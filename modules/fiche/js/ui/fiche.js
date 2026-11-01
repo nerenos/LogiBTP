@@ -1,9 +1,9 @@
 import { ERREUR_FICHE } from '../src/codes.js';
-import { echapper, formatLibre, htmlSur, editerLibelle, creerCombo, confirmer, formatHeure } from '@logibtp/socle/ui';
+import { echapper, formatLibre, htmlSur, editerLibelle, creerCombo, confirmer, formatHeure, notifier } from '@logibtp/socle/ui';
 import { MODES, LIBELLES_MODES, enSaisie, titreFiche } from '../src/modes.js';
 import { validerFiche, MESSAGES } from '../src/validation.js';
 import { ParametrageFiche } from './parametrage.js';
-import { texte, texteHtml, pluriel, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
+import { texte, texteHtml, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 
 const BATTEMENT = 30000;
 const CLE_CONFIDENTIEL = 'logibtp.fiche.confidentiel';
@@ -299,23 +299,30 @@ export class FicheBase {
     const saisie = enSaisie(this.mode);
     const masques = this.fiche.masques.length > 0;
     const boutons = [
-      { icone: icone('fiche_modifier'), libelle: texte('fiche.fiche.modifier'), titre: texte('fiche.fiche.modifier_aide'), action: () => this.modifier(), visible: !saisie && d.modifier && this.id !== null, principal: true },
-      { libelle: texte('commun.enregistrer'), titre: texte('fiche.fiche.enregistrer_aide'), action: () => this.enregistrer(), visible: saisie, principal: true },
-      { libelle: texte('commun.annuler'), titre: texte('fiche.fiche.annuler_aide'), action: () => this.annuler(), visible: saisie },
-      { icone: icone('fiche_copier'), libelle: texte('fiche.fiche.copier'), titre: texte('fiche.fiche.copier_aide'), action: () => this.copier(), visible: !saisie && d.modifier && this.id !== null },
-      { icone: icone('supprimer'), libelle: texte('commun.supprimer'), titre: texte('fiche.fiche.supprimer_aide'), action: () => this.supprimer(), visible: !saisie && d.supprimer && this.id !== null },
-      { icone: icone('fiche_synthese'), libelle: texte('fiche.fiche.synthese'), titre: texte('fiche.fiche.synthese_aide'), action: () => this.#basculerSynthese(), visible: !saisie && this.id !== null, actif: this.#syntheseVisible() },
-      { icone: icone('fiche_confidentiel'), libelle: texte('fiche.fiche.confidentiel'), titre: texte('fiche.fiche.confidentiel_aide'), action: () => this.reveler(), visible: masques && d.confidentiel },
+      { icone: icone('fiche_modifier'), libelle: texte('fiche.fiche.modifier'), titre: texte('fiche.fiche.modifier_aide'), action: () => this.modifier(), visible: !saisie && d.modifier && this.id !== null, principal: true, groupe: 'edition' },
+      { libelle: texte('commun.enregistrer'), titre: texte('fiche.fiche.enregistrer_aide'), action: () => this.enregistrer(), visible: saisie, principal: true, groupe: 'edition' },
+      { libelle: texte('commun.annuler'), titre: texte('fiche.fiche.annuler_aide'), action: () => this.annuler(), visible: saisie, groupe: 'edition' },
+      { icone: icone('fiche_copier'), libelle: texte('fiche.fiche.copier'), titre: texte('fiche.fiche.copier_aide'), action: () => this.copier(), visible: !saisie && d.modifier && this.id !== null, groupe: 'element' },
+      { icone: icone('supprimer'), libelle: texte('commun.supprimer'), titre: texte('fiche.fiche.supprimer_aide'), action: () => this.supprimer(), visible: !saisie && d.supprimer && this.id !== null, groupe: 'element' },
+      { icone: icone('fiche_synthese'), libelle: texte('fiche.fiche.synthese'), titre: texte('fiche.fiche.synthese_aide'), action: () => this.#basculerSynthese(), visible: !saisie && this.id !== null, actif: this.#syntheseVisible(), groupe: 'affichage' },
+      { icone: icone('fiche_confidentiel'), libelle: texte('fiche.fiche.confidentiel'), titre: texte('fiche.fiche.confidentiel_aide'), action: () => this.reveler(), visible: masques && d.confidentiel, groupe: 'affichage' },
       ...this.actionsSupplementaires(),
       // Actions de l'application hôte (imprimer…), hors saisie et sur une fiche enregistrée.
       ...this.actionsHote.map((a) => ({ ...a, visible: !saisie && this.id !== null && a.visible !== false })),
       { icone: icone('fiche_parametrer'), libelle: texte('fiche.fiche.parametrer'), titre: texte('fiche.fiche.parametrer_aide'), action: () => this.parametrer(), visible: this.peutParametrer },
-      { icone: icone('retirer'), libelle: texte('commun.fermer'), titre: texte('commun.fermer_echap'), action: () => this.fermer(), visible: true },
+      { icone: icone('retirer'), libelle: texte('commun.fermer'), titre: texte('commun.fermer_echap'), action: () => this.fermer(), visible: true, groupe: 'fermer' },
     ].filter((b) => b.visible !== false);
     const zone = this.conteneur.querySelector('.fiche-actions');
-    zone.innerHTML = `${d.confidentiel ? `<label class="fiche-option" title="${texteHtml('fiche.fiche.session_aide')}">
-      <input type="checkbox" data-session ${confidentielSession() ? 'checked' : ''}> ${texteHtml('fiche.fiche.session')}</label>` : ''}
-      ${boutons.map((b, i) => `<button type="button" data-i="${i}" class="${b.principal ? 'principal' : ''}${b.icone ? ' bouton-icone' : ''}" title="${echapper(bulle(b))}" aria-label="${echapper(b.libelle)}"${b.actif === undefined ? '' : ` aria-pressed="${b.actif}"`}>${echapper(b.icone ?? b.libelle)}</button>`).join('')}`;
+    // Barre en groupes séparés (I7) : édition | élément | affichage | actions | fermer.
+    const bouton = (b) => `<button type="button" data-i="${boutons.indexOf(b)}" class="${b.principal ? 'principal' : ''}${b.icone ? ' bouton-icone' : ''}" title="${echapper(bulle(b))}" aria-label="${echapper(b.libelle)}"${b.actif === undefined ? '' : ` aria-pressed="${b.actif}"`}>${echapper(b.icone ?? b.libelle)}</button>`;
+    const session = d.confidentiel ? `<label class="fiche-option" title="${texteHtml('fiche.fiche.session_aide')}">
+      <input type="checkbox" data-session ${confidentielSession() ? 'checked' : ''}> ${texteHtml('fiche.fiche.session')}</label>` : '';
+    zone.classList.add('barre-outils');
+    zone.setAttribute('role', 'toolbar');
+    zone.innerHTML = ['edition', 'element', 'affichage', 'actions', 'fermer'].map((g) => {
+      const contenu = `${g === 'affichage' ? session : ''}${boutons.filter((b) => (b.groupe ?? 'actions') === g).map(bouton).join('')}`;
+      return contenu ? `<span class="groupe-outils">${contenu}</span>` : '';
+    }).join('');
     zone.querySelectorAll('button[data-i]').forEach((el) => el.addEventListener('click', () => Promise.resolve(boutons[Number(el.dataset.i)].action()).catch((e) => this.#erreur(e))));
     zone.querySelector('[data-session]')?.addEventListener('change', (e) => {
       definirConfidentielSession(e.target.checked);
@@ -334,11 +341,51 @@ export class FicheBase {
     b.querySelector('[data-reprendre]')?.addEventListener('click', () => this.modifier({ forcer: true }).catch((e) => this.#erreur(e)));
   }
 
+  /** Libellé du champ d'une erreur (champ du programme ou supplémentaire ; erreur générale : le code). */
+  #libelleErreur(e) {
+    return (e.supplementaire ? this.definition.supplementaires ?? [] : this.definition.champs).find((c) => c.code === e.champ)?.libelle ?? e.champ;
+  }
+
   #rendreErreurs() {
     const z = this.conteneur.querySelector('.fiche-erreurs');
     z.hidden = !this.erreurs.length;
-    const libelle = (e) => (e.supplementaire ? this.definition.supplementaires : this.definition.champs).find((c) => c.code === e.champ)?.libelle ?? e.champ;
-    z.innerHTML = this.erreurs.map((e) => `<li data-champ="${echapper(e.champ)}">${texteHtml('fiche.fiche.erreur_champ', { champ: libelle(e), message: e.message })}</li>`).join('');
+    z.innerHTML = this.erreurs.map((e, i) => `<li data-erreur="${i}" title="${texteHtml('fiche.fiche.aller_champ')}">${texteHtml('fiche.fiche.erreur_champ', { champ: this.#libelleErreur(e), message: e.message })}</li>`).join('');
+    z.querySelectorAll('[data-erreur]').forEach((li) => li.addEventListener('click', () => this.allerAuChamp(this.erreurs[Number(li.dataset.erreur)])));
+  }
+
+  /**
+   * Erreurs de saisie dans la fenêtre des messages (I5) : un élément par champ (libellé, onglet, message), « Aller »
+   * mène au champ ; titre « n champs à corriger ».
+   */
+  #signalerErreurs() {
+    const sections = this.sections();
+    notifier({
+      niveau: 'erreur',
+      details: this.erreurs.map((e) => {
+        const s = sections.find((x) => x.code === this.#sectionErreur(sections, e));
+        return {
+          libelle: s && sections.length > 1 ? texte('fiche.fiche.champ_onglet', { champ: this.#libelleErreur(e), onglet: s.titre }) : this.#libelleErreur(e),
+          message: e.message,
+          aller: () => this.allerAuChamp(e),
+        };
+      }),
+    });
+  }
+
+  /** Va au champ d'une erreur : son onglet, puis le champ (défilé, saisie active, signalé une fois). */
+  allerAuChamp(e) {
+    if (!e) return;
+    const sections = this.sections();
+    const section = this.#sectionErreur(sections, e);
+    if (section && section !== this.section) { this.section = section; this.rendre(); }
+    const code = e.supplementaire ? `+${e.champ}` : e.champ;
+    const bloc = [...this.conteneur.querySelectorAll('.fiche-champ[data-champ]')].find((x) => x.dataset.champ === code);
+    if (!bloc) return;
+    bloc.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+    bloc.querySelector('input:not([type=hidden]):not([disabled]), select, textarea, [tabindex]')?.focus({ preventScroll: true });
+    bloc.classList.remove('signale');
+    void bloc.offsetWidth;
+    bloc.classList.add('signale');
   }
 
   #rendreSection(section) {
@@ -399,6 +446,7 @@ export class FicheBase {
     const masque = this.masques.has(code);
     const erreur = this.erreurs.find((e) => e.champ === champ.code && !!e.supplementaire === !!champ.supplementaire);
     const div = document.createElement('div');
+    div.dataset.champ = code;
     div.className = `fiche-champ ${champ.largeur === 'plein' || champ.type === 'zone' || champ.type === 'html' ? 'plein' : ''} ${erreur ? 'erreur' : ''} ${champ.confidentiel ? 'confidentiel' : ''}`;
     // Une case à cocher n'est jamais obligatoire (elle vaut oui ou non) : pas de marque.
     const caseACocher = champ.type === 'booleen';
@@ -765,7 +813,7 @@ export class FicheBase {
     ];
     if (this.erreurs.length) {
       this.#allerErreur();
-      this.message(pluriel('fiche.fiche.erreurs', this.erreurs.length), 'erreur');
+      this.#signalerErreurs();
       return false;
     }
     try {
@@ -792,7 +840,7 @@ export class FicheBase {
       return true;
     } catch (e) {
       if (e.code === ERREUR_FICHE.CODE_PRIS) return this.#codePris(e);
-      if (e.code === 'VALIDATION' && Array.isArray(e.details)) { this.erreurs = e.details; this.#allerErreur(); }
+      if (e.code === 'VALIDATION' && Array.isArray(e.details)) { this.erreurs = e.details; this.#allerErreur(); this.#signalerErreurs(); return false; }
       else if (e.code === ERREUR_FICHE.VERROU_PERDU) { this.#verrouPerdu(e.details); return false; }
       this.#erreur(e);
       return false;

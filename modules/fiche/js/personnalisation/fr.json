@@ -115,7 +115,9 @@
       "fermer_question": "Des modifications ne sont pas enregistrées. Fermer quand même ?",
       "synthese": "Synthèse",
       "synthese_aide": "Afficher ou masquer le bandeau de synthèse (préférence de ce poste)",
-      "onglet_alerte": "Élément en défaut"
+      "onglet_alerte": "Élément en défaut",
+      "aller_champ": "Aller au champ",
+      "champ_onglet": "{{champ}} (onglet {{onglet}})"
     },
     "parametrage": {
       "types": {

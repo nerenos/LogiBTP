@@ -1088,7 +1088,8 @@
         "clic_droit_touche": "Clic droit",
         "clic_droit": "Menu de la ligne"
       },
-      "raccourcis_titre": "Raccourcis des lignes"
+      "raccourcis_titre": "Raccourcis des lignes",
+      "erreur_ligne": "Ligne « {{libelle}} »"
     },
     "fonctions": {
       "conditionnements": {
@@ -5626,9 +5627,9 @@
   },
   "documents_btp": {
     "avertissements": {
-      "points_un": "Point à vérifier",
-      "points_autre": "Points à vérifier",
-      "confirmer": "{{titre}} :\n\n{{liste}}\n\n{{verbe}} quand même ?"
+      "points_un": "{{nombre}} point à vérifier",
+      "points_autre": "{{nombre}} points à vérifier",
+      "question": "{{verbe}} quand même ?"
     },
     "sources": {
       "aide": "Documents validés du même tiers qui ont encore des lignes ouvertes. Chaque document coché devient une section du document, avec son pied.",

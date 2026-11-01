@@ -215,3 +215,44 @@ input.champ-date[readonly], input.champ-date:disabled { background-image: none; 
 input.champ-date[readonly][placeholder="jj/mm/aaaa"]::placeholder, input.champ-date:disabled[placeholder="jj/mm/aaaa"]::placeholder { color: transparent; }
 input.champ-date.invalide { border-color: var(--erreur); background-color: var(--erreur-fond); }
 input.champ-date-cache { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; border: 0; padding: 0; }
+
+/* Fenêtre des messages (I4, I5 : notification.js) : pile en bas à droite, décompte arrêté au survol, figé au clic. */
+.notifications-pile { position: fixed; right: 1rem; bottom: 1rem; z-index: 1000; display: flex; flex-direction: column; gap: 0.5rem;
+  width: min(26rem, calc(100vw - 2rem)); max-height: calc(100vh - 2rem); overflow: auto; pointer-events: none; }
+.notifications-pile:empty { display: none; }
+dialog.notification { position: static; margin: 0; pointer-events: auto; width: 100%; box-sizing: border-box; padding: 0; overflow: hidden;
+  background: var(--surface); color: var(--texte); border: 1px solid var(--bord); border-left: 4px solid var(--erreur);
+  border-radius: 6px; box-shadow: 0 6px 20px var(--notification-ombre); }
+dialog.notification.avertissement { border-left-color: var(--alerte); }
+dialog.notification.info { border-left-color: var(--accent); }
+dialog.notification.succes { border-left-color: var(--succes); }
+dialog.notification header { display: flex; align-items: center; gap: 0.5rem; padding: 0.45rem 0.4rem 0.2rem 0.75rem; }
+dialog.notification header strong { flex: 1; color: var(--erreur); }
+dialog.notification.avertissement header strong { color: var(--alerte); }
+dialog.notification.info header strong, dialog.notification.succes header strong { color: var(--texte); }
+.notification-corps { padding: 0 0.75rem 0.6rem; max-height: 50vh; overflow: auto; }
+.notification-message { margin: 0.1rem 0 0.3rem; white-space: pre-line; }
+.notification-details { margin: 0.2rem 0 0; padding-left: 1.1rem; }
+.notification-details li { margin: 0.15rem 0; }
+.notification-aller { margin-left: 0.3rem; }
+.notification-decompte { height: 3px; background: currentColor; color: var(--erreur); transform-origin: left; animation: notification-decompte linear forwards; opacity: 0.7; }
+dialog.notification.avertissement .notification-decompte { color: var(--alerte); }
+dialog.notification.en-pause .notification-decompte { animation-play-state: paused; }
+dialog.notification.figee .notification-decompte { display: none; }
+@keyframes notification-decompte { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+button.lien { background: none; border: none; padding: 0; color: var(--accent); text-decoration: underline; cursor: pointer; font: inherit; }
+
+/* Infobulles (I8 : infobulle.js). */
+.infobulle { position: fixed; z-index: 1100; max-width: min(28rem, calc(100vw - 12px)); padding: 0.3rem 0.55rem; border-radius: 5px;
+  background: var(--bulle-fond); color: var(--bulle-texte); font-size: 0.86em; line-height: 1.35; pointer-events: none;
+  box-shadow: 0 3px 10px var(--notification-ombre); white-space: normal; overflow-wrap: anywhere; }
+.infobulle[hidden] { display: none; }
+.infobulle kbd { font: inherit; font-size: 0.92em; padding: 0 0.3em; border-radius: 3px; border: 1px solid currentColor; opacity: 0.9; }
+
+/* Barres d'outils (I7) : groupes séparés par un trait vertical (navigation | édition | affichage | actions | fermer). */
+.barre-outils { display: flex; align-items: center; flex-wrap: wrap; gap: 0.25rem; }
+.groupe-outils { display: inline-flex; align-items: center; gap: 0.25rem; }
+.groupe-outils + .groupe-outils, .separateur-outils + .groupe-outils { border-left: 1px solid var(--outils-separateur); padding-left: 0.45rem; margin-left: 0.2rem; }
+.groupe-outils[hidden], .groupe-outils:empty { display: none; }
+.separateur-outils { align-self: stretch; width: 1px; margin: 0.15rem 0.25rem; background: var(--outils-separateur); }
+.liste-avertissements { margin: 0.3rem 0 0.6rem; padding-left: 1.2rem; }

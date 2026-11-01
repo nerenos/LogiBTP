@@ -104,3 +104,8 @@ a.fiche-indicateur:hover { background: var(--accent-clair); }
 .fiche-onglet-compte { display: inline-block; min-width: 1.4em; padding: 0 5px; margin-left: 2px; border-radius: 9px; background: var(--accent-clair); color: var(--accent); font-size: 0.75em; font-weight: 600; text-align: center; }
 .fiche-onglet-compte.alerte { background: var(--erreur); color: var(--surface); }
 .fiche-onglets button.vide { color: var(--discret); }
+/* Champ en cause (I5) : signalé une fois quand on y va depuis la liste des erreurs. */
+.fiche-erreurs li[data-erreur] { cursor: pointer; }
+.fiche-erreurs li[data-erreur]:hover { text-decoration: underline; }
+.fiche-champ.signale { animation: fiche-signale 1.2s ease-out 1; border-radius: 4px; }
+@keyframes fiche-signale { 0%, 40% { box-shadow: 0 0 0 3px var(--erreur); } 100% { box-shadow: 0 0 0 3px transparent; } }

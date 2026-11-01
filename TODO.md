@@ -244,8 +244,8 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
 
 ### Ergonomie ([analyse du 31/10/2026](documentation/conception/ANALYSE-ERGONOMIE.md), décisions Q1–Q16 prises)
 
-- [ ] E1 : fenêtre des messages d'erreur à décompte (I4), détail des erreurs de validation (I5), infobulles du thème
-  (I8), séparateurs des barres d'outils (I7) ; après la PR de personnalisation (dictionnaire, `theme.css`).
+- [ ] Barres d'outils (suite de E1) : débordement replié dans un menu « ⋯ » en petite largeur (aujourd'hui : retour à
+  la ligne des groupes).
 - [ ] Indicateur « Devis à relancer » : une note de relance du CRM doit remettre le délai de 15 jours à zéro (Q5 ;
   aujourd'hui : jours depuis l'envoi, `jours_envoye` de `db/253`) ; délai de relance en paramètre.
 - [ ] Listes : vues enregistrées par les utilisateurs avec l'ancien picto du statut (colonne `statut`) à passer sur la

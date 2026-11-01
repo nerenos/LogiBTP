@@ -20,3 +20,5 @@ export { editerLibelle } from './editeur-riche.js';
 export { THEMES, appliquerTheme, DENSITES, appliquerDensite } from './theme.js';
 export { ouvrirDialogue, confirmer, alerter, saisir, ouvrirModale } from './dialogue.js';
 export { PadSignature, epaisseurTrait } from './signature.js';
+export { notifier, titreNotification, corpsNotificationHtml, EVENEMENT_NOTIFICATION, DELAI_NOTIFICATION } from './notification.js';
+export { activerInfobulles, bulleHtml, positionBulle } from './infobulle.js';

@@ -1,6 +1,6 @@
-import { texte, pluriel } from '@logibtp/socle/dictionnaire';
+import { texteHtml, pluriel } from '@logibtp/socle/dictionnaire';
 import { api } from '../api.js';
-import { confirmer } from '@logibtp/socle/ui';
+import { confirmer, echapper } from '@logibtp/socle/ui';
 
 /**
  * Avertissements de gestion avant une action (CONCEPTION-REGLES-DOCUMENTS.md, lot 6) : VALIDER (total nul, référence
@@ -15,5 +15,11 @@ export async function confirmerAvertissements(entId, action, verbe) {
     return true;
   }
   if (!liste?.length) return true;
-  return await confirmer(texte('documents_btp.avertissements.confirmer', { titre: pluriel('documents_btp.avertissements.points', liste.length), liste: liste.map((m) => `• ${m.message}`).join('\n'), verbe }));
+  // Un élément par point (I5), titre « n points à vérifier ».
+  return await confirmer('', {
+    titre: pluriel('documents_btp.avertissements.points', liste.length, { nombre: liste.length }),
+    html: `<ul class="liste-avertissements">${liste.map((m) => `<li>${echapper(m.message)}</li>`).join('')}</ul>
+      <p class="dialogue-message">${texteHtml('documents_btp.avertissements.question', { verbe })}</p>`,
+    ok: verbe,
+  });
 }

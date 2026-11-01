@@ -1,5 +1,8 @@
-import { echapper } from '@logibtp/socle/ui';
-import { texte, texteHtml } from '@logibtp/socle/dictionnaire';
+import { echapper, ouvrirDialogue, EVENEMENT_NOTIFICATION, formatHeure } from '@logibtp/socle/ui';
+import { texte, texteHtml, iconeHtml } from '@logibtp/socle/dictionnaire';
+
+/** Messages gardés pour l'historique du bandeau (I4). */
+const MAX_HISTORIQUE = 30;
 
 // Bandeau fixé en haut de chaque page : logo (accueil) à gauche, menus déroulants à la manière des anciens programmes
 // Windows (clic ou Alt + lettre soulignée, survol pour passer d'un menu à l'autre, flèches, Entrée, Échap), sous-menus
@@ -49,7 +52,7 @@ export class Bandeau {
         <button type="button" data-masquer title="${texteHtml('navigation.bandeau.masquer')}" aria-label="${texteHtml('navigation.bandeau.masquer')}">⇥</button>
       </span>
       <nav class="bandeau-menus" role="menubar" aria-label="${texteHtml('navigation.bandeau.menu_principal')}"></nav>
-      <span class="bandeau-message" role="status"></span>
+      <span class="bandeau-message"><button type="button" class="bandeau-historique" title="${texteHtml('navigation.bandeau.historique')}" aria-label="${texteHtml('navigation.bandeau.historique')}" hidden>${iconeHtml('navigation_historique')}</button><span class="bandeau-message-texte" role="status"></span></span>
       <span class="bandeau-infos"></span>
       <div class="bandeau-deroulant" role="menu" hidden></div>
       <div class="bandeau-deroulant bandeau-sous-menu" role="menu" hidden></div>
@@ -63,6 +66,14 @@ export class Bandeau {
       this.naviguer(accueil, { nouvelleFenetre: e.ctrlKey || e.shiftKey });
     });
     this.racine.querySelector('.bandeau-retour')?.addEventListener('click', () => retour());
+    // Historique des messages (I4) : ceux du bandeau et ceux de la fenêtre des messages du socle.
+    this.historique = [];
+    this.racine.querySelector('.bandeau-historique').addEventListener('click', () => this.afficherHistorique());
+    this.racine.querySelector('.bandeau-message-texte').addEventListener('click', () => { if (this.historique.length) this.afficherHistorique(); });
+    globalThis.addEventListener?.(EVENEMENT_NOTIFICATION, (e) => {
+      const d = e.detail ?? {};
+      this.historiser([d.titre, d.message, ...(d.details ?? []).map((x) => [x.libelle, x.message].filter(Boolean).join(' : '))].filter(Boolean).join(' — '), d.niveau);
+    });
     this.#evenementsPanneau();
     this.barre.addEventListener('click', (e) => {
       if (this.vertical) { this.#clicVertical(e); return; }
@@ -224,13 +235,32 @@ export class Bandeau {
     this.ajuster();
   }
 
-  message(texte, niveau = 'info') {
-    const zone = this.racine.querySelector('.bandeau-message');
-    zone.textContent = texte;
-    zone.title = texte;
-    zone.className = `bandeau-message ${niveau}`;
+  message(contenu, niveau = 'info') {
+    this.historiser(contenu, niveau);
+    const zone = this.racine.querySelector('.bandeau-message-texte');
+    zone.textContent = contenu;
+    zone.title = contenu;
+    zone.className = `bandeau-message-texte ${niveau}`;
     clearTimeout(this.minuterieMessage);
-    this.minuterieMessage = setTimeout(() => { zone.textContent = ''; zone.className = 'bandeau-message'; }, niveau === 'erreur' ? 10000 : 6000);
+    this.minuterieMessage = setTimeout(() => { zone.textContent = ''; zone.removeAttribute('title'); zone.className = 'bandeau-message-texte'; }, niveau === 'erreur' ? 10000 : 6000);
+  }
+
+  /** Ajoute un message à l'historique (le plus récent en tête). */
+  historiser(contenu, niveau = 'info') {
+    if (!contenu) return;
+    this.historique.unshift({ le: new Date(), niveau, texte: String(contenu) });
+    this.historique.length = Math.min(this.historique.length, MAX_HISTORIQUE);
+    this.racine.querySelector('.bandeau-historique').hidden = false;
+  }
+
+  /** Derniers messages de la fenêtre, du plus récent au plus ancien. */
+  afficherHistorique() {
+    const lignes = this.historique.map((m) => `<li class="${echapper(m.niveau)}"><time>${echapper(formatHeure(m.le.toISOString()))}</time> ${echapper(m.texte)}</li>`).join('');
+    return ouvrirDialogue({
+      titre: texte('navigation.bandeau.historique'), classe: 'bandeau-historique-fenetre',
+      html: lignes ? `<ul class="bandeau-historique-liste">${lignes}</ul>` : `<p class="aide">${texteHtml('navigation.bandeau.historique_vide')}</p>`,
+      boutons: [{ libelle: texte('commun.fermer'), principal: true, valeur: null }],
+    });
   }
 
   #menu(code) { return this.menus.find((m) => m.code === code); }

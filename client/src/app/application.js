@@ -5,7 +5,7 @@ import { accesSousArbre, autorise } from '@logibtp/droits';
 import { Bandeau, PanneauFenetres, confirmerFermetureSession, DISPOSITION_DEFAUT } from '@logibtp/navigation/ui';
 import { GestionThemes } from '@logibtp/liste/ui';
 import { ParametrageFiche } from '@logibtp/fiche/ui';
-import { echapper, appliquerTheme, appliquerDensite, actionDe, definirAideRaccourcis, confirmer, formatHeure, activerCombos, activerDates } from '@logibtp/socle/ui';
+import { echapper, appliquerTheme, appliquerDensite, actionDe, definirAideRaccourcis, confirmer, formatHeure, activerCombos, activerDates, activerInfobulles, notifier } from '@logibtp/socle/ui';
 import './raccourcis.js';
 import { api, ErreurApi } from './api.js';
 import { creerFournisseurListe, estTypeDocument, LIBELLES_ELEMENTS } from './listes.js';
@@ -25,7 +25,7 @@ import './terrain/operations-terrain.js';
 import { menus } from './navigation/menus.js';
 import { ROUTES } from './pages/index.js';
 import { CLE_PREFERENCES_NAVIGATION, urlDocument, urlFiche, TYPE_DOCUMENT, SUJET_FENETRE } from './codes.js';
-import { texte, texteHtml, pluriel, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
+import { texte, texteHtml, pluriel, icone, iconeHtml, messageErreur } from '@logibtp/socle/dictionnaire';
 import { logoApplication } from '../personnalisation.js';
 
 // Application web LogiBTP (cœur) : services partagés par les pages, routeur (navigation classique dans la
@@ -61,6 +61,8 @@ export class Application {
     // Listes de choix : les <select> encore construits par les écrans s'affichent en combos du socle.
     activerCombos(document.body);
     activerDates(document.body);
+    // Infobulles du thème à la place des bulles natives des attributs title (I8).
+    activerInfobulles();
     // Tiers et contacts choisis dans une vraie liste (I1) : injectés dans le module Annuaire.
     brancherChoixAnnuaire();
     // Rechargement (F5, Vite) : la page quittée reste affichée pendant le démarrage au lieu d'un écran vide.
@@ -499,14 +501,26 @@ export class Application {
     return `<a href="/notifications" class="cloche${c.urgentes ? ' urgente' : ''}" title="${echapper(titre)}">${iconeHtml('notifications_btp_cloche')}${c.non_lues ? `<span class="compteur">${c.non_lues}</span>` : ''}</a>`;
   }
 
-  message(texte, niveau = 'info') { this.bandeau?.message(texte, niveau); }
+  /**
+   * Message à l'utilisateur : erreurs et avertissements dans la fenêtre des messages du socle (I4, décompte de 8 s,
+   * historique du bandeau) ; succès et informations dans le bandeau.
+   */
+  message(contenu, niveau = 'info') {
+    if (niveau === 'erreur' || niveau === 'avertissement') notifier({ message: contenu, niveau });
+    else this.bandeau?.message(contenu, niveau);
+  }
 
-  erreur(e) {
+  /**
+   * Erreur dans la fenêtre des messages ; les `details` d'une erreur de l'API (champs d'une fiche, contrôles d'un
+   * document) y sont listés un par un (I5). Options : libelle(detail) et aller(detail) → fonction qui mène au champ ou à
+   * la ligne en cause (lien « Aller »).
+   */
+  erreur(e, { libelle, aller } = {}) {
     console.error(e);
-    if (e instanceof ErreurApi) {
-      const details = Array.isArray(e.details) ? ` : ${e.details.map((d) => d.message).join(' · ')}` : '';
-      this.message(`${e.message}${details}`, 'erreur');
-    } else this.message(e?.message ?? String(e), 'erreur');
+    const details = e instanceof ErreurApi && Array.isArray(e.details)
+      ? e.details.filter((d) => d && typeof d === 'object' && d.message).map((d) => ({ libelle: libelle?.(d) ?? null, message: messageErreur(d.code, d.message, d), aller: aller?.(d) ?? null }))
+      : [];
+    notifier({ message: e?.message ?? String(e), details, niveau: 'erreur' });
   }
 
   /** Signalement demandé par une autre fenêtre : cadre clignotant et titre alterné. */

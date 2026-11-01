@@ -652,3 +652,27 @@ client` pour les lots qui changent des vues fournies.
 - **Contrôles** : `npm test` ; essai dans le navigateur (client d'un projet : filtre retiré, double-clic ; intervenant :
   filtre de la fonction, Échap ; contact d'une personne : création d'un individu).
 
+## 18. Réalisation du lot E1 : messages, infobulles, barres d'outils (01/11/2026)
+
+- **Fenêtre des messages** (I4, socle `ui/notification.js`) : `notifier({ titre, message, details, niveau, delai })`,
+  `<dialog>` non modale empilée en bas à droite, barre de décompte (8 s), arrêtée au survol, figée au premier clic ou
+  focus, ✕ ou Échap (fenêtre active) ; `app.message` y envoie erreurs et avertissements (Q15), succès et informations
+  restent dans le bandeau. Historique : chaque message est annoncé par l'événement `logibtp:notification` ; le bandeau
+  (module Navigation) garde les 30 derniers, bouton 🕘 ou clic sur le message → fenêtre « Derniers messages ».
+- **Erreurs détaillées** (I5) : `app.erreur(e, { libelle, aller })` liste les `details` d'une erreur de l'API (message du
+  dictionnaire par code) ; fiches : un élément par champ (libellé, onglet), titre « n champs à corriger », « Aller » mène
+  à l'onglet et au champ (défilé, saisie active, signalé une fois), la liste en tête de fiche y mène aussi
+  (`allerAuChamp`) ; documents : contrôles du refus de validation, « Aller » vers la ligne en cause
+  (`erreurDocument`) ; avertissements à confirmer : un point par ligne, titre « n points à vérifier ».
+- **Infobulles** (I8, socle `ui/infobulle.js`) : `activerInfobulles()` au démarrage du client ; les `title` existants
+  sont lus sans être réécrits (retirés le temps de l'affichage, `aria-describedby`), 300 ms puis aussitôt d'une bulle à
+  la voisine, focus clavier, appui long au toucher, placement au-dessus sinon au-dessous, raccourcis en `kbd`
+  (`bulleHtml`, `positionBulle` testés) ; variables `--bulle-fond`, `--bulle-texte` du thème.
+- **Barres d'outils** (I7) : `.barre-outils` / `.groupe-outils` du socle (trait `--outils-separateur`), appliquées à la
+  page document, aux fiches (édition | élément | affichage | actions | fermer), au planning et aux pages du pointage ;
+  la liste garde ses groupes (L5, pas de trait avant Créer) avec le même trait.
+- **Reste** (TODO) : débordement des barres replié dans un menu « ⋯ » en petite largeur (aujourd'hui : retour à la
+  ligne) ; champs de l'entête en cause encadrés sur la page document (I2, lot E11).
+- **Contrôles** : `npm test` (socle : `notification.test.js`) ; navigateur : fiche matériel vide enregistrée (fenêtre,
+  « Aller », décompte, historique), bulle de « Enregistrer (Ctrl+S) », barres du planning et de la fiche.
+

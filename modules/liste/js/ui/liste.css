@@ -34,7 +34,8 @@
 .liste-groupe { display: inline-flex; align-items: center; gap: 0.25rem; }
 .liste-groupe:empty, .liste-groupe:not(:has(> :not([hidden]):not(:empty))) { display: none; }
 .liste-groupe-recherche { flex: 1 1 18rem; min-width: 12rem; gap: 0.4rem; }
-.liste-elements, .liste-groupe-affichage, .liste-groupe-hote { padding-left: 0.4rem; border-left: 1px solid var(--bord); }
+/* Séparateurs entre groupes (I7) : trait du thème des barres d'outils du socle ; pas de trait avant Créer (L5). */
+.liste-elements, .liste-groupe-affichage, .liste-groupe-hote { padding-left: 0.45rem; border-left: 1px solid var(--outils-separateur); }
 .liste-vues { max-width: 16rem; }
 .liste-themes { max-width: 12rem; font-weight: 600; }
 .liste-themes[hidden] { display: none; }

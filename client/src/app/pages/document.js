@@ -57,7 +57,7 @@ const enteteDock = (titre, fermer = '') => `
 const separateur = (cote) => `<div class="separateur" data-sep="${cote}" title="${texteHtml('document_btp.page.separateur')}"></div>`;
 
 const gabarit = () => `
-  <div class="document-barre">
+  <div class="document-barre barre-outils" role="toolbar">
     <nav class="onglets" role="tablist">
       <button role="tab" data-onglet-vue="entete" title="${texteHtml('document_btp.page.onglets.entete_aide')}">${texteHtml('document_btp.page.onglets.entete')}</button>
       <button role="tab" data-onglet-vue="lignes" title="${texteHtml('document_btp.page.onglets.lignes_aide')}">${texteHtml('document_btp.page.onglets.lignes')}</button>
@@ -67,19 +67,19 @@ const gabarit = () => `
       <button role="tab" data-onglet-vue="suivi" title="${texteHtml('document_btp.page.onglets.suivi_aide')}" hidden>${texteHtml('document_btp.page.onglets.suivi')}</button>
       <button role="tab" data-onglet-vue="reglements" title="${texteHtml('document_btp.page.onglets.reglements_aide')}">${texteHtml('document_btp.page.onglets.reglements')}</button>
     </nav>
-    <div class="groupe">
+    <div class="groupe groupe-outils">
       <button data-action="annuler" title="${texteHtml('document_btp.page.annuler')}">${iconeHtml('document_btp_annuler')}</button>
       <button data-action="retablir" title="${texteHtml('document_btp.page.retablir')}">${iconeHtml('document_btp_retablir')}</button>
       <button data-action="bibliotheque" title="${texteHtml('document_btp.page.bibliotheque_aide')}">${iconeHtml('document_textes')} ${texteHtml('document_btp.page.bibliotheque')}</button>
       <button data-action="precedent" hidden>${iconeHtml('precedent')}</button>
       <button data-action="suivant" hidden>${iconeHtml('suivant')}</button>
     </div>
-    <span class="groupe" data-vues></span>
-    <span class="groupe"><button data-basculer-dock="plan" title="${texteHtml('document_btp.page.plan_aide')}">${iconeHtml('document_btp_plan')} ${texteHtml('document_btp.page.plan')}</button>
+    <span class="groupe groupe-outils" data-vues></span>
+    <span class="groupe groupe-outils"><button data-basculer-dock="plan" title="${texteHtml('document_btp.page.plan_aide')}">${iconeHtml('document_btp_plan')} ${texteHtml('document_btp.page.plan')}</button>
       <button data-basculer-dock="notifications" class="compteur-notifications" title="${texteHtml('document_btp.page.notifications_aide')}">${iconeHtml('avertissement')} 0</button>
       <button data-action="rechercher" title="${texteHtml('document_btp.page.rechercher')}">${iconeHtml('rechercher')}</button></span>
     <!-- Calé à droite : Enregistrer (clic) et ses suites dans le menu ▾, puis Aperçu, Envoyer, Fermer en icônes. -->
-    <div class="groupe barre-droite">
+    <div class="groupe groupe-outils barre-droite">
       <span class="bouton-menu bouton-menu-superchamps">
         <button data-action="enregistrer" class="principal" title="${texteHtml('document_btp.page.enregistrer_aide')}">${texteHtml('document_btp.page.enregistrer')}</button><button type="button" class="principal bouton-menu-fleche" data-ouvrir-actions title="${texteHtml('document_btp.page.actions_aide')}" aria-label="${texteHtml('document_btp.page.actions_libelle')}" aria-haspopup="menu">${iconeHtml('replier')}</button>
         <div class="menu-deroulant-contenu menu-actions-document" role="menu" data-menu-actions hidden>
@@ -252,7 +252,7 @@ export class PageDocument extends PageBase {
       if (e.target.closest('[data-ouvrir-actions]')) { menu.hidden = !menu.hidden; if (!menu.hidden) menu.querySelector('button:not([hidden]):not(:disabled)')?.focus(); return; }
       menu.hidden = true;
       const b = e.target.closest('button[data-action]');
-      if (b && actions[b.dataset.action]) Promise.resolve(actions[b.dataset.action]()).catch((x) => app.erreur(x));
+      if (b && actions[b.dataset.action]) Promise.resolve(actions[b.dataset.action]()).catch((x) => this.erreurDocument(x));
     });
     // Raccourcis de la page (groupe document, personnalisables) : Alt+1… onglets, Ctrl+F recherche dans les lignes
     // (sans filtre, à la place de celle du navigateur ; onglet Analyse : dans la liste des éléments), fonctions de la barre.
@@ -269,7 +269,7 @@ export class PageDocument extends PageBase {
         this.recherche.ouvrir();
         return;
       }
-      if (actions[action]) { e.preventDefault(); Promise.resolve(actions[action]()).catch((x) => app.erreur(x)); }
+      if (actions[action]) { e.preventDefault(); Promise.resolve(actions[action]()).catch((x) => this.erreurDocument(x)); }
     };
     document.addEventListener('keydown', this.clavier);
     // Menu des actions du document : refermé par un clic ailleurs ou Échap.
@@ -953,6 +953,21 @@ export class PageDocument extends PageBase {
       arborescence: this.servicesStructure ? new ArborescenceBtp(contexte, { structure: this.servicesStructure, entId: d.ent_id }) : null,
       ouvrirUrl: (url) => this.app.naviguer(url, { nouvelleFenetre: true }),
       message: (t, n) => this.app.message(t, n),
+    });
+  }
+
+  /**
+   * Erreur d'une action du document : les contrôles en cause (refus de validation) sont listés dans la fenêtre des
+   * messages (I5), chacun avec « Aller » vers sa ligne.
+   */
+  erreurDocument(e) {
+    const ligne = (d) => (d.lig_id ? this.editeur?.saisie.lignes.find((l) => l.lig_id === d.lig_id) : null);
+    this.app.erreur(e, {
+      libelle: (d) => {
+        const l = ligne(d);
+        return l ? texte('document_btp.page.erreur_ligne', { libelle: String(l.lig_libelle_brut ?? l.lig_code ?? '').slice(0, 60) || l.lig_id }) : null;
+      },
+      aller: (d) => (ligne(d) ? () => { this.disposition.onglet('lignes'); this.editeur.allerA(d.lig_id); } : null),
     });
   }
 
