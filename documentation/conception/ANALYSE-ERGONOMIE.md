@@ -705,3 +705,25 @@ client` pour les lots qui changent des vues fournies.
 - **Contrôles** : `npm test` (`controles-btp.test.js`, `bibliotheque-appel.test.js`) ; navigateur : devis neuf,
   article PARP20 en m² → pal (1 pal = 6 m², PA 13,20 → 79,20, Ctrl+Z rend les deux), quantité à 0 signalée et grille
   filtrée, cinq niveaux de titres (retraits 24 / 41,6 / 48,8 / 56 / 63,2 px), thème sombre.
+
+## 20. Réalisation du lot E11 : onglets de la page document (01/11/2026)
+
+- **Ordre des onglets** (Q7) : Entête Alt+1, Règlements Alt+2, Lignes Alt+3, Analyse Alt+4, Pièces Alt+5, Suivi Alt+6,
+  Options Alt+8 (Alt+7 : notifications) ; bulles des onglets avec le raccourci personnalisé (`libelleRaccourci`).
+- **Suivi et Traçabilité** (D7) : un onglet, notes du CRM en haut, traçabilité en bas, séparateur à glisser (double-clic :
+  moitié), chaque partie réductible à son titre ; hauteur et partie réduite gardées dans le navigateur (préférence
+  `suiviDocument`) ; module CRM désactivé : traçabilité seule. Un onglet Traçabilité mémorisé rouvre les Lignes.
+- **Onglet Options** (D8, Q8) : `PanneauxDocument.rendreOptions` (modèle de saisie, décimales, numérotation, étiquettes
+  du document) complété par `champsOptions` du cœur (calcul des ouvrages, bibliothèque) ; l'entête garde l'identité,
+  les propriétés paramétrées, le rattachement, l'annuaire, les coordonnées et les textes de l'édition. Options des
+  frais annexes : restent dans l'onglet Analyse (vue Frais annexes), où elles agissent.
+- **Règlement** (D9) : condition de paiement et mode de règlement quittent l'entête pour la tête de l'onglet Règlements
+  (`rendreReglement`), avec l'aperçu de l'échéancier tant qu'il n'est pas enregistré (recalculé à chaque saisie quand
+  l'onglet est affiché) ; document non enregistré : la condition se choisit déjà.
+- **Champs en cause** (I2) : `ERREUR_DOCUMENT` et `CHAMPS_ERREUR_DOCUMENT` (`codes.js` : tiers, adresse de livraison,
+  rattachement, date, propriété, condition de paiement) ; au refus, le champ (ou sa section) est encadré et son onglet
+  marqué jusqu'à la version suivante, la fenêtre des messages nomme le champ et « Aller » ouvre l'onglet, fait défiler,
+  active la saisie et signale le champ une fois ; les lignes en cause gardent « Aller » à la ligne.
+- **Reste** (TODO) : propriété d'exemple `mode_reglement` du devis en double du mode de règlement.
+- **Contrôles** : `npm test` ; navigateur : devis neuf (bulles Alt+1…Alt+8, onglet Règlements avec l'aperçu, Options),
+  enregistré puis validé sans tiers (fenêtre « 1 champ à corriger », annuaire encadré, « Aller »), Suivi en deux parties.

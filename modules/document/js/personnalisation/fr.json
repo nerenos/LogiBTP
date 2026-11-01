@@ -286,7 +286,8 @@
         "defaut": "défaut"
       },
       "sous_total": "Sous-total",
-      "totaux_erreur": "Le calcul signale une erreur : totaux à vérifier (voir les notifications)"
+      "totaux_erreur": "Le calcul signale une erreur : totaux à vérifier (voir les notifications)",
+      "options": "Options du document"
     },
     "etapes": {
       "entete": "Entête",

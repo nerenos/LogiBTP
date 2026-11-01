@@ -867,20 +867,20 @@
     },
     "page": {
       "onglets": {
-        "entete_aide": "Alt+1",
+        "entete_aide": "{{raccourci}} : identité, rattachement, intervenants, coordonnées, textes de l’édition",
         "entete": "Entête",
-        "lignes_aide": "Alt+2",
+        "lignes_aide": "{{raccourci}}",
         "lignes": "Lignes",
-        "analyse_aide": "Alt+3 : coefficients par nature ou par tranche",
+        "analyse_aide": "{{raccourci}} : coefficients par nature ou par tranche",
         "analyse": "Analyse",
-        "pieces_aide": "Alt+4 : documents de la GED liés au document, pièces jointes à envoyer",
+        "pieces_aide": "{{raccourci}} : documents de la GED liés au document, pièces jointes à envoyer",
         "pieces": "Pièces",
-        "tracabilite_aide": "Alt+5 : origine (import), documents liés, historique des versions",
-        "tracabilite": "Traçabilité",
-        "suivi_aide": "Alt+6 : notes, tâches et courriels du document (module CRM)",
+        "suivi_aide": "{{raccourci}} : notes, tâches et courriels (module CRM), origine, documents liés et historique",
         "suivi": "Suivi",
         "reglements": "Règlements",
-        "reglements_aide": "Alt+8 : échéancier, règlements, imputations et déductions d'acompte"
+        "reglements_aide": "{{raccourci}} : condition et mode de règlement, échéancier, règlements, imputations et déductions d’acompte",
+        "options": "Options",
+        "options_aide": "{{raccourci}} : modèle de saisie, décimales, numérotation, calcul des ouvrages, bibliothèque, étiquettes"
       },
       "actions": {
         "valider_aide": "Valider et bloquer le document",
@@ -1108,7 +1108,21 @@
         "clic_droit": "Menu de la ligne"
       },
       "raccourcis_titre": "Raccourcis des lignes",
-      "erreur_ligne": "Ligne « {{libelle}} »"
+      "erreur_ligne": "Ligne « {{libelle}} »",
+      "suivi": {
+        "crm": "Suivi",
+        "tracabilite": "Traçabilité",
+        "reduire": "Réduire cette partie",
+        "deplier": "Afficher cette partie"
+      },
+      "champs_erreur": {
+        "tiers": "Annuaire du document (tiers)",
+        "adresse": "Adresse de livraison",
+        "rattachement": "Rattachement",
+        "date": "Date",
+        "propriete": "Propriété du document",
+        "reglement": "Condition de paiement"
+      }
     },
     "fonctions": {
       "conditionnements": {
@@ -4828,8 +4842,7 @@
         "ongletLignes": "Onglet Lignes",
         "ongletAnalyse": "Onglet Analyse",
         "ongletPieces": "Onglet Pièces",
-        "ongletTracabilite": "Onglet Traçabilité",
-        "ongletSuivi": "Onglet Suivi (CRM)",
+        "ongletSuivi": "Onglet Suivi (CRM et traçabilité)",
         "rechercher": "Rechercher dans les lignes",
         "valider": "Valider le document",
         "transformer": "Transformer le document",
@@ -4838,7 +4851,8 @@
         "notifications": "Afficher ou masquer les notifications",
         "notificationSuivante": "Notification suivante (ligne)",
         "notificationPrecedente": "Notification précédente (ligne)",
-        "ongletReglements": "Onglet Règlements"
+        "ongletReglements": "Onglet Règlements",
+        "ongletOptions": "Onglet Options"
       },
       "planning": {
         "groupe": "Planning",
@@ -5879,7 +5893,7 @@
       "rafraichir_aide": "Revenir à la proposition calculée par la condition de paiement de la pièce",
       "rafraichir": "Rafraîchir",
       "enregistrer": "Enregistrer l'échéancier",
-      "sans_echeancier": "L'échéancier est calculé à la validation des factures et des avoirs (aperçu dans l'entête, section Règlement).",
+      "sans_echeancier": "L’échéancier est calculé à la validation des factures et des avoirs (aperçu ci-dessus, selon la condition de paiement).",
       "col": {
         "numero": "N°",
         "nature": "Nature",

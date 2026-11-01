@@ -254,7 +254,6 @@ dialog.dialogue-options { max-width: min(820px, calc(100vw - 32px)); }
 .document-import details summary { cursor: pointer; font-weight: 600; margin-top: 4px; }
 
 /* Onglet Traçabilité : origine, documents liés, historique. */
-.vue-tracabilite { overflow: auto; padding: 1rem; }
 .vue-reglements { overflow: auto; padding: 1rem; }
 .reglements-document section { margin-bottom: 1.5rem; }
 .reglements-document .avertissement { color: var(--avertissement, #b45309); }
@@ -469,7 +468,21 @@ iframe.edition-impression { position: fixed; width: 0; height: 0; border: 0; vis
 .crm-ajout-lien { margin-top: .4rem; }
 .crm-pieces { min-height: 6rem; }
 .crm-note-cote, .crm-note-principal { min-width: 0; }
-.vue-suivi { overflow: auto; }
+.vue-suivi { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; border-top: 1px solid var(--bord); }
+/* Onglet Suivi (D7) : Suivi du CRM en haut, traçabilité en bas ; une partie réduite garde son titre. */
+.vue-suivi .suivi-partie { display: flex; flex-direction: column; min-height: 0; }
+.vue-suivi .suivi-crm { flex: 0 1 50%; }
+.vue-suivi .suivi-tracabilite { flex: 1 1 0; }
+.vue-suivi .suivi-entete { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.3rem 0.2rem; border-bottom: 1px solid var(--bord); }
+.vue-suivi .suivi-entete h3 { margin: 0; font-size: 1rem; }
+.vue-suivi .suivi-contenu { flex: 1; min-height: 0; overflow: auto; }
+.vue-suivi .suivi-tracabilite .suivi-contenu { padding: 0.6rem 1rem; }
+.vue-suivi .suivi-partie.reduite { flex: none !important; }
+.vue-suivi .suivi-partie.reduite .suivi-contenu { display: none; }
+.vue-suivi .separateur-suivi { flex: none; height: 6px; cursor: row-resize; }
+.vue-suivi:has(.suivi-partie.reduite) .separateur-suivi { display: none; }
+.vue-suivi.sans-crm .suivi-crm, .vue-suivi.sans-crm .separateur-suivi { display: none; }
+.vue-options { overflow: auto; padding-top: 0.6rem; border-top: 1px solid var(--bord); }
 .crm-pastille { display: inline-block; width: .75em; height: .75em; border-radius: 50%; background: var(--bord); vertical-align: middle; }
 .crm-pastille-rouge { background: var(--crm-rappel-rouge); }
 .crm-pastille-orange { background: var(--crm-rappel-orange); }

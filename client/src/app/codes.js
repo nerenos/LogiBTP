@@ -119,6 +119,32 @@ export const CLE_PREFERENCES_NAVIGATION = 'logibtp.navigation';
 /** États affichés d'un document dans les listes, calculés par v_liste_documents (db/253, Q3 : jamais de statut posé). */
 export const ETAT_LISTE_DOCUMENT = Object.freeze({ EXPIRE: 'EXPIRE', REFUSE: 'REFUSE' });
 
+/**
+ * Erreurs de validation d'un document qui désignent un champ hors des lignes (I2) : émises par le module Document
+ * (TIERS_OBLIGATOIRE, DATE_*, PROPRIETE_OBLIGATOIRE, CONDITION_PAIEMENT) et par le cœur (SpecialisationBtp).
+ */
+export const ERREUR_DOCUMENT = Object.freeze({
+  TIERS_OBLIGATOIRE: 'TIERS_OBLIGATOIRE', ADRESSE_LIVRAISON: 'ADRESSE_LIVRAISON', MARCHE_OBLIGATOIRE: 'MARCHE_OBLIGATOIRE',
+  EXE_CHANTIER: 'EXE_CHANTIER', EXE_CHANTIER_UNIQUE: 'EXE_CHANTIER_UNIQUE', DATE_FUTURE: 'DATE_FUTURE', DATE_ANTERIEURE: 'DATE_ANTERIEURE',
+  PROPRIETE_OBLIGATOIRE: 'PROPRIETE_OBLIGATOIRE', CONDITION_PAIEMENT: 'CONDITION_PAIEMENT',
+});
+
+/**
+ * Champ en cause de chaque erreur de ERREUR_DOCUMENT : onglet de la page document, élément (sélecteur dans la vue de
+ * l'onglet) encadré et clé du libellé (`document_btp.page.champs_erreur.<cle>`).
+ */
+export const CHAMPS_ERREUR_DOCUMENT = Object.freeze({
+  [ERREUR_DOCUMENT.TIERS_OBLIGATOIRE]: { onglet: 'entete', selecteur: '.annuaire-document', cle: 'tiers' },
+  [ERREUR_DOCUMENT.ADRESSE_LIVRAISON]: { onglet: 'entete', selecteur: '[data-adresse]', cle: 'adresse' },
+  [ERREUR_DOCUMENT.MARCHE_OBLIGATOIRE]: { onglet: 'entete', selecteur: '.rattachement-document', cle: 'rattachement' },
+  [ERREUR_DOCUMENT.EXE_CHANTIER]: { onglet: 'entete', selecteur: '.rattachement-document', cle: 'rattachement' },
+  [ERREUR_DOCUMENT.EXE_CHANTIER_UNIQUE]: { onglet: 'entete', selecteur: '.rattachement-document', cle: 'rattachement' },
+  [ERREUR_DOCUMENT.DATE_FUTURE]: { onglet: 'entete', selecteur: '[data-champ="ent_date"]', cle: 'date' },
+  [ERREUR_DOCUMENT.DATE_ANTERIEURE]: { onglet: 'entete', selecteur: '[data-champ="ent_date"]', cle: 'date' },
+  [ERREUR_DOCUMENT.PROPRIETE_OBLIGATOIRE]: { onglet: 'entete', selecteur: '[data-prop]', cle: 'propriete' },
+  [ERREUR_DOCUMENT.CONDITION_PAIEMENT]: { onglet: 'reglements', selecteur: '.reglement-document', cle: 'reglement' },
+});
+
 /** Pastilles de la colonne État des documents (format `pastille` du module Liste) : code → libellé et teinte (L2). */
 export const PASTILLES_ETAT_DOCUMENT = Object.freeze([
   { valeur: 'BROUILLON', libelle: 'Brouillon', teinte: 'neutre' },
