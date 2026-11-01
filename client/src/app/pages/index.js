@@ -66,8 +66,8 @@ import { PageSaisiePointage, PageSynthesePointage, PageExportPointage, PageParam
 // et sert à restaurer la session.
 export const ROUTES = [
   { nom: 'accueil', chemin: '/', page: PageAccueil, titre: 'Accueil' },
-  { nom: 'connexion', chemin: '/connexion', page: PageConnexion, titre: 'Connexion' },
-  { nom: 'compte', chemin: '/compte', page: PageCompte, titre: 'Mon compte' },
+  { nom: 'connexion', chemin: '/connexion', page: PageConnexion, titre: texte('authentification_btp.connexion.titre') },
+  { nom: 'compte', chemin: '/compte', page: PageCompte, titre: texte('authentification_btp.mon_compte.titre') },
   { nom: 'liste', chemin: '/liste/:theme?', page: PageListe, titre: 'Listes' },
   { nom: 'fiche', chemin: '/fiche/:type/:id', page: PageFiche, titre: 'Fiche' },
   { nom: 'document', chemin: '/document/:id', page: PageDocument, titre: 'Document' },
@@ -127,9 +127,9 @@ export const ROUTES = [
   { nom: 'parametres-connexions', chemin: '/parametres/connexions', page: PageParametresConnexions, titre: 'Connexions externes' },
   { nom: 'parametres-calendriers', chemin: '/parametres/calendriers', page: PageParametresCalendriers, titre: texte('calendrier_btp.routes.calendriers') },
   { nom: 'habilitations', chemin: '/ressources/habilitations', page: PageHabilitations, titre: 'Habilitations, entretiens et visites à surveiller' },
-  { nom: 'parametres-comptes', chemin: '/parametres/comptes', page: PageParametresComptes, titre: 'Comptes utilisateurs' },
+  { nom: 'parametres-comptes', chemin: '/parametres/comptes', page: PageParametresComptes, titre: texte('authentification_btp.comptes.titre') },
   { nom: 'parametres-installation', chemin: '/parametres/installation', page: PageParametresInstallation, titre: 'Installation' },
-  { nom: 'parametres-droits', chemin: '/parametres/droits', page: PageParametresDroits, titre: 'Profils et droits' },
+  { nom: 'parametres-droits', chemin: '/parametres/droits', page: PageParametresDroits, titre: texte('droits_btp.profils.titre') },
   { nom: 'parametres-services', chemin: '/parametres/services', page: PageParametresServices, titre: 'Services et membres' },
   { nom: 'parametres-referentiels', chemin: '/parametres/referentiels', page: PageParametresReferentiels, titre: 'Référentiels communs' },
   { nom: 'parametres-crm', chemin: '/parametres/crm', page: PageParametresCrm, titre: texte('crm_btp.routes.parametres_crm') },

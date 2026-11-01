@@ -1,40 +1,20 @@
 // Règles des comptes, répliquées dans ReglesCompte.cs (jeux modules/authentification/tests/cas) : pseudo, mot de passe,
 // état d'un compte (connexion possible ou non), contrôle d'un compte saisi pour sa personne liée.
 import { sansAccent } from '@logibtp/socle';
+import { texte, textesParCode } from '@logibtp/socle/dictionnaire';
 
 export const TYPES_COMPTE = ['PERSONNE', 'SERVICE'];
 
 /** État d'un compte, du plus bloquant au plus permissif ; A_CHANGER se connecte mais doit changer son mot de passe. */
-export const ETATS_COMPTE = {
-  SERVICE: 'Compte de service (sans connexion)',
-  INACTIF: 'Désactivé',
-  EXPIRE: 'Expiré',
-  SANS_MOT_DE_PASSE: 'Sans mot de passe',
-  VERROUILLE: 'Verrouillé temporairement',
-  A_CHANGER: 'Mot de passe provisoire',
-  ACTIF: 'Actif',
-};
+export const ETATS_COMPTE = textesParCode('authentification.etats', ['SERVICE', 'INACTIF', 'EXPIRE', 'SANS_MOT_DE_PASSE', 'VERROUILLE', 'A_CHANGER', 'ACTIF']);
 
 export const LONGUEUR_PSEUDO = { min: 3, max: 50 };
 export const LONGUEUR_MDP_MAX = 128;
 export const POLITIQUE_DEFAUT = { longueur_min: 12, courants: [] };
 
-export const MESSAGES_AUTH = {
-  PSEUDO_VIDE: 'Identifiant obligatoire',
-  PSEUDO_LONGUEUR: `Identifiant de ${LONGUEUR_PSEUDO.min} à ${LONGUEUR_PSEUDO.max} caractères`,
-  PSEUDO_FORMAT: 'Identifiant : lettres minuscules sans accents, chiffres, point, tiret ou souligné ; commence par une lettre ou un chiffre',
-  PSEUDO_RESERVE: 'Identifiant réservé : choisissez-en un autre',
-  MDP_VIDE: 'Mot de passe obligatoire',
-  MDP_COURT: 'Mot de passe trop court',
-  MDP_LONG: `Mot de passe de ${LONGUEUR_MDP_MAX} caractères au plus`,
-  MDP_COURANT: 'Mot de passe trop courant : choisissez-en un autre',
-  MDP_PSEUDO: "Le mot de passe ne doit pas contenir l'identifiant",
-  PERSONNE_NON_AUTORISEE: "Cette personne ne peut pas avoir de compte (salarié ou intérimaire actif seulement)",
-  PROFIL_INCONNU: 'Profil inconnu',
-  PROFIL_INTERDIT: 'Profil interdit pour cette personne',
-  VALIDITE_OBLIGATOIRE: 'Date de fin de validité obligatoire (fin de mission)',
-  VALIDITE_PASSEE: 'Date de fin de validité déjà passée',
-};
+const VALEURS_MESSAGES = { pseudo_min: LONGUEUR_PSEUDO.min, pseudo_max: LONGUEUR_PSEUDO.max, mdp_max: LONGUEUR_MDP_MAX };
+export const MESSAGES_AUTH = Object.freeze(Object.defineProperties({}, Object.fromEntries(['PSEUDO_VIDE', 'PSEUDO_LONGUEUR', 'PSEUDO_FORMAT', 'PSEUDO_RESERVE', 'MDP_VIDE', 'MDP_COURT', 'MDP_LONG', 'MDP_COURANT', 'MDP_PSEUDO', 'PERSONNE_NON_AUTORISEE', 'PROFIL_INCONNU', 'PROFIL_INTERDIT', 'VALIDITE_OBLIGATOIRE', 'VALIDITE_PASSEE']
+  .map((c) => [c, { enumerable: true, get: () => texte(`authentification.regles.${c}`, VALEURS_MESSAGES) }]))));
 
 /** Pseudo comparé et enregistré en minuscules, sans espaces autour. */
 export function normaliserPseudo(code) {

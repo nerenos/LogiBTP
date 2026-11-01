@@ -781,3 +781,21 @@ restant livrable seul (le repli sur la clé ou sur le message du serveur ne cass
   corrigés ici ; à rejouer à chaque lot.
 - **Contrôles** : `npm test` (module avec le dictionnaire, clés littérales de `modules/import/js/src` vérifiées par le
   test du client) ; page d'import affichée dans le navigateur (fichier illisible, aperçu d'un devis).
+
+## 33. Réalisation du lot P3t : modules Authentification et Droits (01/11/2026)
+
+- **Périmètre** : les règles des deux modules (`modules/authentification/js/src/regles.js` : états des comptes et
+  messages des règles des pseudos et mots de passe, à variables ; `modules/droits/js/src/regles.js` : libellés des
+  actions et des portées, messages du contrôle des profils ; dépendance au socle, tests avec le dictionnaire, couche
+  `modules/droits/js/personnalisation` ajoutée à `client/personnalisation/couches.js`) et leurs écrans du cœur :
+  connexion (mot de passe oublié, nouveau mot de passe, code de connexion, comptes de test), Mon compte (sessions,
+  machines connues, double facteur), comptes utilisateurs (identifiants d'API, adresses exclues, journal des
+  connexions, usurpation), compte d'une personne (`comptes/comptes.js`), profils et droits (arbre, montants de
+  validation, journal), pastille d'usurpation du bandeau, titres des routes.
+- **Textes** : `authentification.*` et `droits.*` des modules ; `authentification_btp.*` (`connexion`, `mon_compte`,
+  `compte`, `comptes`, `evenements`, `usurpation`) et `droits_btp.*` (`profils`, `evenements`) du cœur.
+- **Icônes** : `authentification_btp_*` (connexion, mot de passe, compte, comptes, déconnexion, machine, API,
+  usurpation, refus…), `droits_btp_*` (droits, hériter, réappliquer, déplié / replié…) ; les événements des journaux
+  associent une icône à un libellé par code (`ICONES_EVENEMENTS` + `textesParCode`).
+- **Contrôles** : `npm test` (clés littérales des deux modules vérifiées par le test du client), analyse des portées
+  (homonyme `texte` renommé dans Mon compte) ; pages affichées dans le navigateur avec une API simulée.

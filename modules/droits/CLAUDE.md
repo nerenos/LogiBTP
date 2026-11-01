@@ -5,8 +5,11 @@
 - Le serveur décide : chaque route `/api` est rattachée à un nœud par la table de la spécialisation ; une route absente de la table est refusée (403 `DROIT_NON_DECLARE`) et signalée au démarrage (exception en développement).
 - Fournit le contrat `IDroits` du socle aux autres modules (Document, Fiche, CRM, Authentification) ; sans module Droits, ces modules gardent leurs tables historiques (`droit_document`, `droit_fiche`, `crm_droit`).
 
+## Textes et icônes (module Personnalisation, lot P3t)
+- Textes `droits.*` du `fr.json` du module (couche `modules/droits/js/personnalisation`) : `actions`, `portees` (`LIBELLES_ACTIONS`, `LIBELLES_PORTEES` par `textesParCode`), `erreurs_regles` (`MESSAGES_DROITS`) ; tests avec le dictionnaire (`test/preparation.js`). Écrans du cœur : `droits_btp.*`.
+
 ## Dépendances
-- JS `@logibtp/droits` : aucune dépendance (règles seules). .NET : `LogiBTP.Droits` (règles), `LogiBTP.Droits.Web` → `LogiBTP.Socle.Web`, EF Core Npgsql. Jamais du cœur ni d'un autre module.
+- JS `@logibtp/droits` : le socle seul (dictionnaire : textes des règles). .NET : `LogiBTP.Droits` (règles), `LogiBTP.Droits.Web` → `LogiBTP.Socle.Web`, EF Core Npgsql. Jamais du cœur ni d'un autre module.
 - Utilisé par : cœur (`SpecialisationDroitsBtp` : catalogue et table des routes ; `Program.cs` : `AddModuleDroits`, `UseDroits` après `UseAuthentificationSession`, `MapModuleDroits`, `VerifierRoutesDroits`) ; client (`app.acces(noeud)`, `app.peut(noeud, action)`, propriété `droit` des menus, page `/parametres/droits`).
 
 ## Structure

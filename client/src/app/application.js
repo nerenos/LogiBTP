@@ -24,7 +24,7 @@ import './terrain/operations-terrain.js';
 import { menus } from './navigation/menus.js';
 import { ROUTES } from './pages/index.js';
 import { CLE_PREFERENCES_NAVIGATION, urlDocument, urlFiche, TYPE_DOCUMENT, SUJET_FENETRE } from './codes.js';
-import { texte } from '@logibtp/socle/dictionnaire';
+import { texte, texteHtml, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { logoApplication } from '../personnalisation.js';
 
 // Application web LogiBTP (cœur) : services partagés par les pages, routeur (navigation classique dans la
@@ -97,7 +97,7 @@ export class Application {
     // Connexion ou déconnexion dans une autre fenêtre du navigateur (même cookie) : cette fenêtre suit.
     this.abonner(SUJET_FENETRE.SESSION, (e) => this.#sessionChangee(e));
     document.addEventListener('click', async (e) => {
-      if (e.target.closest?.('[data-fin-usurpation]') && await confirmer('Terminer l\'usurpation et revenir à votre compte ?')) this.terminerUsurpation().catch((x) => this.erreur(x));
+      if (e.target.closest?.('[data-fin-usurpation]') && await confirmer(texte('authentification_btp.usurpation.terminer_confirmer'))) this.terminerUsurpation().catch((x) => this.erreur(x));
     });
     await this.fenetres.demarrer();
 
@@ -477,7 +477,7 @@ export class Application {
     const us = this.session?.usurpation;
     if (!us) return '';
     const fin = formatHeure(us.fin);
-    return `<button type="button" class="bandeau-usurpation" data-fin-usurpation title="${echapper(`${this.session.code} agit pour ${us.libelle ?? us.code} jusqu'à ${fin} : ${us.motif}. Cliquer pour terminer.`)}">🎭 ${echapper(us.code)} · fin ${fin} ✕</button>`;
+    return `<button type="button" class="bandeau-usurpation" data-fin-usurpation title="${texteHtml('authentification_btp.usurpation.pastille_aide', { code: this.session.code, compte: us.libelle ?? us.code, fin, motif: us.motif })}">${iconeHtml('authentification_btp_usurpation')} ${texteHtml('authentification_btp.usurpation.pastille', { code: us.code, fin })} ${iconeHtml('retirer')}</button>`;
   }
 
   /** Cloche du bandeau : notifications non lues (rouge s'il y en a d'urgentes). */
