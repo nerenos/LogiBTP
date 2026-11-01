@@ -4,9 +4,10 @@
 import { texte, texteHtml, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { Dz } from '@logibtp/socle';
 import { formatNombre, formatDate, formatDateHeure, echapper, celluleCsv } from '@logibtp/socle/ui';
-import { COLONNES_DETAIL, COUT, lignesDetail, anomalie, libelleColonne, infoColonne, regrouperFaits } from '../src/indicateurs.js';
+import { COLONNES_DETAIL, COLONNES_HEURES, COUT, lignesDetail, anomalie, libelleColonne, infoColonne, regrouperFaits } from '../src/indicateurs.js';
 import { COLONNES_LISTE, arbreListe, lignesListe, clesJusqua, arrondiAffiche } from '../src/liste.js';
 import { NIVEAU_LISTE } from '../src/codes.js';
+import { blocResultats } from '../src/resultats.js';
 
 const montant = (v, decimales = 2) => formatNombre(v?.toString?.() ?? v, decimales);
 /** Écart à la référence (contrôle ou photo) sous le chiffre, avec la valeur de référence en bulle. */
@@ -20,13 +21,15 @@ const cellule = (valeur, c, l, ref = null) => {
   // Postes de pied : remises et déductions négatives par nature, jamais en rouge.
   const a = l.type === 'postes' ? null : anomalie(valeur, c.sens);
   const bulle = a ? `${texte(`rentabilite.anomalies.${a}`)}\n${texte('rentabilite.detail.ouvrir_faits')}` : texte('rentabilite.detail.ouvrir_faits');
-  return `<td data-colonne="${c.code}" class="montant rentabilite-bande-${c.teinte}${a ? ' rentabilite-anomalie' : ''}" title="${echapper(bulle)}">${montant(valeur)}${
+  // Heures : vides plutôt que 0,00 (seules les natures de main-d'œuvre en portent).
+  const affiche = c.heures && valeur.isZero() ? '' : montant(valeur);
+  return `<td data-colonne="${c.code}" class="montant rentabilite-bande-${c.teinte}${c.code === 'h_budget' ? ' rentabilite-debut-heures' : ''}${a ? ' rentabilite-anomalie' : ''}" title="${echapper(bulle)}">${affiche}${
     ref ? ecart(valeur, ref.valeurs[c.code] ?? Dz(0), ref.libelle) : ''}</td>`;
 };
 
 /**
  * Tableau du Détail d'un chantier. options : { cout (PA | PR), ordre (undefined = tout, 0 = sans ordre, id), periode
- * (du… au : flux de la période), reference ({ libelle, agregats } : contrôle ou photo, écarts sous les chiffres),
+ * (du… au : flux de la période), heures (colonnes d'heures de main-d'œuvre), reference ({ libelle, agregats } : contrôle ou photo, écarts sous les chiffres),
  * ouvrirFaits({ indicateurs, natures, composante, ordre, colonne, ligne }, nouvelleFenetre) }.
  */
 export class TableauDetail {
@@ -42,7 +45,8 @@ export class TableauDetail {
   /** donnees : { agregats, natures } du serveur (GET /rentabilite/chantiers/{id}). */
   rendre(donnees, options = {}) {
     Object.assign(this.#o, options);
-    const parametres = { natures: donnees.natures ?? [], ordre: this.#o.ordre, cout: this.#o.cout, periode: !!this.#o.periode };
+    const colonnes = this.#o.heures ? [...COLONNES_DETAIL, ...COLONNES_HEURES] : COLONNES_DETAIL;
+    const parametres = { natures: donnees.natures ?? [], ordre: this.#o.ordre, cout: this.#o.cout, periode: !!this.#o.periode, colonnes };
     const ref = this.#o.reference;
     // Avec une référence, ses lignes disparues depuis restent affichées (à zéro) pour que les écarts se lisent ligne à ligne.
     const aZero = (ref?.agregats ?? []).map((a) => ({ ...a, pa: 0, pr: 0, pv: 0, heures: null, pa_periode: 0, pr_periode: 0, pv_periode: 0, heures_periode: null }));
@@ -51,17 +55,17 @@ export class TableauDetail {
     const vide = this.#lignes.length === 1 && COLONNES_DETAIL.every((c) => this.#lignes[0].valeurs[c.code].isZero());
     if (vide) { this.#zone.innerHTML = `<p class="aide">${texteHtml('rentabilite.detail.aucun')}</p>`; return; }
     this.#zone.innerHTML = `<table class="rentabilite-detail tableau-compact">
-      <thead><tr><th>${texteHtml('rentabilite.detail.nature')}</th>${COLONNES_DETAIL.map((c) => `<th class="montant rentabilite-colonne-${c.teinte}" title="${echapper(infoColonne(c))}">${echapper(libelleColonne(c))}</th>`).join('')}</tr></thead>
+      <thead><tr><th>${texteHtml('rentabilite.detail.nature')}</th>${colonnes.map((c) => `<th class="montant rentabilite-colonne-${c.teinte}${c.code === 'h_budget' ? ' rentabilite-debut-heures' : ''}" title="${echapper(infoColonne(c))}">${echapper(libelleColonne(c))}</th>`).join('')}</tr></thead>
       <tbody>${this.#lignes.map((l, i) => `<tr class="rentabilite-ligne-${l.type}" data-i="${i}"${l.info ? ` title="${echapper(l.info)}"` : ''}>
         <th scope="row">${echapper(l.libelle)}</th>
-        ${COLONNES_DETAIL.map((c) => cellule(l.valeurs[c.code], c, l, refs ? refs.get(l.code) ?? { libelle: ref.libelle, valeurs: {} } : null)).join('')}
+        ${colonnes.map((c) => cellule(l.valeurs[c.code], c, l, refs ? refs.get(l.code) ?? { libelle: ref.libelle, valeurs: {} } : null)).join('')}
       </tr>`).join('')}</tbody></table>`;
     const table = this.#zone.querySelector('table');
     table.addEventListener('dblclick', (ev) => {
       const td = ev.target.closest('td[data-colonne]');
       if (!td) return;
       const l = this.#lignes[Number(td.parentElement.dataset.i)];
-      const c = COLONNES_DETAIL.find((x) => x.code === td.dataset.colonne);
+      const c = colonnes.find((x) => x.code === td.dataset.colonne);
       this.#o.ouvrirFaits({ indicateurs: c.faits, natures: l.natures, composante: l.composante, ordre: this.#o.ordre, colonne: c.code, ligne: l.libelle },
         ev.ctrlKey || ev.metaKey);
     });
@@ -263,5 +267,37 @@ export class TableauListe {
       ...tout.map(ligne),
       ligne({ ...this.#racine, profondeur: 0 }),
     ];
+  }
+}
+
+/**
+ * Bloc de résultats sur les PV (§ 4.8) sous le Détail : lignes Budget, Réalisé, Facturé, Reste à facturer, Prévisionnel ;
+ * HT des lignes, postes par libellé, HT net, coût PA et marge brute, coût PR et marge nette (montant et %). options :
+ * { ordre, periode, voirCouts, decimales }.
+ */
+export class TableauResultats {
+  #zone;
+
+  constructor(zone) { this.#zone = zone; }
+
+  /** donnees : { agregats, postes } du Détail. */
+  rendre(donnees, { ordre, periode = false, voirCouts = true } = {}) {
+    const { libelles, lignes } = blocResultats({ agregats: donnees.agregats ?? [], postes: donnees.postes ?? [], ordre, periode });
+    const pct = (v) => (v === null ? '' : texte('rentabilite.liste.pourcent', { valeur: formatNombre(v.toDecimalPlaces(1).toString(), 1) }));
+    const negatif = (v) => (v !== null && v.isNegative() && !v.isZero() ? ' rentabilite-anomalie' : '');
+    const th = (cle, classe = 'montant') => `<th class="${classe}" title="${echapper(texte(`rentabilite.resultats.colonnes.${cle}.info`))}">${texteHtml(`rentabilite.resultats.colonnes.${cle}.libelle`)}</th>`;
+    this.#zone.innerHTML = `<table class="rentabilite-resultats tableau-compact">
+      <thead><tr><th>${texteHtml('rentabilite.resultats.titre')}</th>${th('lignes')}
+        ${libelles.map((l) => `<th class="montant rentabilite-poste" title="${echapper(texte('rentabilite.resultats.colonnes.poste.info'))}">${echapper(l)}</th>`).join('')}
+        ${th('net')}${voirCouts ? `${th('pa')}${th('brute')}${th('taux_brute')}${th('pr')}${th('nette')}${th('taux_nette')}` : ''}</tr></thead>
+      <tbody>${lignes.map((l) => `<tr class="rentabilite-resultat-${l.code}" title="${echapper(texte(`rentabilite.resultats.lignes.${l.code}.info`))}">
+        <th scope="row">${texteHtml(`rentabilite.resultats.lignes.${l.code}.libelle`)}</th>
+        <td class="montant">${montant(l.lignes)}</td>
+        ${libelles.map((x) => `<td class="montant rentabilite-poste">${l.postes.has(x) ? montant(l.postes.get(x)) : ''}</td>`).join('')}
+        <td class="montant rentabilite-net">${montant(l.net)}</td>
+        ${voirCouts ? `<td class="montant">${montant(l.pa)}</td><td class="montant${negatif(l.brute)}">${montant(l.brute)}</td><td class="montant${negatif(l.taux_brute)}">${pct(l.taux_brute)}</td>
+          <td class="montant">${montant(l.pr)}</td><td class="montant${negatif(l.nette)}">${montant(l.nette)}</td><td class="montant${negatif(l.taux_nette)}">${pct(l.taux_nette)}</td>` : ''}
+      </tr>`).join('')}</tbody></table>
+      ${periode ? `<p class="aide">${texteHtml('rentabilite.resultats.periode')}</p>` : ''}`;
   }
 }

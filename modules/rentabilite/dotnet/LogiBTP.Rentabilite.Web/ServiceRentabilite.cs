@@ -26,6 +26,9 @@ public sealed record ResumeCalculLu(long Id, DateTimeOffset Debut, DateTimeOffse
 public sealed record AgregatFaits(long? OrdreId, int? NatId, string Indicateur, string Composante, decimal Pa, decimal Pr, decimal Pv, decimal? Heures, int Nb,
     decimal PaPeriode, decimal PrPeriode, decimal PvPeriode, decimal? HeuresPeriode);
 
+/// <summary>Postes de pied (composante POSTE) par indicateur, ordre et libellé, pour le bloc de résultats (§ 4.8).</summary>
+public sealed record PosteFaits(long? OrdreId, string Indicateur, string Libelle, decimal Pv, decimal PvPeriode);
+
 /// <summary>Somme des faits ouverts d'une règle de contrôle.</summary>
 public sealed record ControleFaits(string Regle, int Nb, decimal Pa, decimal? Heures);
 
@@ -35,7 +38,7 @@ public sealed record ControleFaits(string Regle, int Nb, decimal Pa, decimal? He
 /// </summary>
 public sealed record DetailChantier(ChantierRentabilite Chantier, DateOnly? Du, DateOnly? Au, bool VoirCouts, FraicheurChantier Fraicheur,
     IReadOnlyList<OrdreRentabilite> Ordres, IReadOnlyList<NatureRentabilite> Natures, IReadOnlyList<AgregatFaits> Agregats, IReadOnlyList<ControleFaits> Controles,
-    ControleLu? Controle, IReadOnlyList<PhotoLue> Photos, ReferenceDetail? Reference);
+    ControleLu? Controle, IReadOnlyList<PhotoLue> Photos, ReferenceDetail? Reference, IReadOnlyList<PosteFaits> Postes);
 
 /// <summary>
 /// Filtre de la page des faits (un chiffre du Détail) : indicateurs et natures en listes (nature 0 = « Non ventilé »),
@@ -298,6 +301,13 @@ public partial class ServiceRentabilite(RentabiliteDbContext db, SpecialisationR
             WHERE afa_cha_id = {chantier} AND afa_calcul_fin IS NULL AND afa_regle = ANY({regles}) AND ({au}::date IS NULL OR afa_date <= {au})
             GROUP BY 1 ORDER BY 1
             """).ToListAsync(ct);
+        var postes = await db.Database.SqlQuery<PosteFaits>($"""
+            SELECT afa_ordre_id AS ordre_id, afa_indicateur AS indicateur, coalesce(nullif(trim(afa_libelle), ''), '—') AS libelle,
+                   sum(afa_montant_pv) AS pv, coalesce(sum(afa_montant_pv) FILTER (WHERE afa_date >= {du}), 0) AS pv_periode
+            FROM rentabilite_fait
+            WHERE afa_cha_id = {chantier} AND afa_calcul_fin IS NULL AND afa_composante = {Composante.Poste} AND ({au}::date IS NULL OR afa_date <= {au})
+            GROUP BY 1, 2, 3 ORDER BY 3
+            """).ToListAsync(ct);
         var controle = await DernierControleAsync(u, chantier, ct);
         var photos = await PhotosAsync(chantier, ct);
         ReferenceDetail? reference_ = null;
@@ -316,7 +326,7 @@ public partial class ServiceRentabilite(RentabiliteDbContext db, SpecialisationR
         var natures = await spec.NaturesAsync(db, ct);
         var utilisees = agregats.Concat(reference_?.Agregats ?? []).Where(a => a.NatId is not null).Select(a => a.NatId!.Value).ToHashSet();
         return new DetailChantier(c, du, au, p.VoirCouts, await FraicheurAsync(chantier, ct), await spec.OrdresAsync(db, chantier, ct),
-            natures.Where(n => utilisees.Contains(n.Id)).ToList(), agregats, controles, controle, photos, reference_);
+            natures.Where(n => utilisees.Contains(n.Id)).ToList(), agregats, controles, controle, photos, reference_, postes);
     }
 
     private static AgregatFaits SansCouts(AgregatFaits a) => a with { Pa = 0, Pr = 0, PaPeriode = 0, PrPeriode = 0 };

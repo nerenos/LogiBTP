@@ -24,6 +24,7 @@ public static class Composante
     public const string Materiel = "MATERIEL";
     public const string Stock = "STOCK";
     public const string Poste = "POSTE";
+    public const string Acompte = "ACOMPTE";
 }
 
 /// <summary>Source d'un fait.</summary>

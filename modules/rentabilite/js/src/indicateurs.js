@@ -33,6 +33,22 @@ export const COLONNES_DETAIL = Object.freeze([
   { code: 'reste_facturer', calcul: (v) => v.budget_pv.minus(v.facture), faits: [INDICATEUR.BUDGET, INDICATEUR.FACTURE], sens: SENS.POSITIF, teinte: 'reste-facturer' },
 ].map((c) => Object.freeze({ ...c, faits: c.faits ?? c.indicateurs })));
 
+/**
+ * Colonnes d'heures de main-d'œuvre du Détail (§ 4.9, facultatives) : heures des lignes MO en heures du budget et du
+ * budget d'exécution, heures planifiées restantes (engagé), heures pointées (déboursé), reste = budget d'exécution −
+ * planifié − pointé.
+ */
+export const COLONNES_HEURES = Object.freeze([
+  { code: 'h_budget', indicateurs: [INDICATEUR.BUDGET], champ: 'heures', periode: true, sens: SENS.POSITIF, teinte: 'budget' },
+  { code: 'h_budget_execution', indicateurs: [INDICATEUR.BUDGET_EXECUTION], champ: 'heures', periode: true, sens: SENS.POSITIF, teinte: 'budget-execution' },
+  { code: 'h_planifie', indicateurs: [INDICATEUR.ENGAGE], champ: 'heures', sens: SENS.POSITIF, teinte: 'engage' },
+  { code: 'h_pointe', indicateurs: [INDICATEUR.DEBOURSE], champ: 'heures', periode: true, sens: SENS.POSITIF, teinte: 'debourse' },
+  {
+    code: 'h_reste', calcul: (v) => v.h_budget_execution.minus(v.h_planifie).minus(v.h_pointe),
+    faits: [INDICATEUR.BUDGET_EXECUTION, INDICATEUR.ENGAGE, INDICATEUR.DEBOURSE], sens: SENS.POSITIF, teinte: 'reste-depenser',
+  },
+].map((c) => Object.freeze({ ...c, heures: true, faits: c.faits ?? c.indicateurs })));
+
 /** Libellé et bulle d'une colonne (module Personnalisation). */
 export const libelleColonne = (c) => texte(`rentabilite.colonnes.${c.code}.libelle`);
 export const infoColonne = (c) => texte(`rentabilite.colonnes.${c.code}.info`);
@@ -85,10 +101,10 @@ export const indicateursDe = (colonnes) => new Set(colonnes.flatMap((c) => c.fai
  * ventilé » (faits sans nature hors postes) et « Postes de pied » (composante POSTE). Chaque ligne porte le filtre des
  * faits qui la composent (`natures` : identifiants, 0 = sans nature ; `composante` : POSTE ou !POSTE).
  */
-export function lignesDetail({ agregats, natures, ordre, cout = COUT.PR, periode = false }) {
-  const lus = indicateursDe(COLONNES_DETAIL);
+export function lignesDetail({ agregats, natures, ordre, cout = COUT.PR, periode = false, colonnes = COLONNES_DETAIL }) {
+  const lus = indicateursDe(colonnes);
   const retenus = filtrerOrdre(agregats, ordre).filter((a) => lus.has(a.indicateur));
-  const valeurs = (l) => valeursColonnes(l, cout, { periode });
+  const valeurs = (l) => valeursColonnes(l, cout, { periode, colonnes });
   const lignes = [{ type: 'total', code: 'total', libelle: texte('rentabilite.detail.total'), natures: null, composante: null, valeurs: valeurs(retenus) }];
   const postes = retenus.filter((a) => a.composante === COMPOSANTE.POSTE);
   const ventiles = retenus.filter((a) => a.composante !== COMPOSANTE.POSTE);

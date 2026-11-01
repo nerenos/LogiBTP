@@ -3,7 +3,7 @@ import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, champDate, formatNombre, formatDate, formatDateHeure, lireStockage, ecrireStockage, confirmer, saisir, ouvrirDialogue, telechargerCsv } from '@logibtp/socle/ui';
 import { aujourdhui, Dz } from '@logibtp/socle';
 import { COUT, COLONNES_DETAIL, INDICATEUR, COLONNES_LISTE, NIVEAU_LISTE, RACCOURCI_PERIODE, BORNE_PERIODE, ERREUR_PERIODE, lirePeriode, controlerPeriode, raccourciPeriode } from '@logibtp/rentabilite';
-import { TableauDetail, TableauFaits, TableauListe } from '@logibtp/rentabilite/ui';
+import { TableauDetail, TableauFaits, TableauListe, TableauResultats } from '@logibtp/rentabilite/ui';
 import { TYPE_FICHE, ROLE_RENTABILITE, urlFiche, urlDocument } from '../codes.js';
 import { api } from '../api.js';
 import { champRattachement } from '../structure/selection.js';
@@ -13,6 +13,7 @@ import { champRattachement } from '../structure/selection.js';
 // fenêtre), rapprochement des pièces et des faits, paramètres (rôle des types, taux horaires, frais généraux).
 
 const CLE_COUT = 'rentabiliteCout';
+const CLE_HEURES = 'rentabiliteHeures';
 const montant = (v) => formatNombre(v, 2);
 
 /** Adresse de la page des faits d'un chiffre. */
@@ -311,7 +312,7 @@ export class PageRentabiliteChantier extends PageBase {
   async ouvrir() {
     this.titre = texte('rentabilite_btp.routes.chantier');
     this.filtre = { ordre: this.requete.ordre ?? '', du: this.requete.du ?? '', au: this.requete.au ?? '', reference: this.requete.reference ?? '',
-      cout: lireStockage(CLE_COUT, COUT.PR) === COUT.PA ? COUT.PA : COUT.PR };
+      cout: lireStockage(CLE_COUT, COUT.PR) === COUT.PA ? COUT.PA : COUT.PR, heures: lireStockage(CLE_HEURES, '0') === '1' };
     this.conteneur.innerHTML = '<div class="page-parametres page-rentabilite" data-corps></div>';
     await this.#charger();
   }
@@ -341,9 +342,11 @@ export class PageRentabiliteChantier extends PageBase {
         ${d.voir_couts ? `<label>${texteHtml('rentabilite_btp.chantier.cout')} <span data-cout></span></label>` : ''}
         <label title="${texteHtml('rentabilite_btp.liste.periode_titre')}">${texteHtml('rentabilite_btp.liste.du')} <input type="text" size="10" data-du value="${this.filtre.du ? formatDate(this.filtre.du) : ''}"></label>
         <label title="${texteHtml('rentabilite_btp.chantier.au_titre')}">${texteHtml('rentabilite_btp.chantier.au')} <input type="text" size="10" data-au value="${this.filtre.au ? formatDate(this.filtre.au) : ''}"></label>
-        <label title="${texteHtml('rentabilite_btp.chantier.comparer_titre')}">${texteHtml('rentabilite_btp.chantier.comparer')} <span data-reference></span></label></p>
+        <label title="${texteHtml('rentabilite_btp.chantier.comparer_titre')}">${texteHtml('rentabilite_btp.chantier.comparer')} <span data-reference></span></label>
+        <label title="${texteHtml('rentabilite_btp.chantier.heures_titre')}"><input type="checkbox" data-heures${this.filtre.heures ? ' checked' : ''}> ${texteHtml('rentabilite_btp.chantier.heures')}</label></p>
       ${d.du ? `<p class="aide">${texteHtml('rentabilite_btp.chantier.periode_aide')}</p>` : ''}
       <div data-detail></div>
+      <div data-resultats></div>
       <div data-acomptes></div>
       <div data-photos></div>
       <div data-controles></div>
@@ -380,6 +383,12 @@ export class PageRentabiliteChantier extends PageBase {
     });
     corps.querySelector('[data-reference]').append(reference);
     reference.addEventListener('change', () => { this.filtre.reference = reference.valeurCombo ?? ''; this.#memoriser(); this.#charger(); });
+    corps.querySelector('[data-heures]').addEventListener('change', (e) => {
+      this.filtre.heures = e.target.checked;
+      ecrireStockage(CLE_HEURES, this.filtre.heures ? '1' : '0');
+      this.#rendreDetail();
+    });
+    this.resultats = new TableauResultats(corps.querySelector('[data-resultats]'));
     corps.querySelector('[data-controle]').addEventListener('click', async () => {
       try {
         await api.rentabilite.controler([c.id]);
@@ -476,8 +485,10 @@ export class PageRentabiliteChantier extends PageBase {
     const r = this.donnees.reference;
     const libelle = r ? (r.code === 'controle' ? texte('rentabilite_btp.chantier.reference_controle', { date: formatDateHeure(r.le) })
       : texte('rentabilite_btp.chantier.reference_photo', { date: formatDate(r.au), libelle: '' }).trim()) : null;
-    this.tableau.rendre(this.donnees, { cout: this.filtre.cout, ordre: this.filtre.ordre === '' ? undefined : this.filtre.ordre, periode: !!this.donnees.du,
+    const ordre = this.filtre.ordre === '' ? undefined : this.filtre.ordre;
+    this.tableau.rendre(this.donnees, { cout: this.filtre.cout, ordre, periode: !!this.donnees.du, heures: this.filtre.heures,
       reference: r ? { libelle, agregats: r.agregats } : null });
+    this.resultats.rendre(this.donnees, { ordre, periode: !!this.donnees.du, voirCouts: this.donnees.voir_couts });
   }
 
   /** Contrôles (§ 10) : pointages non valorisés, valorisés au taux du service, sorties sans prix, tâches sans taux. */

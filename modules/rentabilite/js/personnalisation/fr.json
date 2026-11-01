@@ -16,7 +16,8 @@
       "MO": "Main-d'œuvre",
       "MATERIEL": "Matériel",
       "STOCK": "Stock",
-      "POSTE": "Postes de pied"
+      "POSTE": "Postes de pied",
+      "ACOMPTE": "Factures d'acompte"
     },
     "colonnes": {
       "budget": {
@@ -78,6 +79,26 @@
       "acompte_reste": {
         "libelle": "Reste d'acompte",
         "info": "Acompte payé − acompte utilisé"
+      },
+      "h_budget": {
+        "libelle": "H budget",
+        "info": "Heures des lignes de main-d'œuvre en heures des commandes (budget)"
+      },
+      "h_budget_execution": {
+        "libelle": "H budget d'exécution",
+        "info": "Heures de main-d'œuvre du budget d'exécution (ordres d'exécution)"
+      },
+      "h_planifie": {
+        "libelle": "H planifiées",
+        "info": "Heures du planning restant à faire après le dernier pointage (engagé)"
+      },
+      "h_pointe": {
+        "libelle": "H pointées",
+        "info": "Heures pointées (déboursé)"
+      },
+      "h_reste": {
+        "libelle": "H restantes",
+        "info": "Heures du budget d'exécution − planifiées − pointées ; négatif : dépassement"
       }
     },
     "anomalies": {
@@ -168,6 +189,69 @@
     "periodes": {
       "PERIODE_DATE": "Période illisible : saisissez une année (2026), un mois (10/2026) ou une date",
       "PERIODE_ORDRE": "Le début de la période est après sa fin"
+    },
+    "resultats": {
+      "titre": "Résultats sur les PV",
+      "periode": "Période : budget, réalisé, facturé et déboursé sont ceux de la période ; reste à facturer et prévisionnel au cumul.",
+      "lignes": {
+        "budget": {
+          "libelle": "Budget",
+          "info": "Budget PV face au budget PA / PR"
+        },
+        "realise": {
+          "libelle": "Réalisé",
+          "info": "Lignes facturées après déduction du précédent, sans factures d'acompte ni postes, face au déboursé"
+        },
+        "facture": {
+          "libelle": "Facturé",
+          "info": "Facturé (lignes, factures d'acompte et postes) face au déboursé à la même date"
+        },
+        "reste_facturer": {
+          "libelle": "Reste à facturer",
+          "info": "Budget − facturé, face au reste à dépenser"
+        },
+        "previsionnel": {
+          "libelle": "Prévisionnel",
+          "info": "À terminaison : budget PV face au dépensé + reste à dépenser"
+        }
+      },
+      "colonnes": {
+        "lignes": {
+          "libelle": "HT des lignes",
+          "info": "Prix client : HT des lignes vendues, base des deux marges"
+        },
+        "poste": {
+          "info": "Poste de pied HT (remise, compte prorata, révision, déduction…)"
+        },
+        "net": {
+          "libelle": "HT net",
+          "info": "HT des lignes + postes de pied"
+        },
+        "pa": {
+          "libelle": "Coût PA",
+          "info": "Coût en face de la ligne, au prix d'achat"
+        },
+        "brute": {
+          "libelle": "Marge brute",
+          "info": "HT des lignes − coût PA"
+        },
+        "taux_brute": {
+          "libelle": "% brute",
+          "info": "Marge brute / HT des lignes"
+        },
+        "pr": {
+          "libelle": "Coût PR",
+          "info": "Coût en face de la ligne, au prix de revient (frais généraux compris)"
+        },
+        "nette": {
+          "libelle": "Marge nette",
+          "info": "HT des lignes − coût PR"
+        },
+        "taux_nette": {
+          "libelle": "% nette",
+          "info": "Marge nette / HT des lignes"
+        }
+      }
     }
   },
   "erreurs": {

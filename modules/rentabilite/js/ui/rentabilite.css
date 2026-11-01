@@ -60,3 +60,13 @@
 .rentabilite-liste input[type="checkbox"] { margin: 0 0.3em 0 0; vertical-align: middle; }
 .rentabilite-changements { font-size: 0.85em; margin-left: 0.4em; }
 .rentabilite-ecart { display: block; font-size: 0.8em; color: var(--rentabilite-ecart); }
+
+/* Heures de main-d'œuvre du Détail et bloc de résultats (§ 4.8). */
+.rentabilite-detail .rentabilite-debut-heures { border-left: 2px solid var(--rentabilite-ecart); }
+.rentabilite-detail td.rentabilite-debut-heures { box-shadow: inset 2px 0 0 var(--rentabilite-ecart); }
+.rentabilite-resultats th[scope="row"] { text-align: left; font-weight: normal; white-space: nowrap; }
+.rentabilite-resultats .montant { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.rentabilite-resultats .rentabilite-poste { font-style: italic; }
+.rentabilite-resultats .rentabilite-net { font-weight: 600; }
+.rentabilite-resultats .rentabilite-resultat-budget th, .rentabilite-resultats .rentabilite-resultat-budget td { background: var(--rentabilite-groupe-fond); }
+.rentabilite-resultats .rentabilite-resultat-previsionnel th, .rentabilite-resultats .rentabilite-resultat-previsionnel td { background: var(--rentabilite-total-fond); font-weight: 600; }

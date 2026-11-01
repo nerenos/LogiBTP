@@ -7934,7 +7934,9 @@
       "reference_photo": "Photo du {{date}} {{libelle}}",
       "periode_aide": "Période : budget, budget d'exécution, déboursé et facturé sont ceux de la période ; engagé, dépensé et restes sont au cumul à la fin de la période.",
       "acomptes": "Acomptes en trésorerie",
-      "acomptes_aide": "Montants TTC des acomptes en trésorerie des marchés du chantier : payés (règlements pointés, ou reçus sans le module Règlements) et déduits des pièces."
+      "acomptes_aide": "Montants TTC des acomptes en trésorerie des marchés du chantier : payés (règlements pointés, ou reçus sans le module Règlements) et déduits des pièces.",
+      "heures": "Heures MO",
+      "heures_titre": "Ajoute les heures de main-d'œuvre : budget, budget d'exécution, planifiées, pointées, restantes"
     },
     "fraicheur": {
       "calcule": "Calculé le {{date}} ({{declencheur}})",

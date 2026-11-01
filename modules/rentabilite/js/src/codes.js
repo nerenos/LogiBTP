@@ -20,6 +20,7 @@ export const COMPOSANTE = Object.freeze({
   MATERIEL: 'MATERIEL',
   STOCK: 'STOCK',
   POSTE: 'POSTE',
+  ACOMPTE: 'ACOMPTE',
 });
 
 /** Source d'un fait. */

@@ -39,7 +39,7 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
     public const string Noeud = "rentabilite";
     public const string NoeudCouts = "rentabilite/couts";
 
-    public override int VersionRegles => 2;
+    public override int VersionRegles => 3;
 
     /// <summary>Règles appliquées (afa_regle), affichées dans la page des faits.</summary>
     public static class Regles
@@ -94,7 +94,7 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
         string? NatureAvoir, bool Annule, decimal TotalHt, long? Ordre, bool SansCommande, string? Numero);
 
     private sealed record LigneSql(long LigId, long EntId, long? ParentId, int Ordre, short Tyl, string TypePrix, decimal Ht, decimal Pa, decimal Pr,
-        decimal Qte, string? Unite, int? NatId, int? ChaId, long? ArtId, string? Libelle, long? AvtSource, bool Solde);
+        decimal Qte, string? Unite, int? NatId, int? ChaId, long? ArtId, string? Libelle, long? AvtSource, bool Solde, bool Heures);
 
     private sealed record LienSql(long Source, long Cible, decimal Qte);
     private sealed record SoldeSql(long LigId, DateOnly Date);
@@ -154,7 +154,9 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
                    coalesce(l.lig_type_prix, 'V') AS type_prix, coalesce(l.lig_montant_ht, 0) AS ht, coalesce(l.lig_montant_pa, 0) AS pa,
                    coalesce(l.lig_montant_pr, 0) AS pr, coalesce(l.lig_qte_totale, l.lig_qte, 0) AS qte, l.lig_unt_code AS unite, l.lig_nat_id AS nat_id,
                    l.lig_cha_id AS cha_id, l.lig_art_id AS art_id, left(coalesce(l.lig_libelle_brut, l.lig_libelle_affiche), 200) AS libelle,
-                   l.lig_avt_source_lig_id AS avt_source, coalesce(l.lig_solde, FALSE) AS solde
+                   l.lig_avt_source_lig_id AS avt_source, coalesce(l.lig_solde, FALSE) AS solde,
+                   (lower(coalesce(l.lig_unt_code, '')) IN ('h', 'heure', 'heures')
+                    AND EXISTS (SELECT 1 FROM nature_element n WHERE n.nat_id = l.lig_nat_id AND n.nat_rgn_code = 'MO')) AS heures
             FROM document_ligne l WHERE l.lig_ent_id = ANY({ents}) AND l.lig_tyl_id IN (1, 2, 3, 8, 11)
             """).ToListAsync(ct);
         c.Charger(pieces, lignes);
@@ -440,9 +442,11 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
                 var pas = Repartir(signe * feuille.Pa, repartition.Select(x => x.Part).ToList());
                 var prs = Repartir(signe * feuille.Pr, repartition.Select(x => x.Part).ToList());
                 var pvs = Repartir(pv, repartition.Select(x => x.Part).ToList());
+                var hs = feuille.Heures ? Repartir(signe * feuille.Qte, repartition.Select(x => x.Part).ToList()) : null;
                 for (var i = 0; i < repartition.Count; i++)
                     Ajouter(indicateur, Composante.Vente, date, p, feuille, feuille.NatId, pas[i], prs[i], pvs[i], regle, repartition[i].Oe,
-                        qte: repartition.Count == 1 ? signe * feuille.Qte : null, unite: feuille.Unite);
+                        qte: repartition.Count == 1 ? signe * feuille.Qte : null, unite: feuille.Unite,
+                        heures: hs?[i]);
             }
         }
 
@@ -494,7 +498,8 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
                 var pv = sources.Sum(k => Lignes[k.Source].Ht * PartLien(k, Lignes[k.Source]));
                 foreach (var (feuille, pvf) in Ventiler(l, pv))
                     Ajouter(Indicateur.BudgetExecution, Composante.Vente, p.Date, p, feuille, feuille.NatId, feuille.Pa, feuille.Pr, pvf,
-                        sources.Count > 0 ? Regles.OeReprise : Regles.OeAjout, p.EntId, qte: feuille.Qte, unite: feuille.Unite);
+                        sources.Count > 0 ? Regles.OeReprise : Regles.OeAjout, p.EntId, qte: feuille.Qte, unite: feuille.Unite,
+                        heures: feuille.Heures ? feuille.Qte : null);
             }
             foreach (var p in Pieces.Values.Where(p => p.Role == RolesRentabilite.OrdreExecution))
                 foreach (var x in fraisAnnexes[p.EntId].Where(x => ChantierDe(x, p) == chantier))
@@ -527,8 +532,10 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
             {
                 var commande = CommandeDe(l);
                 var oe = commande is null ? null : Reprises(commande).OrderByDescending(x => x.Part).Select(x => (long?)x.Oe).FirstOrDefault();
+                // Factures d'acompte : composante à part, hors du « réalisé » du bloc de résultats (Q15).
+                var composante = p.Role == RolesRentabilite.FactureAcompte ? Composante.Acompte : Composante.Vente;
                 foreach (var (feuille, pv) in Ventiler(l, Signe(p) * l.Ht))
-                    Ajouter(Indicateur.Facture, Composante.Vente, p.Date, p, feuille, feuille.NatId, 0, 0, pv, Regles.FactureLigne, oe ?? p.Ordre);
+                    Ajouter(Indicateur.Facture, composante, p.Date, p, feuille, feuille.NatId, 0, 0, pv, Regles.FactureLigne, oe ?? p.Ordre);
             }
             foreach (var p in Pieces.Values.Where(p => roles.Contains(p.Role))) PiedEtFrais(Indicateur.Facture, p, Signe(p), p.Date, Composante.Vente, false);
         }
@@ -883,7 +890,9 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
             SELECT l.lig_id, l.lig_ent_id AS ent_id, l.lig_parent_id AS parent_id, l.lig_ordre AS ordre, l.lig_tyl_id AS tyl,
                    coalesce(l.lig_type_prix, 'V') AS type_prix, coalesce(l.lig_montant_ht, 0) AS ht, coalesce(l.lig_montant_pa, 0) AS pa,
                    coalesce(l.lig_montant_pr, 0) AS pr, coalesce(l.lig_qte_totale, l.lig_qte, 0) AS qte, l.lig_unt_code AS unite, l.lig_nat_id AS nat_id,
-                   l.lig_cha_id AS cha_id, l.lig_art_id AS art_id, NULL::text AS libelle, l.lig_avt_source_lig_id AS avt_source, FALSE AS solde
+                   l.lig_cha_id AS cha_id, l.lig_art_id AS art_id, NULL::text AS libelle, l.lig_avt_source_lig_id AS avt_source, FALSE AS solde,
+                   (lower(coalesce(l.lig_unt_code, '')) IN ('h', 'heure', 'heures')
+                    AND EXISTS (SELECT 1 FROM nature_element n WHERE n.nat_id = l.lig_nat_id AND n.nat_rgn_code = 'MO')) AS heures
             FROM document_ligne l WHERE l.lig_ent_id = ANY({ents}) AND l.lig_tyl_id IN (1, 2, 3, 8, 11)
             """).ToListAsync(ct);
         c.Charger(retenues, lignesSql);
