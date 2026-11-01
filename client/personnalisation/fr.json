@@ -243,7 +243,7 @@
         "SEMAINE": "À la semaine"
       },
       "interimaires": "Intérimaires",
-      "interim_imputes": "Heures imputées aux chantiers avec un coût",
+      "interim_imputes": "Intérimaires valorisés au taux de leur mission (sinon : heures sans coût, coût par les factures de l'agence)",
       "sous_types": "Sous-types de main-d'œuvre",
       "sous_types_aide": "Le type de main-d'œuvre est une nature du regroupement Main-d'œuvre (bibliothèque) ; le sous-type précise l'activité.",
       "productif": "Productif",
@@ -8017,7 +8017,13 @@
       "ACOMPTE_PAYE": "Règlement pointé sur un reçu d'acompte",
       "ACOMPTE_RECU": "Reçu d'acompte (montant)",
       "ACOMPTE_UTILISE": "Acompte déduit d'une pièce",
-      "PRODUCTION_LIGNE": "Ligne de situation de production : écart avec la situation de production précédente"
+      "PRODUCTION_LIGNE": "Ligne de situation de production : écart avec la situation de production précédente",
+      "POINTAGE_INTERIM": "Pointage d'intérimaire : heures sans valeur (coût par les factures de l'agence)",
+      "POINTAGE_MISSION": "Pointage d'intérimaire valorisé au taux de sa mission",
+      "POINTAGE_MATERIEL": "Heures de matériel pointées au coût horaire du matériel",
+      "MATERIEL_LOUE": "Heures de matériel loué (coût par la commande de location)",
+      "MATERIEL_SANS_COUT": "Heures de matériel sans coût horaire (fiche ou type)",
+      "TACHE_MATERIEL": "Matériel planifié (après son dernier pointage)"
     },
     "roles": {
       "COMMANDE_VENTE": "Commande client (budget)",
@@ -8068,6 +8074,12 @@
       "taux_aide": "Valorise les pointages sans coût horaire et les tâches planifiées (signalés dans « À vérifier »).",
       "service": "Service",
       "taux_horaire": "Taux horaire",
+      "materiel": "Coût horaire du matériel",
+      "materiel_aide": "Valorise les heures de matériel pointées (déboursé du chantier pointé) et planifiées (engagé), hors matériel loué. Le coût saisi sur la fiche du matériel l'emporte ; sinon celui de son type, sinon du type parent.",
+      "type_materiel": "Type de matériel",
+      "cout_horaire": "Coût horaire",
+      "nature_materiel": "Nature des heures de matériel",
+      "nature_materiel_vide": "Non ventilé",
       "coefs": "Coefficients de frais généraux",
       "coefs_aide": "Prix de revient = prix d'achat × coefficient, par nature (vide : toutes) à partir d'une date.",
       "nature": "Nature",

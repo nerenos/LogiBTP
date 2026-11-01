@@ -102,6 +102,7 @@ export const api = {
     enregistrerRoles: (l) => appel('PUT', '/rentabilite/parametres/roles', l),
     enregistrerTaux: (l) => appel('PUT', '/rentabilite/parametres/taux', l),
     enregistrerCoefs: (l) => appel('PUT', '/rentabilite/parametres/coefs', l),
+    enregistrerMateriel: (m) => appel('PUT', '/rentabilite/parametres/materiel', m),
   },
   execution: {
     types: () => appel('GET', '/execution/types'),

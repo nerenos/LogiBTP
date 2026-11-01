@@ -29,6 +29,10 @@
   lot G1 : appliquer `db/250` (révision des prix : index, formules, paramètres des marchés) puis saisir ou importer les
   valeurs des index utilisés (`/parametres/revision`) ; libellés du catalogue BT à vérifier ; rejouer le `191` régénéré
   (bloc `REVISION_PRIX` des situations et factures d'avancement).
+- [ ] Module Rentabilité, lot 5 : appliquer `db/261` (coût horaire du matériel, paramètres, triggers ; chantiers ouverts
+  remis en file pour la version 5 des règles) et rejouer le `131` régénéré (coût moyen horaire de la fiche matériel) ;
+  saisir les coûts horaires par type de matériel et la nature des heures de matériel dans `/parametres/rentabilite`,
+  vérifier l'option des intérimaires dans `/parametres/pointage` (non cochée : heures sans coût).
 - [ ] Module Rentabilité, lot 4 : appliquer `modules/document/db/019q` (type d'avancement D) puis `db/260` (type
   `V_PRODUCTION`, transformation depuis la commande, droits, rôle PRODUCTION ; chantiers ouverts remis en file pour la
   version 4 des règles), rejouer les `121`, `176` et `191` régénérés (thème de liste Situations, vue des colonnes,
@@ -238,7 +242,8 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
   des pièces, chargé d'affaires en individu, chantiers d'une pièce, garde-fou des unités), lot 1 réalisé (faits
   versionnés, file, nuit, Détail, faits, rapprochement, rôles des types paramétrés), lot 2 réalisé (Liste
   multi-origine, période, vues, acomptes en trésorerie, contrôles et changements, photos), lot 3 réalisé (bloc de résultats PV, heures MO), lot 4 réalisé (situation de production, colonnes croisées,
-  préchargement, production, FAE / PCA) ; lots 5 à 8 à réaliser. Plus
+  préchargement, production, FAE / PCA) ; lot 5 réalisé (coût horaire du matériel, matériel pointé et planifié, option des
+  intérimaires) ; lots 6 à 8 à réaliser. Plus
   tard (Q17) : historique du chargé d'affaires d'une affaire et d'un chantier (aujourd'hui seul le chargé d'affaires
   actuel compte, sur toute la période). Simplifications du lot 1 à revoir :
   - PV ventilé sur les feuilles d'un ouvrage au prorata du PR (à défaut du PA, sinon à parts égales), l'analyse parlant
@@ -246,7 +251,6 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
   - engagé planifié : prorata calendaire des tâches, daté du jour (seuls faits exclus de la comparaison de nuit) ;
   - ligne de commande reprise par plusieurs ordres : répartie au prorata ; facturé rattaché à l'ordre le plus important ;
   - choix de l'ordre sur les lignes d'achat (R4) non fait : l'ordre d'une pièce d'achat est celui de son entête ;
-  - matériel (lot 5) et option de valorisation des intérimaires non faits ;
   - lignes de `rentabilite_calcul` jamais purgées ; suppression d'un lien entre pièces non signalée (rattrapée la nuit) ;
   - chantier qui tient un stock : ses articles de stock ignorés (consommés à la sortie) ;
   - portées EQUIPE et SERVICE du droit `rentabilite` traitées comme SOI (chargé, conducteur, responsable de l'affaire).
@@ -266,6 +270,10 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
     production précédente ; production sans postes de pied (lignes vendues seules) ;
   - colonnes croisées : quantité, % et montant cumulés de l'autre situation, sans colonne d'écart en période ;
   - onglet Gestion du marché sans les situations de production ; édition par le modèle de la situation de travaux.
+  Simplifications du lot 5 à revoir :
+  - coût horaire du matériel non daté (R9) ; matériel loué = loueur renseigné et location non terminée à la date ;
+  - tâche affectée seulement à du matériel : pas de main-d'œuvre théorique (comme une tâche affectée à des intérimaires) ;
+  - intérimaires valorisés : coût du pointage s'il est valorisé, sinon taux de la mission à la date (pas de taux moyen).
 - [ ] Module Comptabilité avancée : à définir (voir aussi « Module Comptabilité complet »).
 - [ ] Module de gestion des risques : à définir.
 - [ ] Module de circuit de validation : à définir.
@@ -286,7 +294,7 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
 - [ ] Tarifs fournisseurs (lot 8 réalisé) : formats d'import personnalisés (module Import : correspondance de colonnes enregistrée par fournisseur), remises par famille d'articles et catalogues, unités synonymes à l'import (A18b).
 - [ ] Projet (lot 6) : retirer l'ancien texte `prj_responsable` quand les responsables auront été repris en individus (démo `structure/donnees.js`, `db/161`, `SpecialisationCrmBtp.CreerProjetAsync` qui l'écrit encore) ; zone de déplacement du projet reprise par le chantier ouvert depuis le projet (zones du Pointage par agence).
 - [ ] Matériel (lot 5c réalisé) : import des cartes carburant (module Import, M8) ; relevés de compteurs saisis à la borne (source BORNE prévue) ; données de démonstration d'entretiens (aujourd'hui tous en retard faute d'historique).
-- [ ] Refacturation interne du matériel aux chantiers où il travaille (coût horaire d'usage, M4 du lot 5c) : décision de la future analyse de rentabilité ; le coût par heure est affiché dans l'onglet Coûts.
+- [ ] Refacturation interne du matériel (M4 du lot 5c) : les heures pointées et planifiées sont valorisées sur les chantiers où il travaille (module Rentabilité, lot 5) ; reste à créditer le chantier de suivi du matériel du même montant (produit interne) et à proposer le coût par heure de l'onglet Coûts comme coût moyen de la fiche.
 
 ## Interface
 

@@ -641,7 +641,7 @@ export class PageRentabiliteRapprochement extends PageBase {
   }
 }
 
-/** Paramètres (administrateur) : rôle de chaque type de pièce, taux horaire par service, coefficients de frais généraux. */
+/** Paramètres (administrateur) : rôle de chaque type de pièce, taux horaire par service, coût du matériel, coefficients de frais généraux. */
 export class PageParametresRentabilite extends PageBase {
   icone = icone('rentabilite_detail');
   #modifie = false;
@@ -656,12 +656,14 @@ export class PageParametresRentabilite extends PageBase {
     this.conteneur.innerHTML = `<div class="page-parametres page-rentabilite"><div class="entete-page"><h1 class="page-titre">${iconeHtml('rentabilite_detail')} ${texteHtml('rentabilite_btp.routes.parametres')}</h1></div>
       <h2>${texteHtml('rentabilite_btp.parametres.roles')}</h2><p class="aide">${texteHtml('rentabilite_btp.parametres.roles_aide')}</p><div data-roles></div>
       <h2>${texteHtml('rentabilite_btp.parametres.taux')}</h2><p class="aide">${texteHtml('rentabilite_btp.parametres.taux_aide')}</p><div data-taux></div>
+      <h2>${texteHtml('rentabilite_btp.parametres.materiel')}</h2><p class="aide">${texteHtml('rentabilite_btp.parametres.materiel_aide')}</p><div data-materiel></div>
       <h2>${texteHtml('rentabilite_btp.parametres.coefs')}</h2><p class="aide">${texteHtml('rentabilite_btp.parametres.coefs_aide')}</p><div data-coefs></div>
       ${admin ? `<p class="aide">${texteHtml('rentabilite_btp.parametres.recalcul')}</p>` : `<p class="aide">${texteHtml('rentabilite_btp.parametres.lecture')}</p>`}</div>`;
     let p;
     try { p = await api.rentabilite.parametres(); } catch (e) { this.app.erreur(e); return; }
     this.#roles(p.roles, admin);
     this.#taux(p.taux, admin);
+    this.#materiel(p.materiel, p.natures, admin);
     this.#coefs(p.coefs, p.natures, admin);
   }
 
@@ -703,6 +705,27 @@ export class PageParametresRentabilite extends PageBase {
       this.#modifie = true;
     }));
     if (admin) this.#bouton(zone, () => api.rentabilite.enregistrerTaux(taux));
+  }
+
+  /** Coût horaire par type de matériel (sous-types en retrait) et nature des heures de matériel. */
+  #materiel(materiel, natures, admin) {
+    const zone = this.conteneur.querySelector('[data-materiel]');
+    const options = natures.map((n) => ({ valeur: String(n.id), libelle: `${n.code} – ${n.libelle}`, detail: n.code }));
+    zone.innerHTML = `<p class="ligne"><label>${texteHtml('rentabilite_btp.parametres.nature_materiel')} <span data-nature></span></label></p>
+      <table class="tableau-compact"><thead><tr><th>${texteHtml('rentabilite_btp.parametres.type_materiel')}</th><th class="montant">${texteHtml('rentabilite_btp.parametres.cout_horaire')}</th></tr></thead>
+      <tbody>${materiel.couts.map((c, i) => `<tr><td${c.parent ? ' class="rentabilite-sous-type"' : ''}>${echapper(c.libelle)}</td>
+        <td><input data-i="${i}" size="8" inputmode="decimal" class="montant" value="${c.cout === null ? '' : echapper(formatNombre(c.cout, 2))}" ${admin ? '' : 'readonly'}></td></tr>`).join('')}</tbody></table>`;
+    const nature = creerCombo({ options, valeur: materiel.nature === null ? '' : String(materiel.nature), vide: true });
+    nature.placeholder = texte('rentabilite_btp.parametres.nature_materiel_vide');
+    if (!admin) nature.readOnly = true;
+    nature.addEventListener('change', () => { materiel.nature = nature.valeurCombo ? Number(nature.valeurCombo) : null; this.#modifie = true; });
+    zone.querySelector('[data-nature]').append(nature);
+    zone.querySelectorAll('input[data-i]').forEach((input) => input.addEventListener('change', () => {
+      const v = input.value.trim().replace(/\s/g, '').replace(',', '.');
+      materiel.couts[Number(input.dataset.i)].cout = v === '' ? null : v;
+      this.#modifie = true;
+    }));
+    if (admin) this.#bouton(zone, () => api.rentabilite.enregistrerMateriel(materiel));
   }
 
   #coefs(coefs, natures, admin) {

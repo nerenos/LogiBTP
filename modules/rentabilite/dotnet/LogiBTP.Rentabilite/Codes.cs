@@ -36,6 +36,7 @@ public static class SourceFait
     public const string Tache = "TACHE";
     public const string Mouvement = "MOUVEMENT";
     public const string Reglement = "REGLEMENT";
+    public const string PointageMateriel = "POINTAGE_MATERIEL";
 }
 
 /// <summary>État d'un calcul (rca_etat).</summary>

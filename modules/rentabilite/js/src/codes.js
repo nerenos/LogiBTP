@@ -31,6 +31,7 @@ export const SOURCE_FAIT = Object.freeze({
   TACHE: 'TACHE',
   MOUVEMENT: 'MOUVEMENT',
   REGLEMENT: 'REGLEMENT',
+  POINTAGE_MATERIEL: 'POINTAGE_MATERIEL',
 });
 
 /** État d'un calcul (rca_etat). */

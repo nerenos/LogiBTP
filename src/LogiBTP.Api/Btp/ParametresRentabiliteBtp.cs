@@ -7,7 +7,8 @@ namespace LogiBTP.Api.Btp;
 
 /// <summary>
 /// Paramètres du module Rentabilité (db/258, page /parametres/rentabilite) : rôle de chaque type de pièce (§ 4.1), taux
-/// horaire moyen par service (Q8, R2), coefficients de frais généraux par nature et par date (Q7). Écriture réservée aux
+/// horaire moyen par service (Q8, R2), coefficients de frais généraux par nature et par date (Q7), coût horaire par type de
+/// matériel et nature des heures de matériel (db/261, lot 5, R9). Écriture réservée aux
 /// administrateurs ; toute modification met les chantiers ouverts dans la file (les règles appliquées changent).
 /// </summary>
 public static class ParametresRentabiliteBtp
@@ -17,6 +18,8 @@ public static class ParametresRentabiliteBtp
     public sealed record CoefNature(int? NatId, DateOnly Depuis, decimal Coef);
     public sealed record ServiceLu(int Id, string Libelle);
     public sealed record NatureLue(int Id, string Code, string Libelle);
+    public sealed record CoutTypeMateriel(string Type, string Libelle, string? Parent, decimal? Cout);
+    public sealed record ParametresMateriel(int? Nature, List<CoutTypeMateriel> Couts);
 
     public static RouteGroupBuilder MapParametresRentabilite(this RouteGroupBuilder api)
     {
@@ -38,6 +41,16 @@ public static class ParametresRentabiliteBtp
             natures = await db.Database.SqlQuery<NatureLue>($"""
                 SELECT nat_id AS id, nat_code AS code, nat_libelle AS libelle FROM nature_element WHERE nat_actif ORDER BY nat_code
                 """).ToListAsync(ct),
+            materiel = new ParametresMateriel(
+                (await db.Database.SqlQuery<int?>($"SELECT rpa_nat_materiel AS \"Value\" FROM rentabilite_parametre WHERE rpa_id = 1").ToListAsync(ct)).FirstOrDefault(),
+                await db.Database.SqlQuery<CoutTypeMateriel>($"""
+                    SELECT v.lva_code AS type, v.lva_libelle AS libelle, v.lva_parent AS parent, r.rcm_cout AS cout
+                    FROM liste_valeur v
+                    LEFT JOIN liste_valeur p ON p.lva_liste = v.lva_liste AND p.lva_code = v.lva_parent
+                    LEFT JOIN rentabilite_cout_materiel r ON r.rcm_type = v.lva_code
+                    WHERE v.lva_liste = 'TYPE_MATERIEL' AND (v.lva_actif OR r.rcm_cout IS NOT NULL)
+                    ORDER BY coalesce(p.lva_ordre, v.lva_ordre), coalesce(p.lva_code, v.lva_code), v.lva_parent NULLS FIRST, v.lva_ordre
+                    """).ToListAsync(ct)),
         });
 
         api.MapPut("/rentabilite/parametres/roles", async (List<RoleType> roles, HttpContext http, LogiBtpContext db, ServiceRentabilite s, CancellationToken ct) =>
@@ -74,6 +87,26 @@ public static class ParametresRentabiliteBtp
             foreach (var t in taux.Where(t => t.Taux is not null))
                 await db.Database.ExecuteSqlInterpolatedAsync($"""
                     INSERT INTO rentabilite_taux_service (rts_srv_id, rts_taux, rts_maj_par) VALUES ({t.SrvId}, {t.Taux}, {u.Code})
+                    """, ct);
+            await tx.CommitAsync(ct);
+            await ToutRecalculerAsync(db, s, u, ct);
+            return Results.NoContent();
+        });
+
+        api.MapPut("/rentabilite/parametres/materiel", async (ParametresMateriel m, HttpContext http, LogiBtpContext db, ServiceRentabilite s, CancellationToken ct) =>
+        {
+            var u = Utilisateur.Depuis(http);
+            u.ExigerAdmin();
+            if (m.Couts.Any(c => c.Cout < 0)) throw ExceptionMetier.Invalide("RENTABILITE_COUT_MATERIEL", "Un coût horaire de matériel est positif ou nul");
+            await using var tx = await db.Database.BeginTransactionAsync(ct);
+            await db.Database.ExecuteSqlInterpolatedAsync($"""
+                INSERT INTO rentabilite_parametre (rpa_id, rpa_nat_materiel, rpa_maj_par) VALUES (1, {m.Nature}, {u.Code})
+                ON CONFLICT (rpa_id) DO UPDATE SET rpa_nat_materiel = EXCLUDED.rpa_nat_materiel, rpa_maj_par = EXCLUDED.rpa_maj_par, rpa_maj_le = now()
+                """, ct);
+            await db.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM rentabilite_cout_materiel", ct);
+            foreach (var c in m.Couts.Where(c => c.Cout is not null))
+                await db.Database.ExecuteSqlInterpolatedAsync($"""
+                    INSERT INTO rentabilite_cout_materiel (rcm_type, rcm_cout, rcm_maj_par) VALUES ({c.Type}, {c.Cout}, {u.Code})
                     """, ct);
             await tx.CommitAsync(ct);
             await ToutRecalculerAsync(db, s, u, ct);

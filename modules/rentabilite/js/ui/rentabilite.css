@@ -73,3 +73,4 @@
 .rentabilite-resultats .rentabilite-net { font-weight: 600; }
 .rentabilite-resultats .rentabilite-resultat-budget th, .rentabilite-resultats .rentabilite-resultat-budget td { background: var(--rentabilite-groupe-fond); }
 .rentabilite-resultats .rentabilite-resultat-previsionnel th, .rentabilite-resultats .rentabilite-resultat-previsionnel td { background: var(--rentabilite-total-fond); font-weight: 600; }
+.page-rentabilite .rentabilite-sous-type { padding-left: 1.5em; }

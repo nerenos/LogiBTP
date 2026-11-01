@@ -34,6 +34,12 @@ namespace LogiBTP.Api.Btp;
 /// <item>Production (§ 4.12, lot 4) : situations de production valables, cumulées ; chaque situation apporte l'écart de
 /// chaque ligne du marché avec la situation de production précédente (date, puis création), ventilé comme le budget,
 /// daté de la situation ; lignes seules (ni postes de pied ni frais annexes).</item>
+/// <item>Matériel (lot 5, V46, R9) : heures pointées (<c>pointage_materiel</c>) en déboursé du chantier pointé, heures
+/// planifiées (affectations après le dernier pointage du matériel) en engagé, au coût moyen horaire de la fiche, sinon du
+/// type ou de son parent (<c>f_cout_horaire_materiel</c>), nature des paramètres ; matériel loué : heures sans valeur (coût
+/// par la commande de location), jamais engagé par le planning.</item>
+/// <item>Intérimaires (V43, R10) : option du Pointage ; non cochée, heures sans valeur (coût par les factures de l'agence) ;
+/// cochée, coût valorisé du pointage sinon taux de la mission à la date.</item>
 /// </list>
 /// PR des coûts réels = PA × coefficient de frais généraux de la nature à la date (<c>rentabilite_coef_fg</c>).
 /// </summary>
@@ -42,7 +48,7 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
     public const string Noeud = "rentabilite";
     public const string NoeudCouts = "rentabilite/couts";
 
-    public override int VersionRegles => 4;
+    public override int VersionRegles => 5;
 
     /// <summary>Règles appliquées (afa_regle), affichées dans la page des faits.</summary>
     public static class Regles
@@ -82,10 +88,16 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
         public const string AcompteRecu = "ACOMPTE_RECU";
         public const string AcompteUtilise = "ACOMPTE_UTILISE";
         public const string ProductionLigne = "PRODUCTION_LIGNE";
+        public const string PointageInterim = "POINTAGE_INTERIM";
+        public const string PointageMission = "POINTAGE_MISSION";
+        public const string PointageMateriel = "POINTAGE_MATERIEL";
+        public const string MaterielLoue = "MATERIEL_LOUE";
+        public const string MaterielSansCout = "MATERIEL_SANS_COUT";
+        public const string TacheMateriel = "TACHE_MATERIEL";
     }
 
     public override IReadOnlyList<string> ReglesControle { get; } =
-        [Regles.PointageNonValorise, Regles.PointageTauxService, Regles.StockNonValorise, Regles.TacheSansTaux];
+        [Regles.PointageNonValorise, Regles.PointageTauxService, Regles.StockNonValorise, Regles.TacheSansTaux, Regles.MaterielSansCout];
 
     public override bool DependDuJour(Fait f) => f.SourceType == SourceFait.Tache;
 
@@ -103,12 +115,19 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
     private sealed record LienSql(long Source, long Cible, decimal Qte);
     private sealed record SoldeSql(long LigId, DateOnly Date);
     private sealed record CoefSql(int? NatId, DateOnly Depuis, decimal Coef);
-    private sealed record PointageSql(long PoiId, DateOnly Date, long? OrdreId, int? NatureId, int? SrvId, int Minutes, decimal? Cout, string? Salarie);
+    private sealed record PointageSql(long PoiId, DateOnly Date, long? OrdreId, int? NatureId, int? SrvId, int Minutes, decimal? Cout, string? Salarie,
+        bool Interim, decimal? TauxMission);
+    private sealed record PointageMaterielSql(long PmaId, int MatId, DateOnly Date, int Minutes, long? TacId);
+    private sealed record MaterielSql(int Id, decimal? Cout, bool Loueur, DateOnly? FinLocation, DateOnly? Derniere, string? Libelle)
+    {
+        /// <summary>Loué à cette date : un loueur et la location non terminée.</summary>
+        public bool Loue(DateOnly date) => Loueur && (FinLocation is null || date <= FinLocation);
+    }
     private sealed record OrdreSql(long Ent, long? Oe);
     private sealed record MouvementSql(long MvtId, long EntId, long? LigId, DateOnly Date, decimal Qte, decimal? Prix, string? Unite, int? NatId, string? Libelle);
     private sealed record CarburantSql(long MevId, DateOnly Date, decimal? Cout, string? Libelle);
     private sealed record TacheSql(long TacId, DateTime Debut, DateTime Fin, int Heures, int? SrvId, string? OrigineType, string? OrigineId, string? Libelle,
-        string? ResType, string? ResId, int? AffHeures);
+        string? ResType, string? ResId, int? AffHeures, decimal? AffQuantite);
     private sealed record TauxSql(int Id, decimal? Taux);
     private sealed record AcompteSql(string Indicateur, string Regle, DateOnly Date, long EntId, string Type, int MarId, string Source, long? SourceId,
         decimal Montant, string? Libelle);
@@ -188,16 +207,33 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
         // Pointages retenus (couche validée si la semaine l'est, sinon saisie).
         var pointages = await db.Database.SqlQuery<PointageSql>($"""
             SELECT p.poi_id, p.date_pointage AS date, p.ordre_id, p.nature_id, p.srv_id, p.minutes::int AS minutes, p.cout,
-                   nullif(concat_ws(' ', s.sal_prenom, s.sal_nom), '') AS salarie
+                   nullif(concat_ws(' ', s.sal_prenom, s.sal_nom), '') AS salarie, coalesce(s.sal_statut = 'INTERIM', FALSE) AS interim,
+                   CASE WHEN s.sal_statut = 'INTERIM' THEN (SELECT m.mis_taux_horaire FROM mission_interim m WHERE m.mis_sal_id = s.sal_id
+                        AND p.date_pointage BETWEEN m.mis_debut AND m.mis_fin ORDER BY m.mis_debut DESC LIMIT 1) END AS taux_mission
             FROM v_pointages_retenus p LEFT JOIN salarie s ON s.sal_id = p.sal_id
             WHERE p.chantier_id = {chantier}
             """).ToListAsync(ct);
+        c.InterimValorises = (await db.Database.SqlQuery<bool>($"SELECT ppa_interim_imputes AS \"Value\" FROM poi_parametre WHERE ppa_id = 1").ToListAsync(ct))
+            .FirstOrDefault();
         var ordresPointes = pointages.Where(p => p.OrdreId is not null).Select(p => p.OrdreId!.Value).Distinct().ToArray();
         Dictionary<long, long?> oes = ordresPointes.Length == 0 ? [] : (await db.Database.SqlQuery<OrdreSql>($"""
             SELECT x AS ent, f_rentabilite_ordre(x) AS oe FROM unnest({ordresPointes}) x
             """).ToListAsync(ct)).ToDictionary(o => o.Ent, o => o.Oe);
         c.Pointages(pointages, oes);
 
+        // Matériel (lot 5) : heures pointées sur le chantier, coût horaire effectif, location, dernier pointage.
+        c.NatureMateriel = (await db.Database.SqlQuery<int?>($"SELECT rpa_nat_materiel AS \"Value\" FROM rentabilite_parametre WHERE rpa_id = 1").ToListAsync(ct))
+            .FirstOrDefault();
+        var pointagesMateriel = await db.Database.SqlQuery<PointageMaterielSql>($"""
+            SELECT pma_id, pma_mat_id AS mat_id, pma_date AS date, pma_minutes AS minutes, pma_tac_id AS tac_id
+            FROM pointage_materiel WHERE pma_cha_id = {chantier}
+            """).ToListAsync(ct);
+        var materielsPointes = pointagesMateriel.Select(p => p.MatId).ToArray();
+        var tachesPointees = pointagesMateriel.Where(p => p.TacId is not null).Select(p => p.TacId!.Value).Distinct().ToArray();
+        Dictionary<long, long?> oeTachesMateriel = tachesPointees.Length == 0 ? [] : (await db.Database.SqlQuery<OrdreSql>($"""
+            SELECT t.tac_id AS ent, f_rentabilite_ordre(t.tac_origine_id::bigint) AS oe FROM pla_tache t
+            WHERE t.tac_id = ANY({tachesPointees}) AND t.tac_origine_type = 'ordre' AND t.tac_origine_id ~ '^\d+$'
+            """).ToListAsync(ct)).ToDictionary(o => o.Ent, o => o.Oe);
         if (!tientStock)
         {
             var mouvements = await db.Database.SqlQuery<MouvementSql>($"""
@@ -255,14 +291,24 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
             """).ToListAsync(ct);
         c.Acomptes(acomptes);
 
-        // Main-d'œuvre planifiée (engagé, datée du jour) : tâches non terminées du chantier qui finissent aujourd'hui ou après.
+        // Main-d'œuvre et matériel planifiés (engagé, daté du jour) : tâches non terminées du chantier qui finissent aujourd'hui ou après.
         var taches = await db.Database.SqlQuery<TacheSql>($"""
             SELECT t.tac_id, t.tac_debut AS debut, t.tac_fin AS fin, t.tac_heures AS heures, t.tac_srv_id AS srv_id, t.tac_origine_type AS origine_type,
-                   t.tac_origine_id AS origine_id, t.tac_libelle AS libelle, a.aff_res_type AS res_type, a.aff_res_id AS res_id, a.aff_heures AS aff_heures
+                   t.tac_origine_id AS origine_id, t.tac_libelle AS libelle, a.aff_res_type AS res_type, a.aff_res_id AS res_id, a.aff_heures AS aff_heures,
+                   a.aff_quantite
             FROM pla_tache t LEFT JOIN pla_affectation a ON a.aff_tac_id = t.tac_id
             WHERE t.tac_type_element = 'chantier' AND t.tac_id_element = {chantier.ToString()} AND t.tac_etat <> 'TERMINEE'
               AND t.tac_fin::date >= {aujourdhui}
             """).ToListAsync(ct);
+        var materielsPlanifies = taches.Where(t => t.ResType == "MATERIEL" && int.TryParse(t.ResId, out _)).Select(t => int.Parse(t.ResId!));
+        var idsMateriel = materielsPointes.Concat(materielsPlanifies).Distinct().ToArray();
+        c.Materiels = idsMateriel.Length == 0 ? [] : (await db.Database.SqlQuery<MaterielSql>($"""
+            SELECT m.mat_id AS id, f_cout_horaire_materiel(m.mat_id) AS cout, m.mat_loueur_id IS NOT NULL AS loueur, m.mat_fin_location AS fin_location,
+                   (SELECT max(p.pma_date) FROM pointage_materiel p WHERE p.pma_mat_id = m.mat_id) AS derniere,
+                   left(concat_ws(' ', m.mat_code, m.mat_designation), 200) AS libelle
+            FROM materiel m WHERE m.mat_id = ANY({idsMateriel})
+            """).ToListAsync(ct)).ToDictionary(m => m.Id);
+        c.PointagesMateriel(pointagesMateriel, oeTachesMateriel);
         if (taches.Count > 0)
         {
             var salaries = taches.Where(t => t.ResType == "SALARIE" && int.TryParse(t.ResId, out _)).Select(t => int.Parse(t.ResId!)).Distinct().ToArray();
@@ -300,6 +346,9 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
         public List<LienSql> Liens { get; set; } = [];
         public Dictionary<long, DateOnly> Soldes { get; set; } = [];
         public HashSet<long> ArticlesStock { get; set; } = [];
+        public bool InterimValorises { get; set; }
+        public int? NatureMateriel { get; set; }
+        public Dictionary<int, MaterielSql> Materiels { get; set; } = [];
 
         private readonly Dictionary<long, List<LigneSql>> enfants = [];
         private readonly Dictionary<long, List<LigneSql>> vendues = [];
@@ -410,7 +459,8 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
             string regle, long? ordre, string? libelle = null, decimal? qte = null, string? unite = null, decimal? heures = null, string source = SourceFait.Document,
             long? sourceId = null)
         {
-            if (pa == 0 && pr == 0 && pv == 0 && (heures ?? 0) == 0 && regle is not (Regles.PointageNonValorise or Regles.StockNonValorise or Regles.TacheSansTaux)) return;
+            if (pa == 0 && pr == 0 && pv == 0 && (heures ?? 0) == 0 && regle is not (Regles.PointageNonValorise or Regles.StockNonValorise or Regles.TacheSansTaux or Regles.MaterielLoue
+            or Regles.MaterielSansCout)) return;
             Faits.Add(new Fait(chantier, ordre, p?.Marche, indicateur, composante, date, nature, qte, unite, pa, pr, pv, heures, source, p?.Type, p?.EntId,
                 l?.LigId, sourceId, regle, libelle ?? l?.Libelle));
         }
@@ -698,12 +748,34 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
             foreach (var x in pointages)
             {
                 var heures = x.Minutes / 60m;
-                var (pa, regle) = x.Cout is { } c ? (c, Regles.Pointage)
+                // Intérimaire (R10) : heures sans valeur si l'option du Pointage n'est pas cochée (coût par les factures de l'agence).
+                var (pa, regle) = x.Interim && !InterimValorises ? (0m, Regles.PointageInterim)
+                    : x.Cout is { } c ? (c, Regles.Pointage)
+                    : x.Interim && x.TauxMission is { } tm ? (R6(heures * tm), Regles.PointageMission)
                     : x.SrvId is { } s && TauxService.TryGetValue(s, out var t) ? (heures * t, Regles.PointageTauxService)
                     : (0m, Regles.PointageNonValorise);
                 var ordre = x.OrdreId is { } o ? oes.GetValueOrDefault(o) : null;
                 Ajouter(Indicateur.Debourse, Composante.Mo, x.Date, null, null, x.NatureId, pa, pa * Coef(x.NatureId, x.Date), 0, regle, ordre, x.Salarie, heures, "h",
                     heures, SourceFait.Pointage, x.PoiId);
+            }
+        }
+
+        /// <summary>
+        /// Heures pointées du matériel (V46) : déboursé du chantier pointé au coût horaire effectif ; matériel loué à la date :
+        /// heures sans valeur (coût par la commande de location) ; sans coût : signalé. Heures en quantité (h), jamais en heures de MO.
+        /// </summary>
+        public void PointagesMateriel(List<PointageMaterielSql> pointages, Dictionary<long, long?> oes)
+        {
+            foreach (var x in pointages)
+            {
+                var heures = x.Minutes / 60m;
+                var m = Materiels.GetValueOrDefault(x.MatId);
+                var (pa, regle) = m is not null && m.Loue(x.Date) ? (0m, Regles.MaterielLoue)
+                    : m?.Cout is { } cout ? (R6(heures * cout), Regles.PointageMateriel)
+                    : (0m, Regles.MaterielSansCout);
+                var ordre = x.TacId is { } t ? oes.GetValueOrDefault(t) : null;
+                Ajouter(Indicateur.Debourse, Composante.Materiel, x.Date, null, null, NatureMateriel, pa, pa * Coef(NatureMateriel, x.Date), 0, regle, ordre,
+                    m?.Libelle, heures, "h", null, SourceFait.PointageMateriel, x.PmaId);
             }
         }
 
@@ -740,7 +812,8 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
         /// <summary>
         /// Main-d'œuvre planifiée (V35, V36) : tâche affectée à des salariés, part de chaque affectation après la dernière saisie
         /// du salarié, à son taux ; tâche théorique sans affectation, part après la dernière saisie du chantier, au taux du
-        /// service. Part = jours calendaires restants / jours de la tâche. Intérim, matériel et sous-traitants : par leurs commandes.
+        /// service. Part = jours calendaires restants / jours de la tâche. Matériel hors location : heures après son dernier
+        /// pointage, au coût horaire effectif (lot 5). Intérim, matériel loué et sous-traitants : par leurs commandes.
         /// </summary>
         public void Planning(List<TacheSql> taches, Dictionary<int, decimal?> taux, Dictionary<int, DateOnly?> dernieres, DateOnly? derniereChantier,
             Dictionary<long, long?> oes, Dictionary<int, int> naturesService)
@@ -768,6 +841,15 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
                     Ajouter(Indicateur.Engage, Composante.Mo, aujourdhui, null, null, nature, pa, pa * Coef(nature, aujourdhui), 0,
                         tauxService is null ? Regles.TacheSansTaux : Regles.TacheTheorique, ordre, t.Libelle, heures, "h", heures, SourceFait.Tache, t.TacId);
                     continue;
+                }
+                // Matériel planifié hors location (V35) : heures après son dernier pointage × quantité, au coût horaire effectif.
+                foreach (var a in affectations.Where(a => a.ResType == "MATERIEL" && int.TryParse(a.ResId, out _)))
+                {
+                    if (!Materiels.TryGetValue(int.Parse(a.ResId!), out var m) || m.Loue(aujourdhui)) continue;
+                    var heures = R6((a.AffHeures ?? 0) / 60m * (a.AffQuantite ?? 1) * Reste(t, m.Derniere));
+                    var pa = R6(heures * (m.Cout ?? 0));
+                    Ajouter(Indicateur.Engage, Composante.Materiel, aujourdhui, null, null, NatureMateriel, pa, pa * Coef(NatureMateriel, aujourdhui), 0,
+                        m.Cout is null ? Regles.TacheSansTaux : Regles.TacheMateriel, ordre, $"{t.Libelle} · {m.Libelle}", heures, "h", null, SourceFait.Tache, t.TacId);
                 }
                 foreach (var a in affectations.Where(a => a.ResType == "SALARIE" && int.TryParse(a.ResId, out _)))
                 {

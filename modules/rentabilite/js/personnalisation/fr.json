@@ -167,7 +167,8 @@
       "POINTAGE": "Pointages",
       "TACHE": "Planning",
       "MOUVEMENT": "Mouvements de stock",
-      "REGLEMENT": "Règlements"
+      "REGLEMENT": "Règlements",
+      "POINTAGE_MATERIEL": "Pointages du matériel"
     },
     "liste": {
       "total": "Total",
