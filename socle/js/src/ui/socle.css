@@ -13,6 +13,17 @@ body {
   color: var(--texte);
 }
 button, input, select { font: inherit; color: inherit; }
+
+/* Emoji par shortcode (« :nom: » → <img class="emoji">, emoji / appliquerEmojis de @logibtp/socle/dictionnaire) : image
+   fixe à la taille du texte qui l'entoure, quel que soit l'appareil. Images : images/emojis/ des couches. */
+img.emoji {
+  display: inline-block;
+  width: var(--emoji-taille);
+  height: var(--emoji-taille);
+  margin: 0 var(--emoji-marge);
+  vertical-align: var(--emoji-decalage);
+  object-fit: contain;
+}
 button {
   background: var(--surface);
   border: 1px solid var(--bord);

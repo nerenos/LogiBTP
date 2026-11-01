@@ -14,6 +14,7 @@ import '@logibtp/execution/ui/atelier.css';
 import '@logibtp/annuaire/ui/annuaire.css';
 import '@logibtp/entreprises-fr/ui/entreprises.css';
 import './styles.css';
+import { observerEmojis } from '@logibtp/socle/dictionnaire';
 import { chargerPersonnalisation } from './personnalisation.js';
 
 // Application web LogiBTP : accueil, bandeau à menus, pages (listes, fiches, documents, GED, paramètres),
@@ -22,6 +23,8 @@ import { chargerPersonnalisation } from './personnalisation.js';
 // modules (constantes comprises) s'évaluent avec le dictionnaire chargé. L'aperçu de la page quittée reste affiché.
 async function demarrer() {
   await chargerPersonnalisation();
+  // Shortcodes « :nom: » des textes affichés remplacés par les images fixes de images/emojis.json (§ 42).
+  observerEmojis(document.body);
   const { Application } = await import('./app/application.js');
   const app = new Application();
   // Débogage en développement uniquement.

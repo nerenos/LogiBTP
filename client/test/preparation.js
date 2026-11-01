@@ -3,5 +3,5 @@ import { composer } from '@logibtp/personnalisation';
 import { initialiserDictionnaire } from '@logibtp/socle/dictionnaire';
 import { COUCHES } from '../personnalisation/couches.js';
 
-const { libelles, icones } = composer(COUCHES);
-initialiserDictionnaire({ libelles, icones });
+const { libelles, icones, emojis } = composer(COUCHES);
+initialiserDictionnaire({ libelles, icones, emojis });

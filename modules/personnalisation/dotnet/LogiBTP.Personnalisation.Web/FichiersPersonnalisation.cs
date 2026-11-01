@@ -15,7 +15,7 @@ public sealed record FichierPersonnalisation(byte[] Contenu, string Type, string
 /// (wwwroot/personnalisation, produits par la construction du client) surchargés par ceux de l'installation
 /// (dossier LOGIBTP_PERSONNALISATION, par défaut {LOGIBTP_CONFIG}/personnalisation) :
 /// <list type="bullet">
-/// <item>fr.json et images/icones.json : fusion profonde (l'installation ne donne que les clés changées) ;
+/// <item>fr.json, images/icones.json et images/emojis.json : fusion profonde (l'installation ne donne que les clés changées) ;
 ///   _meta.version de fr.json = empreinte du résultat (adresses des images relues quand la personnalisation change) ;</item>
 /// <item>theme.css : celui du programme puis celui de l'installation (ses variables l'emportent) ;</item>
 /// <item>autres fichiers de images/ : celui de l'installation s'il existe, sinon celui du programme.</item>
@@ -27,6 +27,7 @@ public sealed class FichiersPersonnalisation(string dossierProgramme, string? do
 {
     public const string Dictionnaire = "fr.json";
     public const string Icones = "images/icones.json";
+    public const string Emojis = "images/emojis.json";
     public const string Theme = "theme.css";
 
     private readonly ConcurrentDictionary<string, (string Signature, FichierPersonnalisation Fichier)> _cache = new();
@@ -85,7 +86,7 @@ public sealed class FichiersPersonnalisation(string dossierProgramme, string? do
     private static FichierPersonnalisation Composer(string relatif, string? programme, string? installation)
     {
         byte[] contenu;
-        if (relatif is Dictionnaire or Icones && installation is not null)
+        if (relatif is Dictionnaire or Icones or Emojis && installation is not null)
         {
             var fusion = Socle.Dictionnaire.Fusionner(LireJson(programme), LireJson(installation));
             if (relatif == Dictionnaire)

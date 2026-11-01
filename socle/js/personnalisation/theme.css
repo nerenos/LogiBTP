@@ -33,6 +33,10 @@
   --grille-retrait-max: 4rem;
   --grille-guide: rgba(100, 116, 139, 0.35);
   --grille-signal: var(--alerte);
+  /* Emojis par shortcode (« :casque: » → images/emojis/, § 42) : taille relative au texte et alignement sur la ligne. */
+  --emoji-taille: 1.25em;
+  --emoji-decalage: -0.25em;
+  --emoji-marge: 0.05em;
 }
 :root[data-densite="compacte"] {
   --taille-texte: 13px;

@@ -21,12 +21,16 @@ const socle = couche('socle', {
   'fr.json': { _meta: { langue: 'fr-FR', version: 'x' }, commun: { ok: 'OK', annuler: 'Annuler' } },
   'theme.css': ':root { --accent: blue; }',
   'images/icones.json': { parametres: '⚙' },
+  'images/emojis.json': { valide: 'emojis/valide.svg' },
+  'images/emojis/valide.svg': '<svg>valide</svg>',
   'images/logo.svg': '<svg>socle</svg>',
 });
 const coeur = couche('coeur', {
   'fr.json': { commun: { ok: 'D\'accord' }, application: { nom: 'LogiBTP' } },
   'theme.css': ':root { --accent: red; }',
   'images/icones.json': { chantier: '👷' },
+  'images/emojis.json': { casque: 'emojis/casque.svg' },
+  'images/emojis/casque.svg': '<svg>casque</svg>',
   'images/logo.svg': '<svg>coeur</svg>',
   'images/borne/fond.png': 'png',
 });
@@ -40,6 +44,13 @@ describe('composition des couches', () => {
     expect(c.libelles._meta.langue).toBe('fr-FR');
     expect(c.libelles._meta.version).toMatch(/^[0-9a-f]{16}$/);
     expect(c.icones).toEqual({ parametres: '⚙', chantier: '👷' });
+  });
+
+  it('fusionne les catalogues d\'emojis et sert leurs images (§ 42)', () => {
+    expect(c.emojis).toEqual({ valide: 'emojis/valide.svg', casque: 'emojis/casque.svg' });
+    expect(JSON.parse(contenu(c, 'images/emojis.json').corps)).toEqual(c.emojis);
+    expect(String(contenu(c, 'images/emojis/casque.svg').corps)).toBe('<svg>casque</svg>');
+    expect(c.images.has('images/emojis.json')).toBe(false);
   });
 
   it('concatène les thèmes dans l\'ordre et retient la dernière image', () => {
@@ -81,7 +92,7 @@ describe('index.html', () => {
     const b = balisesHtml(['images/logo.svg'], 'images/icone.svg');
     expect(b.map((x) => `${x.attrs.rel} ${x.attrs.href}`)).toEqual([
       'icon /personnalisation/images/icone.svg', 'preload /personnalisation/fr.json', 'preload /personnalisation/images/icones.json',
-      'preload /personnalisation/images/logo.svg', 'stylesheet /personnalisation/theme.css',
+      'preload /personnalisation/images/emojis.json',      'preload /personnalisation/images/logo.svg', 'stylesheet /personnalisation/theme.css',
     ]);
     expect(b.every((x) => x.tag === 'link')).toBe(true);
   });
