@@ -2,19 +2,31 @@
 // indicateur, total en haut, montants anormaux en rouge, double-clic = faits du chiffre) et tableau des faits regroupés par
 // pièce. Composants sans métier : l'application fournit les agrégats, les natures, les faits et l'ouverture d'une pièce.
 import { texte, texteHtml, iconeHtml } from '@logibtp/socle/dictionnaire';
-import { formatNombre, formatDate, echapper } from '@logibtp/socle/ui';
+import { Dz } from '@logibtp/socle';
+import { formatNombre, formatDate, formatDateHeure, echapper, celluleCsv } from '@logibtp/socle/ui';
 import { COLONNES_DETAIL, COUT, lignesDetail, anomalie, libelleColonne, infoColonne, regrouperFaits } from '../src/indicateurs.js';
+import { COLONNES_LISTE, arbreListe, lignesListe, clesJusqua, arrondiAffiche } from '../src/liste.js';
+import { NIVEAU_LISTE } from '../src/codes.js';
 
-const montant = (v) => formatNombre(v?.toString?.() ?? v, 2);
-const cellule = (valeur, c, l) => {
+const montant = (v, decimales = 2) => formatNombre(v?.toString?.() ?? v, decimales);
+/** Écart à la référence (contrôle ou photo) sous le chiffre, avec la valeur de référence en bulle. */
+const ecart = (valeur, reference, libelleReference) => {
+  if (reference === undefined || reference === null || valeur === null || reference.equals(valeur)) return '';
+  const d = valeur.minus(reference);
+  return `<small class="rentabilite-ecart" title="${echapper(texte('rentabilite.detail.reference_valeur', { reference: libelleReference, valeur: montant(reference) }))}">${
+    echapper(texte(d.isNegative() ? 'rentabilite.detail.ecart_moins' : 'rentabilite.detail.ecart_plus', { valeur: montant(d.abs()) }))}</small>`;
+};
+const cellule = (valeur, c, l, ref = null) => {
   // Postes de pied : remises et déductions négatives par nature, jamais en rouge.
   const a = l.type === 'postes' ? null : anomalie(valeur, c.sens);
   const bulle = a ? `${texte(`rentabilite.anomalies.${a}`)}\n${texte('rentabilite.detail.ouvrir_faits')}` : texte('rentabilite.detail.ouvrir_faits');
-  return `<td data-colonne="${c.code}" class="montant rentabilite-bande-${c.teinte}${a ? ' rentabilite-anomalie' : ''}" title="${echapper(bulle)}">${montant(valeur)}</td>`;
+  return `<td data-colonne="${c.code}" class="montant rentabilite-bande-${c.teinte}${a ? ' rentabilite-anomalie' : ''}" title="${echapper(bulle)}">${montant(valeur)}${
+    ref ? ecart(valeur, ref.valeurs[c.code] ?? Dz(0), ref.libelle) : ''}</td>`;
 };
 
 /**
- * Tableau du Détail d'un chantier. options : { cout (PA | PR), ordre (undefined = tout, 0 = sans ordre, id),
+ * Tableau du Détail d'un chantier. options : { cout (PA | PR), ordre (undefined = tout, 0 = sans ordre, id), periode
+ * (du… au : flux de la période), reference ({ libelle, agregats } : contrôle ou photo, écarts sous les chiffres),
  * ouvrirFaits({ indicateurs, natures, composante, ordre, colonne, ligne }, nouvelleFenetre) }.
  */
 export class TableauDetail {
@@ -30,14 +42,19 @@ export class TableauDetail {
   /** donnees : { agregats, natures } du serveur (GET /rentabilite/chantiers/{id}). */
   rendre(donnees, options = {}) {
     Object.assign(this.#o, options);
-    this.#lignes = lignesDetail({ agregats: donnees.agregats ?? [], natures: donnees.natures ?? [], ordre: this.#o.ordre, cout: this.#o.cout });
+    const parametres = { natures: donnees.natures ?? [], ordre: this.#o.ordre, cout: this.#o.cout, periode: !!this.#o.periode };
+    const ref = this.#o.reference;
+    // Avec une référence, ses lignes disparues depuis restent affichées (à zéro) pour que les écarts se lisent ligne à ligne.
+    const aZero = (ref?.agregats ?? []).map((a) => ({ ...a, pa: 0, pr: 0, pv: 0, heures: null, pa_periode: 0, pr_periode: 0, pv_periode: 0, heures_periode: null }));
+    this.#lignes = lignesDetail({ ...parametres, agregats: [...(donnees.agregats ?? []), ...aZero] });
+    const refs = ref ? new Map(lignesDetail({ ...parametres, agregats: ref.agregats ?? [] }).map((l) => [l.code, { libelle: ref.libelle, valeurs: l.valeurs }])) : null;
     const vide = this.#lignes.length === 1 && COLONNES_DETAIL.every((c) => this.#lignes[0].valeurs[c.code].isZero());
     if (vide) { this.#zone.innerHTML = `<p class="aide">${texteHtml('rentabilite.detail.aucun')}</p>`; return; }
     this.#zone.innerHTML = `<table class="rentabilite-detail tableau-compact">
       <thead><tr><th>${texteHtml('rentabilite.detail.nature')}</th>${COLONNES_DETAIL.map((c) => `<th class="montant rentabilite-colonne-${c.teinte}" title="${echapper(infoColonne(c))}">${echapper(libelleColonne(c))}</th>`).join('')}</tr></thead>
       <tbody>${this.#lignes.map((l, i) => `<tr class="rentabilite-ligne-${l.type}" data-i="${i}"${l.info ? ` title="${echapper(l.info)}"` : ''}>
         <th scope="row">${echapper(l.libelle)}</th>
-        ${COLONNES_DETAIL.map((c) => cellule(l.valeurs[c.code], c, l)).join('')}
+        ${COLONNES_DETAIL.map((c) => cellule(l.valeurs[c.code], c, l, refs ? refs.get(l.code) ?? { libelle: ref.libelle, valeurs: {} } : null)).join('')}
       </tr>`).join('')}</tbody></table>`;
     const table = this.#zone.querySelector('table');
     table.addEventListener('dblclick', (ev) => {
@@ -106,5 +123,145 @@ export class TableauFaits {
       ev.preventDefault();
       this.#o.ouvrirPiece(Number(a.dataset.piece), ev.ctrlKey || ev.metaKey);
     }));
+  }
+}
+
+const LIGNES_DETAILLABLES = new Set(['chantier', 'ordre', 'sans_ordre']);
+
+/**
+ * Tableau de la Liste (§ 6) : arbre chargé d'affaires › affaire › chantier › ordre (ou affaire › …), total figé en pied,
+ * montants anormaux en rouge, fraîcheur et changements depuis le contrôle de l'utilisateur, arrondi 0 ou 2 décimales,
+ * colonnes en période. options : { cout, periode, decimales, niveau, etats: Map(cha_id → état), selection (Set de
+ * chantiers cochés), ouvrirDetail(chantier, nouvelleFenetre), ouvrirFaits({ chantier, ordre, indicateurs, colonne },
+ * nouvelleFenetre), ouvrirChangements(chantier, nouvelleFenetre), selectionModifiee(Set) }.
+ */
+export class TableauListe {
+  #zone;
+  #o;
+  #racine = null;
+  #lignes = [];
+  #ouverts = new Set();
+  #donnees = null;
+
+  constructor(zone, options = {}) {
+    this.#zone = zone;
+    this.#o = { cout: COUT.PR, periode: false, decimales: 2, niveau: NIVEAU_LISTE.AFFAIRE, etats: new Map(), selection: new Set(),
+      ouvrirDetail: () => {}, ouvrirFaits: () => {}, ouvrirChangements: () => {}, selectionModifiee: () => {}, ...options };
+  }
+
+  /** donnees : { chantiers, ordres, agregats } du serveur (GET /rentabilite/chantiers). */
+  rendre(donnees, options = {}) {
+    if (donnees) this.#donnees = donnees;
+    const niveau = this.#o.niveau;
+    Object.assign(this.#o, options);
+    const d = this.#donnees ?? { chantiers: [], agregats: [], ordres: [] };
+    this.#racine = arbreListe({ chantiers: d.chantiers ?? [], agregats: d.agregats ?? [], ordres: d.ordres ?? [], niveau: this.#o.niveau,
+      cout: this.#o.cout, periode: this.#o.periode });
+    // Changement d'origine : groupes repliés jusqu'au chantier.
+    if (niveau !== this.#o.niveau || !this.#ouverts.size) this.#ouverts = new Set(clesJusqua(this.#racine, this.#o.niveau === NIVEAU_LISTE.CHARGE ? 'charge' : 'affaire'));
+    this.#dessiner();
+  }
+
+  /** Ouvre tout jusqu'au type donné (charge, affaire, chantier) ou referme tout (null). */
+  ouvrirJusqua(type) {
+    this.#ouverts = new Set(type ? clesJusqua(this.#racine, type) : []);
+    this.#dessiner();
+  }
+
+  get racine() { return this.#racine; }
+
+  #valeur(v, c) {
+    if (v === null || v === undefined) return '';
+    if (c.pourcent) return texte('rentabilite.liste.pourcent', { valeur: formatNombre(arrondiAffiche(v, 1).toString(), 1) });
+    if (c.heures) return v.isZero() ? '' : formatNombre(arrondiAffiche(v, 2).toString(), 2);
+    return formatNombre(arrondiAffiche(v, this.#o.decimales).toString(), this.#o.decimales);
+  }
+
+  #cellule(l, c) {
+    const v = l.valeurs[c.code];
+    const a = v === null ? null : anomalie(v, c.sens);
+    const detaillable = LIGNES_DETAILLABLES.has(l.type) && !c.pourcent;
+    const bulle = [a ? texte(`rentabilite.anomalies.${a}`) : '', detaillable ? texte('rentabilite.liste.ouvrir_faits') : ''].filter(Boolean).join('\n');
+    return `<td data-colonne="${c.code}" class="montant rentabilite-bande-${c.teinte}${a ? ' rentabilite-anomalie' : ''}${detaillable ? ' rentabilite-detaillable' : ''}"${
+      bulle ? ` title="${echapper(bulle)}"` : ''}>${echapper(this.#valeur(v, c))}</td>`;
+  }
+
+  #etat(l) {
+    if (l.type !== 'chantier') return '';
+    const e = this.#o.etats.get(l.chantier);
+    if (!e) return '';
+    const marques = [];
+    if (e.en_attente) marques.push(`<span class="rentabilite-marque" title="${echapper(texte('rentabilite.liste.en_attente'))}">${iconeHtml('rentabilite_attente')}</span>`);
+    if (e.erreur || e.etat === 'ERREUR') marques.push(`<span class="rentabilite-marque rentabilite-anomalie" title="${echapper(texte('rentabilite.liste.erreur', { erreur: e.erreur ?? '' }))}">${iconeHtml('rentabilite_anomalie')}</span>`);
+    if (e.changements > 0) {
+      marques.push(`<a href="#" class="rentabilite-changements" data-changements="${l.chantier}" title="${echapper(texte('rentabilite.liste.controle_le', { date: formatDateHeure(e.controle_le) }))}">${
+        echapper(texte(e.changements > 1 ? 'rentabilite.liste.changements_autre' : 'rentabilite.liste.changements_un', { nombre: e.changements }))}</a>`);
+    }
+    return marques.join(' ');
+  }
+
+  #dessiner() {
+    if (!this.#racine.enfants.length) { this.#zone.innerHTML = `<p class="aide">${texteHtml('rentabilite.liste.aucun')}</p>`; return; }
+    this.#lignes = lignesListe(this.#racine, this.#ouverts);
+    const sel = this.#o.selection;
+    const tete = COLONNES_LISTE.map((c) => `<th class="montant rentabilite-colonne-${c.teinte}" title="${echapper(infoColonne(c))}">${echapper(libelleColonne(c))}</th>`).join('');
+    const ligne = (l, i) => {
+      const bascule = l.feuille ? '<span class="rentabilite-bascule"></span>'
+        : `<button type="button" class="rentabilite-bascule" data-basculer="${i}" title="${echapper(texte(l.ouvert ? 'rentabilite.liste.replier' : 'rentabilite.liste.deplier'))}">${iconeHtml(l.ouvert ? 'rentabilite_replier' : 'rentabilite_deplier')}</button>`;
+      const coche = l.type === 'chantier' ? `<input type="checkbox" data-cocher="${l.chantier}"${sel.has(l.chantier) ? ' checked' : ''} title="${echapper(texte('rentabilite.liste.selection'))}">` : '';
+      const libelle = l.type === 'chantier'
+        ? `<a href="#" data-detail="${l.chantier}" title="${echapper(texte('rentabilite.liste.ouvrir_detail'))}">${echapper(l.libelle)}</a>`
+        : echapper(l.libelle);
+      return `<tr class="rentabilite-ligne-${l.type}" data-i="${i}">
+        <th scope="row" style="--profondeur:${l.profondeur}">${coche}${bascule}${libelle} ${this.#etat(l)}</th>
+        ${COLONNES_LISTE.map((c) => this.#cellule(l, c)).join('')}</tr>`;
+    };
+    const total = this.#racine;
+    this.#zone.innerHTML = `<table class="rentabilite-liste tableau-compact">
+      <thead><tr><th>${texteHtml('rentabilite.liste.origine')}</th>${tete}</tr></thead>
+      <tbody>${this.#lignes.map(ligne).join('')}</tbody>
+      <tfoot><tr class="rentabilite-ligne-total"><th scope="row">${echapper(total.libelle)}</th>${COLONNES_LISTE.map((c) => this.#cellule(total, c)).join('')}</tr></tfoot>
+    </table>`;
+    const table = this.#zone.querySelector('table');
+    table.addEventListener('click', (ev) => {
+      const b = ev.target.closest('[data-basculer]');
+      if (b) {
+        const l = this.#lignes[Number(b.dataset.basculer)];
+        if (this.#ouverts.has(l.cle)) this.#ouverts.delete(l.cle); else this.#ouverts.add(l.cle);
+        this.#dessiner();
+        return;
+      }
+      const a = ev.target.closest('a[data-detail]');
+      if (a) { ev.preventDefault(); this.#o.ouvrirDetail(Number(a.dataset.detail), ev.ctrlKey || ev.metaKey); return; }
+      const ch = ev.target.closest('a[data-changements]');
+      if (ch) { ev.preventDefault(); this.#o.ouvrirChangements(Number(ch.dataset.changements), ev.ctrlKey || ev.metaKey); }
+    });
+    table.addEventListener('change', (ev) => {
+      const c = ev.target.closest('input[data-cocher]');
+      if (!c) return;
+      const id = Number(c.dataset.cocher);
+      if (c.checked) sel.add(id); else sel.delete(id);
+      this.#o.selectionModifiee(sel);
+    });
+    table.addEventListener('dblclick', (ev) => {
+      const td = ev.target.closest('td.rentabilite-detaillable');
+      if (!td) return;
+      const l = this.#lignes[Number(td.parentElement.dataset.i)];
+      const c = COLONNES_LISTE.find((x) => x.code === td.dataset.colonne);
+      this.#o.ouvrirFaits({ chantier: l.chantier, ordre: l.ordre, indicateurs: c.faits, colonne: c.code, ligne: l.libelle }, ev.ctrlKey || ev.metaKey);
+    });
+  }
+
+  /** Lignes CSV de tout l'arbre (tous niveaux, total en dernier), montants à l'arrondi choisi, point décimal. */
+  lignesCsv() {
+    const tout = lignesListe(this.#racine, new Set(clesJusqua(this.#racine, 'chantier').concat(clesJusqua(this.#racine, 'ordre'))));
+    const valeur = (v, c) => (v === null || v === undefined ? '' : arrondiAffiche(v, c.pourcent ? 1 : c.heures ? 2 : this.#o.decimales).toString());
+    const ligne = (l) => [texte(`rentabilite.liste.niveaux.${l.type}`), `${'  '.repeat(l.profondeur ?? 0)}${l.libelle}`, ...COLONNES_LISTE.map((c) => valeur(l.valeurs[c.code], c))]
+      .map(celluleCsv).join(';');
+    return [
+      [texte('rentabilite.liste.csv.niveau'), texte('rentabilite.liste.csv.libelle'), ...COLONNES_LISTE.map(libelleColonne)].map(celluleCsv).join(';'),
+      ...tout.map(ligne),
+      ligne({ ...this.#racine, profondeur: 0 }),
+    ];
   }
 }

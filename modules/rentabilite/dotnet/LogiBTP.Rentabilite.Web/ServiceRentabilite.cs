@@ -18,13 +18,24 @@ public sealed record ResumeCalculLu(long Id, DateTimeOffset Debut, DateTimeOffse
     string? Message, int? NbFaits, int? Ajouts, int? Retraits, int? Ecarts);
 
 /// <summary>Somme des faits ouverts par ordre, nature, indicateur et composante (le client regroupe et totalise).</summary>
-public sealed record AgregatFaits(long? OrdreId, int? NatId, string Indicateur, string Composante, decimal Pa, decimal Pr, decimal Pv, decimal? Heures, int Nb);
+/// <summary>
+/// Somme des faits par ordre, nature, indicateur et composante (le client regroupe et totalise) : cumul jusqu'au <c>au</c>
+/// et, si un début de période est donné, part datée de la période (§ 5.4 : budgets, déboursé, facturé sur la période ;
+/// engagé et restes à la fin).
+/// </summary>
+public sealed record AgregatFaits(long? OrdreId, int? NatId, string Indicateur, string Composante, decimal Pa, decimal Pr, decimal Pv, decimal? Heures, int Nb,
+    decimal PaPeriode, decimal PrPeriode, decimal PvPeriode, decimal? HeuresPeriode);
 
 /// <summary>Somme des faits ouverts d'une règle de contrôle.</summary>
 public sealed record ControleFaits(string Regle, int Nb, decimal Pa, decimal? Heures);
 
-public sealed record DetailChantier(ChantierRentabilite Chantier, DateOnly? Au, bool VoirCouts, FraicheurChantier Fraicheur, IReadOnlyList<OrdreRentabilite> Ordres,
-    IReadOnlyList<NatureRentabilite> Natures, IReadOnlyList<AgregatFaits> Agregats, IReadOnlyList<ControleFaits> Controles);
+/// <summary>
+/// Détail d'un chantier : agrégats (et ceux de la référence comparée : contrôle ou photo), contrôles des règles, dernier
+/// contrôle de l'utilisateur et ce qui a changé depuis, photos.
+/// </summary>
+public sealed record DetailChantier(ChantierRentabilite Chantier, DateOnly? Du, DateOnly? Au, bool VoirCouts, FraicheurChantier Fraicheur,
+    IReadOnlyList<OrdreRentabilite> Ordres, IReadOnlyList<NatureRentabilite> Natures, IReadOnlyList<AgregatFaits> Agregats, IReadOnlyList<ControleFaits> Controles,
+    ControleLu? Controle, IReadOnlyList<PhotoLue> Photos, ReferenceDetail? Reference);
 
 /// <summary>
 /// Filtre de la page des faits (un chiffre du Détail) : indicateurs et natures en listes (nature 0 = « Non ventilé »),
@@ -59,7 +70,7 @@ public sealed record LigneRapprochementLue(string SourceType, long? EntId, Piece
 /// seules les différences s'écrivent), file vidée par le planificateur, recalcul de nuit avec comparaison, lectures du
 /// Détail, des faits d'un chiffre et du rapprochement.
 /// </summary>
-public class ServiceRentabilite(RentabiliteDbContext db, SpecialisationRentabilite spec, TimeProvider horloge)
+public partial class ServiceRentabilite(RentabiliteDbContext db, SpecialisationRentabilite spec, TimeProvider horloge)
 {
     private const int VerrouModule = 7_340_201;
 
@@ -269,17 +280,17 @@ public class ServiceRentabilite(RentabiliteDbContext db, SpecialisationRentabili
 
     private sealed record EnFile(string? Raison, DateTimeOffset Depuis, string? Erreur);
 
-    /// <summary>Détail d'un chantier (§ 7) : sommes des faits ouverts jusqu'au <paramref name="au"/> (vide : tous), par ordre, nature, indicateur et composante.</summary>
-    public async Task<DetailChantier> DetailAsync(IServiceProvider services, Utilisateur u, int chantier, DateOnly? au, CancellationToken ct)
+    /// <summary>
+    /// Détail d'un chantier (§ 7) : sommes des faits ouverts jusqu'au <paramref name="au"/> (vide : tous), et de la période
+    /// depuis <paramref name="du"/> ; <paramref name="reference"/> : « controle » (dernier contrôle de l'utilisateur) ou
+    /// « photo:&lt;id&gt; », agrégats tels qu'ils étaient connus alors, pour la colonne d'écart.
+    /// </summary>
+    public async Task<DetailChantier> DetailAsync(IServiceProvider services, Utilisateur u, int chantier, DateOnly? du, DateOnly? au, string? reference,
+        CancellationToken ct)
     {
+        if (Periodes.Controler(du, au) is { } erreur) throw ExceptionMetier.Invalide(erreur, "Le début de la période est après sa fin");
         var (c, p) = await AccesAsync(services, u, chantier, ct);
-        var agregats = await db.Database.SqlQuery<AgregatFaits>($"""
-            SELECT afa_ordre_id AS ordre_id, afa_nat_id AS nat_id, afa_indicateur AS indicateur, afa_composante AS composante,
-                   sum(afa_montant_pa) AS pa, sum(afa_montant_pr) AS pr, sum(afa_montant_pv) AS pv, sum(afa_heures) AS heures, count(*)::int AS nb
-            FROM rentabilite_fait
-            WHERE afa_cha_id = {chantier} AND afa_calcul_fin IS NULL AND ({au}::date IS NULL OR afa_date <= {au})
-            GROUP BY 1, 2, 3, 4
-            """).ToListAsync(ct);
+        var agregats = await AgregatsAsync(chantier, du, au, null, ct);
         var regles = spec.ReglesControle.ToArray();
         var controles = await db.Database.SqlQuery<ControleFaits>($"""
             SELECT afa_regle AS regle, count(*)::int AS nb, sum(afa_montant_pa) AS pa, sum(afa_heures) AS heures
@@ -287,11 +298,47 @@ public class ServiceRentabilite(RentabiliteDbContext db, SpecialisationRentabili
             WHERE afa_cha_id = {chantier} AND afa_calcul_fin IS NULL AND afa_regle = ANY({regles}) AND ({au}::date IS NULL OR afa_date <= {au})
             GROUP BY 1 ORDER BY 1
             """).ToListAsync(ct);
+        var controle = await DernierControleAsync(u, chantier, ct);
+        var photos = await PhotosAsync(chantier, ct);
+        ReferenceDetail? reference_ = null;
+        if (reference == "controle" && controle is not null)
+            reference_ = new ReferenceDetail("controle", controle.CalculId, au, controle.Le, await AgregatsAsync(chantier, du, au, controle.CalculId, ct));
+        else if (reference is ['p', 'h', 'o', 't', 'o', ':', .. var x] && long.TryParse(x, out var idPhoto) && photos.FirstOrDefault(f => f.Id == idPhoto) is { } ph)
+        {
+            var auPhoto = au is { } a && a < ph.Date ? a : ph.Date;
+            reference_ = new ReferenceDetail(reference, ph.CalculId, auPhoto, ph.Le, await AgregatsAsync(chantier, du, auPhoto, ph.CalculId, ct));
+        }
+        if (!p.VoirCouts)
+        {
+            agregats = agregats.Select(SansCouts).ToList();
+            if (reference_ is not null) reference_ = reference_ with { Agregats = reference_.Agregats.Select(SansCouts).ToList() };
+        }
         var natures = await spec.NaturesAsync(db, ct);
-        var utilisees = agregats.Where(a => a.NatId is not null).Select(a => a.NatId!.Value).ToHashSet();
-        return new DetailChantier(c, au, p.VoirCouts, await FraicheurAsync(chantier, ct), await spec.OrdresAsync(db, chantier, ct),
-            natures.Where(n => utilisees.Contains(n.Id)).ToList(), agregats, controles);
+        var utilisees = agregats.Concat(reference_?.Agregats ?? []).Where(a => a.NatId is not null).Select(a => a.NatId!.Value).ToHashSet();
+        return new DetailChantier(c, du, au, p.VoirCouts, await FraicheurAsync(chantier, ct), await spec.OrdresAsync(db, chantier, ct),
+            natures.Where(n => utilisees.Contains(n.Id)).ToList(), agregats, controles, controle, photos, reference_);
     }
+
+    private static AgregatFaits SansCouts(AgregatFaits a) => a with { Pa = 0, Pr = 0, PaPeriode = 0, PrPeriode = 0 };
+
+    /// <summary>
+    /// Sommes des faits d'un chantier par ordre, nature, indicateur, composante : faits ouverts (<paramref name="calcul"/>
+    /// vide) ou tels que connus au calcul donné (ouverts à ce calcul ou avant, non clos à ce calcul ou avant).
+    /// </summary>
+    private Task<List<AgregatFaits>> AgregatsAsync(int chantier, DateOnly? du, DateOnly? au, long? calcul, CancellationToken ct) =>
+        db.Database.SqlQuery<AgregatFaits>($"""
+            SELECT afa_ordre_id AS ordre_id, afa_nat_id AS nat_id, afa_indicateur AS indicateur, afa_composante AS composante,
+                   sum(afa_montant_pa) AS pa, sum(afa_montant_pr) AS pr, sum(afa_montant_pv) AS pv, sum(afa_heures) AS heures, count(*)::int AS nb,
+                   coalesce(sum(afa_montant_pa) FILTER (WHERE afa_date >= {du}), 0) AS pa_periode,
+                   coalesce(sum(afa_montant_pr) FILTER (WHERE afa_date >= {du}), 0) AS pr_periode,
+                   coalesce(sum(afa_montant_pv) FILTER (WHERE afa_date >= {du}), 0) AS pv_periode,
+                   sum(afa_heures) FILTER (WHERE afa_date >= {du}) AS heures_periode
+            FROM rentabilite_fait
+            WHERE afa_cha_id = {chantier} AND ({au}::date IS NULL OR afa_date <= {au})
+              AND (CASE WHEN {calcul}::bigint IS NULL THEN afa_calcul_fin IS NULL
+                        ELSE afa_calcul_debut <= {calcul} AND (afa_calcul_fin IS NULL OR afa_calcul_fin > {calcul}) END)
+            GROUP BY 1, 2, 3, 4
+            """).ToListAsync(ct);
 
     /// <summary>Faits composant un chiffre (§ 8) : PA / PR masqués sans le droit, pièces d'un type non consultable résumées par type.</summary>
     public async Task<FaitsChantier> FaitsAsync(IServiceProvider services, Utilisateur u, int chantier, FiltreFaits f, CancellationToken ct)

@@ -109,6 +109,7 @@ export const ROLE_RENTABILITE = Object.freeze({
   AVOIR_ST: 'AVOIR_ST',
   RESERVATION_STOCK: 'RESERVATION_STOCK',
   MOUVEMENT_STOCK: 'MOUVEMENT_STOCK',
+  RECU_ACOMPTE: 'RECU_ACOMPTE',
 });
 
 /** Sujets publiés entre les fenêtres de l'application (app.publier / app.abonner). */

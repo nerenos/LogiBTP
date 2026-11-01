@@ -3,5 +3,8 @@
   "rentabilite_faits": "🔎",
   "rentabilite_nouvelle_fenetre": "⧉",
   "rentabilite_anomalie": "⚠",
-  "rentabilite_annulee": "⊘"
+  "rentabilite_annulee": "⊘",
+  "rentabilite_deplier": "▸",
+  "rentabilite_replier": "▾",
+  "rentabilite_attente": "⏳"
 }

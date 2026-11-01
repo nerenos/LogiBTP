@@ -9,6 +9,17 @@ public class RentabiliteDbContext(DbContextOptions<RentabiliteDbContext> options
 /// <summary>Chantier analysé (axes joints à la lecture : affaire, chargé d'affaires).</summary>
 public sealed record ChantierRentabilite(int Id, string Code, string? Libelle, int? AffaireId, string? Affaire, string? Charge, string? Statut);
 
+/// <summary>
+/// Chantier de la Liste avec ses axes d'origine (affaire, chargé d'affaires) ; <c>Exclu</c> : chantier interne ou
+/// d'une affaire de gestion, de matériel, de stock, de dotations ou de SAV, masqué par défaut (Q25) ; <c>Clos</c> :
+/// chantier terminé, masqué par défaut.
+/// </summary>
+public sealed record ChantierListe(int Id, string Code, string? Libelle, int? AffaireId, string? AffaireCode, string? Affaire, long? ChargeId, string? Charge,
+    string? Statut, bool Exclu, bool Clos);
+
+/// <summary>Ordre d'exécution d'un chantier de la Liste.</summary>
+public sealed record OrdreChantier(int ChaId, long Id, string? Numero, string? Libelle, string? Statut);
+
 /// <summary>Ordre d'exécution d'un chantier (sous-niveau de l'origine).</summary>
 public sealed record OrdreRentabilite(long Id, string? Numero, string? Libelle, string? Statut);
 
@@ -49,6 +60,12 @@ public abstract class SpecialisationRentabilite
 
     /// <summary>Chantiers recalculés chaque nuit.</summary>
     public abstract Task<List<int>> ChantiersOuvertsAsync(RentabiliteDbContext db, CancellationToken ct);
+
+    /// <summary>Chantiers de la Liste (tous ; le module filtre exclus, clos et portée).</summary>
+    public abstract Task<List<ChantierListe>> ChantiersListeAsync(RentabiliteDbContext db, CancellationToken ct);
+
+    /// <summary>Ordres d'exécution de plusieurs chantiers (Liste).</summary>
+    public abstract Task<List<OrdreChantier>> OrdresChantiersAsync(RentabiliteDbContext db, int[] chantiers, CancellationToken ct);
 
     public abstract Task<ChantierRentabilite?> ChantierAsync(RentabiliteDbContext db, int chantier, CancellationToken ct);
 

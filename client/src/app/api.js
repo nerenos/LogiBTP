@@ -77,7 +77,21 @@ export const api = {
   rentabilite: {
     file: () => appel('GET', '/rentabilite/file'),
     recalculerTout: () => appel('POST', '/rentabilite/recalculer-tout'),
-    chantier: (id, au) => appel('GET', `/rentabilite/chantiers/${id}${au ? `?au=${encodeURIComponent(au)}` : ''}`),
+    liste: (f = {}) => {
+      const p = new URLSearchParams(Object.entries(f).filter(([, v]) => v !== undefined && v !== null && v !== '' && v !== false).map(([k, v]) => [k, String(v)]));
+      return appel('GET', `/rentabilite/chantiers${p.size ? `?${p}` : ''}`);
+    },
+    chantier: (id, au, { du, reference } = {}) => {
+      const p = new URLSearchParams(Object.entries({ du, au, reference }).filter(([, v]) => v));
+      return appel('GET', `/rentabilite/chantiers/${id}${p.size ? `?${p}` : ''}`);
+    },
+    controler: (chantiers) => appel('POST', '/rentabilite/controles', { chantiers }),
+    changements: (id, calcul) => appel('GET', `/rentabilite/chantiers/${id}/changements${calcul ? `?calcul=${encodeURIComponent(calcul)}` : ''}`),
+    photographier: (id, d) => appel('POST', `/rentabilite/chantiers/${id}/photos`, d),
+    supprimerPhoto: (id) => appel('DELETE', `/rentabilite/photos/${id}`),
+    vues: () => appel('GET', '/rentabilite/vues'),
+    enregistrerVue: (v) => appel('POST', '/rentabilite/vues', v),
+    supprimerVue: (id) => appel('DELETE', `/rentabilite/vues/${id}`),
     recalculer: (id) => appel('POST', `/rentabilite/chantiers/${id}/recalculer`),
     faits: (id, filtre) => {
       const p = new URLSearchParams(Object.entries(filtre).filter(([, v]) => v !== undefined && v !== null && v !== ''));

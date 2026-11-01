@@ -17,6 +17,9 @@
   --rentabilite-facture-texte: #0f3311;
   --rentabilite-reste-facturer: #c8e9c9;
   --rentabilite-reste-facturer-texte: #173b18;
+  --rentabilite-acompte: #d7c8ef;
+  --rentabilite-acompte-texte: #2e1d4f;
+  --rentabilite-ecart: #5f6b7a;
   --rentabilite-anomalie: #c62828;
   --rentabilite-total-fond: #eef1f5;
   --rentabilite-groupe-fond: #f6f7f9;
@@ -40,6 +43,9 @@
     --rentabilite-facture-texte: #dff5e0;
     --rentabilite-reste-facturer: #23402a;
     --rentabilite-reste-facturer-texte: #d8f0d9;
+    --rentabilite-acompte: #3b2d57;
+    --rentabilite-acompte-texte: #e6dcf7;
+    --rentabilite-ecart: #a9b4c2;
     --rentabilite-anomalie: #ff8a80;
     --rentabilite-total-fond: #262a31;
     --rentabilite-groupe-fond: #1f2329;
@@ -63,6 +69,9 @@
   --rentabilite-facture-texte: #dff5e0;
   --rentabilite-reste-facturer: #23402a;
   --rentabilite-reste-facturer-texte: #d8f0d9;
+  --rentabilite-acompte: #3b2d57;
+  --rentabilite-acompte-texte: #e6dcf7;
+  --rentabilite-ecart: #a9b4c2;
   --rentabilite-anomalie: #ff8a80;
   --rentabilite-total-fond: #262a31;
   --rentabilite-groupe-fond: #1f2329;

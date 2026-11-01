@@ -107,6 +107,7 @@ public static class RolesRentabilite
     public const string AvoirSt = "AVOIR_ST";
     public const string ReservationStock = "RESERVATION_STOCK";
     public const string MouvementStock = "MOUVEMENT_STOCK";
+    public const string RecuAcompte = "RECU_ACOMPTE";
 }
 
 /// <summary>Catégories de la GED posées par le serveur (dge_categorie).</summary>

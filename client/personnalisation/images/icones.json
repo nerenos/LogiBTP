@@ -668,5 +668,11 @@
   "navigation_btp_parametrage_rentabilite": "⚙",
   "rentabilite_btp_recalculer": "⟳",
   "rentabilite_btp_rapprochement": "⚖",
-  "rentabilite_btp_attente": "⏳"
+  "rentabilite_btp_attente": "⏳",
+  "rentabilite_btp_vue_enregistrer": "💾",
+  "rentabilite_btp_vue_supprimer": "🗑",
+  "rentabilite_btp_vue_defaut": "★",
+  "rentabilite_btp_controle": "✓",
+  "rentabilite_btp_csv": "⭳",
+  "rentabilite_btp_photo": "📷"
 }

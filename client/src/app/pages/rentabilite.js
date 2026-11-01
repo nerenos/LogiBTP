@@ -1,9 +1,9 @@
 import { texte, texteHtml, icone, iconeHtml, pluriel } from '@logibtp/socle/dictionnaire';
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo, champDate, formatNombre, formatDate, formatDateHeure, lireStockage, ecrireStockage, confirmer } from '@logibtp/socle/ui';
-import { aujourdhui } from '@logibtp/socle';
-import { COUT } from '@logibtp/rentabilite';
-import { TableauDetail, TableauFaits } from '@logibtp/rentabilite/ui';
+import { echapper, creerCombo, champDate, formatNombre, formatDate, formatDateHeure, lireStockage, ecrireStockage, confirmer, saisir, ouvrirDialogue, telechargerCsv } from '@logibtp/socle/ui';
+import { aujourdhui, Dz } from '@logibtp/socle';
+import { COUT, COLONNES_DETAIL, INDICATEUR, COLONNES_LISTE, NIVEAU_LISTE, RACCOURCI_PERIODE, BORNE_PERIODE, ERREUR_PERIODE, lirePeriode, controlerPeriode, raccourciPeriode } from '@logibtp/rentabilite';
+import { TableauDetail, TableauFaits, TableauListe } from '@logibtp/rentabilite/ui';
 import { TYPE_FICHE, ROLE_RENTABILITE, urlFiche, urlDocument } from '../codes.js';
 import { api } from '../api.js';
 import { champRattachement } from '../structure/selection.js';
@@ -22,6 +22,7 @@ export function urlFaits(chantier, f) {
   if (f.natures?.length) p.set('nature', f.natures.join(','));
   if (f.composante) p.set('composante', f.composante);
   if (f.ordre !== undefined && f.ordre !== null && f.ordre !== '') p.set('ordre', f.ordre);
+  if (f.du) p.set('du', f.du);
   if (f.au) p.set('au', f.au);
   if (f.colonne) p.set('colonne', f.colonne);
   if (f.ligne) p.set('ligne', f.ligne);
@@ -42,7 +43,31 @@ function fraicheurHtml(f) {
   return parts.join(' · ');
 }
 
-/** Accueil du module : choix d'un chantier, état de la file, recalcul général (administrateur). */
+const CLE_LISTE = 'rentabiliteListe';
+const PAR_DEFAUT = Object.freeze({ du: null, au: null, raccourci: null, niveau: NIVEAU_LISTE.AFFAIRE, cout: COUT.PR, decimales: 2, exclus: false, clos: false });
+
+/** Paramètres d'une vue rendus utilisables : un raccourci de période est recalculé au jour de l'ouverture. */
+function parametresVue(p) {
+  const v = { ...PAR_DEFAUT, ...(p ?? {}) };
+  if (v.raccourci) Object.assign(v, raccourciPeriode(v.raccourci) ?? {});
+  v.decimales = Number(v.decimales) === 0 ? 0 : 2;
+  return v;
+}
+
+/** Saisie d'une borne de période (« 2026 », « 10/2026 », date abrégée) : date ISO, null si vide, undefined si erronée. */
+function lireBorne(champ, borne) {
+  const r = lirePeriode(champ.value, borne);
+  champ.classList.toggle('invalide', !!r.erreur);
+  if (r.erreur) return undefined;
+  champ.value = r.date ? formatDate(r.date) : '';
+  return r.date;
+}
+
+/**
+ * Liste de la rentabilité (§ 6) : chantiers visibles par chargé d'affaires ou par affaire, puis ordres ; période du… au
+ * (raccourcis), PA / PR, arrondi, exclus et clos, vues enregistrées (personnelles ou globales), fraîcheur et changements
+ * depuis le contrôle de chacun, « ✓ Contrôlé » sur la sélection, export CSV ; choix direct d'un chantier.
+ */
 export class PageRentabilite extends PageBase {
   icone = icone('rentabilite_detail');
 
@@ -50,18 +75,105 @@ export class PageRentabilite extends PageBase {
 
   async ouvrir() {
     this.titre = texte('rentabilite_btp.routes.accueil');
-    this.conteneur.innerHTML = `<div class="page-parametres page-rentabilite"><div class="entete-page"><h1 class="page-titre">${iconeHtml('rentabilite_detail')} ${texteHtml('rentabilite_btp.routes.accueil')}</h1></div>
-      <p class="aide">${texteHtml('rentabilite_btp.accueil.aide')}</p>
-      <p class="ligne" data-choix></p>
-      <h2>${texteHtml('rentabilite_btp.accueil.file')}</h2><p data-file></p>
-      ${this.app.estAdmin() ? `<p><button type="button" data-tout title="${texteHtml('rentabilite_btp.accueil.tout_titre')}">${iconeHtml('rentabilite_btp_recalculer')} ${texteHtml('rentabilite_btp.accueil.tout')}</button></p>` : ''}</div>`;
+    this.selection = new Set();
+    let enregistre = null;
+    try { enregistre = JSON.parse(lireStockage(CLE_LISTE, 'null')); } catch { enregistre = null; }
+    try { this.vues = await api.rentabilite.vues(); } catch (e) { this.app.erreur(e); this.vues = []; }
+    const defaut = this.vues.find((v) => v.defaut && v.proprietaire) ?? this.vues.find((v) => v.defaut);
+    this.vue = enregistre?.vue ? this.vues.find((v) => v.id === enregistre.vue) ?? null : defaut ?? null;
+    this.p = parametresVue(enregistre?.parametres ?? this.vue?.parametres);
+    const admin = this.app.estAdmin();
+    this.conteneur.innerHTML = `<div class="page-parametres page-rentabilite"><div class="entete-page"><h1 class="page-titre">${iconeHtml('rentabilite_detail')} ${texteHtml('rentabilite_btp.routes.accueil')}</h1>
+        <div class="barre-outils">
+          <div class="groupe-outils"><span data-vue></span>
+            <button type="button" data-enregistrer-vue title="${texteHtml('rentabilite_btp.liste.vue_enregistrer_titre')}">${iconeHtml('rentabilite_btp_vue_enregistrer')}</button>
+            <button type="button" data-supprimer-vue title="${texteHtml('rentabilite_btp.liste.vue_supprimer')}">${iconeHtml('rentabilite_btp_vue_supprimer')}</button></div>
+          <div class="groupe-outils">
+            <button type="button" data-deplier title="${texteHtml('rentabilite_btp.liste.deplier_titre')}">${iconeHtml('rentabilite_deplier')} ${texteHtml('rentabilite_btp.liste.deplier')}</button>
+            <button type="button" data-replier title="${texteHtml('rentabilite_btp.liste.replier_titre')}">${iconeHtml('rentabilite_replier')}</button></div>
+          <div class="groupe-outils">
+            <button type="button" data-controle title="${texteHtml('rentabilite_btp.liste.controle_titre')}" disabled>${iconeHtml('rentabilite_btp_controle')} ${texteHtml('rentabilite_btp.liste.controle')}</button>
+            <button type="button" data-csv title="${texteHtml('rentabilite_btp.liste.csv_titre')}">${iconeHtml('rentabilite_btp_csv')}</button>
+            ${admin ? `<button type="button" data-tout title="${texteHtml('rentabilite_btp.accueil.tout_titre')}">${iconeHtml('rentabilite_btp_recalculer')} ${texteHtml('rentabilite_btp.accueil.tout')}</button>` : ''}</div>
+        </div></div>
+      <p class="ligne">
+        <label title="${texteHtml('rentabilite_btp.liste.periode_titre')}">${texteHtml('rentabilite_btp.liste.du')} <input type="text" size="10" data-du></label>
+        <label title="${texteHtml('rentabilite_btp.liste.periode_titre')}">${texteHtml('rentabilite_btp.liste.au')} <input type="text" size="10" data-au></label>
+        ${Object.values(RACCOURCI_PERIODE).map((r) => `<button type="button" class="lien" data-raccourci="${r}">${texteHtml(`rentabilite_btp.liste.raccourcis.${r}`)}</button>`).join(' ')}
+      </p>
+      <p class="ligne">
+        <label>${texteHtml('rentabilite_btp.liste.niveau')} <span data-niveau></span></label>
+        <label data-zone-cout hidden>${texteHtml('rentabilite_btp.chantier.cout')} <span data-cout></span></label>
+        <label>${texteHtml('rentabilite_btp.liste.arrondi')} <span data-arrondi></span></label>
+        <label title="${texteHtml('rentabilite_btp.liste.exclus_titre')}"><input type="checkbox" data-exclus> ${texteHtml('rentabilite_btp.liste.exclus')}</label>
+        <label><input type="checkbox" data-clos> ${texteHtml('rentabilite_btp.liste.clos')}</label>
+        <span data-choix title="${texteHtml('rentabilite_btp.liste.choix_titre')}"></span>
+      </p>
+      <p class="aide" data-file></p>
+      <div class="rentabilite-zone-liste" data-liste></div>
+      <p class="aide">${texteHtml('rentabilite_btp.liste.aide')}</p></div>`;
+    const $ = (s) => this.conteneur.querySelector(s);
+    this.#rendreVues();
+    const niveau = creerCombo({ options: Object.values(NIVEAU_LISTE).map((n) => ({ valeur: n, libelle: texte(`rentabilite_btp.liste.niveaux.${n}`) })), valeur: this.p.niveau, vide: false });
+    $('[data-niveau]').append(niveau);
+    niveau.addEventListener('change', () => { this.p.niveau = niveau.valeurCombo; this.#modifie(false); });
+    const cout = creerCombo({ options: [{ valeur: COUT.PR, libelle: texte('rentabilite_btp.chantier.cout_pr') }, { valeur: COUT.PA, libelle: texte('rentabilite_btp.chantier.cout_pa') }], valeur: this.p.cout, vide: false });
+    $('[data-cout]').append(cout);
+    cout.addEventListener('change', () => { this.p.cout = cout.valeurCombo; this.#modifie(false); });
+    const arrondi = creerCombo({ options: [{ valeur: '2', libelle: texte('rentabilite_btp.liste.arrondi_2') }, { valeur: '0', libelle: texte('rentabilite_btp.liste.arrondi_0') }], valeur: String(this.p.decimales), vide: false });
+    $('[data-arrondi]').append(arrondi);
+    arrondi.addEventListener('change', () => { this.p.decimales = Number(arrondi.valeurCombo); this.#modifie(false); });
+    const du = $('[data-du]');
+    const au = $('[data-au]');
+    this.champs = { du, au, niveau, cout, arrondi, exclus: $('[data-exclus]'), clos: $('[data-clos]') };
+    this.#afficherParametres();
+    const borne = (champ, cle, b) => champ.addEventListener('change', () => {
+      const d = lireBorne(champ, b);
+      if (d === undefined) { this.app.message(texte(`rentabilite.periodes.${ERREUR_PERIODE.DATE}`), 'erreur'); return; }
+      this.p[cle] = d;
+      this.p.raccourci = null;
+      if (controlerPeriode(this.p.du, this.p.au)) { this.app.message(texte(`rentabilite.periodes.${ERREUR_PERIODE.ORDRE}`), 'erreur'); return; }
+      this.#modifie(true);
+    });
+    borne(du, 'du', BORNE_PERIODE.DEBUT);
+    borne(au, 'au', BORNE_PERIODE.FIN);
+    this.conteneur.querySelectorAll('[data-raccourci]').forEach((b) => b.addEventListener('click', () => {
+      Object.assign(this.p, raccourciPeriode(b.dataset.raccourci), { raccourci: b.dataset.raccourci === RACCOURCI_PERIODE.ORIGINE ? null : b.dataset.raccourci });
+      this.#afficherParametres();
+      this.#modifie(true);
+    }));
+    this.champs.exclus.addEventListener('change', (e) => { this.p.exclus = e.target.checked; this.#modifie(true); });
+    this.champs.clos.addEventListener('change', (e) => { this.p.clos = e.target.checked; this.#modifie(true); });
     const refs = await api.structureReferentiels();
-    this.conteneur.querySelector('[data-choix]').append(champRattachement({
+    $('[data-choix]').append(champRattachement({
       type: TYPE_FICHE.CHANTIER, refs, valeur: null, titre: texte('rentabilite_btp.accueil.chantier'),
       choisir: (id) => { if (id) this.app.naviguer(`/rentabilite/chantier/${id}`); },
     }));
-    this.conteneur.querySelector('.rattachement-code')?.focus();
-    this.conteneur.querySelector('[data-tout]')?.addEventListener('click', async () => {
+    this.tableau = new TableauListe($('[data-liste]'), {
+      selection: this.selection,
+      ouvrirDetail: (id, nouvelle) => this.app.naviguer(this.#urlDetail(id), { nouvelleFenetre: nouvelle }),
+      ouvrirChangements: (id, nouvelle) => this.app.naviguer(`/rentabilite/changements/${id}`, { nouvelleFenetre: nouvelle }),
+      ouvrirFaits: (f, nouvelle) => {
+        const enPeriode = COLONNES_LISTE.find((c) => c.code === f.colonne)?.periode;
+        this.app.naviguer(urlFaits(f.chantier, { ...f, du: enPeriode ? this.p.du : null, au: this.p.au }), { nouvelleFenetre: nouvelle });
+      },
+      selectionModifiee: (s) => { $('[data-controle]').disabled = !s.size; },
+    });
+    $('[data-deplier]').addEventListener('click', () => this.tableau.ouvrirJusqua('chantier'));
+    $('[data-replier]').addEventListener('click', () => this.tableau.ouvrirJusqua(null));
+    $('[data-controle]').addEventListener('click', async () => {
+      try {
+        const r = await api.rentabilite.controler([...this.selection]);
+        this.app.message(pluriel('rentabilite_btp.liste.controle_fait', r.chantiers, { nombre: r.chantiers }), 'succes');
+        this.selection.clear();
+        $('[data-controle]').disabled = true;
+        await this.#charger();
+      } catch (e) { this.app.erreur(e); }
+    });
+    $('[data-csv]').addEventListener('click', () => telechargerCsv(`${texte('rentabilite.liste.csv.nom')}-${aujourdhui()}.csv`, this.tableau.lignesCsv()));
+    $('[data-enregistrer-vue]').addEventListener('click', () => this.#enregistrerVue());
+    $('[data-supprimer-vue]').addEventListener('click', () => this.#supprimerVue());
+    $('[data-tout]')?.addEventListener('click', async () => {
       if (!await confirmer(texte('rentabilite_btp.accueil.tout_confirmer'))) return;
       try {
         const r = await api.rentabilite.recalculerTout();
@@ -69,34 +181,137 @@ export class PageRentabilite extends PageBase {
         await this.#file();
       } catch (e) { this.app.erreur(e); }
     });
+    await this.#charger();
+  }
+
+  reprendre() { this.#charger(); }
+
+  #urlDetail(id) {
+    const p = new URLSearchParams(Object.entries({ du: this.p.du, au: this.p.au }).filter(([, v]) => v));
+    return `/rentabilite/chantier/${id}${p.size ? `?${p}` : ''}`;
+  }
+
+  #afficherParametres() {
+    const c = this.champs;
+    c.du.value = this.p.du ? formatDate(this.p.du) : '';
+    c.au.value = this.p.au ? formatDate(this.p.au) : '';
+    c.exclus.checked = !!this.p.exclus;
+    c.clos.checked = !!this.p.clos;
+    this.conteneur.querySelectorAll('[data-raccourci]').forEach((b) => b.classList.toggle('actif', b.dataset.raccourci === (this.p.raccourci ?? (this.p.du || this.p.au ? '' : RACCOURCI_PERIODE.ORIGINE))));
+  }
+
+  /** Paramètre modifié : gardé dans le navigateur ; `recharger` = nouvelle demande au serveur (période, exclus, clos). */
+  #modifie(recharger) {
+    ecrireStockage(CLE_LISTE, JSON.stringify({ vue: this.vue?.id ?? null, parametres: this.p }));
+    this.#afficherParametres();
+    if (recharger) this.#charger(); else this.#rendre();
+  }
+
+  async #charger() {
+    const zone = this.conteneur.querySelector('[data-liste]');
+    try {
+      this.donnees = await api.rentabilite.liste({ du: this.p.du, au: this.p.au, exclus: this.p.exclus, clos: this.p.clos });
+    } catch (e) { this.app.erreur(e); zone.innerHTML = ''; return; }
+    this.conteneur.querySelector('[data-zone-cout]').hidden = !this.donnees.voir_couts;
+    this.#rendre();
     await this.#file();
   }
 
-  reprendre() { this.#file(); }
+  #rendre() {
+    if (!this.donnees) return;
+    const d = this.donnees;
+    this.tableau.rendre(d, {
+      niveau: this.p.niveau, cout: d.voir_couts ? this.p.cout : COUT.PR, decimales: this.p.decimales, periode: !!this.p.du,
+      etats: new Map((d.etats ?? []).map((e) => [e.cha_id, e])),
+    });
+  }
 
   async #file() {
     const zone = this.conteneur.querySelector('[data-file]');
     try {
       const f = await api.rentabilite.file();
       zone.innerHTML = f.attente
-        ? `${echapper(pluriel('rentabilite_btp.accueil.attente', f.attente, { nombre: f.attente }))}${f.erreurs ? ` · <span class="rentabilite-anomalie">${echapper(pluriel('rentabilite_btp.accueil.erreurs', f.erreurs, { nombre: f.erreurs }))}</span>` : ''}`
+        ? `${iconeHtml('rentabilite_btp_attente')} ${echapper(pluriel('rentabilite_btp.accueil.attente', f.attente, { nombre: f.attente }))}${f.erreurs ? ` · <span class="rentabilite-anomalie">${echapper(pluriel('rentabilite_btp.accueil.erreurs', f.erreurs, { nombre: f.erreurs }))}</span>` : ''}`
         : texteHtml('rentabilite_btp.accueil.file_vide');
+    } catch (e) { this.app.erreur(e); }
+  }
+
+  #rendreVues() {
+    const zone = this.conteneur.querySelector('[data-vue]');
+    zone.innerHTML = '';
+    const combo = creerCombo({
+      options: this.vues.map((v) => ({ valeur: String(v.id), libelle: `${v.defaut ? `${icone('rentabilite_btp_vue_defaut')} ` : ''}${v.nom}`,
+        detail: texte(v.proprietaire ? 'rentabilite_btp.liste.vue_personnelle' : 'rentabilite_btp.liste.vue_globale') })),
+      valeur: this.vue ? String(this.vue.id) : '', vide: true, titre: texte('rentabilite_btp.liste.vue_titre'),
+    });
+    zone.append(combo);
+    combo.addEventListener('change', () => {
+      this.vue = this.vues.find((v) => String(v.id) === combo.valeurCombo) ?? null;
+      this.p = parametresVue(this.vue?.parametres);
+      const c = this.champs;
+      c.niveau.definirValeur?.(this.p.niveau);
+      c.cout.definirValeur?.(this.p.cout);
+      c.arrondi.definirValeur?.(String(this.p.decimales));
+      this.#modifie(true);
+    });
+    this.conteneur.querySelector('[data-supprimer-vue]').disabled = !this.vue || (!this.vue.proprietaire && !this.app.estAdmin());
+  }
+
+  async #enregistrerVue() {
+    const admin = this.app.estAdmin();
+    const r = await ouvrirDialogue({
+      titre: texte('rentabilite_btp.liste.vue_enregistrer'), focus: '[name="nom"]',
+      html: `<p><label>${texteHtml('rentabilite_btp.liste.vue_nom')} <input type="text" name="nom" size="30" value="${echapper(this.vue?.nom ?? '')}"></label></p>
+        <p><label><input type="checkbox" name="defaut"${this.vue?.defaut ? ' checked' : ''}> ${texteHtml('rentabilite_btp.liste.vue_defaut')}</label></p>
+        ${admin ? `<p><label><input type="checkbox" name="globale"${this.vue && !this.vue.proprietaire ? ' checked' : ''}> ${texteHtml('rentabilite_btp.liste.vue_globale_case')}</label></p>` : ''}
+        ${this.vue ? `<p><label><input type="checkbox" name="nouvelle"> ${texteHtml('rentabilite_btp.liste.vue_nouvelle')}</label></p>` : ''}`,
+      boutons: [{ libelle: texte('commun.annuler'), valeur: null }, {
+        libelle: texte('commun.enregistrer'), principal: true,
+        valeur: (d) => ({ nom: d.querySelector('[name="nom"]').value.trim(), defaut: d.querySelector('[name="defaut"]').checked,
+          globale: !!d.querySelector('[name="globale"]')?.checked, nouvelle: !!d.querySelector('[name="nouvelle"]')?.checked }),
+      }],
+    });
+    if (!r) return;
+    try {
+      const v = await api.rentabilite.enregistrerVue({ id: this.vue && !r.nouvelle ? this.vue.id : null, nom: r.nom, globale: r.globale, defaut: r.defaut, parametres: this.p });
+      this.vues = await api.rentabilite.vues();
+      this.vue = this.vues.find((x) => x.id === v.id) ?? null;
+      this.#rendreVues();
+      this.#modifie(false);
+      this.app.message(texte('rentabilite_btp.liste.vue_enregistree', { nom: v.nom }), 'succes');
+    } catch (e) { this.app.erreur(e); }
+  }
+
+  async #supprimerVue() {
+    if (!this.vue || !await confirmer(texte('rentabilite_btp.liste.vue_supprimer_confirmer', { nom: this.vue.nom }))) return;
+    try {
+      await api.rentabilite.supprimerVue(this.vue.id);
+      this.vues = this.vues.filter((v) => v.id !== this.vue.id);
+      this.vue = null;
+      this.#rendreVues();
+      this.#modifie(false);
     } catch (e) { this.app.erreur(e); }
   }
 }
 
-/** Détail d'un chantier (§ 7) : ordre (tout, sans ordre, un ordre), coût PA ou PR, jusqu'au, contrôles. */
+/**
+ * Détail d'un chantier (§ 7) : ordre (tout, sans ordre, un ordre), coût PA ou PR, période du… au, comparaison au dernier
+ * contrôle ou à une photo (écarts sous les chiffres), « ✓ Contrôlé », changements depuis le contrôle, 📷 photo, acomptes
+ * en trésorerie, contrôles.
+ */
 export class PageRentabiliteChantier extends PageBase {
   icone = icone('rentabilite_detail');
 
   urlCourante() {
-    const p = new URLSearchParams(Object.entries({ ordre: this.filtre?.ordre, au: this.filtre?.au }).filter(([, v]) => v !== undefined && v !== null && v !== ''));
+    const f = this.filtre ?? {};
+    const p = new URLSearchParams(Object.entries({ ordre: f.ordre, du: f.du, au: f.au, reference: f.reference }).filter(([, v]) => v !== undefined && v !== null && v !== ''));
     return `/rentabilite/chantier/${encodeURIComponent(this.params.id)}${p.size ? `?${p}` : ''}`;
   }
 
   async ouvrir() {
     this.titre = texte('rentabilite_btp.routes.chantier');
-    this.filtre = { ordre: this.requete.ordre ?? '', au: this.requete.au ?? '', cout: lireStockage(CLE_COUT, COUT.PR) === COUT.PA ? COUT.PA : COUT.PR };
+    this.filtre = { ordre: this.requete.ordre ?? '', du: this.requete.du ?? '', au: this.requete.au ?? '', reference: this.requete.reference ?? '',
+      cout: lireStockage(CLE_COUT, COUT.PR) === COUT.PA ? COUT.PA : COUT.PR };
     this.conteneur.innerHTML = '<div class="page-parametres page-rentabilite" data-corps></div>';
     await this.#charger();
   }
@@ -106,7 +321,7 @@ export class PageRentabiliteChantier extends PageBase {
   async #charger() {
     const corps = this.conteneur.querySelector('[data-corps]');
     let d;
-    try { d = await api.rentabilite.chantier(this.params.id, this.filtre.au); } catch (e) { this.app.erreur(e); corps.innerHTML = `<p class="aide">${texteHtml('rentabilite_btp.chantier.introuvable')}</p>`; return; }
+    try { d = await api.rentabilite.chantier(this.params.id, this.filtre.au, { du: this.filtre.du, reference: this.filtre.reference }); } catch (e) { this.app.erreur(e); corps.innerHTML = `<p class="aide">${texteHtml('rentabilite_btp.chantier.introuvable')}</p>`; return; }
     this.donnees = d;
     const c = d.chantier;
     this.titre = texte('rentabilite_btp.chantier.titre', { code: c.code });
@@ -115,13 +330,22 @@ export class PageRentabiliteChantier extends PageBase {
         <div class="barre-outils"><div class="groupe-outils">
           <button type="button" data-recalculer title="${texteHtml('rentabilite_btp.chantier.recalculer_titre')}">${iconeHtml('rentabilite_btp_recalculer')} ${texteHtml('rentabilite_btp.chantier.recalculer')}</button>
           <a class="bouton" href="/rentabilite/rapprochement/${Number(c.id)}" title="${texteHtml('rentabilite_btp.chantier.rapprochement_titre')}">${iconeHtml('rentabilite_btp_rapprochement')} ${texteHtml('rentabilite_btp.chantier.rapprochement')}</a>
+        </div><div class="groupe-outils">
+          <button type="button" data-controle title="${texteHtml('rentabilite_btp.chantier.controle_titre')}">${iconeHtml('rentabilite_btp_controle')} ${texteHtml('rentabilite_btp.liste.controle')}</button>
+          <button type="button" data-photo title="${texteHtml('rentabilite_btp.chantier.photo_titre')}">${iconeHtml('rentabilite_btp_photo')} ${texteHtml('rentabilite_btp.chantier.photo')}</button>
         </div></div></div>
       <p class="aide">${[c.affaire ? texteHtml('rentabilite_btp.chantier.affaire', { affaire: c.affaire }) : '', c.charge ? texteHtml('rentabilite_btp.chantier.charge', { nom: c.charge }) : ''].filter(Boolean).join(' · ')}</p>
       <p class="aide" data-fraicheur>${fraicheurHtml(d.fraicheur)}</p>
+      <p class="aide" data-controle-etat>${this.#controleHtml(d)}</p>
       <p class="ligne"><label>${texteHtml('rentabilite_btp.chantier.ordre')} <span data-ordre></span></label>
         ${d.voir_couts ? `<label>${texteHtml('rentabilite_btp.chantier.cout')} <span data-cout></span></label>` : ''}
-        <label title="${texteHtml('rentabilite_btp.chantier.au_titre')}">${texteHtml('rentabilite_btp.chantier.au')} <input type="date" data-au value="${echapper(this.filtre.au)}"></label></p>
+        <label title="${texteHtml('rentabilite_btp.liste.periode_titre')}">${texteHtml('rentabilite_btp.liste.du')} <input type="text" size="10" data-du value="${this.filtre.du ? formatDate(this.filtre.du) : ''}"></label>
+        <label title="${texteHtml('rentabilite_btp.chantier.au_titre')}">${texteHtml('rentabilite_btp.chantier.au')} <input type="text" size="10" data-au value="${this.filtre.au ? formatDate(this.filtre.au) : ''}"></label>
+        <label title="${texteHtml('rentabilite_btp.chantier.comparer_titre')}">${texteHtml('rentabilite_btp.chantier.comparer')} <span data-reference></span></label></p>
+      ${d.du ? `<p class="aide">${texteHtml('rentabilite_btp.chantier.periode_aide')}</p>` : ''}
       <div data-detail></div>
+      <div data-acomptes></div>
+      <div data-photos></div>
       <div data-controles></div>
       <p class="aide">${texteHtml('rentabilite.detail.ouvrir_faits')}</p>`;
     const ordres = creerCombo({
@@ -136,8 +360,42 @@ export class PageRentabiliteChantier extends PageBase {
       corps.querySelector('[data-cout]').append(cout);
       cout.addEventListener('change', () => { this.filtre.cout = cout.valeurCombo; ecrireStockage(CLE_COUT, this.filtre.cout); this.#rendreDetail(); });
     }
-    const au = champDate(corps.querySelector('[data-au]'));
-    au.addEventListener('change', () => { this.filtre.au = au.value; this.#memoriser(); this.#charger(); });
+    const borne = (champ, cle, b) => champ.addEventListener('change', () => {
+      const v = lireBorne(champ, b);
+      if (v === undefined) { this.app.message(texte(`rentabilite.periodes.${ERREUR_PERIODE.DATE}`), 'erreur'); return; }
+      const autre = { ...this.filtre, [cle]: v ?? '' };
+      if (controlerPeriode(autre.du || null, autre.au || null)) { this.app.message(texte(`rentabilite.periodes.${ERREUR_PERIODE.ORDRE}`), 'erreur'); return; }
+      this.filtre[cle] = v ?? '';
+      this.#memoriser();
+      this.#charger();
+    });
+    borne(corps.querySelector('[data-du]'), 'du', BORNE_PERIODE.DEBUT);
+    borne(corps.querySelector('[data-au]'), 'au', BORNE_PERIODE.FIN);
+    const reference = creerCombo({
+      options: [
+        ...(d.controle ? [{ valeur: 'controle', libelle: texte('rentabilite_btp.chantier.reference_controle', { date: formatDateHeure(d.controle.le) }) }] : []),
+        ...d.photos.map((ph) => ({ valeur: `photo:${ph.id}`, libelle: texte('rentabilite_btp.chantier.reference_photo', { date: formatDate(ph.date), libelle: ph.libelle ?? texte(`rentabilite_btp.photos.types.${ph.type}`) }) })),
+      ],
+      valeur: this.filtre.reference, vide: true, titre: texte('rentabilite_btp.chantier.comparer_titre'),
+    });
+    corps.querySelector('[data-reference]').append(reference);
+    reference.addEventListener('change', () => { this.filtre.reference = reference.valeurCombo ?? ''; this.#memoriser(); this.#charger(); });
+    corps.querySelector('[data-controle]').addEventListener('click', async () => {
+      try {
+        await api.rentabilite.controler([c.id]);
+        this.app.message(texte('rentabilite_btp.chantier.controle_fait'), 'succes');
+        await this.#charger();
+      } catch (e) { this.app.erreur(e); }
+    });
+    corps.querySelector('[data-photo]').addEventListener('click', async () => {
+      const libelle = await saisir(texte('rentabilite_btp.chantier.photo_libelle'), '', { titre: texte('rentabilite_btp.chantier.photo') });
+      if (libelle === null) return;
+      try {
+        await api.rentabilite.photographier(c.id, { date: this.filtre.au || null, libelle: libelle.trim() || null });
+        this.app.message(texte('rentabilite_btp.chantier.photo_faite'), 'succes');
+        await this.#charger();
+      } catch (e) { this.app.erreur(e); }
+    });
     corps.querySelector('[data-recalculer]').addEventListener('click', async (ev) => {
       ev.target.disabled = true;
       try {
@@ -147,16 +405,79 @@ export class PageRentabiliteChantier extends PageBase {
       } catch (e) { this.app.erreur(e); ev.target.disabled = false; }
     });
     this.tableau = new TableauDetail(corps.querySelector('[data-detail]'), {
-      ouvrirFaits: (f, nouvelle) => this.app.naviguer(urlFaits(c.id, { ...f, au: this.filtre.au }), { nouvelleFenetre: nouvelle }),
+      ouvrirFaits: (f, nouvelle) => {
+        const enPeriode = COLONNES_DETAIL.find((x) => x.code === f.colonne)?.periode;
+        this.app.naviguer(urlFaits(c.id, { ...f, du: enPeriode ? this.filtre.du : null, au: this.filtre.au }), { nouvelleFenetre: nouvelle });
+      },
     });
     this.#rendreDetail();
+    this.#rendreAcomptes(corps.querySelector('[data-acomptes]'));
+    this.#rendrePhotos(corps.querySelector('[data-photos]'));
     this.#rendreControles(corps.querySelector('[data-controles]'));
+  }
+
+  /** Dernier contrôle de l'utilisateur et changements nets depuis (lien vers la page des changements). */
+  #controleHtml(d) {
+    if (!d.controle) return texteHtml('rentabilite.liste.jamais_controle');
+    const lien = d.controle.changements
+      ? ` · <a href="/rentabilite/changements/${Number(d.chantier.id)}">${echapper(pluriel('rentabilite_btp.chantier.changements', d.controle.changements, { nombre: d.controle.changements }))}</a>`
+      : ` · ${texteHtml('rentabilite_btp.chantier.aucun_changement')}`;
+    return `${texteHtml('rentabilite_btp.chantier.controle_par', { date: formatDateHeure(d.controle.le), par: d.controle.par })}${lien}`;
+  }
+
+  /** Acomptes en trésorerie du chantier (R6) : payé, utilisé, reste ; double-clic : faits. */
+  #rendreAcomptes(zone) {
+    const somme = (i) => this.donnees.agregats.filter((a) => a.indicateur === i).reduce((s, a) => s.plus(Dz(a.pv)), Dz(0));
+    const paye = somme(INDICATEUR.ACOMPTE_PAYE);
+    const utilise = somme(INDICATEUR.ACOMPTE_UTILISE);
+    if (paye.isZero() && utilise.isZero()) { zone.innerHTML = ''; return; }
+    const reste = paye.minus(utilise);
+    const cellule = (v, indicateurs) => `<td class="montant${v.isNegative() ? ' rentabilite-anomalie' : ''}" data-faits="${indicateurs.join(',')}" title="${texteHtml('rentabilite.detail.ouvrir_faits')}">${montant(v.toString())}</td>`;
+    zone.innerHTML = `<h2>${texteHtml('rentabilite_btp.chantier.acomptes')}</h2>
+      <table class="tableau-compact rentabilite-acomptes"><thead><tr><th class="montant">${texteHtml('rentabilite.colonnes.acompte_paye.libelle')}</th>
+        <th class="montant">${texteHtml('rentabilite.colonnes.acompte_utilise.libelle')}</th><th class="montant">${texteHtml('rentabilite.colonnes.acompte_reste.libelle')}</th></tr></thead>
+      <tbody><tr>${cellule(paye, [INDICATEUR.ACOMPTE_PAYE])}${cellule(utilise, [INDICATEUR.ACOMPTE_UTILISE])}${cellule(reste, [INDICATEUR.ACOMPTE_PAYE, INDICATEUR.ACOMPTE_UTILISE])}</tr></tbody></table>
+      <p class="aide">${texteHtml('rentabilite_btp.chantier.acomptes_aide')}</p>`;
+    zone.querySelector('table').addEventListener('dblclick', (ev) => {
+      const td = ev.target.closest('[data-faits]');
+      if (td) this.app.naviguer(urlFaits(this.donnees.chantier.id, { indicateurs: td.dataset.faits.split(','), au: this.filtre.au }), { nouvelleFenetre: ev.ctrlKey || ev.metaKey });
+    });
+  }
+
+  /** Photos du chantier (mensuelles et à la demande) : comparer, supprimer une photo manuelle. */
+  #rendrePhotos(zone) {
+    const l = this.donnees.photos ?? [];
+    if (!l.length) { zone.innerHTML = ''; return; }
+    zone.innerHTML = `<details><summary>${echapper(pluriel('rentabilite_btp.photos.titre', l.length, { nombre: l.length }))}</summary>
+      <table class="tableau-compact"><thead><tr><th>${texteHtml('rentabilite_btp.photos.date')}</th><th>${texteHtml('rentabilite_btp.photos.type')}</th>
+        <th>${texteHtml('rentabilite_btp.photos.libelle')}</th><th>${texteHtml('rentabilite_btp.photos.par')}</th><th class="cellule-boutons"></th></tr></thead>
+      <tbody>${l.map((ph) => `<tr><td>${formatDate(ph.date)}</td><td>${texteHtml(`rentabilite_btp.photos.types.${ph.type}`)}</td><td>${echapper(ph.libelle ?? '')}</td>
+        <td>${echapper(ph.par ?? '')} ${formatDateHeure(ph.le)}</td>
+        <td class="cellule-boutons"><button type="button" data-comparer="${ph.id}" title="${texteHtml('rentabilite_btp.photos.comparer')}">${iconeHtml('rentabilite_btp_rapprochement')}</button>
+        ${ph.type === 'MANUEL' ? `<button type="button" data-supprimer="${ph.id}" title="${texteHtml('rentabilite_btp.photos.supprimer')}">${iconeHtml('rentabilite_btp_vue_supprimer')}</button>` : ''}</td></tr>`).join('')}</tbody></table></details>`;
+    zone.querySelectorAll('[data-comparer]').forEach((b) => b.addEventListener('click', () => {
+      this.filtre.reference = `photo:${b.dataset.comparer}`;
+      this.#memoriser();
+      this.#charger();
+    }));
+    zone.querySelectorAll('[data-supprimer]').forEach((b) => b.addEventListener('click', async () => {
+      if (!await confirmer(texte('rentabilite_btp.photos.supprimer_confirmer'))) return;
+      try {
+        await api.rentabilite.supprimerPhoto(Number(b.dataset.supprimer));
+        if (this.filtre.reference === `photo:${b.dataset.supprimer}`) this.filtre.reference = '';
+        await this.#charger();
+      } catch (e) { this.app.erreur(e); }
+    }));
   }
 
   #memoriser() { this.app.routeur?.remplacerUrl?.(this.urlCourante()); }
 
   #rendreDetail() {
-    this.tableau.rendre(this.donnees, { cout: this.filtre.cout, ordre: this.filtre.ordre === '' ? undefined : this.filtre.ordre });
+    const r = this.donnees.reference;
+    const libelle = r ? (r.code === 'controle' ? texte('rentabilite_btp.chantier.reference_controle', { date: formatDateHeure(r.le) })
+      : texte('rentabilite_btp.chantier.reference_photo', { date: formatDate(r.au), libelle: '' }).trim()) : null;
+    this.tableau.rendre(this.donnees, { cout: this.filtre.cout, ordre: this.filtre.ordre === '' ? undefined : this.filtre.ordre, periode: !!this.donnees.du,
+      reference: r ? { libelle, agregats: r.agregats } : null });
   }
 
   /** Contrôles (§ 10) : pointages non valorisés, valorisés au taux du service, sorties sans prix, tâches sans taux. */
@@ -203,6 +524,7 @@ export class PageRentabiliteFaits extends PageBase {
     this.conteneur.querySelector('[data-filtre]').innerHTML = [
       `<a href="/rentabilite/chantier/${Number(c.id)}">${iconeHtml('rentabilite_detail')} ${echapper(c.code)} ${echapper(c.libelle ?? '')}</a>`,
       colonne ? echapper(colonne) : '', r.ligne ? echapper(r.ligne) : '', r.regle ? texteHtml(`rentabilite_btp.regles.${r.regle}`) : '',
+      r.du ? texteHtml('rentabilite_btp.faits.depuis', { date: formatDate(r.du) }) : '',
       r.au ? texteHtml('rentabilite_btp.faits.jusquau', { date: formatDate(r.au) }) : '',
     ].filter(Boolean).join(' · ');
     this.#rendre();
@@ -220,6 +542,53 @@ export class PageRentabiliteFaits extends PageBase {
       libelleOrdre: (id) => (id === null || id === undefined ? '' : ordres.get(id) ?? ''),
       ouvrirPiece: (id, nouvelle) => this.app.naviguer(urlDocument(id), { nouvelleFenetre: nouvelle }),
     }).rendre(d);
+  }
+}
+
+/**
+ * Ce qui a changé (§ 10.4) depuis le dernier contrôle de l'utilisateur (ou un calcul donné) : faits ajoutés ou modifiés,
+ * faits retirés, regroupés par pièce ; « ✓ Contrôlé » marque le chantier contrôlé au dernier calcul.
+ */
+export class PageRentabiliteChangements extends PageBase {
+  icone = icone('rentabilite_faits');
+
+  urlCourante() { return `/rentabilite/changements/${encodeURIComponent(this.params.id)}${this.requete.calcul ? `?calcul=${encodeURIComponent(this.requete.calcul)}` : ''}`; }
+
+  async ouvrir() {
+    this.titre = texte('rentabilite_btp.routes.changements');
+    this.conteneur.innerHTML = `<div class="page-parametres page-rentabilite"><div class="entete-page"><h1 class="page-titre" data-titre>${iconeHtml('rentabilite_faits')} ${texteHtml('rentabilite_btp.routes.changements')}</h1>
+        <div class="barre-outils"><div class="groupe-outils"><button type="button" data-controle title="${texteHtml('rentabilite_btp.chantier.controle_titre')}">${iconeHtml('rentabilite_btp_controle')} ${texteHtml('rentabilite_btp.liste.controle')}</button></div></div></div>
+      <p class="aide" data-depuis></p>
+      <h2 data-titre-ajoutes></h2><div data-ajoutes></div>
+      <h2 data-titre-retires></h2><div data-retires></div></div>`;
+    let d;
+    try { d = await api.rentabilite.changements(this.params.id, this.requete.calcul); } catch (e) { this.app.erreur(e); return; }
+    const c = d.chantier;
+    this.titre = texte('rentabilite_btp.changements.titre', { code: c.code });
+    const $ = (s) => this.conteneur.querySelector(s);
+    $('[data-titre]').innerHTML = `${iconeHtml('rentabilite_faits')} ${texteHtml('rentabilite_btp.changements.titre', { code: c.code })}`;
+    $('[data-depuis]').innerHTML = `<a href="/rentabilite/chantier/${Number(c.id)}?reference=controle">${iconeHtml('rentabilite_detail')} ${echapper(c.code)} ${echapper(c.libelle ?? '')}</a> · ${
+      texteHtml('rentabilite_btp.changements.depuis', { date: d.depuis_le ? formatDateHeure(d.depuis_le) : '' })}`;
+    $('[data-titre-ajoutes]').textContent = pluriel('rentabilite_btp.changements.ajoutes', d.ajoutes.length, { nombre: d.ajoutes.length });
+    $('[data-titre-retires]').textContent = pluriel('rentabilite_btp.changements.retires', d.retires.length, { nombre: d.retires.length });
+    const natures = new Map(d.natures.map((n) => [n.id, `${n.code} – ${n.libelle}`]));
+    const ordres = new Map(d.ordres.map((o) => [o.id, o.numero ?? `#${o.id}`]));
+    const options = {
+      annulees: true, voirCouts: d.voir_couts,
+      libelleRegle: (code) => texte(`rentabilite_btp.regles.${code}`),
+      libelleNature: (id) => (id === null || id === undefined ? texte('rentabilite.detail.non_ventile') : natures.get(id) ?? ''),
+      libelleOrdre: (id) => (id === null || id === undefined ? '' : ordres.get(id) ?? ''),
+      ouvrirPiece: (id, nouvelle) => this.app.naviguer(urlDocument(id), { nouvelleFenetre: nouvelle }),
+    };
+    new TableauFaits($('[data-ajoutes]'), options).rendre({ faits: d.ajoutes, pieces: d.pieces });
+    new TableauFaits($('[data-retires]'), options).rendre({ faits: d.retires, pieces: d.pieces });
+    $('[data-controle]').addEventListener('click', async () => {
+      try {
+        await api.rentabilite.controler([c.id]);
+        this.app.message(texte('rentabilite_btp.chantier.controle_fait'), 'succes');
+        this.app.naviguer(`/rentabilite/chantier/${Number(c.id)}`);
+      } catch (e) { this.app.erreur(e); }
+    });
   }
 }
 

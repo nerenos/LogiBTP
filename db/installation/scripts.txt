@@ -205,6 +205,7 @@ db/255_perimetre_documents.sql rejouable
 db/256_affaire_responsable.sql rejouable
 db/257_document_chantier.sql rejouable
 db/258_rentabilite.sql rejouable
+db/259_rentabilite_lot2.sql rejouable
 
 # Vues de colonnes des types de documents créés après 176 : rejouée en dernier.
 db/176_documents_vues_types.sql rejouable

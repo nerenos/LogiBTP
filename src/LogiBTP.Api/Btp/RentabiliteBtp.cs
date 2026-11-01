@@ -39,7 +39,7 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
     public const string Noeud = "rentabilite";
     public const string NoeudCouts = "rentabilite/couts";
 
-    public override int VersionRegles => 1;
+    public override int VersionRegles => 2;
 
     /// <summary>Règles appliquées (afa_regle), affichées dans la page des faits.</summary>
     public static class Regles
@@ -75,6 +75,9 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
         public const string TacheAffectee = "TACHE_AFFECTEE";
         public const string TacheTheorique = "TACHE_THEORIQUE";
         public const string TacheSansTaux = "TACHE_SANS_TAUX";
+        public const string AcomptePaye = "ACOMPTE_PAYE";
+        public const string AcompteRecu = "ACOMPTE_RECU";
+        public const string AcompteUtilise = "ACOMPTE_UTILISE";
     }
 
     public override IReadOnlyList<string> ReglesControle { get; } =
@@ -103,6 +106,8 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
     private sealed record TacheSql(long TacId, DateTime Debut, DateTime Fin, int Heures, int? SrvId, string? OrigineType, string? OrigineId, string? Libelle,
         string? ResType, string? ResId, int? AffHeures);
     private sealed record TauxSql(int Id, decimal? Taux);
+    private sealed record AcompteSql(string Indicateur, string Regle, DateOnly Date, long EntId, string Type, int MarId, string Source, long? SourceId,
+        decimal Montant, string? Libelle);
     private sealed record DateSql(int Id, DateOnly? Date);
 
     private static readonly string[] RolesCommandes = [RolesRentabilite.CommandeVente, RolesRentabilite.OrdreExecution, RolesRentabilite.CommandeAchat,
@@ -206,6 +211,42 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
             WHERE e.mev_type = 'CARBURANT' AND m.mat_cha_id = {chantier}
             """).ToListAsync(ct);
         c.Carburant(carburant);
+
+        // Acomptes en trésorerie (§ 4.7, R6) : payé = règlements pointés sur les reçus (module Règlements actif), sinon montant
+        // des reçus ; utilisé = déductions des pièces valables. Montants TTC, hors des indicateurs de coût et du facturé.
+        var acomptes = await db.Database.SqlQuery<AcompteSql>($"""
+            SELECT {Indicateur.AcomptePaye} AS indicateur, {Regles.AcomptePaye} AS regle, r.reg_date AS date, d.ent_id, t.tyd_code AS type, mac.mac_mar_id AS mar_id,
+                   {SourceFait.Reglement} AS source, pt.poi_id AS source_id, pt.poi_montant AS montant, mac.mac_libelle AS libelle
+            FROM marche_acompte mac
+            JOIN marche m ON m.mar_id = mac.mac_mar_id
+            JOIN document d ON d.ent_id = mac.mac_piece_ent_id
+            JOIN v_document_valable v ON v.ent_id = d.ent_id AND NOT v.annule
+            JOIN type_document t ON t.tyd_id = d.ent_tyd_id
+            JOIN document_echeance e ON e.ech_ent_id = d.ent_id
+            JOIN pointage pt ON pt.poi_echeance_id = e.ech_id AND pt.poi_reg_id IS NOT NULL
+            JOIN reglement r ON r.reg_id = pt.poi_reg_id
+            WHERE m.mar_cha_id = {chantier} AND mac.mac_mode = 'TRESORERIE' AND f_module_actif('reglement')
+            UNION ALL
+            SELECT {Indicateur.AcomptePaye}, {Regles.AcompteRecu}, d.ent_date, d.ent_id, t.tyd_code, mac.mac_mar_id, {SourceFait.Document}, NULL::bigint,
+                   d.ent_total_ttc, mac.mac_libelle
+            FROM marche_acompte mac
+            JOIN marche m ON m.mar_id = mac.mac_mar_id
+            JOIN document d ON d.ent_id = mac.mac_piece_ent_id
+            JOIN v_document_valable v ON v.ent_id = d.ent_id AND NOT v.annule
+            JOIN type_document t ON t.tyd_id = d.ent_tyd_id
+            WHERE m.mar_cha_id = {chantier} AND mac.mac_mode = 'TRESORERIE' AND NOT f_module_actif('reglement')
+            UNION ALL
+            SELECT {Indicateur.AcompteUtilise}, {Regles.AcompteUtilise}, d.ent_date, d.ent_id, t.tyd_code, mac.mac_mar_id,
+                   {SourceFait.Document}, acd.acd_id, acd.acd_montant, mac.mac_libelle
+            FROM acompte_deduction acd
+            JOIN marche_acompte mac ON mac.mac_id = acd.acd_mac_id
+            JOIN marche m ON m.mar_id = mac.mac_mar_id
+            JOIN document d ON d.ent_id = acd.acd_ent_id
+            JOIN v_document_valable v ON v.ent_id = d.ent_id AND NOT v.annule
+            JOIN type_document t ON t.tyd_id = d.ent_tyd_id
+            WHERE m.mar_cha_id = {chantier} AND mac.mac_mode = 'TRESORERIE'
+            """).ToListAsync(ct);
+        c.Acomptes(acomptes);
 
         // Main-d'œuvre planifiée (engagé, datée du jour) : tâches non terminées du chantier qui finissent aujourd'hui ou après.
         var taches = await db.Database.SqlQuery<TacheSql>($"""
@@ -644,6 +685,14 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
             }
         }
 
+        /// <summary>Acomptes en trésorerie : payé et utilisé (TTC, en PV), sans ordre ni nature.</summary>
+        public void Acomptes(List<AcompteSql> acomptes)
+        {
+            foreach (var x in acomptes.Where(x => x.Montant != 0))
+                Faits.Add(new Fait(chantier, null, x.MarId, x.Indicateur, Composante.Vente, x.Date, null, null, null, 0, 0, x.Montant, null, x.Source, x.Type,
+                    x.EntId, null, x.SourceId, x.Regle, x.Libelle));
+        }
+
         public void Carburant(List<CarburantSql> pleins)
         {
             foreach (var x in pleins.Where(x => x.Cout is not null))
@@ -706,6 +755,31 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
 
     public override Task<List<int>> ChantiersOuvertsAsync(RentabiliteDbContext db, CancellationToken ct) =>
         db.Database.SqlQuery<int>($"SELECT cha_id AS \"Value\" FROM chantier WHERE cha_statut = 'OUVERT' ORDER BY cha_id").ToListAsync(ct);
+
+    /// <summary>Chantiers de la Liste : exclus = internes, dépôts et affaires de gestion (G : stock, matériel, dotations, SAV, frais) ; clos = non ouverts.</summary>
+    public override Task<List<ChantierListe>> ChantiersListeAsync(RentabiliteDbContext db, CancellationToken ct) =>
+        db.Database.SqlQuery<ChantierListe>($"""
+            SELECT c.cha_id AS id, c.cha_code AS code, c.cha_libelle AS libelle, a.aff_id AS affaire_id, a.aff_code AS affaire_code, a.aff_libelle AS affaire,
+                   i.ind_id::bigint AS charge_id, nullif(concat_ws(' ', i.ind_prenom, i.ind_nom), '') AS charge, c.cha_statut AS statut,
+                   (coalesce(c.cha_interne, FALSE) OR coalesce(c.cha_depot, FALSE) OR coalesce(a.aff_nature = 'G', FALSE)) AS exclu,
+                   (c.cha_statut <> 'OUVERT') AS clos
+            FROM chantier c
+            LEFT JOIN affaire a ON a.aff_id = c.cha_aff_id
+            LEFT JOIN individu i ON i.ind_id = coalesce(c.cha_charge_ind_id, a.aff_responsable_ind_id)
+            ORDER BY c.cha_code
+            """).ToListAsync(ct);
+
+    public override Task<List<OrdreChantier>> OrdresChantiersAsync(RentabiliteDbContext db, int[] chantiers, CancellationToken ct) =>
+        db.Database.SqlQuery<OrdreChantier>($"""
+            SELECT d.ent_chantier_id AS cha_id, d.ent_id AS id, d.ent_numero AS numero, d.ent_objet AS libelle, s.std_code AS statut
+            FROM document d
+            JOIN type_document t ON t.tyd_id = d.ent_tyd_id
+            JOIN rentabilite_role_type x ON x.rrt_tyd_code = t.tyd_code AND x.rrt_role = {RolesRentabilite.OrdreExecution}
+            JOIN v_document_valable v ON v.ent_id = d.ent_id AND NOT v.annule
+            JOIN statut_document s ON s.std_id = d.ent_std_id
+            WHERE d.ent_chantier_id = ANY({chantiers})
+            ORDER BY d.ent_date, d.ent_id
+            """).ToListAsync(ct);
 
     public override async Task<ChantierRentabilite?> ChantierAsync(RentabiliteDbContext db, int chantier, CancellationToken ct) =>
         (await db.Database.SqlQuery<ChantierRentabilite>($"""

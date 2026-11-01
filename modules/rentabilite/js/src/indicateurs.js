@@ -13,21 +13,23 @@ export const COUT = Object.freeze({ PA: 'PA', PR: 'PR' });
 
 /**
  * Colonnes du Détail : `indicateurs` sommés sur `champ` (cout = PA ou PR selon le choix, pv), ou `calcul` à partir des
- * autres colonnes ; `teinte` = suffixe des variables `--rentabilite-<teinte>` du thème ; `faits` : indicateurs listés
- * par le double-clic.
+ * autres colonnes (toujours sur les cumuls) ; `periode` : en période du… au, somme des faits de la période (budget,
+ * budget d'exécution, déboursé, facturé : § 5.4 Q4), les autres restent au cumul à la fin de la période (engagé, dépensé,
+ * restes) ; `teinte` = suffixe des variables `--rentabilite-<teinte>` du thème ; `faits` : indicateurs listés par le
+ * double-clic.
  */
 export const COLONNES_DETAIL = Object.freeze([
-  { code: 'budget', indicateurs: [INDICATEUR.BUDGET], champ: 'cout', sens: SENS.POSITIF, teinte: 'budget' },
-  { code: 'budget_execution', indicateurs: [INDICATEUR.BUDGET_EXECUTION], champ: 'cout', sens: SENS.POSITIF, teinte: 'budget-execution' },
+  { code: 'budget', indicateurs: [INDICATEUR.BUDGET], champ: 'cout', periode: true, sens: SENS.POSITIF, teinte: 'budget' },
+  { code: 'budget_execution', indicateurs: [INDICATEUR.BUDGET_EXECUTION], champ: 'cout', periode: true, sens: SENS.POSITIF, teinte: 'budget-execution' },
   { code: 'engage', indicateurs: [INDICATEUR.ENGAGE], champ: 'cout', sens: SENS.POSITIF, teinte: 'engage' },
-  { code: 'debourse', indicateurs: [INDICATEUR.DEBOURSE], champ: 'cout', sens: SENS.POSITIF, teinte: 'debourse' },
+  { code: 'debourse', indicateurs: [INDICATEUR.DEBOURSE], champ: 'cout', periode: true, sens: SENS.POSITIF, teinte: 'debourse' },
   { code: 'depense', indicateurs: [INDICATEUR.ENGAGE, INDICATEUR.DEBOURSE], champ: 'cout', sens: SENS.POSITIF, teinte: 'depense' },
   {
     code: 'reste_depenser', calcul: (v) => v.budget_execution.minus(v.depense), faits: [INDICATEUR.BUDGET_EXECUTION, INDICATEUR.ENGAGE, INDICATEUR.DEBOURSE],
     sens: SENS.POSITIF, teinte: 'reste-depenser',
   },
-  { code: 'budget_pv', indicateurs: [INDICATEUR.BUDGET], champ: 'pv', sens: SENS.POSITIF, teinte: 'budget' },
-  { code: 'facture', indicateurs: [INDICATEUR.FACTURE], champ: 'pv', sens: SENS.POSITIF, teinte: 'facture' },
+  { code: 'budget_pv', indicateurs: [INDICATEUR.BUDGET], champ: 'pv', periode: true, sens: SENS.POSITIF, teinte: 'budget' },
+  { code: 'facture', indicateurs: [INDICATEUR.FACTURE], champ: 'pv', periode: true, sens: SENS.POSITIF, teinte: 'facture' },
   { code: 'reste_facturer', calcul: (v) => v.budget_pv.minus(v.facture), faits: [INDICATEUR.BUDGET, INDICATEUR.FACTURE], sens: SENS.POSITIF, teinte: 'reste-facturer' },
 ].map((c) => Object.freeze({ ...c, faits: c.faits ?? c.indicateurs })));
 
@@ -51,26 +53,43 @@ export function filtrerOrdre(agregats, ordre) {
   return agregats.filter((a) => (o === 0 ? a.ordre_id === null || a.ordre_id === undefined : a.ordre_id === o));
 }
 
-/** Valeur de chaque colonne (Decimal) pour des agrégats ; `cout` : PA ou PR. */
-export function valeursColonnes(agregats, cout = COUT.PR) {
+/** Somme d'un champ (pa, pr, pv, heures) des agrégats de ces indicateurs, au cumul ou sur la période (`<champ>_periode`). */
+function somme(agregats, indicateurs, champ, periode) {
+  const cle = periode ? `${champ}_periode` : champ;
+  return agregats.filter((a) => indicateurs.includes(a.indicateur))
+    .reduce((s, a) => (a[cle] === null || a[cle] === undefined ? s : s.plus(Dz(a[cle]))), Dz(0));
+}
+
+/**
+ * Valeur de chaque colonne (Decimal, ou null pour un rapport sans base) pour des agrégats ; `cout` : PA ou PR ;
+ * `periode` : colonnes `periode` sur la période (les colonnes calculées restent sur les cumuls) ; `colonnes` : Détail
+ * par défaut, Liste (COLONNES_LISTE).
+ */
+export function valeursColonnes(agregats, cout = COUT.PR, { periode = false, colonnes = COLONNES_DETAIL } = {}) {
   const champCout = cout === COUT.PA ? 'pa' : 'pr';
-  const v = {};
-  for (const c of COLONNES_DETAIL.filter((x) => !x.calcul)) {
-    const champ = c.champ === 'pv' ? 'pv' : champCout;
-    v[c.code] = agregats.filter((a) => c.indicateurs.includes(a.indicateur)).reduce((s, a) => s.plus(Dz(a[champ])), Dz(0));
-  }
-  for (const c of COLONNES_DETAIL.filter((x) => x.calcul)) v[c.code] = c.calcul(v);
+  const champ = (c) => (c.champ === 'cout' ? champCout : c.champ);
+  const cumul = {};
+  for (const c of colonnes.filter((x) => !x.calcul)) cumul[c.code] = somme(agregats, c.indicateurs, champ(c), false);
+  for (const c of colonnes.filter((x) => x.calcul)) cumul[c.code] = c.calcul(cumul);
+  if (!periode) return cumul;
+  const v = { ...cumul };
+  for (const c of colonnes.filter((x) => x.periode && !x.calcul)) v[c.code] = somme(agregats, c.indicateurs, champ(c), true);
   return v;
 }
+
+/** Indicateurs lus par des colonnes (les autres, acomptes au Détail par exemple, n'y forment aucune ligne). */
+export const indicateursDe = (colonnes) => new Set(colonnes.flatMap((c) => c.faits));
 
 /**
  * Lignes du Détail : total en haut, puis chaque regroupement (dans l'ordre des natures) et ses natures, puis « Non
  * ventilé » (faits sans nature hors postes) et « Postes de pied » (composante POSTE). Chaque ligne porte le filtre des
  * faits qui la composent (`natures` : identifiants, 0 = sans nature ; `composante` : POSTE ou !POSTE).
  */
-export function lignesDetail({ agregats, natures, ordre, cout = COUT.PR }) {
-  const retenus = filtrerOrdre(agregats, ordre);
-  const lignes = [{ type: 'total', code: 'total', libelle: texte('rentabilite.detail.total'), natures: null, composante: null, valeurs: valeursColonnes(retenus, cout) }];
+export function lignesDetail({ agregats, natures, ordre, cout = COUT.PR, periode = false }) {
+  const lus = indicateursDe(COLONNES_DETAIL);
+  const retenus = filtrerOrdre(agregats, ordre).filter((a) => lus.has(a.indicateur));
+  const valeurs = (l) => valeursColonnes(l, cout, { periode });
+  const lignes = [{ type: 'total', code: 'total', libelle: texte('rentabilite.detail.total'), natures: null, composante: null, valeurs: valeurs(retenus) }];
   const postes = retenus.filter((a) => a.composante === COMPOSANTE.POSTE);
   const ventiles = retenus.filter((a) => a.composante !== COMPOSANTE.POSTE);
   const groupes = new Map();
@@ -83,21 +102,21 @@ export function lignesDetail({ agregats, natures, ordre, cout = COUT.PR }) {
     const ids = g.natures.map((n) => n.id);
     const duGroupe = ventiles.filter((a) => ids.includes(a.nat_id));
     if (!duGroupe.length) continue;
-    lignes.push({ type: 'groupe', code: `groupe:${g.code}`, libelle: g.libelle, natures: ids, composante: `!${COMPOSANTE.POSTE}`, valeurs: valeursColonnes(duGroupe, cout) });
+    lignes.push({ type: 'groupe', code: `groupe:${g.code}`, libelle: g.libelle, natures: ids, composante: `!${COMPOSANTE.POSTE}`, valeurs: valeurs(duGroupe) });
     for (const n of g.natures) {
       const deLaNature = ventiles.filter((a) => a.nat_id === n.id);
       if (!deLaNature.length) continue;
-      lignes.push({ type: 'nature', code: `nature:${n.id}`, libelle: `${n.code} – ${n.libelle}`, natures: [n.id], composante: `!${COMPOSANTE.POSTE}`, valeurs: valeursColonnes(deLaNature, cout) });
+      lignes.push({ type: 'nature', code: `nature:${n.id}`, libelle: `${n.code} – ${n.libelle}`, natures: [n.id], composante: `!${COMPOSANTE.POSTE}`, valeurs: valeurs(deLaNature) });
     }
   }
   const sansNature = ventiles.filter((a) => a.nat_id === null || a.nat_id === undefined);
   if (sansNature.length) {
     lignes.push({ type: 'non_ventile', code: 'non_ventile', libelle: texte('rentabilite.detail.non_ventile'), info: texte('rentabilite.detail.non_ventile_info'),
-      natures: [0], composante: `!${COMPOSANTE.POSTE}`, valeurs: valeursColonnes(sansNature, cout) });
+      natures: [0], composante: `!${COMPOSANTE.POSTE}`, valeurs: valeurs(sansNature) });
   }
   if (postes.length) {
     lignes.push({ type: 'postes', code: 'postes', libelle: texte('rentabilite.detail.postes'), info: texte('rentabilite.detail.postes_info'),
-      natures: null, composante: COMPOSANTE.POSTE, valeurs: valeursColonnes(postes, cout) });
+      natures: null, composante: COMPOSANTE.POSTE, valeurs: valeurs(postes) });
   }
   return lignes;
 }

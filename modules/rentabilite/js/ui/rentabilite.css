@@ -34,3 +34,29 @@
 .rentabilite-faits .rentabilite-annulee td { opacity: 0.6; text-decoration: line-through; }
 .rentabilite-faits .rentabilite-masque td { font-style: italic; }
 .page-rentabilite td.montant, .page-rentabilite th.montant, .rentabilite-detail .montant, .rentabilite-faits .montant { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* Liste : arbre multi-origine, total figé en pied, colonnes d'acompte. */
+.rentabilite-colonne-acompte { background: var(--rentabilite-acompte); color: var(--rentabilite-acompte-texte); }
+.rentabilite-detail td.rentabilite-bande-acompte, .rentabilite-liste td.rentabilite-bande-acompte { border-left-color: var(--rentabilite-acompte); }
+.rentabilite-liste td.montant { border-left: 3px solid transparent; }
+.rentabilite-liste td.rentabilite-bande-budget { border-left-color: var(--rentabilite-budget); }
+.rentabilite-liste td.rentabilite-bande-budget-execution { border-left-color: var(--rentabilite-budget-execution); }
+.rentabilite-liste td.rentabilite-bande-engage { border-left-color: var(--rentabilite-engage); }
+.rentabilite-liste td.rentabilite-bande-debourse { border-left-color: var(--rentabilite-debourse); }
+.rentabilite-liste td.rentabilite-bande-depense { border-left-color: var(--rentabilite-depense); }
+.rentabilite-liste td.rentabilite-bande-reste-depenser { border-left-color: var(--rentabilite-reste-depenser); }
+.rentabilite-liste td.rentabilite-bande-facture { border-left-color: var(--rentabilite-facture); }
+.rentabilite-liste td.rentabilite-bande-reste-facturer { border-left-color: var(--rentabilite-reste-facturer); }
+.rentabilite-liste td.rentabilite-detaillable { cursor: zoom-in; }
+.rentabilite-liste td.rentabilite-detaillable:hover { outline: 1px solid var(--accent); outline-offset: -1px; }
+.rentabilite-liste th[scope="row"] { text-align: left; font-weight: normal; white-space: nowrap; padding-left: calc(0.3em + var(--profondeur, 0) * 1.2em); }
+.rentabilite-liste .rentabilite-ligne-charge th, .rentabilite-liste .rentabilite-ligne-charge td,
+.rentabilite-liste .rentabilite-ligne-affaire th, .rentabilite-liste .rentabilite-ligne-affaire td { background: var(--rentabilite-groupe-fond); font-weight: 600; }
+.rentabilite-liste .rentabilite-ligne-sans_ordre th { font-style: italic; }
+.rentabilite-liste tfoot { position: sticky; bottom: 0; }
+.rentabilite-liste tfoot th, .rentabilite-liste tfoot td { background: var(--rentabilite-total-fond); font-weight: 600; }
+.rentabilite-liste .montant { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.rentabilite-bascule { display: inline-block; width: 1.4em; padding: 0; border: 0; background: none; color: inherit; cursor: pointer; }
+.rentabilite-liste input[type="checkbox"] { margin: 0 0.3em 0 0; vertical-align: middle; }
+.rentabilite-changements { font-size: 0.85em; margin-left: 0.4em; }
+.rentabilite-ecart { display: block; font-size: 0.8em; color: var(--rentabilite-ecart); }

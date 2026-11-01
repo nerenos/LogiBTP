@@ -89,3 +89,64 @@ CREATE TABLE IF NOT EXISTS rentabilite_execution (
     rex_resultat  TEXT
 );
 COMMENT ON TABLE rentabilite_execution IS 'Dernière exécution des tâches périodiques du planificateur (recalcul de nuit) par base';
+
+-- Lot 2 (§ 10.3, § 10.4, § 6) : contrôles « ce qui a changé », photos, vues enregistrées de la Liste.
+
+-- Contrôle d'un chantier par un utilisateur : le calcul vu ; à la réouverture, les faits ouverts ou clos depuis ce
+-- calcul sont « ce qui a changé ».
+CREATE TABLE IF NOT EXISTS rentabilite_controle (
+    rco_id      BIGSERIAL     PRIMARY KEY,
+    rco_cha_id  INT           NOT NULL,
+    rco_rca_id  BIGINT        NOT NULL REFERENCES rentabilite_calcul (rca_id),
+    rco_par     VARCHAR(100)  NOT NULL,
+    rco_le      TIMESTAMPTZ   NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS ix_rco_chantier ON rentabilite_controle (rco_cha_id, rco_par, rco_id DESC);
+COMMENT ON TABLE rentabilite_controle IS 'Contrôles des chiffres d''un chantier : calcul vu, auteur, date (ce qui a changé depuis = faits ouverts ou clos après ce calcul)';
+
+-- Photo : les faits d'un chantier tels que connus à un calcul, datés jusqu'à une date. Les faits n'étant jamais
+-- effacés, la photo est une référence (calcul, date) et non une copie : une purge future des faits clos doit garder
+-- ceux qu'une photo voit encore.
+CREATE TABLE IF NOT EXISTS rentabilite_photo (
+    rph_id      BIGSERIAL     PRIMARY KEY,
+    rph_cha_id  INT           NOT NULL,
+    rph_date    DATE          NOT NULL,
+    rph_rca_id  BIGINT        NOT NULL REFERENCES rentabilite_calcul (rca_id),
+    rph_type    VARCHAR(10)   NOT NULL,
+    rph_libelle VARCHAR(150),
+    rph_par     VARCHAR(100),
+    rph_le      TIMESTAMPTZ   NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_rph_mois ON rentabilite_photo (rph_cha_id, rph_date) WHERE rph_type = 'MOIS';
+CREATE INDEX IF NOT EXISTS ix_rph_chantier ON rentabilite_photo (rph_cha_id, rph_date DESC);
+COMMENT ON TABLE rentabilite_photo IS 'Photos des chiffres d''un chantier (MOIS : fin de mois, MANUEL : à la demande) : faits connus au calcul rph_rca_id, datés jusqu''au rph_date';
+
+-- Vues enregistrées de la Liste (sur le modèle de vue_liste) : propriétaire vide = vue globale (administrateur).
+CREATE TABLE IF NOT EXISTS rentabilite_vue (
+    rvu_id           SERIAL        PRIMARY KEY,
+    rvu_nom          VARCHAR(100)  NOT NULL,
+    rvu_proprietaire VARCHAR(100),
+    rvu_parametres   JSONB         NOT NULL DEFAULT '{}',
+    rvu_defaut       BOOLEAN       NOT NULL DEFAULT FALSE,
+    rvu_maj_le       TIMESTAMPTZ   NOT NULL DEFAULT now()
+);
+COMMENT ON TABLE rentabilite_vue IS 'Vues de la Liste : niveau d''origine, colonnes, PA / PR, arrondi, période par défaut, chantiers exclus ou clos affichés';
+
+-- Changements nets d'un chantier depuis un calcul : faits ouverts depuis (encore ouverts) et faits connus alors puis clos,
+-- sans les paires identiques (un fait retiré puis rétabli à l'identique n'est pas un changement).
+CREATE OR REPLACE FUNCTION f_rentabilite_signature(f rentabilite_fait) RETURNS TEXT LANGUAGE sql IMMUTABLE AS $$
+    SELECT md5(row(f.afa_ordre_id, f.afa_mar_id, f.afa_indicateur, f.afa_composante, f.afa_date, f.afa_nat_id, f.afa_qte, f.afa_unite,
+                   f.afa_montant_pa, f.afa_montant_pr, f.afa_montant_pv, f.afa_heures, f.afa_source_type, f.afa_type_piece,
+                   f.afa_ent_id, f.afa_lig_id, f.afa_source_id, f.afa_regle, f.afa_libelle)::text)
+$$;
+
+CREATE OR REPLACE FUNCTION f_rentabilite_changements(p_cha INT, p_calcul BIGINT) RETURNS INT LANGUAGE sql STABLE AS $$
+    SELECT coalesce(sum(abs(s.ajoutes - s.retires)), 0)::int
+    FROM (SELECT f_rentabilite_signature(f) AS sig,
+                 count(*) FILTER (WHERE f.afa_calcul_debut > p_calcul) AS ajoutes,
+                 count(*) FILTER (WHERE f.afa_calcul_debut <= p_calcul) AS retires
+          FROM rentabilite_fait f
+          WHERE f.afa_cha_id = p_cha
+            AND (f.afa_calcul_debut > p_calcul AND f.afa_calcul_fin IS NULL OR f.afa_calcul_debut <= p_calcul AND f.afa_calcul_fin > p_calcul)
+          GROUP BY 1) s
+$$;

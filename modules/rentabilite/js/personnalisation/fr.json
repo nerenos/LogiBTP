@@ -5,7 +5,9 @@
       "BUDGET_EXECUTION": "Budget d'exécution",
       "ENGAGE": "Engagé",
       "DEBOURSE": "Déboursé",
-      "FACTURE": "Facturé"
+      "FACTURE": "Facturé",
+      "ACOMPTE_PAYE": "Acompte payé",
+      "ACOMPTE_UTILISE": "Acompte utilisé"
     },
     "composantes": {
       "VENTE": "Vente",
@@ -52,6 +54,30 @@
       "reste_facturer": {
         "libelle": "Reste à facturer",
         "info": "Budget PV − facturé ; négatif : facturé au-delà du budget"
+      },
+      "pct_depense": {
+        "libelle": "% dépensé",
+        "info": "Dépensé / budget d'exécution (au cumul)"
+      },
+      "pct_facture": {
+        "libelle": "% facturé",
+        "info": "Facturé / budget PV (au cumul)"
+      },
+      "heures": {
+        "libelle": "Heures MO",
+        "info": "Heures de main-d'œuvre pointées (déboursé)"
+      },
+      "acompte_paye": {
+        "libelle": "Acompte payé",
+        "info": "Acomptes en trésorerie reçus (règlements pointés, sinon reçus validés), TTC"
+      },
+      "acompte_utilise": {
+        "libelle": "Acompte utilisé",
+        "info": "Acomptes en trésorerie déduits des situations et factures, TTC"
+      },
+      "acompte_reste": {
+        "libelle": "Reste d'acompte",
+        "info": "Acompte payé − acompte utilisé"
       }
     },
     "anomalies": {
@@ -68,7 +94,10 @@
       "sans_groupe": "Autres natures",
       "nature": "Nature",
       "ouvrir_faits": "Double-clic : faits composant ce chiffre (Ctrl : dans une nouvelle fenêtre)",
-      "aucun": "Aucun fait pour ce chantier."
+      "aucun": "Aucun fait pour ce chantier.",
+      "reference_valeur": "{{reference}} : {{valeur}}",
+      "ecart_plus": "+{{valeur}}",
+      "ecart_moins": "−{{valeur}}"
     },
     "faits": {
       "date": "Date",
@@ -99,7 +128,50 @@
       "DOCUMENT": "Pièce",
       "POINTAGE": "Pointages",
       "TACHE": "Planning",
-      "MOUVEMENT": "Mouvements de stock"
+      "MOUVEMENT": "Mouvements de stock",
+      "REGLEMENT": "Règlements"
+    },
+    "liste": {
+      "total": "Total",
+      "sans_ordre": "Sans ordre",
+      "sans_affaire": "Sans affaire",
+      "sans_charge": "Sans chargé d'affaires",
+      "origine": "Origine",
+      "aucun": "Aucun chantier.",
+      "ouvrir_detail": "Clic : Détail du chantier",
+      "ouvrir_faits": "Double-clic : faits composant ce chiffre (Ctrl : dans une nouvelle fenêtre)",
+      "deplier": "Déplier",
+      "replier": "Replier",
+      "changements_un": "{{nombre}} changement depuis votre contrôle",
+      "changements_autre": "{{nombre}} changements depuis votre contrôle",
+      "jamais_controle": "Jamais contrôlé par vous",
+      "controle_le": "Contrôlé le {{date}}",
+      "calcule_le": "Calculé le {{date}}",
+      "en_attente": "Recalcul en attente",
+      "erreur": "Dernier calcul en erreur : {{erreur}}",
+      "selection": "Sélectionner",
+      "csv": {
+        "nom": "rentabilite",
+        "niveau": "Niveau",
+        "libelle": "Libellé"
+      },
+      "niveaux": {
+        "charge": "Chargé d'affaires",
+        "affaire": "Affaire",
+        "chantier": "Chantier",
+        "ordre": "Ordre",
+        "sans_ordre": "Ordre",
+        "total": "Total"
+      },
+      "pourcent": "{{valeur}} %"
+    },
+    "periodes": {
+      "PERIODE_DATE": "Période illisible : saisissez une année (2026), un mois (10/2026) ou une date",
+      "PERIODE_ORDRE": "Le début de la période est après sa fin"
     }
+  },
+  "erreurs": {
+    "RENTABILITE_SANS_CALCUL": "Le chantier n'a encore jamais été calculé",
+    "RENTABILITE_VUE_NOM": "Nom de la vue obligatoire"
   }
 }

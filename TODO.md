@@ -29,6 +29,9 @@
   lot G1 : appliquer `db/250` (révision des prix : index, formules, paramètres des marchés) puis saisir ou importer les
   valeurs des index utilisés (`/parametres/revision`) ; libellés du catalogue BT à vérifier ; rejouer le `191` régénéré
   (bloc `REVISION_PRIX` des situations et factures d'avancement).
+- [ ] Module Rentabilité, lot 2 : rejouer `modules/rentabilite/db/099r` puis appliquer `db/259` (acomptes en trésorerie,
+  contrôles, photos, vues ; tous les chantiers ouverts sont remis en file pour la version 2 des règles) ; vérifier le
+  rôle « Reçu d'acompte » dans `/parametres/rentabilite`.
 - [ ] Module Rentabilité, lot 1 : appliquer `modules/rentabilite/db/099r` et `db/258`, activer le module dans
   `/parametres/modules`, vérifier les rôles des types et saisir les taux horaires des services dans
   `/parametres/rentabilite` ; le premier passage du planificateur calcule tous les chantiers ouverts.
@@ -227,7 +230,8 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
 - [ ] Module Rentabilité (ex « Analyse », suivi économique des chantiers) : analyse validée le 01/11/2026
   ([ANALYSE-MODULE-ANALYSE.md](documentation/conception/ANALYSE-MODULE-ANALYSE.md)), lot 0 réalisé (périmètre unique
   des pièces, chargé d'affaires en individu, chantiers d'une pièce, garde-fou des unités), lot 1 réalisé (faits
-  versionnés, file, nuit, Détail, faits, rapprochement, rôles des types paramétrés) ; lots 2 à 8 à réaliser. Plus
+  versionnés, file, nuit, Détail, faits, rapprochement, rôles des types paramétrés), lot 2 réalisé (Liste
+  multi-origine, période, vues, acomptes en trésorerie, contrôles et changements, photos) ; lots 3 à 8 à réaliser. Plus
   tard (Q17) : historique du chargé d'affaires d'une affaire et d'un chantier (aujourd'hui seul le chargé d'affaires
   actuel compte, sur toute la période). Simplifications du lot 1 à revoir :
   - PV ventilé sur les feuilles d'un ouvrage au prorata du PR (à défaut du PA, sinon à parts égales), l'analyse parlant
@@ -239,6 +243,12 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
   - lignes de `rentabilite_calcul` jamais purgées ; suppression d'un lien entre pièces non signalée (rattrapée la nuit) ;
   - chantier qui tient un stock : ses articles de stock ignorés (consommés à la sortie) ;
   - portées EQUIPE et SERVICE du droit `rentabilite` traitées comme SOI (chargé, conducteur, responsable de l'affaire).
+  Simplifications du lot 2 à revoir :
+  - acomptes en trésorerie au niveau du chantier (sans ordre ni nature), TTC ; un acompte payé sans module Règlements
+    est daté du reçu validé ;
+  - colonnes de la Liste fixes (pas de choix de colonnes dans les vues) ; les rapports (% dépensé, % facturé) sont au
+    cumul même en période ;
+  - photos jamais purgées ; une photo référence un calcul, toute purge des faits devra garder ceux qu'elle voit.
 - [ ] Module Comptabilité avancée : à définir (voir aussi « Module Comptabilité complet »).
 - [ ] Module de gestion des risques : à définir.
 - [ ] Module de circuit de validation : à définir.

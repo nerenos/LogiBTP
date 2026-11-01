@@ -26,6 +26,8 @@ public class PlanificateurRentabilite(IServiceProvider services, IOptions<Option
     ILogger<PlanificateurRentabilite> journal, TimeProvider horloge) : BackgroundService
 {
     public const string TacheNuit = "nuit";
+    public const string TacheVersion = "version";
+    public const string TachePhotos = "photos";
 
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
@@ -65,6 +67,19 @@ public class PlanificateurRentabilite(IServiceProvider services, IOptions<Option
         var db = portee.GetRequiredService<RentabiliteDbContext>();
         if (!await portee.GetRequiredService<SpecialisationRentabilite>().ActifAsync(db, ct)) return;
         var service = portee.GetRequiredService<ServiceRentabilite>();
+        // Nouvelle version des règles (V64) : tous les chantiers ouverts remis dans la file, une fois.
+        var version = portee.GetRequiredService<SpecialisationRentabilite>().VersionRegles.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        var connue = (await db.Database.SqlQuery<string?>($"SELECT rex_resultat AS \"Value\" FROM rentabilite_execution WHERE rex_tache = {TacheVersion}")
+            .ToListAsync(ct)).FirstOrDefault();
+        if (connue != version)
+        {
+            var spec = portee.GetRequiredService<SpecialisationRentabilite>();
+            await service.SignalerAsync(await spec.ChantiersOuvertsAsync(db, ct), $"Règles de calcul en version {version}", false, ct);
+            await db.Database.ExecuteSqlInterpolatedAsync($"""
+                INSERT INTO rentabilite_execution (rex_tache, rex_derniere, rex_resultat) VALUES ({TacheVersion}, now(), {version})
+                ON CONFLICT (rex_tache) DO UPDATE SET rex_derniere = now(), rex_resultat = EXCLUDED.rex_resultat
+                """, ct);
+        }
         await service.TraiterFileAsync(Math.Max(1, options.Value.ChantiersParPassage), ct);
         var maintenant = horloge.GetLocalNow();
         if (maintenant.Hour < options.Value.HeureNuit) return;
@@ -80,5 +95,21 @@ public class PlanificateurRentabilite(IServiceProvider services, IOptions<Option
         var resultat = $"{chantiers} chantiers recalculés, {enEcart} en écart, {erreurs} en erreur";
         if (enEcart > 0 || erreurs > 0) journal.LogWarning("Rentabilité, recalcul de nuit : {Resultat}", resultat);
         await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE rentabilite_execution SET rex_resultat = {resultat} WHERE rex_tache = {TacheNuit}", ct);
+        // Photos de fin de mois (§ 10.3) : la première nuit d'un mois, après le recalcul, photo de chaque chantier ouvert au
+        // dernier jour du mois précédent.
+        var jour = DateOnly.FromDateTime(maintenant.DateTime);
+        var finMois = new DateOnly(jour.Year, jour.Month, 1).AddDays(-1);
+        var dernierePhoto = (await db.Database.SqlQuery<string?>($"SELECT rex_resultat AS \"Value\" FROM rentabilite_execution WHERE rex_tache = {TachePhotos}")
+            .ToListAsync(ct)).FirstOrDefault();
+        var cle = finMois.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+        if (dernierePhoto != cle)
+        {
+            var n = await service.PhotosMoisAsync(finMois, ct);
+            await db.Database.ExecuteSqlInterpolatedAsync($"""
+                INSERT INTO rentabilite_execution (rex_tache, rex_derniere, rex_resultat) VALUES ({TachePhotos}, now(), {cle})
+                ON CONFLICT (rex_tache) DO UPDATE SET rex_derniere = now(), rex_resultat = EXCLUDED.rex_resultat
+                """, ct);
+            journal.LogInformation("Rentabilité : {Nombre} photos de fin de mois au {Date}", n, cle);
+        }
     }
 }

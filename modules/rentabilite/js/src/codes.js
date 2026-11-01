@@ -7,6 +7,8 @@ export const INDICATEUR = Object.freeze({
   ENGAGE: 'ENGAGE',
   DEBOURSE: 'DEBOURSE',
   FACTURE: 'FACTURE',
+  ACOMPTE_PAYE: 'ACOMPTE_PAYE',
+  ACOMPTE_UTILISE: 'ACOMPTE_UTILISE',
 });
 
 /** Composante d'un fait (colonne de détail des indicateurs de coût). */
@@ -26,6 +28,7 @@ export const SOURCE_FAIT = Object.freeze({
   POINTAGE: 'POINTAGE',
   TACHE: 'TACHE',
   MOUVEMENT: 'MOUVEMENT',
+  REGLEMENT: 'REGLEMENT',
 });
 
 /** État d'un calcul (rca_etat). */
@@ -40,4 +43,36 @@ export const DECLENCHEUR = Object.freeze({
   FILE: 'FILE',
   NUIT: 'NUIT',
   MANUEL: 'MANUEL',
+});
+
+/** Borne d'une période saisie (lirePeriode). */
+export const BORNE_PERIODE = Object.freeze({
+  DEBUT: 'DEBUT',
+  FIN: 'FIN',
+});
+
+/** Raccourcis de période. */
+export const RACCOURCI_PERIODE = Object.freeze({
+  MOIS: 'MOIS',
+  MOIS_PRECEDENT: 'MOIS_PRECEDENT',
+  EXERCICE: 'EXERCICE',
+  ORIGINE: 'ORIGINE',
+});
+
+/** Erreurs de saisie d'une période. */
+export const ERREUR_PERIODE = Object.freeze({
+  DATE: 'PERIODE_DATE',
+  ORDRE: 'PERIODE_ORDRE',
+});
+
+/** Type d'une photo (copie figée des faits d'un chantier à une date). */
+export const TYPE_PHOTO = Object.freeze({
+  MOIS: 'MOIS',
+  MANUEL: 'MANUEL',
+});
+
+/** Niveaux d'origine de la Liste. */
+export const NIVEAU_LISTE = Object.freeze({
+  CHARGE: 'CHARGE',
+  AFFAIRE: 'AFFAIRE',
 });

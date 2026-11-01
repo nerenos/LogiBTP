@@ -10,6 +10,8 @@ public static class Indicateur
     public const string Engage = "ENGAGE";
     public const string Debourse = "DEBOURSE";
     public const string Facture = "FACTURE";
+    public const string AcomptePaye = "ACOMPTE_PAYE";
+    public const string AcompteUtilise = "ACOMPTE_UTILISE";
 }
 
 /// <summary>Composante d'un fait (colonne de détail des indicateurs de coût).</summary>
@@ -31,6 +33,7 @@ public static class SourceFait
     public const string Pointage = "POINTAGE";
     public const string Tache = "TACHE";
     public const string Mouvement = "MOUVEMENT";
+    public const string Reglement = "REGLEMENT";
 }
 
 /// <summary>État d'un calcul (rca_etat).</summary>
@@ -47,4 +50,41 @@ public static class Declencheur
     public const string File = "FILE";
     public const string Nuit = "NUIT";
     public const string Manuel = "MANUEL";
+}
+
+/// <summary>Borne d'une période saisie (Periodes.Lire).</summary>
+public static class BornePeriode
+{
+    public const string Debut = "DEBUT";
+    public const string Fin = "FIN";
+}
+
+/// <summary>Raccourcis de période.</summary>
+public static class RaccourciPeriode
+{
+    public const string Mois = "MOIS";
+    public const string MoisPrecedent = "MOIS_PRECEDENT";
+    public const string Exercice = "EXERCICE";
+    public const string Origine = "ORIGINE";
+}
+
+/// <summary>Erreurs de saisie d'une période.</summary>
+public static class ErreurPeriode
+{
+    public const string Date = "PERIODE_DATE";
+    public const string Ordre = "PERIODE_ORDRE";
+}
+
+/// <summary>Type d'une photo (copie figée des faits d'un chantier à une date).</summary>
+public static class TypePhoto
+{
+    public const string Mois = "MOIS";
+    public const string Manuel = "MANUEL";
+}
+
+/// <summary>Niveaux d'origine de la Liste.</summary>
+public static class NiveauListe
+{
+    public const string Charge = "CHARGE";
+    public const string Affaire = "AFFAIRE";
 }
