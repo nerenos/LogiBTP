@@ -858,18 +858,18 @@ public class DocumentService<TDoc, TLigne, TComplet>(
     public sealed record Precedent(decimal Montant, decimal Qte, decimal Pct);
 
     /// <summary>
-    /// Précédents des lignes du marché (lig_avt_source_lig_id) : dernier document validé, non annulé, qui facture
+    /// Précédents des lignes du marché (lig_avt_source_lig_id) : dernier document valable (PerimetreDocuments : ni
+    /// remplacé par un indice suivant, ni annulé) qui facture
     /// l'avancement (présentation P) ou le reprend d'un autre logiciel (type R), hors le document lui-même (Q31, 13.11).
     /// </summary>
     protected internal async Task<Dictionary<long, Precedent>> Precedents(IReadOnlyCollection<long> sources, long? exclure, CancellationToken ct)
     {
         if (sources.Count == 0) return [];
         var lignes = await (from l in db.Lignes.AsNoTracking()
-                            join d in db.Documents.AsNoTracking() on l.LigEntId equals d.EntId
+                            join d in db.Documents.AsNoTracking().Valables(db) on l.LigEntId equals d.EntId
                             join t in db.TypesDocument.AsNoTracking() on d.EntTydId equals t.TydId
-                            join s in db.StatutsDocument.AsNoTracking() on d.EntStdId equals s.StdId
-                            where l.LigAvtSourceLigId != null && sources.Contains(l.LigAvtSourceLigId.Value) && d.EntVerrouille
-                                && d.EntId != (exclure ?? 0) && s.StdCode != "ANNULE"
+                            where l.LigAvtSourceLigId != null && sources.Contains(l.LigAvtSourceLigId.Value)
+                                && d.EntId != (exclure ?? 0)
                                 && (d.EntAvtPresentation == "P" || t.TydAvancement == "R")
                             select new { Source = l.LigAvtSourceLigId!.Value, d.EntId, l.LigAvtMontantCumul, l.LigAvtQteCumul, l.LigAvtPct })
             .ToListAsync(ct);
@@ -891,11 +891,10 @@ public class DocumentService<TDoc, TLigne, TComplet>(
     {
         if (sources.Count == 0) return [];
         var lignes = await (from l in db.Lignes.AsNoTracking()
-                            join d in db.Documents.AsNoTracking() on l.LigEntId equals d.EntId
+                            join d in db.Documents.AsNoTracking().Valables(db) on l.LigEntId equals d.EntId
                             join t in db.TypesDocument.AsNoTracking() on d.EntTydId equals t.TydId
-                            join s in db.StatutsDocument.AsNoTracking() on d.EntStdId equals s.StdId
                             where l.LigAvtSourceLigId != null && sources.Contains(l.LigAvtSourceLigId.Value) && l.LigAvtMode != null
-                                && d.EntVerrouille && d.EntIsReference && s.StdCode != "ANNULE" && t.TydAvancement == "S"
+                                && t.TydAvancement == "S"
                             select new { Source = l.LigAvtSourceLigId!.Value, d.EntId, l.LigAvtMode, l.LigAvtValeur })
             .ToListAsync(ct);
         return lignes.GroupBy(x => x.Source).ToDictionary(g => g.Key, g =>

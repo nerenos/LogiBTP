@@ -408,10 +408,9 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
             INSERT INTO document_deduction (ded_ent_id, ded_deduit_ent_id, ded_rang, ded_montant_ht, ded_montant_ttc)
             SELECT d.ent_id, x.ent_id, x.ent_rang_avancement, x.ent_total_ht, x.ent_total_ttc
             FROM document d
-            JOIN document x ON x.ent_marche_id = d.ent_marche_id AND x.ent_id <> d.ent_id AND x.ent_verrouille
+            JOIN document x ON x.ent_marche_id = d.ent_marche_id AND x.ent_id <> d.ent_id AND f_document_valable(x.ent_id, FALSE)
             JOIN type_document tx ON tx.tyd_id = x.ent_tyd_id
-            JOIN statut_document s ON s.std_id = x.ent_std_id
-            WHERE d.ent_id = {entId} AND s.std_code <> 'ANNULE' AND (x.ent_avt_presentation = 'P' OR tx.tyd_avancement = 'R')
+            WHERE d.ent_id = {entId} AND (x.ent_avt_presentation = 'P' OR tx.tyd_avancement = 'R')
               AND (x.ent_rang_avancement IS NULL OR d.ent_rang_avancement IS NULL OR x.ent_rang_avancement < d.ent_rang_avancement)
             """, ct);
     }
@@ -426,10 +425,10 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         await db.Database.ExecuteSqlInterpolatedAsync($"""
             UPDATE document d SET ent_rang_avancement = 1 + coalesce((
                 SELECT max(x.ent_rang_avancement) FROM document x
-                JOIN type_document tx ON tx.tyd_id = x.ent_tyd_id JOIN statut_document s ON s.std_id = x.ent_std_id
+                JOIN type_document tx ON tx.tyd_id = x.ent_tyd_id
                 JOIN type_document td ON td.tyd_id = d.ent_tyd_id
-                WHERE x.ent_marche_id = d.ent_marche_id AND x.ent_id <> d.ent_id AND x.ent_verrouille AND s.std_code <> 'ANNULE'
-                  AND CASE WHEN td.tyd_avancement = 'S' THEN tx.tyd_avancement = 'S' AND x.ent_is_reference
+                WHERE x.ent_marche_id = d.ent_marche_id AND x.ent_id <> d.ent_id AND f_document_valable(x.ent_id, FALSE)
+                  AND CASE WHEN td.tyd_avancement = 'S' THEN tx.tyd_avancement = 'S'
                            ELSE x.ent_avt_presentation = 'P' OR tx.tyd_avancement = 'R' END), 0)
             WHERE d.ent_id = {entId} AND d.ent_rang_avancement IS NULL AND d.ent_avt_presentation IS NOT NULL AND d.ent_marche_id IS NOT NULL
             """, ct);

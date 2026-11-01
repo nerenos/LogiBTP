@@ -24,7 +24,7 @@ public sealed class SpecialisationReglementBtp : SpecialisationReglement
         JOIN type_document t ON t.tyd_id = d.ent_tyd_id
         JOIN statut_document s ON s.std_id = d.ent_std_id
         LEFT JOIN personne p ON p.per_id = d.ent_tiers_id
-        WHERE d.ent_verrouille AND s.std_code <> 'ANNULE' AND d.ent_tiers_id IS NOT NULL
+        WHERE f_document_valable(d.ent_id, FALSE) AND d.ent_tiers_id IS NOT NULL
           AND (@tiers IS NULL OR d.ent_tiers_id = @tiers)
           AND (@sens IS NULL OR (CASE WHEN f_famille_achat(t.tyd_famille) THEN 'D' ELSE 'E' END) = @sens)
           AND (@ids IS NULL OR e.ech_id = ANY(@ids))
