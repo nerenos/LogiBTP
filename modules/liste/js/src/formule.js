@@ -30,21 +30,21 @@ function decouper(source) {
     if (/\s/.test(c)) { i++; continue; }
     const debut = i;
     if (c === '"' || c === '\'') {
-      let texte = '';
+      let chaine = '';
       i++;
       while (i < source.length) {
         if (source[i] === c) {
           // Guillemet doublé : guillemet littéral.
           if (source[i + 1] !== c) break;
-          texte += c;
+          chaine += c;
           i += 2;
           continue;
         }
-        texte += source[i++];
+        chaine += source[i++];
       }
       if (i >= source.length) throw new ErreurFormule(texte('liste.formule.chaine'), debut);
       i++;
-      jetons.push({ t: 'texte', v: texte, p: debut });
+      jetons.push({ t: 'texte', v: chaine, p: debut });
     } else if (c === '[') {
       const fin = source.indexOf(']', i);
       if (fin < 0) throw new ErreurFormule(texte('liste.formule.crochet'), debut);

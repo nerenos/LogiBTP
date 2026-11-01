@@ -761,3 +761,23 @@ restant livrable seul (le repli sur la clé ou sur le message du serveur ne cass
   rétablir, rapport, sous-rapport, bloc, attente, fait…) ; communes du socle.
 - **Contrôles** : `npm test`, `npm run exporter-resultats` puis `dotnet test` du module (17 tests) ; aperçu, éditeur,
   dictionnaire et paramétrage affichés dans le navigateur (API simulée).
+
+## 32. Réalisation du lot P3s : module Import (31/10/2026)
+
+- **Périmètre** : le module (`modules/import/js/src` : erreurs du zip et du XML, conversion OptimBTP — erreurs,
+  avertissements, sorts et motifs documentés des champs `CHAMPS_ENTETE`, `CHAMPS_LIGNE`, `CHAMPS_INTERVENANT`, zones
+  du rapport — ; dépendance au socle et couche de personnalisation ajoutées) et ses écrans du cœur : page d'import
+  (`pages/import-optim.js`), devis importé à vérifier (`import/devis-a-verifier.js` : bandeau, traçabilité, création,
+  GED), rapport (`import/rapport-import.js`), conversion (`import/devis-importe.js` : objet et chantier par défaut),
+  formats, titre de la route.
+- **Textes** : `import.*` du module ; `import_btp.*` du cœur (`page`, `verification`, `rapport`, `devis`, `formats`,
+  `routes`).
+- **Icônes** : `import_btp_import`, `import_btp_verifier`, `import_btp_debogage` ; communes du socle.
+- **Couleurs** : étiquette créée pour une couleur d'origine sans correspondance par `couleurTheme('--import-etiquette-defaut')`
+  (valeur enregistrée dans le document).
+- **Contrôle des homonymes** : une variable locale nommée `texte` (ou `icone`…) masque l'import du dictionnaire ; un
+  contrôle par analyse des portées (espree + eslint-scope) sur tous les fichiers JS a trouvé deux appels faux d'un lot
+  précédent (fil du CRM : message publié, formule de liste : chaîne non fermée) et un nom ambigu (chrono des fiches),
+  corrigés ici ; à rejouer à chaque lot.
+- **Contrôles** : `npm test` (module avec le dictionnaire, clés littérales de `modules/import/js/src` vérifiées par le
+  test du client) ; page d'import affichée dans le navigateur (fichier illisible, aperçu d'un devis).

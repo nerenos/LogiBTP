@@ -3712,5 +3712,78 @@
       "parametres": "Paramétrage des éditions",
       "apercu": "Aperçu"
     }
+  },
+  "import_btp": {
+    "page": {
+      "aide_html": "Fichier <code>.optim</code> exporté d'OptimBTP (archive contenant le devis en XML). Le devis importé s'ouvre dans une nouvelle fenêtre pour être vérifié avant sa création ; le fichier est ensuite conservé dans les pièces du devis.",
+      "depot_html": "Déposez le fichier ici ou <u>choisissez-le</u>",
+      "source_introuvable": "Fichier source introuvable dans la GED",
+      "lecture": "Lecture du fichier…",
+      "illisible": "Fichier illisible : {{message}}",
+      "sans_role": "sans rôle",
+      "sans_objet": "Devis sans objet",
+      "fichier": "Fichier",
+      "fichier_valeur": "{{fichier}} — référence {{reference}}",
+      "du": ", du {{date}}",
+      "lignes": "Lignes",
+      "lignes_valeur": "{{titres}} titre(s), {{ouvrages}} ouvrage(s), {{elements}} élément(s), {{textes}} texte(s)",
+      "total": "Total d'origine",
+      "total_valeur": "{{ht}} € HT — {{ttc}} € TTC",
+      "redacteur": "Rédacteur",
+      "intervenants": "Intervenants",
+      "aucun": "aucun",
+      "non_repris": "Non repris",
+      "non_repris_valeur": "{{nombre}} champ(s) — détail dans le devis importé, en mode débogage",
+      "verifier_aide": "Ouvre le devis importé dans une nouvelle fenêtre, sans l'enregistrer",
+      "verifier": "Vérifier le devis importé"
+    },
+    "routes": {
+      "optim": "Import d'un devis OptimBTP"
+    },
+    "verification": {
+      "etat_html": "<b>Devis importé de {{format}}</b> ({{fichier}}) — non enregistré : vérifiez-le, puis créez-le.",
+      "origine_html": "Import <b>{{format}}</b> du fichier {{fichier}}",
+      "reference_html": " — référence d'origine <b>{{reference}}</b>",
+      "introuvable": "Import introuvable ou déjà créé : relancez l'import depuis le menu",
+      "total_ecart": "Total {{total}} € HT (écart {{ecart}} € avec {{format}}, {{lignes}} ligne(s))",
+      "total_identique": "Total {{total}} € HT identique à {{format}}",
+      "creer": "Créer le devis",
+      "abandonner": "Abandonner",
+      "non_repris": "Champs non repris ({{nombre}})",
+      "ecarts": "· écarts par ligne ({{nombre}})",
+      "ligne": "Ligne",
+      "logibtp": "LogiBTP",
+      "ecart": "Écart",
+      "confirmer_abandon": "Abandonner ce devis importé ? Rien n'a été enregistré.",
+      "origine": "Origine",
+      "aide_origine": "À la création, le fichier est conservé dans les pièces du devis et l'origine enregistrée : l'import pourra être réutilisé.",
+      "rapport": "Rapport d'import (mode débogage)",
+      "creation_refusee": "Création refusée : {{message}}",
+      "ged_titre": "Import {{format}} – {{fichier}}",
+      "ged_notes_reference": "Fichier source de l'import ({{format}}, référence {{reference}})",
+      "ged_notes": "Fichier source de l'import ({{format}})",
+      "ged_echec": "Fichier source non conservé dans la GED : {{message}}",
+      "cree": "{{type}} {{numero}} créé depuis {{format}}"
+    },
+    "rapport": {
+      "tout_repris": "Tous les champs renseignés du fichier sont repris.",
+      "champ": "Champ",
+      "signification": "Signification",
+      "valeurs": "Valeur(s)",
+      "lignes": "Lignes",
+      "unite": "Unité « {{unite}} » inconnue ({{nombre}} ligne(s)) : laissée vide",
+      "nature": "Nature « {{nature}} » sans correspondance ({{nombre}} ligne(s)) : à compléter",
+      "mode_reglement": "Mode de règlement « {{mode}} » sans correspondance",
+      "redacteur": "Rédacteur « {{nom}} » absent de l'annuaire de notre société : à choisir",
+      "couleur": "Couleur « {{libelle}} » sans étiquette correspondante : ajoutée aux étiquettes du document",
+      "chantier": "Chantier absent du fichier : « {{chantier}} » par défaut, à corriger dans l'entête"
+    },
+    "devis": {
+      "a_preciser": "À préciser",
+      "objet": "Devis importé"
+    },
+    "formats": {
+      "inconnu": "Format d'import inconnu : {{code}}"
+    }
   }
 }

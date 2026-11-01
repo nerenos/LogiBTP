@@ -1,3 +1,4 @@
+import { texte, textesParCode } from '@logibtp/socle/dictionnaire';
 import { lireZip } from './zip.js';
 import { analyserXml, enfant, enfants, feuilles } from './xml.js';
 import { rtfEnHtml, estRtf } from './rtf.js';
@@ -15,143 +16,139 @@ import { rtfEnHtml, estRtf } from './rtf.js';
 // (les composantes reçoivent le coefficient de vente de leur ligne de prix : calcul « somme des PV » de LogiBTP).
 
 /** Statuts des champs. */
-export const SORTS = Object.freeze({
-  REPRIS: 'repris',
-  RECALCULE: 'recalculé',
-  NON_REPRIS: 'non repris',
-});
+export const SORTS = textesParCode('import.sorts', ['REPRIS', 'RECALCULE', 'NON_REPRIS']);
 const R = SORTS.REPRIS, C = SORTS.RECALCULE, N = SORTS.NON_REPRIS;
 
 /** Entête : champ → [sort, destination ou motif]. */
 export const CHAMPS_ENTETE = {
-  Chantier: [R, 'Propriété « Chantier » du devis'],
-  PosteTvx: [N, 'Poste de travaux (pas d\'équivalent)'],
-  Client: [R, 'Nom du client, à rattacher à l\'annuaire'],
-  Redacteur: [R, "Rédacteur (individu de l'annuaire de notre société)"],
-  CAff: [N, 'Chargé d\'affaires'],
-  Metreur: [N, 'Métreur'],
-  Reference: [R, "Référence d'origine (traçabilité) ; notre référence si « Nos références » est vide"],
-  RefUnique: [N, 'Référence sans indice'],
-  Indice: [N, 'Indice OptimBTP'],
-  Version: [N, 'Version OptimBTP'],
-  IsVersionRef: [N, 'Version de référence'],
-  DateDoc: [R, 'Date du document'],
-  Annee: [C, 'Déduit de la date'],
-  Mois: [C, 'Déduit de la date'],
-  Exercice: [C, 'Déduit de la date'],
-  IsCde: [N, 'Devis transformé en commande'],
-  RefExt: [R, 'Référence externe'],
-  NosRef: [R, 'Notre référence'],
-  RefExtMarche: [N, 'Référence du marché'],
-  Libelle: [R, 'Objet du document'],
-  LibelleRTF: [C, 'Objet mis en forme (l\'objet est repris en texte)'],
-  Observation: [N, 'Observations'],
-  ModeReglCode: [R, 'Propriété « Mode de règlement » si correspondance'],
-  ModeReglLib: [R, 'Propriété « Mode de règlement » si correspondance'],
-  TotNbH: [N, 'Total des heures'],
-  PAT: [C, 'Total déboursé sec (contrôle)'],
-  MtFG: [C, 'Total des frais généraux (contrôle)'],
-  PRT: [C, 'Total prix de revient (contrôle)'],
-  MtHT: [C, 'Total HT (contrôle)'],
-  MtHTNet: [C, 'Total HT net (contrôle)'],
-  TxTVA_Def: [R, 'Taux de TVA des lignes sans taux'],
-  MtTVA: [C, 'Total TVA (contrôle)'],
-  MtTTC: [C, 'Total TTC (contrôle)'],
-  MtTTCNet: [C, 'Net TTC (contrôle)'],
-  MtHT_Option: [N, 'Total HT des options'],
-  ZoneDeplacement: [N, 'Zone de déplacement'],
+  Chantier: [R, texte('import.champs.entete.Chantier')],
+  PosteTvx: [N, texte('import.champs.entete.PosteTvx')],
+  Client: [R, texte('import.champs.entete.Client')],
+  Redacteur: [R, texte('import.champs.entete.Redacteur')],
+  CAff: [N, texte('import.champs.entete.CAff')],
+  Metreur: [N, texte('import.champs.entete.Metreur')],
+  Reference: [R, texte('import.champs.entete.Reference')],
+  RefUnique: [N, texte('import.champs.entete.RefUnique')],
+  Indice: [N, texte('import.champs.entete.Indice')],
+  Version: [N, texte('import.champs.entete.Version')],
+  IsVersionRef: [N, texte('import.champs.entete.IsVersionRef')],
+  DateDoc: [R, texte('import.champs.entete.DateDoc')],
+  Annee: [C, texte('import.champs.entete.Annee')],
+  Mois: [C, texte('import.champs.entete.Mois')],
+  Exercice: [C, texte('import.champs.entete.Exercice')],
+  IsCde: [N, texte('import.champs.entete.IsCde')],
+  RefExt: [R, texte('import.champs.entete.RefExt')],
+  NosRef: [R, texte('import.champs.entete.NosRef')],
+  RefExtMarche: [N, texte('import.champs.entete.RefExtMarche')],
+  Libelle: [R, texte('import.champs.entete.Libelle')],
+  LibelleRTF: [C, texte('import.champs.entete.LibelleRTF')],
+  Observation: [N, texte('import.champs.entete.Observation')],
+  ModeReglCode: [R, texte('import.champs.entete.ModeReglCode')],
+  ModeReglLib: [R, texte('import.champs.entete.ModeReglLib')],
+  TotNbH: [N, texte('import.champs.entete.TotNbH')],
+  PAT: [C, texte('import.champs.entete.PAT')],
+  MtFG: [C, texte('import.champs.entete.MtFG')],
+  PRT: [C, texte('import.champs.entete.PRT')],
+  MtHT: [C, texte('import.champs.entete.MtHT')],
+  MtHTNet: [C, texte('import.champs.entete.MtHTNet')],
+  TxTVA_Def: [R, texte('import.champs.entete.TxTVA_Def')],
+  MtTVA: [C, texte('import.champs.entete.MtTVA')],
+  MtTTC: [C, texte('import.champs.entete.MtTTC')],
+  MtTTCNet: [C, texte('import.champs.entete.MtTTCNet')],
+  MtHT_Option: [N, texte('import.champs.entete.MtHT_Option')],
+  ZoneDeplacement: [N, texte('import.champs.entete.ZoneDeplacement')],
 };
 
 /** Lignes : champ → [sort, destination ou motif]. */
 export const CHAMPS_LIGNE = {
-  Identifiant: [R, 'Arborescence'],
-  IdentifiantParent: [R, 'Arborescence'],
-  IsFA: [N, 'Branche des globalisations (coût réparti dans les prix par PGU)'],
-  IsVideTexte: [R, 'Ligne de texte'],
-  IsSousDetail: [R, 'Composante d\'ouvrage'],
-  IsOption: [N, 'Ligne en option'],
-  IsNonCalcul: [N, 'Ligne non calculée'],
-  IsNonEdite: [R, 'Ligne non éditée'],
-  IsSautPageAvant: [R, 'Saut de page avant la ligne'],
-  CHT_Code: [N, 'Chantier de la ligne'],
-  PTV_Code: [N, 'Poste de travaux de la ligne'],
-  TRS_ID: [N, 'Tiers de la ligne'],
-  Ordre: [R, 'Ordre des lignes'],
-  Niveau: [C, 'Déduit de l\'arborescence'],
-  TypeLigne: [R, 'Type de ligne (titre, ouvrage, élément)'],
-  IsST: [N, 'Ligne sous-traitée'],
-  IsAjustement: [N, 'Ligne d\'ajustement'],
-  FTY_Code: [R, 'Nature (par code, libellé ou regroupement)'],
-  FTY_Libelle: [R, 'Nature (par code, libellé ou regroupement)'],
-  FTY_LibelleRgp: [R, 'Nature (par code, libellé ou regroupement)'],
-  Hierarchie: [C, 'Numérotation'],
-  NumLigne: [R, 'Numérotation (départs de séquence)'],
-  Code: [R, 'Code de la ligne'],
-  Libelle: [R, 'Libellé (texte, si pas de RTF)'],
-  LibelleRTF: [R, 'Libellé mis en forme'],
-  LibUnite: [R, 'Unité (si connue)'],
-  QteInit: [C, 'Quantité avant cadence et perte (la quantité finale est reprise)'],
-  CoefPerte: [C, 'Inclus dans la quantité reprise'],
-  QteCadence: [C, 'Inclus dans la quantité reprise'],
-  Cadence: [C, 'Incluse dans la quantité reprise'],
-  Qte: [R, 'Quantité'],
-  QteFixe: [R, 'Quantité absolue dans l\'ouvrage'],
-  QteTot: [C, 'Quantité totale'],
-  IdentifiantPrixIdem: [N, 'Prix identique à une autre ligne (le prix est repris)'],
-  CouleurPrixIdem: [N, 'Couleur du prix identique'],
-  PAU: [R, 'Prix d\'achat (déboursé sec unitaire)'],
-  PAT: [C, 'Déboursé sec total'],
-  PctFG: [R, 'Coefficient de frais généraux'],
-  PRU: [C, 'Prix de revient unitaire (contrôle)'],
-  PRT: [C, 'Prix de revient total'],
-  PGU: [R, 'Part de globalisation incluse dans le déboursé'],
-  PGT: [C, 'Globalisation totale'],
-  PFIU: [N, 'Frais indirects unitaires'],
-  PFIT: [N, 'Frais indirects totaux'],
-  PctVte: [R, 'Coefficient de bénéfice'],
-  PVU: [C, 'Prix de vente unitaire (contrôle ; repris si montant fixe)'],
-  MntHT: [C, 'Montant HT (contrôle)'],
-  IsMntFixe: [R, 'Prix de vente fixe'],
-  IsMntForce: [N, 'Montant forcé'],
-  TxTVA: [R, 'Taux de TVA'],
-  NbHU: [N, 'Heures unitaires'],
-  NbHTot: [N, 'Heures totales'],
-  CheminImage: [N, 'Image de la ligne'],
-  Couleur: [R, 'Étiquette de couleur (paramètres COUL_xx)'],
-  VDL_Tiers: [N, 'Tiers de la ligne'],
-  IsCoefVteDefaut: [N, 'Coefficient de vente par défaut'],
-  CoefVteDefaut: [N, 'Coefficient de vente par défaut'],
-  IsAtelier: [N, 'Ligne atelier (quantité, cadence, jours)'],
-  QteAtelier: [N, 'Atelier : quantité'],
-  CadenceAtelier: [N, 'Atelier : cadence'],
-  NbJourAtelier: [N, 'Atelier : jours'],
-  IsGlobalisation: [N, 'Ligne de globalisation'],
-  CouleurGlobalisation: [N, 'Couleur de globalisation'],
-  NbJourGlobalisation: [N, 'Globalisation : jours'],
-  MntChiffrageGlobalisation: [N, 'Globalisation : montant chiffré'],
-  NbLigneGlobalisation: [N, 'Globalisation : lignes'],
-  RatioGlobalisation: [N, 'Globalisation : ratio'],
-  Globalisations: [N, 'Répartition des globalisations (PU estimé, quantité, PGU)'],
+  Identifiant: [R, texte('import.champs.ligne.Identifiant')],
+  IdentifiantParent: [R, texte('import.champs.ligne.IdentifiantParent')],
+  IsFA: [N, texte('import.champs.ligne.IsFA')],
+  IsVideTexte: [R, texte('import.champs.ligne.IsVideTexte')],
+  IsSousDetail: [R, texte('import.champs.ligne.IsSousDetail')],
+  IsOption: [N, texte('import.champs.ligne.IsOption')],
+  IsNonCalcul: [N, texte('import.champs.ligne.IsNonCalcul')],
+  IsNonEdite: [R, texte('import.champs.ligne.IsNonEdite')],
+  IsSautPageAvant: [R, texte('import.champs.ligne.IsSautPageAvant')],
+  CHT_Code: [N, texte('import.champs.ligne.CHT_Code')],
+  PTV_Code: [N, texte('import.champs.ligne.PTV_Code')],
+  TRS_ID: [N, texte('import.champs.ligne.TRS_ID')],
+  Ordre: [R, texte('import.champs.ligne.Ordre')],
+  Niveau: [C, texte('import.champs.ligne.Niveau')],
+  TypeLigne: [R, texte('import.champs.ligne.TypeLigne')],
+  IsST: [N, texte('import.champs.ligne.IsST')],
+  IsAjustement: [N, texte('import.champs.ligne.IsAjustement')],
+  FTY_Code: [R, texte('import.champs.ligne.FTY_Code')],
+  FTY_Libelle: [R, texte('import.champs.ligne.FTY_Libelle')],
+  FTY_LibelleRgp: [R, texte('import.champs.ligne.FTY_LibelleRgp')],
+  Hierarchie: [C, texte('import.champs.ligne.Hierarchie')],
+  NumLigne: [R, texte('import.champs.ligne.NumLigne')],
+  Code: [R, texte('import.champs.ligne.Code')],
+  Libelle: [R, texte('import.champs.ligne.Libelle')],
+  LibelleRTF: [R, texte('import.champs.ligne.LibelleRTF')],
+  LibUnite: [R, texte('import.champs.ligne.LibUnite')],
+  QteInit: [C, texte('import.champs.ligne.QteInit')],
+  CoefPerte: [C, texte('import.champs.ligne.CoefPerte')],
+  QteCadence: [C, texte('import.champs.ligne.QteCadence')],
+  Cadence: [C, texte('import.champs.ligne.Cadence')],
+  Qte: [R, texte('import.champs.ligne.Qte')],
+  QteFixe: [R, texte('import.champs.ligne.QteFixe')],
+  QteTot: [C, texte('import.champs.ligne.QteTot')],
+  IdentifiantPrixIdem: [N, texte('import.champs.ligne.IdentifiantPrixIdem')],
+  CouleurPrixIdem: [N, texte('import.champs.ligne.CouleurPrixIdem')],
+  PAU: [R, texte('import.champs.ligne.PAU')],
+  PAT: [C, texte('import.champs.ligne.PAT')],
+  PctFG: [R, texte('import.champs.ligne.PctFG')],
+  PRU: [C, texte('import.champs.ligne.PRU')],
+  PRT: [C, texte('import.champs.ligne.PRT')],
+  PGU: [R, texte('import.champs.ligne.PGU')],
+  PGT: [C, texte('import.champs.ligne.PGT')],
+  PFIU: [N, texte('import.champs.ligne.PFIU')],
+  PFIT: [N, texte('import.champs.ligne.PFIT')],
+  PctVte: [R, texte('import.champs.ligne.PctVte')],
+  PVU: [C, texte('import.champs.ligne.PVU')],
+  MntHT: [C, texte('import.champs.ligne.MntHT')],
+  IsMntFixe: [R, texte('import.champs.ligne.IsMntFixe')],
+  IsMntForce: [N, texte('import.champs.ligne.IsMntForce')],
+  TxTVA: [R, texte('import.champs.ligne.TxTVA')],
+  NbHU: [N, texte('import.champs.ligne.NbHU')],
+  NbHTot: [N, texte('import.champs.ligne.NbHTot')],
+  CheminImage: [N, texte('import.champs.ligne.CheminImage')],
+  Couleur: [R, texte('import.champs.ligne.Couleur')],
+  VDL_Tiers: [N, texte('import.champs.ligne.VDL_Tiers')],
+  IsCoefVteDefaut: [N, texte('import.champs.ligne.IsCoefVteDefaut')],
+  CoefVteDefaut: [N, texte('import.champs.ligne.CoefVteDefaut')],
+  IsAtelier: [N, texte('import.champs.ligne.IsAtelier')],
+  QteAtelier: [N, texte('import.champs.ligne.QteAtelier')],
+  CadenceAtelier: [N, texte('import.champs.ligne.CadenceAtelier')],
+  NbJourAtelier: [N, texte('import.champs.ligne.NbJourAtelier')],
+  IsGlobalisation: [N, texte('import.champs.ligne.IsGlobalisation')],
+  CouleurGlobalisation: [N, texte('import.champs.ligne.CouleurGlobalisation')],
+  NbJourGlobalisation: [N, texte('import.champs.ligne.NbJourGlobalisation')],
+  MntChiffrageGlobalisation: [N, texte('import.champs.ligne.MntChiffrageGlobalisation')],
+  NbLigneGlobalisation: [N, texte('import.champs.ligne.NbLigneGlobalisation')],
+  RatioGlobalisation: [N, texte('import.champs.ligne.RatioGlobalisation')],
+  Globalisations: [N, texte('import.champs.ligne.Globalisations')],
 };
 
 /** Intervenants (Annuaires) : champ → [sort, destination ou motif]. */
 export const CHAMPS_INTERVENANT = {
-  TRS_NomReduit: [R, 'Recherche dans l\'annuaire'],
-  RoleTiers: [R, 'Rôle'],
-  IsProjetCh: [R, 'Rôle : projet ou chantier'],
-  IsClient: [R, 'Rôle : client'],
-  IsDestinataire: [R, 'Rôle : destinataire'],
-  IsTiersPayeur: [R, 'Rôle : payeur'],
-  IsCompteGestion: [N, 'Compte de gestion'],
-  IsTitulaire: [R, 'Rôle : titulaire'],
-  IsSTraitant: [R, 'Rôle : sous-traitant'],
-  Commentaire: [N, 'Commentaire'],
-  ADR_RaisonSociale: [R, 'Recherche dans l\'annuaire'],
-  ADR_Ligne1: [N, 'Adresse (celle de l\'annuaire est utilisée)'],
-  ADR_Ligne2: [N, 'Adresse'], ADR_Ligne3: [N, 'Adresse'], ADR_Ligne4: [N, 'Adresse'],
-  ADR_CP: [N, 'Adresse'], ADR_Ville: [N, 'Adresse'], ADR_Cedex: [N, 'Adresse'], ADR_Pays: [N, 'Adresse'],
-  Interlocuteur: [N, 'Interlocuteur'], Fonction: [N, 'Fonction de l\'interlocuteur'],
-  Email: [N, 'Coordonnées'], NumTel: [N, 'Coordonnées'], NumFax: [N, 'Coordonnées'], NumPort: [N, 'Coordonnées'], EmailFacture: [N, 'Coordonnées'],
+  TRS_NomReduit: [R, texte('import.champs.intervenant.TRS_NomReduit')],
+  RoleTiers: [R, texte('import.champs.intervenant.RoleTiers')],
+  IsProjetCh: [R, texte('import.champs.intervenant.IsProjetCh')],
+  IsClient: [R, texte('import.champs.intervenant.IsClient')],
+  IsDestinataire: [R, texte('import.champs.intervenant.IsDestinataire')],
+  IsTiersPayeur: [R, texte('import.champs.intervenant.IsTiersPayeur')],
+  IsCompteGestion: [N, texte('import.champs.intervenant.IsCompteGestion')],
+  IsTitulaire: [R, texte('import.champs.intervenant.IsTitulaire')],
+  IsSTraitant: [R, texte('import.champs.intervenant.IsSTraitant')],
+  Commentaire: [N, texte('import.champs.intervenant.Commentaire')],
+  ADR_RaisonSociale: [R, texte('import.champs.intervenant.ADR_RaisonSociale')],
+  ADR_Ligne1: [N, texte('import.champs.intervenant.ADR_Ligne1')],
+  ADR_Ligne2: [N, texte('import.champs.intervenant.adresse')], ADR_Ligne3: [N, texte('import.champs.intervenant.adresse')], ADR_Ligne4: [N, texte('import.champs.intervenant.adresse')],
+  ADR_CP: [N, texte('import.champs.intervenant.adresse')], ADR_Ville: [N, texte('import.champs.intervenant.adresse')], ADR_Cedex: [N, texte('import.champs.intervenant.adresse')], ADR_Pays: [N, texte('import.champs.intervenant.adresse')],
+  Interlocuteur: [N, texte('import.champs.intervenant.Interlocuteur')], Fonction: [N, texte('import.champs.intervenant.Fonction')],
+  Email: [N, texte('import.champs.intervenant.coordonnees')], NumTel: [N, texte('import.champs.intervenant.coordonnees')], NumFax: [N, texte('import.champs.intervenant.coordonnees')], NumPort: [N, texte('import.champs.intervenant.coordonnees')], EmailFacture: [N, texte('import.champs.intervenant.coordonnees')],
 };
 
 /** Valeur « vide » d'un champ (non signalée dans le rapport). */
@@ -178,7 +175,7 @@ export async function lireFichierOptim(octets) {
   if (o[0] === 0x50 && o[1] === 0x4b) {
     const fichiers = lireZip(o);
     const f = fichiers.find((x) => /\.xml$/i.test(x.nom));
-    if (!f) throw new Error('Archive OptimBTP sans fichier XML');
+    if (!f) throw new Error(texte('import.optim.sans_xml'));
     xml = new TextDecoder().decode(await f.lire());
   } else {
     xml = new TextDecoder().decode(o);
@@ -195,7 +192,7 @@ export async function lireFichierOptim(octets) {
  */
 export function convertirOptim(xml) {
   const racine = analyserXml(xml);
-  if (racine.nom !== 'Devis') throw new Error(`Fichier OptimBTP inattendu : racine <${racine.nom}> au lieu de <Devis>`);
+  if (racine.nom !== 'Devis') throw new Error(texte('import.optim.racine', { racine: racine.nom }));
   const e = feuilles(enfant(racine, 'Entete'));
   const nonRepris = new Map();
   const avertissements = [];
@@ -212,11 +209,11 @@ export function convertirOptim(xml) {
     for (const [k, v] of Object.entries(valeurs)) {
       if (estVide(v)) continue;
       const def = champs[k];
-      if (!def) signaler(zone, k, v.slice(0, 80), 'Champ inconnu du module d\'import', ligne);
+      if (!def) signaler(zone, k, v.slice(0, 80), texte('import.optim.champ_inconnu'), ligne);
       else if (def[0] === N) signaler(zone, k, v.slice(0, 80), def[1], ligne);
     }
   };
-  controler('Entête', e, CHAMPS_ENTETE);
+  controler(texte('import.zones.entete'), e, CHAMPS_ENTETE);
 
   const parametres = enfants(enfant(racine, 'Parametres'), 'Parametre').map((p) => feuilles(p));
   // Durée de validité de l'offre (en mois) → jours.
@@ -258,19 +255,19 @@ export function convertirOptim(xml) {
       interlocuteur: v.Interlocuteur || null, email: v.Email || null, telephone: v.NumTel || v.NumPort || null,
     });
   }
-  if (!intervenants.some((i) => i.roles.includes('CLIENT'))) avertissements.push('Aucun client renseigné dans le fichier : à choisir dans l\'annuaire du document');
+  if (!intervenants.some((i) => i.roles.includes('CLIENT'))) avertissements.push(texte('import.optim.sans_client'));
 
   // Compléments de pied : la ventilation de TVA est recalculée ; les autres (remises, retenues…) sont signalés.
   const complements = enfants(enfant(racine, 'Complements'), 'Complement').map((c) => feuilles(c));
   for (const c of complements) {
     if (c.TypeComplement === 'VTLTVA') continue;
-    signaler('Pied', c.TypeComplement || 'Complément', `${c.Libelle ?? ''} : base ${c.Base}, taux ${c.Taux}, montant ${c.Montant}`, 'Complément de pied (remise, retenue, prorata…)');
+    signaler(texte('import.zones.pied'), c.TypeComplement || texte('import.optim.complement'), texte('import.optim.complement_valeur', { libelle: c.Libelle ?? '', base: c.Base, taux: c.Taux, montant: c.Montant }), texte('import.optim.complement_motif'));
   }
   for (const p of parametres) {
     if (PARAMETRES_REPRIS.has(p.Code) || couleurs.some((c) => c.code === p.Code)) continue;
     const valeurs = ['Txt1', 'Txt2', 'Num1', 'Num2', 'Num3', 'Num4', 'Num5', 'Bool1', 'Bool2', 'Bool3', 'Date1', 'Date2', 'Date3']
       .filter((k) => !estVide(p[k])).map((k) => `${k} ${p[k]}`);
-    if (valeurs.length || !estVide(p.TextRTF)) signaler('Paramètres', p.Code, `${p.Libelle} : ${valeurs.join(', ') || 'texte'}`, 'Paramètre du devis OptimBTP');
+    if (valeurs.length || !estVide(p.TextRTF)) signaler(texte('import.zones.parametres'), p.Code, texte('import.optim.parametre_valeur', { libelle: p.Libelle, valeurs: valeurs.join(', ') || texte('import.optim.texte') }), texte('import.optim.parametre_motif'));
   }
 
   // Lignes.
@@ -299,14 +296,14 @@ export function convertirOptim(xml) {
         continue;
       }
       const libre = { ...v };
-      controler('Lignes', libre, CHAMPS_LIGNE, id);
+      controler(texte('import.zones.lignes'), libre, CHAMPS_LIGNE, id);
       if (b.globalisations) signaler('Lignes', 'Globalisations', `${enfants(b.globalisations, 'Globalisation').length} répartition(s)`, CHAMPS_LIGNE.Globalisations[1], id);
       if (v.IsSautPageAvant === '1') {
         lignes.push({ id: `${id}-saut`, parent: parentNeutre?.id ?? null, type: 'SAUT_PAGE', libelle_html: '', source: id });
       }
       const composante = v.IsSousDetail === '1';
       const type = v.IsVideTexte === '1' ? 'TEXTE' : { 4: 'TITRE', 3: 'TITRE', 2: 'OUVRAGE', 1: 'ELEMENT' }[v.TypeLigne] ?? null;
-      if (!type) { avertissements.push(`Ligne ${id} : type de ligne ${v.TypeLigne} inconnu, reprise en texte`); }
+      if (!type) { avertissements.push(texte('import.optim.type_inconnu', { ligne: id, type: v.TypeLigne })); }
       const libelle = estRtf(v.LibelleRTF) ? rtfEnHtml(v.LibelleRTF) : echapper(v.Libelle ?? '');
       const l = {
         id, parent: parentNeutre?.id ?? null, type: type ?? 'TEXTE', source: id, composante,
@@ -357,7 +354,7 @@ export function convertirOptim(xml) {
     }
   };
   parcourir(null, null, null);
-  if (exclues) avertissements.push(`${exclues} ligne(s) de globalisation non reprises : leur coût est réparti dans le déboursé des lignes de prix`);
+  if (exclues) avertissements.push(texte('import.optim.globalisations', { nombre: exclues }));
 
   return {
     format: 'OptimBTP', entete, intervenants, lignes, complements, parametres, couleurs,

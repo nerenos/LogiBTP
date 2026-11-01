@@ -136,7 +136,7 @@ export const ROUTES = [
   { nom: 'parametres-raccourcis', chemin: '/parametres/raccourcis', page: PageParametresRaccourcis, titre: 'Raccourcis clavier' },
   { nom: 'graphe', chemin: '/annuaire/graphe', page: PageGraphe, titre: 'Graphe des relations' },
   { nom: 'notre-societe', chemin: '/annuaire/societe', page: PageNotreSociete, titre: 'Notre société' },
-  { nom: 'import-optim', chemin: '/import/optimbtp', page: PageImportOptim, titre: "Import d'un devis OptimBTP" },
+  { nom: 'import-optim', chemin: '/import/optimbtp', page: PageImportOptim, titre: texte('import_btp.routes.optim') },
   { nom: 'reglements', chemin: '/reglements', page: PageReglements, titre: 'Règlements' },
   { nom: 'crm-note', chemin: '/crm/note/:id', page: PageNoteCrm, titre: texte('crm_btp.routes.note') },
   { nom: 'crm-suivi', chemin: '/crm/suivi', page: PageSuiviCrm, titre: texte('crm_btp.routes.suivi') },

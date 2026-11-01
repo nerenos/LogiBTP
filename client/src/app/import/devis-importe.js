@@ -1,3 +1,4 @@
+import { texte, couleurTheme } from '@logibtp/socle/dictionnaire';
 import { associerUnite, associerNature, associerTaux, associerOption, normaliser } from '@logibtp/import';
 import { TL } from '../../calcul/index.js';
 
@@ -45,7 +46,7 @@ export function saisieDevisImporte(devis, { definition, natures, redacteurs = []
       ?? (e.couleur ? globales.find((g) => String(g.couleur).toLowerCase() === e.couleur) : null);
     if (trouvee) return trouvee.code;
     const code = `${normaliser(devis.format).slice(0, 5)}_${String(e.code).toUpperCase()}`.slice(0, 20); // lig_etiquette : 20 caractères
-    if (!etiquettesDocument.some((x) => x.code === code)) etiquettesDocument.push({ code, libelle: e.libelle, couleur: e.couleur ?? '#94a3b8' });
+    if (!etiquettesDocument.some((x) => x.code === code)) etiquettesDocument.push({ code, libelle: e.libelle, couleur: e.couleur ?? couleurTheme('--import-etiquette-defaut', '#94a3b8') });
     return code;
   };
   const ordres = new Map();
@@ -89,7 +90,7 @@ export function saisieDevisImporte(devis, { definition, natures, redacteurs = []
   // Chantier obligatoire : à défaut, l'objet du devis (signalé dans les correspondances).
   const chantierParDefaut = !devis.entete.chantier && definition.proprietes?.some((p) => p.prd_code === 'chantier' && p.prd_obligatoire);
   if (devis.entete.chantier) proprietes.chantier = devis.entete.chantier;
-  else if (chantierParDefaut) proprietes.chantier = devis.entete.objet ?? 'À préciser';
+  else if (chantierParDefaut) proprietes.chantier = devis.entete.objet ?? texte('import_btp.devis.a_preciser');
   const defMode = definition.proprietes?.find((p) => p.prd_code === 'mode_reglement');
   const mode = defMode ? associerOption(devis.entete.mode_reglement, defMode.prd_options ?? []) : null;
   if (mode) proprietes.mode_reglement = mode;
@@ -99,7 +100,7 @@ export function saisieDevisImporte(devis, { definition, natures, redacteurs = []
   const redacteur = nomRedacteur ? redacteurs.find((r) => normaliser(r.libelle) === nomRedacteur || mots(r.libelle) === mots(devis.entete.redacteur)) ?? null : null;
   return {
     document: {
-      ent_date: devis.entete.date ?? undefined, ent_objet: devis.entete.objet ?? 'Devis importé', ent_mode_calcul_ouvrage: 'B',
+      ent_date: devis.entete.date ?? undefined, ent_objet: devis.entete.objet ?? texte('import_btp.devis.objet'), ent_mode_calcul_ouvrage: 'B',
       ent_notre_reference: devis.entete.notre_reference ?? null, ent_reference_externe: devis.entete.reference_externe ?? null,
       ent_validite_jours: devis.entete.validite_jours ?? definition.type?.tyd_validite_jours ?? null,
       ent_redacteur_id: redacteur?.valeur ?? null, ent_etiquettes: etiquettesDocument,

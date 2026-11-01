@@ -356,15 +356,15 @@ export class FournisseurFicheMemoire {
   #chrono(type, valeurs) {
     const def = this.#type(type).definition.chrono;
     if (!def) return null;
-    const texte = (v) => (v === null || v === undefined || String(v).trim() === '' ? null : String(v).trim());
-    const variante = def.variante ? texte(valeurs[def.variante]) ?? def.variantes?.[0]?.valeur ?? '' : '';
+    const valeur = (v) => (v === null || v === undefined || String(v).trim() === '' ? null : String(v).trim());
+    const variante = def.variante ? valeur(valeurs[def.variante]) ?? def.variantes?.[0]?.valeur ?? '' : '';
     const p = this.chronosParametres.get(`${type}:${variante}`);
     const prefixe = p ? p.prefixe : def.variantes?.find((v) => v.valeur === variante)?.prefixe ?? def.prefixe;
     const format = p ? p.format ?? def.format : def.format;
     const raz = p ? p.raz : def.raz ?? 'J';
-    const portee = def.portee ? texte(valeurs[def.portee]) ?? '' : '';
+    const portee = def.portee ? valeur(valeurs[def.portee]) ?? '' : '';
     const aParent = (format ?? '').includes('{PARENT}');
-    const valeurParent = def.parent && aParent ? texte(valeurs[def.parent]) : null;
+    const valeurParent = def.parent && aParent ? valeur(valeurs[def.parent]) : null;
     const parent = valeurParent !== null ? this.parentChrono?.(type, def.parent, valeurParent) ?? null : null;
     return { definition: def, variante, prefixe, format, raz, portee, parent, aParent };
   }

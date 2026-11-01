@@ -1,3 +1,4 @@
+import { texte } from '@logibtp/socle/dictionnaire';
 import { TYPE_DOCUMENT } from '../codes.js';
 import { lireFichierOptim } from '@logibtp/import';
 
@@ -10,6 +11,6 @@ export const FORMATS_IMPORT = {
 /** Format d'après son code ou son libellé (origine enregistrée : dor_format = libellé). */
 export function formatImport(code) {
   const f = FORMATS_IMPORT[code] ?? Object.values(FORMATS_IMPORT).find((x) => x.libelle === code);
-  if (!f) throw new Error(`Format d'import inconnu : ${code}`);
+  if (!f) throw new Error(texte('import_btp.formats.inconnu', { code }));
   return f;
 }

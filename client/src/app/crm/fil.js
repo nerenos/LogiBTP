@@ -89,13 +89,13 @@ export class FilCrm {
 
   /** Message publié : note pour mémo « Dans le fil » rattachée à l'élément ; photos déposées dans la GED de la note. */
   async publier() {
-    const texte = this.conteneur.querySelector('[data-message]').value.trim();
+    const message = this.conteneur.querySelector('[data-message]').value.trim();
     const fichiers = [...(this.conteneur.querySelector('[data-photos]').files ?? [])];
-    if (!texte && !fichiers.length) { this.app.message(texte('crm_btp.fil.message_vide'), 'avertissement'); return; }
+    if (!message && !fichiers.length) { this.app.message(texte('crm_btp.fil.message_vide'), 'avertissement'); return; }
     try {
       const s = nouvelleSaisie({ etat: ETAT_NOTE.MEMO, element: this.element });
-      s.objet = (texte.split('\n')[0] || pluriel('crm_btp.fil.nb_photos', fichiers.length)).slice(0, 200);
-      s.message_html = texte.includes('\n') || texte.length > 200 ? texteEnHtml(texte) : null;
+      s.objet = (message.split('\n')[0] || pluriel('crm_btp.fil.nb_photos', fichiers.length)).slice(0, 200);
+      s.message_html = message.includes('\n') || message.length > 200 ? texteEnHtml(message) : null;
       s.dans_fil = true;
       const d = await api.crm.creer(s);
       if (fichiers.length) {

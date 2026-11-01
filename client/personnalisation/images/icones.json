@@ -255,5 +255,8 @@
   "edition_btp_double": "📄",
   "edition_btp_actualiser": "⟳",
   "edition_btp_attente": "⏳",
-  "edition_btp_fait": "✔"
+  "edition_btp_fait": "✔",
+  "import_btp_import": "📥",
+  "import_btp_verifier": "🔍",
+  "import_btp_debogage": "🐞"
 }

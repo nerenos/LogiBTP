@@ -2,6 +2,8 @@
 // (deflate, décompressé par DecompressionStream). Pas de chiffrement ni de zip64 : les exports des logiciels de
 // chiffrage n'en utilisent pas.
 
+import { texte } from '@logibtp/socle/dictionnaire';
+
 const SIG_FIN = 0x06054b50;
 const SIG_CENTRAL = 0x02014b50;
 const SIG_LOCAL = 0x04034b50;
@@ -14,13 +16,13 @@ export function lireZip(octets) {
   for (let i = o.length - 22; i >= Math.max(0, o.length - 22 - 0xffff); i--) {
     if (v.getUint32(i, true) === SIG_FIN) { fin = i; break; }
   }
-  if (fin < 0) throw new Error('Archive zip illisible : répertoire central introuvable');
+  if (fin < 0) throw new Error(texte('import.zip.central'));
   const nombre = v.getUint16(fin + 10, true);
   let p = v.getUint32(fin + 16, true);
-  const texte = new TextDecoder();
+  const decodeur = new TextDecoder();
   const fichiers = [];
   for (let k = 0; k < nombre; k++) {
-    if (v.getUint32(p, true) !== SIG_CENTRAL) throw new Error('Archive zip illisible : entrée du répertoire central invalide');
+    if (v.getUint32(p, true) !== SIG_CENTRAL) throw new Error(texte('import.zip.entree'));
     const drapeaux = v.getUint16(p + 8, true);
     const methode = v.getUint16(p + 10, true);
     const compresse = v.getUint32(p + 20, true);
@@ -29,19 +31,19 @@ export function lireZip(octets) {
     const lgExtra = v.getUint16(p + 30, true);
     const lgComm = v.getUint16(p + 32, true);
     const local = v.getUint32(p + 42, true);
-    const nom = texte.decode(o.subarray(p + 46, p + 46 + lgNom));
+    const nom = decodeur.decode(o.subarray(p + 46, p + 46 + lgNom));
     p += 46 + lgNom + lgExtra + lgComm;
     if (nom.endsWith('/')) continue;
     fichiers.push({
       nom,
       taille,
       lire: async () => {
-        if (drapeaux & 1) throw new Error(`${nom} : fichier chiffré non pris en charge`);
-        if (v.getUint32(local, true) !== SIG_LOCAL) throw new Error(`${nom} : entête locale invalide`);
+        if (drapeaux & 1) throw new Error(texte('import.zip.chiffre', { nom }));
+        if (v.getUint32(local, true) !== SIG_LOCAL) throw new Error(texte('import.zip.locale', { nom }));
         const debut = local + 30 + v.getUint16(local + 26, true) + v.getUint16(local + 28, true);
         const donnees = o.subarray(debut, debut + compresse);
         if (methode === 0) return donnees.slice();
-        if (methode !== 8) throw new Error(`${nom} : méthode de compression ${methode} non prise en charge`);
+        if (methode !== 8) throw new Error(texte('import.zip.methode', { nom, methode }));
         const flux = new Blob([donnees]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
         return new Uint8Array(await new Response(flux).arrayBuffer());
       },

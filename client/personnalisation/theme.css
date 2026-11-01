@@ -95,3 +95,8 @@
   --sous-traitance-non-conforme-fond: rgb(220 38 38 / 0.15);
   --sous-traitance-a-echeance: #b45309;
 }
+
+/* Import (lot P3s) : couleur d'une étiquette créée pour une couleur d'origine sans correspondance */
+:root {
+  --import-etiquette-defaut: #94a3b8;
+}
