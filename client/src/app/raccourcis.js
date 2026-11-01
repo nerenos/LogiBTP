@@ -23,12 +23,12 @@ declarerRaccourcis('document', {
   libelle: texte('navigation_btp.raccourcis.document.groupe'),
   actions: {
     ongletEntete: { libelle: texte('navigation_btp.raccourcis.document.ongletEntete'), defaut: 'Alt+1' },
-    ongletLignes: { libelle: texte('navigation_btp.raccourcis.document.ongletLignes'), defaut: 'Alt+2' },
-    ongletAnalyse: { libelle: texte('navigation_btp.raccourcis.document.ongletAnalyse'), defaut: 'Alt+3' },
-    ongletPieces: { libelle: texte('navigation_btp.raccourcis.document.ongletPieces'), defaut: 'Alt+4' },
-    ongletTracabilite: { libelle: texte('navigation_btp.raccourcis.document.ongletTracabilite'), defaut: 'Alt+5' },
+    ongletReglements: { libelle: texte('navigation_btp.raccourcis.document.ongletReglements'), defaut: 'Alt+2' },
+    ongletLignes: { libelle: texte('navigation_btp.raccourcis.document.ongletLignes'), defaut: 'Alt+3' },
+    ongletAnalyse: { libelle: texte('navigation_btp.raccourcis.document.ongletAnalyse'), defaut: 'Alt+4' },
+    ongletPieces: { libelle: texte('navigation_btp.raccourcis.document.ongletPieces'), defaut: 'Alt+5' },
     ongletSuivi: { libelle: texte('navigation_btp.raccourcis.document.ongletSuivi'), defaut: 'Alt+6' },
-    ongletReglements: { libelle: texte('navigation_btp.raccourcis.document.ongletReglements'), defaut: 'Alt+8' },
+    ongletOptions: { libelle: texte('navigation_btp.raccourcis.document.ongletOptions'), defaut: 'Alt+8' },
     rechercher: { libelle: texte('navigation_btp.raccourcis.document.rechercher'), defaut: 'Ctrl+F' },
     valider: { libelle: texte('navigation_btp.raccourcis.document.valider'), defaut: [] },
     transformer: { libelle: texte('navigation_btp.raccourcis.document.transformer'), defaut: [] },
@@ -67,4 +67,4 @@ declarerRaccourcis('pointage', {
 });
 
 /** Onglet de la page document désigné par une action. */
-export const ONGLETS_DOCUMENT = { ongletEntete: 'entete', ongletLignes: 'lignes', ongletAnalyse: 'analyse', ongletPieces: 'pieces', ongletTracabilite: 'tracabilite', ongletSuivi: 'suivi', ongletReglements: 'reglements' };
+export const ONGLETS_DOCUMENT = { ongletEntete: 'entete', ongletReglements: 'reglements', ongletLignes: 'lignes', ongletAnalyse: 'analyse', ongletPieces: 'pieces', ongletSuivi: 'suivi', ongletOptions: 'options' };

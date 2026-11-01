@@ -1,7 +1,7 @@
 import { texte, icone } from '@logibtp/socle/dictionnaire';
 import { TYPE_FICHE, MODULE_FACULTATIF } from '../codes.js';
 import { Bandeau, DISPOSITION_MENU } from '@logibtp/navigation/ui';
-import { THEMES } from '@logibtp/socle/ui';
+import { THEMES, DENSITES } from '@logibtp/socle/ui';
 
 // Menus du bandeau, regroupés par classe de métier, et catalogue des raccourcis de l'accueil (tous les éléments
 // de menu ayant une URL). Les menus Fenêtres et Paramètres sont construits à l'ouverture (état courant).
@@ -160,12 +160,10 @@ export const MENUS_METIER = [
     ],
   },
   {
-    code: 'terrain', libelle: texte('navigation_btp.menus.terrain.libelle'), module: MODULE_FACULTATIF.PLANNING, droit: 'terrain', elements: [
-      { code: 'terrain', libelle: texte('navigation_btp.menus.terrain.terrain.libelle'), icone: icone('navigation_btp_terrain'), url: '/terrain', info: texte('navigation_btp.menus.terrain.terrain.info') },
-    ],
-  },
-  {
     code: 'pointage', libelle: texte('navigation_btp.menus.pointage.libelle'), module: MODULE_FACULTATIF.POINTAGE, droit: 'pointage', elements: [
+      // Mon terrain (I9) : conditions propres, affiché même sans le module ni le droit du Pointage (`independant`).
+      { code: 'terrain', libelle: texte('navigation_btp.menus.terrain.terrain.libelle'), icone: icone('navigation_btp_terrain'), url: '/terrain', module: MODULE_FACULTATIF.PLANNING, droit: 'terrain', independant: true, info: texte('navigation_btp.menus.terrain.terrain.info') },
+      { separateur: true },
       { code: 'pointage-saisie', libelle: texte('navigation_btp.menus.pointage.pointage_saisie.libelle'), icone: icone('navigation_btp_pointage_saisie'), url: '/pointage/saisie', info: texte('navigation_btp.menus.pointage.pointage_saisie.info') },
       { code: 'pointage-synthese', libelle: texte('navigation_btp.menus.pointage.pointage_synthese.libelle'), icone: icone('navigation_btp_pointage_synthese'), url: '/pointage/synthese', info: texte('navigation_btp.menus.pointage.pointage_synthese.info') },
       { code: 'pointage-export', libelle: texte('navigation_btp.menus.pointage.pointage_export.libelle'), icone: icone('navigation_btp_pointage_export'), url: '/pointage/export', info: texte('navigation_btp.menus.pointage.pointage_export.info') },
@@ -238,6 +236,15 @@ export function groupesThemes() {
 const visible = (app, x) => (!x.module || app.moduleActif?.(x.module) !== false) && (!x.type || app.typeActif?.(x.type) !== false)
   && (!x.droit || app.acces?.(x.droit) !== false);
 
+/**
+ * Éléments visibles d'un menu : un élément `independant` ne dépend que de ses propres conditions ; sans les conditions
+ * du menu, seuls ceux-là restent (menu Pointage réduit à Mon terrain, Q16).
+ */
+export function elementsMenu(app, m) {
+  const menuVisible = visible(app, m);
+  return elementsVisibles(app, (m.elements ?? []).filter((e) => menuVisible || e.independant));
+}
+
 /** Éléments visibles, sans séparateur en tête, en fin ni en double (le dernier des deux est gardé). */
 export function elementsVisibles(app, elements) {
   const res = [];
@@ -254,7 +261,7 @@ export function elementsVisibles(app, elements) {
 /** Menus complets : métier (filtrés par les modules actifs), puis Paramètres et Fenêtres (dynamiques). */
 export function menus(app) {
   return [
-    ...MENUS_METIER.filter((m) => visible(app, m)).map((m) => ({ ...m, elements: () => elementsVisibles(app, m.elements) })),
+    ...MENUS_METIER.filter((m) => elementsMenu(app, m).length).map((m) => ({ ...m, elements: () => elementsMenu(app, m) })),
     {
       code: 'parametres', libelle: texte('navigation_btp.menus.parametres.libelle'), court: texte('navigation_btp.menus.parametres.court'), elements: () => elementsVisibles(app, [
         { code: 'preferences', libelle: texte('navigation_btp.menus.parametres.preferences.libelle'), icone: icone('navigation_btp_preferences'), url: '/parametres' },
@@ -262,6 +269,10 @@ export function menus(app) {
         {
           libelle: texte('navigation_btp.menus.parametres.theme_d_affichage.libelle'), icone: icone('navigation_btp_theme_d_affichage'), info: THEMES.find((t) => t.code === app.preferences.get('theme'))?.libelle,
           sousMenu: () => THEMES.map((t) => ({ libelle: t.libelle, icone: t.icone, coche: app.preferences.get('theme') === t.code, action: () => app.changerTheme(t.code) })),
+        },
+        {
+          libelle: texte('navigation_btp.menus.parametres.densite.libelle'), icone: icone('navigation_btp_densite'), info: DENSITES.find((d) => d.code === (app.preferences.get('densite') ?? 'confortable'))?.libelle,
+          sousMenu: () => DENSITES.map((d) => ({ libelle: d.libelle, icone: d.icone, coche: (app.preferences.get('densite') ?? 'confortable') === d.code, action: () => app.changerDensite(d.code) })),
         },
         {
           libelle: texte('navigation_btp.menus.parametres.position_du_menu.libelle'), icone: icone('navigation_btp_position_du_menu'), info: POSITIONS_MENU.find((p) => p.mode === (app.bandeau?.disposition.mode ?? DISPOSITION_MENU.HAUT))?.libelle,
@@ -335,7 +346,7 @@ export function menus(app) {
 /** Raccourcis proposés à l'accueil : éléments de menu métier ayant une URL. */
 export function catalogueRaccourcis(app = null) {
   return [
-    ...MENUS_METIER.filter((m) => !app || visible(app, m)).flatMap((m) => m.elements.filter((e) => e.url && e.code && (!app || visible(app, e))).map((e) => ({ code: e.code, libelle: e.libelle, icone: e.icone, url: e.url, groupe: Bandeau.libelle(m.libelle) }))),
+    ...MENUS_METIER.flatMap((m) => (app ? elementsMenu(app, m) : m.elements).filter((e) => e.url && e.code).map((e) => ({ code: e.code, libelle: e.libelle, icone: e.icone, url: e.url, groupe: Bandeau.libelle(m.libelle) }))),
     { code: 'preferences', libelle: texte('navigation_btp.menus.parametres.preferences.libelle'), icone: icone('navigation_btp_preferences'), url: '/parametres', groupe: Bandeau.libelle(texte('navigation_btp.menus.parametres.libelle')) },
   ];
 }

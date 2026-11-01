@@ -78,7 +78,8 @@
         "rechercher": "Bibliothèque",
         "annuler": "$t(commun.annuler)",
         "retablir": "Rétablir"
-      }
+      },
+      "niveau": "Niveau {{niveau}}"
     },
     "raccourcis": {
       "groupe_grille": "Lignes (document, métré)",
@@ -140,6 +141,27 @@
       "variable": "Variable…",
       "aide_consultation": "Consultation seule : libellé non modifiable · Échap : fermer",
       "aide_saisie": "Entrée : paragraphe · Maj+Entrée : retour à la ligne · Ctrl+Entrée : valider · Échap : annuler"
+    },
+    "densite": {
+      "confortable": "Confortable",
+      "compacte": "Compacte"
+    },
+    "date": {
+      "aide": "Saisie abrégée : 15 → le 15 du mois, 16/05 → cette année, 15/05/23 → 2023, t → aujourd'hui, +3 → dans 3 jours ; F4 : calendrier"
+    },
+    "notification": {
+      "titres": {
+        "erreur": "Erreur",
+        "avertissement": "Attention",
+        "info": "Information",
+        "succes": "Terminé"
+      },
+      "champs_un": "{{nombre}} champ à corriger",
+      "champs_autre": "{{nombre}} champs à corriger",
+      "points_un": "{{nombre}} point à vérifier",
+      "points_autre": "{{nombre}} points à vérifier",
+      "aller": "Aller",
+      "fermer": "Fermer (Échap)"
     }
   },
   "erreurs": {

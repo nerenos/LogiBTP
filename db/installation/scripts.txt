@@ -45,6 +45,7 @@ modules/metre/db/021_metre_script.sql
 modules/liste/db/030_liste_schema.sql
 modules/liste/db/031_liste_themes.sql
 modules/liste/db/032_liste_saisie.sql
+modules/liste/db/033_liste_vue_defaut.sql rejouable
 modules/fiche/db/040_fiche_schema.sql
 modules/fiche/db/041_fiche_parametrage.sql
 modules/fiche/db/042_fiche_chrono.sql
@@ -194,6 +195,9 @@ db/247_comptabilite_cles_tiers.sql
 db/248_chantier_lignes.sql
 db/249_marches_a_facturer.sql rejouable
 db/250_revision_prix.sql rejouable
+db/251_salaries_agences_codes.sql rejouable
+db/252_materiel_etats.sql rejouable
+db/253_liste_etats.sql
 
 # Vues de colonnes des types de documents créés après 176 : rejouée en dernier.
 db/176_documents_vues_types.sql rejouable

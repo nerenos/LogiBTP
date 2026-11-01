@@ -302,4 +302,28 @@ public sealed class IntegrationPostgresTests : IAsyncLifetime
             Assert.Equal(attendus, obtenus);
         }
     }
+    [Fact]
+    public async Task Agregats_identiques_au_js()
+    {
+        if (_cnx is null) return;
+        foreach (var c in _jeu["agregats"]!.AsArray())
+        {
+            var agregats = c!["agregats"].Deserialize<List<AgregatListe>>(JsonCalcul.Options)!;
+            var l = (await Lire(new ConstructeurRequete(Source(), Def(c["filtres"]), Demande(c["requete"])).Agregats(agregats))).Single();
+            decimal? Valeur(string cle) => l[cle] is null or DBNull ? null : Convert.ToDecimal(l[cle]);
+            var obtenus = new Dictionary<string, decimal?> { ["_lignes"] = Valeur("_lignes") };
+            for (var i = 0; i < agregats.Count; i++)
+            {
+                obtenus[agregats[i].Code] = agregats[i].Calcul == "ratio"
+                    ? (Valeur($"a{i}d") is { } d && d != 0 ? Valeur($"a{i}n") / d : null)
+                    : Valeur($"a{i}");
+            }
+            foreach (var (code, attendu) in c["attendu"]!.AsObject())
+            {
+                var o = obtenus[code];
+                if (attendu is null) Assert.True(o is null, $"{c["nom"]} : {code}");
+                else Assert.True(o is { } x && Math.Abs(x - attendu.GetValue<decimal>()) < 0.000001m, $"{c["nom"]} : {code} = {o}");
+            }
+        }
+    }
 }

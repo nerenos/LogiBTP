@@ -1,6 +1,7 @@
 // Compteurs et événements du matériel (lot 5c-2 des demandes du 25/10/2026), répliqués dans ReglesCompteurs.cs (jeu
 // tests/ressources/05_compteurs.json) : relevés datés en heures (H) ou kilomètres (KM), deux unités au plus par
-// matériel (M7) ; un relevé ne descend pas sous le précédent de la même unité, sauf remise à zéro (compteur remplacé) ;
+// matériel (M7) ; un relevé ne descend pas sous le précédent de la même unité, sauf remise à zéro (compteur remplacé)
+// ou rectification (valeur corrigée, motif obligatoire : FM2 de l'analyse d'ergonomie) ;
 // compteur à une date ; série cumulée (les remises à zéro ajoutent la valeur atteinte avant elles) ; contrôle d'un
 // événement (panne, sinistre, accident, immobilisation, contrôle, entretien, plein de carburant, autre).
 // Relevés ordonnés par date puis par ordre de saisie ; dates ISO comparées en texte.
@@ -15,7 +16,7 @@ export const TYPES_EVENEMENT = ['PANNE', 'SINISTRE', 'ACCIDENT', 'IMMOBILISATION
 export const LIBELLES_EVENEMENT = textesParCode('ressources_btp.compteurs.evenements', ['PANNE', 'SINISTRE', 'ACCIDENT', 'IMMOBILISATION', 'CONTROLE', 'ENTRETIEN', 'CARBURANT', 'AUTRE']);
 export const ICONES_EVENEMENT = Object.fromEntries(['PANNE', 'SINISTRE', 'ACCIDENT', 'IMMOBILISATION', 'CONTROLE', 'ENTRETIEN', 'CARBURANT', 'AUTRE'].map((c) => [c, icone(`ressources_btp_evenement_${c.toLowerCase()}`)]));
 
-export const MESSAGES_COMPTEURS = textesParCode('ressources_btp.compteurs.erreurs', ['REL_UNITE', 'REL_DATE', 'REL_VALEUR', 'REL_DECROISSANT', 'EVT_TYPE', 'EVT_DATE', 'EVT_LIBELLE', 'EVT_LITRES', 'EVT_COUT']);
+export const MESSAGES_COMPTEURS = textesParCode('ressources_btp.compteurs.erreurs', ['REL_UNITE', 'REL_DATE', 'REL_VALEUR', 'REL_DECROISSANT', 'REL_MOTIF', 'EVT_TYPE', 'EVT_DATE', 'EVT_LIBELLE', 'EVT_LITRES', 'EVT_COUT']);
 
 const ordinal = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 const nombre = (v) => (v === null || v === undefined || v === '' ? null : Number(v));
@@ -40,11 +41,12 @@ export function controlerReleves(unites, releves) {
     if (!unites.includes(x.unite)) r.push({ code: 'REL_UNITE', releve: i });
     if (!x.date) r.push({ code: 'REL_DATE', releve: i });
     if (nombre(x.valeur) === null || nombre(x.valeur) < 0) r.push({ code: 'REL_VALEUR', releve: i });
+    if (x.rectification && !String(x.commentaire ?? '').trim()) r.push({ code: 'REL_MOTIF', releve: i });
   });
   for (const unite of UNITES_COMPTEUR) {
     const l = ordonnes(releves, unite);
     for (let k = 1; k < l.length; k++) {
-      if (!l[k].r.remise && nombre(l[k].r.valeur) < nombre(l[k - 1].r.valeur)) r.push({ code: 'REL_DECROISSANT', releve: l[k].i });
+      if (!l[k].r.remise && !l[k].r.rectification && nombre(l[k].r.valeur) < nombre(l[k - 1].r.valeur)) r.push({ code: 'REL_DECROISSANT', releve: l[k].i });
     }
   }
   return r.sort((a, b) => a.releve - b.releve || ordinal(a.code, b.code));

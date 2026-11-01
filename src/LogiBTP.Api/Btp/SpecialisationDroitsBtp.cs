@@ -122,6 +122,7 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
         new("/api/listes/lot", ModeRoute.Action, "listes", ActionsDroits.Consulter),
         new("/api/listes/segments", ModeRoute.Action, "listes", ActionsDroits.Consulter),
         new("/api/listes/controle", ModeRoute.Action, "listes", ActionsDroits.Consulter),
+        new("/api/listes/agregats", ModeRoute.Action, "listes", ActionsDroits.Consulter),
         new("/api/listes/lignes", ModeRoute.Action, "listes", ActionsDroits.Consulter),
         new("/api/structure", ModeRoute.Module, "structure"),
         new("/api/annuaire", ModeRoute.Module, "annuaire"),

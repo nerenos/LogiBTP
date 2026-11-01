@@ -52,6 +52,16 @@ describe('requêtes paginées (jeu partagé avec le serveur)', () => {
     });
   }
 
+  for (const c of jeu.agregats) {
+    it(`agrégats : ${c.nom}`, async () => {
+      const r = await fournisseur().agregats({ definition: { ...definition, theme: 't' }, ...c.requete, agregats: c.agregats });
+      for (const [code, v] of Object.entries(c.attendu)) {
+        if (v === null) expect(r[code], code).toBeNull();
+        else expect(r[code], code).toBeCloseTo(v, 8);
+      }
+    });
+  }
+
   it('saisie dans la liste : colonnes autorisées, conversion, conflit', async () => {
     const source = structuredClone(jeu.source);
     source.modifiable = true;

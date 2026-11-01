@@ -22,6 +22,23 @@
   --pied-fond: #f3f0fa;
   --fond-carte: rgba(148, 163, 184, 0.12);
   color-scheme: light;
+  /* Densité (I6) : confortable par défaut, compacte par <html data-densite="compacte"> (appliquerDensite). */
+  --taille-texte: 14px;
+  --grille-hauteur-ligne: 1.9rem;
+  --grille-marge-ligne: 0.24rem;
+  --cellule-marge: 3px 7px;
+  /* Retrait des niveaux de la grille (D4) : plein pour les deux premiers, réduit ensuite, plafonné. */
+  --grille-retrait: 1.1rem;
+  --grille-retrait-profond: 0.45rem;
+  --grille-retrait-max: 4rem;
+  --grille-guide: rgba(100, 116, 139, 0.35);
+  --grille-signal: var(--alerte);
+}
+:root[data-densite="compacte"] {
+  --taille-texte: 13px;
+  --grille-hauteur-ligne: 1.75rem;
+  --grille-marge-ligne: 0.18rem;
+  --cellule-marge: 2px 6px;
 }
 
 /* Thème sombre : celui du système (Automatique), sauf choix explicite data-theme="light" / "dark" sur <html>
@@ -66,4 +83,26 @@
   --ouvrage-fond: #1c2027;
   --pied-fond: #25222f;
   color-scheme: dark;
+}
+
+/* Infobulles (I8), fenêtre des messages (I4) et séparateurs des barres d'outils (I7). */
+:root {
+  --bulle-fond: #1f2328;
+  --bulle-texte: #f4f5f7;
+  --outils-separateur: #d0d5dd;
+  --notification-ombre: rgb(0 0 0 / 0.22);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bulle-fond: #e6e8eb;
+    --bulle-texte: #16181c;
+    --outils-separateur: #394049;
+    --notification-ombre: rgb(0 0 0 / 0.5);
+  }
+}
+:root[data-theme="dark"] {
+  --bulle-fond: #e6e8eb;
+  --bulle-texte: #16181c;
+  --outils-separateur: #394049;
+  --notification-ombre: rgb(0 0 0 / 0.5);
 }

@@ -451,9 +451,9 @@ function barreSemaine(conteneur, page, { changerSemaine, changerFiltre }) {
   conteneur.querySelector('[data-recherche]').addEventListener('change', (e) => { page.recherche = e.target.value; changerFiltre(); });
 }
 
-const BARRE = `<p class="ligne"><button type="button" data-prec title="${texteHtml('pointage.barre.precedente')}">${iconeHtml('precedent')}</button> <input type="date" data-date>
-  <button type="button" data-suiv title="${texteHtml('pointage.barre.suivante')}">${iconeHtml('suivant')}</button> <span data-semaine class="aide"></span>
-  · <span data-service></span> <input type="search" data-recherche placeholder="${texteHtml('pointage.barre.recherche')}"></p>`;
+const BARRE = `<p class="ligne barre-outils" role="toolbar"><span class="groupe-outils"><button type="button" data-prec title="${texteHtml('pointage.barre.precedente')}">${iconeHtml('precedent')}</button> <input type="date" data-date>
+  <button type="button" data-suiv title="${texteHtml('pointage.barre.suivante')}">${iconeHtml('suivant')}</button> <span data-semaine class="aide"></span></span>
+  <span class="groupe-outils"><span data-service></span> <input type="search" data-recherche placeholder="${texteHtml('pointage.barre.recherche')}"></span></p>`;
 
 /** Saisie hebdomadaire au bureau : salariés du service avec leurs totaux, grille de la semaine du salarié choisi. */
 export class PageSaisiePointage extends PageBase {
@@ -652,7 +652,7 @@ export class PageSynthesePointage extends PageBase {
     c.querySelector('[data-tout]').addEventListener('change', (e) => { this.tout = e.target.checked; this.#url(); this.#rendreListe(); });
     // Blocage à la journée : période de validation sur la ligne de la semaine.
     if (this.ref.parametres.blocage === 'JOUR') {
-      c.querySelector('.entete-page > p.ligne').insertAdjacentHTML('beforeend', ` · <span class="aide">${texteHtml('pointage.synthese.periode')}</span> <input type="date" data-du> ${texteHtml('pointage.synthese.au')} <input type="date" data-au>`);
+      c.querySelector('.entete-page > p.ligne').insertAdjacentHTML('beforeend', `<span class="groupe-outils"><span class="aide">${texteHtml('pointage.synthese.periode')}</span> <input type="date" data-du> ${texteHtml('pointage.synthese.au')} <input type="date" data-au></span>`);
     }
     barreSemaine(c, this, {
       changerSemaine: async (lundi) => {

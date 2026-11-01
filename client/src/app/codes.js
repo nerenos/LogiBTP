@@ -115,3 +115,69 @@ export const urlDocument = (id) => `/document/${id}`;
 
 /** Préférences de l'application dans le localStorage (recopiée dans public/demarrage-theme.js). */
 export const CLE_PREFERENCES_NAVIGATION = 'logibtp.navigation';
+
+/** États affichés d'un document dans les listes, calculés par v_liste_documents (db/253, Q3 : jamais de statut posé). */
+export const ETAT_LISTE_DOCUMENT = Object.freeze({ EXPIRE: 'EXPIRE', REFUSE: 'REFUSE' });
+
+/**
+ * Erreurs de validation d'un document qui désignent un champ hors des lignes (I2) : émises par le module Document
+ * (TIERS_OBLIGATOIRE, DATE_*, PROPRIETE_OBLIGATOIRE, CONDITION_PAIEMENT) et par le cœur (SpecialisationBtp).
+ */
+export const ERREUR_DOCUMENT = Object.freeze({
+  TIERS_OBLIGATOIRE: 'TIERS_OBLIGATOIRE', ADRESSE_LIVRAISON: 'ADRESSE_LIVRAISON', MARCHE_OBLIGATOIRE: 'MARCHE_OBLIGATOIRE',
+  EXE_CHANTIER: 'EXE_CHANTIER', EXE_CHANTIER_UNIQUE: 'EXE_CHANTIER_UNIQUE', DATE_FUTURE: 'DATE_FUTURE', DATE_ANTERIEURE: 'DATE_ANTERIEURE',
+  PROPRIETE_OBLIGATOIRE: 'PROPRIETE_OBLIGATOIRE', CONDITION_PAIEMENT: 'CONDITION_PAIEMENT',
+});
+
+/**
+ * Champ en cause de chaque erreur de ERREUR_DOCUMENT : onglet de la page document, élément (sélecteur dans la vue de
+ * l'onglet) encadré et clé du libellé (`document_btp.page.champs_erreur.<cle>`).
+ */
+export const CHAMPS_ERREUR_DOCUMENT = Object.freeze({
+  [ERREUR_DOCUMENT.TIERS_OBLIGATOIRE]: { onglet: 'entete', selecteur: '.annuaire-document', cle: 'tiers' },
+  [ERREUR_DOCUMENT.ADRESSE_LIVRAISON]: { onglet: 'entete', selecteur: '[data-adresse]', cle: 'adresse' },
+  [ERREUR_DOCUMENT.MARCHE_OBLIGATOIRE]: { onglet: 'entete', selecteur: '.rattachement-document', cle: 'rattachement' },
+  [ERREUR_DOCUMENT.EXE_CHANTIER]: { onglet: 'entete', selecteur: '.rattachement-document', cle: 'rattachement' },
+  [ERREUR_DOCUMENT.EXE_CHANTIER_UNIQUE]: { onglet: 'entete', selecteur: '.rattachement-document', cle: 'rattachement' },
+  [ERREUR_DOCUMENT.DATE_FUTURE]: { onglet: 'entete', selecteur: '[data-champ="ent_date"]', cle: 'date' },
+  [ERREUR_DOCUMENT.DATE_ANTERIEURE]: { onglet: 'entete', selecteur: '[data-champ="ent_date"]', cle: 'date' },
+  [ERREUR_DOCUMENT.PROPRIETE_OBLIGATOIRE]: { onglet: 'entete', selecteur: '[data-prop]', cle: 'propriete' },
+  [ERREUR_DOCUMENT.CONDITION_PAIEMENT]: { onglet: 'reglements', selecteur: '.reglement-document', cle: 'reglement' },
+});
+
+/** Pastilles de la colonne État des documents (format `pastille` du module Liste) : code → libellé et teinte (L2). */
+export const PASTILLES_ETAT_DOCUMENT = Object.freeze([
+  { valeur: 'BROUILLON', libelle: 'Brouillon', teinte: 'neutre' },
+  { valeur: 'APPROUVE', libelle: 'Approuvé', teinte: 'info' },
+  { valeur: 'VALIDE', libelle: 'Validé', teinte: 'info' },
+  { valeur: 'ENVOYE', libelle: 'Envoyé', teinte: 'envoye' },
+  { valeur: 'ACCEPTE', libelle: 'Accepté', teinte: 'succes' },
+  { valeur: 'FACTURATION', libelle: 'En facturation', teinte: 'termine' },
+  { valeur: 'FACTURE', libelle: 'Facturé', teinte: 'termine' },
+  { valeur: 'SOLDE', libelle: 'Soldé', teinte: 'termine' },
+  { valeur: 'PAYE_PARTIEL', libelle: 'Payé partiellement', teinte: 'succes' },
+  { valeur: 'PAYE', libelle: 'Payé', teinte: 'succes' },
+  { valeur: ETAT_LISTE_DOCUMENT.EXPIRE, libelle: 'Expiré', teinte: 'attention' },
+  { valeur: ETAT_LISTE_DOCUMENT.REFUSE, libelle: 'Refusé', teinte: 'erreur' },
+  { valeur: 'NON_RETENU', libelle: 'Non retenu', teinte: 'erreur' },
+  { valeur: 'ANNULE', libelle: 'Annulé', teinte: 'barre' },
+  { valeur: 'REMPLACE', libelle: 'Remplacé', teinte: 'barre' },
+].map(Object.freeze));
+
+/** Pastilles des statuts de la structure (projet, affaire, chantier, marché ; contraintes de db/160). */
+export const PASTILLES_STATUT_STRUCTURE = Object.freeze({
+  projet: [
+    { valeur: 'EN_COURS', libelle: 'En cours', teinte: 'info' }, { valeur: 'REMIS', libelle: 'Offre remise', teinte: 'envoye' },
+    { valeur: 'OBTENU', libelle: 'Obtenu', teinte: 'succes' }, { valeur: 'PERDU', libelle: 'Perdu', teinte: 'erreur' },
+    { valeur: 'ABANDONNE', libelle: 'Abandonné', teinte: 'barre' },
+  ],
+  affaire: [{ valeur: 'OUVERTE', libelle: 'Ouverte', teinte: 'info' }, { valeur: 'CLOSE', libelle: 'Close', teinte: 'termine' }],
+  chantier: [
+    { valeur: 'OUVERT', libelle: 'Ouvert', teinte: 'info' }, { valeur: 'TERMINE', libelle: 'Terminé', teinte: 'succes' },
+    { valeur: 'CLOS', libelle: 'Clos', teinte: 'termine' },
+  ],
+  marche: [
+    { valeur: 'EN_COURS', libelle: 'En cours', teinte: 'info' }, { valeur: 'SOLDE', libelle: 'Soldé', teinte: 'termine' },
+    { valeur: 'RESILIE', libelle: 'Résilié', teinte: 'erreur' },
+  ],
+});

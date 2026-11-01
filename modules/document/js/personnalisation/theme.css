@@ -15,4 +15,7 @@
   --document-divergent: rgba(80, 130, 230, 0.12);
   --document-trouvee: rgba(250, 204, 21, 0.18);
   --document-trouvee-courante: rgba(250, 204, 21, 0.45);
+  /* Net à payer du pied de la grille (D5) : pastille d'accent. */
+  --document-total-fond: var(--accent-clair);
+  --document-total-texte: var(--accent);
 }

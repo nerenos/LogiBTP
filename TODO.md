@@ -242,6 +242,22 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
 
 ## Interface
 
+### Ergonomie ([analyse du 31/10/2026](documentation/conception/ANALYSE-ERGONOMIE.md), décisions Q1–Q16 prises)
+
+- [ ] Barres d'outils (suite de E1) : débordement replié dans un menu « ⋯ » en petite largeur (aujourd'hui : retour à
+  la ligne des groupes).
+- [ ] Indicateur « Devis à relancer » : une note de relance du CRM doit remettre le délai de 15 jours à zéro (Q5 ;
+  aujourd'hui : jours depuis l'envoi, `jours_envoye` de `db/253`) ; délai de relance en paramètre.
+- [ ] Listes : vues enregistrées par les utilisateurs avec l'ancien picto du statut (colonne `statut`) à passer sur la
+  colonne `etat` en pastille (script de reprise des définitions JSON).
+- [ ] Matériel : photo de l'état au retour d'une affectation (dépôt dans la GED du matériel depuis la ligne).
+- [ ] Salariés : retirer `sal_matricule` (recopie du code depuis `db/251`) des requêtes qui le lisent encore (magasin,
+  habilitations, comptes), puis la colonne.
+- [ ] Unités de l'article (E10, suite) : même liste et même conversion depuis le détail de la ligne (combo Unité), et
+  choix « ne plus demander » gardé avec le document plutôt que pour la seule fenêtre ouverte.
+- [ ] Choix en liste (I1, suite) : individus de notre société au poste voulu (conducteur, chargé d'affaires, rédacteur :
+  combos actuelles) et contact d'un intervenant dans la liste des contacts du tiers ; sélection multiple (destinataires).
+- [ ] Champs mois (`<input type="month">`, 13 écrans) : même saisie abrégée que les dates, à étudier.
 ### Personnalisation (textes, thème, images — [analyse](documentation/conception/ANALYSE-MODULE-PERSONNALISATION.md))
 
 Lots P1 (module, chargement, socle et navigation migrés), P2 (erreurs par code), P3a (Pointage), P3b (module Document), P3c (page document du cœur), P3d (module Liste), P3e (module Fiche), P3f (module GED), P3g (module Annuaire), P3h (module Bibliothèque), P3i (module CRM), P3j (module Mail), P3k (module Planning), P3l (module Stock), P3m (module Exécution), P3n (module Sous-traitance), P3o (module Comptabilité), P3p (module Calendrier), P3q (module Métré), P3r (module Édition), P3s (module Import), P3t (modules Authentification et Droits), P3u (modules OAuth et Notifications), P3v (navigation du cœur), P3w (fiches du cœur), P3x (structure, documents et hors ligne), P3y (ressources et terrain), P3z (analyse, frais annexes et bibliothèque du cœur), P3aa (pages de paramétrage et pages générales) et P3ab (écrans de la révision des prix et des règlements) faits. Suites, dans l'ordre de l'analyse (§ 7.1) :

@@ -48,14 +48,17 @@ export class GestionThemes {
   }
 
   async charger() {
-    this.themes = await this.fournisseur.themes();
+    const [themes, vues] = await Promise.all([this.fournisseur.themes(), this.fournisseur.vues(null, null).catch(() => [])]);
+    this.themes = themes;
+    this.vuesParTheme = new Map();
+    for (const v of vues) this.vuesParTheme.set(v.vli_theme, [...(this.vuesParTheme.get(v.vli_theme) ?? []), v]);
     this.rendre();
   }
 
   rendre() {
     this.corps.innerHTML = `
       <table class="concepteur-table themes-table">
-        <thead><tr>${['icone', 'code', 'libelle', 'ordre', 'types'].map((c) => `<th>${texteHtml(`liste.themes.colonnes.${c}`)}</th>`).join('')}<th></th></tr></thead>
+        <thead><tr>${['icone', 'code', 'libelle', 'ordre', 'types', 'vue_defaut'].map((c) => `<th>${texteHtml(`liste.themes.colonnes.${c}`)}</th>`).join('')}<th></th></tr></thead>
         <tbody>${this.themes.map((t, i) => `
           <tr data-i="${i}">
             <td><input data-c="thl_icone" value="${echapper(t.thl_icone ?? '')}" maxlength="4" size="3"></td>
@@ -63,14 +66,17 @@ export class GestionThemes {
             <td><input data-c="thl_libelle" value="${echapper(t.thl_libelle ?? '')}"></td>
             <td><input data-c="thl_ordre" type="number" value="${t.thl_ordre ?? 0}" style="width:4.5rem"></td>
             <td><input data-c="thl_types" class="large" value="${echapper(typesVersTexte(t.thl_types))}" placeholder="${texteHtml('liste.themes.types_vide')}"></td>
+            <td><select data-c="thl_vli_defaut" title="${texteHtml('liste.themes.vue_defaut_aide')}"><option value="">${texteHtml('liste.themes.vue_premiere')}</option>
+              ${(this.vuesParTheme.get(t.thl_code) ?? []).map((v) => `<option value="${v.vli_id}" ${Number(t.thl_vli_defaut) === v.vli_id ? 'selected' : ''}>${echapper(v.vli_nom)}</option>`).join('')}</select></td>
             <td><button type="button" data-enregistrer class="principal">${texteHtml('commun.enregistrer')}</button> <button type="button" data-supprimer title="${texteHtml('liste.themes.supprimer_aide')}">${iconeHtml('retirer')}</button></td>
-          </tr>`).join('') || `<tr><td colspan="6" class="aide">${texteHtml('liste.themes.aucun')}</td></tr>`}</tbody>
+          </tr>`).join('') || `<tr><td colspan="7" class="aide">${texteHtml('liste.themes.aucun')}</td></tr>`}</tbody>
       </table>`;
     this.corps.querySelectorAll('tr[data-i]').forEach((tr) => {
       const t = this.themes[Number(tr.dataset.i)];
       tr.querySelectorAll('[data-c]').forEach((el) => el.addEventListener('change', () => {
         const k = el.dataset.c;
-        t[k] = k === 'thl_types' ? texteVersTypes(el.value) : k === 'thl_ordre' ? Number(el.value) : el.value.trim();
+        t[k] = k === 'thl_types' ? texteVersTypes(el.value) : k === 'thl_ordre' ? Number(el.value)
+          : k === 'thl_vli_defaut' ? (el.value ? Number(el.value) : null) : el.value.trim();
       }));
       tr.querySelector('[data-enregistrer]').addEventListener('click', async () => {
         try {

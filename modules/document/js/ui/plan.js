@@ -1,7 +1,7 @@
 import { texte, texteHtml, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { CFG_LIGNES as C, ordreAffichage, echapper, formatNombre, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
 import { TL, estTranche } from '../src/index.js';
-import { ID_PIED } from './editeur-document.js';
+import { ID_PIED, LIBELLES_TYPE_PRIX } from './editeur-document.js';
 
 // Plan du document : les tranches (titres) en arbre, avec leur montant, puis le pied. Deux modes au clic :
 // « Aller à » sélectionne la tranche dans la grille (tranches parentes dépliées), « Filtrer » limite l'affichage de la
@@ -92,8 +92,51 @@ export class PlanDocument {
         ${tranches.filter((t) => !masquees.has(t.ligne.lig_id)).map((t) => item(t.ligne.lig_id, t.ligne.lig_numerotation ?? '', t.ligne.lig_libelle_brut || texte(t.ligne.lig_tyl_id === TL.SECTION ? 'document.plan.section' : 'document.plan.titre'), t.ligne.lig_montant_ht, t)).join('')}
         ${(ed.resultat.pied ?? []).length ? item(ID_PIED, '', texte('document.plan.pied'), net, { classe: 'pied' }) : ''}
       </ul>
-      ${tranches.length ? '' : `<p class="aide">${texteHtml('document.plan.aucun_titre')}</p>`}`;
+      ${tranches.length ? '' : `<p class="aide">${texteHtml('document.plan.aucun_titre')}</p>`}
+      ${this.legendeHtml()}`;
     this.#ajusterBarre();
+  }
+
+  /**
+   * Légende (D6) : étiquettes et modes de vente du document (clic : filtre par pastille de la grille), fonds des lignes
+   * et marques présents dans le document seulement. Couleurs lues dans les données ou le thème (classes), jamais
+   * recopiées. Repliable (préférence `planLegende` du navigateur).
+   */
+  legende() {
+    const ed = this.editeur;
+    const lignes = ed.resultat.lignes ?? [];
+    const etiquettesPresentes = new Set(lignes.map((l) => l.lig_etiquette).filter(Boolean));
+    const etiquettes = ed.etiquettes().filter((e) => etiquettesPresentes.has(e.code));
+    const types = new Set(lignes.map((l) => ed.typePrixEffectif(l)));
+    const modes = Object.keys(LIBELLES_TYPE_PRIX).filter((t) => t !== 'V' && types.has(t));
+    const tyl = new Set(lignes.map((l) => l.lig_tyl_id));
+    const fonds = [['section', tyl.has(TL.SECTION)], ['titre', tyl.has(TL.TITRE)], ['ouvrage', tyl.has(TL.OUVRAGE)], ['pied', (ed.resultat.pied ?? []).length > 0]]
+      .filter(([, present]) => present).map(([code]) => code);
+    const marques = [
+      ['hors_total', modes.some((t) => t !== 'F')],
+      ['frais', types.has('F')],
+      ['soldee', Boolean(ed.restes) && lignes.some((l) => Number(l.lig_qte_vendue ?? 0) === 0 && ed.soldeLigne?.({ item: l, calcule: l })?.avant?.soldee)],
+      ['non_editee', lignes.some((l) => l.lig_is_non_editee)],
+    ].filter(([, present]) => present).map(([code]) => code);
+    return { etiquettes, modes, fonds, marques };
+  }
+
+  legendeHtml() {
+    const ed = this.editeur;
+    const { etiquettes, modes, fonds, marques } = this.legende();
+    if (!etiquettes.length && !modes.length && !fonds.length && !marques.length) return '';
+    const { etiquettes: filtreEtq, types: filtreTypes } = ed.filtreMarqueurs ?? { etiquettes: new Set(), types: new Set() };
+    const groupe = (cle, contenu) => (contenu ? `<div class="legende-groupe"><strong>${texteHtml(`document.plan.legende.${cle}`)}</strong><ul>${contenu}</ul></div>` : '');
+    const pastille = (attr, valeur, couleur, libelle, actif) => `<li><button type="button" class="lien legende-filtre${actif ? ' actif' : ''}" ${attr}="${echapper(valeur)}" aria-pressed="${actif}"
+      title="${texteHtml('document.plan.legende.filtrer', { nom: libelle })}"><span class="legende-pastille" ${couleur ? `style="background:${echapper(couleur)}"` : ''}></span>${echapper(libelle)}</button></li>`;
+    const ouverte = lirePreferences().planLegende !== false;
+    return `<details class="plan-legende" ${ouverte ? 'open' : ''}>
+      <summary>${texteHtml('document.plan.legende.titre')}</summary>
+      ${groupe('etiquettes', etiquettes.map((e) => pastille('data-legende-etq', e.code, e.couleur, e.libelle, filtreEtq.has(e.code))).join(''))}
+      ${groupe('modes', modes.map((t) => pastille('data-legende-type', t, ed.couleurTypePrix(t)?.couleur, LIBELLES_TYPE_PRIX[t], filtreTypes.has(t))).join(''))}
+      ${groupe('fonds', fonds.map((f) => `<li><span class="legende-fond fond-${f}"></span>${texteHtml(`document.plan.legende.fond_${f}`)}</li>`).join(''))}
+      ${groupe('marques', marques.map((m) => `<li><span class="legende-marque marque-${m}">${texteHtml('document.plan.legende.exemple')}</span>${texteHtml(`document.plan.legende.marque_${m}`)}</li>`).join(''))}
+    </details>`;
   }
 
   /** Bouton d'ouverture / réduction des lignes de la grille : réduit tant qu'une ligne est ouverte, sinon ouvre tout. */
@@ -163,6 +206,25 @@ export class PlanDocument {
   }
 
   #clic(e) {
+    const legende = e.target.closest('[data-legende-etq], [data-legende-type]');
+    if (legende) {
+      // Étiquette ou mode de la légende : bascule dans le filtre par pastille de la grille.
+      const ed = this.editeur;
+      const etiquettes = new Set(ed.filtreMarqueurs.etiquettes);
+      const types = new Set(ed.filtreMarqueurs.types);
+      const basculer = (ens, v) => (ens.has(v) ? ens.delete(v) : ens.add(v));
+      if (legende.dataset.legendeEtq !== undefined) basculer(etiquettes, legende.dataset.legendeEtq);
+      else basculer(types, legende.dataset.legendeType);
+      ed.filtrerMarqueurs({ etiquettes: [...etiquettes], types: [...types] });
+      this.rendre();
+      return;
+    }
+    if (e.target.closest('.plan-legende > summary')) {
+      const d = e.target.closest('.plan-legende');
+      // L'état ouvert change après le clic.
+      setTimeout(() => ecrirePreferences({ planLegende: d.open }), 0);
+      return;
+    }
     const mode = e.target.closest('[data-mode]');
     if (mode) {
       this.mode = mode.dataset.mode;

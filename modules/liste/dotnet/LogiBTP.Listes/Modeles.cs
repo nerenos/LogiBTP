@@ -83,6 +83,24 @@ public sealed class DemandeListe
     public int Taille { get; set; } = 100;
     public List<string>? Ids { get; set; }
     public string? Colonne { get; set; }
+    /// <summary>Filtres ajoutés à ceux de la vue (carte d'indicateur choisie), même sémantique, en ET.</summary>
+    public List<FiltreVue> Filtres { get; set; } = [];
+    /// <summary>Agrégats demandés (totaux des colonnes, indicateurs) sur toute la sélection.</summary>
+    public List<AgregatListe> Agregats { get; set; } = [];
+}
+
+/// <summary>
+/// Agrégat d'une liste (totaux L3, indicateurs L4) : somme, moyenne, min, max d'une colonne numérique, compte des
+/// lignes, ou ratio compte(filtres) ÷ compte(dénominateur) ; filtres propres en plus de la sélection. Même sémantique
+/// que agreger (requete.js), jeu 04_agregats.json.
+/// </summary>
+public sealed class AgregatListe
+{
+    public string Code { get; set; } = "";
+    public string Calcul { get; set; } = "somme";
+    public string? Colonne { get; set; }
+    public List<FiltreVue> Filtres { get; set; } = [];
+    public List<FiltreVue> Denominateur { get; set; } = [];
 }
 
 /// <summary>Type d'élément couvert par un thème.</summary>

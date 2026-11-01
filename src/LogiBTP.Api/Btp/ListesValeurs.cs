@@ -22,6 +22,7 @@ public static class ListesValeurs
         ["PRIORITE_PROJET"] = ("Priorités des projets", false),
         ["EVALUATION_PROJET"] = ("Évaluations des projets", false),
         ["ENERGIE"] = ("Énergies du matériel", false),
+        ["ETAT_MATERIEL"] = ("Conditions du matériel", false),
     };
 
     /// <summary>Requête qui dit si un code est employé (paramètre @c), par liste ; absente : jamais employé.</summary>
@@ -29,6 +30,7 @@ public static class ListesValeurs
     {
         ["TYPE_MATERIEL"] = "SELECT EXISTS (SELECT 1 FROM materiel WHERE mat_famille = @c) AS \"Value\"",
         ["ENERGIE"] = "SELECT EXISTS (SELECT 1 FROM materiel WHERE mat_energie = @c) AS \"Value\"",
+        ["ETAT_MATERIEL"] = "SELECT EXISTS (SELECT 1 FROM materiel WHERE mat_condition = @c) OR EXISTS (SELECT 1 FROM materiel_etat WHERE met_condition = @c) AS \"Value\"",
     };
 
     private sealed record LigneValeur(string Code, string Libelle, string? Parent, string? Couleur, int Ordre, bool Actif);

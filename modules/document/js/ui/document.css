@@ -6,6 +6,11 @@
   border-radius: 6px 6px 0 0; border-bottom: none; padding: 0.35rem 1.2rem; background: var(--fond);
   color: var(--discret);
 }
+/* Champs en cause d'un refus (I2) : encadrés jusqu'à la version suivante, signalés une fois par « Aller » ; onglet marqué. */
+.champ-erreur { outline: 2px solid var(--erreur); outline-offset: 2px; border-radius: 4px; }
+.page-document .signale { animation: document-signale 1.2s ease-out 1; }
+@keyframes document-signale { 0%, 40% { box-shadow: 0 0 0 4px var(--erreur-fond); } 100% { box-shadow: 0 0 0 4px transparent; } }
+.onglets button.onglet-erreur { box-shadow: inset 0 -3px 0 var(--erreur); }
 .onglets button.actif { background: var(--surface); color: var(--texte); font-weight: 600; box-shadow: inset 0 2px 0 var(--accent); }
 .onglets .resume { margin-left: auto; color: var(--discret); font-size: 0.9em; padding-bottom: 0.3rem; }
 
@@ -56,10 +61,17 @@ body.redimensionnement { user-select: none; cursor: col-resize; }
   flex: none; display: flex; align-items: center; gap: 1rem; padding: 0.35rem 0.7rem;
   border-top: 1px solid var(--bord); background: var(--surface);
 }
-.pied-lignes .aide { margin: 0 0 0 auto; cursor: help; }
-.totaux-compacts { display: flex; gap: 1.2rem; flex-wrap: wrap; font-variant-numeric: tabular-nums; }
-.totaux-compacts small { color: var(--discret); margin-right: 0.25rem; }
-.totaux-compacts .net { font-weight: 700; }
+.pied-lignes .aide { cursor: help; color: var(--discret); font-size: 0.9em; }
+/* Totaux du pied (D5) : calés à droite, chiffres tabulaires plus grands, libellés en petites capitales, net en pastille. */
+.totaux-compacts { display: flex; align-items: center; flex-wrap: wrap; margin-left: auto; font-variant-numeric: tabular-nums; font-size: 1.15em; line-height: 1.2; }
+.totaux-compacts > span { padding: 0 0.8rem; border-left: 1px solid var(--bord); white-space: nowrap; }
+.totaux-compacts > span:first-child { border-left: none; }
+.totaux-compacts small { color: var(--discret); margin-right: 0.35rem; font-size: 0.68em; font-variant: all-small-caps; letter-spacing: 0.04em; }
+.totaux-compacts .net { font-weight: 700; border-left: none; margin-left: 0.3rem; padding: 0.1rem 0.7rem; border-radius: 999px;
+  background: var(--document-total-fond); color: var(--document-total-texte); }
+.totaux-compacts .net small { color: inherit; opacity: 0.8; }
+.totaux-compacts.attention > span { color: var(--alerte); }
+.totaux-compacts.attention .net { background: var(--alerte-fond); color: var(--alerte); }
 .panneau { background: var(--surface); border: 1px solid var(--bord); border-radius: 6px; padding: 0.6rem 0.8rem; }
 .panneau h3 { margin: 0 0 0.4rem; font-size: 0.95rem; }
 .aide { color: var(--discret); font-size: 0.85em; margin: 0.4rem 0 0; }
@@ -109,6 +121,9 @@ table.totaux tr.net th, table.totaux tr.net td { font-weight: 700; color: var(--
 .notifications-document .filtre .nombre { font-variant-numeric: tabular-nums; color: var(--discret); }
 .notifications-document .sep { width: 1px; align-self: stretch; background: var(--bord); margin: 0 0.2rem; }
 .notifications-document .tout-afficher { border: none; background: none; color: var(--discret); font-size: 0.85em; }
+.notifications-document .filtrer-grille { border: 1px solid var(--bord); border-radius: 3px; background: none; padding: 0 0.45rem; font-size: 0.85em; }
+.notifications-document .filtrer-grille.actif { color: var(--surface); background: var(--accent); border-color: var(--accent); }
+.notifications-document .filtrer-grille:disabled { opacity: 0.5; }
 .notifications-document ul { list-style: none; margin: 0; padding: 0; }
 .notifications-document li button { display: flex; gap: 0.5rem; align-items: baseline; width: 100%; text-align: left; border: none;
   background: none; padding: 0.15rem 0.4rem; border-radius: 3px; }
@@ -231,6 +246,26 @@ dialog.dialogue-vue::backdrop { background: var(--document-fond-modale); }
 .plan-arbre .complement { color: var(--discret); font-size: 0.8em; white-space: nowrap; }
 .plan-arbre .type-prix { width: 0.6rem; height: 0.9rem; flex: none; align-self: center; border-radius: 2px; }
 .plan-arbre li.pied { border-top: 1px solid var(--bord); margin-top: 0.3rem; padding-top: 0.3rem; }
+/* Légende du plan (D6), en bas, repliable : seulement ce qui est présent dans le document. */
+.plan-legende { margin-top: auto; border-top: 1px solid var(--bord); padding: 0.3rem 0.3rem 0.2rem; font-size: 0.82rem; flex: none; }
+.plan-legende summary { cursor: pointer; color: var(--discret); font-weight: 600; }
+.plan-legende .legende-groupe { margin-top: 0.3rem; }
+.plan-legende strong { display: block; color: var(--discret); font-weight: 500; font-variant: all-small-caps; letter-spacing: 0.04em; }
+.plan-legende ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.15rem 0.7rem; }
+.plan-legende li { display: flex; align-items: center; gap: 0.3rem; }
+.plan-legende .legende-filtre { display: inline-flex; align-items: center; gap: 0.3rem; color: inherit; text-decoration: none; }
+.plan-legende .legende-filtre.actif { font-weight: 600; text-decoration: underline; }
+.plan-legende .legende-pastille { width: 0.7rem; height: 0.7rem; border-radius: 50%; background: var(--document-etiquette-vide); box-shadow: 0 0 0 1px var(--document-contour-pastille); }
+.plan-legende .legende-fond { width: 1.4rem; height: 0.8rem; border: 1px solid var(--bord); border-radius: 2px; }
+.plan-legende .fond-section { background: var(--accent-clair); border-top: 2px solid var(--accent); }
+.plan-legende .fond-titre { background: var(--titre-fond); }
+.plan-legende .fond-ouvrage { background: var(--ouvrage-fond); }
+.plan-legende .fond-pied { background: var(--pied-fond); }
+.plan-legende .legende-marque { font-variant-numeric: tabular-nums; }
+.plan-legende .marque-hors_total { color: var(--discret); text-decoration: line-through; }
+.plan-legende .marque-frais { font-style: italic; }
+.plan-legende .marque-soldee { color: var(--discret); opacity: 0.7; }
+.plan-legende .marque-non_editee { opacity: 0.6; }
 .barre-filtre { flex: none; display: flex; gap: 0.6rem; align-items: center; padding: 0.3rem 0.7rem; background: var(--accent-clair); border-bottom: 1px solid var(--bord); font-size: 0.9em; }
 .grille tr.pied-tranche td { font-weight: 700; background: var(--pied-fond); border-top: 2px solid var(--bord); }
 .barre-filtre[hidden] { display: none; }

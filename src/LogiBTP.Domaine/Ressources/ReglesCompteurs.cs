@@ -1,7 +1,10 @@
 namespace LogiBTP.Domaine.Ressources;
 
-/// <summary>Relevé de compteur : unité (H, KM), date, valeur, remise à zéro (compteur remplacé).</summary>
-public sealed record ReleveCompteur(string? Unite, DateOnly? Date, decimal? Valeur, bool Remise = false);
+/// <summary>
+/// Relevé de compteur : unité (H, KM), date, valeur, remise à zéro (compteur remplacé), rectification (valeur corrigée,
+/// motif obligatoire dans le commentaire).
+/// </summary>
+public sealed record ReleveCompteur(string? Unite, DateOnly? Date, decimal? Valeur, bool Remise = false, bool Rectification = false, string? Commentaire = null);
 
 /// <summary>Erreur d'une liste de relevés : code, relevé en cause (indice dans la liste).</summary>
 public sealed record ErreurReleve(string Code, int Releve);
@@ -15,7 +18,8 @@ public sealed record EvenementMateriel(string? Type, DateOnly? Date, DateOnly? F
 /// <summary>
 /// Compteurs et événements du matériel (lot 5c-2 des demandes du 25/10/2026), répliqués dans
 /// client/src/app/ressources/compteurs.js (jeu tests/ressources/05_compteurs.json) : relevés datés en heures ou
-/// kilomètres (deux unités au plus, M7), jamais sous le précédent de la même unité sauf remise à zéro ; compteur à une
+/// kilomètres (deux unités au plus, M7), jamais sous le précédent de la même unité sauf remise à zéro ou rectification
+/// (motif obligatoire) ; compteur à une
 /// date ; série cumulée ; contrôle d'un événement. Relevés ordonnés par date puis par ordre de saisie.
 /// </summary>
 public static class ReglesCompteurs
@@ -46,13 +50,14 @@ public static class ReglesCompteurs
             if (x.Unite is null || !unites.Contains(x.Unite)) r.Add(new("REL_UNITE", i));
             if (x.Date is null) r.Add(new("REL_DATE", i));
             if (x.Valeur is not >= 0) r.Add(new("REL_VALEUR", i));
+            if (x.Rectification && string.IsNullOrWhiteSpace(x.Commentaire)) r.Add(new("REL_MOTIF", i));
         }
         foreach (var unite in Unites)
         {
             var l = Ordonnes(releves, unite);
             for (var k = 1; k < l.Count; k++)
             {
-                if (!l[k].R.Remise && l[k].R.Valeur < l[k - 1].R.Valeur) r.Add(new("REL_DECROISSANT", l[k].I));
+                if (!l[k].R.Remise && !l[k].R.Rectification && l[k].R.Valeur < l[k - 1].R.Valeur) r.Add(new("REL_DECROISSANT", l[k].I));
             }
         }
         return [.. r.OrderBy(e => e.Releve).ThenBy(e => e.Code, StringComparer.Ordinal)];

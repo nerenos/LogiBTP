@@ -36,13 +36,13 @@ export const TYPES_FICHE = {
       libelle: 'Salarié',
       titre: '[prenom] [nom]',
       chrono: chrono('S', '{P}{N:5}'),
-      sous_titre: '[matricule] · [poste]',
+      sous_titre: '[code] · [poste]',
       // Peu d'onglets, des groupes de champs : informations liées à l'entreprise, puis données privées (RGPD).
       sections: [
         {
           code: 'entreprise', titre: 'Entreprise',
           groupes: [
-            { titre: 'Identité', champs: ['matricule', 'code', 'matricule_paie', 'nom', 'prenom', 'ind_id'] },
+            { titre: 'Identité', champs: ['code', 'matricule_paie', 'nom', 'prenom', 'ind_id'] },
             { titre: 'Emploi', champs: ['agence', 'service', 'poste', 'qualification', 'type_mo', 'statut', 'date_entree', 'date_sortie', 'usage'] },
             { titre: 'Coordonnées professionnelles', champs: ['email', 'telephone'] },
             { titre: 'Rémunération', champs: ['salaire_brut', 'heures_mois', 'cout_horaire'] },
@@ -61,14 +61,15 @@ export const TYPES_FICHE = {
         },
       ],
       champs: [
-        c('matricule', 'Matricule', 'sal_matricule', 'texte', { obligatoire: true, longueur: 10, saisie: 'creation', non_copie: true, aide: 'Identifiant unique, saisi à la création' }),
-        c('code', 'Code', 'sal_code', 'texte', { longueur: 20, non_copie: true, aide: 'Code court du salarié : recherche rapide, homonymes' }),
-        c('matricule_paie', 'Matricule de paie', 'sal_matricule_paie', 'texte', { longueur: 30, non_copie: true, aide: 'Matricule du logiciel de paie (export des variables de paie) ; vide : le matricule' }),
+        // Le code est l'identifiant du salarié (plus de matricule saisi, db/251) ; le matricule de paie n'est demandé que
+        // s'il diffère du code.
+        c('code', 'Code', 'sal_code', 'texte', { obligatoire: true, longueur: 10, non_copie: true, aide: 'Identifiant unique du salarié : recherche rapide, homonymes' }),
+        c('matricule_paie', 'Matricule de paie', 'sal_matricule_paie', 'texte', { longueur: 30, non_copie: true, aide: 'Matricule du logiciel de paie (export des variables de paie) ; vide : le code' }),
         c('nom', 'Nom', 'sal_nom', 'texte', { obligatoire: true, longueur: 60 }),
         c('ind_id', 'Individu (annuaire)', 'sal_ind_id', 'nombre', { reference: 'individu', non_copie: true, aide: "Fiche de l'individu dans l'annuaire : identité et coordonnées partagées avec les autres modules" }),
         c('prenom', 'Prénom', 'sal_prenom', 'texte', { obligatoire: true, longueur: 60 }),
         c('date_naissance', 'Date de naissance', 'sal_date_naissance', 'date', { confidentiel: true }),
-        c('num_secu', 'N° de sécurité sociale', 'sal_num_secu', 'texte', {
+        c('num_secu', 'N° de sécurité sociale', 'sal_num_secu', 'texte', { exemple: '1 85 05 69 123 456 78',
           confidentiel: true, non_copie: true, longueur: 21, format: 'regex:^[12] ?[0-9]{2} ?[0-9]{2} ?[0-9]{2} ?[0-9]{3} ?[0-9]{3} ?[0-9]{2}$',
           aide: '13 chiffres + clé (espaces acceptés)',
         }),
@@ -79,7 +80,12 @@ export const TYPES_FICHE = {
           aide: 'Service principal (planning, pointage, exécution) ; les autres appartenances se gèrent dans Paramètres › Services',
         }),
         c('poste', 'Poste', 'sal_poste', 'texte', { longueur: 60 }),
-        c('agence', 'Agence', 'sal_agence', 'liste', { options: options('Lyon', 'Saint-Étienne', 'Grenoble', 'Bourg-en-Bresse') }),
+        // Agence = notre société ou l'un de ses niveaux inférieurs dans l'annuaire (db/251) : une agence ajoutée dans
+        // l'annuaire est proposée d'office.
+        c('agence', 'Agence', 'sal_agence_per_id', 'liste', {
+          requete: 'SELECT per_id, nom FROM v_agences_societe WHERE actif ORDER BY profondeur, nom',
+          aide: "Notre société ou l'un de ses niveaux inférieurs dans l'annuaire (agences, établissements)",
+        }),
         c('type_mo', 'Type de main-d\'œuvre', 'sal_type_mo', 'liste', {
           options: options(['OUVRIER', 'Ouvrier'], ['ETAM', 'ETAM'], ['CADRE', 'Ingénieur et cadre']), aide: 'Catégorie conventionnelle BTP',
         }),
@@ -87,8 +93,8 @@ export const TYPES_FICHE = {
         c('date_entree', "Date d'entrée", 'sal_date_entree', 'date'),
         c('actif', 'Actif', 'sal_actif', 'booleen', { obligatoire: true, defaut: true }),
         c('usage', 'Utilisation', 'sal_usage', 'liste', USAGE),
-        c('email', 'E-mail professionnel', 'sal_email', 'texte', { longueur: 100, format: 'email', non_copie: true }),
-        c('telephone', 'Téléphone professionnel', 'sal_telephone', 'texte', { longueur: 20, format: 'telephone' }),
+        c('email', 'E-mail professionnel', 'sal_email', 'texte', { exemple: 'prenom.nom@entreprise.fr', longueur: 100, format: 'email', non_copie: true }),
+        c('telephone', 'Téléphone professionnel', 'sal_telephone', 'texte', { exemple: '06 12 34 56 78', longueur: 20, format: 'telephone' }),
         // Données privées (RGPD) : confidentielles, affichées à la demande.
         c('adresse', 'Adresse', 'sal_adresse', 'zone', { longueur: 200, confidentiel: true, largeur: 'plein' }),
         c('code_postal', 'Code postal', 'sal_code_postal', 'texte', { longueur: 5, format: 'code_postal', confidentiel: true }),
@@ -124,7 +130,7 @@ export const TYPES_FICHE = {
             { titre: 'Dates', champs: ['date_entree', 'date_mise_service', 'fin_garantie', 'date_sortie'] },
             { titre: 'Poids et dimensions', champs: ['poids', 'longueur', 'largeur', 'hauteur'] },
             { titre: 'Location', champs: ['loueur_id', 'location_ent_id', 'fin_location'] },
-            { titre: 'Exploitation', champs: ['etat', 'chantier', 'compteurs', 'heures_utilisation', 'kilometres', 'controle_ok'] },
+            { titre: 'Exploitation', champs: ['etat', 'condition', 'chantier', 'compteurs', 'heures_utilisation', 'kilometres', 'controle_ok'] },
             { titre: 'Planification', champs: ['mode', 'quantite', 'unite', 'srv_id', 'cal_id'] },
             { titre: 'Achat', champs: ['valeur_achat', 'date_achat'] },
             { titre: 'Observations', champs: ['observations'], largeur: 'plein' },
@@ -137,12 +143,21 @@ export const TYPES_FICHE = {
         c('famille', 'Type', 'mat_famille', 'liste', { obligatoire: true, requete: REQUETE_TYPES_MATERIEL, aide: 'Types de matériel regroupés (Paramètres › Référentiels communs)' }),
         c('marque', 'Marque', 'mat_marque', 'texte', { longueur: 60 }),
         c('numero_serie', 'N° de série', 'mat_numero_serie', 'texte', { longueur: 40, non_copie: true }),
-        c('etat', 'État', 'mat_etat', 'liste', {
+        // Disponibilité et condition (db/252) : chaque changement est tracé avec son motif (onglet Historique).
+        c('etat', 'Disponibilité', 'mat_etat', 'liste', {
           obligatoire: true, defaut: 'DISPO',
           options: options(['DISPO', 'Disponible'], ['CHANTIER', 'En chantier'], ['PANNE', 'En panne'], ['REBUT', 'Rebut']),
         }),
+        c('condition', 'Condition', 'mat_condition', 'liste', {
+          obligatoire: true, defaut: 'BON',
+          requete: "SELECT lva_code, lva_libelle FROM liste_valeur WHERE lva_liste = 'ETAT_MATERIEL' AND lva_actif ORDER BY lva_ordre, lva_code",
+          aide: 'État physique du matériel (Paramètres › Référentiels communs) ; aussi saisi au retour d\'une affectation',
+        }),
+        c('etat_motif', 'Motif du changement d\'état', 'mat_etat_motif', 'texte', { longueur: 200, non_copie: true }),
+        c('etat_par', 'Changement d\'état par', 'mat_etat_par', 'texte', { longueur: 50, lecture_seule: true, non_copie: true }),
         c('chantier', 'Chantier', 'mat_chantier', 'texte', { longueur: 100 }),
-        c('heures_utilisation', "Heures d'utilisation", 'mat_heures', 'nombre', { lecture_seule: true, format: '99999', aide: 'Dernier relevé du compteur (onglet Compteurs)' }),
+        // Compteurs (db/252) : saisis à la création (relevé initial), puis par relevés et rectifications (onglet Compteurs).
+        c('heures_utilisation', "Heures d'utilisation", 'mat_heures', 'nombre', { saisie: 'creation', format: '99999', aide: 'Saisi à la création (relevé initial) ; ensuite : onglet Compteurs (relevé ou rectification)' }),
         c('controle_ok', 'Contrôle réglementaire à jour', 'mat_controle_ok', 'booleen', { defaut: false }),
         c('valeur_achat', "Valeur d'achat", 'mat_valeur_achat', 'nombre', { format: '9999999.99' }),
         c('date_achat', "Date d'achat", 'mat_date_achat', 'date'),
@@ -150,16 +165,16 @@ export const TYPES_FICHE = {
         // Référentiel des ressources (db/195) : matériel identifié (engin, véhicule) ou par nombre (banches, étais).
         c('usage', 'Utilisation', 'mat_usage', 'liste', USAGE),
         c('mode', 'Gestion', 'mat_mode', 'liste', { obligatoire: true, defaut: 'IDENTIFIE', options: options(['IDENTIFIE', 'Identifié (un engin)'], ['NOMBRE', 'Par nombre (stock)']) }),
-        c('quantite', 'Quantité disponible', 'mat_quantite', 'nombre', { obligatoire: true, defaut: 1, format: '999999.999', aide: 'Matériel par nombre : le planning avertit au-delà' }),
+        c('quantite', 'Quantité disponible', 'mat_quantite', 'nombre', { obligatoire: true, defaut: 1, format: '999999.999', aide: 'Matériel par nombre : le planning avertit au-delà ; matériel identifié : toujours 1' }),
         c('unite', 'Unité', 'mat_unite', 'texte', { longueur: 10 }),
         c('cal_id', 'Calendrier', 'mat_cal_id', 'liste', { requete: 'SELECT cal_id, cal_libelle FROM calendrier WHERE cal_actif ORDER BY cal_defaut DESC, cal_code', aide: 'Vide : calendrier du service' }),
         // Lot 5a des demandes du 25/10/2026 (db/230).
         c('modele', 'Modèle', 'mat_modele', 'texte', { longueur: 60 }),
-        c('immatriculation', 'Immatriculation', 'mat_immatriculation', 'texte', { longueur: 20, non_copie: true, aide: 'Unique : un véhicule immatriculé ou un EPI marqué' }),
+        c('immatriculation', 'Immatriculation', 'mat_immatriculation', 'texte', { exemple: 'AA-123-AA', longueur: 20, non_copie: true, aide: 'Unique : un véhicule immatriculé ou un EPI marqué' }),
         c('energie', 'Énergie', 'mat_energie', 'liste', { requete: "SELECT lva_code, lva_libelle FROM liste_valeur WHERE lva_liste = 'ENERGIE' AND lva_actif ORDER BY lva_ordre, lva_code" }),
         // Lot 5c-2 (db/233) : compteurs suivis, valeurs = derniers relevés.
         c('compteurs', 'Compteurs', 'mat_compteurs', 'liste', { obligatoire: true, defaut: 'H', options: options(['H', 'Heures'], ['KM', 'Kilomètres'], ['H_KM', 'Heures et kilomètres'], ['AUCUN', 'Aucun']) }),
-        c('kilometres', 'Kilométrage', 'mat_kilometres', 'nombre', { lecture_seule: true, format: '9999999', aide: 'Dernier relevé du compteur (onglet Compteurs)' }),
+        c('kilometres', 'Kilométrage', 'mat_kilometres', 'nombre', { saisie: 'creation', format: '9999999', aide: 'Saisi à la création (relevé initial) ; ensuite : onglet Compteurs (relevé ou rectification)' }),
         c('date_entree', "Date d'entrée", 'mat_date_entree', 'date'),
         c('date_mise_service', 'Mise en service', 'mat_date_mise_service', 'date'),
         c('fin_garantie', 'Fin de garantie', 'mat_fin_garantie', 'date'),
@@ -615,7 +630,7 @@ export const TYPES_FICHE = {
         c('retenue_pct', 'Retenue de garantie (%)', 'mar_retenue_pct', 'nombre', { format: '999.99', aide: '% du TTC de chaque facture du marché (5 % au plus), poste du pied global et échéance à part' }),
         c('date', 'Date', 'mar_date', 'date', { obligatoire: true }),
         c('date_reception', 'Date de réception', 'mar_date_reception', 'date', { aide: 'Réception des travaux : la retenue de garantie est libérée un an après, sauf réserves' }),
-        c('reserves', 'Réception avec réserves', 'mar_reserves', 'booleen', { obligatoire: true, defaut: false, aide: 'Réserves non levées : la retenue de garantie reste bloquée' }),
+        c('reserves', 'Réception avec réserves', 'mar_reserves', 'booleen', { defaut: false, aide: 'Réserves non levées : la retenue de garantie reste bloquée' }),
         c('reserves_levees_le', 'Réserves levées le', 'mar_reserves_levees_le', 'date', { aide: "Levée après l'échéance : la retenue est libérée à la levée" }),
         c('statut', 'Statut', 'mar_statut', 'liste', { obligatoire: true, defaut: 'EN_COURS', options: options(['EN_COURS', 'En cours'], ['SOLDE', 'Soldé'], ['RESILIE', 'Résilié']) }),
         c('commentaire', 'Commentaire', 'mar_commentaire', 'zone'),

@@ -55,6 +55,8 @@ export class FournisseurFicheApi {
 
   definition(type) { return this.appel('GET', this.#u(type, null, '/definition')); }
   charger(type, id, { confidentiel = false } = {}) { return this.appel('GET', this.#u(type, id, confidentiel ? '?confidentiel=true' : '')); }
+  /** Synthèse : { indicateurs: [{ code, libelle, valeur, niveau, url }], onglets: { code: { nombre, alerte } } }. */
+  synthese(type, id) { return this.appel('GET', this.#u(type, id, '/synthese')); }
   reveler(type, id) { return this.appel('POST', this.#u(type, id, '/confidentiel')); }
   revelerSecret(type, id, champ) { return this.appel('POST', this.#u(type, id, '/secret'), { champ }); }
   verrouiller(type, id, { jeton, forcer = false }) { return this.appel('POST', this.#u(type, id, '/verrou'), { jeton, forcer }); }
@@ -209,6 +211,12 @@ export class FournisseurFicheMemoire {
   async charger(type, id, options = {}) {
     this.#exiger(type, 'voir');
     return this.#lire(type, id, options);
+  }
+
+  /** Synthèse : aucune en mémoire (le bandeau calculé dans le navigateur reste affiché). */
+  async synthese(type) {
+    this.#exiger(type, 'voir');
+    return { indicateurs: [], onglets: {} };
   }
 
   async reveler(type, id) {

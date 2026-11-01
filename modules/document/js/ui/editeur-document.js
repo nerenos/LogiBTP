@@ -3,25 +3,19 @@ import {
   Magasin, GrilleArbre, formatNombre, formatLibre, htmlSur, lireNombre, estHtml, decoderEntites, echapper,
   editerLibelle, lirePreferences, ecrirePreferences, enfants, libelleRaccourci,
 } from '@logibtp/socle/ui';
-import { D, Dz, S, UN } from '@logibtp/socle';
-import { texte, texteHtml, icone, iconeHtml, textesParCode, couleurTheme } from '@logibtp/socle/dictionnaire';
+import { D, Dz, S, UN, completerDate, dateLocale } from '@logibtp/socle';
+import { texte, texteHtml, icone, iconeHtml, textesParCode, couleurTheme, pluriel } from '@logibtp/socle/dictionnaire';
 import { calculerDocument, TL, CODES_TL, estChiffree, estPied, accepteEnfants, estTranche, estTypeNumerote, etatSolde, regle } from '../src/index.js';
 import { ReglesDocument } from './regles.js';
 import { PressePapiers } from './presse-papiers.js';
 
-/** Date saisie dans la grille (JJ/MM/AAAA, JJ/MM/AA, JJ/MM de l'année en cours, AAAA-MM-JJ) en ISO ; null si vide, undefined si illisible. */
-export function lireDateSaisie(texte, aujourdhui = new Date()) {
-  const t = String(texte ?? '').trim();
-  if (t === '') return null;
-  let a; let m; let j;
-  const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(t);
-  const fr = /^(\d{1,2})[/.-](\d{1,2})(?:[/.-](\d{2}|\d{4}))?$/.exec(t);
-  if (iso) [, a, m, j] = iso.map(Number);
-  else if (fr) { j = Number(fr[1]); m = Number(fr[2]); a = fr[3] ? Number(fr[3].length === 2 ? `20${fr[3]}` : fr[3]) : aujourdhui.getFullYear(); }
-  else return undefined;
-  const d = new Date(Date.UTC(a, m - 1, j));
-  if (d.getUTCFullYear() !== a || d.getUTCMonth() !== m - 1 || d.getUTCDate() !== j) return undefined;
-  return d.toISOString().slice(0, 10);
+/**
+ * Date saisie dans la grille en ISO, par la saisie abrégée du socle (completerDate : « 15 », « 16/05 », « 15/05/23 »,
+ * « 150523 », « t », « +3 »…) ; null si vide, undefined si illisible.
+ */
+export function lireDateSaisie(saisie, aujourdhui = new Date()) {
+  const r = completerDate(saisie, dateLocale(aujourdhui));
+  return r === '' ? null : r ?? undefined;
 }
 
 /** Saisie et affichage des remises (préférence `remises` du navigateur) : coefficient (0,95) ou pourcentage (5 %). */
@@ -155,6 +149,7 @@ export class EditeurDocument {
     this.filtre = null;
     // Filtre d'affichage par pastille : étiquettes ('' : sans étiquette) et modes de vente (V, O, M, A).
     this.filtreMarqueurs = { etiquettes: new Set(), types: new Set() };
+    this.filtreSignalees = null;
     this.appelerCode = appelerCode;
     this.rechercherExterne = rechercher;
     this.surSelection = surSelection;
@@ -542,10 +537,13 @@ export class EditeurDocument {
         res = res.slice(i, j).map((r) => ({ ...r, profondeur: r.profondeur - base }));
       }
     }
-    if (!this.filtreMarqueursActif()) return res;
+    const marqueurs = this.filtreMarqueursActif();
+    const signalees = this.filtreSignalees;
+    if (!marqueurs && !signalees) return res;
     const parId = new Map(this.saisie.lignes.map((l) => [l.lig_id, l]));
+    const trouvees = new Set(this.saisie.lignes
+      .filter((l) => (!marqueurs || this.correspondMarqueurs(l)) && (!signalees || signalees.has(l.lig_id))).map((l) => l.lig_id));
     const garder = new Set();
-    const trouvees = new Set(this.saisie.lignes.filter((l) => this.correspondMarqueurs(l)).map((l) => l.lig_id));
     for (const id of trouvees) {
       for (let x = parId.get(id); x && !garder.has(x.lig_id); x = parId.get(x.lig_parent_id)) garder.add(x.lig_id);
     }
@@ -560,6 +558,23 @@ export class EditeurDocument {
   }
 
   filtreMarqueursActif() { return this.filtreMarqueurs.etiquettes.size > 0 || this.filtreMarqueurs.types.size > 0; }
+
+  /** Un filtre d'affichage est posé (tranche, pastilles ou lignes signalées). */
+  filtreAffichageActif() { return this.filtre !== null || this.filtreMarqueursActif() || Boolean(this.filtreSignalees); }
+
+  /**
+   * Filtre sur des lignes signalées (D1 : notifications visibles du panneau) : ces lignes et leurs tranches parentes ;
+   * null retire le filtre. Rien ne change si l'ensemble est le même.
+   */
+  filtrerSignalees(ids) {
+    const nouveau = ids ? new Set(ids) : null;
+    const avant = this.filtreSignalees;
+    if (!nouveau && !avant) return;
+    if (nouveau && avant && nouveau.size === avant.size && [...nouveau].every((x) => avant.has(x))) return;
+    this.filtreSignalees = nouveau;
+    this.grille.rendre();
+    this.surFiltre?.(this.filtre);
+  }
 
   correspondMarqueurs(l) {
     const { etiquettes, types } = this.filtreMarqueurs;
@@ -578,7 +593,9 @@ export class EditeurDocument {
   retirerFiltres() {
     document.querySelector('.menu-filtre-marqueurs')?.remove();
     this.filtreMarqueurs = { etiquettes: new Set(), types: new Set() };
+    this.filtreSignalees = null;
     this.majEntetePoignee();
+    this.surRetraitFiltres?.();
     this.filtrer(null);
   }
 
@@ -595,6 +612,7 @@ export class EditeurDocument {
       parts.push(texte('document.editeur.filtre_etiquettes', { liste: [...etiquettes].map((c) => (c ? libelles.get(c) ?? c : texte('document.editeur.sans_etiquette_min'))).join(', ') }));
     }
     if (types.size) parts.push(texte('document.editeur.filtre_modes', { liste: [...types].map((t) => LIBELLES_TYPE_PRIX[t] ?? t).join(', ') }));
+    if (this.filtreSignalees) parts.push(pluriel('document.editeur.filtre_signalees', this.filtreSignalees.size, { nombre: this.filtreSignalees.size }));
     return parts.length ? parts.join(' · ') : null;
   }
 
@@ -731,7 +749,7 @@ export class EditeurDocument {
       for (const r of [...this.grille.replies]) if (r <= ID_PIED) this.grille.replies.delete(r);
     }
     this.grille.rendre();
-    if ((this.filtre !== null || this.filtreMarqueursActif()) && !this.grille.index?.has(id)) this.retirerFiltres();
+    if (this.filtreAffichageActif() && !this.grille.index?.has(id)) this.retirerFiltres();
     this.grille.selectionner(id);
     this.grille.tbody.querySelector(`tr[data-id="${id}"]`)?.scrollIntoView({ block: focus ? 'start' : 'center' });
     if (focus) this.grille.focus();
@@ -788,6 +806,13 @@ export class EditeurDocument {
     if (!gravite) return null;
     const messages = this.messagesLigne(r).map((x) => x.message).join('\n');
     return { icone: icone(gravite), classe: gravite, titre: texte('document.editeur.signal', { messages }) };
+  }
+
+  /** Cellule en cause d'une notification de la ligne (message à `colonnes` : clés des colonnes), soulignée (D1). */
+  signalCellule(r, c) {
+    if (!this.notificationsLigne || r.virtuelle) return null;
+    const m = this.messagesLigne(r).filter((x) => x.colonnes?.includes(c.cle));
+    return m.length ? { classe: m.some((x) => x.gravite === 'erreur') ? 'erreur' : 'avertissement', titre: m.map((x) => x.message).join('\n') } : null;
   }
 
   /** Numéro et libellé d'une ligne (messages, notifications). */
@@ -1064,7 +1089,7 @@ export class EditeurDocument {
       {
         cle: 'unite', titre: texte('document.colonnes.unite'), classe: 'col-unite', editeur: 'liste', editable: chiffree,
         champ: () => 'lig_unt_code', lire: (l) => l.lig_unt_code ?? '', valeur: (r) => r.calcule.lig_unt_code ?? '',
-        suggestions: () => this.suggestionsUnites(),
+        suggestions: (l) => this.suggestionsUnites(l),
       },
       {
         cle: 'pv', titre: texte('document.colonnes.pv'), classe: 'col-nombre', ...this.colonneNombre('lig_pv', (l) => chiffree(l) && !this.estCompose(l)),
@@ -1353,8 +1378,11 @@ export class EditeurDocument {
   /** Variables proposées dans les textes d'introduction et de conclusion (niveau du document). */
   variablesTexte() { return variablesTexteDocument(); }
 
-  /** Unités du référentiel, complétées par les unités saisies librement dans le document. */
-  suggestionsUnites() {
+  /** Ligne courante de la grille changée (point d'accroche : préchargement des données de la ligne). */
+  selectionChangee(_id) {}
+
+  /** Unités du référentiel, complétées par les unités saisies librement dans le document (ligne : celle en saisie). */
+  suggestionsUnites(_ligne) {
     const connues = (this.definition.unites ?? []).map((u) => ({ valeur: u.unt_code, libelle: u.unt_libelle }));
     const codes = new Set(connues.map((u) => u.valeur));
     const saisies = [...new Set(this.saisie.lignes.map((l) => l.lig_unt_code).filter((c) => c && !codes.has(c)))]
@@ -1584,6 +1612,7 @@ export class EditeurDocument {
       choisirMarqueur: (id, ancre) => this.choisirEtiquette(id, ancre),
       // Notifications de la ligne (hôte : notificationsLigne) : icône de la poignée, clic → panneau des notifications.
       signal: (r) => this.signal(r),
+      signalCellule: (r, c) => this.signalCellule(r, c),
       choisirSignal: (id) => this.surSignal?.(id),
       menuContextuel: (elements, id) => this.surMenuContextuel?.(elements, id) ?? elements,
 
@@ -1601,7 +1630,7 @@ export class EditeurDocument {
       ].join(' '),
 
       titreLigne: (r) => this.messagesLigne(r).map((x) => x.message).join('\n'),
-      selection: (id) => this.surSelection?.(id),
+      selection: (id) => { this.selectionChangee(id); this.surSelection?.(id); },
     };
   }
 

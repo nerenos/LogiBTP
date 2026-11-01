@@ -1,16 +1,19 @@
 import { texte, texteHtml, pluriel, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { ERREUR_LISTE } from '../src/codes.js';
 import { echapper, lireNombre, creerCombo, ouvrirMenuContextuel, confirmer, lireStockage, ecrireStockage } from '@logibtp/socle/ui';
-import { ModeleVue, normaliserDefinition, vraiDonnee } from '../src/modele.js';
+import { ModeleVue, normaliserDefinition, vraiDonnee, texteIndicateur, TOTAUX_COLONNE } from '../src/modele.js';
 import { filtreActif, correspond, comparerValeurs, estNumerique } from '../src/filtres.js';
 import { calculerLargeurs } from '../src/largeurs.js';
-import { comptesSegment } from '../src/requete.js';
+import { comptesSegment, agreger } from '../src/requete.js';
 import { FormatsCellule, appliquerStyle, alignement } from './formats.js';
+import { PanneauVues } from './panneau-vues.js';
 import { ouvrirMenuFiltre, fermerMenuFiltre } from './menu-filtre.js';
 import { ConcepteurVue, libelleFiltreVue } from './concepteur.js';
 import { GestionThemes } from './themes.js';
 
 const LARGEUR_COIN = 30;
+/** Taille du texte (px) pour laquelle les largeurs fixes des vues sont données (densité compacte). */
+const TAILLE_REFERENCE = 13;
 const DELAI_RECHERCHE = 350;
 const DUREE_MARQUE = 4000;
 
@@ -33,8 +36,11 @@ const DUREE_MARQUE = 4000;
  * types d'élément qu'il couvre ; ses vues ne montrent que des lignes de ces types (aucun type = tous).
  */
 export class ListeDonnees {
-  constructor(racine, { fournisseur, contexte = null, ouvrir, message, peutRequete = false, peutGererThemes = false, intervalleControle = 30000, formats, cleVue, creation, surVue, panneau, glisser, filtresVue, actionsElements, actionsVue, groupeTheme } = {}) {
+  constructor(racine, { fournisseur, contexte = null, ouvrir, message, peutRequete = false, peutGererThemes = false, intervalleControle = 30000, formats, cleVue, creation, surVue, panneau, glisser, filtresVue, actionsElements, actionsVue, groupeTheme, choix = false, themeFixe = null } = {}) {
     this.racine = racine;
+    // Mode choix (I1, `choisirDansListe`) : ni concepteur, ni saisie, ni actions sur les éléments ; vues d'un seul thème.
+    this.modeChoix = choix;
+    this.themeFixe = themeFixe;
     // Regroupement des thèmes dans leur combo (l'application : menus du bandeau) : groupeTheme(theme) → { groupe, ordre } | null.
     this.groupeTheme = groupeTheme ?? null;
     // Lignes glissables vers une autre fenêtre : glisser({ ligne, definition }) → { type, valeur, texte, rang } | null ;
@@ -49,6 +55,9 @@ export class ListeDonnees {
     this.fabriquePanneau = panneau;
     this.panneauSpecifique = null;
     this.filtresExternes = new Map();
+    this.filtreIndicateur = null; // code de l'indicateur cliqué : ses filtres s'ajoutent à la demande (L4)
+    this.totauxBase = null;       // totaux de la base sur toute la sélection (L3)
+    this.valeursIndicateurs = null;
     this.filtresVue = filtresVue ?? null;
     this.message = message ?? (() => {});
     this.peutRequete = peutRequete;
@@ -58,7 +67,7 @@ export class ListeDonnees {
     this.fabriqueActionsVue = actionsVue ?? null;
     this.actionsElements = null;
     this.themes = [];
-    this.theme = null;             // code du thème affiché, null = toutes les vues
+    this.theme = themeFixe;        // code du thème affiché, null = toutes les vues
     this.formats = formats ?? new FormatsCellule();
     this.cleVue = cleVue ?? `logibtp.liste.${contexte ?? 'toutes'}`;
     this.vues = [];
@@ -104,30 +113,38 @@ export class ListeDonnees {
   #construire() {
     const r = this.racine;
     r.classList.add('liste');
+    r.classList.toggle('liste-mode-choix', this.modeChoix);
     r.innerHTML = `
+      <div class="liste-principale">
       <div class="liste-barre">
-        <span class="liste-themes"></span>
-        <select class="liste-vues" title="${texteHtml('liste.liste.vue')}"></select>
         <button type="button" data-action="concevoir" title="${texteHtml('liste.liste.concevoir')}">${iconeHtml('liste_saisie')}</button>
-        <span class="liste-elements">
-          <button type="button" data-action="creer" class="principal" hidden></button>
+        <span class="liste-groupe liste-groupe-recherche">
+          <input type="search" class="liste-recherche" placeholder="${texteHtml('liste.liste.rechercher')}" title="${texteHtml('liste.liste.rechercher_aide')}">
+          <span class="liste-filtres-vue" hidden></span>
+          <span class="liste-compteur"></span>
+        </span>
+        <span class="liste-groupe liste-groupe-creer"><button type="button" data-action="creer" class="principal" hidden></button></span>
+        <span class="liste-groupe liste-elements">
           <button type="button" data-element="consulter" class="bouton-icone" title="${texteHtml('liste.liste.consulter_aide')}" aria-label="${texteHtml('liste.liste.consulter')}" hidden>${iconeHtml('liste_consulter')}</button>
           <button type="button" data-element="copier" class="bouton-icone" title="${texteHtml('liste.liste.copier_aide')}" aria-label="${texteHtml('liste.liste.copier')}" hidden>${iconeHtml('liste_copier')}</button>
           <button type="button" data-element="supprimer" class="bouton-icone" title="${texteHtml('liste.liste.supprimer_aide')}" aria-label="${texteHtml('liste.liste.supprimer')}" hidden>${iconeHtml('supprimer')}</button>
           <span class="liste-elements-autres"></span>
         </span>
-        <input type="search" class="liste-recherche" placeholder="${texteHtml('liste.liste.rechercher')}" title="${texteHtml('liste.liste.rechercher_aide')}">
-        <span class="liste-filtres-vue" hidden></span>
-        <span class="liste-compteur"></span>
-        <button type="button" data-action="effacer" class="bouton-icone" title="${texteHtml('liste.liste.effacer_aide')}" aria-label="${texteHtml('liste.liste.effacer')}" hidden>${iconeHtml('liste_effacer')}</button>
-        <button type="button" data-action="lignes" aria-pressed="false"></button>
-        <button type="button" data-action="tout" aria-pressed="false">${iconeHtml('liste_tout')}</button>
-        <button type="button" data-action="rafraichir" title="${texteHtml('liste.liste.rafraichir')}">${iconeHtml('liste_rafraichir')}</button>
+        <span class="liste-groupe liste-groupe-affichage">
+          <button type="button" data-action="effacer" class="bouton-icone" title="${texteHtml('liste.liste.effacer_aide')}" aria-label="${texteHtml('liste.liste.effacer')}" disabled>${iconeHtml('liste_effacer')}</button>
+          <button type="button" data-action="lignes" aria-pressed="false"></button>
+          <button type="button" data-action="tout" aria-pressed="false">${iconeHtml('liste_tout')}</button>
+          <button type="button" data-action="indicateurs" class="bouton-icone" aria-pressed="true" hidden>${iconeHtml('liste_indicateurs')}</button>
+          <button type="button" data-action="rafraichir" title="${texteHtml('liste.liste.rafraichir')}">${iconeHtml('liste_rafraichir')}</button>
+        </span>
+        <span class="liste-groupe liste-groupe-hote">
         <span class="liste-actions-hote"></span>
         <button type="button" data-action="saisie" aria-pressed="false" hidden
           title="${texteHtml('liste.liste.saisie_aide')}">${iconeHtml('liste_saisie')} ${texteHtml('liste.liste.saisie')}</button>
+        </span>
       </div>
       <p class="liste-erreurs" hidden></p>
+      <div class="liste-indicateurs" hidden></div>
       <div class="liste-corps">
         <div class="liste-zone" tabindex="0">
           <table class="liste-table"><colgroup></colgroup><thead></thead><tbody></tbody></table>
@@ -147,7 +164,10 @@ export class ListeDonnees {
             <div class="liste-segments"></div>
           </div>
         </aside>
-      </div>`;
+      </div>
+      </div>
+      <div class="liste-separateur-vues" title="${texteHtml('liste.vues.separateur')}"></div>
+      <aside class="liste-vues-panneau" aria-label="Vues"></aside>`;
     this.zone = r.querySelector('.liste-zone');
     this.corpsListe = r.querySelector('.liste-corps');
     this.prefs = this.#lirePreferences();
@@ -161,16 +181,29 @@ export class ListeDonnees {
     r.querySelector('.liste-panneau [data-action="reduire"]').addEventListener('click', () => this.#reduire(!this.prefs.reduit));
     this.#separateur(r.querySelector('.liste-separateur'));
     this.#appliquerDock();
+    this.panneauVues = new PanneauVues({
+      conteneur: r.querySelector('.liste-vues-panneau'), separateur: r.querySelector('.liste-separateur-vues'), liste: this,
+      prefs: () => this.prefs, ecrire: () => this.#ecrirePreferences(),
+    });
     this.table = r.querySelector('.liste-table');
     this.corps = this.table.tBodies[0];
     this.basSuite = r.querySelector('.liste-suite');
-    r.querySelector('.liste-vues').addEventListener('change', (e) => this.ouvrirVue(Number(e.target.value)).catch((x) => this.#erreur(x)));
     r.querySelector('[data-action="concevoir"]').addEventListener('click', () => this.concevoir(false));
     r.querySelectorAll('[data-element]').forEach((b) => b.addEventListener('click', (e) => this.#actionElement(b.dataset.element, e).catch((x) => this.#erreur(x))));
     r.querySelector('[data-action="rafraichir"]').addEventListener('click', () => this.recharger());
     r.querySelector('[data-action="saisie"]').addEventListener('click', () => this.basculerSaisie());
-    r.querySelector('[data-action="creer"]').addEventListener('click', () => this.actionCreation?.action());
+    // Création : action directe, ou liste de choix (`choix` : [{ libelle, action }], plusieurs types).
+    r.querySelector('[data-action="creer"]').addEventListener('click', (e) => {
+      const c = this.actionCreation;
+      if (c?.choix) ouvrirMenuContextuel({ target: e.currentTarget, preventDefault() {} }, c.choix.map((x) => ({ libelle: x.libelle, titre: x.titre, action: x.action })), { aide: false });
+      else c?.action();
+    });
     r.querySelector('[data-action="tout"]').addEventListener('click', () => this.basculerTout());
+    r.querySelector('[data-action="indicateurs"]').addEventListener('click', () => this.basculerIndicateurs());
+    r.querySelector('.liste-indicateurs').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-indicateur]');
+      if (b) this.choisirIndicateur(b.dataset.indicateur);
+    });
     r.querySelector('[data-action="lignes"]').addEventListener('click', () => this.basculerLignes());
     r.querySelector('[data-action="effacer"]').addEventListener('click', () => {
       this.filtres.clear();
@@ -259,24 +292,25 @@ export class ListeDonnees {
   async chargerThemes() {
     this.themes = await this.fournisseur.themes?.() ?? [];
     if (this.theme && !this.themes.some((t) => t.thl_code === this.theme)) this.theme = null;
-    // Combo des thèmes (« * » = toutes les vues), regroupés comme les menus de l'application quand elle le demande.
-    const options = this.themes.map((t, i) => {
-      const g = this.groupeTheme?.(t) ?? null;
-      return { valeur: t.thl_code, libelle: `${t.thl_icone ?? ''} ${t.thl_libelle}`.trim(), detail: (t.thl_types ?? []).map((x) => x.libelle || x.code).join(', '),
-        groupe: this.groupeTheme ? g?.groupe ?? texte('liste.liste.themes_autres') : undefined, ordre: g?.ordre ?? 1e6 + i };
-    }).sort((a, b) => a.ordre - b.ordre);
-    const combo = creerCombo({ options: [{ valeur: '*', libelle: texte('liste.liste.toutes_vues') }, ...options], valeur: this.theme ?? '*', vide: false, titre: texte('liste.liste.theme_aide') });
-    combo.classList.add('liste-themes');
-    combo.addEventListener('change', () => this.choisirTheme(combo.valeurCombo === '*' ? null : combo.valeurCombo).catch((x) => this.#erreur(x)));
-    combo.hidden = !this.themes.length && !this.peutGererThemes;
-    this.racine.querySelector('.liste-themes').replaceWith(combo);
-    this.comboThemes = combo;
+    // Thèmes et vues dans le panneau des vues (L1), regroupés comme les menus de l'application quand elle le demande.
+    await this.panneauVues.rafraichir();
   }
 
-  /** Thème courant affiché dans sa combo (sans événement). */
-  #afficherTheme() { this.comboThemes?.definirValeur(this.theme ?? '*'); }
+  /** Thème courant marqué dans le panneau des vues. */
+  #afficherTheme() { this.panneauVues?.rendre(); }
 
-  /** Change de thème : vues du thème, puis la dernière ouverte dans ce thème. */
+  /** Ouvre une vue d'un thème (panneau des vues) : le thème devient le thème courant. */
+  async ouvrirVueDuTheme(theme, id) {
+    if (theme !== this.theme) {
+      this.theme = theme;
+      this.prefs.theme = theme;
+      this.#ecrirePreferences();
+      await this.chargerVues();
+    }
+    await this.ouvrirVue(id);
+  }
+
+  /** Change de thème : vues du thème, puis sa vue par défaut (★ de l'utilisateur, de l'administrateur, première). */
   async choisirTheme(code) {
     this.theme = code;
     this.prefs.theme = code;
@@ -287,9 +321,8 @@ export class ListeDonnees {
   }
 
   async #ouvrirDansTheme(vueId) {
-    let id = vueId ?? this.prefs.vueParTheme?.[this.theme ?? ''] ?? null;
-    if (id === null && this.theme === null) { try { id = Number(localStorage.getItem(this.cleVue)) || null; } catch { id = null; } }
-    if (!this.vues.some((v) => v.vli_id === id)) id = this.vues[0]?.vli_id ?? null;
+    let id = vueId ?? this.panneauVues.vueParDefaut(this.theme, this.vues);
+    if (!this.vues.some((v) => v.vli_id === id)) id = this.panneauVues.vueParDefaut(this.theme, this.vues);
     if (id !== null) { await this.ouvrirVue(id); return; }
     // Thème sans vue : liste vide, le concepteur (＋) en crée une.
     this.vue = null;
@@ -312,18 +345,15 @@ export class ListeDonnees {
 
   async chargerVues() {
     this.vues = await this.fournisseur.vues(this.contexte, this.theme);
-    this.racine.querySelector('.liste-vues').innerHTML = this.vues.map((v) =>
-      `<option value="${v.vli_id}" title="${texteHtml(`liste.liste.vue_partage.${['P', 'G', 'T'].includes(v.vli_partage) ? v.vli_partage : 'P'}`, { proprietaire: v.vli_proprietaire ?? '' })}">${echapper(v.vli_nom)}</option>`).join('');
-    if (this.vue?.vli_id) this.racine.querySelector('.liste-vues').value = String(this.vue.vli_id);
+    await this.panneauVues.rafraichir();
   }
 
   async ouvrirVue(id) {
     const vue = await this.fournisseur.vue(id);
     try { localStorage.setItem(this.cleVue, String(id)); } catch { /* préférence non conservée */ }
-    this.prefs.vueParTheme = { ...this.prefs.vueParTheme, [this.theme ?? '']: id };
     this.#ecrirePreferences();
-    this.racine.querySelector('.liste-vues').value = String(id);
     this.appliquerVue(vue, { nonEnregistree: false });
+    this.panneauVues.rendre();
     this.surVue?.({ theme: this.theme, vue: id });
   }
 
@@ -343,6 +373,8 @@ export class ListeDonnees {
     }
     this.triBase = null;
     this.triLocal = null;
+    this.filtreIndicateur = null;
+    this.#appliquerIndicateurs();
     const erreurs = [...this.modele.erreurs].map(([code, m]) => texte('liste.liste.erreur_colonne', { colonne: this.modele.parCode.get(code)?.titre ?? code, message: m }));
     const zoneErreurs = this.racine.querySelector('.liste-erreurs');
     zoneErreurs.hidden = !erreurs.length;
@@ -353,7 +385,7 @@ export class ListeDonnees {
     const creer = this.racine.querySelector('[data-action="creer"]');
     creer.hidden = !this.actionCreation;
     creer.textContent = this.actionCreation?.libelle ?? '';
-    creer.title = this.actionCreation ? texte('liste.liste.creer', { libelle: this.actionCreation.libelle.replace(icone('ajouter'), '').trim() }) : '';
+    creer.title = this.actionCreation ? this.actionCreation.titre ?? texte('liste.liste.creer', { libelle: this.actionCreation.libelle.replace(icone('ajouter'), '').replace(icone('liste_creer_choix'), '').trim() }) : '';
     this.actionsElements = this.vue ? this.fabriqueActions?.(this.vue) ?? null : null;
     // Actions supplémentaires de l'application (transformer…) : un bouton chacune.
     const autres = this.racine.querySelector('.liste-elements-autres');
@@ -412,7 +444,7 @@ export class ListeDonnees {
         await this.chargerVues();
         try { localStorage.setItem(this.cleVue, String(enregistree.vli_id)); } catch { /* préférence non conservée */ }
         this.appliquerVue(enregistree, { nonEnregistree: false });
-        this.racine.querySelector('.liste-vues').value = String(enregistree.vli_id);
+        this.panneauVues.rendre();
         this.message(texte('liste.liste.vue_enregistree', { nom: enregistree.vli_nom }), 'succes');
         return enregistree;
       },
@@ -460,6 +492,7 @@ export class ListeDonnees {
       definition: this.nonEnregistree || !this.vue?.vli_id ? this.definition : null,
       recherche: this.recherche,
       segments,
+      filtres: this.#indicateurs().find((i) => i.code === this.filtreIndicateur)?.filtres ?? [],
       tri: this.triBase ?? this.definition.tri,
     };
   }
@@ -472,8 +505,10 @@ export class ListeDonnees {
     this.fin = false;
     this.enCours = false;
     this.marques.clear();
+    this.totauxBase = null;
     this.rendreCorps();
     if (!this.vue) return;
+    this.chargerAgregats();
     this.chargerSuite().catch((e) => this.#erreur(e));
   }
 
@@ -574,6 +609,7 @@ export class ListeDonnees {
     }
     this.lignes = etat.map((x) => relues.get(String(x.id)) ?? connues.get(String(x.id))).filter(Boolean);
     this.rendreCorps();
+    this.chargerAgregats();
     this.#effacerMarques();
     return { ajoutees, modifiees, supprimees };
   }
@@ -591,6 +627,7 @@ export class ListeDonnees {
       else this.lignes.splice(i, 1);
     }
     this.rendreCorps();
+    this.chargerAgregats();
     this.#effacerMarques();
     // Ligne nouvelle ou déplacée par le tri : sa place est donnée par le contrôle complet.
     if (inconnue) await this.verifier();
@@ -778,6 +815,7 @@ export class ListeDonnees {
     const o = (col.options ?? []).find((x) => String(x.valeur) === String(valeur));
     if (o?.image) return `<img class="segment-image" src="${echapper(o.image)}" alt="">`;
     if (o?.picto) return `<span class="segment-picto">${echapper(o.picto)}</span>`;
+    if (col.format === 'pastille') return `<span class="segment-teinte teinte-${echapper(o?.teinte || 'neutre')}"></span>`;
     if (col.format === 'coche') return `<span class="segment-picto">${iconeHtml(String(valeur) === 'true' ? 'liste_coche' : 'liste_decoche')}</span>`;
     return '';
   }
@@ -826,7 +864,7 @@ export class ListeDonnees {
     }
     thead.replaceChildren(tr);
     const filtres = [...this.filtres.values()].some(filtreActif);
-    this.racine.querySelector('[data-action="effacer"]').hidden = !filtres && !this.triLocal;
+    this.racine.querySelector('[data-action="effacer"]').disabled = !filtres && !this.triLocal;
     this.#largeurs();
   }
 
@@ -932,6 +970,7 @@ export class ListeDonnees {
     this.corps.replaceChildren(f);
     this.#compteur(affichees.length);
     this.#rendreSuite();
+    this.#rendreTotaux();
   }
 
   /** Nouveau lot : ajouté en fin de tableau, sauf tri local actif (le tableau est alors retrié). */
@@ -942,6 +981,141 @@ export class ListeDonnees {
     for (const l of this.lignesAffichees(nouvelles)) f.append(this.#ligneDom(l, visibles));
     this.corps.append(f);
     this.#compteur(this.corps.rows.length);
+    if (this.#filtresColonnesActifs()) this.#rendreTotaux();
+  }
+
+  // ---------------------------------------------------------------- totaux et indicateurs (L3, L4)
+
+  /** Colonnes visibles à total (lues dans la source). */
+  #colonnesTotal() { return this.modele ? this.#visibles().filter((c) => c.total && !c.calcul) : []; }
+
+  #agregatsTotal(colonnes = this.#colonnesTotal()) { return colonnes.map((c) => ({ code: c.code, calcul: c.total, colonne: c.code })); }
+
+  #indicateurs() { return this.modele ? this.definition.indicateurs ?? [] : []; }
+
+  /** Bandeau d'indicateurs affiché : la vue en déclare et l'utilisateur ne l'a pas masqué (préférence par vue). */
+  get indicateursAffiches() {
+    return this.#indicateurs().length > 0 && this.prefs.indicateurs?.[String(this.vue?.vli_id ?? 'nouvelle')] !== false;
+  }
+
+  basculerIndicateurs() {
+    const cle = String(this.vue?.vli_id ?? 'nouvelle');
+    const masquer = this.indicateursAffiches;
+    this.prefs.indicateurs = { ...this.prefs.indicateurs, [cle]: false };
+    if (!masquer) delete this.prefs.indicateurs[cle];
+    this.#ecrirePreferences();
+    // Bandeau masqué : son filtre ne doit pas rester posé sans être visible.
+    if (masquer && this.filtreIndicateur) { this.filtreIndicateur = null; this.#appliquerIndicateurs(); this.recharger(); this.rafraichirSegments().catch(() => {}); return; }
+    this.#appliquerIndicateurs();
+    if (!masquer) this.chargerAgregats();
+  }
+
+  /** Clic sur une carte : pose ses filtres (la liste n'affiche que ses lignes), un second clic les retire. */
+  choisirIndicateur(code) {
+    const ind = this.#indicateurs().find((i) => i.code === code);
+    if (!ind?.filtres?.length) return;
+    this.filtreIndicateur = this.filtreIndicateur === code ? null : code;
+    this.#rendreIndicateurs();
+    this.recharger();
+    this.rafraichirSegments().catch(() => {});
+  }
+
+  #appliquerIndicateurs() {
+    const b = this.racine.querySelector('[data-action="indicateurs"]');
+    const affiches = this.indicateursAffiches;
+    b.hidden = !this.#indicateurs().length;
+    b.setAttribute('aria-pressed', String(affiches));
+    b.classList.toggle('actif', affiches);
+    b.title = texte(`liste.liste.indicateurs_${affiches ? 'masquer' : 'afficher'}`);
+    if (!affiches) this.valeursIndicateurs = null;
+    this.#rendreIndicateurs();
+  }
+
+  /**
+   * Agrégats calculés par la base sur toute la sélection : totaux (indicateur cliqué compris) et indicateurs (sans
+   * l'indicateur cliqué : les cartes ne bougent pas quand on clique). Une erreur n'empêche pas la liste.
+   */
+  async chargerAgregats() {
+    if (!this.vue) return;
+    const gen = this.generation;
+    const totaux = this.#agregatsTotal();
+    const inds = this.indicateursAffiches ? this.#indicateurs() : [];
+    if (!totaux.length && !inds.length) { this.#rendreTotaux(); return; }
+    try {
+      const [t, i] = await Promise.all([
+        totaux.length ? this.fournisseur.agregats({ ...this.demande(), agregats: totaux }) : null,
+        inds.length ? this.fournisseur.agregats({
+          ...this.demande(), filtres: [],
+          agregats: inds.map((x) => ({ code: x.code, calcul: x.calcul, colonne: x.colonne, filtres: x.filtres ?? [], denominateur: x.denominateur ?? [] })),
+        }) : null,
+      ]);
+      if (gen !== this.generation) return;
+      this.totauxBase = t;
+      this.valeursIndicateurs = i;
+    } catch (e) {
+      if (gen !== this.generation) return;
+      this.message(texte('liste.liste.totaux_erreur', { message: e.message ?? e }), 'avertissement');
+    }
+    this.#rendreTotaux();
+    this.#rendreIndicateurs();
+  }
+
+  /**
+   * Ligne de total collante en bas du tableau : totaux de la base sur toute la sélection ; dès qu'un filtre de
+   * colonne (lignes chargées) est posé, totaux des lignes affichées, signalés (Q4).
+   */
+  #rendreTotaux() {
+    const colonnes = this.#colonnesTotal();
+    if (!colonnes.length || !this.vue) { this.table.tFoot?.remove(); return; }
+    const pied = this.table.tFoot ?? this.table.createTFoot();
+    const local = this.#filtresColonnesActifs();
+    const valeurs = local ? agreger(this.lignesAffichees(), this.#agregatsTotal(colonnes)) : this.totauxBase;
+    const n = valeurs?._lignes;
+    const portee = texte(`liste.liste.totaux_portee_${local ? 'affichees' : 'selection'}`);
+    const tr = document.createElement('tr');
+    tr.className = local ? 'liste-totaux local' : 'liste-totaux';
+    const coin = document.createElement('td');
+    coin.className = 'liste-coin';
+    coin.textContent = icone('liste_totaux');
+    coin.title = n === undefined ? texte('liste.liste.totaux', { portee }) : pluriel('liste.liste.totaux_lignes', n, { portee });
+    tr.append(coin);
+    let etiquette = false;
+    for (const c of this.#visibles()) {
+      const td = document.createElement('td');
+      td.dataset.code = c.code;
+      td.className = `aligne-${alignement(c)}`;
+      if (c.total && !c.calcul) {
+        const v = valeurs?.[c.code];
+        td.textContent = valeurs ? (v === null || v === undefined ? '—' : c.total === 'compte' ? String(v) : this.modele.texte(v, { ...c, format: 'nombre' })) : '…';
+        td.title = `${TOTAUX_COLONNE[c.total] ?? c.total} ${portee}`;
+      } else if (!etiquette) {
+        // Première colonne sans total : rappel du nombre de lignes et de la portée.
+        td.className = 'aligne-gauche liste-totaux-etiquette';
+        td.textContent = n === undefined ? '' : pluriel(`liste.liste.totaux_${local ? 'affichees' : 'lignes_nombre'}`, n);
+        td.title = coin.title;
+      }
+      etiquette = true;
+      tr.append(td);
+    }
+    pied.replaceChildren(tr);
+  }
+
+  #rendreIndicateurs() {
+    const zone = this.racine.querySelector('.liste-indicateurs');
+    const inds = this.indicateursAffiches ? this.#indicateurs() : [];
+    zone.hidden = !inds.length;
+    if (!inds.length) { zone.replaceChildren(); return; }
+    const v = this.valeursIndicateurs;
+    zone.innerHTML = inds.map((i) => {
+      const cliquable = i.filtres?.length > 0;
+      const actif = this.filtreIndicateur === i.code;
+      const valeur = v ? texteIndicateur(v[i.code], i.format) : '…';
+      const titre = [i.bulle, cliquable ? texte(`liste.liste.indicateur_${actif ? 'retirer' : 'filtrer'}`) : ''].filter(Boolean).join('\n');
+      const balise = cliquable ? 'button type="button"' : 'div';
+      return `<${balise} class="liste-indicateur teinte-${echapper(i.teinte ?? 'neutre')}${actif ? ' actif' : ''}" data-indicateur="${echapper(i.code)}"
+        ${cliquable ? `aria-pressed="${actif}"` : ''} title="${echapper(titre)}">
+        <span class="liste-indicateur-titre">${echapper(i.titre ?? i.code)}</span><strong>${echapper(valeur)}</strong></${cliquable ? 'button' : 'div'}>`;
+    }).join('');
   }
 
   #compteur(affichees) {
@@ -1066,8 +1240,12 @@ export class ListeDonnees {
   #largeurs() {
     const ajustees = this.#largeursAjustees();
     // Une colonne ajustée à la souris devient fixe (pour cet utilisateur) ; les autres se partagent le reste.
+    // Largeurs fixes de la vue pensées pour un texte de 13 px : mises à l'échelle de la densité (I6, 14 px en confortable).
+    const echelle = (parseFloat(getComputedStyle(this.table).fontSize) || TAILLE_REFERENCE) / TAILLE_REFERENCE;
+    const aLEchelle = (l) => (l?.mode === 'fixe' && echelle !== 1
+      ? { ...l, valeur: Number(l.valeur) * echelle, ...(l.min ? { min: Number(l.min) * echelle } : {}), ...(l.max ? { max: Number(l.max) * echelle } : {}) } : l);
     const visibles = this.#visibles().map((c) => (ajustees[c.code]
-      ? { ...c, largeur: { mode: 'fixe', valeur: ajustees[c.code], min: 36, max: null } } : c));
+      ? { ...c, largeur: { mode: 'fixe', valeur: ajustees[c.code], min: 36, max: null } } : { ...c, largeur: aLEchelle(c.largeur) }));
     const dispo = Math.max(this.zone.clientWidth - LARGEUR_COIN - 2, 200);
     const largeurs = calculerLargeurs(visibles, dispo);
     const cg = this.table.querySelector('colgroup');
@@ -1232,7 +1410,7 @@ export class ListeDonnees {
     const valeur = ligne[code];
     if (c.format === 'coche') { this.#enregistrer(id, code, !vraiDonnee(valeur)); return; }
     let ed;
-    if (c.format === 'combo' || c.format === 'picto') {
+    if (c.format === 'combo' || c.format === 'picto' || c.format === 'pastille') {
       // Combo saisissable : la saisie filtre les options ou désigne directement l'option (libellé ou code).
       ed = creerCombo({
         options: c.options.map((o) => ({ valeur: String(o.valeur), libelle: `${o.picto ?? ''} ${o.libelle ?? o.valeur}`.trim() })),
@@ -1312,6 +1490,7 @@ export class ListeDonnees {
     try {
       const relue = await this.fournisseur.modifier(this.demande(), id, ligne._h, { [code]: valeur });
       this.#remplacerLigne(id, relue);
+      if (this.modele.parCode.get(code)?.total) this.chargerAgregats();
       return true;
     } catch (e) {
       if (e.code === ERREUR_LISTE.LIGNE_MODIFIEE && e.details) {

@@ -2,11 +2,11 @@ import { texte } from '@logibtp/socle/dictionnaire';
 import { lireStockage, ecrireStockage, ErreurApi, appelApi } from '@logibtp/socle';
 import { ERREUR_LISTE } from './codes.js';
 import { normaliserDefinition } from './modele.js';
-import { filtrer, trier, lot, jusqua, comptesSegment, empreinte, filtresEffectifs } from './requete.js';
+import { filtrer, trier, lot, jusqua, comptesSegment, empreinte, filtresEffectifs, agreger, colonnesAgregats } from './requete.js';
 
 // Fournisseurs de données d'une liste. Même interface pour l'API et pour la mémoire (démo hors ligne, tests) :
 //
-//   themes()                      → [{ thl_code, thl_libelle, thl_icone, thl_ordre, thl_types: [{ code, libelle }], thl_actif }]
+//   themes()                      → [{ thl_code, thl_libelle, thl_icone, thl_ordre, thl_types: [{ code, libelle }], thl_actif, thl_vli_defaut }]
 //   enregistrerTheme(theme)       supprimerTheme(code)    (profil ADMIN)
 //   vues(contexte, theme)         → [{ vli_id, vli_nom, vli_contexte, vli_theme, vli_partage, vli_proprietaire, modifiable }]
 //   vue(id)                       → { vli_id, vli_nom, vli_contexte, vli_partage, vli_groupe, vli_version, definition }
@@ -15,12 +15,13 @@ import { filtrer, trier, lot, jusqua, comptesSegment, empreinte, filtresEffectif
 //   colonnesRequete(sql)          → [{ code, type }]   (requête manuelle, profil ADMIN)
 //   lot(demande)                  → { lignes, suite }  lignes : données + _id, _type, _h (empreinte)
 //   segments(demande, colonne)    → [{ valeur, nombre }]
+//   agregats(demande)             → { _lignes, code: valeur } (demande.agregats : [{ code, calcul, colonne, filtres, denominateur }])
 //   controle(demande, jusqua)     → [{ id, h }] lignes du filtre jusqu'au curseur, dans l'ordre
 //   lignes(demande, ids)          → lignes du filtre parmi ces ID (absente = supprimée ou hors filtre)
 //   modifier(demande, id, h, valeurs) → ligne relue après enregistrement ; erreur 409 LIGNE_MODIFIEE (details = ligne
 //                                   actuelle) si l'empreinte h ne correspond plus (modifiée par ailleurs)
 //
-// demande = { vue_id, definition, recherche, segments: { colonne: [valeurs] }, tri: [{ colonne, sens }], apres, taille }
+// demande = { vue_id, definition, recherche, segments: { colonne: [valeurs] }, filtres: [filtres de vue en plus], tri: [{ colonne, sens }], apres, taille }
 
 export class ErreurFournisseur extends ErreurApi {}
 
@@ -37,8 +38,8 @@ export class FournisseurApi {
 
   /** Corps envoyé : la définition sert pour une vue non enregistrée (concepteur) ; le serveur contrôle la source. */
   corps(demande, extra = {}) {
-    const { vue_id = null, definition = null, recherche = '', segments = {}, tri = [] } = demande;
-    return { vue_id, definition, recherche, segments, tri, ...extra };
+    const { vue_id = null, definition = null, recherche = '', segments = {}, tri = [], filtres = [] } = demande;
+    return { vue_id, definition, recherche, segments, tri, filtres, ...extra };
   }
 
   themes() { return this.appel('GET', '/themes'); }
@@ -57,6 +58,7 @@ export class FournisseurApi {
   colonnesRequete(requete) { return this.appel('POST', '/sources/requete', { requete }); }
   lot(d) { return this.appel('POST', '/lot', this.corps(d, { apres: d.apres ?? null, taille: d.taille ?? 100 })); }
   segments(d, colonne) { return this.appel('POST', '/segments', this.corps(d, { colonne })); }
+  agregats(d) { return this.appel('POST', '/agregats', this.corps(d, { agregats: d.agregats ?? [] })); }
   controle(d, curseur) { return this.appel('POST', '/controle', this.corps(d, { jusqua: curseur ?? null })); }
   lignes(d, ids) { return this.appel('POST', '/lignes', this.corps(d, { ids: ids.map(String) })); }
   modifier(d, id, h, valeurs) { return this.appel('POST', '/modifier', this.corps(d, { id: String(id), h, valeurs })); }
@@ -181,7 +183,7 @@ export class FournisseurMemoire {
     const codes = def.colonnes.filter((c) => !c.calcul && connues.has(c.code)).map((c) => c.code);
     // Colonnes de segment et de tri lues même si la vue ne les affiche pas (comme le WHERE / ORDER BY du serveur).
     const internes = [...Object.keys(d.segments ?? {}), ...def.segments.map((x) => x.colonne), ...(d.tri ?? []).map((t) => t.colonne),
-      ...filtresEffectifs(def, connues).map((f) => f.colonne)]
+      ...filtresEffectifs(def, connues).map((f) => f.colonne), ...(d.filtres ?? []).map((f) => f.colonne), ...colonnesAgregats(d.agregats)]
       .filter((c) => connues.has(c) && !codes.includes(c));
     const segmentsVue = new Set(def.segments.map((x) => x.colonne));
     const colonneId = def.source.colonne_id ?? s.colonne_id;
@@ -202,7 +204,7 @@ export class FournisseurMemoire {
     });
     const recherche = def.colonnes.filter((c) => !c.calcul && c.recherche && connues.has(c.code)).map((c) => c.code);
     const tri = (d.tri ?? []).filter((t) => connues.has(t.colonne));
-    const filtres = filtresEffectifs(def, connues);
+    const filtres = [...filtresEffectifs(def, connues), ...(d.filtres ?? []).filter((f) => connues.has(f.colonne))];
     const types = (this.themesStockes.find((t) => t.thl_code === def.theme)?.thl_types ?? []).map((t) => t.code);
     return { lignes, recherche, tri, filtres, types };
   }
@@ -218,6 +220,12 @@ export class FournisseurMemoire {
     const autres = { ...(d.segments ?? {}) };
     delete autres[colonne];
     return comptesSegment(filtrer(lignes, { ...d, segments: autres, filtres, types }, recherche), colonne);
+  }
+
+  /** Agrégats sur toute la sélection (demande.agregats : totaux, indicateurs). */
+  async agregats(d) {
+    const { lignes, recherche, filtres, types } = await this.#lignesSource(d);
+    return agreger(filtrer(lignes, { ...d, filtres, types }, recherche), d.agregats ?? []);
   }
 
   async controle(d, curseur) {

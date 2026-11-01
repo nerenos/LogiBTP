@@ -51,6 +51,7 @@ public static class Extensions
             await s.Supprimer(type, id, Utilisateur.Depuis(http), ct);
             return Results.NoContent();
         });
+        g.MapGet("/{id}/synthese", (string type, string id, HttpContext http, ServiceFiche s, CancellationToken ct) => s.Synthese(type, id, Utilisateur.Depuis(http), ct));
         g.MapPost("/{id}/confidentiel", (string type, string id, HttpContext http, ServiceFiche s, CancellationToken ct) => s.Reveler(type, id, Utilisateur.Depuis(http), ct));
         g.MapPost("/{id}/secret", (string type, string id, DemandeSecret d, HttpContext http, ServiceFiche s, CancellationToken ct) => s.RevelerSecret(type, id, d.Champ, Utilisateur.Depuis(http), ct));
         g.MapPost("/{id}/verrou", (string type, string id, DemandeVerrou d, HttpContext http, ServiceFiche s, CancellationToken ct) => s.Verrouiller(type, id, d, Utilisateur.Depuis(http), ct));

@@ -46,6 +46,8 @@
 .fiche-saisie-champ.nombre { text-align: right; font-variant-numeric: tabular-nums; }
 .fiche-saisie-champ[type="checkbox"] { width: auto; align-self: flex-start; }
 .fiche-saisie-champ[readonly] { background: transparent; border-color: transparent; padding-left: 0; }
+/* Champ vide en consultation : « — » discret. */
+.fiche-saisie-champ.fiche-vide::placeholder { color: var(--discret); opacity: 1; }
 textarea.fiche-saisie-champ[readonly] { resize: none; }
 select.fiche-saisie-champ:disabled { opacity: 1; background: transparent; border-color: transparent; padding-left: 0; appearance: none; }
 .fiche-saisie .fiche-saisie-champ:not([readonly]) { border-color: var(--accent); }
@@ -88,3 +90,22 @@ select.fiche-saisie-champ:disabled { opacity: 1; background: transparent; border
 .fiche-param-grille .large input, .fiche-param-grille textarea { width: 100%; max-width: 48rem; font: inherit; }
 .fiche-param-grille textarea { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 0.9em; resize: vertical; }
 .fiche-complement { margin-top: 0.8rem; }
+
+/* Bandeau de synthèse (indicateurs du serveur) et compteurs des onglets. */
+.fiche-indicateur { display: inline-flex; flex-direction: column; gap: 2px; padding: 4px 10px; border-left: 3px solid var(--bord); color: inherit; text-decoration: none; }
+a.fiche-indicateur:hover { background: var(--accent-clair); }
+.fiche-indicateur-libelle { font-size: 0.75em; color: var(--discret); }
+.fiche-indicateur-valeur { font-weight: 600; font-variant-numeric: tabular-nums; }
+.fiche-indicateur.niveau-ok { border-left-color: var(--succes); }
+.fiche-indicateur.niveau-attention { border-left-color: var(--alerte); }
+.fiche-indicateur.niveau-attention .fiche-indicateur-valeur { color: var(--alerte); }
+.fiche-indicateur.niveau-erreur { border-left-color: var(--erreur); }
+.fiche-indicateur.niveau-erreur .fiche-indicateur-valeur { color: var(--erreur); }
+.fiche-onglet-compte { display: inline-block; min-width: 1.4em; padding: 0 5px; margin-left: 2px; border-radius: 9px; background: var(--accent-clair); color: var(--accent); font-size: 0.75em; font-weight: 600; text-align: center; }
+.fiche-onglet-compte.alerte { background: var(--erreur); color: var(--surface); }
+.fiche-onglets button.vide { color: var(--discret); }
+/* Champ en cause (I5) : signalé une fois quand on y va depuis la liste des erreurs. */
+.fiche-erreurs li[data-erreur] { cursor: pointer; }
+.fiche-erreurs li[data-erreur]:hover { text-decoration: underline; }
+.fiche-champ.signale { animation: fiche-signale 1.2s ease-out 1; border-radius: 4px; }
+@keyframes fiche-signale { 0%, 40% { box-shadow: 0 0 0 3px var(--erreur); } 100% { box-shadow: 0 0 0 3px transparent; } }

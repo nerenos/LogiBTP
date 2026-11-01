@@ -6,5 +6,5 @@ export { ErreurApi, appelApi } from '../api.js';
 export { lireStockage, ecrireStockage } from '../ui/preferences.js';
 export { sansAccent, normaliser, ACCENTUEES, BASES, SPECIAUX } from './accents.js';
 export { remplacerVariables, texteBrut, formaterValeur, echapperHtml } from './libelles.js';
-export { dateLocale, aujourdhui, numeroJour, depuisNumero, ajouterJours, joursEntre, jourSemaine, joursDuMois, ajouterMois } from './dates.js';
+export { dateLocale, aujourdhui, numeroJour, depuisNumero, ajouterJours, joursEntre, jourSemaine, joursDuMois, ajouterMois, completerDate, texteDate } from './dates.js';
 export { NIVEAU_NOTIFICATION, PROFIL, ACTION_DROIT, NIVEAU_CONFIDENTIALITE } from '../codes.js';

@@ -288,7 +288,6 @@ export class PanneauxBtp extends PanneauxDocument {
   }
 
   champsEntete(d) {
-    const defaut = this.bibliotheques.find((b) => b.defaut);
     // Document d'avancement : numéro de situation (attribué à la validation, modifiable : reprise d'un autre logiciel).
     const rang = d.ent_avt_presentation ? [`<label title="${texteHtml('document_btp.panneaux.rang_aide')}">${texteHtml('document_btp.panneaux.rang')}
       <input data-champ="ent_rang_avancement" data-entier inputmode="numeric" size="4" value="${d.ent_rang_avancement ?? ''}"></label>`] : [];
@@ -298,8 +297,13 @@ export class PanneauxBtp extends PanneauxDocument {
       <input type="month" data-mois-revision value="${echapper(String(d.ent_mois_revision ?? '').slice(0, 7))}"></label>`);
     }
     return [...rang,...(this.annuaire ? [`<label title="${texteHtml('document_btp.panneaux.redacteur_aide')}">${texteHtml('document_btp.panneaux.redacteur')}
-      <input data-redacteur autocomplete="off" value="${echapper(this.libelleRedacteur(d.ent_redacteur_id))}"></label>`] : []),
-    `<label>${texteHtml('document_btp.panneaux.calcul_ouvrages')}
+      <input data-redacteur autocomplete="off" value="${echapper(this.libelleRedacteur(d.ent_redacteur_id))}"></label>`] : [])];
+  }
+
+  /** Onglet Options (D8) : calcul des ouvrages et bibliothèque du document. */
+  champsOptions(d) {
+    const defaut = this.bibliotheques.find((b) => b.defaut);
+    return [`<label>${texteHtml('document_btp.panneaux.calcul_ouvrages')}
       <select data-champ="ent_mode_calcul_ouvrage">${['V', 'D', 'B'].map((m) => opt(m, texte(`document_btp.panneaux.modes_calcul.${m}`), d.ent_mode_calcul_ouvrage)).join('')}</select></label>`,
     `<label title="${texteHtml('document_btp.panneaux.bibliotheque_aide')}">${texteHtml('document_btp.panneaux.bibliotheque')}
       <select data-champ="ent_bib_id" data-entier>${opt('', defaut ? texte('document_btp.panneaux.bibliotheque_defaut_code', { code: defaut.code }) : texte('document_btp.panneaux.bibliotheque_defaut'), d.ent_bib_id ?? '')}${this.bibliotheques.filter((b) => b.actif || b.id === d.ent_bib_id)

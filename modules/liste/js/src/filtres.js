@@ -108,7 +108,7 @@ export function valeursDistinctes(lignes, colonne, modele) {
     else compte.set(t, { texte: t, valeur: v, nombre: 1 });
   }
   // Listes et cases à cocher : ordre des libellés affichés ; sinon ordre des valeurs (nombres, dates).
-  const parTexte = ['combo', 'picto', 'coche'].includes(colonne.format);
+  const parTexte = ['combo', 'picto', 'pastille', 'coche'].includes(colonne.format);
   return [...compte.values()].sort((x, y) => (parTexte
     ? comparerValeurs(x.texte, y.texte, false)
     : comparerValeurs(x.valeur, y.valeur, estNumerique(colonne))));

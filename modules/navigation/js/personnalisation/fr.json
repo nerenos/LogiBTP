@@ -14,7 +14,9 @@
       "largeur": "Largeur du menu (double-clic : largeur par défaut)",
       "creation": "{{titre}} (Ctrl : nouvelle fenêtre)",
       "nouvelle_fenetre": "Ouvrir dans une nouvelle fenêtre (Ctrl+clic)",
-      "vide": "(vide)"
+      "vide": "(vide)",
+      "historique": "Derniers messages",
+      "historique_vide": "Aucun message."
     },
     "accueil": {
       "actualiser_titre": "Actualiser les widgets",

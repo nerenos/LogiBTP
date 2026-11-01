@@ -30,5 +30,19 @@
   "liste_tri_base": "⇅",
   "liste_trier": "⇵",
   "liste_filtre_actif": "⧩",
-  "liste_filtre": "▾"
+  "liste_filtre": "▾",
+  "liste_indicateurs": "▦",
+  "liste_creer_choix": "▾",
+  "liste_choix_filtre": "⚑",
+  "liste_totaux": "Σ",
+  "liste_vues_partage_P": "👤",
+  "liste_vues_partage_G": "👥",
+  "liste_vues_partage_T": "",
+  "liste_vues_themes": "⚙",
+  "liste_vues_afficher": "☰",
+  "liste_vues_reduire": "⇥",
+  "liste_vues_theme": "📋",
+  "liste_vues_etoile": "★",
+  "liste_vues_etoile_defaut": "✩",
+  "liste_vues_etoile_vide": "☆"
 }

@@ -3,13 +3,12 @@ import { urlFiche, TYPE_FICHE } from '../codes.js';
 import { aujourdhui } from '@logibtp/socle';
 import { FicheBase } from '@logibtp/fiche/ui';
 import { FournisseurFicheApi, MODES } from '@logibtp/fiche';
-import { formatNombre, echapper } from '@logibtp/socle/ui';
+import { formatNombre, echapper, saisir } from '@logibtp/socle/ui';
 import { principale } from '@logibtp/annuaire';
 import { choisirIndividu } from '@logibtp/annuaire/ui';
 import { ENTETES } from '../api.js';
 import { rolesSalarie } from '../annuaire/salaries.js';
 import { urlPhotoIndividu, vignette } from '../annuaire/photo.js';
-import { AGENCES_SALARIES } from '../annuaire/donnees.js';
 
 // Fiches du cœur : spécialisations de FicheBase (module Fiche) pour les salariés et les matériels.
 
@@ -108,13 +107,39 @@ export class FicheSalarie extends FicheLogiBTP {
     const v = super.valeursCreation();
     const i = this.individuSource;
     if (!i) return v;
-    const iv = i.valeurs;
-    const rat = (iv.rattachements ?? []).find((r) => Object.values(AGENCES_SALARIES).includes(Number(r.per_id))) ?? null;
-    const agence = Object.entries(AGENCES_SALARIES).find(([, id]) => id === Number(rat?.per_id))?.[0] ?? null;
+    return { ...v, ind_id: Number(i.id), ...this.#valeursIndividu(i.valeurs, v) };
+  }
+
+  /** Agences proposées (notre société et ses niveaux inférieurs, v_agences_societe) : identifiants des personnes. */
+  #agences() {
+    return (this.definition.champs.find((c) => c.code === 'agence')?.options ?? []).map((o) => Number(o.valeur));
+  }
+
+  /**
+   * Valeurs du salarié lues dans un individu de l'annuaire : identité, agence et poste (son rattachement à l'une de nos
+   * agences), coordonnées professionnelles de ce rattachement, contrat intérim.
+   */
+  #valeursIndividu(iv, v) {
+    const agences = this.#agences();
+    const rat = (iv.rattachements ?? []).find((r) => r.actif !== false && agences.includes(Number(r.per_id)))
+      ?? (iv.rattachements ?? []).find((r) => agences.includes(Number(r.per_id))) ?? null;
     return {
-      ...v, ind_id: Number(i.id), nom: iv.nom, prenom: iv.prenom, agence, poste: rat?.fonction ?? null, statut: (iv.roles ?? []).includes('INTERIMAIRE') ? 'INTERIM' : v.statut,
+      nom: iv.nom ?? null, prenom: iv.prenom ?? null, agence: rat ? Number(rat.per_id) : null, service: rat?.service ?? null, poste: rat?.fonction?.replace(/ \(intérim\)$/, '') ?? null,
+      statut: (iv.roles ?? []).includes('INTERIMAIRE') ? 'INTERIM' : v.statut,
       email: principale(rat?.coordonnees ?? [], 'EMAIL'), telephone: principale(rat?.coordonnees ?? [], 'TELEPHONE'),
     };
+  }
+
+  /** Individu lié en saisie (FS1) : ses valeurs complètent les champs vides du salarié, sans rien écraser. */
+  async #completerDepuisIndividu(id) {
+    const i = await this.fournisseur.charger(TYPE_FICHE.INDIVIDU, id).catch(() => null);
+    if (!i) return 0;
+    const v = this.valeurs();
+    const vide = (x) => x === null || x === undefined || x === '';
+    const completes = Object.entries(this.#valeursIndividu(i.valeurs, v)).filter(([code, x]) => !vide(x) && vide(v[code]) && code !== 'statut');
+    if (i.valeurs.roles?.includes('INTERIMAIRE') && v.statut !== 'INTERIM' && vide(v.statut)) completes.push(['statut', 'INTERIM']);
+    for (const [code, x] of completes) this.definirValeur(code, x);
+    return completes.length;
   }
 
   /** Individu de l'annuaire : lien vers sa fiche ; en saisie, lier à un individu existant ou le créer. */
@@ -136,7 +161,9 @@ export class FicheSalarie extends FicheLogiBTP {
       if (r.nouveau) { await this.#creerIndividu(r.nouveau); return; }
       this.libelleIndividu = r.individu.nom_complet;
       this.definirValeur('ind_id', r.individu.id);
+      const n = await this.#completerDepuisIndividu(r.individu.id);
       this.rendre();
+      if (n) this.message(pluriel('fiches_btp.salarie.champs_completes', n), 'succes');
     });
     el.querySelector('[data-creer]')?.addEventListener('click', () => this.#creerIndividu({ nom: this.valeur('nom'), prenom: this.valeur('prenom') }).catch((e) => this.message(e.message, 'erreur')));
     if (valeur && !this.libelleIndividu) {
@@ -153,10 +180,12 @@ export class FicheSalarie extends FicheLogiBTP {
       v.email ? { nature: 'EMAIL', usage: 'PRO', valeur: v.email, principal: true } : null,
       v.telephone ? { nature: 'TELEPHONE', usage: 'PORTABLE', valeur: v.telephone, principal: true } : null,
     ].filter(Boolean);
-    const agence = AGENCES_SALARIES[v.agence] ?? AGENCES_SALARIES.Lyon;
+    // Agence du salarié, sinon notre société (première des agences proposées).
+    const agence = Number(v.agence) || this.#agences()[0];
+    if (!agence) { this.message(texte('fiches_btp.salarie.aucune_agence'), 'erreur'); return; }
     const i = await this.fournisseur.creer(TYPE_FICHE.INDIVIDU, {
       valeurs: {
-        civilite, nom, prenom, pays: 'FR', actif: true, roles: rolesSalarie(v),
+        civilite, nom, prenom, pays: 'FR', actif: true, usage: 'A', roles: rolesSalarie(v),
         rattachements: [{ per_id: agence, fonction: v.poste ?? null, service: v.service ?? null, debut: v.date_entree ?? null, actif: true, coordonnees }],
       },
       proprietes: {},
@@ -216,9 +245,45 @@ export class FicheMateriel extends FicheLogiBTP {
         r.habilitations(corps.querySelector('[data-controles]'), { element: 'materiel', id: this.id, titre: texte('fiches_btp.materiel.controles') });
         r.exigees(corps.querySelector('[data-exigees]'), { materiel: this.id });
       },
-    }, ...(r.affectations ? [{ code: 'affectations', titre: texte('fiches_btp.onglets.affectations'), rendre: (corps) => r.affectations(corps, { materiel: this.id }) }] : []),
+    }, ...(r.affectations ? [{ code: 'affectations', titre: texte('fiches_btp.onglets.affectations'), rendre: (corps) => r.affectations(corps, { materiel: this.id, identifie: this.valeur('mode') === 'IDENTIFIE' }) }] : []),
       ...(r.compteurs ? [{ code: 'compteurs', titre: texte('fiches_btp.onglets.compteurs'), rendre: (corps) => r.compteurs(corps, { materiel: this.id }) }] : []),
+      ...(r.etats ? [{ code: 'historique', titre: texte('fiches_btp.onglets.historique'), rendre: (corps) => r.etats(corps, { materiel: this.id }) }] : []),
       ...(r.couts ? [{ code: 'couts', titre: texte('fiches_btp.onglets.couts'), rendre: (corps) => r.couts(corps, { materiel: this.id }) }] : [])];
+  }
+
+  /**
+   * Matériel identifié (FM1) : quantité 1 en lecture seule, unité masquée ; changement de disponibilité ou de condition
+   * en modification (FM3) : motif demandé, tracé dans l'historique (db/252).
+   */
+  rendreChamp(champ, valeur) {
+    const identifie = this.valeur('mode') === 'IDENTIFIE';
+    if (identifie && (champ.code === 'quantite' || champ.code === 'unite')) {
+      const el = super.rendreChamp({ ...champ, lecture_seule: true }, champ.code === 'quantite' ? 1 : null);
+      el.title = texte('fiches_btp.materiel.quantite_identifie');
+      if (champ.code === 'unite') el.placeholder = '—';
+      return el;
+    }
+    const el = super.rendreChamp(champ, valeur);
+    if (!this.estEnSaisie()) return el;
+    if (champ.code === 'mode') {
+      el.addEventListener('change', () => {
+        if (this.valeur('mode') === 'IDENTIFIE') this.definirValeur('quantite', 1);
+        this.rendre();
+      });
+    }
+    if ((champ.code === 'etat' || champ.code === 'condition') && this.mode === MODES.MODIFICATION) {
+      el.addEventListener('change', async () => {
+        // Un seul motif par valeur choisie (le combo peut signaler deux fois le même choix) ; retour à la valeur
+        // enregistrée : pas de motif.
+        const v = this.valeur(champ.code);
+        this.etatsDemandes ??= {};
+        if (v === this.etatsDemandes[champ.code] || v === this.fiche.valeurs[champ.code]) { this.etatsDemandes[champ.code] = v; return; }
+        this.etatsDemandes[champ.code] = v;
+        const motif = await saisir(texte('fiches_btp.materiel.motif_etat'), this.valeur('etat_motif') ?? '', { titre: texte('fiches_btp.materiel.changement_etat') });
+        if (motif !== null) this.definirValeur('etat_motif', motif.trim() || null);
+      });
+    }
+    return el;
   }
 
   rendreInformations(v) {
@@ -226,6 +291,7 @@ export class FicheMateriel extends FicheLogiBTP {
     const age = jours(v.date_achat);
     if (age !== null) parts.push(info(texteHtml('fiches_btp.infos.age'), texteHtml('fiches_btp.infos.annees_decimal', { nombre: (age / 365.25).toFixed(1).replace('.', ',') })));
     if (v.etat === 'PANNE') parts.push(info(texteHtml('fiches_btp.infos.etat'), texteHtml('fiches_btp.infos.panne'), true));
+    if (v.condition === 'ENDOMMAGE' || v.condition === 'HS') parts.push(info(texteHtml('fiches_btp.infos.condition'), texteHtml(`fiches_btp.infos.condition_${v.condition === 'HS' ? 'hs' : 'endommage'}`), true));
     if (v.controle_ok === false) parts.push(info(texteHtml('fiches_btp.infos.controle'), texteHtml('fiches_btp.infos.a_faire'), true));
     return parts.join('');
   }

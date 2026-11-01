@@ -8,7 +8,7 @@ import { CLASSES_FICHE } from '../fiches/classes.js';
 import { PanneauSuivi } from '../crm/panneau-suivi.js';
 import { FilCrm } from '../crm/fil.js';
 import { rendreComptePersonne } from '../comptes/comptes.js';
-import { rendreHabilitations, rendreMissions, rendreHabilitationsExigees, rendreAffectations, rendreMaterielAffecte, rendreCoutsMateriel } from '../ressources/ressources-ui.js';
+import { rendreHabilitations, rendreMissions, rendreHabilitationsExigees, rendreAffectations, rendreMaterielAffecte, rendreCoutsMateriel, rendreEtatsMateriel } from '../ressources/ressources-ui.js';
 import { rendreCompteursMateriel } from '../ressources/compteurs-ui.js';
 import { LISTE_PAR_TYPE } from '../application.js';
 import { voisins } from '../suite-liste.js';
@@ -61,6 +61,7 @@ export class PageFiche extends PageBase {
       // Annuaire : fiche liée (personne, individu, élément) dans la fenêtre, ou dans une nouvelle avec Ctrl / Maj.
       ouvrirUrl: (url, e) => app.naviguer(url, { nouvelleFenetre: Boolean(e && (e.ctrlKey || e.shiftKey || e.metaKey)) }),
       ouvrirFiche: ({ type: t, id }, e) => app.naviguer(urlFiche(t, id), { nouvelleFenetre: Boolean(e && (e.ctrlKey || e.shiftKey || e.metaKey)) }),
+      ouvrirLien: (url, e) => app.naviguer(url, { nouvelleFenetre: Boolean(e && (e.ctrlKey || e.shiftKey || e.metaKey)) }),
       // Onglet Pièces jointes : vue simplifiée de la GED, limitée aux documents de l'élément.
       // Arborescence : la fiche est la racine (projet, affaire, chantier, marché : structure et documents rattachés).
       ged: ({ conteneur, type: typeElement, id: idElement, libelle, modifiable }) => new ExplorateurGed(conteneur, {
@@ -99,6 +100,7 @@ export class PageFiche extends PageBase {
         materielAffecte: (corps, p) => rendreMaterielAffecte(corps, { app, ...p }).catch((e) => app.erreur(e)),
         couts: (corps, p) => rendreCoutsMateriel(corps, { app, ...p }).catch((e) => app.erreur(e)),
         compteurs: (corps, p) => rendreCompteursMateriel(corps, { app, ...p }).catch((e) => app.erreur(e)),
+        etats: (corps, p) => rendreEtatsMateriel(corps, { app, ...p }).catch((e) => app.erreur(e)),
       },
       surEnregistre: (f, { cree }) => {
         app.publier(SUJET_FENETRE.ENREGISTRE, { type, ids: [f.id, `SAL-${f.id}`, `MAT-${f.id}`], cree });

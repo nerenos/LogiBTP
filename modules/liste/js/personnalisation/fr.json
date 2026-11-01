@@ -63,7 +63,27 @@
     },
     "modele": {
       "formule": "Formule : {{message}}",
-      "regle": "Règle « {{condition}} » : {{message}}"
+      "regle": "Règle « {{condition}} » : {{message}}",
+      "totaux": {
+        "somme": "Somme",
+        "moyenne": "Moyenne",
+        "min": "Minimum",
+        "max": "Maximum",
+        "compte": "Nombre de lignes"
+      },
+      "calculs": {
+        "somme": "Somme",
+        "compte": "Nombre de lignes",
+        "ratio": "Ratio (lignes ÷ dénominateur)",
+        "moyenne": "Moyenne",
+        "min": "Minimum",
+        "max": "Maximum"
+      },
+      "formats_indicateur": {
+        "nombre": "Nombre",
+        "montant": "Montant (€)",
+        "pourcentage": "Pourcentage"
+      }
     },
     "themes": {
       "titre": "Thèmes de vues",
@@ -80,8 +100,11 @@
         "code": "Code",
         "libelle": "Libellé",
         "ordre": "Ordre",
-        "types": "Types d'élément (code = libellé ; …)"
-      }
+        "types": "Types d'élément (code = libellé ; …)",
+        "vue_defaut": "Vue par défaut"
+      },
+      "vue_defaut_aide": "Vue ouverte d’un clic sur le thème, sauf la vue ★ de l’utilisateur",
+      "vue_premiere": "(la première)"
     },
     "menu": {
       "toutes": "Toutes",
@@ -132,7 +155,8 @@
       "aucun": "(aucun)",
       "onglets": {
         "forme": "Mise en forme",
-        "colonnes": "Colonnes et source"
+        "colonnes": "Colonnes et source",
+        "indicateurs": "Indicateurs"
       },
       "supprimer": "Supprimer la vue",
       "appliquer_aide": "Appliquer à la liste sans enregistrer",
@@ -146,10 +170,15 @@
         "identifiant": "Colonne identifiant obligatoire (ouverture de la fiche)",
         "type": "Type d'élément obligatoire (colonne ou valeur constante)",
         "colonne": "Au moins une colonne",
-        "filtre_colonne": "Filtre de la vue : colonne à choisir",
-        "filtre_valeur": "Filtre de la vue sur {{colonne}} : valeur à saisir",
-        "filtre_valeur2": "Filtre de la vue sur {{colonne}} : seconde valeur à saisir",
-        "filtre_valeurs": "Filtre de la vue sur {{colonne}} : valeurs à saisir"
+        "filtre_colonne": "{{quoi}} : colonne à choisir",
+        "filtre_valeur": "{{quoi}} sur {{colonne}} : valeur à saisir",
+        "filtre_valeur2": "{{quoi}} sur {{colonne}} : seconde valeur à saisir",
+        "filtre_valeurs": "{{quoi}} sur {{colonne}} : valeurs à saisir",
+        "quoi_vue": "Filtre de la vue",
+        "quoi_indicateur": "Indicateur « {{titre}} »",
+        "quoi_filtre": "{{quoi}}, filtre",
+        "quoi_denominateur": "{{quoi}}, dénominateur",
+        "indicateur_colonne": "{{quoi}} : colonne à choisir"
       },
       "nom_copie": "{{nom}} (copie)",
       "monter": "Monter",
@@ -175,7 +204,12 @@
         "decimales": "Décimales",
         "alignement": "Alignement",
         "valeurs": "Valeurs (une par ligne : valeur | libellé | picto)",
-        "valeurs_exemple": "P | En panne | 🔴"
+        "valeurs_exemple": "P | En panne | 🔴",
+        "total": "Total",
+        "total_aide": "Ligne de total en bas de la liste, calculée par la base sur toute la sélection",
+        "total_aucun": "Aucun",
+        "valeurs_pastille": "Valeurs (une par ligne : valeur | libellé | teinte : {{teintes}})",
+        "valeurs_pastille_exemple": "P | En panne | erreur"
       },
       "alignements": {
         "auto": "Automatique",
@@ -267,6 +301,22 @@
         "aucune": "Aucune",
         "ajouter": "Ajouter une colonne calculée",
         "nom": "Calcul {{numero}}"
+      },
+      "indicateurs": {
+        "aide": "Indicateurs calculés par la base sur toute la sélection (recherche, segments, filtres de la vue). Un indicateur qui porte des filtres est cliquable : la liste n'affiche plus que ses lignes. Ratio = lignes retenues par ses filtres ÷ lignes retenues par le dénominateur.",
+        "titre": "Titre",
+        "calcul": "Calcul",
+        "colonne": "Colonne",
+        "aucune_colonne": "—",
+        "teinte": "Teinte",
+        "numerateur": "Numérateur",
+        "filtres": "Filtres",
+        "denominateur": "Dénominateur",
+        "sans_filtre": "Aucun : toutes les lignes",
+        "supprimer": "Supprimer l'indicateur",
+        "aucun": "Aucun indicateur.",
+        "ajouter": "Ajouter un indicateur",
+        "nouveau": "Indicateur {{n}}"
       }
     },
     "formats": {
@@ -275,7 +325,8 @@
       "date": "Date",
       "coche": "Case à cocher",
       "combo": "Liste (combo)",
-      "picto": "Picto (petite image)"
+      "picto": "Picto (petite image)",
+      "pastille": "Pastille (libellé coloré)"
     },
     "liste": {
       "vue": "Vue",
@@ -364,7 +415,64 @@
       "lignes_un": "{{charge}} ligne",
       "lignes_autre": "{{charge}} lignes",
       "fin_un": "Fin de la liste · {{nombre}} ligne",
-      "fin_autre": "Fin de la liste · {{nombre}} lignes"
+      "fin_autre": "Fin de la liste · {{nombre}} lignes",
+      "indicateurs_masquer": "Masquer les indicateurs",
+      "indicateurs_afficher": "Afficher les indicateurs",
+      "totaux_erreur": "Totaux non calculés : {{message}}",
+      "totaux_portee_affichees": "des lignes affichées (filtres de colonnes, lignes chargées)",
+      "totaux_portee_selection": "de toute la sélection",
+      "totaux": "Totaux {{portee}}",
+      "totaux_lignes_un": "Totaux {{portee}} : {{nombre}} ligne",
+      "totaux_lignes_autre": "Totaux {{portee}} : {{nombre}} lignes",
+      "totaux_affichees_un": "{{nombre}} affichée",
+      "totaux_affichees_autre": "{{nombre}} affichées",
+      "totaux_lignes_nombre_un": "{{nombre}} ligne",
+      "totaux_lignes_nombre_autre": "{{nombre}} lignes",
+      "indicateur_retirer": "Cliquer pour retirer ce filtre",
+      "indicateur_filtrer": "Cliquer pour n'afficher que ces lignes"
+    },
+    "choix": {
+      "creer_aide": "Créer un nouvel élément (la recherche saisie est reprise)",
+      "fermer_aide": "Fermer (Échap)",
+      "fermer": "Fermer",
+      "aide": "Entrée ou double-clic : choisir · Échap : annuler",
+      "aide_multiple": "Entrée ou double-clic : choisir · Ctrl / Maj + clic : plusieurs lignes · Échap : annuler",
+      "aucune": "Aucune ligne sélectionnée",
+      "filtre_aide": "Filtre de l'appel : cliquer ✕ pour voir toutes les lignes",
+      "filtre": "{{colonne}} : {{valeurs}}",
+      "retirer_filtre": "Retirer le filtre",
+      "titre": "Choisir"
+    },
+    "vues": {
+      "partage": {
+        "P": "Vue personnelle",
+        "G": "Vue du groupe",
+        "T": "Vue de tous"
+      },
+      "partage_de": "{{partage}} de {{proprietaire}}",
+      "titre": "Vues",
+      "nouvelle_aide": "Nouvelle vue dans le thème courant",
+      "nouvelle": "Nouvelle vue",
+      "themes_aide": "Thèmes et vues… (administrateur)",
+      "themes": "Thèmes et vues",
+      "rechercher": "Rechercher une vue…",
+      "afficher": "Afficher le panneau des vues",
+      "reduire": "Réduire le panneau des vues",
+      "sans_theme": "Sans thème",
+      "ouvrir_theme": "Ouvrir la vue par défaut du thème",
+      "deplier": "Déplier",
+      "etoile_retirer": "Vue par défaut du thème (vous) : cliquer pour retirer",
+      "etoile_defaut": "Vue par défaut du thème : cliquer pour la marquer comme la vôtre",
+      "etoile_marquer": "Ouvrir cette vue d'un clic sur le thème",
+      "modifier": "Modifier la vue",
+      "aucune": "Aucune vue",
+      "menu": {
+        "defaut": "Vue par défaut du thème (pour moi)",
+        "modifier": "Modifier la vue…",
+        "enregistrer_sous": "Enregistrer sous…",
+        "nouvelle": "Nouvelle vue dans ce thème…"
+      },
+      "separateur": "Glisser pour redimensionner · double-clic pour réduire"
     }
   },
   "erreurs": {

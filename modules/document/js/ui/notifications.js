@@ -27,6 +27,9 @@ export class NotificationsDocument {
     this.surCompte = surCompte;
     this.sources = [{ cle: 'calcul', get libelle() { return texte('document.notifications.calcul'); }, messages: () => this.messagesCalcul() }, ...sources];
     this.courant = null;
+    // Grille filtrée sur les lignes des notifications affichées (D1), tenu à jour à chaque rendu.
+    this.grilleFiltree = false;
+    editeur.surRetraitFiltres = () => { this.grilleFiltree = false; this.rendre(); };
     const p = lirePreferences().notificationsDocument ?? {};
     this.masques = { gravites: new Set(p.gravites ?? []), sources: new Set(p.sources ?? []), codes: new Set(p.codes ?? []) };
     racine.classList.add('notifications-document');
@@ -96,6 +99,13 @@ export class NotificationsDocument {
     this.racine.querySelector('.courante')?.scrollIntoView({ block: 'nearest' });
   }
 
+  /** Grille limitée aux lignes des notifications affichées (filtres du panneau appliqués), ou rendue entière. */
+  filtrerGrille(actif) {
+    this.grilleFiltree = actif;
+    if (!actif) this.editeur.filtrerSignalees?.(null);
+    this.rendre();
+  }
+
   ouvrir(m) {
     this.courant = cle(m);
     this.rendre();
@@ -114,8 +124,13 @@ export class NotificationsDocument {
       data-filtre="${genre}" data-valeur="${echapper(valeur)}" title="${echapper(titre)}" aria-pressed="${!this.masques[genre].has(valeur)}">${html} <span class="nombre">${n}</span></button>`;
     const codesPresents = [...new Set(tous.map((m) => m.code))].sort();
     this.liste = liste;
+    if (this.grilleFiltree) this.editeur.filtrerSignalees?.(liste.map((m) => m.lig_id).filter((x) => x !== null && x !== undefined));
+    const lignesSignalees = liste.some((m) => m.lig_id !== null && m.lig_id !== undefined);
     this.racine.innerHTML = `
       <div class="filtres-notifications">
+        <button type="button" class="filtrer-grille${this.grilleFiltree ? ' actif' : ''}" data-filtrer-grille aria-pressed="${this.grilleFiltree}"
+          title="${texteHtml(this.grilleFiltree ? 'document.notifications.grille_tout' : 'document.notifications.filtrer_grille_aide')}" ${!lignesSignalees && !this.grilleFiltree ? 'disabled' : ''}>${iconeHtml('document_filtrer_grille')} ${texteHtml('document.notifications.filtrer_grille')}</button>
+        <span class="sep"></span>
         ${ORDRE_GRAVITE.map((g) => bouton('gravites', g, GRAVITES[g].icone, texte('document.notifications.basculer', { nom: GRAVITES[g].libelle }), compte((m) => m.gravite === g))).join('')}
         ${this.sources.length > 1 ? `<span class="sep"></span>${this.sources.map((s) => bouton('sources', s.cle, echapper(s.libelle), texte('document.notifications.basculer_source', { nom: s.libelle }), compte((m) => m.source === s.cle))).join('')}` : ''}
         ${codesPresents.length ? `<span class="sep"></span>${codesPresents.map((c) => bouton('codes', c, echapper(this.libelles[c] ?? c), texte('document.notifications.basculer', { nom: c }), compte((m) => m.code === c))).join('')}` : ''}
@@ -134,6 +149,10 @@ export class NotificationsDocument {
   #clic(e) {
     const b = e.target.closest('button');
     if (!b) return;
+    if (b.dataset.filtrerGrille !== undefined) {
+      this.filtrerGrille(!this.grilleFiltree);
+      return;
+    }
     if (b.dataset.toutAfficher !== undefined) {
       for (const s of Object.values(this.masques)) s.clear();
       this.#memoriser();

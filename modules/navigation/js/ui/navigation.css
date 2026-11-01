@@ -21,8 +21,10 @@
 .bandeau.bandeau-serre .bandeau-infos { min-width: 0; flex-shrink: 1; gap: 0.25rem; }
 .bandeau.bandeau-serre .bandeau-infos > :not(.cloche) { max-width: 7rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 1; min-width: 1.4rem; }
 .bandeau.acces-clavier .bandeau-menus u, .bandeau-deroulant:not([hidden]) ~ * u, .bandeau:has(.bandeau-deroulant:not([hidden])) .bandeau-menus u { text-decoration: underline; }
-.bandeau-message { margin-left: auto; align-self: center; max-width: 45vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
-.bandeau-message.erreur { color: var(--erreur); }
+.bandeau-message { margin-left: auto; align-self: center; max-width: 45vw; display: flex; align-items: center; gap: 0.3rem; min-width: 0; }
+.bandeau-message-texte { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; cursor: pointer; }
+.bandeau-historique { border: none; background: none; padding: 0 0.15rem; color: var(--discret); cursor: pointer; }
+.bandeau-message-texte.erreur { color: var(--erreur); }
 /* Téléphone (application de terrain) : les menus défilent dans le bandeau au lieu d'élargir la page ; message masqué. */
 @media (max-width: 700px) {
   .bandeau-menus { flex: 1 1 auto; min-width: 0; overflow-x: auto; scrollbar-width: none; }
@@ -30,8 +32,13 @@
   .bandeau-menus button { height: 27px; }
   .bandeau-message { display: none; }
 }
-.bandeau-message.avertissement { color: var(--alerte); }
-.bandeau-message.succes { color: var(--succes); }
+.bandeau-message-texte.avertissement { color: var(--alerte); }
+.bandeau-message-texte.succes { color: var(--succes); }
+.bandeau-historique-liste { margin: 0; padding-left: 1.1rem; max-height: 60vh; overflow: auto; min-width: min(34rem, 80vw); }
+.bandeau-historique-liste li { margin: 0.2rem 0; }
+.bandeau-historique-liste time { color: var(--discret); font-variant-numeric: tabular-nums; }
+.bandeau-historique-liste li.erreur { color: var(--erreur); }
+.bandeau-historique-liste li.avertissement { color: var(--alerte); }
 .bandeau-infos { display: flex; align-items: center; gap: 0.4rem; color: var(--discret); padding: 0 0.4rem; white-space: nowrap; }
 .bandeau-societe { background: var(--accent-clair); color: var(--accent); border-radius: 3px; padding: 0 0.4rem; font-weight: 600; }
 .bandeau-logo { flex: none; display: flex; align-items: center; padding: 0 0.5rem 0 0.2rem; border-right: 1px solid var(--bord); }
@@ -113,8 +120,9 @@ body:has(> .bandeau-vertical) > .pages { flex: 1; min-width: 0; min-height: 0; }
 .bandeau-vertical .bandeau-fenetre:hover { background: var(--accent-clair); }
 .bandeau-vertical .bandeau-separateur span { padding-left: 1.2rem; }
 .bandeau-vertical .bandeau-vide { padding-left: calc(1rem + var(--profondeur, 1) * 1.1rem); }
-.bandeau-vertical .bandeau-message { grid-area: message; margin: 0; max-width: none; white-space: normal; padding: 0 0.7rem; }
-.bandeau-vertical .bandeau-message:not(:empty) { padding: 0.4rem 0.7rem; border-top: 1px solid var(--bord); }
+.bandeau-vertical .bandeau-message { grid-area: message; margin: 0; max-width: none; padding: 0 0.7rem; }
+.bandeau-vertical .bandeau-message-texte { white-space: normal; }
+.bandeau-vertical .bandeau-message:has(.bandeau-message-texte:not(:empty)) { padding: 0.4rem 0.7rem; border-top: 1px solid var(--bord); }
 .bandeau-vertical .bandeau-infos {
   grid-area: infos; flex-wrap: wrap; white-space: normal; gap: 0.35rem 0.6rem; padding: 0.55rem 0.7rem;
   border-top: 1px solid var(--bord); background: var(--titre-fond);

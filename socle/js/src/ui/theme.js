@@ -8,6 +8,18 @@ export const THEMES = [
   { code: 'sombre', libelle: texte('socle.theme.sombre'), icone: icone('theme_sombre') },
 ];
 
+/** Densité d'affichage (I6) : confortable par défaut, compacte en option ; posée sur <html data-densite>. */
+export const DENSITES = [
+  { code: 'confortable', libelle: texte('socle.densite.confortable'), icone: icone('densite_confortable') },
+  { code: 'compacte', libelle: texte('socle.densite.compacte'), icone: icone('densite_compacte') },
+];
+
+export function appliquerDensite(choix, racine = globalThis.document?.documentElement) {
+  if (!racine) return;
+  if (choix === 'compacte') racine.dataset.densite = 'compacte';
+  else delete racine.dataset.densite;
+}
+
 export function appliquerTheme(choix, racine = globalThis.document?.documentElement) {
   if (!racine) return;
   if (choix === 'clair') racine.dataset.theme = 'light';

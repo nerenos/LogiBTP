@@ -93,8 +93,6 @@ export class PanneauxDocument {
     const editeur = this.editeur;
     const d = editeur.saisie.document;
     const def = editeur.definition;
-    const fmt = typeof d.ent_num_format === 'string' ? JSON.parse(d.ent_num_format) : d.ent_num_format ?? { separateur: '.', niveaux: [{ style: '1' }] };
-    const niveaux = [0, 1, 2].map((i) => fmt.niveaux?.[i]?.style ?? '');
     const props = def.proprietes.filter((p) => p.prd_niveau === 'E');
     const valeurs = d.ent_proprietes ?? {};
     const statut = def.statuts?.find((s) => s.std_id === d.ent_std_id);
@@ -116,13 +114,7 @@ export class PanneauxDocument {
           <input data-champ="ent_validite_jours" data-entier type="number" min="1" max="3650" value="${d.ent_validite_jours ?? ''}"></label>
         ${d.ent_date_validite ? `<label>${texteHtml('document.panneaux.valable_jusqu')} <input type="date" value="${echapper(d.ent_date_validite)}" disabled></label>` : ''}
         ${this.champTauxDocument(d)}
-        ${def.modeles?.length ? `<label title="${texteHtml('document.panneaux.modele_aide')}">${texteHtml('document.panneaux.modele')} <select data-champ="ent_modele">${opt('', '—', d.ent_modele)}${def.modeles.map((x) => opt(x.code, x.libelle, d.ent_modele)).join('')}</select></label>` : ''}
         ${this.champsEntete(d).join('')}
-        <label>${texteHtml('document.panneaux.decimales_montants')} <input data-champ="ent_precision_montant" data-entier type="number" min="0" max="6" value="${d.ent_precision_montant ?? 2}"></label>
-        <fieldset class="numerotation"><legend>${texteHtml('document.panneaux.numerotation')}</legend>
-          ${niveaux.map((s, i) => `<select data-niveau="${i}">${i > 0 ? opt('', '—', s) : ''}${STYLES_NUM.map(([v, l]) => opt(v, l, s)).join('')}</select>`).join('')}
-          <input data-separateur maxlength="2" value="${echapper(fmt.separateur ?? '.')}" title="${texteHtml('document.panneaux.separateur')}">
-        </fieldset>
         ${props.map((p) => {
           const v = valeurs[p.prd_code] ?? '';
           const libelle = `${echapper(p.prd_libelle)}${p.prd_obligatoire ? ' *' : ''}`;
@@ -135,14 +127,10 @@ export class PanneauxDocument {
           return `<label>${libelle}<input type="${type}" data-prop="${p.prd_code}" data-type="${p.prd_type_donnee}" value="${echapper(v)}"></label>`;
         }).join('')}
       </div>
-      ${this.sectionEtiquettes(d)}
-      ${this.sectionReglement()}
       ${this.sectionTextes()}
       ${this.sectionsEntete()}`;
 
     const m = editeur.magasin;
-    this.lierEtiquettes(zone);
-    this.lierReglement(zone);
     this.lierTextes(zone);
     lier(zone.querySelector('.formulaire'), '[data-champ]', (champ, v, el) => m.modifier((b) => { b.document[champ] = valeurChamp(el, v); }, texte('document.etapes.entete')));
     zone.querySelector('[data-action="appliquer-tva-document"]')?.addEventListener('click', async (e) => {
@@ -153,12 +141,6 @@ export class PanneauxDocument {
         { titre: texte('document.etapes.tva_document'), ok: texte('document.panneaux.appliquer') });
       if (ok) m.modifier((b) => this.regles.appliquerTauxDocument(b, id), texte('document.etapes.tva_document'));
     });
-    const majFormat = () => {
-      const styles = [...zone.querySelectorAll('[data-niveau]')].map((s) => s.value).filter(Boolean);
-      const separateur = zone.querySelector('[data-separateur]').value || '.';
-      m.modifier((b) => { b.document.ent_num_format = { separateur, niveaux: styles.map((style) => ({ style })) }; }, texte('document.etapes.numerotation'));
-    };
-    zone.querySelectorAll('[data-niveau], [data-separateur]').forEach((el) => el.addEventListener('change', majFormat));
     zone.querySelectorAll('[data-prop]').forEach((el) => el.addEventListener('change', () => {
       let v = el.type === 'checkbox' ? el.checked : el.value;
       if (el.dataset.type === 'entier') v = v === '' ? null : Number(v);
@@ -166,6 +148,52 @@ export class PanneauxDocument {
       m.modifier((b) => { b.document.ent_proprietes = { ...(b.document.ent_proprietes ?? {}), [el.dataset.prop]: v === '' ? null : v }; }, texte('document.etapes.propriete'));
     }));
     this.lierEntete(zone);
+  }
+
+  // ------------------------------------------------------------------ options (D8)
+
+  /** Champs d'options propres à la spécialisation (data-champ sur le document), après les options génériques. */
+  champsOptions(_d) { return []; }
+
+  /** Sections HTML ajoutées sous les options, et leur branchement. */
+  sectionsOptions() { return ''; }
+
+  lierOptions(_zone) {}
+
+  /**
+   * Onglet Options : réglages du document consultés rarement (modèle de saisie, décimales, numérotation, options de la
+   * spécialisation, étiquettes du document) ; l'entête garde l'identité, les rattachements et les textes de l'édition.
+   */
+  rendreOptions(zone) {
+    if (!zone || zone.contains(document.activeElement)) return;
+    const editeur = this.editeur;
+    const d = editeur.saisie.document;
+    const def = editeur.definition;
+    const fmt = typeof d.ent_num_format === 'string' ? JSON.parse(d.ent_num_format) : d.ent_num_format ?? { separateur: '.', niveaux: [{ style: '1' }] };
+    const niveaux = [0, 1, 2].map((i) => fmt.niveaux?.[i]?.style ?? '');
+    zone.innerHTML = `
+      <fieldset class="options-document"><legend>${texteHtml('document.panneaux.options')}</legend>
+      <div class="formulaire">
+        ${def.modeles?.length ? `<label title="${texteHtml('document.panneaux.modele_aide')}">${texteHtml('document.panneaux.modele')} <select data-champ="ent_modele">${opt('', '—', d.ent_modele)}${def.modeles.map((x) => opt(x.code, x.libelle, d.ent_modele)).join('')}</select></label>` : ''}
+        <label>${texteHtml('document.panneaux.decimales_montants')} <input data-champ="ent_precision_montant" data-entier type="number" min="0" max="6" value="${d.ent_precision_montant ?? 2}"></label>
+        <fieldset class="numerotation"><legend>${texteHtml('document.panneaux.numerotation')}</legend>
+          ${niveaux.map((s, i) => `<select data-niveau="${i}">${i > 0 ? opt('', '—', s) : ''}${STYLES_NUM.map(([v, l]) => opt(v, l, s)).join('')}</select>`).join('')}
+          <input data-separateur maxlength="2" value="${echapper(fmt.separateur ?? '.')}" title="${texteHtml('document.panneaux.separateur')}">
+        </fieldset>
+        ${this.champsOptions(d).join('')}
+      </div></fieldset>
+      ${this.sectionEtiquettes(d)}
+      ${this.sectionsOptions()}`;
+    const m = editeur.magasin;
+    this.lierEtiquettes(zone);
+    lier(zone.querySelector('.formulaire'), '[data-champ]', (champ, v, el) => m.modifier((b) => { b.document[champ] = valeurChamp(el, v); }, texte('document.etapes.entete')));
+    const majFormat = () => {
+      const styles = [...zone.querySelectorAll('[data-niveau]')].map((x) => x.value).filter(Boolean);
+      const separateur = zone.querySelector('[data-separateur]').value || '.';
+      m.modifier((b) => { b.document.ent_num_format = { separateur, niveaux: styles.map((style) => ({ style })) }; }, texte('document.etapes.numerotation'));
+    };
+    zone.querySelectorAll('[data-niveau], [data-separateur]').forEach((el) => el.addEventListener('change', majFormat));
+    this.lierOptions(zone);
   }
 
   // ------------------------------------------------------------------ textes de l'édition
@@ -231,15 +259,26 @@ export class PanneauxDocument {
 
   // ------------------------------------------------------------------ règlement et échéancier
 
-  /** Section Règlement de l'entête : condition de paiement, mode de règlement et échéancier (aperçu ou enregistré). */
-  sectionReglement() {
+  /**
+   * Section Règlement : condition de paiement, mode de règlement et, avec `apercu`, l'échéancier (aperçu ou enregistré).
+   * Rendue par l'hôte où il la veut (onglet Règlements de la page document : `rendreReglement`), plus dans l'entête.
+   */
+  sectionReglement({ apercu = true } = {}) {
     if (!this.editeur.definition.conditions_paiement?.length) return '';
     return `<fieldset class="reglement-document"><legend>${texteHtml('document.panneaux.reglement')}</legend>
       <div class="formulaire">
         <label title="${texteHtml('document.panneaux.condition_aide')}">${texteHtml('document.panneaux.condition')} <span data-condition-paiement></span></label>
         <label title="${texteHtml('document.panneaux.mode_aide')}">${texteHtml('document.panneaux.mode')} <span data-mode-reglement></span></label>
       </div>
-      <div data-echeancier></div></fieldset>`;
+      ${apercu ? '<div data-echeancier></div>' : ''}</fieldset>`;
+  }
+
+  /** Section Règlement rendue et branchée dans une zone (onglet Règlements). */
+  rendreReglement(zone, options = {}) {
+    if (!zone) return;
+    zone.innerHTML = this.sectionReglement(options);
+    zone.hidden = !zone.innerHTML;
+    this.lierReglement(zone);
   }
 
   /**
@@ -505,6 +544,10 @@ export class PanneauxDocument {
     const extra = this.lignesTotaux(d);
     if (compact) {
       const detailTva = r.tva.map((t) => texte('document.panneaux.tva_detail', { code: t.tva_code, montant: formatNombre(t.tva_montant_net, pm), base: formatNombre(t.tva_base_ht, pm) })).join(' · ');
+      // Erreur de calcul : totaux signalés en attention (D5).
+      const ecart = (r.erreurs ?? []).length > 0;
+      zone.classList.toggle('attention', ecart);
+      zone.title = ecart ? texte('document.panneaux.totaux_erreur') : '';
       zone.innerHTML = `
         <span><small>${texteHtml('document.panneaux.total_ht')}</small> ${formatNombre(d.ent_total_ht, pm)}</span>
         <span title="${echapper(detailTva)}"><small>${texteHtml('document.panneaux.tva')}</small> ${formatNombre(d.ent_total_tva, pm)}</span>

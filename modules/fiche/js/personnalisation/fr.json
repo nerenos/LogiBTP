@@ -112,7 +112,12 @@
       "utiliser": "Utiliser {{code}}",
       "supprimer_question": "Supprimer « {{titre}} » ? Cette suppression est définitive.",
       "supprime": "{{libelle}} supprimé",
-      "fermer_question": "Des modifications ne sont pas enregistrées. Fermer quand même ?"
+      "fermer_question": "Des modifications ne sont pas enregistrées. Fermer quand même ?",
+      "synthese": "Synthèse",
+      "synthese_aide": "Afficher ou masquer le bandeau de synthèse (préférence de ce poste)",
+      "onglet_alerte": "Élément en défaut",
+      "aller_champ": "Aller au champ",
+      "champ_onglet": "{{champ}} (onglet {{onglet}})"
     },
     "parametrage": {
       "types": {

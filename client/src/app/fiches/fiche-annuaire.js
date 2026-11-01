@@ -476,7 +476,7 @@ export class FicheIndividu extends FicheAnnuaire {
     if (mail) parts.push(info(texteHtml('fiches_btp.infos.email'), `<a href="mailto:${echapper(mail)}">${echapper(mail)}</a>`));
     const n = v.nb_rattachements ?? this.rattachementsLus.length;
     if (n > 1) parts.push(info(texteHtml('fiches_btp.infos.rattachements'), pluriel('fiches_btp.annuaire.personnes', n)));
-    if (v.salarie) parts.push(info(texteHtml('fiches_btp.infos.salarie'), `${echapper(v.salarie.matricule)} · ${echapper(v.salarie.poste ?? '')}${v.salarie.actif ? '' : ` ${texteHtml('fiches_btp.annuaire.sorti')}`}`));
+    if (v.salarie) parts.push(info(texteHtml('fiches_btp.infos.salarie'), `${echapper(v.salarie.code ?? '')} · ${echapper(v.salarie.poste ?? '')}${v.salarie.actif ? '' : ` ${texteHtml('fiches_btp.annuaire.sorti')}`}`));
     if (this.homonymes?.length && this.mode === MODES.CREATION) parts.push(info(texteHtml('fiches_btp.infos.homonymes'), echapper(this.homonymes.map((h) => h.nom_complet + (h.personnes ? ` (${h.personnes})` : '')).join(' · ')), true));
     return parts.join('');
   }
@@ -511,7 +511,7 @@ export class FicheIndividu extends FicheAnnuaire {
     const roles = this.fiche?.valeurs?.roles ?? [];
     return [
       {
-        libelle: `${icone('fiches_btp_salarie')} ${salarie ? texte('fiches_btp.annuaire.salarie', { matricule: salarie.matricule }) : texte('fiches_btp.annuaire.creer_salarie')}`,
+        libelle: `${icone('fiches_btp_salarie')} ${salarie ? texte('fiches_btp.annuaire.salarie', { matricule: salarie.code ?? '' }) : texte('fiches_btp.annuaire.creer_salarie')}`,
         titre: salarie ? texte('fiches_btp.annuaire.ouvrir_salarie', { poste: [salarie.poste ?? '', salarie.agence].filter(Boolean).join(', ') }) : texte('fiches_btp.annuaire.creer_salarie_aide'),
         visible: !this.estEnSaisie() && this.id !== null && (!!salarie || roles.includes('SALARIE') || roles.includes('INTERIMAIRE')),
         action: () => this.ouvrirFiche({ type: TYPE_FICHE.SALARIE, id: salarie ? salarie.id : `nouveau?individu=${this.id}` }),

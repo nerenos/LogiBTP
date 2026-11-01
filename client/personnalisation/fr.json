@@ -617,6 +617,24 @@
         "entete": "— (chantier de l'entête)",
         "sans": "Sans chantier : choisir le chantier de la ligne",
         "herite": "— chantier de l'entête : choisir un chantier pour l'imposer à la ligne"
+      },
+      "unites": {
+        "article": "Unités de l’article",
+        "autres": "Autres unités",
+        "equivalence": "1 {{unite}} = {{ratio}} {{stock}}",
+        "role_vente": "Unité de vente",
+        "role_stock": "Unité de stock",
+        "role_autre": "Unité de l’article",
+        "titre": "Convertir le prix ?",
+        "equivalence_titre": "1 {{apres}} = {{facteur}} {{avant}}",
+        "prix": "{{avant}} €/{{unite_avant}} → {{apres}} €/{{unite_apres}}",
+        "pa": "PA :",
+        "pv_fixe": "PV fixe :",
+        "qte": "Quantité pour la même quantité physique : {{avant}} {{unite_avant}} → {{apres}} {{unite_apres}}",
+        "memoriser": "Ne plus demander pour ce document (même choix)",
+        "convertir": "Convertir le prix",
+        "convertir_qte": "Convertir le prix et la quantité",
+        "aucun": "Ne rien convertir"
       }
     },
     "colonnes": {
@@ -647,7 +665,8 @@
       "frais_prorata": "Ventilation au prorata",
       "cle_frais": "Clé de frais annexes",
       "rattachement": "Rattachement",
-      "chantier_ligne": "Chantier de la ligne"
+      "chantier_ligne": "Chantier de la ligne",
+      "unite_convertie": "unité"
     },
     "stock_lieux": {
       "A_RECEPTION": {
@@ -848,20 +867,20 @@
     },
     "page": {
       "onglets": {
-        "entete_aide": "Alt+1",
+        "entete_aide": "{{raccourci}} : identité, rattachement, intervenants, coordonnées, textes de l’édition",
         "entete": "Entête",
-        "lignes_aide": "Alt+2",
+        "lignes_aide": "{{raccourci}}",
         "lignes": "Lignes",
-        "analyse_aide": "Alt+3 : coefficients par nature ou par tranche",
+        "analyse_aide": "{{raccourci}} : coefficients par nature ou par tranche",
         "analyse": "Analyse",
-        "pieces_aide": "Alt+4 : documents de la GED liés au document, pièces jointes à envoyer",
+        "pieces_aide": "{{raccourci}} : documents de la GED liés au document, pièces jointes à envoyer",
         "pieces": "Pièces",
-        "tracabilite_aide": "Alt+5 : origine (import), documents liés, historique des versions",
-        "tracabilite": "Traçabilité",
-        "suivi_aide": "Alt+6 : notes, tâches et courriels du document (module CRM)",
+        "suivi_aide": "{{raccourci}} : notes, tâches et courriels (module CRM), origine, documents liés et historique",
         "suivi": "Suivi",
         "reglements": "Règlements",
-        "reglements_aide": "Alt+8 : échéancier, règlements, imputations et déductions d'acompte"
+        "reglements_aide": "{{raccourci}} : condition et mode de règlement, échéancier, règlements, imputations et déductions d’acompte",
+        "options": "Options",
+        "options_aide": "{{raccourci}} : modèle de saisie, décimales, numérotation, calcul des ouvrages, bibliothèque, étiquettes"
       },
       "actions": {
         "valider_aide": "Valider et bloquer le document",
@@ -1088,7 +1107,22 @@
         "clic_droit_touche": "Clic droit",
         "clic_droit": "Menu de la ligne"
       },
-      "raccourcis_titre": "Raccourcis des lignes"
+      "raccourcis_titre": "Raccourcis des lignes",
+      "erreur_ligne": "Ligne « {{libelle}} »",
+      "suivi": {
+        "crm": "Suivi",
+        "tracabilite": "Traçabilité",
+        "reduire": "Réduire cette partie",
+        "deplier": "Afficher cette partie"
+      },
+      "champs_erreur": {
+        "tiers": "Annuaire du document (tiers)",
+        "adresse": "Adresse de livraison",
+        "rattachement": "Rattachement",
+        "date": "Date",
+        "propriete": "Propriété du document",
+        "reglement": "Condition de paiement"
+      }
     },
     "fonctions": {
       "conditionnements": {
@@ -1869,61 +1903,6 @@
       "corps_defaut_html": "<p>Bonjour,</p><p>Veuillez trouver ci-joint {{document}}.</p><p>Cordialement,</p>"
     }
   },
-  "erreurs": {
-    "ACOMPTE_EMIS": "La facture ou le reçu de cet acompte existe déjà",
-    "AFF_BOUCLE": "Matériels porteurs en boucle : le porteur choisi est lui-même porté par ce matériel",
-    "ARC_NUMERO": "Numéro d'accusé de réception : 50 caractères au plus",
-    "ARC_TYPE": "L'accusé de réception ne concerne que les commandes fournisseur et de sous-traitance",
-    "ATELIER_SALARIE": "Votre compte n'est lié à aucun salarié : l'écran de l'atelier propose les étapes d'un salarié",
-    "BLOCAGES_EXCLUSIFS": "PV fixe et PV affiché fixe sont exclusifs : seul le PV fixe est retenu",
-    "CONSULTATION_RETENUE": "Seule une offre validée du lot peut être retenue",
-    "CONSULTATION_TYPE": "Ce type de document n'a pas de lot de consultation",
-    "CONSULTATION_VIDE": "Pas encore de lot de consultation pour ce document",
-    "ENT_MATERIEL": "Ordre sans matériel",
-    "ENT_NATURE": "Nature d'entretien inconnue",
-    "EQU_VERROU": "Le verrou de modification de l'équipe n'est plus détenu : elle est rechargée",
-    "EQU_VERSION": "L'équipe a été modifiée par ailleurs : elle est rechargée",
-    "ETAPES_ABSENTES": "Aucune étape à planifier",
-    "EXE_DATES": "Fin prévue avant le début",
-    "EXE_FAMILLE": "Ce document n'est pas un ordre d'exécution",
-    "EXE_MOTIF": "Motif obligatoire pour bloquer un ordre",
-    "FA_HORS_SECTION": "Tranche de frais annexes hors d'une section : non ventilée",
-    "FA_HORS_TRANCHE": "Ligne de frais annexes hors d'une tranche de frais annexes : non ventilée",
-    "FA_PIED": "Frais annexe de pied non ventilé : à remplacer par une tranche de frais annexes",
-    "FA_SANS_RECEPTRICE": "Aucune ligne pour recevoir les frais annexes de la tranche",
-    "MARCHE_CREATION": "Commande d'un marché : créez ce document depuis la fiche du marché (toutes ses commandes)",
-    "MARCHE_SANS_COMMANDE": "Le marché n'a pas de commande validée",
-    "METRE_ABSENT": "La quantité est issue d'un métré absent",
-    "OUVRAGE_SANS_COMPOSANTE": "Prix fixe interdit sur un ouvrage sans composante : ajoutez des composantes ou transformez la ligne en élément",
-    "PARCOURS_ABSENT": "Le chantier n'a pas de parcours d'exécution",
-    "PLANNING_SANS_TACHE": "Aucune tâche du planning pour cet ordre",
-    "PLAN_CODE": "Code du plan obligatoire : lettres, chiffres et _ (20 au plus)",
-    "PLAN_NATURE": "Nature inconnue",
-    "PV_AFFICHE_FIXE": "Le PV affiché fixe est réservé aux lignes de prix",
-    "REL_LIE": "Relevé introuvable ou lié à un événement ou à un ordre",
-    "SERVICE_MEMBRE": "Membre en double",
-    "SERVICE_NIVEAUX": "Deux niveaux de services au plus (service, sous-service)",
-    "STK_ARTICLE": "Article non géré en stock",
-    "STK_BORNE_DEPOT": "Aucun dépôt de stock pour cette borne (paramétrage des bornes)",
-    "STK_MOTIF": "Motif obligatoire pour refuser une saisie",
-    "ST_CIBLE": "Appel d'offres ou commande de sous-traitance",
-    "ST_LIGNES": "Aucune ligne de prix dans la sélection",
-    "ST_SOURCE": "Seuls une commande ou un devis client, un ordre de sous-traitance se sous-traitent",
-    "ST_UN_SEUL": "Une commande de sous-traitance est passée à un seul sous-traitant",
-    "TERRAIN_DEMANDE": "Au moins un article ou besoin",
-    "TERRAIN_LIVRAISON": "Au moins une quantité reçue",
-    "TERRAIN_MATERIEL": "Rien à enregistrer",
-    "TERRAIN_PERSONNE": "Compte sans salarié lié",
-    "TERRAIN_PHOTO": "Images seulement",
-    "TERRAIN_RECEPTION_ETAT": "Sans réserve, avec réserves ou refusée",
-    "TERRAIN_RECEPTION_TYPE": "La réception se signe sur un ordre de pose",
-    "TERRAIN_RESERVES": "Au moins une réserve",
-    "TERRAIN_SAV_OBJET": "Objet de l'intervention obligatoire",
-    "TERRAIN_SAV_TEXTE": "Constat et travaux obligatoires",
-    "TERRAIN_SAV_TYPE": "Cet ordre n'est pas une intervention SAV",
-    "TERRAIN_SIGNATAIRE": "Nom du signataire obligatoire",
-    "TERRAIN_TACHE": "Tâche absente de votre journée"
-  },
   "planning_btp": {
     "etats": {
       "OPTION": "Option",
@@ -1991,10 +1970,10 @@
       "dependance": "Dépendance"
     },
     "synchro": {
-      "TEMPS_REEL": "Temps réel",
       "30": "Toutes les 30 s",
       "60": "Toutes les minutes",
       "300": "Toutes les 5 min",
+      "TEMPS_REEL": "Temps réel",
       "PAUSE": "En pause",
       "MANUEL": "Manuelle (⟳)"
     },
@@ -4554,8 +4533,8 @@
       "terrain": {
         "libelle": "Terra&in",
         "terrain": {
-          "libelle": "Mon terrain (tâches, adresses, pièces)",
-          "info": "Vos tâches du planning du jour ou de la semaine, adresse et itinéraire, contact sur place, consignes et pièces diffusées sur le terrain"
+          "libelle": "Mon terrain (tâches, pointage, pièces)",
+          "info": "Vos tâches du planning du jour ou de la semaine, pointage, adresse et itinéraire, contact sur place, consignes et pièces diffusées sur le terrain"
         }
       },
       "pointage": {
@@ -4807,6 +4786,9 @@
         },
         "apropos": {
           "libelle": "À propos de LogiBTP"
+        },
+        "densite": {
+          "libelle": "Densité d’affichage"
         }
       },
       "fenetres": {
@@ -4860,8 +4842,7 @@
         "ongletLignes": "Onglet Lignes",
         "ongletAnalyse": "Onglet Analyse",
         "ongletPieces": "Onglet Pièces",
-        "ongletTracabilite": "Onglet Traçabilité",
-        "ongletSuivi": "Onglet Suivi (CRM)",
+        "ongletSuivi": "Onglet Suivi (CRM et traçabilité)",
         "rechercher": "Rechercher dans les lignes",
         "valider": "Valider le document",
         "transformer": "Transformer le document",
@@ -4870,7 +4851,8 @@
         "notifications": "Afficher ou masquer les notifications",
         "notificationSuivante": "Notification suivante (ligne)",
         "notificationPrecedente": "Notification précédente (ligne)",
-        "ongletReglements": "Onglet Règlements"
+        "ongletReglements": "Onglet Règlements",
+        "ongletOptions": "Onglet Options"
       },
       "planning": {
         "groupe": "Planning",
@@ -5005,7 +4987,10 @@
       "nom_requis": "Saisissez d'abord le nom du salarié",
       "individu_cree": "Individu créé dans l'annuaire et rattaché à l'agence : enregistrez le salarié pour conserver le lien",
       "fiche_annuaire": "Fiche annuaire",
-      "fiche_annuaire_aide": "Ouvrir la fiche de l'individu (coordonnées, rattachements)"
+      "fiche_annuaire_aide": "Ouvrir la fiche de l'individu (coordonnées, rattachements)",
+      "champs_completes_un": "{{nombre}} champ complété depuis l'annuaire",
+      "champs_completes_autre": "{{nombre}} champs complétés depuis l'annuaire",
+      "aucune_agence": "Aucune agence de notre société dans l'annuaire"
     },
     "onglets": {
       "suivi": "Suivi",
@@ -5017,7 +5002,8 @@
       "controles": "Contrôles et habilitations",
       "affectations": "Affectations",
       "compteurs": "Compteurs",
-      "couts": "Coûts"
+      "couts": "Coûts",
+      "historique": "Historique"
     },
     "suivi_nouvelle": "Enregistrez la fiche pour suivre ses notes et ses tâches.",
     "infos": {
@@ -5044,7 +5030,10 @@
       "portable": "Portable",
       "rattachements": "Rattachements",
       "salarie": "Salarié",
-      "homonymes": "Homonymes"
+      "homonymes": "Homonymes",
+      "condition": "Condition",
+      "condition_hs": "Hors service",
+      "condition_endommage": "Endommagé"
     },
     "controles": {
       "entree_future": "Date d'entrée dans le futur",
@@ -5055,7 +5044,10 @@
       "chantier": "Chantier à préciser pour un matériel en chantier"
     },
     "materiel": {
-      "controles": "Contrôles réglementaires"
+      "controles": "Contrôles réglementaires",
+      "quantite_identifie": "Matériel identifié : toujours un seul",
+      "motif_etat": "Motif du changement (gardé dans l'historique du matériel) :",
+      "changement_etat": "Changement d'état du matériel"
     },
     "element": {
       "types": {
@@ -5348,7 +5340,7 @@
       },
       "document": "Document {{id}}",
       "tiers": "Tiers {{id}}",
-      "rechercher_tiers": "Rechercher un tiers (code, raison sociale)",
+      "rechercher_tiers": "Rechercher un tiers (code, raison sociale ; F4 : liste)",
       "prospect_aide": "Nouveau prospect : tiers provisoire de l'annuaire (doublons proposés)",
       "prospect": "Nouveau prospect (tiers provisoire)",
       "individu": "Individu {{id}}",
@@ -5432,7 +5424,8 @@
       "numero_rang": "n° {{rang}}",
       "document_cree": "{{nom}} {{numero}} créé",
       "commande": "Commande",
-      "avenants": "Avenants"
+      "avenants": "Avenants",
+      "choisir_tiers": "Choisir dans la liste des tiers (F4 ou double-clic dans le champ)"
     },
     "colonnes": {
       "facture": "Facture",
@@ -5547,7 +5540,7 @@
       "tiers": "Tiers {{id}}",
       "ouvrir_contact": "Ouvrir la fiche du contact",
       "contact": "Contact {{id}}",
-      "rechercher": "Rechercher un tiers",
+      "rechercher": "Rechercher un tiers (F4 : liste)",
       "tiers_fige": "Document issu d'une transformation : le tiers ne change plus",
       "nouveau_tiers": "Nouveau tiers (provisoire), après contrôle des doublons",
       "ecrire": "Écrire",
@@ -5558,7 +5551,10 @@
         "tiers": "Intervenant {{n}} : tiers ou contact à choisir",
         "unique": "Un seul intervenant « {{fonction}} »",
         "paiement_direct": "Intervenant {{n}} : paiement direct réservé aux sous-traitants"
-      }
+      },
+      "choisir_tiers": "Choisir dans la liste des tiers (F4 ou double-clic dans le champ), filtrée selon la fonction",
+      "intervenant": "intervenant",
+      "choix_titre": "Tiers : {{fonction}}"
     },
     "marche_commande": {
       "nouveau_chantier": "Nouveau chantier",
@@ -5664,9 +5660,9 @@
   },
   "documents_btp": {
     "avertissements": {
-      "points_un": "Point à vérifier",
-      "points_autre": "Points à vérifier",
-      "confirmer": "{{titre}} :\n\n{{liste}}\n\n{{verbe}} quand même ?"
+      "points_un": "{{nombre}} point à vérifier",
+      "points_autre": "{{nombre}} points à vérifier",
+      "question": "{{verbe}} quand même ?"
     },
     "sources": {
       "aide": "Documents validés du même tiers qui ont encore des lignes ouvertes. Chaque document coché devient une section du document, avec son pied.",
@@ -5897,7 +5893,7 @@
       "rafraichir_aide": "Revenir à la proposition calculée par la condition de paiement de la pièce",
       "rafraichir": "Rafraîchir",
       "enregistrer": "Enregistrer l'échéancier",
-      "sans_echeancier": "L'échéancier est calculé à la validation des factures et des avoirs (aperçu dans l'entête, section Règlement).",
+      "sans_echeancier": "L’échéancier est calculé à la validation des factures et des avoirs (aperçu ci-dessus, selon la condition de paiement).",
       "col": {
         "numero": "N°",
         "nature": "Nature",
@@ -6086,19 +6082,24 @@
         "AFF_DATE": "Début obligatoire, fin après le début",
         "AFF_SOI": "Un matériel ne s'affecte pas à lui-même",
         "AFF_CHEVAUCHEMENT": "Une seule affectation à la fois : périodes qui se chevauchent",
-        "AFF_BOUCLE": "Matériels porteurs en boucle"
+        "AFF_BOUCLE": "Matériels porteurs en boucle",
+        "AFF_RETOUR": "État du matériel au retour obligatoire pour terminer l’affectation"
       },
       "titre": "Affectations",
       "ajouter": "Nouvelle affectation (la précédente se termine la veille)",
       "aide": "Une affectation à la fois : un salarié, un intérimaire, un sous-traitant ou un autre matériel (porteur : le petit outillage d'un camion suit le camion).",
       "colonnes": {
         "type": "Affecté à",
-        "ressource": "Ressource"
+        "ressource": "Ressource",
+        "depart": "État au départ",
+        "retour": "État au retour"
       },
       "retirer": "Retirer cette affectation",
       "aucune": "Jamais affecté.",
       "faute": "affectation {{n}} : {{message}}",
-      "enregistrees": "Affectations enregistrées"
+      "enregistrees": "Affectations enregistrées",
+      "retour_obligatoire": "Obligatoire pour terminer l’affectation",
+      "retour_facultatif": "Facultatif"
     },
     "compteurs": {
       "unites": {
@@ -6124,7 +6125,8 @@
         "EVT_DATE": "Date obligatoire, fin après le début",
         "EVT_LIBELLE": "Libellé obligatoire",
         "EVT_LITRES": "Nombre de litres obligatoire",
-        "EVT_COUT": "Coût négatif"
+        "EVT_COUT": "Coût négatif",
+        "REL_MOTIF": "Motif de la rectification obligatoire"
       },
       "sources": {
         "SAISIE": "Saisie",
@@ -6132,7 +6134,8 @@
         "ORDRE": "Ordre",
         "BORNE": "Borne",
         "REPRISE": "Reprise de la fiche",
-        "TERRAIN": "Terrain"
+        "TERRAIN": "Terrain",
+        "INVENTAIRE": "Rectification"
       },
       "aucun": "Aucun relevé ni événement.",
       "frise": "Frise des compteurs et des événements",
@@ -6151,7 +6154,9 @@
         "litres": "Litres",
         "cout": "Coût HT",
         "remise": "Remise à zéro",
-        "description": "Description"
+        "description": "Description",
+        "valeur_corrigee": "Valeur corrigée",
+        "motif": "Motif"
       },
       "evenement": {
         "titre": "Événement",
@@ -6164,14 +6169,16 @@
         "litres": "{{litres}} l",
         "supprimer_evenement": "Supprimer cet événement",
         "titre": "Journal",
-        "origine": "Origine"
+        "origine": "Origine",
+        "rectification": "rectification"
       },
       "titre": "Compteurs et événements",
       "actions": {
         "releve": "Nouveau relevé du compteur",
         "plein": "Plein de carburant (coût porté au chantier de suivi)",
         "evenement": "Nouvel événement : panne, sinistre, contrôle…",
-        "ordre": "Nouvel ordre d'entretien (atelier)"
+        "ordre": "Nouvel ordre d'entretien (atelier)",
+        "rectifier": "Rectifier le compteur (valeur erronée, motif obligatoire)"
       },
       "actuels_html": "Compteurs : <b>{{valeurs}}</b>",
       "aucun_compteur": "Aucun compteur suivi (champ Compteurs de la fiche).",
@@ -6182,13 +6189,18 @@
         "retirer_releve": "Retirer ce relevé ?",
         "releve_retire": "Relevé retiré",
         "supprimer_evenement": "Supprimer cet événement et son relevé ?",
-        "evenement_supprime": "Événement supprimé"
+        "evenement_supprime": "Événement supprimé",
+        "rectifie": "Compteur rectifié"
       },
       "pointages": {
         "titre": "Heures pointées sur le terrain",
         "chantier": "Chantier",
         "conducteur": "Conducteur",
         "duree": "Durée"
+      },
+      "rectification": {
+        "titre": "Rectification du compteur",
+        "aide": "Corrige une valeur erronée (relevé initial, saisie) : la valeur peut être inférieure au relevé précédent ; le motif est gardé dans le journal."
       }
     },
     "equipes": {
@@ -6500,6 +6512,31 @@
       "habilitations_autre": "{{nombre}} habilitations",
       "expirees_un": "{{nombre}} expirée",
       "expirees_autre": "{{nombre}} expirées"
+    },
+    "etats": {
+      "sources": {
+        "CREATION": "Création",
+        "FICHE": "Fiche",
+        "AFFECTATION": "Affectation",
+        "REPRISE": "Reprise"
+      },
+      "disponibilites": {
+        "DISPO": "Disponible",
+        "CHANTIER": "En chantier",
+        "PANNE": "En panne",
+        "REBUT": "Rebut"
+      },
+      "titre": "Historique de l'état",
+      "aide": "Chaque changement de disponibilité ou de condition (fiche, retour d'une affectation) est gardé avec son motif.",
+      "colonnes": {
+        "date": "Date",
+        "disponibilite": "Disponibilité",
+        "condition": "Condition",
+        "motif": "Motif",
+        "origine": "Origine",
+        "par": "Par"
+      },
+      "aucun": "Aucun changement."
     }
   },
   "terrain_btp": {
@@ -7157,6 +7194,15 @@
         "importer": "Importer {{nombre}} ligne(s)",
         "fait": "Tarifs importés : {{crees}} création(s), {{maj}} mise(s) à jour"
       }
+    },
+    "choix": {
+      "tiers": "Choisir un tiers",
+      "relation": "Relation : {{relations}}",
+      "ou": " ou ",
+      "tiers_deja": "Tiers déjà choisi : choisissez-en un autre",
+      "contact": "Choisir un contact",
+      "contact_deja": "Contact déjà choisi : choisissez-en un autre",
+      "nouvel_individu": "Nouvel individu"
     }
   },
   "bibliotheque_btp": {
@@ -7308,6 +7354,10 @@
         "application": "Application",
         "nom": "LogiBTP",
         "moteur": "Moteur de calcul"
+      },
+      "densite": {
+        "titre": "Densité",
+        "aide": "Confortable : texte de 14 px et lignes plus hautes ; compacte : texte de 13 px et lignes serrées, pour voir plus de lignes à l’écran."
       }
     },
     "documents": {
@@ -7625,7 +7675,14 @@
       "marquer_aide": "Ajouter ou retirer des marques (listes rapides du stock) aux articles sélectionnés",
       "marques": "{{nombre}} article(s) marqué(s)",
       "imprimer_aide": "Aperçu et impression de la liste (vue et recherche en cours) ou d’étiquettes",
-      "titre": "Listes"
+      "titre": "Listes",
+      "creation": {
+        "ordre": "{{icone}} Ordre {{fleche}}",
+        "document": "{{icone}} Document {{fleche}}",
+        "ordre_execution": "{{type}} (choisir le marché)…",
+        "marche_a_lancer": "{{type}} : marché à lancer",
+        "ordre_entretien": "{{type}} (depuis la fiche du matériel)…"
+      }
     },
     "routes": {
       "fiche": "Fiche",
@@ -7779,5 +7836,70 @@
       },
       "superieur": "Supérieur"
     }
+  },
+  "erreurs": {
+    "ACOMPTE_EMIS": "La facture ou le reçu de cet acompte existe déjà",
+    "AFF_BOUCLE": "Matériels porteurs en boucle : le porteur choisi est lui-même porté par ce matériel",
+    "ARC_NUMERO": "Numéro d'accusé de réception : 50 caractères au plus",
+    "ARC_TYPE": "L'accusé de réception ne concerne que les commandes fournisseur et de sous-traitance",
+    "ATELIER_SALARIE": "Votre compte n'est lié à aucun salarié : l'écran de l'atelier propose les étapes d'un salarié",
+    "BLOCAGES_EXCLUSIFS": "PV fixe et PV affiché fixe sont exclusifs : seul le PV fixe est retenu",
+    "CONSULTATION_RETENUE": "Seule une offre validée du lot peut être retenue",
+    "CONSULTATION_TYPE": "Ce type de document n'a pas de lot de consultation",
+    "CONSULTATION_VIDE": "Pas encore de lot de consultation pour ce document",
+    "DECALAGE": "Décalage de 0 à 12 mois",
+    "ENT_MATERIEL": "Ordre sans matériel",
+    "ENT_NATURE": "Nature d'entretien inconnue",
+    "EQU_VERROU": "Le verrou de modification de l'équipe n'est plus détenu : elle est rechargée",
+    "EQU_VERSION": "L'équipe a été modifiée par ailleurs : elle est rechargée",
+    "ETAPES_ABSENTES": "Aucune étape à planifier",
+    "EXE_DATES": "Fin prévue avant le début",
+    "EXE_FAMILLE": "Ce document n'est pas un ordre d'exécution",
+    "EXE_MOTIF": "Motif obligatoire pour bloquer un ordre",
+    "FA_HORS_SECTION": "Tranche de frais annexes hors d'une section : non ventilée",
+    "FA_HORS_TRANCHE": "Ligne de frais annexes hors d'une tranche de frais annexes : non ventilée",
+    "FA_PIED": "Frais annexe de pied non ventilé : à remplacer par une tranche de frais annexes",
+    "FA_SANS_RECEPTRICE": "Aucune ligne pour recevoir les frais annexes de la tranche",
+    "FORMULE": "Libellé du modèle obligatoire",
+    "MARCHE_CREATION": "Commande d'un marché : créez ce document depuis la fiche du marché (toutes ses commandes)",
+    "MARCHE_SANS_COMMANDE": "Le marché n'a pas de commande validée",
+    "MARCHE_VENTE": "Seul un marché de vente se facture par avancement",
+    "METRE_ABSENT": "La quantité est issue d'un métré absent",
+    "MOIS_A_VENIR": "Mois à venir : rien à facturer",
+    "MOIS_ZERO": "Mois zéro (établissement des prix) obligatoire",
+    "OUVRAGE_SANS_COMPOSANTE": "Prix fixe interdit sur un ouvrage sans composante : ajoutez des composantes ou transformez la ligne en élément",
+    "PARCOURS_ABSENT": "Le chantier n'a pas de parcours d'exécution",
+    "PLANNING_SANS_TACHE": "Aucune tâche du planning pour cet ordre",
+    "PLAN_CODE": "Code du plan obligatoire : lettres, chiffres et _ (20 au plus)",
+    "PLAN_NATURE": "Nature inconnue",
+    "PV_AFFICHE_FIXE": "Le PV affiché fixe est réservé aux lignes de prix",
+    "REL_LIE": "Relevé introuvable ou lié à un événement ou à un ordre",
+    "REV_FERME": "Marché à prix ferme : aucune révision",
+    "REV_RIEN": "Aucune régularisation de révision à facturer",
+    "REV_SOUS_TRAITANCE": "Marché de sous-traitance : la régularisation passe sur la facture d'avancement suivante",
+    "REV_TIERS": "Client du marché à renseigner",
+    "SERVICE_MEMBRE": "Membre en double",
+    "SERVICE_NIVEAUX": "Deux niveaux de services au plus (service, sous-service)",
+    "STK_ARTICLE": "Article non géré en stock",
+    "STK_BORNE_DEPOT": "Aucun dépôt de stock pour cette borne (paramétrage des bornes)",
+    "STK_MOTIF": "Motif obligatoire pour refuser une saisie",
+    "ST_CIBLE": "Appel d'offres ou commande de sous-traitance",
+    "ST_LIGNES": "Aucune ligne de prix dans la sélection",
+    "ST_SOURCE": "Seuls une commande ou un devis client, un ordre de sous-traitance se sous-traitent",
+    "ST_UN_SEUL": "Une commande de sous-traitance est passée à un seul sous-traitant",
+    "TERRAIN_DEMANDE": "Au moins un article ou besoin",
+    "TERRAIN_LIVRAISON": "Au moins une quantité reçue",
+    "TERRAIN_MATERIEL": "Rien à enregistrer",
+    "TERRAIN_PERSONNE": "Compte sans salarié lié",
+    "TERRAIN_PHOTO": "Images seulement",
+    "TERRAIN_RECEPTION_ETAT": "Sans réserve, avec réserves ou refusée",
+    "TERRAIN_RECEPTION_TYPE": "La réception se signe sur un ordre de pose",
+    "TERRAIN_RESERVES": "Au moins une réserve",
+    "TERRAIN_SAV_OBJET": "Objet de l'intervention obligatoire",
+    "TERRAIN_SAV_TEXTE": "Constat et travaux obligatoires",
+    "TERRAIN_SAV_TYPE": "Cet ordre n'est pas une intervention SAV",
+    "TERRAIN_SIGNATAIRE": "Nom du signataire obligatoire",
+    "TERRAIN_TACHE": "Tâche absente de votre journée",
+    "TYPE_PRIX": "Type de prix FERME, ACTUALISABLE ou REVISABLE"
   }
 }

@@ -32,12 +32,12 @@ public static class SalariesAnnuaire
     /// <summary>Résumé du salarié lié à un individu, ou null.</summary>
     public static Task<object?> Salarie(IServiceProvider sp, long indId, CancellationToken ct) => Executer<object?>(sp, async cnx =>
     {
-        await using var cmd = Commande(cnx, "SELECT sal_id, sal_matricule, sal_poste, sal_agence, sal_statut, sal_actif FROM salarie WHERE sal_ind_id = @i", ("i", indId));
+        await using var cmd = Commande(cnx, "SELECT sal_id, sal_code, sal_poste, sal_agence, sal_statut, sal_actif FROM salarie WHERE sal_ind_id = @i", ("i", indId));
         await using var rd = await cmd.ExecuteReaderAsync(ct);
         if (!await rd.ReadAsync(ct)) return null;
         return new
         {
-            id = rd.GetInt32(0), matricule = rd.GetString(1), poste = rd.IsDBNull(2) ? null : rd.GetString(2), agence = rd.IsDBNull(3) ? null : rd.GetString(3),
+            id = rd.GetInt32(0), code = rd.IsDBNull(1) ? null : rd.GetString(1), poste = rd.IsDBNull(2) ? null : rd.GetString(2), agence = rd.IsDBNull(3) ? null : rd.GetString(3),
             statut = rd.IsDBNull(4) ? null : rd.GetString(4), actif = rd.GetBoolean(5),
         };
     }, ct);
@@ -74,21 +74,21 @@ public static class SalariesAnnuaire
                 """, ("i", ind));
             if (await compte.ExecuteNonQueryAsync(ct) > 0) LogiBTP.Authentification.Web.ServiceAuthentification.OublierSessions();
         }
-        // Agence : « LogiBTP Démo » (Lyon) ou « LogiBTP Démo – Agence de … » (même règle que db/142).
-        var agence = Texte(v.GetValueOrDefault("agence"));
-        var libelle = agence is null or "Lyon" ? "LogiBTP Démo" : $"LogiBTP Démo – Agence de {agence}";
+        // Agence : personne de l'annuaire (notre société ou un de ses niveaux inférieurs, v_agences_societe de db/251) ;
+        // le rattachement du salarié à l'une d'elles est déplacé, sinon créé.
+        var agence = long.TryParse(Texte(v.GetValueOrDefault("agence")), out var a) ? a : (long?)null;
         var poste = Texte(v.GetValueOrDefault("poste"));
         var entree = Texte(v.GetValueOrDefault("date_entree"));
         await using var maj = Commande(cnx, """
-            WITH agence AS (SELECT per_id FROM personne WHERE per_raison_sociale = @agence LIMIT 1),
+            WITH agence AS (SELECT per_id FROM v_agences_societe WHERE per_id = @agence),
             maj AS (
                 UPDATE rattachement SET rat_fonction = @fonction, rat_service = @service, rat_debut = CAST(@debut AS date), rat_actif = @actif,
                        rat_per_id = coalesce((SELECT per_id FROM agence), rat_per_id), rat_modifie_le = now()
-                WHERE rat_ind_id = @i AND rat_per_id IN (SELECT per_id FROM personne WHERE per_raison_sociale LIKE 'LogiBTP Démo%')
+                WHERE rat_ind_id = @i AND rat_per_id IN (SELECT per_id FROM v_agences_societe)
                 RETURNING rat_id)
             INSERT INTO rattachement (rat_ind_id, rat_per_id, rat_fonction, rat_service, rat_debut, rat_actif)
             SELECT @i, per_id, @fonction, @service, CAST(@debut AS date), @actif FROM agence WHERE NOT EXISTS (SELECT 1 FROM maj)
-            """, ("agence", libelle), ("fonction", poste is null ? null : poste + (interim ? " (intérim)" : "")), ("service", Texte(v.GetValueOrDefault("service"))),
+            """, ("agence", agence), ("fonction", poste is null ? null : poste + (interim ? " (intérim)" : "")), ("service", Texte(v.GetValueOrDefault("service"))),
             ("debut", entree is null ? null : entree[..10]), ("actif", actif), ("i", ind));
         return await maj.ExecuteNonQueryAsync(ct);
     }, ct);

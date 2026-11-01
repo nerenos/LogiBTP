@@ -254,7 +254,6 @@ dialog.dialogue-options { max-width: min(820px, calc(100vw - 32px)); }
 .document-import details summary { cursor: pointer; font-weight: 600; margin-top: 4px; }
 
 /* Onglet Traçabilité : origine, documents liés, historique. */
-.vue-tracabilite { overflow: auto; padding: 1rem; }
 .vue-reglements { overflow: auto; padding: 1rem; }
 .reglements-document section { margin-bottom: 1.5rem; }
 .reglements-document .avertissement { color: var(--avertissement, #b45309); }
@@ -469,7 +468,21 @@ iframe.edition-impression { position: fixed; width: 0; height: 0; border: 0; vis
 .crm-ajout-lien { margin-top: .4rem; }
 .crm-pieces { min-height: 6rem; }
 .crm-note-cote, .crm-note-principal { min-width: 0; }
-.vue-suivi { overflow: auto; }
+.vue-suivi { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; border-top: 1px solid var(--bord); }
+/* Onglet Suivi (D7) : Suivi du CRM en haut, traçabilité en bas ; une partie réduite garde son titre. */
+.vue-suivi .suivi-partie { display: flex; flex-direction: column; min-height: 0; }
+.vue-suivi .suivi-crm { flex: 0 1 50%; }
+.vue-suivi .suivi-tracabilite { flex: 1 1 0; }
+.vue-suivi .suivi-entete { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.3rem 0.2rem; border-bottom: 1px solid var(--bord); }
+.vue-suivi .suivi-entete h3 { margin: 0; font-size: 1rem; }
+.vue-suivi .suivi-contenu { flex: 1; min-height: 0; overflow: auto; }
+.vue-suivi .suivi-tracabilite .suivi-contenu { padding: 0.6rem 1rem; }
+.vue-suivi .suivi-partie.reduite { flex: none !important; }
+.vue-suivi .suivi-partie.reduite .suivi-contenu { display: none; }
+.vue-suivi .separateur-suivi { flex: none; height: 6px; cursor: row-resize; }
+.vue-suivi:has(.suivi-partie.reduite) .separateur-suivi { display: none; }
+.vue-suivi.sans-crm .suivi-crm, .vue-suivi.sans-crm .separateur-suivi { display: none; }
+.vue-options { overflow: auto; padding-top: 0.6rem; border-top: 1px solid var(--bord); }
 .crm-pastille { display: inline-block; width: .75em; height: .75em; border-radius: 50%; background: var(--bord); vertical-align: middle; }
 .crm-pastille-rouge { background: var(--crm-rappel-rouge); }
 .crm-pastille-orange { background: var(--crm-rappel-orange); }
@@ -614,7 +627,7 @@ details.avertissement > summary { cursor: pointer; }
 .synthese-exceptions .badge-exception { margin: 1px 0; }
 /* Tableau compact : séparations atténuées, en-têtes figés au défilement de leur conteneur, titres sur deux lignes. */
 .tableau-compact { border-collapse: separate; border-spacing: 0; width: 100%; }
-.tableau-compact th, .tableau-compact td { padding: 2px 6px; border-bottom: 1px solid color-mix(in srgb, var(--bord) 45%, transparent); vertical-align: top; line-height: 1.25; }
+.tableau-compact th, .tableau-compact td { padding: var(--cellule-marge); border-bottom: 1px solid color-mix(in srgb, var(--bord) 45%, transparent); vertical-align: top; line-height: 1.25; }
 .tableau-compact th + th, .tableau-compact td + td { border-left: 1px solid color-mix(in srgb, var(--bord) 30%, transparent); }
 .tableau-compact thead th { position: sticky; top: 0; z-index: 1; background: var(--surface); border-bottom: 1px solid var(--bord); font-weight: 600; white-space: nowrap; }
 .tableau-compact small { font-size: .78em; color: var(--discret); font-weight: normal; }
@@ -674,7 +687,7 @@ details.avertissement > summary { cursor: pointer; }
 .tuiles-ressources .tuile-aplanifier.glissable { padding: .25rem .4rem; gap: 0; }
 .tuiles-ressources .ta-entete b { font-weight: 600; }
 .barre-aplanifier input[type="search"] { flex: 1; min-width: 8rem; }
-.panneau-planning .tableau-compact input[type="date"] { width: 8.2rem; }
+.panneau-planning .tableau-compact input[type="date"], .panneau-planning .tableau-compact input.champ-date { width: 8.2rem; }
 .tuiles-aplanifier { display: grid; grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)); gap: .4rem; }
 .tuile-aplanifier { border: 1px solid var(--bord); border-radius: 6px; padding: .35rem .45rem; background: var(--surface); display: flex; flex-direction: column; gap: .15rem; }
 .tuile-aplanifier.glissable { cursor: grab; }
@@ -687,7 +700,7 @@ details.avertissement > summary { cursor: pointer; }
 .tuile-aplanifier .ta-service { font-size: .85em; color: var(--discret); border-left: 3px solid var(--ta-couleur); padding-left: .3rem; }
 .tuile-aplanifier .ta-jauge { height: 5px; border-radius: 3px; background: var(--titre-fond); overflow: hidden; }
 .tuile-aplanifier .ta-jauge i { display: block; height: 100%; background: var(--accent); }
-.tuile-aplanifier input[type="date"] { width: 100%; box-sizing: border-box; }
+.tuile-aplanifier input[type="date"], .tuile-aplanifier input.champ-date { width: 100%; box-sizing: border-box; }
 .panneau-planning .onglets button.actif { font-weight: 600; text-decoration: underline; }
 .panneau-planning tr.glissable { cursor: grab; }
 /* Entête du panneau (onglets, boutons de la tâche) figée au défilement. */
@@ -894,7 +907,7 @@ button.lien { background: none; border: none; padding: 0; color: var(--lien, #1d
 .etapes-ordre { overflow-x: auto; margin-bottom: 0.5rem; }
 .etapes-tableau th.en-cours { box-shadow: inset 0 -3px 0 var(--accent, #2563eb); }
 .etapes-tableau td { white-space: nowrap; }
-.etapes-tableau td.erreur input[type="date"] { color: var(--execution-alerte); font-weight: 600; }
+.etapes-tableau td.erreur input[type="date"], .etapes-tableau td.erreur input.champ-date { color: var(--execution-alerte); font-weight: 600; }
 .etape-pastille { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
 
 /* Exécution, lot 2d : étapes au planning (jalon de durée nulle en losange, attente en bande hachurée). */

@@ -1,5 +1,5 @@
 {
-  "description": "Recherche (chaque mot dans au moins une colonne), segments, tri avec vides en dernier puis ID, pagination par clé. Textes de tri en minuscules ASCII : même ordre quelle que soit la collation. Filtres fixes de la vue (« filtres ») : toujours appliqués, en ET. Types d'élément du thème (« types ») : la ligne doit être de l'un d'eux (vide = tous). Colonne multivaluée (tableau, « etiquettes ») : un segment ou un filtre « parmi » retient la ligne si l'une de ses valeurs est retenue (vide = tableau vide ou absent) ; les comptes portent sur chaque valeur ; la recherche et « contient » portent sur les valeurs jointes par « , ».",
+  "description": "Recherche (chaque mot dans au moins une colonne), segments, tri avec vides en dernier puis ID, pagination par clé. Textes de tri en minuscules ASCII : même ordre quelle que soit la collation. Filtres fixes de la vue (« filtres ») : toujours appliqués, en ET. Types d'élément du thème (« types ») : la ligne doit être de l'un d'eux (vide = tous). Colonne multivaluée (tableau, « etiquettes ») : un segment ou un filtre « parmi » retient la ligne si l'une de ses valeurs est retenue (vide = tableau vide ou absent) ; les comptes portent sur chaque valeur ; la recherche et « contient » portent sur les valeurs jointes par « , ». Agrégats (« agregats », totaux et indicateurs) : somme (vides ignorés, ensemble vide : 0), moyenne, min, max (ensemble vide : null), compte, ratio = compte(filtres) ÷ compte(dénominateur) (null si nul) ; chaque agrégat a ses filtres propres ; « _lignes » = nombre de lignes de la sélection ; « filtres » de la requête = filtres supplémentaires (indicateur cliqué).",
   "source": {
     "colonnes": [
       {
@@ -752,6 +752,169 @@
           "nombre": 1
         }
       ]
+    }
+  ],
+  "agregats": [
+    {
+      "nom": "tout",
+      "requete": {},
+      "agregats": [
+        {
+          "code": "s",
+          "calcul": "somme",
+          "colonne": "montant"
+        },
+        {
+          "code": "min",
+          "calcul": "min",
+          "colonne": "montant"
+        },
+        {
+          "code": "max",
+          "calcul": "max",
+          "colonne": "montant"
+        },
+        {
+          "code": "n",
+          "calcul": "compte"
+        },
+        {
+          "code": "moy",
+          "calcul": "moyenne",
+          "colonne": "montant"
+        }
+      ],
+      "attendu": {
+        "_lignes": 7,
+        "s": 675.5,
+        "min": 15,
+        "max": 300,
+        "n": 7,
+        "moy": 112.5833333333
+      }
+    },
+    {
+      "nom": "segment, filtres propres et ratio",
+      "requete": {
+        "segments": {
+          "ville": [
+            "lyon"
+          ]
+        }
+      },
+      "agregats": [
+        {
+          "code": "actifs",
+          "calcul": "somme",
+          "colonne": "montant",
+          "filtres": [
+            {
+              "colonne": "actif",
+              "op": "vrai"
+            }
+          ]
+        },
+        {
+          "code": "sans_montant",
+          "calcul": "compte",
+          "filtres": [
+            {
+              "colonne": "montant",
+              "op": "vide"
+            }
+          ]
+        },
+        {
+          "code": "taux",
+          "calcul": "ratio",
+          "filtres": [
+            {
+              "colonne": "montant",
+              "op": ">=",
+              "valeur": "100"
+            }
+          ],
+          "denominateur": [
+            {
+              "colonne": "montant",
+              "op": "nonvide"
+            }
+          ]
+        },
+        {
+          "code": "moy",
+          "calcul": "moyenne",
+          "colonne": "montant"
+        }
+      ],
+      "attendu": {
+        "_lignes": 3,
+        "actifs": 200.5,
+        "sans_montant": 1,
+        "taux": 0.5,
+        "moy": 100.25
+      }
+    },
+    {
+      "nom": "sélection vide",
+      "requete": {
+        "recherche": "zzz"
+      },
+      "agregats": [
+        {
+          "code": "s",
+          "calcul": "somme",
+          "colonne": "montant"
+        },
+        {
+          "code": "moy",
+          "calcul": "moyenne",
+          "colonne": "montant"
+        },
+        {
+          "code": "n",
+          "calcul": "compte"
+        },
+        {
+          "code": "taux",
+          "calcul": "ratio",
+          "filtres": [
+            {
+              "colonne": "actif",
+              "op": "vrai"
+            }
+          ]
+        }
+      ],
+      "attendu": {
+        "_lignes": 0,
+        "s": 0,
+        "moy": null,
+        "n": 0,
+        "taux": null
+      }
+    },
+    {
+      "nom": "filtres de la requête (indicateur cliqué)",
+      "requete": {
+        "filtres": [
+          {
+            "colonne": "actif",
+            "op": "faux"
+          }
+        ]
+      },
+      "agregats": [
+        {
+          "code": "s",
+          "calcul": "somme",
+          "colonne": "montant"
+        }
+      ],
+      "attendu": {
+        "_lignes": 2,
+        "s": 95
+      }
     }
   ]
 }

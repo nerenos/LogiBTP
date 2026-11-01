@@ -42,9 +42,19 @@ export const LIBELLES_CONTROLE_SAISIE = Object.freeze({
   [CONTROLE_SAISIE.CHANTIER_LIGNE]: 'Autre chantier',
 });
 
+/** Colonnes de la grille en cause par contrôle de saisie (cellule soulignée, D1). */
+export const COLONNES_CONTROLE_SAISIE = Object.freeze({
+  [CONTROLE_SAISIE.UNITE_MANQUANTE]: Object.freeze(['unite']),
+  [CONTROLE_SAISIE.COEF_FG_INFERIEUR]: Object.freeze(['fg']),
+  [CONTROLE_SAISIE.COEF_BENEF_INFERIEUR]: Object.freeze(['benef']),
+  [CONTROLE_SAISIE.PRIX_NUL]: Object.freeze(['pa', 'pv']),
+  [CONTROLE_SAISIE.QTE_NULLE]: Object.freeze(['qte']),
+  [CONTROLE_SAISIE.CHANTIER_LIGNE]: Object.freeze(['chantier']),
+});
+
 /**
  * Avertissements de saisie des lignes de prix et de leurs composantes (lignes calculées) : [{ lig_id, code, message,
- * gravite }]. Lignes écartées : écart d'arrondi, pour mémoire et frais annexes (type de prix effectif). Coefficients :
+ * gravite, colonnes (cellules en cause) }]. Lignes écartées : écart d'arrondi, pour mémoire et frais annexes (type de prix effectif). Coefficients :
  * ventes seulement, sur les lignes sans composante et sur les ouvrages calculés par leurs coefficients (mode D).
  * options : { famille, modeOuvrage, typePrix(l) → type de prix effectif, qteNulle (false : quantités à 0 non signalées,
  * documents transformés ou d'avancement dont les lignes soldées restent à 0), achat (document d'achat) et chantier
@@ -53,7 +63,7 @@ export const LIBELLES_CONTROLE_SAISIE = Object.freeze({
 export function controlesSaisie(lignes, { famille = 'V', modeOuvrage = 'V', typePrix = (l) => l.lig_type_prix ?? 'V', qteNulle = true, achat = false, chantier = null } = {}) {
   const parents = new Set(lignes.map((l) => l.lig_parent_id).filter((p) => p !== null && p !== undefined));
   const res = [];
-  const ajouter = (l, code, message) => res.push({ lig_id: l.lig_id, code, message, gravite: 'avertissement' });
+  const ajouter = (l, code, message) => res.push({ lig_id: l.lig_id, code, message, gravite: 'avertissement', colonnes: COLONNES_CONTROLE_SAISIE[code] });
   for (const l of lignes) {
     if (!estChiffree(l) || l.lig_is_ecart_arrondi || ['M', 'F'].includes(typePrix(l))) continue;
     const compose = parents.has(l.lig_id);

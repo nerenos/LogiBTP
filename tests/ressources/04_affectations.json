@@ -1,5 +1,5 @@
 {
-  "description": "Affectations d'un matériel (client/src/app/ressources/affectations.js ↔ ReglesAffectations.cs) : une affectation datée (du, au facultatif = en cours) à un salarié, un intérimaire, un sous-traitant ou un autre matériel (porteur : petit outillage dans un camion) ; contrôle d'une saisie (type, dates, matériel lui-même, chevauchement : une seule affectation à la fois, la seconde des deux est signalée), affectation à une date. Dates ISO comparées en texte, identifiants comparés en texte.",
+  "description": "Affectations d'un matériel (client/src/app/ressources/affectations.js ↔ ReglesAffectations.cs) : une affectation datée (du, au facultatif = en cours) à un salarié, un intérimaire, un sous-traitant ou un autre matériel (porteur : petit outillage dans un camion) ; contrôle d'une saisie (type, dates, matériel lui-même, chevauchement : une seule affectation à la fois, la seconde des deux est signalée ; matériel identifié : état au retour d'une affectation terminée, sauf reprise), affectation à une date. Dates ISO comparées en texte, identifiants comparés en texte.",
   "controles": [
     {
       "nom": "historique valable : périodes successives, la dernière en cours",
@@ -41,6 +41,24 @@
       "materiel": "7",
       "affectations": [{ "type": "SALARIE", "id": "", "du": "2026-01-05", "au": null }],
       "attendu": [{ "code": "AFF_CIBLE", "affectation": 0 }]
+    },
+    {
+      "nom": "matériel identifié : retour obligatoire pour une affectation terminée, sauf reprise ; en cours sans retour",
+      "materiel": "7",
+      "identifie": true,
+      "affectations": [
+        { "type": "SALARIE", "id": "12", "du": "2025-01-05", "au": "2025-06-30", "retour_requis": false },
+        { "type": "SALARIE", "id": "12", "du": "2026-01-05", "au": "2026-02-28", "retour": "BON" },
+        { "type": "SALARIE", "id": "13", "du": "2026-03-01", "au": "2026-03-31", "retour": " " },
+        { "type": "SALARIE", "id": "14", "du": "2026-04-01", "au": null }
+      ],
+      "attendu": [{ "code": "AFF_RETOUR", "affectation": 2 }]
+    },
+    {
+      "nom": "matériel par nombre : pas d'état de retour exigé",
+      "materiel": "7",
+      "affectations": [{ "type": "SALARIE", "id": "12", "du": "2026-01-05", "au": "2026-02-28" }],
+      "attendu": []
     }
   ],
   "a_date": [

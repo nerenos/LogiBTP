@@ -14,6 +14,7 @@ import { champRattachement } from '../structure/selection.js';
 import { VueGrapheStructure } from '../structure/graphe-structure.js';
 import { individusStructure } from '../panneaux-btp.js';
 import { creerTiersProvisoire } from '@logibtp/annuaire/ui';
+import { choisirTiers } from '../annuaire/choix.js';
 
 // Fiches de la structure des affaires : projet, affaire, chantier, marché. Listes de choix des références (affaire,
 // projet, chantier, commande d'origine, tiers de l'annuaire), code prévisionnel du chrono (module Fiche), préremplissage depuis un
@@ -108,7 +109,15 @@ export class FicheStructure extends FicheLogiBTP {
   /** Choix d'une référence : une spécialisation complète les champs liés (parents, client du projet…). */
   choisirReference(code, id) { this.definirValeur(code, id); }
 
-  /** Tiers de l'annuaire : recherche par code ou raison sociale (liste proposée), l'ID est enregistré. */
+  /** Relations proposées par défaut dans la liste des tiers (I1) : client ou prospect ; sous-traitant d'un marché ST. */
+  relationsTiers() {
+    return this.type === TYPE_FICHE.MARCHE && this.valeur('sens') === 'ST' ? ['SOUS_TRAITANT'] : ['CLIENT', 'PROSPECT'];
+  }
+
+  /**
+   * Tiers de l'annuaire : recherche par code ou raison sociale (liste proposée), ou liste complète des tiers (🔍, F4,
+   * double-clic) filtrée selon la fiche ; l'ID est enregistré.
+   */
   #champTiers(champ, valeur, lecture) {
     const annuaire = this.services.annuaire;
     const span = document.createElement('span');
@@ -126,11 +135,22 @@ export class FicheStructure extends FicheLogiBTP {
       return span;
     }
     const id = `tiers-${champ.code}-${Math.random().toString(36).slice(2, 8)}`;
-    span.innerHTML = `<input type="search" class="fiche-saisie-champ" list="${id}" value="${echapper(nom ?? (valeur ? texte('fiches_btp.structure.tiers', { id: valeur }) : ''))}" placeholder="${texteHtml('fiches_btp.structure.rechercher_tiers')}"><datalist id="${id}"></datalist>`;
+    span.innerHTML = `<input type="search" class="fiche-saisie-champ" list="${id}" value="${echapper(nom ?? (valeur ? texte('fiches_btp.structure.tiers', { id: valeur }) : ''))}" placeholder="${texteHtml('fiches_btp.structure.rechercher_tiers')}"><datalist id="${id}"></datalist>
+      <button type="button" class="bouton-icone" data-liste-tiers title="${texteHtml('fiches_btp.structure.choisir_tiers')}">${iconeHtml('rechercher')}</button>`;
     const input = span.querySelector('input');
     const liste = span.querySelector('datalist');
     let resultats = [];
     let minuterie = null;
+    const ouvrirListe = async () => {
+      const p = await choisirTiers({ relations: this.relationsTiers(champ), titre: champ.libelle ?? 'Tiers', recherche: valeur ? '' : input.value.trim() });
+      if (!p) return;
+      this.tiersNoms.set(p.id, `${p.code ?? ''} – ${p.raison_sociale ?? ''}`);
+      this.definirValeur(champ.code, p.id);
+      this.rendre();
+    };
+    span.querySelector('[data-liste-tiers]').addEventListener('click', ouvrirListe);
+    input.addEventListener('keydown', (e) => { if (e.key === 'F4') { e.preventDefault(); ouvrirListe(); } });
+    input.addEventListener('dblclick', ouvrirListe);
     input.addEventListener('input', () => {
       clearTimeout(minuterie);
       const choisi = resultats.find((p) => `${p.code} – ${p.raison_sociale}` === input.value);

@@ -11,5 +11,7 @@
   "fiche_monter": "↑",
   "fiche_descendre": "↓",
   "fiche_deplier": "▸",
-  "fiche_replier": "▾"
+  "fiche_replier": "▾",
+  "fiche_synthese": "📊",
+  "fiche_onglet_alerte": "⚠"
 }

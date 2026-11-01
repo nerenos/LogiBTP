@@ -38,11 +38,16 @@ function texteLiberation(l) {
 }
 
 /**
- * Rendu de l'onglet. ctx : { app, page (page document : editeur, chargerDocument), modes [[code, libellé]] }.
+ * Rendu de l'onglet. ctx : { app, page (page document : editeur, panneaux, chargerDocument), modes [[code, libellé]] }.
+ * En tête, seul endroit de leur saisie (D9) : condition de paiement et mode de règlement du document, avec l'aperçu
+ * de l'échéancier tant qu'il n'est pas enregistré (`PanneauxDocument.rendreReglement`).
  */
-export async function afficherReglements(zone, { app, page, modes }) {
+export async function afficherReglements(racine, { app, page, modes }) {
   const ed = page.editeur;
   const doc = ed.saisie.document;
+  racine.innerHTML = '<section class="panneau reglement-conditions"></section><div class="reglements-corps"></div>';
+  page.panneaux?.rendreReglement(racine.querySelector('.reglement-conditions'), { apercu: !(ed.saisie.echeances ?? []).length });
+  const zone = racine.querySelector('.reglements-corps');
   if (!doc.ent_id) { zone.innerHTML = `<p class="aide">${texteHtml('reglements_btp.document.non_enregistre')}</p>`; return; }
   zone.innerHTML = `<p class="aide">${texteHtml('reglements_btp.document.chargement')}</p>`;
   const type = ed.definition.type ?? {};
@@ -211,7 +216,7 @@ export async function afficherReglements(zone, { app, page, modes }) {
     const x = choix[r.i];
     await api.imputer({ echeance_id: x.cible, montant: r.montant, avoir_echeance_id: x.avoir ?? null, reglement_id: x.reglement ?? null, date: r.date, commentaire: r.commentaire });
     app.message(texte('reglements_btp.document.impute'), 'succes');
-    await afficherReglements(zone, { app, page, modes });
+    await afficherReglements(racine, { app, page, modes });
   };
 
   rendre();

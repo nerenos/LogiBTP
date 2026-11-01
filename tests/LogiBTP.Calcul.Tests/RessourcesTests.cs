@@ -122,7 +122,8 @@ public class RessourcesTests
         Assert.True(ReglesEquipes.Contient(sous, 1, 3));
         Assert.False(ReglesEquipes.Contient(sous, 3, 1));
     }
-    private static AffectationMateriel Affectation(JsonNode a) => new(a["type"]!.GetValue<string>(), a["id"]?.GetValue<string>(), Jour(a["du"]), Jour(a["au"]));
+    private static AffectationMateriel Affectation(JsonNode a) => new(a["type"]!.GetValue<string>(), a["id"]?.GetValue<string>(), Jour(a["du"]), Jour(a["au"]),
+        a["retour"]?.GetValue<string>(), a["retour_requis"]?.GetValue<bool>() ?? true);
 
     [Fact]
     public void Affectations_identiques_au_js()
@@ -131,7 +132,8 @@ public class RessourcesTests
         foreach (var c in j["controles"]!.AsArray())
         {
             var attendu = c!["attendu"]!.AsArray().Select(x => new ErreurAffectation(x!["code"]!.GetValue<string>(), x["affectation"]!.GetValue<int>())).ToList();
-            Assert.Equal(attendu, ReglesAffectations.Controler(c["materiel"]!.GetValue<string>(), c["affectations"]!.AsArray().Select(a => Affectation(a!)).ToList()));
+            Assert.Equal(attendu, ReglesAffectations.Controler(c["materiel"]!.GetValue<string>(), c["affectations"]!.AsArray().Select(a => Affectation(a!)).ToList(),
+                c["identifie"]?.GetValue<bool>() ?? false));
         }
         foreach (var c in j["a_date"]!.AsArray())
         {
@@ -152,7 +154,8 @@ public class RessourcesTests
     private static decimal? Nombre(JsonNode? n) => n?.GetValue<decimal>();
 
     private static ReleveCompteur Releve(JsonNode r) =>
-        new(r["unite"]?.GetValue<string>(), Jour(r["date"]), Nombre(r["valeur"]), r["remise"]?.GetValue<bool>() ?? false);
+        new(r["unite"]?.GetValue<string>(), Jour(r["date"]), Nombre(r["valeur"]), r["remise"]?.GetValue<bool>() ?? false,
+            r["rectification"]?.GetValue<bool>() ?? false, r["commentaire"]?.GetValue<string>());
 
     [Fact]
     public void Compteurs_identiques_au_js()

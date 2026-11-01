@@ -160,8 +160,8 @@ export class PagePlanning extends PageBase {
 
   async ouvrir() {
     this.titre = texte('planning_btp.routes.planning');
-    this.conteneur.innerHTML = `<div class="page-planning"><div class="barre-planning ligne">
-        <span class="menu-deroulant" data-menu="options"><button type="button" class="bouton-icone" data-ouvrir-menu="options" title="${texteHtml('planning_btp.barre.options_titre')}" aria-label="${texteHtml('planning_btp.barre.options')}">${iconeHtml('planning_btp_options')}</button>
+    this.conteneur.innerHTML = `<div class="page-planning"><div class="barre-planning ligne barre-outils" role="toolbar">
+        <span class="groupe-outils"><span class="menu-deroulant" data-menu="options"><button type="button" class="bouton-icone" data-ouvrir-menu="options" title="${texteHtml('planning_btp.barre.options_titre')}" aria-label="${texteHtml('planning_btp.barre.options')}">${iconeHtml('planning_btp_options')}</button>
           <div class="menu-deroulant-contenu menu-options-planning" data-contenu-menu="options" hidden>
             <div class="mo-ligne"><span>${texteHtml('planning_btp.barre.zoom')}</span><span><button type="button" data-zoom="0.8" title="${texteHtml('planning_btp.barre.zoom_arriere')}">${iconeHtml('planning_btp_zoom_arriere')}</button><button type="button" data-zoom="1.25" title="${texteHtml('planning_btp.barre.zoom_avant')}">${iconeHtml('ajouter')}</button></span></div>
             <div class="mo-ligne"><span>${texteHtml('planning_btp.barre.hauteur')}</span><span data-lignes-texte></span></div>
@@ -169,14 +169,14 @@ export class PagePlanning extends PageBase {
             <div class="mo-ligne" data-ligne-synchro><span>${texteHtml('planning_btp.barre.rafraichissement')}</span><span data-synchro></span></div></div></span>
         <b>${iconeHtml('planning_btp_planning')}</b> <span data-vue></span>
         <button type="button" data-prec title="${texteHtml('planning_btp.barre.precedente')}">${iconeHtml('precedent')}</button><button type="button" data-aujourdhui>${texteHtml('planning.vue.aujourdhui')}</button><button type="button" data-suiv title="${texteHtml('planning_btp.barre.suivante')}">${iconeHtml('suivant')}</button>
-        <span data-periode class="aide"></span> <span data-echelle></span>
-        <span class="menu-deroulant" data-menu="services"><button type="button" data-ouvrir-menu="services" title="${texteHtml('planning_btp.barre.services_titre')}">${iconeHtml('planning_btp_service')} <span data-libelle-services>${texteHtml('planning_btp.barre.services')}</span> ${iconeHtml('replier')}</button>
+        <span data-periode class="aide"></span> <span data-echelle></span></span>
+        <span class="groupe-outils"><span class="menu-deroulant" data-menu="services"><button type="button" data-ouvrir-menu="services" title="${texteHtml('planning_btp.barre.services_titre')}">${iconeHtml('planning_btp_service')} <span data-libelle-services>${texteHtml('planning_btp.barre.services')}</span> ${iconeHtml('replier')}</button>
           <div class="menu-deroulant-contenu" data-contenu-menu="services" hidden></div></span>
-        <input type="search" data-recherche placeholder="${texteHtml('planning_btp.barre.recherche')}" size="14"> <button type="button" data-actualiser title="${texteHtml('commun.actualiser')}">${iconeHtml('planning_btp_actualiser')}</button>
-        <button type="button" data-nouvelle>${iconeHtml('ajouter')} ${texteHtml('planning_btp.barre.tache')}</button> <button type="button" data-annuler title="${texteHtml('planning_btp.historique.annuler', { touches: libelleRaccourci('annuler', 'planning') })}" disabled>${iconeHtml('planning_btp_annuler')}</button><button type="button" data-retablir title="${texteHtml('planning_btp.historique.retablir', { touches: libelleRaccourci('retablir', 'planning') })}" disabled>${iconeHtml('planning_btp_retablir')}</button>
-        <button type="button" data-attente class="badge-exception" hidden title="${texteHtml('planning_btp.barre.attente_titre')}"></button>
-        <a data-lien-consultation title="${texteHtml('planning_btp.barre.consultation_titre')}">${iconeHtml('planning_btp_consultation')} ${texteHtml('planning_btp.barre.consultation')}</a> <button type="button" data-plein-ecran hidden>${iconeHtml('planning_btp_plein_ecran')} ${texteHtml('planning_btp.barre.plein_ecran')}</button>
-        <button type="button" data-afficher-panneau hidden title="${texteHtml('planning_btp.barre.panneau_titre')}">${iconeHtml('planning_btp_panneau')} ${texteHtml('planning_btp.barre.panneau')}</button>
+        <input type="search" data-recherche placeholder="${texteHtml('planning_btp.barre.recherche')}" size="14"> <button type="button" data-actualiser title="${texteHtml('commun.actualiser')}">${iconeHtml('planning_btp_actualiser')}</button></span>
+        <span class="groupe-outils"><button type="button" data-nouvelle>${iconeHtml('ajouter')} ${texteHtml('planning_btp.barre.tache')}</button> <button type="button" data-annuler title="${texteHtml('planning_btp.historique.annuler', { touches: libelleRaccourci('annuler', 'planning') })}" disabled>${iconeHtml('planning_btp_annuler')}</button><button type="button" data-retablir title="${texteHtml('planning_btp.historique.retablir', { touches: libelleRaccourci('retablir', 'planning') })}" disabled>${iconeHtml('planning_btp_retablir')}</button>
+        <button type="button" data-attente class="badge-exception" hidden title="${texteHtml('planning_btp.barre.attente_titre')}"></button></span>
+        <span class="groupe-outils"><a data-lien-consultation title="${texteHtml('planning_btp.barre.consultation_titre')}">${iconeHtml('planning_btp_consultation')} ${texteHtml('planning_btp.barre.consultation')}</a> <button type="button" data-plein-ecran hidden>${iconeHtml('planning_btp_plein_ecran')} ${texteHtml('planning_btp.barre.plein_ecran')}</button>
+        <button type="button" data-afficher-panneau hidden title="${texteHtml('planning_btp.barre.panneau_titre')}">${iconeHtml('planning_btp_panneau')} ${texteHtml('planning_btp.barre.panneau')}</button></span>
         <span class="aide" data-etat></span></div>
       <div class="planning-corps"><div class="zone-planning"><div data-planning></div></div>
         <div class="separateur-panneau-planning" data-separateur-panneau title="${texteHtml('planning_btp.panneau.elargir')}"></div>

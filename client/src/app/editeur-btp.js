@@ -1,5 +1,5 @@
-import { texte, icone } from '@logibtp/socle/dictionnaire';
-import { CFG_LIGNES as C, parId, ancetres, descendants, formatNombre, formatLibre, lireNombre, echapper } from '@logibtp/socle/ui';
+import { texte, texteHtml, icone } from '@logibtp/socle/dictionnaire';
+import { CFG_LIGNES as C, parId, ancetres, descendants, formatNombre, formatLibre, lireNombre, echapper, ouvrirDialogue } from '@logibtp/socle/ui';
 import {
   EditeurDocument, ReglesDocument, PressePapiers, correspondance, modifierColonne, insererColonnes,
 } from '@logibtp/document/ui';
@@ -9,6 +9,7 @@ import { calculerDocument, TL, estChiffree, natureObligatoire } from '../calcul/
 import { FONCTIONS_BTP } from '../calcul/fonctions-btp.js';
 import { compteLigne, libelleCompte, relationTiers } from './comptes.js';
 import { fraisRecus, bilanTranche } from './frais-annexes.js';
+import { unitesArticle, conversionUnite } from './bibliotheque/appel.js';
 
 // Spécialisation BTP de l'éditeur du module Document : moteur de devis BTP, colonnes de déboursé, PV fixe,
 // lignes d'écart d'arrondi calculées, métrés et variables (module Métré). L'éditeur sert aussi d'hôte au
@@ -351,12 +352,115 @@ export class EditeurDevisBtp extends EditeurDocument {
     return colonnes;
   }
 
+  // ------------------------------------------------------------ unités de l'article (D2, D3)
+
+  /** Identifiant de l'élément de la bibliothèque lié à la ligne, ou null. */
+  idElement(l) {
+    const id = l?.lig_art_id ?? l?.lig_proprietes?.element?.id;
+    return id === null || id === undefined ? null : Number(id);
+  }
+
+  /**
+   * Élément lié à la ligne s'il est déjà lu (cache de la page), sinon null ; la lecture est lancée par
+   * `chargerElement(id)` posé par la page (service de la bibliothèque). Un élément supprimé reste à null.
+   */
+  elementLigne(l, { charger = true } = {}) {
+    const id = this.idElement(l);
+    if (id === null || !this.chargerElement) return null;
+    this.elements ??= new Map();
+    if (!this.elements.has(id)) {
+      if (!charger) return null;
+      this.elements.set(id, null);
+      Promise.resolve(this.chargerElement(id)).then((e) => this.elements.set(id, e ?? null), () => {});
+    }
+    return this.elements.get(id);
+  }
+
+  /** Ligne courante : son élément est lu d'avance (liste des unités, conversion). */
+  selectionChangee(id) {
+    const l = this.saisie?.lignes.find((x) => x.lig_id === id);
+    if (l) this.elementLigne(l);
+  }
+
+  /** Unités de l'article en tête (vente, stock, unités déclarées avec leur équivalence), puis les autres unités. */
+  suggestionsUnites(ligne) {
+    const autres = super.suggestionsUnites(ligne);
+    const e = ligne ? this.elementLigne(ligne) : null;
+    const unites = unitesArticle(e);
+    if (!unites.length) return autres;
+    const libelles = new Map((this.definition.unites ?? []).map((u) => [u.unt_code, u.unt_libelle]));
+    const article = texte('document_btp.editeur.unites.article');
+    const tete = unites.map((u) => ({
+      valeur: u.unite, groupe: article, libelle: libelles.get(u.unite) ?? u.unite,
+      detail: u.role !== 'STOCK' && u.ratio ? texte('document_btp.editeur.unites.equivalence', { unite: u.unite, ratio: formatLibre(u.ratio.toString(), 6), stock: e.unite_stock })
+        : texte(`document_btp.editeur.unites.role_${u.role.toLowerCase()}`),
+    }));
+    const codes = new Set(unites.map((u) => u.unite));
+    const groupe = texte('document_btp.editeur.unites.autres');
+    return [...tete, ...autres.filter((o) => !codes.has(o.valeur)).map((o) => ({ ...o, groupe }))];
+  }
+
+  /**
+   * Unité changée sur une ligne liée à un article (D3) : avec une correspondance, la conversion du prix (et de la
+   * quantité) est proposée ; le choix peut valoir pour tout le document (Q6). Une seule étape d'annulation.
+   */
+  changerUnite(id, unite) {
+    const l = this.saisie.lignes.find((x) => x.lig_id === id);
+    if (!l || this.fige || this.champVerrouille(l, 'lig_unt_code')) return false;
+    const e = this.elementLigne(l, { charger: false });
+    const conv = e ? conversionUnite(e, l, l.lig_unt_code, unite) : null;
+    const aPrix = conv && (conv.pa !== null || conv.pv !== null);
+    if (!aPrix) return false;
+    const appliquer = (choix) => {
+      if (choix === null || choix === undefined) return;
+      this.magasin.modifier((d) => {
+        const x = d.lignes.find((y) => y.lig_id === id);
+        if (!x) return;
+        x.lig_unt_code = unite;
+        if (choix !== 'AUCUN') {
+          if (conv.pa !== null) x.lig_pa = conv.pa;
+          if (conv.pv !== null) x.lig_pv = conv.pv;
+          if (choix === 'PRIX_QTE' && conv.qte !== null && x.lig_qte_source !== 'M') x.lig_qte = conv.qte;
+          if (x.lig_proprietes?.element) x.lig_proprietes = { ...x.lig_proprietes, element: { ...x.lig_proprietes.element, unite, ratio: conv.ratio } };
+        }
+        this.regles.apresModification(d, id, 'lig_unt_code');
+      }, texte('document_btp.etapes.unite_convertie'));
+    };
+    if (this.choixConversion) { appliquer(this.choixConversion); return true; }
+    const pm = l.lig_precision_pv ?? 2;
+    const prix = (avant, apres) => texte('document_btp.editeur.unites.prix', { avant: formatNombre(avant, pm), apres: formatNombre(apres, pm), unite_avant: l.lig_unt_code, unite_apres: unite });
+    const lignes = [
+      conv.pa !== null ? `<li>${texteHtml('document_btp.editeur.unites.pa')} ${echapper(prix(l.lig_pa, conv.pa))}</li>` : '',
+      conv.pv !== null ? `<li>${texteHtml('document_btp.editeur.unites.pv_fixe')} ${echapper(prix(l.lig_pv, conv.pv))}</li>` : '',
+    ].join('');
+    const qteModifiable = conv.qte !== null && l.lig_qte_source !== 'M';
+    const lire = (v) => (d) => {
+      if (d.querySelector('[data-memoriser]')?.checked) this.choixConversion = v;
+      return v;
+    };
+    ouvrirDialogue({
+      titre: texte('document_btp.editeur.unites.titre'),
+      html: `<p>${texteHtml('document_btp.editeur.unites.equivalence_titre', { apres: unite, facteur: formatLibre(conv.facteur.toString(), 6), avant: l.lig_unt_code })}</p>
+        <ul>${lignes}</ul>
+        ${qteModifiable ? `<p class="aide">${texteHtml('document_btp.editeur.unites.qte', { avant: formatLibre(l.lig_qte, 6), apres: formatLibre(conv.qte, 6), unite_avant: l.lig_unt_code, unite_apres: unite })}</p>` : ''}
+        <label class="case"><input type="checkbox" data-memoriser> ${texteHtml('document_btp.editeur.unites.memoriser')}</label>`,
+      boutons: [
+        { libelle: texte('document_btp.editeur.unites.convertir'), valeur: lire('PRIX'), principal: true },
+        ...(qteModifiable ? [{ libelle: texte('document_btp.editeur.unites.convertir_qte'), valeur: lire('PRIX_QTE') }] : []),
+        { libelle: texte('document_btp.editeur.unites.aucun'), valeur: lire('AUCUN') },
+      ],
+      valeurAnnulation: null,
+    }).then(appliquer).finally(() => this.grille.focus?.());
+    return true;
+  }
+
   /** Compte comptable (grille ou détail) : code sans espaces, 20 caractères ; vide = compte hérité. */
   modifierLigne(id, champ, valeur) {
     super.modifierLigne(id, champ, champ === 'lig_cpt_code' ? String(valeur ?? '').trim().slice(0, 20) || null : valeur);
   }
 
   modifierCellule(id, champ, brut, colonne) {
+    if (champ === 'lig_unt_code' && this.changerUnite(id, String(brut ?? '').trim().slice(0, 10) || null)) return true;
     if (champ === 'lig_cpt_code') {
       this.modifierLigne(id, champ, brut);
       return true;

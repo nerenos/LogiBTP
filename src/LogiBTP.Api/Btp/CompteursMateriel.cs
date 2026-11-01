@@ -5,8 +5,8 @@ using Npgsql;
 
 namespace LogiBTP.Api.Btp;
 
-/// <summary>Relevé saisi : date, unité, valeur, remise à zéro, commentaire.</summary>
-public sealed record ReleveSaisi(DateOnly? Date, string? Unite, decimal? Valeur, bool Remise, string? Commentaire);
+/// <summary>Relevé saisi : date, unité, valeur, remise à zéro, commentaire ; rectification : valeur corrigée (motif = commentaire).</summary>
+public sealed record ReleveSaisi(DateOnly? Date, string? Unite, decimal? Valeur, bool Remise, string? Commentaire, bool Rectification = false);
 
 /// <summary>Événement saisi, avec son relevé de compteur facultatif (obligatoire pour un plein si le matériel a un compteur).</summary>
 public sealed record EvenementSaisi(string? Type, DateOnly? Date, DateOnly? Fin, string? Libelle, string? Description, decimal? Cout, decimal? Litres, long? EntId, ReleveSaisi? Releve,
@@ -15,14 +15,17 @@ public sealed record EvenementSaisi(string? Type, DateOnly? Date, DateOnly? Fin,
 /// <summary>
 /// Compteurs et événements du matériel (db/233, lot 5c-2 des demandes du 25/10/2026) : relevés datés en heures ou
 /// kilomètres contrôlés par <see cref="ReglesCompteurs"/> (une saisie ne fait apparaître aucune erreur nouvelle dans
-/// l'historique), événements (panne, sinistre, accident, immobilisation, contrôle, entretien, plein de carburant) avec
+/// l'historique ; une rectification, de source INVENTAIRE, peut descendre sous le précédent), événements (panne, sinistre, accident, immobilisation, contrôle, entretien, plein de carburant) avec
 /// relevé lié ; un plein est la première imputation possible : chantier de suivi créé s'il manque
 /// (<see cref="CoutsMateriel.ChantierMaterielAsync"/>) et coût porté par <c>v_cout_chantier</c> (nature CARBURANT).
 /// </summary>
 public static class CompteursMateriel
 {
+    /// <summary>Source d'un relevé de rectification (valeur corrigée avec motif, db/252).</summary>
+    public const string SourceRectification = "INVENTAIRE";
+
     private sealed record PointageMaterielLu(long Id, DateOnly Date, int Minutes, string? Chantier, string? Salarie, string? Commentaire);
-    private sealed record ReleveSql(int Id, DateOnly Date, string Unite, decimal Valeur, bool Remise, int? MevId, long? EntId, string Source);
+    private sealed record ReleveSql(int Id, DateOnly Date, string Unite, decimal Valeur, bool Remise, int? MevId, long? EntId, string Source, string? Commentaire);
 
     /// <summary>Historique du matériel : unités suivies, compteurs, relevés (récents d'abord), événements.</summary>
     public const string SqlHistorique = """
@@ -57,13 +60,13 @@ public static class CompteursMateriel
         var unites = await UnitesAsync(db, materiel, ct);
         var existants = (await db.Database.SqlQueryRaw<ReleveSql>("""
             SELECT mre_id AS id, mre_date AS date, mre_unite AS unite, mre_valeur AS valeur, mre_remise AS remise, mre_mev_id AS mev_id,
-                   mre_ent_id AS ent_id, mre_source AS source
+                   mre_ent_id AS ent_id, mre_source AS source, mre_commentaire AS commentaire
             FROM materiel_releve WHERE mre_mat_id = @m ORDER BY mre_id
             """, new NpgsqlParameter("m", materiel)).ToListAsync(ct))
             .Where(x => (sansEvenement is null || x.MevId != sansEvenement) && (sansOrdre is null || x.EntId != sansOrdre || x.Source != "ORDRE"))
-            .Select(x => new ReleveCompteur(x.Unite, x.Date, x.Valeur, x.Remise)).ToList();
+            .Select(x => new ReleveCompteur(x.Unite, x.Date, x.Valeur, x.Remise, x.Source == SourceRectification, x.Commentaire)).ToList();
         var avant = ReglesCompteurs.Controler(unites, existants).ToHashSet();
-        var apres = ReglesCompteurs.Controler(unites, [.. existants, new ReleveCompteur(r.Unite, r.Date, r.Valeur, r.Remise)]);
+        var apres = ReglesCompteurs.Controler(unites, [.. existants, new ReleveCompteur(r.Unite, r.Date, r.Valeur, r.Remise, r.Rectification, r.Commentaire)]);
         if (apres.FirstOrDefault(e => !avant.Contains(e)) is { } erreur)
         {
             throw ExceptionMetier.Invalide(erreur.Code, erreur.Code == "REL_DECROISSANT" && erreur.Releve < existants.Count
@@ -133,7 +136,7 @@ public static class CompteursMateriel
             """, new NpgsqlParameter("m", id)).ToListAsync(ct));
         g.MapPost("/releves", async (int id, ReleveSaisi r, HttpContext http, LogiBtpContext db, CancellationToken ct) =>
         {
-            await AjouterReleveAsync(db, id, r, "SAISIE", null, Utilisateur.Depuis(http).Code, ct);
+            await AjouterReleveAsync(db, id, r, r.Rectification ? SourceRectification : "SAISIE", null, Utilisateur.Depuis(http).Code, ct);
             return await HistoriqueAsync(db, id, ct);
         });
         // Relevé saisi seul : supprimable (celui d'un événement se retire avec l'événement, celui d'un ordre avec l'ordre).

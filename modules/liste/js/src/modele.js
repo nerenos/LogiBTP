@@ -1,4 +1,4 @@
-import { texte } from '@logibtp/socle/dictionnaire';
+import { texte, textesParCode } from '@logibtp/socle/dictionnaire';
 import { formatNombre } from '@logibtp/socle/ui';
 import { compilerFormule, resolveurColonnes, resultat, vrai } from './formule.js';
 
@@ -7,7 +7,7 @@ import { compilerFormule, resolveurColonnes, resultat, vrai } from './formule.js
 // Définition d'une vue (stockée en JSONB dans vue_liste.vli_definition) :
 // {
 //   source: { mode: 'vue' | 'requete', vue, requete, colonne_id, colonne_type, type_element },
-//   colonnes: [{ code, calcul, formule, titre, bulle, format, decimales, options: [{ valeur, libelle, picto }],
+//   colonnes: [{ code, calcul, formule, titre, bulle, format, decimales, options: [{ valeur, libelle, picto, teinte }],
 //                style: { couleur, fond, gras, italique, souligne, barre }, regles: [{ condition, style }],
 //                largeur: { mode: 'auto' | 'fixe' | 'proportionnel', valeur, min, max }, masquee, recherche, alignement,
 //                modifiable (saisie dans la liste, si la source et la colonne de la base le permettent) }],
@@ -16,7 +16,23 @@ import { compilerFormule, resolveurColonnes, resultat, vrai } from './formule.js
 //   theme: code du thème (regroupement des vues ; ses types d'élément restreignent les lignes)
 // }
 
-export const FORMATS = ['texte', 'nombre', 'date', 'coche', 'combo', 'picto'];
+export const FORMATS = ['texte', 'nombre', 'date', 'coche', 'combo', 'picto', 'pastille'];
+/** Teintes des pastilles (format `pastille`, option `teinte`) : variables `--pastille-<teinte>-fond / -texte` du thème. */
+export const TEINTES_PASTILLE = ['neutre', 'info', 'envoye', 'succes', 'attention', 'erreur', 'termine', 'barre'];
+/** Totaux de colonne (ligne de pied, L3) : calculs d'agrégat d'une colonne de la source. */
+export const TOTAUX_COLONNE = textesParCode('liste.modele.totaux', ['somme', 'moyenne', 'min', 'max', 'compte']);
+/** Calculs et formats des indicateurs (bandeau de synthèse, L4). */
+export const CALCULS_INDICATEUR = textesParCode('liste.modele.calculs', ['somme', 'compte', 'ratio', 'moyenne', 'min', 'max']);
+export const FORMATS_INDICATEUR = textesParCode('liste.modele.formats_indicateur', ['nombre', 'montant', 'pourcentage']);
+
+/** Texte d'une valeur d'indicateur selon son format (vide : « — »). */
+export function texteIndicateur(v, format, decimales) {
+  if (v === null || v === undefined || Number.isNaN(Number(v))) return '—';
+  if (format === 'pourcentage') return `${formatNombre(Number(v) * 100, decimales ?? 1)} %`;
+  if (format === 'montant') return `${formatNombre(v, decimales ?? 2)} €`;
+  return formatNombre(v, decimales ?? (Number.isInteger(Number(v)) ? 0 : 2));
+}
+
 export const STYLE_VIDE = Object.freeze({ couleur: null, fond: null, gras: false, italique: false, souligne: false, barre: false });
 
 /** Définition complétée par les valeurs par défaut (une vue ancienne reste lisible). */
@@ -25,13 +41,15 @@ export function normaliserDefinition(def = {}) {
     source: { mode: 'vue', vue: null, requete: '', colonne_id: null, colonne_type: null, type_element: null, ...def.source },
     colonnes: (def.colonnes ?? []).map((c) => ({
       calcul: false, formule: '', titre: c.code, bulle: '', format: 'texte', decimales: 2, options: [], regles: [],
-      masquee: false, recherche: !c.calcul, alignement: null, modifiable: false,
+      masquee: false, recherche: !c.calcul, alignement: null, modifiable: false, total: null,
       ...c,
       style: { ...STYLE_VIDE, ...c.style },
       largeur: { mode: 'auto', valeur: null, min: null, max: null, ...c.largeur },
     })),
     segments: def.segments ?? [],
     filtres: def.filtres ?? [],
+    // Bandeau d'indicateurs (L4) : [{ code, titre, calcul, colonne, filtres, denominateur, format, teinte }].
+    indicateurs: (def.indicateurs ?? []).map((i) => ({ titre: i.code, calcul: 'compte', colonne: null, filtres: [], denominateur: [], format: 'nombre', teinte: 'neutre', ...i })),
     // Lignes en sommeil (colonne usage = S) montrées ; masquées par défaut (filtresEffectifs).
     sommeil: def.sommeil ?? false,
     theme: def.theme ?? null,
@@ -144,6 +162,7 @@ export class ModeleVue {
       case 'date': return dateFr(valeur);
       case 'coche': return vraiDonnee(valeur) ? 'Oui' : 'Non';
       case 'combo':
+      case 'pastille':
       case 'picto': return this.option(colonne, valeur)?.libelle ?? String(valeur);
       default: return String(valeur);
     }

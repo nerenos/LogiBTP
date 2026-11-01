@@ -44,7 +44,7 @@ describe('équipes (jeu partagé)', () => {
 
 describe('affectations du matériel (jeu partagé)', () => {
   const j = jeu('04_affectations.json');
-  for (const c of j.controles) it(`contrôle : ${c.nom}`, () => expect(controlerAffectations(c.materiel, c.affectations)).toEqual(c.attendu));
+  for (const c of j.controles) it(`contrôle : ${c.nom}`, () => expect(controlerAffectations(c.materiel, c.affectations, { identifie: c.identifie ?? false })).toEqual(c.attendu));
   for (const c of j.a_date) {
     for (const [date, attendu] of Object.entries(c.dates)) it(`${c.nom} : ${date}`, () => expect(affectationA(c.affectations, date)).toBe(attendu));
   }

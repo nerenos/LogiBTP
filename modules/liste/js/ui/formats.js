@@ -25,6 +25,22 @@ export class FormatsCellule {
     return s;
   }
 
+  /** Pastille à libellé : libellé de l'option et sa teinte (`teinte` : neutre, info, envoye, succes, attention, erreur,
+   *  termine, barre), sinon la valeur en teinte neutre. */
+  pastille(valeur, colonne, modele) {
+    if (valeur === null || valeur === undefined || valeur === '') return '';
+    if (Array.isArray(valeur)) {
+      const s = document.createElement('span');
+      for (const v of valeur) s.append(this.pastille(v, colonne, modele));
+      return s;
+    }
+    const o = modele.option(colonne, valeur);
+    const s = document.createElement('span');
+    s.className = `liste-pastille teinte-${o?.teinte || 'neutre'}`;
+    s.textContent = o?.libelle ?? String(valeur);
+    return s;
+  }
+
   /** Petite image : picto de l'option (emoji ou URL d'image), sinon la valeur elle-même si c'est une image. */
   picto(valeur, colonne, modele) {
     if (valeur === null || valeur === undefined || valeur === '') return '';

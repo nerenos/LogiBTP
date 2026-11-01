@@ -6,7 +6,7 @@ import { ecrireDuree } from '@logibtp/pointage';
 import { api } from '../api.js';
 import {
   LIBELLES_UNITE, LIBELLES_EVENEMENT, ICONES_EVENEMENT, TYPES_EVENEMENT, MESSAGES_COMPTEURS,
-  unitesCompteurs, cumuls, controlerEvenement,
+  unitesCompteurs, cumuls, controlerEvenement, controlerReleves,
 } from './compteurs.js';
 import { creerOrdreEntretien, tableauOrdres, rendrePlansMateriel } from './entretiens-ui.js';
 
@@ -15,7 +15,7 @@ import { creerOrdreEntretien, tableauOrdres, rendrePlansMateriel } from './entre
 // d'un événement dans une fenêtre <dialog>. Contrôles de compteurs.js (↔ ReglesCompteurs.cs) avant l'envoi.
 
 const jour = (d) => (d ? String(d).slice(0, 10).split('-').reverse().join('/') : '');
-const SOURCES = textesParCode('ressources_btp.compteurs.sources', ['SAISIE', 'CARBURANT', 'ORDRE', 'BORNE', 'REPRISE', 'TERRAIN']);
+const SOURCES = textesParCode('ressources_btp.compteurs.sources', ['SAISIE', 'CARBURANT', 'ORDRE', 'BORNE', 'REPRISE', 'TERRAIN', 'INVENTAIRE']);
 const message = (e) => MESSAGES_COMPTEURS[e.code] ?? e.message;
 
 /** Frise SVG : une courbe par unité (valeurs cumulées), événements en pastilles au-dessus, sur la période des données. */
@@ -49,14 +49,18 @@ function frise(d, unites) {
     <text x="${L - D}" y="${H - 4}" text-anchor="end" class="frise-axe">${jour(new Date(fin).toISOString())}</text></svg>`;
 }
 
-/** Fenêtre de saisie d'un relevé seul. */
-async function saisirReleve(unites) {
+/**
+ * Fenêtre de saisie d'un relevé seul ; rectification (db/252) : valeur corrigée, qui peut être inférieure au relevé
+ * précédent, avec un motif obligatoire.
+ */
+async function saisirReleve(unites, { rectification = false } = {}) {
   return ouvrirDialogue({
-    titre: texte('ressources_btp.compteurs.releve.titre'),
-    html: `<div class="formulaire-compact"><label>${texteHtml('ressources_btp.compteurs.champs.date')} <input type="date" data-c="date" value="${aujourdhui()}"></label>
-      <label>${texteHtml('ressources_btp.compteurs.champs.compteur')} <span data-unite></span></label><label>${texteHtml('ressources_btp.compteurs.champs.valeur')} <input type="number" min="0" step="0.1" data-c="valeur"></label>
-      <label><input type="checkbox" data-c="remise"> ${texteHtml('ressources_btp.compteurs.champs.remise_remplace')}</label>
-      <label>${texteHtml('ressources_btp.compteurs.champs.commentaire')} <input data-c="commentaire" maxlength="200" size="30"></label></div>`,
+    titre: texte(`ressources_btp.compteurs.${rectification ? 'rectification' : 'releve'}.titre`),
+    html: `<div class="formulaire-compact">${rectification ? `<p class="aide">${texteHtml('ressources_btp.compteurs.rectification.aide')}</p>` : ''}
+      <label>${texteHtml('ressources_btp.compteurs.champs.date')} <input type="date" data-c="date" value="${aujourdhui()}"></label>
+      <label>${texteHtml('ressources_btp.compteurs.champs.compteur')} <span data-unite></span></label><label>${texteHtml(`ressources_btp.compteurs.champs.${rectification ? 'valeur_corrigee' : 'valeur'}`)} <input type="number" min="0" step="0.1" data-c="valeur"></label>
+      ${rectification ? '' : `<label><input type="checkbox" data-c="remise"> ${texteHtml('ressources_btp.compteurs.champs.remise_remplace')}</label>`}
+      <label>${texteHtml(`ressources_btp.compteurs.champs.${rectification ? 'motif' : 'commentaire'}`)} <input data-c="commentaire" maxlength="200" size="30"></label></div>`,
     focus: '[data-c="valeur"]',
     construire: (dlg) => { dlg._unite = creerCombo({ options: unites.map((u) => ({ valeur: u, libelle: LIBELLES_UNITE[u] })), valeur: unites[0], vide: false }); dlg.querySelector('[data-unite]').append(dlg._unite); },
     boutons: [{ libelle: texte('commun.annuler'), valeur: null }, {
@@ -64,7 +68,8 @@ async function saisirReleve(unites) {
       valeur: (dlg) => ({
         date: dlg.querySelector('[data-c="date"]').value || null, unite: dlg._unite.valeurCombo,
         valeur: dlg.querySelector('[data-c="valeur"]').value === '' ? null : Number(dlg.querySelector('[data-c="valeur"]').value),
-        remise: dlg.querySelector('[data-c="remise"]').checked, commentaire: dlg.querySelector('[data-c="commentaire"]').value || null,
+        remise: dlg.querySelector('[data-c="remise"]')?.checked ?? false, commentaire: dlg.querySelector('[data-c="commentaire"]').value || null,
+        rectification,
       }),
     }],
   });
@@ -141,7 +146,7 @@ export async function rendreCompteursMateriel(corps, { app, materiel }) {
     const ligne = (x) => {
       if (x.genre === 'releve') {
         const r = x.r;
-        return `<tr><td>${jour(r.date)}</td><td>${iconeHtml('ressources_btp_releve')} ${texteHtml('ressources_btp.compteurs.journal.releve')}</td><td>${echapper(r.commentaire ?? '')}${r.remise ? ` <span class="pastille-compte attention">${texteHtml('ressources_btp.compteurs.journal.remise')}</span>` : ''}</td>
+        return `<tr><td>${jour(r.date)}</td><td>${iconeHtml('ressources_btp_releve')} ${texteHtml('ressources_btp.compteurs.journal.releve')}</td><td>${echapper(r.commentaire ?? '')}${r.remise ? ` <span class="pastille-compte attention">${texteHtml('ressources_btp.compteurs.journal.remise')}</span>` : ''}${r.source === 'INVENTAIRE' ? ` <span class="pastille-compte attention">${texteHtml('ressources_btp.compteurs.journal.rectification')}</span>` : ''}</td>
           <td class="nombre">${formatNombre(r.valeur, 1)} ${LIBELLES_UNITE[r.unite]}</td><td></td><td></td>
           <td>${r.numero ? `<a href="${urlDocument(r.ent_id)}">${echapper(r.numero)}</a>` : echapper(SOURCES[r.source] ?? r.source)}</td>
           <td class="cellule-boutons">${r.source !== 'ORDRE' ? `<button type="button" class="bouton-icone" data-retirer-releve="${r.id}" title="${texteHtml('ressources_btp.compteurs.journal.retirer_releve')}">${iconeHtml('retirer')}</button>` : ''}</td></tr>`;
@@ -158,6 +163,7 @@ export async function rendreCompteursMateriel(corps, { app, materiel }) {
     corps.innerHTML = `<div class="ressources-compteurs"><div class="titre-actions"><h3>${texteHtml('ressources_btp.compteurs.titre')}</h3>
         <span class="titre-actions-boutons">
           ${unites.length ? `<button type="button" class="bouton-icone" data-releve title="${texteHtml('ressources_btp.compteurs.actions.releve')}">${iconeHtml('ressources_btp_releve')}</button>` : ''}
+          ${unites.length ? `<button type="button" class="bouton-icone" data-rectifier title="${texteHtml('ressources_btp.compteurs.actions.rectifier')}">${iconeHtml('ressources_btp_rectifier')}</button>` : ''}
           <button type="button" class="bouton-icone" data-plein title="${texteHtml('ressources_btp.compteurs.actions.plein')}">${iconeHtml('ressources_btp_plein')}</button>
           <button type="button" class="bouton-icone" data-evenement title="${texteHtml('ressources_btp.compteurs.actions.evenement')}">${iconeHtml('ajouter')}</button>
           <button type="button" class="bouton-icone" data-ordre title="${texteHtml('ressources_btp.compteurs.actions.ordre')}">${iconeHtml('ressources_btp_entretien')}</button></span></div>
@@ -182,6 +188,13 @@ export async function rendreCompteursMateriel(corps, { app, materiel }) {
     corps.querySelector('[data-releve]')?.addEventListener('click', async () => {
       const r = await saisirReleve(unites);
       if (r) await appliquer(api.ressources.ajouterReleve(materiel, r), texte('ressources_btp.compteurs.messages.releve_enregistre'));
+    });
+    corps.querySelector('[data-rectifier]')?.addEventListener('click', async () => {
+      const r = await saisirReleve(unites, { rectification: true });
+      if (!r) return;
+      const fautes = controlerReleves(unites, [r]);
+      if (fautes.length) { app.erreur(new Error(fautes.map((f) => MESSAGES_COMPTEURS[f.code]).join(' · '))); return; }
+      await appliquer(api.ressources.ajouterReleve(materiel, r), texte('ressources_btp.compteurs.messages.rectifie'));
     });
     corps.querySelector('[data-plein]').addEventListener('click', () => evenement({ type: 'CARBURANT' }));
     corps.querySelector('[data-evenement]').addEventListener('click', () => evenement({}));

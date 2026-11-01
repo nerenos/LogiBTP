@@ -4,6 +4,8 @@ import { ListeDeroulante, AssistantFormule } from './liste-deroulante.js';
 import { texte } from '../dictionnaire/index.js';
 
 const LARGEUR_MIN = 28;
+/** Niveaux au retrait plein (--grille-retrait), les suivants au retrait réduit (--grille-retrait-profond). */
+const NIVEAUX_PLEINS = 2;
 
 /** Largeurs réglées des colonnes (colonne.largeur en px). */
 const largeursDe = (colonnes) => new Map(colonnes.filter((c) => Number(c.largeur) > 0).map((c) => [c.cle, Number(c.largeur)]));
@@ -27,6 +29,7 @@ const largeursDe = (colonnes) => new Map(colonnes.filter((c) => Number(c.largeur
  *                            marqueur(ligne) → { fond, titre } | null (pastille colorée de la poignée), choisirMarqueur(id, element),
  *                            signal(ligne) → { icone, classe, titre } | null (icône d'erreur ou d'avertissement de la poignée),
  *                            choisirSignal(id) (clic sur l'icône),
+ *                            signalCellule(ligne, colonne) → { classe, titre } | null (cellule en cause, soulignée),
  *                            entetePoignee(th) (contenu de l'entête de la colonne des poignées),
  *                            libelleDepot(cibleId, position) → texte du badge pendant un glisser (avant, après, composant…),
  *                            depotExterne : { types, autorise(cibleId, position, types), deposer(cibleId, position, dataTransfer) }
@@ -188,7 +191,22 @@ export class GrilleArbre {
         td.className = [c.classe ?? '', c.classeCellule?.(r) ?? '', c.editable?.(r.item) ? 'editable' : '', id === this.courant && i === this.colonne ? 'cellule' : ''].join(' ');
         const bulle = c.titreCellule?.(r);
         if (bulle) td.title = bulle;
-        if (i === 0) td.style.paddingLeft = `${0.4 + r.profondeur * 1.1}rem`;
+        // Cellule en cause d'un signal (avertissement de saisie…) : classe et bulle de l'hôte.
+        const sc = this.o.actions.signalCellule?.(r, c);
+        if (sc) {
+          td.classList.add('cellule-signalee', ...(sc.classe ? [sc.classe] : []));
+          if (sc.titre) td.title = td.title ? `${sc.titre}\n${td.title}` : sc.titre;
+        }
+        // Retrait dégressif et plafonné (thème : --grille-retrait, --grille-retrait-profond, --grille-retrait-max) ;
+        // au-delà de deux niveaux, guides verticaux et niveau dans la bulle.
+        if (i === 0) {
+          td.classList.add('niveau');
+          td.style.setProperty('--niveau', r.profondeur);
+          if (r.profondeur > NIVEAUX_PLEINS) {
+            td.classList.add('profond');
+            if (!td.title) td.title = texte('socle.grille.niveau', { niveau: r.profondeur + 1 });
+          }
+        }
         if (c.arbre) {
           const b = document.createElement('span');
           b.className = 'repli';

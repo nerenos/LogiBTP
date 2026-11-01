@@ -1,7 +1,10 @@
 namespace LogiBTP.Domaine.Ressources;
 
-/// <summary>Affectation d'un matériel : type (SALARIE, INTERIM, SOUS_TRAITANT, MATERIEL), identifiant, période.</summary>
-public sealed record AffectationMateriel(string Type, string? Id, DateOnly? Du, DateOnly? Au);
+/// <summary>
+/// Affectation d'un matériel : type (SALARIE, INTERIM, SOUS_TRAITANT, MATERIEL), identifiant, période, état du matériel au
+/// retour, retour exigé (false : affectation terminée avant la règle, reprise de db/252).
+/// </summary>
+public sealed record AffectationMateriel(string Type, string? Id, DateOnly? Du, DateOnly? Au, string? Retour = null, bool RetourRequis = true);
 
 /// <summary>Erreur d'une saisie d'affectations : code, affectation en cause (indice dans la saisie).</summary>
 public sealed record ErreurAffectation(string Code, int Affectation);
@@ -10,7 +13,8 @@ public sealed record ErreurAffectation(string Code, int Affectation);
 /// Affectations d'un matériel (lot 5b des demandes du 25/10/2026), répliquées dans
 /// client/src/app/ressources/affectations.js (jeu tests/ressources/04_affectations.json) : affectation datée (fin
 /// facultative = en cours) à un salarié, un intérimaire, un sous-traitant ou un autre matériel (porteur) ; une seule à
-/// la fois (la seconde de deux périodes qui se chevauchent est signalée).
+/// la fois (la seconde de deux périodes qui se chevauchent est signalée) ; matériel identifié : une affectation terminée
+/// porte l'état du matériel au retour.
 /// </summary>
 public static class ReglesAffectations
 {
@@ -18,7 +22,7 @@ public static class ReglesAffectations
 
     private static bool DatesValables(AffectationMateriel a) => a.Du is { } du && (a.Au is not { } au || au >= du);
 
-    public static List<ErreurAffectation> Controler(string materiel, IReadOnlyList<AffectationMateriel> affectations)
+    public static List<ErreurAffectation> Controler(string materiel, IReadOnlyList<AffectationMateriel> affectations, bool identifie = false)
     {
         var r = new List<ErreurAffectation>();
         for (var i = 0; i < affectations.Count; i++)
@@ -32,6 +36,7 @@ public static class ReglesAffectations
             var chevauche = DatesValables(a) && affectations.Take(i).Any(b => DatesValables(b)
                 && a.Du!.Value <= (b.Au ?? DateOnly.MaxValue) && b.Du!.Value <= (a.Au ?? DateOnly.MaxValue));
             if (chevauche) r.Add(new("AFF_CHEVAUCHEMENT", i));
+            if (identifie && a.Au is not null && string.IsNullOrWhiteSpace(a.Retour) && a.RetourRequis) r.Add(new("AFF_RETOUR", i));
         }
         return [.. r.OrderBy(e => e.Affectation).ThenBy(e => e.Code, StringComparer.Ordinal)];
     }

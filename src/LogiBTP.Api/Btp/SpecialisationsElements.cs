@@ -54,6 +54,8 @@ public sealed class SpecialisationFicheBtp(IServiceScopeFactory scopes) : Specia
             return;
         }
         if (type == TypesFiche.Salarie) await SalariesAnnuaire.Synchroniser(scope.ServiceProvider, valeurs, ct);
+        // Matériel (db/252) : l'auteur d'un changement de disponibilité ou de condition est tracé dans materiel_etat.
+        if (type == TypesFiche.Materiel && (creation || aEcrire.ContainsKey("etat") || aEcrire.ContainsKey("condition"))) aEcrire["etat_par"] = u.Code;
         // Conducteur de travaux, chargé d'affaires, chef d'équipe d'un chantier, responsable et métreur d'un projet (lot 6) :
         // individus de notre structure (rattachés à notre société ou à un niveau inférieur).
         if (ChampsIndividuStructure.TryGetValue(type, out var champsIndividus))
@@ -111,6 +113,13 @@ public sealed class SpecialisationFicheBtp(IServiceScopeFactory scopes) : Specia
     {
         using var scope = scopes.CreateScope();
         await SuppressionFiches.Controler(scope.ServiceProvider.GetRequiredService<LogiBtpContext>(), type, id, ct);
+    }
+
+    /// <summary>Bandeau de synthèse et compteurs des onglets des fiches du cœur (<see cref="SynthesesFiches"/>).</summary>
+    public override async Task<SyntheseFiche?> SyntheseAsync(string type, string id, Utilisateur u, CancellationToken ct)
+    {
+        using var scope = scopes.CreateScope();
+        return await SynthesesFiches.CalculerAsync(scope.ServiceProvider.GetRequiredService<LogiBtpContext>(), type, id, ct);
     }
 
     private static bool Vrai(object? v) => v is true || (v is string s && s == "true") || (v is JsonElement e && e.ValueKind == JsonValueKind.True);

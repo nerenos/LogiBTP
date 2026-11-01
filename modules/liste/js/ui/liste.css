@@ -1,7 +1,41 @@
 /* @logibtp/liste/ui – liste chargée par lots, segments, en-têtes multilignes, menu de filtre, concepteur de vues. */
 
-.liste { display: flex; flex-direction: column; min-height: 0; height: 100%; gap: 0.4rem; }
+.liste { display: flex; flex-direction: row; min-height: 0; height: 100%; --vues-largeur: 230px; }
+.liste-principale { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 0.4rem; }
+/* Panneau des vues (L1) : à droite de tout, arbre groupe › thème › vues ; réduit en un bouton. */
+.liste-separateur-vues { flex: none; width: 6px; cursor: col-resize; touch-action: none; }
+.liste-separateur-vues:hover { background: var(--accent-clair); }
+.liste-separateur-vues[hidden] { display: block; width: 0.4rem; cursor: default; background: none; }
+.liste-vues-panneau { flex: none; width: var(--vues-largeur); min-height: 0; display: flex; flex-direction: column; border: 1px solid var(--bord);
+  border-radius: 4px; background: var(--surface); overflow: hidden; }
+.liste-vues-panneau > header { display: flex; align-items: center; gap: 0.15rem; padding: 0.2rem 0.3rem; border-bottom: 1px solid var(--bord); background: var(--titre-fond); flex: none; }
+.liste-vues-panneau > header button { padding: 0 0.3rem; border-color: transparent; background: transparent; color: var(--discret); min-width: 0; }
+.liste-vues-titre { font-weight: 600; margin-right: auto; }
+.liste-vues-recherche { margin: 0.3rem; flex: none; }
+.liste-vues-arbre { flex: 1; min-height: 0; overflow: auto; padding: 0 0.2rem 0.4rem; }
+.liste-vues-groupe { margin: 0.5rem 0.3rem 0.1rem; font-size: 0.8em; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; color: var(--discret); }
+.liste-vues-theme, .liste-vues-vue { display: flex; align-items: center; gap: 0.3rem; padding: 0.15rem 0.3rem; border-radius: 4px; cursor: pointer; }
+.liste-vues-theme:hover, .liste-vues-vue:hover { background: var(--accent-clair); }
+.liste-vues-theme.courant { font-weight: 600; }
+.liste-vues-theme small { color: var(--discret); }
+.liste-vues-vue { padding-left: 2rem; }
+.liste-vues-vue.courante { background: var(--selection); }
+.liste-vues-nom { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.liste-vues-deplier { width: 1.1rem; min-width: 1.1rem; padding: 0; border: none; background: none; color: var(--discret); }
+.liste-vues-vue .bouton-icone { padding: 0 0.15rem; min-width: 0; border-color: transparent; background: transparent; color: var(--discret); visibility: hidden; }
+.liste-vues-vue:hover .bouton-icone, .liste-vues-vue .liste-vues-etoile.marquee { visibility: visible; }
+.liste-vues-etoile.marquee { color: var(--alerte); }
+.liste-vues-partage { font-size: 0.85em; }
+.liste-vues-panneau.reduit { width: 2.4rem; }
+.liste-vues-panneau.reduit > :not(header), .liste-vues-panneau.reduit header > :not([data-action="reduire-vues"]) { display: none; }
+.liste-vues-panneau.reduit > header { justify-content: center; border-bottom: none; }
 .liste-barre { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; flex: none; }
+/* Barre (L5) : vue, puis recherche, puis groupes d'actions calés à droite et séparés ; un bouton inutilisable est grisé. */
+.liste-groupe { display: inline-flex; align-items: center; gap: 0.25rem; }
+.liste-groupe:empty, .liste-groupe:not(:has(> :not([hidden]):not(:empty))) { display: none; }
+.liste-groupe-recherche { flex: 1 1 18rem; min-width: 12rem; gap: 0.4rem; }
+/* Séparateurs entre groupes (I7) : trait du thème des barres d'outils du socle ; pas de trait avant Créer (L5). */
+.liste-elements, .liste-groupe-affichage, .liste-groupe-hote { padding-left: 0.45rem; border-left: 1px solid var(--outils-separateur); }
 .liste-vues { max-width: 16rem; }
 .liste-themes { max-width: 12rem; font-weight: 600; }
 .liste-themes[hidden] { display: none; }
@@ -121,6 +155,39 @@ textarea.liste-editeur { display: block; }
 .liste-coche { font-size: 1.05em; color: var(--discret); }
 .liste-coche.coche { color: var(--succes); }
 .liste-picto img { height: 1.2em; width: auto; vertical-align: middle; }
+/* Pastilles à libellé (format pastille) : teintes --pastille-<teinte>-fond / -texte du thème du module. */
+.liste-pastille { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; vertical-align: middle;
+  padding: 0 0.5em; border-radius: 0.75em; font-size: 0.85em; line-height: 1.55; font-weight: 500; white-space: nowrap;
+  background: var(--pastille-neutre-fond); color: var(--pastille-neutre-texte); }
+.liste-pastille + .liste-pastille { margin-left: 0.25em; }
+.teinte-info { --t-fond: var(--pastille-info-fond); --t-texte: var(--pastille-info-texte); }
+.teinte-envoye { --t-fond: var(--pastille-envoye-fond); --t-texte: var(--pastille-envoye-texte); }
+.teinte-succes { --t-fond: var(--pastille-succes-fond); --t-texte: var(--pastille-succes-texte); }
+.teinte-attention { --t-fond: var(--pastille-attention-fond); --t-texte: var(--pastille-attention-texte); }
+.teinte-erreur { --t-fond: var(--pastille-erreur-fond); --t-texte: var(--pastille-erreur-texte); }
+.teinte-termine { --t-fond: var(--pastille-termine-fond); --t-texte: var(--pastille-termine-texte); }
+.liste-pastille[class*="teinte-"]:not(.teinte-neutre):not(.teinte-barre) { background: var(--t-fond); color: var(--t-texte); }
+.liste-pastille.teinte-barre { text-decoration: line-through; }
+.segment-teinte { display: inline-block; width: 0.7em; height: 0.7em; border-radius: 50%; vertical-align: middle;
+  background: var(--t-texte, var(--pastille-neutre-texte)); }
+.segment-teinte.teinte-neutre, .segment-teinte.teinte-barre { background: var(--pastille-neutre-texte); }
+/* Ligne de total collante (L3) : totaux de la base, ou des lignes affichées (filtres de colonnes, marqués). */
+.liste-table tfoot td { position: sticky; bottom: 0; z-index: 2; background: var(--titre-fond); font-weight: 600;
+  border-top: 2px solid var(--bord); white-space: nowrap; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.liste-totaux .liste-coin { color: var(--discret); text-align: center; }
+.liste-totaux-etiquette { color: var(--discret); font-weight: 500; }
+.liste-totaux.local td { background: var(--pastille-attention-fond); }
+.liste-totaux.local .liste-totaux-etiquette { color: var(--pastille-attention-texte); }
+/* Bandeau d'indicateurs (L4) : cartes au-dessus de la liste, cliquables quand elles portent un filtre. */
+.liste-indicateurs { display: flex; flex-wrap: wrap; gap: 0.5rem; flex: none; }
+.liste-indicateur { display: flex; flex-direction: column; align-items: flex-start; gap: 0.1rem; min-width: 9rem; max-width: 16rem;
+  padding: 0.35rem 0.75rem; border: 1px solid var(--bord); border-left: 4px solid var(--t-texte, var(--pastille-neutre-texte));
+  border-radius: 6px; background: var(--surface); color: var(--texte); font: inherit; text-align: left; }
+button.liste-indicateur { cursor: pointer; }
+button.liste-indicateur:hover { border-color: var(--accent); }
+.liste-indicateur.actif { background: var(--t-fond, var(--pastille-neutre-fond)); box-shadow: 0 0 0 2px var(--accent-clair); }
+.liste-indicateur-titre { font-size: 0.85em; color: var(--discret); }
+.liste-indicateur strong { font-size: 1.25em; font-variant-numeric: tabular-nums; }
 .liste-suite { padding: 0.5rem; text-align: center; color: var(--discret); }
 .liste-attente::before { content: "⏳ "; }
 
@@ -201,9 +268,29 @@ textarea.liste-editeur { display: block; }
 .concepteur-filtres { margin-top: 0.8rem; border: 1px solid var(--bord); border-radius: 4px; display: flex; flex-direction: column; gap: 0.35rem; align-items: flex-start; }
 .filtre-vue { display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap; }
 .filtre-vue [hidden] { display: none; }
+.concepteur-indicateur { margin-bottom: 0.8rem; border: 1px solid var(--bord); border-radius: 4px; display: flex; flex-direction: column; gap: 0.5rem; }
+.filtres-indicateur { display: flex; flex-direction: column; gap: 0.35rem; align-items: flex-start; }
+.concepteur-indicateur-actions { display: flex; gap: 0.35rem; }
+.concepteur-indicateur [hidden] { display: none; }
 .concepteur-calculees { margin-top: 0.8rem; border: 1px solid var(--bord); border-radius: 4px; display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; }
 .pastille-colonne { background: var(--accent-clair); border-radius: 999px; padding: 0.05rem 0.6rem; }
 @media (max-width: 760px) {
   .concepteur-forme, .concepteur-source { grid-template-columns: 1fr; }
 }
 .liste-table tr.glissable { cursor: grab; }
+
+/* Choix dans une liste (I1, choisirDansListe) : fenêtre de la liste en mode choix. */
+dialog.choix-liste { width: min(1150px, 96vw); height: min(760px, 92vh); max-width: none; max-height: none; padding: 0.75rem;
+  border: 1px solid var(--bord); border-radius: 8px; background: var(--surface); color: var(--texte); }
+dialog.choix-liste[open] { display: flex; flex-direction: column; gap: 0.5rem; }
+.choix-liste-entete, .choix-liste-pied { display: flex; align-items: center; gap: 0.5rem; flex: none; flex-wrap: wrap; }
+.choix-liste-entete h2 { margin: 0; font-size: 1.1em; }
+.choix-liste-espace { flex: 1; }
+.choix-liste-filtres { display: flex; gap: 0.35rem; flex-wrap: wrap; }
+.choix-liste-filtre { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0 0.25rem 0 0.6rem; border-radius: 1em;
+  background: var(--pastille-info-fond); color: var(--pastille-info-texte); font-size: 0.9em; }
+.choix-liste-zone { flex: 1; min-height: 0; }
+.liste-mode-choix [data-action="concevoir"], .liste-mode-choix [data-action="saisie"], .liste-mode-choix .liste-elements,
+.liste-mode-choix .liste-groupe-hote, .liste-mode-choix .liste-groupe-creer, .liste-mode-choix [data-modifier] { display: none; }
+.choix-liste-message.avertissement { color: var(--pastille-attention-texte); }
+.choix-liste-message.erreur { color: var(--erreur); }

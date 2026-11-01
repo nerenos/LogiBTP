@@ -1,10 +1,10 @@
 import { texte, texteHtml, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
-import { urlDocument, TYPE_FICHE, TYPE_DOCUMENT, TYPES_SOUS_TRAITABLES, MODULE_FACULTATIF, SUJET_FENETRE } from '../codes.js';
+import { urlDocument, TYPE_FICHE, TYPE_DOCUMENT, TYPES_SOUS_TRAITABLES, MODULE_FACULTATIF, SUJET_FENETRE, CHAMPS_ERREUR_DOCUMENT } from '../codes.js';
 import { FAMILLE_DOCUMENT, STATUT_DOCUMENT, STATUTS_HORS_VIGUEUR, estFamilleAchat } from '@logibtp/document';
 import { PageBase } from '@logibtp/navigation';
 import { ExplorateurGed } from '@logibtp/ged/ui';
 import { ArborescenceBtp } from '../ged/arborescence.js';
-import { echapper, formatNombre, actionDe, libelleRaccourci, basculerAideMemoire, fermerAideMemoire, confirmer, ouvrirDialogue, ouvrirModale, saisir } from '@logibtp/socle/ui';
+import { echapper, formatNombre, actionDe, libelleRaccourci, basculerAideMemoire, fermerAideMemoire, confirmer, ouvrirDialogue, ouvrirModale, saisir, separateur as separateurZones, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
 import { D, aujourdhui } from '@logibtp/socle';
 import { ONGLETS_DOCUMENT } from '../raccourcis.js';
 import { Disposition, GestionVuesDocument, PlanDocument, RechercheLignes, NotificationsDocument } from '@logibtp/document/ui';
@@ -57,29 +57,29 @@ const enteteDock = (titre, fermer = '') => `
 const separateur = (cote) => `<div class="separateur" data-sep="${cote}" title="${texteHtml('document_btp.page.separateur')}"></div>`;
 
 const gabarit = () => `
-  <div class="document-barre">
+  <div class="document-barre barre-outils" role="toolbar">
     <nav class="onglets" role="tablist">
-      <button role="tab" data-onglet-vue="entete" title="${texteHtml('document_btp.page.onglets.entete_aide')}">${texteHtml('document_btp.page.onglets.entete')}</button>
-      <button role="tab" data-onglet-vue="lignes" title="${texteHtml('document_btp.page.onglets.lignes_aide')}">${texteHtml('document_btp.page.onglets.lignes')}</button>
-      <button role="tab" data-onglet-vue="analyse" title="${texteHtml('document_btp.page.onglets.analyse_aide')}">${texteHtml('document_btp.page.onglets.analyse')}</button>
-      <button role="tab" data-onglet-vue="pieces" title="${texteHtml('document_btp.page.onglets.pieces_aide')}">${texteHtml('document_btp.page.onglets.pieces')}</button>
-      <button role="tab" data-onglet-vue="tracabilite" title="${texteHtml('document_btp.page.onglets.tracabilite_aide')}">${texteHtml('document_btp.page.onglets.tracabilite')}</button>
-      <button role="tab" data-onglet-vue="suivi" title="${texteHtml('document_btp.page.onglets.suivi_aide')}" hidden>${texteHtml('document_btp.page.onglets.suivi')}</button>
-      <button role="tab" data-onglet-vue="reglements" title="${texteHtml('document_btp.page.onglets.reglements_aide')}">${texteHtml('document_btp.page.onglets.reglements')}</button>
+      <button role="tab" data-onglet-vue="entete" title="${texteHtml('document_btp.page.onglets.entete_aide', { raccourci: libelleRaccourci('ongletEntete', 'document') })}">${texteHtml('document_btp.page.onglets.entete')}</button>
+      <button role="tab" data-onglet-vue="reglements" title="${texteHtml('document_btp.page.onglets.reglements_aide', { raccourci: libelleRaccourci('ongletReglements', 'document') })}">${texteHtml('document_btp.page.onglets.reglements')}</button>
+      <button role="tab" data-onglet-vue="lignes" title="${texteHtml('document_btp.page.onglets.lignes_aide', { raccourci: libelleRaccourci('ongletLignes', 'document') })}">${texteHtml('document_btp.page.onglets.lignes')}</button>
+      <button role="tab" data-onglet-vue="analyse" title="${texteHtml('document_btp.page.onglets.analyse_aide', { raccourci: libelleRaccourci('ongletAnalyse', 'document') })}">${texteHtml('document_btp.page.onglets.analyse')}</button>
+      <button role="tab" data-onglet-vue="pieces" title="${texteHtml('document_btp.page.onglets.pieces_aide', { raccourci: libelleRaccourci('ongletPieces', 'document') })}">${texteHtml('document_btp.page.onglets.pieces')}</button>
+      <button role="tab" data-onglet-vue="suivi" title="${texteHtml('document_btp.page.onglets.suivi_aide', { raccourci: libelleRaccourci('ongletSuivi', 'document') })}">${texteHtml('document_btp.page.onglets.suivi')}</button>
+      <button role="tab" data-onglet-vue="options" title="${texteHtml('document_btp.page.onglets.options_aide', { raccourci: libelleRaccourci('ongletOptions', 'document') })}">${texteHtml('document_btp.page.onglets.options')}</button>
     </nav>
-    <div class="groupe">
+    <div class="groupe groupe-outils">
       <button data-action="annuler" title="${texteHtml('document_btp.page.annuler')}">${iconeHtml('document_btp_annuler')}</button>
       <button data-action="retablir" title="${texteHtml('document_btp.page.retablir')}">${iconeHtml('document_btp_retablir')}</button>
       <button data-action="bibliotheque" title="${texteHtml('document_btp.page.bibliotheque_aide')}">${iconeHtml('document_textes')} ${texteHtml('document_btp.page.bibliotheque')}</button>
       <button data-action="precedent" hidden>${iconeHtml('precedent')}</button>
       <button data-action="suivant" hidden>${iconeHtml('suivant')}</button>
     </div>
-    <span class="groupe" data-vues></span>
-    <span class="groupe"><button data-basculer-dock="plan" title="${texteHtml('document_btp.page.plan_aide')}">${iconeHtml('document_btp_plan')} ${texteHtml('document_btp.page.plan')}</button>
+    <span class="groupe groupe-outils" data-vues></span>
+    <span class="groupe groupe-outils"><button data-basculer-dock="plan" title="${texteHtml('document_btp.page.plan_aide')}">${iconeHtml('document_btp_plan')} ${texteHtml('document_btp.page.plan')}</button>
       <button data-basculer-dock="notifications" class="compteur-notifications" title="${texteHtml('document_btp.page.notifications_aide')}">${iconeHtml('avertissement')} 0</button>
       <button data-action="rechercher" title="${texteHtml('document_btp.page.rechercher')}">${iconeHtml('rechercher')}</button></span>
     <!-- Calé à droite : Enregistrer (clic) et ses suites dans le menu ▾, puis Aperçu, Envoyer, Fermer en icônes. -->
-    <div class="groupe barre-droite">
+    <div class="groupe groupe-outils barre-droite">
       <span class="bouton-menu bouton-menu-superchamps">
         <button data-action="enregistrer" class="principal" title="${texteHtml('document_btp.page.enregistrer_aide')}">${texteHtml('document_btp.page.enregistrer')}</button><button type="button" class="principal bouton-menu-fleche" data-ouvrir-actions title="${texteHtml('document_btp.page.actions_aide')}" aria-label="${texteHtml('document_btp.page.actions_libelle')}" aria-haspopup="menu">${iconeHtml('replier')}</button>
         <div class="menu-deroulant-contenu menu-actions-document" role="menu" data-menu-actions hidden>
@@ -111,8 +111,21 @@ const gabarit = () => `
     </section>
     <section id="vue-analyse" class="vue vue-analyse" role="tabpanel"></section>
     <section id="vue-pieces" class="vue vue-pieces" role="tabpanel"></section>
-    <section id="vue-tracabilite" class="vue vue-tracabilite" role="tabpanel"></section>
-    <section id="vue-suivi" class="vue vue-suivi" role="tabpanel"></section>
+    <!-- Suivi (D7) : notes du CRM en haut, traçabilité en bas ; séparateur à glisser, chaque partie réductible. -->
+    <section id="vue-suivi" class="vue vue-suivi" role="tabpanel">
+      <div class="suivi-partie suivi-crm" data-partie="crm">
+        <div class="suivi-entete"><h3>${texteHtml('document_btp.page.suivi.crm')}</h3>
+          <button type="button" class="bouton-icone" data-reduire-partie="crm" title="${texteHtml('document_btp.page.suivi.reduire')}">${iconeHtml('replier')}</button></div>
+        <div id="suivi-crm" class="suivi-contenu"></div>
+      </div>
+      <div class="separateur separateur-suivi" data-sep-suivi title="${texteHtml('document_btp.page.separateur')}"></div>
+      <div class="suivi-partie suivi-tracabilite" data-partie="tracabilite">
+        <div class="suivi-entete"><h3>${texteHtml('document_btp.page.suivi.tracabilite')}</h3>
+          <button type="button" class="bouton-icone" data-reduire-partie="tracabilite" title="${texteHtml('document_btp.page.suivi.reduire')}">${iconeHtml('replier')}</button></div>
+        <div id="tracabilite" class="suivi-contenu"></div>
+      </div>
+    </section>
+    <section id="vue-options" class="vue vue-options" role="tabpanel"><div id="options" class="panneau entete"></div></section>
     <section id="vue-reglements" class="vue vue-reglements" role="tabpanel"></section>
     <section id="vue-lignes" class="vue vue-lignes" role="tabpanel">
       <div class="zone-dock" data-zone="gauche"></div>
@@ -123,8 +136,8 @@ const gabarit = () => `
         <div id="recherche-lignes" hidden></div>
         <div id="grille"></div>
         <footer class="pied-lignes">
-          <div id="totaux" class="totaux-compacts"></div>
           <span class="aide aide-raccourcis" data-aide-raccourcis role="button" tabindex="0" title="${texteHtml('document_btp.page.raccourcis_aide')}">${texteHtml('document_btp.page.raccourcis')} ${iconeHtml('document_btp_info')}</span>
+          <div id="totaux" class="totaux-compacts"></div>
         </footer>
       </div>
       ${separateur('droite')}
@@ -172,6 +185,7 @@ export class PageDocument extends PageBase {
   icone = icone('document_btp_page');
 
   $(s) { return this.conteneur.querySelector(s); }
+  $$(s) { return [...this.conteneur.querySelectorAll(s)]; }
 
   async ouvrir() {
     const app = this.app;
@@ -185,13 +199,13 @@ export class PageDocument extends PageBase {
         if (o === 'lignes') this.editeur?.grille.focus();
         if (o === 'analyse') this.analyse?.rendre();
         if (o === 'pieces') this.afficherPieces();
-        if (o === 'tracabilite') this.afficherTracabilite();
-        if (o === 'suivi') this.afficherSuivi();
+        if (o === 'suivi') { this.afficherSuivi(); this.afficherTracabilite(); }
         if (o === 'reglements') this.afficherReglements();
       },
       // Plan fermé : le filtre d'affichage qu'il a posé est retiré.
       surDock: (id, visible) => { if (id === 'plan' && !visible && this.editeur?.filtre !== null) this.editeur?.filtrer(null); },
     });
+    this.#lierSuivi();
     const actions = {
       enregistrer: () => this.enregistrer(), valider: () => this.valider(), transformer: () => this.transformer(),
       precedent: () => this.precedent(), suivant: () => this.suivant(),
@@ -252,7 +266,7 @@ export class PageDocument extends PageBase {
       if (e.target.closest('[data-ouvrir-actions]')) { menu.hidden = !menu.hidden; if (!menu.hidden) menu.querySelector('button:not([hidden]):not(:disabled)')?.focus(); return; }
       menu.hidden = true;
       const b = e.target.closest('button[data-action]');
-      if (b && actions[b.dataset.action]) Promise.resolve(actions[b.dataset.action]()).catch((x) => app.erreur(x));
+      if (b && actions[b.dataset.action]) Promise.resolve(actions[b.dataset.action]()).catch((x) => this.erreurDocument(x));
     });
     // Raccourcis de la page (groupe document, personnalisables) : Alt+1… onglets, Ctrl+F recherche dans les lignes
     // (sans filtre, à la place de celle du navigateur ; onglet Analyse : dans la liste des éléments), fonctions de la barre.
@@ -269,7 +283,7 @@ export class PageDocument extends PageBase {
         this.recherche.ouvrir();
         return;
       }
-      if (actions[action]) { e.preventDefault(); Promise.resolve(actions[action]()).catch((x) => app.erreur(x)); }
+      if (actions[action]) { e.preventDefault(); Promise.resolve(actions[action]()).catch((x) => this.erreurDocument(x)); }
     };
     document.addEventListener('keydown', this.clavier);
     // Menu des actions du document : refermé par un clic ailleurs ou Échap.
@@ -469,6 +483,8 @@ export class PageDocument extends PageBase {
     this.recherche = new RechercheLignes(this.$('#recherche-lignes'), { editeur: this.editeur });
     // Éléments glissés depuis la fenêtre de la bibliothèque.
     this.editeur.surDepotExterne = (donnees, cibleId, position) => this.appel.deposer(donnees, cibleId, position);
+    // Éléments liés aux lignes (unités de l'article, conversion du prix : D2, D3), lus à la demande.
+    this.editeur.chargerElement = (id) => this.appel.fournisseur.element(id);
     this.analyse = new AnalyseCoefficients(this.$('#vue-analyse'), { editeur: this.editeur, natures: this.natures, message: (t, n) => this.app.message(t, n), appel: this.appel });
     this.editeur.coefsDefaut = this.coefsDefaut;
     this.editeur.natures = this.natures;
@@ -482,7 +498,7 @@ export class PageDocument extends PageBase {
     // Mode débogage de la vue : rapport d'import (bandeau, traçabilité).
     this.editeur.surVue = () => {
       rendreBandeauImport(this);
-      if (this.disposition.p.onglet === 'tracabilite') this.afficherTracabilite();
+      if (this.disposition.p.onglet === 'suivi') this.afficherTracabilite();
     };
     this.afficherFiltre();
     // Vues de colonnes : vue mémorisée (navigateur) ou vue par défaut du type et du modèle du document.
@@ -611,6 +627,10 @@ export class PageDocument extends PageBase {
     }
     const p = this.panneaux;
     p.rendreEntete(this.$('#entete'));
+    p.rendreOptions(this.$('#options'));
+    this.#marquerErreurs();
+    // Onglet Règlements affiché : aperçu de l'échéancier recalculé (net à payer, date).
+    if (this.disposition?.p.onglet === 'reglements') p.rendreEcheancier(this.$('#vue-reglements .reglement-conditions [data-echeancier]'));
     this.plan?.rendre();
     if (this.disposition.p.onglet === 'analyse') this.analyse?.rendre();
     p.rendreDetail(this.$('#detail'), this.selection);
@@ -654,9 +674,9 @@ export class PageDocument extends PageBase {
     this.#rendreAttente();
     document.body.classList.toggle('lecture-seule', !modifiable);
     if (this.disposition?.p.onglet === 'pieces') this.afficherPieces();
-    if (this.disposition?.p.onglet === 'tracabilite' && this.tracabiliteCle !== this.cleTracabilite()) this.afficherTracabilite();
-    // Onglet Suivi (module CRM actif, document enregistré) : notes du groupe d'indices.
-    this.$('[data-onglet-vue="suivi"]').hidden = !this.app.moduleActif(MODULE_FACULTATIF.CRM) || !doc.ent_id;
+    if (this.disposition?.p.onglet === 'suivi' && this.tracabiliteCle !== this.cleTracabilite()) this.afficherTracabilite();
+    // Onglet Suivi : notes du groupe d'indices (module CRM actif) au-dessus de la traçabilité.
+    this.$('#vue-suivi').classList.toggle('sans-crm', !this.app.moduleActif(MODULE_FACULTATIF.CRM));
     // Ordres (module Exécution) : coefficients par nature et marge dans l'ordre d'exécution seulement (E3, E17).
     const typeDoc = this.editeur.definition.type;
     this.$('[data-onglet-vue="analyse"]').hidden = typeDoc?.tyd_famille === FAMILLE_DOCUMENT.EXECUTION && typeDoc.tyd_code !== TYPE_DOCUMENT.E_OE;
@@ -897,7 +917,7 @@ export class PageDocument extends PageBase {
   }
 
   afficherTracabilite() {
-    const zone = this.$('#vue-tracabilite');
+    const zone = this.$('#tracabilite');
     const d = this.editeur?.saisie.document;
     if (!d) return;
     this.tracabiliteCle = this.cleTracabilite();
@@ -920,9 +940,41 @@ export class PageDocument extends PageBase {
       .catch((x) => { zone.innerHTML = `<p class="erreur">${echapper(x.message)}</p>`; });
   }
 
+  /**
+   * Onglet Suivi (D7) : hauteur de la partie Suivi (séparateur à glisser, double-clic : moitié) et partie réduite à son
+   * titre (bouton de chaque partie, une seule à la fois), gardées dans le navigateur (préférence `suiviDocument`).
+   */
+  #lierSuivi() {
+    const vue = this.$('#vue-suivi');
+    const crm = vue.querySelector('.suivi-crm');
+    const p = { hauteur: null, reduite: null, ...(lirePreferences().suiviDocument ?? {}) };
+    const appliquer = () => {
+      crm.style.flexBasis = p.hauteur ? `${p.hauteur}px` : '';
+      vue.querySelectorAll('[data-partie]').forEach((x) => x.classList.toggle('reduite', x.dataset.partie === p.reduite));
+      vue.querySelectorAll('[data-reduire-partie]').forEach((b) => {
+        const reduite = b.dataset.reduirePartie === p.reduite;
+        b.innerHTML = iconeHtml(reduite ? 'document_deplier' : 'replier');
+        b.title = texte(reduite ? 'document_btp.page.suivi.deplier' : 'document_btp.page.suivi.reduire');
+        b.setAttribute('aria-expanded', String(!reduite));
+      });
+    };
+    const memoriser = () => { ecrirePreferences({ suiviDocument: p }); appliquer(); };
+    separateurZones(vue.querySelector('[data-sep-suivi]'), {
+      cible: crm, axe: 'y', min: 80, max: () => vue.clientHeight - 80,
+      appliquer: (_c, h) => { p.hauteur = h; p.reduite = null; appliquer(); },
+      surFin: memoriser, surDoubleClic: () => { p.hauteur = null; memoriser(); },
+    });
+    vue.querySelectorAll('[data-reduire-partie]').forEach((b) => b.addEventListener('click', () => {
+      p.reduite = p.reduite === b.dataset.reduirePartie ? null : b.dataset.reduirePartie;
+      memoriser();
+    }));
+    appliquer();
+  }
+
   /** Onglet Suivi (module CRM) : notes, tâches et courriels du document, tous indices confondus (groupe d'indices). */
   afficherSuivi() {
-    const zone = this.$('#vue-suivi');
+    if (!this.app.moduleActif(MODULE_FACULTATIF.CRM)) return;
+    const zone = this.$('#suivi-crm');
     const d = this.editeur?.saisie.document;
     if (!d?.ent_id) { zone.innerHTML = `<p class="aide">${texteHtml('document_btp.page.suivi_indisponible')}</p>`; return; }
     const id = String(d.ent_groupe_id ?? d.ent_id);
@@ -954,6 +1006,69 @@ export class PageDocument extends PageBase {
       ouvrirUrl: (url) => this.app.naviguer(url, { nouvelleFenetre: true }),
       message: (t, n) => this.app.message(t, n),
     });
+  }
+
+  /**
+   * Erreur d'une action du document : les contrôles en cause (refus de validation) sont listés dans la fenêtre des
+   * messages (I5), chacun avec « Aller » vers sa ligne.
+   */
+  /**
+   * Erreur d'une action du document : un élément par erreur de l'API ; une ligne en cause → « Aller » à la ligne,
+   * un champ hors des lignes (CHAMPS_ERREUR_DOCUMENT, I2) → « Aller » à l'onglet et au champ, encadré avec son onglet
+   * jusqu'à la version suivante du document.
+   */
+  erreurDocument(e) {
+    const ligne = (d) => (d.lig_id ? this.editeur?.saisie.lignes.find((l) => l.lig_id === d.lig_id) : null);
+    const champ = (d) => (ligne(d) ? null : CHAMPS_ERREUR_DOCUMENT[d.code] ?? null);
+    const details = Array.isArray(e?.details) ? e.details : [];
+    this.erreursChamps = { version: this.editeur?.saisie.document.ent_version ?? null, codes: details.map((d) => d.code).filter((c) => CHAMPS_ERREUR_DOCUMENT[c]) };
+    this.#marquerErreurs();
+    this.app.erreur(e, {
+      libelle: (d) => {
+        const l = ligne(d);
+        if (l) return texte('document_btp.page.erreur_ligne', { libelle: String(l.lig_libelle_brut ?? l.lig_code ?? '').slice(0, 60) || l.lig_id });
+        const c = champ(d);
+        return c ? texte(`document_btp.page.champs_erreur.${c.cle}`) : null;
+      },
+      aller: (d) => {
+        if (ligne(d)) return () => { this.disposition.onglet('lignes'); this.editeur.allerA(d.lig_id); };
+        return champ(d) ? () => this.allerChampErreur(d.code) : null;
+      },
+    });
+  }
+
+  /** Champs et onglets des erreurs du dernier refus encadrés (redessinés à chaque rendu ; oubliés à la version suivante). */
+  #marquerErreurs() {
+    const e = this.erreursChamps;
+    if (e && e.version !== (this.editeur?.saisie.document.ent_version ?? null)) this.erreursChamps = null;
+    this.$$('.champ-erreur').forEach((x) => x.classList.remove('champ-erreur'));
+    this.$$('[data-onglet-vue].onglet-erreur').forEach((x) => x.classList.remove('onglet-erreur'));
+    for (const code of this.erreursChamps?.codes ?? []) {
+      const c = CHAMPS_ERREUR_DOCUMENT[code];
+      this.elementErreur(c)?.classList.add('champ-erreur');
+      this.$(`[data-onglet-vue="${c.onglet}"]`)?.classList.add('onglet-erreur');
+    }
+  }
+
+  /** Élément encadré d'une erreur : le champ avec son libellé, sinon la section. */
+  elementErreur(c) {
+    const el = this.$(`#vue-${c.onglet}`)?.querySelector(c.selecteur);
+    return el?.closest('label, fieldset') ?? el ?? null;
+  }
+
+  /** Va au champ d'une erreur : onglet, défilement, saisie active, signalé une fois. */
+  allerChampErreur(code) {
+    const c = CHAMPS_ERREUR_DOCUMENT[code];
+    if (!c) return;
+    this.disposition.onglet(c.onglet);
+    const el = this.elementErreur(c);
+    if (!el) return;
+    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    el.querySelector('input:not([type=hidden]):not([disabled]), select, textarea, button')?.focus({ preventScroll: true });
+    el.classList.remove('signale');
+    void el.offsetWidth;
+    el.classList.add('signale');
+    el.addEventListener('animationend', () => el.classList.remove('signale'), { once: true });
   }
 
   async valider() {

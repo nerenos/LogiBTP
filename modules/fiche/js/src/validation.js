@@ -13,7 +13,8 @@ export const MESSAGES = textesParCode('fiche.validation', ['OBLIGATOIRE', 'LONGU
 export const FORMATS_PREDEFINIS = pairesParCode('fiche.formats', ['email', 'telephone', 'code_postal']);
 
 const vide = (v) => v === null || v === undefined || (typeof v === 'string' && v.trim() === '');
-const estObligatoire = (c) => !!(c.obligatoire || c.obligatoire_parametre);
+// Une case à cocher n'est jamais obligatoire : elle vaut toujours oui ou non (vide = non à l'enregistrement).
+const estObligatoire = (c) => c.type !== 'booleen' && !!(c.obligatoire || c.obligatoire_parametre);
 
 /** Nombre d'une saisie (virgule acceptée), ou null si invalide. */
 export function nombreSaisi(v) {

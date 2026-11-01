@@ -406,8 +406,5 @@ pour({ rat: 34 }, [mail('m.roche@menuiseries-alpines.example'), 'PRO'], [tel('06
 pour({ rat: 35 }, [tel('06 71 00 00 07'), 'PORTABLE']);
 pour({ rat: 36 }, [mail('compta@gplm.example'), 'PRO']);
 
-/** Agences de notre société (personnes) par agence des salariés de démonstration. */
-export const AGENCES_SALARIES = { Lyon: 1, Grenoble: 2, 'Saint-Étienne': 25, 'Bourg-en-Bresse': 26 };
-
 /** Fournisseurs des tarifs de la bibliothèque de démonstration : tfo_tiers_id. */
 export const TIERS_TARIFS = { 'Aciers du Rhône': 22, 'Métal Distribution': 23, 'Béton Lyonnais': 24, 'Matériaux Rhône-Alpes': 5 };

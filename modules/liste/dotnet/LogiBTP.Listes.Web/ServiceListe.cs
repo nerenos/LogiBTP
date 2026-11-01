@@ -47,7 +47,7 @@ public partial class ServiceListe(ListeDbContext db, SpecialisationListe special
 
     protected static ThemeListeDto VersDto(ThemeListe t) => new()
     {
-        ThlCode = t.ThlCode, ThlLibelle = t.ThlLibelle, ThlIcone = t.ThlIcone, ThlOrdre = t.ThlOrdre, ThlActif = t.ThlActif,
+        ThlCode = t.ThlCode, ThlLibelle = t.ThlLibelle, ThlIcone = t.ThlIcone, ThlOrdre = t.ThlOrdre, ThlActif = t.ThlActif, ThlVliDefaut = t.ThlVliDefaut,
         ThlTypes = t.ThlTypes.Deserialize<List<TypeElementTheme>>(JsonCalcul.Options) ?? [],
     };
 
@@ -73,6 +73,8 @@ public partial class ServiceListe(ListeDbContext db, SpecialisationListe special
         theme.ThlOrdre = dto.ThlOrdre;
         theme.ThlActif = dto.ThlActif;
         theme.ThlTypes = JsonSerializer.SerializeToDocument(types, JsonCalcul.Options);
+        // Vue par défaut : une vue de ce thème, sinon aucune.
+        theme.ThlVliDefaut = dto.ThlVliDefaut is long v && await db.Vues.AnyAsync(x => x.VliId == v && x.VliTheme == theme.ThlCode, ct) ? v : null;
         await db.SaveChangesAsync(ct);
         return VersDto(theme);
     }
@@ -360,6 +362,23 @@ public partial class ServiceListe(ListeDbContext db, SpecialisationListe special
         var c = await Constructeur(d, u, ct);
         var lignes = await Lignes(Requete(() => c.Segments(d.Colonne)), ct);
         return lignes.Select(l => new CompteSegment(l["valeur"] as string, Convert.ToInt64(l["nombre"]))).ToList();
+    }
+
+    /// <summary>Agrégats (totaux, indicateurs) sur toute la sélection : { "_lignes": n, code: valeur | null }.</summary>
+    public virtual async Task<Dictionary<string, decimal?>> Agregats(DemandeListe d, Utilisateur u, CancellationToken ct)
+    {
+        var c = await Constructeur(d, u, ct);
+        var ligne = (await Lignes(Requete(() => c.Agregats(d.Agregats)), ct)).FirstOrDefault() ?? [];
+        static decimal? Nombre(object? v) => v is null ? null : Convert.ToDecimal(v, System.Globalization.CultureInfo.InvariantCulture);
+        var res = new Dictionary<string, decimal?> { ["_lignes"] = Nombre(ligne.GetValueOrDefault("_lignes")) ?? 0 };
+        for (var i = 0; i < d.Agregats.Count; i++)
+        {
+            var a = d.Agregats[i];
+            res[a.Code] = a.Calcul == "ratio"
+                ? (Nombre(ligne.GetValueOrDefault($"a{i}d")) is decimal den && den != 0 ? (Nombre(ligne.GetValueOrDefault($"a{i}n")) ?? 0) / den : null)
+                : Nombre(ligne.GetValueOrDefault($"a{i}"));
+        }
+        return res;
     }
 
     public virtual async Task<List<EtatLigne>> Controle(DemandeListe d, Utilisateur u, CancellationToken ct)

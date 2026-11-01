@@ -149,6 +149,7 @@ public partial class ConstructeurRequete
             conditions.Add($"NOT (({type})::text = ANY({P(TypesRefuses.ToArray())}))");
         }
         conditions.AddRange(Definition.Filtres.Select(ConditionFiltre));
+        conditions.AddRange(Demande.Filtres.Select(ConditionFiltre));
         if (MasqueSommeil) conditions.Add($"{Col(ColonneUsage)}::text IS DISTINCT FROM 'S'");
         var colonnes = ColonnesRecherche();
         foreach (var mot in Mots(Demande.Recherche))
@@ -296,6 +297,48 @@ public partial class ConstructeurRequete
             return Fin($"SELECT x.v AS valeur, count(*) AS nombre {Depuis} LEFT JOIN LATERAL (SELECT DISTINCT u FROM unnest({col}::text[]) AS u WHERE u IS NOT NULL) AS x(v) ON TRUE"
                 + $"{Where(Conditions(colonne))} GROUP BY 1 ORDER BY 1 NULLS LAST LIMIT {P(max)}");
         return Fin($"SELECT {col}::text AS valeur, count(*) AS nombre {Depuis}{Where(Conditions(colonne))} GROUP BY 1 ORDER BY 1 NULLS LAST LIMIT {P(max)}");
+    }
+
+    /// <summary>Calculs d'agrégat acceptés (même liste que CALCULS_AGREGAT côté JS).</summary>
+    public static readonly IReadOnlySet<string> CalculsAgregat = new HashSet<string>(StringComparer.Ordinal) { "somme", "moyenne", "min", "max", "compte", "ratio" };
+    public const int AgregatsMax = 40;
+
+    private string Filtre(IReadOnlyList<FiltreVue> filtres) =>
+        filtres.Count == 0 ? "" : $" FILTER (WHERE {string.Join(" AND ", filtres.Select(ConditionFiltre))})";
+
+    /// <summary>
+    /// Agrégats sur toute la sélection (vue, recherche, segments, filtres de la demande) : une ligne, colonne « _lignes »
+    /// (nombre de lignes), puis « a{i} » par agrégat (ratio : « a{i}n » et « a{i}d », rapport calculé par l'appelant).
+    /// Somme et compte d'un ensemble vide : 0 ; moyenne, min, max : null.
+    /// </summary>
+    public virtual RequeteSql Agregats(IReadOnlyList<AgregatListe> agregats)
+    {
+        if (agregats.Count > AgregatsMax) throw new ErreurListe("AGREGAT", $"{AgregatsMax} agrégats au plus");
+        var parties = new List<string> { "count(*) AS \"_lignes\"" };
+        for (var i = 0; i < agregats.Count; i++)
+        {
+            var a = agregats[i];
+            if (!CalculsAgregat.Contains(a.Calcul)) throw new ErreurListe("AGREGAT", $"Calcul d'agrégat inconnu : {a.Calcul}");
+            var filtre = Filtre(a.Filtres);
+            if (a.Calcul == "compte") { parties.Add($"count(*){filtre} AS \"a{i}\""); continue; }
+            if (a.Calcul == "ratio")
+            {
+                parties.Add($"count(*){filtre} AS \"a{i}n\"");
+                parties.Add($"count(*){Filtre(a.Denominateur)} AS \"a{i}d\"");
+                continue;
+            }
+            if (a.Colonne is not { } colonne || !TypeNumerique().IsMatch(_colonnes.GetValueOrDefault(colonne)?.Type.ToLowerInvariant() ?? ""))
+                throw new ErreurListe("AGREGAT", $"Colonne numérique attendue pour l'agrégat {a.Code}");
+            var col = $"{Col(colonne)}::numeric";
+            parties.Add(a.Calcul switch
+            {
+                "somme" => $"coalesce(sum({col}){filtre}, 0) AS \"a{i}\"",
+                "moyenne" => $"avg({col}){filtre} AS \"a{i}\"",
+                "min" => $"min({col}){filtre} AS \"a{i}\"",
+                _ => $"max({col}){filtre} AS \"a{i}\"",
+            });
+        }
+        return Fin($"SELECT {string.Join(", ", parties)} {Depuis}{Where(Conditions())}");
     }
 
     /// <summary>ID et empreinte des lignes du filtre jusqu'au curseur inclus, dans l'ordre.</summary>
