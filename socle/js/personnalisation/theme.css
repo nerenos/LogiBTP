@@ -27,6 +27,12 @@
   --grille-hauteur-ligne: 1.9rem;
   --grille-marge-ligne: 0.24rem;
   --cellule-marge: 3px 7px;
+  /* Retrait des niveaux de la grille (D4) : plein pour les deux premiers, réduit ensuite, plafonné. */
+  --grille-retrait: 1.1rem;
+  --grille-retrait-profond: 0.45rem;
+  --grille-retrait-max: 4rem;
+  --grille-guide: rgba(100, 116, 139, 0.35);
+  --grille-signal: var(--alerte);
 }
 :root[data-densite="compacte"] {
   --taille-texte: 13px;

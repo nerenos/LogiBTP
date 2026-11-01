@@ -63,6 +63,50 @@ export function prixUnite(e, unite) {
   return { pa: parUnite(e.pa), pv: parUnite(e.pv), unite: u, ratio: S(r) };
 }
 
+const TYPES_SANS_UNITES = ['OUVRAGE', 'ENSEMBLE', 'POSTE_PIED', 'TEXTE'];
+
+/** Ratio d'une unité pour l'élément (quantité en unité de stock pour 1 unité, Dec), null sans correspondance. */
+function ratioOuNul(e, unite) {
+  try {
+    return ratio(unite, { unite_stock: e.unite_stock, unites: e.unites ?? [], donnees: e.donnees ?? {} });
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Unités d'un article (D2) dans l'ordre proposé : vente, stock, puis unités déclarées ; [{ unite, role (VENTE |
+ * STOCK | AUTRE), ratio (Dec, null sans correspondance calculable) }], sans doublon. Ouvrage, ensemble… : [].
+ */
+export function unitesArticle(e) {
+  if (!e?.unite_stock || TYPES_SANS_UNITES.includes(e.type)) return [];
+  const vues = new Map();
+  const ajouter = (unite, role) => { if (unite && !vues.has(unite)) vues.set(unite, { unite, role, ratio: ratioOuNul(e, unite) }); };
+  ajouter(e.unite_vente, 'VENTE');
+  ajouter(e.unite_stock, 'STOCK');
+  for (const u of e.unites ?? []) ajouter(u.unite, 'AUTRE');
+  return [...vues.values()];
+}
+
+/**
+ * Conversion des prix d'une ligne liée à un article quand son unité passe de `avant` à `apres` (D3) : null sans
+ * correspondance (une des deux unités non déclarée) ou sans changement ; sinon { facteur (Dec : 1 après = facteur
+ * avant), pa, pv (PV fixe seulement, sinon null : il se recalcule), qte (même quantité physique), ratio (lien) }.
+ */
+export function conversionUnite(e, ligne, avant, apres) {
+  if (!avant || !apres || avant === apres) return null;
+  const rAvant = ratioOuNul(e, avant);
+  const rApres = ratioOuNul(e, apres);
+  if (!rAvant || !rApres || unitesArticle(e).length === 0) return null;
+  const facteur = rApres.div(rAvant);
+  const fois = (v) => (v === null || v === undefined || v === '' ? null : nombre(D(v).times(facteur)));
+  const divise = (v) => (v === null || v === undefined || v === '' ? null : nombre(D(v).div(facteur)));
+  return {
+    facteur, ratio: S(rApres),
+    pa: fois(ligne.lig_pa), pv: ligne.lig_pv_fixe ? fois(ligne.lig_pv) : null, qte: divise(ligne.lig_qte),
+  };
+}
+
 /** Valeurs d'une ligne pour un article. */
 export function valeursArticle(e, bibDocument, proprietes = {}) {
   const { ratio: r, ...p } = prixArticle(e);

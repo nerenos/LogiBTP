@@ -253,10 +253,10 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
 - [ ] Matériel : photo de l'état au retour d'une affectation (dépôt dans la GED du matériel depuis la ligne).
 - [ ] Salariés : retirer `sal_matricule` (recopie du code depuis `db/251`) des requêtes qui le lisent encore (magasin,
   habilitations, comptes), puis la colonne.
-- [ ] E10, E11 : page document (après les PR de personnalisation et des règlements) — filtre des notifications,
-  unités de l'article et conversion du prix, retrait limité, totaux, légende du plan (D1–D6) ; Suivi + Traçabilité,
-  onglet Options en dernier (textes de l'édition restent dans l'entête), règlement dans l'onglet Règlements placé après
-  l'Entête, champs en cause (D7–D9, I2).
+- [ ] E11 : page document — Suivi + Traçabilité, onglet Options en dernier (textes de l'édition restent dans l'entête),
+  règlement dans l'onglet Règlements placé après l'Entête, champs en cause (D7–D9, I2).
+- [ ] Unités de l'article (E10, suite) : même liste et même conversion depuis le détail de la ligne (combo Unité), et
+  choix « ne plus demander » gardé avec le document plutôt que pour la seule fenêtre ouverte.
 - [ ] Choix en liste (I1, suite) : individus de notre société au poste voulu (conducteur, chargé d'affaires, rédacteur :
   combos actuelles) et contact d'un intervenant dans la liste des contacts du tiers ; sélection multiple (destinataires).
 - [ ] Champs mois (`<input type="month">`, 13 écrans) : même saisie abrégée que les dates, à étudier.

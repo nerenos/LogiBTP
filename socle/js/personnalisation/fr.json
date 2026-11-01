@@ -78,7 +78,8 @@
         "rechercher": "Bibliothèque",
         "annuler": "$t(commun.annuler)",
         "retablir": "Rétablir"
-      }
+      },
+      "niveau": "Niveau {{niveau}}"
     },
     "raccourcis": {
       "groupe_grille": "Lignes (document, métré)",

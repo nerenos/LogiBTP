@@ -60,4 +60,10 @@ describe('Contrôles de saisie BTP', () => {
     expect(controlesSaisie(lignes, { famille: 'A', achat: true, chantier: null })).toEqual([]);
     expect(controlesSaisie(lignes, { chantier: 5 })).toEqual([]);
   });
+
+  it('désigne les cellules en cause de chaque avertissement (D1)', () => {
+    const l = { lig_id: 1, lig_tyl_id: TL.ELEMENT, lig_qte: 0, lig_pa: 0, lig_pv: 0, lig_coef_fg: 1, lig_coef_benef: 1 };
+    expect(controlesSaisie([l]).map((m) => [m.code, m.colonnes])).toEqual([
+      [CONTROLE_SAISIE.UNITE_MANQUANTE, ['unite']], [CONTROLE_SAISIE.PRIX_NUL, ['pa', 'pv']], [CONTROLE_SAISIE.QTE_NULLE, ['qte']]]);
+  });
 });

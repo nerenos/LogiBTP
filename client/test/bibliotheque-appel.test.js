@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { valeursArticle, contenuOuvrage, prixArticle } from '../src/app/bibliotheque/appel.js';
+import { valeursArticle, contenuOuvrage, prixArticle, unitesArticle, conversionUnite } from '../src/app/bibliotheque/appel.js';
 import { calculerOuvrage } from '../src/app/bibliotheque/bibliotheque.js';
 import { bibliothequeDemo } from './bibliotheque-demo.js';
 import { valeursDepuisLigne } from '../src/app/bibliotheque/envoi.js';
@@ -58,5 +58,21 @@ describe('appel de la bibliothèque', () => {
     expect(valeursDepuisLigne(sans, 'OUVRAGE')).not.toHaveProperty('pv_fixe');
     expect(valeursDepuisLigne(sans, 'OUVRAGE')).not.toHaveProperty('pv');
     expect(valeursDepuisLigne({ lig_tyl_id: 1, lig_libelle_html: 'Lot', lig_pv_fixe: true, lig_pv: 10 }, 'ENSEMBLE').pv_fixe).toBe(false);
+  });
+});
+
+// Unités de l'article proposées en premier (D2) et prix converti au changement d'unité (D3).
+describe("unités de l'article", () => {
+  const e = { type: 'ARTICLE', unite_stock: 'm2', unite_vente: 'u', unites: [{ unite: 'u', formule: '2.5' }, { unite: 'pal', formule: '50' }], donnees: {} };
+  it('vente, stock puis unités déclarées, sans doublon', () => {
+    expect(unitesArticle(e).map((u) => [u.unite, u.role, u.ratio?.toString()])).toEqual([['u', 'VENTE', '2.5'], ['m2', 'STOCK', '1'], ['pal', 'AUTRE', '50']]);
+    expect(unitesArticle({ ...e, type: 'OUVRAGE' })).toEqual([]);
+  });
+  it('conversion : prix multipliés, quantité divisée, PV seulement s’il est fixe', () => {
+    const c = conversionUnite(e, { lig_pa: 12, lig_pv: 20, lig_pv_fixe: false, lig_qte: 10 }, 'm2', 'u');
+    expect([c.facteur.toString(), c.pa, c.pv, c.qte, c.ratio]).toEqual(['2.5', 30, null, 4, '2.5']);
+    expect(conversionUnite(e, { lig_pa: 30, lig_pv: 50, lig_pv_fixe: true, lig_qte: 4 }, 'u', 'm2')).toMatchObject({ pa: 12, pv: 20, qte: 10 });
+    expect(conversionUnite(e, { lig_pa: 1 }, 'm2', 'kg')).toBeNull();
+    expect(conversionUnite(e, { lig_pa: 1 }, 'm2', 'm2')).toBeNull();
   });
 });

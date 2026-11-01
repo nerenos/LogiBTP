@@ -617,6 +617,24 @@
         "entete": "— (chantier de l'entête)",
         "sans": "Sans chantier : choisir le chantier de la ligne",
         "herite": "— chantier de l'entête : choisir un chantier pour l'imposer à la ligne"
+      },
+      "unites": {
+        "article": "Unités de l’article",
+        "autres": "Autres unités",
+        "equivalence": "1 {{unite}} = {{ratio}} {{stock}}",
+        "role_vente": "Unité de vente",
+        "role_stock": "Unité de stock",
+        "role_autre": "Unité de l’article",
+        "titre": "Convertir le prix ?",
+        "equivalence_titre": "1 {{apres}} = {{facteur}} {{avant}}",
+        "prix": "{{avant}} €/{{unite_avant}} → {{apres}} €/{{unite_apres}}",
+        "pa": "PA :",
+        "pv_fixe": "PV fixe :",
+        "qte": "Quantité pour la même quantité physique : {{avant}} {{unite_avant}} → {{apres}} {{unite_apres}}",
+        "memoriser": "Ne plus demander pour ce document (même choix)",
+        "convertir": "Convertir le prix",
+        "convertir_qte": "Convertir le prix et la quantité",
+        "aucun": "Ne rien convertir"
       }
     },
     "colonnes": {
@@ -647,7 +665,8 @@
       "frais_prorata": "Ventilation au prorata",
       "cle_frais": "Clé de frais annexes",
       "rattachement": "Rattachement",
-      "chantier_ligne": "Chantier de la ligne"
+      "chantier_ligne": "Chantier de la ligne",
+      "unite_convertie": "unité"
     },
     "stock_lieux": {
       "A_RECEPTION": {

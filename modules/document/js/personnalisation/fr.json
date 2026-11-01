@@ -40,7 +40,10 @@
       "aide_ligne": "Aller à la ligne (F8 : suivante, Maj+F8 : précédente)",
       "document": "Document",
       "aucune_filtre": "Aucune notification avec ces filtres.",
-      "aucune": "Aucune erreur ni avertissement dans le document."
+      "aucune": "Aucune erreur ni avertissement dans le document.",
+      "filtrer_grille": "Filtrer la grille",
+      "filtrer_grille_aide": "N’afficher dans la grille que les lignes des notifications affichées (et leurs tranches)",
+      "grille_tout": "Afficher de nouveau toutes les lignes"
     },
     "plan": {
       "clic": "Clic sur une tranche",
@@ -62,6 +65,23 @@
         "tout": "Tout",
         "tout_ouvrir": "Ouvrir toutes les lignes (titres, ouvrages, pied)",
         "tout_reduire": "Réduire toutes les lignes (titres, ouvrages, pied)"
+      },
+      "legende": {
+        "titre": "Légende",
+        "etiquettes": "Étiquettes",
+        "modes": "Modes de vente",
+        "fonds": "Lignes",
+        "marques": "Marques",
+        "filtrer": "Filtrer la grille : {{nom}} (clic de nouveau : retirer)",
+        "fond_section": "Section",
+        "fond_titre": "Titre",
+        "fond_ouvrage": "Ouvrage",
+        "fond_pied": "Pied",
+        "exemple": "123,45",
+        "marque_hors_total": "Hors total (option, pour mémoire…)",
+        "marque_frais": "Frais annexes",
+        "marque_soldee": "Ligne soldée",
+        "marque_non_editee": "Non imprimée"
       }
     },
     "parametrage": {
@@ -265,7 +285,8 @@
         "tiers": "tiers",
         "defaut": "défaut"
       },
-      "sous_total": "Sous-total"
+      "sous_total": "Sous-total",
+      "totaux_erreur": "Le calcul signale une erreur : totaux à vérifier (voir les notifications)"
     },
     "etapes": {
       "entete": "Entête",
@@ -376,7 +397,9 @@
       "avancement_ajout": "Document d'avancement : seuls du texte et des lignes de pied s'ajoutent",
       "insertion_interdite": "Position d'insertion interdite",
       "saisie_libre": "Saisie libre",
-      "dans_document": "dans ce document"
+      "dans_document": "dans ce document",
+      "filtre_signalees_un": "{{nombre}} ligne signalée",
+      "filtre_signalees_autre": "{{nombre}} lignes signalées"
     },
     "variables": {
       "choix": "{{libelle}} – {{variable}}",

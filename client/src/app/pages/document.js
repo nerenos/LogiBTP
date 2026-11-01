@@ -123,8 +123,8 @@ const gabarit = () => `
         <div id="recherche-lignes" hidden></div>
         <div id="grille"></div>
         <footer class="pied-lignes">
-          <div id="totaux" class="totaux-compacts"></div>
           <span class="aide aide-raccourcis" data-aide-raccourcis role="button" tabindex="0" title="${texteHtml('document_btp.page.raccourcis_aide')}">${texteHtml('document_btp.page.raccourcis')} ${iconeHtml('document_btp_info')}</span>
+          <div id="totaux" class="totaux-compacts"></div>
         </footer>
       </div>
       ${separateur('droite')}
@@ -469,6 +469,8 @@ export class PageDocument extends PageBase {
     this.recherche = new RechercheLignes(this.$('#recherche-lignes'), { editeur: this.editeur });
     // Éléments glissés depuis la fenêtre de la bibliothèque.
     this.editeur.surDepotExterne = (donnees, cibleId, position) => this.appel.deposer(donnees, cibleId, position);
+    // Éléments liés aux lignes (unités de l'article, conversion du prix : D2, D3), lus à la demande.
+    this.editeur.chargerElement = (id) => this.appel.fournisseur.element(id);
     this.analyse = new AnalyseCoefficients(this.$('#vue-analyse'), { editeur: this.editeur, natures: this.natures, message: (t, n) => this.app.message(t, n), appel: this.appel });
     this.editeur.coefsDefaut = this.coefsDefaut;
     this.editeur.natures = this.natures;

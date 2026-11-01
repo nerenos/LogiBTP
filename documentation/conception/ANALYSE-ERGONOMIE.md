@@ -676,3 +676,32 @@ client` pour les lots qui changent des vues fournies.
 - **Contrôles** : `npm test` (socle : `notification.test.js`) ; navigateur : fiche matériel vide enregistrée (fenêtre,
   « Aller », décompte, historique), bulle de « Enregistrer (Ctrl+S) », barres du planning et de la fiche.
 
+
+## 19. Réalisation du lot E10 : page document (01/11/2026)
+
+- **Notifications et grille** (D1) : bouton « ⧩ Filtrer la grille » du dock des notifications
+  (`NotificationsDocument.filtrerGrille`) : la grille n'affiche que les lignes des notifications visibles (filtres du
+  dock appliqués, tenu à jour à chaque calcul) et leurs tranches, bandeau « Affichage filtré : n lignes signalées » ;
+  `EditeurDocument.filtrerSignalees(ids)`, retiré par « Tout afficher ». Cellule en cause soulignée (`--grille-signal`,
+  bulle du message) : `colonnes` des messages (`COLONNES_CONTROLE_SAISIE` de `controles-btp.js`), point d'accroche
+  `signalCellule(ligne, colonne)` de `GrilleArbre`.
+- **Unités de l'article** (D2) : ligne liée à un élément, élément lu d'avance quand la ligne devient courante
+  (`EditeurDevisBtp.elementLigne`, `chargerElement` posé par la page : service de la bibliothèque) ; liste « Unités de
+  l'article » (vente, stock, unités déclarées avec « 1 u = r unité de stock ») puis « Autres unités »
+  (`unitesArticle` de `bibliotheque/appel.js`).
+- **Conversion du prix** (D3, Q6) : unité changée vers une unité de l'article → fenêtre « Convertir le prix ? »
+  (équivalence, PA, PV s'il est fixe ; convertir le prix, le prix et la quantité — pas pour une quantité de métré —, ne
+  rien convertir ; Échap : unité inchangée), case « Ne plus demander pour ce document » (même choix jusqu'à la
+  fermeture) ; lien `element.unite` / `ratio` mis à jour ; une seule étape d'annulation (`conversionUnite`, testée).
+- **Retrait des niveaux** (D4) : `--grille-retrait` (1,1 rem) pour deux niveaux, `--grille-retrait-profond` (0,45 rem)
+  ensuite, plafond `--grille-retrait-max` (4 rem) ; au-delà de deux niveaux, guides verticaux (`--grille-guide`) et
+  « Niveau n » en bulle. Toutes les grilles arborescentes (document, bibliothèque, métré).
+- **Totaux du pied** (D5) : « Raccourcis ⓘ » à gauche, totaux calés à droite en chiffres plus grands, libellés en
+  petites capitales, séparateurs fins, net à payer en pastille (`--document-total-fond`, `--document-total-texte`) ;
+  erreur de calcul : totaux en couleur d'alerte.
+- **Légende du plan** (D6) : section repliable en bas du plan (préférence `planLegende`) : étiquettes et modes de vente
+  présents (clic : filtre par pastille de la grille), fonds de lignes (section, titre, ouvrage, pied), marques (hors
+  total, frais annexes, soldée, non imprimée) ; couleurs des données ou du thème.
+- **Contrôles** : `npm test` (`controles-btp.test.js`, `bibliotheque-appel.test.js`) ; navigateur : devis neuf,
+  article PARP20 en m² → pal (1 pal = 6 m², PA 13,20 → 79,20, Ctrl+Z rend les deux), quantité à 0 signalée et grille
+  filtrée, cinq niveaux de titres (retraits 24 / 41,6 / 48,8 / 56 / 63,2 px), thème sombre.

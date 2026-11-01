@@ -505,6 +505,10 @@ export class PanneauxDocument {
     const extra = this.lignesTotaux(d);
     if (compact) {
       const detailTva = r.tva.map((t) => texte('document.panneaux.tva_detail', { code: t.tva_code, montant: formatNombre(t.tva_montant_net, pm), base: formatNombre(t.tva_base_ht, pm) })).join(' · ');
+      // Erreur de calcul : totaux signalés en attention (D5).
+      const ecart = (r.erreurs ?? []).length > 0;
+      zone.classList.toggle('attention', ecart);
+      zone.title = ecart ? texte('document.panneaux.totaux_erreur') : '';
       zone.innerHTML = `
         <span><small>${texteHtml('document.panneaux.total_ht')}</small> ${formatNombre(d.ent_total_ht, pm)}</span>
         <span title="${echapper(detailTva)}"><small>${texteHtml('document.panneaux.tva')}</small> ${formatNombre(d.ent_total_tva, pm)}</span>
