@@ -5,8 +5,10 @@ obj/
 node_modules/
 client/dist/
 **/tests/resultats-js/
+graphify-out/
 stockage-ged/
 .env
+src/LogiBTP.Api/appsettings.Development.json
 # Clé de construction du .env (CleConstruction.targets), propre à chaque distribution
 cle-construction.secret
 # Journal technique de repli (base indisponible)
