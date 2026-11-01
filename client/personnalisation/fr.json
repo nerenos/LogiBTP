@@ -5881,5 +5881,720 @@
     "routes": {
       "fusion": "Fusion"
     }
+  },
+  "ressources_btp": {
+    "affectations": {
+      "types": {
+        "SALARIE": "Salarié",
+        "INTERIM": "Intérimaire",
+        "SOUS_TRAITANT": "Sous-traitant",
+        "MATERIEL": "Matériel (porteur)"
+      },
+      "erreurs": {
+        "AFF_TYPE": "Type d'affectation inconnu",
+        "AFF_CIBLE": "Affecté à qui ?",
+        "AFF_DATE": "Début obligatoire, fin après le début",
+        "AFF_SOI": "Un matériel ne s'affecte pas à lui-même",
+        "AFF_CHEVAUCHEMENT": "Une seule affectation à la fois : périodes qui se chevauchent",
+        "AFF_BOUCLE": "Matériels porteurs en boucle"
+      },
+      "titre": "Affectations",
+      "ajouter": "Nouvelle affectation (la précédente se termine la veille)",
+      "aide": "Une affectation à la fois : un salarié, un intérimaire, un sous-traitant ou un autre matériel (porteur : le petit outillage d'un camion suit le camion).",
+      "colonnes": {
+        "type": "Affecté à",
+        "ressource": "Ressource"
+      },
+      "retirer": "Retirer cette affectation",
+      "aucune": "Jamais affecté.",
+      "faute": "affectation {{n}} : {{message}}",
+      "enregistrees": "Affectations enregistrées"
+    },
+    "compteurs": {
+      "unites": {
+        "H": "h",
+        "KM": "km"
+      },
+      "evenements": {
+        "PANNE": "Panne",
+        "SINISTRE": "Sinistre",
+        "ACCIDENT": "Accident",
+        "IMMOBILISATION": "Immobilisation",
+        "CONTROLE": "Contrôle",
+        "ENTRETIEN": "Entretien",
+        "CARBURANT": "Plein de carburant",
+        "AUTRE": "Autre"
+      },
+      "erreurs": {
+        "REL_UNITE": "Unité de compteur non suivie pour ce matériel",
+        "REL_DATE": "Date du relevé obligatoire",
+        "REL_VALEUR": "Valeur du compteur obligatoire et positive",
+        "REL_DECROISSANT": "Compteur inférieur au relevé précédent : cocher « remise à zéro » si le compteur a été remplacé",
+        "EVT_TYPE": "Type d'événement inconnu",
+        "EVT_DATE": "Date obligatoire, fin après le début",
+        "EVT_LIBELLE": "Libellé obligatoire",
+        "EVT_LITRES": "Nombre de litres obligatoire",
+        "EVT_COUT": "Coût négatif"
+      },
+      "sources": {
+        "SAISIE": "Saisie",
+        "CARBURANT": "Plein",
+        "ORDRE": "Ordre",
+        "BORNE": "Borne",
+        "REPRISE": "Reprise de la fiche",
+        "TERRAIN": "Terrain"
+      },
+      "aucun": "Aucun relevé ni événement.",
+      "frise": "Frise des compteurs et des événements",
+      "releve": {
+        "titre": "Relevé du compteur"
+      },
+      "champs": {
+        "date": "Date",
+        "compteur": "Compteur",
+        "valeur": "Valeur",
+        "remise_remplace": "Remise à zéro (compteur remplacé)",
+        "commentaire": "Commentaire",
+        "type": "Type",
+        "fin": "Fin",
+        "plan": "Plan réalisé",
+        "litres": "Litres",
+        "cout": "Coût HT",
+        "remise": "Remise à zéro",
+        "description": "Description"
+      },
+      "evenement": {
+        "titre": "Événement",
+        "nouveau": "Nouvel événement"
+      },
+      "journal": {
+        "releve": "Relevé",
+        "remise": "remise à zéro",
+        "retirer_releve": "Retirer ce relevé",
+        "litres": "{{litres}} l",
+        "supprimer_evenement": "Supprimer cet événement",
+        "titre": "Journal",
+        "origine": "Origine"
+      },
+      "titre": "Compteurs et événements",
+      "actions": {
+        "releve": "Nouveau relevé du compteur",
+        "plein": "Plein de carburant (coût porté au chantier de suivi)",
+        "evenement": "Nouvel événement : panne, sinistre, contrôle…",
+        "ordre": "Nouvel ordre d'entretien (atelier)"
+      },
+      "actuels_html": "Compteurs : <b>{{valeurs}}</b>",
+      "aucun_compteur": "Aucun compteur suivi (champ Compteurs de la fiche).",
+      "ordres": "Ordres d'entretien",
+      "messages": {
+        "evenement_enregistre": "Événement enregistré",
+        "releve_enregistre": "Relevé enregistré",
+        "retirer_releve": "Retirer ce relevé ?",
+        "releve_retire": "Relevé retiré",
+        "supprimer_evenement": "Supprimer cet événement et son relevé ?",
+        "evenement_supprime": "Événement supprimé"
+      },
+      "pointages": {
+        "titre": "Heures pointées sur le terrain",
+        "chantier": "Chantier",
+        "conducteur": "Conducteur",
+        "duree": "Durée"
+      }
+    },
+    "equipes": {
+      "erreurs": {
+        "EQU_CODE": "Code de l'équipe obligatoire",
+        "EQU_LIBELLE": "Libellé de l'équipe obligatoire",
+        "EQU_PERIODE": "Date de début de la composition obligatoire",
+        "EQU_DATE_DOUBLE": "Deux compositions commencent le même jour",
+        "EQU_TYPE": "Type de membre inconnu",
+        "EQU_DOUBLON": "Membre présent deux fois dans la composition",
+        "EQU_SOI": "Une équipe ne peut pas se contenir elle-même",
+        "EQU_CHEF_TYPE": "Le chef d'équipe est un salarié ou un intérimaire",
+        "EQU_CHEFS": "Un seul chef d'équipe par composition",
+        "EQU_CYCLE": "Une équipe ne peut pas contenir une équipe qui la contient",
+        "EQU_ORDRE": "Une composition ne peut pas commencer avant une composition plus ancienne non chargée",
+        "EQU_VERSION": "L'équipe a été modifiée par ailleurs",
+        "EQU_VERROU": "L'équipe est en cours de modification par un autre utilisateur"
+      }
+    },
+    "habilitations": {
+      "etats": {
+        "VALIDE": "Valide",
+        "A_RENOUVELER": "À renouveler",
+        "EXPIREE": "Expirée",
+        "NON_ACQUISE": "Pas encore acquise"
+      },
+      "erreurs": {
+        "HAB_TYPE": "Type d'habilitation inconnu ou inactif",
+        "HAB_CONCERNE": "Ce type d'habilitation ne s'applique pas à cet élément",
+        "HAB_DATES": "Fin de validité antérieure à l'obtention",
+        "MIS_PERIODE": "Fin de mission antérieure au début",
+        "MIS_DATES": "Début et fin de mission obligatoires",
+        "MIS_AGENCE": "Agence d'intérim obligatoire",
+        "MIS_TAUX": "Taux horaire négatif",
+        "MIS_CHEVAUCHEMENT": "Missions qui se chevauchent"
+      },
+      "jours": "{{nombre}} j",
+      "depuis": "depuis {{nombre}} j",
+      "titre": "Habilitations",
+      "ajouter": "Ajouter une habilitation",
+      "colonnes": {
+        "type": "Type",
+        "obtenue": "Obtenue le",
+        "fin": "Fin de validité",
+        "etat": "État",
+        "numero": "N°",
+        "organisme": "Organisme"
+      },
+      "fin_aide": "Vide : calculée depuis la durée du type",
+      "calculee": "calculée : {{date}}",
+      "retirer": "Retirer cette habilitation",
+      "aucune": "Aucune habilitation.",
+      "faute": "ligne {{n}} : {{messages}}",
+      "enregistrees": "Habilitations enregistrées"
+    },
+    "entretiens": {
+      "etats": {
+        "EN_RETARD": "En retard",
+        "A_PREVOIR": "À prévoir",
+        "OK": "À jour",
+        "INCONNU": "Sans compteur ni date"
+      },
+      "natures": {
+        "PREVENTIF": "Préventif",
+        "CURATIF": "Curatif (réparation)",
+        "REGLEMENTAIRE": "Réglementaire"
+      },
+      "origines": {
+        "TYPE_PARENT": "type parent",
+        "TYPE": "type",
+        "MATERIEL": "matériel"
+      },
+      "ordre": {
+        "nouveau": "Enregistrez l'ordre d'abord.",
+        "sans_materiel": "Ordre sans matériel : créez les ordres d'entretien depuis la fiche du matériel (onglet Compteurs).",
+        "cloture": "À la clôture (état Terminé), l'entretien s'inscrit dans l'historique du matériel."
+      },
+      "champs": {
+        "nature": "Nature",
+        "compteur": "Compteur à l'intervention",
+        "objet": "Objet",
+        "operations": "Opérations",
+        "operations_aide": "Une opération par ligne"
+      },
+      "messages": {
+        "enregistre": "Entretien enregistré",
+        "plans": "Plans enregistrés"
+      },
+      "nouveau": {
+        "titre": "Nouvel ordre d'entretien",
+        "aide": "L'ordre est créé en brouillon sur le chantier de suivi du matériel : ajoutez-y la main-d'œuvre (heures) et les pièces."
+      },
+      "ordres": {
+        "aucun": "Aucun ordre d'entretien.",
+        "brouillon": "Brouillon"
+      },
+      "colonnes": {
+        "ordre": "Ordre",
+        "date": "Date",
+        "etat": "État",
+        "statut": "Statut",
+        "materiel": "Matériel",
+        "plan": "Plan",
+        "periodicite": "Périodicité",
+        "dernier": "Dernier",
+        "echeance": "Échéance"
+      },
+      "mois": "{{nombre}} mois",
+      "criteres": {
+        "le": "le {{date}}",
+        "depasse": "dépassé de {{valeur}} {{unite}}",
+        "dans": "dans {{valeur}} {{unite}}"
+      },
+      "echeances": {
+        "aucune": "Aucun entretien en retard ni à prévoir dans ce délai.",
+        "aucun_plan": "Aucun plan d'entretien."
+      },
+      "jamais": "jamais",
+      "creer_ordre": "Créer l'ordre d'entretien de ce plan",
+      "plans": {
+        "actif_aide": "Décoché : le plan hérité de même code est retiré",
+        "retirer": "Retirer ce plan",
+        "herites": "Hérités :",
+        "remplacer": "Remplacer pour ce matériel",
+        "desactiver": "Ne pas appliquer à ce matériel",
+        "heures": "Heures",
+        "km": "Km",
+        "mois": "Mois",
+        "operations": "Opérations (une par ligne)",
+        "actif": "Actif",
+        "aucun": "Aucun plan.",
+        "ajouter": "Nouveau plan",
+        "enregistrer": "Enregistrer les plans",
+        "titre": "Plans d'entretien",
+        "editer": "Plans propres à ce matériel (remplacer ou retirer un plan du type)"
+      }
+    },
+    "couts": {
+      "natures": {
+        "MO": "Main-d'œuvre",
+        "STOCK": "Pièces du stock",
+        "ACHAT": "Achats",
+        "SOUS_TRAITANCE": "Sous-traitance",
+        "CARBURANT": "Carburant",
+        "TOTAL": "Total"
+      },
+      "mois": {
+        "1": "janvier",
+        "2": "février",
+        "3": "mars",
+        "4": "avril",
+        "5": "mai",
+        "6": "juin",
+        "7": "juillet",
+        "8": "août",
+        "9": "septembre",
+        "10": "octobre",
+        "11": "novembre",
+        "12": "décembre"
+      },
+      "titre": "Coûts",
+      "aucun": "Aucun chantier de suivi : il porte les coûts du matériel (pointages de l'atelier, pièces sorties du stock, achats et factures fournisseur, sous-traitance). Il est créé à la première imputation, ou ici.",
+      "creer": "Créer le chantier de suivi",
+      "cree": "Chantier de suivi créé",
+      "chantier": "Chantier de suivi",
+      "clos": "Clos",
+      "partage": "— partagé par les {{nombre}} matériels gérés par nombre de ce type",
+      "documents": "Documents",
+      "pointages": "Pointages",
+      "colonnes": {
+        "mois": "Mois",
+        "heures": "Heures MO"
+      },
+      "annee": "Année {{annee}}",
+      "depuis_entree": "Depuis l'entrée",
+      "par_heure_html": "Coût par heure d'utilisation : <b>{{cout}} €</b> ({{heures}} h au compteur).",
+      "par_heure_partage": "Coût par heure : sans objet pour un chantier partagé.",
+      "par_heure_inconnu": "Coût par heure : heures d'utilisation non renseignées.",
+      "non_valorises_un": "{{nombre}} mouvement non valorisé",
+      "non_valorises_autre": "{{nombre}} mouvements non valorisés"
+    },
+    "colonnes": {
+      "commentaire": "Commentaire",
+      "du": "Du",
+      "au": "Au"
+    },
+    "exigees": {
+      "titre": "Habilitations exigées du conducteur",
+      "aide": "Le planning signale l'affectation d'un salarié sans ces habilitations valables à la date de la tâche.",
+      "enregistrer": "Enregistrer les exigences",
+      "enregistrees": "Habilitations exigées enregistrées"
+    },
+    "missions": {
+      "tiers": "Tiers {{id}}",
+      "titre": "Missions d'intérim",
+      "ajouter": "Ajouter une mission",
+      "aide": "Le taux horaire facturé par l'agence sert au coût des chantiers (option du Pointage) et au contrôle des factures d'intérim ; la fin de la mission en cours est proposée comme fin de validité du compte de connexion.",
+      "colonnes": {
+        "agence": "Agence",
+        "debut": "Début",
+        "fin": "Fin",
+        "taux_html": "Taux horaire<br><small>facturé (€)</small>"
+      },
+      "retirer": "Retirer cette mission",
+      "aucune": "Aucune mission.",
+      "faute": "mission {{n}} : {{messages}}",
+      "enregistrees": "Missions enregistrées"
+    },
+    "en_cours": "En cours",
+    "materiel_affecte": {
+      "titre": "Matériel affecté",
+      "colonnes": {
+        "materiel": "Matériel",
+        "type": "Type",
+        "immatriculation": "Immatriculation",
+        "depuis": "Depuis",
+        "par": "Par"
+      },
+      "porte": "porté par {{via}}",
+      "direct": "direct",
+      "aucun": "Aucun matériel affecté aujourd'hui.",
+      "passees": "Affectations passées"
+    },
+    "parametres": {
+      "categories": {
+        "CACES": "CACES",
+        "HAUTEUR": "Travail en hauteur",
+        "ELECTRIQUE": "Électrique",
+        "SECURITE": "Sécurité",
+        "MEDICAL": "Médical",
+        "CONTROLE": "Contrôle (matériel)",
+        "AUTRE": "Autre"
+      },
+      "concernes": {
+        "SALARIE": "Salarié",
+        "MATERIEL": "Matériel",
+        "LES_DEUX": "Les deux"
+      },
+      "domaines": {
+        "BLOCAGE": "Blocage d'un ordre",
+        "NON_CONFORMITE": "Non-conformité",
+        "ECART_PLANNING": "Écart de planning",
+        "AUTRE": "Autre"
+      },
+      "titre": "Référentiel des ressources",
+      "types": {
+        "titre": "Types d'habilitations",
+        "aide": "Durée de validité en mois (vide : sans fin) ; la fin de validité d'une habilitation se calcule depuis son obtention si elle n'est pas saisie. Un type retiré est supprimé s'il est inutilisé, sinon désactivé.",
+        "categorie": "Catégorie",
+        "concerne": "Concerne",
+        "duree": "Durée (mois)",
+        "utilise": "Utilisé",
+        "ajouter": "Type",
+        "enregistrer": "Enregistrer les types",
+        "enregistres": "Types d'habilitations enregistrés"
+      },
+      "colonnes": {
+        "ordre": "Ordre",
+        "actif": "Actif"
+      },
+      "motifs": {
+        "titre": "Motifs",
+        "aide": "Motifs de blocage des ordres (Exécution), de non-conformité (Pointage), d'écart de planning ; le service désigné est prévenu (tâche du CRM si le module est actif). Un motif retiré est désactivé.",
+        "domaine": "Domaine",
+        "service": "Service à prévenir",
+        "ajouter": "Motif",
+        "enregistrer": "Enregistrer les motifs",
+        "enregistres": "Motifs enregistrés"
+      },
+      "plans": {
+        "nombre_un": "{{nombre}} plan",
+        "nombre_autre": "{{nombre}} plans",
+        "titre": "Plans d'entretien par type de matériel",
+        "aide": "Périodicités en heures, kilomètres ou mois (la première atteinte déclenche) ; un type enfant hérite des plans de son parent, un matériel peut remplacer ou retirer un plan (onglet Compteurs de sa fiche).",
+        "type": "Type",
+        "herites": "Hérités de {{parent}} : {{plans}} (un plan de même code les remplace)."
+      },
+      "natures": {
+        "titre": "Natures de main-d'œuvre → services",
+        "aide": "Les heures des composantes de ces natures (unité heure) dans les commandes validées donnent les heures budget d'un chantier par service.",
+        "nature": "Nature",
+        "service": "Service",
+        "enregistrees": "Natures enregistrées"
+      }
+    },
+    "surveiller": {
+      "titre": "Habilitations, entretiens et visites à surveiller",
+      "echeance_dans": "échéance dans",
+      "jours": "jours",
+      "compte": "{{habilitations}}, dont {{expirees}}.",
+      "colonnes": {
+        "element": "Élément",
+        "habilitation": "Habilitation",
+        "echeance": "Échéance",
+        "date": "Date",
+        "loueur": "Loueur"
+      },
+      "aucune": "Aucune habilitation expirée ni à renouveler dans ce délai.",
+      "entretiens": "Matériels : entretiens en retard ou à prévoir",
+      "fins": "Matériels : fins de location et de garantie",
+      "fin_location": "Fin de location",
+      "fin_garantie": "Fin de garantie",
+      "filtres": {
+        "tout": "Tout",
+        "salarie": "Salariés",
+        "materiel": "Matériels"
+      },
+      "habilitations_un": "{{nombre}} habilitation",
+      "habilitations_autre": "{{nombre}} habilitations",
+      "expirees_un": "{{nombre}} expirée",
+      "expirees_autre": "{{nombre}} expirées"
+    }
+  },
+  "terrain_btp": {
+    "navigations": {
+      "AUTO": "Selon l'appareil",
+      "GOOGLE": "Google Maps",
+      "WAZE": "Waze",
+      "APPLE": "Plans (Apple)"
+    },
+    "hors_ligne": {
+      "garde": "{{libelle}} : enregistré sur cet appareil, envoyé au retour du réseau",
+      "etape": "Étape « {{etape}} » · {{ordre}}",
+      "sur_appareil": "sur l'appareil"
+    },
+    "sav": {
+      "hors_ligne": "Hors ligne : interventions non consultées sur cet appareil.",
+      "nouvelle": "Nouvelle intervention",
+      "compte_rendu": "compte rendu du {{date}}",
+      "aucune": "Aucune intervention ouverte.",
+      "champs": {
+        "objet": "Objet",
+        "objet_exemple": "Fuite, panne, entretien…",
+        "chantier": "Chantier",
+        "sans_chantier": "Client sans chantier",
+        "client": "Client",
+        "adresse": "Adresse",
+        "code_postal": "Code postal",
+        "ville": "Ville"
+      },
+      "choisir": "Choisissez un chantier ou un client"
+    },
+    "complements": {
+      "sans_reseau": "Hors ligne : à ouvrir une première fois avec le réseau"
+    },
+    "livraison": {
+      "aucune": "Aucune commande à recevoir sur ce chantier",
+      "titre": "Livraison · {{chantier}}",
+      "commande": "Commande",
+      "bl": "N° du bon de livraison",
+      "commentaire": "Commentaire (manquants, casse…)",
+      "photo": "Photo du bon ou de la casse",
+      "quantite": "Quantité reçue",
+      "vide": "Saisissez au moins une quantité reçue",
+      "libelle": "Livraison {{numero}}",
+      "creee": "Bon {{numero}} créé : à valider au bureau"
+    },
+    "materiel": {
+      "aucun": "Aucun matériel sur cette tâche ni affecté à vous",
+      "titre": "Matériel · {{tache}}",
+      "materiel": "Matériel",
+      "duree": "Durée d'utilisation",
+      "compteur_h": "Compteur (h)",
+      "compteur_km": "Compteur (km)",
+      "plein": "Plein de carburant",
+      "litres": "Litres",
+      "cout": "Coût (€)",
+      "commentaire": "Commentaire",
+      "dernier": "dernier : {{valeur}}",
+      "rien": "Rien à enregistrer",
+      "libelle": "Matériel · {{materiel}}",
+      "pointe": "Matériel pointé"
+    },
+    "actions": {
+      "photos": {
+        "prendre": "Prendre une photo",
+        "galerie": "Galerie",
+        "aucune": "Aucune photo choisie.",
+        "origine": "Qualité d'origine (sans réduction : détails à conserver)",
+        "choisies": "{{photos}} : {{noms}}",
+        "titre": "Photos · {{tache}}",
+        "envoyer": "Envoyer",
+        "vide": "Choisissez au moins une photo",
+        "envoyees_un": "{{nombre}} photo envoyée",
+        "envoyees_autre": "{{nombre}} photos envoyées",
+        "joindre": "Joindre des photos",
+        "nombre_un": "{{nombre}} photo",
+        "nombre_autre": "{{nombre}} photos"
+      },
+      "avancement": {
+        "titre": "Avancement · {{tache}}",
+        "reel": "Avancement réel aujourd'hui",
+        "libelle": "Avancement {{pourcent}} % · {{tache}}",
+        "enregistre": "Avancement enregistré : {{pourcent}} %"
+      },
+      "commentaire": "Commentaire",
+      "nc": {
+        "titre": "Non-conformité · {{tache}}",
+        "motif": "Motif",
+        "motif_exemple": "Matériaux, plan, commande…",
+        "precisions": "Précisions",
+        "signaler": "Signaler",
+        "photos": "Non-conformité : {{motif}}",
+        "libelle": "Non-conformité « {{motif}} » · {{tache}}",
+        "signalee": "Non-conformité signalée au service concerné",
+        "enregistree": "Non-conformité enregistrée (suivi CRM inactif : aucune tâche créée)"
+      },
+      "demande": {
+        "titre": "Demande d'approvisionnement · {{tache}}",
+        "articles": "Articles demandés (un par ligne, quantité comprise)",
+        "exemple": "20 sacs de colle C2\n1 rouleau de bande",
+        "commentaire": "Commentaire (date souhaitée, lieu de livraison…)",
+        "envoyer": "Envoyer la demande",
+        "photos": "Demande d'approvisionnement : {{articles}}",
+        "envoyee": "Demande {{numero}} envoyée"
+      }
+    },
+    "pointage": {
+      "hors_ligne": "Hors ligne : cette journée n'a pas été consultée sur cet appareil, elle n'est pas disponible. Ouvrez « Mon terrain » avec le réseau pour la garder.",
+      "sans_salarie": "Votre compte n'est lié à aucun salarié.",
+      "validee": "Journée validée : consultation seulement (une correction se demande au service RH).",
+      "a_pointer": "À pointer",
+      "libre": "Saisie libre",
+      "completer_aide": "Répartit les heures prévues au calendrier, moins celles déjà saisies, entre les lignes sans durée",
+      "completer": "Compléter la journée",
+      "repas": {
+        "bouton": "Repas",
+        "aucun": "Pas de repas au restaurant",
+        "libelle": "Repas du {{date}}",
+        "garde": "{{restaurant}} ({{icone}} sur l'appareil)",
+        "retire": "Repas retiré",
+        "enregistre": "Repas enregistré",
+        "choisi": "Restaurant choisi"
+      },
+      "enregistrer": "Enregistrer la journée",
+      "rien_a_completer": "Rien à compléter : la journée est pleine ou sans ligne vide",
+      "sans_heures": "Aucune heure prévue ce jour au calendrier",
+      "abandonner_confirmer": "Abandonner la journée gardée sur cet appareil ? Les pointages du serveur seront réaffichés.",
+      "refus": "Envoi de cette journée refusé : {{erreur}}. Corrigez puis enregistrez, ou",
+      "reessayer": "Réessayer",
+      "abandonner": "Abandonner ma saisie",
+      "gardee": "Journée enregistrée sur cet appareil le {{date}} : elle sera envoyée au retour du réseau.",
+      "bilan": "Prévu {{prevu}} h · saisi {{saisi}} h",
+      "aucun": "Aucun pointage ce jour.",
+      "libre_enregistree": "Saisie libre (enregistrée)",
+      "retirer": "Retirer la ligne",
+      "retirer_seul": "Retirer la ligne (pour vous seul)",
+      "chantier": "Chantier",
+      "ordre": "Ordre",
+      "type": "Type",
+      "activite": "Activité",
+      "duree": "Durée",
+      "motif": "Motif de non-conformité",
+      "commentaire": "Commentaire",
+      "pour_equipe": "Pour l'équipe",
+      "equipiers": "Équipiers (même pointage pour chacun)",
+      "ajouter_equipier": "Ajouter un équipier",
+      "seul": "seul",
+      "incomplete": "Chaque ligne a un chantier, un type et une durée (ou retirez-la)",
+      "libelle": "Journée du {{date}}",
+      "enregistree": "Journée enregistrée",
+      "etape_terminee": "Étape terminée ?"
+    },
+    "appliquer_autres": "Appliquer la modification aux {{nombre}} autres membres encore identiques",
+    "appliquer_autre": "Appliquer la modification à l'autre membre s'il est encore identique",
+    "page": {
+      "onglets": {
+        "jour": "Aujourd'hui",
+        "semaine": "Semaine",
+        "pointage": "Pointage",
+        "ordres": "Ordres",
+        "sav": "SAV"
+      },
+      "jours": {
+        "0": "dim.",
+        "1": "lun.",
+        "2": "mar.",
+        "3": "mer.",
+        "4": "jeu.",
+        "5": "ven.",
+        "6": "sam."
+      },
+      "taille_ko": "{{taille}} Ko",
+      "taille_mo": "{{taille}} Mo",
+      "titre": "Mon terrain",
+      "precedente": "Période précédente",
+      "suivante": "Période suivante",
+      "itineraire": "Itinéraire",
+      "navigation": "Application de navigation",
+      "navigation_aide": "L'itinéraire s'ouvre dans l'application choisie ; aucune position n'est enregistrée.",
+      "presaisie": "Présaisir mes heures (journée vide : heures du calendrier réparties sur mes tâches, à vérifier avant d'enregistrer)",
+      "attente_un": "{{nombre}} saisie sur cet appareil, envoyée au retour du réseau.",
+      "attente_autre": "{{nombre}} saisies sur cet appareil, envoyées au retour du réseau.",
+      "refus": "envoi refusé ({{erreur}})",
+      "abandonner": "Abandonner",
+      "ouvrir": "Ouvrir",
+      "abandonner_confirmer": "Abandonner cette saisie gardée sur l'appareil ? Elle ne sera jamais envoyée.",
+      "periode": "du {{du}} au {{au}}",
+      "ordres": "Mes ordres : étapes à valider",
+      "hors_ligne": "Hors ligne : cette période n'a pas été consultée sur cet appareil. Les deux semaines autour d'aujourd'hui sont gardées dès l'ouverture de « Mon terrain » avec le réseau.",
+      "sans_salarie": "Votre compte n'est lié à aucun salarié : demandez à l'administrateur de le relier à votre fiche.",
+      "aucune_jour": "Aucune tâche planifiée ce jour.",
+      "aucune_semaine": "Aucune tâche planifiée cette semaine.",
+      "herite": "(chantier)",
+      "appeler": "Appeler",
+      "pieces": "Pièces",
+      "sans_information": "Aucune information de terrain pour cette tâche.",
+      "actions": {
+        "avancement": "Avancement",
+        "photos": "Photos",
+        "nc": "Non-conformité",
+        "demande": "Demande",
+        "materiel": "Matériel",
+        "livraison": "Livraison",
+        "reception": "Réception"
+      }
+    },
+    "reception": {
+      "etats": {
+        "SANS_RESERVE": {
+          "libelle": "Sans réserve",
+          "aide": "Les travaux sont conformes."
+        },
+        "AVEC_RESERVES": {
+          "libelle": "Avec réserves",
+          "aide": "Les réserves seront levées par l'entreprise."
+        },
+        "REFUSEE": {
+          "libelle": "Refus",
+          "aide": "La réception est refusée : l'ordre est bloqué."
+        }
+      },
+      "manque": {
+        "nom": "Il manque le nom du signataire",
+        "reserve": "Il manque au moins une réserve",
+        "motif": "Il manque le motif du refus",
+        "signature": "Il manque la signature du client"
+      },
+      "titre": "Réception de pose",
+      "hors_ligne": "Hors ligne : cet ordre n'a pas été ouvert sur cet appareil avec le réseau.",
+      "titre_ordre": "Réception {{numero}}",
+      "client": "Client : {{nom}}",
+      "historique": "Réceptions déjà signées ({{nombre}})",
+      "pv": "PV",
+      "decision": "Décision",
+      "reserves": "Réserves (une par ligne)",
+      "motif": "Motif du refus",
+      "nom": "Nom du signataire",
+      "qualite": "Qualité",
+      "qualite_defaut": "Client",
+      "qualite_exemple": "Client, maître d'œuvre…",
+      "envoyer_pv": "Envoyer le PV à",
+      "courriel_aide": "adresse du client (facultatif)",
+      "signature": "Signature du client",
+      "valider": "Valider la réception",
+      "signature_facultative": "(facultative pour un refus)",
+      "signature_obligatoire": "(obligatoire)",
+      "libelle": "Réception de {{numero}}",
+      "libelle_ordre": "Réception de l'ordre",
+      "gardee": "Réception signée et gardée sur cet appareil : le PV sera édité et envoyé au retour du réseau.",
+      "enregistree_etat": "Réception enregistrée ({{etat}}).",
+      "ouvrir_pv": "Ouvrir le PV signé",
+      "pv_envoye": "PV envoyé à {{courriel}}.",
+      "enregistree": "Réception enregistrée"
+    },
+    "chargement": "Chargement…",
+    "etape_validee": "Étape « {{etape}} » : validée le {{date}}",
+    "etape_a_valider": "Étape « {{etape}} » : à valider",
+    "sav_page": {
+      "manque": {
+        "constat": "Il manque le constat",
+        "travaux": "Il manque les travaux réalisés",
+        "nom": "Il manque le nom du signataire",
+        "signature": "Il manque la signature du client"
+      },
+      "titre": "Intervention SAV",
+      "hors_ligne": "Hors ligne : cette intervention n'a pas été ouverte sur cet appareil avec le réseau.",
+      "titre_ordre": "SAV {{numero}}",
+      "historique": "Comptes rendus déjà faits ({{nombre}})",
+      "terminee": "Terminée",
+      "a_reprendre": "À reprendre",
+      "client_absent": "client absent",
+      "bon": "Bon",
+      "constat": "Constat",
+      "travaux": "Travaux réalisés",
+      "fournitures": "Fournitures (une par ligne)",
+      "intervention_terminee": "Intervention terminée (sinon : à reprendre, le bureau est prévenu)",
+      "absent": "Client absent (bon non signé)",
+      "envoyer_bon": "Envoyer le bon à",
+      "enregistrer": "Enregistrer le compte rendu",
+      "libelle": "Intervention {{numero}}",
+      "gardee": "Compte rendu gardé sur cet appareil : le bon sera édité et envoyé au retour du réseau.",
+      "enregistre_point": "Compte rendu enregistré.",
+      "ouvrir_bon": "Ouvrir le bon",
+      "bon_envoye": "Bon envoyé à {{courriel}}.",
+      "enregistre": "Compte rendu enregistré"
+    }
   }
 }

@@ -5,28 +5,17 @@
 // événement (panne, sinistre, accident, immobilisation, contrôle, entretien, plein de carburant, autre).
 // Relevés ordonnés par date puis par ordre de saisie ; dates ISO comparées en texte.
 
+import { icone, textesParCode } from '@logibtp/socle/dictionnaire';
+
 export const UNITES_COMPTEUR = ['H', 'KM'];
-export const LIBELLES_UNITE = { H: 'h', KM: 'km' };
+export const LIBELLES_UNITE = textesParCode('ressources_btp.compteurs.unites', ['H', 'KM']);
 export const COMPTEURS_MATERIEL = { H: ['H'], KM: ['KM'], H_KM: ['H', 'KM'], AUCUN: [] };
 
 export const TYPES_EVENEMENT = ['PANNE', 'SINISTRE', 'ACCIDENT', 'IMMOBILISATION', 'CONTROLE', 'ENTRETIEN', 'CARBURANT', 'AUTRE'];
-export const LIBELLES_EVENEMENT = {
-  PANNE: 'Panne', SINISTRE: 'Sinistre', ACCIDENT: 'Accident', IMMOBILISATION: 'Immobilisation', CONTROLE: 'Contrôle',
-  ENTRETIEN: 'Entretien', CARBURANT: 'Plein de carburant', AUTRE: 'Autre',
-};
-export const ICONES_EVENEMENT = { PANNE: '⚠', SINISTRE: '🔥', ACCIDENT: '💥', IMMOBILISATION: '⛔', CONTROLE: '🔍', ENTRETIEN: '🔧', CARBURANT: '⛽', AUTRE: '•' };
+export const LIBELLES_EVENEMENT = textesParCode('ressources_btp.compteurs.evenements', ['PANNE', 'SINISTRE', 'ACCIDENT', 'IMMOBILISATION', 'CONTROLE', 'ENTRETIEN', 'CARBURANT', 'AUTRE']);
+export const ICONES_EVENEMENT = Object.fromEntries(['PANNE', 'SINISTRE', 'ACCIDENT', 'IMMOBILISATION', 'CONTROLE', 'ENTRETIEN', 'CARBURANT', 'AUTRE'].map((c) => [c, icone(`ressources_btp_evenement_${c.toLowerCase()}`)]));
 
-export const MESSAGES_COMPTEURS = {
-  REL_UNITE: 'Unité de compteur non suivie pour ce matériel',
-  REL_DATE: 'Date du relevé obligatoire',
-  REL_VALEUR: 'Valeur du compteur obligatoire et positive',
-  REL_DECROISSANT: 'Compteur inférieur au relevé précédent : cocher « remise à zéro » si le compteur a été remplacé',
-  EVT_TYPE: 'Type d\'événement inconnu',
-  EVT_DATE: 'Date obligatoire, fin après le début',
-  EVT_LIBELLE: 'Libellé obligatoire',
-  EVT_LITRES: 'Nombre de litres obligatoire',
-  EVT_COUT: 'Coût négatif',
-};
+export const MESSAGES_COMPTEURS = textesParCode('ressources_btp.compteurs.erreurs', ['REL_UNITE', 'REL_DATE', 'REL_VALEUR', 'REL_DECROISSANT', 'EVT_TYPE', 'EVT_DATE', 'EVT_LIBELLE', 'EVT_LITRES', 'EVT_COUT']);
 
 const ordinal = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 const nombre = (v) => (v === null || v === undefined || v === '' ? null : Number(v));

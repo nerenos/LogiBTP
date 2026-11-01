@@ -1,20 +1,14 @@
 // Affectations d'un matériel (lot 5b des demandes du 25/10/2026), répliquées dans ReglesAffectations.cs (jeu
 // tests/ressources/04_affectations.json) : une affectation datée (du, au facultatif = en cours) à un salarié, un
 // intérimaire, un sous-traitant ou un autre matériel (porteur : petit outillage dans un camion) ; une seule à la fois.
+import { textesParCode } from '@logibtp/socle/dictionnaire';
 import { TYPE_RESSOURCE } from '../codes.js';
 
 export const TYPES_AFFECTATION = Object.values(TYPE_RESSOURCE);
 
-export const LIBELLES_AFFECTATION = { SALARIE: 'Salarié', INTERIM: 'Intérimaire', SOUS_TRAITANT: 'Sous-traitant', MATERIEL: 'Matériel (porteur)' };
+export const LIBELLES_AFFECTATION = textesParCode('ressources_btp.affectations.types', ['SALARIE', 'INTERIM', 'SOUS_TRAITANT', 'MATERIEL']);
 
-export const MESSAGES_AFFECTATIONS = {
-  AFF_TYPE: 'Type d\'affectation inconnu',
-  AFF_CIBLE: 'Affecté à qui ?',
-  AFF_DATE: 'Début obligatoire, fin après le début',
-  AFF_SOI: 'Un matériel ne s\'affecte pas à lui-même',
-  AFF_CHEVAUCHEMENT: 'Une seule affectation à la fois : périodes qui se chevauchent',
-  AFF_BOUCLE: 'Matériels porteurs en boucle',
-};
+export const MESSAGES_AFFECTATIONS = textesParCode('ressources_btp.affectations.erreurs', ['AFF_TYPE', 'AFF_CIBLE', 'AFF_DATE', 'AFF_SOI', 'AFF_CHEVAUCHEMENT', 'AFF_BOUCLE']);
 
 const ordinal = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 const FIN = '9999-12-31';

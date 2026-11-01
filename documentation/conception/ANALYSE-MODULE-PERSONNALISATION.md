@@ -38,3 +38,21 @@
   thème (lues par `couleurTheme` au dessin, aussi pour l'export SVG).
 - **Contrôles** : `npm test`, analyse des portées ; fenêtres de transformation, d'options, de sources, de choix d'un
   rattachement, d'adresse et table des intervenants affichées dans le navigateur.
+
+## 38. Réalisation du lot P3y : ressources et terrain (01/11/2026)
+
+- **Périmètre** : référentiel des ressources (`ressources/` : affectations, compteurs, équipes, entretiens, règles,
+  onglets des fiches salarié et matériel), pages `/parametres/ressources` et `/ressources/habilitations`, application de
+  terrain (`terrain/` : navigation, opérations hors ligne, actions d'une tâche, SAV, compléments, pointage de la
+  journée) et pages `/terrain`, `/terrain/reception/:id`, `/terrain/sav/:id` ; titres de ces routes.
+- **Textes** : `ressources_btp.*` (tables par code des états, sources, natures, origines, catégories et domaines par
+  `textesParCode` ou libellés en accesseurs ; mois des coûts `couts.mois.<n>`), `terrain_btp.*` (`page` : onglets,
+  jours abrégés, tailles des pièces, actions des tâches ; `pointage`, `reception` : états et manques par code, `sav_page`,
+  `actions`, `hors_ligne`).
+- **Icônes** : `ressources_btp_*` (événements des compteurs, paramètres, à surveiller), `terrain_btp_*` (page, onglets,
+  actions des tâches, adresse, itinéraire, contact, appel, pièce, réception, refus, attente, hors ligne…) ; icônes du
+  module Pointage (`pointage_repas`, `pointage_equipe`, `pointage_ordre`) et du socle (ajouter, retirer, enregistrer,
+  verrou, précédent, suivant) réutilisées.
+- **Couleurs** : couleur d'une tâche sans couleur propre par la variable `--terrain-tache` du thème.
+- **Contrôles** : `npm test`, analyse des portées ; pointage de la journée (tâches, saisie libre, équipe) affiché dans le
+  navigateur, tous les modules migrés chargés sans erreur.

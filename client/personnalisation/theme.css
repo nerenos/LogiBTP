@@ -118,4 +118,6 @@
   --graphe-structure-achat: #2f6fd1;
   --graphe-structure-sous-traitance: #7c3aed;
   --graphe-structure-vente: #2e9d5b;
+  /* Terrain : couleur d'une tâche sans couleur propre. */
+  --terrain-tache: #2563eb;
 }

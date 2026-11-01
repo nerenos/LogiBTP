@@ -1,3 +1,4 @@
+import { texte, texteHtml, pluriel, iconeHtml, textesParCode } from '@logibtp/socle/dictionnaire';
 import { pastille } from '../pastilles.js';
 import { urlFiche, TYPE_FICHE } from '../codes.js';
 import { ajouterJours, aujourdhui } from '@logibtp/socle';
@@ -16,7 +17,7 @@ const CLASSES = { VALIDE: 'ok', A_RENOUVELER: 'attention', EXPIREE: 'erreur', NO
 
 /** Pastille de l'état d'une habilitation (avec les jours restants). */
 export function pastilleHabilitation(e) {
-  const jours = e.jours_restants === null || e.jours_restants === undefined ? '' : e.jours_restants >= 0 ? ` · ${e.jours_restants} j` : ` · depuis ${-e.jours_restants} j`;
+  const jours = e.jours_restants === null || e.jours_restants === undefined ? '' : e.jours_restants >= 0 ? ` · ${texte('ressources_btp.habilitations.jours', { nombre: e.jours_restants })}` : ` · ${texte('ressources_btp.habilitations.depuis', { nombre: -e.jours_restants })}`;
   return pastille(`${ETATS_HABILITATION[e.etat] ?? e.etat}${jours}`, CLASSES[e.etat] ?? 'neutre');
 }
 
@@ -30,13 +31,13 @@ export async function typesHabilitation({ recharger = false } = {}) {
 
 const messages = (codes) => codes.map((c) => MESSAGES_RESSOURCES[c] ?? c).join(', ');
 /** Bouton icône (libellé en bulle). */
-const action = (attr, icone, titre) => `<button type="button" class="bouton-icone" ${attr} title="${titre}" aria-label="${titre}">${icone}</button>`;
+const action = (attr, symbole, titre) => `<button type="button" class="bouton-icone" ${attr} title="${echapper(titre)}" aria-label="${echapper(titre)}">${iconeHtml(symbole)}</button>`;
 
 /**
  * Habilitations d'un salarié ou d'un matériel : tableau éditable (type, obtention, fin de validité — calculée depuis la
  * durée du type si vide —, numéro, organisme, commentaire), état recalculé à la saisie, enregistrement par l'API.
  */
-export async function rendreHabilitations(corps, { app, element, id, titre = 'Habilitations' }) {
+export async function rendreHabilitations(corps, { app, element, id, titre = texte('ressources_btp.habilitations.titre') }) {
   const [{ liste: types, index }, lignes] = await Promise.all([typesHabilitation(), api.ressources.habilitations(element, id)]);
   const concerne = element === TYPE_FICHE.MATERIEL ? 'MATERIEL' : 'SALARIE';
   const options = types.filter((t) => t.actif && (t.concerne === concerne || t.concerne === 'LES_DEUX')).map((t) => ({ valeur: t.code, libelle: t.libelle, detail: t.code }));
@@ -45,21 +46,21 @@ export async function rendreHabilitations(corps, { app, element, id, titre = 'Ha
   const rendre = () => {
     // Présentation commune des tableaux de saisie (tableau compact, actions sur la ligne de titre, boutons en icônes).
     corps.innerHTML = `<div class="ressources-habilitations"><div class="titre-actions"><h3>${echapper(titre)}</h3>
-        <span class="titre-actions-boutons">${action('data-ajouter', '＋', 'Ajouter une habilitation')}
-          <button type="button" class="principal" data-enregistrer ${modifiee ? '' : 'disabled'}>Enregistrer</button></span></div>
-      <table class="tableau-compact largeur-contenu"><thead><tr><th>Type</th><th>Obtenue le</th><th>Fin de validité</th><th>État</th><th>N°</th><th>Organisme</th><th>Commentaire</th><th></th></tr></thead><tbody>
+        <span class="titre-actions-boutons">${action('data-ajouter', 'ajouter', texte('ressources_btp.habilitations.ajouter'))}
+          <button type="button" class="principal" data-enregistrer ${modifiee ? '' : 'disabled'}>${texteHtml('commun.enregistrer')}</button></span></div>
+      <table class="tableau-compact largeur-contenu"><thead><tr><th>${texteHtml('ressources_btp.habilitations.colonnes.type')}</th><th>${texteHtml('ressources_btp.habilitations.colonnes.obtenue')}</th><th>${texteHtml('ressources_btp.habilitations.colonnes.fin')}</th><th>${texteHtml('ressources_btp.habilitations.colonnes.etat')}</th><th>${texteHtml('ressources_btp.habilitations.colonnes.numero')}</th><th>${texteHtml('ressources_btp.habilitations.colonnes.organisme')}</th><th>${texteHtml('ressources_btp.colonnes.commentaire')}</th><th></th></tr></thead><tbody>
       ${saisie.map((h, i) => {
         const e = etatHabilitation(h, index[h.code]?.duree_mois ?? null, aujourdhui());
         const calc = !h.valide_jusqu_au && e.fin;
         return `<tr data-i="${i}"><td data-type></td>
           <td><input type="date" data-c="obtenue_le" value="${echapper(h.obtenue_le ?? '')}"></td>
-          <td><input type="date" data-c="valide_jusqu_au" value="${echapper(h.valide_jusqu_au ?? '')}" title="Vide : calculée depuis la durée du type">${calc ? `<div><small>calculée : ${jour(e.fin)}</small></div>` : ''}</td>
+          <td><input type="date" data-c="valide_jusqu_au" value="${echapper(h.valide_jusqu_au ?? '')}" title="${texteHtml('ressources_btp.habilitations.fin_aide')}">${calc ? `<div><small>${texteHtml('ressources_btp.habilitations.calculee', { date: jour(e.fin) })}</small></div>` : ''}</td>
           <td>${h.code ? pastilleHabilitation(e) : ''}</td>
           <td><input data-c="numero" value="${echapper(h.numero ?? '')}" size="10" maxlength="60"></td>
           <td><input data-c="organisme" value="${echapper(h.organisme ?? '')}" size="14" maxlength="120"></td>
           <td><input data-c="commentaire" value="${echapper(h.commentaire ?? '')}" size="28"></td>
-          <td class="cellule-boutons">${action('data-retirer', '✕', 'Retirer cette habilitation')}</td></tr>`;
-      }).join('') || '<tr><td colspan="8" class="aide">Aucune habilitation.</td></tr>'}</tbody></table>
+          <td class="cellule-boutons">${action('data-retirer', 'retirer', texte('ressources_btp.habilitations.retirer'))}</td></tr>`;
+      }).join('') || `<tr><td colspan="8" class="aide">${texteHtml('ressources_btp.habilitations.aucune')}</td></tr>`}</tbody></table>
       <p class="connexion-erreur" data-erreur hidden></p></div>`;
     corps.querySelectorAll('tr[data-i]').forEach((tr) => {
       const h = saisie[Number(tr.dataset.i)];
@@ -77,11 +78,11 @@ export async function rendreHabilitations(corps, { app, element, id, titre = 'Ha
     corps.querySelector('[data-enregistrer]').addEventListener('click', async () => {
       const erreur = corps.querySelector('[data-erreur]');
       const fautes = saisie.map((h, i) => ({ i, codes: controlerHabilitation(h, index, element) })).filter((x) => x.codes.length);
-      if (fautes.length) { erreur.textContent = fautes.map((f) => `ligne ${f.i + 1} : ${messages(f.codes)}`).join(' · '); erreur.hidden = false; return; }
+      if (fautes.length) { erreur.textContent = fautes.map((f) => texte('ressources_btp.habilitations.faute', { n: f.i + 1, messages: messages(f.codes) })).join(' · '); erreur.hidden = false; return; }
       try {
         saisie = (await api.ressources.enregistrerHabilitations(element, id, saisie)).map((h) => ({ ...h }));
         modifiee = false;
-        app.message('Habilitations enregistrées', 'succes');
+        app.message(texte('ressources_btp.habilitations.enregistrees'), 'succes');
         rendre();
       } catch (e) { erreur.textContent = e.message; erreur.hidden = false; }
     });
@@ -93,13 +94,13 @@ export async function rendreHabilitations(corps, { app, element, id, titre = 'Ha
 export async function rendreHabilitationsExigees(corps, { app, materiel }) {
   const [{ liste: types }, exigees] = await Promise.all([typesHabilitation(), api.ressources.exigeesMateriel(materiel)]);
   const choix = new Set(exigees);
-  corps.innerHTML = `<div class="ressources-exigees"><h3>Habilitations exigées du conducteur</h3>
-    <p class="aide">Le planning signale l'affectation d'un salarié sans ces habilitations valables à la date de la tâche.</p>
+  corps.innerHTML = `<div class="ressources-exigees"><h3>${texteHtml('ressources_btp.exigees.titre')}</h3>
+    <p class="aide">${texteHtml('ressources_btp.exigees.aide')}</p>
     <p>${types.filter((t) => t.actif && t.concerne !== 'MATERIEL').map((t) => `<label class="ligne"><input type="checkbox" value="${echapper(t.code)}" ${choix.has(t.code) ? 'checked' : ''}> ${echapper(t.libelle)}</label>`).join(' ')}</p>
-    <p><button type="button" data-enregistrer>Enregistrer les exigences</button></p></div>`;
+    <p><button type="button" data-enregistrer>${texteHtml('ressources_btp.exigees.enregistrer')}</button></p></div>`;
   corps.querySelector('[data-enregistrer]').addEventListener('click', async () => {
     const codes = [...corps.querySelectorAll('input[type=checkbox]:checked')].map((c) => c.value);
-    try { await api.ressources.enregistrerExigeesMateriel(materiel, codes); app.message('Habilitations exigées enregistrées', 'succes'); } catch (e) { app.erreur(e); }
+    try { await api.ressources.enregistrerExigeesMateriel(materiel, codes); app.message(texte('ressources_btp.exigees.enregistrees'), 'succes'); } catch (e) { app.erreur(e); }
   });
 }
 
@@ -110,22 +111,21 @@ export async function rendreHabilitationsExigees(corps, { app, materiel }) {
 export async function rendreMissions(corps, { app, salarie, annuaire }) {
   const [missions, agences] = await Promise.all([api.ressources.missions(salarie), annuaire.rechercherPersonnes({ recherche: '', casquette: 'INTERIM', limite: 200 }).catch(() => [])]);
   const options = agences.map((a) => ({ valeur: a.id, libelle: a.raison_sociale, detail: a.ville ?? '' }));
-  for (const m of missions) if (m.agence_id && !options.some((o) => Number(o.valeur) === Number(m.agence_id))) options.push({ valeur: m.agence_id, libelle: m.agence ?? `Tiers ${m.agence_id}` });
+  for (const m of missions) if (m.agence_id && !options.some((o) => Number(o.valeur) === Number(m.agence_id))) options.push({ valeur: m.agence_id, libelle: m.agence ?? texte('ressources_btp.missions.tiers', { id: m.agence_id }) });
   let saisie = missions.map((m) => ({ ...m }));
   let modifiee = false;
   const rendre = () => {
-    corps.innerHTML = `<div class="ressources-missions"><div class="titre-actions"><h3>Missions d'intérim</h3>
-        <span class="titre-actions-boutons">${action('data-ajouter', '＋', 'Ajouter une mission')}
-          <button type="button" class="principal" data-enregistrer ${modifiee ? '' : 'disabled'}>Enregistrer</button></span></div>
-      <p class="aide">Le taux horaire facturé par l'agence sert au coût des chantiers (option du Pointage) et au contrôle des factures d'intérim ;
-        la fin de la mission en cours est proposée comme fin de validité du compte de connexion.</p>
-      <table class="tableau-compact largeur-contenu"><thead><tr><th>Agence</th><th>Début</th><th>Fin</th><th>Taux horaire<br><small>facturé (€)</small></th><th>Commentaire</th><th></th><th></th></tr></thead><tbody>
+    corps.innerHTML = `<div class="ressources-missions"><div class="titre-actions"><h3>${texteHtml('ressources_btp.missions.titre')}</h3>
+        <span class="titre-actions-boutons">${action('data-ajouter', 'ajouter', texte('ressources_btp.missions.ajouter'))}
+          <button type="button" class="principal" data-enregistrer ${modifiee ? '' : 'disabled'}>${texteHtml('commun.enregistrer')}</button></span></div>
+      <p class="aide">${texteHtml('ressources_btp.missions.aide')}</p>
+      <table class="tableau-compact largeur-contenu"><thead><tr><th>${texteHtml('ressources_btp.missions.colonnes.agence')}</th><th>${texteHtml('ressources_btp.missions.colonnes.debut')}</th><th>${texteHtml('ressources_btp.missions.colonnes.fin')}</th><th>${texteHtml('ressources_btp.missions.colonnes.taux_html')}</th><th>${texteHtml('ressources_btp.colonnes.commentaire')}</th><th></th><th></th></tr></thead><tbody>
       ${saisie.map((m, i) => `<tr data-i="${i}"><td data-agence></td>
         <td><input type="date" data-c="debut" value="${echapper(m.debut ?? '')}"></td><td><input type="date" data-c="fin" value="${echapper(m.fin ?? '')}"></td>
         <td><input data-c="taux_horaire" class="nombre" value="${formatNombre(m.taux_horaire, 2)}" size="8" inputmode="decimal"></td>
         <td><input data-c="commentaire" value="${echapper(m.commentaire ?? '')}" size="28"></td>
-        <td>${m.en_cours ? '<span class="pastille-compte ok">En cours</span>' : ''}</td>
-        <td class="cellule-boutons">${action('data-retirer', '✕', 'Retirer cette mission')}</td></tr>`).join('') || '<tr><td colspan="7" class="aide">Aucune mission.</td></tr>'}</tbody></table>
+        <td>${m.en_cours ? `<span class="pastille-compte ok">${texteHtml('ressources_btp.en_cours')}</span>` : ''}</td>
+        <td class="cellule-boutons">${action('data-retirer', 'retirer', texte('ressources_btp.missions.retirer'))}</td></tr>`).join('') || `<tr><td colspan="7" class="aide">${texteHtml('ressources_btp.missions.aucune')}</td></tr>`}</tbody></table>
       <p class="connexion-erreur" data-erreur hidden></p></div>`;
     corps.querySelectorAll('tr[data-i]').forEach((tr) => {
       const m = saisie[Number(tr.dataset.i)];
@@ -148,11 +148,11 @@ export async function rendreMissions(corps, { app, salarie, annuaire }) {
     corps.querySelector('[data-enregistrer]').addEventListener('click', async () => {
       const erreur = corps.querySelector('[data-erreur]');
       const fautes = controlerMissions(saisie);
-      if (fautes.length) { erreur.textContent = fautes.map((f) => `mission ${f.index + 1} : ${messages(f.codes)}`).join(' · '); erreur.hidden = false; return; }
+      if (fautes.length) { erreur.textContent = fautes.map((f) => texte('ressources_btp.missions.faute', { n: f.index + 1, messages: messages(f.codes) })).join(' · '); erreur.hidden = false; return; }
       try {
         saisie = (await api.ressources.enregistrerMissions(salarie, saisie)).map((m) => ({ ...m }));
         modifiee = false;
-        app.message('Missions enregistrées', 'succes');
+        app.message(texte('ressources_btp.missions.enregistrees'), 'succes');
         rendre();
       } catch (e) { erreur.textContent = e.message; erreur.hidden = false; }
     });
@@ -171,16 +171,16 @@ export async function rendreAffectations(corps, { app, materiel }) {
   let modifiee = false;
   const rendre = () => {
     const encours = affectationA(saisie, aujourdhui());
-    corps.innerHTML = `<div class="ressources-affectations"><div class="titre-actions"><h3>Affectations</h3>
-        <span class="titre-actions-boutons">${action('data-ajouter', '＋', 'Nouvelle affectation (la précédente se termine la veille)')}
-          <button type="button" class="principal" data-enregistrer ${modifiee ? '' : 'disabled'}>Enregistrer</button></span></div>
-      <p class="aide">Une affectation à la fois : un salarié, un intérimaire, un sous-traitant ou un autre matériel (porteur : le petit outillage d'un camion suit le camion).</p>
-      <table class="tableau-compact largeur-contenu"><thead><tr><th>Affecté à</th><th>Ressource</th><th>Du</th><th>Au</th><th>Commentaire</th><th></th><th></th></tr></thead><tbody>
+    corps.innerHTML = `<div class="ressources-affectations"><div class="titre-actions"><h3>${texteHtml('ressources_btp.affectations.titre')}</h3>
+        <span class="titre-actions-boutons">${action('data-ajouter', 'ajouter', texte('ressources_btp.affectations.ajouter'))}
+          <button type="button" class="principal" data-enregistrer ${modifiee ? '' : 'disabled'}>${texteHtml('commun.enregistrer')}</button></span></div>
+      <p class="aide">${texteHtml('ressources_btp.affectations.aide')}</p>
+      <table class="tableau-compact largeur-contenu"><thead><tr><th>${texteHtml('ressources_btp.affectations.colonnes.type')}</th><th>${texteHtml('ressources_btp.affectations.colonnes.ressource')}</th><th>${texteHtml('ressources_btp.colonnes.du')}</th><th>${texteHtml('ressources_btp.colonnes.au')}</th><th>${texteHtml('ressources_btp.colonnes.commentaire')}</th><th></th><th></th></tr></thead><tbody>
       ${saisie.map((a, i) => `<tr data-i="${i}"><td data-type></td><td data-ressource></td>
         <td><input type="date" data-c="du" value="${echapper(a.du ?? '')}"></td><td><input type="date" data-c="au" value="${echapper(a.au ?? '')}"></td>
         <td><input data-c="commentaire" value="${echapper(a.commentaire ?? '')}" size="28" maxlength="200"></td>
-        <td>${i === encours ? '<span class="pastille-compte ok">En cours</span>' : ''}</td>
-        <td class="cellule-boutons">${action('data-retirer', '✕', 'Retirer cette affectation')}</td></tr>`).join('') || '<tr><td colspan="7" class="aide">Jamais affecté.</td></tr>'}</tbody></table>
+        <td>${i === encours ? `<span class="pastille-compte ok">${texteHtml('ressources_btp.en_cours')}</span>` : ''}</td>
+        <td class="cellule-boutons">${action('data-retirer', 'retirer', texte('ressources_btp.affectations.retirer'))}</td></tr>`).join('') || `<tr><td colspan="7" class="aide">${texteHtml('ressources_btp.affectations.aucune')}</td></tr>`}</tbody></table>
       <p class="connexion-erreur" data-erreur hidden></p></div>`;
     corps.querySelectorAll('tr[data-i]').forEach((tr) => {
       const a = saisie[Number(tr.dataset.i)];
@@ -204,11 +204,11 @@ export async function rendreAffectations(corps, { app, materiel }) {
     corps.querySelector('[data-enregistrer]').addEventListener('click', async () => {
       const erreur = corps.querySelector('[data-erreur]');
       const fautes = controlerAffectations(materiel, saisie.map((a) => ({ type: a.type, id: a.ressource, du: a.du, au: a.au })));
-      if (fautes.length) { erreur.textContent = fautes.map((f) => `affectation ${f.affectation + 1} : ${MESSAGES_AFFECTATIONS[f.code] ?? f.code}`).join(' · '); erreur.hidden = false; return; }
+      if (fautes.length) { erreur.textContent = fautes.map((f) => texte('ressources_btp.affectations.faute', { n: f.affectation + 1, message: MESSAGES_AFFECTATIONS[f.code] ?? f.code })).join(' · '); erreur.hidden = false; return; }
       try {
         saisie = (await api.ressources.enregistrerAffectations(materiel, saisie)).map((a) => ({ ...a }));
         modifiee = false;
-        app.message('Affectations enregistrées', 'succes');
+        app.message(texte('ressources_btp.affectations.enregistrees'), 'succes');
         rendre();
       } catch (e) { erreur.textContent = MESSAGES_AFFECTATIONS[e.code] ?? e.message; erreur.hidden = false; }
     });
@@ -222,17 +222,16 @@ export async function rendreAffectations(corps, { app, materiel }) {
  */
 export async function rendreMaterielAffecte(corps, { app, type, id }) {
   const d = await api.ressources.materielAffecte(type, id);
-  const lien = (m) => `<a href="${urlFiche(TYPE_FICHE.MATERIEL, m.id)}">🚜 ${echapper(m.code)} ${echapper(m.designation ?? '')}</a>`;
-  corps.innerHTML = `<div class="ressources-materiel-affecte"><h3>Matériel affecté</h3>
-    ${d.courant.length ? `<table class="tableau-compact largeur-contenu"><thead><tr><th>Matériel</th><th>Type</th><th>Immatriculation</th><th>Depuis</th><th>Par</th></tr></thead><tbody>
+  const lien = (m) => `<a href="${urlFiche(TYPE_FICHE.MATERIEL, m.id)}">${iconeHtml('ressources_btp_materiel')} ${echapper(m.code)} ${echapper(m.designation ?? '')}</a>`;
+  corps.innerHTML = `<div class="ressources-materiel-affecte"><h3>${texteHtml('ressources_btp.materiel_affecte.titre')}</h3>
+    ${d.courant.length ? `<table class="tableau-compact largeur-contenu"><thead><tr><th>${texteHtml('ressources_btp.materiel_affecte.colonnes.materiel')}</th><th>${texteHtml('ressources_btp.materiel_affecte.colonnes.type')}</th><th>${texteHtml('ressources_btp.materiel_affecte.colonnes.immatriculation')}</th><th>${texteHtml('ressources_btp.materiel_affecte.colonnes.depuis')}</th><th>${texteHtml('ressources_btp.materiel_affecte.colonnes.par')}</th></tr></thead><tbody>
       ${d.courant.map((m) => `<tr><td>${'&nbsp;&nbsp;'.repeat(m.niveau)}${lien(m)}</td><td>${echapper(m.type ?? '')}</td><td>${echapper(m.immatriculation ?? '')}</td>
-        <td>${jour(m.du)}</td><td>${m.via ? `porté par ${echapper(m.via)}` : 'direct'}</td></tr>`).join('')}</tbody></table>` : '<p class="aide">Aucun matériel affecté aujourd\'hui.</p>'}
-    ${d.historique.length ? `<h3>Affectations passées</h3><table class="tableau-compact largeur-contenu"><thead><tr><th>Matériel</th><th>Du</th><th>Au</th></tr></thead><tbody>
+        <td>${jour(m.du)}</td><td>${m.via ? texteHtml('ressources_btp.materiel_affecte.porte', { via: m.via }) : texteHtml('ressources_btp.materiel_affecte.direct')}</td></tr>`).join('')}</tbody></table>` : `<p class="aide">${texteHtml('ressources_btp.materiel_affecte.aucun')}</p>`}
+    ${d.historique.length ? `<h3>${texteHtml('ressources_btp.materiel_affecte.passees')}</h3><table class="tableau-compact largeur-contenu"><thead><tr><th>${texteHtml('ressources_btp.materiel_affecte.colonnes.materiel')}</th><th>${texteHtml('ressources_btp.colonnes.du')}</th><th>${texteHtml('ressources_btp.colonnes.au')}</th></tr></thead><tbody>
       ${d.historique.map((m) => `<tr><td>${lien(m)}</td><td>${jour(m.du)}</td><td>${jour(m.au)}</td></tr>`).join('')}</tbody></table>` : ''}</div>`;
 }
 
-const LIBELLES_COUT = { MO: 'Main-d\'œuvre', STOCK: 'Pièces du stock', ACHAT: 'Achats', SOUS_TRAITANCE: 'Sous-traitance', CARBURANT: 'Carburant', TOTAL: 'Total' };
-const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+const LIBELLES_COUT = textesParCode('ressources_btp.couts.natures', ['MO', 'STOCK', 'ACHAT', 'SOUS_TRAITANCE', 'CARBURANT', 'TOTAL']);
 
 /**
  * Coûts d'un matériel (lot 5c-1, db/232) : chantier de suivi (créé à la demande ; partagé par les matériels gérés par
@@ -243,11 +242,11 @@ export async function rendreCoutsMateriel(corps, { app, materiel }) {
   const montant = (v) => (Number(v) ? formatNombre(v, 2) : '');
   const rendre = (d) => {
     if (!d.chantier) {
-      corps.innerHTML = `<div class="ressources-couts"><div class="titre-actions"><h3>Coûts</h3></div>
-        <p class="aide">Aucun chantier de suivi : il porte les coûts du matériel (pointages de l'atelier, pièces sorties du stock, achats et factures fournisseur, sous-traitance). Il est créé à la première imputation, ou ici.</p>
-        <button type="button" class="principal" data-creer>Créer le chantier de suivi</button></div>`;
+      corps.innerHTML = `<div class="ressources-couts"><div class="titre-actions"><h3>${texteHtml('ressources_btp.couts.titre')}</h3></div>
+        <p class="aide">${texteHtml('ressources_btp.couts.aucun')}</p>
+        <button type="button" class="principal" data-creer>${texteHtml('ressources_btp.couts.creer')}</button></div>`;
       corps.querySelector('[data-creer]').addEventListener('click', async () => {
-        try { rendre(await api.ressources.creerChantierMateriel(materiel)); app.message('Chantier de suivi créé', 'succes'); } catch (e) { app.erreur(e); }
+        try { rendre(await api.ressources.creerChantierMateriel(materiel)); app.message(texte('ressources_btp.couts.cree'), 'succes'); } catch (e) { app.erreur(e); }
       });
       return;
     }
@@ -256,19 +255,19 @@ export async function rendreCoutsMateriel(corps, { app, materiel }) {
     const ligne = (titre, t, heures, classe = '') => `<tr class="${classe}"><td>${titre}</td>
       <td class="nombre">${Number(heures) ? formatNombre(heures, 2) : ''}</td>${colonnes.map((n) => `<td class="nombre">${montant(t[n])}</td>`).join('')}</tr>`;
     const filtre = encodeURIComponent(c.code);
-    corps.innerHTML = `<div class="ressources-couts"><div class="titre-actions"><h3>Coûts</h3>
+    corps.innerHTML = `<div class="ressources-couts"><div class="titre-actions"><h3>${texteHtml('ressources_btp.couts.titre')}</h3>
         <span class="titre-actions-boutons"><span data-annee></span></span></div>
-      <p>Chantier de suivi <a href="${urlFiche(TYPE_FICHE.CHANTIER, c.id)}">${echapper(c.code)}</a> ${echapper(c.libelle)}
-        ${c.statut === 'OUVERT' ? '' : '<span class="pastille-compte neutre">Clos</span>'}
-        ${c.partage ? `<span class="aide">— partagé par les ${c.materiels} matériels gérés par nombre de ce type</span>` : ''}
-        · <a href="/liste/documents?chantier=${filtre}">Documents</a> · <a href="/liste/pointages?chantier=${filtre}">Pointages</a></p>
-      <table class="tableau-compact largeur-contenu"><thead><tr><th>Mois</th><th>Heures MO</th>${colonnes.map((n) => `<th>${LIBELLES_COUT[n] ?? n}</th>`).join('')}</tr></thead><tbody>
-      ${d.mois.map((m, i) => ligne(MOIS[i], m.montants, m.heures_mo)).join('')}</tbody><tfoot>
-      ${ligne(`Année ${d.annee}`, d.total_annee, d.heures_mo_annee, 'total')}
-      ${ligne(`Depuis l'entrée${d.date_entree ? ` (${jour(d.date_entree)})` : ''}`, d.total_depuis_entree, null, 'total')}</tfoot></table>
-      <p>${d.cout_par_heure != null ? `Coût par heure d'utilisation : <b>${formatNombre(d.cout_par_heure, 2)} €</b> (${formatNombre(d.heures, 0)} h au compteur).`
-        : c.partage ? '<span class="aide">Coût par heure : sans objet pour un chantier partagé.</span>' : '<span class="aide">Coût par heure : heures d\'utilisation non renseignées.</span>'}
-        ${Number(d.non_valorises) ? ` <span class="pastille-compte attention">${d.non_valorises} mouvement(s) non valorisé(s)</span>` : ''}</p></div>`;
+      <p>${texteHtml('ressources_btp.couts.chantier')} <a href="${urlFiche(TYPE_FICHE.CHANTIER, c.id)}">${echapper(c.code)}</a> ${echapper(c.libelle)}
+        ${c.statut === 'OUVERT' ? '' : `<span class="pastille-compte neutre">${texteHtml('ressources_btp.couts.clos')}</span>`}
+        ${c.partage ? `<span class="aide">${texteHtml('ressources_btp.couts.partage', { nombre: c.materiels })}</span>` : ''}
+        · <a href="/liste/documents?chantier=${filtre}">${texteHtml('ressources_btp.couts.documents')}</a> · <a href="/liste/pointages?chantier=${filtre}">${texteHtml('ressources_btp.couts.pointages')}</a></p>
+      <table class="tableau-compact largeur-contenu"><thead><tr><th>${texteHtml('ressources_btp.couts.colonnes.mois')}</th><th>${texteHtml('ressources_btp.couts.colonnes.heures')}</th>${colonnes.map((n) => `<th>${echapper(LIBELLES_COUT[n] ?? n)}</th>`).join('')}</tr></thead><tbody>
+      ${d.mois.map((m, i) => ligne(texteHtml(`ressources_btp.couts.mois.${i + 1}`), m.montants, m.heures_mo)).join('')}</tbody><tfoot>
+      ${ligne(texteHtml('ressources_btp.couts.annee', { annee: d.annee }), d.total_annee, d.heures_mo_annee, 'total')}
+      ${ligne(`${texteHtml('ressources_btp.couts.depuis_entree')}${d.date_entree ? ` (${jour(d.date_entree)})` : ''}`, d.total_depuis_entree, null, 'total')}</tfoot></table>
+      <p>${d.cout_par_heure != null ? texteHtml('ressources_btp.couts.par_heure_html', { cout: formatNombre(d.cout_par_heure, 2), heures: formatNombre(d.heures, 0) })
+        : `<span class="aide">${texteHtml(c.partage ? 'ressources_btp.couts.par_heure_partage' : 'ressources_btp.couts.par_heure_inconnu')}</span>`}
+        ${Number(d.non_valorises) ? ` <span class="pastille-compte attention">${pluriel('ressources_btp.couts.non_valorises', d.non_valorises)}</span>` : ''}</p></div>`;
     const annee = creerCombo({ options: d.annees.map((a) => ({ valeur: a, libelle: String(a) })), valeur: d.annee, vide: false });
     annee.addEventListener('change', async () => {
       try { rendre(await api.ressources.coutsMateriel(materiel, annee.valeurCombo)); } catch (e) { app.erreur(e); }
