@@ -130,12 +130,18 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
 
     /// <summary>
     /// Commande client : un marché est obligatoire pour la valider (créé ou choisi par l'utilisateur), sauf la commande
-    /// intermédiaire d'un devis facturé directement (CONCEPTION-ACHATS-MARCHES.md, Q16 et 13.1).
+    /// intermédiaire d'un devis facturé directement (CONCEPTION-ACHATS-MARCHES.md, Q16 et 13.1) ; unités des lignes.
     /// </summary>
-    public override Task ControlerValidationAsync(DocumentDbContext<DocumentBtp, DocumentLigneBtp> db, DocumentCompletBtp document, TypeDocument type,
+    public override async Task ControlerValidationAsync(DocumentDbContext<DocumentBtp, DocumentLigneBtp> db, DocumentCompletBtp document, TypeDocument type,
         List<MessageCalcul> erreurs, CancellationToken ct)
     {
-        if (type.TydFamille == "E") return ControlerOrdreAsync(db, document, erreurs, ct);
+        // Unités des lignes transformées et des articles gérés en stock (garde-fou, lot 0 du module Rentabilité).
+        await UnitesLignesBtp.ControlerAsync(db, document, type, erreurs, ct);
+        if (type.TydFamille == "E")
+        {
+            await ControlerOrdreAsync(db, document, erreurs, ct);
+            return;
+        }
         if (type.TydCode == TypesDocument.VCommande && !document.Document.EntIntermediaire && document.Document.EntMarcheId is null)
         {
             erreurs.Add(new MessageCalcul(null, "MARCHE_OBLIGATOIRE", "Marché à créer ou à choisir avant de valider la commande"));
@@ -152,8 +158,12 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         }
         // Stock : date du mouvement, lieux des entrées, sorties et transferts (module Stock, S9, S10).
         MouvementsStockBtp.Controler(document.Document, type, erreurs);
-        return ControlerAvancementNumerote(db, document, type, erreurs, ct);
+        await ControlerAvancementNumerote(db, document, type, erreurs, ct);
     }
+
+    /// <summary>Quantités des liens de transformation converties dans l'unité de la ligne d'origine (UnitesLignesBtp).</summary>
+    public override Task ApresRecalculLiensAsync(DocumentDbContext<DocumentBtp, DocumentLigneBtp> db, long entId, CancellationToken ct) =>
+        UnitesLignesBtp.ConvertirLiensAsync(db, entId, ct);
 
     /// <summary>
     /// Facture d'avancement d'un marché : refusée tant qu'une facture d'avancement créée avant elle dans le même marché

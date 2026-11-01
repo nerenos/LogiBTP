@@ -443,6 +443,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
 
         var corr = await persistance.Ecrire(id, specialisation.VersComplet(r), ct);
         await RecalculerLiens(id, ct);
+        await specialisation.ApresRecalculLiensAsync(db, id, ct);
         static Dictionary<long, long> Nouveaux(Dictionary<long, long> d) => d.Where(kv => kv.Key != kv.Value).ToDictionary();
         return new ReponseEnregistrement<TComplet>
         {
