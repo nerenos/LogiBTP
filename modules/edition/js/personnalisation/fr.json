@@ -1,0 +1,172 @@
+{
+  "erreurs": {
+    "CHARTE_INVALIDE": "Charte invalide",
+    "IMPORT_FORMAT": "Paquet de modèles d'édition attendu (format logibtp-edition)",
+    "IMPORT_VERSION": "Paquet d'une version plus récente de l'application",
+    "MODELE_CODE": "Code de modèle obligatoire (80 caractères au plus)",
+    "MODELE_DEFAUT": "Modèle par défaut d'un type : choisir un autre modèle par défaut avant de le supprimer",
+    "MODELE_INVALIDE": "Modèle invalide"
+  },
+  "edition": {
+    "charte": {
+      "defaut": "Charte par défaut",
+      "couleur_invalide": "Couleur invalide : {{couleur}}",
+      "heritage_circulaire": "Héritage circulaire : {{chaine}}",
+      "base_inconnue": "Style de base inconnu : {{base}}",
+      "police": "Police non livrée : {{police}}",
+      "couleur_inconnue": "Couleur inconnue : {{couleur}}"
+    },
+    "alertes": {
+      "lieu": "{{lieu}} : {{message}}",
+      "lieu_condition": "{{lieu}} : condition : {{message}}",
+      "condition": "condition : {{message}}",
+      "composant_inconnu": "Composant inconnu : {{type}}",
+      "champ": "champ",
+      "html_fusion": "Tableau d’un libellé : cellules fusionnées rendues sans fusion",
+      "image_introuvable": "Image introuvable : {{code}}",
+      "image_resolution": "Image {{code}} : {{dpi}} dpi à la taille imprimée (300 conseillés)",
+      "code39_largeur": "Code-barres « {{donnee}} » plus large que sa zone ({{largeur}} mm)",
+      "bloc_introuvable": "Bloc introuvable : {{bloc}}",
+      "bloc_cycle": "Bloc {{bloc}} : inclusion trop profonde (cycle ?)",
+      "mode_inconnu": "Mode de bande inconnu : {{mode}}",
+      "sous_rapport_niveau": "Sous-rapport {{rapport}} : plus de trois niveaux",
+      "sous_rapport_introuvable": "Sous-rapport introuvable : {{rapport}}",
+      "etiquette_deborde": "Contenu d’étiquette plus haut que l’étiquette (coupé)",
+      "debordement": "Page {{page}} : un élément de {{hauteur}} mm dépasse la zone imprimable"
+    },
+    "lieux": {
+      "qr": "QR code",
+      "repetition": "répétition",
+      "colonnes": "colonnes du tableau",
+      "presentation": "présentation {{code}}",
+      "etiquettes": "étiquettes"
+    },
+    "imprime": {
+      "report": "Report",
+      "a_reporter": "À reporter",
+      "total": "Total"
+    },
+    "formules": {
+      "chaine": "Chaîne non terminée",
+      "reference": "Référence {{…}} non fermée",
+      "caractere": "Caractère inattendu « {{caractere}} »",
+      "attendu": "« {{attendu}} » attendu",
+      "incomplete": "Expression incomplète",
+      "inattendu": "« {{jeton}} » inattendu",
+      "nombre_attendu": "{{nom}} : nombre attendu (« {{valeur}} »)",
+      "division_zero": "Division par zéro",
+      "fonction_inconnue": "Fonction inconnue : {{nom}}",
+      "arguments": "{{nom}} : {{nombre}} argument(s) attendu(s)",
+      "arguments_entre": "{{nom}} : {{min}} à {{max}} argument(s) attendu(s)",
+      "invalide": "Expression invalide"
+    },
+    "images": {
+      "svg": "Format SVG refusé : exporter le logo en PNG haute résolution",
+      "format": "Format d’image non accepté : PNG ou JPEG seulement",
+      "jpeg_illisible": "JPEG illisible (dimensions introuvables)",
+      "cmjn": "JPEG CMJN refusé : enregistrer l’image en RVB"
+    },
+    "modele": {
+      "illisible": "Modèle illisible",
+      "version": "Format {{version}} plus récent que le moteur ({{moteur}})",
+      "bande": "Type de bande inconnu : {{type}}",
+      "composant": "Type de composant inconnu : {{type}}"
+    },
+    "codes": {
+      "vide": "Code 39 : donnée vide",
+      "non_admis": "Code 39 : caractère(s) non admis « {{interdits}} » (chiffres, A-Z, espace, - . $ / + %)"
+    },
+    "catalogue": {
+      "categories": {
+        "CONDITIONS": "Conditions",
+        "TEXTE": "Texte",
+        "NOMBRES": "Nombres et montants",
+        "DATES": "Dates",
+        "COLLECTIONS": "Collections",
+        "PAGE": "Page et paramètres",
+        "MISE_EN_FORME": "Mise en forme",
+        "CODES": "Codes"
+      },
+      "fonctions": {
+        "si": "Valeur selon une condition ; sans « sinon » : vide si faux. Seule la branche retenue est évaluée.",
+        "estvide": "Vrai si la valeur est absente, vide ou une liste vide.",
+        "premiernonvide": "Première valeur non vide (jusqu’à 20).",
+        "contient": "Vrai si le texte contient le recherché (sans casse ni accents).",
+        "commencepar": "Vrai si le texte commence par le début (sans casse ni accents).",
+        "dans": "Vrai si la valeur est égale à l’une des suivantes.",
+        "choix": "Valeur de rang donné (1 = première) ; vide hors limites.",
+        "concat": "Textes mis bout à bout (garde la mise en forme Gras, Couleur…). L’opérateur & fait de même.",
+        "joindre": "Valeurs non vides jointes par le séparateur ; les listes (lignes d’adresse) sont mises à plat. Séparateur Ligne() : une valeur par ligne.",
+        "majuscule": "Texte en majuscules.",
+        "minuscule": "Texte en minuscules.",
+        "gauche": "n premiers caractères.",
+        "droite": "n derniers caractères.",
+        "longueur": "Nombre de caractères.",
+        "remplacer": "Toutes les occurrences remplacées.",
+        "texte": "Valeur convertie en texte brut.",
+        "ligne": "Saut de ligne (avec multiligne « auto » ou « sauts »).",
+        "nombre": "Nombre au format français, décimales fixes (2 par défaut), séparateur de milliers (vrai par défaut).",
+        "montant": "Montant sans symbole (2 décimales par défaut).",
+        "monnaie": "Montant suivi du symbole (€ par défaut).",
+        "pourcent": "Pourcentage sous sa forme la plus simple (2 décimales au plus) : 30 %, 85,26 %.",
+        "simple": "Nombre sous sa forme la plus simple, zéros inutiles retirés : 30, 85,5.",
+        "arrondi": "Arrondi commercial (0 décimale par défaut).",
+        "arrondisup": "Arrondi vers le haut.",
+        "arrondiinf": "Arrondi vers le bas.",
+        "abs": "Valeur absolue.",
+        "min": "Plus petite valeur (listes mises à plat).",
+        "max": "Plus grande valeur.",
+        "enlettres": "Montant en toutes lettres (euro / centime par défaut).",
+        "entierenlettres": "Partie entière en lettres, sans unité.",
+        "date": "Date mise en forme : court (17/10/2026, par défaut), long (17 octobre 2026), mois (octobre 2026), heure.",
+        "ajouterjours": "Date décalée de n jours.",
+        "aujourdhui": "Date du jour de l’édition (fournie par le serveur).",
+        "somme": "Somme d’un champ (ou d’une expression sur element) des éléments d’une collection.",
+        "compte": "Nombre d’éléments (ou de valeurs non vides du champ).",
+        "moyenne": "Moyenne des valeurs non vides du champ.",
+        "page": "Numéro de la page (bandes de page).",
+        "nbpages": "Nombre total de pages.",
+        "parametre": "Valeur d’un paramètre du modèle, de la présentation ou de la demande ; Parametre(\"presentation\") = code de la présentation.",
+        "gras": "Texte en gras dans le champ.",
+        "italique": "Texte en italique.",
+        "souligne": "Texte souligné.",
+        "barre": "Texte barré.",
+        "taille": "Taille de police en points.",
+        "couleur": "Couleur de la charte (primaire, alerte…) ou #rrggbb.",
+        "style": "Style nommé de la charte appliqué à une partie du champ.",
+        "retrait": "Retrait suspendu : libellé à gauche, texte aligné après lui sur toutes ses lignes.",
+        "codebarre39": "Valeur encodée pour la police Code 39 (dans un champ ; le composant code39 le fait seul)."
+      },
+      "operateurs": {
+        "calcul": "Calcul en décimal exact (× ÷ − acceptés).",
+        "concatenation": "Concaténation de textes.",
+        "comparaisons": "Comparaisons (nombres, dates, textes).",
+        "logique": "Logique.",
+        "priorite": "Priorité.",
+        "chaine": "Chaîne littérale (\"\" pour un guillemet dans \"…\").",
+        "litteraux": "Littéraux."
+      },
+      "contextes": {
+        "ligne": "Élément courant d’un tableau (une ligne de la collection).",
+        "element": "Élément courant d’une bande REPETE / GROUPE, d’un composant repete, d’un pied ou d’une collection de sous-rapport.",
+        "groupe": "Groupe courant d’une bande GROUPE : valeur (de la rupture), elements, rang, premier (premier élément), suite (vrai sur les pages suivantes).",
+        "page": "Page courante (bandes de page) : numero, total, premiere, derniere.",
+        "bloc": "Paramètres passés à un bloc lié.",
+        "donnees": "Racine des données de la source (utile quand un champ de l’élément courant porte le même nom).",
+        "parametres": "Paramètres du rapport, de la présentation et de la demande (aussi par Parametre(\"nom\")).",
+        "sources": "Sources annexes déclarées par sources_annexes, lues par le serveur.",
+        "hote": "Dans un sous-rapport : données du rapport qui l’inclut.",
+        "elements": "Dans un sous-rapport sur une liste : les éléments transmis."
+      },
+      "formats": {
+        "montant": "Montant, 2 décimales, séparateur de milliers (montant:3 : 3 décimales).",
+        "monnaie": "Montant suivi de « € » (monnaie:$ : autre symbole).",
+        "nombre": "Nombre à N décimales fixes.",
+        "simple": "Nombre sous sa forme la plus simple (N décimales au plus).",
+        "pourcent": "Pourcentage le plus simple (2 décimales au plus) suivi de « % ».",
+        "date": "Date courte (date:long, date:mois, date:heure).",
+        "zero_vide": "Valeur nulle non imprimée (aussi propriété zero_vide: true)."
+      }
+    }
+  }
+}

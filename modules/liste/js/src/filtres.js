@@ -1,3 +1,4 @@
+import { pairesParCode } from '@logibtp/socle/dictionnaire';
 import { normaliser } from './normaliser.js';
 
 // Filtres et tri des colonnes, façon tableur. Ils portent sur les lignes déjà chargées (pas sur la base) :
@@ -5,14 +6,11 @@ import { normaliser } from './normaliser.js';
 //   condition   { op, a, b } : nombre / date (= <> > >= < <= entre vide nonvide) ou texte (contient commence finit = <> vide nonvide)
 //   format      { fond, couleur, gras, italique, souligne, barre } : mise en forme calculée de la cellule
 
-export const OPERATEURS_NOMBRE = [
-  ['=', 'Égal à'], ['<>', 'Différent de'], ['>', 'Supérieur à'], ['>=', 'Supérieur ou égal à'],
-  ['<', 'Inférieur à'], ['<=', 'Inférieur ou égal à'], ['entre', 'Entre'], ['vide', 'Vide'], ['nonvide', 'Non vide'],
-];
-export const OPERATEURS_TEXTE = [
-  ['contient', 'Contient'], ['commence', 'Commence par'], ['finit', 'Se termine par'], ['=', 'Égal à'], ['<>', 'Différent de'],
-  ['vide', 'Vide'], ['nonvide', 'Non vide'],
-];
+export const OPERATEURS_NOMBRE = pairesParCode('liste.operateurs', [
+  ['=', 'egal'], ['<>', 'different'], ['>', 'superieur'], ['>=', 'superieur_egal'], ['<', 'inferieur'], ['<=', 'inferieur_egal'],
+  'entre', 'vide', 'nonvide',
+]);
+export const OPERATEURS_TEXTE = pairesParCode('liste.operateurs', ['contient', 'commence', 'finit', ['=', 'egal'], ['<>', 'different'], 'vide', 'nonvide']);
 
 export const filtreActif = (f) => !!f && (f.valeurs instanceof Set || !!f.condition?.op || (f.format && Object.values(f.format).some((v) => v !== null && v !== undefined)));
 

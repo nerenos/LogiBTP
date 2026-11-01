@@ -1,6 +1,8 @@
 // Analyseur XML minimal (éléments, attributs, texte, CDATA, entités) : les fichiers d'échange lus par le module sont
 // des arbres simples ; pas de DOMParser pour fonctionner aussi sous Node (tests).
 
+import { texte } from '@logibtp/socle/dictionnaire';
+
 const ENTITES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" };
 
 export const decoderEntites = (t) => t.replace(/&(#x[0-9a-f]+|#\d+|\w+);/gi, (m, e) => {
@@ -28,11 +30,11 @@ export function analyserXml(source) {
     }
     if (source[lt + 1] === '?' || source[lt + 1] === '!') { i = source.indexOf('>', lt) + 1; continue; }
     const gt = source.indexOf('>', lt);
-    if (gt < 0) throw new Error('XML invalide : balise non fermée');
+    if (gt < 0) throw new Error(texte('import.xml.balise'));
     let corps = source.slice(lt + 1, gt);
     if (corps[0] === '/') {
       const nom = corps.slice(1).trim();
-      if (haut.nom !== nom) throw new Error(`XML invalide : </${nom}> ferme <${haut.nom}>`);
+      if (haut.nom !== nom) throw new Error(texte('import.xml.fermeture', { nom, ouvert: haut.nom }));
       pile.pop();
       i = gt + 1;
       continue;
@@ -46,9 +48,9 @@ export function analyserXml(source) {
     if (!auto) pile.push(el);
     i = gt + 1;
   }
-  if (pile.length !== 1) throw new Error(`XML invalide : <${pile[pile.length - 1].nom}> non fermé`);
+  if (pile.length !== 1) throw new Error(texte('import.xml.non_ferme', { nom: pile[pile.length - 1].nom }));
   const el = racine.enfants[0];
-  if (!el) throw new Error('XML vide');
+  if (!el) throw new Error(texte('import.xml.vide'));
   return el;
 }
 

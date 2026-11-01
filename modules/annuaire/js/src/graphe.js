@@ -14,6 +14,7 @@
 // Clés : P<id> (personne), I<id> (individu), G<id> (contacts résumés d'une personne) ; ordre d'un individu : 1000.
 // Format, parcours en largeur, fusion et disposition : module Graphe (@logibtp/graphe).
 
+import { icone, pluriel } from '@logibtp/socle/dictionnaire';
 import { parcourirEnLargeur, fusionnerGraphes as fusionner } from '@logibtp/graphe';
 
 export const PROFONDEUR_MAX = 5;
@@ -99,12 +100,12 @@ export function construireGraphe(donnees, depart, { profondeur = 1, contacts = t
         casquettes: [...(p.casquettes ?? [])], actif: actif(p), sous_titre: p.ville ?? null, distance, depart: k === k0, reste: null });
     } else {
       const i = individus.get(id);
-      noeuds.push({ cle: k, type: 'individu', id, libelle: i.libelle, niveau: null, ordre: ORDRE_INDIVIDU, icone: '👤', casquettes: [], actif: actif(i),
+      noeuds.push({ cle: k, type: 'individu', id, libelle: i.libelle, niveau: null, ordre: ORDRE_INDIVIDU, icone: icone('annuaire_individu'), casquettes: [], actif: actif(i),
         sous_titre: null, distance, depart: k === k0, reste: null });
     }
   }
   for (const [id, n] of resumes) {
-    noeuds.push({ cle: `G${id}`, type: 'groupe', id, libelle: `+ ${n} contact${n > 1 ? 's' : ''}`, niveau: null, ordre: ORDRE_INDIVIDU, icone: '👥', casquettes: [],
+    noeuds.push({ cle: `G${id}`, type: 'groupe', id, libelle: pluriel('annuaire.graphe.contacts_resumes', n), niveau: null, ordre: ORDRE_INDIVIDU, icone: icone('annuaire_groupe'), casquettes: [],
       actif: true, sous_titre: null, distance: distances.get(`P${id}`) + 1, depart: false, reste: n });
   }
 

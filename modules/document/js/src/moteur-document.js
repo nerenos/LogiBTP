@@ -2,6 +2,7 @@ import {
   Dec, D, Dz, S, ZERO, coef, arrondir, arr6,
   ErreurCalcul, analyserReference, remplacerVariables, texteBrut, sansAccent,
 } from '@logibtp/socle';
+import { messageErreur } from '@logibtp/socle/dictionnaire';
 import { numeroter } from './numerotation.js';
 import {
   TL, estChiffree, estPied, estTypeNumerote, accepteEnfants, estTranche,
@@ -157,13 +158,14 @@ export class MoteurDocument {
     return qv;
   }
 
+  // Message : « erreurs.<code> » du dictionnaire s'il existe (module Personnalisation), sinon celui du moteur.
   erreur(ligId, code, message, bloquante = true) {
-    this.erreurs.push({ lig_id: ligId ?? null, code, message });
+    this.erreurs.push({ lig_id: ligId ?? null, code, message: messageErreur(code, message) });
     if (bloquante && ligId !== null && ligId !== undefined) this.enErreur.add(ligId);
   }
 
   avertir(ligId, code, message) {
-    this.avertissements.push({ lig_id: ligId ?? null, code, message });
+    this.avertissements.push({ lig_id: ligId ?? null, code, message: messageErreur(code, message) });
   }
 
   capturer(e, ligId) {

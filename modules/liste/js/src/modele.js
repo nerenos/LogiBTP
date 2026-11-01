@@ -1,3 +1,4 @@
+import { texte } from '@logibtp/socle/dictionnaire';
 import { formatNombre } from '@logibtp/socle/ui';
 import { compilerFormule, resolveurColonnes, resultat, vrai } from './formule.js';
 
@@ -70,14 +71,14 @@ export class ModeleVue {
       try {
         if (c.calcul) this.formules.set(c.code, compilerFormule(c.formule, resoudre));
       } catch (e) {
-        this.erreurs.set(c.code, `Formule : ${e.message}`);
+        this.erreurs.set(c.code, texte('liste.modele.formule', { message: e.message }));
       }
       const regles = [];
       for (const r of c.regles) {
         try {
           regles.push({ condition: compilerFormule(r.condition, resoudre), style: r.style ?? {} });
         } catch (e) {
-          this.erreurs.set(c.code, `Règle « ${r.condition} » : ${e.message}`);
+          this.erreurs.set(c.code, texte('liste.modele.regle', { condition: r.condition, message: e.message }));
         }
       }
       this.regles.set(c.code, regles);

@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "exporter-resultats": "node scripts/exporter-resultats.mjs",
-    "generer-vues-liste": "node scripts/generer-vues-liste.mjs"
+    "generer-vues-liste": "node scripts/generer-vues-liste.mjs",
+    "extraire-erreurs": "node scripts/extraire-erreurs.mjs"
   },
   "dependencies": {
     "@codemirror/commands": "^6.11.1",
@@ -23,11 +24,12 @@
     "@lezer/highlight": "^1.2.5",
     "@logibtp/annuaire": "0.2.0",
     "@logibtp/authentification": "0.2.0",
-    "@logibtp/droits": "0.2.0",
     "@logibtp/bibliotheque": "0.2.0",
     "@logibtp/calendrier": "0.2.0",
+    "@logibtp/comptabilite": "0.2.0",
     "@logibtp/crm": "0.2.0",
     "@logibtp/document": "0.2.0",
+    "@logibtp/droits": "0.2.0",
     "@logibtp/edition": "0.2.0",
     "@logibtp/entreprises-fr": "0.2.0",
     "@logibtp/execution": "0.2.0",
@@ -39,12 +41,12 @@
     "@logibtp/mail": "0.2.0",
     "@logibtp/metre": "0.2.0",
     "@logibtp/navigation": "0.2.0",
+    "@logibtp/personnalisation": "0.2.0",
     "@logibtp/planning": "0.2.0",
     "@logibtp/pointage": "0.2.0",
     "@logibtp/reglement": "0.2.0",
     "@logibtp/socle": "0.2.0",
     "@logibtp/sous-traitance": "0.2.0",
-    "@logibtp/comptabilite": "0.2.0",
     "@logibtp/stock": "0.2.0"
   },
   "devDependencies": {

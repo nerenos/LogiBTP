@@ -1,3 +1,4 @@
+import { texte } from '@logibtp/socle/dictionnaire';
 import { NIVEAU_CONFIDENTIALITE, PROFIL, ErreurApi, appelApi } from '@logibtp/socle';
 import { sha256, horodatage, empreinteEntree, verifierChaine, EMPREINTE_ORIGINE } from './coffre.js';
 import { editionsAPurger, GENRES } from './versions.js';
@@ -79,7 +80,7 @@ export class FournisseurGedApi {
   etape(id, e) { return this.appel('POST', `/documents/${id}/etapes`, e); }
   async contenu(versionId) {
     const r = await fetch(this.urlContenu(versionId), { headers: this.entetes });
-    if (!r.ok) throw new ErreurGed(r.status, 'CONTENU', 'Contenu indisponible');
+    if (!r.ok) throw new ErreurGed(r.status, 'CONTENU', texte('ged.fournisseur.contenu_indisponible'));
     return r.blob();
   }
   urlContenu(versionId, { telecharger = false } = {}) { return `${this.base}/versions/${versionId}/contenu${telecharger ? '?telecharger=true' : ''}`; }
@@ -132,12 +133,13 @@ const CLES_ACCES = ['confidentialite', 'acces_profils', 'acces_utilisateurs'];
 const EXTRAIT_MAX = 2000;
 
 const liste = (v) => [...new Set((Array.isArray(v) ? v : String(v ?? '').split(',')).map((x) => String(x ?? '').trim()).filter(Boolean))];
-const texte = (v) => (v === null || v === undefined || String(v).trim() === '' ? null : String(v).trim());
+/** Texte saisi nettoyé (espaces retirés), ou null s'il est vide. */
+const nettoye = (v) => (v === null || v === undefined || String(v).trim() === '' ? null : String(v).trim());
 const memeElement = (a, b) => (a.type_element ?? null) === (b.type_element ?? null) && String(a.id_element ?? '') === String(b.id_element ?? '');
 
 function confidentialite(v) {
-  const n = texte(v)?.toUpperCase() ?? NIVEAU_CONFIDENTIALITE.INTERNE;
-  if (!CONFIDENTIALITES.some(([c]) => c === n)) throw new ErreurGed(422, 'CONFIDENTIALITE', `Confidentialité inconnue : ${v}`);
+  const n = nettoye(v)?.toUpperCase() ?? NIVEAU_CONFIDENTIALITE.INTERNE;
+  if (!CONFIDENTIALITES.some(([c]) => c === n)) throw new ErreurGed(422, 'CONFIDENTIALITE', texte('ged.fournisseur.confidentialite_inconnue', { valeur: v }));
   return n;
 }
 
@@ -180,7 +182,7 @@ export class FournisseurGedMemoire {
 
   #doc(id) {
     const d = this.documents.find((x) => x.id === Number(id));
-    if (!d || !this.#visible(d)) throw new ErreurGed(404, 'INTROUVABLE', `Document ${id} introuvable`);
+    if (!d || !this.#visible(d)) throw new ErreurGed(404, 'INTROUVABLE', texte('ged.fournisseur.document_introuvable', { id }));
     return d;
   }
 
@@ -240,7 +242,7 @@ export class FournisseurGedMemoire {
 
   #documentArchive(id) {
     const a = this.archives.find((x) => x.document.id === Number(id));
-    if (!a || !accesAutorise(a.document, this.#moi)) throw new ErreurGed(404, 'INTROUVABLE', `Document ${id} introuvable`);
+    if (!a || !accesAutorise(a.document, this.#moi)) throw new ErreurGed(404, 'INTROUVABLE', texte('ged.fournisseur.document_introuvable', { id }));
     const parent = this.archives.find((x) => x.document.id === a.document.parent_id);
     return {
       ...this.#vueArchive(a), versions: structuredClone([...a.versions].sort((x, y) => x.numero - y.numero)),
@@ -268,7 +270,7 @@ export class FournisseurGedMemoire {
     if (fichier) c = await this.#stocker(fichier);
     else {
       const derniere = existantes.at(-1);
-      if (!derniere) throw new ErreurGed(422, 'FICHIER', 'Fichier attendu');
+      if (!derniere) throw new ErreurGed(422, 'FICHIER', texte('ged.fournisseur.fichier_attendu'));
       c = { empreinte: empreinte ?? derniere.empreinte, taille: derniere.taille, type: derniere.type_mime };
       nom_fichier ??= derniere.nom_fichier;
     }
@@ -298,10 +300,10 @@ export class FournisseurGedMemoire {
     const t = type || null;
     const i = id === null || id === undefined || id === '' ? null : String(id);
     if (t === null && i === null) return;
-    if (t === null || i === null) throw new ErreurGed(422, 'ELEMENT', 'Élément lié incomplet : type et identifiant vont ensemble');
+    if (t === null || i === null) throw new ErreurGed(422, 'ELEMENT', texte('ged.fournisseur.element_incomplet'));
     const existe = await this.elementExiste(t, i);
-    if (existe === null || existe === undefined) throw new ErreurGed(422, 'ELEMENT_TYPE', `Type d'élément inconnu : ${t}`);
-    if (!existe) throw new ErreurGed(422, 'ELEMENT_INEXISTANT', `Élément lié inexistant : ${t} ${i}`);
+    if (existe === null || existe === undefined) throw new ErreurGed(422, 'ELEMENT_TYPE', texte('ged.fournisseur.element_type', { type: t }));
+    if (!existe) throw new ErreurGed(422, 'ELEMENT_INEXISTANT', texte('ged.fournisseur.element_inexistant', { type: t, id: i }));
   }
 
   /** Pièce jointe sans boucle : le parent n'est ni le document ni l'une de ses pièces jointes (tr_ged_parent_sans_boucle). */
@@ -310,7 +312,7 @@ export class FournisseurGedMemoire {
     const vus = new Set();
     for (let x = Number(parentId); x !== null && !vus.has(x); x = this.documents.find((d) => d.id === x)?.parent_id ?? null) {
       if (documentId !== null && documentId !== undefined && x === Number(documentId)) {
-        throw new ErreurGed(422, 'BOUCLE', 'Un document ne peut pas être une pièce jointe de lui-même ou de ses pièces jointes');
+        throw new ErreurGed(422, 'BOUCLE', texte('ged.fournisseur.boucle'));
       }
       vus.add(x);
     }
@@ -318,31 +320,31 @@ export class FournisseurGedMemoire {
 
   #dossier(id) {
     const r = this.dossiers.find((x) => x.id === Number(id));
-    if (!r) throw new ErreurGed(404, 'INTROUVABLE', `Répertoire ${id} introuvable`);
+    if (!r) throw new ErreurGed(404, 'INTROUVABLE', texte('ged.fournisseur.repertoire_introuvable', { id }));
     return r;
   }
 
   async deposer({ fichier, nom_fichier, meta = {} }) {
-    if (!meta.titre?.trim()) throw new ErreurGed(422, 'TITRE', 'Titre obligatoire');
+    if (!meta.titre?.trim()) throw new ErreurGed(422, 'TITRE', texte('ged.fournisseur.titre_obligatoire'));
     const m = { ...meta };
     // Répertoire de dépôt : le document est lié à l'élément du répertoire (même si ce n'est pas celui affiché).
-    if (texte(m.repertoire_id)) Object.assign(m, { type_element: this.#dossier(m.repertoire_id).type_element, id_element: this.#dossier(m.repertoire_id).id_element });
+    if (nettoye(m.repertoire_id)) Object.assign(m, { type_element: this.#dossier(m.repertoire_id).type_element, id_element: this.#dossier(m.repertoire_id).id_element });
     await this.#controlerElement(m.type_element, m.id_element);
     if (m.parent_id !== null && m.parent_id !== undefined) this.controlerParent(null, m.parent_id);
-    const saisie = texte(m.confidentialite) ? confidentialite(m.confidentialite) : null;
+    const saisie = nettoye(m.confidentialite) ? confidentialite(m.confidentialite) : null;
     const blob = fichier instanceof Blob ? fichier : new Blob([fichier]);
     const nom = nom_fichier ?? fichier?.name ?? 'document';
     const { texte: contenu, etat } = await extraireTexte(blob, nom, blob.type);
     const classe = classer({ nom_fichier: nom, type_mime: blob.type, titre: m.titre, texte: contenu ?? m.mail?.message ?? null, expediteur: m.mail?.de ?? null,
-      type_element: texte(m.type_element) }, this.reglesClassification);
+      type_element: nettoye(m.type_element) }, this.reglesClassification);
     const d = {
       id: Math.max(0, ...this.documents.map((x) => x.id), ...this.archives.map((a) => a.document.id)) + 1, titre: m.titre.trim(),
-      categorie: texte(m.categorie) ?? classe.categorie, nature: m.nature ?? 'fichier',
-      type_element: texte(m.type_element), id_element: texte(m.id_element), auteur: m.auteur ?? this.utilisateur,
+      categorie: nettoye(m.categorie) ?? classe.categorie, nature: m.nature ?? 'fichier',
+      type_element: nettoye(m.type_element), id_element: nettoye(m.id_element), auteur: m.auteur ?? this.utilisateur,
       date_document: m.date_document ?? this.#aujourdhui(), parent_id: m.parent_id ?? null,
       mail: m.mail ?? null, resume: m.resume ?? null, notes: m.notes ?? null, etat: null, coffre: false, coffre_le: null, a_envoyer: false, terrain: false,
       supprime: false, supprime_le: null, supprime_par: null, cree_le: this.#maintenant(), cree_par: this.utilisateur, modifie_le: null,
-      nb_consultations: 0, consulte_le: null, repertoire_id: texte(m.repertoire_id) ? Number(m.repertoire_id) : null,
+      nb_consultations: 0, consulte_le: null, repertoire_id: nettoye(m.repertoire_id) ? Number(m.repertoire_id) : null,
       confidentialite: saisie ?? classe.confidentialite ?? NIVEAU_CONFIDENTIALITE.INTERNE, acces_profils: liste(m.acces_profils ?? []), acces_utilisateurs: liste(m.acces_utilisateurs ?? []),
       mots_cles: liste([...(m.mots_cles ?? []), ...classe.mots_cles]), langue: 'fr', index_etat: etat, texte_contenu: contenu,
       classification: classe.regles.length ? { regles: classe.regles, categorie: classe.categorie, confidentialite: classe.confidentialite, le: this.#maintenant() } : null,
@@ -361,18 +363,18 @@ export class FournisseurGedMemoire {
     try {
       for (const [k, v] of Object.entries(meta)) {
         if (!autorises.includes(k)) {
-          if (d.coffre && MODIFIABLES.includes(k) && texte(v) !== texte(d[k])) {
-            throw new ErreurGed(422, 'COFFRE', 'Document du coffre-fort : seules les informations de classement sont modifiables');
+          if (d.coffre && MODIFIABLES.includes(k) && nettoye(v) !== nettoye(d[k])) {
+            throw new ErreurGed(422, 'COFFRE', texte('ged.fournisseur.coffre_classement'));
           }
           continue;
         }
-        if (CLES_ACCES.includes(k) && !peutChangerAcces(d, this.#moi)) throw new ErreurGed(403, 'ACCES_REFUSE', 'Droit CONFIDENTIALITE refusé');
+        if (CLES_ACCES.includes(k) && !peutChangerAcces(d, this.#moi)) throw new ErreurGed(403, 'ACCES_REFUSE', texte('ged.fournisseur.droit_refuse', { droit: 'CONFIDENTIALITE' }));
         if (k === 'a_envoyer' || k === 'terrain') d[k] = v === true || v === 'true';
         else if (k === 'confidentialite') d.confidentialite = confidentialite(v);
         else if (['acces_profils', 'acces_utilisateurs', 'mots_cles'].includes(k)) d[k] = liste(v);
-        else if (k === 'repertoire_id') this.#classer(d, texte(v) === null ? null : Number(v));
-        else if (k === 'titre') { if (!texte(v)) throw new ErreurGed(422, 'TITRE', 'Titre obligatoire'); d.titre = texte(v); }
-        else d[k] = texte(v);
+        else if (k === 'repertoire_id') this.#classer(d, nettoye(v) === null ? null : Number(v));
+        else if (k === 'titre') { if (!nettoye(v)) throw new ErreurGed(422, 'TITRE', texte('ged.fournisseur.titre_obligatoire')); d.titre = nettoye(v); }
+        else d[k] = nettoye(v);
       }
       if (!memeElement(d, avant)) {
         await this.#controlerElement(d.type_element, d.id_element);
@@ -394,7 +396,7 @@ export class FournisseurGedMemoire {
     if (repertoireId === null) { d.repertoire_id = null; return; }
     const r = this.#dossier(repertoireId);
     if (!memeElement(r, d)) {
-      if (d.coffre) throw new ErreurGed(422, 'COFFRE', 'Document du coffre-fort : il reste lié à son élément');
+      if (d.coffre) throw new ErreurGed(422, 'COFFRE', texte('ged.fournisseur.coffre_lie'));
       Object.assign(d, { type_element: r.type_element, id_element: r.id_element });
     }
     d.repertoire_id = r.id;
@@ -402,8 +404,8 @@ export class FournisseurGedMemoire {
 
   async nouvelleVersion(id, { fichier, nom_fichier, genre = GENRES.EDITION, etape = null, etat = null, commentaire = null }) {
     const d = this.#doc(id);
-    if (d.coffre) throw new ErreurGed(422, 'COFFRE', 'Document du coffre-fort : verrouillé, aucune nouvelle version');
-    if (d.supprime) throw new ErreurGed(422, 'SUPPRIME', 'Document supprimé : restaurez-le d\'abord');
+    if (d.coffre) throw new ErreurGed(422, 'COFFRE', texte('ged.fournisseur.coffre_version'));
+    if (d.supprime) throw new ErreurGed(422, 'SUPPRIME', texte('ged.fournisseur.supprime'));
     const blob = fichier instanceof Blob ? fichier : new Blob([fichier]);
     Object.assign(d, await this.#indexation(blob, nom_fichier ?? fichier?.name ?? 'document'));
     await this.#ajouterVersion(d, { fichier: blob, nom_fichier: nom_fichier ?? fichier?.name, genre, etape, etat, commentaire });
@@ -417,14 +419,14 @@ export class FournisseurGedMemoire {
 
   async etape(id, { etape, etat = null, commentaire = null }) {
     const d = this.#doc(id);
-    if (d.coffre) throw new ErreurGed(422, 'COFFRE', 'Document du coffre-fort : verrouillé');
+    if (d.coffre) throw new ErreurGed(422, 'COFFRE', texte('ged.fournisseur.coffre_verrouille'));
     await this.#ajouterVersion(d, { genre: GENRES.ETAPE, etape, etat: etat ?? etape, commentaire });
     return this.document(id);
   }
 
   #version(versionId) {
     const v = this.versions.find((x) => x.id === Number(versionId)) ?? this.archives.flatMap((a) => a.versions).find((x) => x.id === Number(versionId));
-    if (!v) throw new ErreurGed(404, 'INTROUVABLE', 'Version introuvable');
+    if (!v) throw new ErreurGed(404, 'INTROUVABLE', texte('ged.fournisseur.version_introuvable'));
     return v;
   }
 
@@ -489,7 +491,7 @@ export class FournisseurGedMemoire {
 
   async supprimer(id) {
     const d = this.#doc(id);
-    if (d.coffre && !this.admin) throw new ErreurGed(403, 'ACCES_REFUSE', 'Document du coffre-fort : suppression réservée à un administrateur');
+    if (d.coffre && !this.admin) throw new ErreurGed(403, 'ACCES_REFUSE', texte('ged.fournisseur.coffre_suppression'));
     Object.assign(d, { supprime: true, supprime_le: this.#maintenant(), supprime_par: this.utilisateur });
     for (const p of this.documents.filter((x) => x.parent_id === d.id && !x.coffre)) Object.assign(p, { supprime: true, supprime_le: d.supprime_le, supprime_par: this.utilisateur });
     return this.document(id);
@@ -502,10 +504,10 @@ export class FournisseurGedMemoire {
   }
 
   async purger(id) {
-    if (!this.admin) throw new ErreurGed(403, 'ACCES_REFUSE', 'Suppression définitive réservée à un administrateur');
+    if (!this.admin) throw new ErreurGed(403, 'ACCES_REFUSE', texte('ged.fournisseur.purge_admin'));
     const d = this.#doc(id);
-    if (d.coffre) throw new ErreurGed(422, 'COFFRE', 'Un document du coffre-fort ne peut pas être supprimé définitivement');
-    if (!d.supprime) throw new ErreurGed(422, 'NON_SUPPRIME', 'Seul un document marqué comme supprimé peut être purgé');
+    if (d.coffre) throw new ErreurGed(422, 'COFFRE', texte('ged.fournisseur.coffre_purge'));
+    if (!d.supprime) throw new ErreurGed(422, 'NON_SUPPRIME', texte('ged.fournisseur.non_supprime'));
     for (const p of this.documents.filter((x) => x.parent_id === d.id)) p.parent_id = null;
     this.liens = this.liens.filter((l) => l.source_id !== d.id && l.cible_id !== d.id);
     this.documents = this.documents.filter((x) => x.id !== d.id);
@@ -518,27 +520,27 @@ export class FournisseurGedMemoire {
   // ---------------------------------------------------------------- répertoires
 
   async repertoires({ type_element = null, id_element = null } = {}) {
-    const cible = { type_element: texte(type_element), id_element: texte(id_element) };
+    const cible = { type_element: nettoye(type_element), id_element: nettoye(id_element) };
     return this.dossiers.filter((r) => memeElement(r, cible)).sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))
       .map((r) => ({ ...r, nb_documents: this.documents.filter((d) => d.repertoire_id === r.id && !d.supprime && !d.archive && this.#visible(d)).length }));
   }
 
   #nomRepertoire(nom) {
-    const n = texte(nom);
-    if (!n) throw new ErreurGed(422, 'NOM', 'Nom de répertoire obligatoire');
-    if (n.length > 150 || /[/\\]/.test(n)) throw new ErreurGed(422, 'NOM', 'Nom de répertoire invalide (150 caractères, sans / ni \\)');
+    const n = nettoye(nom);
+    if (!n) throw new ErreurGed(422, 'NOM', texte('ged.fournisseur.nom_obligatoire'));
+    if (n.length > 150 || /[/\\]/.test(n)) throw new ErreurGed(422, 'NOM', texte('ged.fournisseur.nom_invalide'));
     return n;
   }
 
   #unique(nom, parentId, element, sauf = null) {
     if (this.dossiers.some((r) => r.id !== sauf && (r.parent_id ?? null) === (parentId ?? null) && memeElement(r, element) && r.nom.toLowerCase() === nom.toLowerCase())) {
-      throw new ErreurGed(422, 'DOUBLON', `Un répertoire « ${nom} » existe déjà à cet endroit`);
+      throw new ErreurGed(422, 'DOUBLON', texte('ged.fournisseur.repertoire_existe', { nom }));
     }
   }
 
   async creerRepertoire({ nom, parent_id = null, type_element = null, id_element = null }) {
     const n = this.#nomRepertoire(nom);
-    let element = { type_element: texte(type_element), id_element: texte(id_element) };
+    let element = { type_element: nettoye(type_element), id_element: nettoye(id_element) };
     if (parent_id !== null && parent_id !== undefined && parent_id !== '') {
       const p = this.#dossier(parent_id);
       element = { type_element: p.type_element, id_element: p.id_element };
@@ -555,11 +557,11 @@ export class FournisseurGedMemoire {
     const nom = 'nom' in demande ? this.#nomRepertoire(demande.nom) : r.nom;
     let parent = r.parent_id;
     if ('parent_id' in demande) {
-      parent = texte(demande.parent_id) === null ? null : Number(demande.parent_id);
+      parent = nettoye(demande.parent_id) === null ? null : Number(demande.parent_id);
       if (parent !== null) {
-        if (!memeElement(this.#dossier(parent), r)) throw new ErreurGed(422, 'REPERTOIRE_ELEMENT', 'Un répertoire se déplace sous le même élément');
+        if (!memeElement(this.#dossier(parent), r)) throw new ErreurGed(422, 'REPERTOIRE_ELEMENT', texte('ged.fournisseur.repertoire_element'));
         for (let x = parent; x !== null; x = this.#dossier(x).parent_id) {
-          if (x === r.id) throw new ErreurGed(422, 'REPERTOIRE_BOUCLE', `Le répertoire ${r.id} ne peut pas être déplacé dans l'un de ses sous-répertoires`);
+          if (x === r.id) throw new ErreurGed(422, 'REPERTOIRE_BOUCLE', texte('ged.fournisseur.repertoire_boucle', { id: r.id }));
         }
       }
     }
@@ -571,7 +573,7 @@ export class FournisseurGedMemoire {
   async supprimerRepertoire(id) {
     const r = this.#dossier(id);
     if (this.dossiers.some((x) => x.parent_id === r.id) || this.documents.some((d) => d.repertoire_id === r.id)) {
-      throw new ErreurGed(422, 'REPERTOIRE_NON_VIDE', 'Le répertoire n\'est pas vide');
+      throw new ErreurGed(422, 'REPERTOIRE_NON_VIDE', texte('ged.fournisseur.repertoire_non_vide'));
     }
     this.dossiers = this.dossiers.filter((x) => x.id !== r.id);
   }
@@ -588,26 +590,26 @@ export class FournisseurGedMemoire {
 
   async ajouterDerivation(id, { cible_id, type, langue = null, commentaire = null }) {
     const t = String(type ?? '').trim().toUpperCase();
-    if (!TYPES_DERIVATION.includes(t)) throw new ErreurGed(422, 'TYPE', `Type de dérivation inconnu : ${type}`);
+    if (!TYPES_DERIVATION.includes(t)) throw new ErreurGed(422, 'TYPE', texte('ged.fournisseur.derivation_type', { type }));
     const source = this.#doc(id);
     const cible = this.#doc(cible_id);
-    if (source.id === cible.id) throw new ErreurGed(422, 'DERIVATION_BOUCLE', 'Un document ne dérive pas de lui-même');
+    if (source.id === cible.id) throw new ErreurGed(422, 'DERIVATION_BOUCLE', texte('ged.fournisseur.derivation_soi'));
     // Sans boucle (comme tr_ged_derivation_sans_boucle) : la cible ne doit pas déjà être une source de la source.
     const sources = new Set([source.id]);
     for (let ajout = true; ajout;) {
       ajout = false;
       for (const l of this.liens) if (sources.has(l.cible_id) && !sources.has(l.source_id)) { sources.add(l.source_id); ajout = true; }
     }
-    if (sources.has(cible.id)) throw new ErreurGed(422, 'DERIVATION_BOUCLE', `Le document ${source.id} dérive déjà du document ${cible.id}`);
-    if (this.liens.some((l) => l.source_id === source.id && l.cible_id === cible.id && l.type === t)) throw new ErreurGed(422, 'DOUBLON', 'Cet élément existe déjà');
-    this.liens.push({ id: this.#suivant(this.liens), source_id: source.id, cible_id: cible.id, type: t, langue: texte(langue), commentaire: texte(commentaire),
+    if (sources.has(cible.id)) throw new ErreurGed(422, 'DERIVATION_BOUCLE', texte('ged.fournisseur.derivation_existe', { source: source.id, cible: cible.id }));
+    if (this.liens.some((l) => l.source_id === source.id && l.cible_id === cible.id && l.type === t)) throw new ErreurGed(422, 'DOUBLON', texte('ged.fournisseur.doublon'));
+    this.liens.push({ id: this.#suivant(this.liens), source_id: source.id, cible_id: cible.id, type: t, langue: nettoye(langue), commentaire: nettoye(commentaire),
       cree_le: this.#maintenant(), cree_par: this.utilisateur });
     return this.document(id);
   }
 
   async supprimerDerivation(id) {
     const l = this.liens.find((x) => x.id === Number(id));
-    if (!l) throw new ErreurGed(404, 'INTROUVABLE', `Dérivation ${id} introuvable`);
+    if (!l) throw new ErreurGed(404, 'INTROUVABLE', texte('ged.fournisseur.derivation_introuvable', { id }));
     this.#doc(l.cible_id);
     this.liens = this.liens.filter((x) => x.id !== l.id);
   }
@@ -622,7 +624,7 @@ export class FournisseurGedMemoire {
   }
 
   async indexerEnAttente() {
-    if (!this.admin) throw new ErreurGed(403, 'ACCES_REFUSE', 'Droit INDEXER refusé');
+    if (!this.admin) throw new ErreurGed(403, 'ACCES_REFUSE', texte('ged.fournisseur.droit_refuse', { droit: 'INDEXER' }));
     const lot = this.documents.filter((d) => d.index_etat === ETATS_INDEX.A_FAIRE).slice(0, 200);
     for (const d of lot) await this.indexer(d.id);
     return { indexes: lot.length, restants: this.documents.filter((d) => d.index_etat === ETATS_INDEX.A_FAIRE).length };
@@ -633,13 +635,13 @@ export class FournisseurGedMemoire {
   async regles() { return { retention: structuredClone(this.reglesRetention), classification: structuredClone(this.reglesClassification) }; }
 
   async remplacerReglesRetention(regles) {
-    if (!this.admin) throw new ErreurGed(403, 'ACCES_REFUSE', 'Droit PARAMETRER refusé');
+    if (!this.admin) throw new ErreurGed(403, 'ACCES_REFUSE', texte('ged.fournisseur.droit_refuse', { droit: 'PARAMETRER' }));
     for (const r of regles) {
-      if (!texte(r.libelle)) throw new ErreurGed(422, 'LIBELLE', 'Libellé de règle obligatoire');
-      if (r.duree_active_mois < 0 || r.duree_conservation_mois < 0) throw new ErreurGed(422, 'DUREE', `Durées positives attendues (${r.libelle})`);
+      if (!nettoye(r.libelle)) throw new ErreurGed(422, 'LIBELLE', texte('ged.fournisseur.libelle_regle'));
+      if (r.duree_active_mois < 0 || r.duree_conservation_mois < 0) throw new ErreurGed(422, 'DUREE', texte('ged.fournisseur.durees_positives', { libelle: r.libelle }));
       if (r.duree_active_mois !== null && r.duree_active_mois !== undefined && r.duree_conservation_mois !== null && r.duree_conservation_mois !== undefined
-        && r.duree_conservation_mois < r.duree_active_mois) throw new ErreurGed(422, 'DUREE', `La conservation ne peut pas être plus courte que la durée active (${r.libelle})`);
-      if (!['REVOIR', 'DETRUIRE'].includes(r.action_fin)) throw new ErreurGed(422, 'ACTION', 'Action de fin REVOIR ou DETRUIRE attendue');
+        && r.duree_conservation_mois < r.duree_active_mois) throw new ErreurGed(422, 'DUREE', texte('ged.fournisseur.conservation_courte', { libelle: r.libelle }));
+      if (!['REVOIR', 'DETRUIRE'].includes(r.action_fin)) throw new ErreurGed(422, 'ACTION', texte('ged.fournisseur.action_fin'));
     }
     let id = Math.max(0, ...regles.map((r) => r.id ?? 0));
     this.reglesRetention = regles.map((r) => ({ priorite: 100, actif: true, ...structuredClone(r), id: r.id > 0 ? r.id : ++id }));
@@ -647,19 +649,19 @@ export class FournisseurGedMemoire {
   }
 
   async remplacerReglesClassification(regles) {
-    if (!this.admin) throw new ErreurGed(403, 'ACCES_REFUSE', 'Droit PARAMETRER refusé');
+    if (!this.admin) throw new ErreurGed(403, 'ACCES_REFUSE', texte('ged.fournisseur.droit_refuse', { droit: 'PARAMETRER' }));
     for (const r of regles) {
-      if (!texte(r.libelle)) throw new ErreurGed(422, 'LIBELLE', 'Libellé de règle obligatoire');
-      if (!liste(r.extensions ?? []).length && !liste(r.types_mime ?? []).length && !liste(r.mots ?? []).length && !texte(r.expediteur) && !texte(r.type_element)) {
-        throw new ErreurGed(422, 'CRITERE', `Au moins un critère attendu (${r.libelle})`);
+      if (!nettoye(r.libelle)) throw new ErreurGed(422, 'LIBELLE', texte('ged.fournisseur.libelle_regle'));
+      if (!liste(r.extensions ?? []).length && !liste(r.types_mime ?? []).length && !liste(r.mots ?? []).length && !nettoye(r.expediteur) && !nettoye(r.type_element)) {
+        throw new ErreurGed(422, 'CRITERE', texte('ged.fournisseur.critere', { libelle: r.libelle }));
       }
-      if (!texte(r.categorie) && !texte(r.confidentialite) && !liste(r.mots_cles ?? []).length) throw new ErreurGed(422, 'RESULTAT', `Catégorie, confidentialité ou mots-clés attendus (${r.libelle})`);
-      if (texte(r.confidentialite)) confidentialite(r.confidentialite);
+      if (!nettoye(r.categorie) && !nettoye(r.confidentialite) && !liste(r.mots_cles ?? []).length) throw new ErreurGed(422, 'RESULTAT', texte('ged.fournisseur.resultat', { libelle: r.libelle }));
+      if (nettoye(r.confidentialite)) confidentialite(r.confidentialite);
     }
     let id = Math.max(0, ...regles.map((r) => r.id ?? 0));
     this.reglesClassification = regles.map((r) => ({ priorite: 100, actif: true, ...structuredClone(r), id: r.id > 0 ? r.id : ++id,
       extensions: liste(r.extensions ?? []).map((e) => e.replace(/^\./, '').toLowerCase()), types_mime: liste(r.types_mime ?? []), mots: liste(r.mots ?? []),
-      mots_cles: liste(r.mots_cles ?? []), expediteur: texte(r.expediteur), type_element: texte(r.type_element), categorie: texte(r.categorie), confidentialite: texte(r.confidentialite) }));
+      mots_cles: liste(r.mots_cles ?? []), expediteur: nettoye(r.expediteur), type_element: nettoye(r.type_element), categorie: nettoye(r.categorie), confidentialite: nettoye(r.confidentialite) }));
     return this.regles();
   }
 
@@ -670,7 +672,7 @@ export class FournisseurGedMemoire {
   }
 
   async appliquerRetention() {
-    if (!this.admin) throw new ErreurGed(403, 'ACCES_REFUSE', 'Droit ARCHIVER refusé');
+    if (!this.admin) throw new ErreurGed(403, 'ACCES_REFUSE', texte('ged.fournisseur.droit_refuse', { droit: 'ARCHIVER' }));
     const dues = await this.echeances();
     let archives = 0;
     for (const e of dues) archives += this.#archiverFamille(e.document.id, `Rétention : ${e.echeances.libelle}`);
@@ -699,14 +701,14 @@ export class FournisseurGedMemoire {
 
   async archiver(id, motif = null) {
     const d = this.#doc(id);
-    if (d.supprime) throw new ErreurGed(422, 'SUPPRIME', 'Document supprimé : restaurez-le d\'abord');
-    if (d.parent_id) throw new ErreurGed(422, 'ARCHIVE_PIECE', 'Une pièce jointe s\'archive avec son mail');
-    return { archives: this.#archiverFamille(d.id, texte(motif)) };
+    if (d.supprime) throw new ErreurGed(422, 'SUPPRIME', texte('ged.fournisseur.supprime'));
+    if (d.parent_id) throw new ErreurGed(422, 'ARCHIVE_PIECE', texte('ged.fournisseur.archive_piece'));
+    return { archives: this.#archiverFamille(d.id, nettoye(motif)) };
   }
 
   async desarchiver(id) {
     const d = await this.document(id);
-    if (!d.archive) throw new ErreurGed(422, 'NON_ARCHIVE', 'Ce document n\'est pas archivé');
+    if (!d.archive) throw new ErreurGed(422, 'NON_ARCHIVE', texte('ged.fournisseur.non_archive'));
     const surPlace = this.documents.find((x) => x.id === Number(id));
     if (surPlace) {
       const famille = [surPlace.id];

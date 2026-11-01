@@ -1,3 +1,4 @@
+import { texte } from '@logibtp/socle/dictionnaire';
 import { Dec } from '@logibtp/socle';
 
 // Lexeur du langage de script des métrés (réplique de Script/Lexeur.cs).
@@ -42,8 +43,8 @@ const RE_SUITE_ID = /[\p{L}\p{N}_]/u;
 const estChiffre = (c) => c !== undefined && c >= '0' && c <= '9';
 
 /** Découpe le texte ; renvoie { jetons, erreurs } (erreurs de syntaxe : { code, message, ligne, colonne }). */
-export function decouper(texte) {
-  const s = texte ?? '';
+export function decouper(script) {
+  const s = script ?? '';
   const brut = [];
   const erreurs = [];
   let i = 0;
@@ -72,7 +73,7 @@ export function decouper(texte) {
       const fin = s.indexOf('}}', i + 2);
       const finLigne = s.indexOf('\n', i);
       if (fin < 0 || (finLigne >= 0 && finLigne < fin)) {
-        erreur(i, 'Accolades fermantes « }} » attendues');
+        erreur(i, texte('metre.script.accolades'));
         i = finLigne < 0 ? s.length : finLigne;
         continue;
       }
@@ -98,13 +99,13 @@ export function decouper(texte) {
         while (estChiffre(s[j])) j++;
       }
       if (RE_SUITE_ID.test(s[j] ?? '')) {
-        erreur(j, `Caractère inattendu « ${s[j]} » après un nombre`);
+        erreur(j, texte('metre.script.apres_nombre', { caractere: s[j] }));
         while (j < s.length && RE_SUITE_ID.test(s[j])) j++;
         i = j;
         continue;
       }
       const v = new Dec(s.slice(i, j).replace(',', '.'));
-      if (v.gt(MAX_DECIMAL)) erreur(i, 'Nombre trop grand');
+      if (v.gt(MAX_DECIMAL)) erreur(i, texte('metre.script.nombre_trop_grand'));
       pousser('nb', v.gt(MAX_DECIMAL) ? new Dec(0) : v, i, j);
       i = j;
       continue;
@@ -123,7 +124,7 @@ export function decouper(texte) {
         v += s[j++];
       }
       // Chaîne non fermée : signalée, mais gardée pour ne pas provoquer d'autres erreurs.
-      if (!ferme) erreur(i, 'Guillemet fermant attendu');
+      if (!ferme) erreur(i, texte('metre.script.guillemet'));
       pousser('ch', v, i, j);
       i = j;
       continue;
@@ -153,9 +154,9 @@ export function decouper(texte) {
     }
     if (c === ',') {
       // Virgule entre deux arguments : signalée, puis lue comme un point-virgule.
-      erreur(i, 'Les arguments se séparent par un point-virgule « ; »');
+      erreur(i, texte('metre.script.point_virgule'));
       pousser('op', ';', i, i + 1);
-    } else erreur(i, `Caractère inattendu « ${c} »`);
+    } else erreur(i, texte('metre.script.caractere', { caractere: c }));
     i++;
   }
   brut.push({ t: 'fin', v: null, debut: s.length, fin: s.length, ...pos(s.length) });

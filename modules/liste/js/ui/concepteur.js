@@ -1,3 +1,4 @@
+import { texte, texteHtml, icone, iconeHtml, textesParCode, couleurTheme } from '@logibtp/socle/dictionnaire';
 import { echapper, ouvrirModale, confirmer } from '@logibtp/socle/ui';
 import { normaliserDefinition, FORMATS, STYLE_VIDE } from '../src/modele.js';
 import { compilerFormule, resolveurColonnes } from '../src/formule.js';
@@ -9,8 +10,8 @@ const SANS_VALEUR = new Set(['vide', 'nonvide', 'vrai', 'faux']);
 export function libelleFiltreVue(f, titre = f.colonne) {
   const op = OPERATEURS_VUE.find(([v]) => v === f.op)?.[1] ?? f.op;
   if (SANS_VALEUR.has(f.op)) return `${titre} ${op}`;
-  if (f.op === 'dans') return `${titre} parmi ${(f.valeurs ?? []).join(', ')}`;
-  if (f.op === 'entre') return `${titre} entre ${f.valeur ?? ''} et ${f.valeur2 ?? ''}`;
+  if (f.op === 'dans') return texte('liste.concepteur.filtre_dans', { titre, valeurs: (f.valeurs ?? []).join(', ') });
+  if (f.op === 'entre') return texte('liste.concepteur.filtre_entre', { titre, valeur: f.valeur ?? '', valeur2: f.valeur2 ?? '' });
   return `${titre} ${op} ${f.valeur ?? ''}`;
 }
 
@@ -21,7 +22,7 @@ export function libelleFiltreVue(f, titre = f.colonne) {
 //   Colonnes et source   vue de la base ou requête manuelle (ADMIN), identifiant et type d'élément (ouverture
 //                        de la fiche), colonnes affichées, colonnes de recherche, segments, tri par défaut
 
-const LIB_FORMATS = { texte: 'Texte', nombre: 'Numérique', date: 'Date', coche: 'Case à cocher', combo: 'Liste (combo)', picto: 'Picto (petite image)' };
+const LIB_FORMATS = textesParCode('liste.formats', ['texte', 'nombre', 'date', 'coche', 'combo', 'picto']);
 const opt = (v, l, courant) => `<option value="${echapper(v ?? '')}" ${String(courant ?? '') === String(v ?? '') ? 'selected' : ''}>${echapper(l)}</option>`;
 const premiereLigne = (t) => String(t ?? '').replace(/\s*\n\s*/g, ' ');
 
@@ -61,27 +62,27 @@ export class ConcepteurVue {
     const fond = document.createElement('dialog');
     fond.className = 'concepteur-fond dialogue-plein';
     fond.innerHTML = `
-      <div class="concepteur" role="dialog" aria-label="Concepteur de vue">
+      <div class="concepteur" role="dialog" aria-label="${texteHtml('liste.concepteur.titre')}">
         <header>
-          <label>Nom de la vue <input data-vue="vli_nom" value="${echapper(this.vue.vli_nom ?? '')}"></label>
-          <label>Partage <select data-vue="vli_partage">
-            ${opt('P', 'Moi seul', this.vue.vli_partage)}${opt('G', 'Mon groupe', this.vue.vli_partage)}${opt('T', 'Tous', this.vue.vli_partage)}</select></label>
-          <label class="groupe-partage">Groupe <input data-vue="vli_groupe" value="${echapper(this.vue.vli_groupe ?? '')}"></label>
-          <label title="Regroupement des vues ; les types d'élément du thème restreignent les lignes">Thème <select data-theme>
-            ${opt('', '(aucun)', this.def.theme)}${this.themes.map((t) => opt(t.thl_code, `${t.thl_icone ?? ''} ${t.thl_libelle}`.trim(), this.def.theme)).join('')}</select></label>
+          <label>${texteHtml('liste.concepteur.nom')} <input data-vue="vli_nom" value="${echapper(this.vue.vli_nom ?? '')}"></label>
+          <label>${texteHtml('liste.concepteur.partage')} <select data-vue="vli_partage">
+            ${['P', 'G', 'T'].map((p) => opt(p, texte(`liste.concepteur.partages.${p}`), this.vue.vli_partage)).join('')}</select></label>
+          <label class="groupe-partage">${texteHtml('liste.concepteur.groupe')} <input data-vue="vli_groupe" value="${echapper(this.vue.vli_groupe ?? '')}"></label>
+          <label title="${texteHtml('liste.concepteur.theme_aide')}">${texteHtml('liste.concepteur.theme')} <select data-theme>
+            ${opt('', texte('liste.concepteur.aucun'), this.def.theme)}${this.themes.map((t) => opt(t.thl_code, `${t.thl_icone ?? ''} ${t.thl_libelle}`.trim(), this.def.theme)).join('')}</select></label>
           <nav>
-            <button type="button" data-onglet="forme">Mise en forme</button>
-            <button type="button" data-onglet="colonnes">Colonnes et source</button>
+            <button type="button" data-onglet="forme">${texteHtml('liste.concepteur.onglets.forme')}</button>
+            <button type="button" data-onglet="colonnes">${texteHtml('liste.concepteur.onglets.colonnes')}</button>
           </nav>
-          <button type="button" data-action="fermer" title="Fermer (Échap)">✕</button>
+          <button type="button" data-action="fermer" title="${texteHtml('liste.themes.fermer')}">${iconeHtml('retirer')}</button>
         </header>
         <div class="concepteur-corps"></div>
         <footer>
           <span class="concepteur-message"></span>
-          <button type="button" data-action="supprimer" ${this.vue.vli_id ? '' : 'hidden'}>Supprimer la vue</button>
-          <button type="button" data-action="appliquer" title="Appliquer à la liste sans enregistrer">Appliquer</button>
-          <button type="button" data-action="copie" ${this.vue.vli_id ? '' : 'hidden'}>Enregistrer comme nouvelle vue</button>
-          <button type="button" class="principal" data-action="enregistrer">Enregistrer</button>
+          <button type="button" data-action="supprimer" ${this.vue.vli_id ? '' : 'hidden'}>${texteHtml('liste.concepteur.supprimer')}</button>
+          <button type="button" data-action="appliquer" title="${texteHtml('liste.concepteur.appliquer_aide')}">${texteHtml('liste.concepteur.appliquer')}</button>
+          <button type="button" data-action="copie" ${this.vue.vli_id ? '' : 'hidden'}>${texteHtml('liste.concepteur.copie')}</button>
+          <button type="button" class="principal" data-action="enregistrer">${texteHtml('commun.enregistrer')}</button>
         </footer>
       </div>`;
     ouvrirModale(fond);
@@ -99,7 +100,7 @@ export class ConcepteurVue {
     fond.querySelector('[data-action="enregistrer"]').addEventListener('click', () => this.#enregistrer(false));
     fond.querySelector('[data-action="copie"]').addEventListener('click', () => this.#enregistrer(true));
     fond.querySelector('[data-action="supprimer"]').addEventListener('click', async () => {
-      if (!await confirmer(`Supprimer la vue « ${this.vue.vli_nom} » ?`)) return;
+      if (!await confirmer(texte('liste.concepteur.supprimer_confirmer', { nom: this.vue.vli_nom }))) return;
       try { await this.cb.supprimer(this.vue); this.fermer(); } catch (e) { this.#erreur(e.message); }
     });
     this.clavier = (e) => { if (e.key === 'Escape' && !e.defaultPrevented && !document.querySelector('.liste-menu')) this.fermer(); };
@@ -116,10 +117,10 @@ export class ConcepteurVue {
     this.fond.remove();
   }
 
-  #erreur(texte) {
+  #erreur(message) {
     const m = this.fond.querySelector('.concepteur-message');
-    m.textContent = texte ?? '';
-    m.classList.toggle('erreur', !!texte);
+    m.textContent = message ?? '';
+    m.classList.toggle('erreur', !!message);
   }
 
   async #chargerSources() {
@@ -151,7 +152,7 @@ export class ConcepteurVue {
     try {
       this.colonnesSource = await this.fournisseur.colonnesRequete(this.def.source.requete);
       if (signaler) this.#erreur('');
-      if (signaler) this.cb.message(`Requête valide : ${this.colonnesSource.length} colonne(s)`, 'succes');
+      if (signaler) this.cb.message(texte('liste.concepteur.requete_valide', { nombre: this.colonnesSource.length }), 'succes');
     } catch (e) {
       this.colonnesSource = [];
       this.#erreur(e.message);
@@ -161,16 +162,16 @@ export class ConcepteurVue {
   #valider(complet) {
     const d = this.def;
     const erreurs = [];
-    if (!this.vue.vli_nom?.trim()) erreurs.push('Nom de la vue obligatoire');
-    if (d.source.mode === 'vue' ? !d.source.vue : !d.source.requete?.trim()) erreurs.push('Source de données à choisir');
-    if (!d.source.colonne_id) erreurs.push('Colonne identifiant obligatoire (ouverture de la fiche)');
-    if (!d.source.colonne_type && !d.source.type_element) erreurs.push('Type d\'élément obligatoire (colonne ou valeur constante)');
-    if (!d.colonnes.length) erreurs.push('Au moins une colonne');
+    if (!this.vue.vli_nom?.trim()) erreurs.push(texte('liste.concepteur.erreurs.nom'));
+    if (d.source.mode === 'vue' ? !d.source.vue : !d.source.requete?.trim()) erreurs.push(texte('liste.concepteur.erreurs.source'));
+    if (!d.source.colonne_id) erreurs.push(texte('liste.concepteur.erreurs.identifiant'));
+    if (!d.source.colonne_type && !d.source.type_element) erreurs.push(texte('liste.concepteur.erreurs.type'));
+    if (!d.colonnes.length) erreurs.push(texte('liste.concepteur.erreurs.colonne'));
     for (const f of d.filtres) {
-      if (!f.colonne) erreurs.push('Filtre de la vue : colonne à choisir');
-      else if (!SANS_VALEUR.has(f.op) && f.op !== 'dans' && (f.valeur ?? '') === '') erreurs.push(`Filtre de la vue sur ${f.colonne} : valeur à saisir`);
-      else if (f.op === 'entre' && (f.valeur2 ?? '') === '') erreurs.push(`Filtre de la vue sur ${f.colonne} : seconde valeur à saisir`);
-      else if (f.op === 'dans' && !(f.valeurs ?? []).length) erreurs.push(`Filtre de la vue sur ${f.colonne} : valeurs à saisir`);
+      if (!f.colonne) erreurs.push(texte('liste.concepteur.erreurs.filtre_colonne'));
+      else if (!SANS_VALEUR.has(f.op) && f.op !== 'dans' && (f.valeur ?? '') === '') erreurs.push(texte('liste.concepteur.erreurs.filtre_valeur', { colonne: f.colonne }));
+      else if (f.op === 'entre' && (f.valeur2 ?? '') === '') erreurs.push(texte('liste.concepteur.erreurs.filtre_valeur2', { colonne: f.colonne }));
+      else if (f.op === 'dans' && !(f.valeurs ?? []).length) erreurs.push(texte('liste.concepteur.erreurs.filtre_valeurs', { colonne: f.colonne }));
     }
     const resoudre = resolveurColonnes(d.colonnes);
     for (const c of d.colonnes) {
@@ -186,7 +187,7 @@ export class ConcepteurVue {
   async #enregistrer(copie) {
     if (!this.#valider(true)) return;
     const v = structuredClone(this.vue);
-    if (copie) { v.vli_id = null; v.vli_nom = `${v.vli_nom} (copie)`; }
+    if (copie) { v.vli_id = null; v.vli_nom = texte('liste.concepteur.nom_copie', { nom: v.vli_nom }); }
     try {
       const enregistree = await this.cb.enregistrer(v);
       this.fermer();
@@ -213,17 +214,17 @@ export class ConcepteurVue {
         <aside class="concepteur-liste">
           <ol>${d.colonnes.map((c, i) => `
             <li data-code="${echapper(c.code)}" class="${c.code === this.selection ? 'actif' : ''} ${c.masquee ? 'masquee' : ''}">
-              <span class="nom">${echapper(premiereLigne(c.titre) || c.code)}${c.calcul ? ' <em>ƒ</em>' : ''}</span>
-              <button type="button" data-masquer title="${c.masquee ? 'Afficher' : 'Masquer'}">${c.masquee ? '◌' : '◉'}</button>
-              <button type="button" data-monter ${i === 0 ? 'disabled' : ''} title="Monter">↑</button>
-              <button type="button" data-descendre ${i === d.colonnes.length - 1 ? 'disabled' : ''} title="Descendre">↓</button>
+              <span class="nom">${echapper(premiereLigne(c.titre) || c.code)}${c.calcul ? ` <em>${iconeHtml('liste_formule')}</em>` : ''}</span>
+              <button type="button" data-masquer title="${texteHtml(c.masquee ? 'liste.concepteur.afficher' : 'liste.concepteur.masquer')}">${iconeHtml(c.masquee ? 'liste_masquee' : 'liste_affichee')}</button>
+              <button type="button" data-monter ${i === 0 ? 'disabled' : ''} title="${texteHtml('liste.concepteur.monter')}">${iconeHtml('liste_monter')}</button>
+              <button type="button" data-descendre ${i === d.colonnes.length - 1 ? 'disabled' : ''} title="${texteHtml('liste.concepteur.descendre')}">${iconeHtml('liste_descendre')}</button>
             </li>`).join('')}</ol>
-          ${d.colonnes.length ? '' : '<p class="aide">Aucune colonne : choisissez-les dans l\'onglet « Colonnes et source ».</p>'}
-          <fieldset><legend>Vue</legend>
-            <label>Hauteur des lignes <select data-def="lignes">${opt('multi', 'Multiligne (texte complet)', d.lignes)}${opt('simple', 'Une ligne', d.lignes)}</select></label>
-            <label>Lignes par lot <input type="number" min="20" max="1000" step="10" data-def="taille_lot" value="${d.taille_lot}"></label>
+          ${d.colonnes.length ? '' : `<p class="aide">${texteHtml('liste.concepteur.aucune_colonne')}</p>`}
+          <fieldset><legend>${texteHtml('liste.concepteur.vue')}</legend>
+            <label>${texteHtml('liste.concepteur.hauteur')} <select data-def="lignes">${opt('multi', texte('liste.concepteur.lignes_multi'), d.lignes)}${opt('simple', texte('liste.concepteur.lignes_simple'), d.lignes)}</select></label>
+            <label>${texteHtml('liste.concepteur.taille_lot')} <input type="number" min="20" max="1000" step="10" data-def="taille_lot" value="${d.taille_lot}"></label>
             ${Object.keys(this.largeursAjustees).length || this.ordreAjuste?.length ? `<button type="button" data-action="reprendre-largeurs"
-              title="L'ordre et les largeurs ajustés à la souris deviennent ceux de la vue (largeurs fixes)">Reprendre ma disposition (ordre et largeurs)</button>` : ''}
+              title="${texteHtml('liste.concepteur.reprendre_aide')}">${texteHtml('liste.concepteur.reprendre')}</button>` : ''}
           </fieldset>
         </aside>
         <section class="concepteur-colonne"></section>
@@ -269,59 +270,58 @@ export class ConcepteurVue {
   #rendreColonneForme() {
     const zone = this.corps.querySelector('.concepteur-colonne');
     const c = this.colonne();
-    if (!c) { zone.innerHTML = '<p class="aide">Sélectionnez une colonne.</p>'; return; }
+    if (!c) { zone.innerHTML = `<p class="aide">${texteHtml('liste.concepteur.selectionner')}</p>`; return; }
     const s = c.style;
     const couleur = (cle, libelle) => `<label class="couleur">${libelle}
-      <input type="color" data-style="${cle}" value="${echapper(s[cle] ?? (cle === 'fond' ? '#ffffff' : '#000000'))}">
-      <label class="coche"><input type="checkbox" data-sans="${cle}" ${s[cle] ? '' : 'checked'}> aucune</label></label>`;
+      <input type="color" data-style="${cle}" value="${echapper(s[cle] ?? couleurTheme(cle === 'fond' ? '--liste-fond-defaut' : '--liste-texte-defaut', cle === 'fond' ? '#ffffff' : '#000000'))}">
+      <label class="coche"><input type="checkbox" data-sans="${cle}" ${s[cle] ? '' : 'checked'}> ${texteHtml('liste.concepteur.couleur_aucune')}</label></label>`;
     const bascule = (cle, lettre, titre) => `<label class="bascule" title="${titre}"><input type="checkbox" data-style="${cle}" ${s[cle] ? 'checked' : ''}><span>${lettre}</span></label>`;
     const autres = this.def.colonnes.filter((x) => x.code !== c.code);
     zone.innerHTML = `
-      <h3>${echapper(premiereLigne(c.titre) || c.code)} <small>${c.calcul ? 'colonne calculée' : `colonne ${echapper(c.code)} de la source`}</small></h3>
+      <h3>${echapper(premiereLigne(c.titre) || c.code)} <small>${c.calcul ? texteHtml('liste.concepteur.colonne_calculee') : texteHtml('liste.concepteur.colonne_source', { code: c.code })}</small></h3>
       <div class="formulaire">
-        <label class="large">Titre (Entrée : nouvelle ligne) <textarea rows="2" data-col="titre">${echapper(c.titre ?? '')}</textarea></label>
-        <label class="large">Bulle d'aide <input data-col="bulle" value="${echapper(c.bulle ?? '')}"></label>
-        <label>Format <select data-col="format">${FORMATS.map((f) => opt(f, LIB_FORMATS[f], c.format)).join('')}</select></label>
-        <label ${c.format === 'nombre' ? '' : 'hidden'}>Décimales <input type="number" min="0" max="6" data-col="decimales" value="${c.decimales ?? 2}"></label>
-        <label>Alignement <select data-col="alignement">${opt('', 'Automatique', c.alignement)}${opt('gauche', 'Gauche', c.alignement)}${opt('centre', 'Centré', c.alignement)}${opt('droite', 'Droite', c.alignement)}</select></label>
-        <label class="large" ${c.format === 'combo' || c.format === 'picto' ? '' : 'hidden'}>Valeurs (une par ligne : valeur | libellé | picto)
-          <textarea rows="4" data-options placeholder="P | En panne | 🔴">${echapper(c.options.map((o) => [o.valeur, o.libelle, o.picto].filter((x) => x !== undefined && x !== null && x !== '').join(' | ')).join('\n'))}</textarea></label>
-        <fieldset class="large"><legend>Mise en forme</legend>
-          ${couleur('couleur', 'Texte')}${couleur('fond', 'Fond')}
-          ${bascule('gras', 'G', 'Gras')}${bascule('italique', 'I', 'Italique')}${bascule('souligne', 'S', 'Souligné')}${bascule('barre', 'B', 'Barré')}
+        <label class="large">${texteHtml('liste.concepteur.champs.titre')} <textarea rows="2" data-col="titre">${echapper(c.titre ?? '')}</textarea></label>
+        <label class="large">${texteHtml('liste.concepteur.champs.bulle')} <input data-col="bulle" value="${echapper(c.bulle ?? '')}"></label>
+        <label>${texteHtml('liste.concepteur.champs.format')} <select data-col="format">${FORMATS.map((f) => opt(f, LIB_FORMATS[f], c.format)).join('')}</select></label>
+        <label ${c.format === 'nombre' ? '' : 'hidden'}>${texteHtml('liste.concepteur.champs.decimales')} <input type="number" min="0" max="6" data-col="decimales" value="${c.decimales ?? 2}"></label>
+        <label>${texteHtml('liste.concepteur.champs.alignement')} <select data-col="alignement">${['', 'gauche', 'centre', 'droite'].map((a) => opt(a, texte(`liste.concepteur.alignements.${a || 'auto'}`), c.alignement)).join('')}</select></label>
+        <label class="large" ${c.format === 'combo' || c.format === 'picto' ? '' : 'hidden'}>${texteHtml('liste.concepteur.champs.valeurs')}
+          <textarea rows="4" data-options placeholder="${texteHtml('liste.concepteur.champs.valeurs_exemple')}">${echapper(c.options.map((o) => [o.valeur, o.libelle, o.picto].filter((x) => x !== undefined && x !== null && x !== '').join(' | ')).join('\n'))}</textarea></label>
+        <fieldset class="large"><legend>${texteHtml('liste.concepteur.onglets.forme')}</legend>
+          ${couleur('couleur', texteHtml('liste.concepteur.couleur_texte'))}${couleur('fond', texteHtml('liste.concepteur.couleur_fond'))}
+          ${['gras', 'italique', 'souligne', 'barre'].map((k) => bascule(k, texteHtml(`liste.concepteur.lettres.${k}`), texteHtml(`liste.menu.styles.${k}`))).join('')}
         </fieldset>
-        <fieldset class="large"><legend>Largeur</legend>
-          <label>Mode <select data-largeur="mode">${opt('auto', 'Automatique', c.largeur.mode)}${opt('fixe', 'Fixe (px)', c.largeur.mode)}${opt('proportionnel', 'Proportionnelle (poids)', c.largeur.mode)}</select></label>
-          <label ${c.largeur.mode === 'auto' ? 'hidden' : ''}>${c.largeur.mode === 'fixe' ? 'Largeur (px)' : 'Poids'} <input type="number" min="0" data-largeur="valeur" value="${c.largeur.valeur ?? ''}"></label>
-          <label>Min (px) <input type="number" min="0" data-largeur="min" value="${c.largeur.min ?? ''}"></label>
-          <label>Max (px) <input type="number" min="0" data-largeur="max" value="${c.largeur.max ?? ''}"></label>
+        <fieldset class="large"><legend>${texteHtml('liste.concepteur.largeur.titre')}</legend>
+          <label>${texteHtml('liste.concepteur.largeur.mode')} <select data-largeur="mode">${['auto', 'fixe', 'proportionnel'].map((m) => opt(m, texte(`liste.concepteur.largeur.modes.${m}`), c.largeur.mode)).join('')}</select></label>
+          <label ${c.largeur.mode === 'auto' ? 'hidden' : ''}>${texteHtml(c.largeur.mode === 'fixe' ? 'liste.concepteur.largeur.px' : 'liste.concepteur.largeur.poids')} <input type="number" min="0" data-largeur="valeur" value="${c.largeur.valeur ?? ''}"></label>
+          <label>${texteHtml('liste.concepteur.largeur.min')} <input type="number" min="0" data-largeur="min" value="${c.largeur.min ?? ''}"></label>
+          <label>${texteHtml('liste.concepteur.largeur.max')} <input type="number" min="0" data-largeur="max" value="${c.largeur.max ?? ''}"></label>
         </fieldset>
-        <label class="coche"><input type="checkbox" data-col="masquee" ${c.masquee ? 'checked' : ''}> Masquée</label>
+        <label class="coche"><input type="checkbox" data-col="masquee" ${c.masquee ? 'checked' : ''}> ${texteHtml('liste.concepteur.masquee')}</label>
         ${c.calcul ? `
-        <label class="large">Formule
-          <textarea rows="3" data-col="formule" class="formule" placeholder='SI [Qté commandée] > [Qté livrée] ALORS "Reste à livrer" SINON ""'>${echapper(c.formule ?? '')}</textarea>
+        <label class="large">${texteHtml('liste.concepteur.formule')}
+          <textarea rows="3" data-col="formule" class="formule" placeholder="${texteHtml('liste.concepteur.formule_exemple')}">${echapper(c.formule ?? '')}</textarea>
           <span class="validation" data-validation="formule"></span></label>
-        <label>Insérer une colonne <select data-inserer="formule">${opt('', '—', '')}${autres.map((x) => opt(x.code, premiereLigne(x.titre) || x.code, '')).join('')}</select></label>
-        <button type="button" data-action="supprimer-colonne">Supprimer la colonne calculée</button>` : ''}
-        <fieldset class="large regles"><legend>Mise en forme conditionnelle (la première règle vraie s'ajoute au style, puis les suivantes)</legend>
+        <label>${texteHtml('liste.concepteur.inserer')} <select data-inserer="formule">${opt('', '—', '')}${autres.map((x) => opt(x.code, premiereLigne(x.titre) || x.code, '')).join('')}</select></label>
+        <button type="button" data-action="supprimer-colonne">${texteHtml('liste.concepteur.supprimer_calculee')}</button>` : ''}
+        <fieldset class="large regles"><legend>${texteHtml('liste.concepteur.regles')}</legend>
           ${c.regles.map((r, i) => `
             <div class="regle" data-regle="${i}">
-              <input class="formule" data-regle-champ="condition" value="${echapper(r.condition ?? '')}" placeholder='[État] = "En panne"'>
-              <label title="Couleur du texte"><input type="checkbox" data-regle-avec="couleur" ${r.style?.couleur ? 'checked' : ''}>A<input type="color" data-regle-style="couleur" value="${echapper(r.style?.couleur ?? '#b42318')}"></label>
-              <label title="Couleur de fond"><input type="checkbox" data-regle-avec="fond" ${r.style?.fond ? 'checked' : ''}>▇<input type="color" data-regle-style="fond" value="${echapper(r.style?.fond ?? '#fdecea')}"></label>
-              ${['gras', 'italique', 'souligne', 'barre'].map((k) => `<label class="bascule" title="${k}"><input type="checkbox" data-regle-style="${k}" ${r.style?.[k] ? 'checked' : ''}><span>${{ gras: 'G', italique: 'I', souligne: 'S', barre: 'B' }[k]}</span></label>`).join('')}
-              <button type="button" data-supprimer-regle title="Supprimer la règle">✕</button>
+              <input class="formule" data-regle-champ="condition" value="${echapper(r.condition ?? '')}" placeholder="${texteHtml('liste.concepteur.regle_exemple')}">
+              <label title="${texteHtml('liste.concepteur.regle_couleur')}"><input type="checkbox" data-regle-avec="couleur" ${r.style?.couleur ? 'checked' : ''}>${texteHtml('liste.concepteur.regle_couleur_lettre')}<input type="color" data-regle-style="couleur" value="${echapper(r.style?.couleur ?? couleurTheme('--liste-regle-texte', '#b42318'))}"></label>
+              <label title="${texteHtml('liste.menu.fond')}"><input type="checkbox" data-regle-avec="fond" ${r.style?.fond ? 'checked' : ''}>${iconeHtml('liste_fond')}<input type="color" data-regle-style="fond" value="${echapper(r.style?.fond ?? couleurTheme('--liste-regle-fond', '#fdecea'))}"></label>
+              ${['gras', 'italique', 'souligne', 'barre'].map((k) => `<label class="bascule" title="${texteHtml(`liste.menu.styles.${k}`)}"><input type="checkbox" data-regle-style="${k}" ${r.style?.[k] ? 'checked' : ''}><span>${texteHtml(`liste.concepteur.lettres.${k}`)}</span></label>`).join('')}
+              <button type="button" data-supprimer-regle title="${texteHtml('liste.concepteur.regle_supprimer')}">${iconeHtml('retirer')}</button>
               <span class="validation" data-validation="regle-${i}"></span>
             </div>`).join('')}
-          <button type="button" data-action="ajouter-regle">Ajouter une règle</button>
+          <button type="button" data-action="ajouter-regle">${texteHtml('liste.concepteur.regle_ajouter')}</button>
         </fieldset>
       </div>
-      <p class="aide">Formules : [Colonne] (code ou titre), + − × ÷, &amp; (concaténation), = &lt;&gt; &lt; &gt;, ET, OU, NON,
-        SI … ALORS … SINON …, SI(c; a; b), ARRONDI, ABS, MIN, MAX, ESTVIDE, CONCAT.</p>`;
+      <p class="aide">${texteHtml('liste.concepteur.formules_aide')}</p>`;
 
     const rafraichirListe = () => {
       const li = this.corps.querySelector(`li[data-code="${CSS.escape(c.code)}"] .nom`);
-      if (li) li.innerHTML = `${echapper(premiereLigne(c.titre) || c.code)}${c.calcul ? ' <em>ƒ</em>' : ''}`;
+      if (li) li.innerHTML = `${echapper(premiereLigne(c.titre) || c.code)}${c.calcul ? ` <em>${iconeHtml('liste_formule')}</em>` : ''}`;
     };
     zone.querySelectorAll('[data-col]').forEach((el) => {
       const evt = el.type === 'checkbox' || el.tagName === 'SELECT' ? 'change' : 'input';
@@ -381,7 +381,7 @@ export class ConcepteurVue {
       div.querySelector('[data-supprimer-regle]').addEventListener('click', () => { c.regles.splice(Number(div.dataset.regle), 1); this.#rendreColonneForme(); });
     });
     zone.querySelector('[data-action="ajouter-regle"]').addEventListener('click', () => {
-      c.regles.push({ condition: '', style: { fond: '#fdecea' } });
+      c.regles.push({ condition: '', style: { fond: couleurTheme('--liste-regle-fond', '#fdecea') } });
       this.#rendreColonneForme();
     });
     this.#validerFormules(zone, c);
@@ -395,7 +395,7 @@ export class ConcepteurVue {
       if (!String(source ?? '').trim()) { el.textContent = ''; el.className = 'validation'; return; }
       try {
         compilerFormule(source, resoudre);
-        el.textContent = '✓';
+        el.textContent = icone('liste_valide');
         el.className = 'validation ok';
       } catch (e) {
         el.textContent = e.message;
@@ -417,22 +417,22 @@ export class ConcepteurVue {
     const choixColonnes = (courant, vide) => `${vide ? opt('', vide, courant) : ''}${this.colonnesSource.map((c) => opt(c.code, c.code, courant)).join('')}`;
     this.corps.innerHTML = `
       <div class="concepteur-source">
-        <fieldset><legend>Source des données</legend>
-          <label class="coche"><input type="radio" name="mode-source" value="vue" ${s.mode === 'vue' ? 'checked' : ''}> Vue de la base</label>
+        <fieldset><legend>${texteHtml('liste.concepteur.source.titre')}</legend>
+          <label class="coche"><input type="radio" name="mode-source" value="vue" ${s.mode === 'vue' ? 'checked' : ''}> ${texteHtml('liste.concepteur.source.vue')}</label>
           <select data-source-vue ${s.mode === 'vue' ? '' : 'disabled'}>${opt('', '—', s.vue)}${this.sources.map((x) => opt(x.code, x.libelle, s.vue)).join('')}</select>
-          <label class="coche" title="${this.peutRequete ? '' : 'Réservé au profil ADMIN'}"><input type="radio" name="mode-source" value="requete" ${s.mode === 'requete' ? 'checked' : ''} ${this.peutRequete ? '' : 'disabled'}> Requête manuelle (SELECT)</label>
-          <textarea rows="5" data-requete class="formule" ${s.mode === 'requete' && this.peutRequete ? '' : 'disabled'} placeholder="SELECT … FROM … (une seule instruction, lecture seule)">${echapper(s.requete ?? '')}</textarea>
-          <button type="button" data-action="tester" ${s.mode === 'requete' && this.peutRequete ? '' : 'hidden'}>Tester la requête</button>
+          <label class="coche" title="${this.peutRequete ? '' : texteHtml('liste.concepteur.source.admin')}"><input type="radio" name="mode-source" value="requete" ${s.mode === 'requete' ? 'checked' : ''} ${this.peutRequete ? '' : 'disabled'}> ${texteHtml('liste.concepteur.source.requete')}</label>
+          <textarea rows="5" data-requete class="formule" ${s.mode === 'requete' && this.peutRequete ? '' : 'disabled'} placeholder="${texteHtml('liste.concepteur.source.requete_aide')}">${echapper(s.requete ?? '')}</textarea>
+          <button type="button" data-action="tester" ${s.mode === 'requete' && this.peutRequete ? '' : 'hidden'}>${texteHtml('liste.concepteur.source.tester')}</button>
         </fieldset>
-        <fieldset><legend>Ouverture de la fiche</legend>
-          <label>Colonne identifiant <select data-source="colonne_id">${choixColonnes(s.colonne_id, '—')}</select></label>
-          <label>Colonne type d'élément <select data-source="colonne_type">${choixColonnes(s.colonne_type, '(type constant)')}</select></label>
-          <label ${s.colonne_type ? 'hidden' : ''}>Type constant <input data-source="type_element" value="${echapper(s.type_element ?? '')}" placeholder="devis, facture, salarie, materiel…"></label>
+        <fieldset><legend>${texteHtml('liste.concepteur.fiche.titre')}</legend>
+          <label>${texteHtml('liste.concepteur.fiche.identifiant')} <select data-source="colonne_id">${choixColonnes(s.colonne_id, '—')}</select></label>
+          <label>${texteHtml('liste.concepteur.fiche.colonne_type')} <select data-source="colonne_type">${choixColonnes(s.colonne_type, texte('liste.concepteur.fiche.type_constant_vide'))}</select></label>
+          <label ${s.colonne_type ? 'hidden' : ''}>${texteHtml('liste.concepteur.fiche.type_constant')} <input data-source="type_element" value="${echapper(s.type_element ?? '')}" placeholder="${texteHtml('liste.concepteur.fiche.type_exemple')}"></label>
         </fieldset>
       </div>
       <table class="concepteur-table">
-        <thead><tr><th>Colonne</th><th>Type</th><th>Afficher</th><th title="Incluse dans la barre de recherche (toute la base)">Recherche</th><th title="Filtre par segment (toute la base)">Segment</th>
-          <th title="Saisie dans la liste (mode ✎ Saisie), si la source et la base le permettent">Modifiable</th><th>Tri par défaut</th></tr></thead>
+        <thead><tr><th>${texteHtml('liste.concepteur.table.colonne')}</th><th>${texteHtml('liste.concepteur.table.type')}</th><th>${texteHtml('liste.concepteur.table.afficher')}</th><th title="${texteHtml('liste.concepteur.table.recherche_aide')}">${texteHtml('liste.concepteur.table.recherche')}</th><th title="${texteHtml('liste.concepteur.table.segment_aide')}">${texteHtml('liste.concepteur.table.segment')}</th>
+          <th title="${texteHtml('liste.concepteur.table.modifiable_aide', { icone: icone('liste_saisie') })}">${texteHtml('liste.concepteur.table.modifiable')}</th><th>${texteHtml('liste.concepteur.table.tri')}</th></tr></thead>
         <tbody>${this.colonnesSource.map((c) => {
           const v = affichees.get(c.code);
           return `<tr data-code="${echapper(c.code)}">
@@ -441,30 +441,30 @@ export class ConcepteurVue {
             <td><input type="checkbox" data-recherche ${v?.recherche ? 'checked' : ''} ${v ? '' : 'disabled'}></td>
             <td><input type="checkbox" data-segment ${segments.has(c.code) ? 'checked' : ''}></td>
             <td><input type="checkbox" data-modifiable ${v?.modifiable ? 'checked' : ''} ${v && c.modifiable && this.sourceModifiable() ? '' : 'disabled'}
-              title="${!this.sourceModifiable() ? 'Source en lecture seule' : !c.modifiable ? 'Colonne non modifiable dans la base (calculée, jointure…)' : v ? '' : 'Affichez d\'abord la colonne'}"></td>
-            <td><select data-tri>${opt('', '—', tri?.colonne === c.code ? tri.sens : '')}${opt('asc', 'Croissant', tri?.colonne === c.code ? tri.sens : '')}${opt('desc', 'Décroissant', tri?.colonne === c.code ? tri.sens : '')}</select></td>
+              title="${!this.sourceModifiable() ? texteHtml('liste.concepteur.table.lecture_seule') : !c.modifiable ? texteHtml('liste.concepteur.table.non_modifiable') : v ? '' : texteHtml('liste.concepteur.table.afficher_avant')}"></td>
+            <td><select data-tri>${opt('', '—', tri?.colonne === c.code ? tri.sens : '')}${opt('asc', texte('liste.concepteur.table.croissant'), tri?.colonne === c.code ? tri.sens : '')}${opt('desc', texte('liste.concepteur.table.decroissant'), tri?.colonne === c.code ? tri.sens : '')}</select></td>
           </tr>`;
-        }).join('') || `<tr><td colspan="7" class="aide">${s.mode === 'requete' ? 'Testez la requête pour obtenir ses colonnes.' : 'Choisissez une source.'}</td></tr>`}</tbody>
+        }).join('') || `<tr><td colspan="7" class="aide">${s.mode === 'requete' ? texteHtml('liste.concepteur.table.tester') : texteHtml('liste.concepteur.table.choisir')}</td></tr>`}</tbody>
       </table>
-      <fieldset class="concepteur-filtres"><legend>Filtres de la vue (appliqués par la base, toujours actifs)</legend>
+      <fieldset class="concepteur-filtres"><legend>${texteHtml('liste.concepteur.filtres.titre')}</legend>
         ${d.filtres.map((f, i) => {
           const src = this.colonnesSource.find((c) => c.code === f.colonne);
           const date = /date|time/.test(src?.type ?? '');
           const type = date ? 'date' : 'text';
           return `<div class="filtre-vue" data-filtre-vue="${i}">
-            <select data-f="colonne">${opt('', '— colonne —', f.colonne)}${this.colonnesSource.map((c) => opt(c.code, c.code, f.colonne)).join('')}</select>
+            <select data-f="colonne">${opt('', texte('liste.concepteur.filtres.colonne'), f.colonne)}${this.colonnesSource.map((c) => opt(c.code, c.code, f.colonne)).join('')}</select>
             <select data-f="op">${OPERATEURS_VUE.map(([v, l]) => opt(v, l, f.op)).join('')}</select>
-            <input data-f="valeur" type="${type}" value="${echapper(f.op === 'dans' ? (f.valeurs ?? []).join(' ; ') : f.valeur ?? '')}" ${SANS_VALEUR.has(f.op) ? 'hidden' : ''} placeholder="${f.op === 'dans' ? 'valeur ; valeur…' : 'valeur'}">
-            <input data-f="valeur2" type="${type}" value="${echapper(f.valeur2 ?? '')}" ${f.op === 'entre' ? '' : 'hidden'} placeholder="et">
-            <button type="button" data-supprimer-filtre title="Supprimer le filtre">✕</button>
+            <input data-f="valeur" type="${type}" value="${echapper(f.op === 'dans' ? (f.valeurs ?? []).join(' ; ') : f.valeur ?? '')}" ${SANS_VALEUR.has(f.op) ? 'hidden' : ''} placeholder="${texteHtml(f.op === 'dans' ? 'liste.concepteur.filtres.valeurs' : 'liste.concepteur.filtres.valeur')}">
+            <input data-f="valeur2" type="${type}" value="${echapper(f.valeur2 ?? '')}" ${f.op === 'entre' ? '' : 'hidden'} placeholder="${texteHtml('liste.menu.et')}">
+            <button type="button" data-supprimer-filtre title="${texteHtml('liste.concepteur.filtres.supprimer')}">${iconeHtml('retirer')}</button>
           </div>`;
-        }).join('') || '<p class="aide">Aucun filtre : toutes les lignes de la source sont proposées (ex. ajouter « actif est coché » pour les salariés actifs).</p>'}
-        <button type="button" data-action="ajouter-filtre" ${this.colonnesSource.length ? '' : 'disabled'}>Ajouter un filtre</button>
-        ${this.colonnesSource.some((c) => c.code === COLONNE_USAGE) ? `<label class="fiche-option" title="Fiches mises en sommeil (avant archivage) : masquées par défaut"><input type="checkbox" data-sommeil ${d.sommeil ? 'checked' : ''}> Afficher les fiches en sommeil</label>` : ''}
+        }).join('') || `<p class="aide">${texteHtml('liste.concepteur.filtres.aucun')}</p>`}
+        <button type="button" data-action="ajouter-filtre" ${this.colonnesSource.length ? '' : 'disabled'}>${texteHtml('liste.concepteur.filtres.ajouter')}</button>
+        ${this.colonnesSource.some((c) => c.code === COLONNE_USAGE) ? `<label class="fiche-option" title="${texteHtml('liste.concepteur.filtres.sommeil_aide')}"><input type="checkbox" data-sommeil ${d.sommeil ? 'checked' : ''}> ${texteHtml('liste.concepteur.filtres.sommeil')}</label>` : ''}
       </fieldset>
-      <fieldset class="concepteur-calculees"><legend>Colonnes calculées</legend>
-        ${d.colonnes.filter((c) => c.calcul).map((c) => `<span class="pastille-colonne">${echapper(premiereLigne(c.titre))}</span>`).join('') || '<span class="aide">Aucune</span>'}
-        <button type="button" data-action="ajouter-calcul">Ajouter une colonne calculée</button>
+      <fieldset class="concepteur-calculees"><legend>${texteHtml('liste.concepteur.calculees.titre')}</legend>
+        ${d.colonnes.filter((c) => c.calcul).map((c) => `<span class="pastille-colonne">${echapper(premiereLigne(c.titre))}</span>`).join('') || `<span class="aide">${texteHtml('liste.concepteur.calculees.aucune')}</span>`}
+        <button type="button" data-action="ajouter-calcul">${texteHtml('liste.concepteur.calculees.ajouter')}</button>
       </fieldset>`;
 
     this.corps.querySelectorAll('[name="mode-source"]').forEach((r) => r.addEventListener('change', () => {
@@ -523,7 +523,7 @@ export class ConcepteurVue {
     this.corps.querySelector('[data-action="ajouter-calcul"]').addEventListener('click', () => {
       let n = 1;
       while (d.colonnes.some((c) => c.code === `calcul_${n}`)) n++;
-      d.colonnes.push(normaliserDefinition({ colonnes: [{ code: `calcul_${n}`, calcul: true, titre: `Calcul ${n}`, formule: '""', style: { ...STYLE_VIDE } }] }).colonnes[0]);
+      d.colonnes.push(normaliserDefinition({ colonnes: [{ code: `calcul_${n}`, calcul: true, titre: texte('liste.concepteur.calculees.nom', { numero: n }), formule: '""', style: { ...STYLE_VIDE } }] }).colonnes[0]);
       this.selection = `calcul_${n}`;
       this.onglet = 'forme';
       this.rendre();

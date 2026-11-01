@@ -1,3 +1,4 @@
+import { texte, texteHtml, pluriel, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { ERREUR_LISTE } from '../src/codes.js';
 import { echapper, lireNombre, creerCombo, ouvrirMenuContextuel, confirmer, lireStockage, ecrireStockage } from '@logibtp/socle/ui';
 import { ModeleVue, normaliserDefinition, vraiDonnee } from '../src/modele.js';
@@ -106,25 +107,25 @@ export class ListeDonnees {
     r.innerHTML = `
       <div class="liste-barre">
         <span class="liste-themes"></span>
-        <select class="liste-vues" title="Vue"></select>
-        <button type="button" data-action="concevoir" title="Modifier la vue (mise en forme, colonnes, partage, enregistrer comme nouvelle vue)">✎</button>
+        <select class="liste-vues" title="${texteHtml('liste.liste.vue')}"></select>
+        <button type="button" data-action="concevoir" title="${texteHtml('liste.liste.concevoir')}">${iconeHtml('liste_saisie')}</button>
         <span class="liste-elements">
           <button type="button" data-action="creer" class="principal" hidden></button>
-          <button type="button" data-element="consulter" class="bouton-icone" title="Consulter — l'élément sélectionné (double-clic ; Ctrl : nouvelle fenêtre)" aria-label="Consulter" hidden>👁</button>
-          <button type="button" data-element="copier" class="bouton-icone" title="Copier — créer un nouvel élément à partir de l'élément sélectionné" aria-label="Copier" hidden>⧉</button>
-          <button type="button" data-element="supprimer" class="bouton-icone" title="Supprimer — les éléments sélectionnés" aria-label="Supprimer" hidden>🗑</button>
+          <button type="button" data-element="consulter" class="bouton-icone" title="${texteHtml('liste.liste.consulter_aide')}" aria-label="${texteHtml('liste.liste.consulter')}" hidden>${iconeHtml('liste_consulter')}</button>
+          <button type="button" data-element="copier" class="bouton-icone" title="${texteHtml('liste.liste.copier_aide')}" aria-label="${texteHtml('liste.liste.copier')}" hidden>${iconeHtml('liste_copier')}</button>
+          <button type="button" data-element="supprimer" class="bouton-icone" title="${texteHtml('liste.liste.supprimer_aide')}" aria-label="${texteHtml('liste.liste.supprimer')}" hidden>${iconeHtml('supprimer')}</button>
           <span class="liste-elements-autres"></span>
         </span>
-        <input type="search" class="liste-recherche" placeholder="Rechercher…" title="Contient, sans casse ni accents, sur toute la base">
+        <input type="search" class="liste-recherche" placeholder="${texteHtml('liste.liste.rechercher')}" title="${texteHtml('liste.liste.rechercher_aide')}">
         <span class="liste-filtres-vue" hidden></span>
         <span class="liste-compteur"></span>
-        <button type="button" data-action="effacer" class="bouton-icone" title="Effacer les filtres et le tri des colonnes" aria-label="Effacer les filtres" hidden>⨯</button>
+        <button type="button" data-action="effacer" class="bouton-icone" title="${texteHtml('liste.liste.effacer_aide')}" aria-label="${texteHtml('liste.liste.effacer')}" hidden>${iconeHtml('liste_effacer')}</button>
         <button type="button" data-action="lignes" aria-pressed="false"></button>
-        <button type="button" data-action="tout" aria-pressed="false">⇊</button>
-        <button type="button" data-action="rafraichir" title="Recharger depuis la base">⟳</button>
+        <button type="button" data-action="tout" aria-pressed="false">${iconeHtml('liste_tout')}</button>
+        <button type="button" data-action="rafraichir" title="${texteHtml('liste.liste.rafraichir')}">${iconeHtml('liste_rafraichir')}</button>
         <span class="liste-actions-hote"></span>
         <button type="button" data-action="saisie" aria-pressed="false" hidden
-          title="Saisie dans la liste : clic sur une cellule modifiable, Entrée ligne suivante, Tab colonne suivante, Échap annule">✎ Saisie</button>
+          title="${texteHtml('liste.liste.saisie_aide')}">${iconeHtml('liste_saisie')} ${texteHtml('liste.liste.saisie')}</button>
       </div>
       <p class="liste-erreurs" hidden></p>
       <div class="liste-corps">
@@ -132,14 +133,14 @@ export class ListeDonnees {
           <table class="liste-table"><colgroup></colgroup><thead></thead><tbody></tbody></table>
           <div class="liste-suite"></div>
         </div>
-        <div class="liste-separateur" title="Glisser pour redimensionner · double-clic pour réduire"></div>
+        <div class="liste-separateur" title="${texteHtml('liste.liste.separateur')}"></div>
         <aside class="liste-panneau">
           <header>
-            <span class="liste-panneau-titre">Segments</span>
-            <button type="button" data-dock="gauche" title="Ancrer à gauche">◧</button>
-            <button type="button" data-dock="bas" title="Ancrer en bas">⬓</button>
-            <button type="button" data-dock="droite" title="Ancrer à droite">◨</button>
-            <button type="button" data-action="reduire">–</button>
+            <span class="liste-panneau-titre">${texteHtml('liste.liste.segments')}</span>
+            <button type="button" data-dock="gauche" title="${texteHtml('liste.liste.dock.gauche')}">${iconeHtml('liste_ancrer_gauche')}</button>
+            <button type="button" data-dock="bas" title="${texteHtml('liste.liste.dock.bas')}">${iconeHtml('liste_ancrer_bas')}</button>
+            <button type="button" data-dock="droite" title="${texteHtml('liste.liste.dock.droite')}">${iconeHtml('liste_ancrer_droite')}</button>
+            <button type="button" data-action="reduire">${iconeHtml('liste_reduire')}</button>
           </header>
           <div class="liste-panneau-contenu">
             <div class="liste-panneau-specifique" hidden></div>
@@ -262,9 +263,9 @@ export class ListeDonnees {
     const options = this.themes.map((t, i) => {
       const g = this.groupeTheme?.(t) ?? null;
       return { valeur: t.thl_code, libelle: `${t.thl_icone ?? ''} ${t.thl_libelle}`.trim(), detail: (t.thl_types ?? []).map((x) => x.libelle || x.code).join(', '),
-        groupe: this.groupeTheme ? g?.groupe ?? 'Autres' : undefined, ordre: g?.ordre ?? 1e6 + i };
+        groupe: this.groupeTheme ? g?.groupe ?? texte('liste.liste.themes_autres') : undefined, ordre: g?.ordre ?? 1e6 + i };
     }).sort((a, b) => a.ordre - b.ordre);
-    const combo = creerCombo({ options: [{ valeur: '*', libelle: 'Toutes les vues' }, ...options], valeur: this.theme ?? '*', vide: false, titre: 'Thème : regroupement des vues' });
+    const combo = creerCombo({ options: [{ valeur: '*', libelle: texte('liste.liste.toutes_vues') }, ...options], valeur: this.theme ?? '*', vide: false, titre: texte('liste.liste.theme_aide') });
     combo.classList.add('liste-themes');
     combo.addEventListener('change', () => this.choisirTheme(combo.valeurCombo === '*' ? null : combo.valeurCombo).catch((x) => this.#erreur(x)));
     combo.hidden = !this.themes.length && !this.peutGererThemes;
@@ -293,7 +294,7 @@ export class ListeDonnees {
     // Thème sans vue : liste vide, le concepteur (＋) en crée une.
     this.vue = null;
     this.appliquerVue({ vli_id: null, vli_nom: '', definition: { theme: this.theme } }, { nonEnregistree: false, vide: true });
-    this.message('Aucune vue dans ce thème : ＋ pour en créer une');
+    this.message(texte('liste.liste.theme_sans_vue', { icone: icone('ajouter') }));
     this.surVue?.({ theme: this.theme, vue: null });
   }
 
@@ -311,9 +312,8 @@ export class ListeDonnees {
 
   async chargerVues() {
     this.vues = await this.fournisseur.vues(this.contexte, this.theme);
-    const partage = { P: 'personnelle', G: 'groupe', T: 'tous' };
     this.racine.querySelector('.liste-vues').innerHTML = this.vues.map((v) =>
-      `<option value="${v.vli_id}" title="Vue ${partage[v.vli_partage] ?? ''} de ${echapper(v.vli_proprietaire ?? '')}">${echapper(v.vli_nom)}</option>`).join('');
+      `<option value="${v.vli_id}" title="${texteHtml(`liste.liste.vue_partage.${['P', 'G', 'T'].includes(v.vli_partage) ? v.vli_partage : 'P'}`, { proprietaire: v.vli_proprietaire ?? '' })}">${echapper(v.vli_nom)}</option>`).join('');
     if (this.vue?.vli_id) this.racine.querySelector('.liste-vues').value = String(this.vue.vli_id);
   }
 
@@ -343,7 +343,7 @@ export class ListeDonnees {
     }
     this.triBase = null;
     this.triLocal = null;
-    const erreurs = [...this.modele.erreurs].map(([code, m]) => `${this.modele.parCode.get(code)?.titre ?? code} : ${m}`);
+    const erreurs = [...this.modele.erreurs].map(([code, m]) => texte('liste.liste.erreur_colonne', { colonne: this.modele.parCode.get(code)?.titre ?? code, message: m }));
     const zoneErreurs = this.racine.querySelector('.liste-erreurs');
     zoneErreurs.hidden = !erreurs.length;
     zoneErreurs.textContent = erreurs.join(' · ');
@@ -353,7 +353,7 @@ export class ListeDonnees {
     const creer = this.racine.querySelector('[data-action="creer"]');
     creer.hidden = !this.actionCreation;
     creer.textContent = this.actionCreation?.libelle ?? '';
-    creer.title = this.actionCreation ? `Créer : ${this.actionCreation.libelle.replace('＋', '').trim()}` : '';
+    creer.title = this.actionCreation ? texte('liste.liste.creer', { libelle: this.actionCreation.libelle.replace(icone('ajouter'), '').trim() }) : '';
     this.actionsElements = this.vue ? this.fabriqueActions?.(this.vue) ?? null : null;
     // Actions supplémentaires de l'application (transformer…) : un bouton chacune.
     const autres = this.racine.querySelector('.liste-elements-autres');
@@ -374,8 +374,8 @@ export class ListeDonnees {
     const fv = this.racine.querySelector('.liste-filtres-vue');
     const libelles = this.definition.filtres.map((f) => libelleFiltreVue(f, this.modele.parCode.get(f.colonne)?.titre?.replace(/\s*\n\s*/g, ' ') ?? f.colonne));
     fv.hidden = !libelles.length;
-    fv.textContent = `⚑ ${libelles.length === 1 ? libelles[0] : `${libelles.length} filtres de vue`}`;
-    fv.title = `Filtres de la vue, appliqués par la base :\n${libelles.join('\n')}`;
+    fv.textContent = `${icone('liste_filtre_vue')} ${libelles.length === 1 ? libelles[0] : texte('liste.liste.filtres_vue', { nombre: libelles.length })}`;
+    fv.title = texte('liste.liste.filtres_vue_aide', { liste: libelles.join('\n') });
     this.#rendreEntete();
     this.recharger();
     this.rafraichirSegments();
@@ -384,7 +384,7 @@ export class ListeDonnees {
   concevoir(nouvelle) {
     fermerMenuFiltre();
     const base = nouvelle || !this.vue
-      ? { vli_id: null, vli_nom: 'Nouvelle vue', vli_contexte: this.contexte, vli_partage: 'P', vli_groupe: null,
+      ? { vli_id: null, vli_nom: texte('liste.liste.nouvelle_vue'), vli_contexte: this.contexte, vli_partage: 'P', vli_groupe: null,
         definition: { ...(nouvelle && this.vue ? structuredClone(this.vue.definition) : normaliserDefinition({})), theme: this.theme } }
       : structuredClone(this.vue);
     this.concepteur = new ConcepteurVue({
@@ -413,7 +413,7 @@ export class ListeDonnees {
         try { localStorage.setItem(this.cleVue, String(enregistree.vli_id)); } catch { /* préférence non conservée */ }
         this.appliquerVue(enregistree, { nonEnregistree: false });
         this.racine.querySelector('.liste-vues').value = String(enregistree.vli_id);
-        this.message(`Vue « ${enregistree.vli_nom} » enregistrée`, 'succes');
+        this.message(texte('liste.liste.vue_enregistree', { nom: enregistree.vli_nom }), 'succes');
         return enregistree;
       },
       supprimer: async (v) => {
@@ -421,7 +421,7 @@ export class ListeDonnees {
         this.vue = null;
         await this.chargerVues();
         await this.#ouvrirDansTheme(null);
-        this.message(`Vue « ${v.vli_nom} » supprimée`, 'succes');
+        this.message(texte('liste.liste.vue_supprimee', { nom: v.vli_nom }), 'succes');
       },
       message: this.message,
     });
@@ -436,7 +436,7 @@ export class ListeDonnees {
     zone.replaceChildren();
     this.panneauSpecifique = this.vue && this.fabriquePanneau ? this.fabriquePanneau({ vue: this.vue, conteneur: zone, liste: this }) : null;
     zone.hidden = !this.panneauSpecifique;
-    this.racine.querySelector('.liste-panneau-titre').textContent = this.panneauSpecifique ? 'Filtres' : 'Segments';
+    this.racine.querySelector('.liste-panneau-titre').textContent = texte(this.panneauSpecifique ? 'liste.liste.filtres' : 'liste.liste.segments');
   }
 
   /**
@@ -534,10 +534,10 @@ export class ListeDonnees {
     const simple = this.affichageLignes === 'simple';
     this.racine.classList.toggle('liste-simple', simple);
     const b = this.racine.querySelector('[data-action="lignes"]');
-    b.textContent = simple ? '⇕' : '⇔';
+    b.textContent = icone(simple ? 'liste_lignes_entieres' : 'liste_lignes_simples');
     b.classList.toggle('actif', !!this.prefs.lignes?.[String(this.vue?.vli_id ?? 'nouvelle')]);
     b.setAttribute('aria-pressed', String(simple));
-    b.title = simple ? 'Afficher les lignes en entier (multiligne)' : 'Afficher chaque ligne sur une seule ligne';
+    b.title = texte(simple ? 'liste.liste.lignes_multi' : 'liste.liste.lignes_simple');
   }
 
   /** Interrupteur « Charger toutes les lignes » : conservé lors des rechargements (filtres, segments, tri). */
@@ -625,14 +625,12 @@ export class ListeDonnees {
     c.style.setProperty('--panneau-hauteur', `${this.prefs.hauteur}px`);
     this.racine.querySelectorAll('[data-dock]').forEach((b) => b.classList.toggle('actif', b.dataset.dock === this.prefs.dock));
     const b = this.racine.querySelector('.liste-panneau [data-action="reduire"]');
-    b.textContent = this.prefs.reduit ? '▢' : '–';
-    b.title = this.prefs.reduit ? 'Agrandir le panneau des segments' : 'Réduire le panneau des segments';
+    b.textContent = icone(this.prefs.reduit ? 'liste_agrandir' : 'liste_reduire');
+    b.title = texte(this.prefs.reduit ? 'liste.liste.panneau_agrandir' : 'liste.liste.panneau_reduire');
     const t = this.racine.querySelector('[data-action="tout"]');
     t.classList.toggle('actif', !!this.modeTout);
     t.setAttribute('aria-pressed', String(!!this.modeTout));
-    t.title = this.modeTout
-      ? 'Chargement de toutes les lignes : actif, y compris après un filtre (cliquer pour revenir au chargement par lots)'
-      : 'Charger toutes les lignes (reste actif lors des rechargements)';
+    t.title = texte(this.modeTout ? 'liste.liste.tout_actif' : 'liste.liste.tout');
   }
 
   #reduire(reduit) {
@@ -721,17 +719,17 @@ export class ListeDonnees {
       // Titre : replie / déplie le segment ; réduit, il indique le nombre de valeurs filtrées.
       return `<div class="segment${reduit ? ' reduit' : ''}" data-segment="${echapper(s.colonne)}">
         <button type="button" class="segment-titre" data-replier aria-expanded="${!reduit}"
-          title="${reduit ? 'Déplier' : 'Réduire'} ce segment (mémorisé pour cette vue)"><span class="segment-chevron">${reduit ? '▸' : '▾'}</span>${echapper(titre.replace(/\n/g, ' '))}${actives.size ? ` <small class="segment-filtre">(${actives.size})</small>` : ''}</button>
-        <span class="segment-valeurs"${reduit ? ' hidden' : ''}><button type="button" data-tout class="${actives.size ? '' : 'actif'}">Tous</button>
+          title="${texteHtml(reduit ? 'liste.liste.segment_deplier' : 'liste.liste.segment_reduire')}"><span class="segment-chevron">${iconeHtml(reduit ? 'liste_segment_replie' : 'liste_segment_deplie')}</span>${echapper(titre.replace(/\n/g, ' '))}${actives.size ? ` <small class="segment-filtre">(${actives.size})</small>` : ''}</button>
+        <span class="segment-valeurs"${reduit ? ' hidden' : ''}><button type="button" data-tout class="${actives.size ? '' : 'actif'}">${texteHtml('liste.liste.segment_tous')}</button>
         ${comptes[i].map((c) => {
-          const libelle = c.valeur === null ? '(vide)' : col ? this.modele.texte(c.valeur, col) || c.valeur : c.valeur;
-          const bulle = c.horsFiltre ? `${libelle} — nombre de la base, hors filtres de colonnes (lignes non chargées)`
-            : calcules[i].partiel ? `${libelle} — compté sur les lignes chargées (filtres de colonnes)` : libelle;
+          const libelle = c.valeur === null ? texte('liste.liste.vide') : col ? this.modele.texte(c.valeur, col) || c.valeur : c.valeur;
+          const bulle = c.horsFiltre ? texte('liste.liste.segment_hors_filtre', { libelle })
+            : calcules[i].partiel ? texte('liste.liste.segment_partiel', { libelle }) : libelle;
           return `<button type="button" data-valeur="${c.valeur === null ? '' : echapper(c.valeur)}" data-vide="${c.valeur === null}"
             class="${actives.has(c.valeur) ? 'actif' : ''}${c.horsFiltre ? ' hors-filtre' : ''}" title="${echapper(bulle)}">${this.#imageSegment(col, c.valeur)}${echapper(libelle)} <small>${c.nombre}${calcules[i].partiel && !c.horsFiltre ? '+' : ''}</small></button>`;
         }).join('')}
         ${[...actives].filter((v) => !comptes[i].some((c) => c.valeur === v)).map((v) =>
-          `<button type="button" class="actif" data-valeur="${echapper(v ?? '')}" data-vide="${v === null}">${echapper(v ?? '(vide)')} <small>0</small></button>`).join('')}
+          `<button type="button" class="actif" data-valeur="${echapper(v ?? '')}" data-vide="${v === null}">${echapper(v ?? texte('liste.liste.vide'))} <small>0</small></button>`).join('')}
       </span></div>`;
     }).join('');
     zone.querySelectorAll('[data-segment]').forEach((div) => {
@@ -770,8 +768,8 @@ export class ListeDonnees {
     div.querySelector('.segment-valeurs').hidden = reduit;
     const b = div.querySelector('[data-replier]');
     b.setAttribute('aria-expanded', String(!reduit));
-    b.title = `${reduit ? 'Déplier' : 'Réduire'} ce segment (mémorisé pour cette vue)`;
-    b.querySelector('.segment-chevron').textContent = reduit ? '▸' : '▾';
+    b.title = texte(reduit ? 'liste.liste.segment_deplier' : 'liste.liste.segment_reduire');
+    b.querySelector('.segment-chevron').textContent = icone(reduit ? 'liste_segment_replie' : 'liste_segment_deplie');
   }
 
   /** Image associée à une valeur de segment : image ou picto de l'option de la colonne, case pour un oui / non. */
@@ -780,7 +778,7 @@ export class ListeDonnees {
     const o = (col.options ?? []).find((x) => String(x.valeur) === String(valeur));
     if (o?.image) return `<img class="segment-image" src="${echapper(o.image)}" alt="">`;
     if (o?.picto) return `<span class="segment-picto">${echapper(o.picto)}</span>`;
-    if (col.format === 'coche') return `<span class="segment-picto">${String(valeur) === 'true' ? '☑' : '☐'}</span>`;
+    if (col.format === 'coche') return `<span class="segment-picto">${iconeHtml(String(valeur) === 'true' ? 'liste_coche' : 'liste_decoche')}</span>`;
     return '';
   }
 
@@ -797,13 +795,11 @@ export class ListeDonnees {
     const tr = document.createElement('tr');
     const coin = document.createElement('th');
     coin.className = 'liste-coin';
-    coin.innerHTML = `<button type="button" class="${this.modeTriBase ? 'actif' : ''}" title="${this.modeTriBase
-      ? 'Tri sur toute la base : un clic sur un en-tête recharge la liste dans cet ordre'
-      : 'Trier toute la base (sinon le tri porte sur les lignes chargées)'}">⇅</button>`;
+    coin.innerHTML = `<button type="button" class="${this.modeTriBase ? 'actif' : ''}" title="${texteHtml(this.modeTriBase ? 'liste.liste.tri_base_actif' : 'liste.liste.tri_base')}">${iconeHtml('liste_tri_base')}</button>`;
     coin.querySelector('button').addEventListener('click', () => {
       this.modeTriBase = !this.modeTriBase;
       this.#rendreEntete();
-      this.message(this.modeTriBase ? 'Tri sur toute la base' : 'Tri sur les lignes chargées');
+      this.message(texte(this.modeTriBase ? 'liste.liste.tri_sur_base' : 'liste.liste.tri_sur_chargees'));
     });
     tr.append(coin);
     for (const c of visibles) {
@@ -817,10 +813,10 @@ export class ListeDonnees {
       const actif = filtreActif(this.filtres.get(c.code));
       th.innerHTML = `<div class="liste-th">
         <span class="liste-th-titre">${echapper(c.titre ?? c.code)}</span>
-        <span class="liste-poignee" title="Glisser pour redimensionner · double-clic : largeur de la vue"></span>
+        <span class="liste-poignee" title="${texteHtml('liste.liste.poignee')}"></span>
         <span class="liste-th-boutons">
-          <button type="button" data-tri class="${sens ? 'actif' : ''} ${triB ? 'base' : ''}" title="${triB ? 'Trié sur toute la base' : triL ? 'Trié sur les lignes chargées' : 'Trier'}">${sens === 'asc' ? '▲' : sens === 'desc' ? '▼' : '⇵'}</button>
-          <button type="button" data-filtre class="${actif ? 'actif' : ''}" title="Filtrer les lignes chargées">${actif ? '⧩' : '▾'}</button>
+          <button type="button" data-tri class="${sens ? 'actif' : ''} ${triB ? 'base' : ''}" title="${texteHtml(triB ? 'liste.liste.trie_base' : triL ? 'liste.liste.trie_chargees' : 'liste.liste.trier')}">${iconeHtml(sens === 'asc' ? 'liste_tri_asc' : sens === 'desc' ? 'liste_tri_desc' : 'liste_trier')}</button>
+          <button type="button" data-filtre class="${actif ? 'actif' : ''}" title="${texteHtml('liste.liste.filtrer')}">${iconeHtml(actif ? 'liste_filtre_actif' : 'liste_filtre')}</button>
         </span></div>`;
       th.querySelector('[data-tri]').addEventListener('click', () => this.#clicTri(c, sens));
       th.querySelector('[data-filtre]').addEventListener('click', (e) => this.#menu(c, e.currentTarget));
@@ -844,7 +840,7 @@ export class ListeDonnees {
   trier(code, sens, base) {
     const c = this.modele.parCode.get(code);
     if (base && c?.calcul) {
-      this.message('Colonne calculée : tri des lignes chargées uniquement', 'avertissement');
+      this.message(texte('liste.menu.tri_calcule'), 'avertissement');
       base = false;
     }
     if (base) {
@@ -907,7 +903,7 @@ export class ListeDonnees {
     if (this.glisser?.({ ligne, definition: this.definition })) {
       tr.draggable = true;
       tr.classList.add('glissable');
-      tr.title = "Glisser vers un document pour l'insérer";
+      tr.title = texte('liste.liste.glisser');
     }
     if (this.selection === id || this.selections.has(id)) tr.classList.add('selectionnee');
     const coin = document.createElement('td');
@@ -951,18 +947,18 @@ export class ListeDonnees {
   #compteur(affichees) {
     const charge = `${this.lignes.length}${this.fin ? '' : '+'}`;
     this.racine.querySelector('.liste-compteur').textContent = affichees === this.lignes.length
-      ? `${charge} ligne${this.lignes.length > 1 ? 's' : ''}`
-      : `${affichees} / ${charge} chargées`;
+      ? pluriel('liste.liste.lignes', this.lignes.length, { charge })
+      : texte('liste.liste.lignes_chargees', { affichees, charge });
   }
 
   #rendreSuite() {
     const b = this.basSuite;
-    if (!this.vue) { b.textContent = 'Aucune vue'; return; }
-    if (this.enCours) b.innerHTML = '<span class="liste-attente">Chargement…</span>';
+    if (!this.vue) { b.textContent = texte('liste.liste.aucune_vue'); return; }
+    if (this.enCours) b.innerHTML = `<span class="liste-attente">${texteHtml('liste.liste.chargement')}</span>`;
     else if (!this.fin) {
-      b.innerHTML = '<button type="button">Charger la suite</button>';
+      b.innerHTML = `<button type="button">${texteHtml('liste.liste.suite')}</button>`;
       b.querySelector('button').addEventListener('click', () => this.chargerSuite().catch((e) => this.#erreur(e)));
-    } else b.textContent = this.lignes.length ? `Fin de la liste · ${this.lignes.length} ligne${this.lignes.length > 1 ? 's' : ''}` : 'Aucune ligne';
+    } else b.textContent = this.lignes.length ? pluriel('liste.liste.fin', this.lignes.length) : texte('liste.liste.aucune_ligne');
   }
 
   /** Colonnes visibles, dans l'ordre choisi à la souris par l'utilisateur (sinon celui de la vue). */
@@ -1128,15 +1124,16 @@ export class ListeDonnees {
     if (!a?.[code] || !lignes.length) return;
     if (code === 'consulter') { a.consulter(lignes[0], evenement); return; }
     if (code === 'copier') { await a.copier(lignes[0], evenement); return; }
-    const libelle = lignes.length > 1 ? `${lignes.length} éléments` : `« ${lignes[0].numero ?? lignes[0].code ?? lignes[0].libelle ?? lignes[0].nom ?? lignes[0]._id} »`;
-    if (!await confirmer(`Supprimer ${libelle} ? Cette suppression est définitive.`)) return;
+    const confirmation = lignes.length > 1 ? texte('liste.liste.supprimer_plusieurs', { nombre: lignes.length })
+      : texte('liste.liste.supprimer_un', { nom: lignes[0].numero ?? lignes[0].code ?? lignes[0].libelle ?? lignes[0].nom ?? lignes[0]._id });
+    if (!await confirmer(confirmation)) return;
     const refus = [];
     let supprimes = 0;
     for (const l of lignes) {
-      try { await a.supprimer(l); supprimes++; } catch (e) { refus.push(`${l.numero ?? l.code ?? l._id} : ${e.message}`); }
+      try { await a.supprimer(l); supprimes++; } catch (e) { refus.push(texte('liste.liste.refus_ligne', { nom: l.numero ?? l.code ?? l._id, message: e.message })); }
     }
-    if (supprimes) this.message(`${supprimes} élément(s) supprimé(s)`, 'succes');
-    if (refus.length) this.message(`Suppression refusée — ${refus.join(' · ')}`, 'erreur');
+    if (supprimes) this.message(texte('liste.liste.supprimes', { nombre: supprimes }), 'succes');
+    if (refus.length) this.message(texte('liste.liste.suppression_refusee', { refus: refus.join(' · ') }), 'erreur');
     this.selections = new Set();
     this.selection = null;
     await this.verifier();
@@ -1150,18 +1147,18 @@ export class ListeDonnees {
     const n = lignes.length;
     const executer = (f) => () => Promise.resolve(f()).catch((x) => this.#erreur(x));
     ouvrirMenuContextuel(e, [
-      { libelle: 'Ouvrir', raccourci: 'Entrée · double-clic', action: () => this.ouvrir(id), actif: n === 1 },
-      { libelle: 'Ouvrir dans une nouvelle fenêtre', raccourci: 'Ctrl+Entrée · Ctrl+clic', action: () => this.ouvrir(id, { ctrlKey: true }), actif: n === 1 },
+      { libelle: texte('liste.liste.menu.ouvrir'), raccourci: texte('liste.liste.menu.ouvrir_touches'), action: () => this.ouvrir(id), actif: n === 1 },
+      { libelle: texte('liste.liste.menu.nouvelle_fenetre'), raccourci: texte('liste.liste.menu.nouvelle_fenetre_touches'), action: () => this.ouvrir(id, { ctrlKey: true }), actif: n === 1 },
       { separateur: true },
-      ...(a?.consulter ? [{ libelle: 'Consulter', action: executer(() => this.#actionElement('consulter')), actif: n === 1 }] : []),
-      ...(a?.copier ? [{ libelle: 'Copier', action: executer(() => this.#actionElement('copier')), actif: n === 1 }] : []),
-      ...(a?.supprimer ? [{ libelle: n > 1 ? `Supprimer (${n})` : 'Supprimer', action: executer(() => this.#actionElement('supprimer')), actif: n >= 1 }] : []),
+      ...(a?.consulter ? [{ libelle: texte('liste.liste.consulter'), action: executer(() => this.#actionElement('consulter')), actif: n === 1 }] : []),
+      ...(a?.copier ? [{ libelle: texte('liste.liste.copier'), action: executer(() => this.#actionElement('copier')), actif: n === 1 }] : []),
+      ...(a?.supprimer ? [{ libelle: n > 1 ? texte('liste.liste.menu.supprimer_n', { nombre: n }) : texte('liste.liste.supprimer'), action: executer(() => this.#actionElement('supprimer')), actif: n >= 1 }] : []),
       ...(a?.autres ?? []).map((x) => ({
         libelle: x.libelle, titre: x.titre, action: executer(() => x.action(lignes, e)),
         actif: n >= 1 && n <= (x.max ?? 1) && (x.actif ? x.actif(lignes) : true),
       })),
       { separateur: true },
-      { libelle: 'Sélection multiple', raccourci: 'Ctrl+clic · Maj+clic · Maj+↑↓', actif: false },
+      { libelle: texte('liste.liste.menu.selection'), raccourci: texte('liste.liste.menu.selection_touches'), actif: false },
     ]);
   }
 
@@ -1220,7 +1217,7 @@ export class ListeDonnees {
     b.setAttribute('aria-pressed', String(actif));
     this.racine.classList.toggle('liste-saisie', actif);
     this.rendreCorps();
-    if (actif) this.message('Saisie : cliquez une cellule modifiable (fond hachuré) · Entrée : ligne suivante · Tab : colonne suivante · Échap : annuler');
+    if (actif) this.message(texte('liste.liste.saisie_message'));
   }
 
   #td(id, code) {
@@ -1264,7 +1261,7 @@ export class ListeDonnees {
       if (fini) return;
       fini = true;
       const saisie = ed.resoudre ? ed.resoudre() : ed.value;
-      if (saisie === undefined) { this.message(`Valeur inconnue : ${ed.value}`, 'erreur'); fini = false; ed.focus(); return; }
+      if (saisie === undefined) { this.message(texte('liste.liste.valeur_inconnue', { valeur: ed.value }), 'erreur'); fini = false; ed.focus(); return; }
       const ok = await this.#enregistrer(id, code, saisie, { texte: true });
       if (!ok) { fini = false; ed.focus(); return; }
       if (mouvement) this.#saisieSuivante(id, code, mouvement);
@@ -1297,14 +1294,14 @@ export class ListeDonnees {
    * Enregistre une valeur saisie : conversion selon le format, envoi au fournisseur avec l'empreinte de la ligne
    * (verrouillage optimiste), ligne relue en retour. Renvoie false si la saisie est invalide (l'éditeur reste ouvert).
    */
-  async #enregistrer(id, code, saisie, { texte = false } = {}) {
+  async #enregistrer(id, code, saisie, { texte: saisieTexte = false } = {}) {
     const ligne = this.lignes.find((l) => String(l._id) === String(id));
     const c = this.modele.parCode.get(code);
     let valeur = saisie;
-    if (texte) {
+    if (saisieTexte) {
       if (c.format === 'nombre') {
         valeur = lireNombre(saisie);
-        if (valeur === undefined) { this.message(`Nombre invalide : ${saisie}`, 'erreur'); return false; }
+        if (valeur === undefined) { this.message(texte('liste.liste.nombre_invalide', { valeur: saisie }), 'erreur'); return false; }
       } else valeur = saisie === '' ? null : saisie;
     }
     const avant = ligne[code];

@@ -14,11 +14,18 @@ import '@logibtp/execution/ui/atelier.css';
 import '@logibtp/annuaire/ui/annuaire.css';
 import '@logibtp/entreprises-fr/ui/entreprises.css';
 import './styles.css';
-import { Application } from './app/application.js';
+import { chargerPersonnalisation } from './personnalisation.js';
 
 // Application web LogiBTP : accueil, bandeau à menus, pages (listes, fiches, documents, GED, paramètres),
 // fenêtres séparées et session restaurable (module Navigation).
-const app = new Application();
-// Débogage en développement uniquement.
-if (import.meta.env.DEV) window.__logibtp = app;
-app.demarrer().catch((e) => app.erreur(e));
+// Textes, icônes et logo d'abord (module Personnalisation), puis l'application : importée seulement ensuite, ses
+// modules (constantes comprises) s'évaluent avec le dictionnaire chargé. L'aperçu de la page quittée reste affiché.
+async function demarrer() {
+  await chargerPersonnalisation();
+  const { Application } = await import('./app/application.js');
+  const app = new Application();
+  // Débogage en développement uniquement.
+  if (import.meta.env.DEV) window.__logibtp = app;
+  await app.demarrer().catch((e) => app.erreur(e));
+}
+demarrer().catch((e) => console.error(e));

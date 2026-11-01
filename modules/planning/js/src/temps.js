@@ -2,16 +2,23 @@
 // (calculés en UTC pour ignorer les changements d'heure, comme le module Calendrier), échelles d'affichage, colonnes et
 // groupes d'en-tête, arrondi au pas du glisser.
 
+import { texte } from '@logibtp/socle/dictionnaire';
+
 /** Échelles : minutes par colonne ; regroupement d'en-tête. */
+const echelle = (code, minutes, groupe) => ({ get libelle() { return texte(`planning.echelles.${code}`); }, minutes, groupe });
 export const ECHELLES = {
-  HEURE: { libelle: 'Heure', minutes: 60, groupe: 'JOUR' },
-  DEMI_JOUR: { libelle: 'Demi-journée', minutes: 720, groupe: 'JOUR' },
-  JOUR: { libelle: 'Jour', minutes: 1440, groupe: 'SEMAINE' },
-  SEMAINE: { libelle: 'Semaine', minutes: 10080, groupe: 'MOIS' },
+  HEURE: echelle('HEURE', 60, 'JOUR'),
+  DEMI_JOUR: echelle('DEMI_JOUR', 720, 'JOUR'),
+  JOUR: echelle('JOUR', 1440, 'SEMAINE'),
+  SEMAINE: echelle('SEMAINE', 10080, 'MOIS'),
 };
 
-const JOURS = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam'];
-const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+// Noms courts des jours (dimanche = 0) et noms des mois (module Personnalisation).
+const JOURS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'].map((j) => texte(`planning.temps.jours.${j}`));
+const MOIS = ['janvier', 'fevrier', 'mars', 'avril', 'mai', 'juin', 'juillet', 'aout', 'septembre', 'octobre', 'novembre', 'decembre']
+  .map((m) => texte(`planning.temps.mois.${m}`));
+const jj = (d) => String(d.getUTCDate()).padStart(2, '0');
+const mm = (d) => String(d.getUTCMonth() + 1).padStart(2, '0');
 const LUNDI_1970 = 4 * 1440; // 1970-01-05 est un lundi.
 
 /** « AAAA-MM-JJ » ou « AAAA-MM-JJTHH:MM » → minutes depuis 1970 (heure locale lue comme UTC). */
@@ -49,17 +56,17 @@ export function semaineIso(m) {
 
 function libelleColonne(m, echelle) {
   const d = new Date(m * 60000);
-  if (echelle === 'HEURE') return `${d.getUTCHours()}h`;
-  if (echelle === 'DEMI_JOUR') return d.getUTCHours() < 12 ? 'matin' : 'après-midi';
-  if (echelle === 'JOUR') return `${JOURS[d.getUTCDay()]} ${d.getUTCDate()}`;
-  return `S${semaineIso(m)}`;
+  if (echelle === 'HEURE') return texte('planning.temps.heure', { heure: d.getUTCHours() });
+  if (echelle === 'DEMI_JOUR') return d.getUTCHours() < 12 ? texte('planning.temps.matin') : texte('planning.temps.apres_midi');
+  if (echelle === 'JOUR') return texte('planning.temps.colonne_jour', { jour: JOURS[d.getUTCDay()], numero: d.getUTCDate() });
+  return texte('planning.temps.colonne_semaine', { semaine: semaineIso(m) });
 }
 
 function libelleGroupe(m, unite) {
   const d = new Date(m * 60000);
-  if (unite === 'JOUR') return `${JOURS[d.getUTCDay()]} ${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${d.getUTCFullYear()}`;
-  if (unite === 'SEMAINE') return `Semaine ${semaineIso(m)} — ${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
-  return `${MOIS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+  if (unite === 'JOUR') return texte('planning.temps.groupe_jour', { jour: JOURS[d.getUTCDay()], date: `${jj(d)}/${mm(d)}/${d.getUTCFullYear()}` });
+  if (unite === 'SEMAINE') return texte('planning.temps.groupe_semaine', { semaine: semaineIso(m), date: `${jj(d)}/${mm(d)}` });
+  return texte('planning.temps.groupe_mois', { mois: MOIS[d.getUTCMonth()], annee: d.getUTCFullYear() });
 }
 
 /** Colonnes entre deux instants (minutes), alignées sur l'échelle : { debut, fin, libelle, weekend }. */

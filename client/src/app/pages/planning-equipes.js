@@ -1,8 +1,9 @@
+import { texte, texteHtml, textesParCode, pluriel, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { ajouterJours, aujourdhui } from '@logibtp/socle';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, lirePreferences, ecrirePreferences, confirmer, formatHeure } from '@logibtp/socle/ui';
 import { api } from '../api.js';
-import { TYPES_RESSOURCE, choisirRessources } from '../planning/ressources-tache.js';
+import { choisirRessources } from '../planning/ressources-tache.js';
 import { finsPeriodes, controlerEquipe, periodeA, MESSAGES_EQUIPES, TYPES_CHEF } from '../ressources/equipes.js';
 
 // Planning (cœur) : équipes et compositions. Une composition est datée par son seul début et vaut jusqu'à la veille de la
@@ -15,26 +16,27 @@ import { finsPeriodes, controlerEquipe, periodeA, MESSAGES_EQUIPES, TYPES_CHEF }
 
 const LOT = 10;
 const BATTEMENT = 30000;
-const TYPES_MEMBRE = { ...TYPES_RESSOURCE, EQUIPE: 'Équipe' };
-const ICONES = { SALARIE: '👷', INTERIM: '🧑‍🔧', MATERIEL: '🚜', SOUS_TRAITANT: '🏢', EQUIPE: '👥' };
+const TYPES_MEMBRE = textesParCode('planning_btp.types_ressource', ['SALARIE', 'INTERIM', 'MATERIEL', 'SOUS_TRAITANT', 'EQUIPE']);
+// Icône de chaque type de membre (module Personnalisation).
+const ICONES = { SALARIE: 'planning_btp_salarie', INTERIM: 'planning_btp_interim', MATERIEL: 'planning_btp_materiel', SOUS_TRAITANT: 'planning_btp_service', EQUIPE: 'planning_btp_equipe' };
 const jour = (d) => (d ? `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}` : '');
 const cle = (m) => `${m.type}:${m.id}`;
 
 export class PageEquipes extends PageBase {
-  icone = '👥';
+  icone = icone('planning_btp_equipe');
 
   urlCourante() { return `/planning/equipes${this.id ? `?id=${this.id}` : ''}`; }
 
   get modifiee() { return Boolean(this.modifie); }
 
   async ouvrir() {
-    this.titre = 'Équipes';
+    this.titre = texte('planning_btp.equipes.titre');
     this.jeton = crypto.randomUUID();
-    this.conteneur.innerHTML = `<div class="page-parametres page-equipes"><div class="entete-page"><h1 class="page-titre">👥 Équipes et compositions</h1></div>
-      <div class="equipes-corps"><aside class="equipes-liste"><div class="barre-aplanifier"><input type="search" data-filtre placeholder="Rechercher une équipe…">
-          <label title="Afficher aussi les équipes inactives"><input type="checkbox" data-inactives> Inactives</label>
-          <button type="button" class="bouton-icone" data-nouvelle title="Nouvelle équipe" aria-label="Nouvelle équipe">＋</button></div><div data-liste></div></aside>
-        <section class="equipes-detail" data-detail><p class="aide">Choisir une équipe, ou ＋ pour en créer une.</p></section></div></div>`;
+    this.conteneur.innerHTML = `<div class="page-parametres page-equipes"><div class="entete-page"><h1 class="page-titre">${iconeHtml('planning_btp_equipe')} ${texteHtml('planning_btp.routes.equipes')}</h1></div>
+      <div class="equipes-corps"><aside class="equipes-liste"><div class="barre-aplanifier"><input type="search" data-filtre placeholder="${texteHtml('planning_btp.equipes.rechercher')}">
+          <label title="${texteHtml('planning_btp.equipes.inactives_titre')}"><input type="checkbox" data-inactives> ${texteHtml('planning_btp.equipes.inactives')}</label>
+          <button type="button" class="bouton-icone" data-nouvelle title="${texteHtml('planning_btp.equipes.nouvelle')}" aria-label="${texteHtml('planning_btp.equipes.nouvelle')}">${iconeHtml('ajouter')}</button></div><div data-liste></div></aside>
+        <section class="equipes-detail" data-detail><p class="aide">${texteHtml('planning_btp.equipes.choisir', { ajouter: icone('ajouter') })}</p></section></div></div>`;
     const c = this.conteneur;
     [this.ressources, this.ref] = await Promise.all([api.planning.ressources({}).catch(() => []), api.planning.referentiels().catch(() => ({ services: [] }))]);
     this.libelles = new Map(this.ressources.map((r) => [`${r.type}:${r.id}`, r.libelle]));
@@ -66,11 +68,11 @@ export class PageEquipes extends PageBase {
     const t = c.querySelector('[data-filtre]').value.trim().toLowerCase();
     const inactives = c.querySelector('[data-inactives]').checked;
     const l = this.equipes.filter((e) => (inactives || e.actif) && (!t || `${e.code} ${e.libelle} ${e.chef ?? ''} ${e.service ?? ''}`.toLowerCase().includes(t)));
-    c.querySelector('[data-liste]').innerHTML = l.length ? `<table class="tableau-compact pleine-largeur"><thead><tr><th>Équipe</th><th>Chef</th><th class="nombre" title="Membres aujourd'hui, ceux des équipes en renfort compris">Eff.</th></tr></thead><tbody>
+    c.querySelector('[data-liste]').innerHTML = l.length ? `<table class="tableau-compact pleine-largeur"><thead><tr><th>${texteHtml('planning_btp.types_ressource.EQUIPE')}</th><th>${texteHtml('planning_btp.equipes.chef')}</th><th class="nombre" title="${texteHtml('planning_btp.equipes.effectif_titre')}">${texteHtml('planning_btp.equipes.effectif')}</th></tr></thead><tbody>
       ${l.map((e) => `<tr class="cliquable${e.id === this.id ? ' selection' : ''}${e.actif ? '' : ' aide'}" data-id="${e.id}" title="${echapper(e.commentaire ?? '')}"><td><b>${echapper(e.code)}</b> ${echapper(e.libelle)}
-        ${e.sous_equipes ? `<small class="aide" title="Équipes en renfort">· 👥 ${e.sous_equipes}</small>` : ''}${e.commentaire ? ' <small title="Aide-mémoire">📝</small>' : ''}<br><small class="aide">${echapper(e.service ?? '')}</small></td>
+        ${e.sous_equipes ? `<small class="aide" title="${texteHtml('planning_btp.equipes.renforts')}">· ${iconeHtml('planning_btp_equipe')} ${e.sous_equipes}</small>` : ''}${e.commentaire ? ` <small title="${texteHtml('planning_btp.equipes.aide_memoire')}">${iconeHtml('planning_btp_aide_memoire')}</small>` : ''}<br><small class="aide">${echapper(e.service ?? '')}</small></td>
         <td>${echapper(e.chef ?? '')}</td><td class="nombre">${e.effectif}</td></tr>`).join('')}</tbody></table>`
-      : '<p class="aide">Aucune équipe.</p>';
+      : `<p class="aide">${texteHtml('planning_btp.equipes.aucune')}</p>`;
     c.querySelectorAll('[data-liste] tr[data-id]').forEach((tr) => tr.addEventListener('click', () => this.#choisir(Number(tr.dataset.id))));
   }
 
@@ -78,7 +80,7 @@ export class PageEquipes extends PageBase {
 
   /** Ouvre une équipe (null : nouvelle, directement en modification) ; modification en cours : confirmation puis libération. */
   async #choisir(id) {
-    if (this.modifie && !await confirmer('Abandonner les modifications de l\'équipe en cours ?')) return;
+    if (this.modifie && !await confirmer(texte('planning_btp.equipes.abandonner_en_cours'))) return;
     await this.#liberer();
     if (id) {
       if (!(await this.#charger(id))) return;
@@ -137,7 +139,7 @@ export class PageEquipes extends PageBase {
       let r;
       try { r = await api.ressources.verrouillerEquipe(this.id, this.jeton); } catch (err) { this.app.erreur(err); return false; }
       if (!r.ok) {
-        this.app.message(`${MESSAGES_EQUIPES.EQU_VERROU} (${r.verrou?.utilisateur ?? '?'} depuis ${r.verrou ? formatHeure(r.verrou.depuis) : '?'})`, 'avertissement');
+        this.app.message(texte('planning_btp.equipes.verrou', { message: MESSAGES_EQUIPES.EQU_VERROU, utilisateur: r.verrou?.utilisateur ?? '?', heure: r.verrou ? formatHeure(r.verrou.depuis) : '?' }), 'avertissement');
         this.#rendre();
         return false;
       }
@@ -146,7 +148,7 @@ export class PageEquipes extends PageBase {
       this.#rendreEntete();
       if (r.version !== this.equipe.version) {
         await this.#charger(this.id);
-        this.app.message('L\'équipe a été modifiée par ailleurs : la version de la base est rechargée, refaire la modification', 'avertissement');
+        this.app.message(texte('planning_btp.equipes.modifiee_ailleurs'), 'avertissement');
         this.#rendre();
         return false;
       }
@@ -159,7 +161,7 @@ export class PageEquipes extends PageBase {
     const r = await api.ressources.verrouillerEquipe(this.id, this.jeton).catch(() => null);
     if (r && !r.ok) {
       this.#arreter();
-      this.app.message(`Verrou perdu : ${r.verrou?.utilisateur ?? 'un autre utilisateur'} modifie l'équipe ; elle est rechargée`, 'erreur');
+      this.app.message(texte('planning_btp.equipes.verrou_perdu', { utilisateur: r.verrou?.utilisateur ?? texte('planning_btp.equipes.autre_utilisateur') }), 'erreur');
       this.modifie = false;
       await this.#charger(this.id);
       this.mode = 'consultation';
@@ -185,8 +187,8 @@ export class PageEquipes extends PageBase {
   }
 
   async #abandonner() {
-    if (this.modifie && !await confirmer('Abandonner les modifications ?')) return;
-    if (!this.id) { this.modifie = false; this.#rendre(); this.conteneur.querySelector('[data-detail]').innerHTML = '<p class="aide">Choisir une équipe, ou ＋ pour en créer une.</p>'; return; }
+    if (this.modifie && !await confirmer(texte('planning_btp.equipes.abandonner_confirmer'))) return;
+    if (!this.id) { this.modifie = false; this.#rendre(); this.conteneur.querySelector('[data-detail]').innerHTML = `<p class="aide">${texteHtml('planning_btp.equipes.choisir', { ajouter: icone('ajouter') })}</p>`; return; }
     await this.#liberer();
     this.modifie = false;
     await this.#charger(this.id);
@@ -210,30 +212,30 @@ export class PageEquipes extends PageBase {
     const enCours = (p) => courante && courante.du === p.du && courante.membres === p.membres;
     zone.innerHTML = `<div class="titre-actions" data-entete-equipe></div>
       <table class="tableau-compact largeur-contenu"><tbody>
-        <tr><td>Code</td><td><input data-code size="10" value="${echapper(e.code)}"></td><td>Libellé</td><td><input data-libelle size="32" value="${echapper(e.libelle)}"></td></tr>
-        <tr><td>Service</td><td colspan="2" data-service></td><td><label><input type="checkbox" data-actif ${e.actif ? 'checked' : ''}> Active</label></td></tr>
-        <tr><td>Aide-mémoire</td><td colspan="3"><textarea data-commentaire rows="2" cols="60" placeholder="Compétences, contraintes, binômes à éviter, au moins un chauffeur…">${echapper(e.commentaire ?? '')}</textarea></td></tr>
+        <tr><td>${texteHtml('commun.code')}</td><td><input data-code size="10" value="${echapper(e.code)}"></td><td>${texteHtml('commun.libelle')}</td><td><input data-libelle size="32" value="${echapper(e.libelle)}"></td></tr>
+        <tr><td>${texteHtml('planning_btp.bulle.service')}</td><td colspan="2" data-service></td><td><label><input type="checkbox" data-actif ${e.actif ? 'checked' : ''}> ${texteHtml('planning_btp.equipes.active')}</label></td></tr>
+        <tr><td>${texteHtml('planning_btp.equipes.aide_memoire')}</td><td colspan="3"><textarea data-commentaire rows="2" cols="60" placeholder="${texteHtml('planning_btp.equipes.aide_memoire_aide')}">${echapper(e.commentaire ?? '')}</textarea></td></tr>
       </tbody></table>
       ${erreurs.some((x) => x.periode === null) ? `<p class="erreur">${erreurs.filter((x) => x.periode === null).map((x) => echapper(MESSAGES_EQUIPES[x.code])).join(' · ')}</p>` : ''}
-      <div class="titre-actions"><h2>Compositions</h2><span class="titre-actions-boutons">
-        <input type="date" data-date-periode value="${date}" title="Début de la nouvelle composition"><button type="button" data-nouvelle-periode title="Nouvelle composition à partir de cette date (reprend les membres de la composition en cours à cette date)">＋ Composition</button></span></div>
-      <p class="aide">Chaque composition commence à sa date et vaut jusqu'au début de la suivante. Une équipe en renfort compte avec ses propres membres au planning et au pointage.</p>
+      <div class="titre-actions"><h2>${texteHtml('planning_btp.equipes.compositions')}</h2><span class="titre-actions-boutons">
+        <input type="date" data-date-periode value="${date}" title="${texteHtml('planning_btp.equipes.debut_composition')}"><button type="button" data-nouvelle-periode title="${texteHtml('planning_btp.equipes.nouvelle_composition_titre')}">${iconeHtml('ajouter')} ${texteHtml('planning_btp.equipes.composition')}</button></span></div>
+      <p class="aide">${texteHtml('planning_btp.equipes.aide')}</p>
       <div class="periodes-equipe">${affichees.map((p) => {
         const i = this.periodes.indexOf(p);
         const au = finDe(p);
         return `<div class="periode-equipe${enCours(p) ? ' courante' : ''}" data-i="${i}">
-        <div class="pe-entete"><span>Depuis le <input type="date" data-du value="${p.du ?? ''}"> <span class="aide">${au ? `jusqu'au ${jour(au)}` : 'sans fin'}</span></span>
-          ${enCours(p) ? '<span class="badge-onglet pe-badge">en cours</span>' : ''}<span class="pe-resume aide">${p.membres.length} membre${p.membres.length > 1 ? 's' : ''}</span>
-          <button type="button" class="bouton-icone" data-suppr-periode title="Supprimer la composition (la précédente continue jusqu'à la suivante)" aria-label="Supprimer la composition">✕</button></div>
+        <div class="pe-entete"><span>${texteHtml('planning_btp.equipes.depuis')} <input type="date" data-du value="${p.du ?? ''}"> <span class="aide">${au ? texteHtml('planning_btp.equipes.jusqu_au', { date: jour(au) }) : texteHtml('planning_btp.equipes.sans_fin')}</span></span>
+          ${enCours(p) ? `<span class="badge-onglet pe-badge">${texteHtml('planning_btp.equipes.en_cours')}</span>` : ''}<span class="pe-resume aide">${echapper(pluriel('planning_btp.equipes.membres', p.membres.length))}</span>
+          <button type="button" class="bouton-icone" data-suppr-periode title="${texteHtml('planning_btp.equipes.suppr_composition_titre')}" aria-label="${texteHtml('planning_btp.equipes.suppr_composition')}">${iconeHtml('retirer')}</button></div>
         ${erreursDe(p).length ? `<p class="erreur">${erreursDe(p).map(echapper).join(' · ')}</p>` : ''}
-        <textarea data-commentaire-periode rows="1" placeholder="Aide-mémoire de la composition (ex. : A ne porte pas de charge, B et C pas ensemble)">${echapper(p.commentaire ?? '')}</textarea>
-        <ul class="liste-ressources-tache">${p.membres.map((m, k) => `<li class="ligne-ressource" data-k="${k}"><span class="lr-libelle">${ICONES[m.type] ?? '•'} ${echapper(this.libelles.get(cle(m)) ?? cle(m))}
-            <small class="aide">${echapper(TYPES_MEMBRE[m.type] ?? m.type)}</small>${m.chef ? ' <b class="chef-equipe" title="Chef de l\'équipe : contact des communications">★ chef</b>' : ''}</span>
-          <span class="lr-actions">${TYPES_CHEF.includes(m.type) ? `<button type="button" class="bouton-icone" data-chef title="${m.chef ? 'Ne plus être chef' : 'Désigner chef de l\'équipe'}" aria-label="Chef">${m.chef ? '☆' : '★'}</button>` : ''}
-            <button type="button" class="bouton-icone" data-retirer title="Retirer de la composition" aria-label="Retirer">✕</button></span></li>`).join('') || '<li class="aide">Aucun membre (équipe arrêtée sur cette période)</li>'}</ul>
-        <div class="ajout-ressource"><span data-ajout></span><button type="button" class="bouton-icone" data-choisir title="Choisir dans la liste des ressources (disponibilités sur la composition)" aria-label="Choisir">☰</button></div></div>`;
-      }).join('') || '<p class="aide">Aucune composition : ＋ Composition pour composer l\'équipe.</p>'}</div>
-      ${this.plusAnciennes ? `<p><button type="button" data-historique title="Compositions plus anciennes">⏬ ${LOT} compositions précédentes</button></p>` : ''}`;
+        <textarea data-commentaire-periode rows="1" placeholder="${texteHtml('planning_btp.equipes.aide_memoire_composition')}">${echapper(p.commentaire ?? '')}</textarea>
+        <ul class="liste-ressources-tache">${p.membres.map((m, k) => `<li class="ligne-ressource" data-k="${k}"><span class="lr-libelle">${iconeHtml(ICONES[m.type] ?? 'planning_btp_puce')} ${echapper(this.libelles.get(cle(m)) ?? cle(m))}
+            <small class="aide">${echapper(TYPES_MEMBRE[m.type] ?? m.type)}</small>${m.chef ? ` <b class="chef-equipe" title="${texteHtml('planning_btp.equipes.chef_titre')}">${iconeHtml('planning_btp_chef')} ${texteHtml('planning_btp.equipes.chef_court')}</b>` : ''}</span>
+          <span class="lr-actions">${TYPES_CHEF.includes(m.type) ? `<button type="button" class="bouton-icone" data-chef title="${m.chef ? texteHtml('planning_btp.equipes.plus_chef') : texteHtml('planning_btp.equipes.designer_chef')}" aria-label="${texteHtml('planning_btp.equipes.chef')}">${iconeHtml(m.chef ? 'planning_btp_non_chef' : 'planning_btp_chef')}</button>` : ''}
+            <button type="button" class="bouton-icone" data-retirer title="${texteHtml('planning_btp.equipes.retirer_titre')}" aria-label="${texteHtml('commun.retirer')}">${iconeHtml('retirer')}</button></span></li>`).join('') || `<li class="aide">${texteHtml('planning_btp.equipes.aucun_membre')}</li>`}</ul>
+        <div class="ajout-ressource"><span data-ajout></span><button type="button" class="bouton-icone" data-choisir title="${texteHtml('planning_btp.equipes.choisir_titre')}" aria-label="${texteHtml('planning_btp.equipes.choisir_court')}">${iconeHtml('planning_btp_options')}</button></div></div>`;
+      }).join('') || `<p class="aide">${texteHtml('planning_btp.equipes.aucune_composition', { ajouter: icone('ajouter') })}</p>`}</div>
+      ${this.plusAnciennes ? `<p><button type="button" data-historique title="${texteHtml('planning_btp.equipes.plus_anciennes')}">${iconeHtml('planning_btp_historique')} ${texteHtml('planning_btp.equipes.precedentes', { nombre: LOT })}</button></p>` : ''}`;
     this.#brancher(zone);
   }
 
@@ -242,12 +244,12 @@ export class PageEquipes extends PageBase {
     const z = this.conteneur.querySelector('[data-entete-equipe]');
     if (!z) return;
     const e = this.equipe;
-    z.innerHTML = `<h2>${e.id ? `${echapper(e.code)} — ${echapper(e.libelle)}` : 'Nouvelle équipe'}</h2>
+    z.innerHTML = `<h2>${e.id ? `${echapper(e.code)} — ${echapper(e.libelle)}` : texteHtml('planning_btp.equipes.nouvelle')}</h2>
       <span class="titre-actions-boutons">${this.mode !== 'modification'
-        ? '<span class="badge-mode" title="Le premier changement passe en modification (verrou)">👁 Consultation</span>'
-        : `<span class="badge-mode modification" title="Verrou détenu : personne d'autre ne modifie l'équipe">✎ Modification${this.modifie ? ' ●' : ''}</span>
-          <button type="button" data-enregistrer title="Enregistrer l'équipe et ses compositions, libérer le verrou">💾 Enregistrer</button>
-          <button type="button" data-abandonner title="Abandonner les modifications et revenir en consultation">Abandonner</button>`}</span>`;
+        ? `<span class="badge-mode" title="${texteHtml('planning_btp.equipes.consultation_titre')}">${iconeHtml('planning_btp_consultation')} ${texteHtml('planning_btp.barre.consultation')}</span>`
+        : `<span class="badge-mode modification" title="${texteHtml('planning_btp.equipes.modification_titre')}">${iconeHtml('planning_btp_tache')} ${texteHtml('planning_btp.equipes.modification')}${this.modifie ? ` ${iconeHtml('planning_btp_coche')}` : ''}</span>
+          <button type="button" data-enregistrer title="${texteHtml('planning_btp.equipes.enregistrer_titre')}">${iconeHtml('enregistrer')} ${texteHtml('commun.enregistrer')}</button>
+          <button type="button" data-abandonner title="${texteHtml('planning_btp.equipes.abandonner_titre')}">${texteHtml('planning_btp.equipes.abandonner')}</button>`}</span>`;
     z.querySelector('[data-enregistrer]')?.addEventListener('click', () => this.#enregistrer());
     z.querySelector('[data-abandonner]')?.addEventListener('click', () => this.#abandonner());
   }
@@ -260,7 +262,7 @@ export class PageEquipes extends PageBase {
     zone.addEventListener('input', (ev) => {
       if (this.mode !== 'modification' && !ev.target.classList.contains('combo')) this.#entrer();
     });
-    const service = creerCombo({ options: (this.ref.services ?? []).map((s) => ({ valeur: s.id, libelle: s.parent_id ? `↳ ${s.libelle}` : s.libelle })), valeur: e.srv_id ?? '', vide: true, titre: 'Service de l\'équipe' });
+    const service = creerCombo({ options: (this.ref.services ?? []).map((s) => ({ valeur: s.id, libelle: s.parent_id ? `${icone('sous_niveau')} ${s.libelle}` : s.libelle })), valeur: e.srv_id ?? '', vide: true, titre: texte('planning_btp.equipes.service') });
     v('[data-service]').append(service);
     service.addEventListener('change', () => this.#modifier(() => { e.srv_id = service.valeurCombo === '' ? null : Number(service.valeurCombo); }));
     const champ = (sel, f) => v(sel).addEventListener('change', (ev) => this.#modifier(() => f(ev.target)));
@@ -272,7 +274,7 @@ export class PageEquipes extends PageBase {
     v('[data-nouvelle-periode]').addEventListener('click', () => this.#nouvellePeriode(v('[data-date-periode]').value));
     // Membres proposés : ressources et autres équipes (jamais l'équipe elle-même).
     const options = [
-      ...this.equipes.filter((x) => x.id !== e.id).map((x) => ({ valeur: `EQUIPE:${x.id}`, libelle: `${x.code} ${x.libelle}`, detail: 'Équipe', groupe: 'Équipes' })),
+      ...this.equipes.filter((x) => x.id !== e.id).map((x) => ({ valeur: `EQUIPE:${x.id}`, libelle: `${x.code} ${x.libelle}`, detail: TYPES_MEMBRE.EQUIPE, groupe: texte('planning_btp.alertes.types.EQUIPE') })),
       ...this.ressources.map((r) => ({ valeur: `${r.type}:${r.id}`, libelle: r.libelle, detail: r.service ?? TYPES_MEMBRE[r.type], groupe: TYPES_MEMBRE[r.type] ?? r.type })),
     ];
     zone.querySelectorAll('.periode-equipe').forEach((div) => {
@@ -284,7 +286,7 @@ export class PageEquipes extends PageBase {
       }));
       div.querySelector('[data-commentaire-periode]').addEventListener('change', (ev) => this.#modifier(() => { p.commentaire = ev.target.value; }));
       div.querySelector('[data-suppr-periode]').addEventListener('click', async () => {
-        if (p.membres.length && !await confirmer(`Supprimer la composition du ${jour(p.du)} (${p.membres.length} membre(s)) ? La précédente continue jusqu'à la suivante.`)) return;
+        if (p.membres.length && !await confirmer(texte('planning_btp.equipes.confirmer_suppression', { date: jour(p.du), membres: pluriel('planning_btp.equipes.membres', p.membres.length) }))) return;
         this.#modifier(() => this.periodes.splice(this.periodes.indexOf(p), 1));
       });
       div.querySelectorAll('li[data-k]').forEach((li) => {
@@ -297,14 +299,14 @@ export class PageEquipes extends PageBase {
         }));
       });
       // Une ressource à la fois (combo), ou la liste de sélection / désélection avec les disponibilités.
-      const ajout = creerCombo({ options, valeur: '', vide: true, titre: 'Ajouter un membre : ressource ou équipe en renfort' });
-      ajout.placeholder = 'Ajouter un membre…';
+      const ajout = creerCombo({ options, valeur: '', vide: true, titre: texte('planning_btp.equipes.ajouter_titre') });
+      ajout.placeholder = texte('planning_btp.equipes.ajouter');
       div.querySelector('[data-ajout]').append(ajout);
       ajout.addEventListener('change', () => {
         const val = ajout.valeurCombo;
         ajout.definirValeur('');
         if (!val) return;
-        if (p.membres.some((x) => cle(x) === val)) { this.app.message('Déjà membre de la composition', 'avertissement'); return; }
+        if (p.membres.some((x) => cle(x) === val)) { this.app.message(texte('planning_btp.equipes.deja_membre'), 'avertissement'); return; }
         const k = val.indexOf(':');
         this.#modifier(() => p.membres.push({ type: val.slice(0, k), id: val.slice(k + 1), chef: false }));
       });
@@ -337,8 +339,8 @@ export class PageEquipes extends PageBase {
    */
   #nouvellePeriode(date) {
     if (!date) return;
-    if (this.periodes.some((p) => p.du === date)) { this.app.message('Une composition commence déjà à cette date', 'avertissement'); return; }
-    if (this.depuis && date < this.depuis) { this.app.message(`${MESSAGES_EQUIPES.EQU_ORDRE} : charger les compositions précédentes`, 'avertissement'); return; }
+    if (this.periodes.some((p) => p.du === date)) { this.app.message(texte('planning_btp.equipes.date_prise'), 'avertissement'); return; }
+    if (this.depuis && date < this.depuis) { this.app.message(texte('planning_btp.equipes.charger_precedentes', { message: MESSAGES_EQUIPES.EQU_ORDRE }), 'avertissement'); return; }
     const avant = finsPeriodes(this.periodes).filter((p) => p.du < date).at(-1);
     const source = avant ? this.periodes.find((p) => p.du === avant.du) : null;
     this.#modifier(() => this.periodes.push({ du: date, commentaire: '', membres: (source?.membres ?? []).map((m) => ({ ...m })) }));
@@ -369,7 +371,7 @@ export class PageEquipes extends PageBase {
     this.#arreter();
     this.mode = 'consultation';
     this.modifie = false;
-    this.app.message('Équipe enregistrée', 'succes');
+    this.app.message(texte('planning_btp.equipes.enregistree'), 'succes');
     await this.#chargerListe();
     await this.#charger(r.id);
     this.app.routeur.remplacerUrl(this.urlCourante());

@@ -1,3 +1,4 @@
+import { texte, texteHtml, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, formatNombre, formatDate } from '@logibtp/socle/ui';
 import { formatImport } from '../import/formats.js';
@@ -10,18 +11,17 @@ import { derniereVersionGed } from '../documents/tracabilite.js';
  * un brouillon non enregistré, que l'utilisateur contrôle avant de le créer.
  */
 export class PageImportOptim extends PageBase {
-  icone = '📥';
+  icone = icone('import_btp_import');
 
   get format() { return formatImport('OptimBTP'); }
 
   async ouvrir() {
-    this.titre = 'Import d\'un devis OptimBTP';
+    this.titre = texte('import_btp.routes.optim');
     this.conteneur.innerHTML = `<div class="page-simple page-import">
-      <h1 class="page-titre">📥 Import d'un devis OptimBTP</h1>
-      <p class="aide">Fichier <code>.optim</code> exporté d'OptimBTP (archive contenant le devis en XML). Le devis importé s'ouvre dans une
-        nouvelle fenêtre pour être vérifié avant sa création ; le fichier est ensuite conservé dans les pièces du devis.</p>
+      <h1 class="page-titre">${iconeHtml('import_btp_import')} ${texteHtml('import_btp.routes.optim')}</h1>
+      <p class="aide">${texteHtml('import_btp.page.aide_html')}</p>
       <label class="import-depot"><input type="file" accept="${this.format.extensions}" hidden>
-        <span>Déposez le fichier ici ou <u>choisissez-le</u></span></label>
+        <span>${texteHtml('import_btp.page.depot_html')}</span></label>
       <div class="import-apercu"></div>
     </div>`;
     const depot = this.conteneur.querySelector('.import-depot');
@@ -46,12 +46,12 @@ export class PageImportOptim extends PageBase {
     const ged = (await this.app.services()).ged;
     const doc = await ged.document(id);
     const v = await derniereVersionGed(ged, id);
-    if (!v) throw new Error('Fichier source introuvable dans la GED');
+    if (!v) throw new Error(texte('import_btp.page.source_introuvable'));
     await this.lire(await ged.contenu(v.id), v.nom_fichier ?? doc.titre);
   }
 
   async lire(fichier, nom) {
-    this.apercu.innerHTML = '<p class="aide">Lecture du fichier…</p>';
+    this.apercu.innerHTML = `<p class="aide">${texteHtml('import_btp.page.lecture')}</p>`;
     try {
       this.devis = await this.format.lire(await fichier.arrayBuffer());
       this.fichier = fichier;
@@ -59,27 +59,27 @@ export class PageImportOptim extends PageBase {
       this.afficherApercu();
     } catch (e) {
       this.devis = null;
-      this.apercu.innerHTML = `<p class="erreur">Fichier illisible : ${echapper(e.message)}</p>`;
+      this.apercu.innerHTML = `<p class="erreur">${texteHtml('import_btp.page.illisible', { message: e.message })}</p>`;
     }
   }
 
   afficherApercu() {
     const d = this.devis;
     const compte = (t) => d.lignes.filter((l) => l.type === t).length;
-    const intervenants = d.intervenants.map((i) => `${echapper(i.nom ?? i.interlocuteur ?? '')} (${i.roles.join(', ').toLowerCase() || 'sans rôle'})`).join(' ; ');
+    const intervenants = d.intervenants.map((i) => `${echapper(i.nom ?? i.interlocuteur ?? '')} (${echapper(i.roles.join(', ').toLowerCase()) || texteHtml('import_btp.page.sans_role')})`).join(' ; ');
     this.apercu.innerHTML = `
       <section class="import-resume">
-        <h2>${echapper(d.entete.objet ?? 'Devis sans objet')}</h2>
+        <h2>${echapper(d.entete.objet ?? texte('import_btp.page.sans_objet'))}</h2>
         <dl>
-          <dt>Fichier</dt><dd>${echapper(this.nomFichier)} — référence ${echapper(d.entete.reference ?? '?')}${d.entete.date ? `, du ${formatDate(d.entete.date)}` : ''}</dd>
-          <dt>Lignes</dt><dd>${compte('TITRE')} titre(s), ${compte('OUVRAGE')} ouvrage(s), ${compte('ELEMENT')} élément(s), ${compte('TEXTE')} texte(s)</dd>
-          <dt>Total d'origine</dt><dd>${formatNombre(d.entete.controle.total_ht, 2)} € HT — ${formatNombre(d.entete.controle.total_ttc, 2)} € TTC</dd>
-          <dt>Rédacteur</dt><dd>${echapper(d.entete.redacteur ?? '—')}</dd>
-          <dt>Intervenants</dt><dd>${intervenants || '<i>aucun</i>'}</dd>
-          <dt>Non repris</dt><dd>${d.non_repris.length} champ(s) — détail dans le devis importé, en mode débogage</dd>
+          <dt>${texteHtml('import_btp.page.fichier')}</dt><dd>${texteHtml('import_btp.page.fichier_valeur', { fichier: this.nomFichier, reference: d.entete.reference ?? '?' })}${d.entete.date ? `${texteHtml('import_btp.page.du', { date: formatDate(d.entete.date) })}` : ''}</dd>
+          <dt>${texteHtml('import_btp.page.lignes')}</dt><dd>${texteHtml('import_btp.page.lignes_valeur', { titres: compte('TITRE'), ouvrages: compte('OUVRAGE'), elements: compte('ELEMENT'), textes: compte('TEXTE') })}</dd>
+          <dt>${texteHtml('import_btp.page.total')}</dt><dd>${texteHtml('import_btp.page.total_valeur', { ht: formatNombre(d.entete.controle.total_ht, 2), ttc: formatNombre(d.entete.controle.total_ttc, 2) })}</dd>
+          <dt>${texteHtml('import_btp.page.redacteur')}</dt><dd>${echapper(d.entete.redacteur ?? '—')}</dd>
+          <dt>${texteHtml('import_btp.page.intervenants')}</dt><dd>${intervenants || `<i>${texteHtml('import_btp.page.aucun')}</i>`}</dd>
+          <dt>${texteHtml('import_btp.page.non_repris')}</dt><dd>${texteHtml('import_btp.page.non_repris_valeur', { nombre: d.non_repris.length })}</dd>
         </dl>
-        ${d.avertissements.length ? `<ul class="import-avertissements">${d.avertissements.map((a) => `<li>⚠ ${echapper(a)}</li>`).join('')}</ul>` : ''}
-        <div class="boutons"><button type="button" class="principal" data-action="verifier" title="Ouvre le devis importé dans une nouvelle fenêtre, sans l'enregistrer">🔍 Vérifier le devis importé</button></div>
+        ${d.avertissements.length ? `<ul class="import-avertissements">${d.avertissements.map((a) => `<li>${iconeHtml('avertissement')} ${echapper(a)}</li>`).join('')}</ul>` : ''}
+        <div class="boutons"><button type="button" class="principal" data-action="verifier" title="${texteHtml('import_btp.page.verifier_aide')}">${iconeHtml('import_btp_verifier')} ${texteHtml('import_btp.page.verifier')}</button></div>
       </section>`;
     this.apercu.querySelector('[data-action="verifier"]').addEventListener('click', () => this.verifier().catch((x) => this.app.erreur(x)));
   }

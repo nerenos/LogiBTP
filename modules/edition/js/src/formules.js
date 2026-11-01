@@ -3,6 +3,7 @@
 // Valeurs : décimal (Dec, jamais Number), chaîne, booléen, null, liste (collection), objet, texte riche
 // ({ riche: [{ texte, style }] }, produit par Gras, Taille, Style…) ou valeur spéciale (Retrait).
 // Analyseur sans eval ; noms de fonctions sans accents ni casse ; arguments séparés par « ; » (virgule décimale).
+import { texte } from '@logibtp/socle/dictionnaire';
 import { Dec, D, formatNombre, sansAccent } from '@logibtp/socle';
 import { montantEnLettres, entierEnLettres } from './lettres.js';
 
@@ -32,7 +33,7 @@ function lexer(src) {
       const fermant = c === '"' ? '"' : '»';
       let j = i + 1; let v = '';
       for (;;) {
-        if (j >= s.length) throw new ErreurFormule('SYNTAXE', 'Chaîne non terminée');
+        if (j >= s.length) throw new ErreurFormule('SYNTAXE', texte('edition.formules.chaine'));
         if (s[j] === fermant) {
           if (fermant === '"' && s[j + 1] === '"') { v += '"'; j += 2; continue; }
           break;
@@ -54,14 +55,14 @@ function lexer(src) {
     if (c === '{' && s[i + 1] === '{') {
       // {{chemin}} dans une expression : référence.
       const f = s.indexOf('}}', i + 2);
-      if (f < 0) throw new ErreurFormule('SYNTAXE', 'Référence {{…}} non fermée');
+      if (f < 0) throw new ErreurFormule('SYNTAXE', texte('edition.formules.reference'));
       res.push({ t: 'ref', v: s.slice(i + 2, f).trim() });
       i = f + 2;
       continue;
     }
     const m = /^[A-Za-z_$@À-ÿ][A-Za-z0-9_$@À-ÿ]*/.exec(s.slice(i));
     if (m) { res.push({ t: 'id', v: m[0] }); i += m[0].length; continue; }
-    throw new ErreurFormule('SYNTAXE', `Caractère inattendu « ${c} »`);
+    throw new ErreurFormule('SYNTAXE', texte('edition.formules.caractere', { caractere: c }));
   }
   return res;
 }
@@ -76,7 +77,7 @@ function analyser(src) {
   const voir = () => j[p];
   const estOp = (v) => voir()?.t === 'op' && voir().v === v;
   const estMot = (v) => voir()?.t === 'id' && normaliser(voir().v) === v;
-  const attendre = (v) => { if (!estOp(v)) throw new ErreurFormule('SYNTAXE', `« ${v} » attendu`); p++; };
+  const attendre = (v) => { if (!estOp(v)) throw new ErreurFormule('SYNTAXE', texte('edition.formules.attendu', { attendu: v })); p++; };
 
   const ou = () => { let g = et(); while (estMot('ou')) { p++; g = { k: 'ou', g, d: et() }; } return g; };
   const et = () => { let g = non(); while (estMot('et')) { p++; g = { k: 'et', g, d: non() }; } return g; };
@@ -101,7 +102,7 @@ function analyser(src) {
   const unaire = () => { if (estOp('-')) { p++; return { k: 'neg', e: unaire() }; } if (estOp('+')) { p++; return unaire(); } return prim(); };
   const prim = () => {
     const t = voir();
-    if (!t) throw new ErreurFormule('SYNTAXE', 'Expression incomplète');
+    if (!t) throw new ErreurFormule('SYNTAXE', texte('edition.formules.incomplete'));
     if (t.t === 'nombre') { p++; return { k: 'val', v: new Dec(t.v) }; }
     if (t.t === 'chaine') { p++; return { k: 'val', v: t.v }; }
     if (t.t === 'ref') { p++; return { k: 'ref', chemin: t.v }; }
@@ -131,10 +132,10 @@ function analyser(src) {
       }
       return { k: 'ref', chemin };
     }
-    throw new ErreurFormule('SYNTAXE', `« ${t.v} » inattendu`);
+    throw new ErreurFormule('SYNTAXE', texte('edition.formules.inattendu', { jeton: t.v }));
   };
   const arbre = ou();
-  if (p < j.length) throw new ErreurFormule('SYNTAXE', `« ${voir().v} » inattendu`);
+  if (p < j.length) throw new ErreurFormule('SYNTAXE', texte('edition.formules.inattendu', { jeton: voir().v }));
   return arbre;
 }
 
@@ -220,7 +221,7 @@ const versDec = (v, nom = 'valeur') => {
   if (typeof v === 'boolean') return new Dec(v ? 1 : 0);
   const s = String(v).replace(/[\s  ]/g, '').replace(',', '.');
   if (/^-?\d+(\.\d+)?$/.test(s)) return new Dec(s);
-  throw new ErreurFormule('TYPE', `${nom} : nombre attendu (« ${enTexte(v)} »)`);
+  throw new ErreurFormule('TYPE', texte('edition.formules.nombre_attendu', { nom, valeur: enTexte(v) }));
 };
 
 const versBool = (v) => {
@@ -362,17 +363,17 @@ function evaluerArbre(n, ctx) {
       if (n.op === '+') return g.plus(d);
       if (n.op === '-') return g.minus(d);
       if (n.op === '*') return g.times(d);
-      if (d.isZero()) throw new ErreurFormule('DIVISION_ZERO', 'Division par zéro');
+      if (d.isZero()) throw new ErreurFormule('DIVISION_ZERO', texte('edition.formules.division_zero'));
       return g.div(d);
     }
     case 'appel': {
       const f = ctx.fonctions?.[n.nom] ?? FONCTIONS[n.nom];
-      if (!f) throw new ErreurFormule('FONCTION_INCONNUE', `Fonction inconnue : ${n.brut}`);
-      if (n.args.length < f.min || n.args.length > f.max) throw new ErreurFormule('ARGUMENTS', `${n.brut} : ${f.min === f.max ? f.min : `${f.min} à ${f.max}`} argument(s) attendu(s)`);
+      if (!f) throw new ErreurFormule('FONCTION_INCONNUE', texte('edition.formules.fonction_inconnue', { nom: n.brut }));
+      if (n.args.length < f.min || n.args.length > f.max) throw new ErreurFormule('ARGUMENTS', f.min === f.max ? texte('edition.formules.arguments', { nom: n.brut, nombre: f.min }) : texte('edition.formules.arguments_entre', { nom: n.brut, min: f.min, max: f.max }));
       if (f.paresseux) return f.appliquer(n.args, ctx, ev);
       return f.appliquer(n.args.map(ev), ctx);
     }
-    default: throw new ErreurFormule('SYNTAXE', 'Expression invalide');
+    default: throw new ErreurFormule('SYNTAXE', texte('edition.formules.invalide'));
   }
 }
 
@@ -391,7 +392,7 @@ function compiler(source) {
       if (d < 0) { parties.push({ texte: s.slice(i) }); break; }
       if (d > i) parties.push({ texte: s.slice(i, d) });
       const f = s.indexOf('}}', d + 2);
-      if (f < 0) throw new ErreurFormule('SYNTAXE', 'Référence {{…}} non fermée');
+      if (f < 0) throw new ErreurFormule('SYNTAXE', texte('edition.formules.reference'));
       parties.push({ arbre: analyser(s.slice(d + 2, f)) });
       i = f + 2;
     }

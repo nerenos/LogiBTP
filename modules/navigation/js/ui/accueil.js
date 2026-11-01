@@ -1,6 +1,7 @@
 import { echapper, confirmer } from '@logibtp/socle/ui';
 import { deplacer } from '../src/preferences.js';
 import { TYPES_WIDGET } from './widgets.js';
+import { texte, texteHtml, pluriel, langue } from '@logibtp/socle/dictionnaire';
 
 // Accueil (classe mère) : bandeau « Restaurer ma session précédente », raccourcis personnalisables (ajout, retrait,
 // ordre par glisser), tableau de bord de widgets (ajout, retrait, ordre, taille). Choix gardés dans le navigateur.
@@ -14,7 +15,7 @@ import { TYPES_WIDGET } from './widgets.js';
 
 const TAILLES = ['petit', 'moyen', 'large'];
 const LIBELLES_TAILLE = { petit: '¼', moyen: '½', large: '1' };
-const dateHeure = (t) => new Date(t).toLocaleString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+const dateHeure = (t) => new Date(t).toLocaleString(langue(), { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
 
 export class AccueilBase {
   constructor(conteneur, { catalogueRaccourcis = [], catalogueWidgets = [], preferences, session = null, naviguer, message = () => {}, entete = '', types = TYPES_WIDGET } = {}) {
@@ -34,14 +35,14 @@ export class AccueilBase {
       <header class="accueil-entete">
         <div class="accueil-salutation">${entete}</div>
         <div class="accueil-outils">
-          <button type="button" data-action="actualiser" title="Actualiser les widgets">⟳</button>
-          <button type="button" data-action="personnaliser" title="Ajouter, retirer, réordonner les raccourcis et les widgets">✎ Personnaliser</button>
+          <button type="button" data-action="actualiser" title="${texteHtml('navigation.accueil.actualiser_titre')}">⟳</button>
+          <button type="button" data-action="personnaliser" title="${texteHtml('navigation.accueil.personnaliser_titre')}">✎ ${texteHtml('navigation.accueil.personnaliser')}</button>
         </div>
       </header>
-      <section class="accueil-bloc"><h2>Raccourcis</h2><div class="accueil-tuiles"></div></section>
-      <section class="accueil-bloc"><h2>Tableau de bord</h2><div class="accueil-grille"></div></section>
-      <div class="accueil-edition-pied" hidden><button type="button" data-action="reinitialiser">Rétablir l'accueil par défaut</button>
-        <button type="button" class="principal" data-action="terminer">Terminer la personnalisation</button></div>`;
+      <section class="accueil-bloc"><h2>${texteHtml('navigation.accueil.raccourcis')}</h2><div class="accueil-tuiles"></div></section>
+      <section class="accueil-bloc"><h2>${texteHtml('navigation.accueil.tableau_de_bord')}</h2><div class="accueil-grille"></div></section>
+      <div class="accueil-edition-pied" hidden><button type="button" data-action="reinitialiser">${texteHtml('navigation.accueil.reinitialiser')}</button>
+        <button type="button" class="principal" data-action="terminer">${texteHtml('navigation.accueil.terminer')}</button></div>`;
     this.racine.addEventListener('click', (e) => this.#clic(e));
     this.racine.addEventListener('auxclick', (e) => {
       const t = e.target.closest('.accueil-tuile[data-url]');
@@ -64,17 +65,18 @@ export class AccueilBase {
     if (!s && !bloquees?.length) { zone.hidden = true; return; }
     zone.hidden = false;
     if (bloquees?.length) {
-      zone.innerHTML = `<div><b>Le navigateur a bloqué l'ouverture de ${bloquees.length} fenêtre(s).</b>
-        <span class="aide">Autorisez les fenêtres pop-up pour ce site, ou ouvrez-les une à une :</span></div>
+      zone.innerHTML = `<div><b>${echapper(pluriel('navigation.session.bloquees', bloquees.length))}</b>
+        <span class="aide">${texteHtml('navigation.session.bloquees_aide')}</span></div>
         <div class="accueil-bloquees">${bloquees.map((f, i) => `<button type="button" data-action="ouvrir-bloquee" data-index="${i}">${echapper(f.icone ?? '')} ${echapper(f.titre || f.url)}</button>`).join('')}</div>`;
       this.bloquees = bloquees;
       return;
     }
     const n = s.fenetres.length;
-    zone.innerHTML = `<div><b>${s.interrompue ? 'Session interrompue' : 'Session précédente'}</b> du ${dateHeure(s.fermeeLe)} : ${n} fenêtre${n > 1 ? 's' : ''}
+    zone.innerHTML = `<div><b>${texteHtml(s.interrompue ? 'navigation.session.interrompue' : 'navigation.session.precedente')}</b>
+        ${echapper(pluriel('navigation.session.du', n, { date: dateHeure(s.fermeeLe) }))}
         <span class="aide">(${s.fenetres.map((f) => echapper(f.titre || f.url)).join(' · ')})</span></div>
-      <div><button type="button" class="principal" data-action="restaurer">↺ Restaurer ma session précédente</button>
-        <button type="button" data-action="oublier" title="Ne plus proposer cette session">Ignorer</button></div>`;
+      <div><button type="button" class="principal" data-action="restaurer">↺ ${texteHtml('navigation.session.restaurer')}</button>
+        <button type="button" data-action="oublier" title="${texteHtml('navigation.session.oublier_titre')}">${texteHtml('commun.ignorer')}</button></div>`;
   }
 
   #restaurer() {
@@ -84,7 +86,7 @@ export class AccueilBase {
     this.urlCourante = urlCourante;
     this.rendreSession(bloquees);
     if (!bloquees.length) {
-      this.message('Session restaurée');
+      this.message(texte('navigation.session.restauree'));
       if (urlCourante && urlCourante !== '/') this.naviguer(urlCourante, { nouvelleFenetre: false });
     }
   }
@@ -98,13 +100,13 @@ export class AccueilBase {
     const zone = this.racine.querySelector('.accueil-tuiles');
     zone.innerHTML = codes.map((c, i) => {
       const r = this.#raccourci(c);
-      return `<a class="accueil-tuile" href="${echapper(r.url)}" data-url="${echapper(r.url)}" data-index="${i}" draggable="${this.edition}" title="${echapper(r.groupe ? `${r.groupe} › ${r.libelle}` : r.libelle)} (Ctrl+clic : nouvelle fenêtre)">
+      return `<a class="accueil-tuile" href="${echapper(r.url)}" data-url="${echapper(r.url)}" data-index="${i}" draggable="${this.edition}" title="${texteHtml('navigation.accueil.tuile_titre', { libelle: r.groupe ? `${r.groupe} › ${r.libelle}` : r.libelle })}">
         <span class="icone">${echapper(r.icone ?? '🔗')}</span><span class="libelle">${echapper(r.libelle)}</span>
-        ${this.edition ? `<button type="button" class="accueil-retirer" data-action="retirer-raccourci" data-index="${i}" title="Retirer">✕</button>` : ''}</a>`;
+        ${this.edition ? `<button type="button" class="accueil-retirer" data-action="retirer-raccourci" data-index="${i}" title="${texteHtml('commun.retirer')}">✕</button>` : ''}</a>`;
     }).join('') + (this.edition ? `<div class="accueil-tuile accueil-ajout">
-        <span class="icone">＋</span><select data-action="ajouter-raccourci" aria-label="Ajouter un raccourci"><option value="">Ajouter un raccourci…</option>
-        ${this.#optionsGroupees(this.catalogueRaccourcis.filter((r) => !codes.includes(r.code)), (r) => r.groupe ?? 'Autres', (r) => `${r.icone ?? ''} ${r.libelle}`)}</select></div>` : '')
-      || '<p class="aide">Aucun raccourci : ✎ Personnaliser pour en ajouter.</p>';
+        <span class="icone">＋</span><select data-action="ajouter-raccourci" aria-label="${texteHtml('navigation.accueil.ajouter_raccourci')}"><option value="">${texteHtml('navigation.accueil.ajouter_raccourci_choix')}</option>
+        ${this.#optionsGroupees(this.catalogueRaccourcis.filter((r) => !codes.includes(r.code)), (r) => r.groupe ?? texte('navigation.accueil.autres'), (r) => `${r.icone ?? ''} ${r.libelle}`)}</select></div>` : '')
+      || `<p class="aide">${texteHtml('navigation.accueil.aucun_raccourci')}</p>`;
     zone.querySelector('select')?.addEventListener('change', (e) => {
       if (!e.target.value) return;
       this.preferences.set('raccourcis', [...this.preferences.get('raccourcis'), e.target.value]);
@@ -162,12 +164,12 @@ export class AccueilBase {
       carte.draggable = this.edition;
       carte.innerHTML = `<header><h3>${def.url ? `<a href="${echapper(def.url)}" data-url="${echapper(def.url)}">` : ''}${echapper(`${def.icone ?? ''} ${def.titre}`.trim())}${def.url ? '</a>' : ''}</h3>
         <span class="widget-outils">${this.edition
-          ? `<button type="button" data-action="taille" data-index="${i}" title="Taille : ${taille}">${LIBELLES_TAILLE[taille]}</button><button type="button" data-action="retirer-widget" data-index="${i}" title="Retirer">✕</button>`
-          : `<button type="button" data-action="actualiser-widget" data-index="${i}" title="Actualiser">⟳</button>`}</span></header>
+          ? `<button type="button" data-action="taille" data-index="${i}" title="${texteHtml('navigation.accueil.taille', { taille: texte(`navigation.accueil.taille_${taille}`) })}">${LIBELLES_TAILLE[taille]}</button><button type="button" data-action="retirer-widget" data-index="${i}" title="${texteHtml('commun.retirer')}">✕</button>`
+          : `<button type="button" data-action="actualiser-widget" data-index="${i}" title="${texteHtml('commun.actualiser')}">⟳</button>`}</span></header>
         <div class="widget-corps"></div>`;
       grille.append(carte);
       const Classe = this.types[def.type];
-      if (!Classe) { carte.querySelector('.widget-corps').textContent = `Type de widget inconnu : ${def.type}`; return; }
+      if (!Classe) { carte.querySelector('.widget-corps').textContent = texte('navigation.accueil.widget_inconnu', { type: def.type }); return; }
       const widget = new Classe({ definition: def, corps: carte.querySelector('.widget-corps'), naviguer: this.naviguer });
       this.widgets[i] = widget;
       widget.actualiser();
@@ -177,11 +179,11 @@ export class AccueilBase {
       const ajout = document.createElement('article');
       ajout.className = 'widget widget-petit accueil-ajout-widget';
       const disponibles = this.catalogueWidgets.filter((d) => !choisis.some((w) => w.code === d.code));
-      ajout.innerHTML = `<header><h3>＋ Ajouter un widget</h3></header><div class="widget-corps">${disponibles.length
+      ajout.innerHTML = `<header><h3>＋ ${texteHtml('navigation.accueil.ajouter_widget')}</h3></header><div class="widget-corps">${disponibles.length
         ? `<ul class="accueil-catalogue">${disponibles.map((d) => `<li><button type="button" data-action="ajouter-widget" data-code="${echapper(d.code)}"><b>${echapper(`${d.icone ?? ''} ${d.titre}`)}</b><small>${echapper(d.description ?? '')}</small></button></li>`).join('')}</ul>`
-        : '<p class="aide">Tous les widgets sont affichés.</p>'}</div>`;
+        : `<p class="aide">${texteHtml('navigation.accueil.tous_widgets')}</p>`}</div>`;
       grille.append(ajout);
-    } else if (!choisis.length) grille.innerHTML = '<p class="aide">Aucun widget : ✎ Personnaliser pour en ajouter.</p>';
+    } else if (!choisis.length) grille.innerHTML = `<p class="aide">${texteHtml('navigation.accueil.aucun_widget')}</p>`;
   }
 
   actualiser() { for (const w of this.widgets) w?.actualiser(); }
@@ -206,7 +208,7 @@ export class AccueilBase {
               this.session.oublier();
               if (this.urlCourante && this.urlCourante !== '/') this.naviguer(this.urlCourante, { nouvelleFenetre: false });
             }
-          } else this.message('Fenêtre bloquée par le navigateur : autorisez les pop-up pour ce site', 'avertissement');
+          } else this.message(texte('navigation.fenetres.bloquee'), 'avertissement');
           break;
         }
         case 'personnaliser': this.#basculerEdition(!this.edition); break;
@@ -214,7 +216,7 @@ export class AccueilBase {
         case 'actualiser': this.actualiser(); break;
         case 'actualiser-widget': this.widgets[i]?.actualiser(); break;
         case 'reinitialiser':
-          if (await confirmer("Rétablir les raccourcis et les widgets par défaut ?")) {
+          if (await confirmer(texte('navigation.accueil.reinitialiser_question'))) {
             this.preferences.reinitialiser('raccourcis');
             this.preferences.reinitialiser('widgets');
             this.rendreRaccourcis();

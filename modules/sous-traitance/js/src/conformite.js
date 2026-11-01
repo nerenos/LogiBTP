@@ -8,18 +8,15 @@
 //   cond_public (true | false | null), cond_garantie (code | null), cond_montant_min (nombre | null), ordre } ;
 // piece : { categorie, portee, dge_id, depose_le, valide_au } ; ajustement : { code, mode (AJOUTEE | DISPENSEE), motif } ;
 // contexte : { public, garantie, montant_ht } ; dates 'AAAA-MM-JJ'.
+import { texte, textesParCode, icone } from '@logibtp/socle/dictionnaire';
 import { ajouterMois, ajouterJours } from '@logibtp/socle';
 
-export const ETATS_PIECE = {
-  FOURNIE: { libelle: 'Fournie', icone: '✅' },
-  A_ECHEANCE: { libelle: 'À échéance', icone: '⏳' },
-  EXPIREE: { libelle: 'Expirée', icone: '⛔' },
-  MANQUANTE: { libelle: 'Manquante', icone: '❌' },
-  ABSENTE: { libelle: 'Non fournie (facultative)', icone: '▫' },
-  DISPENSEE: { libelle: 'Dispensée', icone: '➖' },
-};
-export const ACTIONS_BLOQUEES = { COMMANDE: 'Validation de la commande', FACTURE: 'Validation de la facture', PAIEMENT: 'Bon à payer, paiement' };
-export const PORTEES_PIECE = { TIERS: 'Sous-traitant (toutes ses affaires)', MARCHE: 'Marché' };
+export const ETATS_PIECE = Object.freeze(Object.fromEntries(['FOURNIE', 'A_ECHEANCE', 'EXPIREE', 'MANQUANTE', 'ABSENTE', 'DISPENSEE'].map((c) => [c, Object.freeze({
+  get libelle() { return texte(`sous_traitance.pieces.etats.${c}`); },
+  get icone() { return icone(`sous_traitance_piece_${c.toLowerCase()}`); },
+})])));
+export const ACTIONS_BLOQUEES = textesParCode('sous_traitance.pieces.actions', ['COMMANDE', 'FACTURE', 'PAIEMENT']);
+export const PORTEES_PIECE = textesParCode('sous_traitance.pieces.portees', ['TIERS', 'MARCHE']);
 
 export { ajouterMois };
 

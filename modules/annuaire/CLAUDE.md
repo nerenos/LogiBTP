@@ -77,6 +77,12 @@
 - Salariés : chaque salarié est lié à un individu (`salarie.sal_ind_id`) rattaché à notre société ; synchronisation dans le cœur (`SalariesAnnuaire.cs`, `synchroniserSalarie`).
 - Démo : modifier `client/src/app/annuaire/donnees.js` puis `npm run generer-vues-liste --workspace client` (régénère `db/141`).
 
+## Textes, icônes et couleurs (module Personnalisation, lot P3g)
+- Textes `annuaire.*` de `js/personnalisation/fr.json` (zones `natures`, `reseaux`, `coordonnees`, `identifiants`, `fournisseur`, `partage`, `liens`, `provisoire`, `fusion`, `selection`, `rattachements`, `referentiels`, `graphe`) ; icônes `annuaire_*` de `images/icones.json` et communes du socle ; couleurs des relations du graphe `--annuaire-relation-<code>` de `theme.css`.
+- `NATURES` (libellés, usages par `pairesParCode`), `RESEAUX`, `MESSAGES_COORDONNEES`, `MESSAGES_IDENTIFIANTS` : même forme qu'avant ; utilitaires de texte locaux : `nettoye`.
+- Gardés : civilités (valeurs enregistrées), mots ignorés des doublons ; libellé « + N contacts » et icônes des nœuds identiques au jeu `03_graphe.json` (serveur littéral).
+- Tests : `js/test/preparation.js` compose socle + module (clé manquante = échec) ; clés du code vérifiées par `client/test/personnalisation.test.js`.
+
 ## Tests
 - `npm test --workspace modules/annuaire/js` (vitest : jeux partagés, fournisseur mémoire, disposition du graphe).
 - `dotnet test modules/annuaire/dotnet/LogiBTP.Annuaire.Tests` (ou `dotnet test LogiBTP.slnx`).

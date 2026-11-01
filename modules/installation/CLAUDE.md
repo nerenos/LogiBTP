@@ -100,6 +100,8 @@ Windows : `Installer-LogiBTP.ps1 -Domaine D [-Confiance CIDR] [-Administrateur p
 `Restaurer-LogiBTP.ps1 -Sauvegarde <jeu> [-AvecConfiguration] [-Confirmer]`.
 Variables : `LOGIBTP_CONFIG` (/app/config), `LOGIBTP_CONFIG_BASE` (/app/base-config), `LOGIBTP_SQL` (/app/sql),
 `LOGIBTP_CERTIFICATS` (/app/certificats), `LOGIBTP_PORT_HTTPS_PUBLIC` (port public de la redirection, 443).
+Personnalisation de l'installation (module Personnalisation : `fr.json` partiel, `theme.css`, `images/`) : dossier
+`personnalisation/` du volume de configuration (`/app/config/personnalisation`), ou `LOGIBTP_PERSONNALISATION` ; relue sans redémarrage.
 
 ## Tests
 `dotnet test modules/installation/dotnet/LogiBTP.Installation.Tests` (manifeste ↔ dépôt, ordre, pg_hba, postgresql.conf,

@@ -1,3 +1,4 @@
+import { texteHtml, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { echapper } from '@logibtp/socle/ui';
 import { genreApercu, formatTaille } from '../src/fichiers.js';
 
@@ -20,11 +21,11 @@ export function htmlMail(mail) {
   const date = mail.date ? new Date(mail.date).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' }) : '';
   return `<div class="ged-mail">
     <dl>
-      <dt>Objet</dt><dd><strong>${echapper(mail.objet ?? '')}</strong></dd>
-      <dt>${mail.sens === 'envoye' ? 'Envoyé par' : 'De'}</dt><dd>${echapper(mail.de ?? '')}</dd>
-      <dt>À</dt><dd>${echapper(mail.a ?? '')}</dd>
-      ${mail.cc ? `<dt>Cc</dt><dd>${echapper(mail.cc)}</dd>` : ''}
-      <dt>Date</dt><dd>${echapper(date)}</dd>
+      <dt>${texteHtml('ged.apercu.objet')}</dt><dd><strong>${echapper(mail.objet ?? '')}</strong></dd>
+      <dt>${mail.sens === 'envoye' ? texteHtml('ged.apercu.envoye_par') : texteHtml('ged.apercu.de')}</dt><dd>${echapper(mail.de ?? '')}</dd>
+      <dt>${texteHtml('ged.apercu.a')}</dt><dd>${echapper(mail.a ?? '')}</dd>
+      ${mail.cc ? `<dt>${texteHtml('ged.apercu.cc')}</dt><dd>${echapper(mail.cc)}</dd>` : ''}
+      <dt>${texteHtml('ged.apercu.date')}</dt><dd>${echapper(date)}</dd>
     </dl>
     <pre class="ged-mail-message">${echapper(mail.message ?? '')}</pre>
   </div>`;
@@ -36,16 +37,16 @@ export function htmlMail(mail) {
  */
 export async function rendreApercu(zone, { fournisseur, doc, version, tailleMax, urlTelechargement }) {
   liberer(zone);
-  if (!version) { zone.innerHTML = '<p class="aide">Aucun contenu.</p>'; return; }
+  if (!version) { zone.innerHTML = `<p class="aide">${texteHtml('ged.apercu.aucun_contenu')}</p>`; return; }
   const genre = doc.nature === 'mail' ? 'mail' : genreApercu(version.nom_fichier, version.type_mime);
-  const lien = urlTelechargement ? `<a class="bouton" href="${echapper(urlTelechargement)}" download="${echapper(version.nom_fichier)}">⬇ Télécharger ${echapper(version.nom_fichier)}</a>` : '';
+  const lien = urlTelechargement ? `<a class="bouton" href="${echapper(urlTelechargement)}" download="${echapper(version.nom_fichier)}">${iconeHtml('ged_telecharger')} ${texteHtml('ged.apercu.telecharger', { fichier: version.nom_fichier })}</a>` : '';
   if (genre === 'mail') { zone.innerHTML = htmlMail(doc.mail); return; }
   if (!genre || (tailleMax && version.taille > tailleMax)) {
-    zone.innerHTML = `<div class="ged-sans-apercu"><span class="ged-icone-grande">📄</span>
-      <p>${genre ? `Fichier trop lourd pour l'aperçu (${formatTaille(version.taille)})` : 'Pas d\'aperçu pour ce format'}</p>${lien}</div>`;
+    zone.innerHTML = `<div class="ged-sans-apercu"><span class="ged-icone-grande">${iconeHtml('ged_fichier')}</span>
+      <p>${genre ? texteHtml('ged.apercu.trop_lourd', { taille: formatTaille(version.taille) }) : texteHtml('ged.apercu.sans_apercu')}</p>${lien}</div>`;
     return;
   }
-  zone.innerHTML = '<p class="aide ged-chargement">Chargement de l\'aperçu…</p>';
+  zone.innerHTML = `<p class="aide ged-chargement">${texteHtml('ged.apercu.chargement')}</p>`;
   const blob = await fournisseur.contenu(version.id);
   if (genre === 'texte') {
     const texte = await blob.slice(0, TEXTE_MAX).text();

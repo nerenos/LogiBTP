@@ -1,4 +1,5 @@
 import { echapper } from '@logibtp/socle/ui';
+import { texte, texteHtml } from '@logibtp/socle/dictionnaire';
 
 // Bandeau fixé en haut de chaque page : logo (accueil) à gauche, menus déroulants à la manière des anciens programmes
 // Windows (clic ou Alt + lettre soulignée, survol pour passer d'un menu à l'autre, flèches, Entrée, Échap), sous-menus
@@ -41,19 +42,19 @@ export class Bandeau {
     this.lignes = new Map();
     this.racine.classList.add('bandeau');
     this.racine.innerHTML = `
-      <a class="bandeau-logo" href="${echapper(accueil)}" title="${echapper(titreApplication)} : accueil (Alt+Origine)">${logo || `<span class="bandeau-logo-texte">${echapper(titreApplication)}</span>`}</a>
-      ${retour ? '<button type="button" class="bandeau-retour" title="Revenir à la page précédente" aria-label="Revenir à la page précédente">◀</button>' : ''}
+      <a class="bandeau-logo" href="${echapper(accueil)}" title="${texteHtml('navigation.bandeau.accueil', { application: titreApplication })}">${logo || `<span class="bandeau-logo-texte">${echapper(titreApplication)}</span>`}</a>
+      ${retour ? `<button type="button" class="bandeau-retour" title="${texteHtml('navigation.bandeau.retour')}" aria-label="${texteHtml('navigation.bandeau.retour')}">◀</button>` : ''}
       <span class="bandeau-outils">
-        <button type="button" data-masquage-auto aria-pressed="false" title="Masquer automatiquement le menu quand la souris le quitte">📌</button>
-        <button type="button" data-masquer title="Masquer le menu" aria-label="Masquer le menu">⇥</button>
+        <button type="button" data-masquage-auto aria-pressed="false" title="${texteHtml('navigation.bandeau.masquage_auto')}">📌</button>
+        <button type="button" data-masquer title="${texteHtml('navigation.bandeau.masquer')}" aria-label="${texteHtml('navigation.bandeau.masquer')}">⇥</button>
       </span>
-      <nav class="bandeau-menus" role="menubar" aria-label="Menu principal"></nav>
+      <nav class="bandeau-menus" role="menubar" aria-label="${texteHtml('navigation.bandeau.menu_principal')}"></nav>
       <span class="bandeau-message" role="status"></span>
       <span class="bandeau-infos"></span>
       <div class="bandeau-deroulant" role="menu" hidden></div>
       <div class="bandeau-deroulant bandeau-sous-menu" role="menu" hidden></div>
-      <div class="bandeau-poignee" title="Largeur du menu (double-clic : largeur par défaut)"></div>
-      <button type="button" class="bandeau-languette" title="Afficher le menu" aria-label="Afficher le menu">☰</button>`;
+      <div class="bandeau-poignee" title="${texteHtml('navigation.bandeau.largeur')}"></div>
+      <button type="button" class="bandeau-languette" title="${texteHtml('navigation.bandeau.afficher')}" aria-label="${texteHtml('navigation.bandeau.afficher')}">☰</button>`;
     this.barre = this.racine.querySelector('.bandeau-menus');
     this.deroulant = this.racine.querySelector('.bandeau-deroulant');
     this.sous = this.racine.querySelector('.bandeau-sous-menu');
@@ -123,7 +124,7 @@ export class Bandeau {
     r.style.setProperty('--largeur-menu', `${d.largeur}px`);
     const auto = r.querySelector('[data-masquage-auto]');
     auto.setAttribute('aria-pressed', String(Boolean(d.masquageAuto)));
-    auto.title = d.masquageAuto ? 'Garder le menu affiché' : 'Masquer automatiquement le menu quand la souris le quitte';
+    auto.title = texte(d.masquageAuto ? 'navigation.bandeau.garder' : 'navigation.bandeau.masquage_auto');
     const masquer = r.querySelector('[data-masquer]');
     masquer.hidden = Boolean(d.masquageAuto);
     masquer.textContent = this.aGauche ? '⇤' : '⇥';
@@ -244,10 +245,10 @@ export class Bandeau {
         <span class="bandeau-icone">${echapper(x.icone ?? '')}</span>
         <span class="bandeau-libelle">${echapper(x.libelle)}${x.info ? `<small>${echapper(x.info)}</small>` : ''}</span>
         <span class="bandeau-raccourci">${echapper(x.raccourci ?? '')}</span>
-        ${x.creation && !x.desactive ? `<button type="button" class="bandeau-fenetre bandeau-creation" data-creation title="${echapper(x.creation.titre ?? 'Créer')} (Ctrl : nouvelle fenêtre)">＋</button>` : '<span></span>'}
-        ${fenetre ? '<button type="button" class="bandeau-fenetre" data-fenetre title="Ouvrir dans une nouvelle fenêtre (Ctrl+clic)">⧉</button>' : x.sousMenu ? '<span class="bandeau-fleche">▸</span>' : '<span></span>'}
+        ${x.creation && !x.desactive ? `<button type="button" class="bandeau-fenetre bandeau-creation" data-creation title="${texteHtml('navigation.bandeau.creation', { titre: x.creation.titre ?? texte('commun.creer') })}">＋</button>` : '<span></span>'}
+        ${fenetre ? `<button type="button" class="bandeau-fenetre" data-fenetre title="${texteHtml('navigation.bandeau.nouvelle_fenetre')}">⧉</button>` : x.sousMenu ? '<span class="bandeau-fleche">▸</span>' : '<span></span>'}
       </div>`;
-    }).join('') || '<div class="bandeau-vide">(vide)</div>';
+    }).join('') || `<div class="bandeau-vide">${texteHtml('navigation.bandeau.vide')}</div>`;
   }
 
   ouvrir(code) {
@@ -353,10 +354,10 @@ export class Bandeau {
         <span class="bandeau-coche">${x.coche ? '✓' : ''}</span>
         <span class="bandeau-icone">${echapper(x.icone ?? '')}</span>
         <span class="bandeau-libelle">${echapper(x.libelle)}${x.info ? `<small>${echapper(x.info)}</small>` : ''}</span>
-        ${x.creation && !x.desactive ? `<button type="button" class="bandeau-fenetre bandeau-creation" data-creation tabindex="-1" title="${echapper(x.creation.titre ?? 'Créer')} (Ctrl : nouvelle fenêtre)">＋</button>` : '<span></span>'}
-        ${fenetre ? '<button type="button" class="bandeau-fenetre" data-fenetre tabindex="-1" title="Ouvrir dans une nouvelle fenêtre (Ctrl+clic)">⧉</button>' : x.sousMenu ? `<span class="bandeau-fleche">${ouvert ? '▾' : '▸'}</span>` : '<span></span>'}
+        ${x.creation && !x.desactive ? `<button type="button" class="bandeau-fenetre bandeau-creation" data-creation tabindex="-1" title="${texteHtml('navigation.bandeau.creation', { titre: x.creation.titre ?? texte('commun.creer') })}">＋</button>` : '<span></span>'}
+        ${fenetre ? `<button type="button" class="bandeau-fenetre" data-fenetre tabindex="-1" title="${texteHtml('navigation.bandeau.nouvelle_fenetre')}">⧉</button>` : x.sousMenu ? `<span class="bandeau-fleche">${ouvert ? '▾' : '▸'}</span>` : '<span></span>'}
       </div>${ouvert ? `<div role="group">${this.#htmlVertical(liste(x.sousMenu), chemin, profondeur + 1)}</div>` : ''}`;
-    }).join('') || `<div class="bandeau-vide" style="--profondeur: ${profondeur}">(vide)</div>`;
+    }).join('') || `<div class="bandeau-vide" style="--profondeur: ${profondeur}">${texteHtml('navigation.bandeau.vide')}</div>`;
   }
 
   /**

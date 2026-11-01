@@ -1,10 +1,9 @@
+import { texte, texteHtml, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { echapper, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
 
-/** Gravités des notifications, de la plus forte à la plus faible. */
-export const GRAVITES = Object.freeze({
-  erreur: { icone: '⛔', libelle: 'Erreurs' },
-  avertissement: { icone: '⚠', libelle: 'Avertissements' },
-});
+/** Gravités des notifications, de la plus forte à la plus faible (icône HTML et libellé lus dans le dictionnaire). */
+const gravite = (cle, nom) => Object.freeze({ get icone() { return iconeHtml(nom); }, get libelle() { return texte(`document.notifications.${cle}`); } });
+export const GRAVITES = Object.freeze({ erreur: gravite('erreurs', 'erreur'), avertissement: gravite('avertissements', 'avertissement') });
 const ORDRE_GRAVITE = Object.keys(GRAVITES);
 
 /**
@@ -26,7 +25,7 @@ export class NotificationsDocument {
     this.libelles = libelles;
     this.aller = aller ?? ((m) => editeur.allerA(m.lig_id));
     this.surCompte = surCompte;
-    this.sources = [{ cle: 'calcul', libelle: 'Calcul', messages: () => this.messagesCalcul() }, ...sources];
+    this.sources = [{ cle: 'calcul', get libelle() { return texte('document.notifications.calcul'); }, messages: () => this.messagesCalcul() }, ...sources];
     this.courant = null;
     const p = lirePreferences().notificationsDocument ?? {};
     this.masques = { gravites: new Set(p.gravites ?? []), sources: new Set(p.sources ?? []), codes: new Set(p.codes ?? []) };
@@ -117,19 +116,19 @@ export class NotificationsDocument {
     this.liste = liste;
     this.racine.innerHTML = `
       <div class="filtres-notifications">
-        ${ORDRE_GRAVITE.map((g) => bouton('gravites', g, GRAVITES[g].icone, `${GRAVITES[g].libelle} : afficher ou masquer`, compte((m) => m.gravite === g))).join('')}
-        ${this.sources.length > 1 ? `<span class="sep"></span>${this.sources.map((s) => bouton('sources', s.cle, echapper(s.libelle), `Source ${s.libelle} : afficher ou masquer`, compte((m) => m.source === s.cle))).join('')}` : ''}
-        ${codesPresents.length ? `<span class="sep"></span>${codesPresents.map((c) => bouton('codes', c, echapper(this.libelles[c] ?? c), `${c} : afficher ou masquer`, compte((m) => m.code === c))).join('')}` : ''}
-        ${gravites.size || sources.size || codes.size ? '<button type="button" class="tout-afficher" data-tout-afficher title="Retirer les filtres">✕ Tout afficher</button>' : ''}
+        ${ORDRE_GRAVITE.map((g) => bouton('gravites', g, GRAVITES[g].icone, texte('document.notifications.basculer', { nom: GRAVITES[g].libelle }), compte((m) => m.gravite === g))).join('')}
+        ${this.sources.length > 1 ? `<span class="sep"></span>${this.sources.map((s) => bouton('sources', s.cle, echapper(s.libelle), texte('document.notifications.basculer_source', { nom: s.libelle }), compte((m) => m.source === s.cle))).join('')}` : ''}
+        ${codesPresents.length ? `<span class="sep"></span>${codesPresents.map((c) => bouton('codes', c, echapper(this.libelles[c] ?? c), texte('document.notifications.basculer', { nom: c }), compte((m) => m.code === c))).join('')}` : ''}
+        ${gravites.size || sources.size || codes.size ? `<button type="button" class="tout-afficher" data-tout-afficher title="${texteHtml('document.notifications.retirer_filtres')}">${iconeHtml('retirer')} ${texteHtml('document.notifications.tout_afficher')}</button>` : ''}
       </div>
       ${liste.length ? `<ul>${liste.map((m, i) => `<li><button type="button" class="${m.gravite}${cle(m) === this.courant ? ' courante' : ''}" data-message="${i}"
-          title="${m.lig_id === null || m.lig_id === undefined ? 'Document' : 'Aller à la ligne'} (F8 : suivante, Maj+F8 : précédente)">
-          <span class="icone">${GRAVITES[m.gravite]?.icone ?? '•'}</span>
-          <span class="ligne">${echapper(m.lig_id === null || m.lig_id === undefined ? 'Document' : (this.editeur.titreLigne?.(m.lig_id) ?? String(m.lig_id)).trim())}</span>
+          title="${texteHtml(m.lig_id === null || m.lig_id === undefined ? 'document.notifications.aide_document' : 'document.notifications.aide_ligne')}">
+          <span class="icone">${GRAVITES[m.gravite]?.icone ?? iconeHtml('document_puce')}</span>
+          <span class="ligne">${echapper(m.lig_id === null || m.lig_id === undefined ? texte('document.notifications.document') : (this.editeur.titreLigne?.(m.lig_id) ?? String(m.lig_id)).trim())}</span>
           <span class="message">${echapper(m.message)}</span>
           <code>${echapper(m.code)}</code>
         </button></li>`).join('')}</ul>`
-        : `<p class="aide">${tous.length ? 'Aucune notification avec ces filtres.' : 'Aucune erreur ni avertissement dans le document.'}</p>`}`;
+        : `<p class="aide">${texteHtml(tous.length ? 'document.notifications.aucune_filtre' : 'document.notifications.aucune')}</p>`}`;
   }
 
   #clic(e) {

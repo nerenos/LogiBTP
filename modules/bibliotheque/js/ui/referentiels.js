@@ -1,3 +1,4 @@
+import { texte, texteHtml, pluriel, icone, iconeHtml, pairesParCode, textesParCode } from '@logibtp/socle/dictionnaire';
 import { aujourdhui } from '@logibtp/socle';
 import { echapper, confirmer, formatDate } from '@logibtp/socle/ui';
 import { SCENARIOS_PA, TYPES_NATURE, coefficientsEffectifs } from '../src/calcul.js';
@@ -8,8 +9,8 @@ import { SCENARIOS_PA, TYPES_NATURE, coefficientsEffectifs } from '../src/calcul
 // (globaux ou par nature, historique), scénarios de prix d'achat. Les comptes d'une nature sont tenus par l'application
 // (ventilation du module Comptabilité).
 
-const ONGLETS = [['bibliotheques', 'Bibliothèques'], ['familles', 'Familles'], ['natures', 'Natures'], ['regroupements', 'Regroupements'],
-  ['coefficients', 'Coefficients'], ['prix', 'Prix d\'achat']];
+const ONGLETS = pairesParCode('bibliotheque.referentiels.onglets', ['bibliotheques', 'familles', 'natures', 'regroupements', 'coefficients', 'prix']);
+const TYPES_COURTS = textesParCode('bibliotheque.referentiels.types_courts', TYPES_NATURE.map(([c]) => c));
 const date = (d) => (d ? String(d).slice(0, 10).split('-').reverse().join('/') : '');
 const coef = (v) => (v === null || v === undefined || v === '' ? '—' : String(v).replace('.', ','));
 
@@ -22,8 +23,8 @@ export class GestionReferentiels {
     this.onglet = 'bibliotheques';
     this.bibId = null;
     this.racine.classList.add('bib-referentiels');
-    this.racine.innerHTML = `<nav class="bib-onglets">${ONGLETS.map(([c, t]) => `<button type="button" data-onglet="${c}">${t}</button>`).join('')}</nav>
-      ${admin ? '' : '<p class="aide">Consultation : le paramétrage est réservé à un administrateur.</p>'}<div class="bib-zone"></div>`;
+    this.racine.innerHTML = `<nav class="bib-onglets">${ONGLETS.map(([c, t]) => `<button type="button" data-onglet="${c}">${echapper(t)}</button>`).join('')}</nav>
+      ${admin ? '' : `<p class="aide">${texteHtml('bibliotheque.referentiels.consultation')}</p>`}<div class="bib-zone"></div>`;
     this.racine.querySelector('.bib-onglets').addEventListener('click', (e) => {
       const b = e.target.closest('[data-onglet]');
       if (b) { this.onglet = b.dataset.onglet; this.rendre().catch((x) => this.#erreur(x)); }
@@ -58,7 +59,7 @@ export class GestionReferentiels {
     };
     zone.innerHTML = `<table class="bib-table tableau-compact largeur-contenu"><thead><tr>${colonnes.map((c) => `<th>${echapper(c.libelle)}</th>`).join('')}<th></th></tr></thead><tbody>
       ${[...lignes, ...(ro ? [] : [{ ...vide, _nouveau: true }])].map((l, i) => `<tr data-i="${i}" class="${l._nouveau ? 'ajout' : ''}">${colonnes.map((c) => `<td>${c.lecture ? echapper(c.lecture(l)) : champ(c, l[c.code])}</td>`).join('')}
-        <td class="bib-actions">${ro ? '' : `<button type="button" data-action="enregistrer" title="Enregistrer">${l._nouveau ? '＋ Ajouter' : '✓'}</button>${l._nouveau || !supprimer ? '' : '<button type="button" data-action="supprimer" title="Supprimer">🗑</button>'}`}</td></tr>`).join('')}
+        <td class="bib-actions">${ro ? '' : `<button type="button" data-action="enregistrer" title="${texteHtml('commun.enregistrer')}">${l._nouveau ? `${iconeHtml('ajouter')} ${texteHtml('commun.ajouter')}` : iconeHtml('bibliotheque_enregistrer')}</button>${l._nouveau || !supprimer ? '' : `<button type="button" data-action="supprimer" title="${texteHtml('commun.supprimer')}">${iconeHtml('supprimer')}</button>`}`}</td></tr>`).join('')}
       </tbody></table>`;
     const toutes = [...lignes, { ...vide, _nouveau: true }];
     zone.querySelector('tbody').addEventListener('click', async (e) => {
@@ -75,10 +76,10 @@ export class GestionReferentiels {
       delete v._nouveau;
       try {
         if (b.dataset.action === 'supprimer') {
-          if (!await confirmer(`Supprimer « ${l[cle] ?? ''} » ?`)) return;
+          if (!await confirmer(texte('bibliotheque.referentiels.supprimer_confirmer', { libelle: l[cle] ?? '' }))) return;
           await supprimer(l);
         } else await enregistrer(v);
-        this.message(b.dataset.action === 'supprimer' ? 'Supprimé' : 'Enregistré', 'succes');
+        this.message(b.dataset.action === 'supprimer' ? texte('bibliotheque.referentiels.supprime') : texte('bibliotheque.referentiels.enregistre'), 'succes');
         await this.rendre();
       } catch (x) { this.#erreur(x); }
     });
@@ -86,11 +87,11 @@ export class GestionReferentiels {
 
   async #bibliotheques(zone) {
     const bibs = await this.fournisseur.bibliotheques();
-    zone.innerHTML = '<p class="aide">Le code sert de préfixe d\'appel hors de la bibliothèque (BIB:CODE). La bibliothèque par défaut est proposée à la création des éléments.</p><div></div>';
+    zone.innerHTML = `<p class="aide">${texteHtml('bibliotheque.referentiels.aide_bibliotheques')}</p><div></div>`;
     this.#tableau(zone.lastElementChild, {
       cle: 'code', lignes: bibs, vide: { id: 0, actif: true, defaut: false, ordre: 0 },
-      colonnes: [{ code: 'code', libelle: 'Code', largeur: '7rem' }, { code: 'libelle', libelle: 'Libellé', largeur: '18rem' }, { code: 'defaut', libelle: 'Par défaut', type: 'case' },
-        { code: 'actif', libelle: 'Active', type: 'case' }, { code: 'ordre', libelle: 'Ordre', nombre: true, largeur: '4rem' }],
+      colonnes: [{ code: 'code', libelle: texte('commun.code'), largeur: '7rem' }, { code: 'libelle', libelle: texte('commun.libelle'), largeur: '18rem' }, { code: 'defaut', libelle: texte('bibliotheque.referentiels.colonnes.defaut'), type: 'case' },
+        { code: 'actif', libelle: texte('bibliotheque.referentiels.colonnes.active'), type: 'case' }, { code: 'ordre', libelle: texte('bibliotheque.referentiels.colonnes.ordre'), nombre: true, largeur: '4rem' }],
       enregistrer: (v) => this.fournisseur.enregistrerBibliotheque(v), supprimer: (l) => this.fournisseur.supprimerBibliotheque(l.id),
     });
   }
@@ -109,28 +110,28 @@ export class GestionReferentiels {
       const sous = enfants(f.id);
       const ouvert = this.famillesOuvertes.has(f.id) || descendants(f.id).includes(this.familleChoisie);
       return `<li><div class="bib-famille ${f.id === this.familleChoisie ? 'choisie' : ''}" data-famille="${f.id}">
-        <span class="bib-ouvrir" data-ouvrir="${f.id}">${sous.length ? (ouvert ? '▾' : '▸') : ''}</span>
+        <span class="bib-ouvrir" data-ouvrir="${f.id}">${sous.length ? iconeHtml(ouvert ? 'bibliotheque_ouvert' : 'bibliotheque_ferme') : ''}</span>
         <span class="bib-famille-libelle">${echapper(f.libelle)}</span><small>${echapper(f.code)}</small></div>
         ${sous.length && ouvert ? `<ul>${sous.map(noeud).join('')}</ul>` : ''}</li>`;
     };
     const exclus = choisie ? new Set([choisie.id, ...descendants(choisie.id)]) : new Set();
-    zone.innerHTML = `<label class="bib-ligne">Bibliothèque <select data-bib>${bibs.map((b) => `<option value="${b.id}" ${b.id === this.bibId ? 'selected' : ''}>${echapper(`${b.code} – ${b.libelle}`)}</option>`).join('')}</select></label>
+    zone.innerHTML = `<label class="bib-ligne">${texteHtml('bibliotheque.referentiels.familles.bibliotheque')} <select data-bib>${bibs.map((b) => `<option value="${b.id}" ${b.id === this.bibId ? 'selected' : ''}>${echapper(`${b.code} – ${b.libelle}`)}</option>`).join('')}</select></label>
       <div class="bib-familles">
         <div class="bib-familles-arbre">
-          ${this.admin ? `<div class="bib-familles-outils"><button type="button" class="principal" data-ajouter>＋ ${choisie ? `Sous-famille de « ${echapper(choisie.libelle)} »` : 'Famille racine'}</button>
-            ${choisie ? '<button type="button" data-deselectionner title="Pour ajouter une famille racine">Désélectionner</button>' : ''}</div>` : ''}
-          <ul class="bib-arbre-familles">${enfants(null).map(noeud).join('') || '<li class="aide">Aucune famille : ＋ pour en créer une.</li>'}</ul>
+          ${this.admin ? `<div class="bib-familles-outils"><button type="button" class="principal" data-ajouter>${iconeHtml('ajouter')} ${choisie ? texteHtml('bibliotheque.referentiels.familles.sous_famille', { libelle: choisie.libelle }) : texteHtml('bibliotheque.referentiels.familles.racine')}</button>
+            ${choisie ? `<button type="button" data-deselectionner title="${texteHtml('bibliotheque.referentiels.familles.deselectionner_aide')}">${texteHtml('bibliotheque.referentiels.familles.deselectionner')}</button>` : ''}</div>` : ''}
+          <ul class="bib-arbre-familles">${enfants(null).map(noeud).join('') || `<li class="aide">${texteHtml('bibliotheque.referentiels.familles.aucune', { icone: icone('ajouter') })}</li>`}</ul>
         </div>
         <div class="bib-familles-edition">${choisie ? `
           <h3>${echapper(choisie.chemin)}</h3>
           <div class="bib-formulaire">
-            <label>Code <input data-f="code" value="${echapper(choisie.code)}" ${this.admin ? '' : 'readonly'}></label>
-            <label>Libellé <input data-f="libelle" value="${echapper(choisie.libelle)}" ${this.admin ? '' : 'readonly'}></label>
-            <label>Ordre <input data-f="ordre" type="number" value="${choisie.ordre ?? 0}" ${this.admin ? '' : 'readonly'}></label>
-            <label>Famille parente <select data-f="parent_id" ${this.admin ? '' : 'disabled'}><option value="">(racine)</option>
+            <label>${texteHtml('commun.code')} <input data-f="code" value="${echapper(choisie.code)}" ${this.admin ? '' : 'readonly'}></label>
+            <label>${texteHtml('commun.libelle')} <input data-f="libelle" value="${echapper(choisie.libelle)}" ${this.admin ? '' : 'readonly'}></label>
+            <label>${texteHtml('bibliotheque.referentiels.colonnes.ordre')} <input data-f="ordre" type="number" value="${choisie.ordre ?? 0}" ${this.admin ? '' : 'readonly'}></label>
+            <label>${texteHtml('bibliotheque.referentiels.familles.parente')} <select data-f="parent_id" ${this.admin ? '' : 'disabled'}><option value="">${texteHtml('bibliotheque.referentiels.familles.racine_option')}</option>
               ${familles.filter((f) => !exclus.has(f.id)).map((f) => `<option value="${f.id}" ${f.id === choisie.parent_id ? 'selected' : ''}>${echapper(f.chemin)}</option>`).join('')}</select></label>
-            ${this.admin ? '<p><button type="button" class="principal" data-enregistrer>Enregistrer</button> <button type="button" class="danger" data-supprimer>Supprimer</button></p>' : ''}
-          </div>` : '<p class="aide">Sélectionnez une famille pour la modifier, ou ＋ pour créer une famille racine (ajoutée en fin de liste). Avec une famille sélectionnée, ＋ crée une sous-famille.</p>'}
+            ${this.admin ? `<p><button type="button" class="principal" data-enregistrer>${texteHtml('commun.enregistrer')}</button> <button type="button" class="danger" data-supprimer>${texteHtml('commun.supprimer')}</button></p>` : ''}
+          </div>` : `<p class="aide">${texteHtml('bibliotheque.referentiels.familles.aide', { icone: icone('ajouter') })}</p>`}
         </div>
       </div>`;
     zone.querySelector('[data-bib]').addEventListener('change', (e) => { this.bibId = Number(e.target.value); this.familleChoisie = null; this.rendre().catch((x) => this.#erreur(x)); });
@@ -152,30 +153,30 @@ export class GestionReferentiels {
       let n = 1;
       while (familles.some((f) => f.code === `NOUV${n}`)) n++;
       try {
-        const liste = await this.fournisseur.enregistrerFamille({ bib_id: this.bibId, parent_id: parent, code: `NOUV${n}`, libelle: 'Nouvelle famille',
+        const liste = await this.fournisseur.enregistrerFamille({ bib_id: this.bibId, parent_id: parent, code: `NOUV${n}`, libelle: texte('bibliotheque.referentiels.familles.nouvelle'),
           ordre: Math.max(0, ...enfants(parent).map((f) => f.ordre ?? 0)) + 1 });
         const creee = liste.find((f) => f.code === `NOUV${n}`);
         if (parent) this.famillesOuvertes.add(parent);
         this.familleChoisie = creee?.id ?? null;
         await this.rendre();
         zone.querySelector('[data-f="libelle"]')?.select();
-        this.message('Famille créée : renseignez son code et son libellé', 'succes');
+        this.message(texte('bibliotheque.referentiels.familles.creee'), 'succes');
       } catch (x) { this.#erreur(x); }
     });
     zone.querySelector('[data-enregistrer]')?.addEventListener('click', async () => {
       const f = (c) => zone.querySelector(`[data-f="${c}"]`).value;
       try {
         await this.fournisseur.enregistrerFamille({ id: choisie.id, bib_id: this.bibId, code: f('code'), libelle: f('libelle'), ordre: Number(f('ordre')) || 0, parent_id: f('parent_id') ? Number(f('parent_id')) : null });
-        this.message('Famille enregistrée', 'succes');
+        this.message(texte('bibliotheque.referentiels.familles.enregistree'), 'succes');
         await this.rendre();
       } catch (x) { this.#erreur(x); }
     });
     zone.querySelector('[data-supprimer]')?.addEventListener('click', async () => {
-      if (!await confirmer(`Supprimer la famille « ${choisie.chemin} » ? Les éléments rattachés n'auront plus de famille.`)) return;
+      if (!await confirmer(texte('bibliotheque.referentiels.familles.supprimer', { famille: choisie.chemin }))) return;
       try {
         await this.fournisseur.supprimerFamille(choisie.id);
         this.familleChoisie = choisie.parent_id ?? null;
-        this.message('Famille supprimée', 'succes');
+        this.message(texte('bibliotheque.referentiels.familles.supprimee'), 'succes');
         await this.rendre();
       } catch (x) { this.#erreur(x); }
     });
@@ -183,24 +184,24 @@ export class GestionReferentiels {
 
   async #natures(zone) {
     const [natures, regroupements] = await Promise.all([this.fournisseur.natures(), this.fournisseur.regroupements()]);
-    zone.innerHTML = `<p class="aide">Types (main-d\'œuvre, engin, matériaux, sous-traitance, frais, facturation interne, amortissement, divers) : plusieurs possibles. Le regroupement reste libre (ex. « Fabrication » : natures de main-d\'œuvre et de sous-traitance). Axe analytique : repris par la comptabilité ; comptes : ventilation de la comptabilité. Une nature « isolant » affiche les caractéristiques d\'isolation (R, λ, U) dans la fiche.</p><div></div>`;
+    zone.innerHTML = `<p class="aide">${texteHtml('bibliotheque.referentiels.natures.aide', { comptes: texte('bibliotheque.referentiels.natures.sans_comptes') })}</p><div></div>`;
     this.#tableau(zone.lastElementChild, {
       cle: 'code', lignes: natures, vide: { id: 0, actif: true, isolant: false, types: [] },
-      colonnes: [{ code: 'code', libelle: 'Code', largeur: '7rem' }, { code: 'libelle', libelle: 'Libellé', largeur: '14rem' },
-        { code: 'types', libelle: 'Types', type: 'cases', options: TYPES_NATURE.map(([valeur, libelle]) => ({ valeur, libelle, court: { MO: 'MO', ENGIN: 'Engin', MATERIAUX: 'Mat.', SOUS_TRAITANCE: 'ST', FRAIS: 'Frais', FACTURATION_INTERNE: 'Fact. int.', AMORTISSEMENT: 'Amort.', DIVERS: 'Div.' }[valeur] })) },
-        { code: 'regroupement', libelle: 'Regroupement', options: regroupements.map((r) => ({ valeur: r.code, libelle: r.libelle })) },
-        { code: 'axe_analytique', libelle: 'Axe analytique', largeur: '8rem' },
-        { code: 'isolant', libelle: 'Isolant', type: 'case' }, { code: 'actif', libelle: 'Active', type: 'case' }],
+      colonnes: [{ code: 'code', libelle: texte('commun.code'), largeur: '7rem' }, { code: 'libelle', libelle: texte('commun.libelle'), largeur: '14rem' },
+        { code: 'types', libelle: texte('bibliotheque.referentiels.colonnes.types'), type: 'cases', options: TYPES_NATURE.map(([valeur, libelle]) => ({ valeur, libelle, court: TYPES_COURTS[valeur] })) },
+        { code: 'regroupement', libelle: texte('bibliotheque.referentiels.colonnes.regroupement'), options: regroupements.map((r) => ({ valeur: r.code, libelle: r.libelle })) },
+        { code: 'axe_analytique', libelle: texte('bibliotheque.referentiels.colonnes.axe_analytique'), largeur: '8rem' },
+        { code: 'isolant', libelle: texte('bibliotheque.referentiels.colonnes.isolant'), type: 'case' }, { code: 'actif', libelle: texte('bibliotheque.referentiels.colonnes.active'), type: 'case' }],
       enregistrer: (v) => this.fournisseur.enregistrerNature(v), supprimer: (l) => this.fournisseur.supprimerNature(l.id),
     });
   }
 
   async #regroupements(zone) {
     const regroupements = await this.fournisseur.regroupements();
-    zone.innerHTML = '<p class="aide">Regroupements personnalisables des natures (main-d\'œuvre, matériaux, engins, sous-traitance, prestations, vente…).</p><div></div>';
+    zone.innerHTML = `<p class="aide">${texteHtml('bibliotheque.referentiels.aide_regroupements')}</p><div></div>`;
     this.#tableau(zone.lastElementChild, {
       cle: 'code', lignes: regroupements, vide: { ordre: 0 },
-      colonnes: [{ code: 'code', libelle: 'Code', largeur: '10rem' }, { code: 'libelle', libelle: 'Libellé', largeur: '16rem' }, { code: 'ordre', libelle: 'Ordre', nombre: true, largeur: '4rem' }],
+      colonnes: [{ code: 'code', libelle: texte('commun.code'), largeur: '10rem' }, { code: 'libelle', libelle: texte('commun.libelle'), largeur: '16rem' }, { code: 'ordre', libelle: texte('bibliotheque.referentiels.colonnes.ordre'), nombre: true, largeur: '4rem' }],
       enregistrer: (v) => this.fournisseur.enregistrerRegroupement(v), supprimer: (l) => this.fournisseur.supprimerRegroupement(l.code),
     });
   }
@@ -214,40 +215,38 @@ export class GestionReferentiels {
     const jour = aujourdhui();
     const enVigueur = { coef_fg: liste.find((x) => x.debut <= jour && x.coef_fg !== null)?.id, coef_benef: liste.find((x) => x.debut <= jour && x.coef_benef !== null)?.id };
     const effectifs = coefficientsEffectifs({ nat_id: nat }, periodes, jour, p);
-    const source = (s) => ({ nature: `nature, depuis le ${date(s.debut)}`, global: `global, depuis le ${date(s.debut)}`, defaut: 'par défaut (paramètres)' }[s.portee] ?? s.portee);
+    const source = (s) => (['nature', 'global', 'defaut'].includes(s.portee) ? texte(`bibliotheque.referentiels.coefficients.sources.${s.portee}`, { debut: date(s.debut) }) : s.portee);
     zone.innerHTML = `<div class="bib-coefficients">
-      <label class="bib-ligne">Portée <select data-portee><option value="">Global (toutes natures)</option>
+      <label class="bib-ligne">${texteHtml('bibliotheque.referentiels.coefficients.portee')} <select data-portee><option value="">${texteHtml('bibliotheque.referentiels.coefficients.global')}</option>
         ${natures.map((n) => `<option value="${n.id}" ${String(n.id) === this.portee ? 'selected' : ''}>${echapper(n.libelle)}</option>`).join('')}</select></label>
-      <p class="bib-vigueur">En vigueur aujourd'hui : frais généraux <b>${coef(effectifs.coef_fg)}</b> <small>(${source(effectifs.sources.coef_fg)})</small> ·
-        bénéfice <b>${coef(effectifs.coef_benef)}</b> <small>(${source(effectifs.sources.coef_benef)})</small></p>
-      <table class="bib-table tableau-compact largeur-contenu"><thead><tr><th>Début</th><th>Frais généraux</th><th>Bénéfice</th><th>Commentaire</th><th>Créée</th><th>État</th><th></th></tr></thead><tbody>
+      <p class="bib-vigueur">${texteHtml('bibliotheque.referentiels.coefficients.vigueur_html', { fg: coef(effectifs.coef_fg), source_fg: source(effectifs.sources.coef_fg), benef: coef(effectifs.coef_benef), source_benef: source(effectifs.sources.coef_benef) })}</p>
+      <table class="bib-table tableau-compact largeur-contenu"><thead><tr><th>${texteHtml('bibliotheque.referentiels.coefficients.debut')}</th><th>${texteHtml('bibliotheque.referentiels.coefficients.fg')}</th><th>${texteHtml('bibliotheque.referentiels.coefficients.benef')}</th><th>${texteHtml('bibliotheque.referentiels.coefficients.commentaire')}</th><th>${texteHtml('bibliotheque.referentiels.coefficients.creee')}</th><th>${texteHtml('bibliotheque.referentiels.coefficients.etat')}</th><th></th></tr></thead><tbody>
         ${liste.map((x) => {
-          const etat = x.debut > jour ? 'à venir' : (x.id === enVigueur.coef_fg || x.id === enVigueur.coef_benef ? 'en vigueur' : 'passée');
-          return `<tr class="periode-${etat.replace(' ', '-')}"><td>${date(x.debut)}</td><td class="nombre">${coef(x.coef_fg)}</td><td class="nombre">${coef(x.coef_benef)}</td>
-            <td>${echapper(x.commentaire ?? '')}</td><td><small>${echapper(x.cree_par ?? '')} ${formatDate(x.cree_le)}</small></td><td>${etat}</td>
-            <td>${this.admin && etat === 'à venir' ? `<button type="button" data-supprimer-periode="${x.id}" title="Supprimer (pas encore commencée)">🗑</button>` : ''}</td></tr>`;
-        }).join('') || `<tr><td colspan="7" class="aide">Aucune période${nat === null ? ` : coefficients de repli ${coef(p.coef_fg_defaut)} et ${coef(p.coef_benef_defaut)}, créez une période globale` : ' : les coefficients globaux s\'appliquent'}.</td></tr>`}
+          const etat = x.debut > jour ? 'a_venir' : (x.id === enVigueur.coef_fg || x.id === enVigueur.coef_benef ? 'en_vigueur' : 'passee');
+          return `<tr class="periode-${etat.replace('_', '-')}"><td>${date(x.debut)}</td><td class="nombre">${coef(x.coef_fg)}</td><td class="nombre">${coef(x.coef_benef)}</td>
+            <td>${echapper(x.commentaire ?? '')}</td><td><small>${echapper(x.cree_par ?? '')} ${formatDate(x.cree_le)}</small></td><td>${texteHtml(`bibliotheque.referentiels.etats.${etat}`)}</td>
+            <td>${this.admin && etat === 'a_venir' ? `<button type="button" data-supprimer-periode="${x.id}" title="${texteHtml('bibliotheque.referentiels.coefficients.supprimer_aide')}">${iconeHtml('supprimer')}</button>` : ''}</td></tr>`;
+        }).join('') || `<tr><td colspan="7" class="aide">${nat === null ? texteHtml('bibliotheque.referentiels.coefficients.aucune_globale', { fg: coef(p.coef_fg_defaut), benef: coef(p.coef_benef_defaut) }) : texteHtml('bibliotheque.referentiels.coefficients.aucune_nature')}</td></tr>`}
       </tbody></table>
-      ${this.admin ? `<fieldset class="fiche-groupe"><legend>Nouvelle période</legend><div class="bib-grille">
-        <label>Début <input type="date" data-p="debut" value="${jour}"></label>
-        <label>Frais généraux <input data-p="coef_fg" inputmode="decimal" placeholder="${nat === null ? '' : 'repris du global'}"></label>
-        <label>Bénéfice <input data-p="coef_benef" inputmode="decimal" placeholder="${nat === null ? '' : 'repris du global'}"></label>
-        <label class="large">Commentaire <input data-p="commentaire"></label></div>
-        <p><button type="button" class="principal" data-ajouter-periode>＋ Créer la période</button>
-          <span class="aide">Une période commencée n'est plus modifiable : pour changer un coefficient, créez une nouvelle période (l'historique est conservé).
-          Les éléments qui suivent ces coefficients (non imposés) sont recalculés.</span></p></fieldset>` : ''}
+      ${this.admin ? `<fieldset class="fiche-groupe"><legend>${texteHtml('bibliotheque.referentiels.coefficients.nouvelle')}</legend><div class="bib-grille">
+        <label>${texteHtml('bibliotheque.referentiels.coefficients.debut')} <input type="date" data-p="debut" value="${jour}"></label>
+        <label>${texteHtml('bibliotheque.referentiels.coefficients.fg')} <input data-p="coef_fg" inputmode="decimal" placeholder="${nat === null ? '' : texteHtml('bibliotheque.referentiels.coefficients.repris')}"></label>
+        <label>${texteHtml('bibliotheque.referentiels.coefficients.benef')} <input data-p="coef_benef" inputmode="decimal" placeholder="${nat === null ? '' : texteHtml('bibliotheque.referentiels.coefficients.repris')}"></label>
+        <label class="large">${texteHtml('bibliotheque.referentiels.coefficients.commentaire')} <input data-p="commentaire"></label></div>
+        <p><button type="button" class="principal" data-ajouter-periode>${iconeHtml('ajouter')} ${texteHtml('bibliotheque.referentiels.coefficients.creer')}</button>
+          <span class="aide">${texteHtml('bibliotheque.referentiels.coefficients.aide')}</span></p></fieldset>` : ''}
     </div>`;
     zone.querySelector('[data-portee]').addEventListener('change', (e) => { this.portee = e.target.value; this.rendre().catch((x) => this.#erreur(x)); });
     zone.querySelector('[data-ajouter-periode]')?.addEventListener('click', async () => {
       const v = (c) => zone.querySelector(`[data-p="${c}"]`).value.trim().replace(',', '.');
       try {
         const r = await this.fournisseur.enregistrerPeriode({ nat_id: nat, debut: v('debut'), coef_fg: v('coef_fg') || null, coef_benef: v('coef_benef') || null, commentaire: zone.querySelector('[data-p="commentaire"]').value || null });
-        this.message(`Période enregistrée · ${r.elements_recalcules} élément(s) recalculé(s)`, 'succes');
+        this.message(pluriel('bibliotheque.referentiels.coefficients.enregistree', r.elements_recalcules), 'succes');
         await this.rendre();
       } catch (x) { this.#erreur(x); }
     });
     zone.querySelectorAll('[data-supprimer-periode]').forEach((b) => b.addEventListener('click', async () => {
-      if (!await confirmer('Supprimer cette période à venir ?')) return;
+      if (!await confirmer(texte('bibliotheque.referentiels.coefficients.supprimer'))) return;
       try { await this.fournisseur.supprimerPeriode(Number(b.dataset.supprimerPeriode)); await this.rendre(); } catch (x) { this.#erreur(x); }
     }));
   }
@@ -256,12 +255,12 @@ export class GestionReferentiels {
     const p = await this.fournisseur.parametres();
     const ro = this.admin ? '' : 'disabled';
     zone.innerHTML = `<div class="bib-formulaire">
-      <fieldset><legend>Scénarios de prix d'achat autorisés</legend>${SCENARIOS_PA.map(([c, l]) => `<label class="bib-ligne"><input type="checkbox" data-scenario="${c}" ${p.scenarios_autorises.includes(c) ? 'checked' : ''} ${ro}> ${echapper(l)}</label>`).join('')}</fieldset>
-      <label>Scénario par défaut à la création <select data-defaut ${ro}>${SCENARIOS_PA.map(([c, l]) => `<option value="${c}" ${c === p.scenario_defaut ? 'selected' : ''}>${echapper(l)}</option>`).join('')}</select></label>
-      <p class="aide">Chaque élément peut restreindre ses scénarios autorisés et choisir le sien dans l'onglet Prix de sa fiche.</p>
-      <label class="bib-ligne"><input type="checkbox" data-pv-ouvrages ${p.pv_fixe_ouvrages_envoyes ? 'checked' : ''} ${ro}> Envoi d'un ouvrage depuis un document : reprendre son PV fixe</label>
-      <p class="aide">Sans cette option, un ouvrage envoyé vers la bibliothèque prend le prix de sa composition ; le PV fixe se force dans sa fiche.</p>
-      ${this.admin ? '<button type="button" class="principal" data-enregistrer>Enregistrer</button>' : ''}</div>`;
+      <fieldset><legend>${texteHtml('bibliotheque.referentiels.prix.autorises')}</legend>${SCENARIOS_PA.map(([c, l]) => `<label class="bib-ligne"><input type="checkbox" data-scenario="${c}" ${p.scenarios_autorises.includes(c) ? 'checked' : ''} ${ro}> ${echapper(l)}</label>`).join('')}</fieldset>
+      <label>${texteHtml('bibliotheque.referentiels.prix.defaut')} <select data-defaut ${ro}>${SCENARIOS_PA.map(([c, l]) => `<option value="${c}" ${c === p.scenario_defaut ? 'selected' : ''}>${echapper(l)}</option>`).join('')}</select></label>
+      <p class="aide">${texteHtml('bibliotheque.referentiels.prix.aide')}</p>
+      <label class="bib-ligne"><input type="checkbox" data-pv-ouvrages ${p.pv_fixe_ouvrages_envoyes ? 'checked' : ''} ${ro}> ${texteHtml('bibliotheque.referentiels.prix.pv_ouvrages')}</label>
+      <p class="aide">${texteHtml('bibliotheque.referentiels.prix.pv_ouvrages_aide')}</p>
+      ${this.admin ? `<button type="button" class="principal" data-enregistrer>${texteHtml('commun.enregistrer')}</button>` : ''}</div>`;
     zone.querySelector('[data-enregistrer]')?.addEventListener('click', async () => {
       try {
         await this.fournisseur.enregistrerParametres({
@@ -271,7 +270,7 @@ export class GestionReferentiels {
           coef_fg_defaut: p.coef_fg_defaut, coef_benef_defaut: p.coef_benef_defaut,
           pv_fixe_ouvrages_envoyes: zone.querySelector('[data-pv-ouvrages]').checked,
         });
-        this.message('Paramètres de prix enregistrés', 'succes');
+        this.message(texte('bibliotheque.referentiels.prix.enregistres'), 'succes');
       } catch (x) { this.#erreur(x); }
     });
   }

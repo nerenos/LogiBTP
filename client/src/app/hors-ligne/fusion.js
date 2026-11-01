@@ -1,3 +1,4 @@
+import { texte } from '@logibtp/socle/dictionnaire';
 import { CHAMPS_SERVEUR } from './attente.js';
 
 // Fusion à trois voies d'un document saisi hors ligne (mode hors ligne, lot 4) : version de départ (document du
@@ -60,14 +61,14 @@ function inchangee(table, base, v) {
 /** Texte court d'une entité pour l'écran d'arbitrage. */
 export function libelleEntite(table, e) {
   if (!e) return '';
-  if (table === 'document') return 'Entête';
+  if (table === 'document') return texte('hors_ligne_btp.entites.document');
   if (table === 'lignes') {
-    const texte = String(e.lig_libelle_brut ?? e.lig_libelle_html ?? '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-    return [e.lig_code, texte.length > 70 ? `${texte.slice(0, 70)}…` : texte].filter(Boolean).join(' – ') || `Ligne ${e.lig_id}`;
+    const brut = String(e.lig_libelle_brut ?? e.lig_libelle_html ?? '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    return [e.lig_code, brut.length > 70 ? `${brut.slice(0, 70)}…` : brut].filter(Boolean).join(' – ') || texte('hors_ligne_btp.entites.ligne', { id: e.lig_id });
   }
-  if (table === 'metres') return `Métré de la ligne ${e.mtr_lig_id}`;
-  if (table === 'variables') return `Variable ${e.var_nom ?? e.var_id}`;
-  return `Ventilation ${e.vfr_id}`;
+  if (table === 'metres') return texte('hors_ligne_btp.entites.metre', { id: e.mtr_lig_id });
+  if (table === 'variables') return texte('hors_ligne_btp.entites.variable', { nom: e.var_nom ?? e.var_id });
+  return texte('hors_ligne_btp.entites.ventilation', { id: e.vfr_id });
 }
 
 /**

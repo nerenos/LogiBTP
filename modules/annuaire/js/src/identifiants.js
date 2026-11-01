@@ -1,5 +1,7 @@
 // Identifiants des personnes (facturation électronique, règlement) : SIREN, SIRET, TVA intracommunautaire, IBAN, BIC.
 // Réplique de Identifiants.cs (jeu partagé modules/annuaire/tests/cas/01_identifiants.json).
+import { textesParCode } from '@logibtp/socle/dictionnaire';
+
 
 /** Texte sans espaces, points, tirets ni barres, en majuscules. */
 export const compacter = (v) => String(v ?? '').replace(/[\s.\-/]/g, '').toUpperCase();
@@ -78,16 +80,7 @@ export function formaterTelephone(v) {
   return s;
 }
 
-export const MESSAGES_IDENTIFIANTS = {
-  SIREN: 'SIREN invalide (9 chiffres, clé de contrôle)',
-  SIRET: 'SIRET invalide (14 chiffres, clé de contrôle)',
-  SIRET_SIREN: 'Le SIRET ne commence pas par le SIREN',
-  TVA: 'Numéro de TVA intracommunautaire invalide',
-  TVA_SIREN: 'Le numéro de TVA ne correspond pas au SIREN',
-  IBAN: 'IBAN invalide',
-  BIC: 'BIC invalide',
-  PAYS: 'Code pays sur 2 lettres (ISO)',
-};
+export const MESSAGES_IDENTIFIANTS = textesParCode('annuaire.identifiants.erreurs', ['SIREN', 'SIRET', 'SIRET_SIREN', 'TVA', 'TVA_SIREN', 'IBAN', 'BIC', 'PAYS']);
 
 /**
  * Contrôles des identifiants d'une personne : [{ champ, code, message }]. En France, SIREN et SIRET sont contrôlés

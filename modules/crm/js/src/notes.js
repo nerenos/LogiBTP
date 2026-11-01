@@ -4,20 +4,21 @@
 // Une note est une action, un message ou une tâche. Une tâche a un responsable (individu) ou un service qui la prendra,
 // et une échéance ; un message a au moins un destinataire, sauf une réponse dans un fil. Une note privée ou de données
 // personnelles (RGPD) ne paraît jamais dans le fil d'actualité.
+import { texte, icone, textesParCode } from '@logibtp/socle/dictionnaire';
 import { NATURE_NOTE, ETAT_NOTE } from './codes.js';
 
 export const NATURES_NOTE = [
-  { valeur: NATURE_NOTE.ACTION, libelle: 'Action', icone: '⚡' },
-  { valeur: NATURE_NOTE.MESSAGE, libelle: 'Message', icone: '💬' },
-  { valeur: NATURE_NOTE.TACHE, libelle: 'Tâche', icone: '☑' },
+  { valeur: NATURE_NOTE.ACTION, libelle: texte('crm.natures_note.ACTION'), icone: icone('crm_action') },
+  { valeur: NATURE_NOTE.MESSAGE, libelle: texte('crm.natures_note.MESSAGE'), icone: icone('crm_message') },
+  { valeur: NATURE_NOTE.TACHE, libelle: texte('crm.natures_note.TACHE'), icone: icone('crm_tache') },
 ];
 
 export const ETATS_NOTE = [
-  { valeur: ETAT_NOTE.A_FAIRE, libelle: 'À faire' },
-  { valeur: ETAT_NOTE.EN_COURS, libelle: 'En cours' },
-  { valeur: ETAT_NOTE.TERMINE, libelle: 'Terminé' },
-  { valeur: ETAT_NOTE.MEMO, libelle: 'Pour mémo' },
-  { valeur: ETAT_NOTE.ANNULEE, libelle: 'Annulée' },
+  { valeur: ETAT_NOTE.A_FAIRE, libelle: texte('crm.etats_note.A_FAIRE') },
+  { valeur: ETAT_NOTE.EN_COURS, libelle: texte('crm.etats_note.EN_COURS') },
+  { valeur: ETAT_NOTE.TERMINE, libelle: texte('crm.etats_note.TERMINE') },
+  { valeur: ETAT_NOTE.MEMO, libelle: texte('crm.etats_note.MEMO') },
+  { valeur: ETAT_NOTE.ANNULEE, libelle: texte('crm.etats_note.ANNULEE') },
 ];
 
 /** États qui sortent une note des listes de travail et des rappels. */
@@ -48,13 +49,8 @@ export function controlerNote(note) {
 }
 
 /** Libellés des erreurs de controlerNote. */
-export const MESSAGES_NOTE = {
-  NOTE_NATURE: 'Nature inconnue (action, message ou tâche)',
-  NOTE_ETAT: 'État inconnu',
-  NOTE_OBJET: `Objet obligatoire (${LONGUEUR_OBJET} caractères au plus)`,
-  NOTE_RESPONSABLE: 'Une tâche a un responsable, ou un service qui la prendra',
-  NOTE_ECHEANCE: 'Une tâche a une échéance',
-  NOTE_DESTINATAIRE: 'Un message a au moins un destinataire',
-  NOTE_PRIVEE_FIL: 'Une note privée ne paraît pas dans le fil d\'actualité',
-  NOTE_RGPD_FIL: 'Une note de données personnelles ne paraît pas dans le fil d\'actualité',
-};
+const messagesNote = textesParCode('crm.notes.erreurs', ['NOTE_NATURE', 'NOTE_ETAT', 'NOTE_RESPONSABLE', 'NOTE_ECHEANCE', 'NOTE_DESTINATAIRE', 'NOTE_PRIVEE_FIL', 'NOTE_RGPD_FIL']);
+export const MESSAGES_NOTE = Object.freeze(Object.defineProperties({}, {
+  ...Object.getOwnPropertyDescriptors(messagesNote),
+  NOTE_OBJET: { enumerable: true, get: () => texte('crm.notes.erreurs.NOTE_OBJET', { longueur: LONGUEUR_OBJET }) },
+}));

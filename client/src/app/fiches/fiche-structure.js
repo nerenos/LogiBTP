@@ -1,3 +1,4 @@
+import { texte, texteHtml, pluriel, icone, iconeHtml, textesParCode, pairesParCode } from '@logibtp/socle/dictionnaire';
 import { urlDocument, urlFiche, TYPE_FICHE, TYPE_POSTE_MARCHE, TYPE_DOCUMENT, MODULE_FACULTATIF } from '../codes.js';
 import { MODES } from '@logibtp/fiche';
 import { echapper, formatDate, formatNombre, formatLibre, lireNombre, creerCombo, lirePreferences, ecrirePreferences, confirmer } from '@logibtp/socle/ui';
@@ -19,19 +20,15 @@ import { creerTiersProvisoire } from '@logibtp/annuaire/ui';
 // projet (?projet=) ou un chantier (?chantier=, ?commande=), liens vers les éléments rattachés. Un projet passé
 // « Obtenu » propose d'ouvrir son chantier.
 
-const LIBELLES_STATUT = {
-  EN_COURS: 'En cours', REMIS: 'Offre remise', OBTENU: 'Obtenu', PERDU: 'Perdu', ABANDONNE: 'Abandonné', OUVERTE: 'Ouverte', CLOSE: 'Close',
-  OUVERT: 'Ouvert', TERMINE: 'Terminé', CLOS: 'Clos', SOLDE: 'Soldé', RESILIE: 'Résilié',
-};
+const LIBELLES_STATUT = textesParCode('fiches_btp.structure.statuts', ['EN_COURS', 'REMIS', 'OBTENU', 'PERDU', 'ABANDONNE', 'OUVERTE', 'CLOSE', 'OUVERT', 'TERMINE', 'CLOS', 'SOLDE', 'RESILIE']);
 const parametre = (nom) => Number(new URLSearchParams(globalThis.location?.search ?? '').get(nom)) || null;
 
 /** Raccourcis des fiches vers les listes (thème, libellé), filtrées par le code de la fiche (?projet=CODE…). */
 const RACCOURCIS = {
-  projet: [['documents', 'Documents'], ['devis', 'Devis'], ['chantiers', 'Chantiers']],
-  affaire: [['documents', 'Documents'], ['chantiers', 'Chantiers'], ['marches', 'Marchés'], ['factures', 'Factures']],
-  chantier: [['documents', 'Documents'], ['devis', 'Devis'], ['commandes', 'Commandes'], ['situations', 'Situations'], ['factures', 'Factures'],
-    ['marches', 'Marchés'], ['achats_commandes', 'Commandes fournisseurs'], ['achats_factures', 'Factures fournisseurs']],
-  marche: [['documents', 'Documents'], ['situations', 'Situations'], ['factures', 'Factures']],
+  projet: [...pairesParCode('fiches_btp.structure.listes', ['documents', 'devis', 'chantiers'])],
+  affaire: [...pairesParCode('fiches_btp.structure.listes', ['documents', 'chantiers', 'marches', 'factures'])],
+  chantier: [...pairesParCode('fiches_btp.structure.listes', ['documents', 'devis', 'commandes', 'situations', 'factures', 'marches', 'achats_commandes', 'achats_factures'])],
+  marche: [...pairesParCode('fiches_btp.structure.listes', ['documents', 'situations', 'factures'])],
 };
 
 export class FicheStructure extends FicheLogiBTP {
@@ -95,7 +92,7 @@ export class FicheStructure extends FicheLogiBTP {
       const span = document.createElement('span');
       span.className = 'fiche-valeur';
       const c = (this.refs.commandes ?? []).find((x) => x.id === Number(valeur));
-      span.innerHTML = valeur ? `<a href="${urlDocument(Number(valeur))}">${echapper(c ? `${c.numero ?? ''} ${c.objet ?? ''}` : `Document ${valeur}`)}</a>` : '—';
+      span.innerHTML = valeur ? `<a href="${urlDocument(Number(valeur))}">${echapper(c ? `${c.numero ?? ''} ${c.objet ?? ''}` : texte('fiches_btp.structure.document', { id: valeur }))}</a>` : '—';
       return span;
     }
     // Zone de code, libellé en lien vers la fiche, double-clic ou F4 : liste de choix.
@@ -125,11 +122,11 @@ export class FicheStructure extends FicheLogiBTP {
       }).catch(() => {});
     }
     if (lecture) {
-      span.innerHTML = valeur ? `<a href="${urlFiche(TYPE_FICHE.PERSONNE, Number(valeur))}">${echapper(nom || `Tiers ${valeur}`)}</a>` : '—';
+      span.innerHTML = valeur ? `<a href="${urlFiche(TYPE_FICHE.PERSONNE, Number(valeur))}">${echapper(nom || texte('fiches_btp.structure.tiers', { id: valeur }))}</a>` : '—';
       return span;
     }
     const id = `tiers-${champ.code}-${Math.random().toString(36).slice(2, 8)}`;
-    span.innerHTML = `<input type="search" class="fiche-saisie-champ" list="${id}" value="${echapper(nom ?? (valeur ? `Tiers ${valeur}` : ''))}" placeholder="Rechercher un tiers (code, raison sociale)"><datalist id="${id}"></datalist>`;
+    span.innerHTML = `<input type="search" class="fiche-saisie-champ" list="${id}" value="${echapper(nom ?? (valeur ? texte('fiches_btp.structure.tiers', { id: valeur }) : ''))}" placeholder="${texteHtml('fiches_btp.structure.rechercher_tiers')}"><datalist id="${id}"></datalist>`;
     const input = span.querySelector('input');
     const liste = span.querySelector('datalist');
     let resultats = [];
@@ -149,11 +146,11 @@ export class FicheStructure extends FicheLogiBTP {
       const bouton = document.createElement('button');
       bouton.type = 'button';
       bouton.className = 'bouton-icone';
-      bouton.textContent = '＋';
-      bouton.title = 'Nouveau prospect : tiers provisoire de l\'annuaire (doublons proposés)';
+      bouton.textContent = icone('ajouter');
+      bouton.title = texte('fiches_btp.structure.prospect_aide');
       bouton.addEventListener('click', async () => {
         const saisi = resultats.some((p) => `${p.code} – ${p.raison_sociale}` === input.value) ? '' : input.value.trim();
-        const p = await creerTiersProvisoire({ annuaire, raison_sociale: saisi, casquettes: ['CLIENT'], titre: 'Nouveau prospect (tiers provisoire)' });
+        const p = await creerTiersProvisoire({ annuaire, raison_sociale: saisi, casquettes: ['CLIENT'], titre: texte('fiches_btp.structure.prospect') });
         if (!p) return;
         this.tiersNoms.set(Number(p.id), `${p.code ?? ''} – ${p.raison_sociale ?? ''}`);
         this.definirValeur(champ.code, Number(p.id));
@@ -177,7 +174,7 @@ export class FicheStructure extends FicheLogiBTP {
     this.individusSociete.then((liste) => {
       const choisi = liste.find((x) => Number(x.valeur) === Number(valeur));
       if (lecture) {
-        span.innerHTML = valeur ? `<a href="${urlFiche(TYPE_FICHE.INDIVIDU, Number(valeur))}">${echapper(choisi?.libelle ?? `Individu ${valeur}`)}</a>` : '—';
+        span.innerHTML = valeur ? `<a href="${urlFiche(TYPE_FICHE.INDIVIDU, Number(valeur))}">${echapper(choisi?.libelle ?? texte('fiches_btp.structure.individu', { id: valeur }))}</a>` : '—';
         return;
       }
       const combo = creerCombo({ valeur: valeur ?? '', options: liste.map((x) => ({ valeur: x.valeur, libelle: x.libelle, detail: x.detail })), titre: champ.aide ?? '' });
@@ -203,11 +200,11 @@ export class FicheStructure extends FicheLogiBTP {
       }).catch(() => {});
     }
     if (lecture) {
-      span.innerHTML = valeur ? `<a href="${urlFiche(TYPE_FICHE.INDIVIDU, Number(valeur))}">${echapper(nom || `Individu ${valeur}`)}</a>` : '—';
+      span.innerHTML = valeur ? `<a href="${urlFiche(TYPE_FICHE.INDIVIDU, Number(valeur))}">${echapper(nom || texte('fiches_btp.structure.individu', { id: valeur }))}</a>` : '—';
       return span;
     }
     const id = `individu-${champ.code}-${Math.random().toString(36).slice(2, 8)}`;
-    span.innerHTML = `<input type="search" class="fiche-saisie-champ" list="${id}" value="${echapper(nom ?? (valeur ? `Individu ${valeur}` : ''))}" placeholder="Rechercher un individu (nom)"><datalist id="${id}"></datalist>`;
+    span.innerHTML = `<input type="search" class="fiche-saisie-champ" list="${id}" value="${echapper(nom ?? (valeur ? texte('fiches_btp.structure.individu', { id: valeur }) : ''))}" placeholder="${texteHtml('fiches_btp.structure.rechercher_individu')}"><datalist id="${id}"></datalist>`;
     const input = span.querySelector('input');
     const liste = span.querySelector('datalist');
     const libelle = (i) => `${i.nom_complet}${i.personnes ? ` (${i.personnes})` : ''}`;
@@ -232,10 +229,10 @@ export class FicheStructure extends FicheLogiBTP {
     const raccourcis = this.id !== null && v.code ? [...(RACCOURCIS[this.type] ?? []), ...this.raccourcisModules()] : [];
     return liens.map((l) => `<div class="fiche-info"><span>${echapper(l.titre)}</span>
       <b>${l.elements.map((x) => `<a href="${urlFiche(l.type, x.id)}">${echapper(x.code)}</a> ${echapper(x.libelle ?? '')}${x.extra ? ` <small>${echapper(x.extra)}</small>` : ''}`).join(' · ')}</b></div>`).join('')
-      + (raccourcis.length ? `<div class="fiche-info fiche-raccourcis"><span>Listes</span><b>${raccourcis.map(([theme, libelle]) =>
-        `<a href="/liste/${theme}?${new URLSearchParams({ [this.type]: v.code })}" title="${echapper(`${libelle} filtrés sur ${v.code} (Ctrl : nouvelle fenêtre)`)}">${echapper(libelle)}</a>`).join(' · ')}</b></div>` : '')
+      + (raccourcis.length ? `<div class="fiche-info fiche-raccourcis"><span>${texteHtml('fiches_btp.structure.listes_titre')}</span><b>${raccourcis.map(([theme, libelle]) =>
+        `<a href="/liste/${theme}?${new URLSearchParams({ [this.type]: v.code })}" title="${texteHtml('fiches_btp.structure.liste_filtree', { libelle, code: v.code })}">${echapper(libelle)}</a>`).join(' · ')}</b></div>` : '')
       + (this.id !== null && ['chantier', 'marche'].includes(this.type) && this.moduleActif(MODULE_FACULTATIF.REGLEMENT)
-        ? `<div class="fiche-info"><span>Règlements</span><b><a href="/reglements?${this.type}=${Number(this.id)}" title="Échéances des pièces validées du ${this.type === TYPE_FICHE.CHANTIER ? 'chantier' : 'marché'}, pointé et reste, tous tiers">Échéances et règlements</a></b></div>` : '');
+        ? `<div class="fiche-info"><span>${texteHtml('fiches_btp.structure.reglements')}</span><b><a href="/reglements?${this.type}=${Number(this.id)}" title="${texteHtml(this.type === TYPE_FICHE.CHANTIER ? 'fiches_btp.reglements_aide_chantier' : 'fiches_btp.reglements_aide_marche')}">${texteHtml('fiches_btp.structure.echeances')}</a></b></div>` : '');
   }
 
   /** Champ tiers qui propose un nouveau prospect (tiers provisoire) : aucun par défaut. */
@@ -244,7 +241,7 @@ export class FicheStructure extends FicheLogiBTP {
   /** Raccourcis vers les listes des modules facultatifs actifs (thème, libellé). */
   raccourcisModules() {
     if (this.type !== TYPE_FICHE.CHANTIER || !this.moduleActif(MODULE_FACULTATIF.SOUS_TRAITANCE)) return [];
-    return [['marches_st', 'Marchés de sous-traitance'], ['st_commandes', 'Commandes de sous-traitance'], ['st_factures', 'Factures de sous-traitance']];
+    return [...pairesParCode('fiches_btp.structure.listes', ['marches_st', 'st_commandes', 'st_factures'])];
   }
 
   liens() { return []; }
@@ -252,9 +249,9 @@ export class FicheStructure extends FicheLogiBTP {
   /** Onglet Graphe : liens de la structure et documents rattachés (module Graphe). */
   ongletsSpecifiques() {
     return [{
-      code: 'graphe', titre: 'Graphe',
+      code: 'graphe', titre: texte('fiches_btp.structure.onglets.graphe'),
       rendre: (corps) => {
-        if (this.id === null) { corps.innerHTML = '<p class="aide">Enregistrez la fiche pour voir ses liens et ses documents.</p>'; return; }
+        if (this.id === null) { corps.innerHTML = `<p class="aide">${texteHtml('fiches_btp.structure.graphe_nouvelle')}</p>`; return; }
         corps.classList.add('graphe-hote');
         this.vueGraphe = new VueGrapheStructure(corps, {
           structure: this.services.structure, depart: { type: this.type, id: Number(this.id) }, message: this.message,
@@ -268,9 +265,9 @@ export class FicheStructure extends FicheLogiBTP {
   ongletsFil() {
     if (!this.fil || !['affaire', 'chantier'].includes(this.type)) return [];
     return [{
-      code: 'fil', titre: 'Fil',
+      code: 'fil', titre: texte('fiches_btp.structure.onglets.fil'),
       rendre: (corps) => {
-        if (this.id === null) { corps.innerHTML = '<p class="aide">Enregistrez la fiche pour voir son fil d\'actualité.</p>'; return; }
+        if (this.id === null) { corps.innerHTML = `<p class="aide">${texteHtml('fiches_btp.structure.fil_nouvelle')}</p>`; return; }
         this.filCrm?.fermer();
         const v = this.fiche?.valeurs ?? {};
         this.filCrm = this.fil(corps, { type: this.type, id: this.id, libelle: [v.code, v.libelle].filter(Boolean).join(' ') });
@@ -284,7 +281,7 @@ export class FicheProjet extends FicheStructure {
   prospectAutorise(champ) { return champ.code === 'tiers_id'; }
 
   liens() {
-    return [{ titre: 'Chantier', type: TYPE_FICHE.CHANTIER, elements: (this.refs.chantiers ?? []).filter((c) => c.prj_id === Number(this.id)) }];
+    return [{ titre: texte('fiches_btp.structure.liens.chantier'), type: TYPE_FICHE.CHANTIER, elements: (this.refs.chantiers ?? []).filter((c) => c.prj_id === Number(this.id)) }];
   }
 
   /** Passage à « Obtenu » : proposer d'ouvrir le chantier (fiche de création préremplie depuis le projet). */
@@ -295,7 +292,7 @@ export class FicheProjet extends FicheStructure {
     await this.rechargerReferentiels();
     const obtenu = this.valeur('statut') === 'OBTENU' && avant !== 'OBTENU';
     if (obtenu && !(this.refs.chantiers ?? []).some((c) => c.prj_id === Number(this.id))
-      && await confirmer(`Projet obtenu : ouvrir le chantier de « ${this.valeur('libelle')} » ?`)) {
+      && await confirmer(texte('fiches_btp.structure.projet_obtenu', { libelle: this.valeur('libelle') }))) {
       this.ouvrirUrl(`/fiche/chantier/nouveau?projet=${this.id}`);
     }
     this.rendre();
@@ -305,7 +302,7 @@ export class FicheProjet extends FicheStructure {
 
 export class FicheAffaire extends FicheStructure {
   liens() {
-    return [{ titre: 'Chantiers', type: TYPE_FICHE.CHANTIER, elements: (this.refs.chantiers ?? []).filter((c) => c.aff_id === Number(this.id)) }];
+    return [{ titre: texte('fiches_btp.structure.liens.chantiers'), type: TYPE_FICHE.CHANTIER, elements: (this.refs.chantiers ?? []).filter((c) => c.aff_id === Number(this.id)) }];
   }
 }
 
@@ -337,16 +334,16 @@ export class FicheChantier extends FicheStructure {
       api.pointage.zones(Number(this.id)).then((l) => { this.zones = l; this.rendre(); }).catch(() => { this.zones = []; });
     }
     return super.rendreInformations(v) + (this.zones?.length
-      ? `<div class="fiche-info"><span>Zones de déplacement</span><b>${this.zones.map((z) => `${echapper(z.agence)} : zone ${z.zone}`).join(' · ')}</b></div>` : '');
+      ? `<div class="fiche-info"><span>${texteHtml('fiches_btp.structure.zones')}</span><b>${this.zones.map((z) => texteHtml('fiches_btp.structure.zone', { agence: z.agence, zone: z.zone })).join(' · ')}</b></div>` : '');
   }
 
   liens(v) {
     const marches = (this.refs.marches ?? []).filter((m) => m.cha_id === Number(this.id))
-      .map((m) => ({ ...m, extra: m.montant_ht !== null ? `${formatNombre(m.montant_ht, 2)} € HT` : '' }));
+      .map((m) => ({ ...m, extra: m.montant_ht !== null ? texte('fiches_btp.structure.montant_ht', { montant: formatNombre(m.montant_ht, 2) }) : '' }));
     return [
-      { titre: 'Affaire', type: TYPE_FICHE.AFFAIRE, elements: (this.refs.affaires ?? []).filter((a) => a.id === Number(v.aff_id)) },
-      { titre: 'Projet', type: TYPE_FICHE.PROJET, elements: (this.refs.projets ?? []).filter((p) => p.id === Number(v.prj_id)) },
-      { titre: 'Marchés', type: TYPE_FICHE.MARCHE, elements: marches },
+      { titre: texte('fiches_btp.structure.liens.affaire'), type: TYPE_FICHE.AFFAIRE, elements: (this.refs.affaires ?? []).filter((a) => a.id === Number(v.aff_id)) },
+      { titre: texte('fiches_btp.structure.liens.projet'), type: TYPE_FICHE.PROJET, elements: (this.refs.projets ?? []).filter((p) => p.id === Number(v.prj_id)) },
+      { titre: texte('fiches_btp.structure.liens.marches'), type: TYPE_FICHE.MARCHE, elements: marches },
     ];
   }
 }
@@ -361,7 +358,7 @@ export class FicheMarche extends FicheStructure {
   filtreReference(champ) {
     if (champ.code !== 'marche_vente_id') return null;
     const cha = this.valeur('cha_id');
-    return { libelle: 'Marchés de vente du chantier', test: (x) => (x.sens ?? 'V') === 'V' && (!cha || x.cha_id === Number(cha)) };
+    return { libelle: texte('fiches_btp.structure.marches_vente'), test: (x) => (x.sens ?? 'V') === 'V' && (!cha || x.cha_id === Number(cha)) };
   }
 
   /** Création depuis un chantier (?chantier=) ou une commande (?commande=) ; le code prévisionnel suit le chantier (chrono à {PARENT}). */
@@ -393,7 +390,7 @@ export class FicheMarche extends FicheStructure {
   }
 
   liens(v) {
-    return [{ titre: 'Chantier', type: TYPE_FICHE.CHANTIER, elements: (this.refs.chantiers ?? []).filter((c) => c.id === Number(v.cha_id)) }];
+    return [{ titre: texte('fiches_btp.structure.liens.chantier'), type: TYPE_FICHE.CHANTIER, elements: (this.refs.chantiers ?? []).filter((c) => c.id === Number(v.cha_id)) }];
   }
 
   /**
@@ -407,15 +404,14 @@ export class FicheMarche extends FicheStructure {
     try { e = await api.engageSousTraitance(Number(this.id)); } catch (x) { zone.innerHTML = `<p class="erreur">${echapper(x.message)}</p>`; return; }
     const f = (v) => formatNombre(v, 2);
     const ecart = Dz(e.prevu).minus(Dz(e.engage));
-    zone.innerHTML = `<p class="ligne">Déboursé de sous-traitance prévu <strong>${f(e.prevu)}</strong> · Engagé <strong>${f(e.engage)}</strong>
-        · Réalisé <strong>${f(e.facture)}</strong> · ${ecart.isNegative() ? `<span class="erreur">Dépassement ${f(ecart.abs().toString())}</span>` : `Reste prévu non engagé ${f(ecart.toString())}`}</p>
-      ${e.marches.length ? `<table class="tableau-gestion"><thead><tr><th>Marché</th><th>Sous-traitant</th><th>Garantie</th><th class="nombre">Agréé</th>
-        <th class="nombre">Engagé HT</th><th class="nombre">Réalisé HT</th><th class="nombre">Reste à facturer</th><th class="nombre">Paiement direct</th><th>Prestations</th></tr></thead><tbody>
+    zone.innerHTML = `<p class="ligne">${texteHtml('fiches_btp.structure.engage.resume_html', { prevu: f(e.prevu), engage: f(e.engage), facture: f(e.facture) })} · ${ecart.isNegative() ? `<span class="erreur">${texteHtml('fiches_btp.structure.engage.depassement', { montant: f(ecart.abs().toString()) })}</span>` : texteHtml('fiches_btp.structure.engage.reste', { montant: f(ecart.toString()) })}</p>
+      ${e.marches.length ? `<table class="tableau-gestion"><thead><tr><th>${texteHtml('fiches_btp.structure.colonnes.marche')}</th><th>${texteHtml('fiches_btp.structure.colonnes.sous_traitant')}</th><th>${texteHtml('fiches_btp.structure.colonnes.garantie')}</th><th class="nombre">${texteHtml('fiches_btp.structure.colonnes.agree')}</th>
+        <th class="nombre">${texteHtml('fiches_btp.structure.colonnes.engage_ht')}</th><th class="nombre">${texteHtml('fiches_btp.structure.colonnes.realise_ht')}</th><th class="nombre">${texteHtml('fiches_btp.structure.colonnes.reste_a_facturer')}</th><th class="nombre">${texteHtml('fiches_btp.structure.colonnes.paiement_direct')}</th><th>${texteHtml('fiches_btp.structure.colonnes.prestations')}</th></tr></thead><tbody>
         ${e.marches.map((m) => `<tr><td><a href="${urlFiche(TYPE_FICHE.MARCHE, m.marche_id)}">${echapper(m.code)}</a> <small class="aide">${echapper(m.libelle ?? '')}</small></td>
           <td>${echapper(m.sous_traitant ?? '')}</td><td>${echapper(m.garantie ?? '')}</td><td class="nombre">${f(m.montant_agree)}</td><td class="nombre">${f(m.engage)}</td>
           <td class="nombre">${f(m.facture)}</td><td class="nombre">${f(Dz(m.engage).minus(Dz(m.facture)).toString())}</td><td class="nombre">${f(m.paiement_direct)}</td>
-          <td><a href="/liste/st_commandes?${new URLSearchParams({ marche: m.code })}">Commandes</a> · <a href="/liste/st_factures?${new URLSearchParams({ marche: m.code })}">Factures</a></td></tr>`).join('')}</tbody></table>`
-        : '<p class="aide">Aucun marché de sous-traitance lié à ce marché (ou sur son chantier).</p>'}`;
+          <td><a href="/liste/st_commandes?${new URLSearchParams({ marche: m.code })}">${texteHtml('fiches_btp.structure.listes.commandes')}</a> · <a href="/liste/st_factures?${new URLSearchParams({ marche: m.code })}">${texteHtml('fiches_btp.structure.listes.factures')}</a></td></tr>`).join('')}</tbody></table>`
+        : `<p class="aide">${texteHtml('fiches_btp.structure.engage.aucun')}</p>`}`;
   }
 
   /** Onglet Gestion (CONCEPTION-MARCHES-REGLEMENTS.md, Q1 à Q4) avant le graphe. */
@@ -423,28 +419,28 @@ export class FicheMarche extends FicheStructure {
     // Marché de sous-traitance (module Sous-traitance, lot 2) : pièces du sous-traitant et du marché.
     const pieces = this.valeur('sens') === 'ST' && this.id !== null && this.moduleActif(MODULE_FACULTATIF.SOUS_TRAITANCE) && this.services.structure.gestion
       ? [{
-        code: 'pieces', titre: 'Pièces',
+        code: 'pieces', titre: texte('fiches_btp.structure.onglets.pieces'),
         rendre: (corps) => rendrePieces(corps, {
           element: { type: TYPE_FICHE.MARCHE, id: Number(this.id), tiers: this.valeur('tiers_id') }, ged: this.services.ged, message: this.message,
           demander: () => this.ouvrirUrl(`/mail/nouveau?type=st_pieces&id=marche:${this.id}`, { ctrlKey: true }),
         }).catch((e) => this.message(e.message, 'erreur')),
       }, {
         // Lot 4 : paiement direct ou délégation, réception et retenue de garantie.
-        code: 'paiements', titre: 'Paiements',
+        code: 'paiements', titre: texte('fiches_btp.structure.onglets.paiements'),
         rendre: (corps) => rendrePaiements(corps, { marche: Number(this.id), message: this.message }).catch((e) => this.message(e.message, 'erreur')),
       }]
       : [];
     // Marché de vente : réception et retenue de garantie (en ligne).
     const retenue = this.valeur('sens') !== 'ST' && this.id !== null && this.services.structure.gestion
-      ? [{ code: 'retenue', titre: 'Retenue', rendre: (corps) => rendreRetenue(corps, { marche: Number(this.id), message: this.message }).catch((e) => this.message(e.message, 'erreur')) }]
+      ? [{ code: 'retenue', titre: texte('fiches_btp.structure.onglets.retenue'), rendre: (corps) => rendreRetenue(corps, { marche: Number(this.id), message: this.message }).catch((e) => this.message(e.message, 'erreur')) }]
       : [];
     // Révision des prix (lots G1 et G3) : paramètres du marché et périodes révisées, vente et sous-traitance.
     const revision = this.id !== null && this.services.structure.gestion
-      ? [{ code: 'revision', titre: 'Révision', rendre: (corps) => rendreRevision(corps, {
+      ? [{ code: 'revision', get titre() { return texte('fiches_btp.structure.onglets.revision'); }, rendre: (corps) => rendreRevision(corps, {
         marche: Number(this.id), message: this.message, ouvrir: (url, e) => this.ouvrirUrl(url, e),
       }).catch((e) => this.message(e.message, 'erreur')) }]
       : [];
-    return [{ code: 'gestion', titre: 'Gestion', rendre: (corps) => this.rendreGestion(corps) }, ...pieces, ...retenue, ...revision, ...super.ongletsSpecifiques()];
+    return [{ code: 'gestion', titre: texte('fiches_btp.structure.onglets.gestion'), rendre: (corps) => this.rendreGestion(corps) }, ...pieces, ...retenue, ...revision, ...super.ongletsSpecifiques()];
   }
 
   /**
@@ -462,18 +458,18 @@ export class FicheMarche extends FicheStructure {
     const bloc = document.createElement('details');
     bloc.className = 'groupe-gestion';
     const n = (v) => (v == null ? '–' : `${formatNombre(v, 1).replace(/,0$/, '')} %`);
-    bloc.innerHTML = `<summary><h3>Avancement réel et situations</h3></summary>
-      <p>Réel sur le chantier : <b>${n(a.reel)}</b>${a.dernier ? ` (dernier relevé le ${formatDate(a.dernier)})` : ''} · situé : <b>${situe || '–'}</b>
-        <span class="aide">Réel = moyenne des tâches pondérée par leurs heures ; un chantier à plusieurs marchés compte toutes ses tâches.</span></p>
-      <table class="tableau-gestion"><thead><tr><th>Tâche</th><th class="nombre">Heures</th><th class="nombre">Réel</th><th>Relevé</th></tr></thead>
+    bloc.innerHTML = `<summary><h3>${texteHtml('fiches_btp.structure.avancement.titre')}</h3></summary>
+      <p>${texteHtml('fiches_btp.structure.avancement.reel_html', { reel: n(a.reel) })}${a.dernier ? ` ${texteHtml('fiches_btp.structure.avancement.dernier', { date: formatDate(a.dernier) })}` : ''} · ${texteHtml('fiches_btp.structure.avancement.situe_html', { situe: situe || '–' })}
+        <span class="aide">${texteHtml('fiches_btp.structure.avancement.aide')}</span></p>
+      <table class="tableau-gestion"><thead><tr><th>${texteHtml('fiches_btp.structure.colonnes.tache')}</th><th class="nombre">${texteHtml('fiches_btp.structure.colonnes.heures')}</th><th class="nombre">${texteHtml('fiches_btp.structure.colonnes.reel')}</th><th>${texteHtml('fiches_btp.structure.colonnes.releve')}</th></tr></thead>
       <tbody>${a.taches.map((t) => `<tr><td>${echapper(t.libelle)}</td><td class="nombre">${formatNombre(t.heures, 1)}</td><td class="nombre">${n(t.pourcent)}</td><td>${t.le ? formatDate(t.le) : ''}</td></tr>`).join('')}</tbody></table>`;
     corps.querySelector('[data-groupe="recapitulatif"]')?.after(bloc);
   }
 
   async rendreGestion(corps) {
-    if (this.id === null) { corps.innerHTML = '<p class="aide">Enregistrez la fiche pour gérer le marché.</p>'; return; }
-    if (!this.services.structure.gestion) { corps.innerHTML = '<p class="aide">Gestion du marché disponible en ligne seulement.</p>'; return; }
-    corps.innerHTML = '<p class="aide">Chargement…</p>';
+    if (this.id === null) { corps.innerHTML = `<p class="aide">${texteHtml('fiches_btp.structure.gestion.nouvelle')}</p>`; return; }
+    if (!this.services.structure.gestion) { corps.innerHTML = `<p class="aide">${texteHtml('fiches_btp.structure.gestion.en_ligne')}</p>`; return; }
+    corps.innerHTML = `<p class="aide">${texteHtml('fiches_btp.structure.gestion.chargement')}</p>`;
     let g;
     try { g = await this.services.structure.gestion(Number(this.id)); } catch (e) { corps.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; return; }
     const f = (v) => formatNombre(v, 2);
@@ -483,7 +479,7 @@ export class FicheMarche extends FicheStructure {
       const s = formatNombre(D(n).div(D(d)).times(100).toDecimalPlaces(2).toString(), 2);
       return `${s.includes(',') ? s.replace(/0+$/, '').replace(/,$/, '') : s} %`;
     };
-    const lien = (x) => `<a href="${urlDocument(Number(x.ent_id))}" title="Ouvrir (Ctrl : nouvelle fenêtre)">${echapper(x.numero ?? `#${x.ent_id}`)}</a>`;
+    const lien = (x) => `<a href="${urlDocument(Number(x.ent_id))}" title="${texteHtml('fiches_btp.structure.gestion.ouvrir')}">${echapper(x.numero ?? `#${x.ent_id}`)}</a>`;
     const somme = (liste, cle) => liste.reduce((s, x) => s.plus(Dz(x[cle])), D(0)).toString();
     const total = (cle) => somme(g.commandes, cle);
     const prevu = total('prevu_ht');
@@ -506,57 +502,55 @@ export class FicheMarche extends FicheStructure {
     // Regroupement repliable : titre, boutons de création (sans replier), contenu.
     const reduits = new Set(lirePreferences().gestionMarcheReduits ?? []);
     const groupe = (code, titre, boutons, contenu) => `<details class="groupe-gestion" data-groupe="${code}" ${reduits.has(code) ? '' : 'open'}>
-      <summary><h3>${titre}</h3><span class="groupe-gestion-boutons">${boutons.map((x) => `<button type="button" data-creer="${x.type}" title="${echapper(x.titre)}">${x.libelle}</button>`).join('')}</span></summary>
+      <summary><h3>${titre}</h3><span class="groupe-gestion-boutons">${boutons.map((x) => `<button type="button" data-creer="${x.type}" title="${echapper(x.titre)}">${echapper(x.libelle)}</button>`).join('')}</span></summary>
       ${contenu}</details>`;
     const creation = this.creationPossible();
     const B = (type) => (creation ? [CREATIONS_MARCHE[type]] : []);
 
     corps.innerHTML = `<div class="gestion-marche">
-      ${groupe('recapitulatif', 'Récapitulatif du marché et des avenants', [...B(TYPE_DOCUMENT.V_RECEPTION), ...(this.moduleActif(MODULE_FACULTATIF.EXECUTION) ? B(TYPE_DOCUMENT.E_OE) : [])], `
-      <table class="tableau-gestion"><thead><tr><th>Commande</th><th>N°</th><th>Objet</th><th class="nombre">HT net</th><th class="nombre">TTC net</th>
-        <th class="nombre">Travaux HT</th><th class="nombre">Situé</th><th class="nombre">Avancement</th><th class="nombre">Facturé HT</th><th class="nombre">Reste à facturer</th></tr></thead>
-      <tbody>${g.commandes.map((c) => `<tr><td>${c.role === 'BASE' ? 'Marché' : `TS ${c.rang}`}</td><td>${lien(c)}</td><td>${echapper(c.objet ?? '')}</td>
+      ${groupe('recapitulatif', texteHtml('fiches_btp.structure.gestion.recapitulatif'), [...B(TYPE_DOCUMENT.V_RECEPTION), ...(this.moduleActif(MODULE_FACULTATIF.EXECUTION) ? B(TYPE_DOCUMENT.E_OE) : [])], `
+      <table class="tableau-gestion"><thead><tr><th>${texteHtml('fiches_btp.structure.colonnes.commande')}</th><th>${texteHtml('fiches_btp.structure.colonnes.numero')}</th><th>${texteHtml('fiches_btp.structure.colonnes.objet')}</th><th class="nombre">${texteHtml('fiches_btp.structure.colonnes.ht_net')}</th><th class="nombre">${texteHtml('fiches_btp.structure.colonnes.ttc_net')}</th>
+        <th class="nombre">${texteHtml('fiches_btp.structure.colonnes.travaux_ht')}</th><th class="nombre">${texteHtml('fiches_btp.structure.colonnes.situe')}</th><th class="nombre">${texteHtml('fiches_btp.structure.colonnes.avancement')}</th><th class="nombre">${texteHtml('fiches_btp.structure.colonnes.facture_ht')}</th><th class="nombre">${texteHtml('fiches_btp.structure.colonnes.reste_a_facturer')}</th></tr></thead>
+      <tbody>${g.commandes.map((c) => `<tr><td>${c.role === 'BASE' ? texteHtml('fiches_btp.structure.gestion.marche') : texteHtml('fiches_btp.structure.gestion.ts', { rang: c.rang })}</td><td>${lien(c)}</td><td>${echapper(c.objet ?? '')}</td>
         <td class="nombre">${f(c.prevu_ht)}</td><td class="nombre">${f(c.prevu_ttc)}</td><td class="nombre">${f(c.travaux_ht)}</td><td class="nombre">${f(c.situe_ht)}</td>
         <td class="nombre">${pct(c.situe_ht, c.travaux_ht)}</td><td class="nombre">${f(c.facture_ht)}</td>
         <td class="nombre">${f(Dz(c.travaux_ht).minus(Dz(c.facture_ht)).toString())}</td></tr>`).join('')}</tbody>
-      <tfoot><tr><th colspan="3">Total</th><th class="nombre">${f(prevu)}</th><th class="nombre">${f(total('prevu_ttc'))}</th><th class="nombre">${f(total('travaux_ht'))}</th>
+      <tfoot><tr><th colspan="3">${texteHtml('commun.total')}</th><th class="nombre">${f(prevu)}</th><th class="nombre">${f(total('prevu_ttc'))}</th><th class="nombre">${f(total('travaux_ht'))}</th>
         <th class="nombre">${f(total('situe_ht'))}</th><th class="nombre">${pct(total('situe_ht'), total('travaux_ht'))}</th>
         <th class="nombre">${f(g.facture_ht)}</th><th class="nombre">${f(Dz(g.montant_ht).minus(Dz(g.facture_ht)).toString())}</th></tr></tfoot></table>
-      <p class="aide">Situé : dernière situation de référence ; facturé par commande : factures et avoirs d'avancement non annulés (travaux) ;
-        facturé du marché : toutes ses factures et avoirs validés. Reste du marché = montant du marché − facturé.</p>`)}
+      <p class="aide">${texteHtml('fiches_btp.structure.gestion.recapitulatif_aide')}</p>`)}
 
-      ${groupe('situations', 'Situations', B(TYPE_DOCUMENT.V_SITUATION), g.situations.length ? `<table class="tableau-gestion"><thead><tr><th>N° de situation</th><th>Document</th><th>Indice</th><th>Date</th><th>Statut</th>
-        <th class="nombre">Cumul HT</th><th class="nombre" title="Cumul de la situation sur le total HT net du marché et de ses avenants">Avancement du marché</th><th></th></tr></thead><tbody>${g.situations.map((x) => `<tr><td>${x.rang ?? ''}</td><td>${lien(x)}</td>
-        <td>${echapper(x.indice ?? '')}${x.indices > 1 ? ` <small>(${x.indices} indices)</small>` : ''}</td><td>${echapper(x.date ?? '')}</td>
-        <td>${echapper(x.statut ?? '')}${x.facturee ? ' · facturée' : ''}</td><td class="nombre">${f(x.total_ht)}</td><td class="nombre">${pct(x.total_ht, prevu)}</td>
-        <td>${x.valide && !x.facturee ? `<button type="button" data-facturer="${x.ent_id}">Facturer</button> <button type="button" data-reviser="${x.ent_id}">Réviser</button>` : ''}</td></tr>`).join('')}
-        </tbody></table>` : '<p class="aide">Aucune situation.</p>')}
+      ${groupe('situations', texteHtml('fiches_btp.structure.gestion.situations'), B(TYPE_DOCUMENT.V_SITUATION), g.situations.length ? `<table class="tableau-gestion"><thead><tr><th>${texteHtml('fiches_btp.structure.colonnes.n_de_situation')}</th><th>${texteHtml('fiches_btp.structure.colonnes.document')}</th><th>${texteHtml('fiches_btp.structure.colonnes.indice')}</th><th>${texteHtml('fiches_btp.structure.colonnes.date')}</th><th>${texteHtml('fiches_btp.structure.colonnes.statut')}</th>
+        <th class="nombre">${texteHtml('fiches_btp.structure.colonnes.cumul_ht')}</th><th class="nombre" title="${texteHtml('fiches_btp.structure.colonnes.avancement_marche_aide')}">${texteHtml('fiches_btp.structure.colonnes.avancement_du_marche')}</th><th></th></tr></thead><tbody>${g.situations.map((x) => `<tr><td>${x.rang ?? ''}</td><td>${lien(x)}</td>
+        <td>${echapper(x.indice ?? '')}${x.indices > 1 ? ` <small>${texteHtml('fiches_btp.structure.gestion.indices', { nombre: x.indices })}</small>` : ''}</td><td>${echapper(x.date ?? '')}</td>
+        <td>${echapper(x.statut ?? '')}${x.facturee ? ` · ${texteHtml('fiches_btp.structure.gestion.facturee')}` : ''}</td><td class="nombre">${f(x.total_ht)}</td><td class="nombre">${pct(x.total_ht, prevu)}</td>
+        <td>${x.valide && !x.facturee ? `<button type="button" data-facturer="${x.ent_id}">${texteHtml('fiches_btp.structure.gestion.facturer')}</button> <button type="button" data-reviser="${x.ent_id}">${texteHtml('fiches_btp.structure.gestion.reviser')}</button>` : ''}</td></tr>`).join('')}
+        </tbody></table>` : `<p class="aide">${texteHtml('fiches_btp.structure.gestion.aucune_situation')}</p>`)}
 
-      ${groupe('factures', "Factures et avoirs d'avancement", [...B(TYPE_DOCUMENT.V_FACTURE_AVT), ...B(TYPE_DOCUMENT.V_REPRISE_AVT)], `
-      ${nbAnnulees ? `<label class="fiche-option"><input type="checkbox" data-annulees ${this.voirAnnulees ? 'checked' : ''}> Afficher les pièces annulées (${nbAnnulees})</label>` : ''}
-      ${factures.length ? `<table class="tableau-gestion"><thead><tr><th>N° de situation</th><th>Pièce</th><th>Type</th><th>Date</th><th>Statut</th>
-        <th class="nombre">HT net</th><th class="nombre">TTC net</th><th class="nombre">Net à payer</th>${reglements ? '<th class="nombre">Réglé</th><th class="nombre">Reste à payer</th>' : ''}<th></th></tr></thead><tbody>${factures.map((x) => `<tr class="${x.annule ? 'annulee' : ''}">
-        <td>${x.rang ?? ''}</td><td>${lien(x)}</td><td>${echapper(x.type)}${x.nature === 'ANNULATION' ? ' (annulation)' : x.nature === 'AVANCEMENT' ? " (d'avancement)" : ''}</td>
+      ${groupe('factures', texteHtml('fiches_btp.structure.gestion.factures'), [...B(TYPE_DOCUMENT.V_FACTURE_AVT), ...B(TYPE_DOCUMENT.V_REPRISE_AVT)], `
+      ${nbAnnulees ? `<label class="fiche-option"><input type="checkbox" data-annulees ${this.voirAnnulees ? 'checked' : ''}> ${texteHtml('fiches_btp.structure.gestion.voir_annulees', { nombre: nbAnnulees })}</label>` : ''}
+      ${factures.length ? `<table class="tableau-gestion"><thead><tr><th>${texteHtml('fiches_btp.structure.colonnes.n_de_situation')}</th><th>${texteHtml('fiches_btp.structure.colonnes.piece')}</th><th>${texteHtml('fiches_btp.structure.colonnes.type')}</th><th>${texteHtml('fiches_btp.structure.colonnes.date')}</th><th>${texteHtml('fiches_btp.structure.colonnes.statut')}</th>
+        <th class="nombre">${texteHtml('fiches_btp.structure.colonnes.ht_net')}</th><th class="nombre">${texteHtml('fiches_btp.structure.colonnes.ttc_net')}</th><th class="nombre">${texteHtml('fiches_btp.structure.colonnes.net_a_payer')}</th>${reglements ? `<th class="nombre">${texteHtml('fiches_btp.structure.colonnes.regle')}</th><th class="nombre">${texteHtml('fiches_btp.structure.colonnes.reste_a_payer')}</th>` : ''}<th></th></tr></thead><tbody>${factures.map((x) => `<tr class="${x.annule ? 'annulee' : ''}">
+        <td>${x.rang ?? ''}</td><td>${lien(x)}</td><td>${echapper(x.type)}${x.nature === 'ANNULATION' ? ` ${texteHtml('fiches_btp.structure.gestion.nature_annulation')}` : x.nature === 'AVANCEMENT' ? ` ${texteHtml('fiches_btp.structure.gestion.nature_avancement')}` : ''}</td>
         <td>${echapper(x.date ?? '')}</td><td>${echapper(x.statut ?? '')}</td><td class="nombre">${f(x.total_ht)}</td><td class="nombre">${f(x.total_ttc)}</td>
-        <td class="nombre">${f(x.net_a_payer)}</td>${regle(x)}<td>${x.valide && !x.annule ? `<button type="button" data-annuler="${x.ent_id}">Annuler par avoir…</button>` : ''}</td></tr>`).join('')}
-        </tbody><tfoot><tr><th colspan="5">Total${nbAnnulees && this.voirAnnulees ? ' (hors pièces annulées)' : ''}</th><th class="nombre">${f(somme(facturesComptees, 'total_ht'))}</th>
+        <td class="nombre">${f(x.net_a_payer)}</td>${regle(x)}<td>${x.valide && !x.annule ? `<button type="button" data-annuler="${x.ent_id}">${texteHtml('fiches_btp.structure.gestion.annuler')}</button>` : ''}</td></tr>`).join('')}
+        </tbody><tfoot><tr><th colspan="5">${texteHtml('commun.total')}${nbAnnulees && this.voirAnnulees ? ` ${texteHtml('fiches_btp.structure.gestion.hors_annulees')}` : ''}</th><th class="nombre">${f(somme(facturesComptees, 'total_ht'))}</th>
         <th class="nombre">${f(somme(facturesComptees, 'total_ttc'))}</th><th class="nombre">${f(somme(facturesComptees, 'net_a_payer'))}</th>
         ${reglements ? `<th class="nombre">${f(totalRegle('pointe'))}</th><th class="nombre">${f(totalRegle('reste'))}</th>` : ''}<th></th></tr></tfoot></table>`
-        : '<p class="aide">Aucune facture d\'avancement.</p>'}`)}
+        : `<p class="aide">${texteHtml('fiches_btp.structure.gestion.aucune_facture')}</p>`}`)}
 
-      ${groupe('sous_traitants', 'Factures sous-traitants avec paiement direct', creation ? [CREATIONS_MARCHE.A_FACTURE] : [], sousTraitants.length ? `<table class="tableau-gestion"><thead><tr><th>Pièce</th><th>Réf. sous-traitant</th>
-        <th>Sous-traitant</th><th>Type</th><th>Date</th><th>Statut</th><th class="nombre">HT net</th><th class="nombre">TTC net</th><th>Facture liée</th></tr></thead>
+      ${groupe('sous_traitants', texteHtml('fiches_btp.structure.gestion.sous_traitants'), creation ? [CREATIONS_MARCHE.A_FACTURE] : [], sousTraitants.length ? `<table class="tableau-gestion"><thead><tr><th>${texteHtml('fiches_btp.structure.colonnes.piece')}</th><th>${texteHtml('fiches_btp.structure.colonnes.ref_sous_traitant')}</th>
+        <th>${texteHtml('fiches_btp.structure.colonnes.sous_traitant')}</th><th>${texteHtml('fiches_btp.structure.colonnes.type')}</th><th>${texteHtml('fiches_btp.structure.colonnes.date')}</th><th>${texteHtml('fiches_btp.structure.colonnes.statut')}</th><th class="nombre">${texteHtml('fiches_btp.structure.colonnes.ht_net')}</th><th class="nombre">${texteHtml('fiches_btp.structure.colonnes.ttc_net')}</th><th>${texteHtml('fiches_btp.structure.colonnes.facture_liee')}</th></tr></thead>
         <tbody>${sousTraitants.map((x) => `<tr class="${x.annule ? 'annulee' : ''}"><td>${lien(x)}</td><td>${echapper(x.reference ?? '')}</td><td>${echapper(x.tiers ?? '')}</td>
         <td>${echapper(x.type)}</td><td>${echapper(x.date ?? '')}</td><td>${echapper(x.statut ?? '')}</td><td class="nombre">${f(x.total_ht)}</td>
         <td class="nombre">${f(x.total_ttc)}</td><td>${x.liee ? lien(x.liee) : ''}</td></tr>`).join('')}</tbody>
-        <tfoot><tr><th colspan="6">Total</th><th class="nombre">${f(somme(stComptees, 'total_ht'))}</th><th class="nombre">${f(somme(stComptees, 'total_ttc'))}</th><th></th></tr></tfoot></table>
-        <p class="aide">Sous-traitants : postes « Paiement direct » du marché et intervenants marqués paiement direct (marché, chantier). Facture liée : facture
-          du marché dont le paiement direct du sous-traitant est égal au TTC de la pièce, sinon la première à sa date ou après.</p>`
-        : '<p class="aide">Aucune facture de sous-traitant en paiement direct (postes « Paiement direct » du marché, intervenants marqués paiement direct).</p>')}
+        <tfoot><tr><th colspan="6">${texteHtml('commun.total')}</th><th class="nombre">${f(somme(stComptees, 'total_ht'))}</th><th class="nombre">${f(somme(stComptees, 'total_ttc'))}</th><th></th></tr></tfoot></table>
+        <p class="aide">${texteHtml('fiches_btp.structure.gestion.sous_traitants_aide')}</p>`
+        : `<p class="aide">${texteHtml('fiches_btp.structure.gestion.aucun_sous_traitant')}</p>`)}
 
-      ${this.valeur('sens') !== 'ST' && this.moduleActif(MODULE_FACULTATIF.SOUS_TRAITANCE) ? groupe('sous_traitance', 'Sous-traitance : engagé et réalisé', [], '<div data-engage></div>') : ''}
-      ${groupe('acomptes', 'Acomptes', [], '<div data-acomptes></div>')}
-      ${groupe('postes', 'Postes de pied', [], '<div data-postes></div>')}
+      ${this.valeur('sens') !== 'ST' && this.moduleActif(MODULE_FACULTATIF.SOUS_TRAITANCE) ? groupe('sous_traitance', texteHtml('fiches_btp.structure.gestion.sous_traitance'), [], '<div data-engage></div>') : ''}
+      ${groupe('acomptes', texteHtml('fiches_btp.structure.gestion.acomptes'), [], '<div data-acomptes></div>')}
+      ${groupe('postes', texteHtml('fiches_btp.structure.gestion.postes'), [], '<div data-postes></div>')}
     </div>`;
     corps.querySelectorAll('details.groupe-gestion').forEach((d) => d.addEventListener('toggle', () => {
       const r = new Set(lirePreferences().gestionMarcheReduits ?? []);
@@ -578,20 +572,20 @@ export class FicheMarche extends FicheStructure {
     corps.querySelector('[data-annulees]')?.addEventListener('change', (e) => { this.voirAnnulees = e.target.checked; recharger(); });
     corps.querySelectorAll('[data-facturer]').forEach((b) => b.addEventListener('click', action(async (id, e) => {
       const r = await this.services.structure.facturerSituation(id);
-      this.message(`Facture d'avancement créée depuis la situation`, 'succes');
+      this.message(texte('fiches_btp.structure.gestion.facture_creee'), 'succes');
       this.ouvrirUrl(urlDocument(r.document.ent_id), e);
     })));
     corps.querySelectorAll('[data-reviser]').forEach((b) => b.addEventListener('click', action(async (id, e) => {
       const r = await this.services.structure.reviser(id);
-      this.message(`Révision créée (indice ${r.document.ent_indice})`, 'succes');
+      this.message(texte('fiches_btp.structure.gestion.revision_creee', { indice: r.document.ent_indice }), 'succes');
       this.ouvrirUrl(urlDocument(r.document.ent_id), e);
     })));
     corps.querySelectorAll('[data-annuler]').forEach((b) => b.addEventListener('click', action(async (id) => {
       const pieces = await this.services.structure.piecesAnnulation(id);
-      const liste = pieces.map((x) => `• ${x.rang ? `n° ${x.rang} · ` : ''}${x.type} ${x.numero ?? ''}`).join('\n');
-      if (!(await confirmer(`Pièces annulées par avoir :\n\n${liste}\n\nAnnuler ?`, { titre: 'Annulation par avoir', danger: true }))) return;
+      const liste = pieces.map((x) => `• ${x.rang ? `${texte('fiches_btp.structure.numero_rang', { rang: x.rang })} · ` : ''}${x.type} ${x.numero ?? ''}`).join('\n');
+      if (!(await confirmer(texte('fiches_btp.structure.gestion.confirmer_annulation', { liste }), { titre: texte('fiches_btp.structure.gestion.annulation'), danger: true }))) return;
       const r = await this.services.structure.annuler(id);
-      this.message(`${r.avoirs.length} avoir(s) d'annulation créé(s)${r.situation ? ' ; dernière situation remise en cours' : ''}`, 'succes');
+      this.message(`${pluriel('fiches_btp.structure.gestion.avoirs_crees', r.avoirs.length)}${r.situation ? ` ; ${texte('fiches_btp.structure.gestion.situation_remise')}` : ''}`, 'succes');
     })));
   }
 
@@ -608,38 +602,36 @@ export class FicheMarche extends FicheStructure {
       [acomptes, mode] = await Promise.all([this.services.structure.acomptes(Number(this.id)), this.services.structure.modeAcomptes()]);
     } catch (e) { zone.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; return; }
     const ca = mode.mode === 'CA';
-    const DEDUCTIONS = [['LINEAIRE', 'Linéaire (au prorata de l\'avancement)'], ['PREMIERE', 'Première facture'], ['DERNIERE', 'Dernière facture']];
+    const DEDUCTIONS = pairesParCode('fiches_btp.structure.acomptes.deductions', ['LINEAIRE', 'PREMIERE', 'DERNIERE']);
     const f = (v) => formatNombre(v ?? 0, 2);
     const lien = (x) => (x ? `<a href="${urlDocument(Number(x.ent_id))}">${echapper(x.numero ?? `#${x.ent_id}`)}</a> <small>${echapper(x.statut ?? '')}</small>` : '');
-    zone.innerHTML = `<p class="aide">Mode de la société : ${ca ? 'chiffre d\'affaires (facture d\'acompte avec TVA, déduction HT par commande)'
-      : 'avance de trésorerie (reçu sans TVA, déduction TTC au pied global)'} ; montants ${ca ? 'HT' : 'TTC'}. La déduction est calculée à la validation
-      de chaque facture d'avancement, une fois la facture ou le reçu de l'acompte validé.</p>
-      ${acomptes.length ? `<table class="tableau-gestion"><thead><tr><th>N°</th><th>Libellé</th><th class="nombre">Montant</th><th>Déduction</th>
-        <th>Demande</th><th>${ca ? 'Facture' : 'Reçu'}</th><th class="nombre">Déduit</th><th class="nombre">Reste à déduire</th><th></th></tr></thead>
+    zone.innerHTML = `<p class="aide">${texteHtml(ca ? 'fiches_btp.acomptes.mode_ca' : 'fiches_btp.acomptes.mode_tresorerie')}</p>
+      ${acomptes.length ? `<table class="tableau-gestion"><thead><tr><th>${texteHtml('fiches_btp.structure.colonnes.numero')}</th><th>${texteHtml('fiches_btp.structure.colonnes.libelle')}</th><th class="nombre">${texteHtml('fiches_btp.structure.colonnes.montant')}</th><th>${texteHtml('fiches_btp.structure.colonnes.deduction')}</th>
+        <th>${texteHtml('fiches_btp.structure.colonnes.demande')}</th><th>${texteHtml(ca ? 'fiches_btp.colonnes.facture' : 'fiches_btp.colonnes.recu')}</th><th class="nombre">${texteHtml('fiches_btp.structure.colonnes.deduit')}</th><th class="nombre">${texteHtml('fiches_btp.structure.colonnes.reste_a_deduire')}</th><th></th></tr></thead>
         <tbody>${acomptes.map((a) => `<tr><td>${a.rang}</td><td>${echapper(a.libelle)}</td><td class="nombre">${f(a.montant)}</td>
           <td>${echapper(DEDUCTIONS.find(([c]) => c === a.deduction)?.[1] ?? a.deduction)}</td><td>${lien(a.demande)}</td><td>${lien(a.piece)}</td>
           <td class="nombre">${f(a.deduit)}</td><td class="nombre">${f(Dz(a.montant).minus(Dz(a.deduit)).toString())}</td>
-          <td>${!a.piece || a.piece.annule ? `<button type="button" data-emettre="${a.id}" title="Valide la demande si besoin, puis crée la pièce">${ca ? 'Facturer' : 'Reçu'}</button>` : ''}</td></tr>`).join('')}</tbody></table>`
-        : '<p class="aide">Aucun acompte.</p>'}
+          <td>${!a.piece || a.piece.annule ? `<button type="button" data-emettre="${a.id}" title="${texteHtml('fiches_btp.structure.acomptes.emettre_aide')}">${texteHtml(ca ? 'fiches_btp.acomptes.facturer' : 'fiches_btp.acomptes.recu')}</button>` : ''}</td></tr>`).join('')}</tbody></table>`
+        : `<p class="aide">${texteHtml('fiches_btp.structure.acomptes.aucun')}</p>`}
       <div class="formulaire acompte-nouveau">
-        <label>Acompte <input data-a="valeur" size="10" inputmode="decimal" placeholder="10"></label>
-        <label>En <span data-a="saisie"></span></label>
-        <label>Déduction <span data-a="deduction"></span></label>
-        <label class="large">Libellé <input data-a="libelle" maxlength="150" placeholder="Acompte n° ${acomptes.length + 1}"></label>
-        <button type="button" data-demander>＋ Demande d'acompte</button>
+        <label>${texteHtml('fiches_btp.structure.acomptes.acompte')} <input data-a="valeur" size="10" inputmode="decimal" placeholder="10"></label>
+        <label>${texteHtml('fiches_btp.structure.acomptes.en')} <span data-a="saisie"></span></label>
+        <label>${texteHtml('fiches_btp.structure.acomptes.deduction')} <span data-a="deduction"></span></label>
+        <label class="large">${texteHtml('fiches_btp.structure.acomptes.libelle')} <input data-a="libelle" maxlength="150" placeholder="${texteHtml('fiches_btp.structure.acomptes.libelle_defaut', { rang: acomptes.length + 1 })}"></label>
+        <button type="button" data-demander>${iconeHtml('ajouter')} ${texteHtml('fiches_btp.structure.acomptes.demander')}</button>
       </div>`;
-    const saisie = creerCombo({ options: [{ valeur: 'P', libelle: '% du marché HT' }, { valeur: 'M', libelle: `Montant ${ca ? 'HT' : 'TTC'}` }], valeur: 'P', vide: false });
+    const saisie = creerCombo({ options: [{ valeur: 'P', libelle: texte('fiches_btp.structure.acomptes.pourcentage') }, { valeur: 'M', libelle: texte(ca ? 'fiches_btp.acomptes.montant_ht' : 'fiches_btp.acomptes.montant_ttc') }], valeur: 'P', vide: false });
     const deduction = creerCombo({ options: DEDUCTIONS.map(([valeur, libelle]) => ({ valeur, libelle })), valeur: 'LINEAIRE', vide: false });
     zone.querySelector('[data-a="saisie"]').replaceWith(saisie);
     zone.querySelector('[data-a="deduction"]').replaceWith(deduction);
     zone.querySelector('[data-demander]').addEventListener('click', async (e) => {
       const valeur = lireNombre(zone.querySelector('[data-a="valeur"]').value);
-      if (valeur === null || valeur === undefined || Dz(valeur).lte(0)) { this.message('Acompte : valeur positive', 'avertissement'); return; }
+      if (valeur === null || valeur === undefined || Dz(valeur).lte(0)) { this.message(texte('fiches_btp.structure.acomptes.valeur_positive'), 'avertissement'); return; }
       try {
         const r = await this.services.structure.demanderAcompte(Number(this.id), {
           libelle: zone.querySelector('[data-a="libelle"]').value.trim() || null, saisie: saisie.valeurCombo, valeur, deduction: deduction.valeurCombo,
         });
-        this.message(`Demande d'acompte créée : ${r.document.ent_numero ?? ''}`, 'succes');
+        this.message(texte('fiches_btp.structure.acomptes.demande_creee', { numero: r.document.ent_numero ?? '' }), 'succes');
         this.ouvrirUrl(urlDocument(r.document.ent_id), e);
         this.rendreGestion(corps);
       } catch (x) { this.message(x.message, 'erreur'); }
@@ -647,7 +639,7 @@ export class FicheMarche extends FicheStructure {
     zone.querySelectorAll('[data-emettre]').forEach((b) => b.addEventListener('click', async (e) => {
       try {
         const r = await this.services.structure.emettreAcompte(Number(b.dataset.emettre));
-        this.message(`${ca ? 'Facture' : 'Reçu'} d'acompte créé : à valider`, 'succes');
+        this.message(texte(ca ? 'fiches_btp.acomptes.facture_creee' : 'fiches_btp.acomptes.recu_cree'), 'succes');
         this.ouvrirUrl(urlDocument(r.document.ent_id), e);
         this.rendreGestion(corps);
       } catch (x) { this.message(x.message, 'erreur'); }
@@ -663,23 +655,22 @@ export class FicheMarche extends FicheStructure {
     if (!zone || !this.services.structure.postes) return;
     let postes = await this.services.structure.postes(Number(this.id)).catch((e) => { zone.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; return null; });
     if (!postes) return;
-    const TYPES = [[TYPE_POSTE_MARCHE.PAIEMENT_DIRECT, 'Paiement direct'], [TYPE_POSTE_MARCHE.PRORATA, 'Compte prorata'], [TYPE_POSTE_MARCHE.REMISE, 'Remise'], [TYPE_POSTE_MARCHE.AUTRE, 'Autre']];
-    const PORTEES = [['G', 'Factures (pied global)'], ['C', 'Commandes (modèle)']];
-    const MODES = [['P', '%'], ['M', 'Montant']];
-    const SENS = [[-1, 'Déduction'], [1, 'Ajout']];
+    const TYPES = pairesParCode('fiches_btp.structure.postes.types', [TYPE_POSTE_MARCHE.PAIEMENT_DIRECT, TYPE_POSTE_MARCHE.PRORATA, TYPE_POSTE_MARCHE.REMISE, TYPE_POSTE_MARCHE.AUTRE]);
+    const PORTEES = pairesParCode('fiches_btp.structure.postes.portees', ['G', 'C']);
+    const MODES = pairesParCode('fiches_btp.structure.postes.modes', ['P', 'M']);
+    const SENS = pairesParCode('fiches_btp.structure.postes.sens', [[-1, 'deduction'], [1, 'ajout']]);
     // Sous-traitants du paiement direct : tiers des intervenants du marché.
     const tiers = new Map();
     for (const x of this.valeur('intervenants') ?? []) if (x.per_id) tiers.set(Number(x.per_id), x.tiers ?? x.raison_sociale ?? `#${x.per_id}`);
     const rendre = () => {
-      zone.innerHTML = `<p class="aide">Retenue de garantie : % des conditions du marché (${formatLibre(this.valeur('retenue_pct') ?? 0)} %), sur le TTC de chaque facture.
-        Le pied global des factures ne reçoit que des postes après TVA (TTC) ; un paiement direct se chiffre sur chaque facture.</p>
-        ${postes.length ? `<table class="tableau-gestion"><thead><tr><th>Pièces</th><th>Type</th><th>Libellé</th><th>Niveau</th><th>Mode</th>
-          <th class="nombre">Valeur</th><th>Sens</th><th>Sous-traitant</th><th>Actif</th><th></th></tr></thead><tbody>${postes.map((p, i) => `<tr data-i="${i}">
+      zone.innerHTML = `<p class="aide">${texteHtml('fiches_btp.structure.postes.aide', { pct: formatLibre(this.valeur('retenue_pct') ?? 0) })}</p>
+        ${postes.length ? `<table class="tableau-gestion"><thead><tr><th>${texteHtml('fiches_btp.structure.colonnes.pieces')}</th><th>${texteHtml('fiches_btp.structure.colonnes.type')}</th><th>${texteHtml('fiches_btp.structure.colonnes.libelle')}</th><th>${texteHtml('fiches_btp.structure.colonnes.niveau')}</th><th>${texteHtml('fiches_btp.structure.colonnes.mode')}</th>
+          <th class="nombre">${texteHtml('fiches_btp.structure.colonnes.valeur')}</th><th>${texteHtml('fiches_btp.structure.colonnes.sens')}</th><th>${texteHtml('fiches_btp.structure.colonnes.sous_traitant')}</th><th>${texteHtml('fiches_btp.structure.colonnes.actif')}</th><th></th></tr></thead><tbody>${postes.map((p, i) => `<tr data-i="${i}">
           <td data-combo="portee"></td><td data-combo="type"></td><td><input data-c="libelle" size="26" maxlength="150" value="${echapper(p.libelle)}"></td>
           <td data-combo="niveau"></td><td data-combo="mode"></td><td><input data-c="valeur" size="8" inputmode="decimal" value="${formatLibre(p.valeur)}"></td>
           <td data-combo="sens"></td><td data-combo="per_id"></td><td><input type="checkbox" data-c="actif" ${p.actif ? 'checked' : ''}></td>
-          <td><button type="button" data-retirer title="Retirer le poste">✕</button></td></tr>`).join('')}</tbody></table>` : '<p class="aide">Aucun poste.</p>'}
-        <div class="boutons"><button type="button" data-ajouter>＋ Poste</button> <button type="button" class="principal" data-enregistrer>Enregistrer les postes</button></div>`;
+          <td><button type="button" data-retirer title="${texteHtml('fiches_btp.structure.postes.retirer')}">${iconeHtml('retirer')}</button></td></tr>`).join('')}</tbody></table>` : `<p class="aide">${texteHtml('fiches_btp.structure.postes.aucun')}</p>`}
+        <div class="boutons"><button type="button" data-ajouter>${iconeHtml('ajouter')} ${texteHtml('fiches_btp.structure.postes.ajouter')}</button> <button type="button" class="principal" data-enregistrer>${texteHtml('fiches_btp.structure.postes.enregistrer')}</button></div>`;
       zone.querySelectorAll('tbody tr').forEach((tr) => {
         const p = postes[Number(tr.dataset.i)];
         const combo = (cle, liste, vide = false) => {
@@ -692,7 +683,7 @@ export class FicheMarche extends FicheStructure {
         };
         combo('portee', PORTEES);
         combo('type', TYPES);
-        combo('niveau', p.portee === 'G' ? [['TTC', 'Après TVA']] : [['HT', 'Avant TVA'], ['TTC', 'Après TVA']]);
+        combo('niveau', pairesParCode('fiches_btp.structure.postes.niveaux', p.portee === 'G' ? ['TTC'] : ['HT', 'TTC']));
         combo('mode', MODES);
         combo('sens', SENS);
         combo('per_id', [...tiers].map(([id, nom]) => [id, nom]), true);
@@ -700,14 +691,14 @@ export class FicheMarche extends FicheStructure {
       zone.querySelectorAll('[data-retirer]').forEach((b) => b.addEventListener('click', () => { lire(); postes.splice(Number(b.closest('tr').dataset.i), 1); rendre(); }));
       zone.querySelector('[data-ajouter]').addEventListener('click', () => {
         lire();
-        postes.push({ id: null, portee: 'G', type: 'PAIEMENT_DIRECT', libelle: 'Paiement direct', niveau: 'TTC', mode: 'M', valeur: 0, sens: -1, per_id: null, ordre: postes.length + 1, actif: true });
+        postes.push({ id: null, portee: 'G', type: 'PAIEMENT_DIRECT', libelle: texte('fiches_btp.structure.postes.types.PAIEMENT_DIRECT'), niveau: 'TTC', mode: 'M', valeur: 0, sens: -1, per_id: null, ordre: postes.length + 1, actif: true });
         rendre();
       });
       zone.querySelector('[data-enregistrer]').addEventListener('click', async () => {
         if (!lire()) return;
         try {
           postes = await this.services.structure.enregistrerPostes(Number(this.id), postes);
-          this.message('Postes du marché enregistrés : appliqués aux factures et commandes à leur validation', 'succes');
+          this.message(texte('fiches_btp.structure.postes.enregistres'), 'succes');
           rendre();
         } catch (e) { this.message(e.message, 'erreur'); }
       });
@@ -719,7 +710,7 @@ export class FicheMarche extends FicheStructure {
         p.libelle = tr.querySelector('[data-c="libelle"]').value.trim();
         p.actif = tr.querySelector('[data-c="actif"]').checked;
         const v = lireNombre(tr.querySelector('[data-c="valeur"]').value);
-        if (v === null || v === undefined) { this.message(`${p.libelle || 'Poste'} : valeur invalide`, 'avertissement'); return false; }
+        if (v === null || v === undefined) { this.message(texte('fiches_btp.structure.postes.valeur_invalide', { libelle: p.libelle || texte('fiches_btp.structure.postes.poste') }), 'avertissement'); return false; }
         p.valeur = v;
         p.sens = Number(p.sens);
         p.per_id = p.per_id === null || p.per_id === '' ? null : Number(p.per_id);
@@ -744,7 +735,7 @@ export class FicheMarche extends FicheStructure {
     const c = CREATIONS_MARCHE[type];
     if (type === TYPE_DOCUMENT.A_FACTURE) { this.ouvrirUrl(`/document/nouveau?type=A_FACTURE&marche=${Number(this.id)}`, e); return; }
     const r = await this.services.structure.documentMarche(Number(this.id), type);
-    this.message(`${c.nom} ${r.document.ent_numero ?? ''} créé`, 'succes');
+    this.message(texte('fiches_btp.structure.document_cree', { nom: c.nom, numero: r.document.ent_numero ?? '' }), 'succes');
     this.ouvrirUrl(urlDocument(r.document.ent_id), e);
   }
 
@@ -752,24 +743,24 @@ export class FicheMarche extends FicheStructure {
   rendreInformations(v) {
     const commandes = (this.refs.marche_documents ?? []).filter((x) => x.mar_id === Number(this.id));
     if (!commandes.length) return super.rendreInformations(v);
-    const ligne = (x) => `<a href="${urlDocument(Number(x.ent_id))}">${echapper(x.numero ?? `Document ${x.ent_id}`)}</a> ${echapper(x.objet ?? '')}`
-      + ` <small>${formatNombre(x.total_ht ?? 0, 2)} € HT</small>`;
+    const ligne = (x) => `<a href="${urlDocument(Number(x.ent_id))}">${echapper(x.numero ?? texte('fiches_btp.structure.document', { id: x.ent_id }))}</a> ${echapper(x.objet ?? '')}`
+      + ` <small>${texteHtml('fiches_btp.structure.montant_ht', { montant: formatNombre(x.total_ht ?? 0, 2) })}</small>`;
     const base = commandes.filter((x) => x.role === 'BASE');
     const avenants = commandes.filter((x) => x.role === 'AVENANT');
     return super.rendreInformations(v)
-      + (base.length ? `<div class="fiche-info"><span>Commande</span> <b>${base.map(ligne).join(' · ')}</b></div>` : '')
-      + (avenants.length ? `<div class="fiche-info"><span>Avenants</span> <b>${avenants.map((x) => `n° ${x.rang} : ${ligne(x)}`).join(' · ')}</b></div>` : '');
+      + (base.length ? `<div class="fiche-info"><span>${texteHtml('fiches_btp.structure.commande')}</span> <b>${base.map(ligne).join(' · ')}</b></div>` : '')
+      + (avenants.length ? `<div class="fiche-info"><span>${texteHtml('fiches_btp.structure.avenants')}</span> <b>${avenants.map((x) => `${texteHtml('fiches_btp.structure.numero_rang', { rang: x.rang })} : ${ligne(x)}`).join(' · ')}</b></div>` : '');
   }
 }
 
 /** Boutons de création des regroupements de l'onglet Gestion du marché. */
 const CREATIONS_MARCHE = {
-  V_RECEPTION: { type: TYPE_DOCUMENT.V_RECEPTION, libelle: '🚚 Nouveau BL', nom: 'Bon de livraison', titre: 'Bon de livraison des commandes du marché (reste à livrer de chaque commande)' },
-  E_OE: { type: TYPE_DOCUMENT.E_OE, libelle: "▶ Ordre d'exécution", nom: "Ordre d'exécution", titre: "Lancer l'exécution : ordre d'exécution repris des commandes du marché (une section par commande ; module Exécution)" },
-  V_SITUATION: { type: TYPE_DOCUMENT.V_SITUATION, libelle: '📈 Nouvelle situation', nom: 'Situation', titre: 'Situation de travaux : avancement cumulé des commandes du marché (non comptable)' },
-  V_FACTURE_AVT: { type: TYPE_DOCUMENT.V_FACTURE_AVT, libelle: "📊 Nouvelle facture d'avancement", nom: "Facture d'avancement", titre: "Facture d'avancement : avancement cumulé, facture de la période" },
-  V_REPRISE_AVT: { type: TYPE_DOCUMENT.V_REPRISE_AVT, libelle: '↺ Reprise', nom: "Reprise d'avancement", titre: "Reprise d'avancement : cumul déjà facturé dans un autre logiciel (non comptable, déduit des factures suivantes)" },
-  A_FACTURE: { type: TYPE_DOCUMENT.A_FACTURE, libelle: '＋ Facture sous-traitant', nom: 'Facture fournisseur', titre: 'Facture fournisseur rattachée au marché (choisir le sous-traitant dans l’annuaire du document)' },
+  V_RECEPTION: { type: TYPE_DOCUMENT.V_RECEPTION, get libelle() { return `${icone('fiches_btp_bl')} ${texte('fiches_btp.structure.creations.V_RECEPTION.libelle')}`; }, get nom() { return texte('fiches_btp.structure.creations.V_RECEPTION.nom'); }, get titre() { return texte('fiches_btp.structure.creations.V_RECEPTION.titre'); } },
+  E_OE: { type: TYPE_DOCUMENT.E_OE, get libelle() { return `${icone('fiches_btp_ordre')} ${texte('fiches_btp.structure.creations.E_OE.libelle')}`; }, get nom() { return texte('fiches_btp.structure.creations.E_OE.nom'); }, get titre() { return texte('fiches_btp.structure.creations.E_OE.titre'); } },
+  V_SITUATION: { type: TYPE_DOCUMENT.V_SITUATION, get libelle() { return `${icone('fiches_btp_situation')} ${texte('fiches_btp.structure.creations.V_SITUATION.libelle')}`; }, get nom() { return texte('fiches_btp.structure.creations.V_SITUATION.nom'); }, get titre() { return texte('fiches_btp.structure.creations.V_SITUATION.titre'); } },
+  V_FACTURE_AVT: { type: TYPE_DOCUMENT.V_FACTURE_AVT, get libelle() { return `${icone('fiches_btp_facture_avt')} ${texte('fiches_btp.structure.creations.V_FACTURE_AVT.libelle')}`; }, get nom() { return texte('fiches_btp.structure.creations.V_FACTURE_AVT.nom'); }, get titre() { return texte('fiches_btp.structure.creations.V_FACTURE_AVT.titre'); } },
+  V_REPRISE_AVT: { type: TYPE_DOCUMENT.V_REPRISE_AVT, get libelle() { return `${icone('fiches_btp_reprise')} ${texte('fiches_btp.structure.creations.V_REPRISE_AVT.libelle')}`; }, get nom() { return texte('fiches_btp.structure.creations.V_REPRISE_AVT.nom'); }, get titre() { return texte('fiches_btp.structure.creations.V_REPRISE_AVT.titre'); } },
+  A_FACTURE: { type: TYPE_DOCUMENT.A_FACTURE, get libelle() { return `${icone('ajouter')} ${texte('fiches_btp.structure.creations.A_FACTURE.libelle')}`; }, get nom() { return texte('fiches_btp.structure.creations.A_FACTURE.nom'); }, get titre() { return texte('fiches_btp.structure.creations.A_FACTURE.titre'); } },
 };
 
 export const CLASSES_STRUCTURE = { projet: FicheProjet, affaire: FicheAffaire, chantier: FicheChantier, marche: FicheMarche };

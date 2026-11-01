@@ -1,3 +1,4 @@
+import { texte, pluriel } from '@logibtp/socle/dictionnaire';
 import { SUJET_FENETRE } from '../codes.js';
 import { api, ErreurApi } from '../api.js';
 import { listeAttente, lireAttente, ecrireAttente, retirerAttente, marquerAttente, envoiCree, estHorsLigne, ETAT_ATTENTE } from './attente.js';
@@ -56,14 +57,14 @@ export async function envoyerAttentes(app) {
         const conflit = x instanceof ErreurApi && x.statut === 409;
         await marquerAttente(compte, e.id_local, { etat: conflit ? ETAT_ATTENTE.CONFLIT : ETAT_ATTENTE.ERREUR, erreur: x.message });
         app.publier(SUJET_ATTENTE, {});
-        app.message(`${e.libelle} : ${conflit ? 'modifié entre-temps sur le serveur, vos modifications restent sur ce poste' : `envoi refusé (${x.message})`}`, 'erreur');
+        app.message(conflit ? texte('hors_ligne_btp.envoi.conflit', { libelle: e.libelle }) : texte('hors_ligne_btp.envoi.refuse', { libelle: e.libelle, erreur: x.message }), 'erreur');
       }
     }
-    if (n) app.message(`${n} document${n > 1 ? 's' : ''} saisi${n > 1 ? 's' : ''} hors ligne envoyé${n > 1 ? 's' : ''} au serveur`, 'succes');
+    if (n) app.message(pluriel('hors_ligne_btp.envoi.documents', n), 'succes');
     const o = await envoyerOperations(compte);
     if (o.envoyees || o.refusees.length) app.publier(SUJET_ATTENTE, {});
-    if (o.envoyees) app.message(`${o.envoyees} saisie${o.envoyees > 1 ? 's' : ''} du terrain envoyée${o.envoyees > 1 ? 's' : ''} au serveur`, 'succes');
-    for (const r of o.refusees) app.message(`${r.libelle} : envoi refusé (${r.erreur}) ; la saisie reste sur cet appareil`, 'erreur');
+    if (o.envoyees) app.message(pluriel('hors_ligne_btp.envoi.operations', o.envoyees), 'succes');
+    for (const r of o.refusees) app.message(texte('hors_ligne_btp.envoi.operation_refusee', { libelle: r.libelle, erreur: r.erreur }), 'erreur');
     return n + o.envoyees;
   };
   // Une seule fenêtre envoie : les autres passent leur tour.

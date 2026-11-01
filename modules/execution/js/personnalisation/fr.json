@@ -1,0 +1,63 @@
+{
+  "erreurs": {
+    "ETP_MOTIF": "Motif obligatoire pour annuler la validation d'une étape",
+    "PAR_MODELE": "Code et libellé du modèle obligatoires"
+  },
+  "execution": {
+    "etapes": {
+      "natures": {
+        "TACHE": "Tâche (enchaînement)",
+        "JALON": "Jalon (point de repère)",
+        "ATTENTE": "Attente (séchage, validation d'un tiers)"
+      },
+      "unites": {
+        "H": "heures",
+        "OUV": "jours ouvrés",
+        "CAL": "jours calendaires"
+      },
+      "erreurs": {
+        "ETP_INCONNUE": "Étape inconnue",
+        "ETP_DEJA_VALIDEE": "Étape déjà validée",
+        "ETP_ORDRE": "Étapes précédentes à valider d'abord",
+        "ETP_CONTROLE": "Contrôle du N+1 attendu sur une étape précédente",
+        "ETP_CONTROLE_ATTENTE": "Contrôle du N+1 pas encore fait sur une étape précédente",
+        "ETP_NON_VALIDEE": "Étape non validée",
+        "ETP_SUIVANT_VALIDE": "Une étape suivante est déjà validée",
+        "ETP_SANS_CONTROLE": "Cette étape n'a pas de contrôle du N+1",
+        "ETP_CODE": "Code d'état obligatoire",
+        "ETP_DOUBLON": "Même état deux fois",
+        "ETP_AMONT": "Étape amont inconnue",
+        "ETP_BOUCLE": "Les étapes amont forment une boucle",
+        "ETP_NATURE": "Nature inconnue",
+        "ETP_DUREE": "Durée négative ou unité inconnue"
+      }
+    },
+    "etats": {
+      "service": {
+        "SANS_OBJET": "Sans objet",
+        "A_VENIR": "À venir",
+        "EN_ATTENTE": "En attente",
+        "EN_COURS": "En cours",
+        "BLOQUE": "Bloqué",
+        "TERMINE": "Terminé"
+      },
+      "erreurs": {
+        "PAR_CODE": "Code d'étape obligatoire",
+        "PAR_DOUBLON": "Codes d'étape en double",
+        "PAR_SERVICE": "Service obligatoire pour chaque étape",
+        "PAR_AMONT": "Étape amont inconnue",
+        "PAR_BOUCLE": "Parcours en boucle"
+      }
+    },
+    "atelier": {
+      "titre": "Étapes à valider",
+      "numero": "N° d'ordre (code-barres)",
+      "prevu": "prévu {{date}}",
+      "termine": "{{etape}} terminé",
+      "toutes": "Toutes les étapes sont validées.",
+      "aucune": "Aucune étape à valider pour vous aujourd'hui : saisissez le numéro d'un ordre.",
+      "introuvable": "Ordre introuvable",
+      "validee": "{{numero}} : étape validée"
+    }
+  }
+}

@@ -1,3 +1,4 @@
+import { texte, texteHtml, icone, iconeHtml, textesParCode } from '@logibtp/socle/dictionnaire';
 import { echapper, htmlSur, formatDateHeure } from '@logibtp/socle/ui';
 import { NATURES_NOTE, ETATS_NOTE, ETATS_CLOS, NATURE_NOTE, ETAT_NOTE } from '@logibtp/crm';
 import { lireMail } from '@logibtp/ged';
@@ -20,7 +21,7 @@ export async function individusCrm(app) {
 }
 
 export const libelleNature = (code) => NATURES_NOTE.find((n) => n.valeur === code)?.libelle ?? code;
-export const iconeNature = (code) => NATURES_NOTE.find((n) => n.valeur === code)?.icone ?? '•';
+export const iconeNature = (code) => NATURES_NOTE.find((n) => n.valeur === code)?.icone ?? icone('crm_btp_puce');
 export const libelleEtat = (code) => ETATS_NOTE.find((e) => e.valeur === code)?.libelle ?? code;
 export const estClose = (note) => ETATS_CLOS.includes(note.etat);
 
@@ -46,16 +47,17 @@ export function echeanceNote(note) {
 /** Pastille d'état d'une note. */
 export const pastilleEtat = (note) => `<span class="crm-etat crm-etat-${String(note.etat).toLowerCase()}">${echapper(libelleEtat(note.etat))}</span>`;
 
-const COULEURS_RAPPEL = { ROUGE: 'Échu ou imminent', ORANGE: 'Bientôt', VERT: 'À venir' };
+const COULEURS_RAPPEL = textesParCode('crm_btp.couleurs_rappel', ['ROUGE', 'ORANGE', 'VERT']);
 
 /** Pastille de couleur d'un rappel (rouge, orange, vert). */
 export const pastilleRappel = (r) => (r.couleur ? `<span class="crm-pastille crm-pastille-${r.couleur.toLowerCase()}" title="${COULEURS_RAPPEL[r.couleur] ?? ''}"></span>` : '<span class="crm-pastille"></span>');
 
 /** Description d'un rappel : à date, ou n jours avant l'échéance. */
 export function libelleRappel(r, seuils = null) {
-  if (r.type === 'DATE') return `Le ${formatDateHeure(r.quand)}`;
+  if (r.type === 'DATE') return texte('crm_btp.rappel.le', { quand: formatDateHeure(r.quand) });
   const j = r.delai_jours ?? seuils?.orange;
-  return `${j === null || j === undefined ? 'Avant' : `${j} j avant`} l'échéance${r.reference ? ` (${formatDateHeure(r.reference)})` : ''}`;
+  const avant = j === null || j === undefined ? texte('crm_btp.rappel.avant') : texte('crm_btp.rappel.jours_avant', { jours: j });
+  return texte('crm_btp.rappel.echeance', { avant, reference: r.reference ? ` (${formatDateHeure(r.reference)})` : '' });
 }
 
 /** Lien HTML vers l'élément principal d'une note. */
@@ -100,7 +102,7 @@ export async function noteDepuisCourriel(app, fichier, element) {
   const s = nouvelleSaisie({ etat: ETAT_NOTE.MEMO, element });
   s.tno_id = ctx.types.find((t) => t.code === 'COURRIEL')?.id ?? null;
   s.objet = (mail.objet || fichier.name).slice(0, 200);
-  s.message_html = `<p><b>De :</b> ${echapper(mail.de)}${mail.a ? `<br><b>À :</b> ${echapper(mail.a)}` : ''}${mail.date ? `<br><b>Date :</b> ${echapper(formatDateHeure(mail.date))}` : ''}</p>${texteEnHtml(mail.message)}`;
+  s.message_html = `<p><b>${texteHtml('crm_btp.courriel.de')}</b> ${echapper(mail.de)}${mail.a ? `<br><b>${texteHtml('crm_btp.courriel.a')}</b> ${echapper(mail.a)}` : ''}${mail.date ? `<br><b>${texteHtml('crm_btp.courriel.date')}</b> ${echapper(formatDateHeure(mail.date))}` : ''}</p>${texteEnHtml(mail.message)}`;
   const d = await api.crm.creer(s);
   const { ged } = await app.services();
   await ged.deposer({ fichier, nom_fichier: fichier.name, meta: { titre: s.objet, categorie: 'crm', type_element: 'crm_note', id_element: String(d.note.id), date_document: mail.date?.slice(0, 10) ?? null } });
@@ -115,9 +117,9 @@ export function zoneRiche(html, { lecture = false, surChange = () => {} } = {}) 
   const div = document.createElement('div');
   div.className = 'crm-riche';
   div.innerHTML = `${lecture ? '' : `<div class="crm-riche-outils" role="toolbar">
-    <button type="button" data-cmd="bold" title="Gras (Ctrl+B)"><b>G</b></button><button type="button" data-cmd="italic" title="Italique (Ctrl+I)"><i>I</i></button>
-    <button type="button" data-cmd="underline" title="Souligné (Ctrl+U)"><u>S</u></button><button type="button" data-cmd="insertUnorderedList" title="Liste à puces">• ≡</button>
-    <button type="button" data-cmd="insertOrderedList" title="Liste numérotée">1. ≡</button><button type="button" data-cmd="removeFormat" title="Effacer la mise en forme">⌫</button></div>`}
+    <button type="button" data-cmd="bold" title="${texteHtml('crm_btp.riche.gras')}"><b>${texteHtml('crm_btp.riche.gras_court')}</b></button><button type="button" data-cmd="italic" title="${texteHtml('crm_btp.riche.italique')}"><i>${texteHtml('crm_btp.riche.italique_court')}</i></button>
+    <button type="button" data-cmd="underline" title="${texteHtml('crm_btp.riche.souligne')}"><u>${texteHtml('crm_btp.riche.souligne_court')}</u></button><button type="button" data-cmd="insertUnorderedList" title="${texteHtml('crm_btp.riche.puces')}">${iconeHtml('crm_btp_liste_puces')}</button>
+    <button type="button" data-cmd="insertOrderedList" title="${texteHtml('crm_btp.riche.numeros')}">${iconeHtml('crm_btp_liste_numeros')}</button><button type="button" data-cmd="removeFormat" title="${texteHtml('crm_btp.riche.effacer')}">${iconeHtml('crm_btp_effacer_forme')}</button></div>`}
     <div class="crm-riche-texte" ${lecture ? '' : 'contenteditable="true"'}>${htmlSur(html ?? '')}</div>`;
   const texte = div.querySelector('.crm-riche-texte');
   div.querySelectorAll('[data-cmd]').forEach((b) => b.addEventListener('mousedown', (e) => {

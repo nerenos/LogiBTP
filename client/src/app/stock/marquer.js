@@ -1,3 +1,4 @@
+import { texte, texteHtml, pluriel, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { echapper, ouvrirModale } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 import { choixMultiple } from '../choix-multiple.js';
@@ -9,13 +10,13 @@ export async function marquerArticles(ids) {
   const options = marques.map((m) => ({ valeur: m.code, libelle: m.libelle }));
   const dlg = document.createElement('dialog');
   dlg.className = 'dialogue-structure';
-  dlg.innerHTML = `<form method="dialog"><h3>🏷 Marquer ${ids.length} article${ids.length > 1 ? 's' : ''}</h3>
-    <p class="ligne"><b>Ajouter</b> <span data-ajouter></span></p><p class="ligne"><b>Retirer</b> <span data-retirer></span></p>
-    <p class="aide">Les marques servent de listes rapides (inventaires, magasin, borne) ; elles se définissent dans les paramètres du stock.
-      ${marques.length ? '' : `<br>${echapper('Aucune marque définie.')}`}</p>
-    <div class="boutons"><button value="annuler">Annuler</button> <button type="button" class="principal" data-ok>Appliquer</button></div></form>`;
-  const ajouter = choixMultiple({ options, titre: 'Ajouter une marque', aucun: 'aucune' });
-  const retirer = choixMultiple({ options, titre: 'Retirer une marque', aucun: 'aucune' });
+  dlg.innerHTML = `<form method="dialog"><h3>${iconeHtml('stock_btp_marque')} ${texteHtml('stock_btp.marquer.titre', { articles: pluriel('stock_btp.etat.articles', ids.length) })}</h3>
+    <p class="ligne"><b>${texteHtml('commun.ajouter')}</b> <span data-ajouter></span></p><p class="ligne"><b>${texteHtml('commun.retirer')}</b> <span data-retirer></span></p>
+    <p class="aide">${texteHtml('stock_btp.marquer.aide')}
+      ${marques.length ? '' : `<br>${texteHtml('stock_btp.marquer.aucune')}`}</p>
+    <div class="boutons"><button value="annuler">${texteHtml('commun.annuler')}</button> <button type="button" class="principal" data-ok>${texteHtml('stock_btp.marquer.appliquer')}</button></div></form>`;
+  const ajouter = choixMultiple({ options, titre: texte('stock_btp.marquer.ajouter'), aucun: texte('stock_btp.marquer.aucun') });
+  const retirer = choixMultiple({ options, titre: texte('stock_btp.marquer.retirer'), aucun: texte('stock_btp.marquer.aucun') });
   dlg.querySelector('[data-ajouter]').append(ajouter);
   dlg.querySelector('[data-retirer]').append(retirer);
   document.body.append(dlg);

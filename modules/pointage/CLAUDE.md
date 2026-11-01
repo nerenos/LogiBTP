@@ -4,7 +4,7 @@
 Heures de main-d'œuvre des salariés et des intérimaires : saisie (bureau, borne), contrôles, synthèse et validation, variables de paie et export, valorisation, congés et absences.
 
 ## Contraintes absolues
-- Ne connaît ni salariés, ni chantiers, ni natures, ni ordres, ni équipes : identifiants fournis par `SpecialisationPointage` (cœur : `SpecialisationPointageBtp`), clés étrangères posées par le cœur (`db/199`). JS sans dépendance ; .NET → `LogiBTP.Socle.Web`. Jamais du cœur ni d'un autre module.
+- Ne connaît ni salariés, ni chantiers, ni natures, ni ordres, ni équipes : identifiants fournis par `SpecialisationPointage` (cœur : `SpecialisationPointageBtp`), clés étrangères posées par le cœur (`db/199`). JS → `@logibtp/socle` (dictionnaire seulement) ; .NET → `LogiBTP.Socle.Web`. Jamais du cœur ni d'un autre module.
 - Un pointage est toujours rattaché à un chantier (chantiers internes pour le temps hors chantier). Durées en minutes entières, heures en minutes depuis minuit, dates « AAAA-MM-JJ ».
 - Règles répliquées JS ↔ C# avec un jeu commun : `controles.js` ↔ `ReglesPointage.cs` (`01_controles`), `validation.js` ↔ `ReglesValidation.cs` (`02_validation`), `paie.js` ↔ `ReglesPaie.cs` (`03_paie`), `conges.js` ↔ `ReglesConges.cs` (`04_conges`).
 - Deux couches : la SAISIE n'est jamais altérée par la validation ; la couche VALIDE (`poi_semaine`) la remplace quand elle existe. Un jour validé est bloqué (409 `POI_VALIDE`), y compris depuis la borne.
@@ -12,6 +12,7 @@ Heures de main-d'œuvre des salariés et des intérimaires : saisie (bureau, bor
 - Borne : routes publiques sans session, jeton d'appareil `X-Borne-Jeton` (empreinte SHA-256 en base), PIN haché PBKDF2 (5 essais, 15 min de blocage), jeton de saisie glissant de 5 min en mémoire.
 - Droits : saisie = le salarié, le responsable de son service ou un administrateur (`PeutSaisirAsync`) ; RH = `EstRhAsync` ; chef = `ChefDeAsync`.
 - Scripts SQL rejouables, pas de migrations EF.
+- Textes et icônes (module Personnalisation, lot P3a) : jamais en dur ; libellés et messages par code lus par `textesParCode` du socle (`js/personnalisation/fr.json`, préfixe `pointage.*`), icônes dans `js/personnalisation/images/icones.json` ; tests : `test/preparation.js` compose socle + module (clé manquante = échec). Textes des pages (cœur) : `pointage.<zone>.*` de `client/personnalisation/fr.json`.
 
 ## État actuel
 - **JS** : `controles.js` (+ `lundiDe`, `joursSemaine`, `lireDuree`, `ecrireDuree`), `validation.js`, `paie.js`, `conges.js`.

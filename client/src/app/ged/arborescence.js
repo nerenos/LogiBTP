@@ -1,3 +1,4 @@
+import { texte, icone } from '@logibtp/socle/dictionnaire';
 import { urlDocument, TYPE_FICHE } from '../codes.js';
 import { ArborescenceGed } from '@logibtp/ged/ui';
 
@@ -11,10 +12,10 @@ import { ArborescenceGed } from '@logibtp/ged/ui';
 //     ne sont pas imbriqués ; le dossier d'un document montre des liens symboliques vers ses enfants ;
 //   - racine sur un document : chemin des documents enfants (devis › commande › facture…), imbriqués.
 
-const ICONES = { projet: '🎯', affaire: '🗂', chantier: '🏗', marche: '📜' };
+const ICONES = Object.fromEntries(['projet', 'affaire', 'chantier', 'marche'].map((t) => [t, icone(`ged_btp_${t}`)]));
 const PREFIXES = { projet: 'P', affaire: 'A', chantier: 'C', marche: 'M' };
 const STRUCTURE = ['projet', 'affaire', 'chantier', 'marche'];
-const FAMILLES = [['V', 'Ventes', '💶'], ['A', 'Achats', '🛒'], ['T', 'Sous-traitance', '🤝'], ['S', 'Stock', '📦']];
+const FAMILLES = ['V', 'A', 'T', 'S'];
 // Ordre des types dans une famille : cycle du document (suffixe du code), les autres ensuite par libellé.
 const ORDRE_TYPES = ['DEVIS', 'DEMANDE', 'COMMANDE', 'RESERVATION', 'RECEPTION', 'ENTREE', 'SORTIE', 'TRANSFERT', 'RETOUR', 'SITUATION',
   'REPRISE_AVT', 'FACTURE_AVT', 'FACTURE', 'AVOIR', 'INVENTAIRE'];
@@ -49,13 +50,13 @@ export class ArborescenceBtp extends ArborescenceGed {
   #noeudDocument(d, mode, contexte) {
     return {
       cle: `D${d.groupe_id ?? d.id}`, type: 'document', ent_id: d.id, groupe_id: d.groupe_id ?? d.id, libelle: `${d.type_libelle ?? d.type} ${d.numero ?? `#${d.id}`}`,
-      sous_titre: d.objet ?? null, icone: '📄', element: { type_element: d.type, id_element: String(d.groupe_id ?? d.id) }, mode, contexte,
+      sous_titre: d.objet ?? null, icone: icone('ged_btp_document'), element: { type_element: d.type, id_element: String(d.groupe_id ?? d.id) }, mode, contexte,
     };
   }
 
   async racine() {
     const c = this.contexte;
-    if (!c) return { cle: 'racine', libelle: 'Documents', icone: '🗂', element: null, type: 'racine' };
+    if (!c) return { cle: 'racine', libelle: texte('ged_btp.arborescence.racine'), icone: icone('ged_btp_racine'), element: null, type: 'racine' };
     if (STRUCTURE.includes(c.type_element)) {
       const refs = await this.#refs();
       const x = refs[`${c.type_element === TYPE_FICHE.MARCHE ? 'marches' : `${c.type_element}s`}`]?.find((y) => String(y.id) === String(c.id_element));
@@ -72,8 +73,8 @@ export class ArborescenceBtp extends ArborescenceGed {
   async enfants(n) {
     if (n.type === 'racine') {
       return [
-        { cle: 'G-affaires', libelle: 'Affaires', icone: ICONES.affaire, groupe: true, type: 'groupe', niveau: 'affaire', element: null },
-        { cle: 'G-projets', libelle: 'Projets', icone: ICONES.projet, groupe: true, type: 'groupe', niveau: 'projet', element: null },
+        { cle: 'G-affaires', libelle: texte('ged_btp.arborescence.affaires'), icone: ICONES.affaire, groupe: true, type: 'groupe', niveau: 'affaire', element: null },
+        { cle: 'G-projets', libelle: texte('ged_btp.arborescence.projets'), icone: ICONES.projet, groupe: true, type: 'groupe', niveau: 'projet', element: null },
       ];
     }
     if (n.type === 'groupe') {
@@ -113,7 +114,7 @@ export class ArborescenceBtp extends ArborescenceGed {
     // Documents rangés sous ce nœud : rattachement le plus précis égal au nœud.
     const ici = contexte.documents.filter((d) => this.#placement(d) === n.cle && (!projet || !d.projet_id || d.projet_id === projet));
     // Dossiers virtuels par famille (Ventes, Achats, Stock), sans documents propres.
-    const familles = FAMILLES.map(([code, libelle, icone]) => ({ code, libelle, icone, documents: ici.filter((d) => familleDe(d) === code) }))
+    const familles = FAMILLES.map((code) => ({ code, libelle: texte(`ged_btp.arborescence.familles.${code}`), icone: icone(`ged_btp_famille_${code}`), documents: ici.filter((d) => familleDe(d) === code) }))
       .filter((f) => f.documents.length)
       .map((f) => ({ cle: `F${f.code}`, type: 'famille', famille: f.code, libelle: f.libelle, icone: f.icone, groupe: true, element: null,
         sous_titre: this.#compte(f.documents), documents: f.documents, contexte: { ...contexte, base: n } }));
@@ -134,7 +135,7 @@ export class ArborescenceBtp extends ArborescenceGed {
     }
     return [...types.values()]
       .sort((a, b) => rangType(a.code) - rangType(b.code) || a.libelle.localeCompare(b.libelle, 'fr'))
-      .map((t) => ({ cle: `T${t.code}`, type: 'type_document', libelle: t.libelle, icone: '📂', groupe: true, element: null,
+      .map((t) => ({ cle: `T${t.code}`, type: 'type_document', libelle: t.libelle, icone: icone('ged_btp_type'), groupe: true, element: null,
         sous_titre: this.#compte(t.documents), documents: t.documents, contexte: n.contexte }));
   }
 
@@ -173,8 +174,8 @@ export class ArborescenceBtp extends ArborescenceGed {
     return cibles.map((d) => {
       const chemin = base ? this.#cheminDepuis(base, d) : null;
       const libelle = `${d.type_libelle ?? d.type} ${d.numero ?? `#${d.id}`}`;
-      return chemin ? { cle: `L${d.groupe_id ?? d.id}`, libelle, sous_titre: d.objet ?? null, icone: '📄', lien: { cle: `D${d.groupe_id ?? d.id}`, chemin, libelle } }
-        : { cle: `U${d.id}`, libelle, sous_titre: d.objet ?? null, icone: '📄', url: urlDocument(d.id) };
+      return chemin ? { cle: `L${d.groupe_id ?? d.id}`, libelle, sous_titre: d.objet ?? null, icone: icone('ged_btp_document'), lien: { cle: `D${d.groupe_id ?? d.id}`, chemin, libelle } }
+        : { cle: `U${d.id}`, libelle, sous_titre: d.objet ?? null, icone: icone('ged_btp_document'), url: urlDocument(d.id) };
     });
   }
 }

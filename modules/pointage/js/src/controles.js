@@ -2,22 +2,15 @@
 // modules/pointage/tests/cas/01_controles.json) : erreurs (bloquantes à l'enregistrement) et avertissements (signalés
 // seulement : amplitude, chantier clos). Durées en minutes entières, dates « AAAA-MM-JJ », heures de début et de fin en
 // minutes depuis minuit (ANALYSE-MODULE-POINTAGE.md § 6 « Contrôles visibles avant l'envoi »).
+import { textesParCode } from '@logibtp/socle/dictionnaire';
 
 /** Paramètres par défaut de la société (poi_parametre). */
 export const PARAMETRES_DEFAUT = { pas_minutes: 15, amplitude_jour: 600, amplitude_semaine: 2880, ordre_nom: 'NP', validation: 'SIMPLE', blocage: 'SEMAINE' };
 
-export const MESSAGES_POINTAGE = {
-  POI_CHANTIER: 'Chantier obligatoire (chantier interne pour le temps hors chantier)',
-  POI_TYPE: 'Type de main-d\'œuvre obligatoire',
-  POI_MINUTES: 'Durée invalide (de 1 minute à 24 heures)',
-  POI_PAS: 'Durée hors du pas de saisie',
-  POI_PLAGE: 'Début et fin incohérents avec la durée',
-  POI_CHEVAUCHEMENT: 'Plages horaires qui se chevauchent',
-  POI_MOTIF: 'Motif obligatoire pour une non-conformité',
-  POI_JOUR: 'Amplitude journalière dépassée',
-  POI_SEMAINE: 'Amplitude hebdomadaire dépassée',
-  POI_CHANTIER_CLOS: 'Chantier clos',
-};
+/** Libellés des contrôles (fr.json : pointage.controles.<CODE>). */
+export const MESSAGES_POINTAGE = textesParCode('pointage.controles', [
+  'POI_CHANTIER', 'POI_TYPE', 'POI_MINUTES', 'POI_PAS', 'POI_PLAGE', 'POI_CHEVAUCHEMENT', 'POI_MOTIF', 'POI_JOUR', 'POI_SEMAINE', 'POI_CHANTIER_CLOS',
+]);
 
 const avertissement = (code, cle, date) => ({ code, niveau: 'AVERTISSEMENT', ...(cle !== undefined ? { cle } : {}), ...(date ? { date } : {}) });
 const erreur = (code, cle) => ({ code, niveau: 'ERREUR', cle });

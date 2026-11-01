@@ -3,17 +3,16 @@
 // nature ou refuse. Règles répliquées dans ReglesConges.cs (jeu tests/cas/04_conges.json) : contrôle d'une demande
 // (dates, demi-journées, chevauchement à la demi-journée avec les demandes et congés en cours du salarié), jours
 // décomptés (jours travaillés seulement, 0,5 aux bornes en demi-journée), traitements permis.
+import { textesParCode } from '@logibtp/socle/dictionnaire';
 import { ETAT_CONGE } from './codes.js';
 
-export const ETATS_CONGE = { [ETAT_CONGE.DEMANDE]: 'Demandé', [ETAT_CONGE.VALIDE]: 'Validé', [ETAT_CONGE.REFUSE]: 'Refusé', [ETAT_CONGE.ANNULE]: 'Annulé' };
+/** Libellés des états d'une demande (fr.json : pointage.etats_conge.<ÉTAT>). */
+export const ETATS_CONGE = textesParCode('pointage.etats_conge', Object.values(ETAT_CONGE));
 
-export const MESSAGES_CONGES = {
-  CNG_DATES: 'Dates du congé : début et fin obligatoires, la fin après le début',
-  CNG_DEMI: 'Un congé d\'une seule journée ne peut pas commencer l\'après-midi et finir à midi',
-  CNG_CHEVAUCHEMENT: 'Le salarié a déjà un congé demandé ou validé sur cette période',
-  CNG_ETAT: 'Ce congé n\'est plus à traiter',
-  CNG_NATURE: 'La nature de l\'absence est obligatoire pour valider',
-};
+/** Libellés des refus d'une demande (fr.json : pointage.conges.<CODE>). */
+export const MESSAGES_CONGES = textesParCode('pointage.conges', [
+  'CNG_DATES', 'CNG_DEMI', 'CNG_CHEVAUCHEMENT', 'CNG_ETAT', 'CNG_NATURE',
+]);
 
 const jourNumero = (d) => Date.parse(`${d}T00:00:00Z`) / 86400000;
 

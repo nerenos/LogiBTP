@@ -1,3 +1,4 @@
+import { texteHtml, textesParCode } from '@logibtp/socle/dictionnaire';
 import { urlFiche, TYPE_FICHE } from '../codes.js';
 import { echapper, formatNombre, ouvrirModale } from '@logibtp/socle/ui';
 
@@ -5,10 +6,8 @@ import { echapper, formatNombre, ouvrirModale } from '@logibtp/socle/ui';
 // rattachement) : recherche sur le code, le libellé et le parent, flèches + Entrée ou double-clic pour choisir.
 
 const FERMES = ['CLOSE', 'CLOS', 'PERDU', 'ABANDONNE', 'RESILIE', 'SOLDE'];
-const LIBELLES_STATUT = {
-  EN_COURS: 'En cours', REMIS: 'Offre remise', OBTENU: 'Obtenu', PERDU: 'Perdu', ABANDONNE: 'Abandonné', OUVERTE: 'Ouverte', CLOSE: 'Close',
-  OUVERT: 'Ouvert', TERMINE: 'Terminé', CLOS: 'Clos', SOLDE: 'Soldé', RESILIE: 'Résilié',
-};
+// Statuts : mêmes libellés que les fiches de la structure.
+const LIBELLES_STATUT = textesParCode('fiches_btp.structure.statuts', ['EN_COURS', 'REMIS', 'OBTENU', 'PERDU', 'ABANDONNE', 'OUVERTE', 'CLOSE', 'OUVERT', 'TERMINE', 'CLOS', 'SOLDE', 'RESILIE']);
 
 /** Parent affiché dans la liste : affaire d'un chantier, chantier d'un marché. */
 function parent(type, x, refs) {
@@ -28,14 +27,14 @@ export function choisirRattachement({ type, titre, liste, refs, courant = null, 
   dlg.innerHTML = `<form method="dialog">
     <h3>${echapper(titre)}</h3>
     <div class="selection-barre">
-      <input type="search" data-recherche placeholder="Rechercher (code, libellé, parent)">
+      <input type="search" data-recherche placeholder="${texteHtml('structure_btp.selection.rechercher')}">
       ${filtre ? `<label><input type="checkbox" data-filtre checked> ${echapper(filtre.libelle)}</label>` : ''}
-      <label><input type="checkbox" data-fermes> Clos et soldés</label>
+      <label><input type="checkbox" data-fermes> ${texteHtml('structure_btp.selection.fermes')}</label>
     </div>
-    <div class="selection-liste"><table class="table-selection"><thead><tr><th>Code</th><th>Libellé</th><th>${type === TYPE_FICHE.MARCHE ? 'Chantier' : type === TYPE_FICHE.CHANTIER ? 'Affaire · projet' : ''}</th>
-      <th>Statut</th>${type === TYPE_FICHE.MARCHE ? '<th class="col-nombre">Montant HT</th>' : ''}</tr></thead><tbody></tbody></table></div>
-    <div class="boutons"><button value="annuler">Annuler</button><button type="button" data-vider title="Retirer le rattachement">Aucun</button>
-      <button type="button" class="principal" data-choisir>Choisir</button></div></form>`;
+    <div class="selection-liste"><table class="table-selection"><thead><tr><th>${texteHtml('commun.code')}</th><th>${texteHtml('commun.libelle')}</th><th>${type === TYPE_FICHE.MARCHE ? texteHtml('structure_btp.selection.chantier') : type === TYPE_FICHE.CHANTIER ? texteHtml('structure_btp.selection.affaire_projet') : ''}</th>
+      <th>${texteHtml('structure_btp.selection.statut')}</th>${type === TYPE_FICHE.MARCHE ? `<th class="col-nombre">${texteHtml('structure_btp.selection.montant')}</th>` : ''}</tr></thead><tbody></tbody></table></div>
+    <div class="boutons"><button value="annuler">${texteHtml('commun.annuler')}</button><button type="button" data-vider title="${texteHtml('structure_btp.selection.vider_aide')}">${texteHtml('structure_btp.selection.vider')}</button>
+      <button type="button" class="principal" data-choisir>${texteHtml('structure_btp.selection.choisir')}</button></div></form>`;
   document.body.append(dlg);
   const $ = (s) => dlg.querySelector(s);
   let lignes = [];
@@ -49,7 +48,7 @@ export function choisirRattachement({ type, titre, liste, refs, courant = null, 
     $('tbody').innerHTML = lignes.map((x, i) => `<tr data-i="${i}" class="${i === index ? 'courante' : ''}"><td><b>${echapper(x.code)}</b></td><td>${echapper(x.libelle ?? '')}</td>
       <td>${echapper(parent(type, x, refs))}</td><td>${echapper(LIBELLES_STATUT[x.statut] ?? x.statut ?? '')}</td>
       ${type === TYPE_FICHE.MARCHE ? `<td class="col-nombre">${formatNombre(x.montant_ht, 2)}</td>` : ''}</tr>`).join('')
-      || '<tr><td colspan="5" class="aide">Aucun élément</td></tr>';
+      || `<tr><td colspan="5" class="aide">${texteHtml('structure_btp.selection.aucun')}</td></tr>`;
   };
   const marquer = () => {
     dlg.querySelectorAll('tbody tr[data-i]').forEach((tr) => tr.classList.toggle('courante', Number(tr.dataset.i) === index));
@@ -83,7 +82,7 @@ export function choisirRattachement({ type, titre, liste, refs, courant = null, 
 }
 
 const LISTES = { projet: 'projets', affaire: 'affaires', chantier: 'chantiers', marche: 'marches' };
-const TITRES_CHOIX = { projet: 'Choisir le projet', affaire: "Choisir l'affaire", chantier: 'Choisir le chantier', marche: 'Choisir le marché' };
+const TITRES_CHOIX = textesParCode('structure_btp.selection.titres', ['projet', 'affaire', 'chantier', 'marche']);
 
 /**
  * Zone de rattachement (projet, affaire, chantier, marché) : saisie du code (exact, ou seul code commençant ainsi),
@@ -97,9 +96,9 @@ export function champRattachement({ type, refs, valeur, choisir, titre = null, l
   const div = document.createElement('div');
   div.className = 'rattachement-champ champ-rattachement';
   div.innerHTML = `${titre ? `<label>${echapper(titre)} </label>` : ''}
-    <input class="rattachement-code" value="${echapper(x?.code ?? '')}" placeholder="${lecture ? '' : 'Code'}" autocomplete="off"
-      ${lecture ? 'readonly' : 'title="Code (double-clic ou F4 : choisir dans la liste)"'}>
-    <span class="rattachement-libelle">${x ? `<a href="${urlFiche(type, x.id)}" title="Ouvrir la fiche">${echapper(x.libelle ?? '')}</a>` : '<span class="aide">—</span>'}</span>`;
+    <input class="rattachement-code" value="${echapper(x?.code ?? '')}" placeholder="${lecture ? '' : texteHtml('commun.code')}" autocomplete="off"
+      ${lecture ? 'readonly' : `title="${texteHtml('structure_btp.selection.code_aide')}"`}>
+    <span class="rattachement-libelle">${x ? `<a href="${urlFiche(type, x.id)}" title="${texteHtml('structure_btp.selection.ouvrir')}">${echapper(x.libelle ?? '')}</a>` : '<span class="aide">—</span>'}</span>`;
   const input = div.querySelector('input');
   if (titre) div.querySelector('label').append(input);
   if (lecture) return div;

@@ -4,26 +4,13 @@
 // au plus un chef par composition (salarié ou intérimaire, contact des communications). En base : les compositions
 // (`equipe_periode`, commentaire) et une ligne par membre et par suite continue de compositions (`equipe_composition`).
 // Répliqué dans ReglesEquipes.cs (jeu tests/ressources/03_equipes.json).
+import { textesParCode } from '@logibtp/socle/dictionnaire';
 import { ajouterJours } from '@logibtp/socle';
 
 export const TYPES_MEMBRE = ['SALARIE', 'INTERIM', 'MATERIEL', 'SOUS_TRAITANT', 'EQUIPE'];
 export const TYPES_CHEF = ['SALARIE', 'INTERIM'];
 
-export const MESSAGES_EQUIPES = {
-  EQU_CODE: 'Code de l\'équipe obligatoire',
-  EQU_LIBELLE: 'Libellé de l\'équipe obligatoire',
-  EQU_PERIODE: 'Date de début de la composition obligatoire',
-  EQU_DATE_DOUBLE: 'Deux compositions commencent le même jour',
-  EQU_TYPE: 'Type de membre inconnu',
-  EQU_DOUBLON: 'Membre présent deux fois dans la composition',
-  EQU_SOI: 'Une équipe ne peut pas se contenir elle-même',
-  EQU_CHEF_TYPE: 'Le chef d\'équipe est un salarié ou un intérimaire',
-  EQU_CHEFS: 'Un seul chef d\'équipe par composition',
-  EQU_CYCLE: 'Une équipe ne peut pas contenir une équipe qui la contient',
-  EQU_ORDRE: 'Une composition ne peut pas commencer avant une composition plus ancienne non chargée',
-  EQU_VERSION: 'L\'équipe a été modifiée par ailleurs',
-  EQU_VERROU: 'L\'équipe est en cours de modification par un autre utilisateur',
-};
+export const MESSAGES_EQUIPES = textesParCode('ressources_btp.equipes.erreurs', ['EQU_CODE', 'EQU_LIBELLE', 'EQU_PERIODE', 'EQU_DATE_DOUBLE', 'EQU_TYPE', 'EQU_DOUBLON', 'EQU_SOI', 'EQU_CHEF_TYPE', 'EQU_CHEFS', 'EQU_CYCLE', 'EQU_ORDRE', 'EQU_VERSION', 'EQU_VERROU']);
 
 const cle = (m) => `${m.type}:${m.id}`;
 /** Comparaisons identiques en C# : ordinale pour les textes, numérique pour deux identifiants numériques. */

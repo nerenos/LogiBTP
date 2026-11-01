@@ -2,13 +2,11 @@
 //   etape    (validation, envoi, signature…) : toutes conservées
 //   edition  (dépôts, modifications)         : les N dernières conservées, les plus anciennes purgées
 // La version courante (dernier numéro) n'est jamais purgée ; un document du coffre-fort ne perd aucune version.
+import { pairesParCode } from '@logibtp/socle/dictionnaire';
 
 export const GENRES = Object.freeze({ EDITION: 'edition', ETAPE: 'etape' });
 
-export const ETAPES = [
-  ['VALIDATION', 'Validation'], ['ENVOI', 'Envoi'], ['RECEPTION', 'Réception'], ['SIGNATURE', 'Signature'],
-  ['REFUS', 'Refus'], ['ARCHIVAGE', 'Archivage'],
-];
+export const ETAPES = pairesParCode('ged.etapes', ['VALIDATION', 'ENVOI', 'RECEPTION', 'SIGNATURE', 'REFUS', 'ARCHIVAGE']);
 
 /** Numéros des éditions à purger. */
 export function editionsAPurger(versions, conservees, { coffre = false } = {}) {

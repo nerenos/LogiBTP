@@ -1,0 +1,148 @@
+{
+  "_meta": {
+    "langue": "fr-FR"
+  },
+  "commun": {
+    "ok": "OK",
+    "oui": "Oui",
+    "non": "Non",
+    "annuler": "Annuler",
+    "valider": "Valider",
+    "enregistrer": "Enregistrer",
+    "fermer": "Fermer",
+    "fermer_echap": "Fermer (Échap)",
+    "supprimer": "Supprimer",
+    "retirer": "Retirer",
+    "ajouter": "Ajouter",
+    "modifier": "Modifier",
+    "rechercher": "Rechercher",
+    "actualiser": "Actualiser",
+    "afficher": "Afficher",
+    "ignorer": "Ignorer",
+    "creer": "Créer",
+    "code": "Code",
+    "libelle": "Libellé",
+    "sans_titre": "(sans titre)",
+    "total": "Total",
+    "jours_courts": {
+      "lundi": "Lun",
+      "mardi": "Mar",
+      "mercredi": "Mer",
+      "jeudi": "Jeu",
+      "vendredi": "Ven",
+      "samedi": "Sam",
+      "dimanche": "Dim"
+    }
+  },
+  "socle": {
+    "dialogue": {
+      "confirmation": "Confirmation",
+      "information": "Information",
+      "saisie": "Saisie"
+    },
+    "aide_memoire": {
+      "titre": "Raccourcis",
+      "personnaliser": "Personnaliser les raccourcis…"
+    },
+    "signature": {
+      "zone": "Zone de signature : signer avec le doigt ou le stylet",
+      "effacer": "Effacer",
+      "effacer_titre": "Effacer la signature"
+    },
+    "theme": {
+      "auto": "Automatique (système)",
+      "clair": "Clair",
+      "sombre": "Sombre"
+    },
+    "grille": {
+      "entete_colonne": "Glisser l'entête pour déplacer la colonne, sa bordure droite pour la largeur (double-clic : automatique)",
+      "mise_en_forme": "Mise en forme (double-clic)",
+      "mise_en_forme_consultation": "Mise en forme (consultation)",
+      "depot_impossible": "Dépôt impossible ici",
+      "menu": {
+        "insererApres": "Insérer après",
+        "insererAvant": "Insérer avant",
+        "insererEnfant": "Insérer un enfant",
+        "couper": "Couper",
+        "copier": "Copier",
+        "coller": "Coller",
+        "dupliquer": "Dupliquer",
+        "supprimer": "$t(commun.supprimer)",
+        "monter": "Monter",
+        "descendre": "Descendre",
+        "indenter": "Augmenter le niveau",
+        "desindenter": "Diminuer le niveau",
+        "deplier": "Déplier",
+        "replier": "Replier",
+        "ouvrirMetre": "Métré",
+        "rechercher": "Bibliothèque",
+        "annuler": "$t(commun.annuler)",
+        "retablir": "Rétablir"
+      }
+    },
+    "raccourcis": {
+      "groupe_grille": "Lignes (document, métré)",
+      "grille": {
+        "insererApres": "Insérer une ligne après",
+        "insererAvant": "Insérer une ligne avant",
+        "insererEnfant": "Insérer une ligne enfant",
+        "monter": "Monter la ligne",
+        "descendre": "Descendre la ligne",
+        "indenter": "Augmenter le niveau",
+        "desindenter": "Diminuer le niveau",
+        "etendreHaut": "Étendre la sélection vers le haut",
+        "etendreBas": "Étendre la sélection vers le bas",
+        "couper": "Couper",
+        "copier": "Copier",
+        "coller": "Coller",
+        "dupliquer": "Dupliquer",
+        "supprimer": "$t(commun.supprimer)",
+        "annuler": "$t(commun.annuler)",
+        "retablir": "Rétablir",
+        "ouvrirMetre": "Ouvrir le métré",
+        "rechercher": "Rechercher dans la bibliothèque",
+        "replier": "Replier la tranche",
+        "deplier": "Déplier la tranche",
+        "menu": "Menu contextuel (aide-mémoire ; touche Menu et Maj+F10 aussi)"
+      }
+    },
+    "touches": {
+      "Shift": "Maj",
+      "Enter": "Entrée",
+      "ArrowUp": "↑",
+      "ArrowDown": "↓",
+      "ArrowLeft": "←",
+      "ArrowRight": "→",
+      "Delete": "Suppr",
+      "Escape": "Échap",
+      "Space": "Espace",
+      "Backspace": "Retour arrière",
+      "ContextMenu": "Menu",
+      "PageUp": "Pg préc.",
+      "PageDown": "Pg suiv.",
+      "Home": "Début",
+      "End": "Fin"
+    },
+    "editeur": {
+      "titre": "Libellé",
+      "titre_fenetre": "Mise en forme du libellé",
+      "bold": "Gras (Ctrl+B)",
+      "italic": "Italique (Ctrl+I)",
+      "underline": "Souligné (Ctrl+U)",
+      "strikeThrough": "Barré",
+      "superscript": "Exposant (m², m³)",
+      "subscript": "Indice",
+      "insertUnorderedList": "Liste à puces",
+      "insertOrderedList": "Liste numérotée",
+      "removeFormat": "Effacer la mise en forme",
+      "couleur": "Couleur {{couleur}}",
+      "inserer_variable": "Insérer une variable",
+      "variable": "Variable…",
+      "aide_consultation": "Consultation seule : libellé non modifiable · Échap : fermer",
+      "aide_saisie": "Entrée : paragraphe · Maj+Entrée : retour à la ligne · Ctrl+Entrée : valider · Échap : annuler"
+    }
+  },
+  "erreurs": {
+    "FORMULE_VIDE": "Formule vide"
+  }
+}

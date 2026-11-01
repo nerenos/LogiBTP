@@ -1,0 +1,8 @@
+/* Module Exécution : couleurs de l'écran tactile des étapes (EcranEtapesAtelier), surchargeables par le cœur et l'installation. */
+:root {
+  --exe-propose: #2563eb;
+  --exe-propose-halo: rgb(37 99 235 / 0.25);
+  --exe-retard: #b42318;
+  --exe-valider: #16a34a;
+  --exe-valider-texte: #fff;
+}

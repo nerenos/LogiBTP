@@ -1,0 +1,13 @@
+{
+  "execution_nature_tache": "▬",
+  "execution_nature_jalon": "◆",
+  "execution_nature_attente": "⏳",
+  "execution_etat_sans_objet": "—",
+  "execution_etat_a_venir": "⏳",
+  "execution_etat_en_attente": "🟡",
+  "execution_etat_en_cours": "🔵",
+  "execution_etat_bloque": "⛔",
+  "execution_etat_termine": "✅",
+  "execution_etape_validee": "✅",
+  "execution_valider": "✓"
+}

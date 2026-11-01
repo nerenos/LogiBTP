@@ -27,5 +27,8 @@ Messagerie de l'application par des comptes système (SMTP / IMAP, mot de passe 
 - Réception : `GET /boites`, `POST /comptes/{id}/relever`, `GET /recus?vue=a-rapprocher|tous|rapproches|ignores&compte=`, `GET /rattachement/types`, `POST /messages/{id}/rattacher|detacher|ignorer|marquer-adresse`.
 - Consultation : `GET /messages?vue=envoyes|attente|erreurs|tous`, `GET /messages/{id}`, `POST /messages/{id}/annuler|relancer`, `GET /lots`, `GET /journal`, `GET /compteurs`, `POST /traiter` (administrateur).
 
+## Textes et icônes (module Personnalisation, lot P3j)
+- Le module n'affiche aucun texte (erreurs par code au lot P2). Écrans du Mail dans le cœur (`client/src/app/pages/mail.js`, `parametres-mail.js`) : textes `mail_btp.*`, icônes `mail_btp_*`, couleurs du corps des courriels `--mail-corps-*` de `client/personnalisation`.
+
 ## Tests
 `dotnet test modules/mail/dotnet/LogiBTP.Mail.Tests` (règles, adresses, gabarits, reconnaissance ; parcours complet avec un faux transport si `LOGIBTP_TEST_PG` désigne une base où `007` est chargé) ; `npm test --workspace modules/mail/js`. Essai réel : `LOGIBTP_TEST_MAIL_*` du `.env`.

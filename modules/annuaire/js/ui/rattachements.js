@@ -1,3 +1,4 @@
+import { texte, texteHtml, pluriel, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { echapper, formatDate } from '@logibtp/socle/ui';
 import { texteCoordonnee, estVide, coordonneesParDefaut } from '../src/coordonnees.js';
 import { TAILLE_PAGE_RATTACHEMENTS } from '../src/fournisseurs.js';
@@ -76,17 +77,17 @@ export class EditeurRattachements {
     const pagination = this.options.charger && (this.total > TAILLE_PAGE_RATTACHEMENTS || this.recherche);
     this.conteneur.innerHTML = `<div class="rattachements">
       <div class="rattachements-barre">
-        ${this.options.charger ? `<input type="search" data-recherche placeholder="${cote === 'personne' ? 'Rechercher un contact (nom, fonction, service)…' : 'Rechercher une personne…'}" value="${echapper(this.recherche)}">` : ''}
-        <span class="aide">${this.total} ${cote === 'personne' ? 'contact' : 'rattachement'}${this.total > 1 ? 's' : ''}${this.recherche ? ' trouvé(s)' : ''}${nbModifs + nouveaux.length ? ` · ${nbModifs + nouveaux.length} modification(s) à enregistrer` : ''}</span>
-        ${pagination ? `<span class="rattachements-pages"><button type="button" data-page="-1" ${this.page <= 1 ? 'disabled' : ''} title="Page précédente">‹</button>
-          <span>${debut}–${fin} sur ${this.total}</span>
-          <button type="button" data-page="1" ${this.page >= pages ? 'disabled' : ''} title="Page suivante">›</button></span>` : ''}
-        ${modifiable ? `<button type="button" data-ajout>${cote === 'personne' ? '＋ Contact' : '＋ Rattacher à une personne'}</button>` : ''}
+        ${this.options.charger ? `<input type="search" data-recherche placeholder="${cote === 'personne' ? texteHtml('annuaire.rattachements.recherche_contact') : texteHtml('annuaire.rattachements.recherche_personne')}" value="${echapper(this.recherche)}">` : ''}
+        <span class="aide">${cote === 'personne' ? pluriel('annuaire.rattachements.nb_contacts', this.total) : pluriel('annuaire.rattachements.nb_rattachements', this.total)}${this.recherche ? texteHtml('annuaire.rattachements.trouves') : ''}${nbModifs + nouveaux.length ? ` · ${pluriel('annuaire.rattachements.modifications', nbModifs + nouveaux.length)}` : ''}</span>
+        ${pagination ? `<span class="rattachements-pages"><button type="button" data-page="-1" ${this.page <= 1 ? 'disabled' : ''} title="${texteHtml('annuaire.rattachements.page_precedente')}">${iconeHtml('annuaire_page_precedente')}</button>
+          <span>${texteHtml('annuaire.rattachements.pages', { debut, fin, total: this.total })}</span>
+          <button type="button" data-page="1" ${this.page >= pages ? 'disabled' : ''} title="${texteHtml('annuaire.rattachements.page_suivante')}">${iconeHtml('annuaire_page_suivante')}</button></span>` : ''}
+        ${modifiable ? `<button type="button" data-ajout>${iconeHtml('ajouter')} ${cote === 'personne' ? texteHtml('annuaire.rattachements.ajout_contact') : texteHtml('annuaire.rattachements.ajout_personne')}</button>` : ''}
       </div>
-      ${nouveaux.length ? `<h4 class="rattachements-titre">Nouveaux (enregistrement de la fiche)</h4>${nouveaux.map((r) => this.#carte(r)).join('')}` : ''}
+      ${nouveaux.length ? `<h4 class="rattachements-titre">${texteHtml('annuaire.rattachements.nouveaux')}</h4>${nouveaux.map((r) => this.#carte(r)).join('')}` : ''}
       <div class="rattachements-liste">
         ${this.lignes.length ? this.lignes.map((l) => this.#carte(this.#courant(l))).join('')
-          : `<p class="aide">${this.recherche ? 'Aucun résultat.' : cote === 'personne' ? 'Aucun contact rattaché.' : 'Rattaché à aucune personne.'}</p>`}
+          : `<p class="aide">${this.recherche ? texteHtml('annuaire.rattachements.aucun_resultat') : cote === 'personne' ? texteHtml('annuaire.rattachements.aucun_contact') : texteHtml('annuaire.rattachements.aucune_personne')}</p>`}
       </div></div>`;
     this.conteneur.querySelectorAll('.rattachement[data-cle]').forEach((carte) => this.#brancher(carte));
     this.conteneur.querySelector('[data-ajout]')?.addEventListener('click', () => this.#ajouter().catch((e) => this.options.message?.(e.message, 'erreur')));
@@ -102,7 +103,7 @@ export class EditeurRattachements {
   #carte(r) {
     const { cote, modifiable } = this.options;
     const nom = cote === 'personne' ? (r.individu || [r.nouvel_individu?.civilite, r.nouvel_individu?.prenom, r.nouvel_individu?.nom].filter(Boolean).join(' ')) : r.personne;
-    const icone = cote === 'personne' ? '👤' : this.options.niveaux?.find((n) => n.code === r.niveau)?.icone ?? '🏢';
+    const symbole = cote === 'personne' ? icone('annuaire_individu') : this.options.niveaux?.find((n) => n.code === r.niveau)?.icone ?? icone('annuaire_personne');
     const cible = cote === 'personne' ? r.ind_id : r.per_id;
     const coords = (r.coordonnees ?? []).filter((u) => !estVide(u));
     const cle = this.#cle(r);
@@ -110,27 +111,27 @@ export class EditeurRattachements {
     const ouvert = !r.supprime && (this.ouverts.has(cle) || (modifiable && !r.rat_id));
     return `<article class="rattachement ${r.actif === false ? 'inactif' : ''} ${r.supprime ? 'retire' : ''} ${modifie && !r.supprime ? 'modifie' : ''}" data-cle="${cle}">
       <header>
-        <span class="rattachement-nom">${icone} ${cible ? `<a href="/fiche/${cote === 'personne' ? 'individu' : 'personne'}/${cible}" data-ouvrir>${echapper(nom ?? '')}</a>` : `<b>${echapper(nom ?? '')}</b> <small class="aide">(nouveau)</small>`}</span>
-        ${r.principal ? '<span class="badge" title="Contact principal de la personne">★ principal</span>' : ''}${r.titulaire ? '<span class="badge">titulaire</span>' : ''}${r.actif === false ? '<span class="badge gris">inactif</span>' : ''}
-        ${r.supprime ? '<span class="badge alerte">retiré à l\'enregistrement</span>' : modifie ? '<span class="badge">modifié</span>' : ''}
+        <span class="rattachement-nom">${echapper(symbole)} ${cible ? `<a href="/fiche/${cote === 'personne' ? 'individu' : 'personne'}/${cible}" data-ouvrir>${echapper(nom ?? '')}</a>` : `<b>${echapper(nom ?? '')}</b> <small class="aide">${texteHtml('annuaire.rattachements.nouveau')}</small>`}</span>
+        ${r.principal ? `<span class="badge" title="${texteHtml('annuaire.rattachements.principal_aide')}">${iconeHtml('annuaire_principal')} ${texteHtml('annuaire.rattachements.principal')}</span>` : ''}${r.titulaire ? `<span class="badge">${texteHtml('annuaire.rattachements.titulaire')}</span>` : ''}${r.actif === false ? `<span class="badge gris">${texteHtml('annuaire.rattachements.inactif')}</span>` : ''}
+        ${r.supprime ? `<span class="badge alerte">${texteHtml('annuaire.rattachements.retire')}</span>` : modifie ? `<span class="badge">${texteHtml('annuaire.rattachements.modifie')}</span>` : ''}
         <span class="rattachement-fonction">${echapper([r.fonction, r.service].filter(Boolean).join(' · '))}</span>
         <span class="aide">${r.debut || r.fin ? `${formatDate(r.debut) || '…'} → ${formatDate(r.fin) || '…'}` : ''}</span>
         <span class="rattachement-coords">${coords.slice(0, 3).map((u) => echapper(texteCoordonnee(u))).join(' · ')}</span>
-        ${r.supprime ? (modifiable ? '<button type="button" data-annuler-retrait>Annuler le retrait</button>' : '')
-          : `<button type="button" data-plier title="${ouvert ? 'Replier' : 'Détails et coordonnées propres'}">${ouvert ? '▴' : '▾'}</button>
-             ${modifiable ? '<button type="button" data-retirer title="Retirer ce rattachement (à l\'enregistrement)">✕</button>' : ''}`}
+        ${r.supprime ? (modifiable ? `<button type="button" data-annuler-retrait>${texteHtml('annuaire.rattachements.annuler_retrait')}</button>` : '')
+          : `<button type="button" data-plier title="${ouvert ? texteHtml('annuaire.rattachements.replier') : texteHtml('annuaire.rattachements.deplier')}">${iconeHtml(ouvert ? 'annuaire_replier' : 'annuaire_deplier')}</button>
+             ${modifiable ? `<button type="button" data-retirer title="${texteHtml('annuaire.rattachements.retirer')}">${iconeHtml('retirer')}</button>` : ''}`}
       </header>
       ${ouvert ? `<div class="rattachement-detail">
         <div class="rattachement-champs">
-          <label>Fonction <input data-r="fonction" value="${echapper(r.fonction ?? '')}" ${modifiable ? '' : 'readonly'}></label>
-          <label>Service <input data-r="service" value="${echapper(r.service ?? '')}" ${modifiable ? '' : 'readonly'}></label>
-          <label>Début <input type="date" data-r="debut" value="${echapper(r.debut ?? '')}" ${modifiable ? '' : 'readonly'}></label>
-          <label>Fin <input type="date" data-r="fin" value="${echapper(r.fin ?? '')}" ${modifiable ? '' : 'readonly'}></label>
-          <label class="ligne"><input type="checkbox" data-r="principal" ${r.principal ? 'checked' : ''} ${modifiable ? '' : 'disabled'}> Contact principal</label>
-          <label class="ligne"><input type="checkbox" data-r="actif" ${r.actif !== false ? 'checked' : ''} ${modifiable ? '' : 'disabled'}> Actif</label>
-          <label class="plein">Commentaire <input data-r="commentaire" value="${echapper(r.commentaire ?? '')}" ${modifiable ? '' : 'readonly'}></label>
+          <label>${texteHtml('annuaire.rattachements.champs.fonction')} <input data-r="fonction" value="${echapper(r.fonction ?? '')}" ${modifiable ? '' : 'readonly'}></label>
+          <label>${texteHtml('annuaire.rattachements.champs.service')} <input data-r="service" value="${echapper(r.service ?? '')}" ${modifiable ? '' : 'readonly'}></label>
+          <label>${texteHtml('annuaire.rattachements.champs.debut')} <input type="date" data-r="debut" value="${echapper(r.debut ?? '')}" ${modifiable ? '' : 'readonly'}></label>
+          <label>${texteHtml('annuaire.rattachements.champs.fin')} <input type="date" data-r="fin" value="${echapper(r.fin ?? '')}" ${modifiable ? '' : 'readonly'}></label>
+          <label class="ligne"><input type="checkbox" data-r="principal" ${r.principal ? 'checked' : ''} ${modifiable ? '' : 'disabled'}> ${texteHtml('annuaire.rattachements.champs.principal')}</label>
+          <label class="ligne"><input type="checkbox" data-r="actif" ${r.actif !== false ? 'checked' : ''} ${modifiable ? '' : 'disabled'}> ${texteHtml('annuaire.rattachements.champs.actif')}</label>
+          <label class="plein">${texteHtml('annuaire.rattachements.champs.commentaire')} <input data-r="commentaire" value="${echapper(r.commentaire ?? '')}" ${modifiable ? '' : 'readonly'}></label>
         </div>
-        <h4>Coordonnées propres à ce rattachement</h4>
+        <h4>${texteHtml('annuaire.rattachements.coordonnees')}</h4>
         <div class="rattachement-coordonnees"></div>
       </div>` : ''}
     </article>`;
@@ -188,13 +189,13 @@ export class EditeurRattachements {
     const presents = [...this.lignes, ...this.modifications];
     let nouveau;
     if (cote === 'personne') {
-      const r = await choisirIndividu({ annuaire, titre: 'Ajouter un contact', exclure: presents.map((x) => Number(x.ind_id)).filter(Boolean) });
+      const r = await choisirIndividu({ annuaire, titre: texte('annuaire.rattachements.ajouter_contact'), exclure: presents.map((x) => Number(x.ind_id)).filter(Boolean) });
       if (!r) return;
       nouveau = r.individu
         ? { ind_id: r.individu.id, individu: r.individu.nom_complet }
         : { nouvel_individu: r.nouveau, individu: [r.nouveau.civilite, r.nouveau.prenom, r.nouveau.nom].filter(Boolean).join(' ') };
     } else {
-      const p = await choisirPersonne({ annuaire, titre: 'Rattacher à une personne', exclure: presents.map((x) => Number(x.per_id)).filter(Boolean) });
+      const p = await choisirPersonne({ annuaire, titre: texte('annuaire.rattachements.ajout_personne'), exclure: presents.map((x) => Number(x.per_id)).filter(Boolean) });
       if (!p) return;
       nouveau = { per_id: p.id, personne: p.raison_sociale, niveau: p.niveau };
     }

@@ -44,5 +44,10 @@
 - `GET|PUT /parametres` (seuils, `format_plan` : nul au PUT = inchangé, contrôlé `FORMAT_PLAN` ; PUT administrateur), `GET /rappels?tous=` (mes rappels actifs ; visibles seulement par défaut), `POST /notes/{id}/rappels`, `PUT|DELETE /rappels/{id}`, `POST /rappels/{id}/traiter` ; le détail d'une note porte ses rappels.
 - `GET /notes/{id}?reveler=`, `POST /notes`, `PUT /notes/{id}`, `DELETE /notes/{id}`, `POST /notes/{id}/prendre|rendre|lue`.
 
+## Textes et icônes (module Personnalisation, lot P3i)
+- Textes `crm.*` de `js/personnalisation/fr.json` (tables de libellés et messages des règles) ; icônes `crm_action`, `crm_message`, `crm_tache`. Écrans du CRM dans le cœur : textes `crm_btp.*`, icônes `crm_btp_*` et couleurs `--crm-*` de `client/personnalisation`.
+- `MESSAGES_NOTE.NOTE_OBJET` : accesseur (variable `{{longueur}}`) ; autres messages par `textesParCode`.
+- Tests : `js/test/preparation.js` compose socle + module (clé manquante = échec) ; clés du code vérifiées par `client/test/personnalisation.test.js`.
+
 ## Tests
 - `npm test --workspace modules/crm/js` ; `dotnet test modules/crm/dotnet/LogiBTP.Crm.Tests` (même jeu).

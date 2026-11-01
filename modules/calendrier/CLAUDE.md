@@ -17,5 +17,8 @@
 ## Routes HTTP (préfixe `/api/calendriers`)
 - `GET /`, `POST /`, `PUT /{id}`, `DELETE /{id}` (écritures : administrateur) ; `GET /{id}/journees?du=&au=&portee=service:7,…` (0 = calendrier par défaut) ; `GET /jours-fermes?portee=` (sans : société), `PUT /jours-fermes` { type, id, regles }.
 
+## Textes et icônes (module Personnalisation, lot P3p)
+- Textes `calendrier.*` du `fr.json` du module (`regles` : `REGLES_FERME` par `textesParCode`, `jours` : `JOURS_SEMAINE`, `erreurs_regles` : `MESSAGES_CALENDRIER`, `{{max}}` du cycle) ; tests avec le dictionnaire (`test/preparation.js`). Page du cœur : `calendrier_btp.*`, icônes `calendrier_btp_*`.
+
 ## Tests
 - `npm test --workspace modules/calendrier/js` ; `dotnet test modules/calendrier/dotnet/LogiBTP.Calendrier.Tests` (mêmes jeux).

@@ -1,3 +1,4 @@
+import { texte, texteHtml, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { CFG_LIGNES as C, ordreAffichage } from '@logibtp/socle/ui';
 
 // Recherche dans les lignes du document, sans filtrer : les lignes trouvées (numéro, code, libellé) sont surlignées
@@ -15,12 +16,12 @@ export class RechercheLignes {
     this.index = -1;
     conteneur.classList.add('barre-recherche');
     conteneur.innerHTML = `
-      <span aria-hidden="true">🔍</span>
-      <input type="search" data-recherche-lignes placeholder="Rechercher dans les lignes : numéro, code, libellé" aria-label="Rechercher dans les lignes">
+      <span aria-hidden="true">${iconeHtml('rechercher')}</span>
+      <input type="search" data-recherche-lignes placeholder="${texteHtml('document.recherche.indication')}" aria-label="${texteHtml('document.recherche.titre')}">
       <span class="compteur" aria-live="polite"></span>
-      <button type="button" data-precedent title="Résultat précédent (Maj+Entrée)">▲</button>
-      <button type="button" data-suivant title="Résultat suivant (Entrée)">▼</button>
-      <button type="button" data-fermer title="Fermer la recherche (Échap)">✕</button>`;
+      <button type="button" data-precedent title="${texteHtml('document.recherche.precedent')}">${iconeHtml('document_monter')}</button>
+      <button type="button" data-suivant title="${texteHtml('document.recherche.suivant')}">${iconeHtml('document_descendre')}</button>
+      <button type="button" data-fermer title="${texteHtml('document.recherche.fermer')}">${iconeHtml('retirer')}</button>`;
     this.champ = conteneur.querySelector('input');
     this.champ.addEventListener('input', () => this.chercher());
     this.champ.addEventListener('keydown', (e) => {
@@ -81,7 +82,7 @@ export class RechercheLignes {
   afficher() {
     const n = this.resultats.length;
     const id = n ? this.resultats[this.index] : null;
-    this.conteneur.querySelector('.compteur').textContent = this.champ.value.trim() ? (n ? `${this.index + 1} / ${n}` : 'Aucun résultat') : '';
+    this.conteneur.querySelector('.compteur').textContent = this.champ.value.trim() ? (n ? texte('document.recherche.position', { rang: this.index + 1, nombre: n }) : texte('document.recherche.aucun')) : '';
     this.conteneur.classList.toggle('sans-resultat', Boolean(this.champ.value.trim()) && !n);
     this.editeur.marquer(n ? new Set(this.resultats) : null, id);
     if (id !== null) this.editeur.allerA(id, { focus: false });

@@ -1,3 +1,4 @@
+import { texte, icone } from '@logibtp/socle/dictionnaire';
 import { aujourdhui } from '@logibtp/socle';
 import { api } from '../api.js';
 import { declarerOperation, ecrireOperation } from '../hors-ligne/operations.js';
@@ -73,7 +74,7 @@ export async function envoyerOuGarder(app, { type, id, corps, libelle, url = '/t
   }
   await ecrireOperation({ compte: app.utilisateur(), type, id, corps, libelle, url });
   app.publier(SUJET_ATTENTE, {});
-  app.message(`${libelle} : enregistré sur cet appareil, envoyé au retour du réseau`, 'avertissement');
+  app.message(texte('terrain_btp.hors_ligne.garde', { libelle }), 'avertissement');
   return { horsLigne: true };
 }
 
@@ -90,9 +91,9 @@ export function fournisseurEtapes(app, charger) {
       const o = ordres.find((x) => x.ent_id === entId);
       const etape = o?.etapes.find((e) => e.code === code);
       const r = await envoyerOuGarder(app, { type: OPERATION_TERRAIN.ETAPE, id: `${entId}:${code}`, corps: { ent_id: entId, code },
-        libelle: `Étape « ${etape?.libelle ?? code} » · ${o?.numero ?? entId}`, url: '/terrain?onglet=ordres' }, () => api.terrain.validerEtape(entId, code));
+        libelle: texte('terrain_btp.hors_ligne.etape', { etape: etape?.libelle ?? code, ordre: o?.numero ?? entId }), url: '/terrain?onglet=ordres' }, () => api.terrain.validerEtape(entId, code));
       if (r.reponse) return r.reponse;
-      const etapes = (o?.etapes ?? []).map((e) => (e.code === code ? { ...e, valide_le: aujourdhui(), valide_par: '⏳ sur l\'appareil' } : e));
+      const etapes = (o?.etapes ?? []).map((e) => (e.code === code ? { ...e, valide_le: aujourdhui(), valide_par: `${icone('terrain_btp_attente')} ${texte('terrain_btp.hors_ligne.sur_appareil')}` } : e));
       return { etapes, en_cours: etapes.find((e) => !e.valide_le)?.code ?? null };
     },
   };

@@ -1,3 +1,4 @@
+import { texte, texteHtml, pluriel, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { echapper, creerCombo, confirmer, formatDateHeure, formatDate, ouvrirModale } from '@logibtp/socle/ui';
 import { controlerConge, MESSAGES_CONGES, ETATS_CONGE, ETAT_CONGE } from '@logibtp/pointage';
 import { api } from '../api.js';
@@ -8,9 +9,10 @@ import { api } from '../api.js';
 
 
 /** Période lisible d'un congé (demi-journées aux bornes). */
+const avecMoment = (date, cle) => (cle ? texte(`pointage.conge.${cle}`, { date }) : date);
 export const periodeConge = (c) => (c.du === c.au
-  ? `${formatDate(c.du)}${c.debut_midi ? ' après-midi' : c.fin_midi ? ' matin' : ''}`
-  : `du ${formatDate(c.du)}${c.debut_midi ? ' après-midi' : ''} au ${formatDate(c.au)}${c.fin_midi ? ' midi' : ''}`);
+  ? avecMoment(formatDate(c.du), c.debut_midi ? 'apres_midi' : c.fin_midi ? 'matin' : null)
+  : texte('pointage.conge.periode', { du: avecMoment(formatDate(c.du), c.debut_midi ? 'apres_midi' : null), au: avecMoment(formatDate(c.au), c.fin_midi ? 'midi' : null) }));
 
 /**
  * Pastille d'un congé : couleur de la nature (validé), contour pointillé tant qu'il est demandé ; libellé en bulle.
@@ -18,7 +20,7 @@ export const periodeConge = (c) => (c.du === c.au
  */
 export function pastilleConge(c, natures = []) {
   const n = (Array.isArray(natures) ? natures.find((x) => x.code === c.nature) : natures[c.nature]) ?? null;
-  const titre = `${n ? n.libelle : 'Congé'} — ${ETATS_CONGE[c.etat] ?? c.etat}${c.part === 0.5 ? ' (demi-journée)' : ''}`;
+  const titre = texte(c.part === 0.5 ? 'pointage.conge.pastille_demi' : 'pointage.conge.pastille', { nature: n ? n.libelle : texte('pointage.conge.conge'), etat: ETATS_CONGE[c.etat] ?? c.etat });
   return `<span class="pastille-conge etat-${String(c.etat).toLowerCase()}${c.part === 0.5 ? ' demi' : ''}" style="${n?.couleur ? `--couleur-conge: ${n.couleur}` : ''}" title="${echapper(titre)}">${echapper(n?.code ?? '?')}</span>`;
 }
 
@@ -36,39 +38,39 @@ export function ouvrirConge(app, { conge = null, initial = {}, salarieLibelle = 
     const actives = natures.filter((n) => n.actif || n.code === c.nature);
     const dlg = document.createElement('dialog');
     dlg.className = 'dialogue-structure dialogue-conge';
-    dlg.innerHTML = `<h3>🏖 ${nouveau ? 'Demande de congé' : `Congé — ${echapper(ETATS_CONGE[c.etat] ?? c.etat)}`}</h3>
+    dlg.innerHTML = `<h3>${iconeHtml('pointage_conge')} ${nouveau ? texteHtml('pointage.conge.demande') : texteHtml('pointage.conge.titre', { etat: ETATS_CONGE[c.etat] ?? c.etat })}</h3>
       <div class="grille-champs">
-        <label class="large"><span>Salarié</span>${salaries && nouveau ? '<span data-salarie></span>' : `<b>${echapper(salarieLibelle ?? (c.nom ? `${c.nom} ${c.prenom}` : `Salarié ${c.salarie}`))}</b>`}</label>
-        <label><span>Du</span><input type="date" data-du value="${c.du ?? ''}" ${traitable ? '' : 'disabled'}></label>
-        <label><span>Au</span><input type="date" data-au value="${c.au ?? c.du ?? ''}" ${traitable ? '' : 'disabled'}></label>
-        <label><input type="checkbox" data-debut-midi ${c.debut_midi ? 'checked' : ''} ${traitable ? '' : 'disabled'}> Commence l'après-midi</label>
-        <label><input type="checkbox" data-fin-midi ${c.fin_midi ? 'checked' : ''} ${traitable ? '' : 'disabled'}> Finit à midi</label>
-        <label class="large"><span>Commentaire du demandeur (motif, précisions)</span><textarea data-commentaire rows="2" ${traitable ? '' : 'disabled'}>${echapper(c.commentaire ?? '')}</textarea></label>
+        <label class="large"><span>${texteHtml('pointage.conge.salarie')}</span>${salaries && nouveau ? '<span data-salarie></span>' : `<b>${echapper(salarieLibelle ?? (c.nom ? `${c.nom} ${c.prenom}` : texte('pointage.conge.salarie_id', { id: c.salarie })))}</b>`}</label>
+        <label><span>${texteHtml('pointage.conge.du')}</span><input type="date" data-du value="${c.du ?? ''}" ${traitable ? '' : 'disabled'}></label>
+        <label><span>${texteHtml('pointage.conge.au')}</span><input type="date" data-au value="${c.au ?? c.du ?? ''}" ${traitable ? '' : 'disabled'}></label>
+        <label><input type="checkbox" data-debut-midi ${c.debut_midi ? 'checked' : ''} ${traitable ? '' : 'disabled'}> ${texteHtml('pointage.conge.commence_apres_midi')}</label>
+        <label><input type="checkbox" data-fin-midi ${c.fin_midi ? 'checked' : ''} ${traitable ? '' : 'disabled'}> ${texteHtml('pointage.conge.finit_midi')}</label>
+        <label class="large"><span>${texteHtml('pointage.conge.commentaire')}</span><textarea data-commentaire rows="2" ${traitable ? '' : 'disabled'}>${echapper(c.commentaire ?? '')}</textarea></label>
       </div>
-      ${rh ? `<fieldset><legend>Service RH</legend><div class="grille-champs">
-        <label class="large"><span>Nature de l'absence (obligatoire pour valider)</span><span data-nature></span></label>
-        <label class="large"><span>Réponse au demandeur</span><input type="text" data-reponse value="${echapper(c.reponse ?? '')}"></label></div></fieldset>`
-        : c.nature ? `<p>Nature : ${pastilleConge(c, natures)} ${echapper(natures.find((n) => n.code === c.nature)?.libelle ?? c.nature)}</p>` : ''}
-      <p class="aide">${nouveau ? `Demandé par ${echapper(demandeur ?? app.utilisateur?.() ?? '')} ; la nature sera affectée par le service RH à la validation.`
-        : `Demandé par ${echapper(c.demande_par)} le ${formatDateHeure(c.demande_le)}${c.traite_par ? ` · traité par ${echapper(c.traite_par)} le ${formatDateHeure(c.traite_le)}` : ''}${c.jours != null ? ` · ${String(c.jours).replace('.', ',')} jour(s) décompté(s)` : ''}`}
-        ${!rh && c.reponse ? `<br>Réponse : ${echapper(c.reponse)}` : ''}</p>
+      ${rh ? `<fieldset><legend>${texteHtml('pointage.conge.service_rh')}</legend><div class="grille-champs">
+        <label class="large"><span>${texteHtml('pointage.conge.nature')}</span><span data-nature></span></label>
+        <label class="large"><span>${texteHtml('pointage.conge.reponse')}</span><input type="text" data-reponse value="${echapper(c.reponse ?? '')}"></label></div></fieldset>`
+        : c.nature ? `<p>${texteHtml('pointage.conge.nature_libelle')} ${pastilleConge(c, natures)} ${echapper(natures.find((n) => n.code === c.nature)?.libelle ?? c.nature)}</p>` : ''}
+      <p class="aide">${nouveau ? texteHtml('pointage.conge.demande_par_nouveau', { demandeur: demandeur ?? app.utilisateur?.() ?? '' })
+        : `${texteHtml('pointage.conge.demande_par', { par: c.demande_par, le: formatDateHeure(c.demande_le) })}${c.traite_par ? ` · ${texteHtml('pointage.conge.traite_par', { par: c.traite_par, le: formatDateHeure(c.traite_le) })}` : ''}${c.jours != null ? ` · ${echapper(pluriel('pointage.conge.jours_decomptes', c.jours, { jours: String(c.jours).replace('.', ',') }))}` : ''}`}
+        ${!rh && c.reponse ? `<br>${texteHtml('pointage.conge.reponse_libelle', { reponse: c.reponse })}` : ''}</p>
       <p class="erreur" data-erreur></p>
       <p class="boutons">
-        ${traitable ? `<button type="button" data-enregistrer title="${nouveau ? 'Envoyer la demande au service RH' : 'Enregistrer les modifications'}">${nouveau ? '✉ Demander' : '💾 Enregistrer'}</button>` : ''}
-        ${rh && (nouveau || c.etat === 'DEMANDE') ? '<button type="button" data-valider title="Valider avec la nature choisie">✅ Valider</button>' : ''}
-        ${rh && !nouveau && c.etat === 'DEMANDE' ? '<button type="button" data-refuser title="Refuser la demande (réponse conseillée)">⛔ Refuser</button>' : ''}
-        ${!nouveau && (c.etat === ETAT_CONGE.DEMANDE || (rh && c.etat === ETAT_CONGE.VALIDE)) ? '<button type="button" data-annuler title="Annuler ce congé">🗑 Annuler le congé</button>' : ''}
-        <button type="button" data-fermer>Fermer</button></p>`;
+        ${traitable ? `<button type="button" data-enregistrer title="${texteHtml(nouveau ? 'pointage.conge.demander_aide' : 'pointage.conge.enregistrer_aide')}">${nouveau ? `${iconeHtml('courriel')} ${texteHtml('pointage.conge.demander')}` : `${iconeHtml('enregistrer')} ${texteHtml('commun.enregistrer')}`}</button>` : ''}
+        ${rh && (nouveau || c.etat === 'DEMANDE') ? `<button type="button" data-valider title="${texteHtml('pointage.conge.valider_aide')}">${iconeHtml('pointage_conge_valider')} ${texteHtml('commun.valider')}</button>` : ''}
+        ${rh && !nouveau && c.etat === 'DEMANDE' ? `<button type="button" data-refuser title="${texteHtml('pointage.conge.refuser_aide')}">${iconeHtml('erreur')} ${texteHtml('pointage.conge.refuser')}</button>` : ''}
+        ${!nouveau && (c.etat === ETAT_CONGE.DEMANDE || (rh && c.etat === ETAT_CONGE.VALIDE)) ? `<button type="button" data-annuler title="${texteHtml('pointage.conge.annuler_aide')}">${iconeHtml('supprimer')} ${texteHtml('pointage.conge.annuler')}</button>` : ''}
+        <button type="button" data-fermer>${texteHtml('commun.fermer')}</button></p>`;
     document.body.append(dlg);
     const q = (s) => dlg.querySelector(s);
     let comboSalarie = null;
     if (salaries && nouveau) {
-      comboSalarie = creerCombo({ options: salaries.map((s) => ({ valeur: s.id, libelle: s.libelle, detail: s.detail })), valeur: c.salarie ?? '', vide: true, titre: 'Salarié' });
+      comboSalarie = creerCombo({ options: salaries.map((s) => ({ valeur: s.id, libelle: s.libelle, detail: s.detail })), valeur: c.salarie ?? '', vide: true, titre: texte('pointage.conge.salarie') });
       q('[data-salarie]').append(comboSalarie);
     }
     let comboNature = null;
     if (rh) {
-      comboNature = creerCombo({ options: actives.map((n) => ({ valeur: n.code, libelle: n.libelle, detail: n.code, couleur: n.couleur })), valeur: c.nature ?? '', vide: true, titre: 'Nature' });
+      comboNature = creerCombo({ options: actives.map((n) => ({ valeur: n.code, libelle: n.libelle, detail: n.code, couleur: n.couleur })), valeur: c.nature ?? '', vide: true, titre: texte('pointage.conges.nature') });
       q('[data-nature]').append(comboNature);
     }
     const saisie = () => ({
@@ -78,7 +80,7 @@ export function ouvrirConge(app, { conge = null, initial = {}, salarieLibelle = 
     });
     const erreur = (t) => { q('[data-erreur]').textContent = t ?? ''; };
     const controler = (s) => {
-      if (!s.salarie) { erreur('Choisissez le salarié'); return false; }
+      if (!s.salarie) { erreur(texte('pointage.conge.choisir_salarie')); return false; }
       const codes = controlerConge({ id: c.id ?? null, ...s, etat: 'DEMANDE' }, []);
       if (codes.length) { erreur(codes.map((k) => MESSAGES_CONGES[k]).join(' · ')); return false; }
       return true;
@@ -113,7 +115,7 @@ export function ouvrirConge(app, { conge = null, initial = {}, salarieLibelle = 
       agir(() => api.pointage.traiterConge(c.id, 'refuser', { version: c.version, reponse }));
     });
     q('[data-annuler]')?.addEventListener('click', async () => {
-      if (!await confirmer('Annuler ce congé ?')) return;
+      if (!await confirmer(texte('pointage.conge.annuler_confirmer'))) return;
       agir(() => api.pointage.traiterConge(c.id, 'annuler', { version: c.version, reponse: q('[data-reponse]')?.value.trim() || null }));
     });
     ouvrirModale(dlg, () => dlg.close());

@@ -1,3 +1,4 @@
+import { texte, texteHtml, pluriel, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { urlFiche, TYPE_FICHE } from '../codes.js';
 import { echapper } from '@logibtp/socle/ui';
 import { creerTiersProvisoire } from '@logibtp/annuaire/ui';
@@ -58,13 +59,13 @@ export class TableIntervenants {
     const pd = l.filter((x) => x.paiement_direct);
     this.el.innerHTML = `
       <table class="table-intervenants ${this.lecture ? 'lecture' : ''}"><thead><tr>
-        <th>Fonction</th><th>Tiers</th><th>Contact</th><th>Coordonnées</th><th title="Intervenant principal de la fonction">Princ.</th>
-        <th>Paiement direct</th><th>Commentaire</th>${this.lecture ? '' : '<th></th>'}</tr></thead>
-      <tbody>${l.length ? l.map((x, i) => this.#ligne(x, i)).join('') : `<tr><td colspan="8" class="aide">Aucun intervenant</td></tr>`}</tbody></table>
+        <th>${texteHtml('structure_btp.intervenants.colonnes.fonction')}</th><th>${texteHtml('structure_btp.intervenants.colonnes.tiers')}</th><th>${texteHtml('structure_btp.intervenants.colonnes.contact')}</th><th>${texteHtml('structure_btp.intervenants.colonnes.coordonnees')}</th><th title="${texteHtml('structure_btp.intervenants.colonnes.principal_aide')}">${texteHtml('structure_btp.intervenants.colonnes.principal')}</th>
+        <th>${texteHtml('structure_btp.intervenants.colonnes.paiement_direct')}</th><th>${texteHtml('structure_btp.intervenants.colonnes.commentaire')}</th>${this.lecture ? '' : '<th></th>'}</tr></thead>
+      <tbody>${l.length ? l.map((x, i) => this.#ligne(x, i)).join('') : `<tr><td colspan="8" class="aide">${texteHtml('structure_btp.intervenants.aucun')}</td></tr>`}</tbody></table>
       <div class="intervenants-pied">
-        ${this.lecture ? '' : '<button type="button" data-ajouter>＋ Intervenant</button>'}
+        ${this.lecture ? '' : `<button type="button" data-ajouter>${iconeHtml('ajouter')} ${texteHtml('structure_btp.intervenants.ajouter')}</button>`}
         ${this.actions.map((a, i) => `<button type="button" data-action-sup="${i}" title="${echapper(a.titre ?? '')}">${echapper(a.libelle)}</button>`).join('')}
-        ${pd.length ? `<span class="intervenants-pd">Paiement direct : ${pd.length} sous-traitant(s)</span>` : ''}
+        ${pd.length ? `<span class="intervenants-pd">${pluriel('structure_btp.intervenants.paiement_direct', pd.length)}</span>` : ''}
       </div>`;
     this.#lier();
     l.forEach((x, i) => this.#coordonnees(x, i));
@@ -73,28 +74,28 @@ export class TableIntervenants {
   #ligne(x, i) {
     const f = this.fonction(x.fonction);
     const fixe = this.fixe && i === 0 && x.fonction === this.fixe;
-    const lienTiers = x.per_id ? `<a href="${urlFiche(TYPE_FICHE.PERSONNE, Number(x.per_id))}" title="Ouvrir la fiche du tiers">${echapper(x.tiers ?? `Tiers ${x.per_id}`)}</a>` : '—';
-    const lienContact = x.ind_id ? `<a href="${urlFiche(TYPE_FICHE.INDIVIDU, Number(x.ind_id))}" title="Ouvrir la fiche du contact">${echapper(x.contact ?? `Contact ${x.ind_id}`)}</a>` : '—';
+    const lienTiers = x.per_id ? `<a href="${urlFiche(TYPE_FICHE.PERSONNE, Number(x.per_id))}" title="${texteHtml('structure_btp.intervenants.ouvrir_tiers')}">${echapper(x.tiers ?? texte('structure_btp.intervenants.tiers', { id: x.per_id }))}</a>` : '—';
+    const lienContact = x.ind_id ? `<a href="${urlFiche(TYPE_FICHE.INDIVIDU, Number(x.ind_id))}" title="${texteHtml('structure_btp.intervenants.ouvrir_contact')}">${echapper(x.contact ?? texte('structure_btp.intervenants.contact', { id: x.ind_id }))}</a>` : '—';
     const paiement = f?.paiement_direct
       ? (this.lecture
-        ? (x.paiement_direct ? 'Oui' : 'Non')
-        : `<label class="pd"><input type="checkbox" data-champ="paiement_direct" ${x.paiement_direct ? 'checked' : ''}> Oui</label>`)
+        ? echapper(texte(x.paiement_direct ? 'commun.oui' : 'commun.non'))
+        : `<label class="pd"><input type="checkbox" data-champ="paiement_direct" ${x.paiement_direct ? 'checked' : ''}> ${texteHtml('commun.oui')}</label>`)
       : '';
     if (this.lecture) {
       return `<tr data-i="${i}"><td>${echapper(f?.libelle ?? x.fonction ?? '')}</td><td>${lienTiers}</td><td>${lienContact}</td><td class="coordonnees"></td>
-        <td>${x.principal ? '★' : ''}</td><td>${paiement}</td><td>${echapper(x.commentaire ?? '')}</td></tr>`;
+        <td>${x.principal ? iconeHtml('structure_btp_principal') : ''}</td><td>${paiement}</td><td>${echapper(x.commentaire ?? '')}</td></tr>`;
     }
     return `<tr data-i="${i}">
       <td><select data-champ="fonction" ${fixe ? 'disabled' : ''}>${this.fonctionsProposees(x.fonction).map((y) => `<option value="${y.code}" ${y.code === x.fonction ? 'selected' : ''}>${echapper(y.libelle)}</option>`).join('')}</select></td>
-      <td class="tiers"><input type="search" data-tiers list="itv-tiers-${i}" value="${echapper(x.tiers ?? '')}" placeholder="Rechercher un tiers" ${fixe && this.tiersFige && x.per_id ? 'disabled title="Document issu d\'une transformation : le tiers ne change plus"' : ''}><datalist id="itv-tiers-${i}"></datalist>
-        ${x.per_id ? `<a href="${urlFiche(TYPE_FICHE.PERSONNE, Number(x.per_id))}" title="Ouvrir la fiche du tiers">↗</a>` : ''}
-        ${fixe && this.tiersFige && x.per_id ? '' : '<button type="button" data-nouveau-tiers title="Nouveau tiers (provisoire), après contrôle des doublons">＋</button>'}</td>
+      <td class="tiers"><input type="search" data-tiers list="itv-tiers-${i}" value="${echapper(x.tiers ?? '')}" placeholder="${texteHtml('structure_btp.intervenants.rechercher')}" ${fixe && this.tiersFige && x.per_id ? `disabled title="${texteHtml('structure_btp.intervenants.tiers_fige')}"` : ''}><datalist id="itv-tiers-${i}"></datalist>
+        ${x.per_id ? `<a href="${urlFiche(TYPE_FICHE.PERSONNE, Number(x.per_id))}" title="${texteHtml('structure_btp.intervenants.ouvrir_tiers')}">${iconeHtml('structure_btp_ouvrir')}</a>` : ''}
+        ${fixe && this.tiersFige && x.per_id ? '' : `<button type="button" data-nouveau-tiers title="${texteHtml('structure_btp.intervenants.nouveau_tiers')}">${iconeHtml('ajouter')}</button>`}</td>
       <td><select data-contact><option value="">${x.ind_id ? echapper(x.contact ?? '') : '—'}</option></select></td>
       <td class="coordonnees"></td>
       <td><input type="checkbox" data-champ="principal" ${x.principal ? 'checked' : ''}></td>
       <td>${paiement}</td>
       <td><input data-champ="commentaire" value="${echapper(x.commentaire ?? '')}"></td>
-      <td>${fixe ? '' : '<button type="button" data-supprimer title="Retirer">✕</button>'}</td></tr>`;
+      <td>${fixe ? '' : `<button type="button" data-supprimer title="${texteHtml('commun.retirer')}">${iconeHtml('retirer')}</button>`}</td></tr>`;
   }
 
   /** Coordonnées du contact (rattachement au tiers) et liste des contacts du tiers. */
@@ -116,8 +117,8 @@ export class TableIntervenants {
     const r = contacts.find((c) => c.ind_id === Number(x.ind_id));
     const email = nature(r?.coordonnees, 'EMAIL');
     const tel = nature(r?.coordonnees, 'TELEPHONE');
-    tr.querySelector('.coordonnees').innerHTML = [email ? `<a href="mailto:${echapper(email)}" title="Écrire">✉ ${echapper(email)}</a>` : '',
-      tel ? `<a href="tel:${echapper(tel.replace(/\s/g, ''))}" title="Appeler">☎ ${echapper(tel)}</a>` : ''].filter(Boolean).join('<br>');
+    tr.querySelector('.coordonnees').innerHTML = [email ? `<a href="mailto:${echapper(email)}" title="${texteHtml('structure_btp.intervenants.ecrire')}">${iconeHtml('courriel')} ${echapper(email)}</a>` : '',
+      tel ? `<a href="tel:${echapper(tel.replace(/\s/g, ''))}" title="${texteHtml('structure_btp.intervenants.appeler')}">${iconeHtml('telephone')} ${echapper(tel)}</a>` : ''].filter(Boolean).join('<br>');
     const choix = tr.querySelector('[data-contact]');
     if (choix) {
       choix.innerHTML = `<option value="">—</option>${contacts.filter((c) => c.actif !== false || c.ind_id === Number(x.ind_id))

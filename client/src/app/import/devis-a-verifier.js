@@ -1,3 +1,4 @@
+import { texte, texteHtml, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { urlDocument, SUJET_FENETRE } from '../codes.js';
 import { STATUT_DOCUMENT } from '@logibtp/document';
 import { aujourdhui } from '@logibtp/socle';
@@ -22,7 +23,7 @@ const CHAMPS_SERVEUR = ['ent_id', 'ent_tyd_id', 'ent_numero', 'ent_version', 'en
 /** Chargement du devis importé dans la page document (page : PageDocument). */
 export async function ouvrirImport(page, jeton) {
   const entree = jeton ? await lireImport(jeton) : null;
-  if (!entree) throw new Error('Import introuvable ou déjà créé : relancez l\'import depuis le menu');
+  if (!entree) throw new Error(texte('import_btp.verification.introuvable'));
   const format = formatImport(entree.format);
   const devis = await format.lire(await entree.fichier.arrayBuffer());
   const type = page.types.find((t) => t.tyd_code === format.type);
@@ -52,20 +53,20 @@ export function rendreBandeauImport(page) {
   const messages = [...imp.devis.avertissements, ...messagesCorrespondances(imp.saisie.correspondances)];
   const debogage = Boolean(ed.vue?.debogage);
   const ouvert = zone.querySelector('details')?.open ?? false;
-  zone.innerHTML = `<div class="import-etat">📥 <b>Devis importé de ${echapper(imp.format.libelle)}</b> (${echapper(imp.entree.nom_fichier)}) — non enregistré : vérifiez-le, puis créez-le.
-      <span class="${e.ecart_total ? 'erreur' : 'succes'}">Total ${formatNombre(e.total_calcule, 2)} € HT ${e.ecart_total ? `(écart ${formatNombre(e.ecart_total, 2)} € avec ${echapper(imp.format.libelle)}, ${e.lignes.length} ligne(s))` : `identique à ${echapper(imp.format.libelle)}`}</span>
-      <button type="button" class="principal" data-import="creer">Créer le devis</button>
-      <button type="button" data-import="abandonner">Abandonner</button></div>
-    ${messages.length ? `<ul class="import-avertissements">${messages.map((m) => `<li>⚠ ${echapper(m)}</li>`).join('')}</ul>` : ''}
-    ${debogage ? `<details class="import-debogage"${ouvert ? ' open' : ''}><summary>🐞 Champs non repris (${imp.devis.non_repris.length})${e.lignes.length ? ` · écarts par ligne (${e.lignes.length})` : ''}</summary>
-      ${e.lignes.length ? `<table class="table-analyse"><thead><tr><th>Ligne</th><th>${echapper(imp.format.libelle)}</th><th>LogiBTP</th><th>Écart</th></tr></thead><tbody>${e.lignes.map((l) => `<tr><td>${echapper(l.numero ?? '')}</td><td class="nombre">${formatNombre(l.origine, 2)}</td><td class="nombre">${formatNombre(l.calcule, 2)}</td><td class="nombre">${formatNombre(l.ecart, 2)}</td></tr>`).join('')}</tbody></table>` : ''}
+  zone.innerHTML = `<div class="import-etat">${iconeHtml('import_btp_import')} ${texteHtml('import_btp.verification.etat_html', { format: imp.format.libelle, fichier: imp.entree.nom_fichier })}
+      <span class="${e.ecart_total ? 'erreur' : 'succes'}">${e.ecart_total ? texteHtml('import_btp.verification.total_ecart', { total: formatNombre(e.total_calcule, 2), ecart: formatNombre(e.ecart_total, 2), format: imp.format.libelle, lignes: e.lignes.length }) : texteHtml('import_btp.verification.total_identique', { total: formatNombre(e.total_calcule, 2), format: imp.format.libelle })}</span>
+      <button type="button" class="principal" data-import="creer">${texteHtml('import_btp.verification.creer')}</button>
+      <button type="button" data-import="abandonner">${texteHtml('import_btp.verification.abandonner')}</button></div>
+    ${messages.length ? `<ul class="import-avertissements">${messages.map((m) => `<li>${iconeHtml('avertissement')} ${echapper(m)}</li>`).join('')}</ul>` : ''}
+    ${debogage ? `<details class="import-debogage"${ouvert ? ' open' : ''}><summary>${iconeHtml('import_btp_debogage')} ${texteHtml('import_btp.verification.non_repris', { nombre: imp.devis.non_repris.length })}${e.lignes.length ? ` ${texteHtml('import_btp.verification.ecarts', { nombre: e.lignes.length })}` : ''}</summary>
+      ${e.lignes.length ? `<table class="table-analyse"><thead><tr><th>${texteHtml('import_btp.verification.ligne')}</th><th>${echapper(imp.format.libelle)}</th><th>${texteHtml('import_btp.verification.logibtp')}</th><th>${texteHtml('import_btp.verification.ecart')}</th></tr></thead><tbody>${e.lignes.map((l) => `<tr><td>${echapper(l.numero ?? '')}</td><td class="nombre">${formatNombre(l.origine, 2)}</td><td class="nombre">${formatNombre(l.calcule, 2)}</td><td class="nombre">${formatNombre(l.ecart, 2)}</td></tr>`).join('')}</tbody></table>` : ''}
       ${tableNonRepris(imp.devis.non_repris)}</details>` : ''}`;
   zone.querySelector('[data-import="creer"]').addEventListener('click', (ev) => {
     ev.target.disabled = true;
     creerDepuisImport(page).catch((x) => { ev.target.disabled = false; page.app.erreur(x); });
   });
   zone.querySelector('[data-import="abandonner"]').addEventListener('click', async () => {
-    if (!await confirmer('Abandonner ce devis importé ? Rien n\'a été enregistré.')) return;
+    if (!await confirmer(texte('import_btp.verification.confirmer_abandon'))) return;
     await retirerImport(imp.jeton).catch(() => {});
     page.importEnCours = null;
     if (window.opener) window.close();
@@ -77,10 +78,10 @@ export function rendreBandeauImport(page) {
 export function tracabiliteImport(page, zone) {
   const imp = page.importEnCours;
   const debogage = Boolean(page.editeur.vue?.debogage);
-  zone.innerHTML = `<div class="tracabilite"><section class="trac-bloc"><h3>Origine</h3>
-    <p>📥 Import <b>${echapper(imp.format.libelle)}</b> du fichier ${echapper(imp.entree.nom_fichier)}${imp.devis.entete.reference ? ` — référence d'origine <b>${echapper(imp.devis.entete.reference)}</b>` : ''}.</p>
-    <p class="aide">À la création, le fichier est conservé dans les pièces du devis et l'origine enregistrée : l'import pourra être réutilisé.</p>
-    ${debogage ? `<details class="trac-rapport" open><summary>Rapport d'import (mode débogage)</summary>${tableNonRepris(imp.devis.non_repris)}</details>` : ''}</section></div>`;
+  zone.innerHTML = `<div class="tracabilite"><section class="trac-bloc"><h3>${texteHtml('import_btp.verification.origine')}</h3>
+    <p>${iconeHtml('import_btp_import')} ${texteHtml('import_btp.verification.origine_html', { format: imp.format.libelle, fichier: imp.entree.nom_fichier })}${imp.devis.entete.reference ? texteHtml('import_btp.verification.reference_html', { reference: imp.devis.entete.reference }) : ''}.</p>
+    <p class="aide">${texteHtml('import_btp.verification.aide_origine')}</p>
+    ${debogage ? `<details class="trac-rapport" open><summary>${texteHtml('import_btp.verification.rapport')}</summary>${tableNonRepris(imp.devis.non_repris)}</details>` : ''}</section></div>`;
 }
 
 /**
@@ -106,7 +107,7 @@ export async function creerDepuisImport(page) {
     });
   } catch (e) {
     await api.supprimerDocument(id).catch(() => {});
-    throw new Error(`Création refusée : ${[e.message, ...(e.details ?? []).map((x) => x.message)].filter(Boolean).join(' — ')}`);
+    throw new Error(texte('import_btp.verification.creation_refusee', { message: [e.message, ...(e.details ?? []).map((x) => x.message)].filter(Boolean).join(' — ') }));
   }
   // Fichier source conservé dans la GED du devis (pièces), puis origine : la traçabilité pointe sur ce fichier.
   let fichierId = null;
@@ -115,14 +116,14 @@ export async function creerDepuisImport(page) {
       const g = await page.servicesGed.deposer({
         fichier: imp.entree.fichier, nom_fichier: imp.entree.nom_fichier,
         meta: {
-          titre: `Import ${imp.format.libelle} – ${imp.entree.nom_fichier}`, categorie: 'import', type_element: ed.definition.type.tyd_code,
+          titre: texte('import_btp.verification.ged_titre', { format: imp.format.libelle, fichier: imp.entree.nom_fichier }), categorie: 'import', type_element: ed.definition.type.tyd_code,
           id_element: String(cree.document.ent_groupe_id ?? id), date_document: aujourdhui(),
-          notes: `Fichier source de l'import (${imp.format.libelle}${imp.devis.entete.reference ? `, référence ${imp.devis.entete.reference}` : ''})`,
+          notes: imp.devis.entete.reference ? texte('import_btp.verification.ged_notes_reference', { format: imp.format.libelle, reference: imp.devis.entete.reference }) : texte('import_btp.verification.ged_notes', { format: imp.format.libelle }),
         },
       });
       fichierId = g.id;
     } catch (e) {
-      page.app.message(`Fichier source non conservé dans la GED : ${e.message}`, 'avertissement');
+      page.app.message(texte('import_btp.verification.ged_echec', { message: e.message }), 'avertissement');
     }
   }
   const ecarts = ecartsImport(r, imp.saisie.controles, imp.devis.entete.controle.total_ht);
@@ -135,5 +136,5 @@ export async function creerDepuisImport(page) {
   page.app.routeur.remplacerUrl(urlDocument(id));
   await page.chargerDocument(id);
   page.app.publier(SUJET_FENETRE.ENREGISTRE, { type: ed.definition.type.tyd_code, ids: [id], cree: true });
-  page.app.message(`${ed.definition.type.tyd_libelle} ${cree.document.ent_numero ?? ''} créé depuis ${imp.format.libelle}`, 'succes');
+  page.app.message(texte('import_btp.verification.cree', { type: ed.definition.type.tyd_libelle, numero: cree.document.ent_numero ?? '', format: imp.format.libelle }), 'succes');
 }

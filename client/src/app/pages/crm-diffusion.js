@@ -1,3 +1,4 @@
+import { texte, texteHtml, pluriel, icone, iconeHtml, pairesParCode } from '@logibtp/socle/dictionnaire';
 import { SUJET_FENETRE } from '../codes.js';
 import { aujourdhui } from '@logibtp/socle';
 import { PageBase } from '@logibtp/navigation';
@@ -7,12 +8,7 @@ import { api } from '../api.js';
 import { lienElement } from '../crm/crm.js';
 
 /** Modes de diffusion (crm_diffusion_destinataire.dfd_mode). */
-export const MODES_DIFFUSION = [
-  { valeur: 'COURRIEL', libelle: 'Courriel' },
-  { valeur: 'PAPIER', libelle: 'Papier' },
-  { valeur: 'PLATEFORME', libelle: 'Plateforme' },
-  { valeur: 'MAIN_PROPRE', libelle: 'Remise en main propre' },
-];
+export const MODES_DIFFUSION = pairesParCode('crm_btp.modes_diffusion', ['COURRIEL', 'PAPIER', 'PLATEFORME', 'MAIN_PROPRE']).map(([valeur, libelle]) => ({ valeur, libelle }));
 
 /** Fonctions d'intervenant qui visent les plans par défaut. */
 const VISEURS = ['ARCHITECTE', 'MOE', 'MAITRE_OEUVRE', 'BUREAU_CONTROLE', 'CONTROLEUR', 'BET', 'CLIENT', 'MAITRE_OUVRAGE', 'MOA'];
@@ -25,7 +21,7 @@ const STRUCTURE = ['projet', 'affaire', 'chantier', 'marche'];
  * depuis les intervenants de l'élément ; ceux qui visent reçoivent des visas attendus et une tâche de retour.
  */
 export class PageDiffusionCrm extends PageBase {
-  icone = '📤';
+  icone = icone('crm_btp_bordereaux');
 
   get modifiee() { return Boolean(this.saisie && this.modifie); }
 
@@ -48,7 +44,7 @@ export class PageDiffusionCrm extends PageBase {
     const plans = await Promise.all(String(r.plans ?? '').split(',').filter(Boolean).map((id) => api.crm.plan(Number(id))));
     this.pieces = plans.filter((p) => p.indices.length).map((p) => {
       const i = p.indices[p.indices.length - 1];
-      return { pin_id: i.id, libelle: `${p.plan.repere} – ${p.plan.nom} – ${i.indice ? `indice ${i.indice}` : 'premier indice'}`, choisi: true };
+      return { pin_id: i.id, libelle: `${p.plan.repere} – ${p.plan.nom} – ${i.indice ? texte('crm_btp.diffusion.indice', { indice: i.indice }) : texte('crm_btp.diffusion.premier_indice')}`, choisi: true };
     });
     this.destinataires = [];
     if (this.element && STRUCTURE.includes(this.element.type)) {
@@ -58,29 +54,29 @@ export class PageDiffusionCrm extends PageBase {
         this.destinataires.push({ tiers_id: x.per_id, tiers: x.tiers, ind_id: x.ind_id ?? null, contact: x.contact ?? null, fonction: x.fonction, mode: 'COURRIEL', exemplaires: 1, attend_visa: VISEURS.includes(x.fonction) });
       }
     }
-    this.saisie = { date: aujourdhui(), objet: `Diffusion de plans${e ? ` – ${e.libelle}` : ''}`.slice(0, 200), delai_visa_jours: 15 };
-    this.titre = 'Nouveau bordereau de diffusion';
+    this.saisie = { date: aujourdhui(), objet: (e ? texte('crm_btp.diffusion.objet_element', { libelle: e.libelle }) : texte('crm_btp.diffusion.objet')).slice(0, 200), delai_visa_jours: 15 };
+    this.titre = texte('crm_btp.diffusion.nouveau');
     this.rendreSaisie(e);
   }
 
   rendreSaisie(e) {
     const s = this.saisie;
-    this.conteneur.innerHTML = `<div class="page-parametres page-crm"><h1 class="page-titre">📤 Nouveau bordereau de diffusion</h1>
-      ${e ? `<p>Rattaché à ${lienElement(e)}</p>` : ''}
-      <div class="formulaire crm-formulaire"><label>Objet <input data-s="objet" maxlength="200" value="${echapper(s.objet)}"></label>
-        <label>Date <input type="date" data-s="date" value="${s.date}"></label>
-        <label>Délai de visa (jours) <input data-s="delai_visa_jours" size="4" inputmode="numeric" value="${s.delai_visa_jours}"></label></div>
-      <h2>Pièces</h2>${this.pieces.length ? `<ul class="crm-liens">${this.pieces.map((p, i) => `<li><label><input type="checkbox" data-piece="${i}" ${p.choisi ? 'checked' : ''}> 📐 ${echapper(p.libelle)}</label></li>`).join('')}</ul>`
-        : '<p class="aide">Aucune pièce : choisissez des plans dans la liste des plans (« Diffuser la sélection »).</p>'}
-      <h2>Destinataires</h2><div data-destinataires></div>
-      <div class="boutons"><button type="button" data-ajouter title="Destinataire choisi dans l'annuaire">＋ Destinataire…</button>
-        <button type="button" class="principal" data-creer>Créer le bordereau</button></div></div>`;
+    this.conteneur.innerHTML = `<div class="page-parametres page-crm"><h1 class="page-titre">${iconeHtml('crm_btp_bordereaux')} ${texteHtml('crm_btp.diffusion.nouveau')}</h1>
+      ${e ? `<p>${texteHtml('crm_btp.diffusion.rattache')} ${lienElement(e)}</p>` : ''}
+      <div class="formulaire crm-formulaire"><label>${texteHtml('crm_btp.liste.objet')} <input data-s="objet" maxlength="200" value="${echapper(s.objet)}"></label>
+        <label>${texteHtml('crm_btp.diffusions.date')} <input type="date" data-s="date" value="${s.date}"></label>
+        <label>${texteHtml('crm_btp.diffusion.delai')} <input data-s="delai_visa_jours" size="4" inputmode="numeric" value="${s.delai_visa_jours}"></label></div>
+      <h2>${texteHtml('crm_btp.diffusions.pieces')}</h2>${this.pieces.length ? `<ul class="crm-liens">${this.pieces.map((p, i) => `<li><label><input type="checkbox" data-piece="${i}" ${p.choisi ? 'checked' : ''}> ${iconeHtml('crm_btp_plans')} ${echapper(p.libelle)}</label></li>`).join('')}</ul>`
+        : `<p class="aide">${texteHtml('crm_btp.diffusion.aucune_piece')}</p>`}
+      <h2>${texteHtml('crm_btp.diffusions.destinataires')}</h2><div data-destinataires></div>
+      <div class="boutons"><button type="button" data-ajouter title="${texteHtml('crm_btp.diffusion.ajouter_titre')}">${iconeHtml('ajouter')} ${texteHtml('crm_btp.diffusion.ajouter')}</button>
+        <button type="button" class="principal" data-creer>${texteHtml('crm_btp.diffusion.creer')}</button></div></div>`;
     this.modifie = true;
     this.conteneur.querySelectorAll('[data-s]').forEach((i) => i.addEventListener('input', () => { s[i.dataset.s] = i.dataset.s === 'delai_visa_jours' ? Number(i.value) || 0 : i.value; }));
     this.conteneur.querySelectorAll('[data-piece]').forEach((c) => c.addEventListener('change', () => { this.pieces[Number(c.dataset.piece)].choisi = c.checked; }));
     this.conteneur.querySelector('[data-ajouter]').addEventListener('click', async () => {
       const { annuaire } = await this.app.services();
-      const p = await choisirPersonne({ annuaire, titre: 'Destinataire du bordereau', exclure: this.destinataires.map((d) => d.tiers_id) });
+      const p = await choisirPersonne({ annuaire, titre: texte('crm_btp.diffusion.destinataire_titre'), exclure: this.destinataires.map((d) => d.tiers_id) });
       if (p) { this.destinataires.push({ tiers_id: p.id, tiers: p.nom_commercial || p.raison_sociale, ind_id: null, contact: null, mode: 'COURRIEL', exemplaires: 1, attend_visa: false }); this.rendreDestinataires(); }
     });
     this.conteneur.querySelector('[data-creer]').addEventListener('click', () => this.creer());
@@ -89,10 +85,10 @@ export class PageDiffusionCrm extends PageBase {
 
   rendreDestinataires() {
     const zone = this.conteneur.querySelector('[data-destinataires]');
-    zone.innerHTML = this.destinataires.length ? `<table class="crm-table"><thead><tr><th>Tiers</th><th>Contact</th><th>Mode</th><th>Exemplaires</th><th>Vise les plans</th><th></th></tr></thead><tbody>
+    zone.innerHTML = this.destinataires.length ? `<table class="crm-table"><thead><tr><th>${texteHtml('crm_btp.demandes.tiers')}</th><th>${texteHtml('crm_btp.demande.contact')}</th><th>${texteHtml('crm_btp.diffusion.mode')}</th><th>${texteHtml('crm_btp.diffusion.exemplaires')}</th><th>${texteHtml('crm_btp.diffusion.vise')}</th><th></th></tr></thead><tbody>
       ${this.destinataires.map((d, i) => `<tr data-i="${i}"><td>${echapper(d.tiers ?? `#${d.tiers_id}`)}${d.fonction ? ` <small class="aide">${echapper(d.fonction)}</small>` : ''}</td><td>${echapper(d.contact ?? '')}</td>
         <td><span data-mode></span></td><td><input data-exemplaires size="3" value="${d.exemplaires}"></td><td><input type="checkbox" data-visa ${d.attend_visa ? 'checked' : ''}></td>
-        <td><button type="button" data-retirer>✕</button></td></tr>`).join('')}</tbody></table>` : '<p class="aide">Aucun destinataire.</p>';
+        <td><button type="button" data-retirer title="${texteHtml('commun.retirer')}">${iconeHtml('retirer')}</button></td></tr>`).join('')}</tbody></table>` : `<p class="aide">${texteHtml('crm_btp.diffusion.aucun_destinataire')}</p>`;
     zone.querySelectorAll('tr[data-i]').forEach((tr) => {
       const d = this.destinataires[Number(tr.dataset.i)];
       const mode = creerCombo({ options: MODES_DIFFUSION, valeur: d.mode, vide: false });
@@ -118,7 +114,7 @@ export class PageDiffusionCrm extends PageBase {
       this.titre = `${d.numero} – ${d.objet}`;
       this.app.routeur.remplacerUrl(`/crm/diffusion/${d.id}`);
       this.app.publier(SUJET_FENETRE.CRM, { diffusion: d.id });
-      this.app.message('Bordereau créé : visas attendus et tâches de retour posés', 'succes');
+      this.app.message(texte('crm_btp.diffusion.cree'), 'succes');
       this.rendreBordereau();
     } catch (e) { this.app.erreur(e); }
   }
@@ -128,17 +124,17 @@ export class PageDiffusionCrm extends PageBase {
     const d = this.diffusion;
     const mode = (m) => MODES_DIFFUSION.find((x) => x.valeur === m)?.libelle ?? m;
     this.conteneur.innerHTML = `<div class="page-parametres crm-bordereau">
-      <div class="boutons crm-actions"><button type="button" class="principal" data-imprimer title="Imprimer le bordereau">🖨 Imprimer</button>
-        <button type="button" data-courriel title="Envoyer les pièces aux destinataires « par courriel » (module Mail), dans une autre fenêtre">📧 Envoyer par courriel</button>
-        ${d.element ? `<a href="/crm/diffusions?type=${encodeURIComponent(d.type_element)}&id=${encodeURIComponent(d.id_element)}">Autres bordereaux</a>` : ''}</div>
-      <h1 class="page-titre">Bordereau de diffusion ${echapper(d.numero)}</h1>
-      <p><b>${echapper(d.objet)}</b><br>Date : ${formatDate(d.date)}${d.element ? ` · ${lienElement(d.element)}` : ''} · émis par ${echapper(d.cree_par)}</p>
-      <h2>Pièces diffusées</h2><table class="crm-table"><thead><tr><th>N°</th><th>Pièce</th></tr></thead><tbody>
+      <div class="boutons crm-actions"><button type="button" class="principal" data-imprimer title="${texteHtml('crm_btp.diffusion.imprimer_titre')}">${iconeHtml('crm_btp_imprimer')} ${texteHtml('crm_btp.diffusion.imprimer')}</button>
+        <button type="button" data-courriel title="${texteHtml('crm_btp.diffusion.courriel_titre')}">${iconeHtml('crm_btp_courriel')} ${texteHtml('crm_btp.diffusion.courriel')}</button>
+        ${d.element ? `<a href="/crm/diffusions?type=${encodeURIComponent(d.type_element)}&id=${encodeURIComponent(d.id_element)}">${texteHtml('crm_btp.diffusion.autres')}</a>` : ''}</div>
+      <h1 class="page-titre">${texteHtml('crm_btp.diffusion.titre', { numero: d.numero })}</h1>
+      <p><b>${echapper(d.objet)}</b><br>${texteHtml('crm_btp.diffusion.date_le', { date: formatDate(d.date) })}${d.element ? ` · ${lienElement(d.element)}` : ''} · ${texteHtml('crm_btp.diffusion.emis_par', { nom: d.cree_par })}</p>
+      <h2>${texteHtml('crm_btp.diffusion.pieces_diffusees')}</h2><table class="crm-table"><thead><tr><th>${texteHtml('crm_btp.demandes.numero')}</th><th>${texteHtml('crm_btp.diffusion.piece')}</th></tr></thead><tbody>
         ${d.pieces.map((p, i) => `<tr><td>${i + 1}</td><td>${p.plan_id ? `<a href="/crm/plan/${p.plan_id}">${echapper(p.libelle)}</a>` : echapper(p.libelle)}</td></tr>`).join('')}</tbody></table>
-      <h2>Destinataires</h2><table class="crm-table"><thead><tr><th>Destinataire</th><th>Contact</th><th>Mode</th><th class="nombre">Ex.</th><th>Visa</th></tr></thead><tbody>
+      <h2>${texteHtml('crm_btp.diffusions.destinataires')}</h2><table class="crm-table"><thead><tr><th>${texteHtml('crm_btp.diffusion.destinataire')}</th><th>${texteHtml('crm_btp.demande.contact')}</th><th>${texteHtml('crm_btp.diffusion.mode')}</th><th class="nombre">${texteHtml('crm_btp.diffusion.ex')}</th><th>${texteHtml('crm_btp.diffusion.visa')}</th></tr></thead><tbody>
         ${d.destinataires.map((x) => `<tr><td>${lienElement(x.tiers)}</td><td>${lienElement(x.contact)}</td><td>${echapper(mode(x.mode))}</td><td class="nombre">${x.exemplaires}</td>
-          <td>${x.attend_visa ? `attendu sous ${d.delai_visa_jours} j${x.visas_attendus ? ` · ${x.visas_recus}/${x.visas_attendus} reçu(s)` : ''}${x.note_id ? ` · <a href="/crm/note/${x.note_id}" class="crm-ecran">tâche</a>` : ''}` : 'pour information'}</td></tr>`).join('')}</tbody></table>
-      <p class="crm-signature">Visa de réception :</p></div>`;
+          <td>${x.attend_visa ? `${texteHtml('crm_btp.diffusion.attendu', { jours: d.delai_visa_jours })}${x.visas_attendus ? ` · ${echapper(pluriel('crm_btp.diffusion.recus', x.visas_attendus, { recus: x.visas_recus }))}` : ''}${x.note_id ? ` · <a href="/crm/note/${x.note_id}" class="crm-ecran">${texteHtml('crm_btp.diffusion.tache')}</a>` : ''}` : texteHtml('crm_btp.diffusion.information')}</td></tr>`).join('')}</tbody></table>
+      <p class="crm-signature">${texteHtml('crm_btp.diffusion.signature')}</p></div>`;
     this.conteneur.querySelector('[data-imprimer]').addEventListener('click', () => window.print());
     this.conteneur.querySelector('[data-courriel]').addEventListener('click', () => this.app.naviguer(`/mail/nouveau?type=crm_diffusion&id=${this.params.id}`, { nouvelleFenetre: true }));
   }

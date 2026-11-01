@@ -1,3 +1,4 @@
+import { texte, texteHtml, pluriel, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { SUJET_FENETRE } from '../codes.js';
 import { ETAT_NOTE } from '@logibtp/crm';
 import { echapper, htmlSur, formatDateHeure } from '@logibtp/socle/ui';
@@ -5,12 +6,12 @@ import { api } from '../api.js';
 import { lienElement, nouvelleSaisie, texteEnHtml } from './crm.js';
 
 export const GENRES_FIL = [
-  { code: 'NOTE', libelle: 'Notes', icone: '💬' },
-  { code: 'DOCUMENT', libelle: 'Documents', icone: '📄' },
-  { code: 'PHOTO', libelle: 'Photos', icone: '📷' },
-  { code: 'EVENEMENT', libelle: 'Événements', icone: '🔔' },
+  { code: 'NOTE', libelle: texte('crm_btp.fil.genres.NOTE'), icone: icone('crm_btp_note') },
+  { code: 'DOCUMENT', libelle: texte('crm_btp.fil.genres.DOCUMENT'), icone: icone('crm_btp_document') },
+  { code: 'PHOTO', libelle: texte('crm_btp.fil.genres.PHOTO'), icone: icone('crm_btp_photo') },
+  { code: 'EVENEMENT', libelle: texte('crm_btp.fil.genres.EVENEMENT'), icone: icone('crm_btp_evenement') },
 ];
-const ICONES = { NOTE: '💬', DOCUMENT: '📄', PHOTOS: '📷', EVENEMENT: '🔔' };
+const ICONES = { NOTE: icone('crm_btp_note'), DOCUMENT: icone('crm_btp_document'), PHOTOS: icone('crm_btp_photo'), EVENEMENT: icone('crm_btp_evenement') };
 const PHOTOS_VISIBLES = 3;
 
 /**
@@ -34,11 +35,11 @@ export class FilCrm {
   async ouvrir() {
     const app = this.app;
     this.conteneur.classList.add('crm-fil-hote');
-    this.conteneur.innerHTML = `${this.element ? `<div class="crm-publier"><textarea data-message rows="2" placeholder="Message pour le fil de ${echapper(this.libelle ?? 'l\'élément')}…"></textarea>
-        <label class="crm-photos" title="Joindre des photos"><input type="file" data-photos accept="image/*" multiple hidden>📷 Photos</label><span data-nb-photos class="aide"></span>
-        <button type="button" class="principal" data-publier>Publier</button></div>` : '<p class="aide">Fil de toutes les notes publiées et des événements ; les documents et photos se voient dans le fil d\'un élément.</p>'}
+    this.conteneur.innerHTML = `${this.element ? `<div class="crm-publier"><textarea data-message rows="2" placeholder="${this.libelle ? texteHtml('crm_btp.fil.message_pour', { libelle: this.libelle }) : texteHtml('crm_btp.fil.message_pour_element')}"></textarea>
+        <label class="crm-photos" title="${texteHtml('crm_btp.fil.joindre_photos')}"><input type="file" data-photos accept="image/*" multiple hidden>${iconeHtml('crm_btp_photo')} ${texteHtml('crm_btp.fil.photos')}</label><span data-nb-photos class="aide"></span>
+        <button type="button" class="principal" data-publier>${texteHtml('crm_btp.fil.publier')}</button></div>` : `<p class="aide">${texteHtml('crm_btp.fil.global')}</p>`}
       <div class="crm-filtres">${GENRES_FIL.map((g) => `<label class="fiche-option"><input type="checkbox" data-genre="${g.code}" ${this.genres.has(g.code) ? 'checked' : ''}> ${g.icone} ${g.libelle}</label>`).join('')}</div>
-      <div data-fil class="crm-fil"></div><div class="boutons"><button type="button" data-suite hidden>Plus ancien…</button></div>`;
+      <div data-fil class="crm-fil"></div><div class="boutons"><button type="button" data-suite hidden>${texteHtml('crm_btp.fil.plus_ancien')}</button></div>`;
     const $ = (s) => this.conteneur.querySelector(s);
     this.conteneur.querySelectorAll('[data-genre]').forEach((c) => c.addEventListener('change', () => {
       if (c.checked) this.genres.add(c.dataset.genre); else this.genres.delete(c.dataset.genre);
@@ -46,7 +47,7 @@ export class FilCrm {
       this.charger(true);
     }));
     $('[data-suite]').addEventListener('click', () => this.charger(false));
-    $('[data-photos]')?.addEventListener('change', (ev) => { const n = ev.target.files.length; $('[data-nb-photos]').textContent = n ? `${n} photo(s)` : ''; });
+    $('[data-photos]')?.addEventListener('change', (ev) => { const n = ev.target.files.length; $('[data-nb-photos]').textContent = n ? pluriel('crm_btp.fil.nb_photos', n) : ''; });
     $('[data-publier]')?.addEventListener('click', () => this.publier());
     this.desabonner = app.abonner(SUJET_FENETRE.CRM, () => this.charger(true));
     await this.charger(true);
@@ -58,12 +59,12 @@ export class FilCrm {
     const zone = this.conteneur.querySelector('[data-fil]');
     if (!zone) return;
     if (depuisDebut) { this.suivant = null; zone.innerHTML = ''; }
-    if (!this.genres.size) { zone.innerHTML = '<p class="aide">Choisissez au moins un genre.</p>'; this.conteneur.querySelector('[data-suite]').hidden = true; return; }
+    if (!this.genres.size) { zone.innerHTML = `<p class="aide">${texteHtml('crm_btp.fil.aucun_genre')}</p>`; this.conteneur.querySelector('[data-suite]').hidden = true; return; }
     let lot;
     try {
       lot = await api.crm.fil({ type_element: this.element?.type, id_element: this.element?.id, avant: this.suivant, taille: 30, genres: [...this.genres].join(',') });
     } catch (e) { zone.insertAdjacentHTML('beforeend', `<p class="erreur">${echapper(e.message)}</p>`); return; }
-    if (depuisDebut && !lot.elements.length) zone.innerHTML = '<p class="aide">Rien dans le fil pour l\'instant.</p>';
+    if (depuisDebut && !lot.elements.length) zone.innerHTML = `<p class="aide">${texteHtml('crm_btp.fil.vide')}</p>`;
     zone.insertAdjacentHTML('beforeend', lot.elements.map((x) => this.html(x)).join(''));
     this.suivant = lot.suivant;
     this.conteneur.querySelector('[data-suite]').hidden = !lot.suivant;
@@ -75,26 +76,26 @@ export class FilCrm {
     const vignettes = photos.slice(0, PHOTOS_VISIBLES).map((p) => `<a href="${echapper(p.url ?? '#')}" title="${echapper(p.titre)}"><img src="${echapper(p.contenu ?? '')}" alt="${echapper(p.titre)}" loading="lazy"></a>`).join('');
     const reste = photos.length - PHOTOS_VISIBLES;
     return `<article class="crm-fil-element crm-fil-${x.genre.toLowerCase()}">
-      <div class="crm-fil-entete"><span class="crm-fil-icone">${ICONES[x.genre] ?? '•'}</span>
+      <div class="crm-fil-entete"><span class="crm-fil-icone">${ICONES[x.genre] ?? icone('crm_btp_puce')}</span>
         <b>${x.url ? `<a href="${echapper(x.url)}">${echapper(x.titre)}</a>` : echapper(x.titre)}</b>
         ${x.element ? `<span class="aide">· ${lienElement(x.element)}</span>` : ''}
         <span class="aide crm-fil-quand">${echapper(x.par ?? '')} · ${echapper(formatDateHeure(x.quand))}</span></div>
       ${x.texte ? `<div class="crm-fil-texte">${htmlSur(x.texte)}</div>` : ''}
       ${photos.length ? `<div class="crm-fil-photos">${vignettes}${reste > 0 ? `<a class="crm-fil-reste" href="${echapper(x.url ?? photos[PHOTOS_VISIBLES].url ?? '#')}">+${reste}</a>` : ''}</div>` : ''}
-      ${autres.length ? `<ul class="crm-liens">${autres.map((p) => `<li>📄 <a href="${echapper(p.url ?? '#')}">${echapper(p.titre)}</a></li>`).join('')}</ul>` : ''}
-      ${x.note_id ? `<div class="aide"><a href="/crm/note/${x.note_id}">${x.nb_reponses ? `💬 ${x.nb_reponses} réponse(s)` : '↩ Répondre'}</a></div>` : ''}
+      ${autres.length ? `<ul class="crm-liens">${autres.map((p) => `<li>${iconeHtml('crm_btp_document')} <a href="${echapper(p.url ?? '#')}">${echapper(p.titre)}</a></li>`).join('')}</ul>` : ''}
+      ${x.note_id ? `<div class="aide"><a href="/crm/note/${x.note_id}">${x.nb_reponses ? `${iconeHtml('crm_btp_note')} ${echapper(pluriel('crm_btp.fil.nb_reponses', x.nb_reponses))}` : `${iconeHtml('crm_btp_repondre')} ${texteHtml('crm_btp.fil.repondre')}`}</a></div>` : ''}
     </article>`;
   }
 
   /** Message publié : note pour mémo « Dans le fil » rattachée à l'élément ; photos déposées dans la GED de la note. */
   async publier() {
-    const texte = this.conteneur.querySelector('[data-message]').value.trim();
+    const message = this.conteneur.querySelector('[data-message]').value.trim();
     const fichiers = [...(this.conteneur.querySelector('[data-photos]').files ?? [])];
-    if (!texte && !fichiers.length) { this.app.message('Écrivez un message ou joignez des photos', 'avertissement'); return; }
+    if (!message && !fichiers.length) { this.app.message(texte('crm_btp.fil.message_vide'), 'avertissement'); return; }
     try {
       const s = nouvelleSaisie({ etat: ETAT_NOTE.MEMO, element: this.element });
-      s.objet = (texte.split('\n')[0] || `${fichiers.length} photo(s)`).slice(0, 200);
-      s.message_html = texte.includes('\n') || texte.length > 200 ? texteEnHtml(texte) : null;
+      s.objet = (message.split('\n')[0] || pluriel('crm_btp.fil.nb_photos', fichiers.length)).slice(0, 200);
+      s.message_html = message.includes('\n') || message.length > 200 ? texteEnHtml(message) : null;
       s.dans_fil = true;
       const d = await api.crm.creer(s);
       if (fichiers.length) {
@@ -105,7 +106,7 @@ export class FilCrm {
       this.conteneur.querySelector('[data-photos]').value = '';
       this.conteneur.querySelector('[data-nb-photos]').textContent = '';
       this.app.publier(SUJET_FENETRE.CRM, { fil: true });
-      this.app.message('Publié dans le fil', 'succes');
+      this.app.message(texte('crm_btp.fil.publie'), 'succes');
     } catch (e) { this.app.erreur(e); }
   }
 }

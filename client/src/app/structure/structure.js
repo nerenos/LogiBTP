@@ -1,3 +1,4 @@
+import { texte } from '@logibtp/socle/dictionnaire';
 import { TYPE_DOCUMENT } from '../codes.js';
 import { api } from '../api.js';
 import { ERREUR_FICHE } from '@logibtp/fiche';
@@ -29,12 +30,12 @@ export function controlerIntervenants(liste, fonctions, portee) {
   (liste ?? []).forEach((x, i) => {
     const n = i + 1;
     const f = fonctions.find((y) => y.code === x.fonction);
-    if (!f) { erreurs.push(`Intervenant ${n} : fonction inconnue`); return; }
-    if (f.portee !== 'T' && f.portee !== portee) erreurs.push(`Intervenant ${n} : fonction « ${f.libelle} » non proposée ici`);
-    if (!x.per_id && !x.ind_id) erreurs.push(`Intervenant ${n} : tiers ou contact à choisir`);
+    if (!f) { erreurs.push(texte('structure_btp.intervenants.erreurs.fonction_inconnue', { n })); return; }
+    if (f.portee !== 'T' && f.portee !== portee) erreurs.push(texte('structure_btp.intervenants.erreurs.fonction_portee', { n, fonction: f.libelle }));
+    if (!x.per_id && !x.ind_id) erreurs.push(texte('structure_btp.intervenants.erreurs.tiers', { n }));
     vues.set(f.code, (vues.get(f.code) ?? 0) + 1);
-    if (f.unique && vues.get(f.code) === 2) erreurs.push(`Un seul intervenant « ${f.libelle} »`);
-    if (x.paiement_direct && !f.paiement_direct) erreurs.push(`Intervenant ${n} : paiement direct réservé aux sous-traitants`);
+    if (f.unique && vues.get(f.code) === 2) erreurs.push(texte('structure_btp.intervenants.erreurs.unique', { fonction: f.libelle }));
+    if (x.paiement_direct && !f.paiement_direct) erreurs.push(texte('structure_btp.intervenants.erreurs.paiement_direct', { n }));
   });
   return erreurs;
 }
@@ -73,7 +74,7 @@ export async function creerFicheCodeLibre(fournisseur, type, corps) {
     return await fournisseur.creer(type, corps);
   } catch (e) {
     const { code, propose } = e.details ?? {};
-    if (e.code !== ERREUR_FICHE.CODE_PRIS || !propose || !await confirmer(`Le code ${code} est déjà utilisé. Utiliser le prochain code disponible : ${propose} ?`, { ok: `Utiliser ${propose}` })) throw e;
+    if (e.code !== ERREUR_FICHE.CODE_PRIS || !propose || !await confirmer(texte('structure_btp.code_pris', { code, propose }), { ok: texte('structure_btp.code_pris_ok', { propose }) })) throw e;
     return fournisseur.creer(type, { ...corps, valeurs: { ...corps.valeurs, code: propose } });
   }
 }

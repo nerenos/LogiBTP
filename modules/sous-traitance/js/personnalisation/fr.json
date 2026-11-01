@@ -1,0 +1,60 @@
+{
+  "erreurs": {
+    "PD_EXISTE": "Une demande existe déjà pour cette facture",
+    "PD_FACTURE": "Seule une facture validée du sous-traitant fait l'objet d'une demande de paiement",
+    "PD_GARANTIE": "Le marché n'est ni en paiement direct ni en délégation de paiement",
+    "STT_DOUBLON": "Même pièce deux fois",
+    "STT_MOTIF": "Motif obligatoire pour dispenser une pièce",
+    "STT_PIECE": "Code et libellé de la pièce obligatoires"
+  },
+  "sous_traitance": {
+    "pieces": {
+      "etats": {
+        "FOURNIE": "Fournie",
+        "A_ECHEANCE": "À échéance",
+        "EXPIREE": "Expirée",
+        "MANQUANTE": "Manquante",
+        "ABSENTE": "Non fournie (facultative)",
+        "DISPENSEE": "Dispensée"
+      },
+      "actions": {
+        "COMMANDE": "Validation de la commande",
+        "FACTURE": "Validation de la facture",
+        "PAIEMENT": "Bon à payer, paiement"
+      },
+      "portees": {
+        "TIERS": "Sous-traitant (toutes ses affaires)",
+        "MARCHE": "Marché"
+      }
+    },
+    "paiement_direct": {
+      "etats": {
+        "RECUE": "Demande reçue",
+        "ACCEPTEE": "Acceptée",
+        "PARTIELLE": "Acceptée en partie",
+        "REFUSEE": "Refusée",
+        "TRANSMISE": "Transmise au maître d'ouvrage",
+        "PAYEE": "Payée par le maître d'ouvrage"
+      },
+      "erreurs": {
+        "PD_PLAFOND": "Le cumul accepté dépasse le montant agréé du sous-traitant",
+        "PD_DEMANDE": "Le montant accepté dépasse la demande du sous-traitant",
+        "PD_MOTIF": "Motif obligatoire pour refuser tout ou partie de la demande",
+        "PD_NEGATIF": "Montant accepté négatif"
+      }
+    },
+    "retenue": {
+      "erreurs": {
+        "RET_RECEPTION": "Travaux non réceptionnés : pas d'échéance de libération",
+        "RET_RESERVES": "Réserves non levées : la retenue reste bloquée"
+      }
+    },
+    "ventilation": {
+      "erreurs": {
+        "VENT_SANS_LIGNE": "Aucune ligne d'avancement à ventiler",
+        "VENT_SANS_RESTE": "Rien ne reste à facturer sur les lignes de la commande",
+        "VENT_DEPASSEMENT": "Le montant dépasse le reste à facturer de la commande"
+      }
+    }
+  }
+}

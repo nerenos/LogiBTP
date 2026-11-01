@@ -1,6 +1,7 @@
 import { actionDe, libelleRaccourci } from './raccourcis.js';
 import { ouvrirMenuContextuel } from './menu-contextuel.js';
 import { ListeDeroulante, AssistantFormule } from './liste-deroulante.js';
+import { texte } from '../dictionnaire/index.js';
 
 const LARGEUR_MIN = 28;
 
@@ -92,7 +93,7 @@ export class GrilleArbre {
       th.append(c.titre);
       if (disposable) {
         th.classList.add('deplacable');
-        th.title = 'Glisser l\'entête pour déplacer la colonne, sa bordure droite pour la largeur (double-clic : automatique)';
+        th.title = texte('socle.grille.entete_colonne');
         th.addEventListener('pointerdown', (e) => this.#debutDeplacementColonne(e, i));
         const bord = document.createElement('span');
         bord.className = 'redim';
@@ -434,7 +435,7 @@ export class GrilleArbre {
     b.type = 'button';
     b.className = 'bouton-riche';
     b.textContent = '¶';
-    b.title = editable ? 'Mise en forme (double-clic)' : 'Mise en forme (consultation)';
+    b.title = texte(editable ? 'socle.grille.mise_en_forme' : 'socle.grille.mise_en_forme_consultation');
     b.addEventListener('mousedown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
     b.addEventListener('click', (ev) => { ev.stopPropagation(); this.editer(i, null, { riche: true }); });
     td.classList.add('avec-bouton-riche');
@@ -638,21 +639,22 @@ export class GrilleArbre {
     }
     if (this.courant === null || this.courant === undefined) return;
     const ligne = this.ligneCourante();
-    const element = (action, libelle) => {
+    // Libellé de chaque action : socle.grille.menu.<action> du dictionnaire.
+    const element = (action) => {
       const f = this.#fonction(action);
-      return f ? { libelle, raccourci: libelleRaccourci(action), action: f } : null;
+      return f ? { libelle: texte(`socle.grille.menu.${action}`), raccourci: libelleRaccourci(action), action: f } : null;
     };
     let elements = [
-      element('insererApres', 'Insérer après'), element('insererAvant', 'Insérer avant'), element('insererEnfant', 'Insérer un enfant'),
+      element('insererApres'), element('insererAvant'), element('insererEnfant'),
       { separateur: true },
-      element('couper', 'Couper'), element('copier', 'Copier'), element('coller', 'Coller'), element('dupliquer', 'Dupliquer'), element('supprimer', 'Supprimer'),
+      element('couper'), element('copier'), element('coller'), element('dupliquer'), element('supprimer'),
       { separateur: true },
-      element('monter', 'Monter'), element('descendre', 'Descendre'), element('indenter', 'Augmenter le niveau'), element('desindenter', 'Diminuer le niveau'),
-      ...(ligne?.aEnfants ? [this.replies.has(this.courant) ? element('deplier', 'Déplier') : element('replier', 'Replier')] : []),
+      element('monter'), element('descendre'), element('indenter'), element('desindenter'),
+      ...(ligne?.aEnfants ? [this.replies.has(this.courant) ? element('deplier') : element('replier')] : []),
       { separateur: true },
-      element('ouvrirMetre', 'Métré'), element('rechercher', 'Bibliothèque'),
+      element('ouvrirMetre'), element('rechercher'),
       { separateur: true },
-      element('annuler', 'Annuler'), element('retablir', 'Rétablir'),
+      element('annuler'), element('retablir'),
     ].filter(Boolean);
     elements = this.o.actions.menuContextuel?.(elements, this.courant) ?? elements;
     const cible = e ?? { target: this.tbody.querySelector(`tr[data-id="${this.courant}"]`) ?? this.conteneur };
@@ -738,7 +740,7 @@ export class GrilleArbre {
       document.body.append(this.badge);
     }
     this.badge.classList.toggle('interdit', !autorise);
-    this.badge.textContent = autorise ? (this.o.actions.libelleDepot?.(cible.cibleId, cible.position) ?? cible.position) : 'Dépôt impossible ici';
+    this.badge.textContent = autorise ? (this.o.actions.libelleDepot?.(cible.cibleId, cible.position) ?? cible.position) : texte('socle.grille.depot_impossible');
     this.badge.style.left = `${x + 14}px`;
     this.badge.style.top = `${y + 16}px`;
   }

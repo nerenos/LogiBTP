@@ -1,0 +1,20 @@
+/* Thème du module GED (module Personnalisation) : variables propres à l'explorateur, après celles du socle. */
+
+:root {
+  /* Texte des boutons actifs sur la couleur d'accent. */
+  --ged-texte-sur-couleur: #fff;
+  /* Bulles des boutons en icône. */
+  --ged-bulle-fond: #23272e;
+  --ged-bulle-texte: #fff;
+  --ged-ombre-bulle: rgb(0 0 0 / 0.25);
+  /* Survol des dossiers, des tuiles et des lignes. */
+  --ged-survol: rgb(127 127 127 / 0.08);
+  --ged-survol-ligne: rgb(127 127 127 / 0.06);
+  /* Fond de l'aperçu d'un PDF. */
+  --ged-fond-pdf: #fff;
+  /* Zone de dépôt des fichiers glissés. */
+  --ged-fond-depot: rgb(29 95 191 / 0.08);
+  /* Fenêtre du dépôt : fond et ombre. */
+  --ged-fond-modale: rgb(0 0 0 / 0.35);
+  --ged-ombre-fenetre: rgb(0 0 0 / 0.3);
+}

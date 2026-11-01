@@ -1,0 +1,18 @@
+/* Thème du module Document (module Personnalisation) : variables propres aux documents, après celles du socle. */
+
+:root {
+  /* Couleur proposée pour une nouvelle étiquette de ligne (champ couleur : #rrggbb). */
+  --document-etiquette-defaut: #64748b;
+  /* Couleur affichée pour une étiquette du document sans couleur. */
+  --document-etiquette-vide: #999999;
+  /* Mode de vente sans couleur paramétrée (pastille de la ligne). */
+  --document-type-prix-defaut: #94a3b8;
+  /* Menus flottants, pastilles, fond des fenêtres de vues. */
+  --document-ombre: rgba(0, 0, 0, 0.18);
+  --document-contour-pastille: rgba(0, 0, 0, 0.2);
+  --document-fond-modale: rgba(0, 0, 0, 0.35);
+  /* Analyse : élément dont les lignes divergent ; recherche dans les lignes : trouvées, puis la courante. */
+  --document-divergent: rgba(80, 130, 230, 0.12);
+  --document-trouvee: rgba(250, 204, 21, 0.18);
+  --document-trouvee-courante: rgba(250, 204, 21, 0.45);
+}

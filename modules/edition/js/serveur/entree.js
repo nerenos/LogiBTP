@@ -2,6 +2,12 @@
 // Paquet unique construit par `npm run construire --workspace modules/edition/js` (esbuild, format IIFE) ; échanges
 // en JSON (chaînes) et en octets (Uint8Array) ; aucune entrée-sortie ici : tout vient du serveur.
 import { editer, assembler, produirePdf, Polices, verifierModele, verifierCharte, dependances, lireImage, base64VersOctets, normaliserModele } from '../src/index.js';
+import { initialiserDictionnaire } from '@logibtp/socle/dictionnaire';
+import libelles from '../personnalisation/fr.json';
+
+// Textes du module (alertes, libellés imprimés par défaut : Report, À reporter, Total) : dictionnaire du programme
+// intégré au paquet, mêmes textes que le navigateur ; les surcharges de l'installation ne s'appliquent qu'à l'aperçu.
+initialiserDictionnaire({ libelles, origine: 'paquet' });
 
 // Jint n'a pas de minuterie : pdf-lib ne s'en sert que pour céder la main entre deux étapes.
 if (typeof globalThis.setTimeout !== 'function') {

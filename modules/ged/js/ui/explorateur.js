@@ -1,6 +1,7 @@
+import { texte, texteHtml, pluriel, pairesParCode, textesParCode, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { NIVEAU_CONFIDENTIALITE, PROFIL } from '@logibtp/socle';
 import { echapper, lirePreferences, ecrirePreferences, creerCombo, confirmer, saisir, formatDate, formatDateHeure, separateur } from '@logibtp/socle/ui';
-import { icone, formatTaille } from '../src/fichiers.js';
+import { iconeDocument, formatTaille } from '../src/fichiers.js';
 import { versionsVisibles, etapes, ETAPES, GENRES } from '../src/versions.js';
 import { normaliserRecherche } from '../src/recherche.js';
 import { CONFIDENTIALITES, libelleConfidentialite, peutChangerAcces } from '../src/acces.js';
@@ -27,12 +28,12 @@ const libelleEtape = (code) => ETAPES.find(([c]) => c === code)?.[1] ?? code ?? 
 const cleChemin = (chemin) => chemin.map((n) => n.cle).join('/');
 const cleElement = (e) => (e ? `${e.type_element}|${e.id_element}` : '∅');
 const TYPE_GLISSE = 'application/x-logibtp-ged';
-const TYPES_DERIVATION = [['VERSION', 'Version'], ['TRADUCTION', 'Traduction'], ['ADAPTATION', 'Adaptation'], ['EXTRAIT', 'Extrait'], ['ANNOTATION', 'Annotation']];
-const STATUTS_RETENTION = { ACTIF: 'Actif', A_ARCHIVER: 'À archiver', FIN_CONSERVATION: 'Fin de conservation' };
-const ETATS_INDEX = { A_FAIRE: 'À indexer', FAIT: 'Texte indexé', SANS_TEXTE: 'Aucun texte', ECHEC: 'Échec de l\'extraction' };
+const TYPES_DERIVATION = pairesParCode('ged.derivations', ['VERSION', 'TRADUCTION', 'ADAPTATION', 'EXTRAIT', 'ANNOTATION']);
+const STATUTS_RETENTION = textesParCode('ged.statuts_retention', ['ACTIF', 'A_ARCHIVER', 'FIN_CONSERVATION']);
+const ETATS_INDEX = textesParCode('ged.etats_index', ['A_FAIRE', 'FAIT', 'SANS_TEXTE', 'ECHEC']);
 const COLONNES = [
-  { cle: 'nom', libelle: 'Nom', compact: true }, { cle: 'categorie', libelle: 'Catégorie' }, { cle: 'date', libelle: 'Date', compact: true },
-  { cle: 'auteur', libelle: 'Auteur' }, { cle: 'taille', libelle: 'Taille', compact: true, nombre: true }, { cle: 'confidentialite', libelle: 'Accès' },
+  { cle: 'nom', compact: true }, { cle: 'categorie' }, { cle: 'date', compact: true },
+  { cle: 'auteur' }, { cle: 'taille', compact: true, nombre: true }, { cle: 'confidentialite' },
 ];
 
 /** Bouton d'action en icône, libellé dans une bulle. */
@@ -89,37 +90,37 @@ export class ExplorateurGed {
     c.innerHTML = `
       <div class="ged-barre">
         <div class="ged-nav">
-          ${bouton('arriere', '←', 'Précédent (Alt+←)', { pos: 'gauche' })}${bouton('avant', '→', 'Suivant (Alt+→)', { pos: 'gauche' })}${bouton('parent', '↑', 'Dossier parent (Retour arrière)', { pos: 'gauche' })}
+          ${bouton('arriere', icone('ged_precedent'), texte('ged.explorateur.precedent'), { pos: 'gauche' })}${bouton('avant', icone('ged_suivant'), texte('ged.explorateur.suivant'), { pos: 'gauche' })}${bouton('parent', icone('ged_parent'), texte('ged.explorateur.parent'), { pos: 'gauche' })}
         </div>
-        <div class="ged-chemin" title="Chemin du dossier ; la saisie filtre le dossier, Entrée cherche dans toute la GED (contenu des fichiers compris)">
+        <div class="ged-chemin" title="${texteHtml('ged.explorateur.chemin_aide')}">
           <span class="ged-segments"></span>
-          <input type="search" class="ged-filtre" placeholder="Filtrer… (Entrée : rechercher partout)" aria-label="Filtrer le dossier ou rechercher">
+          <input type="search" class="ged-filtre" placeholder="${texteHtml('ged.explorateur.filtrer')}" aria-label="${texteHtml('ged.explorateur.filtrer_aide')}">
         </div>
         <div class="ged-outils">
-          ${bouton('arbre', '🌳', 'Afficher ou masquer l\'arbre des dossiers')}
-          ${bouton('vue', '☰', 'Affichage : icônes ou détails')}
-          ${this.modifiable ? bouton('dossier', '📁＋', 'Nouveau dossier') : ''}
-          ${this.modifiable ? `${bouton('ajouter', '＋', 'Ajouter des documents (ou glisser-déposer)', { classe: 'principal' })}<input type="file" multiple hidden data-fichiers>` : ''}
+          ${bouton('arbre', icone('ged_arbre'), texte('ged.explorateur.arbre'))}
+          ${bouton('vue', icone('ged_vue'), texte('ged.explorateur.vue'))}
+          ${this.modifiable ? bouton('dossier', icone('ged_nouveau_dossier'), texte('ged.explorateur.nouveau_dossier')) : ''}
+          ${this.modifiable ? `${bouton('ajouter', icone('ajouter'), texte('ged.explorateur.ajouter'), { classe: 'principal' })}<input type="file" multiple hidden data-fichiers>` : ''}
           <span class="ged-separateur-outils"></span>
-          ${this.contexte ? '' : bouton('filtre-coffre', '🔒', 'Coffre-fort seulement', { classe: 'bascule' })}
-          ${this.envoi ? bouton('filtre-envoi', '📧', 'Pièces jointes à envoyer seulement', { classe: 'bascule' }) : ''}
-          ${this.terrain ? bouton('filtre-terrain', '📱', 'Pièces diffusées sur le terrain seulement', { classe: 'bascule' }) : ''}
-          ${bouton('filtre-archives', '🗄', 'Documents archivés', { classe: 'bascule' })}
-          ${this.admin ? bouton('filtre-supprimes', '🗑', 'Afficher les documents supprimés', { classe: 'bascule' }) : ''}
-          ${this.admin && !this.contexte ? bouton('coffre', '🛡', 'Vérifier toute la chaîne du coffre-fort') : ''}
-          ${this.admin && !this.contexte ? bouton('retention', '⏳', 'Rétention : documents à archiver') : ''}
+          ${this.contexte ? '' : bouton('filtre-coffre', icone('verrou'), texte('ged.explorateur.filtre_coffre'), { classe: 'bascule' })}
+          ${this.envoi ? bouton('filtre-envoi', icone('ged_envoi'), texte('ged.explorateur.filtre_envoi'), { classe: 'bascule' }) : ''}
+          ${this.terrain ? bouton('filtre-terrain', icone('ged_terrain'), texte('ged.explorateur.filtre_terrain'), { classe: 'bascule' }) : ''}
+          ${bouton('filtre-archives', icone('ged_archive'), texte('ged.explorateur.filtre_archives'), { classe: 'bascule' })}
+          ${this.admin ? bouton('filtre-supprimes', icone('supprimer'), texte('ged.explorateur.filtre_supprimes'), { classe: 'bascule' }) : ''}
+          ${this.admin && !this.contexte ? bouton('coffre', icone('ged_coffre_chaine'), texte('ged.explorateur.verifier_chaine')) : ''}
+          ${this.admin && !this.contexte ? bouton('retention', icone('ged_retention'), texte('ged.explorateur.retention')) : ''}
         </div>
       </div>
       <div class="ged-corps">
-        <nav class="ged-arbre" aria-label="Dossiers"></nav>
+        <nav class="ged-arbre" aria-label="${texteHtml('ged.explorateur.dossiers')}"></nav>
         <div class="ged-sep" data-sep="arbre"></div>
-        <section class="ged-liste" tabindex="0" aria-label="Contenu du dossier">
+        <section class="ged-liste" tabindex="0" aria-label="${texteHtml('ged.explorateur.contenu')}">
           <div class="ged-liste-entete"><span class="ged-compteur"></span><span class="ged-actions-dossier"></span></div>
           <div class="ged-contenu"></div>
         </section>
         <div class="ged-sep" data-sep="visu"></div>
         <section class="ged-visu">
-          <div class="ged-visu-haut"><p class="aide ged-visu-vide">Sélectionnez un document, ou déposez des fichiers dans un dossier.</p></div>
+          <div class="ged-visu-haut"><p class="aide ged-visu-vide">${texteHtml('ged.explorateur.selection_depot')}</p></div>
           <div class="ged-sep ged-sep-h" data-sep="dock"></div>
           <div class="ged-dock"></div>
         </section>
@@ -226,7 +227,7 @@ export class ExplorateurGed {
   }
 
   #noeudRepertoire(r, parent) {
-    return { cle: `R${r.id}`, libelle: r.nom, icone: '📁', element: parent.element, repertoire: { id: r.id, nom: r.nom }, nb: r.nb_documents };
+    return { cle: `R${r.id}`, libelle: r.nom, icone: icone('ged_dossier'), element: parent.element, repertoire: { id: r.id, nom: r.nom }, nb: r.nb_documents };
   }
 
   /** Nœuds sous le dernier nœud du chemin : automatiques (liens compris) puis répertoires créés. */
@@ -304,7 +305,7 @@ export class ExplorateurGed {
       }
       if (base) return this.#aller(base);
     }
-    this.message(`Dossier « ${lien.lien.libelle ?? lien.libelle} » introuvable dans l'arborescence`, 'erreur');
+    this.message(texte('ged.explorateur.lien_introuvable', { dossier: lien.lien.libelle ?? lien.libelle }), 'erreur');
   }
 
   async precedent() {
@@ -351,9 +352,9 @@ export class ExplorateurGed {
 
   #rendreChemin() {
     const z = this.conteneur.querySelector('.ged-segments');
-    const segments = this.chemin.map((n, i) => `<button type="button" class="ged-segment" data-i="${i}">${n.icone ?? '📁'} ${echapper(n.libelle)}</button>`);
-    if (this.resultats) segments.push(`<span class="ged-segment courant">🔍 « ${echapper(this.resultats.recherche)} »</span>`);
-    z.innerHTML = segments.join('<span class="ged-chevron">›</span>');
+    const segments = this.chemin.map((n, i) => `<button type="button" class="ged-segment" data-i="${i}">${n.icone ?? iconeHtml('ged_dossier')} ${echapper(n.libelle)}</button>`);
+    if (this.resultats) segments.push(`<span class="ged-segment courant">${iconeHtml('rechercher')} ${texteHtml('ged.explorateur.recherche', { recherche: this.resultats.recherche })}</span>`);
+    z.innerHTML = segments.join(`<span class="ged-chevron">${iconeHtml('ged_chevron')}</span>`);
     z.querySelectorAll('[data-i]').forEach((b) => b.addEventListener('click', () => this.#lancer(() => this.#aller(this.chemin.slice(0, Number(b.dataset.i) + 1)))));
     z.querySelectorAll('[data-i]').forEach((b) => this.#cibleDepot(b, this.chemin.slice(0, Number(b.dataset.i) + 1)));
     z.scrollLeft = z.scrollWidth;
@@ -372,8 +373,8 @@ export class ExplorateurGed {
       const feuille = ouvert && !enfants.length;
       const sous = ouvert ? (await Promise.all(enfants.map((e) => branche([...chemin, e])))).join('') : '';
       return `<li><div class="ged-noeud ${k === courant ? 'courant' : ''}" data-chemin="${echapper(k)}">
-          <button type="button" class="ged-deplier" data-deplier="${echapper(k)}" ${feuille ? 'disabled' : ''} aria-label="${ouvert ? 'Replier' : 'Déplier'}">${feuille ? '' : ouvert ? '▾' : '▸'}</button>
-          <span class="ged-noeud-ico">${n.icone ?? '📁'}</span><span class="ged-noeud-nom" title="${echapper(n.libelle)}">${echapper(n.libelle)}</span>
+          <button type="button" class="ged-deplier" data-deplier="${echapper(k)}" ${feuille ? 'disabled' : ''} aria-label="${texteHtml(ouvert ? 'ged.explorateur.replier' : 'ged.explorateur.deplier')}">${feuille ? '' : iconeHtml(ouvert ? 'replier' : 'ged_deplier')}</button>
+          <span class="ged-noeud-ico">${n.icone ?? iconeHtml('ged_dossier')}</span><span class="ged-noeud-nom" title="${echapper(n.libelle)}">${echapper(n.libelle)}</span>
         </div>${sous ? `<ul>${sous}</ul>` : ''}</li>`;
     };
     this.cheminsArbre = new Map();
@@ -438,13 +439,13 @@ export class ExplorateurGed {
     const nbEnvoi = docs.filter((d) => d.a_envoyer).length;
     const nbTerrain = docs.filter((d) => d.terrain).length;
     this.conteneur.querySelector('.ged-compteur').textContent = [
-      dossiers.length ? `${dossiers.length} dossier${dossiers.length > 1 ? 's' : ''}` : '',
-      `${docs.length} document${docs.length > 1 ? 's' : ''}`, this.envoi && nbEnvoi ? `${nbEnvoi} à envoyer` : '',
-      this.terrain && nbTerrain ? `${nbTerrain} sur le terrain` : '',
+      dossiers.length ? pluriel('ged.explorateur.nb_dossiers', dossiers.length) : '',
+      pluriel('ged.explorateur.nb_documents', docs.length), this.envoi && nbEnvoi ? texte('ged.explorateur.nb_envoi', { nombre: nbEnvoi }) : '',
+      this.terrain && nbTerrain ? texte('ged.explorateur.nb_terrain', { nombre: nbTerrain }) : '',
     ].filter(Boolean).join(' · ');
     this.#rendreActionsDossier();
     if (!dossiers.length && !ordonnes.length) {
-      this.contenu.innerHTML = `<p class="aide ged-vide">${this.filtre || this.resultats ? 'Aucun résultat.' : 'Dossier vide.'}${this.modifiable && !this.resultats && !this.noeud?.groupe ? ' Glissez des fichiers ici ou utilisez ＋.' : ''}</p>`;
+      this.contenu.innerHTML = `<p class="aide ged-vide">${texteHtml(this.filtre || this.resultats ? 'ged.explorateur.aucun_resultat' : 'ged.explorateur.dossier_vide')}${this.modifiable && !this.resultats && !this.noeud?.groupe ? ` ${texteHtml('ged.explorateur.glisser_ici', { icone: icone('ajouter') })}` : ''}</p>`;
       return;
     }
     this.contenu.innerHTML = this.vue === 'icones' ? this.#htmlIcones(dossiers, ordonnes, ids) : this.#htmlDetails(dossiers, ordonnes, ids);
@@ -456,39 +457,39 @@ export class ExplorateurGed {
   }
 
   #badges(d) {
-    return `${d.coffre ? '<span class="ged-badge coffre" data-bulle="Coffre-fort : verrouillé, horodaté">🔒</span>' : ''}
-      ${d.archive ? '<span class="ged-badge" data-bulle="Archivé">🗄</span>' : ''}
-      ${d.nb_pieces ? `<span class="ged-badge" data-bulle="Pièces jointes">📎 ${d.nb_pieces}</span>` : ''}
+    return `${d.coffre ? `<span class="ged-badge coffre" data-bulle="${texteHtml('ged.explorateur.badge_coffre')}">${iconeHtml('verrou')}</span>` : ''}
+      ${d.archive ? `<span class="ged-badge" data-bulle="${texteHtml('ged.explorateur.badge_archive')}">${iconeHtml('ged_archive')}</span>` : ''}
+      ${d.nb_pieces ? `<span class="ged-badge" data-bulle="${texteHtml('ged.explorateur.pieces')}">${iconeHtml('ged_pieces')} ${d.nb_pieces}</span>` : ''}
       ${d.etat ? `<span class="ged-badge etat">${echapper(libelleEtape(d.etat))}</span>` : ''}
-      ${d.version?.numero > 1 ? `<span class="ged-badge" data-bulle="Version courante">v${d.version.numero}</span>` : ''}`;
+      ${d.version?.numero > 1 ? `<span class="ged-badge" data-bulle="${texteHtml('ged.explorateur.version_courante')}">${texteHtml('ged.explorateur.version_numero', { numero: d.version.numero })}</span>` : ''}`;
   }
 
   #htmlDetails(dossiers, docs, ids) {
     const colonnes = COLONNES.filter((c) => !this.compact || c.compact);
     const recherche = Boolean(this.resultats);
     const entete = colonnes.map((c) => `<th data-tri="${c.cle}" class="${c.nombre ? 'nombre' : ''} ${this.tri.col === c.cle ? 'trie' : ''}" aria-sort="${this.tri.col === c.cle ? (this.tri.sens > 0 ? 'ascending' : 'descending') : 'none'}">
-      ${c.libelle}${this.tri.col === c.cle ? (this.tri.sens > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('');
+      ${texteHtml(`ged.colonnes.${c.cle}`)}${this.tri.col === c.cle ? ` ${iconeHtml(this.tri.sens > 0 ? 'ged_tri_asc' : 'ged_tri_desc')}` : ''}</th>`).join('');
     const cellules = (d) => colonnes.map((c) => {
       switch (c.cle) {
-        case 'nom': return `<td class="ged-nom"><span class="ged-ico">${icone(d)}</span><span class="ged-titre">${echapper(d.titre)}</span>${this.#badges(d)}
+        case 'nom': return `<td class="ged-nom"><span class="ged-ico">${iconeDocument(d)}</span><span class="ged-titre">${echapper(d.titre)}</span>${this.#badges(d)}
           ${recherche && d.type_element ? `<small class="ged-emplacement">${echapper(`${d.type_element} ${d.id_element ?? ''}`)}</small>` : ''}</td>`;
         case 'categorie': return `<td>${echapper(this.libelleCategorie(d.categorie))}</td>`;
         case 'date': return `<td>${formatDate(d.date_document)}</td>`;
         case 'auteur': return `<td>${echapper(d.auteur ?? '')}</td>`;
         case 'taille': return `<td class="nombre">${formatTaille(d.version?.taille)}</td>`;
         case 'confidentialite': return `<td>${(d.confidentialite ?? NIVEAU_CONFIDENTIALITE.INTERNE) === NIVEAU_CONFIDENTIALITE.INTERNE && !(d.acces_profils ?? []).length && !(d.acces_utilisateurs ?? []).length ? ''
-          : `<span class="ged-badge acces">${echapper(libelleConfidentialite(d.confidentialite))}${(d.acces_profils ?? []).length + (d.acces_utilisateurs ?? []).length ? ' 👥' : ''}</span>`}</td>`;
+          : `<span class="ged-badge acces">${echapper(libelleConfidentialite(d.confidentialite))}${(d.acces_profils ?? []).length + (d.acces_utilisateurs ?? []).length ? ` ${iconeHtml('ged_acces_liste')}` : ''}</span>`}</td>`;
         default: return '<td></td>';
       }
     }).join('');
     const vide = colonnes.length - 1;
-    return `<table class="ged-table"><thead><tr>${this.envoi ? '<th class="ged-envoi" data-bulle="Pièce jointe à envoyer (module Mail)">📧</th>' : ''}${this.terrain ? '<th class="ged-envoi" data-bulle="Pièce diffusée sur le terrain">📱</th>' : ''}${entete}</tr></thead><tbody>
+    return `<table class="ged-table"><thead><tr>${this.envoi ? `<th class="ged-envoi" data-bulle="${texteHtml('ged.explorateur.colonne_envoi')}">${iconeHtml('ged_envoi')}</th>` : ''}${this.terrain ? `<th class="ged-envoi" data-bulle="${texteHtml('ged.explorateur.colonne_terrain')}">${iconeHtml('ged_terrain')}</th>` : ''}${entete}</tr></thead><tbody>
       ${dossiers.map((n, i) => `<tr data-noeud="${i}" class="ged-ligne-dossier ${this.selection?.noeud === n.cle ? 'selectionnee' : ''} ${n.lien || n.url ? 'lien' : ''}" draggable="false">
-        ${this.envoi ? '<td></td>' : ''}${this.terrain ? '<td></td>' : ''}<td class="ged-nom"><span class="ged-ico">${n.lien || n.url ? '↪' : ''}${n.icone ?? '📁'}</span><span class="ged-titre">${echapper(n.libelle)}</span>
+        ${this.envoi ? '<td></td>' : ''}${this.terrain ? '<td></td>' : ''}<td class="ged-nom"><span class="ged-ico">${n.lien || n.url ? iconeHtml('ged_lien') : ''}${n.icone ?? iconeHtml('ged_dossier')}</span><span class="ged-titre">${echapper(n.libelle)}</span>
         ${n.sous_titre ? `<small class="ged-emplacement">${echapper(n.sous_titre)}</small>` : ''}</td>${'<td></td>'.repeat(vide)}</tr>`).join('')}
       ${docs.map((d) => `<tr data-doc="${d.id}" class="${this.#classeDoc(d, ids)}" draggable="${this.modifiable && !d.archive}">
-        ${this.envoi ? `<td class="ged-envoi"><input type="checkbox" data-envoi="${d.id}" ${d.a_envoyer ? 'checked' : ''} ${this.modifiable && !d.supprime && !d.archive ? '' : 'disabled'} aria-label="Pièce jointe à envoyer"></td>` : ''}
-        ${this.terrain ? `<td class="ged-envoi"><input type="checkbox" data-terrain="${d.id}" ${d.terrain ? 'checked' : ''} ${this.modifiable && !d.supprime && !d.archive ? '' : 'disabled'} aria-label="Pièce diffusée sur le terrain"></td>` : ''}
+        ${this.envoi ? `<td class="ged-envoi"><input type="checkbox" data-envoi="${d.id}" ${d.a_envoyer ? 'checked' : ''} ${this.modifiable && !d.supprime && !d.archive ? '' : 'disabled'} aria-label="${texteHtml('ged.explorateur.envoi')}"></td>` : ''}
+        ${this.terrain ? `<td class="ged-envoi"><input type="checkbox" data-terrain="${d.id}" ${d.terrain ? 'checked' : ''} ${this.modifiable && !d.supprime && !d.archive ? '' : 'disabled'} aria-label="${texteHtml('ged.explorateur.colonne_terrain')}"></td>` : ''}
         ${cellules(d)}</tr>`).join('')}
     </tbody></table>`;
   }
@@ -496,9 +497,9 @@ export class ExplorateurGed {
   #htmlIcones(dossiers, docs, ids) {
     return `<div class="ged-icones">
       ${dossiers.map((n, i) => `<div class="ged-tuile ${this.selection?.noeud === n.cle ? 'selectionnee' : ''} ${n.lien || n.url ? 'lien' : ''}" data-noeud="${i}" tabindex="-1" title="${echapper(n.libelle)}">
-        <span class="ged-tuile-ico">${n.icone ?? '📁'}${n.lien || n.url ? '<span class="ged-tuile-lien">↪</span>' : ''}</span><span class="ged-tuile-nom">${echapper(n.libelle)}</span></div>`).join('')}
+        <span class="ged-tuile-ico">${n.icone ?? iconeHtml('ged_dossier')}${n.lien || n.url ? `<span class="ged-tuile-lien">${iconeHtml('ged_lien')}</span>` : ''}</span><span class="ged-tuile-nom">${echapper(n.libelle)}</span></div>`).join('')}
       ${docs.map((d) => `<div class="ged-tuile ${this.#classeDoc(d, ids)}" data-doc="${d.id}" tabindex="-1" draggable="${this.modifiable && !d.archive}" title="${echapper(d.titre)}">
-        <span class="ged-tuile-ico">${icone(d)}${d.coffre ? '<span class="ged-tuile-lien">🔒</span>' : ''}</span><span class="ged-tuile-nom">${echapper(d.titre)}</span></div>`).join('')}
+        <span class="ged-tuile-ico">${iconeDocument(d)}${d.coffre ? `<span class="ged-tuile-lien">${iconeHtml('verrou')}</span>` : ''}</span><span class="ged-tuile-nom">${echapper(d.titre)}</span></div>`).join('')}
     </div>`;
   }
 
@@ -542,7 +543,7 @@ export class ExplorateurGed {
     const z = this.conteneur.querySelector('.ged-actions-dossier');
     const n = this.#noeudSelectionne() ?? (this.resultats ? null : this.noeud);
     z.innerHTML = this.modifiable && n?.repertoire
-      ? `${bouton('renommer', '✎', `Renommer « ${n.libelle} » (F2)`)}${bouton('supprimer-dossier', '✕', `Supprimer le dossier « ${n.libelle} » (vide)`)}` : '';
+      ? `${bouton('renommer', icone('ged_renommer'), texte('ged.explorateur.renommer', { dossier: n.libelle }))}${bouton('supprimer-dossier', icone('retirer'), texte('ged.explorateur.supprimer_dossier', { dossier: n.libelle }))}` : '';
     z.querySelector('[data-action="renommer"]')?.addEventListener('click', () => this.#lancer(() => this.renommerDossier(n)));
     z.querySelector('[data-action="supprimer-dossier"]')?.addEventListener('click', () => this.#lancer(() => this.supprimerDossier(n)));
   }
@@ -563,27 +564,27 @@ export class ExplorateurGed {
 
   async nouveauDossier() {
     const n = this.noeud;
-    if (this.resultats || n.groupe || n.lien) { this.message('Ouvrez un dossier pour y créer un sous-dossier', 'erreur'); return; }
-    const nom = await saisir(`Nouveau dossier dans « ${n.libelle} » :`, 'Nouveau dossier');
+    if (this.resultats || n.groupe || n.lien) { this.message(texte('ged.explorateur.ouvrir_pour_creer'), 'erreur'); return; }
+    const nom = await saisir(texte('ged.explorateur.nouveau_dossier_dans', { dossier: n.libelle }), texte('ged.explorateur.nouveau_dossier'));
     if (!nom?.trim()) return;
     await this.fournisseur.creerRepertoire({ nom: nom.trim(), parent_id: n.repertoire?.id ?? null, ...(n.element ?? {}) });
-    this.message(`Dossier « ${nom.trim()} » créé`, 'succes');
+    this.message(texte('ged.explorateur.dossier_cree', { dossier: nom.trim() }), 'succes');
     await this.recharger();
   }
 
   async renommerDossier(n) {
-    const nom = await saisir('Nouveau nom du dossier :', n.libelle);
+    const nom = await saisir(texte('ged.explorateur.nouveau_nom'), n.libelle);
     if (!nom?.trim() || nom.trim() === n.libelle) return;
     await this.fournisseur.modifierRepertoire(n.repertoire.id, { nom: nom.trim() });
     if (this.noeud.cle === n.cle) this.chemin = [...this.chemin.slice(0, -1), { ...n, libelle: nom.trim() }];
-    this.message('Dossier renommé', 'succes');
+    this.message(texte('ged.explorateur.dossier_renomme'), 'succes');
     await this.recharger();
   }
 
   async supprimerDossier(n) {
-    if (!await confirmer(`Supprimer le dossier « ${n.libelle} » ? Il doit être vide.`)) return;
+    if (!await confirmer(texte('ged.explorateur.supprimer_dossier_question', { dossier: n.libelle }))) return;
     await this.fournisseur.supprimerRepertoire(n.repertoire.id);
-    this.message('Dossier supprimé', 'succes');
+    this.message(texte('ged.explorateur.dossier_supprime'), 'succes');
     this.selection = null;
     if (this.noeud.cle === n.cle) this.chemin = this.chemin.slice(0, -1);
     await this.recharger();
@@ -599,8 +600,8 @@ export class ExplorateurGed {
 
   async deposer(fichiers, chemin = this.chemin) {
     const n = chemin.at(-1);
-    if (this.resultats && chemin === this.chemin) { this.message('Ouvrez un dossier pour y déposer des fichiers', 'erreur'); return; }
-    if (n.groupe || n.lien || n.url) { this.message(`« ${n.libelle} » regroupe des dossiers : déposez les fichiers dans l'un d'eux`, 'erreur'); return; }
+    if (this.resultats && chemin === this.chemin) { this.message(texte('ged.explorateur.ouvrir_pour_deposer'), 'erreur'); return; }
+    if (n.groupe || n.lien || n.url) { this.message(texte('ged.explorateur.regroupement_depot', { dossier: n.libelle }), 'erreur'); return; }
     this.parametres ??= await this.fournisseur.parametres();
     new DialogueDepot(fichiers, {
       fournisseur: this.fournisseur, destination: this.#destination(chemin), utilisateur: this.utilisateur, parametres: this.parametres, message: this.message,
@@ -614,7 +615,7 @@ export class ExplorateurGed {
     const meta = n.repertoire ? { repertoire_id: n.repertoire.id }
       : { type_element: n.element?.type_element ?? null, id_element: n.element ? String(n.element.id_element) : null, repertoire_id: null };
     for (const id of ids) await this.fournisseur.modifier(id, meta);
-    this.message(`${ids.length > 1 ? `${ids.length} documents classés` : 'Document classé'} dans « ${n.libelle} »`, 'succes');
+    this.message(pluriel('ged.explorateur.classes', ids.length, { dossier: n.libelle }), 'succes');
     await this.recharger();
   }
 
@@ -651,7 +652,7 @@ export class ExplorateurGed {
       if (!avecFichiers(e)) return;
       e.preventDefault();
       this.profondeur++;
-      zone.textContent = `Déposer dans « ${this.resultats ? '…' : this.noeud?.libelle ?? ''} » (ou sur un dossier)`;
+      zone.textContent = texte('ged.explorateur.deposer_dans', { dossier: this.resultats ? '…' : this.noeud?.libelle ?? '' });
       zone.hidden = false;
     });
     this.conteneur.addEventListener('dragover', (e) => { if (avecFichiers(e)) e.preventDefault(); });
@@ -670,15 +671,15 @@ export class ExplorateurGed {
   #rendreVisuDossier(n = this.resultats ? null : this.noeud) {
     libererApercu(this.haut.querySelector('.ged-apercu') ?? this.haut);
     this.dock.innerHTML = '';
-    if (!n) { this.haut.innerHTML = '<p class="aide ged-visu-vide">Sélectionnez un document.</p>'; return; }
+    if (!n) { this.haut.innerHTML = `<p class="aide ged-visu-vide">${texteHtml('ged.explorateur.selectionnez')}</p>`; return; }
     const nbDocs = n === this.noeud ? (this.documents ?? []).length : n.nb;
-    this.haut.innerHTML = `<header class="ged-visu-entete"><span class="ged-icone-grande">${n.lien || n.url ? '↪' : ''}${n.icone ?? '📁'}</span>
-        <div class="ged-visu-titre"><h3>${echapper(n.libelle)}</h3><small>${n.lien ? 'Lien vers un dossier de l\'arborescence' : n.url ? 'Ouvre l\'élément' : n.groupe ? 'Regroupement' : n.repertoire ? 'Dossier' : n.element ? 'Dossier de l\'élément' : 'Documents sans élément lié'}
-        ${n.sous_titre ? ` · ${echapper(n.sous_titre)}` : ''}${nbDocs !== undefined && !n.groupe && !n.lien ? ` · ${nbDocs} document${nbDocs > 1 ? 's' : ''}` : ''}</small></div>
-        <div class="ged-visu-actions">${n === this.noeud ? '' : bouton('ouvrir-noeud', '📂', 'Ouvrir')}</div></header>
-      <p class="aide ged-visu-vide">${n.lien || n.url ? 'Ouvrez le lien pour aller au dossier.'
-        : n.groupe ? (n === this.noeud ? 'Regroupement : ouvrez l\'un de ses dossiers pour y déposer des fichiers.' : 'Ouvrez le dossier pour voir son contenu.')
-          : 'Sélectionnez un document, ou déposez des fichiers.'}</p>`;
+    this.haut.innerHTML = `<header class="ged-visu-entete"><span class="ged-icone-grande">${n.lien || n.url ? iconeHtml('ged_lien') : ''}${n.icone ?? iconeHtml('ged_dossier')}</span>
+        <div class="ged-visu-titre"><h3>${echapper(n.libelle)}</h3><small>${texteHtml(n.lien ? 'ged.explorateur.genre.lien' : n.url ? 'ged.explorateur.genre.url' : n.groupe ? 'ged.explorateur.genre.groupe' : n.repertoire ? 'ged.explorateur.genre.repertoire' : n.element ? 'ged.explorateur.genre.element' : 'ged.explorateur.genre.sans_element')}
+        ${n.sous_titre ? ` · ${echapper(n.sous_titre)}` : ''}${nbDocs !== undefined && !n.groupe && !n.lien ? ` · ${pluriel('ged.explorateur.nb_documents', nbDocs)}` : ''}</small></div>
+        <div class="ged-visu-actions">${n === this.noeud ? '' : bouton('ouvrir-noeud', icone('ged_ouvrir'), texte('ged.explorateur.ouvrir'))}</div></header>
+      <p class="aide ged-visu-vide">${texteHtml(n.lien || n.url ? 'ged.explorateur.aide_lien'
+        : n.groupe ? (n === this.noeud ? 'ged.explorateur.aide_groupe' : 'ged.explorateur.aide_dossier')
+          : 'ged.explorateur.aide_selection')}</p>`;
     this.haut.querySelector('[data-action="ouvrir-noeud"]')?.addEventListener('click', () => this.#lancer(() => this.ouvrir(n)));
   }
 
@@ -711,33 +712,33 @@ export class ExplorateurGed {
     const ongletDock = this.#prefs().onglet ?? 'infos';
     this.haut.innerHTML = `
       <header class="ged-visu-entete">
-        <span class="ged-icone-grande">${icone(d)}</span>
+        <span class="ged-icone-grande">${iconeDocument(d)}</span>
         <div class="ged-visu-titre"><h3 title="${echapper(d.titre)}">${echapper(d.titre)}</h3>
-          <small>${echapper(this.libelleCategorie(d.categorie) || 'Sans catégorie')}${d.etat ? ` · ${echapper(libelleEtape(d.etat))}` : ''}
+          <small>${echapper(this.libelleCategorie(d.categorie) || texte('ged.explorateur.sans_categorie'))}${d.etat ? ` · ${echapper(libelleEtape(d.etat))}` : ''}
           ${d.confidentialite && d.confidentialite !== NIVEAU_CONFIDENTIALITE.INTERNE ? ` · ${echapper(libelleConfidentialite(d.confidentialite))}` : ''}
-          ${d.archive ? ' · <b>archivé</b>' : ''}${d.supprime ? ` · <b class="erreur">supprimé le ${formatDate(d.supprime_le)}</b>` : ''}</small></div>
+          ${d.archive ? ` · <b>${texteHtml('ged.explorateur.archive')}</b>` : ''}${d.supprime ? ` · <b class="erreur">${texteHtml('ged.explorateur.supprime_le', { date: formatDate(d.supprime_le) })}</b>` : ''}</small></div>
         <div class="ged-visu-actions">
-          ${courante ? `<a class="ged-icone-bouton" href="${echapper(this.#lienContenu(courante))}" download="${echapper(courante.nom_fichier)}" data-bulle="Télécharger" aria-label="Télécharger">⬇</a>` : ''}
-          ${editable && !d.coffre ? `${bouton('version', '⟳', `Nouvelle version (les ${this.parametres.editions_conservees} dernières éditions sont conservées)`)}<input type="file" hidden data-version>` : ''}
-          ${editable && !d.coffre ? bouton('etape', '✔', 'Enregistrer une étape (validation, envoi, signature…)') : ''}
-          ${editable && !d.coffre ? bouton('coffre', '🔒', 'Archiver au coffre-fort : verrouillé, empreinte et horodatage') : ''}
-          ${d.coffre && !d.archive ? bouton('verifier', '✓', 'Vérifier l\'intégrité (empreinte et chaîne du coffre-fort)') : ''}
-          ${editable && !d.parent_id ? bouton('archiver', '🗄', 'Archiver (sort des recherches actives, restaurable)') : ''}
-          ${d.archive && this.modifiable ? bouton('desarchiver', '📤', 'Sortir de l\'archive') : ''}
-          ${this.modifiable && !d.supprime && !d.archive && (!d.coffre || this.admin) ? bouton('supprimer', '🗑', 'Supprimer (masqué, récupérable)') : ''}
-          ${d.supprime && this.modifiable ? bouton('restaurer', '↺', 'Restaurer') : ''}
-          ${d.supprime && this.admin && !d.coffre ? bouton('purger', '✖', 'Supprimer définitivement (administrateur)', { classe: 'danger' }) : ''}
-          ${bouton('dock', '▤', 'Afficher ou masquer le panneau des informations', { classe: 'bascule' })}
+          ${courante ? `<a class="ged-icone-bouton" href="${echapper(this.#lienContenu(courante))}" download="${echapper(courante.nom_fichier)}" data-bulle="${texteHtml('ged.explorateur.telecharger')}" aria-label="${texteHtml('ged.explorateur.telecharger')}">${iconeHtml('ged_telecharger')}</a>` : ''}
+          ${editable && !d.coffre ? `${bouton('version', icone('ged_version'), texte('ged.explorateur.nouvelle_version_aide', { nombre: this.parametres.editions_conservees }))}<input type="file" hidden data-version>` : ''}
+          ${editable && !d.coffre ? bouton('etape', icone('ged_etape'), texte('ged.explorateur.etape_aide')) : ''}
+          ${editable && !d.coffre ? bouton('coffre', icone('verrou'), texte('ged.explorateur.coffre_aide')) : ''}
+          ${d.coffre && !d.archive ? bouton('verifier', icone('ged_verifier'), texte('ged.explorateur.verifier_aide')) : ''}
+          ${editable && !d.parent_id ? bouton('archiver', icone('ged_archive'), texte('ged.explorateur.archiver_aide')) : ''}
+          ${d.archive && this.modifiable ? bouton('desarchiver', icone('ged_desarchiver'), texte('ged.explorateur.desarchiver_aide')) : ''}
+          ${this.modifiable && !d.supprime && !d.archive && (!d.coffre || this.admin) ? bouton('supprimer', icone('supprimer'), texte('ged.explorateur.supprimer_aide')) : ''}
+          ${d.supprime && this.modifiable ? bouton('restaurer', icone('ged_restaurer'), texte('ged.explorateur.restaurer')) : ''}
+          ${d.supprime && this.admin && !d.coffre ? bouton('purger', icone('ged_purger'), texte('ged.explorateur.purger_aide'), { classe: 'danger' }) : ''}
+          ${bouton('dock', icone('ged_dock'), texte('ged.explorateur.dock_aide'), { classe: 'bascule' })}
         </div>
       </header>
       <div class="ged-etape-saisie" hidden>
         <span data-place="etape"></span>
-        <input data-etape-commentaire placeholder="Commentaire (destinataire, signataire…)">
-        <label class="ged-option" title="Joindre le fichier de cette étape (ex. devis signé)"><input type="file" data-etape-fichier></label>
-        <button type="button" class="principal" data-action="etape-ok">Enregistrer l'étape</button>
+        <input data-etape-commentaire placeholder="${texteHtml('ged.explorateur.etape_commentaire')}">
+        <label class="ged-option" title="${texteHtml('ged.explorateur.etape_fichier')}"><input type="file" data-etape-fichier></label>
+        <button type="button" class="principal" data-action="etape-ok">${texteHtml('ged.explorateur.etape_ok')}</button>
       </div>
-      ${d.parent ? `<p class="ged-lien-mail">📎 Pièce jointe du mail <a href="#" data-ouvrir="${d.parent.id}">${echapper(d.parent.titre)}</a></p>` : ''}
-      ${d.pieces?.length ? `<div class="ged-pieces"><b>Pièces jointes</b>${d.pieces.map((p) => `<a href="#" data-ouvrir="${p.id}">${icone(p)} ${echapper(p.titre)}</a>`).join('')}</div>` : ''}
+      ${d.parent ? `<p class="ged-lien-mail">${iconeHtml('ged_pieces')} ${texteHtml('ged.explorateur.piece_du_mail')} <a href="#" data-ouvrir="${d.parent.id}">${echapper(d.parent.titre)}</a></p>` : ''}
+      ${d.pieces?.length ? `<div class="ged-pieces"><b>${texteHtml('ged.explorateur.pieces')}</b>${d.pieces.map((p) => `<a href="#" data-ouvrir="${p.id}">${iconeDocument(p)} ${echapper(p.titre)}</a>`).join('')}</div>` : ''}
       <div class="ged-apercu"></div>`;
     this.#rendreDock(ongletDock);
     this.#basculerDock(!this.dock.hidden, false);
@@ -745,7 +746,7 @@ export class ExplorateurGed {
     const apercu = z.querySelector('.ged-apercu');
     this.#apercu(apercu, courante);
     z.querySelectorAll('[data-ouvrir]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); this.#lancer(() => this.selectionnerDocument(Number(a.dataset.ouvrir))); }));
-    const etape = creerCombo({ options: ETAPES.map(([valeur, libelle]) => ({ valeur, libelle })), valeur: 'VALIDATION', vide: false, titre: 'Étape' });
+    const etape = creerCombo({ options: ETAPES.map(([valeur, libelle]) => ({ valeur, libelle })), valeur: 'VALIDATION', vide: false, titre: texte('ged.explorateur.etape') });
     z.querySelector('[data-place="etape"]').replaceWith(etape);
     const action = (nom, f) => z.querySelector(`[data-action="${nom}"]`)?.addEventListener('click', () => this.#lancer(f));
     action('dock', () => this.#basculerDock(this.dock.hidden));
@@ -754,8 +755,8 @@ export class ExplorateurGed {
     entreeVersion?.addEventListener('change', () => this.#lancer(async () => {
       const f = entreeVersion.files[0];
       if (!f) return;
-      await this.fournisseur.nouvelleVersion(d.id, { fichier: f, genre: GENRES.EDITION, commentaire: 'Nouvelle version' });
-      this.message('Nouvelle version enregistrée', 'succes');
+      await this.fournisseur.nouvelleVersion(d.id, { fichier: f, genre: GENRES.EDITION, commentaire: texte('ged.explorateur.nouvelle_version') });
+      this.message(texte('ged.explorateur.version_enregistree'), 'succes');
       await this.recharger({ arbre: false });
     }));
     action('etape', () => { const s = z.querySelector('.ged-etape-saisie'); s.hidden = !s.hidden; });
@@ -765,48 +766,50 @@ export class ExplorateurGed {
       const f = z.querySelector('[data-etape-fichier]').files[0];
       if (f) await this.fournisseur.nouvelleVersion(d.id, { fichier: f, genre: GENRES.ETAPE, etape: code, etat: code, commentaire });
       else await this.fournisseur.etape(d.id, { etape: code, etat: code, commentaire });
-      this.message(`Étape « ${libelleEtape(code)} » enregistrée`, 'succes');
+      this.message(texte('ged.explorateur.etape_enregistree', { etape: libelleEtape(code) }), 'succes');
       await this.recharger({ arbre: false });
     });
     action('coffre', async () => {
-      const motif = await saisir('Archivage au coffre-fort : le document sera verrouillé (ni modification ni suppression).\nMotif :', this.libelleCategorie(d.categorie) || 'Archivage');
+      const motif = await saisir(texte('ged.explorateur.coffre_motif'), this.libelleCategorie(d.categorie) || texte('ged.explorateur.coffre_motif_defaut'));
       if (motif === null) return;
       await this.fournisseur.mettreAuCoffre(d.id, motif);
-      this.message('Document archivé au coffre-fort', 'succes');
+      this.message(texte('ged.explorateur.coffre_fait'), 'succes');
       await this.recharger({ arbre: false });
     });
     action('verifier', async () => {
       const r = await this.fournisseur.verifier(d.id);
+      const chaine = !r.coffre ? '' : r.coffre.ok ? texte('ged.explorateur.chaine_valide', { nombre: r.coffre.entrees })
+        : texte('ged.explorateur.chaine_rompue', { raison: r.coffre.rupture?.raison });
       this.message(r.integre
-        ? `✓ Intègre : empreinte recalculée identique${r.coffre ? (r.coffre.ok ? `, chaîne du coffre-fort valide (${r.coffre.entrees} entrées)` : ` — chaîne rompue : ${r.coffre.rupture?.raison}`) : ''}`
-        : `✗ Altéré : empreinte attendue ${r.empreinte_attendue}, calculée ${r.empreinte_calculee}`, r.integre && r.coffre?.ok !== false ? 'succes' : 'erreur');
+        ? `${icone('ged_verifier')} ${texte('ged.explorateur.integre', { chaine })}`
+        : `${icone('ged_altere')} ${texte('ged.explorateur.altere', { attendue: r.empreinte_attendue, calculee: r.empreinte_calculee })}`, r.integre && r.coffre?.ok !== false ? 'succes' : 'erreur');
     });
     action('archiver', async () => {
-      if (!await confirmer(`Archiver « ${d.titre} »${d.nb_pieces ? ' et ses pièces jointes' : ''} ? Le document sort des recherches actives ; il reste consultable avec le filtre 🗄 et restaurable.`)) return;
-      const r = await this.fournisseur.archiver(d.id, 'Archivage manuel');
-      this.message(`${r.archives} document${r.archives > 1 ? 's' : ''} archivé${r.archives > 1 ? 's' : ''}`, 'succes');
+      if (!await confirmer(texte('ged.explorateur.archiver_question', { titre: d.titre, pieces: d.nb_pieces ? texte('ged.explorateur.archiver_pieces') : '', icone: icone('ged_archive') }))) return;
+      const r = await this.fournisseur.archiver(d.id, texte('ged.explorateur.archivage_manuel'));
+      this.message(pluriel('ged.explorateur.archives', r.archives), 'succes');
       this.selection = this.options.archives ? this.selection : null;
       await this.recharger({ arbre: false });
       if (!this.selection) this.#rendreVisuDossier();
     });
     action('desarchiver', async () => {
       await this.fournisseur.desarchiver(d.id);
-      this.message('Document sorti de l\'archive', 'succes');
+      this.message(texte('ged.explorateur.desarchive'), 'succes');
       await this.recharger({ arbre: false });
     });
     action('supprimer', async () => {
-      if (!await confirmer(`Supprimer « ${d.titre} » ? Le document est masqué, il reste récupérable${d.nb_pieces ? ' (ses pièces jointes aussi)' : ''}.`)) return;
+      if (!await confirmer(texte('ged.explorateur.supprimer_question', { titre: d.titre, pieces: d.nb_pieces ? texte('ged.explorateur.supprimer_pieces') : '' }))) return;
       await this.fournisseur.supprimer(d.id);
-      this.message('Document supprimé (masqué)', 'succes');
+      this.message(texte('ged.explorateur.supprime'), 'succes');
       if (!this.options.supprimes) this.selection = null;
       await this.recharger({ arbre: false });
       if (!this.selection) this.#rendreVisuDossier();
     });
-    action('restaurer', async () => { await this.fournisseur.restaurer(d.id); this.message('Document restauré', 'succes'); await this.recharger({ arbre: false }); });
+    action('restaurer', async () => { await this.fournisseur.restaurer(d.id); this.message(texte('ged.explorateur.restaure'), 'succes'); await this.recharger({ arbre: false }); });
     action('purger', async () => {
-      if (!await confirmer(`Supprimer DÉFINITIVEMENT « ${d.titre} » et toutes ses versions ? Cette action est irréversible.`)) return;
+      if (!await confirmer(texte('ged.explorateur.purger_question', { titre: d.titre }))) return;
       await this.fournisseur.purger(d.id);
-      this.message('Document supprimé définitivement', 'succes');
+      this.message(texte('ged.explorateur.purge'), 'succes');
       this.selection = null;
       await this.recharger({ arbre: false });
       this.#rendreVisuDossier();
@@ -820,13 +823,13 @@ export class ExplorateurGed {
     const editions = versionsVisibles(d.versions);
     const historique = etapes(d.versions);
     const onglets = [
-      ['infos', 'Informations'], ['versions', `Versions (${editions.length})`], ['historique', `Historique (${historique.length})`],
-      ['derivations', `Dérivations (${d.derivations?.length ?? 0})`], ...(d.coffre ? [['coffre', 'Coffre-fort']] : []),
+      ['infos', texte('ged.explorateur.onglets.infos')], ['versions', texte('ged.explorateur.onglets.versions', { nombre: editions.length })], ['historique', texte('ged.explorateur.onglets.historique', { nombre: historique.length })],
+      ['derivations', texte('ged.explorateur.onglets.derivations', { nombre: d.derivations?.length ?? 0 })], ...(d.coffre ? [['coffre', texte('ged.champs.coffre')]] : []),
     ];
     if (!onglets.some(([k]) => k === onglet)) onglet = 'infos';
     this.dock.innerHTML = `<div class="ged-dock-onglets" role="tablist">
-        ${onglets.map(([k, l]) => `<button type="button" role="tab" class="ged-onglet ${k === onglet ? 'actif' : ''}" aria-selected="${k === onglet}" data-onglet="${k}">${l}</button>`).join('')}
-        <button type="button" class="ged-icone-bouton ged-dock-masquer" data-action="masquer-dock" data-bulle="Masquer le panneau" aria-label="Masquer le panneau">▾</button>
+        ${onglets.map(([k, l]) => `<button type="button" role="tab" class="ged-onglet ${k === onglet ? 'actif' : ''}" aria-selected="${k === onglet}" data-onglet="${k}">${echapper(l)}</button>`).join('')}
+        <button type="button" class="ged-icone-bouton ged-dock-masquer" data-action="masquer-dock" data-bulle="${texteHtml('ged.explorateur.masquer_dock')}" aria-label="${texteHtml('ged.explorateur.masquer_dock')}">${iconeHtml('replier')}</button>
       </div><div class="ged-dock-corps" role="tabpanel"></div>`;
     this.dock.querySelectorAll('[data-onglet]').forEach((b) => b.addEventListener('click', () => { this.#ecrirePrefs({ onglet: b.dataset.onglet }); this.#rendreDock(b.dataset.onglet); }));
     this.dock.querySelector('[data-action="masquer-dock"]').addEventListener('click', () => this.#basculerDock(false));
@@ -845,33 +848,33 @@ export class ExplorateurGed {
     const r = d.retention;
     z.innerHTML = `
       <div class="ged-formulaire">
-        ${champ('titre', 'Titre')}
-        <label>Catégorie <span data-place="categorie"></span></label>
-        ${champ('date_document', 'Date', 'date')}
-        ${champ('auteur', 'Auteur')}
-        <label>Confidentialité <span data-place="confidentialite"></span></label>
-        ${tableau('acces_profils', 'Réservé aux profils', !acces, 'tous')}
-        ${tableau('acces_utilisateurs', 'Réservé aux utilisateurs', !acces, 'tous')}
-        ${tableau('mots_cles', 'Mots-clés', !editable, 'séparés par des virgules')}
-        <label class="large">Résumé <textarea rows="2" data-m="resume" ${editable ? '' : 'readonly'} placeholder="Résumé du document">${echapper(d.resume ?? '')}</textarea></label>
-        <label class="large">Notes <textarea rows="2" data-m="notes" ${editable ? '' : 'readonly'}>${echapper(d.notes ?? '')}</textarea></label>
-        ${this.envoi ? `<label class="coche"><input type="checkbox" data-envoi-detail ${d.a_envoyer ? 'checked' : ''} ${editable ? '' : 'disabled'}> 📧 Pièce jointe à envoyer</label>` : ''}
-        ${this.terrain ? `<label class="coche"><input type="checkbox" data-terrain-detail ${d.terrain ? 'checked' : ''} ${editable ? '' : 'disabled'}> 📱 Diffusée sur le terrain</label>` : ''}
+        ${champ('titre', texteHtml('ged.champs.titre'))}
+        <label>${texteHtml('ged.champs.categorie')} <span data-place="categorie"></span></label>
+        ${champ('date_document', texteHtml('ged.champs.date'), 'date')}
+        ${champ('auteur', texteHtml('ged.champs.auteur'))}
+        <label>${texteHtml('ged.champs.confidentialite')} <span data-place="confidentialite"></span></label>
+        ${tableau('acces_profils', texteHtml('ged.explorateur.acces_profils'), !acces, texteHtml('ged.regles.tous'))}
+        ${tableau('acces_utilisateurs', texteHtml('ged.explorateur.acces_utilisateurs'), !acces, texteHtml('ged.regles.tous'))}
+        ${tableau('mots_cles', texteHtml('ged.champs.mots_cles'), !editable, texteHtml('ged.champs.mots_cles_aide'))}
+        <label class="large">${texteHtml('ged.champs.resume')} <textarea rows="2" data-m="resume" ${editable ? '' : 'readonly'} placeholder="${texteHtml('ged.explorateur.resume_aide')}">${echapper(d.resume ?? '')}</textarea></label>
+        <label class="large">${texteHtml('ged.champs.notes')} <textarea rows="2" data-m="notes" ${editable ? '' : 'readonly'}>${echapper(d.notes ?? '')}</textarea></label>
+        ${this.envoi ? `<label class="coche"><input type="checkbox" data-envoi-detail ${d.a_envoyer ? 'checked' : ''} ${editable ? '' : 'disabled'}> ${iconeHtml('ged_envoi')} ${texteHtml('ged.explorateur.envoi')}</label>` : ''}
+        ${this.terrain ? `<label class="coche"><input type="checkbox" data-terrain-detail ${d.terrain ? 'checked' : ''} ${editable ? '' : 'disabled'}> ${iconeHtml('ged_terrain')} ${texteHtml('ged.explorateur.terrain')}</label>` : ''}
       </div>
       <dl class="ged-proprietes">
-        <dt>Élément lié</dt><dd>${echapper(d.type_element ? `${d.type_element} ${d.id_element}` : 'aucun')}${d.repertoire_id ? ' · classé dans un dossier' : ''}</dd>
-        <dt>Indexation</dt><dd>${echapper(ETATS_INDEX[d.index_etat] ?? d.index_etat ?? '')}
-          ${editable && this.fournisseur.indexer ? `<button type="button" class="ged-lien-bouton" data-action="indexer">réindexer</button>` : ''}
-          ${d.extrait_texte ? `<details><summary>Texte extrait</summary><pre class="ged-extrait">${echapper(d.extrait_texte)}</pre></details>` : ''}</dd>
-        ${d.classification?.regles?.length ? `<dt>Classement automatique</dt><dd>${d.classification.regles.length} règle${d.classification.regles.length > 1 ? 's' : ''} appliquée${d.classification.regles.length > 1 ? 's' : ''}
-          ${d.classification.categorie ? ` · catégorie proposée : ${echapper(this.libelleCategorie(d.classification.categorie))}` : ''}</dd>` : ''}
-        ${r ? `<dt>Rétention</dt><dd>${echapper(r.libelle ?? 'aucune règle')} · <b>${STATUTS_RETENTION[r.statut] ?? r.statut}</b>
-          ${r.archiver_le ? ` · archivage le ${formatDate(r.archiver_le)}` : ''}${r.fin_le ? ` · fin de conservation le ${formatDate(r.fin_le)}` : ''}</dd>` : ''}
-        ${d.archive ? `<dt>Archivé</dt><dd>le ${formatDateHeure(d.archive_le)}</dd>` : ''}
-        <dt>Créé</dt><dd>le ${formatDateHeure(d.cree_le)} par ${echapper(d.cree_par ?? '')}${d.modifie_le ? ` · modifié le ${formatDateHeure(d.modifie_le)}` : ''} · ${d.nb_versions ?? d.versions.length} version(s) · ${d.nb_consultations ?? 0} consultation(s)</dd>
+        <dt>${texteHtml('ged.explorateur.element_lie')}</dt><dd>${echapper(d.type_element ? `${d.type_element} ${d.id_element}` : texte('ged.explorateur.aucun'))}${d.repertoire_id ? ` · ${texteHtml('ged.explorateur.classe_dossier')}` : ''}</dd>
+        <dt>${texteHtml('ged.explorateur.indexation')}</dt><dd>${echapper(ETATS_INDEX[d.index_etat] ?? d.index_etat ?? '')}
+          ${editable && this.fournisseur.indexer ? `<button type="button" class="ged-lien-bouton" data-action="indexer">${texteHtml('ged.explorateur.reindexer')}</button>` : ''}
+          ${d.extrait_texte ? `<details><summary>${texteHtml('ged.explorateur.texte_extrait')}</summary><pre class="ged-extrait">${echapper(d.extrait_texte)}</pre></details>` : ''}</dd>
+        ${d.classification?.regles?.length ? `<dt>${texteHtml('ged.explorateur.classement_auto')}</dt><dd>${echapper(pluriel('ged.explorateur.regles_appliquees', d.classification.regles.length))}
+          ${d.classification.categorie ? ` · ${texteHtml('ged.explorateur.categorie_proposee', { categorie: this.libelleCategorie(d.classification.categorie) })}` : ''}</dd>` : ''}
+        ${r ? `<dt>${texteHtml('ged.explorateur.retention_titre')}</dt><dd>${echapper(r.libelle ?? texte('ged.explorateur.aucune_regle'))} · <b>${echapper(STATUTS_RETENTION[r.statut] ?? r.statut)}</b>
+          ${r.archiver_le ? ` · ${texteHtml('ged.explorateur.archivage_le', { date: formatDate(r.archiver_le) })}` : ''}${r.fin_le ? ` · ${texteHtml('ged.explorateur.fin_le', { date: formatDate(r.fin_le) })}` : ''}</dd>` : ''}
+        ${d.archive ? `<dt>${texteHtml('ged.explorateur.archive_titre')}</dt><dd>${texteHtml('ged.explorateur.le', { date: formatDateHeure(d.archive_le) })}</dd>` : ''}
+        <dt>${texteHtml('ged.explorateur.cree_titre')}</dt><dd>${texteHtml('ged.explorateur.cree', { date: formatDateHeure(d.cree_le), auteur: d.cree_par ?? '' })}${d.modifie_le ? ` · ${texteHtml('ged.explorateur.modifie_le', { date: formatDateHeure(d.modifie_le) })}` : ''} · ${echapper(pluriel('ged.explorateur.nb_versions', d.nb_versions ?? d.versions.length))} · ${echapper(pluriel('ged.explorateur.nb_consultations', d.nb_consultations ?? 0))}</dd>
       </dl>`;
-    const categorie = creerCombo({ options: (this.parametres.categories ?? []).map((c) => ({ valeur: c.code, libelle: c.libelle })), valeur: d.categorie ?? '', titre: 'Catégorie' });
-    const confidentialite = creerCombo({ options: CONFIDENTIALITES.map(([valeur, libelle]) => ({ valeur, libelle })), valeur: d.confidentialite ?? NIVEAU_CONFIDENTIALITE.INTERNE, vide: false, titre: 'Confidentialité' });
+    const categorie = creerCombo({ options: (this.parametres.categories ?? []).map((c) => ({ valeur: c.code, libelle: c.libelle })), valeur: d.categorie ?? '', titre: texte('ged.champs.categorie') });
+    const confidentialite = creerCombo({ options: CONFIDENTIALITES.map(([valeur, libelle]) => ({ valeur, libelle })), valeur: d.confidentialite ?? NIVEAU_CONFIDENTIALITE.INTERNE, vide: false, titre: texte('ged.champs.confidentialite') });
     categorie.readOnly = lecture;
     confidentialite.readOnly = !acces;
     z.querySelector('[data-place="categorie"]').replaceWith(categorie);
@@ -884,17 +887,17 @@ export class ExplorateurGed {
     z.querySelector('[data-terrain-detail]')?.addEventListener('change', (e) => this.#lancer(() => this.marquerTerrain(d.id, e.target.checked)));
     z.querySelector('[data-action="indexer"]')?.addEventListener('click', () => this.#lancer(async () => {
       this.doc = await this.fournisseur.indexer(d.id);
-      this.message(ETATS_INDEX[this.doc.index_etat] ?? 'Indexé', this.doc.index_etat === 'ECHEC' ? 'erreur' : 'succes');
+      this.message(ETATS_INDEX[this.doc.index_etat] ?? texte('ged.explorateur.indexe'), this.doc.index_etat === 'ECHEC' ? 'erreur' : 'succes');
       this.#rendreDock('infos');
     }));
   }
 
   #ligneVersion(v, etape = false) {
     return `<tr${etape ? ` data-texte="${echapper(`${libelleEtape(v.etape)} ${v.etat ?? ''} ${v.auteur} ${formatDateHeure(v.date)} ${v.commentaire ?? ''}`.toLowerCase())}"` : ''}>
-      <td>v${v.numero}</td><td>${formatDateHeure(v.date)}</td><td>${echapper(v.auteur)}</td>
+      <td>${texteHtml('ged.explorateur.version_numero', { numero: v.numero })}</td><td>${formatDateHeure(v.date)}</td><td>${echapper(v.auteur)}</td>
       ${etape ? `<td><b>${echapper(libelleEtape(v.etape))}</b></td><td>${echapper(v.commentaire ?? '')}</td>` : `<td>${echapper(v.nom_fichier)}</td><td class="nombre">${formatTaille(v.taille)}</td>`}
-      <td class="ged-versions-actions"><a href="${echapper(this.#lienContenu(v))}" download="${echapper(v.nom_fichier)}" data-bulle="Télécharger" aria-label="Télécharger">⬇</a>
-        <a href="#" data-apercu="${v.id}" data-bulle="Aperçu" aria-label="Aperçu">👁</a></td></tr>`;
+      <td class="ged-versions-actions"><a href="${echapper(this.#lienContenu(v))}" download="${echapper(v.nom_fichier)}" data-bulle="${texteHtml('ged.explorateur.telecharger')}" aria-label="${texteHtml('ged.explorateur.telecharger')}">${iconeHtml('ged_telecharger')}</a>
+        <a href="#" data-apercu="${v.id}" data-bulle="${texteHtml('ged.explorateur.apercu')}" aria-label="${texteHtml('ged.explorateur.apercu')}">${iconeHtml('ged_apercu')}</a></td></tr>`;
   }
 
   #lierApercus(z) {
@@ -906,13 +909,13 @@ export class ExplorateurGed {
 
   #ongletVersions(z, editions) {
     z.innerHTML = `<table class="ged-versions">${editions.map((v) => this.#ligneVersion(v)).join('')}</table>
-      <p class="aide">Les ${this.parametres.editions_conservees} dernières éditions sont conservées.</p>`;
+      <p class="aide">${texteHtml('ged.explorateur.editions_conservees', { nombre: this.parametres.editions_conservees })}</p>`;
     this.#lierApercus(z);
   }
 
   #ongletHistorique(z, historique) {
-    z.innerHTML = `<input type="search" data-filtre-etapes placeholder="Rechercher une version antérieure (étape, état, auteur, date…)">
-      <table class="ged-versions ged-etapes">${historique.map((v) => this.#ligneVersion(v, true)).join('') || '<tr><td class="aide">Aucune étape enregistrée.</td></tr>'}</table>`;
+    z.innerHTML = `<input type="search" data-filtre-etapes placeholder="${texteHtml('ged.explorateur.rechercher_version')}">
+      <table class="ged-versions ged-etapes">${historique.map((v) => this.#ligneVersion(v, true)).join('') || `<tr><td class="aide">${texteHtml('ged.explorateur.aucune_etape')}</td></tr>`}</table>`;
     z.querySelector('[data-filtre-etapes]').addEventListener('input', (e) => {
       const t = e.target.value.toLowerCase();
       z.querySelectorAll('.ged-etapes tr[data-texte]').forEach((tr) => { tr.hidden = !!t && !tr.dataset.texte.includes(t); });
@@ -927,49 +930,49 @@ export class ExplorateurGed {
     const libelle = (t) => TYPES_DERIVATION.find(([c]) => c === t)?.[1] ?? t;
     z.innerHTML = `
       <table class="ged-versions">${(d.derivations ?? []).map((l) => `<tr>
-        <td>${l.sens === 'cible' ? '→' : '←'}</td><td><b>${echapper(libelle(l.type))}</b>${l.langue ? ` (${echapper(l.langue)})` : ''}</td>
-        <td><a href="#" data-ouvrir="${l.document.id}">${icone(l.document)} ${echapper(l.document.titre)}</a></td><td>${echapper(l.commentaire ?? '')}</td>
-        <td>${editable ? `<button type="button" class="ged-lien-bouton" data-retirer="${l.id}" aria-label="Retirer le lien">✕</button>` : ''}</td></tr>`).join('')
-        || '<tr><td class="aide">Aucune dérivation : versions séparées, traductions, adaptations, extraits ou annotations de ce document.</td></tr>'}</table>
-      ${editable && candidats.length ? `<div class="ged-ajout-derivation"><span>Ce document a pour</span><span data-place="type"></span>
-        <span data-place="cible"></span><input data-langue placeholder="Langue (traduction)" size="10">
-        <button type="button" data-action="deriver">Lier</button></div>` : ''}
-      <p class="aide">→ : document dérivé de celui-ci ; ← : document dont celui-ci dérive.</p>`;
+        <td>${iconeHtml(l.sens === 'cible' ? 'ged_derive' : 'ged_source')}</td><td><b>${echapper(libelle(l.type))}</b>${l.langue ? ` (${echapper(l.langue)})` : ''}</td>
+        <td><a href="#" data-ouvrir="${l.document.id}">${iconeDocument(l.document)} ${echapper(l.document.titre)}</a></td><td>${echapper(l.commentaire ?? '')}</td>
+        <td>${editable ? `<button type="button" class="ged-lien-bouton" data-retirer="${l.id}" aria-label="${texteHtml('ged.explorateur.retirer_lien')}">${iconeHtml('retirer')}</button>` : ''}</td></tr>`).join('')
+        || `<tr><td class="aide">${texteHtml('ged.explorateur.aucune_derivation')}</td></tr>`}</table>
+      ${editable && candidats.length ? `<div class="ged-ajout-derivation"><span>${texteHtml('ged.explorateur.a_pour')}</span><span data-place="type"></span>
+        <span data-place="cible"></span><input data-langue placeholder="${texteHtml('ged.explorateur.langue')}" size="10">
+        <button type="button" data-action="deriver">${texteHtml('ged.explorateur.lier')}</button></div>` : ''}
+      <p class="aide">${texteHtml('ged.explorateur.aide_derivations', { derive: icone('ged_derive'), source: icone('ged_source') })}</p>`;
     z.querySelectorAll('[data-ouvrir]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); this.#lancer(() => this.selectionnerDocument(Number(a.dataset.ouvrir))); }));
     z.querySelectorAll('[data-retirer]').forEach((b) => b.addEventListener('click', () => this.#lancer(async () => {
       await this.fournisseur.supprimerDerivation(Number(b.dataset.retirer));
       await this.selectionnerDocument(d.id);
     })));
     if (!z.querySelector('[data-action="deriver"]')) return;
-    const type = creerCombo({ options: TYPES_DERIVATION.map(([valeur, l]) => ({ valeur, libelle: `${l.toLowerCase()}` })), valeur: 'TRADUCTION', vide: false, titre: 'Type de dérivation' });
-    const cible = creerCombo({ options: candidats.map((x) => ({ valeur: x.id, libelle: x.titre, detail: x.version?.nom_fichier ?? '' })), titre: 'Document dérivé (dossier courant)' });
+    const type = creerCombo({ options: TYPES_DERIVATION.map(([valeur, l]) => ({ valeur, libelle: `${l.toLowerCase()}` })), valeur: 'TRADUCTION', vide: false, titre: texte('ged.explorateur.type_derivation') });
+    const cible = creerCombo({ options: candidats.map((x) => ({ valeur: x.id, libelle: x.titre, detail: x.version?.nom_fichier ?? '' })), titre: texte('ged.explorateur.document_derive') });
     z.querySelector('[data-place="type"]').replaceWith(type);
     z.querySelector('[data-place="cible"]').replaceWith(cible);
     z.querySelector('[data-action="deriver"]').addEventListener('click', () => this.#lancer(async () => {
-      if (!cible.valeurCombo) { this.message('Choisissez le document dérivé', 'erreur'); return; }
+      if (!cible.valeurCombo) { this.message(texte('ged.explorateur.choisir_derive'), 'erreur'); return; }
       this.doc = await this.fournisseur.ajouterDerivation(d.id, { cible_id: Number(cible.valeurCombo), type: type.valeurCombo, langue: z.querySelector('[data-langue]').value || null });
-      this.message('Dérivation enregistrée', 'succes');
+      this.message(texte('ged.explorateur.derivation_enregistree'), 'succes');
       this.#rendreDock('derivations');
     }));
   }
 
   #ongletCoffre(z) {
     z.innerHTML = `<dl class="ged-coffre">${(this.doc.journal_coffre ?? []).map((e) => `
-        <dt>Archivé le</dt><dd>${formatDateHeure(e.horodatage)} par ${echapper(e.utilisateur)}${e.motif ? ` · ${echapper(e.motif)}` : ''}</dd>
-        <dt>Empreinte (SHA-256)</dt><dd><code>${e.empreinte_document}</code></dd>
-        <dt>Entrée du journal</dt><dd><code>${e.empreinte_entree}</code></dd>`).join('')}</dl>`;
+        <dt>${texteHtml('ged.explorateur.archive_le')}</dt><dd>${texteHtml('ged.explorateur.date_par', { date: formatDateHeure(e.horodatage), utilisateur: e.utilisateur })}${e.motif ? ` · ${echapper(e.motif)}` : ''}</dd>
+        <dt>${texteHtml('ged.explorateur.empreinte')}</dt><dd><code>${e.empreinte_document}</code></dd>
+        <dt>${texteHtml('ged.explorateur.entree_journal')}</dt><dd><code>${e.empreinte_entree}</code></dd>`).join('')}</dl>`;
   }
 
   #apercu(zone, version) {
     rendreApercu(zone, {
       fournisseur: this.fournisseur, doc: this.doc, version, tailleMax: this.parametres.taille_apercu_max,
       urlTelechargement: version ? this.#lienContenu(version) : null,
-    }).catch((e) => { zone.innerHTML = `<p class="erreur">Aperçu impossible : ${echapper(e.message)}</p>`; });
+    }).catch((e) => { zone.innerHTML = `<p class="erreur">${texteHtml('ged.explorateur.apercu_impossible', { message: e.message })}</p>`; });
   }
 
   async #modifier(meta) {
     this.doc = await this.fournisseur.modifier(this.doc.id, meta);
-    this.message('Informations enregistrées', 'succes');
+    this.message(texte('ged.explorateur.infos_enregistrees'), 'succes');
     const deplace = 'categorie' in meta || 'titre' in meta || 'confidentialite' in meta || 'date_document' in meta || 'auteur' in meta;
     if (deplace) {
       this.cacheDocs.clear();
@@ -984,7 +987,7 @@ export class ExplorateurGed {
     for (const d of this.documents ?? []) if (d.id === id) d.a_envoyer = valeur;
     if (this.doc?.id === id) this.doc.a_envoyer = valeur;
     this.#rendreListe();
-    this.message(valeur ? 'Pièce jointe à envoyer' : 'Pièce jointe retirée de l\'envoi', 'succes');
+    this.message(valeur ? texte('ged.explorateur.envoi') : texte('ged.explorateur.envoi_retire'), 'succes');
   }
 
   /** Diffuse (ou non) le document sur le terrain (application de terrain de l'élément lié). */
@@ -993,25 +996,25 @@ export class ExplorateurGed {
     for (const d of this.documents ?? []) if (d.id === id) d.terrain = valeur;
     if (this.doc?.id === id) this.doc.terrain = valeur;
     this.#rendreListe();
-    this.message(valeur ? 'Pièce diffusée sur le terrain' : 'Pièce retirée du terrain', 'succes');
+    this.message(valeur ? texte('ged.explorateur.colonne_terrain') : texte('ged.explorateur.terrain_retire'), 'succes');
   }
 
   // ================================================================ administration
 
   async verifierCoffre() {
     const r = await this.fournisseur.verifierCoffre();
-    this.message(r.ok ? `Coffre-fort intègre : ${r.entrees} entrée(s), chaîne valide` : `Coffre-fort : ${r.rupture.raison} à l'entrée ${r.rupture.index + 1}`, r.ok ? 'succes' : 'erreur');
+    this.message(r.ok ? pluriel('ged.explorateur.coffre_integre', r.entrees) : texte('ged.explorateur.coffre_rompu', { raison: r.rupture.raison, rang: r.rupture.index + 1 }), r.ok ? 'succes' : 'erreur');
   }
 
   /** Échéances de rétention : liste des documents à archiver, archivage sur confirmation. */
   async afficherRetention() {
     const dues = await this.fournisseur.echeances();
-    if (!dues.length) { this.message('Aucun document à archiver', 'succes'); return; }
-    this.resultats = { recherche: 'rétention échue', documents: dues.map((e) => e.document) };
+    if (!dues.length) { this.message(texte('ged.explorateur.rien_a_archiver'), 'succes'); return; }
+    this.resultats = { recherche: texte('ged.explorateur.retention_echue'), documents: dues.map((e) => e.document) };
     await this.#chargerDossier();
-    if (await confirmer(`${dues.length} document${dues.length > 1 ? 's sont arrivés' : ' est arrivé'} à échéance de rétention. Les archiver maintenant ?`)) {
+    if (await confirmer(pluriel('ged.explorateur.echus', dues.length))) {
       const r = await this.fournisseur.appliquerRetention();
-      this.message(`${r.archives} document${r.archives > 1 ? 's' : ''} archivé${r.archives > 1 ? 's' : ''}`, 'succes');
+      this.message(pluriel('ged.explorateur.archives', r.archives), 'succes');
       this.resultats = null;
       await this.recharger();
     }

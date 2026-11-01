@@ -6,7 +6,7 @@
 - Pas de droits fins ici : le profil du compte est celui du module Droits (`IDroits.ProfilsAsync` du socle ; sans lui, `Profils` de la spécialisation et les droits historiques). Usurpation par un administrateur (module Droits, lot 2).
 
 ## Dépendances
-- JS `@logibtp/authentification` : aucune dépendance (règles seules). .NET : `LogiBTP.Authentification` (règles, empreintes, jetons), `LogiBTP.Authentification.Web` → `LogiBTP.Socle.Web`, EF Core Npgsql. Jamais du cœur ni d'un autre module.
+- JS `@logibtp/authentification` : le socle seul (dictionnaire : textes des règles). .NET : `LogiBTP.Authentification` (règles, empreintes, jetons), `LogiBTP.Authentification.Web` → `LogiBTP.Socle.Web`, EF Core Npgsql. Jamais du cœur ni d'un autre module.
 - Utilisé par : cœur (`SpecialisationAuthentificationBtp`, `Program.cs` : intergiciel, routes, commande `comptes`) ; client (`pages/connexion.js`, `pages/compte.js`, session de `Application`).
 
 ## Structure
@@ -43,6 +43,9 @@
 
 ## Commande serveur
 - `dotnet run --no-build --project src\LogiBTP.Api --launch-profile http -- comptes creer-admin <pseudo> [--libelle "…"] [--societe <code>]` (administrateur sans personne liée, mot de passe provisoire affiché une fois), `reinitialiser <pseudo>` (provisoire, déverrouillé, sessions fermées), `deverrouiller <pseudo>`, `liste`.
+
+## Textes et icônes (module Personnalisation, lot P3t)
+- Textes `authentification.*` du `fr.json` du module (`etats` : `ETATS_COMPTE` par `textesParCode` ; `regles` : `MESSAGES_AUTH`, à variables) ; tests avec le dictionnaire (`test/preparation.js`). Écrans du cœur : `authentification_btp.*`.
 
 ## Tests
 - `npm test --workspace modules/authentification/js` ; `dotnet test modules/authentification/dotnet/LogiBTP.Authentification.Tests` (mêmes jeux, empreintes).

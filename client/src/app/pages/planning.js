@@ -1,6 +1,7 @@
 import { urlFiche, TYPE_FICHE, MODULE_FACULTATIF, SUJET_FENETRE } from '../codes.js';
 import { dateLocale, NIVEAU_NOTIFICATION } from '@logibtp/socle';
 import { PageBase } from '@logibtp/navigation';
+import { texte, texteHtml, textesParCode, pluriel, icone, iconeHtml, couleurTheme } from '@logibtp/socle/dictionnaire';
 import { echapper, creerCombo, actionDe, lirePreferences, ecrirePreferences, ouvrirMenuContextuel, libelleRaccourci, confirmer, separateur, ouvrirModale, formatDate } from '@logibtp/socle/ui';
 import { ECHELLES, versMinutes, depuisMinutes, debutUnite, periodeFlottante, aujourdhui, DIFFUSION_PLANNING } from '@logibtp/planning';
 import { VuePlanning } from '@logibtp/planning/ui';
@@ -17,48 +18,51 @@ import { ETATS_TACHE, COULEURS_ETAT, ORIGINE_TERRAIN } from '../planning/etats.j
 
 const ETATS = ETATS_TACHE;
 /** Pastille de l'état ; sans état (vide, par défaut) : aucune pastille. */
-const pastilleEtat = (etat) => (etat ? `<i class="pastille-etat-tache" style="background:${COULEURS_ETAT[etat] ?? '#98a2b3'}" title="${echapper(ETATS[etat] ?? etat)}"></i>` : '');
+const pastilleEtat = (etat) => (etat ? `<i class="pastille-etat-tache" style="background:${COULEURS_ETAT[etat] ?? COULEURS_ETAT.OPTION}" title="${echapper(ETATS[etat] ?? etat)}"></i>` : '');
 /** États proposés à la saisie : « Aucun » (vide) d'abord. */
-const ETATS_SAISIE = { '': 'Aucun', ...ETATS };
+const ETATS_SAISIE = { '': texte('planning_btp.etats_saisie.aucun'), ...ETATS };
 const LIGNES_TEXTE = [1, 2, 3, 4, 5, 6, 8, 10];
-const JOURS_COURTS = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam'];
-const TRIS_APLANIFIER = { nom: 'Nom', service: 'Service', reste: 'Reste', date: 'Date prévisionnelle' };
+const JOURS_COURTS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'].map((j) => texte(`planning.temps.jours.${j}`));
+// Libellés par code (module Personnalisation).
+const TRIS_APLANIFIER = textesParCode('planning_btp.tris', ['nom', 'service', 'reste', 'date']);
 /** Onglets du panneau du planning (icône en panneau réduit). */
+const onglet = (cle, nomIcone, compteur = false) => ({ get libelle() { return texte(`planning_btp.onglets.${cle}`); }, get icone() { return iconeHtml(nomIcone); }, compteur });
 const ONGLETS_PANNEAU = {
-  aplanifier: { libelle: 'À planifier', icone: '📋', compteur: true },
-  creer: { libelle: 'Créer une tâche depuis un projet, un chantier ou un ordre en cours', icone: '✚' }, ressources: { libelle: 'Ressources et équipes', icone: '👷' }, tache: { libelle: 'Tâche', icone: '✎' },
-  alertes: { libelle: 'Alertes', icone: '⚠', compteur: true }, jalons: { libelle: 'Jalons', icone: '◆', compteur: true },
+  aplanifier: onglet('aplanifier', 'planning_btp_aplanifier', true),
+  creer: onglet('creer', 'planning_btp_creer'), ressources: onglet('ressources', 'planning_btp_ressources'), tache: onglet('tache', 'planning_btp_tache'),
+  alertes: onglet('alertes', 'avertissement', true), jalons: onglet('jalons', 'planning_btp_jalon', true),
 };
 const ETATS_PANNEAU = ['normal', 'reduit', 'masque'];
 /** Bouton icône d'une ligne à actions au survol (libellé en bulle). */
-const action = (attr, valeur, icone, titre) => `<button type="button" class="bouton-icone" ${attr}="${echapper(String(valeur))}" title="${titre}" aria-label="${titre}">${icone}</button>`;
-const MODES = { 1: 'Début + heures → fin', 2: 'Début + fin → heures', 3: 'Charge (heures ventilées)' };
+const action = (attr, valeur, symbole, titre) => `<button type="button" class="bouton-icone" ${attr}="${echapper(String(valeur))}" title="${titre}" aria-label="${titre}">${symbole}</button>`;
+const MODES = textesParCode('planning_btp.modes', ['1', '2', '3']);
 const LARGEURS = { HEURE: 40, DEMI_JOUR: 60, JOUR: 48, SEMAINE: 90 };
 const TYPE_GLISSER = 'application/x-logibtp-planning';
 const TYPE_GLISSER_SOURCE = 'application/x-logibtp-planning-source';
 /** Heures proposées à la création depuis une source : celles de la source, au plus 35 h, sinon 7 h. */
 const heuresSource = (s) => (s.heures ? Math.max(15, Math.min(s.heures, 2100)) : 420);
-const COULEURS_SERVICE = ['#2563eb', '#16a34a', '#d97706', '#9333ea', '#0891b2', '#be185d', '#4d7c0f', '#dc2626'];
+/** Couleurs des services (variables du thème --planning-service-1 à 8, attribuées dans l'ordre). */
+const COULEURS_SERVICE = [1, 2, 3, 4, 5, 6, 7, 8].map((n) => `var(--planning-service-${n})`);
 const versLocal = (s) => (s ? s.slice(0, 16) : '');
-const TYPES_DEP = { FD: 'Fin → début', DD: 'Début → début' };
-const UNITES_DEP = { CAL: 'jours calendaires', OUV: 'jours ouvrés' };
-const MODES_DEP = { FIXE: 'Fixe (propagée)', ALERTE: 'Alerte' };
-const FREQUENCES = { JOUR: 'Chaque jour', SEMAINE: 'Chaque semaine', MOIS: 'Chaque mois' };
-const TYPES_JALON = { LIVRAISON: 'Livraison', FIN_CHANTIER: 'Fin de chantier', FIN_ORDRE: 'Fin d\'ordre', ALERTE: 'Alerte', INTERVENTION: 'Intervention', AUTRE: 'Autre' };
+const TYPES_DEP = textesParCode('planning_btp.types_dependance', ['FD', 'DD']);
+const UNITES_DEP = textesParCode('planning_btp.unites_dependance', ['CAL', 'OUV']);
+const MODES_DEP = textesParCode('planning_btp.modes_dependance', ['FIXE', 'ALERTE']);
+const FREQUENCES = textesParCode('planning_btp.frequences', ['JOUR', 'SEMAINE', 'MOIS']);
+const TYPES_JALON = textesParCode('planning_btp.types_jalon', ['LIVRAISON', 'FIN_CHANTIER', 'FIN_ORDRE', 'ALERTE', 'INTERVENTION', 'AUTRE']);
 // Partie mobile de la tâche, lue par l'application de terrain (/terrain) ; vide : adresse, contact et téléphone du chantier.
-const CHAMPS_MOBILE = { adresse: 'Adresse', contact: 'Contact', telephone: 'Téléphone', commentaire: 'Consignes', liens: 'Liens (un par ligne)' };
-const GROUPES_TACHE = { tache: 'Tâche', mobile: 'Mobile', ressource: 'Ressource', detail: 'Détail', dependance: 'Dépendance' };
-const SYNCHRO = { TEMPS_REEL: 'Temps réel', 30: 'Toutes les 30 s', 60: 'Toutes les minutes', 300: 'Toutes les 5 min', PAUSE: 'En pause', MANUEL: 'Manuelle (⟳)' };
+const CHAMPS_MOBILE = textesParCode('planning_btp.champs_mobile', ['adresse', 'contact', 'telephone', 'commentaire', 'liens']);
+const GROUPES_TACHE = textesParCode('planning_btp.groupes_tache', ['tache', 'mobile', 'ressource', 'detail', 'dependance']);
+const SYNCHRO = textesParCode('planning_btp.synchro', ['TEMPS_REEL', '30', '60', '300', 'PAUSE', 'MANUEL']);
 
 /** Petite fenêtre de choix d'un service (services › sous-services) ; résout l'identifiant ou null. */
 function choisirService(services, actuel, objet) {
   return new Promise((resoudre) => {
     const dlg = document.createElement('dialog');
     dlg.className = 'dialogue-structure';
-    dlg.innerHTML = `<h3>Service principal — ${echapper(objet)}</h3><p class="aide">Actuel : ${echapper(actuel?.libelle ?? 'aucun')}</p>
-      <p data-combo></p><p class="ligne"><button type="button" data-valider>Valider</button> <button type="button" data-abandon>Annuler</button></p>`;
+    dlg.innerHTML = `<h3>${texteHtml('planning_btp.service.titre', { objet })}</h3><p class="aide">${texteHtml('planning_btp.service.actuel', { service: actuel?.libelle ?? texte('planning_btp.service.aucun') })}</p>
+      <p data-combo></p><p class="ligne"><button type="button" data-valider>${texteHtml('commun.valider')}</button> <button type="button" data-abandon>${texteHtml('commun.annuler')}</button></p>`;
     document.body.append(dlg);
-    const combo = creerCombo({ options: services.map((x) => ({ valeur: x.id, libelle: x.parent_id ? `↳ ${x.libelle}` : x.libelle, detail: x.code })), valeur: actuel?.id ?? '', vide: false, titre: 'Service' });
+    const combo = creerCombo({ options: services.map((x) => ({ valeur: x.id, libelle: x.parent_id ? `${icone('sous_niveau')} ${x.libelle}` : x.libelle, detail: x.code })), valeur: actuel?.id ?? '', vide: false, titre: texte('planning_btp.service.combo') });
     dlg.querySelector('[data-combo]').append(combo);
     let fini = false;
     const finir = (v) => { if (fini) return; fini = true; if (dlg.open) dlg.close(); dlg.remove(); resoudre(v); };
@@ -98,7 +102,7 @@ class VuePlanningBtp extends VuePlanning {
   contenuBarre(t) {
     const code = t.element ? `<b>${echapper(t.element.code)}</b> ` : '';
     const res = this.regroupement !== 'RESSOURCE' && t.ressources?.length ? ` <small>· ${echapper(t.ressources.join(', '))}</small>` : '';
-    if (t.origine_type === 'conge') return `🏖 ${echapper(t.libelle)}${res}`;
+    if (t.origine_type === 'conge') return `${iconeHtml('planning_btp_conge')} ${echapper(t.libelle)}${res}`;
     return `${pastilleEtat(t.etat)}${code}${echapper(t.libelle)}${res}`;
   }
 
@@ -109,11 +113,11 @@ class VuePlanningBtp extends VuePlanning {
     if (l.cle.startsWith('chantier:')) {
       // Attentes des étapes d'ordres (séchage, validation d'un tiers : E34) en bandes hachurées sous les barres.
       const attentes = (this.attentes ?? []).filter((a) => `chantier:${a.chantier}` === l.cle).map((a) => ({
-        debut: versMinutes(a.debut), fin: versMinutes(a.fin), classe: 'attente-etape', titre: `Attente : ${a.libelle}${a.numero ? ` (${a.numero})` : ''}`, texte: '',
+        debut: versMinutes(a.debut), fin: versMinutes(a.fin), classe: 'attente-etape', titre: a.numero ? texte('planning_btp.vue.attente_numero', { libelle: a.libelle, numero: a.numero }) : texte('planning_btp.vue.attente', { libelle: a.libelle }), texte: '',
       }));
       return attentes.concat((this.jalons ?? []).filter((j) => `chantier:${j.id_element}` === l.cle).map((j) => ({
         debut: versMinutes(j.quand) - 15 * this.minutesParPixel, fin: versMinutes(j.quand) + 15 * this.minutesParPixel, classe: `jalon jalon-${j.type.toLowerCase()}`,
-        titre: `${TYPES_JALON[j.type] ?? j.type} : ${j.libelle} (${j.quand.replace('T', ' ')})`, texte: '◆',
+        titre: texte('planning_btp.vue.jalon', { type: TYPES_JALON[j.type] ?? j.type, libelle: j.libelle, quand: j.quand.replace('T', ' ') }), texte: icone('planning_btp_jalon'),
       })));
     }
     if (!l.cle.startsWith('srv:') || !this.charge) return [];
@@ -122,62 +126,62 @@ class VuePlanningBtp extends VuePlanning {
       const r = c.capacite ? c.planifie / c.capacite : (c.planifie ? 2 : 0);
       return {
         debut: versMinutes(c.date), fin: versMinutes(c.date) + 1440, classe: r > 1 ? 'charge-plein' : r >= 0.7 ? 'charge-moyen' : 'charge-ok',
-        titre: `${c.date} : planifié ${h(c.planifie)} h · capacité ${h(c.capacite)} h · disponible ${c.disponible < 0 ? '−' : ''}${h(Math.abs(c.disponible))} h`,
-        texte: `${Math.round(c.planifie / 60)}/${Math.round(c.capacite / 60)} h`,
+        titre: texte('planning_btp.vue.charge', { date: c.date, planifie: h(c.planifie), capacite: h(c.capacite), disponible: `${c.disponible < 0 ? '−' : ''}${h(Math.abs(c.disponible))}` }),
+        texte: texte('planning_btp.vue.charge_court', { planifie: Math.round(c.planifie / 60), capacite: Math.round(c.capacite / 60) }),
       };
     });
   }
 
   /** Bulle structurée : état, chantier, libellé, période, heures, service, ressources, avancement, mémo. */
   bulleBarre(t) {
-    const quand = (m) => { const d = new Date(m * 60000); return `${JOURS_COURTS[d.getUTCDay()]} ${depuisMinutes(m).slice(8, 10)}/${depuisMinutes(m).slice(5, 7)} ${depuisMinutes(m).slice(11, 16)}`; };
+    const quand = (m) => { const d = new Date(m * 60000); return texte('planning_btp.bulle.quand', { jour: JOURS_COURTS[d.getUTCDay()], date: `${depuisMinutes(m).slice(8, 10)}/${depuisMinutes(m).slice(5, 7)}`, heure: depuisMinutes(m).slice(11, 16) }); };
     const ligne = (libelle, valeur) => (valeur ? `<dt>${libelle}</dt><dd>${valeur}</dd>` : '');
     const service = this.services?.get(t.srv_id);
     const av = Number(t.avancement) || 0;
-    return `<div class="bulle-tache" style="--bt-couleur:${t.couleur ?? '#3b82f6'}">
-      <div class="bt-entete">${pastilleEtat(t.etat)}<span>${echapper(t.etat ? ETATS[t.etat] ?? t.etat : 'Sans état')}</span>${t.theorique ? '<span class="bt-theorique">théorique</span>' : ''}</div>
+    return `<div class="bulle-tache" style="--bt-couleur:${t.couleur ?? 'var(--pla-barre)'}">
+      <div class="bt-entete">${pastilleEtat(t.etat)}<span>${echapper(t.etat ? ETATS[t.etat] ?? t.etat : texte('planning_btp.bulle.sans_etat'))}</span>${t.theorique ? `<span class="bt-theorique">${texteHtml('planning_btp.bulle.theorique')}</span>` : ''}</div>
       ${t.element ? `<div class="bt-chantier"><b>${echapper(t.element.code)}</b> ${echapper(t.element.libelle ?? '')}</div>` : ''}
       <div class="bt-libelle">${echapper(t.libelle)}</div>
-      <dl>${ligne('Début', quand(t.debut))}${ligne('Fin', quand(t.fin))}${ligne('Heures', `${ecrireDuree(t.heures) || '0:00'} h`)}${ligne('Service', service ? echapper(service) : '')}
-        ${ligne('Ressources', t.ressources?.length ? t.ressources.map((x) => echapper(x)).join('<br>') : '<span class="aide">aucune (charge du service)</span>')}
-        ${ligne('Avancement', `<span class="bt-avancement"><i style="width:${Math.max(0, Math.min(100, av))}%"></i></span> ${av} %`)}</dl>
+      <dl>${ligne(texteHtml('planning_btp.bulle.debut'), quand(t.debut))}${ligne(texteHtml('planning_btp.bulle.fin'), quand(t.fin))}${ligne(texteHtml('planning_btp.bulle.heures'), texteHtml('planning_btp.bulle.duree', { duree: ecrireDuree(t.heures) || '0:00' }))}${ligne(texteHtml('planning_btp.bulle.service'), service ? echapper(service) : '')}
+        ${ligne(texteHtml('planning_btp.bulle.ressources'), t.ressources?.length ? t.ressources.map((x) => echapper(x)).join('<br>') : `<span class="aide">${texteHtml('planning_btp.bulle.aucune_ressource')}</span>`)}
+        ${ligne(texteHtml('planning_btp.bulle.avancement'), `<span class="bt-avancement"><i style="width:${Math.max(0, Math.min(100, av))}%"></i></span> ${av} %`)}</dl>
       ${t.memo ? `<div class="bt-memo">${echapper(t.memo)}</div>` : ''}</div>`;
   }
 
   titreBarre(t) {
-    return `${t.element ? `${t.element.code} ${t.element.libelle}\n` : ''}${t.libelle}${t.etat ? ` (${ETATS[t.etat] ?? t.etat})` : ''}\n${depuisMinutes(t.debut).replace('T', ' ')} → ${depuisMinutes(t.fin).replace('T', ' ')}\n${ecrireDuree(t.heures)} h${t.ressources?.length ? `\n${t.ressources.join(', ')}` : ''}`;
+    return `${t.element ? `${t.element.code} ${t.element.libelle}\n` : ''}${t.libelle}${t.etat ? ` (${ETATS[t.etat] ?? t.etat})` : ''}\n${depuisMinutes(t.debut).replace('T', ' ')} ${icone('planning_vers')} ${depuisMinutes(t.fin).replace('T', ' ')}\n${texte('planning_btp.bulle.duree', { duree: ecrireDuree(t.heures) })}${t.ressources?.length ? `\n${t.ressources.join(', ')}` : ''}`;
   }
 }
 
 export class PagePlanning extends PageBase {
-  icone = '📅';
+  icone = icone('planning_btp_planning');
 
   urlCourante() { return `/planning?${new URLSearchParams(Object.entries({ vue: this.vue, du: this.du, consultation: this.consultation ? '1' : '', panneau: this.panneauSeul ? '1' : '' }).filter(([, v]) => v))}`; }
 
   async ouvrir() {
-    this.titre = 'Planning';
+    this.titre = texte('planning_btp.routes.planning');
     this.conteneur.innerHTML = `<div class="page-planning"><div class="barre-planning ligne">
-        <span class="menu-deroulant" data-menu="options"><button type="button" class="bouton-icone" data-ouvrir-menu="options" title="Options d'affichage : zoom, hauteur des lignes, temps non travaillé, synchronisation" aria-label="Options d'affichage">☰</button>
+        <span class="menu-deroulant" data-menu="options"><button type="button" class="bouton-icone" data-ouvrir-menu="options" title="${texteHtml('planning_btp.barre.options_titre')}" aria-label="${texteHtml('planning_btp.barre.options')}">${iconeHtml('planning_btp_options')}</button>
           <div class="menu-deroulant-contenu menu-options-planning" data-contenu-menu="options" hidden>
-            <div class="mo-ligne"><span>Zoom</span><span><button type="button" data-zoom="0.8" title="Zoom arrière">－</button><button type="button" data-zoom="1.25" title="Zoom avant">＋</button></span></div>
-            <div class="mo-ligne"><span>Hauteur des lignes</span><span data-lignes-texte></span></div>
-            <label class="mo-ligne" title="Masquer les heures et les jours non travaillés par l'entreprise (Paramètres du planning)"><span>Masquer le temps non travaillé</span><input type="checkbox" data-masquer></label>
-            <div class="mo-ligne" data-ligne-synchro><span>Rafraîchissement</span><span data-synchro></span></div></div></span>
-        <b>📅</b> <span data-vue></span>
-        <button type="button" data-prec title="Période précédente">◀</button><button type="button" data-aujourdhui>Aujourd'hui</button><button type="button" data-suiv title="Période suivante">▶</button>
+            <div class="mo-ligne"><span>${texteHtml('planning_btp.barre.zoom')}</span><span><button type="button" data-zoom="0.8" title="${texteHtml('planning_btp.barre.zoom_arriere')}">${iconeHtml('planning_btp_zoom_arriere')}</button><button type="button" data-zoom="1.25" title="${texteHtml('planning_btp.barre.zoom_avant')}">${iconeHtml('ajouter')}</button></span></div>
+            <div class="mo-ligne"><span>${texteHtml('planning_btp.barre.hauteur')}</span><span data-lignes-texte></span></div>
+            <label class="mo-ligne" title="${texteHtml('planning_btp.barre.masquer_titre')}"><span>${texteHtml('planning_btp.barre.masquer')}</span><input type="checkbox" data-masquer></label>
+            <div class="mo-ligne" data-ligne-synchro><span>${texteHtml('planning_btp.barre.rafraichissement')}</span><span data-synchro></span></div></div></span>
+        <b>${iconeHtml('planning_btp_planning')}</b> <span data-vue></span>
+        <button type="button" data-prec title="${texteHtml('planning_btp.barre.precedente')}">${iconeHtml('precedent')}</button><button type="button" data-aujourdhui>${texteHtml('planning.vue.aujourdhui')}</button><button type="button" data-suiv title="${texteHtml('planning_btp.barre.suivante')}">${iconeHtml('suivant')}</button>
         <span data-periode class="aide"></span> <span data-echelle></span>
-        <span class="menu-deroulant" data-menu="services"><button type="button" data-ouvrir-menu="services" title="Filtrer la vue par services (mémorisé pour votre compte)">🏢 <span data-libelle-services>Services</span> ▾</button>
+        <span class="menu-deroulant" data-menu="services"><button type="button" data-ouvrir-menu="services" title="${texteHtml('planning_btp.barre.services_titre')}">${iconeHtml('planning_btp_service')} <span data-libelle-services>${texteHtml('planning_btp.barre.services')}</span> ${iconeHtml('replier')}</button>
           <div class="menu-deroulant-contenu" data-contenu-menu="services" hidden></div></span>
-        <input type="search" data-recherche placeholder="Ressource…" size="14"> <button type="button" data-actualiser title="Actualiser">⟳</button>
-        <button type="button" data-nouvelle>＋ Tâche</button> <button type="button" data-annuler title="Annuler (Ctrl+Z)" disabled>↶</button><button type="button" data-retablir title="Rétablir (Ctrl+Y)" disabled>↷</button>
-        <button type="button" data-attente class="badge-exception" hidden title="Modifications des autres utilisateurs : actualiser"></button>
-        <a data-lien-consultation title="Ouvrir la vue en consultation (lecture seule, actualisée en temps réel)">👁 Consultation</a> <button type="button" data-plein-ecran hidden>⛶ Plein écran</button>
-        <button type="button" data-afficher-panneau hidden title="Afficher le panneau (à planifier, tâche, alertes, jalons)">▤ Panneau</button>
+        <input type="search" data-recherche placeholder="${texteHtml('planning_btp.barre.recherche')}" size="14"> <button type="button" data-actualiser title="${texteHtml('commun.actualiser')}">${iconeHtml('planning_btp_actualiser')}</button>
+        <button type="button" data-nouvelle>${iconeHtml('ajouter')} ${texteHtml('planning_btp.barre.tache')}</button> <button type="button" data-annuler title="${texteHtml('planning_btp.historique.annuler', { touches: libelleRaccourci('annuler', 'planning') })}" disabled>${iconeHtml('planning_btp_annuler')}</button><button type="button" data-retablir title="${texteHtml('planning_btp.historique.retablir', { touches: libelleRaccourci('retablir', 'planning') })}" disabled>${iconeHtml('planning_btp_retablir')}</button>
+        <button type="button" data-attente class="badge-exception" hidden title="${texteHtml('planning_btp.barre.attente_titre')}"></button>
+        <a data-lien-consultation title="${texteHtml('planning_btp.barre.consultation_titre')}">${iconeHtml('planning_btp_consultation')} ${texteHtml('planning_btp.barre.consultation')}</a> <button type="button" data-plein-ecran hidden>${iconeHtml('planning_btp_plein_ecran')} ${texteHtml('planning_btp.barre.plein_ecran')}</button>
+        <button type="button" data-afficher-panneau hidden title="${texteHtml('planning_btp.barre.panneau_titre')}">${iconeHtml('planning_btp_panneau')} ${texteHtml('planning_btp.barre.panneau')}</button>
         <span class="aide" data-etat></span></div>
       <div class="planning-corps"><div class="zone-planning"><div data-planning></div></div>
-        <div class="separateur-panneau-planning" data-separateur-panneau title="Glisser pour élargir le panneau"></div>
-        <aside class="panneau-planning"><div class="entete-panneau"><div class="onglets ligne">${Object.entries(ONGLETS_PANNEAU).map(([cle, o]) => `<button type="button" data-onglet="${cle}" class="onglet-icone${cle === 'aplanifier' ? ' actif' : ''}" title="${o.libelle}" aria-label="${o.libelle}">${o.icone}${o.compteur ? `<span class="badge-onglet" data-nb-${cle} hidden></span>` : ''}</button>`).join('')}
-              <span class="commandes-panneau"><button type="button" class="bouton-icone" data-panneau-reduire title="Réduire le panneau">»</button><button type="button" class="bouton-icone" data-panneau-fenetre title="Ouvrir le panneau dans une autre fenêtre">⧉</button><button type="button" class="bouton-icone" data-panneau-rattacher hidden title="Remettre le panneau dans la fenêtre du planning">⇤</button></span></div>
+        <div class="separateur-panneau-planning" data-separateur-panneau title="${texteHtml('planning_btp.panneau.elargir')}"></div>
+        <aside class="panneau-planning"><div class="entete-panneau"><div class="onglets ligne">${Object.entries(ONGLETS_PANNEAU).map(([cle, o]) => `<button type="button" data-onglet="${cle}" class="onglet-icone${cle === 'aplanifier' ? ' actif' : ''}" title="${echapper(o.libelle)}" aria-label="${echapper(o.libelle)}">${o.icone}${o.compteur ? `<span class="badge-onglet" data-nb-${cle} hidden></span>` : ''}</button>`).join('')}
+              <span class="commandes-panneau"><button type="button" class="bouton-icone" data-panneau-reduire title="${texteHtml('planning_btp.panneau.reduire')}">${iconeHtml('planning_btp_reduire')}</button><button type="button" class="bouton-icone" data-panneau-fenetre title="${texteHtml('planning_btp.panneau.fenetre')}">${iconeHtml('planning_btp_fenetre')}</button><button type="button" class="bouton-icone" data-panneau-rattacher hidden title="${texteHtml('planning_btp.panneau.rattacher')}">${iconeHtml('planning_btp_rattacher')}</button></span></div>
             <div data-actions-tache hidden></div></div>
           ${Object.keys(ONGLETS_PANNEAU).map((cle) => `<div data-panneau="${cle}"${cle === 'aplanifier' ? '' : ' hidden'}></div>`).join('')}</aside></div></div>`;
     const c = this.conteneur;
@@ -189,16 +193,16 @@ export class PagePlanning extends PageBase {
     [this.vues, this.ref, this.parametres] = await Promise.all([api.planning.vues(), api.planning.referentiels(), api.planning.parametres().catch(() => null)]);
     this.vue = this.requete.vue ?? this.vues[0]?.code;
     this.couleurs = new Map(this.ref.services.map((s, i) => [s.id, COULEURS_SERVICE[i % COULEURS_SERVICE.length]]));
-    const comboVue = creerCombo({ options: this.vues.map((v) => ({ valeur: v.code, libelle: v.libelle })), valeur: this.vue, vide: false, titre: 'Vue' });
+    const comboVue = creerCombo({ options: this.vues.map((v) => ({ valeur: v.code, libelle: v.libelle })), valeur: this.vue, vide: false, titre: texte('planning_btp.barre.vue') });
     c.querySelector('[data-vue]').append(comboVue);
     comboVue.addEventListener('change', () => { this.vue = comboVue.valeurCombo; this.du = null; this.#definition(); this.#charger(); });
-    this.comboEchelle = creerCombo({ options: Object.entries(ECHELLES).map(([valeur, e]) => ({ valeur, libelle: e.libelle })), valeur: 'JOUR', vide: false, titre: 'Échelle' });
+    this.comboEchelle = creerCombo({ options: Object.entries(ECHELLES).map(([valeur, e]) => ({ valeur, libelle: e.libelle })), valeur: 'JOUR', vide: false, titre: texte('planning_btp.barre.echelle') });
     c.querySelector('[data-echelle]').append(this.comboEchelle);
     this.comboEchelle.addEventListener('change', () => this.planning.regler({ echelle: this.comboEchelle.valeurCombo, largeurColonne: LARGEURS[this.comboEchelle.valeurCombo] }));
     c.querySelectorAll('[data-zoom]').forEach((b) => b.addEventListener('click', () => this.planning.zoomer(Number(b.dataset.zoom))));
     // Zoom vertical : lignes de texte par barre (hauteur des lignes), préférence du navigateur.
     const lignesTexte = Number(lirePreferences().planningLignesTexte) || 1;
-    const comboLignes = creerCombo({ options: LIGNES_TEXTE.map((n) => ({ valeur: String(n), libelle: `${n} ligne${n > 1 ? 's' : ''}` })), valeur: String(lignesTexte), vide: false, titre: 'Lignes de texte par barre (hauteur des lignes)' });
+    const comboLignes = creerCombo({ options: LIGNES_TEXTE.map((n) => ({ valeur: String(n), libelle: pluriel('planning_btp.barre.lignes', n) })), valeur: String(lignesTexte), vide: false, titre: texte('planning_btp.barre.lignes_titre') });
     comboLignes.size = 7;
     c.querySelector('[data-lignes-texte]').append(comboLignes);
     comboLignes.addEventListener('change', () => { ecrirePreferences({ planningLignesTexte: Number(comboLignes.valeurCombo) }); this.planning.regler({ lignesTexte: Number(comboLignes.valeurCombo) }); });
@@ -290,16 +294,16 @@ export class PagePlanning extends PageBase {
     const effectif = (x) => coches.has(x.code) || (x.parent_id && coches.has(parId.get(x.parent_id)?.code));
     const libelle = () => {
       const l = this.filtreServices;
-      const defaut = this.definition.services?.length ? `Vue : ${this.definition.services.map((code) => services.find((x) => x.code === code)?.libelle ?? code).join(', ')}` : 'Tous les services';
-      c.querySelector('[data-libelle-services]').textContent = !l ? (this.definition.services?.length ? 'Services de la vue' : 'Tous les services')
-        : l.length === 1 ? services.find((x) => x.code === l[0])?.libelle ?? l[0] : `${l.length} services`;
-      c.querySelector('[data-ouvrir-menu="services"]').title = `Filtrer la vue par services (mémorisé pour votre compte) — ${l ? l.map((code) => services.find((x) => x.code === code)?.libelle ?? code).join(', ') : defaut}`;
+      const defaut = this.definition.services?.length ? texte('planning_btp.services.vue', { services: this.definition.services.map((code) => services.find((x) => x.code === code)?.libelle ?? code).join(', ') }) : texte('planning_btp.services.tous');
+      c.querySelector('[data-libelle-services]').textContent = !l ? (this.definition.services?.length ? texte('planning_btp.services.de_la_vue') : texte('planning_btp.services.tous'))
+        : l.length === 1 ? services.find((x) => x.code === l[0])?.libelle ?? l[0] : pluriel('planning_btp.services.nombre', l.length);
+      c.querySelector('[data-ouvrir-menu="services"]').title = texte('planning_btp.services.titre', { services: l ? l.map((code) => services.find((x) => x.code === code)?.libelle ?? code).join(', ') : defaut });
       c.querySelector('[data-ouvrir-menu="services"]').classList.toggle('filtre-actif', Boolean(l));
     };
     const rendre = () => {
       const ligne = (x, sous) => `<label class="mo-ligne${sous ? ' sous-service' : ''}"><span><input type="checkbox" data-service="${echapper(x.code)}" ${effectif(x) ? 'checked' : ''}
-        ${sous && coches.has(parId.get(x.parent_id)?.code) ? 'disabled title="Compris dans le service parent"' : ''}> ${echapper(x.libelle)}</span></label>`;
-      zone.innerHTML = `<div class="mo-titre">Services de la vue <button type="button" data-tous-services title="Revenir aux services de la vue">Tous</button></div>
+        ${sous && coches.has(parId.get(x.parent_id)?.code) ? `disabled title="${texteHtml('planning_btp.services.compris')}"` : ''}> ${echapper(x.libelle)}</span></label>`;
+      zone.innerHTML = `<div class="mo-titre">${texteHtml('planning_btp.services.de_la_vue')} <button type="button" data-tous-services title="${texteHtml('planning_btp.services.revenir')}">${texteHtml('planning_btp.services.tous_court')}</button></div>
         ${services.filter((x) => !x.parent_id || !parId.has(x.parent_id)).map((x) => ligne(x, false) + enfants(x.id).map((e) => ligne(e, true)).join('')).join('')}`;
       zone.querySelectorAll('[data-service]').forEach((cb) => cb.addEventListener('change', () => {
         const x = services.find((s) => s.code === cb.dataset.service);
@@ -365,7 +369,7 @@ export class PagePlanning extends PageBase {
       c.querySelector('.page-planning').classList.add('panneau-seul');
       c.querySelector('[data-panneau-rattacher]').hidden = false;
       c.querySelector('[data-panneau-rattacher]').addEventListener('click', () => window.close());
-      this.titre = 'Planning — panneau';
+      this.titre = texte('planning_btp.panneau.titre');
       this.desabonnements = [this.app.abonner(SUJET_FENETRE.PLANNING_SELECTION, ({ tache }) => { this.#editer(tache); this.#onglet('tache'); })];
       this.app.publier(SUJET_FENETRE.PLANNING_PANNEAU, { ouvert: true });
       this.quitterFenetre = () => this.app.publier(SUJET_FENETRE.PLANNING_PANNEAU, { ouvert: false });
@@ -397,10 +401,10 @@ export class PagePlanning extends PageBase {
     c.querySelector('[data-separateur-panneau]').hidden = etat === 'masque' || etat === 'reduit' || this.panneauSeul;
     const afficher = c.querySelector('[data-afficher-panneau]');
     afficher.hidden = this.panneauSeul || etat !== 'masque';
-    afficher.textContent = this.panneauEnFenetre ? '⧉ Panneau dans une autre fenêtre' : '▤ Panneau';
+    afficher.textContent = this.panneauEnFenetre ? `${icone('planning_btp_fenetre')} ${texte('planning_btp.panneau.autre_fenetre')}` : `${icone('planning_btp_panneau')} ${texte('planning_btp.barre.panneau')}`;
     afficher.disabled = Boolean(this.panneauEnFenetre);
-    c.querySelector('[data-panneau-reduire]').textContent = etat === 'reduit' ? '«' : '»';
-    c.querySelector('[data-panneau-reduire]').title = etat === 'reduit' ? 'Déplier le panneau' : 'Réduire le panneau';
+    c.querySelector('[data-panneau-reduire]').textContent = etat === 'reduit' ? icone('planning_btp_deplier') : icone('planning_btp_reduire');
+    c.querySelector('[data-panneau-reduire]').title = etat === 'reduit' ? texte('planning_btp.panneau.deplier') : texte('planning_btp.panneau.reduire');
     for (const cle of ['reduire', 'fenetre']) c.querySelector(`[data-panneau-${cle}]`).hidden = this.panneauSeul;
     this.planning?.actualiser();
   }
@@ -440,7 +444,7 @@ export class PagePlanning extends PageBase {
   #preparerSynchro() {
     const c = this.conteneur;
     this.synchro = this.consultation ? 'TEMPS_REEL' : String(lirePreferences().planningSynchro ?? 'TEMPS_REEL');
-    const combo = creerCombo({ options: Object.entries(SYNCHRO).map(([valeur, libelle]) => ({ valeur, libelle })), valeur: this.synchro, vide: false, titre: 'Synchronisation' });
+    const combo = creerCombo({ options: Object.entries(SYNCHRO).map(([valeur, libelle]) => ({ valeur, libelle })), valeur: this.synchro, vide: false, titre: texte('planning_btp.barre.synchronisation') });
     c.querySelector('[data-synchro]').append(combo);
     const appliquer = () => {
       clearInterval(this.intervalle);
@@ -464,7 +468,7 @@ export class PagePlanning extends PageBase {
   #majAttente() {
     const b = this.conteneur.querySelector('[data-attente]');
     b.hidden = !this.attente || this.consultation;
-    b.textContent = `⟳ ${this.attente} modification${this.attente > 1 ? 's' : ''}`;
+    b.textContent = `${icone('planning_btp_actualiser')} ${pluriel('planning_btp.barre.modifications', this.attente)}`;
   }
 
   /** Annuler / rétablir (lot 3) : opérations de la session, rejouées par l'API (versions relues). */
@@ -481,8 +485,8 @@ export class PagePlanning extends PageBase {
       if (action === 'annuler') this.#annuler();
       else if (action === 'retablir') this.#retablir();
       else if (action === 'actualiser') this.#charger();
-      else if (b?.geree && (action === 'supprimer' || action === 'dupliquer')) this.app.message('Absence d\'un congé : elle se modifie depuis le congé', 'avertissement');
-      else if (action === 'supprimer' && b && await confirmer('Supprimer la tâche sélectionnée ?')) this.#supprimer(b.tache);
+      else if (b?.geree && (action === 'supprimer' || action === 'dupliquer')) this.app.message(texte('planning_btp.messages.conge_gere'), 'avertissement');
+      else if (action === 'supprimer' && b && await confirmer(texte('planning_btp.messages.supprimer_selection'))) this.#supprimer(b.tache);
       else if (action === 'dupliquer' && b) this.#deplacer({ tache: b, debut: b.debut, fin: b.fin, ligne: b.ligne, copie: true });
     };
     document.addEventListener('keydown', this.clavier);
@@ -500,15 +504,15 @@ export class PagePlanning extends PageBase {
     const a = this.historique.at(-1);
     const r = this.refaire.at(-1);
     c.querySelector('[data-annuler]').disabled = !a;
-    c.querySelector('[data-annuler]').title = a ? `Annuler : ${a.libelle} (Ctrl+Z)` : 'Annuler (Ctrl+Z)';
+    c.querySelector('[data-annuler]').title = a ? texte('planning_btp.historique.annuler_operation', { libelle: a.libelle, touches: libelleRaccourci('annuler', 'planning') }) : texte('planning_btp.historique.annuler', { touches: libelleRaccourci('annuler', 'planning') });
     c.querySelector('[data-retablir]').disabled = !r;
-    c.querySelector('[data-retablir]').title = r ? `Rétablir : ${r.libelle} (Ctrl+Y)` : 'Rétablir (Ctrl+Y)';
+    c.querySelector('[data-retablir]').title = r ? texte('planning_btp.historique.retablir_operation', { libelle: r.libelle, touches: libelleRaccourci('retablir', 'planning') }) : texte('planning_btp.historique.retablir', { touches: libelleRaccourci('retablir', 'planning') });
   }
 
   async #annuler() {
     const e = this.historique.pop();
     if (!e) return;
-    await this.#apres(e.annuler(), `Annulé : ${e.libelle}`);
+    await this.#apres(e.annuler(), texte('planning_btp.historique.annule', { libelle: e.libelle }));
     this.refaire.push(e);
     this.#majHistorique();
   }
@@ -516,7 +520,7 @@ export class PagePlanning extends PageBase {
   async #retablir() {
     const e = this.refaire.pop();
     if (!e) return;
-    await this.#apres(e.retablir(), `Rétabli : ${e.libelle}`);
+    await this.#apres(e.retablir(), texte('planning_btp.historique.retabli', { libelle: e.libelle }));
     this.historique.push(e);
     this.#majHistorique();
   }
@@ -539,10 +543,10 @@ export class PagePlanning extends PageBase {
 
   async #supprimer(id) {
     const avant = await api.planning.tache(id).catch(() => null);
-    const ok = await this.#apres(supprimerTache(id).then(() => true), 'Tâche supprimée');
+    const ok = await this.#apres(supprimerTache(id).then(() => true), texte('planning_btp.messages.supprimee'));
     if (!ok || !avant) return;
     const ref = { id };
-    this.#memoriser({ libelle: 'suppression', annuler: async () => { ref.id = (await api.planning.creer(saisieDe(avant))).id; }, retablir: () => supprimerTache(ref.id) });
+    this.#memoriser({ libelle: texte('planning_btp.historique.operations.suppression'), annuler: async () => { ref.id = (await api.planning.creer(saisieDe(avant))).id; }, retablir: () => supprimerTache(ref.id) });
     this.#viderTache();
   }
 
@@ -577,7 +581,7 @@ export class PagePlanning extends PageBase {
     this.#majAttente();
     this.app.routeur.remplacerUrl(this.urlCourante());
     const p = this.periode;
-    this.conteneur.querySelector('[data-periode]').textContent = `${depuisMinutes(p.debut).slice(0, 10)} → ${depuisMinutes(p.fin - 1).slice(0, 10)}`;
+    this.conteneur.querySelector('[data-periode]').textContent = `${depuisMinutes(p.debut).slice(0, 10)} ${icone('planning_vers')} ${depuisMinutes(p.fin - 1).slice(0, 10)}`;
     let d;
     try { d = await api.planning.donnees({ vue: this.vue, du: depuisMinutes(p.debut), au: depuisMinutes(p.fin), recherche: this.recherche, services: this.filtreServices?.join(',') }); } catch (e) { this.app.erreur(e); return; }
     this.lignes = d.lignes.map((l) => ({ ...l, ligneFixe: this.definition.regroupement !== 'RESSOURCE' ? false : l.ligne_fixe }));
@@ -593,7 +597,7 @@ export class PagePlanning extends PageBase {
     await this.#feries(p);
     this.planning.definirDonnees(this.lignes, this.barres);
     if (!this.consultation) { this.#alertes(); this.#rendreJalons(); }
-    this.conteneur.querySelector('[data-etat]').textContent = `${this.lignes.length} lignes · ${new Set(this.barres.map((b) => b.tache)).size} tâches`;
+    this.conteneur.querySelector('[data-etat]').textContent = `${pluriel('planning_btp.etat.lignes', this.lignes.length)} · ${pluriel('planning_btp.etat.taches', new Set(this.barres.map((b) => b.tache)).size)}`;
     // Centrage sur maintenant après la mise en page (largeur de la vue connue).
     if (!this.centre) { this.centre = true; const d = new Date(); requestAnimationFrame(() => this.planning.allerA(aujourdhui(d) + d.getHours() * 60 + d.getMinutes())); }
   }
@@ -634,30 +638,30 @@ export class PagePlanning extends PageBase {
 
   /** Glisser une barre : déplacement, redimensionnement (bord), changement de ressource, copie (Ctrl). */
   async #deplacer({ tache: b, debut, fin, ligne, copie, mode: modeGlisser }) {
-    if (b.geree) { this.app.message('Absence d\'un congé : elle se modifie depuis le congé (clic sur la barre)', 'avertissement'); return false; }
-    if (this.definition.regroupement !== 'RESSOURCE' && ligne !== b.ligne) { this.app.message('Changer de ligne n\'est possible que dans une vue par ressources', 'avertissement'); return false; }
+    if (b.geree) { this.app.message(texte('planning_btp.messages.conge_gere_barre'), 'avertissement'); return false; }
+    if (this.definition.regroupement !== 'RESSOURCE' && ligne !== b.ligne) { this.app.message(texte('planning_btp.messages.ligne_ressources'), 'avertissement'); return false; }
     if (this.definition.regroupement === 'RESSOURCE' && ligne !== b.ligne && (b.theorique || ligne.startsWith('srv:'))) {
-      this.app.message('Affecter une tâche théorique : depuis le détail de la tâche', 'avertissement');
+      this.app.message(texte('planning_btp.messages.theorique'), 'avertissement');
       return false;
     }
     const mode = modeGlisser ?? (debut - b.debut === fin - b.fin ? 'deplacer' : debut !== b.debut ? 'debut' : 'fin');
     const operation = () => api.planning.deplacer(b.tache, { debut: depuisMinutes(debut), fin: depuisMinutes(fin), mode, de: b.ligne, vers: ligne, copie, version: b.version });
     if (copie) {
-      const r = await this.#apres(operation(), 'Tâche copiée');
-      if (r) this.#memoriserCreation(r, 'copie');
-    } else await this.#modifierMemorise(b.tache, mode === 'deplacer' ? 'déplacement' : 'redimensionnement', operation);
+      const r = await this.#apres(operation(), texte('planning_btp.messages.copiee'));
+      if (r) this.#memoriserCreation(r, texte('planning_btp.historique.operations.copie'));
+    } else await this.#modifierMemorise(b.tache, mode === 'deplacer' ? texte('planning_btp.historique.operations.deplacement') : texte('planning_btp.historique.operations.redimensionnement'), operation);
     return false;
   }
 
   async #scinder({ tache: b, instant }) {
     if (instant <= b.debut || instant >= b.fin || b.geree) return;
     const avant = await api.planning.tache(b.tache).catch(() => null);
-    const r = await this.#apres(api.planning.scinder(b.tache, { instant: depuisMinutes(instant), version: b.version }), 'Tâche scindée');
+    const r = await this.#apres(api.planning.scinder(b.tache, { instant: depuisMinutes(instant), version: b.version }), texte('planning_btp.messages.scindee'));
     if (!r || !avant) return;
     const premiere = { id: r.premiere.id };
     const seconde = { id: r.seconde.id };
     this.#memoriser({
-      libelle: 'scission',
+      libelle: texte('planning_btp.historique.operations.scission'),
       annuler: async () => { await supprimerTache(seconde.id); await restaurer(premiere.id, avant); },
       retablir: async () => {
         const cur = await api.planning.tache(premiere.id);
@@ -670,7 +674,7 @@ export class PagePlanning extends PageBase {
   async #deposer(e, { ligne, instant, tache }) {
     const glissee = e.dataTransfer.getData(TYPE_GLISSER_RESSOURCE);
     if (glissee) {
-      if (!tache) { this.app.message('Déposer la ressource sur une tâche', 'avertissement'); return; }
+      if (!tache) { this.app.message(texte('planning_btp.messages.deposer_ressource'), 'avertissement'); return; }
       await this.#ajouterRessource(tache.tache, JSON.parse(glissee));
       return;
     }
@@ -680,8 +684,8 @@ export class PagePlanning extends PageBase {
       const res = this.#ressourceDe(ligne);
       const r = await this.#apres(api.planning.creer({
         ...this.#saisieSource(s), calcul: 1, debut: depuisMinutes(instant), fin: null, srv_id: s.srv_id ?? ligne.srv_id ?? null, affectations: res ? [{ type: res.type, id: res.id }] : [],
-      }), 'Tâche créée');
-      if (r) this.#memoriserCreation(r, 'création');
+      }), texte('planning_btp.messages.creee'));
+      if (r) this.#memoriserCreation(r, texte('planning_btp.historique.operations.creation'));
       return;
     }
     const brut = e.dataTransfer.getData(TYPE_GLISSER);
@@ -691,9 +695,9 @@ export class PagePlanning extends PageBase {
     const srv = ligne.srv_id ?? x.srv_id;
     const r = await this.#apres(api.planning.creer({
       calcul: 1, debut: depuisMinutes(instant), heures: Math.max(15, Math.min(x.reste, 2100)), nb_ressources: 1, srv_id: srv, type_element: TYPE_FICHE.CHANTIER, id_element: x.id,
-      libelle: `${x.service ?? 'Travaux'}`, affectations: ressource ? [{ type: ressource[0], id: ressource[1] }] : [],
-    }), 'Tâche planifiée');
-    if (r) this.#memoriserCreation(r, 'planification');
+      libelle: x.service ?? texte('planning_btp.messages.travaux'), affectations: ressource ? [{ type: ressource[0], id: ressource[1] }] : [],
+    }), texte('planning_btp.messages.planifiee'));
+    if (r) this.#memoriserCreation(r, texte('planning_btp.historique.operations.planification'));
   }
 
   /**
@@ -711,27 +715,27 @@ export class PagePlanning extends PageBase {
   /** Clic droit sur une tâche (détail, état, dupliquer, scinder, supprimer) ou sur une zone vide (nouvelle tâche). */
   #menu(e, b, { ligne, instant }) {
     const ressource = this.#ressourceDe(ligne);
-    const nouvelle = { libelle: '＋ Nouvelle tâche ici', titre: 'Début à cet instant, sur cette ressource', action: () => this.#afficherTache(null, {
+    const nouvelle = { libelle: `${icone('ajouter')} ${texte('planning_btp.menu.nouvelle_ici')}`, titre: texte('planning_btp.menu.nouvelle_ici_titre'), action: () => this.#afficherTache(null, {
       debut: depuisMinutes(instant), srv_id: ligne?.srv_id ?? null, affectations: ressource ? [{ ...ressource }] : [],
     }) };
     if (this.consultation) return;
     if (!b) { ouvrirMenuContextuel(e, [nouvelle, ...(ressource ? [{ separateur: true }, ...this.#elementsRessource(ressource, ligne, instant)] : [])]); return; }
     if (b.geree) {
-      ouvrirMenuContextuel(e, [{ libelle: '🏖 Ouvrir le congé…', titre: 'Absence tenue par le module Pointage : demande, validation, nature', action: () => this.#ouvrirCongeTache(b) },
+      ouvrirMenuContextuel(e, [{ libelle: `${icone('planning_btp_conge')} ${texte('planning_btp.menu.ouvrir_conge')}`, titre: texte('planning_btp.menu.ouvrir_conge_titre'), action: () => this.#ouvrirCongeTache(b) },
         ...(ressource ? [{ separateur: true }, ...this.#elementsRessource(ressource, ligne, instant)] : [])]);
       return;
     }
     const scinder = instant > b.debut && instant < b.fin;
     ouvrirMenuContextuel(e, [
-      { libelle: '✎ Détail de la tâche', action: () => this.#afficherTache(b.tache) },
+      { libelle: `${icone('planning_btp_tache')} ${texte('planning_btp.menu.detail')}`, action: () => this.#afficherTache(b.tache) },
       { separateur: true },
-      ...Object.entries(ETATS_SAISIE).map(([etat, libelle]) => ({ libelle: `${(b.etat ?? '') === etat ? '● ' : '○ '}${libelle}`, actif: (b.etat ?? '') !== etat, titre: 'Changer l\'état de la tâche', action: () => this.#changerEtat(b.tache, etat) })),
+      ...Object.entries(ETATS_SAISIE).map(([etat, libelle]) => ({ libelle: `${(b.etat ?? '') === etat ? icone('planning_btp_coche') : icone('planning_btp_non_coche')} ${libelle}`, actif: (b.etat ?? '') !== etat, titre: texte('planning_btp.menu.etat_titre'), action: () => this.#changerEtat(b.tache, etat) })),
       { separateur: true },
-      { libelle: '⧉ Dupliquer', raccourci: libelleRaccourci('dupliquer', 'planning'), action: () => this.#deplacer({ tache: b, debut: b.debut, fin: b.fin, ligne: b.ligne, copie: true }) },
-      { libelle: '✂ Scinder ici', raccourci: 'Alt+clic', actif: scinder, action: () => this.#scinder({ tache: b, instant }) },
+      { libelle: `${icone('planning_btp_fenetre')} ${texte('planning_btp.menu.dupliquer')}`, raccourci: libelleRaccourci('dupliquer', 'planning'), action: () => this.#deplacer({ tache: b, debut: b.debut, fin: b.fin, ligne: b.ligne, copie: true }) },
+      { libelle: `${icone('planning_btp_scinder')} ${texte('planning_btp.menu.scinder')}`, raccourci: texte('planning_btp.menu.scinder_raccourci'), actif: scinder, action: () => this.#scinder({ tache: b, instant }) },
       nouvelle,
       { separateur: true },
-      { libelle: '🗑 Supprimer', raccourci: libelleRaccourci('supprimer', 'planning'), action: async () => { if (await confirmer('Supprimer cette tâche ?')) this.#supprimer(b.tache); } },
+      { libelle: `${icone('supprimer')} ${texte('commun.supprimer')}`, raccourci: libelleRaccourci('supprimer', 'planning'), action: async () => { if (await confirmer(texte('planning_btp.messages.supprimer_tache'))) this.#supprimer(b.tache); } },
     ]);
   }
 
@@ -740,7 +744,7 @@ export class PagePlanning extends PageBase {
     const ressource = this.#ressourceDe(l);
     if (!ressource || this.consultation) return;
     ouvrirMenuContextuel(e, [
-      { libelle: '＋ Nouvelle tâche pour cette ressource', action: () => this.#afficherTache(null, { srv_id: l.srv_id ?? null, affectations: [{ ...ressource }] }) },
+      { libelle: `${icone('ajouter')} ${texte('planning_btp.menu.nouvelle_ressource')}`, action: () => this.#afficherTache(null, { srv_id: l.srv_id ?? null, affectations: [{ ...ressource }] }) },
       { separateur: true },
       ...this.#elementsRessource(ressource, l),
     ]);
@@ -750,10 +754,10 @@ export class PagePlanning extends PageBase {
     const fiche = { SALARIE: 'salarie', INTERIM: 'salarie', MATERIEL: 'materiel' }[ressource.type];
     const salarie = fiche === TYPE_FICHE.SALARIE && this.app.moduleActif(MODULE_FACULTATIF.POINTAGE);
     return [
-      ...(salarie ? [{ libelle: '🏖 Demander un congé…', titre: 'Demande pré-remplie (date, salarié, demandeur), à valider par le service RH pour la nature',
+      ...(salarie ? [{ libelle: `${icone('planning_btp_conge')} ${texte('planning_btp.menu.demander_conge')}`, titre: texte('planning_btp.menu.demander_conge_titre'),
         action: () => this.#demanderConge(ressource, instant) }] : []),
-      { libelle: '🏢 Changer le service principal…', actif: Boolean(fiche), titre: 'Service principal de la ressource (lignes du planning, charge des services)', action: () => this.#changerService(ressource, l) },
-      { libelle: '📋 Ouvrir la fiche', actif: Boolean(fiche), action: () => this.app.naviguer(urlFiche(fiche, ressource.id), { nouvelleFenetre: true }) },
+      { libelle: `${icone('planning_btp_service')} ${texte('planning_btp.menu.changer_service')}`, actif: Boolean(fiche), titre: texte('planning_btp.menu.changer_service_titre'), action: () => this.#changerService(ressource, l) },
+      { libelle: `${icone('planning_btp_aplanifier')} ${texte('planning_btp.menu.ouvrir_fiche')}`, actif: Boolean(fiche), action: () => this.app.naviguer(urlFiche(fiche, ressource.id), { nouvelleFenetre: true }) },
     ];
   }
 
@@ -763,7 +767,7 @@ export class PagePlanning extends PageBase {
     const info = await api.pointage.conges({ salarie: ressource.id, du: jour, au: jour }).catch((e) => { this.app.erreur(e); return null; });
     if (!info) return;
     const r = await ouvrirConge(this.app, { initial: { salarie: Number(ressource.id), du: jour, au: jour }, salarieLibelle: ressource.libelle, rh: info.rh, natures: info.natures });
-    if (r) { this.app.message('Demande de congé enregistrée : absence ajoutée au planning', 'succes'); await this.#charger(); }
+    if (r) { this.app.message(texte('planning_btp.messages.conge_demande'), 'succes'); await this.#charger(); }
   }
 
   /** Congé d'une barre d'absence (origine « conge ») : salarié affecté, congé relu par son identifiant. */
@@ -775,7 +779,7 @@ export class PagePlanning extends PageBase {
       const jour = t.debut.slice(0, 10);
       const info = await api.pointage.conges({ salarie: salarie.id, du: jour, au: jour });
       const conge = info.conges.find((c) => String(c.id) === String(t.origine_id));
-      if (!conge) { this.app.message('Congé introuvable (supprimé ou hors de vos droits)', 'avertissement'); return; }
+      if (!conge) { this.app.message(texte('planning_btp.messages.conge_introuvable'), 'avertissement'); return; }
       const r = await ouvrirConge(this.app, { conge, rh: info.rh, natures: info.natures });
       if (r) await this.#charger();
     } catch (e) { this.app.erreur(e); }
@@ -788,7 +792,7 @@ export class PagePlanning extends PageBase {
     if (choix == null || choix === actuel?.id) return;
     try {
       await api.planning.changerServiceRessource(ressource.type, ressource.id, choix);
-      this.app.message(`${ressource.libelle} : service principal « ${this.ref.services.find((x) => x.id === choix)?.libelle} »`, 'succes');
+      this.app.message(texte('planning_btp.messages.service_change', { ressource: ressource.libelle, service: this.ref.services.find((x) => x.id === choix)?.libelle }), 'succes');
       this.ressourcesPromesse = null;
       await this.#charger();
     } catch (err) { this.app.erreur(err); }
@@ -797,7 +801,7 @@ export class PagePlanning extends PageBase {
   async #changerEtat(id, etat) {
     const t = await api.planning.tache(id).catch((e) => { this.app.erreur(e); return null; });
     if (!t) return;
-    await this.#modifierMemorise(id, 'changement d\'état', () => api.planning.modifier(id, { ...saisieDe(t), etat, fin: t.calcul === 1 ? null : t.fin, heures: t.calcul === 2 ? null : t.heures, version: t.version }));
+    await this.#modifierMemorise(id, texte('planning_btp.historique.operations.etat'), () => api.planning.modifier(id, { ...saisieDe(t), etat, fin: t.calcul === 1 ? null : t.fin, heures: t.calcul === 2 ? null : t.heures, version: t.version }));
   }
 
   /** Saisie d'une tâche créée depuis une source (projet, chantier, ordre) : élément, origine, service, libellé, heures. */
@@ -817,12 +821,12 @@ export class PagePlanning extends PageBase {
     const zone = this.conteneur.querySelector('[data-panneau="creer"]');
     let types = [];
     try { types = (await api.planning.sources()).types; } catch { /* serveur sans les sources */ }
-    if (!types.length) { zone.innerHTML = '<p class="aide">Aucune source de tâche disponible.</p>'; return; }
+    if (!types.length) { zone.innerHTML = `<p class="aide">${texteHtml('planning_btp.creer.aucune_source')}</p>`; return; }
     zone.classList.add('onglet-liste');
-    zone.innerHTML = `<div class="onglet-liste-haut"><div class="barre-aplanifier"><span data-type-source></span><input type="search" data-recherche-source placeholder="Rechercher (code, libellé, client)…"></div>
-      <p class="aide">Glisser sur le planning : la tâche est créée au point de dépôt. ＋ : nouvelle tâche pré-remplie.</p></div><div class="onglet-liste-corps" data-liste-source></div>`;
+    zone.innerHTML = `<div class="onglet-liste-haut"><div class="barre-aplanifier"><span data-type-source></span><input type="search" data-recherche-source placeholder="${texteHtml('planning_btp.creer.recherche')}"></div>
+      <p class="aide">${texteHtml('planning_btp.creer.aide', { ajouter: icone('ajouter') })}</p></div><div class="onglet-liste-corps" data-liste-source></div>`;
     const prefere = lirePreferences().planningCreerType;
-    const type = creerCombo({ options: types.map((t) => ({ valeur: t.code, libelle: t.libelle })), valeur: types.some((t) => t.code === prefere) ? prefere : types[0].code, vide: false, titre: 'Point de départ' });
+    const type = creerCombo({ options: types.map((t) => ({ valeur: t.code, libelle: t.libelle })), valeur: types.some((t) => t.code === prefere) ? prefere : types[0].code, vide: false, titre: texte('planning_btp.creer.point_depart') });
     type.size = 22;
     zone.querySelector('[data-type-source]').append(type);
     const recherche = zone.querySelector('[data-recherche-source]');
@@ -831,11 +835,11 @@ export class PagePlanning extends PageBase {
       let l;
       try { l = (await api.planning.sources(type.valeurCombo, recherche.value.trim())).sources; } catch (e) { liste.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; return; }
       const date = (d) => (d ? `${d.slice(8, 10)}/${d.slice(5, 7)}` : '');
-      liste.innerHTML = l.length ? `<table class="tableau-compact pleine-largeur"><thead><tr><th>Source</th><th>Prévu</th><th class="nombre">Heures</th><th></th></tr></thead><tbody>
+      liste.innerHTML = l.length ? `<table class="tableau-compact pleine-largeur"><thead><tr><th>${texteHtml('planning_btp.creer.source')}</th><th>${texteHtml('planning_btp.creer.prevu')}</th><th class="nombre">${texteHtml('planning_btp.bulle.heures')}</th><th></th></tr></thead><tbody>
         ${l.map((s, i) => `<tr draggable="true" class="glissable" data-i="${i}" title="${echapper(s.detail ?? '')}"><td><b>${echapper(s.code)}</b> <small>${echapper(s.libelle)}</small><br><small class="aide">${echapper(s.detail ?? '')}</small></td>
-          <td><small>${s.debut || s.fin ? `${date(s.debut)} → ${date(s.fin)}` : ''}</small></td><td class="nombre">${s.heures ? ecrireDuree(s.heures) : ''}</td>
-          <td class="cellule-boutons"><button type="button" class="bouton-icone" data-nouvelle-source title="Nouvelle tâche pré-remplie" aria-label="Nouvelle tâche">＋</button></td></tr>`).join('')}</tbody></table>`
-        : '<p class="aide">Aucun élément.</p>';
+          <td><small>${s.debut || s.fin ? `${date(s.debut)} ${iconeHtml('planning_vers')} ${date(s.fin)}` : ''}</small></td><td class="nombre">${s.heures ? ecrireDuree(s.heures) : ''}</td>
+          <td class="cellule-boutons"><button type="button" class="bouton-icone" data-nouvelle-source title="${texteHtml('planning_btp.creer.nouvelle_titre')}" aria-label="${texteHtml('planning_btp.creer.nouvelle')}">${iconeHtml('ajouter')}</button></td></tr>`).join('')}</tbody></table>`
+        : `<p class="aide">${texteHtml('planning_btp.creer.aucun')}</p>`;
       liste.querySelectorAll('tr[data-i]').forEach((tr) => {
         const s = l[Number(tr.dataset.i)];
         tr.addEventListener('dragstart', (e) => { e.dataTransfer.setData(TYPE_GLISSER_SOURCE, JSON.stringify(s)); e.dataTransfer.effectAllowed = 'copy'; });
@@ -862,21 +866,21 @@ export class PagePlanning extends PageBase {
     // Équipe : développée par le serveur en ses membres au début de la tâche (copie de la composition, sans doublon).
     const deja = res.type === 'EQUIPE' ? (t.equipes ?? []).some((e) => String(e.id) === String(res.id))
       : t.affectations.some((a) => a.type === res.type && String(a.id) === String(res.id));
-    if (deja) { this.app.message(`${res.libelle} est déjà dans « ${t.libelle} »`, 'avertissement'); return; }
+    if (deja) { this.app.message(texte('planning_btp.messages.deja_affectee', { ressource: res.libelle, tache: t.libelle }), 'avertissement'); return; }
     const s = saisieDe(t);
     s.affectations.push({ type: res.type, id: String(res.id), equipe_id: null, quantite: null });
-    const r = await this.#modifierMemorise(id, 'ajout de ressource', () => api.planning.modifier(id, { ...s, fin: t.calcul === 1 ? null : t.fin, heures: t.calcul === 2 ? null : t.heures, version: t.version }));
+    const r = await this.#modifierMemorise(id, texte('planning_btp.historique.operations.ajout_ressource'), () => api.planning.modifier(id, { ...s, fin: t.calcul === 1 ? null : t.fin, heures: t.calcul === 2 ? null : t.heures, version: t.version }));
     if (r) {
-      this.app.message(`${res.libelle} ajouté à « ${t.libelle} »`, 'succes');
+      this.app.message(texte('planning_btp.messages.ajoutee', { ressource: res.libelle, tache: t.libelle }), 'succes');
       if (!this.conteneur.querySelector('[data-panneau="tache"]').hidden) this.#editer(id);
     }
   }
 
   /** Nouvelle composition d'une équipe dans la tâche, après confirmation (membres restants retirés, nouveaux sans doublon). */
   async #appliquerEquipe(t, equipe, date) {
-    if (!await confirmer('Mettre la tâche à jour avec la nouvelle composition de l\'équipe ?\nLes membres restants de l\'ancienne composition sont retirés, ceux de la nouvelle ajoutés (sans doublon) ; la tâche est recalculée.\nLes modifications non enregistrées du détail sont abandonnées.')) return;
+    if (!await confirmer(texte('planning_btp.messages.appliquer_equipe'))) return;
     const cur = await api.planning.tache(t.id);
-    const r = await this.#modifierMemorise(t.id, 'composition d\'équipe', () => api.planning.appliquerEquipe(t.id, equipe, cur.version, date));
+    const r = await this.#modifierMemorise(t.id, texte('planning_btp.historique.operations.composition'), () => api.planning.appliquerEquipe(t.id, equipe, cur.version, date));
     if (r) this.#editer(t.id);
   }
 
@@ -887,11 +891,11 @@ export class PagePlanning extends PageBase {
       this.triAPlanifier = prefs.planningAPlanifierTri ?? 'reste';
       this.sensAPlanifier = prefs.planningAPlanifierSens ?? (this.triAPlanifier === 'reste' ? -1 : 1);
       this.tuilesAPlanifier = Boolean(prefs.planningAPlanifierTuiles);
-      zone.innerHTML = `<div class="barre-aplanifier ligne"><input type="search" data-filtre-aplanifier placeholder="Rechercher (chantier, service)…">
+      zone.innerHTML = `<div class="barre-aplanifier ligne"><input type="search" data-filtre-aplanifier placeholder="${texteHtml('planning_btp.aplanifier.recherche')}">
           <span data-tri-aplanifier></span><button type="button" class="bouton-icone" data-sens-aplanifier></button>
           <button type="button" class="bouton-icone" data-presentation-aplanifier></button></div>
-        <p class="aide">Glisser sur une ressource (ou un service) : début au point de dépôt.</p><div data-liste-aplanifier></div>`;
-      const tri = creerCombo({ options: options(TRIS_APLANIFIER), valeur: this.triAPlanifier, vide: false, titre: 'Trier par' });
+        <p class="aide">${texteHtml('planning_btp.aplanifier.aide')}</p><div data-liste-aplanifier></div>`;
+      const tri = creerCombo({ options: options(TRIS_APLANIFIER), valeur: this.triAPlanifier, vide: false, titre: texte('planning_btp.aplanifier.trier') });
       tri.size = 10;
       zone.querySelector('[data-tri-aplanifier]').append(tri);
       tri.addEventListener('change', () => {
@@ -925,23 +929,23 @@ export class PagePlanning extends PageBase {
     if (!b) return;
     b.hidden = !n;
     b.textContent = n > 99 ? '99+' : String(n);
-    b.closest('button').title = `${ONGLETS_PANNEAU[onglet].libelle}${n ? ` : ${detail}` : ''}`;
+    b.closest('button').title = n ? texte('planning_btp.panneau.badge', { onglet: ONGLETS_PANNEAU[onglet].libelle, detail }) : ONGLETS_PANNEAU[onglet].libelle;
   }
 
   #rendreAPlanifier() {
     const zone = this.conteneur.querySelector('[data-panneau="aplanifier"]');
     const liste = zone.querySelector('[data-liste-aplanifier]');
     const sens = zone.querySelector('[data-sens-aplanifier]');
-    sens.textContent = this.sensAPlanifier > 0 ? '↑' : '↓';
-    sens.title = this.sensAPlanifier > 0 ? 'Ordre croissant' : 'Ordre décroissant';
+    sens.textContent = this.sensAPlanifier > 0 ? icone('planning_btp_croissant') : icone('planning_btp_decroissant');
+    sens.title = this.sensAPlanifier > 0 ? texte('planning_btp.aplanifier.croissant') : texte('planning_btp.aplanifier.decroissant');
     const pres = zone.querySelector('[data-presentation-aplanifier]');
-    pres.textContent = this.tuilesAPlanifier ? '☰' : '▦';
-    pres.title = this.tuilesAPlanifier ? 'Présenter en liste' : 'Présenter en tuiles';
+    pres.textContent = this.tuilesAPlanifier ? icone('planning_btp_options') : icone('planning_btp_tuiles');
+    pres.title = this.tuilesAPlanifier ? texte('planning_btp.aplanifier.en_liste') : texte('planning_btp.aplanifier.en_tuiles');
     const aFaire = (this.listeAPlanifier ?? []).filter((x) => x.reste > 0).length;
-    this.#badge('aplanifier', aFaire, `${aFaire} élément${aFaire > 1 ? 's' : ''} avec des heures à planifier`);
-    if (!this.listeAPlanifier?.length) { liste.innerHTML = '<p class="aide">Aucune heure à planifier (commandes validées des chantiers ouverts).</p>'; return; }
-    const texte = zone.querySelector('[data-filtre-aplanifier]').value.trim().toLowerCase();
-    const l = this.listeAPlanifier.filter((x) => !texte || `${x.code} ${x.libelle} ${x.service ?? ''}`.toLowerCase().includes(texte));
+    this.#badge('aplanifier', aFaire, pluriel('planning_btp.aplanifier.badge', aFaire));
+    if (!this.listeAPlanifier?.length) { liste.innerHTML = `<p class="aide">${texteHtml('planning_btp.aplanifier.vide')}</p>`; return; }
+    const recherche = zone.querySelector('[data-filtre-aplanifier]').value.trim().toLowerCase();
+    const l = this.listeAPlanifier.filter((x) => !recherche || `${x.code} ${x.libelle} ${x.service ?? ''}`.toLowerCase().includes(recherche));
     const cles = { nom: (x) => `${x.code} ${x.libelle}`, service: (x) => x.service ?? '', reste: (x) => x.reste, date: (x) => x.date_prevue ?? '' };
     const cle = cles[this.triAPlanifier] ?? cles.reste;
     l.sort((a, b) => {
@@ -950,20 +954,20 @@ export class PagePlanning extends PageBase {
       if (this.triAPlanifier === 'date' && Boolean(va) !== Boolean(vb)) return va ? -1 : 1; // sans date : toujours à la fin
       return (typeof va === 'number' ? va - vb : String(va).localeCompare(String(vb), 'fr', { numeric: true })) * this.sensAPlanifier;
     });
-    if (!l.length) { liste.innerHTML = '<p class="aide">Aucun élément ne correspond à la recherche.</p>'; return; }
-    const reste = (x) => `<span class="${x.reste < 0 ? 'erreur' : ''}">${ecrireDuree(Math.abs(x.reste)) || '0:00'}${x.reste < 0 ? ' dépassé' : ''}</span>`;
-    const date = (x) => `<input type="date" data-date-prevue value="${x.date_prevue ?? ''}" title="Date prévisionnelle (tri de la liste)">`;
+    if (!l.length) { liste.innerHTML = `<p class="aide">${texteHtml('planning_btp.aplanifier.aucun')}</p>`; return; }
+    const reste = (x) => `<span class="${x.reste < 0 ? 'erreur' : ''}">${x.reste < 0 ? texteHtml('planning_btp.aplanifier.depasse', { duree: ecrireDuree(Math.abs(x.reste)) || '0:00' }) : ecrireDuree(x.reste) || '0:00'}</span>`;
+    const date = (x) => `<input type="date" data-date-prevue value="${x.date_prevue ?? ''}" title="${texteHtml('planning_btp.aplanifier.date_titre')}">`;
     const index = (x) => this.listeAPlanifier.indexOf(x);
     const jauge = (x) => (x.budget ? Math.min(100, Math.round((x.planifie * 100) / x.budget)) : 0);
     liste.innerHTML = this.tuilesAPlanifier
       ? `<div class="tuiles-aplanifier">${l.map((x) => `<div class="tuile-aplanifier ${x.reste > 0 ? 'glissable' : 'soldee'}" draggable="${x.reste > 0}" data-i="${index(x)}" title="${echapper(`${x.code} ${x.libelle}`)}">
           <div class="ta-entete"><b>${echapper(x.code)}</b><span class="ta-reste">${reste(x)}</span></div><div class="ta-libelle">${echapper(x.libelle)}</div>
-          <div class="ta-service" style="--ta-couleur:${this.couleurs.get(x.srv_id) ?? '#94a3b8'}">${echapper(x.service ?? '')}</div>
-          <div class="ta-jauge" title="Planifié ${ecrireDuree(x.planifie) || '0:00'} h sur ${ecrireDuree(x.budget) || '0:00'} h"><i style="width:${jauge(x)}%"></i></div>
+          <div class="ta-service" style="--ta-couleur:${this.couleurs.get(x.srv_id) ?? 'var(--planning-service-aucun)'}">${echapper(x.service ?? '')}</div>
+          <div class="ta-jauge" title="${texteHtml('planning_btp.aplanifier.jauge', { planifie: ecrireDuree(x.planifie) || '0:00', budget: ecrireDuree(x.budget) || '0:00' })}"><i style="width:${jauge(x)}%"></i></div>
           <div>${date(x)}</div></div>`).join('')}</div>`
-      : `<table class="tableau-compact pleine-largeur liste-aplanifier"><thead><tr><th>Chantier</th><th>Service</th><th class="nombre">Reste</th><th>Prévue le</th></tr></thead><tbody>
+      : `<table class="tableau-compact pleine-largeur liste-aplanifier"><thead><tr><th>${texteHtml('planning_btp.aplanifier.chantier')}</th><th>${texteHtml('planning_btp.bulle.service')}</th><th class="nombre">${texteHtml('planning_btp.tris.reste')}</th><th>${texteHtml('planning_btp.aplanifier.prevue')}</th></tr></thead><tbody>
         ${l.map((x) => `<tr draggable="${x.reste > 0}" data-i="${index(x)}" class="${x.reste > 0 ? 'glissable' : 'aide'}" title="${echapper(`${x.libelle}
-Budget ${ecrireDuree(x.budget) || '0:00'} h · planifié ${ecrireDuree(x.planifie) || '0:00'} h`)}">
+${texte('planning_btp.aplanifier.budget', { budget: ecrireDuree(x.budget) || '0:00', planifie: ecrireDuree(x.planifie) || '0:00' })}`)}">
           <td><b>${echapper(x.code)}</b><br><small>${echapper(x.libelle)}</small></td><td>${echapper(x.service ?? '')}</td><td class="nombre">${reste(x)}</td><td>${date(x)}</td></tr>`).join('')}</tbody></table>`;
     liste.querySelectorAll('[data-i]').forEach((el) => {
       const x = this.listeAPlanifier[Number(el.dataset.i)];
@@ -989,15 +993,16 @@ Budget ${ecrireDuree(x.budget) || '0:00'} h · planifié ${ecrireDuree(x.planifi
     let l;
     try { l = await api.planning.notifications({ vue: this.vue, du: depuisMinutes(p.debut), au: depuisMinutes(p.fin), services: this.filtreServices?.join(',') }); } catch (e) { zone.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; return; }
     const importantes = l.filter((n) => n.niveau !== NIVEAU_NOTIFICATION.INFO && n.etat !== 'VUE').length;
-    this.#badge('alertes', importantes, `${importantes} alerte${importantes > 1 ? 's' : ''} à examiner`);
-    const TYPES = { DEPENDANCE: '🔗 Dépendances', LIEE: '📎 Tâches liées', SUROCCUPATION: '⛔ Sur-occupation', HABILITATION: '🎓 Habilitations', MATERIEL: '🧱 Matériel', EQUIPE: '👥 Équipes', SOUSOCCUPATION: '💤 Sous-occupation' };
-    zone.innerHTML = l.length ? Object.entries(TYPES).filter(([t]) => l.some((n) => n.type === t)).map(([t, titre]) => {
+    this.#badge('alertes', importantes, pluriel('planning_btp.alertes.badge', importantes));
+    const TYPES = ['DEPENDANCE', 'LIEE', 'SUROCCUPATION', 'HABILITATION', 'MATERIEL', 'EQUIPE', 'SOUSOCCUPATION'];
+    zone.innerHTML = l.length ? TYPES.filter((t) => l.some((n) => n.type === t)).map((t) => {
+      const titre = `${iconeHtml(`planning_btp_alerte_${t.toLowerCase()}`)} ${texteHtml(`planning_btp.alertes.types.${t}`)}`;
       const n = l.filter((x) => x.type === t);
-      return `<details ${t === 'SOUSOCCUPATION' ? '' : 'open'}><summary><b>${titre}</b> (${n.length}) <button type="button" data-tout-traiter="${t}" title="Marquer toutes traitées">✔ tout</button></summary><ul class="alertes-planning">
+      return `<details ${t === 'SOUSOCCUPATION' ? '' : 'open'}><summary><b>${titre}</b> (${n.length}) <button type="button" data-tout-traiter="${t}" title="${texteHtml('planning_btp.alertes.tout_traiter_titre')}">${iconeHtml('planning_btp_traitee')} ${texteHtml('planning_btp.alertes.tout')}</button></summary><ul class="alertes-planning">
         ${n.map((x) => `<li class="ligne-actions-survol ${x.etat === 'VUE' ? 'vue' : ''}" data-cle="${echapper(x.cle)}" tabindex="0"><span class="las-texte">${echapper(x.message)}</span>
-          <span class="las-actions">${x.tache ? action('data-aller', x.tache, '➜', 'Aller à la tâche') : ''}${x.action === 'APPLIQUER_EQUIPE' ? action('data-equipe', `${x.tache}:${x.equipe}`, '👥', 'Appliquer la nouvelle composition de l\'équipe') : ''}
-          ${x.etat === 'VUE' ? '' : action('data-vue', '', '👁', 'Marquer vue')}${action('data-traitee', '', '✔', 'Marquer traitée')}</span></li>`).join('')}</ul></details>`;
-    }).join('') : '<p class="aide">Aucune alerte sur la période.</p>';
+          <span class="las-actions">${x.tache ? action('data-aller', x.tache, iconeHtml('planning_btp_aller'), texteHtml('planning_btp.alertes.aller')) : ''}${x.action === 'APPLIQUER_EQUIPE' ? action('data-equipe', `${x.tache}:${x.equipe}`, iconeHtml('planning_btp_alerte_equipe'), texteHtml('planning_btp.alertes.appliquer_equipe')) : ''}
+          ${x.etat === 'VUE' ? '' : action('data-vue', '', iconeHtml('planning_btp_consultation'), texteHtml('planning_btp.alertes.marquer_vue'))}${action('data-traitee', '', iconeHtml('planning_btp_traitee'), texteHtml('planning_btp.alertes.marquer_traitee'))}</span></li>`).join('')}</ul></details>`;
+    }).join('') : `<p class="aide">${texteHtml('planning_btp.alertes.aucune')}</p>`;
     const marquer = async (cles, etat) => { try { await api.planning.marquerNotifications({ cles, etat }); await this.#alertes(); } catch (e) { this.app.erreur(e); } };
     zone.querySelectorAll('li[data-cle]').forEach((li) => {
       li.querySelector('[data-vue]')?.addEventListener('click', () => marquer([li.dataset.cle], 'VUE'));
@@ -1012,7 +1017,7 @@ Budget ${ecrireDuree(x.budget) || '0:00'} h · planifié ${ecrireDuree(x.planifi
       li.querySelector('[data-equipe]')?.addEventListener('click', async (e) => {
         const [tache, equipe] = e.currentTarget.dataset.equipe.split(':').map(Number);
         const cur = await api.planning.tache(tache);
-        await this.#modifierMemorise(tache, 'composition d\'équipe', () => api.planning.appliquerEquipe(tache, equipe, cur.version));
+        await this.#modifierMemorise(tache, texte('planning_btp.historique.operations.composition'), () => api.planning.appliquerEquipe(tache, equipe, cur.version));
       });
     });
     zone.querySelectorAll('[data-tout-traiter]').forEach((b) => b.addEventListener('click', (e) => {
@@ -1025,41 +1030,41 @@ Budget ${ecrireDuree(x.budget) || '0:00'} h · planifié ${ecrireDuree(x.planifi
   async #rendreJalons() {
     const zone = this.conteneur.querySelector('[data-panneau="jalons"]');
     const jalons = this.planning.jalons ?? [];
-    this.#badge('jalons', jalons.length, `${jalons.length} jalon${jalons.length > 1 ? 's' : ''} sur la période`);
+    this.#badge('jalons', jalons.length, pluriel('planning_btp.jalons.badge', jalons.length));
     const elements = await api.planning.elements().catch(() => []);
-    zone.innerHTML = `<ul class="alertes-planning">${jalons.map((j) => `<li>◆ ${j.quand.replace('T', ' ')} — ${echapper(TYPES_JALON[j.type] ?? j.type)} : ${echapper(j.libelle)}
-        ${j.cle.startsWith('jalon:') ? `<button type="button" data-suppr-jalon="${j.cle.slice(6)}" title="Supprimer">✕</button>` : ''}</li>`).join('') || '<li class="aide">Aucun jalon sur la période</li>'}</ul>
+    zone.innerHTML = `<ul class="alertes-planning">${jalons.map((j) => `<li>${iconeHtml('planning_btp_jalon')} ${j.quand.replace('T', ' ')} — ${echapper(TYPES_JALON[j.type] ?? j.type)} : ${echapper(j.libelle)}
+        ${j.cle.startsWith('jalon:') ? `<button type="button" data-suppr-jalon="${j.cle.slice(6)}" title="${texteHtml('commun.supprimer')}">${iconeHtml('retirer')}</button>` : ''}</li>`).join('') || `<li class="aide">${texteHtml('planning_btp.jalons.aucun')}</li>`}</ul>
       <p class="ligne"><input type="datetime-local" data-jalon-quand> <span data-jalon-type></span></p>
-      <p class="ligne"><input data-jalon-libelle placeholder="Libellé du jalon" size="18"> <span data-jalon-chantier></span> <button type="button" data-ajouter-jalon>＋ Jalon</button></p>`;
+      <p class="ligne"><input data-jalon-libelle placeholder="${texteHtml('planning_btp.jalons.libelle')}" size="18"> <span data-jalon-chantier></span> <button type="button" data-ajouter-jalon>${iconeHtml('ajouter')} ${texteHtml('planning_btp.jalons.jalon')}</button></p>`;
     const type = creerCombo({ options: Object.entries(TYPES_JALON).map(([valeur, libelle]) => ({ valeur, libelle })), valeur: 'LIVRAISON', vide: false });
     zone.querySelector('[data-jalon-type]').append(type);
-    const chantier = creerCombo({ options: elements.map((e) => ({ valeur: e.id, libelle: `${e.code} ${e.libelle}` })), valeur: '', vide: true, titre: 'Chantier' });
+    const chantier = creerCombo({ options: elements.map((e) => ({ valeur: e.id, libelle: `${e.code} ${e.libelle}` })), valeur: '', vide: true, titre: texte('planning_btp.aplanifier.chantier') });
     zone.querySelector('[data-jalon-chantier]').append(chantier);
-    zone.querySelectorAll('[data-suppr-jalon]').forEach((b) => b.addEventListener('click', () => this.#apres(api.planning.supprimerJalon(b.dataset.supprJalon), 'Jalon supprimé')));
+    zone.querySelectorAll('[data-suppr-jalon]').forEach((b) => b.addEventListener('click', () => this.#apres(api.planning.supprimerJalon(b.dataset.supprJalon), texte('planning_btp.jalons.supprime'))));
     zone.querySelector('[data-ajouter-jalon]').addEventListener('click', () => {
       const quand = zone.querySelector('[data-jalon-quand]').value;
       if (!quand) return;
-      this.#apres(api.planning.creerJalon({ quand, type: type.valeurCombo, libelle: zone.querySelector('[data-jalon-libelle]').value, type_element: chantier.valeurCombo ? 'chantier' : null, id_element: chantier.valeurCombo ? String(chantier.valeurCombo) : null }), 'Jalon ajouté');
+      this.#apres(api.planning.creerJalon({ quand, type: type.valeurCombo, libelle: zone.querySelector('[data-jalon-libelle]').value, type_element: chantier.valeurCombo ? 'chantier' : null, id_element: chantier.valeurCombo ? String(chantier.valeurCombo) : null }), texte('planning_btp.jalons.ajoute'));
     });
   }
 
   /** Liens d'une tâche (lot 5) : tâche principale et tâche liée, dépendances entrantes (saisies) et sortantes, répétition. */
   async #rendreLiens(zone, t) {
-    if (!t.id) { zone.innerHTML = '<p class="aide">Dépendances et répétition : après l\'enregistrement de la tâche.</p>'; return; }
+    if (!t.id) { zone.innerHTML = `<p class="aide">${texteHtml('planning_btp.liens.apres_enregistrement')}</p>`; return; }
     const deps = await api.planning.dependances(t.id).catch(() => ({ predecesseurs: [], successeurs: [] }));
     const entrantes = deps.predecesseurs.map((d) => ({ de: d.de, libelle: d.libelle, type: d.type, decalage: d.decalage, unite: d.unite, mode: d.mode }));
     const taches = [...new Map(this.barres.filter((b) => b.tache !== t.id).map((b) => [b.tache, b])).values()];
     const rendre = () => {
-      zone.innerHTML = `<p>${t.parent_id ? `Tâche principale : <a href="#" data-aller-parent>${echapper(t.parent ?? `n° ${t.parent_id}`)}</a>` : '<span class="aide">Pas de tâche principale</span>'} <button type="button" data-liee>＋ Tâche liée</button></p>
-        <p><b>Dépend de</b></p><ul class="alertes-planning">${entrantes.map((d, i) => `<li>${echapper(d.libelle ?? `n° ${d.de}`)} — ${TYPES_DEP[d.type]}, ${d.decalage} ${UNITES_DEP[d.unite]}, ${MODES_DEP[d.mode]} <button type="button" data-retirer-dep="${i}">✕</button></li>`).join('') || '<li class="aide">Aucune</li>'}</ul>
-        <p class="ligne"><span data-dep-tache></span> <span data-dep-type></span> <input type="number" data-dep-decalage value="0" size="3"> <span data-dep-unite></span> <span data-dep-mode></span> <button type="button" data-ajouter-dep>＋</button></p>
-        <p><button type="button" data-enregistrer-deps>Enregistrer les dépendances</button></p>
-        ${deps.successeurs.length ? `<p><b>Tâches suivantes</b> : ${deps.successeurs.map((d) => echapper(d.libelle ?? `n° ${d.vers}`)).join(', ')}</p>` : ''}
-        <h4>Répétition</h4><p class="ligne"><span data-frequence></span> <input type="number" data-nombre min="1" max="52" value="4" size="3"> fois <button type="button" data-repeter>Répéter</button>
-          ${t.serie ? '<button type="button" data-suppr-serie title="Supprimer les tâches de la série qui commencent après celle-ci">Supprimer la suite de la série</button>' : ''}</p>`;
+      zone.innerHTML = `<p>${t.parent_id ? `${texteHtml('planning_btp.liens.principale')} <a href="#" data-aller-parent>${echapper(t.parent ?? texte('planning_btp.liens.numero', { numero: t.parent_id }))}</a>` : `<span class="aide">${texteHtml('planning_btp.liens.sans_principale')}</span>`} <button type="button" data-liee>${iconeHtml('ajouter')} ${texteHtml('planning_btp.liens.liee')}</button></p>
+        <p><b>${texteHtml('planning_btp.liens.depend_de')}</b></p><ul class="alertes-planning">${entrantes.map((d, i) => `<li>${echapper(d.libelle ?? texte('planning_btp.liens.numero', { numero: d.de }))} — ${echapper(TYPES_DEP[d.type])}, ${d.decalage} ${echapper(UNITES_DEP[d.unite])}, ${echapper(MODES_DEP[d.mode])} <button type="button" data-retirer-dep="${i}">${iconeHtml('retirer')}</button></li>`).join('') || `<li class="aide">${texteHtml('planning_btp.liens.aucune')}</li>`}</ul>
+        <p class="ligne"><span data-dep-tache></span> <span data-dep-type></span> <input type="number" data-dep-decalage value="0" size="3"> <span data-dep-unite></span> <span data-dep-mode></span> <button type="button" data-ajouter-dep>${iconeHtml('ajouter')}</button></p>
+        <p><button type="button" data-enregistrer-deps>${texteHtml('planning_btp.liens.enregistrer')}</button></p>
+        ${deps.successeurs.length ? `<p><b>${texteHtml('planning_btp.liens.suivantes')}</b> : ${deps.successeurs.map((d) => echapper(d.libelle ?? texte('planning_btp.liens.numero', { numero: d.vers }))).join(', ')}</p>` : ''}
+        <h4>${texteHtml('planning_btp.liens.repetition')}</h4><p class="ligne"><span data-frequence></span> <input type="number" data-nombre min="1" max="52" value="4" size="3"> ${texteHtml('planning_btp.liens.fois')} <button type="button" data-repeter>${texteHtml('planning_btp.liens.repeter')}</button>
+          ${t.serie ? `<button type="button" data-suppr-serie title="${texteHtml('planning_btp.liens.suppr_serie_titre')}">${texteHtml('planning_btp.liens.suppr_serie')}</button>` : ''}</p>`;
       const combo = (cle, opts, valeur, titre) => { const c = creerCombo({ options: opts, valeur, vide: false, titre }); zone.querySelector(`[data-${cle}]`).append(c); return c; };
       const opt = (o) => Object.entries(o).map(([valeur, libelle]) => ({ valeur, libelle }));
-      const tache = combo('dep-tache', taches.map((b) => ({ valeur: b.tache, libelle: b.libelle, detail: b.element?.code ?? '' })), taches[0]?.tache ?? '', 'Tâche précédente');
+      const tache = combo('dep-tache', taches.map((b) => ({ valeur: b.tache, libelle: b.libelle, detail: b.element?.code ?? '' })), taches[0]?.tache ?? '', texte('planning_btp.liens.precedente'));
       const type = combo('dep-type', opt(TYPES_DEP), 'FD');
       const unite = combo('dep-unite', opt(UNITES_DEP), 'CAL');
       const mode = combo('dep-mode', opt(MODES_DEP), 'FIXE');
@@ -1073,16 +1078,16 @@ Budget ${ecrireDuree(x.budget) || '0:00'} h · planifié ${ecrireDuree(x.planifi
         rendre();
       });
       zone.querySelector('[data-enregistrer-deps]').addEventListener('click', async () => {
-        const r = await this.#modifierMemorise(t.id, 'dépendances', () => api.planning.enregistrerDependances(t.id, entrantes.map(({ libelle, ...d }) => d)).then(() => api.planning.tache(t.id)));
+        const r = await this.#modifierMemorise(t.id, texte('planning_btp.historique.operations.dependances'), () => api.planning.enregistrerDependances(t.id, entrantes.map(({ libelle, ...d }) => d)).then(() => api.planning.tache(t.id)));
         if (r) this.#editer(t.id);
       });
       zone.querySelector('[data-liee]').addEventListener('click', async () => {
-        const r = await this.#apres(api.planning.creer({ ...saisieDe(t), libelle: `${t.libelle} (liée)`, parent_id: t.id, calcul: 2, fin: t.debut.slice(0, 11) + '12:00' > t.debut ? t.debut.slice(0, 11) + '12:00' : t.fin, heures: null, affectations: [] }), 'Tâche liée créée');
-        if (r) { this.#memoriserCreation(r, 'tâche liée'); this.#editer(r.id); }
+        const r = await this.#apres(api.planning.creer({ ...saisieDe(t), libelle: texte('planning_btp.liens.libelle_liee', { libelle: t.libelle }), parent_id: t.id, calcul: 2, fin: t.debut.slice(0, 11) + '12:00' > t.debut ? t.debut.slice(0, 11) + '12:00' : t.fin, heures: null, affectations: [] }), texte('planning_btp.liens.liee_creee'));
+        if (r) { this.#memoriserCreation(r, texte('planning_btp.historique.operations.liee')); this.#editer(r.id); }
       });
-      zone.querySelector('[data-repeter]').addEventListener('click', () => this.#apres(api.planning.repeter(t.id, { frequence: frequence.valeurCombo, nombre: Number(zone.querySelector('[data-nombre]').value) || 1 }), 'Tâches répétées'));
+      zone.querySelector('[data-repeter]').addEventListener('click', () => this.#apres(api.planning.repeter(t.id, { frequence: frequence.valeurCombo, nombre: Number(zone.querySelector('[data-nombre]').value) || 1 }), texte('planning_btp.liens.repetees')));
       zone.querySelector('[data-suppr-serie]')?.addEventListener('click', async () => {
-        if (await confirmer('Supprimer les tâches suivantes de la série ?')) this.#apres(api.planning.supprimerSerie(t.serie, depuisMinutes(versMinutes(t.debut) + 1)), 'Suite de la série supprimée');
+        if (await confirmer(texte('planning_btp.liens.confirmer_serie'))) this.#apres(api.planning.supprimerSerie(t.serie, depuisMinutes(versMinutes(t.debut) + 1)), texte('planning_btp.liens.serie_supprimee'));
       });
     };
     rendre();
@@ -1108,40 +1113,40 @@ Budget ${ecrireDuree(x.budget) || '0:00'} h · planifié ${ecrireDuree(x.planifi
     const elements = await api.planning.elements('', typeElement).catch(() => []);
     if (t.element && !elements.some((e) => e.id === t.id_element)) elements.unshift(t.element);
     const mobile = t.mobile ?? {};
-    const groupe = (cle, corps) => `<details class="groupe-tache" data-groupe="${cle}" ${this.#repliees().includes(cle) ? '' : 'open'}><summary><b>${GROUPES_TACHE[cle]}</b></summary>${corps}</details>`;
+    const groupe = (cle, corps) => `<details class="groupe-tache" data-groupe="${cle}" ${this.#repliees().includes(cle) ? '' : 'open'}><summary><b>${echapper(GROUPES_TACHE[cle])}</b></summary>${corps}</details>`;
     // Boutons dans l'entête du panneau (avec les onglets), toujours visibles au défilement du détail.
     const barre = this.conteneur.querySelector('[data-actions-tache]');
-    barre.innerHTML = `<p class="ligne"><button type="button" data-apercu>Aperçu du calcul</button> <button type="button" data-enregistrer title="Enregistrer la tâche (${echapper(libelleRaccourci('enregistrer', 'application') || 'Ctrl+S')})">Enregistrer</button>
-        <button type="button" data-abandonner title="Abandonner les modifications (Échap)">Annuler</button>
-        ${t.id ? '<button type="button" data-supprimer>Supprimer</button>' : ''}</p><div data-resultat class="aide"></div>`;
-    zone.innerHTML = `      ${groupe('tache', `<p><label>Libellé <input data-libelle size="30" value="${echapper(t.libelle)}"></label></p>
-        <p class="ligne">${typeElement === TYPE_FICHE.PROJET ? 'Projet' : 'Chantier'} <span data-element></span></p><p class="ligne">Service <span data-service></span></p>
-        ${t.origine_type === 'ordre' ? `<p class="aide">Depuis l'ordre n° ${echapper(String(t.origine_id))}</p>` : ''}
-        ${t.origine_type === ORIGINE_TERRAIN ? '<p class="aide">🛠 Réalisée sans être planifiée : créée par une saisie libre du terrain</p>' : ''}
-        <p class="ligne">Calcul <span data-mode></span></p>
-        <p><label>Début <input type="datetime-local" data-debut value="${versLocal(t.debut)}"></label></p>
-        <p><label>Fin <input type="datetime-local" data-fin value="${versLocal(t.fin)}"></label></p>
-        <p class="ligne"><label>Heures <input data-heures size="7" value="${ecrireDuree(t.heures)}"></label> <label>Ressources (charge) <input type="number" data-nb min="1" size="3" value="${t.nb_ressources}"></label></p>
-        <p class="ligne">État <span data-etat-tache></span></p>
-        <p class="ligne"><label>Couleur <input type="color" data-couleur value="${t.couleur ?? '#3b82f6'}"></label> <label><input type="checkbox" data-sans-couleur ${t.couleur ? '' : 'checked'}> par service</label></p>
-        <p><label>Avancement <input type="number" data-avancement min="0" max="100" size="3" value="${t.avancement}"> %</label></p>
-        <p><textarea data-memo rows="2" cols="34" placeholder="Mémo">${echapper(t.memo ?? '')}</textarea></p>`)}
-      ${groupe('mobile', Object.entries(CHAMPS_MOBILE).map(([cle, libelle]) => `<p><label>${libelle}<br><textarea data-mobile="${cle}" rows="${['adresse', 'contact', 'telephone'].includes(cle) ? 1 : 2}" cols="34">${echapper(mobile[cle] ?? '')}</textarea></label></p>`).join(''))}
+    barre.innerHTML = `<p class="ligne"><button type="button" data-apercu>${texteHtml('planning_btp.detail.apercu')}</button> <button type="button" data-enregistrer title="${texteHtml('planning_btp.detail.enregistrer_titre', { touches: libelleRaccourci('enregistrer', 'application') || 'Ctrl+S' })}">${texteHtml('commun.enregistrer')}</button>
+        <button type="button" data-abandonner title="${texteHtml('planning_btp.detail.abandonner_titre')}">${texteHtml('commun.annuler')}</button>
+        ${t.id ? `<button type="button" data-supprimer>${texteHtml('commun.supprimer')}</button>` : ''}</p><div data-resultat class="aide"></div>`;
+    zone.innerHTML = `      ${groupe('tache', `<p><label>${texteHtml('commun.libelle')} <input data-libelle size="30" value="${echapper(t.libelle)}"></label></p>
+        <p class="ligne">${typeElement === TYPE_FICHE.PROJET ? texteHtml('planning_btp.detail.projet') : texteHtml('planning_btp.aplanifier.chantier')} <span data-element></span></p><p class="ligne">${texteHtml('planning_btp.bulle.service')} <span data-service></span></p>
+        ${t.origine_type === 'ordre' ? `<p class="aide">${texteHtml('planning_btp.detail.depuis_ordre', { numero: t.origine_id })}</p>` : ''}
+        ${t.origine_type === ORIGINE_TERRAIN ? `<p class="aide">${iconeHtml('planning_btp_terrain')} ${texteHtml('planning_btp.detail.saisie_libre')}</p>` : ''}
+        <p class="ligne">${texteHtml('planning_btp.detail.calcul')} <span data-mode></span></p>
+        <p><label>${texteHtml('planning_btp.bulle.debut')} <input type="datetime-local" data-debut value="${versLocal(t.debut)}"></label></p>
+        <p><label>${texteHtml('planning_btp.bulle.fin')} <input type="datetime-local" data-fin value="${versLocal(t.fin)}"></label></p>
+        <p class="ligne"><label>${texteHtml('planning_btp.bulle.heures')} <input data-heures size="7" value="${ecrireDuree(t.heures)}"></label> <label>${texteHtml('planning_btp.detail.nb_ressources')} <input type="number" data-nb min="1" size="3" value="${t.nb_ressources}"></label></p>
+        <p class="ligne">${texteHtml('planning_btp.detail.etat')} <span data-etat-tache></span></p>
+        <p class="ligne"><label>${texteHtml('planning_btp.detail.couleur')} <input type="color" data-couleur value="${t.couleur ?? couleurTheme('--pla-barre', '#3b82f6')}"></label> <label><input type="checkbox" data-sans-couleur ${t.couleur ? '' : 'checked'}> ${texteHtml('planning_btp.detail.par_service')}</label></p>
+        <p><label>${texteHtml('planning_btp.bulle.avancement')} <input type="number" data-avancement min="0" max="100" size="3" value="${t.avancement}"> %</label></p>
+        <p><textarea data-memo rows="2" cols="34" placeholder="${texteHtml('planning_btp.detail.memo')}">${echapper(t.memo ?? '')}</textarea></p>`)}
+      ${groupe('mobile', Object.entries(CHAMPS_MOBILE).map(([cle, libelle]) => `<p><label>${echapper(libelle)}<br><textarea data-mobile="${cle}" rows="${['adresse', 'contact', 'telephone'].includes(cle) ? 1 : 2}" cols="34">${echapper(mobile[cle] ?? '')}</textarea></label></p>`).join(''))}
       ${groupe('ressource', `<div data-ressources-tache></div>
-        <p><b>Habilitations exigées</b></p><p class="ligne" data-habilitations></p><p class="ligne"><span data-habilitation></span> <button type="button" data-ajouter-hab>＋</button></p>
-        <p><button type="button" data-creneau title="Première plage libre de la première ressource affectée, sinon d'une ressource habilitée du service">🔎 Premier créneau libre</button> <span data-proposition class="aide"></span></p>`)}
-      ${groupe('detail', `<p><b>${t.id ? `Tâche n° ${t.id}` : 'Nouvelle tâche'}</b></p><p class="aide" data-realise></p><p class="aide" data-avancement-reel></p>${t.maj_par ? `<p class="aide">Modifiée par ${echapper(t.maj_par)}</p>` : ''}`)}
+        <p><b>${texteHtml('planning_btp.detail.habilitations')}</b></p><p class="ligne" data-habilitations></p><p class="ligne"><span data-habilitation></span> <button type="button" data-ajouter-hab>${iconeHtml('ajouter')}</button></p>
+        <p><button type="button" data-creneau title="${texteHtml('planning_btp.detail.creneau_titre')}">${iconeHtml('rechercher')} ${texteHtml('planning_btp.detail.creneau')}</button> <span data-proposition class="aide"></span></p>`)}
+      ${groupe('detail', `<p><b>${t.id ? texteHtml('planning_btp.detail.numero', { numero: t.id }) : texteHtml('planning_btp.creer.nouvelle')}</b></p><p class="aide" data-realise></p><p class="aide" data-avancement-reel></p>${t.maj_par ? `<p class="aide">${texteHtml('planning_btp.detail.modifiee_par', { nom: t.maj_par })}</p>` : ''}`)}
       ${groupe('dependance', '<div data-liens></div>')}`;
     zone.querySelectorAll('details[data-groupe]').forEach((d) => d.addEventListener('toggle', () => {
       ecrirePreferences({ planningGroupesReplies: [...zone.querySelectorAll('details[data-groupe]:not([open])')].map((x) => x.dataset.groupe) });
     }));
     if (t.id && this.app.moduleActif(MODULE_FACULTATIF.POINTAGE)) {
-      api.liaisons.realise(t.id).then((r) => { if (r.minutes != null) zone.querySelector('[data-realise]').textContent = `Réalisé (pointages) : ${ecrireDuree(r.minutes) || '0:00'} h sur ${ecrireDuree(t.heures) || '0:00'} h planifiées`; }).catch(() => {});
+      api.liaisons.realise(t.id).then((r) => { if (r.minutes != null) zone.querySelector('[data-realise]').textContent = texte('planning_btp.detail.realise', { realise: ecrireDuree(r.minutes) || '0:00', planifie: ecrireDuree(t.heures) || '0:00' }); }).catch(() => {});
     }
     // Avancement réel relevé sur le terrain (pla_avancement), distinct de l'avancement théorique saisi ici.
     if (t.id) {
       api.planning.avancements(t.id).then((l) => {
-        if (l[0]) zone.querySelector('[data-avancement-reel]').textContent = `Avancement réel : ${l[0].pourcent} % le ${formatDate(l[0].le)} (${l[0].par})${l[0].commentaire ? ` — ${l[0].commentaire}` : ''}`;
+        if (l[0]) zone.querySelector('[data-avancement-reel]').textContent = texte('planning_btp.detail.avancement_reel', { pourcent: l[0].pourcent, date: formatDate(l[0].le), par: l[0].par, commentaire: l[0].commentaire ? ` — ${l[0].commentaire}` : '' });
       }).catch(() => {});
     }
     this.#rendreLiens(zone.querySelector('[data-liens]'), t);
@@ -1154,11 +1159,11 @@ Budget ${ecrireDuree(x.budget) || '0:00'} h · planifié ${ecrireDuree(x.planifi
       champs.forEach((c) => { c.placeholder = ''; });
       if (typeElement !== TYPE_FICHE.CHANTIER || !element.valeurCombo || !this.app.acces('terrain')) return;
       const d = await api.terrain.chantier(element.valeurCombo).catch(() => null);
-      champs.forEach((c) => { if (d?.[c.dataset.mobile]) c.placeholder = `Chantier : ${d[c.dataset.mobile]}`; });
+      champs.forEach((c) => { if (d?.[c.dataset.mobile]) c.placeholder = texte('planning_btp.detail.repere_chantier', { valeur: d[c.dataset.mobile] }); });
     };
     element.addEventListener('change', reperesChantier);
     reperesChantier();
-    const service = combo('service', this.ref.services.map((s) => ({ valeur: s.id, libelle: s.parent_id ? `↳ ${s.libelle}` : s.libelle })), t.srv_id);
+    const service = combo('service', this.ref.services.map((s) => ({ valeur: s.id, libelle: s.parent_id ? `${icone('sous_niveau')} ${s.libelle}` : s.libelle })), t.srv_id);
     const mode = combo('mode', options(MODES), String(t.calcul), false);
     const etat = combo('etat-tache', options(ETATS_SAISIE).map((o) => ({ ...o, couleur: COULEURS_ETAT[o.valeur] })), t.etat ?? '', false);
     // Période de la tâche pour les disponibilités : début et fin saisis, sinon fin calculée (aperçu), sinon un jour.
@@ -1174,7 +1179,7 @@ Budget ${ecrireDuree(x.budget) || '0:00'} h · planifié ${ecrireDuree(x.planifi
     });
     const comboHab = combo('habilitation', this.ref.habilitations.map((h) => ({ valeur: h.code, libelle: h.libelle, detail: h.code })), '');
     const rendreHabs = () => {
-      zone.querySelector('[data-habilitations]').innerHTML = habs.length ? habs.map((h, i) => `<span class="badge-exception">${echapper(this.ref.habilitations.find((x) => x.code === h)?.libelle ?? h)} <button type="button" data-retirer-hab="${i}">✕</button></span>`).join(' ') : '<span class="aide">Aucune</span>';
+      zone.querySelector('[data-habilitations]').innerHTML = habs.length ? habs.map((h, i) => `<span class="badge-exception">${echapper(this.ref.habilitations.find((x) => x.code === h)?.libelle ?? h)} <button type="button" data-retirer-hab="${i}">${iconeHtml('retirer')}</button></span>`).join(' ') : `<span class="aide">${texteHtml('planning_btp.liens.aucune')}</span>`;
       zone.querySelectorAll('[data-retirer-hab]').forEach((b) => b.addEventListener('click', () => { habs.splice(Number(b.dataset.retirerHab), 1); rendreHabs(); }));
     };
     rendreHabs();
@@ -1188,8 +1193,8 @@ Budget ${ecrireDuree(x.budget) || '0:00'} h · planifié ${ecrireDuree(x.planifi
           apres: zone.querySelector('[data-debut]').value || depuisMinutes(versMinutes(new Date().toISOString().slice(0, 16))), habilitations: habs.join(','),
         });
         const prop = zone.querySelector('[data-proposition]');
-        if (!r) { prop.textContent = 'Aucun créneau sur l\'horizon (ressource habilitée et libre).'; return; }
-        prop.innerHTML = `${echapper(r.libelle)} : ${r.debut.replace('T', ' ')} → ${r.fin.replace('T', ' ')} <button type="button" data-prendre>Prendre</button>`;
+        if (!r) { prop.textContent = texte('planning_btp.detail.aucun_creneau'); return; }
+        prop.innerHTML = `${echapper(r.libelle)} : ${r.debut.replace('T', ' ')} ${iconeHtml('planning_vers')} ${r.fin.replace('T', ' ')} <button type="button" data-prendre>${texteHtml('planning_btp.detail.prendre')}</button>`;
         prop.querySelector('[data-prendre]').addEventListener('click', () => {
           zone.querySelector('[data-debut]').value = r.debut;
           if (!premiere) ressources.ajouter(r.ressource, r.libelle);
@@ -1213,20 +1218,20 @@ Budget ${ecrireDuree(x.budget) || '0:00'} h · planifié ${ecrireDuree(x.planifi
       try {
         const r = await api.planning.calculer(saisie());
         barre.querySelector('[data-resultat]').textContent = r.erreurs.length ? r.erreurs.join(', ')
-          : `Fin ${r.fin?.replace('T', ' ')} · ${ecrireDuree(r.heures)} h${Object.keys(r.par_ressource).length ? ` · ${Object.entries(r.par_ressource).map(([k, m]) => `${ressources.affs.find((a) => `${a.type}:${a.id}` === k)?.libelle ?? k} ${ecrireDuree(m)}`).join(', ')}` : ''}`;
+          : `${texte('planning_btp.detail.apercu_resultat', { fin: r.fin?.replace('T', ' '), duree: ecrireDuree(r.heures) })}${Object.keys(r.par_ressource).length ? ` · ${Object.entries(r.par_ressource).map(([cle, m]) => `${ressources.affs.find((a) => `${a.type}:${a.id}` === cle)?.libelle ?? cle} ${ecrireDuree(m)}`).join(', ')}` : ''}`;
       } catch (e) { this.app.erreur(e); }
     });
     barre.querySelector('[data-enregistrer]').addEventListener('click', async () => {
       let r;
-      if (t.id) r = await this.#modifierMemorise(t.id, 'modification', () => api.planning.modifier(t.id, saisie()));
+      if (t.id) r = await this.#modifierMemorise(t.id, texte('planning_btp.historique.operations.modification'), () => api.planning.modifier(t.id, saisie()));
       else {
-        r = await this.#apres(api.planning.creer(saisie()), 'Tâche enregistrée');
-        if (r) this.#memoriserCreation(r, 'nouvelle tâche');
+        r = await this.#apres(api.planning.creer(saisie()), texte('planning_btp.messages.enregistree'));
+        if (r) this.#memoriserCreation(r, texte('planning_btp.historique.operations.nouvelle'));
       }
       if (r) this.#editer(r.id);
     });
     barre.querySelector('[data-supprimer]')?.addEventListener('click', async () => {
-      if (await confirmer('Supprimer cette tâche ?')) await this.#supprimer(t.id);
+      if (await confirmer(texte('planning_btp.messages.supprimer_tache'))) await this.#supprimer(t.id);
     });
     // Raccourcis de la saisie (Ctrl+S, Échap : `enregistrer` / `echap` de la page).
     const annuler = () => { if (t.id) this.#editer(t.id); else this.#viderTache(); };
@@ -1243,27 +1248,27 @@ const HEURES_TRAVAIL = Array.from({ length: 25 }, (_, h) => ({ valeur: String(h 
  * dehors à l'échelle de l'heure), vendredi, samedi et dimanche masqués —, seuil de sous-occupation, horizon du créneau.
  */
 export class PageParametresPlanning extends PageBase {
-  icone = '📅';
+  icone = icone('planning_btp_planning');
 
   async ouvrir() {
-    this.titre = 'Paramètres du planning';
-    this.conteneur.innerHTML = `<div class="page-parametres"><div class="entete-page"><h1 class="page-titre">📅 Paramètres du planning</h1></div><div data-corps></div></div>`;
+    this.titre = texte('planning_btp.routes.parametres');
+    this.conteneur.innerHTML = `<div class="page-parametres"><div class="entete-page"><h1 class="page-titre">${iconeHtml('planning_btp_planning')} ${texteHtml('planning_btp.routes.parametres')}</h1></div><div data-corps></div></div>`;
     const corps = this.conteneur.querySelector('[data-corps]');
     const admin = this.app.estAdmin();
     const ro = admin ? '' : 'disabled';
     const p = await api.planning.parametres();
-    const jour = (cle, libelle, aide) => `<label title="${aide}"><input type="checkbox" data-${cle} ${p[`masquer_${cle}`] ? 'checked' : ''} ${ro}> ${libelle}</label>`;
-    corps.innerHTML = `<div class="titre-actions"><h2>Affichage</h2>${admin ? '<span class="titre-actions-boutons"><button type="button" data-enregistrer title="Enregistrer les paramètres">💾 Enregistrer</button></span>' : ''}</div>
-      <p class="aide">Masqués dans les vues quand l'option « Masquer le temps non travaillé » de la barre du planning est cochée.</p>
+    const jour = (cle, libelle, aide) => `<label title="${echapper(aide)}"><input type="checkbox" data-${cle} ${p[`masquer_${cle}`] ? 'checked' : ''} ${ro}> ${echapper(libelle)}</label>`;
+    corps.innerHTML = `<div class="titre-actions"><h2>${texteHtml('planning_btp.parametres.affichage')}</h2>${admin ? `<span class="titre-actions-boutons"><button type="button" data-enregistrer title="${texteHtml('planning_btp.parametres.enregistrer_titre')}">${iconeHtml('enregistrer')} ${texteHtml('commun.enregistrer')}</button></span>` : ''}</div>
+      <p class="aide">${texteHtml('planning_btp.parametres.aide')}</p>
       <table class="tableau-compact largeur-contenu"><tbody>
-      <tr><td>Début des heures travaillées<br><small class="aide">avant : masqué à l'échelle de l'heure</small></td><td data-debut></td></tr>
-      <tr><td>Fin des heures travaillées<br><small class="aide">après : masqué à l'échelle de l'heure</small></td><td data-fin></td></tr>
-      <tr><td>Jours masqués<br><small class="aide">à toutes les échelles sauf la semaine</small></td><td>${jour('vendredi', 'Vendredi', 'Un service qui ne travaille qu\'un vendredi sur deux l\'a en absence dans son calendrier')} ${jour('samedi', 'Samedi', '')} ${jour('dimanche', 'Dimanche', '')}</td></tr>
+      <tr><td>${texteHtml('planning_btp.parametres.debut')}<br><small class="aide">${texteHtml('planning_btp.parametres.debut_aide')}</small></td><td data-debut></td></tr>
+      <tr><td>${texteHtml('planning_btp.parametres.fin')}<br><small class="aide">${texteHtml('planning_btp.parametres.fin_aide')}</small></td><td data-fin></td></tr>
+      <tr><td>${texteHtml('planning_btp.parametres.jours')}<br><small class="aide">${texteHtml('planning_btp.parametres.jours_aide')}</small></td><td>${jour('vendredi', texte('planning_btp.parametres.vendredi'), texte('planning_btp.parametres.vendredi_aide'))} ${jour('samedi', texte('planning_btp.parametres.samedi'), '')} ${jour('dimanche', texte('planning_btp.parametres.dimanche'), '')}</td></tr>
       </tbody></table>
-      <h2>Charge et créneaux</h2>
+      <h2>${texteHtml('planning_btp.parametres.charge')}</h2>
       <table class="tableau-compact largeur-contenu"><tbody>
-      <tr><td>Sous-occupation signalée au-delà de (% de la capacité disponible)</td><td><input type="number" data-sous min="0" max="100" size="4" value="${p.sous_occupation}" ${ro}></td></tr>
-      <tr><td>Horizon du premier créneau libre (jours)</td><td><input type="number" data-horizon min="1" max="365" size="4" value="${p.horizon_creneau}" ${ro}></td></tr>
+      <tr><td>${texteHtml('planning_btp.parametres.sous_occupation')}</td><td><input type="number" data-sous min="0" max="100" size="4" value="${p.sous_occupation}" ${ro}></td></tr>
+      <tr><td>${texteHtml('planning_btp.parametres.horizon')}</td><td><input type="number" data-horizon min="1" max="365" size="4" value="${p.horizon_creneau}" ${ro}></td></tr>
       </tbody></table>`;
     const combo = (cle, valeur) => {
       const c = creerCombo({ options: HEURES_TRAVAIL, valeur: String(valeur), vide: false });
@@ -1282,7 +1287,7 @@ export class PageParametresPlanning extends PageBase {
           heure_debut: Number(debut.valeurCombo), heure_fin: Number(fin.valeurCombo),
           masquer_vendredi: v('[data-vendredi]').checked, masquer_samedi: v('[data-samedi]').checked, masquer_dimanche: v('[data-dimanche]').checked,
         });
-        this.app.message('Paramètres enregistrés', 'succes');
+        this.app.message(texte('planning_btp.parametres.enregistres'), 'succes');
       } catch (e) { this.app.erreur(e); }
     });
   }

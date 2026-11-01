@@ -1,3 +1,4 @@
+import { texteHtml, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { echapper } from '@logibtp/socle/ui';
 
 /**
@@ -45,13 +46,13 @@ export class NotificationsMetre {
     const erreurs = messages.filter((m) => m.gravite === 'erreur').length;
     this.surCompte?.({ erreurs, avertissements: messages.length - erreurs });
     this.racine.innerHTML = messages.length ? `<ul>${messages.map((m, i) => `<li>
-        <button type="button" class="${m.gravite}" data-message="${i}" title="Ouvrir le métré à cette position">
-          <span class="icone">${m.gravite === 'erreur' ? '⛔' : '⚠'}</span>
+        <button type="button" class="${m.gravite}" data-message="${i}" title="${texteHtml('metre.notifications.ouvrir')}">
+          <span class="icone">${m.gravite === 'erreur' ? iconeHtml('metre_erreur') : iconeHtml('metre_avertissement')}</span>
           <span class="ligne">${echapper(this.hote.titreLigne(m.ligId).trim())}</span>
           ${m.ligne ? `<code>${m.ligne}:${m.colonne}</code>` : ''}
           <span class="message">${echapper(m.message)}</span>
         </button></li>`).join('')}</ul>`
-      : '<p class="aide">Aucune erreur ni avertissement dans les métrés du document.</p>';
+      : `<p class="aide">${texteHtml('metre.notifications.aucune')}</p>`;
     this.racine.querySelectorAll('[data-message]').forEach((b) => b.addEventListener('click', () => {
       const m = messages[Number(b.dataset.message)];
       this.ouvrir?.(m.ligId, m.mtrId, m.ligne ? { ligne: m.ligne, colonne: m.colonne } : null);

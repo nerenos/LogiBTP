@@ -1,3 +1,4 @@
+import { texte, texteHtml, pluriel, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { echapper } from '@logibtp/socle/ui';
 import { VueGraphe, tronquer } from '@logibtp/graphe/ui';
 import { fusionnerGraphes, enColonneAnnuaire, PROFONDEUR_MAX } from '../src/graphe.js';
@@ -9,10 +10,9 @@ import { fusionnerGraphes, enColonneAnnuaire, PROFONDEUR_MAX } from '../src/grap
 
 const LARGEUR = { personne: 184, individu: 150, groupe: 120 };
 const HAUTEUR = { personne: 46, individu: 30, groupe: 28 };
-const COULEURS_RELATION = {
-  CLIENT: '#2e9d5b', PROSPECT: '#7cc497', FOURNISSEUR: '#2f6fd1', LOUEUR: '#5b8fe0', SOUS_TRAITANT: '#e07b24', COTRAITANT: '#c99a2e',
-  INTERIM: '#b5651d', ARCHITECTE: '#8b5cf6', MOE: '#7c3aed', BE: '#6d5bd0', BC: '#0f9fa8', MOA: '#d14d72', BANQUE: '#64748b', ASSURANCE: '#475569',
-};
+// Couleur de la relation principale : variable --annuaire-relation-<code> du thème (relations du référentiel livré).
+const RELATIONS_COLOREES = ['CLIENT', 'PROSPECT', 'FOURNISSEUR', 'LOUEUR', 'SOUS_TRAITANT', 'COTRAITANT', 'INTERIM', 'ARCHITECTE', 'MOE', 'BE', 'BC', 'MOA', 'BANQUE', 'ASSURANCE'];
+const couleurRelation = (code) => `var(--annuaire-relation-${code.toLowerCase().replaceAll('_', '-')})`;
 
 export class VueGrapheAnnuaire extends VueGraphe {
   static CLE_REGLAGES = 'annuaireGraphe';
@@ -37,9 +37,9 @@ export class VueGrapheAnnuaire extends VueGraphe {
 
   controlesReglages() {
     return [
-      { code: 'contacts', libelle: 'Contacts', type: 'case' },
-      { code: 'liens', libelle: 'Liens', type: 'case' },
-      { code: 'max_contacts', libelle: 'Contacts par personne', titre: 'Au-delà, les contacts d\'une personne sont résumés (« + N contacts »)', type: 'liste', options: [4, 8, 15, 30, 100] },
+      { code: 'contacts', libelle: texte('annuaire.graphe.reglages.contacts'), type: 'case' },
+      { code: 'liens', libelle: texte('annuaire.graphe.reglages.liens'), type: 'case' },
+      { code: 'max_contacts', libelle: texte('annuaire.graphe.reglages.max_contacts'), titre: texte('annuaire.graphe.reglages.max_contacts_aide'), type: 'liste', options: [4, 8, 15, 30, 100] },
     ];
   }
 
@@ -49,8 +49,8 @@ export class VueGrapheAnnuaire extends VueGraphe {
 
   couleurNoeud(n) {
     if (n.type !== 'personne') return 'var(--discret)';
-    const c = (n.casquettes ?? []).find((x) => COULEURS_RELATION[x]);
-    return c ? COULEURS_RELATION[c] : 'var(--bord)';
+    const c = (n.casquettes ?? []).find((x) => RELATIONS_COLOREES.includes(x));
+    return c ? couleurRelation(c) : 'var(--bord)';
   }
 
   #niveau(n) { return this.options.referentiels?.niveaux?.find((x) => x.code === n.niveau)?.libelle ?? n.niveau ?? ''; }
@@ -62,18 +62,18 @@ export class VueGrapheAnnuaire extends VueGraphe {
       const relations = (n.casquettes ?? []).map((c) => this.options.referentiels?.casquettes?.find((x2) => x2.code === c)?.icone ?? '').join('');
       return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="7" fill="var(--surface)" ${bord}/>
         <rect x="${x}" y="${y}" width="6" height="${h}" rx="3" fill="${this.couleurNoeud(n)}"/>
-        <text x="${x + 14}" y="${y + 19}" font-size="13">${echapper(n.icone ?? '🏢')}</text>
+        <text x="${x + 14}" y="${y + 19}" font-size="13">${echapper(n.icone ?? icone('annuaire_personne'))}</text>
         <text x="${x + 34}" y="${y + 19}" font-size="12" font-weight="600" fill="var(--texte)">${echapper(tronquer(n.libelle, 22))}</text>
         <text x="${x + 34}" y="${y + 35}" font-size="10" fill="var(--discret)">${echapper(tronquer([this.#niveau(n), n.sous_titre].filter(Boolean).join(' · '), 22))}</text>
         ${relations ? `<text x="${x + w - 6}" y="${y + 35}" font-size="10" text-anchor="end">${echapper(relations)}</text>` : ''}`;
     }
     if (n.type === 'individu') {
       return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${h / 2}" fill="var(--fond)" ${bord}/>
-        <text x="${x + 10}" y="${y + 20}" font-size="12">👤</text>
+        <text x="${x + 10}" y="${y + 20}" font-size="12">${iconeHtml('annuaire_individu')}</text>
         <text x="${x + 28}" y="${y + 19}" font-size="11" fill="var(--texte)">${echapper(tronquer(n.libelle, 19))}</text>`;
     }
     return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${h / 2}" fill="var(--fond)" stroke="var(--discret)" stroke-dasharray="3 3"/>
-      <text x="${cx}" y="${y + 18}" font-size="11" text-anchor="middle" fill="var(--discret)">👥 ${echapper(n.libelle)}</text>`;
+      <text x="${cx}" y="${y + 18}" font-size="11" text-anchor="middle" fill="var(--discret)">${iconeHtml('annuaire_groupe')} ${echapper(n.libelle)}</text>`;
   }
 
   styleArete(a) {
@@ -92,19 +92,23 @@ export class VueGrapheAnnuaire extends VueGraphe {
   }
 
   legende() {
-    return [{ classe: 'l-hier', libelle: 'Hiérarchie' }, { classe: 'l-lien', libelle: 'Lien' }, { classe: 'l-rat', libelle: 'Contact' }, { classe: 'l-inactif', libelle: 'Inactif' }];
+    return [{ classe: 'l-hier', libelle: texte('annuaire.graphe.legende.hierarchie') }, { classe: 'l-lien', libelle: texte('annuaire.graphe.legende.lien') }, { classe: 'l-rat', libelle: texte('annuaire.graphe.legende.contact') }, { classe: 'l-inactif', libelle: texte('annuaire.graphe.legende.inactif') }];
   }
 
   compte(g) {
     return g.noeuds.length
-      ? `${g.noeuds.filter((n) => n.type === 'personne').length} personne(s), ${g.noeuds.filter((n) => n.type === 'individu').length} contact(s), ${g.aretes.length} relation(s)` : 'Fiche introuvable';
+      ? [
+        pluriel('annuaire.graphe.compte.personnes', g.noeuds.filter((n) => n.type === 'personne').length),
+        pluriel('annuaire.graphe.compte.contacts', g.noeuds.filter((n) => n.type === 'individu').length),
+        pluriel('annuaire.graphe.compte.relations', g.aretes.length),
+      ].join(', ') : texte('annuaire.graphe.introuvable');
   }
 
   infosNoeud(n) {
     const ref = this.options.referentiels ?? {};
     const relations = (n.casquettes ?? []).map((c) => ref.casquettes?.find((x) => x.code === c)).filter(Boolean);
-    return `<p class="aide">${n.type === 'personne' ? echapper(this.#niveau(n)) : n.type === 'individu' ? 'Individu' : 'Contacts non affichés'}${n.sous_titre ? ` · ${echapper(n.sous_titre)}` : ''}
-        · ${n.distance === 0 ? 'fiche de départ' : `à ${n.distance} saut${n.distance > 1 ? 's' : ''}`}${n.actif ? '' : ' · inactif'}</p>
+    return `<p class="aide">${n.type === 'personne' ? echapper(this.#niveau(n)) : n.type === 'individu' ? texteHtml('annuaire.graphe.individu') : texteHtml('annuaire.graphe.contacts_masques')}${n.sous_titre ? ` · ${echapper(n.sous_titre)}` : ''}
+        · ${n.distance === 0 ? texteHtml('annuaire.graphe.depart') : pluriel('annuaire.graphe.distance', n.distance)}${n.actif ? '' : ` · ${texteHtml('annuaire.graphe.inactif')}`}</p>
       ${relations.length ? `<p class="annuaire-pastilles">${relations.map((r) => `<span class="pastille cochee">${echapper(r.icone ?? '')} ${echapper(r.libelle)}</span>`).join('')}</p>` : ''}`;
   }
 
@@ -112,15 +116,15 @@ export class VueGrapheAnnuaire extends VueGraphe {
 
   boutonsNoeud(n) {
     if (n.type === 'groupe') {
-      return [{ code: 'tous', libelle: 'Afficher tous les contacts', action: () => this.developper(n, { max_contacts: 200 }).catch((e) => this.erreur(e)) }];
+      return [{ code: 'tous', libelle: texte('annuaire.graphe.tous_contacts'), action: () => this.developper(n, { max_contacts: 200 }).catch((e) => this.erreur(e)) }];
     }
     return super.boutonsNoeud(n);
   }
 
   relationVoisin(a, n) {
-    if (a.type === 'hierarchie') return a.de === n.cle ? 'Niveau inférieur' : 'Niveau supérieur';
-    if (a.type === 'lien') return `${a.libelle ?? 'Lien'}${a.vers === n.cle ? ' (vers cette fiche)' : ''}`;
-    if (a.type === 'rattachement') return a.libelle ?? 'Contact';
-    return 'Contacts';
+    if (a.type === 'hierarchie') return a.de === n.cle ? texte('annuaire.graphe.voisin.inferieur') : texte('annuaire.graphe.voisin.superieur');
+    if (a.type === 'lien') return a.vers === n.cle ? texte('annuaire.graphe.voisin.vers_fiche', { lien: a.libelle ?? texte('annuaire.graphe.voisin.lien') }) : a.libelle ?? texte('annuaire.graphe.voisin.lien');
+    if (a.type === 'rattachement') return a.libelle ?? texte('annuaire.graphe.voisin.contact');
+    return texte('annuaire.graphe.voisin.contacts');
   }
 }

@@ -1,3 +1,4 @@
+import { texte, texteHtml, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { TYPE_DOCUMENT } from '../codes.js';
 import { echapper, creerCombo, ouvrirModale } from '@logibtp/socle/ui';
 import { api } from '../api.js';
@@ -13,24 +14,24 @@ export async function sousTraiter({ entId, selection = [], message }) {
   const sousTraitants = await api.sousTraitants();
   const dlg = document.createElement('dialog');
   dlg.className = 'dialogue-structure';
-  dlg.innerHTML = `<form method="dialog" class="assistant-sous-traiter"><h3>🤝 Sous-traiter</h3>
-    <p class="ligne"><label><input type="radio" name="portee" value="selection" ${selection.length ? 'checked' : 'disabled'}> Lignes sélectionnées (${selection.length})</label>
-      <label><input type="radio" name="portee" value="tout" ${selection.length ? '' : 'checked'}> Tout le reliquat</label></p>
-    <p class="ligne">Créer : <span data-cible></span></p>
+  dlg.innerHTML = `<form method="dialog" class="assistant-sous-traiter"><h3>${iconeHtml('sous_traitance_btp_sous_traiter')} ${texteHtml('sous_traitance_btp.assistant.titre')}</h3>
+    <p class="ligne"><label><input type="radio" name="portee" value="selection" ${selection.length ? 'checked' : 'disabled'}> ${texteHtml('sous_traitance_btp.assistant.selection', { nombre: selection.length })}</label>
+      <label><input type="radio" name="portee" value="tout" ${selection.length ? '' : 'checked'}> ${texteHtml('sous_traitance_btp.assistant.tout')}</label></p>
+    <p class="ligne">${texteHtml('sous_traitance_btp.assistant.creer_titre')} <span data-cible></span></p>
     <p class="aide" data-aide></p>
-    <p class="ligne"><input type="search" data-filtre placeholder="Filtrer les sous-traitants" size="30"></p>
+    <p class="ligne"><input type="search" data-filtre placeholder="${texteHtml('sous_traitance_btp.assistant.filtre')}" size="30"></p>
     <div class="liste-choix" data-liste style="max-height: 16rem; overflow: auto">
       ${sousTraitants.length ? sousTraitants.map((s) => `<label class="ligne-choix"><input type="checkbox" value="${s.id}"> ${echapper(s.libelle)}</label>`).join('<br>')
-        : '<span class="aide">Aucun sous-traitant dans l\'annuaire (relation « Sous-traitant »).</span>'}
+        : `<span class="aide">${texteHtml('sous_traitance_btp.assistant.aucun')}</span>`}
     </div>
-    <p class="ligne"><button type="button" class="principal" data-creer>Créer</button> <button value="annuler">Annuler</button></p></form>`;
+    <p class="ligne"><button type="button" class="principal" data-creer>${texteHtml('commun.creer')}</button> <button value="annuler">${texteHtml('commun.annuler')}</button></p></form>`;
   document.body.append(dlg);
-  const cible = creerCombo({ vide: false, valeur: TYPE_DOCUMENT.T_AO, options: [{ valeur: TYPE_DOCUMENT.T_AO, libelle: 'Appel d\'offres de sous-traitance' }, { valeur: TYPE_DOCUMENT.T_COMMANDE, libelle: 'Commande de sous-traitance' }] });
+  const cible = creerCombo({ vide: false, valeur: TYPE_DOCUMENT.T_AO, options: [{ valeur: TYPE_DOCUMENT.T_AO, libelle: texte('sous_traitance_btp.assistant.t_ao') }, { valeur: TYPE_DOCUMENT.T_COMMANDE, libelle: texte('sous_traitance_btp.assistant.t_commande') }] });
   dlg.querySelector('[data-cible]').replaceWith(cible);
   const aide = () => {
     dlg.querySelector('[data-aide]').textContent = cible.resoudre() === TYPE_DOCUMENT.T_AO
-      ? 'Un appel d\'offres par sous-traitant coché, dans le même lot de consultation (comparatif des offres).'
-      : 'Une commande pour un seul sous-traitant ; elle se valide dans un marché de sous-traitance.';
+      ? texte('sous_traitance_btp.assistant.aide_ao')
+      : texte('sous_traitance_btp.assistant.aide_commande');
   };
   cible.addEventListener('change', aide);
   cible.addEventListener('blur', aide);
@@ -44,7 +45,7 @@ export async function sousTraiter({ entId, selection = [], message }) {
     dlg.querySelector('[data-creer]').addEventListener('click', async () => {
       const type = cible.resoudre();
       const sts = [...dlg.querySelectorAll('[data-liste] input:checked')].map((c) => Number(c.value));
-      if (type === TYPE_DOCUMENT.T_COMMANDE && sts.length > 1) { message('Une commande de sous-traitance va à un seul sous-traitant', 'erreur'); return; }
+      if (type === TYPE_DOCUMENT.T_COMMANDE && sts.length > 1) { message(texte('sous_traitance_btp.assistant.un_seul'), 'erreur'); return; }
       const lignes = dlg.querySelector('input[name="portee"]:checked')?.value === 'selection' ? selection : [];
       try {
         const r = await api.sousTraiter(entId, { cible: type, lignes, sous_traitants: sts });

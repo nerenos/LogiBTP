@@ -1,3 +1,4 @@
+import { texte, textesParCode } from '@logibtp/socle/dictionnaire';
 import { ETATS_CLOS } from './notes.js';
 
 // Rappels des notes (ANALYSE-MODULE-CRM.md, C6, C19, C26), répliqués dans ReglesRappel.cs
@@ -10,8 +11,8 @@ import { ETATS_CLOS } from './notes.js';
 // (terminée, pour mémo, annulée) ou un rappel traité ne rappelle plus rien.
 
 export const TYPES_RAPPEL = [
-  { valeur: 'DATE', libelle: 'À date' },
-  { valeur: 'AVANT', libelle: 'Avant l\'échéance' },
+  { valeur: 'DATE', libelle: texte('crm.types_rappel.DATE') },
+  { valeur: 'AVANT', libelle: texte('crm.types_rappel.AVANT') },
 ];
 
 export const SEUILS_DEFAUT = { orange: 7, rouge: 1 };
@@ -36,13 +37,7 @@ export function controlerRappel(rappel, note) {
   return erreurs;
 }
 
-export const MESSAGES_RAPPEL = {
-  RAPPEL_TYPE: 'Type de rappel inconnu (à date ou avant l\'échéance)',
-  RAPPEL_DATE: 'Un rappel à date a une date et une heure',
-  RAPPEL_DELAI: 'Le délai avant l\'échéance est un nombre entier de jours',
-  RAPPEL_ECHEANCE: 'Un rappel avant l\'échéance demande une échéance sur la note',
-  RAPPEL_CLOS: 'Une note terminée, pour mémo ou annulée ne porte pas de rappel',
-};
+export const MESSAGES_RAPPEL = textesParCode('crm.rappels.erreurs', ['RAPPEL_TYPE', 'RAPPEL_DATE', 'RAPPEL_DELAI', 'RAPPEL_ECHEANCE', 'RAPPEL_CLOS']);
 
 /**
  * État d'un rappel à un instant : { actif, visible, couleur: VERT | ORANGE | ROUGE | null, reference } ; reference =

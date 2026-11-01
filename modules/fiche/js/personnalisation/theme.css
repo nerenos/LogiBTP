@@ -1,0 +1,7 @@
+/* Thème du module Fiche (module Personnalisation) : variables propres aux fiches, après celles du socle. */
+
+:root {
+  /* Fenêtre du paramétrage : fond et ombre. */
+  --fiche-fond-modale: rgb(0 0 0 / 0.35);
+  --fiche-ombre-fenetre: rgb(0 0 0 / 0.3);
+}

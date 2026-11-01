@@ -1,5 +1,6 @@
 import { echapper, creerCombo, ouvrirModale } from '@logibtp/socle/ui';
 import { FORMATS_PREDEFINIS, erreurRequete } from '../src/validation.js';
+import { texte, texteHtml, icone, iconeHtml, pairesParCode, textesParCode } from '@logibtp/socle/dictionnaire';
 
 // Paramétrage d'un type de fiche (profil ADMIN) :
 // - champs du logiciel : rendre obligatoire un champ facultatif, rendre confidentiel (RGPD : masqué, révélé à la
@@ -9,11 +10,10 @@ import { FORMATS_PREDEFINIS, erreurRequete } from '../src/validation.js';
 //   obligatoire, confidentiel, actif.
 // Les valeurs des champs supplémentaires sont stockées dans la colonne JSONB du type (tyf_colonne_proprietes).
 
-const TYPES = [['texte', 'Texte'], ['nombre', 'Numérique'], ['booleen', 'Oui / non'], ['date', 'Date'], ['liste', 'Liste de valeurs'],
-  ['motdepasse', 'Mot de passe (chiffré)']];
+const TYPES = pairesParCode('fiche.parametrage.types', ['texte', 'nombre', 'booleen', 'date', 'liste', 'motdepasse']);
 /** Onglet Informations complémentaires (champ sans onglet de la définition). */
 const SANS_ONGLET = '+supplementaires';
-const LIBELLES_TYPES = Object.fromEntries([...TYPES, ['zone', 'Texte long'], ['html', 'Texte mis en forme'], ['json', 'Données liées']]);
+const LIBELLES_TYPES = textesParCode('fiche.parametrage.types', [...TYPES.map(([c]) => c), 'zone', 'html', 'json']);
 
 /** « A = Libellé ; B » ⇄ [{ valeur, libelle }]. */
 const optionsVersTexte = (o) => (o ?? []).map((x) => (x.libelle && x.libelle !== x.valeur ? `${x.valeur} = ${x.libelle}` : x.valeur)).join(' ; ');
@@ -32,13 +32,13 @@ export class ParametrageFiche {
     this.fond = document.createElement('dialog');
     this.fond.className = 'fiche-dialogue-fond dialogue-plein';
     this.fond.innerHTML = `
-      <div class="fiche-dialogue" role="dialog" aria-label="Paramétrage de la fiche">
-        <header><strong>Paramétrage des fiches ${echapper(definition.libelle)}</strong>
-          <button type="button" data-action="fermer" title="Fermer (Échap)">✕</button></header>
+      <div class="fiche-dialogue" role="dialog" aria-label="${texteHtml('fiche.parametrage.dialogue')}">
+        <header><strong>${texteHtml('fiche.parametrage.titre', { libelle: definition.libelle })}</strong>
+          <button type="button" data-action="fermer" title="${texteHtml('commun.fermer_echap')}">${iconeHtml('retirer')}</button></header>
         <div class="fiche-dialogue-corps"></div>
         <footer><span class="fiche-dialogue-message"></span>
-          <button type="button" data-action="ajouter">Ajouter un champ supplémentaire</button>
-          <button type="button" class="principal" data-action="enregistrer">Enregistrer</button></footer>
+          <button type="button" data-action="ajouter">${texteHtml('fiche.parametrage.ajouter')}</button>
+          <button type="button" class="principal" data-action="enregistrer">${texteHtml('commun.enregistrer')}</button></footer>
       </div>`;
     ouvrirModale(this.fond);
     this.corps = this.fond.querySelector('.fiche-dialogue-corps');
@@ -75,7 +75,7 @@ export class ParametrageFiche {
   #renumeroter() { this.p.supplementaires.forEach((c, i) => { c.ordre = (i + 1) * 10; }); }
 
   #onglets() {
-    return [{ valeur: SANS_ONGLET, libelle: 'Informations complémentaires' }, ...(this.definition.sections ?? []).map((s) => ({ valeur: s.code, libelle: s.titre }))];
+    return [{ valeur: SANS_ONGLET, libelle: texte('fiche.fiche.complementaires') }, ...(this.definition.sections ?? []).map((s) => ({ valeur: s.code, libelle: s.titre }))];
   }
 
   rendre() {
@@ -86,44 +86,43 @@ export class ParametrageFiche {
     const libelleOnglet = (code) => onglets.find((o) => o.valeur === (code ?? SANS_ONGLET))?.libelle ?? '';
     const n = this.p.supplementaires.length;
     this.corps.innerHTML = `
-      <h3>Champs du logiciel</h3>
-      <p class="aide">* obligatoire pour le logiciel (non modifiable) ; cochez pour imposer la saisie d'un champ facultatif.
-        RGPD : un champ confidentiel est masqué, affiché à la demande (droit CONFIDENTIEL) et chaque accès est journalisé.</p>
-      <table class="fiche-param tableau-compact largeur-contenu"><thead><tr><th>Champ</th><th>Type</th><th>Obligatoire</th><th title="Donnée personnelle : masquée et journalisée">RGPD 🔒</th></tr></thead><tbody>
+      <h3>${texteHtml('fiche.parametrage.champs_logiciel')}</h3>
+      <p class="aide">${texteHtml('fiche.parametrage.aide_logiciel')}</p>
+      <table class="fiche-param tableau-compact largeur-contenu"><thead><tr><th>${texteHtml('fiche.parametrage.champ')}</th><th>${texteHtml('fiche.parametrage.type')}</th><th>${texteHtml('fiche.parametrage.obligatoire')}</th><th title="${texteHtml('fiche.parametrage.rgpd_aide')}">${texteHtml('fiche.parametrage.rgpd')} ${iconeHtml('verrou')}</th></tr></thead><tbody>
         ${this.definition.champs.filter((c) => !c.gere).map((c) => {
           const duLogiciel = c.confidentiel && !c.confidentiel_parametre;
           return `<tr><td>${echapper(c.libelle)}</td><td>${echapper(LIBELLES_TYPES[c.type] ?? c.type)}</td>
-          <td>${c.obligatoire ? '<span title="Obligatoire pour le logiciel">*</span>' : c.lecture_seule ? '' : `<input type="checkbox" data-obligatoire="${echapper(c.code)}" ${obligatoires.has(c.code) ? 'checked' : ''}>`}</td>
-          <td>${duLogiciel ? '<span title="Confidentiel pour le logiciel">🔒</span>' : `<input type="checkbox" data-confidentiel="${echapper(c.code)}" ${confidentiels.has(c.code) ? 'checked' : ''}>`}</td></tr>`;
+          <td>${c.obligatoire ? `<span title="${texteHtml('fiche.parametrage.obligatoire_logiciel')}">${iconeHtml('fiche_obligatoire')}</span>` : c.lecture_seule ? '' : `<input type="checkbox" data-obligatoire="${echapper(c.code)}" ${obligatoires.has(c.code) ? 'checked' : ''}>`}</td>
+          <td>${duLogiciel ? `<span title="${texteHtml('fiche.parametrage.confidentiel_logiciel')}">${iconeHtml('verrou')}</span>` : `<input type="checkbox" data-confidentiel="${echapper(c.code)}" ${confidentiels.has(c.code) ? 'checked' : ''}>`}</td></tr>`;
         }).join('')}
       </tbody></table>
-      <h3>Champs supplémentaires</h3>
-      <p class="aide">Ordre : ↑ ↓ ; onglet et groupe (cadre titré) : où le champ s'affiche dans la fiche. ▸ : format, longueur, aide, valeurs.</p>
-      <table class="fiche-param fiche-param-supplementaires tableau-compact largeur-contenu"><thead><tr><th></th><th>Code</th><th>Libellé</th><th>Type</th><th>Onglet</th><th>Groupe</th>
-        <th title="Obligatoire">Oblig.</th><th title="Confidentiel (RGPD)">🔒</th><th>Actif</th><th></th></tr></thead><tbody>
+      <h3>${texteHtml('fiche.parametrage.supplementaires')}</h3>
+      <p class="aide">${texteHtml('fiche.parametrage.aide_supplementaires', { monter: icone('fiche_monter'), descendre: icone('fiche_descendre'), details: icone('fiche_deplier') })}</p>
+      <table class="fiche-param fiche-param-supplementaires tableau-compact largeur-contenu"><thead><tr><th></th><th>${texteHtml('commun.code')}</th><th>${texteHtml('commun.libelle')}</th><th>${texteHtml('fiche.parametrage.type')}</th><th>${texteHtml('fiche.parametrage.onglet')}</th><th>${texteHtml('fiche.parametrage.groupe')}</th>
+        <th title="${texteHtml('fiche.parametrage.obligatoire')}">${texteHtml('fiche.parametrage.oblig')}</th><th title="${texteHtml('fiche.parametrage.confidentiel')}">${iconeHtml('verrou')}</th><th>${texteHtml('fiche.parametrage.actif')}</th><th></th></tr></thead><tbody>
         ${this.p.supplementaires.map((c, i) => `<tr data-i="${i}">
-          <td class="fiche-param-ordre"><button type="button" data-monter title="Monter" ${i === 0 ? 'disabled' : ''}>↑</button><button type="button" data-descendre title="Descendre" ${i === n - 1 ? 'disabled' : ''}>↓</button></td>
-          <td><input data-c="code" value="${echapper(c.code)}" ${c.nouveau ? '' : 'readonly'} size="12" placeholder="code"></td>
+          <td class="fiche-param-ordre"><button type="button" data-monter title="${texteHtml('fiche.parametrage.monter')}" ${i === 0 ? 'disabled' : ''}>${iconeHtml('fiche_monter')}</button><button type="button" data-descendre title="${texteHtml('fiche.parametrage.descendre')}" ${i === n - 1 ? 'disabled' : ''}>${iconeHtml('fiche_descendre')}</button></td>
+          <td><input data-c="code" value="${echapper(c.code)}" ${c.nouveau ? '' : 'readonly'} size="12" placeholder="${texteHtml('fiche.parametrage.code')}"></td>
           <td><input data-c="libelle" value="${echapper(c.libelle)}" size="18"></td>
           <td data-combo="type"></td>
           <td data-combo="section" title="${echapper(libelleOnglet(c.section))}"></td>
-          <td><input data-c="groupe" list="groupes-fiche" value="${echapper(c.groupe ?? '')}" size="14" placeholder="(sans groupe)"></td>
+          <td><input data-c="groupe" list="groupes-fiche" value="${echapper(c.groupe ?? '')}" size="14" placeholder="${texteHtml('fiche.parametrage.sans_groupe')}"></td>
           <td><input type="checkbox" data-c="obligatoire" ${c.obligatoire ? 'checked' : ''}></td>
           <td><input type="checkbox" data-c="confidentiel" ${c.confidentiel ? 'checked' : ''}></td>
           <td><input type="checkbox" data-c="actif" ${c.actif !== false ? 'checked' : ''}></td>
-          <td class="fiche-param-ordre"><button type="button" data-details title="Format, longueur, aide, valeurs">${this.ouverts.has(i) ? '▾' : '▸'}</button><button type="button" data-suppr title="Supprimer (les valeurs déjà saisies restent stockées)">✕</button></td></tr>
+          <td class="fiche-param-ordre"><button type="button" data-details title="${texteHtml('fiche.parametrage.details')}">${iconeHtml(this.ouverts.has(i) ? 'fiche_replier' : 'fiche_deplier')}</button><button type="button" data-suppr title="${texteHtml('fiche.parametrage.supprimer')}">${iconeHtml('retirer')}</button></td></tr>
           ${this.ouverts.has(i) ? `<tr class="fiche-param-details" data-i="${i}"><td></td><td colspan="9"><div class="fiche-param-grille">
-            <label>Format <input data-c="format" list="formats-fiche" value="${echapper(c.format ?? '')}" ${['texte', 'nombre', 'motdepasse'].includes(c.type) ? '' : 'disabled'}></label>
-            <label>Longueur max. <input data-c="longueur" type="number" min="1" value="${c.longueur ?? ''}" ${['texte', 'motdepasse'].includes(c.type) ? '' : 'disabled'}></label>
-            <label class="large">Aide (infobulle) <input data-c="aide" value="${echapper(c.aide ?? '')}" maxlength="200"></label>
+            <label>${texteHtml('fiche.parametrage.format')} <input data-c="format" list="formats-fiche" value="${echapper(c.format ?? '')}" ${['texte', 'nombre', 'motdepasse'].includes(c.type) ? '' : 'disabled'}></label>
+            <label>${texteHtml('fiche.parametrage.longueur')} <input data-c="longueur" type="number" min="1" value="${c.longueur ?? ''}" ${['texte', 'motdepasse'].includes(c.type) ? '' : 'disabled'}></label>
+            <label class="large">${texteHtml('fiche.parametrage.aide')} <input data-c="aide" value="${echapper(c.aide ?? '')}" maxlength="200"></label>
             ${c.type === 'liste' ? `
-            <label class="large">Valeurs (A = Libellé ; B = Libellé) <input data-c="options" value="${echapper(optionsVersTexte(c.options))}" ${c.requete ? 'disabled' : ''}></label>
-            <label class="large">Ou requête SQL (1re colonne : valeur, 2e : libellé ; exécutée en lecture seule)
-              <textarea data-c="requete" rows="2" spellcheck="false" placeholder="SELECT code, libelle FROM … ORDER BY libelle">${echapper(c.requete ?? '')}</textarea></label>` : ''}
-            ${c.type === 'motdepasse' ? '<p class="aide large">Chiffré en base par la chaîne de l\'installation ; affiché à la demande (👁), chaque accès est journalisé. Jamais copié.</p>' : ''}
-          </div></td></tr>` : ''}`).join('') || '<tr><td colspan="10" class="aide">Aucun champ supplémentaire</td></tr>'}
+            <label class="large">${texteHtml('fiche.parametrage.valeurs')} <input data-c="options" value="${echapper(optionsVersTexte(c.options))}" ${c.requete ? 'disabled' : ''}></label>
+            <label class="large">${texteHtml('fiche.parametrage.requete')}
+              <textarea data-c="requete" rows="2" spellcheck="false" placeholder="${texteHtml('fiche.parametrage.requete_exemple')}">${echapper(c.requete ?? '')}</textarea></label>` : ''}
+            ${c.type === 'motdepasse' ? `<p class="aide large">${texteHtml('fiche.parametrage.aide_secret', { oeil: icone('fiche_confidentiel') })}</p>` : ''}
+          </div></td></tr>` : ''}`).join('') || `<tr><td colspan="10" class="aide">${texteHtml('fiche.parametrage.aucun')}</td></tr>`}
       </tbody></table>
-      <datalist id="formats-fiche">${FORMATS_PREDEFINIS.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}<option value="999.99">Masque numérique</option></datalist>
+      <datalist id="formats-fiche">${FORMATS_PREDEFINIS.map(([v, l]) => `<option value="${v}">${echapper(l)}</option>`).join('')}<option value="999.99">${texteHtml('fiche.formats.masque')}</option></datalist>
       <datalist id="groupes-fiche">${groupes.map((g) => `<option value="${echapper(g)}"></option>`).join('')}</datalist>`;
 
     this.corps.querySelectorAll('[data-obligatoire]').forEach((el) => el.addEventListener('change', () => {
@@ -143,7 +142,7 @@ export class ParametrageFiche {
         else c[k] = el.value.trim() || null;
         if (k === 'requete') {
           const e = c.requete ? erreurRequete(c.requete) : null;
-          this.#erreur(e ? `${c.libelle || c.code} : ${e}` : '');
+          this.#erreur(e ? texte('fiche.parametrage.erreur_requete', { champ: c.libelle || c.code, message: e }) : '');
           this.rendre();
         }
       }));
@@ -205,7 +204,7 @@ export class ParametrageFiche {
       this.p = await this.fournisseur.enregistrerParametrage(this.type, p);
       this.modifie = true;
       this.#erreur('');
-      this.message('Paramétrage enregistré', 'succes');
+      this.message(texte('fiche.parametrage.enregistre'), 'succes');
       this.fermer();
     } catch (e) {
       this.#erreur(e.message);

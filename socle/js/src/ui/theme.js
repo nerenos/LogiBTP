@@ -1,10 +1,11 @@
 // Thème d'affichage : automatique (celui du système), clair ou sombre. Le choix est posé sur <html data-theme>,
-// que socle.css interprète ; « auto » retire l'attribut et laisse jouer prefers-color-scheme.
+// que theme.css (module Personnalisation) interprète ; « auto » retire l'attribut et laisse jouer prefers-color-scheme.
+import { texte, icone } from '../dictionnaire/index.js';
 
 export const THEMES = [
-  { code: 'auto', libelle: 'Automatique (système)', icone: '🖥' },
-  { code: 'clair', libelle: 'Clair', icone: '☀️' },
-  { code: 'sombre', libelle: 'Sombre', icone: '🌙' },
+  { code: 'auto', libelle: texte('socle.theme.auto'), icone: icone('theme_auto') },
+  { code: 'clair', libelle: texte('socle.theme.clair'), icone: icone('theme_clair') },
+  { code: 'sombre', libelle: texte('socle.theme.sombre'), icone: icone('theme_sombre') },
 ];
 
 export function appliquerTheme(choix, racine = globalThis.document?.documentElement) {

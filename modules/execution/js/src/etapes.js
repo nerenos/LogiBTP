@@ -7,29 +7,16 @@
 // Une étape : { code, libelle, nature (TACHE | JALON | ATTENTE), duree, unite (H | OUV | CAL), amonts (null : l'étape
 // précédente), date_obligatoire, controle, controle_bloquant, valide_le, controle_le, prevu_impose } ; dates 'AAAA-MM-JJ'.
 
-export const NATURES_ETAPE = {
-  TACHE: { libelle: 'Tâche (enchaînement)', icone: '▬' },
-  JALON: { libelle: 'Jalon (point de repère)', icone: '◆' },
-  ATTENTE: { libelle: 'Attente (séchage, validation d\'un tiers)', icone: '⏳' },
-};
-export const UNITES_ETAPE = { H: 'heures', OUV: 'jours ouvrés', CAL: 'jours calendaires' };
+// Libellés et icônes lus dans le dictionnaire (module Personnalisation) : accesseurs, lus à l'affichage.
+import { texte, textesParCode, icone } from '@logibtp/socle/dictionnaire';
 
-export const MESSAGES_ETAPES = {
-  ETP_INCONNUE: 'Étape inconnue',
-  ETP_DEJA_VALIDEE: 'Étape déjà validée',
-  ETP_ORDRE: 'Étapes précédentes à valider d\'abord',
-  ETP_CONTROLE: 'Contrôle du N+1 attendu sur une étape précédente',
-  ETP_CONTROLE_ATTENTE: 'Contrôle du N+1 pas encore fait sur une étape précédente',
-  ETP_NON_VALIDEE: 'Étape non validée',
-  ETP_SUIVANT_VALIDE: 'Une étape suivante est déjà validée',
-  ETP_SANS_CONTROLE: 'Cette étape n\'a pas de contrôle du N+1',
-  ETP_CODE: 'Code d\'état obligatoire',
-  ETP_DOUBLON: 'Même état deux fois',
-  ETP_AMONT: 'Étape amont inconnue',
-  ETP_BOUCLE: 'Les étapes amont forment une boucle',
-  ETP_NATURE: 'Nature inconnue',
-  ETP_DUREE: 'Durée négative ou unité inconnue',
-};
+const nature = (code) => Object.freeze({ get libelle() { return texte(`execution.etapes.natures.${code}`); }, get icone() { return icone(`execution_nature_${code.toLowerCase()}`); } });
+export const NATURES_ETAPE = Object.freeze({ TACHE: nature('TACHE'), JALON: nature('JALON'), ATTENTE: nature('ATTENTE') });
+export const UNITES_ETAPE = textesParCode('execution.etapes.unites', ['H', 'OUV', 'CAL']);
+
+export const MESSAGES_ETAPES = textesParCode('execution.etapes.erreurs', [
+  'ETP_INCONNUE', 'ETP_DEJA_VALIDEE', 'ETP_ORDRE', 'ETP_CONTROLE', 'ETP_CONTROLE_ATTENTE', 'ETP_NON_VALIDEE', 'ETP_SUIVANT_VALIDE', 'ETP_SANS_CONTROLE', 'ETP_CODE', 'ETP_DOUBLON', 'ETP_AMONT', 'ETP_BOUCLE', 'ETP_NATURE', 'ETP_DUREE',
+]);
 
 const JOUR = 86400000;
 const versJour = (d) => Math.floor(Date.parse(`${String(d).slice(0, 10)}T00:00:00Z`) / JOUR);

@@ -1,3 +1,4 @@
+import { texte, texteHtml, icone, iconeHtml, pairesParCode } from '@logibtp/socle/dictionnaire';
 import { pastilleTable } from '../pastilles.js';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, confirmer, formatDateHeure } from '@logibtp/socle/ui';
@@ -5,34 +6,22 @@ import { api } from '../api.js';
 import { zoneRiche } from '../crm/crm.js';
 import { reconnaitre, NATURES, ACTIONS, ZONES } from '@logibtp/mail';
 
-const HEBERGEURS = [
-  { valeur: 'GMAIL', libelle: 'Gmail (grand public)' }, { valeur: 'OVH', libelle: 'Exchange hébergé OVH' }, { valeur: 'AUTRE', libelle: 'Autre hébergeur' },
-];
-const SECURITES = [{ valeur: 'SSL', libelle: 'SSL / TLS (connexion chiffrée)' }, { valeur: 'STARTTLS', libelle: 'STARTTLS' }];
-const AUTHENTIFICATIONS = [{ valeur: 'MOT_DE_PASSE', libelle: 'Mot de passe' }, { valeur: 'OAUTH2', libelle: 'OAuth 2.0 (connexion externe)' }];
+const HEBERGEURS = pairesParCode('mail_btp.hebergeurs', ['GMAIL', 'OVH', 'AUTRE']).map(([valeur, libelle]) => ({ valeur, libelle }));
+const SECURITES = pairesParCode('mail_btp.securites', ['SSL', 'STARTTLS']).map(([valeur, libelle]) => ({ valeur, libelle }));
+const AUTHENTIFICATIONS = pairesParCode('mail_btp.authentifications', ['MOT_DE_PASSE', 'OAUTH2']).map(([valeur, libelle]) => ({ valeur, libelle }));
 // Serveurs proposés à la création d'un compte selon l'hébergeur (champs vides seulement).
 const PREREGLAGES = {
   GMAIL: { smtp: { hote: 'smtp.gmail.com', port: 465, securite: 'SSL' }, imap: { hote: 'imap.gmail.com', port: 993, securite: 'SSL' }, authentification: 'OAUTH2' },
   OVH: { smtp: { hote: '', port: 587, securite: 'STARTTLS' }, imap: { hote: '', port: 993, securite: 'SSL' }, authentification: 'MOT_DE_PASSE' },
   AUTRE: { smtp: { hote: '', port: 465, securite: 'SSL' }, imap: { hote: '', port: 993, securite: 'SSL' }, authentification: 'MOT_DE_PASSE' },
 };
-const LIMITES = [
-  ['messages_par_minute', 'Messages par minute'], ['destinataires_par_message', 'Destinataires par courriel'], ['destinataires_par_heure', 'Destinataires par heure'],
-  ['destinataires_par_jour', 'Destinataires par jour'], ['messages_par_heure_par_domaine', 'Messages par heure vers un domaine'], ['nouveaux_par_jour', 'Nouveaux destinataires par jour'],
-];
-const PARAMETRES = [
-  ['seuil_envoi_groupe', 'Confirmation au-delà de (destinataires)'], ['seuil_quota_pct', 'Avertissement à (% du quota journalier)'],
-  ['seuil_non_remise_pct', 'Suspension au-delà de (% de non-remises sur une heure)'], ['seuil_utilisateur_heure', 'Envois inhabituels : courriels par heure et par utilisateur'],
-  ['reserve_prioritaire_pct', 'Réserve des envois prioritaires (% du quota)'], ['taille_max_mo', 'Pièces jointes par courriel (Mo)'], ['journal_mois', 'Conservation du journal (mois)'],
-  ['conservation_non_rapproches_jours', 'Courriels reçus non rapprochés : conservés (jours)'], ['premiere_releve_jours', 'Première relève : courriels des derniers (jours)'],
-  ['taille_reception_mo', 'Courriel reçu au-delà (Mo) : en-têtes seuls'], ['seuil_haut', 'Reconnaissance : rattachement automatique dès (score %)'],
-  ['seuil_bas', 'Reconnaissance : proposition dès (score %)'],
-];
-const APRES_RATTACHEMENT = [
-  { valeur: 'RIEN', libelle: 'ne rien faire sur le serveur' }, { valeur: 'DEPLACER', libelle: 'déplacer vers le dossier' },
-  { valeur: 'RETIRER_DRAPEAU', libelle: 'retirer le drapeau « à suivre »' },
-];
-const ETATS = { A_VERIFIER: ['À vérifier', 'neutre'], OK: ['Opérationnel', 'ok'], ERREUR: ['En erreur', 'erreur'], SUSPENDU: ['Envois groupés suspendus', 'attention'] };
+const LIMITES = pairesParCode('mail_btp.limites', ['messages_par_minute', 'destinataires_par_message', 'destinataires_par_heure', 'destinataires_par_jour', 'messages_par_heure_par_domaine', 'nouveaux_par_jour']);
+const PARAMETRES = pairesParCode('mail_btp.reglages', [
+  'seuil_envoi_groupe', 'seuil_quota_pct', 'seuil_non_remise_pct', 'seuil_utilisateur_heure', 'reserve_prioritaire_pct', 'taille_max_mo', 'journal_mois', 'conservation_non_rapproches_jours', 'premiere_releve_jours', 'taille_reception_mo', 'seuil_haut', 'seuil_bas',
+]);
+const APRES_RATTACHEMENT = pairesParCode('mail_btp.apres_rattachement', ['RIEN', 'DEPLACER', 'RETIRER_DRAPEAU']).map(([valeur, libelle]) => ({ valeur, libelle }));
+const CLASSES_ETATS = { A_VERIFIER: 'neutre', OK: 'ok', ERREUR: 'erreur', SUSPENDU: 'attention' };
+const ETATS = Object.fromEntries(pairesParCode('mail_btp.etats_compte', Object.keys(CLASSES_ETATS)).map(([code, libelle]) => [code, [libelle, CLASSES_ETATS[code]]]));
 export const VARIABLES_MODELE = ['numero', 'type', 'document', 'objet', 'date', 'validite', 'montant_ht', 'montant_ttc', 'net_a_payer', 'tiers', 'contact', 'redacteur', 'utilisateur',
   'pieces_manquantes', 'pieces_a_renouveler'];
 
@@ -44,23 +33,22 @@ export const pastilleCompteMail = (etat) => pastilleTable(ETATS, etat);
  * et seuils d'avertissement des envois.
  */
 export class PageParametresMail extends PageBase {
-  icone = '📧';
+  icone = icone('mail_btp_parametres_page');
 
   async ouvrir() {
     const app = this.app;
-    this.titre = 'Messagerie';
+    this.titre = texte('mail_btp.routes.parametres');
     this.conteneur.innerHTML = `<div class="page-parametres">
-      <div class="entete-page"><h1 class="page-titre">📧 Messagerie</h1><span><button type="button" data-boite>📬 Suivi des envois</button></span></div>
-      <p class="aide">Comptes de messagerie de l'application (adresses de service : commercial@, noreply@…). L'adresse, les serveurs et les
-        identifiants sont chiffrés en base ; l'application désigne chaque compte par son alias.</p>
-      <h2>Comptes</h2><div data-comptes></div><div data-compte></div>
-      <h2>Expéditeur par usage</h2><div data-usages></div>
-      <h2>Modèles de courriels</h2><div data-modeles></div>
-      <h2>Reconnaissance des courriels reçus</h2><div data-regles></div>
-      <h2>Limitations et avertissements</h2><div data-parametres></div></div>`;
+      <div class="entete-page"><h1 class="page-titre">${iconeHtml('mail_btp_parametres_page')} ${texteHtml('mail_btp.routes.parametres')}</h1><span><button type="button" data-boite>${iconeHtml('mail_btp_boite')} ${texteHtml('mail_btp.vues.envois')}</button></span></div>
+      <p class="aide">${texteHtml('mail_btp.parametres.aide')}</p>
+      <h2>${texteHtml('mail_btp.suivi.comptes')}</h2><div data-comptes></div><div data-compte></div>
+      <h2>${texteHtml('mail_btp.parametres.usages')}</h2><div data-usages></div>
+      <h2>${texteHtml('mail_btp.parametres.modeles')}</h2><div data-modeles></div>
+      <h2>${texteHtml('mail_btp.parametres.reconnaissance')}</h2><div data-regles></div>
+      <h2>${texteHtml('mail_btp.parametres.limitations')}</h2><div data-parametres></div></div>`;
     this.conteneur.querySelector('[data-boite]').addEventListener('click', () => app.naviguer('/mail?vue=envois'));
     if (!app.estAdmin()) {
-      this.conteneur.querySelector('[data-comptes]').innerHTML = '<p class="aide">Réservé à un administrateur, en ligne.</p>';
+      this.conteneur.querySelector('[data-comptes]').innerHTML = `<p class="aide">${texteHtml('mail_btp.parametres.reserve')}</p>`;
       return;
     }
     [this.comptes, this.alias, this.usages, this.modeles, this.parametres, this.connexions] = await Promise.all([
@@ -82,19 +70,18 @@ export class PageParametresMail extends PageBase {
     const zone = this.conteneur.querySelector('[data-regles]');
     const l = this.regles.map((r) => ({ ...r }));
     const rendre = () => {
-      zone.innerHTML = `<p class="aide">Un courriel reçu est rattaché tout seul s'il répond à un envoi de l'application, ou si un seul document cité
-        dépasse le seuil de rattachement ; la première règle qui s'applique donne sa nature et le service prévenu (ALERTER), ou l'ignore.</p>
-        <table class="tableau-compact largeur-contenu"><thead><tr><th>Ordre</th><th>Code</th><th>Libellé</th><th>Nature</th><th>Mots (séparés par ;)</th><th>Zones</th>
-          <th>Expéditeur (suffixe)</th><th>Service</th><th>Action</th><th>Actif</th><th class="cellule-boutons"></th></tr></thead><tbody>
+      zone.innerHTML = `<p class="aide">${texteHtml('mail_btp.parametres.regles_aide')}</p>
+        <table class="tableau-compact largeur-contenu"><thead><tr><th>${texteHtml('mail_btp.parametres.ordre')}</th><th>${texteHtml('commun.code')}</th><th>${texteHtml('commun.libelle')}</th><th>${texteHtml('mail_btp.parametres.nature')}</th><th>${texteHtml('mail_btp.parametres.mots')}</th><th>${texteHtml('mail_btp.parametres.zones')}</th>
+          <th>${texteHtml('mail_btp.parametres.expediteur')}</th><th>${texteHtml('mail_btp.parametres.service')}</th><th>${texteHtml('mail_btp.parametres.action')}</th><th>${texteHtml('mail_btp.parametres.actif')}</th><th class="cellule-boutons"></th></tr></thead><tbody>
         ${l.map((r, i) => `<tr data-i="${i}"><td><input data-r="ordre" value="${r.ordre}" size="3"></td><td><input data-r="code" value="${echapper(r.code)}" size="8"></td>
           <td><input data-r="libelle" value="${echapper(r.libelle)}" size="20"></td><td><span data-nature></span></td>
-          <td><input data-r="mots" value="${echapper(r.mots.join('; '))}" size="32"></td><td><input data-r="dans" value="${echapper(r.dans.join(', '))}" size="12" placeholder="toutes"></td>
+          <td><input data-r="mots" value="${echapper(r.mots.join('; '))}" size="32"></td><td><input data-r="dans" value="${echapper(r.dans.join(', '))}" size="12" placeholder="${texteHtml('mail_btp.parametres.zones_toutes')}"></td>
           <td><input data-r="expediteur" value="${echapper(r.expediteur ?? '')}" size="16"></td><td><input data-r="service" value="${echapper(r.service ?? '')}" size="8"></td>
           <td><span data-action></span></td><td><input type="checkbox" data-r="actif" ${r.actif ? 'checked' : ''}></td>
-          <td class="cellule-boutons"><button type="button" data-retirer>✕</button></td></tr>`).join('')}</tbody></table>
-        <div class="boutons"><button type="button" data-ajouter>＋ Règle</button> <button type="button" class="principal" data-enregistrer-regles>Enregistrer les règles</button></div>
-        <h3>Essai</h3><p class="ligne"><input data-essai="de" size="24" placeholder="expéditeur"> <input data-essai="objet" size="40" placeholder="objet">
-          <input data-essai="texte" size="40" placeholder="texte"> <button type="button" data-essayer>Essayer</button> <span data-resultat-essai></span></p>`;
+          <td class="cellule-boutons"><button type="button" data-retirer title="${texteHtml('commun.retirer')}">${iconeHtml('retirer')}</button></td></tr>`).join('')}</tbody></table>
+        <div class="boutons"><button type="button" data-ajouter>${iconeHtml('ajouter')} ${texteHtml('mail_btp.parametres.regle')}</button> <button type="button" class="principal" data-enregistrer-regles>${texteHtml('mail_btp.parametres.enregistrer_regles')}</button></div>
+        <h3>${texteHtml('mail_btp.parametres.essai')}</h3><p class="ligne"><input data-essai="de" size="24" placeholder="${texteHtml('mail_btp.parametres.essai_de')}"> <input data-essai="objet" size="40" placeholder="${texteHtml('mail_btp.parametres.essai_objet')}">
+          <input data-essai="texte" size="40" placeholder="${texteHtml('mail_btp.parametres.essai_texte')}"> <button type="button" data-essayer>${texteHtml('mail_btp.parametres.essayer')}</button> <span data-resultat-essai></span></p>`;
       zone.querySelectorAll('tr[data-i]').forEach((tr) => {
         const r = l[Number(tr.dataset.i)];
         const nature = creerCombo({ options: NATURES.map((n) => ({ valeur: n, libelle: n })), valeur: r.nature });
@@ -118,13 +105,17 @@ export class PageParametresMail extends PageBase {
         rendre();
       });
       zone.querySelector('[data-enregistrer-regles]').addEventListener('click', async () => {
-        try { this.regles = await api.mail.enregistrerRegles(l); this.app.message('Règles enregistrées', 'succes'); this.rendreRegles(); } catch (e) { this.app.erreur(e); }
+        try { this.regles = await api.mail.enregistrerRegles(l); this.app.message(texte('mail_btp.parametres.regles_enregistrees'), 'succes'); this.rendreRegles(); } catch (e) { this.app.erreur(e); }
       });
       zone.querySelector('[data-essayer]').addEventListener('click', () => {
         const e = (k) => zone.querySelector(`[data-essai="${k}"]`).value;
         const r = reconnaitre({ objet: e('objet'), texte: e('texte'), pieces: [], texte_pieces: '', de: e('de'), fil: [], candidats: [], expediteur_tiers: [], tiers: [], automatique: false },
           l.filter((x) => x.actif), { haut: this.parametres.seuil_haut ?? 80, bas: this.parametres.seuil_bas ?? 40 });
-        zone.querySelector('[data-resultat-essai]').textContent = r.regle ? `Règle ${r.regle} : ${r.nature}${r.service ? `, service ${r.service}` : ''}${r.decision === 'IGNORE' ? ', ignoré' : ''}` : 'Aucune règle';
+        zone.querySelector('[data-resultat-essai]').textContent = r.regle ? [
+          texte('mail_btp.parametres.essai_regle', { regle: r.regle, nature: r.nature }),
+          ...(r.service ? [texte('mail_btp.parametres.essai_service', { service: r.service })] : []),
+          ...(r.decision === 'IGNORE' ? [texte('mail_btp.parametres.essai_ignore')] : []),
+        ].join(', ') : texte('mail_btp.parametres.essai_aucune');
       });
     };
     rendre();
@@ -138,22 +129,22 @@ export class PageParametresMail extends PageBase {
 
   rendreComptes() {
     const zone = this.conteneur.querySelector('[data-comptes]');
-    zone.innerHTML = `${this.comptes.length ? `<table class="tableau-compact largeur-contenu"><thead><tr><th>État</th><th>Alias</th><th>Code</th><th>Envoi</th>
-      <th>Réception</th><th>Authentification</th><th>Hébergeur</th><th>Vérifié le</th><th class="cellule-boutons"></th></tr></thead><tbody>
+    zone.innerHTML = `${this.comptes.length ? `<table class="tableau-compact largeur-contenu"><thead><tr><th>${texteHtml('mail_btp.champs.etat')}</th><th>${texteHtml('mail_btp.parametres.alias')}</th><th>${texteHtml('commun.code')}</th><th>${texteHtml('mail_btp.parametres.envoi')}</th>
+      <th>${texteHtml('mail_btp.parametres.reception')}</th><th>${texteHtml('mail_btp.parametres.authentification')}</th><th>${texteHtml('mail_btp.parametres.hebergeur')}</th><th>${texteHtml('mail_btp.parametres.verifie_le')}</th><th class="cellule-boutons"></th></tr></thead><tbody>
       ${this.comptes.map((c) => `<tr data-id="${c.id}"${c.actif ? '' : ' class="discret"'}><td title="${echapper(c.derniere_erreur ?? '')}">${pastilleCompteMail(c.etat)}</td>
         <td>${echapper(c.alias)}${c.autres_alias.length ? ` <span class="aide">(+ ${echapper(c.autres_alias.join(', '))})</span>` : ''}</td><td>${echapper(c.code)}</td>
-        <td>${c.envoi ? '✓' : ''}</td><td>${c.reception ? '✓' : ''}</td><td>${c.authentification === 'OAUTH2' ? 'OAuth 2.0' : 'Mot de passe'}</td>
+        <td>${c.envoi ? iconeHtml('mail_btp_valider') : ''}</td><td>${c.reception ? iconeHtml('mail_btp_valider') : ''}</td><td>${c.authentification === 'OAUTH2' ? texteHtml('mail_btp.parametres.oauth') : texteHtml('mail_btp.authentifications.MOT_DE_PASSE')}</td>
         <td>${echapper(HEBERGEURS.find((h) => h.valeur === c.hebergeur)?.libelle ?? c.hebergeur)}</td><td>${formatDateHeure(c.verifie_le)}</td>
-        <td class="cellule-boutons"><button type="button" data-tester title="Se connecter aux serveurs du compte">🔌 Tester</button>
-          ${c.etat === 'SUSPENDU' ? '<button type="button" data-reprendre title="Reprendre les envois groupés">▶ Reprendre</button>' : ''}
-          <button type="button" data-modifier title="Modifier le compte">✎</button></td></tr>`).join('')}</tbody></table>` : '<p class="aide">Aucun compte : les envois de courriels sont indisponibles.</p>'}
-      <div class="boutons"><button type="button" data-nouveau>＋ Compte</button></div>`;
+        <td class="cellule-boutons"><button type="button" data-tester title="${texteHtml('mail_btp.parametres.tester_titre')}">${iconeHtml('mail_btp_tester')} ${texteHtml('mail_btp.parametres.tester')}</button>
+          ${c.etat === 'SUSPENDU' ? `<button type="button" data-reprendre title="${texteHtml('mail_btp.parametres.reprendre_titre')}">${iconeHtml('mail_btp_reprendre')} ${texteHtml('mail_btp.suivi.reprendre')}</button>` : ''}
+          <button type="button" data-modifier title="${texteHtml('mail_btp.parametres.modifier_compte')}">${iconeHtml('mail_btp_modifier')}</button></td></tr>`).join('')}</tbody></table>` : `<p class="aide">${texteHtml('mail_btp.parametres.aucun_compte')}</p>`}
+      <div class="boutons"><button type="button" data-nouveau>${iconeHtml('ajouter')} ${texteHtml('mail_btp.suivi.compte')}</button></div>`;
     zone.querySelectorAll('tr[data-id]').forEach((tr) => {
       const c = this.comptes.find((x) => x.id === Number(tr.dataset.id));
       tr.querySelector('[data-tester]').addEventListener('click', async () => {
         try {
           const r = await api.mail.tester(c.id);
-          this.app.message(r.etat === 'ERREUR' ? `Échec : ${r.derniere_erreur}` : 'Connexion réussie', r.etat === 'ERREUR' ? 'erreur' : 'succes');
+          this.app.message(r.etat === 'ERREUR' ? texte('mail_btp.parametres.echec', { erreur: r.derniere_erreur }) : texte('mail_btp.parametres.connexion_ok'), r.etat === 'ERREUR' ? 'erreur' : 'succes');
           await this.recharger();
         } catch (e) { this.app.erreur(e); }
       });
@@ -171,42 +162,42 @@ export class PageParametresMail extends PageBase {
     const smtp = c?.smtp ?? (c ? null : p.smtp);
     const imap = c?.imap ?? (c ? null : p.imap);
     const serveur = (cle, s, info) => `<tr><th>${cle.toUpperCase()}</th><td>
-        <input data-${cle}="hote" value="${echapper(s?.hote ?? '')}" size="24" placeholder="hôte (vide : aucun)">
-        <input data-${cle}="port" value="${s?.port ?? ''}" size="5" inputmode="numeric" placeholder="port"> <span data-securite-${cle}></span>
-        <input data-${cle}="identifiant" size="22" autocomplete="off" placeholder="${info?.identifiant_configure ? 'identifiant inchangé' : 'identifiant (vide : l’adresse)'}">
-        <input type="password" data-${cle}="mot_de_passe" size="16" autocomplete="new-password" placeholder="${info?.mot_de_passe_configure ? 'mot de passe inchangé' : 'mot de passe'}"></td></tr>`;
-    zone.innerHTML = `<h3>${c ? `Compte ${echapper(c.alias)}` : 'Nouveau compte'}</h3><table class="tableau-compact largeur-contenu"><tbody>
-      <tr><th>Code</th><td><input data-c="code" value="${echapper(c?.code ?? '')}" size="16" maxlength="30"></td></tr>
-      <tr><th>Alias principal</th><td><input data-c="alias" value="${echapper(c?.alias ?? '')}" size="30" maxlength="80" placeholder="ex. Service commercial"></td></tr>
-      <tr><th>Adresse</th><td><input data-c="adresse" size="34" autocomplete="off" placeholder="${c ? 'inchangée (jamais réaffichée)' : 'adresse@domaine.fr'}">
-        ${c ? '<button type="button" data-afficher title="Afficher l’adresse (journalisé)">👁</button> <span data-adresse></span>' : ''}</td></tr>
-      <tr><th>Nom affiché</th><td><input data-c="nom" size="30" placeholder="${c ? 'inchangé' : 'ex. Société Martin – Service commercial'}"></td></tr>
-      <tr><th>Hébergeur</th><td><span data-hebergeur></span></td></tr>
-      <tr><th>Usages</th><td><label class="ligne"><input type="checkbox" data-c="envoi" ${c?.envoi ?? true ? 'checked' : ''}> envoi (SMTP)</label>
-        <label class="ligne"><input type="checkbox" data-c="reception" ${c?.reception ? 'checked' : ''}> réception (IMAP, lot de la relève)</label>
-        <label class="ligne"><input type="checkbox" data-c="copie" ${c?.copie_envoyes ?? true ? 'checked' : ''}> copie des envois dans « Envoyés » (IMAP)</label></td></tr>
-      <tr><th>Authentification</th><td><span data-auth></span> <span data-oauth></span></td></tr>
+        <input data-${cle}="hote" value="${echapper(s?.hote ?? '')}" size="24" placeholder="${texteHtml('mail_btp.parametres.hote')}">
+        <input data-${cle}="port" value="${s?.port ?? ''}" size="5" inputmode="numeric" placeholder="${texteHtml('mail_btp.parametres.port')}"> <span data-securite-${cle}></span>
+        <input data-${cle}="identifiant" size="22" autocomplete="off" placeholder="${info?.identifiant_configure ? texteHtml('mail_btp.parametres.identifiant_inchange') : texteHtml('mail_btp.parametres.identifiant')}">
+        <input type="password" data-${cle}="mot_de_passe" size="16" autocomplete="new-password" placeholder="${info?.mot_de_passe_configure ? texteHtml('mail_btp.parametres.mdp_inchange') : texteHtml('mail_btp.parametres.mdp')}"></td></tr>`;
+    zone.innerHTML = `<h3>${c ? texteHtml('mail_btp.parametres.compte_titre', { alias: c.alias }) : texteHtml('mail_btp.parametres.nouveau_compte')}</h3><table class="tableau-compact largeur-contenu"><tbody>
+      <tr><th>${texteHtml('commun.code')}</th><td><input data-c="code" value="${echapper(c?.code ?? '')}" size="16" maxlength="30"></td></tr>
+      <tr><th>${texteHtml('mail_btp.parametres.alias_principal')}</th><td><input data-c="alias" value="${echapper(c?.alias ?? '')}" size="30" maxlength="80" placeholder="${texteHtml('mail_btp.parametres.alias_aide')}"></td></tr>
+      <tr><th>${texteHtml('mail_btp.parametres.adresse')}</th><td><input data-c="adresse" size="34" autocomplete="off" placeholder="${c ? texteHtml('mail_btp.parametres.adresse_inchangee') : texteHtml('mail_btp.parametres.adresse_aide')}">
+        ${c ? `<button type="button" data-afficher title="${texteHtml('mail_btp.parametres.afficher_adresse')}">${iconeHtml('mail_btp_afficher')}</button> <span data-adresse></span>` : ''}</td></tr>
+      <tr><th>${texteHtml('mail_btp.parametres.nom_affiche')}</th><td><input data-c="nom" size="30" placeholder="${c ? texteHtml('mail_btp.parametres.inchange') : texteHtml('mail_btp.parametres.nom_aide')}"></td></tr>
+      <tr><th>${texteHtml('mail_btp.parametres.hebergeur')}</th><td><span data-hebergeur></span></td></tr>
+      <tr><th>${texteHtml('mail_btp.parametres.usages_compte')}</th><td><label class="ligne"><input type="checkbox" data-c="envoi" ${c?.envoi ?? true ? 'checked' : ''}> ${texteHtml('mail_btp.parametres.envoi_smtp')}</label>
+        <label class="ligne"><input type="checkbox" data-c="reception" ${c?.reception ? 'checked' : ''}> ${texteHtml('mail_btp.parametres.reception_imap')}</label>
+        <label class="ligne"><input type="checkbox" data-c="copie" ${c?.copie_envoyes ?? true ? 'checked' : ''}> ${texteHtml('mail_btp.parametres.copie_envoyes')}</label></td></tr>
+      <tr><th>${texteHtml('mail_btp.parametres.authentification')}</th><td><span data-auth></span> <span data-oauth></span></td></tr>
       ${serveur('smtp', smtp, c?.smtp)}${serveur('imap', imap, c?.imap)}
-      <tr><th>Répondre à</th><td><span data-repondre></span> <span class="aide">indispensable pour un compte « noreply »</span></td></tr>
-      <tr><th>Limitations</th><td>${LIMITES.map(([k, l]) => `<label class="ligne">${l} <input data-limite="${k}" size="5" inputmode="numeric"
+      <tr><th>${texteHtml('mail_btp.parametres.repondre_a')}</th><td><span data-repondre></span> <span class="aide">${texteHtml('mail_btp.parametres.repondre_aide')}</span></td></tr>
+      <tr><th>${texteHtml('mail_btp.parametres.limites')}</th><td>${LIMITES.map(([k, l]) => `<label class="ligne">${echapper(l)} <input data-limite="${k}" size="5" inputmode="numeric"
         value="${c?.limites_saisies?.[k] || ''}" placeholder="${c?.limites?.[k] ?? ''}"></label>`).join(' ')}
-        <p class="aide">Vide : valeur par défaut de l'hébergeur (prudente, à vérifier : les quotas des hébergeurs changent).</p></td></tr>
-      <tr><th>Réception</th><td>
-        <label class="ligne">Relève toutes les <input data-o="intervalle_minutes" size="4" inputmode="numeric" value="${c?.options?.intervalle_minutes ?? 60}"> min</label>
-        <label class="ligne"><input type="checkbox" data-o="marquer_lus" ${c?.options?.marquer_lus ? 'checked' : ''}> marquer comme lus les courriels relevés</label>
-        <label class="ligne"><input type="checkbox" data-o="drapeau_a_suivre" ${c?.options?.drapeau_a_suivre ? 'checked' : ''}> drapeau « à suivre » = à rapprocher</label><br>
-        <label class="ligne">Après un rattachement <span data-apres></span></label>
-        <label class="ligne">dossier <input data-o="dossier_traites" size="20" value="${echapper(c?.options?.dossier_traites ?? 'LogiBTP/Traités')}"></label><br>
-        <label class="ligne">Dossiers relevés <input data-dossiers size="50" value="${echapper((c?.dossiers ?? [{ nom: 'INBOX', role: 'RECEPTION' }]).map((d) => `${d.nom}=${d.role}`).join('; '))}"></label>
-        <p class="aide">« INBOX=RECEPTION; LogiBTP/À traiter=A_TRAITER » : un courriel déposé dans un dossier A_TRAITER va toujours dans « À rapprocher ». Jamais de suppression sur le serveur.
-          ${c?.releve_le ? `Dernière relève : ${formatDateHeure(c.releve_le)}${c.releve_erreur ? ` — <span class="erreur">${echapper(c.releve_erreur)}</span>` : ''}` : ''}</p></td></tr>
-      <tr><th>Services qui voient la boîte</th><td><input data-c="services" value="${echapper((c?.services ?? []).join(', '))}" size="30" placeholder="codes des services (réception)"></td></tr>
-      <tr><th>Signature</th><td data-signature></td></tr>
-      <tr><th>Actif</th><td><input type="checkbox" data-c="actif" ${c?.actif ?? true ? 'checked' : ''}></td></tr>
+        <p class="aide">${texteHtml('mail_btp.parametres.limites_aide')}</p></td></tr>
+      <tr><th>${texteHtml('mail_btp.parametres.reception')}</th><td>
+        <label class="ligne">${texteHtml('mail_btp.parametres.releve')} <input data-o="intervalle_minutes" size="4" inputmode="numeric" value="${c?.options?.intervalle_minutes ?? 60}"> ${texteHtml('mail_btp.parametres.minutes')}</label>
+        <label class="ligne"><input type="checkbox" data-o="marquer_lus" ${c?.options?.marquer_lus ? 'checked' : ''}> ${texteHtml('mail_btp.parametres.marquer_lus')}</label>
+        <label class="ligne"><input type="checkbox" data-o="drapeau_a_suivre" ${c?.options?.drapeau_a_suivre ? 'checked' : ''}> ${texteHtml('mail_btp.parametres.drapeau')}</label><br>
+        <label class="ligne">${texteHtml('mail_btp.parametres.apres')} <span data-apres></span></label>
+        <label class="ligne">${texteHtml('mail_btp.parametres.dossier')} <input data-o="dossier_traites" size="20" value="${echapper(c?.options?.dossier_traites ?? 'LogiBTP/Traités')}"></label><br>
+        <label class="ligne">${texteHtml('mail_btp.parametres.dossiers')} <input data-dossiers size="50" value="${echapper((c?.dossiers ?? [{ nom: 'INBOX', role: 'RECEPTION' }]).map((d) => `${d.nom}=${d.role}`).join('; '))}"></label>
+        <p class="aide">${texteHtml('mail_btp.parametres.dossiers_aide')}
+          ${c?.releve_le ? `${texteHtml('mail_btp.parametres.derniere_releve', { date: formatDateHeure(c.releve_le) })}${c.releve_erreur ? ` — <span class="erreur">${echapper(c.releve_erreur)}</span>` : ''}` : ''}</p></td></tr>
+      <tr><th>${texteHtml('mail_btp.parametres.services')}</th><td><input data-c="services" value="${echapper((c?.services ?? []).join(', '))}" size="30" placeholder="${texteHtml('mail_btp.parametres.services_aide')}"></td></tr>
+      <tr><th>${texteHtml('mail_btp.parametres.signature')}</th><td data-signature></td></tr>
+      <tr><th>${texteHtml('mail_btp.parametres.actif')}</th><td><input type="checkbox" data-c="actif" ${c?.actif ?? true ? 'checked' : ''}></td></tr>
     </tbody></table>
-    <div class="boutons"><button type="button" class="principal" data-enregistrer>Enregistrer le compte</button>
-      ${c ? '<button type="button" data-supprimer>✕ Supprimer</button>' : ''} <button type="button" data-fermer>Fermer</button></div>
-    ${c ? '<h3>Alias du compte</h3><div data-alias></div>' : ''}`;
+    <div class="boutons"><button type="button" class="principal" data-enregistrer>${texteHtml('mail_btp.parametres.enregistrer_compte')}</button>
+      ${c ? `<button type="button" data-supprimer>${iconeHtml('retirer')} ${texteHtml('commun.supprimer')}</button>` : ''} <button type="button" data-fermer>${texteHtml('commun.fermer')}</button></div>
+    ${c ? `<h3>${texteHtml('mail_btp.parametres.alias_compte')}</h3><div data-alias></div>` : ''}`;
     const val = (k) => zone.querySelector(`[data-c="${k}"]`);
     const hebergeur = creerCombo({ options: HEBERGEURS, valeur: c?.hebergeur ?? 'GMAIL' });
     zone.querySelector('[data-hebergeur]').replaceWith(hebergeur);
@@ -245,11 +236,11 @@ export class PageParametresMail extends PageBase {
       return { hote: v('hote'), port: Number(v('port')) || 0, securite: securites[cle].valeurCombo, identifiant: v('identifiant') || null, mot_de_passe: v('mot_de_passe') || null };
     };
     zone.querySelector('[data-afficher]')?.addEventListener('click', async () => {
-      try { const a = await api.mail.adresse(c.id); zone.querySelector('[data-adresse]').textContent = `${a.adresse}${a.nom_affiche ? ` (${a.nom_affiche})` : ''}`; } catch (e) { this.app.erreur(e); }
+      try { const a = await api.mail.adresse(c.id); zone.querySelector('[data-adresse]').textContent = a.nom_affiche ? texte('mail_btp.parametres.adresse_nom', { adresse: a.adresse, nom: a.nom_affiche }) : a.adresse; } catch (e) { this.app.erreur(e); }
     });
     zone.querySelector('[data-fermer]').addEventListener('click', () => { zone.innerHTML = ''; });
     zone.querySelector('[data-supprimer]')?.addEventListener('click', async () => {
-      if (!await confirmer(`Supprimer le compte « ${c.alias} » ?`)) return;
+      if (!await confirmer(texte('mail_btp.parametres.supprimer_compte', { alias: c.alias }))) return;
       try { await api.mail.supprimerCompte(c.id); zone.innerHTML = ''; await this.recharger(); } catch (e) { this.app.erreur(e); }
     });
     zone.querySelector('[data-enregistrer]').addEventListener('click', async () => {
@@ -272,7 +263,7 @@ export class PageParametresMail extends PageBase {
       };
       try {
         const r = c ? await api.mail.modifierCompte(c.id, saisie) : await api.mail.creerCompte(saisie);
-        this.app.message('Compte enregistré : « 🔌 Tester » pour vérifier la connexion', 'succes');
+        this.app.message(texte('mail_btp.parametres.compte_enregistre'), 'succes');
         await this.recharger();
         this.rendreCompte(this.comptes.find((x) => x.id === r.id));
       } catch (e) { this.app.erreur(e); }
@@ -283,12 +274,12 @@ export class PageParametresMail extends PageBase {
   rendreAlias(c, zone) {
     const liste = this.alias.filter((a) => a.compte_id === c.id).map((a) => ({ ...a }));
     const rendre = () => {
-      zone.innerHTML = `<p class="aide">Noms du compte dans l'application (expéditeur proposé à l'envoi) ; un principal.</p>
-        <table class="tableau-compact largeur-contenu"><thead><tr><th>Nom</th><th>Principal</th><th>Actif</th><th class="cellule-boutons"></th></tr></thead><tbody>
+      zone.innerHTML = `<p class="aide">${texteHtml('mail_btp.parametres.alias_aide_liste')}</p>
+        <table class="tableau-compact largeur-contenu"><thead><tr><th>${texteHtml('mail_btp.parametres.nom')}</th><th>${texteHtml('mail_btp.parametres.principal')}</th><th>${texteHtml('mail_btp.parametres.actif')}</th><th class="cellule-boutons"></th></tr></thead><tbody>
         ${liste.map((a, i) => `<tr data-i="${i}"><td><input data-k="nom" value="${echapper(a.nom)}" size="30" maxlength="80"></td>
           <td><input type="radio" name="alias-principal" data-k="principal" ${a.principal ? 'checked' : ''}></td>
-          <td><input type="checkbox" data-k="actif" ${a.actif ? 'checked' : ''}></td><td class="cellule-boutons"><button type="button" data-retirer>✕</button></td></tr>`).join('')}
-        </tbody></table><div class="boutons"><button type="button" data-ajouter>＋ Alias</button> <button type="button" data-enregistrer-alias>Enregistrer les alias</button></div>`;
+          <td><input type="checkbox" data-k="actif" ${a.actif ? 'checked' : ''}></td><td class="cellule-boutons"><button type="button" data-retirer title="${texteHtml('commun.retirer')}">${iconeHtml('retirer')}</button></td></tr>`).join('')}
+        </tbody></table><div class="boutons"><button type="button" data-ajouter>${iconeHtml('ajouter')} ${texteHtml('mail_btp.parametres.alias')}</button> <button type="button" data-enregistrer-alias>${texteHtml('mail_btp.parametres.enregistrer_alias')}</button></div>`;
       zone.querySelectorAll('tr[data-i]').forEach((tr) => {
         const a = liste[Number(tr.dataset.i)];
         tr.querySelector('[data-k="nom"]').addEventListener('input', (e) => { a.nom = e.target.value; });
@@ -300,7 +291,7 @@ export class PageParametresMail extends PageBase {
       zone.querySelector('[data-enregistrer-alias]').addEventListener('click', async () => {
         try {
           await api.mail.enregistrerAlias(c.id, liste.map((a) => ({ id: a.id ?? 0, nom: a.nom, compte_id: c.id, principal: a.principal, actif: a.actif, envoi: true, compte_actif: true })));
-          this.app.message('Alias enregistrés', 'succes');
+          this.app.message(texte('mail_btp.parametres.alias_enregistres'), 'succes');
           await this.recharger();
         } catch (e) { this.app.erreur(e); }
       });
@@ -313,12 +304,11 @@ export class PageParametresMail extends PageBase {
     const options = this.alias.filter((a) => a.actif && a.envoi).map((a) => ({ valeur: a.id, libelle: a.nom }));
     const lignes = this.usages.usages.map((u) => ({ ...u }));
     const rendre = () => {
-      zone.innerHTML = `<p class="aide">Alias proposé comme expéditeur selon l'usage ; une portée « type:CODE » (type de document) précise l'usage.
-        Sans alias pour un usage, l'alias de « Autres envois », sinon le premier alias principal.</p>
-        <table class="tableau-compact largeur-contenu"><thead><tr><th>Usage</th><th>Portée</th><th>Alias</th><th class="cellule-boutons"></th></tr></thead><tbody>
-        ${lignes.map((l, i) => `<tr data-i="${i}"><td><span data-usage></span></td><td><input data-portee value="${echapper(l.portee ?? '')}" size="16" placeholder="(défaut)"></td>
-          <td><span data-alias></span></td><td class="cellule-boutons"><button type="button" data-retirer>✕</button></td></tr>`).join('')}
-        </tbody></table><div class="boutons"><button type="button" data-ajouter>＋ Usage</button> <button type="button" data-enregistrer-usages>Enregistrer les usages</button></div>`;
+      zone.innerHTML = `<p class="aide">${texteHtml('mail_btp.parametres.usages_aide')}</p>
+        <table class="tableau-compact largeur-contenu"><thead><tr><th>${texteHtml('mail_btp.parametres.usage')}</th><th>${texteHtml('mail_btp.parametres.portee')}</th><th>${texteHtml('mail_btp.parametres.alias')}</th><th class="cellule-boutons"></th></tr></thead><tbody>
+        ${lignes.map((l, i) => `<tr data-i="${i}"><td><span data-usage></span></td><td><input data-portee value="${echapper(l.portee ?? '')}" size="16" placeholder="${texteHtml('mail_btp.parametres.defaut')}"></td>
+          <td><span data-alias></span></td><td class="cellule-boutons"><button type="button" data-retirer title="${texteHtml('commun.retirer')}">${iconeHtml('retirer')}</button></td></tr>`).join('')}
+        </tbody></table><div class="boutons"><button type="button" data-ajouter>${iconeHtml('ajouter')} ${texteHtml('mail_btp.parametres.usage')}</button> <button type="button" data-enregistrer-usages>${texteHtml('mail_btp.parametres.enregistrer_usages')}</button></div>`;
       zone.querySelectorAll('tr[data-i]').forEach((tr) => {
         const l = lignes[Number(tr.dataset.i)];
         const u = creerCombo({ options: this.usages.connus.map((x) => ({ valeur: x.code, libelle: x.libelle })), valeur: l.usage });
@@ -332,7 +322,7 @@ export class PageParametresMail extends PageBase {
       });
       zone.querySelector('[data-ajouter]').addEventListener('click', () => { lignes.push({ usage: 'GENERAL', portee: '', alias_id: options[0]?.valeur }); rendre(); });
       zone.querySelector('[data-enregistrer-usages]').addEventListener('click', async () => {
-        try { this.usages.usages = await api.mail.enregistrerUsages(lignes); this.app.message('Usages enregistrés', 'succes'); } catch (e) { this.app.erreur(e); }
+        try { this.usages.usages = await api.mail.enregistrerUsages(lignes); this.app.message(texte('mail_btp.parametres.usages_enregistres'), 'succes'); } catch (e) { this.app.erreur(e); }
       });
     };
     rendre();
@@ -341,13 +331,13 @@ export class PageParametresMail extends PageBase {
   rendreModeles(selection = null) {
     const zone = this.conteneur.querySelector('[data-modeles]');
     const libelleUsage = (code) => this.usages.connus.find((x) => x.code === code)?.libelle ?? code;
-    zone.innerHTML = `<p class="aide">Objet et corps proposés à la rédaction selon l'usage et le type de document. Variables :
+    zone.innerHTML = `<p class="aide">${texteHtml('mail_btp.parametres.modeles_aide')}
       ${VARIABLES_MODELE.map((v) => `<code>{{${v}}}</code>`).join(' ')}.</p>
-      ${this.modeles.length ? `<table class="tableau-compact largeur-contenu"><thead><tr><th>Code</th><th>Libellé</th><th>Usage</th><th>Type</th><th>Défaut</th><th>Actif</th>
+      ${this.modeles.length ? `<table class="tableau-compact largeur-contenu"><thead><tr><th>${texteHtml('commun.code')}</th><th>${texteHtml('commun.libelle')}</th><th>${texteHtml('mail_btp.parametres.usage')}</th><th>${texteHtml('mail_btp.parametres.type')}</th><th>${texteHtml('mail_btp.parametres.defaut_colonne')}</th><th>${texteHtml('mail_btp.parametres.actif')}</th>
         <th class="cellule-boutons"></th></tr></thead><tbody>${this.modeles.map((m) => `<tr data-id="${m.id}"><td>${echapper(m.code)}</td><td>${echapper(m.libelle)}</td>
-        <td>${echapper(libelleUsage(m.usage))}</td><td>${echapper(m.type || '(tous)')}</td><td>${m.defaut ? '✓' : ''}</td><td>${m.actif ? '✓' : ''}</td>
-        <td class="cellule-boutons"><button type="button" data-modifier>✎</button></td></tr>`).join('')}</tbody></table>` : ''}
-      <div class="boutons"><button type="button" data-nouveau>＋ Modèle</button></div><div data-modele></div>`;
+        <td>${echapper(libelleUsage(m.usage))}</td><td>${m.type ? echapper(m.type) : texteHtml('mail_btp.parametres.tous')}</td><td>${m.defaut ? iconeHtml('mail_btp_valider') : ''}</td><td>${m.actif ? iconeHtml('mail_btp_valider') : ''}</td>
+        <td class="cellule-boutons"><button type="button" data-modifier title="${texteHtml('commun.modifier')}">${iconeHtml('mail_btp_modifier')}</button></td></tr>`).join('')}</tbody></table>` : ''}
+      <div class="boutons"><button type="button" data-nouveau>${iconeHtml('ajouter')} ${texteHtml('mail_btp.parametres.modele')}</button></div><div data-modele></div>`;
     zone.querySelectorAll('tr[data-id]').forEach((tr) => tr.querySelector('[data-modifier]').addEventListener('click', () =>
       this.rendreModele(this.modeles.find((m) => m.id === Number(tr.dataset.id)))));
     zone.querySelector('[data-nouveau]').addEventListener('click', () => this.rendreModele(null));
@@ -357,19 +347,19 @@ export class PageParametresMail extends PageBase {
   rendreModele(m) {
     const zone = this.conteneur.querySelector('[data-modele]');
     zone.innerHTML = `<table class="tableau-compact largeur-contenu"><tbody>
-      <tr><th>Code</th><td><input data-m="code" value="${echapper(m?.code ?? '')}" size="16" maxlength="30"></td></tr>
-      <tr><th>Libellé</th><td><input data-m="libelle" value="${echapper(m?.libelle ?? '')}" size="40"></td></tr>
-      <tr><th>Usage</th><td><span data-usage></span></td></tr>
-      <tr><th>Type de document</th><td><input data-m="type" value="${echapper(m?.type ?? '')}" size="16" placeholder="(tous) ex. V_DEVIS"></td></tr>
-      <tr><th>Objet</th><td><input data-m="objet" value="${echapper(m?.objet ?? '')}" size="60" placeholder="{{type}} {{numero}} – {{objet}}"></td></tr>
-      <tr><th>Corps</th><td data-corps></td></tr>
-      <tr><th>Options</th><td><label class="ligne"><input type="checkbox" data-m="defaut" ${m?.defaut ? 'checked' : ''}> modèle par défaut</label>
-        <label class="ligne"><input type="checkbox" data-m="actif" ${m?.actif ?? true ? 'checked' : ''}> actif</label></td></tr></tbody></table>
-      <div class="boutons"><button type="button" class="principal" data-enregistrer>Enregistrer le modèle</button>
-        ${m ? '<button type="button" data-supprimer>✕ Supprimer</button>' : ''}</div>`;
+      <tr><th>${texteHtml('commun.code')}</th><td><input data-m="code" value="${echapper(m?.code ?? '')}" size="16" maxlength="30"></td></tr>
+      <tr><th>${texteHtml('commun.libelle')}</th><td><input data-m="libelle" value="${echapper(m?.libelle ?? '')}" size="40"></td></tr>
+      <tr><th>${texteHtml('mail_btp.parametres.usage')}</th><td><span data-usage></span></td></tr>
+      <tr><th>${texteHtml('mail_btp.parametres.type_document')}</th><td><input data-m="type" value="${echapper(m?.type ?? '')}" size="16" placeholder="${texteHtml('mail_btp.parametres.type_aide')}"></td></tr>
+      <tr><th>${texteHtml('mail_btp.champs.objet')}</th><td><input data-m="objet" value="${echapper(m?.objet ?? '')}" size="60" placeholder="${texteHtml('mail_btp.parametres.objet_aide', { type: '{{type}}', numero: '{{numero}}', objet: '{{objet}}' })}"></td></tr>
+      <tr><th>${texteHtml('mail_btp.parametres.corps')}</th><td data-corps></td></tr>
+      <tr><th>${texteHtml('mail_btp.parametres.options')}</th><td><label class="ligne"><input type="checkbox" data-m="defaut" ${m?.defaut ? 'checked' : ''}> ${texteHtml('mail_btp.parametres.modele_defaut')}</label>
+        <label class="ligne"><input type="checkbox" data-m="actif" ${m?.actif ?? true ? 'checked' : ''}> ${texteHtml('mail_btp.parametres.actif_minuscule')}</label></td></tr></tbody></table>
+      <div class="boutons"><button type="button" class="principal" data-enregistrer>${texteHtml('mail_btp.parametres.enregistrer_modele')}</button>
+        ${m ? `<button type="button" data-supprimer>${iconeHtml('retirer')} ${texteHtml('commun.supprimer')}</button>` : ''}</div>`;
     const usage = creerCombo({ options: this.usages.connus.map((x) => ({ valeur: x.code, libelle: x.libelle })), valeur: m?.usage ?? 'DOCUMENT_VENTE' });
     zone.querySelector('[data-usage]').replaceWith(usage);
-    const corps = zoneRiche(m?.corps_html ?? '<p>Bonjour,</p><p>Veuillez trouver ci-joint {{document}}.</p><p>Cordialement,</p>');
+    const corps = zoneRiche(m?.corps_html ?? texte('mail_btp.parametres.corps_defaut_html', { document: '{{document}}' }));
     zone.querySelector('[data-corps]').append(corps.element);
     const v = (k) => zone.querySelector(`[data-m="${k}"]`);
     zone.querySelector('[data-enregistrer]').addEventListener('click', async () => {
@@ -378,25 +368,24 @@ export class PageParametresMail extends PageBase {
           id: m?.id ?? 0, code: v('code').value, libelle: v('libelle').value, usage: usage.valeurCombo, type: v('type').value.trim(), objet: v('objet').value,
           corps_html: corps.valeur() ?? '', defaut: v('defaut').checked, actif: v('actif').checked,
         });
-        this.app.message('Modèle enregistré', 'succes');
+        this.app.message(texte('mail_btp.parametres.modele_enregistre'), 'succes');
         this.rendreModeles();
       } catch (e) { this.app.erreur(e); }
     });
     zone.querySelector('[data-supprimer]')?.addEventListener('click', async () => {
-      if (!await confirmer(`Supprimer le modèle « ${m.libelle} » ?`)) return;
+      if (!await confirmer(texte('mail_btp.parametres.supprimer_modele', { libelle: m.libelle }))) return;
       try { this.modeles = await api.mail.supprimerModele(m.id); this.rendreModeles(); } catch (e) { this.app.erreur(e); }
     });
   }
 
   rendreParametres() {
     const zone = this.conteneur.querySelector('[data-parametres]');
-    zone.innerHTML = `<p class="aide">Les limitations de chaque compte se règlent dans le compte ; une limite atteinte met les courriels en attente,
-      jamais en échec. Au-delà des seuils, l'envoi demande une confirmation ou prévient les administrateurs.</p><table class="tableau-compact largeur-contenu"><tbody>
-      ${PARAMETRES.map(([k, l]) => `<tr><th>${l}</th><td><input data-p="${k}" value="${this.parametres[k] ?? ''}" size="6" inputmode="numeric"></td></tr>`).join('')}
-      </tbody></table><div class="boutons"><button type="button" data-enregistrer-parametres>Enregistrer</button></div>`;
+    zone.innerHTML = `<p class="aide">${texteHtml('mail_btp.parametres.reglages_aide')}</p><table class="tableau-compact largeur-contenu"><tbody>
+      ${PARAMETRES.map(([k, l]) => `<tr><th>${echapper(l)}</th><td><input data-p="${k}" value="${this.parametres[k] ?? ''}" size="6" inputmode="numeric"></td></tr>`).join('')}
+      </tbody></table><div class="boutons"><button type="button" data-enregistrer-parametres>${texteHtml('commun.enregistrer')}</button></div>`;
     zone.querySelector('[data-enregistrer-parametres]').addEventListener('click', async () => {
       const p = Object.fromEntries(PARAMETRES.map(([k]) => [k, Number(zone.querySelector(`[data-p="${k}"]`).value) || 0]));
-      try { this.parametres = await api.mail.enregistrerParametres(p); this.app.message('Paramètres enregistrés', 'succes'); } catch (e) { this.app.erreur(e); }
+      try { this.parametres = await api.mail.enregistrerParametres(p); this.app.message(texte('mail_btp.parametres.reglages_enregistres'), 'succes'); } catch (e) { this.app.erreur(e); }
     });
   }
 }

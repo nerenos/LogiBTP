@@ -1,4 +1,5 @@
 import { PROFIL, ErreurApi, appelApi } from '@logibtp/socle';
+import { texte } from '@logibtp/socle/dictionnaire';
 import { ERREUR_FICHE } from './codes.js';
 import { validerChamp, erreurRequete, MESSAGES } from './validation.js';
 import { controlerChrono, formaterCode, lireCode, debutCode, codeSuivant, exerciceChrono } from './chrono.js';
@@ -107,7 +108,7 @@ export class FournisseurFicheMemoire {
 
   #type(code) {
     const t = this.types[code];
-    if (!t) throw new ErreurFiche(404, 'TYPE', `Type de fiche ${code} inconnu`);
+    if (!t) throw new ErreurFiche(404, 'TYPE', texte('fiche.fournisseur.type_inconnu', { code }));
     return t;
   }
 
@@ -120,7 +121,7 @@ export class FournisseurFicheMemoire {
   }
 
   #exiger(type, droit) {
-    if (!this.#droits(type)[droit]) throw new ErreurFiche(403, 'ACCES_REFUSE', `Droit ${droit.toUpperCase()} refusé`);
+    if (!this.#droits(type)[droit]) throw new ErreurFiche(403, 'ACCES_REFUSE', texte('fiche.fournisseur.droit_refuse', { droit: droit.toUpperCase() }));
   }
 
   async definition(type) {
@@ -158,7 +159,7 @@ export class FournisseurFicheMemoire {
   #ligne(type, id) {
     const t = this.#type(type);
     const l = t.lignes.find((x) => String(x[t.cle]) === String(id));
-    if (!l) throw new ErreurFiche(404, 'INTROUVABLE', `Fiche ${type} ${id} introuvable`);
+    if (!l) throw new ErreurFiche(404, 'INTROUVABLE', texte('fiche.fournisseur.introuvable', { type, id }));
     return l;
   }
 
@@ -226,7 +227,7 @@ export class FournisseurFicheMemoire {
     const def = await this.definition(type);
     const supplementaire = String(champ).startsWith('+');
     const c = supplementaire ? def.supplementaires.find((x) => x.code === champ.slice(1)) : def.champs.find((x) => x.code === champ);
-    if (!c || !estSecret(c)) throw new ErreurFiche(422, 'CHAMP', `Champ ${champ} : pas un mot de passe`);
+    if (!c || !estSecret(c)) throw new ErreurFiche(422, 'CHAMP', texte('fiche.fournisseur.pas_secret', { champ }));
     if (c.confidentiel) this.#exiger(type, 'confidentiel');
     const l = this.#ligne(type, id);
     this.#journaliser(type, id, def, [champ]);
@@ -275,7 +276,7 @@ export class FournisseurFicheMemoire {
       const code = validerChamp(c, proprietes[c.code]);
       if (code) erreurs.push({ champ: c.code, code, message: MESSAGES[code], supplementaire: true });
     }
-    if (erreurs.length) throw new ErreurFiche(422, 'VALIDATION', 'Fiche incomplète ou incorrecte', erreurs);
+    if (erreurs.length) throw new ErreurFiche(422, 'VALIDATION', texte('fiche.fournisseur.incomplete'), erreurs);
   }
 
   #ecrire(type, l, valeurs, proprietes) {
@@ -283,7 +284,7 @@ export class FournisseurFicheMemoire {
     const champs = new Map(t.definition.champs.map((c) => [c.code, c]));
     for (const [code, v] of Object.entries(valeurs ?? {})) {
       const c = champs.get(code);
-      if (!c || c.lecture_seule) throw new ErreurFiche(422, 'CHAMP', `Champ ${code} non modifiable`);
+      if (!c || c.lecture_seule) throw new ErreurFiche(422, 'CHAMP', texte('fiche.fournisseur.non_modifiable', { code }));
       l[code] = convertir(c, v);
     }
     if (proprietes && Object.keys(proprietes).length) l[t.proprietes] = { ...(l[t.proprietes] ?? {}), ...proprietes };
@@ -304,9 +305,9 @@ export class FournisseurFicheMemoire {
     const l = this.#ligne(type, id);
     const v = this.#verrou(type, id);
     if (!v || v.jeton !== jeton) {
-      throw new ErreurFiche(409, ERREUR_FICHE.VERROU_PERDU, v ? `Fiche reprise en modification par ${v.utilisateur}` : 'Verrou de modification expiré : reprenez la modification', this.#vueVerrou(v, jeton));
+      throw new ErreurFiche(409, ERREUR_FICHE.VERROU_PERDU, v ? texte('fiche.fournisseur.reprise_par', { utilisateur: v.utilisateur }) : texte('fiche.fournisseur.verrou_expire'), this.#vueVerrou(v, jeton));
     }
-    if (h && h !== this.#empreinte(type, l)) throw new ErreurFiche(409, 'FICHE_MODIFIEE', 'La fiche a été modifiée par ailleurs : rechargez-la');
+    if (h && h !== this.#empreinte(type, l)) throw new ErreurFiche(409, 'FICHE_MODIFIEE', texte('fiche.fournisseur.modifiee'));
     const essai = structuredClone(l);
     this.#ecrire(type, essai, valeurs, proprietes);
     const def = await this.definition(type);
@@ -342,9 +343,9 @@ export class FournisseurFicheMemoire {
     this.#exiger(type, 'supprimer');
     const t = this.#type(type);
     const v = this.verrous.get(`${type}:${id}`);
-    if (v && v.utilisateur !== this.utilisateur) throw new ErreurFiche(409, ERREUR_FICHE.FICHE_EN_MODIFICATION, `Fiche en cours de modification par ${v.utilisateur} : suppression impossible`);
+    if (v && v.utilisateur !== this.utilisateur) throw new ErreurFiche(409, ERREUR_FICHE.FICHE_EN_MODIFICATION, texte('fiche.fournisseur.suppression_verrou', { utilisateur: v.utilisateur }));
     const i = t.lignes.findIndex((x) => String(x[t.cle]) === String(id));
-    if (i < 0) throw new ErreurFiche(404, 'INTROUVABLE', `Fiche ${type} ${id} introuvable`);
+    if (i < 0) throw new ErreurFiche(404, 'INTROUVABLE', texte('fiche.fournisseur.introuvable', { type, id }));
     await t.avantSuppression?.(t.lignes[i]);
     t.lignes.splice(i, 1);
     this.verrous.delete(`${type}:${id}`);
@@ -355,15 +356,15 @@ export class FournisseurFicheMemoire {
   #chrono(type, valeurs) {
     const def = this.#type(type).definition.chrono;
     if (!def) return null;
-    const texte = (v) => (v === null || v === undefined || String(v).trim() === '' ? null : String(v).trim());
-    const variante = def.variante ? texte(valeurs[def.variante]) ?? def.variantes?.[0]?.valeur ?? '' : '';
+    const valeur = (v) => (v === null || v === undefined || String(v).trim() === '' ? null : String(v).trim());
+    const variante = def.variante ? valeur(valeurs[def.variante]) ?? def.variantes?.[0]?.valeur ?? '' : '';
     const p = this.chronosParametres.get(`${type}:${variante}`);
     const prefixe = p ? p.prefixe : def.variantes?.find((v) => v.valeur === variante)?.prefixe ?? def.prefixe;
     const format = p ? p.format ?? def.format : def.format;
     const raz = p ? p.raz : def.raz ?? 'J';
-    const portee = def.portee ? texte(valeurs[def.portee]) ?? '' : '';
+    const portee = def.portee ? valeur(valeurs[def.portee]) ?? '' : '';
     const aParent = (format ?? '').includes('{PARENT}');
-    const valeurParent = def.parent && aParent ? texte(valeurs[def.parent]) : null;
+    const valeurParent = def.parent && aParent ? valeur(valeurs[def.parent]) : null;
     const parent = valeurParent !== null ? this.parentChrono?.(type, def.parent, valeurParent) ?? null : null;
     return { definition: def, variante, prefixe, format, raz, portee, parent, aParent };
   }
@@ -419,7 +420,7 @@ export class FournisseurFicheMemoire {
     const saisi = l[ch.definition.champ];
     if (saisi !== null && saisi !== undefined && String(saisi).trim() !== '') {
       const pris = this.#pris(type, ch, String(saisi).trim());
-      if (pris) throw new ErreurFiche(409, ERREUR_FICHE.CODE_PRIS, `Le code ${saisi} est déjà utilisé`, { code: saisi, pris, propose: this.#suivantLibre(type, ch, saisi) });
+      if (pris) throw new ErreurFiche(409, ERREUR_FICHE.CODE_PRIS, texte('fiche.fournisseur.code_pris', { code: saisi }), { code: saisi, pris, propose: this.#suivantLibre(type, ch, saisi) });
       return null;
     }
     l[ch.definition.champ] = this.#previsionnel(type, ch);
@@ -433,7 +434,7 @@ export class FournisseurFicheMemoire {
     if (nouveau === (avant[def.champ] ?? null)) return;
     this.#exiger(type, 'modifier_code');
     const pris = nouveau !== null ? this.#pris(type, this.#chrono(type, apres), nouveau, id) : null;
-    if (pris) throw new ErreurFiche(422, ERREUR_FICHE.CODE_PRIS, `Le code ${nouveau} est déjà utilisé`, { code: nouveau, pris, propose: null });
+    if (pris) throw new ErreurFiche(422, ERREUR_FICHE.CODE_PRIS, texte('fiche.fournisseur.code_pris', { code: nouveau }), { code: nouveau, pris, propose: null });
   }
 
   async code(type, { code = null, valeurs = {}, id = null } = {}) {
@@ -464,9 +465,9 @@ export class FournisseurFicheMemoire {
   }
 
   async enregistrerChrono(type, { variante = '', prefixe = null, format = null, raz = 'J', dernier = null }) {
-    if (this.profil !== PROFIL.ADMIN) throw new ErreurFiche(403, 'ACCES_REFUSE', 'Paramétrage réservé au profil ADMIN');
+    if (this.profil !== PROFIL.ADMIN) throw new ErreurFiche(403, 'ACCES_REFUSE', texte('fiche.fournisseur.reserve_admin'));
     const def = this.#type(type).definition.chrono;
-    if (!def) throw new ErreurFiche(422, 'CHRONO', `Les fiches ${type} n'ont pas de chrono`);
+    if (!def) throw new ErreurFiche(422, 'CHRONO', texte('fiche.fournisseur.sans_chrono', { type }));
     const f = format?.trim() || null;
     const r = raz === 'A' ? 'A' : 'J';
     const e = controlerChrono({ format: f ?? def.format, raz: r });
@@ -485,13 +486,13 @@ export class FournisseurFicheMemoire {
   }
 
   async enregistrerParametrage(type, p) {
-    if (this.profil !== PROFIL.ADMIN) throw new ErreurFiche(403, 'ACCES_REFUSE', 'Paramétrage réservé au profil ADMIN');
+    if (this.profil !== PROFIL.ADMIN) throw new ErreurFiche(403, 'ACCES_REFUSE', texte('fiche.fournisseur.reserve_admin'));
     const codes = new Set();
     for (const c of p.supplementaires ?? []) {
-      if (!/^[a-z][a-z0-9_]{0,62}$/.test(c.code ?? '')) throw new ErreurFiche(422, 'CODE', `Code de champ invalide : ${c.code ?? ''} (minuscules, chiffres, _)`);
-      if (codes.has(c.code) || this.#type(type).definition.champs.some((x) => x.code === c.code)) throw new ErreurFiche(422, 'CODE', `Code de champ déjà utilisé : ${c.code}`);
-      if (!TYPES_SUPPLEMENTAIRES.includes(c.type)) throw new ErreurFiche(422, 'TYPE', `Type de champ invalide : ${c.type}`);
-      if (!String(c.libelle ?? '').trim()) throw new ErreurFiche(422, 'LIBELLE', `Libellé obligatoire pour le champ ${c.code}`);
+      if (!/^[a-z][a-z0-9_]{0,62}$/.test(c.code ?? '')) throw new ErreurFiche(422, 'CODE', texte('fiche.fournisseur.code_invalide', { code: c.code ?? '' }));
+      if (codes.has(c.code) || this.#type(type).definition.champs.some((x) => x.code === c.code)) throw new ErreurFiche(422, 'CODE', texte('fiche.fournisseur.code_utilise', { code: c.code }));
+      if (!TYPES_SUPPLEMENTAIRES.includes(c.type)) throw new ErreurFiche(422, 'TYPE', texte('fiche.fournisseur.type_invalide', { type: c.type }));
+      if (!String(c.libelle ?? '').trim()) throw new ErreurFiche(422, 'LIBELLE', texte('fiche.fournisseur.libelle_obligatoire', { code: c.code }));
       if (c.type === 'liste' && c.requete?.trim()) {
         const e = erreurRequete(c.requete);
         if (e) throw new ErreurFiche(422, 'REQUETE', e);

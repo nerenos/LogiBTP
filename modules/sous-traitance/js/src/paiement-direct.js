@@ -1,3 +1,4 @@
+import { texte, textesParCode, icone } from '@logibtp/socle/dictionnaire';
 import { Dz, S, ZERO, ajouterJours } from '@logibtp/socle';
 
 // Module Sous-traitance : paiement direct d'un sous-traitant par le maître d'ouvrage (ANALYSE-MODULE-SOUS-TRAITANCE.md
@@ -5,20 +6,11 @@ import { Dz, S, ZERO, ajouterJours } from '@logibtp/socle';
 // payé par le maître d'ouvrage (TTC, ou HT en autoliquidation), délai d'acceptation de la demande (15 jours), contrôles
 // d'une acceptation (cumul accepté ≤ montant agréé, montant ≤ demande, refus partiel motivé) et état de la demande.
 
-export const ETATS_PAIEMENT_DIRECT = {
-  RECUE: { libelle: 'Demande reçue', icone: '📥' },
-  ACCEPTEE: { libelle: 'Acceptée', icone: '✅' },
-  PARTIELLE: { libelle: 'Acceptée en partie', icone: '◐' },
-  REFUSEE: { libelle: 'Refusée', icone: '⛔' },
-  TRANSMISE: { libelle: 'Transmise au maître d\'ouvrage', icone: '📤' },
-  PAYEE: { libelle: 'Payée par le maître d\'ouvrage', icone: '💶' },
-};
-export const MESSAGES_PAIEMENT_DIRECT = {
-  PD_PLAFOND: 'Le cumul accepté dépasse le montant agréé du sous-traitant',
-  PD_DEMANDE: 'Le montant accepté dépasse la demande du sous-traitant',
-  PD_MOTIF: 'Motif obligatoire pour refuser tout ou partie de la demande',
-  PD_NEGATIF: 'Montant accepté négatif',
-};
+export const ETATS_PAIEMENT_DIRECT = Object.freeze(Object.fromEntries(['RECUE', 'ACCEPTEE', 'PARTIELLE', 'REFUSEE', 'TRANSMISE', 'PAYEE'].map((c) => [c, Object.freeze({
+  get libelle() { return texte(`sous_traitance.paiement_direct.etats.${c}`); },
+  get icone() { return icone(`sous_traitance_pd_${c.toLowerCase()}`); },
+})])));
+export const MESSAGES_PAIEMENT_DIRECT = textesParCode('sous_traitance.paiement_direct.erreurs', ['PD_PLAFOND', 'PD_DEMANDE', 'PD_MOTIF', 'PD_NEGATIF']);
 export const DELAI_ACCEPTATION_JOURS = 15;
 
 /** Montant que le maître d'ouvrage paie au sous-traitant : TTC de sa facture, HT en autoliquidation (la TVA reste due par nous). */

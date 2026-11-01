@@ -1,3 +1,4 @@
+import { texte, texteHtml, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { TYPE_FICHE } from '../codes.js';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, confirmer, formatDateHeure } from '@logibtp/socle/ui';
@@ -10,15 +11,15 @@ import { urlPhotoIndividu, vignette } from '../annuaire/photo.js';
  * passe est provisoire : `?changer=1`), déconnexion de toutes les fenêtres.
  */
 export class PageCompte extends PageBase {
-  icone = '👤';
+  icone = icone('authentification_btp_compte');
 
   async ouvrir() {
     const app = this.app;
-    this.titre = 'Mon compte';
+    this.titre = texte('authentification_btp.mon_compte.titre');
     const s = app.session;
     if (!s?.connecte) {
-      this.conteneur.innerHTML = `<div class="page-simple"><h1>👤 Mon compte</h1><p class="aide">Non connecté.</p>
-        <p><a href="/connexion">🔑 Se connecter</a></p></div>`;
+      this.conteneur.innerHTML = `<div class="page-simple"><h1>${iconeHtml('authentification_btp_compte')} ${texteHtml('authentification_btp.mon_compte.titre')}</h1><p class="aide">${texteHtml('authentification_btp.mon_compte.non_connecte')}</p>
+        <p><a href="/connexion">${iconeHtml('authentification_btp_connexion')} ${texteHtml('authentification_btp.connexion.se_connecter')}</a></p></div>`;
       return;
     }
     this.politique = await api.auth.politique().catch(() => ({ longueur_min: 12, courants: [] }));
@@ -30,23 +31,23 @@ export class PageCompte extends PageBase {
       }).catch(() => {});
     }
     const impose = s.mdp_a_changer;
-    this.conteneur.innerHTML = `<div class="page-parametres"><h1 class="page-titre">👤 Mon compte</h1>
-      ${impose ? '<p class="carte avertissement">🔐 Mot de passe provisoire : choisissez votre mot de passe pour continuer.</p>' : ''}
-      <section class="carte"><h2>Session</h2><span data-photo></span>
-        <dl class="definitions"><dt>Identifiant</dt><dd><b>${echapper(s.code)}</b></dd>
-        <dt>Nom</dt><dd>${echapper(s.libelle ?? '')}</dd><dt>Profil</dt><dd>${echapper(s.profil)}</dd>
-        <dt>Société</dt><dd>${echapper(app.societe?.libelle ?? '')}</dd>
-        ${s.expire_le ? `<dt>Expire</dt><dd>${formatDateHeure(s.expire_le)} (prolongée à chaque utilisation, sauf « Rester connecté »)</dd>` : ''}</dl>
-        ${impose ? '' : '<p><button type="button" data-action="deconnecter" class="danger">⏻ Se déconnecter</button></p>'}
+    this.conteneur.innerHTML = `<div class="page-parametres"><h1 class="page-titre">${iconeHtml('authentification_btp_compte')} ${texteHtml('authentification_btp.mon_compte.titre')}</h1>
+      ${impose ? `<p class="carte avertissement">${iconeHtml('authentification_btp_mdp')} ${texteHtml('authentification_btp.mon_compte.provisoire')}</p>` : ''}
+      <section class="carte"><h2>${texteHtml('authentification_btp.mon_compte.session')}</h2><span data-photo></span>
+        <dl class="definitions"><dt>${texteHtml('authentification_btp.connexion.identifiant')}</dt><dd><b>${echapper(s.code)}</b></dd>
+        <dt>${texteHtml('authentification_btp.mon_compte.nom')}</dt><dd>${echapper(s.libelle ?? '')}</dd><dt>${texteHtml('authentification_btp.compte.profil')}</dt><dd>${echapper(s.profil)}</dd>
+        <dt>${texteHtml('authentification_btp.mon_compte.societe')}</dt><dd>${echapper(app.societe?.libelle ?? '')}</dd>
+        ${s.expire_le ? `<dt>${texteHtml('authentification_btp.mon_compte.expire')}</dt><dd>${texteHtml('authentification_btp.mon_compte.expire_valeur', { date: formatDateHeure(s.expire_le) })}</dd>` : ''}</dl>
+        ${impose ? '' : `<p><button type="button" data-action="deconnecter" class="danger">${iconeHtml('authentification_btp_deconnecter')} ${texteHtml('authentification_btp.mon_compte.deconnecter')}</button></p>`}
       </section>
-      <form class="carte" data-form autocomplete="on"><h2>Changer mon mot de passe</h2>
+      <form class="carte" data-form autocomplete="on"><h2>${texteHtml('authentification_btp.mon_compte.changer')}</h2>
         <input type="text" name="identifiant" autocomplete="username" value="${echapper(s.code)}" hidden>
-        <p><label>Mot de passe actuel${impose ? ' (provisoire)' : ''}<br><input type="password" name="actuel" autocomplete="current-password" required></label></p>
-        <p><label>Nouveau mot de passe<br><input type="password" name="nouveau" autocomplete="new-password" required minlength="${this.politique.longueur_min}"></label></p>
-        <p><label>Confirmation<br><input type="password" name="confirmation" autocomplete="new-password" required></label></p>
-        <p class="aide">${this.politique.longueur_min} caractères au moins, sans votre identifiant ; une phrase de plusieurs mots est plus sûre et plus facile à retenir.</p>
+        <p><label>${impose ? texteHtml('authentification_btp.mon_compte.actuel_provisoire') : texteHtml('authentification_btp.mon_compte.actuel')}<br><input type="password" name="actuel" autocomplete="current-password" required></label></p>
+        <p><label>${texteHtml('authentification_btp.connexion.nouveau')}<br><input type="password" name="nouveau" autocomplete="new-password" required minlength="${this.politique.longueur_min}"></label></p>
+        <p><label>${texteHtml('authentification_btp.connexion.confirmation')}<br><input type="password" name="confirmation" autocomplete="new-password" required></label></p>
+        <p class="aide">${texteHtml('authentification_btp.mon_compte.regle_mdp', { n: this.politique.longueur_min })}</p>
         <p class="connexion-erreur" data-erreur hidden></p>
-        <p><button type="submit" class="principal">Enregistrer le mot de passe</button>${impose ? ' <button type="button" data-action="deconnecter">⏻ Se déconnecter</button>' : ''}</p>
+        <p><button type="submit" class="principal">${texteHtml('authentification_btp.mon_compte.enregistrer_mdp')}</button>${impose ? ` <button type="button" data-action="deconnecter">${iconeHtml('authentification_btp_deconnecter')} ${texteHtml('authentification_btp.mon_compte.deconnecter')}</button>` : ''}</p>
       </form></div>`;
     if (!impose) this.conteneur.querySelector('.page-parametres').insertAdjacentHTML('beforeend', '<section class="carte" data-sessions></section>');
     this.conteneur.querySelectorAll('[data-action="deconnecter"]').forEach((b) => b.addEventListener('click', () => app.deconnecter()));
@@ -61,23 +62,23 @@ export class PageCompte extends PageBase {
    */
   async #rendreSessions(zone) {
     const { sessions, machines, double_facteur: double } = await api.auth.sessions();
-    zone.innerHTML = `<h2 class="titre-actions">Mes sessions <span>${sessions.length > 1 ? '<button type="button" data-fermer-autres>⏻ Fermer les autres sessions</button>' : ''}</span></h2>
-      <table class="tableau-compact"><thead><tr><th>Navigateur</th><th>Adresse</th><th>Ouverte</th><th>Dernière activité</th><th>Expire</th><th></th></tr></thead><tbody>
-      ${sessions.map((s) => `<tr><td>${echapper(s.navigateur ?? '')}${s.machine ? ` <span class="pastille" title="Machine connue : ${echapper(s.machine)}">💻</span>` : ''}${s.api ? ' <span class="pastille">API</span>' : ''}</td>
+    zone.innerHTML = `<h2 class="titre-actions">${texteHtml('authentification_btp.mon_compte.sessions')} <span>${sessions.length > 1 ? `<button type="button" data-fermer-autres>${iconeHtml('authentification_btp_deconnecter')} ${texteHtml('authentification_btp.mon_compte.fermer_autres')}</button>` : ''}</span></h2>
+      <table class="tableau-compact"><thead><tr><th>${texteHtml('authentification_btp.mon_compte.navigateur')}</th><th>${texteHtml('authentification_btp.mon_compte.adresse')}</th><th>${texteHtml('authentification_btp.mon_compte.ouverte')}</th><th>${texteHtml('authentification_btp.mon_compte.derniere_activite')}</th><th>${texteHtml('authentification_btp.mon_compte.expire')}</th><th></th></tr></thead><tbody>
+      ${sessions.map((s) => `<tr><td>${echapper(s.navigateur ?? '')}${s.machine ? ` <span class="pastille" title="${texteHtml('authentification_btp.mon_compte.machine_connue', { machine: s.machine })}">${iconeHtml('authentification_btp_machine')}</span>` : ''}${s.api ? ` <span class="pastille">${texteHtml('authentification_btp.mon_compte.api')}</span>` : ''}</td>
         <td>${echapper(s.adresse ?? '')}</td><td>${formatDateHeure(s.cree_le)}</td><td>${formatDateHeure(s.vu_le)}</td><td>${formatDateHeure(s.expire_le)}</td>
-        <td class="cellule-boutons">${s.courante ? '<span class="aide">celle-ci</span>' : `<button type="button" class="bouton-icone" data-fermer="${s.id}" title="Fermer cette session">⏻</button>`}</td></tr>`).join('')}</tbody></table>
-      <h2>Mes machines connues</h2>
-      <p class="aide">Une machine connue permet « Rester connecté » (7 jours) et la connexion sans code. Oubliez une machine perdue ou partagée.</p>
-      ${machines.length ? `<table class="tableau-compact"><thead><tr><th>Machine</th><th>Adresse</th><th>Connue depuis</th><th>Dernière connexion</th><th></th></tr></thead><tbody>
+        <td class="cellule-boutons">${s.courante ? `<span class="aide">${texteHtml('authentification_btp.mon_compte.celle_ci')}</span>` : `<button type="button" class="bouton-icone" data-fermer="${s.id}" title="${texteHtml('authentification_btp.mon_compte.fermer_session')}">${iconeHtml('authentification_btp_deconnecter')}</button>`}</td></tr>`).join('')}</tbody></table>
+      <h2>${texteHtml('authentification_btp.mon_compte.machines')}</h2>
+      <p class="aide">${texteHtml('authentification_btp.mon_compte.machines_aide')}</p>
+      ${machines.length ? `<table class="tableau-compact"><thead><tr><th>${texteHtml('authentification_btp.mon_compte.machine')}</th><th>${texteHtml('authentification_btp.mon_compte.adresse')}</th><th>${texteHtml('authentification_btp.mon_compte.connue_depuis')}</th><th>${texteHtml('authentification_btp.compte.derniere_connexion')}</th><th></th></tr></thead><tbody>
         ${machines.map((m) => `<tr><td>${echapper(m.nom ?? '')}</td><td>${echapper(m.adresse ?? '')}</td><td>${formatDateHeure(m.cree_le)}</td><td>${formatDateHeure(m.vu_le)}</td>
-          <td class="cellule-boutons"><button type="button" class="bouton-icone" data-oublier="${m.id}" title="Oublier cette machine (ses sessions sont fermées)">✕</button></td></tr>`).join('')}</tbody></table>`
-        : '<p class="aide">Aucune machine connue.</p>'}
-      <p><label class="ligne"><input type="checkbox" data-double ${double ? 'checked' : ''}> Me demander un code par courriel à chaque connexion depuis une machine inconnue</label></p>`;
+          <td class="cellule-boutons"><button type="button" class="bouton-icone" data-oublier="${m.id}" title="${texteHtml('authentification_btp.mon_compte.oublier_aide')}">${iconeHtml('retirer')}</button></td></tr>`).join('')}</tbody></table>`
+        : `<p class="aide">${texteHtml('authentification_btp.mon_compte.aucune_machine')}</p>`}
+      <p><label class="ligne"><input type="checkbox" data-double ${double ? 'checked' : ''}> ${texteHtml('authentification_btp.mon_compte.double')}</label></p>`;
     const recharger = () => this.#rendreSessions(zone).catch((e) => this.app.erreur(e));
     zone.querySelector('[data-fermer-autres]')?.addEventListener('click', () => api.auth.fermerSessions().then(recharger).catch((e) => this.app.erreur(e)));
     zone.querySelectorAll('[data-fermer]').forEach((b) => b.addEventListener('click', () => api.auth.fermerSession(b.dataset.fermer).then(recharger).catch((e) => this.app.erreur(e))));
     zone.querySelectorAll('[data-oublier]').forEach((b) => b.addEventListener('click', async () => {
-      if (await confirmer('Oublier cette machine ? Ses sessions sont fermées.')) api.auth.oublierMachine(b.dataset.oublier).then(recharger).catch((e) => this.app.erreur(e));
+      if (await confirmer(texte('authentification_btp.mon_compte.confirmer_oubli'))) api.auth.oublierMachine(b.dataset.oublier).then(recharger).catch((e) => this.app.erreur(e));
     }));
     zone.querySelector('[data-double]').addEventListener('change', (e) => api.auth.doubleFacteur(e.target.checked).catch((x) => this.app.erreur(x)));
   }
@@ -85,16 +86,16 @@ export class PageCompte extends PageBase {
   async #changer(form) {
     const f = new FormData(form);
     const erreur = this.conteneur.querySelector('[data-erreur]');
-    const afficher = (texte) => { erreur.textContent = texte; erreur.hidden = !texte; };
+    const afficher = (message) => { erreur.textContent = message; erreur.hidden = !message; };
     const nouveau = f.get('nouveau');
     const codes = controlerMotDePasse(nouveau, this.politique, this.app.session.code);
     if (nouveau !== f.get('confirmation')) codes.push('CONFIRMATION');
-    if (codes.length) { afficher(codes.map((c) => MESSAGES_AUTH[c] ?? 'La confirmation diffère du nouveau mot de passe').join(' · ')); return; }
+    if (codes.length) { afficher(codes.map((c) => MESSAGES_AUTH[c] ?? texte('authentification_btp.mon_compte.confirmation_differe')).join(' · ')); return; }
     afficher('');
     try {
       const etaitProvisoire = this.app.session.mdp_a_changer;
       this.app.session = await api.auth.changerMotDePasse(f.get('actuel'), nouveau);
-      this.app.message('Mot de passe enregistré ; vos autres sessions sont fermées', 'succes');
+      this.app.message(texte('authentification_btp.mon_compte.mdp_enregistre'), 'succes');
       if (etaitProvisoire) { this.app.fermetureForcee = true; location.assign('/'); return; }
       form.reset();
     } catch (e) { afficher(e.message); }

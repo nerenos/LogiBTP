@@ -1,3 +1,4 @@
+import { texte, texteHtml, pairesParCode, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo } from '@logibtp/socle/ui';
 import { ACTIONS_BLOQUEES, PORTEES_PIECE } from '@logibtp/sous-traitance';
@@ -7,21 +8,20 @@ import { api } from '../api.js';
 // paramétrable (administrateur) des pièces du sous-traitant et du marché, avec durée de validité, délai de rappel,
 // actions bloquées et conditions (marché public ou privé, garantie, montant minimal).
 
-const GARANTIES = [{ valeur: 'PAIEMENT_DIRECT', libelle: 'Paiement direct' }, { valeur: 'DELEGATION', libelle: 'Délégation' }, { valeur: 'CAUTION', libelle: 'Caution' }];
-const PUBLIC = [{ valeur: 'oui', libelle: 'Public' }, { valeur: 'non', libelle: 'Privé' }];
+const options = (paires) => paires.map(([valeur, libelle]) => ({ valeur, libelle }));
+const GARANTIES = options(pairesParCode('sous_traitance_btp.parametres.garanties', ['PAIEMENT_DIRECT', 'DELEGATION', 'CAUTION']));
+const PUBLIC = options(pairesParCode('sous_traitance_btp.parametres.publics', ['oui', 'non']));
 
 export class PageParametresSousTraitance extends PageBase {
-  icone = '🤝';
+  icone = icone('sous_traitance_btp_sous_traiter');
   #modifie = false;
 
   get modifiee() { return this.#modifie; }
 
   async ouvrir() {
-    this.titre = 'Pièces exigées des sous-traitants';
-    this.conteneur.innerHTML = `<div class="page-parametres"><div class="entete-page"><h1 class="page-titre">🤝 Pièces exigées des sous-traitants</h1></div>
-      <p class="aide">Pièces du sous-traitant (valables pour tous ses marchés : Kbis, URSSAF…) et documents du marché (DC4, contrat…). Une pièce fournie
-      est un document de la GED de la catégorie indiquée ; sa validité court depuis son dépôt (durée) ou jusqu'à la date saisie. Une pièce
-      bloquante manquante ou expirée empêche l'action cochée.</p><div data-corps></div></div>`;
+    this.titre = texte('sous_traitance_btp.routes.parametres');
+    this.conteneur.innerHTML = `<div class="page-parametres"><div class="entete-page"><h1 class="page-titre">${iconeHtml('sous_traitance_btp_sous_traiter')} ${texteHtml('sous_traitance_btp.routes.parametres')}</h1></div>
+      <p class="aide">${texteHtml('sous_traitance_btp.parametres.aide')}</p><div data-corps></div></div>`;
     this.pieces = await api.sousTraitance.typesPieces();
     this.#rendre();
   }
@@ -31,9 +31,9 @@ export class PageParametresSousTraitance extends PageBase {
     const l = this.pieces;
     const corps = this.conteneur.querySelector('[data-corps]');
     const dis = admin ? '' : 'disabled';
-    corps.innerHTML = `<table class="tableau-compact"><thead><tr><th>Code</th><th>Libellé</th><th>Portée</th><th>Catégorie GED</th><th>Obligatoire</th>
-      <th>Validité (mois)</th><th>Rappel (jours)</th>${Object.values(ACTIONS_BLOQUEES).map((a) => `<th title="${echapper(a)}">Bloque ${echapper(a.split(' ').pop())}</th>`).join('')}
-      <th>Marché</th><th>Garantie</th><th>Montant min.</th><th>Actif</th><th class="cellule-boutons"></th></tr></thead><tbody>
+    corps.innerHTML = `<table class="tableau-compact"><thead><tr><th>${texteHtml('commun.code')}</th><th>${texteHtml('commun.libelle')}</th><th>${texteHtml('sous_traitance_btp.pieces.portee')}</th><th>${texteHtml('sous_traitance_btp.parametres.categorie')}</th><th>${texteHtml('sous_traitance_btp.parametres.obligatoire')}</th>
+      <th>${texteHtml('sous_traitance_btp.parametres.validite')}</th><th>${texteHtml('sous_traitance_btp.parametres.rappel')}</th>${Object.entries(ACTIONS_BLOQUEES).map(([code, a]) => `<th title="${echapper(a)}">${texteHtml(`sous_traitance_btp.parametres.bloque.${code}`)}</th>`).join('')}
+      <th>${texteHtml('sous_traitance_btp.marche.marche')}</th><th>${texteHtml('sous_traitance_btp.parametres.garantie')}</th><th>${texteHtml('sous_traitance_btp.parametres.montant_min')}</th><th>${texteHtml('sous_traitance_btp.parametres.actif')}</th><th class="cellule-boutons"></th></tr></thead><tbody>
       ${l.map((p, i) => `<tr data-i="${i}"><td><input data-c="code" size="10" value="${echapper(p.code)}" ${admin && !p._existant ? '' : 'readonly'}></td>
         <td><input data-c="libelle" size="30" value="${echapper(p.libelle)}" ${admin ? '' : 'readonly'}></td><td data-portee></td>
         <td><input data-c="categorie" size="16" value="${echapper(p.categorie ?? '')}" ${admin ? '' : 'readonly'}></td>
@@ -44,9 +44,9 @@ export class PageParametresSousTraitance extends PageBase {
         <td data-public></td><td data-garantie></td>
         <td><input data-c="cond_montant_min" size="8" value="${p.cond_montant_min ?? ''}" ${admin ? '' : 'readonly'}></td>
         <td><input type="checkbox" data-c="actif" ${p.actif ? 'checked' : ''} ${dis}></td>
-        <td class="cellule-boutons">${admin ? `<button type="button" data-monter ${i ? '' : 'disabled'} title="Monter">↑</button><button type="button" data-retirer title="Retirer">✕</button>` : ''}</td></tr>`).join('')}
+        <td class="cellule-boutons">${admin ? `<button type="button" data-monter ${i ? '' : 'disabled'} title="${texteHtml('sous_traitance_btp.parametres.monter')}">${iconeHtml('sous_traitance_btp_monter')}</button><button type="button" data-retirer title="${texteHtml('commun.retirer')}">${iconeHtml('retirer')}</button>` : ''}</td></tr>`).join('')}
       </tbody></table>
-      ${admin ? '<p class="ligne"><button type="button" data-ajouter>＋ Pièce</button> <button type="button" class="principal" data-enregistrer>Enregistrer</button></p>' : ''}`;
+      ${admin ? `<p class="ligne"><button type="button" data-ajouter>${iconeHtml('ajouter')} ${texteHtml('sous_traitance_btp.parametres.piece')}</button> <button type="button" class="principal" data-enregistrer>${texteHtml('commun.enregistrer')}</button></p>` : ''}`;
     const changer = () => { this.#modifie = true; };
     corps.querySelectorAll('tr[data-i]').forEach((tr) => {
       const p = l[Number(tr.dataset.i)];
@@ -84,7 +84,7 @@ export class PageParametresSousTraitance extends PageBase {
       try {
         this.pieces = (await api.sousTraitance.enregistrerTypesPieces(l.map(({ _existant, ...x }, i) => ({ ...x, ordre: (i + 1) * 10 })))).map((x) => ({ ...x, _existant: true }));
         this.#modifie = false;
-        this.app.message('Pièces exigées enregistrées', 'succes');
+        this.app.message(texte('sous_traitance_btp.parametres.enregistrees'), 'succes');
         this.#rendre();
       } catch (e) { this.app.message(e.message, 'erreur'); }
     });

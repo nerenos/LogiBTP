@@ -1,3 +1,4 @@
+import { texte, icone } from '@logibtp/socle/dictionnaire';
 import { urlDocument, urlFiche, TYPE_FICHE, MODULE_FACULTATIF, SUJET_FENETRE } from '../codes.js';
 import { PageBase } from '@logibtp/navigation';
 import { ListeDonnees } from '@logibtp/liste/ui';
@@ -17,25 +18,25 @@ function creationDepuisVue(vue, app, themes = []) {
   if (source === 'documents') {
     const type = themes.find((t) => t.thl_code === vue.definition.theme)?.thl_types?.[0];
     if (!type) return null;
-    return { libelle: `＋ ${type.libelle}`, action: () => app.naviguer(`/document/nouveau?type=${encodeURIComponent(type.code)}`) };
+    return { libelle: `${icone('ajouter')} ${type.libelle}`, action: () => app.naviguer(`/document/nouveau?type=${encodeURIComponent(type.code)}`) };
   }
   // Structure des affaires : fiches projet, affaire, chantier, marché.
-  const structure = { projets: ['projet', 'Projet'], affaires: ['affaire', 'Affaire'], chantiers: ['chantier', 'Chantier'], marches: ['marche', 'Marché'], marches_st: ['marche', 'Marché'] }[source];
-  if (structure) return { libelle: `＋ ${structure[1]}`, action: () => app.naviguer(`/fiche/${structure[0]}/nouveau`) };
+  const structure = { projets: 'projet', affaires: 'affaire', chantiers: 'chantier', marches: 'marche', marches_st: 'marche' }[source];
+  if (structure) return { libelle: `${icone('ajouter')} ${texte(`pages_btp.liste.creer.${structure}`)}`, action: () => app.naviguer(`/fiche/${structure}/nouveau`) };
   if (source === 'elements') {
     const type = (vue.definition.filtres ?? []).find((f) => f.colonne === 'type' && ['OUVRAGE', 'ENSEMBLE'].includes(f.valeur))?.valeur ?? null;
-    const libelle = { OUVRAGE: '＋ Ouvrage', ENSEMBLE: '＋ Ensemble' }[type] ?? '＋ Article';
+    const libelle = `${icone('ajouter')} ${texte(`pages_btp.liste.creer.${['OUVRAGE', 'ENSEMBLE'].includes(type) ? type : 'ARTICLE'}`)}`;
     return { libelle, action: () => app.naviguer(`/fiche/element/nouveau${type ? `?type=${type}` : ''}`) };
   }
   // Annuaire : création avec la première relation (casquette) filtrée par la vue (Clients, Fournisseurs…).
   if (source === 'personnes') {
     const casquette = (vue.definition.filtres ?? []).find((f) => f.colonne === 'casquettes')?.valeurs?.[0];
-    return { libelle: '＋ Personne', action: () => app.naviguer(`/fiche/personne/nouveau${casquette ? `?casquette=${casquette}` : ''}`) };
+    return { libelle: `${icone('ajouter')} ${texte(`pages_btp.liste.creer.${'personne'}`)}`, action: () => app.naviguer(`/fiche/personne/nouveau${casquette ? `?casquette=${casquette}` : ''}`) };
   }
-  if (source === 'individus') return { libelle: '＋ Individu', action: () => app.naviguer('/fiche/individu/nouveau') };
+  if (source === 'individus') return { libelle: `${icone('ajouter')} ${texte(`pages_btp.liste.creer.${'individu'}`)}`, action: () => app.naviguer('/fiche/individu/nouveau') };
   const type = { salaries: 'salarie', materiels: 'materiel' }[source];
   if (!type) return null;
-  return { libelle: type === TYPE_FICHE.SALARIE ? '＋ Salarié' : '＋ Matériel', action: () => app.naviguer(`/fiche/${type}/nouveau`) };
+  return { libelle: `${icone('ajouter')} ${texte(`pages_btp.liste.creer.${type === TYPE_FICHE.SALARIE ? 'salarie' : 'materiel'}`)}`, action: () => app.naviguer(`/fiche/${type}/nouveau`) };
 }
 
 /** Fiche de chaque source de liste (thèmes d'un seul type de fiche). */
@@ -59,13 +60,13 @@ function actionsDepuisVue(vue, app, services, themes = []) {
         const rep = await api.copier(l._id);
         const id = rep.document?.ent_id ?? rep.ent_id;
         app.publier(SUJET_FENETRE.ENREGISTRE, { ids: [id], cree: true });
-        app.message(`Copie créée : ${rep.document?.ent_numero ?? ''}`, 'succes');
+        app.message(texte('pages_btp.liste.copie', { numero: rep.document?.ent_numero ?? '' }), 'succes');
         await app.naviguer(urlDocument(id));
       },
       supprimer: app.estAdmin() ? (l) => api.supprimerDocument(l._id) : null,
       // Transformation d'un document validé (même fenêtre de choix que la page document) ; le document créé s'ouvre.
       autres: [{
-        code: 'transformer', icone: '⇢', libelle: 'Transformer', titre: 'Transformer le document validé (commande, livraison, situation, facture…)',
+        code: 'transformer', icone: icone('pages_btp_transformer'), libelle: texte('pages_btp.liste.transformer'), titre: texte('pages_btp.liste.transformer_aide'),
         actif: ([l]) => (l.verrouille ?? (l.statut ? l.statut !== 'Brouillon' : true)) !== false,
         action: async ([l], e) => {
           const cree = await transformerDocument({ entId: l._id, typeCode: l._type, numero: l.numero, objet: l.objet, message: (t, n) => app.message(t, n) });
@@ -81,11 +82,11 @@ function actionsDepuisVue(vue, app, services, themes = []) {
   if (!type || (theme?.thl_types?.length ?? 0) > 1) return null;
   // Bibliothèque, module Stock actif : marquage en masse des articles sélectionnés.
   const marquer = type === TYPE_FICHE.ELEMENT && app.moduleActif(MODULE_FACULTATIF.STOCK) ? [{
-    code: 'marquer', icone: '🏷', libelle: 'Marquer', titre: 'Ajouter ou retirer des marques (listes rapides du stock) aux articles sélectionnés',
+    code: 'marquer', icone: icone('pages_btp_marquer'), libelle: texte('pages_btp.liste.marquer'), titre: texte('pages_btp.liste.marquer_aide'),
     actif: (lignes) => lignes.length > 0,
     action: async (lignes) => {
       const n = await marquerArticles(lignes.map((l) => Number(l._id)));
-      if (n !== null) { app.message(`${n} article(s) marqué(s)`, 'succes'); app.publier(SUJET_FENETRE.ENREGISTRE, { ids: lignes.map((l) => l._id) }); }
+      if (n !== null) { app.message(texte('pages_btp.liste.marques', { nombre: n }), 'succes'); app.publier(SUJET_FENETRE.ENREGISTRE, { ids: lignes.map((l) => l._id) }); }
     },
   }] : [];
   return {
@@ -103,7 +104,7 @@ function actionsDepuisVue(vue, app, services, themes = []) {
  */
 export class PageListe extends PageBase {
   static conserver = true;
-  icone = '📋';
+  icone = icone('pages_btp_liste');
 
   async ouvrir() {
     const app = this.app;
@@ -130,7 +131,7 @@ export class PageListe extends PageBase {
       actionsElements: (vue) => actionsDepuisVue(vue, app, s, this.liste?.themes ?? []),
       // Impression de la vue (recherche en cours comprise) ou d'étiquettes (module Édition).
       actionsVue: (vue) => (vue?.vli_id ? [{
-        icone: '🖨', libelle: 'Imprimer', titre: 'Aperçu et impression de la liste (vue et recherche en cours) ou d’étiquettes',
+        icone: icone('pages_btp_imprimer'), libelle: texte('pages_btp.fiche.imprimer'), titre: texte('pages_btp.liste.imprimer_aide'),
         action: () => {
           const recherche = this.liste?.recherche ? `&recherche=${encodeURIComponent(this.liste.recherche)}` : '';
           app.naviguer(`/edition?source=liste&id=${vue.vli_id}${recherche}`, { nouvelleFenetre: true });
@@ -175,8 +176,8 @@ export class PageListe extends PageBase {
 
   #vueChoisie(theme, vue) {
     const t = this.liste.themes.find((x) => x.thl_code === theme);
-    this.icone = t?.thl_icone || '📋';
-    this.titre = [t?.thl_libelle, this.liste.vue?.vli_nom].filter(Boolean).filter((x, i, a) => a.indexOf(x) === i).join(' – ') || 'Listes';
+    this.icone = t?.thl_icone || icone('pages_btp_liste');
+    this.titre = [t?.thl_libelle, this.liste.vue?.vli_nom].filter(Boolean).filter((x, i, a) => a.indexOf(x) === i).join(' – ') || texte('pages_btp.liste.titre');
     const url = this.app.routeur.url('liste', { theme }, { vue, ...(this.filtre?.codes() ?? {}) });
     if (this.app.routeur.page === this) this.app.routeur.remplacerUrl(url);
     this.app.majPage();

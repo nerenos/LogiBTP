@@ -24,13 +24,11 @@ import './terrain/operations-terrain.js';
 import { menus } from './navigation/menus.js';
 import { ROUTES } from './pages/index.js';
 import { CLE_PREFERENCES_NAVIGATION, urlDocument, urlFiche, TYPE_DOCUMENT, SUJET_FENETRE } from './codes.js';
+import { texte, texteHtml, pluriel, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
+import { logoApplication } from '../personnalisation.js';
 
 // Application web LogiBTP (cœur) : services partagés par les pages, routeur (navigation classique dans la
 // fenêtre), fenêtres séparées et session (module Navigation), bandeau à menus.
-
-const LOGO = `<svg viewBox="0 0 104 24" role="img" aria-label="LogiBTP"><g fill="currentColor">
-  <rect x="1" y="13" width="9" height="9" rx="1"/><rect x="11" y="13" width="9" height="9" rx="1" opacity=".75"/><rect x="6" y="3" width="9" height="9" rx="1" opacity=".55"/></g>
-  <text x="25" y="18" font-family="system-ui, Segoe UI, sans-serif" font-size="15" font-weight="700" fill="currentColor">Logi<tspan fill="#e8a33d">BTP</tspan></text></svg>`;
 
 /** Pour une fiche, la liste où revenir quand elle a été ouverte directement (fenêtre séparée, session restaurée). */
 export const LISTE_PAR_TYPE = {
@@ -51,7 +49,7 @@ export class Application {
       this.bandeau?.disposer(this.preferences.get('menu'));
     });
     // Page modifiée quittée : question dans une fenêtre <dialog> (socle) plutôt que confirm() du navigateur.
-    PageBase.confirmer = (message) => confirmer(message, { titre: 'Modifications non enregistrées', ok: 'Quitter' });
+    PageBase.confirmer = (message) => confirmer(message, { titre: texte('navigation_btp.fenetres.modifiee'), ok: texte('navigation_btp.application.quitter') });
     this.abonnes = new Map(); // sujet → Set(fonction)
     this.servicesPrets = null;
   }
@@ -62,12 +60,12 @@ export class Application {
     // Rechargement (F5, Vite) : la page quittée reste affichée pendant le démarrage au lieu d'un écran vide.
     afficherApercu(document.querySelector('#pages'), `${location.pathname}${location.search}`);
     this.bandeau = new Bandeau(document.querySelector('#bandeau'), {
-      menus: menus(this), naviguer: (url, o) => this.naviguer(url, o), logo: LOGO, titreApplication: 'LogiBTP', retour: () => this.retour(),
+      menus: menus(this), naviguer: (url, o) => this.naviguer(url, o), logo: logoApplication(), titreApplication: texte('application.nom'), retour: () => this.retour(),
       disposition: this.preferences.get('menu'), surDisposition: (d) => this.preferences.set('menu', d),
     });
     // Application installable : le service worker garde le client et les données consultées (mode hors ligne).
     enregistrerServiceWorker({
-      surNouvelleVersion: () => this.message('Nouvelle version de LogiBTP installée : rechargez la page (F5) une fois vos saisies enregistrées', 'avertissement'),
+      surNouvelleVersion: () => this.message(texte('navigation_btp.application.nouvelle_version'), 'avertissement'),
     });
     this.societe = await societeCourante();
     // Session (module Authentification) : sans session, seule la page de connexion s'ouvre ; mot de passe provisoire :
@@ -99,7 +97,7 @@ export class Application {
     // Connexion ou déconnexion dans une autre fenêtre du navigateur (même cookie) : cette fenêtre suit.
     this.abonner(SUJET_FENETRE.SESSION, (e) => this.#sessionChangee(e));
     document.addEventListener('click', async (e) => {
-      if (e.target.closest?.('[data-fin-usurpation]') && await confirmer('Terminer l\'usurpation et revenir à votre compte ?')) this.terminerUsurpation().catch((x) => this.erreur(x));
+      if (e.target.closest?.('[data-fin-usurpation]') && await confirmer(texte('authentification_btp.usurpation.terminer_confirmer'))) this.terminerUsurpation().catch((x) => this.erreur(x));
     });
     await this.fenetres.demarrer();
 
@@ -258,7 +256,7 @@ export class Application {
     this.session = null;
     const retour = `${location.pathname}${location.search}`;
     if (this.routeur?.page?.modifiee) {
-      this.message('Session expirée : reconnectez-vous dans la fenêtre ouverte, puis enregistrez de nouveau', 'avertissement');
+      this.message(texte('navigation_btp.application.session_expiree'), 'avertissement');
       this.naviguer(`/connexion?fenetre=1`, { nouvelleFenetre: true });
       setTimeout(() => { this.sessionPerdueSignalee = false; }, 5000);
       return;
@@ -299,7 +297,7 @@ export class Application {
       setTimeout(() => {
         const w = this.fenetres.ouvrir(url);
         if (w) w.focus();
-        else this.message('Fenêtre bloquée par le navigateur : autorisez les fenêtres pop-up pour ce site', 'avertissement');
+        else this.message(texte('navigation_btp.application.fenetre_bloquee'), 'avertissement');
       }, 0);
       return Promise.resolve(false);
     }
@@ -329,7 +327,7 @@ export class Application {
   ouvrirElement(element, { nouvelleFenetre = false } = {}) {
     const url = this.urlElement(element);
     if (!url) {
-      this.message(`Fiche ${LIBELLES_ELEMENTS[element.type] ?? element.type} n° ${element.id} : écran pas encore disponible`, 'avertissement');
+      this.message(texte('navigation_btp.application.fiche_indisponible', { type: LIBELLES_ELEMENTS[element.type] ?? element.type, id: element.id }), 'avertissement');
       return;
     }
     const prefere = this.preferences.get('nouvelleFenetre');
@@ -387,19 +385,19 @@ export class Application {
 
   rendreInfos() {
     const s = this.societe;
-    this.bandeau.infos(`${s ? `<span class="bandeau-societe" title="${echapper(s.principale ? 'Base principale' : `Base de la société ${s.libelle} (sous-domaine ${s.code})`)}">🏢 ${echapper(s.libelle)}</span>` : ''}
+    this.bandeau.infos(`${s ? `<span class="bandeau-societe" title="${s.principale ? texteHtml('navigation_btp.application.base_principale') : texteHtml('navigation_btp.application.base_societe', { societe: s.libelle, code: s.code })}">${iconeHtml('authentification_btp_societe')} ${echapper(s.libelle)}</span>` : ''}
       ${this.#etatApi()}${this.#attentes()}
-      ${this.session?.connecte ? `${this.#usurpation()}${this.#cloche()}<a href="/compte" title="${echapper(`${this.session.libelle ?? this.session.code} : mon compte, mot de passe, déconnexion`)}">👤 ${echapper(this.utilisateur())} · ${echapper(this.profil())}</a>`
-        : '<a href="/connexion">👤 Se connecter</a>'}`);
+      ${this.session?.connecte ? `${this.#usurpation()}${this.#cloche()}<a href="/compte" title="${texteHtml('navigation_btp.application.mon_compte', { nom: this.session.libelle ?? this.session.code })}">${iconeHtml('authentification_btp_compte')} ${echapper(this.utilisateur())} · ${echapper(this.profil())}</a>`
+        : `<a href="/connexion">${iconeHtml('authentification_btp_compte')} ${texteHtml('authentification_btp.connexion.se_connecter')}</a>`}`);
   }
 
   /** État de l'API dans le bandeau : vert si connectée, rouge si elle ne répond plus. */
   #etatApi() {
-    if (!this.apiPerdue) return '<span class="etat-api connectee" title="API connectée">● API</span>';
+    if (!this.apiPerdue) return `<span class="etat-api connectee" title="${texteHtml('navigation_btp.application.api_connectee')}">${iconeHtml('navigation_btp_etat_api')} ${texteHtml('navigation_btp.application.api')}</span>`;
     const titre = pwaControle()
-      ? "Serveur injoignable : les données déjà consultées sur ce poste s'affichent depuis le navigateur ; rien ne peut être enregistré. Nouvel essai toutes les 15 secondes."
-      : "L'API ne répond plus : rien ne peut être enregistré. Nouvel essai toutes les 15 secondes.";
-    return `<span class="etat-api deconnectee" title="${titre}">● Hors ligne</span>`;
+      ? texteHtml('navigation_btp.application.injoignable_pwa')
+      : texteHtml('navigation_btp.application.injoignable');
+    return `<span class="etat-api deconnectee" title="${titre}">${iconeHtml('navigation_btp_etat_api')} ${texteHtml('navigation_btp.application.hors_ligne')}</span>`;
   }
 
   /** Envoi des documents enregistrés hors ligne (API joignable, session ouverte). */
@@ -423,7 +421,7 @@ export class Application {
     const probleme = l.find((e) => e.etat !== ETAT_ATTENTE.ATTENTE);
     const titre = l.map((e) => `${e.libelle} : ${ETATS_ATTENTE[e.etat] ?? e.etat}${e.erreur ? ` (${e.erreur})` : ''}`).join('\n');
     const cible = probleme ?? l[0];
-    return `<a href="${cible.url ?? urlAttente(cible)}" class="etat-attente${probleme ? ' probleme' : ''}" title="${echapper(`Enregistrés sur ce poste, pas encore envoyés au serveur :\n${titre}`)}">⏳ ${l.length}</a>`;
+    return `<a href="${cible.url ?? urlAttente(cible)}" class="etat-attente${probleme ? ' probleme' : ''}" title="${texteHtml('navigation_btp.application.attentes', { liste: titre })}">${iconeHtml('navigation_btp_attente')} ${l.length}</a>`;
   }
 
   /** Passage hors ligne (API perdue) : bandeau rouge, classe `hors-ligne` du corps, contrôle toutes les 15 secondes. */
@@ -446,13 +444,13 @@ export class Application {
       if (disponible === !this.apiPerdue) return;
       if (!disponible) {
         this.#passerHorsLigne();
-        this.message(pwaControle() ? 'Serveur injoignable : consultation des données gardées sur ce poste, enregistrements impossibles'
-          : "L'API ne répond plus : les modifications ne peuvent pas être enregistrées", 'erreur');
+        this.message(pwaControle() ? texte('navigation_btp.application.perdue_pwa')
+          : texte('navigation_btp.application.perdue'), 'erreur');
       } else {
         this.apiPerdue = false;
         document.body.classList.remove('hors-ligne');
         clearInterval(this.minuterieApi);
-        this.message('API de nouveau connectée', 'succes');
+        this.message(texte('navigation_btp.application.retrouvee'), 'succes');
         this.envoyerAttentes();
       }
       this.rendreInfos();
@@ -465,10 +463,9 @@ export class Application {
   #attendreApi() {
     this.apiPerdue = true;
     this.rendreInfos();
-    document.querySelector('#pages').innerHTML = `<div class="page-simple"><h1>● Serveur injoignable</h1>
-      <p class="aide">L'API LogiBTP ne répond pas. Nouvel essai toutes les 15 secondes : la page se rechargera à son retour.</p>
-      <p class="aide">Pour travailler sans serveur, l'application doit avoir été ouverte en ligne sur ce poste, avec une session.</p>
-      <p><button type="button" data-reessayer>⟳ Réessayer maintenant</button></p></div>`;
+    document.querySelector('#pages').innerHTML = `<div class="page-simple"><h1>${iconeHtml('navigation_btp_etat_api')} ${texteHtml('navigation_btp.application.injoignable_titre')}</h1>
+      ${texteHtml('navigation_btp.application.injoignable_aide_html')}
+      <p><button type="button" data-reessayer>${iconeHtml('navigation_btp_reessayer')} ${texteHtml('navigation_btp.application.reessayer')}</button></p></div>`;
     const essayer = async () => { if (await api.disponible()) location.reload(); };
     document.querySelector('[data-reessayer]').addEventListener('click', essayer);
     setInterval(essayer, 15000);
@@ -479,15 +476,15 @@ export class Application {
     const us = this.session?.usurpation;
     if (!us) return '';
     const fin = formatHeure(us.fin);
-    return `<button type="button" class="bandeau-usurpation" data-fin-usurpation title="${echapper(`${this.session.code} agit pour ${us.libelle ?? us.code} jusqu'à ${fin} : ${us.motif}. Cliquer pour terminer.`)}">🎭 ${echapper(us.code)} · fin ${fin} ✕</button>`;
+    return `<button type="button" class="bandeau-usurpation" data-fin-usurpation title="${texteHtml('authentification_btp.usurpation.pastille_aide', { code: this.session.code, compte: us.libelle ?? us.code, fin, motif: us.motif })}">${iconeHtml('authentification_btp_usurpation')} ${texteHtml('authentification_btp.usurpation.pastille', { code: us.code, fin })} ${iconeHtml('retirer')}</button>`;
   }
 
   /** Cloche du bandeau : notifications non lues (rouge s'il y en a d'urgentes). */
   #cloche() {
     const c = this.notifications;
-    if (!c) return '<a href="/notifications" title="Notifications">🔔</a>';
-    const titre = `${c.non_lues} non lue(s), ${c.a_traiter} à traiter${c.urgentes ? `, ${c.urgentes} urgente(s)` : ''}`;
-    return `<a href="/notifications" class="cloche${c.urgentes ? ' urgente' : ''}" title="${titre}">🔔${c.non_lues ? `<span class="compteur">${c.non_lues}</span>` : ''}</a>`;
+    if (!c) return `<a href="/notifications" title="${texteHtml('notifications_btp.boite.titre')}">${iconeHtml('notifications_btp_cloche')}</a>`;
+    const titre = [pluriel('notifications_btp.cloche.non_lues', c.non_lues), pluriel('notifications_btp.cloche.a_traiter', c.a_traiter), ...(c.urgentes ? [pluriel('notifications_btp.cloche.urgentes', c.urgentes)] : [])].join(', ');
+    return `<a href="/notifications" class="cloche${c.urgentes ? ' urgente' : ''}" title="${echapper(titre)}">${iconeHtml('notifications_btp_cloche')}${c.non_lues ? `<span class="compteur">${c.non_lues}</span>` : ''}</a>`;
   }
 
   message(texte, niveau = 'info') { this.bandeau?.message(texte, niveau); }
@@ -506,14 +503,14 @@ export class Application {
     document.querySelector('.nav-signal')?.remove();
     const s = document.createElement('div');
     s.className = 'nav-signal';
-    s.innerHTML = `<span>🔔 ${echapper(this.routeur?.page?.titre || 'Cette fenêtre')}</span>`;
+    s.innerHTML = `<span>${iconeHtml('navigation_btp_signal')} ${echapper(this.routeur?.page?.titre || texte('navigation_btp.fenetres.courante'))}</span>`;
     document.body.append(s);
     setTimeout(() => s.remove(), 2600);
     const titre = document.title;
     let n = 0;
     clearInterval(this.clignotement);
     this.clignotement = setInterval(() => {
-      document.title = n % 2 ? titre : `🔔 ${titre}`;
+      document.title = n % 2 ? titre : `${icone('navigation_btp_signal')} ${titre}`;
       if (++n > 9) { clearInterval(this.clignotement); document.title = titre; }
     }, 500);
   }
@@ -547,7 +544,7 @@ export class Application {
     setTimeout(() => {
       if (window.closed) return;
       this.fermetureForcee = false;
-      this.message("Le navigateur ne laisse fermer par l'application que les fenêtres qu'elle a ouvertes : fermez celle-ci avec Ctrl+W", 'avertissement');
+      this.message(texte('navigation_btp.application.fermeture_refusee'), 'avertissement');
     }, 250);
   }
 
@@ -563,7 +560,7 @@ export class Application {
     await this.libererPage();
     const fenetres = this.fenetres.fermerSession();
     await this.routeur.aller('/', { remplacer: true, forcer: true });
-    this.message(`Session fermée (${fenetres.length} fenêtre${fenetres.length > 1 ? 's' : ''}) : « Restaurer ma session précédente » la rouvrira`, 'succes');
+    this.message(pluriel('navigation_btp.application.session_fermee', fenetres.length), 'succes');
   }
 
   restaurerSession() {

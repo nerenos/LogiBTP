@@ -3,14 +3,14 @@
   --vp-entete: 220px;
   --vp-voie: 22px;
   --vp-hauteur-entete: 44px;
-  --vp-couleur: #3b82f6;
+  --vp-couleur: var(--pla-barre);
   position: relative;
   display: grid;
   grid-template-columns: var(--vp-entete) 1fr;
   grid-template-rows: var(--vp-hauteur-entete) 1fr;
   min-height: 0;
   height: 100%;
-  border: 1px solid var(--bord, #cbd5e1);
+  border: 1px solid var(--bord);
   overflow: hidden;
   font-size: 12px;
   user-select: none;
@@ -18,89 +18,89 @@
 .vp-poignee-entete {
   position: absolute; z-index: 5; top: 0; bottom: 0; left: calc(var(--vp-entete) - 3px); width: 6px; cursor: col-resize; touch-action: none;
 }
-.vp-poignee-entete:hover, .vp-poignee-entete.active { background: rgba(59, 130, 246, .45); }
-.vp-coin { border-right: 1px solid var(--bord, #cbd5e1); border-bottom: 1px solid var(--bord, #cbd5e1); }
-.vp-entete { overflow: hidden; position: relative; border-bottom: 1px solid var(--bord, #cbd5e1); }
+.vp-poignee-entete:hover, .vp-poignee-entete.active { background: var(--pla-poignee-survol); }
+.vp-coin { border-right: 1px solid var(--bord); border-bottom: 1px solid var(--bord); }
+.vp-entete { overflow: hidden; position: relative; border-bottom: 1px solid var(--bord); }
 .vp-entete-plan { position: relative; height: 100%; }
 /* Lignes de l'en-tête (20 px chacune) : mois et année, jours ou semaines, découpage de la journée. */
 .vp-entete-ligne { position: absolute; left: 0; right: 0; height: 20px; }
-.vp-entete-ligne + .vp-entete-ligne { border-top: 1px solid var(--bord, #cbd5e1); }
+.vp-entete-ligne + .vp-entete-ligne { border-top: 1px solid var(--bord); }
 .vp-entete-ligne > div {
   position: absolute; top: 0; bottom: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
-  border-left: 1px solid var(--bord, #cbd5e1); padding: 2px 0; box-sizing: border-box; text-align: center; line-height: 15px;
+  border-left: 1px solid var(--bord); padding: 2px 0; box-sizing: border-box; text-align: center; line-height: 15px;
 }
 .vp-entete-ligne.large > div { text-align: left; padding: 2px 4px; }
 .vp-entete-ligne.niveau-mois > div { font-weight: 600; }
 .vp-entete-ligne > div.weekend { opacity: .6; }
-.vp-entete-ligne > div.ferie { opacity: 1; color: #c2410c; background: rgba(234, 88, 12, .12); font-weight: 600; }
+.vp-entete-ligne > div.ferie { opacity: 1; color: var(--pla-ferie-texte); background: var(--pla-ferie-fond); font-weight: 600; }
 /* Jour courant : bordures rouges de sa colonne, dans l'en-tête et le corps. */
-.vp-aujourdhui { position: absolute; top: 0; bottom: 0; box-sizing: border-box; border-left: 2px solid #dc2626; border-right: 2px solid #dc2626; pointer-events: none; }
-.vp-entete .vp-aujourdhui { background: rgba(220, 38, 38, .08); z-index: 1; }
-.vp-lignes { overflow: hidden; position: relative; border-right: 1px solid var(--bord, #cbd5e1); }
+.vp-aujourdhui { position: absolute; top: 0; bottom: 0; box-sizing: border-box; border-left: 2px solid var(--pla-aujourdhui); border-right: 2px solid var(--pla-aujourdhui); pointer-events: none; }
+.vp-entete .vp-aujourdhui { background: var(--pla-aujourdhui-fond); z-index: 1; }
+.vp-lignes { overflow: hidden; position: relative; border-right: 1px solid var(--bord); }
 .vp-lignes-plan { position: relative; }
 .vp-ligne {
   position: absolute; left: 0; right: 0; box-sizing: border-box; padding: 3px 6px; overflow: hidden;
-  white-space: nowrap; text-overflow: ellipsis; border-bottom: 1px solid var(--bord, #e2e8f0);
+  white-space: nowrap; text-overflow: ellipsis; border-bottom: 1px solid var(--bord);
 }
-.vp-ligne.groupe { font-weight: 600; background: rgba(148, 163, 184, .15); }
+.vp-ligne.groupe { font-weight: 600; background: var(--pla-groupe-fond); }
 /* Ressources d'autres services qui portent des tâches des services filtrés. */
-.vp-ligne.hors-service { font-style: italic; color: var(--discret, #64748b); }
-.vp-ligne.groupe.hors-service { background: rgba(217, 119, 6, .12); }
+.vp-ligne.hors-service { font-style: italic; color: var(--discret); }
+.vp-ligne.groupe.hors-service { background: var(--pla-hors-service-fond); }
 .vp-corps { overflow: auto; position: relative; }
 .vp-plan { position: relative; }
 .vp-fond {
   position: absolute; inset: 0;
-  background-image: linear-gradient(to right, rgba(148, 163, 184, .25) 1px, transparent 1px);
+  background-image: linear-gradient(to right, var(--pla-grille) 1px, transparent 1px);
 }
-.vp-weekend { position: absolute; top: 0; bottom: 0; background: rgba(148, 163, 184, .12); }
+.vp-weekend { position: absolute; top: 0; bottom: 0; background: var(--pla-weekend); }
 /* Jour férié ou fermé : bande comme un week-end, teintée et hachurée pour s'en distinguer. */
 .vp-ferie {
   position: absolute; top: 0; bottom: 0;
-  background: repeating-linear-gradient(135deg, rgba(234, 88, 12, .10) 0 6px, rgba(234, 88, 12, .04) 6px 12px);
+  background: repeating-linear-gradient(135deg, var(--pla-ferie-hachure) 0 6px, var(--pla-ferie-hachure-clair) 6px 12px);
 }
 .vp-fond.sans-degrade { background-image: none; }
-.vp-colonne { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px solid rgba(148, 163, 184, .25); }
+.vp-colonne { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px solid var(--pla-grille); }
 /* Période masquée (heures non travaillées, jours masqués) : trait de coupure. */
-.vp-coupure { position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px solid rgba(100, 116, 139, .7); margin-left: -1px; }
-.vp-separation { position: absolute; left: 0; right: 0; height: 0; border-top: 1px solid rgba(148, 163, 184, .25); }
+.vp-coupure { position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px solid var(--pla-coupure); margin-left: -1px; }
+.vp-separation { position: absolute; left: 0; right: 0; height: 0; border-top: 1px solid var(--pla-grille); }
 .vp-barre {
   position: absolute; box-sizing: border-box; border-radius: 3px; overflow: hidden;
-  white-space: nowrap; text-overflow: ellipsis; cursor: grab; color: #fff; line-height: 15px; padding: 2px 5px 6px;
-  background: var(--vp-couleur); border: 1px solid rgba(0, 0, 0, .15);
+  white-space: nowrap; text-overflow: ellipsis; cursor: grab; color: var(--pla-barre-texte); line-height: 15px; padding: 2px 5px 6px;
+  background: var(--vp-couleur); border: 1px solid var(--pla-barre-bord);
 }
 .vp-barre::before, .vp-barre::after { content: ''; position: absolute; top: 0; bottom: 0; width: 5px; cursor: ew-resize; }
 .vp-barre::before { left: 0; }
 .vp-barre::after { right: 0; }
-.vp-barre.selection { outline: 2px solid #f59e0b; outline-offset: 1px; z-index: 2; }
-.vp-barre.cible { outline: 3px solid #16a34a; outline-offset: 1px; z-index: 2; filter: brightness(1.15); }
+.vp-barre.selection { outline: 2px solid var(--pla-selection); outline-offset: 1px; z-index: 2; }
+.vp-barre.cible { outline: 3px solid var(--pla-cible); outline-offset: 1px; z-index: 2; filter: brightness(1.15); }
 /* Glisser : la tâche reste en place, la surcouche montre sa future position (contour pointillé) et l'instant visé. */
 .vp-surcouche { position: absolute; inset: 0; pointer-events: none; z-index: 4; }
-.vp-barre.vp-projection { opacity: .6; outline: 2px dashed var(--texte, #111827); outline-offset: 1px; box-shadow: 0 3px 10px rgba(0, 0, 0, .35); cursor: grabbing; }
+.vp-barre.vp-projection { opacity: .6; outline: 2px dashed var(--texte); outline-offset: 1px; box-shadow: 0 3px 10px var(--pla-ombre-projection); cursor: grabbing; }
 .vp-projection-etiquette {
   position: absolute; transform: translateY(calc(-100% - 4px)); padding: 1px 5px; border-radius: 3px; white-space: nowrap;
-  font-size: 11px; background: #111827; color: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, .3);
+  font-size: 11px; background: var(--pla-etiquette-fond); color: var(--pla-etiquette-texte); box-shadow: 0 1px 4px var(--pla-ombre-etiquette);
 }
 .vp-projection-etiquette.dessous { transform: none; }
 .vue-planning.lecture .vp-barre { cursor: default; }
 /* Avancement : barre de progression sur toute la largeur, en bas de la barre. */
-.vp-progression { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(0, 0, 0, .28); pointer-events: none; }
-.vp-progression i { display: block; height: 100%; background: rgba(255, 255, 255, .92); }
-.vp-progression.complete i { background: #4ade80; }
+.vp-progression { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: var(--pla-progression-fond); pointer-events: none; }
+.vp-progression i { display: block; height: 100%; background: var(--pla-progression); }
+.vp-progression.complete i { background: var(--pla-progression-complete); }
 /* Barres sur plusieurs lignes de texte (option lignesTexte : --vp-lignes). */
 .vue-planning.multiligne .vp-barre { white-space: normal; line-height: 15px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--vp-lignes); overflow-wrap: anywhere; }
 
 /* Bulle d'une barre (survol) : au-dessus de tout, sans capter le pointeur. */
 .vp-bulle {
   position: fixed; z-index: 1000; pointer-events: none; max-width: 22rem; padding: .45rem .6rem; border-radius: 6px; font-size: 12px;
-  background: var(--surface, #fff); color: var(--texte, #1f2937); border: 1px solid var(--bord, #cbd5e1); box-shadow: 0 4px 14px rgba(0, 0, 0, .25);
+  background: var(--surface); color: var(--texte); border: 1px solid var(--bord); box-shadow: 0 4px 14px var(--pla-ombre-bulle);
 }
 .vp-bulle[hidden] { display: none; }
 
 /* Décorations des lignes (sous les barres) : capacité d'un service, jalons. */
 .vp-deco { position: absolute; box-sizing: border-box; font-size: 10px; overflow: hidden; white-space: nowrap; padding: 0 3px; pointer-events: auto; opacity: .85; }
-.vp-deco.charge-ok { background: rgba(22, 163, 74, .22); }
-.vp-deco.charge-moyen { background: rgba(217, 119, 6, .3); }
-.vp-deco.charge-plein { background: rgba(220, 38, 38, .35); }
+.vp-deco.charge-ok { background: var(--pla-charge-ok); }
+.vp-deco.charge-moyen { background: var(--pla-charge-moyen); }
+.vp-deco.charge-plein { background: var(--pla-charge-plein); }
 
 /* Jalons (losange centré sur l'instant). */
-.vp-deco.jalon { color: #b45309; font-size: 21px; line-height: 1; text-align: center; padding: 0; opacity: 1; background: none; overflow: visible; }
+.vp-deco.jalon { color: var(--pla-jalon); font-size: 21px; line-height: 1; text-align: center; padding: 0; opacity: 1; background: none; overflow: visible; }

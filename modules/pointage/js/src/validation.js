@@ -2,28 +2,19 @@
 // état d'un jour d'après les validations qui le couvrent (simple : RH ; double : chef de service puis RH, le RH pouvant
 // valider sans le chef), contrôle des actions (valider, dévalider avec motif), exceptions d'une semaine pour la
 // synthèse par exceptions (ANALYSE-MODULE-POINTAGE.md M11, M12, M17, § 6).
+import { texte, icone, textesParCode } from '@logibtp/socle/dictionnaire';
 
-export const ETATS_VALIDATION = {
-  NON_VALIDE: { libelle: 'À valider', icone: '○' },
-  VALIDE_CHEF: { libelle: 'Validé par le chef', icone: '◐' },
-  VALIDE: { libelle: 'Validé', icone: '●' },
-};
+/** États d'un jour : libellé (fr.json : pointage.etats_validation.<ÉTAT>) et icône (pointage_etat_<état>). */
+const etat = (code) => Object.freeze({
+  get libelle() { return texte(`pointage.etats_validation.${code}`); },
+  get icone() { return icone(`pointage_etat_${code.toLowerCase()}`); },
+});
+export const ETATS_VALIDATION = Object.freeze({ NON_VALIDE: etat('NON_VALIDE'), VALIDE_CHEF: etat('VALIDE_CHEF'), VALIDE: etat('VALIDE') });
 
-export const MESSAGES_VALIDATION = {
-  VAL_CHEF_SIMPLE: 'Validation simple : seul le service RH valide',
-  VAL_DEJA: 'Déjà validé',
-  VAL_RH_FAIT: 'Déjà validé par le service RH',
-  DEV_MOTIF: 'Motif obligatoire pour dévalider',
-  DEV_RIEN: 'Rien à dévalider',
-  DEV_RH_FAIT: 'Validé par le service RH : seul le RH peut dévalider',
-  EXC_CORRECTION: 'Demande de correction en attente',
-  EXC_SANS_POINTAGE: 'Jour travaillé sans pointage',
-  EXC_NON_CONFORMITE: 'Non-conformité signalée',
-  EXC_HEURES_SUP: 'Heures supplémentaires',
-  EXC_CONTROLE: 'Contrôle à vérifier (amplitude, chantier clos…)',
-  EXC_ZONE: 'Zone de déplacement à valider (chantier sans zone pour l\'agence)',
-  EXC_MODIFIE: 'Corrigé par rapport à la saisie',
-};
+/** Libellés des refus et exceptions (fr.json : pointage.validation.<CODE>). */
+export const MESSAGES_VALIDATION = textesParCode('pointage.validation', [
+  'VAL_CHEF_SIMPLE', 'VAL_DEJA', 'VAL_RH_FAIT', 'DEV_MOTIF', 'DEV_RIEN', 'DEV_RH_FAIT', 'EXC_CORRECTION', 'EXC_SANS_POINTAGE', 'EXC_NON_CONFORMITE', 'EXC_HEURES_SUP', 'EXC_CONTROLE', 'EXC_ZONE', 'EXC_MODIFIE',
+]);
 
 const couvre = (v, date) => !v.annule && v.du <= date && date <= v.au;
 

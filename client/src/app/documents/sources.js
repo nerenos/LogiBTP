@@ -1,3 +1,4 @@
+import { texteHtml, pluriel } from '@logibtp/socle/dictionnaire';
 import { echapper, formatNombre, ouvrirModale } from '@logibtp/socle/ui';
 
 // Choix de documents sources (CONCEPTION-ACHATS-MARCHES.md Q10, 13.4 bis) : documents validés encore ouverts (BL et
@@ -9,14 +10,13 @@ export function choisirSources({ documents, titre }) {
   dlg.className = 'dialogue-structure dialogue-options';
   dlg.innerHTML = `<form method="dialog">
     <h3>${echapper(titre)}</h3>
-    ${documents.length ? `<p class="aide">Documents validés du même tiers qui ont encore des lignes ouvertes. Chaque document coché devient une
-      section du document, avec son pied.</p>
+    ${documents.length ? `<p class="aide">${texteHtml('documents_btp.sources.aide')}</p>
     <div class="options-choix"><table><tbody>${documents.map((d) => `<tr>
       <td><input type="checkbox" value="${d.ent_id}"></td><td><span class="pastille">${echapper(d.type_libelle)}</span></td>
       <td>${echapper(d.numero ?? '')}</td><td>${echapper(d.date ?? '')}</td><td class="libelle">${echapper(d.objet ?? '')}</td>
-      <td class="nombre">${formatNombre(d.total_ht ?? 0, 2)}</td><td><small>${d.lignes_ouvertes} ligne(s) ouverte(s)</small></td></tr>`).join('')}
-    </tbody></table></div>` : '<p class="aide">Aucun document validé en attente pour ce type de document et ce tiers.</p>'}
-    <div class="boutons"><button value="annuler">Annuler</button>${documents.length ? '<button type="button" class="principal" data-valider>Reprendre</button>' : ''}</div></form>`;
+      <td class="nombre">${formatNombre(d.total_ht ?? 0, 2)}</td><td><small>${pluriel('documents_btp.sources.lignes_ouvertes', d.lignes_ouvertes)}</small></td></tr>`).join('')}
+    </tbody></table></div>` : `<p class="aide">${texteHtml('documents_btp.sources.aucun')}</p>`}
+    <div class="boutons"><button value="annuler">${texteHtml('commun.annuler')}</button>${documents.length ? `<button type="button" class="principal" data-valider>${texteHtml('documents_btp.sources.reprendre')}</button>` : ''}</div></form>`;
   document.body.append(dlg);
   return new Promise((resoudre) => {
     let fini = false;

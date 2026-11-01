@@ -1,3 +1,4 @@
+import { texte, texteHtml, icone, iconeHtml, textesParCode } from '@logibtp/socle/dictionnaire';
 import { echapper, formatNombre, formatLibre, lireNombre, lirePreferences, ecrirePreferences, ouvrirModale } from '@logibtp/socle/ui';
 import { correspond, filtreActif } from '@logibtp/liste';
 import { ouvrirMenuFiltre, fermerMenuFiltre } from '@logibtp/liste/ui';
@@ -19,43 +20,43 @@ import { RapportFraisAnnexes } from './frais-annexes-ui.js';
 
 /** Colonnes du tableau ; `saisie` : coef (coefficient écrit sur les feuilles), prorata (lignes vendues), montant (forcé). */
 export const COLONNES_ANALYSE = [
-  { cle: 'nb', titre: 'Lignes', type: 'entier', defaut: false, aide: 'Nombre de lignes chiffrées sans composante' },
-  { cle: 'ds', titre: 'Déboursé', type: 'montant', defaut: true, aide: 'Σ quantité totale × PA' },
-  { cle: 'fg', titre: 'FG', type: 'coef', defaut: true, saisie: 'coef', champ: 'lig_coef_fg', aide: 'Coefficient de frais généraux (revient / déboursé)' },
-  { cle: 'rev', titre: 'Revient', type: 'montant', defaut: true, saisie: 'montant', aide: 'Σ quantité totale × PR' },
-  { cle: 'benef', titre: 'Bénéf.', type: 'coef', defaut: true, saisie: 'coef', champ: 'lig_coef_benef', aide: 'Coefficient de bénéfice (PV / revient)' },
-  { cle: 'pv', titre: 'PV avant FA', type: 'montant', defaut: true, saisie: 'montant', aide: 'Σ quantité totale × PV, avant frais annexes' },
-  { cle: 'coefFa', titre: 'Coef. FA', type: 'coef', defaut: false, aide: 'Coefficient de frais annexes (PV avec FA / PV)' },
-  { cle: 'fa', titre: 'FA ventilés', type: 'montant', defaut: true, aide: 'Frais annexes ventilés : PV avec FA − PV' },
-  { cle: 'pvFa', titre: 'PV avec FA', type: 'montant', defaut: true, aide: 'PV × coefficient de frais annexes' },
-  { cle: 'prorata', titre: 'Prorata', type: 'coef', defaut: false, saisie: 'prorata', champ: 'lig_coef_prorata', aide: 'Prorata des lignes vendues' },
-  { cle: 'client', titre: 'Prix client', type: 'montant', defaut: true, saisie: 'montant', aide: 'PV avec FA × prorata × remise' },
-  { cle: 'global', titre: 'Coef. global', type: 'coef', defaut: false, aide: 'Prix client / déboursé' },
-  { cle: 'margeBrute', titre: 'Marge brute', type: 'montant', defaut: true, aide: 'Prix client − déboursé (PA)' },
-  { cle: 'tauxBrute', titre: '% brute', type: 'pct', defaut: false, aide: 'Marge brute / prix client' },
-  { cle: 'margeNette', titre: 'Marge nette', type: 'montant', defaut: true, aide: 'PV remisé sans frais annexes ni prorata − revient' },
-  { cle: 'tauxNette', titre: '% nette', type: 'pct', defaut: true, aide: 'Marge nette / PV remisé sans frais annexes ni prorata' },
+  { cle: 'nb', get titre() { return texte('analyse_btp.colonnes.nb.titre'); }, type: 'entier', defaut: false, get aide() { return texte('analyse_btp.colonnes.nb.aide'); } },
+  { cle: 'ds', get titre() { return texte('analyse_btp.colonnes.ds.titre'); }, type: 'montant', defaut: true, get aide() { return texte('analyse_btp.colonnes.ds.aide'); } },
+  { cle: 'fg', get titre() { return texte('analyse_btp.colonnes.fg.titre'); }, type: 'coef', defaut: true, saisie: 'coef', champ: 'lig_coef_fg', get aide() { return texte('analyse_btp.colonnes.fg.aide'); } },
+  { cle: 'rev', get titre() { return texte('analyse_btp.colonnes.rev.titre'); }, type: 'montant', defaut: true, saisie: 'montant', get aide() { return texte('analyse_btp.colonnes.rev.aide'); } },
+  { cle: 'benef', get titre() { return texte('analyse_btp.colonnes.benef.titre'); }, type: 'coef', defaut: true, saisie: 'coef', champ: 'lig_coef_benef', get aide() { return texte('analyse_btp.colonnes.benef.aide'); } },
+  { cle: 'pv', get titre() { return texte('analyse_btp.colonnes.pv.titre'); }, type: 'montant', defaut: true, saisie: 'montant', get aide() { return texte('analyse_btp.colonnes.pv.aide'); } },
+  { cle: 'coefFa', get titre() { return texte('analyse_btp.colonnes.coefFa.titre'); }, type: 'coef', defaut: false, get aide() { return texte('analyse_btp.colonnes.coefFa.aide'); } },
+  { cle: 'fa', get titre() { return texte('analyse_btp.colonnes.fa.titre'); }, type: 'montant', defaut: true, get aide() { return texte('analyse_btp.colonnes.fa.aide'); } },
+  { cle: 'pvFa', get titre() { return texte('analyse_btp.colonnes.pvFa.titre'); }, type: 'montant', defaut: true, get aide() { return texte('analyse_btp.colonnes.pvFa.aide'); } },
+  { cle: 'prorata', get titre() { return texte('analyse_btp.colonnes.prorata.titre'); }, type: 'coef', defaut: false, saisie: 'prorata', champ: 'lig_coef_prorata', get aide() { return texte('analyse_btp.colonnes.prorata.aide'); } },
+  { cle: 'client', get titre() { return texte('analyse_btp.colonnes.client.titre'); }, type: 'montant', defaut: true, saisie: 'montant', get aide() { return texte('analyse_btp.colonnes.client.aide'); } },
+  { cle: 'global', get titre() { return texte('analyse_btp.colonnes.global.titre'); }, type: 'coef', defaut: false, get aide() { return texte('analyse_btp.colonnes.global.aide'); } },
+  { cle: 'margeBrute', get titre() { return texte('analyse_btp.colonnes.margeBrute.titre'); }, type: 'montant', defaut: true, get aide() { return texte('analyse_btp.colonnes.margeBrute.aide'); } },
+  { cle: 'tauxBrute', get titre() { return texte('analyse_btp.colonnes.tauxBrute.titre'); }, type: 'pct', defaut: false, get aide() { return texte('analyse_btp.colonnes.tauxBrute.aide'); } },
+  { cle: 'margeNette', get titre() { return texte('analyse_btp.colonnes.margeNette.titre'); }, type: 'montant', defaut: true, get aide() { return texte('analyse_btp.colonnes.margeNette.aide'); } },
+  { cle: 'tauxNette', get titre() { return texte('analyse_btp.colonnes.tauxNette.titre'); }, type: 'pct', defaut: true, get aide() { return texte('analyse_btp.colonnes.tauxNette.aide'); } },
 ];
 
-const LIBELLES_COEF = { fg: 'frais généraux', benef: 'bénéfice', prorata: 'prorata' };
+const LIBELLES_COEF = textesParCode('analyse_btp.coefs', ['fg', 'benef', 'prorata']);
 
 /** Texte comparé sans casse ni accents (recherche dans la liste des éléments). */
 const normaliser = (t) => String(t ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 /** Tri de la liste des éléments : valeur comparée par colonne (valeurs divergentes : le minimum). */
 const TRIS_ELEMENTS = {
-  code: { titre: 'Code', texte: true, valeur: (g) => g.code },
-  libelle: { titre: 'Libellé', texte: true, valeur: (g) => g.libelle },
-  unite: { titre: 'U', texte: true, valeur: (g) => [...g.unites].join(' / ') },
-  nb: { titre: 'Lignes', valeur: (g) => g.feuilles.length, aide: 'Nombre de lignes' },
-  qt: { titre: 'Qté totale', valeur: (g) => g.qt },
-  pa: { titre: VALEURS_ELEMENT.pa.titre, valeur: (g) => g.valeurs.pa?.min ?? null },
-  fg: { titre: VALEURS_ELEMENT.fg.titre, valeur: (g) => g.valeurs.fg?.min ?? null },
-  pr: { titre: VALEURS_ELEMENT.pr.titre, valeur: (g) => g.valeurs.pr?.min ?? null },
-  benef: { titre: VALEURS_ELEMENT.benef.titre, valeur: (g) => g.valeurs.benef?.min ?? null },
-  pv: { titre: VALEURS_ELEMENT.pv.titre, valeur: (g) => g.valeurs.pv?.min ?? null },
-  montant: { titre: 'Montant PV', valeur: (g) => g.montant },
-  nature: { titre: 'Nature', texte: true, filtrable: false, valeur: (g, natures) => [...g.natures].map((n) => natures.get(n)?.code ?? '').join(', ') },
+  code: { get titre() { return texte('analyse_btp.elements.code'); }, texte: true, valeur: (g) => g.code },
+  libelle: { get titre() { return texte('analyse_btp.elements.libelle'); }, texte: true, valeur: (g) => g.libelle },
+  unite: { get titre() { return texte('analyse_btp.elements.unite'); }, texte: true, valeur: (g) => [...g.unites].join(' / ') },
+  nb: { get titre() { return texte('analyse_btp.elements.nb'); }, valeur: (g) => g.feuilles.length, get aide() { return texte('analyse_btp.elements.nb_aide'); } },
+  qt: { get titre() { return texte('analyse_btp.elements.qt'); }, valeur: (g) => g.qt },
+  pa: { get titre() { return VALEURS_ELEMENT.pa.titre; }, valeur: (g) => g.valeurs.pa?.min ?? null },
+  fg: { get titre() { return VALEURS_ELEMENT.fg.titre; }, valeur: (g) => g.valeurs.fg?.min ?? null },
+  pr: { get titre() { return VALEURS_ELEMENT.pr.titre; }, valeur: (g) => g.valeurs.pr?.min ?? null },
+  benef: { get titre() { return VALEURS_ELEMENT.benef.titre; }, valeur: (g) => g.valeurs.benef?.min ?? null },
+  pv: { get titre() { return VALEURS_ELEMENT.pv.titre; }, valeur: (g) => g.valeurs.pv?.min ?? null },
+  montant: { get titre() { return texte('analyse_btp.elements.montant'); }, valeur: (g) => g.montant },
+  nature: { get titre() { return texte('analyse_btp.elements.nature'); }, texte: true, filtrable: false, valeur: (g, natures) => [...g.natures].map((n) => natures.get(n)?.code ?? '').join(', ') },
 };
 
 /** Colonnes de la liste des éléments (toutes affichées par défaut). */
@@ -131,9 +132,9 @@ export class AnalyseCoefficients {
   libelleFiltreNature() {
     const n = this.filtreNature;
     if (n === null) return null;
-    if (n === 'n:') return 'sans nature';
-    if (n.startsWith('n:')) { const x = this.natures.get(Number(n.slice(2))); return x ? x.libelle : `nature ${n.slice(2)}`; }
-    return `regroupement ${n.slice(2)}`;
+    if (n === 'n:') return texte('analyse_btp.filtre.sans_nature');
+    if (n.startsWith('n:')) { const x = this.natures.get(Number(n.slice(2))); return x ? x.libelle : texte('analyse_btp.filtre.nature', { id: n.slice(2) }); }
+    return texte('analyse_btp.filtre.regroupement', { code: n.slice(2) });
   }
 
   get resultat() { return this.editeur.resultat; }
@@ -154,8 +155,8 @@ export class AnalyseCoefficients {
     principal.dataset.masquee = this.masquee ?? '';
     for (const b of principal.querySelectorAll('[data-masquer-partie]')) {
       const masquee = this.masquee === b.dataset.masquerPartie;
-      b.textContent = masquee ? '▸' : '▾';
-      b.title = masquee ? 'Afficher cette partie' : 'Masquer cette partie (l\'autre prend toute la place)';
+      b.textContent = icone(masquee ? 'analyse_btp_ferme' : 'analyse_btp_ouvert');
+      b.title = texte(masquee ? 'analyse_btp.parties.afficher' : 'analyse_btp.parties.masquer');
       b.setAttribute('aria-expanded', String(!masquee));
     }
   }
@@ -193,7 +194,7 @@ export class AnalyseCoefficients {
   }
 
   libelleTranche(l) {
-    return `${l.lig_numerotation ?? ''} ${l.lig_libelle_brut || (l.lig_tyl_id === TL.SECTION ? 'Section' : 'Titre')}`.trim();
+    return `${l.lig_numerotation ?? ''} ${l.lig_libelle_brut || texte(l.lig_tyl_id === TL.SECTION ? 'analyse_btp.tranches.section' : 'analyse_btp.tranches.titre')}`.trim();
   }
 
   /** Groupes du tableau : les natures de la portée [{ cle, libelle, feuilles, agregat, nature }], et le total de la portée. */
@@ -202,14 +203,14 @@ export class AnalyseCoefficients {
     this.feuillesPortee = portee;
     const feuilles = portee.filter((f) => this.correspondNature(f));
     this.feuilles = feuilles;
-    const libelleTotal = this.filtreNature !== null ? `Total (${this.libelleFiltreNature()})` : this.portee === null ? 'Total du document' : 'Total de la portée';
+    const libelleTotal = this.filtreNature !== null ? texte('analyse_btp.total.filtre', { filtre: this.libelleFiltreNature() }) : texte(this.portee === null ? 'analyse_btp.total.document' : 'analyse_btp.total.portee');
     const total = { cle: 'total', libelle: libelleTotal, feuilles, agregat: agreger(feuilles, this.coefFa) };
     const groupes = new Map();
     for (const f of feuilles) {
       const cle = `n:${f.nature ?? ''}`;
       if (!groupes.has(cle)) {
         const n = this.natures.get(f.nature);
-        groupes.set(cle, { cle, libelle: n ? `${n.code} · ${n.libelle}` : f.nature ? `Nature ${f.nature}` : 'Sans nature', feuilles: [], nature: f.nature });
+        groupes.set(cle, { cle, libelle: n ? `${n.code} · ${n.libelle}` : f.nature ? texte('analyse_btp.natures.nature', { id: f.nature }) : texte('analyse_btp.natures.sans'), feuilles: [], nature: f.nature });
       }
       groupes.get(cle).feuilles.push(f);
     }
@@ -249,8 +250,8 @@ export class AnalyseCoefficients {
       if (!saisissable) return `<td class="nombre ${classe}">${txt}</td>`;
       const valeur = c.type === 'montant' ? formatNombre(arr(v, pm), pm) : txt;
       const aide = c.saisie === 'montant'
-        ? `Saisir le ${MONTANTS_FORCABLES[c.cle].libelle} : les coefficients des lignes sont recalculés, l'arrondi est absorbé par les plus fortes lignes`
-        : `Saisir un coefficient de ${LIBELLES_COEF[c.cle]} : il est écrit sur les lignes ${c.saisie === 'prorata' ? 'vendues' : 'chiffrées sans composante'} du groupe`;
+        ? texte('analyse_btp.saisie.montant', { montant: MONTANTS_FORCABLES[c.cle].libelle })
+        : texte(c.saisie === 'prorata' ? 'analyse_btp.saisie.prorata' : 'analyse_btp.saisie.coef', { coef: LIBELLES_COEF[c.cle] });
       return `<td class="nombre"><input class="${classe} ${c.type === 'montant' ? 'montant' : ''}" data-saisie="${c.saisie}" data-groupe="${echapper(g.cle)}" data-cle="${c.cle}"
         value="${echapper(valeur)}" title="${echapper(aide)}"></td>`;
     };
@@ -261,56 +262,54 @@ export class AnalyseCoefficients {
 
     this.conteneur.innerHTML = `
       <div class="analyse-gauche" style="--part-tranches:${this.partageGauche}%">${this.arbre(tranches, pm)}
-        <div class="analyse-separateur" data-separateur="gauche" role="separator" aria-orientation="horizontal" title="Glisser pour déplacer la limite · double-clic : partage par défaut"></div>
+        <div class="analyse-separateur" data-separateur="gauche" role="separator" aria-orientation="horizontal" title="${texteHtml('analyse_btp.separateur')}"></div>
         ${this.arbreNatures(pm)}</div>
       <div class="analyse-principal">
       <div class="analyse-barre">
-        <span class="analyse-portee">Portée : <strong>${echapper(this.portee === null ? 'Document entier' : this.libelleTranche(tranches.find((t) => t.ligne.lig_id === this.portee).ligne))}</strong>
-          ${this.filtreNature !== null ? ` · <strong>${echapper(this.libelleFiltreNature())}</strong> <button type="button" data-nature-filtre="" title="Toutes les natures">✕</button>` : ''}</span>
-        ${this.portee !== null ? `<button type="button" data-portee-id="${parentEstTranche ? parent : ''}" title="Remonter d'un niveau">↑</button>` : ''}
-        <label class="coche" title="Options, variantes et lignes pour mémoire comprises dans l'analyse (et dans les saisies)">
-          <input type="checkbox" data-hors-total ${this.horsTotal ? 'checked' : ''}> Options et pour mémoire</label>
-        <span class="analyse-fa">Coef. frais annexes moyen : <strong>${formatLibre(this.coefFa)}</strong></span>
-        <button type="button" data-vue-analyse="frais" title="Répartition des frais annexes par tranche de frais, nature, élément et ligne ; clés de ventilation">Frais annexes</button>
+        <span class="analyse-portee">${texteHtml('analyse_btp.barre.portee')} <strong>${echapper(this.portee === null ? texte('analyse_btp.barre.document') : this.libelleTranche(tranches.find((t) => t.ligne.lig_id === this.portee).ligne))}</strong>
+          ${this.filtreNature !== null ? ` · <strong>${echapper(this.libelleFiltreNature())}</strong> <button type="button" data-nature-filtre="" title="${texteHtml('analyse_btp.natures.toutes')}">${iconeHtml('retirer')}</button>` : ''}</span>
+        ${this.portee !== null ? `<button type="button" data-portee-id="${parentEstTranche ? parent : ''}" title="${texteHtml('analyse_btp.barre.remonter')}">${iconeHtml('analyse_btp_remonter')}</button>` : ''}
+        <label class="coche" title="${texteHtml('analyse_btp.barre.hors_total_aide')}">
+          <input type="checkbox" data-hors-total ${this.horsTotal ? 'checked' : ''}> ${texteHtml('analyse_btp.barre.hors_total')}</label>
+        <span class="analyse-fa">${texteHtml('analyse_btp.barre.coef_fa')} <strong>${formatLibre(this.coefFa)}</strong></span>
+        <button type="button" data-vue-analyse="frais" title="${texteHtml('analyse_btp.barre.frais_aide')}">${texteHtml('analyse_btp.barre.frais')}</button>
       </div>
       <div class="analyse-parties">
       <section class="analyse-partie" data-partie="coefs">
         <header class="partie-entete">
           <button type="button" class="partie-bascule" data-masquer-partie="coefs"></button>
-          <h3>Coefficients par nature</h3>
+          <h3>${texteHtml('analyse_btp.coefs_titre')}</h3>
           ${this.menuColonnes('coefs', COLONNES_ANALYSE.map((c) => ({ cle: c.cle, titre: c.titre, aide: c.aide })), this.colonnes)}
-          <span class="aide">Coefficient ou montant saisi écrit sur les lignes (Ctrl+Z pour annuler) ; les montants restent les vraies valeurs, l'arrondi est
-            absorbé par les plus fortes lignes, en dernier recours par une ligne d'écart d'arrondi dans la nature. Moyennes pondérées.</span>
+          <span class="aide">${texteHtml('analyse_btp.coefs_aide')}</span>
         </header>
         <div class="partie-corps"><table class="table-analyse">
-        <thead><tr><th>Nature</th>${colonnes.map((c) => `<th title="${echapper(c.aide)}">${echapper(c.titre)}</th>`).join('')}</tr></thead>
+        <thead><tr><th>${texteHtml('analyse_btp.elements.nature')}</th>${colonnes.map((c) => `<th title="${echapper(c.aide)}">${echapper(c.titre)}</th>`).join('')}</tr></thead>
         <tbody>${liste.map((g) => ligne(g)).join('')}</tbody>
         <tfoot>${ligne(total, true)}</tfoot>
         </table>
-        ${liste.length ? '' : '<p class="aide">Aucune ligne chiffrée dans cette portée.</p>'}</div>
+        ${liste.length ? '' : `<p class="aide">${texteHtml('analyse_btp.sans_ligne')}</p>`}</div>
       </section>
-      <div class="analyse-separateur" data-separateur="parties" role="separator" aria-orientation="horizontal" title="Glisser pour déplacer la limite · double-clic : partage par défaut"></div>
+      <div class="analyse-separateur" data-separateur="parties" role="separator" aria-orientation="horizontal" title="${texteHtml('analyse_btp.separateur')}"></div>
       <section class="analyse-partie analyse-elements" data-partie="elements">
         <header class="partie-entete">
           <button type="button" class="partie-bascule" data-masquer-partie="elements"></button>
-          <h3>Éléments <small data-nb-elements></small></h3>
+          <h3>${texteHtml('analyse_btp.elements_titre')} <small data-nb-elements></small></h3>
           ${this.menuColonnes('elements', COLONNES_ELEMENTS.filter((k) => k !== 'libelle').map((k) => ({ cle: k, titre: TRIS_ELEMENTS[k].titre, aide: TRIS_ELEMENTS[k].aide })), this.colonnesElements)}
           <span class="recherche-elements">
-            <input type="search" data-recherche placeholder="Rechercher un code ou un libellé" value="${echapper(this.recherche)}"
-              title="Recherche sans filtre : Entrée / Maj+Entrée pour passer de résultat en résultat, Échap pour effacer">
+            <input type="search" data-recherche placeholder="${texteHtml('analyse_btp.recherche.placeholder')}" value="${echapper(this.recherche)}"
+              title="${texteHtml('analyse_btp.recherche.aide')}">
             <span class="compteur" data-compteur-recherche aria-live="polite"></span>
-            <button type="button" data-resultat="-1" title="Résultat précédent (Maj+Entrée)">▲</button>
-            <button type="button" data-resultat="1" title="Résultat suivant (Entrée)">▼</button>
+            <button type="button" data-resultat="-1" title="${texteHtml('analyse_btp.recherche.precedent')}">${iconeHtml('analyse_btp_precedent')}</button>
+            <button type="button" data-resultat="1" title="${texteHtml('analyse_btp.recherche.suivant')}">${iconeHtml('analyse_btp_suivant')}</button>
           </span>
           ${this.appel && !this.editeur.magasin?.lectureSeule ? `<button type="button" data-recharger-prix
-            title="Prix du jour de la bibliothèque sur les éléments affichés (portée, nature et filtres) : PA rechargé, coefficients conservés ; aperçu avant écriture">⟳ Prix de la bibliothèque</button>` : ''}
-          <span class="aide">Regroupés par code et libellé (hors tranches et ouvrages) ; valeur saisie écrite sur toutes les lignes du groupe dans la portée
-            et la nature filtrées. Fond coloré : les lignes diffèrent (minimum – maximum).</span>
+            title="${texteHtml('analyse_btp.prix.bouton_aide')}">${iconeHtml('analyse_btp_recharger')} ${texteHtml('analyse_btp.prix.titre')}</button>` : ''}
+          <span class="aide">${texteHtml('analyse_btp.elements_aide')}</span>
         </header>
         <div class="partie-corps"><table class="table-analyse table-elements">
           <thead><tr>${COLONNES_ELEMENTS.filter((k) => this.colonnesElements.has(k)).map((k) => [k, TRIS_ELEMENTS[k]]).map(([k, t]) => `<th data-tri="${k}" class="triable" aria-sort="none"
-            title="${echapper(t.aide ?? t.titre)} : cliquer pour trier (croissant, décroissant, ordre par défaut)">${echapper(t.titre)}<span class="sens-tri"></span>
-            ${t.filtrable === false ? '' : `<button type="button" class="filtre-colonne" data-filtre-colonne="${k}" title="Filtrer cette colonne">▾</button>`}</th>`).join('')}</tr></thead>
+            title="${texteHtml('analyse_btp.tri', { colonne: t.aide ?? t.titre })}">${echapper(t.titre)}<span class="sens-tri"></span>
+            ${t.filtrable === false ? '' : `<button type="button" class="filtre-colonne" data-filtre-colonne="${k}" title="${texteHtml('analyse_btp.filtrer')}">${iconeHtml('analyse_btp_filtre')}</button>`}</th>`).join('')}</tr></thead>
           <tbody></tbody>
         </table></div>
       </section>
@@ -339,7 +338,7 @@ export class AnalyseCoefficients {
     const ed = this.editeur;
     if (ed.magasin?.lectureSeule) return;
     const feuilles = [...(this.elements?.values() ?? [])].flatMap((g) => g.feuilles);
-    if (!feuilles.length) { this.message('Aucun élément affiché', 'avertissement'); return; }
+    if (!feuilles.length) { this.message(texte('analyse_btp.prix.aucun'), 'avertissement'); return; }
     const fournisseur = this.appel.fournisseur;
     const bib = await this.appel.bibDocument();
     const parId = new Map();
@@ -358,7 +357,7 @@ export class AnalyseCoefficients {
     // Lignes sans lien dont le code n'existe pas dans la bibliothèque : comptées, pas listées.
     const lignes = tout.filter((x) => !x.sansCorrespondance);
     const sans = tout.length - lignes.length;
-    if (!lignes.length) { this.message(`Prix déjà à jour avec la bibliothèque${sans ? ` (${sans} ligne(s) sans élément correspondant)` : ''}`, 'succes'); return; }
+    if (!lignes.length) { this.message(sans ? texte('analyse_btp.prix.a_jour_sans', { nombre: sans }) : texte('analyse_btp.prix.a_jour'), 'succes'); return; }
     const retenues = await this.apercuPrix(lignes, sans);
     if (!retenues?.length) return;
     const parLigne = new Map(retenues.map((x) => [x.id, x]));
@@ -369,8 +368,8 @@ export class AnalyseCoefficients {
         const p = prixUnite(r.element, x.lig_unt_code);
         Object.assign(x, r.champs, { lig_proprietes: { ...(x.lig_proprietes ?? {}), element: lien(r.element, { unite: p.unite, ratio: p.ratio }) } });
       }
-    }, 'Prix de la bibliothèque');
-    this.message(`${retenues.length} ligne(s) mise(s) à jour depuis la bibliothèque`, 'succes');
+    }, texte('analyse_btp.prix.titre'));
+    this.message(texte('analyse_btp.prix.fait', { nombre: retenues.length }), 'succes');
   }
 
   /** Aperçu des prix rechargés : lignes cochées (les rapprochements par le code sont à cocher) ; résout avec les retenues. */
@@ -381,20 +380,19 @@ export class AnalyseCoefficients {
       const fond = document.createElement('dialog');
       fond.className = 'fiche-dialogue-fond dialogue-plein';
       const ecrites = lignes.filter((x) => x.champs).length;
-      fond.innerHTML = `<section class="fiche-dialogue apercu-prix" role="dialog" aria-label="Prix de la bibliothèque">
-        <header><h2>⟳ Prix de la bibliothèque</h2><button type="button" data-fermer title="Fermer (Échap)">✕</button></header>
-        <p class="aide">Prix du jour, convertis dans l'unité de chaque ligne ; coefficients conservés. PV fixe en bibliothèque : PV repris en PV fixe.
-          Ligne à PV fixe : son PV est conservé (le bénéfice suit). Lignes sans lien : rapprochement par le code, à cocher.</p>
-        <div class="apercu-prix-table"><table class="bib-table"><thead><tr><th></th><th>Code</th><th>Libellé</th><th>U.</th><th>PA</th><th>PV</th><th>Remarque</th></tr></thead><tbody>
+      fond.innerHTML = `<section class="fiche-dialogue apercu-prix" role="dialog" aria-label="${texteHtml('analyse_btp.prix.titre')}">
+        <header><h2>${iconeHtml('analyse_btp_recharger')} ${texteHtml('analyse_btp.prix.titre')}</h2><button type="button" data-fermer title="${texteHtml('commun.fermer_echap')}">${iconeHtml('retirer')}</button></header>
+        <p class="aide">${texteHtml('analyse_btp.prix.aide')}</p>
+        <div class="apercu-prix-table"><table class="bib-table"><thead><tr><th></th><th>${texteHtml('commun.code')}</th><th>${texteHtml('commun.libelle')}</th><th>${texteHtml('bibliotheque_btp.appel.colonnes.unite')}</th><th>${texteHtml('analyse_btp.valeurs.pa')}</th><th>${texteHtml('analyse_btp.valeurs.pv')}</th><th>${texteHtml('analyse_btp.prix.remarque')}</th></tr></thead><tbody>
         ${lignes.map((x, i) => `<tr class="${x.champs ? '' : 'sans-ecriture'}">
           <td>${x.champs ? `<input type="checkbox" data-i="${i}" ${x.rapprochement ? '' : 'checked'}>` : ''}</td>
           <td>${echapper(x.code)}</td><td>${echapper(x.libelle)}</td><td>${echapper(x.unite)}</td>
           <td class="nombre">${x.champs ? variation(x.avant.pa, x.apres.pa) : ''}</td><td class="nombre">${x.champs ? variation(x.avant.pv, x.apres.pv) : ''}</td>
-          <td>${x.rapprochement && x.element ? `Rapprocher de <b>${echapper(`${x.element.bib_code}:${x.element.code}`)}</b> – ${echapper(x.element.libelle ?? '')}` : ''}
-            ${x.alerte ? `<span class="alerte">⚠ ${echapper(x.alerte)}</span>` : ''}</td></tr>`).join('')}
+          <td>${x.rapprochement && x.element ? `${texteHtml('analyse_btp.prix.rapprocher', { element: `${x.element.bib_code}:${x.element.code}` })} – ${echapper(x.element.libelle ?? '')}` : ''}
+            ${x.alerte ? `<span class="alerte">${iconeHtml('avertissement')} ${echapper(x.alerte)}</span>` : ''}</td></tr>`).join('')}
         </tbody></table></div>
-        <footer><span class="aide">${ecrites} ligne(s) modifiable(s), ${lignes.length - ecrites} signalée(s)${sans ? `, ${sans} sans élément correspondant (ni lien ni code connu)` : ''}</span>
-          <button type="button" data-fermer>Annuler</button><button type="button" class="principal" data-appliquer ${ecrites ? '' : 'disabled'}>Appliquer</button></footer></section>`;
+        <footer><span class="aide">${texteHtml('analyse_btp.prix.bilan', { ecrites, signalees: lignes.length - ecrites })}${sans ? `, ${texteHtml('analyse_btp.prix.sans', { nombre: sans })}` : ''}</span>
+          <button type="button" data-fermer>${texteHtml('commun.annuler')}</button><button type="button" class="principal" data-appliquer ${ecrites ? '' : 'disabled'}>${texteHtml('analyse_btp.prix.appliquer')}</button></footer></section>`;
       ouvrirModale(fond);
       const fermer = (r) => { fond.remove(); resoudre(r ?? null); };
       fond.querySelectorAll('[data-fermer]').forEach((b) => b.addEventListener('click', () => fermer()));
@@ -408,10 +406,9 @@ export class AnalyseCoefficients {
   rendreFrais() {
     if (this.conteneur.contains(document.activeElement) && document.activeElement.closest('.analyse-frais input')) return;
     this.conteneur.innerHTML = `<div class="analyse-principal analyse-vue-frais">
-        <div class="analyse-barre"><button type="button" data-vue-analyse="coefs">← Coefficients et éléments</button>
-          <strong>Ventilation des frais annexes</strong>
-          <span class="aide">Clés par priorité : ligne (détail de la ligne), élément, nature de la tranche, nature globale ; sans clé, prorata du montant hors frais.
-            Avec des clés, le reste n'est pas ventilé (écart) : « Répartir le reste » ou ajouter des clés. La validation fige la ventilation.</span></div>
+        <div class="analyse-barre"><button type="button" data-vue-analyse="coefs">${iconeHtml('analyse_btp_retour')} ${texteHtml('analyse_btp.frais.retour')}</button>
+          <strong>${texteHtml('analyse_btp.frais.titre')}</strong>
+          <span class="aide">${texteHtml('analyse_btp.frais.aide')}</span></div>
         <div class="analyse-frais"></div></div>`;
     this.rapportFrais ??= new RapportFraisAnnexes(null, { editeur: this.editeur, natures: this.natures, message: this.message });
     this.rapportFrais.conteneur = this.conteneur.querySelector('.analyse-frais');
@@ -445,12 +442,12 @@ export class AnalyseCoefficients {
     for (const th of this.conteneur.querySelectorAll('.table-elements th[data-tri]')) {
       const actif = this.tri?.cle === th.dataset.tri;
       th.setAttribute('aria-sort', actif ? (this.tri.sens === 1 ? 'ascending' : 'descending') : 'none');
-      th.querySelector('.sens-tri').textContent = actif ? (this.tri.sens === 1 ? ' ▲' : ' ▼') : '';
+      th.querySelector('.sens-tri').textContent = actif ? ` ${icone(this.tri.sens === 1 ? 'analyse_btp_precedent' : 'analyse_btp_suivant')}` : '';
       const b = th.querySelector('[data-filtre-colonne]');
       if (!b) continue;
       const filtre = filtreActif(this.filtresElements.get(th.dataset.tri));
       b.classList.toggle('actif', filtre);
-      b.textContent = filtre ? '⧩' : '▾';
+      b.textContent = icone(filtre ? 'analyse_btp_filtre_actif' : 'analyse_btp_filtre');
     }
     this.elements = new Map(groupes.map((g) => [g.cle, g]));
     const nombre = (v, d) => formatLibre(Math.round(v * 10 ** d) / 10 ** d, d);
@@ -460,16 +457,16 @@ export class AnalyseCoefficients {
       if (!s) return '<td></td>';
       const txt = s.divergent ? `${nombre(s.min, def.decimales)} – ${nombre(s.max, def.decimales)}` : nombre(s.min, def.decimales);
       if (lectureSeule) return `<td class="nombre ${s.divergent ? 'divergent' : ''}">${txt}</td>`;
-      return `<td class="nombre ${s.divergent ? 'divergent' : ''}" title="${s.divergent ? `Valeurs différentes : de ${txt.replace(' – ', ' à ')}` : ''}">
+      return `<td class="nombre ${s.divergent ? 'divergent' : ''}" title="${s.divergent ? texteHtml('analyse_btp.elements_saisie.divergent', { min: nombre(s.min, def.decimales), max: nombre(s.max, def.decimales) }) : ''}">
         <input data-saisie="element" data-element="${echapper(g.cle)}" data-cle="${k}" value="${s.divergent ? '' : echapper(txt)}"
-          placeholder="${echapper(txt)}" title="Saisir le ${echapper(def.titre)} de toutes les lignes du groupe (${g.feuilles.length})"></td>`;
+          placeholder="${echapper(txt)}" title="${texteHtml('analyse_btp.elements_saisie.valeur', { valeur: def.titre, nombre: g.feuilles.length })}"></td>`;
     };
     const natures = (g) => [...g.natures].map((n) => this.natures.get(n)?.code ?? (n ? String(n) : '—')).join(', ');
     // Quantité totale (perte et quantité des ouvrages parents comprises) : modifiable, reventilée au prorata ;
     // 📐 si au moins une ligne a sa quantité issue d'un métré (la saisie la désactive).
     const quantite = (g) => {
       const metres = g.feuilles.filter((f) => (f.saisie?.lig_qte_source ?? 'S') === 'M').length;
-      const marque = metres ? `<span class="metre" title="${metres} ligne(s) dont la quantité est issue d'un métré : une nouvelle quantité la remplace par une quantité saisie (métré conservé, désactivé)">📐</span>` : '';
+      const marque = metres ? `<span class="metre" title="${texteHtml('analyse_btp.elements_saisie.metres', { nombre: metres })}">${iconeHtml('analyse_btp_metre')}</span>` : '';
       const txt = nombre(g.qt, 3);
       if (lectureSeule) return `<td class="nombre">${marque}${txt}</td>`;
       return `<td class="nombre">${marque}<input data-saisie="element" data-element="${echapper(g.cle)}" data-cle="qt" value="${echapper(txt)}"
@@ -487,7 +484,7 @@ export class AnalyseCoefficients {
     const visibles = COLONNES_ELEMENTS.filter((k) => this.colonnesElements.has(k));
     const edite = this.saisieElement?.cle;
     corps.innerHTML = groupes.map((g) => `<tr data-groupe="${echapper(g.cle)}" class="${g.cle === edite ? 'edite' : ''}">${visibles.map((k) => (cellules[k] ? cellules[k](g) : valeur(g, k))).join('')}</tr>`).join('')
-      || `<tr><td colspan="${visibles.length}" class="aide">Aucun élément.</td></tr>`;
+      || `<tr><td colspan="${visibles.length}" class="aide">${texteHtml('bibliotheque_btp.appel.aucun')}</td></tr>`;
     this.affiches = groupes.map((g) => g.cle);
     this.marquerRecherche(groupes, { allerAuResultat });
     // Ligne modifiée : reste visible, sa cellule reprend le focus.
@@ -499,9 +496,9 @@ export class AnalyseCoefficients {
       this.saisieElement = null;
     }
     const filtres = actifs.length || this.ordreFige;
-    this.conteneur.querySelector('[data-nb-elements]').innerHTML = `(${groupes.length}${filtres ? ` sur ${tous.length}` : ''} groupe(s), `
-      + `${groupes.reduce((n, g) => n + g.feuilles.length, 0)} ligne(s))${actifs.length ? ' <button type="button" class="lien" data-effacer-filtres>Effacer les filtres</button>' : ''}`
-      + `${this.ordreFige ? ' <button type="button" class="lien" data-liberer-ordre title="Ordre figé après une saisie : réappliquer le tri et les filtres">Réappliquer tri et filtres</button>' : ''}`;
+    this.conteneur.querySelector('[data-nb-elements]').innerHTML = `(${texteHtml(filtres ? 'analyse_btp.compte.filtre' : 'analyse_btp.compte.tous', { groupes: groupes.length, tous: tous.length, lignes: groupes.reduce((n, g) => n + g.feuilles.length, 0) })})`
+      + `${actifs.length ? ` <button type="button" class="lien" data-effacer-filtres>${texteHtml('analyse_btp.compte.effacer')}</button>` : ''}`
+      + `${this.ordreFige ? ` <button type="button" class="lien" data-liberer-ordre title="${texteHtml('analyse_btp.compte.liberer_aide')}">${texteHtml('analyse_btp.compte.liberer')}</button>` : ''}`;
   }
 
   /**
@@ -521,7 +518,7 @@ export class AnalyseCoefficients {
       tr.classList.toggle('trouvee-courante', tr.dataset.groupe === courant);
     }
     const compteur = this.conteneur.querySelector('[data-compteur-recherche]');
-    if (compteur) compteur.textContent = mots.length ? (trouves.length ? `${this.resultatRecherche + 1} / ${trouves.length}` : 'Aucun résultat') : '';
+    if (compteur) compteur.textContent = mots.length ? (trouves.length ? `${this.resultatRecherche + 1} / ${trouves.length}` : texte('analyse_btp.recherche.aucun')) : '';
     this.conteneur.querySelector('.recherche-elements')?.classList.toggle('sans-resultat', mots.length > 0 && !trouves.length);
     if (allerAuResultat && courant !== null) {
       [...this.conteneur.querySelectorAll('.table-elements tbody tr[data-groupe]')].find((tr) => tr.dataset.groupe === courant)?.scrollIntoView({ block: 'center' });
@@ -584,10 +581,10 @@ export class AnalyseCoefficients {
   /** Menu de choix des colonnes d'une partie (coefs, elements). */
   menuColonnes(partie, colonnes, actives) {
     return `<span class="analyse-colonnes">
-      <button type="button" data-choix-colonnes aria-expanded="false">Colonnes ▾</button>
+      <button type="button" data-choix-colonnes aria-expanded="false">${texteHtml('analyse_btp.colonnes_menu.titre')} ${iconeHtml('analyse_btp_filtre')}</button>
       <div class="menu-colonnes" hidden>
         ${colonnes.map((c) => `<label title="${echapper(c.aide ?? c.titre)}"><input type="checkbox" data-colonne-de="${partie}" data-colonne="${c.cle}" ${actives.has(c.cle) ? 'checked' : ''}> ${echapper(c.titre)}</label>`).join('')}
-        <button type="button" data-colonnes-defaut="${partie}">Colonnes par défaut</button>
+        <button type="button" data-colonnes-defaut="${partie}">${texteHtml('analyse_btp.colonnes_menu.defaut')}</button>
       </div>
     </span>`;
   }
@@ -598,9 +595,9 @@ export class AnalyseCoefficients {
     if (res.erreur) { this.message(res.erreur, 'erreur'); this.rendre(); return; }
     this.editeur.magasin.modifier((d) => {
       for (const l of d.lignes) if (res.qtes.has(l.lig_id)) { l.lig_qte = res.qtes.get(l.lig_id); l.lig_qte_source = 'S'; }
-    }, `Analyse : quantité de « ${g.libelle || g.code} »`);
-    this.message(`Quantité totale ${formatLibre(valeur)} reventilée sur ${res.qtes.size} ligne(s) « ${g.libelle || g.code} »`
-      + `${res.metres ? ` ; ${res.metres} métré(s) désactivé(s) (conservé(s), quantité saisie)` : ''}`);
+    }, texte('analyse_btp.etapes.quantite', { element: g.libelle || g.code }));
+    this.message(texte('analyse_btp.messages.quantite', { valeur: formatLibre(valeur), nombre: res.qtes.size, element: g.libelle || g.code })
+      + `${res.metres ? ` ; ${texte('analyse_btp.messages.metres', { nombre: res.metres })}` : ''}`);
   }
 
   /** Valeur saisie dans la partie Éléments : écrite sur toutes les lignes du groupe (une étape d'annulation). */
@@ -610,18 +607,18 @@ export class AnalyseCoefficients {
     this.ordreFige ??= [...(this.affiches ?? [])];
     this.saisieElement = { cle: cleGroupe, colonne: cle };
     if (cle === 'qt') {
-      if (Number(valeur) < 0) { this.message('Quantité invalide'); this.rendre(); return; }
+      if (Number(valeur) < 0) { this.message(texte('analyse_btp.messages.quantite_invalide')); this.rendre(); return; }
       this.appliquerQuantite(g, valeur);
       return;
     }
-    if (Number(valeur) < 0 || (cle !== 'pa' && cle !== 'pv' && Number(valeur) <= 0)) { this.message('Valeur invalide'); this.rendre(); return; }
+    if (Number(valeur) < 0 || (cle !== 'pa' && cle !== 'pv' && Number(valeur) <= 0)) { this.message(texte('analyse_btp.messages.valeur_invalide')); this.rendre(); return; }
     const { modifs, erreur } = modificationsElement(g, cle, valeur);
     if (erreur) { this.message(erreur, 'erreur'); this.rendre(); return; }
     const titre = VALEURS_ELEMENT[cle].titre;
     this.editeur.magasin.modifier((d) => {
       for (const l of d.lignes) if (modifs.has(l.lig_id)) Object.assign(l, modifs.get(l.lig_id));
-    }, `Analyse : ${titre} de « ${g.libelle || g.code} »`);
-    this.message(`${titre} ${formatLibre(valeur)} écrit sur ${modifs.size} ligne(s) « ${g.libelle || g.code} »${cle === 'pv' ? ' (prix fixe)' : ''}`);
+    }, texte('analyse_btp.etapes.valeur', { valeur: titre, element: g.libelle || g.code }));
+    this.message(texte(cle === 'pv' ? 'analyse_btp.messages.valeur_fixe' : 'analyse_btp.messages.valeur', { valeur: titre, montant: formatLibre(valeur), nombre: modifs.size, element: g.libelle || g.code }));
   }
 
   /** Arbre des natures des lignes de la portée : regroupements puis natures ; filtre. */
@@ -634,21 +631,21 @@ export class AnalyseCoefficients {
       const nat = this.natures.get(id);
       const reg = nat?.regroupement ?? 'AUTRE';
       if (!regroupements.has(reg)) regroupements.set(reg, []);
-      regroupements.get(reg).push({ id, libelle: nat ? `${nat.code} · ${nat.libelle}` : `Nature ${id}`, n });
+      regroupements.get(reg).push({ id, libelle: nat ? `${nat.code} · ${nat.libelle}` : texte('analyse_btp.natures.nature', { id }), n });
     }
     const total = [...comptes.values()].reduce((a, b) => a + b, 0);
     const noeud = (cle, libelle, n, profondeur, { pli = null, classe = '' } = {}) => `
       <li class="${classe} ${this.filtreNature === cle ? 'courant' : ''}" style="padding-left:${0.3 + profondeur * 0.9}rem">
-        <span class="pli" ${pli ? `data-nature-pli="${echapper(pli)}"` : ''}>${pli ? (this.naturesReplies.has(pli) ? '▸' : '▾') : ''}</span>
+        <span class="pli" ${pli ? `data-nature-pli="${echapper(pli)}"` : ''}>${pli ? iconeHtml(this.naturesReplies.has(pli) ? 'analyse_btp_ferme' : 'analyse_btp_ouvert') : ''}</span>
         <button type="button" class="lien" data-nature-filtre="${echapper(cle ?? '')}" title="${echapper(libelle)}">${echapper(libelle)}</button></li>`;
-    const items = [noeud(null, 'Toutes les natures', total, 0, { classe: 'global' })];
+    const items = [noeud(null, texte('analyse_btp.natures.toutes'), total, 0, { classe: 'global' })];
     for (const [reg, natures] of [...regroupements].sort((a, b) => a[0].localeCompare(b[0]))) {
       items.push(noeud(`r:${reg}`, reg, natures.reduce((a, x) => a + x.n, 0), 1, { pli: reg }));
       if (this.naturesReplies.has(reg)) continue;
       for (const x of natures.sort((a, b) => a.libelle.localeCompare(b.libelle))) items.push(noeud(`n:${x.id}`, x.libelle, x.n, 2));
     }
-    if (comptes.has(null)) items.push(noeud('n:', 'Sans nature', comptes.get(null), 1));
-    return `<aside class="analyse-arbre analyse-natures" aria-label="Filtre par nature"><div class="analyse-arbre-titre">Natures</div><ul>${items.join('')}</ul></aside>`;
+    if (comptes.has(null)) items.push(noeud('n:', texte('analyse_btp.natures.sans'), comptes.get(null), 1));
+    return `<aside class="analyse-arbre analyse-natures" aria-label="${texteHtml('analyse_btp.natures.filtre')}"><div class="analyse-arbre-titre">${texteHtml('analyse_btp.natures.titre')}</div><ul>${items.join('')}</ul></aside>`;
   }
 
   /**
@@ -661,18 +658,18 @@ export class AnalyseCoefficients {
     const masques = new Set();
     const noeud = (id, libelle, montant, profondeur, aEnfants, classe = '') => `
       <li class="${classe} ${id === this.portee ? 'courant' : ''}" style="padding-left:${0.3 + profondeur * 0.9}rem">
-        <span class="pli" ${aEnfants && id !== null ? `data-arbre-pli="${id}"` : ''}>${aEnfants && id !== null ? (this.arbreReplies.has(id) ? '▸' : '▾') : ''}</span>
+        <span class="pli" ${aEnfants && id !== null ? `data-arbre-pli="${id}"` : ''}>${aEnfants && id !== null ? iconeHtml(this.arbreReplies.has(id) ? 'analyse_btp_ferme' : 'analyse_btp_ouvert') : ''}</span>
         <button type="button" class="lien" data-portee-id="${id ?? ''}" title="${echapper(libelle)}">${echapper(libelle)}</button>
         <span class="mt">${formatNombre(montant, pm)}</span></li>`;
     // Document entier : total HT du corps (avant postes de pied), comme le tableau.
     const totalCorps = (this.resultat.pied ?? []).find((e) => e.cle === 'TOTAL_HT')?.montant ?? this.resultat.document.ent_total_ht;
-    const items = [noeud(null, 'Document entier', totalCorps, 0, false, 'global')];
+    const items = [noeud(null, texte('analyse_btp.barre.document'), totalCorps, 0, false, 'global')];
     for (const t of tranches) {
       const id = t.ligne.lig_id;
       if (masques.has(t.parent) || this.arbreReplies.has(t.parent)) { masques.add(id); continue; }
       items.push(noeud(id, this.libelleTranche(t.ligne), t.ligne.lig_montant_ht, t.profondeur + 1, avecEnfants.has(id), t.ligne.lig_tyl_id === TL.SECTION ? 'section' : ''));
     }
-    return `<aside class="analyse-arbre" aria-label="Portée de l'analyse"><div class="analyse-arbre-titre">Tranches</div><ul>${items.join('')}</ul></aside>`;
+    return `<aside class="analyse-arbre" aria-label="${texteHtml('analyse_btp.tranches.portee')}"><div class="analyse-arbre-titre">${texteHtml('analyse_btp.tranches.titre_arbre')}</div><ul>${items.join('')}</ul></aside>`;
   }
 
   #clic(e) {
@@ -756,7 +753,7 @@ export class AnalyseCoefficients {
     if (t.matches('input[data-saisie="element"]')) {
       const v = lireNombre(t.value);
       t.blur();
-      if (v === undefined || v === null) { if (v === undefined) this.message('Nombre attendu'); this.rendre(); return; }
+      if (v === undefined || v === null) { if (v === undefined) this.message(texte('analyse_btp.messages.nombre')); this.rendre(); return; }
       this.appliquerElement(t.dataset.element, t.dataset.cle, Number(v));
       return;
     }
@@ -764,9 +761,9 @@ export class AnalyseCoefficients {
     const g = [...(this.dernier?.liste ?? []), this.dernier?.total].find((x) => x?.cle === t.dataset.groupe);
     const v = lireNombre(t.value);
     t.blur();
-    if (!g || v === undefined || v === null) { this.message('Nombre attendu'); this.rendre(); return; }
+    if (!g || v === undefined || v === null) { this.message(texte('analyse_btp.messages.nombre')); this.rendre(); return; }
     if (t.dataset.saisie === 'montant') this.forcer(g, t.dataset.cle, Number(v));
-    else if (Number(v) <= 0) { this.message('Coefficient invalide (nombre positif attendu)'); this.rendre(); }
+    else if (Number(v) <= 0) { this.message(texte('analyse_btp.messages.coef_invalide')); this.rendre(); }
     else this.appliquerCoef(g, t.dataset.cle, Number(v));
   }
 
@@ -782,8 +779,8 @@ export class AnalyseCoefficients {
       if (ed.saisie.document.ent_mode_calcul_ouvrage === 'D') for (const f of groupe.feuilles) ids.add(f.prix.lig_id);
     }
     if (!ids.size) return;
-    ed.magasin.modifier((d) => { for (const l of d.lignes) if (ids.has(l.lig_id)) l[champ] = valeur; }, `Analyse : ${LIBELLES_COEF[cle]} ${formatLibre(valeur)}`);
-    this.message(`Coefficient de ${LIBELLES_COEF[cle]} ${formatLibre(valeur)} écrit sur ${ids.size} ligne(s) (${groupe.libelle})`);
+    ed.magasin.modifier((d) => { for (const l of d.lignes) if (ids.has(l.lig_id)) l[champ] = valeur; }, texte('analyse_btp.etapes.coef', { coef: LIBELLES_COEF[cle], valeur: formatLibre(valeur) }));
+    this.message(texte('analyse_btp.messages.coef', { coef: LIBELLES_COEF[cle], valeur: formatLibre(valeur), nombre: ids.size, groupe: groupe.libelle }));
   }
 
   /**
@@ -809,12 +806,12 @@ export class AnalyseCoefficients {
       const n = this.natures.get(nature);
       d.lignes.push({
         ...ed.nouvelleLigne(idEcart, TL.ELEMENT, d.document.ent_id), lig_parent_id: conteneur, lig_ordre: ordre,
-        lig_libelle_html: `Écart d'arrondi (analyse${n ? ` – ${n.libelle}` : ''})`, lig_qte: 1, lig_unt_code: 'u',
+        lig_libelle_html: n ? texteHtml('analyse_btp.ecart.nature', { nature: n.libelle }) : texteHtml('analyse_btp.ecart.libelle'), lig_qte: 1, lig_unt_code: 'u',
         lig_pa: Number(paEcart(cle, res.ecart, this.coefFa)), lig_coef_fg: 1, lig_coef_benef: 1, lig_nat_id: nature ?? null,
       });
       ed.regles.appliquerContexte(d, idEcart, ed.definition.taux_tva);
-    }, `Analyse : ${libelle} forcé à ${formatNombre(cible, 2)}`);
-    this.message(`${libelle[0].toUpperCase()}${libelle.slice(1)} forcé à ${formatNombre(cible, 2)} (${groupe.libelle}) : ${res.coefs.size} coefficient(s) recalculé(s)`
-      + `${res.ecart !== null ? `, ligne d'écart d'arrondi de ${formatNombre(Number(res.ecart), 2)} ajoutée` : ''}`);
+    }, texte('analyse_btp.etapes.forcer', { montant: libelle, cible: formatNombre(cible, 2) }));
+    this.message(texte('analyse_btp.messages.force', { montant: `${libelle[0].toUpperCase()}${libelle.slice(1)}`, cible: formatNombre(cible, 2), groupe: groupe.libelle, nombre: res.coefs.size })
+      + `${res.ecart !== null ? `, ${texte('analyse_btp.messages.ecart', { montant: formatNombre(Number(res.ecart), 2) })}` : ''}`);
   }
 }

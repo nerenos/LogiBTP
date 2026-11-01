@@ -7,13 +7,11 @@
 //   Mode 2 : début + fin → heures.
 //   Mode 3 (charge) : début, fin, heures → ventilation des heures par jour au prorata du temps travaillable.
 
+import { textesParCode } from '@logibtp/socle/dictionnaire';
 import { dateDe } from './temps.js';
 
-export const MESSAGES_CALCUL = {
-  PLA_CALENDRIER: 'Aucune plage travaillée suffisante : vérifier les calendriers et les absences',
-  PLA_FIN: 'La fin précède le début',
-  PLA_HEURES: 'Nombre d\'heures invalide',
-};
+/** Messages des erreurs du calcul, par code (module Personnalisation). */
+export const MESSAGES_CALCUL = textesParCode('planning.calcul.erreurs', ['PLA_CALENDRIER', 'PLA_FIN', 'PLA_HEURES']);
 
 /** Retire des plages [d, f] (triées) les intervalles d'absence. */
 export function retirerAbsences(plages, absences) {

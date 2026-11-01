@@ -1,26 +1,16 @@
 // Règles du référentiel des ressources, répliquées dans src/LogiBTP.Domaine/Ressources/ReglesRessources.cs (jeux
 // tests/ressources) : validité des habilitations (fin calculée depuis la durée du type, état à une date), habilitations
 // exigées manquantes, contrôle des habilitations et des missions d'intérim, mission en cours. Dates au format AAAA-MM-JJ.
+import { textesParCode } from '@logibtp/socle/dictionnaire';
 import { TYPE_FICHE } from '../codes.js';
 import { ajouterMois, joursEntre } from '@logibtp/socle';
 
-export const ETATS_HABILITATION = {
-  VALIDE: 'Valide', A_RENOUVELER: 'À renouveler', EXPIREE: 'Expirée', NON_ACQUISE: 'Pas encore acquise',
-};
+export const ETATS_HABILITATION = textesParCode('ressources_btp.habilitations.etats', ['VALIDE', 'A_RENOUVELER', 'EXPIREE', 'NON_ACQUISE']);
 
 /** Délai (jours) avant la fin de validité à partir duquel une habilitation est « à renouveler ». */
 export const SEUIL_RENOUVELLEMENT = 60;
 
-export const MESSAGES_RESSOURCES = {
-  HAB_TYPE: "Type d'habilitation inconnu ou inactif",
-  HAB_CONCERNE: "Ce type d'habilitation ne s'applique pas à cet élément",
-  HAB_DATES: "Fin de validité antérieure à l'obtention",
-  MIS_PERIODE: 'Fin de mission antérieure au début',
-  MIS_DATES: 'Début et fin de mission obligatoires',
-  MIS_AGENCE: "Agence d'intérim obligatoire",
-  MIS_TAUX: 'Taux horaire négatif',
-  MIS_CHEVAUCHEMENT: 'Missions qui se chevauchent',
-};
+export const MESSAGES_RESSOURCES = textesParCode('ressources_btp.habilitations.erreurs', ['HAB_TYPE', 'HAB_CONCERNE', 'HAB_DATES', 'MIS_PERIODE', 'MIS_DATES', 'MIS_AGENCE', 'MIS_TAUX', 'MIS_CHEVAUCHEMENT']);
 
 export { ajouterMois };
 

@@ -1,3 +1,4 @@
+import { textesParCode } from '@logibtp/socle/dictionnaire';
 import { Dz, S, ZERO, arrondir } from '@logibtp/socle';
 
 // Module Sous-traitance : ventilation d'une facture reçue sur les lignes de la commande (ANALYSE-MODULE-SOUS-TRAITANCE.md
@@ -8,11 +9,7 @@ import { Dz, S, ZERO, arrondir } from '@logibtp/socle';
 //
 // lignes : [{ id, marche, precedent }] (montants) ; periode (ou cumul) ; precision : décimales des montants.
 
-export const MESSAGES_VENTILATION = {
-  VENT_SANS_LIGNE: 'Aucune ligne d\'avancement à ventiler',
-  VENT_SANS_RESTE: 'Rien ne reste à facturer sur les lignes de la commande',
-  VENT_DEPASSEMENT: 'Le montant dépasse le reste à facturer de la commande',
-};
+export const MESSAGES_VENTILATION = textesParCode('sous_traitance.ventilation.erreurs', ['VENT_SANS_LIGNE', 'VENT_SANS_RESTE', 'VENT_DEPASSEMENT']);
 
 /** Ventile une période (ou un cumul : `cumul` renseigné) ; rend { lignes: [{ id, periode, cumul }], periode, erreurs }. */
 export function ventilerFactureRecue({ lignes, periode = null, cumul = null, precision = 2 }) {

@@ -1,0 +1,30 @@
+{
+  "droits": {
+    "actions": {
+      "CONSULTER": "Consulter",
+      "MODIFIER": "Modifier",
+      "VALIDER": "Valider",
+      "CREER": "Créer",
+      "SUPPRIMER": "Supprimer",
+      "DEVERROUILLER": "Déverrouiller",
+      "FORCER": "Forcer",
+      "RGPD": "Données RGPD",
+      "SUPERVISER": "Superviser",
+      "USURPER": "Usurper",
+      "MODIFIER_CODE": "Modifier le code"
+    },
+    "portees": {
+      "SOI": "Soi",
+      "EQUIPE": "Son équipe",
+      "SERVICE": "Son service",
+      "TOUT": "Tout"
+    },
+    "erreurs_regles": {
+      "PROFIL_CODE": "Code du profil : 2 à 30 caractères, une lettre puis lettres, chiffres ou _ (majuscules)",
+      "PROFIL_LIBELLE": "Libellé du profil obligatoire (100 caractères au plus)",
+      "NOEUD_INVALIDE": "Nœud de droits invalide",
+      "ACTION_INCONNUE": "Action inconnue pour ce nœud",
+      "PORTEE_INCONNUE": "Portée inconnue (SOI, EQUIPE, SERVICE ou TOUT)"
+    }
+  }
+}

@@ -1,3 +1,4 @@
+import { texte, icone } from '@logibtp/socle/dictionnaire';
 import { CFG_LIGNES as C, parId, ancetres, descendants, formatNombre, formatLibre, lireNombre, echapper } from '@logibtp/socle/ui';
 import {
   EditeurDocument, ReglesDocument, PressePapiers, correspondance, modifierColonne, insererColonnes,
@@ -147,30 +148,23 @@ export class DictionnaireBtp extends DictionnaireMetre {
     const ligne = this.index.get(ligId);
     const res = this.hote.resultat;
     // Données lisibles par un métré (avant la quantité vendue : ni prix calculés, ni quantités calculées).
-    const liste = [
-      ['lig_qte', 'Quantité saisie'], ['lig_unt_code', 'Unité'], ['lig_code', 'Code'],
-      ['lig_libelle_html', 'Libellé (modifiable par le script : libellé calculé)'],
-      ['lig_pa', 'Prix d\'achat'], ['lig_coef_perte', 'Coefficient de perte'], ['lig_coef_fg', 'Coefficient de frais généraux'],
-      ['lig_coef_benef', 'Coefficient de bénéfice'], ['lig_coef_remise', 'Coefficient de remise'],
-      ['lig_poids', 'Poids (kg, élément)'], ['lig_surface', 'Surface (m², élément)'], ['lig_volume', 'Volume (m³, élément)'],
-      ['lig_hauteur', 'Hauteur (m, élément)'], ['lig_largeur', 'Largeur (m, élément)'], ['lig_epaisseur', 'Épaisseur (m, élément)'],
-      ['lig_longueur', 'Longueur (m, élément)'],
-    ];
-    if (pourDefinition) liste.push(['lig_qte_vendue', 'Quantité vendue'], ['lig_qte_totale', 'Quantité totale']);
+    const cles = ['lig_qte', 'lig_unt_code', 'lig_code', 'lig_libelle_html', 'lig_pa', 'lig_coef_perte', 'lig_coef_fg', 'lig_coef_benef',
+      'lig_coef_remise', 'lig_poids', 'lig_surface', 'lig_volume', 'lig_hauteur', 'lig_largeur', 'lig_epaisseur', 'lig_longueur'];
+    if (pourDefinition) cles.push('lig_qte_vendue', 'lig_qte_totale');
+    const liste = cles.map((col) => [col, texte(`document_btp.donnees.${col}`)]);
     const brut = (v) => (typeof v === 'string' && v.includes('<') ? v.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : v);
-    const entrees = liste.map(([col, lib]) => ({ valeur: `{{${col}}}`, libelle: lib, detail: brut(ligne[col]) ?? '', groupe: 'Ligne' }));
+    const entrees = liste.map(([col, lib]) => ({ valeur: `{{${col}}}`, libelle: lib, detail: brut(ligne[col]) ?? '', groupe: texte('document_btp.donnees.groupe_ligne') }));
     const doc = this.hote.saisie.document;
-    for (const [col, lib] of [
-      ['ent_numero', 'Numéro du document'], ['ent_date', 'Date du document'], ['ent_objet', 'Objet'],
-      ['ent_notre_reference', 'Notre référence'], ['ent_reference_externe', 'Référence externe'], ['ent_validite_jours', 'Validité (jours)'],
-      ['ent_mode_calcul_ouvrage', 'Mode de calcul des ouvrages (D / V / B)'], ['ent_precision_montant', 'Décimales des montants'],
-    ]) entrees.push({ valeur: `{{document.${col}}}`, libelle: lib, detail: doc?.[col] ?? '', groupe: 'Entête' });
+    for (const col of ['ent_numero', 'ent_date', 'ent_objet', 'ent_notre_reference', 'ent_reference_externe', 'ent_validite_jours',
+      'ent_mode_calcul_ouvrage', 'ent_precision_montant']) {
+      entrees.push({ valeur: `{{document.${col}}}`, libelle: texte(`document_btp.donnees.${col}`), detail: doc?.[col] ?? '', groupe: texte('document_btp.donnees.groupe_entete') });
+    }
     const parent = this.index.get(ligne.lig_parent_id);
     if (parent && estChiffree(parent)) {
       const pc = res.lignes.find((l) => l.lig_id === parent.lig_id);
-      entrees.push({ valeur: `{{document_ligne[${parent.lig_id}].lig_qte_vendue}}`, libelle: 'Quantité de l\'ouvrage parent', detail: pc?.lig_qte_vendue ?? '', groupe: 'Ligne' });
+      entrees.push({ valeur: `{{document_ligne[${parent.lig_id}].lig_qte_vendue}}`, libelle: texte('document_btp.donnees.qte_parent'), detail: pc?.lig_qte_vendue ?? '', groupe: texte('document_btp.donnees.groupe_ligne') });
     }
-    if (ligne.lig_art_id) entrees.push({ valeur: '{{article.art_poids}}', libelle: 'Poids de l\'article', detail: '', groupe: 'Article' });
+    if (ligne.lig_art_id) entrees.push({ valeur: '{{article.art_poids}}', libelle: texte('document_btp.donnees.art_poids'), detail: '', groupe: texte('document_btp.donnees.groupe_article') });
     return entrees;
   }
 }
@@ -224,10 +218,10 @@ export class EditeurDevisBtp extends EditeurDocument {
   complementTranche(ligne) {
     const b = bilanTranche(this.resultat, ligne.lig_id);
     if (!b || Number(b.prevu) === 0) return null;
-    return `ventilé ${formatLibre(Math.round(Number(b.ventile) / Number(b.prevu) * 1000) / 10, 1)} %`;
+    return texte('document_btp.editeur.ventile', { pct: formatLibre(Math.round(Number(b.ventile) / Number(b.prevu) * 1000) / 10, 1) });
   }
 
-  libelleType(r) { return r.estCalculee ? 'Écart' : super.libelleType(r); }
+  libelleType(r) { return r.estCalculee ? texte('document_btp.editeur.ecart') : super.libelleType(r); }
 
   apresSuppression(d, supprimees) {
     const metres = new Set(d.metres.filter((x) => supprimees.has(x.mtr_lig_id)).map((x) => x.mtr_id));
@@ -250,22 +244,22 @@ export class EditeurDevisBtp extends EditeurDocument {
     const qte = colonnes.find((c) => c.cle === 'qte');
     const metreQte = (r) => estChiffree(r.calcule) && r.calcule.lig_qte_source === 'M';
     modifierColonne(colonnes, 'qte', {
-      valeur: (r) => (metreQte(r) ? `ⓜ ${qte.valeur(r)}` : qte.valeur(r)),
-      titreCellule: (r) => (metreQte(r) ? 'ⓜ Quantité calculée par le métré de la ligne (F4 : ouvrir le métré)' : qte.titreCellule?.(r) ?? ''),
+      valeur: (r) => (metreQte(r) ? `${icone('document_btp_metre')} ${qte.valeur(r)}` : qte.valeur(r)),
+      titreCellule: (r) => (metreQte(r) ? texte('document_btp.editeur.qte_metre', { icone: icone('document_btp_metre') }) : qte.titreCellule?.(r) ?? ''),
     });
     // Nature (comme les articles de la bibliothèque) : obligatoire sur les lignes de prix pour valider.
     const nature = (id) => (this.natures ?? []).find((n) => n.id === Number(id));
     const manquante = (r) => !r.virtuelle && natureObligatoire(r.item) && (r.item.lig_nat_id === null || r.item.lig_nat_id === undefined);
     insererColonnes(colonnes, 'qte', [{
-      cle: 'nature', titre: 'Nature', classe: 'col-nature', editeur: 'select', editable: chiffree,
+      cle: 'nature', titre: texte('document_btp.colonnes.nature'), classe: 'col-nature', editeur: 'select', editable: chiffree,
       champ: () => 'lig_nat_id', lire: (l) => l.lig_nat_id ?? '',
       options: () => [{ valeur: '', libelle: '—' }, ...(this.natures ?? []).filter((n) => n.actif !== false).map((n) => ({ valeur: n.id, libelle: `${n.code} – ${n.libelle}` }))],
       valeur: (r) => (r.virtuelle || !estChiffree(r.item) ? '' : nature(r.item.lig_nat_id)?.code ?? (r.item.lig_nat_id ? `#${r.item.lig_nat_id}` : '')),
       classeCellule: (r) => (manquante(r) ? 'manquant' : ''),
-      titreCellule: (r) => (manquante(r) ? 'Nature obligatoire pour valider le document' : nature(r.item?.lig_nat_id)?.libelle ?? ''),
+      titreCellule: (r) => (manquante(r) ? texte('document_btp.editeur.nature_obligatoire') : nature(r.item?.lig_nat_id)?.libelle ?? ''),
     }, {
       // Compte comptable : celui de la ligne, sinon le compte hérité (nature, tiers) souligné ; saisie libre proposant le plan de comptes.
-      cle: 'compte', titre: 'Compte', classe: 'col-compte', editeur: 'liste', editable: chiffree,
+      cle: 'compte', titre: texte('document_btp.colonnes.compte'), classe: 'col-compte', editeur: 'liste', editable: chiffree,
       champ: () => 'lig_cpt_code', lire: (l) => l.lig_cpt_code ?? '',
       suggestions: () => (this.comptes ?? []).filter((c) => c.actif !== false).map((c) => ({ valeur: c.code, libelle: c.libelle })),
       valeur: (r) => {
@@ -277,7 +271,7 @@ export class EditeurDevisBtp extends EditeurDocument {
         const c = r.virtuelle ? null : this.compteLigne(r.item);
         if (!c) return '';
         const lib = libelleCompte(c.code, this.comptes);
-        return c.herite ? `${lib} — hérité (${c.detail}) : saisir un compte pour l'imposer à la ligne` : lib;
+        return c.herite ? texte('document_btp.editeur.compte_herite', { libelle: lib, detail: c.detail }) : lib;
       },
     }]);
     // Chantier de la ligne (achats, db/248) : celui de la ligne, sinon celui de l'entête (souligné) ; facture de plusieurs
@@ -304,51 +298,51 @@ export class EditeurDevisBtp extends EditeurDocument {
     }
     insererColonnes(colonnes, 'pv', [
       {
-        cle: 'pa', titre: 'PA', classe: 'col-nombre', ...this.colonneNombre('lig_pa', (l) => chiffree(l) && !this.estCompose(l)),
+        cle: 'pa', titre: texte('document_btp.colonnes.pa'), classe: 'col-nombre', ...this.colonneNombre('lig_pa', (l) => chiffree(l) && !this.estCompose(l)),
         valeur: (r) => (estChiffree(r.calcule) ? formatNombre(r.calcule.lig_pa, 2) : ''),
       },
       {
-        cle: 'fg', titre: 'FG', classe: 'col-coef', ...this.colonneNombre('lig_coef_fg', chiffree),
+        cle: 'fg', titre: texte('document_btp.colonnes.fg'), classe: 'col-coef', ...this.colonneNombre('lig_coef_fg', chiffree),
         valeur: (r) => (estChiffree(r.calcule) ? this.coefAffiche(r.calcule.lig_coef_fg, this.coefsDefaut?.fg) : ''),
       },
       {
-        cle: 'benef', titre: 'Bénéf.', classe: 'col-coef', ...this.colonneNombre('lig_coef_benef', chiffree),
+        cle: 'benef', titre: texte('document_btp.colonnes.benef'), classe: 'col-coef', ...this.colonneNombre('lig_coef_benef', chiffree),
         valeur: (r) => (estChiffree(r.calcule) ? this.coefAffiche(r.calcule.lig_coef_benef, this.coefsDefaut?.benef) : ''),
       },
       {
         // Prorata : appliqué au prix affiché après les frais annexes, avant la remise (lignes de prix).
-        cle: 'prorata', titre: 'Prorata', classe: 'col-coef',
+        cle: 'prorata', titre: texte('document_btp.colonnes.prorata'), classe: 'col-coef',
         ...this.colonneNombre('lig_coef_prorata', (l) => chiffree(l) && this.regles.estLigneDePrix(this.saisie.lignes, l)),
         valeur: (r) => (this.regles.estLigneDePrix(this.saisie.lignes, r.item) && Number(r.calcule.lig_coef_prorata ?? 1) !== 1
           ? this.coefAffiche(r.calcule.lig_coef_prorata, 1) : ''),
       },
       {
         // Frais annexes reçus (ventilation des tranches F) et coefficient qui en résulte.
-        cle: 'coef_fa', titre: 'Coef. FA', classe: 'col-coef',
+        cle: 'coef_fa', titre: texte('document_btp.colonnes.coef_fa'), classe: 'col-coef',
         valeur: (r) => (!r.virtuelle && estChiffree(r.calcule) && Number(r.calcule.lig_coef_fa ?? 1) !== 1 ? this.coefAffiche(r.calcule.lig_coef_fa, 1) : ''),
-        titreCellule: () => 'Coefficient de frais annexes : 1 + frais reçus / montant hors frais',
+        titreCellule: () => texte('document_btp.editeur.coef_fa'),
       },
       {
-        cle: 'fa_recus', titre: 'FA reçus', classe: 'col-nombre',
+        cle: 'fa_recus', titre: texte('document_btp.colonnes.fa_recus'), classe: 'col-nombre',
         valeur: (r) => {
           const v = r.virtuelle ? null : fraisRecus(this.resultat, r.item.lig_id);
           return v ? formatNombre(v, this.saisie.document.ent_precision_montant ?? 2) : '';
         },
-        titreCellule: () => 'Frais annexes reçus par la ligne (somme des parts des tranches de frais)',
+        titreCellule: () => texte('document_btp.editeur.fa_recus'),
       },
     ]);
     // Saisir un PV impose un prix fixe (avant frais annexes et remise) ; vider la cellule le retire.
     modifierColonne(colonnes, 'pv', {
       editable: chiffree,
       lire: (l) => (l.lig_pv_fixe ? formatLibre(l.lig_pv) : ''),
-      valeur: (r) => this.baseAffichee(r.calcule) ?? (estChiffree(r.calcule) ? `${r.item.lig_pv_fixe ? '🔒 ' : r.calcule.lig_pv_fixe ? '⇣ ' : ''}${formatNombre(r.calcule.lig_pv, r.calcule.lig_precision_pv ?? 2)}` : ''),
+      valeur: (r) => this.baseAffichee(r.calcule) ?? (estChiffree(r.calcule) ? `${r.item.lig_pv_fixe ? `${icone('verrou')} ` : r.calcule.lig_pv_fixe ? `${icone('document_btp_pv_impose')} ` : ''}${formatNombre(r.calcule.lig_pv, r.calcule.lig_precision_pv ?? 2)}` : ''),
       titreCellule: (r) => (!estChiffree(r.calcule) || this.baseAffichee(r.calcule) !== null ? ''
-        : r.item.lig_pv_fixe ? '🔒 PV fixe saisi (avant frais annexes et remise) : vider la cellule pour le retirer'
-          : r.calcule.lig_pv_fixe ? '⇣ PV imposé par la ventilation du prix fixe d\'un ouvrage parent' : ''),
+        : r.item.lig_pv_fixe ? texte('document_btp.editeur.pv_fixe', { icone: icone('verrou') })
+          : r.calcule.lig_pv_fixe ? texte('document_btp.editeur.pv_impose', { icone: icone('document_btp_pv_impose') }) : ''),
     });
     modifierColonne(colonnes, 'pvnet', {
-      valeur: (r) => (estChiffree(r.calcule) ? `${r.item.lig_pv_affiche_fixe ? '🔒 ' : ''}${formatNombre(r.calcule.lig_pv_remise, r.calcule.lig_precision_pv ?? 2)}` : ''),
-      titreCellule: (r) => (estChiffree(r.calcule) && r.item.lig_pv_affiche_fixe ? '🔒 PV affiché fixe (avec frais annexes) : les frais annexes s\'ajustent' : ''),
+      valeur: (r) => (estChiffree(r.calcule) ? `${r.item.lig_pv_affiche_fixe ? `${icone('verrou')} ` : ''}${formatNombre(r.calcule.lig_pv_remise, r.calcule.lig_precision_pv ?? 2)}` : ''),
+      titreCellule: (r) => (estChiffree(r.calcule) && r.item.lig_pv_affiche_fixe ? texte('document_btp.editeur.pv_affiche_fixe', { icone: icone('verrou') }) : ''),
     });
     // Frais annexes et coefficient de prorata réservés aux ventes (règle FRAIS_ANNEXES, P11).
     if (this.definition.regles && this.definition.regles.FRAIS_ANNEXES === false) {
@@ -362,28 +356,28 @@ export class EditeurDevisBtp extends EditeurDocument {
     super.modifierLigne(id, champ, champ === 'lig_cpt_code' ? String(valeur ?? '').trim().slice(0, 20) || null : valeur);
   }
 
-  modifierCellule(id, champ, texte, colonne) {
+  modifierCellule(id, champ, brut, colonne) {
     if (champ === 'lig_cpt_code') {
-      this.modifierLigne(id, champ, texte);
+      this.modifierLigne(id, champ, brut);
       return true;
     }
     if (champ === 'lig_nat_id') {
-      this.magasin.modifier((d) => { d.lignes.find((y) => y.lig_id === id).lig_nat_id = texte === '' || texte === null ? null : Number(texte); }, 'Nature');
+      this.magasin.modifier((d) => { d.lignes.find((y) => y.lig_id === id).lig_nat_id = brut === '' || brut === null ? null : Number(brut); }, texte('document_btp.etapes.nature'));
       return true;
     }
     if (champ === 'lig_cha_id') {
-      this.magasin.modifier((d) => { d.lignes.find((y) => y.lig_id === id).lig_cha_id = texte === '' || texte === null ? null : Number(texte); }, 'Chantier de la ligne');
+      this.magasin.modifier((d) => { d.lignes.find((y) => y.lig_id === id).lig_cha_id = brut === '' || brut === null ? null : Number(brut); }, texte('document_btp.etapes.chantier_ligne'));
       return true;
     }
-    if (champ !== 'lig_pv') return super.modifierCellule(id, champ, texte, colonne);
-    const valeur = lireNombre(texte);
-    if (valeur === undefined) { this.surMessage?.('Nombre invalide'); return false; }
+    if (champ !== 'lig_pv') return super.modifierCellule(id, champ, brut, colonne);
+    const valeur = lireNombre(brut);
+    if (valeur === undefined) { this.surMessage?.(texte('document_btp.editeur.nombre_invalide')); return false; }
     this.magasin.modifier((d) => {
       const x = d.lignes.find((y) => y.lig_id === id);
       x.lig_pv = valeur;
       x.lig_pv_fixe = valeur !== null;
       this.regles.apresModification(d, id, 'lig_pv_fixe');
-    }, 'PV fixe');
+    }, texte('document_btp.etapes.pv_fixe'));
     return true;
   }
 
@@ -421,7 +415,7 @@ export class EditeurDevisBtp extends EditeurDocument {
     const calcul = new Set();
     for (const v of this.resultat.variables) calcul.add(`${v.var_portee}${v.var_nom}`);
     for (const m of this.saisie.metres) if (m.mtr_variable) calcul.add(m.mtr_variable.trim());
-    return [...super.variablesLibelle(), ...[...calcul].sort().map((v) => ({ valeur: `{{${v}}}`, libelle: `Variable {{${v}}}` }))];
+    return [...super.variablesLibelle(), ...[...calcul].sort().map((v) => ({ valeur: `{{${v}}}`, libelle: texte('document_btp.donnees.variable', { variable: `{{${v}}}` }) }))];
   }
 
   actions() {
@@ -447,18 +441,18 @@ export class EditeurDevisBtp extends EditeurDocument {
   creerMetre(id) {
     const l = this.saisie.lignes.find((x) => x.lig_id === id);
     if (this.variablesDocumentSur(id)) { this.ouvrirMetreExterne?.(id, null); return; }
-    if (!this.peutAvoirMetre(id)) { this.surMessage?.('Le métré concerne les lignes chiffrées (F4 sur la section : variables du document)'); return; }
+    if (!this.peutAvoirMetre(id)) { this.surMessage?.(texte('document_btp.editeur.metre_chiffrees')); return; }
     let mtrId = this.metreDeLigne(id);
     if (mtrId === null) {
       mtrId = this.magasin.prochainId();
       // Script de départ : la quantité saisie.
-      const script = `// Métré de la ligne\nRenvoyer ${l.lig_qte ? String(l.lig_qte).replace(',', '.') : '0'}`;
+      const script = `// ${texte('document_btp.editeur.metre_commentaire')}\nRenvoyer ${l.lig_qte ? String(l.lig_qte).replace(',', '.') : '0'}`;
       this.magasin.modifier((d) => {
         d.metres.push({ mtr_id: mtrId, mtr_lig_id: id, mtr_libelle: null, mtr_unt_code: l.lig_unt_code ?? null, mtr_variable: null, mtr_resultat: null, mtr_script: script });
         const x = d.lignes.find((y) => y.lig_id === id);
         x.lig_mtr_id = mtrId;
         x.lig_qte_source = 'M';
-      }, 'Création du métré');
+      }, texte('document_btp.etapes.creation_metre'));
     }
     this.ouvrirMetreExterne?.(id, mtrId);
   }

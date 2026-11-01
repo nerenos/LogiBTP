@@ -1,6 +1,7 @@
 // Routeur de l'application : routes déclarées par le cœur (chemins à paramètres), navigation classique par
 // l'historique du navigateur (précédent / suivant), garde avant de quitter une page qui a des modifications en
 // cours, pages conservées en mémoire (une liste retrouve ses lignes et sa position au retour d'une fiche).
+import { texte } from '@logibtp/socle/dictionnaire';
 
 /** Paramètres d'un chemin déclaré ('/fiche/:type/:id', ':x?' facultatif) pour un pathname, ou null. */
 export function correspondre(chemin, pathname) {
@@ -136,7 +137,7 @@ export class PageBase {
 
   /** Avant de quitter : false pour rester (confirmation refusée). */
   async quitter() {
-    return !this.modifiee || PageBase.confirmer(`« ${this.titre} » : des modifications ne sont pas enregistrées. Quitter quand même ?`);
+    return !this.modifiee || PageBase.confirmer(texte('navigation.page.quitter_modifiee', { titre: this.titre }));
   }
 
   /** Page conservée : affichée de nouveau (rafraîchissement éventuel). */

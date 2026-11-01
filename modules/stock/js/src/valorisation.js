@@ -1,3 +1,4 @@
+import { textesParCode } from '@logibtp/socle/dictionnaire';
 import { D, Dz, S, arrondir } from '@logibtp/socle';
 import { minute } from './stock.js';
 
@@ -12,7 +13,8 @@ import { minute } from './stock.js';
 // Le prix d'une réception facturée est celui de la facture (l'application le reporte sur le mouvement) ; non facturée,
 // il est provisoire. Sans achat : valeur de repli (PA de la bibliothèque), signalée.
 
-export const METHODES_VALORISATION = { PMP: 'Prix moyen pondéré', DERNIER_PA: "Dernier prix d'achat" };
+/** Libellés des méthodes, par code (module Personnalisation). */
+export const METHODES_VALORISATION = textesParCode('stock.methodes', ['PMP', 'DERNIER_PA']);
 
 /**
  * Entrée : { mouvements: [{ id, lieu, date, quantite, prix?, provisoire? }], comptages: [{ lieu, date, quantite }],
