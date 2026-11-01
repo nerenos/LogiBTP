@@ -5,7 +5,7 @@
 
 ## Présentation
 
-LogiBTP est une application web modulaire de gestion d'entreprise (ERP) taillée pour les professionnels du Bâtiment et des Travaux Publics (BTP). Conçue pour être robuste, rapide et utilisable partout (y compris sans connexion réseau), elle couvre l'intégralité du cycle de vie d'un chantier, du devis initial jusqu'à la facturation, la comptabilité et l'analyse de rentabilité.
+LogiBTP est une application web modulaire de gestion d'entreprise (ERP) taillée pour les professionnels du Bâtiment et des Travaux Publics (BTP). Conçue pour être robuste, rapide, utilisable partout (y compris sans connexion réseau) et tout support (Windows, Linux, Mac, Android et IOS pour les clients et Windows/Linux pour la partie serveur), elle couvre l'intégralité du cycle de vie d'un chantier, du devis initial jusqu'à la facturation, la comptabilité et l'analyse de rentabilité.
 
 ## Principes Architecturaux
 
