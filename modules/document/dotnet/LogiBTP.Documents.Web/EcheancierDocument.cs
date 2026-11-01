@@ -140,36 +140,56 @@ public sealed class EcheancierDocument<TDoc, TLigne, TComplet>(DocumentDbContext
     }
 
     /// <summary>
-    /// Échéancier modifié à la main (pièce validée) : dates, modes, découpage ; les totaux par nature (net à payer,
-    /// retenue) restent ceux du calcul ; une retenue reçoit sa date de libération.
+    /// Échéancier modifié à la main (pièce validée) : ajout, suppression, découpage, dates, modes ; une échéance gardée
+    /// (même identifiant) conserve ses pointages. La somme peut différer du net à payer ou de la retenue : l'interface
+    /// l'affiche en avertissement (décision du 31/10/2026), « Rafraîchir » revient à la proposition calculée.
     /// </summary>
     public async Task<List<DocumentEcheance>> Modifier(long entId, List<EcheanceSaisie> saisie, CancellationToken ct)
     {
         var actuelles = await db.Echeances.Where(x => x.EchEntId == entId).ToListAsync(ct);
         if (actuelles.Count == 0) throw ExceptionMetier.Invalide("ECHEANCIER", "Échéancier calculé à la validation de la pièce");
-        foreach (var nature in new[] { "NORMALE", "RETENUE" })
-        {
-            if (actuelles.Where(x => x.EchNature == nature).Sum(x => x.EchMontant) != saisie.Where(x => x.Nature == nature).Sum(x => x.Montant))
-            {
-                throw ExceptionMetier.Invalide("ECHEANCIER", nature == "NORMALE" ? "Le total des échéances reste égal au net à payer" : "Le total des retenues reste celui de la pièce");
-            }
-        }
-        if (saisie.Any(x => x.Nature == "NORMALE" && x.Date is null)) throw ExceptionMetier.Invalide("ECHEANCIER", "Chaque échéance a une date");
-        db.Echeances.RemoveRange(actuelles);
-        short rang = 0;
-        db.Echeances.AddRange(saisie.Select(x => new DocumentEcheance
-        {
-            EchEntId = entId, EchRang = ++rang, EchDate = x.Date, EchMontant = x.Montant, EchMode = x.Mode, EchNature = x.Nature, EchManuel = true,
-        }));
+        var erreurs = new List<string>();
+        if (saisie.Count == 0) erreurs.Add("Au moins une échéance");
+        if (saisie.Any(x => x.Nature is not ("NORMALE" or "RETENUE"))) erreurs.Add("Nature NORMALE ou RETENUE");
+        if (saisie.Any(x => x.Nature == "NORMALE" && x.Date is null)) erreurs.Add("Chaque échéance a une date");
+        if (saisie.Any(x => x.Montant == 0)) erreurs.Add("Montant non nul");
+        if (saisie.Any(x => x.Id is long id && actuelles.All(a => a.EchId != id))) erreurs.Add("Échéance d'une autre pièce");
+        if (saisie.Where(x => x.Id is not null).GroupBy(x => x.Id).Any(g => g.Count() > 1)) erreurs.Add("Échéance en double");
+        if (erreurs.Count > 0) throw ExceptionMetier.Invalide("ECHEANCIER", string.Join(" ; ", erreurs));
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
         try
         {
+            // Rangs libérés d'abord (unicité par pièce et rang), puis mise à jour en place, ajouts et retraits.
+            foreach (var a in actuelles) a.EchRang = (short)-a.EchRang;
             await db.SaveChangesAsync(ct);
+            short rang = 0;
+            foreach (var x in saisie)
+            {
+                var e = x.Id is long id ? actuelles.First(a => a.EchId == id) : db.Echeances.Add(new DocumentEcheance { EchEntId = entId }).Entity;
+                e.EchRang = ++rang;
+                e.EchDate = x.Date;
+                e.EchMontant = x.Montant;
+                e.EchMode = x.Mode;
+                e.EchNature = x.Nature;
+                e.EchManuel = true;
+            }
+            db.Echeances.RemoveRange(actuelles.Where(a => saisie.All(x => x.Id != a.EchId)));
+            await db.SaveChangesAsync(ct);
+            await tx.CommitAsync(ct);
         }
         catch (DbUpdateException)
         {
             // Une application peut référencer les échéances (pointages des règlements) : elles ne se suppriment plus.
-            throw ExceptionMetier.Conflit("ECHEANCES_POINTEES", "Échéancier déjà pointé par des règlements : il ne se modifie plus");
+            throw ExceptionMetier.Conflit("ECHEANCES_POINTEES", "Échéance pointée par un règlement : retirez d'abord le pointage pour la supprimer");
         }
+        return await db.Echeances.AsNoTracking().Where(x => x.EchEntId == entId).OrderBy(x => x.EchRang).ToListAsync(ct);
+    }
+
+    /// <summary>Proposition recalculée (bouton Rafraîchir) : condition figée, net à payer et retenues de la pièce.</summary>
+    public async Task<List<DocumentEcheance>> Recalculer(long entId, CancellationToken ct)
+    {
+        if (!await db.Echeances.AnyAsync(x => x.EchEntId == entId, ct)) throw ExceptionMetier.Invalide("ECHEANCIER", "Échéancier calculé à la validation de la pièce");
+        await Ecrire(entId, ct);
         return await db.Echeances.AsNoTracking().Where(x => x.EchEntId == entId).OrderBy(x => x.EchRang).ToListAsync(ct);
     }
 }

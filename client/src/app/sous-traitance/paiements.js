@@ -1,6 +1,6 @@
 import { texte, texteHtml, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { urlDocument } from '../codes.js';
-import { aujourdhui } from '@logibtp/socle';
+import { D, aujourdhui } from '@logibtp/socle';
 import { echapper, formatNombre, lireNombre, creerCombo, confirmer } from '@logibtp/socle/ui';
 import { ETATS_PAIEMENT_DIRECT, MESSAGES_PAIEMENT_DIRECT, MESSAGES_RETENUE, controlerAcceptation } from '@logibtp/sous-traitance';
 import { api } from '../api.js';
@@ -121,13 +121,15 @@ export async function rendreRetenue(zone, { marche, message }) {
       ${lib.echeance ? ` · ${texteHtml('sous_traitance_btp.retenue.echeance', { date: jour(lib.echeance) })}` : ''} · ${etat}
       ${!r.liberee_le && lib.liberable && nonDatees.length ? `<button type="button" data-liberer title="${texteHtml('sous_traitance_btp.retenue.liberer_titre')}">${iconeHtml('sous_traitance_btp_liberable')} ${texteHtml('sous_traitance_btp.retenue.liberer')}</button>` : ''}</p>
     <p class="aide">${texteHtml('sous_traitance_btp.retenue.aide')}</p>
-    <table class="tableau-compact"><thead><tr><th>${texteHtml('sous_traitance_btp.retenue.piece')}</th><th>${texteHtml('sous_traitance_btp.paiements.date')}</th><th class="nombre">${texteHtml('sous_traitance_btp.retenue.retenue')}</th><th>${texteHtml('sous_traitance_btp.retenue.echeance_titre')}</th></tr></thead><tbody>
+    <table class="tableau-compact"><thead><tr><th>${texteHtml('sous_traitance_btp.retenue.piece')}</th><th>${texteHtml('sous_traitance_btp.paiements.date')}</th><th class="nombre">${texteHtml('sous_traitance_btp.retenue.retenue')}</th><th class="nombre" title="${texteHtml('sous_traitance_btp.retenue.cautionne_aide')}">${texteHtml('sous_traitance_btp.retenue.cautionne')}</th><th>${texteHtml('sous_traitance_btp.retenue.echeance_titre')}</th></tr></thead><tbody>
     ${r.retenues.length ? r.retenues.map((x) => `<tr><td><a href="${urlDocument(Number(x.ent_id))}">${echapper(x.numero ?? `#${x.ent_id}`)}</a> <small class="aide">${echapper(x.type)}</small></td>
-      <td>${jour(x.date_document)}</td><td class="nombre">${f(x.montant)}</td><td>${x.date ? jour(x.date) : `<span class="aide">${texteHtml('sous_traitance_btp.retenue.a_liberation')}</span>`}</td></tr>`).join('')
-    : `<tr><td colspan="4" class="aide">${texteHtml('sous_traitance_btp.retenue.aucune')}</td></tr>`}
-    </tbody><tfoot><tr><th colspan="2">${texteHtml('commun.total')}</th><th class="nombre">${f(r.total)}</th><th></th></tr></tfoot></table>
-    ${r.cautions.length ? `<h4>${texteHtml('sous_traitance_btp.retenue.cautions')}</h4><table class="tableau-compact"><thead><tr><th>${texteHtml('sous_traitance_btp.retenue.organisme')}</th><th>${texteHtml('sous_traitance_btp.retenue.reference')}</th><th class="nombre">${texteHtml('sous_traitance_btp.paiements.montant')}</th><th>${texteHtml('sous_traitance_btp.retenue.du')}</th><th>${texteHtml('sous_traitance_btp.retenue.au')}</th><th>${texteHtml('sous_traitance_btp.retenue.mainlevee')}</th></tr></thead><tbody>
-      ${r.cautions.map((c) => `<tr><td>${echapper(c.organisme)}</td><td>${echapper(c.reference ?? '')}</td><td class="nombre">${f(c.montant)}</td><td>${jour(c.date)}</td>
+      <td>${jour(x.date_document)}</td><td class="nombre">${f(x.montant)}</td><td class="nombre">${!D(x.cautionne ?? 0).isZero() ? f(x.cautionne) : ''}</td><td>${x.date ? jour(x.date) : `<span class="aide">${texteHtml('sous_traitance_btp.retenue.a_liberation')}</span>`}</td></tr>`).join('')
+    : `<tr><td colspan="5" class="aide">${texteHtml('sous_traitance_btp.retenue.aucune')}</td></tr>`}
+    </tbody><tfoot><tr><th colspan="2">${texteHtml('commun.total')}</th><th class="nombre">${f(r.total)}</th><th class="nombre">${!D(r.cautionne ?? 0).isZero() ? f(r.cautionne) : ''}</th><th></th></tr></tfoot></table>
+    ${r.cautions.length ? `<h4>${texteHtml('sous_traitance_btp.retenue.cautions')}</h4><p class="aide">${texteHtml('sous_traitance_btp.retenue.cautions_aide')}</p>
+      <table class="tableau-compact"><thead><tr><th>${texteHtml('sous_traitance_btp.retenue.organisme')}</th><th>${texteHtml('sous_traitance_btp.retenue.reference')}</th><th class="nombre">${texteHtml('sous_traitance_btp.paiements.montant')}</th><th class="nombre">${texteHtml('sous_traitance_btp.retenue.consomme')}</th><th>${texteHtml('sous_traitance_btp.retenue.portee')}</th><th>${texteHtml('sous_traitance_btp.retenue.du')}</th><th>${texteHtml('sous_traitance_btp.retenue.au')}</th><th>${texteHtml('sous_traitance_btp.retenue.mainlevee')}</th></tr></thead><tbody>
+      ${r.cautions.map((c) => `<tr><td>${echapper(c.organisme)}</td><td>${echapper(c.reference ?? '')}</td><td class="nombre">${f(c.montant)}</td><td class="nombre">${f(c.consomme)}</td>
+        <td>${c.objet_id ? texteHtml('sous_traitance_btp.retenue.portee_marche') : texteHtml('sous_traitance_btp.retenue.portee_tiers')}</td><td>${jour(c.date)}</td>
         <td>${jour(c.date_fin)}</td><td>${jour(c.mainlevee)}</td></tr>`).join('')}</tbody></table>` : ''}`;
   zone.querySelector('[data-liberer]')?.addEventListener('click', async () => {
     try {

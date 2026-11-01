@@ -20,7 +20,7 @@ public class ReglesVentilationTests
         {
             var e = c!["entree"]!;
             var a = c["attendu"]!;
-            var r = ReglesVentilation.Compte(new EntreeVentilation(Texte(e["compte"]), Texte(e["nature"]), Texte(e["taux"]), Texte(e["type"])), types, cles);
+            var r = ReglesVentilation.Compte(new EntreeVentilation(Texte(e["compte"]), Texte(e["nature"]), Texte(e["taux"]), Texte(e["type"]), Texte(e["tiers"])), types, cles);
             Assert.True(new ResultatVentilation(Texte(a["compte"]), Texte(a["origine"]), Texte(a["type"]), Texte(a["erreur"])) == r, $"{c["nom"]} : {r}");
             if (r.Erreur is string err) Assert.True(ReglesVentilation.Messages.ContainsKey(err), err);
             if (r.Origine is string o) Assert.True(ReglesVentilation.Origines.ContainsKey(o), o);

@@ -368,8 +368,8 @@ public class TransformationService<TDoc, TLigne, TComplet>(
         var typeCible = await documents.Type(dem.CibleTydId, ct);
         var preparations = await PreparerSources(dem.Sources, typeCible, u, ct);
         if (preparations.Count == 0) throw ExceptionMetier.Invalide("RIEN_A_TRANSFORMER", "Aucune quantité à transformer dans ces documents");
-        long n = 0;
-        var contenus = preparations.Select(p => ContenuSource(p, preparations.Count > 1, ref n)).ToList();
+        var ids = new Compteur();
+        var contenus = await ContenusRegroupes(preparations, preparations.Count > 1, ids, ct);
         var numero = typeCible.TydNumerotationContinue ? null : await documents.AttribuerNumero(typeCible, DateOnly.FromDateTime(DateTime.Today), ct);
         var cible = await documents.Dupliquer(preparations[0].Source, d =>
         {
@@ -397,7 +397,7 @@ public class TransformationService<TDoc, TLigne, TComplet>(
         var preparations = await PreparerSources(sources, typeCible, u, ct);
         if (preparations.Count == 0) throw ExceptionMetier.Invalide("RIEN_A_TRANSFORMER", "Aucune quantité à transformer dans ces documents");
         var enSections = deja.Count + preparations.Count > 1 || (cible.Lignes.Count > 0 && preparations.Count > 0);
-        long n = 0;
+        var ids = new Compteur();
         var existant = JsonCalcul.Cloner(cible);
         if (enSections && existant.Lignes.Count > 0)
         {
@@ -405,10 +405,13 @@ public class TransformationService<TDoc, TLigne, TComplet>(
                 ? await LibelleDocument(deja[0], ct)
                 : $"{typeCible.TydLibelle} {cible.Document.EntNumero ?? ""}".Trim();
             var code = deja.Count > 0 ? await db.Documents.AsNoTracking().Where(x => x.EntId == deja[0]).Select(x => x.EntNumero).FirstAsync(ct) : null;
-            EnSection(existant, libelle, code, ref n);
+            EnSection(existant, libelle, code, ref ids.N);
         }
+        // Livraisons d'une commande déjà présente (section regroupée, ou section d'un BL déjà repris de la même commande) :
+        // regroupées avec elle ; les autres suivent le cas général.
+        var restantes = enSections ? await RegrouperDansExistant(existant, deja, preparations, ids, ct) : preparations;
         var contenus = new List<TComplet> { existant };
-        contenus.AddRange(preparations.Select(p => ContenuSource(p, enSections, ref n)));
+        contenus.AddRange(await ContenusRegroupes(restantes, enSections, ids, ct));
         var fusion = Fusionner(contenus);
         fusion.Document = cible.Document;
         await documents.EnregistrerDans(cibleId, fusion, u, ct);
@@ -483,9 +486,109 @@ public class TransformationService<TDoc, TLigne, TComplet>(
     {
         var c = documents.RenumeroterTemporaire(JsonCalcul.Cloner(p.Source), ref n);
         c = PreparerAvancement(Filtrer(c, p.Garder, p.Retenues, p.EnVendu), p);
-        specialisation.PreparerContenuSource(c, p.Source.Document);
+        specialisation.PreparerContenuSource(c, p.Source.Document, p.TypeSource, p.TypeCible);
         if (enSection) EnSection(c, $"{p.TypeSource.TydLibelle} {p.Source.Document.EntNumero ?? ""}{(string.IsNullOrWhiteSpace(p.Source.Document.EntObjet) ? "" : " – " + p.Source.Document.EntObjet)}".Trim(), p.Source.Document.EntNumero, ref n);
         return c;
+    }
+
+    /// <summary>Compteur d'identifiants temporaires (négatifs) partagé par les contenus repris.</summary>
+    private sealed class Compteur
+    {
+        public long N;
+        public long Suivant() => --N;
+    }
+
+    /// <summary>Commande d'origine unique de chaque document (seule source de transformation), sinon absent.</summary>
+    private async Task<Dictionary<long, long>> OriginesUniques(IEnumerable<long> documentsIds, CancellationToken ct)
+    {
+        var liste = documentsIds.Distinct().ToList();
+        var liens = await db.DocumentsLien.AsNoTracking().Where(l => liste.Contains(l.LieCibleEntId) && l.LieType == "TRANSFORMATION")
+            .Select(l => new { l.LieCibleEntId, l.LieSourceEntId }).ToListAsync(ct);
+        return liens.GroupBy(l => l.LieCibleEntId).Where(g => g.Select(x => x.LieSourceEntId).Distinct().Count() == 1)
+            .ToDictionary(g => g.Key, g => g.First().LieSourceEntId);
+    }
+
+    /// <summary>Libellé de la tranche d'une livraison : type, numéro et date.</summary>
+    private static string LibelleLivraison(Preparation p) =>
+        $"{p.TypeSource.TydLibelle} {p.Source.Document.EntNumero ?? ""} du {p.Source.Document.EntDate:dd/MM/yyyy}".Replace("  ", " ").Trim();
+
+    /// <summary>Une livraison se regroupe si son contenu n'est pas déjà réparti en plusieurs sections (BL de plusieurs commandes).</summary>
+    private static bool Regroupable(TComplet c) => c.Lignes.Count(l => l.LigParentId is null && l.LigTylId == TL.Section) <= 1;
+
+    /// <summary>
+    /// Contenus des sources : en sections, les livraisons d'une même commande d'origine (au moins deux) sont regroupées
+    /// dans une section de la commande, une tranche par livraison (13.14 a) ; les autres sources gardent leur section.
+    /// </summary>
+    private async Task<List<TComplet>> ContenusRegroupes(List<Preparation> preparations, bool enSections, Compteur ids, CancellationToken ct)
+    {
+        var origines = enSections ? await OriginesUniques(preparations.Select(p => p.Source.Document.EntId), ct) : new Dictionary<long, long>();
+        var bruts = preparations.Select(p => ContenuSource(p, false, ref ids.N)).ToList();
+        long? Cle(int i) => origines.TryGetValue(preparations[i].Source.Document.EntId, out var o) && Regroupable(bruts[i]) ? o : null;
+        var res = new List<TComplet>();
+        var traites = new HashSet<int>();
+        for (var i = 0; i < preparations.Count; i++)
+        {
+            if (!traites.Add(i)) continue;
+            var cle = Cle(i);
+            var groupe = cle is null ? new List<int> { i } : Enumerable.Range(i, preparations.Count - i).Where(j => Cle(j) == cle).ToList();
+            if (groupe.Count < 2)
+            {
+                res.Add(enSections ? ContenuSource(preparations[i], true, ref ids.N) : bruts[i]);
+                continue;
+            }
+            foreach (var j in groupe) traites.Add(j);
+            var origine = cle!.Value;
+            var c = JsonCalcul.Cloner(bruts[i]);
+            c.Lignes = RegroupementLivraisons.Regrouper(groupe.Select(j => (bruts[j].Lignes, LibelleLivraison(preparations[j]))).ToList(), origine,
+                await LibelleDocument(origine, ct), await db.Documents.AsNoTracking().Where(x => x.EntId == origine).Select(x => x.EntNumero).FirstAsync(ct), ids.Suivant);
+            foreach (var j in groupe.Skip(1)) specialisation.FusionnerComplements(c, bruts[j]);
+            res.Add(c);
+        }
+        return res;
+    }
+
+    /// <summary>
+    /// Ajout de livraisons à un document en sections : une livraison dont la commande d'origine a déjà sa section
+    /// regroupée y devient une tranche ; une livraison de la même commande qu'un BL déjà repris (section du BL) est
+    /// regroupée avec lui dans une nouvelle section de la commande, à la place de la section du BL. Renvoie les sources
+    /// qui restent à ajouter.
+    /// </summary>
+    private async Task<List<Preparation>> RegrouperDansExistant(TComplet existant, List<long> deja, List<Preparation> preparations, Compteur ids, CancellationToken ct)
+    {
+        var origines = await OriginesUniques(preparations.Select(p => p.Source.Document.EntId).Concat(deja), ct);
+        var numeros = await db.Documents.AsNoTracking().Where(x => deja.Contains(x.EntId)).Select(x => new { x.EntId, x.EntNumero }).ToListAsync(ct);
+        var restantes = new List<Preparation>();
+        foreach (var groupe in preparations.GroupBy(p => origines.TryGetValue(p.Source.Document.EntId, out var o) ? o : (long?)null))
+        {
+            if (groupe.Key is not long origine) { restantes.AddRange(groupe); continue; }
+            var liste = groupe.Select(p => (Preparation: p, Contenu: ContenuSource(p, false, ref ids.N))).Where(x => Regroupable(x.Contenu)).ToList();
+            restantes.AddRange(groupe.Where(p => liste.All(x => x.Preparation != p)));
+            if (liste.Count == 0) continue;
+            var racine = existant.Lignes.Where(l => l.LigParentId is null && l.LigTylId == TL.Section).ToList();
+            var regroupee = racine.FirstOrDefault(l => RegroupementLivraisons.Origine(l) == origine);
+            if (regroupee is not null)
+            {
+                var enfants = existant.Lignes.Where(l => l.LigParentId == regroupee.LigId).ToList();
+                existant.Lignes.AddRange(RegroupementLivraisons.Ajouter(regroupee, enfants, liste.Select(x => (x.Contenu.Lignes, LibelleLivraison(x.Preparation))).ToList(), ids.Suivant));
+                foreach (var x in liste) specialisation.FusionnerComplements(existant, x.Contenu);
+                continue;
+            }
+            // Section d'un BL déjà repris de la même commande (code = numéro du BL).
+            var codes = deja.Where(d => origines.TryGetValue(d, out var o) && o == origine).Select(d => numeros.FirstOrDefault(x => x.EntId == d)?.EntNumero).Where(c => c is not null).ToHashSet();
+            var sectionBl = racine.FirstOrDefault(l => l.LigCode is not null && codes.Contains(l.LigCode));
+            if (sectionBl is null) { restantes.AddRange(liste.Select(x => x.Preparation)); continue; }
+            var parId = existant.Lignes.ToDictionary(l => l.LigId);
+            var sousArbre = existant.Lignes.Where(l => l == sectionBl || EstDescendant(l, sectionBl.LigId, parId)).ToList();
+            var position = existant.Lignes.IndexOf(sectionBl);
+            existant.Lignes.RemoveAll(sousArbre.Contains);
+            var livraisons = new List<(List<TLigne>, string)> { (sousArbre, System.Net.WebUtility.HtmlDecode(sectionBl.LigLibelleHtml ?? sectionBl.LigCode ?? "")) };
+            livraisons.AddRange(liste.Select(x => (x.Contenu.Lignes, LibelleLivraison(x.Preparation))));
+            var lignes = RegroupementLivraisons.Regrouper(livraisons, origine, await LibelleDocument(origine, ct),
+                await db.Documents.AsNoTracking().Where(x => x.EntId == origine).Select(x => x.EntNumero).FirstAsync(ct), ids.Suivant);
+            existant.Lignes.InsertRange(Math.Min(position, existant.Lignes.Count), lignes);
+            foreach (var x in liste) specialisation.FusionnerComplements(existant, x.Contenu);
+        }
+        return restantes;
     }
 
     /// <summary>Contenus mis bout à bout (sections dans l'ordre des sources), compléments de la spécialisation fusionnés.</summary>

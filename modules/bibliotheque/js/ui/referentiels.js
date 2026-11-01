@@ -5,9 +5,9 @@ import { SCENARIOS_PA, TYPES_NATURE, coefficientsEffectifs } from '../src/calcul
 
 // Paramétrage de la bibliothèque (classe mère) : bibliothèques (code d'appel, bibliothèque par défaut), familles éditées
 // en arbre (ajout d'une racine, ou d'une sous-famille sous la famille sélectionnée), natures (types, regroupement, axe
-// analytique, comptes), regroupements personnalisables, coefficients de frais généraux et de bénéfice par période
-// (globaux ou par nature, historique), scénarios de prix d'achat. Option `sansComptesNatures` : comptes des natures
-// non affichés (l'application les tient ailleurs, ex. ventilation d'un module de comptabilité).
+// analytique), regroupements personnalisables, coefficients de frais généraux et de bénéfice par période
+// (globaux ou par nature, historique), scénarios de prix d'achat. Les comptes d'une nature sont tenus par l'application
+// (ventilation du module Comptabilité).
 
 const ONGLETS = pairesParCode('bibliotheque.referentiels.onglets', ['bibliotheques', 'familles', 'natures', 'regroupements', 'coefficients', 'prix']);
 const TYPES_COURTS = textesParCode('bibliotheque.referentiels.types_courts', TYPES_NATURE.map(([c]) => c));
@@ -15,9 +15,8 @@ const date = (d) => (d ? String(d).slice(0, 10).split('-').reverse().join('/') :
 const coef = (v) => (v === null || v === undefined || v === '' ? '—' : String(v).replace('.', ','));
 
 export class GestionReferentiels {
-  constructor(conteneur, { fournisseur, message = () => {}, admin = false, sansComptesNatures = false }) {
+  constructor(conteneur, { fournisseur, message = () => {}, admin = false }) {
     this.racine = conteneur;
-    this.sansComptesNatures = sansComptesNatures;
     this.fournisseur = fournisseur;
     this.message = message;
     this.admin = admin;
@@ -185,15 +184,14 @@ export class GestionReferentiels {
 
   async #natures(zone) {
     const [natures, regroupements] = await Promise.all([this.fournisseur.natures(), this.fournisseur.regroupements()]);
-    zone.innerHTML = `<p class="aide">${texteHtml('bibliotheque.referentiels.natures.aide', { comptes: this.sansComptesNatures ? texte('bibliotheque.referentiels.natures.sans_comptes') : texte('bibliotheque.referentiels.natures.comptes') })}</p><div></div>`;
+    zone.innerHTML = `<p class="aide">${texteHtml('bibliotheque.referentiels.natures.aide', { comptes: texte('bibliotheque.referentiels.natures.sans_comptes') })}</p><div></div>`;
     this.#tableau(zone.lastElementChild, {
       cle: 'code', lignes: natures, vide: { id: 0, actif: true, isolant: false, types: [] },
       colonnes: [{ code: 'code', libelle: texte('commun.code'), largeur: '7rem' }, { code: 'libelle', libelle: texte('commun.libelle'), largeur: '14rem' },
         { code: 'types', libelle: texte('bibliotheque.referentiels.colonnes.types'), type: 'cases', options: TYPES_NATURE.map(([valeur, libelle]) => ({ valeur, libelle, court: TYPES_COURTS[valeur] })) },
         { code: 'regroupement', libelle: texte('bibliotheque.referentiels.colonnes.regroupement'), options: regroupements.map((r) => ({ valeur: r.code, libelle: r.libelle })) },
-        { code: 'axe_analytique', libelle: texte('bibliotheque.referentiels.colonnes.axe_analytique'), largeur: '8rem' }, { code: 'compte_achat', libelle: texte('bibliotheque.referentiels.colonnes.compte_achat'), largeur: '7rem' },
-        { code: 'compte_vente', libelle: texte('bibliotheque.referentiels.colonnes.compte_vente'), largeur: '7rem' }, { code: 'isolant', libelle: texte('bibliotheque.referentiels.colonnes.isolant'), type: 'case' }, { code: 'actif', libelle: texte('bibliotheque.referentiels.colonnes.active'), type: 'case' }]
-        .filter((c) => !this.sansComptesNatures || !c.code.startsWith('compte_')),
+        { code: 'axe_analytique', libelle: texte('bibliotheque.referentiels.colonnes.axe_analytique'), largeur: '8rem' },
+        { code: 'isolant', libelle: texte('bibliotheque.referentiels.colonnes.isolant'), type: 'case' }, { code: 'actif', libelle: texte('bibliotheque.referentiels.colonnes.active'), type: 'case' }],
       enregistrer: (v) => this.fournisseur.enregistrerNature(v), supprimer: (l) => this.fournisseur.supprimerNature(l.id),
     });
   }
@@ -260,6 +258,8 @@ export class GestionReferentiels {
       <fieldset><legend>${texteHtml('bibliotheque.referentiels.prix.autorises')}</legend>${SCENARIOS_PA.map(([c, l]) => `<label class="bib-ligne"><input type="checkbox" data-scenario="${c}" ${p.scenarios_autorises.includes(c) ? 'checked' : ''} ${ro}> ${echapper(l)}</label>`).join('')}</fieldset>
       <label>${texteHtml('bibliotheque.referentiels.prix.defaut')} <select data-defaut ${ro}>${SCENARIOS_PA.map(([c, l]) => `<option value="${c}" ${c === p.scenario_defaut ? 'selected' : ''}>${echapper(l)}</option>`).join('')}</select></label>
       <p class="aide">${texteHtml('bibliotheque.referentiels.prix.aide')}</p>
+      <label class="bib-ligne"><input type="checkbox" data-pv-ouvrages ${p.pv_fixe_ouvrages_envoyes ? 'checked' : ''} ${ro}> ${texteHtml('bibliotheque.referentiels.prix.pv_ouvrages')}</label>
+      <p class="aide">${texteHtml('bibliotheque.referentiels.prix.pv_ouvrages_aide')}</p>
       ${this.admin ? `<button type="button" class="principal" data-enregistrer>${texteHtml('commun.enregistrer')}</button>` : ''}</div>`;
     zone.querySelector('[data-enregistrer]')?.addEventListener('click', async () => {
       try {
@@ -268,6 +268,7 @@ export class GestionReferentiels {
           scenarios_autorises: [...zone.querySelectorAll('[data-scenario]:checked')].map((x) => x.dataset.scenario),
           // Coefficients : gérés par période (onglet Coefficients) ; les valeurs de repli des paramètres sont conservées.
           coef_fg_defaut: p.coef_fg_defaut, coef_benef_defaut: p.coef_benef_defaut,
+          pv_fixe_ouvrages_envoyes: zone.querySelector('[data-pv-ouvrages]').checked,
         });
         this.message(texte('bibliotheque.referentiels.prix.enregistres'), 'succes');
       } catch (x) { this.#erreur(x); }

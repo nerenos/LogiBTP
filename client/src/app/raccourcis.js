@@ -28,6 +28,7 @@ declarerRaccourcis('document', {
     ongletPieces: { libelle: texte('navigation_btp.raccourcis.document.ongletPieces'), defaut: 'Alt+4' },
     ongletTracabilite: { libelle: texte('navigation_btp.raccourcis.document.ongletTracabilite'), defaut: 'Alt+5' },
     ongletSuivi: { libelle: texte('navigation_btp.raccourcis.document.ongletSuivi'), defaut: 'Alt+6' },
+    ongletReglements: { libelle: texte('navigation_btp.raccourcis.document.ongletReglements'), defaut: 'Alt+8' },
     rechercher: { libelle: texte('navigation_btp.raccourcis.document.rechercher'), defaut: 'Ctrl+F' },
     valider: { libelle: texte('navigation_btp.raccourcis.document.valider'), defaut: [] },
     transformer: { libelle: texte('navigation_btp.raccourcis.document.transformer'), defaut: [] },
@@ -66,4 +67,4 @@ declarerRaccourcis('pointage', {
 });
 
 /** Onglet de la page document désigné par une action. */
-export const ONGLETS_DOCUMENT = { ongletEntete: 'entete', ongletLignes: 'lignes', ongletAnalyse: 'analyse', ongletPieces: 'pieces', ongletTracabilite: 'tracabilite', ongletSuivi: 'suivi' };
+export const ONGLETS_DOCUMENT = { ongletEntete: 'entete', ongletLignes: 'lignes', ongletAnalyse: 'analyse', ongletPieces: 'pieces', ongletTracabilite: 'tracabilite', ongletSuivi: 'suivi', ongletReglements: 'reglements' };

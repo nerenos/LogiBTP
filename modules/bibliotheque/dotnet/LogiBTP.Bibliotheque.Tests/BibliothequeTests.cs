@@ -102,6 +102,9 @@ public class CoefficientsElementTests
 public class CodesTests
 {
     [Fact]
-    public void Parite_avec_le_js() =>
+    public void Parite_avec_le_js()
+    {
         Assert.Empty(Constantes.Ecarts(CasPartages.Chemin("modules", "bibliotheque", "js", "src", "codes.js"), "GESTION_ELEMENT", typeof(GestionElement)));
+        Assert.Empty(Constantes.Ecarts(CasPartages.Chemin("modules", "bibliotheque", "js", "src", "codes.js"), "GENRE_POSTE", typeof(GenrePoste)));
+    }
 }

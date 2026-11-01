@@ -22,7 +22,8 @@
         "NATURE_TAUX": "nature et taux de TVA",
         "NATURE": "nature",
         "TAUX": "taux de TVA",
-        "TYPE": "type comptable"
+        "TYPE": "type comptable",
+        "TIERS": "compte du tiers"
       },
       "erreurs": {
         "COMPTE_INTROUVABLE": "Aucun compte : ni sur la ligne, ni par la ventilation, ni par défaut pour le type comptable"

@@ -13,7 +13,7 @@ export const SOURCES_LISTE = {
       ['verrouille', 'boolean'], ['modifie_le', 'timestamp with time zone'],
       ['client', 'text'], ['projet', 'text'], ['affaire', 'text'], ['marche', 'text'],
       ['projet_id', 'integer'], ['affaire_id', 'integer'], ['chantier_id', 'integer'], ['marche_id', 'integer'],
-      ['alerte', 'text'], ['numero_situation', 'integer'], ['facture', 'text'],
+      ['alerte', 'text'], ['numero_situation', 'integer'], ['facture', 'text'], ['chantiers', 'ARRAY'],
     ],
   },
   // Ordres du module Exécution (db/197 : v_liste_ordres = documents de la famille E + exécution).

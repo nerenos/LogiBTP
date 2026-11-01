@@ -1,13 +1,14 @@
 // Règle de ventilation (compte d'une ligne), répliquée dans ReglesVentilation.cs (jeu
 // modules/comptabilite/tests/cas/02_ventilation.json ; ANALYSE-MODULE-COMPTABILITE.md § 3.2). Le plus précis gagne :
-// 1. compte saisi sur la ligne ; 2. clé nature + taux ; 3. clé nature ; 4. clé taux ; 5. compte par défaut du type
-// comptable ; sinon COMPTE_INTROUVABLE. Aux étapes 2 à 5, le type comptable de la pièce passe avant son parent
-// (ex. sous-traitance → achat), puis le parent du parent.
+// 1. compte saisi sur la ligne ; 2. compte de produit ou de charge du tiers de la pièce (distinct de son compte
+// auxiliaire) ; 3. clé nature + taux ; 4. clé nature ; 5. clé taux ; 6. compte par défaut du type comptable ; sinon
+// COMPTE_INTROUVABLE. Aux étapes 3 à 6, le type comptable de la pièce passe avant son parent (ex. sous-traitance →
+// achat), puis le parent du parent.
 
 import { textesParCode } from '@logibtp/socle/dictionnaire';
 
 /** Étapes de la règle, dans l'ordre. */
-export const ORIGINES_VENTILATION = textesParCode('comptabilite.ventilation.origines', ['LIGNE', 'NATURE_TAUX', 'NATURE', 'TAUX', 'TYPE']);
+export const ORIGINES_VENTILATION = textesParCode('comptabilite.ventilation.origines', ['LIGNE', 'TIERS', 'NATURE_TAUX', 'NATURE', 'TAUX', 'TYPE']);
 
 export const MESSAGES_VENTILATION = textesParCode('comptabilite.ventilation.erreurs', ['COMPTE_INTROUVABLE']);
 
@@ -29,12 +30,15 @@ export function chaineTypes(type, types = []) {
 
 /**
  * Compte de ventilation : { compte, origine, type, erreur }.
- * entree : { compte (saisi sur la ligne), nature (code), taux (code), type (type comptable de la pièce) } ;
+ * entree : { compte (saisi sur la ligne), tiers (compte de produit ou de charge du tiers), nature, taux (codes ou
+ * identifiants, comparés tels quels aux clés), type (type comptable de la pièce) } ;
  * parametrage : { types: [{ code, parent, compte_defaut }], cles: [{ type, nature, taux, compte }] }.
  */
 export function compteVentilation(entree, { types = [], cles = [] } = {}) {
   const propre = texte(entree?.compte);
   if (propre) return { compte: propre, origine: 'LIGNE', type: null, erreur: null };
+  const tiers = texte(entree?.tiers);
+  if (tiers) return { compte: tiers, origine: 'TIERS', type: null, erreur: null };
   const nature = texte(entree?.nature);
   const taux = texte(entree?.taux);
   const chaine = chaineTypes(entree?.type, types);

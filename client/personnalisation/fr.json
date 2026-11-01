@@ -640,7 +640,8 @@
       "frais_figer": "Figer la ventilation",
       "frais_prorata": "Ventilation au prorata",
       "cle_frais": "Clé de frais annexes",
-      "rattachement": "Rattachement"
+      "rattachement": "Rattachement",
+      "chantier_ligne": "Chantier de la ligne"
     },
     "stock_lieux": {
       "A_RECEPTION": {
@@ -835,7 +836,9 @@
         "cle_aide": "Vide : pas de clé (prorata, ou part décidée par les clés d'élément et de nature)",
         "mode_pct": "% de la tranche",
         "mode_unite": "€ par unité"
-      }
+      },
+      "mois_revision": "Mois des travaux",
+      "mois_revision_aide": "Mois des travaux de la période pour la révision des prix (vide : mois de la date de la pièce)"
     },
     "page": {
       "onglets": {
@@ -850,7 +853,9 @@
         "tracabilite_aide": "Alt+5 : origine (import), documents liés, historique des versions",
         "tracabilite": "Traçabilité",
         "suivi_aide": "Alt+6 : notes, tâches et courriels du document (module CRM)",
-        "suivi": "Suivi"
+        "suivi": "Suivi",
+        "reglements": "Règlements",
+        "reglements_aide": "Alt+8 : échéancier, règlements, imputations et déductions d'acompte"
       },
       "actions": {
         "valider_aide": "Valider et bloquer le document",
@@ -3064,7 +3069,14 @@
       "du": "Du",
       "au": "Au",
       "mainlevee": "Mainlevée",
-      "liberee_ok": "Retenue libérée"
+      "liberee_ok": "Retenue libérée",
+      "cautionne": "Dont cautionné",
+      "cautionne_aide": "Part couverte par une caution : exigible avec la pièce",
+      "cautions_aide": "Une caution remplace la retenue : la part cautionnée est exigible avec la pièce ; elle se consomme sur les retenues les plus anciennes, la retenue non couverte reste due à la libération.",
+      "consomme": "Consommé",
+      "portee": "Portée",
+      "portee_marche": "Ce marché",
+      "portee_tiers": "Toutes les retenues du tiers"
     },
     "pieces": {
       "a_renouveler_un": "{{nombre}} pièce à renouveler",
@@ -4283,6 +4295,10 @@
           "libelle": "Marchés",
           "info": "Ouverts à la validation des commandes clients : suivi de la facturation",
           "creation": "Nouveau marché"
+        },
+        "revision_prix": {
+          "libelle": "Révision des prix : index et formules",
+          "info": "Valeurs mensuelles des index (saisie, import CSV), catalogue et modèles de formules"
         }
       },
       "ventes": {
@@ -4317,6 +4333,10 @@
         "import_optim": {
           "libelle": "Importer un devis OptimBTP",
           "info": "Fichier .optim : lignes, prix et coefficients repris, champs non repris listés"
+        },
+        "marches_a_facturer": {
+          "libelle": "Marchés à facturer du mois",
+          "info": "Marchés en cours sans situation du mois : créer les situations d'un clic ou noter « pas d'avancement »"
         }
       },
       "achats": {
@@ -4843,7 +4863,8 @@
         "apercu": "Aperçu et impression",
         "notifications": "Afficher ou masquer les notifications",
         "notificationSuivante": "Notification suivante (ligne)",
-        "notificationPrecedente": "Notification précédente (ligne)"
+        "notificationPrecedente": "Notification précédente (ligne)",
+        "ongletReglements": "Onglet Règlements"
       },
       "planning": {
         "groupe": "Planning",
@@ -5336,7 +5357,8 @@
         "pieces": "Pièces",
         "paiements": "Paiements",
         "retenue": "Retenue",
-        "gestion": "Gestion"
+        "gestion": "Gestion",
+        "revision": "Révision"
       },
       "graphe_nouvelle": "Enregistrez la fiche pour voir ses liens et ses documents.",
       "fil_nouvelle": "Enregistrez la fiche pour voir son fil d'actualité.",
@@ -5585,7 +5607,10 @@
       "ouvrir": "Ouvrir la fiche"
     },
     "code_pris": "Le code {{code}} est déjà utilisé. Utiliser le prochain code disponible : {{propose}} ?",
-    "code_pris_ok": "Utiliser {{propose}}"
+    "code_pris_ok": "Utiliser {{propose}}",
+    "routes": {
+      "marches_a_facturer": "Marchés à facturer"
+    }
   },
   "documents_btp": {
     "avertissements": {
@@ -5686,7 +5711,9 @@
       "vaut_aussi": "(vaut aussi {{etapes}})",
       "reliquat": "Tout le reliquat du document est repris (quantités restant à transformer pour cette étape).",
       "aucune_cible": "Ce type de document ne se transforme pas",
-      "le_document": "le document"
+      "le_document": "le document",
+      "par_lignes": "Choisir les lignes et les quantités",
+      "par_lignes_aide": "Les lignes décochées restent à transformer ; la quantité de chaque ligne se modifie"
     },
     "options": {
       "gardee": "Gardée",
@@ -5705,6 +5732,18 @@
         "A": "Variante",
         "base": "Base"
       }
+    },
+    "lignes": {
+      "titre": "Lignes à transformer",
+      "aide": "Les lignes décochées restent à transformer ; la quantité proposée est le reste de l'étape.",
+      "toutes": "Tout cocher ou décocher",
+      "numero": "N°",
+      "libelle": "Libellé",
+      "quantite": "Quantité",
+      "reste": "Reste",
+      "a_transformer": "À transformer",
+      "quantite_invalide": "Quantité invalide",
+      "aucune": "Aucune ligne à transformer"
     }
   },
   "reglements_btp": {
@@ -5736,7 +5775,13 @@
       "pieces": "Pièces",
       "organisme": "Organisme",
       "fin": "Fin",
-      "mainlevee": "Mainlevée"
+      "mainlevee": "Mainlevée",
+      "cautionne": "Dont cautionné",
+      "cautionne_aide": "Retenue de garantie : part couverte par une caution, exigible avec la pièce",
+      "consomme": "Consommé",
+      "disponible": "Disponible",
+      "portee": "Portée",
+      "couvertes": "Pièces couvertes"
     },
     "pointer_tiers": "Pointer les règlements de ce tiers",
     "blocs": {
@@ -5762,21 +5807,26 @@
       "titre": "Cautions",
       "supprimer_aide": "Supprimer la caution et ses pointages",
       "aucune": "Aucune caution.",
-      "ajouter_aide": "Pointe les retenues de garantie ouvertes, de la plus ancienne à la plus récente",
-      "ajouter": "Caution sur les retenues"
+      "ajouter_aide": "Couvre les retenues de garantie de la portée, de la plus ancienne à la plus récente",
+      "ajouter": "Caution sur les retenues",
+      "toutes": "Toutes les retenues",
+      "toutes_tiers": "Toutes les retenues du tiers",
+      "aide": "Une caution remplace la retenue de garantie : la part cautionnée est exigible avec la pièce ; elle se consomme sur les retenues les plus anciennes, la retenue non couverte reste due à la libération."
     },
     "messages": {
       "montant": "Montant du règlement à saisir",
       "trop_percu": "Non pointé : {{montant}} (trop-perçu)",
       "enregistre": "Règlement enregistré",
       "supprimer": "Supprimer ce règlement et ses pointages ?",
-      "supprimer_caution": "Supprimer cette caution et ses pointages ?",
+      "supprimer_caution": "Supprimer cette caution ? Les retenues qu'elle couvrait redeviennent dues à la libération.",
       "caution_incomplete": "Organisme et montant de la caution à saisir",
       "caution_enregistree": "Caution enregistrée"
     },
     "routes": {
       "reglements": "Règlements"
-    }
+    },
+    "imputation": "Imputation d'avoir",
+    "marche_id": "Marché #{{id}}"
   },
   "hors_ligne_btp": {
     "etats": {
@@ -7462,6 +7512,11 @@
       "racine": "Documents",
       "affaires": "Affaires",
       "projets": "Projets"
+    }
+  },
+  "revision_btp": {
+    "routes": {
+      "parametres": "Révision des prix"
     }
   }
 }

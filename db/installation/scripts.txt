@@ -58,11 +58,13 @@ modules/bibliotheque/db/062_bibliotheque_coefficients.sql
 modules/bibliotheque/db/063_bibliotheque_poste_pied.sql
 modules/bibliotheque/db/064_bibliotheque_complements.sql
 modules/bibliotheque/db/065_bibliotheque_tarifs.sql
+modules/bibliotheque/db/066_bibliotheque_poste_genre.sql
 modules/annuaire/db/070_annuaire_schema.sql
 modules/annuaire/db/071_annuaire_provisoire.sql
 modules/annuaire/db/072_annuaire_code_secours.sql
 modules/annuaire/db/073_annuaire_non_remis.sql
 modules/reglement/db/080_reglement_schema.sql
+modules/reglement/db/081_reglement_cautions.sql
 modules/execution/db/085_execution.sql
 modules/execution/db/085b_execution_etapes.sql
 modules/pointage/db/086_pointage.sql
@@ -87,6 +89,7 @@ modules/stock/db/093d_stock_dotations.sql
 modules/comptabilite/db/094_comptabilite.sql
 modules/comptabilite/db/094b_comptabilite_ventilation.sql
 modules/comptabilite/db/094c_comptabilite_export.sql
+modules/comptabilite/db/094d_comptabilite_cles.sql
 modules/crm/db/095_crm_schema.sql
 modules/crm/db/096_crm_rappels.sql
 modules/crm/db/097_crm_demandes.sql
@@ -187,6 +190,10 @@ db/243_terrain_pointage.sql
 db/244_terrain_reception.sql
 db/245_terrain_sav.sql
 db/246_terrain_complements.sql
+db/247_comptabilite_cles_tiers.sql
+db/248_chantier_lignes.sql
+db/249_marches_a_facturer.sql rejouable
+db/250_revision_prix.sql rejouable
 
 # Vues de colonnes des types de documents créés après 176 : rejouée en dernier.
 db/176_documents_vues_types.sql rejouable

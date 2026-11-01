@@ -1,6 +1,6 @@
 import { texte, texteHtml, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { urlDocument, TYPE_FICHE, TYPE_DOCUMENT, TYPES_SOUS_TRAITABLES, MODULE_FACULTATIF, SUJET_FENETRE } from '../codes.js';
-import { FAMILLE_DOCUMENT, STATUT_DOCUMENT, STATUTS_HORS_VIGUEUR } from '@logibtp/document';
+import { FAMILLE_DOCUMENT, STATUT_DOCUMENT, STATUTS_HORS_VIGUEUR, estFamilleAchat } from '@logibtp/document';
 import { PageBase } from '@logibtp/navigation';
 import { ExplorateurGed } from '@logibtp/ged/ui';
 import { ArborescenceBtp } from '../ged/arborescence.js';
@@ -32,6 +32,7 @@ import { choisirSources } from '../documents/sources.js';
 const TYPES_SOURCES = /_(RECEPTION|FACTURE|FACTURE_AVT|SITUATION|AVOIR)$/;
 const MARCHE_TYPES = [TYPE_DOCUMENT.V_RECEPTION, TYPE_DOCUMENT.V_SITUATION, TYPE_DOCUMENT.V_FACTURE_AVT];
 import { afficherTracabilite } from '../documents/tracabilite.js';
+import { afficherReglements } from '../documents/reglements-document.js';
 import { ouvrirImport, creerDepuisImport, rendreBandeauImport, tracabiliteImport } from '../import/devis-a-verifier.js';
 import { formatImport } from '../import/formats.js';
 import { PanneauSuivi } from '../crm/panneau-suivi.js';
@@ -64,6 +65,7 @@ const gabarit = () => `
       <button role="tab" data-onglet-vue="pieces" title="${texteHtml('document_btp.page.onglets.pieces_aide')}">${texteHtml('document_btp.page.onglets.pieces')}</button>
       <button role="tab" data-onglet-vue="tracabilite" title="${texteHtml('document_btp.page.onglets.tracabilite_aide')}">${texteHtml('document_btp.page.onglets.tracabilite')}</button>
       <button role="tab" data-onglet-vue="suivi" title="${texteHtml('document_btp.page.onglets.suivi_aide')}" hidden>${texteHtml('document_btp.page.onglets.suivi')}</button>
+      <button role="tab" data-onglet-vue="reglements" title="${texteHtml('document_btp.page.onglets.reglements_aide')}">${texteHtml('document_btp.page.onglets.reglements')}</button>
     </nav>
     <div class="groupe">
       <button data-action="annuler" title="${texteHtml('document_btp.page.annuler')}">${iconeHtml('document_btp_annuler')}</button>
@@ -111,6 +113,7 @@ const gabarit = () => `
     <section id="vue-pieces" class="vue vue-pieces" role="tabpanel"></section>
     <section id="vue-tracabilite" class="vue vue-tracabilite" role="tabpanel"></section>
     <section id="vue-suivi" class="vue vue-suivi" role="tabpanel"></section>
+    <section id="vue-reglements" class="vue vue-reglements" role="tabpanel"></section>
     <section id="vue-lignes" class="vue vue-lignes" role="tabpanel">
       <div class="zone-dock" data-zone="gauche"></div>
       ${separateur('gauche')}
@@ -184,6 +187,7 @@ export class PageDocument extends PageBase {
         if (o === 'pieces') this.afficherPieces();
         if (o === 'tracabilite') this.afficherTracabilite();
         if (o === 'suivi') this.afficherSuivi();
+        if (o === 'reglements') this.afficherReglements();
       },
       // Plan fermé : le filtre d'affichage qu'il a posé est retiré.
       surDock: (id, visible) => { if (id === 'plan' && !visible && this.editeur?.filtre !== null) this.editeur?.filtrer(null); },
@@ -469,7 +473,11 @@ export class PageDocument extends PageBase {
     this.editeur.coefsDefaut = this.coefsDefaut;
     this.editeur.natures = this.natures;
     this.editeur.comptes = this.comptes;
+    // Chantiers proposés pour la colonne Chantier des lignes d'achat.
+    this.editeur.chantiers = this.structure?.chantiers ?? [];
     this.editeur.regleVentilation = this.regleVentilation;
+    // Compte de produit ou de charge du tiers (avant les clés de la ventilation).
+    this.editeur.chargerComptesTiers = this.regleVentilation ? (id) => api.comptabilite.comptesLignesTiers(id).catch(() => null) : null;
     this.editeur.surFiltre = () => this.afficherFiltre();
     // Mode débogage de la vue : rapport d'import (bandeau, traçabilité).
     this.editeur.surVue = () => {
@@ -513,6 +521,7 @@ export class PageDocument extends PageBase {
           messages: () => controlesSaisie(lignes(), {
             famille: ed.definition.type?.tyd_famille ?? 'V', modeOuvrage: ed.saisie.document.ent_mode_calcul_ouvrage ?? 'V',
             typePrix: (l) => ed.typePrixEffectif(l), qteNulle: !ed.transforme,
+            achat: estFamilleAchat(ed.definition.type?.tyd_famille), chantier: ed.saisie.document.ent_chantier_id ?? null,
           }),
         },
         {
@@ -652,6 +661,9 @@ export class PageDocument extends PageBase {
     const typeDoc = this.editeur.definition.type;
     this.$('[data-onglet-vue="analyse"]').hidden = typeDoc?.tyd_famille === FAMILLE_DOCUMENT.EXECUTION && typeDoc.tyd_code !== TYPE_DOCUMENT.E_OE;
     if (this.disposition?.p.onglet === 'suivi') this.afficherSuivi();
+    // Onglet Règlements : pièces de vente et d'achat (pas les ordres d'exécution) ; rafraîchi à chaque changement de version.
+    this.$('[data-onglet-vue="reglements"]').hidden = typeDoc?.tyd_famille === FAMILLE_DOCUMENT.EXECUTION;
+    if (this.disposition?.p.onglet === 'reglements' && this.reglementsCle !== this.cleTracabilite()) this.afficherReglements();
     this.app.majPage();
   }
 
@@ -897,6 +909,15 @@ export class PageDocument extends PageBase {
       // Réutilisation du fichier source conservé : nouvelle vérification dans une autre fenêtre.
       reimporter: (o) => this.app.naviguer(`${formatImport(o.dor_format).page}?ged=${o.dor_fichier_id}`, { nouvelleFenetre: true }),
     }).catch((x) => { zone.innerHTML = `<p class="erreur">${echapper(x.message)}</p>`; });
+  }
+
+  /** Onglet Règlements : échéancier modifiable, règlements et imputations, déductions d'acompte (documents/reglements-document.js). */
+  afficherReglements() {
+    const zone = this.$('#vue-reglements');
+    if (!this.editeur?.saisie.document) return;
+    this.reglementsCle = this.cleTracabilite();
+    afficherReglements(zone, { app: this.app, page: this, modes: this.panneaux?.modesReglement?.() ?? [] })
+      .catch((x) => { zone.innerHTML = `<p class="erreur">${echapper(x.message)}</p>`; });
   }
 
   /** Onglet Suivi (module CRM) : notes, tâches et courriels du document, tous indices confondus (groupe d'indices). */

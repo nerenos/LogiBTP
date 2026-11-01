@@ -4,11 +4,12 @@ import { texteBrut, S, dateLocale, PROFIL, ErreurApi, appelApi } from '@logibtp/
 
 // Fournisseurs du module Bibliothèque. Même interface pour l'API (routes MapModuleBibliotheque) et pour la mémoire
 // (démo hors ligne, tests) :
-//   parametres() / enregistrerParametres(p)              { scenario_defaut, scenarios_autorises, coef_fg_defaut, coef_benef_defaut }
+//   parametres() / enregistrerParametres(p)              { scenario_defaut, scenarios_autorises, coef_fg_defaut, coef_benef_defaut,
+//                                                          pv_fixe_ouvrages_envoyes }
 //   bibliotheques() / enregistrerBibliotheque(b) / supprimerBibliotheque(id)        [{ id, code, libelle, defaut, actif, ordre }]
 //   familles(bibId) / enregistrerFamille(f) / supprimerFamille(id)                  [{ id, bib_id, parent_id, code, libelle, ordre, chemin, niveau }]
 //   regroupements() / enregistrerRegroupement(r) / supprimerRegroupement(code)      [{ code, libelle, ordre }]
-//   natures() / enregistrerNature(n) / supprimerNature(id)                          [{ id, code, libelle, regroupement, axe_analytique, compte_achat, compte_vente, actif }]
+//   natures() / enregistrerNature(n) / supprimerNature(id)                          [{ id, code, libelle, regroupement, axe_analytique, actif }]
 //   periodes() / enregistrerPeriode(p) / supprimerPeriode(id)  [{ id, nat_id, debut, coef_fg, coef_benef, commentaire }] ;
 //                                                        enregistrer/supprimer → { periodes, elements_recalcules }
 //   recalculer()                                         { elements_recalcules } (coefficients en vigueur aujourd'hui)
@@ -117,7 +118,7 @@ export class FournisseurBibliothequeMemoire {
     this.tarifsElements = structuredClone(tarifs);
     this.historiques = [];
     this.periodesCoefs = structuredClone(periodes);
-    this.params = { scenario_defaut: 'FIXE', scenarios_autorises: SCENARIOS_TOUS, coef_fg_defaut: 1, coef_benef_defaut: 1, ...parametres };
+    this.params = { scenario_defaut: 'FIXE', scenarios_autorises: SCENARIOS_TOUS, coef_fg_defaut: 1, coef_benef_defaut: 1, pv_fixe_ouvrages_envoyes: false, ...parametres };
     this.profil = profil;
     this.utilisateur = utilisateur;
     this.horloge = horloge;
@@ -352,6 +353,7 @@ export class FournisseurBibliothequeMemoire {
       poste: e.type === 'POSTE_PIED' ? {
         niveau: e.pied_niveau ?? null, mode: e.pied_mode ?? null, base: e.pied_base ?? null, sens: e.pied_sens ?? null, valeur: e.pied_valeur ?? null,
         retenue: e.pied_retenue === true || e.pied_retenue === 'true', compte: e.cpt_code ?? null, tva: e.tva_code ?? null,
+        genre: e.pied_genre ?? null,
       } : null,
       code_barre: e.code_barre ?? null, delai_livraison: e.delai_livraison ?? null,
     });

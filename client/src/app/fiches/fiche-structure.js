@@ -4,6 +4,7 @@ import { MODES } from '@logibtp/fiche';
 import { echapper, formatDate, formatNombre, formatLibre, lireNombre, creerCombo, lirePreferences, ecrirePreferences, confirmer } from '@logibtp/socle/ui';
 import { rendrePieces } from '../sous-traitance/pieces.js';
 import { rendrePaiements, rendreRetenue } from '../sous-traitance/paiements.js';
+import { rendreRevision } from '../structure/revision-marche.js';
 import { D, Dz, aujourdhui } from '@logibtp/socle';
 import { FicheLogiBTP } from './fiches.js';
 import { api } from '../api.js';
@@ -433,7 +434,13 @@ export class FicheMarche extends FicheStructure {
     const retenue = this.valeur('sens') !== 'ST' && this.id !== null && this.services.structure.gestion
       ? [{ code: 'retenue', titre: texte('fiches_btp.structure.onglets.retenue'), rendre: (corps) => rendreRetenue(corps, { marche: Number(this.id), message: this.message }).catch((e) => this.message(e.message, 'erreur')) }]
       : [];
-    return [{ code: 'gestion', titre: texte('fiches_btp.structure.onglets.gestion'), rendre: (corps) => this.rendreGestion(corps) }, ...pieces, ...retenue, ...super.ongletsSpecifiques()];
+    // Révision des prix (lots G1 et G3) : paramètres du marché et périodes révisées, vente et sous-traitance.
+    const revision = this.id !== null && this.services.structure.gestion
+      ? [{ code: 'revision', get titre() { return texte('fiches_btp.structure.onglets.revision'); }, rendre: (corps) => rendreRevision(corps, {
+        marche: Number(this.id), message: this.message, ouvrir: (url, e) => this.ouvrirUrl(url, e),
+      }).catch((e) => this.message(e.message, 'erreur')) }]
+      : [];
+    return [{ code: 'gestion', titre: texte('fiches_btp.structure.onglets.gestion'), rendre: (corps) => this.rendreGestion(corps) }, ...pieces, ...retenue, ...revision, ...super.ongletsSpecifiques()];
   }
 
   /**

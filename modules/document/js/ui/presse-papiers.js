@@ -73,6 +73,9 @@ export class PressePapiers {
 
   /** Ajoute au brouillon les compléments d'une copie renumérotée. */
   insererComplements(_brouillon, _copie) {}
+
+  /** Après le placement des lignes collées (parents connus) : compléments qui dépendent de la position. */
+  apresPlacement(_brouillon, _copie) {}
 }
 
 /** Nouvel ID d'une référence, ou null si elle sort de la copie. */

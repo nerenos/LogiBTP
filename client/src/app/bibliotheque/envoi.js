@@ -13,7 +13,9 @@ import { TL, estTranche } from '../../calcul/index.js';
 //   - prix : les PA sont envoyés ; les frais annexes ventilés ne vont jamais dans la bibliothèque. Les coefficients FG
 //     et bénéfice de l'élément sont ceux par défaut (nature ou globaux) à la création, inchangés à la mise à jour
 //     (l'utilisateur les force dans la bibliothèque) ; seule une ligne à PV fixe (avant frais annexes) envoie son PV
-//     (article) et impose ses coefficients. La ligne reçoit ensuite le lien, le code d'appel et le type de l'élément.
+//     et impose ses coefficients ; un ouvrage ne l'envoie que si l'option de la société le prévoit (paramètre
+//     pv_fixe_ouvrages_envoyes de la bibliothèque, non par défaut : prix de sa composition, PV fixe inchangé à la mise
+//     à jour). La ligne reçoit ensuite le lien, le code d'appel et le type de l'élément.
 // Les écritures passent par les fiches « element » (contrôles, unicité du code, historique des prix).
 
 /** Type d'élément pour une ligne de document (null : ligne non transférable). */
@@ -75,28 +77,30 @@ export function compositionDepuisContenu(contenu, mode = 'V', qtesVendues = new 
 /**
  * Valeurs de la fiche « element » écrites depuis une ligne : libellé, nature, remise ; coefficients imposés seulement
  * pour une ligne à PV fixe (sinon : ceux par défaut à la création, inchangés à la mise à jour) ; article : unité, PA
- * fixe (ramené à l'unité de stock par le ratio du lien) et PV fixe ; ouvrage : composition et PV fixe de la ligne (sinon
- * prix de la composition) ; ensemble : composition (prix = totaux de sa tranche).
+ * fixe (ramené à l'unité de stock par le ratio du lien) et PV fixe ; ouvrage : composition et, avec l'option
+ * `pvFixeOuvrages`, PV fixe de la ligne (sinon prix de la composition : PV fixe à non à la création, inchangé à la mise
+ * à jour) ; ensemble : composition (prix = totaux de sa tranche).
  */
-export function valeursDepuisLigne(l, type, { composition = null, creation = false } = {}) {
+export function valeursDepuisLigne(l, type, { composition = null, creation = false, pvFixeOuvrages = false } = {}) {
   const ratio = Number(l.lig_proprietes?.element?.ratio ?? 1) || 1;
   const v = {
     libelle_html: l.lig_libelle_html || texteBrut(l.lig_libelle_html ?? '') || texte('bibliotheque_btp.envoi.libelle_defaut'), nat_id: l.lig_nat_id ?? null,
     coef_remise: String(l.lig_coef_remise ?? 1),
   };
-  if (l.lig_pv_fixe) {
+  const pvFixe = Boolean(l.lig_pv_fixe) && (type === 'ARTICLE' || (type === 'OUVRAGE' && pvFixeOuvrages));
+  if (pvFixe) {
     Object.assign(v, { coef_fg: String(l.lig_coef_fg ?? 1), coef_benef: String(l.lig_coef_benef ?? 1), coef_fg_impose: true, coef_benef_impose: true });
   } else if (creation) Object.assign(v, { coef_fg_impose: false, coef_benef_impose: false });
   if (type === 'ARTICLE') {
     Object.assign(v, {
       pa_fixe: l.lig_pa === null || l.lig_pa === undefined ? null : String(Number(l.lig_pa) / ratio),
-      pv_fixe: Boolean(l.lig_pv_fixe), ...(l.lig_pv_fixe ? { pv: String(Number(l.lig_pv) / ratio) } : {}),
+      pv_fixe: pvFixe, ...(pvFixe ? { pv: String(Number(l.lig_pv) / ratio) } : {}),
     });
     if (creation) Object.assign(v, { unite_stock: l.lig_unt_code || 'u', scenario_pa: 'FIXE', gestion: 'NON_GERE', unites: [] });
   } else {
     v.composition = composition;
-    v.pv_fixe = type === 'OUVRAGE' && Boolean(l.lig_pv_fixe);
-    if (v.pv_fixe) v.pv = String(l.lig_pv);
+    if (pvFixe) Object.assign(v, { pv_fixe: true, pv: String(l.lig_pv) });
+    else if (creation || type === 'ENSEMBLE' || pvFixeOuvrages) v.pv_fixe = false;
     if (type === 'ENSEMBLE') Object.assign(v, { coef_fg: '1', coef_benef: '1' });
     if (creation) Object.assign(v, { unite_stock: type === 'OUVRAGE' ? l.lig_unt_code || 'u' : 'u', scenario_pa: 'FIXE', gestion: 'NON_GERE', unites: [] });
   }
@@ -216,6 +220,8 @@ export class EnvoiBibliotheque {
     const liens = new Map();
     const erreurs = [];
     let crees = 0, majs = 0;
+    const params = await this.bibliotheque.parametres?.().catch(() => null);
+    const pvFixeOuvrages = Boolean(params?.pv_fixe_ouvrages_envoyes);
     for (const c of choix) {
       if (c.action === 'ignorer') continue;
       const l = c.ligne;
@@ -230,14 +236,14 @@ export class EnvoiBibliotheque {
         let id;
         if (c.action === 'creer') {
           if (!c.codeSaisi) throw new Error(texte('bibliotheque_btp.envoi.erreurs.code'));
-          const valeurs = { ...valeursDepuisLigne(l, c.type, { composition, creation: true }), bib_id: c.bibId, code: c.codeSaisi, type: c.type, actif: true };
+          const valeurs = { ...valeursDepuisLigne(l, c.type, { composition, creation: true, pvFixeOuvrages }), bib_id: c.bibId, code: c.codeSaisi, type: c.type, actif: true };
           id = (await this.fiche.creer(TYPE_FICHE.ELEMENT, { valeurs })).id;
           crees++;
         } else {
           id = Number(c.action.split(':')[1]);
           const actuel = await this.fiche.charger(TYPE_FICHE.ELEMENT, id);
           if (actuel.valeurs.type !== c.type) throw new Error(texte('bibliotheque_btp.envoi.erreurs.type', { code: actuel.valeurs.code, type_element: texte(`bibliotheque_btp.envoi.types.${actuel.valeurs.type}`).toLowerCase(), type_ligne: texte(`bibliotheque_btp.envoi.types.${c.type}`).toLowerCase() }));
-          const valeurs = valeursDepuisLigne(l, c.type, { composition });
+          const valeurs = valeursDepuisLigne(l, c.type, { composition, pvFixeOuvrages });
           // PA : repris seulement pour un article à prix fixe (sinon tarifs ou dernier prix d'achat).
           if (c.type === 'ARTICLE' && actuel.valeurs.scenario_pa !== 'FIXE') delete valeurs.pa_fixe;
           const jeton = crypto.randomUUID();

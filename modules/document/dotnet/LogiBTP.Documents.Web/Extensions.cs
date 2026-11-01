@@ -193,6 +193,8 @@ public static class Extensions
             s.Echeancier.EnregistrerDefauts(v, Utilisateur.Depuis(http), ct));
         api.MapPut("/documents/{id:long}/echeances", (long id, List<EcheanceSaisie> v, HttpContext http, DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>
             s.ModifierEcheances(id, v, Utilisateur.Depuis(http), ct));
+        api.MapPost("/documents/{id:long}/echeances/recalculer", (long id, HttpContext http, DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>
+            s.RecalculerEcheances(id, Utilisateur.Depuis(http), ct));
         api.MapGet("/documents/{id:long}/lot-archivage", (long id, TransformationService<TDoc, TLigne, TComplet> s, CancellationToken ct) => s.LotArchivage(id, ct));
 
         // Calcul serveur sans enregistrement et arbitrage des écarts

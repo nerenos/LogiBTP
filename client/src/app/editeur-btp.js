@@ -3,10 +3,11 @@ import { CFG_LIGNES as C, parId, ancetres, descendants, formatNombre, formatLibr
 import {
   EditeurDocument, ReglesDocument, PressePapiers, correspondance, modifierColonne, insererColonnes,
 } from '@logibtp/document/ui';
+import { estFamilleAchat } from '@logibtp/document';
 import { DictionnaireMetre } from '@logibtp/metre/ui';
 import { calculerDocument, TL, estChiffree, natureObligatoire } from '../calcul/index.js';
 import { FONCTIONS_BTP } from '../calcul/fonctions-btp.js';
-import { compteLigne, libelleCompte } from './comptes.js';
+import { compteLigne, libelleCompte, relationTiers } from './comptes.js';
 import { fraisRecus, bilanTranche } from './frais-annexes.js';
 
 // Spécialisation BTP de l'éditeur du module Document : moteur de devis BTP, colonnes de déboursé, PV fixe,
@@ -39,7 +40,8 @@ export class ReglesBtp extends ReglesDocument {
 /**
  * Presse-papiers BTP : les métrés (scripts), les variables et les clés de ventilation des frais annexes suivent les
  * lignes copiées. Une clé est recréée sur la copie comme si elle avait été saisie sur la nouvelle ligne : clé de ligne
- * d'une ligne copiée (sa tranche de frais copiée avec elle, ou la même tranche quand on colle dans le même document),
+ * d'une ligne copiée (sa tranche de frais copiée avec elle, ou la même tranche quand on colle dans le même document sous la même tranche
+ * parente),
  * clé d'élément ou de nature d'une tranche de frais copiée (ses clés de ligne vers des lignes non copiées sont perdues).
  */
 export class PressePapiersBtp extends PressePapiers {
@@ -80,9 +82,25 @@ export class PressePapiersBtp extends PressePapiers {
   insererComplements(d, copie) {
     d.metres.push(...copie.metres);
     d.variables.push(...copie.variables.map((v) => ({ ...v, var_ent_id: d.document.ent_id })));
+  }
+
+  /**
+   * Clés de ventilation, une fois les lignes placées : une clé vers une tranche de frais restée dans le document ne
+   * suit la ligne que si l'on colle dans ce document et sous la même tranche parente (portée de la tranche de frais) ;
+   * ailleurs la ligne revient au prorata (décision du 31/10/2026).
+   */
+  apresPlacement(d, copie) {
     const memeDocument = (copie.source_ent_id ?? null) === (d.document.ent_id ?? null);
+    const index = parId(C, d.lignes);
+    const dansPortee = (k) => {
+      const source = index.get(k.vfr_source_lig_id);
+      if (!memeDocument || !source) return false;
+      if (k.vfr_cible !== 'LIGNE') return true;
+      const portee = source.lig_parent_id ?? null;
+      return portee === null || ancetres(C, d.lignes, k.vfr_lig_id).some((a) => a.lig_id === portee);
+    };
     const cles = (copie.ventilations ?? [])
-      .filter((k) => !k._source_externe || (memeDocument && d.lignes.some((l) => l.lig_id === k.vfr_source_lig_id)))
+      .filter((k) => !k._source_externe || dansPortee(k))
       .map(({ _source_externe, ...k }) => ({ ...k, vfr_ent_id: d.document.ent_id ?? null }));
     if (cles.length) (d.ventilations ??= []).push(...cles);
   }
@@ -256,6 +274,28 @@ export class EditeurDevisBtp extends EditeurDocument {
         return c.herite ? texte('document_btp.editeur.compte_herite', { libelle: lib, detail: c.detail }) : lib;
       },
     }]);
+    // Chantier de la ligne (achats, db/248) : celui de la ligne, sinon celui de l'entête (souligné) ; facture de plusieurs
+    // chantiers : entête vide, chantier par ligne (repris du document source).
+    if (estFamilleAchat(this.definition.type?.tyd_famille)) {
+      const chantier = (id) => (this.chantiers ?? []).find((c) => c.id === Number(id));
+      insererColonnes(colonnes, 'qte', [{
+        cle: 'chantier', titre: 'Chantier', classe: 'col-chantier', editeur: 'select', editable: chiffree,
+        champ: () => 'lig_cha_id', lire: (l) => l.lig_cha_id ?? '',
+        options: () => [{ valeur: '', libelle: '— (chantier de l\'entête)' }, ...(this.chantiers ?? []).map((c) => ({ valeur: c.id, libelle: `${c.code} – ${c.libelle ?? ''}` }))],
+        valeur: (r) => {
+          if (r.virtuelle || !estChiffree(r.item)) return '';
+          if (r.item.lig_cha_id) return chantier(r.item.lig_cha_id)?.code ?? `#${r.item.lig_cha_id}`;
+          const e = chantier(this.saisie.document.ent_chantier_id);
+          return e ? { html: `<u class="compte-herite">${echapper(e.code)}</u>` } : '';
+        },
+        titreCellule: (r) => {
+          if (r.virtuelle || !estChiffree(r.item)) return '';
+          const c = chantier(r.item.lig_cha_id ?? this.saisie.document.ent_chantier_id);
+          if (!c) return 'Sans chantier : choisir le chantier de la ligne';
+          return `${c.code} – ${c.libelle ?? ''}${r.item.lig_cha_id ? '' : ' — chantier de l\'entête : choisir un chantier pour l\'imposer à la ligne'}`;
+        },
+      }]);
+    }
     insererColonnes(colonnes, 'pv', [
       {
         cle: 'pa', titre: texte('document_btp.colonnes.pa'), classe: 'col-nombre', ...this.colonneNombre('lig_pa', (l) => chiffree(l) && !this.estCompose(l)),
@@ -325,6 +365,10 @@ export class EditeurDevisBtp extends EditeurDocument {
       this.magasin.modifier((d) => { d.lignes.find((y) => y.lig_id === id).lig_nat_id = brut === '' || brut === null ? null : Number(brut); }, texte('document_btp.etapes.nature'));
       return true;
     }
+    if (champ === 'lig_cha_id') {
+      this.magasin.modifier((d) => { d.lignes.find((y) => y.lig_id === id).lig_cha_id = brut === '' || brut === null ? null : Number(brut); }, texte('document_btp.etapes.chantier_ligne'));
+      return true;
+    }
     if (champ !== 'lig_pv') return super.modifierCellule(id, champ, brut, colonne);
     const valeur = lireNombre(brut);
     if (valeur === undefined) { this.surMessage?.(texte('document_btp.editeur.nombre_invalide')); return false; }
@@ -343,9 +387,27 @@ export class EditeurDevisBtp extends EditeurDocument {
    */
   compteLigne(l) {
     return compteLigne(l, {
-      natures: this.natures ?? [], famille: this.definition.type?.tyd_famille ?? 'V', typeDocument: this.definition.type?.tyd_code ?? null,
-      tauxTva: this.definition.taux_tva ?? [], regle: this.regleVentilation ?? null,
+      natures: this.natures ?? [], typeDocument: this.definition.type?.tyd_code ?? null,
+      tauxTva: this.definition.taux_tva ?? [], regle: this.regleVentilation ?? null, compteTiers: this.compteTiersDocument(),
     });
+  }
+
+  /**
+   * Compte de produit ou de charge du tiers du document (relation selon la famille), lu une fois par tiers par
+   * `chargerComptesTiers(id)` posé par la page ; la grille est redessinée à son arrivée. null : inconnu ou aucun.
+   */
+  compteTiersDocument() {
+    const id = Number(this.saisie?.document?.ent_tiers_id) || null;
+    if (!id || !this.chargerComptesTiers) return null;
+    this.comptesTiers ??= new Map();
+    if (!this.comptesTiers.has(id)) {
+      this.comptesTiers.set(id, {});
+      Promise.resolve(this.chargerComptesTiers(id)).then((c) => {
+        this.comptesTiers.set(id, c ?? {});
+        if (c && Object.values(c).some(Boolean)) this.grille?.rendre();
+      }).catch(() => {});
+    }
+    return this.comptesTiers.get(id)?.[relationTiers(this.definition.type?.tyd_famille ?? 'V')] ?? null;
   }
 
   /** Variables de libellé : données génériques + variables de calcul et de métré. */

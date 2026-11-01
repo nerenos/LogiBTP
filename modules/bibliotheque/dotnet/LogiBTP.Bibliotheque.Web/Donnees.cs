@@ -50,8 +50,6 @@ public class NatureElement
     public string NatLibelle { get; set; } = "";
     public string? NatRgnCode { get; set; }
     public string? NatAxeAnalytique { get; set; }
-    public string? NatCompteAchat { get; set; }
-    public string? NatCompteVente { get; set; }
     public bool NatIsolant { get; set; }
     public JsonDocument NatTypes { get; set; } = JsonDocument.Parse("[]");
     public bool NatActif { get; set; } = true;
@@ -109,6 +107,7 @@ public class Element
     public string? ElePiedSens { get; set; }
     public decimal? ElePiedValeur { get; set; }
     public bool ElePiedRetenue { get; set; }
+    public string? ElePiedGenre { get; set; }
     public string? EleCptCode { get; set; }
     public string? EleTvaCode { get; set; }
     // Compléments (064) : mots-clés de recherche, code-barres, description technique, délai de livraison (jours).
@@ -232,12 +231,14 @@ public sealed class ParametresBibliothequeDto
     public List<string> ScenariosAutorises { get; set; } = [.. CalculElement.Scenarios];
     public decimal CoefFgDefaut { get; set; } = 1;
     public decimal CoefBenefDefaut { get; set; } = 1;
+    /// <summary>Envoi d'un ouvrage d'un document vers la bibliothèque : son PV fixe est-il repris ? (non par défaut)</summary>
+    public bool PvFixeOuvragesEnvoyes { get; set; }
 }
 
 public sealed record BibliothequeDto(int Id, string Code, string Libelle, bool Defaut, bool Actif, int Ordre);
 public sealed record FamilleDto(int Id, int BibId, int? ParentId, string Code, string Libelle, int Ordre, string Chemin, int Niveau);
 public sealed record RegroupementDto(string Code, string Libelle, int Ordre);
-public sealed record NatureDto(int Id, string Code, string Libelle, string? Regroupement, string? AxeAnalytique, string? CompteAchat, string? CompteVente, bool Actif,
+public sealed record NatureDto(int Id, string Code, string Libelle, string? Regroupement, string? AxeAnalytique, bool Actif,
     bool Isolant = false, List<string>? Types = null);
 
 /// <summary>Période de coefficients : NatId null = globale ; un coefficient null est repris de la portée supérieure.</summary>
@@ -279,7 +280,8 @@ public sealed record ElementDetailDto(long Id, int BibId, string BibCode, string
     PosteElementDto? Poste = null, string? CodeBarre = null, int? DelaiLivraison = null);
 
 /// <summary>Poste de pied d'un élément POSTE_PIED (inséré dans le pied des documents).</summary>
-public sealed record PosteElementDto(string? Niveau, string? Mode, string? Base, string? Sens, decimal? Valeur, bool Retenue, string? Compte, string? Tva);
+public sealed record PosteElementDto(string? Niveau, string? Mode, string? Base, string? Sens, decimal? Valeur, bool Retenue, string? Compte, string? Tva,
+    string? Genre = null);
 
 public sealed record ElementRechercheDto(long Id, string BibCode, string Code, string Type, string? Libelle, string LibelleHtml, string UniteStock,
     decimal? Pa, decimal? Pr, decimal? Pv, decimal? PvNet, decimal CoefFg, decimal CoefBenef);

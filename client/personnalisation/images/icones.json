@@ -645,5 +645,7 @@
   "ged_btp_famille_S": "📦",
   "ged_btp_document": "📄",
   "ged_btp_racine": "🗂",
-  "ged_btp_type": "📂"
+  "ged_btp_type": "📂",
+  "navigation_btp_revision_prix": "📈",
+  "navigation_btp_marches_a_facturer": "🧾"
 }

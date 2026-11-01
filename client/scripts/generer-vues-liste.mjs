@@ -133,10 +133,10 @@ ${lignesElements};
 
 -- Postes de pied (POSTE_PIED, modules/bibliotheque/db/063) : sans prix.
 INSERT INTO element (ele_id, ele_bib_id, ele_code, ele_type, ele_libelle_html, ele_libelle, ele_gestion, ele_unt_stock, ele_coef_fg, ele_coef_benef, ele_actif,
-  ele_maj_par, ele_commentaire_prix, ele_pied_niveau, ele_pied_mode, ele_pied_base, ele_pied_sens, ele_pied_valeur, ele_pied_retenue, ele_cpt_code, ele_tva_code) VALUES
+  ele_maj_par, ele_commentaire_prix, ele_pied_niveau, ele_pied_mode, ele_pied_base, ele_pied_sens, ele_pied_valeur, ele_pied_retenue, ele_cpt_code, ele_tva_code, ele_pied_genre) VALUES
 ${ELEMENTS.filter((e) => e.type === 'POSTE_PIED').map((e) => ` (${[e.id, e.bib_id, q(e.code), q(e.type), q(e.libelle_html), q(texteBrut(e.libelle_html)), q(e.gestion), q(e.unite_stock),
     n(e.coef_fg), n(e.coef_benef), b(e.actif), q('demo'), q('Données de démonstration'), q(e.pied_niveau), q(e.pied_mode), q(e.pied_base), q(e.pied_sens),
-    n(e.pied_valeur), b(e.pied_retenue), q(e.cpt_code), q(e.tva_code)].join(', ')})`).join(',\n')};
+    n(e.pied_valeur), b(e.pied_retenue), q(e.cpt_code), q(e.tva_code), q(e.pied_genre)].join(', ')})`).join(',\n')};
 
 INSERT INTO tarif_fournisseur (tfo_id, tfo_ele_id, tfo_fournisseur, tfo_reference, tfo_libelle, tfo_unt_code, tfo_prix, tfo_debut, tfo_fin, tfo_principal, tfo_lien, tfo_maj_par) VALUES
 ${TARIFS.map((t) => ` (${t.id}, ${t.ele_id}, ${q(t.fournisseur)}, ${q(t.reference)}, ${q(t.libelle)}, ${q(t.unite)}, ${t.prix}, ${q(t.debut)}, ${q(t.fin)}, ${b(t.principal)}, ${q(t.lien)}, 'demo')`).join(',\n')};

@@ -52,4 +52,7 @@ public class DocumentLigneBtp : DocumentLigne
 
     /// <summary>Heures réalisées saisies sur une ligne d'ordre (sans le module Pointage, db/197).</summary>
     public decimal? LigHeuresRealisees { get; set; }
+
+    /// <summary>Chantier de la ligne (documents d'achat, db/248) : repris de l'entête ou du document source, modifiable.</summary>
+    public int? LigChaId { get; set; }
 }

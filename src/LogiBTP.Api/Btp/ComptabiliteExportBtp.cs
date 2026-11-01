@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using LogiBTP.Bibliotheque;
 using LogiBTP.Comptabilite;
 using LogiBTP.Comptabilite.Web;
 using LogiBTP.Documents;
@@ -12,10 +13,14 @@ namespace LogiBTP.Api.Btp;
 /// <item>Pièces : état comptable `ent_etat_compta` (A / T), indice de référence seulement (un indice remplacé n'est pas transféré), type comptable `f_type_comptable`, date comptable = date de la
 /// pièce du fournisseur pour un achat, sinon date du document ; avoir saisi en positif : signe -1.</item>
 /// <item>Lignes : les lignes vendues (élément ou ouvrage sans ligne chiffrée au-dessus, prix vendu, hors frais annexes,
-/// options, variantes et pour mémoire), compte par la ventilation (lot 2) ; leurs montants ne servent que de poids : la
-/// base HT de chaque taux (`document_tva`) fait foi.</item>
+/// options, variantes et pour mémoire), compte par la ventilation (lot 2 : ligne, compte de produit ou de charge du tiers
+/// de la relation, clés, défaut du type) ; leurs montants ne servent que de poids : la base HT de chaque taux
+/// (`document_tva`) fait foi.</item>
 /// <item>Postes de pied (HT et TTC) : genre par le marqueur du marché (`poste_marche` : R retenue, A&lt;n&gt; acompte, sinon
-/// le type du poste du marché), sinon par le libellé ; compte de la ligne, sinon celui du genre dans le type comptable ;
+/// le type du poste du marché), sinon par le genre recopié de l'élément POSTE_PIED (`lig_proprietes.genre_poste`), à
+/// défaut (lignes antérieures) par le libellé ; compte de la ligne, sinon celui du genre dans le type comptable ;
+/// déduction d'acompte selon le mode de la société : poste HT (chiffre d'affaires) = diminution des produits, sans
+/// compte d'acompte ; poste TTC (trésorerie) = part HT au compte d'acompte, part de TVA retirée de la TVA de la pièce ;
 /// paiement direct : à défaut, compte du sous-traitant du poste (collectif sous-traitant et son compte auxiliaire) ;
 /// retenue du marché (R) couverte par une échéance RETENUE : portée par l'échéance ; autres retenues (pieds de section) :
 /// postes sur le compte de retenue.</item>
@@ -27,10 +32,11 @@ public sealed partial class SpecialisationComptabiliteBtp
 {
     private sealed record DocSql(long Id, string? Numero, DateOnly Date, string? Reference, string TypeDocument, string Famille, string? TypeComptable,
         decimal TotalTtc, string Etat, string? Tiers, bool Particulier, string? CompteClient, string? CompteFournisseur, string? CompteSt,
-        string? CollectifClient, string? CollectifFournisseur, string? CollectifSt, string? Chantier, string? Objet);
+        string? CollectifClient, string? CollectifFournisseur, string? CollectifSt, string? Chantier, string? Objet,
+        string? ProduitClient, string? ChargeFournisseur, string? ChargeSt);
 
     private sealed record LigneSql(long Ent, long Id, long? Parent, short Type, string TypePrix, decimal? Montant, string? Nature, string? Taux,
-        string? Compte, string? Poste, string? Libelle);
+        string? Compte, string? Poste, string? Libelle, string? GenrePoste);
 
     private sealed record TvaSql(long Ent, string Code, decimal Taux, string Comportement, decimal Base, decimal Montant, string? Exigibilite,
         string? Collectee, string? Encaissement, string? Deductible, string? Autoliquidee);
@@ -39,17 +45,24 @@ public sealed partial class SpecialisationComptabiliteBtp
 
     private sealed record PosteMarcheSql(int Id, string Type, long? Tiers, string? Compte, string? Collectif);
 
+    private sealed record CleSql(string Type, string? Nature, string? Taux, string Compte);
+
     [GeneratedRegex("^A[0-9]+$")] private static partial Regex CleAcompte();
 
-    /// <summary>Genre d'un poste de pied : marqueur du marché, sinon libellé.</summary>
-    private static string Genre(string? poste, string? libelle, IReadOnlyDictionary<int, string> postesMarche)
+    /// <summary>
+    /// Genre d'un poste de pied : marqueur du marché, sinon genre recopié de l'élément POSTE_PIED, sinon (lignes saisies
+    /// avant le genre) libellé.
+    /// </summary>
+    private static string Genre(string? poste, string? genre, string? libelle, IReadOnlyDictionary<int, string> postesMarche)
     {
-        if (poste == PostesMarche.CleRetenue) return "RETENUE";
-        if (poste is not null && CleAcompte().IsMatch(poste)) return "ACOMPTE";
-        if (int.TryParse(poste, out var id) && postesMarche.TryGetValue(id, out var type)) return type is "REMISE" or "PRORATA" or "PAIEMENT_DIRECT" ? type : "AUTRE";
+        if (poste == PostesMarche.CleRetenue) return GenrePoste.Retenue;
+        if (poste is not null && CleAcompte().IsMatch(poste)) return GenrePoste.Acompte;
+        if (int.TryParse(poste, out var id) && postesMarche.TryGetValue(id, out var type))
+            return type is GenrePoste.Remise or GenrePoste.Prorata or GenrePoste.PaiementDirect ? type : GenrePoste.Autre;
+        if (!string.IsNullOrWhiteSpace(genre)) return genre;
         var l = (libelle ?? "").ToLowerInvariant();
-        return l.Contains("retenue de garantie") ? "RETENUE" : l.Contains("acompte") ? "ACOMPTE" : l.Contains("paiement direct") ? "PAIEMENT_DIRECT"
-            : l.Contains("prorata") ? "PRORATA" : l.Contains("remise") || l.Contains("rabais") ? "REMISE" : "AUTRE";
+        return l.Contains("retenue de garantie") ? GenrePoste.Retenue : l.Contains("acompte") ? GenrePoste.Acompte : l.Contains("paiement direct") ? GenrePoste.PaiementDirect
+            : l.Contains("prorata") ? GenrePoste.Prorata : l.Contains("remise") || l.Contains("rabais") ? GenrePoste.Remise : GenrePoste.Autre;
     }
 
     public override async Task<List<PieceExportee>> PiecesAsync(ComptabiliteDbContext db, FiltrePieces f, CancellationToken ct)
@@ -64,7 +77,8 @@ public sealed partial class SpecialisationComptabiliteBtp
                    p.per_raison_sociale AS tiers, NOT coalesce(n.niv_morale, TRUE) AS particulier,
                    p.per_cli_compte AS compte_client, p.per_fou_compte AS compte_fournisseur, p.per_st_compte AS compte_st,
                    p.per_cli_collectif AS collectif_client, p.per_fou_collectif AS collectif_fournisseur, p.per_st_collectif AS collectif_st,
-                   coalesce(nullif(c.cha_code_analytique, ''), c.cha_code) AS chantier, d.ent_objet AS objet
+                   coalesce(nullif(c.cha_code_analytique, ''), c.cha_code) AS chantier, d.ent_objet AS objet,
+                   p.per_cli_compte_produit AS produit_client, p.per_fou_compte_charge AS charge_fournisseur, p.per_st_compte_charge AS charge_st
             FROM document d
             JOIN type_document t ON t.tyd_id = d.ent_tyd_id
             LEFT JOIN personne p ON p.per_id = d.ent_tiers_id
@@ -81,7 +95,8 @@ public sealed partial class SpecialisationComptabiliteBtp
         var lignes = (await db.Database.SqlQuery<LigneSql>($"""
             SELECT l.lig_ent_id AS ent, l.lig_id AS id, l.lig_parent_id AS parent, l.lig_tyl_id AS type, l.lig_type_prix::text AS type_prix,
                    l.lig_montant_ht AS montant, n.nat_code AS nature, v.ttv_code AS taux, l.lig_cpt_code AS compte,
-                   l.lig_proprietes ->> 'poste_marche' AS poste, left(l.lig_libelle_brut, 60) AS libelle
+                   l.lig_proprietes ->> 'poste_marche' AS poste, left(l.lig_libelle_brut, 60) AS libelle,
+                   l.lig_proprietes ->> 'genre_poste' AS genre_poste
             FROM document_ligne l
             LEFT JOIN nature_element n ON n.nat_id = l.lig_nat_id
             LEFT JOIN taux_tva v ON v.ttv_id = l.lig_tva_id
@@ -109,7 +124,14 @@ public sealed partial class SpecialisationComptabiliteBtp
         var typesPostes = postesMarche.ToDictionary(p => p.Key, p => p.Value.Type);
         var typesComptables = await db.TypesComptables.AsNoTracking().ToDictionaryAsync(t => t.TcoCode, ct);
         var typesRegle = typesComptables.Values.Where(t => t.TcoActif).Select(t => new TypeVentilation(t.TcoCode, t.TcoParent, t.TcoCptDefaut)).ToList();
-        var cles = (await db.Ventilations.AsNoTracking().ToListAsync(ct)).Select(v => new CleVentilation(v.VcoTcoCode, v.VcoNature, v.VcoTaux, v.VcoCptCode)).ToList();
+        // Clés enregistrées par identifiant, comparées aux codes des lignes (code du moment de la nature et du taux).
+        var cles = (await db.Database.SqlQuery<CleSql>($"""
+            SELECT v.vco_tco_code AS type, n.nat_code AS nature, t.ttv_code AS taux, v.vco_cpt_code AS compte
+            FROM ventilation_compte v
+            LEFT JOIN nature_element n ON n.nat_id = v.vco_nat_id
+            LEFT JOIN taux_tva t ON t.ttv_id = v.vco_ttv_id
+            WHERE (v.vco_nat_id IS NULL OR n.nat_id IS NOT NULL) AND (v.vco_ttv_id IS NULL OR t.ttv_id IS NOT NULL)
+            """).ToListAsync(ct)).Select(v => new CleVentilation(v.Type, v.Nature, v.Taux, v.Compte)).ToList();
         var collectifs = await db.Collectifs.AsNoTracking().ToDictionaryAsync(c => c.ColCode, c => c.ColCptCode, ct);
         var surDebits = await db.Parametres.AsNoTracking().AnyAsync(p => p.PcpCle == "tva_sur_debits" && p.PcpValeur == "true", ct);
 
@@ -129,6 +151,8 @@ public sealed partial class SpecialisationComptabiliteBtp
             var achat = FamillesDocument.EstAchat(d.Famille);
             var sousTraitance = d.Famille == "T";
             var ls = lignes[d.Id].ToList();
+            // Compte de produit ou de charge du tiers de la relation (sous-traitant : celui du fournisseur s'il est vide).
+            var compteTiersLignes = !achat ? d.ProduitClient : sousTraitance ? d.ChargeSt ?? d.ChargeFournisseur : d.ChargeFournisseur;
             var parId = ls.ToDictionary(l => l.Id);
             // Ligne vendue : chiffrée (ouvrage, élément), sans ligne chiffrée au-dessus, au prix vendu sur toute sa branche.
             bool Exclue(LigneSql l)
@@ -146,7 +170,7 @@ public sealed partial class SpecialisationComptabiliteBtp
             var vendues = ls.Where(l => l.Type is 2 or 3 && (l.Montant ?? 0) != 0 && !SousChiffree(l) && !Exclue(l))
                 .Select(l =>
                 {
-                    var r = ReglesVentilation.Compte(new EntreeVentilation(l.Compte, l.Nature, l.Taux, tco), typesRegle, cles);
+                    var r = ReglesVentilation.Compte(new EntreeVentilation(l.Compte, l.Nature, l.Taux, tco, compteTiersLignes), typesRegle, cles);
                     return new LignePiece(r.Compte, l.Taux, l.Montant ?? 0, r.Erreur);
                 }).ToList();
             var ech = echeances[d.Id].ToList();
@@ -156,23 +180,27 @@ public sealed partial class SpecialisationComptabiliteBtp
             var postesTtc = new List<PostePiece>();
             foreach (var p in ls.Where(l => l.Type is 8 or 9 && (l.Montant ?? 0) != 0))
             {
-                var genre = Genre(p.Poste, p.Libelle, typesPostes);
+                var genre = Genre(p.Poste, p.GenrePoste, p.Libelle, typesPostes);
                 if (p.Poste == PostesMarche.CleRetenue && retenueParEcheance) continue;
+                // Déduction d'acompte avant la TVA (mode chiffre d'affaires) : l'acompte facturé est déjà un produit, la
+                // déduction diminue simplement les produits de la pièce (base HT des taux), sans compte d'acompte.
+                if (genre == GenrePoste.Acompte && p.Type == 8) continue;
                 // Paiement direct d'un poste du marché : sous-traitant du poste (sauf compte saisi ou compte du type).
-                var sousTraitant = genre == "PAIEMENT_DIRECT" && int.TryParse(p.Poste, out var mpo) ? postesMarche.GetValueOrDefault(mpo) : null;
+                var sousTraitant = genre == GenrePoste.PaiementDirect && int.TryParse(p.Poste, out var mpo) ? postesMarche.GetValueOrDefault(mpo) : null;
                 var compte = p.Compte ?? genre switch
                 {
-                    "REMISE" => Compte(tco, t => t.TcoCptRemise),
-                    "PRORATA" => Compte(tco, t => t.TcoCptProrata),
-                    "ACOMPTE" => Compte(tco, t => t.TcoCptAcompte),
-                    "PAIEMENT_DIRECT" => Compte(tco, t => t.TcoCptPaiementDirect) ?? (sousTraitant?.Compte is not null ? sousTraitant.Collectif : null),
-                    "RETENUE" => compteRetenue ?? (achat ? d.CollectifFournisseur : d.CollectifClient),
+                    GenrePoste.Remise => Compte(tco, t => t.TcoCptRemise),
+                    GenrePoste.Prorata => Compte(tco, t => t.TcoCptProrata),
+                    GenrePoste.Acompte => Compte(tco, t => t.TcoCptAcompte),
+                    GenrePoste.PaiementDirect => Compte(tco, t => t.TcoCptPaiementDirect) ?? (sousTraitant?.Compte is not null ? sousTraitant.Collectif : null),
+                    GenrePoste.Retenue => compteRetenue ?? (achat ? d.CollectifFournisseur : d.CollectifClient),
                     _ when p.Type == 8 => ReglesVentilation.Compte(new EntreeVentilation(null, p.Nature, null, tco), typesRegle, cles).Compte,
                     _ => null,
                 };
-                var auxiliaire = genre == "RETENUE" ? (achat ? d.CompteSt ?? d.CompteFournisseur : d.CompteClient)
-                    : genre == "PAIEMENT_DIRECT" && p.Compte is null && Compte(tco, t => t.TcoCptPaiementDirect) is null ? sousTraitant?.Compte : null;
-                (p.Type == 8 ? postesHt : postesTtc).Add(new PostePiece(p.Libelle ?? genre.ToLowerInvariant(), compte, p.Montant ?? 0, auxiliaire));
+                var auxiliaire = genre == GenrePoste.Retenue ? (achat ? d.CompteSt ?? d.CompteFournisseur : d.CompteClient)
+                    : genre == GenrePoste.PaiementDirect && p.Compte is null && Compte(tco, t => t.TcoCptPaiementDirect) is null ? sousTraitant?.Compte : null;
+                (p.Type == 8 ? postesHt : postesTtc).Add(new PostePiece(p.Libelle ?? genre.ToLowerInvariant(), compte, p.Montant ?? 0, auxiliaire,
+                    Acompte: genre == GenrePoste.Acompte && p.Type == 9));
             }
             var (compteTiers, collectif) = !achat
                 ? (d.CompteClient, d.CollectifClient ?? collectifs.GetValueOrDefault(d.Particulier ? "CLIENT_PRIVE" : "CLIENT_PRO"))

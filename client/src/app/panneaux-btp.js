@@ -292,6 +292,11 @@ export class PanneauxBtp extends PanneauxDocument {
     // Document d'avancement : numéro de situation (attribué à la validation, modifiable : reprise d'un autre logiciel).
     const rang = d.ent_avt_presentation ? [`<label title="${texteHtml('document_btp.panneaux.rang_aide')}">${texteHtml('document_btp.panneaux.rang')}
       <input data-champ="ent_rang_avancement" data-entier inputmode="numeric" size="4" value="${d.ent_rang_avancement ?? ''}"></label>`] : [];
+    // Facture d'avancement d'un marché à prix révisables : mois des travaux de la période (vide : mois de la pièce).
+    if (d.ent_avt_presentation === 'P' && d.ent_marche_id) {
+      rang.push(`<label title="${texteHtml('document_btp.panneaux.mois_revision_aide')}">${texteHtml('document_btp.panneaux.mois_revision')}
+      <input type="month" data-mois-revision value="${echapper(String(d.ent_mois_revision ?? '').slice(0, 7))}"></label>`);
+    }
     return [...rang,...(this.annuaire ? [`<label title="${texteHtml('document_btp.panneaux.redacteur_aide')}">${texteHtml('document_btp.panneaux.redacteur')}
       <input data-redacteur autocomplete="off" value="${echapper(this.libelleRedacteur(d.ent_redacteur_id))}"></label>`] : []),
     `<label>${texteHtml('document_btp.panneaux.calcul_ouvrages')}
@@ -515,6 +520,14 @@ export class PanneauxBtp extends PanneauxDocument {
     const arc = zone.querySelector('[data-arc]');
     if (arc) this.rendreArc(arc);
     this.lierRedacteur(zone).catch(() => {});
+    const moisRevision = zone.querySelector('[data-mois-revision]');
+    if (moisRevision) {
+      moisRevision.readOnly = !!m.lectureSeule;
+      moisRevision.addEventListener('change', () => {
+        const v = /^\d{4}-\d{2}$/.test(moisRevision.value) ? `${moisRevision.value}-01` : null;
+        if (v !== (this.editeur.saisie.document.ent_mois_revision ?? null)) m.modifier((b) => { b.document.ent_mois_revision = v; }, 'Mois des travaux');
+      });
+    }
     zone.querySelectorAll('[data-contact]').forEach((bloc) => this.rendreContact(bloc, bloc.dataset.contact));
     zone.querySelectorAll('[data-adresse]').forEach((bloc) => this.rendreAdresse(bloc));
     const conteneur = zone.querySelector('[data-intervenants]');

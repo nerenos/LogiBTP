@@ -4,7 +4,7 @@ import { PageBase } from '@logibtp/navigation';
 import { echapper, formatNombre, lireNombre, creerCombo, confirmer } from '@logibtp/socle/ui';
 import { Dz, aujourdhui } from '@logibtp/socle';
 import { MODES_REGLEMENT } from '@logibtp/document';
-import { proposerPointage, nonPointe } from '@logibtp/reglement';
+import { proposerPointage, nonPointe, MODE_REGLEMENT_SYSTEME } from '@logibtp/reglement';
 import { api } from '../api.js';
 
 /** Date du jour (locale) au format ISO. */
@@ -12,7 +12,9 @@ import { api } from '../api.js';
 /**
  * Règlements d'un tiers (module Règlements, CONCEPTION-MARCHES-REGLEMENTS.md, Q15 à Q18) : `/reglements?sens=E|D&tiers=`.
  * Échéances ouvertes des pièces validées (reste à payer), saisie d'un règlement avec pointage (répartition proposée :
- * plus ancienne d'abord), règlements du tiers (non pointé), cautions pointant les retenues de garantie.
+ * plus ancienne d'abord), règlements du tiers (non pointé), cautions de retenue de garantie (lot F : la caution remplace la
+ * retenue ; sa consommation, calculée par le serveur, rend la part cautionnée exigible avec la pièce et proposée à la
+ * répartition à la date de la pièce ; la retenue non couverte reste due à la libération).
  * Périmètre d'un chantier ou d'un marché (lot 6 : A27) : `/reglements?chantier=` ou `?marche=` : échéances de ses pièces
  * validées, tous tiers, clients puis fournisseurs, avec le pointé et le reste ; le tiers ouvre sa page de pointage.
  */
@@ -95,14 +97,27 @@ export class PageReglements extends PageBase {
     const f = (v) => formatNombre(v ?? 0, 2);
     // Toutes les échéances du tiers (pièces des règlements), affichées ouvertes seulement sauf demande.
     const parId = new Map(toutes.map((e) => [e.id, e]));
+    // Marchés des retenues du tiers (portée d'une caution), libellés par les référentiels de la structure.
+    const idsMarches = [...new Set(toutes.filter((e) => e.nature === 'RETENUE' && e.objet_id).map((e) => Number(e.objet_id)))];
+    const refs = idsMarches.length ? await this.app.services().then(({ structure }) => structure.referentiels()).catch(() => ({})) : {};
+    const marches = new Map(idsMarches.map((id) => {
+      const m = (refs.marches ?? []).find((x) => x.id === id);
+      return [id, m ? `${m.code}${m.libelle ? ` – ${m.libelle}` : ''}` : texte('reglements_btp.marche_id', { id })];
+    }));
     const echeances = this.toutes ? toutes : toutes.filter((e) => !e.reglee);
+    const NATURE_RETENUE = 'RETENUE';
+    // Échéance proposée à la répartition : normale (son reste), ou part cautionnée d'une retenue (datée de la pièce).
+    const aRepartir = (e) => (e.nature !== NATURE_RETENUE ? { id: e.id, date: e.date, reste: e.reste }
+      : !Dz(e.exigible_caution ?? 0).isZero() ? { id: e.id, date: e.date ?? e.date_piece, reste: e.exigible_caution }
+        : e.date ? { id: e.id, date: e.date, reste: e.reste } : null);
     const lien = (e) => `<a href="${urlDocument(Number(e.piece_id))}">${echapper(e.piece ?? `#${e.piece_id}`)}</a>`;
     corps.innerHTML = `
       <h2>${texteHtml('reglements_btp.echeances')}</h2>
-      ${echeances.length ? `<table><thead><tr><th>${texteHtml('reglements_btp.colonnes.piece')}</th><th>${texteHtml('reglements_btp.colonnes.type')}</th><th>${texteHtml('reglements_btp.colonnes.echeance')}</th><th class="nombre">${texteHtml('reglements_btp.colonnes.montant')}</th><th class="nombre">${texteHtml('reglements_btp.colonnes.pointe')}</th>
-        <th class="nombre">${texteHtml('reglements_btp.colonnes.reste')}</th><th class="nombre">${texteHtml('reglements_btp.colonnes.a_pointer')}</th></tr></thead><tbody>${echeances.map((e) => `<tr${e.reglee ? ' class="discret"' : ''}>
+      ${echeances.length ? `<table><thead><tr><th>${texteHtml('reglements_btp.colonnes.piece')}</th><th>${texteHtml('reglements_btp.colonnes.type')}</th><th>${texteHtml('reglements_btp.colonnes.echeance')}</th><th class="nombre">${texteHtml('reglements_btp.colonnes.montant')}</th><th class="nombre" title="${texteHtml('reglements_btp.colonnes.cautionne_aide')}">${texteHtml('reglements_btp.colonnes.cautionne')}</th>
+        <th class="nombre">${texteHtml('reglements_btp.colonnes.pointe')}</th><th class="nombre">${texteHtml('reglements_btp.colonnes.reste')}</th><th class="nombre">${texteHtml('reglements_btp.colonnes.a_pointer')}</th></tr></thead><tbody>${echeances.map((e) => `<tr${e.reglee ? ' class="discret"' : ''}>
         <td>${lien(e)}</td><td>${echapper(e.type)}</td><td>${e.nature === 'RETENUE' ? `${texteHtml('reglements_btp.retenue')}${e.date ? ` · ${echapper(e.date)}` : ''}` : echapper(e.date ?? '')}</td>
-        <td class="nombre">${f(e.montant)}</td><td class="nombre">${f(e.pointe)}</td><td class="nombre">${f(e.reste)}</td>
+        <td class="nombre">${f(e.montant)}</td><td class="nombre">${Dz(e.cautionne ?? 0).isZero() ? '' : f(e.cautionne)}</td>
+        <td class="nombre">${f(e.pointe)}</td><td class="nombre">${f(e.reste)}</td>
         <td class="nombre"><input data-pointer="${e.id}" size="10" inputmode="decimal" ${e.reglee ? 'disabled' : ''}></td></tr>`).join('')}</tbody></table>`
         : `<p class="aide">${texteHtml('reglements_btp.aucune_echeance_ouverte')}</p>`}
       <h2>${texteHtml('reglements_btp.nouveau')}</h2>
@@ -116,34 +131,42 @@ export class PageReglements extends PageBase {
       </div>
       <h2>${texteHtml('reglements_btp.reglements')}</h2>
       ${reglements.length ? `<table><thead><tr><th>${texteHtml('reglements_btp.colonnes.date')}</th><th>${texteHtml('reglements_btp.colonnes.mode')}</th><th>${texteHtml('reglements_btp.colonnes.reference')}</th><th class="nombre">${texteHtml('reglements_btp.colonnes.montant')}</th><th class="nombre">${texteHtml('reglements_btp.colonnes.non_pointe')}</th><th>${texteHtml('reglements_btp.colonnes.pieces')}</th><th></th></tr></thead>
-        <tbody>${reglements.map((r) => `<tr><td>${echapper(r.date)}</td><td>${echapper(this.modes.find(([c]) => c === r.mode)?.[1] ?? r.mode)}</td>
+        <tbody>${reglements.map((r) => `<tr><td>${echapper(r.date)}</td><td>${r.mode === MODE_REGLEMENT_SYSTEME.IMPUTATION ? texteHtml('reglements_btp.imputation') : echapper(this.modes.find(([c]) => c === r.mode)?.[1] ?? r.mode)}</td>
         <td>${echapper(r.reference ?? '')}</td><td class="nombre">${f(r.montant)}</td><td class="nombre">${f(r.non_pointe)}</td>
         <td>${r.pointages.map((p) => echapper(parId.get(p.echeance_id)?.piece ?? texte('reglements_btp.echeance_id', { id: p.echeance_id }))).join(', ')}</td>
         <td><button type="button" data-supprimer="${r.id}" title="${texteHtml('reglements_btp.supprimer_aide')}">${iconeHtml('retirer')}</button></td></tr>`).join('')}</tbody></table>`
         : `<p class="aide">${texteHtml('reglements_btp.aucun')}</p>`}
       <h2>${texteHtml('reglements_btp.cautions.titre')}</h2>
       ${cautions.length ? `<table><thead><tr><th>${texteHtml('reglements_btp.colonnes.organisme')}</th><th>${texteHtml('reglements_btp.colonnes.reference')}</th><th>${texteHtml('reglements_btp.colonnes.date')}</th><th>${texteHtml('reglements_btp.colonnes.fin')}</th><th>${texteHtml('reglements_btp.colonnes.mainlevee')}</th><th class="nombre">${texteHtml('reglements_btp.colonnes.montant')}</th>
-        <th class="nombre">${texteHtml('reglements_btp.colonnes.non_pointe')}</th><th></th></tr></thead><tbody>${cautions.map((c) => `<tr><td>${echapper(c.organisme)}</td><td>${echapper(c.reference ?? '')}</td>
+        <th class="nombre">${texteHtml('reglements_btp.colonnes.consomme')}</th><th class="nombre">${texteHtml('reglements_btp.colonnes.disponible')}</th><th>${texteHtml('reglements_btp.colonnes.portee')}</th><th>${texteHtml('reglements_btp.colonnes.couvertes')}</th><th></th></tr></thead><tbody>${cautions.map((c) => `<tr><td>${echapper(c.organisme)}</td><td>${echapper(c.reference ?? '')}</td>
         <td>${echapper(c.date)}</td><td>${echapper(c.date_fin ?? '')}</td><td>${echapper(c.mainlevee ?? '')}</td><td class="nombre">${f(c.montant)}</td>
-        <td class="nombre">${f(c.non_pointe)}</td><td><button type="button" data-supprimer-caution="${c.id}" title="${texteHtml('reglements_btp.cautions.supprimer_aide')}">${iconeHtml('retirer')}</button></td></tr>`).join('')}</tbody></table>`
+        <td class="nombre">${f(c.consomme)}</td><td class="nombre">${f(c.non_pointe)}</td><td>${c.objet_id ? echapper(marches.get(c.objet_id) ?? texte('reglements_btp.marche_id', { id: c.objet_id })) : texteHtml('reglements_btp.cautions.toutes')}</td>
+        <td>${c.pointages.map((p) => `${echapper(parId.get(p.echeance_id)?.piece ?? texte('reglements_btp.echeance_id', { id: p.echeance_id }))} (${f(p.montant)})`).join(', ')}</td>
+        <td><button type="button" data-supprimer-caution="${c.id}" title="${texteHtml('reglements_btp.cautions.supprimer_aide')}">${iconeHtml('retirer')}</button></td></tr>`).join('')}</tbody></table>`
         : `<p class="aide">${texteHtml('reglements_btp.cautions.aucune')}</p>`}
+      <p class="aide">${texteHtml('reglements_btp.cautions.aide')}</p>
       <div class="formulaire">
         <label>${texteHtml('reglements_btp.colonnes.organisme')} <input data-c="organisme" maxlength="150"></label>
         <label>${texteHtml('reglements_btp.champs.montant')} <input data-c="montant" size="12" inputmode="decimal"></label>
         <label>${texteHtml('reglements_btp.champs.date')} <input type="date" data-c="date" value="${aujourdhui()}"></label>
         <label>${texteHtml('reglements_btp.colonnes.fin')} <input type="date" data-c="date_fin"></label>
+        <label>${texteHtml('reglements_btp.colonnes.mainlevee')} <input type="date" data-c="mainlevee"></label>
         <label>${texteHtml('reglements_btp.champs.reference')} <input data-c="reference" maxlength="100"></label>
+        <label>${texteHtml('reglements_btp.colonnes.portee')} <span data-c-portee></span></label>
         <button type="button" data-caution title="${texteHtml('reglements_btp.cautions.ajouter_aide')}">${iconeHtml('ajouter')} ${texteHtml('reglements_btp.cautions.ajouter')}</button>
       </div>`;
     const mode = creerCombo({ options: this.modes.filter(([, , actif]) => actif !== false).map(([valeur, libelle]) => ({ valeur, libelle })), valeur: this.modes[0]?.[0] ?? 'VIREMENT', vide: false });
     corps.querySelector('[data-r="mode"]').replaceWith(mode);
+    const portee = creerCombo({ options: [{ valeur: '', libelle: texte('reglements_btp.cautions.toutes_tiers') }, ...[...marches].map(([valeur, libelle]) => ({ valeur, libelle }))],
+      valeur: marches.size === 1 ? [...marches.keys()][0] : '', vide: false });
+    corps.querySelector('[data-c-portee]').replaceWith(portee);
     const champ = (cle) => corps.querySelector(`[data-r="${cle}"]`);
     const pointages = () => [...corps.querySelectorAll('[data-pointer]')].map((el) => ({ echeance_id: Number(el.dataset.pointer), montant: lireNombre(el.value) }))
       .filter((p) => p.montant !== null && p.montant !== undefined && !Dz(p.montant).isZero());
     corps.querySelector('[data-repartir]').addEventListener('click', () => {
       const montant = lireNombre(champ('montant').value);
       if (montant === null || montant === undefined) { this.app.message(texte('reglements_btp.messages.montant'), 'avertissement'); return; }
-      const proposes = new Map(proposerPointage(montant, echeances.filter((e) => !e.reglee && e.nature !== 'RETENUE').map((e) => ({ id: e.id, date: e.date, reste: e.reste })))
+      const proposes = new Map(proposerPointage(montant, echeances.filter((e) => !e.reglee).map(aRepartir).filter(Boolean))
         .map((p) => [p.id, p.montant]));
       corps.querySelectorAll('[data-pointer]').forEach((el) => { el.value = proposes.has(Number(el.dataset.pointer)) ? formatNombre(proposes.get(Number(el.dataset.pointer)), 2) : ''; });
       const reste = nonPointe(montant, [...proposes.values()].map((m) => ({ montant: m })));
@@ -173,14 +196,12 @@ export class PageReglements extends PageBase {
       const c = (cle) => corps.querySelector(`[data-c="${cle}"]`).value.trim();
       const montant = lireNombre(c('montant'));
       if (!c('organisme') || montant === null || montant === undefined || Dz(montant).lte(0)) { this.app.message(texte('reglements_btp.messages.caution_incomplete'), 'avertissement'); return; }
-      // Retenues de garantie ouvertes pointées par la caution (plus anciennes d'abord).
-      const retenues = echeances.filter((e) => !e.reglee && e.nature === 'RETENUE');
-      const objet = retenues.find((e) => e.objet_id)?.objet_id ?? null;
+      // La consommation sur les retenues est calculée par le serveur (aucun pointage).
+      const objet = portee.valeurCombo === '' ? null : Number(portee.valeurCombo);
       try {
         await api.enregistrerCaution({
           tiers_id: this.tiers, objet: objet ? 'marche' : null, objet_id: objet, organisme: c('organisme'), montant, date: c('date'),
-          date_fin: c('date_fin') || null, reference: c('reference') || null, mainlevee: null,
-          pointages: proposerPointage(montant, retenues.map((e) => ({ id: e.id, date: e.date, reste: e.reste }))).map((p) => ({ echeance_id: p.id, montant: p.montant })),
+          date_fin: c('date_fin') || null, reference: c('reference') || null, mainlevee: c('mainlevee') || null,
         });
         this.app.message(texte('reglements_btp.messages.caution_enregistree'), 'succes');
         await this.rendre();

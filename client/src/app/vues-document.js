@@ -9,6 +9,7 @@ const cols = (...cles) => cles.map((cle) => ({ cle }));
 // ventilation (parent, précédent, ce document, cumul, %, reste) ; pas de coefficients ; ventes : PV net seul. Dans un
 // document d'avancement, les mêmes clés désignent les valeurs d'avancement (ALIAS_AVANCEMENT du module Document).
 const ENTETE = ['num', 'type', 'code', 'libelle', 'nature', 'unite'];
+const ENTETE_ACHAT = ['num', 'type', 'code', 'libelle', 'nature', 'chantier', 'unite'];
 const VENTILATION = ['qte_parent', 'montant_parent', 'pct_prec', 'qte_prec', 'montant_prec', 'pct_periode', 'qte', 'montant', 'pct_cumul', 'qte_cumul', 'montant_cumul', 'reste', 'solde'];
 const VUES_TRANSFORMES = [
   { nom: 'Ventilation (ventes)', types: ['V_COMMANDE', 'V_RECEPTION', 'V_RETOUR', 'V_FACTURE', 'V_AVOIR'], colonnes: [...ENTETE, 'pvnet', ...VENTILATION, 'tva', 'commentaire'] },
@@ -16,8 +17,9 @@ const VUES_TRANSFORMES = [
   { nom: 'Avancement', types: ['V_SITUATION', 'V_FACTURE_AVT', 'V_REPRISE_AVT', 'A_FACTURE_AVT', 'T_FACTURE_AVT'],
     colonnes: ['num', 'libelle', 'unite', 'pvnet', 'qte_parent', 'qte_prec', 'qte_cumul', 'pct_prec', 'pct_cumul', 'montant_parent', 'montant_cumul', 'montant'] },
   // Commandes : date de livraison de la ligne (lot 9) avant le commentaire.
-  { nom: 'Ventilation (achats)', types: ['A_COMMANDE', 'A_RECEPTION', 'A_RETOUR', 'A_FACTURE', 'A_AVOIR', 'T_COMMANDE', 'T_AVOIR'], colonnes: [...ENTETE, 'pv', 'remise', 'pvnet', ...VENTILATION, 'tva', 'commentaire'],
-    parType: { A_COMMANDE: [...ENTETE, 'pv', 'remise', 'pvnet', ...VENTILATION, 'tva', 'livraison', 'commentaire'], T_COMMANDE: [...ENTETE, 'pv', 'remise', 'pvnet', ...VENTILATION, 'tva', 'livraison', 'commentaire'] } },
+  // Achats : chantier de la ligne (db/248) après la nature.
+  { nom: 'Ventilation (achats)', types: ['A_COMMANDE', 'A_RECEPTION', 'A_RETOUR', 'A_FACTURE', 'A_AVOIR', 'T_COMMANDE', 'T_AVOIR'], colonnes: [...ENTETE_ACHAT, 'pv', 'remise', 'pvnet', ...VENTILATION, 'tva', 'commentaire'],
+    parType: { A_COMMANDE: [...ENTETE_ACHAT, 'pv', 'remise', 'pvnet', ...VENTILATION, 'tva', 'livraison', 'commentaire'], T_COMMANDE: [...ENTETE_ACHAT, 'pv', 'remise', 'pvnet', ...VENTILATION, 'tva', 'livraison', 'commentaire'] } },
   // Ordres (module Exécution) : l'ordre d'exécution porte le budget planifié (prix et coefficients modifiables) ; les
   // ordres suivants montrent les quantités (parent, reste), sans prix (E2, E17).
   { nom: 'Budget planifié', types: ['E_OE'], colonnes: [...ENTETE, 'qte_parent', 'qte', 'reste', 'pa', 'fg', 'pv', 'montant', 'commentaire'] },
@@ -31,7 +33,7 @@ const VUES_TRANSFORMES = [
 export const VUES_DOCUMENT = [
   {
     id: 1, nom: 'Complet', tyd_id: null, mod_code: 'COMPLET', globale: true, proprietaire: null, par_defaut: true,
-    definition: { colonnes: cols('num', 'type', 'code', 'libelle', 'nature', 'compte', 'qte', 'qte_parent', 'reste', 'solde', 'unite', 'pa', 'fg', 'benef', 'pv', 'remise', 'pvnet', 'montant', 'tva', 'commentaire'), debogage: false, systeme: [] },
+    definition: { colonnes: cols('num', 'type', 'code', 'libelle', 'nature', 'compte', 'chantier', 'qte', 'qte_parent', 'reste', 'solde', 'unite', 'pa', 'fg', 'benef', 'pv', 'remise', 'pvnet', 'montant', 'tva', 'commentaire'), debogage: false, systeme: [] },
   },
   {
     id: 2, nom: 'Chiffrage', tyd_id: null, mod_code: 'CHIFFRAGE', globale: true, proprietaire: null, par_defaut: true,

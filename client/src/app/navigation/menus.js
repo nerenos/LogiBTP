@@ -63,6 +63,7 @@ export const MENUS_METIER = [
       { code: 'affaires', libelle: texte('navigation_btp.menus.affaires.affaires.libelle'), icone: icone('navigation_btp_affaires'), url: L('affaires'), info: texte('navigation_btp.menus.affaires.affaires.info'), creation: F(TYPE_FICHE.AFFAIRE, texte('navigation_btp.menus.affaires.affaires.creation')) },
       { code: 'chantiers', libelle: texte('navigation_btp.menus.affaires.chantiers.libelle'), icone: icone('navigation_btp_chantiers'), url: L('chantiers'), creation: F(TYPE_FICHE.CHANTIER, texte('navigation_btp.menus.affaires.chantiers.creation')) },
       { code: 'marches', libelle: texte('navigation_btp.menus.affaires.marches.libelle'), icone: icone('navigation_btp_marches'), url: L('marches'), info: texte('navigation_btp.menus.affaires.marches.info'), creation: F(TYPE_FICHE.MARCHE, texte('navigation_btp.menus.affaires.marches.creation')) },
+      { code: 'revision-prix', libelle: texte('navigation_btp.menus.affaires.revision_prix.libelle'), icone: icone('navigation_btp_revision_prix'), url: '/parametres/revision', info: texte('navigation_btp.menus.affaires.revision_prix.info') },
     ],
   },
   {
@@ -71,6 +72,7 @@ export const MENUS_METIER = [
       { code: 'commandes', libelle: texte('navigation_btp.menus.ventes.commandes.libelle'), icone: icone('navigation_btp_commandes'), url: L('commandes'), creation: D('V_COMMANDE', texte('navigation_btp.menus.ventes.commandes.creation')) },
       { code: 'livraisons', libelle: texte('navigation_btp.menus.ventes.livraisons.libelle'), icone: icone('navigation_btp_livraisons'), url: L('livraisons'), creation: D('V_RECEPTION', texte('navigation_btp.menus.ventes.livraisons.creation')) },
       { code: 'situations', libelle: texte('navigation_btp.menus.ventes.situations.libelle'), icone: icone('navigation_btp_situations'), url: L('situations'), creation: D('V_SITUATION', texte('navigation_btp.menus.ventes.situations.creation')) },
+      { code: 'marches-a-facturer', libelle: texte('navigation_btp.menus.ventes.marches_a_facturer.libelle'), icone: icone('navigation_btp_marches_a_facturer'), url: '/marches/a-facturer', droit: 'structure', info: texte('navigation_btp.menus.ventes.marches_a_facturer.info') },
       { code: 'factures', libelle: texte('navigation_btp.menus.ventes.factures.libelle'), icone: icone('navigation_btp_factures'), url: L('factures'), creation: D('V_FACTURE', texte('navigation_btp.menus.ventes.factures.creation')) },
       { code: 'documents', libelle: texte('navigation_btp.menus.ventes.documents.libelle'), icone: icone('navigation_btp_documents'), url: L('documents') },
       { code: 'reglements-clients', libelle: texte('navigation_btp.menus.ventes.reglements_clients.libelle'), icone: icone('navigation_btp_reglements_clients'), url: '/reglements?sens=E', info: texte('navigation_btp.menus.ventes.reglements_clients.info'), module: MODULE_FACULTATIF.REGLEMENT },

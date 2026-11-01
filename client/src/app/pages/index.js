@@ -10,6 +10,7 @@ import { PageParametresBibliotheque } from './parametres-bibliotheque.js';
 import { PageParametresAnnuaire, PageNotreSociete } from './parametres-annuaire.js';
 import { PageParametresDocuments } from './parametres-documents.js';
 import { PageParametresSousTraitance } from './parametres-sous-traitance.js';
+import { PageParametresRevision } from './parametres-revision.js';
 import { PagePlanComptable, PageTiersComptables, PageParametresComptabilite, PageVentilation, PageExportComptable } from './comptabilite.js';
 import { PageComparatifConsultation } from './consultation.js';
 import { PageStock, PageMouvementStock } from '../stock/etat.js';
@@ -23,6 +24,7 @@ import { PageGraphe } from './graphe.js';
 import { PageIntrouvable } from './introuvable.js';
 import { PageImportOptim } from './import-optim.js';
 import { PageReglements } from './reglements.js';
+import { PageMarchesAFacturer } from './marches-a-facturer.js';
 import { PageEdition } from './edition.js';
 import { PageParametresEditions } from './parametres-editions.js';
 import { PageParametresModules } from './parametres-modules.js';
@@ -77,6 +79,7 @@ export const ROUTES = [
   { nom: 'parametres-bibliotheque', chemin: '/parametres/bibliotheque', page: PageParametresBibliotheque, titre: texte('parametres_btp.bibliotheque.titre') },
   { nom: 'parametres-annuaire', chemin: '/parametres/annuaire', page: PageParametresAnnuaire, titre: texte('parametres_btp.annuaire.titre') },
   { nom: 'parametres-documents', chemin: '/parametres/documents', page: PageParametresDocuments, titre: texte('parametres_btp.documents.titre') },
+  { nom: 'parametres-revision', chemin: '/parametres/revision', page: PageParametresRevision, titre: texte('revision_btp.routes.parametres') },
   { nom: 'parametres-sous-traitance', chemin: '/parametres/sous-traitance', page: PageParametresSousTraitance, titre: texte('sous_traitance_btp.routes.parametres') },
   { nom: 'consultation-comparatif', chemin: '/consultation/comparatif', page: PageComparatifConsultation, titre: texte('sous_traitance_btp.routes.comparatif') },
   { nom: 'stock', chemin: '/stock', page: PageStock, titre: texte('stock_btp.routes.stock') },
@@ -138,6 +141,7 @@ export const ROUTES = [
   { nom: 'notre-societe', chemin: '/annuaire/societe', page: PageNotreSociete, titre: texte('parametres_btp.societe.titre') },
   { nom: 'import-optim', chemin: '/import/optimbtp', page: PageImportOptim, titre: texte('import_btp.routes.optim') },
   { nom: 'reglements', chemin: '/reglements', page: PageReglements, titre: texte('reglements_btp.routes.reglements') },
+  { nom: 'marches-a-facturer', chemin: '/marches/a-facturer', page: PageMarchesAFacturer, titre: texte('structure_btp.routes.marches_a_facturer') },
   { nom: 'crm-note', chemin: '/crm/note/:id', page: PageNoteCrm, titre: texte('crm_btp.routes.note') },
   { nom: 'crm-suivi', chemin: '/crm/suivi', page: PageSuiviCrm, titre: texte('crm_btp.routes.suivi') },
   { nom: 'crm-rappels', chemin: '/crm/rappels', page: PageRappelsCrm, titre: texte('crm_btp.routes.rappels') },

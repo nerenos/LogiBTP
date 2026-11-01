@@ -29,6 +29,8 @@ public static class Extensions
         g.MapGet("/tiers", (ServiceReglement s, CancellationToken ct) => s.Tiers(ct));
         g.MapGet("/echeances", (long? tiers, string? sens, long? piece, long? objet, bool? ouvertes, ServiceReglement s, CancellationToken ct) =>
             s.Echeances(new FiltreEcheances(tiers, sens, null, piece is long p ? [p] : null, objet), ouvertes ?? false, ct));
+        g.MapGet("/pointages", (long piece, ServiceReglement s, CancellationToken ct) => s.PointagesPiece(piece, ct));
+        g.MapPost("/imputations", (ImputationSaisie i, HttpContext http, ServiceReglement s, CancellationToken ct) => s.Imputer(i, Utilisateur.Depuis(http), ct));
         g.MapPost("/etat", (DemandeEtatPieces d, ServiceReglement s, CancellationToken ct) => s.EtatPieces(d.Pieces, ct));
         g.MapGet("", (long? tiers, string? sens, ServiceReglement s, CancellationToken ct) => s.Reglements(tiers, sens, ct));
         g.MapPost("", (ReglementSaisi r, HttpContext http, ServiceReglement s, CancellationToken ct) => s.EnregistrerReglement(null, r, Utilisateur.Depuis(http), ct));

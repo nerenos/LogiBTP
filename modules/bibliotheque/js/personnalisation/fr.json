@@ -270,7 +270,9 @@
         "autorises": "Scénarios de prix d'achat autorisés",
         "defaut": "Scénario par défaut à la création",
         "aide": "Chaque élément peut restreindre ses scénarios autorisés et choisir le sien dans l'onglet Prix de sa fiche.",
-        "enregistres": "Paramètres de prix enregistrés"
+        "enregistres": "Paramètres de prix enregistrés",
+        "pv_ouvrages": "Envoi d'un ouvrage depuis un document : reprendre son PV fixe",
+        "pv_ouvrages_aide": "Sans cette option, un ouvrage envoyé vers la bibliothèque prend le prix de sa composition ; le PV fixe se force dans sa fiche."
       }
     }
   },

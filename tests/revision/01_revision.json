@@ -1,0 +1,81 @@
+{
+  "description": "Révision et actualisation des prix des marchés (CONCEPTION-REVISION-PRIX.md) : client/src/app/structure/revision.js ↔ src/LogiBTP.Domaine/ReglesRevision.cs. Montants et coefficients en chaînes décimales.",
+  "series": {
+    "BT01": { "valeurs": [
+      { "mois": "2025-01", "valeur": "120" },
+      { "mois": "2025-06", "valeur": "123" },
+      { "mois": "2025-07", "valeur": "124.2" },
+      { "mois": "2025-08", "valeur": "125", "provisoire": true }
+    ] },
+    "BT06": { "valeurs": [
+      { "mois": "2025-01", "valeur": "110" },
+      { "mois": "2025-02", "valeur": "108.9" },
+      { "mois": "2025-07", "valeur": "112.2" }
+    ] },
+    "BTX": { "raccordements": { "2005": "1.5" }, "valeurs": [
+      { "mois": "2025-01", "valeur": "80", "base": "2005" },
+      { "mois": "2025-07", "valeur": "126" }
+    ] }
+  },
+  "formules": [
+    { "nom": "correcte", "formule": { "partie_fixe": "0.15", "termes": [{ "index": "BT01", "poids": "0.85" }], "precision": 3, "arrondi": "PROCHE" }, "attendu": [] },
+    { "nom": "sans index", "formule": { "partie_fixe": "0.15", "termes": [], "precision": 3, "arrondi": "PROCHE" }, "attendu": ["REV_SANS_TERME"] },
+    { "nom": "somme différente de 1", "formule": { "partie_fixe": "0.2", "termes": [{ "index": "BT01", "poids": "0.85" }], "precision": 3, "arrondi": "PROCHE" }, "attendu": ["REV_SOMME"] },
+    { "nom": "poids nul, partie fixe 1", "formule": { "partie_fixe": "1", "termes": [{ "index": "BT01", "poids": "0" }], "precision": 3, "arrondi": "PROCHE" }, "attendu": ["REV_POIDS", "REV_PARTIE_FIXE"] },
+    { "nom": "index en double, précision et arrondi", "formule": { "partie_fixe": "0.15", "termes": [{ "index": "BT01", "poids": "0.5" }, { "index": "bt01", "poids": "0.35" }], "precision": 7, "arrondi": "X" },
+      "attendu": ["REV_INDEX_DOUBLE", "REV_PRECISION", "REV_ARRONDI"] }
+  ],
+  "coefficients": [
+    { "nom": "un index, mois exact", "formule": { "partie_fixe": "0.15", "termes": [{ "index": "BT01", "poids": "0.85" }], "precision": 3, "arrondi": "PROCHE" },
+      "mois_zero": "2025-01", "mois_index": "2025-07", "attendu": { "coef": "1.03", "provisoire": false, "manquants": [] } },
+    { "nom": "index provisoire", "formule": { "partie_fixe": "0.15", "termes": [{ "index": "BT01", "poids": "0.85" }], "precision": 3, "arrondi": "PROCHE" },
+      "mois_zero": "2025-01", "mois_index": "2025-08", "attendu": { "coef": "1.035", "provisoire": true, "manquants": [] } },
+    { "nom": "index non publié : dernier connu", "formule": { "partie_fixe": "0.15", "termes": [{ "index": "BT01", "poids": "0.85" }], "precision": 3, "arrondi": "PROCHE" },
+      "mois_zero": "2025-01", "mois_index": "2025-09", "attendu": { "coef": "1.035", "provisoire": true, "manquants": [] } },
+    { "nom": "arrondi supérieur", "formule": { "partie_fixe": "0.15", "termes": [{ "index": "BT01", "poids": "0.85" }], "precision": 3, "arrondi": "SUPERIEUR" },
+      "mois_zero": "2025-01", "mois_index": "2025-08", "attendu": { "coef": "1.036", "provisoire": true, "manquants": [] } },
+    { "nom": "deux index, demi arrondi vers le haut", "formule": { "partie_fixe": "0.15", "termes": [{ "index": "BT01", "poids": "0.5" }, { "index": "BT06", "poids": "0.35" }], "precision": 3, "arrondi": "PROCHE" },
+      "mois_zero": "2025-01", "mois_index": "2025-07", "attendu": { "coef": "1.025", "provisoire": false, "manquants": [] } },
+    { "nom": "I0 inconnu", "formule": { "partie_fixe": "0.15", "termes": [{ "index": "BT01", "poids": "0.85" }], "precision": 3, "arrondi": "PROCHE" },
+      "mois_zero": "2024-12", "mois_index": "2025-07", "attendu": { "coef": null, "provisoire": false, "manquants": ["BT01 I0"] } },
+    { "nom": "In inconnus", "formule": { "partie_fixe": "0.15", "termes": [{ "index": "BT01", "poids": "0.5" }, { "index": "BT06", "poids": "0.35" }], "precision": 3, "arrondi": "PROCHE" },
+      "mois_zero": "2025-01", "mois_index": "2024-12", "attendu": { "coef": null, "provisoire": false, "manquants": ["BT01 In", "BT06 In"] } },
+    { "nom": "raccordement d'une ancienne base", "formule": { "partie_fixe": "0", "termes": [{ "index": "BTX", "poids": "1" }], "precision": 4, "arrondi": "PROCHE" },
+      "mois_zero": "2025-01", "mois_index": "2025-07", "attendu": { "coef": "1.05", "provisoire": false, "manquants": [] } }
+  ],
+  "pieces": [
+    { "nom": "prix ferme", "parametres": { "type_prix": "FERME", "mois_zero": "2025-01", "formule": { "partie_fixe": "0.15", "termes": [{ "index": "BT01", "poids": "0.85" }], "precision": 3, "arrondi": "PROCHE" } },
+      "mois_piece": "2025-08", "attendu": { "coef": null, "mois_index": null } },
+    { "nom": "révisable avec décalage d'un mois", "parametres": { "type_prix": "REVISABLE", "mois_zero": "2025-01", "decalage": 1, "formule": { "partie_fixe": "0.15", "termes": [{ "index": "BT01", "poids": "0.85" }], "precision": 3, "arrondi": "PROCHE" } },
+      "mois_piece": "2025-08", "attendu": { "coef": "1.03", "mois_index": "2025-07" } },
+    { "nom": "actualisable, début dans les trois mois", "parametres": { "type_prix": "ACTUALISABLE", "mois_zero": "2025-01", "debut_travaux": "2025-03-15", "formule": { "partie_fixe": "0.15", "termes": [{ "index": "BT01", "poids": "0.85" }], "precision": 3, "arrondi": "PROCHE" } },
+      "mois_piece": "2025-08", "attendu": { "coef": "1", "mois_index": null } },
+    { "nom": "actualisable : index du début − 3 mois", "parametres": { "type_prix": "ACTUALISABLE", "mois_zero": "2025-01", "debut_travaux": "2025-10-02", "formule": { "partie_fixe": "0.15", "termes": [{ "index": "BT01", "poids": "0.85" }], "precision": 3, "arrondi": "PROCHE" } },
+      "mois_piece": "2026-01", "attendu": { "coef": "1.03", "mois_index": "2025-07" } },
+    { "nom": "actualisation à la baisse écartée", "parametres": { "type_prix": "ACTUALISABLE", "mois_zero": "2025-01", "debut_travaux": "2025-05-01", "formule": { "partie_fixe": "0", "termes": [{ "index": "BT06", "poids": "1" }], "precision": 3, "arrondi": "PROCHE" } },
+      "mois_piece": "2025-06", "attendu": { "coef": "1", "mois_index": "2025-02" } },
+    { "nom": "actualisation à la baisse retenue", "parametres": { "type_prix": "ACTUALISABLE", "mois_zero": "2025-01", "debut_travaux": "2025-05-01", "actualisation_baisse": true, "formule": { "partie_fixe": "0", "termes": [{ "index": "BT06", "poids": "1" }], "precision": 3, "arrondi": "PROCHE" } },
+      "mois_piece": "2025-06", "attendu": { "coef": "0.99", "mois_index": "2025-02" } }
+  ],
+  "regularisations": [
+    { "nom": "périodes révisées puis régularisées", "precision": 2,
+      "periodes": [
+        { "id": "P1", "base": "10000", "coef": "1.03", "deja": "300" },
+        { "id": "P2", "base": "5000", "coef": "1.035", "deja": "150" },
+        { "id": "P3", "base": "2000", "coef": null, "deja": "0" },
+        { "id": "P4", "base": "-1000", "coef": "1.035", "deja": "-30" },
+        { "id": "P5", "base": "333.33", "coef": "1.0245", "deja": "0" },
+        { "id": "P6", "base": "100.2", "coef": "1.025", "deja": "0" },
+        { "id": "P7", "base": "-100.2", "coef": "1.025", "deja": "0" }
+      ],
+      "attendu": [
+        { "id": "P1", "revision": "300", "a_facturer": "0" },
+        { "id": "P2", "revision": "175", "a_facturer": "25" },
+        { "id": "P3", "revision": "0", "a_facturer": "0" },
+        { "id": "P4", "revision": "-35", "a_facturer": "-5" },
+        { "id": "P5", "revision": "8.17", "a_facturer": "8.17" },
+        { "id": "P6", "revision": "2.51", "a_facturer": "2.51" },
+        { "id": "P7", "revision": "-2.51", "a_facturer": "-2.51" }
+      ] }
+  ]
+}

@@ -86,6 +86,19 @@ public sealed partial class SpecialisationComptabiliteBtp : SpecialisationCompta
 
     public override string? TypeHerite(string typeCompte) => typeCompte == "SOUS_TRAITANT" ? "FOURNISSEUR" : null;
 
+    private sealed record ComptesLignesSql(string? Client, string? Fournisseur, string? SousTraitant);
+
+    /// <summary>Compte de produit (client), de charge (fournisseur) et de sous-traitance (sinon celui du fournisseur), db/247.</summary>
+    public override async Task<Dictionary<string, string?>> ComptesLignesTiersAsync(ComptabiliteDbContext db, long tiers, CancellationToken ct)
+    {
+        var c = await db.Database.SqlQuery<ComptesLignesSql>($"""
+            SELECT per_cli_compte_produit AS client, per_fou_compte_charge AS fournisseur,
+                   coalesce(per_st_compte_charge, per_fou_compte_charge) AS sous_traitant
+            FROM personne WHERE per_id = {tiers}
+            """).FirstOrDefaultAsync(ct);
+        return new() { ["CLIENT"] = c?.Client, ["FOURNISSEUR"] = c?.Fournisseur, ["SOUS_TRAITANT"] = c?.SousTraitant };
+    }
+
     /// <summary>Un compte de sous-traitant égal à son compte fournisseur n'est pas gardé (il en hérite).</summary>
     public override async Task EnregistrerComptesTiersAsync(ComptabiliteDbContext db, List<CompteTiersSaisi> comptes, CancellationToken ct)
     {
@@ -113,8 +126,9 @@ public sealed partial class SpecialisationComptabiliteBtp : SpecialisationCompta
         (await db.Database.SqlQuery<UsageSql>($"""
             SELECT x.quoi AS quoi, x.nombre AS nombre FROM (
                 SELECT 'lignes de documents' AS quoi, (SELECT count(*)::int FROM document_ligne WHERE lig_cpt_code = {code}) AS nombre
-                UNION ALL SELECT 'natures', (SELECT count(*)::int FROM nature_element WHERE nat_compte_vente = {code} OR nat_compte_achat = {code})
-                UNION ALL SELECT 'tiers', (SELECT count(*)::int FROM personne WHERE {code} IN (per_cli_collectif, per_fou_collectif, per_st_collectif))
+                UNION ALL SELECT 'clés de ventilation', (SELECT count(*)::int FROM ventilation_compte WHERE vco_cpt_code = {code})
+                UNION ALL SELECT 'tiers', (SELECT count(*)::int FROM personne
+                          WHERE {code} IN (per_cli_collectif, per_fou_collectif, per_st_collectif, per_cli_compte_produit, per_fou_compte_charge, per_st_compte_charge))
                 UNION ALL SELECT 'taux de TVA', (SELECT count(*)::int FROM taux_tva
                           WHERE {code} IN (ttv_cpt_collectee, ttv_cpt_collectee_encaissement, ttv_cpt_deductible, ttv_cpt_autoliquidee))) x
             WHERE x.nombre > 0
@@ -122,13 +136,13 @@ public sealed partial class SpecialisationComptabiliteBtp : SpecialisationCompta
         .Select(u => $"{u.Nombre} {u.Quoi}")
         .ToList();
 
-    private sealed record NatureSql(string Code, string Libelle, bool Actif);
+    private sealed record NatureSql(int Id, string Code, string Libelle, bool Actif);
 
     public override async Task<List<NatureVentilation>> NaturesAsync(ComptabiliteDbContext db, CancellationToken ct) =>
         (await db.Database.SqlQuery<NatureSql>($"""
-            SELECT nat_code AS code, nat_libelle AS libelle, nat_actif AS actif FROM nature_element ORDER BY nat_actif DESC, nat_code
+            SELECT nat_id AS id, nat_code AS code, nat_libelle AS libelle, nat_actif AS actif FROM nature_element ORDER BY nat_actif DESC, nat_code
             """).ToListAsync(ct))
-        .Select(n => new NatureVentilation(n.Code, n.Libelle, n.Actif)).ToList();
+        .Select(n => new NatureVentilation(n.Id, n.Code, n.Libelle, n.Actif)).ToList();
 
     private sealed record TypeDocumentSql(string Code, string Libelle, string Famille, string? TypeComptable, string? TypeEffectif, bool PieceComptable);
 

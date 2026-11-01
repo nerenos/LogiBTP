@@ -18,7 +18,7 @@ public sealed class SpecialisationReglementBtp : SpecialisationReglement
         SELECT coalesce(json_agg(json_build_object(
           'id', e.ech_id, 'piece_id', d.ent_id, 'piece', d.ent_numero, 'type', t.tyd_libelle, 'tiers_id', d.ent_tiers_id, 'tiers', p.per_raison_sociale,
           'sens', CASE WHEN f_famille_achat(t.tyd_famille) THEN 'D' ELSE 'E' END, 'date', e.ech_date, 'montant', e.ech_montant, 'nature', e.ech_nature,
-          'objet_id', d.ent_marche_id) ORDER BY e.ech_date NULLS LAST, d.ent_id, e.ech_rang), '[]') AS "Value"
+          'objet_id', d.ent_marche_id, 'date_piece', d.ent_date) ORDER BY e.ech_date NULLS LAST, d.ent_id, e.ech_rang), '[]') AS "Value"
         FROM document_echeance e
         JOIN document d ON d.ent_id = e.ech_ent_id
         JOIN type_document t ON t.tyd_id = d.ent_tyd_id

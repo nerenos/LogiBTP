@@ -1,0 +1,67 @@
+{
+  "description": "Cautions de retenue de garantie (reste.js consommerCautions / exigibleCaution ↔ ResteAPayer.ConsommerCautions / ExigibleCaution, décision du 31/10/2026) : caution consommée des pièces les plus anciennes aux plus récentes, retenue couverte en partie, cautions de l'objet avant celles sans objet, mainlevée, retenue négative non couverte ; part cautionnée exigible restant à pointer.",
+  "consommations": [
+    {
+      "nom": "une caution sur plusieurs retenues, la dernière couverte en partie",
+      "cautions": [ { "id": 1, "objet": 10, "date": "2026-03-01", "montant": "5000", "mainlevee": null } ],
+      "retenues": [
+        { "id": 102, "objet": 10, "date_piece": "2026-05-31", "montant": "2500" },
+        { "id": 101, "objet": 10, "date_piece": "2026-04-30", "montant": "2000" },
+        { "id": 103, "objet": 10, "date_piece": "2026-06-30", "montant": "1500" }
+      ],
+      "attendu": {
+        "allocations": [ { "caution": 1, "retenue": 101, "montant": "2000" }, { "caution": 1, "retenue": 102, "montant": "2500" }, { "caution": 1, "retenue": 103, "montant": "500" } ],
+        "retenues": [ { "id": 102, "cautionne": "2500", "retenu": "0" }, { "id": 101, "cautionne": "2000", "retenu": "0" }, { "id": 103, "cautionne": "500", "retenu": "1000" } ],
+        "cautions": [ { "id": 1, "consomme": "5000", "disponible": "0" } ]
+      }
+    },
+    {
+      "nom": "cautions de l'objet d'abord, puis sans objet ; autre marché non couvert par la caution de l'objet",
+      "cautions": [
+        { "id": 2, "objet": null, "date": "2026-01-15", "montant": "1000", "mainlevee": null },
+        { "id": 3, "objet": 10, "date": "2026-02-01", "montant": "800", "mainlevee": null }
+      ],
+      "retenues": [
+        { "id": 201, "objet": 10, "date_piece": "2026-03-31", "montant": "1200" },
+        { "id": 202, "objet": 20, "date_piece": "2026-03-31", "montant": "900" }
+      ],
+      "attendu": {
+        "allocations": [ { "caution": 3, "retenue": 201, "montant": "800" }, { "caution": 2, "retenue": 201, "montant": "400" }, { "caution": 2, "retenue": 202, "montant": "600" } ],
+        "retenues": [ { "id": 201, "cautionne": "1200", "retenu": "0" }, { "id": 202, "cautionne": "600", "retenu": "300" } ],
+        "cautions": [ { "id": 2, "consomme": "1000", "disponible": "0" }, { "id": 3, "consomme": "800", "disponible": "0" } ]
+      }
+    },
+    {
+      "nom": "mainlevée : pièces datées de la mainlevée ou après non couvertes ; retenue négative et pièce sans date",
+      "cautions": [ { "id": 4, "objet": 10, "date": "2026-01-01", "montant": "3000", "mainlevee": "2026-06-30" } ],
+      "retenues": [
+        { "id": 301, "objet": 10, "date_piece": "2026-05-31", "montant": "1000" },
+        { "id": 302, "objet": 10, "date_piece": "2026-06-30", "montant": "1000" },
+        { "id": 303, "objet": 10, "date_piece": "2026-04-30", "montant": "-200" },
+        { "id": 304, "objet": 10, "date_piece": null, "montant": "500" }
+      ],
+      "attendu": {
+        "allocations": [ { "caution": 4, "retenue": 301, "montant": "1000" } ],
+        "retenues": [ { "id": 301, "cautionne": "1000", "retenu": "0" }, { "id": 302, "cautionne": "0", "retenu": "1000" }, { "id": 303, "cautionne": "0", "retenu": "-200" }, { "id": 304, "cautionne": "0", "retenu": "500" } ],
+        "cautions": [ { "id": 4, "consomme": "1000", "disponible": "2000" } ]
+      }
+    },
+    {
+      "nom": "caution plus grande que les retenues : disponible restant",
+      "cautions": [ { "id": 5, "objet": 10, "date": "2026-01-01", "montant": "10000", "mainlevee": null } ],
+      "retenues": [ { "id": 401, "objet": 10, "date_piece": "2026-02-28", "montant": "1234.56" } ],
+      "attendu": {
+        "allocations": [ { "caution": 5, "retenue": 401, "montant": "1234.56" } ],
+        "retenues": [ { "id": 401, "cautionne": "1234.56", "retenu": "0" } ],
+        "cautions": [ { "id": 5, "consomme": "1234.56", "disponible": "8765.44" } ]
+      }
+    }
+  ],
+  "exigibles": [
+    { "nom": "cautionné non pointé", "cautionne": "500", "pointe": "0", "reste": "1500", "attendu": "500" },
+    { "nom": "cautionné en partie pointé", "cautionne": "500", "pointe": "200", "reste": "1300", "attendu": "300" },
+    { "nom": "cautionné déjà réglé", "cautionne": "500", "pointe": "700", "reste": "800", "attendu": "0" },
+    { "nom": "borné au reste", "cautionne": "500", "pointe": "0", "reste": "300", "attendu": "300" },
+    { "nom": "sans caution", "cautionne": "0", "pointe": "0", "reste": "1000", "attendu": "0" }
+  ]
+}

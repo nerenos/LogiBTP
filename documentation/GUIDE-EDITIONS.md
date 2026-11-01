@@ -671,6 +671,21 @@ ni les tranches de frais annexes ; pieds de section en lignes `PIED`.
 | `echeances[]` | `rang`, `date` (vide : à réception), `montant`, `mode`, `nature` (RETENUE) | collection |
 | `textes.intro`, `textes.fin` | Textes de l'édition (HTML) | html |
 
+#### Révision des prix (pièces d'un marché révisable ou actualisable)
+
+Présent sur une pièce validée qui porte une révision, ou sur une situation (pour information, calculée à ce jour : `revision.information`), sinon vide : `revision` (objet). Bloc lié `REVISION_PRIX` (formule, tableau des périodes), placé dans les modèles des situations, des factures d'avancement et des propositions de situation de sous-traitance.
+
+| Chemin | Libellé | Type |
+|---|---|---|
+| `revision.type_prix`, `revision.mois_zero`, `revision.decalage` | Type de prix, mois zéro (AAAA-MM), décalage de l'index | texte, nombre |
+| `revision.formule` | Formule : « 0,15 + BT01 × 0,85 » | texte |
+| `revision.periodes[]` | Période de la pièce puis périodes régularisées | collection |
+| `revision.periodes[].piece`, `.commande`, `.mois`, `.mois_index` | Pièce, commande, mois des travaux, mois de l'index | texte |
+| `revision.periodes[].base`, `.revision`, `.montant` | HT de la période, révision due, facturé par la pièce | montant |
+| `revision.periodes[].coef`, `.provisoire`, `.regularisation` | Coefficient, index provisoire, période régularisée | nombre, booléen |
+| `revision.total`, `revision.provisoire` | Révision facturée par la pièce (situation : due à ce jour), au moins un index provisoire | montant, booléen |
+| `revision.information` | Situation : pour information (`montant` = à facturer) | booléen |
+
 #### Étapes d'un ordre (module Exécution, documents de la famille E)
 
 | Chemin | Libellé | Type |
