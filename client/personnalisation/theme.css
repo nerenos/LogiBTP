@@ -120,4 +120,6 @@
   --graphe-structure-vente: #2e9d5b;
   /* Terrain : couleur d'une tâche sans couleur propre. */
   --terrain-tache: #2563eb;
+  /* Référentiels : couleur proposée pour une nouvelle valeur de liste. */
+  --valeur-liste-defaut: #64748b;
 }

@@ -74,3 +74,20 @@
 - **Contrôles** : `npm test` (messages de l'analyse et de l'import des tarifs lus dans le dictionnaire des tests),
   analyse des portées (paramètres `texte` renommés : `lireCsvTarifs(contenu)`, `choisir(cherche)`) ; onglet Analyse du
   devis de démonstration et vue des frais annexes affichés dans le navigateur.
+
+## 40. Réalisation du lot P3aa : pages de paramétrage et pages générales (01/11/2026)
+
+- **Périmètre** : pages de paramétrage du cœur (`pages/parametres.js`, `parametres-documents.js`, `-installation.js`,
+  `-raccourcis.js`, `-services.js`, `-referentiels.js`, `-modules.js`, `-annuaire.js`, `-bibliotheque.js`, `-ged.js`),
+  pages générales (`accueil.js`, `fiche.js`, `introuvable.js`, `ged.js`, `graphe.js`, `liste.js`), titres de toutes les
+  routes (`pages/index.js`), arborescence de la GED (`ged/arborescence.js`), paramètres `$` d'une tranche
+  (`variables-tranche.js`), contrôle du parent de l'annuaire (`fiches/fiche-annuaire.js`).
+- **Textes** : `parametres_btp.*` (natures des services en accesseurs, origines du certificat par `textesParCode`,
+  jetons de numérotation et de code par fonctions), `pages_btp.*` (dont `routes.*`), `ged_btp.*` (familles et dossiers
+  virtuels), `document_btp.variables_tranche.*`. La syntaxe des échéances (FM, le) et des formats (`{P}`, `{N:5}`) reste
+  littérale.
+- **Icônes et couleurs** : `parametres_btp_*`, `pages_btp_*` (dont `pages_btp_fiche_<type>`), `ged_btp_*` ; couleur par
+  défaut d'une valeur de liste : `--valeur-liste-defaut` du thème (`couleurTheme`).
+- **Contrôles** : `npm test`, analyse des portées (paramètres `texte` / `icone` renommés : `lireEcheances(saisie)`,
+  `alerte(message)`), page de l'installation rendue dans le navigateur, natures des services et aller-retour des
+  échéances vérifiés.

@@ -1,3 +1,4 @@
+import { texte, texteHtml, icone, langue } from '@logibtp/socle/dictionnaire';
 import { PageBase, Preferences } from '@logibtp/navigation';
 import { AccueilBase } from '@logibtp/navigation/ui';
 import { echapper } from '@logibtp/socle/ui';
@@ -6,13 +7,13 @@ import { catalogueWidgets, WIDGETS_DEFAUT } from '../navigation/widgets.js';
 
 /** Accueil : session précédente à restaurer, raccourcis personnalisables, tableau de bord. */
 export class PageAccueil extends PageBase {
-  icone = '⌂';
+  icone = icone('pages_btp_accueil');
 
   async ouvrir() {
     const app = this.app;
-    this.titre = 'Accueil';
+    this.titre = texte('pages_btp.accueil.titre');
     const heure = new Date().getHours();
-    const salut = heure < 18 ? 'Bonjour' : 'Bonsoir';
+    const salut = texte(heure < 18 ? 'pages_btp.accueil.bonjour' : 'pages_btp.accueil.bonsoir');
     const session = new URLSearchParams(location.search).get('session') === 'fermee';
     this.accueil = new AccueilBase(this.conteneur, {
       catalogueRaccourcis: catalogueRaccourcis(this.app),
@@ -26,9 +27,9 @@ export class PageAccueil extends PageBase {
       },
       naviguer: (url, o) => app.naviguer(url, o),
       message: (t, n) => app.message(t, n),
-      entete: `<h1>${salut} ${echapper(app.utilisateur())}</h1>
-        <p>${echapper(app.societe?.libelle ?? '')} · ${new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-        ${session ? ' · <b>Session fermée</b> : cette fenêtre a été conservée par le navigateur.' : ''}</p>`,
+      entete: `<h1>${echapper(salut)} ${echapper(app.utilisateur())}</h1>
+        <p>${echapper(app.societe?.libelle ?? '')} · ${new Date().toLocaleDateString(langue(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+        ${session ? ` · ${texteHtml('pages_btp.accueil.session_fermee_html')}` : ''}</p>`,
     });
     this.accueil.ouvrir();
     if (this.requete.restaurer) this.restaurerSession();

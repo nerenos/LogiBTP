@@ -1,15 +1,12 @@
+import { texte, texteHtml, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, confirmer } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 import { individusSociete } from '../panneaux-btp.js';
 
 /** Natures de service (db/193 : srv_nature). */
-export const NATURES_SERVICE = [
-  { valeur: 'PRODUCTION', libelle: 'Production' },
-  { valeur: 'ETUDE', libelle: 'Études' },
-  { valeur: 'LOGISTIQUE', libelle: 'Logistique' },
-  { valeur: 'ADMINISTRATIF', libelle: 'Administratif' },
-];
+export const NATURES_SERVICE = ['PRODUCTION', 'ETUDE', 'LOGISTIQUE', 'ADMINISTRATIF']
+  .map((valeur) => Object.freeze({ valeur, get libelle() { return texte(`parametres_btp.services.natures.${valeur}`); } }));
 
 /**
  * Services de l'entreprise et salariés rattachés (db/193 ; ANALYSE-MODULES-TRANSVERSE.md § 4.1, CRM C18 / C30) :
@@ -17,15 +14,15 @@ export const NATURES_SERVICE = [
  * de la liste est supprimé s'il est libre, sinon mis en sommeil.
  */
 export class PageParametresServices extends PageBase {
-  icone = '🏢';
+  icone = icone('parametres_btp_services');
 
   get modifiee() { return Boolean(this.servicesModifies || this.membresModifies); }
 
   async ouvrir() {
     const app = this.app;
-    this.titre = 'Services et membres';
-    this.conteneur.innerHTML = `<div class="page-parametres"><h1 class="page-titre">🏢 Services et membres</h1>
-      <div data-services></div><h2 data-titre-membres>Membres</h2><div data-membres><p class="aide">Choisissez un service (Membres…).</p></div></div>`;
+    this.titre = texte('parametres_btp.services.titre');
+    this.conteneur.innerHTML = `<div class="page-parametres"><h1 class="page-titre">${iconeHtml('parametres_btp_services')} ${texteHtml('parametres_btp.services.titre')}</h1>
+      <div data-services></div><h2 data-titre-membres>${texteHtml('parametres_btp.services.membres.titre')}</h2><div data-membres><p class="aide">${texteHtml('parametres_btp.services.membres.choisir')}</p></div></div>`;
     this.admin = app.estAdmin();
     this.services = await api.services();
     const { annuaire } = await app.services();
@@ -36,10 +33,9 @@ export class PageParametresServices extends PageBase {
   rendreServices() {
     const zone = this.conteneur.querySelector('[data-services]');
     const parents = () => this.services.filter((s) => !s.parent_code).map((s) => ({ valeur: s.code, libelle: s.libelle, detail: s.code }));
-    zone.innerHTML = `<p class="aide">Deux niveaux : un service et ses sous-services. Vente et Achat sont des services administratifs (CRM).
-      Un service retiré est supprimé s'il n'a ni membre ni sous-service, sinon mis en sommeil.</p>
-      <table class="tableau-compact largeur-contenu"><thead><tr><th>Code</th><th>Libellé</th><th>Sous-service de</th><th>Nature</th><th>Responsable</th><th>Ordre</th><th>Actif</th>
-        <th class="nombre">Membres</th><th></th></tr></thead><tbody>
+    zone.innerHTML = `<p class="aide">${texteHtml('parametres_btp.services.aide')}</p>
+      <table class="tableau-compact largeur-contenu"><thead><tr><th>${texteHtml('commun.code')}</th><th>${texteHtml('commun.libelle')}</th><th>${texteHtml('parametres_btp.services.colonnes.parent')}</th><th>${texteHtml('parametres_btp.services.colonnes.nature')}</th><th>${texteHtml('parametres_btp.services.colonnes.responsable')}</th><th>${texteHtml('parametres_btp.services.colonnes.ordre')}</th><th>${texteHtml('parametres_btp.documents.actif')}</th>
+        <th class="nombre">${texteHtml('parametres_btp.services.membres.titre')}</th><th></th></tr></thead><tbody>
       ${this.services.map((s, i) => `<tr data-i="${i}"${s.actif ? '' : ' class="discret"'}>
         <td><input data-c="code" value="${echapper(s.code)}" size="10" maxlength="20" ${this.admin ? '' : 'disabled'}></td>
         <td><input data-c="libelle" value="${echapper(s.libelle)}" size="26" maxlength="80" ${this.admin ? '' : 'disabled'}></td>
@@ -47,11 +43,11 @@ export class PageParametresServices extends PageBase {
         <td><input data-c="ordre" value="${Number(s.ordre ?? 0)}" size="4" inputmode="numeric" ${this.admin ? '' : 'disabled'}></td>
         <td><input type="checkbox" data-c="actif" ${s.actif ? 'checked' : ''} ${this.admin ? '' : 'disabled'}></td>
         <td class="nombre">${s.id ? Number(s.nb_membres ?? 0) : ''}</td>
-        <td>${s.id ? '<button type="button" data-membres title="Salariés rattachés à ce service">Membres…</button>' : ''}
-          ${this.admin ? '<button type="button" data-retirer title="Retirer le service (supprimé s\'il est libre, sinon en sommeil)">✕</button>' : ''}</td></tr>`).join('')}
+        <td>${s.id ? `<button type="button" data-membres title="${texteHtml('parametres_btp.services.membres.aide')}">${texteHtml('parametres_btp.services.membres.bouton')}</button>` : ''}
+          ${this.admin ? `<button type="button" data-retirer title="${texteHtml('parametres_btp.services.retirer')}">${iconeHtml('retirer')}</button>` : ''}</td></tr>`).join('')}
       </tbody></table>
-      ${this.admin ? `<div class="boutons"><button type="button" data-ajouter>＋ Service</button>
-        <button type="button" class="principal" data-enregistrer>Enregistrer les services</button></div>` : '<p class="aide">Seul un administrateur modifie les services.</p>'}`;
+      ${this.admin ? `<div class="boutons"><button type="button" data-ajouter>${iconeHtml('ajouter')} ${texteHtml('parametres_btp.services.ajouter')}</button>
+        <button type="button" class="principal" data-enregistrer>${texteHtml('parametres_btp.services.enregistrer')}</button></div>` : `<p class="aide">${texteHtml('parametres_btp.services.lecture')}</p>`}`;
     zone.querySelectorAll('tr[data-i]').forEach((tr) => {
       const s = this.services[Number(tr.dataset.i)];
       const combo = (options, valeur, vide, champ) => {
@@ -91,13 +87,13 @@ export class PageParametresServices extends PageBase {
         responsable_id: s.responsable_id ?? null, ordre: Number(s.ordre ?? 0), actif: s.actif !== false,
       })));
       this.servicesModifies = false;
-      this.app.message('Services enregistrés', 'succes');
+      this.app.message(texte('parametres_btp.services.enregistres'), 'succes');
       this.rendreServices();
     } catch (e) { this.app.erreur(e); }
   }
 
   async ouvrirMembres(service) {
-    if (this.membresModifies && !await confirmer('Les membres modifiés du service précédent ne sont pas enregistrés. Continuer ?')) return;
+    if (this.membresModifies && !await confirmer(texte('parametres_btp.services.membres.quitter'))) return;
     this.service = service;
     this.membres = await api.membresService(service.id);
     this.membresModifies = false;
@@ -106,23 +102,22 @@ export class PageParametresServices extends PageBase {
 
   rendreMembres() {
     const zone = this.conteneur.querySelector('[data-membres]');
-    this.conteneur.querySelector('[data-titre-membres]').textContent = `Membres : ${this.service.libelle}`;
+    this.conteneur.querySelector('[data-titre-membres]').textContent = texte('parametres_btp.services.membres.titre_service', { service: this.service.libelle });
     const presents = new Set(this.membres.map((m) => m.ind_id));
-    zone.innerHTML = `<p class="aide">Salariés de notre société rattachés au service. Le service principal d'un salarié est unique :
-      le désigner ici le retire de son ancien service principal.</p>
-      ${this.membres.length ? `<table class="tableau-compact largeur-contenu"><thead><tr><th>Salarié</th><th>Service principal</th><th></th></tr></thead><tbody>
+    zone.innerHTML = `<p class="aide">${texteHtml('parametres_btp.services.membres.explication')}</p>
+      ${this.membres.length ? `<table class="tableau-compact largeur-contenu"><thead><tr><th>${texteHtml('parametres_btp.services.membres.salarie')}</th><th>${texteHtml('parametres_btp.services.membres.principal')}</th><th></th></tr></thead><tbody>
         ${this.membres.map((m, i) => `<tr data-i="${i}"${m.actif === false ? ' class="discret"' : ''}><td>${echapper(m.individu)}</td>
           <td><input type="checkbox" data-principal ${m.principal ? 'checked' : ''} ${this.admin ? '' : 'disabled'}></td>
-          <td>${this.admin ? '<button type="button" data-retirer title="Retirer du service">✕</button>' : ''}</td></tr>`).join('')}</tbody></table>`
-        : '<p class="aide">Aucun membre.</p>'}
-      ${this.admin ? '<div class="boutons"><span data-ajout></span> <button type="button" data-ajouter>＋ Ajouter</button> <button type="button" class="principal" data-enregistrer>Enregistrer les membres</button></div>' : ''}`;
+          <td>${this.admin ? `<button type="button" data-retirer title="${texteHtml('parametres_btp.services.membres.retirer')}">${iconeHtml('retirer')}</button>` : ''}</td></tr>`).join('')}</tbody></table>`
+        : `<p class="aide">${texteHtml('parametres_btp.services.membres.aucun')}</p>`}
+      ${this.admin ? `<div class="boutons"><span data-ajout></span> <button type="button" data-ajouter>${iconeHtml('ajouter')} ${texteHtml('commun.ajouter')}</button> <button type="button" class="principal" data-enregistrer>${texteHtml('parametres_btp.services.membres.enregistrer')}</button></div>` : ''}`;
     zone.querySelectorAll('tr[data-i]').forEach((tr) => {
       const m = this.membres[Number(tr.dataset.i)];
       tr.querySelector('[data-principal]').addEventListener('change', (e) => { m.principal = e.target.checked; this.membresModifies = true; });
       tr.querySelector('[data-retirer]')?.addEventListener('click', () => { this.membres.splice(Number(tr.dataset.i), 1); this.membresModifies = true; this.rendreMembres(); });
     });
     if (!this.admin) return;
-    const ajout = creerCombo({ options: this.individus.filter((x) => !presents.has(x.valeur)), titre: 'Salarié de notre société' });
+    const ajout = creerCombo({ options: this.individus.filter((x) => !presents.has(x.valeur)), titre: texte('parametres_btp.services.membres.ajout') });
     zone.querySelector('[data-ajout]').replaceWith(ajout);
     zone.querySelector('[data-ajouter]').addEventListener('click', () => {
       const id = ajout.resoudre();
@@ -139,7 +134,7 @@ export class PageParametresServices extends PageBase {
         this.services = await api.services();
         this.rendreServices();
         this.rendreMembres();
-        this.app.message('Membres enregistrés', 'succes');
+        this.app.message(texte('parametres_btp.services.membres.enregistres'), 'succes');
       } catch (e) { this.app.erreur(e); }
     });
   }

@@ -1085,6 +1085,11 @@
         "contenance": "Conditionnements, contenance",
         "contenance_positive": "Conditionnements : contenance positive attendue"
       }
+    },
+    "variables_tranche": {
+      "titre": "Paramètres de la tranche ($)",
+      "aide": "Utilisables dans les métrés et libellés des lignes de la tranche : {{$nom}}.",
+      "ajouter": "Ajouter un paramètre"
     }
   },
   "crm_btp": {
@@ -5147,7 +5152,10 @@
       "creer_particulier": "Créer le compte particulier",
       "ouvrir_particulier": "Ouvrir son compte particulier (client)",
       "creer_particulier_aide": "Créer une personne « Particulier » dont il est titulaire, avec ses coordonnées personnelles partagées",
-      "particulier_cree": "Compte particulier créé : coordonnées personnelles partagées"
+      "particulier_cree": "Compte particulier créé : coordonnées personnelles partagées",
+      "erreurs": {
+        "propre_parent": "Une personne ne peut pas être son propre niveau supérieur"
+      }
     },
     "structure": {
       "colonnes": {
@@ -7046,6 +7054,414 @@
       "crees": "{{nombre}} élément(s) créé(s)",
       "majs": "{{nombre}} mis à jour",
       "bilan": "Bibliothèque : {{bilan}}"
+    }
+  },
+  "parametres_btp": {
+    "general": {
+      "titre": "Paramètres",
+      "affichage": "Affichage",
+      "theme": "Thème",
+      "theme_aide": "Automatique suit le réglage clair / sombre du système. Le choix s'applique à toutes les fenêtres de ce navigateur.",
+      "menu": {
+        "titre": "Menu",
+        "position": "Position du menu",
+        "haut": "En haut (barre de menus)",
+        "gauche": "À gauche, sur toute la hauteur",
+        "droite": "À droite, sur toute la hauteur",
+        "largeur": "Largeur",
+        "px": "px",
+        "masquer": "Masquer le menu ({{icone}} sur le bord de l'écran pour le rouvrir)",
+        "masquage_auto": "Masquer automatiquement quand la souris quitte le menu",
+        "aide": "À gauche ou à droite : les menus se déplient en dessous de leur titre au clic, avec des lignes hautes pour le tactile ; la société, l'utilisateur et les notifications sont fixés en bas du menu. La largeur se règle aussi en glissant le bord du menu côté page."
+      },
+      "remises": {
+        "titre": "Remises des lignes de documents",
+        "libelle": "Remises",
+        "coefficient": "En coefficient (0,95 = 5 %)",
+        "pourcentage": "En pourcentage (30 = 0,70)",
+        "aide": "Affichage et saisie de la colonne Remise ; le document garde le coefficient. Le bouton de l'entête de la colonne bascule aussi ce choix."
+      },
+      "raccourcis": {
+        "titre": "Raccourcis clavier",
+        "aide": "Toutes les fonctions qui acceptent un raccourci, avec leurs touches ; chaque raccourci se remplace (gardé dans ce navigateur). Le clic droit sur une ligne les rappelle.",
+        "lien": "Personnaliser les raccourcis…"
+      },
+      "navigation": {
+        "titre": "Navigation",
+        "nouvelle_fenetre": "Ouvrir les fiches et les documents d'une liste dans une nouvelle fenêtre",
+        "aide": "Par défaut, la navigation se fait dans la fenêtre (liste → fiche → retour à la liste). Ctrl+clic, Maj+clic ou clic milieu (et ⧉ dans les menus) inversent ce choix. Les préférences restent dans ce navigateur, pour cette société.",
+        "fenetres": "Fenêtres ouvertes…",
+        "oublier": "Oublier la session précédente",
+        "session": "Fermer la session…",
+        "oubliee": "Session précédente oubliée"
+      },
+      "utilisateur": {
+        "titre": "Utilisateur",
+        "texte_html": "Utilisateur <b>{{utilisateur}}</b>, profil <b>{{profil}}</b>.",
+        "compte": "Mon compte"
+      },
+      "listes": {
+        "titre": "Listes et fiches",
+        "themes": "Thèmes et vues de liste…",
+        "salarie": "Champs de la fiche salarié…",
+        "materiel": "Champs de la fiche matériel…"
+      },
+      "ged": {
+        "titre": "GED",
+        "editions": "Éditions conservées",
+        "editions_valeur": "{{nombre}} dernières (les étapes sont toutes conservées)",
+        "apercu": "Aperçu jusqu'à",
+        "copie": "Copie cachée des mails envoyés",
+        "copie_vide": "(non définie, module Mail à venir)",
+        "categories": "Catégories"
+      },
+      "societe": {
+        "titre": "Société",
+        "principale": "(base principale)",
+        "adresse": "Adresse",
+        "aide_html": "Une base par société : chaque société s'ouvre sur son sous-domaine (ex. <code>{{exemple}}</code>) ; sans sous-domaine, la base principale. Deux sociétés ouvertes en même temps ne partagent ni fenêtres, ni session, ni préférences."
+      },
+      "apropos": {
+        "titre": "À propos",
+        "application": "Application",
+        "nom": "LogiBTP",
+        "moteur": "Moteur de calcul"
+      }
+    },
+    "documents": {
+      "titre": "Paramétrage des documents",
+      "etiquettes": "Étiquettes et couleurs des lignes",
+      "solde": {
+        "titre": "Solde des lignes",
+        "aide": "À la validation d'un bon de livraison ou d'une facture issu d'une commande, une ligne est soldée automatiquement quand son reste est inférieur ou égal à l'un des deux seuils (0 : soldée quand tout est livré ou facturé). La case « Soldée » de la ligne permet aussi de la solder à la main.",
+        "pct": "% de la quantité du parent",
+        "qte": "Quantité",
+        "achats": "Achats",
+        "ventes": "Ventes",
+        "enregistrer": "Enregistrer les seuils",
+        "invalide": "Seuil invalide : nombre positif ou nul",
+        "enregistres": "Seuils de solde enregistrés"
+      },
+      "conditions": {
+        "titre": "Conditions de paiement",
+        "aide": "Échéances : « 30% 0j; 70% 30j FM » — pourcentage du net à payer, délai en jours, puis FM (fin de mois) ou « le 10 » (jour fixe du mois), mode de règlement facultatif (VIREMENT, LCR…). Vide : comptant. Le tiers choisit sa condition par son délai de paiement (même code).",
+        "echeances": "Échéances",
+        "retirer": "Retirer (désactivée si un document l'utilise)",
+        "ajouter": "Condition",
+        "defaut": "Par défaut :",
+        "ventes": "ventes",
+        "achats": "achats",
+        "enregistrer": "Enregistrer les conditions",
+        "enregistrees": "Conditions de paiement enregistrées",
+        "erreur": "{{condition}} : échéances mal écrites (ex. « 30% 0j; 70% 30j FM »)"
+      },
+      "acomptes": {
+        "titre": "Acomptes",
+        "aide": "Avance de trésorerie : demande puis reçu d'acompte (non comptable, sans TVA), déduction TTC au pied des factures. Chiffre d'affaires : demande puis facture d'acompte (TVA du marché, comptée dans le facturé), déduction HT dans le pied de chaque commande.",
+        "mode": "Mode",
+        "enregistrer": "Enregistrer le mode",
+        "TRESORERIE": "Avance de trésorerie",
+        "CA": "Chiffre d'affaires",
+        "enregistre": "Mode d'acompte enregistré"
+      },
+      "textes": {
+        "titre": "Textes de l'édition",
+        "aide": "Introduction : avant le bloc des lignes ; conclusion : après le pied et les récapitulatifs (marché, factures). Le modèle est recopié dans chaque nouveau document du type, puis modifiable ; les variables sont figées à la validation.",
+        "type": "Type de document",
+        "aucun": "Aucun texte",
+        "intro": "Introduction",
+        "fin": "Conclusion",
+        "enregistrer": "Enregistrer les textes",
+        "enregistres": "Textes enregistrés"
+      },
+      "regles": {
+        "titre": "Règles des documents",
+        "global": "Global",
+        "aide": "Valeur d'une règle pour un document : celle de son type, sinon de sa famille, sinon la valeur globale, sinon le défaut. {{bloquant}} bloque la validation, {{avertissement}} avertit sans bloquer. -1 : pas de seuil.",
+        "regle": "Règle",
+        "defaut": "Défaut",
+        "valeurs": "Valeurs paramétrées",
+        "retirer": "Retirer cette valeur",
+        "ajouter": "Valeur pour un niveau (global, famille, type)",
+        "enregistrer": "Enregistrer les règles",
+        "enregistrees": "Règles des documents enregistrées"
+      },
+      "ordres": {
+        "titre": "Types d'ordres (Exécution)",
+        "aide": "Un type désactivé disparaît des menus, des listes et des transformations ; ses étapes de parcours sont ignorées. Il ne se désactive que lorsque tous ses ordres sont terminés.",
+        "type": "Type",
+        "service": "Service par défaut",
+        "non_termines": "Non terminés",
+        "enregistre": "{{type}} : enregistré"
+      },
+      "actif": "Actif"
+    },
+    "installation": {
+      "origines": {
+        "LOGIBTP": "Autorité LogiBTP de l'installation",
+        "IMPORTE": "Certificat importé (Active Directory, prestataire)",
+        "LETSENCRYPT": "Let's Encrypt (défi DNS)"
+      },
+      "taille_go": "{{taille}} Go",
+      "titre": "Installation",
+      "relire": "Relire l'état",
+      "aide": "État du serveur, en lecture : le certificat, les sauvegardes et les mises à jour se gèrent sur le serveur (Installer-LogiBTP.ps1, Sauvegarder-LogiBTP.ps1, MettreAJour-LogiBTP.ps1).",
+      "certificat": {
+        "origine": "Origine",
+        "noms": "Noms",
+        "emetteur": "Émetteur",
+        "fin": "Valable jusqu'au",
+        "fin_valeur": "{{date}} ({{jours}} jour(s))",
+        "empreinte": "Empreinte de l'autorité",
+        "renouveler": "Certificat à renouveler",
+        "postes": "Postes et tablettes : page",
+        "titre": "Certificat HTTPS"
+      },
+      "bases": {
+        "societe": "Société",
+        "base": "Base",
+        "etat": "État",
+        "connexion": "Connexion",
+        "scripts": "Scripts",
+        "attente": "En attente",
+        "joignable": "joignable",
+        "injoignable": "injoignable",
+        "chiffree": "chiffrée (TLS)",
+        "non_chiffree": "non chiffrée : relancer « installation preparer »",
+        "a_faire": "{{nombre}} (mise à jour à faire)",
+        "titre": "Bases"
+      },
+      "sauvegarde": {
+        "aucune": "Aucune sauvegarde connue",
+        "echec": "Échec : {{erreur}}",
+        "ancienne": "Sauvegarde de plus de deux jours",
+        "titre": "Sauvegardes"
+      },
+      "disques": {
+        "usage": "Usage",
+        "libre": "Libre",
+        "titre": "Espace disque"
+      },
+      "version_domaine_html": "Version <b>{{version}}</b>, déploiement {{deploiement}}, domaine <b>{{domaine}}</b>, {{protocole}}.",
+      "version_html": "Version <b>{{version}}</b>, déploiement {{deploiement}}, {{protocole}}.",
+      "https": "HTTPS",
+      "http": "HTTP seul"
+    },
+    "sans_certificat": "Aucun certificat : l'application est servie en HTTP (copier-coller des lignes, empreintes de la GED et borne indisponibles hors du poste serveur).",
+    "sauvegarde": {
+      "derniere_chiffree_html": "Dernière sauvegarde : <b>{{date}}</b>, {{bases}} base(s), {{taille}}, chiffrée.",
+      "derniere_html": "Dernière sauvegarde : <b>{{date}}</b>, {{bases}} base(s), {{taille}}."
+    },
+    "raccourcis": {
+      "aide": "« Modifier » puis appuyez sur la combinaison voulue (Échap : annuler). Une combinaison déjà prise dans le même écran (ou par toute l'application) est refusée ; prise dans un autre écran, elle est acceptée après confirmation. Le clic droit sur une ligne rappelle ces raccourcis. Évitez AltGr, Alt+Maj et Ctrl+N/T/W (réservés par le système ou le navigateur).",
+      "tout": "Tout remettre par défaut",
+      "fonction": "Fonction",
+      "raccourci": "Raccourci",
+      "defaut": "Par défaut",
+      "aucun": "Aucun raccourci",
+      "revenir": "Revenir au raccourci par défaut",
+      "tout_confirmer": "Remettre tous les raccourcis par défaut ?",
+      "retablis": "Raccourcis par défaut rétablis",
+      "capture": "Appuyez sur la combinaison…",
+      "pris": "{{touches}} est déjà utilisé par « {{fonction}} » ({{groupe}})",
+      "conflit": "{{touches}} sert aussi à « {{fonction}} » ({{groupe}}). L'utiliser quand même ?",
+      "enregistre": "Raccourci {{touches}} enregistré"
+    },
+    "services": {
+      "natures": {
+        "PRODUCTION": "Production",
+        "ETUDE": "Études",
+        "LOGISTIQUE": "Logistique",
+        "ADMINISTRATIF": "Administratif"
+      },
+      "titre": "Services et membres",
+      "membres": {
+        "titre": "Membres",
+        "choisir": "Choisissez un service (Membres…).",
+        "aide": "Salariés rattachés à ce service",
+        "bouton": "Membres…",
+        "quitter": "Les membres modifiés du service précédent ne sont pas enregistrés. Continuer ?",
+        "titre_service": "Membres : {{service}}",
+        "explication": "Salariés de notre société rattachés au service. Le service principal d'un salarié est unique : le désigner ici le retire de son ancien service principal.",
+        "salarie": "Salarié",
+        "principal": "Service principal",
+        "retirer": "Retirer du service",
+        "aucun": "Aucun membre.",
+        "enregistrer": "Enregistrer les membres",
+        "ajout": "Salarié de notre société",
+        "enregistres": "Membres enregistrés"
+      },
+      "aide": "Deux niveaux : un service et ses sous-services. Vente et Achat sont des services administratifs (CRM). Un service retiré est supprimé s'il n'a ni membre ni sous-service, sinon mis en sommeil.",
+      "colonnes": {
+        "parent": "Sous-service de",
+        "nature": "Nature",
+        "responsable": "Responsable",
+        "ordre": "Ordre"
+      },
+      "retirer": "Retirer le service (supprimé s'il est libre, sinon en sommeil)",
+      "ajouter": "Service",
+      "enregistrer": "Enregistrer les services",
+      "lecture": "Seul un administrateur modifie les services.",
+      "enregistres": "Services enregistrés"
+    },
+    "referentiels": {
+      "colonnes": {
+        "ordre": "Ordre",
+        "regroupement": "Regroupement",
+        "couleur": "Couleur",
+        "decimales": "Décimales",
+        "synonymes": "Synonymes",
+        "type": "Type",
+        "prefixe": "Préfixe",
+        "format": "Format",
+        "raz_html": "Remise<br><small>à zéro</small>",
+        "dernier_numero_html": "Dernier<br><small>numéro</small>",
+        "prochain_numero_html": "Prochain<br><small>numéro</small>",
+        "fiche": "Fiche",
+        "dernier_rang_html": "Dernier<br><small>rang</small>",
+        "prochain_code_html": "Prochain<br><small>code</small>"
+      },
+      "raz": {
+        "A": "Chaque exercice",
+        "J": "Jamais"
+      },
+      "jetons_numero": "{P} préfixe du type, {AAAA} ou {AA} année, {N} rang ou {N:5} rang sur 5 chiffres ; vide : {P}{AAAA}-{N:5}",
+      "jetons_code": "{P} préfixe, {AAAA} ou {AA} année, {N} rang ou {N:5} rang sur 5 chiffres, {PARENT} code du chantier (marchés) ; vide : format par défaut du type",
+      "titre": "Référentiels communs",
+      "listes": {
+        "aide": "Deux niveaux : un regroupement et ses valeurs (une valeur rangée sous un regroupement).",
+        "ajouter": "Ajouter une valeur",
+        "retirer": "Retirer (désactivée si elle est employée)",
+        "enregistres": "{{liste}} enregistrés"
+      },
+      "modes": {
+        "titre": "Modes de règlement",
+        "aide": "Proposés dans les tiers (client, fournisseur), l'entête des pièces, les échéances et les règlements. Délais de paiement : conditions de paiement des documents (Paramètres › Documents).",
+        "ajouter": "Ajouter un mode",
+        "retirer": "Retirer (désactivé s'il est employé)",
+        "enregistres": "Modes de règlement enregistrés"
+      },
+      "unites": {
+        "titre": "Unités",
+        "aide": "Décimales : précision par défaut des quantités. Synonymes : autres écritures reconnues à la saisie et à l'import (M² = m2, m², mcarre…), séparées par des virgules.",
+        "ajouter": "Ajouter une unité",
+        "retirer": "Retirer (désactivée si une ligne l'emploie)",
+        "enregistrees": "Unités enregistrées"
+      },
+      "numeros": {
+        "titre": "Numérotation des documents",
+        "aide": "Format : {{jetons}}. Remise à zéro chaque exercice : l'année doit figurer dans le numéro. Reprise : dernier numéro déjà attribué cette année (ou depuis toujours sans remise à zéro) ; le suivant sera attribué.",
+        "continue": "numérotation continue",
+        "reprendre": "Reprendre la numérotation de « {{type}} » après le numéro {{numero}} ?",
+        "enregistree": "Numérotation de « {{type}} » enregistrée"
+      },
+      "appliquer": "Appliquer",
+      "codes": {
+        "titre": "Codes des fiches",
+        "aide": "Format : {{jetons}}. À la création d'une fiche, le code prévisionnel s'affiche en italique ; laissé tel quel, le code calculé est attribué à l'enregistrement (un code déjà pris est sauté). Un code saisi déjà pris : le prochain code libre à partir de la saisie est proposé. Reprise : dernier rang déjà attribué cette année (ou depuis toujours sans remise à zéro).",
+        "portee": "compteur par bibliothèque",
+        "parent": "rang d’après le chantier",
+        "reprendre": "Reprendre les codes « {{fiche}} » après le rang {{rang}} ?",
+        "enregistres": "Codes « {{fiche}} » enregistrés"
+      }
+    },
+    "modules": {
+      "titre": "Modules de la société",
+      "aide": "Un module désactivé disparaît des menus et ses écrans sont refusés ; ses données sont conservées et reviennent à la réactivation.",
+      "module": "Module",
+      "description": "Description",
+      "modifie": "Modifié",
+      "necessite": "Nécessite : {{modules}}",
+      "lecture": "Seul un administrateur change l'activation des modules."
+    },
+    "annuaire": {
+      "titre": "Paramétrage de l'annuaire"
+    },
+    "societe": {
+      "titre": "Notre société",
+      "ouverture": "Ouverture de la fiche de la société…",
+      "absente": "La société de cette base n'est pas encore dans l'annuaire. Ses agences, ses salariés (chargés d'affaires, chiffreurs, conducteurs…) et les utilisateurs lui seront rattachés.",
+      "creer": "Créer la fiche de notre société"
+    },
+    "bibliotheque": {
+      "titre": "Paramétrage de la bibliothèque"
+    },
+    "ged": {
+      "titre": "Paramétrage de la GED",
+      "entete": "Rétention et classification des documents"
+    }
+  },
+  "pages_btp": {
+    "accueil": {
+      "titre": "Accueil",
+      "bonjour": "Bonjour",
+      "bonsoir": "Bonsoir",
+      "session_fermee_html": "<b>Session fermée</b> : cette fenêtre a été conservée par le navigateur."
+    },
+    "fiche": {
+      "nouvelle": "Nouvelle fiche {{type}}",
+      "titre": "Fiche {{type}} {{id}}",
+      "imprimer": "Imprimer",
+      "imprimer_aide": "Aperçu et impression de la fiche (modèle d’édition)",
+      "precedente": "Précédente",
+      "precedente_aide": "Fiche précédente de la liste ({{rang}} / {{total}})",
+      "suivante": "Suivante",
+      "suivante_aide": "Fiche suivante de la liste ({{rang}} / {{total}})"
+    },
+    "introuvable": {
+      "titre": "Page introuvable",
+      "adresse_html": "L'adresse <code>{{adresse}}</code> ne correspond à aucun écran.",
+      "retour": "Retour à l'accueil"
+    },
+    "ged": {
+      "coffre": "Coffre-fort",
+      "titre": "Documents (GED)"
+    },
+    "graphe": {
+      "aucune": "Aucune fiche : ouvrez le graphe depuis une personne ou un individu.",
+      "titre": "Graphe – {{libelle}}",
+      "relations": "Relations de {{libelle}}"
+    },
+    "liste": {
+      "creer": {
+        "projet": "Projet",
+        "affaire": "Affaire",
+        "chantier": "Chantier",
+        "marche": "Marché",
+        "OUVRAGE": "Ouvrage",
+        "ENSEMBLE": "Ensemble",
+        "ARTICLE": "Article",
+        "personne": "Personne",
+        "individu": "Individu",
+        "salarie": "Salarié",
+        "materiel": "Matériel"
+      },
+      "copie": "Copie créée : {{numero}}",
+      "transformer": "Transformer",
+      "transformer_aide": "Transformer le document validé (commande, livraison, situation, facture…)",
+      "marquer": "Marquer",
+      "marquer_aide": "Ajouter ou retirer des marques (listes rapides du stock) aux articles sélectionnés",
+      "marques": "{{nombre}} article(s) marqué(s)",
+      "imprimer_aide": "Aperçu et impression de la liste (vue et recherche en cours) ou d’étiquettes",
+      "titre": "Listes"
+    },
+    "routes": {
+      "fiche": "Fiche",
+      "document": "Document",
+      "graphe": "Graphe des relations"
+    }
+  },
+  "ged_btp": {
+    "arborescence": {
+      "familles": {
+        "V": "Ventes",
+        "A": "Achats",
+        "T": "Sous-traitance",
+        "S": "Stock"
+      },
+      "racine": "Documents",
+      "affaires": "Affaires",
+      "projets": "Projets"
     }
   }
 }

@@ -269,7 +269,7 @@ export class FichePersonne extends FicheAnnuaire {
 
   validerMetier(v) {
     const erreurs = erreursIdentifiants(v).map(({ champ, message }) => ({ champ, message }));
-    if (v.parent_id && this.id !== null && Number(v.parent_id) === Number(this.id)) erreurs.push({ champ: 'parent_id', message: 'Une personne ne peut pas être son propre niveau supérieur' });
+    if (v.parent_id && this.id !== null && Number(v.parent_id) === Number(this.id)) erreurs.push({ champ: 'parent_id', message: texte('fiches_btp.annuaire.erreurs.propre_parent') });
     return erreurs;
   }
 
