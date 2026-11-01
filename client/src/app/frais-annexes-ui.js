@@ -1,3 +1,4 @@
+import { texte, texteHtml, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { D } from '@logibtp/socle';
 import { echapper, formatNombre, formatLibre, lireNombre, creerCombo } from '@logibtp/socle/ui';
 import { TL, estChiffree, estTranche, cleElementVentilation } from '../calcul/index.js';
@@ -11,7 +12,7 @@ import {
 // saisissent ici ; les clés de ligne aussi dans le détail de la ligne. Une part reçue par un ouvrage est attribuée à
 // ses feuilles au prorata de leur montant (quantité totale × PV), comme le moteur répartit une clé de feuille.
 
-const MODES_CLE = [{ valeur: 'P', libelle: '% de la tranche' }, { valeur: 'M', libelle: '€' }];
+const MODES_CLE = ['P', 'M'].map((valeur) => ({ valeur, get libelle() { return texte(`frais_annexes_btp.modes_cle.${valeur}`); } }));
 
 export class RapportFraisAnnexes {
   constructor(conteneur, { editeur, natures = new Map(), message = () => {} }) {
@@ -91,24 +92,24 @@ export class RapportFraisAnnexes {
 
     this.conteneur.innerHTML = `
       <div class="frais-reglages">
-        <label>Lignes hors vente qui reçoivent des frais <span data-reglage="ent_fa_lignes"></span></label>
-        <label>Options et variantes <span data-reglage="ent_fa_mode"></span></label>
+        <label>${texteHtml('frais_annexes_btp.rapport.hors_vente')} <span data-reglage="ent_fa_lignes"></span></label>
+        <label>${texteHtml('frais_annexes_btp.rapport.options')} <span data-reglage="ent_fa_mode"></span></label>
       </div>
       ${messages.length ? `<ul class="frais-messages">${messages.map((m) => `<li><code>${echapper(m.code)}</code> ${echapper(m.message)}</li>`).join('')}</ul>` : ''}
-      ${bilans.length ? '' : '<p class="aide">Aucune tranche de frais annexes : choisissez « Frais annexes » comme type de prix d\'un titre placé dans une section.</p>'}
+      ${bilans.length ? '' : `<p class="aide">${texteHtml('frais_annexes_btp.rapport.aucune')}</p>`}
       <table class="table-analyse table-frais-bilan">
-        <thead><tr><th>Tranche de frais</th><th>Portée</th><th>Prévu</th><th>Ventilé</th><th>%</th><th title="Montants HT avec frais − sans frais, après arrondi des PV">Ventilé réel</th><th>Écart</th><th></th></tr></thead>
+        <thead><tr><th>${texteHtml('frais_annexes_btp.rapport.colonnes.tranche')}</th><th>${texteHtml('frais_annexes_btp.rapport.colonnes.portee')}</th><th>${texteHtml('frais_annexes_btp.rapport.colonnes.prevu')}</th><th>${texteHtml('frais_annexes_btp.rapport.colonnes.ventile')}</th><th>%</th><th title="${texteHtml('frais_annexes_btp.rapport.colonnes.reel_aide')}">${texteHtml('frais_annexes_btp.rapport.colonnes.reel')}</th><th>${texteHtml('frais_annexes_btp.rapport.colonnes.ecart')}</th><th></th></tr></thead>
         <tbody>${bilans.map((b) => `
           <tr data-tranche="${b.lig_id}" class="${this.ouverts.has(b.lig_id) ? 'ouvert' : ''}">
-            <th><button type="button" class="pli" data-plier="${b.lig_id}">${this.ouverts.has(b.lig_id) ? '▾' : '▸'}</button> ${echapper(libelle(b.lig_id))}</th>
+            <th><button type="button" class="pli" data-plier="${b.lig_id}">${iconeHtml(this.ouverts.has(b.lig_id) ? 'frais_annexes_btp_ouvert' : 'frais_annexes_btp_ferme')}</button> ${echapper(libelle(b.lig_id))}</th>
             <td>${echapper(b.portee_id ? libelle(b.portee_id) : '—')}</td>
-            <td class="nombre">${formatNombre(b.prevu, pm)}</td><td class="nombre">${formatNombre(b.ventile, pm)} <small>${b.cles ? 'clés' : 'prorata'}</small></td>
+            <td class="nombre">${formatNombre(b.prevu, pm)}</td><td class="nombre">${formatNombre(b.ventile, pm)} <small>${texteHtml(b.cles ? 'frais_annexes_btp.rapport.cles' : 'frais_annexes_btp.rapport.prorata')}</small></td>
             <td class="nombre">${pct(b)}</td><td class="nombre">${formatNombre(b.ventile_reel, pm)}</td>
             <td class="nombre ${Number(b.ecart) ? 'coef-bas' : ''}">${formatNombre(b.ecart, pm)}</td>
             <td class="actions">${lecture ? '' : `
-              <button type="button" data-action-frais="reste" title="Fige la ventilation en clés de ligne et répartit le montant non ventilé au prorata sur les lignes qui ne reçoivent encore rien">Répartir le reste</button>
-              <button type="button" data-action-frais="figer" title="Remplace les clés de la tranche par des clés de ligne en montant par unité">Figer</button>
-              ${b.cles ? '<button type="button" data-action-frais="prorata" title="Supprime les clés de la tranche (les clés de nature globales restent)">Prorata</button>' : ''}`}</td>
+              <button type="button" data-action-frais="reste" title="${texteHtml('frais_annexes_btp.rapport.actions.reste_aide')}">${texteHtml('frais_annexes_btp.rapport.actions.reste')}</button>
+              <button type="button" data-action-frais="figer" title="${texteHtml('frais_annexes_btp.rapport.actions.figer_aide')}">${texteHtml('frais_annexes_btp.rapport.actions.figer')}</button>
+              ${b.cles ? `<button type="button" data-action-frais="prorata" title="${texteHtml('frais_annexes_btp.rapport.actions.prorata_aide')}">${texteHtml('frais_annexes_btp.rapport.actions.prorata')}</button>` : ''}`}</td>
           </tr>
           ${this.ouverts.has(b.lig_id) ? `<tr class="frais-detail"><td colspan="8">${this.detail(b, s, pm, lecture)}</td></tr>` : ''}`).join('')}
         </tbody>
@@ -118,7 +119,7 @@ export class RapportFraisAnnexes {
     const reglage = (champ, libelles) => {
       const combo = creerCombo({ options: Object.entries(libelles).map(([v, t]) => ({ valeur: v, libelle: t })), valeur: ed.saisie.document[champ] ?? Object.keys(libelles)[0], vide: false });
       combo.disabled = lecture;
-      combo.addEventListener('change', () => ed.magasin.modifier((d) => { d.document[champ] = combo.valeurCombo; }, 'Frais annexes'));
+      combo.addEventListener('change', () => ed.magasin.modifier((d) => { d.document[champ] = combo.valeurCombo; }, texte('frais_annexes_btp.rapport.etape')));
       this.conteneur.querySelector(`[data-reglage="${champ}"]`).append(combo);
     };
     reglage('ent_fa_lignes', LIBELLES_FA_LIGNES);
@@ -146,7 +147,7 @@ export class RapportFraisAnnexes {
     const saisieCle = (source, cible, valeur) => {
       const k = cle(source, cible, valeur);
       return `<span class="saisie-cle" data-source="${source ?? ''}" data-cible="${cible}" data-valeur-cible="${echapper(valeur)}" data-mode="${k?.vfr_mode ?? 'P'}">
-        <input class="nombre" value="${echapper(k ? formatLibre(k.vfr_valeur) : '')}" ${lecture ? 'disabled' : ''} title="Vide : pas de clé"></span>`;
+        <input class="nombre" value="${echapper(k ? formatLibre(k.vfr_valeur) : '')}" ${lecture ? 'disabled' : ''} title="${texteHtml('frais_annexes_btp.rapport.cle_vide')}"></span>`;
     };
     const grouper = (cleDe) => {
       const g = new Map();
@@ -179,18 +180,18 @@ export class RapportFraisAnnexes {
     const m = (v) => formatNombre(v, pm);
     const libelle = (id) => s.parId.get(id)?.lig_libelle_brut || '—';
     return `<div class="frais-parties">
-      <section><h4>Par nature</h4><table class="table-analyse">
-        <thead><tr><th>Nature</th><th>Hors frais</th><th>Part reçue</th><th title="Clé valable pour cette tranche de frais">Clé de la tranche</th><th title="Clé valable pour toutes les tranches de frais">Clé globale</th></tr></thead>
+      <section><h4>${texteHtml('frais_annexes_btp.rapport.par_nature')}</h4><table class="table-analyse">
+        <thead><tr><th>${texteHtml('frais_annexes_btp.rapport.colonnes.nature')}</th><th>${texteHtml('frais_annexes_btp.rapport.colonnes.hors_frais')}</th><th>${texteHtml('frais_annexes_btp.rapport.colonnes.part')}</th><th title="${texteHtml('frais_annexes_btp.rapport.colonnes.cle_tranche_aide')}">${texteHtml('frais_annexes_btp.rapport.colonnes.cle_tranche')}</th><th title="${texteHtml('frais_annexes_btp.rapport.colonnes.cle_globale_aide')}">${texteHtml('frais_annexes_btp.rapport.colonnes.cle_globale')}</th></tr></thead>
         <tbody>${parNature.map((g) => `<tr><th>${echapper(nature(g.cle) ? `${nature(g.cle).code} – ${nature(g.cle).libelle}` : `#${g.cle}`)}</th>
           <td class="nombre">${m(g.poids)}</td><td class="nombre">${m(g.part)}</td><td>${saisieCle(b.lig_id, 'NATURE', g.cle)}</td><td>${saisieCle(null, 'NATURE', g.cle)}</td></tr>`).join('')}</tbody>
       </table></section>
-      <section><h4>Par élément</h4><table class="table-analyse">
-        <thead><tr><th>Code</th><th>Libellé</th><th>Hors frais</th><th>Part reçue</th><th>Clé</th></tr></thead>
+      <section><h4>${texteHtml('frais_annexes_btp.rapport.par_element')}</h4><table class="table-analyse">
+        <thead><tr><th>${texteHtml('commun.code')}</th><th>${texteHtml('commun.libelle')}</th><th>${texteHtml('frais_annexes_btp.rapport.colonnes.hors_frais')}</th><th>${texteHtml('frais_annexes_btp.rapport.colonnes.part')}</th><th>${texteHtml('frais_annexes_btp.rapport.colonnes.cle')}</th></tr></thead>
         <tbody>${parElement.map((g) => `<tr><td>${echapper(g.feuilles[0].feuille.lig_code ?? '')}</td><th>${echapper(g.feuilles[0].feuille.lig_libelle_brut ?? '')}</th>
           <td class="nombre">${m(g.poids)}</td><td class="nombre">${m(g.part)}</td><td>${saisieCle(b.lig_id, 'ELEMENT', g.cle)}</td></tr>`).join('')}</tbody>
       </table></section>
-      <section><h4>Par tranche</h4><table class="table-analyse">
-        <thead><tr><th>Tranche / ligne</th><th>Hors frais</th><th>Part reçue</th><th>Coef. FA</th></tr></thead>
+      <section><h4>${texteHtml('frais_annexes_btp.rapport.par_tranche')}</h4><table class="table-analyse">
+        <thead><tr><th>${texteHtml('frais_annexes_btp.rapport.colonnes.tranche_ligne')}</th><th>${texteHtml('frais_annexes_btp.rapport.colonnes.hors_frais')}</th><th>${texteHtml('frais_annexes_btp.rapport.colonnes.part')}</th><th>${texteHtml('frais_annexes_btp.rapport.colonnes.coef_fa')}</th></tr></thead>
         <tbody>${[...parTranche.values()].map((g) => `<tr class="groupe"><th>${echapper(libelle(g.tranche))}</th><td class="nombre">${m(g.poids)}</td><td class="nombre">${m(g.part)}</td><td></td></tr>
           ${g.lignes.map((x) => `<tr><td class="indent"><a href="#" data-aller="${x.prix.lig_id}">${echapper(`${x.prix.lig_numerotation ?? ''} ${x.prix.lig_libelle_brut ?? ''}`)}</a></td>
             <td class="nombre">${m(x.poids)}</td><td class="nombre">${m(x.part)}</td><td class="nombre">${formatLibre(x.prix.lig_coef_fa ?? 1, 4)}</td></tr>`).join('')}`).join('')}</tbody>
@@ -208,15 +209,15 @@ export class RapportFraisAnnexes {
       mode.disabled = champ.disabled;
       span.append(mode);
       const ecrire = () => {
-        const texte = champ.value.trim();
-        const v = texte === '' ? null : lireNombre(texte);
-        if (v === undefined) { this.message('Nombre invalide'); return; }
+        const saisie = champ.value.trim();
+        const v = saisie === '' ? null : lireNombre(saisie);
+        if (v === undefined) { this.message(texte('frais_annexes_btp.rapport.nombre_invalide')); return; }
         const source = span.dataset.source === '' ? null : Number(span.dataset.source);
         const cible = span.dataset.cible === 'ELEMENT'
           ? { vfr_cible: 'ELEMENT', vfr_element: span.dataset.valeurCible }
           : { vfr_cible: 'NATURE', vfr_nat_id: Number(span.dataset.valeurCible) };
         const id = m.prochainId();
-        m.modifier((d) => ecrireCle(d, source, cible, mode.valeurCombo || 'P', v, () => id), 'Clé de frais annexes');
+        m.modifier((d) => ecrireCle(d, source, cible, mode.valeurCombo || 'P', v, () => id), texte('frais_annexes_btp.rapport.etape_cle'));
       };
       champ.addEventListener('change', ecrire);
       mode.addEventListener('change', () => { if (champ.value.trim() !== '') ecrire(); });
@@ -236,7 +237,7 @@ export class RapportFraisAnnexes {
     const r = ed.resultat;
     if (!bilanTranche(r, source)) return;
     const cles = quoi === 'prorata' ? [] : quoi === 'figer' ? figerVentilation(r, { source, prochainId }) : repartirReste(ed.entree(ed.saisie), r, source, prochainId);
-    if (!cles) { this.message('Aucune ligne pour recevoir les frais'); return; }
-    m.modifier((d) => remplacerCles(d, source, cles), { reste: 'Répartir le reste des frais', figer: 'Figer la ventilation', prorata: 'Ventilation au prorata' }[quoi]);
+    if (!cles) { this.message(texte('frais_annexes_btp.rapport.sans_ligne')); return; }
+    m.modifier((d) => remplacerCles(d, source, cles), texte(`frais_annexes_btp.etapes.${quoi}`));
   }
 }

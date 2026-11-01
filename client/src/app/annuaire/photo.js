@@ -1,3 +1,4 @@
+import { texte, texteHtml, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { TYPE_FICHE } from '../codes.js';
 import { aujourdhui } from '@logibtp/socle';
 import { echapper } from '@logibtp/socle/ui';
@@ -29,18 +30,18 @@ export const vignette = (url) => (url ? `<img class="element-vignette" src="${ec
  * Onglet Photo / Logo : images de la GED de la fiche (cliquer = choisir), ajout d'une image (catégorie photo),
  * retrait. `definir(id | null)` pose le champ image_ged de la fiche (enregistré avec elle).
  */
-export async function rendrePhoto(corps, { ged, typeElement, id, valeur, definir, modifiable, utilisateur, message, titre = 'Photo' }) {
-  if (id === null) { corps.innerHTML = `<p class="aide">Enregistrez la fiche pour lui associer ${titre === 'Logo' ? 'un logo' : 'une photo'}.</p>`; return; }
-  if (!ged) { corps.innerHTML = '<p class="aide">GED indisponible.</p>'; return; }
+export async function rendrePhoto(corps, { ged, typeElement, id, valeur, definir, modifiable, utilisateur, message, titre = texte('fiches_btp.annuaire.onglets.photo') }) {
+  if (id === null) { corps.innerHTML = `<p class="aide">${texteHtml(titre === texte('fiches_btp.annuaire.onglets.logo') ? 'annuaire_btp.photo.enregistrer_logo' : 'annuaire_btp.photo.enregistrer_photo')}</p>`; return; }
+  if (!ged) { corps.innerHTML = `<p class="aide">${texteHtml('annuaire_btp.photo.sans_ged')}</p>`; return; }
   const docs = await ged.lister({ type_element: typeElement, id_element: String(id) });
   const images = docs.filter((d) => d.version?.type_mime?.startsWith('image/'));
   const choisie = Number(valeur()) || null;
   corps.innerHTML = `<div class="element-medias"><fieldset class="fiche-groupe"><legend>${echapper(titre)}</legend>
       <div class="element-images">${images.map((d) => `<label class="element-image ${d.id === choisie ? 'choisie' : ''}">
         <img src="${echapper(ged.urlContenu(d.version.id))}" alt="${echapper(d.titre)}"><span><input type="radio" name="photo" value="${d.id}" ${d.id === choisie ? 'checked' : ''} ${modifiable ? '' : 'disabled'}> ${echapper(d.titre)}</span></label>`).join('')
-        || '<p class="aide">Aucune image : ajoutez-en une.</p>'}</div>
-      <p><button type="button" data-ajout>＋ Ajouter une image</button>${choisie && modifiable ? ' <button type="button" data-retirer>Retirer</button>' : ''}
-        ${modifiable ? '' : '<span class="aide"> Passez en modification pour choisir l\'image.</span>'}</p>
+        || `<p class="aide">${texteHtml('annuaire_btp.photo.aucune')}</p>`}</div>
+      <p><button type="button" data-ajout>${iconeHtml('annuaire_btp_ajouter_image')} ${texteHtml('annuaire_btp.photo.ajouter')}</button>${choisie && modifiable ? ` <button type="button" data-retirer>${texteHtml('commun.retirer')}</button>` : ''}
+        ${modifiable ? '' : `<span class="aide"> ${texteHtml('annuaire_btp.photo.lecture')}</span>`}</p>
     </fieldset><input type="file" accept="image/*" hidden data-fichier></div>`;
   const recharger = () => rendrePhoto(corps, { ged, typeElement, id, valeur, definir, modifiable, utilisateur, message, titre });
   corps.querySelectorAll('input[name="photo"]').forEach((r) => r.addEventListener('change', () => {
@@ -61,7 +62,7 @@ export async function rendrePhoto(corps, { ged, typeElement, id, valeur, definir
           date_document: aujourdhui(), auteur: utilisateur,
         },
       });
-      message('Image ajoutée à la GED de la fiche', 'succes');
+      message(texte('annuaire_btp.photo.ajoutee'), 'succes');
       if (modifiable && d?.id && !valeur()) definir(Number(d.id));
       await recharger();
     } catch (e) { message(e.message, 'erreur'); }

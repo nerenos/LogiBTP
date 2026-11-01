@@ -1,3 +1,4 @@
+import { texte, texteHtml, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { formatPrix } from '@logibtp/bibliotheque/ui';
 import { ratio, codeAppel } from '@logibtp/bibliotheque';
 import { D, S, arr6 } from '@logibtp/socle';
@@ -165,12 +166,12 @@ export class AppelBibliotheque {
         return;
       }
       if (memeCode.length > 1) {
-        this.message(`${code} : présent dans plusieurs bibliothèques, choisissez l'élément`, 'avertissement');
+        this.message(texte('bibliotheque_btp.appel.plusieurs', { code }), 'avertissement');
         const choisi = await this.choisir(code, { memeCode: true });
         if (choisi) await this.deployer(ligId, await this.fournisseur.element(choisi.id), { surLigne: true });
         return;
       }
-      this.message(`${code} : introuvable dans la bibliothèque, choisissez un élément`, 'avertissement');
+      this.message(texte('bibliotheque_btp.appel.introuvable', { code }), 'avertissement');
       await this.rechercher(ligId, code, { surLigne: true });
     }
   }
@@ -185,8 +186,8 @@ export class AppelBibliotheque {
   }
 
   /** F3 : recherche puis déploiement de l'élément choisi (après la ligne courante, ou à sa place si elle est vide). */
-  async rechercher(ligId, texte = '', { surLigne = false } = {}) {
-    const choisi = await this.choisir(texte);
+  async rechercher(ligId, cherche = '', { surLigne = false } = {}) {
+    const choisi = await this.choisir(cherche);
     if (choisi) await this.deployer(ligId, await this.fournisseur.element(choisi.id), { surLigne });
   }
 
@@ -205,16 +206,16 @@ export class AppelBibliotheque {
       return;
     }
     if (e.type === 'TEXTE') {
-      ed.insererContenu(contenuTexte(ed, e, bib), ligId, `Texte ${e.code}`, { remplacer: Boolean(l) && !aEnfants && ligneVide(l) });
+      ed.insererContenu(contenuTexte(ed, e, bib), ligId, texte('bibliotheque_btp.appel.etapes.TEXTE', { code: e.code }), { remplacer: Boolean(l) && !aEnfants && ligneVide(l) });
     } else if (e.type === 'ENSEMBLE') {
       // Ensemble : sa tranche et ses lignes, après la ligne (ou à sa place si elle est vide).
       const contenu = contenuEnsemble(e, bib);
-      if (!contenu) { this.message(`${e.code} : ensemble sans tranche racine`, 'avertissement'); return; }
-      ed.insererContenu(contenu, ligId, `Ensemble ${e.code}`, { remplacer: surPlace && ligneVide(l) });
+      if (!contenu) { this.message(texte('bibliotheque_btp.appel.sans_tranche', { code: e.code }), 'avertissement'); return; }
+      ed.insererContenu(contenu, ligId, texte('bibliotheque_btp.appel.etapes.ENSEMBLE', { code: e.code }), { remplacer: surPlace && ligneVide(l) });
     } else if (e.type === 'OUVRAGE') {
       const contenu = contenuOuvrage(e, bib, { quantite: surPlace && l.lig_qte ? l.lig_qte : 1 });
-      if (!contenu) { this.message(`${e.code} : ouvrage sans composition`, 'avertissement'); return; }
-      ed.insererContenu(contenu, ligId, `Ouvrage ${e.code}`, { remplacer: surPlace });
+      if (!contenu) { this.message(texte('bibliotheque_btp.appel.sans_composition', { code: e.code }), 'avertissement'); return; }
+      ed.insererContenu(contenu, ligId, texte('bibliotheque_btp.appel.etapes.OUVRAGE', { code: e.code }), { remplacer: surPlace });
     } else if (surPlace) {
       // Article sur la ligne où le code est saisi : quantité, position et métré conservés.
       ed.magasin.modifier((d) => {
@@ -223,10 +224,10 @@ export class AppelBibliotheque {
         x.lig_tyl_id = TL.ELEMENT;
         if ((x.lig_qte === null || x.lig_qte === undefined) && x.lig_qte_source !== 'M') x.lig_qte = 1;
         ed.regles.appliquerContexte(d, ligId, ed.definition.taux_tva);
-      }, `Article ${e.code}`);
+      }, texte('bibliotheque_btp.appel.etapes.ARTICLE', { code: e.code }));
     } else {
       const ligne = { ...ed.nouvelleLigne(1, TL.ELEMENT, ed.saisie.document.ent_id), ...valeursArticle(e, bib), lig_qte: 1 };
-      ed.insererContenu({ racines: [1], lignes: [ligne], metres: [], variables: [] }, ligId, `Article ${e.code}`);
+      ed.insererContenu({ racines: [1], lignes: [ligne], metres: [], variables: [] }, ligId, texte('bibliotheque_btp.appel.etapes.ARTICLE', { code: e.code }));
     }
     this.message(`${codeAppel(e, bib)} – ${e.libelle ?? ''}`.slice(0, 120));
   }
@@ -237,7 +238,7 @@ export class AppelBibliotheque {
    */
   deployerPoste(ligId, e, bib, { surLigne = false } = {}) {
     const ed = this.editeur();
-    if (!this.postes || !ed.insererPoste) { this.message(`${e.code} : poste de pied, à insérer dans le pied d'un document`, 'avertissement'); return; }
+    if (!this.postes || !ed.insererPoste) { this.message(texte('bibliotheque_btp.appel.poste_hors_pied', { code: e.code }), 'avertissement'); return; }
     const taux = ed.definition.taux_tva ?? [];
     const valeurs = valeursPoste(e, bib, taux);
     const cle = e.poste?.niveau === 'TTC' ? 'TTC' : 'HT';
@@ -249,7 +250,7 @@ export class AppelBibliotheque {
         const x = d.lignes.find((y) => y.lig_id === ligId);
         Object.assign(x, valeurs, { lig_proprietes: { ...(x.lig_proprietes ?? {}), ...valeurs.lig_proprietes } });
         ed.regles.appliquerContexte(d, ligId, taux);
-      }, `Poste ${e.code}`);
+      }, texte('bibliotheque_btp.appel.etapes.POSTE_PIED', { code: e.code }));
     } else {
       let section = null;
       const vide = ed.groupesVides?.get(ligId);
@@ -260,14 +261,14 @@ export class AppelBibliotheque {
         while (x && x.lig_parent_id !== null) x = parId.get(x.lig_parent_id);
         if (x?.lig_tyl_id === TL.SECTION) section = x.lig_id;
         else if (lignes.some((y) => y.lig_parent_id === null && y.lig_tyl_id === TL.SECTION)) {
-          this.message('Poste HT d\'un document à sections : placez-vous dans la section qui le porte', 'avertissement');
+          this.message(texte('bibliotheque_btp.appel.poste_section'), 'avertissement');
           return;
         }
       }
       const id = ed.insererPoste({ cle, section }, valeurs);
       ed.grille?.selectionner(id);
     }
-    this.message(`${codeAppel(e, bib)} – ${e.libelle ?? ''} (poste de pied ${cle})`.slice(0, 120));
+    this.message(`${codeAppel(e, bib)} – ${e.libelle ?? ''} ${texte('bibliotheque_btp.appel.poste_insere', { niveau: cle })}`.slice(0, 120));
   }
 
   /** Contenu à insérer pour un élément (format du presse-papiers) : article, ouvrage ou ensemble. */
@@ -289,7 +290,7 @@ export class AppelBibliotheque {
     try {
       const liste = Array.isArray(donnees) ? donnees : [donnees];
       if (liste.some((d) => d.societe && d.societe !== location.host)) {
-        this.message("Élément d'une autre société : glissez-le depuis la bibliothèque de cette société", 'avertissement');
+        this.message(texte('bibliotheque_btp.appel.autre_societe'), 'avertissement');
         return;
       }
       const ed = this.editeur();
@@ -313,12 +314,12 @@ export class AppelBibliotheque {
           ...(copie.variables ?? []).map((v) => v.var_id)];
         suivant = Math.min(suivant, ...ids) - 1;
       }
-      if (ignores.length) this.message(`${ignores.join(', ')} : sans composition, non inséré(s)`, 'avertissement');
+      if (ignores.length) this.message(texte('bibliotheque_btp.appel.ignores', { codes: ignores.join(', ') }), 'avertissement');
       if (!total.racines.length) return;
-      const libelle = elements.length > 1 ? `${elements.length} éléments (glissés)` : `${elements[0].code} (glissé)`;
+      const libelle = elements.length > 1 ? texte('bibliotheque_btp.appel.glisses', { nombre: elements.length }) : texte('bibliotheque_btp.appel.glisse', { code: elements[0].code });
       const id = ed.insererContenu(total, refId, libelle, { position });
       if (id !== null) {
-        this.message(elements.length > 1 ? `${total.racines.length} élément(s) insérés` : `${codeAppel(elements[0], bib)} – ${elements[0].libelle ?? ''} inséré`.slice(0, 120));
+        this.message(elements.length > 1 ? texte('bibliotheque_btp.appel.inseres', { nombre: total.racines.length }) : texte('bibliotheque_btp.appel.insere', { element: `${codeAppel(elements[0], bib)} – ${elements[0].libelle ?? ''}` }).slice(0, 120));
       }
     } catch (x) {
       this.message(x.message ?? String(x), 'erreur');
@@ -330,7 +331,7 @@ export class AppelBibliotheque {
   async actualiser(ids) {
     const ed = this.editeur();
     const lignes = ed.saisie.lignes.filter((l) => ids.includes(l.lig_id) && l.lig_art_id && l.lig_tyl_id === TL.ELEMENT);
-    if (!lignes.length) { this.message('Aucune ligne d\'article de la bibliothèque dans la sélection', 'avertissement'); return; }
+    if (!lignes.length) { this.message(texte('bibliotheque_btp.appel.sans_article'), 'avertissement'); return; }
     const elements = new Map();
     for (const l of lignes) {
       try { elements.set(l.lig_id, await this.fournisseur.element(l.lig_art_id)); } catch { /* élément supprimé */ }
@@ -341,24 +342,24 @@ export class AppelBibliotheque {
         const { ratio: r, ...p } = prixArticle(e);
         Object.assign(x, p, techniquesLigne(e), { lig_proprietes: { ...(x.lig_proprietes ?? {}), element: lien(e, { unite: p.lig_unt_code, ratio: r }) } });
       }
-    }, 'Prix de la bibliothèque');
-    this.message(`${elements.size} ligne(s) actualisée(s) depuis la bibliothèque`, 'succes');
+    }, texte('bibliotheque_btp.appel.etape_prix'));
+    this.message(texte('bibliotheque_btp.appel.actualisees', { nombre: elements.size }), 'succes');
   }
 
   /**
    * Dialogue de recherche (tous types, toutes bibliothèques ; `type` présélectionné ; `memeCode` : seulement les
    * éléments dont le code est le texte cherché) ; résout avec l'élément choisi ou null.
    */
-  choisir(texte = '', { type = '', memeCode = false } = {}) {
+  choisir(cherche = '', { type = '', memeCode = false } = {}) {
     return new Promise((resoudre) => {
       const fond = document.createElement('dialog');
       fond.className = 'fiche-dialogue-fond dialogue-plein';
-      fond.innerHTML = `<section class="fiche-dialogue element-recherche" role="dialog" aria-label="Bibliothèque">
-        <header><h2>📚 Bibliothèque</h2><button type="button" data-fermer title="Fermer (Échap)">✕</button></header>
-        <div class="element-recherche-barre"><input type="search" placeholder="Code ou libellé…" value="${echapper(texte)}">
-          <select data-type><option value="">Tous les éléments</option><option value="ARTICLE">Articles</option><option value="OUVRAGE">Ouvrages</option><option value="ENSEMBLE">Ensembles</option><option value="POSTE_PIED">Postes de pied</option><option value="TEXTE">Textes</option></select></div>
+      fond.innerHTML = `<section class="fiche-dialogue element-recherche" role="dialog" aria-label="${texteHtml('bibliotheque_btp.appel.titre')}">
+        <header><h2>${iconeHtml('bibliotheque_btp_page')} ${texteHtml('bibliotheque_btp.appel.titre')}</h2><button type="button" data-fermer title="${texteHtml('commun.fermer_echap')}">${iconeHtml('retirer')}</button></header>
+        <div class="element-recherche-barre"><input type="search" placeholder="${texteHtml('bibliotheque_btp.appel.recherche')}" value="${echapper(cherche)}">
+          <select data-type><option value="">${texteHtml('bibliotheque_btp.appel.types.tous')}</option>${['ARTICLE', 'OUVRAGE', 'ENSEMBLE', 'POSTE_PIED', 'TEXTE'].map((t) => `<option value="${t}">${texteHtml(`bibliotheque_btp.appel.types.${t}`)}</option>`).join('')}</select></div>
         <div class="element-resultats"></div>
-        <p class="aide">Entrée ou double-clic : insérer · ↑↓ : choisir · Échap : fermer</p></section>`;
+        <p class="aide">${texteHtml('bibliotheque_btp.appel.aide')}</p></section>`;
       ouvrirModale(fond);
       fond.querySelector('[data-type]').value = type;
       const entree = fond.querySelector('input');
@@ -370,13 +371,13 @@ export class AppelBibliotheque {
       const chercher = async () => {
         resultats = await this.fournisseur.rechercher({ recherche: entree.value, type: fond.querySelector('[data-type]').value || null });
         // Même code dans plusieurs bibliothèques : tant que le texte cherché est ce code, seuls ses éléments sont listés.
-        const cle = texte.trim().toLocaleLowerCase('fr');
+        const cle = cherche.trim().toLocaleLowerCase('fr');
         if (memeCode && entree.value.trim().toLocaleLowerCase('fr') === cle) resultats = resultats.filter((e) => String(e.code ?? '').toLocaleLowerCase('fr') === cle);
         actif = 0;
-        zone.innerHTML = resultats.length ? `<table class="bib-table"><thead><tr><th></th><th>Code</th><th>Libellé</th><th>U.</th><th>PA</th><th>PV net</th></tr></thead><tbody>
-          ${resultats.map((e, i) => `<tr data-i="${i}"><td>${{ OUVRAGE: '🏗️', ENSEMBLE: '🧩', POSTE_PIED: '🧾', TEXTE: '📝' }[e.type] ?? '🧱'}</td><td><b>${echapper(e.bib_code)}:${echapper(e.code)}</b></td><td>${echapper(e.libelle ?? '')}</td>
+        zone.innerHTML = resultats.length ? `<table class="bib-table"><thead><tr><th></th><th>${texteHtml('commun.code')}</th><th>${texteHtml('commun.libelle')}</th><th>${texteHtml('bibliotheque_btp.appel.colonnes.unite')}</th><th>${texteHtml('analyse_btp.valeurs.pa')}</th><th>${texteHtml('bibliotheque_btp.appel.colonnes.pv_net')}</th></tr></thead><tbody>
+          ${resultats.map((e, i) => `<tr data-i="${i}"><td>${iconeHtml(['OUVRAGE', 'ENSEMBLE', 'POSTE_PIED', 'TEXTE'].includes(e.type) ? `bibliotheque_btp_${e.type}` : 'bibliotheque_btp_ARTICLE')}</td><td><b>${echapper(e.bib_code)}:${echapper(e.code)}</b></td><td>${echapper(e.libelle ?? '')}</td>
             <td>${echapper(e.unite_stock)}</td><td class="nombre">${prix(e.pa)}</td><td class="nombre">${prix(e.pv_net)}</td></tr>`).join('')}</tbody></table>`
-          : '<p class="aide">Aucun élément.</p>';
+          : `<p class="aide">${texteHtml('bibliotheque_btp.appel.aucun')}</p>`;
         surligner();
       };
       let minuterie;

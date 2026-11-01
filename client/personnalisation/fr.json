@@ -6596,5 +6596,456 @@
       "bon_envoye": "Bon envoyé à {{courriel}}.",
       "enregistre": "Compte rendu enregistré"
     }
+  },
+  "analyse_btp": {
+    "montants": {
+      "rev": "revient",
+      "pv": "PV avant frais annexes",
+      "client": "prix client"
+    },
+    "valeurs": {
+      "pa": "PA",
+      "fg": "FG",
+      "pr": "PR",
+      "benef": "Bénéf.",
+      "pv": "PV"
+    },
+    "erreurs": {
+      "sans_ligne": "Aucune ligne dont le coefficient pilote le {{montant}} dans ce groupe",
+      "trop_faible": "Montant trop faible : les lignes à prix imposé valent déjà {{fixe}}",
+      "pr_sans_pa": "PR impossible sans PA ({{element}})",
+      "sans_quantite": "Aucune ligne dont la quantité peut être recalculée (ouvrage parent de quantité nulle)"
+    },
+    "prix": {
+      "introuvable": "Élément lié introuvable dans la bibliothèque",
+      "sans_code": "Aucun élément de ce code dans la bibliothèque",
+      "sans_lien": "Sans lien ni code : non rechargée",
+      "type": "Élément de type {{type}} : non rechargé",
+      "pv_fixe": "PV fixe en bibliothèque : le PV imposé de la ligne est conservé",
+      "bouton_aide": "Prix du jour de la bibliothèque sur les éléments affichés (portée, nature et filtres) : PA rechargé, coefficients conservés ; aperçu avant écriture",
+      "titre": "Prix de la bibliothèque",
+      "aucun": "Aucun élément affiché",
+      "a_jour_sans": "Prix déjà à jour avec la bibliothèque ({{nombre}} ligne(s) sans élément correspondant)",
+      "a_jour": "Prix déjà à jour avec la bibliothèque",
+      "fait": "{{nombre}} ligne(s) mise(s) à jour depuis la bibliothèque",
+      "aide": "Prix du jour, convertis dans l'unité de chaque ligne ; coefficients conservés. PV fixe en bibliothèque : PV repris en PV fixe. Ligne à PV fixe : son PV est conservé (le bénéfice suit). Lignes sans lien : rapprochement par le code, à cocher.",
+      "remarque": "Remarque",
+      "rapprocher": "Rapprocher de {{element}}",
+      "bilan": "{{ecrites}} ligne(s) modifiable(s), {{signalees}} signalée(s)",
+      "sans": "{{nombre}} sans élément correspondant (ni lien ni code connu)",
+      "appliquer": "Appliquer"
+    },
+    "colonnes": {
+      "nb": {
+        "titre": "Lignes",
+        "aide": "Nombre de lignes chiffrées sans composante"
+      },
+      "ds": {
+        "titre": "Déboursé",
+        "aide": "Σ quantité totale × PA"
+      },
+      "fg": {
+        "titre": "FG",
+        "aide": "Coefficient de frais généraux (revient / déboursé)"
+      },
+      "rev": {
+        "titre": "Revient",
+        "aide": "Σ quantité totale × PR"
+      },
+      "benef": {
+        "titre": "Bénéf.",
+        "aide": "Coefficient de bénéfice (PV / revient)"
+      },
+      "pv": {
+        "titre": "PV avant FA",
+        "aide": "Σ quantité totale × PV, avant frais annexes"
+      },
+      "coefFa": {
+        "titre": "Coef. FA",
+        "aide": "Coefficient de frais annexes (PV avec FA / PV)"
+      },
+      "fa": {
+        "titre": "FA ventilés",
+        "aide": "Frais annexes ventilés : PV avec FA − PV"
+      },
+      "pvFa": {
+        "titre": "PV avec FA",
+        "aide": "PV × coefficient de frais annexes"
+      },
+      "prorata": {
+        "titre": "Prorata",
+        "aide": "Prorata des lignes vendues"
+      },
+      "client": {
+        "titre": "Prix client",
+        "aide": "PV avec FA × prorata × remise"
+      },
+      "global": {
+        "titre": "Coef. global",
+        "aide": "Prix client / déboursé"
+      },
+      "margeBrute": {
+        "titre": "Marge brute",
+        "aide": "Prix client − déboursé (PA)"
+      },
+      "tauxBrute": {
+        "titre": "% brute",
+        "aide": "Marge brute / prix client"
+      },
+      "margeNette": {
+        "titre": "Marge nette",
+        "aide": "PV remisé sans frais annexes ni prorata − revient"
+      },
+      "tauxNette": {
+        "titre": "% nette",
+        "aide": "Marge nette / PV remisé sans frais annexes ni prorata"
+      }
+    },
+    "elements": {
+      "code": "Code",
+      "libelle": "Libellé",
+      "unite": "U",
+      "nb": "Lignes",
+      "qt": "Qté totale",
+      "montant": "Montant PV",
+      "nature": "Nature",
+      "nb_aide": "Nombre de lignes"
+    },
+    "coefs": {
+      "fg": "frais généraux",
+      "benef": "bénéfice",
+      "prorata": "prorata"
+    },
+    "filtre": {
+      "sans_nature": "sans nature",
+      "nature": "nature {{id}}",
+      "regroupement": "regroupement {{code}}"
+    },
+    "parties": {
+      "afficher": "Afficher cette partie",
+      "masquer": "Masquer cette partie (l'autre prend toute la place)"
+    },
+    "tranches": {
+      "section": "Section",
+      "titre": "Titre",
+      "portee": "Portée de l'analyse",
+      "titre_arbre": "Tranches"
+    },
+    "total": {
+      "filtre": "Total ({{filtre}})",
+      "document": "Total du document",
+      "portee": "Total de la portée"
+    },
+    "natures": {
+      "nature": "Nature {{id}}",
+      "sans": "Sans nature",
+      "toutes": "Toutes les natures",
+      "filtre": "Filtre par nature",
+      "titre": "Natures"
+    },
+    "saisie": {
+      "montant": "Saisir le {{montant}} : les coefficients des lignes sont recalculés, l'arrondi est absorbé par les plus fortes lignes",
+      "prorata": "Saisir un coefficient de {{coef}} : il est écrit sur les lignes vendues du groupe",
+      "coef": "Saisir un coefficient de {{coef}} : il est écrit sur les lignes chiffrées sans composante du groupe"
+    },
+    "separateur": "Glisser pour déplacer la limite · double-clic : partage par défaut",
+    "barre": {
+      "portee": "Portée :",
+      "document": "Document entier",
+      "remonter": "Remonter d'un niveau",
+      "hors_total_aide": "Options, variantes et lignes pour mémoire comprises dans l'analyse (et dans les saisies)",
+      "hors_total": "Options et pour mémoire",
+      "coef_fa": "Coef. frais annexes moyen :",
+      "frais_aide": "Répartition des frais annexes par tranche de frais, nature, élément et ligne ; clés de ventilation",
+      "frais": "Frais annexes"
+    },
+    "coefs_titre": "Coefficients par nature",
+    "coefs_aide": "Coefficient ou montant saisi écrit sur les lignes (Ctrl+Z pour annuler) ; les montants restent les vraies valeurs, l'arrondi est absorbé par les plus fortes lignes, en dernier recours par une ligne d'écart d'arrondi dans la nature. Moyennes pondérées.",
+    "sans_ligne": "Aucune ligne chiffrée dans cette portée.",
+    "elements_titre": "Éléments",
+    "recherche": {
+      "placeholder": "Rechercher un code ou un libellé",
+      "aide": "Recherche sans filtre : Entrée / Maj+Entrée pour passer de résultat en résultat, Échap pour effacer",
+      "precedent": "Résultat précédent (Maj+Entrée)",
+      "suivant": "Résultat suivant (Entrée)",
+      "aucun": "Aucun résultat"
+    },
+    "elements_aide": "Regroupés par code et libellé (hors tranches et ouvrages) ; valeur saisie écrite sur toutes les lignes du groupe dans la portée et la nature filtrées. Fond coloré : les lignes diffèrent (minimum – maximum).",
+    "tri": "{{colonne}} : cliquer pour trier (croissant, décroissant, ordre par défaut)",
+    "filtrer": "Filtrer cette colonne",
+    "frais": {
+      "retour": "Coefficients et éléments",
+      "titre": "Ventilation des frais annexes",
+      "aide": "Clés par priorité : ligne (détail de la ligne), élément, nature de la tranche, nature globale ; sans clé, prorata du montant hors frais. Avec des clés, le reste n'est pas ventilé (écart) : « Répartir le reste » ou ajouter des clés. La validation fige la ventilation."
+    },
+    "elements_saisie": {
+      "divergent": "Valeurs différentes : de {{min}} à {{max}}",
+      "valeur": "Saisir le {{valeur}} de toutes les lignes du groupe ({{nombre}})",
+      "metres": "{{nombre}} ligne(s) dont la quantité est issue d'un métré : une nouvelle quantité la remplace par une quantité saisie (métré conservé, désactivé)"
+    },
+    "compte": {
+      "filtre": "{{groupes}} sur {{tous}} groupe(s), {{lignes}} ligne(s)",
+      "tous": "{{groupes}} groupe(s), {{lignes}} ligne(s)",
+      "effacer": "Effacer les filtres",
+      "liberer_aide": "Ordre figé après une saisie : réappliquer le tri et les filtres",
+      "liberer": "Réappliquer tri et filtres"
+    },
+    "colonnes_menu": {
+      "titre": "Colonnes",
+      "defaut": "Colonnes par défaut"
+    },
+    "etapes": {
+      "quantite": "Analyse : quantité de « {{element}} »",
+      "valeur": "Analyse : {{valeur}} de « {{element}} »",
+      "coef": "Analyse : {{coef}} {{valeur}}",
+      "forcer": "Analyse : {{montant}} forcé à {{cible}}"
+    },
+    "messages": {
+      "quantite": "Quantité totale {{valeur}} reventilée sur {{nombre}} ligne(s) « {{element}} »",
+      "metres": "{{nombre}} métré(s) désactivé(s) (conservé(s), quantité saisie)",
+      "quantite_invalide": "Quantité invalide",
+      "valeur_invalide": "Valeur invalide",
+      "valeur_fixe": "{{valeur}} {{montant}} écrit sur {{nombre}} ligne(s) « {{element}} » (prix fixe)",
+      "valeur": "{{valeur}} {{montant}} écrit sur {{nombre}} ligne(s) « {{element}} »",
+      "nombre": "Nombre attendu",
+      "coef_invalide": "Coefficient invalide (nombre positif attendu)",
+      "coef": "Coefficient de {{coef}} {{valeur}} écrit sur {{nombre}} ligne(s) ({{groupe}})",
+      "force": "{{montant}} forcé à {{cible}} ({{groupe}}) : {{nombre}} coefficient(s) recalculé(s)",
+      "ecart": "ligne d'écart d'arrondi de {{montant}} ajoutée"
+    },
+    "ecart": {
+      "nature": "Écart d'arrondi (analyse – {{nature}})",
+      "libelle": "Écart d'arrondi (analyse)"
+    }
+  },
+  "frais_annexes_btp": {
+    "lignes": {
+      "V": "Lignes vendues seulement",
+      "OA": "Aussi les options et variantes",
+      "OAM": "Aussi les options, variantes et lignes pour mémoire"
+    },
+    "modes": {
+      "C": "Au coefficient moyen des lignes vendues (sans réduire leur part)",
+      "B": "Dans la base de répartition (les lignes vendues reçoivent moins)"
+    },
+    "cibles": {
+      "LIGNE": "Ligne",
+      "ELEMENT": "Élément",
+      "NATURE": "Nature"
+    },
+    "modes_cle": {
+      "P": "% de la tranche",
+      "M": "€"
+    },
+    "etapes": {
+      "reste": "Répartir le reste des frais",
+      "figer": "Figer la ventilation",
+      "prorata": "Ventilation au prorata"
+    },
+    "rapport": {
+      "hors_vente": "Lignes hors vente qui reçoivent des frais",
+      "options": "Options et variantes",
+      "aucune": "Aucune tranche de frais annexes : choisissez « Frais annexes » comme type de prix d'un titre placé dans une section.",
+      "colonnes": {
+        "tranche": "Tranche de frais",
+        "portee": "Portée",
+        "prevu": "Prévu",
+        "ventile": "Ventilé",
+        "reel_aide": "Montants HT avec frais − sans frais, après arrondi des PV",
+        "reel": "Ventilé réel",
+        "ecart": "Écart",
+        "nature": "Nature",
+        "hors_frais": "Hors frais",
+        "part": "Part reçue",
+        "cle_tranche_aide": "Clé valable pour cette tranche de frais",
+        "cle_tranche": "Clé de la tranche",
+        "cle_globale_aide": "Clé valable pour toutes les tranches de frais",
+        "cle_globale": "Clé globale",
+        "cle": "Clé",
+        "tranche_ligne": "Tranche / ligne",
+        "coef_fa": "Coef. FA"
+      },
+      "cles": "clés",
+      "prorata": "prorata",
+      "actions": {
+        "reste_aide": "Fige la ventilation en clés de ligne et répartit le montant non ventilé au prorata sur les lignes qui ne reçoivent encore rien",
+        "reste": "Répartir le reste",
+        "figer_aide": "Remplace les clés de la tranche par des clés de ligne en montant par unité",
+        "figer": "Figer",
+        "prorata_aide": "Supprime les clés de la tranche (les clés de nature globales restent)",
+        "prorata": "Prorata"
+      },
+      "etape": "Frais annexes",
+      "cle_vide": "Vide : pas de clé",
+      "par_nature": "Par nature",
+      "par_element": "Par élément",
+      "par_tranche": "Par tranche",
+      "nombre_invalide": "Nombre invalide",
+      "etape_cle": "Clé de frais annexes",
+      "sans_ligne": "Aucune ligne pour recevoir les frais"
+    }
+  },
+  "annuaire_btp": {
+    "import_tarifs": {
+      "colonnes": {
+        "element": "Code de l'élément (CODE ou BIB:CODE)",
+        "reference": "Référence fournisseur",
+        "code_barre": "Code-barres",
+        "libelle": "Libellé fournisseur",
+        "unite": "Unité d'achat",
+        "prix_public": "Prix public HT",
+        "remise1": "Remise 1 (%)",
+        "remise2": "Remise 2 (%)",
+        "prix": "Prix net HT (sans prix public)",
+        "delai": "Délai de livraison (jours)",
+        "debut": "Début de validité",
+        "fin": "Fin de validité",
+        "principal": "Tarif principal (oui / non)"
+      },
+      "erreurs": {
+        "entete": "En-tête : une colonne element, reference ou code_barre est obligatoire",
+        "illisible": "{{colonne}} illisible",
+        "delai": "délai illisible",
+        "date": "{{colonne}} : date JJ/MM/AAAA ou AAAA-MM-JJ",
+        "element": "élément, référence ou code-barres obligatoire",
+        "prix": "prix public ou prix net obligatoire"
+      },
+      "exemple": "HA10;REF-123;3760001234567;Acier HA10 barre 12 m;t;1350,00;20;5;;7;01/01/2027;;oui"
+    },
+    "photo": {
+      "enregistrer_logo": "Enregistrez la fiche pour lui associer un logo.",
+      "enregistrer_photo": "Enregistrez la fiche pour lui associer une photo.",
+      "sans_ged": "GED indisponible.",
+      "aucune": "Aucune image : ajoutez-en une.",
+      "ajouter": "Ajouter une image",
+      "lecture": "Passez en modification pour choisir l'image.",
+      "ajoutee": "Image ajoutée à la GED de la fiche"
+    },
+    "tarifs": {
+      "actions": {
+        "CREE": "Création",
+        "MAJ": "Mise à jour",
+        "ERREUR": "Erreur"
+      },
+      "colonnes": {
+        "element": "Élément",
+        "reference": "Réf.\nfournisseur",
+        "libelle": "Libellé\nfournisseur",
+        "prix_public": "Prix\npublic",
+        "remise1": "Rem.\n1 %",
+        "remise2": "Rem.\n2 %",
+        "prix": "Prix\nnet",
+        "unite": "U.",
+        "delai": "Délai\n(j)",
+        "code_barre": "Code-barres",
+        "debut": "Début",
+        "fin": "Fin"
+      },
+      "principal": "Tarif principal de l'élément",
+      "recherche": "Élément : code, libellé, code-barres…",
+      "prix_net": "Prix net : saisi sans prix public, sinon calculé",
+      "enregistrer": "Enregistrer le tarif",
+      "ajouter": "Ajouter le tarif",
+      "retirer": "Retirer ce tarif",
+      "titre": "Tarifs du fournisseur",
+      "importer": "Importer un fichier CSV de tarifs (format fixe)",
+      "modele": "Télécharger le modèle du fichier CSV",
+      "aucun": "Aucun tarif.",
+      "aide": "Prix net = prix public × (1 − remise 1) × (1 − remise 2), sinon le prix saisi ; il alimente le prix d'achat de l'élément (scénarios fournisseur principal et meilleur prix).",
+      "choisir": "Choisissez l'élément dans la liste proposée",
+      "sans_prix": "Prix public ou prix net à saisir",
+      "enregistre": "Tarif enregistré (prix de l'élément recalculé)",
+      "retirer_confirmer": "Retirer ce tarif ?",
+      "import": {
+        "titre": "Import des tarifs : {{fichier}}",
+        "bilan": "{{crees}} création(s), {{maj}} mise(s) à jour, {{erreurs}} ligne(s) en erreur",
+        "ignorees": "colonnes ignorées : {{colonnes}}",
+        "ligne": "Ligne",
+        "action": "Action",
+        "message": "Message",
+        "colonnes": "Colonnes du format :",
+        "importer": "Importer {{nombre}} ligne(s)",
+        "fait": "Tarifs importés : {{crees}} création(s), {{maj}} mise(s) à jour"
+      }
+    }
+  },
+  "bibliotheque_btp": {
+    "appel": {
+      "types": {
+        "tous": "Tous les éléments",
+        "ARTICLE": "Articles",
+        "OUVRAGE": "Ouvrages",
+        "ENSEMBLE": "Ensembles",
+        "POSTE_PIED": "Postes de pied",
+        "TEXTE": "Textes"
+      },
+      "etapes": {
+        "TEXTE": "Texte {{code}}",
+        "ENSEMBLE": "Ensemble {{code}}",
+        "OUVRAGE": "Ouvrage {{code}}",
+        "ARTICLE": "Article {{code}}",
+        "POSTE_PIED": "Poste {{code}}"
+      },
+      "plusieurs": "{{code}} : présent dans plusieurs bibliothèques, choisissez l'élément",
+      "introuvable": "{{code}} : introuvable dans la bibliothèque, choisissez un élément",
+      "sans_tranche": "{{code}} : ensemble sans tranche racine",
+      "sans_composition": "{{code}} : ouvrage sans composition",
+      "poste_hors_pied": "{{code}} : poste de pied, à insérer dans le pied d'un document",
+      "poste_section": "Poste HT d'un document à sections : placez-vous dans la section qui le porte",
+      "poste_insere": "(poste de pied {{niveau}})",
+      "autre_societe": "Élément d'une autre société : glissez-le depuis la bibliothèque de cette société",
+      "ignores": "{{codes}} : sans composition, non inséré(s)",
+      "glisses": "{{nombre}} éléments (glissés)",
+      "glisse": "{{code}} (glissé)",
+      "inseres": "{{nombre}} élément(s) insérés",
+      "insere": "{{element}} inséré",
+      "sans_article": "Aucune ligne d'article de la bibliothèque dans la sélection",
+      "etape_prix": "Prix de la bibliothèque",
+      "actualisees": "{{nombre}} ligne(s) actualisée(s) depuis la bibliothèque",
+      "titre": "Bibliothèque",
+      "recherche": "Code ou libellé…",
+      "aide": "Entrée ou double-clic : insérer · ↑↓ : choisir · Échap : fermer",
+      "colonnes": {
+        "unite": "U.",
+        "pv_net": "PV net"
+      },
+      "aucun": "Aucun élément."
+    },
+    "envoi": {
+      "types": {
+        "ARTICLE": "Article",
+        "OUVRAGE": "Ouvrage",
+        "ENSEMBLE": "Ensemble"
+      },
+      "libelle_defaut": "Élément",
+      "lecture": "Document en lecture seule",
+      "selection": "Sélectionnez des lignes d'élément, d'ouvrage ou de tranche (titre)",
+      "titre": "Enregistrer dans la bibliothèque",
+      "aide": "Une ligne liée met à jour son élément. Pour une ligne non liée, les éléments de même code ou de même libellé sont proposés : rattachez-la à l'un d'eux (mise à jour) ou créez un nouvel élément. Les PA sont envoyés sans les frais annexes ; les coefficients restent ceux de la bibliothèque (imposés seulement pour une ligne à PV fixe).",
+      "colonnes": {
+        "ligne": "Ligne",
+        "type": "Type",
+        "action": "Action"
+      },
+      "montant": "{{montant}} € HT",
+      "maj": "Mettre à jour {{element}} (élément lié)",
+      "rattacher_code": "Rattacher à {{element}} – {{libelle}} (même code)",
+      "rattacher_libelle": "Rattacher à {{element}} – {{libelle}} (même libellé)",
+      "creer": "Créer un nouvel élément",
+      "ignorer": "Ne pas enregistrer",
+      "code": "Code de l'élément (unique dans la bibliothèque)",
+      "erreurs": {
+        "code": "code obligatoire",
+        "type": "l'élément {{code}} est un {{type_element}}, la ligne un {{type_ligne}}",
+        "verrou": "fiche en cours de modification par {{utilisateur}}",
+        "liste": "erreurs : {{erreurs}}",
+        "autre": "un autre utilisateur"
+      },
+      "commentaire": "Depuis le document {{numero}}",
+      "etape": "Lien vers la bibliothèque",
+      "crees": "{{nombre}} élément(s) créé(s)",
+      "majs": "{{nombre}} mis à jour",
+      "bilan": "Bibliothèque : {{bilan}}"
+    }
   }
 }

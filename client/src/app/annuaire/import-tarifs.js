@@ -3,14 +3,11 @@
 // sur l'en-tête). Colonnes reconnues (COLONNES_TARIFS) ; une ligne doit désigner l'élément (code d'appel, référence
 // fournisseur ou code-barres) et porter un prix public ou un prix net. Nombres à virgule ou à point, dates JJ/MM/AAAA
 // ou AAAA-MM-JJ, principal : oui / 1 / x. Le serveur rapproche les éléments et contrôle (ServiceBibliotheque.ImporterTarifs).
+import { texte, pairesParCode } from '@logibtp/socle/dictionnaire';
 import { normaliser as normaliserTexte } from '@logibtp/socle';
 
-export const COLONNES_TARIFS = [
-  ['element', "Code de l'élément (CODE ou BIB:CODE)"], ['reference', 'Référence fournisseur'], ['code_barre', 'Code-barres'],
-  ['libelle', 'Libellé fournisseur'], ['unite', "Unité d'achat"], ['prix_public', 'Prix public HT'], ['remise1', 'Remise 1 (%)'],
-  ['remise2', 'Remise 2 (%)'], ['prix', 'Prix net HT (sans prix public)'], ['delai', 'Délai de livraison (jours)'],
-  ['debut', 'Début de validité'], ['fin', 'Fin de validité'], ['principal', 'Tarif principal (oui / non)'],
-];
+export const COLONNES_TARIFS = pairesParCode('annuaire_btp.import_tarifs.colonnes', ['element', 'reference', 'code_barre', 'libelle', 'unite',
+  'prix_public', 'remise1', 'remise2', 'prix', 'delai', 'debut', 'fin', 'principal']);
 
 const NOMBRES = ['prix_public', 'remise1', 'remise2', 'prix'];
 const normaliser = (s) => normaliserTexte(String(s ?? '').trim()).replace(/[\s-]+/g, '_');
@@ -53,8 +50,8 @@ function date(v) {
  * remise1, remise2, prix, delai, debut, fin, principal }], erreurs: [{ rang, message }], inconnues: [en-têtes ignorés] }.
  * rang = numéro de la ligne de données (1 = première ligne après l'en-tête) ; les lignes vides sont ignorées.
  */
-export function lireCsvTarifs(texte) {
-  const brut = String(texte ?? '').replace(/^﻿/, '').split(/\r?\n/);
+export function lireCsvTarifs(contenu) {
+  const brut = String(contenu ?? '').replace(/^﻿/, '').split(/\r?\n/);
   const entete = brut.shift() ?? '';
   const separateur = [';', '\t', ','].find((s) => entete.includes(s)) ?? ';';
   const codes = cellules(entete, separateur).map(normaliser);
@@ -63,7 +60,7 @@ export function lireCsvTarifs(texte) {
   const lignes = [];
   const erreurs = [];
   if (!codes.some((c) => ['element', 'reference', 'code_barre'].includes(c))) {
-    return { lignes, erreurs: [{ rang: 0, message: 'En-tête : une colonne element, reference ou code_barre est obligatoire' }], inconnues };
+    return { lignes, erreurs: [{ rang: 0, message: texte('annuaire_btp.import_tarifs.erreurs.entete') }], inconnues };
   }
   brut.forEach((texteLigne, i) => {
     if (!texteLigne.trim()) return;
@@ -74,17 +71,17 @@ export function lireCsvTarifs(texte) {
     const fautes = [];
     for (const c of NOMBRES) {
       const n = nombre(v[c]);
-      if (Number.isNaN(n)) fautes.push(`${c} illisible`); else l[c] = n;
+      if (Number.isNaN(n)) fautes.push(texte('annuaire_btp.import_tarifs.erreurs.illisible', { colonne: c })); else l[c] = n;
     }
     const d = nombre(v.delai);
-    if (Number.isNaN(d) || (d !== null && !/^\d+$/.test(d))) fautes.push('délai illisible'); else l.delai = d === null ? null : Number(d);
+    if (Number.isNaN(d) || (d !== null && !/^\d+$/.test(d))) fautes.push(texte('annuaire_btp.import_tarifs.erreurs.delai')); else l.delai = d === null ? null : Number(d);
     for (const c of ['debut', 'fin']) {
       const x = date(v[c]);
-      if (x === undefined) fautes.push(`${c} : date JJ/MM/AAAA ou AAAA-MM-JJ`); else l[c] = x;
+      if (x === undefined) fautes.push(texte('annuaire_btp.import_tarifs.erreurs.date', { colonne: c })); else l[c] = x;
     }
     l.principal = ['oui', 'o', '1', 'x', 'vrai', 'true'].includes(normaliser(v.principal));
-    if (!l.element && !l.reference && !l.code_barre) fautes.push('élément, référence ou code-barres obligatoire');
-    if (l.prix_public === null && l.prix === null) fautes.push('prix public ou prix net obligatoire');
+    if (!l.element && !l.reference && !l.code_barre) fautes.push(texte('annuaire_btp.import_tarifs.erreurs.element'));
+    if (l.prix_public === null && l.prix === null) fautes.push(texte('annuaire_btp.import_tarifs.erreurs.prix'));
     if (fautes.length) erreurs.push({ rang, message: fautes.join(' ; ') }); else lignes.push(l);
   });
   return { lignes, erreurs, inconnues };
@@ -92,5 +89,5 @@ export function lireCsvTarifs(texte) {
 
 /** Modèle de fichier (en-tête et une ligne d'exemple), séparateur « ; ». */
 export function modeleCsvTarifs() {
-  return `${COLONNES_TARIFS.map(([c]) => c).join(';')}\r\nHA10;REF-123;3760001234567;Acier HA10 barre 12 m;t;1350,00;20;5;;7;01/01/2027;;oui\r\n`;
+  return `${COLONNES_TARIFS.map(([c]) => c).join(';')}\r\n${texte('annuaire_btp.import_tarifs.exemple')}\r\n`;
 }

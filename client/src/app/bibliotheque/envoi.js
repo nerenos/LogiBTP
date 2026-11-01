@@ -1,3 +1,4 @@
+import { texte, texteHtml } from '@logibtp/socle/dictionnaire';
 import { TYPE_FICHE } from '../codes.js';
 import { codeAppel } from '@logibtp/bibliotheque';
 import { texteBrut, D, arrondir } from '@logibtp/socle';
@@ -80,7 +81,7 @@ export function compositionDepuisContenu(contenu, mode = 'V', qtesVendues = new 
 export function valeursDepuisLigne(l, type, { composition = null, creation = false } = {}) {
   const ratio = Number(l.lig_proprietes?.element?.ratio ?? 1) || 1;
   const v = {
-    libelle_html: l.lig_libelle_html || texteBrut(l.lig_libelle_html ?? '') || 'Élément', nat_id: l.lig_nat_id ?? null,
+    libelle_html: l.lig_libelle_html || texteBrut(l.lig_libelle_html ?? '') || texte('bibliotheque_btp.envoi.libelle_defaut'), nat_id: l.lig_nat_id ?? null,
     coef_remise: String(l.lig_coef_remise ?? 1),
   };
   if (l.lig_pv_fixe) {
@@ -165,34 +166,32 @@ export class EnvoiBibliotheque {
 
   /** Dialogue : action par ligne (mettre à jour l'élément lié, rattacher à un doublon, créer), puis écriture. */
   async ouvrir(ids) {
-    if (this.editeur().magasin.lectureSeule) { this.message('Document en lecture seule', 'avertissement'); return; }
+    if (this.editeur().magasin.lectureSeule) { this.message(texte('bibliotheque_btp.envoi.lecture'), 'avertissement'); return; }
     const { lignes, bibs } = await this.preparer(ids);
-    if (!lignes.length) { this.message('Sélectionnez des lignes d\'élément, d\'ouvrage ou de tranche (titre)', 'avertissement'); return; }
-    const libelleType = { ARTICLE: 'Article', OUVRAGE: 'Ouvrage', ENSEMBLE: 'Ensemble' };
+    if (!lignes.length) { this.message(texte('bibliotheque_btp.envoi.selection'), 'avertissement'); return; }
     const ed = this.editeur();
     const montant = (l) => ed.resultat.lignes.find((x) => x.lig_id === l.lig_id)?.lig_montant_ht;
     const dlg = document.createElement('dialog');
     dlg.className = 'dialogue-envoi-bibliotheque';
     dlg.innerHTML = `<form method="dialog">
-      <h3>Enregistrer dans la bibliothèque</h3>
-      <p class="aide">Une ligne liée met à jour son élément. Pour une ligne non liée, les éléments de même code ou de même libellé sont proposés :
-        rattachez-la à l'un d'eux (mise à jour) ou créez un nouvel élément. Les PA sont envoyés sans les frais annexes ; les coefficients restent ceux de la bibliothèque (imposés seulement pour une ligne à PV fixe).</p>
-      <table class="table-analyse"><thead><tr><th>Ligne</th><th>Type</th><th>Action</th></tr></thead><tbody>
+      <h3>${texteHtml('bibliotheque_btp.envoi.titre')}</h3>
+      <p class="aide">${texteHtml('bibliotheque_btp.envoi.aide')}</p>
+      <table class="table-analyse"><thead><tr><th>${texteHtml('bibliotheque_btp.envoi.colonnes.ligne')}</th><th>${texteHtml('bibliotheque_btp.envoi.colonnes.type')}</th><th>${texteHtml('bibliotheque_btp.envoi.colonnes.action')}</th></tr></thead><tbody>
       ${lignes.map((x, i) => `<tr data-i="${i}"><td><b>${echapper(x.ligne.lig_code ?? '')}</b> ${echapper(texteBrut(x.ligne.lig_libelle_html ?? '').slice(0, 70))}
-          <br><small>${montant(x.ligne) !== undefined ? `${formatNombre(montant(x.ligne), 2)} € HT` : ''}</small></td>
-        <td>${libelleType[x.type]}</td>
+          <br><small>${montant(x.ligne) !== undefined ? texteHtml('bibliotheque_btp.envoi.montant', { montant: formatNombre(montant(x.ligne), 2) }) : ''}</small></td>
+        <td>${texteHtml(`bibliotheque_btp.envoi.types.${x.type}`)}</td>
         <td><select data-action>
-          ${x.element ? `<option value="maj:${x.element.id}">Mettre à jour ${echapper(`${x.element.bib_code}:${x.element.code}`)} (élément lié)</option>` : ''}
-          ${x.candidats.map((c) => `<option value="maj:${c.e.id}">Rattacher à ${echapper(`${c.e.bib_code}:${c.e.code}`)} – ${echapper((c.e.libelle ?? '').slice(0, 40))} (${c.code ? 'même code' : 'même libellé'})</option>`).join('')}
-          <option value="creer" ${!x.element && !x.candidats.length ? 'selected' : ''}>Créer un nouvel élément</option>
-          <option value="ignorer">Ne pas enregistrer</option>
+          ${x.element ? `<option value="maj:${x.element.id}">${texteHtml('bibliotheque_btp.envoi.maj', { element: `${x.element.bib_code}:${x.element.code}` })}</option>` : ''}
+          ${x.candidats.map((c) => `<option value="maj:${c.e.id}">${texteHtml(c.code ? 'bibliotheque_btp.envoi.rattacher_code' : 'bibliotheque_btp.envoi.rattacher_libelle', { element: `${c.e.bib_code}:${c.e.code}`, libelle: (c.e.libelle ?? '').slice(0, 40) })}</option>`).join('')}
+          <option value="creer" ${!x.element && !x.candidats.length ? 'selected' : ''}>${texteHtml('bibliotheque_btp.envoi.creer')}</option>
+          <option value="ignorer">${texteHtml('bibliotheque_btp.envoi.ignorer')}</option>
         </select>
         <span class="creation" ${x.element || x.candidats.length ? 'hidden' : ''}>
           <select data-bib>${bibs.filter((b) => b.actif !== false).map((b) => `<option value="${b.id}" ${b.code === x.bib ? 'selected' : ''}>${echapper(b.code)}</option>`).join('')}</select>
-          <input data-code value="${echapper(x.code)}" size="14" title="Code de l'élément (unique dans la bibliothèque)">
+          <input data-code value="${echapper(x.code)}" size="14" title="${texteHtml('bibliotheque_btp.envoi.code')}">
         </span></td></tr>`).join('')}
       </tbody></table>
-      <div class="boutons"><button value="annuler">Annuler</button><button type="button" class="principal" data-valider>Enregistrer</button></div></form>`;
+      <div class="boutons"><button value="annuler">${texteHtml('commun.annuler')}</button><button type="button" class="principal" data-valider>${texteHtml('commun.enregistrer')}</button></div></form>`;
     document.body.append(dlg);
     const fermer = () => { dlg.close(); dlg.remove(); };
     dlg.addEventListener('close', () => dlg.remove());
@@ -230,22 +229,22 @@ export class EnvoiBibliotheque {
         }
         let id;
         if (c.action === 'creer') {
-          if (!c.codeSaisi) throw new Error('code obligatoire');
+          if (!c.codeSaisi) throw new Error(texte('bibliotheque_btp.envoi.erreurs.code'));
           const valeurs = { ...valeursDepuisLigne(l, c.type, { composition, creation: true }), bib_id: c.bibId, code: c.codeSaisi, type: c.type, actif: true };
           id = (await this.fiche.creer(TYPE_FICHE.ELEMENT, { valeurs })).id;
           crees++;
         } else {
           id = Number(c.action.split(':')[1]);
           const actuel = await this.fiche.charger(TYPE_FICHE.ELEMENT, id);
-          if (actuel.valeurs.type !== c.type) throw new Error(`l'élément ${actuel.valeurs.code} est un ${actuel.valeurs.type.toLowerCase()}, la ligne un ${c.type.toLowerCase()}`);
+          if (actuel.valeurs.type !== c.type) throw new Error(texte('bibliotheque_btp.envoi.erreurs.type', { code: actuel.valeurs.code, type_element: texte(`bibliotheque_btp.envoi.types.${actuel.valeurs.type}`).toLowerCase(), type_ligne: texte(`bibliotheque_btp.envoi.types.${c.type}`).toLowerCase() }));
           const valeurs = valeursDepuisLigne(l, c.type, { composition });
           // PA : repris seulement pour un article à prix fixe (sinon tarifs ou dernier prix d'achat).
           if (c.type === 'ARTICLE' && actuel.valeurs.scenario_pa !== 'FIXE') delete valeurs.pa_fixe;
           const jeton = crypto.randomUUID();
           const v = await this.fiche.verrouiller(TYPE_FICHE.ELEMENT, id, { jeton });
-          if (v.ok === false) throw new Error(`fiche en cours de modification par ${v.verrou?.utilisateur ?? 'un autre utilisateur'}`);
+          if (v.ok === false) throw new Error(texte('bibliotheque_btp.envoi.erreurs.verrou', { utilisateur: v.verrou?.utilisateur ?? texte('bibliotheque_btp.envoi.erreurs.autre') }));
           try {
-            await this.fiche.enregistrer(TYPE_FICHE.ELEMENT, id, { jeton, h: actuel.h, valeurs: { ...valeurs, commentaire_prix: `Depuis le document ${ed.saisie.document.ent_numero ?? ''}`.trim() } });
+            await this.fiche.enregistrer(TYPE_FICHE.ELEMENT, id, { jeton, h: actuel.h, valeurs: { ...valeurs, commentaire_prix: texte('bibliotheque_btp.envoi.commentaire', { numero: ed.saisie.document.ent_numero ?? '' }).trim() } });
           } finally {
             await this.fiche.deverrouiller(TYPE_FICHE.ELEMENT, id, jeton).catch(() => {});
           }
@@ -265,10 +264,10 @@ export class EnvoiBibliotheque {
           l.lig_code = codeAppel(e, bibDoc);
           l.lig_proprietes = { ...(l.lig_proprietes ?? {}), element: { ...(l.lig_proprietes?.element ?? {}), id: e.id, bib: e.bib_code, code: e.code, type: e.type } };
         }
-      }, 'Lien vers la bibliothèque');
+      }, texte('bibliotheque_btp.envoi.etape'));
     }
-    const bilan = [crees ? `${crees} élément(s) créé(s)` : '', majs ? `${majs} mis à jour` : ''].filter(Boolean).join(', ');
-    if (erreurs.length) this.message(`${bilan ? `${bilan} ; ` : ''}erreurs : ${erreurs.join(' · ')}`, 'erreur');
-    else if (bilan) this.message(`Bibliothèque : ${bilan}`);
+    const bilan = [crees ? texte('bibliotheque_btp.envoi.crees', { nombre: crees }) : '', majs ? texte('bibliotheque_btp.envoi.majs', { nombre: majs }) : ''].filter(Boolean).join(', ');
+    if (erreurs.length) this.message(`${bilan ? `${bilan} ; ` : ''}${texte('bibliotheque_btp.envoi.erreurs.liste', { erreurs: erreurs.join(' · ') })}`, 'erreur');
+    else if (bilan) this.message(texte('bibliotheque_btp.envoi.bilan', { bilan }));
   }
 }

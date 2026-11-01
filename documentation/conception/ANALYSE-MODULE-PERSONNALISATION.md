@@ -56,3 +56,21 @@
 - **Couleurs** : couleur d'une tâche sans couleur propre par la variable `--terrain-tache` du thème.
 - **Contrôles** : `npm test`, analyse des portées ; pointage de la journée (tâches, saisie libre, équipe) affiché dans le
   navigateur, tous les modules migrés chargés sans erreur.
+
+## 39. Réalisation du lot P3z : analyse, frais annexes et bibliothèque du cœur (01/11/2026)
+
+- **Périmètre** : onglet Analyse de la page document (`analyse-coefs.js` : colonnes, arbres des tranches et des
+  natures, éléments, rechargement des prix, vue des frais annexes ; `analyse-calcul.js` : montants forçables, valeurs des
+  éléments, erreurs et remarques du rechargement), frais annexes (`frais-annexes.js`, `frais-annexes-ui.js`), appel et
+  envoi de la bibliothèque (`bibliotheque/appel.js`, `envoi.js`), tarifs d'un fournisseur et leur import CSV
+  (`annuaire/tarifs-fournisseur.js`, `import-tarifs.js`), onglet Photo / Logo des fiches de l'annuaire (`annuaire/photo.js`).
+- **Textes** : `analyse_btp.*` (colonnes et éléments en accesseurs, coefficients par `textesParCode`, messages et étapes
+  d'annulation), `frais_annexes_btp.*` (lignes hors vente, modes, cibles par `textesParCode`, rapport), `bibliotheque_btp.*`
+  (`appel` : types, étapes par type d'élément, messages ; `envoi`), `annuaire_btp.*` (`tarifs`, `import_tarifs` : colonnes du
+  format par `pairesParCode`, erreurs de lecture ; `photo`). Le titre Logo / Photo est comparé à sa clé
+  (`fiches_btp.annuaire.onglets.*`).
+- **Icônes** : `analyse_btp_*` (plis, filtres, tri, rechargement, métré, retour), `frais_annexes_btp_*` (plis),
+  `bibliotheque_btp_<TYPE>` des éléments et `bibliotheque_btp_page`, `annuaire_btp_tarif_*`, `annuaire_btp_ajouter_image`.
+- **Contrôles** : `npm test` (messages de l'analyse et de l'import des tarifs lus dans le dictionnaire des tests),
+  analyse des portées (paramètres `texte` renommés : `lireCsvTarifs(contenu)`, `choisir(cherche)`) ; onglet Analyse du
+  devis de démonstration et vue des frais annexes affichés dans le navigateur.
