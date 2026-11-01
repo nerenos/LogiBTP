@@ -5414,5 +5414,472 @@
       "facture_creee": "Facture d'acompte créée : à valider",
       "recu_cree": "Reçu d'acompte créé : à valider"
     }
+  },
+  "structure_btp": {
+    "adresses": {
+      "origines": {
+        "CHANTIER": "Chantier",
+        "DEPOT": "Dépôt de l'entreprise",
+        "COMPTOIR": "Retrait au comptoir",
+        "LIBRE": "Saisie libre"
+      },
+      "contact": "Contact sur place : {{nom}}",
+      "titre": "Adresse",
+      "champs": {
+        "libelle": "Libellé (lieu, chantier, dépôt…)",
+        "ligne1": "Adresse",
+        "ligne2": "Complément",
+        "code_postal": "Code postal",
+        "ville": "Ville",
+        "pays": "Pays",
+        "contact": "Contact sur place",
+        "telephone": "Téléphone",
+        "instructions": "Instructions de livraison"
+      },
+      "vider": "Vider",
+      "aucune": "Aucune adresse dans l'annuaire."
+    },
+    "niveaux": {
+      "projet": "Projet",
+      "affaire": "Affaire",
+      "chantier": "Chantier",
+      "marche": "Marché"
+    },
+    "filtre": {
+      "rattachement_aide": "Documents rattachés au projet, à l'affaire, au chantier ou au marché choisi",
+      "rattachement": "Rattachement",
+      "effacer": "Effacer",
+      "retirer_rattachement": "Retirer le filtre par rattachement",
+      "titre": "Filtre",
+      "retirer": "Retirer le filtre"
+    },
+    "graphe": {
+      "types": {
+        "projet": "Projet",
+        "affaire": "Affaire",
+        "chantier": "Chantier",
+        "marche": "Marché",
+        "document": "Document"
+      },
+      "copie": "Copie",
+      "reglages": {
+        "documents": "Documents",
+        "documents_aide": "Documents rattachés (devis, commandes, situations, factures…)",
+        "liens": "Transformations",
+        "liens_aide": "Liens entre documents (devis → commande → facture…)"
+      },
+      "legende": {
+        "structure": "Structure",
+        "rattache": "Document rattaché",
+        "transformation": "Transformation"
+      },
+      "introuvable": "Élément introuvable",
+      "montant_ht": "{{montant}} € HT",
+      "depart": "fiche de départ",
+      "sauts_un": "à {{nombre}} saut",
+      "sauts_autre": "à {{nombre}} sauts",
+      "ouvrir_document": "Ouvrir le document",
+      "transforme_en_type": "Transformé en ({{type}})",
+      "transforme_en": "Transformé en",
+      "issu_de": "Issu de",
+      "rattache_a": "Rattaché à",
+      "compte": {
+        "chantiers_un": "{{nombre}} chantier",
+        "chantiers_autre": "{{nombre}} chantiers",
+        "marches_un": "{{nombre}} marché",
+        "marches_autre": "{{nombre}} marchés",
+        "documents_un": "{{nombre}} document",
+        "documents_autre": "{{nombre}} documents"
+      }
+    },
+    "intervenants": {
+      "colonnes": {
+        "fonction": "Fonction",
+        "tiers": "Tiers",
+        "contact": "Contact",
+        "coordonnees": "Coordonnées",
+        "principal_aide": "Intervenant principal de la fonction",
+        "principal": "Princ.",
+        "paiement_direct": "Paiement direct",
+        "commentaire": "Commentaire"
+      },
+      "aucun": "Aucun intervenant",
+      "ajouter": "Intervenant",
+      "paiement_direct_un": "Paiement direct : {{nombre}} sous-traitant",
+      "paiement_direct_autre": "Paiement direct : {{nombre}} sous-traitants",
+      "ouvrir_tiers": "Ouvrir la fiche du tiers",
+      "tiers": "Tiers {{id}}",
+      "ouvrir_contact": "Ouvrir la fiche du contact",
+      "contact": "Contact {{id}}",
+      "rechercher": "Rechercher un tiers",
+      "tiers_fige": "Document issu d'une transformation : le tiers ne change plus",
+      "nouveau_tiers": "Nouveau tiers (provisoire), après contrôle des doublons",
+      "ecrire": "Écrire",
+      "appeler": "Appeler",
+      "erreurs": {
+        "fonction_inconnue": "Intervenant {{n}} : fonction inconnue",
+        "fonction_portee": "Intervenant {{n}} : fonction « {{fonction}} » non proposée ici",
+        "tiers": "Intervenant {{n}} : tiers ou contact à choisir",
+        "unique": "Un seul intervenant « {{fonction}} »",
+        "paiement_direct": "Intervenant {{n}} : paiement direct réservé aux sous-traitants"
+      }
+    },
+    "marche_commande": {
+      "nouveau_chantier": "Nouveau chantier",
+      "prive": "Marché privé",
+      "public": "Marché public",
+      "titre": "Marché de la commande {{numero}}",
+      "aide": "Une commande client se valide dans un marché, qui suit ses livraisons, situations et factures. Le montant du marché est le total des commandes validées (commande de base et avenants).",
+      "chantier": "Chantier",
+      "code_aide": "Vide : code calculé à la création",
+      "adresse": "Adresse",
+      "code_postal": "Code postal",
+      "ville": "Ville",
+      "affaire": "Affaire",
+      "conducteur": "Conducteur de travaux",
+      "fin_prevue": "Fin prévue",
+      "depot": "Dépôt de stock",
+      "stock_tenu": "Tient un stock",
+      "marche": "Marché",
+      "nouveau_marche": "Nouveau marché (cette commande en est la base)",
+      "avenant": "Avenant d'un marché en cours du chantier",
+      "nature": "Nature",
+      "retenue": "Retenue de garantie (%)",
+      "montant": "Montant de la commande : {{montant}}",
+      "valider": "Valider la commande",
+      "code_chantier": "d’après le code du chantier",
+      "erreurs": {
+        "marche": "Choisissez le marché dont la commande est un avenant",
+        "libelle_marche": "Libellé du marché obligatoire",
+        "libelle_chantier": "Libellé du chantier obligatoire",
+        "chantier": "Choisissez le chantier"
+      }
+    },
+    "montant_ht": "{{montant}} € HT",
+    "selection": {
+      "titres": {
+        "projet": "Choisir le projet",
+        "affaire": "Choisir l'affaire",
+        "chantier": "Choisir le chantier",
+        "marche": "Choisir le marché"
+      },
+      "rechercher": "Rechercher (code, libellé, parent)",
+      "fermes": "Clos et soldés",
+      "chantier": "Chantier",
+      "affaire_projet": "Affaire · projet",
+      "statut": "Statut",
+      "montant": "Montant HT",
+      "vider_aide": "Retirer le rattachement",
+      "vider": "Aucun",
+      "choisir": "Choisir",
+      "aucun": "Aucun élément",
+      "code_aide": "Code (double-clic ou F4 : choisir dans la liste)",
+      "ouvrir": "Ouvrir la fiche"
+    },
+    "code_pris": "Le code {{code}} est déjà utilisé. Utiliser le prochain code disponible : {{propose}} ?",
+    "code_pris_ok": "Utiliser {{propose}}"
+  },
+  "documents_btp": {
+    "avertissements": {
+      "points_un": "Point à vérifier",
+      "points_autre": "Points à vérifier",
+      "confirmer": "{{titre}} :\n\n{{liste}}\n\n{{verbe}} quand même ?"
+    },
+    "sources": {
+      "aide": "Documents validés du même tiers qui ont encore des lignes ouvertes. Chaque document coché devient une section du document, avec son pied.",
+      "lignes_ouvertes_un": "{{nombre}} ligne ouverte",
+      "lignes_ouvertes_autre": "{{nombre}} lignes ouvertes",
+      "aucun": "Aucun document validé en attente pour ce type de document et ce tiers.",
+      "reprendre": "Reprendre"
+    },
+    "tracabilite": {
+      "actions": {
+        "CREATION": "Création",
+        "MODIFICATION": "Modification",
+        "VALIDATION": "Validation",
+        "ANNULATION": "Annulation"
+      },
+      "liens": {
+        "TRANSFORMATION": "Transformation",
+        "COPIE": "Copie"
+      },
+      "chargement": "Chargement…",
+      "origine": "Origine",
+      "importe_html": "Importé depuis <b>{{format}}</b> le {{date}} par {{utilisateur}}",
+      "reference_html": "référence d'origine <b>{{reference}}</b>",
+      "fichier": "Fichier source : {{nom}}",
+      "conserve": "(conservé dans les pièces du document)",
+      "non_conserve": "(non conservé)",
+      "telecharger": "Télécharger le fichier",
+      "reimporter_aide": "Relire le fichier source et ouvrir un nouveau devis importé à vérifier",
+      "reimporter": "Réutiliser l'import",
+      "rapport": "Rapport d'import (mode débogage)",
+      "saisi": "Document saisi dans LogiBTP (ni import, ni transformation).",
+      "issu_de": "Issu de",
+      "aucune_source": "Aucun document d'origine.",
+      "cibles": "Documents issus de celui-ci",
+      "aucune_cible": "Aucun document créé à partir de celui-ci.",
+      "historique": "Historique",
+      "colonnes": {
+        "version": "Version",
+        "action": "Action",
+        "date": "Date",
+        "utilisateur": "Utilisateur"
+      },
+      "aucune_version": "Aucune version enregistrée."
+    },
+    "transformation": {
+      "etapes": {
+        "COMMANDE": {
+          "titre": "Commande",
+          "aide": "Engagement du client ou commande au fournisseur"
+        },
+        "RECEPTION": {
+          "titre": "Livraison",
+          "aide": "Bon de livraison ou de réception des quantités"
+        },
+        "SITUATION": {
+          "titre": "Situation de travaux",
+          "aide": "État d'avancement cumulé, avant la facture d'avancement"
+        },
+        "FACTURATION": {
+          "titre": "Facturation",
+          "aide": "Facture, facture d'avancement"
+        },
+        "RETOUR": {
+          "titre": "Retour",
+          "aide": "Retour de marchandises"
+        },
+        "AVOIR": {
+          "titre": "Avoir",
+          "aide": "Annulation totale ou partielle d'une facture"
+        }
+      },
+      "descriptions": {
+        "V_COMMANDE": "Le client accepte : commande reprenant le reliquat du document",
+        "V_RECEPTION": "Livraison des quantités restant à livrer",
+        "V_RETOUR": "Retour client des quantités livrées",
+        "V_SITUATION": "Situation de travaux (avancement cumulé), à transformer ensuite en facture d'avancement",
+        "V_FACTURE": "Facture du reliquat à facturer",
+        "V_FACTURE_AVT": "Facture d'avancement (situation)",
+        "V_AVOIR": "Avoir sur la facture",
+        "A_COMMANDE": "Commande au fournisseur des éléments du document",
+        "A_RECEPTION": "Réception des quantités commandées",
+        "A_RETOUR": "Retour au fournisseur",
+        "A_FACTURE": "Facture du fournisseur",
+        "A_FACTURE_AVT": "Situation du fournisseur ou du sous-traitant",
+        "A_AVOIR": "Avoir du fournisseur"
+      },
+      "autres": "Autres",
+      "titre": "Transformer {{type}} {{numero}}",
+      "achat": "Achat",
+      "sous_traitance": "Sous-traitance",
+      "intermediaire": "(par une {{type}} validée automatiquement)",
+      "vaut_aussi": "(vaut aussi {{etapes}})",
+      "reliquat": "Tout le reliquat du document est repris (quantités restant à transformer pour cette étape).",
+      "aucune_cible": "Ce type de document ne se transforme pas",
+      "le_document": "le document"
+    },
+    "options": {
+      "gardee": "Gardée",
+      "retenue": "Retenue",
+      "ecartee": "Écartée",
+      "non_retenue": "Non retenue",
+      "titre": "Options et variantes",
+      "aide": "Une option ou une variante retenue passe en prix vendu (à son prix du document) ; non retenue, elle n'est pas reprise. La ligne de base d'une variante est gardée sauf si vous l'écartez.",
+      "tout": "Tout retenir",
+      "rien": "Rien retenir",
+      "transformer": "Transformer",
+      "sans_choix_un": "{{nombre}} option ou variante sans choix",
+      "sans_choix_autre": "{{nombre}} options ou variantes sans choix",
+      "genres": {
+        "O": "Option",
+        "A": "Variante",
+        "base": "Base"
+      }
+    }
+  },
+  "reglements_btp": {
+    "retenue": "Retenue de garantie",
+    "titres": {
+      "fournisseurs": "Règlements fournisseurs",
+      "clients": "Règlements clients",
+      "chantier": "Échéances du chantier",
+      "marche": "Échéances du marché"
+    },
+    "tiers": "Tiers",
+    "toutes": "Échéances réglées aussi",
+    "choisir_tiers": "Choisissez un tiers.",
+    "aucune_echeance": "Aucune échéance.",
+    "aucune_echeance_ouverte": "Aucune échéance ouverte.",
+    "colonnes": {
+      "tiers": "Tiers",
+      "piece": "Pièce",
+      "type": "Type",
+      "echeance": "Échéance",
+      "montant": "Montant",
+      "pointe": "Pointé",
+      "reste": "Reste",
+      "a_pointer": "À pointer",
+      "date": "Date",
+      "mode": "Mode",
+      "reference": "Référence",
+      "non_pointe": "Non pointé",
+      "pieces": "Pièces",
+      "organisme": "Organisme",
+      "fin": "Fin",
+      "mainlevee": "Mainlevée"
+    },
+    "pointer_tiers": "Pointer les règlements de ce tiers",
+    "blocs": {
+      "E": "Clients : encaissements",
+      "D": "Fournisseurs et sous-traitants : décaissements"
+    },
+    "echeances": "Échéances",
+    "nouveau": "Nouveau règlement",
+    "champs": {
+      "date": "Date",
+      "mode": "Mode",
+      "montant": "Montant",
+      "reference": "Référence"
+    },
+    "repartir_aide": "Répartit le montant sur les échéances, de la plus ancienne à la plus récente",
+    "repartir": "Répartir",
+    "enregistrer": "Enregistrer le règlement",
+    "reglements": "Règlements",
+    "echeance_id": "échéance {{id}}",
+    "supprimer_aide": "Supprimer le règlement et ses pointages",
+    "aucun": "Aucun règlement.",
+    "cautions": {
+      "titre": "Cautions",
+      "supprimer_aide": "Supprimer la caution et ses pointages",
+      "aucune": "Aucune caution.",
+      "ajouter_aide": "Pointe les retenues de garantie ouvertes, de la plus ancienne à la plus récente",
+      "ajouter": "Caution sur les retenues"
+    },
+    "messages": {
+      "montant": "Montant du règlement à saisir",
+      "trop_percu": "Non pointé : {{montant}} (trop-perçu)",
+      "enregistre": "Règlement enregistré",
+      "supprimer": "Supprimer ce règlement et ses pointages ?",
+      "supprimer_caution": "Supprimer cette caution et ses pointages ?",
+      "caution_incomplete": "Organisme et montant de la caution à saisir",
+      "caution_enregistree": "Caution enregistrée"
+    },
+    "routes": {
+      "reglements": "Règlements"
+    }
+  },
+  "hors_ligne_btp": {
+    "etats": {
+      "ATTENTE": "En attente d’envoi",
+      "CONFLIT": "Conflit à résoudre",
+      "FUSION": "Fusion à vérifier puis enregistrer",
+      "ERREUR": "Envoi refusé"
+    },
+    "entites": {
+      "document": "Entête",
+      "ligne": "Ligne {{id}}",
+      "metre": "Métré de la ligne {{id}}",
+      "variable": "Variable {{nom}}",
+      "ventilation": "Ventilation {{id}}"
+    },
+    "envoi": {
+      "conflit": "{{libelle}} : modifié entre-temps sur le serveur, vos modifications restent sur ce poste",
+      "refuse": "{{libelle}} : envoi refusé ({{erreur}})",
+      "documents_un": "{{nombre}} document saisi hors ligne envoyé au serveur",
+      "documents_autre": "{{nombre}} documents saisis hors ligne envoyés au serveur",
+      "operations_un": "{{nombre}} saisie du terrain envoyée au serveur",
+      "operations_autre": "{{nombre}} saisies du terrain envoyées au serveur",
+      "operation_refusee": "{{libelle}} : envoi refusé ({{erreur}}) ; la saisie reste sur cet appareil"
+    },
+    "fusion": {
+      "natures": {
+        "AJOUT": "Ajout",
+        "MODIFICATION": "Modification",
+        "SUPPRESSION": "Suppression"
+      },
+      "cotes": {
+        "ici": "Ma saisie",
+        "serveur": "Serveur",
+        "deux": "Les deux (sans conflit)"
+      },
+      "tables": {
+        "document": "Entête",
+        "lignes": "Ligne",
+        "metres": "Métré",
+        "variables": "Variable",
+        "ventilations": "Ventilation"
+      },
+      "champs": {
+        "ent_objet": "Objet",
+        "ent_tiers_id": "Tiers",
+        "ent_date": "Date",
+        "ent_intervenants": "Intervenants",
+        "ent_notre_reference": "Notre référence",
+        "ent_reference_externe": "Référence externe",
+        "ent_validite_jours": "Validité (jours)",
+        "ent_chantier_id": "Chantier",
+        "ent_marche_id": "Marché",
+        "lig_code": "Code",
+        "lig_libelle_html": "Libellé",
+        "lig_qte": "Quantité",
+        "lig_unt_code": "Unité",
+        "lig_pv": "PV",
+        "lig_pa": "PA",
+        "lig_coef_fg": "Coef. FG",
+        "lig_coef_benef": "Coef. bénéfice",
+        "lig_coef_remise": "Remise",
+        "lig_nat_id": "Nature",
+        "lig_tva_id": "TVA",
+        "lig_parent_id": "Tranche",
+        "lig_commentaire": "Commentaire",
+        "mtr_script": "Script",
+        "var_valeur": "Valeur"
+      },
+      "titre": "Fusion",
+      "chargement": "Chargement…",
+      "aucune": "Aucune saisie hors ligne de ce document sur ce poste.",
+      "api_perdue": "La fusion compare votre saisie à la version actuelle du serveur : elle sera possible à son retour.",
+      "titre_document": "Fusion : {{libelle}}",
+      "fusionner_aide": "Saisie fusionnée ouverte dans le document : vérifiez puis enregistrez",
+      "fusionner": "Fusionner et vérifier",
+      "ecraser_aide": "Votre saisie remplace la version du serveur (ses modifications sont perdues)",
+      "ecraser": "Garder ma saisie",
+      "copie_aide": "Votre saisie devient un nouveau document en brouillon ; ce document reste tel que sur le serveur",
+      "copie": "Copie en brouillon",
+      "abandonner_aide": "Votre saisie est supprimée de ce poste",
+      "abandonner": "Abandonner ma saisie",
+      "resume_html": "Votre saisie a été enregistrée sur ce poste le <b>{{le}}</b>, sans réseau. Entre-temps, le serveur a enregistré la version <b>{{version}}</b>",
+      "depart_inconnu": "Version de départ inconnue : toute différence est présentée comme un conflit.",
+      "figee": "Le document a été validé (ou n’est plus modifiable) sur le serveur : votre saisie peut devenir une copie en brouillon, ou être abandonnée.",
+      "conflits": "Conflits ({{nombre}})",
+      "tout_local": "Tout : ma saisie",
+      "tout_serveur": "Tout : serveur",
+      "colonnes": {
+        "element": "Élément",
+        "champ": "Champ",
+        "depart": "Départ",
+        "nature": "Nature",
+        "cote": "Faite par"
+      },
+      "aucun_conflit": "Aucun conflit : les modifications des deux côtés se complètent.",
+      "changements": "Modifications prises d'office ({{nombre}})",
+      "aucun_changement": "Aucune.",
+      "supprime_ici": "Supprimée dans ma saisie, modifiée sur le serveur",
+      "supprime_serveur": "Modifiée dans ma saisie, supprimée sur le serveur",
+      "supprimer": "Supprimer",
+      "garder_local": "Garder ma version",
+      "garder_serveur": "Garder la version du serveur",
+      "message_ecraser": "Votre saisie est posée sur la version du serveur : vérifiez puis enregistrez",
+      "message_fusion": "Saisie fusionnée : vérifiez (totaux recalculés) puis enregistrez",
+      "confirmer_ecraser": "Garder votre saisie entière ? Les modifications faites sur le serveur depuis votre départ seront perdues à l’enregistrement.",
+      "suffixe_copie": "(copie hors ligne)",
+      "message_copie": "Copie en brouillon : vérifiez puis enregistrez pour la créer sur le serveur",
+      "confirmer_abandon": "Supprimer votre saisie hors ligne de ce poste ? La version du serveur sera rouverte."
+    },
+    "routes": {
+      "fusion": "Fusion"
+    }
   }
 }

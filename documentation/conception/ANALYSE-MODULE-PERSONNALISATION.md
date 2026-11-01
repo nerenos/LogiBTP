@@ -18,3 +18,23 @@
 - **Hors lot** : les titres des groupes comparés par le code (`groupeVisible` : groupe « Sous-traitance » de la
   définition) suivent les définitions des fiches, rangées avec les données système (§ 8).
 - **Contrôles** : `npm test`, analyse des portées ; onglet Gestion d'un marché affiché dans le navigateur.
+
+## 37. Réalisation du lot P3x : structure, documents et hors ligne (01/11/2026)
+
+- **Périmètre** : structure des affaires (`structure/` : adresses des travaux et de livraison, filtre des listes par
+  rattachement, graphe de la structure, intervenants, fenêtre du marché d'une commande, liste de choix des
+  rattachements, contrôle des intervenants et code déjà pris), documents (`documents/` : fenêtre de transformation,
+  options et variantes, documents sources, points à vérifier, onglet Traçabilité), page des règlements
+  (`pages/reglements.js`), saisie hors ligne (`hors-ligne/` : états des saisies en attente, libellés des entités,
+  messages d'envoi) et page de fusion (`pages/fusion-document.js`).
+- **Textes** : `structure_btp.*` (`adresses`, `filtre`, `niveaux`, `graphe`, `intervenants`, `marche_commande`,
+  `selection`), `documents_btp.*` (`transformation.etapes|descriptions`, `options`, `sources`, `tracabilite`,
+  `avertissements`), `reglements_btp.*`, `hors_ligne_btp.*` (`etats`, `entites`, `envoi`, `fusion`) ; statuts de la liste de
+  choix : ceux des fiches de la structure (`fiches_btp.structure.statuts`). Les messages du contrôle des intervenants
+  passent par le dictionnaire, en français identiques à `Intervenants.Controler` (test inchangé).
+- **Icônes** : `structure_btp_*` (types du graphe, principal, ouvrir), `documents_btp_<type>` des cibles de
+  transformation, importé, réimporter, `reglements_btp_page`, `hors_ligne_btp_*` (fusion, garder, copie, fusionner).
+- **Couleurs** : nœuds du graphe de la structure et familles de documents par les variables `--graphe-structure-*` du
+  thème (lues par `couleurTheme` au dessin, aussi pour l'export SVG).
+- **Contrôles** : `npm test`, analyse des portées ; fenêtres de transformation, d'options, de sources, de choix d'un
+  rattachement, d'adresse et table des intervenants affichées dans le navigateur.

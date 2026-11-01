@@ -1,3 +1,4 @@
+import { texte, texteHtml, iconeHtml, textesParCode } from '@logibtp/socle/dictionnaire';
 import { aujourdhui } from '@logibtp/socle';
 import { echapper, ouvrirModale } from '@logibtp/socle/ui';
 
@@ -7,7 +8,7 @@ import { echapper, ouvrirModale } from '@logibtp/socle/ui';
 // mention, releve_le }. Comparaison avec le client répliquée par AdressesDocument.cs (ventes : payeur et adresse des
 // travaux identiques au client restent vides).
 
-export const ORIGINES_ADRESSE = { CHANTIER: 'Chantier', DEPOT: 'Dépôt de l\'entreprise', COMPTOIR: 'Retrait au comptoir', LIBRE: 'Saisie libre' };
+export const ORIGINES_ADRESSE = textesParCode('structure_btp.adresses.origines', ['CHANTIER', 'DEPOT', 'COMPTOIR', 'LIBRE']);
 
 /** Texte comparé : espaces réduits, sans casse ; vide = ''. */
 export const normaliser = (t) => String(t ?? '').split(/\s+/).filter(Boolean).join(' ').toUpperCase();
@@ -46,14 +47,14 @@ export function lignesAdresse(x) {
     x.libelle ? `<strong>${echapper(x.libelle)}</strong>` : '',
     ...[a.ligne1, a.ligne2, a.ligne3].filter(Boolean).map(echapper),
     [a.code_postal, a.ville].filter(Boolean).map(echapper).join(' ') + (a.pays && a.pays !== 'FR' ? ` (${echapper(a.pays)})` : ''),
-    x.contact?.nom ? `Contact sur place : ${echapper(x.contact.nom)}` : '',
-    x.telephone ? `☎ ${echapper(x.telephone)}` : '',
+    x.contact?.nom ? texteHtml('structure_btp.adresses.contact', { nom: x.contact.nom }) : '',
+    x.telephone ? `${iconeHtml('telephone')} ${echapper(x.telephone)}` : '',
     x.instructions ? `<em>${echapper(x.instructions)}</em>` : '',
   ].filter((l) => l && l.trim());
 }
 
 /** Saisie d'une adresse (libre, ou modification d'une adresse reprise) ; résout avec l'adresse, null (vider) ou undefined. */
-export function saisirAdresse(x, { titre = 'Adresse' } = {}) {
+export function saisirAdresse(x, { titre = texte('structure_btp.adresses.titre') } = {}) {
   const v = x ?? { origine: 'LIBRE', adresse: {} };
   const a = v.adresse ?? {};
   return new Promise((resoudre) => {
@@ -61,15 +62,15 @@ export function saisirAdresse(x, { titre = 'Adresse' } = {}) {
     fond.className = 'fiche-dialogue-fond dialogue-plein';
     const champ = (cle, libelle, valeur, large = false) => `<label class="${large ? 'large' : ''}">${libelle}<input data-cle="${cle}" value="${echapper(valeur ?? '')}"></label>`;
     fond.innerHTML = `<section class="fiche-dialogue saisie-adresse" role="dialog" aria-label="${echapper(titre)}">
-      <header><h2>${echapper(titre)}</h2><button type="button" data-fermer title="Fermer (Échap)">✕</button></header>
+      <header><h2>${echapper(titre)}</h2><button type="button" data-fermer title="${texteHtml('commun.fermer_echap')}">${iconeHtml('retirer')}</button></header>
       <div class="formulaire">
-        ${champ('libelle', 'Libellé (lieu, chantier, dépôt…)', v.libelle, true)}
-        ${champ('ligne1', 'Adresse', a.ligne1, true)}${champ('ligne2', 'Complément', a.ligne2, true)}
-        ${champ('code_postal', 'Code postal', a.code_postal)}${champ('ville', 'Ville', a.ville)}${champ('pays', 'Pays', a.pays ?? 'FR')}
-        ${champ('contact', 'Contact sur place', v.contact?.nom)}${champ('telephone', 'Téléphone', v.telephone)}
-        <label class="large">Instructions de livraison<textarea data-cle="instructions" rows="2">${echapper(v.instructions ?? '')}</textarea></label>
+        ${champ('libelle', texteHtml('structure_btp.adresses.champs.libelle'), v.libelle, true)}
+        ${champ('ligne1', texteHtml('structure_btp.adresses.champs.ligne1'), a.ligne1, true)}${champ('ligne2', texteHtml('structure_btp.adresses.champs.ligne2'), a.ligne2, true)}
+        ${champ('code_postal', texteHtml('structure_btp.adresses.champs.code_postal'), a.code_postal)}${champ('ville', texteHtml('structure_btp.adresses.champs.ville'), a.ville)}${champ('pays', texteHtml('structure_btp.adresses.champs.pays'), a.pays ?? 'FR')}
+        ${champ('contact', texteHtml('structure_btp.adresses.champs.contact'), v.contact?.nom)}${champ('telephone', texteHtml('structure_btp.adresses.champs.telephone'), v.telephone)}
+        <label class="large">${texteHtml('structure_btp.adresses.champs.instructions')}<textarea data-cle="instructions" rows="2">${echapper(v.instructions ?? '')}</textarea></label>
       </div>
-      <footer><button type="button" data-vider>Vider</button><button type="button" data-fermer>Annuler</button><button type="button" class="principal" data-valider>Valider</button></footer></section>`;
+      <footer><button type="button" data-vider>${texteHtml('structure_btp.adresses.vider')}</button><button type="button" data-fermer>${texteHtml('commun.annuler')}</button><button type="button" class="principal" data-valider>${texteHtml('commun.valider')}</button></footer></section>`;
     ouvrirModale(fond);
     const lire = (cle) => fond.querySelector(`[data-cle="${cle}"]`).value.trim() || null;
     const fermer = (r) => { fond.remove(); resoudre(r); };
@@ -96,9 +97,9 @@ export function choisirAdresse(liste, { titre }) {
     const fond = document.createElement('dialog');
     fond.className = 'fiche-dialogue-fond dialogue-plein';
     fond.innerHTML = `<section class="fiche-dialogue saisie-adresse" role="dialog" aria-label="${echapper(titre)}">
-      <header><h2>${echapper(titre)}</h2><button type="button" data-fermer title="Fermer (Échap)">✕</button></header>
+      <header><h2>${echapper(titre)}</h2><button type="button" data-fermer title="${texteHtml('commun.fermer_echap')}">${iconeHtml('retirer')}</button></header>
       ${liste.length ? `<ul class="choix-adresses">${liste.map((x, i) => `<li><button type="button" data-i="${i}">${lignesAdresse(x).join('<br>')}</button></li>`).join('')}</ul>`
-    : '<p class="aide">Aucune adresse dans l\'annuaire.</p>'}</section>`;
+    : `<p class="aide">${texteHtml('structure_btp.adresses.aucune')}</p>`}</section>`;
     ouvrirModale(fond);
     const fermer = (r) => { fond.remove(); resoudre(r ?? null); };
     fond.querySelector('[data-fermer]').addEventListener('click', () => fermer());

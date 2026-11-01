@@ -108,3 +108,14 @@
   --widget-materiel-panne: #c0392b;
   --widget-materiel-rebut: #667085;
 }
+
+/* Graphe de la structure des affaires (fiches projet, affaire, chantier, marché) : nœuds et familles de documents. */
+:root {
+  --graphe-structure-projet: #8b5cf6;
+  --graphe-structure-affaire: #d14d72;
+  --graphe-structure-chantier: #e07b24;
+  --graphe-structure-marche: #2f6fd1;
+  --graphe-structure-achat: #2f6fd1;
+  --graphe-structure-sous-traitance: #7c3aed;
+  --graphe-structure-vente: #2e9d5b;
+}

@@ -1,3 +1,4 @@
+import { texte, texteHtml, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { urlFiche, urlDocument, TYPE_FICHE } from '../codes.js';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, formatNombre, lireNombre, creerCombo, confirmer } from '@logibtp/socle/ui';
@@ -16,7 +17,7 @@ import { api } from '../api.js';
  * validées, tous tiers, clients puis fournisseurs, avec le pointé et le reste ; le tiers ouvre sa page de pointage.
  */
 export class PageReglements extends PageBase {
-  icone = '💳';
+  icone = icone('reglements_btp_page');
 
   async ouvrir() {
     // Modes de règlement paramétrables (module Document), sinon la liste du module.
@@ -26,10 +27,10 @@ export class PageReglements extends PageBase {
       : this.requete.marche ? { type: TYPE_FICHE.MARCHE, id: Number(this.requete.marche) } : null;
     if (this.perimetre) { await this.#ouvrirPerimetre(); return; }
     this.sens = this.requete.sens === 'D' ? 'D' : 'E';
-    this.titre = this.sens === 'D' ? 'Règlements fournisseurs' : 'Règlements clients';
-    this.conteneur.innerHTML = `<div class="page-parametres page-reglements"><h1 class="page-titre">💳 ${echapper(this.titre)}</h1>
-      <p>Tiers <span data-tiers></span> <label class="fiche-option"><input type="checkbox" data-toutes> Échéances réglées aussi</label></p>
-      <div data-corps><p class="aide">Choisissez un tiers.</p></div></div>`;
+    this.titre = texte(this.sens === 'D' ? 'reglements_btp.titres.fournisseurs' : 'reglements_btp.titres.clients');
+    this.conteneur.innerHTML = `<div class="page-parametres page-reglements"><h1 class="page-titre">${iconeHtml('reglements_btp_page')} ${echapper(this.titre)}</h1>
+      <p>${texteHtml('reglements_btp.tiers')} <span data-tiers></span> <label class="fiche-option"><input type="checkbox" data-toutes> ${texteHtml('reglements_btp.toutes')}</label></p>
+      <div data-corps><p class="aide">${texteHtml('reglements_btp.choisir_tiers')}</p></div></div>`;
     let tiers = [];
     try { tiers = (await api.tiersReglements()).filter((t) => t.sens === this.sens); } catch (e) { app.message(e.message, 'erreur'); }
     const combo = creerCombo({ options: tiers.map((t) => ({ valeur: t.id, libelle: t.nom })), valeur: this.requete.tiers ? Number(this.requete.tiers) : '' });
@@ -43,10 +44,9 @@ export class PageReglements extends PageBase {
   /** Échéances d'un chantier ou d'un marché, tous tiers (lecture ; pointage dans la page du tiers). */
   async #ouvrirPerimetre() {
     const { type, id } = this.perimetre;
-    const libelle = type === TYPE_FICHE.CHANTIER ? 'chantier' : 'marché';
-    this.titre = `Échéances du ${libelle}`;
-    this.conteneur.innerHTML = `<div class="page-parametres page-reglements"><div class="entete-page"><h1 class="page-titre">💳 ${echapper(this.titre)} <a href="${urlFiche(type, id)}" data-element></a></h1>
-      <label class="fiche-option"><input type="checkbox" data-toutes> Échéances réglées aussi</label></div><div data-corps></div></div>`;
+    this.titre = texte(type === TYPE_FICHE.CHANTIER ? 'reglements_btp.titres.chantier' : 'reglements_btp.titres.marche');
+    this.conteneur.innerHTML = `<div class="page-parametres page-reglements"><div class="entete-page"><h1 class="page-titre">${iconeHtml('reglements_btp_page')} ${echapper(this.titre)} <a href="${urlFiche(type, id)}" data-element></a></h1>
+      <label class="fiche-option"><input type="checkbox" data-toutes> ${texteHtml('reglements_btp.toutes')}</label></div><div data-corps></div></div>`;
     this.conteneur.querySelector('[data-toutes]').addEventListener('change', (e) => { this.toutes = e.target.checked; this.#rendrePerimetre(); });
     const { structure } = await this.app.services();
     const refs = await structure.referentiels().catch(() => ({}));
@@ -63,17 +63,17 @@ export class PageReglements extends PageBase {
     const visibles = this.toutes ? l : l.filter((e) => !e.reglee);
     const bloc = (sens, titre) => {
       const lignes = visibles.filter((e) => e.sens === sens);
-      if (!lignes.length) return `<h2>${titre}</h2><p class="aide">Aucune échéance${this.toutes ? '' : ' ouverte'}.</p>`;
+      if (!lignes.length) return `<h2>${titre}</h2><p class="aide">${texteHtml(this.toutes ? 'reglements_btp.aucune_echeance' : 'reglements_btp.aucune_echeance_ouverte')}</p>`;
       const total = (cle) => lignes.reduce((t, e) => t.plus(Dz(e[cle])), Dz(0)).toString();
-      return `<h2>${titre}</h2><table class="tableau-compact largeur-contenu"><thead><tr><th>Tiers</th><th>Pièce</th><th>Type</th><th>Échéance</th>
-        <th class="nombre">Montant</th><th class="nombre">Pointé</th><th class="nombre">Reste</th></tr></thead><tbody>
-        ${lignes.map((e) => `<tr${e.reglee ? ' class="discret"' : ''}><td><a href="/reglements?sens=${sens}&tiers=${Number(e.tiers_id)}" title="Pointer les règlements de ce tiers">${echapper(e.tiers ?? '')}</a></td>
+      return `<h2>${titre}</h2><table class="tableau-compact largeur-contenu"><thead><tr><th>${texteHtml('reglements_btp.colonnes.tiers')}</th><th>${texteHtml('reglements_btp.colonnes.piece')}</th><th>${texteHtml('reglements_btp.colonnes.type')}</th><th>${texteHtml('reglements_btp.colonnes.echeance')}</th>
+        <th class="nombre">${texteHtml('reglements_btp.colonnes.montant')}</th><th class="nombre">${texteHtml('reglements_btp.colonnes.pointe')}</th><th class="nombre">${texteHtml('reglements_btp.colonnes.reste')}</th></tr></thead><tbody>
+        ${lignes.map((e) => `<tr${e.reglee ? ' class="discret"' : ''}><td><a href="/reglements?sens=${sens}&tiers=${Number(e.tiers_id)}" title="${texteHtml('reglements_btp.pointer_tiers')}">${echapper(e.tiers ?? '')}</a></td>
           <td><a href="${urlDocument(Number(e.piece_id))}">${echapper(e.piece ?? `#${e.piece_id}`)}</a></td><td>${echapper(e.type)}</td>
-          <td>${e.nature === 'RETENUE' ? `Retenue de garantie${e.date ? ` · ${echapper(e.date)}` : ''}` : echapper(e.date ?? '')}</td>
+          <td>${e.nature === 'RETENUE' ? `${texteHtml('reglements_btp.retenue')}${e.date ? ` · ${echapper(e.date)}` : ''}` : echapper(e.date ?? '')}</td>
           <td class="nombre">${f(e.montant)}</td><td class="nombre">${f(e.pointe)}</td><td class="nombre">${f(e.reste)}</td></tr>`).join('')}</tbody>
-        <tfoot><tr><th colspan="4">Total</th><th class="nombre">${f(total('montant'))}</th><th class="nombre">${f(total('pointe'))}</th><th class="nombre">${f(total('reste'))}</th></tr></tfoot></table>`;
+        <tfoot><tr><th colspan="4">${texteHtml('commun.total')}</th><th class="nombre">${f(total('montant'))}</th><th class="nombre">${f(total('pointe'))}</th><th class="nombre">${f(total('reste'))}</th></tr></tfoot></table>`;
     };
-    corps.innerHTML = bloc('E', 'Clients : encaissements') + bloc('D', 'Fournisseurs et sous-traitants : décaissements');
+    corps.innerHTML = bloc('E', texteHtml('reglements_btp.blocs.E')) + bloc('D', texteHtml('reglements_btp.blocs.D'));
   }
 
   urlCourante() {
@@ -83,7 +83,7 @@ export class PageReglements extends PageBase {
 
   async rendre() {
     const corps = this.conteneur.querySelector('[data-corps]');
-    if (!this.tiers) { corps.innerHTML = '<p class="aide">Choisissez un tiers.</p>'; return; }
+    if (!this.tiers) { corps.innerHTML = `<p class="aide">${texteHtml('reglements_btp.choisir_tiers')}</p>`; return; }
     let toutes; let reglements; let cautions;
     try {
       [toutes, reglements, cautions] = await Promise.all([
@@ -98,42 +98,42 @@ export class PageReglements extends PageBase {
     const echeances = this.toutes ? toutes : toutes.filter((e) => !e.reglee);
     const lien = (e) => `<a href="${urlDocument(Number(e.piece_id))}">${echapper(e.piece ?? `#${e.piece_id}`)}</a>`;
     corps.innerHTML = `
-      <h2>Échéances</h2>
-      ${echeances.length ? `<table><thead><tr><th>Pièce</th><th>Type</th><th>Échéance</th><th class="nombre">Montant</th><th class="nombre">Pointé</th>
-        <th class="nombre">Reste</th><th class="nombre">À pointer</th></tr></thead><tbody>${echeances.map((e) => `<tr${e.reglee ? ' class="discret"' : ''}>
-        <td>${lien(e)}</td><td>${echapper(e.type)}</td><td>${e.nature === 'RETENUE' ? `Retenue de garantie${e.date ? ` · ${echapper(e.date)}` : ''}` : echapper(e.date ?? '')}</td>
+      <h2>${texteHtml('reglements_btp.echeances')}</h2>
+      ${echeances.length ? `<table><thead><tr><th>${texteHtml('reglements_btp.colonnes.piece')}</th><th>${texteHtml('reglements_btp.colonnes.type')}</th><th>${texteHtml('reglements_btp.colonnes.echeance')}</th><th class="nombre">${texteHtml('reglements_btp.colonnes.montant')}</th><th class="nombre">${texteHtml('reglements_btp.colonnes.pointe')}</th>
+        <th class="nombre">${texteHtml('reglements_btp.colonnes.reste')}</th><th class="nombre">${texteHtml('reglements_btp.colonnes.a_pointer')}</th></tr></thead><tbody>${echeances.map((e) => `<tr${e.reglee ? ' class="discret"' : ''}>
+        <td>${lien(e)}</td><td>${echapper(e.type)}</td><td>${e.nature === 'RETENUE' ? `${texteHtml('reglements_btp.retenue')}${e.date ? ` · ${echapper(e.date)}` : ''}` : echapper(e.date ?? '')}</td>
         <td class="nombre">${f(e.montant)}</td><td class="nombre">${f(e.pointe)}</td><td class="nombre">${f(e.reste)}</td>
         <td class="nombre"><input data-pointer="${e.id}" size="10" inputmode="decimal" ${e.reglee ? 'disabled' : ''}></td></tr>`).join('')}</tbody></table>`
-        : '<p class="aide">Aucune échéance ouverte.</p>'}
-      <h2>Nouveau règlement</h2>
+        : `<p class="aide">${texteHtml('reglements_btp.aucune_echeance_ouverte')}</p>`}
+      <h2>${texteHtml('reglements_btp.nouveau')}</h2>
       <div class="formulaire">
-        <label>Date <input type="date" data-r="date" value="${aujourdhui()}"></label>
-        <label>Mode <span data-r="mode"></span></label>
-        <label>Montant <input data-r="montant" size="12" inputmode="decimal"></label>
-        <label>Référence <input data-r="reference" maxlength="100"></label>
-        <button type="button" data-repartir title="Répartit le montant sur les échéances, de la plus ancienne à la plus récente">Répartir</button>
-        <button type="button" class="principal" data-enregistrer>Enregistrer le règlement</button>
+        <label>${texteHtml('reglements_btp.champs.date')} <input type="date" data-r="date" value="${aujourdhui()}"></label>
+        <label>${texteHtml('reglements_btp.champs.mode')} <span data-r="mode"></span></label>
+        <label>${texteHtml('reglements_btp.champs.montant')} <input data-r="montant" size="12" inputmode="decimal"></label>
+        <label>${texteHtml('reglements_btp.champs.reference')} <input data-r="reference" maxlength="100"></label>
+        <button type="button" data-repartir title="${texteHtml('reglements_btp.repartir_aide')}">${texteHtml('reglements_btp.repartir')}</button>
+        <button type="button" class="principal" data-enregistrer>${texteHtml('reglements_btp.enregistrer')}</button>
       </div>
-      <h2>Règlements</h2>
-      ${reglements.length ? `<table><thead><tr><th>Date</th><th>Mode</th><th>Référence</th><th class="nombre">Montant</th><th class="nombre">Non pointé</th><th>Pièces</th><th></th></tr></thead>
+      <h2>${texteHtml('reglements_btp.reglements')}</h2>
+      ${reglements.length ? `<table><thead><tr><th>${texteHtml('reglements_btp.colonnes.date')}</th><th>${texteHtml('reglements_btp.colonnes.mode')}</th><th>${texteHtml('reglements_btp.colonnes.reference')}</th><th class="nombre">${texteHtml('reglements_btp.colonnes.montant')}</th><th class="nombre">${texteHtml('reglements_btp.colonnes.non_pointe')}</th><th>${texteHtml('reglements_btp.colonnes.pieces')}</th><th></th></tr></thead>
         <tbody>${reglements.map((r) => `<tr><td>${echapper(r.date)}</td><td>${echapper(this.modes.find(([c]) => c === r.mode)?.[1] ?? r.mode)}</td>
         <td>${echapper(r.reference ?? '')}</td><td class="nombre">${f(r.montant)}</td><td class="nombre">${f(r.non_pointe)}</td>
-        <td>${r.pointages.map((p) => echapper(parId.get(p.echeance_id)?.piece ?? `échéance ${p.echeance_id}`)).join(', ')}</td>
-        <td><button type="button" data-supprimer="${r.id}" title="Supprimer le règlement et ses pointages">✕</button></td></tr>`).join('')}</tbody></table>`
-        : '<p class="aide">Aucun règlement.</p>'}
-      <h2>Cautions</h2>
-      ${cautions.length ? `<table><thead><tr><th>Organisme</th><th>Référence</th><th>Date</th><th>Fin</th><th>Mainlevée</th><th class="nombre">Montant</th>
-        <th class="nombre">Non pointé</th><th></th></tr></thead><tbody>${cautions.map((c) => `<tr><td>${echapper(c.organisme)}</td><td>${echapper(c.reference ?? '')}</td>
+        <td>${r.pointages.map((p) => echapper(parId.get(p.echeance_id)?.piece ?? texte('reglements_btp.echeance_id', { id: p.echeance_id }))).join(', ')}</td>
+        <td><button type="button" data-supprimer="${r.id}" title="${texteHtml('reglements_btp.supprimer_aide')}">${iconeHtml('retirer')}</button></td></tr>`).join('')}</tbody></table>`
+        : `<p class="aide">${texteHtml('reglements_btp.aucun')}</p>`}
+      <h2>${texteHtml('reglements_btp.cautions.titre')}</h2>
+      ${cautions.length ? `<table><thead><tr><th>${texteHtml('reglements_btp.colonnes.organisme')}</th><th>${texteHtml('reglements_btp.colonnes.reference')}</th><th>${texteHtml('reglements_btp.colonnes.date')}</th><th>${texteHtml('reglements_btp.colonnes.fin')}</th><th>${texteHtml('reglements_btp.colonnes.mainlevee')}</th><th class="nombre">${texteHtml('reglements_btp.colonnes.montant')}</th>
+        <th class="nombre">${texteHtml('reglements_btp.colonnes.non_pointe')}</th><th></th></tr></thead><tbody>${cautions.map((c) => `<tr><td>${echapper(c.organisme)}</td><td>${echapper(c.reference ?? '')}</td>
         <td>${echapper(c.date)}</td><td>${echapper(c.date_fin ?? '')}</td><td>${echapper(c.mainlevee ?? '')}</td><td class="nombre">${f(c.montant)}</td>
-        <td class="nombre">${f(c.non_pointe)}</td><td><button type="button" data-supprimer-caution="${c.id}" title="Supprimer la caution et ses pointages">✕</button></td></tr>`).join('')}</tbody></table>`
-        : '<p class="aide">Aucune caution.</p>'}
+        <td class="nombre">${f(c.non_pointe)}</td><td><button type="button" data-supprimer-caution="${c.id}" title="${texteHtml('reglements_btp.cautions.supprimer_aide')}">${iconeHtml('retirer')}</button></td></tr>`).join('')}</tbody></table>`
+        : `<p class="aide">${texteHtml('reglements_btp.cautions.aucune')}</p>`}
       <div class="formulaire">
-        <label>Organisme <input data-c="organisme" maxlength="150"></label>
-        <label>Montant <input data-c="montant" size="12" inputmode="decimal"></label>
-        <label>Date <input type="date" data-c="date" value="${aujourdhui()}"></label>
-        <label>Fin <input type="date" data-c="date_fin"></label>
-        <label>Référence <input data-c="reference" maxlength="100"></label>
-        <button type="button" data-caution title="Pointe les retenues de garantie ouvertes, de la plus ancienne à la plus récente">＋ Caution sur les retenues</button>
+        <label>${texteHtml('reglements_btp.colonnes.organisme')} <input data-c="organisme" maxlength="150"></label>
+        <label>${texteHtml('reglements_btp.champs.montant')} <input data-c="montant" size="12" inputmode="decimal"></label>
+        <label>${texteHtml('reglements_btp.champs.date')} <input type="date" data-c="date" value="${aujourdhui()}"></label>
+        <label>${texteHtml('reglements_btp.colonnes.fin')} <input type="date" data-c="date_fin"></label>
+        <label>${texteHtml('reglements_btp.champs.reference')} <input data-c="reference" maxlength="100"></label>
+        <button type="button" data-caution title="${texteHtml('reglements_btp.cautions.ajouter_aide')}">${iconeHtml('ajouter')} ${texteHtml('reglements_btp.cautions.ajouter')}</button>
       </div>`;
     const mode = creerCombo({ options: this.modes.filter(([, , actif]) => actif !== false).map(([valeur, libelle]) => ({ valeur, libelle })), valeur: this.modes[0]?.[0] ?? 'VIREMENT', vide: false });
     corps.querySelector('[data-r="mode"]').replaceWith(mode);
@@ -142,37 +142,37 @@ export class PageReglements extends PageBase {
       .filter((p) => p.montant !== null && p.montant !== undefined && !Dz(p.montant).isZero());
     corps.querySelector('[data-repartir]').addEventListener('click', () => {
       const montant = lireNombre(champ('montant').value);
-      if (montant === null || montant === undefined) { this.app.message('Montant du règlement à saisir', 'avertissement'); return; }
+      if (montant === null || montant === undefined) { this.app.message(texte('reglements_btp.messages.montant'), 'avertissement'); return; }
       const proposes = new Map(proposerPointage(montant, echeances.filter((e) => !e.reglee && e.nature !== 'RETENUE').map((e) => ({ id: e.id, date: e.date, reste: e.reste })))
         .map((p) => [p.id, p.montant]));
       corps.querySelectorAll('[data-pointer]').forEach((el) => { el.value = proposes.has(Number(el.dataset.pointer)) ? formatNombre(proposes.get(Number(el.dataset.pointer)), 2) : ''; });
       const reste = nonPointe(montant, [...proposes.values()].map((m) => ({ montant: m })));
-      if (!Dz(reste).isZero()) this.app.message(`Non pointé : ${formatNombre(reste, 2)} (trop-perçu)`, 'avertissement');
+      if (!Dz(reste).isZero()) this.app.message(texte('reglements_btp.messages.trop_percu', { montant: formatNombre(reste, 2) }), 'avertissement');
     });
     corps.querySelector('[data-enregistrer]').addEventListener('click', async () => {
       const montant = lireNombre(champ('montant').value);
-      if (montant === null || montant === undefined || Dz(montant).isZero()) { this.app.message('Montant du règlement à saisir', 'avertissement'); return; }
+      if (montant === null || montant === undefined || Dz(montant).isZero()) { this.app.message(texte('reglements_btp.messages.montant'), 'avertissement'); return; }
       try {
         await api.enregistrerReglement({
           tiers_id: this.tiers, sens: this.sens, date: champ('date').value, mode: mode.valeurCombo, montant,
           reference: champ('reference').value.trim() || null, commentaire: null, pointages: pointages(),
         });
-        this.app.message('Règlement enregistré', 'succes');
+        this.app.message(texte('reglements_btp.messages.enregistre'), 'succes');
         await this.rendre();
       } catch (e) { this.app.message(e.message, 'erreur'); }
     });
     corps.querySelectorAll('[data-supprimer]').forEach((b) => b.addEventListener('click', async () => {
-      if (!(await confirmer('Supprimer ce règlement et ses pointages ?'))) return;
+      if (!(await confirmer(texte('reglements_btp.messages.supprimer')))) return;
       try { await api.supprimerReglement(Number(b.dataset.supprimer)); await this.rendre(); } catch (e) { this.app.message(e.message, 'erreur'); }
     }));
     corps.querySelectorAll('[data-supprimer-caution]').forEach((b) => b.addEventListener('click', async () => {
-      if (!(await confirmer('Supprimer cette caution et ses pointages ?'))) return;
+      if (!(await confirmer(texte('reglements_btp.messages.supprimer_caution')))) return;
       try { await api.supprimerCaution(Number(b.dataset.supprimerCaution)); await this.rendre(); } catch (e) { this.app.message(e.message, 'erreur'); }
     }));
     corps.querySelector('[data-caution]').addEventListener('click', async () => {
       const c = (cle) => corps.querySelector(`[data-c="${cle}"]`).value.trim();
       const montant = lireNombre(c('montant'));
-      if (!c('organisme') || montant === null || montant === undefined || Dz(montant).lte(0)) { this.app.message('Organisme et montant de la caution à saisir', 'avertissement'); return; }
+      if (!c('organisme') || montant === null || montant === undefined || Dz(montant).lte(0)) { this.app.message(texte('reglements_btp.messages.caution_incomplete'), 'avertissement'); return; }
       // Retenues de garantie ouvertes pointées par la caution (plus anciennes d'abord).
       const retenues = echeances.filter((e) => !e.reglee && e.nature === 'RETENUE');
       const objet = retenues.find((e) => e.objet_id)?.objet_id ?? null;
@@ -182,7 +182,7 @@ export class PageReglements extends PageBase {
           date_fin: c('date_fin') || null, reference: c('reference') || null, mainlevee: null,
           pointages: proposerPointage(montant, retenues.map((e) => ({ id: e.id, date: e.date, reste: e.reste }))).map((p) => ({ echeance_id: p.id, montant: p.montant })),
         });
-        this.app.message('Caution enregistrée', 'succes');
+        this.app.message(texte('reglements_btp.messages.caution_enregistree'), 'succes');
         await this.rendre();
       } catch (e) { this.app.message(e.message, 'erreur'); }
     });

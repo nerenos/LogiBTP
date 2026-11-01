@@ -1,3 +1,4 @@
+import { texte, texteHtml, pluriel, icone, iconeHtml, textesParCode } from '@logibtp/socle/dictionnaire';
 import { echapper, formatNombre, ouvrirModale } from '@logibtp/socle/ui';
 import { unitesOptionnelles, FAMILLE_DOCUMENT } from '@logibtp/document';
 import { api } from '../api.js';
@@ -9,33 +10,14 @@ import { confirmerAvertissements } from './avertissements.js';
 // Options et variantes du document : chacune est retenue (prix vendu) ou non (non reprise), la ligne de base d'une
 // variante peut aussi être écartée (choisirOptions). Utilisée par la page document et par les listes de documents.
 
-const ETAPES = [
-  { code: 'COMMANDE', titre: 'Commande', aide: 'Engagement du client ou commande au fournisseur' },
-  { code: 'RECEPTION', titre: 'Livraison', aide: 'Bon de livraison ou de réception des quantités' },
-  { code: 'SITUATION', titre: 'Situation de travaux', aide: 'État d\'avancement cumulé, avant la facture d\'avancement' },
-  { code: 'FACTURATION', titre: 'Facturation', aide: 'Facture, facture d\'avancement' },
-  { code: 'RETOUR', titre: 'Retour', aide: 'Retour de marchandises' },
-  { code: 'AVOIR', titre: 'Avoir', aide: 'Annulation totale ou partielle d\'une facture' },
-];
-const ICONES = {
-  V_COMMANDE: '🤝', V_RECEPTION: '🚚', V_RETOUR: '↩️', V_SITUATION: '📈', V_FACTURE: '💶', V_FACTURE_AVT: '📊', V_AVOIR: '🧾',
-  A_COMMANDE: '📦', A_RECEPTION: '🚛', A_RETOUR: '↩️', A_FACTURE: '🧾', A_FACTURE_AVT: '📊', A_AVOIR: '🧾', S_RESERVATION: '📌', S_SORTIE: '📤',
-};
-const DESCRIPTIONS = {
-  V_COMMANDE: 'Le client accepte : commande reprenant le reliquat du document',
-  V_RECEPTION: 'Livraison des quantités restant à livrer',
-  V_RETOUR: 'Retour client des quantités livrées',
-  V_SITUATION: 'Situation de travaux (avancement cumulé), à transformer ensuite en facture d\'avancement',
-  V_FACTURE: 'Facture du reliquat à facturer',
-  V_FACTURE_AVT: 'Facture d\'avancement (situation)',
-  V_AVOIR: 'Avoir sur la facture',
-  A_COMMANDE: 'Commande au fournisseur des éléments du document',
-  A_RECEPTION: 'Réception des quantités commandées',
-  A_RETOUR: 'Retour au fournisseur',
-  A_FACTURE: 'Facture du fournisseur',
-  A_FACTURE_AVT: 'Situation du fournisseur ou du sous-traitant',
-  A_AVOIR: 'Avoir du fournisseur',
-};
+const etape = (code) => ({
+  code,
+  get titre() { return texte(`documents_btp.transformation.etapes.${code}.titre`); },
+  get aide() { return texte(`documents_btp.transformation.etapes.${code}.aide`); },
+});
+const ETAPES = ['COMMANDE', 'RECEPTION', 'SITUATION', 'FACTURATION', 'RETOUR', 'AVOIR'].map(etape);
+const ICONES = Object.fromEntries(['V_COMMANDE', 'V_RECEPTION', 'V_RETOUR', 'V_SITUATION', 'V_FACTURE', 'V_FACTURE_AVT', 'V_AVOIR', 'A_COMMANDE', 'A_RECEPTION', 'A_RETOUR', 'A_FACTURE', 'A_FACTURE_AVT', 'A_AVOIR', 'S_RESERVATION', 'S_SORTIE'].map((c) => [c, icone(`documents_btp_${c.toLowerCase()}`)]));
+const DESCRIPTIONS = textesParCode('documents_btp.transformation.descriptions', ['V_COMMANDE', 'V_RECEPTION', 'V_RETOUR', 'V_SITUATION', 'V_FACTURE', 'V_FACTURE_AVT', 'V_AVOIR', 'A_COMMANDE', 'A_RECEPTION', 'A_RETOUR', 'A_FACTURE', 'A_FACTURE_AVT', 'A_AVOIR']);
 
 /**
  * Cibles possibles d'un type de document, dans un ordre logique : [{ tyd_id, code, libelle, famille, etape, vaut }].
@@ -58,19 +40,19 @@ export function choisirTransformation({ source, cibles }) {
   const dlg = document.createElement('dialog');
   dlg.className = 'dialogue-structure dialogue-transformation';
   const groupes = ETAPES.map((e) => ({ ...e, cibles: cibles.filter((c) => c.etape === e.code) }))
-    .concat([{ code: 'AUTRE', titre: 'Autres', aide: '', cibles: cibles.filter((c) => !ETAPES.some((e) => e.code === c.etape)) }])
+    .concat([{ code: 'AUTRE', titre: texte('documents_btp.transformation.autres'), aide: '', cibles: cibles.filter((c) => !ETAPES.some((e) => e.code === c.etape)) }])
     .filter((g) => g.cibles.length);
   let i = 0;
   dlg.innerHTML = `<form method="dialog">
-    <h3>Transformer ${echapper(source.libelle_type ?? 'le document')} ${echapper(source.numero ?? '')}</h3>
+    <h3>${texteHtml('documents_btp.transformation.titre', { type: source.libelle_type ?? texte('documents_btp.transformation.le_document'), numero: source.numero ?? '' })}</h3>
     ${source.objet ? `<p class="aide">${echapper(source.objet)}</p>` : ''}
     <div class="transformation-choix">${groupes.map((g) => `<section><h4>${echapper(g.titre)}${g.aide ? ` <small>${echapper(g.aide)}</small>` : ''}</h4>
       ${g.cibles.map((c) => `<button type="button" class="transformation-cible" data-i="${i++}">
-        <span class="transformation-icone">${ICONES[c.code] ?? '📄'}</span>
-        <span><b>${echapper(c.libelle)}</b>${c.famille === FAMILLE_DOCUMENT.ACHAT ? ' <span class="pastille">Achat</span>' : c.famille === FAMILLE_DOCUMENT.SOUS_TRAITANCE ? ' <span class="pastille">Sous-traitance</span>' : ''}<small>${echapper(DESCRIPTIONS[c.code] ?? '')}${c.intermediaire ? ` (par une ${echapper(c.intermediaire.toLowerCase())} validée automatiquement)` : c.vaut.length ? ` (vaut aussi ${c.vaut.map((v) => ETAPES.find((e) => e.code === v)?.titre.toLowerCase() ?? v).join(', ')})` : ''}</small></span>
+        <span class="transformation-icone">${ICONES[c.code] ?? iconeHtml('documents_btp_document')}</span>
+        <span><b>${echapper(c.libelle)}</b>${c.famille === FAMILLE_DOCUMENT.ACHAT ? ` <span class="pastille">${texteHtml('documents_btp.transformation.achat')}</span>` : c.famille === FAMILLE_DOCUMENT.SOUS_TRAITANCE ? ` <span class="pastille">${texteHtml('documents_btp.transformation.sous_traitance')}</span>` : ''}<small>${echapper(DESCRIPTIONS[c.code] ?? '')}${c.intermediaire ? ` ${texteHtml('documents_btp.transformation.intermediaire', { type: c.intermediaire.toLowerCase() })}` : c.vaut.length ? ` ${texteHtml('documents_btp.transformation.vaut_aussi', { etapes: c.vaut.map((v) => ETAPES.find((e) => e.code === v)?.titre.toLowerCase() ?? v).join(', ') })}` : ''}</small></span>
       </button>`).join('')}</section>`).join('')}</div>
-    <p class="aide">Tout le reliquat du document est repris (quantités restant à transformer pour cette étape).</p>
-    <div class="boutons"><button value="annuler">Annuler</button></div></form>`;
+    <p class="aide">${texteHtml('documents_btp.transformation.reliquat')}</p>
+    <div class="boutons"><button value="annuler">${texteHtml('commun.annuler')}</button></div></form>`;
   document.body.append(dlg);
   const ordre = groupes.flatMap((g) => g.cibles);
   const boutons = [...dlg.querySelectorAll('[data-i]')];
@@ -109,26 +91,25 @@ export function choisirOptions({ lignes, unites, precision = 2 }) {
   const ligne = (id, genre) => {
     const l = parId.get(id) ?? {};
     const libelle = String(l.lig_libelle_brut ?? l.lig_libelle_html ?? '').replace(/<[^>]*>/g, '').trim();
-    const pastille = { O: 'Option', A: 'Variante', base: 'Base' }[genre];
+    const pastille = texte(`documents_btp.options.genres.${genre}`);
     return `<tr data-id="${id}" data-genre="${genre}">
       <td><span class="pastille">${pastille}</span></td><td>${echapper(l.lig_numerotation ?? '')}</td>
       <td class="libelle">${echapper(libelle || '—')}</td><td class="nombre">${formatNombre(l.lig_montant_ht ?? 0, precision)}</td>
-      <td><label><input type="radio" name="c-${id}" value="1" ${genre === 'base' ? 'checked' : ''}> ${genre === 'base' ? 'Gardée' : 'Retenue'}</label></td>
-      <td><label><input type="radio" name="c-${id}" value="0"> ${genre === 'base' ? 'Écartée' : 'Non retenue'}</label></td></tr>`;
+      <td><label><input type="radio" name="c-${id}" value="1" ${genre === 'base' ? 'checked' : ''}> ${texteHtml(genre === 'base' ? 'documents_btp.options.gardee' : 'documents_btp.options.retenue')}</label></td>
+      <td><label><input type="radio" name="c-${id}" value="0"> ${texteHtml(genre === 'base' ? 'documents_btp.options.ecartee' : 'documents_btp.options.non_retenue')}</label></td></tr>`;
   };
   const dlg = document.createElement('dialog');
   dlg.className = 'dialogue-structure dialogue-options';
   dlg.innerHTML = `<form method="dialog">
-    <h3>Options et variantes</h3>
-    <p class="aide">Une option ou une variante retenue passe en prix vendu (à son prix du document) ; non retenue, elle n'est pas
-      reprise. La ligne de base d'une variante est gardée sauf si vous l'écartez.</p>
+    <h3>${texteHtml('documents_btp.options.titre')}</h3>
+    <p class="aide">${texteHtml('documents_btp.options.aide')}</p>
     <div class="options-choix"><table>
       ${options.length ? `<tbody>${options.map((u) => ligne(u.lig_id, u.type_prix)).join('')}</tbody>` : ''}
       ${bases.map((b) => `<tbody class="groupe-variante">${ligne(b, 'base')}${variantes.filter((u) => u.base_id === b).map((u) => ligne(u.lig_id, 'A')).join('')}</tbody>`).join('')}
     </table></div>
     <p class="erreur" data-erreur></p>
-    <div class="boutons"><button type="button" data-tout="1">Tout retenir</button><button type="button" data-tout="0">Rien retenir</button>
-      <button value="annuler">Annuler</button><button type="button" class="principal" data-valider>Transformer</button></div></form>`;
+    <div class="boutons"><button type="button" data-tout="1">${texteHtml('documents_btp.options.tout')}</button><button type="button" data-tout="0">${texteHtml('documents_btp.options.rien')}</button>
+      <button value="annuler">${texteHtml('commun.annuler')}</button><button type="button" class="principal" data-valider>${texteHtml('documents_btp.options.transformer')}</button></div></form>`;
   document.body.append(dlg);
   const choixDe = (id) => dlg.querySelector(`input[name="c-${id}"]:checked`)?.value ?? null;
   dlg.querySelectorAll('[data-tout]').forEach((b) => b.addEventListener('click', () => {
@@ -147,7 +128,7 @@ export function choisirOptions({ lignes, unites, precision = 2 }) {
     dlg.querySelector('[data-valider]').addEventListener('click', () => {
       const manquants = unites.filter((u) => choixDe(u.lig_id) === null);
       if (manquants.length) {
-        dlg.querySelector('[data-erreur]').textContent = `${manquants.length} option(s) ou variante(s) sans choix`;
+        dlg.querySelector('[data-erreur]').textContent = pluriel('documents_btp.options.sans_choix', manquants.length);
         dlg.querySelector(`tr[data-id="${manquants[0].lig_id}"] input`)?.focus();
         return;
       }
@@ -165,9 +146,9 @@ export async function transformerDocument({ entId, typeCode, numero, objet, type
   const lesTypes = types ?? await api.typesDocument();
   const def = definition ?? await api.definition(typeCode);
   const cibles = ciblesTransformation(def, lesTypes);
-  if (!cibles.length) { message('Ce type de document ne se transforme pas', 'avertissement'); return null; }
+  if (!cibles.length) { message(texte('documents_btp.transformation.aucune_cible'), 'avertissement'); return null; }
   // Validité dépassée, document rejeté : avertissement, l'utilisateur choisit (R3, P25).
-  if (!(await confirmerAvertissements(entId, 'TRANSFORMER', 'Transformer'))) return null;
+  if (!(await confirmerAvertissements(entId, 'TRANSFORMER', texte('documents_btp.options.transformer')))) return null;
   const cible = await choisirTransformation({ source: { numero, objet, libelle_type: def.type?.tyd_libelle }, cibles });
   if (!cible) return null;
   const complet = await api.document(entId);
