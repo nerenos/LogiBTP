@@ -100,13 +100,12 @@ WHERE t.tyd_famille IN ('V','A');
 -- Durée de validité proposée à la création des offres (champ ent_validite_jours du document).
 UPDATE type_document SET tyd_validite_jours = 30 WHERE tyd_code IN ('V_DEVIS', 'A_DEVIS');
 
--- Propriétés spécifiques d'exemple : définition servant à générer l'interface et à valider les valeurs.
+-- Propriété spécifique d'exemple : définition servant à générer l'interface et à valider les valeurs (le mode de
+-- règlement du document est la colonne ent_mode_reglement, saisie dans l'onglet Règlements).
 INSERT INTO propriete_definition (prd_tyd_id, prd_niveau, prd_code, prd_libelle, prd_type_donnee, prd_obligatoire, prd_valeur_defaut, prd_options, prd_groupe, prd_ordre)
 SELECT t.tyd_id, p.niveau, p.code, p.libelle, p.type, p.obligatoire, p.defaut::jsonb, p.options::jsonb, p.groupe, p.ordre
 FROM type_document t
 CROSS JOIN (VALUES
-    ('E', 'mode_reglement',  'Mode de règlement',       'liste',   FALSE, '"VIR"',
-        '[{"code":"VIR","libelle":"Virement"},{"code":"CHQ","libelle":"Chèque"},{"code":"LCR","libelle":"LCR"}]', 'Conditions', 3),
     ('L', 'lot_technique',   'Lot technique',           'texte',   FALSE, NULL,   NULL, NULL, 1)
 ) AS p(niveau, code, libelle, type, obligatoire, defaut, options, groupe, ordre)
 WHERE t.tyd_code = 'V_DEVIS';

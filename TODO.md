@@ -253,8 +253,6 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
 - [ ] Matériel : photo de l'état au retour d'une affectation (dépôt dans la GED du matériel depuis la ligne).
 - [ ] Salariés : retirer `sal_matricule` (recopie du code depuis `db/251`) des requêtes qui le lisent encore (magasin,
   habilitations, comptes), puis la colonne.
-- [ ] Devis : propriété d'exemple `mode_reglement` (`db/110`, entête) en double du mode de règlement du document
-  (onglet Règlements) : à retirer des bases (script) et de la référence.
 - [ ] Unités de l'article (E10, suite) : même liste et même conversion depuis le détail de la ligne (combo Unité), et
   choix « ne plus demander » gardé avec le document plutôt que pour la seule fenêtre ouverte.
 - [ ] Choix en liste (I1, suite) : individus de notre société au poste voulu (conducteur, chargé d'affaires, rédacteur :

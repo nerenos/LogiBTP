@@ -724,6 +724,6 @@ client` pour les lots qui changent des vues fournies.
   rattachement, date, propriété, condition de paiement) ; au refus, le champ (ou sa section) est encadré et son onglet
   marqué jusqu'à la version suivante, la fenêtre des messages nomme le champ et « Aller » ouvre l'onglet, fait défiler,
   active la saisie et signale le champ une fois ; les lignes en cause gardent « Aller » à la ligne.
-- **Reste** (TODO) : propriété d'exemple `mode_reglement` du devis en double du mode de règlement.
+- **Doublon retiré** : propriété d'exemple `mode_reglement` du devis (`db/110`) supprimée de la référence (base à recréer).
 - **Contrôles** : `npm test` ; navigateur : devis neuf (bulles Alt+1…Alt+8, onglet Règlements avec l'aperçu, Options),
   enregistré puis validé sans tiers (fenêtre « 1 champ à corriger », annuaire encadré, « Aller »), Suivi en deux parties.
