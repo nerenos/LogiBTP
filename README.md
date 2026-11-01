@@ -1,7 +1,66 @@
-# LogiBTP – Module de saisie des documents
+# LogiBTP
 
-Moteur unique de saisie pour tous les types de documents (devis, commande, livraison, facture, avoir, documents d'achat et de stock),
-piloté par le paramétrage. Métier BTP : ouvrages avec sous-détail, déboursé, métrés, variables, PV fixes ventilés, lignes de pied, TVA par catégorie.
+> ⚠️ **État du projet : Version Alpha (Test)**
+> Ce projet est actuellement en phase d'alpha et mis à disposition à des fins de test. L'application est en évolution constante et nous souhaitons activement recevoir vos avis, signalements de bugs et suggestions pour son amélioration. N'hésitez pas à nous faire part de vos retours !
+
+## Présentation
+
+LogiBTP est une application web modulaire de gestion d'entreprise (ERP) taillée pour les professionnels du Bâtiment et des Travaux Publics (BTP). Conçue pour être robuste, rapide et utilisable partout (y compris sans connexion réseau), elle couvre l'intégralité du cycle de vie d'un chantier, du devis initial jusqu'à la facturation, la comptabilité et l'analyse de rentabilité.
+
+## Principes Architecturaux
+
+Le projet se distingue par des choix techniques forts visant la maintenabilité, la fiabilité et la performance :
+
+* **Architecture Modulaire Stricte :** Découpage en trois couches (`socle/` → `modules/` → `coeur/`). Le socle ignore le métier, les modules sont indépendants (par ex. le module Métré n'a pas connaissance du module Document), et le cœur spécialise l'ensemble pour le BTP.
+* **Moteurs Miroirs C# / JS :** Les règles métier critiques (calculs de devis, droits, validation de fiches, règles de paie, etc.) sont écrites et testées à stricte parité entre le serveur (C#) et le client (JavaScript Vanilla).
+* **Base de Données Maîtrisée :** Modèle relationnel sous PostgreSQL géré intégralement par scripts SQL (aucun ORM/EF pour les migrations). Les requêtes sont optimisées et le schéma est rigoureusement typé (colonnes en `snake_case`, requêtes en lecture seule pour les listes).
+* **Aucun code en dur :** Tous les textes, icônes, statuts, erreurs et couleurs sont gérés par un système de dictionnaire dynamique (i18n) et de personnalisation, permettant une surcharge complète lors de l'installation.
+
+## Fonctionnalités Principales
+
+### Gestion Commerciale et Études
+
+* **Documents complets :** Devis, commandes, bons de livraison, situations de travaux et factures d'avancement.
+* **Bibliothèque de prix :** Gestion des articles, ouvrages, ensembles paramétrables, gestion des tarifs fournisseurs.
+* **Métrés :** Langage de script intégré pour le calcul des quantités complexes avec actualisation en temps réel.
+* **Révision des prix :** Moteur de révision et d'actualisation selon des formules (a + Σ bi × In/I0).
+
+### Exécution, Chantier et Terrain
+
+* **Application Mobile PWA :** Interface "Terrain" pensée pour tablette/smartphone permettant de consulter les dossiers, les plans et de saisir en mode **hors-ligne** (fusion et synchronisation automatique au retour du réseau).
+* **Pointage & Borne d'atelier :** Saisie des heures par les salariés ou chefs d'équipe, pointage sur borne tactile partagée, validation par niveaux, gestion des congés et des absences.
+* **Planning & Exécution :** Moteur de planification temps réel (affectations, dépendances, charges), gestion des ordres d'exécution, jalons calculés, et vues synchronisées dynamiquement.
+
+### Ressources et Stocks
+
+* **Parc matériel :** Suivi des équipements, entretiens, compteurs, localisation sur chantiers et calcul des coûts.
+* **Stocks et Magasin :** Multi-dépôts, inventaires à date-heure, réévaluations au PMP, gestion des dotations (EPI, outillage), et projection des ruptures.
+
+### Suivi, GED et CRM
+
+* **Coffre-fort GED :** Gestion documentaire structurée, règles de conservation, archivage et classification automatique.
+* **CRM Intégré :** Fil d'actualité par chantier, gestion des tâches, rappels, demandes de prix, et suivi des visas.
+* **Client Mail :** Synchronisation OAuth/IMAP, rattachement automatique des courriels grâce à l'analyse sémantique, et envois lissés par files d'attente.
+
+### Rentabilité et Comptabilité
+
+* **Analyse de rentabilité :** Comparatif temps réel budget / engagé / déboursé / facturé mis à jour automatiquement via des clichés historiques.
+* **Comptabilité :** Plan de comptes, règles de ventilation complexes, gestion de la TVA (incluant l'autoliquidation), édition de traites et export natif vers Sage 100.
+* **Règlements :** Gestion des cautions, retenues de garantie, pointages et relances.
+
+## Déploiement et Technologie
+
+* **Serveur :** API .NET (C#) tournant sous Kestrel (HTTPS).
+* **Frontend :** JavaScript, HTML et CSS purs (Zéro dépendance framework lourde pour garantir la longévité). Utilisation de Web Components et de CSS Grid/Variables.
+* **Déploiement automatisé :** Scripts Windows (PowerShell) et Linux (Bash) fournis, conteneurisation Docker native, génération automatique de certificats Let's Encrypt, sauvegardes chiffrées.
+
+---
+
+**Vos retours sont précieux !**
+En tant qu'utilisateur de cette version alpha, vous pouvez signaler toute anomalie, proposer des évolutions d'ergonomie, ou demander des ajouts fonctionnels directement via le système de suivi du projet.
+
+---
+---
 
 ## Structure
 
