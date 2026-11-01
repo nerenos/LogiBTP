@@ -1,11 +1,11 @@
-import { texte, texteHtml, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
+import { texte, texteHtml, icone, iconeHtml, pluriel } from '@logibtp/socle/dictionnaire';
 import { urlDocument, TYPE_FICHE, TYPE_DOCUMENT, TYPES_SOUS_TRAITABLES, MODULE_FACULTATIF, SUJET_FENETRE, CHAMPS_ERREUR_DOCUMENT } from '../codes.js';
-import { FAMILLE_DOCUMENT, STATUT_DOCUMENT, STATUTS_HORS_VIGUEUR, estFamilleAchat } from '@logibtp/document';
+import { FAMILLE_DOCUMENT, STATUT_DOCUMENT, STATUTS_HORS_VIGUEUR, TYPE_AVANCEMENT, estFamilleAchat } from '@logibtp/document';
 import { PageBase } from '@logibtp/navigation';
 import { ExplorateurGed } from '@logibtp/ged/ui';
 import { ArborescenceBtp } from '../ged/arborescence.js';
 import { echapper, formatNombre, actionDe, libelleRaccourci, basculerAideMemoire, fermerAideMemoire, confirmer, ouvrirDialogue, ouvrirModale, saisir, separateur as separateurZones, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
-import { D, aujourdhui } from '@logibtp/socle';
+import { D, aujourdhui, texteDate } from '@logibtp/socle';
 import { ONGLETS_DOCUMENT } from '../raccourcis.js';
 import { Disposition, GestionVuesDocument, PlanDocument, RechercheLignes, NotificationsDocument } from '@logibtp/document/ui';
 import { PanneauMetre, messagesMetres } from '@logibtp/metre/ui';
@@ -29,8 +29,10 @@ import { proposerMarcheSousTraitance } from '../structure/marche-sous-traitance.
 import { choisirSources } from '../documents/sources.js';
 
 /** Types alimentés par d'autres documents (ajout de sources en brouillon) ; types créés depuis un marché. */
-const TYPES_SOURCES = /_(RECEPTION|FACTURE|FACTURE_AVT|SITUATION|AVOIR)$/;
-const MARCHE_TYPES = [TYPE_DOCUMENT.V_RECEPTION, TYPE_DOCUMENT.V_SITUATION, TYPE_DOCUMENT.V_FACTURE_AVT];
+const TYPES_SOURCES = /_(RECEPTION|FACTURE|FACTURE_AVT|SITUATION|PRODUCTION|AVOIR)$/;
+// Situations de travaux et de production : colonnes croisées et préchargement de l'une par l'autre (§ 4.12, R8).
+const TYPES_CROISES = [TYPE_AVANCEMENT.SITUATION, TYPE_AVANCEMENT.PRODUCTION];
+const MARCHE_TYPES = [TYPE_DOCUMENT.V_RECEPTION, TYPE_DOCUMENT.V_SITUATION, TYPE_DOCUMENT.V_PRODUCTION, TYPE_DOCUMENT.V_FACTURE_AVT];
 import { afficherTracabilite } from '../documents/tracabilite.js';
 import { afficherReglements } from '../documents/reglements-document.js';
 import { ouvrirImport, creerDepuisImport, rendreBandeauImport, tracabiliteImport } from '../import/devis-a-verifier.js';
@@ -93,6 +95,7 @@ const gabarit = () => `
         <button role="menuitem" class="mo-ligne" data-action="annuler-avoir" title="${texteHtml('document_btp.page.actions.annuler_avoir_aide')}" hidden>${texteHtml('document_btp.page.actions.annuler_avoir')}</button>
         <button role="menuitem" class="mo-ligne" data-action="consultation" title="${texteHtml('document_btp.page.actions.consultation_aide')}" hidden>${texteHtml('document_btp.page.actions.consultation', { icone: icone('document_btp_consultation') })}</button>
         <button role="menuitem" class="mo-ligne" data-action="sous-traiter" title="${texteHtml('document_btp.page.actions.sous_traiter_aide')}" hidden>${texteHtml('document_btp.page.actions.sous_traiter', { icone: icone('document_btp_sous_traiter') })}</button>
+        <button role="menuitem" class="mo-ligne" data-action="precharger" title="${texteHtml('document_btp.page.actions.precharger_aide')}" hidden>${texteHtml('document_btp.page.actions.precharger', { icone: icone('document_btp_precharger') })}</button>
         <button role="menuitem" class="mo-ligne" data-action="sources" title="${texteHtml('document_btp.page.actions.sources_aide')}" hidden>${texteHtml('document_btp.page.actions.sources', { icone: icone('ajouter') })}</button>
         </div>
       </span>
@@ -227,6 +230,7 @@ export class PageDocument extends PageBase {
         if (motif?.trim()) this.etapeCycle((id) => api.rejeter(id, motif.trim()), texte('document_btp.page.cycle.rejete'));
       },
       sources: () => this.ajouterSources(),
+      precharger: () => this.prechargerSituation(),
       consultation: () => this.lotConsultation(),
       'sous-traiter': () => this.sousTraiter(),
       'annuler-avoir': () => this.annulerParAvoir(),
@@ -509,6 +513,7 @@ export class PageDocument extends PageBase {
     await this.vues.charger();
     await this.chargerRestes();
     await this.chargerAvancement();
+    await this.chargerCroisees();
     this.metre = new PanneauMetre(this.$('#metre'), this.editeur, {
       fermer: (ligId) => { this.editeur.grille.selectionner(ligId, { colonne: 3 }); this.editeur.grille.focus(); },
       message: (t) => this.app.message(t),
@@ -670,6 +675,8 @@ export class PageDocument extends PageBase {
     this.$('[data-action="sous-traiter"]').hidden = !doc.ent_id || !doc.ent_verrouille || !this.app.moduleActif(MODULE_FACULTATIF.SOUS_TRAITANCE)
       || !TYPES_SOUS_TRAITABLES.includes(ed.definition.type?.tyd_code);
     this.$('[data-action="sources"]').hidden = !modifiable || !TYPES_SOURCES.test(ed.definition.type?.tyd_code ?? '');
+    // Situation de travaux ou de production d'un marché en brouillon : reprise de l'avancement de l'autre situation (R8).
+    this.$('[data-action="precharger"]').hidden = !modifiable || !doc.ent_marche_id || !TYPES_CROISES.includes(ed.definition.type?.tyd_avancement);
     rendreBandeauImport(this);
     this.#rendreAttente();
     document.body.classList.toggle('lecture-seule', !modifiable);
@@ -1155,6 +1162,39 @@ export class PageDocument extends PageBase {
     await this.chargerDocument(d.ent_id);
     this.app.message(texte(r.situation ? 'document_btp.page.annulation.creees_situation' : 'document_btp.page.annulation.creees', { nombre: r.avoirs.length }), 'succes');
     if (r.situation && await confirmer(texte('document_btp.page.annulation.ouvrir_situation'))) await this.app.naviguer(urlDocument(r.situation), { nouvelleFenetre: true });
+  }
+
+  /**
+   * Situation de travaux ou de production d'un marché (§ 4.12) : colonnes croisées de l'autre situation du même mois
+   * (pour information : %, quantité, montant, écart), rien sans autre situation du mois.
+   */
+  async chargerCroisees() {
+    const ed = this.editeur;
+    const d = ed.saisie.document;
+    if (!d.ent_marche_id || !d.ent_id || d.ent_id < 0 || !TYPES_CROISES.includes(ed.definition.type?.tyd_avancement)) { ed.definirCroisees(null); return; }
+    try {
+      const c = await api.croiseesDocument(d.ent_id);
+      ed.definirCroisees(c.document ? { libelle: texte(`document_btp.page.croisees.${c.document.type}`), lignes: c.lignes } : null);
+    } catch { ed.definirCroisees(null); }
+  }
+
+  /**
+   * Préchargement (R8) : l'avancement saisi de l'autre situation du même mois (sinon la dernière validée) est repris sur
+   * les lignes du brouillon, en une étape annulable, après confirmation ; le document reste à vérifier et enregistrer.
+   */
+  async prechargerSituation() {
+    const d = this.editeur.saisie.document;
+    if (!d.ent_id || d.ent_id < 0) { this.app.message(texte('document_btp.page.precharger.enregistrer_avant'), 'avertissement'); return; }
+    try {
+      const c = await api.croiseesDocument(d.ent_id, { repli: true });
+      if (!c.document) { this.app.message(texte('document_btp.page.precharger.aucune'), 'avertissement'); return; }
+      const source = texte(c.document.meme_mois ? 'document_btp.page.precharger.meme_mois' : 'document_btp.page.precharger.derniere', {
+        type: c.document.libelle_type, numero: c.document.numero ?? '', date: texteDate(c.document.date),
+      });
+      if (!await confirmer(texte('document_btp.page.precharger.confirmer', { source }))) return;
+      const n = this.editeur.reprendreAvancement(c.lignes);
+      this.app.message(pluriel('document_btp.page.precharger.fait', n, { nombre: n }), n ? 'succes' : 'avertissement');
+    } catch (e) { this.app.erreur(e); }
   }
 
   /** Document d'avancement d'un marché : numéro de situation et documents précédents (bloc de déduction, 13.7). */

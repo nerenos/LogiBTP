@@ -30,7 +30,7 @@ INSERT INTO theme_liste (thl_code, thl_libelle, thl_icone, thl_ordre, thl_types)
  ('devis', 'Devis', '📝', 20, '[{"code":"V_DEVIS","libelle":"Devis client"}]'::jsonb),
  ('commandes', 'Commandes clients', '🤝', 22, '[{"code":"V_COMMANDE","libelle":"Commande client"}]'::jsonb),
  ('livraisons', 'Livraisons et retours', '🚚', 24, '[{"code":"V_RECEPTION","libelle":"Bon de livraison"},{"code":"V_RETOUR","libelle":"Bon de retour client"}]'::jsonb),
- ('situations', 'Situations de travaux', '📈', 26, '[{"code":"V_SITUATION","libelle":"Situation de travaux"}]'::jsonb),
+ ('situations', 'Situations', '📈', 26, '[{"code":"V_SITUATION","libelle":"Situation de travaux"},{"code":"V_PRODUCTION","libelle":"Situation de production"}]'::jsonb),
  ('factures', 'Factures', '💶', 30, '[{"code":"V_FACTURE","libelle":"Facture"},{"code":"V_FACTURE_AVT","libelle":"Facture d''avancement"},{"code":"V_AVOIR","libelle":"Avoir"}]'::jsonb),
  ('achats_ddp', 'Demandes de prix', '📨', 32, '[{"code":"A_DEVIS","libelle":"Demande de prix fournisseur"}]'::jsonb),
  ('achats_commandes', 'Commandes fournisseurs', '📦', 34, '[{"code":"A_COMMANDE","libelle":"Commande fournisseur"}]'::jsonb),

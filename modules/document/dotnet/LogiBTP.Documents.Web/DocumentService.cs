@@ -886,16 +886,18 @@ public class DocumentService<TDoc, TLigne, TComplet>(
 
     /// <summary>
     /// Saisies de la dernière situation validée de référence, non annulée, par ligne du marché (lig_avt_source_lig_id) :
-    /// point de départ d'une nouvelle situation (aide à la saisie).
+    /// point de départ d'une nouvelle situation (aide à la saisie). <paramref name="avancement"/> : situations de travaux
+    /// (S) ou de production (D), chacune partant de la dernière de son type.
     /// </summary>
-    protected internal async Task<Dictionary<long, SaisieAvancement>> DernieresSituations(IReadOnlyCollection<long> sources, CancellationToken ct)
+    protected internal async Task<Dictionary<long, SaisieAvancement>> DernieresSituations(IReadOnlyCollection<long> sources, CancellationToken ct,
+        string avancement = TypesAvancement.Situation)
     {
         if (sources.Count == 0) return [];
         var lignes = await (from l in db.Lignes.AsNoTracking()
                             join d in db.Documents.AsNoTracking().Valables(db) on l.LigEntId equals d.EntId
                             join t in db.TypesDocument.AsNoTracking() on d.EntTydId equals t.TydId
                             where l.LigAvtSourceLigId != null && sources.Contains(l.LigAvtSourceLigId.Value) && l.LigAvtMode != null
-                                && t.TydAvancement == "S"
+                                && t.TydAvancement == avancement
                             select new { Source = l.LigAvtSourceLigId!.Value, d.EntId, l.LigAvtMode, l.LigAvtValeur })
             .ToListAsync(ct);
         return lignes.GroupBy(x => x.Source).ToDictionary(g => g.Key, g =>
@@ -1047,9 +1049,9 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         var source = await persistance.Charger(id, ct);
         await VerifierDroit(u, source.Document.EntTydId, ActionsDroits.Creer, ct);
         var typeSource = await Type(source.Document.EntTydId, ct);
-        // Situation de travaux (non comptable, Q29) : une situation validée se révise par un nouvel indice, qui devient la
-        // référence, tant qu'aucune facture non annulée n'en est issue.
-        var revision = source.Document.EntVerrouille && typeSource.TydAvancement == "S";
+        // Situation de travaux ou de production (non comptables, Q29) : une situation validée se révise par un nouvel indice,
+        // qui devient la référence, tant qu'aucune facture non annulée n'en est issue.
+        var revision = source.Document.EntVerrouille && TypesAvancement.EstSituation(typeSource.TydAvancement);
         if (!revision && !await Regles.Booleen("INDICE", typeSource, ct))
         {
             throw ExceptionMetier.Invalide("INDICE_INTERDIT", "Pas d'indice pour ce type de document (règle Indices)");

@@ -13,7 +13,7 @@ export const COUT = Object.freeze({ PA: 'PA', PR: 'PR' });
 
 /**
  * Colonnes du Détail : `indicateurs` sommés sur `champ` (cout = PA ou PR selon le choix, pv), ou `calcul` à partir des
- * autres colonnes (toujours sur les cumuls) ; `periode` : en période du… au, somme des faits de la période (budget,
+ * autres colonnes (toujours sur les cumuls) ; `composante` : faits de cette composante seulement ; `periode` : en période du… au, somme des faits de la période (budget,
  * budget d'exécution, déboursé, facturé : § 5.4 Q4), les autres restent au cumul à la fin de la période (engagé, dépensé,
  * restes) ; `teinte` = suffixe des variables `--rentabilite-<teinte>` du thème ; `faits` : indicateurs listés par le
  * double-clic.
@@ -69,10 +69,13 @@ export function filtrerOrdre(agregats, ordre) {
   return agregats.filter((a) => (o === 0 ? a.ordre_id === null || a.ordre_id === undefined : a.ordre_id === o));
 }
 
-/** Somme d'un champ (pa, pr, pv, heures) des agrégats de ces indicateurs, au cumul ou sur la période (`<champ>_periode`). */
-function somme(agregats, indicateurs, champ, periode) {
+/**
+ * Somme d'un champ (pa, pr, pv, heures) des agrégats de ces indicateurs (et de cette composante si elle est donnée), au
+ * cumul ou sur la période (`<champ>_periode`).
+ */
+function somme(agregats, indicateurs, champ, periode, composante = null) {
   const cle = periode ? `${champ}_periode` : champ;
-  return agregats.filter((a) => indicateurs.includes(a.indicateur))
+  return agregats.filter((a) => indicateurs.includes(a.indicateur) && (!composante || a.composante === composante))
     .reduce((s, a) => (a[cle] === null || a[cle] === undefined ? s : s.plus(Dz(a[cle]))), Dz(0));
 }
 
@@ -85,11 +88,11 @@ export function valeursColonnes(agregats, cout = COUT.PR, { periode = false, col
   const champCout = cout === COUT.PA ? 'pa' : 'pr';
   const champ = (c) => (c.champ === 'cout' ? champCout : c.champ);
   const cumul = {};
-  for (const c of colonnes.filter((x) => !x.calcul)) cumul[c.code] = somme(agregats, c.indicateurs, champ(c), false);
+  for (const c of colonnes.filter((x) => !x.calcul)) cumul[c.code] = somme(agregats, c.indicateurs, champ(c), false, c.composante);
   for (const c of colonnes.filter((x) => x.calcul)) cumul[c.code] = c.calcul(cumul);
   if (!periode) return cumul;
   const v = { ...cumul };
-  for (const c of colonnes.filter((x) => x.periode && !x.calcul)) v[c.code] = somme(agregats, c.indicateurs, champ(c), true);
+  for (const c of colonnes.filter((x) => x.periode && !x.calcul)) v[c.code] = somme(agregats, c.indicateurs, champ(c), true, c.composante);
   return v;
 }
 

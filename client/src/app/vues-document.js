@@ -14,7 +14,7 @@ const VENTILATION = ['qte_parent', 'montant_parent', 'pct_prec', 'qte_prec', 'mo
 const VUES_TRANSFORMES = [
   { nom: 'Ventilation (ventes)', types: ['V_COMMANDE', 'V_RECEPTION', 'V_RETOUR', 'V_FACTURE', 'V_AVOIR'], colonnes: [...ENTETE, 'pvnet', ...VENTILATION, 'tva', 'commentaire'] },
   // Avancement : vue réglée par l'utilisateur (quantités, %, montants : parent, précédent, cumul saisissable).
-  { nom: 'Avancement', types: ['V_SITUATION', 'V_FACTURE_AVT', 'V_REPRISE_AVT', 'A_FACTURE_AVT', 'T_FACTURE_AVT'],
+  { nom: 'Avancement', types: ['V_SITUATION', 'V_FACTURE_AVT', 'V_REPRISE_AVT', 'A_FACTURE_AVT', 'T_FACTURE_AVT', 'V_PRODUCTION'],
     colonnes: ['num', 'libelle', 'unite', 'pvnet', 'qte_parent', 'qte_prec', 'qte_cumul', 'pct_prec', 'pct_cumul', 'montant_parent', 'montant_cumul', 'montant'] },
   // Commandes : date de livraison de la ligne (lot 9) avant le commentaire.
   // Achats : chantier de la ligne (db/248) après la nature.

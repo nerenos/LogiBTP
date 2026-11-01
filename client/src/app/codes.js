@@ -20,6 +20,7 @@ export const TYPE_DOCUMENT = Object.freeze({
   V_RECEPTION: 'V_RECEPTION',
   V_RETOUR: 'V_RETOUR',
   V_SITUATION: 'V_SITUATION',
+  V_PRODUCTION: 'V_PRODUCTION',
   V_FACTURE: 'V_FACTURE',
   V_FACTURE_AVT: 'V_FACTURE_AVT',
   V_REPRISE_AVT: 'V_REPRISE_AVT',
@@ -110,6 +111,7 @@ export const ROLE_RENTABILITE = Object.freeze({
   RESERVATION_STOCK: 'RESERVATION_STOCK',
   MOUVEMENT_STOCK: 'MOUVEMENT_STOCK',
   RECU_ACOMPTE: 'RECU_ACOMPTE',
+  PRODUCTION: 'PRODUCTION',
 });
 
 /** Sujets publiés entre les fenêtres de l'application (app.publier / app.abonner). */

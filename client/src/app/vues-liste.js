@@ -206,7 +206,7 @@ export const THEMES_LISTE = [
     thl_code: 'livraisons', thl_libelle: 'Livraisons et retours', thl_icone: '🚚', thl_ordre: 24,
     thl_types: [{ code: 'V_RECEPTION', libelle: 'Bon de livraison' }, { code: 'V_RETOUR', libelle: 'Bon de retour client' }],
   },
-  { thl_code: 'situations', thl_libelle: 'Situations de travaux', thl_icone: '📈', thl_ordre: 26, thl_types: [{ code: 'V_SITUATION', libelle: 'Situation de travaux' }] },
+  { thl_code: 'situations', thl_libelle: 'Situations', thl_icone: '📈', thl_ordre: 26, thl_types: [{ code: 'V_SITUATION', libelle: 'Situation de travaux' }, { code: 'V_PRODUCTION', libelle: 'Situation de production' }] },
   {
     thl_code: 'factures', thl_libelle: 'Factures', thl_icone: '💶', thl_ordre: 30,
     thl_types: [{ code: 'V_FACTURE', libelle: 'Facture' }, { code: 'V_FACTURE_AVT', libelle: 'Facture d\'avancement' }, { code: 'V_AVOIR', libelle: 'Avoir' }],

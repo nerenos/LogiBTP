@@ -132,7 +132,7 @@ export const TYPES_FICHE = {
             { titre: 'Location', champs: ['loueur_id', 'location_ent_id', 'fin_location'] },
             { titre: 'Exploitation', champs: ['etat', 'condition', 'chantier', 'compteurs', 'heures_utilisation', 'kilometres', 'controle_ok'] },
             { titre: 'Planification', champs: ['mode', 'quantite', 'unite', 'srv_id', 'cal_id'] },
-            { titre: 'Achat', champs: ['valeur_achat', 'date_achat'] },
+            { titre: 'Achat et coût', champs: ['valeur_achat', 'date_achat', 'cout_horaire'] },
             { titre: 'Observations', champs: ['observations'], largeur: 'plein' },
           ],
         },
@@ -161,6 +161,8 @@ export const TYPES_FICHE = {
         c('controle_ok', 'Contrôle réglementaire à jour', 'mat_controle_ok', 'booleen', { defaut: false }),
         c('valeur_achat', "Valeur d'achat", 'mat_valeur_achat', 'nombre', { format: '9999999.99' }),
         c('date_achat', "Date d'achat", 'mat_date_achat', 'date'),
+        // Rentabilité des chantiers (db/261) : heures pointées et planifiées du matériel valorisées à ce coût.
+        c('cout_horaire', 'Coût moyen horaire', 'mat_cout_horaire', 'nombre', { format: '9999.99', aide: "Valorise les heures pointées et planifiées du matériel dans la rentabilité des chantiers ; vide : coût de son type (Paramètres › Rentabilité)" }),
         c('observations', 'Observations', 'mat_observations', 'zone'),
         // Référentiel des ressources (db/195) : matériel identifié (engin, véhicule) ou par nombre (banches, étais).
         c('usage', 'Utilisation', 'mat_usage', 'liste', USAGE),

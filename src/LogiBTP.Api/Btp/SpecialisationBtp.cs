@@ -159,6 +159,31 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         // Stock : date du mouvement, lieux des entrées, sorties et transferts (module Stock, S9, S10).
         MouvementsStockBtp.Controler(document.Document, type, erreurs);
         await ControlerAvancementNumerote(db, document, type, erreurs, ct);
+        await ControlerProductionMois(db, document, type, erreurs, ct);
+    }
+
+    /// <summary>
+    /// Situation de production (R7) : une par marché et par mois ; une autre situation de production valable du même
+    /// marché datée du même mois (hors indices du même document) refuse la validation.
+    /// </summary>
+    private static async Task ControlerProductionMois(DocumentDbContext<DocumentBtp, DocumentLigneBtp> db, DocumentCompletBtp document, TypeDocument type,
+        List<MessageCalcul> erreurs, CancellationToken ct)
+    {
+        var d = document.Document;
+        if (type.TydAvancement != TypesAvancement.Production || d.EntMarcheId is not int marche) return;
+        var debut = new DateOnly(d.EntDate.Year, d.EntDate.Month, 1);
+        var autre = await db.Database.SqlQuery<string?>($"""
+            SELECT x.ent_numero AS "Value" FROM document x
+            WHERE x.ent_marche_id = {marche} AND x.ent_tyd_id = {type.TydId} AND x.ent_id <> {d.EntId}
+              AND x.ent_groupe_id IS DISTINCT FROM (SELECT g.ent_groupe_id FROM document g WHERE g.ent_id = {d.EntId}) AND f_document_valable(x.ent_id, FALSE)
+              AND x.ent_date >= {debut} AND x.ent_date < {debut.AddMonths(1)}
+            LIMIT 1
+            """).ToListAsync(ct);
+        if (autre.Count > 0)
+        {
+            erreurs.Add(new MessageCalcul(null, "PRODUCTION_MOIS",
+                $"Une situation de production du marché est déjà validée pour {debut:MM/yyyy} ({autre[0]}) : révisez-la plutôt que d'en valider une autre"));
+        }
     }
 
     /// <summary>Quantités des liens de transformation converties dans l'unité de la ligne d'origine (UnitesLignesBtp).</summary>
@@ -427,7 +452,8 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
 
     /// <summary>
     /// Numéro de situation (Q29) d'un document d'avancement du marché qui n'en a pas : le suivant des documents validés
-    /// de même nature (situations de référence, ou factures d'avancement et reprises) ; à la création depuis le marché et
+    /// de même nature (situations de travaux de référence, situations de production, ou factures d'avancement et reprises) ;
+    /// à la création depuis le marché et
     /// à la validation (un numéro saisi est gardé).
     /// </summary>
     public static async Task NumeroterAvancement(DbContext db, long entId, CancellationToken ct)
@@ -438,7 +464,7 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
                 JOIN type_document tx ON tx.tyd_id = x.ent_tyd_id
                 JOIN type_document td ON td.tyd_id = d.ent_tyd_id
                 WHERE x.ent_marche_id = d.ent_marche_id AND x.ent_id <> d.ent_id AND f_document_valable(x.ent_id, FALSE)
-                  AND CASE WHEN td.tyd_avancement = 'S' THEN tx.tyd_avancement = 'S'
+                  AND CASE WHEN td.tyd_avancement IN ('S', 'D') THEN tx.tyd_avancement = td.tyd_avancement
                            ELSE x.ent_avt_presentation = 'P' OR tx.tyd_avancement = 'R' END), 0)
             WHERE d.ent_id = {entId} AND d.ent_rang_avancement IS NULL AND d.ent_avt_presentation IS NOT NULL AND d.ent_marche_id IS NOT NULL
             """, ct);

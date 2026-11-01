@@ -102,6 +102,7 @@ export const api = {
     enregistrerRoles: (l) => appel('PUT', '/rentabilite/parametres/roles', l),
     enregistrerTaux: (l) => appel('PUT', '/rentabilite/parametres/taux', l),
     enregistrerCoefs: (l) => appel('PUT', '/rentabilite/parametres/coefs', l),
+    enregistrerMateriel: (m) => appel('PUT', '/rentabilite/parametres/materiel', m),
   },
   execution: {
     types: () => appel('GET', '/execution/types'),
@@ -654,6 +655,7 @@ export const api = {
   enregistrerFormulesRevision: (formules) => appel('PUT', '/structure/revision/formules', formules),
   commandesMarche: (id) => appel('GET', `/structure/documents/${id}/commandes-marche`),
   avancementDocument: (id) => appel('GET', `/structure/documents/${id}/avancement`),
+  croiseesDocument: (id, { repli = false } = {}) => appel('GET', `/structure/documents/${id}/croisees${repli ? '?repli=true' : ''}`),
   acomptesDocument: (id) => appel('GET', `/structure/documents/${id}/acomptes`),
   // Annulation par avoir (pièce et, dans un marché, pièces d'avancement suivantes) : liste puis annulation.
   piecesAnnulation: (id) => appel('GET', `/structure/documents/${id}/annulation`),

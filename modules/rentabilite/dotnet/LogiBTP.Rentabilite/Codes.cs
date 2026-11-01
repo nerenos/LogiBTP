@@ -12,6 +12,7 @@ public static class Indicateur
     public const string Facture = "FACTURE";
     public const string AcomptePaye = "ACOMPTE_PAYE";
     public const string AcompteUtilise = "ACOMPTE_UTILISE";
+    public const string Production = "PRODUCTION";
 }
 
 /// <summary>Composante d'un fait (colonne de détail des indicateurs de coût).</summary>
@@ -35,6 +36,7 @@ public static class SourceFait
     public const string Tache = "TACHE";
     public const string Mouvement = "MOUVEMENT";
     public const string Reglement = "REGLEMENT";
+    public const string PointageMateriel = "POINTAGE_MATERIEL";
 }
 
 /// <summary>État d'un calcul (rca_etat).</summary>

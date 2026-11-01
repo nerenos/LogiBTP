@@ -1,13 +1,16 @@
 // Liste de la Rentabilité (ANALYSE-MODULE-ANALYSE.md § 6) : colonnes du Détail plus acomptes en trésorerie, rapports et
 // heures de main-d'œuvre ; arbre multi-origine (chargé d'affaires › affaire › chantier › ordre, ou affaire › chantier ›
 // ordre), total figé en pied ; lignes affichées selon les nœuds ouverts ; lignes du CSV. Calculs en décimal.
-import { arrondir } from '@logibtp/socle';
+import { arrondir, Dz } from '@logibtp/socle';
 import { texte } from '@logibtp/socle/dictionnaire';
-import { INDICATEUR, NIVEAU_LISTE } from './codes.js';
+import { INDICATEUR, COMPOSANTE, NIVEAU_LISTE } from './codes.js';
 import { COLONNES_DETAIL, COUT, SENS, valeursColonnes } from './indicateurs.js';
 
 /** Rapport a / b (Decimal en %), null si la base est nulle. */
 const pourcent = (a, b) => (b.isZero() ? null : a.times(100).dividedBy(b));
+
+/** Partie positive (Decimal) : la valeur, ou zéro si elle est négative. */
+const positif = (v) => (v.isNegative() ? Dz(0) : v);
 
 /** Colonnes de la Liste : celles du Détail, rapports, heures de main-d'œuvre et acomptes en trésorerie (R6). */
 export const COLONNES_LISTE = Object.freeze([
@@ -18,6 +21,12 @@ export const COLONNES_LISTE = Object.freeze([
   Object.freeze({ code: 'acompte_paye', indicateurs: [INDICATEUR.ACOMPTE_PAYE], champ: 'pv', faits: [INDICATEUR.ACOMPTE_PAYE], sens: SENS.POSITIF, teinte: 'acompte' }),
   Object.freeze({ code: 'acompte_utilise', indicateurs: [INDICATEUR.ACOMPTE_UTILISE], champ: 'pv', faits: [INDICATEUR.ACOMPTE_UTILISE], sens: SENS.POSITIF, teinte: 'acompte' }),
   Object.freeze({ code: 'acompte_reste', calcul: (v) => v.acompte_paye.minus(v.acompte_utilise), faits: [INDICATEUR.ACOMPTE_PAYE, INDICATEUR.ACOMPTE_UTILISE], sens: SENS.POSITIF, teinte: 'acompte' }),
+  // Production (§ 4.12, lot 4) : réalisé (lignes facturées, sans acomptes ni postes : Q15), production des situations de
+  // production, factures à établir (production > réalisé) et produits constatés d'avance (réalisé > production) au cumul.
+  Object.freeze({ code: 'realise', indicateurs: [INDICATEUR.FACTURE], composante: COMPOSANTE.VENTE, champ: 'pv', periode: true, faits: [INDICATEUR.FACTURE], sens: SENS.POSITIF, teinte: 'facture' }),
+  Object.freeze({ code: 'production', indicateurs: [INDICATEUR.PRODUCTION], champ: 'pv', periode: true, faits: [INDICATEUR.PRODUCTION], sens: SENS.POSITIF, teinte: 'production' }),
+  Object.freeze({ code: 'fae', calcul: (v) => positif(v.production.minus(v.realise)), faits: [INDICATEUR.PRODUCTION, INDICATEUR.FACTURE], sens: SENS.POSITIF, teinte: 'production' }),
+  Object.freeze({ code: 'pca', calcul: (v) => positif(v.realise.minus(v.production)), faits: [INDICATEUR.PRODUCTION, INDICATEUR.FACTURE], sens: SENS.POSITIF, teinte: 'production' }),
 ]);
 
 const parLibelle = (a, b) => (a.dernier - b.dernier) || a.libelle.localeCompare(b.libelle, 'fr');

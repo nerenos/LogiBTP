@@ -7,7 +7,8 @@
       "DEBOURSE": "Déboursé",
       "FACTURE": "Facturé",
       "ACOMPTE_PAYE": "Acompte payé",
-      "ACOMPTE_UTILISE": "Acompte utilisé"
+      "ACOMPTE_UTILISE": "Acompte utilisé",
+      "PRODUCTION": "Production"
     },
     "composantes": {
       "VENTE": "Vente",
@@ -99,6 +100,22 @@
       "h_reste": {
         "libelle": "H restantes",
         "info": "Heures du budget d'exécution − planifiées − pointées ; négatif : dépassement"
+      },
+      "realise": {
+        "libelle": "Réalisé",
+        "info": "Lignes facturées, après déduction du précédent, sans factures d'acompte ni postes de pied"
+      },
+      "production": {
+        "libelle": "Production",
+        "info": "Avancement réel déclaré par les situations de production (cumul de la dernière situation du mois)"
+      },
+      "fae": {
+        "libelle": "FAE",
+        "info": "Factures à établir : production − réalisé, quand la production dépasse le réalisé (au cumul)"
+      },
+      "pca": {
+        "libelle": "PCA",
+        "info": "Produits constatés d'avance : réalisé − production, quand le réalisé dépasse la production (au cumul)"
       }
     },
     "anomalies": {
@@ -150,7 +167,8 @@
       "POINTAGE": "Pointages",
       "TACHE": "Planning",
       "MOUVEMENT": "Mouvements de stock",
-      "REGLEMENT": "Règlements"
+      "REGLEMENT": "Règlements",
+      "POINTAGE_MATERIEL": "Pointages du matériel"
     },
     "liste": {
       "total": "Total",
@@ -201,6 +219,10 @@
         "realise": {
           "libelle": "Réalisé",
           "info": "Lignes facturées après déduction du précédent, sans factures d'acompte ni postes, face au déboursé"
+        },
+        "production": {
+          "libelle": "Production",
+          "info": "Avancement réel des situations de production ; coût en face : le déboursé (marge la plus juste en cours de chantier)"
         },
         "facture": {
           "libelle": "Facturé",

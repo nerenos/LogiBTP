@@ -81,8 +81,13 @@ public class TransformationService<TDoc, TLigne, TComplet>(
         d.EntNumero = numero;
         d.EntDate = DateOnly.FromDateTime(DateTime.Today);
         d.EntIntermediaire = intermediaire;
-        // Avancement : situation et reprise en cumul, facture d'avancement en période.
-        d.EntAvtPresentation = typeCible.TydAvancement switch { "F" => "P", "S" or "R" => "C", _ => null };
+        // Avancement : situations (travaux, production) et reprise en cumul, facture d'avancement en période.
+        d.EntAvtPresentation = typeCible.TydAvancement switch
+        {
+            TypesAvancement.Facture => "P",
+            TypesAvancement.Situation or TypesAvancement.Production or TypesAvancement.Reprise => "C",
+            _ => null,
+        };
         // Textes d'introduction et de conclusion : ceux de la source, sinon les modèles du type cible.
         if (string.IsNullOrWhiteSpace(d.EntTexteIntroHtml)) d.EntTexteIntroHtml = typeCible.TydTexteIntroHtml;
         if (string.IsNullOrWhiteSpace(d.EntTexteFinHtml)) d.EntTexteFinHtml = typeCible.TydTexteFinHtml;
@@ -284,8 +289,8 @@ public class TransformationService<TDoc, TLigne, TComplet>(
         var cles = retenues.Keys.Concat(source.Lignes.Where(EstPosteEnMontant).Select(l => l.LigId))
             .Select(id => parId[id].LigAvtSourceLigId ?? id).Distinct().ToList();
         var precedents = typeCible.TydAvancement is null ? null : await documents.Precedents(cles, null, ct);
-        // Nouvelle situation : la saisie part de la dernière situation validée (aide à la saisie).
-        var situations = typeCible.TydAvancement == "S" ? await documents.DernieresSituations(cles, ct) : null;
+        // Nouvelle situation (travaux ou production) : la saisie part de la dernière situation validée du même type.
+        var situations = TypesAvancement.EstSituation(typeCible.TydAvancement) ? await documents.DernieresSituations(cles, ct, typeCible.TydAvancement!) : null;
         return new Preparation(source, typeSource, regle, etapes, retenues, avancements, garder, enVendu, unites, choix, typeCible, precedents, situations);
     }
 

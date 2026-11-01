@@ -24,6 +24,7 @@ public static class TypesDocument
     public const string VReception = "V_RECEPTION";
     public const string VRetour = "V_RETOUR";
     public const string VSituation = "V_SITUATION";
+    public const string VProduction = "V_PRODUCTION";
     public const string VFacture = "V_FACTURE";
     public const string VFactureAvt = "V_FACTURE_AVT";
     public const string VRepriseAvt = "V_REPRISE_AVT";
@@ -108,6 +109,7 @@ public static class RolesRentabilite
     public const string ReservationStock = "RESERVATION_STOCK";
     public const string MouvementStock = "MOUVEMENT_STOCK";
     public const string RecuAcompte = "RECU_ACOMPTE";
+    public const string Production = "PRODUCTION";
 }
 
 /// <summary>Catégories de la GED posées par le serveur (dge_categorie).</summary>

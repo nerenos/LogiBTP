@@ -486,6 +486,7 @@
   "fiches_btp_bl": "🚚",
   "fiches_btp_ordre": "▶",
   "fiches_btp_situation": "📈",
+  "fiches_btp_production": "🏗",
   "fiches_btp_facture_avt": "📊",
   "fiches_btp_reprise": "↺",
   "structure_btp_projet": "🎯",
@@ -501,6 +502,7 @@
   "documents_btp_v_reception": "🚚",
   "documents_btp_v_retour": "↩️",
   "documents_btp_v_situation": "📈",
+  "documents_btp_v_production": "🏗",
   "documents_btp_v_facture": "💶",
   "documents_btp_v_facture_avt": "📊",
   "documents_btp_v_avoir": "🧾",
@@ -674,5 +676,6 @@
   "rentabilite_btp_vue_defaut": "★",
   "rentabilite_btp_controle": "✓",
   "rentabilite_btp_csv": "⭳",
-  "rentabilite_btp_photo": "📷"
+  "rentabilite_btp_photo": "📷",
+  "document_btp_precharger": "⇄"
 }

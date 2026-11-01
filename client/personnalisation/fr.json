@@ -243,7 +243,7 @@
         "SEMAINE": "À la semaine"
       },
       "interimaires": "Intérimaires",
-      "interim_imputes": "Heures imputées aux chantiers avec un coût",
+      "interim_imputes": "Intérimaires valorisés au taux de leur mission (sinon : heures sans coût, coût par les factures de l'agence)",
       "sous_types": "Sous-types de main-d'œuvre",
       "sous_types_aide": "Le type de main-d'œuvre est une nature du regroupement Main-d'œuvre (bibliothèque) ; le sous-type précise l'activité.",
       "productif": "Productif",
@@ -905,7 +905,9 @@
         "sous_traiter": "{{icone}} Sous-traiter",
         "sources_aide": "Ajouter des documents sources : BL et commandes en attente, avenants du marché (une section par document)",
         "sources": "{{icone}} Documents",
-        "approuver": "Approuver"
+        "approuver": "Approuver",
+        "precharger": "{{icone}} Reprendre l'autre situation",
+        "precharger_aide": "Reprend l'avancement saisi de la situation de travaux (ou de production) du même mois, sinon de la dernière validée, sur les lignes de ce brouillon"
       },
       "dock": {
         "gauche": "Ancrer à gauche",
@@ -1122,6 +1124,19 @@
         "date": "Date",
         "propriete": "Propriété du document",
         "reglement": "Condition de paiement"
+      },
+      "croisees": {
+        "V_SITUATION": "situation",
+        "V_PRODUCTION": "production"
+      },
+      "precharger": {
+        "enregistrer_avant": "Enregistrez le document avant de reprendre l'avancement d'une autre situation",
+        "aucune": "Aucune autre situation de ce marché à reprendre",
+        "meme_mois": "{{type}} {{numero}} du {{date}} (même mois)",
+        "derniere": "{{type}} {{numero}} du {{date}} (dernière validée, aucune du même mois)",
+        "confirmer": "Reprendre l'avancement saisi de : {{source}} ?\nLes saisies de ce brouillon sont remplacées ligne par ligne (Ctrl+Z pour annuler).",
+        "fait_un": "{{nombre}} ligne reprise : vérifiez puis enregistrez",
+        "fait_autre": "{{nombre}} lignes reprises : vérifiez puis enregistrez"
       }
     },
     "fonctions": {
@@ -5329,6 +5344,11 @@
           "nom": "Situation",
           "titre": "Situation de travaux : avancement cumulé des commandes du marché (non comptable)"
         },
+        "V_PRODUCTION": {
+          "libelle": "Nouvelle situation de production",
+          "nom": "Situation de production",
+          "titre": "Situation de production : avancement réel du chantier sur les commandes du marché (ni facture ni comptabilité ; une par mois)"
+        },
         "V_FACTURE_AVT": {
           "libelle": "Nouvelle facture d'avancement",
           "nom": "Facture d'avancement",
@@ -5731,6 +5751,10 @@
           "titre": "Situation de travaux",
           "aide": "État d'avancement cumulé, avant la facture d'avancement"
         },
+        "PRODUCTION": {
+          "titre": "Situation de production",
+          "aide": "Avancement réel du chantier, pour les factures à établir et produits constatés d'avance"
+        },
         "FACTURATION": {
           "titre": "Facturation",
           "aide": "Facture, facture d'avancement"
@@ -5749,6 +5773,7 @@
         "V_RECEPTION": "Livraison des quantités restant à livrer",
         "V_RETOUR": "Retour client des quantités livrées",
         "V_SITUATION": "Situation de travaux (avancement cumulé), à transformer ensuite en facture d'avancement",
+        "V_PRODUCTION": "Situation de production (avancement réel cumulé, jamais facturée)",
         "V_FACTURE": "Facture du reliquat à facturer",
         "V_FACTURE_AVT": "Facture d'avancement (situation)",
         "V_AVOIR": "Avoir sur la facture",
@@ -7991,7 +8016,14 @@
       "TACHE_SANS_TAUX": "Tâches planifiées sans taux horaire",
       "ACOMPTE_PAYE": "Règlement pointé sur un reçu d'acompte",
       "ACOMPTE_RECU": "Reçu d'acompte (montant)",
-      "ACOMPTE_UTILISE": "Acompte déduit d'une pièce"
+      "ACOMPTE_UTILISE": "Acompte déduit d'une pièce",
+      "PRODUCTION_LIGNE": "Ligne de situation de production : écart avec la situation de production précédente",
+      "POINTAGE_INTERIM": "Pointage d'intérimaire : heures sans valeur (coût par les factures de l'agence)",
+      "POINTAGE_MISSION": "Pointage d'intérimaire valorisé au taux de sa mission",
+      "POINTAGE_MATERIEL": "Heures de matériel pointées au coût horaire du matériel",
+      "MATERIEL_LOUE": "Heures de matériel loué (coût par la commande de location)",
+      "MATERIEL_SANS_COUT": "Heures de matériel sans coût horaire (fiche ou type)",
+      "TACHE_MATERIEL": "Matériel planifié (après son dernier pointage)"
     },
     "roles": {
       "COMMANDE_VENTE": "Commande client (budget)",
@@ -8009,7 +8041,8 @@
       "AVOIR_ST": "Avoir de sous-traitance",
       "RESERVATION_STOCK": "Réservation de stock (engagé)",
       "MOUVEMENT_STOCK": "Mouvement de stock (déboursé)",
-      "RECU_ACOMPTE": "Reçu d'acompte en trésorerie (payé)"
+      "RECU_ACOMPTE": "Reçu d'acompte en trésorerie (payé)",
+      "PRODUCTION": "Situation de production (avancement réel, FAE / PCA)"
     },
     "faits": {
       "titre": "Faits {{code}}",
@@ -8041,6 +8074,12 @@
       "taux_aide": "Valorise les pointages sans coût horaire et les tâches planifiées (signalés dans « À vérifier »).",
       "service": "Service",
       "taux_horaire": "Taux horaire",
+      "materiel": "Coût horaire du matériel",
+      "materiel_aide": "Valorise les heures de matériel pointées (déboursé du chantier pointé) et planifiées (engagé), hors matériel loué. Le coût saisi sur la fiche du matériel l'emporte ; sinon celui de son type, sinon du type parent.",
+      "type_materiel": "Type de matériel",
+      "cout_horaire": "Coût horaire",
+      "nature_materiel": "Nature des heures de matériel",
+      "nature_materiel_vide": "Non ventilé",
       "coefs": "Coefficients de frais généraux",
       "coefs_aide": "Prix de revient = prix d'achat × coefficient, par nature (vide : toutes) à partir d'une date.",
       "nature": "Nature",
