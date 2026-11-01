@@ -799,3 +799,17 @@ restant livrable seul (le repli sur la clé ou sur le message du serveur ne cass
   associent une icône à un libellé par code (`ICONES_EVENEMENTS` + `textesParCode`).
 - **Contrôles** : `npm test` (clés littérales des deux modules vérifiées par le test du client), analyse des portées
   (homonyme `texte` renommé dans Mon compte) ; pages affichées dans le navigateur avec une API simulée.
+
+## 34. Réalisation du lot P3u : modules OAuth et Notifications (01/11/2026)
+
+- **Périmètre** : ces modules n'ont pas de partie JS ; leurs écrans du cœur sont migrés : connexions externes
+  (`pages/parametres-connexions.js` : liste, détail, client du fournisseur, aides Google et Microsoft, rappels ; états
+  par `textesParCode`, flux `FLUX_OAUTH` à libellés calculés), boîte de notifications et préférences
+  (`pages/notifications.js` : états, modules émetteurs, niveaux en icônes), cloche du bandeau (nombres au pluriel par
+  `pluriel`), titres des routes.
+- **Textes** : `oauth_btp.*` (`etats`, `flux`, `connexions`) et `notifications_btp.*` (`modules`, `boite`,
+  `preferences`, `cloche`).
+- **Icônes** : `oauth_btp_*` (connexions, connecter, reconnecter, tester, révoquer…), `notifications_btp_*` (cloche,
+  niveaux urgent / attention / info, lue, traitée…).
+- **Contrôles** : `npm test`, analyse des portées (paramètre `texte` renommé dans les connexions) ; pages affichées
+  dans le navigateur avec une API simulée.

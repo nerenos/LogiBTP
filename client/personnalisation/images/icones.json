@@ -285,5 +285,21 @@
   "droits_btp_heriter": "↺",
   "droits_btp_reappliquer": "⇣",
   "droits_btp_deplie": "▾",
-  "droits_btp_replie": "▸"
+  "droits_btp_replie": "▸",
+  "notifications_btp_cloche": "🔔",
+  "notifications_btp_urgent": "🔴",
+  "notifications_btp_attention": "🟠",
+  "notifications_btp_info": "🔵",
+  "notifications_btp_lue": "👁",
+  "notifications_btp_traitee": "✔",
+  "notifications_btp_tout_lire": "✓",
+  "notifications_btp_controler": "⟳",
+  "oauth_btp_connexions": "🔐",
+  "oauth_btp_reconnecter": "🔁",
+  "oauth_btp_connecter": "🔗",
+  "oauth_btp_tester": "✓",
+  "oauth_btp_modifier": "✎",
+  "oauth_btp_revoquer": "⛔",
+  "oauth_btp_afficher": "👁",
+  "oauth_btp_controler": "⟳"
 }

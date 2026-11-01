@@ -24,7 +24,7 @@ import './terrain/operations-terrain.js';
 import { menus } from './navigation/menus.js';
 import { ROUTES } from './pages/index.js';
 import { CLE_PREFERENCES_NAVIGATION, urlDocument, urlFiche, TYPE_DOCUMENT, SUJET_FENETRE } from './codes.js';
-import { texte, texteHtml, iconeHtml } from '@logibtp/socle/dictionnaire';
+import { texte, texteHtml, pluriel, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { logoApplication } from '../personnalisation.js';
 
 // Application web LogiBTP (cœur) : services partagés par les pages, routeur (navigation classique dans la
@@ -483,9 +483,9 @@ export class Application {
   /** Cloche du bandeau : notifications non lues (rouge s'il y en a d'urgentes). */
   #cloche() {
     const c = this.notifications;
-    if (!c) return '<a href="/notifications" title="Notifications">🔔</a>';
-    const titre = `${c.non_lues} non lue(s), ${c.a_traiter} à traiter${c.urgentes ? `, ${c.urgentes} urgente(s)` : ''}`;
-    return `<a href="/notifications" class="cloche${c.urgentes ? ' urgente' : ''}" title="${titre}">🔔${c.non_lues ? `<span class="compteur">${c.non_lues}</span>` : ''}</a>`;
+    if (!c) return `<a href="/notifications" title="${texteHtml('notifications_btp.boite.titre')}">${iconeHtml('notifications_btp_cloche')}</a>`;
+    const titre = [pluriel('notifications_btp.cloche.non_lues', c.non_lues), pluriel('notifications_btp.cloche.a_traiter', c.a_traiter), ...(c.urgentes ? [pluriel('notifications_btp.cloche.urgentes', c.urgentes)] : [])].join(', ');
+    return `<a href="/notifications" class="cloche${c.urgentes ? ' urgente' : ''}" title="${echapper(titre)}">${iconeHtml('notifications_btp_cloche')}${c.non_lues ? `<span class="compteur">${c.non_lues}</span>` : ''}</a>`;
   }
 
   message(texte, niveau = 'info') { this.bandeau?.message(texte, niveau); }
