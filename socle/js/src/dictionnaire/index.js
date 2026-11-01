@@ -6,8 +6,10 @@
 // avec les vrais textes. Hors navigateur (tests, Jint), initialiserDictionnaire() pose un dictionnaire synchrone.
 
 import { resoudre, resoudrePluriel, valeurBrute, developper, variablesDe, interpoler } from './resolution.js';
+import { segmenterEmojis, contientEmoji, baliseEmoji, emojisEnHtml, emojisDansHtml, estEmoji } from './emojis.js';
 
 export { resoudre, resoudrePluriel, valeurBrute, interpoler, variablesDe, developper, clePluriel, cles, fusionner } from './resolution.js';
+export { MOTIF_SHORTCODE, segmenterEmojis } from './emojis.js';
 
 // Échappement HTML (même règle qu'echapperHtml du calcul, sans charger decimal.js au démarrage).
 const echapperHtml = (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -15,15 +17,16 @@ const echapperHtml = (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;
 /** Adresse des fichiers de personnalisation servis (fr.json, theme.css, images/). */
 export const ADRESSE_PERSONNALISATION = '/personnalisation/';
 
-const etat = { libelles: {}, icones: {}, version: '', langue: 'fr-FR', origine: 'aucune', manquantes: new Set(), surManquante: null };
+const etat = { libelles: {}, icones: {}, emojis: {}, version: '', langue: 'fr-FR', origine: 'aucune', manquantes: new Set(), surManquante: null };
 
 /**
- * Pose le dictionnaire de façon synchrone : { libelles, icones, version }. `surManquante(cle)` est appelé une fois par
+ * Pose le dictionnaire de façon synchrone : { libelles, icones, emojis, version }. `surManquante(cle)` est appelé une fois par
  * clé absente (développement : avertissement dans la console).
  */
-export function initialiserDictionnaire({ libelles = {}, icones = {}, version = '', origine = 'initialise', surManquante = etat.surManquante } = {}) {
+export function initialiserDictionnaire({ libelles = {}, icones = {}, emojis = {}, version = '', origine = 'initialise', surManquante = etat.surManquante } = {}) {
   etat.libelles = libelles ?? {};
   etat.icones = icones ?? {};
+  etat.emojis = emojis ?? {};
   etat.version = version ?? '';
   etat.langue = valeurBrute(etat.libelles, '_meta.langue') ?? 'fr-FR';
   etat.origine = origine;
@@ -38,14 +41,18 @@ async function lireJson(adresse) {
 }
 
 /**
- * Charge fr.json et images/icones.json servis (préchargés par client/index.html). Échec (serveur injoignable sans cache,
- * fichier invalide) : `secours()` fournit le dictionnaire du programme intégré au client ({ libelles, icones }).
+ * Charge fr.json, images/icones.json et images/emojis.json servis (préchargés par client/index.html). Échec (serveur injoignable sans cache,
+ * fichier invalide) : `secours()` fournit le dictionnaire du programme intégré au client ({ libelles, icones, emojis }).
  * Rend l'origine retenue : 'serveur' ou 'secours'.
  */
 export async function chargerDictionnaire({ adresse = ADRESSE_PERSONNALISATION, secours, surManquante } = {}) {
   try {
-    const [libelles, icones] = await Promise.all([lireJson(`${adresse}fr.json`), lireJson(`${adresse}images/icones.json`).catch(() => ({}))]);
-    initialiserDictionnaire({ libelles, icones, version: valeurBrute(libelles, '_meta.version') ?? '', origine: 'serveur', surManquante });
+    const [libelles, icones, emojis] = await Promise.all([
+      lireJson(`${adresse}fr.json`),
+      lireJson(`${adresse}images/icones.json`).catch(() => ({})),
+      lireJson(`${adresse}images/emojis.json`).catch(() => ({})),
+    ]);
+    initialiserDictionnaire({ libelles, icones, emojis, version: valeurBrute(libelles, '_meta.version') ?? '', origine: 'serveur', surManquante });
   } catch (e) {
     if (!secours) throw e;
     const s = await secours();
@@ -170,4 +177,81 @@ export function iconeHtml(nom, defaut = '') {
   const v = etat.icones[nom];
   if (v === undefined) return echapperHtml(defaut);
   return estFichier(v) ? `<img class="icone-image" src="${echapperHtml(image(v))}" alt="">` : echapperHtml(v);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Emojis par shortcode (§ 42) : « :nom: » → image fixe du catalogue images/emojis.json (fichiers sous images/emojis/).
+
+const adresseEmoji = (fichier) => image(fichier);
+
+/** Emoji du catalogue prêt pour innerHTML (<img class="emoji">) ; nom inconnu : `defaut` échappé. */
+export function emoji(nom, defaut = '') {
+  return estEmoji(etat.emojis, nom) ? baliseEmoji(nom, adresseEmoji(etat.emojis[nom])) : echapperHtml(defaut);
+}
+
+/** Noms des emojis du catalogue chargé (aide-mémoire, sélecteur à venir). */
+export const nomsEmojis = () => Object.keys(etat.emojis).sort();
+
+/** Texte brut (saisie, donnée) → HTML : texte échappé, shortcodes connus remplacés par leur image. */
+export const emojisHtml = (texte) => emojisEnHtml(texte, etat.emojis, adresseEmoji);
+
+/** HTML sûr → HTML : shortcodes remplacés dans le texte seulement (jamais dans une balise ou un attribut). */
+export const avecEmojis = (html) => emojisDansHtml(html, etat.emojis, adresseEmoji);
+
+/** texteHtml(cle, valeurs, defaut) avec les shortcodes du libellé (et de ses valeurs) remplacés par leur image. */
+export const texteEmojis = (cle, valeurs, defaut) => avecEmojis(texteHtml(cle, valeurs, defaut));
+
+// Parties du DOM jamais modifiées : saisie, code, SVG, ou zone marquée « sans-emojis » (data-sans-emojis).
+const EXCLUS = 'script, style, textarea, input, select, option, code, pre, svg, [contenteditable]:not([contenteditable="false"]), .sans-emojis, [data-sans-emojis]';
+
+function remplacerNoeud(noeud) {
+  const parent = noeud.parentElement;
+  if (!parent || parent.closest(EXCLUS) || !contientEmoji(noeud.nodeValue, etat.emojis)) return;
+  const doc = noeud.ownerDocument;
+  const fragment = doc.createDocumentFragment();
+  for (const s of segmenterEmojis(noeud.nodeValue, etat.emojis)) {
+    if ('texte' in s) { fragment.appendChild(doc.createTextNode(s.texte)); continue; }
+    const img = doc.createElement('img');
+    img.className = 'emoji';
+    img.src = adresseEmoji(etat.emojis[s.emoji]);
+    img.alt = s.code;
+    img.title = s.code;
+    img.draggable = false;
+    fragment.appendChild(img);
+  }
+  noeud.replaceWith(fragment);
+}
+
+/**
+ * Remplace les shortcodes des nœuds de texte de `racine` (élément, ou nœud de texte) par leurs images. Les champs de
+ * saisie, le code, les SVG et les zones « sans-emojis » sont laissés tels quels. Rend le nombre de nœuds examinés.
+ */
+export function appliquerEmojis(racine) {
+  if (!racine || Object.keys(etat.emojis).length === 0) return 0;
+  if (racine.nodeType === 3) { remplacerNoeud(racine); return 1; }
+  if (racine.nodeType !== 1 && racine.nodeType !== 9 && racine.nodeType !== 11) return 0;
+  const doc = racine.ownerDocument ?? racine;
+  const parcours = doc.createTreeWalker(racine, 4 /* NodeFilter.SHOW_TEXT */);
+  const noeuds = [];
+  for (let n = parcours.nextNode(); n; n = parcours.nextNode()) if (n.nodeValue.includes(':')) noeuds.push(n);
+  noeuds.forEach(remplacerNoeud);
+  return noeuds.length;
+}
+
+/**
+ * Remplacement automatique : applique les emojis à `racine` puis à tout ce qui y est ajouté ou modifié ensuite
+ * (MutationObserver). Appelé une fois au démarrage du client sur document.body ; rend la fonction d'arrêt.
+ */
+export function observerEmojis(racine = typeof document === 'undefined' ? null : document.body) {
+  if (!racine || typeof MutationObserver === 'undefined') return () => {};
+  appliquerEmojis(racine);
+  const observateur = new MutationObserver((mutations) => {
+    if (Object.keys(etat.emojis).length === 0) return;
+    for (const m of mutations) {
+      if (m.type === 'characterData') appliquerEmojis(m.target);
+      else for (const n of m.addedNodes) if (n.isConnected) appliquerEmojis(n);
+    }
+  });
+  observateur.observe(racine, { childList: true, subtree: true, characterData: true });
+  return () => observateur.disconnect();
 }

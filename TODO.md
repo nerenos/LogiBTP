@@ -280,6 +280,9 @@ Lots P1 (module, chargement, socle et navigation migrés), P2 (erreurs par code)
   d'exception lus par `Dictionnaire.cs`.
 - [ ] **Phase 2** (§ 9) : stockage par base, génération des fichiers par société, page `/parametres/personnalisation`,
   repérage des clés à l'écran en mode débogage.
+- [ ] **Emojis par shortcode** (§ 42 : `:nom:` → image fixe de `images/emojis.json`, remplacement automatique du DOM fait,
+  exemples `casque`, `valide`, `attention`) : compléter le catalogue et les images, remplacer les emojis Unicode des
+  textes et des icônes, sélecteur dans les zones de saisie, éditions PDF et courriels côté serveur.
 - [ ] Images de l'application à ajouter au répertoire : icônes PNG 192 / 512 de la PWA, logo de la page de connexion et de
   la borne.
 

@@ -47,6 +47,15 @@ describe('personnalisation du programme', () => {
     expect(logoValide(fs.readFileSync(composition.images.get(LOGO), 'utf8'))).toMatch(/^<svg/);
   });
 
+  it('emojis par shortcode : noms valides, image présente dans une couche (§ 42)', () => {
+    const noms = Object.keys(composition.emojis);
+    expect(noms).toEqual(expect.arrayContaining(['casque', 'valide', 'attention']));
+    for (const [nom, fichier] of Object.entries(composition.emojis)) {
+      expect(nom, nom).toMatch(/^[a-z][a-z0-9_-]*$/);
+      expect(composition.images.has(`images/${fichier}`), `${nom} → images/${fichier}`).toBe(true);
+    }
+  });
+
   it('logo : SVG seul, sans script ni gestionnaire', () => {
     expect(logoValide('<?xml version="1.0"?>\n<svg viewBox="0 0 1 1"></svg>')).toBe('<svg viewBox="0 0 1 1"></svg>');
     expect(logoValide('<svg><script>alert(1)</script></svg>')).toBe('');

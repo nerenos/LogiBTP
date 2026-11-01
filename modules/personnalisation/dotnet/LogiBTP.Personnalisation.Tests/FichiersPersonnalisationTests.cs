@@ -16,6 +16,7 @@ public sealed class FichiersPersonnalisationTests : IDisposable
     {
         Ecrire(Programme, "fr.json", """{ "_meta": { "langue": "fr-FR", "version": "build" }, "commun": { "enregistrer": "Enregistrer", "annuler": "Annuler" } }""");
         Ecrire(Programme, "images/icones.json", """{ "parametres": "⚙", "chantier": "👷" }""");
+        Ecrire(Programme, "images/emojis.json", """{ "casque": "emojis/casque.svg", "valide": "emojis/valide.svg" }""");
         Ecrire(Programme, "theme.css", ":root { --accent: #1d5fbf; }");
         Ecrire(Programme, "images/logo.svg", "<svg>programme</svg>");
         Ecrire(Programme, "images/borne.svg", "<svg>borne</svg>");
@@ -70,6 +71,22 @@ public sealed class FichiersPersonnalisationTests : IDisposable
         Assert.True(theme.IndexOf("#1d5fbf", StringComparison.Ordinal) < theme.IndexOf("#c00", StringComparison.Ordinal));
         Assert.Equal("<svg>installation</svg>", Texte(p.Lire("images/logo.svg")));
         Assert.Equal("<svg>borne</svg>", Texte(p.Lire("images/borne.svg")));
+    }
+
+    [Fact]
+    public void Emojis_fusionnes_et_images_remplacees()
+    {
+        Ecrire(Programme, "images/emojis/casque.svg", "<svg>casque</svg>");
+        Ecrire(Installation, "images/emojis.json", """{ "casque": "emojis/casque-societe.svg", "grue": "emojis/grue.svg" }""");
+        Ecrire(Installation, "images/emojis/grue.svg", "<svg>grue</svg>");
+        var p = new FichiersPersonnalisation(Programme, Installation);
+
+        var emojis = JsonNode.Parse(Texte(p.Lire("images/emojis.json")))!;
+        Assert.Equal("emojis/casque-societe.svg", emojis["casque"]!.GetValue<string>());
+        Assert.Equal("emojis/valide.svg", emojis["valide"]!.GetValue<string>());
+        Assert.Equal("emojis/grue.svg", emojis["grue"]!.GetValue<string>());
+        Assert.Equal("<svg>grue</svg>", Texte(p.Lire("images/emojis/grue.svg")));
+        Assert.Equal("<svg>casque</svg>", Texte(p.Lire("images/emojis/casque.svg")));
     }
 
     [Fact]

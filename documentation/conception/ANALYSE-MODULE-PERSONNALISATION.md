@@ -110,3 +110,30 @@
 - **Contrôles** : `npm test`, clés et icônes statiques relues contre les couches, analyse des portées (paramètres
   `texte` renommés : `lireTermes(saisie)`, `lireCsvIndex(contenu)`, variables locales `formule` et `saisie`) ; page des
   marchés à facturer (API simulée), messages des formules et lecture du CSV vérifiés dans le navigateur.
+
+## 42. Emojis par shortcode (01/11/2026)
+
+- **But** : des pictogrammes identiques sur tous les appareils (les emojis Unicode changent d'une plateforme à
+  l'autre). Un code texte `:nom:` placé dans un texte (libellé de `fr.json`, note, donnée saisie) est remplacé à
+  l'affichage par une image fixe, comme Slack ou Discord (`:casque:`).
+- **Découpage** : celui des textes. Chaque couche (socle → modules → cœur, puis l'installation) peut fournir
+  `images/emojis.json` (catalogue `{ "nom": "emojis/<fichier>.svg" }`, fusionné clé par clé : la couche suivante
+  l'emporte) et ses images sous `images/emojis/`. Composition par `composer` (`emojis`), servi en développement et par
+  l'API (`FichiersPersonnalisation`, fusion avec l'installation), préchargé par `index.html`, intégré au dictionnaire de
+  secours. Exemples fournis : `valide` et `attention` (socle), `casque` (cœur) ; la liste se complète à la main.
+- **Résolution** (socle, `@logibtp/socle/dictionnaire`, fonctions pures dans `dictionnaire/emojis.js`) : nom = une lettre
+  puis minuscules, chiffres, `_` ou `-` ; seul un nom du catalogue est remplacé (`:inconnu:`, une heure `10:30:00`
+  restent du texte). `emoji(nom)` → `<img class="emoji">` ; `emojisHtml(texte)` (texte brut échappé) ;
+  `avecEmojis(html)` (HTML sûr, jamais dans une balise ni un attribut) ; `texteEmojis(cle, valeurs)` (= `texteHtml` +
+  emojis) ; `appliquerEmojis(racine)` et `observerEmojis(racine)` (remplacement automatique dans le DOM, nœuds de texte
+  seulement : jamais dans les champs de saisie, `textarea`, `code`, `pre`, SVG, zones éditables ni `.sans-emojis` /
+  `[data-sans-emojis]`). Le client appelle `observerEmojis(document.body)` au démarrage (`main.js`) : tout texte
+  affiché est concerné sans changer les écrans. Texte de remplacement et info-bulle = le shortcode (copier-coller,
+  lecteurs d'écran).
+- **Présentation** : `img.emoji` dans `socle.css`, taille et alignement par les variables du thème `--emoji-taille`,
+  `--emoji-decalage`, `--emoji-marge`.
+- **Ajouter un emoji** : déposer `images/emojis/<nom>.svg` dans la couche voulue (socle pour un pictogramme général,
+  module pour le sien, `client/personnalisation` pour le BTP, ou le dossier de l'installation) et ajouter la ligne
+  `"<nom>": "emojis/<nom>.svg"` à son `images/emojis.json`. Le test du client vérifie que chaque image existe.
+- **Suites** : remplacer progressivement les emojis Unicode des textes et de `images/icones.json` par des shortcodes ou
+  des images ; sélecteur d'emojis dans les zones de saisie (`nomsEmojis()`) ; éditions PDF et courriels côté serveur.

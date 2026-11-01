@@ -1,12 +1,12 @@
 // Greffon Vite du module Personnalisation (ANALYSE-MODULE-PERSONNALISATION.md § 5.2) :
-// - développement : sert /personnalisation/* (fr.json, images/icones.json, theme.css, images) composés des couches,
+// - développement : sert /personnalisation/* (fr.json, images/icones.json, images/emojis.json, theme.css, images) composés des couches,
 //   page rechargée quand un de leurs fichiers change ;
 // - construction : écrit ces fichiers dans dist/personnalisation/ (servis par l'API avec la surcharge de l'installation) ;
-// - module virtuel « virtual:logibtp-personnalisation » : { libelles, icones } du programme, dictionnaire de secours
+// - module virtuel « virtual:logibtp-personnalisation » : { libelles, icones, emojis } du programme, dictionnaire de secours
 //   importé à la demande quand fr.json est injoignable (jamais de clés brutes à l'écran) ;
 // - index.html : préchargement de fr.json et feuille theme.css bloquante (pas d'éclair de textes ni de couleurs).
 import path from 'node:path';
-import { composer, contenu, DICTIONNAIRE, ICONES, THEME } from './composition.js';
+import { composer, contenu, DICTIONNAIRE, ICONES, EMOJIS, THEME } from './composition.js';
 
 export const MODULE_SECOURS = 'virtual:logibtp-personnalisation';
 const RESOLU = `\0${MODULE_SECOURS}`;
@@ -15,12 +15,12 @@ const ADRESSE = '/personnalisation/';
 /**
  * Balises posées dans l'entête d'index.html (sans script en ligne : politique de sécurité du contenu) : icône de la
  * page, feuille du thème (après les styles de l'application : l'installation peut aussi corriger une règle),
- * préchargement du dictionnaire, du catalogue des icônes et des fichiers `precharger` (relatifs à /personnalisation/).
+ * préchargement du dictionnaire, des catalogues des icônes et des emojis et des fichiers `precharger` (relatifs à /personnalisation/).
  */
 export function balisesHtml(precharger = [], icone = null) {
   return [
     ...(icone ? [{ tag: 'link', attrs: { rel: 'icon', href: `${ADRESSE}${icone}`, type: icone.endsWith('.svg') ? 'image/svg+xml' : undefined }, injectTo: 'head' }] : []),
-    ...[DICTIONNAIRE, ICONES, ...precharger].map((f) => ({ tag: 'link', attrs: { rel: 'preload', href: `${ADRESSE}${f}`, as: 'fetch', crossorigin: '' }, injectTo: 'head' })),
+    ...[DICTIONNAIRE, ICONES, EMOJIS, ...precharger].map((f) => ({ tag: 'link', attrs: { rel: 'preload', href: `${ADRESSE}${f}`, as: 'fetch', crossorigin: '' }, injectTo: 'head' })),
     { tag: 'link', attrs: { rel: 'stylesheet', href: `${ADRESSE}${THEME}` }, injectTo: 'head' },
   ];
 }
@@ -42,7 +42,7 @@ export function personnalisation({ couches, precharger = [], icone = null, modul
       if (id !== RESOLU) return null;
       recomposer();
       for (const f of composition.fichiers) this.addWatchFile(f);
-      return `export default ${JSON.stringify({ libelles: composition.libelles, icones: composition.icones })};`;
+      return `export default ${JSON.stringify({ libelles: composition.libelles, icones: composition.icones, emojis: composition.emojis })};`;
     },
     transformIndexHtml: {
       order: 'post',
@@ -79,6 +79,7 @@ export function personnalisation({ couches, precharger = [], icone = null, modul
       const emettre = (relatif) => this.emitFile({ type: 'asset', fileName: `personnalisation/${relatif}`, source: contenu(composition, relatif).corps });
       emettre(DICTIONNAIRE);
       emettre(ICONES);
+      emettre(EMOJIS);
       emettre(THEME);
       for (const r of composition.images.keys()) emettre(r);
     },
