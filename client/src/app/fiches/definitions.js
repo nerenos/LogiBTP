@@ -513,13 +513,13 @@ export const TYPES_FICHE = {
   affaire: {
     libelle: 'Affaire', table: 'affaire', cle: 'aff_id', colonne_proprietes: 'aff_proprietes',
     definition: {
-      libelle: 'Affaire', titre: '[code] – [libelle]', sous_titre: '[responsable]', chrono: chrono('AFF-', '{P}{AAAA}-{N:3}', 'A'),
+      libelle: 'Affaire', titre: '[code] – [libelle]', chrono: chrono('AFF-', '{P}{AAAA}-{N:3}', 'A'),
       sections: [{
         code: 'informations', titre: 'Affaire',
         groupes: [
           { titre: 'Identification', champs: ['code', 'libelle', 'nature', 'tiers_id'] },
-          { titre: 'Suivi', champs: ['statut', 'date_ouverture', 'date_cloture', 'responsable'] },
-          { titre: 'Commentaire', champs: ['commentaire'], largeur: 'plein' },
+          { titre: 'Suivi', champs: ['statut', 'date_ouverture', 'date_cloture', 'responsable_ind_id'] },
+          { titre: 'Commentaire', champs: ['commentaire', 'responsable'], largeur: 'plein' },
         ],
       }, {
         code: 'intervenants', titre: 'Intervenants',
@@ -536,7 +536,8 @@ export const TYPES_FICHE = {
         c('statut', 'Statut', 'aff_statut', 'liste', { obligatoire: true, defaut: 'OUVERTE', options: options(['OUVERTE', 'Ouverte'], ['CLOSE', 'Close']) }),
         c('date_ouverture', 'Ouverture', 'aff_date_ouverture', 'date'),
         c('date_cloture', 'Clôture', 'aff_date_cloture', 'date'),
-        c('responsable', 'Responsable', 'aff_responsable', 'texte', { longueur: 100 }),
+        c('responsable_ind_id', 'Chargé d\'affaires', 'aff_responsable_ind_id', 'nombre', { reference: 'individu_societe', aide: "Individu de notre société ou de l'une de ses agences" }),
+        c('responsable', 'Responsable (ancienne saisie)', 'aff_responsable', 'texte', { longueur: 100, lecture_seule: true, aide: "Texte d'avant le lot 0 du module Rentabilité : choisir le chargé d'affaires dans la liste des individus" }),
         c('commentaire', 'Commentaire', 'aff_commentaire', 'zone'),
       ],
     },
