@@ -261,7 +261,30 @@ public static partial class TerrainBtp
                 c.Lignes.Add(new DocumentLigneBtp { LigId = -1000, LigEntId = c.Document.EntId, LigOrdre = i + 100, LigTylId = TL.Tva, LigLibelleHtml = "TVA", LigTypePrix = "V" });
             await documents.Enregistrer(c.Document.EntId, c, u, ct);
             return new { ent_id = c.Document.EntId, numero = c.Document.EntNumero };
-        });
+        }).ExigeDroit("terrain/demande", ActionsDroits.Creer);
+
+        // Mes demandes : ordres E_DAP créés par la personne (90 derniers jours), statut, état d'exécution, articles et suites.
+        g.MapGet("/demandes", async (HttpContext http, LogiBtpContext db, CancellationToken ct) =>
+        {
+            var lignes = await db.Database.SqlQueryRaw<string>($$"""
+                SELECT json_build_object(
+                  'id', d.ent_id, 'numero', d.ent_numero, 'date', d.ent_date, 'cree_le', to_char(d.ent_cree_le, 'YYYY-MM-DD"T"HH24:MI'), 'objet', d.ent_objet,
+                  'statut', s.std_code, 'statut_libelle', s.std_libelle, 'execution', d.ent_exe_etat,
+                  'chantier', CASE WHEN c.cha_id IS NOT NULL THEN json_build_object('id', c.cha_id, 'code', c.cha_code, 'libelle', c.cha_libelle) END,
+                  'articles', (SELECT coalesce(json_agg(l.lig_libelle_html ORDER BY l.lig_ordre), '[]') FROM document_ligne l
+                               WHERE l.lig_ent_id = d.ent_id AND l.lig_tyl_id = {{TL.Texte}} AND l.lig_parent_id IS NULL),
+                  'suites', (SELECT coalesce(json_agg(json_build_object('numero', x.ent_numero, 'type', tx.tyd_libelle, 'statut', sx.std_libelle) ORDER BY x.ent_id), '[]')
+                             FROM document_lien k JOIN document x ON x.ent_id = k.lie_cible_ent_id JOIN type_document tx ON tx.tyd_id = x.ent_tyd_id
+                             JOIN statut_document sx ON sx.std_id = x.ent_std_id
+                             WHERE k.lie_source_ent_id = d.ent_id AND k.lie_type = 'TRANSFORMATION')
+                )::text AS "Value"
+                FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id JOIN statut_document s ON s.std_id = d.ent_std_id
+                LEFT JOIN chantier c ON c.cha_id = d.ent_chantier_id
+                WHERE t.tyd_code = @type AND d.ent_cree_par = @u AND d.ent_is_reference AND d.ent_cree_le >= now() - interval '90 days'
+                ORDER BY d.ent_cree_le DESC, d.ent_id DESC LIMIT 100
+                """, new NpgsqlParameter("type", TypesDocument.EDap), new NpgsqlParameter("u", Utilisateur.Depuis(http).Code)).ToListAsync(ct);
+            return lignes.Select(l => JsonDocument.Parse(l).RootElement).ToList();
+        }).ExigeDroit("terrain/demande", ActionsDroits.Consulter);
         return g;
     }
 

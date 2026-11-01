@@ -6697,7 +6697,8 @@
         "semaine": "Semaine",
         "pointage": "Pointage",
         "ordres": "Ordres",
-        "sav": "SAV"
+        "sav": "SAV",
+        "demandes": "Demandes"
       },
       "jours": {
         "0": "dim.",
@@ -6734,14 +6735,22 @@
       "pieces": "Pièces",
       "sans_information": "Aucune information de terrain pour cette tâche.",
       "actions": {
+        "pointage": "Pointer",
         "avancement": "Avancement",
         "photos": "Photos",
         "nc": "Non-conformité",
         "demande": "Demande",
         "materiel": "Matériel",
         "livraison": "Livraison",
-        "reception": "Réception"
-      }
+        "reception": "Réception",
+        "fil": "Fil du chantier"
+      },
+      "aujourdhui": "aujourd'hui",
+      "pointee": "Pointée {{duree}}",
+      "pointee_aide": "Heures pointées sur cette tâche ce jour",
+      "pointee_gardee": "Pointée (sur l'appareil)",
+      "pointee_gardee_aide": "Journée pointée gardée sur l'appareil, envoyée au retour du réseau",
+      "reglages": "Réglages du terrain (itinéraire, présaisie)"
     },
     "reception": {
       "etats": {
@@ -6822,6 +6831,26 @@
       "ouvrir_bon": "Ouvrir le bon",
       "bon_envoye": "Bon envoyé à {{courriel}}.",
       "enregistre": "Compte rendu enregistré"
+    },
+    "reglages": {
+      "titre": "Application de terrain",
+      "retour": "Retour à « Mon terrain »"
+    },
+    "demandes": {
+      "aide": "Demandes d'approvisionnement faites depuis vos tâches (90 derniers jours). Une nouvelle demande se fait depuis la carte d'une tâche.",
+      "aucune": "Aucune demande ces 90 derniers jours.",
+      "hors_ligne": "Hors ligne : vos demandes n'ont pas encore été consultées sur cet appareil.",
+      "sans_numero": "Demande en brouillon",
+      "articles": "Articles et besoins",
+      "suites": "Suites",
+      "sans_suite": "Pas encore traitée au bureau.",
+      "execution": {
+        "A_FAIRE": "À faire",
+        "EN_ATTENTE": "En attente",
+        "EN_COURS": "En cours",
+        "BLOQUE": "Bloquée",
+        "TERMINE": "Terminée"
+      }
     }
   },
   "analyse_btp": {

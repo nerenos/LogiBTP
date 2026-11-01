@@ -75,7 +75,7 @@ public static partial class TerrainBtp
             await TacheAsync(db, u, id, ct);
             if (a.Date > DateOnly.FromDateTime(DateTime.Today)) throw ExceptionMetier.Invalide("TERRAIN_DATE", "Avancement d'un jour à venir");
             return await planning.EnregistrerAvancementAsync(id, a, u, ct);
-        });
+        }).ExigeDroit("terrain/avancement", ActionsDroits.Creer);
 
         // Non-conformité signalée sur une tâche : tâche du CRM au service du motif (sinon de la personne).
         g.MapPost("/taches/{id:long}/non-conformite", async (long id, NonConformiteTerrain n, HttpContext http, LogiBtpContext db, IServiceProvider services, CancellationToken ct) =>

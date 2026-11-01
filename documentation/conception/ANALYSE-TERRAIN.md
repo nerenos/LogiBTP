@@ -246,3 +246,27 @@ l'atelier, géocodage et édition existent. Points délicats :
 | 5 | Réception de pose : PV édité, signature du socle, réserves au CRM, courriel au client par le serveur ; demande d'approvisionnement | Lot 3 ; modules Édition, Mail |
 | 6 | SAV dans la même application (droit SAV refusé par défaut, Exécution lot 5) | Lot 5 |
 | 7 | Second temps : présaisie des heures, réception de livraison simplifiée, pointage des matériels, avancement comparé aux situations | Lot 5 |
+
+## 9. Évolutions du 01/11/2026 (réalisées)
+
+Demandes de l'utilisateur sur la page `/terrain` :
+
+- **Raccourcis de la carte d'une tâche** : « ⏱ Pointer » ouvre l'onglet Pointage au jour de la tâche (jour affiché s'il
+  est dans la tâche, sinon son premier jour, jamais un jour à venir : `jourPointage`), la ligne de la tâche ajoutée si
+  elle manque puis montrée (`PointageTerrain.ouvrir(jour, { tache })`) ; masqué pour une tâche à venir et sans le droit
+  MODIFIER du pointage. « 📰 Fil du chantier » ouvre `/crm/fil?type=chantier&id=` (module CRM actif et droit `crm`).
+- **Tâche pointée** : le serveur renvoie les minutes pointées par la personne sur la tâche, par jour de la période
+  (`pointages` de `GET /api/terrain`, couche SAISIE) ; la carte porte une pastille « Pointée 7:30 » et un liseré ; une
+  journée gardée sur l'appareil et pas encore envoyée la signale « Pointée (sur l'appareil) » (`tachesGardees`).
+- **Semaine** : la journée d'aujourd'hui est encadrée, affichée même sans tâche, et amenée en tête de la liste.
+- **Mise en page** : plus de titre ni de nom en tête de « Mon terrain » (l'en-tête reste sur les pages réception et
+  SAV pour le retour) ; seule la liste défile (ascenseur de `.terrain-liste`, onglets et période fixes) ; détail d'une
+  tâche toujours sur une colonne ; actions réparties (`justify-content: space-around`) ; largeur de 360 à 1080 px.
+- **Réglages** (application de navigation de l'itinéraire, présaisie des heures) : section « Application de terrain »
+  des préférences `/parametres#terrain` (toujours dans le navigateur : `terrainNavigation`, `terrainPresaisie`),
+  bouton ⚙ de la barre de période.
+- **Droits** : nœuds `terrain/demande` (Consulter : onglet Mes demandes ; Créer), `terrain/avancement` et
+  `terrain/materiel` (Créer), à côté de `terrain/livraison` ; contrôlés par les routes (`ExigeDroit`) et masquant les
+  boutons ; repris pour les profils qui avaient déjà le nœud `terrain` (`db/254`). Règle des actions : `actionsTache`.
+- **Onglet 📦 Mes demandes** : demandes d'approvisionnement E_DAP créées par la personne sur 90 jours (statut, état
+  d'exécution, articles, documents issus), `GET /api/terrain/demandes`, gardées pour le hors ligne avec le droit.

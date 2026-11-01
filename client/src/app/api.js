@@ -174,6 +174,7 @@ export const api = {
     enregistrerReception: (ordre, r) => appel('POST', `/terrain/receptions/${ordre}`, r),
     urlPv: (ordre, reception) => `/api/terrain/receptions/${ordre}/pv/${reception}`,
     demande: (d) => appel('POST', '/terrain/demandes', d),
+    demandes: () => appel('GET', '/terrain/demandes'),
     livraisons: (chantier) => appel('GET', `/terrain/livraisons?chantier=${chantier}`),
     enregistrerLivraison: (commande, l) => appel('POST', `/terrain/livraisons/${commande}`, l),
     materiels: (tache) => appel('GET', `/terrain/taches/${tache}/materiels`),

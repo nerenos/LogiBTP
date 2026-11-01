@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { lundiDe, mobileAffiche, lienItineraire, liensTexte, numeroTel, presaisirJournee } from '../src/app/terrain/terrain.js';
+import { lundiDe, mobileAffiche, lienItineraire, liensTexte, numeroTel, presaisirJournee, actionsTache, minutesPointees, tachesGardees, jourPointage, adressesAPrecharger } from '../src/app/terrain/terrain.js';
 
 describe('application de terrain', () => {
   it('présaisie : heures du calendrier au prorata des tâches, équipe du chef reprise', () => {
@@ -79,5 +79,35 @@ describe('hors ligne', () => {
     expect(a).not.toContain('/api/terrain/journee?date=2026-11-02');
     expect(a).toContain('/api/pointage/repas/12?du=2026-10-30&au=2026-10-30');
     expect(a.length).toBe(14 + 2 + 7 + 7 + 2);
+  });
+
+  it('actions d\'une tâche selon les droits : sans chantier aucune, réception sur un ordre de pose seulement', () => {
+    const t = { chantier: { id: 3 } };
+    expect(actionsTache({ chantier: null }, { pointage: true })).toEqual([]);
+    expect(actionsTache(t, {})).toEqual(['photos', 'nc']);
+    expect(actionsTache(t, { pointage: true, avancement: true, demande: true, materiel: true, livraison: true, fil: true }, { pose: true }))
+      .toEqual(['pointage', 'avancement', 'photos', 'nc', 'demande', 'materiel', 'livraison', 'reception', 'fil']);
+    expect(actionsTache(t, { demande: false, fil: true })).toEqual(['photos', 'nc', 'fil']);
+  });
+
+  it('tâche pointée : minutes du jour, journées gardées sur l\'appareil', () => {
+    const t = { id: 5, pointages: [{ date: '2026-11-02', minutes: 240 }, { date: '2026-11-03', minutes: 60 }] };
+    expect(minutesPointees(t, '2026-11-02')).toBe(240);
+    expect(minutesPointees(t, '2026-11-04')).toBe(0);
+    expect(minutesPointees({ id: 1 }, '2026-11-02')).toBe(0);
+    const g = tachesGardees([{ id: '2026-11-02', corps: { lignes: [{ tac_id: 5, minutes: 120 }, { tac_id: 6, minutes: null }, { tac_id: null, minutes: 60 }] } }]);
+    expect([...g]).toEqual(['2026-11-02|5']);
+  });
+
+  it('jour de pointage depuis la carte : jour affiché dans la tâche, sinon son début, jamais à venir', () => {
+    const t = { debut: '2026-11-02T08:00', fin: '2026-11-05T00:00' };
+    expect(jourPointage(t, '2026-11-03', '2026-11-10')).toBe('2026-11-03');
+    expect(jourPointage(t, '2026-11-05', '2026-11-10')).toBe('2026-11-02');
+    expect(jourPointage(t, '2026-11-04', '2026-11-03')).toBe('2026-11-03');
+  });
+
+  it('préchargement : mes demandes avec le droit seulement', () => {
+    expect(adressesAPrecharger('2026-10-30', 12)).not.toContain('/api/terrain/demandes');
+    expect(adressesAPrecharger('2026-10-30', 12, { demandes: true })).toContain('/api/terrain/demandes');
   });
 });

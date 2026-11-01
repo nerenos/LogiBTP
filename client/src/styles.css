@@ -964,7 +964,12 @@ button.lien { background: none; border: none; padding: 0; color: var(--lien, #1d
 .champ-tiers:has(> button) > input { flex: 1; min-width: 0; }
 
 /* Application de terrain (/terrain, ANALYSE-TERRAIN.md) : tablette et smartphone d'abord (cibles d'au moins 44 px). */
-.page-terrain { max-width: 52rem; margin: 0 auto; padding: 0 0.75rem 2rem; display: flex; flex-direction: column; gap: 0.75rem; }
+.page-terrain { flex: 1; min-height: 0; overflow-y: auto; box-sizing: border-box; width: 100%; min-width: 360px; max-width: 1080px; margin: 0 auto;
+  padding: 0.75rem 0.75rem 2rem; display: flex; flex-direction: column; gap: 0.75rem; }
+/* Page « Mon terrain » : onglets et période fixes, seule la liste défile (ascenseur). */
+.page-terrain[data-terrain] { overflow: hidden; padding-bottom: 0; }
+.terrain-liste { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-bottom: 2rem; }
+/* En-tête des pages secondaires (réception, SAV) : titre et retour à « Mon terrain ». */
 .terrain-entete { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
 .terrain-entete .page-titre { margin: 0.5rem 0 0; }
 .terrain-onglets { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
@@ -985,6 +990,19 @@ button.lien { background: none; border: none; padding: 0; color: var(--lien, #1d
 .terrain-element { flex-basis: 100%; color: var(--discret); }
 .terrain-etat { font-size: 0.8rem; padding: 0.1rem 0.5rem; border-radius: 999px; color: #fff; background: var(--couleur); }
 .terrain-detail { padding: 0 0.75rem 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; }
+/* Semaine : journée d'aujourd'hui encadrée. */
+.terrain-journee { border: 2px solid transparent; border-radius: 12px; }
+.terrain-journee + .terrain-journee { margin-top: 0.5rem; }
+.terrain-aujourdhui { border-color: var(--accent); padding: 0 0.5rem 0.5rem; background: color-mix(in srgb, var(--accent) 6%, transparent); }
+.terrain-aujourdhui .terrain-jour small { font-weight: normal; color: var(--accent); }
+/* Tâche pointée ce jour : pastille et liseré. */
+.terrain-pointee { font-size: 0.8rem; padding: 0.1rem 0.5rem; border-radius: 999px; background: var(--pastille-succes-fond); color: var(--pastille-succes-texte); white-space: nowrap; }
+.terrain-pointee.gardee { background: var(--pastille-attention-fond); color: var(--pastille-attention-texte); }
+.terrain-tache-pointee { box-shadow: inset -4px 0 0 var(--pastille-succes-texte); }
+.terrain-saisie.signale { outline: 2px solid var(--accent); outline-offset: 2px; }
+.terrain-statut { --couleur: var(--discret); }
+.terrain-demande { --couleur: var(--accent); }
+.terrain-periode [data-reglages] { min-width: 44px; justify-content: center; }
 .terrain-detail p { margin: 0; }
 .terrain-ligne { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
 .terrain-bouton { display: inline-flex; align-items: center; padding: 0 0.9rem; border: 1px solid var(--bord); background: var(--surface); text-decoration: none; color: inherit; white-space: nowrap; }
@@ -995,16 +1013,12 @@ button.lien { background: none; border: none; padding: 0; color: var(--lien, #1d
 .terrain-piece { display: grid; grid-template-columns: auto 1fr; column-gap: 0.5rem; align-items: center; padding: 0.6rem 0.75rem; min-height: 44px;
   border: 1px solid var(--bord); border-radius: 8px; text-decoration: none; color: inherit; }
 .terrain-piece small { grid-column: 2; }
-.terrain-reglages { margin-top: 1rem; color: var(--discret); }
-@media (min-width: 720px) {
-  .terrain-detail { display: grid; grid-template-columns: 1fr 1fr; align-items: start; }
-  .terrain-consignes, .terrain-pieces, .terrain-liens { grid-column: 1 / -1; }
-}
 /* Application de terrain, lot 2 : pointage de la journée. */
 .terrain-onglets { grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr)); }
 .terrain-onglets button { padding: 0 0.3rem; font-size: 0.95rem; }
 .terrain-bilan { font-weight: 600; margin: 0; }
 .terrain-a-pointer, .terrain-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.terrain-actions { justify-content: space-around; }
 .terrain-a-pointer b { flex-basis: 100%; }
 .terrain-saisie { border: 1px solid var(--bord); border-radius: 10px; background: var(--surface); padding: 0.6rem 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; }
 .terrain-saisie + .terrain-saisie { margin-top: 0.5rem; }
