@@ -471,5 +471,21 @@
   "navigation_btp_signal": "🔔",
   "navigation_btp_etat_api": "●",
   "navigation_btp_attente": "⏳",
-  "navigation_btp_reessayer": "⟳"
+  "navigation_btp_reessayer": "⟳",
+  "fiches_btp_individu": "👤",
+  "fiches_btp_ouvrage": "🏗️",
+  "fiches_btp_ensemble": "🧩",
+  "fiches_btp_notice": "📘",
+  "fiches_btp_societe_base": "🏢",
+  "fiches_btp_provisoire": "⏳",
+  "fiches_btp_entreprises": "🇫🇷",
+  "fiches_btp_valider": "✔",
+  "fiches_btp_fusionner": "⇄",
+  "fiches_btp_salarie": "👷",
+  "fiches_btp_particulier": "🏠",
+  "fiches_btp_bl": "🚚",
+  "fiches_btp_ordre": "▶",
+  "fiches_btp_situation": "📈",
+  "fiches_btp_facture_avt": "📊",
+  "fiches_btp_reprise": "↺"
 }

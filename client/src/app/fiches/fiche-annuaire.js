@@ -1,3 +1,4 @@
+import { texte, texteHtml, pluriel, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { urlFiche, TYPE_FICHE, MODULE_FACULTATIF } from '../codes.js';
 import { aujourdhui } from '@logibtp/socle';
 import { MODES } from '@logibtp/fiche';
@@ -119,7 +120,7 @@ class FicheAnnuaire extends FicheLogiBTP {
     const requis = choixRequis(listes);
     if (requis.length) {
       const choix = await demanderChoix(requis.map(({ u, contexte }) => ({ u, contexte })));
-      if (!choix) { this.message('Enregistrement annulé', 'avertissement'); return false; }
+      if (!choix) { this.message(texte('fiches_btp.annuaire.enregistrement_annule'), 'avertissement'); return false; }
       requis.forEach((r, k) => {
         const l = listes[r.liste];
         l.usages = l.usages.map((u, j) => (j === r.index ? { ...u, choix: choix[k] } : u));
@@ -138,9 +139,9 @@ class FicheAnnuaire extends FicheLogiBTP {
   /** Onglet Graphe : relations autour de la fiche (recentrage sur place, plein écran dans sa page). */
   ongletGraphe(type) {
     return {
-      code: 'graphe', titre: 'Graphe',
+      code: 'graphe', titre: texte('fiches_btp.annuaire.onglets.graphe'),
       rendre: (corps) => {
-        if (this.id === null) { corps.innerHTML = '<p class="aide">Enregistrez la fiche pour voir ses relations.</p>'; return; }
+        if (this.id === null) { corps.innerHTML = `<p class="aide">${texteHtml('fiches_btp.annuaire.graphe_nouvelle')}</p>`; return; }
         corps.classList.add('graphe-hote');
         this.vueGraphe = new VueGrapheAnnuaire(corps, {
           annuaire: this.annuaire, depart: { type, id: Number(this.id) }, referentiels: this.referentiels, message: this.message,
@@ -154,7 +155,7 @@ class FicheAnnuaire extends FicheLogiBTP {
 
   ongletCoordonnees(type) {
     return {
-      code: 'coordonnees', titre: 'Coordonnées', champs: ['coordonnees'],
+      code: 'coordonnees', titre: texte('fiches_btp.annuaire.onglets.coordonnees'), champs: ['coordonnees'],
       rendre: (corps, { modifiable }) => new EditeurCoordonnees(corps, {
         valeur: () => this.valeur('coordonnees') ?? [], definir: (u) => this.definirValeur('coordonnees', u), modifiable, nom: 'fiche',
         proposer: this.id === null ? null : () => this.annuaire.coordonneesProposees(type, this.id),
@@ -200,7 +201,7 @@ export class FichePersonne extends FicheAnnuaire {
   async validerProvisoire() {
     await this.annuaire.validerProvisoire(this.id);
     this.provisoire = false;
-    this.message('Création du tiers validée', 'succes');
+    this.message(texte('fiches_btp.annuaire.tiers_valide'), 'succes');
     this.rendre();
   }
 
@@ -208,7 +209,7 @@ export class FichePersonne extends FicheAnnuaire {
     const r = await fusionnerTiers({ annuaire: this.annuaire, id: Number(this.id), libelles: this.libellesFusion() });
     if (!r) return;
     const n = Object.values(r.reports ?? {}).reduce((s, x) => s + x, 0);
-    this.message(`Tiers fusionné${n ? ` (${n} élément(s) reporté(s))` : ''}`, 'succes');
+    this.message(n ? pluriel('fiches_btp.annuaire.tiers_fusionne_reports', n) : texte('fiches_btp.annuaire.tiers_fusionne'), 'succes');
     this.ouvrirFiche({ type: TYPE_FICHE.PERSONNE, id: r.cible_id }, e);
   }
 
@@ -231,19 +232,19 @@ export class FichePersonne extends FicheAnnuaire {
     if (!this.referentiels) return '';
     const coords = v.coordonnees ?? [];
     const parts = [vignette(this.urlImage)];
-    if (v.societe_base) parts.push(info('Annuaire', '🏢 Société de cette base'));
-    if (this.provisoire) parts.push(info('Annuaire', '⏳ Tiers provisoire : création à valider ou fiche à fusionner', true));
+    if (v.societe_base) parts.push(info(texteHtml('fiches_btp.infos.annuaire'), `${iconeHtml('fiches_btp_societe_base')} ${texteHtml('fiches_btp.annuaire.societe_base')}`));
+    if (this.provisoire) parts.push(info(texteHtml('fiches_btp.infos.annuaire'), `${iconeHtml('fiches_btp_provisoire')} ${texteHtml('fiches_btp.annuaire.provisoire')}`, true));
     const tel = principale(coords, 'TELEPHONE');
     const mail = principale(coords, 'EMAIL');
     const adresse = principale(coords, 'ADRESSE');
-    if (adresse) parts.push(info('Adresse', echapper(adresse)));
-    if (tel) parts.push(info('Téléphone', `<a href="tel:${echapper(tel.replace(/[^0-9+]/g, ''))}">${echapper(formaterTelephone(tel))}</a>`));
-    if (mail) parts.push(info('E-mail', `<a href="mailto:${echapper(mail)}">${echapper(mail)}</a>`));
+    if (adresse) parts.push(info(texteHtml('fiches_btp.infos.adresse'), echapper(adresse)));
+    if (tel) parts.push(info(texteHtml('fiches_btp.infos.telephone'), `<a href="tel:${echapper(tel.replace(/[^0-9+]/g, ''))}">${echapper(formaterTelephone(tel))}</a>`));
+    if (mail) parts.push(info(texteHtml('fiches_btp.infos.email'), `<a href="mailto:${echapper(mail)}">${echapper(mail)}</a>`));
     const contact = this.rattachementsLus.find((r) => r.principal && r.actif !== false) ?? this.rattachementsLus.find((r) => r.actif !== false);
-    if (contact && this.morale) parts.push(info('Contact', echapper([contact.individu, contact.fonction].filter(Boolean).join(' – '))));
-    if (v.etat_administratif === 'F') parts.push(info('État', 'Établissement fermé', true));
-    if (v.siret && !siretValide(compacter(v.siret))) parts.push(info('SIRET', 'invalide', true));
-    if (v.st_decennale_fin && (v.casquettes ?? []).includes('SOUS_TRAITANT') && String(v.st_decennale_fin) < aujourdhui()) parts.push(info('Décennale', 'expirée', true));
+    if (contact && this.morale) parts.push(info(texteHtml('fiches_btp.infos.contact'), echapper([contact.individu, contact.fonction].filter(Boolean).join(' – '))));
+    if (v.etat_administratif === 'F') parts.push(info(texteHtml('fiches_btp.infos.etat'), texteHtml('fiches_btp.annuaire.ferme'), true));
+    if (v.siret && !siretValide(compacter(v.siret))) parts.push(info(texteHtml('fiches_btp.infos.siret'), texteHtml('fiches_btp.annuaire.invalide'), true));
+    if (v.st_decennale_fin && (v.casquettes ?? []).includes('SOUS_TRAITANT') && String(v.st_decennale_fin) < aujourdhui()) parts.push(info(texteHtml('fiches_btp.infos.decennale'), texteHtml('fiches_btp.annuaire.expiree'), true));
     return parts.join('');
   }
 
@@ -274,10 +275,10 @@ export class FichePersonne extends FicheAnnuaire {
 
   actionsSupplementaires() {
     return [
-      { libelle: '🇫🇷 Annuaire des entreprises', titre: 'Rechercher l\'entreprise (nom, SIREN, SIRET) et reprendre ses informations', action: () => this.importerEntreprise(), visible: this.estEnSaisie() && this.morale },
-      { libelle: '✔ Valider le tiers', titre: 'Valider la création de ce tiers provisoire (fiche définitive)', action: () => this.validerProvisoire().catch((x) => this.message(x.message, 'erreur')), visible: !this.estEnSaisie() && this.provisoire },
-      { libelle: '⇄ Fusionner…', titre: 'Fusionner ce tiers provisoire avec une fiche existante (valeurs choisies, documents et contacts reportés)', action: (e) => this.fusionnerProvisoire(e).catch((x) => this.message(x.message, 'erreur')), visible: !this.estEnSaisie() && this.provisoire },
-      { libelle: '＋ Établissement', titre: 'Créer un niveau inférieur (établissement, agence, dépôt…) de cette personne', action: () => this.ouvrirFiche({ type: TYPE_FICHE.PERSONNE, id: `nouveau?parent=${this.id}&niveau=ETABLISSEMENT` }), visible: !this.estEnSaisie() && this.id !== null && this.morale },
+      { libelle: `${icone('fiches_btp_entreprises')} ${texte('fiches_btp.annuaire.entreprises')}`, titre: texte('fiches_btp.annuaire.entreprises_aide'), action: () => this.importerEntreprise(), visible: this.estEnSaisie() && this.morale },
+      { libelle: `${icone('fiches_btp_valider')} ${texte('fiches_btp.annuaire.valider')}`, titre: texte('fiches_btp.annuaire.valider_aide'), action: () => this.validerProvisoire().catch((x) => this.message(x.message, 'erreur')), visible: !this.estEnSaisie() && this.provisoire },
+      { libelle: `${icone('fiches_btp_fusionner')} ${texte('fiches_btp.annuaire.fusionner')}`, titre: texte('fiches_btp.annuaire.fusionner_aide'), action: (e) => this.fusionnerProvisoire(e).catch((x) => this.message(x.message, 'erreur')), visible: !this.estEnSaisie() && this.provisoire },
+      { libelle: `${icone('ajouter')} ${texte('fiches_btp.annuaire.etablissement')}`, titre: texte('fiches_btp.annuaire.etablissement_aide'), action: () => this.ouvrirFiche({ type: TYPE_FICHE.PERSONNE, id: `nouveau?parent=${this.id}&niveau=ETABLISSEMENT` }), visible: !this.estEnSaisie() && this.id !== null && this.morale },
       ...super.actionsSupplementaires(),
     ];
   }
@@ -293,10 +294,10 @@ export class FichePersonne extends FicheAnnuaire {
     ActivitesCache.lire().then((options) => {
       if (lecture) {
         zone.innerHTML = codes.map((c) => `<span class="etiquette-choix">${echapper(options.find((o) => o.valeur === c)?.libelle ?? c)}</span>`).join(' ')
-          || '<span class="aide">Aucune activité</span>';
+          || `<span class="aide">${texteHtml('fiches_btp.annuaire.aucune_activite')}</span>`;
         return;
       }
-      zone.replaceChildren(choixMultiple({ options, valeurs: codes, titre: 'Ajouter une activité', aucun: 'Aucune activité', changer: (v) => this.definirValeur('activites', v) }));
+      zone.replaceChildren(choixMultiple({ options, valeurs: codes, titre: texte('fiches_btp.annuaire.ajouter_activite'), aucun: texte('fiches_btp.annuaire.aucune_activite'), changer: (v) => this.definirValeur('activites', v) }));
     });
     return zone;
   }
@@ -323,7 +324,7 @@ export class FichePersonne extends FicheAnnuaire {
         const s = compacter(el.value);
         if (!siretValide(s)) return;
         const doublon = await this.annuaire.parSiret(s).catch(() => null);
-        if (doublon && Number(doublon.id) !== Number(this.id)) this.message(`SIRET déjà enregistré : ${doublon.raison_sociale} (${doublon.code})`, 'avertissement');
+        if (doublon && Number(doublon.id) !== Number(this.id)) this.message(texte('fiches_btp.annuaire.siret_doublon', { nom: doublon.raison_sociale, code: doublon.code }), 'avertissement');
       });
     }
     return el;
@@ -335,12 +336,12 @@ export class FichePersonne extends FicheAnnuaire {
   #champParent(valeur, lecture) {
     const el = document.createElement('div');
     el.className = 'fiche-saisie-champ annuaire-parent';
-    const libelle = this.libelleParent ?? (valeur ? `Personne ${valeur}` : '');
-    el.innerHTML = valeur ? `<a href="${urlFiche(TYPE_FICHE.PERSONNE, valeur)}" data-ouvrir>${echapper(libelle)}</a>` : '<span class="aide">Aucun (racine)</span>';
-    if (!lecture) el.insertAdjacentHTML('beforeend', ` <button type="button" data-choisir title="Choisir le niveau supérieur">…</button>${valeur ? ' <button type="button" data-vider title="Retirer">✕</button>' : ''}`);
+    const libelle = this.libelleParent ?? (valeur ? texte('fiches_btp.annuaire.personne', { id: valeur }) : '');
+    el.innerHTML = valeur ? `<a href="${urlFiche(TYPE_FICHE.PERSONNE, valeur)}" data-ouvrir>${echapper(libelle)}</a>` : `<span class="aide">${texteHtml('fiches_btp.annuaire.racine')}</span>`;
+    if (!lecture) el.insertAdjacentHTML('beforeend', ` <button type="button" data-choisir title="${texteHtml('fiches_btp.annuaire.choisir_parent')}">…</button>${valeur ? ` <button type="button" data-vider title="${texteHtml('commun.retirer')}">${iconeHtml('retirer')}</button>` : ''}`);
     el.querySelector('[data-ouvrir]')?.addEventListener('click', (e) => { e.preventDefault(); this.ouvrirFiche({ type: TYPE_FICHE.PERSONNE, id: valeur }, e); });
     el.querySelector('[data-choisir]')?.addEventListener('click', async () => {
-      const p = await choisirPersonne({ annuaire: this.annuaire, titre: 'Niveau supérieur', exclure: this.id === null ? [] : [Number(this.id)] });
+      const p = await choisirPersonne({ annuaire: this.annuaire, titre: texte('fiches_btp.annuaire.parent'), exclure: this.id === null ? [] : [Number(this.id)] });
       if (!p) return;
       this.libelleParent = p.raison_sociale;
       this.definirValeur('parent_id', p.id);
@@ -357,23 +358,23 @@ export class FichePersonne extends FicheAnnuaire {
     const fournisseur = (this.valeur('casquettes') ?? []).some((c) => c === 'FOURNISSEUR' || c === 'LOUEUR');
     return [
       this.ongletCoordonnees(TYPE_FICHE.PERSONNE),
-      this.ongletRattachements(TYPE_FICHE.PERSONNE, 'contacts', this.morale ? 'Contacts' : 'Titulaire'),
+      this.ongletRattachements(TYPE_FICHE.PERSONNE, 'contacts', this.morale ? texte('fiches_btp.annuaire.onglets.contacts') : texte('fiches_btp.annuaire.onglets.titulaire')),
       {
-        code: 'liens', titre: 'Liens', champs: ['liens'],
+        code: 'liens', titre: texte('fiches_btp.annuaire.onglets.liens'), champs: ['liens'],
         rendre: (corps, { modifiable }) => new EditeurLiens(corps, {
           valeur: () => this.valeur('liens') ?? [], definir: (l) => this.definirValeur('liens', l), modifiable, annuaire: this.annuaire,
           types: this.referentiels.types_lien, personneId: this.id, enfants: this.valeur('enfants') ?? [],
-          parent: this.valeur('parent_id') ? { id: this.valeur('parent_id'), libelle: this.libelleParent ?? `Personne ${this.valeur('parent_id')}` } : null,
+          parent: this.valeur('parent_id') ? { id: this.valeur('parent_id'), libelle: this.libelleParent ?? texte('fiches_btp.annuaire.personne', { id: this.valeur('parent_id') }) } : null,
           ouvrirFiche: (f, e) => this.ouvrirFiche(f, e), message: this.message,
         }),
       },
       this.ongletGraphe(TYPE_FICHE.PERSONNE),
-      this.ongletPhoto(TYPE_FICHE.PERSONNE, 'Logo'),
-      ...(fournisseur && this.id !== null && this.services.bibliotheque?.tarifsTiers ? [{ code: 'tarifs', titre: 'Tarifs', rendre: (corps) => this.#tarifs(corps).catch((e) => this.message(e.message, 'erreur')) }] : []),
+      this.ongletPhoto(TYPE_FICHE.PERSONNE, texte('fiches_btp.annuaire.onglets.logo')),
+      ...(fournisseur && this.id !== null && this.services.bibliotheque?.tarifsTiers ? [{ code: 'tarifs', titre: texte('fiches_btp.annuaire.onglets.tarifs'), rendre: (corps) => this.#tarifs(corps).catch((e) => this.message(e.message, 'erreur')) }] : []),
       // Sous-traitant (module Sous-traitance, lot 2) : pièces annexes valables pour tous ses marchés.
       ...((this.valeur('casquettes') ?? []).includes('SOUS_TRAITANT') && this.id !== null && this.moduleActif(MODULE_FACULTATIF.SOUS_TRAITANCE) && this.services.ged
         ? [{
-          code: 'pieces-st', titre: 'Pièces',
+          code: 'pieces-st', titre: texte('fiches_btp.annuaire.onglets.pieces'),
           rendre: (corps) => rendrePieces(corps, {
             element: { type: TYPE_FICHE.PERSONNE, id: Number(this.id), tiers: Number(this.id) }, ged: this.services.ged, message: this.message,
             demander: () => this.ouvrirUrl(`/mail/nouveau?type=st_pieces&id=personne:${this.id}`, { ctrlKey: true }),
@@ -394,17 +395,17 @@ export class FichePersonne extends FicheAnnuaire {
 
   /** Reprise depuis l'annuaire des entreprises : identité, identifiants, adresse et dirigeants (contacts). */
   async importerEntreprise() {
-    if (!this.services.entreprises) { this.message('Recherche d\'entreprises indisponible', 'avertissement'); return; }
+    if (!this.services.entreprises) { this.message(texte('fiches_btp.annuaire.entreprises_indisponible'), 'avertissement'); return; }
     const r = await rechercherEntreprise({ fournisseur: this.services.entreprises, recherche: this.valeur('siret') || this.valeur('siren') || this.valeur('raison_sociale') || '' });
     if (!r) return;
     const e = r.entreprise;
     const doublon = e.siret ? await this.annuaire.parSiret(e.siret).catch(() => null) : null;
     if (doublon && Number(doublon.id) !== Number(this.id)) {
-      if (await confirmer(`Cet établissement est déjà dans l'annuaire : ${doublon.raison_sociale} (${doublon.code}). L'ouvrir plutôt que de créer un doublon ?`)) {
+      if (await confirmer(texte('fiches_btp.annuaire.confirmer_doublon', { nom: doublon.raison_sociale, code: doublon.code }))) {
         this.ouvrirFiche({ type: TYPE_FICHE.PERSONNE, id: doublon.id });
         return;
       }
-      this.message('SIRET déjà enregistré : il ne pourra pas l\'être deux fois', 'avertissement');
+      this.message(texte('fiches_btp.annuaire.siret_deux_fois'), 'avertissement');
     }
     const valeurs = {
       raison_sociale: e.raison_sociale, nom_commercial: e.nom_commercial, sigle: e.sigle, pays: 'FR', siren: e.siren, siret: e.siret, tva_intra: e.tva_intra,
@@ -434,7 +435,7 @@ export class FichePersonne extends FicheAnnuaire {
       this.definirValeur('rattachements', [...existants, ...nouveaux]);
     }
     this.rendre();
-    this.message(`Informations reprises de l'annuaire des entreprises${r.dirigeants.length ? `, ${r.dirigeants.length} dirigeant(s) ajouté(s) aux contacts` : ''}`, 'succes');
+    this.message(r.dirigeants.length ? pluriel('fiches_btp.annuaire.reprises_dirigeants', r.dirigeants.length) : texte('fiches_btp.annuaire.reprises'), 'succes');
   }
 
   /** Identifiants enregistrés sans espaces (SIREN, SIRET, TVA, IBAN, BIC) et pays en majuscules. */
@@ -470,13 +471,13 @@ export class FicheIndividu extends FicheAnnuaire {
     const tel = principale(pro.filter((u) => u.usage !== 'PORTABLE'), 'TELEPHONE') ?? principale(perso.filter((u) => u.usage !== 'PORTABLE'), 'TELEPHONE');
     const portable = principale(pro.filter((u) => u.usage === 'PORTABLE'), 'TELEPHONE') ?? principale(perso.filter((u) => u.usage === 'PORTABLE'), 'TELEPHONE');
     const mail = principale(pro, 'EMAIL') ?? principale(perso, 'EMAIL');
-    if (portable) parts.push(info('Portable', `<a href="tel:${echapper(portable.replace(/[^0-9+]/g, ''))}">${echapper(formaterTelephone(portable))}</a>`));
-    if (tel) parts.push(info('Téléphone', `<a href="tel:${echapper(tel.replace(/[^0-9+]/g, ''))}">${echapper(formaterTelephone(tel))}</a>`));
-    if (mail) parts.push(info('E-mail', `<a href="mailto:${echapper(mail)}">${echapper(mail)}</a>`));
+    if (portable) parts.push(info(texteHtml('fiches_btp.infos.portable'), `<a href="tel:${echapper(portable.replace(/[^0-9+]/g, ''))}">${echapper(formaterTelephone(portable))}</a>`));
+    if (tel) parts.push(info(texteHtml('fiches_btp.infos.telephone'), `<a href="tel:${echapper(tel.replace(/[^0-9+]/g, ''))}">${echapper(formaterTelephone(tel))}</a>`));
+    if (mail) parts.push(info(texteHtml('fiches_btp.infos.email'), `<a href="mailto:${echapper(mail)}">${echapper(mail)}</a>`));
     const n = v.nb_rattachements ?? this.rattachementsLus.length;
-    if (n > 1) parts.push(info('Rattachements', `${n} personnes`));
-    if (v.salarie) parts.push(info('Salarié', `${echapper(v.salarie.matricule)} · ${echapper(v.salarie.poste ?? '')}${v.salarie.actif ? '' : ' (sorti)'}`));
-    if (this.homonymes?.length && this.mode === MODES.CREATION) parts.push(info('Homonymes', echapper(this.homonymes.map((h) => h.nom_complet + (h.personnes ? ` (${h.personnes})` : '')).join(' · ')), true));
+    if (n > 1) parts.push(info(texteHtml('fiches_btp.infos.rattachements'), pluriel('fiches_btp.annuaire.personnes', n)));
+    if (v.salarie) parts.push(info(texteHtml('fiches_btp.infos.salarie'), `${echapper(v.salarie.matricule)} · ${echapper(v.salarie.poste ?? '')}${v.salarie.actif ? '' : ` ${texteHtml('fiches_btp.annuaire.sorti')}`}`));
+    if (this.homonymes?.length && this.mode === MODES.CREATION) parts.push(info(texteHtml('fiches_btp.infos.homonymes'), echapper(this.homonymes.map((h) => h.nom_complet + (h.personnes ? ` (${h.personnes})` : '')).join(' · ')), true));
     return parts.join('');
   }
 
@@ -494,7 +495,7 @@ export class FicheIndividu extends FicheAnnuaire {
       el.addEventListener('change', async () => {
         const nom = String(el.value ?? '').trim();
         this.homonymes = nom.length >= 2 ? await this.annuaire.rechercherIndividus({ recherche: `${nom} ${this.valeur('prenom') ?? ''}`.trim(), limite: 5 }).catch(() => []) : [];
-        if (this.homonymes.length) this.message(`Individu(s) déjà dans l'annuaire : ${this.homonymes.map((h) => h.nom_complet).join(', ')}`, 'avertissement');
+        if (this.homonymes.length) this.message(texte('fiches_btp.annuaire.homonymes', { noms: this.homonymes.map((h) => h.nom_complet).join(', ') }), 'avertissement');
         const zone = this.conteneur.querySelector('.fiche-informations');
         const html = this.rendreInformations(this.valeurs());
         zone.hidden = !html;
@@ -510,19 +511,19 @@ export class FicheIndividu extends FicheAnnuaire {
     const roles = this.fiche?.valeurs?.roles ?? [];
     return [
       {
-        libelle: salarie ? `👷 Salarié ${salarie.matricule}` : '👷 Créer la fiche salarié',
-        titre: salarie ? `Ouvrir la fiche salarié (${salarie.poste ?? ''}${salarie.agence ? `, ${salarie.agence}` : ''})` : 'Créer la fiche salarié à partir de cet individu (identité, agence, coordonnées professionnelles)',
+        libelle: `${icone('fiches_btp_salarie')} ${salarie ? texte('fiches_btp.annuaire.salarie', { matricule: salarie.matricule }) : texte('fiches_btp.annuaire.creer_salarie')}`,
+        titre: salarie ? texte('fiches_btp.annuaire.ouvrir_salarie', { poste: [salarie.poste ?? '', salarie.agence].filter(Boolean).join(', ') }) : texte('fiches_btp.annuaire.creer_salarie_aide'),
         visible: !this.estEnSaisie() && this.id !== null && (!!salarie || roles.includes('SALARIE') || roles.includes('INTERIMAIRE')),
         action: () => this.ouvrirFiche({ type: TYPE_FICHE.SALARIE, id: salarie ? salarie.id : `nouveau?individu=${this.id}` }),
       },
       {
-        libelle: particulier ? '🏠 Compte particulier' : '🏠 Créer le compte particulier',
-        titre: particulier ? 'Ouvrir son compte particulier (client)' : 'Créer une personne « Particulier » dont il est titulaire, avec ses coordonnées personnelles partagées',
+        libelle: `${icone('fiches_btp_particulier')} ${particulier ? texte('fiches_btp.annuaire.particulier') : texte('fiches_btp.annuaire.creer_particulier')}`,
+        titre: particulier ? texte('fiches_btp.annuaire.ouvrir_particulier') : texte('fiches_btp.annuaire.creer_particulier_aide'),
         visible: !this.estEnSaisie() && this.id !== null,
         action: async () => {
           if (particulier) { this.ouvrirFiche({ type: TYPE_FICHE.PERSONNE, id: particulier.per_id }); return; }
           const r = await this.annuaire.creerParticulier(this.id);
-          this.message('Compte particulier créé : coordonnées personnelles partagées', 'succes');
+          this.message(texte('fiches_btp.annuaire.particulier_cree'), 'succes');
           await this.recharger();
           this.rendre();
           this.ouvrirFiche({ type: TYPE_FICHE.PERSONNE, id: r.id });
@@ -535,9 +536,9 @@ export class FicheIndividu extends FicheAnnuaire {
   ongletsSpecifiques() {
     return [
       this.ongletCoordonnees(TYPE_FICHE.INDIVIDU),
-      this.ongletRattachements(TYPE_FICHE.INDIVIDU, 'rattachements', 'Rattachements'),
+      this.ongletRattachements(TYPE_FICHE.INDIVIDU, 'rattachements', texte('fiches_btp.infos.rattachements')),
       this.ongletGraphe(TYPE_FICHE.INDIVIDU),
-      this.ongletPhoto(TYPE_FICHE.INDIVIDU, 'Photo'),
+      this.ongletPhoto(TYPE_FICHE.INDIVIDU, texte('fiches_btp.annuaire.onglets.photo')),
       ...this.ongletsSuivi(),
     ];
   }

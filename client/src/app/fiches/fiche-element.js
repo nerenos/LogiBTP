@@ -1,3 +1,4 @@
+import { texte, texteHtml, textesParCode, pairesParCode, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { urlFiche, TYPE_FICHE, urlDocument, MODULE_FACULTATIF } from '../codes.js';
 import { GESTION_ELEMENT } from '@logibtp/bibliotheque';
 import { ajouterJours, aujourdhui } from '@logibtp/socle';
@@ -19,6 +20,8 @@ import { api } from '../api.js';
 // onglets Prix (scénarios, coefficients, remise, historique), Unités (correspondances par formule), Tarifs
 // fournisseurs, Composition des ouvrages (éditeur de devis et métrés), Image et notices techniques (GED, DOE).
 
+// Types d'élément : libellé « fiches_btp.element.types.<type> ».
+const TYPES_ELEMENT = textesParCode('fiches_btp.element.types', ['ARTICLE', 'OUVRAGE', 'ENSEMBLE', 'POSTE_PIED', 'TEXTE']);
 const json = (v, defaut) => (typeof v === 'string' ? (() => { try { return JSON.parse(v); } catch { return defaut; } })() : v ?? defaut);
 const prix = formatPrix;
 /** Valeurs par défaut d'un poste de pied : unité (obligatoire en base), poste HT en pourcentage déduit du cumul. */
@@ -75,7 +78,7 @@ export class FicheElement extends FicheLogiBTP {
   sousTitre(v) {
     const bib = this.referentiels.bibliotheques.find((b) => b.id === Number(v.bib_id));
     const fam = this.referentiels.familles.find((f) => f.id === Number(v.fam_id));
-    return [bib && `${bib.code} – ${bib.libelle}`, fam?.chemin, { OUVRAGE: 'Ouvrage', ENSEMBLE: 'Ensemble', POSTE_PIED: 'Poste de pied', TEXTE: 'Texte' }[v.type] ?? 'Article'].filter(Boolean).join(' · ');
+    return [bib && `${bib.code} – ${bib.libelle}`, fam?.chemin, TYPES_ELEMENT[v.type] ?? TYPES_ELEMENT.ARTICLE].filter(Boolean).join(' · ');
   }
 
   /** Nature isolant : le groupe Isolation (R, λ, U) n'apparaît que pour elle. */
@@ -180,19 +183,19 @@ export class FicheElement extends FicheLogiBTP {
     const ouvrage = ['OUVRAGE', 'ENSEMBLE'].includes(this.valeur('type'));
     if (this.poste || this.texte) return this.ongletUtilisations();
     return [
-      { code: 'prix', titre: 'Prix', champs: ['scenario_pa', 'pa_fixe', 'dernier_pa', 'pmp', 'coef_fg', 'coef_fg_impose', 'coef_benef', 'coef_benef_impose', 'pv', 'pv_fixe', 'coef_remise', 'commentaire_prix'],
+      { code: 'prix', titre: texte('fiches_btp.element.onglets.prix'), champs: ['scenario_pa', 'pa_fixe', 'dernier_pa', 'pmp', 'coef_fg', 'coef_fg_impose', 'coef_benef', 'coef_benef_impose', 'pv', 'pv_fixe', 'coef_remise', 'commentaire_prix'],
         rendre: (corps, { modifiable }) => new OngletPrix(corps, this.#contexte(modifiable)) },
-      { code: 'unites', titre: 'Unités', champs: ['unite_stock', 'unite_achat', 'unite_vente', 'unites'], rendre: (corps, { modifiable }) => new OngletUnites(corps, this.#contexte(modifiable)) },
+      { code: 'unites', titre: texte('fiches_btp.element.onglets.unites'), champs: ['unite_stock', 'unite_achat', 'unite_vente', 'unites'], rendre: (corps, { modifiable }) => new OngletUnites(corps, this.#contexte(modifiable)) },
       ...(ouvrage
-        ? [{ code: 'composition', titre: 'Composition', champs: ['composition'], rendre: (corps, { modifiable }) => this.#composition(corps, modifiable).catch((e) => this.message(e.message, 'erreur')) }]
-        : [{ code: 'tarifs', titre: 'Tarifs fournisseurs', rendre: (corps, { modifiable }) => new OngletTarifs(corps, this.#contexte(modifiable)) }]),
+        ? [{ code: 'composition', titre: texte('fiches_btp.element.onglets.composition'), champs: ['composition'], rendre: (corps, { modifiable }) => this.#composition(corps, modifiable).catch((e) => this.message(e.message, 'erreur')) }]
+        : [{ code: 'tarifs', titre: texte('fiches_btp.element.onglets.tarifs'), rendre: (corps, { modifiable }) => new OngletTarifs(corps, this.#contexte(modifiable)) }]),
       // Module Stock : quantités par lieu, valorisation, PMP, emplacements, mouvements (article géré en stock).
       ...(this.id !== null && this.valeur('gestion') === GESTION_ELEMENT.STOCK && this.valeur('type') === 'ARTICLE' && this.moduleActif(MODULE_FACULTATIF.STOCK)
-        ? [{ code: 'stock', titre: 'Stock', rendre: (corps) => rendreStockArticle(corps, { id: Number(this.id), message: this.message, naviguer: (url, e) => this.ouvrirUrl(url, e) })
+        ? [{ code: 'stock', titre: texte('fiches_btp.element.onglets.stock'), rendre: (corps) => rendreStockArticle(corps, { id: Number(this.id), message: this.message, naviguer: (url, e) => this.ouvrirUrl(url, e) })
           .catch((e) => { corps.innerHTML = `<p class="aide">${echapper(e.message)}</p>`; }) }]
         : []),
       // Image et notices : sous les groupes de l'onglet Article.
-      { code: 'image', dans: 'article', titre: 'Image et notices', champs: ['image_ged'], rendre: (corps, { modifiable }) => this.#imageNotices(corps, modifiable).catch((e) => this.message(e.message, 'erreur')) },
+      { code: 'image', dans: 'article', titre: texte('fiches_btp.element.onglets.image'), champs: ['image_ged'], rendre: (corps, { modifiable }) => this.#imageNotices(corps, modifiable).catch((e) => this.message(e.message, 'erreur')) },
       ...this.ongletUtilisations(),
     ];
   }
@@ -202,35 +205,35 @@ export class FicheElement extends FicheLogiBTP {
   /** Onglet Utilisations (élément enregistré) : ouvrages et ensembles qui le composent, lignes des pièces d'achat. */
   ongletUtilisations() {
     if (this.id === null) return [];
-    return [{ code: 'utilisations', titre: 'Utilisations', rendre: (corps) => this.#utilisations(corps).catch((e) => this.message(e.message, 'erreur')) }];
+    return [{ code: 'utilisations', titre: texte('fiches_btp.element.onglets.utilisations'), rendre: (corps) => this.#utilisations(corps).catch((e) => this.message(e.message, 'erreur')) }];
   }
 
   async #utilisations(corps) {
     const id = Number(this.id);
     const composes = await api.composesElement(id);
-    const icone = { OUVRAGE: '🏗️', ENSEMBLE: '🧩' };
+    const icones = { OUVRAGE: 'fiches_btp_ouvrage', ENSEMBLE: 'fiches_btp_ensemble' };
     const jour = (d) => (d ? String(d).slice(0, 10).split('-').reverse().join('/') : '');
     const filtre = { periode: '365', encours: false };
-    corps.innerHTML = `<div class="element-utilisations"><h3>Ouvrages et ensembles qui l'utilisent</h3>
-      ${composes.length ? `<table class="tableau-compact largeur-contenu"><thead><tr><th></th><th>Code</th><th>Libellé</th><th>Quantité</th><th>U.</th></tr></thead><tbody>
-        ${composes.map((c) => `<tr><td>${icone[c.type] ?? ''}</td><td><a href="${urlFiche(TYPE_FICHE.ELEMENT, c.id)}">${echapper(c.bib_code)}:${echapper(c.code)}</a></td>
+    corps.innerHTML = `<div class="element-utilisations"><h3>${texteHtml('fiches_btp.element.utilisations_titre')}</h3>
+      ${composes.length ? `<table class="tableau-compact largeur-contenu"><thead><tr><th></th><th>${texteHtml('commun.code')}</th><th>${texteHtml('commun.libelle')}</th><th>${texteHtml('fiches_btp.element.quantite')}</th><th>${texteHtml('fiches_btp.element.unite')}</th></tr></thead><tbody>
+        ${composes.map((c) => `<tr><td>${icones[c.type] ? iconeHtml(icones[c.type]) : ''}</td><td><a href="${urlFiche(TYPE_FICHE.ELEMENT, c.id)}">${echapper(c.bib_code)}:${echapper(c.code)}</a></td>
           <td>${echapper(c.libelle ?? '')}</td><td class="nombre">${c.quantite !== null && c.quantite !== undefined ? formatNombre(c.quantite, 4) : ''}</td><td>${echapper(c.unite ?? '')}</td></tr>`).join('')}</tbody></table>`
-        : '<p class="aide">Utilisé dans aucun ouvrage ni ensemble.</p>'}
-      ${this.valeur('type') === 'ARTICLE' ? `<div class="titre-actions"><h3>Achats</h3><span class="titre-actions-boutons"><span data-periode></span>
-        <label class="fiche-option"><input type="checkbox" data-encours> En cours seulement</label></span></div><div data-achats></div>` : ''}</div>`;
+        : `<p class="aide">${texteHtml('fiches_btp.element.inutilise')}</p>`}
+      ${this.valeur('type') === 'ARTICLE' ? `<div class="titre-actions"><h3>${texteHtml('fiches_btp.element.achats')}</h3><span class="titre-actions-boutons"><span data-periode></span>
+        <label class="fiche-option"><input type="checkbox" data-encours> ${texteHtml('fiches_btp.element.encours_seulement')}</label></span></div><div data-achats></div>` : ''}</div>`;
     const zone = corps.querySelector('[data-achats]');
     if (!zone) return;
     const charger = async () => {
       const du = filtre.periode === 'tout' ? null : ajouterJours(aujourdhui(), -Number(filtre.periode));
       const l = await api.achatsElement(id, { du, encours: filtre.encours });
-      zone.innerHTML = l.length ? `<table class="tableau-compact largeur-contenu"><thead><tr><th>Date</th><th>Pièce</th><th>Type</th><th>Fournisseur</th><th>Statut</th>
-          <th>Qté</th><th>U.</th><th>PU HT</th><th>Montant HT</th><th></th></tr></thead><tbody>
-        ${l.map((a) => `<tr><td>${jour(a.date)}</td><td><a href="${urlDocument(a.ent_id)}">${echapper(a.numero ?? 'Brouillon')}</a></td><td>${echapper(a.type)}</td>
+      zone.innerHTML = l.length ? `<table class="tableau-compact largeur-contenu"><thead><tr><th>${texteHtml('fiches_btp.element.date')}</th><th>${texteHtml('fiches_btp.element.piece')}</th><th>${texteHtml('fiches_btp.element.type')}</th><th>${texteHtml('fiches_btp.element.fournisseur')}</th><th>${texteHtml('fiches_btp.element.statut')}</th>
+          <th>${texteHtml('fiches_btp.element.qte')}</th><th>${texteHtml('fiches_btp.element.unite')}</th><th>${texteHtml('fiches_btp.element.pu')}</th><th>${texteHtml('fiches_btp.element.montant')}</th><th></th></tr></thead><tbody>
+        ${l.map((a) => `<tr><td>${jour(a.date)}</td><td><a href="${urlDocument(a.ent_id)}">${echapper(a.numero ?? texte('fiches_btp.element.brouillon'))}</a></td><td>${echapper(a.type)}</td>
           <td>${echapper(a.tiers ?? '')}</td><td>${echapper(a.statut)}</td><td class="nombre">${formatNombre(a.qte ?? 0, 2)}</td><td>${echapper(a.unite ?? '')}</td>
-          <td class="nombre">${prix(a.pu)}</td><td class="nombre">${formatNombre(a.montant ?? 0, 2)}</td><td>${a.en_cours ? '<span class="pastille-compte attention">En cours</span>' : a.solde ? '<span class="pastille-compte neutre">Soldée</span>' : ''}</td></tr>`).join('')}</tbody></table>`
-        : '<p class="aide">Aucune ligne d\'achat sur la période.</p>';
+          <td class="nombre">${prix(a.pu)}</td><td class="nombre">${formatNombre(a.montant ?? 0, 2)}</td><td>${a.en_cours ? `<span class="pastille-compte attention">${texteHtml('fiches_btp.element.en_cours')}</span>` : a.solde ? `<span class="pastille-compte neutre">${texteHtml('fiches_btp.element.soldee')}</span>` : ''}</td></tr>`).join('')}</tbody></table>`
+        : `<p class="aide">${texteHtml('fiches_btp.element.aucun_achat')}</p>`;
     };
-    const periode = creerCombo({ options: [['30', '1 mois'], ['182', '6 mois'], ['365', '1 an'], ['tout', 'Tout']].map(([valeur, libelle]) => ({ valeur, libelle })), valeur: filtre.periode, vide: false });
+    const periode = creerCombo({ options: pairesParCode('fiches_btp.element.periodes', [['30', 'mois_1'], ['182', 'mois_6'], ['365', 'an_1'], ['tout', 'tout']]).map(([valeur, libelle]) => ({ valeur, libelle })), valeur: filtre.periode, vide: false });
     periode.addEventListener('change', () => { filtre.periode = periode.valeurCombo; charger().catch((e) => this.message(e.message, 'erreur')); });
     corps.querySelector('[data-periode]').append(periode);
     corps.querySelector('[data-encours]').addEventListener('change', (e) => { filtre.encours = e.target.checked; charger().catch((x) => this.message(x.message, 'erreur')); });
@@ -268,19 +271,19 @@ export class FicheElement extends FicheLogiBTP {
     const composition = json(this.valeur('composition'), null) ?? this.#compositionInitiale();
     corps.innerHTML = `<div class="element-composition">
       <div class="element-composition-barre">
-        <label ${this.ensemble ? 'hidden' : ''}>Calcul de l'ouvrage <span data-mode></span></label>
-        ${modifiable ? '<button type="button" data-article title="Ou saisir un code dans la colonne Code, ou F3">＋ Élément de la bibliothèque</button>' : ''}
+        <label ${this.ensemble ? 'hidden' : ''}>${texteHtml('fiches_btp.element.calcul')} <span data-mode></span></label>
+        ${modifiable ? `<button type="button" data-article title="${texteHtml('fiches_btp.element.ajouter_aide')}">${iconeHtml('ajouter')} ${texteHtml('fiches_btp.element.ajouter')}</button>` : ''}
         <span class="groupe" data-vues></span>
         <span class="element-composition-totaux"></span>
       </div>
       ${this.ensemble ? '<div class="element-parametres"></div>' : ''}
       <div class="element-composition-corps"><div class="element-composition-grille"></div><aside class="element-composition-detail detail"></aside></div>
       <p class="aide">${this.ensemble
-    ? 'Ensemble : lignes sous la tranche, vendues ou en option, variante, pour mémoire (détail de la ligne). Les paramètres de la tranche ({{$largeur}}…) sont repris par les métrés (F4) et les libellés ; le prix est celui des lignes vendues, chacune avec ses coefficients.'
-    : `Quantités par unité d'ouvrage (${echapper(this.valeur('unite_stock') ?? '?')}). F4 sur une composante : métré. Les coefficients de l'élément (onglet Prix) s'appliquent à l'ouvrage.`}</p>
+    ? texteHtml('fiches_btp.element.aide_ensemble')
+    : texteHtml('fiches_btp.element.aide_ouvrage', { unite: this.valeur('unite_stock') ?? '?' })}</p>
       <aside class="tiroir element-metre" hidden></aside></div>`;
     const combo = creerCombo({
-      options: [{ valeur: 'D', libelle: "Déboursé : PR des composantes × coefficients de l'élément" }, { valeur: 'V', libelle: 'Somme des PV des composantes' }],
+      options: [{ valeur: 'D', libelle: texte('fiches_btp.element.modes.D') }, { valeur: 'V', libelle: texte('fiches_btp.element.modes.V') }],
       valeur: composition.mode ?? 'D', vide: false,
     });
     combo.disabled = !modifiable;
@@ -313,14 +316,14 @@ export class FicheElement extends FicheLogiBTP {
       vues.charger().catch((e) => this.message(e.message, 'erreur'));
     }
     editeur.magasin.lectureSeule = !modifiable;
-    editeur.magasin.surRefus = () => this.message('Passez la fiche en modification pour changer la composition', 'avertissement');
+    editeur.magasin.surRefus = () => this.message(texte('fiches_btp.element.lecture_seule'), 'avertissement');
     const mode = () => combo.valeurCombo;
     const totaux = () => {
       const c = { mode: mode(), lignes: editeur.saisie.lignes, metres: editeur.saisie.metres, variables: editeur.saisie.variables };
       let r;
       try { r = calculerOuvrage(c, { coef_fg: this.valeur('coef_fg'), coef_benef: this.valeur('coef_benef'), coef_remise: this.valeur('coef_remise') }); } catch (e) { r = { erreur: e.message }; }
       corps.querySelector('.element-composition-totaux').innerHTML = r.erreur ? `<span class="erreur">${echapper(r.erreur)}</span>`
-        : `PA ${prix(r.pa)} · PR ${prix(r.pr)} · PV ${prix(r.pv)} · <b>PV net ${prix(r.pv_net)}</b> ${this.ensemble ? '(lignes vendues)' : `/ ${echapper(this.valeur('unite_stock') ?? '')}`}`;
+        : `${texteHtml('fiches_btp.element.totaux_html', { pa: prix(r.pa), pr: prix(r.pr), pv: prix(r.pv), net: prix(r.pv_net) })} ${this.ensemble ? texteHtml('fiches_btp.element.lignes_vendues') : `/ ${echapper(this.valeur('unite_stock') ?? '')}`}`;
       return c;
     };
     // Ensemble : paramètres de la tranche racine (variables $) au-dessus de la grille.
@@ -359,24 +362,24 @@ export class FicheElement extends FicheLogiBTP {
 
   async #imageNotices(corps, modifiable) {
     const ged = this.services.ged;
-    if (this.id === null) { corps.innerHTML = '<p class="aide">Enregistrez l\'élément pour lui associer une image et des notices techniques.</p>'; return; }
+    if (this.id === null) { corps.innerHTML = `<p class="aide">${texteHtml('fiches_btp.element.image_nouveau')}</p>`; return; }
     const docs = await ged.lister({ type_element: TYPE_FICHE.ELEMENT, id_element: String(this.id) });
     const images = docs.filter((d) => d.version?.type_mime?.startsWith('image/'));
     const notices = docs.filter((d) => d.categorie === 'notice_technique');
     const choisie = Number(this.valeur('image_ged')) || null;
     corps.innerHTML = `<div class="element-medias">
-      <fieldset class="fiche-groupe"><legend>Image de l'élément</legend>
+      <fieldset class="fiche-groupe"><legend>${texteHtml('fiches_btp.element.image')}</legend>
         <div class="element-images">${images.map((d) => `<label class="element-image ${d.id === choisie ? 'choisie' : ''}">
           <img src="${echapper(ged.urlContenu(d.version.id))}" alt="${echapper(d.titre)}"><span><input type="radio" name="image" value="${d.id}" ${d.id === choisie ? 'checked' : ''} ${modifiable ? '' : 'disabled'}> ${echapper(d.titre)}</span></label>`).join('')
-          || '<p class="aide">Aucune image : ajoutez-en une.</p>'}</div>
-        <p><button type="button" data-ajout="image">＋ Ajouter une image</button>${choisie && modifiable ? ' <button type="button" data-retirer>Retirer l\'image</button>' : ''}
-          ${modifiable ? '' : '<span class="aide"> Passez en modification pour choisir l\'image de l\'élément.</span>'}</p>
+          || `<p class="aide">${texteHtml('fiches_btp.element.aucune_image')}</p>`}</div>
+        <p><button type="button" data-ajout="image">${iconeHtml('ajouter')} ${texteHtml('fiches_btp.element.ajouter_image')}</button>${choisie && modifiable ? ` <button type="button" data-retirer>${texteHtml('fiches_btp.element.retirer_image')}</button>` : ''}
+          ${modifiable ? '' : `<span class="aide"> ${texteHtml('fiches_btp.element.image_lecture')}</span>`}</p>
       </fieldset>
-      <fieldset class="fiche-groupe"><legend>Notices techniques (DOE)</legend>
-        ${notices.length ? `<ul class="element-notices">${notices.map((d) => `<li>📘 <a href="${echapper(ged.urlContenu(d.version.id, { telecharger: true }))}" target="_blank" rel="noopener">${echapper(d.titre)}</a>
-          <small>${echapper(d.version?.nom_fichier ?? '')}${d.date_document ? ` · ${formatDate(d.date_document)}` : ''}</small></li>`).join('')}</ul>` : '<p class="aide">Aucune notice technique.</p>'}
-        <p><button type="button" data-ajout="notice">＋ Ajouter une notice technique</button></p>
-        <p class="aide">Les notices techniques (catégorie GED « Notice technique (DOE) ») seront jointes au dossier des ouvrages exécutés remis au client.</p>
+      <fieldset class="fiche-groupe"><legend>${texteHtml('fiches_btp.element.notices')}</legend>
+        ${notices.length ? `<ul class="element-notices">${notices.map((d) => `<li>${iconeHtml('fiches_btp_notice')} <a href="${echapper(ged.urlContenu(d.version.id, { telecharger: true }))}" target="_blank" rel="noopener">${echapper(d.titre)}</a>
+          <small>${echapper(d.version?.nom_fichier ?? '')}${d.date_document ? ` · ${formatDate(d.date_document)}` : ''}</small></li>`).join('')}</ul>` : `<p class="aide">${texteHtml('fiches_btp.element.aucune_notice')}</p>`}
+        <p><button type="button" data-ajout="notice">${iconeHtml('ajouter')} ${texteHtml('fiches_btp.element.ajouter_notice')}</button></p>
+        <p class="aide">${texteHtml('fiches_btp.element.notices_aide')}</p>
       </fieldset>
       <input type="file" hidden data-fichier></div>`;
     corps.querySelectorAll('input[name="image"]').forEach((r) => r.addEventListener('change', () => {
@@ -403,7 +406,7 @@ export class FicheElement extends FicheLogiBTP {
             date_document: aujourdhui(), auteur: this.utilisateur,
           },
         });
-        this.message(genre === 'image' ? 'Image ajoutée à la GED de l\'élément' : 'Notice technique ajoutée', 'succes');
+        this.message(genre === 'image' ? texte('fiches_btp.element.image_ajoutee') : texte('fiches_btp.element.notice_ajoutee'), 'succes');
         await this.#imageNotices(corps, modifiable);
       } catch (e) { this.message(e.message, 'erreur'); }
     });
