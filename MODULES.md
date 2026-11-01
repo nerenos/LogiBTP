@@ -5,7 +5,7 @@ Vue d'ensemble des modules et de leurs liens. Le détail de chaque partie est da
 [liste](modules/liste/CLAUDE.md) · [fiche](modules/fiche/CLAUDE.md) · [ged](modules/ged/CLAUDE.md) ·
 [bibliotheque](modules/bibliotheque/CLAUDE.md) · [annuaire](modules/annuaire/CLAUDE.md) ·
 [entreprises-fr](modules/entreprises-fr/CLAUDE.md) · [graphe](modules/graphe/CLAUDE.md) ·
-[navigation](modules/navigation/CLAUDE.md) · [import](modules/import/CLAUDE.md) · [edition](modules/edition/CLAUDE.md) · [reglement](modules/reglement/CLAUDE.md) · [crm](modules/crm/CLAUDE.md) · [authentification](modules/authentification/CLAUDE.md) · [droits](modules/droits/CLAUDE.md) · [calendrier](modules/calendrier/CLAUDE.md) · [notification](modules/notification/CLAUDE.md) · [oauth](modules/oauth/CLAUDE.md) · [mail](modules/mail/CLAUDE.md) · [execution](modules/execution/CLAUDE.md) · [pointage](modules/pointage/CLAUDE.md) · [planning](modules/planning/CLAUDE.md) · [stock](modules/stock/CLAUDE.md) · [comptabilite](modules/comptabilite/CLAUDE.md) · cœur : [client](client/CLAUDE.md),
+[navigation](modules/navigation/CLAUDE.md) · [personnalisation](modules/personnalisation/CLAUDE.md) · [import](modules/import/CLAUDE.md) · [edition](modules/edition/CLAUDE.md) · [reglement](modules/reglement/CLAUDE.md) · [crm](modules/crm/CLAUDE.md) · [authentification](modules/authentification/CLAUDE.md) · [droits](modules/droits/CLAUDE.md) · [calendrier](modules/calendrier/CLAUDE.md) · [notification](modules/notification/CLAUDE.md) · [oauth](modules/oauth/CLAUDE.md) · [mail](modules/mail/CLAUDE.md) · [execution](modules/execution/CLAUDE.md) · [pointage](modules/pointage/CLAUDE.md) · [planning](modules/planning/CLAUDE.md) · [stock](modules/stock/CLAUDE.md) · [comptabilite](modules/comptabilite/CLAUDE.md) · cœur : [client](client/CLAUDE.md),
 [src](src/CLAUDE.md), [db](db/CLAUDE.md).
 
 ## Couches et dépendances
@@ -35,6 +35,7 @@ graph TD
 | entreprises-fr | socle | `LogiBTP.EntreprisesFr.Web` | — | cœur |
 | graphe | socle | — (JS seul) | — | annuaire, cœur |
 | navigation | socle | — (JS seul) | — | cœur (client) |
+| personnalisation | socle (Node : composition, greffon Vite, vérification des clés) | `LogiBTP.Personnalisation.Web` → Socle.Web | — | cœur (`client/vite.config.js`, `Program.cs` : `UsePersonnalisation`) ; la résolution des textes (`@logibtp/socle/dictionnaire`, `Dictionnaire.cs`) est dans le socle, utilisée par tous |
 | import | — | — (JS seul) | — | cœur (client) |
 | edition | socle, pdf-lib, @pdf-lib/fontkit, qrcode-generator ; polices Inter et Libre Barcode 39 (`js/polices`) | `LogiBTP.Editions` (Jint : même moteur JS que le navigateur), `LogiBTP.Editions.Web` | 090 | cœur (aperçu, paramétrage, source « document ») |
 | reglement (facultatif) | socle | `LogiBTP.Reglements(.Web)` → Socle(.Web) | 080 | cœur (échéances des pièces, page Règlements) |

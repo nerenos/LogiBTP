@@ -1,3 +1,4 @@
+import { textesParCode } from '@logibtp/socle/dictionnaire';
 import { D, arrondir } from '@logibtp/socle';
 import { calculerDocument } from '../calcul/index.js';
 
@@ -6,16 +7,9 @@ import { calculerDocument } from '../calcul/index.js';
 // du résultat (parts d'une ligne, bilan d'une tranche, clés orphelines) et les actions qui réécrivent les clés :
 // figer (clés de ligne en montant par unité, comme le serveur à la validation) et répartir le reste.
 
-export const LIBELLES_FA_LIGNES = {
-  V: 'Lignes vendues seulement',
-  OA: 'Aussi les options et variantes',
-  OAM: 'Aussi les options, variantes et lignes pour mémoire',
-};
-export const LIBELLES_FA_MODE = {
-  C: 'Au coefficient moyen des lignes vendues (sans réduire leur part)',
-  B: 'Dans la base de répartition (les lignes vendues reçoivent moins)',
-};
-export const LIBELLES_CIBLE = { LIGNE: 'Ligne', ELEMENT: 'Élément', NATURE: 'Nature' };
+export const LIBELLES_FA_LIGNES = textesParCode('frais_annexes_btp.lignes', ['V', 'OA', 'OAM']);
+export const LIBELLES_FA_MODE = textesParCode('frais_annexes_btp.modes', ['C', 'B']);
+export const LIBELLES_CIBLE = textesParCode('frais_annexes_btp.cibles', ['LIGNE', 'ELEMENT', 'NATURE']);
 export const CODES_FA = ['FA_ECART', 'FA_SANS_RECEPTRICE', 'FA_CLE_ORPHELINE', 'FA_CLE_BLOQUEE', 'FA_HORS_SECTION', 'FA_HORS_TRANCHE', 'FA_PIED'];
 
 /** Bilan d'une tranche de frais (résultat du moteur) : { lig_id, portee_id, cles, prevu, ventile, ventile_reel, ecart }. */

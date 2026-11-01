@@ -1,9 +1,10 @@
 // Application de terrain (ANALYSE-TERRAIN.md) : règles sans interface de la page /terrain (testées par
 // test/terrain.test.js) : partie mobile d'une tâche complétée par son chantier, lien d'itinéraire, liens saisis.
+import { textesParCode } from '@logibtp/socle/dictionnaire';
 import { ajouterJours } from '@logibtp/socle';
 
 /** Applications de navigation proposées (préférence `terrainNavigation` du navigateur, T11). */
-export const NAVIGATIONS = Object.freeze({ AUTO: 'Selon l\'appareil', GOOGLE: 'Google Maps', WAZE: 'Waze', APPLE: 'Plans (Apple)' });
+export const NAVIGATIONS = textesParCode('terrain_btp.navigations', ['AUTO', 'GOOGLE', 'WAZE', 'APPLE']);
 
 /** Lundi de la semaine d'une date « AAAA-MM-JJ ». */
 export function lundiDe(jour) {
@@ -37,8 +38,8 @@ export function lienItineraire(adresse, mode = 'AUTO', agent = '') {
 }
 
 /** Liens saisis (un par ligne) : adresses http(s) cliquables, le reste en texte. */
-export function liensTexte(texte) {
-  return (texte ?? '').split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
+export function liensTexte(saisie) {
+  return (saisie ?? '').split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
     .map((l) => (/^https?:\/\/\S+$/i.test(l) ? { url: l, libelle: l.replace(/^https?:\/\//i, '') } : { texte: l }));
 }
 

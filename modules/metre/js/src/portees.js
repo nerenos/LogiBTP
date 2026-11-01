@@ -1,3 +1,4 @@
+import { texte } from '@logibtp/socle/dictionnaire';
 import { Dec, arr6, ErreurCalcul } from '@logibtp/socle';
 
 /**
@@ -33,12 +34,12 @@ export class Portees {
   cles(portee, ligneId) {
     if (portee === '$$') return ['$$'];
     if (portee === '@') {
-      if (ligneId === null || ligneId === undefined) throw new ErreurCalcul('PORTEE', 'Variable @ hors d\'une ligne');
+      if (ligneId === null || ligneId === undefined) throw new ErreurCalcul('PORTEE', texte('metre.portees.hors_ligne'));
       return [`@:${ligneId}`];
     }
     const contextes = this.hote.chaine(portee, ligneId) ?? [];
     if (contextes.length === 0) {
-      throw new ErreurCalcul('PORTEE', this.hote.messagePortee?.(portee) ?? `Aucun contexte pour une variable ${portee}`);
+      throw new ErreurCalcul('PORTEE', this.hote.messagePortee?.(portee) ?? texte('metre.portees.sans_contexte', { portee }));
     }
     return contextes.map((c) => `${portee}:${c}`);
   }
@@ -49,13 +50,13 @@ export class Portees {
       const m = this.magasin(cle, false);
       if (m && m.has(nom)) return m.get(nom);
     }
-    throw new ErreurCalcul('VARIABLE_INCONNUE', `Variable {{${portee}${nom}}} non définie à ce point du document`);
+    throw new ErreurCalcul('VARIABLE_INCONNUE', texte('metre.portees.non_definie', { reference: `{{${portee}${nom}}}` }));
   }
 
   /** Valeur numérique d'une variable (formules, quantités) : une chaîne ou un booléen est une erreur TYPE. */
   lire(portee, nom, ligneId) {
     const v = this.lireValeur(portee, nom, ligneId);
-    if (!(v instanceof Dec)) throw new ErreurCalcul('TYPE', `Variable {{${portee}${nom}}} : numérique attendu`);
+    if (!(v instanceof Dec)) throw new ErreurCalcul('TYPE', texte('metre.portees.numerique', { reference: `{{${portee}${nom}}}` }));
     return v;
   }
 
@@ -65,13 +66,13 @@ export class Portees {
     const cles = this.cles(portee, ligneId);
     if (operation === '+=') {
       const m = cles.map((c) => this.magasin(c, false)).find((x) => x && x.has(nom));
-      if (!m) throw new ErreurCalcul('VARIABLE_INCONNUE', `Variable {{${portee}${nom}}} non définie : incrémentation impossible`);
-      if (!(m.get(nom) instanceof Dec) || !(v instanceof Dec)) throw new ErreurCalcul('TYPE', `Variable {{${portee}${nom}}} : numérique attendu`);
+      if (!m) throw new ErreurCalcul('VARIABLE_INCONNUE', texte('metre.portees.increment', { reference: `{{${portee}${nom}}}` }));
+      if (!(m.get(nom) instanceof Dec) || !(v instanceof Dec)) throw new ErreurCalcul('TYPE', texte('metre.portees.numerique', { reference: `{{${portee}${nom}}}` }));
       const r = arr6(m.get(nom).plus(v));
       m.set(nom, r);
       return r;
     }
-    if (operation !== '=') throw new ErreurCalcul('OPERATION_INVALIDE', `Opération inconnue « ${operation} »`);
+    if (operation !== '=') throw new ErreurCalcul('OPERATION_INVALIDE', texte('metre.portees.operation', { operation }));
     this.magasin(cles[0], true).set(nom, v);
     return v;
   }

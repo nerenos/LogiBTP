@@ -5,7 +5,7 @@
 .tiroir {
   position: fixed; right: 0.5rem; top: calc(var(--decalage-tiroir, 0px) + 0.6rem); bottom: 0.6rem; width: min(56rem, 100vw);
   border-radius: 6px; border: 1px solid var(--bord);
-  background: var(--surface); border-left: 1px solid var(--bord); box-shadow: -8px 0 24px rgb(0 0 0 / 0.15);
+  background: var(--surface); border-left: 1px solid var(--bord); box-shadow: -8px 0 24px var(--metre-ombre);
   padding: 0.8rem 1rem; z-index: 10; display: flex; flex-direction: column; gap: 0.6rem; overflow: auto;
 }
 .tiroir[hidden] { display: none; }
@@ -56,21 +56,7 @@ body.hors-ligne .mode { color: var(--alerte); }
   .dictionnaire { border-left: none; border-top: 1px solid var(--bord); padding: 0.5rem 0 0; max-height: 14rem; }
 }
 
-/* Script du métré : éditeur de code (couleurs du langage surchargeables par le thème) */
-:root {
-  --code-mot: #7c3aed; --code-type: #0e7490; --code-commentaire: #6b7280; --code-nombre: #b45309; --code-chaine: #15803d;
-  --code-reference: #be185d; --code-fonction: #1d4ed8; --code-operateur: inherit;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --code-mot: #c4b5fd; --code-type: #67e8f9; --code-commentaire: #9ca3af; --code-nombre: #fcd34d; --code-chaine: #86efac;
-    --code-reference: #f9a8d4; --code-fonction: #93c5fd;
-  }
-}
-:root[data-theme="dark"] {
-  --code-mot: #c4b5fd; --code-type: #67e8f9; --code-commentaire: #9ca3af; --code-nombre: #fcd34d; --code-chaine: #86efac;
-  --code-reference: #f9a8d4; --code-fonction: #93c5fd;
-}
+/* Script du métré : couleurs du langage dans personnalisation/theme.css du module (--code-*) */
 .metre-script { display: flex; flex-direction: column; gap: 0.4rem; }
 .metre-editeur .cm-editor { min-height: 16rem; max-height: 60vh; }
 .metre-editeur .cm-scroller { overflow: auto; }

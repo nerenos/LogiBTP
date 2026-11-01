@@ -1,3 +1,4 @@
+import { texte, texteHtml, pairesParCode, pluriel, iconeHtml, couleurTheme } from '@logibtp/socle/dictionnaire';
 import { echapper, creerCombo, confirmer } from '@logibtp/socle/ui';
 import { NATURES_ETAPE, UNITES_ETAPE, MESSAGES_ETAPES, controlerEtapes } from '@logibtp/execution';
 import { api } from '../api.js';
@@ -8,7 +9,7 @@ import { TYPES_ORDRE } from './execution.js';
 // tableau de l'entête, contrôle du N+1 bloquant ou non, statut documentaire déclenché, amonts, durée propre au type).
 
 const optionsServices = (services) => services.filter((s) => s.actif).map((s) => ({ valeur: s.id, libelle: s.libelle, detail: s.code }));
-const STATUTS = [{ valeur: 'ENVOYE', libelle: 'Transmis' }, { valeur: 'VALIDE', libelle: 'Pris en charge' }];
+const STATUTS = pairesParCode('execution_btp.statuts', ['ENVOYE', 'VALIDE']).map(([valeur, libelle]) => ({ valeur, libelle }));
 const nombre = (v) => (v === null || v === undefined ? '' : String(v).replace('.', ','));
 const lireDuree = (t) => (String(t ?? '').trim() === '' ? null : Number(String(t).replace(',', '.')));
 
@@ -18,17 +19,16 @@ export async function rendreCatalogueEtats(zone, { app, services, apres = () => 
   const etats = await api.execution.etats();
   const rendre = () => {
     const erreurs = controlerEtapes(etats.map((e) => ({ code: e.code, nature: e.nature, duree: e.duree, unite: e.unite })));
-    zone.innerHTML = `<p class="aide">États communs à tous les types d'ordres. Nature pour le planning : tâche (enchaînement avec durée), jalon (point de repère),
-      attente (trou sans ressource : séchage, validation d'un tiers).</p>
-      <table class="tableau-compact"><thead><tr><th>Code</th><th>Libellé</th><th>Couleur</th><th>Nature</th><th>Durée</th><th>Unité</th><th>Service</th><th>Actif</th><th class="cellule-boutons"></th></tr></thead><tbody>
+    zone.innerHTML = `<p class="aide">${texteHtml('execution_btp.catalogue.aide')}</p>
+      <table class="tableau-compact"><thead><tr><th>${texteHtml('commun.code')}</th><th>${texteHtml('commun.libelle')}</th><th>${texteHtml('execution_btp.catalogue.couleur')}</th><th>${texteHtml('execution_btp.catalogue.nature')}</th><th>${texteHtml('execution_btp.catalogue.duree')}</th><th>${texteHtml('execution_btp.catalogue.unite')}</th><th>${texteHtml('execution_btp.catalogue.service')}</th><th>${texteHtml('execution_btp.catalogue.actif')}</th><th class="cellule-boutons"></th></tr></thead><tbody>
       ${etats.map((e, i) => `<tr data-i="${i}"><td><input data-c="code" size="12" value="${echapper(e.code)}" ${admin && !e._existant ? '' : 'readonly'}></td>
         <td><input data-c="libelle" size="26" value="${echapper(e.libelle)}" ${admin ? '' : 'readonly'}></td>
-        <td><input type="color" data-c="couleur" value="${echapper(e.couleur ?? '#94a3b8')}" ${admin ? '' : 'disabled'}></td>
+        <td><input type="color" data-c="couleur" value="${echapper(e.couleur ?? couleurTheme('--execution-etape-defaut', '#94a3b8'))}" ${admin ? '' : 'disabled'}></td>
         <td data-nature></td><td><input data-c="duree" size="5" value="${nombre(e.duree)}" ${admin ? '' : 'readonly'}></td><td data-unite></td><td data-service></td>
         <td><input type="checkbox" data-c="actif" ${e.actif ? 'checked' : ''} ${admin ? '' : 'disabled'}></td>
-        <td class="cellule-boutons">${admin ? '<button type="button" data-retirer title="Retirer">✕</button>' : ''}</td></tr>`).join('')}</tbody></table>
+        <td class="cellule-boutons">${admin ? `<button type="button" data-retirer title="${texteHtml('commun.retirer')}">${iconeHtml('retirer')}</button>` : ''}</td></tr>`).join('')}</tbody></table>
       ${erreurs.length ? `<p class="erreur">${erreurs.map((c) => echapper(MESSAGES_ETAPES[c] ?? c)).join(' · ')}</p>` : ''}
-      ${admin ? '<p class="ligne"><button type="button" data-ajouter>＋ État</button> <button type="button" class="principal" data-enregistrer>Enregistrer le catalogue</button></p>' : ''}`;
+      ${admin ? `<p class="ligne"><button type="button" data-ajouter>${iconeHtml('ajouter')} ${texteHtml('execution_btp.catalogue.etat')}</button> <button type="button" class="principal" data-enregistrer>${texteHtml('execution_btp.catalogue.enregistrer')}</button></p>` : ''}`;
     zone.querySelectorAll('tr[data-i]').forEach((tr) => {
       const e = etats[Number(tr.dataset.i)];
       const combo = (sel, options, champ, vide = false, nombreVal = false) => {
@@ -48,13 +48,13 @@ export async function rendreCatalogueEtats(zone, { app, services, apres = () => 
       tr.querySelector('[data-retirer]')?.addEventListener('click', () => { etats.splice(etats.indexOf(e), 1); rendre(); });
     });
     zone.querySelector('[data-ajouter]')?.addEventListener('click', () => {
-      etats.push({ code: '', libelle: '', couleur: '#94a3b8', nature: 'TACHE', duree: 1, unite: 'OUV', srv_id: null, ordre: 0, actif: true }); rendre();
+      etats.push({ code: '', libelle: '', couleur: couleurTheme('--execution-etape-defaut', '#94a3b8'), nature: 'TACHE', duree: 1, unite: 'OUV', srv_id: null, ordre: 0, actif: true }); rendre();
     });
     zone.querySelector('[data-enregistrer]')?.addEventListener('click', async () => {
       try {
         const l = await api.execution.enregistrerEtats(etats.map(({ _existant, ...x }) => x));
         etats.splice(0, etats.length, ...l.map((x) => ({ ...x, _existant: true })));
-        app.message('Catalogue des états enregistré', 'succes');
+        app.message(texte('execution_btp.catalogue.enregistre'), 'succes');
         rendre();
         apres();
       } catch (e) { app.message(e.message, 'erreur'); }
@@ -73,11 +73,10 @@ export async function rendreEtatsTypes(zone, { app }) {
   let etats = [];
   const rendre = () => {
     const erreurs = controlerEtapes(etats.map((e) => ({ code: e.code, amonts: e.amonts ?? undefined, duree: e.duree ?? 0 })));
-    zone.innerHTML = `<p class="aide">Les états à date obligatoire forment les colonnes du tableau de l'entête de l'ordre ; les autres sont masqués et validés
-      d'office avec l'état obligatoire suivant. Sans amont, un état suit le précédent. Un nouvel ordre copie ces états (ou ceux de son étape de parcours).</p>
-      <p class="ligne">Type d'ordre <span data-type></span></p>
-      <table class="tableau-compact"><thead><tr><th>État</th><th>Nature</th><th>Date obligatoire</th><th>Contrôle N+1</th><th>Bloquant</th><th>Statut déclenché</th>
-        <th>Amonts</th><th>Durée</th><th class="cellule-boutons"></th></tr></thead><tbody>
+    zone.innerHTML = `<p class="aide">${texteHtml('execution_btp.types.aide')}</p>
+      <p class="ligne">${texteHtml('execution_btp.types.type')} <span data-type></span></p>
+      <table class="tableau-compact"><thead><tr><th>${texteHtml('execution_btp.catalogue.etat')}</th><th>${texteHtml('execution_btp.catalogue.nature')}</th><th>${texteHtml('execution_btp.types.date_obligatoire')}</th><th>${texteHtml('execution_btp.etapes.controle')}</th><th>${texteHtml('execution_btp.types.bloquant')}</th><th>${texteHtml('execution_btp.types.statut')}</th>
+        <th>${texteHtml('execution_btp.types.amonts')}</th><th>${texteHtml('execution_btp.catalogue.duree')}</th><th class="cellule-boutons"></th></tr></thead><tbody>
       ${etats.map((e, i) => {
         const c = catalogue.find((x) => x.code === e.code);
         return `<tr data-i="${i}"><td data-etat></td><td>${echapper(NATURES_ETAPE[c?.nature]?.icone ?? '')} ${echapper(c ? `${nombre(c.duree)} ${UNITES_ETAPE[c.unite] ?? ''}` : '')}</td>
@@ -85,14 +84,14 @@ export async function rendreEtatsTypes(zone, { app }) {
           <td><input type="checkbox" data-c="controle" ${e.controle ? 'checked' : ''} ${admin ? '' : 'disabled'}></td>
           <td><input type="checkbox" data-c="controle_bloquant" ${e.controle_bloquant ? 'checked' : ''} ${admin && e.controle ? '' : 'disabled'}></td>
           <td data-statut></td>
-          <td><input data-c="amonts" size="14" placeholder="le précédent" value="${echapper((e.amonts ?? []).join(', '))}" ${admin ? '' : 'readonly'}></td>
+          <td><input data-c="amonts" size="14" placeholder="${texteHtml('execution_btp.types.precedent')}" value="${echapper((e.amonts ?? []).join(', '))}" ${admin ? '' : 'readonly'}></td>
           <td><input data-c="duree" size="5" placeholder="${echapper(nombre(c?.duree))}" value="${nombre(e.duree)}" ${admin ? '' : 'readonly'}></td>
-          <td class="cellule-boutons">${admin ? `<button type="button" data-monter title="Monter" ${i ? '' : 'disabled'}>↑</button><button type="button" data-retirer title="Retirer">✕</button>` : ''}</td></tr>`;
+          <td class="cellule-boutons">${admin ? `<button type="button" data-monter title="${texteHtml('execution_btp.types.monter')}" ${i ? '' : 'disabled'}>${iconeHtml('execution_btp_monter')}</button><button type="button" data-retirer title="${texteHtml('commun.retirer')}">${iconeHtml('retirer')}</button>` : ''}</td></tr>`;
       }).join('')}</tbody></table>
       ${erreurs.length ? `<p class="erreur">${erreurs.map((c) => echapper(MESSAGES_ETAPES[c] ?? c)).join(' · ')}</p>` : ''}
-      ${admin ? `<p class="ligne"><button type="button" data-ajouter>＋ État</button> <button type="button" class="principal" data-enregistrer>Enregistrer les états du type</button>
-        <button type="button" data-appliquer title="Les ordres non terminés reprennent ces états pour leurs étapes non validées">Appliquer aux ordres en cours</button></p>` : ''}`;
-    const cType = creerCombo({ options: types.map((t) => ({ valeur: t.code, libelle: t.libelle, detail: t.actif ? t.code : `${t.code} (inactif)` })), valeur: type, vide: false });
+      ${admin ? `<p class="ligne"><button type="button" data-ajouter>${iconeHtml('ajouter')} ${texteHtml('execution_btp.catalogue.etat')}</button> <button type="button" class="principal" data-enregistrer>${texteHtml('execution_btp.types.enregistrer')}</button>
+        <button type="button" data-appliquer title="${texteHtml('execution_btp.types.appliquer_titre')}">${texteHtml('execution_btp.types.appliquer')}</button></p>` : ''}`;
+    const cType = creerCombo({ options: types.map((t) => ({ valeur: t.code, libelle: t.libelle, detail: t.actif ? t.code : texte('execution_btp.types.inactif', { code: t.code }) })), valeur: type, vide: false });
     cType.addEventListener('change', () => { type = cType.valeurCombo; zone.dataset.type = type; charger(); });
     zone.querySelector('[data-type]').append(cType);
     zone.querySelectorAll('tr[data-i]').forEach((tr) => {
@@ -117,15 +116,15 @@ export async function rendreEtatsTypes(zone, { app }) {
     });
     zone.querySelector('[data-ajouter]')?.addEventListener('click', () => {
       const libre = catalogue.find((c) => !etats.some((e) => e.code === c.code));
-      if (!libre) { app.message('Tous les états du catalogue sont déjà utilisés', 'avertissement'); return; }
+      if (!libre) { app.message(texte('execution_btp.types.tous'), 'avertissement'); return; }
       etats.push({ code: libre.code, date_obligatoire: true, controle: false, controle_bloquant: true, statut_document: null, amonts: null, duree: null }); rendre();
     });
     zone.querySelector('[data-enregistrer]')?.addEventListener('click', async () => {
-      try { etats = await api.execution.enregistrerEtatsType(type, etats); app.message('États du type enregistrés', 'succes'); rendre(); } catch (e) { app.message(e.message, 'erreur'); }
+      try { etats = await api.execution.enregistrerEtatsType(type, etats); app.message(texte('execution_btp.types.enregistres'), 'succes'); rendre(); } catch (e) { app.message(e.message, 'erreur'); }
     });
     zone.querySelector('[data-appliquer]')?.addEventListener('click', async () => {
-      if (!await confirmer('Appliquer ces états aux ordres non terminés de ce type (étapes non validées) ?')) return;
-      try { const r = await api.execution.appliquerType(type); app.message(`${r.ordres} ordre(s) mis à jour`, 'succes'); } catch (e) { app.message(e.message, 'erreur'); }
+      if (!await confirmer(texte('execution_btp.types.confirmer'))) return;
+      try { const r = await api.execution.appliquerType(type); app.message(pluriel('execution_btp.types.appliques', r.ordres), 'succes'); } catch (e) { app.message(e.message, 'erreur'); }
     });
   };
   const charger = async () => { etats = type ? await api.execution.etatsType(type) : []; rendre(); };

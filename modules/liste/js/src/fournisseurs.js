@@ -1,3 +1,4 @@
+import { texte } from '@logibtp/socle/dictionnaire';
 import { lireStockage, ecrireStockage, ErreurApi, appelApi } from '@logibtp/socle';
 import { ERREUR_LISTE } from './codes.js';
 import { normaliserDefinition } from './modele.js';
@@ -100,7 +101,7 @@ export class FournisseurMemoire {
   }
 
   async enregistrerTheme(t) {
-    if (!t.thl_code?.trim() || !t.thl_libelle?.trim()) throw new ErreurFournisseur(422, 'THEME', 'Code et libellé du thème obligatoires');
+    if (!t.thl_code?.trim() || !t.thl_libelle?.trim()) throw new ErreurFournisseur(422, 'THEME', texte('liste.fournisseur.theme_obligatoire'));
     const i = this.themesStockes.findIndex((x) => x.thl_code === t.thl_code);
     if (i >= 0) this.themesStockes[i] = structuredClone(t); else this.themesStockes.push(structuredClone(t));
     this.#ecrireStockage();
@@ -163,21 +164,21 @@ export class FournisseurMemoire {
   }
 
   async colonnesRequete() {
-    throw new ErreurFournisseur(501, ERREUR_LISTE.REQUETE_HORS_LIGNE, 'Requête manuelle indisponible hors ligne');
+    throw new ErreurFournisseur(501, ERREUR_LISTE.REQUETE_HORS_LIGNE, texte('liste.fournisseur.requete_hors_ligne'));
   }
 
   async #definition(d) {
     if (d.definition) return normaliserDefinition(d.definition);
     if (d.vue_id) return normaliserDefinition((await this.vue(d.vue_id)).definition);
-    throw new ErreurFournisseur(422, 'VUE', 'Vue ou définition attendue');
+    throw new ErreurFournisseur(422, 'VUE', texte('liste.fournisseur.vue_attendue'));
   }
 
   /** Lignes de la source au format du serveur : colonnes de la vue + _id, _type, _h. */
   async #lignesSource(d) {
     const def = await this.#definition(d);
-    if (def.source.mode !== 'vue') throw new ErreurFournisseur(501, ERREUR_LISTE.REQUETE_HORS_LIGNE, 'Requête manuelle indisponible hors ligne');
+    if (def.source.mode !== 'vue') throw new ErreurFournisseur(501, ERREUR_LISTE.REQUETE_HORS_LIGNE, texte('liste.fournisseur.requete_hors_ligne'));
     const s = this.sourcesDonnees[def.source.vue];
-    if (!s) throw new ErreurFournisseur(404, 'SOURCE', `Source ${def.source.vue} introuvable`);
+    if (!s) throw new ErreurFournisseur(404, 'SOURCE', texte('liste.fournisseur.source_introuvable', { source: def.source.vue }));
     const connues = new Set(s.colonnes.map((c) => c.code));
     const codes = def.colonnes.filter((c) => !c.calcul && connues.has(c.code)).map((c) => c.code);
     // Colonnes de segment et de tri lues même si la vue ne les affiche pas (comme le WHERE / ORDER BY du serveur).
@@ -239,27 +240,27 @@ export class FournisseurMemoire {
   async modifier(d, id, h, valeurs) {
     const def = await this.#definition(d);
     const s = this.sourcesDonnees[def.source.vue];
-    if (def.source.mode !== 'vue' || !s?.modifiable) throw new ErreurFournisseur(422, 'SOURCE_LECTURE_SEULE', 'Cette source n\'est pas modifiable');
+    if (def.source.mode !== 'vue' || !s?.modifiable) throw new ErreurFournisseur(422, 'SOURCE_LECTURE_SEULE', texte('liste.fournisseur.source_lecture_seule'));
     for (const code of Object.keys(valeurs)) {
       const col = s.colonnes.find((c) => c.code === code);
       const vue = def.colonnes.find((c) => c.code === code && !c.calcul);
-      if (!col?.modifiable || !vue?.modifiable) throw new ErreurFournisseur(422, 'COLONNE_NON_MODIFIABLE', `Colonne ${code} non modifiable`);
+      if (!col?.modifiable || !vue?.modifiable) throw new ErreurFournisseur(422, 'COLONNE_NON_MODIFIABLE', texte('liste.fournisseur.colonne_non_modifiable', { code }));
     }
     // Contrôle de l'application avant écriture (ex. fiche en cours de modification par un autre utilisateur).
     await this.verifierModification?.(def.source.vue, id, valeurs);
     const colonneId = def.source.colonne_id ?? s.colonne_id;
     const brute = s.lignes.find((l) => String(l[colonneId]) === String(id));
-    if (!brute) throw new ErreurFournisseur(404, 'INTROUVABLE', `Ligne ${id} introuvable`);
+    if (!brute) throw new ErreurFournisseur(404, 'INTROUVABLE', texte('liste.fournisseur.ligne_introuvable', { id }));
     const actuelle = async () => (await this.#lignesSource({ definition: def })).lignes.find((l) => String(l._id) === String(id));
     const avant = await actuelle();
-    if (h && avant._h !== h) throw new ErreurFournisseur(409, ERREUR_LISTE.LIGNE_MODIFIEE, 'La ligne a été modifiée par ailleurs : valeurs actualisées', structuredClone(avant));
+    if (h && avant._h !== h) throw new ErreurFournisseur(409, ERREUR_LISTE.LIGNE_MODIFIEE, texte('liste.fournisseur.ligne_modifiee'), structuredClone(avant));
     for (const [code, v] of Object.entries(valeurs)) {
       const type = s.colonnes.find((c) => c.code === code).type ?? '';
       if (v === null || v === undefined || v === '') brute[code] = null;
       else if (/bool/.test(type)) brute[code] = v === true || ['true', '1', 'vrai', 'oui'].includes(String(v).toLowerCase());
       else if (/int|numeric|decimal|real|double/.test(type)) {
         const n = Number(String(v).replace(',', '.'));
-        if (Number.isNaN(n)) throw new ErreurFournisseur(422, 'VALEUR', `Valeur numérique invalide pour ${code} : ${v}`);
+        if (Number.isNaN(n)) throw new ErreurFournisseur(422, 'VALEUR', texte('liste.fournisseur.valeur_invalide', { code, valeur: v }));
         brute[code] = /int/.test(type) ? Math.round(n) : n;
       } else brute[code] = String(v);
     }

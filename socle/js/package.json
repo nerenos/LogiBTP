@@ -8,6 +8,7 @@
     ".": "./src/calcul/index.js",
     "./ui": "./src/ui/index.js",
     "./ui/socle.css": "./src/ui/socle.css",
+    "./dictionnaire": "./src/dictionnaire/index.js",
     "./testing": "./testing/index.js"
   },
   "scripts": {

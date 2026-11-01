@@ -1,6 +1,8 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { defineConfig } from 'vite';
+import { personnalisation } from '@logibtp/personnalisation/vite';
+import { COUCHES, PRECHARGES } from './personnalisation/couches.js';
 
 /**
  * Service worker (application installable, mode hors ligne) : sw.js produit à la construction depuis src/pwa/sw.js,
@@ -41,7 +43,11 @@ export const CSP = [
 const proxy = { '/api': { target: process.env.LOGIBTP_API ?? 'http://localhost:5080', changeOrigin: false } };
 
 export default defineConfig({
-  plugins: [serviceWorker()],
+  // Textes, thème et images (module Personnalisation) : /personnalisation/* servis en développement, écrits dans
+  // dist/personnalisation/ à la construction, préchargés par index.html.
+  plugins: [personnalisation({
+    couches: COUCHES, precharger: PRECHARGES, icone: 'images/icone.svg', modules: ['src/app/application.js'],
+  }), serviceWorker()],
   server: {
     port: 5173,
     headers: { 'Content-Security-Policy-Report-Only': CSP },
@@ -51,5 +57,7 @@ export default defineConfig({
   preview: { port: 4173, headers: { 'Content-Security-Policy-Report-Only': CSP }, proxy },
   test: {
     include: ['test/**/*.test.js'],
+    // Dictionnaire composé des couches posé avant chaque fichier de test (vrais textes).
+    setupFiles: ['./test/preparation.js'],
   },
 });

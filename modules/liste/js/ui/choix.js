@@ -1,3 +1,4 @@
+import { texte, texteHtml, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { echapper, ouvrirModale } from '@logibtp/socle/ui';
 import { ListeDonnees } from './liste.js';
 
@@ -17,7 +18,7 @@ import { ListeDonnees } from './liste.js';
  *   fenêtre (une notification de l'application resterait sous la fenêtre modale).
  * Résout avec la ligne choisie (tableau de lignes si `multiple`), { creer: recherche } (bouton de création) ou null.
  */
-export function choisirDansListe({ fournisseur, theme, vue = null, titre = 'Choisir', filtres = {}, libellesFiltres = {}, recherche = '', multiple = false,
+export function choisirDansListe({ fournisseur, theme, vue = null, titre = texte('liste.choix.titre'), filtres = {}, libellesFiltres = {}, recherche = '', multiple = false,
   creer = null, accepter = null, formats, cleVue } = {}) {
   return new Promise((resoudre) => {
     const dlg = document.createElement('dialog');
@@ -27,15 +28,15 @@ export function choisirDansListe({ fournisseur, theme, vue = null, titre = 'Choi
         <h2>${echapper(titre)}</h2>
         <span class="choix-liste-filtres"></span>
         <span class="choix-liste-espace"></span>
-        ${creer ? `<button type="button" data-creer title="Créer un nouvel élément (la recherche saisie est reprise)">${echapper(creer)}</button>` : ''}
-        <button type="button" data-annuler class="bouton-icone" title="Fermer (Échap)" aria-label="Fermer">✕</button>
+        ${creer ? `<button type="button" data-creer title="${texteHtml('liste.choix.creer_aide')}">${echapper(creer)}</button>` : ''}
+        <button type="button" data-annuler class="bouton-icone" title="${texteHtml('liste.choix.fermer_aide')}" aria-label="${texteHtml('liste.choix.fermer')}">${iconeHtml('retirer')}</button>
       </header>
       <div class="choix-liste-zone"></div>
       <footer class="choix-liste-pied">
-        <span class="aide choix-liste-message">Entrée ou double-clic : choisir${multiple ? ' · Ctrl / Maj + clic : plusieurs lignes' : ''} · Échap : annuler</span>
+        <span class="aide choix-liste-message">${texteHtml(multiple ? 'liste.choix.aide_multiple' : 'liste.choix.aide')}</span>
         <span class="choix-liste-espace"></span>
-        <button type="button" data-annuler>Annuler</button>
-        <button type="button" class="principal" data-choisir>Choisir</button>
+        <button type="button" data-annuler>${texteHtml('commun.annuler')}</button>
+        <button type="button" class="principal" data-choisir>${texteHtml('liste.choix.titre')}</button>
       </footer>`;
     const actifs = new Map(Object.entries(filtres).filter(([, v]) => v?.length).map(([c, v]) => [c, [...v]]));
     let liste = null;
@@ -52,14 +53,14 @@ export function choisirDansListe({ fournisseur, theme, vue = null, titre = 'Choi
     const zoneMessage = dlg.querySelector('.choix-liste-message');
     const aide = zoneMessage.textContent;
     let minuterie = null;
-    const signaler = (texte, niveau = 'info') => {
+    const signaler = (msg, niveau = 'info') => {
       clearTimeout(minuterie);
-      zoneMessage.textContent = texte;
+      zoneMessage.textContent = msg;
       zoneMessage.className = `choix-liste-message ${niveau}`;
       minuterie = setTimeout(() => { zoneMessage.textContent = aide; zoneMessage.className = 'aide choix-liste-message'; }, 5000);
     };
     const choisir = (lignes) => {
-      if (!lignes.length) { signaler('Aucune ligne sélectionnée', 'avertissement'); return; }
+      if (!lignes.length) { signaler(texte('liste.choix.aucune'), 'avertissement'); return; }
       const refus = accepter ? lignes.map((l) => accepter(l)).find(Boolean) : null;
       if (refus) { signaler(refus, 'avertissement'); return; }
       finir(multiple ? lignes : lignes[0]);
@@ -74,8 +75,8 @@ export function choisirDansListe({ fournisseur, theme, vue = null, titre = 'Choi
     });
     const zoneFiltres = dlg.querySelector('.choix-liste-filtres');
     const rendreFiltres = () => {
-      zoneFiltres.innerHTML = [...actifs.keys()].map((c) => `<span class="choix-liste-filtre" title="Filtre de l'appel : cliquer ✕ pour voir toutes les lignes">
-        ⚑ ${echapper(libellesFiltres[c] ?? `${c} : ${actifs.get(c).join(', ')}`)}<button type="button" class="bouton-icone" data-retirer="${echapper(c)}" aria-label="Retirer le filtre">✕</button></span>`).join('');
+      zoneFiltres.innerHTML = [...actifs.keys()].map((c) => `<span class="choix-liste-filtre" title="${texteHtml('liste.choix.filtre_aide')}">
+        ${iconeHtml('liste_choix_filtre')} ${echapper(libellesFiltres[c] ?? texte('liste.choix.filtre', { colonne: c, valeurs: actifs.get(c).join(', ') }))}<button type="button" class="bouton-icone" data-retirer="${echapper(c)}" aria-label="${texteHtml('liste.choix.retirer_filtre')}">${iconeHtml('retirer')}</button></span>`).join('');
     };
     zoneFiltres.addEventListener('click', (e) => {
       const b = e.target.closest('[data-retirer]');

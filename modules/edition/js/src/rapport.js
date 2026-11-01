@@ -2,6 +2,7 @@
 // Bandes (Q1, Q2) : ENTETE_PAGE, PIED_PAGE, FOND_PAGE (filigrane, zones fixes) composées pour chaque page ; CORPS
 // (aussi TITRE et RESUME) en flux paginé ; modes UNIQUE, REPETE (une par élément d'une collection), GROUPE (rupture
 // sur une expression : entête et pied de groupe, agrégats du groupe).
+import { texte } from '@logibtp/socle/dictionnaire';
 import { creerContexte, enfant, composer, evaluer, evaluerExpression, condition, alerter } from './composition.js';
 import { paginer } from './pagination.js';
 import { completerCharte } from './charte.js';
@@ -55,7 +56,7 @@ export function editer(modele, donnees, env) {
   // première ; ses paramètres s'appliquent avant ceux de la demande.
   const presentations = m.presentations ?? [];
   const presentation = presentations.find((x) => x.code === env.presentation)
-    ?? presentations.find((x) => x.defaut_si && condition(ctx, x.defaut_si, `présentation ${x.code}`)) ?? presentations[0] ?? null;
+    ?? presentations.find((x) => x.defaut_si && condition(ctx, x.defaut_si, texte('edition.lieux.presentation', { code: x.code }))) ?? presentations[0] ?? null;
   if (presentation) {
     Object.assign(ctx.parametres, presentation.parametres ?? {}, env.parametres ?? {}, { presentation: presentation.code });
     ctx.formule.parametres = ctx.parametres;
@@ -188,7 +189,7 @@ export function fragmentsBande(b, ctx, largeur) {
       if (portee) frs.forEach((f) => { f.portee = portee; });
       res.push(...appliquerOptions(frs, { ...o, saut_apres: o.saut_par_groupe && ig < groupes.length - 1 ? true : o.saut_apres }));
     });
-  } else alerter(ctx, 'MODE_INCONNU', `Mode de bande inconnu : ${mode}`);
+  } else alerter(ctx, 'MODE_INCONNU', texte('edition.alertes.mode_inconnu', { mode }));
   return res;
 }
 
@@ -209,9 +210,9 @@ function appliquerOptions(frs, o) {
  */
 function composerSousRapport(c, ctx, largeur, env) {
   const niveau = (ctx.niveauSousRapport ?? 0) + 1;
-  if (niveau > 3) { alerter(ctx, 'SOUS_RAPPORT_NIVEAU', `Sous-rapport ${c.rapport} : plus de trois niveaux`); return null; }
+  if (niveau > 3) { alerter(ctx, 'SOUS_RAPPORT_NIVEAU', texte('edition.alertes.sous_rapport_niveau', { rapport: c.rapport })); return null; }
   const def = env.rapports?.[c.rapport];
-  if (!def) { alerter(ctx, 'SOUS_RAPPORT_INTROUVABLE', `Sous-rapport introuvable : ${c.rapport}`); return null; }
+  if (!def) { alerter(ctx, 'SOUS_RAPPORT_INTROUVABLE', texte('edition.alertes.sous_rapport_introuvable', { rapport: c.rapport })); return null; }
   const sm = normaliserModele(def);
   const donnees = c.donnees ? evaluerExpression(ctx, c.donnees, `sous-rapport ${c.rapport}`) : ctx.donnees;
   if (donnees === null || donnees === undefined || (Array.isArray(donnees) && !donnees.length)) return null;

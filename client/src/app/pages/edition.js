@@ -1,3 +1,4 @@
+import { texte, texteHtml, textesParCode, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { PageBase } from '@logibtp/navigation';
 import { creerCombo, lirePreferences, ecrirePreferences, echapper, separateur } from '@logibtp/socle/ui';
 import { editer, pageSvg, base64VersOctets } from '@logibtp/edition';
@@ -7,26 +8,26 @@ import { EditeurModeleApercu } from '../editions/editeur-modele.js';
 
 const GABARIT = `
   <div class="edition-barre">
-    <h1 class="page-titre">🖨 <span data-titre>Aperçu</span></h1>
-    <label>Modèle <span data-combo="modele"></span></label>
-    <label data-zone="presentation">Présentation <span data-combo="presentation"></span></label>
-    <label data-zone="format">Format <span data-combo="format"></span></label>
+    <h1 class="page-titre">${iconeHtml('edition_btp_imprimer')} <span data-titre>${texteHtml('edition_btp.apercu.titre')}</span></h1>
+    <label>${texteHtml('edition_btp.apercu.modele')} <span data-combo="modele"></span></label>
+    <label data-zone="presentation">${texteHtml('edition_btp.apercu.presentation')} <span data-combo="presentation"></span></label>
+    <label data-zone="format">${texteHtml('edition_btp.apercu.format')} <span data-combo="format"></span></label>
     <span class="edition-parametres" data-zone="parametres"></span>
-    <label>Zoom <span data-combo="zoom"></span></label>
+    <label>${texteHtml('edition_btp.apercu.zoom')} <span data-combo="zoom"></span></label>
     <span class="edition-actions">
-      <button data-action="imprimer" class="principal" title="Imprimer : PDF produit par le serveur, imprimé à 100 % (le modèle et la présentation sont retenus pour ce document)">🖨 Imprimer</button>
-      <button data-action="pdf" title="Télécharger le PDF (sans le retenir comme dernier modèle imprimé)">⤓ PDF</button>
-      <button data-action="ranger" title="Produire le PDF par le serveur et le ranger dans la GED de l'élément (tâche de fond)">🗄 Ranger en GED</button>
-      <button data-action="double" title="Double : le PDF déjà rangé dans la GED (pièce validée : celui envoyé, jamais modifié)">📄 Double</button>
-      <button data-action="actualiser" title="Relire le document et les modèles">⟳</button>
-      <button data-action="editer" data-admin hidden title="Administrateur : afficher ou masquer l'éditeur du modèle (JSON) pour le tester sur cet aperçu">✎ Modèle</button>
+      <button data-action="imprimer" class="principal" title="${texteHtml('edition_btp.apercu.imprimer_aide')}">${iconeHtml('edition_btp_imprimer')} ${texteHtml('edition_btp.apercu.imprimer')}</button>
+      <button data-action="pdf" title="${texteHtml('edition_btp.apercu.pdf_aide')}">${iconeHtml('edition_btp_pdf')} ${texteHtml('edition_btp.apercu.pdf')}</button>
+      <button data-action="ranger" title="${texteHtml('edition_btp.apercu.ranger_aide')}">${iconeHtml('edition_btp_ranger')} ${texteHtml('edition_btp.apercu.ranger')}</button>
+      <button data-action="double" title="${texteHtml('edition_btp.apercu.double_aide')}">${iconeHtml('edition_btp_double')} ${texteHtml('edition_btp.apercu.double')}</button>
+      <button data-action="actualiser" title="${texteHtml('edition_btp.apercu.actualiser')}">${iconeHtml('edition_btp_actualiser')}</button>
+      <button data-action="editer" data-admin hidden title="${texteHtml('edition_btp.apercu.editer_aide')}">${iconeHtml('edition_btp_modele')} ${texteHtml('edition_btp.editeur.modele')}</button>
     </span>
   </div>
   <div class="edition-alertes" data-zone="alertes" hidden></div>
   <div class="edition-productions" data-zone="productions" hidden></div>
   <div class="edition-corps">
-    <div class="edition-pages" data-zone="pages"><p class="aide">Préparation de l'aperçu…</p></div>
-    <div class="edition-separateur" data-zone="separateur" hidden title="Glisser pour élargir ou réduire l'éditeur (double-clic : largeur par défaut)"></div>
+    <div class="edition-pages" data-zone="pages"><p class="aide">${texteHtml('edition_btp.apercu.preparation')}</p></div>
+    <div class="edition-separateur" data-zone="separateur" hidden title="${texteHtml('edition_btp.apercu.separateur')}"></div>
     <div class="edition-editeur" data-zone="editeur" hidden></div>
   </div>`;
 
@@ -40,7 +41,7 @@ const ZOOMS = [50, 75, 100, 125, 150].map((z) => ({ valeur: String(z), libelle: 
  * l'aperçu, à droite des pages ; séparateur déplaçable, largeur gardée dans le navigateur.
  */
 export class PageEdition extends PageBase {
-  icone = '🖨';
+  icone = icone('edition_btp_imprimer');
 
   async ouvrir() {
     const q = this.requete;
@@ -106,7 +107,7 @@ export class PageEdition extends PageBase {
       throw e;
     }
     this.demande.modele = this.prep.modele.code;
-    this.titre = `Aperçu – ${this.prep.element}`;
+    this.titre = texte('edition_btp.apercu.titre_element', { element: this.prep.element });
     this.$('[data-titre]').textContent = this.prep.element;
     this.construireBarre();
     await this.rendre();
@@ -201,7 +202,7 @@ export class PageEdition extends PageBase {
     const alertes = this.$('[data-zone="alertes"]');
     alertes.hidden = r.alertes.length === 0;
     alertes.innerHTML = r.alertes.length
-      ? `<strong>⚠ ${r.alertes.length} alerte(s) du modèle</strong> (l'édition continue) :<ul>${r.alertes.map((a) => `<li><code>${echapper(a.code)}</code> ${echapper(a.message)}</li>`).join('')}</ul>`
+      ? `${texteHtml('edition_btp.apercu.alertes_html', { icone: icone('avertissement'), nombre: r.alertes.length })}<ul>${r.alertes.map((a) => `<li><code>${echapper(a.code)}</code> ${echapper(a.message)}</li>`).join('')}</ul>`
       : '';
     zone.dataset.duree = String(duree);
   }
@@ -221,24 +222,26 @@ export class PageEdition extends PageBase {
     zone.hidden = liste.length === 0;
     if (!liste.length) return;
     const t = liste[0];
-    const etats = { A_FAIRE: '⏳ en attente', EN_COURS: '⏳ en cours', FAIT: '✔ rangé en GED', ECHEC: '⛔ échec' };
-    const motifs = { VALIDATION: 'à la validation', ENVOI: 'à l’envoi', DEMANDE: 'à la demande', LOT: 'en lot' };
-    zone.innerHTML = `Dernière production ${echapper(motifs[t.motif] ?? t.motif)} : <strong>${etats[t.etat] ?? t.etat}</strong>`
-      + `${t.pages ? ` (${t.pages} page(s), modèle ${echapper(t.modele ?? '')})` : ''}${t.erreur ? ` — ${echapper(t.erreur)}` : ''}`;
+    const ICONES = { A_FAIRE: 'edition_btp_attente', EN_COURS: 'edition_btp_attente', FAIT: 'edition_btp_fait', ECHEC: 'erreur' };
+    const etats = textesParCode('edition_btp.apercu.etats', ['A_FAIRE', 'EN_COURS', 'FAIT', 'ECHEC']);
+    const motifs = textesParCode('edition_btp.apercu.motifs', ['VALIDATION', 'ENVOI', 'DEMANDE', 'LOT']);
+    const etat = etats[t.etat] ? `${icone(ICONES[t.etat])} ${etats[t.etat]}` : t.etat;
+    zone.innerHTML = texteHtml('edition_btp.apercu.production_html', { motif: motifs[t.motif] ?? t.motif, etat })
+      + `${t.pages ? ` ${texteHtml('edition_btp.apercu.production_pages', { pages: t.pages, modele: t.modele ?? '' })}` : ''}${t.erreur ? ` — ${echapper(t.erreur)}` : ''}`;
     if (t.etat === 'A_FAIRE' || t.etat === 'EN_COURS') setTimeout(() => this.majProductions(), 3000);
   }
 
   /** Production par le serveur et rangement en GED (modèle et présentation choisis). */
   async ranger() {
     await api.editions.produire({ ...this.demande, presentation: this.demande.presentation ?? this.resultat?.presentation ?? null });
-    this.app.message('Production demandée : le PDF sera rangé dans la GED', 'succes');
+    this.app.message(texte('edition_btp.apercu.production_demandee'), 'succes');
     await this.majProductions();
   }
 
   /** Double : dernier PDF rangé dans la GED (jamais régénéré). */
   async double() {
     const r = await api.editions.rangee(this.demande.source, this.demande.id).catch(() => null);
-    if (!r) { this.app.message('Aucune édition rangée dans la GED pour cet élément', 'avertissement'); return; }
+    if (!r) { this.app.message(texte('edition_btp.apercu.aucune_rangee'), 'avertissement'); return; }
     window.open(`/api/ged/versions/${r.version_id}/contenu`, '_blank');
   }
 
@@ -269,7 +272,7 @@ export class PageEdition extends PageBase {
         setTimeout(() => { cadre.remove(); URL.revokeObjectURL(url); }, 120000);
       });
       document.body.append(cadre);
-      this.app.message('PDF prêt : impression lancée', 'succes');
+      this.app.message(texte('edition_btp.apercu.impression'), 'succes');
     } finally {
       b.disabled = false;
     }

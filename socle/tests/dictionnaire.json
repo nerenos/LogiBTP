@@ -1,0 +1,47 @@
+{
+  "description": "Dictionnaire des textes (module Personnalisation) : resolution.js ↔ Dictionnaire.cs. Clés à points, interpolation {{nom}}, références $t(cle), pluriel _zero / _un / _autre (|n| < 2 = singulier), repli, fusion des couches.",
+  "dictionnaire": {
+    "_meta": { "langue": "fr-FR", "version": "essai" },
+    "commun": { "chantier": "chantier", "enregistrer": "Enregistrer", "chantier_courant": "Le $t(commun.chantier) {{code}}" },
+    "pointage": {
+      "salaries_zero": "Aucun salarié",
+      "salaries_un": "{{nombre}} salarié",
+      "salaries_autre": "{{nombre}} salariés",
+      "jours_un": "{{nombre}} jour restant pour {{qui}}",
+      "jours_autre": "{{nombre}} jours restants pour {{qui}}",
+      "bonjour": "Bonjour {{ nom }} !",
+      "inconnue": "Voir $t(commun.absente)"
+    },
+    "boucle": { "a": "A $t(boucle.b)", "b": "B $t(boucle.a)" }
+  },
+  "cas": [
+    { "nom": "texte simple", "operation": "texte", "cle": "commun.enregistrer", "attendu": "Enregistrer" },
+    { "nom": "interpolation avec espaces", "operation": "texte", "cle": "pointage.bonjour", "valeurs": { "nom": "Dupont" }, "attendu": "Bonjour Dupont !" },
+    { "nom": "valeur absente : texte vide", "operation": "texte", "cle": "pointage.bonjour", "valeurs": {}, "attendu": "Bonjour  !" },
+    { "nom": "valeur numérique", "operation": "texte", "cle": "pointage.bonjour", "valeurs": { "nom": 12 }, "attendu": "Bonjour 12 !" },
+    { "nom": "référence puis interpolation", "operation": "texte", "cle": "commun.chantier_courant", "valeurs": { "code": "CH-01" }, "attendu": "Le chantier CH-01" },
+    { "nom": "référence inconnue conservée", "operation": "texte", "cle": "pointage.inconnue", "attendu": "Voir $t(commun.absente)" },
+    { "nom": "clé absente : la clé", "operation": "texte", "cle": "pointage.absente", "attendu": "pointage.absente" },
+    { "nom": "clé absente : défaut interpolé", "operation": "texte", "cle": "erreurs.X", "valeurs": { "n": 3 }, "defaut": "Erreur {{n}}", "attendu": "Erreur 3" },
+    { "nom": "branche : pas un texte", "operation": "texte", "cle": "commun", "attendu": "commun" },
+    { "nom": "pluriel zéro", "operation": "pluriel", "cle": "pointage.salaries", "nombre": 0, "attendu": "Aucun salarié" },
+    { "nom": "pluriel un", "operation": "pluriel", "cle": "pointage.salaries", "nombre": 1, "attendu": "1 salarié" },
+    { "nom": "pluriel 1,5 (singulier en français)", "operation": "pluriel", "cle": "pointage.salaries", "nombre": 1.5, "attendu": "1.5 salarié" },
+    { "nom": "pluriel autre", "operation": "pluriel", "cle": "pointage.salaries", "nombre": 3, "attendu": "3 salariés" },
+    { "nom": "pluriel négatif", "operation": "pluriel", "cle": "pointage.salaries", "nombre": -4, "attendu": "-4 salariés" },
+    { "nom": "pluriel sans _zero : _un", "operation": "pluriel", "cle": "pointage.jours", "nombre": 0, "valeurs": { "qui": "Paul" }, "attendu": "0 jour restant pour Paul" },
+    { "nom": "pluriel : nombre imposé par les valeurs", "operation": "pluriel", "cle": "pointage.jours", "nombre": 2, "valeurs": { "qui": "Paul", "nombre": "deux" }, "attendu": "deux jours restants pour Paul" },
+    { "nom": "pluriel d'une clé absente", "operation": "pluriel", "cle": "pointage.absent", "nombre": 2, "attendu": "pointage.absent" },
+    { "nom": "référence circulaire", "operation": "erreur", "cle": "boucle.a" },
+    {
+      "nom": "fusion des couches",
+      "operation": "fusion",
+      "couches": [
+        { "commun": { "enregistrer": "Enregistrer", "annuler": "Annuler" }, "liste": ["a"] },
+        { "commun": { "enregistrer": "Valider" }, "pointage": { "titre": "Pointage" } },
+        { "commun": { "annuler": "Abandonner" }, "liste": ["b"] }
+      ],
+      "attendu": { "commun": { "enregistrer": "Valider", "annuler": "Abandonner" }, "liste": ["b"], "pointage": { "titre": "Pointage" } }
+    }
+  ]
+}

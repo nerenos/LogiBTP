@@ -1,0 +1,45 @@
+/* Thème du module Planning (module Personnalisation) : variables propres à la vue du planning, après celles du socle. */
+
+:root {
+  /* Barre d'une tâche sans couleur propre : fond, texte, bordure. */
+  --pla-barre: #3b82f6;
+  --pla-barre-texte: #fff;
+  --pla-barre-bord: rgb(0 0 0 / 0.15);
+  /* Barre sélectionnée, ligne visée par un dépôt. */
+  --pla-selection: #f59e0b;
+  --pla-cible: #16a34a;
+  /* Poignée de largeur des titres des lignes (survol). */
+  --pla-poignee-survol: rgb(59 130 246 / 0.45);
+  /* Jour courant : bordures de la colonne, fond dans l'en-tête. */
+  --pla-aujourdhui: #dc2626;
+  --pla-aujourdhui-fond: rgb(220 38 38 / 0.08);
+  /* Jour férié ou fermé : texte et fond de l'en-tête, hachures du corps. */
+  --pla-ferie-texte: #c2410c;
+  --pla-ferie-fond: rgb(234 88 12 / 0.12);
+  --pla-ferie-hachure: rgb(234 88 12 / 0.1);
+  --pla-ferie-hachure-clair: rgb(234 88 12 / 0.04);
+  /* Fond des week-ends, traits de la grille, coupure d'une période masquée. */
+  --pla-weekend: rgb(148 163 184 / 0.12);
+  --pla-grille: rgb(148 163 184 / 0.25);
+  --pla-coupure: rgb(100 116 139 / 0.7);
+  /* En-tête d'une ligne de groupe ; groupe d'un autre service. */
+  --pla-groupe-fond: rgb(148 163 184 / 0.15);
+  --pla-hors-service-fond: rgb(217 119 6 / 0.12);
+  /* Glisser : ombre de la projection, étiquette de l'instant visé. */
+  --pla-ombre-projection: rgb(0 0 0 / 0.35);
+  --pla-etiquette-fond: #111827;
+  --pla-etiquette-texte: #fff;
+  --pla-ombre-etiquette: rgb(0 0 0 / 0.3);
+  /* Avancement d'une tâche : fond, part réalisée, tâche terminée. */
+  --pla-progression-fond: rgb(0 0 0 / 0.28);
+  --pla-progression: rgb(255 255 255 / 0.92);
+  --pla-progression-complete: #4ade80;
+  /* Bulle d'une barre (survol). */
+  --pla-ombre-bulle: rgb(0 0 0 / 0.25);
+  /* Charge d'un service : correcte, élevée, pleine. */
+  --pla-charge-ok: rgb(22 163 74 / 0.22);
+  --pla-charge-moyen: rgb(217 119 6 / 0.3);
+  --pla-charge-plein: rgb(220 38 38 / 0.35);
+  /* Jalons. */
+  --pla-jalon: #b45309;
+}

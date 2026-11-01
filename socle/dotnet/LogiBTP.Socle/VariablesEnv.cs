@@ -31,6 +31,8 @@ public static class VariablesEnv
     public const string Deploiement = "LOGIBTP_DEPLOIEMENT";
     public const string Domaine = "LOGIBTP_DOMAINE";
     public const string JournalNiveau = "LOGIBTP_JOURNAL_NIVEAU";
+    /// <summary>Dossier de la personnalisation de l'installation (fr.json, theme.css, images/ ; module Personnalisation).</summary>
+    public const string Personnalisation = "LOGIBTP_PERSONNALISATION";
     public const string PortHttpsPublic = "LOGIBTP_PORT_HTTPS_PUBLIC";
     public const string Proxys = "LOGIBTP_PROXYS";
     public const string Sauvegardes = "LOGIBTP_SAUVEGARDES";

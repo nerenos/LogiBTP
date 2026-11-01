@@ -1,3 +1,4 @@
+import { texte, texteHtml, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, catalogueRaccourcis, combinaison, estModificateur, libelleTouches, conflitsRaccourci, personnaliserRaccourci, reinitialiserRaccourcis, confirmer } from '@logibtp/socle/ui';
 import '../raccourcis.js';
@@ -7,36 +8,34 @@ import '../raccourcis.js';
  * par défaut et celles de l'utilisateur. Personnalisation gardée dans ce navigateur (toutes les fenêtres), jamais en base.
  */
 export class PageParametresRaccourcis extends PageBase {
-  icone = '⌨';
+  icone = icone('parametres_btp_raccourcis');
 
   async ouvrir() {
-    this.titre = 'Raccourcis clavier';
+    this.titre = texte('parametres_btp.general.raccourcis.titre');
     this.rendre();
   }
 
   rendre() {
     const groupes = catalogueRaccourcis();
     this.conteneur.innerHTML = `<div class="page-parametres page-raccourcis">
-      <h1 class="page-titre">⌨ Raccourcis clavier</h1>
-      <p class="aide">« Modifier » puis appuyez sur la combinaison voulue (Échap : annuler). Une combinaison déjà prise dans le même écran
-        (ou par toute l'application) est refusée ; prise dans un autre écran, elle est acceptée après confirmation.
-        Le clic droit sur une ligne rappelle ces raccourcis. Évitez AltGr, Alt+Maj et Ctrl+N/T/W (réservés par le système ou le navigateur).</p>
-      <p><button type="button" data-tout>↺ Tout remettre par défaut</button></p>
+      <h1 class="page-titre">${iconeHtml('parametres_btp_raccourcis')} ${texteHtml('parametres_btp.general.raccourcis.titre')}</h1>
+      <p class="aide">${texteHtml('parametres_btp.raccourcis.aide')}</p>
+      <p><button type="button" data-tout>${iconeHtml('parametres_btp_retablir')} ${texteHtml('parametres_btp.raccourcis.tout')}</button></p>
       ${groupes.map((g) => `<section class="carte"><h2>${echapper(g.libelle)}</h2>
-        <table class="table-raccourcis tableau-compact largeur-contenu"><thead><tr><th>Fonction</th><th>Raccourci</th><th>Par défaut</th><th></th></tr></thead><tbody>
+        <table class="table-raccourcis tableau-compact largeur-contenu"><thead><tr><th>${texteHtml('parametres_btp.raccourcis.fonction')}</th><th>${texteHtml('parametres_btp.raccourcis.raccourci')}</th><th>${texteHtml('parametres_btp.raccourcis.defaut')}</th><th></th></tr></thead><tbody>
         ${g.actions.map((a) => `<tr data-groupe="${echapper(g.groupe)}" data-action="${echapper(a.action)}" class="${a.personnalise ? 'personnalise' : ''}">
           <td>${echapper(a.libelle)}</td>
           <td class="touches">${a.touches.map((t) => `<kbd>${echapper(libelleTouches(t))}</kbd>`).join(' ') || '<span class="aide">—</span>'}</td>
           <td class="aide">${a.defaut.map((t) => echapper(libelleTouches(t))).join(', ') || '—'}</td>
-          <td class="actions"><button type="button" data-modifier>Modifier</button>
-            <button type="button" data-aucun title="Aucun raccourci" ${a.touches.length ? '' : 'disabled'}>✕</button>
-            <button type="button" data-defaut title="Revenir au raccourci par défaut" ${a.personnalise ? '' : 'disabled'}>↺</button></td></tr>`).join('')}
+          <td class="actions"><button type="button" data-modifier>${texteHtml('commun.modifier')}</button>
+            <button type="button" data-aucun title="${texteHtml('parametres_btp.raccourcis.aucun')}" ${a.touches.length ? '' : 'disabled'}>${iconeHtml('retirer')}</button>
+            <button type="button" data-defaut title="${texteHtml('parametres_btp.raccourcis.revenir')}" ${a.personnalise ? '' : 'disabled'}>${iconeHtml('parametres_btp_retablir')}</button></td></tr>`).join('')}
         </tbody></table></section>`).join('')}
     </div>`;
     this.conteneur.querySelector('[data-tout]').addEventListener('click', async () => {
-      if (!await confirmer('Remettre tous les raccourcis par défaut ?')) return;
+      if (!await confirmer(texte('parametres_btp.raccourcis.tout_confirmer'))) return;
       reinitialiserRaccourcis();
-      this.app.message('Raccourcis par défaut rétablis', 'succes');
+      this.app.message(texte('parametres_btp.raccourcis.retablis'), 'succes');
       this.rendre();
     });
     this.conteneur.querySelectorAll('tr[data-action]').forEach((tr) => {
@@ -52,14 +51,14 @@ export class PageParametresRaccourcis extends PageBase {
     this.arreterCapture?.();
     const zone = tr.querySelector('.touches');
     const avant = zone.innerHTML;
-    zone.innerHTML = '<span class="capture">Appuyez sur la combinaison…</span>';
-    bouton.textContent = 'Annuler';
+    zone.innerHTML = `<span class="capture">${texteHtml('parametres_btp.raccourcis.capture')}</span>`;
+    bouton.textContent = texte('commun.annuler');
     const fin = () => {
       document.removeEventListener('keydown', clavier, true);
       bouton.removeEventListener('click', annuler, true);
       this.arreterCapture = null;
     };
-    const annuler = (e) => { e?.stopImmediatePropagation(); fin(); zone.innerHTML = avant; bouton.textContent = 'Modifier'; };
+    const annuler = (e) => { e?.stopImmediatePropagation(); fin(); zone.innerHTML = avant; bouton.textContent = texte('commun.modifier'); };
     const clavier = async (e) => {
       if (estModificateur(e)) return;
       e.preventDefault();
@@ -69,16 +68,16 @@ export class PageParametresRaccourcis extends PageBase {
       const conflits = conflitsRaccourci(groupe, touche, action);
       const bloquants = conflits.filter((c) => c.bloquant);
       if (bloquants.length) {
-        this.app.message(`${libelleTouches(touche)} est déjà utilisé par « ${bloquants[0].libelle} » (${bloquants[0].libelleGroupe})`, 'erreur');
+        this.app.message(texte('parametres_btp.raccourcis.pris', { touches: libelleTouches(touche), fonction: bloquants[0].libelle, groupe: bloquants[0].libelleGroupe }), 'erreur');
         return;
       }
       fin();
-      if (conflits.length && !await confirmer(`${libelleTouches(touche)} sert aussi à « ${conflits[0].libelle} » (${conflits[0].libelleGroupe}). L'utiliser quand même ?`)) {
+      if (conflits.length && !await confirmer(texte('parametres_btp.raccourcis.conflit', { touches: libelleTouches(touche), fonction: conflits[0].libelle, groupe: conflits[0].libelleGroupe }))) {
         this.rendre();
         return;
       }
       personnaliserRaccourci(groupe, action, [touche]);
-      this.app.message(`Raccourci ${libelleTouches(touche)} enregistré`, 'succes');
+      this.app.message(texte('parametres_btp.raccourcis.enregistre', { touches: libelleTouches(touche) }), 'succes');
       this.rendre();
     };
     bouton.addEventListener('click', annuler, true);

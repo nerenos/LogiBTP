@@ -1,3 +1,4 @@
+import { texte } from '@logibtp/socle/dictionnaire';
 import { D, arrondir } from '@logibtp/socle';
 import { estChiffree, estPied, estTranche } from '../calcul/index.js';
 
@@ -69,10 +70,10 @@ export function agreger(feuilles, coefFa) {
  * `base` : valeur unitaire multipliée par le coefficient ; `facteur` : passage de la valeur unitaire au montant.
  */
 export const MONTANTS_FORCABLES = {
-  rev: { champ: 'lig_coef_fg', libelle: 'revient', base: (f) => D(f.ligne.lig_pa ?? 0), facteur: () => D(1) },
-  pv: { champ: 'lig_coef_benef', libelle: 'PV avant frais annexes', base: (f) => D(f.ligne.lig_pr ?? 0), facteur: () => D(1) },
+  rev: { champ: 'lig_coef_fg', get libelle() { return texte('analyse_btp.montants.rev'); }, base: (f) => D(f.ligne.lig_pa ?? 0), facteur: () => D(1) },
+  pv: { champ: 'lig_coef_benef', get libelle() { return texte('analyse_btp.montants.pv'); }, base: (f) => D(f.ligne.lig_pr ?? 0), facteur: () => D(1) },
   client: {
-    champ: 'lig_coef_benef', libelle: 'prix client', base: (f) => D(f.ligne.lig_pr ?? 0),
+    champ: 'lig_coef_benef', get libelle() { return texte('analyse_btp.montants.client'); }, base: (f) => D(f.ligne.lig_pr ?? 0),
     facteur: (f, c) => {
       const p = f.prix;
       return D(p.lig_coef_fa ?? c).times(D(p.lig_coef_prorata ?? 1)).times(D(p.lig_coef_remise ?? 1));
@@ -113,9 +114,9 @@ export function forcerMontant(feuilles, cle, cible, { coefFa = 1, modeDebourse =
   const fixes = feuilles.filter((f) => !adj.includes(f));
   const fixe = fixes.reduce((s, f) => s.plus(actuelle(f)), D(0));
   const variable = adj.reduce((s, f) => s.plus(actuelle(f)), D(0));
-  if (!adj.length || variable.isZero()) return { erreur: `Aucune ligne dont le coefficient pilote le ${m.libelle} dans ce groupe` };
+  if (!adj.length || variable.isZero()) return { erreur: texte('analyse_btp.erreurs.sans_ligne', { montant: m.libelle }) };
   const k = T.minus(fixe).div(variable);
-  if (k.lte(0)) return { erreur: `Montant trop faible : les lignes à prix imposé valent déjà ${arrondir(fixe, 2)}` };
+  if (k.lte(0)) return { erreur: texte('analyse_btp.erreurs.trop_faible', { fixe: arrondir(fixe, 2) }) };
 
   const coefs = new Map(adj.map((f) => [f.ligne.lig_id, arrondir(coefActuel(f).times(k), 6)]));
   const total = () => adj.reduce((s, f) => s.plus(contribution(f, coefs.get(f.ligne.lig_id))), fixe);
@@ -148,11 +149,11 @@ export function paEcart(cle, ecart, coefFa = 1) {
 
 /** Valeurs d'un élément comparées entre les lignes d'un groupe (champ du résultat de calcul). */
 export const VALEURS_ELEMENT = {
-  pa: { champ: 'lig_pa', titre: 'PA', decimales: 4 },
-  fg: { champ: 'lig_coef_fg', titre: 'FG', decimales: 4, coef: true },
-  pr: { champ: 'lig_pr', titre: 'PR', decimales: 4 },
-  benef: { champ: 'lig_coef_benef', titre: 'Bénéf.', decimales: 4, coef: true },
-  pv: { champ: 'lig_pv', titre: 'PV', decimales: 4 },
+  pa: { champ: 'lig_pa', get titre() { return texte('analyse_btp.valeurs.pa'); }, decimales: 4 },
+  fg: { champ: 'lig_coef_fg', get titre() { return texte('analyse_btp.valeurs.fg'); }, decimales: 4, coef: true },
+  pr: { champ: 'lig_pr', get titre() { return texte('analyse_btp.valeurs.pr'); }, decimales: 4 },
+  benef: { champ: 'lig_coef_benef', get titre() { return texte('analyse_btp.valeurs.benef'); }, decimales: 4, coef: true },
+  pv: { champ: 'lig_pv', get titre() { return texte('analyse_btp.valeurs.pv'); }, decimales: 4 },
 };
 
 /** Clé de regroupement d'un élément : code et libellé (sans balises), insensible à la casse et aux espaces. */
@@ -202,7 +203,7 @@ export function modificationsElement(groupe, cle, valeur) {
     else if (cle === 'benef') modifs.set(id, { lig_coef_benef: Number(v) });
     else if (cle === 'pr') {
       const pa = D(f.ligne.lig_pa ?? 0);
-      if (pa.isZero()) return { erreur: `PR impossible sans PA (${groupe.libelle || groupe.code})` };
+      if (pa.isZero()) return { erreur: texte('analyse_btp.erreurs.pr_sans_pa', { element: groupe.libelle || groupe.code }) };
       modifs.set(id, { lig_coef_fg: Number(arrondir(v.div(pa), 6)) });
     } else if (cle === 'pv') modifs.set(id, { lig_pv: Number(v), lig_pv_fixe: true, lig_pv_affiche_fixe: false });
   }
@@ -231,7 +232,7 @@ export function repartirQuantite(groupe, cible, resultat) {
   const prec = (f) => Number(f.saisie?.lig_precision_qte ?? f.ligne.lig_precision_qte ?? 2);
   const totale = (f, qte) => arrondir(D(qte).times(perte(f)), prec(f)).times(facteur(f.ligne));
   const lignes = groupe.feuilles.filter((f) => !facteur(f.ligne).isZero() && !perte(f).isZero());
-  if (!lignes.length) return { erreur: 'Aucune ligne dont la quantité peut être recalculée (ouvrage parent de quantité nulle)' };
+  if (!lignes.length) return { erreur: texte('analyse_btp.erreurs.sans_quantite') };
   const T = D(cible);
   const actuelles = lignes.map((f) => D(f.ligne.lig_qte_totale ?? 0));
   const somme = actuelles.reduce((s, x) => s.plus(x), D(0));
@@ -275,12 +276,12 @@ export function rechargementPrix(feuilles, trouves, prixUnite) {
     const base = { id: l.lig_id, code: l.lig_code ?? '', libelle: f.ligne.lig_libelle_brut ?? '', unite: l.lig_unt_code ?? '' };
     const t = trouves.get(l.lig_id);
     if (!t?.element) {
-      res.push({ ...base, champs: null, sansCorrespondance: !l.lig_art_id, alerte: l.lig_art_id ? 'Élément lié introuvable dans la bibliothèque' : l.lig_code ? 'Aucun élément de ce code dans la bibliothèque' : 'Sans lien ni code : non rechargée' });
+      res.push({ ...base, champs: null, sansCorrespondance: !l.lig_art_id, alerte: texte(l.lig_art_id ? 'analyse_btp.prix.introuvable' : l.lig_code ? 'analyse_btp.prix.sans_code' : 'analyse_btp.prix.sans_lien') });
       continue;
     }
     const e = t.element;
     if (e.type !== 'ARTICLE') {
-      res.push({ ...base, element: e, rapprochement: t.rapprochement, champs: null, alerte: `Élément de type ${e.type} : non rechargé` });
+      res.push({ ...base, element: e, rapprochement: t.rapprochement, champs: null, alerte: texte('analyse_btp.prix.type', { type: e.type }) });
       continue;
     }
     let p;
@@ -293,7 +294,7 @@ export function rechargementPrix(feuilles, trouves, prixUnite) {
     const champs = { lig_pa: p.pa };
     let alerte = null;
     if (pvFixeBib && !pvFixeLigne) Object.assign(champs, { lig_pv: p.pv, lig_pv_fixe: true });
-    if (pvFixeBib && pvFixeLigne) alerte = 'PV fixe en bibliothèque : le PV imposé de la ligne est conservé';
+    if (pvFixeBib && pvFixeLigne) alerte = texte('analyse_btp.prix.pv_fixe');
     if (t.rapprochement) champs.lig_art_id = e.id;
     const avant = { pa: l.lig_pa ?? null, pv: f.ligne.lig_pv ?? null };
     const apres = { pa: p.pa, pv: champs.lig_pv ?? null };

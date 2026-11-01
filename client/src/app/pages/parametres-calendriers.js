@@ -1,3 +1,4 @@
+import { texte, texteHtml, textesParCode, pluriel, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { aujourdhui } from '@logibtp/socle';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, confirmer } from '@logibtp/socle/ui';
@@ -6,10 +7,7 @@ import {
 } from '@logibtp/calendrier';
 import { api } from '../api.js';
 
-const ZONES = {
-  NATIONAL: 'France (nationaux)', ALSACE_MOSELLE: 'Alsace-Moselle', MARTINIQUE: 'Martinique', GUADELOUPE: 'Guadeloupe', GUYANE: 'Guyane',
-  REUNION: 'La Réunion', MAYOTTE: 'Mayotte', SAINT_MARTIN: 'Saint-Martin', SAINT_BARTHELEMY: 'Saint-Barthélemy',
-};
+const ZONES = textesParCode('calendrier_btp.zones', ['NATIONAL', 'ALSACE_MOSELLE', 'MARTINIQUE', 'GUADELOUPE', 'GUYANE', 'REUNION', 'MAYOTTE', 'SAINT_MARTIN', 'SAINT_BARTHELEMY']);
 const OPTIONS_REGLES = Object.entries(REGLES_FERME).map(([valeur, libelle]) => ({ valeur, libelle }));
 const OPTIONS_JOURS = JOURS_SEMAINE.map((libelle, i) => ({ valeur: i + 1, libelle }));
 const jour = (d) => (d ? String(d).slice(0, 10).split('-').reverse().join('/') : '');
@@ -20,11 +18,11 @@ const entier = (v) => (String(v ?? '').trim() === '' ? null : Number(v));
 function resume(r) {
   switch (r.regle) {
     case 'DATE': return jour(r.date);
-    case 'ANNUEL': return `${r.jour}/${String(r.mois).padStart(2, '0')}`;
-    case 'NIEME': return `${r.rang}${r.rang === 1 ? 'er' : 'e'} ${(JOURS_SEMAINE[r.jour - 1] ?? '?').toLowerCase()} du mois ${r.mois}`;
-    case 'DERNIER': return `dernier ${(JOURS_SEMAINE[r.jour - 1] ?? '?').toLowerCase()} du mois ${r.mois}`;
-    case 'PAQUES': return `Pâques ${r.decalage >= 0 ? '+' : '−'} ${Math.abs(r.decalage ?? 0)} j`;
-    case 'PERIODE': return `du ${jour(r.du)} au ${jour(r.au)}`;
+    case 'ANNUEL': return texte('calendrier_btp.resume.annuel', { jour: r.jour, mois: String(r.mois).padStart(2, '0') });
+    case 'NIEME': return r.rang === 1 ? texte('calendrier_btp.resume.nieme_premier', { jour: (JOURS_SEMAINE[r.jour - 1] ?? '?').toLowerCase(), mois: r.mois }) : texte('calendrier_btp.resume.nieme', { rang: r.rang, jour: (JOURS_SEMAINE[r.jour - 1] ?? '?').toLowerCase(), mois: r.mois });
+    case 'DERNIER': return texte('calendrier_btp.resume.dernier', { jour: (JOURS_SEMAINE[r.jour - 1] ?? '?').toLowerCase(), mois: r.mois });
+    case 'PAQUES': return texte('calendrier_btp.resume.paques', { signe: r.decalage >= 0 ? '+' : '−', jours: Math.abs(r.decalage ?? 0) });
+    case 'PERIODE': return texte('calendrier_btp.resume.periode', { du: jour(r.du), au: jour(r.au) });
     default: return '';
   }
 }
@@ -35,14 +33,14 @@ function resume(r) {
  * saisies) ; calendrier et fermetures de chaque service ; aperçu des journées. Administrateur.
  */
 export class PageParametresCalendriers extends PageBase {
-  icone = '📅';
+  icone = icone('calendrier_btp_calendrier');
 
   get modifiee() { return Boolean(this.edition?.modifiee); }
 
   async ouvrir() {
     const app = this.app;
-    this.titre = 'Calendriers de travail';
-    this.conteneur.innerHTML = `<div class="page-parametres"><h1 class="page-titre">📅 Calendriers de travail</h1>
+    this.titre = texte('calendrier_btp.routes.calendriers');
+    this.conteneur.innerHTML = `<div class="page-parametres"><h1 class="page-titre">${iconeHtml('calendrier_btp_calendrier')} ${texteHtml('calendrier_btp.routes.calendriers')}</h1>
       <section class="carte" data-liste></section><section class="carte" data-edition hidden></section>
       <section class="carte" data-feries></section><section class="carte" data-services></section></div>`;
     this.admin = app.estAdmin();
@@ -54,13 +52,13 @@ export class PageParametresCalendriers extends PageBase {
     this.calendriers = await api.calendriers.liste();
     const zone = this.conteneur.querySelector('[data-liste]');
     const hebdo = (c) => Array.from({ length: c.cycle_semaines }, (_, s) => duree(c.plages.filter((p) => p.semaine === s + 1 && !p.du && !p.au).reduce((t, p) => t + p.fin - p.debut, 0))).join(' / ');
-    zone.innerHTML = `<h2>Calendriers</h2>
-      <p class="aide">Un calendrier s'affecte à un service, et se surcharge sur la fiche d'un salarié ou d'un matériel ; sans calendrier, le calendrier par défaut s'applique.</p>
-      <table class="tableau-compact largeur-contenu"><thead><tr><th>Code</th><th>Libellé</th><th>Cycle</th><th>Heures par semaine</th><th>Défaut</th><th>Actif</th><th class="nombre">Utilisé</th><th></th></tr></thead><tbody>
-      ${this.calendriers.map((c, i) => `<tr><td><b>${echapper(c.code)}</b></td><td>${echapper(c.libelle)}</td><td>${c.cycle_semaines > 1 ? `${c.cycle_semaines} semaines` : 'hebdomadaire'}</td>
-        <td>${hebdo(c)}</td><td>${c.defaut ? '★' : ''}</td><td>${c.actif ? '✔' : ''}</td><td class="nombre">${c.utilisations || ''}</td>
-        <td><button type="button" data-i="${i}">${this.admin ? 'Modifier…' : 'Voir…'}</button></td></tr>`).join('')}</tbody></table>
-      ${this.admin ? '<p><button type="button" data-nouveau>＋ Calendrier</button></p>' : ''}`;
+    zone.innerHTML = `<h2>${texteHtml('calendrier_btp.liste.titre')}</h2>
+      <p class="aide">${texteHtml('calendrier_btp.liste.aide')}</p>
+      <table class="tableau-compact largeur-contenu"><thead><tr><th>${texteHtml('commun.code')}</th><th>${texteHtml('commun.libelle')}</th><th>${texteHtml('calendrier_btp.liste.cycle')}</th><th>${texteHtml('calendrier_btp.liste.heures')}</th><th>${texteHtml('calendrier_btp.liste.defaut')}</th><th>${texteHtml('calendrier_btp.liste.actif')}</th><th class="nombre">${texteHtml('calendrier_btp.liste.utilise')}</th><th></th></tr></thead><tbody>
+      ${this.calendriers.map((c, i) => `<tr><td><b>${echapper(c.code)}</b></td><td>${echapper(c.libelle)}</td><td>${c.cycle_semaines > 1 ? texteHtml('calendrier_btp.liste.semaines', { nombre: c.cycle_semaines }) : texteHtml('calendrier_btp.liste.hebdomadaire')}</td>
+        <td>${hebdo(c)}</td><td>${c.defaut ? iconeHtml('calendrier_btp_defaut') : ''}</td><td>${c.actif ? iconeHtml('calendrier_btp_actif') : ''}</td><td class="nombre">${c.utilisations || ''}</td>
+        <td><button type="button" data-i="${i}">${this.admin ? texteHtml('calendrier_btp.liste.modifier') : texteHtml('calendrier_btp.liste.voir')}</button></td></tr>`).join('')}</tbody></table>
+      ${this.admin ? `<p><button type="button" data-nouveau>${iconeHtml('ajouter')} ${texteHtml('calendrier_btp.liste.calendrier')}</button></p>` : ''}`;
     zone.querySelectorAll('[data-i]').forEach((b) => b.addEventListener('click', () => this.#editer(structuredClone(this.calendriers[Number(b.dataset.i)]))));
     zone.querySelector('[data-nouveau]')?.addEventListener('click', () => this.#editer({
       id: null, code: '', libelle: '', cycle_semaines: 1, reference: null, defaut: false, actif: true,
@@ -86,30 +84,30 @@ export class PageParametresCalendriers extends PageBase {
     };
     const rendre = () => {
       const semaines = Array.from({ length: cal.cycle_semaines }, (_, i) => i + 1);
-      zone.innerHTML = `<h2>${cal.id ? `Calendrier ${echapper(cal.code)}` : 'Nouveau calendrier'}</h2>
-        <p class="ligne"><label>Code <input data-c="code" value="${echapper(cal.code)}" size="14" maxlength="20" ${dis}></label>
-          <label>Libellé <input data-c="libelle" value="${echapper(cal.libelle)}" size="36" maxlength="80" ${dis}></label>
-          <label>Cycle (semaines) <input data-c="cycle_semaines" value="${cal.cycle_semaines}" size="3" inputmode="numeric" ${dis}></label>
-          <label>Semaine 1 du cycle : celle du <input type="date" data-c="reference" value="${echapper(cal.reference ?? '')}" ${dis}></label>
-          <label class="ligne"><input type="checkbox" data-c="defaut" ${cal.defaut ? 'checked' : ''} ${dis}> Par défaut</label>
-          <label class="ligne"><input type="checkbox" data-c="actif" ${cal.actif ? 'checked' : ''} ${dis}> Actif</label></p>
-        <p class="aide">Plages par jour, par exemple « 8:00-12:00 13:00-17:00 » ; vide : jour non travaillé.</p>
-        <table class="grille-calendrier tableau-compact largeur-contenu"><thead><tr><th>Jour</th>${semaines.map((s) => `<th>${cal.cycle_semaines > 1 ? `Semaine ${s}` : 'Plages'}</th>`).join('')}</tr></thead><tbody>
+      zone.innerHTML = `<h2>${cal.id ? texteHtml('calendrier_btp.edition.titre', { code: cal.code }) : texteHtml('calendrier_btp.edition.nouveau')}</h2>
+        <p class="ligne"><label>${texteHtml('commun.code')} <input data-c="code" value="${echapper(cal.code)}" size="14" maxlength="20" ${dis}></label>
+          <label>${texteHtml('commun.libelle')} <input data-c="libelle" value="${echapper(cal.libelle)}" size="36" maxlength="80" ${dis}></label>
+          <label>${texteHtml('calendrier_btp.edition.cycle')} <input data-c="cycle_semaines" value="${cal.cycle_semaines}" size="3" inputmode="numeric" ${dis}></label>
+          <label>${texteHtml('calendrier_btp.edition.reference')} <input type="date" data-c="reference" value="${echapper(cal.reference ?? '')}" ${dis}></label>
+          <label class="ligne"><input type="checkbox" data-c="defaut" ${cal.defaut ? 'checked' : ''} ${dis}> ${texteHtml('calendrier_btp.edition.par_defaut')}</label>
+          <label class="ligne"><input type="checkbox" data-c="actif" ${cal.actif ? 'checked' : ''} ${dis}> ${texteHtml('calendrier_btp.liste.actif')}</label></p>
+        <p class="aide">${texteHtml('calendrier_btp.edition.aide')}</p>
+        <table class="grille-calendrier tableau-compact largeur-contenu"><thead><tr><th>${texteHtml('calendrier_btp.edition.jour')}</th>${semaines.map((s) => `<th>${cal.cycle_semaines > 1 ? texteHtml('calendrier_btp.edition.semaine', { numero: s }) : texteHtml('calendrier_btp.edition.plages')}</th>`).join('')}</tr></thead><tbody>
         ${JOURS_SEMAINE.map((nom, j) => `<tr><th>${nom}</th>${semaines.map((s) => {
           const p = permanentes(s, j + 1);
           return `<td><input data-plage="${s}:${j + 1}" value="${echapper(ecrirePlages(p))}" size="22" ${dis}> <small class="aide">${p.length ? duree(p.reduce((t, x) => t + x.fin - x.debut, 0)) : ''}</small></td>`;
         }).join('')}</tr>`).join('')}
-        <tr><th>Total</th>${semaines.map((s) => `<td><b>${duree(cal.plages.filter((p) => p.semaine === s && !p.du && !p.au).reduce((t, x) => t + x.fin - x.debut, 0))}</b></td>`).join('')}</tr></tbody></table>
-        <h3>Plages datées</h3><p class="aide">Pendant leur période, elles remplacent les plages permanentes du même jour (horaires d'été…).</p>
-        <table class="tableau-compact largeur-contenu"><thead><tr><th>Du</th><th>Au</th><th>Semaine</th><th>Jour</th><th>Plages</th><th></th></tr></thead><tbody>
+        <tr><th>${texteHtml('commun.total')}</th>${semaines.map((s) => `<td><b>${duree(cal.plages.filter((p) => p.semaine === s && !p.du && !p.au).reduce((t, x) => t + x.fin - x.debut, 0))}</b></td>`).join('')}</tr></tbody></table>
+        <h3>${texteHtml('calendrier_btp.edition.datees')}</h3><p class="aide">${texteHtml('calendrier_btp.edition.datees_aide')}</p>
+        <table class="tableau-compact largeur-contenu"><thead><tr><th>${texteHtml('calendrier_btp.edition.du')}</th><th>${texteHtml('calendrier_btp.edition.au')}</th><th>${texteHtml('calendrier_btp.edition.semaine_col')}</th><th>${texteHtml('calendrier_btp.edition.jour')}</th><th>${texteHtml('calendrier_btp.edition.plages')}</th><th></th></tr></thead><tbody>
         ${groupesDates().map((g, i) => `<tr data-d="${i}"><td><input type="date" data-dc="du" value="${echapper(g.du ?? '')}" ${dis}></td><td><input type="date" data-dc="au" value="${echapper(g.au ?? '')}" ${dis}></td>
           <td><input data-dc="semaine" value="${g.semaine}" size="2" ${dis}></td><td data-jour></td><td><input data-dc="plages" value="${echapper(ecrirePlages(g.plages))}" size="22" ${dis}></td>
-          <td>${this.admin ? '<button type="button" data-retirer-date>✕</button>' : ''}</td></tr>`).join('')}</tbody></table>
-        ${this.admin ? '<p><button type="button" data-ajouter-date>＋ Plages datées</button></p>' : ''}
+          <td>${this.admin ? `<button type="button" data-retirer-date title="${texteHtml('commun.retirer')}">${iconeHtml('retirer')}</button>` : ''}</td></tr>`).join('')}</tbody></table>
+        ${this.admin ? `<p><button type="button" data-ajouter-date>${iconeHtml('ajouter')} ${texteHtml('calendrier_btp.edition.datees')}</button></p>` : ''}
         <p class="connexion-erreur" data-erreur hidden></p>
-        <p>${this.admin ? `<button type="button" class="principal" data-enregistrer>Enregistrer le calendrier</button>
-          ${cal.id && !cal.defaut ? '<button type="button" data-supprimer class="danger">Supprimer</button>' : ''}` : ''} <button type="button" data-fermer>Fermer</button></p>
-        <h3>Aperçu (deux semaines)</h3><div data-apercu><p class="aide">${cal.id ? 'Chargement…' : 'Enregistrez le calendrier pour voir ses journées.'}</p></div>`;
+        <p>${this.admin ? `<button type="button" class="principal" data-enregistrer>${texteHtml('calendrier_btp.edition.enregistrer')}</button>
+          ${cal.id && !cal.defaut ? `<button type="button" data-supprimer class="danger">${texteHtml('commun.supprimer')}</button>` : ''}` : ''} <button type="button" data-fermer>${texteHtml('commun.fermer')}</button></p>
+        <h3>${texteHtml('calendrier_btp.edition.apercu')}</h3><div data-apercu><p class="aide">${cal.id ? texteHtml('calendrier_btp.edition.chargement') : texteHtml('calendrier_btp.edition.enregistrer_dabord')}</p></div>`;
       const erreur = zone.querySelector('[data-erreur]');
       const marquer = () => { this.edition.modifiee = true; };
       zone.querySelectorAll('[data-c]').forEach((c) => c.addEventListener('change', () => {
@@ -121,7 +119,7 @@ export class PageParametresCalendriers extends PageBase {
       zone.querySelectorAll('[data-plage]').forEach((c) => c.addEventListener('change', () => {
         const [s, j] = c.dataset.plage.split(':').map(Number);
         const lues = lirePlages(c.value);
-        if (lues === null) { erreur.textContent = `${JOURS_SEMAINE[j - 1]} : saisie illisible (ex. 8:00-12:00 13:00-17:00)`; erreur.hidden = false; return; }
+        if (lues === null) { erreur.textContent = texte('calendrier_btp.edition.illisible', { jour: JOURS_SEMAINE[j - 1] }); erreur.hidden = false; return; }
         cal.plages = [...cal.plages.filter((p) => !(p.semaine === s && p.jour === j && !p.du && !p.au)), ...lues.map((p) => ({ semaine: s, jour: j, ...p, du: null, au: null }))];
         marquer();
         rendre();
@@ -141,7 +139,7 @@ export class PageParametresCalendriers extends PageBase {
         tr.querySelectorAll('[data-dc]').forEach((c) => c.addEventListener('change', () => {
           if (c.dataset.dc === 'plages') {
             const lues = lirePlages(c.value);
-            if (lues === null) { erreur.textContent = 'Plages datées : saisie illisible'; erreur.hidden = false; return; }
+            if (lues === null) { erreur.textContent = texte('calendrier_btp.edition.datees_illisible'); erreur.hidden = false; return; }
             remplacer({ ...g, plages: lues });
           } else remplacer({ ...g, [c.dataset.dc]: c.dataset.dc === 'semaine' ? Number(c.value) || 1 : (c.value || null), plages: g.plages.map((p) => ({ debut: p.debut, fin: p.fin })) });
         }));
@@ -156,22 +154,22 @@ export class PageParametresCalendriers extends PageBase {
       zone.querySelector('[data-enregistrer]')?.addEventListener('click', async () => {
         const codes = controlerCalendrier(cal);
         if (!cal.code || !cal.libelle) codes.push('CODE');
-        if (codes.length) { erreur.textContent = codes.includes('CODE') ? 'Code et libellé obligatoires' : messages(codes); erreur.hidden = false; return; }
+        if (codes.length) { erreur.textContent = codes.includes('CODE') ? texte('calendrier_btp.edition.code_libelle') : messages(codes); erreur.hidden = false; return; }
         try {
           const r = cal.id ? await api.calendriers.modifier(cal.id, cal) : await api.calendriers.creer(cal);
           this.edition.modifiee = false;
-          this.app.message('Calendrier enregistré', 'succes');
+          this.app.message(texte('calendrier_btp.edition.enregistre'), 'succes');
           await this.#rendreListe();
           this.#editer(structuredClone(r));
           await this.#rendreServices();
         } catch (e) { erreur.textContent = e.message; erreur.hidden = false; }
       });
       zone.querySelector('[data-supprimer]')?.addEventListener('click', async () => {
-        if (!await confirmer(`Supprimer le calendrier ${cal.code} ?`)) return;
+        if (!await confirmer(texte('calendrier_btp.edition.confirmer_suppression', { code: cal.code }))) return;
         try { await api.calendriers.supprimer(cal.id); this.edition = null; zone.hidden = true; await this.#rendreListe(); } catch (e) { erreur.textContent = e.message; erreur.hidden = false; }
       });
       zone.querySelector('[data-fermer]').addEventListener('click', async () => {
-        if (this.edition?.modifiee && !await confirmer('Abandonner les modifications du calendrier ?')) return;
+        if (this.edition?.modifiee && !await confirmer(texte('calendrier_btp.edition.abandonner'))) return;
         this.edition = null;
         zone.hidden = true;
       });
@@ -184,9 +182,9 @@ export class PageParametresCalendriers extends PageBase {
   async #apercu(zone, id, portee = '') {
     const du = aujourdhui();
     const journees = await api.calendriers.journees(id, du, ajouterJours(du, 13), portee);
-    zone.innerHTML = `<table class="tableau-compact largeur-contenu"><thead><tr><th>Date</th><th>Plages</th><th>Durée</th></tr></thead><tbody>
+    zone.innerHTML = `<table class="tableau-compact largeur-contenu"><thead><tr><th>${texteHtml('calendrier_btp.edition.date')}</th><th>${texteHtml('calendrier_btp.edition.plages')}</th><th>${texteHtml('calendrier_btp.edition.duree')}</th></tr></thead><tbody>
       ${journees.map((j) => `<tr${j.minutes ? '' : ' class="discret"'}><td>${JOURS_SEMAINE[new Date(`${j.date}T00:00:00Z`).getUTCDay() === 0 ? 6 : new Date(`${j.date}T00:00:00Z`).getUTCDay() - 1]} ${jour(j.date)}</td>
-        <td>${j.fermee ? `🚫 ${echapper(j.fermee.join(' · '))}` : echapper(ecrirePlages(j.plages))}</td><td>${j.minutes ? duree(j.minutes) : ''}</td></tr>`).join('')}</tbody></table>`;
+        <td>${j.fermee ? `${iconeHtml('calendrier_btp_ferme')} ${echapper(j.fermee.join(' · '))}` : echapper(ecrirePlages(j.plages))}</td><td>${j.minutes ? duree(j.minutes) : ''}</td></tr>`).join('')}</tbody></table>`;
   }
 
   /** Jours fermés d'une portée : tableau éditable (catalogue à cocher, règles saisies), aperçu des dates d'une année. */
@@ -197,16 +195,16 @@ export class PageParametresCalendriers extends PageBase {
     const rendre = () => {
       const lignes = regles.map((r, i) => `<tr data-i="${i}"><td><input type="checkbox" data-r="actif" ${r.actif ? 'checked' : ''} ${dis}></td>
         <td>${r.code ? echapper(r.libelle) : `<input data-r="libelle" value="${echapper(r.libelle)}" size="28" ${dis}>`}</td>
-        <td>${catalogue ? echapper(ZONES[r.zone] ?? (r.zone ? r.zone : 'Saisie')) : ''}</td>
+        <td>${catalogue ? echapper(ZONES[r.zone] ?? (r.zone ? r.zone : texte('calendrier_btp.fermes.saisie'))) : ''}</td>
         <td>${r.code ? echapper(resume(r)) : `<span data-regle></span> ${this.#champsRegle(r, dis)}`}</td>
-        <td>${!r.code && this.admin ? '<button type="button" data-retirer>✕</button>' : ''}</td></tr>`).join('');
+        <td>${!r.code && this.admin ? `<button type="button" data-retirer title="${texteHtml('commun.retirer')}">${iconeHtml('retirer')}</button>` : ''}</td></tr>`).join('');
       const fermes = joursFermes(regles, `${annee}-01-01`, `${annee}-12-31`);
-      zone.innerHTML = `<h2>${titre}</h2><p class="aide">${aide}</p>
-        <table class="tableau-compact largeur-contenu"><thead><tr><th>Actif</th><th>Libellé</th><th>${catalogue ? 'Zone' : ''}</th><th>Règle</th><th></th></tr></thead><tbody>${lignes}</tbody></table>
+      zone.innerHTML = `<h2>${echapper(titre)}</h2><p class="aide">${echapper(aide)}</p>
+        <table class="tableau-compact largeur-contenu"><thead><tr><th>${texteHtml('calendrier_btp.liste.actif')}</th><th>${texteHtml('commun.libelle')}</th><th>${catalogue ? texteHtml('calendrier_btp.fermes.zone') : ''}</th><th>${texteHtml('calendrier_btp.fermes.regle')}</th><th></th></tr></thead><tbody>${lignes}</tbody></table>
         <p class="connexion-erreur" data-erreur hidden></p>
-        ${this.admin ? `<p><button type="button" data-ajouter>＋ Jour fermé</button> <button type="button" data-ajouter-periode>＋ Période de fermeture</button>
-          <button type="button" class="principal" data-enregistrer>Enregistrer</button></p>` : ''}
-        <details><summary>Dates de l'année <input data-annee value="${annee}" size="5" inputmode="numeric"> : ${fermes.length} jour(s)</summary>
+        ${this.admin ? `<p><button type="button" data-ajouter>${iconeHtml('ajouter')} ${texteHtml('calendrier_btp.fermes.jour_ferme')}</button> <button type="button" data-ajouter-periode>${iconeHtml('ajouter')} ${texteHtml('calendrier_btp.fermes.periode')}</button>
+          <button type="button" class="principal" data-enregistrer>${texteHtml('commun.enregistrer')}</button></p>` : ''}
+        <details><summary>${texteHtml('calendrier_btp.fermes.dates')} <input data-annee value="${annee}" size="5" inputmode="numeric"> : ${echapper(pluriel('calendrier_btp.fermes.jours', fermes.length))}</summary>
           <p>${fermes.map((f) => `${jour(f.date)} ${echapper(f.libelles.join(' · '))}`).join('<br>')}</p></details>`;
       zone.querySelectorAll('tr[data-i]').forEach((tr) => {
         const r = regles[Number(tr.dataset.i)];
@@ -225,37 +223,37 @@ export class PageParametresCalendriers extends PageBase {
         tr.querySelector('[data-retirer]')?.addEventListener('click', () => { regles.splice(Number(tr.dataset.i), 1); rendre(); });
       });
       zone.querySelector('[data-annee]').addEventListener('change', (e) => { annee = Number(e.target.value) || annee; rendre(); });
-      zone.querySelector('[data-ajouter]')?.addEventListener('click', () => { regles.push({ id: null, libelle: 'Pont', regle: 'DATE', date: aujourdhui(), actif: true }); rendre(); });
-      zone.querySelector('[data-ajouter-periode]')?.addEventListener('click', () => { regles.push({ id: null, libelle: 'Fermeture', regle: 'PERIODE', du: `${annee}-08-01`, au: `${annee}-08-21`, actif: true }); rendre(); });
+      zone.querySelector('[data-ajouter]')?.addEventListener('click', () => { regles.push({ id: null, libelle: texte('calendrier_btp.fermes.pont'), regle: 'DATE', date: aujourdhui(), actif: true }); rendre(); });
+      zone.querySelector('[data-ajouter-periode]')?.addEventListener('click', () => { regles.push({ id: null, libelle: texte('calendrier_btp.fermes.fermeture'), regle: 'PERIODE', du: `${annee}-08-01`, au: `${annee}-08-21`, actif: true }); rendre(); });
       zone.querySelector('[data-enregistrer]')?.addEventListener('click', async () => {
         const erreur = zone.querySelector('[data-erreur]');
         const fautes = regles.map((r) => ({ r, codes: controlerRegle(r) })).filter((x) => x.codes.length || !x.r.libelle);
-        if (fautes.length) { erreur.textContent = fautes.map((f) => `${f.r.libelle || '(sans libellé)'} : ${messages(f.codes) || 'libellé obligatoire'}`).join(' · '); erreur.hidden = false; return; }
+        if (fautes.length) { erreur.textContent = fautes.map((f) => `${f.r.libelle || texte('calendrier_btp.fermes.sans_libelle')} : ${messages(f.codes) || texte('calendrier_btp.fermes.libelle_obligatoire')}`).join(' · '); erreur.hidden = false; return; }
         const [type, id] = portee ? portee.split(':') : [null, null];
-        try { regles = (await api.calendriers.enregistrerJoursFermes({ type, id, regles })).map((r) => ({ ...r })); this.app.message('Jours fermés enregistrés', 'succes'); rendre(); } catch (e) { erreur.textContent = e.message; erreur.hidden = false; }
+        try { regles = (await api.calendriers.enregistrerJoursFermes({ type, id, regles })).map((r) => ({ ...r })); this.app.message(texte('calendrier_btp.fermes.enregistres'), 'succes'); rendre(); } catch (e) { erreur.textContent = e.message; erreur.hidden = false; }
       });
     };
     rendre();
   }
 
   #champsRegle(r, dis) {
-    const n = (k, taille = 3) => `<input data-r="${k}" value="${r[k] ?? ''}" size="${taille}" inputmode="numeric" ${dis} title="${k}">`;
+    const n = (k, taille = 3) => `<input data-r="${k}" value="${echapper(r[k] ?? '')}" size="${taille}" inputmode="numeric" ${dis} title="${k}">`;
     const d = (k) => `<input type="date" data-r="${k}" value="${echapper(r[k] ?? '')}" ${dis}>`;
     switch (r.regle) {
       case 'DATE': return d('date');
-      case 'ANNUEL': return `jour ${n('jour')} mois ${n('mois')}`;
-      case 'NIEME': return `rang ${n('rang', 2)} jour (1 = lundi) ${n('jour', 2)} mois ${n('mois')}`;
-      case 'DERNIER': return `jour (1 = lundi) ${n('jour', 2)} mois ${n('mois')}`;
-      case 'PAQUES': return `décalage ${n('decalage', 4)} jours`;
-      case 'PERIODE': return `du ${d('du')} au ${d('au')}`;
+      case 'ANNUEL': return `${texteHtml('calendrier_btp.fermes.c_jour')} ${n('jour')} ${texteHtml('calendrier_btp.fermes.c_mois')} ${n('mois')}`;
+      case 'NIEME': return `${texteHtml('calendrier_btp.fermes.c_rang')} ${n('rang', 2)} ${texteHtml('calendrier_btp.fermes.c_jour_semaine')} ${n('jour', 2)} ${texteHtml('calendrier_btp.fermes.c_mois')} ${n('mois')}`;
+      case 'DERNIER': return `${texteHtml('calendrier_btp.fermes.c_jour_semaine')} ${n('jour', 2)} ${texteHtml('calendrier_btp.fermes.c_mois')} ${n('mois')}`;
+      case 'PAQUES': return `${texteHtml('calendrier_btp.fermes.c_decalage')} ${n('decalage', 4)} ${texteHtml('calendrier_btp.fermes.c_jours')}`;
+      case 'PERIODE': return `${texteHtml('calendrier_btp.fermes.c_du')} ${d('du')} ${texteHtml('calendrier_btp.fermes.c_au')} ${d('au')}`;
       default: return '';
     }
   }
 
   #rendreFeries() {
     return this.#tableFermes(this.conteneur.querySelector('[data-feries]'), {
-      titre: 'Jours fériés et fermetures de la société', catalogue: true,
-      aide: "Liste française proposée : cochez les jours fériés de vos établissements (nationaux, Alsace-Moselle, outre-mer) ; ajoutez ponts et fermetures. Règles : date unique, chaque année, n-ième ou dernier jour de la semaine d'un mois, relatif à Pâques, période.",
+      titre: texte('calendrier_btp.fermes.societe'), catalogue: true,
+      aide: texte('calendrier_btp.fermes.societe_aide'),
     });
   }
 
@@ -264,11 +262,11 @@ export class PageParametresCalendriers extends PageBase {
     const zone = this.conteneur.querySelector('[data-services]');
     const services = await api.calendriers.services();
     const options = this.calendriers.filter((c) => c.actif).map((c) => ({ valeur: c.id, libelle: c.libelle, detail: c.code }));
-    zone.innerHTML = `<h2>Services</h2><p class="aide">Calendrier de chaque service (vide : par défaut) et ses fermetures propres.</p>
-      <table class="tableau-compact largeur-contenu"><thead><tr><th>Service</th><th>Calendrier</th><th></th></tr></thead><tbody>
+    zone.innerHTML = `<h2>${texteHtml('calendrier_btp.services.titre')}</h2><p class="aide">${texteHtml('calendrier_btp.services.aide')}</p>
+      <table class="tableau-compact largeur-contenu"><thead><tr><th>${texteHtml('calendrier_btp.services.service')}</th><th>${texteHtml('calendrier_btp.liste.calendrier')}</th><th></th></tr></thead><tbody>
       ${services.filter((s) => s.actif).map((s) => `<tr data-srv="${s.srv_id}"><td>${echapper(s.libelle)} <small class="aide">${echapper(s.code)}</small></td><td data-cal></td>
-        <td><button type="button" data-fermetures>Fermetures…</button></td></tr>`).join('')}</tbody></table>
-      ${this.admin ? '<p><button type="button" class="principal" data-enregistrer>Enregistrer les calendriers des services</button></p>' : ''}
+        <td><button type="button" data-fermetures>${texteHtml('calendrier_btp.services.fermetures')}</button></td></tr>`).join('')}</tbody></table>
+      ${this.admin ? `<p><button type="button" class="principal" data-enregistrer>${texteHtml('calendrier_btp.services.enregistrer')}</button></p>` : ''}
       <div data-fermetures-service></div>`;
     const choix = new Map();
     zone.querySelectorAll('tr[data-srv]').forEach((tr) => {
@@ -278,13 +276,13 @@ export class PageParametresCalendriers extends PageBase {
       c.addEventListener('change', () => choix.set(s.srv_id, c.valeurCombo ? Number(c.valeurCombo) : null));
       tr.querySelector('[data-cal]').append(c);
       tr.querySelector('[data-fermetures]').addEventListener('click', () => this.#tableFermes(zone.querySelector('[data-fermetures-service]'), {
-        portee: `service:${s.srv_id}`, titre: `Fermetures du service ${s.libelle}`, aide: "S'ajoutent aux jours fermés de la société pour les ressources de ce service.",
+        portee: `service:${s.srv_id}`, titre: texte('calendrier_btp.services.titre_fermetures', { service: s.libelle }), aide: texte('calendrier_btp.services.aide_fermetures'),
       }).catch((e) => this.app.erreur(e)));
     });
     zone.querySelector('[data-enregistrer]')?.addEventListener('click', async () => {
       try {
         await api.calendriers.enregistrerServices([...choix.entries()].map(([srv_id, cal_id]) => ({ srv_id, cal_id })));
-        this.app.message('Calendriers des services enregistrés', 'succes');
+        this.app.message(texte('calendrier_btp.services.enregistres'), 'succes');
         await this.#rendreListe();
       } catch (e) { this.app.erreur(e); }
     });

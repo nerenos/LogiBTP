@@ -1,3 +1,4 @@
+import { texte, texteHtml, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, formatDateHeure } from '@logibtp/socle/ui';
 import { api } from '../api.js';
@@ -8,14 +9,13 @@ import { api } from '../api.js';
  * (409 MODULE_INACTIF), données conservées et rendues à la réactivation.
  */
 export class PageParametresModules extends PageBase {
-  icone = '🧩';
+  icone = icone('parametres_btp_modules');
 
   async ouvrir() {
     const app = this.app;
-    this.titre = 'Modules de la société';
-    this.conteneur.innerHTML = `<div class="page-parametres"><h1 class="page-titre">🧩 Modules de la société</h1>
-      <p class="aide">Un module désactivé disparaît des menus et ses écrans sont refusés ; ses données sont conservées et
-      reviennent à la réactivation.</p><div data-corps></div></div>`;
+    this.titre = texte('parametres_btp.modules.titre');
+    this.conteneur.innerHTML = `<div class="page-parametres"><h1 class="page-titre">${iconeHtml('parametres_btp_modules')} ${texteHtml('parametres_btp.modules.titre')}</h1>
+      <p class="aide">${texteHtml('parametres_btp.modules.aide')}</p><div data-corps></div></div>`;
     await this.rendre(await api.modules());
   }
 
@@ -23,12 +23,12 @@ export class PageParametresModules extends PageBase {
     const app = this.app;
     const admin = app.estAdmin();
     const corps = this.conteneur.querySelector('[data-corps]');
-    corps.innerHTML = `<table class="tableau-compact largeur-contenu"><thead><tr><th>Module</th><th>Description</th><th>Actif</th><th>Modifié</th></tr></thead><tbody>
+    corps.innerHTML = `<table class="tableau-compact largeur-contenu"><thead><tr><th>${texteHtml('parametres_btp.modules.module')}</th><th>${texteHtml('parametres_btp.modules.description')}</th><th>${texteHtml('parametres_btp.documents.actif')}</th><th>${texteHtml('parametres_btp.modules.modifie')}</th></tr></thead><tbody>
       ${modules.map((m) => `<tr><td><b>${echapper(m.libelle)}</b></td><td>${echapper(m.description ?? '')}
-        ${m.dependances?.length ? `<br><small class="aide">Nécessite : ${m.dependances.map(echapper).join(', ')}</small>` : ''}</td>
+        ${m.dependances?.length ? `<br><small class="aide">${texteHtml('parametres_btp.modules.necessite', { modules: m.dependances.join(', ') })}</small>` : ''}</td>
         <td><input type="checkbox" data-module="${echapper(m.code)}" ${m.actif ? 'checked' : ''} ${admin ? '' : 'disabled'}></td>
         <td><small class="aide">${m.maj_par ? `${echapper(m.maj_par)}, ` : ''}${m.maj_le ? formatDateHeure(m.maj_le) : ''}</small></td></tr>`).join('')}
-      </tbody></table>${admin ? '' : '<p class="aide">Seul un administrateur change l\'activation des modules.</p>'}`;
+      </tbody></table>${admin ? '' : `<p class="aide">${texteHtml('parametres_btp.modules.lecture')}</p>`}`;
     corps.querySelectorAll('[data-module]').forEach((c) => c.addEventListener('change', async () => {
       try {
         const liste = await api.activerModule(c.dataset.module, c.checked);

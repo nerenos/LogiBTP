@@ -1,3 +1,4 @@
+import { icone } from '@logibtp/socle/dictionnaire';
 import { vraiDonnee } from '../src/modele.js';
 
 // Rendu des cellules par format. Classe mère : une application peut ajouter ou remplacer un format
@@ -20,7 +21,7 @@ export class FormatsCellule {
   coche(valeur) {
     const s = document.createElement('span');
     s.className = `liste-coche${vraiDonnee(valeur) ? ' coche' : ''}`;
-    s.textContent = vraiDonnee(valeur) ? '☑' : '☐';
+    s.textContent = icone(vraiDonnee(valeur) ? 'liste_coche' : 'liste_decoche');
     return s;
   }
 

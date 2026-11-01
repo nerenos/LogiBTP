@@ -5,7 +5,7 @@
 - Paquet `@logibtp/import` (`modules/import/js`, un seul point d'entrée `.`), **sans aucune dépendance** (ni socle, ni autre module, ni decimal.js). Voir aussi `README.md` (résumé, à conserver).
 
 ## Dépendances
-- Dépend de : rien (API du navigateur : `DecompressionStream`, `TextDecoder`, `Blob`, `Response`).
+- Dépend de : `@logibtp/socle` (dictionnaire : messages, sorts et motifs des champs) et des API du navigateur (`DecompressionStream`, `TextDecoder`, `Blob`, `Response`).
 - Utilisé par : le cœur client seul (`client/src/app/import/formats.js`, `import/devis-importe.js`). Aucun module ne l'importe.
 
 ## Structure
@@ -40,6 +40,9 @@
 - Nouveau format : un lecteur dans ce module (fonction → devis neutre, tables `CHAMPS_*` propres), exporté par `index.js`, puis une entrée dans `client/src/app/import/formats.js` et une page / route d'import. « Réutiliser l'import » (onglet Traçabilité) ouvre la `page` du format retrouvé par `formatImport(dor_format)`.
 - Le module reste sans métier BTP ni dépendance : les codes du cœur (`TL`, colonnes `lig_*`, natures) n'apparaissent que dans `client/src/app/import/`.
 - Montants du devis neutre en `Number` (arrondis `arr` à 6 décimales) : le calcul reste celui du moteur du cœur après traduction.
+
+## Textes et icônes (module Personnalisation, lot P3s)
+- Textes `import.*` du `fr.json` du module (couche `modules/import/js/personnalisation`, ajoutée à `client/personnalisation/couches.js`) : `xml`, `zip`, `optim` (erreurs et avertissements), `sorts` (`SORTS` par `textesParCode`), `champs.<entete|ligne|intervenant>.<Champ>` (motifs des champs), `zones` du rapport ; tests avec le dictionnaire (`test/preparation.js`). Écrans du cœur : `import_btp.*`.
 
 ## Tests
 - `npm test --workspace modules/import/js` (vitest), ou `npm test` à la racine.

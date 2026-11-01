@@ -1,3 +1,4 @@
+import { texte, textesParCode } from '@logibtp/socle/dictionnaire';
 import { Dec, D, S, ZERO, UN, arr6, formatNombre, ErreurCalcul } from '@logibtp/socle';
 import { analyserScript } from './analyseur.js';
 import { MAX_DECIMAL } from './lexeur.js';
@@ -7,7 +8,7 @@ import { FONCTIONS, N, C, B } from './fonctions.js';
 
 const MAX_TOURS = 10000;
 const MAX_INSTRUCTIONS = 100000;
-const NOMS_TYPES = { N: 'numérique', C: 'chaîne', B: 'booléen' };
+const NOMS_TYPES = textesParCode('metre.script.types', ['N', 'C', 'B']);
 const DEFAUTS = { N: () => N(ZERO), C: () => C(''), B: () => B(false) };
 
 class Interruption extends Error {
@@ -25,7 +26,7 @@ function typer(v) {
   if (typeof v === 'string') return C(v);
   if (typeof v === 'boolean') return B(v);
   if (v instanceof Dec || typeof v === 'number') return N(D(v));
-  throw new ErreurCalcul('NON_NUMERIQUE', 'Donnée non utilisable dans un script (ni nombre, ni chaîne, ni booléen)');
+  throw new ErreurCalcul('NON_NUMERIQUE', texte('metre.script.non_utilisable'));
 }
 
 /** Valeur typée vers la valeur exposée : texte décimal, chaîne ou booléen. */
@@ -34,14 +35,14 @@ export function exposer(valeur) {
 }
 
 /** Texte d'une valeur dans une concaténation. */
-function texte(valeur) {
+function enTexte(valeur) {
   if (valeur.t === 'C') return valeur.v;
   if (valeur.t === 'B') return valeur.v ? 'Vrai' : 'Faux';
   return formatNombre(valeur.v);
 }
 
 function controler(v) {
-  if (v.abs().gt(MAX_DECIMAL)) throw new ErreurCalcul('DEPASSEMENT', 'Valeur trop grande');
+  if (v.abs().gt(MAX_DECIMAL)) throw new ErreurCalcul('DEPASSEMENT', texte('metre.script.trop_grande'));
   return v;
 }
 
@@ -98,10 +99,10 @@ export function executerScript(texteScript, contexte = {}) {
       case 'un': {
         const v = evaluer(n.e);
         if (n.op === 'pas') {
-          if (v.t !== 'B') throw new Interruption('TYPE', '« pas » : booléen attendu', n);
+          if (v.t !== 'B') throw new Interruption('TYPE', texte('metre.script.pas_booleen'), n);
           return B(!v.v);
         }
-        if (v.t !== 'N') throw new Interruption('TYPE', `« ${n.op} » : numérique attendu`, n);
+        if (v.t !== 'N') throw new Interruption('TYPE', texte('metre.script.op_numerique', { op: n.op }), n);
         return n.op === '-' ? N(v.v.neg()) : v;
       }
       case 'bin': return binaire(n);
@@ -112,7 +113,7 @@ export function executerScript(texteScript, contexte = {}) {
           if (r.t === 'N') controler(r.v);
           return r;
         } catch (e) {
-          if (e instanceof ErreurCalcul) throw new Interruption(e.code, `${catalogue[n.nom].signature} : ${e.message}`, n);
+          if (e instanceof ErreurCalcul) throw new Interruption(e.code, texte('metre.script.erreur_fonction', { signature: catalogue[n.nom].signature, message: e.message }), n);
           throw e;
         }
       }
@@ -121,14 +122,14 @@ export function executerScript(texteScript, contexte = {}) {
   }
 
   function booleen(v, quoi, n) {
-    if (v.t !== 'B') throw new Interruption('TYPE', `${quoi} : booléen attendu, ${NOMS_TYPES[v.t]} trouvé`, n);
+    if (v.t !== 'B') throw new Interruption('TYPE', texte('metre.script.booleen_attendu', { quoi, type: NOMS_TYPES[v.t] }), n);
     return v.v;
   }
 
   function arithmetique(op, g, d, n) {
-    if (op === '+' && (g.t === 'C' || d.t === 'C')) return C(texte(g) + texte(d));
+    if (op === '+' && (g.t === 'C' || d.t === 'C')) return C(enTexte(g) + enTexte(d));
     if (g.t !== 'N' || d.t !== 'N') {
-      throw new Interruption('TYPE', `« ${op} » : numériques attendus, ${NOMS_TYPES[g.t]} et ${NOMS_TYPES[d.t]} trouvés`, n);
+      throw new Interruption('TYPE', texte('metre.script.numeriques_attendus', { op, gauche: NOMS_TYPES[g.t], droite: NOMS_TYPES[d.t] }), n);
     }
     const a = g.v;
     const b = d.v;
@@ -138,7 +139,7 @@ export function executerScript(texteScript, contexte = {}) {
         case '-': return N(controler(a.minus(b)));
         case '*': return N(controler(a.times(b)));
         default:
-          if (b.isZero()) throw new ErreurCalcul('DIVISION_ZERO', 'Division par zéro');
+          if (b.isZero()) throw new ErreurCalcul('DIVISION_ZERO', texte('metre.script.division_zero'));
           return N(controler(op === '/' ? a.div(b) : a.mod(b)));
       }
     } catch (e) {
@@ -156,8 +157,8 @@ export function executerScript(texteScript, contexte = {}) {
     const g = evaluer(n.g);
     const d = evaluer(n.d);
     if (['+', '-', '*', '/', 'modulo'].includes(n.op)) return arithmetique(n.op, g, d, n);
-    if (g.t !== d.t) throw new Interruption('TYPE', `Comparaison de types différents : ${NOMS_TYPES[g.t]} et ${NOMS_TYPES[d.t]}`, n);
-    if (g.t === 'B' && n.op !== '=' && n.op !== '<>') throw new Interruption('TYPE', 'Booléens : seuls « = » et « <> » sont permis', n);
+    if (g.t !== d.t) throw new Interruption('TYPE', texte('metre.script.types_differents', { gauche: NOMS_TYPES[g.t], droite: NOMS_TYPES[d.t] }), n);
+    if (g.t === 'B' && n.op !== '=' && n.op !== '<>') throw new Interruption('TYPE', texte('metre.script.booleens_comparaison'), n);
     const c = g.t === 'N' ? g.v.cmp(d.v) : g.t === 'C' ? (g.v < d.v ? -1 : g.v > d.v ? 1 : 0) : (g.v === d.v ? 0 : 1);
     switch (n.op) {
       case '=': return B(c === 0);
@@ -171,12 +172,12 @@ export function executerScript(texteScript, contexte = {}) {
 
   /** Valeur conforme au type déclaré (numérique arrondi à 6 décimales). */
   function conforme(type, v, nom, n) {
-    if (v.t !== type) throw new Interruption('TYPE', `« ${nom} » est ${NOMS_TYPES[type]} : ${NOMS_TYPES[v.t]} affecté`, n);
+    if (v.t !== type) throw new Interruption('TYPE', texte('metre.script.type_affecte', { nom, type: NOMS_TYPES[type], affecte: NOMS_TYPES[v.t] }), n);
     return type === 'N' ? N(arr6(v.v)) : v;
   }
 
   function nouvelleValeur(op, ancienne, v, n) {
-    if ((op === '++' || op === '--') && ancienne.t !== 'N') throw new Interruption('TYPE', `« ${op} » : numérique attendu`, n);
+    if ((op === '++' || op === '--') && ancienne.t !== 'N') throw new Interruption('TYPE', texte('metre.script.op_numerique', { op }), n);
     switch (op) {
       case '=': return v;
       case '++': return arithmetique('+', ancienne, N(UN), n);
@@ -196,18 +197,18 @@ export function executerScript(texteScript, contexte = {}) {
       }
       if (c.k === 'portee') {
         // Écriture au contexte le plus proche (=) ou là où la variable existe (opérations composées).
-        if (!contexte.portees) throw new ErreurCalcul('PORTEE', `${c.ref} : aucune portée disponible`);
+        if (!contexte.portees) throw new ErreurCalcul('PORTEE', texte('metre.script.aucune_portee', { ref: c.ref }));
         if (n.op === '=') {
           contexte.portees.affecter(c.portee, c.nom, '=', v.v, contexte.ligneId);
           return;
         }
         const ancienne = typer(contexte.portees.lire(c.portee, c.nom, contexte.ligneId));
         const r = nouvelleValeur(n.op, ancienne, v, n);
-        if (r.t !== 'N') throw new Interruption('TYPE', `${c.ref} : numérique attendu`, n);
+        if (r.t !== 'N') throw new Interruption('TYPE', texte('metre.script.ref_numerique', { ref: c.ref }), n);
         contexte.portees.affecter(c.portee, c.nom, '+=', r.v.minus(ancienne.v), contexte.ligneId);
         return;
       }
-      if (!contexte.ecrire) throw new ErreurCalcul('ECRITURE_INTERDITE', `{{${c.ref}}} ne peut pas être modifié`);
+      if (!contexte.ecrire) throw new ErreurCalcul('ECRITURE_INTERDITE', texte('metre.script.ecriture_interdite', { reference: `{{${c.ref}}}` }));
       const r = n.op === '=' ? v : nouvelleValeur(n.op, lireReference(c), v, n);
       contexte.ecrire(c.ref, exposer(r));
     } catch (e) {
@@ -219,7 +220,7 @@ export function executerScript(texteScript, contexte = {}) {
   // Exécution d'un bloc : renvoie null, { k: 'sortir' }, { k: 'continuer' } ou { k: 'renvoyer', v }.
   function executer(corps) {
     for (const n of corps) {
-      if (++instructions > MAX_INSTRUCTIONS) throw new Interruption('BOUCLE_INFINIE', 'Trop d\'instructions exécutées', n);
+      if (++instructions > MAX_INSTRUCTIONS) throw new Interruption('BOUCLE_INFINIE', texte('metre.script.trop_instructions'), n);
       switch (n.k) {
         case 'decl':
           memoire.set(n.nom, n.init ? conforme(n.type, evaluer(n.init), n.nom, n) : DEFAUTS[n.type]());
@@ -228,7 +229,7 @@ export function executerScript(texteScript, contexte = {}) {
           affecter(n);
           break;
         case 'si': {
-          const branche = n.branches.find((b) => booleen(evaluer(b.cond), 'Condition du « Si »', b.cond));
+          const branche = n.branches.find((b) => booleen(evaluer(b.cond), texte('metre.script.quoi.condition_si'), b.cond));
           const r = executer(branche ? branche.corps : n.sinon ?? []);
           if (r) return r;
           break;
@@ -240,7 +241,7 @@ export function executerScript(texteScript, contexte = {}) {
         }
         case 'renvoyer': {
           const v = evaluer(n.e);
-          if (v.t !== 'N') throw new Interruption('RESULTAT_TYPE', `« Renvoyer » : numérique attendu, ${NOMS_TYPES[v.t]} trouvé`, n);
+          if (v.t !== 'N') throw new Interruption('RESULTAT_TYPE', texte('metre.script.renvoyer_numerique', { type: NOMS_TYPES[v.t] }), n);
           return { k: 'renvoyer', v: v.v };
         }
         default:
@@ -253,20 +254,20 @@ export function executerScript(texteScript, contexte = {}) {
   function boucle(n) {
     const borne = (e, quoi) => {
       const v = evaluer(e);
-      if (v.t !== 'N') throw new Interruption('TYPE', `« Pour », ${quoi} : numérique attendu`, e);
+      if (v.t !== 'N') throw new Interruption('TYPE', texte('metre.script.borne_numerique', { quoi }), e);
       return v.v;
     };
     if (memoire.get(n.nom).t !== 'N') {
-      throw new Interruption('TYPE', `« Pour » : « ${n.nom} » doit être numérique`, n);
+      throw new Interruption('TYPE', texte('metre.script.pour_numerique', { nom: n.nom }), n);
     }
-    const fin = borne(n.fin, 'fin');
-    const pas = n.pas ? borne(n.pas, 'pas') : UN;
-    if (pas.isZero()) throw new Interruption('BOUCLE_INFINIE', '« Pour » : pas nul', n);
-    memoire.set(n.nom, N(arr6(borne(n.debut, 'début'))));
+    const fin = borne(n.fin, texte('metre.script.bornes.fin'));
+    const pas = n.pas ? borne(n.pas, texte('metre.script.bornes.pas')) : UN;
+    if (pas.isZero()) throw new Interruption('BOUCLE_INFINIE', texte('metre.script.pas_nul'), n);
+    memoire.set(n.nom, N(arr6(borne(n.debut, texte('metre.script.bornes.debut')))));
     for (let tours = 0; ; tours++) {
       const i = memoire.get(n.nom).v;
       if (pas.isPos() ? i.gt(fin) : i.lt(fin)) return null;
-      if (tours >= MAX_TOURS) throw new Interruption('BOUCLE_INFINIE', `« Pour » : plus de ${MAX_TOURS} tours`, n);
+      if (tours >= MAX_TOURS) throw new Interruption('BOUCLE_INFINIE', texte('metre.script.trop_tours', { max: MAX_TOURS }), n);
       const r = executer(n.corps);
       if (r?.k === 'sortir') return null;
       if (r?.k === 'renvoyer') return r;
@@ -278,7 +279,7 @@ export function executerScript(texteScript, contexte = {}) {
     for (const d of analyse.declarations) if (d.implicite) memoire.set(d.nom, N(ZERO));
     const r = executer(analyse.programme);
     if (r?.k === 'renvoyer') return sortie(S(arr6(r.v)), [], []);
-    return sortie(null, [], [{ code: 'METRE_SANS_RESULTAT', message: 'Le script ne renvoie pas de quantité (« Renvoyer » absent)' }]);
+    return sortie(null, [], [{ code: 'METRE_SANS_RESULTAT', message: texte('metre.script.sans_resultat') }]);
   } catch (e) {
     if (e instanceof Interruption) return sortie(null, [{ code: e.code, message: e.message, ligne: e.ligne, colonne: e.colonne }], []);
     throw e;

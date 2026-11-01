@@ -3,16 +3,12 @@
 // (lettres et chiffres, longueur maximale), compte de tiers proposé (préfixe + code du tiers sans ses lettres de tête),
 // classe d'un compte.
 
+import { textesParCode } from '@logibtp/socle/dictionnaire';
+
 /** Longueur maximale d'un compte de tiers quand aucune n'est paramétrée. */
 export const LONGUEUR_TIERS_MAX = 17;
 
-export const MESSAGES_COMPTES = {
-  CPT_VIDE: 'Compte vide',
-  CPT_CARACTERES: 'Un compte général ne contient que des chiffres',
-  CPT_CLASSE: 'Un compte général commence par un chiffre de 1 à 9 (classe)',
-  CPT_LONGUEUR: 'Compte trop long',
-  CPT_TIERS_CARACTERES: 'Un compte de tiers ne contient que des lettres et des chiffres',
-};
+export const MESSAGES_COMPTES = textesParCode('comptabilite.comptes.erreurs', ['CPT_VIDE', 'CPT_CARACTERES', 'CPT_CLASSE', 'CPT_LONGUEUR', 'CPT_TIERS_CARACTERES']);
 
 const resultat = (code, erreur = null) => ({ code: erreur ? null : code, erreur });
 

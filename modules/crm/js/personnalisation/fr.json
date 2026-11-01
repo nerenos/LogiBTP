@@ -1,0 +1,93 @@
+{
+  "crm": {
+    "natures_note": {
+      "ACTION": "Action",
+      "MESSAGE": "Message",
+      "TACHE": "Tâche"
+    },
+    "etats_note": {
+      "A_FAIRE": "À faire",
+      "EN_COURS": "En cours",
+      "TERMINE": "Terminé",
+      "MEMO": "Pour mémo",
+      "ANNULEE": "Annulée"
+    },
+    "notes": {
+      "erreurs": {
+        "NOTE_NATURE": "Nature inconnue (action, message ou tâche)",
+        "NOTE_ETAT": "État inconnu",
+        "NOTE_OBJET": "Objet obligatoire ({{longueur}} caractères au plus)",
+        "NOTE_RESPONSABLE": "Une tâche a un responsable, ou un service qui la prendra",
+        "NOTE_ECHEANCE": "Une tâche a une échéance",
+        "NOTE_DESTINATAIRE": "Un message a au moins un destinataire",
+        "NOTE_PRIVEE_FIL": "Une note privée ne paraît pas dans le fil d'actualité",
+        "NOTE_RGPD_FIL": "Une note de données personnelles ne paraît pas dans le fil d'actualité"
+      }
+    },
+    "etats_demande": {
+      "VEILLE": "Veille",
+      "A_ETUDIER": "À étudier",
+      "EN_COURS": "En cours",
+      "TRANSFORMEE": "Transformée en projet",
+      "SANS_SUITE": "Sans suite"
+    },
+    "motifs_sans_suite": {
+      "PERDUE": "Perdue",
+      "NON_RETENUE": "Non retenue",
+      "ABANDONNEE": "Abandonnée"
+    },
+    "demandes": {
+      "erreurs": {
+        "DEMANDE_OBJET": "Objet obligatoire (200 caractères au plus)",
+        "DEMANDE_ETAT": "État inconnu",
+        "DEMANDE_MOTIF": "Une demande sans suite a un motif (perdue, non retenue, abandonnée), et seulement elle",
+        "DEMANDE_CIBLE": "Une demande transformée désigne le projet créé, et seulement elle",
+        "DEMANDE_MONTANT": "Le montant estimé est positif"
+      }
+    },
+    "types_rappel": {
+      "DATE": "À date",
+      "AVANT": "Avant l'échéance"
+    },
+    "rappels": {
+      "erreurs": {
+        "RAPPEL_TYPE": "Type de rappel inconnu (à date ou avant l'échéance)",
+        "RAPPEL_DATE": "Un rappel à date a une date et une heure",
+        "RAPPEL_DELAI": "Le délai avant l'échéance est un nombre entier de jours",
+        "RAPPEL_ECHEANCE": "Un rappel avant l'échéance demande une échéance sur la note",
+        "RAPPEL_CLOS": "Une note terminée, pour mémo ou annulée ne porte pas de rappel"
+      }
+    },
+    "statuts_plan": {
+      "SANS_INDICE": "Sans indice",
+      "A_DIFFUSER": "À diffuser",
+      "SANS_VISA": "Diffusé sans visa attendu",
+      "EN_ATTENTE": "Visas en attente",
+      "REFUSE": "Refusé",
+      "VALIDE": "Bon pour exécution"
+    },
+    "plans": {
+      "champ_inconnu": "Champ inconnu : {{champ}} (champs : {{champs}})",
+      "aucun_champ": "Le format doit contenir au moins un champ ({repere}, {nom}…)",
+      "separateur": "Deux champs doivent être séparés par un texte fixe"
+    }
+  },
+  "erreurs": {
+    "DEMANDE_CLOSE": "Demande déjà transformée ou sans suite",
+    "DEMANDE_PRISE": "Demande déjà prise en charge",
+    "DEMANDE_SERVICE": "Demande sans service : choisissez un autre responsable",
+    "DEMANDE_UTILISEE": "Demande suivie par des notes ou transformée : passez-la sans suite",
+    "FORMAT_PLAN": "Format des noms de plans : champs {repere}, {nom}, {lot}, {indice}, {*}, séparés par un texte fixe",
+    "INDICE_UTILISE": "Indice diffusé ou visé : suppression réservée à l'administrateur",
+    "INDIVIDU_INCONNU": "Votre identifiant de connexion n'est relié à aucun individu de l'annuaire",
+    "NOTE_LIEN": "Un seul élément principal",
+    "NOTE_PRISE": "Note déjà prise en charge",
+    "NOTE_SERVICE": "Note sans service : choisissez un autre responsable",
+    "NOTE_UTILISEE": "Note déjà lue, modifiée ou suivie d'une réponse : annulez-la plutôt",
+    "PLAN": "Repère et nom du plan obligatoires",
+    "PLAN_UTILISE": "Plan diffusé ou visé : suppression réservée à l'administrateur",
+    "SEUILS_RAPPEL": "Seuils en jours : rouge positif ou nul, orange au moins égal au rouge",
+    "VISA_EXISTANT": "Ce tiers a déjà un visa sur cet indice",
+    "VISA_RECU": "Visa reçu : remettez-le en attente ou demandez à l'administrateur"
+  }
+}

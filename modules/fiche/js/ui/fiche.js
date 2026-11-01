@@ -3,6 +3,7 @@ import { echapper, formatLibre, htmlSur, editerLibelle, creerCombo, confirmer, f
 import { MODES, LIBELLES_MODES, enSaisie, titreFiche } from '../src/modes.js';
 import { validerFiche, MESSAGES } from '../src/validation.js';
 import { ParametrageFiche } from './parametrage.js';
+import { texte, texteHtml, pluriel, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 
 const BATTEMENT = 30000;
 const CLE_CONFIDENTIEL = 'logibtp.fiche.confidentiel';
@@ -112,7 +113,7 @@ export class FicheBase {
 
   async ouvrir() {
     this.definition = await this.fournisseur.definition(this.type);
-    if (!this.definition.droits.voir) throw new Error(`Accès refusé aux fiches ${this.definition.libelle}`);
+    if (!this.definition.droits.voir) throw new Error(texte('fiche.fiche.acces_refuse', { libelle: this.definition.libelle }));
     if (this.mode === MODES.CREATION) {
       this.fiche = { id: null, valeurs: this.valeursCreation(), proprietes: {}, h: null, masques: [], verrou: null };
     } else {
@@ -224,7 +225,7 @@ export class FicheBase {
    * (champs : programme, supplementairesSection : codes supplémentaires) pour les erreurs et la navigation.
    */
   sections() {
-    const base = this.definition.sections ?? [{ code: 'general', titre: 'Général', champs: this.definition.champs.map((c) => c.code) }];
+    const base = this.definition.sections ?? [{ code: 'general', titre: texte('fiche.fiche.general'), champs: this.definition.champs.map((c) => c.code) }];
     const supplementaires = (this.definition.supplementaires ?? []).map((c) => ({ ...c, supplementaire: true }));
     const codes = new Set(base.map((x) => x.code));
     const parGroupe = (champs, titre) => {
@@ -238,15 +239,15 @@ export class FicheBase {
     };
     const s = base.map((x) => {
       const groupes = x.groupes ?? [{ titre: null, champs: x.champs ?? [] }];
-      const ajout = parGroupe(supplementaires.filter((c) => c.section === x.code), 'Informations complémentaires');
+      const ajout = parGroupe(supplementaires.filter((c) => c.section === x.code), texte('fiche.fiche.complementaires'));
       return { ...x, groupes: [...groupes, ...ajout], champs: groupes.flatMap((g) => g.champs), supplementairesSection: ajout.flatMap((g) => g.champs.map((c) => c.code)) };
     });
     for (const o of this.ongletsSpecifiques().filter((x) => !x.dans)) s.push({ code: `+${o.code}`, titre: o.titre, specifique: o, champs: o.champs ?? [] });
     const reste = supplementaires.filter((c) => !c.section || !codes.has(c.section));
     if (reste.length) {
-      s.push({ code: '+supplementaires', titre: 'Informations complémentaires', groupes: parGroupe(reste, null), champs: [], supplementairesSection: reste.map((c) => c.code) });
+      s.push({ code: '+supplementaires', titre: texte('fiche.fiche.complementaires'), groupes: parGroupe(reste, null), champs: [], supplementairesSection: reste.map((c) => c.code) });
     }
-    s.push({ code: '+pieces', titre: 'Pièces jointes', pieces: true });
+    s.push({ code: '+pieces', titre: texte('fiche.fiche.pieces'), pieces: true });
     return s;
   }
 
@@ -261,10 +262,10 @@ export class FicheBase {
     const c = this.conteneur;
     c.classList.toggle('fiche-saisie', enSaisie(this.mode));
     c.querySelector('.fiche-type').textContent = def.libelle;
-    c.querySelector('h2').textContent = titreFiche(def.titre, v) || (this.mode === MODES.CREATION || this.mode === MODES.COPIE ? `Nouveau ${def.libelle.toLowerCase()}` : `${def.libelle} ${this.id}`);
+    c.querySelector('h2').textContent = titreFiche(def.titre, v) || (this.mode === MODES.CREATION || this.mode === MODES.COPIE ? texte('fiche.fiche.nouveau', { libelle: def.libelle.toLowerCase() }) : texte('fiche.fiche.titre_defaut', { libelle: def.libelle, id: this.id }));
     c.querySelector('.fiche-sous-titre').textContent = this.sousTitre(v);
     const mode = c.querySelector('.fiche-mode');
-    mode.textContent = LIBELLES_MODES[this.mode] + (this.copieDe ? ` de ${this.copieDe}` : '');
+    mode.textContent = this.copieDe ? texte('fiche.fiche.mode_copie', { mode: LIBELLES_MODES[this.mode], code: this.copieDe }) : LIBELLES_MODES[this.mode];
     mode.className = `fiche-mode mode-${this.mode}`;
     this.#rendreActions();
     this.#rendreBandeau();
@@ -284,7 +285,7 @@ export class FicheBase {
     const enErreur = new Set(this.erreurs.map((e) => this.#sectionErreur(sections, e)));
     // Compteurs des onglets (synthèse) : nombre en pastille, alerte (élément en défaut) en teinte d'erreur ; 0 : atténué.
     const compte = (s) => this.synthese?.onglets?.[s.code.replace(/^\+/, '')];
-    const pastille = (n) => (n ? `<span class="fiche-onglet-compte${n.alerte ? ' alerte' : ''}" title="${n.alerte ? 'Élément en défaut' : ''}">${n.alerte ? '⚠ ' : ''}${n.nombre}</span>` : '');
+    const pastille = (n) => (n ? `<span class="fiche-onglet-compte${n.alerte ? ' alerte' : ''}" title="${n.alerte ? texteHtml('fiche.fiche.onglet_alerte') : ''}">${n.alerte ? `${iconeHtml('fiche_onglet_alerte')} ` : ''}${n.nombre}</span>` : '');
     c.querySelector('.fiche-onglets').innerHTML = sections.map((s) => {
       const n = compte(s);
       return `<button type="button" data-section="${echapper(s.code)}" class="${s.code === this.section ? 'actif' : ''} ${enErreur.has(s.code) ? 'erreur' : ''} ${n && !n.nombre && !n.alerte ? 'vide' : ''}">${echapper(s.titre)}${n && (n.nombre || n.alerte) ? ` ${pastille(n)}` : ''}</button>`;
@@ -298,22 +299,22 @@ export class FicheBase {
     const saisie = enSaisie(this.mode);
     const masques = this.fiche.masques.length > 0;
     const boutons = [
-      { icone: '✎', libelle: 'Modifier', titre: 'Passer en modification (verrouille la fiche)', action: () => this.modifier(), visible: !saisie && d.modifier && this.id !== null, principal: true },
-      { libelle: 'Enregistrer', titre: 'Enregistrer (Ctrl+S)', action: () => this.enregistrer(), visible: saisie, principal: true },
-      { libelle: 'Annuler', titre: 'Abandonner les modifications', action: () => this.annuler(), visible: saisie },
-      { icone: '⧉', libelle: 'Copier', titre: 'Créer une nouvelle fiche à partir de celle-ci', action: () => this.copier(), visible: !saisie && d.modifier && this.id !== null },
-      { icone: '🗑', libelle: 'Supprimer', titre: 'Supprimer cette fiche (refusé si elle est utilisée ailleurs)', action: () => this.supprimer(), visible: !saisie && d.supprimer && this.id !== null },
-      { icone: '📊', libelle: 'Synthèse', titre: 'Afficher ou masquer le bandeau de synthèse (préférence de ce poste)', action: () => this.#basculerSynthese(), visible: !saisie && this.id !== null, actif: this.#syntheseVisible() },
-      { icone: '👁', libelle: 'Confidentiel', titre: 'Afficher les informations confidentielles (accès journalisé)', action: () => this.reveler(), visible: masques && d.confidentiel },
+      { icone: icone('fiche_modifier'), libelle: texte('fiche.fiche.modifier'), titre: texte('fiche.fiche.modifier_aide'), action: () => this.modifier(), visible: !saisie && d.modifier && this.id !== null, principal: true },
+      { libelle: texte('commun.enregistrer'), titre: texte('fiche.fiche.enregistrer_aide'), action: () => this.enregistrer(), visible: saisie, principal: true },
+      { libelle: texte('commun.annuler'), titre: texte('fiche.fiche.annuler_aide'), action: () => this.annuler(), visible: saisie },
+      { icone: icone('fiche_copier'), libelle: texte('fiche.fiche.copier'), titre: texte('fiche.fiche.copier_aide'), action: () => this.copier(), visible: !saisie && d.modifier && this.id !== null },
+      { icone: icone('supprimer'), libelle: texte('commun.supprimer'), titre: texte('fiche.fiche.supprimer_aide'), action: () => this.supprimer(), visible: !saisie && d.supprimer && this.id !== null },
+      { icone: icone('fiche_synthese'), libelle: texte('fiche.fiche.synthese'), titre: texte('fiche.fiche.synthese_aide'), action: () => this.#basculerSynthese(), visible: !saisie && this.id !== null, actif: this.#syntheseVisible() },
+      { icone: icone('fiche_confidentiel'), libelle: texte('fiche.fiche.confidentiel'), titre: texte('fiche.fiche.confidentiel_aide'), action: () => this.reveler(), visible: masques && d.confidentiel },
       ...this.actionsSupplementaires(),
       // Actions de l'application hôte (imprimer…), hors saisie et sur une fiche enregistrée.
       ...this.actionsHote.map((a) => ({ ...a, visible: !saisie && this.id !== null && a.visible !== false })),
-      { icone: '⚙', libelle: 'Paramétrer', titre: 'Paramétrer la fiche : champs obligatoires et champs supplémentaires', action: () => this.parametrer(), visible: this.peutParametrer },
-      { icone: '✕', libelle: 'Fermer', titre: 'Fermer (Échap)', action: () => this.fermer(), visible: true },
+      { icone: icone('fiche_parametrer'), libelle: texte('fiche.fiche.parametrer'), titre: texte('fiche.fiche.parametrer_aide'), action: () => this.parametrer(), visible: this.peutParametrer },
+      { icone: icone('retirer'), libelle: texte('commun.fermer'), titre: texte('commun.fermer_echap'), action: () => this.fermer(), visible: true },
     ].filter((b) => b.visible !== false);
     const zone = this.conteneur.querySelector('.fiche-actions');
-    zone.innerHTML = `${d.confidentiel ? `<label class="fiche-option" title="Ne pas masquer les informations confidentielles pendant cette session (onglet du navigateur)">
-      <input type="checkbox" data-session ${confidentielSession() ? 'checked' : ''}> Visible (session)</label>` : ''}
+    zone.innerHTML = `${d.confidentiel ? `<label class="fiche-option" title="${texteHtml('fiche.fiche.session_aide')}">
+      <input type="checkbox" data-session ${confidentielSession() ? 'checked' : ''}> ${texteHtml('fiche.fiche.session')}</label>` : ''}
       ${boutons.map((b, i) => `<button type="button" data-i="${i}" class="${b.principal ? 'principal' : ''}${b.icone ? ' bouton-icone' : ''}" title="${echapper(bulle(b))}" aria-label="${echapper(b.libelle)}"${b.actif === undefined ? '' : ` aria-pressed="${b.actif}"`}>${echapper(b.icone ?? b.libelle)}</button>`).join('')}`;
     zone.querySelectorAll('button[data-i]').forEach((el) => el.addEventListener('click', () => Promise.resolve(boutons[Number(el.dataset.i)].action()).catch((e) => this.#erreur(e))));
     zone.querySelector('[data-session]')?.addEventListener('change', (e) => {
@@ -328,8 +329,8 @@ export class FicheBase {
     // Son propre verrou (autre fenêtre, onglet fermé) n'est pas annoncé : il sera repris en passant en modification.
     if (!v || v.moi || v.meme_utilisateur) { b.hidden = true; return; }
     b.hidden = false;
-    b.innerHTML = `🔒 En cours de modification par <strong>${echapper(v.utilisateur)}</strong> depuis ${formatHeure(v.depuis)}
-      ${this.definition.droits.debloquer && this.definition.droits.modifier ? '<button type="button" data-reprendre>Reprendre la main</button>' : ''}`;
+    b.innerHTML = `${iconeHtml('verrou')} ${texteHtml('fiche.fiche.verrou_html', { utilisateur: v.utilisateur, heure: formatHeure(v.depuis) })}
+      ${this.definition.droits.debloquer && this.definition.droits.modifier ? `<button type="button" data-reprendre>${texteHtml('fiche.fiche.reprendre_main')}</button>` : ''}`;
     b.querySelector('[data-reprendre]')?.addEventListener('click', () => this.modifier({ forcer: true }).catch((e) => this.#erreur(e)));
   }
 
@@ -337,7 +338,7 @@ export class FicheBase {
     const z = this.conteneur.querySelector('.fiche-erreurs');
     z.hidden = !this.erreurs.length;
     const libelle = (e) => (e.supplementaire ? this.definition.supplementaires : this.definition.champs).find((c) => c.code === e.champ)?.libelle ?? e.champ;
-    z.innerHTML = this.erreurs.map((e) => `<li data-champ="${echapper(e.champ)}">${echapper(libelle(e))} : ${echapper(e.message)}</li>`).join('');
+    z.innerHTML = this.erreurs.map((e) => `<li data-champ="${echapper(e.champ)}">${texteHtml('fiche.fiche.erreur_champ', { champ: libelle(e), message: e.message })}</li>`).join('');
   }
 
   #rendreSection(section) {
@@ -352,7 +353,7 @@ export class FicheBase {
     corps.innerHTML = '<div class="fiche-groupes"></div>';
     const zone = corps.firstElementChild;
     for (const g of groupes.filter((x) => x.champs.length && this.groupeVisible(x, section))) zone.append(this.#groupe(g));
-    if (!zone.children.length) zone.innerHTML = '<p class="aide">Aucun champ.</p>';
+    if (!zone.children.length) zone.innerHTML = `<p class="aide">${texteHtml('fiche.fiche.aucun_champ')}</p>`;
     for (const o of this.ongletsSpecifiques().filter((x) => x.dans === section.code)) {
       const bloc = document.createElement('div');
       bloc.className = 'fiche-complement';
@@ -360,6 +361,13 @@ export class FicheBase {
       o.rendre(bloc, { modifiable: enSaisie(this.mode) });
     }
   }
+
+  /** Bouton « Afficher » des informations confidentielles masquées, ou « non autorisé » sans le droit. */
+  #boutonReveler() {
+    return this.definition.droits.confidentiel ? `<button type="button">${texteHtml('commun.afficher')}</button>` : `<em>${texteHtml('fiche.fiche.non_autorise')}</em>`;
+  }
+
+  #videHtml() { return `<span class="aide">${texteHtml('fiche.fiche.vide')}</span>`; }
 
   /** Groupe affiché (point de spécialisation : groupe propre à une variante de la fiche) ; tous par défaut. */
   groupeVisible(_groupe, _section) { return true; }
@@ -374,7 +382,7 @@ export class FicheBase {
     if (toutMasque) {
       const p = document.createElement('div');
       p.className = 'fiche-masque fiche-masque-groupe';
-      p.innerHTML = `<span>🔒 Informations confidentielles (${g.champs.length})</span>${this.definition.droits.confidentiel ? '<button type="button">Afficher</button>' : '<em>non autorisé</em>'}`;
+      p.innerHTML = `<span>${iconeHtml('verrou')} ${texteHtml('fiche.fiche.masques', { nombre: g.champs.length })}</span>${this.#boutonReveler()}`;
       p.querySelector('button')?.addEventListener('click', () => this.reveler().catch((e) => this.#erreur(e)));
       fs.append(p);
       return fs;
@@ -394,13 +402,13 @@ export class FicheBase {
     div.className = `fiche-champ ${champ.largeur === 'plein' || champ.type === 'zone' || champ.type === 'html' ? 'plein' : ''} ${erreur ? 'erreur' : ''} ${champ.confidentiel ? 'confidentiel' : ''}`;
     // Une case à cocher n'est jamais obligatoire (elle vaut oui ou non) : pas de marque.
     const caseACocher = champ.type === 'booleen';
-    const marques = `${champ.obligatoire && !caseACocher ? '<span class="obligatoire" title="Obligatoire (programme)">*</span>' : ''}${champ.obligatoire_parametre && !caseACocher ? '<span class="obligatoire-parametre" title="Obligatoire (paramétrage)">◆</span>' : ''}${champ.confidentiel ? '<span class="marque-confidentiel" title="Information confidentielle">🔒</span>' : ''}`;
+    const marques = `${champ.obligatoire && !caseACocher ? `<span class="obligatoire" title="${texteHtml('fiche.fiche.obligatoire')}">${iconeHtml('fiche_obligatoire')}</span>` : ''}${champ.obligatoire_parametre && !caseACocher ? `<span class="obligatoire-parametre" title="${texteHtml('fiche.fiche.obligatoire_parametre')}">${iconeHtml('fiche_obligatoire_parametre')}</span>` : ''}${champ.confidentiel ? `<span class="marque-confidentiel" title="${texteHtml('fiche.fiche.marque_confidentiel')}">${iconeHtml('verrou')}</span>` : ''}`;
     div.innerHTML = `<label>${echapper(champ.libelle)} ${marques}</label>`;
     if (champ.aide) div.title = champ.aide;
     if (masque) {
       const m = document.createElement('div');
       m.className = 'fiche-masque';
-      m.innerHTML = `<span>••••••••</span>${this.definition.droits.confidentiel ? '<button type="button">Afficher</button>' : '<em>non autorisé</em>'}`;
+      m.innerHTML = `<span>${iconeHtml('fiche_masque')}</span>${this.#boutonReveler()}`;
       m.querySelector('button')?.addEventListener('click', () => this.reveler().catch((e) => this.#erreur(e)));
       div.append(m);
     } else div.append(this.rendreChamp(champ, champ.supplementaire ? this.propriete(champ.code) : this.valeur(champ.code)));
@@ -423,15 +431,15 @@ export class FicheBase {
         // Libellé mis en forme (stocké mis en forme et en texte brut) : éditeur de mise en forme du socle.
         el = document.createElement('div');
         el.className = 'fiche-html';
-        el.innerHTML = htmlSur(valeur ?? '') || '<span class="aide">(vide)</span>';
+        el.innerHTML = htmlSur(valeur ?? '') || this.#videHtml();
         if (!lecture) {
           el.tabIndex = 0;
-          el.title = 'Cliquer pour modifier la mise en forme';
+          el.title = texte('fiche.fiche.html_aide');
           const editer = async () => {
             const html = await editerLibelle({ html: this.valeur(champ.code) ?? '', titre: champ.libelle });
             if (html === undefined) return;
             this.saisie.valeurs[champ.code] = html;
-            el.innerHTML = htmlSur(html ?? '') || '<span class="aide">(vide)</span>';
+            el.innerHTML = htmlSur(html ?? '') || this.#videHtml();
             this.#majTitre();
           };
           el.addEventListener('click', editer);
@@ -519,15 +527,15 @@ export class FicheBase {
     bloc.append(zone);
     if (!this.#codeModifiable(champ)) {
       el.readOnly = true;
-      if (this.mode === MODES.MODIFICATION && !champ.lecture_seule) el.title = 'Code non modifiable : droit « Modifier le code » nécessaire';
+      if (this.mode === MODES.MODIFICATION && !champ.lecture_seule) el.title = texte('fiche.fiche.code_non_modifiable');
       return bloc;
     }
     if (this.#creation()) {
       const reprendre = document.createElement('button');
       reprendre.type = 'button';
       reprendre.dataset.reprendre = '';
-      reprendre.textContent = '⇥';
-      reprendre.title = 'Reprendre le code prévisionnel pour le modifier';
+      reprendre.textContent = icone('fiche_reprendre_code');
+      reprendre.title = texte('fiche.fiche.reprendre_code');
       reprendre.setAttribute('aria-label', reprendre.title);
       reprendre.addEventListener('click', () => {
         if (!this.etatCode.previsionnel) return;
@@ -590,15 +598,15 @@ export class FicheBase {
     const { previsionnel, pris, saisi } = this.etatCode;
     const creation = this.#creation();
     const input = zone.querySelector('input');
-    if (creation) input.placeholder = previsionnel ?? 'calculé à l\'enregistrement';
+    if (creation) input.placeholder = previsionnel ?? texte('fiche.fiche.code_calcule');
     const reprendre = zone.querySelector('[data-reprendre]');
     if (reprendre) reprendre.disabled = !previsionnel;
     etat.className = `fiche-code-etat${pris ? ' pris' : saisi ? ' libre' : ''}`;
     if (pris) {
-      etat.innerHTML = `⚠ Déjà utilisé${this.ouvrirFiche ? ` par la <button type="button">fiche ${echapper(pris.code)}</button>` : ''}${creation ? ' : le prochain code libre sera proposé à l\'enregistrement' : ''}`;
+      etat.innerHTML = `${iconeHtml('avertissement')} ${texteHtml('fiche.fiche.code_pris')}${this.ouvrirFiche ? texteHtml('fiche.fiche.code_pris_par_html', { code: pris.code }) : ''}${creation ? texteHtml('fiche.fiche.code_pris_creation') : ''}`;
       etat.querySelector('button')?.addEventListener('click', (e) => this.ouvrirFiche({ type: this.type, id: pris.id }, e));
-    } else if (saisi) etat.textContent = '✓ Disponible';
-    else etat.textContent = creation ? (previsionnel ? 'Code prévisionnel, attribué à l\'enregistrement' : '') : '';
+    } else if (saisi) etat.textContent = `${icone('fiche_code_libre')} ${texte('fiche.fiche.code_libre')}`;
+    else etat.textContent = creation ? (previsionnel ? texte('fiche.fiche.code_previsionnel') : '') : '';
   }
 
   /**
@@ -618,11 +626,11 @@ export class FicheBase {
     if (champ.longueur) el.maxLength = champ.longueur;
     const revele = this.secretsReveles.get(cle);
     el.value = champ.code in cible ? cible[champ.code] ?? '' : revele ?? '';
-    if (!(champ.code in cible) && revele === undefined) el.placeholder = enregistre ? '•••••••• (enregistré)' : lecture ? '(aucun)' : '';
+    if (!(champ.code in cible) && revele === undefined) el.placeholder = enregistre ? texte('fiche.fiche.secret_enregistre') : lecture ? texte('fiche.fiche.secret_aucun') : '';
     const oeil = document.createElement('button');
     oeil.type = 'button';
-    oeil.textContent = '👁';
-    oeil.title = 'Afficher / masquer le mot de passe (accès journalisé)';
+    oeil.textContent = icone('fiche_confidentiel');
+    oeil.title = texte('fiche.fiche.secret_aide');
     oeil.disabled = lecture && !enregistre;
     oeil.addEventListener('click', () => (async () => {
       if (el.type === 'text') { el.type = 'password'; return; }
@@ -656,10 +664,10 @@ export class FicheBase {
     this.composantGed = null;
     corps.innerHTML = '<div class="fiche-pieces"></div>';
     const zone = corps.firstElementChild;
-    if (this.id === null) { zone.innerHTML = '<p class="aide">Enregistrez la fiche pour joindre des documents.</p>'; return; }
-    if (!this.ged) { zone.innerHTML = "<p class='aide'>Pièces jointes : la GED n'est pas branchée.</p>"; return; }
+    if (this.id === null) { zone.innerHTML = `<p class="aide">${texteHtml('fiche.fiche.pieces_creation')}</p>`; return; }
+    if (!this.ged) { zone.innerHTML = `<p class="aide">${texteHtml('fiche.fiche.pieces_sans_ged')}</p>`; return; }
     this.composantGed = this.ged({
-      conteneur: zone, type: this.type, id: this.id, libelle: titreFiche(this.definition.titre, this.valeurs()) || `${this.definition.libelle} ${this.id}`,
+      conteneur: zone, type: this.type, id: this.id, libelle: titreFiche(this.definition.titre, this.valeurs()) || texte('fiche.fiche.titre_defaut', { libelle: this.definition.libelle, id: this.id }),
       modifiable: this.definition.droits.modifier,
     });
   }
@@ -677,10 +685,10 @@ export class FicheBase {
     if (!r.ok) {
       this.fiche.verrou = r.verrou;
       this.rendre();
-      this.message(`Fiche en cours de modification par ${r.verrou.utilisateur}`, 'avertissement');
+      this.message(texte('fiche.fiche.en_modification', { utilisateur: r.verrou.utilisateur }), 'avertissement');
       return false;
     }
-    if (forcer) this.message('Vous avez repris la main sur la fiche', 'succes');
+    if (forcer) this.message(texte('fiche.fiche.main_reprise'), 'succes');
     await this.recharger();
     this.fiche.verrou = r.verrou;
     this.mode = MODES.MODIFICATION;
@@ -707,7 +715,7 @@ export class FicheBase {
     clearInterval(this.battement);
     this.mode = MODES.CONSULTATION;
     this.fiche.verrou = verrou;
-    this.message(`${verrou?.utilisateur ?? 'Un autre utilisateur'} a repris la main : vos modifications non enregistrées ne peuvent plus l'être`, 'erreur');
+    this.message(texte('fiche.fiche.verrou_perdu', { utilisateur: verrou?.utilisateur ?? texte('fiche.fiche.autre_utilisateur') }), 'erreur');
     this.rendre();
   }
 
@@ -717,7 +725,7 @@ export class FicheBase {
   }
 
   async annuler() {
-    if (this.modifiee && !await confirmer('Abandonner les modifications ?')) return;
+    if (this.modifiee && !await confirmer(texte('fiche.fiche.abandonner'))) return;
     if (this.mode === MODES.CREATION || this.mode === MODES.COPIE) { await this.fermer({ sansConfirmation: true }); return; }
     await this.#liberer();
     this.mode = MODES.CONSULTATION;
@@ -757,7 +765,7 @@ export class FicheBase {
     ];
     if (this.erreurs.length) {
       this.#allerErreur();
-      this.message(`${this.erreurs.length} erreur(s) à corriger`, 'erreur');
+      this.message(pluriel('fiche.fiche.erreurs', this.erreurs.length), 'erreur');
       return false;
     }
     try {
@@ -779,7 +787,7 @@ export class FicheBase {
       this.erreurs = [];
       this.rendre();
       this.actualiserSynthese();
-      this.message(cree ? `${this.definition.libelle} créé` : 'Fiche enregistrée', 'succes');
+      this.message(cree ? texte('fiche.fiche.cree', { libelle: this.definition.libelle }) : texte('fiche.fiche.enregistree'), 'succes');
       this.surEnregistre?.(fiche, { cree });
       return true;
     } catch (e) {
@@ -798,7 +806,7 @@ export class FicheBase {
   async #codePris(e) {
     const champ = this.definition.chrono?.champ ?? 'code';
     const { code, pris, propose } = e.details ?? {};
-    if (this.#creation() && propose && await confirmer(`Le code ${code} est déjà utilisé${pris?.code ? ` (fiche ${pris.code})` : ''}. Utiliser le prochain code disponible : ${propose} ?`, { ok: `Utiliser ${propose}` })) {
+    if (this.#creation() && propose && await confirmer(texte('fiche.fiche.code_pris_question', { code, fiche: pris?.code ? texte('fiche.fiche.code_pris_fiche', { code: pris.code }) : '', propose }), { ok: texte('fiche.fiche.utiliser', { code: propose }) })) {
       this.saisie.valeurs[champ] = propose;
       this.etatCode = { previsionnel: this.etatCode.previsionnel, pris: null, saisi: propose };
       this.rendre();
@@ -840,17 +848,17 @@ export class FicheBase {
 
   /** Suppression après confirmation ; la fiche se ferme (surSupprime, sinon surFerme). */
   async supprimer() {
-    const titre = titreFiche(this.definition.titre, this.valeurs()) || `${this.definition.libelle} ${this.id}`;
-    if (!await confirmer(`Supprimer « ${titre} » ? Cette suppression est définitive.`)) return false;
+    const titre = titreFiche(this.definition.titre, this.valeurs()) || texte('fiche.fiche.titre_defaut', { libelle: this.definition.libelle, id: this.id });
+    if (!await confirmer(texte('fiche.fiche.supprimer_question', { titre }))) return false;
     await this.fournisseur.supprimer(this.type, this.id);
-    this.message(`${this.definition.libelle} supprimé`, 'succes');
+    this.message(texte('fiche.fiche.supprime', { libelle: this.definition.libelle }), 'succes');
     this.surSupprime?.(this.id);
     await this.fermer({ sansConfirmation: true });
     return true;
   }
 
   async fermer({ sansConfirmation = false } = {}) {
-    if (!sansConfirmation && this.modifiee && !await confirmer('Des modifications ne sont pas enregistrées. Fermer quand même ?')) return false;
+    if (!sansConfirmation && this.modifiee && !await confirmer(texte('fiche.fiche.fermer_question'))) return false;
     await this.#liberer();
     this.surFerme?.();
     return true;

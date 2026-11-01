@@ -1,3 +1,4 @@
+import { texte, texteHtml, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { echapper, formatLibre } from '@logibtp/socle/ui';
 import { opt } from '@logibtp/document/ui';
 
@@ -9,18 +10,18 @@ import { opt } from '@logibtp/document/ui';
 export const variablesTranche = (saisie, ligId) => saisie.variables.filter((v) => v.var_lig_id === ligId && (v.var_mtr_id === null || v.var_mtr_id === undefined));
 
 /** Section HTML des paramètres de la tranche (valeurs calculées en regard). */
-export function sectionVariablesTranche(editeur, ligId, { modifiable = true, titre = 'Paramètres de la tranche ($)' } = {}) {
+export function sectionVariablesTranche(editeur, ligId, { modifiable = true, titre = texte('document_btp.variables_tranche.titre') } = {}) {
   const vars = variablesTranche(editeur.saisie, ligId).sort((a, b) => (a.var_ordre ?? 0) - (b.var_ordre ?? 0));
   const calc = new Map((editeur.resultat.variables ?? []).map((v) => [v.var_id, v.var_valeur]));
   const ro = modifiable ? '' : 'disabled';
   return `<details class="variables-tranche" data-tranche="${ligId}" ${vars.length ? 'open' : ''}><summary>${echapper(titre)}</summary>
-    <p class="aide">Utilisables dans les métrés et libellés des lignes de la tranche : {{$nom}}.</p>
+    <p class="aide">${texteHtml('document_btp.variables_tranche.aide')}</p>
     <table class="variables"><tbody>${vars.map((v) => `
       <tr data-var="${v.var_id}"><td>$<input data-vt="var_nom" value="${echapper(v.var_nom)}" size="12" ${ro}></td>
       <td><select data-vt="var_operation" ${ro}>${opt('=', '=', v.var_operation)}${opt('+=', '+=', v.var_operation)}</select></td>
       <td><input data-vt="var_formule" value="${echapper(v.var_formule ?? '')}" size="10" ${ro}></td>
-      <td class="col-nombre">${formatLibre(calc.get(v.var_id))}</td>${modifiable ? `<td><button type="button" data-vt-supprimer="${v.var_id}" title="Supprimer">✕</button></td>` : ''}</tr>`).join('')}
-    </tbody></table>${modifiable ? '<button type="button" data-vt-ajouter>Ajouter un paramètre</button>' : ''}
+      <td class="col-nombre">${formatLibre(calc.get(v.var_id))}</td>${modifiable ? `<td><button type="button" data-vt-supprimer="${v.var_id}" title="${texteHtml('commun.supprimer')}">${iconeHtml('retirer')}</button></td>` : ''}</tr>`).join('')}
+    </tbody></table>${modifiable ? `<button type="button" data-vt-ajouter>${texteHtml('document_btp.variables_tranche.ajouter')}</button>` : ''}
   </details>`;
 }
 

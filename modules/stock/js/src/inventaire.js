@@ -1,3 +1,4 @@
+import { textesParCode } from '@logibtp/socle/dictionnaire';
 import { D, Dz, S } from '@logibtp/socle';
 
 // Lot d'inventaire (ANALYSE-MODULE-STOCK.md § 5.3, S6, S30), répliqué dans ReglesInventaire.cs (jeu
@@ -6,12 +7,8 @@ import { D, Dz, S } from '@logibtp/socle';
 // emplacement est signalé (avertissement, jamais refusé) ; un prix saisi (valeur d'inventaire : stock lent, obsolète…)
 // vaut pour l'article, deux prix différents sont refusés ; « Appliquer au PMP » exige un prix.
 
-export const MESSAGES_INVENTAIRE = {
-  INV_DOUBLON_EMPLACEMENT: 'Article compté plusieurs fois au même emplacement : les quantités sont cumulées',
-  INV_QUANTITE_NEGATIVE: 'Quantité comptée négative',
-  INV_PRIX_DIFFERENTS: 'Deux prix d\'inventaire différents pour le même article',
-  INV_PMP_SANS_PRIX: '« Appliquer au PMP » sans prix saisi',
-};
+/** Messages des contrôles du lot, par code (module Personnalisation). */
+export const MESSAGES_INVENTAIRE = textesParCode('stock.inventaire.erreurs', ['INV_DOUBLON_EMPLACEMENT', 'INV_QUANTITE_NEGATIVE', 'INV_PRIX_DIFFERENTS', 'INV_PMP_SANS_PRIX']);
 
 const vide = (v) => v === null || v === undefined || v === '';
 

@@ -2,9 +2,10 @@
 // Un style se désigne par son nom (« titre ») ou par un objet { base: 'normal', taille: 11, graisse: 700 } ;
 // une couleur par « couleur:primaire », par son nom de charte (« primaire ») ou en dur (« #1f4e79 »).
 
+import { texte } from '@logibtp/socle/dictionnaire';
 export const CHARTE_DEFAUT = Object.freeze({
   code: 'DEFAUT',
-  libelle: 'Charte par défaut',
+  get libelle() { return texte('edition.charte.defaut'); },
   police: 'Inter',
   couleurs: {
     texte: '#1f2328', discret: '#5f6b7a', primaire: '#1f4e79', secondaire: '#2e7d32', alerte: '#b42318',
@@ -104,19 +105,19 @@ export function verifierCharte(charte, familles = ['Inter', 'Libre Barcode 39'])
   const c = completerCharte(charte);
   const erreurs = [];
   for (const [nom, v] of Object.entries(c.couleurs)) {
-    if (!resoudreCouleur(c, v)) erreurs.push({ chemin: `couleurs.${nom}`, code: 'COULEUR', message: `Couleur invalide : ${v}` });
+    if (!resoudreCouleur(c, v)) erreurs.push({ chemin: `couleurs.${nom}`, code: 'COULEUR', message: texte('edition.charte.couleur_invalide', { couleur: v }) });
   }
   for (const [nom, s] of Object.entries(c.styles)) {
     const visites = new Set([nom]);
     let base = s.base;
     while (base) {
-      if (visites.has(base)) { erreurs.push({ chemin: `styles.${nom}`, code: 'STYLE_CYCLE', message: `Héritage circulaire : ${[...visites, base].join(' → ')}` }); break; }
-      if (!c.styles[base]) { erreurs.push({ chemin: `styles.${nom}`, code: 'STYLE_BASE', message: `Style de base inconnu : ${base}` }); break; }
+      if (visites.has(base)) { erreurs.push({ chemin: `styles.${nom}`, code: 'STYLE_CYCLE', message: texte('edition.charte.heritage_circulaire', { chaine: [...visites, base].join(' → ') }) }); break; }
+      if (!c.styles[base]) { erreurs.push({ chemin: `styles.${nom}`, code: 'STYLE_BASE', message: texte('edition.charte.base_inconnue', { base }) }); break; }
       visites.add(base);
       base = c.styles[base].base;
     }
-    if (s.police && !familles.includes(s.police)) erreurs.push({ chemin: `styles.${nom}.police`, code: 'POLICE', message: `Police non livrée : ${s.police}` });
-    if (s.couleur && !resoudreCouleur(c, s.couleur)) erreurs.push({ chemin: `styles.${nom}.couleur`, code: 'COULEUR', message: `Couleur inconnue : ${s.couleur}` });
+    if (s.police && !familles.includes(s.police)) erreurs.push({ chemin: `styles.${nom}.police`, code: 'POLICE', message: texte('edition.charte.police', { police: s.police }) });
+    if (s.couleur && !resoudreCouleur(c, s.couleur)) erreurs.push({ chemin: `styles.${nom}.couleur`, code: 'COULEUR', message: texte('edition.charte.couleur_inconnue', { couleur: s.couleur }) });
   }
   return erreurs;
 }

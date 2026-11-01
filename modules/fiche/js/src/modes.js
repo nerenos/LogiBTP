@@ -1,3 +1,5 @@
+import { textesParCode } from '@logibtp/socle/dictionnaire';
+
 // Modes d'ouverture d'une fiche ; le mode peut changer une fois la fiche ouverte (consultation → modification…).
 export const MODES = Object.freeze({
   CONSULTATION: 'consultation',
@@ -6,7 +8,7 @@ export const MODES = Object.freeze({
   COPIE: 'copie',
 });
 
-export const LIBELLES_MODES = { consultation: 'Consultation', modification: 'Modification', creation: 'Création', copie: 'Copie' };
+export const LIBELLES_MODES = textesParCode('fiche.modes', Object.values(MODES));
 
 /** Le mode permet-il la saisie ? */
 export const enSaisie = (mode) => mode !== MODES.CONSULTATION;

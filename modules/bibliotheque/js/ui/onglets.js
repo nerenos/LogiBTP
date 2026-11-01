@@ -1,3 +1,4 @@
+import { texte, texteHtml, textesParCode, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { aujourdhui } from '@logibtp/socle';
 import { echapper, formatNombre, formatLibre, confirmer, formatDateHeure } from '@logibtp/socle/ui';
 import { calculerElement, coefficientsEffectifs, prixNetTarif, SCENARIOS_PA } from '../src/calcul.js';
@@ -15,12 +16,7 @@ export const formatPrix = (v, d = 2) => (v === null || v === undefined || v === 
 const prix = formatPrix;
 const json = (v, defaut) => (typeof v === 'string' ? (() => { try { return JSON.parse(v); } catch { return defaut; } })() : v ?? defaut);
 const nombreSaisi = (s) => { const t = String(s ?? '').trim().replace(/\s/g, '').replace(',', '.'); return t === '' ? null : t; };
-const MESSAGES_ALERTES = {
-  PA_INDISPONIBLE: "Prix d'achat indisponible pour ce scénario (tarif principal, dernier PA ou PMP absent)",
-  UNITE: 'Une unité de tarif n\'a pas de correspondance avec l\'unité de stock',
-  DONNEE: 'Une donnée technique utilisée par une formule d\'unité n\'est pas renseignée',
-  RATIO: 'Une correspondance d\'unité est nulle ou négative',
-};
+const MESSAGES_ALERTES = textesParCode('bibliotheque.prix.alertes', ['PA_INDISPONIBLE', 'UNITE', 'DONNEE', 'RATIO']);
 
 /** Onglet Prix : scénario de PA, coefficients, PV fixe, remise, résultat (par unité) et historique des prix. */
 export class OngletPrix {
@@ -49,33 +45,33 @@ export class OngletPrix {
     const autorises = json(valeur('scenarios'), null) ?? parametres.scenarios_autorises;
     const remise = valeur('coef_remise') === null || valeur('coef_remise') === undefined ? '' : formatLibre((1 - Number(valeur('coef_remise'))) * 100, 4);
     const eff = this.effectifs();
-    const source = (s) => ({ impose: 'imposé pour cet élément', nature: `nature, période du ${String(s.debut).split('-').reverse().join('/')}`,
-      global: `global, période du ${String(s.debut).split('-').reverse().join('/')}`, defaut: 'par défaut' }[s.portee] ?? s.portee);
+    const source = (s) => (['impose', 'nature', 'global', 'defaut'].includes(s.portee)
+      ? texte(`bibliotheque.prix.sources.${s.portee}`, { debut: String(s.debut).split('-').reverse().join('/') }) : s.portee);
     // Coefficient : celui de la nature ou global en vigueur, ou imposé (case cochée : saisie libre).
     const coefChamp = (code, libelle) => {
       const impose = valeur(`${code}_impose`) === true || valeur(`${code}_impose`) === 'true';
       const v = impose ? valeur(code) : eff[code];
       return `<div class="bib-coef"><label>${echapper(libelle)}<input data-v="${code}" inputmode="decimal" value="${echapper(v === null || v === undefined ? '' : String(v).replace('.', ','))}" ${ro || !impose ? 'readonly' : ''}></label>
-        <label class="bib-ligne"><input type="checkbox" data-impose="${code}" ${impose ? 'checked' : ''} ${ro}> imposé</label>
+        <label class="bib-ligne"><input type="checkbox" data-impose="${code}" ${impose ? 'checked' : ''} ${ro}> ${texteHtml('bibliotheque.prix.impose')}</label>
         <small class="bib-source">${echapper(source(eff.sources[code]))}</small></div>`;
     };
     const champ = (code, libelle, aide = '') => `<label title="${echapper(aide)}">${echapper(libelle)}<input data-v="${code}" inputmode="decimal" value="${echapper(valeur(code) === null || valeur(code) === undefined ? '' : String(valeur(code)).replace('.', ','))}" ${ro}></label>`;
     this.corps.innerHTML = `<div class="bib-prix">
-      <fieldset class="fiche-groupe"><legend>Prix d'achat</legend>
-        ${this.ouvrage ? '<p class="aide">Ouvrage : le prix d\'achat est la somme des composantes (onglet Composition).</p>' : `
-        <label>Scénario <select data-v="scenario_pa" ${ro}>${SCENARIOS_PA.filter(([c]) => autorises.includes(c) || c === valeur('scenario_pa')).map(([c, l]) => `<option value="${c}" ${c === valeur('scenario_pa') ? 'selected' : ''}>${echapper(l)}</option>`).join('')}</select></label>
-        <div class="bib-grille">${champ('pa_fixe', 'Prix fixe', 'Scénario « Prix fixe »')}${champ('dernier_pa', 'Dernier prix d\'achat', 'Alimenté par le futur module Achats')}${champ('pmp', 'Prix moyen pondéré', 'Alimenté par le futur module Stock')}</div>
-        <details><summary>Scénarios autorisés pour cet élément</summary>${SCENARIOS_PA.map(([c, l]) => `<label class="bib-ligne"><input type="checkbox" data-scenario="${c}" ${autorises.includes(c) ? 'checked' : ''} ${ro}> ${echapper(l)}</label>`).join('')}</details>`}
+      <fieldset class="fiche-groupe"><legend>${texteHtml('bibliotheque.prix.achat')}</legend>
+        ${this.ouvrage ? `<p class="aide">${texteHtml('bibliotheque.prix.ouvrage_aide')}</p>` : `
+        <label>${texteHtml('bibliotheque.prix.scenario')} <select data-v="scenario_pa" ${ro}>${SCENARIOS_PA.filter(([c]) => autorises.includes(c) || c === valeur('scenario_pa')).map(([c, l]) => `<option value="${c}" ${c === valeur('scenario_pa') ? 'selected' : ''}>${echapper(l)}</option>`).join('')}</select></label>
+        <div class="bib-grille">${champ('pa_fixe', texte('bibliotheque.scenarios.FIXE'), texte('bibliotheque.prix.pa_fixe_aide'))}${champ('dernier_pa', texte('bibliotheque.scenarios.DERNIER_PA'), texte('bibliotheque.prix.dernier_pa_aide'))}${champ('pmp', texte('bibliotheque.scenarios.PMP'), texte('bibliotheque.prix.pmp_aide'))}</div>
+        <details><summary>${texteHtml('bibliotheque.prix.autorises')}</summary>${SCENARIOS_PA.map(([c, l]) => `<label class="bib-ligne"><input type="checkbox" data-scenario="${c}" ${autorises.includes(c) ? 'checked' : ''} ${ro}> ${echapper(l)}</label>`).join('')}</details>`}
       </fieldset>
-      <fieldset class="fiche-groupe"><legend>Coefficients et vente</legend>
-        <div class="bib-grille">${coefChamp('coef_fg', 'Coef. frais généraux')}${coefChamp('coef_benef', 'Coef. bénéfice')}
-          ${this.ensemble ? '' : `<label class="bib-ligne" title="${this.ouvrage ? 'PV imposé à l’ouvrage : ventilé sur la composition à l’insertion (gardé tel quel en mode bordereau)' : ''}"><input type="checkbox" data-v="pv_fixe" ${valeur('pv_fixe') === true || valeur('pv_fixe') === 'true' ? 'checked' : ''} ${ro}> PV fixe</label>
-          ${champ('pv', 'PV (si fixe)')}`}
-          <label title="Remise sur le PV (coefficient de remise = 1 − remise)">Remise sur PV (%)<input data-remise inputmode="decimal" value="${echapper(remise)}" ${ro}></label></div>
+      <fieldset class="fiche-groupe"><legend>${texteHtml('bibliotheque.prix.coefficients')}</legend>
+        <div class="bib-grille">${coefChamp('coef_fg', texte('bibliotheque.prix.coef_fg'))}${coefChamp('coef_benef', texte('bibliotheque.prix.coef_benef'))}
+          ${this.ensemble ? '' : `<label class="bib-ligne" title="${this.ouvrage ? texteHtml('bibliotheque.prix.pv_fixe_ouvrage') : ''}"><input type="checkbox" data-v="pv_fixe" ${valeur('pv_fixe') === true || valeur('pv_fixe') === 'true' ? 'checked' : ''} ${ro}> ${texteHtml('bibliotheque.prix.pv_fixe')}</label>
+          ${champ('pv', texte('bibliotheque.prix.pv'))}`}
+          <label title="${texteHtml('bibliotheque.prix.remise_aide')}">${texteHtml('bibliotheque.prix.remise')}<input data-remise inputmode="decimal" value="${echapper(remise)}" ${ro}></label></div>
       </fieldset>
-      <fieldset class="fiche-groupe plein"><legend>Résultat (par unité de stock : ${echapper(valeur('unite_stock') ?? '?')})</legend><div class="bib-resultat"></div></fieldset>
-      ${modifiable ? `<label class="plein">Commentaire de la modification de prix (historique)<input data-v="commentaire_prix" value="${echapper(valeur('commentaire_prix') ?? '')}" placeholder="Ex. hausse fournisseur au 1er octobre"></label>` : ''}
-      <fieldset class="fiche-groupe plein"><legend>Historique des prix</legend><div class="bib-historique">${this.ctx.id === null ? '<p class="aide">Disponible après l\'enregistrement.</p>' : '⏳'}</div></fieldset>
+      <fieldset class="fiche-groupe plein"><legend>${texteHtml('bibliotheque.prix.resultat', { unite: valeur('unite_stock') ?? '?' })}</legend><div class="bib-resultat"></div></fieldset>
+      ${modifiable ? `<label class="plein">${texteHtml('bibliotheque.prix.commentaire')}<input data-v="commentaire_prix" value="${echapper(valeur('commentaire_prix') ?? '')}" placeholder="${texteHtml('bibliotheque.prix.commentaire_exemple')}"></label>` : ''}
+      <fieldset class="fiche-groupe plein"><legend>${texteHtml('bibliotheque.prix.historique')}</legend><div class="bib-historique">${this.ctx.id === null ? `<p class="aide">${texteHtml('bibliotheque.prix.historique_apres')}</p>` : iconeHtml('bibliotheque_attente')}</div></fieldset>
     </div>`;
     this.corps.querySelectorAll('[data-v]').forEach((el) => el.addEventListener(el.type === 'checkbox' || el.tagName === 'SELECT' ? 'change' : 'input', () => {
       const code = el.dataset.v;
@@ -105,21 +101,21 @@ export class OngletPrix {
     if (!zone) return;
     const l = this.ctx.valeurs();
     if (this.ouvrage) {
-      zone.innerHTML = `<table class="bib-table"><tr><th>PA</th><th>PR</th><th>PV</th><th>PV net</th></tr>
+      zone.innerHTML = `<table class="bib-table"><tr><th>${texteHtml('bibliotheque.prix.colonnes.pa')}</th><th>${texteHtml('bibliotheque.prix.colonnes.pr')}</th><th>${texteHtml('bibliotheque.prix.colonnes.pv')}</th><th>${texteHtml('bibliotheque.prix.colonnes.pv_net')}</th></tr>
         <tr><td>${prix(l.pa)}</td><td>${prix(l.pr)}</td><td>${prix(l.pv)}</td><td><b>${prix(l.pv_net)}</b></td></tr></table>
-        <p class="aide">Prix issus du calcul de la composition${l.pv_fixe === true || l.pv_fixe === 'true' ? ' (PV fixe imposé, coefficient de bénéfice déduit)' : ''}, mis à jour à l'enregistrement.</p>`;
+        <p class="aide">${l.pv_fixe === true || l.pv_fixe === 'true' ? texteHtml('bibliotheque.prix.composition_pv_fixe') : texteHtml('bibliotheque.prix.composition')}</p>`;
       return;
     }
     const c = this.effectifs();
     Object.assign(l, { coef_fg: c.coef_fg, coef_benef: l.pv_fixe === true || l.pv_fixe === 'true' ? l.coef_benef : c.coef_benef });
     let r;
     try { r = calculerElement(entreeDepuisLigne(l, this.tarifs)); } catch (e) { zone.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; return; }
-    zone.innerHTML = `<table class="bib-table"><thead><tr><th>Unité</th><th>Quantité en ${echapper(l.unite_stock ?? '')}</th><th>PA</th><th>PR</th><th>PV net</th></tr></thead><tbody>
-      ${r.prix_unites.map((p) => `<tr class="${p.unite === l.unite_stock ? 'stock' : ''}"><td>${echapper(p.unite)}${p.unite === l.unite_stock ? ' <small>(stock)</small>' : ''}</td>
+    zone.innerHTML = `<table class="bib-table"><thead><tr><th>${texteHtml('bibliotheque.prix.colonnes.unite')}</th><th>${texteHtml('bibliotheque.prix.colonnes.quantite', { unite: l.unite_stock ?? '' })}</th><th>${texteHtml('bibliotheque.prix.colonnes.pa')}</th><th>${texteHtml('bibliotheque.prix.colonnes.pr')}</th><th>${texteHtml('bibliotheque.prix.colonnes.pv_net')}</th></tr></thead><tbody>
+      ${r.prix_unites.map((p) => `<tr class="${p.unite === l.unite_stock ? 'stock' : ''}"><td>${echapper(p.unite)}${p.unite === l.unite_stock ? ` <small>${texteHtml('bibliotheque.prix.stock')}</small>` : ''}</td>
         <td class="nombre">${p.ratio === null ? `<span class="erreur">${echapper(p.erreur ?? '')}</span>` : formatLibre(p.ratio)}</td><td class="nombre">${prix(p.pa)}</td><td class="nombre">${prix(p.pr)}</td><td class="nombre"><b>${prix(p.pv_net)}</b></td></tr>`).join('')}
       </tbody></table>
-      <p class="bib-synthese">PA ${prix(r.pa)} × FG ${formatLibre(l.coef_fg ?? 1)} = PR ${prix(r.pr)} · × bénéfice ${formatLibre(r.coef_benef)} = PV ${prix(r.pv)} · remise ${formatLibre((1 - Number(l.coef_remise ?? 1)) * 100, 4)} % → <b>PV net ${prix(r.pv_net)}</b></p>
-      ${r.alertes.map((a) => `<p class="alerte">⚠ ${echapper(MESSAGES_ALERTES[a] ?? a)}</p>`).join('')}`;
+      <p class="bib-synthese">${texteHtml('bibliotheque.prix.synthese_html', { pa: prix(r.pa), fg: formatLibre(l.coef_fg ?? 1), pr: prix(r.pr), benef: formatLibre(r.coef_benef), pv: prix(r.pv), remise: formatLibre((1 - Number(l.coef_remise ?? 1)) * 100, 4), fleche: icone('bibliotheque_resultat'), pv_net: prix(r.pv_net) })}</p>
+      ${r.alertes.map((a) => `<p class="alerte">${iconeHtml('avertissement')} ${echapper(MESSAGES_ALERTES[a] ?? a)}</p>`).join('')}`;
   }
 
   async chargerHistorique() {
@@ -129,13 +125,13 @@ export class OngletPrix {
       const v = (x, k) => (x?.[k] ?? null);
       const cellule = (e, k, d) => {
         const change = e.avant && String(v(e.avant, k)) !== String(v(e.apres, k));
-        return `<td class="nombre ${change ? 'change' : ''}" title="${change ? `Avant : ${prix(v(e.avant, k), d)}` : ''}">${prix(v(e.apres, k), d)}</td>`;
+        return `<td class="nombre ${change ? 'change' : ''}" title="${change ? texteHtml('bibliotheque.prix.avant', { prix: prix(v(e.avant, k), d) }) : ''}">${prix(v(e.apres, k), d)}</td>`;
       };
-      zone.innerHTML = h.length ? `<table class="bib-table"><thead><tr><th>Date</th><th>Auteur</th><th>Scénario</th><th>PA</th><th>FG</th><th>PR</th><th>Bénéf.</th><th>PV</th><th>Remise</th><th>PV net</th><th>Commentaire</th></tr></thead><tbody>
+      zone.innerHTML = h.length ? `<table class="bib-table"><thead><tr><th>${texteHtml('bibliotheque.prix.colonnes.date')}</th><th>${texteHtml('bibliotheque.prix.colonnes.auteur')}</th><th>${texteHtml('bibliotheque.prix.scenario')}</th><th>${texteHtml('bibliotheque.prix.colonnes.pa')}</th><th>${texteHtml('bibliotheque.prix.colonnes.fg')}</th><th>${texteHtml('bibliotheque.prix.colonnes.pr')}</th><th>${texteHtml('bibliotheque.prix.colonnes.benef')}</th><th>${texteHtml('bibliotheque.prix.colonnes.pv')}</th><th>${texteHtml('bibliotheque.prix.colonnes.remise')}</th><th>${texteHtml('bibliotheque.prix.colonnes.pv_net')}</th><th>${texteHtml('bibliotheque.prix.colonnes.commentaire')}</th></tr></thead><tbody>
         ${h.map((e) => `<tr><td>${formatDateHeure(e.date)}</td><td>${echapper(e.auteur ?? '')}</td>
           <td>${echapper(SCENARIOS_PA.find(([c]) => c === e.apres.scenario)?.[1] ?? e.apres.scenario ?? '')}</td>
           ${cellule(e, 'pa')}${cellule(e, 'coef_fg', 4)}${cellule(e, 'pr')}${cellule(e, 'coef_benef', 4)}${cellule(e, 'pv')}${cellule(e, 'coef_remise', 4)}${cellule(e, 'pv_net')}
-          <td>${echapper(e.commentaire ?? '')}</td></tr>`).join('')}</tbody></table>` : '<p class="aide">Aucune modification de prix.</p>';
+          <td>${echapper(e.commentaire ?? '')}</td></tr>`).join('')}</tbody></table>` : `<p class="aide">${texteHtml('bibliotheque.prix.aucune_modification')}</p>`;
     } catch (e) { zone.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; }
   }
 }
@@ -160,21 +156,21 @@ export class OngletUnites {
     const conv = this.#unites();
     const stock = valeur('unite_stock');
     this.corps.innerHTML = `<div class="bib-unites">
-      <fieldset class="fiche-groupe"><legend>Unités</legend><div class="bib-grille">
-        <label>Unité de stock * <select data-v="unite_stock" ${ro}>${options(stock, !stock)}</select></label>
-        <label>Unité d'achat <select data-v="unite_achat" ${ro}>${options(valeur('unite_achat'))}</select></label>
-        <label>Unité de vente <select data-v="unite_vente" ${ro}>${options(valeur('unite_vente'))}</select></label></div>
-        <p class="aide">Les prix sont valorisés dans l'unité de stock ; les autres unités s'y convertissent par les correspondances ci-dessous.</p>
+      <fieldset class="fiche-groupe"><legend>${texteHtml('bibliotheque.unites.titre')}</legend><div class="bib-grille">
+        <label>${texteHtml('bibliotheque.unites.stock')} <select data-v="unite_stock" ${ro}>${options(stock, !stock)}</select></label>
+        <label>${texteHtml('bibliotheque.unites.achat')} <select data-v="unite_achat" ${ro}>${options(valeur('unite_achat'))}</select></label>
+        <label>${texteHtml('bibliotheque.unites.vente')} <select data-v="unite_vente" ${ro}>${options(valeur('unite_vente'))}</select></label></div>
+        <p class="aide">${texteHtml('bibliotheque.unites.aide')}</p>
       </fieldset>
-      <fieldset class="fiche-groupe plein"><legend>Correspondances (quantité en ${echapper(stock ?? 'unité de stock')} pour 1 unité)</legend>
-        <table class="bib-table"><thead><tr><th>Unité</th><th>Formule</th><th>Exemple</th><th></th></tr></thead><tbody>
+      <fieldset class="fiche-groupe plein"><legend>${texteHtml('bibliotheque.unites.correspondances', { unite: stock ?? texte('bibliotheque.unites.unite_stock') })}</legend>
+        <table class="bib-table"><thead><tr><th>${texteHtml('bibliotheque.prix.colonnes.unite')}</th><th>${texteHtml('bibliotheque.unites.formule')}</th><th>${texteHtml('bibliotheque.unites.exemple')}</th><th></th></tr></thead><tbody>
         ${conv.map((u, i) => `<tr data-i="${i}"><td><select data-c="unite" ${ro}>${options(u.unite)}</select></td>
-          <td><input data-c="formule" value="${echapper(u.formule ?? '')}" placeholder="ex. 1000 / {{poids_ml}}" ${ro}></td><td class="bib-exemple"></td>
-          <td>${modifiable ? '<button type="button" data-supprimer title="Retirer">✕</button>' : ''}</td></tr>`).join('')}
+          <td><input data-c="formule" value="${echapper(u.formule ?? '')}" placeholder="${texteHtml('bibliotheque.unites.formule_exemple', { poids_ml: '{{poids_ml}}' })}" ${ro}></td><td class="bib-exemple"></td>
+          <td>${modifiable ? `<button type="button" data-supprimer title="${texteHtml('commun.retirer')}">${iconeHtml('retirer')}</button>` : ''}</td></tr>`).join('')}
         </tbody></table>
-        ${modifiable ? '<button type="button" data-ajouter>＋ Ajouter une unité</button>' : ''}
-        <p class="aide">Données utilisables (onglet Article, par unité de stock) : ${[...DONNEES_TECHNIQUES.map(([code, libelle]) => ({ code, libelle })), ...donnees].map((d) => `<code title="${echapper(d.libelle)}">{{${echapper(d.code)}}}</code>`).join(' ')}.
-          Exemples : acier stocké au ml (poids au ml) : kg → <code>1 / {{poids}}</code>, t → <code>1000 / {{poids}}</code> ; plaque de plâtre stockée au m² : plaque → <code>{{hauteur}} * {{largeur}} / 1000000</code>.</p>
+        ${modifiable ? `<button type="button" data-ajouter>${iconeHtml('ajouter')} ${texteHtml('bibliotheque.unites.ajouter')}</button>` : ''}
+        <p class="aide">${texteHtml('bibliotheque.unites.donnees')} ${[...DONNEES_TECHNIQUES.map(([code, libelle]) => ({ code, libelle })), ...donnees].map((d) => `<code title="${echapper(d.libelle)}">{{${echapper(d.code)}}}</code>`).join(' ')}.
+          ${texteHtml('bibliotheque.unites.exemples_html', { poids: '{{poids}}', hauteur: '{{hauteur}}', largeur: '{{largeur}}' })}</p>
       </fieldset></div>`;
     this.corps.querySelectorAll('[data-v]').forEach((el) => el.addEventListener('change', () => { this.ctx.definir(el.dataset.v, el.value || null); if (el.dataset.v === 'unite_stock') this.rendre(); }));
     this.corps.querySelectorAll('tr[data-i] [data-c]').forEach((el) => el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', () => this.#enregistrer()));
@@ -201,7 +197,7 @@ export class OngletUnites {
     this.corps.querySelectorAll('tr[data-i]').forEach((tr) => {
       const u = tr.querySelector('[data-c="unite"]').value;
       const p = r?.prix_unites.find((x) => x.unite === u);
-      tr.querySelector('.bib-exemple').innerHTML = !u ? '' : p?.ratio ? `1 ${echapper(u)} = ${formatLibre(p.ratio)} ${echapper(l.unite_stock ?? '')}` : `<span class="erreur">${echapper(p?.erreur ?? 'formule incomplète')}</span>`;
+      tr.querySelector('.bib-exemple').innerHTML = !u ? '' : p?.ratio ? `1 ${echapper(u)} = ${formatLibre(p.ratio)} ${echapper(l.unite_stock ?? '')}` : `<span class="erreur">${echapper(p?.erreur ?? texte('bibliotheque.unites.incomplete'))}</span>`;
     });
   }
 }
@@ -215,7 +211,7 @@ export class OngletTarifs {
   }
 
   async charger() {
-    if (this.ctx.id === null) { this.corps.innerHTML = '<p class="aide">Enregistrez l\'élément pour saisir ses tarifs fournisseurs.</p>'; return; }
+    if (this.ctx.id === null) { this.corps.innerHTML = `<p class="aide">${texteHtml('bibliotheque.tarifs.enregistrer_avant')}</p>`; return; }
     this.rendre(await this.ctx.fournisseur.tarifs(this.ctx.id));
   }
 
@@ -227,24 +223,23 @@ export class OngletTarifs {
     // Prix net : prix public remisé (lot 8) s'il est renseigné, sinon le prix saisi.
     const net = (t) => { try { return t.prix_public !== null && t.prix_public !== undefined && t.prix_public !== '' ? prix(String(prixNetTarif(t)), 4) : ''; } catch { return ''; } };
     const ligne = (t, i) => `<tr data-i="${i}" class="${t.id ? '' : 'ajout'}">
-      <td><input type="radio" name="principal" data-c="principal" ${t.principal ? 'checked' : ''} ${ro} title="Fournisseur principal"></td>
+      <td><input type="radio" name="principal" data-c="principal" ${t.principal ? 'checked' : ''} ${ro} title="${texteHtml('bibliotheque.tarifs.principal')}"></td>
       <td><input data-c="fournisseur" value="${echapper(t.fournisseur ?? '')}" ${ro}></td><td><input data-c="reference" value="${echapper(t.reference ?? '')}" ${ro} style="width:7rem"></td>
       <td><input data-c="libelle" value="${echapper(t.libelle ?? '')}" ${ro}></td>
-      <td><input data-c="prix_public" inputmode="decimal" value="${saisi(t.prix_public)}" ${ro} style="width:6rem" title="Prix public : le prix net est le prix public remisé"></td>
+      <td><input data-c="prix_public" inputmode="decimal" value="${saisi(t.prix_public)}" ${ro} style="width:6rem" title="${texteHtml('bibliotheque.tarifs.prix_public_aide')}"></td>
       <td><input data-c="remise1" inputmode="decimal" value="${saisi(t.remise1)}" ${ro} style="width:3.5rem"></td>
       <td><input data-c="remise2" inputmode="decimal" value="${saisi(t.remise2)}" ${ro} style="width:3.5rem"></td>
-      <td><input data-c="prix" inputmode="decimal" value="${saisi(t.prix)}" ${ro} style="width:6rem" title="Prix net (PA) : saisi sans prix public, sinon calculé">${net(t) ? `<small class="aide" data-net> = ${net(t)}</small>` : ''}</td>
+      <td><input data-c="prix" inputmode="decimal" value="${saisi(t.prix)}" ${ro} style="width:6rem" title="${texteHtml('bibliotheque.tarifs.prix_aide')}">${net(t) ? `<small class="aide" data-net> = ${net(t)}</small>` : ''}</td>
       <td><select data-c="unite" ${ro}>${options(t.unite ?? this.ctx.valeur('unite_achat') ?? this.ctx.valeur('unite_stock'))}</select></td>
-      <td><input data-c="delai" inputmode="numeric" value="${saisi(t.delai)}" ${ro} style="width:3.5rem" title="Délai de livraison du fournisseur (jours)"></td>
+      <td><input data-c="delai" inputmode="numeric" value="${saisi(t.delai)}" ${ro} style="width:3.5rem" title="${texteHtml('bibliotheque.tarifs.delai_aide')}"></td>
       <td><input data-c="code_barre" value="${echapper(t.code_barre ?? '')}" ${ro} style="width:8rem"></td>
       <td><input type="date" data-c="debut" value="${echapper(t.debut ?? '')}" ${ro}></td><td><input type="date" data-c="fin" value="${echapper(t.fin ?? '')}" ${ro}></td>
-      <td>${t.lien ? `<a href="${echapper(t.lien)}" target="_blank" rel="noopener" title="${echapper(t.lien)}">🔗</a>` : ''}<input data-c="lien" value="${echapper(t.lien ?? '')}" placeholder="https://…" ${ro} style="width:9rem"></td>
-      <td class="bib-actions">${modifiable ? `<button type="button" data-action="enregistrer">${t.id ? '✓' : '＋'}</button>${t.id ? '<button type="button" data-action="supprimer">🗑</button>' : ''}` : ''}</td></tr>`;
+      <td>${t.lien ? `<a href="${echapper(t.lien)}" target="_blank" rel="noopener" title="${echapper(t.lien)}">${iconeHtml('bibliotheque_lien')}</a>` : ''}<input data-c="lien" value="${echapper(t.lien ?? '')}" placeholder="https://…" ${ro} style="width:9rem"></td>
+      <td class="bib-actions">${modifiable ? `<button type="button" data-action="enregistrer">${iconeHtml(t.id ? 'bibliotheque_enregistrer' : 'ajouter')}</button>${t.id ? `<button type="button" data-action="supprimer" title="${texteHtml('commun.supprimer')}">${iconeHtml('supprimer')}</button>` : ''}` : ''}</td></tr>`;
     const lignes = modifiable ? [...tarifs, {}] : tarifs;
-    this.corps.innerHTML = `<div class="bib-tarifs"><table class="bib-table"><thead><tr><th title="Principal">★</th><th>Fournisseur</th><th>Référence</th><th>Libellé</th><th>Prix public</th><th>Remise 1 %</th><th>Remise 2 %</th><th>Prix net</th><th>Unité</th><th>Délai (j)</th><th>Code-barres</th><th>Début</th><th>Fin</th><th>Lien</th><th></th></tr></thead>
-      <tbody>${lignes.map(ligne).join('') || '<tr><td colspan="15" class="aide">Aucun tarif.</td></tr>'}</tbody></table>
-      <p class="aide">Plusieurs tarifs possibles, d'un ou de plusieurs fournisseurs (y compris plusieurs tarifs d'un même fournisseur). Le tarif principal ★ et les tarifs en vigueur
-        alimentent les scénarios « fournisseur principal » et « meilleur prix » ; l'enregistrement recalcule le prix de l'élément et l'inscrit dans l'historique.</p></div>`;
+    this.corps.innerHTML = `<div class="bib-tarifs"><table class="bib-table"><thead><tr><th title="${texteHtml('bibliotheque.tarifs.colonnes.principal')}">${iconeHtml('bibliotheque_principal')}</th><th>${texteHtml('bibliotheque.tarifs.colonnes.fournisseur')}</th><th>${texteHtml('bibliotheque.tarifs.colonnes.reference')}</th><th>${texteHtml('commun.libelle')}</th><th>${texteHtml('bibliotheque.tarifs.colonnes.prix_public')}</th><th>${texteHtml('bibliotheque.tarifs.colonnes.remise1')}</th><th>${texteHtml('bibliotheque.tarifs.colonnes.remise2')}</th><th>${texteHtml('bibliotheque.tarifs.colonnes.prix')}</th><th>${texteHtml('bibliotheque.prix.colonnes.unite')}</th><th>${texteHtml('bibliotheque.tarifs.colonnes.delai')}</th><th>${texteHtml('bibliotheque.tarifs.colonnes.code_barre')}</th><th>${texteHtml('bibliotheque.tarifs.colonnes.debut')}</th><th>${texteHtml('bibliotheque.tarifs.colonnes.fin')}</th><th>${texteHtml('bibliotheque.tarifs.colonnes.lien')}</th><th></th></tr></thead>
+      <tbody>${lignes.map(ligne).join('') || `<tr><td colspan="15" class="aide">${texteHtml('bibliotheque.tarifs.aucun')}</td></tr>`}</tbody></table>
+      <p class="aide">${texteHtml('bibliotheque.tarifs.aide', { principal: icone('bibliotheque_principal') })}</p></div>`;
     this.corps.querySelector('tbody').addEventListener('click', async (e) => {
       const b = e.target.closest('button[data-action]');
       if (!b) return;
@@ -257,12 +252,12 @@ export class OngletTarifs {
       if (v.prix === null && v.prix_public !== null) v.prix = '0';
       try {
         const r = b.dataset.action === 'supprimer'
-          ? (await confirmer('Supprimer ce tarif ?') ? await this.ctx.fournisseur.supprimerTarif(this.ctx.id, t.id) : null)
+          ? (await confirmer(texte('bibliotheque.tarifs.supprimer')) ? await this.ctx.fournisseur.supprimerTarif(this.ctx.id, t.id) : null)
           : await this.ctx.fournisseur.enregistrerTarif(this.ctx.id, v);
         if (!r) return;
         this.rendre(r.tarifs);
         this.ctx.surPrix?.(r.prix);
-        this.ctx.message(`Tarifs enregistrés · PA ${prix(r.prix.pa)} · PV net ${prix(r.prix.pv_net)}`, 'succes');
+        this.ctx.message(texte('bibliotheque.tarifs.enregistres', { pa: prix(r.prix.pa), pv_net: prix(r.prix.pv_net) }), 'succes');
       } catch (x) { this.ctx.message(x.message, 'erreur'); }
     });
   }

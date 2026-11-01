@@ -1,3 +1,5 @@
+import { texte } from '@logibtp/socle/dictionnaire';
+
 // Chrono du code d'une fiche (code prévisionnel, contrôle, code suivant), répliqué dans LogiBTP.Fiches/ChronoFiche.cs
 // (jeu partagé modules/fiche/tests/cas/02_chrono.json).
 //
@@ -18,14 +20,14 @@ export const exerciceChrono = (raz, annee) => (raz === 'J' ? 0 : annee);
 /** Message d'erreur du format, null s'il est valable. */
 export function controlerChrono({ format, raz }) {
   const f = effectif(format);
-  if (f.length > 40) return 'Format de 40 caractères au plus';
+  if (f.length > 40) return texte('fiche.chrono.longueur');
   const js = jetons(f).map((m) => m[1]);
   const reste = f.replace(JETONS, '');
-  if (reste.includes('{') || reste.includes('}')) return 'Jeton inconnu : {P}, {AAAA}, {AA}, {N}, {N:k} ou {PARENT} seulement';
-  if (js.filter((j) => j.startsWith('N')).length !== 1) return 'Le format porte un rang {N} (ou {N:k}), une seule fois';
-  if (js.filter((j) => j === 'AAAA' || j === 'AA').length > 1) return 'Une seule année dans le format';
-  if (js.filter((j) => j === 'PARENT').length > 1) return 'Un seul {PARENT} dans le format';
-  if (raz === 'A' && !js.some((j) => j === 'AAAA' || j === 'AA')) return "Rang remis à zéro chaque exercice : l'année ({AAAA} ou {AA}) doit figurer dans le code";
+  if (reste.includes('{') || reste.includes('}')) return texte('fiche.chrono.jeton_inconnu');
+  if (js.filter((j) => j.startsWith('N')).length !== 1) return texte('fiche.chrono.un_rang');
+  if (js.filter((j) => j === 'AAAA' || j === 'AA').length > 1) return texte('fiche.chrono.une_annee');
+  if (js.filter((j) => j === 'PARENT').length > 1) return texte('fiche.chrono.un_parent');
+  if (raz === 'A' && !js.some((j) => j === 'AAAA' || j === 'AA')) return texte('fiche.chrono.annee_requise');
   return null;
 }
 

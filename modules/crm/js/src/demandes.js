@@ -3,19 +3,21 @@
 //
 // États : VEILLE (repérée) → A_ETUDIER → EN_COURS (échanges, chiffrage préparatoire) → TRANSFORMEE (projet créé) ou
 // SANS_SUITE (motif : perdue, non retenue, abandonnée). « Gagnée / perdue » relève ensuite du projet.
+import { texte, textesParCode } from '@logibtp/socle/dictionnaire';
+
 
 export const ETATS_DEMANDE = [
-  { valeur: 'VEILLE', libelle: 'Veille' },
-  { valeur: 'A_ETUDIER', libelle: 'À étudier' },
-  { valeur: 'EN_COURS', libelle: 'En cours' },
-  { valeur: 'TRANSFORMEE', libelle: 'Transformée en projet' },
-  { valeur: 'SANS_SUITE', libelle: 'Sans suite' },
+  { valeur: 'VEILLE', libelle: texte('crm.etats_demande.VEILLE') },
+  { valeur: 'A_ETUDIER', libelle: texte('crm.etats_demande.A_ETUDIER') },
+  { valeur: 'EN_COURS', libelle: texte('crm.etats_demande.EN_COURS') },
+  { valeur: 'TRANSFORMEE', libelle: texte('crm.etats_demande.TRANSFORMEE') },
+  { valeur: 'SANS_SUITE', libelle: texte('crm.etats_demande.SANS_SUITE') },
 ];
 
 export const MOTIFS_SANS_SUITE = [
-  { valeur: 'PERDUE', libelle: 'Perdue' },
-  { valeur: 'NON_RETENUE', libelle: 'Non retenue' },
-  { valeur: 'ABANDONNEE', libelle: 'Abandonnée' },
+  { valeur: 'PERDUE', libelle: texte('crm.motifs_sans_suite.PERDUE') },
+  { valeur: 'NON_RETENUE', libelle: texte('crm.motifs_sans_suite.NON_RETENUE') },
+  { valeur: 'ABANDONNEE', libelle: texte('crm.motifs_sans_suite.ABANDONNEE') },
 ];
 
 /** États d'une demande terminée (hors listes de travail). */
@@ -38,10 +40,4 @@ export function controlerDemande(d) {
   return erreurs;
 }
 
-export const MESSAGES_DEMANDE = {
-  DEMANDE_OBJET: 'Objet obligatoire (200 caractères au plus)',
-  DEMANDE_ETAT: 'État inconnu',
-  DEMANDE_MOTIF: 'Une demande sans suite a un motif (perdue, non retenue, abandonnée), et seulement elle',
-  DEMANDE_CIBLE: 'Une demande transformée désigne le projet créé, et seulement elle',
-  DEMANDE_MONTANT: 'Le montant estimé est positif',
-};
+export const MESSAGES_DEMANDE = textesParCode('crm.demandes.erreurs', ['DEMANDE_OBJET', 'DEMANDE_ETAT', 'DEMANDE_MOTIF', 'DEMANDE_CIBLE', 'DEMANDE_MONTANT']);

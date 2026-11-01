@@ -22,6 +22,8 @@ describe('règles du service worker', () => {
   it("classe les pages, les fichiers de l'application et les autres origines", () => {
     expect(t('GET', '/document/5', true)).toBe('page');
     expect(t('GET', '/assets/index-abc.js')).toBe('fichier');
+    expect(t('GET', '/personnalisation/fr.json')).toBe('personnalisation');
+    expect(t('GET', '/personnalisation/images/logo.svg?v=abc')).toBe('personnalisation');
     expect(t('POST', '/connexion')).toBe('reseau');
     expect(traitement({ methode: 'GET', url: 'https://recherche-entreprises.api.gouv.fr/search?q=x', origine })).toBe('reseau');
   });

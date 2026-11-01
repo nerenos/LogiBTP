@@ -9,6 +9,7 @@ using LogiBTP.Crm.Web;
 using LogiBTP.Documents.Web;
 using LogiBTP.Editions.Web;
 using LogiBTP.EntreprisesFr.Web;
+using LogiBTP.Personnalisation.Web;
 using LogiBTP.Execution.Web;
 using LogiBTP.SousTraitance.Web;
 using LogiBTP.Stock.Web;
@@ -176,7 +177,9 @@ if (app.Environment.IsDevelopment()) await ConversionMetresBases.ConvertirAsync(
 
 app.UseSecurite();
 app.UseHttpsInstallation();
-// Client web construit (wwwroot de l'image Docker) : fichiers statiques et CSP bloquante ; en développement, Vite le sert.
+// Textes, thème et images du client (module Personnalisation) avec la surcharge de l'installation, puis client web
+// construit (wwwroot de l'image Docker) : fichiers statiques et CSP bloquante ; en développement, Vite sert les deux.
+app.UsePersonnalisation();
 app.UseClientWeb();
 app.UseErreursMetier();
 app.UseSocietes();

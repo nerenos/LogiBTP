@@ -1,3 +1,4 @@
+import { texte, texteHtml, pluriel, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { urlFiche, TYPE_FICHE } from '../codes.js';
 import { aujourdhui } from '@logibtp/socle';
 import { FicheBase } from '@logibtp/fiche/ui';
@@ -29,9 +30,9 @@ export class FicheLogiBTP extends FicheBase {
   ongletsSuivi() {
     if (!this.suivi) return [];
     return [{
-      code: 'suivi', titre: 'Suivi',
+      code: 'suivi', titre: texte('fiches_btp.onglets.suivi'),
       rendre: (corps) => {
-        if (this.id === null) { corps.innerHTML = '<p class="aide">Enregistrez la fiche pour suivre ses notes et ses tâches.</p>'; return; }
+        if (this.id === null) { corps.innerHTML = `<p class="aide">${texteHtml('fiches_btp.suivi_nouvelle')}</p>`; return; }
         this.panneauSuivi?.fermer();
         this.panneauSuivi = this.suivi(corps, { type: this.type, id: this.id });
       },
@@ -63,19 +64,19 @@ export class FicheSalarie extends FicheLogiBTP {
     if (this.id === null) return super.ongletsSpecifiques();
     const r = this.ressources;
     return [...super.ongletsSpecifiques(),
-      ...(r ? [{ code: 'habilitations', titre: 'Habilitations', rendre: (corps) => r.habilitations(corps, { element: 'salarie', id: this.id }) }] : []),
-      ...(r && this.valeur('statut') === 'INTERIM' ? [{ code: 'missions', titre: 'Missions', rendre: (corps) => r.missions(corps, { salarie: this.id }) }] : []),
-      ...(r?.materielAffecte ? [{ code: 'materiel-affecte', titre: 'Matériel', rendre: (corps) => r.materielAffecte(corps, { type: this.valeur('statut') === 'INTERIM' ? 'INTERIM' : 'SALARIE', id: this.id }) }] : []),
-      ...(this.dotations ? [{ code: 'dotations', titre: 'Dotations', rendre: (corps) => this.dotations(corps, { salarie: Number(this.id) }) }] : []),
+      ...(r ? [{ code: 'habilitations', titre: texte('fiches_btp.onglets.habilitations'), rendre: (corps) => r.habilitations(corps, { element: 'salarie', id: this.id }) }] : []),
+      ...(r && this.valeur('statut') === 'INTERIM' ? [{ code: 'missions', titre: texte('fiches_btp.onglets.missions'), rendre: (corps) => r.missions(corps, { salarie: this.id }) }] : []),
+      ...(r?.materielAffecte ? [{ code: 'materiel-affecte', titre: texte('fiches_btp.onglets.materiel'), rendre: (corps) => r.materielAffecte(corps, { type: this.valeur('statut') === 'INTERIM' ? 'INTERIM' : 'SALARIE', id: this.id }) }] : []),
+      ...(this.dotations ? [{ code: 'dotations', titre: texte('fiches_btp.onglets.dotations'), rendre: (corps) => this.dotations(corps, { salarie: Number(this.id) }) }] : []),
       ...(this.compte ? [this.#ongletCompte()] : [])];
   }
 
   #ongletCompte() {
     return {
-      code: 'compte', titre: 'Compte',
+      code: 'compte', titre: texte('fiches_btp.onglets.compte'),
       rendre: (corps) => {
         const ind = this.valeur('ind_id');
-        if (!ind) { corps.innerHTML = "<p class=\"aide\">Liez d'abord le salarié à un individu de l'annuaire (onglet principal) : le compte de connexion se rattache à l'individu.</p>"; return; }
+        if (!ind) { corps.innerHTML = `<p class="aide">${texteHtml('fiches_btp.salarie.sans_individu')}</p>`; return; }
         this.compte(corps, { type: TYPE_FICHE.INDIVIDU, id: ind, prenom: this.valeur('prenom'), nom: this.valeur('nom') });
       },
     };
@@ -147,33 +148,33 @@ export class FicheSalarie extends FicheLogiBTP {
     const el = document.createElement('div');
     el.className = 'fiche-saisie-champ annuaire-parent';
     const saisie = this.estEnSaisie();
-    el.innerHTML = valeur ? `<a href="${urlFiche(TYPE_FICHE.INDIVIDU, valeur)}" data-ouvrir>👤 ${echapper(this.libelleIndividu ?? `Individu ${valeur}`)}</a>` : '<span class="aide">Non lié à l\'annuaire</span>';
+    el.innerHTML = valeur ? `<a href="${urlFiche(TYPE_FICHE.INDIVIDU, valeur)}" data-ouvrir>${iconeHtml('fiches_btp_individu')} ${echapper(this.libelleIndividu ?? texte('fiches_btp.salarie.individu', { id: valeur }))}</a>` : `<span class="aide">${texteHtml('fiches_btp.salarie.non_lie')}</span>`;
     if (saisie) {
-      el.insertAdjacentHTML('beforeend', ` <button type="button" data-lier title="Lier à un individu existant de l'annuaire">…</button>
-        ${valeur ? '<button type="button" data-delier title="Retirer le lien">✕</button>' : '<button type="button" data-creer title="Créer l\'individu dans l\'annuaire (rattaché à l\'agence)">＋ Créer dans l\'annuaire</button>'}`);
+      el.insertAdjacentHTML('beforeend', ` <button type="button" data-lier title="${texteHtml('fiches_btp.salarie.lier')}">…</button>
+        ${valeur ? `<button type="button" data-delier title="${texteHtml('fiches_btp.salarie.delier')}">${iconeHtml('retirer')}</button>` : `<button type="button" data-creer title="${texteHtml('fiches_btp.salarie.creer_aide')}">${iconeHtml('ajouter')} ${texteHtml('fiches_btp.salarie.creer')}</button>`}`);
     }
     el.querySelector('[data-ouvrir]')?.addEventListener('click', (e) => { e.preventDefault(); this.ouvrirFiche({ type: TYPE_FICHE.INDIVIDU, id: valeur }, e); });
     el.querySelector('[data-delier]')?.addEventListener('click', () => { this.definirValeur('ind_id', null); this.rendre(); });
     el.querySelector('[data-lier]')?.addEventListener('click', async () => {
-      const r = await choisirIndividu({ annuaire: this.services.annuaire, titre: 'Individu du salarié', nom: [this.valeur('nom'), this.valeur('prenom')].filter(Boolean).join(' ') });
+      const r = await choisirIndividu({ annuaire: this.services.annuaire, titre: texte('fiches_btp.salarie.choisir'), nom: [this.valeur('nom'), this.valeur('prenom')].filter(Boolean).join(' ') });
       if (!r) return;
       if (r.nouveau) { await this.#creerIndividu(r.nouveau); return; }
       this.libelleIndividu = r.individu.nom_complet;
       this.definirValeur('ind_id', r.individu.id);
       const n = await this.#completerDepuisIndividu(r.individu.id);
       this.rendre();
-      if (n) this.message(`${n} champ${n > 1 ? 's' : ''} complété${n > 1 ? 's' : ''} depuis l'annuaire`, 'succes');
+      if (n) this.message(pluriel('fiches_btp.salarie.champs_completes', n), 'succes');
     });
     el.querySelector('[data-creer]')?.addEventListener('click', () => this.#creerIndividu({ nom: this.valeur('nom'), prenom: this.valeur('prenom') }).catch((e) => this.message(e.message, 'erreur')));
     if (valeur && !this.libelleIndividu) {
-      this.services.annuaire.individu(valeur).then((i) => { this.libelleIndividu = i.nom_complet; const a = el.querySelector('[data-ouvrir]'); if (a) a.textContent = `👤 ${i.nom_complet}`; }).catch(() => {});
+      this.services.annuaire.individu(valeur).then((i) => { this.libelleIndividu = i.nom_complet; const a = el.querySelector('[data-ouvrir]'); if (a) a.textContent = `${icone('fiches_btp_individu')} ${i.nom_complet}`; }).catch(() => {});
     }
     return el;
   }
 
   /** Individu créé dans l'annuaire, rattaché à l'agence du salarié avec ses coordonnées professionnelles. */
   async #creerIndividu({ civilite = null, nom, prenom }) {
-    if (!nom) { this.message('Saisissez d\'abord le nom du salarié', 'avertissement'); return; }
+    if (!nom) { this.message(texte('fiches_btp.salarie.nom_requis'), 'avertissement'); return; }
     const v = this.valeurs();
     const coordonnees = [
       v.email ? { nature: 'EMAIL', usage: 'PRO', valeur: v.email, principal: true } : null,
@@ -181,7 +182,7 @@ export class FicheSalarie extends FicheLogiBTP {
     ].filter(Boolean);
     // Agence du salarié, sinon notre société (première des agences proposées).
     const agence = Number(v.agence) || this.#agences()[0];
-    if (!agence) { this.message('Aucune agence de notre société dans l\'annuaire', 'erreur'); return; }
+    if (!agence) { this.message(texte('fiches_btp.salarie.aucune_agence'), 'erreur'); return; }
     const i = await this.fournisseur.creer(TYPE_FICHE.INDIVIDU, {
       valeurs: {
         civilite, nom, prenom, pays: 'FR', actif: true, usage: 'A', roles: rolesSalarie(v),
@@ -192,13 +193,13 @@ export class FicheSalarie extends FicheLogiBTP {
     this.libelleIndividu = [nom?.toUpperCase(), prenom].filter(Boolean).join(' ');
     this.definirValeur('ind_id', Number(i.id));
     this.rendre();
-    this.message('Individu créé dans l\'annuaire et rattaché à l\'agence : enregistrez le salarié pour conserver le lien', 'succes');
+    this.message(texte('fiches_btp.salarie.individu_cree'), 'succes');
   }
 
   actionsSupplementaires() {
     const ind = this.valeur('ind_id');
     return [
-      { libelle: '👤 Fiche annuaire', titre: 'Ouvrir la fiche de l\'individu (coordonnées, rattachements)', visible: !this.estEnSaisie() && !!ind, action: () => this.ouvrirFiche({ type: TYPE_FICHE.INDIVIDU, id: ind }) },
+      { libelle: `${icone('fiches_btp_individu')} ${texte('fiches_btp.salarie.fiche_annuaire')}`, titre: texte('fiches_btp.salarie.fiche_annuaire_aide'), visible: !this.estEnSaisie() && !!ind, action: () => this.ouvrirFiche({ type: TYPE_FICHE.INDIVIDU, id: ind }) },
       ...super.actionsSupplementaires(),
     ];
   }
@@ -206,22 +207,22 @@ export class FicheSalarie extends FicheLogiBTP {
   rendreInformations(v) {
     const parts = [];
     const anciennete = jours(v.date_entree);
-    if (anciennete !== null) parts.push(info('Ancienneté', `${Math.max(0, Math.floor(anciennete / 365.25))} an(s)`));
+    if (anciennete !== null) parts.push(info(texteHtml('fiches_btp.infos.anciennete'), pluriel('fiches_btp.infos.annees', Math.max(0, Math.floor(anciennete / 365.25)))));
     const age = jours(v.date_naissance);
-    if (age !== null) parts.push(info('Âge', `${Math.floor(age / 365.25)} ans`));
+    if (age !== null) parts.push(info(texteHtml('fiches_btp.infos.age'), pluriel('fiches_btp.infos.annees', Math.floor(age / 365.25))));
     if (v.salaire_brut !== null && v.salaire_brut !== undefined && Number(v.heures_mois) > 0) {
-      parts.push(info('Coût horaire chargé', `${formatNombre(Number(String(v.salaire_brut).replace(',', '.')) * 1.45 / Number(String(v.heures_mois).replace(',', '.')), 2)} €`));
+      parts.push(info(texteHtml('fiches_btp.infos.cout_horaire'), texteHtml('fiches_btp.infos.euros', { montant: formatNombre(Number(String(v.salaire_brut).replace(',', '.')) * 1.45 / Number(String(v.heures_mois).replace(',', '.')), 2) })));
     }
-    if (v.actif === false) parts.push(info('Situation', 'Sorti des effectifs', true));
+    if (v.actif === false) parts.push(info(texteHtml('fiches_btp.infos.situation'), texteHtml('fiches_btp.infos.sorti'), true));
     return parts.join('');
   }
 
   validerMetier(v) {
     const erreurs = [];
-    if (v.date_entree && String(v.date_entree).slice(0, 10) > aujourdhui()) erreurs.push({ champ: 'date_entree', message: 'Date d\'entrée dans le futur' });
+    if (v.date_entree && String(v.date_entree).slice(0, 10) > aujourdhui()) erreurs.push({ champ: 'date_entree', message: texte('fiches_btp.controles.entree_future') });
     if (v.date_naissance) {
-      if (jours(v.date_naissance) / 365.25 < 15) erreurs.push({ champ: 'date_naissance', message: 'Âge inférieur à 15 ans' });
-      if (v.date_entree && String(v.date_naissance) >= String(v.date_entree)) erreurs.push({ champ: 'date_naissance', message: 'Naissance postérieure à l\'entrée' });
+      if (jours(v.date_naissance) / 365.25 < 15) erreurs.push({ champ: 'date_naissance', message: texte('fiches_btp.controles.age_min') });
+      if (v.date_entree && String(v.date_naissance) >= String(v.date_entree)) erreurs.push({ champ: 'date_naissance', message: texte('fiches_btp.controles.naissance_entree') });
     }
     return erreurs;
   }
@@ -238,16 +239,16 @@ export class FicheMateriel extends FicheLogiBTP {
     const r = this.ressources;
     if (!r || this.id === null) return super.ongletsSpecifiques();
     return [...super.ongletsSpecifiques(), {
-      code: 'habilitations', titre: 'Contrôles et habilitations',
+      code: 'habilitations', titre: texte('fiches_btp.onglets.controles'),
       rendre: (corps) => {
         corps.innerHTML = '<div data-controles></div><div data-exigees></div>';
-        r.habilitations(corps.querySelector('[data-controles]'), { element: 'materiel', id: this.id, titre: 'Contrôles réglementaires' });
+        r.habilitations(corps.querySelector('[data-controles]'), { element: 'materiel', id: this.id, titre: texte('fiches_btp.materiel.controles') });
         r.exigees(corps.querySelector('[data-exigees]'), { materiel: this.id });
       },
-    }, ...(r.affectations ? [{ code: 'affectations', titre: 'Affectations', rendre: (corps) => r.affectations(corps, { materiel: this.id, identifie: this.valeur('mode') === 'IDENTIFIE' }) }] : []),
-      ...(r.compteurs ? [{ code: 'compteurs', titre: 'Compteurs', rendre: (corps) => r.compteurs(corps, { materiel: this.id }) }] : []),
-      ...(r.etats ? [{ code: 'historique', titre: 'Historique', rendre: (corps) => r.etats(corps, { materiel: this.id }) }] : []),
-      ...(r.couts ? [{ code: 'couts', titre: 'Coûts', rendre: (corps) => r.couts(corps, { materiel: this.id }) }] : [])];
+    }, ...(r.affectations ? [{ code: 'affectations', titre: texte('fiches_btp.onglets.affectations'), rendre: (corps) => r.affectations(corps, { materiel: this.id, identifie: this.valeur('mode') === 'IDENTIFIE' }) }] : []),
+      ...(r.compteurs ? [{ code: 'compteurs', titre: texte('fiches_btp.onglets.compteurs'), rendre: (corps) => r.compteurs(corps, { materiel: this.id }) }] : []),
+      ...(r.etats ? [{ code: 'historique', titre: texte('fiches_btp.onglets.historique'), rendre: (corps) => r.etats(corps, { materiel: this.id }) }] : []),
+      ...(r.couts ? [{ code: 'couts', titre: texte('fiches_btp.onglets.couts'), rendre: (corps) => r.couts(corps, { materiel: this.id }) }] : [])];
   }
 
   /**
@@ -258,7 +259,7 @@ export class FicheMateriel extends FicheLogiBTP {
     const identifie = this.valeur('mode') === 'IDENTIFIE';
     if (identifie && (champ.code === 'quantite' || champ.code === 'unite')) {
       const el = super.rendreChamp({ ...champ, lecture_seule: true }, champ.code === 'quantite' ? 1 : null);
-      el.title = 'Matériel identifié : toujours un seul';
+      el.title = texte('fiches_btp.materiel.quantite_identifie');
       if (champ.code === 'unite') el.placeholder = '—';
       return el;
     }
@@ -278,7 +279,7 @@ export class FicheMateriel extends FicheLogiBTP {
         this.etatsDemandes ??= {};
         if (v === this.etatsDemandes[champ.code] || v === this.fiche.valeurs[champ.code]) { this.etatsDemandes[champ.code] = v; return; }
         this.etatsDemandes[champ.code] = v;
-        const motif = await saisir('Motif du changement (gardé dans l\'historique du matériel) :', this.valeur('etat_motif') ?? '', { titre: 'Changement d\'état du matériel' });
+        const motif = await saisir(texte('fiches_btp.materiel.motif_etat'), this.valeur('etat_motif') ?? '', { titre: texte('fiches_btp.materiel.changement_etat') });
         if (motif !== null) this.definirValeur('etat_motif', motif.trim() || null);
       });
     }
@@ -288,18 +289,18 @@ export class FicheMateriel extends FicheLogiBTP {
   rendreInformations(v) {
     const parts = [];
     const age = jours(v.date_achat);
-    if (age !== null) parts.push(info('Âge', `${(age / 365.25).toFixed(1).replace('.', ',')} an(s)`));
-    if (v.etat === 'PANNE') parts.push(info('État', 'En panne', true));
-    if (v.condition === 'ENDOMMAGE' || v.condition === 'HS') parts.push(info('Condition', v.condition === 'HS' ? 'Hors service' : 'Endommagé', true));
-    if (v.controle_ok === false) parts.push(info('Contrôle réglementaire', 'à faire', true));
+    if (age !== null) parts.push(info(texteHtml('fiches_btp.infos.age'), texteHtml('fiches_btp.infos.annees_decimal', { nombre: (age / 365.25).toFixed(1).replace('.', ',') })));
+    if (v.etat === 'PANNE') parts.push(info(texteHtml('fiches_btp.infos.etat'), texteHtml('fiches_btp.infos.panne'), true));
+    if (v.condition === 'ENDOMMAGE' || v.condition === 'HS') parts.push(info(texteHtml('fiches_btp.infos.condition'), texteHtml(`fiches_btp.infos.condition_${v.condition === 'HS' ? 'hs' : 'endommage'}`), true));
+    if (v.controle_ok === false) parts.push(info(texteHtml('fiches_btp.infos.controle'), texteHtml('fiches_btp.infos.a_faire'), true));
     return parts.join('');
   }
 
   validerMetier(v) {
     const erreurs = [];
-    if (Number(v.heures_utilisation) < 0) erreurs.push({ champ: 'heures_utilisation', message: 'Nombre d\'heures négatif' });
-    if (v.date_achat && String(v.date_achat).slice(0, 10) > aujourdhui()) erreurs.push({ champ: 'date_achat', message: 'Date d\'achat dans le futur' });
-    if (v.etat === 'CHANTIER' && !v.chantier) erreurs.push({ champ: 'chantier', message: 'Chantier à préciser pour un matériel en chantier' });
+    if (Number(v.heures_utilisation) < 0) erreurs.push({ champ: 'heures_utilisation', message: texte('fiches_btp.controles.heures_negatives') });
+    if (v.date_achat && String(v.date_achat).slice(0, 10) > aujourdhui()) erreurs.push({ champ: 'date_achat', message: texte('fiches_btp.controles.achat_futur') });
+    if (v.etat === 'CHANTIER' && !v.chantier) erreurs.push({ champ: 'chantier', message: texte('fiches_btp.controles.chantier') });
     return erreurs;
   }
 }

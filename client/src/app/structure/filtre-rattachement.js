@@ -1,3 +1,4 @@
+import { texte, texteHtml, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { TYPE_FICHE } from '../codes.js';
 import { echapper } from '@logibtp/socle/ui';
 import { champRattachement } from './selection.js';
@@ -9,11 +10,11 @@ import { champRattachement } from './selection.js';
 // Adresse : /liste/<thème>?<type>=CODE (un seul type : projet, affaire, chantier ou marche ; raccourcis des fiches).
 
 export const NIVEAUX = [
-  { type: TYPE_FICHE.PROJET, colonne: 'projet_id', liste: 'projets', titre: 'Projet' },
-  { type: TYPE_FICHE.AFFAIRE, colonne: 'affaire_id', liste: 'affaires', titre: 'Affaire' },
+  { type: TYPE_FICHE.PROJET, colonne: 'projet_id', liste: 'projets', get titre() { return texte('structure_btp.niveaux.projet'); } },
+  { type: TYPE_FICHE.AFFAIRE, colonne: 'affaire_id', liste: 'affaires', get titre() { return texte('structure_btp.niveaux.affaire'); } },
   // Documents : chantier de l'entête, sinon des lignes d'achat et des documents sources (colonne chantiers, db/248).
-  { type: TYPE_FICHE.CHANTIER, colonne: 'chantier_id', colonneDocuments: 'chantiers', liste: 'chantiers', titre: 'Chantier' },
-  { type: TYPE_FICHE.MARCHE, colonne: 'marche_id', liste: 'marches', titre: 'Marché' },
+  { type: TYPE_FICHE.CHANTIER, colonne: 'chantier_id', colonneDocuments: 'chantiers', liste: 'chantiers', get titre() { return texte('structure_btp.niveaux.chantier'); } },
+  { type: TYPE_FICHE.MARCHE, colonne: 'marche_id', liste: 'marches', get titre() { return texte('structure_btp.niveaux.marche'); } },
 ];
 
 export class FiltreRattachement {
@@ -71,7 +72,7 @@ export class FiltreRattachement {
     c.replaceChildren();
     if (this.source === 'documents') {
       c.hidden = false;
-      c.innerHTML = `<span class="filtre-rattachement-titre" title="Documents rattachés au projet, à l'affaire, au chantier ou au marché choisi">Rattachement</span>
+      c.innerHTML = `<span class="filtre-rattachement-titre" title="${texteHtml('structure_btp.filtre.rattachement_aide')}">${texteHtml('structure_btp.filtre.rattachement')}</span>
         <span class="filtre-types" role="radiogroup">${NIVEAUX.map((n) => `<button type="button" role="radio" data-type="${n.type}" aria-checked="${n === this.niveau}"
           class="${n === this.niveau ? 'actif' : ''}">${echapper(n.titre)}</button>`).join('')}</span>`;
       c.querySelectorAll('[data-type]').forEach((b) => b.addEventListener('click', () => {
@@ -88,8 +89,8 @@ export class FiltreRattachement {
       if (this.id) {
         const b = document.createElement('button');
         b.type = 'button';
-        b.textContent = '✕ Effacer';
-        b.title = 'Retirer le filtre par rattachement';
+        b.textContent = `${icone('retirer')} ${texte('structure_btp.filtre.effacer')}`;
+        b.title = texte('structure_btp.filtre.retirer_rattachement');
         b.addEventListener('click', () => { this.id = null; this.#appliquerDocuments(); });
         c.append(b);
       }
@@ -98,8 +99,8 @@ export class FiltreRattachement {
     const x = this.#element();
     c.hidden = !this.colonneSimple || !x;
     if (c.hidden) return;
-    c.innerHTML = `<span class="filtre-rattachement-titre">Filtre</span><span class="pastille cochee">${echapper(`${this.niveau.titre} ${x.code}`)}</span>
-      <button type="button" data-effacer title="Retirer le filtre">✕ Effacer</button>`;
+    c.innerHTML = `<span class="filtre-rattachement-titre">${texteHtml('structure_btp.filtre.titre')}</span><span class="pastille cochee">${echapper(`${this.niveau.titre} ${x.code}`)}</span>
+      <button type="button" data-effacer title="${texteHtml('structure_btp.filtre.retirer')}">${iconeHtml('retirer')} ${texteHtml('structure_btp.filtre.effacer')}</button>`;
     c.querySelector('[data-effacer]').addEventListener('click', () => {
       this.liste.definirFiltreExterne(this.colonneSimple, null, { recharger: false });
       this.colonneSimple = null;

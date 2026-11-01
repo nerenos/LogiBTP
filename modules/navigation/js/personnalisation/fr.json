@@ -1,0 +1,83 @@
+{
+  "navigation": {
+    "page": {
+      "quitter_modifiee": "« {{titre}} » : des modifications ne sont pas enregistrées. Quitter quand même ?"
+    },
+    "bandeau": {
+      "accueil": "{{application}} : accueil (Alt+Origine)",
+      "retour": "Revenir à la page précédente",
+      "masquage_auto": "Masquer automatiquement le menu quand la souris le quitte",
+      "garder": "Garder le menu affiché",
+      "masquer": "Masquer le menu",
+      "afficher": "Afficher le menu",
+      "menu_principal": "Menu principal",
+      "largeur": "Largeur du menu (double-clic : largeur par défaut)",
+      "creation": "{{titre}} (Ctrl : nouvelle fenêtre)",
+      "nouvelle_fenetre": "Ouvrir dans une nouvelle fenêtre (Ctrl+clic)",
+      "vide": "(vide)"
+    },
+    "accueil": {
+      "actualiser_titre": "Actualiser les widgets",
+      "personnaliser": "Personnaliser",
+      "personnaliser_titre": "Ajouter, retirer, réordonner les raccourcis et les widgets",
+      "raccourcis": "Raccourcis",
+      "tableau_de_bord": "Tableau de bord",
+      "reinitialiser": "Rétablir l'accueil par défaut",
+      "reinitialiser_question": "Rétablir les raccourcis et les widgets par défaut ?",
+      "terminer": "Terminer la personnalisation",
+      "tuile_titre": "{{libelle}} (Ctrl+clic : nouvelle fenêtre)",
+      "ajouter_raccourci": "Ajouter un raccourci",
+      "ajouter_raccourci_choix": "Ajouter un raccourci…",
+      "autres": "Autres",
+      "aucun_raccourci": "Aucun raccourci : ✎ Personnaliser pour en ajouter.",
+      "taille": "Taille : {{taille}}",
+      "taille_petit": "petit",
+      "taille_moyen": "moyen",
+      "taille_large": "large",
+      "widget_inconnu": "Type de widget inconnu : {{type}}",
+      "ajouter_widget": "Ajouter un widget",
+      "tous_widgets": "Tous les widgets sont affichés.",
+      "aucun_widget": "Aucun widget : ✎ Personnaliser pour en ajouter."
+    },
+    "session": {
+      "bloquees_un": "Le navigateur a bloqué l'ouverture de {{nombre}} fenêtre.",
+      "bloquees_autre": "Le navigateur a bloqué l'ouverture de {{nombre}} fenêtres.",
+      "bloquees_aide": "Autorisez les fenêtres pop-up pour ce site, ou ouvrez-les une à une :",
+      "interrompue": "Session interrompue",
+      "precedente": "Session précédente",
+      "du_un": "du {{date}} : {{nombre}} fenêtre",
+      "du_autre": "du {{date}} : {{nombre}} fenêtres",
+      "restaurer": "Restaurer ma session précédente",
+      "oublier_titre": "Ne plus proposer cette session",
+      "restauree": "Session restaurée"
+    },
+    "fenetres": {
+      "titre": "Fenêtres ouvertes",
+      "fenetre": "Fenêtre",
+      "adresse": "Adresse",
+      "ouverte": "Ouverte",
+      "aide": "« Afficher » remet la fenêtre au premier plan ; si le navigateur ne le permet pas, elle est signalée (titre clignotant et cadre). Les fenêtres d'une autre société (autre sous-domaine) n'apparaissent pas ici.",
+      "fermer_session": "Fermer la session",
+      "fermer_session_choix": "Fermer la session…",
+      "fermer_session_question": "Fermer la session ? Toutes les fenêtres seront fermées ; « Restaurer ma session précédente » les rouvrira.",
+      "premier_plan_impossible": "Le navigateur ne permet pas de mettre cette fenêtre au premier plan : elle est signalée",
+      "bloquee": "Fenêtre bloquée par le navigateur : autorisez les pop-up pour ce site",
+      "modifiee": "Modifications non enregistrées",
+      "courante": "(cette fenêtre)",
+      "principale": "principale",
+      "signaler": "Signaler sa présence",
+      "modifications_en_cours": "Modifications en cours",
+      "modifications_titre": "Modifications non enregistrées",
+      "modifications_perdues": "Ces fenêtres ont des modifications qui seront perdues :",
+      "modifications_aide": "Annulez pour enregistrer d'abord, puis fermez de nouveau la session.",
+      "fermer_quand_meme": "Fermer quand même"
+    },
+    "widgets": {
+      "indisponible": "Données indisponibles : {{erreur}}",
+      "aucune_alerte": "Aucune alerte",
+      "aucune_ligne": "Aucune ligne",
+      "aucune_donnee": "Aucune donnée",
+      "total": "Total : {{total}} {{unite}}"
+    }
+  }
+}

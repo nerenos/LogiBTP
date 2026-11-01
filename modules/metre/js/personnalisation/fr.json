@@ -1,0 +1,203 @@
+{
+  "erreurs": {
+    "RACINE_NEGATIVE": "Racine d'un nombre négatif"
+  },
+  "metre": {
+    "script": {
+      "decrire": {
+        "fin": "fin du script",
+        "nl": "fin de ligne",
+        "jeton": "« {{jeton}} »"
+      },
+      "attendu": "{{quoi}} attendu, {{trouve}} trouvé",
+      "fin_instruction": "Fin d'instruction attendue, {{trouve}} trouvé",
+      "comparaisons_enchainees": "Comparaisons enchaînées : utiliser « et » / « ou »",
+      "variable_inconnue": "Variable « {{nom}} » non déclarée",
+      "fonction_inconnue": "Fonction « {{nom}} » inconnue",
+      "arguments": "{{signature}} : {{nombre}} argument(s) fourni(s)",
+      "expression_attendue": "Expression attendue, {{trouve}} trouvé",
+      "declaration_double": "Variable « {{nom}} » déjà déclarée",
+      "nom_attendu": "Nom de variable attendu, {{trouve}} trouvé",
+      "est_attendu": "« est » attendu, {{trouve}} trouvé",
+      "type_attendu": "Type attendu (chaîne, numérique ou booléen), {{trouve}} trouvé",
+      "declarations_tete": "Les variables se déclarent en tête du script",
+      "instruction_attendue": "Instruction attendue, {{trouve}} trouvé",
+      "fin_attendue": "« Fin » attendu pour fermer {{quoi}} ouvert ligne {{ligne}}",
+      "quoi": {
+        "si": "le « Si »",
+        "pour": "le « Pour »",
+        "parenthese": "Parenthèse fermante « ) »",
+        "egal": "« = »",
+        "condition_si": "Condition du « Si »"
+      },
+      "variable_boucle": "Variable de boucle attendue, {{trouve}} trouvé",
+      "a_attendu": "« à » attendu, {{trouve}} trouvé",
+      "hors_boucle": "« {{mot}} » hors d'une boucle « Pour »",
+      "affectation_attendue": "Affectation attendue (=, +=, -=, *=, /=, ++, --), {{trouve}} trouvé",
+      "sans_ouverture": "« {{mot}} » sans « Si » ou « Pour » correspondant",
+      "accolades": "Accolades fermantes « }} » attendues",
+      "apres_nombre": "Caractère inattendu « {{caractere}} » après un nombre",
+      "nombre_trop_grand": "Nombre trop grand",
+      "guillemet": "Guillemet fermant attendu",
+      "point_virgule": "Les arguments se séparent par un point-virgule « ; »",
+      "caractere": "Caractère inattendu « {{caractere}} »",
+      "types": {
+        "N": "numérique",
+        "C": "chaîne",
+        "B": "booléen"
+      },
+      "non_utilisable": "Donnée non utilisable dans un script (ni nombre, ni chaîne, ni booléen)",
+      "trop_grande": "Valeur trop grande",
+      "pas_booleen": "« pas » : booléen attendu",
+      "op_numerique": "« {{op}} » : numérique attendu",
+      "erreur_fonction": "{{signature}} : {{message}}",
+      "booleen_attendu": "{{quoi}} : booléen attendu, {{type}} trouvé",
+      "numeriques_attendus": "« {{op}} » : numériques attendus, {{gauche}} et {{droite}} trouvés",
+      "division_zero": "Division par zéro",
+      "types_differents": "Comparaison de types différents : {{gauche}} et {{droite}}",
+      "booleens_comparaison": "Booléens : seuls « = » et « <> » sont permis",
+      "type_affecte": "« {{nom}} » est {{type}} : {{affecte}} affecté",
+      "aucune_portee": "{{ref}} : aucune portée disponible",
+      "ref_numerique": "{{ref}} : numérique attendu",
+      "ecriture_interdite": "{{reference}} ne peut pas être modifié",
+      "trop_instructions": "Trop d'instructions exécutées",
+      "renvoyer_numerique": "« Renvoyer » : numérique attendu, {{type}} trouvé",
+      "borne_numerique": "« Pour », {{quoi}} : numérique attendu",
+      "pour_numerique": "« Pour » : « {{nom}} » doit être numérique",
+      "bornes": {
+        "fin": "fin",
+        "pas": "pas",
+        "debut": "début"
+      },
+      "pas_nul": "« Pour » : pas nul",
+      "trop_tours": "« Pour » : plus de {{max}} tours",
+      "sans_resultat": "Le script ne renvoie pas de quantité (« Renvoyer » absent)",
+      "argument_numerique": "{{quoi}} : numérique attendu",
+      "argument_entier": "{{quoi}} : entier de {{min}} à {{max}} attendu",
+      "message_hote": "Métré, ligne {{ligne}}, colonne {{colonne}} : {{message}}"
+    },
+    "fonctions": {
+      "argument_decimales": "{{fonction}}, décimales",
+      "argument_exposant": "{{fonction}}, exposant",
+      "taille_chaine": "Taille : chaîne attendue",
+      "descriptions": {
+        "entiersuperieur": "Plus petit entier supérieur ou égal à x",
+        "entierinferieur": "Plus grand entier inférieur ou égal à x",
+        "arrondi": "Arrondi demi vers l'infini (0 décimale par défaut)",
+        "tronque": "Troncature vers zéro (0 décimale par défaut)",
+        "min": "Plus petite des valeurs",
+        "max": "Plus grande des valeurs",
+        "abs": "Valeur absolue",
+        "racine": "Racine carrée",
+        "puissance": "x à la puissance n (n entier de -100 à 100)",
+        "taille": "Nombre de caractères"
+      }
+    },
+    "portees": {
+      "hors_ligne": "Variable @ hors d'une ligne",
+      "sans_contexte": "Aucun contexte pour une variable {{portee}}",
+      "non_definie": "Variable {{reference}} non définie à ce point du document",
+      "numerique": "Variable {{reference}} : numérique attendu",
+      "increment": "Variable {{reference}} non définie : incrémentation impossible",
+      "operation": "Opération inconnue « {{operation}} »"
+    },
+    "dictionnaire": {
+      "sources": {
+        "metre": "variable de métré",
+        "ligne": "variable de ligne",
+        "document": "variable du document",
+        "resultat": "résultat de métré"
+      },
+      "libelle": "{{portee}} · {{source}}",
+      "groupe_variables": "Variables",
+      "portees": {
+        "document": "document",
+        "titre": "titre",
+        "ouvrage": "ouvrage",
+        "ligne": "ligne"
+      }
+    },
+    "notifications": {
+      "ouvrir": "Ouvrir le métré à cette position",
+      "aucune": "Aucune erreur ni avertissement dans les métrés du document."
+    },
+    "editeur": {
+      "structures": {
+        "si": "Si … alors … Fin",
+        "si_sinon": "Si … alors … Sinon … Fin",
+        "sinonsi": "SinonSi … alors",
+        "pour": "Pour … à … Fin",
+        "pour_pas": "Pour … à … pas … Fin",
+        "sortir": "Sortir de la boucle",
+        "continuer": "Tour suivant de la boucle",
+        "numerique": "Déclaration numérique",
+        "chaine": "Déclaration chaîne",
+        "booleen": "Déclaration booléen",
+        "locale": "Variable locale",
+        "renvoyer": "Renvoyer la quantité",
+        "commentaire": "Commentaire"
+      },
+      "detail_locale": "{{type}} · locale",
+      "placeholder": "Déclarations en tête, instructions, puis « Renvoyer » la quantité…"
+    },
+    "panneau": {
+      "titre": "Métré",
+      "valider_aide": "Revenir à la ligne avec la quantité calculée (Échap)",
+      "valider": "Valider",
+      "script": "Script du métré",
+      "variables_metre": "Variables du métré",
+      "variables_document": "Variables du document ($$) : évaluées avant toutes les lignes",
+      "ajouter_variable": "Ajouter une variable",
+      "dictionnaire": "Dictionnaire",
+      "filtrer": "Filtrer…",
+      "aide_dictionnaire": "Clic : insérer dans le script à la position du curseur (Tab : champ suivant d'un modèle).",
+      "aide_html": "Script : déclarations en tête (<code>Largeur est un numérique = 1.2</code>, <code>local</code> : interne), instructions, <code>Renvoyer</code> = quantité de la ligne · Ctrl+Espace : complétion · Ctrl+/ : commentaire · Tab : indentation · Échap : revenir au devis",
+      "sans_metre": "Cette ligne n'a pas de métré.",
+      "creer": "Créer le métré",
+      "sans_quantite": "Pas de quantité (« Renvoyer » absent)",
+      "titre_document": "{{ligne}} · variables du document",
+      "aide_sans_metre": "Sélectionnez une ligne qui accepte un métré.",
+      "colonnes": {
+        "nom": "Nom",
+        "type": "Type",
+        "valeur": "Valeur",
+        "portee": "Portée",
+        "operation": "Opération",
+        "formule": "Formule"
+      },
+      "parametre": "Paramètre : la valeur par défaut est réécrite dans le script",
+      "calculee": "Calculée par le script",
+      "aucune_variable": "Aucune variable non locale déclarée.",
+      "aucune_avant": "Aucune variable définie avant cette ligne.",
+      "groupes": {
+        "variables": "Variables et données",
+        "fonctions": "Fonctions",
+        "structures": "Structures"
+      },
+      "copie": "{{ref}} copié : sélectionnez une ligne pour l'insérer",
+      "nom_invalide": "Nom de variable invalide (lettres, chiffres, _)",
+      "formule_obligatoire": "Formule obligatoire",
+      "annulation": {
+        "variable": "Variable",
+        "nouvelle": "Nouvelle variable",
+        "ordre": "Ordre des variables",
+        "suppression": "Suppression de variable",
+        "dupliquer": "Dupliquer"
+      },
+      "non_calculee": "Non calculée : voir les messages du document",
+      "portees": {
+        "ligne": "@ ligne",
+        "ouvrage": "@@ ouvrage",
+        "titre": "$ titre",
+        "document": "$$ document"
+      },
+      "operations": {
+        "affecter": "= affecter",
+        "incrementer": "+= incrémenter"
+      },
+      "erreurs_un": "{{nombre}} erreur",
+      "erreurs_autre": "{{nombre}} erreurs",
+      "resultat_html": "Résultat : <strong>{{quantite}}</strong> {{unite}}"
+    }
+  }
+}

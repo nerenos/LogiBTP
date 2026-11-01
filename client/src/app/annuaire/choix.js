@@ -1,3 +1,4 @@
+import { texte, icone } from '@logibtp/socle/dictionnaire';
 import { choisirDansListe } from '@logibtp/liste/ui';
 import { definirChoixAnnuaire } from '@logibtp/annuaire/ui';
 import { CASQUETTES } from './donnees.js';
@@ -24,30 +25,30 @@ export function relationsFonction(fonction) {
   return CASQUETTES.some((c) => c.code === fonction) ? [fonction] : [];
 }
 
-const libelleRelations = (codes) => codes.map((c) => CASQUETTES.find((x) => x.code === c)?.libelle ?? c).join(' ou ');
+const libelleRelations = (codes) => codes.map((c) => CASQUETTES.find((x) => x.code === c)?.libelle ?? c).join(texte('annuaire_btp.choix.ou'));
 
 /**
  * Tiers choisi dans la liste : résumé { id, code, raison_sociale, ville… }, { creer: recherche } si `creer` (libellé du
  * bouton) est donné et choisi, ou null. Options : relations (filtre par défaut), titre, exclure (ids), recherche.
  */
-export async function choisirTiers({ relations = [], titre = 'Choisir un tiers', exclure = [], recherche = '', creer = null } = {}) {
+export async function choisirTiers({ relations = [], titre = texte('annuaire_btp.choix.tiers'), exclure = [], recherche = '', creer = null } = {}) {
   const exclus = new Set(exclure.map(Number));
   const r = await choisirDansListe({
     fournisseur: creerFournisseurListe(), theme: THEME_TIERS, vue: VUES_CHOIX.tiers, titre, recherche, creer,
     filtres: relations.length ? { casquettes: relations } : {},
-    libellesFiltres: { casquettes: `Relation : ${libelleRelations(relations)}` },
-    accepter: (l) => (exclus.has(Number(l._id)) ? 'Tiers déjà choisi : choisissez-en un autre' : null),
+    libellesFiltres: { casquettes: texte('annuaire_btp.choix.relation', { relations: libelleRelations(relations) }) },
+    accepter: (l) => (exclus.has(Number(l._id)) ? texte('annuaire_btp.choix.tiers_deja') : null),
   });
   if (!r || 'creer' in r) return r;
   return { ...r, id: Number(r._id) };
 }
 
 /** Contact (individu) choisi dans la liste : résumé { id, nom_complet, personnes… }, { creer: recherche } ou null. */
-export async function choisirContact({ titre = 'Choisir un contact', exclure = [], recherche = '', creer = null } = {}) {
+export async function choisirContact({ titre = texte('annuaire_btp.choix.contact'), exclure = [], recherche = '', creer = null } = {}) {
   const exclus = new Set(exclure.map(Number));
   const r = await choisirDansListe({
     fournisseur: creerFournisseurListe(), theme: THEME_CONTACTS, vue: VUES_CHOIX.contacts, titre, recherche, creer,
-    accepter: (l) => (exclus.has(Number(l._id)) ? 'Contact déjà choisi : choisissez-en un autre' : null),
+    accepter: (l) => (exclus.has(Number(l._id)) ? texte('annuaire_btp.choix.contact_deja') : null),
   });
   if (!r || 'creer' in r) return r;
   return { ...r, id: Number(r._id) };
@@ -61,7 +62,7 @@ export function brancherChoixAnnuaire() {
       return r && !('creer' in r) ? r : null;
     },
     individu: async ({ titre, exclure, nom }) => {
-      const r = await choisirContact({ titre, exclure, recherche: nom, creer: '＋ Nouvel individu' });
+      const r = await choisirContact({ titre, exclure, recherche: nom, creer: `${icone('ajouter')} ${texte('annuaire_btp.choix.nouvel_individu')}` });
       if (!r) return null;
       return 'creer' in r ? r : { individu: r };
     },

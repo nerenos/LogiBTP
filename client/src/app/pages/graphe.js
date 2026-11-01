@@ -1,3 +1,4 @@
+import { texte, texteHtml, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { urlFiche, TYPE_FICHE } from '../codes.js';
 import { PageBase } from '@logibtp/navigation';
 import { VueGrapheAnnuaire } from '@logibtp/annuaire/ui';
@@ -8,7 +9,7 @@ import { VueGrapheAnnuaire } from '@logibtp/annuaire/ui';
  * sur un nœud est une navigation (retour arrière possible).
  */
 export class PageGraphe extends PageBase {
-  icone = '🕸️';
+  icone = icone('pages_btp_graphe');
 
   async ouvrir() {
     const app = this.app;
@@ -17,13 +18,13 @@ export class PageGraphe extends PageBase {
     let depart = q.type && q.id ? { type: q.type, id: Number(q.id) } : null;
     if (!depart) {
       const societe = await s.annuaire.societeBase();
-      if (!societe) { this.conteneur.innerHTML = '<p class="aide">Aucune fiche : ouvrez le graphe depuis une personne ou un individu.</p>'; return; }
+      if (!societe) { this.conteneur.innerHTML = `<p class="aide">${texteHtml('pages_btp.graphe.aucune')}</p>`; return; }
       depart = { type: TYPE_FICHE.PERSONNE, id: societe.id };
     }
     const resume = depart.type === TYPE_FICHE.PERSONNE ? await s.annuaire.personne(depart.id).catch(() => null) : await s.annuaire.individu(depart.id).catch(() => null);
     const libelle = resume?.raison_sociale ?? resume?.nom_complet ?? `${depart.type} ${depart.id}`;
-    this.titre = `Graphe – ${libelle}`;
-    this.conteneur.innerHTML = `<div class="page-graphe"><h1 class="page-titre">🕸️ Relations de ${libelle.replace(/[<&>]/g, '')}</h1><div class="page-graphe-corps graphe-hote"></div></div>`;
+    this.titre = texte('pages_btp.graphe.titre', { libelle });
+    this.conteneur.innerHTML = `<div class="page-graphe"><h1 class="page-titre">${iconeHtml('pages_btp_graphe')} ${texteHtml('pages_btp.graphe.relations', { libelle })}</h1><div class="page-graphe-corps graphe-hote"></div></div>`;
     const reglages = {
       ...(q.profondeur ? { profondeur: Number(q.profondeur) } : {}), ...(q.contacts ? { contacts: q.contacts === '1' } : {}),
       ...(q.liens ? { liens: q.liens === '1' } : {}), ...(q.max ? { max_contacts: Number(q.max) } : {}),

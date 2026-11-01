@@ -1,0 +1,8 @@
+{
+  "erreurs": {
+    "CONNEXION_CODE": "Code obligatoire (30 caractères au plus)",
+    "CONNEXION_NOM": "Nom d'usage obligatoire (100 caractères au plus)",
+    "OAUTH_ORIGINE": "Adresse de l'application non reconnue pour cette société",
+    "OAUTH_RAPPELS": "Au moins un délai de rappel"
+  }
+}

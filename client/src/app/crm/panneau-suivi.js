@@ -1,3 +1,4 @@
+import { texte, texteHtml, pluriel, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { NATURE_NOTE, ETAT_NOTE } from '@logibtp/crm';
 import { echapper, formatDateHeure } from '@logibtp/socle/ui';
 import { api } from '../api.js';
@@ -28,16 +29,16 @@ export class PanneauSuivi {
     const c = this.conteneur;
     c.classList.add('crm-suivi');
     c.innerHTML = `<div class="crm-suivi-barre">
-        <input class="crm-saisie-rapide" placeholder="Note rapide : Entrée = pour mémo · Ctrl+Entrée = tâche pour moi (demain)" maxlength="200">
-        <button type="button" data-complete title="Note complète (nature, responsable, destinataires, pièces) dans une autre fenêtre">＋ Note…</button>
-        ${this.fenetre ? '<button type="button" data-fenetre title="Ouvrir ce suivi dans une fenêtre à côté">⧉</button>' : ''}
-        <a href="/crm/fil?type=${this.element.type}&id=${encodeURIComponent(this.element.id)}" title="Fil d'actualité de l'élément (notes publiées, documents, photos, événements)">📰 Fil</a>
-        ${STRUCTURE.includes(this.element.type) ? `<a href="/crm/plans?type=${this.element.type}&id=${encodeURIComponent(this.element.id)}" title="Plans, indices et visas">📐 Plans</a>
-          <a href="/crm/diffusions?type=${this.element.type}&id=${encodeURIComponent(this.element.id)}" title="Bordereaux de diffusion">📤 Bordereaux</a>` : ''}
-        <label class="fiche-option" title="Masquer les notes terminées, pour mémo et annulées"><input type="checkbox" data-ouvertes> Ouvertes seulement</label>
+        <input class="crm-saisie-rapide" placeholder="${texteHtml('crm_btp.suivi.saisie_rapide')}" maxlength="200">
+        <button type="button" data-complete title="${texteHtml('crm_btp.suivi.note_complete_titre')}">${iconeHtml('ajouter')} ${texteHtml('crm_btp.suivi.note_complete')}</button>
+        ${this.fenetre ? `<button type="button" data-fenetre title="${texteHtml('crm_btp.suivi.fenetre')}">${iconeHtml('crm_btp_fenetre')}</button>` : ''}
+        <a href="/crm/fil?type=${this.element.type}&id=${encodeURIComponent(this.element.id)}" title="${texteHtml('crm_btp.suivi.fil_titre')}">${iconeHtml('crm_btp_fil')} ${texteHtml('crm_btp.suivi.fil')}</a>
+        ${STRUCTURE.includes(this.element.type) ? `<a href="/crm/plans?type=${this.element.type}&id=${encodeURIComponent(this.element.id)}" title="${texteHtml('crm_btp.suivi.plans_titre')}">${iconeHtml('crm_btp_plans')} ${texteHtml('crm_btp.suivi.plans')}</a>
+          <a href="/crm/diffusions?type=${this.element.type}&id=${encodeURIComponent(this.element.id)}" title="${texteHtml('crm_btp.suivi.bordereaux_titre')}">${iconeHtml('crm_btp_bordereaux')} ${texteHtml('crm_btp.suivi.bordereaux')}</a>` : ''}
+        <label class="fiche-option" title="${texteHtml('crm_btp.suivi.ouvertes_titre')}"><input type="checkbox" data-ouvertes> ${texteHtml('crm_btp.suivi.ouvertes')}</label>
       </div>
-      <div class="crm-depot" hidden>Déposez le courriel (.eml, .msg) : une note est créée avec le fichier en pièce jointe</div>
-      <div class="crm-suivi-liste"><p class="aide">Chargement…</p></div>`;
+      <div class="crm-depot" hidden>${texteHtml('crm_btp.suivi.depot')}</div>
+      <div class="crm-suivi-liste"><p class="aide">${texteHtml('crm_btp.suivi.chargement')}</p></div>`;
     const saisie = c.querySelector('.crm-saisie-rapide');
     saisie.addEventListener('keydown', (e) => {
       if (e.key !== 'Enter' || !saisie.value.trim()) return;
@@ -66,19 +67,19 @@ export class PanneauSuivi {
 
   rendre(zone, page) {
     if (!page.notes.length) {
-      zone.innerHTML = `<p class="aide">${this.ouvertes ? 'Aucune note ouverte.' : 'Aucune note : saisissez une note rapide, déposez un courriel ou créez une note complète.'}</p>`;
+      zone.innerHTML = `<p class="aide">${this.ouvertes ? texteHtml('crm_btp.suivi.aucune_ouverte') : texteHtml('crm_btp.suivi.aucune')}</p>`;
       return;
     }
     zone.innerHTML = `<ul class="crm-notes">${page.notes.map((n) => {
       const e = echeanceNote(n);
       return `<li class="crm-note${estClose(n) ? ' discret' : ''}${n.non_lue ? ' crm-non-lue' : ''}" data-id="${n.id}">
         <span class="crm-note-icone" title="${echapper(n.type ?? '')}">${n.icone ?? iconeNature(n.nature)}</span>
-        <a href="/crm/note/${n.id}" class="crm-note-objet">${n.masquee ? '🔒 ' : ''}${echapper(n.objet)}</a>
+        <a href="/crm/note/${n.id}" class="crm-note-objet">${n.masquee ? `${iconeHtml('verrou')} ` : ''}${echapper(n.objet)}</a>
         ${pastilleEtat(n)}
-        <span class="crm-note-qui">${echapper(n.responsable ?? (n.a_prendre ? `À prendre (${n.service ?? ''})` : n.service ?? ''))}</span>
+        <span class="crm-note-qui">${echapper(n.responsable ?? (n.a_prendre ? texte('crm_btp.suivi.a_prendre', { service: n.service ?? '' }) : n.service ?? ''))}</span>
         <span class="crm-note-echeance ${e.classe}">${echapper(e.texte)}</span>
-        <span class="aide">${echapper(n.cree_par)} · ${echapper(formatDateHeure(n.cree_le))}${n.nb_reponses ? ` · 💬 ${n.nb_reponses}` : ''}</span></li>`;
-    }).join('')}</ul>${page.total > page.notes.length ? `<p class="aide">${page.notes.length} notes sur ${page.total} : voir la liste complète dans le menu Suivi.</p>` : ''}`;
+        <span class="aide">${echapper(n.cree_par)} · ${echapper(formatDateHeure(n.cree_le))}${n.nb_reponses ? ` · ${iconeHtml('crm_btp_note')} ${n.nb_reponses}` : ''}</span></li>`;
+    }).join('')}</ul>${page.total > page.notes.length ? `<p class="aide">${texteHtml('crm_btp.suivi.tronquee', { nombre: page.notes.length, total: page.total })}</p>` : ''}`;
   }
 
   /** Note rapide : pour mémo, ou tâche pour l'utilisateur (son individu, sinon son service principal) échéance demain 9 h. */
@@ -94,7 +95,7 @@ export class PanneauSuivi {
         s.echeance = demain.toISOString();
         s.responsable_id = ctx.individu_id;
         s.srv_id = ctx.services[0]?.id ?? null;
-        if (!s.responsable_id && !s.srv_id) { this.app.message('Votre compte n\'est relié à aucun individu ni service : utilisez « ＋ Note… »', 'avertissement'); return false; }
+        if (!s.responsable_id && !s.srv_id) { this.app.message(texte('crm_btp.suivi.sans_individu'), 'avertissement'); return false; }
       }
       await api.crm.creer(s);
       this.app.publier?.('crm', { element: this.element });
@@ -115,11 +116,11 @@ export class PanneauSuivi {
       bandeau.hidden = true;
       const fichiers = [...e.dataTransfer.files];
       const courriels = fichiers.filter(estCourriel);
-      if (!courriels.length) { this.app.message('Déposez un courriel (.eml ou .msg) ; les autres pièces se joignent depuis la note', 'avertissement'); return; }
+      if (!courriels.length) { this.app.message(texte('crm_btp.suivi.depot_courriel'), 'avertissement'); return; }
       for (const f of courriels) {
         try { await noteDepuisCourriel(this.app, f, this.element); } catch (err) { this.app.erreur(err); }
       }
-      this.app.message(`${courriels.length} courriel(s) enregistré(s) en note`, 'succes');
+      this.app.message(pluriel('crm_btp.suivi.courriels_enregistres', courriels.length), 'succes');
       this.app.publier?.('crm', { element: this.element });
       await this.charger();
     });

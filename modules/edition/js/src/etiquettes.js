@@ -1,6 +1,7 @@
 // Étiquettes (§ 3.7) : mode de rapport « planche ». Chaque élément de la collection est composé dans une cellule de
 // la planche (colonnes × rangées, pas horizontal et vertical, marges de la planche) ; une planche entamée se reprend
 // à l'étiquette de départ (paramètre `premiere_etiquette`, 1 = en haut à gauche).
+import { texte } from '@logibtp/socle/dictionnaire';
 import { composer, enfant, evaluerExpression, alerter } from './composition.js';
 
 /**
@@ -21,7 +22,7 @@ export function paginerEtiquettes(m, ctx, page) {
   const parPlanche = colonnes * rangees;
   const depart = Math.min(parPlanche, Math.max(1, Number(ctx.parametres.premiere_etiquette ?? 1))) - 1;
 
-  const liste = evaluerExpression(ctx, m.collection ?? 'elements', 'étiquettes');
+  const liste = evaluerExpression(ctx, m.collection ?? 'elements', texte('edition.lieux.etiquettes'));
   const elements = Array.isArray(liste) ? liste : liste ? [liste] : [];
   const copies = Math.max(1, Number(ctx.parametres.copies ?? 1));
   const bandes = m.bandes.filter((b) => b.type === 'CORPS');
@@ -43,7 +44,7 @@ export function paginerEtiquettes(m, ctx, page) {
         y += boite.hauteur;
       }
       const bas = mh + Math.floor(pos / colonnes) * pasY + hauteur - interieur + 0.01;
-      if (y > bas) alerter(ctx, 'ETIQUETTE_DEBORDE', 'Contenu d’étiquette plus haut que l’étiquette (coupé)');
+      if (y > bas) alerter(ctx, 'ETIQUETTE_DEBORDE', texte('edition.alertes.etiquette_deborde'));
       // Contenu limité à l'étiquette (éléments entièrement dehors retirés).
       pages[planche].elements.push(...sortie.filter((e) => (e.y ?? e.y1 ?? 0) <= bas));
       if (m.page?.cadres_etiquettes) pages[planche].elements.push({ t: 'rect', x: x - interieur, y: mh + Math.floor(pos / colonnes) * pasY, l: largeur, h: hauteur, trait: { epaisseur: 0.1, couleur: '#c0c4cc', pointille: true } });

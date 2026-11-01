@@ -12,7 +12,7 @@
 - `db/060_bibliotheque_schema.sql` : tables, triggers d'historique, paramètres, `v_famille_element` ; `061` : données techniques ; `062` : coefficients par période ; `063` : postes de pied ; `064` (rejouable) : `ele_mots_cles`, `ele_code_barre` (unique par bibliothèque), `ele_description_html`, `ele_delai_livraison`, type `TEXTE` (libellé seul, sans prix) ; `066` (rejouable) : genre des postes de pied.
 - `js/src/calcul.js` : `calculerElement`, `prixAchat`, `ratio`, `convertir`, `codeAppel`, `analyserCodeAppel`, `coefficientsEffectifs`, `SCENARIOS_PA`, `GESTIONS`, `TYPES_NATURE`.
 - `js/src/fournisseurs.js` : `FournisseurBibliothequeApi`, `FournisseurBibliothequeMemoire`, `ErreurBibliotheque`, `entreeDepuisLigne`, `SCENARIOS_TOUS`, `DONNEES_TECHNIQUES` (interface commune documentée en tête).
-- `js/ui/referentiels.js` : `GestionReferentiels` (option `sansComptesNatures` : comptes des natures masqués, tenus par l'application) ; `onglets.js` : `OngletPrix`, `OngletUnites`, `OngletTarifs` ; `arbres.js` : `PanneauArbres` (filtres familles / natures de la liste) ; `bibliotheque.css`.
+- `js/ui/referentiels.js` : `GestionReferentiels` (comptes des natures tenus par l'application) ; `onglets.js` : `OngletPrix`, `OngletUnites`, `OngletTarifs` ; `arbres.js` : `PanneauArbres` (filtres familles / natures de la liste) ; `bibliotheque.css`.
 - `dotnet/LogiBTP.Bibliotheque` : `CalculElement`, `CoefficientsElement` (sans dépendance web).
 - `dotnet/LogiBTP.Bibliotheque.Web` : `ServiceBibliotheque`, `SpecialisationBibliotheque`, `Donnees.cs` (entités, `BibliothequeDbContext`), `Extensions.cs`.
 
@@ -43,6 +43,12 @@
 - Code de bibliothèque `^[A-Z0-9_]{1,10}$` (jamais « : ») ; bibliothèque avec éléments : désactiver, pas supprimer.
 - Prix copiés dans le document à l'appel (ne suivent plus la bibliothèque) ; envoi document → bibliothèque : coefficients de la ligne imposés à l'élément.
 - Démo : modifier `client/src/app/bibliotheque/donnees.js` puis `npm run generer-vues-liste --workspace client` (régénère `db/116`).
+
+## Textes et icônes (module Personnalisation, lot P3h)
+- Textes `bibliotheque.*` de `js/personnalisation/fr.json` (zones `scenarios`, `gestions`, `types_nature`, `donnees_techniques`, `fournisseur`, `arbres`, `prix`, `unites`, `tarifs`, `referentiels`) ; icônes `bibliotheque_*` de `images/icones.json` et communes du socle ; aucune couleur propre (variables du socle).
+- `SCENARIOS_PA`, `GESTIONS`, `TYPES_NATURE`, `DONNEES_TECHNIQUES` : `pairesParCode` (même forme) ; état d'une période de coefficients par code (`a_venir`, `en_vigueur`, `passee`).
+- Gardés : messages d'erreur de `calcul.js` (moteur répliqué avec `CalculElement.cs`) ; commentaires de l'historique des prix écrits par le fournisseur mémoire.
+- Tests : `js/test/preparation.js` compose socle + module (clé manquante = échec) ; clés du code vérifiées par `client/test/personnalisation.test.js`.
 
 ## Tests
 - `npm test --workspace modules/bibliotheque/js` ; `dotnet test modules/bibliotheque/dotnet/LogiBTP.Bibliotheque.Tests` (ou `dotnet test LogiBTP.slnx`).

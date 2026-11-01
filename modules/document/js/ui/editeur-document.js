@@ -4,6 +4,7 @@ import {
   editerLibelle, lirePreferences, ecrirePreferences, enfants, libelleRaccourci,
 } from '@logibtp/socle/ui';
 import { D, Dz, S, UN, completerDate, dateLocale } from '@logibtp/socle';
+import { texte, texteHtml, icone, iconeHtml, textesParCode, couleurTheme } from '@logibtp/socle/dictionnaire';
 import { calculerDocument, TL, CODES_TL, estChiffree, estPied, accepteEnfants, estTranche, estTypeNumerote, etatSolde, regle } from '../src/index.js';
 import { ReglesDocument } from './regles.js';
 import { PressePapiers } from './presse-papiers.js';
@@ -12,8 +13,8 @@ import { PressePapiers } from './presse-papiers.js';
  * Date saisie dans la grille en ISO, par la saisie abrégée du socle (completerDate : « 15 », « 16/05 », « 15/05/23 »,
  * « 150523 », « t », « +3 »…) ; null si vide, undefined si illisible.
  */
-export function lireDateSaisie(texte, aujourdhui = new Date()) {
-  const r = completerDate(texte, dateLocale(aujourdhui));
+export function lireDateSaisie(saisie, aujourdhui = new Date()) {
+  const r = completerDate(saisie, dateLocale(aujourdhui));
   return r === '' ? null : r ?? undefined;
 }
 
@@ -38,17 +39,12 @@ const dateCourte = (iso) => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso
 /** Libellés des totaux calculés et des groupes du pied (structure résultat.pied du moteur). */
 /** Variables des textes d'introduction et de conclusion : données de l'entête et totaux (éditeur et paramétrage). */
 export function variablesTexteDocument() {
-  return [
-    ['ent_numero', 'Numéro du document'], ['ent_date', 'Date'], ['ent_objet', 'Objet'], ['ent_notre_reference', 'Notre référence'],
-    ['ent_reference_externe', 'Référence externe'], ['ent_validite_jours', 'Validité (jours)'], ['ent_date_validite', 'Fin de validité'],
-    ['ent_total_ht', 'Total HT'], ['ent_total_tva', 'Total TVA'], ['ent_total_ttc', 'Total TTC'], ['ent_net_a_payer', 'Net à payer'],
-  ].map(([v, l]) => ({ valeur: `{{${v}}}`, libelle: `${l} – {{${v}}}` }));
+  return ['ent_numero', 'ent_date', 'ent_objet', 'ent_notre_reference', 'ent_reference_externe', 'ent_validite_jours', 'ent_date_validite',
+    'ent_total_ht', 'ent_total_tva', 'ent_total_ttc', 'ent_net_a_payer',
+  ].map((v) => ({ valeur: `{{${v}}}`, libelle: texte('document.variables.choix', { libelle: texte(`document.variables.${v}`), variable: `{{${v}}}` }) }));
 }
 
-export const LIBELLES_PIED = {
-  TOTAL_HT: 'Total HT', HT_NET: 'Total HT net', TOTAL_TTC: 'Total TTC', SOUS_TOTAL: 'Sous-total', NET: 'Net à payer',
-  HT: 'Postes de pied HT', TTC: 'Postes de pied TTC', TVA: 'TVA',
-};
+export const LIBELLES_PIED = textesParCode('document.pied', ['TOTAL_HT', 'HT_NET', 'TOTAL_TTC', 'SOUS_TOTAL', 'NET', 'HT', 'TTC', 'TVA']);
 
 /** Identifiant de la tranche calculée « Pied du document » (lignes virtuelles : identifiants ≤ −9·10¹¹). */
 export const ID_PIED = -9e11;
@@ -85,15 +81,17 @@ function regrouperSousTotauxHt(pied) {
 // Champs libres d'une ligne reprise du parent dans un document d'avancement (avec la saisie de l'avancement, avt:…).
 const CHAMPS_LIBRES_AVANCEMENT = ['lig_commentaire', 'lig_etiquette', 'lig_is_non_editee', 'lig_solde'];
 // Colonnes de ventilation (clés des documents transformés) dans un document d'avancement : [clé, colonne d'avancement, titre].
-export const ALIAS_AVANCEMENT = [
-  ['qte_parent', 'avt_qte_marche', 'Qté parent'], ['montant_parent', 'avt_montant_marche', 'Montant parent'],
-  ['pct_prec', 'avt_pct_prec', '% préc.'], ['qte_prec', 'avt_qte_prec', 'Qté préc.'], ['montant_prec', 'avt_precedent', 'Montant préc.'],
-  ['pct_periode', 'avt_pct_periode', '% période'],
-  ['pct_cumul', 'avt_pct', '% cumul'], ['qte_cumul', 'avt_qte', 'Qté cumul'], ['montant_cumul', 'avt_montant', 'Montant cumul'],
-];
+// Titre : celui de la colonne de ventilation (fr.json : document.colonnes.<clé>), lu à chaque accès.
+const alias = (cle, colonne) => Object.freeze(Object.defineProperty([cle, colonne], 2, { get: () => texte(`document.colonnes.${cle}`), enumerable: true }));
+export const ALIAS_AVANCEMENT = Object.freeze([
+  alias('qte_parent', 'avt_qte_marche'), alias('montant_parent', 'avt_montant_marche'),
+  alias('pct_prec', 'avt_pct_prec'), alias('qte_prec', 'avt_qte_prec'), alias('montant_prec', 'avt_precedent'),
+  alias('pct_periode', 'avt_pct_periode'),
+  alias('pct_cumul', 'avt_pct'), alias('qte_cumul', 'avt_qte'), alias('montant_cumul', 'avt_montant'),
+]);
 
 /** Libellés des bases de calcul d'une ligne de pied (lig_pied_base). */
-export const LIBELLES_BASE_PIED = { CUMUL: 'Cumul à ce point', TOTAL_HT: 'Total HT du corps', HT_NET: 'Dernier total HT net', TOTAL_TTC: 'Total TTC du corps', LIGNE: 'Sous-total de pied' };
+export const LIBELLES_BASE_PIED = textesParCode('document.bases_pied', ['CUMUL', 'TOTAL_HT', 'HT_NET', 'TOTAL_TTC', 'LIGNE']);
 
 const lireJson = (v, defaut) => (typeof v === 'string' ? (() => { try { return JSON.parse(v); } catch { return defaut; } })() : v ?? defaut);
 
@@ -108,12 +106,11 @@ export const TYPES_DEPOT = {
   'application/x-logibtp-article': TL.ELEMENT, 'application/x-logibtp-ouvrage': TL.OUVRAGE, 'application/x-logibtp-ensemble': TL.TITRE,
 };
 
-export const LIBELLES_TYPE_PRIX = { V: 'Vendu', O: 'Option', M: 'Pour mémoire', A: 'Variante', F: 'Frais annexes' };
+export const LIBELLES_TYPE_PRIX = textesParCode('document.types_prix', ['V', 'O', 'M', 'A', 'F']);
 
-export const LIBELLES_TYPE = {
-  TITRE: 'Titre', OUVRAGE: 'Ouvrage', ELEMENT: 'Élément', TEXTE: 'Texte', SOUS_TOTAL: 'S-total',
-  IMAGE: 'Image', SAUT_PAGE: 'Saut', PIED_HT: 'Pied HT', PIED_TTC: 'Pied TTC', TVA: 'TVA', SECTION: 'Section',
-};
+export const LIBELLES_TYPE = textesParCode('document.types_ligne', [
+  'TITRE', 'OUVRAGE', 'ELEMENT', 'TEXTE', 'SOUS_TOTAL', 'IMAGE', 'SAUT_PAGE', 'PIED_HT', 'PIED_TTC', 'TVA', 'SECTION',
+]);
 
 /** Remplace (fusionne) la colonne `cle` d'une liste de colonnes. */
 export function modifierColonne(colonnes, cle, modif) {
@@ -237,7 +234,7 @@ export class EditeurDocument {
       else if (section !== null) placer(C, d.lignes, [x], section, 'enfant');
       else placer(C, d.lignes, [x], null, 'racine');
       this.regles.appliquerContexte(d, id, taux);
-    }, 'Poste de pied');
+    }, texte('document.etapes.poste_pied'));
     return id;
   }
 
@@ -245,7 +242,7 @@ export class EditeurDocument {
   #sansLigneDuParent(ids, action) {
     const parId = new Map(this.saisie.lignes.map((l) => [l.lig_id, l]));
     if (!ids.some((id) => this.ligneDuParent(parId.get(id)))) return true;
-    this.surMessage?.(`${action} impossible : ligne reprise du document parent`);
+    this.surMessage?.(texte('document.editeur.ligne_parent_impossible', { action }));
     return false;
   }
 
@@ -415,7 +412,7 @@ export class EditeurDocument {
   /** Colonnes système (débogage) : valeurs brutes calculées, en lecture seule. */
   colonnesSysteme() {
     return this.champsSysteme().map((champ) => ({
-      cle: `sys:${champ}`, champ, titre: champ === '_controles' ? 'Contrôles' : champ, classe: 'col-systeme', editable: () => false,
+      cle: `sys:${champ}`, champ, titre: champ === '_controles' ? texte('document.vues.controles') : champ, classe: 'col-systeme', editable: () => false,
       valeur: (r) => (champ === '_controles' ? r.messages.map((m) => m.code).join(' ') : r.virtuelle ? '' : texteSysteme(r.calcule[champ] ?? r.item[champ])),
     }));
   }
@@ -461,11 +458,11 @@ export class EditeurDocument {
     const l = r.item;
     const e = l.lig_etiquette ? this.etiquettes().find((x) => x.code === l.lig_etiquette) : null;
     const type = this.typePrixEffectif(l);
-    const t = type !== 'V' ? this.couleurTypePrix(type) ?? { libelle: LIBELLES_TYPE_PRIX[type] ?? type, couleur: '#94a3b8' } : null;
+    const t = type !== 'V' ? this.couleurTypePrix(type) ?? { libelle: LIBELLES_TYPE_PRIX[type] ?? type, couleur: couleurTheme('--document-type-prix-defaut', '#94a3b8') } : null;
     const c1 = e?.couleur ?? null, c2 = t?.couleur ?? null;
     const fond = c1 && c2 ? `linear-gradient(135deg, ${c1} 50%, ${c2} 50%)` : c1 ?? (c2 ? `linear-gradient(135deg, transparent 50%, ${c2} 50%)` : 'transparent');
-    const titre = [e ? e.libelle : (l.lig_etiquette ? `Étiquette ${l.lig_etiquette}` : 'Sans étiquette'), t?.libelle].filter(Boolean).join(' · ');
-    return { fond, titre: `${titre} — cliquer pour choisir l'étiquette` };
+    const titre = [e ? e.libelle : (l.lig_etiquette ? texte('document.editeur.etiquette_code', { code: l.lig_etiquette }) : texte('document.editeur.sans_etiquette')), t?.libelle].filter(Boolean).join(' · ');
+    return { fond, titre: texte('document.editeur.etiquette_choisir', { titre }) };
   }
 
   /** Choix de l'étiquette (lignes sélectionnées si la ligne en fait partie). */
@@ -477,8 +474,8 @@ export class EditeurDocument {
     if (this.magasin.lectureSeule) { this.magasin.surRefus?.(); return; }
     const menu = document.createElement('div');
     menu.className = 'menu-etiquettes';
-    menu.innerHTML = `${this.etiquettes().map((e) => `<button type="button" data-code="${echapper(e.code)}"><span class="pastille" style="background:${echapper(e.couleur)}"></span>${echapper(e.libelle)}${e.origine === 'document' ? ' <small>(document)</small>' : ''}</button>`).join('')}
-      <button type="button" data-code=""><span class="pastille"></span>Aucune étiquette</button>`;
+    menu.innerHTML = `${this.etiquettes().map((e) => `<button type="button" data-code="${echapper(e.code)}"><span class="pastille" style="background:${echapper(e.couleur)}"></span>${echapper(e.libelle)}${e.origine === 'document' ? ` <small>${texteHtml('document.editeur.etiquette_document')}</small>` : ''}</button>`).join('')}
+      <button type="button" data-code=""><span class="pastille"></span>${texteHtml('document.editeur.aucune_etiquette')}</button>`;
     const r = ancre.getBoundingClientRect();
     menu.style.left = `${r.left}px`;
     menu.style.top = `${r.bottom + 2}px`;
@@ -490,7 +487,7 @@ export class EditeurDocument {
       const b = e.target.closest('[data-code]');
       if (!b) return;
       fermer();
-      this.magasin.modifier((d) => { for (const l of d.lignes) if (lignes.includes(l.lig_id)) l.lig_etiquette = b.dataset.code || null; }, 'Étiquette');
+      this.magasin.modifier((d) => { for (const l of d.lignes) if (lignes.includes(l.lig_id)) l.lig_etiquette = b.dataset.code || null; }, texte('document.etapes.etiquette'));
       this.grille.focus();
     });
   }
@@ -584,14 +581,14 @@ export class EditeurDocument {
     const parts = [];
     if (this.filtre !== null) {
       const l = this.resultat.lignes.find((x) => x.lig_id === this.filtre);
-      parts.push(`tranche ${l ? `${l.lig_numerotation ?? ''} ${l.lig_libelle_brut ?? ''}`.trim() : 'Pied du document'}`);
+      parts.push(texte('document.editeur.filtre_tranche', { tranche: l ? `${l.lig_numerotation ?? ''} ${l.lig_libelle_brut ?? ''}`.trim() : texte('document.plan.pied') }));
     }
     const { etiquettes, types } = this.filtreMarqueurs;
     if (etiquettes.size) {
       const libelles = new Map(this.etiquettes().map((e) => [e.code, e.libelle]));
-      parts.push(`étiquettes ${[...etiquettes].map((c) => (c ? libelles.get(c) ?? c : 'sans étiquette')).join(', ')}`);
+      parts.push(texte('document.editeur.filtre_etiquettes', { liste: [...etiquettes].map((c) => (c ? libelles.get(c) ?? c : texte('document.editeur.sans_etiquette_min'))).join(', ') }));
     }
-    if (types.size) parts.push(`modes de vente ${[...types].map((t) => LIBELLES_TYPE_PRIX[t] ?? t).join(', ')}`);
+    if (types.size) parts.push(texte('document.editeur.filtre_modes', { liste: [...types].map((t) => LIBELLES_TYPE_PRIX[t] ?? t).join(', ') }));
     return parts.length ? parts.join(' · ') : null;
   }
 
@@ -600,8 +597,8 @@ export class EditeurDocument {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'filtre-marqueurs';
-    b.textContent = '⏷';
-    b.title = 'Filtrer par étiquette et mode de vente';
+    b.textContent = icone('document_filtre_marqueurs');
+    b.title = texte('document.editeur.filtrer_marqueurs');
     b.addEventListener('mousedown', (e) => e.preventDefault());
     b.addEventListener('click', (e) => { e.stopPropagation(); this.menuFiltreMarqueurs(b); });
     th.append(b);
@@ -628,12 +625,12 @@ export class EditeurDocument {
       <span class="pastille" style="${couleur ? `background:${echapper(couleur)}` : ''}"></span>${echapper(libelle)} <small>${n ?? 0}</small></label>`;
     const menu = document.createElement('div');
     menu.className = 'menu-etiquettes menu-filtre-marqueurs';
-    menu.innerHTML = `<strong>Étiquettes</strong>
+    menu.innerHTML = `<strong>${texteHtml('document.editeur.etiquettes')}</strong>
       ${this.etiquettes().map((e) => ligne('data-etq', e.code, e.couleur, e.libelle, etiquettes.has(e.code), compte.get(`e:${e.code}`))).join('')}
-      ${ligne('data-etq', '', null, 'Sans étiquette', etiquettes.has(''), compte.get('e:'))}
-      <strong>Modes de vente</strong>
+      ${ligne('data-etq', '', null, texte('document.editeur.sans_etiquette'), etiquettes.has(''), compte.get('e:'))}
+      <strong>${texteHtml('document.editeur.modes_vente')}</strong>
       ${Object.keys(LIBELLES_TYPE_PRIX).map((t) => ligne('data-type', t, this.couleurTypePrix(t)?.couleur, LIBELLES_TYPE_PRIX[t], types.has(t), compte.get(`t:${t}`))).join('')}
-      <div class="boutons"><button type="button" data-effacer>Effacer</button></div>`;
+      <div class="boutons"><button type="button" data-effacer>${texteHtml('document.editeur.effacer')}</button></div>`;
     const r = ancre.getBoundingClientRect();
     menu.style.left = `${r.left}px`;
     menu.style.top = `${r.bottom + 2}px`;
@@ -660,7 +657,7 @@ export class EditeurDocument {
     const s = document.createElement('span');
     s.className = v < 1 ? 'coef-bas' : v < d ? 'coef-moyen' : 'coef-ok';
     s.textContent = formatLibre(valeur, decimales);
-    s.title = v < 1 ? 'Coefficient inférieur à 1' : v < d ? `Coefficient inférieur à la valeur par défaut (${formatLibre(d)})` : `Coefficient au moins égal à la valeur par défaut (${formatLibre(d)})`;
+    s.title = v < 1 ? texte('document.editeur.coef_bas') : v < d ? texte('document.editeur.coef_moyen', { defaut: formatLibre(d) }) : texte('document.editeur.coef_ok', { defaut: formatLibre(d) });
     return s;
   }
 
@@ -739,8 +736,8 @@ export class EditeurDocument {
     const c = this.saisie.lignes.find((l) => l.lig_id === cibleId);
     if (!c) return position;
     const nom = `${this.resultat.lignes.find((l) => l.lig_id === cibleId)?.lig_numerotation ?? ''} ${String(c.lig_libelle_html ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()}`.trim().slice(0, 40);
-    if (position === 'enfant') return c.lig_tyl_id === TL.OUVRAGE ? `Comme composante de « ${nom} »` : `Dans « ${nom} » (en fin)`;
-    return `${position === 'avant' ? 'Avant' : 'Après'} « ${nom} » (même niveau)`;
+    if (position === 'enfant') return c.lig_tyl_id === TL.OUVRAGE ? texte('document.editeur.depot_composante', { nom }) : texte('document.editeur.depot_dans', { nom });
+    return position === 'avant' ? texte('document.editeur.depot_avant', { nom }) : texte('document.editeur.depot_apres', { nom });
   }
 
   /** Dépôt glissé depuis une autre fenêtre : type de ligne déduit du type MIME (article : élément, ouvrage). */
@@ -784,7 +781,7 @@ export class EditeurDocument {
     const gravite = this.graviteLigne(r);
     if (!gravite) return null;
     const messages = this.messagesLigne(r).map((x) => x.message).join('\n');
-    return { icone: gravite === 'erreur' ? '⛔' : '⚠', classe: gravite, titre: `${messages}\n(clic : notifications de la ligne)` };
+    return { icone: icone(gravite), classe: gravite, titre: texte('document.editeur.signal', { messages }) };
   }
 
   /** Numéro et libellé d'une ligne (messages, notifications). */
@@ -822,7 +819,7 @@ export class EditeurDocument {
       const i = res.indexOf(section);
       let fin = i + 1;
       while (fin < res.length && res[fin].profondeur > section.profondeur) fin++;
-      const tranche = this.ligneVirtuelle(`PS${k}`, 'tranche', 'Pied de la section', s.pied.at(-1)?.montant ?? null,
+      const tranche = this.ligneVirtuelle(`PS${k}`, 'tranche', texte('document.editeur.pied_section'), s.pied.at(-1)?.montant ?? null,
         { aEnfants: true, profondeur: section.profondeur + 1, id: ID_PIED - (k + 1) });
       const contenu = replies.has(tranche.item.lig_id) ? []
         : this.structurePied(s.pied, { parId, replies, decalage: (k + 1) * 1e9, tvaDetaillee: false, section: s.lig_id })
@@ -834,7 +831,7 @@ export class EditeurDocument {
     for (const r of lignes) if (estPied(r.calcule) && !dansPied.has(r.item.lig_id)) p.push(r);
     // Tout le pied dans une tranche repliable (montant : net à payer).
     const net = pied.at(-1)?.montant ?? null;
-    res.push(this.ligneVirtuelle('PIED', 'tranche', sections.length ? 'Pied global' : 'Pied du document', net, { aEnfants: true, id: ID_PIED }));
+    res.push(this.ligneVirtuelle('PIED', 'tranche', sections.length ? texte('document.editeur.pied_global') : texte('document.plan.pied'), net, { aEnfants: true, id: ID_PIED }));
     if (!replies.has(ID_PIED)) res.push(...p.map((r) => ({ ...r, profondeur: r.profondeur + 1 })));
     return res;
   }
@@ -867,7 +864,7 @@ export class EditeurDocument {
     const manque = (cle) => ajoutable && !pied.some((e) => e.genre === 'groupe' && e.cle === cle);
     const vide = (cle) => {
       const r = virtuelle(cle === 'HT' ? 'E90' : 'E91', 'vide', LIBELLES_PIED[cle], null, {
-        html: `${echapper(LIBELLES_PIED[cle])} <small class="pied-vide">aucun — ${echapper(libelleRaccourci('insererApres') || 'Ctrl+Entrée')} pour en ajouter</small>`,
+        html: `${echapper(LIBELLES_PIED[cle])} <small class="pied-vide">${texteHtml('document.editeur.pied_vide', { touche: libelleRaccourci('insererApres') || texte('document.editeur.touche_inserer') })}</small>`,
       });
       this.groupesVides?.set(r.item.lig_id, { cle, section });
       p.push(r);
@@ -888,8 +885,8 @@ export class EditeurDocument {
       }
       if (e.genre === 'consolide') {
         // Ligne du pied global : lignes de même nature et de même libellé des pieds de section.
-        const detail = e.mode === 'P' && e.taux !== null ? ` ${formatLibre(e.taux)} %` : e.mode === 'C' && e.taux !== null ? ` × ${formatLibre(e.taux)}` : '';
-        const base = e.base !== null ? ` <small>sur ${formatNombre(e.base, pm)}</small>` : '';
+        const detail = e.mode === 'P' && e.taux !== null ? ` ${texte('document.editeur.taux_pct', { taux: formatLibre(e.taux) })}` : e.mode === 'C' && e.taux !== null ? ` ${texte('document.editeur.taux_coef', { taux: formatLibre(e.taux) })}` : '';
+        const base = e.base !== null ? ` <small>${texteHtml('document.editeur.sur', { base: formatNombre(e.base, pm) })}</small>` : '';
         p.push(virtuelle(`C${i}`, 'consolide', e.libelle, e.montant, {
           profondeur: 0, html: `${echapper(e.libelle || LIBELLES_PIED[e.cle] || e.cle)}${echapper(detail)}${base}`,
           titre: e.libelle,
@@ -906,7 +903,7 @@ export class EditeurDocument {
       if (e.cle === 'TVA') {
         if (!tvaDetaillee) return;
         for (const t of this.resultat.tva) {
-          const libelle = `${t.tva_code} · ${formatLibre(t.tva_taux)} % sur ${formatNombre(t.tva_base_ht, pm)}${t.tva_mention ? ` — ${t.tva_mention}` : ''}`;
+          const libelle = texte('document.editeur.tva_ligne', { code: t.tva_code, taux: formatLibre(t.tva_taux), base: formatNombre(t.tva_base_ht, pm) }) + (t.tva_mention ? ` — ${t.tva_mention}` : '');
           p.push(virtuelle(`V${i}-${t.tva_code}`, 'tva', libelle, t.tva_montant_net, { profondeur: 1, rang: 1 + this.resultat.tva.indexOf(t) }));
         }
         return;
@@ -924,8 +921,8 @@ export class EditeurDocument {
     if (!estPied(c) || c.lig_tyl_id === TL.TVA || !c.lig_pied_mode || c.lig_pied_mode === 'M' || c.lig_base_calcul === null || c.lig_base_calcul === undefined) return null;
     const s = document.createElement('span');
     s.className = 'base-pied';
-    s.textContent = `sur ${formatNombre(c.lig_base_calcul, this.saisie.document.ent_precision_montant ?? 2)}`;
-    s.title = `Base : ${this.libelleBasePied(c)}`;
+    s.textContent = texte('document.editeur.sur', { base: formatNombre(c.lig_base_calcul, this.saisie.document.ent_precision_montant ?? 2) });
+    s.title = texte('document.editeur.base', { base: this.libelleBasePied(c) });
     return s;
   }
 
@@ -933,7 +930,7 @@ export class EditeurDocument {
   libelleBasePied(c) {
     if (c.lig_pied_base === 'LIGNE') {
       const st = this.resultat.lignes.find((x) => x.lig_id === c.lig_pied_base_id);
-      return st ? `Sous-total : ${st.lig_libelle_brut || st.lig_id}` : 'Sous-total introuvable';
+      return st ? texte('document.panneaux.st_libelle', { libelle: st.lig_libelle_brut || st.lig_id }) : texte('document.editeur.st_introuvable');
     }
     return LIBELLES_BASE_PIED[c.lig_pied_base ?? 'CUMUL'];
   }
@@ -957,7 +954,7 @@ export class EditeurDocument {
   colonneRemise(editable) {
     const pct = () => this.remisesPct;
     return {
-      cle: 'remise', titre: 'Remise', classe: 'col-coef', editeur: 'nombre', editable, champ: () => 'lig_coef_remise',
+      cle: 'remise', titre: texte('document.colonnes.remise'), classe: 'col-coef', editeur: 'nombre', editable, champ: () => 'lig_coef_remise',
       lire: (l) => formatLibre(pct() ? pctDepuisCoef(l.lig_coef_remise) : l.lig_coef_remise),
       versValeur: (v) => (pct() ? coefDepuisPct(v) : v),
       valeur: (r) => {
@@ -966,13 +963,13 @@ export class EditeurDocument {
         if (!pct()) return this.coefAffiche(c.lig_coef_remise, 1);
         const s = document.createElement('span');
         s.className = Number(c.lig_coef_remise) < 1 ? 'coef-bas' : 'coef-ok';
-        s.textContent = `${formatLibre(pctDepuisCoef(c.lig_coef_remise), 4)} %`;
-        s.title = `Coefficient ${formatLibre(c.lig_coef_remise, 6)}`;
+        s.textContent = texte('document.editeur.taux_pct', { taux: formatLibre(pctDepuisCoef(c.lig_coef_remise), 4) });
+        s.title = texte('document.editeur.coefficient', { valeur: formatLibre(c.lig_coef_remise, 6) });
         return s;
       },
       enteteBouton: {
-        texte: () => (pct() ? '%' : '×'),
-        titre: () => (pct() ? 'Remises en % : afficher et saisir en coefficient (0,95 = 5 %)' : 'Remises en coefficient : afficher et saisir en % (5 % = 0,95)'),
+        texte: () => icone(pct() ? 'document_remise_pct' : 'document_remise_coef'),
+        titre: () => texte(pct() ? 'document.editeur.remises_pct' : 'document.editeur.remises_coef'),
         clic: () => {
           this.remisesPct = !this.remisesPct;
           ecrirePreferences({ remises: this.remisesPct ? MODES_REMISE.POURCENTAGE : MODES_REMISE.COEFFICIENT });
@@ -986,28 +983,28 @@ export class EditeurDocument {
     const chiffree = (l) => saisissable(l) && estChiffree(l);
     return [
       {
-        cle: 'num', titre: 'N°', classe: 'col-num', arbre: true, editeur: 'texte',
+        cle: 'num', titre: texte('document.colonnes.num'), classe: 'col-num', arbre: true, editeur: 'texte',
         editable: (l) => saisissable(l) && estTypeNumerote(l),
         champ: () => 'lig_numerotation', lire: (l) => (l.lig_num_manuelle ? l.lig_numerotation ?? '' : ''),
-        valeur: (r) => (r.calcule.lig_numerotation ?? '') + (r.item.lig_num_manuelle ? ' ✎' : ''),
-        titreCellule: (r) => (r.item?.lig_num_manuelle ? '✎ Numéro saisi manuellement (vider la cellule : numérotation automatique)' : ''),
+        valeur: (r) => (r.calcule.lig_numerotation ?? '') + (r.item.lig_num_manuelle ? ` ${icone('document_modifier')}` : ''),
+        titreCellule: (r) => (r.item?.lig_num_manuelle ? texte('document.editeur.num_manuel', { icone: icone('document_modifier') }) : ''),
       },
       {
-        cle: 'type', titre: 'Type', classe: 'col-type', editeur: 'select', editable: saisissable,
+        cle: 'type', titre: texte('document.colonnes.type'), classe: 'col-type', editeur: 'select', editable: saisissable,
         champ: () => 'lig_tyl_id', lire: (l) => l.lig_tyl_id,
         options: () => this.definition.types_ligne.map((t) => ({ valeur: t.tyl_id, libelle: t.tyl_libelle })),
-        valeur: (r) => (r.virtuelle ? { total: 'Total', groupe: 'Groupe', vide: 'Groupe', tva: 'Taux', tranche: 'Pied', consolide: 'Consolidé' }[r.virtuelle.type] : this.libelleType(r)),
+        valeur: (r) => (r.virtuelle ? texte(`document.virtuelles.${r.virtuelle.type}`) : this.libelleType(r)),
       },
       {
         // Code d'appel d'une référence (article…) : résolu par l'hôte ; sinon texte libre. Section sans code : numéro
         // du document qu'elle représente (le document lui-même ; plus tard, chaque document intégré).
-        cle: 'code', titre: 'Code', classe: 'col-code', editeur: 'texte', editable: saisissable,
+        cle: 'code', titre: texte('document.colonnes.code'), classe: 'col-code', editeur: 'texte', editable: saisissable,
         champ: () => 'lig_code', lire: (l) => l.lig_code ?? '',
         valeur: (r) => r.calcule.lig_code ?? (r.item?.lig_tyl_id === TL.SECTION ? this.saisie.document.ent_numero ?? '' : ''),
       },
       {
         // Saisie en ligne pour un texte simple ; éditeur de mise en forme au double-clic.
-        cle: 'libelle', titre: 'Libellé', classe: 'col-libelle', editeur: 'texte', editable: saisissable,
+        cle: 'libelle', titre: texte('document.colonnes.libelle'), classe: 'col-libelle', editeur: 'texte', editable: saisissable,
         champ: () => 'lig_libelle_html',
         lire: (l) => (estHtml(l.lig_libelle_html) ? l.lig_libelle_html : decoderEntites(l.lig_libelle_html ?? '')),
         valeur: (r) => ({
@@ -1025,13 +1022,13 @@ export class EditeurDocument {
           // Libellé non modifiable (document validé, ligne reprise du parent) : mise en forme en consultation.
           consulter: (l) => (l._virtuelle ? null : editerLibelle({
             html: this.resultat.lignes.find((x) => x.lig_id === l.lig_id)?.lig_libelle_affiche ?? l.lig_libelle_html,
-            titre: [this.resultat.lignes.find((x) => x.lig_id === l.lig_id)?.lig_numerotation, LIBELLES_TYPE[CODES_TL[l.lig_tyl_id]], 'lecture seule'].filter(Boolean).join(' · '),
+            titre: [this.resultat.lignes.find((x) => x.lig_id === l.lig_id)?.lig_numerotation, LIBELLES_TYPE[CODES_TL[l.lig_tyl_id]], texte('document.editeur.lecture_seule')].filter(Boolean).join(' · '),
             lecture: true,
           })),
         },
         enteteBouton: {
-          texte: () => (this.libellesUneLigne ? '⇕' : '⇔'),
-          titre: () => (this.libellesUneLigne ? 'Afficher les libellés en entier' : 'Afficher les libellés sur une seule ligne'),
+          texte: () => icone(this.libellesUneLigne ? 'document_libelles_entiers' : 'document_libelles_ligne'),
+          titre: () => texte(this.libellesUneLigne ? 'document.editeur.libelles_entiers' : 'document.editeur.libelles_ligne'),
           clic: () => {
             this.libellesUneLigne = !this.libellesUneLigne;
             ecrirePreferences({ [this.transforme ? 'libellesTransformes' : 'libelles']: this.libellesUneLigne ? 'ligne' : 'complet' });
@@ -1040,7 +1037,7 @@ export class EditeurDocument {
         },
       },
       {
-        cle: 'qte', titre: 'Qté', classe: 'col-nombre', editeur: 'nombre',
+        cle: 'qte', titre: texte('document.colonnes.qte'), classe: 'col-nombre', editeur: 'nombre',
         editable: (l) => chiffree(l) || (saisissable(l) && (l.lig_tyl_id === TL.PIED_HT || l.lig_tyl_id === TL.PIED_TTC)),
         champ: (l) => (estPied(l) ? 'lig_pied_valeur' : 'lig_qte'),
         lire: (l) => formatLibre(estPied(l) ? l.lig_pied_valeur : l.lig_qte),
@@ -1048,8 +1045,8 @@ export class EditeurDocument {
           const c = r.calcule;
           if (estPied(c)) {
             if (c.lig_tyl_id === TL.TVA) return '';
-            if (c.lig_pied_mode === 'C') return `× ${formatLibre(c.lig_pied_valeur)}`;
-            return `${formatLibre(c.lig_pied_valeur)}${c.lig_pied_mode === 'P' ? ' %' : ' €'}`;
+            if (c.lig_pied_mode === 'C') return texte('document.editeur.taux_coef', { taux: formatLibre(c.lig_pied_valeur) });
+            return c.lig_pied_mode === 'P' ? texte('document.editeur.taux_pct', { taux: formatLibre(c.lig_pied_valeur) }) : texte('document.editeur.montant_devise', { montant: formatLibre(c.lig_pied_valeur) });
           }
           if (!estChiffree(c)) return '';
           return formatNombre(c.lig_qte_vendue, c.lig_precision_qte ?? 2);
@@ -1059,21 +1056,21 @@ export class EditeurDocument {
       ...this.colonnesAvancement(saisissable),
       ...this.colonnesVentilationAvancement(saisissable),
       {
-        cle: 'unite', titre: 'U', classe: 'col-unite', editeur: 'liste', editable: chiffree,
+        cle: 'unite', titre: texte('document.colonnes.unite'), classe: 'col-unite', editeur: 'liste', editable: chiffree,
         champ: () => 'lig_unt_code', lire: (l) => l.lig_unt_code ?? '', valeur: (r) => r.calcule.lig_unt_code ?? '',
         suggestions: () => this.suggestionsUnites(),
       },
       {
-        cle: 'pv', titre: 'PV', classe: 'col-nombre', ...this.colonneNombre('lig_pv', (l) => chiffree(l) && !this.estCompose(l)),
+        cle: 'pv', titre: texte('document.colonnes.pv'), classe: 'col-nombre', ...this.colonneNombre('lig_pv', (l) => chiffree(l) && !this.estCompose(l)),
         valeur: (r) => this.baseAffichee(r.calcule) ?? (estChiffree(r.calcule) ? formatNombre(r.calcule.lig_pv, r.calcule.lig_precision_pv ?? 2) : ''),
       },
       this.colonneRemise(chiffree),
       {
-        cle: 'pvnet', titre: 'PV net', classe: 'col-nombre', editable: () => false,
+        cle: 'pvnet', titre: texte('document.colonnes.pvnet'), classe: 'col-nombre', editable: () => false,
         valeur: (r) => (estChiffree(r.calcule) ? formatNombre(r.calcule.lig_pv_remise, r.calcule.lig_precision_pv ?? 2) : ''),
       },
       {
-        cle: 'montant', titre: 'Montant HT', classe: 'col-nombre col-montant', editable: () => false,
+        cle: 'montant', titre: texte('document.colonnes.montant'), classe: 'col-nombre col-montant', editable: () => false,
         valeur: (r) => {
           const c = r.calcule;
           if (c.lig_tyl_id === TL.TVA) return formatNombre(c.lig_montant_tva, 2);
@@ -1081,7 +1078,7 @@ export class EditeurDocument {
         },
       },
       {
-        cle: 'tva', titre: 'TVA', classe: 'col-tva', editeur: 'select',
+        cle: 'tva', titre: texte('document.colonnes.tva'), classe: 'col-tva', editeur: 'select',
         editable: (l) => saisissable(l) && (l.lig_tyl_id === TL.TITRE || this.regles.estLigneDePrix(this.saisie.lignes, l) || l.lig_tyl_id === TL.PIED_HT),
         champ: () => 'lig_tva_id', lire: (l) => l.lig_tva_id ?? '',
         options: () => [{ valeur: '', libelle: '—' }, ...this.definition.taux_tva.map((t) => ({ valeur: t.ttv_id, libelle: t.ttv_code }))],
@@ -1094,7 +1091,7 @@ export class EditeurDocument {
             if (h.heterogene) {
               const m = document.createElement('span');
               m.className = 'tva-heterogene';
-              m.textContent = ' ◆';
+              m.textContent = ` ${icone('document_tva_heterogene')}`;
               m.title = h.detail;
               s.appendChild(m);
             }
@@ -1105,7 +1102,7 @@ export class EditeurDocument {
       },
       {
         // Commentaire interne de la ligne (non imprimé) : première ligne dans la cellule, texte entier en bulle.
-        cle: 'commentaire', titre: 'Commentaire', classe: 'col-commentaire', editeur: 'texte', editable: saisissable,
+        cle: 'commentaire', titre: texte('document.colonnes.commentaire'), classe: 'col-commentaire', editeur: 'texte', editable: saisissable,
         champ: () => 'lig_commentaire', lire: (l) => l.lig_commentaire ?? '',
         valeur: (r) => {
           if (r.virtuelle) return '';
@@ -1116,13 +1113,13 @@ export class EditeurDocument {
         titreCellule: (r) => {
           if (r.virtuelle) return '';
           const parent = r.item.lig_proprietes?.commentaire_parent;
-          return [r.item.lig_commentaire, parent ? `Parent : ${parent}` : null].filter(Boolean).join('\n\n');
+          return [r.item.lig_commentaire, parent ? texte('document.editeur.parent', { commentaire: parent }) : null].filter(Boolean).join('\n\n');
         },
       },
       {
         // Date de livraison de la ligne (019l) : la sienne, sinon la date par défaut de l'entête fournie par l'application
         // (dateLivraisonDefaut), en italique : elle suit alors tout changement de l'entête. Vider la cellule revient au défaut.
-        cle: 'livraison', titre: 'Livraison', classe: 'col-date', editeur: 'texte',
+        cle: 'livraison', titre: texte('document.colonnes.livraison'), classe: 'col-date', editeur: 'texte',
         editable: (l) => saisissable(l) && this.regles.estLigneDePrix(this.saisie.lignes, l),
         champ: () => 'lig_date_livraison', lire: (l) => dateCourte(l.lig_date_livraison),
         valeur: (r) => {
@@ -1131,11 +1128,11 @@ export class EditeurDocument {
           const defaut = this.dateLivraisonDefaut();
           return defaut ? { html: `<i class="date-defaut">${dateCourte(defaut)}</i>` } : '';
         },
-        titreCellule: (r) => (r.virtuelle || r.item.lig_date_livraison || !this.dateLivraisonDefaut() ? '' : "Date de l'entête : saisir une date pour l'imposer à la ligne"),
+        titreCellule: (r) => (r.virtuelle || r.item.lig_date_livraison || !this.dateLivraisonDefaut() ? '' : texte('document.editeur.livraison_entete')),
       },
       {
         // Commentaire de la ligne du document parent (repris à la transformation d'avancement), en lecture seule.
-        cle: 'commentaire_parent', titre: 'Commentaire parent', classe: 'col-commentaire', editable: () => false,
+        cle: 'commentaire_parent', titre: texte('document.colonnes.commentaire_parent'), classe: 'col-commentaire', editable: () => false,
         valeur: (r) => (r.virtuelle ? '' : String(r.item.lig_proprietes?.commentaire_parent ?? '').split('\n')[0]),
         titreCellule: (r) => (r.virtuelle ? '' : r.item.lig_proprietes?.commentaire_parent ?? ''),
       },
@@ -1163,78 +1160,78 @@ export class EditeurDocument {
     };
     return [
       {
-        cle: 'qte_parent', titre: 'Qté parent', classe: 'col-nombre', editable: () => false,
+        cle: 'qte_parent', titre: texte('document.colonnes.qte_parent'), classe: 'col-nombre', editable: () => false,
         valeur: (r) => avec(r, (i) => formatNombre(i.qte_parent, precision(r))),
-        titreCellule: (r) => (this.soldeLigne(r) ? 'Quantité de la ligne du document parent' : ''),
+        titreCellule: (r) => (this.soldeLigne(r) ? texte('document.editeur.aide_qte_parent') : ''),
       },
       {
-        cle: 'montant_parent', titre: 'Montant parent', classe: 'col-nombre', editable: () => false,
+        cle: 'montant_parent', titre: texte('document.colonnes.montant_parent'), classe: 'col-nombre', editable: () => false,
         valeur: (r) => avec(r, (i) => formatNombre(i.montant_parent, pm())),
-        titreCellule: (r) => (this.soldeLigne(r) ? 'Montant HT de la ligne du document parent' : ''),
+        titreCellule: (r) => (this.soldeLigne(r) ? texte('document.editeur.aide_montant_parent') : ''),
       },
       {
-        cle: 'pct_prec', titre: '% préc.', classe: 'col-coef', editable: () => false,
+        cle: 'pct_prec', titre: texte('document.colonnes.pct_prec'), classe: 'col-coef', editable: () => false,
         valeur: (r) => avec(r, (i) => pct(i, i.autres, i.autres_montant)),
-        titreCellule: (r) => (this.soldeLigne(r) ? 'Part du parent reprise par les documents précédents' : ''),
+        titreCellule: (r) => (this.soldeLigne(r) ? texte('document.editeur.aide_pct_prec') : ''),
       },
       {
-        cle: 'qte_prec', titre: 'Qté préc.', classe: 'col-nombre', editable: () => false,
+        cle: 'qte_prec', titre: texte('document.colonnes.qte_prec'), classe: 'col-nombre', editable: () => false,
         valeur: (r) => avec(r, (i) => formatNombre(i.autres, precision(r))),
-        titreCellule: (r) => avec(r, (i) => `Quantité des documents précédents à la même étape${Dz(i.autres_brouillons).isZero() ? '' : ` (dont brouillons ${formatNombre(i.autres_brouillons, precision(r))})`}`),
+        titreCellule: (r) => avec(r, (i) => (Dz(i.autres_brouillons).isZero() ? texte('document.editeur.aide_qte_prec') : texte('document.editeur.aide_qte_prec_brouillons', { brouillons: formatNombre(i.autres_brouillons, precision(r)) }))),
       },
       {
-        cle: 'montant_prec', titre: 'Montant préc.', classe: 'col-nombre', editable: () => false,
+        cle: 'montant_prec', titre: texte('document.colonnes.montant_prec'), classe: 'col-nombre', editable: () => false,
         valeur: (r) => avec(r, (i) => formatNombre(i.autres_montant, pm())),
-        titreCellule: (r) => (this.soldeLigne(r) ? 'Montant HT des documents précédents à la même étape' : ''),
+        titreCellule: (r) => (this.soldeLigne(r) ? texte('document.editeur.aide_montant_prec') : ''),
       },
       {
-        cle: 'pct_periode', titre: '% période', classe: 'col-coef', editable: () => false,
+        cle: 'pct_periode', titre: texte('document.colonnes.pct_periode'), classe: 'col-coef', editable: () => false,
         valeur: (r) => avec(r, (i) => pct(i, r.calcule.lig_qte_vendue, r.calcule.lig_montant_ht)),
-        titreCellule: (r) => (this.soldeLigne(r) ? 'Part du parent reprise par ce document' : ''),
+        titreCellule: (r) => (this.soldeLigne(r) ? texte('document.editeur.aide_pct_periode') : ''),
       },
       {
-        cle: 'qte_cumul', titre: 'Qté cumul', classe: 'col-nombre', editable: () => false,
+        cle: 'qte_cumul', titre: texte('document.colonnes.qte_cumul'), classe: 'col-nombre', editable: () => false,
         valeur: (r) => avec(r, (i) => formatNombre(qteCumul(i, r).toString(), precision(r))),
-        titreCellule: (r) => (this.soldeLigne(r) ? 'Quantité cumulée : documents précédents + ce document' : ''),
+        titreCellule: (r) => (this.soldeLigne(r) ? texte('document.editeur.aide_qte_cumul') : ''),
       },
       {
-        cle: 'montant_cumul', titre: 'Montant cumul', classe: 'col-nombre', editable: () => false,
+        cle: 'montant_cumul', titre: texte('document.colonnes.montant_cumul'), classe: 'col-nombre', editable: () => false,
         valeur: (r) => avec(r, (i) => formatNombre(montantCumul(i, r).toString(), pm())),
-        titreCellule: (r) => (this.soldeLigne(r) ? 'Montant HT cumulé : documents précédents + ce document' : ''),
+        titreCellule: (r) => (this.soldeLigne(r) ? texte('document.editeur.aide_montant_cumul') : ''),
       },
       {
-        cle: 'pct_cumul', titre: '% cumul', classe: 'col-coef', editable: () => false,
+        cle: 'pct_cumul', titre: texte('document.colonnes.pct_cumul'), classe: 'col-coef', editable: () => false,
         valeur: (r) => avec(r, (i) => pct(i, qteCumul(i, r), montantCumul(i, r))),
-        titreCellule: (r) => (this.soldeLigne(r) ? 'Part cumulée du parent (quantité, ou montant sans quantité)' : ''),
+        titreCellule: (r) => (this.soldeLigne(r) ? texte('document.editeur.aide_pct_cumul') : ''),
       },
       {
-        cle: 'reste', titre: 'Reste', classe: 'col-nombre col-reste', editable: () => false,
+        cle: 'reste', titre: texte('document.colonnes.reste'), classe: 'col-nombre col-reste', editable: () => false,
         valeur: (r) => { const s = this.soldeLigne(r); return s ? formatNombre(s.etat.reste, precision(r)) : ''; },
         classeCellule: (r) => { const s = this.soldeLigne(r); return s && Dz(s.etat.reste).isNegative() ? 'reste-negatif' : ''; },
         titreCellule: (r) => {
           const s = this.soldeLigne(r);
           if (!s) return '';
           const f = (v) => formatNombre(v, precision(r));
-          return `Reste à solder = parent ${f(s.info.qte_parent)} − autres documents ${f(s.info.autres)}`
-            + `${Dz(s.info.autres_brouillons).isZero() ? '' : ` (dont brouillons ${f(s.info.autres_brouillons)})`}`
-            + ` − ce document ${f(r.calcule.lig_qte_vendue)}${Dz(s.info.solde).isZero() ? '' : ` − soldé ${f(s.info.solde)}`}`;
+          return texte('document.editeur.aide_reste', { parent: f(s.info.qte_parent), autres: f(s.info.autres) })
+            + (Dz(s.info.autres_brouillons).isZero() ? '' : ` ${texte('document.editeur.aide_reste_brouillons', { brouillons: f(s.info.autres_brouillons) })}`)
+            + ` ${texte('document.editeur.aide_reste_document', { quantite: f(r.calcule.lig_qte_vendue) })}` + (Dz(s.info.solde).isZero() ? '' : ` ${texte('document.editeur.aide_reste_solde', { solde: f(s.info.solde) })}`);
         },
       },
       {
-        cle: 'solde', titre: 'Soldé', classe: 'col-solde', editeur: 'select',
+        cle: 'solde', titre: texte('document.colonnes.solde'), classe: 'col-solde', editeur: 'select',
         editable: (l) => saisissable(l) && this.restes.parLigne.has(l.lig_id),
         champ: () => 'lig_solde', lire: (l) => (l.lig_solde ? '1' : ''),
-        options: () => [{ valeur: '', libelle: '—' }, { valeur: '1', libelle: 'Soldée' }],
+        options: () => [{ valeur: '', libelle: '—' }, { valeur: '1', libelle: texte('document.editeur.soldee') }],
         valeur: (r) => {
           const s = this.soldeLigne(r);
           if (!s) return '';
-          return r.item.lig_solde ? '✔' : s.etat.soldee ? { html: '<span class="solde-seuil">✔ seuil</span>' } : '';
+          return r.item.lig_solde ? icone('document_solde') : s.etat.soldee ? { html: `<span class="solde-seuil">${iconeHtml('document_solde')} ${texteHtml('document.editeur.seuil')}</span>` } : '';
         },
         titreCellule: (r) => {
           const s = this.soldeLigne(r);
           if (!s) return '';
-          if (r.item.lig_solde) return 'Ligne soldée : à la validation, le reste de la ligne du parent est clos';
-          return s.etat.soldee ? 'Reste sous le seuil des paramètres : la ligne sera soldée à la validation' : 'Choisir « Soldée » pour clore le reste sans attendre';
+          if (r.item.lig_solde) return texte('document.editeur.aide_soldee');
+          return s.etat.soldee ? texte('document.editeur.aide_seuil') : texte('document.editeur.aide_solder');
         },
       },
     ];
@@ -1251,60 +1248,60 @@ export class EditeurDocument {
     const nombre = (v, d = 2) => (formatNombre(v, d));
     const avt = (l) => Boolean(l?.lig_avt_mode);
     const tranche = (l) => estTranche(l) && this.lignesAvancement(l.lig_id).length > 0;
-    const saisi = (r, mode, texte) => (r.item.lig_avt_mode === mode ? { html: `<b>${echapper(texte)}</b> ✎` } : texte);
+    const saisi = (r, mode, t) => (r.item.lig_avt_mode === mode ? { html: `<b>${echapper(t)}</b> ${iconeHtml('document_modifier')}` } : t);
     return [
       {
-        cle: 'avt_pct_prec', titre: '% préc.', classe: 'col-coef', editable: () => false,
+        cle: 'avt_pct_prec', titre: texte('document.colonnes.avt_pct_prec'), classe: 'col-coef', editable: () => false,
         valeur: (r) => (avt(r.item) ? nombre(r.item.lig_avt_pct_precedent, 2) : ''),
-        titreCellule: () => '% cumulé du dernier document d\'avancement validé (facture ou reprise)',
+        titreCellule: () => texte('document.editeur.aide_avt_pct_prec'),
       },
       {
-        cle: 'avt_pct', titre: '% cumul', classe: 'col-coef', editeur: 'nombre',
+        cle: 'avt_pct', titre: texte('document.colonnes.avt_pct'), classe: 'col-coef', editeur: 'nombre',
         editable: (l) => saisissable(l) && (avt(l) || tranche(l)),
         champ: () => 'avt:P', lire: (l) => (avt(l) ? formatLibre(l.lig_avt_mode === 'P' ? l.lig_avt_valeur : this.calculee(l)?.lig_avt_pct) : ''),
         valeur: (r) => {
           if (avt(r.item)) return saisi(r, 'P', nombre(r.calcule.lig_avt_pct, 2));
           return tranche(r.item) ? nombre(this.pctTranche(r.item.lig_id), 2) : '';
         },
-        titreCellule: (r) => (tranche(r.item) ? 'Saisir un % pour l\'appliquer à toutes les lignes de la tranche' : avt(r.item) ? 'Avancement cumulé en % du montant de la ligne du marché' : ''),
+        titreCellule: (r) => (tranche(r.item) ? texte('document.editeur.aide_avt_tranche') : avt(r.item) ? texte('document.editeur.aide_avt_pct') : ''),
       },
       {
-        cle: 'avt_pct_periode', titre: '% période', classe: 'col-coef', editable: () => false,
+        cle: 'avt_pct_periode', titre: texte('document.colonnes.avt_pct_periode'), classe: 'col-coef', editable: () => false,
         valeur: (r) => (avt(r.item) && r.calcule.lig_avt_pct !== null && r.calcule.lig_avt_pct !== undefined
           ? nombre(Dz(r.calcule.lig_avt_pct).minus(Dz(r.item.lig_avt_pct_precedent)).toString(), 2) : ''),
-        titreCellule: () => 'Avancement de la période : % cumulé − % précédent',
+        titreCellule: () => texte('document.editeur.aide_avt_periode'),
       },
       {
-        cle: 'avt_qte', titre: 'Qté cumul', classe: 'col-nombre', editeur: 'nombre', editable: (l) => saisissable(l) && avt(l) && !estPied(l),
+        cle: 'avt_qte', titre: texte('document.colonnes.avt_qte'), classe: 'col-nombre', editeur: 'nombre', editable: (l) => saisissable(l) && avt(l) && !estPied(l),
         champ: () => 'avt:Q', lire: (l) => formatLibre(l.lig_avt_mode === 'Q' ? l.lig_avt_valeur : this.calculee(l)?.lig_avt_qte_cumul),
         valeur: (r) => (avt(r.item) ? saisi(r, 'Q', nombre(r.calcule.lig_avt_qte_cumul, r.calcule.lig_precision_qte ?? 2)) : ''),
-        titreCellule: (r) => (avt(r.item) ? `Quantité du marché : ${nombre(r.item.lig_avt_qte_marche, r.calcule.lig_precision_qte ?? 2)}` : ''),
+        titreCellule: (r) => (avt(r.item) ? texte('document.editeur.aide_avt_qte', { quantite: nombre(r.item.lig_avt_qte_marche, r.calcule.lig_precision_qte ?? 2) }) : ''),
       },
       {
-        cle: 'avt_montant', titre: 'Montant cumul', classe: 'col-nombre', editeur: 'nombre', editable: (l) => saisissable(l) && avt(l),
+        cle: 'avt_montant', titre: texte('document.colonnes.avt_montant'), classe: 'col-nombre', editeur: 'nombre', editable: (l) => saisissable(l) && avt(l),
         champ: () => 'avt:M', lire: (l) => formatLibre(l.lig_avt_mode === 'M' ? l.lig_avt_valeur : this.calculee(l)?.lig_avt_montant_cumul),
         valeur: (r) => (avt(r.item) ? saisi(r, 'M', nombre(r.calcule.lig_avt_montant_cumul, this.saisie.document.ent_precision_montant ?? 2)) : ''),
-        titreCellule: (r) => (avt(r.item) ? `Montant du marché : ${nombre(r.item.lig_avt_montant_marche)}` : ''),
+        titreCellule: (r) => (avt(r.item) ? texte('document.editeur.aide_avt_montant', { montant: nombre(r.item.lig_avt_montant_marche) }) : ''),
       },
       {
-        cle: 'avt_qte_marche', titre: 'Qté marché', classe: 'col-nombre', editable: () => false,
+        cle: 'avt_qte_marche', titre: texte('document.colonnes.avt_qte_marche'), classe: 'col-nombre', editable: () => false,
         valeur: (r) => (avt(r.item) && !estPied(r.item) ? nombre(r.item.lig_avt_qte_marche, r.calcule.lig_precision_qte ?? 2) : ''),
-        titreCellule: () => 'Quantité de la ligne du marché (commande parente)',
+        titreCellule: () => texte('document.editeur.aide_avt_qte_marche'),
       },
       {
-        cle: 'avt_montant_marche', titre: 'Montant marché', classe: 'col-nombre', editable: () => false,
+        cle: 'avt_montant_marche', titre: texte('document.colonnes.avt_montant_marche'), classe: 'col-nombre', editable: () => false,
         valeur: (r) => (avt(r.item) ? nombre(r.item.lig_avt_montant_marche, this.saisie.document.ent_precision_montant ?? 2) : ''),
-        titreCellule: () => 'Montant HT de la ligne du marché (commande parente)',
+        titreCellule: () => texte('document.editeur.aide_avt_montant_marche'),
       },
       {
-        cle: 'avt_qte_prec', titre: 'Qté préc.', classe: 'col-nombre', editable: () => false,
+        cle: 'avt_qte_prec', titre: texte('document.colonnes.avt_qte_prec'), classe: 'col-nombre', editable: () => false,
         valeur: (r) => (avt(r.item) ? nombre(r.item.lig_avt_qte_precedent, r.calcule.lig_precision_qte ?? 2) : ''),
-        titreCellule: () => 'Quantité cumulée du dernier document d\'avancement validé',
+        titreCellule: () => texte('document.editeur.aide_avt_qte_prec'),
       },
       {
-        cle: 'avt_precedent', titre: 'Montant préc.', classe: 'col-nombre', editable: () => false,
+        cle: 'avt_precedent', titre: texte('document.colonnes.avt_precedent'), classe: 'col-nombre', editable: () => false,
         valeur: (r) => (avt(r.item) ? nombre(r.item.lig_avt_montant_precedent, this.saisie.document.ent_precision_montant ?? 2) : ''),
-        titreCellule: () => 'Montant cumulé du dernier document d\'avancement validé',
+        titreCellule: () => texte('document.editeur.aide_avt_montant_prec'),
       },
     ];
   }
@@ -1343,9 +1340,8 @@ export class EditeurDocument {
   /** Variables proposées dans l'éditeur de libellé : données de la ligne et du document. */
   variablesLibelle() {
     return [
-      ['lig_qte_vendue', 'Quantité vendue'], ['lig_unt_code', 'Unité'], ['lig_pv_remise', 'PV net'], ['lig_montant_ht', 'Montant HT'],
-      ['lig_numerotation', 'Numéro de ligne'], ['document.ent_numero', 'Numéro du document'], ['document.ent_objet', 'Objet du document'],
-    ].map(([v, l]) => ({ valeur: `{{${v}}}`, libelle: `${l} – {{${v}}}` }));
+      'lig_qte_vendue', 'lig_unt_code', 'lig_pv_remise', 'lig_montant_ht', 'lig_numerotation', 'document.ent_numero', 'document.ent_objet',
+    ].map((v) => ({ valeur: `{{${v}}}`, libelle: texte('document.variables.choix', { libelle: texte(`document.variables.${v.replace('document.', 'document_')}`), variable: `{{${v}}}` }) }));
   }
 
   /** Variables proposées dans les textes d'introduction et de conclusion (niveau du document). */
@@ -1356,7 +1352,7 @@ export class EditeurDocument {
     const connues = (this.definition.unites ?? []).map((u) => ({ valeur: u.unt_code, libelle: u.unt_libelle }));
     const codes = new Set(connues.map((u) => u.valeur));
     const saisies = [...new Set(this.saisie.lignes.map((l) => l.lig_unt_code).filter((c) => c && !codes.has(c)))]
-      .sort().map((c) => ({ valeur: c, libelle: 'Saisie libre', detail: 'dans ce document' }));
+      .sort().map((c) => ({ valeur: c, libelle: texte('document.editeur.saisie_libre'), detail: texte('document.editeur.dans_document') }));
     return [...connues, ...saisies];
   }
 
@@ -1367,9 +1363,9 @@ export class EditeurDocument {
   // ---------------------------------------------------------------- actions
 
   modifierLigne(id, champ, valeur) {
-    if (this.fige) { this.surMessage?.('Document validé : consultation seule'); return; }
+    if (this.fige) { this.surMessage?.(texte('document.editeur.fige')); return; }
     if (this.champVerrouille(this.saisie.lignes.find((x) => x.lig_id === id), champ)) {
-      this.surMessage?.('Information reprise du document parent : non modifiable');
+      this.surMessage?.(texte('document.editeur.parent_non_modifiable'));
       return;
     }
     this.magasin.modifier((d) => {
@@ -1377,50 +1373,50 @@ export class EditeurDocument {
       if (!l) return;
       l[champ] = valeur;
       this.regles.apresModification(d, id, champ);
-    }, `Modification ${champ}`);
+    }, texte('document.etapes.modification', { champ }));
   }
 
   /**
    * Saisie d'une cellule : renvoie true si la valeur est acceptée. Une spécialisation traite ses champs
    * puis délègue le reste à super.modifierCellule.
    */
-  modifierCellule(id, champ, texte, colonne) {
+  modifierCellule(id, champ, brut, colonne) {
     const m = this.magasin;
     if (this.champVerrouille(this.saisie.lignes.find((x) => x.lig_id === id), champ)) {
-      this.surMessage?.('Information reprise du document parent : non modifiable');
+      this.surMessage?.(texte('document.editeur.parent_non_modifiable'));
       return false;
     }
     const taux = this.definition.taux_tva;
-    let valeur = texte;
+    let valeur = brut;
     if (colonne.editeur === 'nombre') {
-      valeur = lireNombre(texte);
-      if (valeur === undefined) { this.surMessage?.('Nombre invalide'); return false; }
+      valeur = lireNombre(brut);
+      if (valeur === undefined) { this.surMessage?.(texte('document.editeur.nombre_invalide')); return false; }
       if (colonne.versValeur) valeur = colonne.versValeur(valeur);
     }
     if (champ === 'lig_tyl_id') {
-      const type = Number(texte);
+      const type = Number(brut);
       const l = this.saisie.lignes.find((x) => x.lig_id === id);
       const aEnfants = this.saisie.lignes.some((x) => x.lig_parent_id === id);
-      if (aEnfants && !accepteEnfants({ lig_tyl_id: type })) { this.surMessage?.('Ce type n\'accepte pas de lignes enfants'); return false; }
-      if (estPied({ lig_tyl_id: type }) !== estPied(l) && (l.lig_parent_id !== null || aEnfants)) { this.surMessage?.('Les lignes de pied sont au niveau racine'); return false; }
-      if (type === TL.SECTION && l.lig_parent_id !== null) { this.surMessage?.('Une section est au niveau racine'); return false; }
-      if (!this.ajoutAutorise([{ lig_tyl_id: type }])) { this.surMessage?.('Ce document n\'accepte que du texte et des lignes de pied'); return false; }
+      if (aEnfants && !accepteEnfants({ lig_tyl_id: type })) { this.surMessage?.(texte('document.editeur.sans_enfants')); return false; }
+      if (estPied({ lig_tyl_id: type }) !== estPied(l) && (l.lig_parent_id !== null || aEnfants)) { this.surMessage?.(texte('document.editeur.pied_racine')); return false; }
+      if (type === TL.SECTION && l.lig_parent_id !== null) { this.surMessage?.(texte('document.editeur.section_racine')); return false; }
+      if (!this.ajoutAutorise([{ lig_tyl_id: type }])) { this.surMessage?.(texte('document.editeur.texte_pied_seulement')); return false; }
       m.modifier((d) => {
         const x = d.lignes.find((y) => y.lig_id === id);
         x.lig_tyl_id = type;
         if (estPied(x)) { x.lig_pied_mode ??= 'P'; x.lig_pied_sens ??= -1; }
         this.regles.appliquerContexte(d, id, taux);
-      }, 'Type de ligne');
+      }, texte('document.etapes.type_ligne'));
       return true;
     }
     if (champ === 'lig_code') {
-      const code = String(texte ?? '').trim();
+      const code = String(brut ?? '').trim();
       if (code && this.appelerCode) { this.appelerCode(id, code); return true; }
       this.modifierLigne(id, 'lig_code', code || null);
       return true;
     }
-    if (champ === 'lig_tva_id') valeur = texte === '' ? null : Number(texte);
-    if (champ === 'lig_solde') valeur = texte === '1' || texte === true;
+    if (champ === 'lig_tva_id') valeur = brut === '' ? null : Number(brut);
+    if (champ === 'lig_solde') valeur = brut === '1' || brut === true;
     // Avancement : la saisie fixe le mode (P, Q, M) et sa valeur ; sur une tranche, le % s'applique à toutes ses lignes.
     if (champ.startsWith('avt:')) {
       const mode = champ.slice(4);
@@ -1430,7 +1426,7 @@ export class EditeurDocument {
           x.lig_avt_mode = mode;
           x.lig_avt_valeur = valeur === null ? '0' : valeur;
         }
-      }, 'Avancement');
+      }, texte('document.etapes.avancement'));
       return true;
     }
     // Saisie en ligne : texte simple, échappé (la mise en forme passe par l'éditeur riche).
@@ -1439,8 +1435,8 @@ export class EditeurDocument {
     if (champ === 'lig_unt_code' && valeur) valeur = valeur.trim().slice(0, 10);
     if (champ === 'lig_commentaire') valeur = valeur.trim() === '' ? null : valeur;
     if (champ === 'lig_date_livraison') {
-      valeur = lireDateSaisie(texte);
-      if (valeur === undefined) { this.surMessage?.('Date de livraison : JJ/MM/AAAA'); return false; }
+      valeur = lireDateSaisie(brut);
+      if (valeur === undefined) { this.surMessage?.(texte('document.editeur.date_livraison')); return false; }
     }
     this.modifierLigne(id, champ, valeur);
     return true;
@@ -1451,7 +1447,7 @@ export class EditeurDocument {
     for (const nom of ['modifier', 'modifierRiche', 'inserer', 'deplacer', 'indenter', 'desindenter', 'decaler', 'supprimer', 'dupliquer', 'coller']) {
       const action = actions[nom];
       actions[nom] = (...args) => {
-        if (this.fige) { this.surMessage?.('Document validé : consultation seule'); return nom === 'modifier' ? false : undefined; }
+        if (this.fige) { this.surMessage?.(texte('document.editeur.fige')); return nom === 'modifier' ? false : undefined; }
         return action(...args);
       };
     }
@@ -1490,47 +1486,47 @@ export class EditeurDocument {
           placer(C, d.lignes, [x], ref ? refId : null, ref ? pos : 'racine');
           regles.appliquerContexte(d, id, taux);
           if (regles.estLigneDePrix(d.lignes, x) && x.lig_tva_id === null) x.lig_tva_id = regles.tauxParDefaut(d.lignes, id, taux, d.document);
-        }, 'Insertion');
+        }, texte('document.etapes.insertion'));
         return id;
       },
 
       deplacer: (ids, cibleId, position) => {
-        if (!this.#sansLigneDuParent(ids, 'Déplacement')) return;
+        if (!this.#sansLigneDuParent(ids, texte('document.etapes.deplacement'))) return;
         m.modifier((d) => {
           const racines = racinesSelection(C, d.lignes, ids);
           placer(C, d.lignes, racines, cibleId, position);
           for (const r of racines) regles.appliquerContexte(d, r.lig_id, taux);
-        }, 'Déplacement');
+        }, texte('document.etapes.deplacement'));
         this.coupees.clear();
       },
 
-      indenter: (ids) => this.#sansLigneDuParent(ids, 'Changement de niveau') && m.modifier((d) => {
+      indenter: (ids) => this.#sansLigneDuParent(ids, texte('document.etapes.changement_niveau')) && m.modifier((d) => {
         for (const r of racinesSelection(C, d.lignes, ids)) {
           if (!estPied(r) && indenter(C, d.lignes, r.lig_id, accepteEnfants)) regles.appliquerContexte(d, r.lig_id, taux);
         }
-      }, 'Descendre d\'un niveau'),
+      }, texte('document.etapes.descendre')),
 
-      desindenter: (ids) => this.#sansLigneDuParent(ids, 'Changement de niveau') && m.modifier((d) => {
+      desindenter: (ids) => this.#sansLigneDuParent(ids, texte('document.etapes.changement_niveau')) && m.modifier((d) => {
         for (const r of racinesSelection(C, d.lignes, ids).reverse()) {
           if (desindenter(C, d.lignes, r.lig_id)) regles.appliquerContexte(d, r.lig_id, taux);
         }
-      }, 'Remonter d\'un niveau'),
+      }, texte('document.etapes.remonter')),
 
-      decaler: (id, sens) => this.#sansLigneDuParent([id], 'Déplacement') && m.modifier((d) => { decaler(C, d.lignes, id, sens); }, 'Ordre'),
+      decaler: (id, sens) => this.#sansLigneDuParent([id], texte('document.etapes.deplacement')) && m.modifier((d) => { decaler(C, d.lignes, id, sens); }, texte('document.etapes.ordre')),
 
       supprimer: (ids) => {
-        if (!this.#sansLigneDuParent(ids, 'Suppression')) return;
+        if (!this.#sansLigneDuParent(ids, texte('document.etapes.suppression'))) return;
         const suivante = this.#ligneApres(ids);
         m.modifier((d) => {
           const supprimees = supprimer(C, d.lignes, racinesSelection(C, d.lignes, ids).map((r) => r.lig_id));
           this.apresSuppression(d, supprimees);
-        }, 'Suppression');
+        }, texte('document.etapes.suppression'));
         if (suivante !== null) this.grille.selectionner(suivante);
       },
 
       dupliquer: (ids) => {
         const contenu = pp.extraire(this.saisie, ids, { entId: this.saisie.document.ent_id, coupe: false });
-        this.#insererContenu(contenu, contenu.racines.at(-1), 'Dupliquer');
+        this.#insererContenu(contenu, contenu.racines.at(-1), texte('document.etapes.dupliquer'));
       },
 
       copier: async (ids, couper) => {
@@ -1543,21 +1539,21 @@ export class EditeurDocument {
 
       coller: async (refId) => {
         const contenu = await pp.lire();
-        if (!contenu) { this.surMessage?.('Presse-papiers vide ou non compatible'); return; }
+        if (!contenu) { this.surMessage?.(texte('document.editeur.presse_papiers_vide')); return; }
         const memeDocument = contenu.source_ent_id === this.saisie.document.ent_id;
         const presentes = contenu.racines.every((id) => this.saisie.lignes.some((l) => l.lig_id === id));
         if (contenu.coupe && memeDocument && presentes) {
           // Couper-coller dans le même document : déplacement, les ID, compléments et liens sont conservés.
           if (contenu.racines.includes(refId)) return;
           if (!regles.depotAutorise(this.saisie.lignes, contenu.racines, this.saisie.lignes.find((l) => l.lig_id === refId), 'apres')) {
-            this.surMessage?.('Position de collage interdite');
+            this.surMessage?.(texte('document.editeur.collage_interdit'));
             return;
           }
           this.grille.o.actions.deplacer(contenu.racines, refId, 'apres');
           pp.oublierCoupe();
           return;
         }
-        this.#insererContenu(contenu, refId, 'Coller');
+        this.#insererContenu(contenu, refId, texte('document.etapes.coller'));
       },
 
       modifierRiche: (id, champ, html) => this.modifierLigne(id, champ, html),
@@ -1618,13 +1614,13 @@ export class EditeurDocument {
    */
   insererContenu(contenu, refId, libelle, { remplacer = false, position = 'apres' } = {}) {
     if (!this.ajoutAutorise(contenu.lignes ?? [])) {
-      this.surMessage?.('Document d\'avancement : seuls du texte et des lignes de pied s\'ajoutent');
+      this.surMessage?.(texte('document.editeur.avancement_ajout'));
       return null;
     }
     const copie = this.pressePapiers.renumeroter(contenu, this.magasin.prochainId());
     const ref = this.saisie.lignes.find((l) => l.lig_id === refId);
     if (ref && !this.regles.depotAutorise([...this.saisie.lignes, ...copie.lignes], copie.racines, ref, position)) {
-      this.surMessage?.('Position d\'insertion interdite');
+      this.surMessage?.(texte('document.editeur.insertion_interdite'));
       return null;
     }
     this.magasin.modifier((d) => {
@@ -1645,7 +1641,7 @@ export class EditeurDocument {
     const copie = this.pressePapiers.renumeroter(contenu, this.magasin.prochainId());
     const ref = this.saisie.lignes.find((l) => l.lig_id === refId);
     if (ref && !this.regles.depotAutorise([...this.saisie.lignes, ...copie.lignes], copie.racines, ref, 'apres')) {
-      this.surMessage?.('Position de collage interdite');
+      this.surMessage?.(texte('document.editeur.collage_interdit'));
       return;
     }
     this.magasin.modifier((d) => {

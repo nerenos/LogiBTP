@@ -1,6 +1,7 @@
 // Codes-barres et QR codes (§ 3.14).
 // Code 39 : police Libre Barcode 39 ; la donnée est contrôlée (chiffres, majuscules, espace, - . $ / + %) et
 // encadrée de « * ». QR : matrice calculée en JS (qrcode-generator), dessinée en carrés vectoriels par les rendus.
+import { texte } from '@logibtp/socle/dictionnaire';
 import qrcode from 'qrcode-generator';
 
 const CODE39 = /^[0-9A-Z \-.$/+%]*$/;
@@ -8,10 +9,10 @@ const CODE39 = /^[0-9A-Z \-.$/+%]*$/;
 /** { texte (à écrire dans la police), donnee } ou { erreur }. Les minuscules passent en majuscules. */
 export function code39(valeur) {
   const donnee = String(valeur ?? '').trim().toUpperCase();
-  if (!donnee) return { erreur: 'Code 39 : donnée vide' };
+  if (!donnee) return { erreur: texte('edition.codes.vide') };
   if (!CODE39.test(donnee)) {
     const interdits = [...new Set([...donnee].filter((c) => !CODE39.test(c)))].join(' ');
-    return { erreur: `Code 39 : caractère(s) non admis « ${interdits} » (chiffres, A-Z, espace, - . $ / + %)` };
+    return { erreur: texte('edition.codes.non_admis', { interdits }) };
   }
   return { texte: `*${donnee}*`, donnee };
 }

@@ -1,3 +1,4 @@
+import { texte, texteHtml, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { pastille } from '../pastilles.js';
 import { aujourdhui, PROFIL } from '@logibtp/socle';
 import { echapper, creerCombo, confirmer, formatDateHeure } from '@logibtp/socle/ui';
@@ -20,17 +21,16 @@ export function pastilleCompte(c) {
 let profilsCache = null;
 /** Profils attribuables (`GET /api/auth/profils`). */
 export async function profilsComptes() {
-  profilsCache ??= api.auth.profils().catch(() => ({ profils: [{ code: PROFIL.ADMIN, libelle: 'Administrateur' }, { code: 'SAISIE', libelle: 'Saisie' }], defaut: 'SAISIE' }));
+  profilsCache ??= api.auth.profils().catch(() => ({ profils: [{ code: PROFIL.ADMIN, libelle: texte('authentification_btp.compte.profil_admin') }, { code: 'SAISIE', libelle: texte('authentification_btp.compte.profil_saisie') }], defaut: 'SAISIE' }));
   return profilsCache;
 }
 
 /** Mot de passe provisoire montré une fois, avec copie. */
 function afficherProvisoire(zone, code, mdp) {
-  zone.innerHTML = `<div class="carte avertissement provisoire"><p>🔐 Mot de passe provisoire de <b>${echapper(code)}</b> — à transmettre à la personne ;
-    il ne sera plus affiché et devra être changé à la première connexion :</p>
-    <p><code class="mdp-provisoire">${echapper(mdp)}</code> <button type="button" data-copier>📋 Copier</button></p></div>`;
+  zone.innerHTML = `<div class="carte avertissement provisoire"><p>${iconeHtml('authentification_btp_mdp')} ${texteHtml('authentification_btp.compte.provisoire_html', { code })}</p>
+    <p><code class="mdp-provisoire">${echapper(mdp)}</code> <button type="button" data-copier>${iconeHtml('authentification_btp_copier')} ${texteHtml('authentification_btp.compte.copier')}</button></p></div>`;
   zone.querySelector('[data-copier]').addEventListener('click', async () => {
-    try { await navigator.clipboard.writeText(mdp); zone.querySelector('[data-copier]').textContent = '✔ Copié'; } catch { /* sélection manuelle */ }
+    try { await navigator.clipboard.writeText(mdp); zone.querySelector('[data-copier]').textContent = `${icone('authentification_btp_copie')} ${texte('authentification_btp.compte.copie')}`; } catch { /* sélection manuelle */ }
   });
 }
 
@@ -39,25 +39,25 @@ function afficherProvisoire(zone, code, mdp) {
  * depuis le nom, profil, fin de validité obligatoire pour un intérimaire). `surChange` : après une écriture.
  */
 export async function rendreComptePersonne(corps, { app, type, id, prenom = '', nom = '', surChange = () => {} }) {
-  if (!app.estAdmin()) { corps.innerHTML = '<p class="aide">Seul un administrateur gère les comptes de connexion.</p>'; return; }
-  corps.innerHTML = '<p class="aide">Chargement…</p>';
+  if (!app.estAdmin()) { corps.innerHTML = `<p class="aide">${texteHtml('authentification_btp.compte.admin_seul')}</p>`; return; }
+  corps.innerHTML = `<p class="aide">${texteHtml('authentification_btp.compte.chargement')}</p>`;
   const [{ personne, compte }, { profils, defaut }, politique] = await Promise.all([api.auth.personne(type, id), profilsComptes(), api.auth.politique()]);
   const recharger = async () => { await rendreComptePersonne(corps, { app, type, id, prenom, nom, surChange }); surChange(); };
   const tete = `<p><b>${echapper(personne.libelle)}</b>${personne.statut ? ` · ${echapper(personne.statut)}` : ''}
-    ${personne.autorisee ? '' : `<br><span class="erreur">⚠ ${echapper(MESSAGES_AUTH.PERSONNE_NON_AUTORISEE)}${personne.motif ? ` : ${echapper(personne.motif)}` : ''}</span>`}</p>`;
+    ${personne.autorisee ? '' : `<br><span class="erreur">${iconeHtml('avertissement')} ${echapper(MESSAGES_AUTH.PERSONNE_NON_AUTORISEE)}${personne.motif ? ` : ${echapper(personne.motif)}` : ''}</span>`}</p>`;
   if (compte) {
     corps.innerHTML = `<div class="compte-personne">${tete}<div data-provisoire></div>
-      <dl class="definitions"><dt>Identifiant</dt><dd><b>${echapper(compte.code)}</b> ${pastilleCompte(compte)}</dd>
-        <dt>Profil</dt><dd data-profil></dd><dt>Fin de validité</dt><dd><input type="date" data-validite value="${echapper(compte.valide_jusqu_au ?? '')}">${personne.fin_obligatoire ? ' <small class="aide">obligatoire (fin de mission)</small>' : ''}</dd>
-        <dt>Actif</dt><dd><input type="checkbox" data-actif ${compte.actif ? 'checked' : ''}></dd>
-        <dt>Dernière connexion</dt><dd>${date(compte.derniere_connexion)}</dd><dt>Sessions ouvertes</dt><dd>${compte.sessions_ouvertes}</dd>
-        ${compte.verrouille_jusqu_au && compte.etat === 'VERROUILLE' ? `<dt>Verrouillé jusqu'à</dt><dd>${date(compte.verrouille_jusqu_au)}</dd>` : ''}
-        <dt>Créé</dt><dd>${echapper(compte.cree_par)}, ${date(compte.cree_le)}</dd></dl>
+      <dl class="definitions"><dt>${texteHtml('authentification_btp.compte.identifiant')}</dt><dd><b>${echapper(compte.code)}</b> ${pastilleCompte(compte)}</dd>
+        <dt>${texteHtml('authentification_btp.compte.profil')}</dt><dd data-profil></dd><dt>${texteHtml('authentification_btp.compte.fin_validite')}</dt><dd><input type="date" data-validite value="${echapper(compte.valide_jusqu_au ?? '')}">${personne.fin_obligatoire ? ` <small class="aide">${texteHtml('authentification_btp.compte.fin_obligatoire')}</small>` : ''}</dd>
+        <dt>${texteHtml('authentification_btp.compte.actif')}</dt><dd><input type="checkbox" data-actif ${compte.actif ? 'checked' : ''}></dd>
+        <dt>${texteHtml('authentification_btp.compte.derniere_connexion')}</dt><dd>${date(compte.derniere_connexion)}</dd><dt>${texteHtml('authentification_btp.compte.sessions')}</dt><dd>${compte.sessions_ouvertes}</dd>
+        ${compte.verrouille_jusqu_au && compte.etat === 'VERROUILLE' ? `<dt>${texteHtml('authentification_btp.compte.verrouille_jusqua')}</dt><dd>${date(compte.verrouille_jusqu_au)}</dd>` : ''}
+        <dt>${texteHtml('authentification_btp.compte.cree')}</dt><dd>${texteHtml('authentification_btp.compte.cree_valeur', { par: compte.cree_par, le: date(compte.cree_le) })}</dd></dl>
       <p class="connexion-erreur" data-erreur hidden></p>
-      <p><button type="button" class="principal" data-enregistrer>Enregistrer</button>
-        <button type="button" data-reinitialiser title="Nouveau mot de passe provisoire ; les sessions sont fermées">🔐 Réinitialiser le mot de passe</button>
-        ${compte.etat === 'VERROUILLE' ? '<button type="button" data-deverrouiller>🔓 Déverrouiller</button>' : ''}
-        <a href="/parametres/comptes?compte=${compte.id}">Journal…</a></p></div>`;
+      <p><button type="button" class="principal" data-enregistrer>${texteHtml('commun.enregistrer')}</button>
+        <button type="button" data-reinitialiser title="${texteHtml('authentification_btp.compte.reinitialiser_aide')}">${iconeHtml('authentification_btp_mdp')} ${texteHtml('authentification_btp.compte.reinitialiser')}</button>
+        ${compte.etat === 'VERROUILLE' ? `<button type="button" data-deverrouiller>${iconeHtml('authentification_btp_deverrouiller')} ${texteHtml('authentification_btp.compte.deverrouiller')}</button>` : ''}
+        <a href="/parametres/comptes?compte=${compte.id}">${texteHtml('authentification_btp.compte.journal')}</a></p></div>`;
     const profil = creerCombo({ options: profils.map((p) => ({ valeur: p.code, libelle: p.libelle, detail: p.code })), valeur: compte.profil, vide: false });
     corps.querySelector('[data-profil]').append(profil);
     const erreur = corps.querySelector('[data-erreur]');
@@ -65,12 +65,12 @@ export async function rendreComptePersonne(corps, { app, type, id, prenom = '', 
     corps.querySelector('[data-enregistrer]').addEventListener('click', async () => {
       try {
         await api.auth.modifierCompte(compte.id, { profil: profil.valeurCombo, valide_jusqu_au: corps.querySelector('[data-validite]').value || null, actif: corps.querySelector('[data-actif]').checked });
-        app.message('Compte enregistré (pris en compte au prochain appel de l\'utilisateur)', 'succes');
+        app.message(texte('authentification_btp.compte.enregistre'), 'succes');
         await recharger();
       } catch (e) { echec(e); }
     });
     corps.querySelector('[data-reinitialiser]').addEventListener('click', async () => {
-      if (!await confirmer(`Réinitialiser le mot de passe de ${compte.code} ? Ses sessions seront fermées.`)) return;
+      if (!await confirmer(texte('authentification_btp.compte.confirmer_reinitialiser', { code: compte.code }))) return;
       try {
         const r = await api.auth.reinitialiserCompte(compte.id);
         afficherProvisoire(corps.querySelector('[data-provisoire]'), r.compte.code, r.mot_de_passe);
@@ -83,13 +83,12 @@ export async function rendreComptePersonne(corps, { app, type, id, prenom = '', 
   }
   const propose = suggererPseudo(prenom || personne.libelle.split(' ')[0], nom || personne.libelle.split(' ').slice(1).join(' '));
   corps.innerHTML = `<div class="compte-personne">${tete}
-    <p class="aide">Aucun compte de connexion. Un compte permet à la personne de se connecter avec son identifiant ; un mot de passe
-      provisoire est donné à la création, à changer à la première connexion.</p>
-    ${personne.autorisee ? `<p><label>Identifiant (pseudo)<br><input data-code value="${echapper(propose)}" maxlength="50" spellcheck="false" autocapitalize="none"></label></p>
-      <p><label>Profil<br><span data-profil></span></label></p>
-      <p><label>Fin de validité${personne.fin_obligatoire ? ' (obligatoire : fin de mission)' : ' (facultative)'}<br><input type="date" data-validite min="${aujourdhui()}"></label></p>
+    <p class="aide">${texteHtml('authentification_btp.compte.aucun_compte')}</p>
+    ${personne.autorisee ? `<p><label>${texteHtml('authentification_btp.compte.pseudo')}<br><input data-code value="${echapper(propose)}" maxlength="50" spellcheck="false" autocapitalize="none"></label></p>
+      <p><label>${texteHtml('authentification_btp.compte.profil')}<br><span data-profil></span></label></p>
+      <p><label>${personne.fin_obligatoire ? texteHtml('authentification_btp.compte.fin_validite_obligatoire') : texteHtml('authentification_btp.compte.fin_validite_facultative')}<br><input type="date" data-validite min="${aujourdhui()}"></label></p>
       <p class="connexion-erreur" data-erreur hidden></p>
-      <p><button type="button" class="principal" data-creer>＋ Créer le compte</button></p>` : ''}
+      <p><button type="button" class="principal" data-creer>${iconeHtml('ajouter')} ${texteHtml('authentification_btp.compte.creer')}</button></p>` : ''}
     <div data-provisoire></div></div>`;
   if (!personne.autorisee) return;
   const profil = creerCombo({ options: profils.filter((p) => !personne.profils_interdits.includes(p.code)).map((p) => ({ valeur: p.code, libelle: p.libelle, detail: p.code })), valeur: defaut, vide: false });

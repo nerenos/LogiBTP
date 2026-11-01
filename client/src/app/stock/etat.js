@@ -1,3 +1,4 @@
+import { texte, texteHtml, textesParCode, pluriel, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { urlFiche, TYPE_FICHE, urlDocument } from '../codes.js';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, formatNombre, creerCombo, formatDateHeure, telechargerCsv, celluleCsv } from '@logibtp/socle/ui';
@@ -14,32 +15,33 @@ export const isoDepuisLocal = (v) => (v ? new Date(v).toISOString() : null);
 /** Date-heure UTC à la minute renvoyée par le serveur (« AAAA-MM-JJTHH:MM ») → texte local. */
 export const dateHeureLocale = (v) => (v ? formatDateHeure(`${v}Z`) : '');
 
-const SOURCES = { PMP: 'PMP', DERNIER_PA: 'Dernier PA', REPLI: 'PA de la bibliothèque (aucun achat)' };
+/** Source de la valeur unitaire, par code (module Personnalisation). */
+const SOURCES = textesParCode('stock_btp.sources', ['PMP', 'DERNIER_PA', 'REPLI']);
 
 export class PageStock extends PageBase {
-  icone = '📦';
+  icone = icone('stock_btp_stock');
 
   async ouvrir() {
-    this.titre = 'État du stock';
+    this.titre = texte('stock_btp.routes.stock');
     const p = new URLSearchParams(globalThis.location?.search ?? '');
-    this.conteneur.innerHTML = `<div class="page-parametres page-stock"><div class="entete-page"><h1 class="page-titre">📦 État du stock</h1>
+    this.conteneur.innerHTML = `<div class="page-parametres page-stock"><div class="entete-page"><h1 class="page-titre">${iconeHtml('stock_btp_stock')} ${texteHtml('stock_btp.routes.stock')}</h1>
       <span data-lieu></span>
-      <label>À la date <input type="datetime-local" data-date title="Vide : maintenant"></label>
-      <label><input type="checkbox" data-zeros> Articles à zéro</label>
+      <label>${texteHtml('stock_btp.etat.date')} <input type="datetime-local" data-date title="${texteHtml('stock_btp.etat.date_titre')}"></label>
+      <label><input type="checkbox" data-zeros> ${texteHtml('stock_btp.etat.zeros')}</label>
       <span data-marque></span>
-      <input type="search" data-recherche placeholder="Rechercher un article…" size="24">
-      <button type="button" data-csv title="Exporter le tableau (CSV)">⭳ CSV</button></div>
+      <input type="search" data-recherche placeholder="${texteHtml('stock_btp.etat.recherche')}" size="24">
+      <button type="button" data-csv title="${texteHtml('stock_btp.etat.csv_titre')}">${iconeHtml('stock_btp_csv')} ${texteHtml('stock_btp.etat.csv')}</button></div>
       <p class="aide" data-aide></p><div data-corps></div></div>`;
     const [lieux, marques, articles] = await Promise.all([api.stock.lieux(), api.stock.marques(), api.stock.articles()]);
     this.lieux = lieux;
     // Filtre par marque (lot 2) : marques des articles gérés en stock.
     this.marquesArticle = new Map(articles.map((a) => [a.id, a.marques]));
-    const marque = creerCombo({ options: marques.filter((m) => m.actif).map((m) => ({ valeur: m.code, libelle: m.libelle, couleur: m.couleur })), valeur: '', titre: 'Toutes les marques' });
-    marque.placeholder = 'Marque…';
+    const marque = creerCombo({ options: marques.filter((m) => m.actif).map((m) => ({ valeur: m.code, libelle: m.libelle, couleur: m.couleur })), valeur: '', titre: texte('stock_btp.etat.marques') });
+    marque.placeholder = texte('stock_btp.etat.marque');
     marque.addEventListener('change', () => { this.marque = marque.valeurCombo || null; this.#rendre(); });
     this.conteneur.querySelector('[data-marque]').append(marque);
     this.lieu = Number(p.get('lieu')) || this.lieux.find((l) => l.depot)?.id || this.lieux[0]?.id || null;
-    const combo = creerCombo({ options: this.lieux.map((l) => ({ valeur: l.id, libelle: `${l.depot ? '📦' : '🏗'} ${l.code} – ${l.libelle}` })), valeur: this.lieu ?? '', vide: false });
+    const combo = creerCombo({ options: this.lieux.map((l) => ({ valeur: l.id, libelle: `${icone(l.depot ? 'stock_btp_stock' : 'stock_btp_chantier')} ${l.code} – ${l.libelle}` })), valeur: this.lieu ?? '', vide: false });
     combo.addEventListener('change', () => { this.lieu = Number(combo.valeurCombo); this.charger(); });
     this.conteneur.querySelector('[data-lieu]').append(combo);
     const date = this.conteneur.querySelector('[data-date]');
@@ -53,7 +55,7 @@ export class PageStock extends PageBase {
 
   async charger() {
     const corps = this.conteneur.querySelector('[data-corps]');
-    if (!this.lieu) { corps.innerHTML = '<p class="aide">Aucun dépôt : cochez « Dépôt de stock » dans la fiche d\'un chantier (affaire STOCK).</p>'; return; }
+    if (!this.lieu) { corps.innerHTML = `<p class="aide">${texteHtml('stock_btp.etat.aucun_depot')}</p>`; return; }
     try {
       this.etat = await api.stock.etat(this.lieu, {
         date: isoDepuisLocal(this.conteneur.querySelector('[data-date]').value), zeros: this.conteneur.querySelector('[data-zeros]').checked,
@@ -71,20 +73,19 @@ export class PageStock extends PageBase {
   #rendre() {
     const e = this.etat;
     if (!e) return;
-    this.conteneur.querySelector('[data-aide]').textContent = `Stock au ${dateHeureLocale(e.date)} : dernier inventaire et mouvements suivants. `
-      + `Valorisation : ${METHODES_VALORISATION[e.methode] ?? e.methode} (paramètres du stock).`;
+    this.conteneur.querySelector('[data-aide]').textContent = texte('stock_btp.etat.aide', { date: dateHeureLocale(e.date), methode: METHODES_VALORISATION[e.methode] ?? e.methode });
     const lignes = this.#lignes();
     const total = lignes.reduce((s, l) => s + Number(l.valeur ?? 0), 0);
-    this.conteneur.querySelector('[data-corps]').innerHTML = lignes.length ? `<table class="tableau-compact"><thead><tr><th>Article</th><th>Libellé</th><th>Emplacements</th>
-      <th>Quantité</th><th>U.</th><th>Valeur unitaire</th><th>Source</th><th>Valeur</th><th>Dernier mouvement</th></tr></thead><tbody>
+    this.conteneur.querySelector('[data-corps]').innerHTML = lignes.length ? `<table class="tableau-compact"><thead><tr><th>${texteHtml('stock_btp.colonnes.article')}</th><th>${texteHtml('commun.libelle')}</th><th>${texteHtml('stock_btp.colonnes.emplacements')}</th>
+      <th>${texteHtml('stock_btp.colonnes.quantite')}</th><th>${texteHtml('stock_btp.colonnes.unite_court')}</th><th>${texteHtml('stock_btp.colonnes.valeur_unitaire')}</th><th>${texteHtml('stock_btp.colonnes.source')}</th><th>${texteHtml('stock_btp.colonnes.valeur')}</th><th>${texteHtml('stock_btp.colonnes.dernier_mouvement')}</th></tr></thead><tbody>
       ${lignes.map((l) => `<tr class="${Number(l.quantite) < 0 ? 'negatif' : ''}"><td><a href="${urlFiche(TYPE_FICHE.ELEMENT, l.ele_id)}" data-element="${l.ele_id}">${echapper(l.code)}</a></td>
         <td>${echapper(l.libelle)}</td><td>${echapper(l.emplacements.join(', '))}</td>
         <td class="nombre${Number(l.quantite) < 0 ? ' avertissement' : ''}">${formatNombre(l.quantite, l.precision)}</td><td>${echapper(l.unite)}</td>
-        <td class="nombre">${formatNombre(l.valeur_unitaire, 4)}${l.provisoire ? ' <span title="Prix de réception non encore facturé">⏳</span>' : ''}</td>
+        <td class="nombre">${formatNombre(l.valeur_unitaire, 4)}${l.provisoire ? ` <span title="${texteHtml('stock_btp.etat.provisoire')}">${iconeHtml('stock_btp_provisoire')}</span>` : ''}</td>
         <td class="${l.source === 'REPLI' ? 'avertissement' : ''}">${echapper(SOURCES[l.source] ?? '—')}</td>
         <td class="nombre">${formatNombre(l.valeur, 2)}</td><td>${dateHeureLocale(l.dernier_mouvement)}</td></tr>`).join('')}
-      </tbody><tfoot><tr><th colspan="7">Total (${lignes.length} article${lignes.length > 1 ? 's' : ''})</th><th class="nombre">${formatNombre(total, 2)}</th><th></th></tr></tfoot></table>`
-      : '<p class="aide">Aucun article en stock à cette date.</p>';
+      </tbody><tfoot><tr><th colspan="7">${texteHtml('stock_btp.etat.total', { articles: pluriel('stock_btp.etat.articles', lignes.length) })}</th><th class="nombre">${formatNombre(total, 2)}</th><th></th></tr></tfoot></table>`
+      : `<p class="aide">${texteHtml('stock_btp.etat.aucun')}</p>`;
     this.conteneur.querySelectorAll('[data-element]').forEach((a) => a.addEventListener('click', (ev) => {
       ev.preventDefault();
       this.app.naviguer(urlFiche(TYPE_FICHE.ELEMENT, a.dataset.element), { nouvelleFenetre: ev.ctrlKey });
@@ -95,7 +96,7 @@ export class PageStock extends PageBase {
     const lignes = this.#lignes();
     const cel = celluleCsv;
     const num = (v) => (v === null || v === undefined ? '' : String(v).replace('.', ','));
-    const csv = [['Article', 'Libellé', 'Emplacements', 'Quantité', 'Unité', 'Valeur unitaire', 'Source', 'Valeur'].map(cel).join(';'),
+    const csv = [[texte('stock_btp.colonnes.article'), texte('commun.libelle'), texte('stock_btp.colonnes.emplacements'), texte('stock_btp.colonnes.quantite'), texte('stock_btp.colonnes.unite'), texte('stock_btp.colonnes.valeur_unitaire'), texte('stock_btp.colonnes.source'), texte('stock_btp.colonnes.valeur')].map(cel).join(';'),
       ...lignes.map((l) => [cel(l.code), cel(l.libelle), cel(l.emplacements.join(', ')), num(l.quantite), cel(l.unite), num(l.valeur_unitaire), cel(SOURCES[l.source] ?? ''), num(l.valeur)].join(';'))].join('\r\n');
     telechargerCsv(`stock-${this.lieux.find((l) => l.id === this.lieu)?.code ?? this.lieu}-${(this.etat?.date ?? '').slice(0, 10)}.csv`, csv);
   }
@@ -103,10 +104,10 @@ export class PageStock extends PageBase {
 
 /** Mouvement ouvert depuis la liste : sa pièce d'origine, sinon la fiche de l'article. */
 export class PageMouvementStock extends PageBase {
-  icone = '🔁';
+  icone = icone('stock_btp_mouvement');
 
   async ouvrir() {
-    this.titre = 'Mouvement de stock';
+    this.titre = texte('stock_btp.routes.mouvement');
     const m = await api.stock.mouvement(this.params.id);
     this.app.naviguer(m.ent_id ? urlDocument(m.ent_id) : urlFiche(TYPE_FICHE.ELEMENT, m.ele_id));
   }

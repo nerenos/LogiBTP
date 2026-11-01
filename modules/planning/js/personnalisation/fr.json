@@ -1,0 +1,85 @@
+{
+  "erreurs": {
+    "DEP_TACHE": "Tâche précédente inconnue",
+    "PLA_AVANCEMENT": "Avancement de 0 à 100 %",
+    "PLA_DATE": "Date prévisionnelle invalide",
+    "PLA_HEURES_TRAVAIL": "Heures travaillées : heures entières, le début avant la fin",
+    "PLA_JALON": "Libellé du jalon obligatoire",
+    "PLA_LIBELLE": "Libellé obligatoire",
+    "PLA_MODE": "Mode de calcul inconnu",
+    "PLA_NOTIFICATION": "État ou notification inconnus",
+    "PLA_PARAMETRE": "Seuil (0 à 100 %) ou horizon (1 à 365 jours) invalide",
+    "PLA_PARENT": "Une tâche ne peut pas être sa propre tâche principale",
+    "PLA_REPETITION": "Fréquence inconnue ou nombre hors de 1 à 52",
+    "PLA_SCISSION": "Instant hors de la tâche",
+    "PLA_VERSION": "La tâche a été modifiée par ailleurs : elle est rechargée",
+    "PLA_VUE": "Vue d'un autre utilisateur ou vue globale"
+  },
+  "planning": {
+    "calcul": {
+      "erreurs": {
+        "PLA_CALENDRIER": "Aucune plage travaillée suffisante : vérifier les calendriers et les absences",
+        "PLA_FIN": "La fin précède le début",
+        "PLA_HEURES": "Nombre d'heures invalide"
+      }
+    },
+    "dependances": {
+      "erreurs": {
+        "DEP_SOI": "Une tâche ne peut pas dépendre d'elle-même",
+        "DEP_DOUBLON": "Dépendance en double entre les mêmes tâches",
+        "DEP_CYCLE": "Dépendances circulaires",
+        "DEP_TYPE": "Type ou unité de dépendance inconnus",
+        "DEP_VIOLEE": "La tâche démarre avant la fin de la dépendance",
+        "LIEE_HORS": "Tâche liée hors de la période de sa tâche principale"
+      }
+    },
+    "echelles": {
+      "HEURE": "Heure",
+      "DEMI_JOUR": "Demi-journée",
+      "JOUR": "Jour",
+      "SEMAINE": "Semaine"
+    },
+    "temps": {
+      "jours": {
+        "dimanche": "dim",
+        "lundi": "lun",
+        "mardi": "mar",
+        "mercredi": "mer",
+        "jeudi": "jeu",
+        "vendredi": "ven",
+        "samedi": "sam"
+      },
+      "mois": {
+        "janvier": "janvier",
+        "fevrier": "février",
+        "mars": "mars",
+        "avril": "avril",
+        "mai": "mai",
+        "juin": "juin",
+        "juillet": "juillet",
+        "aout": "août",
+        "septembre": "septembre",
+        "octobre": "octobre",
+        "novembre": "novembre",
+        "decembre": "décembre"
+      },
+      "heure": "{{heure}}h",
+      "matin": "matin",
+      "apres_midi": "après-midi",
+      "colonne_jour": "{{jour}} {{numero}}",
+      "colonne_semaine": "S{{semaine}}",
+      "groupe_jour": "{{jour}} {{date}}",
+      "groupe_semaine": "Semaine {{semaine}} — {{date}}",
+      "groupe_mois": "{{mois}} {{annee}}"
+    },
+    "vue": {
+      "largeur_titres": "Glisser pour régler la largeur des titres des lignes (double-clic : ajuster au contenu)",
+      "aujourdhui": "Aujourd'hui",
+      "ferie": "Jour férié",
+      "periode_masquee": "Période masquée",
+      "glisser_debut": "début {{date}}",
+      "glisser_copie": "copie",
+      "glisser_fin": "fin {{date}}"
+    }
+  }
+}

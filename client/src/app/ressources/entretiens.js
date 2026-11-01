@@ -4,14 +4,15 @@
 // moyen par jour ; échéance d'un plan (heures, kilomètres, mois : le premier atteint déclenche) et état.
 // Dates ISO ; valeurs de compteurs en nombres (jamais des montants).
 
+import { texte } from '@logibtp/socle/dictionnaire';
 import { ajouterJours, ajouterMois, joursEntre } from '@logibtp/socle';
 import { cumuls } from './compteurs.js';
 
 export const ETATS_ECHEANCE = {
-  EN_RETARD: { libelle: 'En retard', classe: 'erreur' },
-  A_PREVOIR: { libelle: 'À prévoir', classe: 'attention' },
-  OK: { libelle: 'À jour', classe: 'ok' },
-  INCONNU: { libelle: 'Sans compteur ni date', classe: 'neutre' },
+  EN_RETARD: { get libelle() { return texte('ressources_btp.entretiens.etats.EN_RETARD'); }, classe: 'erreur' },
+  A_PREVOIR: { get libelle() { return texte('ressources_btp.entretiens.etats.A_PREVOIR'); }, classe: 'attention' },
+  OK: { get libelle() { return texte('ressources_btp.entretiens.etats.OK'); }, classe: 'ok' },
+  INCONNU: { get libelle() { return texte('ressources_btp.entretiens.etats.INCONNU'); }, classe: 'neutre' },
 };
 export const SEUIL_ENTRETIEN = 30;
 export const JOURS_MOYENNE = 90;

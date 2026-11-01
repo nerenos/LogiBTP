@@ -1,3 +1,4 @@
+import { texte, texteHtml, pluriel, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { echapper, lireStockage, ecrireStockage } from '@logibtp/socle/ui';
 
 // Panneau des arbres d'une liste d'éléments (logé dans le panneau ancrable de la liste, option panneau) : familles par
@@ -20,12 +21,12 @@ export class PanneauArbres {
     this.arbres = { fam: [], nat: [] };
     conteneur.classList.add('bib-arbres');
     conteneur.innerHTML = `
-      <div class="bib-arbre-partie" data-partie="fam"><header><span>🌳 Familles</span><small data-resume></small>
-        <button type="button" data-vides title="Masquer les familles et les natures sans élément pour la recherche et les filtres en cours">◌ Masquer vides</button>
-        <button type="button" data-effacer title="Toutes les familles">✕</button></header><ul class="bib-arbre" role="tree"></ul></div>
-      <div class="bib-arbre-separateur" title="Glisser pour répartir familles et natures"></div>
-      <div class="bib-arbre-partie" data-partie="nat"><header><span>🏷️ Natures</span><small data-resume></small>
-        <button type="button" data-effacer title="Toutes les natures">✕</button></header><ul class="bib-arbre" role="tree"></ul></div>`;
+      <div class="bib-arbre-partie" data-partie="fam"><header><span>${iconeHtml('bibliotheque_familles')} ${texteHtml('bibliotheque.arbres.familles')}</span><small data-resume></small>
+        <button type="button" data-vides title="${texteHtml('bibliotheque.arbres.vides_aide')}">${iconeHtml('bibliotheque_masquer_vides')} ${texteHtml('bibliotheque.arbres.vides')}</button>
+        <button type="button" data-effacer title="${texteHtml('bibliotheque.arbres.toutes_familles')}">${iconeHtml('retirer')}</button></header><ul class="bib-arbre" role="tree"></ul></div>
+      <div class="bib-arbre-separateur" title="${texteHtml('bibliotheque.arbres.separateur')}"></div>
+      <div class="bib-arbre-partie" data-partie="nat"><header><span>${iconeHtml('bibliotheque_natures')} ${texteHtml('bibliotheque.arbres.natures')}</span><small data-resume></small>
+        <button type="button" data-effacer title="${texteHtml('bibliotheque.arbres.toutes_natures')}">${iconeHtml('retirer')}</button></header><ul class="bib-arbre" role="tree"></ul></div>`;
     this.#appliquerRatio();
     this.#separateur(conteneur.querySelector('.bib-arbre-separateur'));
     conteneur.addEventListener('click', (e) => this.#clic(e));
@@ -48,14 +49,14 @@ export class PanneauArbres {
       .map((f) => ({ k: `f${f.id}`, valeur: String(f.id), libelle: f.libelle, enfants: sousFamilles(bibId, f.id) }));
     this.arbres.fam = [
       ...bibs.map((b) => ({ k: `b${b.id}`, libelle: `${b.code} – ${b.libelle}`, bibliotheque: true, enfants: sousFamilles(b.id, null) })),
-      { k: 'f∅', valeur: null, libelle: '(sans famille)', enfants: [] },
+      { k: 'f∅', valeur: null, libelle: texte('bibliotheque.arbres.sans_famille'), enfants: [] },
     ];
     this.arbres.nat = [
       ...regroupements.map((r) => ({
         k: `r${r.code}`, libelle: r.libelle, enfants: natures.filter((n) => n.regroupement === r.code).map((n) => ({ k: `n${n.id}`, valeur: String(n.id), libelle: n.libelle, enfants: [] })),
       })).filter((r) => r.enfants.length),
       ...natures.filter((n) => !n.regroupement || !regroupements.some((r) => r.code === n.regroupement)).map((n) => ({ k: `n${n.id}`, valeur: String(n.id), libelle: n.libelle, enfants: [] })),
-      { k: 'n∅', valeur: null, libelle: '(sans nature)', enfants: [] },
+      { k: 'n∅', valeur: null, libelle: texte('bibliotheque.arbres.sans_nature'), enfants: [] },
     ];
     if (!this.prefs.ouverts.length) for (const n of this.arbres.fam) this.ouverts.add(n.k);
     await this.rafraichir();
@@ -91,10 +92,10 @@ export class PanneauArbres {
   rendre() {
     for (const partie of ['fam', 'nat']) {
       const ul = this.conteneur.querySelector(`[data-partie="${partie}"] .bib-arbre`);
-      ul.innerHTML = this.arbres[partie].map((n) => this.#noeud(partie, n)).join('') || '<li class="aide">Aucune entrée</li>';
+      ul.innerHTML = this.arbres[partie].map((n) => this.#noeud(partie, n)).join('') || `<li class="aide">${texteHtml('bibliotheque.arbres.aucune')}</li>`;
       ul.querySelectorAll('input[data-indet="1"]').forEach((c) => { c.indeterminate = true; });
       const n = this.selection[partie].size;
-      this.conteneur.querySelector(`[data-partie="${partie}"] [data-resume]`).textContent = n ? `${n} retenue${n > 1 ? 's' : ''}` : '';
+      this.conteneur.querySelector(`[data-partie="${partie}"] [data-resume]`).textContent = n ? pluriel('bibliotheque.arbres.retenues', n) : '';
     }
     this.conteneur.querySelector('[data-vides]').classList.toggle('actif', this.prefs.masquerVides);
   }
@@ -109,7 +110,7 @@ export class PanneauArbres {
     const ouvert = this.ouverts.has(n.k);
     const enfants = n.enfants.map((x) => this.#noeud(partie, x)).join('');
     return `<li role="treeitem" aria-expanded="${n.enfants.length ? ouvert : ''}" class="${total === 0 ? 'vide' : ''}">
-      <div class="bib-noeud"><span class="bib-ouvrir" data-ouvrir="${echapper(n.k)}">${n.enfants.length ? (ouvert ? '▾' : '▸') : ''}</span>
+      <div class="bib-noeud"><span class="bib-ouvrir" data-ouvrir="${echapper(n.k)}">${n.enfants.length ? iconeHtml(ouvert ? 'bibliotheque_ouvert' : 'bibliotheque_ferme') : ''}</span>
         <label><input type="checkbox" data-k="${echapper(n.k)}" ${coche ? 'checked' : ''} ${partiel ? 'data-indet="1"' : ''} ${cles.length ? '' : 'disabled'}>
         <span class="${n.bibliotheque ? 'bib-noeud-bib' : ''}">${echapper(n.libelle)}</span></label><small>${total}</small></div>
       ${n.enfants.length && ouvert ? `<ul>${enfants}</ul>` : ''}</li>`;

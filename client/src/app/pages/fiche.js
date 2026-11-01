@@ -1,3 +1,4 @@
+import { texte, icone } from '@logibtp/socle/dictionnaire';
 import { urlFiche, MODULE_FACULTATIF, SUJET_FENETRE, TYPE_FICHE } from '../codes.js';
 import { PageBase } from '@logibtp/navigation';
 import { rendreDotationsSalarie } from '../stock/magasin.js';
@@ -15,7 +16,7 @@ import { api } from '../api.js';
 
 // Fiches dont les pièces peuvent être diffusées sur le terrain (case 📱 de la GED, application de terrain).
 const TYPES_TERRAIN = new Set([TYPE_FICHE.CHANTIER, TYPE_FICHE.MARCHE]);
-const ICONES = { salarie: '👷', materiel: '🚜', element: '📚', personne: '🏢', individu: '👤', projet: '🎯', affaire: '🗂', chantier: '🏗', marche: '📜' };
+const ICONES = ['salarie', 'materiel', 'element', 'personne', 'individu', 'projet', 'affaire', 'chantier', 'marche'];
 
 /**
  * Fiche d'un élément (module Fiche) : /fiche/<type>/<id>, /fiche/<type>/nouveau (création). Fermer la fiche (✕ ou
@@ -32,8 +33,8 @@ export class PageFiche extends PageBase {
     const nouveau = this.params.id === 'nouveau';
     const Classe = CLASSES_FICHE[type];
     if (!Classe) throw new Error(`Type de fiche inconnu : ${type}`);
-    this.icone = ICONES[type] ?? '🗂';
-    this.titre = nouveau ? `Nouvelle fiche ${type}` : `Fiche ${type} ${this.params.id}`;
+    this.icone = icone(ICONES.includes(type) ? `pages_btp_fiche_${type}` : 'pages_btp_fiche');
+    this.titre = nouveau ? texte('pages_btp.fiche.nouvelle', { type }) : texte('pages_btp.fiche.titre', { type, id: this.params.id });
     this.conteneur.innerHTML = '<div class="page-fiche"><div class="page-fiche-corps"></div></div>';
     const s = await app.services();
     const voisinage = nouveau ? null : voisins(urlFiche(type, this.params.id));
@@ -45,13 +46,13 @@ export class PageFiche extends PageBase {
       peutParametrer: app.estAdmin(),
       // Impression de la fiche (module Édition) avec les autres boutons de la fiche.
       actions: [{
-        icone: '🖨', libelle: 'Imprimer', titre: 'Aperçu et impression de la fiche (modèle d’édition)',
+        icone: icone('pages_btp_imprimer'), libelle: texte('pages_btp.fiche.imprimer'), titre: texte('pages_btp.fiche.imprimer_aide'),
         action: () => app.naviguer(`/edition?source=fiche&id=${encodeURIComponent(`${type}/${this.fiche?.id ?? this.params.id}`)}`, { nouvelleFenetre: true }),
       },
       // Fiche ouverte depuis une liste : fiches précédente et suivante de la liste (ses lignes affichées).
       ...(voisinage ? [
-        { icone: '◀', libelle: 'Précédente', titre: `Fiche précédente de la liste (${voisinage.rang} / ${voisinage.total})`, visible: Boolean(voisinage.precedent), action: () => this.precedent() },
-        { icone: '▶', libelle: 'Suivante', titre: `Fiche suivante de la liste (${voisinage.rang} / ${voisinage.total})`, visible: Boolean(voisinage.suivant), action: () => this.suivant() },
+        { icone: icone('precedent'), libelle: texte('pages_btp.fiche.precedente'), titre: texte('pages_btp.fiche.precedente_aide', { rang: voisinage.rang, total: voisinage.total }), visible: Boolean(voisinage.precedent), action: () => this.precedent() },
+        { icone: icone('suivant'), libelle: texte('pages_btp.fiche.suivante'), titre: texte('pages_btp.fiche.suivante_aide', { rang: voisinage.rang, total: voisinage.total }), visible: Boolean(voisinage.suivant), action: () => this.suivant() },
       ] : [])],
       // Élément de bibliothèque : référentiels, tarifs, GED (image, notices), définition du document de composition.
       services: s, definitionDocument: () => app.definitionDocument(), utilisateur: app.utilisateur(), admin: app.estAdmin(),

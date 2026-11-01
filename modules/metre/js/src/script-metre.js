@@ -1,3 +1,4 @@
+import { texte } from '@logibtp/socle/dictionnaire';
 import { D, analyserCibleVariable } from '@logibtp/socle';
 import { executerScript } from './script/interpreteur.js';
 
@@ -51,4 +52,4 @@ export function lignesVariablesScript(metre, resultat, existantes, { entId, nouv
 }
 
 /** Message d'une erreur de script pour l'hôte (position dans le script). */
-export const messageErreurScript = (e) => `Métré, ligne ${e.ligne}, colonne ${e.colonne} : ${e.message}`;
+export const messageErreurScript = (e) => texte('metre.script.message_hote', { ligne: e.ligne, colonne: e.colonne, message: e.message });

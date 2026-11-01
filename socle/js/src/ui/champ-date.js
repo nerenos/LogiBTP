@@ -1,4 +1,5 @@
 import { completerDate, texteDate } from '../calcul/dates.js';
+import { texte } from '../dictionnaire/index.js';
 
 // Champs de date à saisie abrégée (décision du 31/10/2026, I3 de l'analyse d'ergonomie) : un `<input type="date">` du
 // navigateur n'accepte pas une saisie partielle. activerDates() remplace d'office chaque champ de date de la page (même
@@ -29,7 +30,7 @@ export function champDate(el) {
   el.autocomplete = 'off';
   el.classList.add('champ-date');
   if (!el.placeholder) el.placeholder = 'jj/mm/aaaa';
-  if (!el.title) el.title = 'Saisie abrégée : 15 → le 15 du mois, 16/05 → cette année, 15/05/23 → 2023, t → aujourd\'hui, +3 → dans 3 jours ; F4 : calendrier';
+  if (!el.title) el.title = texte('socle.date.aide');
 
   Object.defineProperty(el, 'value', {
     configurable: true,
@@ -59,10 +60,10 @@ export function champDate(el) {
       el.setAttribute('aria-invalid', 'true');
       return false;
     }
-    const texte = texteDate(iso);
+    const affiche = texteDate(iso);
     el.classList.remove('invalide');
     el.removeAttribute('aria-invalid');
-    if (texte !== saisie) brut.ecrire(el, texte);
+    if (affiche !== saisie) brut.ecrire(el, affiche);
     return true;
   };
   const signaler = () => {
@@ -90,8 +91,8 @@ export function champDate(el) {
 }
 
 /** Texte « JJ/MM/AAAA » d'un champ → « AAAA-MM-JJ », null s'il ne désigne aucune date. */
-function lireTexte(texte) {
-  const t = String(texte ?? '').trim();
+function lireTexte(saisie) {
+  const t = String(saisie ?? '').trim();
   if (t === '') return '';
   return completerDate(t);
 }

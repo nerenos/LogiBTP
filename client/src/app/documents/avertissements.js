@@ -1,3 +1,4 @@
+import { texte, pluriel } from '@logibtp/socle/dictionnaire';
 import { api } from '../api.js';
 import { confirmer } from '@logibtp/socle/ui';
 
@@ -14,5 +15,5 @@ export async function confirmerAvertissements(entId, action, verbe) {
     return true;
   }
   if (!liste?.length) return true;
-  return await confirmer(`${liste.length > 1 ? 'Points à vérifier' : 'Point à vérifier'} :\n\n${liste.map((m) => `• ${m.message}`).join('\n')}\n\n${verbe} quand même ?`);
+  return await confirmer(texte('documents_btp.avertissements.confirmer', { titre: pluriel('documents_btp.avertissements.points', liste.length), liste: liste.map((m) => `• ${m.message}`).join('\n'), verbe }));
 }

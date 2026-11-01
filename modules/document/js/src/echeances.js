@@ -1,4 +1,5 @@
 import { Dz, arrondir, S, ZERO } from '@logibtp/socle';
+import { pairesParCode } from '@logibtp/socle/dictionnaire';
 
 // Échéancier d'une pièce (CONCEPTION-MARCHES-REGLEMENTS.md, Q19 à Q21), répliqué dans Echeances.cs
 // (jeu modules/document/tests/echeances/01_echeances.json).
@@ -8,10 +9,8 @@ import { Dz, arrondir, S, ZERO } from '@logibtp/socle';
 // plus court). Montants : pourcentage du net à payer arrondi, la dernière échéance prend le reste. Sans ligne : une
 // échéance au comptant. Retenue de garantie : échéance de nature RETENUE sans date (libération à la réception + 1 an).
 
-/** Modes de règlement : [code, libellé] (mêmes codes que le mode de règlement des tiers). */
-export const MODES_REGLEMENT = [
-  ['VIREMENT', 'Virement'], ['PRELEVEMENT', 'Prélèvement'], ['CHEQUE', 'Chèque'], ['LCR', 'LCR'], ['CB', 'Carte bancaire'], ['ESPECES', 'Espèces'],
-];
+/** Modes de règlement : [code, libellé] (fr.json : document.modes_reglement.<CODE>) (mêmes codes que le mode de règlement des tiers). */
+export const MODES_REGLEMENT = pairesParCode('document.modes_reglement', ['VIREMENT', 'PRELEVEMENT', 'CHEQUE', 'LCR', 'CB', 'ESPECES']);
 
 /** Montant retenu (positif) d'une pièce : postes de pied marqués retenue de garantie, dans le net à payer. */
 export function montantRetenue(lignes) {

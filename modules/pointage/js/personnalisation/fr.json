@@ -1,0 +1,89 @@
+{
+  "pointage": {
+    "controles": {
+      "POI_CHANTIER": "Chantier obligatoire (chantier interne pour le temps hors chantier)",
+      "POI_TYPE": "Type de main-d'œuvre obligatoire",
+      "POI_MINUTES": "Durée invalide (de 1 minute à 24 heures)",
+      "POI_PAS": "Durée hors du pas de saisie",
+      "POI_PLAGE": "Début et fin incohérents avec la durée",
+      "POI_CHEVAUCHEMENT": "Plages horaires qui se chevauchent",
+      "POI_MOTIF": "Motif obligatoire pour une non-conformité",
+      "POI_JOUR": "Amplitude journalière dépassée",
+      "POI_SEMAINE": "Amplitude hebdomadaire dépassée",
+      "POI_CHANTIER_CLOS": "Chantier clos"
+    },
+    "validation": {
+      "VAL_CHEF_SIMPLE": "Validation simple : seul le service RH valide",
+      "VAL_DEJA": "Déjà validé",
+      "VAL_RH_FAIT": "Déjà validé par le service RH",
+      "DEV_MOTIF": "Motif obligatoire pour dévalider",
+      "DEV_RIEN": "Rien à dévalider",
+      "DEV_RH_FAIT": "Validé par le service RH : seul le RH peut dévalider",
+      "EXC_CORRECTION": "Demande de correction en attente",
+      "EXC_SANS_POINTAGE": "Jour travaillé sans pointage",
+      "EXC_NON_CONFORMITE": "Non-conformité signalée",
+      "EXC_HEURES_SUP": "Heures supplémentaires",
+      "EXC_CONTROLE": "Contrôle à vérifier (amplitude, chantier clos…)",
+      "EXC_ZONE": "Zone de déplacement à valider (chantier sans zone pour l'agence)",
+      "EXC_MODIFIE": "Corrigé par rapport à la saisie"
+    },
+    "etats_validation": {
+      "NON_VALIDE": "À valider",
+      "VALIDE_CHEF": "Validé par le chef",
+      "VALIDE": "Validé"
+    },
+    "conges": {
+      "CNG_DATES": "Dates du congé : début et fin obligatoires, la fin après le début",
+      "CNG_DEMI": "Un congé d'une seule journée ne peut pas commencer l'après-midi et finir à midi",
+      "CNG_CHEVAUCHEMENT": "Le salarié a déjà un congé demandé ou validé sur cette période",
+      "CNG_ETAT": "Ce congé n'est plus à traiter",
+      "CNG_NATURE": "La nature de l'absence est obligatoire pour valider"
+    },
+    "etats_conge": {
+      "DEMANDE": "Demandé",
+      "VALIDE": "Validé",
+      "REFUSE": "Refusé",
+      "ANNULE": "Annulé"
+    },
+    "types_regle": {
+      "CUMUL_HEURES": "Cumul des heures (par sous-type)",
+      "SEUIL_JOUR": "Seuil journalier (panier…)",
+      "TRANCHES_SEMAINE": "Heures supplémentaires par tranches",
+      "ZONE": "Zone de déplacement du jour",
+      "PLAFOND": "Plafond",
+      "REPAS": "Repas au restaurant (avantage en nature par agence)"
+    },
+    "paie": {
+      "PRF_RUBRIQUE": "Codes de rubriques vides ou en double",
+      "PRF_REGLE": "Règle inconnue ou visant une rubrique absente du profil"
+    },
+    "unites_rubrique": {
+      "H": "Heures",
+      "NB": "Nombre",
+      "ZONE": "Zone"
+    },
+    "saisies_rubrique": {
+      "C": "Calculée",
+      "S": "Saisie",
+      "SC": "Calculée, modifiable"
+    }
+  },
+  "erreurs": {
+    "BORNE_BLOQUE": "Trop d'essais : réessayer dans quelques minutes",
+    "BORNE_JETON": "Identification expirée : recommencer",
+    "BORNE_LIBELLE": "Libellé obligatoire",
+    "BORNE_SALARIE": "Ce salarié ne pointe pas sur cette borne",
+    "BORNE_SANS_PIN": "Aucun PIN : le demander au service RH",
+    "BORNE_TYPE_MO": "Type de main-d'œuvre non proposé par cette borne",
+    "CNG_NATURES": "Natures : code (20 caractères au plus, unique) et libellé obligatoires",
+    "CNG_VERSION": "Le congé a été modifié entre-temps : le recharger",
+    "POI_CORRECTION_TRAITEE": "Demande déjà traitée",
+    "POI_PARAMETRES": "Paramètres du pointage invalides",
+    "POI_RESTAURANT": "Création de restaurant non prise en charge",
+    "POI_RUBRIQUE": "Rubrique non saisissable ou date hors de la semaine",
+    "POI_SEMAINE_HORS": "Pointage hors de la semaine",
+    "POI_VALORISATION": "Mode de valorisation inconnu",
+    "POI_ZONE": "Agence obligatoire, zone de 0 à 9",
+    "PRF_CODE": "Code et libellé du profil obligatoires"
+  }
+}

@@ -5,16 +5,11 @@
 // elle démarre trop tôt) ; dépendances circulaires refusées ; tâche liée hors de la période de sa tâche principale
 // signalée. Instants en minutes depuis 1970 (temps.js).
 
+import { textesParCode } from '@logibtp/socle/dictionnaire';
 import { dateDe, versMinutes } from './temps.js';
 
-export const MESSAGES_DEPENDANCES = {
-  DEP_SOI: 'Une tâche ne peut pas dépendre d\'elle-même',
-  DEP_DOUBLON: 'Dépendance en double entre les mêmes tâches',
-  DEP_CYCLE: 'Dépendances circulaires',
-  DEP_TYPE: 'Type ou unité de dépendance inconnus',
-  DEP_VIOLEE: 'La tâche démarre avant la fin de la dépendance',
-  LIEE_HORS: 'Tâche liée hors de la période de sa tâche principale',
-};
+/** Messages des contrôles des dépendances, par code (module Personnalisation). */
+export const MESSAGES_DEPENDANCES = textesParCode('planning.dependances.erreurs', ['DEP_SOI', 'DEP_DOUBLON', 'DEP_CYCLE', 'DEP_TYPE', 'DEP_VIOLEE', 'LIEE_HORS']);
 
 /**
  * Début au plus tôt permis par une dépendance : base = fin (FD) ou début (DD) de la tâche précédente ; CAL : base +

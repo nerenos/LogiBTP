@@ -1,3 +1,4 @@
+import { texte, texteHtml, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { echapper, ouvrirMenuContextuel } from '@logibtp/socle/ui';
 
 // Panneau des vues (ergonomie L1) : arbre groupe › thème › vues enregistrées, à droite de la liste, à la place des
@@ -5,7 +6,8 @@ import { echapper, ouvrirMenuContextuel } from '@logibtp/socle/ui';
 // l'administrateur, sinon la première) ; le triangle déplie les vues sans en ouvrir. Largeur au glisser, réduit en un
 // bouton ; état gardé dans les préférences de la liste (navigateur).
 
-const PARTAGES = { P: ['👤', 'Vue personnelle'], G: ['👥', 'Vue du groupe'], T: ['', 'Vue de tous'] };
+/** Partage d'une vue : icône (vide : aucune) et libellé ; relus à chaque accès (dictionnaire). */
+const partage = (code) => (['P', 'G', 'T'].includes(code) ? [icone(`liste_vues_partage_${code}`), texte(`liste.vues.partage.${code}`)] : ['', '']);
 const LARGEUR = { min: 160, max: 480, defaut: 230 };
 const SANS_THEME = '';
 
@@ -25,11 +27,11 @@ export class PanneauVues {
     conteneur.innerHTML = `
       <header>
         <button type="button" data-action="reduire-vues" class="bouton-icone"></button>
-        <span class="liste-vues-titre">Vues</span>
-        <button type="button" data-action="nouvelle-vue" class="bouton-icone" title="Nouvelle vue dans le thème courant" aria-label="Nouvelle vue">＋</button>
-        <button type="button" data-action="themes" class="bouton-icone" title="Thèmes et vues… (administrateur)" aria-label="Thèmes et vues" hidden>⚙</button>
+        <span class="liste-vues-titre">${texteHtml('liste.vues.titre')}</span>
+        <button type="button" data-action="nouvelle-vue" class="bouton-icone" title="${texteHtml('liste.vues.nouvelle_aide')}" aria-label="${texteHtml('liste.vues.nouvelle')}">${iconeHtml('ajouter')}</button>
+        <button type="button" data-action="themes" class="bouton-icone" title="${texteHtml('liste.vues.themes_aide')}" aria-label="${texteHtml('liste.vues.themes')}" hidden>${iconeHtml('liste_vues_themes')}</button>
       </header>
-      <input type="search" class="liste-vues-recherche" placeholder="Rechercher une vue…">
+      <input type="search" class="liste-vues-recherche" placeholder="${texteHtml('liste.vues.rechercher')}">
       <div class="liste-vues-arbre" role="tree"></div>`;
     this.arbre = conteneur.querySelector('.liste-vues-arbre');
     conteneur.querySelector('[data-action="reduire-vues"]').addEventListener('click', () => this.reduire(!this.etat().reduit));
@@ -75,8 +77,8 @@ export class PanneauVues {
     this.conteneur.classList.toggle('reduit', !!e.reduit);
     this.separateur.hidden = !!e.reduit;
     const b = this.conteneur.querySelector('[data-action="reduire-vues"]');
-    b.textContent = e.reduit ? '☰' : '⇥';
-    b.title = e.reduit ? 'Afficher le panneau des vues' : 'Réduire le panneau des vues';
+    b.textContent = icone(e.reduit ? 'liste_vues_afficher' : 'liste_vues_reduire');
+    b.title = texte(`liste.vues.${e.reduit ? 'afficher' : 'reduire'}`);
   }
 
   reduire(reduit) {
@@ -90,9 +92,9 @@ export class PanneauVues {
     const l = this.liste;
     const themes = l.themes.filter((t) => !l.themeFixe || t.thl_code === l.themeFixe).map((t, i) => ({ t, g: l.groupeTheme?.(t) ?? null, i }))
       .sort((a, b) => (a.g?.ordre ?? 1e6 + a.i) - (b.g?.ordre ?? 1e6 + b.i));
-    const res = themes.map(({ t, g }) => ({ code: t.thl_code, libelle: t.thl_libelle, icone: t.thl_icone, groupe: l.groupeTheme ? g?.groupe ?? 'Autres' : null }));
+    const res = themes.map(({ t, g }) => ({ code: t.thl_code, libelle: t.thl_libelle, icone: t.thl_icone, groupe: l.groupeTheme ? g?.groupe ?? texte('liste.liste.themes_autres') : null }));
     if (!l.themeFixe && this.toutes.some((v) => !v.vli_theme || !l.themes.some((t) => t.thl_code === v.vli_theme))) {
-      res.push({ code: SANS_THEME, libelle: 'Sans thème', icone: '📋', groupe: l.groupeTheme ? 'Autres' : null });
+      res.push({ code: SANS_THEME, libelle: texte('liste.vues.sans_theme'), icone: icone('liste_vues_theme'), groupe: l.groupeTheme ? texte('liste.liste.themes_autres') : null });
     }
     return res;
   }
@@ -109,7 +111,7 @@ export class PanneauVues {
     const courant = l.theme ?? SANS_THEME;
     const vueCourante = l.vue?.vli_id ?? null;
     const mots = this.filtre.split(/\s+/).filter(Boolean);
-    const correspond = (texte) => mots.every((m) => texte.toLowerCase().includes(m));
+    const correspond = (t) => mots.every((m) => t.toLowerCase().includes(m));
     let groupe = null;
     const html = [];
     for (const t of this.#themes()) {
@@ -120,23 +122,23 @@ export class PanneauVues {
       const ouvert = mots.length > 0 || ouverts.has(t.code) || t.code === courant;
       const defaut = this.vueParDefaut(t.code, vues);
       html.push(`<div class="liste-vues-theme${t.code === courant ? ' courant' : ''}" role="treeitem" aria-expanded="${ouvert}" data-theme="${echapper(t.code)}"
-          title="Ouvrir la vue par défaut du thème">
-          <button type="button" class="liste-vues-deplier" data-deplier tabindex="-1" aria-label="Déplier">${vues.length ? (ouvert ? '▾' : '▸') : ''}</button>
-          <span class="liste-vues-icone">${echapper(t.icone ?? '📋')}</span><span class="liste-vues-nom">${echapper(t.libelle)}</span>
+          title="${texteHtml('liste.vues.ouvrir_theme')}">
+          <button type="button" class="liste-vues-deplier" data-deplier tabindex="-1" aria-label="${texteHtml('liste.vues.deplier')}">${vues.length ? iconeHtml(ouvert ? 'liste_segment_deplie' : 'liste_segment_replie') : ''}</button>
+          <span class="liste-vues-icone">${echapper(t.icone ?? icone('liste_vues_theme'))}</span><span class="liste-vues-nom">${echapper(t.libelle)}</span>
           <small>${vues.length || ''}</small></div>`);
       if (!ouvert) continue;
       for (const v of vuesVisibles) {
-        const [icone, partage] = PARTAGES[v.vli_partage] ?? ['', ''];
+        const [picto, libellePartage] = partage(v.vli_partage);
         const etoile = e.defauts?.[t.code] === v.vli_id;
         html.push(`<div class="liste-vues-vue${v.vli_id === vueCourante ? ' courante' : ''}" role="treeitem" data-vue="${v.vli_id}" data-theme="${echapper(t.code)}"
-            title="${echapper(`${partage}${v.vli_proprietaire ? ` de ${v.vli_proprietaire}` : ''}`)}">
-            <span class="liste-vues-nom">${echapper(v.vli_nom)}</span>${icone ? `<span class="liste-vues-partage">${icone}</span>` : ''}
+            title="${echapper(v.vli_proprietaire ? texte('liste.vues.partage_de', { partage: libellePartage, proprietaire: v.vli_proprietaire }) : libellePartage)}">
+            <span class="liste-vues-nom">${echapper(v.vli_nom)}</span>${picto ? `<span class="liste-vues-partage">${echapper(picto)}</span>` : ''}
             <button type="button" class="bouton-icone liste-vues-etoile${etoile ? ' marquee' : ''}" data-etoile tabindex="-1"
-              title="${etoile ? 'Vue par défaut du thème (vous) : cliquer pour retirer' : v.vli_id === defaut ? 'Vue par défaut du thème : cliquer pour la marquer comme la vôtre' : 'Ouvrir cette vue d\'un clic sur le thème'}">${etoile ? '★' : v.vli_id === defaut ? '✩' : '☆'}</button>
-            <button type="button" class="bouton-icone" data-modifier tabindex="-1" title="Modifier la vue">✎</button></div>`);
+              title="${texteHtml(`liste.vues.etoile_${etoile ? 'retirer' : v.vli_id === defaut ? 'defaut' : 'marquer'}`)}">${iconeHtml(etoile ? 'liste_vues_etoile' : v.vli_id === defaut ? 'liste_vues_etoile_defaut' : 'liste_vues_etoile_vide')}</button>
+            <button type="button" class="bouton-icone" data-modifier tabindex="-1" title="${texteHtml('liste.vues.modifier')}">${iconeHtml('liste_saisie')}</button></div>`);
       }
     }
-    this.arbre.innerHTML = html.join('') || '<p class="aide">Aucune vue</p>';
+    this.arbre.innerHTML = html.join('') || `<p class="aide">${texteHtml('liste.vues.aucune')}</p>`;
     this.arbre.querySelector('.courante')?.scrollIntoView?.({ block: 'nearest' });
   }
 
@@ -163,12 +165,13 @@ export class PanneauVues {
     const theme = el.dataset.theme;
     const id = Number(el.dataset.vue);
     const ouvrir = () => this.liste.ouvrirVueDuTheme(theme === SANS_THEME ? null : theme, id);
-    if (this.liste.modeChoix) { ouvrirMenuContextuel(e, [{ libelle: '★ Vue par défaut du thème (pour moi)', action: () => this.#etoile(theme, id) }], { aide: false }); return; }
+    const etoile = { libelle: `${icone('liste_vues_etoile')} ${texte('liste.vues.menu.defaut')}`, action: () => this.#etoile(theme, id) };
+    if (this.liste.modeChoix) { ouvrirMenuContextuel(e, [etoile], { aide: false }); return; }
     ouvrirMenuContextuel(e, [
-      { libelle: '★ Vue par défaut du thème (pour moi)', action: () => this.#etoile(theme, id) },
-      { libelle: '✎ Modifier la vue…', action: async () => { await ouvrir(); this.liste.concevoir(false); } },
-      { libelle: '⧉ Enregistrer sous…', action: async () => { await ouvrir(); this.liste.concevoir(true); } },
-      { libelle: '＋ Nouvelle vue dans ce thème…', action: async () => { await ouvrir(); this.liste.concevoir(true); } },
+      etoile,
+      { libelle: `${icone('liste_saisie')} ${texte('liste.vues.menu.modifier')}`, action: async () => { await ouvrir(); this.liste.concevoir(false); } },
+      { libelle: `${icone('liste_copier')} ${texte('liste.vues.menu.enregistrer_sous')}`, action: async () => { await ouvrir(); this.liste.concevoir(true); } },
+      { libelle: `${icone('ajouter')} ${texte('liste.vues.menu.nouvelle')}`, action: async () => { await ouvrir(); this.liste.concevoir(true); } },
     ], { aide: false });
   }
 

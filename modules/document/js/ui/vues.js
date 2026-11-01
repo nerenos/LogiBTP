@@ -1,3 +1,4 @@
+import { texte, texteHtml, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { echapper, lirePreferences, ecrirePreferences, confirmer, ouvrirModale } from '@logibtp/socle/ui';
 
 // Vues de colonnes de la grille des lignes : choix de la vue, dialogue des colonnes (visibilité, ordre, largeurs, mode
@@ -27,10 +28,10 @@ export class FournisseurVuesMemoire {
   }
 
   async enregistrer(d) {
-    if (!d.nom?.trim()) throw new Error('Nom de la vue obligatoire');
-    if ((d.globale || d.par_defaut) && !this.admin()) throw new Error('Vue globale réservée à un administrateur');
+    if (!d.nom?.trim()) throw new Error(texte('document.vues.nom_obligatoire'));
+    if ((d.globale || d.par_defaut) && !this.admin()) throw new Error(texte('document.vues.globale_reservee'));
     let v = d.id ? this.liste.find((x) => x.id === d.id) : null;
-    if (v && !v.globale && v.proprietaire !== this.utilisateur()) throw new Error('Vue d\'un autre utilisateur');
+    if (v && !v.globale && v.proprietaire !== this.utilisateur()) throw new Error(texte('document.vues.autre_utilisateur'));
     if (!v) {
       v = { id: Math.max(0, ...this.liste.map((x) => x.id)) + 1 };
       this.liste.push(v);
@@ -48,7 +49,7 @@ export class FournisseurVuesMemoire {
     const i = this.liste.findIndex((x) => x.id === id);
     if (i < 0) return;
     const v = this.liste[i];
-    if (v.globale ? !this.admin() : v.proprietaire !== this.utilisateur()) throw new Error('Suppression non autorisée');
+    if (v.globale ? !this.admin() : v.proprietaire !== this.utilisateur()) throw new Error(texte('document.vues.suppression_refusee'));
     this.liste.splice(i, 1);
   }
 }
@@ -119,7 +120,7 @@ export class GestionVuesDocument {
   get clePreference() { return `${this.type.tyd_code ?? ''}|${this.modele ?? ''}`; }
 
   async charger() {
-    this.vues = await this.fournisseur.vues(this.type).catch((e) => { this.message(`Vues de colonnes indisponibles : ${e.message}`); return []; });
+    this.vues = await this.fournisseur.vues(this.type).catch((e) => { this.message(texte('document.vues.indisponibles', { message: e.message })); return []; });
     const memo = lirePreferences().vuesDocument?.[this.clePreference];
     const vue = this.vues.find((v) => v.id === memo) ?? vueParDefaut(this.vues, this.type.tyd_id ?? null, this.modele);
     this.appliquer(vue, { memoriser: false });
@@ -144,16 +145,16 @@ export class GestionVuesDocument {
     const c = this.conteneur;
     const globales = this.vues.filter((v) => v.globale);
     const miennes = this.vues.filter((v) => !v.globale);
-    const option = (v) => `<option value="${v.id}" ${v.id === this.courante?.id ? 'selected' : ''}>${echapper(v.nom)}${v.par_defaut ? ' ★' : ''}${v.definition?.debogage ? ' 🐞' : ''}</option>`;
+    const option = (v) => `<option value="${v.id}" ${v.id === this.courante?.id ? 'selected' : ''}>${echapper(v.nom)}${v.par_defaut ? ` ${iconeHtml('document_vue_defaut')}` : ''}${v.definition?.debogage ? ` ${iconeHtml('document_debogage')}` : ''}</option>`;
     c.classList.add('vues-document');
     c.innerHTML = `
-      <select data-vue title="Vue de colonnes (★ : vue par défaut d'un modèle · 🐞 : débogage)">
-        <option value="" ${this.courante ? '' : 'selected'}>Toutes les colonnes</option>
-        ${globales.length ? `<optgroup label="Vues globales">${globales.map(option).join('')}</optgroup>` : ''}
-        ${miennes.length ? `<optgroup label="Mes vues">${miennes.map(option).join('')}</optgroup>` : ''}
-        ${this.courante && !this.vues.includes(this.courante) ? `<option value="tmp" selected>${echapper(this.courante.nom)} (non enregistrée)</option>` : ''}
+      <select data-vue title="${texteHtml('document.vues.choix_aide', { defaut: icone('document_vue_defaut'), debogage: icone('document_debogage') })}">
+        <option value="" ${this.courante ? '' : 'selected'}>${texteHtml('document.vues.toutes')}</option>
+        ${globales.length ? `<optgroup label="${texteHtml('document.vues.globales')}">${globales.map(option).join('')}</optgroup>` : ''}
+        ${miennes.length ? `<optgroup label="${texteHtml('document.vues.miennes')}">${miennes.map(option).join('')}</optgroup>` : ''}
+        ${this.courante && !this.vues.includes(this.courante) ? `<option value="tmp" selected>${texteHtml('document.vues.non_enregistree', { nom: this.courante.nom })}</option>` : ''}
       </select>
-      <button type="button" data-colonnes title="Colonnes… : colonnes affichées, ordre, mode débogage, enregistrement de la vue">▦</button>`;
+      <button type="button" data-colonnes title="${texteHtml('document.vues.colonnes_aide')}">${iconeHtml('document_colonnes')}</button>`;
     c.querySelector('[data-vue]').addEventListener('change', (e) => {
       if (e.target.value === 'tmp') return;
       this.appliquer(this.vues.find((v) => v.id === Number(e.target.value)) ?? null);
@@ -190,36 +191,36 @@ export class GestionVuesDocument {
     dlg.className = 'dialogue-vue';
     const listeColonnes = () => etat.ordre.map((k, i) => `<li data-cle="${k}">
         <input type="checkbox" data-visible ${etat.visibles.has(k) ? 'checked' : ''} id="vc-${k}"><span><label for="vc-${k}">${echapper(titres.get(k) ?? k)}</label></span>
-        <input data-titre size="14" maxlength="40" value="${echapper(etat.renommes.get(k) ?? '')}" placeholder="${echapper(titres.get(k) ?? k)}" title="Titre de la colonne dans cette vue (vide : titre d'origine)">
-        <button type="button" data-haut ${i === 0 ? 'disabled' : ''} title="Monter">↑</button><button type="button" data-bas ${i === etat.ordre.length - 1 ? 'disabled' : ''} title="Descendre">↓</button></li>`).join('');
-    const listeSysteme = () => champsSysteme.map((k) => `<li class="systeme"><input type="checkbox" data-sys="${echapper(k)}" ${etat.systeme.has(k) ? 'checked' : ''}><span>${echapper(k === '_controles' ? 'Contrôles (codes des erreurs)' : k)}</span></li>`).join('');
+        <input data-titre size="14" maxlength="40" value="${echapper(etat.renommes.get(k) ?? '')}" placeholder="${echapper(titres.get(k) ?? k)}" title="${texteHtml('document.vues.titre_aide')}">
+        <button type="button" data-haut ${i === 0 ? 'disabled' : ''} title="${texteHtml('document.parametrage.monter')}">${iconeHtml('document_haut')}</button><button type="button" data-bas ${i === etat.ordre.length - 1 ? 'disabled' : ''} title="${texteHtml('document.parametrage.descendre')}">${iconeHtml('document_bas')}</button></li>`).join('');
+    const listeSysteme = () => champsSysteme.map((k) => `<li class="systeme"><input type="checkbox" data-sys="${echapper(k)}" ${etat.systeme.has(k) ? 'checked' : ''}><span>${echapper(k === '_controles' ? texte('document.vues.controles') : k)}</span></li>`).join('');
     dlg.innerHTML = `<form method="dialog">
-      <h3>Colonnes de la grille</h3>
+      <h3>${texteHtml('document.vues.titre')}</h3>
       <div class="dialogue-colonnes">
-        <section><h4>Colonnes (ordre d'affichage)</h4><ul class="colonnes-vue" data-liste>${listeColonnes()}</ul></section>
+        <section><h4>${texteHtml('document.vues.ordre')}</h4><ul class="colonnes-vue" data-liste>${listeColonnes()}</ul></section>
         <section>
-          <p class="aide">Ordre et largeurs se règlent aussi dans la grille (glisser l'entête ou sa bordure droite) ; enregistrer la vue les conserve.
-            <button type="button" data-largeurs ${etat.largeurs.size ? '' : 'disabled'}>Largeurs automatiques</button></p>
-          <h4><label><input type="checkbox" data-debogage ${etat.debogage ? 'checked' : ''}> Mode débogage</label></h4>
-          <p class="aide">Ajoute les colonnes système (valeurs brutes, identifiants, liens, contrôles) masquées en saisie, pour comprendre une erreur. Aucune cochée : toutes.</p>
+          <p class="aide">${texteHtml('document.vues.ordre_aide')}
+            <button type="button" data-largeurs ${etat.largeurs.size ? '' : 'disabled'}>${texteHtml('document.vues.largeurs_auto')}</button></p>
+          <h4><label><input type="checkbox" data-debogage ${etat.debogage ? 'checked' : ''}> ${texteHtml('document.vues.debogage')}</label></h4>
+          <p class="aide">${texteHtml('document.vues.debogage_aide')}</p>
           <ul class="colonnes-vue" data-systeme ${etat.debogage ? '' : 'hidden'}>${listeSysteme()}</ul>
         </section>
       </div>
-      <fieldset class="enregistrement"><legend>Enregistrer la vue</legend>
-        <label>Nom <input data-nom value="${echapper(v?.nom ?? '')}" placeholder="Ma vue"></label>
-        <label><input type="radio" name="portee" value="perso" ${!v?.globale ? 'checked' : ''}> Personnelle</label>
-        <label title="${admin ? '' : 'Réservé à un administrateur'}"><input type="radio" name="portee" value="globale" ${v?.globale ? 'checked' : ''} ${admin ? '' : 'disabled'}> Globale</label>
-        <label title="Types de documents concernés">Pour <select data-tyd><option value="">tous les types</option><option value="${this.type.tyd_id}" ${v?.tyd_id ? 'selected' : ''}>${echapper(this.type.tyd_libelle ?? 'ce type')}</option></select></label>
-        <label>Modèle <select data-modele><option value="">tous les modèles</option>${modeles.map((m) => `<option value="${echapper(m.code)}" ${(v?.mod_code ?? this.modele) === m.code ? 'selected' : ''}>${echapper(m.libelle)}</option>`).join('')}</select></label>
-        <label title="${admin ? 'Vue proposée à l\'ouverture des documents de ce type et de ce modèle' : 'Réservé à un administrateur'}"><input type="checkbox" data-defaut ${v?.par_defaut ? 'checked' : ''} ${admin ? '' : 'disabled'}> Vue par défaut</label>
+      <fieldset class="enregistrement"><legend>${texteHtml('document.vues.enregistrer_vue')}</legend>
+        <label>${texteHtml('document.vues.nom')} <input data-nom value="${echapper(v?.nom ?? '')}" placeholder="${texteHtml('document.vues.nom_exemple')}"></label>
+        <label><input type="radio" name="portee" value="perso" ${!v?.globale ? 'checked' : ''}> ${texteHtml('document.vues.personnelle')}</label>
+        <label title="${admin ? '' : texteHtml('document.vues.reserve_admin')}"><input type="radio" name="portee" value="globale" ${v?.globale ? 'checked' : ''} ${admin ? '' : 'disabled'}> ${texteHtml('document.vues.globale')}</label>
+        <label title="${texteHtml('document.vues.types_aide')}">${texteHtml('document.vues.pour')} <select data-tyd><option value="">${texteHtml('document.vues.tous_types')}</option><option value="${this.type.tyd_id}" ${v?.tyd_id ? 'selected' : ''}>${echapper(this.type.tyd_libelle ?? texte('document.vues.ce_type'))}</option></select></label>
+        <label>${texteHtml('document.vues.modele')} <select data-modele><option value="">${texteHtml('document.vues.tous_modeles')}</option>${modeles.map((m) => `<option value="${echapper(m.code)}" ${(v?.mod_code ?? this.modele) === m.code ? 'selected' : ''}>${echapper(m.libelle)}</option>`).join('')}</select></label>
+        <label title="${texteHtml(admin ? 'document.vues.defaut_aide' : 'document.vues.reserve_admin')}"><input type="checkbox" data-defaut ${v?.par_defaut ? 'checked' : ''} ${admin ? '' : 'disabled'}> ${texteHtml('document.vues.par_defaut')}</label>
       </fieldset>
       <div class="boutons">
-        <button type="button" data-appliquer title="Appliquer sans enregistrer">Appliquer</button>
-        ${v && modifiable ? '<button type="button" data-enregistrer class="principal">Enregistrer</button>' : ''}
-        <button type="button" data-nouvelle ${v ? '' : 'class="principal"'}>Enregistrer comme nouvelle vue</button>
-        ${v && modifiable ? '<button type="button" data-supprimer>Supprimer la vue</button>' : ''}
-        <button type="button" data-tout>Toutes les colonnes</button>
-        <button value="annuler">Fermer</button>
+        <button type="button" data-appliquer title="${texteHtml('document.vues.appliquer_aide')}">${texteHtml('document.vues.appliquer')}</button>
+        ${v && modifiable ? `<button type="button" data-enregistrer class="principal">${texteHtml('commun.enregistrer')}</button>` : ''}
+        <button type="button" data-nouvelle ${v ? '' : 'class="principal"'}>${texteHtml('document.vues.nouvelle')}</button>
+        ${v && modifiable ? `<button type="button" data-supprimer>${texteHtml('document.vues.supprimer')}</button>` : ''}
+        <button type="button" data-tout>${texteHtml('document.vues.toutes')}</button>
+        <button value="annuler">${texteHtml('commun.fermer')}</button>
       </div></form>`;
     document.body.append(dlg);
     dlg.addEventListener('close', () => dlg.remove());
@@ -263,7 +264,7 @@ export class GestionVuesDocument {
       systeme: etat.debogage ? champsSysteme.filter((k) => etat.systeme.has(k)) : [],
     });
     const valide = () => {
-      if (!etat.visibles.size) { this.message('Au moins une colonne doit être affichée'); return false; }
+      if (!etat.visibles.size) { this.message(texte('document.vues.une_colonne')); return false; }
       return true;
     };
     // Options d'enregistrement modifiées par l'utilisateur : une nouvelle vue ne reprend la portée globale et le statut
@@ -273,9 +274,9 @@ export class GestionVuesDocument {
     const enregistrer = async (id) => {
       if (!valide()) return;
       const nom = dlg.querySelector('[data-nom]').value.trim();
-      if (!nom) { this.message('Nom de la vue obligatoire'); dlg.querySelector('[data-nom]').focus(); return; }
+      if (!nom) { this.message(texte('document.vues.nom_obligatoire')); dlg.querySelector('[data-nom]').focus(); return; }
       const nouvelle = !id;
-      if (nouvelle && v && nom === v.nom) { this.message('Donnez un autre nom à la nouvelle vue'); dlg.querySelector('[data-nom]').select(); return; }
+      if (nouvelle && v && nom === v.nom) { this.message(texte('document.vues.autre_nom')); dlg.querySelector('[data-nom]').select(); return; }
       const parDefaut = nouvelle && !touches.has('defaut') ? false : dlg.querySelector('[data-defaut]').checked;
       const globale = nouvelle && !touches.has('portee') ? false : dlg.querySelector('[name="portee"]:checked')?.value === 'globale';
       const tyd = dlg.querySelector('[data-tyd]').value;
@@ -289,18 +290,18 @@ export class GestionVuesDocument {
         this.oublierDisposition(`vue:${sauvee.id}`);
         fermer();
         this.appliquer(this.vues.find((x) => x.id === sauvee.id) ?? sauvee);
-        this.message(`Vue « ${sauvee.nom} » enregistrée`);
+        this.message(texte('document.vues.enregistree', { nom: sauvee.nom }));
       } catch (e) { this.message(e.message); }
     };
     dlg.querySelector('[data-appliquer]').addEventListener('click', () => {
       if (!valide()) return;
       fermer();
-      this.appliquer({ id: null, nom: v ? `${v.nom} modifiée` : 'Vue personnalisée', definition: definition() }, { memoriser: false });
+      this.appliquer({ id: null, nom: v ? texte('document.vues.modifiee', { nom: v.nom }) : texte('document.vues.personnalisee'), definition: definition() }, { memoriser: false });
     });
     dlg.querySelector('[data-enregistrer]')?.addEventListener('click', () => enregistrer(v.id));
     dlg.querySelector('[data-nouvelle]').addEventListener('click', () => enregistrer(null));
     dlg.querySelector('[data-supprimer]')?.addEventListener('click', async () => {
-      if (!await confirmer(`Supprimer la vue « ${v.nom} »${v.globale ? ' (vue globale, pour tous les utilisateurs)' : ''}${v.par_defaut ? ', vue par défaut de son modèle' : ''} ?`)) return;
+      if (!await confirmer(texte(`document.vues.supprimer_confirmer${v.globale ? '_globale' : ''}${v.par_defaut ? '_defaut' : ''}`, { nom: v.nom }))) return;
       try {
         await this.fournisseur.supprimer(v.id);
         this.vues = this.vues.filter((x) => x.id !== v.id);

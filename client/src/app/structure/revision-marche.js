@@ -1,3 +1,4 @@
+import { texte, texteHtml, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { echapper, formatNombre, lireNombre, creerCombo, confirmer } from '@logibtp/socle/ui';
 import { Dz } from '@logibtp/socle';
 import { api } from '../api.js';
@@ -10,8 +11,8 @@ import { controlerFormule, lireTermes, ecrireTermes, MESSAGES_REVISION } from '.
 // propre des commandes ; périodes facturées avec la révision due (meilleurs index connus), déjà facturée et à facturer ;
 // facture simple de régularisation. Le calcul est fait par le serveur (règle partagée : revision.js ↔ ReglesRevision.cs).
 
-const TYPES = [[TYPE_PRIX.FERME, 'Prix ferme'], [TYPE_PRIX.ACTUALISABLE, 'Prix ferme actualisable'], [TYPE_PRIX.REVISABLE, 'Prix révisable']];
-const ARRONDIS = [[ARRONDI_REVISION.PROCHE, 'Au plus proche'], [ARRONDI_REVISION.SUPERIEUR, 'À la valeur supérieure']];
+const TYPES = () => [TYPE_PRIX.FERME, TYPE_PRIX.ACTUALISABLE, TYPE_PRIX.REVISABLE].map((c) => [c, texte(`revision_btp.types.${c}`)]);
+const ARRONDIS = () => [ARRONDI_REVISION.PROCHE, ARRONDI_REVISION.SUPERIEUR].map((c) => [c, texte(`revision_btp.arrondis.${c}`)]);
 const mois = (v) => (v ? String(v).slice(0, 7) : '');
 const jourMois = (v) => (v ? `${v}-01` : null);
 const f = (v) => formatNombre(v ?? 0, 2);
@@ -24,50 +25,49 @@ export async function rendreRevision(zone, { marche, message, ouvrir, modifiable
   const ferme = p.type_prix === TYPE_PRIX.FERME;
   const periodes = r.periodes ?? [];
   zone.innerHTML = `<div class="revision-marche">
-    <h3>Prix du marché</h3>
+    <h3>${texteHtml('revision_btp.marche.prix')}</h3>
     <div class="formulaire">
-      <label>Type de prix <span data-r="type"></span></label>
-      <label>Mois zéro <input type="month" data-r="mois_zero" value="${mois(p.mois_zero)}" title="Mois d'établissement des prix (I0)"></label>
-      ${!p.mois_zero && r.mois_zero_propose ? `<small class="aide">proposé : ${mois(r.mois_zero_propose)} (date du marché)</small>` : ''}
+      <label>${texteHtml('revision_btp.marche.type')} <span data-r="type"></span></label>
+      <label>${texteHtml('revision_btp.marche.mois_zero')} <input type="month" data-r="mois_zero" value="${mois(p.mois_zero)}" title="${texteHtml('revision_btp.marche.mois_zero_aide')}"></label>
+      ${!p.mois_zero && r.mois_zero_propose ? `<small class="aide">${texteHtml('revision_btp.marche.mois_zero_propose', { mois: mois(r.mois_zero_propose) })}</small>` : ''}
     </div>
-    ${r.proposee ? '<p class="avertissement">Formule du marché de vente lié proposée : à vérifier (mois zéro du sous-traitant) puis enregistrer pour qu\'elle s\'applique.</p>' : ''}
+    ${r.proposee ? `<p class="avertissement">${texteHtml('revision_btp.marche.proposee')}</p>` : ''}
     <div class="formulaire" data-formule>
-      <label>Modèle <span data-r="modele"></span></label>
-      <label>Partie fixe <input data-r="partie_fixe" size="8" inputmode="decimal" value="${echapper(String(p.partie_fixe ?? '').replace('.', ','))}"></label>
-      <label class="large">Index et poids <input data-r="termes" size="40" placeholder="BT01 0,85 ; BT06 0,10" value="${echapper(ecrireTermes(p.termes))}"></label>
-      <label>Décalage (mois) <input data-r="decalage" size="3" inputmode="numeric" value="${p.decalage ?? 0}" title="In = index du mois de la pièce moins ce décalage"></label>
-      <label>Précision <input data-r="precision" size="2" inputmode="numeric" value="${p.precision ?? 3}" title="Décimales du coefficient"></label>
-      <label>Arrondi <span data-r="arrondi"></span></label>
+      <label>${texteHtml('revision_btp.marche.modele')} <span data-r="modele"></span></label>
+      <label>${texteHtml('revision_btp.marche.partie_fixe')} <input data-r="partie_fixe" size="8" inputmode="decimal" value="${echapper(String(p.partie_fixe ?? '').replace('.', ','))}"></label>
+      <label class="large">${texteHtml('revision_btp.marche.termes')} <input data-r="termes" size="40" placeholder="${texteHtml('revision_btp.marche.termes_exemple')}" value="${echapper(ecrireTermes(p.termes))}"></label>
+      <label>${texteHtml('revision_btp.marche.decalage')} <input data-r="decalage" size="3" inputmode="numeric" value="${p.decalage ?? 0}" title="${texteHtml('revision_btp.marche.decalage_aide')}"></label>
+      <label>${texteHtml('revision_btp.marche.precision')} <input data-r="precision" size="2" inputmode="numeric" value="${p.precision ?? 3}" title="${texteHtml('revision_btp.marche.precision_aide')}"></label>
+      <label>${texteHtml('revision_btp.marche.arrondi')} <span data-r="arrondi"></span></label>
     </div>
     <p class="aide" data-r="formule"></p>
     <div class="formulaire" data-actualisation>
-      <label>Début des travaux <input type="month" data-r="debut" value="${mois(p.debut_travaux)}" title="Vide : début réel, sinon prévu, du chantier"></label>
-      <small class="aide">retenu : ${r.debut_effectif ? mois(r.debut_effectif) : 'inconnu'}</small>
-      <label><input type="checkbox" data-r="baisse" ${p.baisse ? 'checked' : ''}> Actualisation à la baisse aussi</label>
+      <label>${texteHtml('revision_btp.marche.debut')} <input type="month" data-r="debut" value="${mois(p.debut_travaux)}" title="${texteHtml('revision_btp.marche.debut_aide')}"></label>
+      <small class="aide">${texteHtml('revision_btp.marche.debut_retenu', { mois: r.debut_effectif ? mois(r.debut_effectif) : texte('revision_btp.marche.inconnu') })}</small>
+      <label><input type="checkbox" data-r="baisse" ${p.baisse ? 'checked' : ''}> ${texteHtml('revision_btp.marche.baisse')}</label>
     </div>
-    ${r.commandes.length > 1 ? `<h4>Mois zéro des commandes</h4><table class="tableau-compact"><thead><tr><th>Commande</th><th>Objet</th><th>Mois zéro propre</th></tr></thead><tbody>
+    ${r.commandes.length > 1 ? `<h4>${texteHtml('revision_btp.marche.commandes')}</h4><table class="tableau-compact"><thead><tr><th>${texteHtml('revision_btp.marche.col.commande')}</th><th>${texteHtml('revision_btp.marche.col.objet')}</th><th>${texteHtml('revision_btp.marche.col.mois_zero_propre')}</th></tr></thead><tbody>
       ${r.commandes.map((c) => `<tr><td><a href="${urlDocument(Number(c.ent_id))}">${echapper(c.numero ?? `#${c.ent_id}`)}</a></td><td>${echapper(c.objet ?? '')}</td>
-        <td><input type="month" data-commande="${c.ent_id}" value="${mois(c.mois_zero)}" title="Vide : mois zéro du marché"></td></tr>`).join('')}</tbody></table>` : ''}
-    ${modifiable ? '<div class="boutons"><button type="button" class="principal" data-enregistrer>Enregistrer les prix</button></div>' : ''}
-    <h3>Révision des périodes facturées</h3>
-    ${ferme ? '<p class="aide">Prix ferme : aucune révision.</p>' : `<p class="aide">Révision due avec les meilleurs index connus à ce jour (✱ : index provisoire ou
-      dernier connu) ; l'écart avec la révision déjà facturée est régularisé sur la facture d'avancement suivante${r.facture_simple ? ', ou par une facture de régularisation' : ''}.</p>
-      <table class="tableau-compact"><thead><tr><th>Pièce</th><th>Mois</th><th>Commande</th><th class="nombre">Base HT</th><th>Index</th><th class="nombre">Coefficient</th>
-        <th class="nombre">Révision due</th><th class="nombre">Déjà facturée</th><th class="nombre">À facturer</th></tr></thead><tbody>
+        <td><input type="month" data-commande="${c.ent_id}" value="${mois(c.mois_zero)}" title="${texteHtml('revision_btp.marche.mois_zero_commande_aide')}"></td></tr>`).join('')}</tbody></table>` : ''}
+    ${modifiable ? `<div class="boutons"><button type="button" class="principal" data-enregistrer>${texteHtml('revision_btp.marche.enregistrer')}</button></div>` : ''}
+    <h3>${texteHtml('revision_btp.marche.periodes')}</h3>
+    ${ferme ? `<p class="aide">${texteHtml('revision_btp.marche.ferme')}</p>` : `<p class="aide">${texteHtml('revision_btp.marche.periodes_aide', { provisoire: icone('revision_btp_provisoire'), facture: r.facture_simple ? texte('revision_btp.marche.periodes_facture') : '' })}</p>
+      <table class="tableau-compact"><thead><tr><th>${texteHtml('revision_btp.marche.col.piece')}</th><th>${texteHtml('revision_btp.marche.col.mois')}</th><th>${texteHtml('revision_btp.marche.col.commande')}</th><th class="nombre">${texteHtml('revision_btp.marche.col.base')}</th><th>${texteHtml('revision_btp.marche.col.index')}</th><th class="nombre">${texteHtml('revision_btp.marche.col.coef')}</th>
+        <th class="nombre">${texteHtml('revision_btp.marche.col.due')}</th><th class="nombre">${texteHtml('revision_btp.marche.col.deja')}</th><th class="nombre">${texteHtml('revision_btp.marche.col.a_facturer')}</th></tr></thead><tbody>
       ${periodes.length ? periodes.map((x) => `<tr><td><a href="${urlDocument(Number(x.piece))}">${echapper(x.numero ?? `#${x.piece}`)}</a></td><td>${mois(x.mois)}</td>
         <td>${echapper(x.commande_numero ?? '')}</td><td class="nombre">${f(x.base)}</td><td>${mois(x.mois_index)}</td>
-        <td class="nombre" title="${echapper((x.manquants ?? []).join(', '))}">${x.coef === null ? `<span class="avertissement">manque ${echapper((x.manquants ?? []).join(', '))}</span>` : `${coef(x.coef)}${x.provisoire ? ' ✱' : ''}`}</td>
+        <td class="nombre" title="${echapper((x.manquants ?? []).join(', '))}">${x.coef === null ? `<span class="avertissement">${texteHtml('revision_btp.marche.manque', { index: (x.manquants ?? []).join(', ') })}</span>` : `${coef(x.coef)}${x.provisoire ? ` ${iconeHtml('revision_btp_provisoire')}` : ''}`}</td>
         <td class="nombre">${f(x.revision)}</td><td class="nombre">${f(x.deja)}</td><td class="nombre">${Dz(x.a_facturer).isZero() ? '' : f(x.a_facturer)}</td></tr>`).join('')
-        : '<tr><td colspan="9" class="aide">Aucune facture d\'avancement validée.</td></tr>'}
-      </tbody><tfoot><tr><th colspan="3">Total</th><th class="nombre">${f(r.totaux.base)}</th><th colspan="2"></th><th class="nombre">${f(r.totaux.revision)}</th>
+        : `<tr><td colspan="9" class="aide">${texteHtml('revision_btp.marche.aucune')}</td></tr>`}
+      </tbody><tfoot><tr><th colspan="3">${texteHtml('commun.total')}</th><th class="nombre">${f(r.totaux.base)}</th><th colspan="2"></th><th class="nombre">${f(r.totaux.revision)}</th>
         <th class="nombre">${f(r.totaux.deja)}</th><th class="nombre">${f(r.totaux.a_facturer)}</th></tr></tfoot></table>
-      ${modifiable && r.facture_simple && !Dz(r.totaux.a_facturer).isZero() ? '<div class="boutons"><button type="button" data-facture title="Facture simple au client du marché : une ligne par commande, montants recalculés à la validation">🧾 Facture de régularisation</button></div>' : ''}`}
+      ${modifiable && r.facture_simple && !Dz(r.totaux.a_facturer).isZero() ? `<div class="boutons"><button type="button" data-facture title="${texteHtml('revision_btp.marche.facture_aide')}">${iconeHtml('revision_btp_facture')} ${texteHtml('revision_btp.marche.facture')}</button></div>` : ''}`}
   </div>`;
 
   const remplacer = (cle, combo) => { zone.querySelector(`[data-r="${cle}"]`).replaceWith(combo); return combo; };
-  const type = remplacer('type', creerCombo({ options: TYPES.map(([valeur, libelle]) => ({ valeur, libelle })), valeur: p.type_prix, vide: false }));
-  const arrondi = remplacer('arrondi', creerCombo({ options: ARRONDIS.map(([valeur, libelle]) => ({ valeur, libelle })), valeur: p.arrondi, vide: false }));
-  const modele = remplacer('modele', creerCombo({ options: formules.filter((x) => x.actif).map((x) => ({ valeur: String(x.id), libelle: x.libelle })), valeur: '', titre: 'Recopier un modèle de formule' }));
+  const type = remplacer('type', creerCombo({ options: TYPES().map(([valeur, libelle]) => ({ valeur, libelle })), valeur: p.type_prix, vide: false }));
+  const arrondi = remplacer('arrondi', creerCombo({ options: ARRONDIS().map(([valeur, libelle]) => ({ valeur, libelle })), valeur: p.arrondi, vide: false }));
+  const modele = remplacer('modele', creerCombo({ options: formules.filter((x) => x.actif).map((x) => ({ valeur: String(x.id), libelle: x.libelle })), valeur: '', titre: texte('revision_btp.marche.modele_aide') }));
   const champ = (cle) => zone.querySelector(`[data-r="${cle}"]`);
 
   const lire = () => ({
@@ -88,10 +88,10 @@ export async function rendreRevision(zone, { marche, message, ouvrir, modifiable
     zone.querySelector('[data-actualisation]').hidden = v.type_prix !== TYPE_PRIX.ACTUALISABLE;
     const sortie = champ('formule');
     if (v.type_prix === TYPE_PRIX.FERME) { sortie.textContent = ''; return v; }
-    if (v.termes === null) { sortie.innerHTML = '<span class="erreur">Index et poids illisibles : « BT01 0,85 ; BT06 0,10 »</span>'; return v; }
+    if (v.termes === null) { sortie.innerHTML = `<span class="erreur">${texteHtml('revision_btp.erreurs.illisible')}</span>`; return v; }
     const erreurs = controlerFormule(v);
-    const texte = `Cn = ${String(v.partie_fixe).replace('.', ',')}${v.termes.map((t) => ` + ${String(t.poids).replace('.', ',')} × ${t.index}n / ${t.index}0`).join('')}`;
-    sortie.innerHTML = erreurs.length ? `<span class="erreur">${erreurs.map((e) => echapper(MESSAGES_REVISION[e] ?? e)).join(' ; ')}</span>` : echapper(texte);
+    const formule = `Cn = ${String(v.partie_fixe).replace('.', ',')}${v.termes.map((t) => ` + ${String(t.poids).replace('.', ',')} × ${t.index}n / ${t.index}0`).join('')}`;
+    sortie.innerHTML = erreurs.length ? `<span class="erreur">${erreurs.map((e) => echapper(MESSAGES_REVISION[e] ?? e)).join(' ; ')}</span>` : echapper(formule);
     return v;
   };
   zone.querySelectorAll('input').forEach((x) => x.addEventListener('input', actualiser));
@@ -110,19 +110,19 @@ export async function rendreRevision(zone, { marche, message, ouvrir, modifiable
 
   zone.querySelector('[data-enregistrer]')?.addEventListener('click', async () => {
     const v = actualiser();
-    if (v.type_prix !== TYPE_PRIX.FERME && (v.termes === null || controlerFormule(v).length)) { message('Formule de révision à corriger', 'avertissement'); return; }
-    if (v.type_prix !== TYPE_PRIX.FERME && !v.mois_zero) { message('Mois zéro obligatoire', 'avertissement'); return; }
+    if (v.type_prix !== TYPE_PRIX.FERME && (v.termes === null || controlerFormule(v).length)) { message(texte('revision_btp.marche.a_corriger'), 'avertissement'); return; }
+    if (v.type_prix !== TYPE_PRIX.FERME && !v.mois_zero) { message(texte('revision_btp.marche.mois_zero_obligatoire'), 'avertissement'); return; }
     try {
       await api.enregistrerRevisionMarche(marche, { ...v, termes: v.termes ?? [] });
-      message('Prix du marché enregistrés', 'succes');
+      message(texte('revision_btp.marche.enregistres'), 'succes');
       await rendreRevision(zone, { marche, message, ouvrir, modifiable });
     } catch (e) { message(e.message, 'erreur'); }
   });
   zone.querySelector('[data-facture]')?.addEventListener('click', async (e) => {
-    if (!await confirmer(`Créer une facture de régularisation de ${f(r.totaux.a_facturer)} € HT ? Les montants seront recalculés à sa validation.`)) return;
+    if (!await confirmer(texte('revision_btp.marche.facture_confirmer', { montant: f(r.totaux.a_facturer) }))) return;
     try {
       const d = await api.factureRevision(marche);
-      message(`Facture de régularisation ${d.document.ent_numero ?? ''} créée : à valider`, 'succes');
+      message(texte('revision_btp.marche.facture_creee', { numero: d.document.ent_numero ?? '' }), 'succes');
       ouvrir?.(urlDocument(d.document.ent_id), e);
     } catch (x) { message(x.message, 'erreur'); }
   });

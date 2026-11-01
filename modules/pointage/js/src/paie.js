@@ -2,6 +2,7 @@
 // modules/pointage/tests/cas/03_paie.json) : règles typées d'un profil de paie appliquées dans l'ordre aux pointages
 // retenus (ANALYSE-MODULE-POINTAGE.md M1 à M5). LogiBTP calcule des quantités par rubrique, jamais un salaire.
 // Heures en minutes entières ; zone = numéro de zone du jour ; nombres (panier) entiers.
+import { textesParCode } from '@logibtp/socle/dictionnaire';
 
 /**
  * Types de règles : paramètres attendus.
@@ -14,17 +15,13 @@
  * REPAS             : valeurs { agence: n, '*': défaut } (absent : 1), exclu_si → n chaque jour de repas pris au
  *                     restaurant (avantage en nature selon l'agence du salarié ; 0 = rien).
  */
-export const TYPES_REGLE = {
-  CUMUL_HEURES: 'Cumul des heures (par sous-type)',
-  SEUIL_JOUR: 'Seuil journalier (panier…)',
-  TRANCHES_SEMAINE: 'Heures supplémentaires par tranches',
-  ZONE: 'Zone de déplacement du jour',
-  PLAFOND: 'Plafond',
-  REPAS: 'Repas au restaurant (avantage en nature par agence)',
-};
+export const TYPES_REGLE = textesParCode('pointage.types_regle', [
+  'CUMUL_HEURES', 'SEUIL_JOUR', 'TRANCHES_SEMAINE', 'ZONE', 'PLAFOND', 'REPAS',
+]);
 
-export const UNITES_RUBRIQUE = { H: 'Heures', NB: 'Nombre', ZONE: 'Zone' };
-export const SAISIES_RUBRIQUE = { C: 'Calculée', S: 'Saisie', SC: 'Calculée, modifiable' };
+export const UNITES_RUBRIQUE = textesParCode('pointage.unites_rubrique', ['H', 'NB', 'ZONE']);
+export const SAISIES_RUBRIQUE = textesParCode('pointage.saisies_rubrique', ['C', 'S', 'SC']);
+// Libellés : fr.json, pointage.types_regle.<TYPE>, unites_rubrique, saisies_rubrique, paie.<CODE>.
 
 const ajouter = (o, cle, v) => { o[cle] = (o[cle] ?? 0) + v; };
 
@@ -115,10 +112,9 @@ export function controlerProfil({ rubriques = [], regles = [] }) {
   return r;
 }
 
-export const MESSAGES_PAIE = {
-  PRF_RUBRIQUE: 'Codes de rubriques vides ou en double',
-  PRF_REGLE: 'Règle inconnue ou visant une rubrique absente du profil',
-};
+export const MESSAGES_PAIE = textesParCode('pointage.paie', [
+  'PRF_RUBRIQUE', 'PRF_REGLE',
+]);
 
 /** Quantité exportée : heures en décimal (2 chiffres), nombres et zones tels quels. */
 export const quantiteExport = (unite, v) => (unite === 'H' ? Math.round((v / 60) * 100) / 100 : v);

@@ -8,17 +8,17 @@
   border-radius: 4px; background: transparent; color: inherit; text-decoration: none; cursor: pointer; font-size: 1rem; line-height: 1; }
 .ged-icone-bouton:hover:not(:disabled) { background: var(--titre-fond); border-color: var(--bord); }
 .ged-icone-bouton:disabled { opacity: 0.35; cursor: default; }
-.ged-icone-bouton.principal { background: var(--accent); color: #fff; font-weight: 700; }
+.ged-icone-bouton.principal { background: var(--accent); color: var(--ged-texte-sur-couleur); font-weight: 700; }
 .ged-icone-bouton.principal:hover { background: var(--accent); filter: brightness(1.1); }
 .ged-icone-bouton.danger { color: var(--erreur); }
 .ged-icone-bouton[aria-pressed="true"] { background: var(--accent-clair); border-color: var(--accent); color: var(--accent); }
 .ged [data-bulle], .ged-dialogue [data-bulle] { position: relative; }
 .ged [data-bulle]:hover::after, .ged [data-bulle]:focus-visible::after {
   content: attr(data-bulle); position: absolute; top: calc(100% + 6px); right: 0; z-index: 30; max-width: 22rem; width: max-content;
-  padding: 0.3rem 0.55rem; border-radius: 5px; background: #23272e; color: #fff; font-size: 0.78rem; font-weight: 400; line-height: 1.3;
-  white-space: normal; text-align: left; box-shadow: 0 4px 14px rgb(0 0 0 / 0.25); pointer-events: none; }
+  padding: 0.3rem 0.55rem; border-radius: 5px; background: var(--ged-bulle-fond); color: var(--ged-bulle-texte); font-size: 0.78rem; font-weight: 400; line-height: 1.3;
+  white-space: normal; text-align: left; box-shadow: 0 4px 14px var(--ged-ombre-bulle); pointer-events: none; }
 .ged [data-bulle]:hover::before, .ged [data-bulle]:focus-visible::before {
-  content: ""; position: absolute; top: calc(100% + 1px); right: 0.7rem; z-index: 30; border: 5px solid transparent; border-bottom-color: #23272e; pointer-events: none; }
+  content: ""; position: absolute; top: calc(100% + 1px); right: 0.7rem; z-index: 30; border: 5px solid transparent; border-bottom-color: var(--ged-bulle-fond); pointer-events: none; }
 .ged [data-bulle-pos="gauche"]:hover::after, .ged [data-bulle-pos="gauche"]:focus-visible::after { right: auto; left: 0; }
 .ged [data-bulle-pos="gauche"]:hover::before, .ged [data-bulle-pos="gauche"]:focus-visible::before { right: auto; left: 0.7rem; }
 
@@ -60,7 +60,7 @@
 .ged-arbre ul { list-style: none; margin: 0; padding: 0 0 0 0.9rem; }
 .ged-arbre .ged-arbre-racine { padding-left: 0.2rem; }
 .ged-noeud { display: flex; align-items: center; gap: 0.2rem; padding: 0.12rem 0.3rem 0.12rem 0; border-radius: 3px; cursor: pointer; white-space: nowrap; }
-.ged-noeud:hover { background: rgb(127 127 127 / 0.08); }
+.ged-noeud:hover { background: var(--ged-survol); }
 .ged-noeud.courant { background: var(--accent-clair); color: var(--accent); font-weight: 600; }
 .ged-deplier { width: 1.1rem; flex: none; border: 0; background: transparent; color: var(--discret); padding: 0; cursor: pointer; font-size: 0.8rem; }
 .ged-deplier:disabled { cursor: default; }
@@ -80,7 +80,7 @@
 .ged-table th.trie { color: var(--accent); }
 .ged-table td { padding: 0.22rem 0.4rem; border-bottom: 1px solid var(--bord); vertical-align: middle; }
 .ged-table tbody tr { cursor: pointer; }
-.ged-table tbody tr:hover td { background: rgb(127 127 127 / 0.06); }
+.ged-table tbody tr:hover td { background: var(--ged-survol-ligne); }
 .ged-table tr.selectionnee td, .ged-tuile.selectionnee { background: var(--accent-clair); }
 .ged-table tr.selectionnee td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .ged-table tr.supprime td, .ged-tuile.supprime { color: var(--discret); text-decoration: line-through; }
@@ -100,7 +100,7 @@
 .ged-badge.etat, .ged-badge.acces { background: var(--accent-clair); color: var(--accent); }
 .ged-icones { display: grid; grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr)); gap: 0.3rem; padding: 0.5rem; }
 .ged-tuile { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; padding: 0.45rem 0.3rem; border-radius: 5px; cursor: pointer; text-align: center; outline: none; }
-.ged-tuile:hover { background: rgb(127 127 127 / 0.08); }
+.ged-tuile:hover { background: var(--ged-survol); }
 .ged-tuile-ico { position: relative; font-size: 2.2rem; line-height: 1; }
 .ged-tuile-lien { position: absolute; right: -0.45rem; bottom: -0.2rem; font-size: 0.85rem; }
 .ged-tuile-nom { font-size: 0.82em; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; word-break: break-word; }
@@ -118,7 +118,7 @@
 .ged-etape-saisie .combo { width: 10rem; }
 .ged-apercu { flex: 1 1 auto; min-height: 5rem; border: 1px solid var(--bord); border-radius: 4px; overflow: auto; display: flex; align-items: center; justify-content: center; background: var(--fond); }
 .ged-image { max-width: 100%; max-height: 100%; object-fit: contain; }
-.ged-pdf { width: 100%; height: 100%; min-height: 20rem; border: 0; background: #fff; align-self: stretch; }
+.ged-pdf { width: 100%; height: 100%; min-height: 20rem; border: 0; background: var(--ged-fond-pdf); align-self: stretch; }
 .ged-texte { margin: 0; padding: 0.5rem; white-space: pre-wrap; align-self: stretch; width: 100%; font-size: 0.88em; }
 .ged-sans-apercu { text-align: center; padding: 1rem; color: var(--discret); }
 .ged-chargement::before { content: "⏳ "; }
@@ -163,17 +163,17 @@
 .ged-option { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9em; color: var(--discret); }
 
 .ged-depot-zone { position: absolute; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; font-weight: 600;
-  color: var(--accent); background: rgb(29 95 191 / 0.08); border: 3px dashed var(--accent); border-radius: 8px; pointer-events: none; }
+  color: var(--accent); background: var(--ged-fond-depot); border: 3px dashed var(--accent); border-radius: 8px; pointer-events: none; }
 
 /* Dialogue de dépôt */
-.ged-dialogue-fond { position: fixed; inset: 0; z-index: 45; background: rgb(0 0 0 / 0.35); display: flex; align-items: center; justify-content: center; padding: 1rem; }
-.ged-dialogue { background: var(--surface); border-radius: 8px; box-shadow: 0 12px 40px rgb(0 0 0 / 0.3); width: min(60rem, 100%); max-height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+.ged-dialogue-fond { position: fixed; inset: 0; z-index: 45; background: var(--ged-fond-modale); display: flex; align-items: center; justify-content: center; padding: 1rem; }
+.ged-dialogue { background: var(--surface); border-radius: 8px; box-shadow: 0 12px 40px var(--ged-ombre-fenetre); width: min(60rem, 100%); max-height: 100%; display: flex; flex-direction: column; overflow: hidden; }
 .ged-dialogue > header, .ged-dialogue > footer { display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1rem; flex-wrap: wrap; }
 .ged-dialogue > header { border-bottom: 1px solid var(--bord); }
 .ged-dialogue > header .ged-fermer { margin-left: auto; }
 .ged-modes { display: inline-flex; border: 1px solid var(--bord); border-radius: 5px; overflow: hidden; margin-left: 0.5rem; }
 .ged-modes button { border: 0; border-radius: 0; background: transparent; padding: 0.2rem 0.7rem; cursor: pointer; color: inherit; font: inherit; }
-.ged-modes button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+.ged-modes button[aria-pressed="true"] { background: var(--accent); color: var(--ged-texte-sur-couleur); }
 .ged-dialogue > footer { border-top: 1px solid var(--bord); justify-content: flex-end; }
 .ged-dialogue-message { margin-right: auto; }
 .ged-dialogue-message.erreur, .ged-dialogue .erreur { color: var(--erreur); }

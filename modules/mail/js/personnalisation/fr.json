@@ -1,0 +1,26 @@
+{
+  "erreurs": {
+    "MAIL_ADRESSE_PRISE": "Cette adresse a déjà un compte",
+    "MAIL_ALIAS": "Noms obligatoires, distincts, 80 caractères au plus",
+    "MAIL_ALIAS_PRINCIPAL": "Un alias principal par compte",
+    "MAIL_AUTHENTIFICATION": "Authentification : mot de passe ou OAuth 2.0",
+    "MAIL_CODE": "Code obligatoire (30 caractères au plus)",
+    "MAIL_COMPTE_UTILISE": "Compte avec des courriels : le désactiver plutôt",
+    "MAIL_DESTINATAIRE": "Au moins un destinataire",
+    "MAIL_DOSSIER": "Rôle de dossier : RECEPTION ou A_TRAITER",
+    "MAIL_ELEMENT": "Élément introuvable",
+    "MAIL_HEBERGEUR": "Hébergeur inconnu",
+    "MAIL_IMAP": "Serveur de réception (IMAP) obligatoire pour un compte de réception",
+    "MAIL_INTERVALLE": "Relève : intervalle de 5 minutes à 24 heures",
+    "MAIL_MODELE": "Code, libellé, usage et objet obligatoires",
+    "MAIL_NON_CONFIGURE": "Aucun compte d'envoi configuré : un administrateur le paramètre dans Paramètres › Messagerie",
+    "MAIL_OAUTH": "Choisir la connexion OAuth 2.0 du compte",
+    "MAIL_OBJET": "Objet obligatoire",
+    "MAIL_PIECE": "Pièce jointe introuvable ou non lisible",
+    "MAIL_PORT": "Port invalide",
+    "MAIL_PRIORITE": "Priorité inconnue",
+    "MAIL_RECEPTION": "Ce compte ne reçoit pas de courriels",
+    "MAIL_SECURITE": "Connexion chiffrée obligatoire : SSL ou STARTTLS",
+    "MAIL_SMTP": "Serveur d'envoi (SMTP) obligatoire pour un compte d'envoi"
+  }
+}

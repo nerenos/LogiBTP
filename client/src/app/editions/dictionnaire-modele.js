@@ -1,3 +1,4 @@
+import { texte, texteHtml } from '@logibtp/socle/dictionnaire';
 import { echapper } from '@logibtp/socle/ui';
 import { CATALOGUE_FONCTIONS, CATEGORIES_FONCTIONS, CONTEXTES, FORMATS_CHAMP, OPERATEURS } from '@logibtp/edition';
 import { api } from '../api.js';
@@ -50,7 +51,7 @@ export class DictionnaireModele {
     this.zone = zone;
     this.editeur = editeur;
     this.filtre = '';
-    this.ouverts = new Set(['Fonctions : Conditions']);
+    this.ouverts = new Set([texte('edition_btp.dictionnaire.fonctions', { categorie: CATEGORIES_FONCTIONS[0] })]);
   }
 
   async charger() {
@@ -67,29 +68,29 @@ export class DictionnaireModele {
     const groupes = new Map();
     const ajouter = (titre, e) => { if (!groupes.has(titre)) groupes.set(titre, []); groupes.get(titre).push(e); };
     for (const d of this.donnees ?? []) {
-      ajouter(`Données : ${d.groupe ?? 'Source'}`, {
+      ajouter(texte('edition_btp.dictionnaire.donnees', { groupe: d.groupe ?? texte('edition_btp.dictionnaire.source') }), {
         cle: d.chemin, libelle: d.libelle, detail: d.type, exemple: apercuValeur(exemple(p.donnees, d.chemin)),
         inserer: (nu) => texteDonnee(d, nu),
       });
     }
     const parametres = new Map();
     for (const x of p.modele?.contenu?.parametres ?? []) parametres.set(x.nom, x.libelle ?? x.type ?? '');
-    for (const pr of p.modele?.contenu?.presentations ?? []) for (const k of Object.keys(pr.parametres ?? {})) if (!parametres.has(k)) parametres.set(k, `présentation ${pr.code}`);
-    parametres.set('presentation', 'code de la présentation choisie');
-    for (const [nom, libelle] of parametres) ajouter('Paramètres du modèle', { cle: nom, libelle, detail: 'paramètre', inserer: () => `Parametre("${nom}")` });
-    for (const c of CONTEXTES) ajouter('Contextes', { cle: c.nom, libelle: c.description, detail: c.exemple, inserer: () => c.nom });
+    for (const pr of p.modele?.contenu?.presentations ?? []) for (const k of Object.keys(pr.parametres ?? {})) if (!parametres.has(k)) parametres.set(k, texte('edition_btp.dictionnaire.presentation', { code: pr.code }));
+    parametres.set('presentation', texte('edition_btp.dictionnaire.code_presentation'));
+    for (const [nom, libelle] of parametres) ajouter(texte('edition_btp.dictionnaire.parametres'), { cle: nom, libelle, detail: texte('edition_btp.dictionnaire.parametre'), inserer: () => `Parametre("${nom}")` });
+    for (const c of CONTEXTES) ajouter(texte('edition_btp.dictionnaire.contextes'), { cle: c.nom, libelle: c.description, detail: c.exemple, inserer: () => c.nom });
     for (const cat of CATEGORIES_FONCTIONS) {
       for (const f of CATALOGUE_FONCTIONS.filter((x) => x.categorie === cat)) {
         const vide = /\(\)$/.test(f.signature);
-        ajouter(`Fonctions : ${cat}`, { cle: f.signature, libelle: f.description, detail: f.exemple, inserer: () => `${f.nom}()`, recul: vide ? 0 : 1 });
+        ajouter(texte('edition_btp.dictionnaire.fonctions', { categorie: cat }), { cle: f.signature, libelle: f.description, detail: f.exemple, inserer: () => `${f.nom}()`, recul: vide ? 0 : 1 });
       }
     }
-    for (const f of FORMATS_CHAMP) ajouter('Formats des champs', { cle: f.format, libelle: f.description, inserer: () => f.format.replace(':N', ':2') });
-    for (const o of OPERATEURS) ajouter('Opérateurs', { cle: o.symbole, libelle: o.description, inserer: () => o.symbole.split(' ')[0] });
+    for (const f of FORMATS_CHAMP) ajouter(texte('edition_btp.dictionnaire.formats'), { cle: f.format, libelle: f.description, inserer: () => f.format.replace(':N', ':2') });
+    for (const o of OPERATEURS) ajouter(texte('edition_btp.dictionnaire.operateurs'), { cle: o.symbole, libelle: o.description, inserer: () => o.symbole.split(' ')[0] });
     const charte = p.charte ?? {};
-    for (const [nom, s] of Object.entries(charte.styles ?? {})) ajouter('Charte : styles', { cle: nom, libelle: [s.base && `base ${s.base}`, s.taille && `${s.taille} pt`, s.graisse >= 600 && 'gras', s.italique && 'italique', s.couleur].filter(Boolean).join(', '), inserer: () => nom });
-    for (const [nom, c] of Object.entries(charte.couleurs ?? {})) ajouter('Charte : couleurs', { cle: nom, libelle: String(c), couleur: c, inserer: () => nom });
-    for (const [nom, tr] of Object.entries(charte.traits ?? {})) ajouter('Charte : traits', { cle: nom, libelle: `${tr.epaisseur} mm, ${tr.couleur}`, inserer: () => nom });
+    for (const [nom, s] of Object.entries(charte.styles ?? {})) ajouter(texte('edition_btp.dictionnaire.styles'), { cle: nom, libelle: [s.base && texte('edition_btp.dictionnaire.style_base', { base: s.base }), s.taille && texte('edition_btp.dictionnaire.style_taille', { taille: s.taille }), s.graisse >= 600 && texte('edition_btp.dictionnaire.style_gras'), s.italique && texte('edition_btp.dictionnaire.style_italique'), s.couleur].filter(Boolean).join(', '), inserer: () => nom });
+    for (const [nom, c] of Object.entries(charte.couleurs ?? {})) ajouter(texte('edition_btp.dictionnaire.couleurs'), { cle: nom, libelle: String(c), couleur: c, inserer: () => nom });
+    for (const [nom, tr] of Object.entries(charte.traits ?? {})) ajouter(texte('edition_btp.dictionnaire.traits'), { cle: nom, libelle: texte('edition_btp.dictionnaire.trait', { epaisseur: tr.epaisseur, couleur: tr.couleur }), inserer: () => nom });
     return [...groupes].map(([titre, entrees]) => ({ titre, entrees }));
   }
 
@@ -100,13 +101,13 @@ export class DictionnaireModele {
     })).filter((g) => g.entrees.length);
     this.entrees = groupes.flatMap((g) => g.entrees);
     let i = 0;
-    this.zone.innerHTML = `<div class="dictionnaire-barre"><input type="search" placeholder="Rechercher une donnée, une fonction, un style…" value="${echapper(this.filtre)}">
-        <span class="aide">Clic : insérer · Alt+clic : chemin sans {{ }}</span></div>
+    this.zone.innerHTML = `<div class="dictionnaire-barre"><input type="search" placeholder="${texteHtml('edition_btp.dictionnaire.rechercher')}" value="${echapper(this.filtre)}">
+        <span class="aide">${texteHtml('edition_btp.dictionnaire.aide')}</span></div>
       <div class="dictionnaire-corps">${groupes.map((g) => `<details ${f || this.ouverts.has(g.titre) ? 'open' : ''} data-groupe="${echapper(g.titre)}">
         <summary>${echapper(g.titre)} <small>${g.entrees.length}</small></summary>
         ${g.entrees.map((e) => `<button type="button" class="dictionnaire-entree" data-i="${i++}" title="${echapper([e.libelle, e.detail].filter(Boolean).join('\n'))}">
           <code>${echapper(e.cle)}</code><span>${e.couleur ? `<i class="pastille-couleur" style="background:${echapper(e.couleur)}"></i>` : ''}${echapper(e.libelle ?? '')}</span>${e.exemple ? `<em>${echapper(e.exemple)}</em>` : ''}</button>`).join('')}
-      </details>`).join('') || '<p class="aide">Aucune entrée.</p>'}</div>`;
+      </details>`).join('') || `<p class="aide">${texteHtml('edition_btp.dictionnaire.aucune')}</p>`}</div>`;
     const recherche = this.zone.querySelector('input[type="search"]');
     recherche.addEventListener('input', () => {
       this.filtre = recherche.value;

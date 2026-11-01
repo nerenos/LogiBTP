@@ -1,3 +1,4 @@
+import { texte, textesParCode } from '@logibtp/socle/dictionnaire';
 import { formatNombre } from '@logibtp/socle/ui';
 import { compilerFormule, resolveurColonnes, resultat, vrai } from './formule.js';
 
@@ -19,10 +20,10 @@ export const FORMATS = ['texte', 'nombre', 'date', 'coche', 'combo', 'picto', 'p
 /** Teintes des pastilles (format `pastille`, option `teinte`) : variables `--pastille-<teinte>-fond / -texte` du thème. */
 export const TEINTES_PASTILLE = ['neutre', 'info', 'envoye', 'succes', 'attention', 'erreur', 'termine', 'barre'];
 /** Totaux de colonne (ligne de pied, L3) : calculs d'agrégat d'une colonne de la source. */
-export const TOTAUX_COLONNE = Object.freeze({ somme: 'Somme', moyenne: 'Moyenne', min: 'Minimum', max: 'Maximum', compte: 'Nombre de lignes' });
+export const TOTAUX_COLONNE = textesParCode('liste.modele.totaux', ['somme', 'moyenne', 'min', 'max', 'compte']);
 /** Calculs et formats des indicateurs (bandeau de synthèse, L4). */
-export const CALCULS_INDICATEUR = Object.freeze({ somme: 'Somme', compte: 'Nombre de lignes', ratio: 'Ratio (lignes ÷ dénominateur)', moyenne: 'Moyenne', min: 'Minimum', max: 'Maximum' });
-export const FORMATS_INDICATEUR = Object.freeze({ nombre: 'Nombre', montant: 'Montant (€)', pourcentage: 'Pourcentage' });
+export const CALCULS_INDICATEUR = textesParCode('liste.modele.calculs', ['somme', 'compte', 'ratio', 'moyenne', 'min', 'max']);
+export const FORMATS_INDICATEUR = textesParCode('liste.modele.formats_indicateur', ['nombre', 'montant', 'pourcentage']);
 
 /** Texte d'une valeur d'indicateur selon son format (vide : « — »). */
 export function texteIndicateur(v, format, decimales) {
@@ -88,14 +89,14 @@ export class ModeleVue {
       try {
         if (c.calcul) this.formules.set(c.code, compilerFormule(c.formule, resoudre));
       } catch (e) {
-        this.erreurs.set(c.code, `Formule : ${e.message}`);
+        this.erreurs.set(c.code, texte('liste.modele.formule', { message: e.message }));
       }
       const regles = [];
       for (const r of c.regles) {
         try {
           regles.push({ condition: compilerFormule(r.condition, resoudre), style: r.style ?? {} });
         } catch (e) {
-          this.erreurs.set(c.code, `Règle « ${r.condition} » : ${e.message}`);
+          this.erreurs.set(c.code, texte('liste.modele.regle', { condition: r.condition, message: e.message }));
         }
       }
       this.regles.set(c.code, regles);

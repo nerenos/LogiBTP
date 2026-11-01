@@ -4,6 +4,8 @@
 // Un profil porte des lignes { nœud: { ACTION: PORTÉE } } ; un nœud sans ligne hérite de son plus proche ancêtre qui en
 // a une (« hérité »), un nœud avec une ligne garde la sienne (« propre », même vide). Un profil total (ADMIN) a tout.
 
+import { textesParCode } from '@logibtp/socle/dictionnaire';
+
 /** Actions en cascade (l'interface coche les précédentes) ; les nœuds peuvent déclarer des actions supplémentaires (RGPD…). */
 export const ACTIONS = Object.freeze(['CONSULTER', 'MODIFIER', 'VALIDER', 'CREER', 'SUPPRIMER', 'DEVERROUILLER', 'FORCER']);
 
@@ -16,21 +18,11 @@ export const ALIAS_ACTIONS = {
   CONFIDENTIEL: 'RGPD',
 };
 
-export const LIBELLES_ACTIONS = {
-  CONSULTER: 'Consulter', MODIFIER: 'Modifier', VALIDER: 'Valider', CREER: 'Créer', SUPPRIMER: 'Supprimer',
-  DEVERROUILLER: 'Déverrouiller', FORCER: 'Forcer', RGPD: 'Données RGPD', SUPERVISER: 'Superviser', USURPER: 'Usurper',
-  MODIFIER_CODE: 'Modifier le code',
-};
+export const LIBELLES_ACTIONS = textesParCode('droits.actions', ['CONSULTER', 'MODIFIER', 'VALIDER', 'CREER', 'SUPPRIMER', 'DEVERROUILLER', 'FORCER', 'RGPD', 'SUPERVISER', 'USURPER', 'MODIFIER_CODE']);
 
-export const LIBELLES_PORTEES = { SOI: 'Soi', EQUIPE: 'Son équipe', SERVICE: 'Son service', TOUT: 'Tout' };
+export const LIBELLES_PORTEES = textesParCode('droits.portees', ['SOI', 'EQUIPE', 'SERVICE', 'TOUT']);
 
-export const MESSAGES_DROITS = {
-  PROFIL_CODE: 'Code du profil : 2 à 30 caractères, une lettre puis lettres, chiffres ou _ (majuscules)',
-  PROFIL_LIBELLE: 'Libellé du profil obligatoire (100 caractères au plus)',
-  NOEUD_INVALIDE: 'Nœud de droits invalide',
-  ACTION_INCONNUE: 'Action inconnue pour ce nœud',
-  PORTEE_INCONNUE: 'Portée inconnue (SOI, EQUIPE, SERVICE ou TOUT)',
-};
+export const MESSAGES_DROITS = textesParCode('droits.erreurs_regles', ['PROFIL_CODE', 'PROFIL_LIBELLE', 'NOEUD_INVALIDE', 'ACTION_INCONNUE', 'PORTEE_INCONNUE']);
 
 const rang = (p) => PORTEES.indexOf(p);
 

@@ -1,0 +1,48 @@
+/* Thème du module Liste (module Personnalisation) : variables propres aux listes, après celles du socle. */
+
+:root {
+  /* Texte des boutons actifs sur la couleur d'accent ou d'alerte. */
+  --liste-texte-sur-couleur: #fff;
+  /* Cellules saisissables (mode Saisie) : hachures. */
+  --liste-hachures: rgb(127 127 127 / 0.07);
+  /* Menu de colonne, concepteur : ombres et fond des fenêtres. */
+  --liste-ombre-menu: rgb(0 0 0 / 0.2);
+  --liste-ombre-fenetre: rgb(0 0 0 / 0.3);
+  --liste-fond-modale: rgb(0 0 0 / 0.35);
+  /* Concepteur : couleurs proposées (champs couleur : #rrggbb) d'une colonne sans couleur et d'une nouvelle règle. */
+  --liste-texte-defaut: #000000;
+  --liste-fond-defaut: #ffffff;
+  --liste-regle-texte: #b42318;
+  --liste-regle-fond: #fdecea;
+}
+
+/* Pastilles à libellé (format pastille) : teintes de rôle, contraste AA en clair et en sombre. */
+:root {
+  --pastille-neutre-fond: #eceff3; --pastille-neutre-texte: #3d4451;
+  --pastille-info-fond: #e6effc; --pastille-info-texte: #1d4f91;
+  --pastille-envoye-fond: #dff1fb; --pastille-envoye-texte: #0b5a80;
+  --pastille-succes-fond: #e3f4ea; --pastille-succes-texte: #156036;
+  --pastille-attention-fond: #fff1db; --pastille-attention-texte: #7a4500;
+  --pastille-erreur-fond: #fdecea; --pastille-erreur-texte: #a3201a;
+  --pastille-termine-fond: #efe8fb; --pastille-termine-texte: #5a2e9c;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --pastille-neutre-fond: #343a44; --pastille-neutre-texte: #d4d9e1;
+    --pastille-info-fond: #1d3557; --pastille-info-texte: #b9d3f7;
+    --pastille-envoye-fond: #123f55; --pastille-envoye-texte: #a9dcf3;
+    --pastille-succes-fond: #173f2a; --pastille-succes-texte: #a6e3bf;
+    --pastille-attention-fond: #4a3312; --pastille-attention-texte: #f5cf94;
+    --pastille-erreur-fond: #4f1f1c; --pastille-erreur-texte: #f6b8b2;
+    --pastille-termine-fond: #36255a; --pastille-termine-texte: #d6c3f7;
+  }
+}
+:root[data-theme="dark"] {
+  --pastille-neutre-fond: #343a44; --pastille-neutre-texte: #d4d9e1;
+  --pastille-info-fond: #1d3557; --pastille-info-texte: #b9d3f7;
+  --pastille-envoye-fond: #123f55; --pastille-envoye-texte: #a9dcf3;
+  --pastille-succes-fond: #173f2a; --pastille-succes-texte: #a6e3bf;
+  --pastille-attention-fond: #4a3312; --pastille-attention-texte: #f5cf94;
+  --pastille-erreur-fond: #4f1f1c; --pastille-erreur-texte: #f6b8b2;
+  --pastille-termine-fond: #36255a; --pastille-termine-texte: #d6c3f7;
+}

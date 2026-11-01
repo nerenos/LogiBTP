@@ -1,3 +1,4 @@
+import { texte, pluriel, icone, textesParCode, couleurTheme } from '@logibtp/socle/dictionnaire';
 import { urlDocument, urlFiche, TYPE_FICHE } from '../codes.js';
 import { FAMILLE_DOCUMENT } from '@logibtp/document';
 import { echapper, formatNombre } from '@logibtp/socle/ui';
@@ -11,9 +12,9 @@ import { VueGraphe, tronquer } from '@logibtp/graphe/ui';
 
 const CLE = { projet: 'P', affaire: 'A', chantier: 'C', marche: 'M', document: 'D' };
 const ORDRE = { affaire: 0, projet: 0, chantier: 1, marche: 2 };
-const ICONES = { projet: '🎯', affaire: '🗂', chantier: '🏗', marche: '📜', document: '📄' };
-const COULEURS = { projet: '#8b5cf6', affaire: '#d14d72', chantier: '#e07b24', marche: '#2f6fd1' };
-const LIBELLES = { projet: 'Projet', affaire: 'Affaire', chantier: 'Chantier', marche: 'Marché', document: 'Document' };
+const ICONES = { projet: icone('structure_btp_projet'), affaire: icone('structure_btp_affaire'), chantier: icone('structure_btp_chantier'), marche: icone('structure_btp_marche'), document: icone('structure_btp_document') };
+const COULEURS = ['projet', 'affaire', 'chantier', 'marche'];
+const LIBELLES = textesParCode('structure_btp.graphe.types', ['projet', 'affaire', 'chantier', 'marche', 'document']);
 
 /** Éléments de la structure liés au départ (chantiers de l'affaire, marchés du chantier, parents…), sans limite de profondeur. */
 export function perimetreStructure(refs, depart) {
@@ -62,7 +63,7 @@ export function construireGrapheStructure(refs, docs, depart, { profondeur = 3, 
     }
     if (liens) {
       for (const l of docs.liens ?? []) {
-        if (tous.has(`D${l.source}`) && tous.has(`D${l.cible}`)) arete(`D${l.source}`, `D${l.cible}`, 'transformation', l.type === 'COPIE' ? 'Copie' : null);
+        if (tous.has(`D${l.source}`) && tous.has(`D${l.cible}`)) arete(`D${l.source}`, `D${l.cible}`, 'transformation', l.type === 'COPIE' ? texte('structure_btp.graphe.copie') : null);
       }
     }
   }
@@ -98,19 +99,19 @@ export class VueGrapheStructure extends VueGraphe {
 
   controlesReglages() {
     return [
-      { code: 'documents', libelle: 'Documents', titre: 'Documents rattachés (devis, commandes, situations, factures…)', type: 'case' },
-      { code: 'liens', libelle: 'Transformations', titre: 'Liens entre documents (devis → commande → facture…)', type: 'case' },
+      { code: 'documents', libelle: texte('structure_btp.graphe.reglages.documents'), titre: texte('structure_btp.graphe.reglages.documents_aide'), type: 'case' },
+      { code: 'liens', libelle: texte('structure_btp.graphe.reglages.liens'), titre: texte('structure_btp.graphe.reglages.liens_aide'), type: 'case' },
     ];
   }
 
   dimensions(n) { return n.type === 'document' ? { w: 170, h: 34 } : { w: 184, h: 46 }; }
 
-  couleurNoeud(n) { return COULEURS[n.type] ?? 'var(--bord)'; }
+  couleurNoeud(n) { return COULEURS.includes(n.type) ? couleurTheme(`--graphe-structure-${n.type}`) : 'var(--bord)'; }
 
   corpsNoeud(n, g) {
     if (n.type !== 'document') return super.corpsNoeud(n, g);
     const { x, y, w, h, bord } = g;
-    const couleur = n.famille === FAMILLE_DOCUMENT.ACHAT ? '#2f6fd1' : n.famille === FAMILLE_DOCUMENT.SOUS_TRAITANCE ? '#7c3aed' : '#2e9d5b';
+    const couleur = couleurTheme(n.famille === FAMILLE_DOCUMENT.ACHAT ? '--graphe-structure-achat' : n.famille === FAMILLE_DOCUMENT.SOUS_TRAITANCE ? '--graphe-structure-sous-traitance' : '--graphe-structure-vente');
     return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6" fill="var(--fond)" ${bord}/>
       <rect x="${x}" y="${y}" width="5" height="${h}" rx="2" fill="${couleur}"/>
       <text x="${x + 12}" y="${y + 14}" font-size="11" font-weight="600" fill="var(--texte)">${echapper(tronquer(n.libelle, 22))}</text>
@@ -127,33 +128,33 @@ export class VueGrapheStructure extends VueGraphe {
 
   libelleArete(a) { return a.libelle ? { texte: a.libelle, secondaire: false, couleur: 'var(--accent)' } : null; }
 
-  legende() { return [{ classe: 'l-hier', libelle: 'Structure' }, { classe: 'l-rat', libelle: 'Document rattaché' }, { classe: 'l-lien', libelle: 'Transformation' }]; }
+  legende() { return [{ classe: 'l-hier', libelle: texte('structure_btp.graphe.legende.structure') }, { classe: 'l-rat', libelle: texte('structure_btp.graphe.legende.rattache') }, { classe: 'l-lien', libelle: texte('structure_btp.graphe.legende.transformation') }]; }
 
   compte(g) {
-    if (!g.noeuds.length) return 'Élément introuvable';
+    if (!g.noeuds.length) return texte('structure_btp.graphe.introuvable');
     const n = (t) => g.noeuds.filter((x) => x.type === t).length;
-    return [['chantier', 'chantier(s)'], ['marche', 'marché(s)'], ['document', 'document(s)']].map(([t, l]) => `${n(t)} ${l}`).join(', ');
+    return ['chantiers', 'marches', 'documents'].map((t) => pluriel(`structure_btp.graphe.compte.${t}`, n(t.slice(0, -1)))).join(', ');
   }
 
   titreNoeud(n) { return [`${LIBELLES[n.type]} ${n.libelle}`, n.sous_titre, n.statut_document, n.objet].filter(Boolean).join(' – '); }
 
   infosNoeud(n) {
     const details = n.type === 'document'
-      ? [n.sous_titre, n.statut_document, n.total_ht !== null && n.total_ht !== undefined ? `${formatNombre(n.total_ht, 2)} € HT` : null, n.objet]
-      : [LIBELLES[n.type], n.sous_titre, n.montant_ht ? `${formatNombre(n.montant_ht, 2)} € HT` : null];
-    return `<p class="aide">${details.filter(Boolean).map(echapper).join(' · ')} · ${n.distance === 0 ? 'fiche de départ' : `à ${n.distance} saut${n.distance > 1 ? 's' : ''}`}</p>`;
+      ? [n.sous_titre, n.statut_document, n.total_ht !== null && n.total_ht !== undefined ? texte('structure_btp.graphe.montant_ht', { montant: formatNombre(n.total_ht, 2) }) : null, n.objet]
+      : [LIBELLES[n.type], n.sous_titre, n.montant_ht ? texte('structure_btp.graphe.montant_ht', { montant: formatNombre(n.montant_ht, 2) }) : null];
+    return `<p class="aide">${details.filter(Boolean).map(echapper).join(' · ')} · ${n.distance === 0 ? texteHtml('structure_btp.graphe.depart') : pluriel('structure_btp.graphe.sauts', n.distance)}</p>`;
   }
 
   boutonsNoeud(n) {
     const b = super.boutonsNoeud(n).filter((x) => n.type !== 'document' || x.code === 'ouvrir');
     const ouvrir = b.find((x) => x.code === 'ouvrir');
-    if (ouvrir && n.type === 'document') ouvrir.libelle = 'Ouvrir le document';
+    if (ouvrir && n.type === 'document') ouvrir.libelle = texte('structure_btp.graphe.ouvrir_document');
     return b;
   }
 
   relationVoisin(a, n) {
-    if (a.type === 'transformation') return a.de === n.cle ? `Transformé en${a.libelle ? ` (${a.libelle})` : ''}` : 'Issu de';
-    if (a.type === 'document') return a.de === n.cle ? 'Document rattaché' : 'Rattaché à';
+    if (a.type === 'transformation') return a.de === n.cle ? (a.libelle ? texte('structure_btp.graphe.transforme_en_type', { type: a.libelle }) : texte('structure_btp.graphe.transforme_en')) : texte('structure_btp.graphe.issu_de');
+    if (a.type === 'document') return a.de === n.cle ? texte('structure_btp.graphe.legende.rattache') : texte('structure_btp.graphe.rattache_a');
     const autre = this.noeud(a.de === n.cle ? a.vers : a.de);
     return LIBELLES[autre?.type] ?? '';
   }

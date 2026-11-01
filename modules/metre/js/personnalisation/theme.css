@@ -1,0 +1,17 @@
+/* Module Métré : ombre du panneau et couleurs du langage de script (éditeur CodeMirror), en clair puis en sombre ;
+   surchargeables par le cœur et l'installation. */
+:root {
+  --metre-ombre: rgb(0 0 0 / 0.15);
+  --code-mot: #7c3aed; --code-type: #0e7490; --code-commentaire: #6b7280; --code-nombre: #b45309; --code-chaine: #15803d;
+  --code-reference: #be185d; --code-fonction: #1d4ed8; --code-operateur: inherit;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --code-mot: #c4b5fd; --code-type: #67e8f9; --code-commentaire: #9ca3af; --code-nombre: #fcd34d; --code-chaine: #86efac;
+    --code-reference: #f9a8d4; --code-fonction: #93c5fd;
+  }
+}
+:root[data-theme="dark"] {
+  --code-mot: #c4b5fd; --code-type: #67e8f9; --code-commentaire: #9ca3af; --code-nombre: #fcd34d; --code-chaine: #86efac;
+  --code-reference: #f9a8d4; --code-fonction: #93c5fd;
+}

@@ -44,6 +44,10 @@
     <Project Path="modules/annuaire/dotnet/LogiBTP.Annuaire.Web/LogiBTP.Annuaire.Web.csproj" />
     <Project Path="modules/annuaire/dotnet/LogiBTP.Annuaire.Tests/LogiBTP.Annuaire.Tests.csproj" />
   </Folder>
+  <Folder Name="/modules/personnalisation/">
+    <Project Path="modules/personnalisation/dotnet/LogiBTP.Personnalisation.Web/LogiBTP.Personnalisation.Web.csproj" />
+    <Project Path="modules/personnalisation/dotnet/LogiBTP.Personnalisation.Tests/LogiBTP.Personnalisation.Tests.csproj" />
+  </Folder>
   <Folder Name="/modules/entreprises-fr/">
     <Project Path="modules/entreprises-fr/dotnet/LogiBTP.EntreprisesFr.Web/LogiBTP.EntreprisesFr.Web.csproj" />
     <Project Path="modules/entreprises-fr/dotnet/LogiBTP.EntreprisesFr.Tests/LogiBTP.EntreprisesFr.Tests.csproj" />

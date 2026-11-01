@@ -1,3 +1,4 @@
+import { texte, texteHtml, icone } from '@logibtp/socle/dictionnaire';
 import { echapper } from '@logibtp/socle/ui';
 import { ECHELLES, colonnes, lignesEntete, aujourdhui, arrondirAuPas, depuisMinutes } from '../src/temps.js';
 import { empiler, cumuler, ligneA, visibles } from '../src/disposition.js';
@@ -38,7 +39,7 @@ export class VuePlanning {
     this.#o = { echelle: 'JOUR', largeurColonne: 48, hauteurVoie: VuePlanning.hauteurVoie(options.lignesTexte ?? 1), lignesTexte: 1, hauteurAdaptee: true, pas: 15, largeurEntete: 220, aujourdhui: aujourdhui(), feries: [], actions: {}, ...options };
     conteneur.classList.add('vue-planning');
     conteneur.classList.toggle('lecture', Boolean(this.#o.lecture));
-    conteneur.innerHTML = `<div class="vp-poignee-entete" title="Glisser pour régler la largeur des titres des lignes (double-clic : ajuster au contenu)"></div><div class="vp-coin"></div><div class="vp-entete"><div class="vp-entete-plan"></div></div>
+    conteneur.innerHTML = `<div class="vp-poignee-entete" title="${texteHtml('planning.vue.largeur_titres')}"></div><div class="vp-coin"></div><div class="vp-entete"><div class="vp-entete-plan"></div></div>
       <div class="vp-lignes"><div class="vp-lignes-plan"></div></div><div class="vp-corps"><div class="vp-plan"><div class="vp-fond"></div><div class="vp-barres"></div><div class="vp-surcouche"></div></div></div>`;
     this.corps = conteneur.querySelector('.vp-corps');
     this.plan = conteneur.querySelector('.vp-plan');
@@ -97,7 +98,7 @@ export class VuePlanning {
   /** Bulle d'une barre (HTML), affichée dès le survol ; null = infobulle du navigateur (`titreBarre`). */
   bulleBarre() { return null; }
   /** Infobulle d'une barre (sans bulle). */
-  titreBarre(t) { return `${t.libelle ?? ''}\n${depuisMinutes(t.debut).replace('T', ' ')} → ${depuisMinutes(t.fin).replace('T', ' ')}`; }
+  titreBarre(t) { return `${t.libelle ?? ''}\n${depuisMinutes(t.debut).replace('T', ' ')} ${icone('planning_vers')} ${depuisMinutes(t.fin).replace('T', ' ')}`; }
   /** HTML de l'en-tête d'une ligne. */
   enteteLigne(l) { return echapper(l.libelle ?? ''); }
   /** Classes supplémentaires d'une ligne. */
@@ -332,7 +333,7 @@ export class VuePlanning {
     const a = this.#o.echelle === 'SEMAINE' ? colonnes(j, j + 1, 'SEMAINE')[0].debut : j;
     const b = a + (this.#o.echelle === 'SEMAINE' ? 10080 : 1440);
     if (b <= this.#o.debut || a >= this.#o.fin || this.x(b) <= this.x(a)) return '';
-    return `<div class="vp-aujourdhui" style="left:${this.x(a)}px;width:${this.x(b) - this.x(a)}px" title="Aujourd'hui"></div>`;
+    return `<div class="vp-aujourdhui" style="left:${this.x(a)}px;width:${this.x(b) - this.x(a)}px" title="${texteHtml('planning.vue.aujourdhui')}"></div>`;
   }
 
   /**
@@ -351,8 +352,8 @@ export class VuePlanning {
     fond.innerHTML = separations + (echelle === 'SEMAINE' ? '' : colonnes(debut, fin, 'JOUR').filter((x) => x.weekend)
       .map((x) => [this.x(x.debut), this.x(x.fin)]).filter(([a, b]) => b > a).map(([a, b]) => `<div class="vp-weekend" style="left:${a}px;width:${b - a}px"></div>`).join(''))
       + this.#o.feries.filter((f) => f.jour + 1440 > debut && f.jour < fin).map((f) => [this.x(Math.max(f.jour, debut)), this.x(Math.min(f.jour + 1440, fin)), f.libelle])
-        .filter(([a, b]) => b > a).map(([a, b, l]) => `<div class="vp-ferie" style="left:${a}px;width:${b - a}px" title="${echapper(l ?? 'Jour férié')}"></div>`).join('')
-      + this.#axe.coupures.map((x) => `<div class="vp-coupure" style="left:${x}px" title="Période masquée"></div>`).join('') + this.#aujourdhui();
+        .filter(([a, b]) => b > a).map(([a, b, l]) => `<div class="vp-ferie" style="left:${a}px;width:${b - a}px" title="${echapper(l ?? texte('planning.vue.ferie'))}"></div>`).join('')
+      + this.#axe.coupures.map((x) => `<div class="vp-coupure" style="left:${x}px" title="${texteHtml('planning.vue.periode_masquee')}"></div>`).join('') + this.#aujourdhui();
   }
 
   /** Dessine tout de suite (sans attendre l'image suivante). */
@@ -537,7 +538,8 @@ export class VuePlanning {
     const top = this.#positions[g.ligne] + (g.ligne === g.depart.ligne ? g.voie : 3);
     Object.assign(g.surcouche.style, { left: `${gauche}px`, width: `${Math.max(3, largeur)}px`, top: `${top}px` });
     const date = (m) => { const d = depuisMinutes(m); return `${d.slice(8, 10)}/${d.slice(5, 7)} ${d.slice(11, 16)}`; };
-    g.etiquette.textContent = mode === 'deplacer' ? `${g.copie ? '＋ copie · ' : ''}début ${date(g.debut)}` : mode === 'debut' ? `début ${date(g.debut)}` : `fin ${date(g.fin)}`;
+    const debut = texte('planning.vue.glisser_debut', { date: date(g.debut) });
+    g.etiquette.textContent = mode === 'deplacer' ? `${g.copie ? `${icone('ajouter')} ${texte('planning.vue.glisser_copie')} · ` : ''}${debut}` : mode === 'debut' ? debut : texte('planning.vue.glisser_fin', { date: date(g.fin) });
     // Étiquette au-dessus de la surcouche, ou dessous en haut du planning.
     const dessous = top - this.corps.scrollTop < 24;
     g.etiquette.classList.toggle('dessous', dessous);

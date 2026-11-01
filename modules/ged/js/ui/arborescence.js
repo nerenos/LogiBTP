@@ -8,6 +8,8 @@
 // Les répertoires créés par les utilisateurs s'ajoutent sous chaque nœud lié à un élément (ou sans élément) : c'est
 // l'explorateur qui les lit (fournisseur.repertoires). L'application dérive cette classe pour ses propres nœuds
 // automatiques (structure des affaires, documents enfants…) : racine(), enfants(noeud).
+import { texte, icone } from '@logibtp/socle/dictionnaire';
+
 
 export class ArborescenceGed {
   /** contexte : { type_element, id_element, libelle, icone } ou null (GED globale). */
@@ -18,8 +20,8 @@ export class ArborescenceGed {
   /** Nœud racine : l'élément ouvert (fiche, document), ou les documents sans élément de la GED globale. */
   async racine() {
     const c = this.contexte;
-    if (!c) return { cle: 'racine', libelle: 'Documents', icone: '🗂', element: null };
-    return { cle: `${c.type_element}:${c.id_element}`, libelle: c.libelle ?? `${c.type_element} ${c.id_element}`, icone: c.icone ?? '📁',
+    if (!c) return { cle: 'racine', libelle: texte('ged.arborescence.documents'), icone: icone('ged_racine'), element: null };
+    return { cle: `${c.type_element}:${c.id_element}`, libelle: c.libelle ?? `${c.type_element} ${c.id_element}`, icone: c.icone ?? icone('ged_dossier'),
       element: { type_element: c.type_element, id_element: String(c.id_element) } };
   }
 

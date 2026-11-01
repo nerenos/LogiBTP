@@ -1,0 +1,14 @@
+{
+  "sous_traitance_piece_fournie": "✅",
+  "sous_traitance_piece_a_echeance": "⏳",
+  "sous_traitance_piece_expiree": "⛔",
+  "sous_traitance_piece_manquante": "❌",
+  "sous_traitance_piece_absente": "▫",
+  "sous_traitance_piece_dispensee": "➖",
+  "sous_traitance_pd_recue": "📥",
+  "sous_traitance_pd_acceptee": "✅",
+  "sous_traitance_pd_partielle": "◐",
+  "sous_traitance_pd_refusee": "⛔",
+  "sous_traitance_pd_transmise": "📤",
+  "sous_traitance_pd_payee": "💶"
+}

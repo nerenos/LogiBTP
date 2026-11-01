@@ -1,3 +1,4 @@
+import { texte, textesParCode } from '@logibtp/socle/dictionnaire';
 import { EditorState, Prec } from '@codemirror/state';
 import {
   EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, drawSelection, placeholder,
@@ -18,6 +19,7 @@ import { FONCTIONS } from '../src/script/fonctions.js';
 // structures à compléter (Tab : champ suivant), erreurs soulignées avec marque dans la marge.
 
 const TYPES = ['numérique', 'chaîne', 'booléen'];
+const NOMS_TYPES = textesParCode('metre.script.types', ['N', 'C', 'B']);
 const MOTS = ['Si', 'alors', 'Sinon', 'SinonSi', 'Fin', 'Pour', 'à', 'pas', 'Renvoyer', 'Sortir', 'Continuer', 'et', 'ou', 'modulo', 'Vrai', 'Faux', 'local', 'est un', 'est une'];
 const OUVRANTS = new Set(['si', 'pour']);
 const FERMANTS = /^\s*(fin|sinon|sinonsi)\b/i;
@@ -25,19 +27,19 @@ const OUVRE_BLOC = /^\s*(si|sinon|sinonsi|pour)\b/i;
 
 /** Structures du langage insérées comme modèles à compléter (Tab : champ suivant). */
 export const STRUCTURES = [
-  { libelle: 'Si … alors … Fin', modele: 'Si ${condition} alors\n\t${}\nFin' },
-  { libelle: 'Si … alors … Sinon … Fin', modele: 'Si ${condition} alors\n\t${}\nSinon\n\t${}\nFin' },
-  { libelle: 'SinonSi … alors', modele: 'SinonSi ${condition} alors\n\t${}' },
-  { libelle: 'Pour … à … Fin', modele: 'Pour ${i} = ${début} à ${fin}\n\t${}\nFin' },
-  { libelle: 'Pour … à … pas … Fin', modele: 'Pour ${i} = ${début} à ${fin} pas ${pas}\n\t${}\nFin' },
-  { libelle: 'Sortir de la boucle', modele: 'Sortir' },
-  { libelle: 'Tour suivant de la boucle', modele: 'Continuer' },
-  { libelle: 'Déclaration numérique', modele: '${Nom} est un numérique = ${valeur}' },
-  { libelle: 'Déclaration chaîne', modele: '${Nom} est une chaîne = "${texte}"' },
-  { libelle: 'Déclaration booléen', modele: '${Nom} est un booléen = ${Vrai}' },
-  { libelle: 'Variable locale', modele: 'local ${Nom} est un numérique = ${valeur}' },
-  { libelle: 'Renvoyer la quantité', modele: 'Renvoyer ${quantité}' },
-  { libelle: 'Commentaire', modele: '// ${}' },
+  { get libelle() { return texte('metre.editeur.structures.si'); }, modele: 'Si ${condition} alors\n\t${}\nFin' },
+  { get libelle() { return texte('metre.editeur.structures.si_sinon'); }, modele: 'Si ${condition} alors\n\t${}\nSinon\n\t${}\nFin' },
+  { get libelle() { return texte('metre.editeur.structures.sinonsi'); }, modele: 'SinonSi ${condition} alors\n\t${}' },
+  { get libelle() { return texte('metre.editeur.structures.pour'); }, modele: 'Pour ${i} = ${début} à ${fin}\n\t${}\nFin' },
+  { get libelle() { return texte('metre.editeur.structures.pour_pas'); }, modele: 'Pour ${i} = ${début} à ${fin} pas ${pas}\n\t${}\nFin' },
+  { get libelle() { return texte('metre.editeur.structures.sortir'); }, modele: 'Sortir' },
+  { get libelle() { return texte('metre.editeur.structures.continuer'); }, modele: 'Continuer' },
+  { get libelle() { return texte('metre.editeur.structures.numerique'); }, modele: '${Nom} est un numérique = ${valeur}' },
+  { get libelle() { return texte('metre.editeur.structures.chaine'); }, modele: '${Nom} est une chaîne = "${texte}"' },
+  { get libelle() { return texte('metre.editeur.structures.booleen'); }, modele: '${Nom} est un booléen = ${Vrai}' },
+  { get libelle() { return texte('metre.editeur.structures.locale'); }, modele: 'local ${Nom} est un numérique = ${valeur}' },
+  { get libelle() { return texte('metre.editeur.structures.renvoyer'); }, modele: 'Renvoyer ${quantité}' },
+  { get libelle() { return texte('metre.editeur.structures.commentaire'); }, modele: '// ${}' },
 ];
 
 /** Modèle d'appel d'une fonction depuis sa signature : Arrondi(x; décimales) → Arrondi(${x}; ${décimales}). */
@@ -193,7 +195,7 @@ function completion(source) {
       ...(apresEst ? [] : [
         ...MOTS.map((x) => ({ label: x, type: 'keyword' })),
         ...declarations.map((d) => ({
-          label: d.nom, type: 'variable', detail: `${{ N: 'numérique', C: 'chaîne', B: 'booléen' }[d.type]}${d.local ? ' · locale' : ''}`, boost: 20,
+          label: d.nom, type: 'variable', detail: d.local ? texte('metre.editeur.detail_locale', { type: NOMS_TYPES[d.type] }) : NOMS_TYPES[d.type], boost: 20,
         })),
         ...Object.values(fonctions).map((f) => snippetCompletion(modeleFonction(f), {
           label: f.signature.split('(')[0], detail: f.signature, info: f.description, type: 'function', boost: 10,
@@ -228,7 +230,7 @@ function diagnosticsDe(doc, liste, gravite) {
  * avertissements } d'exécution du texte (positionnés ; le texte analysé localement donne les erreurs d'analyse).
  */
 export class EditeurScript {
-  constructor(conteneur, { texte = '', surChangement, surEchap, dictionnaire = () => [], fonctions, diagnostics = () => null } = {}) {
+  constructor(conteneur, { texte: initial = '', surChangement, surEchap, dictionnaire = () => [], fonctions, diagnostics = () => null } = {}) {
     this.surChangement = surChangement;
     this.externe = false;
     const lint = linter((vue) => {
@@ -242,14 +244,14 @@ export class EditeurScript {
     this.vue = new EditorView({
       parent: conteneur,
       state: EditorState.create({
-        doc: texte,
+        doc: initial,
         extensions: [
           lineNumbers(), highlightActiveLineGutter(), highlightActiveLine(), drawSelection(), history(), bracketMatching(), closeBrackets(),
           indentOnInput(), indentUnit.of('\t'), EditorState.tabSize.of(4),
           langage, indentation, syntaxHighlighting(coloration), theme, EditorView.lineWrapping,
           autocompletion({ override: [completion({ dictionnaire, fonctions })], activateOnTyping: true }),
           lint, lintGutter(),
-          placeholder('Déclarations en tête, instructions, puis « Renvoyer » la quantité…'),
+          placeholder(texte('metre.editeur.placeholder')),
           keymap.of([
             ...closeBracketsKeymap, ...completionKeymap, ...lintKeymap,
             { key: 'Escape', run: () => { surEchap?.(); return Boolean(surEchap); } },

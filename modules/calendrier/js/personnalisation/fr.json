@@ -1,0 +1,43 @@
+{
+  "erreurs": {
+    "CALENDRIER": "Code et libellé obligatoires",
+    "CALENDRIER_DEFAUT": "Le calendrier par défaut ne se supprime pas",
+    "CALENDRIER_UTILISE": "Calendrier utilisé (services, ressources) : désactivez-le",
+    "FER_LIBELLE": "Libellé obligatoire"
+  },
+  "calendrier": {
+    "regles": {
+      "DATE": "Date unique",
+      "ANNUEL": "Chaque année (jour et mois)",
+      "NIEME": "N-ième jour de la semaine du mois",
+      "DERNIER": "Dernier jour de la semaine du mois",
+      "PAQUES": "Relatif à Pâques",
+      "PERIODE": "Période de fermeture"
+    },
+    "erreurs_regles": {
+      "CAL_REFERENCE": "Date de référence obligatoire pour un cycle de plusieurs semaines",
+      "PLG_JOUR": "Jour de la semaine de 1 (lundi) à 7 (dimanche)",
+      "PLG_SEMAINE": "Semaine du cycle inexistante",
+      "PLG_HEURES": "Plage horaire : début avant la fin, entre 0 h et 24 h",
+      "PLG_PERIODE": "Période de la plage : fin avant le début",
+      "PLG_CHEVAUCHEMENT": "Plages horaires qui se chevauchent",
+      "FER_REGLE": "Règle de jour fermé inconnue",
+      "FER_DATE": "Date obligatoire",
+      "FER_MOIS": "Mois de 1 à 12",
+      "FER_JOUR": "Jour invalide",
+      "FER_RANG": "Rang de 1 à 5",
+      "FER_PERIODE": "Période : début et fin obligatoires, fin après le début",
+      "CALENDRIER_VIDE": "Aucun temps de travail dans le calendrier",
+      "CAL_CYCLE": "Cycle de 1 à {{max}} semaines"
+    },
+    "jours": {
+      "1": "Lundi",
+      "2": "Mardi",
+      "3": "Mercredi",
+      "4": "Jeudi",
+      "5": "Vendredi",
+      "6": "Samedi",
+      "7": "Dimanche"
+    }
+  }
+}

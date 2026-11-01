@@ -1,4 +1,5 @@
 import { echapper } from './format.js';
+import { texte } from '../dictionnaire/index.js';
 
 // Fenêtres d'interaction communes, par l'élément HTML5 <dialog> (affichage homogène, au-dessus de tout, page inerte
 // derrière) : remplacent confirm(), alert() et prompt() du navigateur, qui bloquent la page et ne suivent pas le thème.
@@ -66,9 +67,9 @@ export function ouvrirDialogue({ titre = '', message = '', html, boutons = [], v
 }
 
 /** Question oui / non (confirm) : true si l'utilisateur confirme. Une suppression (« Supprimer… ») a son bouton en rouge. */
-export function confirmer(message, { titre = 'Confirmation', html, classe, ...options } = {}) {
-  const suppression = /^Supprimer/.test(message ?? '');
-  const { ok = suppression ? 'Supprimer' : 'OK', annuler = 'Annuler', danger = suppression } = options;
+export function confirmer(message, { titre = texte('socle.dialogue.confirmation'), html, classe, ...options } = {}) {
+  const suppression = String(message ?? '').startsWith(texte('commun.supprimer'));
+  const { ok = suppression ? texte('commun.supprimer') : texte('commun.ok'), annuler = texte('commun.annuler'), danger = suppression } = options;
   return ouvrirDialogue({
     titre, message, html, classe, valeurAnnulation: false,
     boutons: [{ libelle: annuler, valeur: false }, { libelle: ok, valeur: true, principal: true, danger }],
@@ -76,7 +77,7 @@ export function confirmer(message, { titre = 'Confirmation', html, classe, ...op
 }
 
 /** Information à lire (alert) : la promesse se résout à la fermeture. */
-export function alerter(message, { titre = 'Information', ok = 'OK', html, classe } = {}) {
+export function alerter(message, { titre = texte('socle.dialogue.information'), ok = texte('commun.ok'), html, classe } = {}) {
   return ouvrirDialogue({ titre, message, html, classe, valeurAnnulation: undefined, boutons: [{ libelle: ok, valeur: undefined, principal: true }] });
 }
 
@@ -84,7 +85,9 @@ export function alerter(message, { titre = 'Information', ok = 'OK', html, class
  * Saisie d'un texte (prompt) : le texte saisi (éventuellement vide), ou null si l'utilisateur annule.
  * Options : multiligne (zone de texte, Ctrl+Entrée = OK), obligatoire (OK inactif tant que le texte est vide).
  */
-export function saisir(message, defaut = '', { titre = 'Saisie', ok = 'OK', annuler = 'Annuler', multiligne = false, obligatoire = false, classe } = {}) {
+export function saisir(message, defaut = '', {
+  titre = texte('socle.dialogue.saisie'), ok = texte('commun.ok'), annuler = texte('commun.annuler'), multiligne = false, obligatoire = false, classe,
+} = {}) {
   const champ = multiligne
     ? `<textarea class="dialogue-champ" rows="4">${echapper(defaut ?? '')}</textarea>`
     : `<input type="text" class="dialogue-champ" value="${echapper(defaut ?? '')}">`;

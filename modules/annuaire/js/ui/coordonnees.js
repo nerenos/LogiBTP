@@ -1,3 +1,4 @@
+import { texte, texteHtml, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { echapper, ouvrirModale, formatDateHeure, confirmer } from '@logibtp/socle/ui';
 import { NATURES, RESEAUX, texteCoordonnee, memesValeurs, estVide } from '../src/coordonnees.js';
 import { formaterTelephone } from '../src/identifiants.js';
@@ -18,7 +19,8 @@ const lien = (u) => {
 };
 
 const libelleUsage = (nature, code) => NATURES.find((n) => n.code === nature)?.usages.find(([c]) => c === code)?.[1] ?? code ?? '';
-const libelleFiche = (p) => `${{ personne: '🏢', individu: '👤', rattachement: '🤝' }[p.type] ?? ''} ${p.libelle}${p.usage ? ` (${libelleUsage(null, p.usage) || p.usage})` : ''}`;
+const ICONES_FICHE = { personne: 'annuaire_personne', individu: 'annuaire_individu', rattachement: 'annuaire_rattachement' };
+const libelleFiche = (p) => `${ICONES_FICHE[p.type] ? icone(ICONES_FICHE[p.type]) : ''} ${p.libelle}${p.usage ? ` (${libelleUsage(null, p.usage) || p.usage})` : ''}`;
 
 /** La coordonnée a été changée par rapport à sa valeur d'origine (lue ou reprise). */
 export const coordonneeChangee = (u) => !!u.coo_id && !!u.origine && !memesValeurs(u, u.origine);
@@ -68,21 +70,22 @@ export class EditeurCoordonnees {
   /** Adresse signalée non remise par la messagerie : effaçable une fois vérifiée, retirée si la valeur change. */
   #nonRemise(u) {
     if (!u.non_remis_le || coordonneeChangee(u)) return '';
-    const titre = `Non remise le ${formatDateHeure(u.non_remis_le)}${u.non_remis_motif ? ` : ${u.non_remis_motif}` : ''}`;
+    const le = formatDateHeure(u.non_remis_le);
+    const titre = u.non_remis_motif ? texte('annuaire.coordonnees.non_remise_motif', { le, motif: u.non_remis_motif }) : texte('annuaire.coordonnees.non_remise_le', { le });
     return this.options.effacerNonRemise
-      ? `<button type="button" class="coord-partage change" data-non-remise title="${echapper(titre)} (cliquer pour effacer la marque)">⚠ non remise</button>`
-      : `<span class="coord-partage change" title="${echapper(titre)}">⚠ non remise</span>`;
+      ? `<button type="button" class="coord-partage change" data-non-remise title="${texteHtml('annuaire.coordonnees.non_remise_effacer', { titre })}">${iconeHtml('avertissement')} ${texteHtml('annuaire.coordonnees.non_remise')}</button>`
+      : `<span class="coord-partage change" title="${echapper(titre)}">${iconeHtml('avertissement')} ${texteHtml('annuaire.coordonnees.non_remise')}</span>`;
   }
 
   #partage(u) {
     const n = u.partages?.length ?? 0;
     if (!n) return '';
-    const titre = `Partagée avec : ${u.partages.map(libelleFiche).join(', ')}`;
+    const titre = texte('annuaire.coordonnees.partagee_avec', { fiches: u.partages.map(libelleFiche).join(', ') });
     if (coordonneeChangee(u)) {
-      const choix = { MODIFICATION: 'modifiée partout', AUTRE: 'autre information' }[u.choix];
-      return `<span class="coord-partage change" title="${echapper(titre)}">🔗 ${n} · ${choix ?? 'choix à l\'enregistrement'}</span>`;
+      const choix = u.choix ? texteHtml(`annuaire.coordonnees.choix.${u.choix}`) : texteHtml('annuaire.coordonnees.choix_a_faire');
+      return `<span class="coord-partage change" title="${echapper(titre)}">${iconeHtml('annuaire_partage')} ${n} · ${choix}</span>`;
     }
-    return `<button type="button" class="coord-partage" data-partages title="${echapper(titre)}">🔗 ${n}</button>`;
+    return `<button type="button" class="coord-partage" data-partages title="${echapper(titre)}">${iconeHtml('annuaire_partage')} ${n}</button>`;
   }
 
   rendre() {
@@ -91,37 +94,37 @@ export class EditeurCoordonnees {
     const parNature = NATURES.map((n) => ({ ...n, lignes: usages.map((u, i) => ({ u, i })).filter(({ u }) => u.nature === n.code) }));
     this.conteneur.innerHTML = `<div class="coord ${this.options.compact ? 'compact' : ''}">
       ${parNature.filter((n) => modifiable || n.lignes.some(({ u }) => !estVide(u))).map((n) => `<section class="coord-nature" data-nature="${n.code}">
-        <h4>${n.icone} ${n.libelle}</h4>
-        ${n.lignes.filter(({ u }) => modifiable || !estVide(u)).map(({ u, i }) => this.#ligne(n, u, i)).join('') || '<p class="aide">Aucune.</p>'}
-      </section>`).join('') || '<p class="aide">Aucune coordonnée.</p>'}
-      ${modifiable ? `<p class="coord-ajouts">${NATURES.map((n) => `<button type="button" data-ajout="${n.code}">＋ ${n.un}</button>`).join('')}
-        ${this.options.proposer ? '<button type="button" data-reprendre title="Reprendre une coordonnée d\'une fiche liée : elle reste partagée (même identifiant)">⤵ Reprendre d\'une fiche liée…</button>' : ''}</p>` : ''}
+        <h4>${n.icone} ${echapper(n.libelle)}</h4>
+        ${n.lignes.filter(({ u }) => modifiable || !estVide(u)).map(({ u, i }) => this.#ligne(n, u, i)).join('') || `<p class="aide">${texteHtml('annuaire.coordonnees.aucune')}</p>`}
+      </section>`).join('') || `<p class="aide">${texteHtml('annuaire.coordonnees.aucune_coordonnee')}</p>`}
+      ${modifiable ? `<p class="coord-ajouts">${NATURES.map((n) => `<button type="button" data-ajout="${n.code}">${iconeHtml('ajouter')} ${echapper(n.un)}</button>`).join('')}
+        ${this.options.proposer ? `<button type="button" data-reprendre title="${texteHtml('annuaire.coordonnees.reprendre_aide')}">${iconeHtml('annuaire_reprendre')} ${texteHtml('annuaire.coordonnees.reprendre_bouton')}</button>` : ''}</p>` : ''}
     </div>`;
     this.#brancher();
   }
 
   #ligne(n, u, i) {
     const { modifiable } = this.options;
-    const usage = `<select data-c="usage" ${modifiable ? '' : 'disabled'}><option value=""></option>${n.usages.map(([c, l]) => `<option value="${c}" ${c === u.usage ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+    const usage = `<select data-c="usage" ${modifiable ? '' : 'disabled'}><option value=""></option>${n.usages.map(([c, l]) => `<option value="${c}" ${c === u.usage ? 'selected' : ''}>${echapper(l)}</option>`).join('')}</select>`;
     if (!modifiable) {
-      return `<div class="coord-ligne lecture" data-i="${i}">${u.principal ? '<span class="coord-principal" title="Principal">★</span>' : '<span class="coord-principal"></span>'}
+      return `<div class="coord-ligne lecture" data-i="${i}">${u.principal ? `<span class="coord-principal" title="${texteHtml('annuaire.coordonnees.principal')}">${iconeHtml('annuaire_principal')}</span>` : '<span class="coord-principal"></span>'}
         <span class="coord-usage">${echapper(libelleUsage(n.code, u.usage))}${u.libelle ? ` · ${echapper(u.libelle)}` : ''}</span>
         <span class="coord-valeur">${u.nature === 'WEB' && u.reseau ? `<small>${echapper(RESEAUX.find(([c]) => c === u.reseau)?.[1] ?? u.reseau)}</small> ` : ''}${lien(u)}</span>
-        <span class="coord-etat">${this.#etat(u)}</span>${u.coo_id && this.options.historique ? `<button type="button" class="coord-histo" data-historique title="Historique des valeurs">🕘</button>` : ''}</div>`;
+        <span class="coord-etat">${this.#etat(u)}</span>${u.coo_id && this.options.historique ? `<button type="button" class="coord-histo" data-historique title="${texteHtml('annuaire.coordonnees.historique_aide')}">${iconeHtml('annuaire_historique')}</button>` : ''}</div>`;
     }
-    const champ = (c, place, classe = '', type = 'text') => `<input type="${type}" data-c="${c}" class="${classe}" placeholder="${place}" value="${echapper(u[c] ?? '')}">`;
+    const champ = (c, place, classe = '', type = 'text') => `<input type="${type}" data-c="${c}" class="${classe}" placeholder="${echapper(place)}" value="${echapper(u[c] ?? '')}">`;
     const valeurs = {
-      ADRESSE: `<div class="coord-adresse">${champ('ligne1', 'N° et voie', 'l1')}${champ('ligne2', 'Complément', 'l2')}${champ('code_postal', 'CP', 'cp')}${champ('ville', 'Ville', 'ville')}${champ('pays', 'Pays', 'pays')}</div>`,
-      TELEPHONE: champ('valeur', 'Numéro', '', 'tel'),
-      EMAIL: champ('valeur', 'adresse@exemple.fr', '', 'email'),
-      WEB: `<select data-c="reseau"><option value="">Lien</option>${RESEAUX.map(([c, l]) => `<option value="${c}" ${c === u.reseau ? 'selected' : ''}>${l}</option>`).join('')}</select>${champ('valeur', 'https://… ou pseudo')}`,
+      ADRESSE: `<div class="coord-adresse">${champ('ligne1', texte('annuaire.coordonnees.champs.ligne1'), 'l1')}${champ('ligne2', texte('annuaire.coordonnees.champs.ligne2'), 'l2')}${champ('code_postal', texte('annuaire.coordonnees.champs.code_postal'), 'cp')}${champ('ville', texte('annuaire.coordonnees.champs.ville'), 'ville')}${champ('pays', texte('annuaire.coordonnees.champs.pays'), 'pays')}</div>`,
+      TELEPHONE: champ('valeur', texte('annuaire.coordonnees.champs.numero'), '', 'tel'),
+      EMAIL: champ('valeur', texte('annuaire.coordonnees.champs.email'), '', 'email'),
+      WEB: `<select data-c="reseau"><option value="">${texteHtml('annuaire.coordonnees.champs.lien')}</option>${RESEAUX.map(([c, l]) => `<option value="${c}" ${c === u.reseau ? 'selected' : ''}>${echapper(l)}</option>`).join('')}</select>${champ('valeur', texte('annuaire.coordonnees.champs.web'))}`,
     }[n.code];
     return `<div class="coord-ligne" data-i="${i}">
-      <label class="coord-principal" title="Coordonnée principale"><input type="radio" name="principal-${n.code}-${this.options.nom ?? ''}" data-principal ${u.principal ? 'checked' : ''}>★</label>
-      ${usage}<input data-c="libelle" class="coord-libelle" placeholder="Libellé" value="${echapper(u.libelle ?? '')}">
+      <label class="coord-principal" title="${texteHtml('annuaire.coordonnees.principale_aide')}"><input type="radio" name="principal-${n.code}-${this.options.nom ?? ''}" data-principal ${u.principal ? 'checked' : ''}>${iconeHtml('annuaire_principal')}</label>
+      ${usage}<input data-c="libelle" class="coord-libelle" placeholder="${texteHtml('commun.libelle')}" value="${echapper(u.libelle ?? '')}">
       <div class="coord-valeurs">${valeurs}</div>
       <span class="coord-etat">${this.#etat(u)}</span>
-      <button type="button" data-supprimer title="Retirer de cette fiche">✕</button></div>`;
+      <button type="button" data-supprimer title="${texteHtml('annuaire.coordonnees.retirer_aide')}">${iconeHtml('retirer')}</button></div>`;
   }
 
   #brancher() {
@@ -149,36 +152,36 @@ export class EditeurCoordonnees {
   }
 
   #partages(u) {
-    const d = dialogue('🔗 Coordonnée partagée', `<p><b>${echapper(texteCoordonnee(u))}</b></p>
-      <p>Même coordonnée (même identifiant) utilisée par :</p><ul class="coord-fiches">${u.partages.map((p, i) => `<li><a href="#" data-f="${i}">${echapper(libelleFiche(p))}</a></li>`).join('')}</ul>
-      <p class="aide">Une modification de cette coordonnée vous demandera, à l'enregistrement, si elle vaut pour toutes ces fiches ou seulement pour celle-ci.</p>`);
+    const d = dialogue(texte('annuaire.coordonnees.partagee.titre', { icone: icone('annuaire_partage') }), `<p><b>${echapper(texteCoordonnee(u))}</b></p>
+      <p>${texteHtml('annuaire.coordonnees.partagee.utilisee_par')}</p><ul class="coord-fiches">${u.partages.map((p, i) => `<li><a href="#" data-f="${i}">${echapper(libelleFiche(p))}</a></li>`).join('')}</ul>
+      <p class="aide">${texteHtml('annuaire.coordonnees.partagee.aide')}</p>`);
     d.corps.querySelectorAll('[data-f]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); d.fermer(); this.options.ouvrirFiche?.(u.partages[Number(a.dataset.f)]); }));
   }
 
   async #effacerNonRemise(i) {
     const u = this.usages[i];
-    if (!await confirmer(`Effacer la marque « non remise » de ${texteCoordonnee(u)} ?`)) return;
+    if (!await confirmer(texte('annuaire.coordonnees.non_remise_confirmer', { coordonnee: texteCoordonnee(u) }))) return;
     await this.options.effacerNonRemise(u.coo_id);
     this.#modifier(i, { non_remis_le: null, non_remis_motif: null, choix: u.choix }, true);
   }
 
   async #historique(u) {
     const h = await this.options.historique(u.coo_id);
-    dialogue('🕘 Historique de la coordonnée', `<p>Valeur actuelle : <b>${echapper(texteCoordonnee(u))}</b></p>
-      ${h.length ? `<table class="coord-table"><thead><tr><th>Remplacée le</th><th>Par</th><th>Valeur précédente</th></tr></thead><tbody>
+    dialogue(texte('annuaire.coordonnees.historique.titre', { icone: icone('annuaire_historique') }), `<p>${texteHtml('annuaire.coordonnees.historique.actuelle')} <b>${echapper(texteCoordonnee(u))}</b></p>
+      ${h.length ? `<table class="coord-table"><thead><tr><th>${texteHtml('annuaire.coordonnees.historique.le')}</th><th>${texteHtml('annuaire.coordonnees.historique.par')}</th><th>${texteHtml('annuaire.coordonnees.historique.avant')}</th></tr></thead><tbody>
         ${h.map((x) => `<tr><td>${formatDateHeure(x.le)}</td><td>${echapper(x.par ?? '')}</td><td>${echapper(texteCoordonnee({ ...x.avant, nature: u.nature }))}</td></tr>`).join('')}</tbody></table>`
-        : '<p class="aide">Aucune modification enregistrée.</p>'}`);
+        : `<p class="aide">${texteHtml('annuaire.coordonnees.historique.aucune')}</p>`}`);
   }
 
   /** Reprise d'une coordonnée d'une fiche liée : même identifiant (partagée), valeurs d'origine conservées. */
   async #reprendre() {
     const proposees = (await this.options.proposer()).filter((p) => !this.usages.some((u) => u.coo_id === p.coo_id));
-    const d = dialogue('⤵ Reprendre une coordonnée', proposees.length
-      ? `<p class="aide">La coordonnée reste partagée avec la fiche d'origine (même identifiant) : une correction faite d'un côté pourra valoir pour les deux.</p>
+    const d = dialogue(texte('annuaire.coordonnees.reprise.titre', { icone: icone('annuaire_reprendre') }), proposees.length
+      ? `<p class="aide">${texteHtml('annuaire.coordonnees.reprise.aide')}</p>
         <table class="coord-table"><tbody>${proposees.map((p, i) => `<tr><td><label><input type="checkbox" data-p="${i}"> ${NATURES.find((n) => n.code === p.nature)?.icone ?? ''} ${echapper(texteCoordonnee(p))}</label></td>
           <td class="aide">${echapper(libelleUsage(p.nature, p.usage))}</td><td class="aide">${echapper(libelleFiche(p.source))}</td></tr>`).join('')}</tbody></table>`
-      : '<p class="aide">Aucune coordonnée à reprendre : les fiches liées (niveaux supérieurs et inférieurs, contacts, personnes rattachées) n\'en ont pas d\'autre.</p>',
-    proposees.length ? 'Reprendre' : null);
+      : `<p class="aide">${texteHtml('annuaire.coordonnees.reprise.aucune')}</p>`,
+    proposees.length ? texte('annuaire.coordonnees.reprise.action') : null);
     const ok = await d.resultat;
     if (!ok) return;
     const choisies = [...d.corps.querySelectorAll('[data-p]:checked')].map((x) => proposees[Number(x.dataset.p)]);
@@ -200,9 +203,9 @@ export function dialogue(titre, html, action = null, { large = false } = {}) {
   const fond = document.createElement('dialog');
   fond.className = 'fiche-dialogue-fond dialogue-plein';
   fond.innerHTML = `<section class="fiche-dialogue annuaire-dialogue ${large ? 'large' : ''}" role="dialog" aria-label="${echapper(titre)}">
-    <header><h2>${echapper(titre)}</h2><button type="button" data-fermer title="Fermer (Échap)">✕</button></header>
+    <header><h2>${echapper(titre)}</h2><button type="button" data-fermer title="${texteHtml('commun.fermer_echap')}">${iconeHtml('retirer')}</button></header>
     <div class="fiche-dialogue-corps">${html}</div>
-    <footer><span class="fiche-dialogue-message"></span>${action ? `<button type="button" data-annuler>Annuler</button><button type="button" class="principal" data-ok>${echapper(action)}</button>` : '<button type="button" data-annuler>Fermer</button>'}</footer></section>`;
+    <footer><span class="fiche-dialogue-message"></span>${action ? `<button type="button" data-annuler>${texteHtml('commun.annuler')}</button><button type="button" class="principal" data-ok>${echapper(action)}</button>` : `<button type="button" data-annuler>${texteHtml('commun.fermer')}</button>`}</footer></section>`;
   ouvrirModale(fond);
   let resoudre;
   const resultat = new Promise((r) => { resoudre = r; });

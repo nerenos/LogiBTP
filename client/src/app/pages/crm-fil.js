@@ -1,3 +1,4 @@
+import { texte, texteHtml, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { PageBase } from '@logibtp/navigation';
 import { echapper } from '@logibtp/socle/ui';
 import { api } from '../api.js';
@@ -9,15 +10,15 @@ import { FilCrm, GENRES_FIL } from '../crm/fil.js';
  * la page.
  */
 export class PageFilCrm extends PageBase {
-  icone = '📰';
+  icone = icone('crm_btp_fil');
 
   async ouvrir() {
     const app = this.app;
     this.element = this.requete.type && this.requete.id ? { type: this.requete.type, id: String(this.requete.id) } : null;
     this.genres = new Set(this.requete.genres ? this.requete.genres.split(',') : GENRES_FIL.map((g) => g.code));
     const e = this.element ? (await api.crm.elements([this.element]))[0] : null;
-    this.titre = e ? `Fil : ${e.libelle}` : 'Fil d\'actualité';
-    this.conteneur.innerHTML = `<div class="page-parametres page-crm-fil"><h1 class="page-titre">📰 Fil d'actualité${e ? ` : ${lienElement(e)}` : ''}</h1><div data-hote></div></div>`;
+    this.titre = e ? texte('crm_btp.page_fil.titre', { libelle: e.libelle }) : texte('crm_btp.routes.fil');
+    this.conteneur.innerHTML = `<div class="page-parametres page-crm-fil"><h1 class="page-titre">${iconeHtml('crm_btp_fil')} ${texteHtml('crm_btp.routes.fil')}${e ? ` : ${lienElement(e)}` : ''}</h1><div data-hote></div></div>`;
     this.fil = new FilCrm(this.conteneur.querySelector('[data-hote]'), {
       app, element: this.element, libelle: e?.libelle, genres: this.genres,
       surGenres: () => app.routeur.remplacerUrl(this.urlCourante()),

@@ -1,3 +1,4 @@
+import { texte, texteHtml, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { echapper, creerCombo, formatDate, confirmer, lirePreferences } from '@logibtp/socle/ui';
 import { aujourdhui } from '@logibtp/socle';
 import { lireDuree, ecrireDuree } from '@logibtp/pointage';
@@ -45,7 +46,7 @@ export class PointageTerrain {
       this.d = await api.terrain.journee(jour);
     } catch (e) {
       if (!estHorsLigne(e)) { this.app.erreur(e); return; }
-      this.zone.innerHTML = '<p class="carte avertissement">📵 Hors ligne : cette journée n\'a pas été consultée sur cet appareil, elle n\'est pas disponible. Ouvrez « Mon terrain » avec le réseau pour la garder.</p>';
+      this.zone.innerHTML = `<p class="carte avertissement">${iconeHtml('terrain_btp_hors_ligne')} ${texteHtml('terrain_btp.pointage.hors_ligne')}</p>`;
       return;
     }
     // Journée gardée sur l'appareil et pas encore envoyée : elle remplace celle du serveur.
@@ -77,23 +78,23 @@ export class PointageTerrain {
 
   #rendre() {
     const d = this.d;
-    if (!d.personne) { this.zone.innerHTML = '<p class="carte avertissement">Votre compte n\'est lié à aucun salarié.</p>'; return; }
+    if (!d.personne) { this.zone.innerHTML = `<p class="carte avertissement">${texteHtml('terrain_btp.pointage.sans_salarie')}</p>`; return; }
     const lecture = d.valide;
     const sansLigne = d.taches.filter((t) => !this.lignes.some((l) => l.tac_id === t.id));
     this.zone.innerHTML = `<div class="terrain-pointage">
       ${this.#bandeauOperation()}
       <p class="terrain-bilan" data-bilan></p>
-      ${lecture ? '<p class="carte">🔒 Journée validée : consultation seulement (une correction se demande au service RH).</p>' : ''}
-      ${!lecture && sansLigne.length ? `<div class="terrain-a-pointer"><b>À pointer</b>${sansLigne.map((t) => `<button type="button" class="terrain-bouton" data-pointer="${t.id}">＋ ${echapper(t.libelle)}${t.chef && t.membres.length ? ` · 👥 ${t.membres.length + 1}` : ''}</button>`).join('')}</div>` : ''}
+      ${lecture ? `<p class="carte">${iconeHtml('verrou')} ${texteHtml('terrain_btp.pointage.validee')}</p>` : ''}
+      ${!lecture && sansLigne.length ? `<div class="terrain-a-pointer"><b>${texteHtml('terrain_btp.pointage.a_pointer')}</b>${sansLigne.map((t) => `<button type="button" class="terrain-bouton" data-pointer="${t.id}">${iconeHtml('ajouter')} ${echapper(t.libelle)}${t.chef && t.membres.length ? ` · ${iconeHtml('pointage_equipe')} ${t.membres.length + 1}` : ''}</button>`).join('')}</div>` : ''}
       <datalist id="terrain-motifs-pointage">${(d.motifs ?? []).map((m) => `<option value="${echapper(m)}">`).join('')}</datalist>
       <div data-lignes></div>
       <div data-etape-terminee></div>
       ${lecture ? '' : `<div class="terrain-actions">
-        ${d.libre ? '<button type="button" class="terrain-bouton" data-libre>🛠 Saisie libre</button>' : ''}
-        <button type="button" class="terrain-bouton" data-completer title="Répartit les heures prévues au calendrier, moins celles déjà saisies, entre les lignes sans durée">⇥ Compléter la journée</button>
+        ${d.libre ? `<button type="button" class="terrain-bouton" data-libre>${iconeHtml('terrain_btp_libre')} ${texteHtml('terrain_btp.pointage.libre')}</button>` : ''}
+        <button type="button" class="terrain-bouton" data-completer title="${texteHtml('terrain_btp.pointage.completer_aide')}">${iconeHtml('pointage_completer')} ${texteHtml('terrain_btp.pointage.completer')}</button>
       </div>`}
-      <p class="terrain-ligne"><span data-repas>🍽 …</span>${lecture ? '' : '<button type="button" class="terrain-bouton" data-choisir-repas>🍽 Repas</button>'}</p>
-      ${lecture ? '' : '<div class="terrain-enregistrer"><button type="button" class="principal" data-enregistrer>💾 Enregistrer la journée</button></div>'}
+      <p class="terrain-ligne"><span data-repas>${iconeHtml('pointage_repas')} …</span>${lecture ? '' : `<button type="button" class="terrain-bouton" data-choisir-repas>${iconeHtml('pointage_repas')} ${texteHtml('terrain_btp.pointage.repas.bouton')}</button>`}</p>
+      ${lecture ? '' : `<div class="terrain-enregistrer"><button type="button" class="principal" data-enregistrer>${iconeHtml('enregistrer')} ${texteHtml('terrain_btp.pointage.enregistrer')}</button></div>`}
     </div>`;
     const $ = (s) => this.zone.querySelector(s);
     this.zone.querySelectorAll('[data-pointer]').forEach((b) => b.addEventListener('click', () => {
@@ -111,7 +112,7 @@ export class PointageTerrain {
     });
     $('[data-completer]')?.addEventListener('click', () => {
       const minutes = completerJournee(this.lignes.map((l) => ({ minutes: l.minutes, poids: this.#tache(l.tac_id)?.poids ?? 0 })), d.minutes_prevues, this.#pas);
-      if (minutes.every((m) => m == null)) { this.app.message(d.minutes_prevues ? 'Rien à compléter : la journée est pleine ou sans ligne vide' : 'Aucune heure prévue ce jour au calendrier', 'avertissement'); return; }
+      if (minutes.every((m) => m == null)) { this.app.message(texte(d.minutes_prevues ? 'terrain_btp.pointage.rien_a_completer' : 'terrain_btp.pointage.sans_heures'), 'avertissement'); return; }
       minutes.forEach((m, i) => { if (m != null) this.lignes[i].minutes = m; });
       this.modifiee(true);
       this.#rendre();
@@ -125,7 +126,7 @@ export class PointageTerrain {
       this.#rendre();
     });
     $('[data-abandonner]')?.addEventListener('click', async () => {
-      if (!(await confirmer('Abandonner la journée gardée sur cet appareil ? Les pointages du serveur seront réaffichés.'))) return;
+      if (!(await confirmer(texte('terrain_btp.pointage.abandonner_confirmer')))) return;
       await retirerOperation(this.operation.cle);
       this.app.publier(SUJET_ATTENTE, {});
       this.ouvrir(this.jour);
@@ -141,22 +142,22 @@ export class PointageTerrain {
     const o = this.operation;
     if (!o) return '';
     if (o.etat === ETAT_ATTENTE.ERREUR) {
-      return `<div class="carte avertissement">⛔ Envoi de cette journée refusé : ${echapper(o.erreur ?? '')}. Corrigez puis enregistrez, ou
-        <span class="terrain-actions"><button type="button" class="terrain-bouton" data-reessayer>↻ Réessayer</button>
-        <button type="button" class="terrain-bouton" data-abandonner>✕ Abandonner ma saisie</button></span></div>`;
+      return `<div class="carte avertissement">${iconeHtml('terrain_btp_refus')} ${texteHtml('terrain_btp.pointage.refus', { erreur: o.erreur ?? '' })}
+        <span class="terrain-actions"><button type="button" class="terrain-bouton" data-reessayer>${iconeHtml('terrain_btp_reessayer')} ${texteHtml('terrain_btp.pointage.reessayer')}</button>
+        <button type="button" class="terrain-bouton" data-abandonner>${iconeHtml('retirer')} ${texteHtml('terrain_btp.pointage.abandonner')}</button></span></div>`;
     }
-    return `<p class="carte">⏳ Journée enregistrée sur cet appareil le ${echapper(formatDate(o.le.slice(0, 10)))} : elle sera envoyée au retour du réseau.</p>`;
+    return `<p class="carte">${iconeHtml('terrain_btp_attente')} ${texteHtml('terrain_btp.pointage.gardee', { date: formatDate(o.le.slice(0, 10)) })}</p>`;
   }
 
   #rendreBilan() {
     const saisi = this.lignes.reduce((s, l) => s + (l.minutes ?? 0), 0);
     const b = this.zone.querySelector('[data-bilan]');
-    if (b) b.textContent = `Prévu ${ecrireDuree(this.d.minutes_prevues) || '0:00'} h · saisi ${ecrireDuree(saisi) || '0:00'} h`;
+    if (b) b.textContent = texte('terrain_btp.pointage.bilan', { prevu: ecrireDuree(this.d.minutes_prevues) || '0:00', saisi: ecrireDuree(saisi) || '0:00' });
   }
 
   #rendreRepas() {
     const z = this.zone.querySelector('[data-repas]');
-    if (z) z.textContent = this.repas ? `🍽 ${this.repas.restaurant}` : '🍽 Pas de repas au restaurant';
+    if (z) z.textContent = `${icone('pointage_repas')} ${this.repas ? this.repas.restaurant : texte('terrain_btp.pointage.repas.aucun')}`;
   }
 
   async #choisirRepas() {
@@ -166,44 +167,44 @@ export class PointageTerrain {
     const repas = { date: this.jour, restaurant_id: choix.restaurant_id ?? null, nouveau: choix.nouveau ?? null, ville: choix.ville ?? null, cha_id: chantier };
     try {
       const r = await envoyerOuGarder(this.app, { type: OPERATION_TERRAIN.REPAS, id: this.jour, corps: { salarie: this.d.personne.id, repas },
-        libelle: `Repas du ${formatDate(this.jour)}`, url: `/terrain?onglet=pointage&jour=${this.jour}` }, () => api.pointage.enregistrerRepas(this.d.personne.id, repas));
+        libelle: texte('terrain_btp.pointage.repas.libelle', { date: formatDate(this.jour) }), url: `/terrain?onglet=pointage&jour=${this.jour}` }, () => api.pointage.enregistrerRepas(this.d.personne.id, repas));
       if (r.horsLigne) {
-        this.repas = choix.aucun ? null : { restaurant: `${choix.nouveau ?? 'Restaurant choisi'} (⏳ sur l'appareil)` };
+        this.repas = choix.aucun ? null : { restaurant: texte('terrain_btp.pointage.repas.garde', { restaurant: choix.nouveau ?? texte('terrain_btp.pointage.repas.choisi'), icone: icone('terrain_btp_attente') }) };
         this.#rendreRepas();
         return;
       }
       this.repas = (await api.pointage.repas(this.d.personne.id, this.jour, this.jour))[0] ?? null;
       this.#rendreRepas();
-      this.app.message(choix.aucun ? 'Repas retiré' : 'Repas enregistré', 'succes');
+      this.app.message(texte(choix.aucun ? 'terrain_btp.pointage.repas.retire' : 'terrain_btp.pointage.repas.enregistre'), 'succes');
     } catch (e) { this.app.erreur(e); }
   }
 
   #rendreLignes(lecture) {
     const zone = this.zone.querySelector('[data-lignes]');
-    if (!this.lignes.length) { zone.innerHTML = '<p class="terrain-vide">Aucun pointage ce jour.</p>'; return; }
+    if (!this.lignes.length) { zone.innerHTML = `<p class="terrain-vide">${texteHtml('terrain_btp.pointage.aucun')}</p>`; return; }
     zone.innerHTML = this.lignes.map((l, i) => {
       const t = this.#tache(l.tac_id);
       const c = this.#chantier(l.cha_id);
       const o = this.#ordre(l.ent_id);
-      const titre = t ? echapper(t.libelle) : l.libre ? '🛠 Saisie libre' : '🛠 Saisie libre (enregistrée)';
-      const lieu = [c && `🏗 ${c.code} ${c.libelle}`, o && `🧩 ${o.numero ?? o.type}`].filter(Boolean).map(echapper).join(' · ');
+      const titre = t ? echapper(t.libelle) : `${iconeHtml('terrain_btp_libre')} ${texteHtml(l.libre ? 'terrain_btp.pointage.libre' : 'terrain_btp.pointage.libre_enregistree')}`;
+      const lieu = [c && `${icone('terrain_btp_chantier')} ${c.code} ${c.libelle}`, o && `${icone('pointage_ordre')} ${o.numero ?? o.type}`].filter(Boolean).map(echapper).join(' · ');
       const nc = referentiels.sous_types.find((s) => s.code === l.sous_type)?.non_conformite;
       // Équipe d'une tâche (courte) : cases à cocher ; saisie libre : équipiers choisis par recherche (étiquettes).
       const proposes = l.id || !t?.chef ? [] : t.membres;
       const libreEquipe = !l.id && l.libre && this.d.equipiers.length > 0;
       return `<div class="terrain-saisie" data-i="${i}">
-        <p class="terrain-ligne"><b>${titre}</b>${lecture ? '' : `<button type="button" class="terrain-bouton" data-retirer aria-label="Retirer la ligne" title="Retirer la ligne${l.groupe ? ' (pour vous seul)' : ''}">✕</button>`}</p>
-        ${l.libre ? '<div class="terrain-champs"><label>Chantier <span data-combo="chantier"></span></label><label>Ordre <span data-combo="ordre"></span></label></div>' : lieu ? `<p class="aide">${lieu}</p>` : ''}
+        <p class="terrain-ligne"><b>${titre}</b>${lecture ? '' : `<button type="button" class="terrain-bouton" data-retirer aria-label="${texteHtml('terrain_btp.pointage.retirer')}" title="${texteHtml(l.groupe ? 'terrain_btp.pointage.retirer_seul' : 'terrain_btp.pointage.retirer')}">${iconeHtml('retirer')}</button>`}</p>
+        ${l.libre ? `<div class="terrain-champs"><label>${texteHtml('terrain_btp.pointage.chantier')} <span data-combo="chantier"></span></label><label>${texteHtml('terrain_btp.pointage.ordre')} <span data-combo="ordre"></span></label></div>` : lieu ? `<p class="aide">${lieu}</p>` : ''}
         <div class="terrain-champs">
-          <label>Type <span data-combo="type"></span></label>
-          <label>Activité <span data-combo="sous-type"></span></label>
-          <label>Durée <input data-minutes inputmode="decimal" size="6" placeholder="7:30" value="${ecrireDuree(l.minutes ?? 0)}" ${lecture ? 'readonly' : ''}></label>
+          <label>${texteHtml('terrain_btp.pointage.type')} <span data-combo="type"></span></label>
+          <label>${texteHtml('terrain_btp.pointage.activite')} <span data-combo="sous-type"></span></label>
+          <label>${texteHtml('terrain_btp.pointage.duree')} <input data-minutes inputmode="decimal" size="6" placeholder="7:30" value="${ecrireDuree(l.minutes ?? 0)}" ${lecture ? 'readonly' : ''}></label>
         </div>
-        ${nc ? `<label class="large">Motif de non-conformité <input data-motif list="terrain-motifs-pointage" value="${echapper(l.motif ?? '')}" ${lecture ? 'readonly' : ''}></label>` : ''}
-        <label class="large">Commentaire <input data-commentaire value="${echapper(l.commentaire ?? '')}" ${lecture ? 'readonly' : ''}></label>
-        ${proposes.length && !lecture ? `<fieldset class="terrain-membres"><legend>👥 Pour l'équipe</legend>${proposes.map((m) => `<label class="coche"><input type="checkbox" data-membre="${m.id}" ${l.membres.includes(m.id) ? 'checked' : ''}> ${echapper(m.libelle)}</label>`).join('')}</fieldset>` : ''}
-        ${libreEquipe && !lecture ? '<fieldset class="terrain-membres"><legend>👥 Équipiers (même pointage pour chacun)</legend><span data-equipiers></span></fieldset>' : ''}
-        ${l.groupe && l.nb_groupe > 1 && !lecture ? `<label class="coche"><input type="checkbox" data-equipe ${l.equipe ? 'checked' : ''}> 👥 Appliquer la modification ${l.nb_groupe > 2 ? `aux ${l.nb_groupe - 1} autres membres encore identiques` : "à l'autre membre s'il est encore identique"}</label>` : ''}
+        ${nc ? `<label class="large">${texteHtml('terrain_btp.pointage.motif')} <input data-motif list="terrain-motifs-pointage" value="${echapper(l.motif ?? '')}" ${lecture ? 'readonly' : ''}></label>` : ''}
+        <label class="large">${texteHtml('terrain_btp.pointage.commentaire')} <input data-commentaire value="${echapper(l.commentaire ?? '')}" ${lecture ? 'readonly' : ''}></label>
+        ${proposes.length && !lecture ? `<fieldset class="terrain-membres"><legend>${iconeHtml('pointage_equipe')} ${texteHtml('terrain_btp.pointage.pour_equipe')}</legend>${proposes.map((m) => `<label class="coche"><input type="checkbox" data-membre="${m.id}" ${l.membres.includes(m.id) ? 'checked' : ''}> ${echapper(m.libelle)}</label>`).join('')}</fieldset>` : ''}
+        ${libreEquipe && !lecture ? `<fieldset class="terrain-membres"><legend>${iconeHtml('pointage_equipe')} ${texteHtml('terrain_btp.pointage.equipiers')}</legend><span data-equipiers></span></fieldset>` : ''}
+        ${l.groupe && l.nb_groupe > 1 && !lecture ? `<label class="coche"><input type="checkbox" data-equipe ${l.equipe ? 'checked' : ''}> ${iconeHtml('pointage_equipe')} ${l.nb_groupe > 2 ? texteHtml('terrain_btp.appliquer_autres', { nombre: l.nb_groupe - 1 }) : texteHtml('terrain_btp.appliquer_autre')}</label>` : ''}
       </div>`;
     }).join('');
     zone.querySelectorAll('.terrain-saisie').forEach((bloc) => {
@@ -239,7 +240,7 @@ export class PointageTerrain {
         this.modifiee(true);
       }));
       bloc.querySelector('[data-equipiers]')?.append(choixMultiple({
-        options: this.d.equipiers.map((m) => ({ valeur: m.id, libelle: m.libelle })), valeurs: l.membres, titre: 'Ajouter un équipier', aucun: 'seul',
+        options: this.d.equipiers.map((m) => ({ valeur: m.id, libelle: m.libelle })), valeurs: l.membres, titre: texte('terrain_btp.pointage.ajouter_equipier'), aucun: texte('terrain_btp.pointage.seul'),
         changer: (v) => { l.membres = v.map(Number); this.modifiee(true); },
       }));
       bloc.querySelector('[data-retirer]')?.addEventListener('click', () => { this.lignes.splice(this.lignes.indexOf(l), 1); this.modifiee(true); this.#rendre(); });
@@ -249,7 +250,7 @@ export class PointageTerrain {
   /** Enregistre la journée ; renvoie vrai si c'est fait. */
   async enregistrer() {
     const incompletes = this.lignes.filter((l) => !l.cha_id || !l.type_mo || !(l.minutes > 0));
-    if (incompletes.length) { this.app.message('Chaque ligne a un chantier, un type et une durée (ou retirez-la)', 'avertissement'); return false; }
+    if (incompletes.length) { this.app.message(texte('terrain_btp.pointage.incomplete'), 'avertissement'); return false; }
     const corps = {
       date: this.jour,
       // Pointages du jour connus de l'appareil : seuls ceux-là peuvent être retirés (un pointage ajouté ailleurs reste).
@@ -259,7 +260,7 @@ export class PointageTerrain {
     };
     let r;
     try {
-      r = await envoyerOuGarder(this.app, { type: OPERATION_TERRAIN.JOURNEE, id: this.jour, corps, libelle: `Journée du ${formatDate(this.jour)}`,
+      r = await envoyerOuGarder(this.app, { type: OPERATION_TERRAIN.JOURNEE, id: this.jour, corps, libelle: texte('terrain_btp.pointage.libelle', { date: formatDate(this.jour) }),
         url: `/terrain?onglet=pointage&jour=${this.jour}` }, () => api.terrain.enregistrerJournee(corps));
     } catch (e) { this.app.erreur(e); return false; }
     if (r.horsLigne) {
@@ -276,7 +277,7 @@ export class PointageTerrain {
     const ordres = [...new Set(this.lignes.filter((l) => l.ent_id).map((l) => l.ent_id))];
     this.lignes = this.d.pointages.map(depuisPointage);
     this.modifiee(false);
-    this.app.message('Journée enregistrée', 'succes');
+    this.app.message(texte('terrain_btp.pointage.enregistree'), 'succes');
     this.#rendre();
     await this.#etapeTerminee(ordres);
     return true;
@@ -290,7 +291,7 @@ export class PointageTerrain {
     const aValider = r.ordres.filter((o) => o.etapes.some((e) => !e.valide_le));
     if (!aValider.length) return;
     const zone = this.zone.querySelector('[data-etape-terminee]');
-    await new EcranEtapesAtelier(zone, fournisseurEtapes(this.app, () => api.terrain.etapes(ordres)), { titre: 'Étape terminée ?', message: (t, n) => this.app.message(t, n) }).ouvrir();
+    await new EcranEtapesAtelier(zone, fournisseurEtapes(this.app, () => api.terrain.etapes(ordres)), { titre: texte('terrain_btp.pointage.etape_terminee'), message: (t, n) => this.app.message(t, n) }).ouvrir();
     zone.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }

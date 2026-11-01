@@ -26,6 +26,7 @@
     "modules/comptabilite/js",
     "modules/pointage/js",
     "modules/planning/js",
+    "modules/personnalisation/js",
     "modules/navigation/js",
     "modules/import/js",
     "modules/edition/js",

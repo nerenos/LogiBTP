@@ -4,6 +4,8 @@
 // client construit ; en développement (Vite), il n'est pas enregistré.
 //
 // - Fichiers de l'application gardés à l'installation (cache d'abord) ; navigation : réseau d'abord, sinon index.html.
+// - Personnalisation (/personnalisation/ : fr.json, theme.css, images, modifiables sur le serveur) : réseau d'abord,
+//   dernière copie gardée (cache propre, conservé à la déconnexion), sinon celle de l'installation du client.
 // - Lectures de l'API (GET, et POST de lecture des listes) : réseau d'abord, réponse gardée ; serveur injoignable :
 //   dernière réponse gardée, marquée par l'en-tête X-LogiBTP-Hors-Ligne (date de mise en cache).
 // - Écritures : réseau seul ; serveur injoignable : 503 HORS_LIGNE (la saisie des documents est mise en attente par
@@ -17,6 +19,7 @@ const VERSION = '__VERSION__';
 const FICHIERS = __FICHIERS__;
 const CACHE_APPLICATION = `logibtp-application-${VERSION}`;
 const CACHE_DONNEES = 'logibtp-donnees';
+const CACHE_PERSONNALISATION = 'logibtp-personnalisation';
 const CLE_COMPTE = '/__logibtp/compte';
 
 self.addEventListener('install', (e) => {
@@ -55,6 +58,7 @@ self.addEventListener('fetch', (e) => {
   if (t === 'donnee') e.respondWith(donnee(r));
   else if (t === 'ecriture') e.respondWith(ecriture(r));
   else if (t === 'page') e.respondWith(page(r));
+  else if (t === 'personnalisation') e.respondWith(personnalisation(r));
   else if (t === 'fichier') e.respondWith(fichier(r));
 });
 
@@ -108,6 +112,20 @@ async function page(requete) {
   } catch { /* serveur injoignable */ }
   const index = await caches.match('/index.html');
   return index ?? json(erreurHorsLigne(false), 503);
+}
+
+async function personnalisation(requete) {
+  try {
+    const r = await fetch(requete);
+    if (r.ok) {
+      caches.open(CACHE_PERSONNALISATION).then((c) => c.put(requete, r.clone())).catch(() => {});
+      return r;
+    }
+    if (!reponseEnPanne(r.status, r.headers.get('Content-Type'))) return r;
+  } catch { /* serveur injoignable */ }
+  const garde = await caches.open(CACHE_PERSONNALISATION).then((c) => c.match(requete, { ignoreSearch: true }))
+    ?? await caches.match(requete, { ignoreSearch: true });
+  return garde ?? new Response('', { status: 503 });
 }
 
 async function fichier(requete) {

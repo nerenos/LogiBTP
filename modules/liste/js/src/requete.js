@@ -1,3 +1,4 @@
+import { pairesParCode } from '@logibtp/socle/dictionnaire';
 import { motsRecherche, normaliser } from './normaliser.js';
 
 // Sémantique des requêtes de liste (référence du serveur, utilisée par le fournisseur en mémoire et les jeux
@@ -39,12 +40,10 @@ export function filtresEffectifs(definition, connues) {
 }
 
 /** Opérateurs des filtres fixes d'une vue (même liste que ConstructeurRequete.OperateursVue côté C#). */
-export const OPERATEURS_VUE = [
-  ['=', 'égal à'], ['<>', 'différent de'], ['>', 'supérieur à'], ['>=', 'supérieur ou égal à'], ['<', 'inférieur à'],
-  ['<=', 'inférieur ou égal à'], ['entre', 'entre'], ['contient', 'contient'], ['commence', 'commence par'],
-  ['finit', 'se termine par'], ['dans', 'parmi (valeurs séparées par ;)'], ['vide', 'est vide'], ['nonvide', 'n\'est pas vide'],
-  ['vrai', 'est coché (vrai)'], ['faux', 'n\'est pas coché (faux)'],
-];
+export const OPERATEURS_VUE = pairesParCode('liste.operateurs_vue', [
+  ['=', 'egal'], ['<>', 'different'], ['>', 'superieur'], ['>=', 'superieur_egal'], ['<', 'inferieur'], ['<=', 'inferieur_egal'],
+  'entre', 'contient', 'commence', 'finit', 'dans', 'vide', 'nonvide', 'vrai', 'faux',
+]);
 
 const vraiTexte = (v) => ['true', 'vrai', '1', 'oui', 't'].includes(String(v ?? '').trim().toLowerCase());
 

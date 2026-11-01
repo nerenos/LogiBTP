@@ -1,6 +1,7 @@
 import { echapper } from './format.js';
 import { catalogueRaccourcis, libelleTouches, aideRaccourcisDisponible, ouvrirAideRaccourcis } from './raccourcis.js';
 import { lirePreferences, ecrirePreferences } from './preferences.js';
+import { texte, icone } from '../dictionnaire/index.js';
 
 // Aide-mémoire des raccourcis : petite fenêtre flottante, déplaçable par sa barre de titre, fermable (×, Échap), qui
 // laisse la page utilisable. Elle liste les touches effectives (personnalisées ou par défaut) des groupes demandés,
@@ -17,7 +18,7 @@ export function fermerAideMemoire() {
  * Ouvre (ou ferme si elle est déjà ouverte) l'aide-mémoire.
  * options : { titre, groupes: ['grille', …] (ordre d'affichage), notes: [[touches, libellé]] (gestes fixes) }.
  */
-export function basculerAideMemoire({ titre = 'Raccourcis', groupes = ['grille'], notes = [] } = {}) {
+export function basculerAideMemoire({ titre = texte('socle.aide_memoire.titre'), groupes = ['grille'], notes = [] } = {}) {
   if (ouverte) { fermerAideMemoire(); return; }
   const catalogue = catalogueRaccourcis();
   const blocs = groupes.map((g) => catalogue.find((x) => x.groupe === g)).filter(Boolean);
@@ -27,12 +28,12 @@ export function basculerAideMemoire({ titre = 'Raccourcis', groupes = ['grille']
   fen.setAttribute('role', 'dialog');
   fen.setAttribute('aria-label', titre);
   fen.innerHTML = `
-    <header><strong>⌨ ${echapper(titre)}</strong><button type="button" data-fermer title="Fermer (Échap)">×</button></header>
+    <header><strong>${echapper(icone('raccourcis'))} ${echapper(titre)}</strong><button type="button" data-fermer title="${echapper(texte('commun.fermer_echap'))}">×</button></header>
     <div class="corps">
       ${notes.length ? `<table><tbody>${notes.map(([t, l]) => `<tr><td><kbd>${echapper(t)}</kbd></td><td>${echapper(l)}</td></tr>`).join('')}</tbody></table>` : ''}
       ${blocs.map((b) => `<h4>${echapper(b.libelle)}</h4><table><tbody>${b.actions.filter((a) => a.touches.length).map((a) => ligne(a.touches, a.libelle)).join('')}</tbody></table>`).join('')}
     </div>
-    ${aideRaccourcisDisponible() ? '<footer><button type="button" data-personnaliser>Personnaliser les raccourcis…</button></footer>' : ''}`;
+    ${aideRaccourcisDisponible() ? `<footer><button type="button" data-personnaliser>${echapper(texte('socle.aide_memoire.personnaliser'))}</button></footer>` : ''}`;
   document.body.append(fen);
 
   // Position mémorisée (gardée dans la fenêtre), sinon en bas à droite.

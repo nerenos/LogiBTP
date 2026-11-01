@@ -6,6 +6,7 @@
 // ligne, base de la fusion), type_code, libelle, etat (ATTENTE | CONFLIT | FUSION | ERREUR), erreur, le }. FUSION : saisie fusionnée
 // (lot 4) rouverte dans la page document, envoyée seulement quand l'utilisateur l'enregistre.
 // Rien n'est effacé à la déconnexion : la saisie reste sur le poste jusqu'à son envoi.
+import { textesParCode } from '@logibtp/socle/dictionnaire';
 import { magasinIdb } from '@logibtp/socle/ui';
 import { urlDocument } from '../codes.js';
 
@@ -14,10 +15,7 @@ const MAGASIN = 'documents';
 
 /** États d'une entrée de la file. */
 export const ETAT_ATTENTE = Object.freeze({ ATTENTE: 'ATTENTE', CONFLIT: 'CONFLIT', FUSION: 'FUSION', ERREUR: 'ERREUR' });
-export const ETATS_ATTENTE = {
-  [ETAT_ATTENTE.ATTENTE]: 'En attente d’envoi', [ETAT_ATTENTE.CONFLIT]: 'Conflit à résoudre', [ETAT_ATTENTE.FUSION]: 'Fusion à vérifier puis enregistrer',
-  [ETAT_ATTENTE.ERREUR]: 'Envoi refusé',
-};
+export const ETATS_ATTENTE = textesParCode('hors_ligne_btp.etats', Object.values(ETAT_ATTENTE));
 
 /** Page d'arbitrage d'une entrée en conflit, sinon le document. */
 export const urlAttente = (e) => (e.etat === ETAT_ATTENTE.CONFLIT ? `/fusion/document/${e.id_local}` : urlDocument(e.id_local));

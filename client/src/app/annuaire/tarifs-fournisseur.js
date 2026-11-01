@@ -1,3 +1,4 @@
+import { texte, texteHtml, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { urlFiche, TYPE_FICHE } from '../codes.js';
 import { echapper, formatNombre, confirmer, ouvrirDialogue, telechargerCsv, nombreSaisi } from '@logibtp/socle/ui';
 import { prixNetTarif } from '@logibtp/bibliotheque';
@@ -25,30 +26,30 @@ export async function rendreTarifsFournisseur(corps, { bibliotheque, tiers, mess
   const rendre = () => {
     const ligne = (t, i) => `<tr data-i="${i}">
       <td>${t.id ? `<a href="${urlFiche(TYPE_FICHE.ELEMENT, t.ele_id)}" data-element="${t.ele_id}"><b>${echapper(t.bib_code ?? '')}:${echapper(t.code ?? '')}</b></a><br><small>${echapper(t.element ?? '')}</small>`
-        : `<input data-c="recherche" list="tarifs-elements" size="22" placeholder="Élément : code, libellé, code-barres…" value="${echapper(t.recherche ?? '')}">`}</td>
+        : `<input data-c="recherche" list="tarifs-elements" size="22" placeholder="${texteHtml('annuaire_btp.tarifs.recherche')}" value="${echapper(t.recherche ?? '')}">`}</td>
       <td><input data-c="reference" value="${echapper(t.reference ?? '')}" size="9"></td>
       <td><input data-c="libelle" value="${echapper(t.libelle ?? '')}" size="18"></td>
       <td><input data-c="prix_public" inputmode="decimal" value="${saisi(t.prix_public)}" size="7"></td>
       <td><input data-c="remise1" inputmode="decimal" value="${saisi(t.remise1)}" size="3"></td>
       <td><input data-c="remise2" inputmode="decimal" value="${saisi(t.remise2)}" size="3"></td>
-      <td><input data-c="prix" inputmode="decimal" value="${t.prix_public !== null && t.prix_public !== undefined ? '' : saisi(t.prix)}" size="7" placeholder="${t.prix_public !== null && t.prix_public !== undefined ? net(t) : ''}" title="Prix net : saisi sans prix public, sinon calculé"></td>
+      <td><input data-c="prix" inputmode="decimal" value="${t.prix_public !== null && t.prix_public !== undefined ? '' : saisi(t.prix)}" size="7" placeholder="${t.prix_public !== null && t.prix_public !== undefined ? net(t) : ''}" title="${texteHtml('annuaire_btp.tarifs.prix_net')}"></td>
       <td><input data-c="unite" list="tarifs-unites" value="${echapper(t.unite ?? '')}" size="4"></td>
       <td><input data-c="delai" inputmode="numeric" value="${saisi(t.delai)}" size="3"></td>
       <td><input data-c="code_barre" value="${echapper(t.code_barre ?? '')}" size="11"></td>
       <td><input type="date" data-c="debut" value="${jour(t.debut)}"></td><td><input type="date" data-c="fin" value="${jour(t.fin)}"></td>
-      <td><input type="checkbox" data-c="principal" ${t.principal ? 'checked' : ''} title="Tarif principal de l'élément"></td>
-      <td class="cellule-boutons">${modifiable ? `<button type="button" class="bouton-icone" data-enregistrer title="${t.id ? 'Enregistrer le tarif' : 'Ajouter le tarif'}">${t.id ? '✓' : '＋'}</button>
-        ${t.id ? '<button type="button" class="bouton-icone" data-supprimer title="Retirer ce tarif">✕</button>' : ''}` : ''}</td></tr>`;
+      <td><input type="checkbox" data-c="principal" ${t.principal ? 'checked' : ''} title="${texteHtml('annuaire_btp.tarifs.principal')}"></td>
+      <td class="cellule-boutons">${modifiable ? `<button type="button" class="bouton-icone" data-enregistrer title="${texteHtml(t.id ? 'annuaire_btp.tarifs.enregistrer' : 'annuaire_btp.tarifs.ajouter')}">${iconeHtml(t.id ? 'annuaire_btp_tarif_enregistrer' : 'ajouter')}</button>
+        ${t.id ? `<button type="button" class="bouton-icone" data-supprimer title="${texteHtml('annuaire_btp.tarifs.retirer')}">${iconeHtml('retirer')}</button>` : ''}` : ''}</td></tr>`;
     const lignes = modifiable ? [...tarifs, nouveau] : tarifs;
-    corps.innerHTML = `<div class="annuaire-tarifs"><div class="titre-actions"><h3>Tarifs du fournisseur</h3><span class="titre-actions-boutons">
-        ${modifiable ? `<button type="button" class="bouton-icone" data-importer title="Importer un fichier CSV de tarifs (format fixe)">📥</button>
-        <button type="button" class="bouton-icone" data-modele title="Télécharger le modèle du fichier CSV">📄</button>` : ''}</span></div>
-      <table class="tableau-compact largeur-contenu"><thead><tr><th>Élément</th><th>Réf.\nfournisseur</th><th>Libellé\nfournisseur</th><th>Prix\npublic</th><th>Rem.\n1 %</th><th>Rem.\n2 %</th>
-        <th>Prix\nnet</th><th>U.</th><th>Délai\n(j)</th><th>Code-barres</th><th>Début</th><th>Fin</th><th>★</th><th></th></tr></thead>
-      <tbody>${lignes.map(ligne).join('') || '<tr><td colspan="14" class="aide">Aucun tarif.</td></tr>'}</tbody></table>
+    corps.innerHTML = `<div class="annuaire-tarifs"><div class="titre-actions"><h3>${texteHtml('annuaire_btp.tarifs.titre')}</h3><span class="titre-actions-boutons">
+        ${modifiable ? `<button type="button" class="bouton-icone" data-importer title="${texteHtml('annuaire_btp.tarifs.importer')}">${iconeHtml('annuaire_btp_tarif_importer')}</button>
+        <button type="button" class="bouton-icone" data-modele title="${texteHtml('annuaire_btp.tarifs.modele')}">${iconeHtml('annuaire_btp_tarif_modele')}</button>` : ''}</span></div>
+      <table class="tableau-compact largeur-contenu"><thead><tr>${['element', 'reference', 'libelle', 'prix_public', 'remise1', 'remise2', 'prix', 'unite', 'delai', 'code_barre', 'debut', 'fin'].map((c) => `<th>${texteHtml(`annuaire_btp.tarifs.colonnes.${c}`)}</th>`).join('')}
+        <th title="${texteHtml('annuaire_btp.tarifs.principal')}">${iconeHtml('annuaire_btp_tarif_principal')}</th><th></th></tr></thead>
+      <tbody>${lignes.map(ligne).join('') || `<tr><td colspan="14" class="aide">${texteHtml('annuaire_btp.tarifs.aucun')}</td></tr>`}</tbody></table>
       <datalist id="tarifs-elements">${elementsTrouves.map((e) => `<option value="${echapper(`${e.bib_code}:${e.code} – ${e.libelle ?? ''}`)}"></option>`).join('')}</datalist>
       <datalist id="tarifs-unites">${unites.map((u) => `<option value="${echapper(u.unt_code ?? u.code)}"></option>`).join('')}</datalist>
-      <p class="aide">Prix net = prix public × (1 − remise 1) × (1 − remise 2), sinon le prix saisi ; il alimente le prix d'achat de l'élément (scénarios fournisseur principal et meilleur prix).</p></div>`;
+      <p class="aide">${texteHtml('annuaire_btp.tarifs.aide')}</p></div>`;
     corps.querySelectorAll('[data-element]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); ouvrir('element', Number(a.dataset.element), e); }));
     const champRecherche = corps.querySelector('[data-c="recherche"]');
     let minuterie;
@@ -73,18 +74,18 @@ export async function rendreTarifsFournisseur(corps, { bibliotheque, tiers, mess
         v.delai = v.delai === null ? null : Number(nombreSaisi(v.delai));
         if (v.prix === null) v.prix = v.prix_public === null ? null : '0';
         const eleId = t.id ? t.ele_id : nouveau.ele_id;
-        if (!eleId) { message('Choisissez l\'élément dans la liste proposée', 'avertissement'); return; }
-        if (v.prix === null) { message('Prix public ou prix net à saisir', 'avertissement'); return; }
+        if (!eleId) { message(texte('annuaire_btp.tarifs.choisir'), 'avertissement'); return; }
+        if (v.prix === null) { message(texte('annuaire_btp.tarifs.sans_prix'), 'avertissement'); return; }
         try {
           await bibliotheque.enregistrerTarif(eleId, { ...v, id: t.id ?? 0, fournisseur: tiers.nom, tiers_id: tiers.id });
           tarifs = await bibliotheque.tarifsTiers(tiers.id);
           if (!t.id) nouveau = { principal: false };
-          message('Tarif enregistré (prix de l\'élément recalculé)', 'succes');
+          message(texte('annuaire_btp.tarifs.enregistre'), 'succes');
           rendre();
         } catch (e) { message(e.message, 'erreur'); }
       });
       tr.querySelector('[data-supprimer]')?.addEventListener('click', async () => {
-        if (!await confirmer('Retirer ce tarif ?')) return;
+        if (!await confirmer(texte('annuaire_btp.tarifs.retirer_confirmer'))) return;
         try { await bibliotheque.supprimerTarif(t.ele_id, t.id); tarifs = await bibliotheque.tarifsTiers(tiers.id); rendre(); } catch (e) { message(e.message, 'erreur'); }
       });
     });
@@ -115,19 +116,19 @@ export async function rendreTarifsFournisseur(corps, { bibliotheque, tiers, mess
       ...r.lignes.map((x) => ({ ...x, rang: lu.lignes[x.rang - 1]?.rang ?? x.rang })),
     ].sort((a, b) => a.rang - b.rang);
     const valables = r.crees + r.mises_a_jour;
-    const libelles = { CREE: '＋ Création', MAJ: '✎ Mise à jour', ERREUR: '⚠ Erreur' };
+    const icones = { CREE: 'annuaire_btp_tarif_cree', MAJ: 'annuaire_btp_tarif_maj', ERREUR: 'avertissement' };
     const ok = await ouvrirDialogue({
-      titre: `📥 Import des tarifs : ${fichier.name}`,
-      html: `<p>${r.crees} création(s), ${r.mises_a_jour} mise(s) à jour, ${r.erreurs + lu.erreurs.length} ligne(s) en erreur${lu.inconnues.length ? ` · colonnes ignorées : ${echapper(lu.inconnues.join(', '))}` : ''}.</p>
-        <div class="tableau-defilant"><table class="tableau-compact"><thead><tr><th>Ligne</th><th>Élément</th><th>Action</th><th>Message</th></tr></thead><tbody>
-        ${rapport.map((x) => `<tr class="${x.action === 'ERREUR' ? 'erreur' : ''}"><td>${x.rang}</td><td>${echapper(x.code ?? '')}</td><td>${libelles[x.action] ?? x.action}</td><td>${echapper(x.message ?? '')}</td></tr>`).join('')}</tbody></table></div>
-        <p class="aide">Colonnes du format : ${COLONNES_TARIFS.map(([c, l]) => `<b>${c}</b> (${echapper(l)})`).join(', ')}.</p>`,
-      boutons: [{ libelle: 'Annuler', valeur: false }, ...(valables ? [{ libelle: `Importer ${valables} ligne(s)`, principal: true, valeur: true }] : [])],
+      titre: `${icone('annuaire_btp_tarif_importer')} ${texte('annuaire_btp.tarifs.import.titre', { fichier: fichier.name })}`,
+      html: `<p>${texteHtml('annuaire_btp.tarifs.import.bilan', { crees: r.crees, maj: r.mises_a_jour, erreurs: r.erreurs + lu.erreurs.length })}${lu.inconnues.length ? ` · ${texteHtml('annuaire_btp.tarifs.import.ignorees', { colonnes: lu.inconnues.join(', ') })}` : ''}.</p>
+        <div class="tableau-defilant"><table class="tableau-compact"><thead><tr><th>${texteHtml('annuaire_btp.tarifs.import.ligne')}</th><th>${texteHtml('annuaire_btp.tarifs.colonnes.element')}</th><th>${texteHtml('annuaire_btp.tarifs.import.action')}</th><th>${texteHtml('annuaire_btp.tarifs.import.message')}</th></tr></thead><tbody>
+        ${rapport.map((x) => `<tr class="${x.action === 'ERREUR' ? 'erreur' : ''}"><td>${x.rang}</td><td>${echapper(x.code ?? '')}</td><td>${icones[x.action] ? `${iconeHtml(icones[x.action])} ${texteHtml(`annuaire_btp.tarifs.actions.${x.action}`)}` : echapper(x.action)}</td><td>${echapper(x.message ?? '')}</td></tr>`).join('')}</tbody></table></div>
+        <p class="aide">${texteHtml('annuaire_btp.tarifs.import.colonnes')} ${COLONNES_TARIFS.map(([c, l]) => `<b>${c}</b> (${echapper(l)})`).join(', ')}.</p>`,
+      boutons: [{ libelle: texte('commun.annuler'), valeur: false }, ...(valables ? [{ libelle: texte('annuaire_btp.tarifs.import.importer', { nombre: valables }), principal: true, valeur: true }] : [])],
     });
     if (!ok) return false;
     try {
       const fin = await bibliotheque.importerTarifs({ ...demande, simulation: false });
-      message(`Tarifs importés : ${fin.crees} création(s), ${fin.mises_a_jour} mise(s) à jour`, 'succes');
+      message(texte('annuaire_btp.tarifs.import.fait', { crees: fin.crees, maj: fin.mises_a_jour }), 'succes');
       return true;
     } catch (e) { message(e.message, 'erreur'); return false; }
   }

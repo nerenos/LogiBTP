@@ -1,3 +1,4 @@
+import { texte, texteHtml, pluriel, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { echapper } from '@logibtp/socle/ui';
 import { NATURES, texteCoordonnee } from '../src/coordonnees.js';
 import { choixAttendu } from './coordonnees.js';
@@ -21,24 +22,23 @@ export function choixRequis(listes) {
  */
 export async function demanderChoix(elements) {
   const fiches = (u) => u.partages.map((p) => echapper(p.libelle)).join(', ');
-  const d = dialogue('🔗 Coordonnées partagées modifiées', `
-    <p>Ces coordonnées sont aussi utilisées par d'autres fiches. Pour chacune, indiquez s'il s'agit d'une <b>modification</b> (elle change pour
-    toutes les fiches) ou d'une <b>autre information</b> (propre à cette fiche, les autres fiches gardent l'ancienne valeur).</p>
+  const d = dialogue(texte('annuaire.partage.titre', { icone: icone('annuaire_partage') }), `
+    <p>${texteHtml('annuaire.partage.aide_html')}</p>
     ${elements.map(({ u, contexte }, i) => `<fieldset class="partage-choix">
-      <legend>${NATURES.find((n) => n.code === u.nature)?.icone ?? ''} ${echapper(contexte ? `${contexte} – ` : '')}${echapper(NATURES.find((n) => n.code === u.nature)?.un ?? '')}</legend>
+      <legend>${NATURES.find((n) => n.code === u.nature)?.icone ?? ''} ${contexte ? texteHtml('annuaire.partage.dans_contexte', { contexte, nature: NATURES.find((n) => n.code === u.nature)?.un ?? '' }) : echapper(NATURES.find((n) => n.code === u.nature)?.un ?? '')}</legend>
       <p class="partage-valeurs"><s>${echapper(texteCoordonnee({ ...u.origine, nature: u.nature }))}</s> → <b>${echapper(texteCoordonnee(u))}</b></p>
-      <label><input type="radio" name="choix-${i}" value="MODIFICATION"> ✏️ <b>Modification</b> : correction ou mise à jour pour toutes les fiches
-        <small class="aide">(${u.partages.length} autre${u.partages.length > 1 ? 's' : ''} : ${fiches(u)})</small></label>
-      <label><input type="radio" name="choix-${i}" value="AUTRE"> ➕ <b>Autre information</b> : propre à cette fiche seulement</label>
+      <label><input type="radio" name="choix-${i}" value="MODIFICATION"> ${iconeHtml('annuaire_modification')} ${texteHtml('annuaire.partage.modification_html')}
+        <small class="aide">(${pluriel('annuaire.partage.autres', u.partages.length)} : ${fiches(u)})</small></label>
+      <label><input type="radio" name="choix-${i}" value="AUTRE"> ${iconeHtml('annuaire_autre_information')} ${texteHtml('annuaire.partage.autre_html')}</label>
     </fieldset>`).join('')}
-    <p class="partage-tout"><button type="button" data-tout="MODIFICATION">Tout en modification</button> <button type="button" data-tout="AUTRE">Tout en autre information</button></p>`,
-  'Enregistrer', { large: true });
+    <p class="partage-tout"><button type="button" data-tout="MODIFICATION">${texteHtml('annuaire.partage.tout_modification')}</button> <button type="button" data-tout="AUTRE">${texteHtml('annuaire.partage.tout_autre')}</button></p>`,
+  texte('commun.enregistrer'), { large: true });
   const ok = d.fond.querySelector('[data-ok]');
   const lire = () => elements.map((_, i) => d.corps.querySelector(`input[name="choix-${i}"]:checked`)?.value ?? null);
   const maj = () => {
     const manque = lire().filter((x) => !x).length;
     ok.disabled = manque > 0;
-    d.message.textContent = manque ? `${manque} choix à faire` : '';
+    d.message.textContent = manque ? pluriel('annuaire.partage.manque', manque) : '';
   };
   d.corps.addEventListener('change', maj);
   d.corps.querySelectorAll('[data-tout]').forEach((b) => b.addEventListener('click', () => {

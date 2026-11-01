@@ -1,3 +1,4 @@
+import { texte, texteHtml, pluriel, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { echapper, ouvrirDialogue, formatDate } from '@logibtp/socle/ui';
 import { aujourdhui } from '@logibtp/socle';
 import { api } from '../api.js';
@@ -15,13 +16,13 @@ import { estHorsLigne } from '../hors-ligne/attente.js';
 export function selecteurPhotos(racine) {
   let fichiers = [];
   racine.innerHTML = `<div class="terrain-actions">
-      <label class="terrain-bouton">📷 Prendre une photo<input type="file" accept="image/*" capture="environment" hidden data-prise></label>
-      <label class="terrain-bouton">🖼 Galerie<input type="file" accept="image/*" multiple hidden data-galerie></label></div>
-    <p class="aide" data-choisies>Aucune photo choisie.</p>
-    <label class="coche"><input type="checkbox" data-origine> Qualité d'origine (sans réduction : détails à conserver)</label>`;
+      <label class="terrain-bouton">${iconeHtml('terrain_btp_photo')} ${texteHtml('terrain_btp.actions.photos.prendre')}<input type="file" accept="image/*" capture="environment" hidden data-prise></label>
+      <label class="terrain-bouton">${iconeHtml('terrain_btp_galerie')} ${texteHtml('terrain_btp.actions.photos.galerie')}<input type="file" accept="image/*" multiple hidden data-galerie></label></div>
+    <p class="aide" data-choisies>${texteHtml('terrain_btp.actions.photos.aucune')}</p>
+    <label class="coche"><input type="checkbox" data-origine> ${texteHtml('terrain_btp.actions.photos.origine')}</label>`;
   const afficher = () => {
     racine.querySelector('[data-choisies]').textContent = fichiers.length
-      ? `${fichiers.length} photo${fichiers.length > 1 ? 's' : ''} : ${fichiers.map((f) => f.name).join(', ')}` : 'Aucune photo choisie.';
+      ? texte('terrain_btp.actions.photos.choisies', { photos: pluriel('terrain_btp.actions.photos.nombre', fichiers.length), noms: fichiers.map((f) => f.name).join(', ') }) : texte('terrain_btp.actions.photos.aucune');
   };
   racine.querySelectorAll('input[type="file"]').forEach((i) => i.addEventListener('change', () => { fichiers = [...fichiers, ...i.files]; i.value = ''; afficher(); }));
   return {
@@ -41,25 +42,25 @@ export async function saisirAvancement(app, tache) {
   try { releves = await api.terrain.avancements(tache.id); } catch (e) { if (!estHorsLigne(e)) { app.erreur(e); return false; } }
   const dernier = releves[0];
   return ouvrirDialogue({
-    titre: `📈 Avancement · ${tache.libelle}`,
-    html: `<p class="ligne"><label>Avancement réel aujourd'hui <input type="number" data-pourcent min="0" max="100" step="5" inputmode="numeric" size="4" value="${dernier?.pourcent ?? ''}"> %</label></p>
+    titre: `${icone('terrain_btp_avancement')} ${texte('terrain_btp.actions.avancement.titre', { tache: tache.libelle })}`,
+    html: `<p class="ligne"><label>${texteHtml('terrain_btp.actions.avancement.reel')} <input type="number" data-pourcent min="0" max="100" step="5" inputmode="numeric" size="4" value="${dernier?.pourcent ?? ''}"> %</label></p>
       <input type="range" data-curseur min="0" max="100" step="5" value="${dernier?.pourcent ?? 0}" style="width: 100%">
-      <p><label>Commentaire<br><textarea data-commentaire rows="2" cols="34"></textarea></label></p>
+      <p><label>${texteHtml('terrain_btp.actions.commentaire')}<br><textarea data-commentaire rows="2" cols="34"></textarea></label></p>
       ${releves.length ? `<p class="aide">${releves.slice(0, 5).map((r) => `${formatDate(r.le)} : ${r.pourcent} % (${echapper(r.par)})`).join(' · ')}</p>` : ''}`,
-    boutons: [{ libelle: 'Annuler', valeur: false }],
+    boutons: [{ libelle: texte('commun.annuler'), valeur: false }],
     construire: (dlg, fermer) => {
       const champ = dlg.querySelector('[data-pourcent]');
       const curseur = dlg.querySelector('[data-curseur]');
       curseur.addEventListener('input', () => { champ.value = curseur.value; });
       champ.addEventListener('input', () => { curseur.value = champ.value; });
-      boutonPrincipal(dlg, 'Enregistrer', async () => {
+      boutonPrincipal(dlg, texte('commun.enregistrer'), async () => {
         const pourcent = Number(champ.value);
         if (champ.value === '' || !(pourcent >= 0 && pourcent <= 100)) { champ.focus(); return; }
         try {
           const avancement = { date: aujourdhui(), pourcent, commentaire: dlg.querySelector('[data-commentaire]').value.trim() || null };
           const r = await envoyerOuGarder(app, { type: OPERATION_TERRAIN.AVANCEMENT, id: `${tache.id}:${avancement.date}`, corps: { tache: tache.id, avancement },
-            libelle: `Avancement ${pourcent} % · ${tache.libelle}` }, () => api.terrain.enregistrerAvancement(tache.id, avancement));
-          if (r.reponse) app.message(`Avancement enregistré : ${pourcent} %`, 'succes');
+            libelle: texte('terrain_btp.actions.avancement.libelle', { pourcent, tache: tache.libelle }) }, () => api.terrain.enregistrerAvancement(tache.id, avancement));
+          if (r.reponse) app.message(texte('terrain_btp.actions.avancement.enregistre', { pourcent }), 'succes');
           fermer(true);
         } catch (e) { app.erreur(e); }
       });
@@ -70,18 +71,18 @@ export async function saisirAvancement(app, tache) {
 /** Photos de la tâche, déposées dans la GED de son ordre (sinon de son chantier) ; vrai si envoyées. */
 export async function envoyerPhotos(app, tache) {
   return ouvrirDialogue({
-    titre: `📷 Photos · ${tache.libelle}`,
-    html: '<div data-photos></div><p><label>Commentaire<br><textarea data-commentaire rows="2" cols="34"></textarea></label></p>',
-    boutons: [{ libelle: 'Annuler', valeur: false }],
+    titre: `${icone('terrain_btp_photo')} ${texte('terrain_btp.actions.photos.titre', { tache: tache.libelle })}`,
+    html: `<div data-photos></div><p><label>${texteHtml('terrain_btp.actions.commentaire')}<br><textarea data-commentaire rows="2" cols="34"></textarea></label></p>`,
+    boutons: [{ libelle: texte('commun.annuler'), valeur: false }],
     construire: (dlg, fermer) => {
       const s = selecteurPhotos(dlg.querySelector('[data-photos]'));
-      boutonPrincipal(dlg, 'Envoyer', async () => {
-        if (!s.nombre) { app.message('Choisissez au moins une photo', 'avertissement'); return; }
+      boutonPrincipal(dlg, texte('terrain_btp.actions.photos.envoyer'), async () => {
+        if (!s.nombre) { app.message(texte('terrain_btp.actions.photos.vide'), 'avertissement'); return; }
         try {
           const photos = await s.photos(dlg.querySelector('[data-commentaire]').value.trim());
           const r = await envoyerOuGarder(app, { type: OPERATION_TERRAIN.PHOTOS, id: Date.now(), corps: { tache: tache.id, photos },
-            libelle: `${photos.fichiers.length} photo${photos.fichiers.length > 1 ? 's' : ''} · ${tache.libelle}` }, () => api.terrain.photos(tache.id, formulairePhotos(photos)));
-          if (r.reponse) app.message(`${r.reponse.deposees.length} photo${r.reponse.deposees.length > 1 ? 's envoyées' : ' envoyée'}`, 'succes');
+            libelle: `${pluriel('terrain_btp.actions.photos.nombre', photos.fichiers.length)} · ${tache.libelle}` }, () => api.terrain.photos(tache.id, formulairePhotos(photos)));
+          if (r.reponse) app.message(pluriel('terrain_btp.actions.photos.envoyees', r.reponse.deposees.length), 'succes');
           fermer(true);
         } catch (e) { app.erreur(e); }
       });
@@ -92,28 +93,28 @@ export async function envoyerPhotos(app, tache) {
 /** Non-conformité signalée sur la tâche (tâche du CRM au service du motif), photos jointes facultatives. */
 export async function signalerNonConformite(app, tache, motifs = []) {
   return ouvrirDialogue({
-    titre: `⚠ Non-conformité · ${tache.libelle}`,
-    html: `<p><label>Motif<br><input data-motif list="terrain-motifs-nc" size="34" placeholder="Matériaux, plan, commande…"></label></p>
+    titre: `${icone('terrain_btp_nc')} ${texte('terrain_btp.actions.nc.titre', { tache: tache.libelle })}`,
+    html: `<p><label>${texteHtml('terrain_btp.actions.nc.motif')}<br><input data-motif list="terrain-motifs-nc" size="34" placeholder="${texteHtml('terrain_btp.actions.nc.motif_exemple')}"></label></p>
       <datalist id="terrain-motifs-nc">${motifs.map((m) => `<option value="${echapper(m)}">`).join('')}</datalist>
-      <p><label>Précisions<br><textarea data-commentaire rows="2" cols="34"></textarea></label></p>
-      <details><summary>📷 Joindre des photos</summary><div data-photos></div></details>`,
-    boutons: [{ libelle: 'Annuler', valeur: false }],
+      <p><label>${texteHtml('terrain_btp.actions.nc.precisions')}<br><textarea data-commentaire rows="2" cols="34"></textarea></label></p>
+      <details><summary>${iconeHtml('terrain_btp_photo')} ${texteHtml('terrain_btp.actions.photos.joindre')}</summary><div data-photos></div></details>`,
+    boutons: [{ libelle: texte('commun.annuler'), valeur: false }],
     construire: (dlg, fermer) => {
       const s = selecteurPhotos(dlg.querySelector('[data-photos]'));
-      boutonPrincipal(dlg, 'Signaler', async () => {
+      boutonPrincipal(dlg, texte('terrain_btp.actions.nc.signaler'), async () => {
         const motif = dlg.querySelector('[data-motif]').value.trim();
         if (!motif) { dlg.querySelector('[data-motif]').focus(); return; }
         const commentaire = dlg.querySelector('[data-commentaire]').value.trim() || null;
         try {
           const nc = { motif, commentaire };
-          const photos = s.nombre ? await s.photos(`Non-conformité : ${motif}${commentaire ? ` — ${commentaire}` : ''}`) : null;
+          const photos = s.nombre ? await s.photos(`${texte('terrain_btp.actions.nc.photos', { motif })}${commentaire ? ` — ${commentaire}` : ''}`) : null;
           const r = await envoyerOuGarder(app, { type: OPERATION_TERRAIN.NON_CONFORMITE, id: Date.now(), corps: { tache: tache.id, nc, photos },
-            libelle: `Non-conformité « ${motif} » · ${tache.libelle}` }, async () => {
+            libelle: texte('terrain_btp.actions.nc.libelle', { motif, tache: tache.libelle }) }, async () => {
             const rep = await api.terrain.nonConformite(tache.id, nc);
             if (photos) await api.terrain.photos(tache.id, formulairePhotos(photos));
             return rep;
           });
-          if (r.reponse) app.message(r.reponse.crm ? 'Non-conformité signalée au service concerné' : 'Non-conformité enregistrée (suivi CRM inactif : aucune tâche créée)', r.reponse.crm ? 'succes' : 'avertissement');
+          if (r.reponse) app.message(texte(r.reponse.crm ? 'terrain_btp.actions.nc.signalee' : 'terrain_btp.actions.nc.enregistree'), r.reponse.crm ? 'succes' : 'avertissement');
           fermer(true);
         } catch (e) { app.erreur(e); }
       });
@@ -127,26 +128,26 @@ export async function signalerNonConformite(app, tache, motifs = []) {
  */
 export async function demanderApprovisionnement(app, tache) {
   return ouvrirDialogue({
-    titre: `📦 Demande d'approvisionnement · ${tache.libelle}`,
-    html: `<p><label>Articles demandés (un par ligne, quantité comprise)<br><textarea data-articles rows="5" cols="34" placeholder="20 sacs de colle C2&#10;1 rouleau de bande"></textarea></label></p>
-      <p><label>Commentaire (date souhaitée, lieu de livraison…)<br><textarea data-commentaire rows="2" cols="34"></textarea></label></p>
-      <details><summary>📷 Joindre des photos</summary><div data-photos></div></details>`,
-    boutons: [{ libelle: 'Annuler', valeur: false }],
+    titre: `${icone('terrain_btp_demande')} ${texte('terrain_btp.actions.demande.titre', { tache: tache.libelle })}`,
+    html: `<p><label>${texteHtml('terrain_btp.actions.demande.articles')}<br><textarea data-articles rows="5" cols="34" placeholder="${texteHtml('terrain_btp.actions.demande.exemple')}"></textarea></label></p>
+      <p><label>${texteHtml('terrain_btp.actions.demande.commentaire')}<br><textarea data-commentaire rows="2" cols="34"></textarea></label></p>
+      <details><summary>${iconeHtml('terrain_btp_photo')} ${texteHtml('terrain_btp.actions.photos.joindre')}</summary><div data-photos></div></details>`,
+    boutons: [{ libelle: texte('commun.annuler'), valeur: false }],
     construire: (dlg, fermer) => {
       const s = selecteurPhotos(dlg.querySelector('[data-photos]'));
-      boutonPrincipal(dlg, 'Envoyer la demande', async () => {
+      boutonPrincipal(dlg, texte('terrain_btp.actions.demande.envoyer'), async () => {
         const articles = dlg.querySelector('[data-articles]').value.split('\n').map((x) => x.trim()).filter(Boolean);
         if (!articles.length) { dlg.querySelector('[data-articles]').focus(); return; }
         const demande = { cha_id: tache.chantier.id, ent_id: tache.ordre?.id ?? null, articles, commentaire: dlg.querySelector('[data-commentaire]').value.trim() || null };
         try {
-          const photos = s.nombre ? await s.photos(`Demande d'approvisionnement : ${articles.join(', ')}`) : null;
+          const photos = s.nombre ? await s.photos(texte('terrain_btp.actions.demande.photos', { articles: articles.join(', ') })) : null;
           const r = await envoyerOuGarder(app, { type: OPERATION_TERRAIN.DEMANDE, id: Date.now(), corps: { demande, tache: tache.id, photos },
-            libelle: `Demande d'approvisionnement · ${tache.libelle}` }, async () => {
+            libelle: texte('terrain_btp.actions.demande.titre', { tache: tache.libelle }) }, async () => {
             const rep = await api.terrain.demande(demande);
             if (photos) await api.terrain.photos(tache.id, formulairePhotos(photos));
             return rep;
           });
-          if (r.reponse) app.message(`Demande ${r.reponse.numero ?? ''} envoyée`.replace('  ', ' '), 'succes');
+          if (r.reponse) app.message(texte('terrain_btp.actions.demande.envoyee', { numero: r.reponse.numero ?? '' }).replace('  ', ' '), 'succes');
           fermer(true);
         } catch (e) { app.erreur(e); }
       });
@@ -161,6 +162,6 @@ export function boutonPrincipal(dlg, libelle, action) {
   b.className = 'principal';
   b.textContent = libelle;
   b.addEventListener('click', async () => { b.disabled = true; try { await action(); } finally { b.disabled = false; } });
-  const annuler = [...dlg.querySelectorAll('button')].find((x) => x.textContent.trim() === 'Annuler');
+  const annuler = [...dlg.querySelectorAll('button')].find((x) => x.textContent.trim() === texte('commun.annuler'));
   (annuler?.parentElement ?? dlg).append(b);
 }
