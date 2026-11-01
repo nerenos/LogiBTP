@@ -91,3 +91,22 @@
 - **Contrôles** : `npm test`, analyse des portées (paramètres `texte` / `icone` renommés : `lireEcheances(saisie)`,
   `alerte(message)`), page de l'installation rendue dans le navigateur, natures des services et aller-retour des
   échéances vérifiés.
+
+## 41. Réalisation du lot P3ab : écrans de la révision des prix et des règlements (01/11/2026)
+
+- **Périmètre** : écrans arrivés avec la PR #2 et restés en dur après la fusion : paramètres de la révision des prix
+  (`pages/parametres-revision.js` : valeurs des index, import CSV, catalogue, modèles de formules), onglet Révision du
+  marché (`structure/revision-marche.js`), messages des formules (`structure/revision.js`), marchés à facturer du mois
+  (`pages/marches-a-facturer.js`), onglet Règlements du document (`documents/reglements-document.js` : échéancier,
+  règlements et imputations, déductions d'acompte, fenêtre d'imputation), colonne Chantier des lignes (`editeur-btp.js`)
+  et étape « Mois des travaux » de l'entête (`panneaux-btp.js`).
+- **Textes** : `revision_btp.*` (`erreurs.<REV_…>` par `textesParCode`, types de prix et arrondis par code, `marche.*`,
+  `parametres.*`), `structure_btp.a_facturer.*` (pluriels par `pluriel`, noms des pièces par `textesParCode`, mois par
+  `langue()`), `reglements_btp.document.*` (modes de déduction par `textesParCode`), `document_btp.editeur.chantier.*`.
+  La notation des formules (« Cn = … × BT01n / BT010 ») et l'exemple de saisie restent des symboles.
+- **Icônes** : `revision_btp_page`, `revision_btp_facture`, `revision_btp_provisoire`, `structure_btp_a_facturer`,
+  `structure_btp_creer_avancement`, `structure_btp_sans_avancement`, `structure_btp_en_cours`, `structure_btp_retablir`,
+  `reglements_btp_*` (manuel, rafraîchir, imputer, tiers).
+- **Contrôles** : `npm test`, clés et icônes statiques relues contre les couches, analyse des portées (paramètres
+  `texte` renommés : `lireTermes(saisie)`, `lireCsvIndex(contenu)`, variables locales `formule` et `saisie`) ; page des
+  marchés à facturer (API simulée), messages des formules et lecture du CSV vérifiés dans le navigateur.

@@ -1,3 +1,4 @@
+import { textesParCode } from '@logibtp/socle/dictionnaire';
 import { Dec, Dz, S, ZERO, arrondir } from '@logibtp/socle';
 import { TYPE_PRIX, ARRONDI_REVISION } from '../codes.js';
 
@@ -19,15 +20,7 @@ export const ERREUR_REVISION = Object.freeze({
   ARRONDI: 'REV_ARRONDI',
 });
 
-export const MESSAGES_REVISION = Object.freeze({
-  [ERREUR_REVISION.SANS_TERME]: 'La formule n\'a aucun index',
-  [ERREUR_REVISION.POIDS]: 'Le poids d\'un index doit être positif',
-  [ERREUR_REVISION.PARTIE_FIXE]: 'La partie fixe est comprise entre 0 et 1 (exclu)',
-  [ERREUR_REVISION.SOMME]: 'Partie fixe + poids des index doit valoir 1',
-  [ERREUR_REVISION.INDEX_DOUBLE]: 'Un index n\'apparaît qu\'une fois',
-  [ERREUR_REVISION.PRECISION]: 'Précision du coefficient de 0 à 6 décimales',
-  [ERREUR_REVISION.ARRONDI]: 'Arrondi au plus proche ou supérieur',
-});
+export const MESSAGES_REVISION = textesParCode('revision_btp.erreurs', Object.values(ERREUR_REVISION));
 
 const PRECISION_RAPPORT = 10;
 
@@ -132,9 +125,9 @@ export function regulariser(periodes, precision = 2) {
 }
 
 /** Formule saisie « BT01 0,5 ; BT06 0,35 » → termes [{ index, poids }] (poids en chaîne ; texte illisible : null). */
-export function lireTermes(texte) {
+export function lireTermes(saisie) {
   const termes = [];
-  for (const morceau of String(texte ?? '').split(/[;\n]/).map((x) => x.trim()).filter(Boolean)) {
+  for (const morceau of String(saisie ?? '').split(/[;\n]/).map((x) => x.trim()).filter(Boolean)) {
     const m = /^([A-Za-z0-9_.-]+)\s*[:= ]\s*([0-9]+(?:[.,][0-9]+)?)$/.exec(morceau);
     if (!m) return null;
     termes.push({ index: m[1].toUpperCase(), poids: m[2].replace(',', '.') });
