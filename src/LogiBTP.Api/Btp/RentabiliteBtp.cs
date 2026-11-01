@@ -31,6 +31,9 @@ namespace LogiBTP.Api.Btp;
 /// tient un stock pour un article géré en stock (V45).</item>
 /// <item>Facturé : factures, factures d'avancement (période), factures d'acompte, avoirs, ventilés comme le budget ;
 /// postes de pied à part.</item>
+/// <item>Production (§ 4.12, lot 4) : situations de production valables, cumulées ; chaque situation apporte l'écart de
+/// chaque ligne du marché avec la situation de production précédente (date, puis création), ventilé comme le budget,
+/// daté de la situation ; lignes seules (ni postes de pied ni frais annexes).</item>
 /// </list>
 /// PR des coûts réels = PA × coefficient de frais généraux de la nature à la date (<c>rentabilite_coef_fg</c>).
 /// </summary>
@@ -39,7 +42,7 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
     public const string Noeud = "rentabilite";
     public const string NoeudCouts = "rentabilite/couts";
 
-    public override int VersionRegles => 3;
+    public override int VersionRegles => 4;
 
     /// <summary>Règles appliquées (afa_regle), affichées dans la page des faits.</summary>
     public static class Regles
@@ -78,6 +81,7 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
         public const string AcomptePaye = "ACOMPTE_PAYE";
         public const string AcompteRecu = "ACOMPTE_RECU";
         public const string AcompteUtilise = "ACOMPTE_UTILISE";
+        public const string ProductionLigne = "PRODUCTION_LIGNE";
     }
 
     public override IReadOnlyList<string> ReglesControle { get; } =
@@ -110,7 +114,7 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
         decimal Montant, string? Libelle);
     private sealed record DateSql(int Id, DateOnly? Date);
 
-    private static readonly string[] RolesCommandes = [RolesRentabilite.CommandeVente, RolesRentabilite.OrdreExecution, RolesRentabilite.CommandeAchat,
+    private static readonly string[] RolesCommandes = [RolesRentabilite.Production, RolesRentabilite.CommandeVente, RolesRentabilite.OrdreExecution, RolesRentabilite.CommandeAchat,
         RolesRentabilite.CommandeSt, RolesRentabilite.ReservationStock, RolesRentabilite.ReceptionAchat, RolesRentabilite.RetourAchat];
 
     /// <summary>Signe d'une pièce comptable : avoir retourné, sauf l'avoir d'avancement (déjà négatif, V4).</summary>
@@ -177,6 +181,7 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
         c.Budget();
         c.BudgetExecution();
         c.Facture();
+        c.Production();
         c.Engage();
         c.DebourseAchats();
 
@@ -538,6 +543,31 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
                     Ajouter(Indicateur.Facture, composante, p.Date, p, feuille, feuille.NatId, 0, 0, pv, Regles.FactureLigne, oe ?? p.Ordre);
             }
             foreach (var p in Pieces.Values.Where(p => roles.Contains(p.Role))) PiedEtFrais(Indicateur.Facture, p, Signe(p), p.Date, Composante.Vente, false);
+        }
+
+        // ------------------------------------------------------------- production
+
+        /// <summary>
+        /// Production (§ 4.12) : situations de production en cumul ; chaque ligne vendue apporte son écart avec la même ligne
+        /// du marché (lig_avt_source_lig_id) dans la situation de production précédente du marché, à la date de la situation.
+        /// </summary>
+        public void Production()
+        {
+            var precedents = new Dictionary<(int?, long), decimal>();
+            foreach (var p in Pieces.Values.Where(p => p.Role == RolesRentabilite.Production).OrderBy(p => p.Date).ThenBy(p => p.EntId))
+            {
+                foreach (var l in vendues[p.EntId].Where(l => ChantierDe(l, p) == chantier))
+                {
+                    var cle = (p.Marche, l.AvtSource ?? l.LigId);
+                    var ecart = l.Ht - precedents.GetValueOrDefault(cle);
+                    precedents[cle] = l.Ht;
+                    if (ecart == 0) continue;
+                    var commande = CommandeDe(l);
+                    var oe = commande is null ? null : Reprises(commande).OrderByDescending(x => x.Part).Select(x => (long?)x.Oe).FirstOrDefault();
+                    foreach (var (feuille, pv) in Ventiler(l, ecart))
+                        Ajouter(Indicateur.Production, Composante.Vente, p.Date, p, feuille, feuille.NatId, 0, 0, pv, Regles.ProductionLigne, oe ?? p.Ordre);
+                }
+            }
         }
 
         // ------------------------------------------------------------- engagé

@@ -29,6 +29,10 @@
   lot G1 : appliquer `db/250` (révision des prix : index, formules, paramètres des marchés) puis saisir ou importer les
   valeurs des index utilisés (`/parametres/revision`) ; libellés du catalogue BT à vérifier ; rejouer le `191` régénéré
   (bloc `REVISION_PRIX` des situations et factures d'avancement).
+- [ ] Module Rentabilité, lot 4 : appliquer `modules/document/db/019q` (type d'avancement D) puis `db/260` (type
+  `V_PRODUCTION`, transformation depuis la commande, droits, rôle PRODUCTION ; chantiers ouverts remis en file pour la
+  version 4 des règles), rejouer les `121`, `176` et `191` régénérés (thème de liste Situations, vue des colonnes,
+  modèle d'édition) ; vérifier les droits du type « Situation de production » dans `/parametres/droits`.
 - [ ] Module Rentabilité, lot 3 : aucun script ; au démarrage de l'API, la version 3 des règles remet en file tous les
   chantiers ouverts (heures du budget, factures d'acompte).
 - [ ] Module Rentabilité, lot 2 : rejouer `modules/rentabilite/db/099r` puis appliquer `db/259` (acomptes en trésorerie,
@@ -233,7 +237,8 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
   ([ANALYSE-MODULE-ANALYSE.md](documentation/conception/ANALYSE-MODULE-ANALYSE.md)), lot 0 réalisé (périmètre unique
   des pièces, chargé d'affaires en individu, chantiers d'une pièce, garde-fou des unités), lot 1 réalisé (faits
   versionnés, file, nuit, Détail, faits, rapprochement, rôles des types paramétrés), lot 2 réalisé (Liste
-  multi-origine, période, vues, acomptes en trésorerie, contrôles et changements, photos), lot 3 réalisé (bloc de résultats PV, heures MO) ; lots 4 à 8 à réaliser. Plus
+  multi-origine, période, vues, acomptes en trésorerie, contrôles et changements, photos), lot 3 réalisé (bloc de résultats PV, heures MO), lot 4 réalisé (situation de production, colonnes croisées,
+  préchargement, production, FAE / PCA) ; lots 5 à 8 à réaliser. Plus
   tard (Q17) : historique du chargé d'affaires d'une affaire et d'un chantier (aujourd'hui seul le chargé d'affaires
   actuel compte, sur toute la période). Simplifications du lot 1 à revoir :
   - PV ventilé sur les feuilles d'un ouvrage au prorata du PR (à défaut du PA, sinon à parts égales), l'analyse parlant
@@ -256,6 +261,11 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
   - colonnes de la Liste fixes (pas de choix de colonnes dans les vues) ; les rapports (% dépensé, % facturé) sont au
     cumul même en période ;
   - photos jamais purgées ; une photo référence un calcul, toute purge des faits devra garder ceux qu'elle voit.
+  Simplifications du lot 4 à revoir :
+  - précédent d'une situation de production = dernière pièce facturée (comme la situation de travaux), pas la
+    production précédente ; production sans postes de pied (lignes vendues seules) ;
+  - colonnes croisées : quantité, % et montant cumulés de l'autre situation, sans colonne d'écart en période ;
+  - onglet Gestion du marché sans les situations de production ; édition par le modèle de la situation de travaux.
 - [ ] Module Comptabilité avancée : à définir (voir aussi « Module Comptabilité complet »).
 - [ ] Module de gestion des risques : à définir.
 - [ ] Module de circuit de validation : à définir.

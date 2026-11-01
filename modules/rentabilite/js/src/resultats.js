@@ -1,5 +1,6 @@
-// Bloc de résultats sur les PV du Détail (ANALYSE-MODULE-ANALYSE.md § 4.8, décisions Q15, Q16) : lignes Budget,
-// Réalisé, Facturé, Reste à facturer, Prévisionnel ; colonnes HT des lignes, postes de pied par libellé, HT net, marge
+// Bloc de résultats sur les PV du Détail (ANALYSE-MODULE-ANALYSE.md § 4.8, § 4.12, décisions Q15, Q16) : lignes Budget,
+// Réalisé, Production (situations de production, lot 4 : la marge la plus juste en cours de chantier), Facturé, Reste à
+// facturer, Prévisionnel ; colonnes HT des lignes, postes de pied par libellé, HT net, marge
 // brute (HT des lignes − PA) et nette (HT des lignes − PR) en montant et en %. Chaque ligne met en face de son PV le coût
 // du § 4.8. En période, les flux (budget, facturé, déboursé) sont ceux de la période, les restes au cumul.
 import { Dz } from '@logibtp/socle';
@@ -7,7 +8,7 @@ import { INDICATEUR, COMPOSANTE } from './codes.js';
 import { filtrerOrdre } from './indicateurs.js';
 
 /** Lignes du bloc, dans l'ordre d'affichage. */
-export const LIGNES_RESULTATS = Object.freeze(['budget', 'realise', 'facture', 'reste_facturer', 'previsionnel']);
+export const LIGNES_RESULTATS = Object.freeze(['budget', 'realise', 'production', 'facture', 'reste_facturer', 'previsionnel']);
 
 const somme = (agregats, filtre, champ, periode) => agregats.filter(filtre)
   .reduce((s, a) => {
@@ -32,7 +33,8 @@ const totalPostes = (m) => [...m.values()].reduce((s, v) => s.plus(v), Dz(0));
  * Bloc de résultats. agregats : ceux du Détail ; postes : [{ ordre_id, indicateur, libelle, pv, pv_periode }] ;
  * ordre : comme le Détail (undefined = tout, 0 = sans ordre) ; periode : flux de la période.
  * Rend { libelles (postes, dans l'ordre), lignes: [{ code, lignes, postes: Map, net, pa, pr, brute, taux_brute, nette,
- * taux_nette }] } ; une ligne sans poste a `postes` vide et `net` = `lignes`.
+ * taux_nette }] } ; une ligne sans poste a `postes` vide et `net` = `lignes` ; la ligne Production n'est rendue que si le
+ * chantier a une situation de production (coût en face : le déboursé, comme le réalisé).
  */
 export function blocResultats({ agregats, postes = [], ordre, periode = false }) {
   const a = filtrerOrdre(agregats, ordre);
@@ -73,6 +75,8 @@ export function blocResultats({ agregats, postes = [], ordre, periode = false })
   const lignes = [
     ligne('budget', budgetLignes, budgetPostes, pa.budget, pr.budget),
     ligne('realise', realiseLignes, new Map(), pa.debourse, pr.debourse),
+    ...(a.some((x) => x.indicateur === INDICATEUR.PRODUCTION)
+      ? [ligne('production', flux(ind(INDICATEUR.PRODUCTION), 'pv'), new Map(), pa.debourse, pr.debourse)] : []),
     ligne('facture', factureLignes, facturePostes, pa.debourse, pr.debourse),
     ligne('reste_facturer', resteLignes, restePostes, pa.reste, pr.reste),
     // Prévisionnel à terminaison : budget PV (cumul) ; dépensé + reste à dépenser (saisies prévisionnelles : lot 6).

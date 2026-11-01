@@ -385,6 +385,10 @@
       "aide_avt_montant_marche": "Montant HT de la ligne du marché (commande parente)",
       "aide_avt_qte_prec": "Quantité cumulée du dernier document d'avancement validé",
       "aide_avt_montant_prec": "Montant cumulé du dernier document d'avancement validé",
+      "aide_avt_autre_pct": "% cumulé de la {{autre}} de la même période (pour information)",
+      "aide_avt_autre_qte": "Quantité cumulée de la {{autre}} de la même période (pour information)",
+      "aide_avt_autre_montant": "Montant cumulé de la {{autre}} de la même période (pour information)",
+      "aide_avt_autre_ecart": "Montant cumulé de ce document moins celui de la {{autre}} de la même période",
       "fige": "Document validé : consultation seule",
       "parent_non_modifiable": "Information reprise du document parent : non modifiable",
       "nombre_invalide": "Nombre invalide",
@@ -494,7 +498,11 @@
       "avt_qte_marche": "Qté marché",
       "avt_montant_marche": "Montant marché",
       "avt_qte_prec": "Qté préc.",
-      "avt_precedent": "Montant préc."
+      "avt_precedent": "Montant préc.",
+      "avt_autre_pct": "% {{autre}}",
+      "avt_autre_qte": "Qté {{autre}}",
+      "avt_autre_montant": "Montant {{autre}}",
+      "avt_autre_ecart": "Écart / {{autre}}"
     },
     "virtuelles": {
       "total": "Total",

@@ -654,6 +654,7 @@ export const api = {
   enregistrerFormulesRevision: (formules) => appel('PUT', '/structure/revision/formules', formules),
   commandesMarche: (id) => appel('GET', `/structure/documents/${id}/commandes-marche`),
   avancementDocument: (id) => appel('GET', `/structure/documents/${id}/avancement`),
+  croiseesDocument: (id, { repli = false } = {}) => appel('GET', `/structure/documents/${id}/croisees${repli ? '?repli=true' : ''}`),
   acomptesDocument: (id) => appel('GET', `/structure/documents/${id}/acomptes`),
   // Annulation par avoir (pièce et, dans un marché, pièces d'avancement suivantes) : liste puis annulation.
   piecesAnnulation: (id) => appel('GET', `/structure/documents/${id}/annulation`),

@@ -252,7 +252,7 @@ export class TableauListe {
       if (!td) return;
       const l = this.#lignes[Number(td.parentElement.dataset.i)];
       const c = COLONNES_LISTE.find((x) => x.code === td.dataset.colonne);
-      this.#o.ouvrirFaits({ chantier: l.chantier, ordre: l.ordre, indicateurs: c.faits, colonne: c.code, ligne: l.libelle }, ev.ctrlKey || ev.metaKey);
+      this.#o.ouvrirFaits({ chantier: l.chantier, ordre: l.ordre, indicateurs: c.faits, composante: c.composante ?? null, colonne: c.code, ligne: l.libelle }, ev.ctrlKey || ev.metaKey);
     });
   }
 

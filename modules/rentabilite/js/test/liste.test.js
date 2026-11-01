@@ -72,6 +72,25 @@ describe('Liste multi-origine', () => {
     expect(lignesListe(r, new Set([...ouverts, 'c2'])).length).toBe(7);
   });
 
+  it('production : réalisé sans acomptes, FAE et PCA au cumul', () => {
+    const faits = [
+      A(2, INDICATEUR.FACTURE, 0, 0, 400, { periode: { pv: 100 } }),
+      A(2, INDICATEUR.FACTURE, 0, 0, 200, { composante: COMPOSANTE.ACOMPTE }),
+      A(2, INDICATEUR.PRODUCTION, 0, 0, 550, { periode: { pv: 60 } }),
+      A(3, INDICATEUR.FACTURE, 0, 0, 300),
+      A(3, INDICATEUR.PRODUCTION, 0, 0, 250),
+    ];
+    const v2 = valeursColonnes(faits.filter((a) => a.cha_id === 2), COUT.PR, { colonnes: COLONNES_LISTE });
+    expect(v2.realise.toString()).toBe('400');
+    expect(v2.fae.toString()).toBe('150');
+    expect(v2.pca.toString()).toBe('0');
+    const v3 = valeursColonnes(faits.filter((a) => a.cha_id === 3), COUT.PR, { colonnes: COLONNES_LISTE });
+    expect(v3.pca.toString()).toBe('50');
+    const p2 = valeursColonnes(faits.filter((a) => a.cha_id === 2), COUT.PR, { colonnes: COLONNES_LISTE, periode: true });
+    expect(p2.production.toString()).toBe('60');
+    expect(p2.fae.toString()).toBe('150');
+  });
+
   it('le Détail ignore les acomptes', () => {
     const l = lignesDetail({ agregats: AGREGATS.filter((a) => a.cha_id === 2).map((a) => ({ ...a, nat_id: null })), natures: [] });
     expect(l.map((x) => x.type)).toEqual(['total', 'non_ventile']);

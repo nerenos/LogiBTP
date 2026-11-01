@@ -235,6 +235,12 @@ public static class Structure
                 """).FirstAsync(ct);
             return Results.Content(json, "application/json");
         });
+        // Situations de travaux et de production (§ 4.12, R8) : l'autre situation du marché de la même période (mois de la
+        // date ; référence non annulée, la validée d'abord), pour les colonnes croisées et le préchargement ; repli : sans
+        // autre situation du mois, la dernière valable datée au plus tard du mois (préchargement seulement).
+        g.MapGet("/documents/{id:long}/croisees", async (long id, bool? repli, LogiBtpContext db, CancellationToken ct) =>
+            Results.Content(await db.Database.SqlQueryRaw<string>(SqlCroisees, new NpgsqlParameter("id", id), new NpgsqlParameter("repli", repli ?? false))
+                .FirstAsync(ct), "application/json"));
         // Annulation d'une pièce d'avancement (Q30, 13.12 bis) : elle et toutes les pièces d'avancement suivantes du marché
         // (factures, avoirs d'avancement) sont annulées par avoir, en une transaction ; la dernière situation qui les a
         // servies est remise en cours (nouvel indice, avancements conservés). Hors avancement : la pièce seule.
@@ -284,6 +290,37 @@ public static class Structure
         });
         return api;
     }
+
+    /// <summary>
+    /// Autre situation du marché (travaux ↔ production) pour un document d'avancement en cumul : même mois de date,
+    /// référence non annulée ni remplacée (la validée d'abord, puis la plus récente) ; @repli : à défaut, la dernière
+    /// valable datée au plus tard de la fin du mois. Lignes : %, quantité et montant cumulés, mode et valeur saisis, par
+    /// ligne du marché (lig_avt_source_lig_id).
+    /// </summary>
+    private const string SqlCroisees = """
+        WITH d AS (
+            SELECT d.ent_id, d.ent_marche_id, date_trunc('month', d.ent_date)::date AS mois,
+                   CASE t.tyd_avancement WHEN 'S' THEN 'D' WHEN 'D' THEN 'S' END AS autre
+            FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id
+            WHERE d.ent_id = @id AND d.ent_marche_id IS NOT NULL),
+        candidats AS (
+            SELECT x.ent_id, x.ent_numero, x.ent_date, x.ent_verrouille, tx.tyd_code, tx.tyd_libelle,
+                   x.ent_date >= d.mois AND x.ent_date < (d.mois + INTERVAL '1 month')::date AS meme_mois
+            FROM d
+            JOIN document x ON x.ent_marche_id = d.ent_marche_id AND x.ent_id <> d.ent_id AND x.ent_is_reference
+            JOIN type_document tx ON tx.tyd_id = x.ent_tyd_id AND tx.tyd_avancement = d.autre
+            JOIN statut_document sx ON sx.std_id = x.ent_std_id AND sx.std_code NOT IN ('ANNULE', 'REMPLACE')
+            WHERE (x.ent_date >= d.mois AND x.ent_date < (d.mois + INTERVAL '1 month')::date)
+               OR (@repli AND x.ent_date < (d.mois + INTERVAL '1 month')::date AND f_document_valable(x.ent_id, FALSE))),
+        choisi AS (SELECT * FROM candidats ORDER BY meme_mois DESC, ent_verrouille DESC, ent_date DESC, ent_id DESC LIMIT 1)
+        SELECT json_build_object(
+            'document', (SELECT json_build_object('ent_id', c.ent_id, 'numero', c.ent_numero, 'type', c.tyd_code, 'libelle_type', c.tyd_libelle,
+                            'date', c.ent_date, 'valide', c.ent_verrouille, 'meme_mois', c.meme_mois) FROM choisi c),
+            'lignes', coalesce((SELECT json_agg(json_build_object('source_lig_id', l.lig_avt_source_lig_id, 'pct', l.lig_avt_pct,
+                            'qte', l.lig_avt_qte_cumul, 'montant', l.lig_avt_montant_cumul, 'mode', l.lig_avt_mode, 'valeur', l.lig_avt_valeur))
+                        FROM choisi c JOIN document_ligne l ON l.lig_ent_id = c.ent_id
+                        WHERE l.lig_avt_source_lig_id IS NOT NULL AND l.lig_avt_mode IS NOT NULL), '[]'::json)) AS "Value"
+        """;
 
     /// <summary>
     /// Pièces annulées avec la pièce {id} (alias x) : elle-même, et dans un marché les pièces d'avancement validées non

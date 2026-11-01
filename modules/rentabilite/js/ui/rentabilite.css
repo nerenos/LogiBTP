@@ -38,6 +38,9 @@
 /* Liste : arbre multi-origine, total figé en pied, colonnes d'acompte. */
 .rentabilite-colonne-acompte { background: var(--rentabilite-acompte); color: var(--rentabilite-acompte-texte); }
 .rentabilite-detail td.rentabilite-bande-acompte, .rentabilite-liste td.rentabilite-bande-acompte { border-left-color: var(--rentabilite-acompte); }
+/* Production (lot 4) : production, factures à établir (FAE), produits constatés d'avance (PCA). */
+.rentabilite-colonne-production { background: var(--rentabilite-production); color: var(--rentabilite-production-texte); }
+.rentabilite-detail td.rentabilite-bande-production, .rentabilite-liste td.rentabilite-bande-production { border-left-color: var(--rentabilite-production); }
 .rentabilite-liste td.montant { border-left: 3px solid transparent; }
 .rentabilite-liste td.rentabilite-bande-budget { border-left-color: var(--rentabilite-budget); }
 .rentabilite-liste td.rentabilite-bande-budget-execution { border-left-color: var(--rentabilite-budget-execution); }

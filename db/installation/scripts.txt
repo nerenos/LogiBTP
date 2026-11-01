@@ -41,6 +41,7 @@ modules/document/db/019m_document_consultation_issue.sql
 modules/document/db/019n_document_taux_tva_ordre.sql
 modules/document/db/019o_document_taux_tva_defaut.sql
 modules/document/db/019p_document_perimetre.sql rejouable
+modules/document/db/019q_document_production.sql rejouable
 modules/metre/db/020_metre_schema.sql
 modules/metre/db/021_metre_script.sql
 modules/liste/db/030_liste_schema.sql
@@ -206,6 +207,7 @@ db/256_affaire_responsable.sql rejouable
 db/257_document_chantier.sql rejouable
 db/258_rentabilite.sql rejouable
 db/259_rentabilite_lot2.sql rejouable
+db/260_situation_production.sql rejouable
 
 # Vues de colonnes des types de documents créés après 176 : rejouée en dernier.
 db/176_documents_vues_types.sql rejouable

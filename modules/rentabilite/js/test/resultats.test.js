@@ -52,6 +52,17 @@ describe('Bloc de résultats', () => {
     expect(p.facture.postes.get('Remise').toString()).toBe('-5');
     expect(p.reste_facturer.lignes.toString()).toBe('400');
   });
+  it('production : ligne rendue seulement avec une situation de production, coût = déboursé', () => {
+    expect(l.production).toBeUndefined();
+    const avec = [...AGREGATS, A(I.PRODUCTION, C.VENTE, 0, 0, 520, { periode: { pv: 170 } })];
+    const lp = Object.fromEntries(blocResultats({ agregats: avec, postes: POSTES }).lignes.map((x) => [x.code, x]));
+    expect(blocResultats({ agregats: avec }).lignes.map((x) => x.code)).toEqual(['budget', 'realise', 'production', 'facture', 'reste_facturer', 'previsionnel']);
+    expect(lp.production.lignes.toString()).toBe('520');
+    expect(lp.production.brute.toString()).toBe('220');
+    expect(lp.production.nette.toString()).toBe('190');
+    const pp = Object.fromEntries(blocResultats({ agregats: avec, periode: true }).lignes.map((x) => [x.code, x]));
+    expect(pp.production.lignes.toString()).toBe('170');
+  });
   it('marge sans base : % nul', () => {
     const v = blocResultats({ agregats: [], postes: [] }).lignes[0];
     expect(v.taux_brute).toBeNull();

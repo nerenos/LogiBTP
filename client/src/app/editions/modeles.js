@@ -354,7 +354,7 @@ const RAPPORTS = [
   piece({ code: 'DEVIS', libelle: 'Devis', types: ['V_DEVIS'], accord: true, particulier: true, ordre: 10 }),
   piece({ code: 'COMMANDE_CLIENT', libelle: 'Commande client (accusé de réception)', types: ['V_COMMANDE'], titre: 'Accusé de réception de commande', ordre: 20 }),
   piece({ code: 'FACTURE', libelle: 'Facture, avoir, acompte', types: ['V_FACTURE', 'V_AVOIR', 'V_FACTURE_ACOMPTE', 'V_RECU_ACOMPTE', 'V_DEMANDE_ACOMPTE'], lettres: true, paiement: true, ordre: 30 }),
-  piece({ code: 'SITUATION', libelle: 'Situation de travaux', types: ['V_SITUATION', 'V_REPRISE_AVT'], presentations: PRESENTATIONS_AVANCEMENT, ordre: 40, marche: true }),
+  piece({ code: 'SITUATION', libelle: 'Situation de travaux', types: ['V_SITUATION', 'V_PRODUCTION', 'V_REPRISE_AVT'], presentations: PRESENTATIONS_AVANCEMENT, ordre: 40, marche: true }),
   piece({ code: 'FACTURE_AVANCEMENT', libelle: "Facture d'avancement", types: ['V_FACTURE_AVT'], presentations: PRESENTATIONS_AVANCEMENT, lettres: true, paiement: true, ordre: 50, marche: true, facturationMarche: true }),
   piece({
     code: 'BON_LIVRAISON', libelle: 'Bon de livraison, bon de retour', types: ['V_RECEPTION', 'V_RETOUR'], accord: true, libelleAdresse: 'Livraison',
@@ -654,7 +654,7 @@ export const DEFAUTS_EDITION = [
   ...['V_DEVIS'].map((t) => ['DOCUMENT', t, 'DEVIS']),
   ...['V_COMMANDE'].map((t) => ['DOCUMENT', t, 'COMMANDE_CLIENT']),
   ...['V_FACTURE', 'V_AVOIR', 'V_FACTURE_ACOMPTE', 'V_RECU_ACOMPTE', 'V_DEMANDE_ACOMPTE'].map((t) => ['DOCUMENT', t, 'FACTURE']),
-  ...['V_SITUATION', 'V_REPRISE_AVT'].map((t) => ['DOCUMENT', t, 'SITUATION']),
+  ...['V_SITUATION', 'V_PRODUCTION', 'V_REPRISE_AVT'].map((t) => ['DOCUMENT', t, 'SITUATION']),
   ...['V_FACTURE_AVT'].map((t) => ['DOCUMENT', t, 'FACTURE_AVANCEMENT']),
   ...['V_RECEPTION', 'V_RETOUR'].map((t) => ['DOCUMENT', t, 'BON_LIVRAISON']),
   ...['A_COMMANDE', 'A_DEVIS', 'A_RECEPTION', 'A_RETOUR', 'T_AO', 'T_COMMANDE'].map((t) => ['DOCUMENT', t, 'COMMANDE_FOURNISSEUR']),

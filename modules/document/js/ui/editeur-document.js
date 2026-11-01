@@ -5,7 +5,7 @@ import {
 } from '@logibtp/socle/ui';
 import { D, Dz, S, UN, completerDate, dateLocale } from '@logibtp/socle';
 import { texte, texteHtml, icone, iconeHtml, textesParCode, couleurTheme, pluriel } from '@logibtp/socle/dictionnaire';
-import { calculerDocument, TL, CODES_TL, estChiffree, estPied, accepteEnfants, estTranche, estTypeNumerote, etatSolde, regle } from '../src/index.js';
+import { calculerDocument, TL, CODES_TL, estChiffree, estPied, accepteEnfants, estTranche, estTypeNumerote, etatSolde, regle, TYPE_AVANCEMENT } from '../src/index.js';
 import { ReglesDocument } from './regles.js';
 import { PressePapiers } from './presse-papiers.js';
 
@@ -54,6 +54,9 @@ export const COLONNES_RESTE = ['qte_parent', 'reste', 'solde'];
 
 /** Colonnes de l'avancement (situations, factures d'avancement). */
 export const COLONNES_AVANCEMENT = ['avt_pct_prec', 'avt_pct', 'avt_qte', 'avt_montant', 'avt_precedent'];
+
+/** Colonnes croisées : avancement d'un autre document de la même période (situation de travaux ↔ de production). */
+export const COLONNES_CROISEES = ['avt_autre_pct', 'avt_autre_qte', 'avt_autre_montant', 'avt_autre_ecart'];
 /**
  * Structure de pied pour l'affichage : un sous-total saisi entre deux groupes de postes HT (remise, sous-total,
  * compte prorata) rejoint un seul groupe « Postes de pied HT », au même niveau que les postes ; montant du groupe =
@@ -184,7 +187,7 @@ export class EditeurDocument {
 
   /** Situation, facture d'avancement, reprise : lignes reprises du marché, seuls l'avancement et le commentaire se saisissent. */
   get estAvancement() {
-    return Boolean(this.saisie.document.ent_avt_presentation) || ['S', 'F', 'R'].includes(this.definition.type?.tyd_avancement);
+    return Boolean(this.saisie.document.ent_avt_presentation) || Object.values(TYPE_AVANCEMENT).includes(this.definition.type?.tyd_avancement);
   }
 
   /** Ligne reprise du document parent (commande du marché) dans un document d'avancement. */
@@ -345,6 +348,8 @@ export class EditeurDocument {
     if (this.restes?.parLigne.size) ajouter(COLONNES_RESTE);
     // Document d'avancement : colonnes de l'avancement après la quantité si la vue n'en a aucune.
     if (this.saisie.document.ent_avt_presentation) ajouter(COLONNES_AVANCEMENT, ALIAS_AVANCEMENT.map(([cle]) => cle));
+    // Avancement d'un autre document de la période (posé par l'hôte) : colonnes croisées si la vue n'en a aucune.
+    if (this.croisees) ajouter(COLONNES_CROISEES);
     // Largeur réglée (px) portée par la vue ; la première colonne porte l'arborescence (repli des lignes).
     const res = colonnesVue.filter((c) => parCle.has(c.cle))
       .map((c, i) => ({ ...parCle.get(c.cle), ...(c.titre ? { titre: c.titre } : {}), largeur: c.largeur ?? null, arbre: i === 0 }));
@@ -361,6 +366,38 @@ export class EditeurDocument {
    * { seuil_pct, seuil_qte, lignes: [{ lig_id, source_lig_id, etape, qte_parent, autres, autres_brouillons, solde }] }.
    * Ajoute les colonnes Qté parent, Reste et Soldé ; null les retire.
    */
+  /**
+   * Avancement d'un autre document d'avancement de la même période, pour information (situation de travaux ↔ situation
+   * de production, posé par l'hôte) : { libelle, lignes: [{ source_lig_id, pct, qte, montant }] } par ligne du marché
+   * (lig_avt_source_lig_id). Ajoute les colonnes croisées (%, quantité, montant de l'autre document, écart du montant
+   * cumulé de ce document) ; null les retire.
+   */
+  definirCroisees(croisees) {
+    this.croisees = croisees?.lignes?.length
+      ? { libelle: croisees.libelle ?? '', parSource: new Map(croisees.lignes.map((l) => [Number(l.source_lig_id), l])) }
+      : null;
+    this.grille.definirColonnes(this.colonnesAffichees());
+  }
+
+  /**
+   * Reprise de l'avancement saisi d'un autre document (préchargement d'une situation par l'autre) : [{ source_lig_id,
+   * mode, valeur }] appliqués aux lignes de même ligne du marché, en une seule étape annulable. Rend le nombre de lignes
+   * reprises.
+   */
+  reprendreAvancement(saisies) {
+    const parSource = new Map((saisies ?? []).filter((x) => x.mode).map((x) => [Number(x.source_lig_id), x]));
+    const ids = this.saisie.lignes.filter((l) => l.lig_avt_mode && parSource.has(Number(l.lig_avt_source_lig_id))).map((l) => l.lig_id);
+    if (!ids.length) return 0;
+    this.magasin.modifier((d) => {
+      for (const x of d.lignes.filter((y) => ids.includes(y.lig_id))) {
+        const r = parSource.get(Number(x.lig_avt_source_lig_id));
+        x.lig_avt_mode = r.mode;
+        x.lig_avt_valeur = r.valeur === null || r.valeur === undefined ? '0' : String(r.valeur);
+      }
+    }, texte('document.etapes.avancement'));
+    return ids.length;
+  }
+
   definirRestes(restes) {
     this.restes = restes?.lignes?.length
       ? { seuilPct: restes.seuil_pct ?? 0, seuilQte: restes.seuil_qte ?? 0, parLigne: new Map(restes.lignes.map((l) => [l.lig_id, l])) }
@@ -1086,6 +1123,7 @@ export class EditeurDocument {
       ...this.colonnesReste(saisissable),
       ...this.colonnesAvancement(saisissable),
       ...this.colonnesVentilationAvancement(saisissable),
+      ...this.colonnesCroisees(),
       {
         cle: 'unite', titre: texte('document.colonnes.unite'), classe: 'col-unite', editeur: 'liste', editable: chiffree,
         champ: () => 'lig_unt_code', lire: (l) => l.lig_unt_code ?? '', valeur: (r) => r.calcule.lig_unt_code ?? '',
@@ -1335,6 +1373,25 @@ export class EditeurDocument {
         titreCellule: () => texte('document.editeur.aide_avt_montant_prec'),
       },
     ];
+  }
+
+  /** Colonnes croisées (definirCroisees) : %, quantité et montant cumulés de l'autre document, écart du montant cumulé. */
+  colonnesCroisees() {
+    if (!this.croisees) return [];
+    const autre = (l) => (l?.lig_avt_mode ? this.croisees.parSource.get(Number(l.lig_avt_source_lig_id)) ?? null : null);
+    const pm = () => this.saisie.document.ent_precision_montant ?? 2;
+    const titre = (cle) => texte(`document.colonnes.${cle}`, { autre: this.croisees.libelle });
+    const aide = (cle) => texte(`document.editeur.aide_${cle}`, { autre: this.croisees.libelle });
+    return [
+      { cle: 'avt_autre_pct', classe: 'col-coef', valeur: (r) => (autre(r.item) ? formatNombre(autre(r.item).pct ?? 0, 2) : '') },
+      { cle: 'avt_autre_qte', classe: 'col-nombre', valeur: (r) => (autre(r.item) && !estPied(r.item) ? formatNombre(autre(r.item).qte ?? 0, r.calcule.lig_precision_qte ?? 2) : '') },
+      { cle: 'avt_autre_montant', classe: 'col-nombre', valeur: (r) => (autre(r.item) ? formatNombre(autre(r.item).montant ?? 0, pm()) : '') },
+      {
+        cle: 'avt_autre_ecart', classe: 'col-nombre',
+        valeur: (r) => (autre(r.item) && r.calcule.lig_avt_montant_cumul !== null && r.calcule.lig_avt_montant_cumul !== undefined
+          ? formatNombre(Dz(r.calcule.lig_avt_montant_cumul).minus(Dz(autre(r.item).montant)).toString(), pm()) : ''),
+      },
+    ].map((c) => ({ ...c, titre: titre(c.cle), editable: () => false, titreCellule: () => aide(c.cle) }));
   }
 
   /**

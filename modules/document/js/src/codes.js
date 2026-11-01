@@ -9,6 +9,17 @@ export const FAMILLE_DOCUMENT = Object.freeze({
   SOUS_TRAITANCE: 'T',
 });
 
+/**
+ * Avancement d'un type de document (tyd_avancement) : S situation de travaux (cumul facturable), F facture d'avancement
+ * (période), R reprise d'avancement, D situation de production (avancement réel, cumul, ni facturé ni comptable).
+ */
+export const TYPE_AVANCEMENT = Object.freeze({
+  SITUATION: 'S',
+  FACTURE: 'F',
+  REPRISE: 'R',
+  PRODUCTION: 'D',
+});
+
 /** Statuts de documents connus du code (les autres statuts d'un type sont du paramétrage). */
 export const STATUT_DOCUMENT = Object.freeze({
   BROUILLON: 'BROUILLON',

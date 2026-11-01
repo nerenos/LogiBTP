@@ -18,9 +18,9 @@ const etape = (code) => ({
   get titre() { return texte(`documents_btp.transformation.etapes.${code}.titre`); },
   get aide() { return texte(`documents_btp.transformation.etapes.${code}.aide`); },
 });
-const ETAPES = ['COMMANDE', 'RECEPTION', 'SITUATION', 'FACTURATION', 'RETOUR', 'AVOIR'].map(etape);
-const ICONES = Object.fromEntries(['V_COMMANDE', 'V_RECEPTION', 'V_RETOUR', 'V_SITUATION', 'V_FACTURE', 'V_FACTURE_AVT', 'V_AVOIR', 'A_COMMANDE', 'A_RECEPTION', 'A_RETOUR', 'A_FACTURE', 'A_FACTURE_AVT', 'A_AVOIR', 'S_RESERVATION', 'S_SORTIE'].map((c) => [c, icone(`documents_btp_${c.toLowerCase()}`)]));
-const DESCRIPTIONS = textesParCode('documents_btp.transformation.descriptions', ['V_COMMANDE', 'V_RECEPTION', 'V_RETOUR', 'V_SITUATION', 'V_FACTURE', 'V_FACTURE_AVT', 'V_AVOIR', 'A_COMMANDE', 'A_RECEPTION', 'A_RETOUR', 'A_FACTURE', 'A_FACTURE_AVT', 'A_AVOIR']);
+const ETAPES = ['COMMANDE', 'RECEPTION', 'SITUATION', 'PRODUCTION', 'FACTURATION', 'RETOUR', 'AVOIR'].map(etape);
+const ICONES = Object.fromEntries(['V_COMMANDE', 'V_RECEPTION', 'V_RETOUR', 'V_SITUATION', 'V_PRODUCTION', 'V_FACTURE', 'V_FACTURE_AVT', 'V_AVOIR', 'A_COMMANDE', 'A_RECEPTION', 'A_RETOUR', 'A_FACTURE', 'A_FACTURE_AVT', 'A_AVOIR', 'S_RESERVATION', 'S_SORTIE'].map((c) => [c, icone(`documents_btp_${c.toLowerCase()}`)]));
+const DESCRIPTIONS = textesParCode('documents_btp.transformation.descriptions', ['V_COMMANDE', 'V_RECEPTION', 'V_RETOUR', 'V_SITUATION', 'V_PRODUCTION', 'V_FACTURE', 'V_FACTURE_AVT', 'V_AVOIR', 'A_COMMANDE', 'A_RECEPTION', 'A_RETOUR', 'A_FACTURE', 'A_FACTURE_AVT', 'A_AVOIR']);
 
 /**
  * Cibles possibles d'un type de document, dans un ordre logique : [{ tyd_id, code, libelle, famille, etape, vaut }].

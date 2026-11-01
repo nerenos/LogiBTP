@@ -24,6 +24,21 @@ public static class FamillesDocument
     public static string NoeudDroits(string famille, string code) => $"documents/{famille}/{code}";
 }
 
+/// <summary>
+/// Avancement d'un type de document (tyd_avancement) : S situation de travaux (cumul facturable), F facture d'avancement
+/// (période), R reprise d'avancement, D situation de production (avancement réel, cumul, ni facturé ni comptable).
+/// </summary>
+public static class TypesAvancement
+{
+    public const string Situation = "S";
+    public const string Facture = "F";
+    public const string Reprise = "R";
+    public const string Production = "D";
+
+    /// <summary>Situation de travaux ou de production : document en cumul dont la saisie part de la dernière de même type.</summary>
+    public static bool EstSituation(string? avancement) => avancement is Situation or Production;
+}
+
 /// <summary>Statuts de documents connus du code (les autres statuts d'un type sont du paramétrage).</summary>
 public static class StatutsDocument
 {

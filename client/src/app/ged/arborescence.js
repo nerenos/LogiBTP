@@ -17,7 +17,7 @@ const PREFIXES = { projet: 'P', affaire: 'A', chantier: 'C', marche: 'M' };
 const STRUCTURE = ['projet', 'affaire', 'chantier', 'marche'];
 const FAMILLES = ['V', 'A', 'T', 'S'];
 // Ordre des types dans une famille : cycle du document (suffixe du code), les autres ensuite par libellé.
-const ORDRE_TYPES = ['DEVIS', 'DEMANDE', 'COMMANDE', 'RESERVATION', 'RECEPTION', 'ENTREE', 'SORTIE', 'TRANSFERT', 'RETOUR', 'SITUATION',
+const ORDRE_TYPES = ['DEVIS', 'DEMANDE', 'COMMANDE', 'RESERVATION', 'RECEPTION', 'ENTREE', 'SORTIE', 'TRANSFERT', 'RETOUR', 'SITUATION', 'PRODUCTION',
   'REPRISE_AVT', 'FACTURE_AVT', 'FACTURE', 'AVOIR', 'INVENTAIRE'];
 const rangType = (code) => { const i = ORDRE_TYPES.indexOf(String(code ?? '').replace(/^[A-Z]_/, '')); return i < 0 ? ORDRE_TYPES.length : i; };
 const familleDe = (d) => d.famille ?? String(d.type ?? '').charAt(0);

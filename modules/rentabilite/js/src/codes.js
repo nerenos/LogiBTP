@@ -9,6 +9,7 @@ export const INDICATEUR = Object.freeze({
   FACTURE: 'FACTURE',
   ACOMPTE_PAYE: 'ACOMPTE_PAYE',
   ACOMPTE_UTILISE: 'ACOMPTE_UTILISE',
+  PRODUCTION: 'PRODUCTION',
 });
 
 /** Composante d'un fait (colonne de détail des indicateurs de coût). */
