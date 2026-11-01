@@ -611,7 +611,13 @@
       "pv_affiche_fixe": "{{icone}} PV affiché fixe (avec frais annexes) : les frais annexes s'ajustent",
       "nombre_invalide": "Nombre invalide",
       "metre_chiffrees": "Le métré concerne les lignes chiffrées (F4 sur la section : variables du document)",
-      "metre_commentaire": "Métré de la ligne"
+      "metre_commentaire": "Métré de la ligne",
+      "chantier": {
+        "titre": "Chantier",
+        "entete": "— (chantier de l'entête)",
+        "sans": "Sans chantier : choisir le chantier de la ligne",
+        "herite": "— chantier de l'entête : choisir un chantier pour l'imposer à la ligne"
+      }
     },
     "colonnes": {
       "pa": "PA",
@@ -5610,6 +5616,50 @@
     "code_pris_ok": "Utiliser {{propose}}",
     "routes": {
       "marches_a_facturer": "Marchés à facturer"
+    },
+    "a_facturer": {
+      "mois": "Mois",
+      "voir_sans": "Afficher aussi les marchés sans avancement",
+      "creer_coches": "Créer les pièces cochées",
+      "aide": "Marchés de vente en cours, non soldés, sans situation ni facture d'avancement validée dans le mois. « Pas d'avancement » écarte le marché pour ce mois sans créer de pièce ni consommer de numéro de situation.",
+      "aucun": "Aucun marché à facturer en {{mois}}{{masques}}.",
+      "tout": "Tout cocher",
+      "col": {
+        "chantier": "Chantier",
+        "marche": "Marché",
+        "client": "Client",
+        "montant": "Montant HT",
+        "facture": "Facturé HT",
+        "reste": "Reste HT",
+        "derniere": "Dernière pièce",
+        "etat": "État du mois"
+      },
+      "pas_avancement": "Pas d'avancement",
+      "en_cours": "{{piece}} en cours {{numero}}",
+      "a_facturer": "À facturer",
+      "du": "du {{date}}",
+      "aucune": "aucune",
+      "retablir": "Retirer « pas d'avancement » pour ce mois",
+      "creer": "Créer : {{piece}} du marché, datée du mois",
+      "sans_titre": "Pas d'avancement ce mois-ci",
+      "masques_un": "{{nombre}} marché sans avancement masqué.",
+      "masques_autre": "{{nombre}} marchés sans avancement masqués.",
+      "confirmer_un": "Créer {{nombre}} pièce d'avancement pour {{mois}} ? Elle reste en brouillon à compléter.",
+      "confirmer_autre": "Créer {{nombre}} pièces d'avancement pour {{mois}} ? Elles restent en brouillon à compléter.",
+      "non_creees": "Pièces non créées : {{erreurs}}",
+      "creees_un": "{{nombre}} pièce créée en brouillon",
+      "creees_autre": "{{nombre}} pièces créées en brouillon",
+      "commentaire": "Pas d'avancement en {{mois}} pour le marché {{code}} : commentaire facultatif",
+      "noms": {
+        "V_SITUATION": "Situation",
+        "V_FACTURE_AVT": "Facture d'avancement"
+      },
+      "piece": "Pièce",
+      "piece_min": "pièce",
+      "rang": "n° {{rang}}",
+      "masques_court_un": "{{nombre}} sans avancement masqué",
+      "masques_court_autre": "{{nombre}} sans avancement masqués",
+      "creer_coches_n": "Créer les pièces cochées ({{nombre}})"
     }
   },
   "documents_btp": {
@@ -5826,7 +5876,89 @@
       "reglements": "Règlements"
     },
     "imputation": "Imputation d'avoir",
-    "marche_id": "Marché #{{id}}"
+    "marche_id": "Marché #{{id}}",
+    "document": {
+      "deductions": {
+        "PREMIERE": "Première facture",
+        "DERNIERE": "Dernière facture",
+        "LINEAIRE": "Linéaire"
+      },
+      "liberation": {
+        "non_receptionnes": "travaux non réceptionnés",
+        "reserves": "bloquée : réserves non levées (échéance {{date}})",
+        "levee": "libérable le {{date}} (levée des réserves)",
+        "reception": "libérable le {{date}} (réception + 1 an)"
+      },
+      "non_enregistre": "Règlements disponibles pour les documents enregistrés.",
+      "imputation": "Imputation",
+      "echeancier": "Échéancier",
+      "ajouter_aide": "Nouvelle échéance (le montant se reprend sur les autres)",
+      "ajouter": "Échéance",
+      "rafraichir_aide": "Revenir à la proposition calculée par la condition de paiement de la pièce",
+      "rafraichir": "Rafraîchir",
+      "enregistrer": "Enregistrer l'échéancier",
+      "sans_echeancier": "L'échéancier est calculé à la validation des factures et des avoirs (aperçu dans l'entête, section Règlement).",
+      "col": {
+        "numero": "N°",
+        "nature": "Nature",
+        "origine": "Origine"
+      },
+      "echeance": "Échéance",
+      "date_retenue_aide": "Vide : à la libération (marché) ; une date rend la retenue exigible",
+      "date_aide": "Date d'échéance",
+      "retirer": "Retirer l'échéance",
+      "ecart_normal": "La somme des échéances diffère du net à payer ({{net}}) de {{ecart}}.",
+      "ecart_retenue": "La somme des retenues diffère de la retenue de la pièce ({{retenue}}) de {{ecart}}.",
+      "reglements": "Règlements et imputations",
+      "imputer_avoir_aide": "Imputer cet avoir sur une facture du tiers",
+      "imputer_aide": "Imputer un avoir ou le trop-perçu d'un règlement du tiers",
+      "imputer": "Imputer…",
+      "reglements_tiers": "Règlements du tiers",
+      "origine_caution": "Caution {{caution}}",
+      "origine_caution_aide": "(part cautionnée, exigible avec la pièce)",
+      "origine_imputation": "Imputation :",
+      "origine_reglement": "Règlement {{mode}}",
+      "aucun_pointage": "Aucun règlement pointé.",
+      "reste": "Reste à payer :",
+      "acomptes": {
+        "titre": "Déductions d'acompte",
+        "acompte": "Acompte",
+        "deduction": "Déduction",
+        "deja": "Déjà déduit",
+        "document": "Ce document",
+        "ht": "(HT)",
+        "ttc": "(TTC)",
+        "aucun": "Aucun acompte émis à déduire.",
+        "marche": "Acomptes du marché",
+        "apercu": "(aperçu : posées à la validation, sur la saisie enregistrée)",
+        "rang": "n° {{rang}}"
+      },
+      "montant_invalide": "Montant invalide",
+      "rafraichir_confirmer": "Remplacer l'échéancier par la proposition calculée (condition de paiement de la pièce) ?",
+      "recalcule": "Échéancier recalculé",
+      "ecart_confirmer": "La somme des échéances diffère du montant à payer. Enregistrer quand même ?",
+      "enregistre": "Échéancier enregistré",
+      "avoir_impute": "Avoir déjà entièrement imputé",
+      "choix": {
+        "facture": "{{type}} {{piece}} · échéance {{date}} · reste {{reste}}",
+        "avoir": "{{type}} {{piece}} · reste {{reste}}",
+        "trop_percu": "Trop-perçu du règlement du {{date}} ({{mode}}) · {{montant}}"
+      },
+      "aucune_a_regler": "Aucune échéance à régler",
+      "aucune_facture": "Aucune facture ouverte du tiers",
+      "aucun_avoir": "Aucun avoir ni trop-perçu du tiers à imputer",
+      "dialogue": {
+        "titre_avoir": "Imputer l'avoir sur une facture",
+        "titre": "Imputer un avoir ou un trop-perçu",
+        "facture": "Facture",
+        "avoir": "Avoir ou règlement",
+        "commentaire": "Commentaire",
+        "imputer": "Imputer"
+      },
+      "montant_positif": "Montant positif à saisir",
+      "impute": "Imputation enregistrée",
+      "chargement": "Chargement…"
+    }
   },
   "hors_ligne_btp": {
     "etats": {
@@ -7517,6 +7649,135 @@
   "revision_btp": {
     "routes": {
       "parametres": "Révision des prix"
+    },
+    "erreurs": {
+      "REV_SANS_TERME": "La formule n'a aucun index",
+      "REV_POIDS": "Le poids d'un index doit être positif",
+      "REV_PARTIE_FIXE": "La partie fixe est comprise entre 0 et 1 (exclu)",
+      "REV_SOMME": "Partie fixe + poids des index doit valoir 1",
+      "REV_INDEX_DOUBLE": "Un index n'apparaît qu'une fois",
+      "REV_PRECISION": "Précision du coefficient de 0 à 6 décimales",
+      "REV_ARRONDI": "Arrondi au plus proche ou supérieur",
+      "illisible": "Index et poids illisibles : « BT01 0,85 ; BT06 0,10 »"
+    },
+    "types": {
+      "FERME": "Prix ferme",
+      "ACTUALISABLE": "Prix ferme actualisable",
+      "REVISABLE": "Prix révisable"
+    },
+    "arrondis": {
+      "PROCHE": "Au plus proche",
+      "SUPERIEUR": "À la valeur supérieure"
+    },
+    "marche": {
+      "prix": "Prix du marché",
+      "type": "Type de prix",
+      "mois_zero": "Mois zéro",
+      "mois_zero_aide": "Mois d'établissement des prix (I0)",
+      "mois_zero_propose": "proposé : {{mois}} (date du marché)",
+      "proposee": "Formule du marché de vente lié proposée : à vérifier (mois zéro du sous-traitant) puis enregistrer pour qu'elle s'applique.",
+      "modele": "Modèle",
+      "partie_fixe": "Partie fixe",
+      "termes": "Index et poids",
+      "termes_exemple": "BT01 0,85 ; BT06 0,10",
+      "decalage": "Décalage (mois)",
+      "decalage_aide": "In = index du mois de la pièce moins ce décalage",
+      "precision": "Précision",
+      "precision_aide": "Décimales du coefficient",
+      "arrondi": "Arrondi",
+      "debut": "Début des travaux",
+      "debut_aide": "Vide : début réel, sinon prévu, du chantier",
+      "debut_retenu": "retenu : {{mois}}",
+      "baisse": "Actualisation à la baisse aussi",
+      "commandes": "Mois zéro des commandes",
+      "col": {
+        "commande": "Commande",
+        "objet": "Objet",
+        "mois_zero_propre": "Mois zéro propre",
+        "piece": "Pièce",
+        "mois": "Mois",
+        "base": "Base HT",
+        "index": "Index",
+        "coef": "Coefficient",
+        "due": "Révision due",
+        "deja": "Déjà facturée",
+        "a_facturer": "À facturer"
+      },
+      "mois_zero_commande_aide": "Vide : mois zéro du marché",
+      "enregistrer": "Enregistrer les prix",
+      "periodes": "Révision des périodes facturées",
+      "ferme": "Prix ferme : aucune révision.",
+      "periodes_aide": "Révision due avec les meilleurs index connus à ce jour ({{provisoire}} : index provisoire ou dernier connu) ; l'écart avec la révision déjà facturée est régularisé sur la facture d'avancement suivante{{facture}}.",
+      "manque": "manque {{index}}",
+      "aucune": "Aucune facture d'avancement validée.",
+      "facture_aide": "Facture simple au client du marché : une ligne par commande, montants recalculés à la validation",
+      "facture": "Facture de régularisation",
+      "modele_aide": "Recopier un modèle de formule",
+      "a_corriger": "Formule de révision à corriger",
+      "mois_zero_obligatoire": "Mois zéro obligatoire",
+      "enregistres": "Prix du marché enregistrés",
+      "facture_confirmer": "Créer une facture de régularisation de {{montant}} € HT ? Les montants seront recalculés à sa validation.",
+      "facture_creee": "Facture de régularisation {{numero}} créée : à valider",
+      "inconnu": "inconnu",
+      "periodes_facture": ", ou par une facture de régularisation"
+    },
+    "parametres": {
+      "csv_illisible": "ligne illisible : {{ligne}}",
+      "titre": "Révision des prix : index et formules",
+      "aide": "Valeurs mensuelles des index (BT…) saisies ou importées : une valeur provisoire est remplacée par la définitive dès sa publication (l'ancienne reste dans l'historique) ; les factures suivantes régularisent la révision. Formules et type de prix : onglet Révision de chaque marché.",
+      "valeurs": {
+        "titre": "Valeurs des index",
+        "fin": "Jusqu'au mois",
+        "tous": "Tous les index",
+        "aide": "Colonnes : index des formules des marchés et index qui ont des valeurs. Case cochée : valeur provisoire.",
+        "provisoire": "Provisoire",
+        "enregistrer": "Enregistrer les valeurs",
+        "aucun": "Aucun index utilisé : cocher « Tous les index » pour saisir.",
+        "abandonner": "Abandonner les valeurs modifiées ?",
+        "illisible": "{{index}} {{mois}} : valeur illisible",
+        "aucune_modifiee": "Aucune valeur modifiée",
+        "importee": "Importée par {{par}}{{base}}",
+        "saisie": "Saisie par {{par}}{{base}}",
+        "base": " (base {{base}})"
+      },
+      "ecriture": {
+        "erreurs": "{{nombre}} erreur(s) : {{detail}}",
+        "ok": "Valeurs enregistrées : {{creees}} créée(s), {{modifiees}} modifiée(s), {{supprimees}} supprimée(s)",
+        "erreur_ligne": "ligne {{ligne}} {{erreur}}"
+      },
+      "import": {
+        "titre": "Import CSV",
+        "aide_html": "Une ligne par valeur : <code>index;mois;valeur;état</code> (mois AAAA-MM ou MM/AAAA, état P = provisoire, vide ou D = définitive), cinquième colonne facultative : base d'une ancienne série (raccordée par le catalogue). Simuler d'abord : rien n'est écrit.",
+        "exemple": "BT01;2026-07;132,4;P",
+        "simuler": "Simuler",
+        "importer": "Importer",
+        "ligne": "Ligne {{ligne}} : {{erreur}}",
+        "aucune": "Aucune valeur",
+        "bilan": "{{creees}} valeur(s) créée(s), {{modifiees}} modifiée(s), {{inchangees}} inchangée(s)",
+        "nb_erreurs": "{{nombre}} erreur(s)"
+      },
+      "catalogue": {
+        "titre": "Catalogue des index",
+        "aide": "Raccordement : « 2005=1,2345 » (valeur d'une ancienne base × coefficient = valeur dans la base courante). Un index qui a des valeurs ou qui est utilisé par un marché se désactive au lieu d'être retiré.",
+        "base": "Base",
+        "serie": "Série INSEE",
+        "raccordements": "Raccordements",
+        "ajouter": "Index",
+        "enregistrer": "Enregistrer le catalogue",
+        "ok": "Catalogue enregistré"
+      },
+      "actif": "Actif",
+      "retirer": "Retirer",
+      "formules": {
+        "titre": "Modèles de formules",
+        "aide": "Cn = partie fixe + Σ poids × In / I0 (partie fixe + poids = 1) ; un modèle se recopie dans l'onglet Révision d'un marché.",
+        "ajouter": "Modèle",
+        "enregistrer": "Enregistrer les modèles",
+        "illisible": "Index et poids illisibles",
+        "a_corriger": "Modèles à corriger",
+        "ok": "Modèles enregistrés"
+      },
+      "superieur": "Supérieur"
     }
   }
 }

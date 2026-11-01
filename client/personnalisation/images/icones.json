@@ -647,5 +647,17 @@
   "ged_btp_racine": "🗂",
   "ged_btp_type": "📂",
   "navigation_btp_revision_prix": "📈",
-  "navigation_btp_marches_a_facturer": "🧾"
+  "navigation_btp_marches_a_facturer": "🧾",
+  "revision_btp_facture": "🧾",
+  "revision_btp_provisoire": "✱",
+  "revision_btp_page": "📈",
+  "structure_btp_a_facturer": "🧾",
+  "structure_btp_creer_avancement": "📈",
+  "structure_btp_sans_avancement": "∅",
+  "structure_btp_en_cours": "✎",
+  "structure_btp_retablir": "↺",
+  "reglements_btp_manuel": "✎",
+  "reglements_btp_rafraichir": "⟳",
+  "reglements_btp_imputer": "⇄",
+  "reglements_btp_tiers": "💳"
 }

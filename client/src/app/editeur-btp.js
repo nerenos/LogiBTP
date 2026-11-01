@@ -279,9 +279,9 @@ export class EditeurDevisBtp extends EditeurDocument {
     if (estFamilleAchat(this.definition.type?.tyd_famille)) {
       const chantier = (id) => (this.chantiers ?? []).find((c) => c.id === Number(id));
       insererColonnes(colonnes, 'qte', [{
-        cle: 'chantier', titre: 'Chantier', classe: 'col-chantier', editeur: 'select', editable: chiffree,
+        cle: 'chantier', titre: texte('document_btp.editeur.chantier.titre'), classe: 'col-chantier', editeur: 'select', editable: chiffree,
         champ: () => 'lig_cha_id', lire: (l) => l.lig_cha_id ?? '',
-        options: () => [{ valeur: '', libelle: '— (chantier de l\'entête)' }, ...(this.chantiers ?? []).map((c) => ({ valeur: c.id, libelle: `${c.code} – ${c.libelle ?? ''}` }))],
+        options: () => [{ valeur: '', libelle: texte('document_btp.editeur.chantier.entete') }, ...(this.chantiers ?? []).map((c) => ({ valeur: c.id, libelle: `${c.code} – ${c.libelle ?? ''}` }))],
         valeur: (r) => {
           if (r.virtuelle || !estChiffree(r.item)) return '';
           if (r.item.lig_cha_id) return chantier(r.item.lig_cha_id)?.code ?? `#${r.item.lig_cha_id}`;
@@ -291,8 +291,8 @@ export class EditeurDevisBtp extends EditeurDocument {
         titreCellule: (r) => {
           if (r.virtuelle || !estChiffree(r.item)) return '';
           const c = chantier(r.item.lig_cha_id ?? this.saisie.document.ent_chantier_id);
-          if (!c) return 'Sans chantier : choisir le chantier de la ligne';
-          return `${c.code} – ${c.libelle ?? ''}${r.item.lig_cha_id ? '' : ' — chantier de l\'entête : choisir un chantier pour l\'imposer à la ligne'}`;
+          if (!c) return texte('document_btp.editeur.chantier.sans');
+          return `${c.code} – ${c.libelle ?? ''}${r.item.lig_cha_id ? '' : ` ${texte('document_btp.editeur.chantier.herite')}`}`;
         },
       }]);
     }

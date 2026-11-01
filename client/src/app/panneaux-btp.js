@@ -525,7 +525,7 @@ export class PanneauxBtp extends PanneauxDocument {
       moisRevision.readOnly = !!m.lectureSeule;
       moisRevision.addEventListener('change', () => {
         const v = /^\d{4}-\d{2}$/.test(moisRevision.value) ? `${moisRevision.value}-01` : null;
-        if (v !== (this.editeur.saisie.document.ent_mois_revision ?? null)) m.modifier((b) => { b.document.ent_mois_revision = v; }, 'Mois des travaux');
+        if (v !== (this.editeur.saisie.document.ent_mois_revision ?? null)) m.modifier((b) => { b.document.ent_mois_revision = v; }, texte('document_btp.panneaux.mois_revision'));
       });
     }
     zone.querySelectorAll('[data-contact]').forEach((bloc) => this.rendreContact(bloc, bloc.dataset.contact));
