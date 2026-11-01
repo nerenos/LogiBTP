@@ -33,7 +33,7 @@ public static class MarchesAFacturer
                    (SELECT coalesce(sum(f.facture_ht), 0) FROM v_facturation_document f WHERE f.ent_marche_id = m.mar_id) AS facture_ht
             FROM marche m JOIN chantier c ON c.cha_id = m.mar_cha_id LEFT JOIN personne p ON p.per_id = m.mar_tiers_id
             WHERE m.mar_sens = 'V' AND m.mar_statut = 'EN_COURS'
-              AND EXISTS (SELECT 1 FROM marche_document x JOIN document k ON k.ent_id = x.mdo_ent_id WHERE x.mdo_mar_id = m.mar_id AND k.ent_verrouille))
+              AND EXISTS (SELECT 1 FROM marche_document x JOIN document k ON k.ent_id = x.mdo_ent_id WHERE x.mdo_mar_id = m.mar_id AND f_document_valable(k.ent_id, FALSE)))
         SELECT coalesce(json_agg(json_build_object(
                  'mar_id', m.mar_id, 'code', m.mar_code, 'libelle', m.mar_libelle, 'chantier', m.cha_code, 'chantier_libelle', m.cha_libelle,
                  'client', m.client, 'montant_ht', m.mar_montant_ht, 'facture_ht', m.facture_ht,

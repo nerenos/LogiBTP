@@ -252,7 +252,9 @@ export class FicheStructure extends FicheLogiBTP {
       + (raccourcis.length ? `<div class="fiche-info fiche-raccourcis"><span>${texteHtml('fiches_btp.structure.listes_titre')}</span><b>${raccourcis.map(([theme, libelle]) =>
         `<a href="/liste/${theme}?${new URLSearchParams({ [this.type]: v.code })}" title="${texteHtml('fiches_btp.structure.liste_filtree', { libelle, code: v.code })}">${echapper(libelle)}</a>`).join(' · ')}</b></div>` : '')
       + (this.id !== null && ['chantier', 'marche'].includes(this.type) && this.moduleActif(MODULE_FACULTATIF.REGLEMENT)
-        ? `<div class="fiche-info"><span>${texteHtml('fiches_btp.structure.reglements')}</span><b><a href="/reglements?${this.type}=${Number(this.id)}" title="${texteHtml(this.type === TYPE_FICHE.CHANTIER ? 'fiches_btp.reglements_aide_chantier' : 'fiches_btp.reglements_aide_marche')}">${texteHtml('fiches_btp.structure.echeances')}</a></b></div>` : '');
+        ? `<div class="fiche-info"><span>${texteHtml('fiches_btp.structure.reglements')}</span><b><a href="/reglements?${this.type}=${Number(this.id)}" title="${texteHtml(this.type === TYPE_FICHE.CHANTIER ? 'fiches_btp.reglements_aide_chantier' : 'fiches_btp.reglements_aide_marche')}">${texteHtml('fiches_btp.structure.echeances')}</a></b></div>` : '')
+      + (this.id !== null && this.type === TYPE_FICHE.CHANTIER && this.moduleActif(MODULE_FACULTATIF.RENTABILITE) && this.acces('rentabilite')
+        ? `<div class="fiche-info"><span>${texteHtml('fiches_btp.structure.rentabilite')}</span><b><a href="/rentabilite/chantier/${Number(this.id)}" title="${texteHtml('fiches_btp.structure.rentabilite_aide')}">${iconeHtml('rentabilite_detail')} ${texteHtml('fiches_btp.structure.rentabilite_detail')}</a></b></div>` : '');
   }
 
   /** Champ tiers qui propose un nouveau prospect (tiers provisoire) : aucun par défaut. */

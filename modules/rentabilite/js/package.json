@@ -1,0 +1,21 @@
+{
+  "name": "@logibtp/rentabilite",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Module Rentabilité LogiBTP : indicateurs (budget, budget d'exécution, engagé, déboursé, facturé), Détail par nature, faits d'un chiffre, montants anormaux en rouge",
+  "exports": {
+    ".": "./src/index.js",
+    "./ui": "./ui/index.js",
+    "./ui/rentabilite.css": "./ui/rentabilite.css"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@logibtp/socle": "0.2.0"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  }
+}

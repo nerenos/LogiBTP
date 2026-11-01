@@ -200,7 +200,7 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
                     FROM document_ligne l JOIN document_ligne c ON c.lig_id = l.lig_avt_source_lig_id
                     JOIN document f ON f.ent_id = l.lig_ent_id JOIN statut_document s ON s.std_id = f.ent_std_id
                     WHERE c.lig_ent_id IN (SELECT ent_id FROM cmd) AND f.ent_avt_presentation = 'P' AND s.std_code <> 'ANNULE'
-                      AND (f.ent_verrouille OR f.ent_id = @id)
+                      AND (f_document_valable(f.ent_id, FALSE) OR f.ent_id = @id)
                     GROUP BY c.lig_ent_id)
                 SELECT coalesce(json_agg(json_build_object('rang', c.mdo_rang, 'role', c.mdo_role, 'numero', c.ent_numero, 'date', c.ent_date,
                          'objet', c.ent_objet, 'montant_ht', c.ent_total_ht, 'facture_ht', coalesce(f.mt, 0),
@@ -215,8 +215,8 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
                          ORDER BY d.ent_date, d.ent_id), '[]')::text AS "Value"
                 FROM document cur JOIN document d ON d.ent_marche_id = cur.ent_marche_id AND d.ent_id <> cur.ent_id
                 JOIN type_document t ON t.tyd_id = d.ent_tyd_id JOIN statut_document s ON s.std_id = d.ent_std_id
-                WHERE cur.ent_id = @id AND t.tyd_avancement IN ('S', 'F') AND d.ent_verrouille AND s.std_code NOT IN ({SqlBtp.HorsVigueur})
-                  AND d.ent_is_reference AND (d.ent_date, d.ent_id) < (cur.ent_date, cur.ent_id)
+                WHERE cur.ent_id = @id AND t.tyd_avancement IN ('S', 'F') AND f_document_valable(d.ent_id, FALSE)
+                  AND (d.ent_date, d.ent_id) < (cur.ent_date, cur.ent_id)
                 """,
             // Réception de pose (application de terrain, lot 5) : dernière réception de l'ordre, réserves, signataire.
             "reception_pose" => """
@@ -541,8 +541,8 @@ public static class SourceDocumentEdition
             SELECT k.ded_deduit_ent_id AS ent_id FROM document_deduction k WHERE k.ded_ent_id = @id
             UNION
             SELECT x.ent_id FROM cur d JOIN document x ON x.ent_marche_id = d.ent_marche_id AND x.ent_id <> d.ent_id
-            JOIN type_document tx ON tx.tyd_id = x.ent_tyd_id JOIN statut_document s ON s.std_id = x.ent_std_id
-            WHERE NOT EXISTS (SELECT 1 FROM document_deduction WHERE ded_ent_id = @id) AND x.ent_verrouille AND s.std_code <> 'ANNULE'
+            JOIN type_document tx ON tx.tyd_id = x.ent_tyd_id
+            WHERE NOT EXISTS (SELECT 1 FROM document_deduction WHERE ded_ent_id = @id) AND f_document_valable(x.ent_id, FALSE)
               AND (x.ent_avt_presentation = 'P' OR tx.tyd_avancement = 'R')
               AND (x.ent_rang_avancement IS NULL OR d.ent_rang_avancement IS NULL OR x.ent_rang_avancement < d.ent_rang_avancement))
         SELECT json_build_object('ht', coalesce(sum(x.ent_total_ht), 0), 'tva', coalesce(sum(x.ent_total_tva), 0),

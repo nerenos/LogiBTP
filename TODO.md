@@ -29,6 +29,18 @@
   lot G1 : appliquer `db/250` (révision des prix : index, formules, paramètres des marchés) puis saisir ou importer les
   valeurs des index utilisés (`/parametres/revision`) ; libellés du catalogue BT à vérifier ; rejouer le `191` régénéré
   (bloc `REVISION_PRIX` des situations et factures d'avancement).
+- [ ] Module Rentabilité, lot 3 : aucun script ; au démarrage de l'API, la version 3 des règles remet en file tous les
+  chantiers ouverts (heures du budget, factures d'acompte).
+- [ ] Module Rentabilité, lot 2 : rejouer `modules/rentabilite/db/099r` puis appliquer `db/259` (acomptes en trésorerie,
+  contrôles, photos, vues ; tous les chantiers ouverts sont remis en file pour la version 2 des règles) ; vérifier le
+  rôle « Reçu d'acompte » dans `/parametres/rentabilite`.
+- [ ] Module Rentabilité, lot 1 : appliquer `modules/rentabilite/db/099r` et `db/258`, activer le module dans
+  `/parametres/modules`, vérifier les rôles des types et saisir les taux horaires des services dans
+  `/parametres/rentabilite` ; le premier passage du planificateur calcule tous les chantiers ouverts.
+- [ ] Module Rentabilité, lot 0 : appliquer `modules/document/db/019p`, `db/255`, `db/256`, `db/257` et le `131`
+  régénéré (chargé d'affaires de la fiche affaire), puis choisir le chargé d'affaires des affaires et projets listés par
+  `v_responsables_a_reprendre`. Les pièces validées avec une unité sans conversion (stock, lignes transformées) restent
+  telles quelles ; seules les nouvelles validations sont contrôlées.
 - [ ] GED : `modules/ged/db/051` appliqué ; après redémarrage de l'API, indexer les documents déposés avant
   (`POST /api/ged/indexation`, administrateur, lots de 200).
 - [ ] Vue de colonnes « Complet » : `db/150` (`ON CONFLICT DO NOTHING`) n'ajoute pas Compte et Commentaire aux bases
@@ -217,7 +229,33 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
 - [ ] Secteur du chantier et des documents de vente.
 - [ ] Demandes de prix d'achat « sur ordre » : déverrouiller plusieurs commandes pendant la durée du chantier en
   conservant les prix de la demande.
-- [ ] Module Analyse : à définir.
+- [ ] Module Rentabilité (ex « Analyse », suivi économique des chantiers) : analyse validée le 01/11/2026
+  ([ANALYSE-MODULE-ANALYSE.md](documentation/conception/ANALYSE-MODULE-ANALYSE.md)), lot 0 réalisé (périmètre unique
+  des pièces, chargé d'affaires en individu, chantiers d'une pièce, garde-fou des unités), lot 1 réalisé (faits
+  versionnés, file, nuit, Détail, faits, rapprochement, rôles des types paramétrés), lot 2 réalisé (Liste
+  multi-origine, période, vues, acomptes en trésorerie, contrôles et changements, photos), lot 3 réalisé (bloc de résultats PV, heures MO) ; lots 4 à 8 à réaliser. Plus
+  tard (Q17) : historique du chargé d'affaires d'une affaire et d'un chantier (aujourd'hui seul le chargé d'affaires
+  actuel compte, sur toute la période). Simplifications du lot 1 à revoir :
+  - PV ventilé sur les feuilles d'un ouvrage au prorata du PR (à défaut du PA, sinon à parts égales), l'analyse parlant
+    du prix client ;
+  - engagé planifié : prorata calendaire des tâches, daté du jour (seuls faits exclus de la comparaison de nuit) ;
+  - ligne de commande reprise par plusieurs ordres : répartie au prorata ; facturé rattaché à l'ordre le plus important ;
+  - choix de l'ordre sur les lignes d'achat (R4) non fait : l'ordre d'une pièce d'achat est celui de son entête ;
+  - matériel (lot 5) et option de valorisation des intérimaires non faits ;
+  - lignes de `rentabilite_calcul` jamais purgées ; suppression d'un lien entre pièces non signalée (rattrapée la nuit) ;
+  - chantier qui tient un stock : ses articles de stock ignorés (consommés à la sortie) ;
+  - portées EQUIPE et SERVICE du droit `rentabilite` traitées comme SOI (chargé, conducteur, responsable de l'affaire).
+  Simplifications du lot 3 à revoir :
+  - Réalisé sans postes de pied (seulement les lignes des factures) ; Prévisionnel sans saisies prévisionnelles (lot 6) ;
+  - heures du budget : lignes d'une nature du regroupement MO dont l'unité est h, heure ou heures (autres unités sans
+    heures) ;
+  - postes de pied du Reste à facturer rapprochés par libellé (budget − facturé).
+  Simplifications du lot 2 à revoir :
+  - acomptes en trésorerie au niveau du chantier (sans ordre ni nature), TTC ; un acompte payé sans module Règlements
+    est daté du reçu validé ;
+  - colonnes de la Liste fixes (pas de choix de colonnes dans les vues) ; les rapports (% dépensé, % facturé) sont au
+    cumul même en période ;
+  - photos jamais purgées ; une photo référence un calcul, toute purge des faits devra garder ceux qu'elle voit.
 - [ ] Module Comptabilité avancée : à définir (voir aussi « Module Comptabilité complet »).
 - [ ] Module de gestion des risques : à définir.
 - [ ] Module de circuit de validation : à définir.

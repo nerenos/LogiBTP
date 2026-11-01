@@ -86,6 +86,12 @@ public class SpecialisationDocument<TDoc, TLigne, TComplet>
     public virtual Task MontantDepasseAsync(DocumentDbContext<TDoc, TLigne> db, TComplet document, TypeDocument type, Utilisateur u,
         DepassementValidation depassement, CancellationToken ct) => Task.CompletedTask;
 
+    /// <summary>
+    /// Après le recalcul des quantités des liens de transformation d'un document enregistré (quantité de la ligne cible) :
+    /// conversion dans l'unité de la ligne source quand l'unité a changé (le module ne connaît pas les conversions).
+    /// </summary>
+    public virtual Task ApresRecalculLiensAsync(DocumentDbContext<TDoc, TLigne> db, long entId, CancellationToken ct) => Task.CompletedTask;
+
     /// <summary>Après l'enregistrement de la validation, dans sa transaction (suivi d'un marché…).</summary>
     public virtual Task ApresValidationAsync(DocumentDbContext<TDoc, TLigne> db, long entId, TypeDocument type, CancellationToken ct) =>
         Task.CompletedTask;

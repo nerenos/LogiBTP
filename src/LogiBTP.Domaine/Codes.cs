@@ -82,8 +82,32 @@ public static class ModulesFacultatifs
     public const string Planning = "planning";
     public const string Pointage = "pointage";
     public const string Reglement = "reglement";
+    public const string Rentabilite = "rentabilite";
     public const string SousTraitance = "sous_traitance";
     public const string Stock = "stock";
+}
+
+/// <summary>
+/// Rôle d'un type de pièce dans le module Rentabilité (rentabilite_role_type, db/258 ; règles de Btp/RentabiliteBtp.cs).
+/// </summary>
+public static class RolesRentabilite
+{
+    public const string CommandeVente = "COMMANDE_VENTE";
+    public const string FactureVente = "FACTURE_VENTE";
+    public const string FactureAcompte = "FACTURE_ACOMPTE";
+    public const string AvoirVente = "AVOIR_VENTE";
+    public const string OrdreExecution = "ORDRE_EXECUTION";
+    public const string CommandeAchat = "COMMANDE_ACHAT";
+    public const string ReceptionAchat = "RECEPTION_ACHAT";
+    public const string RetourAchat = "RETOUR_ACHAT";
+    public const string FactureAchat = "FACTURE_ACHAT";
+    public const string AvoirAchat = "AVOIR_ACHAT";
+    public const string CommandeSt = "COMMANDE_ST";
+    public const string FactureSt = "FACTURE_ST";
+    public const string AvoirSt = "AVOIR_ST";
+    public const string ReservationStock = "RESERVATION_STOCK";
+    public const string MouvementStock = "MOUVEMENT_STOCK";
+    public const string RecuAcompte = "RECU_ACOMPTE";
 }
 
 /// <summary>Catégories de la GED posées par le serveur (dge_categorie).</summary>

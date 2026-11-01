@@ -11,6 +11,7 @@ using LogiBTP.Editions.Web;
 using LogiBTP.EntreprisesFr.Web;
 using LogiBTP.Personnalisation.Web;
 using LogiBTP.Execution.Web;
+using LogiBTP.Rentabilite.Web;
 using LogiBTP.SousTraitance.Web;
 using LogiBTP.Stock.Web;
 using LogiBTP.Comptabilite.Web;
@@ -114,6 +115,9 @@ builder.Services.AddModuleAuthentification<SpecialisationAuthentificationBtp>(Ba
 builder.Services.AddModuleDroits<SpecialisationDroitsBtp>(Base);
 // Module Exécution (facultatif) : parcours, états des services, synthèse par chantier (modules/execution/db/085, db/197-198).
 builder.Services.AddModuleExecution<SpecialisationExecutionBtp>(Base);
+// Module Rentabilité (facultatif) : faits versionnés par chantier, file de recalcul et recalcul de nuit avec comparaison
+// (modules/rentabilite/db/099r, db/258) ; règles des pièces BTP dans Btp/RentabiliteBtp.cs.
+builder.Services.AddModuleRentabilite<SpecialisationRentabiliteBtp>(Base, builder.Configuration.GetSection("Rentabilite"));
 // Module Sous-traitance (facultatif) : pièces exigées et conformité (modules/sous-traitance/db/092, db/210-212).
 builder.Services.AddModuleSousTraitance<SpecialisationSousTraitanceBtp>(Base);
 // Module Comptabilité (base) : plan comptable, collectifs, comptes des tiers, TVA (modules/comptabilite/db/094, db/223).
@@ -210,6 +214,8 @@ api.MapGroup("").ExigeModule(ModulesFacultatifs.Stock, "Stock").MapMagasinStock(
 api.MapGroup("").ExigeModule(ModulesFacultatifs.Stock, "Stock").MapStockBorne();
 api.MapModulePointage().ExigeModule(ModulesFacultatifs.Pointage, "Pointage MO");
 api.MapModulePlanning().ExigeModule(ModulesFacultatifs.Planning, "Planning");
+api.MapModuleRentabilite().ExigeModule(ModulesFacultatifs.Rentabilite, "Rentabilité");
+api.MapGroup("").ExigeModule(ModulesFacultatifs.Rentabilite, "Rentabilité").MapParametresRentabilite();
 api.MapDiffusion();
 // Liaisons croisées entre modules facultatifs (Exécution, Planning, Pointage, CRM) : portées par le cœur.
 api.MapLiaisons();

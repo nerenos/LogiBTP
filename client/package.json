@@ -33,6 +33,7 @@
     "@logibtp/edition": "0.2.0",
     "@logibtp/entreprises-fr": "0.2.0",
     "@logibtp/execution": "0.2.0",
+    "@logibtp/rentabilite": "0.1.0",
     "@logibtp/fiche": "0.2.0",
     "@logibtp/ged": "0.2.0",
     "@logibtp/graphe": "0.2.0",

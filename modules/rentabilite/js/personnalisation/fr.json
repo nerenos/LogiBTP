@@ -1,0 +1,261 @@
+{
+  "rentabilite": {
+    "indicateurs": {
+      "BUDGET": "Budget",
+      "BUDGET_EXECUTION": "Budget d'exécution",
+      "ENGAGE": "Engagé",
+      "DEBOURSE": "Déboursé",
+      "FACTURE": "Facturé",
+      "ACOMPTE_PAYE": "Acompte payé",
+      "ACOMPTE_UTILISE": "Acompte utilisé"
+    },
+    "composantes": {
+      "VENTE": "Vente",
+      "ACHAT": "Achats",
+      "SOUS_TRAITANCE": "Sous-traitance",
+      "MO": "Main-d'œuvre",
+      "MATERIEL": "Matériel",
+      "STOCK": "Stock",
+      "POSTE": "Postes de pied",
+      "ACOMPTE": "Factures d'acompte"
+    },
+    "colonnes": {
+      "budget": {
+        "libelle": "Budget",
+        "info": "Commandes clients valables (et factures sans commande), au coût choisi"
+      },
+      "budget_execution": {
+        "libelle": "Budget d'exécution",
+        "info": "Lignes de commande remplacées par les lignes des ordres d'exécution qui les reprennent, plus les lignes ajoutées"
+      },
+      "engage": {
+        "libelle": "Engagé",
+        "info": "Commandé ou planifié, pas encore livré ni pointé : commandes d'achat et de sous-traitance, réservations, main-d'œuvre planifiée"
+      },
+      "debourse": {
+        "libelle": "Déboursé",
+        "info": "Coûts réels : réceptions, écarts de prix, factures, sous-traitance, pointages, sorties de stock"
+      },
+      "depense": {
+        "libelle": "Dépensé",
+        "info": "Engagé + déboursé"
+      },
+      "reste_depenser": {
+        "libelle": "Reste à dépenser",
+        "info": "Budget d'exécution − dépensé ; négatif : dépassement"
+      },
+      "budget_pv": {
+        "libelle": "Budget PV",
+        "info": "Prix de vente des commandes (HT des lignes vendues)"
+      },
+      "facture": {
+        "libelle": "Facturé",
+        "info": "Factures, factures d'avancement (période), factures d'acompte et avoirs"
+      },
+      "reste_facturer": {
+        "libelle": "Reste à facturer",
+        "info": "Budget PV − facturé ; négatif : facturé au-delà du budget"
+      },
+      "pct_depense": {
+        "libelle": "% dépensé",
+        "info": "Dépensé / budget d'exécution (au cumul)"
+      },
+      "pct_facture": {
+        "libelle": "% facturé",
+        "info": "Facturé / budget PV (au cumul)"
+      },
+      "heures": {
+        "libelle": "Heures MO",
+        "info": "Heures de main-d'œuvre pointées (déboursé)"
+      },
+      "acompte_paye": {
+        "libelle": "Acompte payé",
+        "info": "Acomptes en trésorerie reçus (règlements pointés, sinon reçus validés), TTC"
+      },
+      "acompte_utilise": {
+        "libelle": "Acompte utilisé",
+        "info": "Acomptes en trésorerie déduits des situations et factures, TTC"
+      },
+      "acompte_reste": {
+        "libelle": "Reste d'acompte",
+        "info": "Acompte payé − acompte utilisé"
+      },
+      "h_budget": {
+        "libelle": "H budget",
+        "info": "Heures des lignes de main-d'œuvre en heures des commandes (budget)"
+      },
+      "h_budget_execution": {
+        "libelle": "H budget d'exécution",
+        "info": "Heures de main-d'œuvre du budget d'exécution (ordres d'exécution)"
+      },
+      "h_planifie": {
+        "libelle": "H planifiées",
+        "info": "Heures du planning restant à faire après le dernier pointage (engagé)"
+      },
+      "h_pointe": {
+        "libelle": "H pointées",
+        "info": "Heures pointées (déboursé)"
+      },
+      "h_reste": {
+        "libelle": "H restantes",
+        "info": "Heures du budget d'exécution − planifiées − pointées ; négatif : dépassement"
+      }
+    },
+    "anomalies": {
+      "negatif": "Montant négatif : anormal pour cette colonne",
+      "positif": "Montant positif : anormal pour cette colonne",
+      "non_nul": "Montant non nul : à vérifier"
+    },
+    "detail": {
+      "total": "Total",
+      "non_ventile": "Non ventilé",
+      "non_ventile_info": "Lignes sans nature : pied des achats, acomptes, pièces anciennes ; jamais réparti en douce",
+      "postes": "Postes de pied",
+      "postes_info": "Remises, compte prorata, révision, déductions : hors des natures",
+      "sans_groupe": "Autres natures",
+      "nature": "Nature",
+      "ouvrir_faits": "Double-clic : faits composant ce chiffre (Ctrl : dans une nouvelle fenêtre)",
+      "aucun": "Aucun fait pour ce chantier.",
+      "reference_valeur": "{{reference}} : {{valeur}}",
+      "ecart_plus": "+{{valeur}}",
+      "ecart_moins": "−{{valeur}}"
+    },
+    "faits": {
+      "date": "Date",
+      "piece": "Pièce",
+      "ligne": "Ligne",
+      "nature": "Nature",
+      "ordre": "Ordre",
+      "qte": "Qté",
+      "unite": "Unité",
+      "pa": "PA",
+      "pr": "PR",
+      "pv": "PV",
+      "heures": "Heures",
+      "regle": "Règle",
+      "indicateur": "Indicateur",
+      "sous_total": "Sous-total {{piece}}",
+      "total": "Total",
+      "masques_un": "{{nombre}} pièce {{type}} non consultable : montant global seul",
+      "masques_autre": "{{nombre}} pièces {{type}} non consultables : montant global seul",
+      "annulees": "Afficher les pièces annulées et leur avoir",
+      "annulees_masquees_un": "{{nombre}} fait de pièces annulées masqué (comptées avec leur avoir)",
+      "annulees_masquees_autre": "{{nombre}} faits de pièces annulées masqués (comptés avec leur avoir)",
+      "aucun": "Aucun fait.",
+      "sans_piece": "—",
+      "total_indicateur": "Total {{indicateur}}"
+    },
+    "sources": {
+      "DOCUMENT": "Pièce",
+      "POINTAGE": "Pointages",
+      "TACHE": "Planning",
+      "MOUVEMENT": "Mouvements de stock",
+      "REGLEMENT": "Règlements"
+    },
+    "liste": {
+      "total": "Total",
+      "sans_ordre": "Sans ordre",
+      "sans_affaire": "Sans affaire",
+      "sans_charge": "Sans chargé d'affaires",
+      "origine": "Origine",
+      "aucun": "Aucun chantier.",
+      "ouvrir_detail": "Clic : Détail du chantier",
+      "ouvrir_faits": "Double-clic : faits composant ce chiffre (Ctrl : dans une nouvelle fenêtre)",
+      "deplier": "Déplier",
+      "replier": "Replier",
+      "changements_un": "{{nombre}} changement depuis votre contrôle",
+      "changements_autre": "{{nombre}} changements depuis votre contrôle",
+      "jamais_controle": "Jamais contrôlé par vous",
+      "controle_le": "Contrôlé le {{date}}",
+      "calcule_le": "Calculé le {{date}}",
+      "en_attente": "Recalcul en attente",
+      "erreur": "Dernier calcul en erreur : {{erreur}}",
+      "selection": "Sélectionner",
+      "csv": {
+        "nom": "rentabilite",
+        "niveau": "Niveau",
+        "libelle": "Libellé"
+      },
+      "niveaux": {
+        "charge": "Chargé d'affaires",
+        "affaire": "Affaire",
+        "chantier": "Chantier",
+        "ordre": "Ordre",
+        "sans_ordre": "Ordre",
+        "total": "Total"
+      },
+      "pourcent": "{{valeur}} %"
+    },
+    "periodes": {
+      "PERIODE_DATE": "Période illisible : saisissez une année (2026), un mois (10/2026) ou une date",
+      "PERIODE_ORDRE": "Le début de la période est après sa fin"
+    },
+    "resultats": {
+      "titre": "Résultats sur les PV",
+      "periode": "Période : budget, réalisé, facturé et déboursé sont ceux de la période ; reste à facturer et prévisionnel au cumul.",
+      "lignes": {
+        "budget": {
+          "libelle": "Budget",
+          "info": "Budget PV face au budget PA / PR"
+        },
+        "realise": {
+          "libelle": "Réalisé",
+          "info": "Lignes facturées après déduction du précédent, sans factures d'acompte ni postes, face au déboursé"
+        },
+        "facture": {
+          "libelle": "Facturé",
+          "info": "Facturé (lignes, factures d'acompte et postes) face au déboursé à la même date"
+        },
+        "reste_facturer": {
+          "libelle": "Reste à facturer",
+          "info": "Budget − facturé, face au reste à dépenser"
+        },
+        "previsionnel": {
+          "libelle": "Prévisionnel",
+          "info": "À terminaison : budget PV face au dépensé + reste à dépenser"
+        }
+      },
+      "colonnes": {
+        "lignes": {
+          "libelle": "HT des lignes",
+          "info": "Prix client : HT des lignes vendues, base des deux marges"
+        },
+        "poste": {
+          "info": "Poste de pied HT (remise, compte prorata, révision, déduction…)"
+        },
+        "net": {
+          "libelle": "HT net",
+          "info": "HT des lignes + postes de pied"
+        },
+        "pa": {
+          "libelle": "Coût PA",
+          "info": "Coût en face de la ligne, au prix d'achat"
+        },
+        "brute": {
+          "libelle": "Marge brute",
+          "info": "HT des lignes − coût PA"
+        },
+        "taux_brute": {
+          "libelle": "% brute",
+          "info": "Marge brute / HT des lignes"
+        },
+        "pr": {
+          "libelle": "Coût PR",
+          "info": "Coût en face de la ligne, au prix de revient (frais généraux compris)"
+        },
+        "nette": {
+          "libelle": "Marge nette",
+          "info": "HT des lignes − coût PR"
+        },
+        "taux_nette": {
+          "libelle": "% nette",
+          "info": "Marge nette / HT des lignes"
+        }
+      }
+    }
+  },
+  "erreurs": {
+    "RENTABILITE_SANS_CALCUL": "Le chantier n'a encore jamais été calculé",
+    "RENTABILITE_VUE_NOM": "Nom de la vue obligatoire"
+  }
+}

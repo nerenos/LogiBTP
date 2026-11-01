@@ -1,0 +1,72 @@
+/* Module Rentabilité : tableau du Détail (bandes de couleur par indicateur sous l'en-tête et à gauche des cellules,
+   jamais toute la cellule ; total en haut ; montants anormaux en rouge) et tableau des faits regroupés par pièce. */
+.rentabilite-detail th[scope="row"] { text-align: left; font-weight: normal; white-space: nowrap; }
+.rentabilite-detail td.montant { cursor: zoom-in; border-left: 3px solid transparent; }
+.rentabilite-detail .rentabilite-ligne-total th, .rentabilite-detail .rentabilite-ligne-total td { background: var(--rentabilite-total-fond); font-weight: 600; }
+.rentabilite-detail .rentabilite-ligne-groupe th, .rentabilite-detail .rentabilite-ligne-groupe td { background: var(--rentabilite-groupe-fond); font-weight: 600; }
+.rentabilite-detail .rentabilite-ligne-nature th { padding-left: 1.5em; }
+.rentabilite-detail .rentabilite-ligne-non_ventile th, .rentabilite-detail .rentabilite-ligne-postes th { font-style: italic; }
+.rentabilite-detail td:hover { outline: 1px solid var(--accent); outline-offset: -1px; }
+
+/* Bande de couleur : en-tête coloré, filet coloré à gauche de chaque cellule de la colonne. */
+.rentabilite-colonne-budget { background: var(--rentabilite-budget); color: var(--rentabilite-budget-texte); }
+.rentabilite-colonne-budget-execution { background: var(--rentabilite-budget-execution); color: var(--rentabilite-budget-execution-texte); }
+.rentabilite-colonne-engage { background: var(--rentabilite-engage); color: var(--rentabilite-engage-texte); }
+.rentabilite-colonne-debourse { background: var(--rentabilite-debourse); color: var(--rentabilite-debourse-texte); }
+.rentabilite-colonne-depense { background: var(--rentabilite-depense); color: var(--rentabilite-depense-texte); }
+.rentabilite-colonne-reste-depenser { background: var(--rentabilite-reste-depenser); color: var(--rentabilite-reste-depenser-texte); }
+.rentabilite-colonne-facture { background: var(--rentabilite-facture); color: var(--rentabilite-facture-texte); }
+.rentabilite-colonne-reste-facturer { background: var(--rentabilite-reste-facturer); color: var(--rentabilite-reste-facturer-texte); }
+.rentabilite-detail td.rentabilite-bande-budget { border-left-color: var(--rentabilite-budget); }
+.rentabilite-detail td.rentabilite-bande-budget-execution { border-left-color: var(--rentabilite-budget-execution); }
+.rentabilite-detail td.rentabilite-bande-engage { border-left-color: var(--rentabilite-engage); }
+.rentabilite-detail td.rentabilite-bande-debourse { border-left-color: var(--rentabilite-debourse); }
+.rentabilite-detail td.rentabilite-bande-depense { border-left-color: var(--rentabilite-depense); }
+.rentabilite-detail td.rentabilite-bande-reste-depenser { border-left-color: var(--rentabilite-reste-depenser); }
+.rentabilite-detail td.rentabilite-bande-facture { border-left-color: var(--rentabilite-facture); }
+.rentabilite-detail td.rentabilite-bande-reste-facturer { border-left-color: var(--rentabilite-reste-facturer); }
+
+.rentabilite-anomalie, td.rentabilite-anomalie { color: var(--rentabilite-anomalie); }
+
+.rentabilite-faits .rentabilite-ligne-groupe th, .rentabilite-faits .rentabilite-ligne-groupe td { background: var(--rentabilite-groupe-fond); font-weight: 600; }
+.rentabilite-faits .rentabilite-ligne-total th, .rentabilite-faits .rentabilite-ligne-total td { background: var(--rentabilite-total-fond); font-weight: 600; }
+.rentabilite-faits th { text-align: left; }
+.rentabilite-faits .rentabilite-annulee td { opacity: 0.6; text-decoration: line-through; }
+.rentabilite-faits .rentabilite-masque td { font-style: italic; }
+.page-rentabilite td.montant, .page-rentabilite th.montant, .rentabilite-detail .montant, .rentabilite-faits .montant { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* Liste : arbre multi-origine, total figé en pied, colonnes d'acompte. */
+.rentabilite-colonne-acompte { background: var(--rentabilite-acompte); color: var(--rentabilite-acompte-texte); }
+.rentabilite-detail td.rentabilite-bande-acompte, .rentabilite-liste td.rentabilite-bande-acompte { border-left-color: var(--rentabilite-acompte); }
+.rentabilite-liste td.montant { border-left: 3px solid transparent; }
+.rentabilite-liste td.rentabilite-bande-budget { border-left-color: var(--rentabilite-budget); }
+.rentabilite-liste td.rentabilite-bande-budget-execution { border-left-color: var(--rentabilite-budget-execution); }
+.rentabilite-liste td.rentabilite-bande-engage { border-left-color: var(--rentabilite-engage); }
+.rentabilite-liste td.rentabilite-bande-debourse { border-left-color: var(--rentabilite-debourse); }
+.rentabilite-liste td.rentabilite-bande-depense { border-left-color: var(--rentabilite-depense); }
+.rentabilite-liste td.rentabilite-bande-reste-depenser { border-left-color: var(--rentabilite-reste-depenser); }
+.rentabilite-liste td.rentabilite-bande-facture { border-left-color: var(--rentabilite-facture); }
+.rentabilite-liste td.rentabilite-bande-reste-facturer { border-left-color: var(--rentabilite-reste-facturer); }
+.rentabilite-liste td.rentabilite-detaillable { cursor: zoom-in; }
+.rentabilite-liste td.rentabilite-detaillable:hover { outline: 1px solid var(--accent); outline-offset: -1px; }
+.rentabilite-liste th[scope="row"] { text-align: left; font-weight: normal; white-space: nowrap; padding-left: calc(0.3em + var(--profondeur, 0) * 1.2em); }
+.rentabilite-liste .rentabilite-ligne-charge th, .rentabilite-liste .rentabilite-ligne-charge td,
+.rentabilite-liste .rentabilite-ligne-affaire th, .rentabilite-liste .rentabilite-ligne-affaire td { background: var(--rentabilite-groupe-fond); font-weight: 600; }
+.rentabilite-liste .rentabilite-ligne-sans_ordre th { font-style: italic; }
+.rentabilite-liste tfoot { position: sticky; bottom: 0; }
+.rentabilite-liste tfoot th, .rentabilite-liste tfoot td { background: var(--rentabilite-total-fond); font-weight: 600; }
+.rentabilite-liste .montant { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.rentabilite-bascule { display: inline-block; width: 1.4em; padding: 0; border: 0; background: none; color: inherit; cursor: pointer; }
+.rentabilite-liste input[type="checkbox"] { margin: 0 0.3em 0 0; vertical-align: middle; }
+.rentabilite-changements { font-size: 0.85em; margin-left: 0.4em; }
+.rentabilite-ecart { display: block; font-size: 0.8em; color: var(--rentabilite-ecart); }
+
+/* Heures de main-d'œuvre du Détail et bloc de résultats (§ 4.8). */
+.rentabilite-detail .rentabilite-debut-heures { border-left: 2px solid var(--rentabilite-ecart); }
+.rentabilite-detail td.rentabilite-debut-heures { box-shadow: inset 2px 0 0 var(--rentabilite-ecart); }
+.rentabilite-resultats th[scope="row"] { text-align: left; font-weight: normal; white-space: nowrap; }
+.rentabilite-resultats .montant { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.rentabilite-resultats .rentabilite-poste { font-style: italic; }
+.rentabilite-resultats .rentabilite-net { font-weight: 600; }
+.rentabilite-resultats .rentabilite-resultat-budget th, .rentabilite-resultats .rentabilite-resultat-budget td { background: var(--rentabilite-groupe-fond); }
+.rentabilite-resultats .rentabilite-resultat-previsionnel th, .rentabilite-resultats .rentabilite-resultat-previsionnel td { background: var(--rentabilite-total-fond); font-weight: 600; }

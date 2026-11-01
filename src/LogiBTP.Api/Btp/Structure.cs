@@ -221,8 +221,8 @@ public static class Structure
                           WHERE k.ded_ent_id = d.ent_id)
                     ELSE (SELECT coalesce(json_agg(json_build_object('ent_id', x.ent_id, 'numero', x.ent_numero, 'type', tx.tyd_libelle, 'rang', x.ent_rang_avancement,
                             'date', x.ent_date, 'total_ht', x.ent_total_ht, 'total_ttc', x.ent_total_ttc) ORDER BY x.ent_rang_avancement NULLS FIRST, x.ent_id), '[]')
-                          FROM document x JOIN type_document tx ON tx.tyd_id = x.ent_tyd_id JOIN statut_document s ON s.std_id = x.ent_std_id
-                          WHERE x.ent_marche_id = d.ent_marche_id AND x.ent_id <> d.ent_id AND x.ent_verrouille AND s.std_code <> 'ANNULE'
+                          FROM document x JOIN type_document tx ON tx.tyd_id = x.ent_tyd_id
+                          WHERE x.ent_marche_id = d.ent_marche_id AND x.ent_id <> d.ent_id AND f_document_valable(x.ent_id, FALSE)
                             AND (x.ent_avt_presentation = 'P' OR tx.tyd_avancement = 'R')
                             AND (x.ent_rang_avancement IS NULL OR d.ent_rang_avancement IS NULL OR x.ent_rang_avancement < d.ent_rang_avancement))
                   END,
@@ -305,12 +305,12 @@ public static class Structure
             FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id JOIN statut_document s ON s.std_id = d.ent_std_id
             WHERE d.ent_marche_id = @id),
         sit AS (
-            SELECT ent_id FROM doc WHERE tyd_avancement = 'S' AND ent_verrouille AND ent_is_reference AND std_code <> 'ANNULE'
+            SELECT ent_id FROM doc WHERE tyd_avancement = 'S' AND f_document_valable(ent_id, FALSE)
             ORDER BY ent_rang_avancement DESC NULLS LAST, ent_id DESC LIMIT 1),
         facture AS (
             SELECT li.cmd_id, sum(l.lig_montant_ht) AS mt
             FROM document_ligne l JOIN lignes li ON li.lig_id = l.lig_avt_source_lig_id JOIN doc d ON d.ent_id = l.lig_ent_id
-            WHERE d.ent_verrouille AND d.ent_avt_presentation = 'P' AND d.std_code <> 'ANNULE'
+            WHERE f_document_valable(d.ent_id, FALSE) AND d.ent_avt_presentation = 'P'
             GROUP BY li.cmd_id),
         situe AS (
             SELECT li.cmd_id, sum(l.lig_avt_montant_cumul) AS mt
@@ -373,12 +373,11 @@ public static class Structure
 
     private const string SqlCascade = """
         document d
-        JOIN document x ON x.ent_verrouille AND (x.ent_id = d.ent_id OR (d.ent_marche_id IS NOT NULL AND d.ent_avt_presentation = 'P'
+        JOIN document x ON f_document_valable(x.ent_id, FALSE) AND (x.ent_id = d.ent_id OR (d.ent_marche_id IS NOT NULL AND d.ent_avt_presentation = 'P'
             AND x.ent_marche_id = d.ent_marche_id AND x.ent_avt_presentation = 'P'
             AND (coalesce(x.ent_rang_avancement, 0) > coalesce(d.ent_rang_avancement, 0)
                  OR (coalesce(x.ent_rang_avancement, 0) = coalesce(d.ent_rang_avancement, 0) AND x.ent_id > d.ent_id))))
         JOIN type_document t ON t.tyd_id = x.ent_tyd_id
-        JOIN statut_document st ON st.std_id = x.ent_std_id AND st.std_code <> 'ANNULE'
         WHERE d.ent_id = @id
         """;
 

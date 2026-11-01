@@ -74,6 +74,35 @@ export const api = {
     journal: (profil = '') => appel('GET', `/droits/journal?${new URLSearchParams({ profil })}`),
   },
   // Module Exécution : exécution d'un ordre (état, motif, affectation, dates), répartition, heures budget d'un chantier.
+  rentabilite: {
+    file: () => appel('GET', '/rentabilite/file'),
+    recalculerTout: () => appel('POST', '/rentabilite/recalculer-tout'),
+    liste: (f = {}) => {
+      const p = new URLSearchParams(Object.entries(f).filter(([, v]) => v !== undefined && v !== null && v !== '' && v !== false).map(([k, v]) => [k, String(v)]));
+      return appel('GET', `/rentabilite/chantiers${p.size ? `?${p}` : ''}`);
+    },
+    chantier: (id, au, { du, reference } = {}) => {
+      const p = new URLSearchParams(Object.entries({ du, au, reference }).filter(([, v]) => v));
+      return appel('GET', `/rentabilite/chantiers/${id}${p.size ? `?${p}` : ''}`);
+    },
+    controler: (chantiers) => appel('POST', '/rentabilite/controles', { chantiers }),
+    changements: (id, calcul) => appel('GET', `/rentabilite/chantiers/${id}/changements${calcul ? `?calcul=${encodeURIComponent(calcul)}` : ''}`),
+    photographier: (id, d) => appel('POST', `/rentabilite/chantiers/${id}/photos`, d),
+    supprimerPhoto: (id) => appel('DELETE', `/rentabilite/photos/${id}`),
+    vues: () => appel('GET', '/rentabilite/vues'),
+    enregistrerVue: (v) => appel('POST', '/rentabilite/vues', v),
+    supprimerVue: (id) => appel('DELETE', `/rentabilite/vues/${id}`),
+    recalculer: (id) => appel('POST', `/rentabilite/chantiers/${id}/recalculer`),
+    faits: (id, filtre) => {
+      const p = new URLSearchParams(Object.entries(filtre).filter(([, v]) => v !== undefined && v !== null && v !== ''));
+      return appel('GET', `/rentabilite/chantiers/${id}/faits${p.size ? `?${p}` : ''}`);
+    },
+    rapprochement: (id) => appel('GET', `/rentabilite/chantiers/${id}/rapprochement`),
+    parametres: () => appel('GET', '/rentabilite/parametres'),
+    enregistrerRoles: (l) => appel('PUT', '/rentabilite/parametres/roles', l),
+    enregistrerTaux: (l) => appel('PUT', '/rentabilite/parametres/taux', l),
+    enregistrerCoefs: (l) => appel('PUT', '/rentabilite/parametres/coefs', l),
+  },
   execution: {
     types: () => appel('GET', '/execution/types'),
     ressources: () => appel('GET', '/execution/ressources'),

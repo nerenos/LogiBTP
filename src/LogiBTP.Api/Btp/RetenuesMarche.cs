@@ -29,7 +29,7 @@ public static class RetenuesMarche
         SELECT e.ech_id, d.ent_id, d.ent_numero AS numero, t.tyd_libelle AS type, d.ent_date AS date_document, e.ech_montant AS montant, e.ech_date AS date
         FROM document_echeance e JOIN document d ON d.ent_id = e.ech_ent_id JOIN type_document t ON t.tyd_id = d.ent_tyd_id
         JOIN statut_document s ON s.std_id = d.ent_std_id
-        WHERE d.ent_marche_id = @id AND e.ech_nature = 'RETENUE' AND d.ent_verrouille AND s.std_code <> 'ANNULE'
+        WHERE d.ent_marche_id = @id AND e.ech_nature = 'RETENUE' AND f_document_valable(d.ent_id, FALSE)
         ORDER BY d.ent_date, d.ent_id
         """;
 
@@ -62,7 +62,7 @@ public static class RetenuesMarche
                 SELECT e.ech_id, d.ent_marche_id AS marche_id, d.ent_date AS date_document, e.ech_montant AS montant
                 FROM document_echeance e JOIN document d ON d.ent_id = e.ech_ent_id JOIN statut_document s ON s.std_id = d.ent_std_id
                 JOIN marche m ON m.mar_id = @id
-                WHERE d.ent_tiers_id = m.mar_tiers_id AND e.ech_nature = 'RETENUE' AND d.ent_verrouille AND s.std_code <> 'ANNULE'
+                WHERE d.ent_tiers_id = m.mar_tiers_id AND e.ech_nature = 'RETENUE' AND f_document_valable(d.ent_id, FALSE)
                 """, new NpgsqlParameter("id", id)).ToListAsync(ct);
             var conso = ResteAPayer.ConsommerCautions(
                 [.. cautions.Select(c => new CautionRetenue(c.Id, c.ObjetId, c.Date, c.Montant, c.Mainlevee))],

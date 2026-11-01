@@ -1,0 +1,78 @@
+/* Module Rentabilité : couleurs des indicateurs (§ 4.10 de l'analyse : en-tête et bande de la colonne, jamais toute la
+   cellule) et montant anormal (§ 4.11), surchargeables par le cœur et l'installation. */
+:root {
+  --rentabilite-budget: #cfe3fb;
+  --rentabilite-budget-texte: #12355b;
+  --rentabilite-budget-execution: #7fb0ec;
+  --rentabilite-budget-execution-texte: #0b2440;
+  --rentabilite-engage: #fbd9cf;
+  --rentabilite-engage-texte: #5b2212;
+  --rentabilite-debourse: #f4a98f;
+  --rentabilite-debourse-texte: #4a1607;
+  --rentabilite-depense: #d9725a;
+  --rentabilite-depense-texte: #ffffff;
+  --rentabilite-reste-depenser: #c9a227;
+  --rentabilite-reste-depenser-texte: #2b2100;
+  --rentabilite-facture: #6fbf73;
+  --rentabilite-facture-texte: #0f3311;
+  --rentabilite-reste-facturer: #c8e9c9;
+  --rentabilite-reste-facturer-texte: #173b18;
+  --rentabilite-acompte: #d7c8ef;
+  --rentabilite-acompte-texte: #2e1d4f;
+  --rentabilite-ecart: #5f6b7a;
+  --rentabilite-anomalie: #c62828;
+  --rentabilite-total-fond: #eef1f5;
+  --rentabilite-groupe-fond: #f6f7f9;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --rentabilite-budget: #1f3550;
+    --rentabilite-budget-texte: #cfe3fb;
+    --rentabilite-budget-execution: #24507f;
+    --rentabilite-budget-execution-texte: #e3efff;
+    --rentabilite-engage: #4a2b22;
+    --rentabilite-engage-texte: #fbd9cf;
+    --rentabilite-debourse: #6b3221;
+    --rentabilite-debourse-texte: #ffe3d9;
+    --rentabilite-depense: #8a3a26;
+    --rentabilite-depense-texte: #ffffff;
+    --rentabilite-reste-depenser: #6b5715;
+    --rentabilite-reste-depenser-texte: #fff3c4;
+    --rentabilite-facture: #2f5f32;
+    --rentabilite-facture-texte: #dff5e0;
+    --rentabilite-reste-facturer: #23402a;
+    --rentabilite-reste-facturer-texte: #d8f0d9;
+    --rentabilite-acompte: #3b2d57;
+    --rentabilite-acompte-texte: #e6dcf7;
+    --rentabilite-ecart: #a9b4c2;
+    --rentabilite-anomalie: #ff8a80;
+    --rentabilite-total-fond: #262a31;
+    --rentabilite-groupe-fond: #1f2329;
+  }
+}
+
+:root[data-theme="dark"] {
+  --rentabilite-budget: #1f3550;
+  --rentabilite-budget-texte: #cfe3fb;
+  --rentabilite-budget-execution: #24507f;
+  --rentabilite-budget-execution-texte: #e3efff;
+  --rentabilite-engage: #4a2b22;
+  --rentabilite-engage-texte: #fbd9cf;
+  --rentabilite-debourse: #6b3221;
+  --rentabilite-debourse-texte: #ffe3d9;
+  --rentabilite-depense: #8a3a26;
+  --rentabilite-depense-texte: #ffffff;
+  --rentabilite-reste-depenser: #6b5715;
+  --rentabilite-reste-depenser-texte: #fff3c4;
+  --rentabilite-facture: #2f5f32;
+  --rentabilite-facture-texte: #dff5e0;
+  --rentabilite-reste-facturer: #23402a;
+  --rentabilite-reste-facturer-texte: #d8f0d9;
+  --rentabilite-acompte: #3b2d57;
+  --rentabilite-acompte-texte: #e6dcf7;
+  --rentabilite-ecart: #a9b4c2;
+  --rentabilite-anomalie: #ff8a80;
+  --rentabilite-total-fond: #262a31;
+  --rentabilite-groupe-fond: #1f2329;
+}

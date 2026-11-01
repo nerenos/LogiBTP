@@ -224,7 +224,10 @@ public static class MouvementsStockBtp
         decimal? Volume, decimal? Hauteur, decimal? Largeur, decimal? Epaisseur, decimal? Longueur);
 
     /// <summary>Quantité en unité de stock pour 1 unité donnée (1 si l'unité est vide, celle du stock ou sans correspondance).</summary>
-    public static decimal Ratio(string? unite, UnitesArticle a)
+    public static decimal Ratio(string? unite, UnitesArticle a) => RatioOuNull(unite, a) ?? 1;
+
+    /// <summary>Quantité en unité de stock pour 1 unité donnée ; null sans correspondance (unité, donnée technique, formule).</summary>
+    public static decimal? RatioOuNull(string? unite, UnitesArticle a)
     {
         var techniques = new Dictionary<string, decimal?>
         {
@@ -239,7 +242,7 @@ public static class MouvementsStockBtp
             Donnees = ServiceBibliotheque.Donnees(proprietes.RootElement, techniques),
         };
         try { return CalculElement.Ratio(string.IsNullOrEmpty(unite) ? a.UniteStock : unite, entree); }
-        catch (ErreurCalcul) { return 1; }
+        catch (ErreurCalcul) { return null; }
     }
 
     /// <summary>Contrôle à la validation : date du mouvement à venir refusée (S10), lieux d'un transfert différents.</summary>

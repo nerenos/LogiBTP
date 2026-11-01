@@ -126,10 +126,10 @@ public static class SousTraitanceAssistant
         var lignes = await db.Database.SqlQueryRaw<LigneEngage>("""
             SELECT m.mar_id AS marche_id, m.mar_code AS code, m.mar_libelle AS libelle, p.per_raison_sociale AS sous_traitant, m.mar_garantie AS garantie,
                    m.mar_montant_agree AS montant_agree,
-                   coalesce((SELECT sum(c.ent_total_ht) FROM marche_document x JOIN document c ON c.ent_id = x.mdo_ent_id WHERE x.mdo_mar_id = m.mar_id AND c.ent_verrouille), 0) AS engage,
+                   coalesce((SELECT sum(c.ent_total_ht) FROM marche_document x JOIN document c ON c.ent_id = x.mdo_ent_id WHERE x.mdo_mar_id = m.mar_id AND f_document_valable(c.ent_id, FALSE)), 0) AS engage,
                    coalesce((SELECT sum(CASE WHEN f.ent_nature_avoir IS NULL THEN 1 ELSE -1 END * abs(f.ent_total_ht))
-                             FROM document f JOIN type_document t ON t.tyd_id = f.ent_tyd_id JOIN statut_document s ON s.std_id = f.ent_std_id
-                             WHERE f.ent_marche_id = m.mar_id AND t.tyd_code IN ('T_FACTURE_AVT', 'T_AVOIR') AND f.ent_verrouille AND s.std_code <> 'ANNULE'), 0) AS facture,
+                             FROM document f JOIN type_document t ON t.tyd_id = f.ent_tyd_id
+                             WHERE f.ent_marche_id = m.mar_id AND t.tyd_code IN ('T_FACTURE_AVT', 'T_AVOIR') AND f_document_valable(f.ent_id, FALSE)), 0) AS facture,
                    coalesce((SELECT sum(z.spd_montant_accepte) FROM stt_paiement_direct z
                              WHERE z.spd_marche_id = m.mar_id AND z.spd_etat IN ('ACCEPTEE', 'PARTIELLE', 'TRANSMISE', 'PAYEE')), 0) AS paiement_direct
             FROM marche m LEFT JOIN personne p ON p.per_id = m.mar_tiers_id
@@ -139,7 +139,7 @@ public static class SousTraitanceAssistant
             """, new NpgsqlParameter("id", marche)).ToListAsync(ct);
         var prevu = await db.Database.SqlQueryRaw<decimal>("""
             SELECT coalesce(sum(coalesce(l.lig_pr, 0) * coalesce(l.lig_qte_totale, l.lig_qte_vendue, 0)), 0) AS "Value"
-            FROM marche_document x JOIN document c ON c.ent_id = x.mdo_ent_id AND c.ent_verrouille
+            FROM marche_document x JOIN document c ON c.ent_id = x.mdo_ent_id AND f_document_valable(c.ent_id, FALSE)
             JOIN document_ligne l ON l.lig_ent_id = c.ent_id JOIN nature_element n ON n.nat_id = l.lig_nat_id
             WHERE x.mdo_mar_id = @id AND n.nat_code = 'ST' AND NOT EXISTS (SELECT 1 FROM document_ligne e WHERE e.lig_parent_id = l.lig_id)
             """, new NpgsqlParameter("id", marche)).FirstAsync(ct);

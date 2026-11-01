@@ -158,7 +158,7 @@ public static class RevisionPrix
             JOIN document_ligne s ON s.lig_id = l.lig_avt_source_lig_id
             WHERE q.ent_marche_id = @m AND q.ent_avt_presentation = 'P' AND coalesce(q.ent_nature_avoir, '') <> 'ANNULATION'
               AND (p.lig_id IS NULL OR p.lig_tyl_id <> {TL.Ouvrage})
-              AND (CASE WHEN @seule::bigint IS NULL THEN q.ent_verrouille AND st.std_code <> 'ANNULE' AND q.ent_id <> coalesce(@x::bigint, 0)
+              AND (CASE WHEN @seule::bigint IS NULL THEN f_document_valable(q.ent_id, FALSE) AND q.ent_id <> coalesce(@x::bigint, 0)
                         ELSE q.ent_id = @seule::bigint END)
             GROUP BY 1, 2, 3, 4, 5
             ORDER BY 4, 3, 1
@@ -171,8 +171,8 @@ public static class RevisionPrix
     private static Task<List<DejaSql>> DejaAsync(DbContext db, int marche, long? exclure, CancellationToken ct) =>
         db.Database.SqlQuery<DejaSql>($"""
             SELECT r.dre_periode_ent_id AS piece, r.dre_commande_ent_id AS commande, sum(r.dre_montant) AS montant
-            FROM document_revision r JOIN document f ON f.ent_id = r.dre_ent_id JOIN statut_document s ON s.std_id = f.ent_std_id
-            WHERE f.ent_marche_id = {marche} AND f.ent_verrouille AND s.std_code <> 'ANNULE' AND f.ent_id <> {exclure ?? 0}
+            FROM document_revision r JOIN document f ON f.ent_id = r.dre_ent_id
+            WHERE f.ent_marche_id = {marche} AND f_document_valable(f.ent_id, FALSE) AND f.ent_id <> {exclure ?? 0}
             GROUP BY 1, 2
             """).ToListAsync(ct);
 

@@ -130,12 +130,18 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
 
     /// <summary>
     /// Commande client : un marché est obligatoire pour la valider (créé ou choisi par l'utilisateur), sauf la commande
-    /// intermédiaire d'un devis facturé directement (CONCEPTION-ACHATS-MARCHES.md, Q16 et 13.1).
+    /// intermédiaire d'un devis facturé directement (CONCEPTION-ACHATS-MARCHES.md, Q16 et 13.1) ; unités des lignes.
     /// </summary>
-    public override Task ControlerValidationAsync(DocumentDbContext<DocumentBtp, DocumentLigneBtp> db, DocumentCompletBtp document, TypeDocument type,
+    public override async Task ControlerValidationAsync(DocumentDbContext<DocumentBtp, DocumentLigneBtp> db, DocumentCompletBtp document, TypeDocument type,
         List<MessageCalcul> erreurs, CancellationToken ct)
     {
-        if (type.TydFamille == "E") return ControlerOrdreAsync(db, document, erreurs, ct);
+        // Unités des lignes transformées et des articles gérés en stock (garde-fou, lot 0 du module Rentabilité).
+        await UnitesLignesBtp.ControlerAsync(db, document, type, erreurs, ct);
+        if (type.TydFamille == "E")
+        {
+            await ControlerOrdreAsync(db, document, erreurs, ct);
+            return;
+        }
         if (type.TydCode == TypesDocument.VCommande && !document.Document.EntIntermediaire && document.Document.EntMarcheId is null)
         {
             erreurs.Add(new MessageCalcul(null, "MARCHE_OBLIGATOIRE", "Marché à créer ou à choisir avant de valider la commande"));
@@ -152,8 +158,12 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         }
         // Stock : date du mouvement, lieux des entrées, sorties et transferts (module Stock, S9, S10).
         MouvementsStockBtp.Controler(document.Document, type, erreurs);
-        return ControlerAvancementNumerote(db, document, type, erreurs, ct);
+        await ControlerAvancementNumerote(db, document, type, erreurs, ct);
     }
+
+    /// <summary>Quantités des liens de transformation converties dans l'unité de la ligne d'origine (UnitesLignesBtp).</summary>
+    public override Task ApresRecalculLiensAsync(DocumentDbContext<DocumentBtp, DocumentLigneBtp> db, long entId, CancellationToken ct) =>
+        UnitesLignesBtp.ConvertirLiensAsync(db, entId, ct);
 
     /// <summary>
     /// Facture d'avancement d'un marché : refusée tant qu'une facture d'avancement créée avant elle dans le même marché
@@ -408,10 +418,9 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
             INSERT INTO document_deduction (ded_ent_id, ded_deduit_ent_id, ded_rang, ded_montant_ht, ded_montant_ttc)
             SELECT d.ent_id, x.ent_id, x.ent_rang_avancement, x.ent_total_ht, x.ent_total_ttc
             FROM document d
-            JOIN document x ON x.ent_marche_id = d.ent_marche_id AND x.ent_id <> d.ent_id AND x.ent_verrouille
+            JOIN document x ON x.ent_marche_id = d.ent_marche_id AND x.ent_id <> d.ent_id AND f_document_valable(x.ent_id, FALSE)
             JOIN type_document tx ON tx.tyd_id = x.ent_tyd_id
-            JOIN statut_document s ON s.std_id = x.ent_std_id
-            WHERE d.ent_id = {entId} AND s.std_code <> 'ANNULE' AND (x.ent_avt_presentation = 'P' OR tx.tyd_avancement = 'R')
+            WHERE d.ent_id = {entId} AND (x.ent_avt_presentation = 'P' OR tx.tyd_avancement = 'R')
               AND (x.ent_rang_avancement IS NULL OR d.ent_rang_avancement IS NULL OR x.ent_rang_avancement < d.ent_rang_avancement)
             """, ct);
     }
@@ -426,10 +435,10 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         await db.Database.ExecuteSqlInterpolatedAsync($"""
             UPDATE document d SET ent_rang_avancement = 1 + coalesce((
                 SELECT max(x.ent_rang_avancement) FROM document x
-                JOIN type_document tx ON tx.tyd_id = x.ent_tyd_id JOIN statut_document s ON s.std_id = x.ent_std_id
+                JOIN type_document tx ON tx.tyd_id = x.ent_tyd_id
                 JOIN type_document td ON td.tyd_id = d.ent_tyd_id
-                WHERE x.ent_marche_id = d.ent_marche_id AND x.ent_id <> d.ent_id AND x.ent_verrouille AND s.std_code <> 'ANNULE'
-                  AND CASE WHEN td.tyd_avancement = 'S' THEN tx.tyd_avancement = 'S' AND x.ent_is_reference
+                WHERE x.ent_marche_id = d.ent_marche_id AND x.ent_id <> d.ent_id AND f_document_valable(x.ent_id, FALSE)
+                  AND CASE WHEN td.tyd_avancement = 'S' THEN tx.tyd_avancement = 'S'
                            ELSE x.ent_avt_presentation = 'P' OR tx.tyd_avancement = 'R' END), 0)
             WHERE d.ent_id = {entId} AND d.ent_rang_avancement IS NULL AND d.ent_avt_presentation IS NOT NULL AND d.ent_marche_id IS NOT NULL
             """, ct);

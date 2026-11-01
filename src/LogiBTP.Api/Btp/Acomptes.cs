@@ -202,7 +202,7 @@ public static class Acomptes
                JOIN statut_document s ON s.std_id = f.ent_std_id WHERE x.acd_mac_id = a.mac_id AND s.std_code <> 'ANNULE' AND f.ent_id <> {d.Document.EntId}) AS deduit,
               a.mac_libelle AS libelle
             FROM marche_acompte a JOIN document p ON p.ent_id = a.mac_piece_ent_id JOIN statut_document sp ON sp.std_id = p.ent_std_id
-            WHERE a.mac_mar_id = {marche} AND p.ent_verrouille AND sp.std_code <> 'ANNULE' ORDER BY a.mac_rang
+            WHERE a.mac_mar_id = {marche} AND f_document_valable(p.ent_id, FALSE) ORDER BY a.mac_rang
             """).ToListAsync(ct);
         var avancees = d.Lignes.Where(l => l.LigAvtMode is not null && !TL.EstPied(l)).ToList();
         var periode = avancees.Sum(l => l.LigMontantHt ?? 0);
