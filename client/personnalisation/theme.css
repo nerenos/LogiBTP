@@ -100,3 +100,11 @@
 :root {
   --import-etiquette-defaut: #94a3b8;
 }
+
+/* Accueil : états du matériel (widget « Matériels par état »). */
+:root {
+  --widget-materiel-dispo: #2e9e5b;
+  --widget-materiel-chantier: #1d5fbf;
+  --widget-materiel-panne: #c0392b;
+  --widget-materiel-rebut: #667085;
+}

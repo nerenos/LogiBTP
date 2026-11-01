@@ -4163,5 +4163,801 @@
       "rappels_titre": "Rappels avant échéance",
       "delais": "Délais enregistrés"
     }
+  },
+  "navigation_btp": {
+    "menus": {
+      "ressources": {
+        "libelle": "&Ressources",
+        "court": "Res.",
+        "ressources": {
+          "libelle": "Toutes les ressources",
+          "info": "Équipes, salariés, intérim, matériel, sous-traitants"
+        },
+        "salaries": {
+          "libelle": "Salariés et intérimaires",
+          "creation": "Nouveau salarié"
+        },
+        "materiels": {
+          "libelle": "Matériels",
+          "creation": "Nouveau matériel"
+        },
+        "habilitations": {
+          "libelle": "Habilitations, entretiens et visites à surveiller",
+          "info": "Expirées ou à renouveler : CACES, visites médicales, VGP…"
+        },
+        "parametrage_ressources": {
+          "libelle": "Types d'habilitations, motifs, natures MO…"
+        }
+      },
+      "annuaire": {
+        "libelle": "&Tiers",
+        "tiers": {
+          "libelle": "Tous les tiers",
+          "info": "Sociétés, établissements, particuliers…",
+          "creation": "Nouvelle personne (société…)"
+        },
+        "clients": {
+          "libelle": "Clients et prospects",
+          "creation": "Nouveau client"
+        },
+        "fournisseurs": {
+          "libelle": "Fournisseurs et loueurs",
+          "creation": "Nouveau fournisseur"
+        },
+        "sous_traitants": {
+          "libelle": "Sous-traitants, cotraitants, intérim",
+          "creation": "Nouveau sous-traitant"
+        },
+        "prescripteurs": {
+          "libelle": "Prescripteurs et maîtres d'ouvrage",
+          "creation": "Nouveau prescripteur"
+        },
+        "contacts": {
+          "libelle": "Contacts (individus)",
+          "creation": "Nouvel individu (contact)"
+        },
+        "equipe_interne": {
+          "libelle": "Notre société : salariés et rôles",
+          "creation": "Nouvel individu"
+        },
+        "graphe_relations": {
+          "libelle": "Graphe des relations",
+          "info": "Hiérarchie, liens et contacts (depuis notre société)"
+        },
+        "notre_societe": {
+          "libelle": "Notre société",
+          "info": "Fiche de la société de cette base"
+        },
+        "parametrage_annuaire": {
+          "libelle": "Niveaux, relations, liens, rôles…"
+        }
+      },
+      "bibliotheque": {
+        "libelle": "&Bibliothèque",
+        "court": "Bib",
+        "articles": {
+          "libelle": "Articles",
+          "creation": "Nouvel article"
+        },
+        "ouvrages": {
+          "libelle": "Ouvrages",
+          "creation": "Nouvel ouvrage"
+        },
+        "ensembles": {
+          "libelle": "Ensembles (structures réutilisables)",
+          "creation": "Nouvel ensemble"
+        },
+        "textes": {
+          "libelle": "Textes (lignes et textes d’édition)",
+          "creation": "Nouveau texte"
+        },
+        "elements": {
+          "libelle": "Tous les éléments",
+          "creation": "Nouvel article"
+        },
+        "parametrage_bibliotheque": {
+          "libelle": "Bibliothèques, familles, natures…"
+        }
+      },
+      "affaires": {
+        "libelle": "A&ffaires",
+        "projets": {
+          "libelle": "Projets (chiffrage)",
+          "creation": "Nouveau projet"
+        },
+        "affaires": {
+          "libelle": "Affaires",
+          "info": "Regroupement de chantiers, ou affaire de gestion (frais hors chantier)",
+          "creation": "Nouvelle affaire"
+        },
+        "chantiers": {
+          "libelle": "Chantiers",
+          "creation": "Nouveau chantier"
+        },
+        "marches": {
+          "libelle": "Marchés",
+          "info": "Ouverts à la validation des commandes clients : suivi de la facturation",
+          "creation": "Nouveau marché"
+        }
+      },
+      "ventes": {
+        "libelle": "&Ventes",
+        "devis": {
+          "libelle": "Devis",
+          "creation": "Nouveau devis"
+        },
+        "commandes": {
+          "libelle": "Commandes clients",
+          "creation": "Nouvelle commande client"
+        },
+        "livraisons": {
+          "libelle": "Bons de livraison et de retour",
+          "creation": "Nouveau bon de livraison"
+        },
+        "situations": {
+          "libelle": "Situations de travaux",
+          "creation": "Nouvelle situation de travaux"
+        },
+        "factures": {
+          "libelle": "Factures, factures d'avancement, avoirs",
+          "creation": "Nouvelle facture"
+        },
+        "documents": {
+          "libelle": "Tous les documents"
+        },
+        "reglements_clients": {
+          "libelle": "Règlements clients",
+          "info": "Échéances, règlements, pointage et cautions (module Règlements)"
+        },
+        "import_optim": {
+          "libelle": "Importer un devis OptimBTP",
+          "info": "Fichier .optim : lignes, prix et coefficients repris, champs non repris listés"
+        }
+      },
+      "achats": {
+        "libelle": "&Achats",
+        "ddp": {
+          "libelle": "Demandes de prix (DDP)",
+          "creation": "Nouvelle demande de prix"
+        },
+        "commandes_fournisseurs": {
+          "libelle": "Commandes fournisseurs",
+          "creation": "Nouvelle commande fournisseur"
+        },
+        "livraisons_fournisseurs": {
+          "libelle": "Bons de livraison et de retour fournisseurs",
+          "creation": "Nouveau bon de livraison fournisseur"
+        },
+        "factures_fournisseurs": {
+          "libelle": "Factures fournisseurs",
+          "creation": "Nouvelle facture fournisseur"
+        },
+        "titre_demandes_execution": {
+          "libelle": "Demandes (Exécution)"
+        },
+        "achats_dac": {
+          "libelle": "Demandes d'achat",
+          "creation": "Nouvel ordre : demande d'achat"
+        },
+        "achats_dap": {
+          "libelle": "Demandes d'approvisionnement",
+          "creation": "Nouvelle demande d'approvisionnement"
+        },
+        "reglements_fournisseurs": {
+          "libelle": "Règlements fournisseurs",
+          "info": "Échéances à payer, règlements émis et pointage (module Règlements)"
+        }
+      },
+      "sous_traitance": {
+        "libelle": "Sous-&traitance",
+        "court": "SsT",
+        "st_ao": {
+          "libelle": "Appels d'offres",
+          "creation": "Nouvel appel d'offres de sous-traitance"
+        },
+        "st_commandes": {
+          "libelle": "Commandes de sous-traitance",
+          "creation": "Nouvelle commande de sous-traitance"
+        },
+        "st_factures": {
+          "libelle": "Factures de sous-traitance"
+        },
+        "st_marches": {
+          "libelle": "Marchés de sous-traitance",
+          "info": "Un marché par sous-traitant et axe de facturation sur un chantier",
+          "creation": "Nouveau marché de sous-traitance"
+        },
+        "st_ordres": {
+          "libelle": "Ordres de sous-traitance (Exécution)",
+          "creation": "Nouvel ordre : ordre de sous-traitance"
+        },
+        "st_pieces": {
+          "libelle": "Pièces exigées…",
+          "info": "Kbis, URSSAF, assurances, DC4… : validité, rappels, actions bloquées"
+        }
+      },
+      "stock": {
+        "libelle": "Stoc&k",
+        "stock_magasin": {
+          "libelle": "Magasin (comptoir)",
+          "info": "Sorties et retours : chantiers, dotations des salariés (EPI, outillage)"
+        },
+        "stock_a_valider": {
+          "libelle": "Saisies de la borne à valider",
+          "info": "Sorties et retours saisis par les salariés : accepter ou refuser"
+        },
+        "stock_dotations": {
+          "libelle": "Dotations des salariés",
+          "info": "EPI et outillage dotés par salarié sur une période"
+        },
+        "stock_etat": {
+          "libelle": "État du stock",
+          "info": "Quantités et valeur d'un dépôt à une date-heure"
+        },
+        "stock_mouvements": {
+          "libelle": "Mouvements de stock"
+        },
+        "stock_documents": {
+          "libelle": "Entrées, sorties et transferts",
+          "creation": "Nouveau transfert de stock"
+        },
+        "stock_appro": {
+          "libelle": "Approvisionnement",
+          "info": "Ruptures à venir, propositions de commande, mini / maxi"
+        },
+        "stock_reservations": {
+          "libelle": "Réservations",
+          "creation": "Nouvelle réservation de stock"
+        },
+        "stock_inventaires": {
+          "libelle": "Inventaires",
+          "info": "Lots de bordereaux comptés à une date-heure, écarts, corrections"
+        },
+        "stock_depots": {
+          "libelle": "Dépôts",
+          "info": "Chantiers cochés « Dépôt de stock » (affaire STOCK) ou qui tiennent un stock"
+        },
+        "stock_parametres": {
+          "libelle": "Valorisation, emplacements et marques…"
+        }
+      },
+      "execution": {
+        "libelle": "&Exécution",
+        "court": "Exe",
+        "execution_atelier": {
+          "libelle": "Étapes à valider (atelier, tablette)",
+          "info": "Étapes des ordres dont vous êtes la ressource ou de votre service sur vos chantiers du jour"
+        },
+        "execution_synthese": {
+          "libelle": "Synthèse par chantier",
+          "info": "Un état par service (parcours et ordres), clic droit pour imposer un état"
+        },
+        "ordres_oe": {
+          "libelle": "Ordres d'exécution",
+          "info": "Lancés depuis la fiche du marché (▶ Ordre d'exécution)"
+        },
+        "ordres_be": {
+          "libelle": "Ordres du bureau d'études",
+          "creation": "Nouvel ordre : ordre du bureau d'études"
+        },
+        "ordres_bm": {
+          "libelle": "Ordres des méthodes",
+          "creation": "Nouvel ordre : ordre du bureau des méthodes"
+        },
+        "ordres_of": {
+          "libelle": "Ordres de fabrication",
+          "creation": "Nouvel ordre : ordre de fabrication"
+        },
+        "ordres_co": {
+          "libelle": "Ordres de colisage",
+          "creation": "Nouvel ordre : ordre de colisage"
+        },
+        "ordres_li": {
+          "libelle": "Ordres de livraison",
+          "creation": "Nouvel ordre : ordre de livraison"
+        },
+        "ordres_sav": {
+          "libelle": "Interventions SAV",
+          "creation": "Nouvel ordre : intervention SAV"
+        },
+        "ordres_ost": {
+          "libelle": "Ordres de sous-traitance",
+          "creation": "Nouvel ordre : ordre de sous-traitance"
+        },
+        "ordres_dac": {
+          "libelle": "Demandes d'achat",
+          "creation": "Nouvel ordre : demande d'achat"
+        },
+        "ordres_po": {
+          "libelle": "Ordres de pose"
+        },
+        "ordres_dap": {
+          "libelle": "Demandes d'approvisionnement",
+          "creation": "Nouvelle demande d'approvisionnement"
+        },
+        "ordres_ent": {
+          "libelle": "Ordres d'entretien du matériel",
+          "info": "Créés depuis la fiche du matériel (onglet Compteurs)"
+        },
+        "ordres": {
+          "libelle": "Tous les ordres"
+        },
+        "ordres_bloques": {
+          "libelle": "Ordres bloqués"
+        },
+        "ordres_retard": {
+          "libelle": "Ordres en retard"
+        },
+        "parametrage_execution": {
+          "libelle": "Paramètres : modèles de parcours, états…"
+        },
+        "types_ordres": {
+          "libelle": "Types d'ordres (activation, service)…"
+        }
+      },
+      "planning": {
+        "libelle": "P&lanning",
+        "planning_atelier": {
+          "libelle": "Atelier par jour"
+        },
+        "planning_pose": {
+          "libelle": "Pose par semaine"
+        },
+        "planning_chantiers": {
+          "libelle": "Chantiers (Gantt)"
+        },
+        "planning_charge": {
+          "libelle": "Charge par service"
+        },
+        "planning_livraisons": {
+          "libelle": "Livraisons"
+        },
+        "planning_equipes": {
+          "libelle": "Équipes et compositions",
+          "info": "Équipes, membres par périodes (salariés, intérimaires, matériels, sous-traitants, équipes en renfort), chef d'équipe"
+        },
+        "parametrage_planning": {
+          "libelle": "Paramètres : heures travaillées, jours masqués…"
+        }
+      },
+      "terrain": {
+        "libelle": "Terra&in",
+        "terrain": {
+          "libelle": "Mon terrain (tâches, adresses, pièces)",
+          "info": "Vos tâches du planning du jour ou de la semaine, adresse et itinéraire, contact sur place, consignes et pièces diffusées sur le terrain"
+        }
+      },
+      "pointage": {
+        "libelle": "&Pointage",
+        "pointage_saisie": {
+          "libelle": "Saisie des pointages",
+          "info": "Grille hebdomadaire par salarié, au chantier ou sur un chantier interne"
+        },
+        "pointage_synthese": {
+          "libelle": "Synthèse et validation",
+          "info": "Salariés à examiner, corrections, validation simple ou double, demandes de correction"
+        },
+        "pointage_export": {
+          "libelle": "Export de paie et valorisation",
+          "info": "Variables de paie des jours validés (CSV), coût des heures"
+        },
+        "pointage_conges": {
+          "libelle": "Congés et absences",
+          "info": "Demandes de congés (pour soi ou ses équipiers), validation RH avec la nature"
+        },
+        "pointages": {
+          "libelle": "Liste des pointages"
+        },
+        "pointages_nc": {
+          "libelle": "Non-conformités"
+        },
+        "pointages_improductifs": {
+          "libelle": "Temps improductif"
+        },
+        "parametrage_pointage": {
+          "libelle": "Paramètres : pas, validation, sous-types…"
+        },
+        "bornes": {
+          "libelle": "Bornes et PIN…",
+          "info": "Enregistrer une borne d'atelier, poser les PIN des salariés"
+        }
+      },
+      "comptabilite": {
+        "libelle": "Co&mptabilité",
+        "court": "Compta",
+        "compta_plan": {
+          "libelle": "Plan comptable",
+          "info": "Comptes généraux, collectifs, TVA : type, sens d'usage, longueur"
+        },
+        "compta_tiers": {
+          "libelle": "Tiers par compte",
+          "info": "Comptes auxiliaires et collectifs des clients, fournisseurs et sous-traitants"
+        },
+        "compta_ventilation": {
+          "libelle": "Ventilation natures × TVA",
+          "info": "Compte des lignes par type comptable, nature et taux de TVA"
+        },
+        "compta_export": {
+          "libelle": "Export des écritures",
+          "info": "Factures, avoirs, achats et sous-traitance vers le logiciel comptable (Sage 100)"
+        },
+        "parametrage_comptabilite": {
+          "libelle": "Paramètres : longueur, collectifs, types comptables, TVA…",
+          "info": "Longueur des comptes, préfixes, collectifs, catégories et taux de TVA"
+        }
+      },
+      "suivi": {
+        "libelle": "&Suivi",
+        "crm_mes": {
+          "libelle": "Mes tâches",
+          "info": "Notes dont je suis responsable",
+          "titre": "Nouvelle tâche"
+        },
+        "crm_rappels": {
+          "libelle": "Mes rappels",
+          "info": "Rouge : échu ou imminent · orange : bientôt · vert : à venir"
+        },
+        "crm_a_prendre": {
+          "libelle": "À prendre dans mes services"
+        },
+        "crm_recues": {
+          "libelle": "Notes reçues"
+        },
+        "crm_toutes": {
+          "libelle": "Toutes les notes",
+          "titre": "Nouvelle note"
+        },
+        "crm_demandes": {
+          "libelle": "Demandes (veille commerciale)",
+          "info": "Avant-projets et consultations suivis avant la création du projet",
+          "titre": "Nouvelle demande"
+        },
+        "crm_mes_demandes": {
+          "libelle": "Mes demandes"
+        },
+        "crm_plans": {
+          "libelle": "Plans et visas",
+          "info": "Indices, visas des tiers, indice en vigueur",
+          "titre": "Nouveau plan"
+        },
+        "crm_diffusions": {
+          "libelle": "Bordereaux de diffusion"
+        },
+        "crm_fil": {
+          "libelle": "Fil d'actualité",
+          "info": "Notes publiées et événements ; le fil d'un chantier se trouve dans son suivi"
+        },
+        "parametrage_crm": {
+          "libelle": "Paramètres : types de notes, rappels, statuts de visa…"
+        }
+      },
+      "documents_ged": {
+        "libelle": "&GED",
+        "ged": {
+          "libelle": "GED : tous les documents"
+        },
+        "coffre": {
+          "libelle": "Coffre-fort",
+          "info": "Documents administratifs scellés"
+        },
+        "ged_liste": {
+          "libelle": "Recherche de documents (liste)"
+        },
+        "courriels": {
+          "libelle": "Courriels envoyés et en attente",
+          "info": "File d’envoi, erreurs, suivi des envois",
+          "titre": "Nouveau courriel"
+        }
+      },
+      "parametres": {
+        "libelle": "&Paramètres",
+        "court": "Param.",
+        "preferences": {
+          "libelle": "Préférences"
+        },
+        "theme_d_affichage": {
+          "libelle": "Thème d'affichage"
+        },
+        "position_du_menu": {
+          "libelle": "Position du menu"
+        },
+        "themes": {
+          "libelle": "Thèmes et vues de liste…"
+        },
+        "fiches": {
+          "libelle": "Fiches",
+          "titre": "Champs supplémentaires des fiches (administrateur)"
+        },
+        "fiche_salarie": {
+          "libelle": "Fiche salarié : champs…"
+        },
+        "fiche_materiel": {
+          "libelle": "Fiche matériel : champs…"
+        },
+        "fiche_element": {
+          "libelle": "Fiche élément : données techniques…"
+        },
+        "fiche_personne": {
+          "libelle": "Fiche personne : champs…"
+        },
+        "fiche_individu": {
+          "libelle": "Fiche individu : champs…"
+        },
+        "fiche_chantier": {
+          "libelle": "Fiche chantier : champs…"
+        },
+        "fiche_affaire": {
+          "libelle": "Fiche affaire : champs…"
+        },
+        "fiche_projet": {
+          "libelle": "Fiche projet : champs…"
+        },
+        "fiche_marche": {
+          "libelle": "Fiche marché : champs…"
+        },
+        "fiche_sous_traitant": {
+          "libelle": "Fiche sous-traitant : champs…"
+        },
+        "fiche_fournisseur": {
+          "libelle": "Fiche fournisseur : champs…"
+        },
+        "fiche_client": {
+          "libelle": "Fiche client : champs…"
+        },
+        "titre_documents": {
+          "libelle": "Documents"
+        },
+        "parametres_documents": {
+          "libelle": "Étiquettes et couleurs des lignes…"
+        },
+        "parametres_editions": {
+          "libelle": "Éditions : modèles et mentions…"
+        },
+        "parametres_ged": {
+          "libelle": "GED : rétention et classification…"
+        },
+        "titre_annuaire_et_bibliotheque": {
+          "libelle": "Annuaire et bibliothèque"
+        },
+        "parametres_annuaire": {
+          "libelle": "Annuaire : niveaux, relations, liens, rôles…"
+        },
+        "parametres_bibliotheque": {
+          "libelle": "Bibliothèques, familles, natures, scénarios…"
+        },
+        "titre_organisation": {
+          "libelle": "Organisation"
+        },
+        "parametres_modules": {
+          "libelle": "Modules de la société…",
+          "titre": "Activer ou désactiver les modules facultatifs"
+        },
+        "parametres_services": {
+          "libelle": "Services et membres…",
+          "titre": "Services de l’entreprise et salariés rattachés"
+        },
+        "parametres_referentiels": {
+          "libelle": "Référentiels communs…",
+          "titre": "Types de matériel, activités, priorités et évaluations des projets, modes de règlement, unités, numérotation des documents"
+        },
+        "parametres_calendriers": {
+          "libelle": "Calendriers et jours fériés…",
+          "titre": "Horaires de travail, cycles, jours fériés, fermetures des services"
+        },
+        "parametres_ressources": {
+          "libelle": "Référentiel des ressources…",
+          "titre": "Types d'habilitations, motifs, natures de main-d'œuvre par service"
+        },
+        "parametres_mail": {
+          "libelle": "Messagerie : comptes, alias, modèles…",
+          "titre": "Comptes de messagerie, expéditeur par usage, modèles, limitations des envois"
+        },
+        "parametres_connexions": {
+          "libelle": "Connexions externes (OAuth)…",
+          "titre": "Connexions aux services externes : Gmail…"
+        },
+        "parametres_comptes": {
+          "libelle": "Comptes utilisateurs…",
+          "titre": "Comptes de connexion des salariés et intérimaires"
+        },
+        "parametres_droits": {
+          "libelle": "Profils et droits…",
+          "titre": "Profils, droits par module, document, fiche et fonction ; journal des modifications"
+        },
+        "parametres_installation": {
+          "libelle": "Installation : certificat, bases, sauvegardes…",
+          "titre": "État du serveur : certificat HTTPS, bases des sociétés, dernière sauvegarde, espace disque"
+        },
+        "raccourcis": {
+          "libelle": "Raccourcis clavier…"
+        },
+        "notifications": {
+          "libelle": "Notifications : préférences…"
+        },
+        "apropos": {
+          "libelle": "À propos de LogiBTP"
+        }
+      },
+      "fenetres": {
+        "libelle": "Fe&nêtres",
+        "court": "Fen.",
+        "liste_des_fenetres": {
+          "libelle": "Liste des fenêtres…"
+        },
+        "nouvelle_fenetre": {
+          "libelle": "Nouvelle fenêtre",
+          "titre": "Ouvre la page courante dans une fenêtre séparée"
+        },
+        "restaurer_ma_session_precedent": {
+          "libelle": "Restaurer ma session précédente"
+        },
+        "fermer_cette_fenetre": {
+          "libelle": "Fermer cette fenêtre"
+        },
+        "fermer_la_session": {
+          "libelle": "Fermer la session…",
+          "titre": "Ferme toutes les fenêtres ; la session pourra être restaurée depuis l'accueil"
+        }
+      }
+    },
+    "positions": {
+      "haut": "En haut",
+      "gauche": "À gauche, sur toute la hauteur",
+      "droite": "À droite, sur toute la hauteur"
+    },
+    "fenetres": {
+      "courante": "Cette fenêtre",
+      "modifiee": "Modifications non enregistrées",
+      "premier_plan": "Mettre au premier plan",
+      "focalisation_refusee": "Le navigateur ne permet pas de mettre cette fenêtre au premier plan : elle est signalée"
+    },
+    "raccourcis": {
+      "application": {
+        "groupe": "Toute l'application",
+        "enregistrer": "Enregistrer la page",
+        "fenetres": "Fenêtres ouvertes",
+        "accueil": "Accueil",
+        "retour": "Page précédente",
+        "precedente": "Fiche ou document précédent de la liste",
+        "suivante": "Fiche ou document suivant de la liste",
+        "parametres": "Paramètres",
+        "raccourcis": "Personnaliser les raccourcis"
+      },
+      "document": {
+        "groupe": "Page document",
+        "ongletEntete": "Onglet Entête",
+        "ongletLignes": "Onglet Lignes",
+        "ongletAnalyse": "Onglet Analyse",
+        "ongletPieces": "Onglet Pièces",
+        "ongletTracabilite": "Onglet Traçabilité",
+        "ongletSuivi": "Onglet Suivi (CRM)",
+        "rechercher": "Rechercher dans les lignes",
+        "valider": "Valider le document",
+        "transformer": "Transformer le document",
+        "bibliotheque": "Ouvrir la bibliothèque",
+        "apercu": "Aperçu et impression",
+        "notifications": "Afficher ou masquer les notifications",
+        "notificationSuivante": "Notification suivante (ligne)",
+        "notificationPrecedente": "Notification précédente (ligne)"
+      },
+      "planning": {
+        "groupe": "Planning",
+        "annuler": "Annuler la dernière opération",
+        "retablir": "Rétablir",
+        "supprimer": "Supprimer la tâche sélectionnée",
+        "dupliquer": "Dupliquer la tâche sélectionnée",
+        "actualiser": "Actualiser le planning"
+      },
+      "pointage": {
+        "groupe": "Saisie des pointages (tableau)",
+        "caseSuivante": "Case suivante (fin de ligne : ligne suivante, fin du tableau : nouvelle ligne)",
+        "casePrecedente": "Case précédente",
+        "ligneDessus": "Même jour, ligne du dessus",
+        "ligneDessous": "Même jour, ligne du dessous",
+        "nouvelleLigne": "Nouvelle ligne reprenant chantier, ordre et type",
+        "dupliquer": "Dupliquer la ligne avec ses durées",
+        "recopierSemaine": "Recopier la durée sur les jours suivants jusqu'au vendredi",
+        "supprimerLigne": "Retirer la ligne",
+        "completerLigne": "Compléter la ligne : heures par défaut du salarié moins les heures déjà saisies du jour"
+      }
+    },
+    "widgets": {
+      "etats_materiel": {
+        "DISPO": "Disponible",
+        "CHANTIER": "En chantier",
+        "PANNE": "En panne",
+        "REBUT": "Rebut"
+      },
+      "rappels": {
+        "titre": "Mes rappels",
+        "description": "Rappels du suivi (CRM) arrivés dans leur délai : rouge échu ou imminent, orange bientôt, vert à venir",
+        "note": "Note {{id}}",
+        "rappel_le": "Rappel le {{date}}",
+        "echeance_le": "Échéance le {{date}}"
+      },
+      "oauth": {
+        "titre": "Connexions à reconnecter",
+        "description": "Connexions externes (Gmail…) à reconnecter ou dont l’autorisation expire bientôt (personnes autorisées)",
+        "jusquau": "Autorisation jusqu'au {{date}}"
+      },
+      "chiffres": {
+        "titre": "Chiffres clés",
+        "description": "Salariés actifs, matériels en panne, devis en cours, documents archivés",
+        "salaries": "Salariés actifs",
+        "materiels": "Matériels",
+        "panne": "Matériels en panne",
+        "panne_detail": "Segment État = En panne",
+        "devis": "Devis en brouillon",
+        "ged": "Documents GED",
+        "coffre": "Au coffre-fort"
+      },
+      "alertes": {
+        "titre": "Alertes",
+        "description": "Matériels en panne, contrats précaires, documents administratifs hors coffre-fort",
+        "panne_un": "{{nombre}} matériel en panne",
+        "panne_autre": "{{nombre}} matériels en panne",
+        "panne_detail": "À réparer ou à remplacer sur les chantiers",
+        "hors_coffre_un": "{{nombre}} document administratif hors coffre-fort",
+        "hors_coffre_autre": "{{nombre}} documents administratifs hors coffre-fort",
+        "precaires_un": "{{nombre}} salarié en CDD ou intérim",
+        "precaires_autre": "{{nombre}} salariés en CDD ou intérim",
+        "precaires_detail": "{{cdd}} CDD · {{interim}} intérim"
+      },
+      "materiels": {
+        "titre": "Matériels par état",
+        "description": "Répartition du parc matériel",
+        "unite": "matériels"
+      },
+      "vide": "(vide)",
+      "salaries": {
+        "titre": "Effectif par service",
+        "description": "Salariés par service",
+        "unite": "salariés"
+      },
+      "documents": {
+        "titre": "Documents par statut",
+        "description": "Devis, commandes, factures par statut",
+        "unite": "documents"
+      },
+      "derniers": {
+        "titre": "Derniers documents",
+        "description": "Les documents les plus récents",
+        "numero": "N°",
+        "type": "Type",
+        "net": "Net à payer"
+      },
+      "date": "Date",
+      "ged": {
+        "titre": "Documents GED récents",
+        "description": "Derniers documents déposés dans la GED",
+        "colonne_titre": "Titre",
+        "categorie": "Catégorie"
+      }
+    },
+    "application": {
+      "injoignable_aide_html": "<p class=\"aide\">L'API LogiBTP ne répond pas. Nouvel essai toutes les 15 secondes : la page se rechargera à son retour.</p><p class=\"aide\">Pour travailler sans serveur, l'application doit avoir été ouverte en ligne sur ce poste, avec une session.</p>",
+      "quitter": "Quitter",
+      "nouvelle_version": "Nouvelle version de LogiBTP installée : rechargez la page (F5) une fois vos saisies enregistrées",
+      "session_expiree": "Session expirée : reconnectez-vous dans la fenêtre ouverte, puis enregistrez de nouveau",
+      "fenetre_bloquee": "Fenêtre bloquée par le navigateur : autorisez les fenêtres pop-up pour ce site",
+      "fiche_indisponible": "Fiche {{type}} n° {{id}} : écran pas encore disponible",
+      "base_principale": "Base principale",
+      "base_societe": "Base de la société {{societe}} (sous-domaine {{code}})",
+      "mon_compte": "{{nom}} : mon compte, mot de passe, déconnexion",
+      "api_connectee": "API connectée",
+      "api": "API",
+      "injoignable_pwa": "Serveur injoignable : les données déjà consultées sur ce poste s'affichent depuis le navigateur ; rien ne peut être enregistré. Nouvel essai toutes les 15 secondes.",
+      "injoignable": "L'API ne répond plus : rien ne peut être enregistré. Nouvel essai toutes les 15 secondes.",
+      "hors_ligne": "Hors ligne",
+      "attentes": "Enregistrés sur ce poste, pas encore envoyés au serveur :\n{{liste}}",
+      "perdue_pwa": "Serveur injoignable : consultation des données gardées sur ce poste, enregistrements impossibles",
+      "perdue": "L'API ne répond plus : les modifications ne peuvent pas être enregistrées",
+      "retrouvee": "API de nouveau connectée",
+      "injoignable_titre": "Serveur injoignable",
+      "reessayer": "Réessayer maintenant",
+      "fermeture_refusee": "Le navigateur ne laisse fermer par l'application que les fenêtres qu'elle a ouvertes : fermez celle-ci avec Ctrl+W",
+      "session_fermee_un": "Session fermée ({{nombre}} fenêtre) : « Restaurer ma session précédente » la rouvrira",
+      "session_fermee_autre": "Session fermée ({{nombre}} fenêtres) : « Restaurer ma session précédente » la rouvrira"
+    }
   }
 }

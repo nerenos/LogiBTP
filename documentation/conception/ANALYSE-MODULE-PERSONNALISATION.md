@@ -813,3 +813,21 @@ restant livrable seul (le repli sur la clé ou sur le message du serveur ne cass
   niveaux urgent / attention / info, lue, traitée…).
 - **Contrôles** : `npm test`, analyse des portées (paramètre `texte` renommé dans les connexions) ; pages affichées
   dans le navigateur avec une API simulée.
+
+## 35. Réalisation du lot P3v : navigation du cœur (01/11/2026)
+
+- **Périmètre** : menus du bandeau (`navigation/menus.js` : menus métier, Paramètres, Fenêtres, positions du menu,
+  raccourcis de l'accueil), widgets de l'accueil (`navigation/widgets.js`), fonctions à raccourci clavier
+  (`raccourcis.js`), bandeau et messages de l'application (`application.js` : société, état de l'API, saisies en
+  attente, compte, page « Serveur injoignable », signalement d'une fenêtre, fermeture de session).
+- **Textes** : `navigation_btp.*` : `menus.<menu>.libelle|court` et `menus.<menu>.<élément>.libelle|info|titre|creation`
+  (élément = son code, sinon son adresse ou son libellé d'origine en clé), `positions`, `fenetres`,
+  `raccourcis.<groupe>.groupe|<action>`, `widgets.*`, `application.*`.
+- **Icônes** : `navigation_btp_<élément>` pour chaque élément de menu, `navigation_btp_widget_*`, `navigation_btp_menu_*`,
+  état de l'API, attentes, signalement.
+- **Couleurs** : états du matériel du widget par les variables `--widget-materiel-*` du thème (lues au chargement du
+  widget : elles suivent le thème).
+- **Hors lot** : définitions des fiches, vues de listes et de documents, données de démonstration et modèles d'édition
+  fournis : données système en base (§ 8), migrées avec elles.
+- **Contrôles** : `npm test` (dont les tests des menus), analyse des portées ; bandeau, menus et widgets affichés dans le
+  navigateur.
