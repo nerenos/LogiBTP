@@ -29,6 +29,10 @@
   lot G1 : appliquer `db/250` (révision des prix : index, formules, paramètres des marchés) puis saisir ou importer les
   valeurs des index utilisés (`/parametres/revision`) ; libellés du catalogue BT à vérifier ; rejouer le `191` régénéré
   (bloc `REVISION_PRIX` des situations et factures d'avancement).
+- [ ] Module Rentabilité, lot 0 : appliquer `modules/document/db/019p`, `db/255`, `db/256`, `db/257` et le `131`
+  régénéré (chargé d'affaires de la fiche affaire), puis choisir le chargé d'affaires des affaires et projets listés par
+  `v_responsables_a_reprendre`. Les pièces validées avec une unité sans conversion (stock, lignes transformées) restent
+  telles quelles ; seules les nouvelles validations sont contrôlées.
 - [ ] GED : `modules/ged/db/051` appliqué ; après redémarrage de l'API, indexer les documents déposés avant
   (`POST /api/ged/indexation`, administrateur, lots de 200).
 - [ ] Vue de colonnes « Complet » : `db/150` (`ON CONFLICT DO NOTHING`) n'ajoute pas Compte et Commentaire aux bases
@@ -217,7 +221,12 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
 - [ ] Secteur du chantier et des documents de vente.
 - [ ] Demandes de prix d'achat « sur ordre » : déverrouiller plusieurs commandes pendant la durée du chantier en
   conservant les prix de la demande.
-- [ ] Module Analyse : à définir.
+- [ ] Module Rentabilité (ex « Analyse », suivi économique des chantiers) : analyse validée le 01/11/2026
+  ([ANALYSE-MODULE-ANALYSE.md](documentation/conception/ANALYSE-MODULE-ANALYSE.md)), lot 0 réalisé (périmètre unique
+  des pièces, chargé d'affaires en individu, chantiers d'une pièce, garde-fou des unités) ; lots 1 à 8 à réaliser.
+  Reportés au lot 1 : rôles des types de documents (budget, engagé, dépensé, facturé) paramétrés plutôt que lus par
+  leurs codes. Plus tard (Q17) : historique du chargé d'affaires d'une affaire et d'un chantier (aujourd'hui seul le
+  chargé d'affaires actuel compte, sur toute la période).
 - [ ] Module Comptabilité avancée : à définir (voir aussi « Module Comptabilité complet »).
 - [ ] Module de gestion des risques : à définir.
 - [ ] Module de circuit de validation : à définir.
