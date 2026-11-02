@@ -275,6 +275,7 @@ export class TableauListe {
 }
 
 export { PanneauPrevisions, INDICATEURS_PREVISION, COMPOSANTES_COUT, champsMontants } from './previsions.js';
+export { PanneauFacturation, TableauFacturationListe, libelleMois } from './facturation.js';
 
 /**
  * Bloc de résultats sur les PV (§ 4.8) sous le Détail : lignes Budget, Réalisé, Facturé, Reste à facturer, Prévisionnel ;

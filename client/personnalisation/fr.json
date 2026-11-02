@@ -4306,6 +4306,10 @@
         },
         "parametrage_rentabilite": {
           "libelle": "Paramétrage de la rentabilité"
+        },
+        "rentabilite_facturation": {
+          "libelle": "Prévisionnel de facturation",
+          "info": "Montants à facturer par chantier et par mois, comparés au facturé"
         }
       },
       "ventes": {
@@ -7908,7 +7912,8 @@
       "faits": "Faits d'un chiffre",
       "rapprochement": "Rapprochement des faits",
       "parametres": "Paramétrage de la rentabilité",
-      "changements": "Changements depuis le contrôle"
+      "changements": "Changements depuis le contrôle",
+      "facturation": "Prévisionnel de facturation"
     },
     "accueil": {
       "aide": "Choisissez un chantier (code, double-clic ou F4 pour la liste) : son Détail par nature et par ordre s'ouvre. Les chiffres sont recalculés dès qu'une pièce, un pointage, une tâche ou un mouvement de stock les concernant change, et chaque nuit.",
@@ -8162,6 +8167,12 @@
       "ajoutes_autre": "{{nombre}} faits ajoutés ou modifiés",
       "retires_un": "{{nombre}} fait retiré ou remplacé",
       "retires_autre": "{{nombre}} faits retirés ou remplacés"
+    },
+    "facturation": {
+      "enregistree": "Prévision de facturation enregistrée (nouvelle version)",
+      "lien": "Prévisionnel de facturation",
+      "lien_titre": "Chantiers × mois : prévu de la dernière version et facturé",
+      "periode_titre": "Mois affichés (par défaut : deux mois avant le mois en cours jusqu'à neuf mois après)"
     }
   },
   "erreurs": {

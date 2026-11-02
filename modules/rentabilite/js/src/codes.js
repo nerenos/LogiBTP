@@ -112,3 +112,19 @@ export const ERREUR_PREVISION = Object.freeze({
   SOLDEE: 'PREVISION_SOLDEE',
   VERSION: 'PREVISION_VERSION',
 });
+
+/** Mode de saisie d'un mois du prévisionnel de facturation (lot 7) : montant HT ou % du budget PV. */
+export const MODE_FACTURATION = Object.freeze({
+  MONTANT: 'MONTANT',
+  POURCENT: 'POURCENT',
+});
+
+/** Erreurs d'une prévision de facturation. */
+export const ERREUR_FACTURATION = Object.freeze({
+  MOIS: 'FACTURATION_MOIS',
+  DOUBLON: 'FACTURATION_DOUBLON',
+  MODE: 'FACTURATION_MODE',
+  VALEUR: 'FACTURATION_VALEUR',
+  BUDGET: 'FACTURATION_BUDGET',
+  VERSION: 'FACTURATION_VERSION',
+});

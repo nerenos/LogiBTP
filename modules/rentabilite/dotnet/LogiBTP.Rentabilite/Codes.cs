@@ -127,3 +127,21 @@ public static class ErreurPrevision
     public const string Soldee = "PREVISION_SOLDEE";
     public const string Version = "PREVISION_VERSION";
 }
+
+/// <summary>Mode de saisie d'un mois du prévisionnel de facturation (lot 7) : montant HT ou % du budget PV.</summary>
+public static class ModeFacturation
+{
+    public const string Montant = "MONTANT";
+    public const string Pourcent = "POURCENT";
+}
+
+/// <summary>Erreurs d'une prévision de facturation.</summary>
+public static class ErreurFacturation
+{
+    public const string Mois = "FACTURATION_MOIS";
+    public const string Doublon = "FACTURATION_DOUBLON";
+    public const string Mode = "FACTURATION_MODE";
+    public const string Valeur = "FACTURATION_VALEUR";
+    public const string Budget = "FACTURATION_BUDGET";
+    public const string Version = "FACTURATION_VERSION";
+}

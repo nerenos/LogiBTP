@@ -29,6 +29,9 @@
   lot G1 : appliquer `db/250` (révision des prix : index, formules, paramètres des marchés) puis saisir ou importer les
   valeurs des index utilisés (`/parametres/revision`) ; libellés du catalogue BT à vérifier ; rejouer le `191` régénéré
   (bloc `REVISION_PRIX` des situations et factures d'avancement).
+- [ ] Module Rentabilité, lot 7 : rejouer `modules/rentabilite/db/099r` (versions et mois du prévisionnel de
+  facturation) puis appliquer `db/263` (clé étrangère) ; donner le nœud « Prévisionnel de facturation »
+  (`rentabilite/facturation`, Modifier : enregistrer une version) aux profils concernés dans `/parametres/droits`.
 - [ ] Module Rentabilité, lot 6 : rejouer `modules/rentabilite/db/099r` (saisies prévisionnelles et leur journal) puis
   appliquer `db/262` (clés étrangères) ; donner le nœud « Saisies prévisionnelles » (`rentabilite/previsions` : créer,
   modifier, supprimer) aux profils qui saisissent dans `/parametres/droits` (à défaut, hérité du nœud `rentabilite`).
@@ -248,7 +251,8 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
   multi-origine, période, vues, acomptes en trésorerie, contrôles et changements, photos), lot 3 réalisé (bloc de résultats PV, heures MO), lot 4 réalisé (situation de production, colonnes croisées,
   préchargement, production, FAE / PCA) ; lot 5 réalisé (coût horaire du matériel, matériel pointé et planifié, option des
   intérimaires) ; lot 6 réalisé (saisies prévisionnelles : faits PREVU_* à part du réel, solde proposé ou manuel,
-  échues signalées, journal ; Prévisionnel à terminaison) ; lots 7 et 8 à réaliser. Plus
+  échues signalées, journal ; Prévisionnel à terminaison) ; lot 7 réalisé (prévisionnel de facturation par chantier et par mois,
+  versions comparées au facturé, atterrissage, Liste chantiers × mois) ; lot 8 à réaliser. Plus
   tard (Q17) : historique du chargé d'affaires d'une affaire et d'un chantier (aujourd'hui seul le chargé d'affaires
   actuel compte, sur toute la période). Simplifications du lot 1 à revoir :
   - PV ventilé sur les feuilles d'un ouvrage au prorata du PR (à défaut du PA, sinon à parts égales), l'analyse parlant
@@ -264,6 +268,13 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
   - heures du budget : lignes d'une nature du regroupement MO dont l'unité est h, heure ou heures (autres unités sans
     heures) ;
   - postes de pied du Reste à facturer rapprochés par libellé (budget − facturé).
+  Simplifications du lot 7 à revoir :
+  - prévision par chantier et par mois au global (montant HT ou % du budget PV) : pas encore au détail des lignes du
+    marché comme une situation (% / quantité / montant par ligne), ni par marché ;
+  - la prévision du mois ne pré-remplit pas encore la situation de « Marchés à facturer » ;
+  - % calculé sur le budget PV du moment de l'enregistrement (gardé dans la version) ; facturé comparé = toutes les
+    pièces de vente valables du mois (postes et acomptes compris) ;
+  - les mois de la Liste suivent la dernière version de chaque chantier (comparaison à une version passée : Détail).
   Simplifications du lot 6 à revoir :
   - solde jamais automatique : une pièce arrivée après la saisie (même chantier, indicateur, composante, nature si
     saisie, tiers si saisi) est seulement proposée ; pas de solde partiel (une facture qui ne couvre qu'une partie de la

@@ -79,6 +79,13 @@ public static class Extensions
         });
         g.MapGet("/previsions/{id:long}/journal", (long id, HttpContext http, ServiceRentabilite s, CancellationToken ct) =>
             s.JournalPrevisionAsync(http.RequestServices, Utilisateur.Depuis(http), id, ct));
+        // Prévisionnel de facturation (lot 7, § 10.2).
+        g.MapGet("/facturation", (int chantier, HttpContext http, ServiceRentabilite s, CancellationToken ct) =>
+            s.FacturationAsync(http.RequestServices, Utilisateur.Depuis(http), chantier, ct));
+        g.MapPost("/facturation", (int chantier, SaisieFacturation d, HttpContext http, ServiceRentabilite s, CancellationToken ct) =>
+            s.EnregistrerFacturationAsync(http.RequestServices, Utilisateur.Depuis(http), chantier, d, ct));
+        g.MapGet("/facturation/liste", (DateOnly? du, DateOnly? au, bool? exclus, bool? clos, HttpContext http, ServiceRentabilite s, CancellationToken ct) =>
+            s.FacturationListeAsync(http.RequestServices, Utilisateur.Depuis(http), du, au, exclus ?? false, clos ?? false, ct));
         return g;
     }
 }

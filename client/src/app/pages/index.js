@@ -55,7 +55,7 @@ import { PageParametresConnexions } from './parametres-connexions.js';
 import { PageParametresMail } from './parametres-mail.js';
 import { PageMail, PageMessageMail, PageRedactionMail } from './mail.js';
 import { PageSyntheseExecution, PageExecutionChantier, PageParametresExecution, PageAtelierExecution } from './execution.js';
-import { PageRentabilite, PageRentabiliteChantier, PageRentabiliteFaits, PageRentabiliteRapprochement, PageRentabiliteChangements, PageParametresRentabilite } from './rentabilite.js';
+import { PageRentabilite, PageRentabiliteFacturation, PageRentabiliteChantier, PageRentabiliteFaits, PageRentabiliteRapprochement, PageRentabiliteChangements, PageParametresRentabilite } from './rentabilite.js';
 import { PageTerrain } from './terrain.js';
 import { PageReceptionTerrain } from './terrain-reception.js';
 import { PageSavTerrain } from './terrain-sav.js';
@@ -110,6 +110,7 @@ export const ROUTES = [
   { nom: 'terrain-reception', chemin: '/terrain/reception/:id', page: PageReceptionTerrain, titre: texte('terrain_btp.reception.titre') },
   { nom: 'terrain-sav', chemin: '/terrain/sav/:id', page: PageSavTerrain, titre: texte('terrain_btp.sav_page.titre') },
   { nom: 'rentabilite', chemin: '/rentabilite', page: PageRentabilite, titre: texte('rentabilite_btp.routes.accueil') },
+  { nom: 'rentabilite-facturation', chemin: '/rentabilite/facturation', page: PageRentabiliteFacturation, titre: texte('rentabilite_btp.routes.facturation') },
   { nom: 'rentabilite-chantier', chemin: '/rentabilite/chantier/:id', page: PageRentabiliteChantier, titre: texte('rentabilite_btp.routes.chantier') },
   { nom: 'rentabilite-faits', chemin: '/rentabilite/faits', page: PageRentabiliteFaits, titre: texte('rentabilite_btp.routes.faits') },
   { nom: 'rentabilite-rapprochement', chemin: '/rentabilite/rapprochement/:id', page: PageRentabiliteRapprochement, titre: texte('rentabilite_btp.routes.rapprochement') },

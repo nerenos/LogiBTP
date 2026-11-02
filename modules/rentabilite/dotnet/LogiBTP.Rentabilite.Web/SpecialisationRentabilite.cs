@@ -92,4 +92,7 @@ public abstract class SpecialisationRentabilite
 
     /// <summary>Droit d'écrire une saisie prévisionnelle (action CREER, MODIFIER, SUPPRIMER) ; refus : exception (403).</summary>
     public virtual Task AutoriserPrevisionAsync(IServiceProvider services, Utilisateur u, string action, CancellationToken ct) => Task.CompletedTask;
+
+    /// <summary>Droit d'enregistrer le prévisionnel de facturation (lot 7) ; refus : exception (403).</summary>
+    public virtual Task AutoriserFacturationAsync(IServiceProvider services, Utilisateur u, CancellationToken ct) => Task.CompletedTask;
 }

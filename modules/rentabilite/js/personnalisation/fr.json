@@ -414,6 +414,69 @@
         "rouverte": "Saisie prévisionnelle rouverte",
         "supprimee": "Saisie prévisionnelle supprimée"
       }
+    },
+    "facturation": {
+      "titre": "Prévisionnel de facturation",
+      "modifier": "Modifier la prévision",
+      "enregistrer": "Enregistrer la prévision",
+      "plus": "＋ 6 mois",
+      "plus_titre": "Prolonger la saisie de six mois",
+      "version": "Prévision du {{le}} par {{par}} ({{nombre}} versions)",
+      "aucune": "Aucune prévision enregistrée.",
+      "budget": "Budget PV : {{montant}}",
+      "comparer": "Comparer avec",
+      "comparer_titre": "Prévision d'une version précédente, pour la comparer au facturé",
+      "prevu_le": "Prévu le {{le}}",
+      "total": "Total",
+      "chantier": "Chantier",
+      "commentaire": "Commentaire de cette version (facultatif)",
+      "mode_titre": "Basculer entre un montant HT et un pourcentage du budget PV",
+      "modes": {
+        "MONTANT": "€",
+        "POURCENT": "%"
+      },
+      "aide": "Facturé : pièces de vente valables du mois (postes compris). Atterrissage : facturé des mois passés, puis prévu à partir du mois en cours. Chaque enregistrement crée une nouvelle version ; les précédentes restent consultables.",
+      "aide_saisie": "Montant HT prévu par mois, ou % du budget PV (bouton € / %) ; un mois vide n'est pas prévu. L'enregistrement crée une nouvelle version.",
+      "liste_aucun": "Aucun chantier avec une prévision ou une facture sur la période.",
+      "liste_aide": "Prévu de la dernière version de chaque chantier ; facturé du mois en dessous, sur fond vert.",
+      "colonnes": {
+        "mois": {
+          "libelle": "Mois",
+          "info": ""
+        },
+        "facture": {
+          "libelle": "Facturé",
+          "info": "Pièces de vente valables du mois (factures, avancement, acomptes, avoirs, postes compris)"
+        },
+        "prevu": {
+          "libelle": "Prévu",
+          "info": "Dernière version de la prévision"
+        },
+        "ecart": {
+          "libelle": "Écart",
+          "info": "Facturé − prévu (mois passés et en cours) ; négatif : retard de facturation"
+        },
+        "cumul_facture": {
+          "libelle": "Cumul facturé",
+          "info": "Facturé depuis le premier mois affiché"
+        },
+        "cumul_prevu": {
+          "libelle": "Cumul prévu",
+          "info": "Prévu depuis le premier mois affiché"
+        },
+        "atterrissage": {
+          "libelle": "Atterrissage",
+          "info": "Facturé des mois passés + prévu à partir du mois en cours"
+        }
+      },
+      "erreurs": {
+        "FACTURATION_MOIS": "mois incorrect",
+        "FACTURATION_DOUBLON": "mois en double",
+        "FACTURATION_MODE": "mode inconnu",
+        "FACTURATION_VALEUR": "nombre attendu",
+        "FACTURATION_BUDGET": "pas de budget PV pour un pourcentage",
+        "FACTURATION_VERSION": "une autre prévision a été enregistrée entre-temps"
+      }
     }
   },
   "erreurs": {

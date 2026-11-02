@@ -66,6 +66,7 @@ export const MENUS_METIER = [
       { code: 'revision-prix', libelle: texte('navigation_btp.menus.affaires.revision_prix.libelle'), icone: icone('navigation_btp_revision_prix'), url: '/parametres/revision', info: texte('navigation_btp.menus.affaires.revision_prix.info') },
       { separateur: true, module: MODULE_FACULTATIF.RENTABILITE, droit: 'rentabilite' },
       { code: 'rentabilite', libelle: texte('navigation_btp.menus.affaires.rentabilite.libelle'), icone: icone('navigation_btp_rentabilite'), url: '/rentabilite', info: texte('navigation_btp.menus.affaires.rentabilite.info'), module: MODULE_FACULTATIF.RENTABILITE, droit: 'rentabilite' },
+      { code: 'rentabilite-facturation', libelle: texte('navigation_btp.menus.affaires.rentabilite_facturation.libelle'), icone: icone('navigation_btp_rentabilite_facturation'), url: '/rentabilite/facturation', info: texte('navigation_btp.menus.affaires.rentabilite_facturation.info'), module: MODULE_FACULTATIF.RENTABILITE, droit: 'rentabilite' },
       { code: 'parametrage-rentabilite', libelle: texte('navigation_btp.menus.affaires.parametrage_rentabilite.libelle'), icone: icone('navigation_btp_parametrage_rentabilite'), url: '/parametres/rentabilite', module: MODULE_FACULTATIF.RENTABILITE, droit: 'rentabilite' },
     ],
   },

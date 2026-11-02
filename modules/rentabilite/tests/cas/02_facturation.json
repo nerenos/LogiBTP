@@ -1,0 +1,64 @@
+{
+  "description": "Prévisionnel de facturation (lot 7, § 10.2) : montant prévu d'un mois (montantPrevu ↔ Facturation.Montant : montant saisi ou % du budget PV, arrondi à 2 décimales, demi vers l'infini) et contrôle d'une prévision (controlerFacturation ↔ Facturation.Controler : une erreur au plus par ligne, dans l'ordre mois, doublon, mode, valeur, budget).",
+  "montants": [
+    { "nom": "montant saisi", "mode": "MONTANT", "valeur": "12500.5", "budget": "100000", "attendu": "12500.50" },
+    { "nom": "montant négatif (avoir prévu)", "mode": "MONTANT", "valeur": "-800", "budget": "100000", "attendu": "-800.00" },
+    { "nom": "pourcentage du budget", "mode": "POURCENT", "valeur": "12.5", "budget": "84000", "attendu": "10500.00" },
+    { "nom": "pourcentage arrondi au demi", "mode": "POURCENT", "valeur": "33.335", "budget": "100", "attendu": "33.34" },
+    { "nom": "pourcentage négatif arrondi", "mode": "POURCENT", "valeur": "-33.335", "budget": "100", "attendu": "-33.34" },
+    { "nom": "montant arrondi", "mode": "MONTANT", "valeur": "0.005", "budget": "0", "attendu": "0.01" }
+  ],
+  "controles": [
+    {
+      "nom": "prévision correcte",
+      "budget": "100000",
+      "lignes": [
+        { "mois": "2026-11-01", "mode": "MONTANT", "valeur": "15000" },
+        { "mois": "2026-12-01", "mode": "POURCENT", "valeur": "20" }
+      ],
+      "attendu": []
+    },
+    {
+      "nom": "mois mal formé, jour autre que le premier, mois impossible",
+      "budget": "100000",
+      "lignes": [
+        { "mois": "2026-11", "mode": "MONTANT", "valeur": "1" },
+        { "mois": "2026-11-15", "mode": "MONTANT", "valeur": "1" },
+        { "mois": "2026-13-01", "mode": "MONTANT", "valeur": "1" }
+      ],
+      "attendu": [
+        { "index": 0, "code": "FACTURATION_MOIS" },
+        { "index": 1, "code": "FACTURATION_MOIS" },
+        { "index": 2, "code": "FACTURATION_MOIS" }
+      ]
+    },
+    {
+      "nom": "doublon, mode inconnu, valeur vide ou non numérique",
+      "budget": "100000",
+      "lignes": [
+        { "mois": "2026-11-01", "mode": "MONTANT", "valeur": "1" },
+        { "mois": "2026-11-01", "mode": "MONTANT", "valeur": "2" },
+        { "mois": "2026-12-01", "mode": "QUANTITE", "valeur": "2" },
+        { "mois": "2027-01-01", "mode": "MONTANT", "valeur": "" },
+        { "mois": "2027-02-01", "mode": "MONTANT", "valeur": "12,5" }
+      ],
+      "attendu": [
+        { "index": 1, "code": "FACTURATION_DOUBLON" },
+        { "index": 2, "code": "FACTURATION_MODE" },
+        { "index": 3, "code": "FACTURATION_VALEUR" },
+        { "index": 4, "code": "FACTURATION_VALEUR" }
+      ]
+    },
+    {
+      "nom": "pourcentage sans budget",
+      "budget": "0",
+      "lignes": [
+        { "mois": "2026-11-01", "mode": "POURCENT", "valeur": "10" },
+        { "mois": "2026-12-01", "mode": "MONTANT", "valeur": "10" }
+      ],
+      "attendu": [
+        { "index": 0, "code": "FACTURATION_BUDGET" }
+      ]
+    }
+  ]
+}

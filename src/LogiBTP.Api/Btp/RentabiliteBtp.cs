@@ -48,6 +48,7 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
     public const string Noeud = "rentabilite";
     public const string NoeudCouts = "rentabilite/couts";
     public const string NoeudPrevisions = "rentabilite/previsions";
+    public const string NoeudFacturation = "rentabilite/facturation";
 
     public override int VersionRegles => 5;
 
@@ -956,6 +957,13 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
     {
         if (services.GetService<IDroits>() is { } droits && !await droits.AutoriseAsync(u, NoeudPrevisions, action, ct))
             throw ExceptionMetier.AccesRefuse(action);
+    }
+
+    /// <summary>Prévisionnel de facturation (lot 7) : action MODIFIER du nœud rentabilite/facturation (héritée de rentabilite à défaut).</summary>
+    public override async Task AutoriserFacturationAsync(IServiceProvider services, Utilisateur u, CancellationToken ct)
+    {
+        if (services.GetService<IDroits>() is { } droits && !await droits.AutoriseAsync(u, NoeudFacturation, ActionsDroits.Modifier, ct))
+            throw ExceptionMetier.AccesRefuse(ActionsDroits.Modifier);
     }
 
     /// <summary>

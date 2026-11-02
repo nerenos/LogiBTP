@@ -3,7 +3,7 @@ import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, champDate, formatNombre, formatDate, formatDateHeure, lireStockage, ecrireStockage, confirmer, saisir, ouvrirDialogue, telechargerCsv } from '@logibtp/socle/ui';
 import { aujourdhui, Dz, ACTION_DROIT } from '@logibtp/socle';
 import { COUT, COLONNES_DETAIL, COLONNES_PREVISION, INDICATEUR, COLONNES_LISTE, NIVEAU_LISTE, RACCOURCI_PERIODE, BORNE_PERIODE, ERREUR_PERIODE, lirePeriode, controlerPeriode, raccourciPeriode } from '@logibtp/rentabilite';
-import { TableauDetail, TableauFaits, TableauListe, TableauResultats, PanneauPrevisions } from '@logibtp/rentabilite/ui';
+import { TableauDetail, TableauFaits, TableauListe, TableauResultats, PanneauPrevisions, PanneauFacturation, TableauFacturationListe } from '@logibtp/rentabilite/ui';
 import { choisirPersonne } from '@logibtp/annuaire/ui';
 import { TYPE_FICHE, ROLE_RENTABILITE, urlFiche, urlDocument } from '../codes.js';
 import { api } from '../api.js';
@@ -17,6 +17,7 @@ const CLE_COUT = 'rentabiliteCout';
 const CLE_HEURES = 'rentabiliteHeures';
 const CLE_PREVU = 'rentabilitePrevu';
 const NOEUD_PREVISIONS = 'rentabilite/previsions';
+const NOEUD_FACTURATION = 'rentabilite/facturation';
 const montant = (v) => formatNombre(v, 2);
 
 /** Adresse de la page des faits d'un chiffre. */
@@ -98,6 +99,7 @@ export class PageRentabilite extends PageBase {
           <div class="groupe-outils">
             <button type="button" data-controle title="${texteHtml('rentabilite_btp.liste.controle_titre')}" disabled>${iconeHtml('rentabilite_btp_controle')} ${texteHtml('rentabilite_btp.liste.controle')}</button>
             <button type="button" data-csv title="${texteHtml('rentabilite_btp.liste.csv_titre')}">${iconeHtml('rentabilite_btp_csv')}</button>
+            <a class="bouton" href="/rentabilite/facturation" title="${texteHtml('rentabilite_btp.facturation.lien_titre')}">${iconeHtml('rentabilite_facturation')} ${texteHtml('rentabilite_btp.facturation.lien')}</a>
             ${admin ? `<button type="button" data-tout title="${texteHtml('rentabilite_btp.accueil.tout_titre')}">${iconeHtml('rentabilite_btp_recalculer')} ${texteHtml('rentabilite_btp.accueil.tout')}</button>` : ''}</div>
         </div></div>
       <p class="ligne">
@@ -353,6 +355,7 @@ export class PageRentabiliteChantier extends PageBase {
       <div data-detail></div>
       <div data-resultats></div>
       <div data-previsions></div>
+      <div data-facturation></div>
       <div data-acomptes></div>
       <div data-photos></div>
       <div data-controles></div>
@@ -432,6 +435,7 @@ export class PageRentabiliteChantier extends PageBase {
     });
     this.#rendreDetail();
     this.#rendrePrevisions(corps.querySelector('[data-previsions]'));
+    this.#rendreFacturation(corps.querySelector('[data-facturation]'));
     this.#rendreAcomptes(corps.querySelector('[data-acomptes]'));
     this.#rendrePhotos(corps.querySelector('[data-photos]'));
     this.#rendreControles(corps.querySelector('[data-controles]'));
@@ -478,6 +482,19 @@ export class PageRentabiliteChantier extends PageBase {
       erreur: (e) => this.app.erreur(e),
     });
     panneau.rendre(d);
+  }
+
+  /** Prévisionnel de facturation du chantier (lot 7, § 10.2) : facturé et prévu par mois, versions, saisie. */
+  async #rendreFacturation(zone) {
+    const id = this.donnees.chantier.id;
+    let d;
+    try { d = await api.rentabilite.facturation(id); } catch (e) { this.app.erreur(e); zone.innerHTML = ''; return; }
+    new PanneauFacturation(zone, {
+      peutModifier: this.app.peut(NOEUD_FACTURATION, ACTION_DROIT.MODIFIER),
+      enregistrer: (s) => api.rentabilite.enregistrerFacturation(id, s),
+      apresEnregistrement: () => this.app.message(texte('rentabilite_btp.facturation.enregistree'), 'succes'),
+      erreur: (e) => this.app.erreur(e),
+    }).rendre(d);
   }
 
   /** Acomptes en trésorerie du chantier (R6) : payé, utilisé, reste ; double-clic : faits. */
@@ -546,6 +563,58 @@ export class PageRentabiliteChantier extends PageBase {
         <th class="montant">${texteHtml('rentabilite_btp.controles.heures')}</th>${this.donnees.voir_couts ? `<th class="montant">${texteHtml('rentabilite_btp.controles.montant')}</th>` : ''}</tr></thead>
       <tbody>${l.map((x) => `<tr><td><a href="${urlFaits(this.donnees.chantier.id, { au: this.filtre.au })}&regle=${encodeURIComponent(x.regle)}">${texteHtml(`rentabilite_btp.regles.${x.regle}`)}</a></td>
         <td class="montant">${x.nb}</td><td class="montant">${x.heures === null ? '' : montant(x.heures)}</td>${this.donnees.voir_couts ? `<td class="montant">${montant(x.pa)}</td>` : ''}</tr>`).join('')}</tbody></table>`;
+  }
+}
+
+/**
+ * Prévisionnel de facturation de tous les chantiers visibles (lot 7, § 10.2) : chantiers × mois, prévu de la dernière
+ * version et facturé du mois ; période du… au (mois), exclus et clos ; un chantier ouvre son Détail.
+ */
+export class PageRentabiliteFacturation extends PageBase {
+  icone = icone('rentabilite_facturation');
+
+  urlCourante() {
+    const f = this.filtre ?? {};
+    const p = new URLSearchParams(Object.entries({ du: f.du, au: f.au, exclus: f.exclus ? '1' : '', clos: f.clos ? '1' : '' }).filter(([, v]) => v));
+    return `/rentabilite/facturation${p.size ? `?${p}` : ''}`;
+  }
+
+  async ouvrir() {
+    this.titre = texte('rentabilite_btp.routes.facturation');
+    this.filtre = { du: this.requete.du ?? '', au: this.requete.au ?? '', exclus: this.requete.exclus === '1', clos: this.requete.clos === '1' };
+    this.conteneur.innerHTML = `<div class="page-parametres page-rentabilite"><div class="entete-page"><h1 class="page-titre">${iconeHtml('rentabilite_facturation')} ${texteHtml('rentabilite_btp.routes.facturation')}</h1>
+        <div class="barre-outils"><div class="groupe-outils"><a class="bouton" href="/rentabilite">${iconeHtml('rentabilite_detail')} ${texteHtml('rentabilite_btp.routes.accueil')}</a></div></div></div>
+      <p class="ligne">
+        <label title="${texteHtml('rentabilite_btp.facturation.periode_titre')}">${texteHtml('rentabilite_btp.liste.du')} <input type="text" size="10" data-du value="${this.filtre.du ? formatDate(this.filtre.du) : ''}"></label>
+        <label title="${texteHtml('rentabilite_btp.facturation.periode_titre')}">${texteHtml('rentabilite_btp.liste.au')} <input type="text" size="10" data-au value="${this.filtre.au ? formatDate(this.filtre.au) : ''}"></label>
+        <label title="${texteHtml('rentabilite_btp.liste.exclus_titre')}"><input type="checkbox" data-exclus${this.filtre.exclus ? ' checked' : ''}> ${texteHtml('rentabilite_btp.liste.exclus')}</label>
+        <label><input type="checkbox" data-clos${this.filtre.clos ? ' checked' : ''}> ${texteHtml('rentabilite_btp.liste.clos')}</label></p>
+      <div class="rentabilite-zone-liste" data-liste></div></div>`;
+    const $ = (s) => this.conteneur.querySelector(s);
+    this.tableau = new TableauFacturationListe($('[data-liste]'), {
+      ouvrirDetail: (c, nouvelle) => this.app.naviguer(`/rentabilite/chantier/${c}`, { nouvelleFenetre: nouvelle }),
+    });
+    const borne = (champ, cle, b) => champ.addEventListener('change', () => {
+      const v = lireBorne(champ, b);
+      if (v === undefined) { this.app.message(texte(`rentabilite.periodes.${ERREUR_PERIODE.DATE}`), 'erreur'); return; }
+      const autre = { ...this.filtre, [cle]: v ?? '' };
+      if (controlerPeriode(autre.du || null, autre.au || null)) { this.app.message(texte(`rentabilite.periodes.${ERREUR_PERIODE.ORDRE}`), 'erreur'); return; }
+      this.filtre[cle] = v ?? '';
+      this.#charger();
+    });
+    borne($('[data-du]'), 'du', BORNE_PERIODE.DEBUT);
+    borne($('[data-au]'), 'au', BORNE_PERIODE.FIN);
+    for (const cle of ['exclus', 'clos']) $(`[data-${cle}]`).addEventListener('change', (e) => { this.filtre[cle] = e.target.checked; this.#charger(); });
+    await this.#charger();
+  }
+
+  reprendre() { this.#charger(); }
+
+  async #charger() {
+    this.app.routeur?.remplacerUrl?.(this.urlCourante());
+    try {
+      this.tableau.rendre(await api.rentabilite.facturationListe({ du: this.filtre.du, au: this.filtre.au, exclus: this.filtre.exclus, clos: this.filtre.clos }));
+    } catch (e) { this.app.erreur(e); }
   }
 }
 

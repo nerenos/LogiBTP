@@ -603,6 +603,15 @@ s'il est dépassé. Droits : nœud `rentabilite/previsions` (créer, modifier, s
 - Rendu : Liste (chantiers × mois) et Détail sur une période.
 - Lien utile avec « Marchés à facturer » (`/marches/a-facturer`) : la prévision du mois peut pré-remplir la situation.
 
+✔ Réalisation (lot 7, 02/11/2026) : prévision par chantier et par mois au global (montant HT ou % du budget PV),
+`rentabilite_facturation_version` (une version par enregistrement : auteur, date, commentaire, budget PV du moment ;
+jamais modifiée, 409 si une autre a été enregistrée depuis la dernière vue) et `rentabilite_facturation_prevue` (mois,
+mode, valeur saisie, montant) ; montant et contrôle répliqués entre `facturation.js` et `Facturation.cs` (jeu
+`tests/cas/02_facturation.json`). Détail : facturé du mois (faits FACTURE), prévu, écart, prévu d'une version passée,
+cumuls et atterrissage (facturé des mois passés + prévu à partir du mois en cours) ; saisie d'une nouvelle version. Page
+`/rentabilite/facturation` : chantiers × mois (prévu de la dernière version, facturé dessous). Droits : nœud
+`rentabilite/facturation`. Reste (TODO) : saisie au détail des lignes du marché, pré-remplissage de la situation.
+
 ### 10.3 Photos et graphiques
 
 - **Photo** : copie figée des agrégats d'un chantier (indicateurs par nature) à une date, prise chaque fin de mois et à
@@ -721,7 +730,7 @@ tête des écrans : « N chantiers en attente de recalcul ». Un chantier en err
 | 4 | Situation de production (module Document et cœur : type, préchargement entre les deux situations, colonnes croisées) ; PCA / FAE dans le module | 3 |
 | 5 | Valorisation du matériel (pointage matériel et planning, coût moyen de la fiche) ; option de valorisation des intérimaires | 1 |
 | 6 | Saisie prévisionnelle (solde des saisies) — réalisé le 02/11/2026 (§ 10.1) | 3 |
-| 7 | Prévisionnel de facturation avec versions | 3 |
+| 7 | Prévisionnel de facturation avec versions — réalisé le 02/11/2026 (§ 10.2) | 3 |
 | 8 | Graphiques | 2 |
 
 ## 14. Décisions et questions

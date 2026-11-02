@@ -105,6 +105,12 @@ export const api = {
     rouvrirPrevision: (id) => appel('POST', `/rentabilite/previsions/${id}/rouvrir`),
     supprimerPrevision: (id) => appel('DELETE', `/rentabilite/previsions/${id}`),
     journalPrevision: (id) => appel('GET', `/rentabilite/previsions/${id}/journal`),
+    facturation: (chantier) => appel('GET', `/rentabilite/facturation?chantier=${encodeURIComponent(chantier)}`),
+    enregistrerFacturation: (chantier, s) => appel('POST', `/rentabilite/facturation?chantier=${encodeURIComponent(chantier)}`, s),
+    facturationListe: (f) => {
+      const p = new URLSearchParams(Object.entries(f).filter(([, v]) => v !== undefined && v !== null && v !== '' && v !== false));
+      return appel('GET', `/rentabilite/facturation/liste${p.size ? `?${p}` : ''}`);
+    },
     parametres: () => appel('GET', '/rentabilite/parametres'),
     enregistrerRoles: (l) => appel('PUT', '/rentabilite/parametres/roles', l),
     enregistrerTaux: (l) => appel('PUT', '/rentabilite/parametres/taux', l),

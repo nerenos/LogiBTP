@@ -22,5 +22,7 @@ public class CodesTests
     [InlineData("ETAT_PREVISION", typeof(EtatPrevision))]
     [InlineData("ACTION_PREVISION", typeof(ActionPrevision))]
     [InlineData("ERREUR_PREVISION", typeof(ErreurPrevision))]
+    [InlineData("MODE_FACTURATION", typeof(ModeFacturation))]
+    [InlineData("ERREUR_FACTURATION", typeof(ErreurFacturation))]
     public void Parite_avec_le_js(string nom, Type type) => Assert.Empty(Constantes.Ecarts(Fichier, nom, type));
 }

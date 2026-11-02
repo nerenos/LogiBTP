@@ -199,3 +199,28 @@ CREATE TABLE IF NOT EXISTS rentabilite_prevision_journal (
 );
 CREATE INDEX IF NOT EXISTS ix_rpj_prevision ON rentabilite_prevision_journal (rpj_rpr_id, rpj_id);
 COMMENT ON TABLE rentabilite_prevision_journal IS 'Historique des saisies prévisionnelles : action (CREATION, MODIFICATION, SOLDE, REOUVERTURE, SUPPRESSION), état avant / après, auteur, date';
+
+-- Lot 7 (§ 10.2) : prévisionnel de facturation par chantier et par mois. Chaque enregistrement crée une version (date,
+-- auteur, commentaire, budget PV du moment) avec tous ses mois ; les versions ne se modifient jamais : la comparaison
+-- « prévu en septembre pour octobre » / « facturé en octobre » relit une version passée.
+CREATE TABLE IF NOT EXISTS rentabilite_facturation_version (
+    rfv_id           BIGSERIAL      PRIMARY KEY,
+    rfv_cha_id       INT            NOT NULL,
+    rfv_par          VARCHAR(100)   NOT NULL,
+    rfv_le           TIMESTAMPTZ    NOT NULL DEFAULT now(),
+    rfv_commentaire  TEXT,
+    rfv_budget_pv    NUMERIC(18,6)  NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS ix_rfv_chantier ON rentabilite_facturation_version (rfv_cha_id, rfv_id DESC);
+COMMENT ON TABLE rentabilite_facturation_version IS 'Versions du prévisionnel de facturation d''un chantier (une par enregistrement, jamais modifiée) ; la dernière est la prévision en cours';
+COMMENT ON COLUMN rentabilite_facturation_version.rfv_budget_pv IS 'Budget PV du chantier à l''enregistrement : base des mois saisis en %';
+
+CREATE TABLE IF NOT EXISTS rentabilite_facturation_prevue (
+    rfp_rfv_id   BIGINT         NOT NULL REFERENCES rentabilite_facturation_version (rfv_id) ON DELETE CASCADE,
+    rfp_mois     DATE           NOT NULL CHECK (extract(day FROM rfp_mois) = 1),
+    rfp_mode     VARCHAR(10)    NOT NULL,
+    rfp_valeur   NUMERIC(18,6)  NOT NULL,
+    rfp_montant  NUMERIC(18,6)  NOT NULL,
+    PRIMARY KEY (rfp_rfv_id, rfp_mois)
+);
+COMMENT ON TABLE rentabilite_facturation_prevue IS 'Mois d''une version du prévisionnel de facturation : mode (MONTANT, POURCENT du budget PV), valeur saisie, montant HT prévu';
