@@ -252,7 +252,8 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
   préchargement, production, FAE / PCA) ; lot 5 réalisé (coût horaire du matériel, matériel pointé et planifié, option des
   intérimaires) ; lot 6 réalisé (saisies prévisionnelles : faits PREVU_* à part du réel, solde proposé ou manuel,
   échues signalées, journal ; Prévisionnel à terminaison) ; lot 7 réalisé (prévisionnel de facturation par chantier et par mois,
-  versions comparées au facturé, atterrissage, Liste chantiers × mois) ; lot 8 à réaliser. Plus
+  versions comparées au facturé, atterrissage, Liste chantiers × mois) ; lot 8 réalisé (graphiques d'évolution du Détail
+  depuis les photos : budget, facturé, dépensé, coût et marge à terminaison) : module terminé selon le découpage. Plus
   tard (Q17) : historique du chargé d'affaires d'une affaire et d'un chantier (aujourd'hui seul le chargé d'affaires
   actuel compte, sur toute la période). Simplifications du lot 1 à revoir :
   - PV ventilé sur les feuilles d'un ouvrage au prorata du PR (à défaut du PA, sinon à parts égales), l'analyse parlant
@@ -268,6 +269,10 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
   - heures du budget : lignes d'une nature du regroupement MO dont l'unité est h, heure ou heures (autres unités sans
     heures) ;
   - postes de pied du Reste à facturer rapprochés par libellé (budget − facturé).
+  Simplifications du lot 8 à revoir :
+  - courbes du Détail d'un chantier seulement (pas de graphique d'une affaire ni d'un chargé d'affaires) ; un point par
+    photo (deux photos du même jour : la plus récente), plus aujourd'hui ; sans photo, pas de courbe ;
+  - le prévisionnel de facturation (lot 7) n'est pas encore tracé (facturé prévu par mois face au facturé).
   Simplifications du lot 7 à revoir :
   - prévision par chantier et par mois au global (montant HT ou % du budget PV) : pas encore au détail des lignes du
     marché comme une situation (% / quantité / montant par ligne), ni par marché ;

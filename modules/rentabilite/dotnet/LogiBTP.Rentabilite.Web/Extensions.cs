@@ -59,6 +59,8 @@ public static class Extensions
         g.MapGet("/chantiers/{id:int}/faits", (int id, string? indicateur, string? nature, long? ordre, string? composante, long? piece, DateOnly? du, DateOnly? au,
             HttpContext http, ServiceRentabilite s, CancellationToken ct) =>
             s.FaitsAsync(http.RequestServices, Utilisateur.Depuis(http), id, FiltreFaits.Lire(indicateur, nature, ordre, composante, piece, du, au), ct));
+        g.MapGet("/chantiers/{id:int}/evolution", (int id, HttpContext http, ServiceRentabilite s, CancellationToken ct) =>
+            s.EvolutionAsync(http.RequestServices, Utilisateur.Depuis(http), id, ct));
         g.MapGet("/chantiers/{id:int}/rapprochement", (int id, HttpContext http, ServiceRentabilite s, CancellationToken ct) =>
             s.RapprochementAsync(http.RequestServices, Utilisateur.Depuis(http), id, ct));
         // Saisies prévisionnelles (lot 6, § 10.1).

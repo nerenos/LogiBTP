@@ -79,7 +79,7 @@
 .rentabilite-colonne-prevu { background: var(--rentabilite-prevu); color: var(--rentabilite-prevu-texte); font-style: italic; }
 .rentabilite-detail td.rentabilite-bande-prevu { border-left-color: var(--rentabilite-prevu); font-style: italic; }
 .rentabilite-detail .rentabilite-debut-prevu { box-shadow: inset 2px 0 0 var(--rentabilite-ecart); }
-.rentabilite-previsions .rentabilite-prevision-soldee td { color: var(--texte-attenue, #6b7280); text-decoration: line-through; }
+.rentabilite-previsions .rentabilite-prevision-soldee td { color: var(--discret); text-decoration: line-through; }
 .rentabilite-previsions .rentabilite-prevision-echue td:first-child { color: var(--rentabilite-anomalie); font-weight: 600; }
 .rentabilite-previsions .rentabilite-proposition td { font-size: 0.9em; background: var(--rentabilite-groupe-fond); }
 .rentabilite-previsions .montant { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
@@ -94,3 +94,25 @@
 .rentabilite-facturation-liste .montant { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .rentabilite-facturation-liste th[scope="row"] { text-align: left; font-weight: normal; white-space: nowrap; }
 .rentabilite-facture-sous { display: block; font-size: 0.8em; color: var(--rentabilite-facture-texte); background: var(--rentabilite-reste-facturer); border-radius: 3px; padding: 0 0.2em; }
+
+/* Graphiques d'évolution (lot 8) : courbes de la couleur de leur série, textes aux couleurs du texte, grille discrète. */
+.rentabilite-graphiques { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr)); gap: 1rem; }
+.rentabilite-graphique { margin: 0; }
+.rentabilite-graphique figcaption { margin-bottom: 0.3em; }
+.rentabilite-graphique-zone { position: relative; }
+.rentabilite-graphique svg { display: block; width: 100%; height: auto; font-size: 12px; }
+.rentabilite-grille { stroke: var(--bord); stroke-width: 1; opacity: 0.6; }
+.rentabilite-grille.rentabilite-zero { stroke: var(--discret); opacity: 1; }
+.rentabilite-axe { fill: var(--discret); font-variant-numeric: tabular-nums; }
+.rentabilite-etiquette { fill: var(--texte); font-variant-numeric: tabular-nums; }
+.rentabilite-reticule { stroke: var(--discret); stroke-width: 1; stroke-dasharray: 3 3; }
+.rentabilite-survol { cursor: crosshair; }
+.rentabilite-serie-1 { color: var(--rentabilite-serie-1); }
+.rentabilite-serie-2 { color: var(--rentabilite-serie-2); }
+.rentabilite-serie-3 { color: var(--rentabilite-serie-3); }
+.rentabilite-serie-4 { color: var(--rentabilite-serie-4); }
+.rentabilite-legende { display: flex; flex-wrap: wrap; gap: 0.3em 1em; list-style: none; margin: 0 0 0.3em; padding: 0; color: var(--texte); }
+.rentabilite-pastille { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 0.35em; background: currentColor; vertical-align: baseline; }
+.rentabilite-bulle { position: absolute; z-index: 2; padding: 0.4em 0.6em; background: var(--surface); color: var(--texte); border: 1px solid var(--bord);
+  border-radius: 6px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); pointer-events: none; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.rentabilite-graphique-tableau summary { cursor: pointer; color: var(--discret); font-size: 0.9em; }

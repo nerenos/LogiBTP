@@ -23,6 +23,11 @@
   --rentabilite-production-texte: #0d3a36;
   --rentabilite-prevu: #e6e0f5;
   --rentabilite-prevu-texte: #33284f;
+  /* Courbes des graphiques (lot 8) : palette catégorielle validée (contraste, daltonisme), dans cet ordre. */
+  --rentabilite-serie-1: #2a78d6;
+  --rentabilite-serie-2: #eb6834;
+  --rentabilite-serie-3: #1baf7a;
+  --rentabilite-serie-4: #eda100;
   --rentabilite-ecart: #5f6b7a;
   --rentabilite-anomalie: #c62828;
   --rentabilite-total-fond: #eef1f5;
@@ -53,6 +58,10 @@
     --rentabilite-production-texte: #d4f2ee;
     --rentabilite-prevu: #352d4d;
     --rentabilite-prevu-texte: #e8e1fb;
+    --rentabilite-serie-1: #3987e5;
+    --rentabilite-serie-2: #d95926;
+    --rentabilite-serie-3: #199e70;
+    --rentabilite-serie-4: #c98500;
     --rentabilite-ecart: #a9b4c2;
     --rentabilite-anomalie: #ff8a80;
     --rentabilite-total-fond: #262a31;
@@ -83,6 +92,10 @@
   --rentabilite-production-texte: #d4f2ee;
   --rentabilite-prevu: #352d4d;
   --rentabilite-prevu-texte: #e8e1fb;
+  --rentabilite-serie-1: #3987e5;
+  --rentabilite-serie-2: #d95926;
+  --rentabilite-serie-3: #199e70;
+  --rentabilite-serie-4: #c98500;
   --rentabilite-ecart: #a9b4c2;
   --rentabilite-anomalie: #ff8a80;
   --rentabilite-total-fond: #262a31;

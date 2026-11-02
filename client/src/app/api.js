@@ -98,6 +98,7 @@ export const api = {
       return appel('GET', `/rentabilite/chantiers/${id}/faits${p.size ? `?${p}` : ''}`);
     },
     rapprochement: (id) => appel('GET', `/rentabilite/chantiers/${id}/rapprochement`),
+    evolution: (id) => appel('GET', `/rentabilite/chantiers/${id}/evolution`),
     previsions: (chantier) => appel('GET', `/rentabilite/previsions?chantier=${encodeURIComponent(chantier)}`),
     creerPrevision: (chantier, s) => appel('POST', `/rentabilite/previsions?chantier=${encodeURIComponent(chantier)}`, s),
     modifierPrevision: (id, s) => appel('PUT', `/rentabilite/previsions/${id}`, s),

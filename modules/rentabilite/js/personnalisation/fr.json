@@ -477,6 +477,36 @@
         "FACTURATION_BUDGET": "pas de budget PV pour un pourcentage",
         "FACTURATION_VERSION": "une autre prévision a été enregistrée entre-temps"
       }
+    },
+    "graphiques": {
+      "titre": "Évolution",
+      "pas_assez": "Pas encore de photo de ce chantier : les courbes apparaîtront après la première photo (prise chaque fin de mois, ou 📷 Photo).",
+      "aujourdhui": "Aujourd'hui",
+      "montants": "Budget, facturation et dépenses",
+      "montants_resume": "Cumuls à chaque photo, puis aujourd'hui ; coûts selon le choix PA / PR.",
+      "montants_resume_pv": "Cumuls à chaque photo, puis aujourd'hui.",
+      "marge_nette": "Marge nette à terminaison",
+      "marge_brute": "Marge brute à terminaison",
+      "marge_resume": "Aujourd'hui : {{taux}} % du budget PV.",
+      "aide": "Chaque point est une photo du chantier (fin de mois ou à la demande) telle qu'elle a été vue, jamais recalculée ; le dernier est l'état d'aujourd'hui. Survol : valeurs du point ; tableau : toutes les valeurs.",
+      "tableau": "Voir les valeurs",
+      "date": "Date",
+      "series": {
+        "budget": "Budget PV",
+        "facture": "Facturé",
+        "depense": "Dépensé (PR)",
+        "depense_pa": "Dépensé (PA)",
+        "terminaison": "Coût à terminaison (PR)",
+        "terminaison_pa": "Coût à terminaison (PA)",
+        "marge": "Marge à terminaison"
+      },
+      "courts": {
+        "budget": "Budget",
+        "facture": "Facturé",
+        "depense": "Dépensé",
+        "terminaison": "Coût final",
+        "marge": "Marge"
+      }
     }
   },
   "erreurs": {

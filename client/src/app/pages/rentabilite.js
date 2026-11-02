@@ -3,7 +3,7 @@ import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, champDate, formatNombre, formatDate, formatDateHeure, lireStockage, ecrireStockage, confirmer, saisir, ouvrirDialogue, telechargerCsv } from '@logibtp/socle/ui';
 import { aujourdhui, Dz, ACTION_DROIT } from '@logibtp/socle';
 import { COUT, COLONNES_DETAIL, COLONNES_PREVISION, INDICATEUR, COLONNES_LISTE, NIVEAU_LISTE, RACCOURCI_PERIODE, BORNE_PERIODE, ERREUR_PERIODE, lirePeriode, controlerPeriode, raccourciPeriode } from '@logibtp/rentabilite';
-import { TableauDetail, TableauFaits, TableauListe, TableauResultats, PanneauPrevisions, PanneauFacturation, TableauFacturationListe } from '@logibtp/rentabilite/ui';
+import { TableauDetail, TableauFaits, TableauListe, TableauResultats, PanneauPrevisions, PanneauFacturation, TableauFacturationListe, GraphiquesEvolution } from '@logibtp/rentabilite/ui';
 import { choisirPersonne } from '@logibtp/annuaire/ui';
 import { TYPE_FICHE, ROLE_RENTABILITE, urlFiche, urlDocument } from '../codes.js';
 import { api } from '../api.js';
@@ -354,6 +354,7 @@ export class PageRentabiliteChantier extends PageBase {
       ${d.du ? `<p class="aide">${texteHtml('rentabilite_btp.chantier.periode_aide')}</p>` : ''}
       <div data-detail></div>
       <div data-resultats></div>
+      <div data-graphiques></div>
       <div data-previsions></div>
       <div data-facturation></div>
       <div data-acomptes></div>
@@ -434,6 +435,9 @@ export class PageRentabiliteChantier extends PageBase {
       },
     });
     this.#rendreDetail();
+    this.graphiques = new GraphiquesEvolution(corps.querySelector('[data-graphiques]'));
+    this.evolution = null;
+    this.#chargerEvolution();
     this.#rendrePrevisions(corps.querySelector('[data-previsions]'));
     this.#rendreFacturation(corps.querySelector('[data-facturation]'));
     this.#rendreAcomptes(corps.querySelector('[data-acomptes]'));
@@ -482,6 +486,12 @@ export class PageRentabiliteChantier extends PageBase {
       erreur: (e) => this.app.erreur(e),
     });
     panneau.rendre(d);
+  }
+
+  /** Graphiques d'évolution (lot 8, § 10.3) : photos du chantier puis aujourd'hui ; redessinés au changement PA / PR. */
+  async #chargerEvolution() {
+    try { this.evolution = await api.rentabilite.evolution(this.donnees.chantier.id); } catch (e) { this.app.erreur(e); return; }
+    this.graphiques.rendre(this.evolution, { cout: this.filtre.cout });
   }
 
   /** Prévisionnel de facturation du chantier (lot 7, § 10.2) : facturé et prévu par mois, versions, saisie. */
@@ -552,6 +562,7 @@ export class PageRentabiliteChantier extends PageBase {
     this.tableau.rendre(this.donnees, { cout: this.filtre.cout, ordre, periode: !!this.donnees.du, heures: this.filtre.heures, previsions: this.filtre.previsions,
       reference: r ? { libelle, agregats: r.agregats } : null });
     this.resultats.rendre(this.donnees, { ordre, periode: !!this.donnees.du, voirCouts: this.donnees.voir_couts });
+    if (this.evolution) this.graphiques.rendre(this.evolution, { cout: this.filtre.cout });
   }
 
   /** Contrôles (§ 10) : pointages non valorisés, valorisés au taux du service, sorties sans prix, tâches sans taux. */

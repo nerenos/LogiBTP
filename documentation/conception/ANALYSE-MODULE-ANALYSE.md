@@ -618,6 +618,14 @@ cumuls et atterrissage (facturé des mois passés + prévu à partir du mois en 
   la demande, jamais recalculée. Elle rend les graphiques d'évolution justes et le passé consultable tel qu'il était vu.
 - Graphiques (module Graphe ou SVG du socle) : évolution de la marge à terminaison, du budget, du facturé cumulé.
 
+✔ Réalisation (lot 8, 02/11/2026) : `GET /api/rentabilite/chantiers/{id}/evolution` rend les agrégats de chaque photo
+(faits connus à son calcul, datés jusqu'à sa date ; une par jour) puis d'aujourd'hui ; le client en tire, par les calculs
+du Détail et du bloc de résultats (`seriesEvolution`), budget PV, facturé cumulé, dépensé, coût et marge à terminaison
+(saisies prévisionnelles comprises). Deux graphiques SVG sans bibliothèque dans le Détail : montants sur un seul axe, et
+marge à terminaison à part (jamais deux échelles) ; palette catégorielle validée en clair et en sombre (contraste,
+daltonisme), légende, étiquette courte en bout de courbe, réticule et bulle au survol, tableau des valeurs ; sans le
+droit des coûts : budget et facturé seuls.
+
 ### 10.4 Versionnage : « qu'est-ce qui a changé depuis mon contrôle ? » (ajout du 01/11)
 
 ✔ Décision : une pièce en retard (facture fournisseur reçue après coup) se saisit **à sa vraie date** ; l'utilisateur
@@ -731,7 +739,7 @@ tête des écrans : « N chantiers en attente de recalcul ». Un chantier en err
 | 5 | Valorisation du matériel (pointage matériel et planning, coût moyen de la fiche) ; option de valorisation des intérimaires | 1 |
 | 6 | Saisie prévisionnelle (solde des saisies) — réalisé le 02/11/2026 (§ 10.1) | 3 |
 | 7 | Prévisionnel de facturation avec versions — réalisé le 02/11/2026 (§ 10.2) | 3 |
-| 8 | Graphiques | 2 |
+| 8 | Graphiques — réalisé le 02/11/2026 (§ 10.3) | 2 |
 
 ## 14. Décisions et questions
 
