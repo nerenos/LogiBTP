@@ -10,6 +10,12 @@ export const INDICATEUR = Object.freeze({
   ACOMPTE_PAYE: 'ACOMPTE_PAYE',
   ACOMPTE_UTILISE: 'ACOMPTE_UTILISE',
   PRODUCTION: 'PRODUCTION',
+  // Saisies prévisionnelles (lot 6, § 10.1) : jamais mélangées au réel.
+  PREVU_BUDGET: 'PREVU_BUDGET',
+  PREVU_EXECUTION: 'PREVU_EXECUTION',
+  PREVU_ENGAGE: 'PREVU_ENGAGE',
+  PREVU_DEBOURSE: 'PREVU_DEBOURSE',
+  PREVU_FACTURE: 'PREVU_FACTURE',
 });
 
 /** Composante d'un fait (colonne de détail des indicateurs de coût). */
@@ -32,6 +38,7 @@ export const SOURCE_FAIT = Object.freeze({
   MOUVEMENT: 'MOUVEMENT',
   REGLEMENT: 'REGLEMENT',
   POINTAGE_MATERIEL: 'POINTAGE_MATERIEL',
+  PREVISION: 'PREVISION',
 });
 
 /** État d'un calcul (rca_etat). */
@@ -78,4 +85,30 @@ export const TYPE_PHOTO = Object.freeze({
 export const NIVEAU_LISTE = Object.freeze({
   CHARGE: 'CHARGE',
   AFFAIRE: 'AFFAIRE',
+});
+
+/** État d'une saisie prévisionnelle : ouverte, échue (échéance passée sans solde), soldée. */
+export const ETAT_PREVISION = Object.freeze({
+  OUVERTE: 'OUVERTE',
+  ECHUE: 'ECHUE',
+  SOLDEE: 'SOLDEE',
+});
+
+/** Action du journal d'une saisie prévisionnelle. */
+export const ACTION_PREVISION = Object.freeze({
+  CREATION: 'CREATION',
+  MODIFICATION: 'MODIFICATION',
+  SOLDE: 'SOLDE',
+  REOUVERTURE: 'REOUVERTURE',
+  SUPPRESSION: 'SUPPRESSION',
+});
+
+/** Erreurs de saisie d'une prévision. */
+export const ERREUR_PREVISION = Object.freeze({
+  INDICATEUR: 'PREVISION_INDICATEUR',
+  COMPOSANTE: 'PREVISION_COMPOSANTE',
+  LIBELLE: 'PREVISION_LIBELLE',
+  MONTANT: 'PREVISION_MONTANT',
+  SOLDEE: 'PREVISION_SOLDEE',
+  VERSION: 'PREVISION_VERSION',
 });

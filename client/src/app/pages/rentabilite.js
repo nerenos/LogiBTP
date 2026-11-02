@@ -1,9 +1,10 @@
 import { texte, texteHtml, icone, iconeHtml, pluriel } from '@logibtp/socle/dictionnaire';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, champDate, formatNombre, formatDate, formatDateHeure, lireStockage, ecrireStockage, confirmer, saisir, ouvrirDialogue, telechargerCsv } from '@logibtp/socle/ui';
-import { aujourdhui, Dz } from '@logibtp/socle';
-import { COUT, COLONNES_DETAIL, INDICATEUR, COLONNES_LISTE, NIVEAU_LISTE, RACCOURCI_PERIODE, BORNE_PERIODE, ERREUR_PERIODE, lirePeriode, controlerPeriode, raccourciPeriode } from '@logibtp/rentabilite';
-import { TableauDetail, TableauFaits, TableauListe, TableauResultats } from '@logibtp/rentabilite/ui';
+import { aujourdhui, Dz, ACTION_DROIT } from '@logibtp/socle';
+import { COUT, COLONNES_DETAIL, COLONNES_PREVISION, INDICATEUR, COLONNES_LISTE, NIVEAU_LISTE, RACCOURCI_PERIODE, BORNE_PERIODE, ERREUR_PERIODE, lirePeriode, controlerPeriode, raccourciPeriode } from '@logibtp/rentabilite';
+import { TableauDetail, TableauFaits, TableauListe, TableauResultats, PanneauPrevisions } from '@logibtp/rentabilite/ui';
+import { choisirPersonne } from '@logibtp/annuaire/ui';
 import { TYPE_FICHE, ROLE_RENTABILITE, urlFiche, urlDocument } from '../codes.js';
 import { api } from '../api.js';
 import { champRattachement } from '../structure/selection.js';
@@ -14,6 +15,8 @@ import { champRattachement } from '../structure/selection.js';
 
 const CLE_COUT = 'rentabiliteCout';
 const CLE_HEURES = 'rentabiliteHeures';
+const CLE_PREVU = 'rentabilitePrevu';
+const NOEUD_PREVISIONS = 'rentabilite/previsions';
 const montant = (v) => formatNombre(v, 2);
 
 /** Adresse de la page des faits d'un chiffre. */
@@ -312,7 +315,8 @@ export class PageRentabiliteChantier extends PageBase {
   async ouvrir() {
     this.titre = texte('rentabilite_btp.routes.chantier');
     this.filtre = { ordre: this.requete.ordre ?? '', du: this.requete.du ?? '', au: this.requete.au ?? '', reference: this.requete.reference ?? '',
-      cout: lireStockage(CLE_COUT, COUT.PR) === COUT.PA ? COUT.PA : COUT.PR, heures: lireStockage(CLE_HEURES, '0') === '1' };
+      cout: lireStockage(CLE_COUT, COUT.PR) === COUT.PA ? COUT.PA : COUT.PR, heures: lireStockage(CLE_HEURES, '0') === '1',
+      previsions: lireStockage(CLE_PREVU, '1') === '1' };
     this.conteneur.innerHTML = '<div class="page-parametres page-rentabilite" data-corps></div>';
     await this.#charger();
   }
@@ -343,10 +347,12 @@ export class PageRentabiliteChantier extends PageBase {
         <label title="${texteHtml('rentabilite_btp.liste.periode_titre')}">${texteHtml('rentabilite_btp.liste.du')} <input type="text" size="10" data-du value="${this.filtre.du ? formatDate(this.filtre.du) : ''}"></label>
         <label title="${texteHtml('rentabilite_btp.chantier.au_titre')}">${texteHtml('rentabilite_btp.chantier.au')} <input type="text" size="10" data-au value="${this.filtre.au ? formatDate(this.filtre.au) : ''}"></label>
         <label title="${texteHtml('rentabilite_btp.chantier.comparer_titre')}">${texteHtml('rentabilite_btp.chantier.comparer')} <span data-reference></span></label>
-        <label title="${texteHtml('rentabilite_btp.chantier.heures_titre')}"><input type="checkbox" data-heures${this.filtre.heures ? ' checked' : ''}> ${texteHtml('rentabilite_btp.chantier.heures')}</label></p>
+        <label title="${texteHtml('rentabilite_btp.chantier.heures_titre')}"><input type="checkbox" data-heures${this.filtre.heures ? ' checked' : ''}> ${texteHtml('rentabilite_btp.chantier.heures')}</label>
+        <label title="${texteHtml('rentabilite_btp.chantier.previsions_titre')}"><input type="checkbox" data-previsions-colonnes${this.filtre.previsions ? ' checked' : ''}> ${texteHtml('rentabilite_btp.chantier.previsions')}</label></p>
       ${d.du ? `<p class="aide">${texteHtml('rentabilite_btp.chantier.periode_aide')}</p>` : ''}
       <div data-detail></div>
       <div data-resultats></div>
+      <div data-previsions></div>
       <div data-acomptes></div>
       <div data-photos></div>
       <div data-controles></div>
@@ -388,6 +394,11 @@ export class PageRentabiliteChantier extends PageBase {
       ecrireStockage(CLE_HEURES, this.filtre.heures ? '1' : '0');
       this.#rendreDetail();
     });
+    corps.querySelector('[data-previsions-colonnes]').addEventListener('change', (e) => {
+      this.filtre.previsions = e.target.checked;
+      ecrireStockage(CLE_PREVU, this.filtre.previsions ? '1' : '0');
+      this.#rendreDetail();
+    });
     this.resultats = new TableauResultats(corps.querySelector('[data-resultats]'));
     corps.querySelector('[data-controle]').addEventListener('click', async () => {
       try {
@@ -415,11 +426,12 @@ export class PageRentabiliteChantier extends PageBase {
     });
     this.tableau = new TableauDetail(corps.querySelector('[data-detail]'), {
       ouvrirFaits: (f, nouvelle) => {
-        const enPeriode = COLONNES_DETAIL.find((x) => x.code === f.colonne)?.periode;
+        const enPeriode = [...COLONNES_DETAIL, ...COLONNES_PREVISION].find((x) => x.code === f.colonne)?.periode;
         this.app.naviguer(urlFaits(c.id, { ...f, du: enPeriode ? this.filtre.du : null, au: this.filtre.au }), { nouvelleFenetre: nouvelle });
       },
     });
     this.#rendreDetail();
+    this.#rendrePrevisions(corps.querySelector('[data-previsions]'));
     this.#rendreAcomptes(corps.querySelector('[data-acomptes]'));
     this.#rendrePhotos(corps.querySelector('[data-photos]'));
     this.#rendreControles(corps.querySelector('[data-controles]'));
@@ -432,6 +444,40 @@ export class PageRentabiliteChantier extends PageBase {
       ? ` · <a href="/rentabilite/changements/${Number(d.chantier.id)}">${echapper(pluriel('rentabilite_btp.chantier.changements', d.controle.changements, { nombre: d.controle.changements }))}</a>`
       : ` · ${texteHtml('rentabilite_btp.chantier.aucun_changement')}`;
     return `${texteHtml('rentabilite_btp.chantier.controle_par', { date: formatDateHeure(d.controle.le), par: d.controle.par })}${lien}`;
+  }
+
+  /**
+   * Saisies prévisionnelles du chantier (lot 6, § 10.1) : liste, saisie, solde (pièce proposée ou motif), journal ;
+   * chaque écriture recalcule le chantier côté serveur, la page est relue.
+   */
+  async #rendrePrevisions(zone) {
+    const id = this.donnees.chantier.id;
+    let d;
+    try { d = await api.rentabilite.previsions(id); } catch (e) { this.app.erreur(e); zone.innerHTML = ''; return; }
+    const peut = (a) => this.app.peut(NOEUD_PREVISIONS, a);
+    const panneau = new PanneauPrevisions(zone, {
+      peut: { creer: peut(ACTION_DROIT.CREER), modifier: peut(ACTION_DROIT.MODIFIER), supprimer: peut(ACTION_DROIT.SUPPRIMER) },
+      actions: {
+        creer: (s) => api.rentabilite.creerPrevision(id, s),
+        modifier: (p, s) => api.rentabilite.modifierPrevision(p, s),
+        solder: (p, r) => api.rentabilite.solderPrevision(p, r),
+        rouvrir: (p) => api.rentabilite.rouvrirPrevision(p),
+        supprimer: (p) => api.rentabilite.supprimerPrevision(p),
+        journal: (p) => api.rentabilite.journalPrevision(p),
+      },
+      choisirTiers: async () => {
+        const { annuaire } = await this.app.services();
+        const p = await choisirPersonne({ annuaire, titre: texte('rentabilite_btp.chantier.previsions_tiers') });
+        return p ? { id: p.id, libelle: p.nom_commercial || p.raison_sociale } : null;
+      },
+      ouvrirPiece: (ent, nouvelle) => this.app.naviguer(urlDocument(ent), { nouvelleFenetre: nouvelle }),
+      apresEcriture: async (succes) => {
+        this.app.message(texte(`rentabilite.previsions.succes.${succes}`), 'succes');
+        await this.#charger();
+      },
+      erreur: (e) => this.app.erreur(e),
+    });
+    panneau.rendre(d);
   }
 
   /** Acomptes en trésorerie du chantier (R6) : payé, utilisé, reste ; double-clic : faits. */
@@ -486,7 +532,7 @@ export class PageRentabiliteChantier extends PageBase {
     const libelle = r ? (r.code === 'controle' ? texte('rentabilite_btp.chantier.reference_controle', { date: formatDateHeure(r.le) })
       : texte('rentabilite_btp.chantier.reference_photo', { date: formatDate(r.au), libelle: '' }).trim()) : null;
     const ordre = this.filtre.ordre === '' ? undefined : this.filtre.ordre;
-    this.tableau.rendre(this.donnees, { cout: this.filtre.cout, ordre, periode: !!this.donnees.du, heures: this.filtre.heures,
+    this.tableau.rendre(this.donnees, { cout: this.filtre.cout, ordre, periode: !!this.donnees.du, heures: this.filtre.heures, previsions: this.filtre.previsions,
       reference: r ? { libelle, agregats: r.agregats } : null });
     this.resultats.rendre(this.donnees, { ordre, periode: !!this.donnees.du, voirCouts: this.donnees.voir_couts });
   }

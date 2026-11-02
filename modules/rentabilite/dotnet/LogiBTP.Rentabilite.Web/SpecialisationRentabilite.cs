@@ -27,7 +27,8 @@ public sealed record OrdreRentabilite(long Id, string? Numero, string? Libelle, 
 public sealed record NatureRentabilite(int Id, string Code, string Libelle, string? Groupe, string? GroupeLibelle, int GroupeOrdre);
 
 /// <summary>Pièce source d'un fait, pour la page des faits.</summary>
-public sealed record PieceRentabilite(long EntId, string Type, string TypeLibelle, string? Numero, string? Indice, DateOnly Date, string? Statut, bool Annulee, string? Tiers);
+public sealed record PieceRentabilite(long EntId, string Type, string TypeLibelle, string? Numero, string? Indice, DateOnly Date, string? Statut, bool Annulee, string? Tiers,
+    int? TiersId);
 
 /// <summary>
 /// Ce que montre une pièce ou une source et ce que ses faits doivent totaliser (rapprochement, § 8) : faits filtrés par
@@ -85,4 +86,10 @@ public abstract class SpecialisationRentabilite
 
     /// <summary>Fait qui change avec le jour qui passe (engagé planifié) : exclu des écarts du recalcul de nuit.</summary>
     public virtual bool DependDuJour(Fait f) => false;
+
+    /// <summary>Noms des tiers des saisies prévisionnelles (lot 6).</summary>
+    public virtual Task<Dictionary<int, string>> TiersAsync(RentabiliteDbContext db, int[] ids, CancellationToken ct) => Task.FromResult(new Dictionary<int, string>());
+
+    /// <summary>Droit d'écrire une saisie prévisionnelle (action CREER, MODIFIER, SUPPRIMER) ; refus : exception (403).</summary>
+    public virtual Task AutoriserPrevisionAsync(IServiceProvider services, Utilisateur u, string action, CancellationToken ct) => Task.CompletedTask;
 }

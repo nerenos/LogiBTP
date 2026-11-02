@@ -74,3 +74,14 @@
 .rentabilite-resultats .rentabilite-resultat-budget th, .rentabilite-resultats .rentabilite-resultat-budget td { background: var(--rentabilite-groupe-fond); }
 .rentabilite-resultats .rentabilite-resultat-previsionnel th, .rentabilite-resultats .rentabilite-resultat-previsionnel td { background: var(--rentabilite-total-fond); font-weight: 600; }
 .page-rentabilite .rentabilite-sous-type { padding-left: 1.5em; }
+
+/* Saisies prévisionnelles (lot 6) : colonnes « prévu » du Détail (en italique, jamais mélangées au réel) et saisies. */
+.rentabilite-colonne-prevu { background: var(--rentabilite-prevu); color: var(--rentabilite-prevu-texte); font-style: italic; }
+.rentabilite-detail td.rentabilite-bande-prevu { border-left-color: var(--rentabilite-prevu); font-style: italic; }
+.rentabilite-detail .rentabilite-debut-prevu { box-shadow: inset 2px 0 0 var(--rentabilite-ecart); }
+.rentabilite-previsions .rentabilite-prevision-soldee td { color: var(--texte-attenue, #6b7280); text-decoration: line-through; }
+.rentabilite-previsions .rentabilite-prevision-echue td:first-child { color: var(--rentabilite-anomalie); font-weight: 600; }
+.rentabilite-previsions .rentabilite-proposition td { font-size: 0.9em; background: var(--rentabilite-groupe-fond); }
+.rentabilite-previsions .montant { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.rentabilite-prevision-saisie .grille-saisie { display: grid; grid-template-columns: max-content 1fr; gap: 0.4em 0.8em; align-items: center; }
+.rentabilite-prevision-saisie .invalide { outline: 2px solid var(--rentabilite-anomalie); }

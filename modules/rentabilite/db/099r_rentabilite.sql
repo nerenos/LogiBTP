@@ -150,3 +150,52 @@ CREATE OR REPLACE FUNCTION f_rentabilite_changements(p_cha INT, p_calcul BIGINT)
             AND (f.afa_calcul_debut > p_calcul AND f.afa_calcul_fin IS NULL OR f.afa_calcul_debut <= p_calcul AND f.afa_calcul_fin > p_calcul)
           GROUP BY 1) s
 $$;
+
+-- Lot 6 (§ 10.1) : saisies prévisionnelles. Une saisie porte un indicateur (budget, budget d'exécution, engagé,
+-- déboursé, facturé), une date et des montants ; tant qu'elle n'est ni soldée ni supprimée, elle devient un fait
+-- d'indicateur PREVU_* (jamais mélangé au réel). Elle se solde à la main (pièce qui la remplace, motif) quand la pièce
+-- réelle arrive ; une saisie échue (échéance passée) est signalée. Toute écriture est journalisée (avant / après).
+CREATE TABLE IF NOT EXISTS rentabilite_prevision (
+    rpr_id              BIGSERIAL      PRIMARY KEY,
+    rpr_cha_id          INT            NOT NULL,
+    rpr_ordre_id        BIGINT,
+    rpr_indicateur      VARCHAR(20)    NOT NULL,
+    rpr_composante      VARCHAR(20)    NOT NULL,
+    rpr_nat_id          INT,
+    rpr_date            DATE           NOT NULL,
+    rpr_montant_pa      NUMERIC(18,6)  NOT NULL DEFAULT 0,
+    rpr_montant_pr      NUMERIC(18,6)  NOT NULL DEFAULT 0,
+    rpr_montant_pv      NUMERIC(18,6)  NOT NULL DEFAULT 0,
+    rpr_libelle         VARCHAR(200)   NOT NULL,
+    rpr_motif           TEXT,
+    rpr_tiers_id        INT,
+    rpr_echeance        DATE,
+    rpr_piece_attendue  VARCHAR(200),
+    rpr_soldee_le       DATE,
+    rpr_solde_ent_id    BIGINT,
+    rpr_solde_motif     TEXT,
+    rpr_solde_par       VARCHAR(100),
+    rpr_supprimee_le    TIMESTAMPTZ,
+    rpr_cree_par        VARCHAR(100)   NOT NULL,
+    rpr_cree_le         TIMESTAMPTZ    NOT NULL DEFAULT now(),
+    rpr_maj_par         VARCHAR(100),
+    rpr_maj_le          TIMESTAMPTZ,
+    rpr_version         INT            NOT NULL DEFAULT 1
+);
+CREATE INDEX IF NOT EXISTS ix_rpr_chantier ON rentabilite_prevision (rpr_cha_id) WHERE rpr_supprimee_le IS NULL;
+COMMENT ON TABLE rentabilite_prevision IS 'Saisies prévisionnelles d''un chantier (budget d''un avenant en négociation, facture non parvenue…) : faits PREVU_* tant qu''elles ne sont ni soldées ni supprimées';
+COMMENT ON COLUMN rentabilite_prevision.rpr_indicateur IS 'Indicateur réel prévu : BUDGET, BUDGET_EXECUTION, ENGAGE, DEBOURSE, FACTURE (le fait porte PREVU_<…>)';
+COMMENT ON COLUMN rentabilite_prevision.rpr_soldee_le IS 'Saisie soldée (remplacée par une pièce réelle ou abandonnée) : plus aucun fait';
+COMMENT ON COLUMN rentabilite_prevision.rpr_echeance IS 'Date à laquelle la pièce attendue doit être arrivée ; passée sans solde : saisie signalée';
+
+CREATE TABLE IF NOT EXISTS rentabilite_prevision_journal (
+    rpj_id      BIGSERIAL     PRIMARY KEY,
+    rpj_rpr_id  BIGINT        NOT NULL REFERENCES rentabilite_prevision (rpr_id) ON DELETE CASCADE,
+    rpj_action  VARCHAR(20)   NOT NULL,
+    rpj_avant   JSONB,
+    rpj_apres   JSONB,
+    rpj_par     VARCHAR(100)  NOT NULL,
+    rpj_le      TIMESTAMPTZ   NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS ix_rpj_prevision ON rentabilite_prevision_journal (rpj_rpr_id, rpj_id);
+COMMENT ON TABLE rentabilite_prevision_journal IS 'Historique des saisies prévisionnelles : action (CREATION, MODIFICATION, SOLDE, REOUVERTURE, SUPPRESSION), état avant / après, auteur, date';

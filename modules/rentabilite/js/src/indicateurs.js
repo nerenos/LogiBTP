@@ -49,6 +49,28 @@ export const COLONNES_HEURES = Object.freeze([
   },
 ].map((c) => Object.freeze({ ...c, heures: true, faits: c.faits ?? c.indicateurs })));
 
+/**
+ * Colonnes prévisionnelles du Détail (lot 6, § 10.1, facultatives) : saisies prévisionnelles, jamais mélangées au réel
+ * (faits PREVU_*), puis restes « réel + prévu » : reste à dépenser = budget d'exécution + prévu − dépensé − dépense
+ * prévue, reste à facturer = budget PV + prévu − facturé − facturation prévue.
+ */
+export const COLONNES_PREVISION = Object.freeze([
+  { code: 'prevu_budget', indicateurs: [INDICATEUR.PREVU_BUDGET], champ: 'cout', periode: true, sens: SENS.LIBRE, teinte: 'prevu' },
+  { code: 'prevu_execution', indicateurs: [INDICATEUR.PREVU_EXECUTION], champ: 'cout', periode: true, sens: SENS.LIBRE, teinte: 'prevu' },
+  { code: 'prevu_depense', indicateurs: [INDICATEUR.PREVU_ENGAGE, INDICATEUR.PREVU_DEBOURSE], champ: 'cout', periode: true, sens: SENS.LIBRE, teinte: 'prevu' },
+  {
+    code: 'reste_depenser_prevu', calcul: (v) => v.budget_execution.plus(v.prevu_execution).minus(v.depense).minus(v.prevu_depense),
+    faits: [INDICATEUR.BUDGET_EXECUTION, INDICATEUR.PREVU_EXECUTION, INDICATEUR.ENGAGE, INDICATEUR.DEBOURSE, INDICATEUR.PREVU_ENGAGE, INDICATEUR.PREVU_DEBOURSE],
+    sens: SENS.POSITIF, teinte: 'reste-depenser',
+  },
+  { code: 'prevu_budget_pv', indicateurs: [INDICATEUR.PREVU_BUDGET], champ: 'pv', periode: true, sens: SENS.LIBRE, teinte: 'prevu' },
+  { code: 'prevu_facture', indicateurs: [INDICATEUR.PREVU_FACTURE], champ: 'pv', periode: true, sens: SENS.LIBRE, teinte: 'prevu' },
+  {
+    code: 'reste_facturer_prevu', calcul: (v) => v.budget_pv.plus(v.prevu_budget_pv).minus(v.facture).minus(v.prevu_facture),
+    faits: [INDICATEUR.BUDGET, INDICATEUR.PREVU_BUDGET, INDICATEUR.FACTURE, INDICATEUR.PREVU_FACTURE], sens: SENS.POSITIF, teinte: 'reste-facturer',
+  },
+].map((c) => Object.freeze({ ...c, prevision: true, faits: c.faits ?? c.indicateurs })));
+
 /** Libellé et bulle d'une colonne (module Personnalisation). */
 export const libelleColonne = (c) => texte(`rentabilite.colonnes.${c.code}.libelle`);
 export const infoColonne = (c) => texte(`rentabilite.colonnes.${c.code}.info`);

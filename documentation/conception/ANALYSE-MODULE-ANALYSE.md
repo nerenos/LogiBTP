@@ -581,6 +581,19 @@ Numérotés pour pouvoir y répondre. Chaque point dit le risque et la réponse 
   chantier, nature et tiers arrive ; une saisie échue est signalée.
 - Historique des modifications (qui, quand, avant / après).
 
+✔ Réalisation (lot 6, 02/11/2026) : table `rentabilite_prevision` du module (indicateur réel, composante pour un coût,
+nature, ordre, date, PA / PR / PV, libellé, motif, tiers, échéance, pièce attendue ; solde : date, pièce, motif, auteur ;
+suppression logique ; version) et journal `rentabilite_prevision_journal` (action, avant / après en JSON). Une saisie ni
+soldée ni supprimée devient au recalcul du chantier un fait d'indicateur `PREVU_BUDGET`, `PREVU_EXECUTION`,
+`PREVU_ENGAGE`, `PREVU_DEBOURSE` ou `PREVU_FACTURE` (source et règle PREVISION), écrit par le module et jamais lu par
+les colonnes du réel ; chaque écriture recalcule le chantier. Le facturé n'a que du PV, l'engagé et le déboursé que des
+coûts, le PR vide vaut le PA. Solde proposé (jamais automatique) quand une pièce est connue après la saisie avec le même
+indicateur et la même composante, la même nature et le même tiers s'ils sont saisis ; solde manuel par une pièce ou un
+motif ; réouverture. Saisie échue (échéance passée) : signalée dans le Détail et dans la Liste. Détail : case
+« Prévisionnel » (colonnes prévues, restes « avec le prévu ») et panneau des saisies ; bloc de résultats : Prévisionnel à
+terminaison = budget PV + budget prévu face au dépensé + dépense prévue + reste du budget d'exécution prévu, compté nul
+s'il est dépassé. Droits : nœud `rentabilite/previsions` (créer, modifier, supprimer) sur les chantiers visibles.
+
 ### 10.2 Prévisionnel de facturation
 
 - Par chantier (ou marché) et par **mois de facturation** : montant ou % facturable, au global ou au détail des lignes
@@ -707,7 +720,7 @@ tête des écrans : « N chantiers en attente de recalcul ». Un chantier en err
 | 3 | Bloc de résultats PV (HT, postes, HT net, marges), heures MO | 1 |
 | 4 | Situation de production (module Document et cœur : type, préchargement entre les deux situations, colonnes croisées) ; PCA / FAE dans le module | 3 |
 | 5 | Valorisation du matériel (pointage matériel et planning, coût moyen de la fiche) ; option de valorisation des intérimaires | 1 |
-| 6 | Saisie prévisionnelle (solde des saisies) | 3 |
+| 6 | Saisie prévisionnelle (solde des saisies) — réalisé le 02/11/2026 (§ 10.1) | 3 |
 | 7 | Prévisionnel de facturation avec versions | 3 |
 | 8 | Graphiques | 2 |
 

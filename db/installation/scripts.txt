@@ -209,6 +209,7 @@ db/258_rentabilite.sql rejouable
 db/259_rentabilite_lot2.sql rejouable
 db/260_situation_production.sql rejouable
 db/261_rentabilite_materiel.sql rejouable
+db/262_rentabilite_previsions.sql rejouable
 
 # Vues de colonnes des types de documents créés après 176 : rejouée en dernier.
 db/176_documents_vues_types.sql rejouable

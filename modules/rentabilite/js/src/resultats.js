@@ -2,7 +2,8 @@
 // Réalisé, Production (situations de production, lot 4 : la marge la plus juste en cours de chantier), Facturé, Reste à
 // facturer, Prévisionnel ; colonnes HT des lignes, postes de pied par libellé, HT net, marge
 // brute (HT des lignes − PA) et nette (HT des lignes − PR) en montant et en %. Chaque ligne met en face de son PV le coût
-// du § 4.8. En période, les flux (budget, facturé, déboursé) sont ceux de la période, les restes au cumul.
+// du § 4.8. En période, les flux (budget, facturé, déboursé) sont ceux de la période, les restes au cumul. Prévisionnel à
+// terminaison (lot 6) : saisies prévisionnelles comprises.
 import { Dz } from '@logibtp/socle';
 import { INDICATEUR, COMPOSANTE } from './codes.js';
 import { filtrerOrdre } from './indicateurs.js';
@@ -44,11 +45,19 @@ export function blocResultats({ agregats, postes = [], ordre, periode = false })
   const flux = (filtre, champ) => somme(a, filtre, champ, periode);
   const cumul = (filtre, champ) => somme(a, filtre, champ, false);
 
-  // Coûts (PA et PR) : budget, déboursé (flux) ; dépensé et reste à dépenser (cumul).
+  // Coûts (PA et PR) : budget, déboursé (flux) ; dépensé et reste à dépenser (cumul) ; à terminaison (saisies
+  // prévisionnelles comprises) : dépensé et dépense prévue, plus le reste du budget d'exécution prévu s'il en reste
+  // (dépassé : rien ne reste à dépenser).
   const cout = (champ) => {
     const depense = cumul(ind(INDICATEUR.ENGAGE), champ).plus(cumul(ind(INDICATEUR.DEBOURSE), champ));
     const reste = cumul(sansPoste(INDICATEUR.BUDGET_EXECUTION), champ).minus(depense);
-    return { budget: flux(sansPoste(INDICATEUR.BUDGET), champ), debourse: flux(ind(INDICATEUR.DEBOURSE), champ), depense, reste };
+    const prevu = (x) => x.indicateur === INDICATEUR.PREVU_ENGAGE || x.indicateur === INDICATEUR.PREVU_DEBOURSE;
+    const depensePrevue = depense.plus(cumul(prevu, champ));
+    const restePrevu = cumul(sansPoste(INDICATEUR.BUDGET_EXECUTION), champ).plus(cumul(ind(INDICATEUR.PREVU_EXECUTION), champ)).minus(depensePrevue);
+    return {
+      budget: flux(sansPoste(INDICATEUR.BUDGET), champ), debourse: flux(ind(INDICATEUR.DEBOURSE), champ), depense, reste,
+      terminaison: depensePrevue.plus(restePrevu.isNegative() ? Dz(0) : restePrevu),
+    };
   };
   const pa = cout('pa');
   const pr = cout('pr');
@@ -79,9 +88,9 @@ export function blocResultats({ agregats, postes = [], ordre, periode = false })
       ? [ligne('production', flux(ind(INDICATEUR.PRODUCTION), 'pv'), new Map(), pa.debourse, pr.debourse)] : []),
     ligne('facture', factureLignes, facturePostes, pa.debourse, pr.debourse),
     ligne('reste_facturer', resteLignes, restePostes, pa.reste, pr.reste),
-    // Prévisionnel à terminaison : budget PV (cumul) ; dépensé + reste à dépenser (saisies prévisionnelles : lot 6).
-    ligne('previsionnel', cumul(sansPoste(INDICATEUR.BUDGET), 'pv'), postesDe(p, INDICATEUR.BUDGET, false),
-      pa.depense.plus(pa.reste), pr.depense.plus(pr.reste)),
+    // Prévisionnel à terminaison : budget PV et budget prévu (cumul) ; dépensé, dépense prévue et reste à dépenser.
+    ligne('previsionnel', cumul(sansPoste(INDICATEUR.BUDGET), 'pv').plus(cumul(ind(INDICATEUR.PREVU_BUDGET), 'pv')), postesDe(p, INDICATEUR.BUDGET, false),
+      pa.terminaison, pr.terminaison),
   ];
   const libelles = [...new Set(lignes.flatMap((l) => [...l.postes.keys()]))].sort((x, y) => x.localeCompare(y, 'fr'));
   return { libelles, lignes };

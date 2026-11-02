@@ -14,7 +14,7 @@ public sealed record AgregatListe(int ChaId, long? OrdreId, string Indicateur, s
 
 /// <summary>Fraîcheur d'un chantier de la Liste : dernier calcul, attente, erreur ; changements depuis le dernier contrôle de l'utilisateur.</summary>
 public sealed record EtatChantierListe(int ChaId, DateTimeOffset? CalculeLe, string? Etat, bool EnAttente, string? Erreur, DateTimeOffset? ControleLe,
-    int Changements);
+    int Changements, int PrevisionsEchues);
 
 public sealed record ListeRentabilite(DateOnly? Du, DateOnly? Au, bool VoirCouts, IReadOnlyList<ChantierListe> Chantiers, IReadOnlyList<OrdreChantier> Ordres,
     IReadOnlyList<AgregatListe> Agregats, IReadOnlyList<EtatChantierListe> Etats);
@@ -69,7 +69,9 @@ public partial class ServiceRentabilite
         var etats = await db.Database.SqlQuery<EtatChantierListe>($"""
             SELECT c AS cha_id, k.rca_fin AS calcule_le, k.rca_etat AS etat, (q.arq_cha_id IS NOT NULL) AS en_attente, q.arq_erreur AS erreur,
                    r.rco_le AS controle_le,
-                   CASE WHEN r.rco_rca_id IS NULL THEN 0 ELSE f_rentabilite_changements(c, r.rco_rca_id) END AS changements
+                   CASE WHEN r.rco_rca_id IS NULL THEN 0 ELSE f_rentabilite_changements(c, r.rco_rca_id) END AS changements,
+                   (SELECT count(*)::int FROM rentabilite_prevision p WHERE p.rpr_cha_id = c AND p.rpr_supprimee_le IS NULL AND p.rpr_soldee_le IS NULL
+                      AND p.rpr_echeance < {Aujourdhui}) AS previsions_echues
             FROM unnest({ids}) c
             LEFT JOIN LATERAL (SELECT rca_fin, rca_etat FROM rentabilite_calcul WHERE rca_cha_id = c ORDER BY rca_id DESC LIMIT 1) k ON TRUE
             LEFT JOIN rentabilite_a_recalculer q ON q.arq_cha_id = c

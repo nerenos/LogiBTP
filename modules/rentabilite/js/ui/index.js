@@ -4,7 +4,7 @@
 import { texte, texteHtml, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { Dz } from '@logibtp/socle';
 import { formatNombre, formatDate, formatDateHeure, echapper, celluleCsv } from '@logibtp/socle/ui';
-import { COLONNES_DETAIL, COLONNES_HEURES, COUT, lignesDetail, anomalie, libelleColonne, infoColonne, regrouperFaits } from '../src/indicateurs.js';
+import { COLONNES_DETAIL, COLONNES_HEURES, COLONNES_PREVISION, COUT, lignesDetail, anomalie, libelleColonne, infoColonne, regrouperFaits } from '../src/indicateurs.js';
 import { COLONNES_LISTE, arbreListe, lignesListe, clesJusqua, arrondiAffiche } from '../src/liste.js';
 import { NIVEAU_LISTE } from '../src/codes.js';
 import { blocResultats } from '../src/resultats.js';
@@ -17,19 +17,20 @@ const ecart = (valeur, reference, libelleReference) => {
   return `<small class="rentabilite-ecart" title="${echapper(texte('rentabilite.detail.reference_valeur', { reference: libelleReference, valeur: montant(reference) }))}">${
     echapper(texte(d.isNegative() ? 'rentabilite.detail.ecart_moins' : 'rentabilite.detail.ecart_plus', { valeur: montant(d.abs()) }))}</small>`;
 };
+const PREMIERE_PREVISION = COLONNES_PREVISION[0].code;
 const cellule = (valeur, c, l, ref = null) => {
   // Postes de pied : remises et déductions négatives par nature, jamais en rouge.
   const a = l.type === 'postes' ? null : anomalie(valeur, c.sens);
   const bulle = a ? `${texte(`rentabilite.anomalies.${a}`)}\n${texte('rentabilite.detail.ouvrir_faits')}` : texte('rentabilite.detail.ouvrir_faits');
-  // Heures : vides plutôt que 0,00 (seules les natures de main-d'œuvre en portent).
-  const affiche = c.heures && valeur.isZero() ? '' : montant(valeur);
-  return `<td data-colonne="${c.code}" class="montant rentabilite-bande-${c.teinte}${c.code === 'h_budget' ? ' rentabilite-debut-heures' : ''}${a ? ' rentabilite-anomalie' : ''}" title="${echapper(bulle)}">${affiche}${
+  // Heures et prévu : vides plutôt que 0,00 (seules les natures de main-d'œuvre portent des heures, peu de lignes une saisie).
+  const affiche = (c.heures || (c.prevision && !c.calcul)) && valeur.isZero() ? '' : montant(valeur);
+  return `<td data-colonne="${c.code}" class="montant rentabilite-bande-${c.teinte}${c.code === 'h_budget' ? ' rentabilite-debut-heures' : ''}${c.code === PREMIERE_PREVISION ? ' rentabilite-debut-prevu' : ''}${a ? ' rentabilite-anomalie' : ''}" title="${echapper(bulle)}">${affiche}${
     ref ? ecart(valeur, ref.valeurs[c.code] ?? Dz(0), ref.libelle) : ''}</td>`;
 };
 
 /**
  * Tableau du Détail d'un chantier. options : { cout (PA | PR), ordre (undefined = tout, 0 = sans ordre, id), periode
- * (du… au : flux de la période), heures (colonnes d'heures de main-d'œuvre), reference ({ libelle, agregats } : contrôle ou photo, écarts sous les chiffres),
+ * (du… au : flux de la période), heures (colonnes d'heures de main-d'œuvre), previsions (colonnes prévisionnelles, lot 6), reference ({ libelle, agregats } : contrôle ou photo, écarts sous les chiffres),
  * ouvrirFaits({ indicateurs, natures, composante, ordre, colonne, ligne }, nouvelleFenetre) }.
  */
 export class TableauDetail {
@@ -45,17 +46,17 @@ export class TableauDetail {
   /** donnees : { agregats, natures } du serveur (GET /rentabilite/chantiers/{id}). */
   rendre(donnees, options = {}) {
     Object.assign(this.#o, options);
-    const colonnes = this.#o.heures ? [...COLONNES_DETAIL, ...COLONNES_HEURES] : COLONNES_DETAIL;
+    const colonnes = [...COLONNES_DETAIL, ...(this.#o.previsions ? COLONNES_PREVISION : []), ...(this.#o.heures ? COLONNES_HEURES : [])];
     const parametres = { natures: donnees.natures ?? [], ordre: this.#o.ordre, cout: this.#o.cout, periode: !!this.#o.periode, colonnes };
     const ref = this.#o.reference;
     // Avec une référence, ses lignes disparues depuis restent affichées (à zéro) pour que les écarts se lisent ligne à ligne.
     const aZero = (ref?.agregats ?? []).map((a) => ({ ...a, pa: 0, pr: 0, pv: 0, heures: null, pa_periode: 0, pr_periode: 0, pv_periode: 0, heures_periode: null }));
     this.#lignes = lignesDetail({ ...parametres, agregats: [...(donnees.agregats ?? []), ...aZero] });
     const refs = ref ? new Map(lignesDetail({ ...parametres, agregats: ref.agregats ?? [] }).map((l) => [l.code, { libelle: ref.libelle, valeurs: l.valeurs }])) : null;
-    const vide = this.#lignes.length === 1 && COLONNES_DETAIL.every((c) => this.#lignes[0].valeurs[c.code].isZero());
+    const vide = this.#lignes.length === 1 && colonnes.every((c) => this.#lignes[0].valeurs[c.code].isZero());
     if (vide) { this.#zone.innerHTML = `<p class="aide">${texteHtml('rentabilite.detail.aucun')}</p>`; return; }
     this.#zone.innerHTML = `<table class="rentabilite-detail tableau-compact">
-      <thead><tr><th>${texteHtml('rentabilite.detail.nature')}</th>${colonnes.map((c) => `<th class="montant rentabilite-colonne-${c.teinte}${c.code === 'h_budget' ? ' rentabilite-debut-heures' : ''}" title="${echapper(infoColonne(c))}">${echapper(libelleColonne(c))}</th>`).join('')}</tr></thead>
+      <thead><tr><th>${texteHtml('rentabilite.detail.nature')}</th>${colonnes.map((c) => `<th class="montant rentabilite-colonne-${c.prevision ? 'prevu' : c.teinte}${c.code === 'h_budget' ? ' rentabilite-debut-heures' : ''}${c.code === PREMIERE_PREVISION ? ' rentabilite-debut-prevu' : ''}" title="${echapper(infoColonne(c))}">${echapper(libelleColonne(c))}</th>`).join('')}</tr></thead>
       <tbody>${this.#lignes.map((l, i) => `<tr class="rentabilite-ligne-${l.type}" data-i="${i}"${l.info ? ` title="${echapper(l.info)}"` : ''}>
         <th scope="row">${echapper(l.libelle)}</th>
         ${colonnes.map((c) => cellule(l.valeurs[c.code], c, l, refs ? refs.get(l.code) ?? { libelle: ref.libelle, valeurs: {} } : null)).join('')}
@@ -197,6 +198,9 @@ export class TableauListe {
     const marques = [];
     if (e.en_attente) marques.push(`<span class="rentabilite-marque" title="${echapper(texte('rentabilite.liste.en_attente'))}">${iconeHtml('rentabilite_attente')}</span>`);
     if (e.erreur || e.etat === 'ERREUR') marques.push(`<span class="rentabilite-marque rentabilite-anomalie" title="${echapper(texte('rentabilite.liste.erreur', { erreur: e.erreur ?? '' }))}">${iconeHtml('rentabilite_anomalie')}</span>`);
+    if (e.previsions_echues > 0) {
+      marques.push(`<a href="#" class="rentabilite-marque rentabilite-anomalie" data-detail="${l.chantier}" title="${echapper(texte(e.previsions_echues > 1 ? 'rentabilite.liste.previsions_echues_autre' : 'rentabilite.liste.previsions_echues_un', { nombre: e.previsions_echues }))}">${iconeHtml('rentabilite_prevision')}</a>`);
+    }
     if (e.changements > 0) {
       marques.push(`<a href="#" class="rentabilite-changements" data-changements="${l.chantier}" title="${echapper(texte('rentabilite.liste.controle_le', { date: formatDateHeure(e.controle_le) }))}">${
         echapper(texte(e.changements > 1 ? 'rentabilite.liste.changements_autre' : 'rentabilite.liste.changements_un', { nombre: e.changements }))}</a>`);
@@ -269,6 +273,8 @@ export class TableauListe {
     ];
   }
 }
+
+export { PanneauPrevisions, INDICATEURS_PREVISION, COMPOSANTES_COUT, champsMontants } from './previsions.js';
 
 /**
  * Bloc de résultats sur les PV (§ 4.8) sous le Détail : lignes Budget, Réalisé, Facturé, Reste à facturer, Prévisionnel ;

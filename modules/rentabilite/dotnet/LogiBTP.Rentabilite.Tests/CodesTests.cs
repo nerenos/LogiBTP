@@ -19,5 +19,8 @@ public class CodesTests
     [InlineData("ERREUR_PERIODE", typeof(ErreurPeriode))]
     [InlineData("TYPE_PHOTO", typeof(TypePhoto))]
     [InlineData("NIVEAU_LISTE", typeof(NiveauListe))]
+    [InlineData("ETAT_PREVISION", typeof(EtatPrevision))]
+    [InlineData("ACTION_PREVISION", typeof(ActionPrevision))]
+    [InlineData("ERREUR_PREVISION", typeof(ErreurPrevision))]
     public void Parite_avec_le_js(string nom, Type type) => Assert.Empty(Constantes.Ecarts(Fichier, nom, type));
 }

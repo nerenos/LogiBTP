@@ -98,6 +98,13 @@ export const api = {
       return appel('GET', `/rentabilite/chantiers/${id}/faits${p.size ? `?${p}` : ''}`);
     },
     rapprochement: (id) => appel('GET', `/rentabilite/chantiers/${id}/rapprochement`),
+    previsions: (chantier) => appel('GET', `/rentabilite/previsions?chantier=${encodeURIComponent(chantier)}`),
+    creerPrevision: (chantier, s) => appel('POST', `/rentabilite/previsions?chantier=${encodeURIComponent(chantier)}`, s),
+    modifierPrevision: (id, s) => appel('PUT', `/rentabilite/previsions/${id}`, s),
+    solderPrevision: (id, d) => appel('POST', `/rentabilite/previsions/${id}/solde`, d),
+    rouvrirPrevision: (id) => appel('POST', `/rentabilite/previsions/${id}/rouvrir`),
+    supprimerPrevision: (id) => appel('DELETE', `/rentabilite/previsions/${id}`),
+    journalPrevision: (id) => appel('GET', `/rentabilite/previsions/${id}/journal`),
     parametres: () => appel('GET', '/rentabilite/parametres'),
     enregistrerRoles: (l) => appel('PUT', '/rentabilite/parametres/roles', l),
     enregistrerTaux: (l) => appel('PUT', '/rentabilite/parametres/taux', l),

@@ -61,6 +61,24 @@ public static class Extensions
             s.FaitsAsync(http.RequestServices, Utilisateur.Depuis(http), id, FiltreFaits.Lire(indicateur, nature, ordre, composante, piece, du, au), ct));
         g.MapGet("/chantiers/{id:int}/rapprochement", (int id, HttpContext http, ServiceRentabilite s, CancellationToken ct) =>
             s.RapprochementAsync(http.RequestServices, Utilisateur.Depuis(http), id, ct));
+        // Saisies prévisionnelles (lot 6, § 10.1).
+        g.MapGet("/previsions", (int chantier, HttpContext http, ServiceRentabilite s, CancellationToken ct) =>
+            s.PrevisionsAsync(http.RequestServices, Utilisateur.Depuis(http), chantier, ct));
+        g.MapPost("/previsions", (int chantier, SaisiePrevision d, HttpContext http, ServiceRentabilite s, CancellationToken ct) =>
+            s.CreerPrevisionAsync(http.RequestServices, Utilisateur.Depuis(http), chantier, d, ct));
+        g.MapPut("/previsions/{id:long}", (long id, SaisiePrevision d, HttpContext http, ServiceRentabilite s, CancellationToken ct) =>
+            s.ModifierPrevisionAsync(http.RequestServices, Utilisateur.Depuis(http), id, d, ct));
+        g.MapPost("/previsions/{id:long}/solde", (long id, SoldeDemande d, HttpContext http, ServiceRentabilite s, CancellationToken ct) =>
+            s.SolderPrevisionAsync(http.RequestServices, Utilisateur.Depuis(http), id, d, ct));
+        g.MapPost("/previsions/{id:long}/rouvrir", (long id, HttpContext http, ServiceRentabilite s, CancellationToken ct) =>
+            s.RouvrirPrevisionAsync(http.RequestServices, Utilisateur.Depuis(http), id, ct));
+        g.MapDelete("/previsions/{id:long}", async (long id, HttpContext http, ServiceRentabilite s, CancellationToken ct) =>
+        {
+            await s.SupprimerPrevisionAsync(http.RequestServices, Utilisateur.Depuis(http), id, ct);
+            return Results.NoContent();
+        });
+        g.MapGet("/previsions/{id:long}/journal", (long id, HttpContext http, ServiceRentabilite s, CancellationToken ct) =>
+            s.JournalPrevisionAsync(http.RequestServices, Utilisateur.Depuis(http), id, ct));
         return g;
     }
 }

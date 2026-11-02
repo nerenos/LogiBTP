@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { blocResultats, lignesDetail, COLONNES_DETAIL, COLONNES_HEURES, INDICATEUR as I, COMPOSANTE as C } from '../src/index.js';
+import { blocResultats, lignesDetail, COLONNES_DETAIL, COLONNES_HEURES, COLONNES_PREVISION, INDICATEUR as I, COMPOSANTE as C } from '../src/index.js';
 
 const A = (indicateur, composante, pa, pr, pv, { heures = null, ordre_id = null, nat_id = 11, periode = null } = {}) => ({
   ordre_id, nat_id, indicateur, composante, pa, pr, pv, heures, nb: 1,
@@ -77,5 +77,41 @@ describe('Heures de main-d\'œuvre', () => {
     const p = lignesDetail({ agregats: AGREGATS, natures: [], periode: true, colonnes: [...COLONNES_DETAIL, ...COLONNES_HEURES] })[0].valeurs;
     expect(p.h_pointe.toString()).toBe('3');
     expect(p.h_reste.toString()).toBe('8');
+  });
+});
+
+describe('Saisies prévisionnelles (lot 6)', () => {
+  const PREVUS = [
+    ...AGREGATS,
+    A(I.PREVU_BUDGET, C.VENTE, 80, 90, 150),
+    A(I.PREVU_EXECUTION, C.VENTE, 50, 55, 0),
+    A(I.PREVU_DEBOURSE, C.ACHAT, 120, 130, 0),
+  ];
+  it('prévisionnel à terminaison : budget prévu, dépense prévue, reste du budget d\'exécution prévu', () => {
+    const l = Object.fromEntries(blocResultats({ agregats: PREVUS, postes: POSTES }).lignes.map((x) => [x.code, x]));
+    expect(l.previsionnel.lignes.toString()).toBe('1150'); // 1000 + 150
+    // Dépensé 400 + prévu 120 = 520 ; reste = 700 + 50 − 520 = 230 → 750
+    expect(l.previsionnel.pa.toString()).toBe('750');
+    // Le réel n'est pas touché.
+    expect(l.budget.lignes.toString()).toBe('1000');
+    expect(l.reste_facturer.pa.toString()).toBe('300');
+  });
+  it('dépassement : rien ne reste à dépenser, le coût à terminaison est le dépensé', () => {
+    const l = Object.fromEntries(blocResultats({ agregats: [...AGREGATS, A(I.PREVU_DEBOURSE, C.ACHAT, 500, 550, 0)] }).lignes.map((x) => [x.code, x]));
+    expect(l.previsionnel.pa.toString()).toBe('900'); // 400 + 500, reste négatif ignoré
+  });
+  it('colonnes prévues du Détail : à part du réel, restes avec le prévu', () => {
+    const colonnes = [...COLONNES_DETAIL, ...COLONNES_PREVISION];
+    const [total] = lignesDetail({ agregats: PREVUS, natures: [], cout: 'PA', colonnes });
+    expect(total.valeurs.budget.toString()).toBe('600');
+    expect(total.valeurs.prevu_budget.toString()).toBe('80');
+    expect(total.valeurs.prevu_depense.toString()).toBe('120');
+    expect(total.valeurs.reste_depenser.toString()).toBe('300');
+    expect(total.valeurs.reste_depenser_prevu.toString()).toBe('230');
+    expect(total.valeurs.reste_facturer_prevu.toString()).toBe('720'); // budget 950 + prévu 150 − facturé 380 (postes compris)
+  });
+  it('sans les colonnes prévues, les faits prévus ne forment aucune ligne', () => {
+    const lignes = lignesDetail({ agregats: [A(I.PREVU_DEBOURSE, C.ACHAT, 1, 1, 0)], natures: [], colonnes: COLONNES_DETAIL });
+    expect(lignes[0].valeurs.debourse.toString()).toBe('0');
   });
 });

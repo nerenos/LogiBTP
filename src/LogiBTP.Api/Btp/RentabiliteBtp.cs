@@ -47,6 +47,7 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
 {
     public const string Noeud = "rentabilite";
     public const string NoeudCouts = "rentabilite/couts";
+    public const string NoeudPrevisions = "rentabilite/previsions";
 
     public override int VersionRegles => 5;
 
@@ -932,7 +933,7 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
     public override async Task<Dictionary<long, PieceRentabilite>> PiecesAsync(RentabiliteDbContext db, long[] ids, CancellationToken ct) =>
         ids.Length == 0 ? [] : (await db.Database.SqlQuery<PieceRentabilite>($"""
             SELECT d.ent_id, t.tyd_code AS type, t.tyd_libelle AS type_libelle, d.ent_numero AS numero, d.ent_indice AS indice, d.ent_date AS date,
-                   s.std_code AS statut, coalesce(v.annule, s.std_code = 'ANNULE') AS annulee, p.per_raison_sociale AS tiers
+                   s.std_code AS statut, coalesce(v.annule, s.std_code = 'ANNULE') AS annulee, p.per_raison_sociale AS tiers, d.ent_tiers_id AS tiers_id
             FROM document d
             JOIN type_document t ON t.tyd_id = d.ent_tyd_id
             JOIN statut_document s ON s.std_id = d.ent_std_id
@@ -942,6 +943,20 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
             """).ToListAsync(ct)).ToDictionary(p => p.EntId);
 
     private sealed record TypeRole(string Code, string Famille);
+
+    public override async Task<Dictionary<int, string>> TiersAsync(RentabiliteDbContext db, int[] ids, CancellationToken ct) =>
+        ids.Length == 0 ? [] : (await db.Database.SqlQuery<TiersNom>($"""
+            SELECT per_id AS id, coalesce(per_raison_sociale, '') AS nom FROM personne WHERE per_id = ANY({ids})
+            """).ToListAsync(ct)).ToDictionary(t => t.Id, t => t.Nom);
+
+    private sealed record TiersNom(int Id, string Nom);
+
+    /// <summary>Saisies prévisionnelles (lot 6) : action du nœud rentabilite/previsions (héritée de rentabilite à défaut).</summary>
+    public override async Task AutoriserPrevisionAsync(IServiceProvider services, Utilisateur u, string action, CancellationToken ct)
+    {
+        if (services.GetService<IDroits>() is { } droits && !await droits.AutoriseAsync(u, NoeudPrevisions, action, ct))
+            throw ExceptionMetier.AccesRefuse(action);
+    }
 
     /// <summary>
     /// Portée (V65) : TOUT = tous les chantiers ; SOI (et EQUIPE, SERVICE) = chantiers dont l'individu de l'utilisateur est

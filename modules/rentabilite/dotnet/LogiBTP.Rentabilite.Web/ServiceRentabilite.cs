@@ -17,7 +17,6 @@ public sealed record FraicheurChantier(ResumeCalculLu? Dernier, bool EnAttente, 
 public sealed record ResumeCalculLu(long Id, DateTimeOffset Debut, DateTimeOffset? Fin, string Declencheur, string? Raison, string? Par, int Version, string Etat,
     string? Message, int? NbFaits, int? Ajouts, int? Retraits, int? Ecarts);
 
-/// <summary>Somme des faits ouverts par ordre, nature, indicateur et composante (le client regroupe et totalise).</summary>
 /// <summary>
 /// Somme des faits par ordre, nature, indicateur et composante (le client regroupe et totalise) : cumul jusqu'au <c>au</c>
 /// et, si un début de période est donné, part datée de la période (§ 5.4 : budgets, déboursé, facturé sur la période ;
@@ -118,6 +117,8 @@ public partial class ServiceRentabilite(RentabiliteDbContext db, SpecialisationR
             VALUES ({chantier}, {declencheur}, {raison}, {par}, {spec.VersionRegles}) RETURNING rca_id AS "Value"
             """).ToListAsync(ct)).Single();
         var nouveaux = await spec.CalculerAsync(db, chantier, Aujourdhui, ct);
+        // Saisies prévisionnelles (lot 6) : faits PREVU_* écrits par le module, jamais par la spécialisation.
+        nouveaux.AddRange(await FaitsPrevisionsAsync(chantier, ct));
         if (nouveaux.FirstOrDefault(f => f.ChaId != chantier) is { } autre)
             throw new InvalidOperationException($"Fait d'un autre chantier ({autre.ChaId}) dans le calcul du chantier {chantier}");
         var anciens = await LireOuvertsAsync(chantier, ct);

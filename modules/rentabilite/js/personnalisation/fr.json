@@ -8,7 +8,12 @@
       "FACTURE": "Facturé",
       "ACOMPTE_PAYE": "Acompte payé",
       "ACOMPTE_UTILISE": "Acompte utilisé",
-      "PRODUCTION": "Production"
+      "PRODUCTION": "Production",
+      "PREVU_BUDGET": "Budget prévu",
+      "PREVU_EXECUTION": "Budget d'exécution prévu",
+      "PREVU_ENGAGE": "Engagé prévu",
+      "PREVU_DEBOURSE": "Déboursé prévu",
+      "PREVU_FACTURE": "Facturation prévue"
     },
     "composantes": {
       "VENTE": "Vente",
@@ -116,6 +121,34 @@
       "pca": {
         "libelle": "PCA",
         "info": "Produits constatés d'avance : réalisé − production, quand le réalisé dépasse la production (au cumul)"
+      },
+      "prevu_budget": {
+        "libelle": "Budget prévu",
+        "info": "Saisies prévisionnelles de budget (coût) : avenant en négociation… ; jamais mélangées au réel"
+      },
+      "prevu_execution": {
+        "libelle": "Exécution prévue",
+        "info": "Saisies prévisionnelles de budget d'exécution (coût)"
+      },
+      "prevu_depense": {
+        "libelle": "Dépense prévue",
+        "info": "Saisies prévisionnelles d'engagé et de déboursé : facture non parvenue, commande à passer…"
+      },
+      "reste_depenser_prevu": {
+        "libelle": "Reste à dépenser avec le prévu",
+        "info": "Budget d'exécution + exécution prévue − dépensé − dépense prévue ; négatif : dépassement"
+      },
+      "prevu_budget_pv": {
+        "libelle": "Budget PV prévu",
+        "info": "Saisies prévisionnelles de budget (PV)"
+      },
+      "prevu_facture": {
+        "libelle": "Facturation prévue",
+        "info": "Saisies prévisionnelles de facturé (PV)"
+      },
+      "reste_facturer_prevu": {
+        "libelle": "Reste à facturer avec le prévu",
+        "info": "Budget PV + budget PV prévu − facturé − facturation prévue"
       }
     },
     "anomalies": {
@@ -168,7 +201,8 @@
       "TACHE": "Planning",
       "MOUVEMENT": "Mouvements de stock",
       "REGLEMENT": "Règlements",
-      "POINTAGE_MATERIEL": "Pointages du matériel"
+      "POINTAGE_MATERIEL": "Pointages du matériel",
+      "PREVISION": "Saisies prévisionnelles"
     },
     "liste": {
       "total": "Total",
@@ -202,7 +236,9 @@
         "sans_ordre": "Ordre",
         "total": "Total"
       },
-      "pourcent": "{{valeur}} %"
+      "pourcent": "{{valeur}} %",
+      "previsions_echues_un": "{{nombre}} saisie prévisionnelle échue : ouvrir le Détail",
+      "previsions_echues_autre": "{{nombre}} saisies prévisionnelles échues : ouvrir le Détail"
     },
     "periodes": {
       "PERIODE_DATE": "Période illisible : saisissez une année (2026), un mois (10/2026) ou une date",
@@ -234,7 +270,7 @@
         },
         "previsionnel": {
           "libelle": "Prévisionnel",
-          "info": "À terminaison : budget PV face au dépensé + reste à dépenser"
+          "info": "À terminaison : budget PV et budget prévu, face au dépensé, à la dépense prévue et au reste du budget d'exécution prévu (rien s'il est dépassé)"
         }
       },
       "colonnes": {
@@ -273,6 +309,110 @@
           "libelle": "% nette",
           "info": "Marge nette / HT des lignes"
         }
+      }
+    },
+    "previsions": {
+      "titre": "Saisies prévisionnelles",
+      "nouvelle": "Nouvelle saisie",
+      "nouvelle_titre": "Budget d'un avenant en négociation, facture non parvenue… : affiché à part du réel jusqu'à son solde",
+      "aucune": "Aucune saisie prévisionnelle sur ce chantier.",
+      "aide": "Une saisie compte dans les colonnes « prévu » et le Prévisionnel jusqu'à son solde : soldez-la quand la pièce réelle arrive (proposée quand une pièce du même indicateur, de la même nature et du même tiers est enregistrée après elle). Une saisie dont l'échéance est passée est échue.",
+      "aide_saisie": "PR vide : égal au PA. L'engagé et le déboursé n'ont que des coûts, le facturé que du PV. Ctrl+Entrée : enregistrer.",
+      "aide_solde": "La saisie ne compte plus après son solde ; elle reste visible, barrée, et peut être rouverte.",
+      "echues_un": "{{nombre}} saisie échue : la pièce attendue n'est pas arrivée",
+      "echues_autre": "{{nombre}} saisies échues : les pièces attendues ne sont pas arrivées",
+      "modifier": "Modifier la saisie",
+      "solder": "Solder",
+      "solder_titre": "Solder « {{libelle}} »",
+      "solder_par": "Solder par cette pièce",
+      "solder_par_titre": "La pièce réelle remplace la saisie : la saisie ne compte plus",
+      "rouvrir": "Rouvrir la saisie (le solde est retiré)",
+      "supprimer": "Supprimer la saisie",
+      "supprimer_confirmer": "Supprimer la saisie « {{libelle}} » ? Elle reste dans le journal.",
+      "journal": "Historique de la saisie",
+      "journal_le": "Le",
+      "journal_par": "Par",
+      "journal_action": "Action",
+      "journal_details": "Modifications",
+      "journal_champs": {
+        "indicateur": "Indicateur",
+        "composante": "Composante",
+        "date": "Date",
+        "nat_id": "Nature",
+        "ordre_id": "Ordre",
+        "pa": "PA",
+        "pr": "PR",
+        "pv": "PV",
+        "libelle": "Libellé",
+        "motif": "Motif",
+        "tiers_id": "Tiers",
+        "echeance": "Échéance",
+        "piece_attendue": "Pièce attendue",
+        "soldee_le": "Soldée le",
+        "solde_ent_id": "Pièce du solde",
+        "solde_motif": "Motif du solde"
+      },
+      "actions": {
+        "CREATION": "Création",
+        "MODIFICATION": "Modification",
+        "SOLDE": "Solde",
+        "REOUVERTURE": "Réouverture",
+        "SUPPRESSION": "Suppression"
+      },
+      "etats": {
+        "OUVERTE": "Ouverte",
+        "ECHUE": "Échue",
+        "SOLDEE": "Soldée"
+      },
+      "cree_par": "Saisie par {{par}} le {{le}}",
+      "echeance_le": "attendue le {{date}}",
+      "soldee_le": "Soldée le {{date}} par {{par}}",
+      "proposition": "Pièce arrivée depuis la saisie : {{piece}} {{tiers}}",
+      "pr_defaut": "= PA",
+      "choisir_tiers": "Choisir le tiers (fournisseur, sous-traitant, client)",
+      "vider_tiers": "Aucun tiers",
+      "colonnes": {
+        "etat": "État",
+        "date": "Date",
+        "indicateur": "Indicateur",
+        "nature": "Nature",
+        "ordre": "Ordre",
+        "libelle": "Libellé",
+        "tiers": "Tiers",
+        "pa": "PA",
+        "pr": "PR",
+        "pv": "PV",
+        "attendu": "Pièce attendue ou solde"
+      },
+      "champs": {
+        "indicateur": "Indicateur",
+        "composante": "Composante",
+        "date": "Date",
+        "libelle": "Libellé",
+        "nature": "Nature",
+        "ordre": "Ordre d'exécution",
+        "pa": "Montant PA",
+        "pr": "Montant PR",
+        "pv": "Montant PV",
+        "tiers": "Tiers",
+        "piece_attendue": "Pièce attendue",
+        "echeance": "Échéance",
+        "motif": "Motif",
+        "piece": "Pièce qui la remplace",
+        "le": "Soldée le",
+        "motif_solde": "Motif (sans pièce)"
+      },
+      "erreurs": {
+        "PREVISION_MONTANT": "Saisir un montant non nul (nombre)",
+        "PREVISION_SOLDEE": "Choisir la pièce qui remplace la saisie ou indiquer un motif",
+        "obligatoires": "Date et libellé obligatoires"
+      },
+      "succes": {
+        "creee": "Saisie prévisionnelle enregistrée",
+        "modifiee": "Saisie prévisionnelle modifiée",
+        "soldee": "Saisie prévisionnelle soldée",
+        "rouverte": "Saisie prévisionnelle rouverte",
+        "supprimee": "Saisie prévisionnelle supprimée"
       }
     }
   },

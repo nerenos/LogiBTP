@@ -6,5 +6,15 @@
   "rentabilite_annulee": "⊘",
   "rentabilite_deplier": "▸",
   "rentabilite_replier": "▾",
-  "rentabilite_attente": "⏳"
+  "rentabilite_attente": "⏳",
+  "rentabilite_prevision": "🔮",
+  "rentabilite_ajouter": "＋",
+  "rentabilite_modifier": "✎",
+  "rentabilite_solder": "✓",
+  "rentabilite_rouvrir": "↩",
+  "rentabilite_journal": "🕘",
+  "rentabilite_supprimer": "🗑",
+  "rentabilite_proposition": "💡",
+  "rentabilite_ouvrir": "↗",
+  "rentabilite_chercher": "🔍"
 }

@@ -13,6 +13,12 @@ public static class Indicateur
     public const string AcomptePaye = "ACOMPTE_PAYE";
     public const string AcompteUtilise = "ACOMPTE_UTILISE";
     public const string Production = "PRODUCTION";
+    // Saisies prévisionnelles (lot 6, § 10.1) : jamais mélangées au réel.
+    public const string PrevuBudget = "PREVU_BUDGET";
+    public const string PrevuExecution = "PREVU_EXECUTION";
+    public const string PrevuEngage = "PREVU_ENGAGE";
+    public const string PrevuDebourse = "PREVU_DEBOURSE";
+    public const string PrevuFacture = "PREVU_FACTURE";
 }
 
 /// <summary>Composante d'un fait (colonne de détail des indicateurs de coût).</summary>
@@ -37,6 +43,7 @@ public static class SourceFait
     public const string Mouvement = "MOUVEMENT";
     public const string Reglement = "REGLEMENT";
     public const string PointageMateriel = "POINTAGE_MATERIEL";
+    public const string Prevision = "PREVISION";
 }
 
 /// <summary>État d'un calcul (rca_etat).</summary>
@@ -90,4 +97,33 @@ public static class NiveauListe
 {
     public const string Charge = "CHARGE";
     public const string Affaire = "AFFAIRE";
+}
+
+/// <summary>État d'une saisie prévisionnelle : ouverte, échue (échéance passée sans solde), soldée.</summary>
+public static class EtatPrevision
+{
+    public const string Ouverte = "OUVERTE";
+    public const string Echue = "ECHUE";
+    public const string Soldee = "SOLDEE";
+}
+
+/// <summary>Action du journal d'une saisie prévisionnelle.</summary>
+public static class ActionPrevision
+{
+    public const string Creation = "CREATION";
+    public const string Modification = "MODIFICATION";
+    public const string Solde = "SOLDE";
+    public const string Reouverture = "REOUVERTURE";
+    public const string Suppression = "SUPPRESSION";
+}
+
+/// <summary>Erreurs de saisie d'une prévision.</summary>
+public static class ErreurPrevision
+{
+    public const string Indicateur = "PREVISION_INDICATEUR";
+    public const string Composante = "PREVISION_COMPOSANTE";
+    public const string Libelle = "PREVISION_LIBELLE";
+    public const string Montant = "PREVISION_MONTANT";
+    public const string Soldee = "PREVISION_SOLDEE";
+    public const string Version = "PREVISION_VERSION";
 }

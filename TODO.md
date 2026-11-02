@@ -29,6 +29,10 @@
   lot G1 : appliquer `db/250` (révision des prix : index, formules, paramètres des marchés) puis saisir ou importer les
   valeurs des index utilisés (`/parametres/revision`) ; libellés du catalogue BT à vérifier ; rejouer le `191` régénéré
   (bloc `REVISION_PRIX` des situations et factures d'avancement).
+- [ ] Module Rentabilité, lot 6 : rejouer `modules/rentabilite/db/099r` (saisies prévisionnelles et leur journal) puis
+  appliquer `db/262` (clés étrangères) ; donner le nœud « Saisies prévisionnelles » (`rentabilite/previsions` : créer,
+  modifier, supprimer) aux profils qui saisissent dans `/parametres/droits` (à défaut, hérité du nœud `rentabilite`).
+  Aucune nouvelle version des règles : rien n'est recalculé tant qu'aucune saisie n'existe.
 - [ ] Module Rentabilité, lot 5 : appliquer `db/261` (coût horaire du matériel, paramètres, triggers ; chantiers ouverts
   remis en file pour la version 5 des règles) et rejouer le `131` régénéré (coût moyen horaire de la fiche matériel) ;
   saisir les coûts horaires par type de matériel et la nature des heures de matériel dans `/parametres/rentabilite`,
@@ -243,7 +247,8 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
   versionnés, file, nuit, Détail, faits, rapprochement, rôles des types paramétrés), lot 2 réalisé (Liste
   multi-origine, période, vues, acomptes en trésorerie, contrôles et changements, photos), lot 3 réalisé (bloc de résultats PV, heures MO), lot 4 réalisé (situation de production, colonnes croisées,
   préchargement, production, FAE / PCA) ; lot 5 réalisé (coût horaire du matériel, matériel pointé et planifié, option des
-  intérimaires) ; lots 6 à 8 à réaliser. Plus
+  intérimaires) ; lot 6 réalisé (saisies prévisionnelles : faits PREVU_* à part du réel, solde proposé ou manuel,
+  échues signalées, journal ; Prévisionnel à terminaison) ; lots 7 et 8 à réaliser. Plus
   tard (Q17) : historique du chargé d'affaires d'une affaire et d'un chantier (aujourd'hui seul le chargé d'affaires
   actuel compte, sur toute la période). Simplifications du lot 1 à revoir :
   - PV ventilé sur les feuilles d'un ouvrage au prorata du PR (à défaut du PA, sinon à parts égales), l'analyse parlant
@@ -255,10 +260,17 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
   - chantier qui tient un stock : ses articles de stock ignorés (consommés à la sortie) ;
   - portées EQUIPE et SERVICE du droit `rentabilite` traitées comme SOI (chargé, conducteur, responsable de l'affaire).
   Simplifications du lot 3 à revoir :
-  - Réalisé sans postes de pied (seulement les lignes des factures) ; Prévisionnel sans saisies prévisionnelles (lot 6) ;
+  - Réalisé sans postes de pied (seulement les lignes des factures) ;
   - heures du budget : lignes d'une nature du regroupement MO dont l'unité est h, heure ou heures (autres unités sans
     heures) ;
   - postes de pied du Reste à facturer rapprochés par libellé (budget − facturé).
+  Simplifications du lot 6 à revoir :
+  - solde jamais automatique : une pièce arrivée après la saisie (même chantier, indicateur, composante, nature si
+    saisie, tiers si saisi) est seulement proposée ; pas de solde partiel (une facture qui ne couvre qu'une partie de la
+    saisie : réduire le montant de la saisie, la solder plus tard) ;
+  - saisie soldée : plus aucun fait, même avant la date du solde (le passé tel qu'il était vu reste dans les photos et
+    les contrôles) ; saisie échue signalée dans la Liste et le Détail, sans notification ;
+  - pas de saisie prévisionnelle d'heures ni de postes de pied ; Liste sans colonnes « prévu » (Détail seulement).
   Simplifications du lot 2 à revoir :
   - acomptes en trésorerie au niveau du chantier (sans ordre ni nature), TTC ; un acompte payé sans module Règlements
     est daté du reçu validé ;

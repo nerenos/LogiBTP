@@ -7961,7 +7961,10 @@
       "acomptes": "Acomptes en trésorerie",
       "acomptes_aide": "Montants TTC des acomptes en trésorerie des marchés du chantier : payés (règlements pointés, ou reçus sans le module Règlements) et déduits des pièces.",
       "heures": "Heures MO",
-      "heures_titre": "Ajoute les heures de main-d'œuvre : budget, budget d'exécution, planifiées, pointées, restantes"
+      "heures_titre": "Ajoute les heures de main-d'œuvre : budget, budget d'exécution, planifiées, pointées, restantes",
+      "previsions": "Prévisionnel",
+      "previsions_titre": "Colonnes des saisies prévisionnelles et restes « avec le prévu », jamais mélangées au réel",
+      "previsions_tiers": "Tiers de la saisie prévisionnelle"
     },
     "fraicheur": {
       "calcule": "Calculé le {{date}} ({{declencheur}})",
@@ -8023,7 +8026,8 @@
       "POINTAGE_MATERIEL": "Heures de matériel pointées au coût horaire du matériel",
       "MATERIEL_LOUE": "Heures de matériel loué (coût par la commande de location)",
       "MATERIEL_SANS_COUT": "Heures de matériel sans coût horaire (fiche ou type)",
-      "TACHE_MATERIEL": "Matériel planifié (après son dernier pointage)"
+      "TACHE_MATERIEL": "Matériel planifié (après son dernier pointage)",
+      "PREVISION": "Saisie prévisionnelle (hors du réel jusqu'à son solde)"
     },
     "roles": {
       "COMMANDE_VENTE": "Commande client (budget)",
