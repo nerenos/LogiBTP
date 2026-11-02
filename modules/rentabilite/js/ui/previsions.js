@@ -247,6 +247,7 @@ export class PanneauPrevisions {
     let combo;
     return ouvrirDialogue({
       titre: texte('rentabilite.previsions.solder_titre', { libelle: p.libelle }),
+      classe: 'rentabilite-prevision-saisie',
       html: `<div class="grille-saisie">
         <label>${texteHtml('rentabilite.previsions.champs.piece')}</label><span data-piece-solde></span>
         <label for="prv-le">${texteHtml('rentabilite.previsions.champs.le')}</label><span><input type="date" id="prv-le" value="${aujourdhui()}"></span>

@@ -83,7 +83,10 @@
 .rentabilite-previsions .rentabilite-prevision-echue td:first-child { color: var(--rentabilite-anomalie); font-weight: 600; }
 .rentabilite-previsions .rentabilite-proposition td { font-size: 0.9em; background: var(--rentabilite-groupe-fond); }
 .rentabilite-previsions .montant { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.rentabilite-prevision-saisie .grille-saisie { display: grid; grid-template-columns: max-content 1fr; gap: 0.4em 0.8em; align-items: center; }
+/* Fenêtre de saisie : assez large pour le libellé, jamais plus que l'écran ; champs bornés à leur colonne. */
+dialog.rentabilite-prevision-saisie { width: min(620px, calc(100vw - 32px)); }
+.rentabilite-prevision-saisie .grille-saisie { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 0.4em 0.8em; align-items: center; }
+.rentabilite-prevision-saisie .grille-saisie input, .rentabilite-prevision-saisie .grille-saisie textarea { max-width: 100%; box-sizing: border-box; }
 .rentabilite-prevision-saisie .invalide { outline: 2px solid var(--rentabilite-anomalie); }
 
 /* Prévisionnel de facturation (lot 7) : mois passés atténués, mois en cours encadré, facturé sous le prévu de la Liste. */

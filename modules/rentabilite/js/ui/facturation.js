@@ -2,7 +2,7 @@
 // prévu de la dernière version, écart, comparaison à une version passée, atterrissage ; saisie d'une nouvelle version
 // en montant ou en % du budget PV) et tableau chantiers × mois de la Liste. Composants sans métier : l'application
 // fournit les appels et l'ouverture du Détail.
-import { texte, texteHtml, iconeHtml, langue } from '@logibtp/socle/dictionnaire';
+import { texte, texteHtml, iconeHtml, langue, pluriel } from '@logibtp/socle/dictionnaire';
 import { Dz, ajouterMois } from '@logibtp/socle';
 import { formatNombre, formatDateHeure, echapper, creerCombo, lireNombre, saisir } from '@logibtp/socle/ui';
 import { MODE_FACTURATION } from '../src/codes.js';
@@ -51,7 +51,7 @@ export class PanneauFacturation {
         <button type="button" data-annuler>${texteHtml('commun.annuler')}</button>
         <button type="button" data-plus title="${echapper(texte('rentabilite.facturation.plus_titre'))}">${texteHtml('rentabilite.facturation.plus')}</button>` : ''}</h2>
       <p class="aide">${courante
-    ? echapper(texte('rentabilite.facturation.version', { le: formatDateHeure(courante.version.le), par: courante.version.par, nombre: d.versions.length }))
+    ? echapper(pluriel('rentabilite.facturation.version', d.versions.length, { le: formatDateHeure(courante.version.le), par: courante.version.par, nombre: d.versions.length }))
       + (courante.version.commentaire ? ` · ${echapper(courante.version.commentaire)}` : '')
     : texteHtml('rentabilite.facturation.aucune')} · ${echapper(texte('rentabilite.facturation.budget', { montant: montant(Dz(d.budget_pv)) }))}
       ${anciennes.length ? ` · <label>${texteHtml('rentabilite.facturation.comparer')} <span data-reference></span></label>` : ''}</p>`;
@@ -190,7 +190,7 @@ export class TableauFacturationListe {
       <thead><tr><th>${texteHtml('rentabilite.facturation.chantier')}</th>${mois.map((m) => `<th class="montant">${echapper(libelleMois(m))}</th>`).join('')}<th class="montant">${texteHtml('rentabilite.facturation.total')}</th></tr></thead>
       <tbody>${chantiers.map((c) => {
         const v = versions.get(c.id);
-        return `<tr><th scope="row"><a href="#" data-detail="${c.id}" title="${echapper(v ? texte('rentabilite.facturation.version', { le: formatDateHeure(v.le), par: v.par, nombre: '' }) : texte('rentabilite.facturation.aucune'))}">${echapper([c.code, c.libelle].filter(Boolean).join(' – '))}</a></th>
+        return `<tr><th scope="row"><a href="#" data-detail="${c.id}" title="${echapper(v ? texte('rentabilite.facturation.version_liste', { le: formatDateHeure(v.le), par: v.par }) : texte('rentabilite.facturation.aucune'))}">${echapper([c.code, c.libelle].filter(Boolean).join(' – '))}</a></th>
           ${mois.map((m) => cellule(total([c.id], [m]))).join('')}${cellule(total([c.id], mois))}</tr>`;
       }).join('')}</tbody>
       <tfoot><tr class="rentabilite-ligne-total"><th scope="row">${texteHtml('rentabilite.facturation.total')}</th>${mois.map((m) => cellule(total(ids, [m]))).join('')}${cellule(total(ids, mois))}</tr></tfoot></table>

@@ -421,7 +421,6 @@
       "enregistrer": "Enregistrer la prévision",
       "plus": "＋ 6 mois",
       "plus_titre": "Prolonger la saisie de six mois",
-      "version": "Prévision du {{le}} par {{par}} ({{nombre}} versions)",
       "aucune": "Aucune prévision enregistrée.",
       "budget": "Budget PV : {{montant}}",
       "comparer": "Comparer avec",
@@ -476,7 +475,10 @@
         "FACTURATION_VALEUR": "nombre attendu",
         "FACTURATION_BUDGET": "pas de budget PV pour un pourcentage",
         "FACTURATION_VERSION": "une autre prévision a été enregistrée entre-temps"
-      }
+      },
+      "version_un": "Prévision du {{le}} par {{par}} (une version)",
+      "version_autre": "Prévision du {{le}} par {{par}} ({{nombre}} versions)",
+      "version_liste": "Prévision du {{le}} par {{par}}"
     },
     "graphiques": {
       "titre": "Évolution",
