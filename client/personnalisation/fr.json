@@ -1,6 +1,6 @@
 {
   "application": {
-    "nom": "LogiBTP"
+    "nom": "LogiBTP – application web"
   },
   "pointage": {
     "grille": {
@@ -2495,7 +2495,7 @@
       "revaloriser": "Tout revaloriser",
       "aide_valorisation": "Le prix est recherché à la date demandée parmi les achats (date de réception, prix de la facture dès qu'elle est validée ; avant elle, prix provisoire de la réception). Sans achat : PA de la bibliothèque, signalé. Le PMP se corrige dans l'onglet Stock de l'article.",
       "marques": "Marques des articles",
-      "aide_marques": "Listes rapides d'articles (EPI, outillage, inventaire tournant…) : marquez les articles dans l'onglet Stock de leur fiche ou en masse depuis la liste de la bibliothèque ({{icone}} Marquer).",
+      "aide_marques": "Listes rapides d'articles (:casque:EPI, outillage, inventaire tournant…) : marquez les articles dans l'onglet Stock de leur fiche ou en masse depuis la liste de la bibliothèque ({{icone}} Marquer).",
       "emplacements": "Emplacements",
       "depot": "Dépôt",
       "aide_emplacements": "Code complet unique dans le dépôt (ex. A, A-01, A-01-2) ; le parent se désigne par son code. Un dépôt est un chantier coché « Dépôt de stock » (affaire STOCK).",
@@ -5088,6 +5088,7 @@
       "onglets": {
         "prix": "Prix",
         "unites": "Unités",
+        "techniques": "Données techniques (par unité de stock)",
         "composition": "Composition",
         "tarifs": "Tarifs fournisseurs",
         "stock": "Stock",

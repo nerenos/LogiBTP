@@ -6,6 +6,9 @@ import { MODES } from '@logibtp/fiche';
 import { echapper, formatNombre, creerCombo, formatDate } from '@logibtp/socle/ui';
 import { GestionVuesDocument } from '@logibtp/document/ui';
 import { OngletPrix, OngletUnites, OngletTarifs, formatPrix } from '@logibtp/bibliotheque/ui';
+
+// Données techniques par unité de stock (onglet Unités).
+const TECHNIQUES = ['poids', 'surface', 'surface_peinture', 'volume', 'hauteur', 'largeur', 'epaisseur', 'longueur'];
 import { rendreStockArticle } from '../stock/article.js';
 import { PanneauMetre } from '@logibtp/metre/ui';
 import { EditeurDevisBtp, DictionnaireBtp } from '../editeur-btp.js';
@@ -92,8 +95,9 @@ export class FicheElement extends FicheLogiBTP {
     // Poste de pied : son groupe à la place des données techniques, de l'isolation et de la gestion.
     // Texte : identification, classement, libellé et mots-clés seulement.
     const texte = this.texte;
-    const garder = (g) => (texte ? !['techniques', 'isolation', 'poste', 'description'].includes(g.code)
-      : poste ? !['techniques', 'isolation'].includes(g.code) : g.code !== 'poste' && (g.code !== 'isolation' || isolant));
+    // Données techniques : elles sont rendues par l'onglet Unités (formules des correspondances), jamais ici.
+    const garder = (g) => g.code !== 'techniques' && (texte ? !['isolation', 'poste', 'description'].includes(g.code)
+      : poste ? !['isolation'].includes(g.code) : g.code !== 'poste' && (g.code !== 'isolation' || isolant));
     return super.sections().map((s) => (s.groupes ? { ...s, groupes: s.groupes.filter(garder) } : s))
       .map((s) => (s.groupes ? { ...s, champs: s.groupes.flatMap((g) => g.champs) } : s));
   }
@@ -185,7 +189,18 @@ export class FicheElement extends FicheLogiBTP {
     return [
       { code: 'prix', titre: texte('fiches_btp.element.onglets.prix'), champs: ['scenario_pa', 'pa_fixe', 'dernier_pa', 'pmp', 'coef_fg', 'coef_fg_impose', 'coef_benef', 'coef_benef_impose', 'pv', 'pv_fixe', 'coef_remise', 'commentaire_prix'],
         rendre: (corps, { modifiable }) => new OngletPrix(corps, this.#contexte(modifiable)) },
-      { code: 'unites', titre: texte('fiches_btp.element.onglets.unites'), champs: ['unite_stock', 'unite_achat', 'unite_vente', 'unites'], rendre: (corps, { modifiable }) => new OngletUnites(corps, this.#contexte(modifiable)) },
+      { code: 'unites', titre: texte('fiches_btp.element.onglets.unites'),
+        champs: [...TECHNIQUES, 'unite_stock', 'unite_achat', 'unite_vente', 'unites'],
+        rendre: (corps, { modifiable }) => {
+          corps.innerHTML = '';
+          // Données techniques d'abord (les formules de correspondance s'y réfèrent), puis unités et correspondances.
+          const groupe = { code: 'techniques', titre: texte('fiches_btp.element.onglets.techniques'), largeur: 'plein',
+            champs: TECHNIQUES.map((code) => this.definition.champs.find((c) => c.code === code)).filter(Boolean) };
+          corps.append(this.rendreGroupe(groupe));
+          const unites = document.createElement('div');
+          corps.append(unites);
+          new OngletUnites(unites, this.#contexte(modifiable));
+        } },
       ...(ouvrage
         ? [{ code: 'composition', titre: texte('fiches_btp.element.onglets.composition'), champs: ['composition'], rendre: (corps, { modifiable }) => this.#composition(corps, modifiable).catch((e) => this.message(e.message, 'erreur')) }]
         : [{ code: 'tarifs', titre: texte('fiches_btp.element.onglets.tarifs'), rendre: (corps, { modifiable }) => new OngletTarifs(corps, this.#contexte(modifiable)) }]),

@@ -419,6 +419,9 @@ export class FicheBase {
   /** Groupe affiché (point de spécialisation : groupe propre à une variante de la fiche) ; tous par défaut. */
   groupeVisible(_groupe, _section) { return true; }
 
+  /** Groupe de champs (cadre titré) rendu par un onglet à rendu propre (même présentation que les sections). */
+  rendreGroupe(groupe) { return this.#groupe(groupe); }
+
   /** Groupe de champs (cadre titré) ; tout masqué : une seule ligne « informations confidentielles ». */
   #groupe(g) {
     const fs = document.createElement('fieldset');
