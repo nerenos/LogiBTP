@@ -68,14 +68,16 @@ public class SpecialisationCrmBtp(IServiceScopeFactory scopes) : SpecialisationC
         var code = await scope.ServiceProvider.GetRequiredService<LogiBTP.Socle.Web.IChronosFiches>().AttribuerAsync(TypesFiche.Projet, new Dictionary<string, object?>(), ct)
             ?? throw LogiBTP.Socle.Web.ExceptionMetier.Conflit("PROJET_IMPOSSIBLE", "Chrono des projets indisponible");
         var commentaire = d.DemDescriptionHtml is null ? null : System.Text.RegularExpressions.Regex.Replace(d.DemDescriptionHtml, "<[^>]+>", " ").Trim();
+        // Responsable du projet : celui de la demande s'il est un individu de notre structure (règle de la fiche projet).
+        long? responsableId = d.DemResponsableId is long r && await IndividusStructure.EstDeLaStructureAsync(db, r, ct) ? r : null;
         var id = await db.Database.SqlQueryRaw<int>("""
-            INSERT INTO projet (prj_code, prj_libelle, prj_tiers_id, prj_statut, prj_montant_estime, prj_responsable, prj_commentaire, prj_proprietes)
-            VALUES (@code, left(@libelle, 150), @tiers, 'EN_COURS', @montant, left(@responsable, 100), @commentaire, jsonb_build_object('crm_demande', @demande::text))
+            INSERT INTO projet (prj_code, prj_libelle, prj_tiers_id, prj_statut, prj_montant_estime, prj_responsable_ind_id, prj_commentaire, prj_proprietes)
+            VALUES (@code, left(@libelle, 150), @tiers, 'EN_COURS', @montant, @responsable, @commentaire, jsonb_build_object('crm_demande', @demande::text))
             RETURNING prj_id AS "Value"
             """,
             new NpgsqlParameter("code", code), new NpgsqlParameter("libelle", d.DemObjet), new NpgsqlParameter("tiers", NpgsqlTypes.NpgsqlDbType.Bigint) { Value = (object?)d.DemTiersId ?? DBNull.Value },
             new NpgsqlParameter("montant", NpgsqlTypes.NpgsqlDbType.Numeric) { Value = (object?)d.DemMontantEstime ?? DBNull.Value },
-            new NpgsqlParameter("responsable", NpgsqlTypes.NpgsqlDbType.Varchar) { Value = (object?)responsable ?? DBNull.Value },
+            new NpgsqlParameter("responsable", NpgsqlTypes.NpgsqlDbType.Bigint) { Value = (object?)responsableId ?? DBNull.Value },
             new NpgsqlParameter("commentaire", NpgsqlTypes.NpgsqlDbType.Text) { Value = (object?)commentaire ?? DBNull.Value },
             new NpgsqlParameter("demande", d.DemNumero)).ToListAsync(ct); // pas d'accolades dans le SQL : EF les lit comme des paramètres
         return new ElementCrm(TypesFiche.Projet, id[0].ToString());

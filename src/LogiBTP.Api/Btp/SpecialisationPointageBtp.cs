@@ -128,7 +128,7 @@ public class SpecialisationPointageBtp(IHttpContextAccessor http) : Specialisati
                    AND (@srv IS NULL OR sv.srv_id = @srv OR sv.srv_parent_id = @srv)
                    AND (@srvs IS NULL OR sv.srv_id = ANY(@srvs) OR sv.srv_parent_id = ANY(@srvs))
                    AND (@fct IS NULL OR s.sal_poste = ANY(@fct))
-                   AND (@r IS NULL OR s.sal_nom ILIKE @r OR s.sal_prenom ILIKE @r OR s.sal_matricule ILIKE @r OR s.sal_code ILIKE @r OR s.sal_matricule_paie ILIKE @r)
+                   AND (@r IS NULL OR s.sal_nom ILIKE @r OR s.sal_prenom ILIKE @r OR s.sal_code ILIKE @r OR s.sal_matricule_paie ILIKE @r)
                    OR s.sal_id = ANY(@ids))
             ORDER BY s.sal_nom, s.sal_prenom
             LIMIT @n

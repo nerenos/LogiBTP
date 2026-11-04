@@ -9,11 +9,11 @@ export const AFFAIRES = [
 ];
 
 export const PROJETS = [
-  { id: 1, code: 'PRJ-2026-001', libelle: 'Extension maison individuelle', tiers_id: 18, statut: 'OBTENU', date_remise: '2026-09-23', date_decision: '2026-10-02', montant_estime: 138000, responsable: 'Paul Moreau', ville: 'Lyon' },
-  { id: 2, code: 'PRJ-2026-002', libelle: 'Résidence Les Érables – 24 logements', tiers_id: 14, statut: 'OBTENU', date_remise: '2026-01-15', date_decision: '2026-01-30', montant_estime: 920000, responsable: 'Paul Moreau', ville: 'Villeurbanne' },
-  { id: 3, code: 'PRJ-2026-003', libelle: 'Réhabilitation de l\'école de Belleroche', tiers_id: 15, statut: 'REMIS', date_remise: '2026-09-30', montant_estime: 365000, responsable: 'Sophie Laurent', ville: 'Belleroche' },
-  { id: 4, code: 'PRJ-2026-004', libelle: 'Garage poids lourds – extension de l\'atelier', tiers_id: 40, statut: 'EN_COURS', montant_estime: 210000, responsable: 'Sophie Laurent', ville: 'Vénissieux' },
-  { id: 5, code: 'PRJ-2026-005', libelle: 'Centrale solaire en toiture', tiers_id: 41, statut: 'PERDU', date_remise: '2026-05-12', date_decision: '2026-06-20', montant_estime: 145000, responsable: 'Paul Moreau', ville: 'Givors' },
+  { id: 1, code: 'PRJ-2026-001', libelle: 'Extension maison individuelle', tiers_id: 18, statut: 'OBTENU', date_remise: '2026-09-23', date_decision: '2026-10-02', montant_estime: 138000, responsable: 'Jean-Pierre Martin', ville: 'Lyon' },
+  { id: 2, code: 'PRJ-2026-002', libelle: 'Résidence Les Érables – 24 logements', tiers_id: 14, statut: 'OBTENU', date_remise: '2026-01-15', date_decision: '2026-01-30', montant_estime: 920000, responsable: 'Jean-Pierre Martin', ville: 'Villeurbanne' },
+  { id: 3, code: 'PRJ-2026-003', libelle: 'Réhabilitation de l\'école de Belleroche', tiers_id: 15, statut: 'REMIS', date_remise: '2026-09-30', montant_estime: 365000, responsable: 'Sophie Bernard', ville: 'Belleroche' },
+  { id: 4, code: 'PRJ-2026-004', libelle: 'Garage poids lourds – extension de l\'atelier', tiers_id: 40, statut: 'EN_COURS', montant_estime: 210000, responsable: 'Sophie Bernard', ville: 'Vénissieux' },
+  { id: 5, code: 'PRJ-2026-005', libelle: 'Centrale solaire en toiture', tiers_id: 41, statut: 'PERDU', date_remise: '2026-05-12', date_decision: '2026-06-20', montant_estime: 145000, responsable: 'Jean-Pierre Martin', ville: 'Givors' },
 ];
 
 export const CHANTIERS = [

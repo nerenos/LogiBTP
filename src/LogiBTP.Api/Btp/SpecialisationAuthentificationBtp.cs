@@ -33,9 +33,9 @@ public class SpecialisationAuthentificationBtp : SpecialisationAuthentification
 
     private const string SqlPersonnes = """
         SELECT i.ind_id::text AS id, concat_ws(' ', i.ind_prenom, i.ind_nom) AS libelle, i.ind_actif AS individu_actif,
-               s.sal_statut AS statut, s.sal_actif AS salarie_actif, s.sal_matricule AS matricule, s.sal_id AS sal_id
+               s.sal_statut AS statut, s.sal_actif AS salarie_actif, s.sal_code AS matricule, s.sal_id AS sal_id
         FROM individu i
-        LEFT JOIN LATERAL (SELECT sal_id, sal_statut, sal_actif, sal_matricule FROM salarie WHERE sal_ind_id = i.ind_id
+        LEFT JOIN LATERAL (SELECT sal_id, sal_statut, sal_actif, sal_code FROM salarie WHERE sal_ind_id = i.ind_id
                            ORDER BY sal_actif DESC, sal_id DESC LIMIT 1) s ON TRUE
         """;
 
@@ -67,7 +67,7 @@ public class SpecialisationAuthentificationBtp : SpecialisationAuthentification
     {
         var lignes = await db.Database.SqlQueryRaw<LignePersonne>(SqlPersonnes + """
              WHERE s.sal_id IS NOT NULL AND s.sal_actif AND i.ind_actif
-               AND (concat_ws(' ', i.ind_prenom, i.ind_nom) ILIKE @t OR concat_ws(' ', i.ind_nom, i.ind_prenom) ILIKE @t OR s.sal_matricule ILIKE @t)
+               AND (concat_ws(' ', i.ind_prenom, i.ind_nom) ILIKE @t OR concat_ws(' ', i.ind_nom, i.ind_prenom) ILIKE @t OR s.sal_code ILIKE @t OR s.sal_matricule_paie ILIKE @t)
              ORDER BY lower(i.ind_nom), lower(i.ind_prenom) LIMIT 30
             """, new NpgsqlParameter("t", $"%{texte.Trim()}%")).ToListAsync(ct);
         return lignes.Select(l => Decrire(l)).ToList();

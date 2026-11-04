@@ -6,9 +6,9 @@
 -- commercial, sinon raison sociale), tenu par trigger : clé des zones de déplacement et de la règle de paie REPAS du
 -- module Pointage. Le rattachement de l'individu du salarié suit (SalariesAnnuaire.cs).
 --
--- Code et matricule : le code du salarié (sal_code, 10 caractères, unique) est son identifiant ; sal_matricule n'est
--- plus saisi, il recopie le code (lu encore par des vues et des écrans, retiré à un lot suivant) ; le matricule de paie
--- reprend l'ancien matricule là où il était vide (l'export de paie ne change pas).
+-- Code et matricule : le code du salarié (sal_code, 10 caractères, unique) est son identifiant ; l'ancien
+-- sal_matricule est repris dans le code là où il manque et dans le matricule de paie là où il est vide (l'export de paie
+-- ne change pas), puis la colonne est retirée par db/265 (reprise sautée quand elle n'existe plus).
 -- =============================================================================
 
 ALTER TABLE salarie ADD COLUMN IF NOT EXISTS sal_agence_per_id INT REFERENCES personne (per_id) ON DELETE SET NULL;
@@ -61,15 +61,19 @@ UPDATE poi_regle g SET prg_parametres = jsonb_set(g.prg_parametres, '{valeurs}',
 UPDATE salarie s SET sal_agence = a.nom FROM v_agences_societe a WHERE a.per_id = s.sal_agence_per_id AND s.sal_agence IS DISTINCT FROM a.nom;
 DROP TABLE agence_renommee;
 
--- Code : reprise du matricule là où il manque, matricule de paie = ancien matricule là où il est vide ; puis le
--- matricule recopie le code (en deux temps : l'unicité du matricule est contrôlée ligne à ligne).
-UPDATE salarie SET sal_code = sal_matricule WHERE sal_code IS NULL;
-UPDATE salarie SET sal_matricule_paie = sal_matricule WHERE sal_matricule_paie IS NULL AND sal_matricule <> left(sal_code, 10);
-UPDATE salarie SET sal_matricule = '~' || sal_id WHERE sal_matricule IS DISTINCT FROM left(sal_code, 10);
-UPDATE salarie SET sal_matricule = left(sal_code, 10) WHERE sal_matricule LIKE '~%';
+-- Code : reprise de l'ancien matricule là où il manque, matricule de paie = ancien matricule là où il est vide ;
+-- l'ancien matricule n'est plus obligatoire (plus écrit, retiré par db/265).
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'salarie' AND column_name = 'sal_matricule') THEN
+        EXECUTE 'UPDATE salarie SET sal_code = sal_matricule WHERE sal_code IS NULL';
+        EXECUTE 'UPDATE salarie SET sal_matricule_paie = sal_matricule WHERE sal_matricule_paie IS NULL AND sal_matricule <> left(sal_code, 10)';
+        EXECUTE 'ALTER TABLE salarie ALTER COLUMN sal_matricule DROP NOT NULL';
+    END IF;
+END $$;
 CREATE UNIQUE INDEX IF NOT EXISTS ux_sal_code ON salarie (sal_code);
 
--- Nom court de l'agence et matricule recopiés à chaque écriture.
+-- Nom court de l'agence recopié à chaque écriture.
 CREATE OR REPLACE FUNCTION f_salarie_agence_code() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
     IF NEW.sal_agence_per_id IS NULL THEN
@@ -78,11 +82,10 @@ BEGIN
         NEW.sal_agence := (SELECT left(coalesce(nullif(trim(per_nom_commercial), ''), per_raison_sociale), 30)
                            FROM personne WHERE per_id = NEW.sal_agence_per_id);
     END IF;
-    NEW.sal_matricule := coalesce(left(NEW.sal_code, 10), NEW.sal_matricule, '~' || NEW.sal_id);
     RETURN NEW;
 END $$;
 DROP TRIGGER IF EXISTS tr_salarie_agence_code ON salarie;
-CREATE TRIGGER tr_salarie_agence_code BEFORE INSERT OR UPDATE OF sal_agence_per_id, sal_code, sal_agence, sal_matricule ON salarie
+CREATE TRIGGER tr_salarie_agence_code BEFORE INSERT OR UPDATE OF sal_agence_per_id, sal_agence ON salarie
     FOR EACH ROW EXECUTE FUNCTION f_salarie_agence_code();
 
 -- Nom commercial ou raison sociale d'une agence modifiés : le nom court des salariés suit, ainsi que les clés du

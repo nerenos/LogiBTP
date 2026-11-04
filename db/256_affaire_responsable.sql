@@ -5,7 +5,7 @@
 -- aff_responsable_ind_id remplace le texte aff_responsable, comme prj_responsable_ind_id pour les projets (db/236) :
 -- l'ancien texte est rapproché d'un individu de la structure quand un seul correspond (prénom et nom, sans casse), sinon
 -- il reste en repli dans la liste et la fiche (« ancienne saisie », lecture seule) ; v_responsables_a_reprendre liste
--- les affaires et projets dont le responsable reste à choisir. Le chargé d'affaires est l'axe d'origine du module
+-- les affaires dont le responsable reste à choisir (l'ancien texte des projets est retiré par db/265). Le chargé d'affaires est l'axe d'origine du module
 -- Rentabilité (affaires, puis chantiers par cha_charge_ind_id).
 -- =============================================================================
 
@@ -27,12 +27,9 @@ UPDATE affaire a SET aff_responsable_ind_id = x.ind_id FROM candidats x WHERE x.
 -- Responsables saisis en texte, pas encore rapprochés d'un individu (à choisir dans la fiche).
 CREATE OR REPLACE VIEW v_responsables_a_reprendre AS
 SELECT 'affaire'::text AS type_element, a.aff_id::bigint AS id, a.aff_code AS code, a.aff_libelle AS libelle, a.aff_responsable AS texte
-FROM affaire a WHERE a.aff_responsable_ind_id IS NULL AND nullif(trim(a.aff_responsable), '') IS NOT NULL
-UNION ALL
-SELECT 'projet', p.prj_id::bigint, p.prj_code, p.prj_libelle, p.prj_responsable
-FROM projet p WHERE p.prj_responsable_ind_id IS NULL AND nullif(trim(p.prj_responsable), '') IS NOT NULL;
+FROM affaire a WHERE a.aff_responsable_ind_id IS NULL AND nullif(trim(a.aff_responsable), '') IS NOT NULL;
 
-COMMENT ON VIEW v_responsables_a_reprendre IS 'Affaires et projets dont le responsable saisi en texte n''est rapproché d''aucun individu';
+COMMENT ON VIEW v_responsables_a_reprendre IS 'Affaires dont le responsable saisi en texte n''est rapproché d''aucun individu';
 
 CREATE OR REPLACE VIEW v_liste_affaires AS
 SELECT a.aff_id AS id, 'affaire'::text AS type_element, a.aff_code AS code, a.aff_libelle AS libelle,

@@ -137,3 +137,10 @@
 - [x] Rafraîchissement simultané d'un jeton sans erreur 500, délai du fournisseur en repli de l'approvisionnement,
   colonne Livraison des commandes et réservations, retrait de la révision en heures du matériel, marque « non remise »
   des courriels dans l'annuaire, précédent / suivant dans la page document, décision Q9 reportée.
+
+### Nettoyage du 04/11/2026
+
+- [x] Colonnes retirées : `salarie.sal_matricule` (lectures passées sur `sal_code`, colonne `matricule` des vues de liste
+  gardée) et `projet.prj_responsable` (projet du CRM créé avec `prj_responsable_ind_id`, démo sur des individus de la
+  structure) par `db/265` ; `search_path = public` des fonctions de la GED (`modules/ged/db/054`, pg_restore direct) ;
+  contrôles avant suppression des fiches du cœur déjà faits (`SuppressionFiches`).

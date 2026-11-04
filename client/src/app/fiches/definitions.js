@@ -475,7 +475,7 @@ export const TYPES_FICHE = {
           { titre: 'Suivi commercial', champs: ['statut', 'priorite', 'evaluation', 'date_remise', 'date_decision', 'responsable_ind_id', 'metreur_ind_id'] },
           { titre: 'Estimation', champs: ['montant_estime', 'debut_prevu', 'fin_prevue', 'duree_estimee', 'duree_unite'] },
           { titre: 'Adresse des travaux', champs: ['adresse', 'code_postal', 'ville', 'zone'] },
-          { titre: 'Commentaire', champs: ['commentaire', 'responsable'], largeur: 'plein' },
+          { titre: 'Commentaire', champs: ['commentaire'], largeur: 'plein' },
         ],
       }, {
         code: 'intervenants', titre: 'Intervenants',
@@ -506,7 +506,6 @@ export const TYPES_FICHE = {
         c('date_remise', 'Date de remise', 'prj_date_remise', 'date'),
         c('date_decision', 'Date de décision', 'prj_date_decision', 'date'),
         c('montant_estime', 'Montant estimé HT', 'prj_montant_estime', 'nombre', { format: '999999999999.99' }),
-        c('responsable', 'Responsable (ancienne saisie)', 'prj_responsable', 'texte', { longueur: 100, lecture_seule: true, aide: "Texte d'avant le lot 6 : choisir le responsable dans la liste des individus" }),
         c('ville', 'Ville', 'prj_ville', 'texte', { longueur: 100 }),
         c('commentaire', 'Commentaire', 'prj_commentaire', 'zone'),
       ],

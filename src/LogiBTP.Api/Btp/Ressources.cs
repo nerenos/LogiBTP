@@ -46,7 +46,7 @@ public static class Ressources
         SELECT h.hab_id AS id, h.hab_tha_code AS code, t.tha_libelle AS libelle, h.hab_obtenue_le AS obtenue_le, h.hab_valide_jusqu_au AS valide_jusqu_au,
                h.hab_numero AS numero, h.hab_organisme AS organisme, h.hab_dge_id AS dge_id, h.hab_commentaire AS commentaire, t.tha_duree_mois AS duree_mois,
                h.hab_type_element AS type_element, h.hab_id_element AS id_element,
-               CASE h.hab_type_element WHEN 'salarie' THEN (SELECT concat_ws(' ', s.sal_prenom, s.sal_nom, '·', s.sal_matricule) FROM salarie s WHERE s.sal_id = h.hab_id_element)
+               CASE h.hab_type_element WHEN 'salarie' THEN (SELECT concat_ws(' ', s.sal_prenom, s.sal_nom, '·', s.sal_code) FROM salarie s WHERE s.sal_id = h.hab_id_element)
                     ELSE (SELECT concat_ws(' · ', m.mat_code, m.mat_designation) FROM materiel m WHERE m.mat_id = h.hab_id_element) END AS element
         FROM habilitation h JOIN type_habilitation t ON t.tha_code = h.hab_tha_code
         """;

@@ -47,7 +47,7 @@ public static class MagasinBtp
 
     private static Task<List<SalarieSql>> SalariesAsync(LogiBtpContext db, int? id, CancellationToken ct) =>
         db.Database.SqlQuery<SalarieSql>($"""
-            SELECT s.sal_id AS id, s.sal_code AS code, s.sal_matricule AS matricule, s.sal_nom AS nom, s.sal_prenom AS prenom, coalesce((SELECT sv.srv_libelle FROM service sv WHERE sv.srv_code = s.sal_service), s.sal_service) AS service,
+            SELECT s.sal_id AS id, s.sal_code AS code, s.sal_code AS matricule, s.sal_nom AS nom, s.sal_prenom AS prenom, coalesce((SELECT sv.srv_libelle FROM service sv WHERE sv.srv_code = s.sal_service), s.sal_service) AS service,
                    s.sal_ind_id AS ind_id, s.sal_cha_dotation_id AS chantier, s.sal_actif AS actif
             FROM salarie s WHERE ({id}::int IS NULL AND s.sal_actif) OR s.sal_id = {id}::int
             ORDER BY s.sal_nom, s.sal_prenom

@@ -67,6 +67,9 @@
   M-2026-005-1, BL, factures et avoirs d'avancement, situations). La facture d'avancement SI2026-00002 (validée avant
   le lot 6b) n'a pas de numéro de situation.
 - [ ] Groupes de démonstration (`db/131`) absents des bases existantes (régénéré, non rejoué).
+- [ ] Colonnes retirées (04/11/2026) : **arrêter l'API ancienne** (elle lit encore `sal_matricule`), puis rejouer `db/251`,
+  `db/256` et le `131` régénéré, appliquer `db/265` (`sal_matricule` et `prj_responsable` retirés ; texte de responsable
+  non repris gardé à la fin du commentaire du projet) et `modules/ged/db/054` (`search_path` des fonctions de la GED).
 - [ ] Colonne Livraison des commandes et vue Réservation : `db/176` (`ON CONFLICT DO NOTHING`) ne change pas les vues déjà présentes ; retrait de la colonne Révision du matériel : `db/121` et `db/131` à rejouer ; colonne `mat_heures_revision` gardée en base.
 
 ## Fonctionnel
@@ -148,7 +151,6 @@ comptables, ventilation) et 3 (écritures, export Sage 100).
 ### Fiches et listes
 
 - [ ] Listes par requête SQL indisponibles hors ligne (démo : options saisies).
-- [ ] Module Fiche : `AvantSuppressionAsync` n'est surchargé nulle part dans le cœur (contrôles métier avant suppression).
 
 ### Structure des affaires
 
@@ -220,9 +222,6 @@ Analyse du 24/10/2026 : [ANALYSE-MODULE-STOCK.md](documentation/conception/ANALY
 
 ### Installation
 
-- [ ] Fonctions SQL appelées sans schéma dans des expressions indexées ou des colonnes générées (`f_ged_normaliser`…) :
-  qualifier les appels ou poser `SET search_path = public` sur les fonctions, pour qu'un pg_restore direct fonctionne
-  (la restauration de l'installeur rejoue le SQL avec `search_path = public` en attendant).
 - [ ] Séparer les données de démonstration des données de référence (116, 141, 161, 163, démo de 120, sous-traitants
   de 211…) : une base neuve d'installation reçoit aujourd'hui la démonstration (211 dépend des niveaux de 141).
 - [ ] **Module d'installation** ([analyse](documentation/conception/ANALYSE-MODULE-INSTALLATION.md), lots 1 à 4 réalisés) :
@@ -320,7 +319,7 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
 - [ ] Restaurants (lot 10 réalisé) : repas dans la saisie d'équipe de la borne (aujourd'hui : chacun pour soi), liste des repas d'une période (contrôle RH, notes de frais), géocodage à l'enregistrement d'un chantier ou d'une adresse (aujourd'hui : au premier besoin) et carte des restaurants.
 - [ ] Documents (lot 9 réalisé) : reconnaissance des accusés de réception reçus par courriel (module Mail, lot 4 : numéro de commande, rattachement, proposition de la livraison confirmée) ; date de livraison par ligne modifiable sur une commande validée (aujourd'hui : l'ARC de l'entête seulement).
 - [ ] Tarifs fournisseurs (lot 8 réalisé) : formats d'import personnalisés (module Import : correspondance de colonnes enregistrée par fournisseur), remises par famille d'articles et catalogues, unités synonymes à l'import (A18b).
-- [ ] Projet (lot 6) : retirer l'ancien texte `prj_responsable` quand les responsables auront été repris en individus (démo `structure/donnees.js`, `db/161`, `SpecialisationCrmBtp.CreerProjetAsync` qui l'écrit encore) ; zone de déplacement du projet reprise par le chantier ouvert depuis le projet (zones du Pointage par agence).
+- [ ] Projet (lot 6) : zone de déplacement du projet reprise par le chantier ouvert depuis le projet (zones du Pointage par agence).
 - [ ] Matériel (lot 5c réalisé) : import des cartes carburant (module Import, M8) ; relevés de compteurs saisis à la borne (source BORNE prévue) ; données de démonstration d'entretiens (aujourd'hui tous en retard faute d'historique).
 - [ ] Refacturation interne du matériel (M4 du lot 5c) : les heures pointées et planifiées sont valorisées sur les chantiers où il travaille (module Rentabilité, lot 5) ; reste à créditer le chantier de suivi du matériel du même montant (produit interne) et à proposer le coût par heure de l'onglet Coûts comme coût moyen de la fiche.
 
@@ -335,8 +334,6 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
 - [ ] Listes : vues enregistrées par les utilisateurs avec l'ancien picto du statut (colonne `statut`) à passer sur la
   colonne `etat` en pastille (script de reprise des définitions JSON).
 - [ ] Matériel : photo de l'état au retour d'une affectation (dépôt dans la GED du matériel depuis la ligne).
-- [ ] Salariés : retirer `sal_matricule` (recopie du code depuis `db/251`) des requêtes qui le lisent encore (magasin,
-  habilitations, comptes), puis la colonne.
 - [ ] Unités de l'article (E10, suite) : même liste et même conversion depuis le détail de la ligne (combo Unité), et
   choix « ne plus demander » gardé avec le document plutôt que pour la seule fenêtre ouverte.
 - [ ] Choix en liste (I1, suite) : individus de notre société au poste voulu (conducteur, chargé d'affaires, rédacteur :

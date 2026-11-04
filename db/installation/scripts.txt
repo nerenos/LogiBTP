@@ -55,6 +55,7 @@ modules/ged/db/050_ged_schema.sql
 modules/ged/db/051_ged_organisation.sql
 modules/ged/db/052_ged_validite.sql
 modules/ged/db/053_ged_terrain.sql
+modules/ged/db/054_ged_search_path.sql rejouable
 modules/bibliotheque/db/060_bibliotheque_schema.sql
 modules/bibliotheque/db/061_bibliotheque_technique.sql
 modules/bibliotheque/db/062_bibliotheque_coefficients.sql
@@ -212,6 +213,7 @@ db/261_rentabilite_materiel.sql rejouable
 db/262_rentabilite_previsions.sql rejouable
 db/263_rentabilite_facturation.sql rejouable
 db/264_preferences_compte.sql rejouable
+db/265_colonnes_retirees.sql rejouable
 
 # Vues de colonnes des types de documents créés après 176 : rejouée en dernier.
 db/176_documents_vues_types.sql rejouable
