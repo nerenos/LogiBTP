@@ -67,9 +67,6 @@
   M-2026-005-1, BL, factures et avoirs d'avancement, situations). La facture d'avancement SI2026-00002 (validée avant
   le lot 6b) n'a pas de numéro de situation.
 - [ ] Groupes de démonstration (`db/131`) absents des bases existantes (régénéré, non rejoué).
-- [ ] Colonnes retirées (04/11/2026) : **arrêter l'API ancienne** (elle lit encore `sal_matricule`), puis rejouer `db/251`,
-  `db/256` et le `131` régénéré, appliquer `db/265` (`sal_matricule` et `prj_responsable` retirés ; texte de responsable
-  non repris gardé à la fin du commentaire du projet) et `modules/ged/db/054` (`search_path` des fonctions de la GED).
 - [ ] Colonne Livraison des commandes et vue Réservation : `db/176` (`ON CONFLICT DO NOTHING`) ne change pas les vues déjà présentes ; retrait de la colonne Révision du matériel : `db/121` et `db/131` à rejouer ; colonne `mat_heures_revision` gardée en base.
 
 ## Fonctionnel
