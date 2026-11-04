@@ -2,7 +2,7 @@
 
 > **Version :** 1.0 — **Dernière mise à jour :** Octobre 2026  
 > **Projet :** LogiBTP — Module de saisie des documents BTP  
-> **Stack :** Client (JS/TS, Vite, CodeMirror, Immer) · API (.NET 8, ASP.NET Core, EF Core) · BDD (PostgreSQL 17)
+> **Stack :** Client (JS/TS, Vite, CodeMirror, Immer) · API (.NET 10, ASP.NET Core, EF Core) · BDD (PostgreSQL 17)
 
 ---
 
@@ -67,7 +67,7 @@ Fournir une référence complète, structurée et maintenable pour tout dévelop
 
 ### Prérequis
 - **Docker Desktop** (PostgreSQL 17 sur port 5433)
-- **.NET 8 SDK**
+- **.NET 10 SDK**
 - **Node.js 20+** + **npm 10+**
 
 ### Lancement en développement
