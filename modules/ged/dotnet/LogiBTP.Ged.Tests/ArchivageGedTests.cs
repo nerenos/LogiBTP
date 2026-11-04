@@ -17,7 +17,7 @@ public class ArchivageGedTests
     private sealed class ServiceFactice(SocieteCourante societe, List<(string? Societe, string Connexion, Utilisateur U)> appels)
         : ServiceGed(null!, null!, null!)
     {
-        public override Task<ResultatRetentionDto> AppliquerRetention(Utilisateur u, CancellationToken ct)
+        public override Task<ResultatRetentionDto> AppliquerRetentionSysteme(Utilisateur u, CancellationToken ct)
         {
             if (societe.Code == "panne") throw new InvalidOperationException("Base inaccessible");
             appels.Add((societe.Code, societe.Connexion, u));

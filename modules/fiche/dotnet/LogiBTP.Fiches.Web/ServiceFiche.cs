@@ -477,6 +477,7 @@ public partial class ServiceFiche(FicheDbContext db, SpecialisationFiche special
             return true;
         }, ct);
         if (geres.Count > 0) await specialisation.EcrireGeresAsync(code, id, false, geres, valide, u, ct);
+        await specialisation.ApresEcritureAsync(code, id, false, u, ct);
         return await VersFiche(t, await LigneComplete(t, id, null, null, ct), d.Confidentiel, droits, u, d.Jeton, ct);
     }
 
@@ -505,6 +506,7 @@ public partial class ServiceFiche(FicheDbContext db, SpecialisationFiche special
             return (string)(await LireDans(cnx, tx, Requete(() => specialisation.Constructeur(t).Insertion(aEcrire, json, calcules)), ct)).First()["id"]!;
         }, ct);
         if (geres.Count > 0) await specialisation.EcrireGeresAsync(code, id, true, geres, valeurs, u, ct);
+        await specialisation.ApresEcritureAsync(code, id, true, u, ct);
         return await VersFiche(t, await LigneComplete(t, id, null, null, ct), d.Confidentiel, droits, u, null, ct);
     }
 

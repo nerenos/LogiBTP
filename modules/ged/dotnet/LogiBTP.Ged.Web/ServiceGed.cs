@@ -940,10 +940,14 @@ public class ServiceGed(GedDbContext db, SpecialisationGed specialisation, Stock
     // ------------------------------------------------------------------ rétention et archive
 
     /// <summary>Documents actifs (non masqués, hors pièces jointes) dont l'archivage ou la fin de conservation est atteint.</summary>
-    public virtual async Task<List<EcheanceDocumentDto>> Echeances(Utilisateur u, CancellationToken ct)
+    public virtual Task<List<EcheanceDocumentDto>> Echeances(Utilisateur u, CancellationToken ct) => EcheancesAsync(u, false, ct);
+
+    /// <summary>Échéances ; <paramref name="tous"/> : sans le filtre d'accès (archivage automatique de nuit).</summary>
+    private async Task<List<EcheanceDocumentDto>> EcheancesAsync(Utilisateur u, bool tous, CancellationToken ct)
     {
         var regles = await ReglesRetention(ct);
-        var docs = await Visibles(db.Documents.AsNoTracking(), u).Where(d => !d.DgeSupprime && !d.DgeArchive && d.DgeParentId == null).ToListAsync(ct);
+        var source = db.Documents.AsNoTracking();
+        var docs = await (tous ? source : Visibles(source, u)).Where(d => !d.DgeSupprime && !d.DgeArchive && d.DgeParentId == null).ToListAsync(ct);
         var dues = docs.Select(d => (d, e: RegleRetention.Echeances(new DocumentRetention(d.DgeCategorie, d.DgeTypeElement, d.DgeDateDocument, d.DgeCreeLe), regles, Aujourdhui)))
             .Where(x => x.e.Statut != RegleRetention.Actif).ToList();
         var dtos = (await VersDtos(dues.Select(x => x.d).ToList(), ct)).ToDictionary(x => x.Id);
@@ -951,10 +955,18 @@ public class ServiceGed(GedDbContext db, SpecialisationGed specialisation, Stock
     }
 
     /// <summary>Archivage des documents arrivés à échéance (administrateur) : déplacés, ou archivés sur place au coffre-fort.</summary>
-    public virtual async Task<ResultatRetentionDto> AppliquerRetention(Utilisateur u, CancellationToken ct)
+    public virtual Task<ResultatRetentionDto> AppliquerRetention(Utilisateur u, CancellationToken ct) => AppliquerRetentionAsync(u, false, ct);
+
+    /// <summary>
+    /// Archivage automatique de nuit (<c>ArchivageGed</c>, utilisateur système administrateur) : tous les documents échus,
+    /// y compris les SECRET dont il n'est ni l'auteur ni un accès listé (la rétention vaut pour tous les documents).
+    /// </summary>
+    public virtual Task<ResultatRetentionDto> AppliquerRetentionSysteme(Utilisateur u, CancellationToken ct) => AppliquerRetentionAsync(u, true, ct);
+
+    private async Task<ResultatRetentionDto> AppliquerRetentionAsync(Utilisateur u, bool tous, CancellationToken ct)
     {
         if (!specialisation.PeutPurger(u)) throw ExceptionMetier.AccesRefuse("ARCHIVER");
-        var dues = await Echeances(u, ct);
+        var dues = await EcheancesAsync(u, tous, ct);
         var archives = 0;
         foreach (var e in dues) archives += await ArchiverFamille(e.Document.Id, u, $"Rétention : {e.Echeances.Libelle}", ct);
         return new ResultatRetentionDto(dues.Count, archives, dues.Select(e => e.Document.Id).ToList());

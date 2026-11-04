@@ -585,6 +585,9 @@ export class PanneauxBtp extends PanneauxDocument {
       champs.splice(j, 0, ...blocages);
       // Nature (obligatoire pour valider) : avant le code article.
       const natures = (this.editeur.natures ?? []).filter((n) => n.actif !== false || n.id === l.lig_nat_id);
+      const u = champs.findIndex((c) => c.includes('data-champ="lig_code"'));
+      champs.splice(u < 0 ? 0 : u, 0, `<label>${texteHtml('document_btp.panneaux.detail.unite')}
+        <input data-champ="lig_unt_code" data-unites maxlength="10" autocomplete="off" value="${echapper(l.lig_unt_code ?? '')}"></label>`);
       const k = champs.findIndex((c) => c.includes('data-champ="lig_code"'));
       champs.splice(k < 0 ? 0 : k, 0, f.sel('lig_nat_id', texteHtml('document_btp.panneaux.detail.nature', { obligatoire: natureObligatoire(l) ? ' *' : '' }), [['', '—'], ...natures.map((n) => [n.id, `${n.code} – ${n.libelle}`])], true),
         this.champCompte(l));
@@ -600,6 +603,16 @@ export class PanneauxBtp extends PanneauxDocument {
     return `<label class="large" title="${texteHtml('document_btp.panneaux.detail.compte_aide')}">${texteHtml('document_btp.panneaux.detail.compte')}
       <input data-champ="lig_cpt_code" data-comptes maxlength="20" autocomplete="off" value="${echapper(l.lig_cpt_code ?? '')}" placeholder="${c?.herite ? echapper(c.code) : ''}">
       <small class="compte-libelle">${info}</small></label>`;
+  }
+
+  /** Unités proposées sur le champ Unité du détail : celles de l'article en tête, comme dans la grille (E10). */
+  lierUnites(zone, l) {
+    const champ = zone.querySelector('[data-unites]');
+    if (!champ) return;
+    let liste = null;
+    champ.addEventListener('focus', () => { if (!liste && !champ.readOnly && !champ.disabled) liste = new ListeDeroulante(champ, this.editeur.suggestionsUnites(l)); });
+    champ.addEventListener('keydown', (e) => { if (liste?.clavier(e)) e.preventDefault(); });
+    champ.addEventListener('blur', () => { liste?.detruire(); liste = null; });
   }
 
   /** Liste du plan de comptes sur le champ du compte (saisie libre : un code absent du plan reste accepté). */
@@ -639,6 +652,7 @@ export class PanneauxBtp extends PanneauxDocument {
     const l = this.editeur.saisie.lignes.find((x) => x.lig_id === ligId);
     if (!l) return;
     this.lierCompte(zone);
+    this.lierUnites(zone, l);
     const lecture = !!this.editeur.magasin.lectureSeule;
     const ids = () => {
       const sel = this.editeur.grille.selection ?? [];

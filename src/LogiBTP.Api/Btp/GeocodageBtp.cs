@@ -7,8 +7,9 @@ namespace LogiBTP.Api.Btp;
 /// <summary>
 /// Géocodage des adresses (lot 10 des demandes du 25/10/2026, A29) par l'API Adresse (section Geocodage : Adresse,
 /// défaut https://api-adresse.data.gouv.fr/search/ — la Géoplateforme répond au même format —, Actif, ScoreMin 0,4).
-/// Paresseux : une adresse de chantier ou de coordonnée est géocodée quand on en a besoin et que son texte diffère de
-/// l'adresse déjà géocodée (un échec n'est pas retenté pour la même adresse) ; l'API injoignable ne bloque rien.
+/// Une adresse de chantier ou de coordonnée est géocodée à l'enregistrement de la fiche (chantier, restaurant :
+/// <c>SpecialisationFicheBtp.ApresEcritureAsync</c>), sinon quand on en a besoin, si son texte diffère de l'adresse déjà
+/// géocodée (un échec n'est pas retenté pour la même adresse) ; l'API injoignable ne bloque rien.
 /// </summary>
 public sealed class Geocodage(HttpClient client, IConfiguration configuration, ILogger<Geocodage> journal)
 {
@@ -79,4 +80,20 @@ public sealed class Geocodage(HttpClient client, IConfiguration configuration, I
         return r;
     }
 
+    private sealed record AdressePersonne(long CooId, string? Ligne1, string? Ligne2, string? Ligne3, string? CodePostal, string? Ville, string? GeocodeAdresse);
+
+    /// <summary>Adresses d'une personne de relation RESTAURANT dont le texte a changé depuis le dernier géocodage.</summary>
+    public async Task RestaurantAsync(DbContext db, long personne, CancellationToken ct)
+    {
+        if (!Actif) return;
+        var l = await db.Database.SqlQueryRaw<AdressePersonne>("""
+            SELECT c.coo_id, c.coo_ligne1 AS ligne1, c.coo_ligne2 AS ligne2, c.coo_ligne3 AS ligne3, c.coo_code_postal AS code_postal,
+                   c.coo_ville AS ville, c.coo_geocode_adresse AS geocode_adresse
+            FROM personne p JOIN usage_coordonnee u ON u.uco_per_id = p.per_id JOIN coordonnee c ON c.coo_id = u.uco_coo_id
+            WHERE p.per_id = @p AND p.per_casquettes ? 'RESTAURANT' AND c.coo_nature = 'ADRESSE'
+            """, new NpgsqlParameter("p", personne)).ToListAsync(ct);
+        var aFaire = l.Select(x => (x.CooId, t: Geographie.TexteAdresse(x.Ligne1, x.Ligne2, x.Ligne3, x.CodePostal, x.Ville), x.GeocodeAdresse))
+            .Where(x => x.t is not null && x.t != x.GeocodeAdresse).Select(x => new AdresseAGeocoder(x.CooId, x.t!)).ToList();
+        if (aFaire.Count > 0) await CoordonneesAsync(db, aFaire, 5, ct);
+    }
 }

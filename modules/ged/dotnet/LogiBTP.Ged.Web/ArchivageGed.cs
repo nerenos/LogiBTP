@@ -71,7 +71,7 @@ public class ArchivageGed(IServiceProvider services, IOptions<OptionsArchivageGe
             try
             {
                 await using var portee = services.CreerPorteeSociete(societe);
-                var r = await portee.ServiceProvider.GetRequiredService<ServiceGed>().AppliquerRetention(u, ct);
+                var r = await portee.ServiceProvider.GetRequiredService<ServiceGed>().AppliquerRetentionSysteme(u, ct);
                 resultats.Add(new ArchivageBaseGed(nom, r, null));
                 if (r.Documents > 0) journal.LogInformation("GED ({Base}) : rétention appliquée, {Documents} document(s) échu(s), {Archives} archivé(s)", nom, r.Documents, r.Archives);
             }

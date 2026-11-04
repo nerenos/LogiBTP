@@ -66,6 +66,12 @@ public class SpecialisationFiche
     public virtual Task ValiderGeresAsync(string type, string? id, IReadOnlyDictionary<string, System.Text.Json.JsonElement> geres,
         IReadOnlyDictionary<string, object?> valeurs, Utilisateur u, CancellationToken ct) => Task.CompletedTask;
 
+    /// <summary>
+    /// Après l'enregistrement complet d'une fiche (ligne puis champs gérés), hors transaction : suites sans effet sur la
+    /// réponse (géocodage…). Une erreur n'annule rien : la spécialisation l'attrape et la journalise.
+    /// </summary>
+    public virtual Task ApresEcritureAsync(string type, string id, bool creation, Utilisateur u, CancellationToken ct) => Task.CompletedTask;
+
     /// <summary>Écriture des champs gérés saisis, après celle de la ligne (id de la fiche créée à la création).</summary>
     public virtual Task EcrireGeresAsync(string type, string id, bool creation, IReadOnlyDictionary<string, System.Text.Json.JsonElement> geres,
         IReadOnlyDictionary<string, object?> valeurs, Utilisateur u, CancellationToken ct) =>

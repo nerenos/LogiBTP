@@ -815,7 +815,8 @@
         "aucun_compte": "Aucun compte",
         "compte_herite": "(hérité : {{detail}})",
         "compte_aide": "Vide : compte de la ventilation (nature et taux de TVA, nature, taux, puis compte par défaut du type comptable du document)",
-        "compte": "Compte comptable"
+        "compte": "Compte comptable",
+        "unite": "Unité"
       },
       "calcul": {
         "qte_vendue": "Qté vendue",

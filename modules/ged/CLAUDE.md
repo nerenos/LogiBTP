@@ -66,7 +66,7 @@
 - Dépôt multipart lu par le service (pas de liaison `IFormFile`, `DisableAntiforgery`) ; ne jamais poser le Content-Type d'un FormData.
 - Bases existantes : appliquer 051 aux deux bases, puis `POST /api/ged/indexation` (administrateur, par lots) pour indexer les documents déjà déposés.
 - Toute modification d'une règle répliquée : les deux côtés + le jeu de cas.
-- Archivage automatique : l'utilisateur système passe par le filtre d'accès (`AccesGed`) comme un administrateur ; un document SECRET dont il n'est ni l'auteur ni un accès listé n'est donc pas archivé automatiquement (à faire à la main par son auteur).
+- Archivage automatique : `ArchivageGed` appelle `ServiceGed.AppliquerRetentionSysteme` (échéances sans le filtre d'accès : documents SECRET compris) ; `AppliquerRetention` (route `/retention/appliquer`) garde le filtre de l'administrateur qui l'appelle.
 
 ## Textes, icônes et couleurs (module Personnalisation, lot P3f)
 - Textes `ged.*` de `js/personnalisation/fr.json` (zones `confidentialites`, `etapes`, `actions_fin`, `derivations`, `statuts_retention`, `etats_index`, `colonnes`, `tailles`, `champs`, `fournisseur`, `apercu`, `depot`, `regles`, `explorateur`) ; icônes `ged_*` de `images/icones.json` et communes du socle ; couleurs `--ged-*` de `theme.css`.

@@ -153,8 +153,6 @@ comptables, ventilation) et 3 (écritures, export Sage 100).
 ### GED
 
 - [ ] Revue des fins de conservation (DETRUIRE : purge proposée, jamais pour le coffre-fort).
-- [ ] L'archivage automatique de nuit (`ArchivageGed`) ne voit pas les documents SECRET d'autrui (filtre d'accès de
-  l'utilisateur système).
 - [ ] Texte des images (OCR) et des .msg non extrait ; résumé automatique (agent IA local).
 
 ### Sous-traitance
@@ -310,7 +308,7 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
 - [ ] « Ne plus utiliser » (db/228) : écarter ces fiches des choix de nouvelle saisie (recherche des tiers de l'annuaire, appel de la bibliothèque, ressources du planning, salariés du pointage et du magasin) : point d'accroche à prévoir dans les modules Annuaire et Bibliothèque (colonne du cœur).
 - [ ] Fournisseur « TVA intracommunautaire » (db/229) : proposer la catégorie de TVA autoliquidée (module Comptabilité) sur les lignes de ses pièces d'achat ; type de tiers FE à reprendre par le futur module Facturation électronique.
 - [ ] Sécurité de la base (lot 11 réalisé) : `MettreAJour-LogiBTP.ps1` pourrait relancer la préparation et redémarrer la base quand la connexion n'est pas chiffrée (aujourd'hui : relancer l'installeur) ; renouvellement du certificat de la base dans la tâche planifiée (aujourd'hui : à chaque préparation, 60 jours avant l'échéance ; certificat de 730 jours).
-- [ ] Restaurants (lot 10 réalisé) : repas dans la saisie d'équipe de la borne (aujourd'hui : chacun pour soi), liste des repas d'une période (contrôle RH, notes de frais), géocodage à l'enregistrement d'un chantier ou d'une adresse (aujourd'hui : au premier besoin) et carte des restaurants.
+- [ ] Restaurants (lot 10 réalisé) : repas dans la saisie d'équipe de la borne (aujourd'hui : chacun pour soi), liste des repas d'une période (contrôle RH, notes de frais) et carte des restaurants.
 - [ ] Documents (lot 9 réalisé) : reconnaissance des accusés de réception reçus par courriel (module Mail, lot 4 : numéro de commande, rattachement, proposition de la livraison confirmée) ; date de livraison par ligne modifiable sur une commande validée (aujourd'hui : l'ARC de l'entête seulement).
 - [ ] Tarifs fournisseurs (lot 8 réalisé) : formats d'import personnalisés (module Import : correspondance de colonnes enregistrée par fournisseur), remises par famille d'articles et catalogues, unités synonymes à l'import (A18b).
 - [ ] Projet (lot 6) : zone de déplacement du projet reprise par le chantier ouvert depuis le projet (zones du Pointage par agence).
@@ -323,11 +321,7 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
 
 - [ ] Barres d'outils (suite de E1) : débordement replié dans un menu « ⋯ » en petite largeur (aujourd'hui : retour à
   la ligne des groupes).
-- [ ] Indicateur « Devis à relancer » : une note de relance du CRM doit remettre le délai de 15 jours à zéro (Q5 ;
-  aujourd'hui : jours depuis l'envoi, `jours_envoye` de `db/253`) ; délai de relance en paramètre.
 - [ ] Matériel : photo de l'état au retour d'une affectation (dépôt dans la GED du matériel depuis la ligne).
-- [ ] Unités de l'article (E10, suite) : même liste et même conversion depuis le détail de la ligne (combo Unité), et
-  choix « ne plus demander » gardé avec le document plutôt que pour la seule fenêtre ouverte.
 - [ ] Choix en liste (I1, suite) : individus de notre société au poste voulu (conducteur, chargé d'affaires, rédacteur :
   combos actuelles) et contact d'un intervenant dans la liste des contacts du tiers ; sélection multiple (destinataires).
 - [ ] Champs mois (`<input type="month">`, 13 écrans) : même saisie abrégée que les dates, à étudier.

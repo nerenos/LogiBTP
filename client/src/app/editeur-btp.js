@@ -454,8 +454,38 @@ export class EditeurDevisBtp extends EditeurDocument {
     return true;
   }
 
-  /** Compte comptable (grille ou détail) : code sans espaces, 20 caractères ; vide = compte hérité. */
+  /**
+   * Choix « ne plus demander pour ce document » de la conversion d'unité (Q6) : gardé dans le navigateur par document,
+   * repris à la réouverture (PRIX, PRIX_QTE ou AUCUN).
+   */
+  get choixConversion() {
+    const cle = this.#cleConversion();
+    if (!cle) return this._choixConversion ?? null;
+    try { return localStorage.getItem(cle) ?? this._choixConversion ?? null; } catch { return this._choixConversion ?? null; }
+  }
+
+  set choixConversion(choix) {
+    this._choixConversion = choix;
+    const cle = this.#cleConversion();
+    if (!cle) return;
+    try { if (choix) localStorage.setItem(cle, choix); else localStorage.removeItem(cle); } catch { /* stockage indisponible : mémoire seule */ }
+  }
+
+  #cleConversion() {
+    const id = this.saisie?.document?.ent_groupe_id ?? this.saisie?.document?.ent_id;
+    return id && Number(id) > 0 ? `logibtp.conversionUnite.${id}` : null;
+  }
+
+  /**
+   * Compte comptable (grille ou détail) : code sans espaces, 20 caractères ; vide = compte hérité. Unité (détail de la
+   * ligne) : même conversion du prix que dans la grille.
+   */
   modifierLigne(id, champ, valeur) {
+    if (champ === 'lig_unt_code') {
+      const unite = String(valeur ?? '').trim().slice(0, 10) || null;
+      if (this.changerUnite(id, unite)) return;
+      valeur = unite;
+    }
     super.modifierLigne(id, champ, champ === 'lig_cpt_code' ? String(valeur ?? '').trim().slice(0, 20) || null : valeur);
   }
 

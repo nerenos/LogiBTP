@@ -89,6 +89,28 @@ public sealed class SpecialisationFicheBtp(IServiceScopeFactory scopes) : Specia
     }
 
     /// <summary>
+    /// Après l'enregistrement d'une fiche : chantier ou restaurant (personne de relation RESTAURANT) géocodés si leur
+    /// adresse a changé (restaurants proches du Pointage) ; un échec est journalisé sans rien annuler.
+    /// </summary>
+    public override async Task ApresEcritureAsync(string type, string id, bool creation, Utilisateur u, CancellationToken ct)
+    {
+        if (type is not (TypesFiche.Chantier or TypesFiche.Personne) || !long.TryParse(id, NumberStyles.None, CultureInfo.InvariantCulture, out var cle)) return;
+        using var scope = scopes.CreateScope();
+        var geo = scope.ServiceProvider.GetService<Geocodage>();
+        if (geo is null) return;
+        try
+        {
+            var db = scope.ServiceProvider.GetRequiredService<LogiBtpContext>();
+            if (type == TypesFiche.Chantier) await geo.ChantierAsync(db, (int)cle, ct);
+            else await geo.RestaurantAsync(db, cle, ct);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            scope.ServiceProvider.GetRequiredService<ILogger<SpecialisationFicheBtp>>().LogWarning(e, "Géocodage de la fiche {Type} {Id} impossible", type, id);
+        }
+    }
+
+    /// <summary>
     /// Chrono d'un marché ({PARENT}) : code de son chantier sans le préfixe du chrono des chantiers (CH-2026-002 →
     /// 2026-002, d'où M-2026-002-1).
     /// </summary>

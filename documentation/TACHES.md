@@ -150,3 +150,10 @@
   ligne passés sur `SqlBtp.P` (restent les tuples, lambdas et `AddWithValue`).
 - [x] Reprises de `db/266` : vues de liste enregistrées sur l'ancien libellé du statut passées sur la pastille `etat`
   (segments compris), colonnes Compte et Commentaire de la vue « Complet ».
+- [x] Archivage de nuit de la GED sur tous les documents échus, SECRET compris (`ServiceGed.AppliquerRetentionSysteme`).
+- [x] Devis à relancer : une note du CRM de type Relance remet le délai à zéro (`db/267`) ; délai = filtre de l'indicateur
+  de la vue (15 jours par défaut, modifiable dans le concepteur).
+- [x] Géocodage à l'enregistrement d'un chantier ou d'un restaurant (point d'accroche `ApresEcritureAsync` du module
+  Fiche).
+- [x] Unités de l'article (E10, suite) : champ Unité du détail de la ligne (unités de l'article en tête, même conversion
+  du prix) ; « ne plus demander » gardé dans le navigateur pour le document.
