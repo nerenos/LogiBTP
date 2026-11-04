@@ -67,6 +67,18 @@ export async function individusStructure(annuaire) {
   try { return await api.individusStructure(); } catch { return individusSociete(annuaire); }
 }
 
+
+/**
+ * Champ libre à liste de choix (ListeDeroulante) du détail : une valeur choisie dans la liste est écrite par programme et
+ * n'émet pas « change », que le détail écoute ; en quittant le champ, « change » est émis si la valeur a changé.
+ */
+function suivreChoix(champ) {
+  let avant = champ.value;
+  champ.addEventListener('focus', () => { avant = champ.value; });
+  champ.addEventListener('change', () => { avant = champ.value; });
+  champ.addEventListener('blur', () => { if (champ.value !== avant) champ.dispatchEvent(new Event('change')); });
+}
+
 /**
  * Panneaux du devis BTP : mode de calcul des ouvrages et variables du document ($$) dans l'entête,
  * quantité issue du métré, perte et blocages de prix dans le détail, déboursé et marge, coefficient de frais annexes.
@@ -610,6 +622,7 @@ export class PanneauxBtp extends PanneauxDocument {
     const champ = zone.querySelector('[data-unites]');
     if (!champ) return;
     let liste = null;
+    suivreChoix(champ);
     champ.addEventListener('focus', () => { if (!liste && !champ.readOnly && !champ.disabled) liste = new ListeDeroulante(champ, this.editeur.suggestionsUnites(l)); });
     champ.addEventListener('keydown', (e) => { if (liste?.clavier(e)) e.preventDefault(); });
     champ.addEventListener('blur', () => { liste?.detruire(); liste = null; });
@@ -621,6 +634,7 @@ export class PanneauxBtp extends PanneauxDocument {
     if (!champ) return;
     const options = (this.editeur.comptes ?? []).filter((c) => c.actif !== false).map((c) => ({ valeur: c.code, libelle: c.libelle }));
     let liste = null;
+    suivreChoix(champ);
     champ.addEventListener('focus', () => { if (!liste && !champ.readOnly) liste = new ListeDeroulante(champ, options); });
     champ.addEventListener('keydown', (e) => { if (liste?.clavier(e)) e.preventDefault(); });
     champ.addEventListener('blur', () => { liste?.detruire(); liste = null; });
