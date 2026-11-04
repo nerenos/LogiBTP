@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { correspondre, construire, analyser, Routeur, PageBase, afficherApercu, CLE_APERCU } from '../src/routeur.js';
 import { GestionFenetres, sessionAProposer, optionsFenetre, CLE_PRECEDENTE, CLE_SESSION } from '../src/fenetres.js';
-import { Preferences, deplacer } from '../src/preferences.js';
+import { Preferences, deplacer, inserer } from '../src/preferences.js';
 
 describe('routes', () => {
   it('paramètres obligatoires et facultatifs', () => {
@@ -260,5 +260,12 @@ describe('préférences', () => {
     expect(new Preferences('x', { raccourcis: [], nouvelleFenetre: false }, s).get('raccourcis')).toEqual(['b', 'a']);
     p.reinitialiser('raccourcis');
     expect(p.get('raccourcis')).toEqual(['a', 'b']);
+  });
+
+  it('insertion à une place ou à la fin', () => {
+    expect(inserer(['a', 'b'], 'x', 1)).toEqual(['a', 'x', 'b']);
+    expect(inserer(['a', 'b'], 'x', 0)).toEqual(['x', 'a', 'b']);
+    expect(inserer(['a', 'b'], 'x')).toEqual(['a', 'b', 'x']);
+    expect(inserer(['a', 'b'], 'x', 9)).toEqual(['a', 'b', 'x']);
   });
 });

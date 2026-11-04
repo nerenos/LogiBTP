@@ -205,7 +205,27 @@ body:has(> .bandeau-auto.bandeau-gauche.bandeau-survol) > .pages { margin-right:
 .accueil-tuile .libelle { font-weight: 500; }
 .accueil-edition .accueil-tuile[draggable="true"], .accueil-edition .widget[draggable="true"] { cursor: grab; outline: 1px dashed var(--accent); }
 .accueil-retirer { position: absolute; top: 0.2rem; right: 0.2rem; padding: 0 0.35rem; font-size: 0.85em; }
-.accueil-ajout select { width: 100%; }
+.accueil-ajout { border-style: dashed; cursor: pointer; font: inherit; }
+.accueil-ajout .libelle { color: var(--discret); }
+.accueil-tuile.accueil-depot { border-color: var(--accent); box-shadow: inset 4px 0 0 var(--accent); }
+.accueil-ajout.accueil-depot { box-shadow: inset 0 0 0 2px var(--accent); }
+/* Fenêtre non modale de choix des raccourcis : à droite, les tuiles restent visibles pour y déposer. */
+dialog.accueil-choix { position: fixed; inset: 4.5rem 1rem auto auto; margin: 0; z-index: 50; width: min(22rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 6rem); padding: 0; display: flex; flex-direction: column; }
+dialog.accueil-choix:not([open]) { display: none; }
+@media (min-width: 700px) { .accueil.accueil-choix-ouvert { padding-right: calc(min(22rem, 100vw - 2rem) + 2rem); } }
+.accueil-choix header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.45rem 0.5rem 0.45rem 0.8rem; border-bottom: 1px solid var(--bord); }
+.accueil-choix h3 { margin: 0; font-size: 1rem; }
+.accueil-choix header button { border: none; background: none; color: var(--discret); cursor: pointer; padding: 0 0.3rem; }
+.accueil-choix header button:hover { color: var(--texte); }
+.accueil-choix > .aide { margin: 0.45rem 0.8rem 0.3rem; }
+.accueil-choix input[type="search"] { margin: 0 0.8rem 0.4rem; }
+.accueil-choix-liste { overflow: auto; padding: 0 0.8rem 0.6rem; }
+.accueil-choix-liste h4 { margin: 0.5rem 0 0.2rem; font-size: 0.8rem; color: var(--discret); text-transform: uppercase; letter-spacing: 0.04em; }
+.accueil-choix-liste ul { list-style: none; margin: 0; padding: 0; }
+.accueil-choix-liste li { display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0.4rem; border-radius: 4px; cursor: grab; user-select: none; }
+.accueil-choix-liste li:hover, .accueil-choix-liste li:focus { background: var(--accent-clair); outline: none; }
+.accueil-choix-liste li .icone { width: 1.4em; text-align: center; }
 .accueil-edition-pied { display: flex; justify-content: flex-end; gap: 0.5rem; }
 .accueil-edition-pied[hidden] { display: none; }
 

@@ -9,7 +9,7 @@ const MAX_HISTORIQUE = 30;
 // (survol ou →), zone d'information (société, mode, messages) à droite. Bandeau trop étroit : libellés courts.
 //
 // menus : [{ code, libelle: '&Ressources' (lettre d'accès après &), court: 'Res.' (écran étroit), elements: [...] ou () => [...] }]
-// élément : { libelle, icone, url, action, separateur, desactive, info, raccourci, coche, fenetre (⧉ proposé,
+// élément : { libelle, icone (texte) ou iconeHtml (HTML sûr de iconeHtml du dictionnaire : emoji ou image), url, action, separateur, desactive, info, raccourci, coche, fenetre (⧉ proposé,
 //             vrai par défaut pour une URL), titre (bulle), creation ({ url, titre } : bouton ＋ de création rapide
 //             sur la même ligne ; Ctrl : nouvelle fenêtre), sousMenu ([...] ou () => [...] : éléments du sous-menu) }
 // naviguer(url, { nouvelleFenetre }) : navigation demandée (Ctrl, Maj ou clic milieu, ou ⧉ : nouvelle fenêtre).
@@ -272,7 +272,7 @@ export class Bandeau {
       return `<div class="bandeau-element${x.desactive ? ' desactive' : ''}${x.sousMenu ? ' a-sous-menu' : ''}${x.classe ? ` ${echapper(x.classe)}` : ''}" role="menuitem" data-index="${i}"
           aria-disabled="${Boolean(x.desactive)}"${x.sousMenu ? ' aria-haspopup="true"' : ''} title="${echapper(x.titre ?? x.info ?? '')}">
         <span class="bandeau-coche">${x.coche ? '✓' : ''}</span>
-        <span class="bandeau-icone">${echapper(x.icone ?? '')}</span>
+        <span class="bandeau-icone">${x.iconeHtml ?? echapper(x.icone ?? '')}</span>
         <span class="bandeau-libelle">${echapper(x.libelle)}${x.info ? `<small>${echapper(x.info)}</small>` : ''}</span>
         <span class="bandeau-raccourci">${echapper(x.raccourci ?? '')}</span>
         ${x.creation && !x.desactive ? `<button type="button" class="bandeau-fenetre bandeau-creation" data-creation title="${texteHtml('navigation.bandeau.creation', { titre: x.creation.titre ?? texte('commun.creer') })}">＋</button>` : '<span></span>'}
@@ -382,7 +382,7 @@ export class Bandeau {
           role="treeitem" data-ligne="${echapper(chemin)}" tabindex="-1" style="--profondeur: ${profondeur}"
           aria-disabled="${Boolean(x.desactive)}"${x.sousMenu ? ` aria-expanded="${ouvert}"` : ''} title="${echapper(x.titre ?? x.info ?? '')}">
         <span class="bandeau-coche">${x.coche ? '✓' : ''}</span>
-        <span class="bandeau-icone">${echapper(x.icone ?? '')}</span>
+        <span class="bandeau-icone">${x.iconeHtml ?? echapper(x.icone ?? '')}</span>
         <span class="bandeau-libelle">${echapper(x.libelle)}${x.info ? `<small>${echapper(x.info)}</small>` : ''}</span>
         ${x.creation && !x.desactive ? `<button type="button" class="bandeau-fenetre bandeau-creation" data-creation tabindex="-1" title="${texteHtml('navigation.bandeau.creation', { titre: x.creation.titre ?? texte('commun.creer') })}">＋</button>` : '<span></span>'}
         ${fenetre ? `<button type="button" class="bandeau-fenetre" data-fenetre tabindex="-1" title="${texteHtml('navigation.bandeau.nouvelle_fenetre')}">⧉</button>` : x.sousMenu ? `<span class="bandeau-fleche">${ouvert ? '▾' : '▸'}</span>` : '<span></span>'}

@@ -1,13 +1,14 @@
 import { echapper, confirmer } from '@logibtp/socle/ui';
-import { deplacer } from '../src/preferences.js';
+import { deplacer, inserer } from '../src/preferences.js';
 import { TYPES_WIDGET } from './widgets.js';
-import { texte, texteHtml, pluriel, langue } from '@logibtp/socle/dictionnaire';
+import { texte, texteHtml, pluriel, langue, iconeHtml } from '@logibtp/socle/dictionnaire';
 
-// Accueil (classe mère) : bandeau « Restaurer ma session précédente », raccourcis personnalisables (ajout, retrait,
+// Accueil (classe mère) : bandeau « Restaurer ma session précédente », raccourcis personnalisables (ajout par une
+// fenêtre de choix non modale : glisser sur les tuiles = place choisie, double-clic ou Entrée = à la fin ; retrait,
 // ordre par glisser), tableau de bord de widgets (ajout, retrait, ordre, taille). Choix gardés dans le navigateur.
 //
 // options :
-//   catalogueRaccourcis : [{ code, libelle, icone, url, groupe }]
+//   catalogueRaccourcis : [{ code, libelle, icone (texte) ou iconeHtml (HTML sûr), url, groupe }]
 //   catalogueWidgets    : [{ code, type, titre, icone, description, taille ('petit' | 'moyen' | 'large'), url, charger }]
 //   preferences         : Preferences (clés raccourcis : [code], widgets : [{ code, taille }])
 //   session             : { precedente: () => session | null, restaurer(session) → { bloquees }, ouvrir(fenetre), oublier() }
@@ -15,6 +16,8 @@ import { texte, texteHtml, pluriel, langue } from '@logibtp/socle/dictionnaire';
 
 const TAILLES = ['petit', 'moyen', 'large'];
 const LIBELLES_TAILLE = { petit: '¼', moyen: '½', large: '1' };
+const sansAccent = (t) => String(t ?? '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+const iconeRaccourci = (r) => r.iconeHtml ?? echapper(r.icone ?? '🔗');
 const dateHeure = (t) => new Date(t).toLocaleString(langue(), { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
 
 export class AccueilBase {
@@ -101,29 +104,99 @@ export class AccueilBase {
     zone.innerHTML = codes.map((c, i) => {
       const r = this.#raccourci(c);
       return `<a class="accueil-tuile" href="${echapper(r.url)}" data-url="${echapper(r.url)}" data-index="${i}" draggable="${this.edition}" title="${texteHtml('navigation.accueil.tuile_titre', { libelle: r.groupe ? `${r.groupe} › ${r.libelle}` : r.libelle })}">
-        <span class="icone">${echapper(r.icone ?? '🔗')}</span><span class="libelle">${echapper(r.libelle)}</span>
-        ${this.edition ? `<button type="button" class="accueil-retirer" data-action="retirer-raccourci" data-index="${i}" title="${texteHtml('commun.retirer')}">✕</button>` : ''}</a>`;
-    }).join('') + (this.edition ? `<div class="accueil-tuile accueil-ajout">
-        <span class="icone">＋</span><select data-action="ajouter-raccourci" aria-label="${texteHtml('navigation.accueil.ajouter_raccourci')}"><option value="">${texteHtml('navigation.accueil.ajouter_raccourci_choix')}</option>
-        ${this.#optionsGroupees(this.catalogueRaccourcis.filter((r) => !codes.includes(r.code)), (r) => r.groupe ?? texte('navigation.accueil.autres'), (r) => `${r.icone ?? ''} ${r.libelle}`)}</select></div>` : '')
+        <span class="icone">${iconeRaccourci(r)}</span><span class="libelle">${echapper(r.libelle)}</span>
+        ${this.edition ? `<button type="button" class="accueil-retirer" data-action="retirer-raccourci" data-index="${i}" title="${texteHtml('commun.retirer')}">${iconeHtml('retirer')}</button>` : ''}</a>`;
+    }).join('') + (this.edition ? `<button type="button" class="accueil-tuile accueil-ajout" data-action="ajouter-raccourci" title="${texteHtml('navigation.accueil.choix_aide')}">
+        <span class="icone">${iconeHtml('ajouter')}</span><span class="libelle">${texteHtml('navigation.accueil.ajouter_raccourci')}</span></button>` : '')
       || `<p class="aide">${texteHtml('navigation.accueil.aucun_raccourci')}</p>`;
-    zone.querySelector('select')?.addEventListener('change', (e) => {
-      if (!e.target.value) return;
-      this.preferences.set('raccourcis', [...this.preferences.get('raccourcis'), e.target.value]);
-      this.rendreRaccourcis();
+    this.#rendreChoix();
+  }
+
+  // ---------------------------------------------------------------- fenêtre de choix des raccourcis
+
+  /** Fenêtre non modale (les tuiles restent des cibles de dépôt) des raccourcis pas encore affichés. */
+  #ouvrirChoix() {
+    if (this.choix) { this.choix.querySelector('input').focus(); return; }
+    const d = document.createElement('dialog');
+    d.className = 'accueil-choix';
+    d.innerHTML = `<header><h3>${texteHtml('navigation.accueil.choix_titre')}</h3>
+        <button type="button" data-fermer title="${texteHtml('commun.fermer')}">${iconeHtml('retirer')}</button></header>
+      <p class="aide">${texteHtml('navigation.accueil.choix_aide')}</p>
+      <input type="search" placeholder="${texteHtml('navigation.accueil.choix_filtre')}" aria-label="${texteHtml('navigation.accueil.choix_filtre')}">
+      <div class="accueil-choix-liste"></div>`;
+    d.querySelector('[data-fermer]').addEventListener('click', () => this.#fermerChoix());
+    d.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); this.#fermerChoix(); return; }
+      const el = e.target.closest?.('[data-code]');
+      if (el && e.key === 'Enter') { e.preventDefault(); this.#ajouterRaccourci(el.dataset.code); }
     });
+    d.addEventListener('dblclick', (e) => {
+      const el = e.target.closest('[data-code]');
+      if (el) this.#ajouterRaccourci(el.dataset.code);
+    });
+    d.querySelector('input').addEventListener('input', () => this.#rendreChoix());
+    this.racine.append(d);
+    this.choix = d;
+    this.racine.classList.add('accueil-choix-ouvert');
+    d.show();
+    this.#rendreChoix();
+    d.querySelector('input').focus();
   }
 
-  #optionsGroupees(elements, groupe, libelle) {
+  #fermerChoix() {
+    this.choix?.close();
+    this.choix?.remove();
+    this.choix = null;
+    this.racine.classList.remove('accueil-choix-ouvert');
+  }
+
+  #rendreChoix() {
+    const liste = this.choix?.querySelector('.accueil-choix-liste');
+    if (!liste) return;
+    const codes = this.preferences.get('raccourcis');
+    const filtre = sansAccent(this.choix.querySelector('input').value.trim());
+    const disponibles = this.catalogueRaccourcis.filter((r) => !codes.includes(r.code));
+    const retenus = disponibles.filter((r) => !filtre || sansAccent(`${r.groupe ?? ''} ${r.libelle}`).includes(filtre));
+    if (!retenus.length) {
+      liste.innerHTML = `<p class="aide">${texteHtml(disponibles.length ? 'navigation.accueil.choix_aucun' : 'navigation.accueil.tous_raccourcis')}</p>`;
+      return;
+    }
     const groupes = new Map();
-    for (const x of elements) groupes.set(groupe(x), [...(groupes.get(groupe(x)) ?? []), x]);
-    return [...groupes].map(([g, xs]) => `<optgroup label="${echapper(g)}">${xs.map((x) => `<option value="${echapper(x.code)}">${echapper(libelle(x))}</option>`).join('')}</optgroup>`).join('');
+    for (const r of retenus) {
+      const g = r.groupe ?? texte('navigation.accueil.autres');
+      groupes.set(g, [...(groupes.get(g) ?? []), r]);
+    }
+    liste.innerHTML = [...groupes].map(([g, rs]) => `<h4>${echapper(g)}</h4><ul>${rs.map((r) => `<li draggable="true" tabindex="0" data-code="${echapper(r.code)}">
+        <span class="icone">${iconeRaccourci(r)}</span><span>${echapper(r.libelle)}</span></li>`).join('')}</ul>`).join('');
   }
 
-  /** Réordonnancement des raccourcis et des widgets par glisser-déposer (mode personnalisation). */
+  /** Raccourci du catalogue ajouté à `position` (index d'une tuile affichée) ou à la fin. */
+  #ajouterRaccourci(code, position = null) {
+    const codes = this.preferences.get('raccourcis');
+    if (!this.#raccourci(code) || codes.includes(code)) return;
+    // Position parmi les tuiles affichées → position dans la préférence (codes absents du catalogue gardés en place).
+    const affiches = codes.filter((c) => this.#raccourci(c));
+    const avant = position == null || position >= affiches.length ? null : codes.indexOf(affiches[position]);
+    this.preferences.set('raccourcis', inserer(codes, code, avant));
+    this.rendreRaccourcis();
+  }
+
+  /** Réordonnancement des raccourcis et des widgets par glisser-déposer (mode personnalisation) ; ajout d'un raccourci
+   *  glissé depuis la fenêtre de choix (déposé sur une tuile : à sa place ; ailleurs dans les tuiles : à la fin). */
   #glisser() {
     let source = null;
+    const marquer = (el) => {
+      this.racine.querySelectorAll('.accueil-depot').forEach((x) => x !== el && x.classList.remove('accueil-depot'));
+      el?.classList.add('accueil-depot');
+    };
     this.racine.addEventListener('dragstart', (e) => {
+      const choisi = e.target.closest?.('.accueil-choix [data-code]');
+      if (choisi) {
+        source = { zone: 'catalogue', code: choisi.dataset.code };
+        e.dataTransfer.effectAllowed = 'copy';
+        e.dataTransfer.setData('text/plain', source.code);
+        return;
+      }
       const el = e.target.closest('[draggable="true"][data-index]');
       if (!el || !this.edition) return;
       source = { zone: el.closest('.accueil-tuiles') ? 'raccourcis' : 'widgets', index: Number(el.dataset.index) };
@@ -131,9 +204,27 @@ export class AccueilBase {
       e.dataTransfer.setData('text/plain', String(source.index));
     });
     this.racine.addEventListener('dragover', (e) => {
-      if (source && e.target.closest('[data-index]')) e.preventDefault();
+      if (!source) return;
+      if (source.zone === 'catalogue') {
+        const zone = e.target.closest('.accueil-tuiles');
+        if (!zone) { marquer(null); return; }
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+        marquer(e.target.closest('.accueil-tuile[data-index]') ?? zone.querySelector('.accueil-ajout'));
+      } else if (e.target.closest('[data-index]')) e.preventDefault();
     });
+    this.racine.addEventListener('dragend', () => { source = null; marquer(null); });
     this.racine.addEventListener('drop', (e) => {
+      if (source?.zone === 'catalogue') {
+        if (!e.target.closest('.accueil-tuiles')) return;
+        e.preventDefault();
+        const cible = e.target.closest('.accueil-tuile[data-index]');
+        const code = source.code;
+        source = null;
+        marquer(null);
+        this.#ajouterRaccourci(code, cible ? Number(cible.dataset.index) : null);
+        return;
+      }
       const cible = e.target.closest('[data-index]');
       if (!source || !cible) return;
       e.preventDefault();
@@ -191,7 +282,7 @@ export class AccueilBase {
   async #clic(e) {
     const b = e.target.closest('[data-action]');
     const action = b?.dataset.action;
-    if (action && b.tagName !== 'SELECT') {
+    if (action) {
       e.preventDefault();
       e.stopPropagation();
       const i = Number(b.dataset.index);
@@ -223,6 +314,7 @@ export class AccueilBase {
             this.rendreWidgets();
           }
           break;
+        case 'ajouter-raccourci': this.#ouvrirChoix(); break;
         case 'retirer-raccourci':
           this.preferences.set('raccourcis', this.preferences.get('raccourcis').filter((_, k) => k !== i));
           this.rendreRaccourcis();
@@ -255,6 +347,7 @@ export class AccueilBase {
 
   #basculerEdition(actif) {
     this.edition = actif;
+    if (!actif) this.#fermerChoix();
     this.racine.classList.toggle('accueil-edition', actif);
     this.racine.querySelector('.accueil-edition-pied').hidden = !actif;
     this.racine.querySelector('[data-action="personnaliser"]').classList.toggle('actif', actif);

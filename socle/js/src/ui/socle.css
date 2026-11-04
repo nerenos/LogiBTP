@@ -24,6 +24,14 @@ img.emoji {
   vertical-align: var(--emoji-decalage);
   object-fit: contain;
 }
+/* Icône du catalogue en fichier image (iconeHtml de @logibtp/socle/dictionnaire) : à la taille d'un emoji du texte. */
+img.icone-image {
+  display: inline-block;
+  width: 1.2em;
+  height: 1.2em;
+  vertical-align: -0.2em;
+  object-fit: contain;
+}
 button {
   background: var(--surface);
   border: 1px solid var(--bord);

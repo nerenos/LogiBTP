@@ -27,6 +27,13 @@ export class Preferences {
 }
 
 /** Déplace un élément d'une liste (réordonnancement des raccourcis et des widgets). */
+/** Copie de `liste` avec `x` inséré à `position` (bornée ; absente ou null : à la fin). */
+export function inserer(liste, x, position = null) {
+  const copie = [...liste];
+  copie.splice(position == null ? copie.length : Math.max(0, Math.min(position, copie.length)), 0, x);
+  return copie;
+}
+
 export function deplacer(liste, depuis, vers) {
   const copie = [...liste];
   if (depuis < 0 || depuis >= copie.length) return copie;
