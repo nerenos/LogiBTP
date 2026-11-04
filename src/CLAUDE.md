@@ -86,6 +86,7 @@
 ## Routes propres au cœur
 - `GET /api/sante` (version du moteur), `GET /api/societe` (code, libellé, principale ; jamais la connexion).
 - `GET /api/comptes-comptables` ([{ code, libelle, actif }]).
+- `GET|PUT /api/preferences/{cle}` (`Btp/PreferencesCompte.cs`, db/264 : préférences du compte connecté, objet JSON de 64 Ko au plus, null si rien ; route de session sans nœud de droits ; clé « accueil »).
 - `GET /api/structure/referentiels` (affaires, projets, chantiers, marchés, commandes `V_COMMANDE`, fonctions).
 - `PUT /api/structure/documents/{id}/rattachement` (même validé ; marché → chantier → affaire et projet complétés).
 - `GET /api/structure/marches/{id}/gestion` : commandes (HT net, TTC net, travaux, situé, facturé), situations, pièces d'avancement, `sous_traitants` (factures et avoirs fournisseurs des sous-traitants en paiement direct : postes PAIEMENT_DIRECT du marché, intervenants du marché ou du chantier ; `liee` = facture du marché portant leur paiement direct, montant égal au TTC d'abord).

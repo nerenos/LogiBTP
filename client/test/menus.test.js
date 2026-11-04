@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { elementsVisibles, menus, catalogueRaccourcis } from '../src/app/navigation/menus.js';
+import { catalogueWidgets } from '../src/app/navigation/widgets.js';
 
 // Menus filtrés par les modules actifs de la société (db/193 : module_societe).
 const app = (inactifs = []) => ({ moduleActif: (c) => !inactifs.includes(c), preferences: { get: () => 'auto' }, fenetres: { liste: () => [] } });
@@ -28,6 +29,17 @@ describe('menus et droits du profil', () => {
     expect(codes).not.toContain('ventes');
     expect(codes).not.toContain('stock');
     expect(codes).toContain('parametres');
+  });
+  it("raccourcis et widgets de l'accueil filtrés par les droits", () => {
+    const raccourcis = catalogueRaccourcis(mobile).map((e) => e.code);
+    expect(raccourcis).toContain('pointage-saisie');
+    expect(raccourcis).not.toContain('salaries');
+    expect(raccourcis).not.toContain('devis');
+    expect(catalogueWidgets(mobile)).toEqual([]);
+    const sansGed = catalogueWidgets({ ...app(), acces: (n) => n !== 'ged' }).map((w) => w.code);
+    expect(sansGed).toContain('materiels-etat');
+    expect(sansGed).not.toContain('ged-recents');
+    expect(sansGed).not.toContain('chiffres');
   });
   it('masque la gestion des profils et des comptes', () => {
     const parametres = menus(mobile).find((m) => m.code === 'parametres').elements().map((e) => e.url);

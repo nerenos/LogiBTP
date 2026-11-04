@@ -229,6 +229,8 @@ api.MapRetenuesMarche();
 api.MapSousTraitanceAssistant();
 api.MapIndividusStructure();
 api.MapComptes();
+// Préférences du compte connecté qui le suivent d'un poste à l'autre (accueil : raccourcis et widgets).
+api.MapPreferencesCompte();
 api.MapGroup("").MapModuleComptabilite();
 api.MapModulesServices();
 api.MapListesValeurs();

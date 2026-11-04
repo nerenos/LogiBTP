@@ -113,6 +113,8 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
         new("/api/installation", ModeRoute.Module, "administration/installation"),
         new("/api/diffusion", ModeRoute.Session),
         new("/api/notifications", ModeRoute.Session),
+        // Préférences du compte connecté (accueil) : chacun les siennes, sans nœud de droits.
+        new("/api/preferences", ModeRoute.Session),
         // Pages de paramétrage : lecture (Consulter sur « parametres ») et écriture (Modifier). Seules les routes qui ne
         // servent que ces pages ; les référentiels lus aussi par les écrans métier restent sous leur module.
         new("/api/parametres-documents", ModeRoute.Parametrage),

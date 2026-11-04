@@ -1,9 +1,10 @@
 import { texte, texteHtml, icone, langue } from '@logibtp/socle/dictionnaire';
-import { PageBase, Preferences } from '@logibtp/navigation';
+import { PageBase } from '@logibtp/navigation';
 import { AccueilBase } from '@logibtp/navigation/ui';
 import { echapper } from '@logibtp/socle/ui';
 import { catalogueRaccourcis, RACCOURCIS_DEFAUT } from '../navigation/menus.js';
 import { catalogueWidgets, WIDGETS_DEFAUT } from '../navigation/widgets.js';
+import { preferencesCompte } from '../preferences-compte.js';
 
 /** Accueil : session précédente à restaurer, raccourcis personnalisables, tableau de bord. */
 export class PageAccueil extends PageBase {
@@ -15,10 +16,16 @@ export class PageAccueil extends PageBase {
     const heure = new Date().getHours();
     const salut = texte(heure < 18 ? 'pages_btp.accueil.bonjour' : 'pages_btp.accueil.bonsoir');
     const session = new URLSearchParams(location.search).get('session') === 'fermee';
+    // Raccourcis et widgets du compte, gardés en base (suivent l'utilisateur d'un poste à l'autre) ; ceux que ce
+    // navigateur gardait avant sont repris une fois.
+    const preferences = await preferencesCompte('accueil', { raccourcis: RACCOURCIS_DEFAUT, widgets: WIDGETS_DEFAUT }, {
+      ancienneCle: 'logibtp.accueil',
+      surErreur: (e) => app.message(texte('pages_btp.accueil.preferences_erreur', { message: e.message }), 'avertissement'),
+    });
     this.accueil = new AccueilBase(this.conteneur, {
       catalogueRaccourcis: catalogueRaccourcis(this.app),
       catalogueWidgets: catalogueWidgets(app),
-      preferences: new Preferences('logibtp.accueil', { raccourcis: RACCOURCIS_DEFAUT, widgets: WIDGETS_DEFAUT }),
+      preferences,
       session: {
         precedente: () => app.fenetres.sessionPrecedente(),
         restaurer: (s) => app.fenetres.restaurer(s),

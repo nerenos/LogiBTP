@@ -36,7 +36,7 @@
 - Toute ouverture d'écran passe par `app.naviguer(url, { nouvelleFenetre })`, jamais par un panneau superposé ; chaque URL désigne un écran précis (partage, nouvelle fenêtre, restauration de session).
 - `PageBase` a `fermer()` ; la méthode `liberer()` (verrous) est propre aux pages `document.js` / `fiche.js` du cœur.
 - Les navigations sont sérialisées par `Routeur.enCours` ; `popstate` refusé par la garde → `history.go(delta)` avec `ignorerPopstate`.
-- Préférences et session dans le `localStorage` (propre à l'origine, donc à la société) ; identifiant de fenêtre dans le `sessionStorage` (onglet dupliqué détecté par `qui` / `present`). Jamais en base.
+- Préférences et session dans le `localStorage` (propre à l'origine, donc à la société) ; identifiant de fenêtre dans le `sessionStorage` (onglet dupliqué détecté par `qui` / `present`). Le module n'écrit jamais en base ; le cœur peut passer à `Preferences` un `stockage` de son choix (accueil : préférences du compte en base, `client/src/app/preferences-compte.js`).
 - `annoncer()` après tout changement de page, titre ou `modifiee` (le cœur le fait dans `majPage`).
 - Rechargement : `memoriser()` garde onglet (`etatAffichage`) et défilements (`defilements` / `appliquerDefilements`, éléments retrouvés par chemin + classe) dans `sessionStorage` (`CLE_AFFICHAGE`, car `history.replaceState` est ignoré pendant `pagehide`) et une copie HTML de la page (`CLE_APERCU`, ≤ 1,5 Mo) ; `client/index.html` puis `afficherApercu` la posent inerte par-dessus `.pages` jusqu'à l'ouverture de la vraie page (retirée par le nettoyage du routeur, ou après 10 s).
 - Restauration : le navigateur peut bloquer les pop-up au-delà de la première ; les `bloquees` se rouvrent une à une depuis l'accueil.

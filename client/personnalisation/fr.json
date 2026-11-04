@@ -7697,7 +7697,8 @@
       "titre": "Accueil",
       "bonjour": "Bonjour",
       "bonsoir": "Bonsoir",
-      "session_fermee_html": "<b>Session fermée</b> : cette fenêtre a été conservée par le navigateur."
+      "session_fermee_html": "<b>Session fermée</b> : cette fenêtre a été conservée par le navigateur.",
+      "preferences_erreur": "Accueil personnalisé non enregistré sur votre compte : {{message}}"
     },
     "fiche": {
       "nouvelle": "Nouvelle fiche {{type}}",

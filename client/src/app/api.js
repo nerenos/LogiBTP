@@ -360,6 +360,11 @@ export const api = {
     executer: () => appel('POST', '/notifications/executer'),
     canaux: () => appel('GET', '/notifications/canaux'),
   },
+  // Préférences du compte connecté gardées en base (db/264) : accueil (raccourcis et widgets). null = rien d'enregistré.
+  preferences: {
+    lire: (cle) => appel('GET', `/preferences/${encodeURIComponent(cle)}`),
+    enregistrer: (cle, valeur, { keepalive = false } = {}) => appel('PUT', `/preferences/${encodeURIComponent(cle)}`, valeur, { keepalive }),
+  },
   // Module Mail : comptes (identité et connexion jamais relues), alias, usages, modèles ; envoi par file d'attente.
   mail: {
     comptes: () => appel('GET', '/mail/comptes'),

@@ -1,6 +1,6 @@
-// Préférences de l'utilisateur gardées dans le navigateur (jamais en base) : raccourcis et widgets de l'accueil,
-// ouverture des fiches et documents dans une nouvelle fenêtre. Le localStorage est propre à l'origine, donc à la
-// société (un sous-domaine par base).
+// Préférences de l'utilisateur : ouverture des fiches et documents dans une nouvelle fenêtre, thème, menu… gardés dans
+// le navigateur (localStorage, propre à l'origine, donc à la société : un sous-domaine par base). Le stockage est
+// remplaçable (getItem / setItem) : le cœur garde ainsi l'accueil (raccourcis et widgets) en base, par compte.
 
 export class Preferences {
   constructor(cle, defauts, stockage = globalThis.localStorage) {

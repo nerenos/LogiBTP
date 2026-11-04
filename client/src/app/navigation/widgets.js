@@ -16,10 +16,11 @@ const NIVEAUX_RAPPEL = { ROUGE: 'erreur', ORANGE: 'alerte', VERT: 'info' };
 
 export function catalogueWidgets(app) {
   const services = () => app.services();
-  // Widgets d'un module désactivé (propriété module) retirés du catalogue.
+  // Widgets d'un module désactivé (propriété module) ou dont le compte n'a pas les droits (propriété droit : nœuds du
+  // module Droits dont le widget lit les données, tous exigés) retirés du catalogue, comme les raccourcis.
   return [
     {
-      code: 'crm-rappels', type: 'alertes', titre: texte('navigation_btp.widgets.rappels.titre'), icone: icone('navigation_btp_widget_rappels'), taille: 'moyen', url: '/crm/rappels', module: MODULE_FACULTATIF.CRM,
+      code: 'crm-rappels', type: 'alertes', titre: texte('navigation_btp.widgets.rappels.titre'), icone: icone('navigation_btp_widget_rappels'), taille: 'moyen', url: '/crm/rappels', module: MODULE_FACULTATIF.CRM, droit: ['crm'],
       description: texte('navigation_btp.widgets.rappels.description'),
       charger: async () => {
         const rappels = await api.crm.rappels();
@@ -31,7 +32,7 @@ export function catalogueWidgets(app) {
       },
     },
     {
-      code: 'oauth-alertes', type: 'alertes', titre: texte('navigation_btp.widgets.oauth.titre'), icone: icone('navigation_btp_widget_oauth'), taille: 'moyen', url: '/parametres/connexions',
+      code: 'oauth-alertes', type: 'alertes', titre: texte('navigation_btp.widgets.oauth.titre'), icone: icone('navigation_btp_widget_oauth'), taille: 'moyen', url: '/parametres/connexions', droit: ['connexions'],
       description: texte('navigation_btp.widgets.oauth.description'),
       charger: async () => (await api.oauth.alertes()).map((c) => ({
         niveau: c.pastille === 'ROUGE' ? 'erreur' : 'alerte', texte: c.nom,
@@ -40,7 +41,7 @@ export function catalogueWidgets(app) {
       })),
     },
     {
-      code: 'chiffres', type: 'indicateurs', titre: texte('navigation_btp.widgets.chiffres.titre'), icone: icone('navigation_btp_widget_chiffres'), taille: 'large',
+      code: 'chiffres', type: 'indicateurs', titre: texte('navigation_btp.widgets.chiffres.titre'), icone: icone('navigation_btp_widget_chiffres'), taille: 'large', droit: ['ressources', 'documents', 'ged'],
       description: texte('navigation_btp.widgets.chiffres.description'),
       charger: async () => {
         const { liste, ged } = await services();
@@ -59,7 +60,7 @@ export function catalogueWidgets(app) {
       },
     },
     {
-      code: 'alertes', type: 'alertes', titre: texte('navigation_btp.widgets.alertes.titre'), icone: icone('navigation_btp_widget_alertes'), taille: 'moyen', url: '/liste/materiels?vue=3',
+      code: 'alertes', type: 'alertes', titre: texte('navigation_btp.widgets.alertes.titre'), icone: icone('navigation_btp_widget_alertes'), taille: 'moyen', url: '/liste/materiels?vue=3', droit: ['ressources', 'ged'],
       description: texte('navigation_btp.widgets.alertes.description'),
       charger: async () => {
         const { liste, ged } = await services();
@@ -78,7 +79,7 @@ export function catalogueWidgets(app) {
       },
     },
     {
-      code: 'materiels-etat', type: 'graphique', titre: texte('navigation_btp.widgets.materiels.titre'), icone: icone('navigation_btp_widget_materiels'), taille: 'petit', url: '/liste/materiels?vue=3',
+      code: 'materiels-etat', type: 'graphique', titre: texte('navigation_btp.widgets.materiels.titre'), icone: icone('navigation_btp_widget_materiels'), taille: 'petit', url: '/liste/materiels?vue=3', droit: ['ressources'],
       description: texte('navigation_btp.widgets.materiels.description'),
       charger: async () => {
         const { liste } = await services();
@@ -87,7 +88,7 @@ export function catalogueWidgets(app) {
       },
     },
     {
-      code: 'salaries-service', type: 'graphique', titre: texte('navigation_btp.widgets.salaries.titre'), icone: icone('navigation_btp_widget_salaries'), taille: 'petit', url: '/liste/salaries?vue=2',
+      code: 'salaries-service', type: 'graphique', titre: texte('navigation_btp.widgets.salaries.titre'), icone: icone('navigation_btp_widget_salaries'), taille: 'petit', url: '/liste/salaries?vue=2', droit: ['ressources'],
       description: texte('navigation_btp.widgets.salaries.description'),
       charger: async () => {
         const { liste } = await services();
@@ -96,7 +97,7 @@ export function catalogueWidgets(app) {
       },
     },
     {
-      code: 'documents-statut', type: 'graphique', titre: texte('navigation_btp.widgets.documents.titre'), icone: icone('navigation_btp_widget_documents'), taille: 'petit', url: '/liste/documents?vue=1',
+      code: 'documents-statut', type: 'graphique', titre: texte('navigation_btp.widgets.documents.titre'), icone: icone('navigation_btp_widget_documents'), taille: 'petit', url: '/liste/documents?vue=1', droit: ['documents'],
       description: texte('navigation_btp.widgets.documents.description'),
       charger: async () => {
         const { liste } = await services();
@@ -105,7 +106,7 @@ export function catalogueWidgets(app) {
       },
     },
     {
-      code: 'derniers-documents', type: 'tableau', titre: texte('navigation_btp.widgets.derniers.titre'), icone: icone('navigation_btp_widget_derniers'), taille: 'moyen', url: '/liste/documents?vue=1',
+      code: 'derniers-documents', type: 'tableau', titre: texte('navigation_btp.widgets.derniers.titre'), icone: icone('navigation_btp_widget_derniers'), taille: 'moyen', url: '/liste/documents?vue=1', droit: ['documents'],
       description: texte('navigation_btp.widgets.derniers.description'),
       charger: async () => {
         const { liste } = await services();
@@ -117,7 +118,7 @@ export function catalogueWidgets(app) {
       },
     },
     {
-      code: 'ged-recents', type: 'tableau', titre: texte('navigation_btp.widgets.ged.titre'), icone: icone('navigation_btp_widget_ged'), taille: 'moyen', url: '/ged',
+      code: 'ged-recents', type: 'tableau', titre: texte('navigation_btp.widgets.ged.titre'), icone: icone('navigation_btp_widget_ged'), taille: 'moyen', url: '/ged', droit: ['ged'],
       description: texte('navigation_btp.widgets.ged.description'),
       charger: async () => {
         const { ged } = await services();
@@ -128,7 +129,7 @@ export function catalogueWidgets(app) {
         };
       },
     },
-  ].filter((w) => (!w.module || app.moduleActif?.(w.module) !== false));
+  ].filter((w) => (!w.module || app.moduleActif?.(w.module) !== false) && (w.droit ?? []).every((n) => app.acces?.(n) !== false));
 }
 
 export const WIDGETS_DEFAUT = [{ code: 'chiffres' }, { code: 'crm-rappels' }, { code: 'oauth-alertes' }, { code: 'alertes' }, { code: 'derniers-documents' }, { code: 'materiels-etat' }, { code: 'salaries-service' }, { code: 'documents-statut' }];
