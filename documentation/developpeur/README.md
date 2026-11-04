@@ -135,5 +135,3 @@ graph TD
 2. **Format :** Markdown + diagrammes Mermaid (rendus sur GitHub/GitLab)
 3. **Génération auto :** Schéma BDD, routes API, dépendances → scripts CI
 4. **Revue :** Toute modification de code impactante doit mettre à jour la doc correspondante
-
-> **Contact :** Équipe LogiBTP — Slack `#logibtp-dev` / Email `dev@logibtp.fr`
