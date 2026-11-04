@@ -77,10 +77,27 @@ public static class Extensions
                 await Refuser(http, "DROIT_NON_DECLARE", "Route sans droit déclaré : accès refusé");
                 return;
             }
-            if (r.Mode is ModeRoute.Module or ModeRoute.Action)
+            // Droits du profil sur le paramétrage (nœud « parametres ») : lus par le paramétrage des modules (ExigerParametres).
+            var utilisateur = Utilisateur.Depuis(http);
+            var etat = await http.RequestServices.GetRequiredService<ServiceDroits>().DroitsAsync(utilisateur.Profil, http.RequestAborted);
+            Utilisateur.Poser(http, utilisateur with
+            {
+                PeutConsulterParametres = ReglesDroits.Autorise(etat, "parametres", ActionsDroits.Consulter),
+                PeutModifierParametres = ReglesDroits.Autorise(etat, "parametres", ActionsDroits.Modifier),
+            });
+            if (r.Mode == ModeRoute.Parametrage)
+            {
+                var ecrit = !HttpMethods.IsGet(http.Request.Method) && !HttpMethods.IsHead(http.Request.Method);
+                if (!(ecrit ? utilisateur.PeutModifierParametres : utilisateur.PeutConsulterParametres) && !utilisateur.EstAdmin)
+                {
+                    await Refuser(http, "ACCES_REFUSE", $"Droit refusé : parametres/{(ecrit ? ActionsDroits.Modifier : ActionsDroits.Consulter)}");
+                    return;
+                }
+            }
+            else if (r.Mode is ModeRoute.Module or ModeRoute.Action)
             {
                 var u = Utilisateur.Depuis(http);
-                var droits = await http.RequestServices.GetRequiredService<ServiceDroits>().DroitsAsync(u.Profil, http.RequestAborted);
+                var droits = etat;
                 var noeud = RoutesDroits.Noeud(r.Noeud!, n => http.Request.RouteValues.TryGetValue(n, out var v) ? v?.ToString() : null);
                 var ecriture = !HttpMethods.IsGet(http.Request.Method) && !HttpMethods.IsHead(http.Request.Method);
                 var permis = r.Mode == ModeRoute.Module ? ReglesDroits.AccesSousArbre(droits, noeud, ecriture) : ReglesDroits.Autorise(droits, noeud, r.Action!);

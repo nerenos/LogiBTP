@@ -235,10 +235,12 @@ export function groupesThemes() {
 /**
  * Menu ou élément visible : sans module, ou module actif pour la société (`module` : code de `module_societe`) ; type de
  * document actif (`type` : code de `type_document`, E39) ; droits du profil (`droit` : nœud du module Droits, au moins
- * une action sur le nœud ou ses descendants).
+ * une action sur le nœud ou ses descendants). Une page de paramétrage (`url` /parametres…) exige en plus le nœud
+ * « parametres » (Consulter ou Modifier) ; les pages administrateur (comptes, profils, installation) gardent leur droit.
  */
 const visible = (app, x) => (!x.module || app.moduleActif?.(x.module) !== false) && (!x.type || app.typeActif?.(x.type) !== false)
-  && (!x.droit || app.acces?.(x.droit) !== false);
+  && (!x.droit || app.acces?.(x.droit) !== false)
+  && (!x.url?.startsWith('/parametres') || x.droit || app.acces?.('parametres') !== false);
 
 /**
  * Éléments visibles d'un menu : un élément `independant` ne dépend que de ses propres conditions ; sans les conditions

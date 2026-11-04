@@ -1143,7 +1143,7 @@ public static class ParametresEditionBtp
         g.MapPut("/mentions", async (JsonObject mentions, HttpContext http, LogiBtpContext db, CancellationToken ct) =>
         {
             var u = Utilisateur.Depuis(http);
-            u.ExigerAdmin();
+            u.ExigerParametres();
             await db.Database.ExecuteSqlRawAsync("""
                 INSERT INTO parametre_edition (pae_cle, pae_valeur, pae_modifie_le, pae_modifie_par) VALUES ('mentions', @v::jsonb, now(), @u)
                 ON CONFLICT (pae_cle) DO UPDATE SET pae_valeur = excluded.pae_valeur, pae_modifie_le = now(), pae_modifie_par = excluded.pae_modifie_par

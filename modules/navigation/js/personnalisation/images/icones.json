@@ -1,3 +1,5 @@
 {
-  "navigation_historique": "🕘"
+  "navigation_historique": "🕘",
+  "navigation_personnaliser": "icones/personnaliser.svg",
+  "navigation_actualiser": "icones/actualiser.svg"
 }

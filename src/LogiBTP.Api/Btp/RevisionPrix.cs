@@ -611,7 +611,7 @@ public static class RevisionPrix
     /// <summary>Catalogue enregistré (administrateur) : ajouts, modifications ; un index absent est retiré s'il n'a ni valeur ni usage.</summary>
     public static async Task<IResult> EnregistrerIndexAsync(LogiBtpContext db, List<IndexPrix> index, Utilisateur u, CancellationToken ct)
     {
-        u.ExigerAdmin();
+        u.ExigerParametres();
         if (index.Any(i => string.IsNullOrWhiteSpace(i.Code) || string.IsNullOrWhiteSpace(i.Libelle))) throw ExceptionMetier.Invalide("INDEX", "Code et libellé obligatoires");
         if (index.GroupBy(i => i.Code.Trim(), StringComparer.OrdinalIgnoreCase).Any(g => g.Count() > 1)) throw ExceptionMetier.Invalide("INDEX", "Code d'index en double");
         if (index.Any(i => i.Raccordements?.Values.Any(v => v <= 0) == true)) throw ExceptionMetier.Invalide("INDEX", "Coefficient de raccordement positif");
@@ -755,7 +755,7 @@ public static class RevisionPrix
     /// <summary>Modèles de formules remplacés (administrateur), chacun contrôlé.</summary>
     public static async Task<IResult> EnregistrerFormulesAsync(LogiBtpContext db, List<FormuleModele> formules, Utilisateur u, CancellationToken ct)
     {
-        u.ExigerAdmin();
+        u.ExigerParametres();
         var normalisees = new List<(FormuleModele F, string Termes)>();
         foreach (var f in formules)
         {

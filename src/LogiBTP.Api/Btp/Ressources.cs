@@ -29,7 +29,7 @@ public static class Ressources
 
     private static void Admin(Utilisateur u)
     {
-        u.ExigerAdmin();
+        u.ExigerParametres();
     }
 
     private sealed record LigneType(string Code, int? DureeMois, string Concerne, bool Actif);

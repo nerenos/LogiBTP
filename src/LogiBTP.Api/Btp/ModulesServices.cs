@@ -130,7 +130,7 @@ public static class ModulesServices
     /// </summary>
     public static async Task EnregistrerServices(LogiBtpContext db, List<ServiceSaisi> services, Utilisateur u, CancellationToken ct)
     {
-        u.ExigerAdmin();
+        u.ExigerParametres();
         foreach (var s in services)
         {
             if (string.IsNullOrWhiteSpace(s.Code) || string.IsNullOrWhiteSpace(s.Libelle)) throw ExceptionMetier.Invalide("SERVICE", "Code et libellé obligatoires");
@@ -193,7 +193,7 @@ public static class ModulesServices
     /// </summary>
     public static async Task EnregistrerMembres(LogiBtpContext db, int service, List<MembreService> membres, Utilisateur u, CancellationToken ct)
     {
-        u.ExigerAdmin();
+        u.ExigerParametres();
         if (membres.Select(m => m.IndId).Distinct().Count() != membres.Count) throw ExceptionMetier.Invalide("SERVICE_MEMBRE", "Membre en double");
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         if (await db.Database.SqlQueryRaw<int>("SELECT count(*)::int AS \"Value\" FROM service WHERE srv_id = @s", new NpgsqlParameter("s", service)).FirstAsync(ct) == 0)

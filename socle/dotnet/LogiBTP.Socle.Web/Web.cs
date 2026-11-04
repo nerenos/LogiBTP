@@ -35,6 +35,16 @@ public sealed record Utilisateur(string Code, string Profil, string? Groupe = nu
         if (!EstAdmin) throw ExceptionMetier.ParametrageRefuse();
     }
 
+    /// <summary>Droits du profil sur le nœud « parametres », renseignés par le module Droits à chaque requête (absent : administrateur seul).</summary>
+    public bool PeutConsulterParametres { get; init; }
+    public bool PeutModifierParametres { get; init; }
+
+    /// <summary>Refus du paramétrage (403) sans le droit de modification sur « parametres » (l'administrateur : toujours).</summary>
+    public void ExigerParametres()
+    {
+        if (!EstAdmin && !PeutModifierParametres) throw ExceptionMetier.ParametrageRefuse();
+    }
+
     /// <summary>Usurpation (module Authentification) : code de l'administrateur qui agit pour cet utilisateur (null sinon).</summary>
     public string? Usurpateur { get; init; }
 

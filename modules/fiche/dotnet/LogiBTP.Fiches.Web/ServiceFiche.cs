@@ -560,7 +560,7 @@ public partial class ServiceFiche(FicheDbContext db, SpecialisationFiche special
 
     public virtual async Task<ParametrageFicheDto> EnregistrerParametrage(string code, ParametrageFicheDto p, Utilisateur u, CancellationToken ct)
     {
-        u.ExigerAdmin();
+        u.ExigerParametres();
         var t = await Type(code, ct);
         var codes = new HashSet<string>(StringComparer.Ordinal);
         foreach (var c in p.Supplementaires)

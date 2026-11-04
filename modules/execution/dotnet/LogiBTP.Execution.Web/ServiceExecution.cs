@@ -155,7 +155,7 @@ public sealed class ServiceExecution(ExecutionDbContext db, SpecialisationExecut
 {
     private static void Admin(Utilisateur u)
     {
-        u.ExigerAdmin();
+        u.ExigerParametres();
     }
 
     private static void Controler(List<EtapeDto> etapes)

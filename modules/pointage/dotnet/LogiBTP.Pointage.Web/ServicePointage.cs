@@ -260,7 +260,7 @@ public sealed class ServicePointage(PointageDbContext db, SpecialisationPointage
 {
     private static void Admin(Utilisateur u)
     {
-        u.ExigerAdmin();
+        u.ExigerParametres();
     }
 
     public async Task<ParametresDto> ParametresAsync(CancellationToken ct)

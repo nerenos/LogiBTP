@@ -56,7 +56,7 @@ public static class ParametresRentabiliteBtp
         api.MapPut("/rentabilite/parametres/roles", async (List<RoleType> roles, HttpContext http, LogiBtpContext db, ServiceRentabilite s, CancellationToken ct) =>
         {
             var u = Utilisateur.Depuis(http);
-            u.ExigerAdmin();
+            u.ExigerParametres();
             var connus = typeof(RolesRentabilite).GetFields().Select(f => (string)f.GetValue(null)!).ToHashSet();
             if (roles.FirstOrDefault(r => r.Role is { } x && !connus.Contains(x)) is { } inconnu)
                 throw ExceptionMetier.Invalide("RENTABILITE_ROLE", $"Rôle inconnu : {inconnu.Role}");
@@ -80,7 +80,7 @@ public static class ParametresRentabiliteBtp
         api.MapPut("/rentabilite/parametres/taux", async (List<TauxService> taux, HttpContext http, LogiBtpContext db, ServiceRentabilite s, CancellationToken ct) =>
         {
             var u = Utilisateur.Depuis(http);
-            u.ExigerAdmin();
+            u.ExigerParametres();
             if (taux.Any(t => t.Taux < 0)) throw ExceptionMetier.Invalide("RENTABILITE_TAUX", "Un taux horaire est positif ou nul");
             await using var tx = await db.Database.BeginTransactionAsync(ct);
             await db.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM rentabilite_taux_service", ct);
@@ -96,7 +96,7 @@ public static class ParametresRentabiliteBtp
         api.MapPut("/rentabilite/parametres/materiel", async (ParametresMateriel m, HttpContext http, LogiBtpContext db, ServiceRentabilite s, CancellationToken ct) =>
         {
             var u = Utilisateur.Depuis(http);
-            u.ExigerAdmin();
+            u.ExigerParametres();
             if (m.Couts.Any(c => c.Cout < 0)) throw ExceptionMetier.Invalide("RENTABILITE_COUT_MATERIEL", "Un coût horaire de matériel est positif ou nul");
             await using var tx = await db.Database.BeginTransactionAsync(ct);
             await db.Database.ExecuteSqlInterpolatedAsync($"""
@@ -116,7 +116,7 @@ public static class ParametresRentabiliteBtp
         api.MapPut("/rentabilite/parametres/coefs", async (List<CoefNature> coefs, HttpContext http, LogiBtpContext db, ServiceRentabilite s, CancellationToken ct) =>
         {
             var u = Utilisateur.Depuis(http);
-            u.ExigerAdmin();
+            u.ExigerParametres();
             if (coefs.Any(c => c.Coef <= 0)) throw ExceptionMetier.Invalide("RENTABILITE_COEF", "Un coefficient de frais généraux est strictement positif");
             if (coefs.GroupBy(c => (c.NatId, c.Depuis)).Any(g => g.Count() > 1))
                 throw ExceptionMetier.Invalide("RENTABILITE_COEF_DOUBLON", "Deux coefficients pour la même nature à la même date");

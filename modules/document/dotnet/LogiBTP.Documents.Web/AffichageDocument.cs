@@ -92,7 +92,7 @@ public class AffichageDocumentService<TDoc, TLigne>(DocumentDbContext<TDoc, TLig
     /// <summary>Liste globale des étiquettes remplacée (administrateur) ; codes en majuscules.</summary>
     public virtual async Task<List<EtiquetteDto>> EnregistrerEtiquettes(List<EtiquetteDto> liste, Utilisateur u, CancellationToken ct)
     {
-        u.ExigerAdmin();
+        u.ExigerParametres();
         var codes = new HashSet<string>();
         foreach (var e in liste)
         {
@@ -115,7 +115,7 @@ public class AffichageDocumentService<TDoc, TLigne>(DocumentDbContext<TDoc, TLig
 
     public virtual async Task<List<CouleurTypePrixDto>> EnregistrerCouleurs(List<CouleurTypePrixDto> liste, Utilisateur u, CancellationToken ct)
     {
-        u.ExigerAdmin();
+        u.ExigerParametres();
         foreach (var c in liste)
         {
             var e = await db.Set<CouleurTypePrix>().FindAsync([c.Type], ct) ?? throw ExceptionMetier.Introuvable($"Mode de vente {c.Type}");

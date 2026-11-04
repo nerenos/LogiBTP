@@ -271,7 +271,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
     /// <summary>Modèles des textes d'un type (administrateur) : recopiés dans les documents créés ensuite.</summary>
     public async Task<TextesType> EnregistrerTextesType(string code, TextesType textes, Utilisateur u, CancellationToken ct)
     {
-        u.ExigerAdmin();
+        u.ExigerParametres();
         var t = await db.TypesDocument.FirstOrDefaultAsync(x => x.TydCode == code, ct) ?? throw ExceptionMetier.Introuvable($"Type de document {code}");
         t.TydTexteIntroHtml = string.IsNullOrWhiteSpace(textes.IntroHtml) ? null : html.Nettoyer(textes.IntroHtml);
         t.TydTexteFinHtml = string.IsNullOrWhiteSpace(textes.FinHtml) ? null : html.Nettoyer(textes.FinHtml);
@@ -940,7 +940,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
     /// <summary>Seuils de solde (administrateur) : valeurs positives, % au plus 100.</summary>
     public async Task<SeuilsSolde> EnregistrerSeuilsSolde(SeuilsSolde s, Utilisateur u, CancellationToken ct)
     {
-        u.ExigerAdmin();
+        u.ExigerParametres();
         foreach (var f in new[] { s.Achat, s.Vente })
         {
             if (f.Pct < 0 || f.Qte < 0) throw ExceptionMetier.Invalide("SEUIL", "Un seuil de solde est positif ou nul");

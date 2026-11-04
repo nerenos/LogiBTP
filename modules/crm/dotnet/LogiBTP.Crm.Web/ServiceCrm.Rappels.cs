@@ -47,7 +47,7 @@ public partial class ServiceCrm
     /// <summary>Seuils globaux (administrateur) : rouge ≥ 0, orange ≥ rouge.</summary>
     public async Task<ParametresCrm> EnregistrerParametres(ParametresCrm p, Utilisateur u, CancellationToken ct)
     {
-        u.ExigerAdmin();
+        u.ExigerParametres();
         if (p.Seuils.Rouge < 0 || p.Seuils.Orange < p.Seuils.Rouge) throw ExceptionMetier.Invalide("SEUILS_RAPPEL", "Seuils en jours : rouge positif ou nul, orange au moins égal au rouge");
         var valeur = JsonSerializer.SerializeToDocument(new { orange = p.Seuils.Orange, rouge = p.Seuils.Rouge });
         var e = await db.Parametres.FirstOrDefaultAsync(x => x.CpaCle == CleSeuils, ct);

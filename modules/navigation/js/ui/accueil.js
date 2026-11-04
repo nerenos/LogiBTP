@@ -38,8 +38,8 @@ export class AccueilBase {
       <header class="accueil-entete">
         <div class="accueil-salutation">${entete}</div>
         <div class="accueil-outils">
-          <button type="button" data-action="actualiser" title="${texteHtml('navigation.accueil.actualiser_titre')}">⟳</button>
-          <button type="button" data-action="personnaliser" title="${texteHtml('navigation.accueil.personnaliser_titre')}">✎ ${texteHtml('navigation.accueil.personnaliser')}</button>
+          <button type="button" data-action="actualiser" title="${texteHtml('navigation.accueil.actualiser_titre')}">${iconeHtml('navigation_actualiser')}</button>
+          <button type="button" data-action="personnaliser" title="${texteHtml('navigation.accueil.personnaliser_titre')}">${iconeHtml('navigation_personnaliser')} ${texteHtml('navigation.accueil.personnaliser')}</button>
         </div>
       </header>
       <section class="accueil-bloc"><h2>${texteHtml('navigation.accueil.raccourcis')}</h2><div class="accueil-tuiles"></div></section>

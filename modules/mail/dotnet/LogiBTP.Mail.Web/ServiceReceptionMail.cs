@@ -228,7 +228,7 @@ public sealed class ServiceReceptionMail(MailDbContext db, ServiceComptesMail co
     /// <summary>Règles réécrites en entier (codes uniques, nature, action et zones connues ; mots ou expéditeur obligatoires).</summary>
     public async Task<List<RegleDto>> EnregistrerReglesAsync(Utilisateur u, List<RegleDto> l, CancellationToken ct)
     {
-        u.ExigerAdmin();
+        u.ExigerParametres();
         foreach (var x in l)
         {
             if (string.IsNullOrWhiteSpace(x.Code) || x.Code.Length > 30 || string.IsNullOrWhiteSpace(x.Libelle)) throw ExceptionMetier.Invalide("MAIL_REGLE", "Code et libellé obligatoires");

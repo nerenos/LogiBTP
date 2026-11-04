@@ -114,7 +114,7 @@ public sealed class ServicePaie(PointageDbContext db, SpecialisationPointage spe
     /// <summary>Remplace les profils (administrateur) ; un profil retiré passe inactif (il peut être attribué).</summary>
     public async Task<List<ProfilDto>> EnregistrerProfilsAsync(List<ProfilDto> l, Utilisateur u, CancellationToken ct)
     {
-        u.ExigerAdmin();
+        u.ExigerParametres();
         foreach (var p in l)
         {
             if (string.IsNullOrWhiteSpace(p.Code) || string.IsNullOrWhiteSpace(p.Libelle)) throw ExceptionMetier.Invalide("PRF_CODE", "Code et libellé du profil obligatoires");

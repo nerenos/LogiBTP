@@ -6,9 +6,10 @@ public sealed record NoeudCatalogue(string Cle, string Libelle, IReadOnlyList<st
 /// <summary>
 /// Contrôle des routes : Module = droits du sous-arbre du nœud (lecture : une action quelconque ; écriture : une action
 /// autre que la consultation), Action = action précise sur le nœud, Session = connecté suffit (pas de droit), Publique =
-/// sans session (déjà réglé par l'authentification).
+/// sans session (déjà réglé par l'authentification). Parametrage = lecture des pages de paramétrage (GET : Consulter sur le nœud « parametres ») et écriture (Modifier) ;
+/// réservé aux routes qui ne servent que les pages /parametres.
 /// </summary>
-public enum ModeRoute { Module, Action, Session, Publique }
+public enum ModeRoute { Module, Action, Session, Publique, Parametrage }
 
 /// <summary>
 /// Route de l'API rattachée à un nœud : préfixe du gabarit de la route (« /api/documents », « /api/fiches/{type} ») ;

@@ -231,7 +231,7 @@ public partial class ServiceFiche : IChronosFiches
     /// </summary>
     public virtual async Task<List<ChronoTypeDto>> EnregistrerChrono(string code, ChronoSaisie s, Utilisateur u, CancellationToken ct)
     {
-        u.ExigerAdmin();
+        u.ExigerParametres();
         var t = await Type(code, ct);
         if (t.Definition.Chrono is not { } def) throw ExceptionMetier.Invalide("CHRONO", $"Les fiches {t.Definition.Libelle} n'ont pas de chrono");
         var variante = s.Variante ?? "";

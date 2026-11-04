@@ -87,7 +87,7 @@ public sealed class ServiceCalendrier(CalendrierDbContext db, SpecialisationCale
 {
     private static void Admin(Utilisateur u)
     {
-        u.ExigerAdmin();
+        u.ExigerParametres();
     }
 
     private static CalendrierTravail Travail(CalendrierEntite c, IEnumerable<PlageEntite> plages) =>

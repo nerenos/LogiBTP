@@ -139,7 +139,7 @@ public partial class ServiceCrm(CrmDbContext db, SpecialisationCrm specialisatio
     /// <summary>Liste complète des types (administrateur) ; un type retiré utilisé par des notes est désactivé.</summary>
     public async Task<List<TypeNoteDto>> EnregistrerTypesNotes(List<TypeNoteDto> types, Utilisateur u, CancellationToken ct)
     {
-        u.ExigerAdmin();
+        u.ExigerParametres();
         if (types.Any(t => string.IsNullOrWhiteSpace(t.Code) || string.IsNullOrWhiteSpace(t.Libelle))) throw ExceptionMetier.Invalide("TYPE_NOTE", "Code et libellé obligatoires");
         var codes = types.Select(t => t.Code.Trim().ToUpperInvariant()).ToList();
         if (codes.Distinct().Count() != codes.Count) throw ExceptionMetier.Invalide("TYPE_NOTE", "Codes en double");

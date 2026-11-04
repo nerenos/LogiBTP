@@ -35,7 +35,7 @@ public sealed class ReferentielsDocument<TDoc, TLigne>(DocumentDbContext<TDoc, T
 
     public async Task<List<ModeReglementDto>> EnregistrerModes(List<ModeReglementDto> modes, Utilisateur u, CancellationToken ct)
     {
-        u.ExigerAdmin();
+        u.ExigerParametres();
         var erreurs = modes.Where(m => string.IsNullOrWhiteSpace(m.Code) || m.Code.Length > 20 || string.IsNullOrWhiteSpace(m.Libelle))
             .Select(m => $"{m.Code} : code (20 caractères au plus) et libellé obligatoires").ToList();
         if (modes.GroupBy(m => m.Code).Any(g => g.Count() > 1)) erreurs.Add("Codes de mode en double");
@@ -65,7 +65,7 @@ public sealed class ReferentielsDocument<TDoc, TLigne>(DocumentDbContext<TDoc, T
     /// <summary>Unités (administrateur) : une unité absente est supprimée si aucune ligne ne l'emploie, sinon désactivée.</summary>
     public async Task<List<UniteDto>> EnregistrerUnites(List<UniteDto> unites, Utilisateur u, CancellationToken ct)
     {
-        u.ExigerAdmin();
+        u.ExigerParametres();
         var erreurs = new List<string>();
         foreach (var x in unites)
         {
@@ -125,7 +125,7 @@ public sealed class ReferentielsDocument<TDoc, TLigne>(DocumentDbContext<TDoc, T
     /// </summary>
     public async Task<List<NumerotationType>> EnregistrerNumerotation(string code, NumerotationSaisie s, Utilisateur u, CancellationToken ct)
     {
-        u.ExigerAdmin();
+        u.ExigerParametres();
         var t = await db.TypesDocument.FirstOrDefaultAsync(x => x.TydCode == code, ct) ?? throw ExceptionMetier.Introuvable($"Type {code}");
         var raz = s.Raz == "J" ? "J" : "A";
         var format = string.IsNullOrWhiteSpace(s.Format) || s.Format.Trim() == NumeroDocument.FormatDefaut ? null : s.Format.Trim();
