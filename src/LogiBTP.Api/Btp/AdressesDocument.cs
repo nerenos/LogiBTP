@@ -81,7 +81,7 @@ public static class AdressesDocument
             )
             SELECT per_id AS "Value" FROM a ORDER BY per_id LIMIT 50
             """;
-            var param = new NpgsqlParameter("f", NpgsqlDbType.Bigint) { Value = (object?)fournisseur ?? DBNull.Value };
+            var param = SqlBtp.P("f", fournisseur, NpgsqlDbType.Bigint);
     
             // On récupère d'abord les IDs pour libérer la connexion EF Core
             var ids = await db.Database.SqlQueryRaw<long>(query, param).ToListAsync(ct);

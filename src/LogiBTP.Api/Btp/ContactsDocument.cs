@@ -42,7 +42,7 @@ public static class ContactsDocument
     {
         var json = await db.Database.SqlQueryRaw<string>(Sql,
             new NpgsqlParameter("per", NpgsqlDbType.Bigint) { Value = perId },
-            new NpgsqlParameter("ind", NpgsqlDbType.Bigint) { Value = (object?)indId ?? DBNull.Value }).ToListAsync(ct);
+            SqlBtp.P("ind", indId, NpgsqlDbType.Bigint)).ToListAsync(ct);
         return json.Count == 0 ? null : JsonDocument.Parse(json[0]);
     }
 

@@ -409,12 +409,12 @@ public static class SourceDocumentEdition
 
         var p = new Func<string, object?, NpgsqlParameter>((n, v) => new NpgsqlParameter(n, v ?? DBNull.Value));
         var json = await db.Database.SqlQueryRaw<string>(Complements,
-            new NpgsqlParameter("red", NpgsqlDbType.Bigint) { Value = (object?)d.EntRedacteurId ?? DBNull.Value },
-            new NpgsqlParameter("prj", NpgsqlDbType.Integer) { Value = (object?)d.EntProjetId ?? DBNull.Value },
-            new NpgsqlParameter("aff", NpgsqlDbType.Integer) { Value = (object?)d.EntAffaireId ?? DBNull.Value },
-            new NpgsqlParameter("cha", NpgsqlDbType.Integer) { Value = (object?)d.EntChantierId ?? DBNull.Value },
-            new NpgsqlParameter("mar", NpgsqlDbType.Integer) { Value = (object?)d.EntMarcheId ?? DBNull.Value },
-            new NpgsqlParameter("cpa", NpgsqlDbType.Varchar) { Value = (object?)d.EntCpaCode ?? DBNull.Value },
+            SqlBtp.P("red", d.EntRedacteurId, NpgsqlDbType.Bigint),
+            SqlBtp.P("prj", d.EntProjetId, NpgsqlDbType.Integer),
+            SqlBtp.P("aff", d.EntAffaireId, NpgsqlDbType.Integer),
+            SqlBtp.P("cha", d.EntChantierId, NpgsqlDbType.Integer),
+            SqlBtp.P("mar", d.EntMarcheId, NpgsqlDbType.Integer),
+            SqlBtp.P("cpa", d.EntCpaCode, NpgsqlDbType.Varchar),
             new NpgsqlParameter("ent", NpgsqlDbType.Bigint) { Value = id },
             new NpgsqlParameter("std", NpgsqlDbType.Integer) { Value = d.EntStdId },
             new NpgsqlParameter("tyd", NpgsqlDbType.Integer) { Value = d.EntTydId }).FirstAsync(ct);

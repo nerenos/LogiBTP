@@ -128,7 +128,7 @@ public static partial class TerrainBtp
                 await db.Database.ExecuteSqlRawAsync("""
                     INSERT INTO pointage_materiel (pma_mat_id, pma_cha_id, pma_tac_id, pma_sal_id, pma_date, pma_minutes, pma_commentaire, pma_par)
                     VALUES (@m, @c, @t, @s, @d, @n, @x, @u)
-                    """, [new NpgsqlParameter("m", m.MatId), new NpgsqlParameter("c", NpgsqlTypes.NpgsqlDbType.Integer) { Value = (object?)t.ChaId ?? DBNull.Value }, new NpgsqlParameter("t", id),
+                    """, [new NpgsqlParameter("m", m.MatId), SqlBtp.P("c", t.ChaId, NpgsqlTypes.NpgsqlDbType.Integer), new NpgsqlParameter("t", id),
                         new NpgsqlParameter("s", s), new NpgsqlParameter("d", m.Date), new NpgsqlParameter("n", m.Minutes.Value), SqlBtp.P("x", note), new NpgsqlParameter("u", u.Code)], ct);
             return Results.Ok(new { ok = true });
         }).ExigeDroit("terrain/materiel", ActionsDroits.Creer);

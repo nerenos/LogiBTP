@@ -300,7 +300,7 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
     public override async Task<string?> CourrielUtilisateurAsync(string utilisateur, CancellationToken ct) =>
         await db.Database.SqlQueryRaw<string>("""
             SELECT c.coo_valeur AS "Value" FROM individu i JOIN usage_coordonnee u ON u.uco_ind_id = i.ind_id JOIN coordonnee c ON c.coo_id = u.uco_coo_id
-            WHERE lower(i.ind_utilisateur) = lower(@u) AND c.coo_nature = 'EMAIL' ORDER BY u.uco_principal DESC, c.coo_id LIMIT 1
+            WHERE i.ind_utilisateur = lower(@u) AND c.coo_nature = 'EMAIL' ORDER BY u.uco_principal DESC, c.coo_id LIMIT 1
             """, new NpgsqlParameter("u", utilisateur)).FirstOrDefaultAsync(ct);
 
     public override async Task<IReadOnlyList<string>> AdministrateursAsync(CancellationToken ct) => await DestinatairesBtp.AdministrateursAsync(db, ct);

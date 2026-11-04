@@ -81,7 +81,7 @@ public static class ListesValeurs
                     lva_couleur = EXCLUDED.lva_couleur, lva_ordre = EXCLUDED.lva_ordre, lva_actif = EXCLUDED.lva_actif
                 """,
                 [new NpgsqlParameter("l", liste), new NpgsqlParameter("c", v.Code.Trim()), new NpgsqlParameter("lib", v.Libelle.Trim()),
-                 new NpgsqlParameter("p", (object?)v.Parent ?? DBNull.Value), new NpgsqlParameter("coul", (object?)v.Couleur ?? DBNull.Value),
+                 SqlBtp.P("p", v.Parent), SqlBtp.P("coul", v.Couleur),
                  new NpgsqlParameter("o", v.Ordre), new NpgsqlParameter("a", v.Actif)], ct);
         }
         await tx.CommitAsync(ct);

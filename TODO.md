@@ -58,9 +58,6 @@
   telles quelles ; seules les nouvelles validations sont contrôlées.
 - [ ] GED : `modules/ged/db/051` appliqué ; après redémarrage de l'API, indexer les documents déposés avant
   (`POST /api/ged/indexation`, administrateur, lots de 200).
-- [ ] Vue de colonnes « Complet » : `db/150` (`ON CONFLICT DO NOTHING`) n'ajoute pas Compte et Commentaire aux bases
-  existantes (à ajouter par le dialogue des colonnes ou par une mise à jour de `vue_document`). Les autres colonnes
-  de la chaîne achats (reste, soldé…) s'ajoutent seules après la quantité.
 - [ ] Données de démonstration : corriger les documents VALIDE → ENVOYE et les devis ACCEPTE → VALIDE (statuts de la
   chaîne ENVOYE / VALIDE), sans script de reprise (base de développement).
 - [ ] Documents d'essai créés pendant le développement dans `logibtp_demo` (commandes CC2026-00003…7, marché
@@ -328,8 +325,6 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
   la ligne des groupes).
 - [ ] Indicateur « Devis à relancer » : une note de relance du CRM doit remettre le délai de 15 jours à zéro (Q5 ;
   aujourd'hui : jours depuis l'envoi, `jours_envoye` de `db/253`) ; délai de relance en paramètre.
-- [ ] Listes : vues enregistrées par les utilisateurs avec l'ancien picto du statut (colonne `statut`) à passer sur la
-  colonne `etat` en pastille (script de reprise des définitions JSON).
 - [ ] Matériel : photo de l'état au retour d'une affectation (dépôt dans la GED du matériel depuis la ligne).
 - [ ] Unités de l'article (E10, suite) : même liste et même conversion depuis le détail de la ligne (combo Unité), et
   choix « ne plus demander » gardé avec le document plutôt que pour la seule fenêtre ouverte.
@@ -377,11 +372,8 @@ Lots P1 (module, chargement, socle et navigation migrés), P2 (erreurs par code)
 
 - [ ] Lots A (code mort sûr) et B (code apparemment inutilisé, à trancher) : en attente des évolutions à venir qui
   touchent ce code ; à reprendre ensuite.
-- [ ] Lot F, reste à trancher : listes de statuts différentes selon les requêtes d'ordres (Pointage : sans SOLDE ; sources
-  du planning et jalons : aucun filtre de statut, un ordre annulé y reste proposé) ; `lower(ind_utilisateur)` seulement
-  dans Mail et OAuth (casse du pseudo non unifiée) ; listes de statuts des requêtes paramétrées par interpolation
-  (`SpecialisationBtp` encours client, `StockApprovisionnementBtp`) et `std_code <> 'ANNULE'` laissés en littéraux ;
-  ~60 `?? DBNull.Value` en ligne (aide `SqlBtp.P` disponible).
+- [ ] Lot F, reste à trancher : listes de statuts des requêtes paramétrées par interpolation (`SpecialisationBtp` encours
+  client, `StockApprovisionnementBtp`) et `std_code <> 'ANNULE'` laissés en littéraux.
 - [ ] Raccourcis clavier : déclarer les fonctions des fiches, des listes et de la GED (groupes à ajouter avec
   `declarerRaccourcis`) ; les accélérateurs des menus du bandeau (`&Paramètres`) ne sont pas personnalisables ; menu
   contextuel à étendre (fiches, explorateur GED, entête du document).

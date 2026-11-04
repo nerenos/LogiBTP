@@ -121,10 +121,10 @@ public static class AffectationsMateriel
                 VALUES (@m, @t, @r, @du, @au, @c, @u, @dep, @ret, @req)
                 """,
                 [new NpgsqlParameter("m", materiel), new NpgsqlParameter("t", a.Type), new NpgsqlParameter("r", a.Ressource!.Trim()),
-                 new NpgsqlParameter("du", a.Du!.Value), new NpgsqlParameter("au", (object?)a.Au ?? DBNull.Value),
-                 new NpgsqlParameter("c", (object?)a.Commentaire?.Trim() ?? DBNull.Value), new NpgsqlParameter("u", u.Code),
+                 new NpgsqlParameter("du", a.Du!.Value), SqlBtp.P("au", a.Au),
+                 SqlBtp.P("c", a.Commentaire?.Trim()), new NpgsqlParameter("u", u.Code),
                  new NpgsqlParameter("dep", (object?)(avant is null ? etat.Condition : avant.Depart) ?? DBNull.Value),
-                 new NpgsqlParameter("ret", (object?)a.Retour ?? DBNull.Value), new NpgsqlParameter("req", avant?.RetourRequis ?? true)], ct);
+                 SqlBtp.P("ret", a.Retour), new NpgsqlParameter("req", avant?.RetourRequis ?? true)], ct);
         }
         var signaler = retour is not null && ConditionsASignaler.Contains(retour.Retour);
         if (retour is not null)
@@ -143,7 +143,7 @@ public static class AffectationsMateriel
                     INSERT INTO materiel_evenement (mev_mat_id, mev_type, mev_date, mev_libelle, mev_description, mev_maj_par)
                     VALUES (@m, 'SINISTRE', @d, left('Retour de ' || @l, 150), @x, @u)
                     """, [new NpgsqlParameter("m", materiel), new NpgsqlParameter("d", retour.Au!.Value), new NpgsqlParameter("l", libelle),
-                       new NpgsqlParameter("x", (object?)retour.Commentaire?.Trim() ?? DBNull.Value), new NpgsqlParameter("u", u.Code)], ct);
+                       SqlBtp.P("x", retour.Commentaire?.Trim()), new NpgsqlParameter("u", u.Code)], ct);
             }
         }
         await tx.CommitAsync(ct);

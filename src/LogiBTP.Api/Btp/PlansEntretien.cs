@@ -70,9 +70,9 @@ public static partial class PlansEntretien
         {
             NpgsqlParameter[] v =
             [
-                new("p", cle), new("c", p.Code!.Trim().ToUpperInvariant()), new("l", (object?)p.Libelle?.Trim() ?? DBNull.Value),
+                new("p", cle), new("c", p.Code!.Trim().ToUpperInvariant()), SqlBtp.P("l", p.Libelle?.Trim()),
                 new("o", (object?)(string.IsNullOrWhiteSpace(p.Operations) ? null : p.Operations.Trim()) ?? DBNull.Value), new("n", p.Nature ?? "PREVENTIF"),
-                new("h", (object?)p.Heures ?? DBNull.Value), new("k", (object?)p.Km ?? DBNull.Value), new("m", (object?)p.Mois ?? DBNull.Value),
+                SqlBtp.P("h", p.Heures), SqlBtp.P("k", p.Km), SqlBtp.P("m", p.Mois),
                 new("a", p.Actif), new("r", p.Ordre), new("u", utilisateur),
             ];
             var update = parType ? """
@@ -136,7 +136,7 @@ public static partial class PlansEntretien
                    (SELECT r.ind_utilisateur FROM service sv JOIN individu r ON r.ind_id = sv.srv_responsable_id WHERE sv.srv_id = m.mat_srv_id) AS responsable
             FROM materiel m
             WHERE (@m::int IS NULL AND m.mat_usage <> 'S' AND m.mat_etat <> 'REBUT') OR m.mat_id = @m::int
-            """, new NpgsqlParameter("m", (object?)materiel ?? DBNull.Value) { NpgsqlDbType = NpgsqlTypes.NpgsqlDbType.Integer }).ToListAsync(ct);
+            """, SqlBtp.P("m", materiel, NpgsqlTypes.NpgsqlDbType.Integer)).ToListAsync(ct);
         var plans = await PlansAsync(db, "TRUE");
         var effectifs = materiels.Select(m => (M: m, Plans: Effectifs(m, plans))).Where(x => x.Plans.Count > 0).ToList();
         if (effectifs.Count == 0) return [];
@@ -193,7 +193,7 @@ public static partial class PlansEntretien
                 new NpgsqlParameter("f", m)).FirstOrDefaultAsync(ct);
             var herites = ReglesEntretiens.PlansEffectifs(
             [
-                (await PlansAsync(db, FiltreType, new NpgsqlParameter("t", (object?)parent ?? DBNull.Value))).Select(p => Regle(p, "TYPE_PARENT")),
+                (await PlansAsync(db, FiltreType, SqlBtp.P("t", parent))).Select(p => Regle(p, "TYPE_PARENT")),
                 (await PlansAsync(db, FiltreType, new NpgsqlParameter("t", m))).Select(p => Regle(p, "TYPE")),
             ]);
             return Results.Ok(new { herites, propres = await PlansAsync(db, FiltreMateriel, new NpgsqlParameter("m", id)) });

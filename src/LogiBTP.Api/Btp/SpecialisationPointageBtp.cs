@@ -133,8 +133,8 @@ public class SpecialisationPointageBtp(IHttpContextAccessor http) : Specialisati
             ORDER BY s.sal_nom, s.sal_prenom
             LIMIT @n
             """,
-            new NpgsqlParameter("ids", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer) { Value = (object?)f.Ids?.ToArray() ?? DBNull.Value },
-            new NpgsqlParameter("srv", NpgsqlTypes.NpgsqlDbType.Integer) { Value = (object?)f.Service ?? DBNull.Value },
+            SqlBtp.P("ids", f.Ids?.ToArray(), NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer),
+            SqlBtp.P("srv", f.Service, NpgsqlTypes.NpgsqlDbType.Integer),
             new NpgsqlParameter("srvs", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer) { Value = f.Services is { Count: > 0 } ? f.Services.ToArray() : DBNull.Value },
             new NpgsqlParameter("fct", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text) { Value = f.Fonctions is { Count: > 0 } ? f.Fonctions.ToArray() : DBNull.Value },
             new NpgsqlParameter("r", NpgsqlTypes.NpgsqlDbType.Text) { Value = string.IsNullOrWhiteSpace(f.Recherche) ? DBNull.Value : $"%{f.Recherche.Trim()}%" },
@@ -151,7 +151,7 @@ public class SpecialisationPointageBtp(IHttpContextAccessor http) : Specialisati
             ORDER BY c.cha_interne, c.cha_code DESC
             LIMIT 50
             """,
-            new NpgsqlParameter("ids", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer) { Value = (object?)ids?.ToArray() ?? DBNull.Value },
+            SqlBtp.P("ids", ids?.ToArray(), NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer),
             new NpgsqlParameter("r", NpgsqlTypes.NpgsqlDbType.Text) { Value = string.IsNullOrWhiteSpace(recherche) ? DBNull.Value : $"%{recherche.Trim()}%" }).ToListAsync(ct);
 
     /// <summary>Bouton « Tous » de la borne (A30) : chantiers ouverts (hors dotations, sauf entretien en cours) et internes, sans la limite de la recherche.</summary>
@@ -189,7 +189,7 @@ public class SpecialisationPointageBtp(IHttpContextAccessor http) : Specialisati
             ORDER BY 2
             LIMIT 500
             """,
-            new NpgsqlParameter("ids", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Bigint) { Value = (object?)ids?.ToArray() ?? DBNull.Value },
+            SqlBtp.P("ids", ids?.ToArray(), NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Bigint),
             new NpgsqlParameter("r", NpgsqlTypes.NpgsqlDbType.Text) { Value = string.IsNullOrWhiteSpace(recherche) ? DBNull.Value : recherche.Trim() }).ToListAsync(ct);
         var geo = http.HttpContext?.RequestServices.GetService<Geocodage>();
         (decimal Lat, decimal Lon)? centre = chantier is int c && geo is not null ? await geo.ChantierAsync(db, c, ct) : null;
@@ -325,7 +325,7 @@ public class SpecialisationPointageBtp(IHttpContextAccessor http) : Specialisati
             LEFT JOIN service sv ON sv.srv_id = e.equ_srv_id
             WHERE e.equ_active AND (@s IS NULL OR e.equ_srv_id = @s OR sv.srv_parent_id = @s)
             ORDER BY e.equ_libelle
-            """, new NpgsqlParameter("d", date), new NpgsqlParameter("s", NpgsqlTypes.NpgsqlDbType.Integer) { Value = (object?)service ?? DBNull.Value }).ToListAsync(ct);
+            """, new NpgsqlParameter("d", date), SqlBtp.P("s", service, NpgsqlTypes.NpgsqlDbType.Integer)).ToListAsync(ct);
 
     public override Task<OrdrePointage?> OrdreParNumeroAsync(PointageDbContext db, string numero, CancellationToken ct) =>
         db.Database.SqlQueryRaw<OrdrePointage>("""

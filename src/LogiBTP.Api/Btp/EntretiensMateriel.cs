@@ -77,7 +77,7 @@ public static class EntretiensMateriel
             c.Lignes.Add(new DocumentLigneBtp { LigId = -1000, LigEntId = c.Document.EntId, LigOrdre = i + 100, LigTylId = TL.Tva, LigLibelleHtml = "TVA", LigTypePrix = "V" });
         await documents.Enregistrer(c.Document.EntId, c, u, ct);
         await db.Database.ExecuteSqlRawAsync("UPDATE document SET ent_mat_id = @m, ent_ent_nature = @n, ent_mpl_id = @p WHERE ent_id = @e",
-            [new NpgsqlParameter("m", materiel), new NpgsqlParameter("n", (object?)n.Nature ?? DBNull.Value), new NpgsqlParameter("p", (object?)n.Plan ?? DBNull.Value),
+            [new NpgsqlParameter("m", materiel), SqlBtp.P("n", n.Nature), SqlBtp.P("p", n.Plan),
              new NpgsqlParameter("e", c.Document.EntId)], ct);
         return c.Document.EntId;
     }
@@ -93,7 +93,7 @@ public static class EntretiensMateriel
         if (releve is not null) await CompteursMateriel.ControlerReleveAsync(db, materiel, releve, null, entId, ct);
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         await db.Database.ExecuteSqlRawAsync("UPDATE document SET ent_ent_nature = @n WHERE ent_id = @e",
-            [new NpgsqlParameter("n", (object?)s.Nature ?? DBNull.Value), new NpgsqlParameter("e", entId)], ct);
+            [SqlBtp.P("n", s.Nature), new NpgsqlParameter("e", entId)], ct);
         await db.Database.ExecuteSqlRawAsync("DELETE FROM materiel_releve WHERE mre_ent_id = @e AND mre_source = 'ORDRE'", [new NpgsqlParameter("e", entId)], ct);
         if (releve is not null) await CompteursMateriel.InsererReleveAsync(db, materiel, releve, "ORDRE", null, entId, u.Code, ct);
         // Ordre déjà clos : la date de l'entretien de l'historique suit le relevé.

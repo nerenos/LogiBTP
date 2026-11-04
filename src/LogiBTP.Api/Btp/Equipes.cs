@@ -164,7 +164,7 @@ public static class Equipes
             var verrou = await db.Database.SqlQueryRaw<bool>($"""
                 SELECT EXISTS (SELECT 1 FROM verrou_fiche WHERE vef_type = @t AND vef_id = @id AND vef_jeton = @j AND vef_renouvele >= now() - make_interval(secs => @ExpirationVerrou)) AS "Value"
                 """, new NpgsqlParameter("ExpirationVerrou", ExpirationVerrou),new NpgsqlParameter("t", TypeVerrou), new NpgsqlParameter("id", e0.ToString(CultureInfo.InvariantCulture)),
-                new NpgsqlParameter("j", NpgsqlDbType.Uuid) { Value = (object?)s.Jeton ?? DBNull.Value }).FirstAsync(ct);
+                SqlBtp.P("j", s.Jeton, NpgsqlDbType.Uuid)).FirstAsync(ct);
             if (!verrou) throw ExceptionMetier.Conflit("EQU_VERROU", "Le verrou de modification de l'équipe n'est plus détenu : elle est rechargée");
             if (s.Version != lue[0].EquVersion) throw ExceptionMetier.Conflit("EQU_VERSION", "L'équipe a été modifiée par ailleurs : elle est rechargée", new { version = lue[0].EquVersion });
             // Compositions plus anciennes que la plus ancienne chargée : gardées avec leurs membres et commentaires.
@@ -178,7 +178,7 @@ public static class Equipes
         }
         else await DroitAsync(db, u, s.SrvId is int sv ? [sv] : [], ct);
         if (await db.Database.SqlQueryRaw<bool>("SELECT EXISTS (SELECT 1 FROM equipe WHERE upper(equ_code) = upper(@c) AND equ_id <> coalesce(@id, 0)) AS \"Value\"",
-                new NpgsqlParameter("c", s.Code.Trim()), new NpgsqlParameter("id", NpgsqlDbType.Integer) { Value = (object?)id ?? DBNull.Value }).FirstAsync(ct))
+                new NpgsqlParameter("c", s.Code.Trim()), SqlBtp.P("id", id, NpgsqlDbType.Integer)).FirstAsync(ct))
         {
             throw ExceptionMetier.Conflit("EQU_CODE_PRIS", $"Le code {s.Code.Trim()} est déjà pris par une autre équipe");
         }
@@ -199,9 +199,9 @@ public static class Equipes
         var p = new[]
         {
             new NpgsqlParameter("code", s.Code.Trim()), new NpgsqlParameter("lib", s.Libelle.Trim()),
-            new NpgsqlParameter("srv", NpgsqlDbType.Integer) { Value = (object?)s.SrvId ?? DBNull.Value }, new NpgsqlParameter("actif", s.Actif),
+            SqlBtp.P("srv", s.SrvId, NpgsqlDbType.Integer), new NpgsqlParameter("actif", s.Actif),
             new NpgsqlParameter("com", NpgsqlDbType.Text) { Value = string.IsNullOrWhiteSpace(s.Commentaire) ? DBNull.Value : s.Commentaire.Trim() },
-            new NpgsqlParameter("id", NpgsqlDbType.Integer) { Value = (object?)id ?? DBNull.Value },
+            SqlBtp.P("id", id, NpgsqlDbType.Integer),
         };
         var equipe = id ?? (await db.Database.SqlQueryRaw<int>("""
             INSERT INTO equipe (equ_code, equ_libelle, equ_srv_id, equ_active, equ_commentaire) VALUES (@code, @lib, @srv, @actif, @com) RETURNING equ_id AS "Value"
@@ -226,8 +226,8 @@ public static class Equipes
             await db.Database.ExecuteSqlRawAsync("""
                 INSERT INTO equipe_composition (eqc_equ_id, eqc_type, eqc_ressource, eqc_sal_id, eqc_du, eqc_au, eqc_chef) VALUES (@e, @t, @r, @s, @du, @au, @chef)
                 """, [new NpgsqlParameter("e", equipe), new NpgsqlParameter("t", l.Type), new NpgsqlParameter("r", l.Id),
-                    new NpgsqlParameter("s", NpgsqlDbType.Integer) { Value = (object?)sal ?? DBNull.Value }, new NpgsqlParameter("du", l.Du),
-                    new NpgsqlParameter("au", NpgsqlDbType.Date) { Value = (object?)l.Au ?? DBNull.Value }, new NpgsqlParameter("chef", l.Chef)], ct);
+                    SqlBtp.P("s", sal, NpgsqlDbType.Integer), new NpgsqlParameter("du", l.Du),
+                    SqlBtp.P("au", l.Au, NpgsqlDbType.Date), new NpgsqlParameter("chef", l.Chef)], ct);
         }
         // Colonnes résumées de l'équipe (liste des ressources, communications) : chef et effectif du jour ; verrou libéré.
         await db.Database.ExecuteSqlRawAsync("""

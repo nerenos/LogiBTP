@@ -75,7 +75,7 @@ public static class CalendriersBtp
             foreach (var x in l)
             {
                 await db.Database.ExecuteSqlRawAsync("UPDATE service SET srv_cal_id = @c, srv_maj_le = now() WHERE srv_id = @s",
-                    [new NpgsqlParameter("c", NpgsqlDbType.Integer) { Value = (object?)x.CalId ?? DBNull.Value }, new NpgsqlParameter("s", x.SrvId)], ct);
+                    [SqlBtp.P("c", x.CalId, NpgsqlDbType.Integer), new NpgsqlParameter("s", x.SrvId)], ct);
             }
             return Results.NoContent();
         });

@@ -80,8 +80,8 @@ public static class CompteursMateriel
             VALUES (@m, @d, @u, @v, @r, @s, @o, @e, @c, @p)
             """,
             [new NpgsqlParameter("m", materiel), new NpgsqlParameter("d", r.Date!.Value), new NpgsqlParameter("u", r.Unite!), new NpgsqlParameter("v", r.Valeur!.Value),
-             new NpgsqlParameter("r", r.Remise), new NpgsqlParameter("s", source), new NpgsqlParameter("o", (object?)ordre ?? DBNull.Value),
-             new NpgsqlParameter("e", (object?)evenement ?? DBNull.Value), new NpgsqlParameter("c", (object?)r.Commentaire?.Trim() ?? DBNull.Value),
+             new NpgsqlParameter("r", r.Remise), new NpgsqlParameter("s", source), SqlBtp.P("o", ordre),
+             SqlBtp.P("e", evenement), SqlBtp.P("c", r.Commentaire?.Trim()),
              new NpgsqlParameter("p", utilisateur)], ct);
 
     /// <summary>Ajoute un relevé contrôlé (source SAISIE, ORDRE, BORNE…), lié à un ordre s'il y a lieu.</summary>
@@ -103,9 +103,9 @@ public static class CompteursMateriel
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         NpgsqlParameter[] p =
         [
-            new("m", materiel), new("t", e.Type!), new("d", e.Date!.Value), new("f", (object?)e.Fin ?? DBNull.Value), new("l", (object?)libelle ?? DBNull.Value),
-            new("x", (object?)e.Description?.Trim() ?? DBNull.Value), new("o", (object?)e.EntId ?? DBNull.Value), new("c", (object?)e.Cout ?? DBNull.Value),
-            new("q", (object?)e.Litres ?? DBNull.Value), new("p", utilisateur), new("i", (object?)id ?? DBNull.Value),
+            new("m", materiel), new("t", e.Type!), new("d", e.Date!.Value), SqlBtp.P("f", e.Fin), SqlBtp.P("l", libelle),
+            SqlBtp.P("x", e.Description?.Trim()), SqlBtp.P("o", e.EntId), SqlBtp.P("c", e.Cout),
+            SqlBtp.P("q", e.Litres), new("p", utilisateur), SqlBtp.P("i", id),
             new("pc", (object?)(e.Type is "ENTRETIEN" or "CONTROLE" && !string.IsNullOrWhiteSpace(e.PlanCode) ? e.PlanCode.Trim() : null) ?? DBNull.Value),
         ];
         var mev = id is null

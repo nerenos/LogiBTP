@@ -38,9 +38,9 @@ public class SpecialisationPlanningBtp(IHttpContextAccessor http) : Specialisati
             ORDER BY r.libelle
             LIMIT 10000
             """,
-            new NpgsqlParameter("cles", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text) { Value = (object?)f.Cles?.ToArray() ?? DBNull.Value },
+            SqlBtp.P("cles", f.Cles?.ToArray(), NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text),
             new NpgsqlParameter("types", types),
-            new NpgsqlParameter("srv", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer) { Value = (object?)f.Services?.ToArray() ?? DBNull.Value },
+            SqlBtp.P("srv", f.Services?.ToArray(), NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer),
             new NpgsqlParameter("q", NpgsqlTypes.NpgsqlDbType.Text) { Value = string.IsNullOrWhiteSpace(f.Recherche) ? DBNull.Value : $"%{f.Recherche.Trim()}%" })
             .ToListAsync(ct);
     }
@@ -96,16 +96,19 @@ public class SpecialisationPlanningBtp(IHttpContextAccessor http) : Specialisati
 
     private sealed record JalonBtp(string Cle, DateTime Quand, string Type, string Libelle, string Id);
 
-    /// <summary>Jalons calculés : fins prévues des chantiers ouverts, fins prévues des ordres de la famille E (Exécution active).</summary>
+    /// <summary>
+    /// Jalons calculés : fins prévues des chantiers ouverts, fins prévues des ordres de la famille E en vigueur (ni annulés
+    /// ni remplacés ; Exécution active).
+    /// </summary>
     public override async Task<List<JalonPlanning>> JalonsAsync(PlanningDbContext db, DateOnly du, DateOnly au, CancellationToken ct) =>
-        (await db.Database.SqlQueryRaw<JalonBtp>("""
+        (await db.Database.SqlQueryRaw<JalonBtp>($"""
             SELECT 'chantier:' || c.cha_id AS cle, c.cha_date_fin_prevue::timestamp AS quand, 'FIN_CHANTIER' AS type, 'Fin prévue ' || c.cha_code AS libelle, c.cha_id::text AS id
             FROM chantier c WHERE (c.cha_statut = 'OUVERT' AND NOT f_chantier_dotation(c.cha_id)) AND c.cha_date_fin_prevue BETWEEN @du AND @au
             UNION ALL
             SELECT 'ordre:' || d.ent_id, d.ent_fin_prevue::timestamp, 'FIN_ORDRE', 'Fin prévue ' || coalesce(d.ent_numero, t.tyd_libelle), d.ent_chantier_id::text
-            FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id
+            FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id JOIN statut_document s ON s.std_id = d.ent_std_id
             WHERE f_module_actif('execution') AND t.tyd_famille = 'E' AND d.ent_is_reference AND d.ent_chantier_id IS NOT NULL
-              AND d.ent_fin_prevue BETWEEN @du AND @au
+              AND s.std_code NOT IN ({SqlBtp.HorsVigueur}) AND d.ent_fin_prevue BETWEEN @du AND @au
             UNION ALL
             SELECT 'crm:' || n.not_id, n.not_echeance::timestamp, 'ALERTE', n.not_objet, l.nli_id_element
             FROM crm_note n JOIN crm_note_lien l ON l.nli_not_id = n.not_id AND l.nli_type_element = 'chantier'
@@ -193,7 +196,7 @@ public class SpecialisationPlanningBtp(IHttpContextAccessor http) : Specialisati
 
     /// <summary>
     /// Points de départ de tâches : chantiers ouverts et internes (dates d'ouverture et de fin prévue), projets en chiffrage
-    /// ou remis (tâche théorique sur le projet), ordres d'exécution non terminés si l'Exécution est active (tâche sur le
+    /// ou remis (tâche théorique sur le projet), ordres d'exécution ouverts (`v_ordres_ouverts` : ni annulés, remplacés, soldés ni terminés) si l'Exécution est active (tâche sur le
     /// chantier de l'ordre, origine = l'ordre, service, dates prévues et heures de main-d'œuvre de l'ordre). 300 au plus.
     /// </summary>
     public override Task<List<SourceTache>> SourcesAsync(PlanningDbContext db, string type, string? recherche, CancellationToken ct)
@@ -224,8 +227,9 @@ public class SpecialisationPlanningBtp(IHttpContextAccessor http) : Specialisati
                        'ordre' AS origine_type, d.ent_id::text AS origine_id, d.ent_srv_id AS srv_id,
                        d.ent_debut_prevu::text AS debut, d.ent_fin_prevue::text AS fin,
                        (SELECT round(sum(h.heures) * 60)::int FROM v_heures_lignes h WHERE h.ent_id = d.ent_id) AS heures, d.ent_exe_etat AS etat
-                FROM document d JOIN type_document y ON y.tyd_id = d.ent_tyd_id JOIN chantier c ON c.cha_id = d.ent_chantier_id
-                WHERE f_module_actif('execution') AND y.tyd_famille = 'E' AND d.ent_is_reference AND coalesce(d.ent_exe_etat, 'A_FAIRE') <> 'TERMINE'
+                FROM document d JOIN v_ordres_ouverts o ON o.ent_id = d.ent_id
+                JOIN type_document y ON y.tyd_id = d.ent_tyd_id JOIN chantier c ON c.cha_id = d.ent_chantier_id
+                WHERE f_module_actif('execution')
                   AND (@q IS NULL OR d.ent_numero ILIKE @q OR d.ent_objet ILIKE @q OR c.cha_code ILIKE @q OR c.cha_libelle ILIKE @q)
                 ORDER BY d.ent_debut_prevu NULLS LAST, d.ent_numero LIMIT 300
                 """,
@@ -243,7 +247,7 @@ public class SpecialisationPlanningBtp(IHttpContextAccessor http) : Specialisati
             WHERE (@ids IS NULL AND p.prj_statut IN ('EN_COURS', 'REMIS') AND (@q IS NULL OR p.prj_code ILIKE @q OR p.prj_libelle ILIKE @q)) OR p.prj_id::text = ANY(@ids)
             ORDER BY p.prj_code LIMIT 500
             """,
-            new NpgsqlParameter("ids", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text) { Value = (object?)ids?.ToArray() ?? DBNull.Value },
+            SqlBtp.P("ids", ids?.ToArray(), NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text),
             new NpgsqlParameter("q", NpgsqlTypes.NpgsqlDbType.Text) { Value = string.IsNullOrWhiteSpace(recherche) ? DBNull.Value : $"%{recherche.Trim()}%" }).ToListAsync(ct)
         : db.Database.SqlQueryRaw<ElementPlanning>("""
             SELECT 'chantier' AS type, c.cha_id::text AS id, c.cha_code AS code, c.cha_libelle AS libelle, '/fiche/chantier/' || c.cha_id AS url
@@ -253,7 +257,7 @@ public class SpecialisationPlanningBtp(IHttpContextAccessor http) : Specialisati
             ORDER BY c.cha_interne, c.cha_code
             LIMIT 500
             """,
-            new NpgsqlParameter("ids", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text) { Value = (object?)ids?.ToArray() ?? DBNull.Value },
+            SqlBtp.P("ids", ids?.ToArray(), NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text),
             new NpgsqlParameter("q", NpgsqlTypes.NpgsqlDbType.Text) { Value = string.IsNullOrWhiteSpace(recherche) ? DBNull.Value : $"%{recherche.Trim()}%" }).ToListAsync(ct);
 
     public override Task<List<BudgetPlanning>> BudgetsAsync(PlanningDbContext db, IReadOnlyCollection<int>? services, string? recherche, CancellationToken ct) =>
@@ -263,7 +267,7 @@ public class SpecialisationPlanningBtp(IHttpContextAccessor http) : Specialisati
             WHERE b.srv_id IS NOT NULL AND (c.cha_statut = 'OUVERT' AND NOT f_chantier_dotation(c.cha_id)) AND (@srv IS NULL OR b.srv_id = ANY(@srv))
               AND (@q IS NULL OR c.cha_code ILIKE @q OR c.cha_libelle ILIKE @q)
             """,
-            new NpgsqlParameter("srv", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer) { Value = (object?)services?.ToArray() ?? DBNull.Value },
+            SqlBtp.P("srv", services?.ToArray(), NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer),
             new NpgsqlParameter("q", NpgsqlTypes.NpgsqlDbType.Text) { Value = string.IsNullOrWhiteSpace(recherche) ? DBNull.Value : $"%{recherche.Trim()}%" }).ToListAsync(ct);
 
     public override Task<List<ServicePlanningDto>> ServicesAsync(PlanningDbContext db, CancellationToken ct) =>

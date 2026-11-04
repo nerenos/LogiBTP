@@ -144,3 +144,9 @@
   gardée) et `projet.prj_responsable` (projet du CRM créé avec `prj_responsable_ind_id`, démo sur des individus de la
   structure) par `db/265` ; `search_path = public` des fonctions de la GED (`modules/ged/db/054`, pg_restore direct) ;
   contrôles avant suppression des fiches du cœur déjà faits (`SuppressionFiches`).
+- [x] Revue du code, lot F : identifiant de connexion `ind_utilisateur` toujours en minuscules (trigger de `db/266`,
+  comparé à `lower(@u)`) ; ordres annulés ou remplacés écartés des jalons du planning, sources de tâches sur
+  `v_ordres_ouverts` (le Pointage garde les ordres soldés : heures pointées après le solde) ; 71 `?? DBNull.Value` en
+  ligne passés sur `SqlBtp.P` (restent les tuples, lambdas et `AddWithValue`).
+- [x] Reprises de `db/266` : vues de liste enregistrées sur l'ancien libellé du statut passées sur la pastille `etat`
+  (segments compris), colonnes Compte et Commentaire de la vue « Complet ».

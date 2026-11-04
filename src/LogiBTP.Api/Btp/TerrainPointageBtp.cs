@@ -184,7 +184,7 @@ public static partial class TerrainBtp
             var srv = await db.Database.SqlQueryRaw<int?>("SELECT nat_srv_id AS \"Value\" FROM nature_element WHERE nat_id = @n", new NpgsqlParameter("n", l.TypeMo)).FirstOrDefaultAsync(ct);
             var libelle = await db.Database.SqlQueryRaw<string>("""
                 SELECT '🛠 ' || coalesce((SELECT d.ent_numero FROM document d WHERE d.ent_id = @e), c.cha_code) AS "Value" FROM chantier c WHERE c.cha_id = @c
-                """, new NpgsqlParameter("e", (object?)l.EntId ?? DBNull.Value), new NpgsqlParameter("c", l.ChaId)).FirstOrDefaultAsync(ct) ?? "🛠 Saisie libre";
+                """, SqlBtp.P("e", l.EntId), new NpgsqlParameter("c", l.ChaId)).FirstOrDefaultAsync(ct) ?? "🛠 Saisie libre";
             creees[i] = await planning.CreerIdAsync(new TacheSaisie(2, LiaisonsBtp.DateHeure(j.Date), LiaisonsBtp.DateHeure(j.Date.AddDays(1)), null, personnes.Count,
                 srv ?? salaries.GetValueOrDefault(s)?.SrvId, TypesFiche.Chantier, l.ChaId.ToString(), $"{libelle} (saisie libre)",
                 personnes.Select(p => new AffectationSaisie(salaries[p].Interimaire ? "INTERIM" : "SALARIE", p.ToString())).ToList(),

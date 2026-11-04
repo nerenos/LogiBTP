@@ -77,15 +77,15 @@ public class SpecialisationAuthentificationBtp : SpecialisationAuthentification
     public override async Task<bool> PseudoLibreAsync(AuthDbContext db, string code, string? type, string? id, CancellationToken ct)
     {
         var ind = type == TypesFiche.Individu ? id : null;
-        return !await db.Database.SqlQueryRaw<int>("SELECT 1 AS \"Value\" FROM individu WHERE lower(ind_utilisateur) = @code AND ind_id::text IS DISTINCT FROM @ind",
-            new NpgsqlParameter("code", code), new NpgsqlParameter("ind", NpgsqlTypes.NpgsqlDbType.Text) { Value = (object?)ind ?? DBNull.Value }).AnyAsync(ct);
+        return !await db.Database.SqlQueryRaw<int>("SELECT 1 AS \"Value\" FROM individu WHERE ind_utilisateur = lower(@code) AND ind_id::text IS DISTINCT FROM @ind",
+            new NpgsqlParameter("code", code), SqlBtp.P("ind", ind, NpgsqlTypes.NpgsqlDbType.Text)).AnyAsync(ct);
     }
 
     /// <summary>Le pseudo du compte devient l'identifiant de connexion de l'individu (ancien identifiant retiré).</summary>
     public override async Task ApresEcritureAsync(AuthDbContext db, Compte compte, string? ancienCode, CancellationToken ct)
     {
         if (compte.CptTypeElement != TypesFiche.Individu || !long.TryParse(compte.CptIdElement, out var ind)) return;
-        await db.Database.ExecuteSqlRawAsync("UPDATE individu SET ind_utilisateur = NULL WHERE ind_id <> @id AND lower(ind_utilisateur) = lower(@code)",
+        await db.Database.ExecuteSqlRawAsync("UPDATE individu SET ind_utilisateur = NULL WHERE ind_id <> @id AND ind_utilisateur = lower(@code)",
             [new NpgsqlParameter("id", ind), new NpgsqlParameter("code", compte.CptCode)], ct);
         await db.Database.ExecuteSqlRawAsync("UPDATE individu SET ind_utilisateur = @code WHERE ind_id = @id",
             [new NpgsqlParameter("id", ind), new NpgsqlParameter("code", compte.CptCode)], ct);

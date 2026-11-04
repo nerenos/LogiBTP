@@ -164,8 +164,8 @@ public static class ModulesServices
             var p = new NpgsqlParameter[]
             {
                 new("code", s.Code.Trim().ToUpperInvariant()), new("libelle", s.Libelle.Trim()), new("nature", s.Nature),
-                new("resp", (object?)s.ResponsableId ?? DBNull.Value), new("ordre", s.Ordre), new("actif", s.Actif),
-                new("parent", (object?)s.ParentCode?.Trim().ToUpperInvariant() ?? DBNull.Value),
+                SqlBtp.P("resp", s.ResponsableId), new("ordre", s.Ordre), new("actif", s.Actif),
+                SqlBtp.P("parent", s.ParentCode?.Trim().ToUpperInvariant()),
             };
             if (s.Id is int id)
             {

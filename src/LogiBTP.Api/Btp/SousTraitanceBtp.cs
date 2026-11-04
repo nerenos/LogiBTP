@@ -53,7 +53,7 @@ public class SpecialisationSousTraitanceBtp : SpecialisationSousTraitance
             FROM document_ged d
             WHERE NOT d.dge_supprime AND d.dge_categorie IS NOT NULL AND d.dge_parent_id IS NULL
               AND ((d.dge_type_element = 'personne' AND d.dge_id_element = @t) OR (d.dge_type_element = 'marche' AND d.dge_id_element = @m))
-            """, new NpgsqlParameter("t", tiers.ToString()), new NpgsqlParameter("m", NpgsqlDbType.Text) { Value = (object?)marche?.ToString() ?? DBNull.Value })
+            """, new NpgsqlParameter("t", tiers.ToString()), SqlBtp.P("m", marche?.ToString(), NpgsqlDbType.Text))
             .ToListAsync(ct)).Select(p => new PieceFournie(p.Categorie, p.Portee, p.DgeId, p.DeposeLe, p.ValideAu)).ToList();
 
     public override async Task DefinirValiditeAsync(SousTraitanceDbContext db, long piece, DateOnly? valideAu, Utilisateur u, CancellationToken ct)
@@ -61,7 +61,7 @@ public class SpecialisationSousTraitanceBtp : SpecialisationSousTraitance
         var n = await db.Database.ExecuteSqlRawAsync("""
             UPDATE document_ged SET dge_valide_au = @v, dge_modifie_le = now()
             WHERE dge_id = @id AND NOT dge_supprime AND dge_type_element IN ('personne', 'marche')
-            """, [new NpgsqlParameter("v", NpgsqlDbType.Date) { Value = (object?)valideAu ?? DBNull.Value }, new NpgsqlParameter("id", piece)], ct);
+            """, [SqlBtp.P("v", valideAu, NpgsqlDbType.Date), new NpgsqlParameter("id", piece)], ct);
         if (n == 0) throw ExceptionMetier.Introuvable($"Pièce {piece}");
     }
 

@@ -75,10 +75,10 @@ public class SpecialisationCrmBtp(IServiceScopeFactory scopes) : SpecialisationC
             VALUES (@code, left(@libelle, 150), @tiers, 'EN_COURS', @montant, @responsable, @commentaire, jsonb_build_object('crm_demande', @demande::text))
             RETURNING prj_id AS "Value"
             """,
-            new NpgsqlParameter("code", code), new NpgsqlParameter("libelle", d.DemObjet), new NpgsqlParameter("tiers", NpgsqlTypes.NpgsqlDbType.Bigint) { Value = (object?)d.DemTiersId ?? DBNull.Value },
-            new NpgsqlParameter("montant", NpgsqlTypes.NpgsqlDbType.Numeric) { Value = (object?)d.DemMontantEstime ?? DBNull.Value },
-            new NpgsqlParameter("responsable", NpgsqlTypes.NpgsqlDbType.Bigint) { Value = (object?)responsableId ?? DBNull.Value },
-            new NpgsqlParameter("commentaire", NpgsqlTypes.NpgsqlDbType.Text) { Value = (object?)commentaire ?? DBNull.Value },
+            new NpgsqlParameter("code", code), new NpgsqlParameter("libelle", d.DemObjet), SqlBtp.P("tiers", d.DemTiersId, NpgsqlTypes.NpgsqlDbType.Bigint),
+            SqlBtp.P("montant", d.DemMontantEstime, NpgsqlTypes.NpgsqlDbType.Numeric),
+            SqlBtp.P("responsable", responsableId, NpgsqlTypes.NpgsqlDbType.Bigint),
+            SqlBtp.P("commentaire", commentaire, NpgsqlTypes.NpgsqlDbType.Text),
             new NpgsqlParameter("demande", d.DemNumero)).ToListAsync(ct); // pas d'accolades dans le SQL : EF les lit comme des paramètres
         return new ElementCrm(TypesFiche.Projet, id[0].ToString());
     }

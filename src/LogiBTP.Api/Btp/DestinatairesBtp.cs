@@ -45,6 +45,6 @@ public static class DestinatairesBtp
     public static Task<List<string>> ServicesAsync(DbContext db, string utilisateur, CancellationToken ct) =>
         db.Database.SqlQueryRaw<string>("""
             SELECT DISTINCT s.srv_code AS "Value" FROM service s JOIN service_membre m ON m.sme_srv_id = s.srv_id
-            JOIN individu i ON i.ind_id = m.sme_ind_id WHERE lower(i.ind_utilisateur) = lower(@u)
+            JOIN individu i ON i.ind_id = m.sme_ind_id WHERE i.ind_utilisateur = lower(@u)
             """, new NpgsqlParameter("u", utilisateur)).ToListAsync(ct);
 }

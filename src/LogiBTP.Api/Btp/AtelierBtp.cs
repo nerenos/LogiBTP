@@ -65,7 +65,7 @@ public static class AtelierBtp
                 {Ouverts}
                   AND upper(d.ent_numero) = upper(@n) AND {Droit}
                 """,
-            new NpgsqlParameter("s", salarie), new NpgsqlParameter("n", (object?)numero ?? DBNull.Value)).ToListAsync(ct);
+            new NpgsqlParameter("s", salarie), SqlBtp.P("n", numero)).ToListAsync(ct);
 
     /// <summary>Ordres ouverts de ces identifiants que le salarié peut lire (étape proposée après un pointage, E52).</summary>
     internal static Task<List<OrdreAtelier>> OrdresParIdsAsync(LogiBtpContext db, int salarie, long[] ids, CancellationToken ct) =>

@@ -202,7 +202,7 @@ public static partial class TerrainBtp
                     VALUES (@e, @c, @t, @f::jsonb, @fin, @abs, @s, @m, @u) RETURNING isv_id AS "Value"
                     """, new NpgsqlParameter("e", ent), new NpgsqlParameter("c", r.Constat.Trim()), new NpgsqlParameter("t", r.Travaux.Trim()),
                     new NpgsqlParameter("f", JsonSerializer.Serialize(fournitures)), new NpgsqlParameter("fin", r.Terminee), new NpgsqlParameter("abs", r.Absent),
-                    new NpgsqlParameter("s", NpgsqlTypes.NpgsqlDbType.Bigint) { Value = (object?)sigId ?? DBNull.Value }, SqlBtp.P("m", courriel), new NpgsqlParameter("u", u.Code)).ToListAsync(ct))[0];
+                    SqlBtp.P("s", sigId, NpgsqlTypes.NpgsqlDbType.Bigint), SqlBtp.P("m", courriel), new NpgsqlParameter("u", u.Code)).ToListAsync(ct))[0];
                 await tx.CommitAsync(ct);
             }
 

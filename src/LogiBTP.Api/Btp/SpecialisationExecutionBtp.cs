@@ -46,7 +46,7 @@ public class SpecialisationExecutionBtp(IHttpContextAccessor http) : Specialisat
             ORDER BY c.code DESC
             LIMIT 500
             """,
-            new NpgsqlParameter("ids", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text) { Value = (object?)ids?.ToArray() ?? DBNull.Value },
+            SqlBtp.P("ids", ids?.ToArray(), NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text),
             new NpgsqlParameter("r", NpgsqlTypes.NpgsqlDbType.Text) { Value = string.IsNullOrWhiteSpace(f.Recherche) ? DBNull.Value : $"%{f.Recherche.Trim()}%" }).ToListAsync(ct);
 
     public override async Task<HashSet<string>> TypesInactifsAsync(ExecutionDbContext db, CancellationToken ct) =>
@@ -133,7 +133,7 @@ public class SpecialisationExecutionBtp(IHttpContextAccessor http) : Specialisat
                                 WHERE m.sme_ind_id = @i AND m.sme_srv_id IN (s.srv_id, s.srv_parent_id))
                     OR EXISTS (SELECT 1 FROM salarie sa WHERE sa.sal_id = @sal AND sa.sal_ind_id = @i)) IS TRUE AS "Value"
             FROM document d WHERE d.ent_id = @id
-            """, new NpgsqlParameter("i", ind), new NpgsqlParameter("sal", NpgsqlDbType.Bigint) { Value = (object?)salarie ?? DBNull.Value },
+            """, new NpgsqlParameter("i", ind), SqlBtp.P("sal", salarie, NpgsqlDbType.Bigint),
             new NpgsqlParameter("id", o.Id)).FirstOrDefaultAsync(ct);
     }
 
@@ -161,8 +161,8 @@ public class SpecialisationExecutionBtp(IHttpContextAccessor http) : Specialisat
             WHERE ent_id = @id
             """,
             [
-                new NpgsqlParameter("e", NpgsqlDbType.Varchar) { Value = (object?)s.Etat ?? DBNull.Value }, new NpgsqlParameter("d", NpgsqlDbType.Date) { Value = (object?)s.Debut ?? DBNull.Value },
-                new NpgsqlParameter("f", NpgsqlDbType.Date) { Value = (object?)s.Fin ?? DBNull.Value }, new NpgsqlParameter("id", o.Id),
+                SqlBtp.P("e", s.Etat, NpgsqlDbType.Varchar), SqlBtp.P("d", s.Debut, NpgsqlDbType.Date),
+                SqlBtp.P("f", s.Fin, NpgsqlDbType.Date), new NpgsqlParameter("id", o.Id),
             ], ct);
         await db.Database.ExecuteSqlRawAsync("""
             INSERT INTO ordre_execution_historique (oeh_ent_id, oeh_etat, oeh_motif_id, oeh_detail, oeh_par)

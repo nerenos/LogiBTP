@@ -146,7 +146,7 @@ public static partial class TerrainBtp
                     INSERT INTO signature (sig_type_element, sig_id_element, sig_nom, sig_qualite, sig_image, sig_par)
                     VALUES ('document', @e::text, @n, @q, @i, @u) RETURNING sig_id AS "Value"
                     """, new NpgsqlParameter("e", ent), new NpgsqlParameter("n", r.Nom.Trim()), SqlBtp.P("q", r.Qualite?.Trim()),
-                    new NpgsqlParameter("i", NpgsqlTypes.NpgsqlDbType.Bytea) { Value = (object?)image ?? DBNull.Value }, new NpgsqlParameter("u", u.Code)).ToListAsync(ct))[0];
+                    SqlBtp.P("i", image, NpgsqlTypes.NpgsqlDbType.Bytea), new NpgsqlParameter("u", u.Code)).ToListAsync(ct))[0];
                 recId = (await db.Database.SqlQueryRaw<long>("""
                     INSERT INTO reception_pose (rec_ent_id, rec_etat, rec_reserves, rec_motif, rec_sig_id, rec_courriel, rec_cree_par)
                     VALUES (@e, @etat, @res::jsonb, @m, @s, @c, @u) RETURNING rec_id AS "Value"

@@ -40,8 +40,8 @@ public static class UtilisationsElement
         g.MapGet("/composes", (long id, LogiBtpContext db, CancellationToken ct) => db.JsonAsync(SqlComposes, ct, new NpgsqlParameter("e", id)));
         g.MapGet("/achats", (long id, DateOnly? du, DateOnly? au, bool? encours, LogiBtpContext db, CancellationToken ct) =>
             db.JsonAsync(SqlAchats, ct, new NpgsqlParameter("e", id),
-                new NpgsqlParameter("du", NpgsqlTypes.NpgsqlDbType.Date) { Value = (object?)du ?? DBNull.Value },
-                new NpgsqlParameter("au", NpgsqlTypes.NpgsqlDbType.Date) { Value = (object?)au ?? DBNull.Value },
+                SqlBtp.P("du", du, NpgsqlTypes.NpgsqlDbType.Date),
+                SqlBtp.P("au", au, NpgsqlTypes.NpgsqlDbType.Date),
                 new NpgsqlParameter("encours", encours ?? false)));
         return api;
     }
