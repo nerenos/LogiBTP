@@ -49,7 +49,10 @@ export class AccueilBase {
     this.racine.addEventListener('click', (e) => this.#clic(e));
     this.racine.addEventListener('auxclick', (e) => {
       const t = e.target.closest('.accueil-tuile[data-url]');
-      if (t && e.button === 1 && !this.edition) { e.preventDefault(); this.naviguer(t.dataset.url, { nouvelleFenetre: true }); }
+      if (!t || e.button !== 1 || this.edition) return;
+      e.preventDefault();
+      const r = e.target.closest('[data-creation]') ? this.#raccourciTuile(t) : null;
+      this.naviguer(r?.creation?.url ?? t.dataset.url, { nouvelleFenetre: true });
     });
     this.#glisser();
   }
@@ -97,6 +100,11 @@ export class AccueilBase {
   // ---------------------------------------------------------------- raccourcis
 
   #raccourci(code) { return this.catalogueRaccourcis.find((r) => r.code === code); }
+
+  // Raccourci d'une tuile : data-index = rang parmi les raccourcis affichés (ceux du catalogue).
+  #raccourciTuile(tuile) {
+    return this.#raccourci(this.preferences.get('raccourcis').filter((c) => this.#raccourci(c))[Number(tuile.dataset.index)]);
+  }
 
   rendreRaccourcis() {
     const codes = this.preferences.get('raccourcis').filter((c) => this.#raccourci(c));
@@ -344,7 +352,12 @@ export class AccueilBase {
     const tuile = e.target.closest('.accueil-tuile[data-url]');
     if (tuile) {
       e.preventDefault();
-      if (!this.edition) this.naviguer(tuile.dataset.url, { nouvelleFenetre: e.ctrlKey || e.shiftKey || e.metaKey });
+      if (this.edition) return;
+      // Boutons de la tuile (comme dans le bandeau) : ＋ = création rapide, ⧉ = nouvelle fenêtre ; ailleurs, le lien.
+      const autre = e.ctrlKey || e.shiftKey || e.metaKey;
+      const r = this.#raccourciTuile(tuile);
+      if (e.target.closest('[data-creation]') && r?.creation) this.naviguer(r.creation.url, { nouvelleFenetre: autre });
+      else this.naviguer(tuile.dataset.url, { nouvelleFenetre: autre || Boolean(e.target.closest('[data-fenetre]')) });
     }
   }
 
