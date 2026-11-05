@@ -1,0 +1,192 @@
+{
+  // Tâches de LogiBTP (Terminal › Exécuter la tâche). Les tâches « …: » en tâche de fond restent ouvertes dans leur terminal.
+  "version": "2.0.0",
+  "options": {
+    "cwd": "${workspaceFolder}"
+  },
+  "inputs": [
+    {
+      "id": "versionImage",
+      "type": "promptString",
+      "description": "Version de l'image Docker (ex. 1.0.0)",
+      "default": "latest"
+    }
+  ],
+  "tasks": [
+    // ------------------------------------------------------------ base de développement
+    {
+      // PostgreSQL 17 sur 5433 (docker-compose.yml) ; sans effet s'il tourne déjà.
+      "label": "base : démarrer",
+      "type": "shell",
+      "command": "docker compose up -d --wait postgres",
+      "problemMatcher": [],
+      "presentation": { "reveal": "silent", "panel": "shared" }
+    },
+    {
+      "label": "base : arrêter",
+      "type": "shell",
+      "command": "docker compose stop postgres",
+      "problemMatcher": []
+    },
+
+    // ------------------------------------------------------------ API
+    {
+      "label": "api : compiler",
+      "type": "process",
+      "command": "dotnet",
+      "args": [
+        "build",
+        "${workspaceFolder}/src/LogiBTP.Api/LogiBTP.Api.csproj",
+        "/property:GenerateFullPaths=true",
+        "/consoleloggerparameters:NoSummary"
+      ],
+      "problemMatcher": "$msCompile",
+      "group": "build",
+      "presentation": { "reveal": "silent", "panel": "shared" }
+    },
+    {
+      // Toute la solution (modules, tests) ; arrêter l'API avant (binaires verrouillés).
+      "label": "solution : compiler",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["build", "${workspaceFolder}/LogiBTP.slnx", "/property:GenerateFullPaths=true", "/consoleloggerparameters:NoSummary"],
+      "problemMatcher": "$msCompile",
+      "group": { "kind": "build", "isDefault": true }
+    },
+    {
+      // API lancée sans débogueur ni recompilation (binaires existants). S'y attacher : lancement « API (s'attacher) ».
+      "label": "api : sans compilation",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["run", "--no-build", "--project", "src/LogiBTP.Api", "--launch-profile", "http"],
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "logibtp-api",
+        "pattern": { "regexp": "^__jamais__$" },
+        "background": { "activeOnStart": true, "beginsPattern": ".", "endsPattern": "Now listening on|Application started" }
+      }
+    },
+    {
+      // API recompilée et rechargée à chaud à chaque enregistrement d'un .cs (Hot Reload ; Ctrl+R dans le terminal pour
+      // redémarrer). Débogage : lancement « API (s'attacher) » (à refaire après un redémarrage complet).
+      "label": "api : dotnet watch",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["watch", "--project", "src/LogiBTP.Api", "run", "--launch-profile", "http"],
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "logibtp-api",
+        "pattern": { "regexp": "^__jamais__$" },
+        "background": { "activeOnStart": true, "beginsPattern": "dotnet watch", "endsPattern": "Now listening on|Application started" }
+      }
+    },
+
+    // ------------------------------------------------------------ client
+    {
+      // Vite en développement (5173, rechargement à chaud) ; réutilisé s'il tourne déjà.
+      "label": "client : vite",
+      "type": "shell",
+      "command": "npm run dev --workspace client",
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "logibtp-vite",
+        "pattern": { "regexp": "^__jamais__$" },
+        "background": { "activeOnStart": true, "beginsPattern": "vite|VITE", "endsPattern": "Local:" }
+      }
+    },
+    {
+      // Client construit puis servi (4173) avec le service worker.
+      "label": "client : aperçu PWA",
+      "type": "shell",
+      "command": "npm run apercu --workspace client",
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "logibtp-vite",
+        "pattern": { "regexp": "^__jamais__$" },
+        "background": { "activeOnStart": true, "beginsPattern": "vite|VITE", "endsPattern": "Local:" }
+      }
+    },
+    {
+      "label": "client : construire",
+      "type": "shell",
+      "command": "npm run build --workspace client",
+      "problemMatcher": []
+    },
+    {
+      // Après toute modification de modules/edition/js/src (moteur exécuté par Jint côté serveur).
+      "label": "édition : construire le moteur",
+      "type": "shell",
+      "command": "npm run construire --workspace modules/edition/js",
+      "problemMatcher": []
+    },
+    {
+      // Après un changement de vues-liste.js, vues-document.js, définitions des fiches ou données de démonstration.
+      "label": "client : générer les vues de liste",
+      "type": "shell",
+      "command": "npm run generer-vues-liste --workspace client",
+      "problemMatcher": []
+    },
+
+    // ------------------------------------------------------------ tests (moteurs miroirs JS / C#)
+    {
+      "label": "tests : JS",
+      "type": "shell",
+      "command": "npm test",
+      "problemMatcher": [],
+      "group": "test"
+    },
+    {
+      "label": "tests : exporter les résultats JS",
+      "type": "shell",
+      "command": "npm run exporter-resultats",
+      "problemMatcher": []
+    },
+    {
+      "label": "tests : C#",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["test", "${workspaceFolder}/LogiBTP.slnx"],
+      "problemMatcher": "$msCompile",
+      "group": "test"
+    },
+    {
+      // Vérification complète d'une règle des moteurs (CLAUDE.md) : npm test, exporter-resultats puis dotnet test.
+      "label": "tests : tout (JS, export, C#)",
+      "dependsOrder": "sequence",
+      "dependsOn": ["tests : JS", "tests : exporter les résultats JS", "tests : C#"],
+      "problemMatcher": [],
+      "group": { "kind": "test", "isDefault": true }
+    },
+    {
+      "label": "dépendances : rapport",
+      "type": "shell",
+      "command": "npm run rapport-dependances",
+      "problemMatcher": []
+    },
+
+    // ------------------------------------------------------------ image Docker (module Installation)
+    {
+      // Construction propre depuis la racine : le Dockerfile refait npm ci, le client et dotnet publish -c Release dans
+      // le conteneur (rien de local n'est repris hormis le contexte filtré par .dockerignore). Clé de construction en
+      // secret BuildKit (cle-construction.secret, jamais versionné).
+      "label": "docker : construire l'image",
+      "type": "shell",
+      "command": "docker build --pull --secret id=cle_construction,src=cle-construction.secret -t logibtp/api:${input:versionImage} -t logibtp/api:latest .",
+      "problemMatcher": []
+    },
+    {
+      // Fichier pour un serveur sans registre (Installer-LogiBTP.ps1 -FichierImage, --fichier-image sous Debian).
+      "label": "docker : exporter l'image",
+      "type": "shell",
+      "command": "docker save logibtp/api:${input:versionImage} -o logibtp-api-${input:versionImage}.tar",
+      "problemMatcher": []
+    },
+    {
+      // Chaîne de livraison : moteur d'édition à jour, tests, image, fichier.
+      "label": "docker : livrer (tests, image, fichier)",
+      "dependsOrder": "sequence",
+      "dependsOn": ["édition : construire le moteur", "tests : tout (JS, export, C#)", "docker : construire l'image", "docker : exporter l'image"],
+      "problemMatcher": []
+    }
+  ]
+}

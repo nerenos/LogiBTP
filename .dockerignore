@@ -16,3 +16,8 @@ journaux/
 .claude/
 documentation/
 modules/edition/js/.essais/
+# Images exportées (docker save) et outils locaux : inutiles et lourds dans le contexte.
+*.tar
+*.tar.gz
+graphify-out/
+.vscode/

@@ -1,0 +1,114 @@
+{
+  // Lancements de LogiBTP (débogage). La base de développement (PostgreSQL 5433, docker-compose.yml) doit tourner :
+  // tâche « base : démarrer » (lancée d'office par les lancements complets).
+  //   API      : http://localhost:5080 (profil « http » de launchSettings.json)
+  //   Client   : Vite http://localhost:5173 (proxy /api → 5080), société « demo » par http://demo.localhost:5173
+  //   Aperçu   : client construit + service worker http://localhost:4173
+  "version": "0.2.0",
+  "configurations": [
+    
+    {
+      // API compilée puis déboguée (points d'arrêt C#).
+      "name": "API",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "api : compiler",
+      "program": "${workspaceFolder}/src/LogiBTP.Api/bin/Debug/net10.0/LogiBTP.Api.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/src/LogiBTP.Api",
+      "launchSettingsProfile": "http",
+      "stopAtEntry": false,
+      "console": "integratedTerminal",
+      "presentation": { "group": "1-api", "order": 1 }
+    },
+    {
+      // API déboguée sans recompiler (binaires déjà construits) : démarrage rapide pendant qu'on travaille le client.
+      "name": "API (sans compilation)",
+      "type": "coreclr",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/LogiBTP.Api/bin/Debug/net10.0/LogiBTP.Api.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/src/LogiBTP.Api",
+      "launchSettingsProfile": "http",
+      "stopAtEntry": false,
+      "console": "integratedTerminal",
+      "presentation": { "group": "1-api", "order": 2 }
+    },
+    {
+      // S'attacher à une API déjà lancée (tâche « api : dotnet watch » pour le rechargement à chaud, ou « api : sans compilation »).
+      "name": "API (s'attacher)",
+      "type": "coreclr",
+      "request": "attach",
+      "processName": "LogiBTP.Api.exe",
+      "presentation": { "group": "1-api", "order": 3 }
+    },
+    {
+      // Client en développement (Vite, rechargement à chaud) débogué dans Chrome, société « demo ».
+      "name": "Client (Vite, demo)",
+      "type": "chrome",
+      "request": "launch",
+      "preLaunchTask": "client : vite",
+      "url": "http://demo.localhost:5173",
+      "webRoot": "${workspaceFolder}/client",
+      "presentation": { "group": "2-client", "order": 1 }
+    },
+    {
+      // Même chose sur la société principale (base logibtp).
+      "name": "Client (Vite, localhost)",
+      "type": "chrome",
+      "request": "launch",
+      "preLaunchTask": "client : vite",
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}/client",
+      "presentation": { "group": "2-client", "order": 2 }
+    },
+    {
+      // Client construit et servi comme en production (service worker, hors ligne).
+      "name": "Client (aperçu PWA)",
+      "type": "chrome",
+      "request": "launch",
+      "preLaunchTask": "client : aperçu PWA",
+      "url": "http://demo.localhost:4173",
+      "webRoot": "${workspaceFolder}/client/dist",
+      "presentation": { "group": "2-client", "order": 3 }
+    },
+    {
+      // Tests du client (Vitest) du fichier ouvert, débogués.
+      "name": "Tests JS (fichier ouvert)",
+      "type": "node",
+      "request": "launch",
+      "autoAttachChildProcesses": true,
+      "program": "${workspaceFolder}/node_modules/vitest/vitest.mjs",
+      "args": ["run", "${relativeFile}"],
+      "cwd": "${fileWorkspaceFolder}",
+      "smartStep": true,
+      "console": "integratedTerminal",
+      "presentation": { "group": "4-tests", "order": 1 }
+    }
+  ],
+  "compounds": [
+    {
+      // API et client débogués ensemble ; base démarrée, API compilée avant.
+      "name": "Complet : API + client",
+      "preLaunchTask": "base : démarrer",
+      "configurations": ["API", "Client (Vite, demo)"],
+      "stopAll": true,
+      "presentation": { "group": "0-complet", "order": 1 }
+    },
+    {
+      // Modifications en direct : API sans recompiler, client Vite à chaud.
+      "name": "Complet : API sans compilation + client",
+      "preLaunchTask": "base : démarrer",
+      "configurations": ["API (sans compilation)", "Client (Vite, demo)"],
+      "stopAll": true,
+      "presentation": { "group": "0-complet", "order": 2 }
+    },
+    {
+      "name": "Complet : API + aperçu PWA",
+      "preLaunchTask": "base : démarrer",
+      "configurations": ["API", "Client (aperçu PWA)"],
+      "stopAll": true,
+      "presentation": { "group": "0-complet", "order": 3 }
+    }
+  ]
+}
