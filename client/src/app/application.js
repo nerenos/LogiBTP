@@ -391,7 +391,7 @@ export class Application {
   majPage() {
     const e = this.etatFenetre();
     const signature = `${e.url}|${e.titre}|${e.modifiee}`;
-    document.title = `${e.modifiee ? '● ' : ''}${e.titre ? `${e.titre} – ` : ''}LogiBTP${this.societe && !this.societe.principale ? ` (${this.societe.libelle})` : ''}`;
+    document.title = `${e.modifiee ? `${icone('modifie')} ` : ''}${e.titre ? `${e.titre} – ` : ''}LogiBTP${this.societe && !this.societe.principale ? ` (${this.societe.libelle})` : ''}`;
     if (signature === this.signature) return;
     this.signature = signature;
     this.fenetres?.annoncer();

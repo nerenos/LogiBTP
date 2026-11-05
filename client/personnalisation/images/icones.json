@@ -678,5 +678,7 @@
   "rentabilite_btp_csv": "⭳",
   "rentabilite_btp_photo": "📷",
   "document_btp_precharger": "⇄",
-  "navigation_btp_rentabilite_facturation": "📅"
+  "navigation_btp_rentabilite_facturation": "📅",
+  "navigation_btp_panneau_deplier": "👥",
+  "navigation_btp_panneau_replier": "«"
 }

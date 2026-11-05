@@ -1,0 +1,30 @@
+{
+  "graphe": {
+    "vue": {
+      "compte": "{{noeuds}} nœud(s), {{relations}} relation(s)",
+      "vide": "Aucun élément",
+      "depart": "départ",
+      "distance_un": "à {{nombre}} saut",
+      "distance_autre": "à {{nombre}} sauts",
+      "inactif": "inactif",
+      "ouvrir": "Ouvrir la fiche",
+      "centrer": "Centrer ici",
+      "centrer_aide": "Repartir de ce nœud",
+      "developper": "Développer",
+      "developper_aide": "Ajouter ses voisins directs au graphe",
+      "niveau": "Niveau de représentation",
+      "niveau_aide": "Nombre de sauts depuis le départ",
+      "plus": "Augmenter le niveau de représentation",
+      "moins": "Diminuer le niveau de représentation",
+      "ajuster": "Ajuster",
+      "ajuster_aide": "Tout voir",
+      "disposer": "Disposer",
+      "disposer_aide": "Replacer les nœuds déplacés",
+      "exporter": "SVG",
+      "exporter_aide": "Enregistrer l'image (SVG)",
+      "plein_ecran": "Plein écran",
+      "plein_ecran_aide": "Ouvrir le graphe dans sa page (Ctrl : nouvelle fenêtre)",
+      "fermer": "Fermer"
+    }
+  }
+}

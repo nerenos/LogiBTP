@@ -120,25 +120,25 @@ export class ExplorateurGed {
     c.innerHTML = `
       <div class="ged-barre">
         <div class="ged-nav">
-          ${bouton('arriere', icone('ged_precedent'), texte('ged.explorateur.precedent'), { pos: 'gauche' })}${bouton('avant', icone('ged_suivant'), texte('ged.explorateur.suivant'), { pos: 'gauche' })}${bouton('parent', icone('ged_parent'), texte('ged.explorateur.parent'), { pos: 'gauche' })}
+          ${bouton('arriere', iconeHtml('ged_precedent'), texte('ged.explorateur.precedent'), { pos: 'gauche' })}${bouton('avant', iconeHtml('ged_suivant'), texte('ged.explorateur.suivant'), { pos: 'gauche' })}${bouton('parent', iconeHtml('ged_parent'), texte('ged.explorateur.parent'), { pos: 'gauche' })}
         </div>
         <div class="ged-chemin" title="${texteHtml('ged.explorateur.chemin_aide')}">
           <span class="ged-segments"></span>
           <input type="search" class="ged-filtre" placeholder="${texteHtml('ged.explorateur.filtrer')}" aria-label="${texteHtml('ged.explorateur.filtrer_aide')}">
         </div>
         <div class="ged-outils">
-          ${bouton('arbre', icone('ged_arbre'), texte('ged.explorateur.arbre'))}
-          ${bouton('vue', icone('ged_vue'), texte('ged.explorateur.vue'))}
-          ${this.modifiable ? bouton('dossier', icone('ged_nouveau_dossier'), texte('ged.explorateur.nouveau_dossier')) : ''}
-          ${this.modifiable ? `${bouton('ajouter', icone('ajouter'), texte('ged.explorateur.ajouter'), { classe: 'principal' })}<input type="file" multiple hidden data-fichiers>` : ''}
+          ${bouton('arbre', iconeHtml('ged_arbre'), texte('ged.explorateur.arbre'))}
+          ${bouton('vue', iconeHtml('ged_vue'), texte('ged.explorateur.vue'))}
+          ${this.modifiable ? bouton('dossier', iconeHtml('ged_nouveau_dossier'), texte('ged.explorateur.nouveau_dossier')) : ''}
+          ${this.modifiable ? `${bouton('ajouter', iconeHtml('ajouter'), texte('ged.explorateur.ajouter'), { classe: 'principal' })}<input type="file" multiple hidden data-fichiers>` : ''}
           <span class="ged-separateur-outils"></span>
-          ${this.contexte ? '' : bouton('filtre-coffre', icone('verrou'), texte('ged.explorateur.filtre_coffre'), { classe: 'bascule' })}
-          ${this.envoi ? bouton('filtre-envoi', icone('ged_envoi'), texte('ged.explorateur.filtre_envoi'), { classe: 'bascule' }) : ''}
-          ${this.terrain ? bouton('filtre-terrain', icone('ged_terrain'), texte('ged.explorateur.filtre_terrain'), { classe: 'bascule' }) : ''}
-          ${bouton('filtre-archives', icone('ged_archive'), texte('ged.explorateur.filtre_archives'), { classe: 'bascule' })}
-          ${this.admin ? bouton('filtre-supprimes', icone('supprimer'), texte('ged.explorateur.filtre_supprimes'), { classe: 'bascule' }) : ''}
-          ${this.admin && !this.contexte ? bouton('coffre', icone('ged_coffre_chaine'), texte('ged.explorateur.verifier_chaine')) : ''}
-          ${this.admin && !this.contexte ? bouton('retention', icone('ged_retention'), texte('ged.explorateur.retention')) : ''}
+          ${this.contexte ? '' : bouton('filtre-coffre', iconeHtml('verrou'), texte('ged.explorateur.filtre_coffre'), { classe: 'bascule' })}
+          ${this.envoi ? bouton('filtre-envoi', iconeHtml('ged_envoi'), texte('ged.explorateur.filtre_envoi'), { classe: 'bascule' }) : ''}
+          ${this.terrain ? bouton('filtre-terrain', iconeHtml('ged_terrain'), texte('ged.explorateur.filtre_terrain'), { classe: 'bascule' }) : ''}
+          ${bouton('filtre-archives', iconeHtml('ged_archive'), texte('ged.explorateur.filtre_archives'), { classe: 'bascule' })}
+          ${this.admin ? bouton('filtre-supprimes', iconeHtml('supprimer'), texte('ged.explorateur.filtre_supprimes'), { classe: 'bascule' }) : ''}
+          ${this.admin && !this.contexte ? bouton('coffre', iconeHtml('ged_coffre_chaine'), texte('ged.explorateur.verifier_chaine')) : ''}
+          ${this.admin && !this.contexte ? bouton('retention', iconeHtml('ged_retention'), texte('ged.explorateur.retention')) : ''}
         </div>
       </div>
       <div class="ged-corps">
@@ -575,7 +575,7 @@ export class ExplorateurGed {
     const z = this.conteneur.querySelector('.ged-actions-dossier');
     const n = this.#noeudSelectionne() ?? (this.resultats ? null : this.noeud);
     z.innerHTML = this.modifiable && n?.repertoire
-      ? `${bouton('renommer', icone('ged_renommer'), texte('ged.explorateur.renommer', { dossier: n.libelle }))}${bouton('supprimer-dossier', icone('retirer'), texte('ged.explorateur.supprimer_dossier', { dossier: n.libelle }))}` : '';
+      ? `${bouton('renommer', iconeHtml('ged_renommer'), texte('ged.explorateur.renommer', { dossier: n.libelle }))}${bouton('supprimer-dossier', iconeHtml('retirer'), texte('ged.explorateur.supprimer_dossier', { dossier: n.libelle }))}` : '';
     z.querySelector('[data-action="renommer"]')?.addEventListener('click', () => this.#lancer(() => this.renommerDossier(n)));
     z.querySelector('[data-action="supprimer-dossier"]')?.addEventListener('click', () => this.#lancer(() => this.supprimerDossier(n)));
   }
@@ -776,7 +776,7 @@ export class ExplorateurGed {
     this.haut.innerHTML = `<header class="ged-visu-entete"><span class="ged-icone-grande">${n.lien || n.url ? iconeHtml('ged_lien') : ''}${n.icone ?? iconeHtml('ged_dossier')}</span>
         <div class="ged-visu-titre"><h3>${echapper(n.libelle)}</h3><small>${texteHtml(n.lien ? 'ged.explorateur.genre.lien' : n.url ? 'ged.explorateur.genre.url' : n.groupe ? 'ged.explorateur.genre.groupe' : n.repertoire ? 'ged.explorateur.genre.repertoire' : n.element ? 'ged.explorateur.genre.element' : 'ged.explorateur.genre.sans_element')}
         ${n.sous_titre ? ` · ${echapper(n.sous_titre)}` : ''}${nbDocs !== undefined && !n.groupe && !n.lien ? ` · ${pluriel('ged.explorateur.nb_documents', nbDocs)}` : ''}</small></div>
-        <div class="ged-visu-actions">${n === this.noeud ? '' : bouton('ouvrir-noeud', icone('ged_ouvrir'), texte('ged.explorateur.ouvrir'))}</div></header>
+        <div class="ged-visu-actions">${n === this.noeud ? '' : bouton('ouvrir-noeud', iconeHtml('ged_ouvrir'), texte('ged.explorateur.ouvrir'))}</div></header>
       <p class="aide ged-visu-vide">${texteHtml(n.lien || n.url ? 'ged.explorateur.aide_lien'
         : n.groupe ? (n === this.noeud ? 'ged.explorateur.aide_groupe' : 'ged.explorateur.aide_dossier')
           : 'ged.explorateur.aide_selection')}</p>`;
@@ -819,16 +819,16 @@ export class ExplorateurGed {
           ${d.archive ? ` · <b>${texteHtml('ged.explorateur.archive')}</b>` : ''}${d.supprime ? ` · <b class="erreur">${texteHtml('ged.explorateur.supprime_le', { date: formatDate(d.supprime_le) })}</b>` : ''}</small></div>
         <div class="ged-visu-actions">
           ${courante ? `<a class="ged-icone-bouton" href="${echapper(this.#lienContenu(courante))}" download="${echapper(courante.nom_fichier)}" data-bulle="${texteHtml('ged.explorateur.telecharger')}" aria-label="${texteHtml('ged.explorateur.telecharger')}">${iconeHtml('ged_telecharger')}</a>` : ''}
-          ${editable && !d.coffre ? `${bouton('version', icone('ged_version'), texte('ged.explorateur.nouvelle_version_aide', { nombre: this.parametres.editions_conservees }))}<input type="file" hidden data-version>` : ''}
-          ${editable && !d.coffre ? bouton('etape', icone('ged_etape'), texte('ged.explorateur.etape_aide')) : ''}
-          ${editable && !d.coffre ? bouton('coffre', icone('verrou'), texte('ged.explorateur.coffre_aide')) : ''}
-          ${d.coffre && !d.archive ? bouton('verifier', icone('ged_verifier'), texte('ged.explorateur.verifier_aide')) : ''}
-          ${editable && !d.parent_id ? bouton('archiver', icone('ged_archive'), texte('ged.explorateur.archiver_aide')) : ''}
-          ${d.archive && this.modifiable ? bouton('desarchiver', icone('ged_desarchiver'), texte('ged.explorateur.desarchiver_aide')) : ''}
-          ${this.modifiable && !d.supprime && !d.archive && (!d.coffre || this.admin) ? bouton('supprimer', icone('supprimer'), texte('ged.explorateur.supprimer_aide')) : ''}
-          ${d.supprime && this.modifiable ? bouton('restaurer', icone('ged_restaurer'), texte('ged.explorateur.restaurer')) : ''}
-          ${d.supprime && this.admin && !d.coffre ? bouton('purger', icone('ged_purger'), texte('ged.explorateur.purger_aide'), { classe: 'danger' }) : ''}
-          ${bouton('dock', icone('ged_dock'), texte('ged.explorateur.dock_aide'), { classe: 'bascule' })}
+          ${editable && !d.coffre ? `${bouton('version', iconeHtml('ged_version'), texte('ged.explorateur.nouvelle_version_aide', { nombre: this.parametres.editions_conservees }))}<input type="file" hidden data-version>` : ''}
+          ${editable && !d.coffre ? bouton('etape', iconeHtml('ged_etape'), texte('ged.explorateur.etape_aide')) : ''}
+          ${editable && !d.coffre ? bouton('coffre', iconeHtml('verrou'), texte('ged.explorateur.coffre_aide')) : ''}
+          ${d.coffre && !d.archive ? bouton('verifier', iconeHtml('ged_verifier'), texte('ged.explorateur.verifier_aide')) : ''}
+          ${editable && !d.parent_id ? bouton('archiver', iconeHtml('ged_archive'), texte('ged.explorateur.archiver_aide')) : ''}
+          ${d.archive && this.modifiable ? bouton('desarchiver', iconeHtml('ged_desarchiver'), texte('ged.explorateur.desarchiver_aide')) : ''}
+          ${this.modifiable && !d.supprime && !d.archive && (!d.coffre || this.admin) ? bouton('supprimer', iconeHtml('supprimer'), texte('ged.explorateur.supprimer_aide')) : ''}
+          ${d.supprime && this.modifiable ? bouton('restaurer', iconeHtml('ged_restaurer'), texte('ged.explorateur.restaurer')) : ''}
+          ${d.supprime && this.admin && !d.coffre ? bouton('purger', iconeHtml('ged_purger'), texte('ged.explorateur.purger_aide'), { classe: 'danger' }) : ''}
+          ${bouton('dock', iconeHtml('ged_dock'), texte('ged.explorateur.dock_aide'), { classe: 'bascule' })}
         </div>
       </header>
       <div class="ged-etape-saisie" hidden>

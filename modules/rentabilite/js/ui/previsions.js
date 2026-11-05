@@ -152,7 +152,7 @@ export class PanneauPrevisions {
       ${couts ? ligne('pr', `<input type="text" id="prv-pr" size="12" class="montant" value="${saisieMontant(p?.pr)}" placeholder="${echapper(texte('rentabilite.previsions.pr_defaut'))}">`) : ''}
       ${ligne('pv', `<input type="text" id="prv-pv" size="12" class="montant" value="${saisieMontant(p?.pv)}">`)}
       ${ligne('tiers', `<span data-tiers>${echapper(tiers.libelle ?? '')}</span> ${this.#o.choisirTiers ? `<button type="button" data-choisir-tiers title="${echapper(texte('rentabilite.previsions.choisir_tiers'))}">${iconeHtml('rentabilite_chercher')}</button>` : ''}
-        <button type="button" data-vider-tiers title="${echapper(texte('rentabilite.previsions.vider_tiers'))}">✕</button>`)}
+        <button type="button" data-vider-tiers title="${echapper(texte('rentabilite.previsions.vider_tiers'))}">${iconeHtml('retirer')}</button>`)}
       ${ligne('piece_attendue', `<input type="text" id="prv-piece_attendue" size="30" maxlength="200" value="${echapper(p?.piece_attendue ?? '')}">`)}
       ${ligne('echeance', `<input type="date" id="prv-echeance" value="${p?.echeance ?? ''}">`)}
       ${ligne('motif', `<textarea id="prv-motif" rows="2" cols="40">${echapper(p?.motif ?? '')}</textarea>`)}

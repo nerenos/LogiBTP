@@ -166,7 +166,7 @@ export class FicheStructure extends FicheLogiBTP {
       const bouton = document.createElement('button');
       bouton.type = 'button';
       bouton.className = 'bouton-icone';
-      bouton.textContent = icone('ajouter');
+      bouton.innerHTML = iconeHtml('ajouter');
       bouton.title = texte('fiches_btp.structure.prospect_aide');
       bouton.addEventListener('click', async () => {
         const saisi = resultats.some((p) => `${p.code} – ${p.raison_sociale}` === input.value) ? '' : input.value.trim();

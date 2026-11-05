@@ -17,7 +17,7 @@ import { texte, texteHtml, pluriel, langue, iconeHtml } from '@logibtp/socle/dic
 const TAILLES = ['petit', 'moyen', 'large'];
 const LIBELLES_TAILLE = { petit: '¼', moyen: '½', large: '1' };
 const sansAccent = (t) => String(t ?? '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
-const iconeRaccourci = (r) => r.iconeHtml ?? echapper(r.icone ?? '🔗');
+const iconeRaccourci = (r) => r.iconeHtml ?? (r.icone ? echapper(r.icone) : iconeHtml('navigation_raccourci'));
 const dateHeure = (t) => new Date(t).toLocaleString(langue(), { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
 
 export class AccueilBase {
@@ -36,7 +36,6 @@ export class AccueilBase {
     this.racine.innerHTML = `
       <section class="accueil-session" hidden></section>
       <header class="accueil-entete">
-        <!-- <div class="accueil-salutation">${entete}</div> -->
         ${entete}
         <div class="accueil-outils">
           <button type="button" data-action="actualiser" title="${texteHtml('navigation.accueil.actualiser_titre')}">${iconeHtml('navigation_actualiser')}</button>
@@ -79,7 +78,7 @@ export class AccueilBase {
     zone.innerHTML = `<div><b>${texteHtml(s.interrompue ? 'navigation.session.interrompue' : 'navigation.session.precedente')}</b>
         ${echapper(pluriel('navigation.session.du', n, { date: dateHeure(s.fermeeLe) }))}
         <span class="aide">(${s.fenetres.map((f) => echapper(f.titre || f.url)).join(' · ')})</span></div>
-      <div><button type="button" class="principal" data-action="restaurer">↺ ${texteHtml('navigation.session.restaurer')}</button>
+      <div><button type="button" class="principal" data-action="restaurer">${iconeHtml('navigation_restaurer')} ${texteHtml('navigation.session.restaurer')}</button>
         <button type="button" data-action="oublier" title="${texteHtml('navigation.session.oublier_titre')}">${texteHtml('commun.ignorer')}</button></div>`;
   }
 
@@ -256,8 +255,8 @@ export class AccueilBase {
       carte.draggable = this.edition;
       carte.innerHTML = `<header><h3>${def.url ? `<a href="${echapper(def.url)}" data-url="${echapper(def.url)}">` : ''}${echapper(`${def.icone ?? ''} ${def.titre}`.trim())}${def.url ? '</a>' : ''}</h3>
         <span class="widget-outils">${this.edition
-          ? `<button type="button" data-action="taille" data-index="${i}" title="${texteHtml('navigation.accueil.taille', { taille: texte(`navigation.accueil.taille_${taille}`) })}">${LIBELLES_TAILLE[taille]}</button><button type="button" data-action="retirer-widget" data-index="${i}" title="${texteHtml('commun.retirer')}">✕</button>`
-          : `<button type="button" data-action="actualiser-widget" data-index="${i}" title="${texteHtml('commun.actualiser')}">⟳</button>`}</span></header>
+          ? `<button type="button" data-action="taille" data-index="${i}" title="${texteHtml('navigation.accueil.taille', { taille: texte(`navigation.accueil.taille_${taille}`) })}">${LIBELLES_TAILLE[taille]}</button><button type="button" data-action="retirer-widget" data-index="${i}" title="${texteHtml('commun.retirer')}">${iconeHtml('retirer')}</button>`
+          : `<button type="button" data-action="actualiser-widget" data-index="${i}" title="${texteHtml('commun.actualiser')}">${iconeHtml('navigation_actualiser')}</button>`}</span></header>
         <div class="widget-corps"></div>`;
       grille.append(carte);
       const Classe = this.types[def.type];
@@ -271,7 +270,7 @@ export class AccueilBase {
       const ajout = document.createElement('article');
       ajout.className = 'widget widget-petit accueil-ajout-widget';
       const disponibles = this.catalogueWidgets.filter((d) => !choisis.some((w) => w.code === d.code));
-      ajout.innerHTML = `<header><h3>＋ ${texteHtml('navigation.accueil.ajouter_widget')}</h3></header><div class="widget-corps">${disponibles.length
+      ajout.innerHTML = `<header><h3>${iconeHtml('navigation_ajouter')} ${texteHtml('navigation.accueil.ajouter_widget')}</h3></header><div class="widget-corps">${disponibles.length
         ? `<ul class="accueil-catalogue">${disponibles.map((d) => `<li><button type="button" data-action="ajouter-widget" data-code="${echapper(d.code)}"><b>${echapper(`${d.icone ?? ''} ${d.titre}`)}</b><small>${echapper(d.description ?? '')}</small></button></li>`).join('')}</ul>`
         : `<p class="aide">${texteHtml('navigation.accueil.tous_widgets')}</p>`}</div>`;
       grille.append(ajout);

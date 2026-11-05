@@ -1,5 +1,5 @@
 import { echapper, ouvrirModale, confirmer, formatHeure } from '@logibtp/socle/ui';
-import { texte, texteHtml } from '@logibtp/socle/dictionnaire';
+import { texte, texteHtml, iconeHtml } from '@logibtp/socle/dictionnaire';
 
 // Liste des fenêtres ouvertes de la session : afficher (premier plan), signaler, fermer ; fermer la session.
 // fenetres : GestionFenetres ; fermerSession() : procédure de l'application (contrôle des modifications).
@@ -12,7 +12,7 @@ export class PanneauFenetres {
     this.fond = document.createElement('dialog');
     this.fond.className = 'nav-dialogue-fond dialogue-plein';
     this.fond.innerHTML = `<section class="nav-dialogue" role="dialog" aria-label="${texteHtml('navigation.fenetres.titre')}">
-      <header><h2>🗗 ${texteHtml('navigation.fenetres.titre')}</h2><button type="button" data-action="fermer" title="${texteHtml('commun.fermer_echap')}">✕</button></header>
+      <header><h2>${iconeHtml('navigation_fenetres')} ${texteHtml('navigation.fenetres.titre')}</h2><button type="button" data-action="fermer" title="${texteHtml('commun.fermer_echap')}">${iconeHtml('retirer')}</button></header>
       <div class="nav-dialogue-corps"><table class="nav-fenetres"><thead><tr><th></th><th>${texteHtml('navigation.fenetres.fenetre')}</th><th>${texteHtml('navigation.fenetres.adresse')}</th><th>${texteHtml('navigation.fenetres.ouverte')}</th><th></th></tr></thead><tbody></tbody></table>
       <p class="aide">${texteHtml('navigation.fenetres.aide')}</p></div>
       <footer><button type="button" data-action="session" class="danger">${texteHtml('navigation.fenetres.fermer_session_choix')}</button><button type="button" data-action="fermer">${texteHtml('commun.fermer')}</button></footer>
@@ -37,12 +37,12 @@ export class PanneauFenetres {
 
   rendre(liste) {
     this.fond.querySelector('tbody').innerHTML = liste.map((f) => `<tr data-id="${echapper(f.id)}" class="${f.courante ? 'courante' : ''}">
-      <td>${echapper(f.icone || '🗔')}</td>
-      <td><b>${echapper(f.titre || texte('commun.sans_titre'))}</b>${f.modifiee ? ` <span class="nav-modifiee" title="${texteHtml('navigation.fenetres.modifiee')}">●</span>` : ''}${f.courante ? ` <small>${texteHtml('navigation.fenetres.courante')}</small>` : ''}${f.principale ? ` <small>${texteHtml('navigation.fenetres.principale')}</small>` : ''}</td>
+      <td>${f.icone ? echapper(f.icone) : iconeHtml('navigation_fenetre')}</td>
+      <td><b>${echapper(f.titre || texte('commun.sans_titre'))}</b>${f.modifiee ? ` <span class="nav-modifiee" title="${texteHtml('navigation.fenetres.modifiee')}">${iconeHtml('modifie')}</span>` : ''}${f.courante ? ` <small>${texteHtml('navigation.fenetres.courante')}</small>` : ''}${f.principale ? ` <small>${texteHtml('navigation.fenetres.principale')}</small>` : ''}</td>
       <td><code>${echapper(f.url)}</code></td>
       <td>${formatHeure(f.ouverteLe)}</td>
       <td class="nav-actions">${f.courante ? `<button type="button" data-action="fermer-courante">${texteHtml('commun.fermer')}</button>`
-        : `<button type="button" data-action="afficher">${texteHtml('commun.afficher')}</button><button type="button" data-action="signaler" title="${texteHtml('navigation.fenetres.signaler')}">🔔</button>`}</td>
+        : `<button type="button" data-action="afficher">${texteHtml('commun.afficher')}</button><button type="button" data-action="signaler" title="${texteHtml('navigation.fenetres.signaler')}">${iconeHtml('navigation_signaler')}</button>`}</td>
     </tr>`).join('');
   }
 
@@ -65,7 +65,7 @@ export function confirmerFermetureSession(modifiees) {
     const fond = document.createElement('dialog');
     fond.className = 'nav-dialogue-fond dialogue-plein';
     fond.innerHTML = `<section class="nav-dialogue" role="alertdialog" aria-label="${texteHtml('navigation.fenetres.modifications_en_cours')}">
-      <header><h2>⚠ ${texteHtml('navigation.fenetres.modifications_titre')}</h2></header>
+      <header><h2>${iconeHtml('avertissement')} ${texteHtml('navigation.fenetres.modifications_titre')}</h2></header>
       <div class="nav-dialogue-corps"><p>${texteHtml('navigation.fenetres.modifications_perdues')}</p>
       <ul>${modifiees.map((f) => `<li><b>${echapper(f.titre || texte('commun.sans_titre'))}</b>${f.courante ? ` ${texteHtml('navigation.fenetres.courante')}` : ''}</li>`).join('')}</ul>
       <p class="aide">${texteHtml('navigation.fenetres.modifications_aide')}</p></div>

@@ -2,6 +2,7 @@
 // réduit en bouton, largeur au glisser du séparateur ; état et largeur dans les préférences du navigateur
 // (`<cle>Reduite`, `<cle>Largeur`).
 import { lirePreferences, ecrirePreferences, separateur } from '@logibtp/socle/ui';
+import { texteHtml, iconeHtml } from '@logibtp/socle/dictionnaire';
 
 /**
  * Présentation de référence du module (synthèse) : corps à panneau latéral. Panneau à gauche (barre : titre, filtres,
@@ -14,10 +15,10 @@ export function gabaritPanneau(cle, { titre, objet, filtres = '', actions = '' }
   return `<div class="corps-panneau${reduit ? ' panneau-reduit' : ''}" data-panneau="${cle}">
       <aside class="panneau-lateral" style="width: ${Number(prefs[`${cle}Largeur`]) || 560}px">
         <div class="panneau-lateral-barre"><b>${titre}</b> ${filtres}
-          <span class="panneau-actions">${actions}<button type="button" class="bouton-icone" data-replier title="Réduire le panneau des ${objet}" aria-label="Réduire le panneau des ${objet}">«</button></span></div>
+          <span class="panneau-actions">${actions}<button type="button" class="bouton-icone" data-replier title="${texteHtml('navigation_btp.panneau_lateral.reduire', { objet })}" aria-label="${texteHtml('navigation_btp.panneau_lateral.reduire', { objet })}">${iconeHtml('navigation_btp_panneau_replier')}</button></span></div>
         <div data-corrections></div><div data-liste class="panneau-lateral-liste"></div><div class="panneau-legende" data-legende></div></aside>
-      <div class="panneau-separateur" data-separateur title="Glisser pour élargir le panneau"></div>
-      <button type="button" class="bouton-icone panneau-deplier" data-deplier title="Afficher le panneau des ${objet}" aria-label="Afficher le panneau des ${objet}">👥</button>
+      <div class="panneau-separateur" data-separateur title="${texteHtml('navigation_btp.panneau_lateral.separateur')}"></div>
+      <button type="button" class="bouton-icone panneau-deplier" data-deplier title="${texteHtml('navigation_btp.panneau_lateral.afficher', { objet })}" aria-label="${texteHtml('navigation_btp.panneau_lateral.afficher', { objet })}">${iconeHtml('navigation_btp_panneau_deplier')}</button>
       <div data-detail class="panneau-detail"></div></div>`;
 }
 

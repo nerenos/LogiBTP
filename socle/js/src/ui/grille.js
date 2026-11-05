@@ -1,7 +1,7 @@
 import { actionDe, libelleRaccourci } from './raccourcis.js';
 import { ouvrirMenuContextuel } from './menu-contextuel.js';
 import { ListeDeroulante, AssistantFormule } from './liste-deroulante.js';
-import { texte } from '../dictionnaire/index.js';
+import { texte, icone } from '../dictionnaire/index.js';
 
 const LARGEUR_MIN = 28;
 /** Niveaux au retrait plein (--grille-retrait), les suivants au retrait réduit (--grille-retrait-profond). */
@@ -210,7 +210,7 @@ export class GrilleArbre {
         if (c.arbre) {
           const b = document.createElement('span');
           b.className = 'repli';
-          b.textContent = r.aEnfants ? (this.replies.has(id) ? '▸' : '▾') : '';
+          b.textContent = r.aEnfants ? icone(this.replies.has(id) ? 'deplier' : 'replier') : '';
           b.addEventListener('mousedown', (ev) => { ev.stopPropagation(); this.basculer(id); });
           td.appendChild(b);
         }

@@ -1,5 +1,5 @@
 import { echapper } from '@logibtp/socle/ui';
-import { texteHtml, langue } from '@logibtp/socle/dictionnaire';
+import { texteHtml, langue, iconeHtml } from '@logibtp/socle/dictionnaire';
 
 // Widgets de l'accueil (classes mères) : le cœur fournit les données par definition.charger() ; le module les
 // affiche. Les éléments portant une URL ouvrent la page correspondante (Ctrl+clic : nouvelle fenêtre).
@@ -54,11 +54,11 @@ export class WidgetIndicateurs extends Widget {
 
 export class WidgetAlertes extends Widget {
   rendre(alertes) {
-    const icones = { erreur: '⛔', alerte: '⚠️', info: 'ℹ️' };
+    const icones = { erreur: iconeHtml('erreur'), alerte: iconeHtml('avertissement'), info: iconeHtml('info') };
     this.corps.innerHTML = alertes.length
       ? `<ul class="widget-alertes">${alertes.map((a) => `<li class="${echapper(a.niveau ?? 'info')}"${lien(a.url)}>
-          <span>${icones[a.niveau] ?? 'ℹ️'}</span><span><b>${echapper(a.texte)}</b>${a.detail ? `<small>${echapper(a.detail)}</small>` : ''}</span></li>`).join('')}</ul>`
-      : `<p class="widget-vide">✓ ${texteHtml('navigation.widgets.aucune_alerte')}</p>`;
+          <span>${icones[a.niveau] ?? icones.info}</span><span><b>${echapper(a.texte)}</b>${a.detail ? `<small>${echapper(a.detail)}</small>` : ''}</span></li>`).join('')}</ul>`
+      : `<p class="widget-vide">${iconeHtml('coche')} ${texteHtml('navigation.widgets.aucune_alerte')}</p>`;
   }
 }
 

@@ -1,5 +1,16 @@
 {
   "navigation_historique": "🕘",
   "navigation_personnaliser": "icones/personnaliser.svg",
-  "navigation_actualiser": "icones/actualiser.svg"
+  "navigation_actualiser": "icones/actualiser.svg",
+  "navigation_ajouter": "icones/ajouter.svg",
+  "navigation_nouvelle_fenetre": "icones/nouvelle_fenetre.svg",
+  "navigation_epingler": "📌",
+  "navigation_masquer_droite": "⇥",
+  "navigation_masquer_gauche": "⇤",
+  "navigation_languette": "☰",
+  "navigation_raccourci": "🔗",
+  "navigation_restaurer": "↺",
+  "navigation_fenetres": "🗗",
+  "navigation_fenetre": "🗔",
+  "navigation_signaler": "🔔"
 }

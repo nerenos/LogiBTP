@@ -5,7 +5,7 @@
 - Pas de base de données : le module ne stocke rien.
 
 ## Dépendances
-- Dépend de : `@logibtp/socle` (JS, `echapper`), `LogiBTP.Socle` / `LogiBTP.Socle.Web` (C#, `ExceptionMetier`, `JsonCalcul`, `CasPartages`).
+- Dépend de : `@logibtp/socle` (JS, `echapper` ; dictionnaire : textes `entreprises_fr.recherche.*` et icône `entreprises_fr_annuaire` de `js/personnalisation/`), `LogiBTP.Socle` / `LogiBTP.Socle.Web` (C#, `ExceptionMetier`, `JsonCalcul`, `CasPartages`).
 - Utilisé par : cœur seulement — `client/src/app/annuaire/annuaire.js` (`creerFournisseurEntreprises()` → service `entreprises` de `application.js`), fiche personne (`client/src/app/fiches/fiche-annuaire.js`, `importerEntreprise()` via `rechercherEntreprise`), `src/LogiBTP.Api/Program.cs` (`AddModuleEntreprisesFr`, `MapModuleEntreprisesFr`). Ne dépend pas du module Annuaire.
 
 ## Structure

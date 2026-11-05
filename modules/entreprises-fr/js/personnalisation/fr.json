@@ -2,5 +2,29 @@
   "erreurs": {
     "INDISPONIBLE": "Annuaire des entreprises injoignable",
     "RECHERCHE": "Saisissez au moins 3 caractères (nom, SIREN ou SIRET)"
+  },
+  "entreprises_fr": {
+    "recherche": {
+      "titre": "Annuaire des entreprises",
+      "fermer": "Fermer (Échap)",
+      "saisie": "Nom, SIREN ou SIRET…",
+      "rechercher": "Rechercher",
+      "source": "Source : annuaire des entreprises de l'État (INSEE, RNE) – données publiques.",
+      "annuler": "Annuler",
+      "reprendre": "Reprendre dans la fiche",
+      "en_cours": "Recherche…",
+      "resultats_un": "{{nombre}} résultat",
+      "resultats_autre": "{{nombre}} résultats",
+      "page": " · page {{page}}/{{pages}}",
+      "aucune": "Aucune entreprise trouvée",
+      "aucune_point": "Aucune entreprise trouvée.",
+      "ferme": "fermé",
+      "siege": "siège",
+      "siret": "SIRET {{siret}}",
+      "naf": "NAF {{naf}}",
+      "dirigeants": "{{nombre}} dirigeant(s) : créer les contacts cochés",
+      "precedents": "Précédents",
+      "suivants": "Suivants"
+    }
   }
 }

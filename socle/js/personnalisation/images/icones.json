@@ -6,7 +6,7 @@
   "erreur": "⛔",
   "avertissement": "⚠",
   "verrou": "🔒",
-  "ajouter": "＋",
+  "ajouter": "icones/ajouter.svg",
   "retirer": "✕",
   "enregistrer": "💾",
   "precedent": "◀",
@@ -20,5 +20,10 @@
   "rechercher": "🔍",
   "telephone": "☎",
   "densite_confortable": "🔍",
-  "densite_compacte": "🔬"
+  "densite_compacte": "🔬",
+  "deplier": "▸",
+  "effacer_format": "⌫",
+  "modifie": "●",
+  "info": "ℹ️",
+  "coche": "✓"
 }

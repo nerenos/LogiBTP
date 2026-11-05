@@ -80,10 +80,10 @@ export class Bandeau {
     this.racine.classList.add('bandeau');
     this.racine.innerHTML = `
       <a class="bandeau-logo" href="${echapper(accueil)}" title="${texteHtml('navigation.bandeau.accueil', { application: titreApplication })}">${logo || `<span class="bandeau-logo-texte">${echapper(titreApplication)}</span>`}</a>
-      ${retour ? `<button type="button" class="bandeau-retour" title="${texteHtml('navigation.bandeau.retour')}" aria-label="${texteHtml('navigation.bandeau.retour')}">◀</button>` : ''}
+      ${retour ? `<button type="button" class="bandeau-retour" title="${texteHtml('navigation.bandeau.retour')}" aria-label="${texteHtml('navigation.bandeau.retour')}">${iconeHtml('precedent')}</button>` : ''}
       <span class="bandeau-outils">
-        <button type="button" data-masquage-auto aria-pressed="false" title="${texteHtml('navigation.bandeau.masquage_auto')}">📌</button>
-        <button type="button" data-masquer title="${texteHtml('navigation.bandeau.masquer')}" aria-label="${texteHtml('navigation.bandeau.masquer')}">⇥</button>
+        <button type="button" data-masquage-auto aria-pressed="false" title="${texteHtml('navigation.bandeau.masquage_auto')}">${iconeHtml('navigation_epingler')}</button>
+        <button type="button" data-masquer title="${texteHtml('navigation.bandeau.masquer')}" aria-label="${texteHtml('navigation.bandeau.masquer')}">${iconeHtml('navigation_masquer_droite')}</button>
       </span>
       <nav class="bandeau-menus" role="menubar" aria-label="${texteHtml('navigation.bandeau.menu_principal')}"></nav>
       <span class="bandeau-message"><button type="button" class="bandeau-historique" title="${texteHtml('navigation.bandeau.historique')}" aria-label="${texteHtml('navigation.bandeau.historique')}" hidden>${iconeHtml('navigation_historique')}</button><span class="bandeau-message-texte" role="status"></span></span>
@@ -91,7 +91,7 @@ export class Bandeau {
       <div class="bandeau-deroulant" role="menu" hidden></div>
       <div class="bandeau-deroulant bandeau-sous-menu" role="menu" hidden></div>
       <div class="bandeau-poignee" title="${texteHtml('navigation.bandeau.largeur')}"></div>
-      <button type="button" class="bandeau-languette" title="${texteHtml('navigation.bandeau.afficher')}" aria-label="${texteHtml('navigation.bandeau.afficher')}">☰</button>`;
+      <button type="button" class="bandeau-languette" title="${texteHtml('navigation.bandeau.afficher')}" aria-label="${texteHtml('navigation.bandeau.afficher')}">${iconeHtml('navigation_languette')}</button>`;
     this.barre = this.racine.querySelector('.bandeau-menus');
     this.deroulant = this.racine.querySelector('.bandeau-deroulant');
     this.sous = this.racine.querySelector('.bandeau-sous-menu');
@@ -172,7 +172,7 @@ export class Bandeau {
     auto.title = texte(d.masquageAuto ? 'navigation.bandeau.garder' : 'navigation.bandeau.masquage_auto');
     const masquer = r.querySelector('[data-masquer]');
     masquer.hidden = Boolean(d.masquageAuto);
-    masquer.textContent = this.aGauche ? '⇤' : '⇥';
+    masquer.innerHTML = iconeHtml(this.aGauche ? 'navigation_masquer_gauche' : 'navigation_masquer_droite');
     if (avant !== d.mode || !this.rendu) this.rendre();
     else this.ajuster();
   }
@@ -306,12 +306,12 @@ export class Bandeau {
       const fenetre = x.url && x.fenetre !== false && !x.desactive && !x.sousMenu;
       return `<div class="bandeau-element${x.desactive ? ' desactive' : ''}${x.sousMenu ? ' a-sous-menu' : ''}${x.classe ? ` ${echapper(x.classe)}` : ''}" role="menuitem" data-index="${i}"
           aria-disabled="${Boolean(x.desactive)}"${x.sousMenu ? ' aria-haspopup="true"' : ''} title="${echapper(x.titre ?? x.info ?? '')}">
-        <span class="bandeau-coche">${x.coche ? '✓' : ''}</span>
+        <span class="bandeau-coche">${x.coche ? iconeHtml('coche') : ''}</span>
         <span class="bandeau-icone">${x.iconeHtml ?? echapper(x.icone ?? '')}</span>
         <span class="bandeau-libelle">${echapper(x.libelle)}${x.info ? `<small>${echapper(x.info)}</small>` : ''}</span>
         <span class="bandeau-raccourci">${echapper(x.raccourci ?? '')}</span>
-        ${x.creation && !x.desactive ? `<button type="button" class="bandeau-fenetre bandeau-creation" data-creation title="${texteHtml('navigation.bandeau.creation', { titre: x.creation.titre ?? texte('commun.creer') })}">＋</button>` : '<span></span>'}
-        ${fenetre ? `<button type="button" class="bandeau-fenetre" data-fenetre title="${texteHtml('navigation.bandeau.nouvelle_fenetre')}">⧉</button>` : x.sousMenu ? '<span class="bandeau-fleche">▸</span>' : '<span></span>'}
+        ${x.creation && !x.desactive ? `<button type="button" class="bandeau-fenetre bandeau-creation" data-creation title="${texteHtml('navigation.bandeau.creation', { titre: x.creation.titre ?? texte('commun.creer') })}">${iconeHtml('navigation_ajouter')}</button>` : '<span></span>'}
+        ${fenetre ? `<button type="button" class="bandeau-fenetre" data-fenetre title="${texteHtml('navigation.bandeau.nouvelle_fenetre')}">${iconeHtml('navigation_nouvelle_fenetre')}</button>` : x.sousMenu ? `<span class="bandeau-fleche">${iconeHtml('deplier')}</span>` : '<span></span>'}
       </div>`;
     }).join('') || `<div class="bandeau-vide">${texteHtml('navigation.bandeau.vide')}</div>`;
   }
@@ -399,7 +399,7 @@ export class Bandeau {
       this.lignes.set(m.code, { menu: m });
       return `<div class="bandeau-groupe${ouvert ? ' ouvert' : ''}">
         <button type="button" class="bandeau-titre" role="treeitem" data-ligne="${echapper(m.code)}" aria-expanded="${ouvert}" tabindex="-1">
-          <span class="bandeau-libelle">${libelleHtml(m)}</span><span class="bandeau-fleche">${ouvert ? '▾' : '▸'}</span></button>
+          <span class="bandeau-libelle">${libelleHtml(m)}</span><span class="bandeau-fleche">${iconeHtml(ouvert ? 'replier' : 'deplier')}</span></button>
         ${ouvert ? `<div role="group">${this.#htmlVertical(liste(m.elements), m.code, 1)}</div>` : ''}
       </div>`;
     }).join('');
@@ -416,11 +416,11 @@ export class Bandeau {
       return `<div class="bandeau-element${x.desactive ? ' desactive' : ''}${x.sousMenu ? ' a-sous-menu' : ''}${ouvert ? ' sous-ouvert' : ''}${x.classe ? ` ${echapper(x.classe)}` : ''}"
           role="treeitem" data-ligne="${echapper(chemin)}" tabindex="-1" style="--profondeur: ${profondeur}"
           aria-disabled="${Boolean(x.desactive)}"${x.sousMenu ? ` aria-expanded="${ouvert}"` : ''} title="${echapper(x.titre ?? x.info ?? '')}">
-        <span class="bandeau-coche">${x.coche ? '✓' : ''}</span>
+        <span class="bandeau-coche">${x.coche ? iconeHtml('coche') : ''}</span>
         <span class="bandeau-icone">${x.iconeHtml ?? echapper(x.icone ?? '')}</span>
         <span class="bandeau-libelle">${echapper(x.libelle)}${x.info ? `<small>${echapper(x.info)}</small>` : ''}</span>
-        ${x.creation && !x.desactive ? `<button type="button" class="bandeau-fenetre bandeau-creation" data-creation tabindex="-1" title="${texteHtml('navigation.bandeau.creation', { titre: x.creation.titre ?? texte('commun.creer') })}">＋</button>` : '<span></span>'}
-        ${fenetre ? `<button type="button" class="bandeau-fenetre" data-fenetre tabindex="-1" title="${texteHtml('navigation.bandeau.nouvelle_fenetre')}">⧉</button>` : x.sousMenu ? `<span class="bandeau-fleche">${ouvert ? '▾' : '▸'}</span>` : '<span></span>'}
+        ${x.creation && !x.desactive ? `<button type="button" class="bandeau-fenetre bandeau-creation" data-creation tabindex="-1" title="${texteHtml('navigation.bandeau.creation', { titre: x.creation.titre ?? texte('commun.creer') })}">${iconeHtml('navigation_ajouter')}</button>` : '<span></span>'}
+        ${fenetre ? `<button type="button" class="bandeau-fenetre" data-fenetre tabindex="-1" title="${texteHtml('navigation.bandeau.nouvelle_fenetre')}">${iconeHtml('navigation_nouvelle_fenetre')}</button>` : x.sousMenu ? `<span class="bandeau-fleche">${iconeHtml(ouvert ? 'replier' : 'deplier')}</span>` : '<span></span>'}
       </div>${ouvert ? `<div role="group">${this.#htmlVertical(liste(x.sousMenu), chemin, profondeur + 1)}</div>` : ''}`;
     }).join('') || `<div class="bandeau-vide" style="--profondeur: ${profondeur}">${texteHtml('navigation.bandeau.vide')}</div>`;
   }

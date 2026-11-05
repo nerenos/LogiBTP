@@ -1,4 +1,5 @@
 import { echapper, ouvrirModale } from '@logibtp/socle/ui';
+import { texte, texteHtml, pluriel, iconeHtml } from '@logibtp/socle/dictionnaire';
 
 // Dialogue de recherche dans l'annuaire des entreprises françaises : nom, SIREN ou SIRET ; l'entreprise choisie est
 // rendue avec les dirigeants cochés (à créer comme contacts). Styles : classes du dialogue des fiches.
@@ -13,11 +14,11 @@ export function rechercherEntreprise({ fournisseur, recherche = '', dirigeants =
   return new Promise((resoudre) => {
     const fond = document.createElement('dialog');
     fond.className = 'fiche-dialogue-fond dialogue-plein';
-    fond.innerHTML = `<section class="fiche-dialogue entreprises-recherche" role="dialog" aria-label="Annuaire des entreprises">
-      <header><h2>🇫🇷 Annuaire des entreprises</h2><button type="button" data-fermer title="Fermer (Échap)">✕</button></header>
-      <div class="entreprises-barre"><input type="search" placeholder="Nom, SIREN ou SIRET…" value="${echapper(recherche)}"><button type="button" data-chercher>Rechercher</button></div>
-      <div class="fiche-dialogue-corps entreprises-zone"><p class="aide">Source : annuaire des entreprises de l'État (INSEE, RNE) – données publiques.</p></div>
-      <footer><span class="fiche-dialogue-message"></span><button type="button" data-annuler>Annuler</button><button type="button" class="principal" data-choisir disabled>Reprendre dans la fiche</button></footer></section>`;
+    fond.innerHTML = `<section class="fiche-dialogue entreprises-recherche" role="dialog" aria-label="${texteHtml('entreprises_fr.recherche.titre')}">
+      <header><h2>${iconeHtml('entreprises_fr_annuaire')} ${texteHtml('entreprises_fr.recherche.titre')}</h2><button type="button" data-fermer title="${texteHtml('entreprises_fr.recherche.fermer')}">${iconeHtml('retirer')}</button></header>
+      <div class="entreprises-barre"><input type="search" placeholder="${texteHtml('entreprises_fr.recherche.saisie')}" value="${echapper(recherche)}"><button type="button" data-chercher>${texteHtml('entreprises_fr.recherche.rechercher')}</button></div>
+      <div class="fiche-dialogue-corps entreprises-zone"><p class="aide">${texteHtml('entreprises_fr.recherche.source')}</p></div>
+      <footer><span class="fiche-dialogue-message"></span><button type="button" data-annuler>${texteHtml('entreprises_fr.recherche.annuler')}</button><button type="button" class="principal" data-choisir disabled>${texteHtml('entreprises_fr.recherche.reprendre')}</button></footer></section>`;
     ouvrirModale(fond);
     const entree = fond.querySelector('input[type="search"]');
     const zone = fond.querySelector('.entreprises-zone');
@@ -33,25 +34,25 @@ export function rechercherEntreprise({ fournisseur, recherche = '', dirigeants =
     };
 
     const chercher = async (p = 1) => {
-      message.textContent = 'Recherche…';
+      message.textContent = texte('entreprises_fr.recherche.en_cours');
       message.className = 'fiche-dialogue-message';
       try {
         const r = await fournisseur.rechercher(entree.value, { page: p });
         page = r.page;
         resultats = r.resultats;
         choisie = resultats.length === 1 ? 0 : null;
-        message.textContent = r.total ? `${r.total} résultat${r.total > 1 ? 's' : ''}${r.pages > 1 ? ` · page ${r.page}/${r.pages}` : ''}` : 'Aucune entreprise trouvée';
+        message.textContent = r.total ? `${pluriel('entreprises_fr.recherche.resultats', r.total, { nombre: r.total })}${r.pages > 1 ? texte('entreprises_fr.recherche.page', { page: r.page, pages: r.pages }) : ''}` : texte('entreprises_fr.recherche.aucune');
         zone.innerHTML = resultats.map((e, i) => `<article class="entreprise" data-i="${i}">
           <div class="entreprise-titre"><b>${echapper(e.raison_sociale ?? '')}</b>${e.nom_commercial && e.nom_commercial !== e.raison_sociale ? ` <span>(${echapper(e.nom_commercial)})</span>` : ''}
-            ${e.etat_administratif === 'F' ? '<span class="entreprise-ferme">fermé</span>' : ''}${e.siege ? '<span class="entreprise-siege">siège</span>' : ''}</div>
-          <div class="aide">SIRET ${echapper(e.siret ?? '—')} · ${echapper(e.forme_libelle ?? e.forme_juridique ?? '')} · NAF ${echapper(e.naf ?? '—')}${e.effectif ? ` · ${echapper(e.effectif)}` : ''}</div>
+            ${e.etat_administratif === 'F' ? `<span class="entreprise-ferme">${texteHtml('entreprises_fr.recherche.ferme')}</span>` : ''}${e.siege ? `<span class="entreprise-siege">${texteHtml('entreprises_fr.recherche.siege')}</span>` : ''}</div>
+          <div class="aide">${texteHtml('entreprises_fr.recherche.siret', { siret: e.siret ?? '—' })} · ${echapper(e.forme_libelle ?? e.forme_juridique ?? '')} · ${texteHtml('entreprises_fr.recherche.naf', { naf: e.naf ?? '—' })}${e.effectif ? ` · ${echapper(e.effectif)}` : ''}</div>
           <div>${echapper(adresse(e.adresse))}</div>
-          ${dirigeants && e.dirigeants.length ? `<details><summary>${e.dirigeants.length} dirigeant(s) : créer les contacts cochés</summary>
+          ${dirigeants && e.dirigeants.length ? `<details><summary>${texteHtml('entreprises_fr.recherche.dirigeants', { nombre: e.dirigeants.length })}</summary>
             ${e.dirigeants.map((d, j) => `<label><input type="checkbox" data-dirigeant="${j}"> ${echapper([d.prenom, d.nom].filter(Boolean).join(' '))}${d.qualite ? ` – ${echapper(d.qualite)}` : ''}</label>`).join('')}</details>` : ''}
-        </article>`).join('') || '<p class="aide">Aucune entreprise trouvée.</p>';
+        </article>`).join('') || `<p class="aide">${texteHtml('entreprises_fr.recherche.aucune_point')}</p>`;
         if (r.pages > 1) {
-          zone.insertAdjacentHTML('beforeend', `<p class="entreprises-pages">${page > 1 ? '<button type="button" data-page="-1">◀ Précédents</button>' : ''}
-            ${page < r.pages ? '<button type="button" data-page="1">Suivants ▶</button>' : ''}</p>`);
+          zone.insertAdjacentHTML('beforeend', `<p class="entreprises-pages">${page > 1 ? `<button type="button" data-page="-1">${iconeHtml('precedent')} ${texteHtml('entreprises_fr.recherche.precedents')}</button>` : ''}
+            ${page < r.pages ? `<button type="button" data-page="1">${texteHtml('entreprises_fr.recherche.suivants')} ${iconeHtml('suivant')}</button>` : ''}</p>`);
         }
         rendreChoix();
       } catch (e) {

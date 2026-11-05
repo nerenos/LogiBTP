@@ -5002,6 +5002,11 @@
       "fermeture_refusee": "Le navigateur ne laisse fermer par l'application que les fenêtres qu'elle a ouvertes : fermez celle-ci avec Ctrl+W",
       "session_fermee_un": "Session fermée ({{nombre}} fenêtre) : « Restaurer ma session précédente » la rouvrira",
       "session_fermee_autre": "Session fermée ({{nombre}} fenêtres) : « Restaurer ma session précédente » la rouvrira"
+    },
+    "panneau_lateral": {
+      "reduire": "Réduire le panneau des {{objet}}",
+      "afficher": "Afficher le panneau des {{objet}}",
+      "separateur": "Glisser pour élargir le panneau"
     }
   },
   "fiches_btp": {

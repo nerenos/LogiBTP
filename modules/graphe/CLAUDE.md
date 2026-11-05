@@ -5,7 +5,8 @@
 - Chaque consommateur construit son graphe à partir de ses données dans le format commun, puis le confie à sa sous-classe de `VueGraphe`.
 
 ## Dépendances
-- Dépend de : `@logibtp/socle` seulement (`echapper`, `lirePreferences`, `ecrirePreferences` de `@logibtp/socle/ui`). Pas de partie .NET ni de base.
+- Dépend de : `@logibtp/socle` seulement (`echapper`, `lirePreferences`, `ecrirePreferences` de `@logibtp/socle/ui` ; `texte`, `pluriel`, `icone`, `iconeHtml` du dictionnaire). Pas de partie .NET ni de base.
+- Textes (`graphe.vue.*`) et icônes (`graphe_*`) dans `js/personnalisation/` (couche déclarée dans `client/personnalisation/couches.js`) ; un bouton du panneau (`boutonsNoeud`) porte son icône par `icone` (clé du catalogue), jamais dans son libellé.
 - Utilisé par : module Annuaire (`construireGraphe` dans `modules/annuaire/js/src/graphe.js`, `VueGrapheAnnuaire` dans `modules/annuaire/js/ui/graphe.js`) ; cœur : `VueGrapheStructure` (`client/src/app/structure/graphe-structure.js`, onglet Graphe des fiches de la structure) ; `client/src/main.js` importe `@logibtp/graphe/ui/graphe.css`.
 
 ## Structure

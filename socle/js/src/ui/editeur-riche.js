@@ -1,6 +1,6 @@
 import { echapper, htmlSur } from './format.js';
 import { ouvrirModale } from './dialogue.js';
-import { texte } from '../dictionnaire/index.js';
+import { texte, iconeHtml } from '../dictionnaire/index.js';
 
 // Éditeur de mise en forme d'un libellé (double-clic sur un libellé).
 // Ctrl+B / Ctrl+I / Ctrl+U, barre d'outils, insertion de variables {{...}}.
@@ -23,7 +23,7 @@ const BOUTONS = [
   { sep: true },
   { couleurs: true },
   { sep: true },
-  { cmd: 'removeFormat', texte: '⌫' },
+  { cmd: 'removeFormat', icone: 'effacer_format' },
 ];
 
 /** Ouvre l'éditeur ; résout avec le HTML saisi (null si vidé), ou undefined si l'utilisateur annule. */
@@ -38,7 +38,7 @@ export function editerLibelle({ html, titre, variables = [], lecture = false }) 
           ${BOUTONS.map((b) => {
             if (b.sep) return '<span class="sep"></span>';
             if (b.couleurs) return COULEURS.map((c) => `<button type="button" class="couleur" data-couleur="${c}" title="${echapper(texte('socle.editeur.couleur', { couleur: c }))}" style="--c:${c}"></button>`).join('');
-            return `<button type="button" data-cmd="${b.cmd}" title="${echapper(texte(`socle.editeur.${b.cmd}`))}">${b.texte}</button>`;
+            return `<button type="button" data-cmd="${b.cmd}" title="${echapper(texte(`socle.editeur.${b.cmd}`))}">${b.icone ? iconeHtml(b.icone) : b.texte}</button>`;
           }).join('')}
           <select data-variable title="${echapper(texte('socle.editeur.inserer_variable'))}">
             <option value="">${echapper(texte('socle.editeur.variable'))}</option>

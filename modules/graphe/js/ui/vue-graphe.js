@@ -1,4 +1,5 @@
 import { echapper, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
+import { texte, texteHtml, pluriel, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { disposerGraphe, fusionnerGraphes, voisinage } from '../src/graphe.js';
 
 // Vue d'un graphe (classe mère, style des outils d'analyse de liens) : couches par ordre, nœuds en colonne sous les
@@ -73,7 +74,7 @@ export class VueGraphe {
     }
     return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="7" fill="var(--surface)" ${bord}/>
       <rect x="${x}" y="${y}" width="6" height="${h}" rx="3" fill="${this.couleurNoeud(n)}"/>
-      <text x="${x + 14}" y="${y + 19}" font-size="13">${echapper(n.icone ?? '◻')}</text>
+      <text x="${x + 14}" y="${y + 19}" font-size="13">${echapper(n.icone ?? icone('graphe_noeud'))}</text>
       <text x="${x + 34}" y="${y + 19}" font-size="12" font-weight="600" fill="var(--texte)">${echapper(tronquer(n.libelle, 22))}</text>
       <text x="${x + 34}" y="${y + 35}" font-size="10" fill="var(--discret)">${echapper(tronquer(n.sous_titre ?? '', 22))}</text>`;
   }
@@ -87,22 +88,22 @@ export class VueGraphe {
   /** Légende : [{ classe, libelle }] (classes l-* de graphe.css, ou style en ligne). */
   legende() { return []; }
 
-  compte(g) { return g.noeuds.length ? `${g.noeuds.length} nœud(s), ${g.aretes.length} relation(s)` : 'Aucun élément'; }
+  compte(g) { return g.noeuds.length ? texte('graphe.vue.compte', { noeuds: g.noeuds.length, relations: g.aretes.length }) : texte('graphe.vue.vide'); }
 
   /** Description du nœud dans le panneau (HTML, sous le titre). */
   infosNoeud(n) {
-    return `<p class="aide">${n.sous_titre ? `${echapper(n.sous_titre)} · ` : ''}${n.distance === 0 ? 'départ' : `à ${n.distance} saut${n.distance > 1 ? 's' : ''}`}${n.actif === false ? ' · inactif' : ''}</p>`;
+    return `<p class="aide">${n.sous_titre ? `${echapper(n.sous_titre)} · ` : ''}${echapper(n.distance === 0 ? texte('graphe.vue.depart') : pluriel('graphe.vue.distance', n.distance, { nombre: n.distance }))}${n.actif === false ? ` · ${texteHtml('graphe.vue.inactif')}` : ''}</p>`;
   }
 
   /** Le nœud a-t-il une fiche à ouvrir (double-clic, bouton) ? */
   peutOuvrir(n) { return !!this.options.ouvrir && n.ouvrable !== false; }
 
-  /** Boutons du panneau : [{ code, libelle, titre, action() }]. */
+  /** Boutons du panneau : [{ code, libelle, titre, icone (clé du catalogue), action() }]. */
   boutonsNoeud(n) {
     const b = [];
-    if (this.peutOuvrir(n)) b.push({ code: 'ouvrir', libelle: 'Ouvrir la fiche', action: (e) => this.options.ouvrir(n, e) });
-    if (!n.depart && n.ouvrable !== false) b.push({ code: 'centrer', libelle: '◎ Centrer ici', titre: 'Repartir de ce nœud', action: () => this.recentrer({ type: n.type, id: n.id }) });
-    if (n.ouvrable !== false) b.push({ code: 'developper', libelle: '＋ Développer', titre: 'Ajouter ses voisins directs au graphe', action: () => this.developper(n).catch((e) => this.erreur(e)) });
+    if (this.peutOuvrir(n)) b.push({ code: 'ouvrir', libelle: texte('graphe.vue.ouvrir'), action: (e) => this.options.ouvrir(n, e) });
+    if (!n.depart && n.ouvrable !== false) b.push({ code: 'centrer', icone: 'graphe_centrer', libelle: texte('graphe.vue.centrer'), titre: texte('graphe.vue.centrer_aide'), action: () => this.recentrer({ type: n.type, id: n.id }) });
+    if (n.ouvrable !== false) b.push({ code: 'developper', icone: 'graphe_developper', libelle: texte('graphe.vue.developper'), titre: texte('graphe.vue.developper_aide'), action: () => this.developper(n).catch((e) => this.erreur(e)) });
     return b;
   }
 
@@ -121,15 +122,15 @@ export class VueGraphe {
           <select data-r="${c.code}">${c.options.map((o) => `<option ${Number(r[c.code]) === o ? 'selected' : ''}>${o}</option>`).join('')}</select></label>`);
     this.conteneur.innerHTML = `<div class="graphe">
       <div class="graphe-barre">
-        <label title="Nombre de sauts depuis le départ">Niveau de représentation
+        <label title="${texteHtml('graphe.vue.niveau_aide')}">${texteHtml('graphe.vue.niveau')}
           <select data-r="profondeur">${Array.from({ length: this.profondeurMax }, (_, i) => `<option value="${i + 1}" ${r.profondeur === i + 1 ? 'selected' : ''}>${i + 1}</option>`).join('')}</select></label>
-        <button type="button" data-plus title="Augmenter le niveau de représentation">＋</button><button type="button" data-moins title="Diminuer le niveau de représentation">－</button>
+        <button type="button" data-plus title="${texteHtml('graphe.vue.plus')}">${iconeHtml('graphe_plus')}</button><button type="button" data-moins title="${texteHtml('graphe.vue.moins')}">${iconeHtml('graphe_moins')}</button>
         ${this.controlesReglages().map(controle).join('')}
         <span class="graphe-compte aide"></span>
-        <span class="graphe-actions"><button type="button" data-ajuster title="Tout voir">⤢ Ajuster</button>
-          <button type="button" data-disposer title="Replacer les nœuds déplacés">⟲ Disposer</button>
-          <button type="button" data-svg title="Enregistrer l'image (SVG)">⬇ SVG</button>
-          ${this.options.pleinEcran ? '<button type="button" data-plein title="Ouvrir le graphe dans sa page (Ctrl : nouvelle fenêtre)">⧉ Plein écran</button>' : ''}</span>
+        <span class="graphe-actions"><button type="button" data-ajuster title="${texteHtml('graphe.vue.ajuster_aide')}">${iconeHtml('graphe_ajuster')} ${texteHtml('graphe.vue.ajuster')}</button>
+          <button type="button" data-disposer title="${texteHtml('graphe.vue.disposer_aide')}">${iconeHtml('graphe_disposer')} ${texteHtml('graphe.vue.disposer')}</button>
+          <button type="button" data-svg title="${texteHtml('graphe.vue.exporter_aide')}">${iconeHtml('graphe_exporter')} ${texteHtml('graphe.vue.exporter')}</button>
+          ${this.options.pleinEcran ? `<button type="button" data-plein title="${texteHtml('graphe.vue.plein_ecran_aide')}">${iconeHtml('graphe_plein_ecran')} ${texteHtml('graphe.vue.plein_ecran')}</button>` : ''}</span>
       </div>
       <div class="graphe-zone">
         <svg class="graphe-svg" xmlns="${NS}"><defs>
@@ -276,9 +277,9 @@ export class VueGraphe {
       return `<li><small class="aide">${echapper(this.relationVoisin(a, n))}</small> <a href="#" data-voisin="${autre?.cle}">${echapper(autre?.libelle ?? '')}</a></li>`;
     });
     const boutons = this.boutonsNoeud(n);
-    panneau.innerHTML = `<header><b>${echapper(n.icone ?? '')} ${echapper(n.libelle)}</b><button type="button" data-fermer title="Fermer">✕</button></header>
+    panneau.innerHTML = `<header><b>${echapper(n.icone ?? '')} ${echapper(n.libelle)}</b><button type="button" data-fermer title="${texteHtml('graphe.vue.fermer')}">${iconeHtml('retirer')}</button></header>
       ${this.infosNoeud(n)}
-      ${boutons.length ? `<p class="graphe-boutons">${boutons.map((b, i) => `<button type="button" data-bouton="${i}" ${b.titre ? `title="${echapper(b.titre)}"` : ''}>${echapper(b.libelle)}</button>`).join('')}</p>` : ''}
+      ${boutons.length ? `<p class="graphe-boutons">${boutons.map((b, i) => `<button type="button" data-bouton="${i}" ${b.titre ? `title="${echapper(b.titre)}"` : ''}>${b.icone ? `${iconeHtml(b.icone)} ` : ''}${echapper(b.libelle)}</button>`).join('')}</p>` : ''}
       ${voisins.length ? `<ul class="graphe-voisins">${voisins.join('')}</ul>` : ''}`;
     panneau.querySelector('[data-fermer]').addEventListener('click', () => { this.selection = null; this.#appliquerSelection(); });
     panneau.querySelectorAll('[data-bouton]').forEach((el) => el.addEventListener('click', (e) => boutons[Number(el.dataset.bouton)].action(e)));
