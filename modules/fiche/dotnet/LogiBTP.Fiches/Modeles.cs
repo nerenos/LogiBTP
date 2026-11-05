@@ -56,8 +56,10 @@ public sealed class GroupeChamps
     public string? Code { get; set; }
     public string? Titre { get; set; }
     public List<string> Champs { get; set; } = [];
-    /// <summary>« plein » : groupe sur toute la largeur (notes…).</summary>
+    /// <summary>LargeursGroupe : « plein » = groupe sur toute la largeur (notes…) ; absente = une colonne.</summary>
     public string? Largeur { get; set; }
+    /// <summary>DispositionsGroupe : « grille » (défaut) ou « flex » (champs à la suite, à la largeur de leur contenu).</summary>
+    public string? Disposition { get; set; }
 }
 
 /// <summary>

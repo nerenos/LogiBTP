@@ -7,3 +7,14 @@ export const ERREUR_FICHE = Object.freeze({
   FICHE_UTILISEE: 'FICHE_UTILISEE',
   CODE_PRIS: 'CODE_PRIS',
 });
+
+/** Largeur d'un groupe de champs dans l'onglet (`largeur` du groupe) ; absente = une colonne de la grille des groupes. */
+export const LARGEUR_GROUPE = Object.freeze({
+  PLEIN: 'plein',
+});
+
+/** Disposition des champs dans un groupe (`disposition` du groupe) ; absente = grille. */
+export const DISPOSITION_GROUPE = Object.freeze({
+  GRILLE: 'grille',
+  FLEX: 'flex',
+});

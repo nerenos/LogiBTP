@@ -10,5 +10,7 @@ public class CodesTests
 
     [Theory]
     [InlineData("ERREUR_FICHE", typeof(ErreursFiche))]
+    [InlineData("LARGEUR_GROUPE", typeof(LargeursGroupe))]
+    [InlineData("DISPOSITION_GROUPE", typeof(DispositionsGroupe))]
     public void Parite_avec_le_js(string nom, Type type) => Assert.Empty(Constantes.Ecarts(Fichier, nom, type));
 }

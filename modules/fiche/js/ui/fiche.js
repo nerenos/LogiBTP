@@ -1,4 +1,4 @@
-import { ERREUR_FICHE } from '../src/codes.js';
+import { ERREUR_FICHE, LARGEUR_GROUPE, DISPOSITION_GROUPE } from '../src/codes.js';
 import { echapper, formatLibre, htmlSur, editerLibelle, creerCombo, confirmer, formatHeure, notifier, declarerRaccourcis, actionDe, libelleRaccourci, ouvrirMenuContextuel } from '@logibtp/socle/ui';
 import { MODES, LIBELLES_MODES, enSaisie, titreFiche } from '../src/modes.js';
 import { validerFiche, MESSAGES } from '../src/validation.js';
@@ -47,7 +47,8 @@ export function definirConfidentielSession(actif) {
  * - Verrou : passer en modification prend le verrou (renouvelé toutes les 30 s) ; si un autre utilisateur modifie
  *   la fiche, un bandeau l'indique et propose « Reprendre la main » à qui a le droit DEBLOQUER.
  * - Onglets peu nombreux, composés de groupes de champs (cadres titrés) : section { code, titre, groupes: [{ titre,
- *   champs, largeur }] } (ou champs à plat : un seul groupe sans titre).
+ *   champs, largeur, disposition }] } (ou champs à plat : un seul groupe sans titre) ; largeur LARGEUR_GROUPE (plein :
+ *   toute la largeur), disposition DISPOSITION_GROUPE (grille par défaut, flex : champs à la largeur de leur contenu).
  * - Champs obligatoires du programme (*) et par paramétrage (◆), champs supplémentaires paramétrés (regroupés en
  *   cadres, dans un onglet de la définition ou dans Informations complémentaires), champs confidentiels masqués
  *   (affichage à la demande, ou pendant toute la session), mots de passe (jamais chargés, révélés à la demande :
@@ -261,7 +262,7 @@ export class FicheBase {
         if (!m.has(t)) m.set(t, []);
         m.get(t).push(c);
       }
-      return [...m].map(([t, cs]) => ({ titre: t, champs: cs, supplementaire: true, largeur: m.size === 1 && !titre ? 'plein' : null }));
+      return [...m].map(([t, cs]) => ({ titre: t, champs: cs, supplementaire: true, largeur: m.size === 1 && !titre ? LARGEUR_GROUPE.PLEIN : null }));
     };
     const s = base.map((x) => {
       const groupes = x.groupes ?? [{ titre: null, champs: x.champs ?? [] }];
@@ -454,7 +455,7 @@ export class FicheBase {
   /** Groupe de champs (cadre titré) ; tout masqué : une seule ligne « informations confidentielles ». */
   #groupe(g) {
     const fs = document.createElement('fieldset');
-    fs.className = `fiche-groupe ${g.largeur === 'plein' ? 'plein' : ''}`;
+    fs.className = ['fiche-groupe', g.largeur === LARGEUR_GROUPE.PLEIN && 'plein', g.disposition === DISPOSITION_GROUPE.FLEX && 'disposition-flex'].filter(Boolean).join(' ');
     if (g.titre) fs.innerHTML = `<legend>${echapper(g.titre)}</legend>`;
     const masques = this.masques;
     const toutMasque = g.champs.every((c) => masques.has(c.supplementaire ? `+${c.code}` : c.code));
@@ -467,7 +468,7 @@ export class FicheBase {
       return fs;
     }
     const grille = document.createElement('div');
-    grille.className = 'fiche-grille';
+    grille.className = g.disposition === DISPOSITION_GROUPE.FLEX ? 'fiche-flex' : 'fiche-grille';
     for (const c of g.champs) grille.append(this.#bloc(c));
     fs.append(grille);
     return fs;
@@ -479,7 +480,7 @@ export class FicheBase {
     const erreur = this.erreurs.find((e) => e.champ === champ.code && !!e.supplementaire === !!champ.supplementaire);
     const div = document.createElement('div');
     div.dataset.champ = code;
-    div.className = `fiche-champ ${champ.largeur === 'plein' || champ.type === 'zone' || champ.type === 'html' ? 'plein' : ''} ${erreur ? 'erreur' : ''} ${champ.confidentiel ? 'confidentiel' : ''}`;
+    div.className = `fiche-champ ${champ.largeur === LARGEUR_GROUPE.PLEIN || champ.type === 'zone' || champ.type === 'html' ? 'plein' : ''} ${erreur ? 'erreur' : ''} ${champ.confidentiel ? 'confidentiel' : ''}`;
     // Une case à cocher n'est jamais obligatoire (elle vaut oui ou non) : pas de marque.
     const caseACocher = champ.type === 'booleen';
     const marques = `${champ.obligatoire && !caseACocher ? `<span class="obligatoire" title="${texteHtml('fiche.fiche.obligatoire')}">${iconeHtml('fiche_obligatoire')}</span>` : ''}${champ.obligatoire_parametre && !caseACocher ? `<span class="obligatoire-parametre" title="${texteHtml('fiche.fiche.obligatoire_parametre')}">${iconeHtml('fiche_obligatoire_parametre')}</span>` : ''}${champ.confidentiel ? `<span class="marque-confidentiel" title="${texteHtml('fiche.fiche.marque_confidentiel')}">${iconeHtml('verrou')}</span>` : ''}`;
