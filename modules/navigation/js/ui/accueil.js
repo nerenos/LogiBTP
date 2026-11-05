@@ -36,7 +36,8 @@ export class AccueilBase {
     this.racine.innerHTML = `
       <section class="accueil-session" hidden></section>
       <header class="accueil-entete">
-        <div class="accueil-salutation">${entete}</div>
+        <!-- <div class="accueil-salutation">${entete}</div> -->
+        ${entete}
         <div class="accueil-outils">
           <button type="button" data-action="actualiser" title="${texteHtml('navigation.accueil.actualiser_titre')}">${iconeHtml('navigation_actualiser')}</button>
           <button type="button" data-action="personnaliser" title="${texteHtml('navigation.accueil.personnaliser_titre')}">${iconeHtml('navigation_personnaliser')} ${texteHtml('navigation.accueil.personnaliser')}</button>

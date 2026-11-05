@@ -395,12 +395,12 @@
       "suppression_refusee": "Suppression refusée — {{refus}}",
       "menu": {
         "ouvrir": "Ouvrir",
-        "ouvrir_touches": "Entrée · double-clic",
+        "ouvrir_souris": "double-clic",
         "nouvelle_fenetre": "Ouvrir dans une nouvelle fenêtre",
-        "nouvelle_fenetre_touches": "Ctrl+Entrée · Ctrl+clic",
+        "nouvelle_fenetre_souris": "Ctrl+clic",
         "supprimer_n": "Supprimer ({{nombre}})",
         "selection": "Sélection multiple",
-        "selection_touches": "Ctrl+clic · Maj+clic · Maj+↑↓"
+        "selection_souris": "Ctrl+clic · Maj+clic"
       },
       "saisie_message": "Saisie : cliquez une cellule modifiable (fond hachuré) · Entrée : ligne suivante · Tab : colonne suivante · Échap : annuler",
       "valeur_inconnue": "Valeur inconnue : {{valeur}}",
@@ -473,6 +473,25 @@
         "nouvelle": "Nouvelle vue dans ce thème…"
       },
       "separateur": "Glisser pour redimensionner · double-clic pour réduire"
+    },
+    "raccourcis": {
+      "groupe": "Listes",
+      "ligne_precedente": "Ligne précédente",
+      "ligne_suivante": "Ligne suivante",
+      "premiere_ligne": "Première ligne",
+      "derniere_ligne": "Dernière ligne",
+      "etendre_haut": "Étendre la sélection vers le haut",
+      "etendre_bas": "Étendre la sélection vers le bas",
+      "tout_selectionner": "Sélectionner toutes les lignes affichées",
+      "ouvrir": "Ouvrir la ligne",
+      "nouvelle_fenetre": "Ouvrir la ligne dans une nouvelle fenêtre",
+      "consulter": "Consulter la sélection",
+      "copier": "Copier la ligne",
+      "supprimer": "Supprimer la sélection",
+      "rechercher": "Aller à la recherche",
+      "creer": "Créer (bouton de création de la vue)",
+      "actualiser": "Actualiser la liste",
+      "saisie": "Mode saisie dans la liste"
     }
   },
   "erreurs": {

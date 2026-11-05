@@ -192,8 +192,8 @@ body:has(> .bandeau-auto.bandeau-gauche.bandeau-survol) > .pages { margin-right:
 .accueil-session .aide { display: block; }
 .accueil-bloquees { display: flex; flex-wrap: wrap; gap: 0.3rem; }
 .accueil-entete { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
-.accueil-salutation h1 { margin: 0; font-size: 1.4rem; }
-.accueil-salutation p { margin: 0.1rem 0 0; color: var(--discret); }
+.accueil-entete h1 { margin: 0; font-size: 1.4rem; }
+.accueil-entete p { margin: 0.1rem 0 0; color: var(--discret); }
 .accueil-outils { display: flex; gap: 0.35rem; }
 .accueil-outils button.actif { background: var(--accent); color: #fff; border-color: var(--accent); }
 .accueil-bloc h2 { font-size: 0.95rem; margin: 0 0 0.45rem; color: var(--discret); text-transform: uppercase; letter-spacing: 0.05em; }

@@ -1,6 +1,6 @@
 import { texte, texteHtml, pluriel, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { ERREUR_LISTE } from '../src/codes.js';
-import { echapper, lireNombre, creerCombo, ouvrirMenuContextuel, confirmer, lireStockage, ecrireStockage } from '@logibtp/socle/ui';
+import { echapper, lireNombre, creerCombo, ouvrirMenuContextuel, confirmer, lireStockage, ecrireStockage, declarerRaccourcis, actionDe, libelleRaccourci } from '@logibtp/socle/ui';
 import { ModeleVue, normaliserDefinition, vraiDonnee, texteIndicateur, TOTAUX_COLONNE } from '../src/modele.js';
 import { filtreActif, correspond, comparerValeurs, estNumerique } from '../src/filtres.js';
 import { calculerLargeurs } from '../src/largeurs.js';
@@ -8,6 +8,35 @@ import { comptesSegment, agreger } from '../src/requete.js';
 import { FormatsCellule, appliquerStyle, alignement } from './formats.js';
 import { PanneauVues } from './panneau-vues.js';
 import { ouvrirMenuFiltre, fermerMenuFiltre } from './menu-filtre.js';
+
+// Fonctions de la liste qui acceptent un raccourci clavier (groupe liste, personnalisable : page des raccourcis de
+// l'application). Lignes : la liste a le focus ; page (rechercher, créer, actualiser, mode saisie) : partout sauf dans
+// un champ de saisie d'un autre écran.
+declarerRaccourcis('liste', {
+  libelle: texte('liste.raccourcis.groupe'),
+  actions: {
+    lignePrecedente: { libelle: texte('liste.raccourcis.ligne_precedente'), defaut: 'ArrowUp' },
+    ligneSuivante: { libelle: texte('liste.raccourcis.ligne_suivante'), defaut: 'ArrowDown' },
+    premiereLigne: { libelle: texte('liste.raccourcis.premiere_ligne'), defaut: 'Home' },
+    derniereLigne: { libelle: texte('liste.raccourcis.derniere_ligne'), defaut: 'End' },
+    etendreHaut: { libelle: texte('liste.raccourcis.etendre_haut'), defaut: 'Shift+ArrowUp' },
+    etendreBas: { libelle: texte('liste.raccourcis.etendre_bas'), defaut: 'Shift+ArrowDown' },
+    toutSelectionner: { libelle: texte('liste.raccourcis.tout_selectionner'), defaut: 'Ctrl+A' },
+    ouvrir: { libelle: texte('liste.raccourcis.ouvrir'), defaut: 'Enter' },
+    nouvelleFenetre: { libelle: texte('liste.raccourcis.nouvelle_fenetre'), defaut: ['Ctrl+Enter', 'Shift+Enter'] },
+    consulter: { libelle: texte('liste.raccourcis.consulter'), defaut: [] },
+    copier: { libelle: texte('liste.raccourcis.copier'), defaut: [] },
+    supprimer: { libelle: texte('liste.raccourcis.supprimer'), defaut: 'Delete' },
+    rechercher: { libelle: texte('liste.raccourcis.rechercher'), defaut: 'Ctrl+F' },
+    creer: { libelle: texte('liste.raccourcis.creer'), defaut: 'Insert' },
+    actualiser: { libelle: texte('liste.raccourcis.actualiser'), defaut: [] },
+    saisie: { libelle: texte('liste.raccourcis.saisie'), defaut: [] },
+  },
+});
+/** Fonctions de la page (hors focus de la liste). */
+const ACTIONS_PAGE = new Set(['rechercher', 'creer', 'actualiser', 'saisie']);
+/** Touches d'une action suivies des gestes de souris : « Entrée · double-clic ». */
+const touchesMenu = (action, souris) => [libelleRaccourci(action, 'liste'), souris].filter(Boolean).join(' · ');
 import { ConcepteurVue, libelleFiltreVue } from './concepteur.js';
 import { GestionThemes } from './themes.js';
 
@@ -97,6 +126,7 @@ export class ListeDonnees {
   }
 
   detruire() {
+    document.removeEventListener('keydown', this.clavierPage);
     this.panneauSpecifique?.detruire?.();
     clearInterval(this.minuterie);
     window.removeEventListener('focus', this.surFocus);
@@ -258,6 +288,8 @@ export class ListeDonnees {
       if (tr && !e.target.closest('td.modifiable')) this.ouvrir(tr.dataset.id, e);
     });
     this.zone.addEventListener('keydown', (e) => this.#clavier(e));
+    this.clavierPage = (e) => this.#clavierPage(e);
+    document.addEventListener('keydown', this.clavierPage);
     // Clic droit : menu court des actions sur la sélection, avec leurs raccourcis (aide-mémoire) ; tout reste accessible sans.
     this.corps.addEventListener('contextmenu', (e) => {
       const tr = e.target.closest('tr[data-id]');
@@ -1325,33 +1357,81 @@ export class ListeDonnees {
     const n = lignes.length;
     const executer = (f) => () => Promise.resolve(f()).catch((x) => this.#erreur(x));
     ouvrirMenuContextuel(e, [
-      { libelle: texte('liste.liste.menu.ouvrir'), raccourci: texte('liste.liste.menu.ouvrir_touches'), action: () => this.ouvrir(id), actif: n === 1 },
-      { libelle: texte('liste.liste.menu.nouvelle_fenetre'), raccourci: texte('liste.liste.menu.nouvelle_fenetre_touches'), action: () => this.ouvrir(id, { ctrlKey: true }), actif: n === 1 },
+      { libelle: texte('liste.liste.menu.ouvrir'), raccourci: touchesMenu('ouvrir', texte('liste.liste.menu.ouvrir_souris')), action: () => this.ouvrir(id), actif: n === 1 },
+      { libelle: texte('liste.liste.menu.nouvelle_fenetre'), raccourci: touchesMenu('nouvelleFenetre', texte('liste.liste.menu.nouvelle_fenetre_souris')), action: () => this.ouvrir(id, { ctrlKey: true }), actif: n === 1 },
       { separateur: true },
-      ...(a?.consulter ? [{ libelle: texte('liste.liste.consulter'), action: executer(() => this.#actionElement('consulter')), actif: n === 1 }] : []),
-      ...(a?.copier ? [{ libelle: texte('liste.liste.copier'), action: executer(() => this.#actionElement('copier')), actif: n === 1 }] : []),
-      ...(a?.supprimer ? [{ libelle: n > 1 ? texte('liste.liste.menu.supprimer_n', { nombre: n }) : texte('liste.liste.supprimer'), action: executer(() => this.#actionElement('supprimer')), actif: n >= 1 }] : []),
+      ...(a?.consulter ? [{ libelle: texte('liste.liste.consulter'), raccourci: touchesMenu('consulter'), action: executer(() => this.#actionElement('consulter')), actif: n === 1 }] : []),
+      ...(a?.copier ? [{ libelle: texte('liste.liste.copier'), raccourci: touchesMenu('copier'), action: executer(() => this.#actionElement('copier')), actif: n === 1 }] : []),
+      ...(a?.supprimer ? [{ libelle: n > 1 ? texte('liste.liste.menu.supprimer_n', { nombre: n }) : texte('liste.liste.supprimer'), raccourci: touchesMenu('supprimer'), action: executer(() => this.#actionElement('supprimer')), actif: n >= 1 }] : []),
       ...(a?.autres ?? []).map((x) => ({
         libelle: x.libelle, titre: x.titre, action: executer(() => x.action(lignes, e)),
         actif: n >= 1 && n <= (x.max ?? 1) && (x.actif ? x.actif(lignes) : true),
       })),
       { separateur: true },
-      { libelle: texte('liste.liste.menu.selection'), raccourci: texte('liste.liste.menu.selection_touches'), actif: false },
+      { libelle: texte('liste.liste.menu.selection'), raccourci: [texte('liste.liste.menu.selection_souris'), libelleRaccourci('etendreBas', 'liste'), libelleRaccourci('toutSelectionner', 'liste')].filter(Boolean).join(' · '), actif: false },
     ]);
   }
 
+  /** Raccourcis des lignes (groupe liste), la liste ayant le focus. */
   #clavier(e) {
     if (e.target !== this.zone) return;
+    const action = actionDe(e, 'liste');
+    if (!action || ACTIONS_PAGE.has(action)) return;
     const lignes = [...this.corps.rows];
     const i = lignes.findIndex((tr) => tr.dataset.id === this.selection);
-    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-      e.preventDefault();
-      const j = Math.min(Math.max(i + (e.key === 'ArrowDown' ? 1 : -1), 0), lignes.length - 1);
-      if (lignes[j]) this.#selectionner(lignes[j].dataset.id, { etendre: e.shiftKey });
-    } else if (e.key === 'Enter' && this.selection) {
-      e.preventDefault();
-      this.ouvrir(this.selection, e);
-    }
+    const aller = (j, etendre = false) => { if (lignes[j]) this.#selectionner(lignes[j].dataset.id, { etendre }); };
+    const fonctions = {
+      lignePrecedente: () => aller(Math.max(i - 1, 0)),
+      ligneSuivante: () => aller(Math.min(i + 1, lignes.length - 1)),
+      premiereLigne: () => aller(0),
+      derniereLigne: () => aller(lignes.length - 1),
+      etendreHaut: () => aller(Math.max(i - 1, 0), true),
+      etendreBas: () => aller(Math.min(i + 1, lignes.length - 1), true),
+      toutSelectionner: () => this.#toutSelectionner(),
+      ouvrir: this.selection ? () => this.ouvrir(this.selection) : null,
+      nouvelleFenetre: this.selection ? () => this.ouvrir(this.selection, { ctrlKey: true }) : null,
+      consulter: () => this.#actionElement('consulter', e),
+      copier: () => this.#actionElement('copier', e),
+      supprimer: () => this.#actionElement('supprimer', e),
+    };
+    const f = fonctions[action];
+    if (!f) return;
+    e.preventDefault();
+    Promise.resolve(f()).catch((x) => this.#erreur(x));
+  }
+
+  /** Raccourcis de la page (rechercher, créer, actualiser, mode saisie) tant que la liste est affichée. */
+  #clavierPage(e) {
+    if (e.defaultPrevented || !this.racine.isConnected || this.racine.offsetParent === null) return;
+    const dialogue = document.querySelector('dialog[open]');
+    if (dialogue && !dialogue.contains(this.racine)) return;
+    const action = actionDe(e, 'liste');
+    if (!ACTIONS_PAGE.has(action)) return;
+    // Hors de la liste, un champ de saisie garde ses touches (sauf la recherche, qui va au champ de la liste).
+    const champ = e.target.closest?.('input, textarea, select, [contenteditable="true"]');
+    if (champ && action !== 'rechercher' && !this.racine.contains(champ)) return;
+    const recherche = this.racine.querySelector('.liste-recherche');
+    const fonctions = {
+      rechercher: () => { recherche.focus(); recherche.select(); },
+      creer: this.actionCreation ? () => this.racine.querySelector('[data-action="creer"]').click() : null,
+      actualiser: () => this.recharger(),
+      saisie: this.racine.querySelector('[data-action="saisie"]')?.hidden === false ? () => this.basculerSaisie() : null,
+    };
+    const f = fonctions[action];
+    if (!f) return;
+    e.preventDefault();
+    Promise.resolve(f()).catch((x) => this.#erreur(x));
+  }
+
+  /** Toutes les lignes affichées sélectionnées (la ligne courante reste). */
+  #toutSelectionner() {
+    const ids = [...this.corps.rows].map((tr) => tr.dataset.id);
+    if (!ids.length) return;
+    const courante = this.selection ?? ids[0];
+    this.#selectionner(ids[0]);
+    this.#selectionner(ids[ids.length - 1], { etendre: true });
+    this.selection = courante;
+    for (const tr of this.corps.rows) tr.classList.toggle('courante', tr.dataset.id === courante);
   }
 
   /** Lignes sélectionnées (données), dans l'ordre affiché ; sans sélection multiple, la ligne courante. */

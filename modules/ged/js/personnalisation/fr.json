@@ -187,9 +187,9 @@
       "confidentialite": "Accès"
     },
     "explorateur": {
-      "precedent": "Précédent (Alt+←)",
-      "suivant": "Suivant (Alt+→)",
-      "parent": "Dossier parent (Retour arrière)",
+      "precedent": "Précédent",
+      "suivant": "Suivant",
+      "parent": "Dossier parent",
       "chemin_aide": "Chemin du dossier ; la saisie filtre le dossier, Entrée cherche dans toute la GED (contenu des fichiers compris)",
       "filtrer": "Filtrer… (Entrée : rechercher partout)",
       "filtrer_aide": "Filtrer le dossier ou rechercher",
@@ -361,6 +361,23 @@
       "retention_echue": "rétention échue",
       "echus_un": "{{nombre}} document est arrivé à échéance de rétention. Les archiver maintenant ?",
       "echus_autre": "{{nombre}} documents sont arrivés à échéance de rétention. Les archiver maintenant ?"
+    },
+    "raccourcis": {
+      "groupe": "GED (explorateur)",
+      "element_precedent": "Élément précédent",
+      "element_suivant": "Élément suivant",
+      "ouvrir": "Ouvrir le dossier ou le lien sélectionné",
+      "renommer": "Renommer le dossier sélectionné",
+      "supprimer_dossier": "Supprimer le dossier sélectionné",
+      "precedent": "Dossier précédent (historique)",
+      "suivant": "Dossier suivant (historique)",
+      "parent": "Dossier parent",
+      "rechercher": "Aller au filtre et à la recherche",
+      "nouveau_dossier": "Nouveau dossier",
+      "ajouter": "Ajouter des documents",
+      "actualiser": "Actualiser",
+      "arbre": "Afficher ou masquer l'arbre des dossiers",
+      "vue": "Affichage : icônes ou détails"
     }
   },
   "erreurs": {

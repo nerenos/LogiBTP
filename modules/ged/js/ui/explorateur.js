@@ -1,6 +1,6 @@
 import { texte, texteHtml, pluriel, pairesParCode, textesParCode, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { NIVEAU_CONFIDENTIALITE, PROFIL } from '@logibtp/socle';
-import { echapper, lirePreferences, ecrirePreferences, creerCombo, confirmer, saisir, formatDate, formatDateHeure, separateur } from '@logibtp/socle/ui';
+import { echapper, lirePreferences, ecrirePreferences, creerCombo, confirmer, saisir, formatDate, formatDateHeure, separateur, declarerRaccourcis, actionDe, libelleRaccourci } from '@logibtp/socle/ui';
 import { iconeDocument, formatTaille } from '../src/fichiers.js';
 import { versionsVisibles, etapes, ETAPES, GENRES } from '../src/versions.js';
 import { normaliserRecherche } from '../src/recherche.js';
@@ -36,9 +36,39 @@ const COLONNES = [
   { cle: 'auteur' }, { cle: 'taille', compact: true, nombre: true }, { cle: 'confidentialite' },
 ];
 
-/** Bouton d'action en icône, libellé dans une bulle. */
-const bouton = (action, icone, bulle, { classe = '', pos = '' } = {}) =>
-  `<button type="button" class="ged-icone-bouton ${classe}" data-action="${action}" data-bulle="${echapper(bulle)}" aria-label="${echapper(bulle)}"${pos ? ` data-bulle-pos="${pos}"` : ''}>${icone}</button>`;
+// Fonctions de l'explorateur qui acceptent un raccourci clavier (groupe ged, personnalisable : page des raccourcis de
+// l'application), écoutées dans l'explorateur. Éléments : la liste a le focus ; navigation et dossier : partout dans
+// l'explorateur hors d'un champ de saisie.
+declarerRaccourcis('ged', {
+  libelle: texte('ged.raccourcis.groupe'),
+  actions: {
+    elementPrecedent: { libelle: texte('ged.raccourcis.element_precedent'), defaut: ['ArrowUp', 'ArrowLeft'] },
+    elementSuivant: { libelle: texte('ged.raccourcis.element_suivant'), defaut: ['ArrowDown', 'ArrowRight'] },
+    ouvrir: { libelle: texte('ged.raccourcis.ouvrir'), defaut: 'Enter' },
+    renommer: { libelle: texte('ged.raccourcis.renommer'), defaut: 'F2' },
+    supprimerDossier: { libelle: texte('ged.raccourcis.supprimer_dossier'), defaut: [] },
+    precedent: { libelle: texte('ged.raccourcis.precedent'), defaut: 'Alt+ArrowLeft' },
+    suivant: { libelle: texte('ged.raccourcis.suivant'), defaut: 'Alt+ArrowRight' },
+    parent: { libelle: texte('ged.raccourcis.parent'), defaut: 'Backspace' },
+    rechercher: { libelle: texte('ged.raccourcis.rechercher'), defaut: 'Ctrl+F' },
+    nouveauDossier: { libelle: texte('ged.raccourcis.nouveau_dossier'), defaut: [] },
+    ajouter: { libelle: texte('ged.raccourcis.ajouter'), defaut: 'Insert' },
+    actualiser: { libelle: texte('ged.raccourcis.actualiser'), defaut: [] },
+    arbre: { libelle: texte('ged.raccourcis.arbre'), defaut: [] },
+    vue: { libelle: texte('ged.raccourcis.vue'), defaut: [] },
+  },
+});
+/** Fonctions qui portent sur l'élément sélectionné de la liste (la liste a le focus). */
+const ACTIONS_LISTE = new Set(['elementPrecedent', 'elementSuivant', 'ouvrir', 'renommer', 'supprimerDossier']);
+/** Bouton de la barre → fonction du clavier (touches rappelées dans la bulle). */
+const RACCOURCI_BOUTON = { arriere: 'precedent', avant: 'suivant', parent: 'parent', dossier: 'nouveauDossier', ajouter: 'ajouter', arbre: 'arbre', vue: 'vue' };
+
+/** Bouton d'action en icône, libellé dans une bulle (avec ses touches). */
+const bouton = (action, icone, libelle, { classe = '', pos = '' } = {}) => {
+  const touches = RACCOURCI_BOUTON[action] ? libelleRaccourci(RACCOURCI_BOUTON[action], 'ged') : '';
+  const bulle = touches ? `${libelle} (${touches})` : libelle;
+  return `<button type="button" class="ged-icone-bouton ${classe}" data-action="${action}" data-bulle="${echapper(bulle)}" aria-label="${echapper(libelle)}"${pos ? ` data-bulle-pos="${pos}"` : ''}>${icone}</button>`;
+};
 
 export class ExplorateurGed {
   constructor(conteneur, { fournisseur, contexte = null, arborescence = null, compact = false, modifiable = true, admin = false, utilisateur = '', message,
@@ -174,11 +204,7 @@ export class ExplorateurGed {
       if (e.key === 'Enter' && filtre.value.trim()) { e.preventDefault(); this.#lancer(() => this.rechercher(filtre.value.trim())); }
       if (e.key === 'Escape' && filtre.value) { e.stopPropagation(); filtre.value = ''; this.filtre = ''; this.#rendreListe(); }
     });
-    c.addEventListener('keydown', (e) => {
-      if (e.altKey && e.key === 'ArrowLeft') { e.preventDefault(); this.#lancer(() => this.precedent()); }
-      if (e.altKey && e.key === 'ArrowRight') { e.preventDefault(); this.#lancer(() => this.suivant()); }
-    });
-    this.liste.addEventListener('keydown', (e) => this.#clavierListe(e));
+    c.addEventListener('keydown', (e) => this.#clavier(e));
     if (this.modifiable) this.#glisserDeposer();
     this.#lancer(() => this.#demarrer());
   }
@@ -548,16 +574,40 @@ export class ExplorateurGed {
     z.querySelector('[data-action="supprimer-dossier"]')?.addEventListener('click', () => this.#lancer(() => this.supprimerDossier(n)));
   }
 
-  #clavierListe(e) {
-    if (e.target.closest('input, textarea, button')) return;
+  /** Raccourcis de l'explorateur (groupe ged). */
+  #clavier(e) {
+    if (e.defaultPrevented) return;
+    const action = actionDe(e, 'ged');
+    if (!action) return;
+    const champ = e.target.closest('input, textarea, select, [contenteditable="true"]');
+    if (champ && action !== 'rechercher') return;
+    if (ACTIONS_LISTE.has(action) && (!this.liste.contains(e.target) || e.target.closest('button'))) return;
     const elements = [...this.contenu.querySelectorAll('[data-noeud], [data-doc]')];
     const i = elements.findIndex((x) => x.classList.contains('selectionnee'));
     const choisir = (el) => { el?.click(); el?.scrollIntoView({ block: 'nearest' }); };
-    if (e.key === 'ArrowDown' || e.key === 'ArrowRight') { e.preventDefault(); choisir(elements[Math.min(i + 1, elements.length - 1)]); }
-    else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') { e.preventDefault(); choisir(elements[Math.max(i - 1, 0)]); }
-    else if (e.key === 'Enter' && this.#noeudSelectionne()) { e.preventDefault(); this.#lancer(() => this.ouvrir(this.#noeudSelectionne())); }
-    else if (e.key === 'Backspace') { e.preventDefault(); this.#lancer(() => this.dossierParent()); }
-    else if (e.key === 'F2' && this.#noeudSelectionne()?.repertoire) { e.preventDefault(); this.#lancer(() => this.renommerDossier(this.#noeudSelectionne())); }
+    const n = this.#noeudSelectionne();
+    const c = this.conteneur;
+    const barre = (nom) => { const b = c.querySelector(`.ged-barre [data-action="${nom}"]`); return b ? () => b.click() : null; };
+    const fonctions = {
+      elementPrecedent: () => choisir(elements[Math.max(i - 1, 0)]),
+      elementSuivant: () => choisir(elements[Math.min(i + 1, elements.length - 1)]),
+      ouvrir: n ? () => this.ouvrir(n) : null,
+      renommer: this.modifiable && n?.repertoire ? () => this.renommerDossier(n) : null,
+      supprimerDossier: this.modifiable && n?.repertoire ? () => this.supprimerDossier(n) : null,
+      precedent: () => this.precedent(),
+      suivant: () => this.suivant(),
+      parent: () => this.dossierParent(),
+      rechercher: () => { const f = c.querySelector('.ged-filtre'); f.focus(); f.select(); },
+      nouveauDossier: barre('dossier'),
+      ajouter: barre('ajouter'),
+      actualiser: () => this.recharger(),
+      arbre: barre('arbre'),
+      vue: barre('vue'),
+    };
+    const f = fonctions[action];
+    if (!f) return;
+    e.preventDefault();
+    this.#lancer(f);
   }
 
   // ================================================================ répertoires

@@ -34,7 +34,8 @@
 - `ConcepteurVue` : édition de la définition (colonnes, formules, règles, segments, tri, filtres fixes, thème, requête si `peutRequete`) ; `appliquerVue(vue, { nonEnregistree })` pour l'aperçu non enregistré.
 - `GestionThemes` (`typesVersTexte`, `texteVersTypes`) : thèmes et types couverts, réservé à `peutGererThemes`. Combo des thèmes de la barre (`creerCombo` du socle, « Toutes les vues ») regroupée par l'option `groupeTheme(theme) → { groupe, ordre }` de l'hôte.
 - `FormatsCellule` (dérivable) : rendu par format, `appliquerStyle`, `alignement`.
-- Clic droit sur une ligne : menu court (`ouvrirMenuContextuel` du socle) : ouvrir, nouvelle fenêtre, actions de `actionsElements` sur la sélection (mêmes règles que les boutons), rappel des raccourcis.
+- Clic droit sur une ligne : menu court (`ouvrirMenuContextuel` du socle) : ouvrir, nouvelle fenêtre, actions de `actionsElements` sur la sélection (mêmes règles que les boutons), rappel des raccourcis (touches effectives du groupe `liste`, gestes de souris `*_souris`).
+- Raccourcis clavier : groupe `liste` déclaré par le module (`declarerRaccourcis` du socle, personnalisable) : lignes — liste ayant le focus : ↑ ↓, Début, Fin, Maj+↑↓, Ctrl+A (lignes affichées), Entrée, Ctrl+Entrée ou Maj+Entrée (nouvelle fenêtre), Suppr (avec confirmation), consulter et copier sans touche — ; page (`#clavierPage`, écouté sur le document jusqu'à `detruire`, ignoré hors d'une fenêtre `<dialog>` qui ne contient pas la liste et dans un champ d'un autre écran) : Ctrl+F (recherche), Inser (création de la vue), actualiser et mode saisie sans touche.
 - Méthodes publiques utiles : `appliquerVue`, `definirFiltreExterne(colonne, valeurs)`, `recharger`, `lignesSelectionnees`, `basculerSaisie`, `trier`, `ouvrir`, `detruire`.
 
 ## Routes HTTP (sous `/api/listes`)
