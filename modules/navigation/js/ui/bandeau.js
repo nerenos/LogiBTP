@@ -1,4 +1,4 @@
-import { echapper, ouvrirDialogue, EVENEMENT_NOTIFICATION, formatHeure } from '@logibtp/socle/ui';
+import { echapper, ouvrirDialogue, EVENEMENT_NOTIFICATION, formatHeure, declarerRaccourcis, actionDe, touchesDe } from '@logibtp/socle/ui';
 import { texte, texteHtml, iconeHtml } from '@logibtp/socle/dictionnaire';
 
 /** Messages gardés pour l'historique du bandeau (I4). */
@@ -25,8 +25,41 @@ export const DISPOSITION_DEFAUT = Object.freeze({ mode: DISPOSITION_MENU.HAUT, l
 export const LARGEUR_MENU = Object.freeze({ min: 200, max: 600 });
 
 const lettre = (libelle) => /&(.)/.exec(libelle)?.[1]?.toLowerCase() ?? null;
-const libelleHtml = (libelle) => echapper(libelle).replace(/&amp;(.)/, '<u>$1</u>');
 const sansEsperluette = (libelle) => libelle.replace(/&(.)/, '$1');
+
+// Accès aux menus au clavier : groupe de raccourcis « menus » (personnalisable), une fonction par menu (son code),
+// Alt + la lettre après & par défaut. La lettre soulignée est celle de la touche effective (Alt + une lettre du libellé).
+const GROUPE_MENUS = 'menus';
+/** Lettre de la touche effective d'un menu (Alt + un caractère), en minuscule ; null sinon. */
+const lettreAcces = (m) => {
+  const t = touchesDe(GROUPE_MENUS, m.code).find((x) => /^Alt\+.$/i.test(x));
+  return t ? t.slice(-1).toLowerCase() : null;
+};
+/** Libellé avec la lettre d'accès soulignée : celle du & si elle est la touche effective, sinon sa première occurrence. */
+const libelleHtml = (m) => {
+  const l = lettreAcces(m);
+  const texteLibelle = sansEsperluette(m.libelle);
+  if (!l) return echapper(texteLibelle);
+  const i = lettre(m.libelle) === l ? m.libelle.indexOf('&') : texteLibelle.toLowerCase().indexOf(l);
+  if (i < 0) return echapper(texteLibelle);
+  return `${echapper(texteLibelle.slice(0, i))}<u>${echapper(texteLibelle[i])}</u>${echapper(texteLibelle.slice(i + 1))}`;
+};
+/**
+ * Déclare (ou complète) le groupe des menus : libellé sans &, Alt + lettre du & par défaut ; une lettre déjà prise par
+ * un menu précédent ne donne pas de touche par défaut (le premier l'emporte, comme avant la personnalisation).
+ */
+const declarerMenus = (menus) => {
+  const prises = new Set();
+  declarerRaccourcis(GROUPE_MENUS, {
+    libelle: texte('navigation.raccourcis.menus'),
+    actions: Object.fromEntries((menus ?? []).map((m) => {
+      const l = lettre(m.libelle);
+      const libre = l && !prises.has(l);
+      if (l) prises.add(l);
+      return [m.code, { libelle: texte('navigation.raccourcis.menu', { menu: sansEsperluette(m.libelle) }), defaut: libre ? `Alt+${l.toUpperCase()}` : [] }];
+    })),
+  });
+};
 const liste = (e) => (typeof e === 'function' ? e() : e) ?? [];
 
 export class Bandeau {
@@ -34,6 +67,7 @@ export class Bandeau {
   constructor(conteneur, { menus, naviguer, logo = '', accueil = '/', titreApplication = 'LogiBTP', retour = null, disposition = {}, surDisposition = () => {} } = {}) {
     this.racine = conteneur;
     this.menus = menus;
+    declarerMenus(menus);
     this.naviguer = naviguer;
     this.ouvert = null;
     // Niveaux ouverts : 0 = menu déroulant, 1 = sous-menu ; { el, elements, actif }.
@@ -209,9 +243,10 @@ export class Bandeau {
 
   rendre() {
     this.rendu = true;
+    declarerMenus(this.menus);
     if (this.vertical) { this.#rendreVertical(); return; }
     this.barre.innerHTML = this.menus.map((m) => `<button type="button" role="menuitem" aria-haspopup="true" data-menu="${echapper(m.code)}"${m.court ? ` title="${echapper(sansEsperluette(m.libelle))}"` : ''}>
-      <span class="bandeau-long">${libelleHtml(m.libelle)}</span>${m.court ? `<span class="bandeau-court">${echapper(m.court)}</span>` : ''}</button>`).join('');
+      <span class="bandeau-long">${libelleHtml(m)}</span>${m.court ? `<span class="bandeau-court">${echapper(m.court)}</span>` : ''}</button>`).join('');
     this.#marquerOuvert();
     this.ajuster();
   }
@@ -364,7 +399,7 @@ export class Bandeau {
       this.lignes.set(m.code, { menu: m });
       return `<div class="bandeau-groupe${ouvert ? ' ouvert' : ''}">
         <button type="button" class="bandeau-titre" role="treeitem" data-ligne="${echapper(m.code)}" aria-expanded="${ouvert}" tabindex="-1">
-          <span class="bandeau-libelle">${libelleHtml(m.libelle)}</span><span class="bandeau-fleche">${ouvert ? '▾' : '▸'}</span></button>
+          <span class="bandeau-libelle">${libelleHtml(m)}</span><span class="bandeau-fleche">${ouvert ? '▾' : '▸'}</span></button>
         ${ouvert ? `<div role="group">${this.#htmlVertical(liste(m.elements), m.code, 1)}</div>` : ''}
       </div>`;
     }).join('');
@@ -445,7 +480,7 @@ export class Bandeau {
   #clavierVertical(e) {
     if (e.altKey && !e.ctrlKey && e.key !== 'Alt') {
       if (e.key === 'Home') { e.preventDefault(); this.naviguer('/', { nouvelleFenetre: false }); return; }
-      const m = this.menus.find((x) => lettre(x.libelle) === e.key.toLowerCase());
+      const m = this.#menuDe(e);
       if (!m) return;
       e.preventDefault();
       e.stopPropagation();
@@ -536,7 +571,7 @@ export class Bandeau {
     if (this.vertical) { this.#clavierVertical(e); return; }
     if (e.altKey && !e.ctrlKey && e.key !== 'Alt') {
       if (e.key === 'Home') { e.preventDefault(); this.naviguer('/', { nouvelleFenetre: false }); return; }
-      const m = this.menus.find((x) => lettre(x.libelle) === e.key.toLowerCase());
+      const m = this.#menuDe(e);
       if (m) { e.preventDefault(); e.stopPropagation(); this.ouvrir(m.code); this.#deplacer(1); }
       return;
     }
@@ -549,7 +584,8 @@ export class Bandeau {
       else if (e.key === 'ArrowDown' || e.key === 'Enter') { e.preventDefault(); this.ouvrir(boutons[i].dataset.menu); this.#deplacer(1); }
       else if (e.key === 'Escape') { e.preventDefault(); document.activeElement.blur(); this.racine.classList.remove('acces-clavier'); }
       else {
-        const m = this.menus.find((x) => lettre(x.libelle) === e.key.toLowerCase());
+        // Barre active (Alt seul) : la lettre soulignée seule ouvre son menu.
+        const m = this.menus.find((x) => lettreAcces(x) === e.key.toLowerCase());
         if (m) { e.preventDefault(); this.ouvrir(m.code); this.#deplacer(1); }
       }
       return;
@@ -574,6 +610,12 @@ export class Bandeau {
       e.stopPropagation();
       touches[e.key]();
     }
+  }
+
+  /** Menu ouvert par un raccourci du groupe menus (Alt + lettre par défaut). */
+  #menuDe(e) {
+    const code = actionDe(e, GROUPE_MENUS);
+    return code ? this.menus.find((m) => m.code === code) ?? null : null;
   }
 
   /** Libellé sans lettre d'accès (titres, listes de raccourcis). */

@@ -169,3 +169,6 @@
 - [x] Menu contextuel étendu : fiches (actions de la barre, onglets), explorateur GED (document, dossier, liste) et
   entête / options du document (boutons de la barre et actions du menu ▾), touches effectives affichées ; nom de la
   touche Inser.
+- [x] Accès aux menus du bandeau personnalisables (groupe `menus` du module Navigation : Alt + lettre du `&` par défaut,
+  lettre soulignée selon la touche effective) ; lettres en double (Tiers / Sous-traitance, Pointage / Paramètres) :
+  le premier menu garde la touche, le second est à régler dans la page des raccourcis.

@@ -84,6 +84,10 @@
       "aucune_ligne": "Aucune ligne",
       "aucune_donnee": "Aucune donnée",
       "total": "Total : {{total}} {{unite}}"
+    },
+    "raccourcis": {
+      "menus": "Menus du bandeau",
+      "menu": "Ouvrir le menu {{menu}}"
     }
   }
 }
