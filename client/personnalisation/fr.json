@@ -2715,7 +2715,9 @@
       "piece": "Pièce des écarts",
       "piece_titre": "Écarts valorisés du lot, pièce comptable exportée par la Comptabilité (stock et variation des stocks)",
       "extourne": "Contre-passation",
-      "extourne_titre": "Pièce qui annule en comptabilité les écarts d'un lot annulé après son transfert"
+      "extourne_titre": "Pièce qui annule en comptabilité les écarts d'un lot annulé après son transfert",
+      "lot": "Lot",
+      "lot_titre": "Numéro de lot ou de série compté (vide : sans lot) ; une ligne par lot"
     },
     "magasin": {
       "dotations": {
@@ -2846,7 +2848,11 @@
       "sans_lot": "Sans lot : {{quantite}}",
       "repartie": "Toute la ligne est répartie entre ses lots.",
       "ajouter": "Ajouter un lot",
-      "etape": "Lots de la ligne"
+      "etape": "Lots de la ligne",
+      "proposer": "Proposer",
+      "proposer_titre": "Lots en stock du lieu d'origine, dans l'ordre FEFO (périssable) ou FIFO ; sans lot saisi, la validation applique cette proposition",
+      "aucune_proposition": "Aucun lot en stock dans le lieu d'origine.",
+      "sortie_aide": "Sans lot saisi, la validation prend les lots en stock du lieu d'origine (FEFO ou FIFO)."
     }
   },
   "execution_btp": {

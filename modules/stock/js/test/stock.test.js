@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { stockA, ecartComptage, valoriser, valeurUnitaire, controlerLot, MESSAGES_INVENTAIRE, projeter, minimumJusqua, proposer, repartirLots, dateLimiteLot, stockParLot, MESSAGES_TRACABILITE } from '../src/index.js';
+import { stockA, ecartComptage, valoriser, valeurUnitaire, controlerLot, MESSAGES_INVENTAIRE, projeter, minimumJusqua, proposer, repartirLots, dateLimiteLot, stockParLot, proposerLots, MESSAGES_TRACABILITE } from '../src/index.js';
 
 // Jeux partagés avec ReglesStock.cs et ReglesValorisation.cs (LogiBTP.Stock.Tests).
 const lire = (f) => JSON.parse(fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../tests/cas', f), 'utf8'));
@@ -64,4 +64,5 @@ describe('lots et numéros de série (jeu partagé)', () => {
   }
   for (const c of jeu.dates) it(c.nom, () => expect(dateLimiteLot(c.article, { fabrication: c.fabrication, reception: c.reception })).toBe(c.attendu));
   for (const c of jeu.stocks) it(c.nom, () => expect(stockParLot({ mouvements: c.mouvements, comptages: c.comptages }, c.t)).toEqual(c.attendu));
+  for (const c of jeu.propositions) it(c.nom, () => expect(proposerLots(c)).toEqual(c.attendu));
 });

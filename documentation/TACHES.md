@@ -109,6 +109,10 @@
 - [x] **Lots et numéros de série, lot S24-a** (05/11/2026) : suivi de l'article (aucun, par lot, par numéro de série ;
   périssable avec durée théorique) dans l'onglet Stock, section « Lots » du détail de la ligne des pièces de stock
   (facultative, reste sans lot), lots créés à la validation (date limite proposée), mouvements et stock par lot.
+- [x] **Lots et numéros de série, lot S24-b** (05/11/2026) : sorties sans lots servies par les lots en stock (FEFO
+  pour un article périssable, sinon FIFO), aussi au magasin et à la borne, bouton « Proposer » ; inventaire par lot
+  (colonne Lot, une ligne par lot à la génération) ; lot INITIAL à l'activation du suivi ; avertissement des entrées
+  sans lot à la validation.
 - [x] **Pièce comptable de l'inventaire** (05/11/2026) : à la validation d'un lot, pièce « Écarts d'inventaire » des
   écarts valorisés (lien dans la page du lot), exportée en opération diverse (compte de stock ↔ variation des stocks,
   type comptable STOCK) ; annulation du lot : pièce annulée, ou contre-passée si elle est déjà transférée.

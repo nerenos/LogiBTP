@@ -51,7 +51,15 @@
 > au § 11.3 : le suivi d'un article est une table du module (`stk_article_suivi`) et non des colonnes de l'élément ; la
 > répartition d'une ligne est gardée dans `lig_proprietes.lots` (enregistrée avec la pièce) et matérialisée à la
 > validation par `mvt_lot_id`, sans table `document_ligne_lot` ; `cpt_lot_id` est posé pour l'inventaire par lot
-> (S24-b) ; un comptage de l'article sans lot remet tout son stock « sans lot ».
+> (S24-b) ; un comptage de l'article sans lot remet tout son stock « sans lot ». Lot S24-b réalisé le 05/11/2026
+> (`proposerLots` ↔ `ProposerLots`, lots dans `controlerLot` ↔ `ReglesInventaire`, `093g`) : une sortie d'un article
+> suivi sans lots saisis reçoit à la validation les lots proposés du lieu d'origine (FEFO si périssable, périmés
+> écartés, sinon FIFO par date d'entrée du lot) — magasin, borne et pièces compris —, bouton « Proposer » de la
+> section ; inventaire par lot (colonne Lot des bordereaux, une ligne par lot en stock à la génération, lot inconnu
+> créé à la validation) ; lot INITIAL à l'activation du suivi ; avertissement non bloquant des entrées incomplètes
+> (`STK_LOTS_MANQUANTS`). Écarts : le comptage reste une ligne par article (quantité totale, stock et valeur
+> inchangés) avec sa répartition par lot dans `stk_comptage_lot` (`cpt_lot_id` retirée) ; le lot INITIAL est posé par
+> un comptage neutre à l'activation (la quantité ne change pas) ; la date d'entrée d'un lot est sa date de création.
 
 ## 1. Note d'origine (résumé)
 
@@ -373,6 +381,6 @@ dotation du salarié (`sal_cha_dotation_id`), vues de liste (stock par lieu, mou
 | Lot | Contenu |
 |---|---|
 | S24-a ✔ | Schéma (suivi `stk_article_suivi` : mode, périssable, durée ; `stk_lot` ; répartition `lig_proprietes.lots` ; `mvt_lot_id`, `cpt_lot_id`), saisie des lots en réception, mouvements par lot, stock par lot (règle répliquée + jeu), onglet Lots de l'article |
-| S24-b | Sorties et transferts (proposition FIFO / FEFO), magasin et borne, inventaire par lot, lot INITIAL |
+| S24-b ✔ | Sorties et transferts (proposition FIFO / FEFO), magasin et borne, inventaire par lot, lot INITIAL |
 | S24-c | Certificats (GED, raccourci dans le chantier), traçabilité ascendante et descendante, péremption (notifications), éditions et étiquettes |
 | S24-d | Numéros de série → équipements installés (avec le module SAV) |

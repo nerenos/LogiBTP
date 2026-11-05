@@ -88,3 +88,26 @@ export function stockParLot({ mouvements = [], comptages = [] }, t) {
     .sort(([a], [b]) => (a === null) - (b === null) || (a ?? 0) - (b ?? 0))
     .map(([lot, v]) => ({ lot, quantite: S(v) }));
 }
+
+/**
+ * Lots proposés pour une sortie (S24.2) : lots en stock du lieu [{ lot, numero, quantite, limite, entree }] (entree :
+ * date d'entrée du lot), servis dans l'ordre FEFO pour un article périssable (date limite croissante, sans date en
+ * dernier ; lots périmés à aujourd'hui écartés), sinon FIFO (date d'entrée croissante), puis par identifiant ; le stock
+ * sans lot n'est jamais proposé. Résultat : { parts: [{ lot, numero, quantite }], reste } (reste = non couvert).
+ */
+export function proposerLots({ quantite, lots = [], perissable = false, aujourdhui = null }) {
+  let reste = Dz(quantite).abs();
+  const cle = (x) => [perissable ? (x.limite ?? '9999-12-31') : '', x.entree ?? '', String(x.lot).padStart(20, '0')].join('|');
+  const candidats = lots.filter((x) => x.lot !== null && x.lot !== undefined && Dz(x.quantite).gt(0)
+    && !(perissable && x.limite && aujourdhui && x.limite < aujourdhui))
+    .sort((a, b) => (cle(a) < cle(b) ? -1 : cle(a) > cle(b) ? 1 : 0));
+  const parts = [];
+  for (const x of candidats) {
+    if (reste.lte(0)) break;
+    const q = Dz(x.quantite).lt(reste) ? Dz(x.quantite) : reste;
+    parts.push({ lot: x.lot, numero: x.numero, quantite: S(q) });
+    reste = reste.minus(q);
+  }
+  return { parts, reste: S(reste) };
+}
+

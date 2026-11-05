@@ -335,6 +335,7 @@ export const api = {
     suiviArticle: (id) => appel('GET', `/stock/articles/${id}/suivi`),
     definirSuiviArticle: (id, s) => appel('PUT', `/stock/articles/${id}/suivi`, s),
     lotsArticle: (id) => appel('GET', `/stock/articles/${id}/lots`),
+    lotsEnStock: (id, lieu) => appel('GET', `/stock/articles/${id}/lots/${lieu}`),
     modifierLot: (id, l) => appel('PUT', `/stock/lots/${id}`, l),
     fichesDotation: (salarie) => appel('GET', `/stock/magasin/dotations/fiches?salarie=${salarie}`),
     dotations: ({ du = null, au = null, salarie = null } = {}) => appel('GET', `/stock/magasin/dotations?${new URLSearchParams(Object.fromEntries(Object.entries({ du, au, salarie }).filter(([, v]) => v !== null && v !== '')))}`),

@@ -46,6 +46,20 @@
         "erreurs": [{ "code": "INV_QUANTITE_NEGATIVE", "ele": 12 }, { "code": "INV_PRIX_DIFFERENTS", "ele": 10 }, { "code": "INV_PMP_SANS_PRIX", "ele": 11 }] } },
     { "nom": "lot vide",
       "lignes": [],
-      "attendu": { "comptages": [], "avertissements": [], "erreurs": [] } }
+      "attendu": { "comptages": [], "avertissements": [], "erreurs": [] } },
+    { "nom": "lots : cumul par numéro sans casse, ligne sans lot = sans lot, doublon d'emplacement par lot",
+      "lignes": [
+        { "bordereau": 1, "ele": 20, "emp": 1, "lot": "C-45", "quantite": 3, "prix": null, "appliquer_pmp": false, "commentaire": null },
+        { "bordereau": 1, "ele": 20, "emp": 1, "lot": "C-46", "quantite": 2, "prix": null, "appliquer_pmp": false, "commentaire": null },
+        { "bordereau": 2, "ele": 20, "emp": 1, "lot": " c-45", "quantite": 1, "prix": null, "appliquer_pmp": false, "commentaire": null },
+        { "bordereau": 2, "ele": 20, "emp": 2, "lot": null, "quantite": 4, "prix": null, "appliquer_pmp": false, "commentaire": null },
+        { "bordereau": 2, "ele": 21, "emp": 2, "lot": "", "quantite": 1, "prix": null, "appliquer_pmp": false, "commentaire": null }
+      ],
+      "attendu": {
+        "comptages": [
+          { "ele": 20, "quantite": "10", "prix": null, "appliquer_pmp": false, "commentaire": null, "lignes": 4,
+            "lots": [{ "numero": "C-45", "quantite": "4" }, { "numero": "C-46", "quantite": "2" }] },
+          { "ele": 21, "quantite": "1", "prix": null, "appliquer_pmp": false, "commentaire": null, "lignes": 1 }],
+        "avertissements": [{ "code": "INV_DOUBLON_EMPLACEMENT", "ele": 20, "emp": 1, "nombre": 2 }], "erreurs": [] } }
   ]
 }

@@ -54,4 +54,18 @@ public class ReglesTracabiliteTests
             Assert.Equal(c["attendu"]!.AsArray().Select(x => $"{x!["lot"]}|{Dec(x["quantite"])}"), r.Select(x => $"{x.Lot}|{x.Quantite}"));
         }
     }
+
+    [Fact]
+    public void Proposition_identique_au_js()
+    {
+        foreach (var c in Jeu["propositions"]!.AsArray())
+        {
+            var lots = c!["lots"]!.AsArray().Where(x => x!["lot"] is not null)
+                .Select(x => new LotEnStock(x!["lot"]!.GetValue<long>(), Txt(x["numero"])!, Dec(x["quantite"])!.Value, Txt(x["limite"]), Txt(x["entree"]))).ToList();
+            var r = ReglesTracabilite.ProposerLots(Dec(c["quantite"])!.Value, lots, c["perissable"]!.GetValue<bool>(), Txt(c["aujourdhui"]));
+            var a = c["attendu"]!;
+            Assert.Equal(a["parts"]!.AsArray().Select(p => $"{p!["lot"]}|{p["numero"]}|{Dec(p["quantite"])}"), r.Parts.Select(p => $"{p.Lot}|{p.Numero}|{p.Quantite}"));
+            Assert.True(r.Reste == Dec(a["reste"]), $"{c["nom"]} : reste {r.Reste}");
+        }
+    }
 }

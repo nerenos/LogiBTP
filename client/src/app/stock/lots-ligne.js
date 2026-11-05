@@ -1,6 +1,8 @@
 import { texte, texteHtml, iconeHtml } from '@logibtp/socle/dictionnaire';
-import { echapper, formatNombre } from '@logibtp/socle/ui';
-import { SUIVI_ARTICLE, repartirLots, dateLimiteLot, MESSAGES_TRACABILITE } from '@logibtp/stock';
+import { echapper, formatNombre, alerter } from '@logibtp/socle/ui';
+import { SUIVI_ARTICLE, repartirLots, dateLimiteLot, proposerLots, MESSAGES_TRACABILITE } from '@logibtp/stock';
+import { aujourdhui } from '@logibtp/socle';
+import { api } from '../api.js';
 import { TYPE_DOCUMENT } from '../codes.js';
 
 // Lots et numéros de série d'une ligne de pièce (module Stock, lot S24-a ; ANALYSE-MODULE-STOCK.md § 11) : section
@@ -14,6 +16,9 @@ const ENTREES = new Set([TYPE_DOCUMENT.A_RECEPTION, TYPE_DOCUMENT.A_FACTURE, TYP
 const SORTIES = new Set([TYPE_DOCUMENT.A_RETOUR, TYPE_DOCUMENT.V_RECEPTION, TYPE_DOCUMENT.V_FACTURE, TYPE_DOCUMENT.S_SORTIE, TYPE_DOCUMENT.S_TRANSFERT]);
 
 export const typeAvecLots = (code) => ENTREES.has(code) || SORTIES.has(code);
+
+/** Lieu d'où sort l'article (proposition des lots) : destination d'un retour fournisseur, sinon origine. */
+const lieuSortie = (type, d) => (type === TYPE_DOCUMENT.A_RETOUR ? d.ent_stk_destination_id ?? d.ent_chantier_id : d.ent_stk_origine_id) ?? null;
 
 /**
  * Section « Lots » d'une ligne dans le détail : rien pour un article sans suivi dont la ligne n'a aucun lot. options :
@@ -62,6 +67,8 @@ export function sectionLots(zone, l, { editeur, lots, lecture }) {
         <p class="aide">${quantite === null ? texteHtml('stock_btp.lots.autre_unite')
           : Number(r.sans_lot) ? texteHtml('stock_btp.lots.sans_lot', { quantite: formatNombre(r.sans_lot, info.precision) }) : texteHtml('stock_btp.lots.repartie')}
           ${lecture ? '' : `<button type="button" class="bouton-icone" data-ajouter title="${texteHtml('stock_btp.lots.ajouter')}">${iconeHtml('ajouter')}</button>`}</p>
+        ${!entree && !lecture ? `<p class="aide">${texteHtml('stock_btp.lots.sortie_aide')}
+          <button type="button" data-proposer title="${texteHtml('stock_btp.lots.proposer_titre')}">${texteHtml('stock_btp.lots.proposer')}</button></p>` : ''}
         ${generales.map((m) => `<p class="avertissement">${echapper(m)}</p>`).join('')}`;
       bloc.querySelectorAll('[data-c]').forEach((c) => c.addEventListener('change', () => {
         const x = saisis[Number(c.dataset.i)];
@@ -70,6 +77,20 @@ export function sectionLots(zone, l, { editeur, lots, lecture }) {
         rendre();
       }));
       bloc.querySelectorAll('[data-retirer]').forEach((b) => b.addEventListener('click', () => { saisis.splice(Number(b.dataset.retirer), 1); enregistrer(); rendre(); }));
+      // Sortie : lots en stock du lieu d'origine, FEFO pour un article périssable, sinon FIFO (même règle que la validation).
+      bloc.querySelector('[data-proposer]')?.addEventListener('click', async () => {
+        const lieu = lieuSortie(type, editeur.saisie.document);
+        if (!lieu || quantite === null) return;
+        try {
+          const stock = await api.stock.lotsEnStock(l.lig_art_id, lieu);
+          const p = proposerLots({ quantite, perissable: info.suivi.perissable, aujourdhui: aujourdhui(),
+            lots: stock.map((x) => ({ lot: x.lot, numero: x.numero, quantite: x.quantite, limite: x.limite, entree: x.entree })) });
+          if (!p.parts.length) { await alerter(texte('stock_btp.lots.aucune_proposition')); return; }
+          saisis.splice(0, saisis.length, ...p.parts.map((x) => ({ numero: x.numero, quantite: x.quantite })));
+          enregistrer();
+          rendre();
+        } catch { /* lieu sans lots : rien */ }
+      });
       bloc.querySelector('[data-ajouter]')?.addEventListener('click', () => {
         // Numéro de série : une unité par ligne ; lot : le reste de la ligne proposé.
         saisis.push({ numero: null, quantite: info.suivi.suivi === SUIVI_ARTICLE.SERIE ? 1 : Number(r.sans_lot) || null });

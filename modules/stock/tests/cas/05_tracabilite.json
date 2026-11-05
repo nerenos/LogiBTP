@@ -56,5 +56,26 @@
       "attendu": [{ "lot": 2, "quantite": "5" }, { "lot": null, "quantite": "1" }] },
     { "nom": "date de calcul avant les mouvements : rien",
       "mouvements": [{ "date": "2026-11-01T08:00", "quantite": 10, "lot": 2 }], "comptages": [], "t": "2026-10-31T23:59", "attendu": [] }
+  ],
+  "propositions": [
+    { "nom": "FIFO : le lot entré le premier d'abord, le sans lot jamais proposé",
+      "quantite": 7, "perissable": false, "aujourdhui": "2026-11-05",
+      "lots": [{ "lot": 3, "numero": "B", "quantite": 5, "limite": null, "entree": "2026-10-10" }, { "lot": 2, "numero": "A", "quantite": 4, "limite": null, "entree": "2026-09-01" },
+               { "lot": null, "numero": null, "quantite": 10, "limite": null, "entree": null }],
+      "attendu": { "parts": [{ "lot": 2, "numero": "A", "quantite": "4" }, { "lot": 3, "numero": "B", "quantite": "3" }], "reste": "0" } },
+    { "nom": "FEFO : date limite la plus proche d'abord, périmé écarté, sans date en dernier",
+      "quantite": "-6", "perissable": true, "aujourdhui": "2026-11-05",
+      "lots": [{ "lot": 1, "numero": "P", "quantite": 2, "limite": "2026-11-01", "entree": "2026-01-01" }, { "lot": 4, "numero": "S", "quantite": 3, "limite": null, "entree": "2026-02-01" },
+               { "lot": 5, "numero": "T", "quantite": 2, "limite": "2027-03-01", "entree": "2026-06-01" }, { "lot": 6, "numero": "U", "quantite": 1, "limite": "2026-12-15", "entree": "2026-08-01" }],
+      "attendu": { "parts": [{ "lot": 6, "numero": "U", "quantite": "1" }, { "lot": 5, "numero": "T", "quantite": "2" }, { "lot": 4, "numero": "S", "quantite": "3" }], "reste": "0" } },
+    { "nom": "stock des lots insuffisant : reste non couvert ; lot à zéro ou négatif ignoré",
+      "quantite": 10, "perissable": false, "aujourdhui": "2026-11-05",
+      "lots": [{ "lot": 7, "numero": "Z", "quantite": 0, "limite": null, "entree": "2026-01-01" }, { "lot": 8, "numero": "Y", "quantite": -2, "limite": null, "entree": "2026-01-02" },
+               { "lot": 9, "numero": "X", "quantite": "3.5", "limite": null, "entree": "2026-01-03" }],
+      "attendu": { "parts": [{ "lot": 9, "numero": "X", "quantite": "3.5" }], "reste": "6.5" } },
+    { "nom": "même date d'entrée : par identifiant",
+      "quantite": 2, "perissable": false, "aujourdhui": "2026-11-05",
+      "lots": [{ "lot": 12, "numero": "L12", "quantite": 5, "limite": null, "entree": "2026-03-03" }, { "lot": 11, "numero": "L11", "quantite": 1, "limite": null, "entree": "2026-03-03" }],
+      "attendu": { "parts": [{ "lot": 11, "numero": "L11", "quantite": "1" }, { "lot": 12, "numero": "L12", "quantite": "1" }], "reste": "0" } }
   ]
 }

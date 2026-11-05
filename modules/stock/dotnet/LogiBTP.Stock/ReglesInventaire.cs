@@ -1,9 +1,10 @@
 namespace LogiBTP.Stock;
 
 /// <summary>Ligne d'un bordereau d'inventaire : quantité null = non comptée.</summary>
-public sealed record LigneInventaire(long Bordereau, long Ele, long? Emp, decimal? Quantite, decimal? Prix, bool AppliquerPmp, string? Commentaire);
+public sealed record LigneInventaire(long Bordereau, long Ele, long? Emp, decimal? Quantite, decimal? Prix, bool AppliquerPmp, string? Commentaire, string? Lot = null);
 
-public sealed record ComptageLot(long Ele, decimal Quantite, decimal? Prix, bool AppliquerPmp, string? Commentaire, int Lignes);
+/// <summary>Comptage d'un article ; Lots (numéro, quantité) seulement si une ligne de l'article porte un lot (le reste est sans lot).</summary>
+public sealed record ComptageLot(long Ele, decimal Quantite, decimal? Prix, bool AppliquerPmp, string? Commentaire, int Lignes, List<PartLot>? Lots = null);
 
 public sealed record AvertissementInventaire(string Code, long Ele, long Emp, int Nombre);
 
@@ -34,12 +35,13 @@ public static class ReglesInventaire
         public bool Appliquer;
         public readonly List<string> Commentaires = [];
         public int Lignes;
+        public readonly List<(string Cle, string Numero, decimal Quantite)> Lots = [];
     }
 
     public static ControleLot Controler(IReadOnlyList<LigneInventaire> lignes)
     {
         var parArticle = new List<(long Ele, Cumul C)>();
-        var parEmplacement = new List<(long Ele, long Emp, int Nombre)>();
+        var parEmplacement = new List<(long Ele, long Emp, string Lot, int Nombre)>();
         var erreurs = new List<ErreurInventaire>();
         foreach (var l in lignes)
         {
@@ -54,11 +56,19 @@ public static class ReglesInventaire
             var c = l.Commentaire?.Trim();
             if (!string.IsNullOrEmpty(c) && !a.Commentaires.Contains(c)) a.Commentaires.Add(c);
             a.Lignes++;
+            var numero = ReglesTracabilite.Numero(l.Lot);
+            var cleLot = numero?.ToUpperInvariant() ?? "";
+            if (numero is not null)
+            {
+                var j = a.Lots.FindIndex(x => x.Cle == cleLot);
+                if (j < 0) a.Lots.Add((cleLot, numero, q));
+                else a.Lots[j] = (cleLot, a.Lots[j].Numero, a.Lots[j].Quantite + q);
+            }
             if (l.Emp is { } emp)
             {
-                var k = parEmplacement.FindIndex(x => x.Ele == l.Ele && x.Emp == emp);
-                if (k < 0) parEmplacement.Add((l.Ele, emp, 1));
-                else parEmplacement[k] = (l.Ele, emp, parEmplacement[k].Nombre + 1);
+                var k = parEmplacement.FindIndex(x => x.Ele == l.Ele && x.Emp == emp && x.Lot == cleLot);
+                if (k < 0) parEmplacement.Add((l.Ele, emp, cleLot, 1));
+                else parEmplacement[k] = (l.Ele, emp, cleLot, parEmplacement[k].Nombre + 1);
             }
         }
         var comptages = new List<ComptageLot>();
@@ -67,7 +77,8 @@ public static class ReglesInventaire
             if (a.Prix.Count > 1) erreurs.Add(new("INV_PRIX_DIFFERENTS", ele));
             if (a.Appliquer && a.Prix.Count == 0) erreurs.Add(new("INV_PMP_SANS_PRIX", ele));
             comptages.Add(new(ele, a.Quantite, a.Prix.Count == 1 ? a.Prix[0] : null, a.Appliquer && a.Prix.Count == 1,
-                a.Commentaires.Count > 0 ? string.Join(" ; ", a.Commentaires) : null, a.Lignes));
+                a.Commentaires.Count > 0 ? string.Join(" ; ", a.Commentaires) : null, a.Lignes,
+                a.Lots.Count > 0 ? a.Lots.Select(x => new PartLot(x.Numero, x.Quantite)).ToList() : null));
         }
         return new(comptages, parEmplacement.Where(x => x.Nombre > 1).Select(x => new AvertissementInventaire("INV_DOUBLON_EMPLACEMENT", x.Ele, x.Emp, x.Nombre)).ToList(), erreurs);
     }

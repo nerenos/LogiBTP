@@ -212,10 +212,19 @@ public static class MouvementsStockBtp
             // Lots (S24) : une part par lot saisi sur la ligne, le reste sans lot ; une répartition en erreur (refusée à la
             // validation) est ignorée. Les lots d'une entrée d'achat sont ceux du fournisseur de la pièce.
             var parts = new List<(long? Lot, decimal Quantite)>();
-            var rep = ReglesTracabilite.Repartir(q, LireLots(l.Lots), l.Suivi);
+            var saisis = LireLots(l.Lots);
+            var rep = ReglesTracabilite.Repartir(q, saisis, l.Suivi);
             if (rep.Erreurs.Count == 0)
                 foreach (var part in rep.Parts)
                     parts.Add((await LotAsync(db, l, part.Numero, entree is not null && achat ? e.Tiers : null, entree is not null, e.Date, ct), part.Quantite));
+            // Sortie d'un article suivi sans lots saisis (magasin, borne, pièce) : lots proposés du lieu d'origine, FEFO pour
+            // un article périssable, sinon FIFO (S24.2) ; ce qu'ils ne couvrent pas reste sans lot.
+            if (saisis.Count == 0 && l.Suivi != SuiviArticle.Aucun && sortie is { } origine)
+            {
+                var stock = await LotsEnStockAsync(db, l.EleId, origine, date, ct);
+                var aujourdhui = DateOnly.FromDateTime(DateTime.Today).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+                foreach (var p in ReglesTracabilite.ProposerLots(q, stock, l.Perissable, aujourdhui).Parts) parts.Add((p.Lot, p.Quantite));
+            }
             var reste = Math.Abs(q) - parts.Sum(x => x.Quantite);
             if (reste != 0 || parts.Count == 0) parts.Add((null, reste));
             var signe = q < 0 ? -1 : 1;
@@ -229,6 +238,45 @@ public static class MouvementsStockBtp
             if (sortie is { } lieuS)
                 foreach (var (lot, qp) in parts) await Inserer(db, l, lieuS, date, -signe * qp, null, false, entId, e.Tiers, lot, ct);
         }
+    }
+
+    private sealed record MouvementLotSql(DateTimeOffset Date, decimal Quantite, long? Lot);
+    private sealed record ComptageLotSql(long Id, DateTimeOffset Date, decimal Quantite, long? Lot, decimal? QuantiteLot);
+    private sealed record LotInfoSql(long Id, string Numero, DateOnly? Limite, DateTimeOffset CreeLe);
+
+    /// <summary>
+    /// Lots en stock d'un article dans un lieu juste avant une date-heure (ReglesTracabilite.StockParLot : comptages
+    /// répartis par lot, mouvements par lot), avec date limite et date d'entrée.
+    /// </summary>
+    private static async Task<List<LotEnStock>> LotsEnStockAsync(DbContext db, long ele, int lieu, DateTimeOffset date, CancellationToken ct)
+    {
+        var mvts = (await db.Database.SqlQuery<MouvementLotSql>($"""
+            SELECT mvt_date AS date, mvt_quantite AS quantite, mvt_lot_id AS lot FROM stk_mouvement WHERE mvt_ele_id = {ele} AND mvt_lieu_id = {lieu}
+            """).ToListAsync(ct)).Select(m => new QuantiteLot(ReglesStock.Minute(m.Date), m.Quantite, m.Lot)).ToList();
+        var cpts = await db.Database.SqlQuery<ComptageLotSql>($"""
+            SELECT c.cpt_id AS id, c.cpt_date AS date, c.cpt_quantite AS quantite, l.cpl_lot_id AS lot, l.cpl_quantite AS quantite_lot
+            FROM stk_comptage c LEFT JOIN stk_comptage_lot l ON l.cpl_cpt_id = c.cpt_id WHERE c.cpt_ele_id = {ele} AND c.cpt_lieu_id = {lieu}
+            """).ToListAsync(ct);
+        var lignes = new List<QuantiteLot>();
+        foreach (var g in cpts.GroupBy(c => c.Id))
+        {
+            var d = ReglesStock.Minute(g.First().Date);
+            var parLot = g.Where(x => x.Lot is not null).ToList();
+            lignes.AddRange(parLot.Select(x => new QuantiteLot(d, x.QuantiteLot ?? 0, x.Lot)));
+            var reste = g.First().Quantite - parLot.Sum(x => x.QuantiteLot ?? 0);
+            if (reste != 0 || parLot.Count == 0) lignes.Add(new QuantiteLot(d, reste, null));
+        }
+        // À la date de la sortie : les mouvements de la pièce ont été retirés avant d'être réécrits ; ceux des lignes
+        // précédentes de la même pièce, déjà réécrits, sont comptés (deux lignes du même article ne prennent pas deux fois un lot).
+        var stock = ReglesTracabilite.StockParLot(mvts, lignes, ReglesStock.Minute(date)).Where(s => s.Lot is not null).ToList();
+        var ids = stock.Select(s => s.Lot!.Value).ToArray();
+        var infos = (await db.Database.SqlQuery<LotInfoSql>($"SELECT lot_id AS id, lot_numero AS numero, lot_limite AS limite, lot_cree_le AS cree_le FROM stk_lot WHERE lot_id = ANY({ids})")
+            .ToListAsync(ct)).ToDictionary(x => x.Id);
+        return stock.Where(s => infos.ContainsKey(s.Lot!.Value)).Select(s =>
+        {
+            var i = infos[s.Lot!.Value];
+            return new LotEnStock(i.Id, i.Numero, s.Quantite, i.Limite?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), i.CreeLe.UtcDateTime.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+        }).ToList();
     }
 
     /// <summary>Lot saisi sur une ligne (`lig_proprietes.lots`) : numéro, quantité en unité de stock, fabrication, date limite, coulée, norme.</summary>
@@ -312,6 +360,35 @@ public static class MouvementsStockBtp
     }
 
     private sealed record SuiviSql(long Ele, string Suivi, string? Unite);
+
+    /// <summary>Entrées qui créent des lots (S24) : réception, entrée de stock, retour client ; la facture issue d'une réception n'écrit rien.</summary>
+    private static readonly string[] EntreesLots = [TypesDocument.AReception, TypesDocument.SEntree, TypesDocument.VRetour];
+
+    /// <summary>
+    /// Avertissement à la validation (S24.2, jamais bloquant) : ligne d'entrée d'un article suivi par lot ou par numéro de
+    /// série dont une partie reste sans lot (ligne dans l'unité de stock ; sinon, aucun lot saisi).
+    /// </summary>
+    public static async Task AvertirLotsAsync(DbContext db, IReadOnlyList<DocumentLigneBtp> lignes, TypeDocument type, List<MessageCalcul> avertissements, CancellationToken ct)
+    {
+        if (!EntreesLots.Contains(type.TydCode) || !await db.Database.SqlQuery<bool>($"SELECT f_module_actif('stock') AS \"Value\"").FirstAsync(ct)) return;
+        var articles = lignes.Where(l => l.LigArtId is not null && l.LigTypePrix == "V").ToList();
+        if (articles.Count == 0) return;
+        var ids = articles.Select(l => l.LigArtId!.Value).Distinct().ToArray();
+        var suivis = (await db.Database.SqlQuery<SuiviSql>($"""
+            SELECT e.ele_id AS ele, s.sas_suivi AS suivi, e.ele_unt_stock AS unite
+            FROM element e JOIN stk_article_suivi s ON s.sas_ele_id = e.ele_id WHERE e.ele_id = ANY({ids}) AND s.sas_suivi <> 'AUCUN'
+            """).ToListAsync(ct)).ToDictionary(x => x.Ele);
+        foreach (var l in articles)
+        {
+            if (!suivis.TryGetValue(l.LigArtId!.Value, out var a)) continue;
+            var lots = l.LigProprietes?.RootElement.ValueKind == JsonValueKind.Object && l.LigProprietes.RootElement.TryGetProperty("lots", out var x) ? LireLots(x.GetRawText()) : [];
+            var memeUnite = string.IsNullOrEmpty(l.LigUntCode) || l.LigUntCode == a.Unite;
+            var r = ReglesTracabilite.Repartir(memeUnite ? l.LigQteTotale ?? l.LigQte ?? 0 : 0, lots, a.Suivi);
+            if (memeUnite ? r.Avertissements.Count > 0 : lots.Count == 0)
+                avertissements.Add(new MessageCalcul(l.LigId, "STK_LOTS_MANQUANTS",
+                    $"Ligne {l.LigNumerotation} ({l.LigCode}) : {(memeUnite ? $"{ArrondiCalcul.FormatNombre(r.SansLot)} {a.Unite} sans lot" : "aucun lot saisi")} ({(a.Suivi == SuiviArticle.Serie ? "article suivi par numéro de série" : "article suivi par lot")})"));
+        }
+    }
 
     private static Task<int> Inserer(DbContext db, LigneSql l, int lieu, DateTimeOffset date, decimal q, decimal? prix, bool provisoire, long entId, long? tiers, long? lot,
         CancellationToken ct) =>

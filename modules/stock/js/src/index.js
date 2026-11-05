@@ -5,4 +5,4 @@ export { METHODES_VALORISATION, valoriser, valeurUnitaire } from './valorisation
 export { MESSAGES_INVENTAIRE, controlerLot } from './inventaire.js';
 export { projeter, minimumJusqua, proposer } from './projection.js';
 export { SUIVI_ARTICLE, UNITE_DUREE } from './codes.js';
-export { MESSAGES_TRACABILITE, numeroLot, repartirLots, dateLimiteLot, stockParLot } from './tracabilite.js';
+export { MESSAGES_TRACABILITE, numeroLot, repartirLots, dateLimiteLot, stockParLot, proposerLots } from './tracabilite.js';

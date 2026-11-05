@@ -153,7 +153,7 @@ export class PageInventaire extends PageBase {
 
   /** Contrôle en direct des bordereaux affichés (erreurs refusées à la validation, avertissements signalés). */
   #controle() {
-    const lignes = this.detail.bordereaux.flatMap((b) => b.lignes.map((l) => ({ bordereau: b.id, ele: l.ele, emp: l.emp, quantite: l.quantite, prix: l.prix, appliquer_pmp: l.appliquer_pmp, commentaire: l.commentaire })));
+    const lignes = this.detail.bordereaux.flatMap((b) => b.lignes.map((l) => ({ bordereau: b.id, ele: l.ele, emp: l.emp, lot: l.lot, quantite: l.quantite, prix: l.prix, appliquer_pmp: l.appliquer_pmp, commentaire: l.commentaire })));
     const c = controlerLot({ lignes });
     this.doublons = new Set(c.avertissements.map((x) => `${x.ele}|${x.emp}`));
     const nom = (ele) => { const a = this.articles.get(ele); return a ? `${a.code} – ${a.libelle}` : texte('stock_btp.inventaire.article_n', { id: ele }); };
@@ -195,7 +195,7 @@ export class PageInventaire extends PageBase {
       <h2 class="titre-actions">${lecture ? echapper(b.libelle) : `<input data-b="libelle" size="40" value="${echapper(b.libelle)}">`}
         <small>${texteHtml('stock_btp.inventaire.compte_par')} ${lecture ? echapper(b.compteur ?? '—') : `<input data-b="compteur" size="16" value="${echapper(b.compteur ?? '')}">`}</small>
         ${lecture ? '' : `<span class="sans-impression"><button type="button" data-enr>${texteHtml('commun.enregistrer')}</button> <button type="button" data-suppr title="${texteHtml('stock_btp.inventaire.suppr_bordereau')}">${iconeHtml('supprimer')}</button></span>`}</h2>
-      <table class="tableau-compact"><thead><tr><th>${texteHtml('stock_btp.colonnes.article')}</th><th>${texteHtml('commun.libelle')}</th><th>${texteHtml('stock_btp.inventaire.emplacement')}</th><th class="theorique">${texteHtml('stock_btp.inventaire.theorique')}</th><th>${texteHtml('stock_btp.inventaire.compte')}</th><th>${texteHtml('stock_btp.colonnes.unite_court')}</th>
+      <table class="tableau-compact"><thead><tr><th>${texteHtml('stock_btp.colonnes.article')}</th><th>${texteHtml('commun.libelle')}</th><th>${texteHtml('stock_btp.inventaire.emplacement')}</th><th title="${texteHtml('stock_btp.inventaire.lot_titre')}">${texteHtml('stock_btp.inventaire.lot')}</th><th class="theorique">${texteHtml('stock_btp.inventaire.theorique')}</th><th>${texteHtml('stock_btp.inventaire.compte')}</th><th>${texteHtml('stock_btp.colonnes.unite_court')}</th>
         <th>${texteHtml('stock_btp.inventaire.prix_inventaire')}</th><th title="${texteHtml('stock_btp.inventaire.pmp_titre')}">${texteHtml('stock_btp.colonnes.pmp')}</th><th>${texteHtml('stock_btp.article.commentaire')}</th><th class="cellule-boutons sans-impression"></th></tr></thead>
       <tbody>${b.lignes.map((l, i) => this.#ligne(b, l, i, lecture)).join('')}</tbody></table>
       ${lecture ? '' : '<p class="ligne sans-impression"><span data-ajout></span></p>'}</section>`).join('') || `<p class="aide">${texteHtml('stock_btp.inventaire.aucun_bordereau')}</p>`;
@@ -207,7 +207,7 @@ export class PageInventaire extends PageBase {
     const doublon = l.emp && this.doublons.has(`${l.ele}|${l.emp}`);
     const champ = (c, v, taille) => (lecture ? echapper(v ?? '') : `<input data-c="${c}" size="${taille}" value="${echapper(v ?? '')}">`);
     return `<tr data-i="${i}" class="${doublon ? 'avertissement' : ''}"><td>${echapper(l.code ?? a?.code ?? '')}</td><td>${echapper(l.libelle ?? a?.libelle ?? '')}</td>
-      <td data-emp>${lecture ? echapper(l.emp_code ?? '') : ''}</td><td class="nombre theorique">${formatNombre(l.theorique, l.precision)}</td>
+      <td data-emp>${lecture ? echapper(l.emp_code ?? '') : ''}</td><td>${champ('lot', l.lot, 10)}</td><td class="nombre theorique">${formatNombre(l.theorique, l.precision)}</td>
       <td class="nombre">${champ('quantite', formatNombre(l.quantite, l.precision), 8)}</td><td>${echapper(l.unite ?? a?.unite ?? '')}</td>
       <td class="nombre">${champ('prix', l.prix === null ? '' : String(l.prix).replace('.', ','), 8)}</td>
       <td><input type="checkbox" data-c="appliquer_pmp" ${l.appliquer_pmp ? 'checked' : ''} ${lecture ? 'disabled' : ''}></td>
@@ -227,7 +227,7 @@ export class PageInventaire extends PageBase {
       tr.querySelector('[data-emp]').append(emp);
       tr.querySelectorAll('[data-c]').forEach((x) => x.addEventListener('change', () => {
         const c = x.dataset.c;
-        l[c] = x.type === 'checkbox' ? x.checked : c === 'commentaire' ? x.value : nombreSaisi(x.value);
+        l[c] = x.type === 'checkbox' ? x.checked : c === 'commentaire' ? x.value : c === 'lot' ? (x.value.trim() || null) : nombreSaisi(x.value);
         modifier();
       }));
       tr.querySelector('[data-retirer]')?.addEventListener('click', () => { b.lignes.splice(b.lignes.indexOf(l), 1); modifier(); this.#bordereaux(this.conteneur.querySelector('[data-contenu]')); });
@@ -240,7 +240,7 @@ export class PageInventaire extends PageBase {
     ajout.addEventListener('change', () => {
       const a = this.articles.get(Number(ajout.valeurCombo));
       if (!a) return;
-      b.lignes.push({ id: null, ele: a.id, code: a.code, libelle: a.libelle, unite: a.unite, precision: a.precision, emp: null, emp_code: null, quantite: null, theorique: null,
+      b.lignes.push({ id: null, ele: a.id, code: a.code, libelle: a.libelle, unite: a.unite, precision: a.precision, emp: null, emp_code: null, lot: null, quantite: null, theorique: null,
         prix: null, appliquer_pmp: false, commentaire: null });
       modifier();
       this.#bordereaux(this.conteneur.querySelector('[data-contenu]'));

@@ -47,6 +47,8 @@ public class LigneBordereauEntite
     public bool BliAppliquerPmp { get; set; }
     public string? BliCommentaire { get; set; }
     public int BliOrdre { get; set; }
+    /// <summary>Numéro de lot ou de série compté (S24-b) ; null = sans lot.</summary>
+    public string? BliLot { get; set; }
 }
 
 public class MarqueEntite
@@ -80,7 +82,7 @@ public sealed record FamilleStock(long Id, string Chemin);
 public sealed record LotDto(long Id, long Lieu, string? LieuCode, string Date, string Libelle, string Etat, bool Micro, string? Commentaire, string CreePar,
     string? ValidePar, string? ValideLe, int Bordereaux, int Lignes, int Comptees, long? Piece = null, long? Extourne = null);
 public sealed record LigneBordereauDto(long? Id, long Ele, string? Code, string? Libelle, string? Unite, int Precision, long? Emp, string? EmpCode,
-    decimal? Quantite, decimal? Theorique, decimal? Prix, bool AppliquerPmp, string? Commentaire);
+    decimal? Quantite, decimal? Theorique, decimal? Prix, bool AppliquerPmp, string? Commentaire, string? Lot = null);
 public sealed record BordereauDto(long Id, string Libelle, string? Critere, string? Compteur, int Ordre, List<LigneBordereauDto> Lignes);
 public sealed record LotDetailDto(LotDto Lot, List<BordereauDto> Bordereaux, ControleLot Controle);
 public sealed record LotSaisi(long? Lieu, DateTimeOffset? Date, string? Libelle, string? Commentaire);
@@ -98,7 +100,7 @@ public sealed record MarquageSaisi(List<long>? Articles, List<string>? Ajouter, 
 /// contrôle partagé (ReglesInventaire), rapport d'écarts (ReglesStock.Ecart, valeur à la date), validation (un comptage
 /// par article, réévaluation si « Appliquer au PMP »), annulation, micro-inventaire ; marques des articles (S20).
 /// </summary>
-public class ServiceInventaire(StockDbContext db, SpecialisationStock specialisation, ServiceStock stock)
+public class ServiceInventaire(StockDbContext db, SpecialisationStock specialisation, ServiceStock stock, ServiceTracabilite tracabilite)
 {
     private static string M(DateTimeOffset d) => ReglesStock.Minute(d);
 
@@ -197,9 +199,9 @@ public class ServiceInventaire(StockDbContext db, SpecialisationStock specialisa
         {
             var a = articles.GetValueOrDefault(l.BliEleId);
             return new(l.BliId, l.BliEleId, a?.Code, a?.Libelle, a?.Unite, a?.Precision ?? 2, l.BliEmpId, l.BliEmpId is { } e ? emps.GetValueOrDefault(e) : null,
-                l.BliQuantite, l.BliTheorique, l.BliPrix, l.BliAppliquerPmp, l.BliCommentaire);
+                l.BliQuantite, l.BliTheorique, l.BliPrix, l.BliAppliquerPmp, l.BliCommentaire, l.BliLot);
         }
-        var controle = ReglesInventaire.Controler(lignes.Select(l => new LigneInventaire(l.BliBorId, l.BliEleId, l.BliEmpId, l.BliQuantite, l.BliPrix, l.BliAppliquerPmp, l.BliCommentaire)).ToList());
+        var controle = ReglesInventaire.Controler(lignes.Select(l => new LigneInventaire(l.BliBorId, l.BliEleId, l.BliEmpId, l.BliQuantite, l.BliPrix, l.BliAppliquerPmp, l.BliCommentaire, l.BliLot)).ToList());
         return new LotDetailDto((await DtosAsync([lot], ct))[0],
             bors.Select(b => new BordereauDto(b.BorId, b.BorLibelle, b.BorCritere, b.BorCompteur, b.BorOrdre, lignes.Where(l => l.BliBorId == b.BorId).Select(Dto).ToList())).ToList(),
             controle);
@@ -248,6 +250,7 @@ public class ServiceInventaire(StockDbContext db, SpecialisationStock specialisa
             e.BliPrix = l.Prix;
             e.BliAppliquerPmp = l.AppliquerPmp;
             e.BliCommentaire = string.IsNullOrWhiteSpace(l.Commentaire) ? null : l.Commentaire.Trim();
+            e.BliLot = ReglesTracabilite.Numero(l.Lot) is { } n ? n[..Math.Min(60, n.Length)] : null;
             e.BliOrdre = i;
         }
         await db.SaveChangesAsync(ct);
@@ -344,6 +347,7 @@ public class ServiceInventaire(StockDbContext db, SpecialisationStock specialisa
         var tous = groupes.SelectMany(x => x.Lignes.Select(l => l.Ele)).Distinct().ToList();
         var articles = await specialisation.ArticlesAsync(db, tous, ct);
         var theoriques = await TheoriquesAsync(lot, tous, ct);
+        var suivis = (await db.ArticlesSuivi.AsNoTracking().Where(s => tous.Contains(s.SasEleId) && s.SasSuivi != SuiviArticle.Aucun).Select(s => s.SasEleId).ToListAsync(ct)).ToHashSet();
         var ordre = await db.Bordereaux.Where(b => b.BorLinId == lotId).Select(b => (int?)b.BorOrdre).MaxAsync(ct) ?? 0;
         foreach (var (libelle, lignes) in groupes)
         {
@@ -354,8 +358,17 @@ public class ServiceInventaire(StockDbContext db, SpecialisationStock specialisa
             }).Entity;
             await db.SaveChangesAsync(ct);
             var tri = par == "EMPLACEMENT" ? lignes : lignes.OrderBy(l => articles.GetValueOrDefault(l.Ele)?.Code ?? "", StringComparer.OrdinalIgnoreCase).ToList();
-            foreach (var (l, i) in tri.Select((l, i) => (l, i)))
-                db.LignesBordereau.Add(new LigneBordereauEntite { BliBorId = b.BorId, BliEleId = l.Ele, BliEmpId = l.Emp, BliTheorique = theoriques.GetValueOrDefault(l.Ele), BliOrdre = i });
+            var i = 0;
+            foreach (var l in tri)
+            {
+                // Article suivi par lot (S24-b) : une ligne par lot en stock à la date du lot, puis le sans lot s'il en reste.
+                var lotsEnStock = suivis.Contains(l.Ele) ? await tracabilite.StockLotsAsync(l.Ele, lot.LinLieuId, lot.LinDate, ct) : [];
+                foreach (var x in lotsEnStock)
+                    db.LignesBordereau.Add(new LigneBordereauEntite { BliBorId = b.BorId, BliEleId = l.Ele, BliEmpId = l.Emp, BliLot = x.Numero, BliTheorique = x.Quantite, BliOrdre = i++ });
+                var sansLot = theoriques.GetValueOrDefault(l.Ele) - lotsEnStock.Sum(x => x.Quantite);
+                if (lotsEnStock.Count == 0 || sansLot != 0)
+                    db.LignesBordereau.Add(new LigneBordereauEntite { BliBorId = b.BorId, BliEleId = l.Ele, BliEmpId = l.Emp, BliTheorique = sansLot, BliOrdre = i++ });
+            }
             await db.SaveChangesAsync(ct);
         }
         return await LotAsync(lotId, ct);
@@ -413,11 +426,18 @@ public class ServiceInventaire(StockDbContext db, SpecialisationStock specialisa
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         foreach (var x in c.Comptages)
         {
-            db.Comptages.Add(new ComptageEntite
+            var comptage = db.Comptages.Add(new ComptageEntite
             {
                 CptEleId = x.Ele, CptLieuId = lot.LinLieuId, CptDate = lot.LinDate, CptQuantite = x.Quantite, CptPrix = x.Prix, CptCommentaire = x.Commentaire,
                 CptLinId = id, CptPar = u.Code,
-            });
+            }).Entity;
+            // Lots comptés (S24-b) : retrouvés par leur numéro, sinon créés ; le reste du comptage est sans lot.
+            if (x.Lots is { Count: > 0 })
+            {
+                await db.SaveChangesAsync(ct);
+                foreach (var p in x.Lots)
+                    db.ComptagesLots.Add(new ComptageLotEntite { CplCptId = comptage.CptId, CplLotId = await tracabilite.LotParNumeroAsync(x.Ele, p.Numero, u, ct), CplQuantite = p.Quantite });
+            }
             if (x.AppliquerPmp && x.Prix is { } prix)
                 db.Reevaluations.Add(new ReevaluationEntite
                 {

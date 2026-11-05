@@ -16,6 +16,13 @@ public sealed record QuantiteLot(string Date, decimal Quantite, long? Lot);
 
 public sealed record StockLot(long? Lot, decimal Quantite);
 
+/// <summary>Lot en stock dans un lieu, candidat à une sortie : date limite et date d'entrée (« AAAA-MM-JJ »).</summary>
+public sealed record LotEnStock(long Lot, string Numero, decimal Quantite, string? Limite, string? Entree);
+
+public sealed record LotPropose(long Lot, string Numero, decimal Quantite);
+
+public sealed record PropositionLots(List<LotPropose> Parts, decimal Reste);
+
 /// <summary>Péremption d'un article (S24.7) : périssable, durée théorique et son unité (J ou M).</summary>
 public sealed record PeremptionArticle(bool Perissable, int? Duree, string Unite);
 
@@ -99,5 +106,26 @@ public static partial class ReglesTracabilite
         var res = q.Where(x => x.Value != 0).OrderBy(x => x.Key).Select(x => new StockLot(x.Key, x.Value)).ToList();
         if (sans != 0) res.Add(new(null, sans));
         return res;
+    }
+
+    /// <summary>
+    /// Lots proposés pour une sortie (S24.2) : FEFO pour un article périssable (date limite croissante, sans date en dernier,
+    /// périmés écartés), sinon FIFO (date d'entrée), puis par identifiant ; le reste non couvert est rendu.
+    /// </summary>
+    public static PropositionLots ProposerLots(decimal quantite, IReadOnlyList<LotEnStock> lots, bool perissable, string? aujourdhui)
+    {
+        var reste = Math.Abs(quantite);
+        string Cle(LotEnStock x) => string.Join("|", perissable ? x.Limite ?? "9999-12-31" : "", x.Entree ?? "", x.Lot.ToString("D20"));
+        var candidats = lots.Where(x => x.Quantite > 0 && !(perissable && x.Limite is not null && aujourdhui is not null && string.CompareOrdinal(x.Limite, aujourdhui) < 0))
+            .OrderBy(Cle, StringComparer.Ordinal).ToList();
+        var parts = new List<LotPropose>();
+        foreach (var x in candidats)
+        {
+            if (reste <= 0) break;
+            var q = Math.Min(x.Quantite, reste);
+            parts.Add(new(x.Lot, x.Numero, q));
+            reste -= q;
+        }
+        return new(parts, reste);
     }
 }

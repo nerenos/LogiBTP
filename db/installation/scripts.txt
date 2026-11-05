@@ -92,6 +92,7 @@ modules/stock/db/093c_stock_approvisionnement.sql
 modules/stock/db/093d_stock_dotations.sql
 modules/stock/db/093e_stock_inventaire_piece.sql
 modules/stock/db/093f_stock_tracabilite.sql
+modules/stock/db/093g_stock_inventaire_lots.sql
 modules/comptabilite/db/094_comptabilite.sql
 modules/comptabilite/db/094b_comptabilite_ventilation.sql
 modules/comptabilite/db/094c_comptabilite_export.sql

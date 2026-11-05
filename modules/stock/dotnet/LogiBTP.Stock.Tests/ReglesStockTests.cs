@@ -63,7 +63,7 @@ public class ReglesStockTests
         foreach (var c in Jeu("03_inventaire.json")["cas"]!.AsArray())
         {
             var lignes = c!["lignes"]!.AsArray().Select(x => new LigneInventaire(x!["bordereau"]!.GetValue<long>(), x["ele"]!.GetValue<long>(), L(x["emp"]),
-                DecN(x["quantite"]), DecN(x["prix"]), x["appliquer_pmp"]!.GetValue<bool>(), Txt(x["commentaire"]))).ToList();
+                DecN(x["quantite"]), DecN(x["prix"]), x["appliquer_pmp"]!.GetValue<bool>(), Txt(x["commentaire"]), Txt(x["lot"]))).ToList();
             var r = ReglesInventaire.Controler(lignes);
             var a = c["attendu"]!;
             var nom = c["nom"]!.ToString();
@@ -75,6 +75,7 @@ public class ReglesStockTests
                 var o = r.Comptages[i];
                 Assert.True(o.Ele == x["ele"]!.GetValue<long>() && o.Quantite == Dec(x["quantite"]!) && o.Prix == DecN(x["prix"]) && o.AppliquerPmp == x["appliquer_pmp"]!.GetValue<bool>()
                     && o.Commentaire == Txt(x["commentaire"]) && o.Lignes == x["lignes"]!.GetValue<int>(), $"{nom} : {o}");
+                Assert.Equal(x["lots"]?.AsArray().Select(p => $"{p!["numero"]}|{Dec(p["quantite"]!)}") ?? [], o.Lots?.Select(p => $"{p.Numero}|{p.Quantite}") ?? []);
             }
             Assert.Equal(a["avertissements"]!.AsArray().Select(x => $"{x!["code"]}|{x["ele"]}|{x["emp"]}|{x["nombre"]}"),
                 r.Avertissements.Select(x => $"{x.Code}|{x.Ele}|{x.Emp}|{x.Nombre}"));

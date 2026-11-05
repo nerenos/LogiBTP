@@ -279,6 +279,8 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         IReadOnlyDictionary<string, System.Text.Json.Nodes.JsonNode?> regles, string action, List<MessageCalcul> avertissements, CancellationToken ct)
     {
         if (action != "VALIDER") return;
+        // Lots et numéros de série (S24.2) : entrée d'un article suivi dont une partie reste sans lot.
+        await MouvementsStockBtp.AvertirLotsAsync(db, document.Lignes, type, avertissements, ct);
         var d = document.Document;
         var parId = document.Lignes.ToDictionary(l => l.LigId);
         // Lignes vendues : lignes de prix hors composantes d'ouvrage, options et frais annexes.

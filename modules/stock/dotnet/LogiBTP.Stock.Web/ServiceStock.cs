@@ -67,8 +67,6 @@ public class ComptageEntite
     public string? CptCommentaire { get; set; }
     public long? CptEntId { get; set; }
     public long? CptLinId { get; set; }
-    /// <summary>Lot compté (S24), null = sans lot (comptage de l'article).</summary>
-    public long? CptLotId { get; set; }
     public string? CptPar { get; set; }
     public DateTimeOffset CptLe { get; set; } = DateTimeOffset.UtcNow;
 }
@@ -123,6 +121,7 @@ public class StockDbContext(DbContextOptions<StockDbContext> options) : DbContex
     public DbSet<LieuParametreEntite> LieuxParametres => Set<LieuParametreEntite>();
     public DbSet<ArticleSuiviEntite> ArticlesSuivi => Set<ArticleSuiviEntite>();
     public DbSet<LotArticleEntite> LotsArticle => Set<LotArticleEntite>();
+    public DbSet<ComptageLotEntite> ComptagesLots => Set<ComptageLotEntite>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -145,6 +144,7 @@ public class StockDbContext(DbContextOptions<StockDbContext> options) : DbContex
         b.Entity<LieuParametreEntite>().ToTable("stk_lieu_parametre").HasKey(x => x.SlpLieuId);
         b.Entity<ArticleSuiviEntite>().ToTable("stk_article_suivi").HasKey(x => x.SasEleId);
         b.Entity<LotArticleEntite>().ToTable("stk_lot").HasKey(x => x.LotId);
+        b.Entity<ComptageLotEntite>().ToTable("stk_comptage_lot").HasKey(x => new { x.CplCptId, x.CplLotId });
     }
 }
 
