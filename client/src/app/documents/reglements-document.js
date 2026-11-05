@@ -9,7 +9,8 @@ import { api } from '../api.js';
 // Onglet Règlements de la page document (décisions du 31/10/2026) :
 // - échéancier d'une pièce validée : proposition calculée à la validation, « ⟳ Rafraîchir » la recalcule, modifiable à la
 //   main (ajout, suppression, découpage des montants, dates, modes) ; avertissement si la somme diffère du net à payer
-//   ou de la retenue ; retenue de garantie : libération prévue du marché (réception + 1 an, réserves), date modifiable ;
+//   ou de la retenue, ou si une échéance est ramenée sous son pointé (jamais refusé : trop-perçu à dépointer ou à
+//   imputer) ; retenue de garantie : libération prévue du marché (réception + 1 an, réserves), date modifiable ;
 // - pointé et reste de chaque échéance, règlements et imputations qui la pointent (module Règlements) ; retenue de
 //   garantie : part cautionnée (lot F, calculée : exigible avec la pièce, la caution ne règle rien) ;
 // - imputation d'un avoir ou d'un trop-perçu sur une facture (ou d'un avoir sur une facture suivante) ;
@@ -27,6 +28,21 @@ export function ecartsEcheancier(echeances, { netAPayer, retenue }) {
   const retenues = somme(NATURE.RETENUE).minus(D(retenue ?? 0));
   if (!retenues.isZero()) ecarts.push({ nature: NATURE.RETENUE, ecart: retenues.toString() });
   return ecarts;
+}
+
+/**
+ * Échéances ramenées sous leur pointé (décision du 05/11/2026 : avertissement seulement, l'excédent pointé devient un
+ * trop-perçu à dépointer ou à imputer) : [{ rang, montant, pointe }] pour chaque échéance enregistrée dont le montant
+ * saisi, en valeur absolue, est inférieur au montant déjà pointé (règlements, imputations ; même signe que l'échéance).
+ */
+export function echeancesSousPointe(echeances, etatParId) {
+  const res = [];
+  echeances.forEach((e, i) => {
+    const x = e.id ? etatParId.get(e.id) : null;
+    if (!x || D(x.pointe ?? 0).isZero()) return;
+    if (D(e.montant ?? 0).abs().lt(D(x.pointe).abs())) res.push({ rang: i + 1, montant: String(e.montant ?? 0), pointe: String(x.pointe) });
+  });
+  return res;
 }
 
 /** Libération prévue d'une retenue (ReglesRetenue du marché) : texte court. */
@@ -73,6 +89,7 @@ export async function afficherReglements(racine, { app, page, modes }) {
 
   const rendre = () => {
     const ecarts = ecartsEcheancier(saisie, { netAPayer, retenue: retenuePiece });
+    const sousPointe = echeancesSousPointe(saisie, etatParId);
     const ouvertes = etat.filter((e) => !e.reglee);
     zone.innerHTML = `<div class="reglements-document page-parametres">
       <section><div class="entete-page"><h3>${texteHtml('reglements_btp.document.echeancier')}</h3>${modifiable ? `<span class="boutons">
@@ -96,7 +113,8 @@ export async function afficherReglements(racine, { app, page, modes }) {
           <td class="cellule-boutons">${modifiable && !(x && !D(x.pointe ?? 0).isZero()) ? `<button type="button" data-supprimer="${i}" title="${texteHtml('reglements_btp.document.retirer')}">${iconeHtml('retirer')}</button>` : ''}</td></tr>`;
       }).join('')}</tbody></table>
       ${ecarts.map((e) => `<p class="avertissement">${iconeHtml('avertissement')} ${e.nature === NATURE.NORMALE ? texteHtml('reglements_btp.document.ecart_normal', { net: f(netAPayer), ecart: f(e.ecart) })
-        : texteHtml('reglements_btp.document.ecart_retenue', { retenue: f(retenuePiece), ecart: f(e.ecart) })}</p>`).join('')}`}
+        : texteHtml('reglements_btp.document.ecart_retenue', { retenue: f(retenuePiece), ecart: f(e.ecart) })}</p>`).join('')}
+      ${sousPointe.map((e) => `<p class="avertissement">${iconeHtml('avertissement')} ${texteHtml('reglements_btp.document.sous_pointe', { rang: e.rang, montant: f(e.montant), pointe: f(e.pointe) })}</p>`).join('')}`}
       </section>
       ${moduleReglement && echeancesDoc.length ? `<section><div class="entete-page"><h3>${texteHtml('reglements_btp.document.reglements')}</h3><span class="boutons">
         ${doc.ent_verrouille && ouvertes.length ? `<button type="button" data-imputer title="${D(netAPayer).isNegative() ? texteHtml('reglements_btp.document.imputer_avoir_aide') : texteHtml('reglements_btp.document.imputer_aide')}">${iconeHtml('reglements_btp_imputer')} ${texteHtml('reglements_btp.document.imputer')}</button>` : ''}
@@ -155,6 +173,7 @@ export async function afficherReglements(racine, { app, page, modes }) {
     zone.querySelector('[data-ech="enregistrer"]')?.addEventListener('click', async () => {
       const ecarts = ecartsEcheancier(saisie, { netAPayer, retenue: retenuePiece });
       if (ecarts.length && !(await confirmer(texte('reglements_btp.document.ecart_confirmer')))) return;
+      if (echeancesSousPointe(saisie, etatParId).length && !(await confirmer(texte('reglements_btp.document.sous_pointe_confirmer')))) return;
       try {
         await api.modifierEcheances(doc.ent_id, saisie.map((e) => ({ id: e.id ?? null, date: e.date || null, montant: e.montant, mode: e.mode ?? null, nature: e.nature })));
         await page.chargerDocument(doc.ent_id); page.afficherReglements();

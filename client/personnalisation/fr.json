@@ -6002,6 +6002,8 @@
       "rafraichir_confirmer": "Remplacer l'échéancier par la proposition calculée (condition de paiement de la pièce) ?",
       "recalcule": "Échéancier recalculé",
       "ecart_confirmer": "La somme des échéances diffère du montant à payer. Enregistrer quand même ?",
+      "sous_pointe": "Échéance {{rang}} : montant {{montant}} inférieur au déjà pointé {{pointe}} ; l'excédent pointé deviendra un trop-perçu (à dépointer ou à imputer).",
+      "sous_pointe_confirmer": "Une échéance au moins devient inférieure à ce qui est déjà pointé : l'excédent sera un trop-perçu. Enregistrer quand même ?",
       "enregistre": "Échéancier enregistré",
       "avoir_impute": "Avoir déjà entièrement imputé",
       "choix": {

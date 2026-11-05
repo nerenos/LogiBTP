@@ -90,7 +90,7 @@ Analyses validées le 23/10/2026 : [ANALYSE-MODULE-MAIL.md](documentation/concep
 - [ ] Envois à brancher quand les fonctions existeront : relevé
   hebdomadaire signé (Pointage M21), relances des devis et factures (CRM C27) ; double authentification par courriel.
 - [ ] Création d'un tiers provisoire depuis l'expéditeur d'un courriel reçu ; transfert d'un reçu à un service.
-- [ ] Lot 5 : relances par courriel (CRM C27, avec le module Règlements).
+- [ ] Lot 5 : relances par courriel (CRM C27, avec le module Règlements) : voir « Relances » (Marchés et règlements).
 - [ ] Avant la mise en production : vérification de l'application Google par Google (portée restreinte
   `https://mail.google.com/`), sinon reconnexion des boîtes Gmail tous les 7 jours (mode test) ou mot de passe
   d'application.
@@ -120,12 +120,9 @@ global). Lots à venir :
 
 ### Marchés et règlements
 
-- [ ] Échéancier modifiable avant la validation (aujourd'hui : pièce validée seulement, l'échéancier n'existe qu'à la
-  validation) et contrôle d'une échéance ramenée sous son pointé (le module Document ignore les pointages) : à décider.
-- [ ] Relances.
-- [ ] Propositions sans décision explicite (retenues par défaut, conception `CONCEPTION-MARCHES-REGLEMENTS.md` § 11) à
-  faire valider : modes d'acompte (11.1), déduction en mode chiffre d'affaires (11.2), postes HT sur commandes (11.3),
-  postes TTC restants (11.4), règlements sans le module (11.5).
+- [ ] Relances des devis et des factures : analyse du 05/11/2026 à valider
+  ([ANALYSE-RELANCES.md](documentation/conception/ANALYSE-RELANCES.md), questions R1 à R18, quatre lots ; comprend le
+  lot 5 du module Mail et C27 du CRM).
 
 ### Comptabilité
 

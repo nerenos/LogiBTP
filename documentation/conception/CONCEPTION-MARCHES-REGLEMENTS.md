@@ -338,7 +338,8 @@ retenue de garantie subie sur les sous-traitants ; paiements émis suivis par le
 L'option est-elle fixée une fois pour toutes, ou modifiable seulement s'il n'y a aucun acompte en cours ? Par marché en
 plus de la société (marchés publics : avance forfaitaire) ?
 
-**Décision** :
+**Décision** (05/11/2026) : proposition retenue, telle que réalisée au lot 4 : mode choisi pour la société, qui ne
+change plus dès qu'un acompte existe ; pas de mode par marché.
 
 ### 11.2 Déduction d'un acompte en mode chiffre d'affaires
 
@@ -354,7 +355,7 @@ change chaque facture (selon le mode de déduction, Q12) et ne peut donc pas êt
 
 **Proposition** : a), cohérent avec Q6 (rien d'HT au pied global) et avec la TVA par commande.
 
-**Décision** :
+**Décision** (05/11/2026) : proposition retenue (a), réalisée au lot 4.
 
 ### 11.3 Postes HT saisis sur les commandes
 
@@ -367,7 +368,8 @@ lot 4). En facture d'avancement, un poste en % suit la période ; un poste en mo
 **Proposition** : oui pour le premier point ; pour le second, un « modèle de pied » sur le marché, recopié dans le pied de
 chaque commande à sa validation dans le marché (modifiable sur la commande).
 
-**Décision** :
+**Décision** (05/11/2026) : proposition retenue (compte prorata en % de la commande, modèle de pied du marché recopié
+dans les commandes, lot 3).
 
 ### 11.4 Postes globaux restants (Q5)
 
@@ -376,7 +378,7 @@ en mode avance de trésorerie, autres postes TTC.
 
 **Proposition** : `marche_poste` réduit à ces postes TTC ; Q5 et Q8 sont à relire dans ce sens.
 
-**Décision** :
+**Décision** (05/11/2026) : proposition retenue (`marche_poste` de portée G : postes après TVA seulement, lot 3).
 
 ### 11.5 Règlements sans le module
 
@@ -387,7 +389,7 @@ récapitulatif (Q3) et les cautions (Q17) ?
 colonne réglé ni de reste à payer, pas de cautions (la retenue de garantie s'applique toujours) ; le module, une fois
 installé, remplit ces informations. « Surchargeable » : classes mères et méthode patron, comme les autres modules.
 
-**Décision** :
+**Décision** (05/11/2026) : proposition retenue (lot 5 : sans le module, ni colonne réglé, ni reste à payer, ni cautions).
 
 ### 11.6 Bases à poser avant la Comptabilité
 
@@ -398,6 +400,16 @@ des écritures des factures, avoirs, acomptes et règlements, export vers un log
 **Proposition** : reporter dans TACHES.md (module Comptabilité) ; aucun développement dans ce chantier.
 
 **Décision** :
+
+### 11.7 Échéancier avant la validation et échéance sous son pointé (05/11/2026)
+
+- Échéancier d'une pièce en brouillon : **décision** : il reste un aperçu (section Règlement de l'entête) ; il n'est
+  écrit qu'à la validation, puis modifiable dans l'onglet Règlements de la page document. Pas de saisie en brouillon.
+- Échéance ramenée sous le montant déjà pointé (règlements, imputations) par une modification de l'échéancier :
+  **décision** : avertissement seulement, jamais de refus ; l'excédent pointé devient un trop-perçu à dépointer ou à
+  imputer. Contrôle de l'interface (`echeancesSousPointe` de `client/src/app/documents/reglements-document.js` : ligne
+  d'avertissement et confirmation avant l'enregistrement) ; le module Document ignore toujours les pointages (une
+  échéance pointée ne se supprime pas : `ECHEANCES_POINTEES`).
 
 ## 12. Réalisation
 
