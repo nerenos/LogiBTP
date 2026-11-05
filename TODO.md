@@ -163,8 +163,10 @@ Analyse du 23/10/2026 : [ANALYSE-MODULE-SOUS-TRAITANCE.md](documentation/concept
 
 Analyse du 24/10/2026 : [ANALYSE-MODULE-STOCK.md](documentation/conception/ANALYSE-MODULE-STOCK.md).
 
-- [ ] Lots et numéros de série (S24) : analyse rédigée le 05/11/2026 (§ 11 de l'analyse : modèle, questions S24.1 à
-  S24.12, lots S24-a à S24-d) ; décisions à prendre avant la réalisation.
+- [ ] Lots et numéros de série (S24) : questions tranchées le 05/11/2026 (§ 11 de l'analyse : lots facultatifs, péremption
+  par article périssable avec durée théorique) ; réalisation par les lots S24-a (schéma, réception, stock par lot),
+  S24-b (sorties FIFO / FEFO, magasin, borne, inventaire, lot INITIAL), S24-c (certificats, traçabilité, péremption,
+  éditions et étiquettes), S24-d (numéros de série → équipements installés, avec le module SAV).
 - [ ] Clôture : valorisation du stock à date de tous les lieux (état et écriture de variation de fin d'exercice) ; la
   dépréciation (valeur d'inventaire inférieure au PMP, provision 39x) n'est pas comptabilisée par la pièce des écarts.
 
