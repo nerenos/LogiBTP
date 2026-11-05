@@ -21,6 +21,8 @@ public class LieuParametreEntite
     public long SlpLieuId { get; set; }
     public int SlpDelaiJours { get; set; } = 7;
     public int SlpFriseJours { get; set; } = 56;
+    /// <summary>Délai d'alerte avant la date limite des lots périssables (jours, S24.7).</summary>
+    public int SlpAlertePeremption { get; set; } = 30;
 }
 
 /// <summary>Événement prévu fourni par l'application : SORTIE (reste d'une réservation) ou ENTREE (reste à recevoir d'une commande), en unité de stock.</summary>
@@ -32,7 +34,7 @@ public sealed record ApproArticle(long Ele, long? FournisseurId, string? Fournis
 public sealed record LigneACommander(long Ele, decimal UnitesAchat, long? FournisseurId);
 public sealed record CommandeCreee(long EntId, string? Numero, string? Fournisseur, int Lignes);
 
-public sealed record ParametresLieuDto(long Lieu, int DelaiJours, int FriseJours);
+public sealed record ParametresLieuDto(long Lieu, int DelaiJours, int FriseJours, int? AlertePeremption = null);
 public sealed record SeuilDto(long Ele, string? Code, string? Libelle, string? Unite, decimal? Mini, decimal? Maxi, int? DelaiJours);
 public sealed record EvenementDto(string Id, string Type, string Date, decimal Quantite, long EntId, string? Numero, string TypePiece, string? Tiers, string? Chantier, bool Retard);
 public sealed record ProjectionArticle(long Lieu, long Ele, string Code, string Libelle, string Unite, int Precision, string Aujourdhui, decimal Stock,
@@ -60,16 +62,17 @@ public class ServiceApprovisionnement(StockDbContext db, SpecialisationStock spe
     public async Task<ParametresLieuDto> ParametresLieuAsync(long lieu, CancellationToken ct)
     {
         var p = await db.LieuxParametres.AsNoTracking().FirstOrDefaultAsync(x => x.SlpLieuId == lieu, ct) ?? new LieuParametreEntite { SlpLieuId = lieu };
-        return new(lieu, p.SlpDelaiJours, p.SlpFriseJours);
+        return new(lieu, p.SlpDelaiJours, p.SlpFriseJours, p.SlpAlertePeremption);
     }
 
     public async Task<ParametresLieuDto> EnregistrerParametresLieuAsync(long lieu, ParametresLieuDto s, Utilisateur u, CancellationToken ct)
     {
         await ExigerGestion(u, ct);
-        if (s.DelaiJours < 0 || s.FriseJours <= 0) throw ExceptionMetier.Invalide("STK_HORIZON", "Délai positif ou nul, frise positive");
+        if (s.DelaiJours < 0 || s.FriseJours <= 0 || s.AlertePeremption < 0) throw ExceptionMetier.Invalide("STK_HORIZON", "Délais positifs ou nuls, frise positive");
         var p = await db.LieuxParametres.FirstOrDefaultAsync(x => x.SlpLieuId == lieu, ct) ?? db.LieuxParametres.Add(new LieuParametreEntite { SlpLieuId = lieu }).Entity;
         p.SlpDelaiJours = s.DelaiJours;
         p.SlpFriseJours = s.FriseJours;
+        if (s.AlertePeremption is int a) p.SlpAlertePeremption = a;
         await db.SaveChangesAsync(ct);
         return await ParametresLieuAsync(lieu, ct);
     }

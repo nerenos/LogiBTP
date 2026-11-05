@@ -119,6 +119,7 @@ export const MENUS_METIER = [
       { code: 'stock-documents', libelle: texte('navigation_btp.menus.stock.stock_documents.libelle'), iconeHtml: iconeHtml('navigation_btp_stock_documents'), url: L('stock_documents'), creation: D('S_TRANSFERT', texte('navigation_btp.menus.stock.stock_documents.creation')) },
       { code: 'stock-appro', libelle: texte('navigation_btp.menus.stock.stock_appro.libelle'), iconeHtml: iconeHtml('navigation_btp_stock_appro'), url: '/stock/approvisionnement', info: texte('navigation_btp.menus.stock.stock_appro.info') },
       { code: 'stock-reservations', libelle: texte('navigation_btp.menus.stock.stock_reservations.libelle'), iconeHtml: iconeHtml('navigation_btp_stock_reservations'), url: L('stock_reservations'), creation: D('S_RESERVATION', texte('navigation_btp.menus.stock.stock_reservations.creation')) },
+      { code: 'stock-lots', libelle: texte('navigation_btp.menus.stock.stock_lots.libelle'), iconeHtml: iconeHtml('navigation_btp_stock_lots'), url: L('stk_lots'), info: texte('navigation_btp.menus.stock.stock_lots.info') },
       { code: 'stock-inventaires', libelle: texte('navigation_btp.menus.stock.stock_inventaires.libelle'), iconeHtml: iconeHtml('navigation_btp_stock_inventaires'), url: '/stock/inventaires', info: texte('navigation_btp.menus.stock.stock_inventaires.info') },
       { code: 'stock-depots', libelle: texte('navigation_btp.menus.stock.stock_depots.libelle'), iconeHtml: iconeHtml('navigation_btp_stock_depots'), url: L('depots'), info: texte('navigation_btp.menus.stock.stock_depots.info') },
       { separateur: true },
@@ -353,8 +354,8 @@ export function menus(app) {
 /** Raccourcis proposés à l'accueil : éléments de menu métier ayant une URL. */
 export function catalogueRaccourcis(app = null) {
   return [
-    ...MENUS_METIER.flatMap((m) => (app ? elementsMenu(app, m) : m.elements).filter((e) => e.url && e.code).map((e) => ({ code: e.code, libelle: e.libelle, icone: e.icone, iconeHtml: e.iconeHtml, url: e.url, groupe: Bandeau.libelle(m.libelle) }))),
-    { code: 'preferences', libelle: texte('navigation_btp.menus.parametres.preferences.libelle'), iconeHtml: iconeHtml('navigation_btp_preferences'), url: '/parametres', groupe: Bandeau.libelle(texte('navigation_btp.menus.parametres.libelle')) },
+    ...MENUS_METIER.flatMap((m) => (app ? elementsMenu(app, m) : m.elements).filter((e) => e.url && e.code).map((e) => ({ code: e.code, libelle: e.libelle, icone: e.icone, iconeHtml: e.iconeHtml, url: e.url, groupe: Bandeau.libelle(m.libelle), creation: e.creation })),),
+    { code: 'preferences', libelle: texte('navigation_btp.menus.parametres.preferences.libelle'), iconeHtml: iconeHtml('navigation_btp_preferences'), url: '/parametres', groupe: Bandeau.libelle(texte('navigation_btp.menus.parametres.libelle')), creation: D('preferences', texte('navigation_btp.menus.parametres.preferences.creation')) },
   ];
 }
 

@@ -262,8 +262,12 @@ export class FicheStructure extends FicheLogiBTP {
 
   /** Raccourcis vers les listes des modules facultatifs actifs (thème, libellé). */
   raccourcisModules() {
-    if (this.type !== TYPE_FICHE.CHANTIER || !this.moduleActif(MODULE_FACULTATIF.SOUS_TRAITANCE)) return [];
-    return [...pairesParCode('fiches_btp.structure.listes', ['marches_st', 'st_commandes', 'st_factures'])];
+    if (this.type !== TYPE_FICHE.CHANTIER) return [];
+    return [
+      ...(this.moduleActif(MODULE_FACULTATIF.SOUS_TRAITANCE) ? pairesParCode('fiches_btp.structure.listes', ['marches_st', 'st_commandes', 'st_factures']) : []),
+      // Lots sortis vers le chantier (S24-c, colonne chantier de v_liste_stk_lots).
+      ...(this.moduleActif(MODULE_FACULTATIF.STOCK) ? pairesParCode('fiches_btp.structure.listes', ['stk_lots']) : []),
+    ];
   }
 
   liens() { return []; }

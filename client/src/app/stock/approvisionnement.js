@@ -53,10 +53,12 @@ export class PageApprovisionnement extends PageBase {
     const p = await api.stock.parametresLieu(this.lieu);
     const z = this.conteneur.querySelector('[data-parametres]');
     z.innerHTML = `<label title="${texteHtml('stock_btp.appro.delai_titre')}">${texteHtml('stock_btp.appro.delai')} <input data-delai size="3" value="${p.delai_jours}"> ${texteHtml('stock_btp.appro.jours_court')}</label>
+      <label title="${texteHtml('stock_btp.appro.peremption_titre')}">${texteHtml('stock_btp.appro.peremption')} <input data-peremption size="3" value="${p.alerte_peremption ?? 30}"> ${texteHtml('stock_btp.appro.jours_court')}</label>
       <button type="button" data-enr-param title="${texteHtml('stock_btp.appro.enregistrer_delai')}">${iconeHtml('stock_btp_valider')}</button>`;
     z.querySelector('[data-enr-param]').addEventListener('click', async () => {
       try {
-        await api.stock.enregistrerParametresLieu(this.lieu, { lieu: this.lieu, delai_jours: Number(z.querySelector('[data-delai]').value) || 0, frise_jours: p.frise_jours });
+        await api.stock.enregistrerParametresLieu(this.lieu, { lieu: this.lieu, delai_jours: Number(z.querySelector('[data-delai]').value) || 0, frise_jours: p.frise_jours,
+          alerte_peremption: Number(z.querySelector('[data-peremption]').value) || 0 });
         await this.#charger();
       } catch (e) { this.app.erreur(e); }
     });

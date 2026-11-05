@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="64" height="64">
+  <!-- Fond Cercle Pastel -->
+  <circle cx="50" cy="50" r="46" fill="#CCFBF1" />
+  
+  <!-- Tractopelle / Engin -->
+  <!-- Cabine et Moteur -->
+  <rect x="22" y="34" width="24" height="22" rx="4" fill="#0D9488" />
+  <rect x="46" y="44" width="18" height="12" rx="4" fill="#0D9488" />
+  <rect x="20" y="30" width="28" height="6" rx="3" fill="#0D9488" />
+  
+  <!-- Fenêtre (découpe blanche) -->
+  <rect x="34" y="38" width="10" height="10" rx="2" fill="#FFFFFF" />
+  
+  <!-- Roues (ultra arrondies) -->
+  <circle cx="30" cy="66" r="12" fill="#0D9488" />
+  <circle cx="30" cy="66" r="4" fill="#FFFFFF" />
+  <circle cx="56" cy="66" r="9" fill="#0D9488" />
+  <circle cx="56" cy="66" r="3" fill="#FFFFFF" />
+  
+  <!-- Bras et Godet -->
+  <path d="M52 48L78 48L84 62" stroke="#0D9488" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M74 66L88 66L88 54" stroke="#0D9488" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+</svg>

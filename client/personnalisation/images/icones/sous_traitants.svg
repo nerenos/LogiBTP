@@ -1,3 +1,12 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Uploaded to: SVG Repo, www.svgrepo.com, Generator: SVG Repo Mixer Tools -->
-<svg width="800px" height="800px" viewBox="0 0 1024 1024" class="icon"  version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="M853.333333 853.333333c-147.2 0-341.333333 85.333333-341.333333 85.333334V469.333333s192-85.333333 384-85.333333l-42.666667 469.333333z" fill="#5C6BC0" /><path d="M170.666667 853.333333c147.2 0 341.333333 85.333333 341.333333 85.333334V469.333333s-192-85.333333-384-85.333333l42.666667 469.333333z" fill="#7986CB" /><path d="M512 256m-170.666667 0a170.666667 170.666667 0 1 0 341.333334 0 170.666667 170.666667 0 1 0-341.333334 0Z" fill="#FFB74D" /><path d="M874.666667 682.666667h21.333333c12.8 0 21.333333-8.533333 21.333333-21.333334v-85.333333c0-12.8-8.533333-21.333333-21.333333-21.333333h-21.333333c-36.266667 0-64 27.733333-64 64s27.733333 64 64 64zM149.333333 554.666667H128c-12.8 0-21.333333 8.533333-21.333333 21.333333v85.333333c0 12.8 8.533333 21.333333 21.333333 21.333334h21.333333c36.266667 0 64-27.733333 64-64s-27.733333-64-64-64z" fill="#FFB74D" /></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="64" height="64">
+  <!-- Fond cercle pastel orange -->
+  <circle cx="50" cy="50" r="46" fill="#FFEDD5" />
+  <!-- Dôme du casque -->
+  <path d="M26 52C26 37 36 27 50 27C64 27 74 37 74 52H26Z" fill="#F97316" />
+  <!-- Visière / Bordure du casque -->
+  <rect x="21" y="50" width="58" height="10" rx="5" fill="#F97316" />
+  <!-- Crête supérieure (nuance plus claire) -->
+  <path d="M44 28C44 26 46.7 24 50 24C53.3 24 56 26 56 28V36H44V28Z" fill="#FFEDD5" />
+  <!-- Jugulaire / Sangle inférieure -->
+  <path d="M33 58V63C33 67.4 36.6 71 41 71H59C63.4 71 67 67.4 67 63V58" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" fill="none" />
+</svg>

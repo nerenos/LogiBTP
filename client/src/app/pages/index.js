@@ -18,6 +18,7 @@ import { PageParametresStock } from '../stock/parametres.js';
 import { PageInventaires, PageInventaire } from '../stock/inventaires.js';
 import { PageApprovisionnement, PageProjection } from '../stock/approvisionnement.js';
 import { PageMagasin, PageDotations, PageSaisiesAValider, PageFicheDotation } from '../stock/magasin.js';
+import { PageLotStock } from '../stock/lot.js';
 import { PageParametresGed } from './parametres-ged.js';
 import { PageParametresRaccourcis } from './parametres-raccourcis.js';
 import { PageGraphe } from './graphe.js';
@@ -86,6 +87,7 @@ export const ROUTES = [
   { nom: 'consultation-comparatif', chemin: '/consultation/comparatif', page: PageComparatifConsultation, titre: texte('sous_traitance_btp.routes.comparatif') },
   { nom: 'stock', chemin: '/stock', page: PageStock, titre: texte('stock_btp.routes.stock') },
   { nom: 'mouvement-stock', chemin: '/stock/mouvement/:id', page: PageMouvementStock, titre: texte('stock_btp.routes.mouvement') },
+  { nom: 'lot-stock', chemin: '/stock/lot/:id', page: PageLotStock, titre: texte('stock_btp.routes.lot') },
   { nom: 'inventaires', chemin: '/stock/inventaires', page: PageInventaires, titre: texte('stock_btp.routes.inventaires') },
   { nom: 'inventaire', chemin: '/stock/inventaire/:id', page: PageInventaire, titre: texte('stock_btp.routes.inventaire') },
   { nom: 'approvisionnement', chemin: '/stock/approvisionnement', page: PageApprovisionnement, titre: texte('stock_btp.routes.approvisionnement') },

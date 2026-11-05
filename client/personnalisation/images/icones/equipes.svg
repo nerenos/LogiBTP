@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="64" height="64">
+  <!-- Fond Carré Arrondi (Regroupement) -->
+  <rect x="4" y="4" width="92" height="92" rx="24" fill="#E0E7FF" />
+
+  <!-- Personne Gauche (Arrière-plan) -->
+  <circle cx="32" cy="42" r="9" fill="#6366F1" />
+  <path d="M18 76C18 64 24 58 32 58C36 58 39.5 59 42 62V79H21C19 79 18 77.5 18 76Z" fill="#6366F1" />
+
+  <!-- Personne Droite (Arrière-plan) -->
+  <circle cx="68" cy="42" r="9" fill="#6366F1" />
+  <path d="M82 76C82 64 76 58 68 58C64 58 60.5 59 58 62V79H79C81 79 82 77.5 82 76Z" fill="#6366F1" />
+
+  <!-- Personne Centre (Premier plan avec contour blanc pour la découpe) -->
+  <circle cx="50" cy="34" r="11" fill="#6366F1" stroke="#FFFFFF" stroke-width="4" />
+  <path d="M28 72C28 58 36 50 50 50C64 50 72 58 72 72C72 75 69.5 77 66.5 77H33.5C30.5 77 28 75 28 72Z" fill="#6366F1" stroke="#FFFFFF" stroke-width="4" stroke-linejoin="round" />
+</svg>

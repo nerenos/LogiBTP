@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="64" height="64">
+  <!-- Fond global en forme de Pièce de Puzzle Pastel -->
+  <path d="M24 6C18.5 6 14 10.5 14 16V36C19.5 36 24 40.5 24 46C24 51.5 19.5 56 14 56V76C14 81.5 18.5 86 24 86H44C44 80.5 48.5 76 54 76C59.5 76 64 80.5 64 86H84C89.5 86 94 81.5 94 76V56C88.5 56 84 51.5 84 46C84 40.5 88.5 36 94 36V16C94 10.5 89.5 6 84 6H64C64 11.5 59.5 16 54 16C48.5 16 44 11.5 44 6H24Z" fill="#EDE9FE" />
+  
+  <!-- Pictogramme Ordre/Check centré -->
+  <circle cx="54" cy="46" r="16" fill="#8B5CF6" />
+  <path d="M46 46L51 51L62 40" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+</svg>

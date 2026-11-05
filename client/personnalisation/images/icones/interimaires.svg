@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="64" height="64">
+  <!-- Fond Cercle Pastel -->
+  <circle cx="50" cy="50" r="46" fill="#EDE9FE" />
+  
+  <!-- Silhouette Intervenant (cadrée à gauche) -->
+  <circle cx="38" cy="36" r="10" fill="#8B5CF6" />
+  <path d="M18 72C18 58 26 50 38 50C42 50 46 51 49 53C51 56 52 60 52 64V72C52 75 49.5 77 46.5 77H23.5C20.5 77 18 75 18 72Z" fill="#8B5CF6" />
+  
+  <!-- Porte-documents / Checklist d'audit -->
+  <rect x="50" y="34" width="28" height="38" rx="4" fill="#8B5CF6" />
+  
+  <!-- Pince du porte-documents (découpe blanche) -->
+  <rect x="57" y="30" width="14" height="6" rx="3" fill="#FFFFFF" />
+  
+  <!-- Lignes de la checklist (découpes blanches) -->
+  <rect x="56" y="46" width="16" height="4" rx="2" fill="#FFFFFF" />
+  <rect x="56" y="56" width="10" height="4" rx="2" fill="#FFFFFF" />
+</svg>

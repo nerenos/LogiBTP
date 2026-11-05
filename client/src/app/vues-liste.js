@@ -106,6 +106,16 @@ export const SOURCES_LISTE = {
       ['origine', 'text'], ['element_id', 'bigint'], ['lieu_id', 'bigint'], ['document_id', 'bigint'],
     ],
   },
+  // Lots et numéros de série (S24-c, db/272) : stock présent, lieux, chantiers servis (filtre ?chantier=CODE), certificats.
+  stk_lots: {
+    libelle: 'Lots et numéros de série', vue: 'v_liste_stk_lots', colonne_id: 'id', colonne_type: 'type_element',
+    colonnes: [
+      ['id', 'bigint'], ['type_element', 'text'], ['numero', 'text'], ['article', 'text'], ['article_libelle', 'text'], ['unite', 'text'], ['suivi', 'text'],
+      ['fournisseur', 'text'], ['fabrication', 'date'], ['limite', 'date'], ['coulee', 'text'], ['norme', 'text'], ['quantite', 'numeric'],
+      ['lieux', 'ARRAY'], ['chantier', 'ARRAY'], ['certificats', 'bigint'], ['certificat_exige', 'boolean'], ['sans_certificat', 'boolean'], ['perime', 'boolean'],
+      ['cree_le', 'timestamp with time zone'], ['element_id', 'bigint'],
+    ],
+  },
   depots: {
     libelle: 'Dépôts de stock', vue: 'v_liste_depots', colonne_id: 'id', colonne_type: 'type_element',
     colonnes: [
@@ -236,6 +246,7 @@ export const THEMES_LISTE = [
   },
   { thl_code: 'stk_mouvements', thl_libelle: 'Mouvements de stock', thl_icone: '🔁', thl_ordre: 45, thl_types: [{ code: 'mouvement_stock', libelle: 'Mouvement de stock' }] },
   { thl_code: 'depots', thl_libelle: 'Dépôts de stock', thl_icone: '🏬', thl_ordre: 46, thl_types: [{ code: 'chantier', libelle: 'Dépôt' }] },
+  { thl_code: 'stk_lots', thl_libelle: 'Lots et numéros de série', thl_icone: '🏷', thl_ordre: 49, thl_types: [{ code: 'stk_lot', libelle: 'Lot' }] },
   { thl_code: 'stock_reservations', thl_libelle: 'Réservations de stock', thl_icone: '📌', thl_ordre: 48, thl_types: [{ code: 'S_RESERVATION', libelle: 'Réservation' }, { code: 'S_DEMANDE', libelle: 'Demande de stock' }] },
   {
     thl_code: 'stock_documents', thl_libelle: 'Entrées, sorties et transferts', thl_icone: '🚚', thl_ordre: 47,
@@ -473,6 +484,15 @@ VUES_LISTE.push(
     col('ville', 'Ville', { ...prop(1.5, 100) }), col('nb_articles', 'Articles', { ...nombre(0), ...fixe(80), recherche: false }),
     montant('valeur', 'Valeur'), col('nb_emplacements', 'Emplacements', { ...nombre(0), ...fixe(100), recherche: false }), col('statut', 'Statut', { ...fixe(80) }),
   ], [{ colonne: 'statut', titre: 'Statut' }]),
+  vueStructure(1304, 'Lots et numéros de série', 'stk_lots', [
+    col('numero', 'N° de lot', { ...fixe(120), style: { gras: true } }), col('article', 'Article', { ...fixe(100) }), col('article_libelle', 'Libellé', { ...prop(3, 160) }),
+    col('quantite', 'En stock', { ...nombre(3), ...fixe(90), recherche: false }), col('unite', 'U.', { ...fixe(44), alignement: 'centre' }),
+    col('lieux', 'Lieux', { ...prop(1.5, 110) }), col('chantier', 'Chantiers servis', { ...prop(2, 120) }), col('fournisseur', 'Fournisseur', { ...prop(2, 120) }),
+    col('fabrication', 'Fabrication', { format: 'date', ...fixe(92), recherche: false, masquee: true }), col('limite', 'Date limite', { format: 'date', ...fixe(92), recherche: false }),
+    col('coulee', 'Coulée', { ...fixe(90) }), col('norme', 'Norme', { ...fixe(90), masquee: true }),
+    col('certificats', 'Certificats', { ...nombre(0), ...fixe(80), recherche: false }), col('sans_certificat', 'Sans certificat', { format: 'coche', ...fixe(80) }),
+    col('perime', 'Périmé', { format: 'coche', ...fixe(64) }), col('suivi', 'Suivi', { ...fixe(64), masquee: true }),
+  ], [{ colonne: 'perime', titre: 'Périmé' }, { colonne: 'sans_certificat', titre: 'Sans certificat' }], [{ colonne: 'numero', sens: 'asc' }]),
 );
 
 // Thème à plusieurs types d'élément : toutes les ressources dans une seule vue.

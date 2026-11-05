@@ -426,6 +426,8 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         }
         // Stock : mouvements des livraisons, réceptions, factures sans livraison et transferts (module Stock, § 4).
         await MouvementsStockBtp.EcrireAsync(db, entId, type, ct);
+        // Lots sortis vers un chantier : leurs certificats matière y seront copiés (file traitée hors de la transaction, S24.6).
+        if (MouvementsStockBtp.Concerne(type)) await LotsStockBtp.PlanifierCopiesAsync(db, entId, null, ct);
         // Édition de la pièce validée produite par le serveur et rangée en GED (module Édition, Q15) ; pièce de vente à
         // numérotation continue (facture, avoir…) : au coffre-fort. Ligne de la file insérée dans la transaction.
         if (FamillesDocument.EstCommerciale(type.TydFamille))

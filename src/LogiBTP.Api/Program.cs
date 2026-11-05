@@ -68,6 +68,7 @@ builder.Services.AddSecurite(securite);
 builder.Logging.AddProvider(new JournalTechnique(builder.Configuration.GetConnectionString("LogiBTP"),
     Path.Combine(builder.Environment.ContentRootPath, "journaux"), JournalTechnique.Niveau(builder.Configuration[VariablesEnv.JournalNiveau])));
 builder.Services.AddHostedService<PurgeJournaux>();
+builder.Services.AddHostedService<CopiesCertificatsLots>();
 
 // Une base par société, choisie par le sous-domaine (section Societes ; sans sous-domaine : ConnectionStrings:LogiBTP).
 builder.Services.AddSocietes(builder.Configuration);
@@ -213,6 +214,7 @@ api.MapModuleStock().ExigeModule(ModulesFacultatifs.Stock, "Stock");
 api.MapGroup("").ExigeModule(ModulesFacultatifs.Stock, "Stock").MapMagasinStock();
 api.MapGroup("").ExigeModule(ModulesFacultatifs.Stock, "Stock").MapStockBorne();
 api.MapGroup("").ExigeModule(ModulesFacultatifs.Stock, "Stock").MapDotationFiche();
+api.MapGroup("").ExigeModule(ModulesFacultatifs.Stock, "Stock").MapLotsStock();
 api.MapModulePointage().ExigeModule(ModulesFacultatifs.Pointage, "Pointage MO");
 api.MapModulePlanning().ExigeModule(ModulesFacultatifs.Planning, "Planning");
 api.MapModuleRentabilite().ExigeModule(ModulesFacultatifs.Rentabilite, "Rentabilité");

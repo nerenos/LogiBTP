@@ -2450,7 +2450,33 @@
       "magasin": "Magasin",
       "dotations": "Dotations des salariés",
       "a_valider": "Saisies de stock à valider",
-      "fiche_dotation": "Fiche de dotation"
+      "fiche_dotation": "Fiche de dotation",
+      "lot": "Lot de stock"
+    },
+    "lot": {
+      "titre": "Lot {{numero}}",
+      "article": "Article",
+      "cree": "Créé le",
+      "stock": "Stock actuel",
+      "lieu": "Lieu",
+      "aucun_stock": "Plus de stock de ce lot.",
+      "certificats": "Certificats matière",
+      "aucun_certificat": "Aucun certificat déposé.",
+      "sans_certificat": "Certificat matière exigé et absent",
+      "titre_certificat": "Titre (facultatif)",
+      "deposer": "Déposer",
+      "deposer_titre": "Rangé dans la GED du lot, puis copié dans la GED de chaque chantier où le lot est sorti",
+      "fichier_attendu": "Choisissez le fichier du certificat.",
+      "certificat_depose": "Certificat déposé ; il sera copié dans la GED des chantiers servis.",
+      "chantiers": "Chantiers servis",
+      "aucun_chantier": "Le lot n'est sorti vers aucun chantier.",
+      "tracabilite": "Traçabilité",
+      "aucun_mouvement": "Aucun mouvement.",
+      "date": "Date",
+      "piece": "Pièce",
+      "tiers": "Tiers",
+      "vers": "Vers",
+      "comptages": "Comptages d'inventaire"
     },
     "etat": {
       "date": "À la date",
@@ -2584,6 +2610,8 @@
       "delai_titre": "Horizon des propositions quand l'article n'a pas de délai",
       "delai": "Délai",
       "jours_court": "j",
+      "peremption": "Alerte de péremption",
+      "peremption_titre": "Lots périssables en stock signalés aux magasiniers (notification quotidienne) quand leur date limite tombe dans ce délai",
       "enregistrer_delai": "Enregistrer le délai du dépôt",
       "stock": "Stock",
       "reserve": "Réservé",
@@ -2825,6 +2853,8 @@
         "M": "mois"
       },
       "suivi_enregistre": "Suivi de l'article enregistré",
+      "certificat": "Certificat matière exigé",
+      "certificat_titre": "Chaque lot doit avoir son certificat matière (3.1, conformité) : les lots sans certificat sont signalés dans la liste et la fiche du lot",
       "aucun": "Aucun lot pour cet article.",
       "numero": "N°",
       "fournisseur": "Fournisseur",
@@ -4544,6 +4574,10 @@
           "libelle": "Réservations",
           "creation": "Nouvelle réservation de stock"
         },
+        "stock_lots": {
+          "libelle": "Lots et numéros de série",
+          "info": "Traçabilité des lots, certificats matière, péremption"
+        },
         "stock_inventaires": {
           "libelle": "Inventaires",
           "info": "Lots de bordereaux comptés à une date-heure, écarts, corrections"
@@ -5392,7 +5426,8 @@
         "achats_factures": "Factures fournisseurs",
         "marches_st": "Marchés de sous-traitance",
         "st_commandes": "Commandes de sous-traitance",
-        "st_factures": "Factures de sous-traitance"
+        "st_factures": "Factures de sous-traitance",
+        "stk_lots": "Lots de stock"
       },
       "acomptes": {
         "deductions": {

@@ -114,6 +114,7 @@ body:has(> .bandeau-vertical) > .pages { flex: 1; min-width: 0; min-height: 0; }
 .bandeau-vertical .bandeau-element:focus-visible small { color: #e8efff; }
 .bandeau-vertical .bandeau-element.sous-ouvert { background: var(--accent-clair); }
 .bandeau-vertical .bandeau-element.desactive { cursor: default; }
+.bandeau-vertical .bandeau-element .bandeau-icone .icone-image { height: 2.2rem; width: 2.2rem; margin-left: -0.7rem; }
 .bandeau-vertical .bandeau-libelle { overflow-wrap: anywhere; min-width: 0; }
 .bandeau-vertical .bandeau-libelle small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bandeau-vertical .bandeau-fenetre { align-self: stretch; min-height: 38px; border-radius: 6px; }
@@ -206,7 +207,7 @@ body:has(> .bandeau-auto.bandeau-gauche.bandeau-survol) > .pages { margin-right:
                  / 2.1rem minmax(0, 1fr) 2.1rem;
   background: var(--surface); border: 1px solid var(--bord); border-radius: 8px; color: inherit; text-decoration: none; text-align: center; }
 .accueil-tuile:hover { border-color: var(--accent); box-shadow: 0 2px 10px rgb(29 95 191 / 0.15); }
-.accueil-tuile .icone { grid-area: icone; padding-top: 0.25rem; font-size: 1.8rem; line-height: 1; }
+.accueil-tuile .icone { grid-area: icone; padding-top: 0.25rem; font-size: 3rem; line-height: 1; }
 .accueil-tuile .libelle { grid-area: libelle; font-weight: 500; padding: 0 0.25rem 0.25rem; }
 .accueil-tuile .bandeau-creation { grid-area: creation; align-self: start; }
 .accueil-tuile [data-fenetre], .accueil-tuile .bandeau-fleche, .accueil-retirer { grid-area: fenetre; align-self: start; }

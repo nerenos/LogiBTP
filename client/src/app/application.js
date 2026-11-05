@@ -330,6 +330,7 @@ export class Application {
     if (type === 'document_ged') return `/ged/${id}`;
     if (type === 'pointage') return `/pointage/saisie?pointage=${id}`;
     if (type === 'mouvement_stock') return `/stock/mouvement/${id}`;
+    if (type === 'stk_lot') return `/stock/lot/${id}`;
     const f = ficheDeLigne({ id, type });
     return f ? urlFiche(f.type, f.id) : null;
   }

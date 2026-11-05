@@ -337,6 +337,9 @@ export const api = {
     lotsArticle: (id) => appel('GET', `/stock/articles/${id}/lots`),
     lotsEnStock: (id, lieu) => appel('GET', `/stock/articles/${id}/lots/${lieu}`),
     modifierLot: (id, l) => appel('PUT', `/stock/lots/${id}`, l),
+    // S24-c : fiche d'un lot (traçabilité, chantiers servis) et dépôt d'un certificat matière (FormData : fichier, titre).
+    lot: (id) => appel('GET', `/stock/lots/${id}`),
+    deposerCertificat: (id, formulaire) => appel('POST', `/stock/lots/${id}/certificats`, formulaire),
     fichesDotation: (salarie) => appel('GET', `/stock/magasin/dotations/fiches?salarie=${salarie}`),
     dotations: ({ du = null, au = null, salarie = null } = {}) => appel('GET', `/stock/magasin/dotations?${new URLSearchParams(Object.fromEntries(Object.entries({ du, au, salarie }).filter(([, v]) => v !== null && v !== '')))}`),
     dotationArticle: (id) => appel('GET', `/stock/articles/${id}/dotation`),

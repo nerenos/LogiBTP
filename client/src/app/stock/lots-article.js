@@ -19,11 +19,12 @@ export async function rendreLotsArticle(zone, { id, message }) {
     <p class="ligne"><label>${texteHtml('stock_btp.lots.suivi')} <span data-suivi></span></label>
       <label><input type="checkbox" data-perissable ${s.perissable ? 'checked' : ''}> ${texteHtml('stock_btp.lots.perissable')}</label>
       <label>${texteHtml('stock_btp.lots.duree')} <input data-duree size="4" value="${s.duree ?? ''}" ${s.perissable ? '' : 'disabled'}></label> <span data-unite></span>
+      <label title="${texteHtml('stock_btp.lots.certificat_titre')}"><input type="checkbox" data-certificat ${s.certificat ? 'checked' : ''}> ${texteHtml('stock_btp.lots.certificat')}</label>
       <button type="button" data-enr-suivi>${texteHtml('commun.enregistrer')}</button></p>
     ${d.lots.length || Number(d.sans_lot) ? `<table class="tableau-compact lots-article"><thead><tr><th>${texteHtml('stock_btp.lots.numero')}</th><th>${texteHtml('stock_btp.lots.fournisseur')}</th>
       <th>${texteHtml('stock_btp.lots.fabrication')}</th><th>${texteHtml('stock_btp.lots.limite')}</th><th>${texteHtml('stock_btp.lots.coulee')}</th><th>${texteHtml('stock_btp.lots.norme')}</th>
       <th>${texteHtml('stock_btp.lots.commentaire')}</th><th>${texteHtml('stock_btp.colonnes.quantite')}</th><th>${texteHtml('stock_btp.lots.lieux')}</th><th class="cellule-boutons"></th></tr></thead><tbody>
-      ${d.lots.map((l, i) => `<tr data-lot="${i}"${Number(l.quantite) === 0 ? ' class="discret"' : ''}><td><b>${echapper(l.numero)}</b></td><td>${echapper(l.tiers_nom ?? '')}</td>
+      ${d.lots.map((l, i) => `<tr data-lot="${i}"${Number(l.quantite) === 0 ? ' class="discret"' : ''}><td><a href="/stock/lot/${l.id}" data-url><b>${echapper(l.numero)}</b></a></td><td>${echapper(l.tiers_nom ?? '')}</td>
         <td><input type="date" data-c="fabrication" value="${l.fabrication ?? ''}"></td>
         <td${l.limite && l.limite < jour ? ` class="avertissement" title="${texteHtml('stock_btp.lots.perime')}"` : ''}><input type="date" data-c="limite" value="${l.limite ?? ''}"></td>
         <td><input data-c="coulee" size="10" maxlength="60" value="${echapper(l.coulee ?? '')}"></td><td><input data-c="norme" size="10" maxlength="60" value="${echapper(l.norme ?? '')}"></td>
@@ -42,7 +43,8 @@ export async function rendreLotsArticle(zone, { id, message }) {
   zone.querySelector('[data-enr-suivi]').addEventListener('click', async () => {
     const perissable = zone.querySelector('[data-perissable]').checked;
     try {
-      await api.stock.definirSuiviArticle(id, { suivi: suivi.valeurCombo, perissable, duree: perissable && duree.value.trim() ? Number(duree.value) : null, unite: unite.valeurCombo });
+      await api.stock.definirSuiviArticle(id, { suivi: suivi.valeurCombo, perissable, duree: perissable && duree.value.trim() ? Number(duree.value) : null, unite: unite.valeurCombo,
+        certificat: zone.querySelector('[data-certificat]').checked });
       message(texte('stock_btp.lots.suivi_enregistre'));
     } catch (e) { message(e.message, 'erreur'); }
   });

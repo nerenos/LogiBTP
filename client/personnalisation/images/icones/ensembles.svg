@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="64" height="64">
+  <!-- Tenons Lego -->
+  <rect x="26" y="4" width="16" height="12" rx="5" fill="#FCA5A5" />
+  <rect x="58" y="4" width="16" height="12" rx="5" fill="#FCA5A5" />
+  <!-- Corps Lego -->
+  <rect x="10" y="14" width="80" height="78" rx="18" fill="#FEE2E2" />
+  
+  <!-- Liste à puces / Structure -->
+  <circle cx="34" cy="38" r="5" fill="#EF4444" />
+  <rect x="46" y="35" width="26" height="6" rx="3" fill="#FCA5A5" />
+  
+  <circle cx="34" cy="54" r="5" fill="#EF4444" />
+  <rect x="46" y="51" width="18" height="6" rx="3" fill="#FCA5A5" />
+  
+  <circle cx="34" cy="70" r="5" fill="#EF4444" />
+  <rect x="46" y="67" width="22" height="6" rx="3" fill="#FCA5A5" />
+</svg>

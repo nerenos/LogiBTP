@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="64" height="64">
+  <!-- Fond global en forme de Fiche Document Pastel -->
+  <path d="M20 12C20 7.5 23.5 4 28 4H62L80 22V88C80 92.5 76.5 96 72 96H28C23.5 96 20 92.5 20 88V12Z" fill="#DBEAFE" />
+  <path d="M62 4L80 22H68C64.7 22 62 19.3 62 16V4Z" fill="#BFDBFE" />
+  
+  <!-- Icône / Motif Document Client à l'intérieur -->
+  <circle cx="50" cy="42" r="11" fill="#3B82F6" />
+  <path d="M32 72C32 61 40 55 50 55C60 55 68 61 68 72C68 74 66 76 64 76H36C34 76 32 74 32 72Z" fill="#3B82F6" />
+</svg>

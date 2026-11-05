@@ -490,7 +490,8 @@ public static class SourceDocumentEdition
             ["redacteur"] = c["redacteur"]?.DeepClone(),
             ["rattachement"] = new JsonObject { ["projet"] = c["projet"]?.DeepClone(), ["affaire"] = c["affaire"]?.DeepClone(), ["chantier"] = c["chantier"]?.DeepClone(), ["marche"] = c["marche"]?.DeepClone() },
             ["intervenants"] = d.EntIntervenants is null ? new JsonArray() : JsonNode.Parse(d.EntIntervenants.RootElement.GetRawText()),
-            ["lignes"] = LignesImprimees(r, lignes, descriptions),
+            ["lignes"] = LignesImprimees(r, lignes, descriptions,
+                await LotsStockBtp.LotsLignesAsync(db, d.EntId, r.Lignes.Select(l => (l.LigId, l.LigProprietes)), ct)),
             ["pied"] = Pied(r.Pied, r, lignes),
             ["tva"] = new JsonArray(r.Tva.Select(t => (JsonNode?)new JsonObject
             {
@@ -649,7 +650,7 @@ public static class SourceDocumentEdition
     private sealed record DescriptionSql(long Id, string Html);
 
     private static JsonArray LignesImprimees(ResultatDocument<DocumentBtp, DocumentLigneBtp> r, Dictionary<long, DocumentLigneBtp> parId,
-        IReadOnlyDictionary<long, string>? descriptions = null)
+        IReadOnlyDictionary<long, string>? descriptions = null, IReadOnlyDictionary<long, JsonArray>? lots = null)
     {
         var enfants = r.Lignes.GroupBy(l => l.LigParentId ?? 0).ToDictionary(g => g.Key, g => g.OrderBy(l => l.LigOrdre).ToList());
         var piedsSections = r.PiedsSections.ToDictionary(p => p.LigId, p => p.Pied);
@@ -678,6 +679,8 @@ public static class SourceDocumentEdition
                         ["avt_montant_precedent"] = l.LigAvtMontantPrecedent, ["avt_pct_precedent"] = l.LigAvtPctPrecedent,
                         ["avt_qte_marche"] = l.LigAvtQteMarche, ["avt_montant_marche"] = l.LigAvtMontantMarche,
                         ["description_html"] = l.LigArtId is long art && descriptions?.GetValueOrDefault(art) is { } desc ? desc : null,
+                        ["lots"] = lots?.GetValueOrDefault(l.LigId)?.DeepClone(),
+                        ["lots_texte"] = LotsStockBtp.TexteLots(lots?.GetValueOrDefault(l.LigId)),
                     };
                     res.Add(o);
                 }
@@ -897,7 +900,11 @@ public static class SourceDocumentEdition
             ("lignes[].avt_montant_cumul", "Montant HT cumulé", "montant"), ("lignes[].avt_montant_precedent", "Montant HT précédent", "montant"),
             ("lignes[].avt_pct_precedent", "Avancement précédent (%)", "nombre"), ("lignes[].avt_qte_marche", "Quantité du marché", "nombre"),
             ("lignes[].avt_montant_marche", "Montant HT du marché", "montant"),
-            ("lignes[].description_html", "Description technique de l'élément de bibliothèque appelé (HTML : html: true)", "html"));
+            ("lignes[].description_html", "Description technique de l'élément de bibliothèque appelé (HTML : html: true)", "html"),
+            ("lignes[].lots", "Lots et numéros de série de la ligne (pièces de stock : mouvements de la pièce validée, sinon répartition saisie)", "collection"),
+            ("lignes[].lots[].numero", "Numéro du lot ou de série", "texte"), ("lignes[].lots[].quantite", "Quantité du lot", "nombre"),
+            ("lignes[].lots[].limite", "Date limite", "date"), ("lignes[].lots[].coulee", "Numéro de coulée", "texte"),
+            ("lignes[].lots_texte", "Lots de la ligne en une phrase (« Lots : A12 (4) ; B07 (6) », HTML échappé)", "texte"));
         G("Pied et totaux",
             ("pied", "Pied imprimable, dans l'ordre", "collection"), ("pied[].genre", "total, sous_total, poste, tva", "texte"),
             ("pied[].cle", "TOTAL_HT, HT_NET, TOTAL_TTC, NET, TVA…", "texte"), ("pied[].libelle", "Libellé", "texte"), ("pied[].mode", "Poste : P %, M montant, C coefficient", "texte"),

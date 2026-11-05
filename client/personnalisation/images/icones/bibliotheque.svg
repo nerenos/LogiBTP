@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="64" height="64">
+  <!-- Fond Carré Arrondi (Regroupement) -->
+  <rect x="4" y="4" width="92" height="92" rx="24" fill="#FEE2E2" />
+  <!-- Classeurs / Livres de la bibliothèque -->
+  <rect x="26" y="26" width="14" height="48" rx="4" fill="#EF4444" />
+  <rect x="44" y="26" width="14" height="48" rx="4" fill="#EF4444" />
+  <!-- Livre incliné -->
+  <path d="M61 73L75 29L88 33L74 77Z" fill="#FCA5A5" />
+</svg>

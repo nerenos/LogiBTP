@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="64" height="64">
+  <!-- Fond Carré Arrondi -->
+  <rect x="4" y="4" width="92" height="92" rx="24" fill="#FCE7F3" />
+  <!-- Icône Tiers -->
+  <circle cx="50" cy="38" r="14" fill="#EC4899" />
+  <path d="M24 74C24 60 35 52 50 52C65 52 76 60 76 74C76 77 73.5 79 70.5 79H29.5C26.5 79 24 77 24 74Z" fill="#EC4899" />
+  <circle cx="50" cy="38" r="6" fill="#FFFFFF" />
+</svg>

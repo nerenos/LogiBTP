@@ -124,6 +124,8 @@ const BLOCS = [
             mt: { valeur: '=Si(ligne.pour_memoire; "PM"; ligne.montant)', alignement: 'droite' },
           },
         },
+        // Lots et numéros de série de la ligne (pièces de stock, S24.12) sous la désignation.
+        { condition: 'ligne.lots_texte', surcharges: { lib: { retrait: '=ligne.niveau * 2', valeur: '=Concat(ligne.libelle_html; "<br><i>"; ligne.lots_texte; "</i>")', html: true } } },
         { surcharges: { lib: { retrait: '=ligne.niveau * 2' } } },
       ],
     },
@@ -473,6 +475,25 @@ const AUTRES = [
       bandes: [{ contenu: { type: 'pile', enfants: [
         champ('{{element._titre}}', { style: 'gras', multiligne: 'une', reduction_min: 7 }),
         champ('=Joindre(Ligne(); element._suite)', { multiligne: 'sauts', lignes_max: 3, ellipse: true }),
+      ] } }],
+    },
+  },
+  // Étiquettes des lots et numéros de série (S24.12) : liste des lots (vue de la liste stk_lots ; colonnes numero, article,
+  // article_libelle, limite et coulee de la vue imprimée), numéro en Code 39 (caractères hors Code 39 : alerte, pas de code).
+  {
+    code: 'ETIQUETTES_LOT', libelle: 'Étiquettes de lots 70 × 37 mm (3 × 8, code-barres du numéro)', genre: 'RAPPORT', cible: 'LISTE', source: 'liste', types: ['stk_lots'], ordre: 30,
+    contenu: {
+      format_version: 1, code: 'ETIQUETTES_LOT', libelle: 'Étiquettes de lots', cible: 'LISTE', source: 'liste', mode: 'ETIQUETTES', collection: 'lignes',
+      page: { format: 'A4', orientation: 'portrait', marges: { haut: 0, bas: 0, gauche: 0, droite: 0 } },
+      planche: { colonnes: 3, rangees: 8, largeur: 70, hauteur: 37, marge_haut: 0.5, marge_gauche: 0, marge_interieure: 3 },
+      parametres: [
+        { nom: 'premiere_etiquette', libelle: 'Première étiquette (planche entamée)', type: 'nombre', defaut: 1 },
+        { nom: 'copies', libelle: 'Exemplaires', type: 'nombre', defaut: 1 },
+      ],
+      bandes: [{ contenu: { type: 'pile', espacement: 0.5, enfants: [
+        champ('=Joindre(" – "; element.article; element.article_libelle)', { style: 'gras', multiligne: 'une', reduction_min: 6, ellipse: true }),
+        { type: 'code39', valeur: '=Majuscule(element.numero)', taille: 20, alignement: 'centre' },
+        champ('=Joindre(" · "; Si(element.limite; "DLU " & Date(element.limite); Nul); Si(element.coulee; "Coulée " & element.coulee; Nul))', { style: 'petit', alignement: 'centre', multiligne: 'une', ellipse: true }),
       ] } }],
     },
   },

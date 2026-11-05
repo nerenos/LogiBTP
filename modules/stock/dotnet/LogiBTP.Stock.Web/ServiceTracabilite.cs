@@ -14,6 +14,8 @@ public class ArticleSuiviEntite
     public bool SasPerissable { get; set; }
     public int? SasDuree { get; set; }
     public string SasUnite { get; set; } = UniteDuree.Mois;
+    /// <summary>Certificat matière exigé pour chaque lot (S24-c : lots sans certificat signalés).</summary>
+    public bool SasCertificat { get; set; }
     public string? SasMajPar { get; set; }
     public DateTimeOffset SasMajLe { get; set; } = DateTimeOffset.UtcNow;
 }
@@ -44,7 +46,7 @@ public class ComptageLotEntite
     public decimal CplQuantite { get; set; }
 }
 
-public sealed record SuiviArticleDto(string Suivi, bool Perissable, int? Duree, string Unite);
+public sealed record SuiviArticleDto(string Suivi, bool Perissable, int? Duree, string Unite, bool Certificat = false);
 public sealed record StockLieuLot(long Lieu, string? LieuCode, decimal Quantite);
 public sealed record LotDtoArticle(long? Id, string? Numero, long? Tiers, string? TiersNom, string? Fabrication, string? Limite, string? Coulee, string? Norme,
     string? Commentaire, decimal Quantite, List<StockLieuLot> Lieux, string? Cree);
@@ -125,7 +127,7 @@ public class ServiceTracabilite(StockDbContext db, SpecialisationStock specialis
     public async Task<SuiviArticleDto> SuiviAsync(long ele, CancellationToken ct)
     {
         var s = await db.ArticlesSuivi.AsNoTracking().FirstOrDefaultAsync(x => x.SasEleId == ele, ct);
-        return s is null ? new(SuiviArticle.Aucun, false, null, UniteDuree.Mois) : new(s.SasSuivi, s.SasPerissable, s.SasDuree, s.SasUnite);
+        return s is null ? new(SuiviArticle.Aucun, false, null, UniteDuree.Mois) : new(s.SasSuivi, s.SasPerissable, s.SasDuree, s.SasUnite, s.SasCertificat);
     }
 
     /// <summary>Suivi d'un article : mode connu, durée positive (périssable seulement), unité J ou M ; un article sans suivi garde sa ligne.</summary>
@@ -142,6 +144,7 @@ public class ServiceTracabilite(StockDbContext db, SpecialisationStock specialis
         s.SasPerissable = d.Perissable;
         s.SasDuree = d.Perissable ? d.Duree : null;
         s.SasUnite = d.Unite;
+        s.SasCertificat = d.Certificat && d.Suivi != SuiviArticle.Aucun;
         s.SasMajPar = u.Code;
         s.SasMajLe = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(ct);

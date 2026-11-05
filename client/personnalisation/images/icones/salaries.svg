@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="64" height="64">
+  <!-- Fond Cercle Pastel -->
+  <circle cx="50" cy="50" r="46" fill="#E0E7FF" />
+  
+  <!-- Silhouette Salarié -->
+  <circle cx="50" cy="34" r="11" fill="#6366F1" />
+  <path d="M26 72C26 58 36 50 50 50C64 50 74 58 74 72C74 75 71.5 77 68.5 77H31.5C28.5 77 26 75 26 72Z" fill="#6366F1" />
+  
+  <!-- Cordon du badge (découpe) -->
+  <path d="M42 50L50 60L58 50" stroke="#FFFFFF" stroke-width="2" fill="none" stroke-linecap="round" />
+  
+  <!-- Badge BTP -->
+  <rect x="43" y="58" width="14" height="18" rx="3" fill="#FFFFFF" />
+  <rect x="46" y="62" width="8" height="5" rx="1.5" fill="#6366F1" />
+  <circle cx="50" cy="71" r="1.5" fill="#6366F1" />
+</svg>

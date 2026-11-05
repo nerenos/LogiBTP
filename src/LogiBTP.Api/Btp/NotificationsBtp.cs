@@ -280,10 +280,12 @@ public sealed class SourceStockBtp(LogiBtpContext db) : ISourceNotifications
     public string Code => "stock";
     public TimeSpan Periode => TimeSpan.FromHours(1);
     public IReadOnlyList<TypeNotification> Types { get; } =
-        [new("stock", "A_VALIDER", "Sorties et retours saisis à la borne, à valider"), new("stock", "RENOUVELER", "EPI et outillage dotés à renouveler")];
+        [new("stock", "A_VALIDER", "Sorties et retours saisis à la borne, à valider"), new("stock", "RENOUVELER", "EPI et outillage dotés à renouveler"),
+         new("stock", "PEREMPTION", "Lots périssables en stock proches de leur date limite")];
 
     private sealed record SaisieSql(long EntId, string? Numero, string? Nom, int? Salarie);
     private sealed record SalarieSql(int Id, string Nom, int? Service);
+    private sealed record PeremptionSql(long Lieu, string Code, int Lots, int Perimes, DateOnly Premiere);
 
     private Task<List<string>> ChefsAsync(int salarie, CancellationToken ct) =>
         db.Database.SqlQueryRaw<string>($"""
@@ -320,6 +322,23 @@ public sealed class SourceStockBtp(LogiBtpContext db) : ISourceNotifications
             r.AddRange(dest.Select(d => new NouvelleNotification(d, "stock", "RENOUVELER", $"Dotations : {g.Count()} article(s) à renouveler pour {nom}",
                 echus > 0 ? $"{echus} déjà échu(s)" : "Dans les 30 jours", echus > 0 ? NiveauNotification.Attention : NiveauNotification.Info, $"/fiche/salarie/{g.Key}", null, null,
                 $"stock-renouveler:{g.Key}:{jour:yyyy-MM-dd}")));
+        }
+        // Péremption (S24.7) : une fois par jour et par lieu, lots d'articles périssables encore en stock dont la date
+        // limite tombe dans le délai d'alerte du lieu (slp_alerte_peremption, 30 jours par défaut), périmés compris.
+        var peremptions = await db.Database.SqlQuery<PeremptionSql>($"""
+            SELECT q.lieu_id AS lieu, c.cha_code AS code, count(*)::int AS lots, count(*) FILTER (WHERE l.lot_limite < {jour})::int AS perimes, min(l.lot_limite) AS premiere
+            FROM v_stk_stock_lot q JOIN stk_lot l ON l.lot_id = q.lot_id JOIN stk_article_suivi s ON s.sas_ele_id = l.lot_ele_id AND s.sas_perissable
+            JOIN chantier c ON c.cha_id = q.lieu_id LEFT JOIN stk_lieu_parametre p ON p.slp_lieu_id = q.lieu_id
+            WHERE q.quantite > 0 AND l.lot_limite IS NOT NULL AND l.lot_limite <= {jour} + coalesce(p.slp_alerte_peremption, 30)
+            GROUP BY q.lieu_id, c.cha_code
+            """).ToListAsync(ct);
+        if (peremptions.Count > 0)
+        {
+            var dest = magasiniers.Count > 0 ? magasiniers : await AdministrateursAsync(ct);
+            foreach (var p in peremptions)
+                r.AddRange(dest.Select(d => new NouvelleNotification(d, "stock", "PEREMPTION", $"Stock {p.Code} : {p.Lots} lot(s) périssable(s) à écouler",
+                    p.Perimes > 0 ? $"{p.Perimes} lot(s) déjà périmé(s)" : $"Première date limite le {p.Premiere:dd/MM/yyyy}",
+                    p.Perimes > 0 ? NiveauNotification.Attention : NiveauNotification.Info, "/liste/stk_lots", null, null, $"stock-peremption:{p.Lieu}:{jour:yyyy-MM-dd}")));
         }
         return r;
     }
