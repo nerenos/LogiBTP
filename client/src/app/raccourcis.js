@@ -40,6 +40,13 @@ declarerRaccourcis('document', {
   },
 });
 
+// Fiches : le groupe est déclaré par le module Fiche (onglets, modifier, copier…) ; actions propres au cœur.
+declarerRaccourcis('fiche', {
+  actions: {
+    imprimer: { libelle: texte('navigation_btp.raccourcis.fiche.imprimer'), defaut: 'Ctrl+P' },
+  },
+});
+
 declarerRaccourcis('planning', {
   libelle: texte('navigation_btp.raccourcis.planning.groupe'),
   actions: {

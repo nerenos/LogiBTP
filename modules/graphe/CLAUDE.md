@@ -31,6 +31,7 @@
 
 ## Conventions et pièges
 - Réglages (dont `profondeur`, bornée 1..`profondeurMax`, défaut 2) dans les préférences du navigateur, jamais en base ; chaque changement réécrit les préférences puis recharge.
+- `charger` n'affiche rien si la vue a été retirée de la page pendant le chargement (onglet quitté).
 - Positions déplacées à la main gardées dans `manuelles` ; « ⟲ Disposer » les efface. `developper` fusionne puis redispose sans recadrer.
 - Export SVG autonome : variables du thème (`--surface`, `--fond`, `--texte`, `--discret`, `--bord`, `--accent`) résolues dans l'image ; marqueurs `graphe-fleche` / `graphe-fleche-lien`.
 - Aucune notion métier ici (pas de personne, chantier…) ; le parcours métier vit dans le module consommateur (et en C# s'il est répliqué, ex. `GrapheAnnuaire.cs`).

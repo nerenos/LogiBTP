@@ -170,7 +170,10 @@ export class VueGraphe {
   }
 
   async charger({ garderVue = false } = {}) {
-    this.graphe = await this.chargerGraphe(this.depart, this.reglages);
+    const graphe = await this.chargerGraphe(this.depart, this.reglages);
+    // Vue retirée pendant le chargement (onglet quitté) : rien à afficher.
+    if (!this.monde.isConnected) return;
+    this.graphe = graphe;
     this.#disposer();
     this.rendre();
     if (!garderVue) this.ajuster();

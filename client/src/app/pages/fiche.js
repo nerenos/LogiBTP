@@ -46,7 +46,7 @@ export class PageFiche extends PageBase {
       peutParametrer: app.estAdmin(),
       // Impression de la fiche (module Édition) avec les autres boutons de la fiche.
       actions: [{
-        icone: icone('pages_btp_imprimer'), libelle: texte('pages_btp.fiche.imprimer'), titre: texte('pages_btp.fiche.imprimer_aide'),
+        icone: icone('pages_btp_imprimer'), libelle: texte('pages_btp.fiche.imprimer'), titre: texte('pages_btp.fiche.imprimer_aide'), raccourci: 'imprimer',
         action: () => app.naviguer(`/edition?source=fiche&id=${encodeURIComponent(`${type}/${this.fiche?.id ?? this.params.id}`)}`, { nouvelleFenetre: true }),
       },
       // Fiche ouverte depuis une liste : fiches précédente et suivante de la liste (ses lignes affichées).

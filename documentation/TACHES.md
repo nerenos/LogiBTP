@@ -160,3 +160,6 @@
 - [x] Revue du code, lot F (fin) : statuts des requêtes du cœur par constantes (`StatutsDocument`, `StatutsDocumentBtp`
   nouveau ↔ `STATUT_DOCUMENT_BTP`) ; requêtes interpolées : statut en paramètre et listes en tableau
   (`std_code <> ALL({SqlBtp.StatutsHorsVigueur})`), requêtes brutes : `NOT IN ({SqlBtp.HorsVigueur})`.
+- [x] Raccourcis clavier des fiches : groupe `fiche` du module Fiche (Modifier F2, onglets Alt+1…9, copier, supprimer,
+  synthèse, confidentiel, paramétrer, onglets précédent / suivant), Imprimer Ctrl+P du cœur, touches dans les bulles ;
+  onglet Graphe quitté avant la fin de son chargement : plus d'erreur.

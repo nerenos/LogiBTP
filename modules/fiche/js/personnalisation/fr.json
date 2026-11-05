@@ -166,6 +166,19 @@
       "aucun": "Aucun champ supplémentaire",
       "erreur_requete": "{{champ}} : {{message}}",
       "enregistre": "Paramétrage enregistré"
+    },
+    "raccourcis": {
+      "groupe": "Fiches",
+      "modifier": "Passer en modification",
+      "annuler": "Annuler les modifications",
+      "copier": "Copier la fiche",
+      "supprimer": "Supprimer la fiche",
+      "synthese": "Afficher ou masquer la synthèse",
+      "confidentiel": "Afficher les informations confidentielles",
+      "parametrer": "Paramétrer la fiche",
+      "onglet_precedent": "Onglet précédent",
+      "onglet_suivant": "Onglet suivant",
+      "onglet": "Onglet {{rang}}"
     }
   },
   "erreurs": {

@@ -1,11 +1,31 @@
 import { ERREUR_FICHE } from '../src/codes.js';
-import { echapper, formatLibre, htmlSur, editerLibelle, creerCombo, confirmer, formatHeure, notifier } from '@logibtp/socle/ui';
+import { echapper, formatLibre, htmlSur, editerLibelle, creerCombo, confirmer, formatHeure, notifier, declarerRaccourcis, actionDe, libelleRaccourci } from '@logibtp/socle/ui';
 import { MODES, LIBELLES_MODES, enSaisie, titreFiche } from '../src/modes.js';
 import { validerFiche, MESSAGES } from '../src/validation.js';
 import { ParametrageFiche } from './parametrage.js';
 import { texte, texteHtml, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 
 const BATTEMENT = 30000;
+
+// Fonctions de la fiche qui acceptent un raccourci clavier (groupe fiche, personnalisable : page des raccourcis de
+// l'application). L'hôte complète le groupe (declarerRaccourcis('fiche', …)) pour ses propres actions, qu'il désigne
+// par la propriété raccourci de l'action (option actions, actionsSupplementaires).
+const ONGLETS = 9;
+declarerRaccourcis('fiche', {
+  libelle: texte('fiche.raccourcis.groupe'),
+  actions: {
+    modifier: { libelle: texte('fiche.raccourcis.modifier'), defaut: 'F2' },
+    annuler: { libelle: texte('fiche.raccourcis.annuler'), defaut: [] },
+    copier: { libelle: texte('fiche.raccourcis.copier'), defaut: [] },
+    supprimer: { libelle: texte('fiche.raccourcis.supprimer'), defaut: [] },
+    synthese: { libelle: texte('fiche.raccourcis.synthese'), defaut: [] },
+    confidentiel: { libelle: texte('fiche.raccourcis.confidentiel'), defaut: [] },
+    parametrer: { libelle: texte('fiche.raccourcis.parametrer'), defaut: [] },
+    ongletPrecedent: { libelle: texte('fiche.raccourcis.onglet_precedent'), defaut: [] },
+    ongletSuivant: { libelle: texte('fiche.raccourcis.onglet_suivant'), defaut: [] },
+    ...Object.fromEntries(Array.from({ length: ONGLETS }, (_, i) => [`onglet${i + 1}`, { libelle: texte('fiche.raccourcis.onglet', { rang: i + 1 }), defaut: `Alt+${i + 1}` }])),
+  },
+});
 const CLE_CONFIDENTIEL = 'logibtp.fiche.confidentiel';
 
 const jetonNeuf = () => (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`);
@@ -39,7 +59,11 @@ export function definirConfidentielSession(actif) {
  * surEnregistre(fiche, { cree }), surFerme().
  */
 /** Bulle d'un bouton : libellé (bouton en icône seule) puis explication. */
-const bulle = (b) => (b.icone ? [b.libelle, b.titre].filter(Boolean).join(' — ') : (b.titre ?? ''));
+const bulle = (b) => {
+  const t = b.icone ? [b.libelle, b.titre].filter(Boolean).join(' — ') : (b.titre ?? '');
+  const touches = b.raccourci ? libelleRaccourci(b.raccourci, 'fiche') : '';
+  return touches ? `${t} (${touches})` : t;
+};
 
 export class FicheBase {
   constructor({ conteneur, fournisseur, type, id = null, mode = MODES.CONSULTATION, message, ged = null, peutParametrer = false, actions = [], surEnregistre, surFerme, surSupprime, ouvrirFiche = null, ouvrirLien = null }) {
@@ -122,11 +146,13 @@ export class FicheBase {
       else if (this.mode === MODES.MODIFICATION) {
         this.mode = MODES.CONSULTATION;
         this.#construire();
+        this.#brancherClavier();
         await this.modifier();
         return this;
       }
     }
     this.#construire();
+    this.#brancherClavier();
     if (this.#creation()) await this.#majCode({ immediat: true });
     else this.actualiserSynthese();
     return this;
@@ -299,19 +325,21 @@ export class FicheBase {
     const saisie = enSaisie(this.mode);
     const masques = this.fiche.masques.length > 0;
     const boutons = [
-      { icone: icone('fiche_modifier'), libelle: texte('fiche.fiche.modifier'), titre: texte('fiche.fiche.modifier_aide'), action: () => this.modifier(), visible: !saisie && d.modifier && this.id !== null, principal: true, groupe: 'edition' },
+      { icone: icone('fiche_modifier'), libelle: texte('fiche.fiche.modifier'), titre: texte('fiche.fiche.modifier_aide'), action: () => this.modifier(), raccourci: 'modifier', visible: !saisie && d.modifier && this.id !== null, principal: true, groupe: 'edition' },
       { libelle: texte('commun.enregistrer'), titre: texte('fiche.fiche.enregistrer_aide'), action: () => this.enregistrer(), visible: saisie, principal: true, groupe: 'edition' },
-      { libelle: texte('commun.annuler'), titre: texte('fiche.fiche.annuler_aide'), action: () => this.annuler(), visible: saisie, groupe: 'edition' },
-      { icone: icone('fiche_copier'), libelle: texte('fiche.fiche.copier'), titre: texte('fiche.fiche.copier_aide'), action: () => this.copier(), visible: !saisie && d.modifier && this.id !== null, groupe: 'element' },
-      { icone: icone('supprimer'), libelle: texte('commun.supprimer'), titre: texte('fiche.fiche.supprimer_aide'), action: () => this.supprimer(), visible: !saisie && d.supprimer && this.id !== null, groupe: 'element' },
-      { icone: icone('fiche_synthese'), libelle: texte('fiche.fiche.synthese'), titre: texte('fiche.fiche.synthese_aide'), action: () => this.#basculerSynthese(), visible: !saisie && this.id !== null, actif: this.#syntheseVisible(), groupe: 'affichage' },
-      { icone: icone('fiche_confidentiel'), libelle: texte('fiche.fiche.confidentiel'), titre: texte('fiche.fiche.confidentiel_aide'), action: () => this.reveler(), visible: masques && d.confidentiel, groupe: 'affichage' },
+      { libelle: texte('commun.annuler'), titre: texte('fiche.fiche.annuler_aide'), action: () => this.annuler(), raccourci: 'annuler', visible: saisie, groupe: 'edition' },
+      { icone: icone('fiche_copier'), libelle: texte('fiche.fiche.copier'), titre: texte('fiche.fiche.copier_aide'), action: () => this.copier(), raccourci: 'copier', visible: !saisie && d.modifier && this.id !== null, groupe: 'element' },
+      { icone: icone('supprimer'), libelle: texte('commun.supprimer'), titre: texte('fiche.fiche.supprimer_aide'), action: () => this.supprimer(), raccourci: 'supprimer', visible: !saisie && d.supprimer && this.id !== null, groupe: 'element' },
+      { icone: icone('fiche_synthese'), libelle: texte('fiche.fiche.synthese'), titre: texte('fiche.fiche.synthese_aide'), action: () => this.#basculerSynthese(), raccourci: 'synthese', visible: !saisie && this.id !== null, actif: this.#syntheseVisible(), groupe: 'affichage' },
+      { icone: icone('fiche_confidentiel'), libelle: texte('fiche.fiche.confidentiel'), titre: texte('fiche.fiche.confidentiel_aide'), action: () => this.reveler(), raccourci: 'confidentiel', visible: masques && d.confidentiel, groupe: 'affichage' },
       ...this.actionsSupplementaires(),
       // Actions de l'application hôte (imprimer…), hors saisie et sur une fiche enregistrée.
       ...this.actionsHote.map((a) => ({ ...a, visible: !saisie && this.id !== null && a.visible !== false })),
-      { icone: icone('fiche_parametrer'), libelle: texte('fiche.fiche.parametrer'), titre: texte('fiche.fiche.parametrer_aide'), action: () => this.parametrer(), visible: this.peutParametrer },
+      { icone: icone('fiche_parametrer'), libelle: texte('fiche.fiche.parametrer'), titre: texte('fiche.fiche.parametrer_aide'), action: () => this.parametrer(), raccourci: 'parametrer', visible: this.peutParametrer },
       { icone: icone('retirer'), libelle: texte('commun.fermer'), titre: texte('commun.fermer_echap'), action: () => this.fermer(), visible: true, groupe: 'fermer' },
     ].filter((b) => b.visible !== false);
+    // Actions visibles par code de raccourci (clavier : #clavier).
+    this.actionsClavier = Object.fromEntries(boutons.filter((b) => b.raccourci).map((b) => [b.raccourci, b.action]));
     const zone = this.conteneur.querySelector('.fiche-actions');
     // Barre en groupes séparés (I7) : édition | élément | affichage | actions | fermer.
     const bouton = (b) => `<button type="button" data-i="${boutons.indexOf(b)}" class="${b.principal ? 'principal' : ''}${b.icone ? ' bouton-icone' : ''}" title="${echapper(bulle(b))}" aria-label="${echapper(b.libelle)}"${b.actif === undefined ? '' : ` aria-pressed="${b.actif}"`}>${echapper(b.icone ?? b.libelle)}</button>`;
@@ -897,6 +925,40 @@ export class FicheBase {
     });
   }
 
+  // ---------------------------------------------------------------- clavier
+
+  /** Raccourcis du groupe fiche, écoutés sur le document tant que la fiche est affichée. */
+  #brancherClavier() {
+    if (this.clavier) return;
+    this.clavier = (e) => {
+      if (!this.conteneur.isConnected) { this.#debrancherClavier(); return; }
+      if (e.defaultPrevented || document.querySelector('dialog[open]')) return;
+      const action = actionDe(e, 'fiche');
+      const f = action && this.#fonctionClavier(action);
+      if (!f) return;
+      e.preventDefault();
+      Promise.resolve(f()).catch((x) => this.#erreur(x));
+    };
+    document.addEventListener('keydown', this.clavier);
+  }
+
+  #debrancherClavier() {
+    if (this.clavier) document.removeEventListener('keydown', this.clavier);
+    this.clavier = null;
+  }
+
+  /** Fonction d'un raccourci : onglet (rang ou voisin), sinon action visible de la barre. */
+  #fonctionClavier(action) {
+    const sections = this.definition ? this.sections() : [];
+    const aller = (i) => (sections[i] && sections[i].code !== this.section ? () => { this.section = sections[i].code; this.rendre(); } : null);
+    const rang = /^onglet(\d+)$/.exec(action);
+    if (rang) return aller(Number(rang[1]) - 1);
+    const courant = sections.findIndex((s) => s.code === this.section);
+    if (action === 'ongletPrecedent') return aller((courant - 1 + sections.length) % sections.length);
+    if (action === 'ongletSuivant') return aller((courant + 1) % sections.length);
+    return this.actionsClavier?.[action] ?? null;
+  }
+
   /** Suppression après confirmation ; la fiche se ferme (surSupprime, sinon surFerme). */
   async supprimer() {
     const titre = titreFiche(this.definition.titre, this.valeurs()) || texte('fiche.fiche.titre_defaut', { libelle: this.definition.libelle, id: this.id });
@@ -910,6 +972,7 @@ export class FicheBase {
 
   async fermer({ sansConfirmation = false } = {}) {
     if (!sansConfirmation && this.modifiee && !await confirmer(texte('fiche.fiche.fermer_question'))) return false;
+    this.#debrancherClavier();
     await this.#liberer();
     this.surFerme?.();
     return true;

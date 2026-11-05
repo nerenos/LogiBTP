@@ -4881,6 +4881,9 @@
         "ongletReglements": "Onglet Règlements",
         "ongletOptions": "Onglet Options"
       },
+      "fiche": {
+        "imprimer": "Imprimer la fiche"
+      },
       "planning": {
         "groupe": "Planning",
         "annuler": "Annuler la dernière opération",
