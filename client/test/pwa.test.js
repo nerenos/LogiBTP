@@ -12,6 +12,8 @@ describe('règles du service worker', () => {
     expect(t('GET', '/api/ged/versions/12/contenu')).toBe('reseau');
     expect(t('POST', '/api/editions/pdf')).toBe('reseau');
     expect(t('GET', '/api/documents/5')).toBe('donnee');
+    // Définition d'une fiche : options des listes par requête SQL résolues par le serveur, gardées pour le hors ligne.
+    expect(t('GET', '/api/fiches/salarie/definition')).toBe('donnee');
     expect(t('POST', '/api/listes/lot')).toBe('donnee');
     expect(t('POST', '/api/structure/documents')).toBe('donnee');
     expect(t('PUT', '/api/documents/5')).toBe('ecriture');

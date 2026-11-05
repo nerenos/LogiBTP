@@ -61,6 +61,8 @@
 
 - [x] Un mot de passe d'une colonne du programme saisi dans une liste (module Liste, saisie en ligne) serait écrit en
   clair. Pas de saisie des mot de passe en liste
+- [x] Listes par requête SQL hors ligne : sans objet depuis la fin de la démo hors ligne ; le serveur résout les
+  options dans `GET /api/fiches/{type}/definition`, gardée par le service worker (réseau d'abord) pour le hors ligne.
 
 ### Structure des affaires
 
