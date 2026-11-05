@@ -1,4 +1,5 @@
 using LogiBTP.Documents.Web;
+using LogiBTP.Documents;
 using LogiBTP.Domaine;
 using LogiBTP.Mail.Web;
 using LogiBTP.Socle.Web;
@@ -28,12 +29,12 @@ public static class Consultations
     {
         var code = await db.Database.SqlQueryRaw<string?>("SELECT ent_consultation AS \"Value\" FROM document WHERE ent_id = @id", new NpgsqlParameter("id", id)).FirstOrDefaultAsync(ct);
         if (code is null) return new { code = (string?)null, documents = Array.Empty<object>() };
-        var docs = await db.Database.SqlQueryRaw<DocumentLot>("""
+        var docs = await db.Database.SqlQueryRaw<DocumentLot>($"""
             SELECT d.ent_id AS id, d.ent_numero AS numero, d.ent_indice AS indice, p.per_raison_sociale AS tiers, d.ent_total_ht AS total_ht,
                    s.std_libelle AS statut, t.tyd_code AS type, d.ent_is_reference AS reference
             FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id JOIN statut_document s ON s.std_id = d.ent_std_id
             LEFT JOIN personne p ON p.per_id = d.ent_tiers_id
-            WHERE d.ent_consultation = @c AND d.ent_is_reference AND s.std_code NOT IN ('REMPLACE')
+            WHERE d.ent_consultation = @c AND d.ent_is_reference AND s.std_code <> '{StatutsDocument.Remplace}'
             ORDER BY d.ent_total_ht, d.ent_id
             """, new NpgsqlParameter("c", code)).ToListAsync(ct);
         return new { code, documents = docs };

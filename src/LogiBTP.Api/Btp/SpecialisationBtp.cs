@@ -83,6 +83,9 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
     /// <summary>Total HT attendu après la conversion des ouvrages sans composante (contrôlé après le calcul de la validation).</summary>
     private static readonly AsyncLocal<decimal?> totalAttendu = new();
 
+    /// <summary>Statuts d'une commande client hors de l'encours : facturée, soldée ou hors vigueur.</summary>
+    private static readonly string[] StatutsCommandeClose = [StatutsDocumentBtp.Facture, .. SqlBtp.StatutsHorsVigueurOuSolde];
+
     public override void PreparerValidation(ResultatDocument<DocumentBtp, DocumentLigneBtp> r)
     {
         if (totalAttendu.Value is decimal attendu)
@@ -327,11 +330,11 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
                     SELECT coalesce((SELECT sum(e.ech_montant - coalesce((SELECT sum(p.poi_montant) FROM pointage p WHERE p.poi_echeance_id = e.ech_id), 0))
                                      FROM document_echeance e JOIN document x ON x.ent_id = e.ech_ent_id JOIN type_document t ON t.tyd_id = x.ent_tyd_id
                                      JOIN statut_document s ON s.std_id = x.ent_std_id
-                                     WHERE x.ent_tiers_id = {tiers} AND t.tyd_famille = 'V' AND x.ent_verrouille AND s.std_code NOT IN ('ANNULE', 'REMPLACE')), 0)
+                                     WHERE x.ent_tiers_id = {tiers} AND t.tyd_famille = 'V' AND x.ent_verrouille AND s.std_code <> ALL({SqlBtp.StatutsHorsVigueur})), 0)
                          + coalesce((SELECT sum(x.ent_total_ttc) FROM document x JOIN type_document t ON t.tyd_id = x.ent_tyd_id
                                      JOIN statut_document s ON s.std_id = x.ent_std_id
                                      WHERE x.ent_tiers_id = {tiers} AND t.tyd_code = 'V_COMMANDE' AND x.ent_verrouille AND x.ent_id <> {d.EntId}
-                                       AND s.std_code NOT IN ('FACTURE', 'SOLDE', 'ANNULE', 'REMPLACE')), 0) AS "Value"
+                                       AND s.std_code <> ALL({StatutsCommandeClose})), 0) AS "Value"
                     """).FirstAsync(ct);
                 var total = encours + d.EntNetAPayer;
                 if (total > max)

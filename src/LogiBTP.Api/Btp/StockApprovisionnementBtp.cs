@@ -53,8 +53,8 @@ public sealed partial class SpecialisationStockBtp
                        sum(k.lil_qte) FILTER (WHERE k.lil_etape = 'FACTURATION') AS facturation
                 FROM document_ligne_lien k JOIN document_ligne lc ON lc.lig_id = k.lil_cible_lig_id
                 JOIN document dc ON dc.ent_id = lc.lig_ent_id JOIN statut_document sc ON sc.std_id = dc.ent_std_id
-                WHERE k.lil_source_lig_id = l.lig_id AND dc.ent_verrouille AND sc.std_code NOT IN ('ANNULE', 'REMPLACE')) x ON TRUE
-            WHERE f_module_actif('stock') AND d.ent_verrouille AND d.ent_is_reference AND s.std_code NOT IN ('ANNULE', 'REMPLACE', 'SOLDE')
+                WHERE k.lil_source_lig_id = l.lig_id AND dc.ent_verrouille AND sc.std_code <> ALL({SqlBtp.StatutsHorsVigueur})) x ON TRUE
+            WHERE f_module_actif('stock') AND d.ent_verrouille AND d.ent_is_reference AND s.std_code <> ALL({SqlBtp.StatutsHorsVigueurOuSolde})
               AND e.ele_gestion = 'STOCK' AND e.ele_type = 'ARTICLE' AND l.lig_type_prix = 'V' AND NOT l.lig_solde
               AND ((t.tyd_code = 'S_RESERVATION' AND d.ent_stk_origine_id = {lieu})
                 OR (t.tyd_code = 'A_COMMANDE' AND coalesce(d.ent_stk_destination_id, d.ent_chantier_id) = {lieu}))

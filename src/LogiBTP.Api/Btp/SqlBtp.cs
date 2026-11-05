@@ -16,6 +16,15 @@ public static class SqlBtp
     /// <summary>Statuts d'une pièce close : hors vigueur ou soldée.</summary>
     public const string HorsVigueurOuSolde = $"{HorsVigueur}, '{StatutsDocument.Solde}'";
 
+    /// <summary>
+    /// Statuts hors vigueur pour une requête interpolée d'EF (passés en paramètre tableau) :
+    /// <c>std_code &lt;&gt; ALL({SqlBtp.StatutsHorsVigueur})</c>.
+    /// </summary>
+    public static readonly string[] StatutsHorsVigueur = [StatutsDocument.Annule, StatutsDocument.Remplace];
+
+    /// <summary>Statuts d'une pièce close pour une requête interpolée d'EF : hors vigueur ou soldée.</summary>
+    public static readonly string[] StatutsHorsVigueurOuSolde = [.. StatutsHorsVigueur, StatutsDocument.Solde];
+
     /// <summary>Paramètre nommé ; null → <c>DBNull</c> (type obligatoire pour un null que PostgreSQL ne peut deviner).</summary>
     public static NpgsqlParameter P(string nom, object? valeur, NpgsqlDbType? type = null) =>
         type is { } t ? new NpgsqlParameter(nom, t) { Value = valeur ?? DBNull.Value } : new NpgsqlParameter(nom, valeur ?? DBNull.Value);

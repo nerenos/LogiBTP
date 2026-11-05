@@ -366,8 +366,6 @@ Lots P1 (module, chargement, socle et navigation migrés), P2 (erreurs par code)
 
 - [ ] Lots A (code mort sûr) et B (code apparemment inutilisé, à trancher) : en attente des évolutions à venir qui
   touchent ce code ; à reprendre ensuite.
-- [ ] Lot F, reste à trancher : listes de statuts des requêtes paramétrées par interpolation (`SpecialisationBtp` encours
-  client, `StockApprovisionnementBtp`) et `std_code <> 'ANNULE'` laissés en littéraux.
 - [ ] Raccourcis clavier : déclarer les fonctions des fiches, des listes et de la GED (groupes à ajouter avec
   `declarerRaccourcis`) ; les accélérateurs des menus du bandeau (`&Paramètres`) ne sont pas personnalisables ; menu
   contextuel à étendre (fiches, explorateur GED, entête du document).

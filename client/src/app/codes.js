@@ -168,6 +168,12 @@ export const CHAMPS_ERREUR_DOCUMENT = Object.freeze({
   [ERREUR_DOCUMENT.CONDITION_PAIEMENT]: { onglet: 'reglements', selecteur: '.reglement-document', cle: 'reglement' },
 });
 
+/** Statuts du cycle des documents propres au cœur (db/179) ↔ StatutsDocumentBtp ; ceux du module : STATUT_DOCUMENT. */
+export const STATUT_DOCUMENT_BTP = Object.freeze({
+  FACTURATION: 'FACTURATION',
+  FACTURE: 'FACTURE',
+});
+
 /** Pastilles de la colonne État des documents (format `pastille` du module Liste) : code → libellé et teinte (L2). */
 export const PASTILLES_ETAT_DOCUMENT = Object.freeze([
   { valeur: 'BROUILLON', libelle: 'Brouillon', teinte: 'neutre' },
@@ -175,8 +181,8 @@ export const PASTILLES_ETAT_DOCUMENT = Object.freeze([
   { valeur: 'VALIDE', libelle: 'Validé', teinte: 'info' },
   { valeur: 'ENVOYE', libelle: 'Envoyé', teinte: 'envoye' },
   { valeur: 'ACCEPTE', libelle: 'Accepté', teinte: 'succes' },
-  { valeur: 'FACTURATION', libelle: 'En facturation', teinte: 'termine' },
-  { valeur: 'FACTURE', libelle: 'Facturé', teinte: 'termine' },
+  { valeur: STATUT_DOCUMENT_BTP.FACTURATION, libelle: 'En facturation', teinte: 'termine' },
+  { valeur: STATUT_DOCUMENT_BTP.FACTURE, libelle: 'Facturé', teinte: 'termine' },
   { valeur: 'SOLDE', libelle: 'Soldé', teinte: 'termine' },
   { valeur: 'PAYE_PARTIEL', libelle: 'Payé partiellement', teinte: 'succes' },
   { valeur: 'PAYE', libelle: 'Payé', teinte: 'succes' },

@@ -1,3 +1,4 @@
+using LogiBTP.Documents;
 using LogiBTP.Domaine;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
@@ -22,12 +23,12 @@ public static class MarchesAFacturer
     public static DateOnly DatePiece(DateOnly mois, DateOnly aujourdhui) =>
         MoisFacturation.DatePiece(mois, aujourdhui) ?? throw ExceptionMetier.Invalide("MOIS_A_VENIR", "Mois à venir : rien à facturer");
 
-    private const string SqlListe = """
+    private const string SqlListe = $"""
         WITH avt AS (
             SELECT d.ent_id, d.ent_marche_id, d.ent_numero, d.ent_date, d.ent_rang_avancement, d.ent_total_ht, d.ent_verrouille,
                    t.tyd_code, t.tyd_avancement, s.std_code
             FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id JOIN statut_document s ON s.std_id = d.ent_std_id
-            WHERE d.ent_marche_id IS NOT NULL AND t.tyd_avancement IN ('S', 'F') AND d.ent_is_reference AND s.std_code <> 'ANNULE'),
+            WHERE d.ent_marche_id IS NOT NULL AND t.tyd_avancement IN ('S', 'F') AND d.ent_is_reference AND s.std_code <> '{StatutsDocument.Annule}'),
         m AS (
             SELECT m.*, c.cha_code, c.cha_libelle, p.per_raison_sociale AS client,
                    (SELECT coalesce(sum(f.facture_ht), 0) FROM v_facturation_document f WHERE f.ent_marche_id = m.mar_id) AS facture_ht

@@ -1,6 +1,7 @@
 using LogiBTP.Crm.Web;
 using LogiBTP.Crm;
 using LogiBTP.Documents.Web;
+using LogiBTP.Documents;
 using LogiBTP.Domaine;
 using LogiBTP.Socle.Web;
 using LogiBTP.SousTraitance;
@@ -26,10 +27,10 @@ public class SpecialisationSousTraitanceBtp : SpecialisationSousTraitance
     private sealed record LigneFactureClient(long Id, string? Numero, DateOnly? Date, decimal Ttc, bool Valide);
 
     // Facture reçue : montants saisis du sous-traitant, sinon totaux calculés de la pièce.
-    private const string SqlFactures = """
+    private const string SqlFactures = $"""
         SELECT d.ent_id AS id, d.ent_marche_id AS marche_id, d.ent_numero AS numero, d.ent_reference_externe AS reference, d.ent_date AS date,
                coalesce(d.ent_st_recu_ht, d.ent_total_ht, 0) AS ht, coalesce(d.ent_st_recu_ttc, d.ent_total_ttc, 0) AS ttc, d.ent_verrouille AS valide,
-               s.std_code = 'ANNULE' AS annule
+               s.std_code = '{StatutsDocument.Annule}' AS annule
         FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id JOIN statut_document s ON s.std_id = d.ent_std_id
         JOIN marche m ON m.mar_id = d.ent_marche_id AND m.mar_sens = 'ST'
         WHERE t.tyd_code = 'T_FACTURE_AVT' AND d.ent_nature_avoir IS NULL
@@ -76,12 +77,12 @@ public class SpecialisationSousTraitanceBtp : SpecialisationSousTraitance
 
     /// <summary>Factures et factures d'avancement non annulées du marché de vente lié, sinon factures directes du chantier (ST5).</summary>
     public override async Task<List<FactureClient>> FacturesClientsAsync(SousTraitanceDbContext db, int marche, CancellationToken ct) =>
-        (await db.Database.SqlQueryRaw<LigneFactureClient>("""
+        (await db.Database.SqlQueryRaw<LigneFactureClient>($"""
             SELECT d.ent_id AS id, d.ent_numero AS numero, d.ent_date AS date, coalesce(d.ent_total_ttc, 0) AS ttc, d.ent_verrouille AS valide
             FROM marche st JOIN document d ON (st.mar_marche_vente_id IS NOT NULL AND d.ent_marche_id = st.mar_marche_vente_id)
                                            OR (st.mar_marche_vente_id IS NULL AND d.ent_chantier_id = st.mar_cha_id AND d.ent_marche_id IS NULL)
             JOIN type_document t ON t.tyd_id = d.ent_tyd_id JOIN statut_document s ON s.std_id = d.ent_std_id
-            WHERE st.mar_id = @m AND t.tyd_code IN ('V_FACTURE', 'V_FACTURE_AVT') AND s.std_code <> 'ANNULE' AND d.ent_nature_avoir IS NULL
+            WHERE st.mar_id = @m AND t.tyd_code IN ('V_FACTURE', 'V_FACTURE_AVT') AND s.std_code <> '{StatutsDocument.Annule}' AND d.ent_nature_avoir IS NULL
             ORDER BY d.ent_date DESC, d.ent_id DESC
             """, new NpgsqlParameter("m", marche)).ToListAsync(ct))
         .Select(f => new FactureClient(f.Id, f.Numero, f.Date, f.Ttc, f.Valide)).ToList();

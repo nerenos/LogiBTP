@@ -89,6 +89,15 @@ public static class ModulesFacultatifs
 }
 
 /// <summary>
+/// Statuts du cycle des documents propres au cœur (statut_document, db/179) ; ceux du module Document : StatutsDocument.
+/// </summary>
+public static class StatutsDocumentBtp
+{
+    public const string Facturation = "FACTURATION";
+    public const string Facture = "FACTURE";
+}
+
+/// <summary>
 /// Rôle d'un type de pièce dans le module Rentabilité (rentabilite_role_type, db/258 ; règles de Btp/RentabiliteBtp.cs).
 /// </summary>
 public static class RolesRentabilite

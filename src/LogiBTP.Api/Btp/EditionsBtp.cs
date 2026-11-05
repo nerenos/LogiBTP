@@ -190,7 +190,7 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
         var db = services.GetRequiredService<LogiBtpContext>();
         var sql = nom switch
         {
-            "marche_documents" => """
+            "marche_documents" => $"""
                 WITH cmd AS (
                     SELECT md.mdo_rang, md.mdo_role, d.ent_id, d.ent_numero, d.ent_date, d.ent_objet, d.ent_total_ht
                     FROM document cur JOIN marche_document md ON md.mdo_mar_id = cur.ent_marche_id JOIN document d ON d.ent_id = md.mdo_ent_id
@@ -199,7 +199,7 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
                     SELECT c.lig_ent_id AS cmd_id, sum(l.lig_montant_ht) AS mt
                     FROM document_ligne l JOIN document_ligne c ON c.lig_id = l.lig_avt_source_lig_id
                     JOIN document f ON f.ent_id = l.lig_ent_id JOIN statut_document s ON s.std_id = f.ent_std_id
-                    WHERE c.lig_ent_id IN (SELECT ent_id FROM cmd) AND f.ent_avt_presentation = 'P' AND s.std_code <> 'ANNULE'
+                    WHERE c.lig_ent_id IN (SELECT ent_id FROM cmd) AND f.ent_avt_presentation = 'P' AND s.std_code <> '{StatutsDocument.Annule}'
                       AND (f_document_valable(f.ent_id, FALSE) OR f.ent_id = @id)
                     GROUP BY c.lig_ent_id)
                 SELECT coalesce(json_agg(json_build_object('rang', c.mdo_rang, 'role', c.mdo_role, 'numero', c.ent_numero, 'date', c.ent_date,

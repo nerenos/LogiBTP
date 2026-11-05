@@ -157,3 +157,6 @@
   Fiche).
 - [x] Unités de l'article (E10, suite) : champ Unité du détail de la ligne (unités de l'article en tête, même conversion
   du prix) ; « ne plus demander » gardé dans le navigateur pour le document.
+- [x] Revue du code, lot F (fin) : statuts des requêtes du cœur par constantes (`StatutsDocument`, `StatutsDocumentBtp`
+  nouveau ↔ `STATUT_DOCUMENT_BTP`) ; requêtes interpolées : statut en paramètre et listes en tableau
+  (`std_code <> ALL({SqlBtp.StatutsHorsVigueur})`), requêtes brutes : `NOT IN ({SqlBtp.HorsVigueur})`.

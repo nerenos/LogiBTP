@@ -1,3 +1,4 @@
+using LogiBTP.Documents;
 using LogiBTP.Domaine;
 using LogiBTP.Documents.Web;
 using LogiBTP.Pointage.Web;
@@ -80,7 +81,7 @@ public static class StockBorneBtp
             // Refus : la pièce passe au statut Annulé (le trigger retire ses mouvements : le stock se recalcule sans elle).
             if (!t.Accepter)
                 await db.Database.ExecuteSqlInterpolatedAsync($"""
-                    UPDATE document d SET ent_std_id = s.std_id FROM statut_document s WHERE d.ent_id = {id} AND s.std_tyd_id = d.ent_tyd_id AND s.std_code = 'ANNULE'
+                    UPDATE document d SET ent_std_id = s.std_id FROM statut_document s WHERE d.ent_id = {id} AND s.std_tyd_id = d.ent_tyd_id AND s.std_code = {StatutsDocument.Annule}
                     """, ct);
             await db.Database.ExecuteSqlInterpolatedAsync($"""
                 UPDATE document SET ent_stk_a_valider = FALSE, ent_stk_traite_par = {u.Code}, ent_stk_traite_le = now(), ent_stk_motif = {(t.Accepter ? null : t.Motif!.Trim())}

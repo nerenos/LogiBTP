@@ -1,4 +1,5 @@
 using System.Text.Json;
+using LogiBTP.Documents;
 using LogiBTP.Documents.Web;
 using LogiBTP.Domaine;
 using LogiBTP.Socle.Web;
@@ -230,7 +231,7 @@ public static class Structure
                   'annules', (SELECT coalesce(json_agg(json_build_object('ent_id', x.ent_id, 'numero', x.ent_numero, 'type', tx.tyd_libelle,
                         'rang', x.ent_rang_avancement, 'total_ht', x.ent_total_ht, 'nature', x.ent_nature_avoir) ORDER BY x.ent_rang_avancement NULLS FIRST, x.ent_id), '[]')
                       FROM document x JOIN type_document tx ON tx.tyd_id = x.ent_tyd_id JOIN statut_document s ON s.std_id = x.ent_std_id
-                      WHERE x.ent_marche_id = d.ent_marche_id AND s.std_code = 'ANNULE' AND x.ent_avt_presentation = 'P')) AS "Value"
+                      WHERE x.ent_marche_id = d.ent_marche_id AND s.std_code = {StatutsDocument.Annule} AND x.ent_avt_presentation = 'P')) AS "Value"
                 FROM document d WHERE d.ent_id = {id}
                 """).FirstAsync(ct);
             return Results.Content(json, "application/json");
@@ -297,7 +298,7 @@ public static class Structure
     /// valable datée au plus tard de la fin du mois. Lignes : %, quantité et montant cumulés, mode et valeur saisis, par
     /// ligne du marché (lig_avt_source_lig_id).
     /// </summary>
-    private const string SqlCroisees = """
+    private const string SqlCroisees = $"""
         WITH d AS (
             SELECT d.ent_id, d.ent_marche_id, date_trunc('month', d.ent_date)::date AS mois,
                    CASE t.tyd_avancement WHEN 'S' THEN 'D' WHEN 'D' THEN 'S' END AS autre
@@ -309,7 +310,7 @@ public static class Structure
             FROM d
             JOIN document x ON x.ent_marche_id = d.ent_marche_id AND x.ent_id <> d.ent_id AND x.ent_is_reference
             JOIN type_document tx ON tx.tyd_id = x.ent_tyd_id AND tx.tyd_avancement = d.autre
-            JOIN statut_document sx ON sx.std_id = x.ent_std_id AND sx.std_code NOT IN ('ANNULE', 'REMPLACE')
+            JOIN statut_document sx ON sx.std_id = x.ent_std_id AND sx.std_code NOT IN ({SqlBtp.HorsVigueur})
             WHERE (x.ent_date >= d.mois AND x.ent_date < (d.mois + INTERVAL '1 month')::date)
                OR (@repli AND x.ent_date < (d.mois + INTERVAL '1 month')::date AND f_document_valable(x.ent_id, FALSE))),
         choisi AS (SELECT * FROM candidats ORDER BY meme_mois DESC, ent_verrouille DESC, ent_date DESC, ent_id DESC LIMIT 1)
@@ -326,7 +327,7 @@ public static class Structure
     /// Pièces annulées avec la pièce {id} (alias x) : elle-même, et dans un marché les pièces d'avancement validées non
     /// annulées qui la suivent (numéro de situation, puis ordre de création).
     /// </summary>
-    private const string SqlGestionMarche = """
+    private const string SqlGestionMarche = $"""
         WITH cmd AS (
             SELECT x.mdo_ent_id AS ent_id, x.mdo_role, x.mdo_rang, c.ent_numero, c.ent_date, c.ent_objet, c.ent_total_ht, c.ent_total_ttc
             FROM marche_document x JOIN document c ON c.ent_id = x.mdo_ent_id
@@ -367,7 +368,7 @@ public static class Structure
             SELECT d.ent_id, d.ent_numero, d.ent_date, d.std_code, p.mpo_per_id AS per_id, l.lig_montant_ht AS mt
             FROM doc d JOIN document_ligne l ON l.lig_ent_id = d.ent_id
             JOIN marche_poste p ON p.mpo_id::text = l.lig_proprietes->>'poste_marche' AND p.mpo_type = 'PAIEMENT_DIRECT'
-            WHERE d.ent_avt_presentation = 'P' AND d.std_code <> 'ANNULE' AND coalesce(l.lig_montant_ht, 0) <> 0)
+            WHERE d.ent_avt_presentation = 'P' AND d.std_code <> '{StatutsDocument.Annule}' AND coalesce(l.lig_montant_ht, 0) <> 0)
         SELECT json_build_object(
           'montant_ht', (SELECT mar_montant_ht FROM marche WHERE mar_id = @id),
           'facture_ht', (SELECT coalesce(sum(f.facture_ht), 0) FROM v_facturation_document f WHERE f.ent_marche_id = @id),
@@ -379,20 +380,20 @@ public static class Structure
           'situations', (SELECT coalesce(json_agg(json_build_object('ent_id', d.ent_id, 'numero', d.ent_numero, 'indice', d.ent_indice,
                 'rang', d.ent_rang_avancement, 'date', d.ent_date, 'statut', d.std_libelle, 'valide', d.ent_verrouille, 'total_ht', d.ent_total_ht,
                 'facturee', EXISTS (SELECT 1 FROM document_lien k JOIN doc f ON f.ent_id = k.lie_cible_ent_id
-                                    WHERE k.lie_source_ent_id = d.ent_id AND k.lie_type = 'TRANSFORMATION' AND f.std_code <> 'ANNULE'),
+                                    WHERE k.lie_source_ent_id = d.ent_id AND k.lie_type = 'TRANSFORMATION' AND f.std_code <> '{StatutsDocument.Annule}'),
                 'indices', (SELECT count(*) FROM document g WHERE g.ent_groupe_id = d.ent_groupe_id))
                 ORDER BY d.ent_rang_avancement NULLS LAST, d.ent_id), '[]')
               FROM doc d WHERE d.tyd_avancement = 'S' AND d.ent_is_reference),
           'factures', (SELECT coalesce(json_agg(json_build_object('ent_id', d.ent_id, 'type', d.tyd_libelle, 'code', d.tyd_code, 'numero', d.ent_numero,
                 'rang', d.ent_rang_avancement, 'date', d.ent_date, 'statut', d.std_libelle, 'valide', d.ent_verrouille,
-                'annule', d.std_code = 'ANNULE', 'nature', d.ent_nature_avoir, 'total_ht', d.ent_total_ht, 'total_ttc', d.ent_total_ttc,
+                'annule', d.std_code = '{StatutsDocument.Annule}', 'nature', d.ent_nature_avoir, 'total_ht', d.ent_total_ht, 'total_ttc', d.ent_total_ttc,
                 'net_a_payer', d.ent_net_a_payer) ORDER BY d.ent_rang_avancement NULLS LAST, d.ent_id), '[]')
               FROM doc d WHERE d.ent_avt_presentation = 'P'),
           -- Factures et avoirs des sous-traitants en paiement direct ; facture liée : facture du marché portant le
           -- paiement direct du sous-traitant (montant égal au TTC de la pièce d'abord, puis la première à sa date ou après).
           'sous_traitants', (SELECT coalesce(json_agg(json_build_object('ent_id', d.ent_id, 'type', d.tyd_libelle, 'numero', d.ent_numero,
                 'reference', d.ent_reference_externe, 'tiers', per.per_raison_sociale, 'date', d.ent_date, 'statut', d.std_libelle,
-                'valide', d.ent_verrouille, 'annule', d.std_code = 'ANNULE', 'total_ht', d.ent_total_ht, 'total_ttc', d.ent_total_ttc,
+                'valide', d.ent_verrouille, 'annule', d.std_code = '{StatutsDocument.Annule}', 'total_ht', d.ent_total_ht, 'total_ttc', d.ent_total_ttc,
                 'liee', (SELECT json_build_object('ent_id', x.ent_id, 'numero', x.ent_numero) FROM pd x
                          WHERE x.per_id = d.ent_tiers_id
                          ORDER BY abs(x.mt) = abs(d.ent_total_ttc) DESC, x.ent_date >= d.ent_date DESC, x.ent_date, x.ent_id LIMIT 1))

@@ -934,7 +934,7 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
     public override async Task<Dictionary<long, PieceRentabilite>> PiecesAsync(RentabiliteDbContext db, long[] ids, CancellationToken ct) =>
         ids.Length == 0 ? [] : (await db.Database.SqlQuery<PieceRentabilite>($"""
             SELECT d.ent_id, t.tyd_code AS type, t.tyd_libelle AS type_libelle, d.ent_numero AS numero, d.ent_indice AS indice, d.ent_date AS date,
-                   s.std_code AS statut, coalesce(v.annule, s.std_code = 'ANNULE') AS annulee, p.per_raison_sociale AS tiers, d.ent_tiers_id AS tiers_id
+                   s.std_code AS statut, coalesce(v.annule, s.std_code = {StatutsDocument.Annule}) AS annulee, p.per_raison_sociale AS tiers, d.ent_tiers_id AS tiers_id
             FROM document d
             JOIN type_document t ON t.tyd_id = d.ent_tyd_id
             JOIN statut_document s ON s.std_id = d.ent_std_id

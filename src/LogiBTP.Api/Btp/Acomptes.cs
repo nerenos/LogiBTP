@@ -53,15 +53,15 @@ public static class Acomptes
         return m;
     }
 
-    private const string SqlListe = """
+    private const string SqlListe = $"""
         SELECT coalesce(json_agg(json_build_object(
           'id', a.mac_id, 'rang', a.mac_rang, 'libelle', a.mac_libelle, 'mode', a.mac_mode, 'saisie', a.mac_saisie, 'valeur', a.mac_valeur,
           'montant', a.mac_montant, 'deduction', a.mac_deduction,
           'demande', CASE WHEN dm.ent_id IS NULL THEN NULL ELSE json_build_object('ent_id', dm.ent_id, 'numero', dm.ent_numero, 'statut', sd.std_libelle, 'valide', dm.ent_verrouille) END,
           'piece', CASE WHEN pc.ent_id IS NULL THEN NULL ELSE json_build_object('ent_id', pc.ent_id, 'numero', pc.ent_numero, 'statut', sp.std_libelle,
-                   'valide', pc.ent_verrouille, 'annule', sp.std_code = 'ANNULE', 'type', tp.tyd_libelle) END,
+                   'valide', pc.ent_verrouille, 'annule', sp.std_code = '{StatutsDocument.Annule}', 'type', tp.tyd_libelle) END,
           'deduit', (SELECT coalesce(sum(x.acd_montant), 0) FROM acompte_deduction x JOIN document f ON f.ent_id = x.acd_ent_id
-                     JOIN statut_document s ON s.std_id = f.ent_std_id WHERE x.acd_mac_id = a.mac_id AND s.std_code <> 'ANNULE'))
+                     JOIN statut_document s ON s.std_id = f.ent_std_id WHERE x.acd_mac_id = a.mac_id AND s.std_code <> '{StatutsDocument.Annule}'))
           ORDER BY a.mac_rang), '[]') AS "Value"
         FROM marche_acompte a
         LEFT JOIN document dm ON dm.ent_id = a.mac_demande_ent_id LEFT JOIN statut_document sd ON sd.std_id = dm.ent_std_id
@@ -199,7 +199,7 @@ public static class Acomptes
         var acomptes = await db.Database.SqlQuery<AcompteEmisSql>($"""
             SELECT a.mac_id AS id, a.mac_rang AS rang, a.mac_mode AS mode, a.mac_montant AS montant, a.mac_deduction AS deduction,
               (SELECT coalesce(sum(x.acd_montant), 0) FROM acompte_deduction x JOIN document f ON f.ent_id = x.acd_ent_id
-               JOIN statut_document s ON s.std_id = f.ent_std_id WHERE x.acd_mac_id = a.mac_id AND s.std_code <> 'ANNULE' AND f.ent_id <> {d.Document.EntId}) AS deduit,
+               JOIN statut_document s ON s.std_id = f.ent_std_id WHERE x.acd_mac_id = a.mac_id AND s.std_code <> {StatutsDocument.Annule} AND f.ent_id <> {d.Document.EntId}) AS deduit,
               a.mac_libelle AS libelle
             FROM marche_acompte a JOIN document p ON p.ent_id = a.mac_piece_ent_id JOIN statut_document sp ON sp.std_id = p.ent_std_id
             WHERE a.mac_mar_id = {marche} AND f_document_valable(p.ent_id, FALSE) ORDER BY a.mac_rang
