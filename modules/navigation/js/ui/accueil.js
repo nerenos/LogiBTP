@@ -103,9 +103,12 @@ export class AccueilBase {
     const zone = this.racine.querySelector('.accueil-tuiles');
     zone.innerHTML = codes.map((c, i) => {
       const r = this.#raccourci(c);
+      const fenetre = r.url && r.fenetre !== false && !r.desactive && !r.sousMenu;
       return `<a class="accueil-tuile" href="${echapper(r.url)}" data-url="${echapper(r.url)}" data-index="${i}" draggable="${this.edition}" title="${texteHtml('navigation.accueil.tuile_titre', { libelle: r.groupe ? `${r.groupe} › ${r.libelle}` : r.libelle })}">
         <span class="icone">${iconeRaccourci(r)}</span><span class="libelle">${echapper(r.libelle)}</span>
-        ${this.edition ? `<button type="button" class="accueil-retirer" data-action="retirer-raccourci" data-index="${i}" title="${texteHtml('commun.retirer')}">${iconeHtml('retirer')}</button>` : ''}</a>`;
+        ${this.edition ? `<button type="button" class="accueil-retirer" data-action="retirer-raccourci" data-index="${i}" title="${texteHtml('commun.retirer')}">${iconeHtml('retirer')}</button>` : ''}
+        ${!this.edition && r.creation && !r.desactive ? `<button type="button" class="bandeau-fenetre bandeau-creation" data-creation title="${texteHtml('navigation.bandeau.creation', { titre: r.creation.titre ?? texte('commun.creer') })}">${iconeHtml('navigation_ajouter')}</button>` : ''}
+        ${this.edition ? '' : fenetre ? `<button type="button" class="bandeau-fenetre" data-fenetre title="${texteHtml('navigation.bandeau.nouvelle_fenetre')}">${iconeHtml('navigation_nouvelle_fenetre')}</button>` : r.sousMenu ? `<span class="bandeau-fleche">${iconeHtml('deplier')}</span>` : ''}</a>`;
     }).join('') + (this.edition ? `<button type="button" class="accueil-tuile accueil-ajout" data-action="ajouter-raccourci" title="${texteHtml('navigation.accueil.choix_aide')}">
         <span class="icone">${iconeHtml('ajouter')}</span><span class="libelle">${texteHtml('navigation.accueil.ajouter_raccourci')}</span></button>` : '')
       || `<p class="aide">${texteHtml('navigation.accueil.aucun_raccourci')}</p>`;

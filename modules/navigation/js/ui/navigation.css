@@ -198,13 +198,21 @@ body:has(> .bandeau-auto.bandeau-gauche.bandeau-survol) > .pages { margin-right:
 .accueil-outils button.actif { background: var(--accent); color: #fff; border-color: var(--accent); }
 .accueil-bloc h2 { font-size: 0.95rem; margin: 0 0 0.45rem; color: var(--discret); text-transform: uppercase; letter-spacing: 0.05em; }
 .accueil-tuiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: 0.55rem; }
-.accueil-tuile { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.3rem; min-height: 5.4rem; padding: 0.5rem;
+/* Tuile en grille nommée : rangée du haut = création, icône, nouvelle fenêtre (ou ✕ en édition), icônes alignées
+   d'une tuile à l'autre ; libellé centré verticalement dans le reste. Colonnes latérales de même largeur. */
+.accueil-tuile { display: grid; justify-items: center; align-items: center; row-gap: 0.3rem; min-height: 5.4rem; padding: 0.25rem;
+  grid-template: "creation icone   fenetre" auto
+                 "libelle  libelle libelle" 1fr
+                 / 1.8rem minmax(0, 1fr) 1.8rem;
   background: var(--surface); border: 1px solid var(--bord); border-radius: 8px; color: inherit; text-decoration: none; text-align: center; }
 .accueil-tuile:hover { border-color: var(--accent); box-shadow: 0 2px 10px rgb(29 95 191 / 0.15); }
-.accueil-tuile .icone { font-size: 1.8rem; line-height: 1; }
-.accueil-tuile .libelle { font-weight: 500; }
+.accueil-tuile .icone { grid-area: icone; padding-top: 0.25rem; font-size: 1.8rem; line-height: 1; }
+.accueil-tuile .libelle { grid-area: libelle; font-weight: 500; padding: 0 0.25rem 0.25rem; }
+.accueil-tuile .bandeau-creation { grid-area: creation; align-self: start; }
+.accueil-tuile [data-fenetre], .accueil-tuile .bandeau-fleche, .accueil-retirer { grid-area: fenetre; align-self: start; }
+.accueil-tuile:hover .bandeau-fenetre { opacity: 1; }
 .accueil-edition .accueil-tuile[draggable="true"], .accueil-edition .widget[draggable="true"] { cursor: grab; outline: 1px dashed var(--accent); }
-.accueil-retirer { position: absolute; top: 0.2rem; right: 0.2rem; padding: 0 0.35rem; font-size: 0.85em; }
+.accueil-retirer { padding: 0 0.35rem; font-size: 0.85em; }
 .accueil-ajout { border-style: dashed; cursor: pointer; font: inherit; }
 .accueil-ajout .libelle { color: var(--discret); }
 .accueil-tuile.accueil-depot { border-color: var(--accent); box-shadow: inset 4px 0 0 var(--accent); }
