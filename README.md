@@ -7,7 +7,7 @@
 
 LogiBTP est une application web modulaire de gestion d'entreprise (ERP) taillée pour les professionnels du Bâtiment et des Travaux Publics (BTP). Conçue pour être robuste, rapide, utilisable partout (y compris sans connexion réseau) et tout support (Windows, Linux, Mac, Android et IOS pour les clients et Windows/Linux pour la partie serveur), elle couvre l'intégralité du cycle de vie d'un chantier, du devis initial jusqu'à la facturation, la comptabilité et l'analyse de rentabilité.
 
-Captures : https://github.com/nerenos/LogiBTP/issues/9#issue-6232817397
+Captures : Thème Clair https://github.com/nerenos/LogiBTP/issues/9#issue-6232817397 / Thème Sombre https://github.com/nerenos/LogiBTP/issues/10#issue-6232840500
 
 ## Principes Architecturaux
 
