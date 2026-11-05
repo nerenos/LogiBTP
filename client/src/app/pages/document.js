@@ -4,7 +4,7 @@ import { FAMILLE_DOCUMENT, STATUT_DOCUMENT, STATUTS_HORS_VIGUEUR, TYPE_AVANCEMEN
 import { PageBase } from '@logibtp/navigation';
 import { ExplorateurGed } from '@logibtp/ged/ui';
 import { ArborescenceBtp } from '../ged/arborescence.js';
-import { echapper, formatNombre, actionDe, libelleRaccourci, basculerAideMemoire, fermerAideMemoire, confirmer, ouvrirDialogue, ouvrirModale, saisir, separateur as separateurZones, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
+import { echapper, formatNombre, actionDe, libelleRaccourci, ouvrirMenuContextuel, basculerAideMemoire, fermerAideMemoire, confirmer, ouvrirDialogue, ouvrirModale, saisir, separateur as separateurZones, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
 import { D, aujourdhui, texteDate } from '@logibtp/socle';
 import { ONGLETS_DOCUMENT } from '../raccourcis.js';
 import { Disposition, GestionVuesDocument, PlanDocument, RechercheLignes, NotificationsDocument } from '@logibtp/document/ui';
@@ -290,6 +290,8 @@ export class PageDocument extends PageBase {
       if (actions[action]) { e.preventDefault(); Promise.resolve(actions[action]()).catch((x) => this.erreurDocument(x)); }
     };
     document.addEventListener('keydown', this.clavier);
+    // Clic droit dans l'entête et les options (hors champ) : actions de la barre du document.
+    for (const vue of ['#vue-entete', '#vue-options']) this.$(vue).addEventListener('contextmenu', (e) => this.#menuEntete(e));
     // Menu des actions du document : refermé par un clic ailleurs ou Échap.
     this.fermerMenuActions = (e) => {
       const menu = this.conteneur.querySelector('[data-menu-actions]');
@@ -768,6 +770,33 @@ export class PageDocument extends PageBase {
       b.hidden = !cible;
       b.title = texte(`document_btp.page.voisins.${action}`, { rang, total });
     }
+  }
+
+  /**
+   * Menu contextuel de l'entête : boutons visibles et actifs de la barre (mêmes règles), puis actions du menu ▾, avec
+   * leurs raccourcis ; le menu du navigateur reste sur les champs (copier, coller) et les liens.
+   */
+  #menuEntete(e) {
+    if (e.defaultPrevented || e.target.closest('input, textarea, select, a, [contenteditable="true"]')) return;
+    const touches = {
+      enregistrer: ['enregistrer', 'application'], precedent: ['precedente', 'application'], suivant: ['suivante', 'application'],
+      annuler: ['annuler', 'grille'], retablir: ['retablir', 'grille'],
+    };
+    const element = (b) => {
+      const [code, groupe] = touches[b.dataset.action] ?? [b.dataset.action, 'document'];
+      // Bouton à texte : son texte ; bouton à icône : l'icône et son libellé (bulle sans le rappel de touche).
+      const texteBouton = b.textContent.trim();
+      const libelle = b.getAttribute('role') === 'menuitem' || (!b.classList.contains('bouton-icone') && /\p{L}{2}/u.test(texteBouton)) ? texteBouton
+        : `${texteBouton} ${(b.getAttribute('aria-label') ?? b.title).replace(/\s*\([^)]*\)\s*$/, '')}`;
+      return { libelle, titre: b.title, raccourci: libelleRaccourci(code, groupe), actif: !b.disabled, action: () => b.click() };
+    };
+    const barre = this.conteneur.querySelector('.document-barre');
+    const visibles = (selecteur) => [...barre.querySelectorAll(selecteur)].filter((b) => !b.hidden && !b.closest('[hidden]:not([data-menu-actions])'));
+    ouvrirMenuContextuel(e, [
+      ...visibles('button[data-action]:not([role="menuitem"])').map(element),
+      { separateur: true },
+      ...visibles('[data-menu-actions] button[data-action]').map(element),
+    ]);
   }
 
   /** Document précédent ou suivant de la liste d'origine, à la place de celui-ci (modifications en cours : confirmation). */

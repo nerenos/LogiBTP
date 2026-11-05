@@ -166,3 +166,6 @@
 - [x] Raccourcis clavier des listes (groupe `liste` : lignes, Début / Fin, Ctrl+A, Entrée, nouvelle fenêtre, Suppr ;
   page : Ctrl+F, Inser) et de l'explorateur GED (groupe `ged` : éléments, Entrée, F2, historique Alt+← / →, parent,
   Ctrl+F, Inser) ; touches effectives dans le menu contextuel des listes et les bulles de la GED.
+- [x] Menu contextuel étendu : fiches (actions de la barre, onglets), explorateur GED (document, dossier, liste) et
+  entête / options du document (boutons de la barre et actions du menu ▾), touches effectives affichées ; nom de la
+  touche Inser.

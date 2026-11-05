@@ -122,7 +122,8 @@
       "PageUp": "Pg préc.",
       "PageDown": "Pg suiv.",
       "Home": "Début",
-      "End": "Fin"
+      "End": "Fin",
+      "Insert": "Inser"
     },
     "editeur": {
       "titre": "Libellé",

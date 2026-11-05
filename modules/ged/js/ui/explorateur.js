@@ -1,6 +1,6 @@
 import { texte, texteHtml, pluriel, pairesParCode, textesParCode, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { NIVEAU_CONFIDENTIALITE, PROFIL } from '@logibtp/socle';
-import { echapper, lirePreferences, ecrirePreferences, creerCombo, confirmer, saisir, formatDate, formatDateHeure, separateur, declarerRaccourcis, actionDe, libelleRaccourci } from '@logibtp/socle/ui';
+import { echapper, lirePreferences, ecrirePreferences, creerCombo, confirmer, saisir, formatDate, formatDateHeure, separateur, declarerRaccourcis, actionDe, libelleRaccourci, ouvrirMenuContextuel } from '@logibtp/socle/ui';
 import { iconeDocument, formatTaille } from '../src/fichiers.js';
 import { versionsVisibles, etapes, ETAPES, GENRES } from '../src/versions.js';
 import { normaliserRecherche } from '../src/recherche.js';
@@ -205,6 +205,12 @@ export class ExplorateurGed {
       if (e.key === 'Escape' && filtre.value) { e.stopPropagation(); filtre.value = ''; this.filtre = ''; this.#rendreListe(); }
     });
     c.addEventListener('keydown', (e) => this.#clavier(e));
+    // Le menu du navigateur et celui d'un écran englobant (fiche) sont écartés tout de suite ; le menu suit (async).
+    this.liste.addEventListener('contextmenu', (e) => {
+      if (e.target.closest('input, a')) return;
+      e.preventDefault();
+      this.#lancer(() => this.#menuListe(e));
+    });
     if (this.modifiable) this.#glisserDeposer();
     this.#lancer(() => this.#demarrer());
   }
@@ -572,6 +578,50 @@ export class ExplorateurGed {
       ? `${bouton('renommer', icone('ged_renommer'), texte('ged.explorateur.renommer', { dossier: n.libelle }))}${bouton('supprimer-dossier', icone('retirer'), texte('ged.explorateur.supprimer_dossier', { dossier: n.libelle }))}` : '';
     z.querySelector('[data-action="renommer"]')?.addEventListener('click', () => this.#lancer(() => this.renommerDossier(n)));
     z.querySelector('[data-action="supprimer-dossier"]')?.addEventListener('click', () => this.#lancer(() => this.supprimerDossier(n)));
+  }
+
+  /**
+   * Clic droit dans la liste : document → actions de son détail (mêmes boutons, mêmes règles) ; dossier → ouvrir,
+   * renommer, supprimer ; ailleurs → dossier parent, nouveau dossier, ajouter, actualiser. Touches du groupe ged.
+   */
+  async #menuListe(e) {
+    const touches = (code) => libelleRaccourci(code, 'ged');
+    const barre = (nom, code) => {
+      const b = this.conteneur.querySelector(`.ged-barre [data-action="${nom}"]`);
+      return b ? [{ libelle: `${b.textContent.trim()} ${b.getAttribute('aria-label')}`, raccourci: touches(code), action: () => b.click() }] : [];
+    };
+    const generales = [
+      ...barre('parent', 'parent'),
+      { libelle: `${icone('ged_actualiser')} ${texte('ged.raccourcis.actualiser')}`, raccourci: touches('actualiser'), action: () => this.#lancer(() => this.recharger()) },
+      { separateur: true },
+      ...barre('dossier', 'nouveauDossier'),
+      ...barre('ajouter', 'ajouter'),
+    ];
+    const doc = e.target.closest('[data-doc]');
+    if (doc) {
+      await this.selectionnerDocument(Number(doc.dataset.doc));
+      // Actions du détail du document sélectionné (téléchargement compris), dans l'ordre de sa barre.
+      const actions = [...this.haut.querySelectorAll('.ged-visu-actions > a, .ged-visu-actions > button[data-action]:not([data-action="dock"])')]
+        .map((b) => ({ libelle: `${b.textContent.trim()} ${b.getAttribute('aria-label')}`, action: () => b.click() }));
+      ouvrirMenuContextuel(e, [...actions, { separateur: true }, ...generales]);
+      return;
+    }
+    const el = e.target.closest('[data-noeud]');
+    const n = el && this.visibles?.dossiers[Number(el.dataset.noeud)];
+    if (n) {
+      this.#selectionnerNoeud(n);
+      const repertoire = this.modifiable && n.repertoire;
+      ouvrirMenuContextuel(e, [
+        { libelle: `${icone('ged_ouvrir')} ${texte('ged.raccourcis.ouvrir')}`, raccourci: touches('ouvrir'), action: () => this.#lancer(() => this.ouvrir(n)) },
+        ...(repertoire ? [
+          { libelle: `${icone('ged_renommer')} ${texte('ged.raccourcis.renommer')}`, raccourci: touches('renommer'), action: () => this.#lancer(() => this.renommerDossier(n)) },
+          { libelle: `${icone('retirer')} ${texte('ged.raccourcis.supprimer_dossier')}`, raccourci: touches('supprimerDossier'), action: () => this.#lancer(() => this.supprimerDossier(n)) },
+        ] : []),
+        { separateur: true }, ...generales,
+      ]);
+      return;
+    }
+    ouvrirMenuContextuel(e, generales);
   }
 
   /** Raccourcis de l'explorateur (groupe ged). */

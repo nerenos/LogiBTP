@@ -1,5 +1,5 @@
 import { ERREUR_FICHE } from '../src/codes.js';
-import { echapper, formatLibre, htmlSur, editerLibelle, creerCombo, confirmer, formatHeure, notifier, declarerRaccourcis, actionDe, libelleRaccourci } from '@logibtp/socle/ui';
+import { echapper, formatLibre, htmlSur, editerLibelle, creerCombo, confirmer, formatHeure, notifier, declarerRaccourcis, actionDe, libelleRaccourci, ouvrirMenuContextuel } from '@logibtp/socle/ui';
 import { MODES, LIBELLES_MODES, enSaisie, titreFiche } from '../src/modes.js';
 import { validerFiche, MESSAGES } from '../src/validation.js';
 import { ParametrageFiche } from './parametrage.js';
@@ -340,6 +340,7 @@ export class FicheBase {
     ].filter((b) => b.visible !== false);
     // Actions visibles par code de raccourci (clavier : #clavier).
     this.actionsClavier = Object.fromEntries(boutons.filter((b) => b.raccourci).map((b) => [b.raccourci, b.action]));
+    this.boutonsBarre = boutons;
     const zone = this.conteneur.querySelector('.fiche-actions');
     // Barre en groupes séparés (I7) : édition | élément | affichage | actions | fermer.
     const bouton = (b) => `<button type="button" data-i="${boutons.indexOf(b)}" class="${b.principal ? 'principal' : ''}${b.icone ? ' bouton-icone' : ''}" title="${echapper(bulle(b))}" aria-label="${echapper(b.libelle)}"${b.actif === undefined ? '' : ` aria-pressed="${b.actif}"`}>${echapper(b.icone ?? b.libelle)}</button>`;
@@ -940,6 +941,30 @@ export class FicheBase {
       Promise.resolve(f()).catch((x) => this.#erreur(x));
     };
     document.addEventListener('keydown', this.clavier);
+    if (!this.menuBranche) {
+      this.menuBranche = true;
+      this.conteneur.addEventListener('contextmenu', (e) => this.#menuFiche(e));
+    }
+  }
+
+  /**
+   * Clic droit dans la fiche (hors champ de saisie, lien et composant qui ouvre son propre menu) : actions de la barre
+   * avec leurs touches, onglets précédent et suivant ; le menu du navigateur reste sur les champs (copier, coller).
+   */
+  #menuFiche(e) {
+    if (e.defaultPrevented || e.target.closest('input, textarea, select, a, [contenteditable="true"], .fiche-saisie-champ')) return;
+    const touches = (code) => (code ? libelleRaccourci(code, 'fiche') : '');
+    const executer = (f) => () => Promise.resolve(f()).catch((x) => this.#erreur(x));
+    const actions = (this.boutonsBarre ?? []).map((b) => ({
+      libelle: [b.icone, b.libelle].filter(Boolean).join(' '), titre: b.titre, raccourci: touches(b.raccourci), action: executer(b.action),
+    }));
+    const sections = this.sections();
+    const onglets = sections.length > 1 ? [
+      { separateur: true },
+      { libelle: texte('fiche.raccourcis.onglet_precedent'), raccourci: touches('ongletPrecedent'), action: executer(this.#fonctionClavier('ongletPrecedent')) },
+      { libelle: texte('fiche.raccourcis.onglet_suivant'), raccourci: touches('ongletSuivant'), action: executer(this.#fonctionClavier('ongletSuivant')) },
+    ] : [];
+    ouvrirMenuContextuel(e, [...actions, ...onglets]);
   }
 
   #debrancherClavier() {

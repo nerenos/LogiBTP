@@ -366,5 +366,4 @@ Lots P1 (module, chargement, socle et navigation migrés), P2 (erreurs par code)
 
 - [ ] Lots A (code mort sûr) et B (code apparemment inutilisé, à trancher) : en attente des évolutions à venir qui
   touchent ce code ; à reprendre ensuite.
-- [ ] Raccourcis clavier : les accélérateurs des menus du bandeau (`&Paramètres`) ne sont pas personnalisables ; menu
-  contextuel à étendre (fiches, explorateur GED, entête du document).
+- [ ] Raccourcis clavier : les accélérateurs des menus du bandeau (`&Paramètres`) ne sont pas personnalisables.
