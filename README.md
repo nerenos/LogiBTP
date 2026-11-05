@@ -258,6 +258,10 @@ Sans API joignable, le client passe en **démo hors ligne** : calcul local compl
 PostgreSQL écoute sur le port 5433 (`logibtp` / `logibtp`). Les scripts SQL (manifeste `db/installation/scripts.txt`) ne
 s'exécutent qu'à la création du volume : `docker compose down -v` pour repartir de zéro.
 
+### Installation Linux (Debian)
+
+[Tuto](documentation/INSTALLATION-DEBIAN.md)
+
 ### Installation chez un client (Docker)
 
 Deux conteneurs indépendants : l'API (qui sert le client web) et PostgreSQL ; détail dans `modules/installation/CLAUDE.md`
