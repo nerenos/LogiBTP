@@ -404,7 +404,9 @@ Une source annexe est déclarée au niveau du rapport (`"sources_annexes": ["mar
 dans le même appel que les données. Sources disponibles pour les documents : `marche_documents`,
 `avancements_precedents` (§ 9.4) ; pour la fiche d'un marché : `marche_sous_traitance` (marché, sous-traitant et maître
 d'ouvrage en coordonnées de l'annuaire, chantier, marché de vente lié, commandes validées ; modèles ST_DC4,
-ST_ACTE_SPECIAL, ST_CONTRAT, ST_ORDRE_SERVICE, dictionnaire de la source « fiche »). Une nouvelle source se programme dans `SpecialisationEditionBtp.SourceAnnexeAsync`
+ST_ACTE_SPECIAL, ST_CONTRAT, ST_ORDRE_SERVICE, dictionnaire de la source « fiche ») ; pour la fiche d'un salarié :
+`dotations_salarie` (modèle FICHE_DOTATION : salarié, période, mouvements de dotation, encore doté, signature ; période
+par les paramètres de la demande `du`, `au` — `/edition?…&p_du=&p_au=` — ou fiche signée `fiche`). Une nouvelle source se programme dans `SpecialisationEditionBtp.SourceAnnexeAsync`
 (`src/LogiBTP.Api/Btp/EditionsBtp.cs`) et s'ajoute au dictionnaire (`SourceDocumentEdition.Dictionnaire`).
 
 ---
@@ -721,6 +723,11 @@ Présent quand le document a au moins une tranche de frais annexes (type de prix
 | `societe.*` | Société (raison sociale, SIRET, TVA, adresse, téléphone, courriel) |
 
 Les champs confidentiels ne sont jamais transmis.
+
+Source annexe de la fiche d'un salarié : `sources.dotations_salarie` — `salarie` (`code`, `nom`, `prenom`, `service`),
+`du`, `au`, `mouvements[]` (`date`, `code`, `libelle`, `unite`, `remis`, `rendu`, `rebut`, `numero`, `borne`), `dote[]`
+(`code`, `libelle`, `unite`, `quantite`), `signe`, `signataire`, `signe_le`, `lieu` ; image `SIGNATURE_DOTATION` (fiche
+signée). Les paramètres de la demande d'une fiche (`p_<nom>` de l'adresse de l'aperçu) sont lus par ses sources annexes.
 
 ### 10.7 Données de la source « liste »
 

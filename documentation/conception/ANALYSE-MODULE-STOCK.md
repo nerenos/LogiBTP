@@ -39,7 +39,12 @@
 > création portés par la borne) puis acceptée, ou refusée et annulée ; le renouvellement est calculé depuis la
 > dernière sortie de l'article encore doté (notification quotidienne à 30 jours au responsable du service).
 >
-> **Module terminé** (lots 1 à 5) ; reste à analyser : lots et numéros de série (S24, TODO).
+> **Module terminé** (lots 1 à 5). Suites du 05/11/2026 : fiche de dotation par le module Édition (S26 : modèle
+> `FICHE_DOTATION`, source annexe `dotations_salarie`, signée à la borne pour les mouvements enregistrés depuis la fiche
+> précédente, PDF rangé dans la GED du salarié, `db/270`, `Btp/DotationFicheBtp.cs`) ; pièce comptable de l'inventaire
+> (pièce `S_INVENTAIRE` des écarts valorisés créée à la validation d'un lot, exportée en opération diverse stock ↔
+> variation des stocks par le module Comptabilité, annulée ou contre-passée à l'annulation du lot : `093e`, `094e`,
+> `db/269`, `Btp/InventaireComptableBtp.cs`). Lots et numéros de série (S24) : analyse au § 11, décisions à prendre.
 
 ## 1. Note d'origine (résumé)
 
@@ -271,9 +276,9 @@ dotation du salarié (`sal_cha_dotation_id`), vues de liste (stock par lieu, mou
 | S21 | Visuel des dotations ? | Tableau salariés × articles (quantités nettes, détail au survol : dates) et frise par salarié ; filtres période, service, marque ; export CSV. **✔ Retenue (24/10/2026).** |
 | S22 | Précision des quantités ? | 3 décimales en unité de stock ; arrondi demi vers l'infini (comme les moteurs). **✔ Décidé (24/10/2026)** : nombre de décimales **paramétré par unité** (`unite.unt_precision_qte` du module Document, déjà présent) appliqué à l'unité de stock de l'article ; arrondi demi vers l'infini ; la conversion depuis l'unité de la ligne est arrondie à la précision de l'unité de stock. |
 | S23 | Stock négatif ? | **Autorisé**, avertissement à la saisie (jamais bloquant : antidatation et inventaire non bloquant l'exigent) ; liste « Stocks négatifs ». **✔ Retenue (24/10/2026).** |
-| S24 | Lots, numéros de série, péremption ? | Hors périmètre (EPI non identifiés) ; matériel identifié = `materiel` des ressources. **⏸ Reportée, à approfondir (24/10/2026)** : lots et numéros de série nécessaires aux **certificats matière** (acier : numéro de coulée, certificat 3.1 rangé en GED et suivi jusqu'au chantier) et au futur **module SAV** (traçabilité des articles vendus, posés et entretenus). Hors des lots 1 à 5 ; le journal des mouvements devra pouvoir porter un lot ou un numéro de série (colonne réservée `mvt_tracabilite` à prévoir dès le lot 1). Analyse propre à mener (TODO). |
+| S24 | Lots, numéros de série, péremption ? | Hors périmètre (EPI non identifiés) ; matériel identifié = `materiel` des ressources. **⏸ Reportée, à approfondir (24/10/2026)** : lots et numéros de série nécessaires aux **certificats matière** (acier : numéro de coulée, certificat 3.1 rangé en GED et suivi jusqu'au chantier) et au futur **module SAV** (traçabilité des articles vendus, posés et entretenus). Hors des lots 1 à 5 ; le journal des mouvements devra pouvoir porter un lot ou un numéro de série (colonne réservée `mvt_tracabilite` à prévoir dès le lot 1). Analyse propre à mener (TODO). **Analyse du 05/11/2026 : § 11 (questions S24.1 à S24.12).** |
 | S25 | Sortie depuis une réservation : obligatoire ? | Non : un transfert vers un chantier consomme d'abord ses réservations du même article et dépôt (plus ancienne date de besoin) ; la transformation réservation → transfert reste possible. **✔ Retenue (24/10/2026).** |
-| S26 | Fiche de dotation EPI signée ? | Édition « Fiche de dotation » par salarié et période, signée sur la borne ou le papier (lot ultérieur). **✔ Retenue (24/10/2026).** |
+| S26 | Fiche de dotation EPI signée ? | Édition « Fiche de dotation » par salarié et période, signée sur la borne ou le papier (lot ultérieur). **✔ Retenue (24/10/2026). Réalisée le 05/11/2026** (modèle `FICHE_DOTATION` du module Édition ; à la borne, la fiche couvre les mouvements enregistrés depuis la fiche signée précédente ; PDF rangé dans la GED du salarié, catégorie « dotation »). |
 | S27 | Renouvellement des EPI (durée de vie) ? | Durée de vie par article (mois) facultative → alerte de renouvellement au chef de service (lot ultérieur). **✔ Retenue (24/10/2026).** |
 | S28 | Coût des sorties : imputation ? | Sortie / transfert vers un chantier = coût au PMP imputé au chantier (vue `v_cout_stock_chantier`, réutilisée par la rentabilité de l'Exécution). **✔ Retenue (24/10/2026).** |
 
@@ -295,3 +300,68 @@ dotation du salarié (`sal_cha_dotation_id`), vues de liste (stock par lieu, mou
 | 3 | Réservations (date de besoin, consommation), dates de livraison des commandes, projection et ruptures, mini / maxi, propositions de commande |
 | 4 | Magasin et dotations : interface magasinier, EPI / outillage (chantier par salarié, retours), validation des saisies, visuel des dotations, onglet Dotations du salarié |
 | 5 | Borne : sorties et retours de l'atelier, dépôt de la borne, saisies à valider ; fiche de dotation, renouvellement (S26, S27) |
+
+## 11. Lots et numéros de série (S24) — analyse du 05/11/2026
+
+### 11.1 Besoins
+
+- **Certificats matière** (acier, béton armé, menuiseries, produits soumis au marquage CE) : relier une quantité livrée
+  à son **numéro de lot** (numéro de coulée pour l'acier) et au **certificat 3.1** du fabricant (PDF rangé en GED),
+  puis suivre ce lot du dépôt jusqu'au chantier (« quel lot a été posé sur quel chantier ? » et l'inverse : « où est
+  parti ce lot rappelé par le fournisseur ? »).
+- **Futur module SAV** : un équipement vendu, posé ou entretenu (chaudière, VMC, motorisation, menuiserie) se
+  reconnaît par son **numéro de série** ; la garantie et les interventions s'y rattachent.
+- **Péremption** (mastics, colles, résines, cartouches) : date limite d'utilisation par lot, sorties dans l'ordre des
+  dates (FEFO) et alerte avant échéance.
+- Hors de S24 : le matériel de l'entreprise identifié individuellement reste une fiche `materiel` des ressources
+  (compteurs, entretiens) ; les EPI restent non identifiés (S16).
+
+### 11.2 Existant
+
+- `stk_mouvement.mvt_tracabilite` (texte, réservé dès le lot 1, jamais renseigné) ; quantités en unité de stock ; stock
+  calculé par article et lieu (`ReglesStock`) ; inventaires par article (`stk_comptage`) ; pièces = documents du module
+  Document (une ligne = un article, une quantité).
+- La GED range déjà des pièces par élément (catégories, validité `dge_valide_au`) : le certificat d'un lot peut y
+  être un document de l'élément « lot ».
+
+### 11.3 Modèle proposé
+
+- **Suivi par article** : `ele_tracabilite` = AUCUN (défaut) / LOT / SERIE, et `ele_peremption` (le lot porte une date
+  limite). Un numéro de série est un lot de quantité 1 : une seule règle de calcul.
+- **Lot** (`stk_lot`, module Stock) : article, numéro (unique par article et fournisseur), fournisseur, date de
+  fabrication, date limite, numéro de coulée et norme (texte libre), certificat (document GED de l'élément `stk_lot`),
+  commentaire. Créé à la réception (saisi ou lu au code-barres) ou à l'inventaire.
+- **Répartition d'une ligne de pièce par lot** (`document_ligne_lot` : ligne, lot, quantité en unité de stock) : une
+  ligne de réception de 2 t d'acier peut porter trois coulées ; la ligne garde sa quantité totale (calcul inchangé).
+- **Mouvements par lot** : `mvt_lot_id` (remplace `mvt_tracabilite`) ; une ligne répartie écrit un mouvement par lot.
+- **Stock par lot** : même règle `stockA` avec le lot dans la clé (dernier comptage du lot + mouvements du lot) ; le
+  stock de l'article reste la somme ; la valorisation reste par article (PMP global, S1), sans coût par lot.
+- **Inventaire** : une ligne par lot compté pour un article suivi ; contrôle partagé étendu (lot obligatoire).
+- **Traçabilité** : vue `v_stk_trace_lot` (entrées, transferts, sorties vers les chantiers, retours) ; écrans « lot »
+  (d'où il vient, où il est allé) et « chantier » (lots posés) ; certificat joint aux documents du chantier.
+
+### 11.4 Questions
+
+| N° | Question | Proposition | Décision |
+|---|---|---|---|
+| S24.1 | Suivi par article ou par famille ? | Par article (`ele_tracabilite`), proposé par la famille à la création de l'article | |
+| S24.2 | Lot obligatoire à la validation d'une pièce ? | Réception d'un article suivi : lots obligatoires (somme = quantité de la ligne, refus `STK_LOT_REPARTITION`) ; sortie et transfert : lots proposés automatiquement (FEFO si péremption, sinon FIFO par date d'entrée), modifiables | |
+| S24.3 | Où saisir les lots ? | Détail de la ligne (section « Lots ») et fenêtre à la validation pour les lignes non réparties ; borne et magasin : lot proposé, changeable par lecture du code-barres | |
+| S24.4 | Stock négatif d'un lot ? | Autorisé comme pour l'article (S23), signalé dans le rapport des lots et à l'inventaire | |
+| S24.5 | Certificat 3.1 : où et quand ? | Document GED de l'élément `stk_lot` (catégorie « certificat matière »), déposé à la réception ou plus tard ; lot sans certificat signalé si la famille l'exige | |
+| S24.6 | Le certificat suit-il le lot sur le chantier ? | Oui : raccourci GED dans la GED du chantier à la première sortie vers lui, et dans le dossier des ouvrages exécutés | |
+| S24.7 | Péremption : alerte ? | Source de notifications quotidienne : lots en stock à moins de N jours de leur date limite (paramètre du dépôt, 30 par défaut) aux magasiniers ; lots périmés exclus des propositions de sortie (avertissement s'ils sont choisis) | |
+| S24.8 | Numéros de série et SAV ? | Un numéro de série vendu ou posé crée un « équipement installé » du futur module SAV (client, chantier, date de pose, garantie) ; d'ici là, recherche du numéro dans la traçabilité | |
+| S24.9 | Valorisation par lot ? | Non : PMP global par article (S1) ; le prix d'achat du lot est gardé pour information | |
+| S24.10 | Transformations (commande → réception → facture) ? | Les lots naissent à la réception ; la facture issue d'une réception reprend la répartition sans ressaisie ; un retour fournisseur indique ses lots | |
+| S24.11 | Articles déjà en stock à l'activation du suivi ? | Lot « INITIAL » créé par article et lieu au stock du jour, à éclater par un inventaire | |
+| S24.12 | Impression ? | Numéros de lot et de série dans les éditions des pièces (collection `lignes[].lots` du dictionnaire) et étiquettes de lot à code-barres | |
+
+### 11.5 Découpage proposé
+
+| Lot | Contenu |
+|---|---|
+| S24-a | Schéma (`ele_tracabilite`, `stk_lot`, `document_ligne_lot`, `mvt_lot_id`), saisie des lots en réception, mouvements par lot, stock par lot (règle répliquée + jeu), onglet Lots de l'article |
+| S24-b | Sorties et transferts (proposition FIFO / FEFO), magasin et borne, inventaire par lot, lot INITIAL |
+| S24-c | Certificats (GED, raccourci dans le chantier), traçabilité ascendante et descendante, péremption (notifications), éditions et étiquettes |
+| S24-d | Numéros de série → équipements installés (avec le module SAV) |

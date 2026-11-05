@@ -56,6 +56,8 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
                 Aide: "Superviser : voir les notes de tous ; RGPD : lever le masquage des notes privées"),
             new("reglement", "Règlements", Simple, Icone: "💶"),
             new("execution", "Exécution", Simple, Icone: "🧭"),
+            new(SpecialisationExecutionBtp.NoeudControle, "Contrôle du N+1 des étapes d'ordres", [ActionsDroits.Valider], Portee: true,
+                Aide: "En plus du responsable du service porteur et de ses délégués : portée service (ordres des services dont on est membre) ou tout"),
             new("execution/sav", "Interventions SAV sur le terrain", Simple, Aide: "Refusé par défaut : ses interventions dans « Mon terrain », compte rendu, bon signé par le client"),
             new("sous_traitance", "Sous-traitance", Simple, Icone: "🤝"),
             new("stock", "Stock", Simple, Icone: "📦"),

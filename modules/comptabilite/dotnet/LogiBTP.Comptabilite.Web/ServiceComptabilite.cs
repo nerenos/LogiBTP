@@ -117,7 +117,7 @@ public sealed class ServiceComptabilite(ComptabiliteDbContext db, Specialisation
         if (await db.Collectifs.AnyAsync(c => c.ColCptCode == code, ct)) usages.Insert(0, "collectif d'un type de tiers");
         if (await db.Ventilations.AnyAsync(v => v.VcoCptCode == code, ct)) usages.Insert(0, "clés de ventilation");
         if (await db.TypesComptables.AnyAsync(t => t.TcoCptDefaut == code || t.TcoCptRemise == code || t.TcoCptRetenue == code || t.TcoCptAcompte == code
-            || t.TcoCptPaiementDirect == code || t.TcoCptProrata == code || t.TcoCptEcartDebit == code || t.TcoCptEcartCredit == code, ct))
+            || t.TcoCptPaiementDirect == code || t.TcoCptProrata == code || t.TcoCptEcartDebit == code || t.TcoCptEcartCredit == code || t.TcoCptContrepartie == code, ct))
             usages.Insert(0, "types comptables");
         if (usages.Count > 0) throw ExceptionMetier.Conflit("CPT_UTILISE", $"Compte {code} utilisé ({string.Join(", ", usages)}) : désactivez-le plutôt");
         db.Comptes.Remove(x);
@@ -218,7 +218,7 @@ public sealed class ServiceComptabilite(ComptabiliteDbContext db, Specialisation
 
     private static TypeComptableDto Dto(TypeComptableEntite x) => new(x.TcoCode, x.TcoLibelle, x.TcoParent, x.TcoSens, x.TcoJournal, x.TcoJournalLibelle,
         x.TcoCptDefaut, x.TcoCptRemise, x.TcoCptRetenue, x.TcoRetenueCompteTiers, x.TcoCptAcompte, x.TcoCptPaiementDirect, x.TcoCptProrata,
-        x.TcoCptEcartDebit, x.TcoCptEcartCredit, x.TcoOrdre, x.TcoActif);
+        x.TcoCptEcartDebit, x.TcoCptEcartCredit, x.TcoOrdre, x.TcoActif, x.TcoCptContrepartie);
 
     public async Task<List<TypeComptableDto>> TypesComptablesAsync(CancellationToken ct) =>
         (await db.TypesComptables.AsNoTracking().OrderBy(x => x.TcoOrdre).ToListAsync(ct)).Select(Dto).ToList();
@@ -248,7 +248,7 @@ public sealed class ServiceComptabilite(ComptabiliteDbContext db, Specialisation
                 throw ExceptionMetier.Invalide("TCO_BOUCLE", $"{t.Libelle} : les types parents forment une boucle");
         }
         await ControlerComptesExistent(l.SelectMany(t => new[] { t.CompteDefaut, t.CompteRemise, t.CompteRetenue, t.CompteAcompte, t.ComptePaiementDirect,
-            t.CompteProrata, t.CompteEcartDebit, t.CompteEcartCredit }), "Types comptables", ct);
+            t.CompteProrata, t.CompteEcartDebit, t.CompteEcartCredit, t.CompteContrepartie }), "Types comptables", ct);
         foreach (var t in l)
         {
             var x = existants[t.Code];
@@ -266,6 +266,7 @@ public sealed class ServiceComptabilite(ComptabiliteDbContext db, Specialisation
             x.TcoCptProrata = Vide(t.CompteProrata);
             x.TcoCptEcartDebit = Vide(t.CompteEcartDebit);
             x.TcoCptEcartCredit = Vide(t.CompteEcartCredit);
+            x.TcoCptContrepartie = Vide(t.CompteContrepartie);
             x.TcoActif = t.Actif;
         }
         await db.SaveChangesAsync(ct);

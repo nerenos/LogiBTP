@@ -131,7 +131,8 @@ public sealed class SourceEntretiens(LogiBtpContext db) : ISourceNotifications
 /// <summary>
 /// Étapes des ordres (module Exécution, E45 ; toutes les heures, module actif) : étape en retard (date prévue dépassée
 /// sans validation) à la ressource principale (salarié), sinon au responsable de l'ordre, sinon au responsable du service ;
-/// contrôle du N+1 attendu depuis plus de deux jours au responsable du service porteur (ou de son parent).
+/// contrôle du N+1 attendu depuis plus de deux jours au responsable du service porteur (ou de son parent) et à ses
+/// délégués en vigueur (`f_controleurs_service`).
 /// </summary>
 public sealed class SourceEtapesExecution(LogiBtpContext db) : ISourceNotifications
 {
@@ -160,11 +161,16 @@ public sealed class SourceEtapesExecution(LogiBtpContext db) : ISourceNotificati
             FROM exe_ordre_etape e JOIN ordres o ON o.ent_id = e.ore_ordre_id
             WHERE e.ore_valide_le IS NULL AND e.ore_prevu_le < @j
             UNION ALL
-            SELECT e.ore_id, o.ent_id, o.ent_numero, e.ore_libelle, e.ore_prevu_le, e.ore_valide_le, 'CONTROLE',
-                   (SELECT r.code FROM responsable r WHERE r.srv_id = o.ent_srv_id)
+            SELECT e.ore_id, o.ent_id, o.ent_numero, e.ore_libelle, e.ore_prevu_le, e.ore_valide_le, 'CONTROLE', i.ind_utilisateur
             FROM exe_ordre_etape e JOIN ordres o ON o.ent_id = e.ore_ordre_id
+            LEFT JOIN LATERAL f_controleurs_service(o.ent_srv_id, @j) c ON TRUE
+            LEFT JOIN individu i ON i.ind_id = c.ind_id AND i.ind_utilisateur IS NOT NULL
             WHERE e.ore_controle AND e.ore_valide_le IS NOT NULL AND e.ore_controle_le IS NULL AND e.ore_valide_le <= @j - 2
             """, new Npgsql.NpgsqlParameter("j", aujourdhui)).ToListAsync(ct);
+        // Contrôle : une ligne par contrôleur (responsable, délégués) ; sans compte, la ligne ne compte que si aucun
+        // contrôleur de l'étape n'en a (alors les administrateurs).
+        lignes = lignes.Where(l => l.Destinataire is not null || l.Genre != "CONTROLE"
+            || !lignes.Any(x => x.Genre == "CONTROLE" && x.OreId == l.OreId && x.Destinataire is not null)).DistinctBy(l => (l.OreId, l.Genre, l.Destinataire)).ToList();
         if (lignes.Count == 0) return [];
         var admins = await DestinatairesBtp.AdministrateursAsync(db, ct);
         return lignes.SelectMany(l => (l.Destinataire is { } d ? [d] : admins).Select(dest => l.Genre == "RETARD"

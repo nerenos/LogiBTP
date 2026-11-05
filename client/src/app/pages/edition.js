@@ -49,6 +49,8 @@ export class PageEdition extends PageBase {
       source: q.source ?? 'document', id: String(q.id ?? ''), modele: q.modele || null, presentation: q.presentation || null,
       format: q.format || null, orientation: null, parametres: q.recherche ? { recherche: q.recherche } : {},
     };
+    // Paramètres libres de la demande (« p_<nom> » : période de la fiche de dotation…), lus par les sources annexes.
+    for (const [k, v] of Object.entries(q)) if (k.startsWith('p_') && v !== '') this.demande.parametres[k.slice(2)] = v;
     this.conteneur.innerHTML = GABARIT;
     this.conteneur.classList.add('page-edition-apercu');
     this.conteneur.querySelector('.edition-barre').addEventListener('click', (e) => {
@@ -172,6 +174,7 @@ export class PageEdition extends PageBase {
       source: d.source, id: d.id, ...(d.modele ? { modele: d.modele } : {}), ...(d.presentation ? { presentation: d.presentation } : {}),
       ...(d.format ? { format: d.format } : {}), ...(d.parametres.recherche ? { recherche: d.parametres.recherche } : {}),
     });
+    for (const [k, v] of Object.entries(this.requete)) if (k.startsWith('p_')) q.set(k, v);
     this.app.routeur.remplacerUrl(`/edition?${q}`);
   }
 

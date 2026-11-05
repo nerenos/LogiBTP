@@ -55,6 +55,7 @@ import { PageParametresConnexions } from './parametres-connexions.js';
 import { PageParametresMail } from './parametres-mail.js';
 import { PageMail, PageMessageMail, PageRedactionMail } from './mail.js';
 import { PageSyntheseExecution, PageExecutionChantier, PageParametresExecution, PageAtelierExecution } from './execution.js';
+import { PageDelegationsControle } from '../execution/delegations.js';
 import { PageRentabilite, PageRentabiliteFacturation, PageRentabiliteChantier, PageRentabiliteFaits, PageRentabiliteRapprochement, PageRentabiliteChangements, PageParametresRentabilite } from './rentabilite.js';
 import { PageTerrain } from './terrain.js';
 import { PageReceptionTerrain } from './terrain-reception.js';
@@ -106,6 +107,7 @@ export const ROUTES = [
   { nom: 'execution-synthese', chemin: '/execution/synthese', page: PageSyntheseExecution, titre: texte('execution_btp.routes.synthese') },
   { nom: 'execution-chantier', chemin: '/execution/chantier/:id', page: PageExecutionChantier, titre: texte('execution_btp.routes.chantier') },
   { nom: 'execution-atelier', chemin: '/execution/atelier', page: PageAtelierExecution, titre: texte('execution_btp.routes.atelier') },
+  { nom: 'execution-delegations', chemin: '/execution/delegations', page: PageDelegationsControle, titre: texte('execution_btp.routes.delegations') },
   { nom: 'terrain', chemin: '/terrain', page: PageTerrain, titre: texte('terrain_btp.page.titre') },
   { nom: 'terrain-reception', chemin: '/terrain/reception/:id', page: PageReceptionTerrain, titre: texte('terrain_btp.reception.titre') },
   { nom: 'terrain-sav', chemin: '/terrain/sav/:id', page: PageSavTerrain, titre: texte('terrain_btp.sav_page.titre') },

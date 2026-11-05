@@ -348,7 +348,7 @@ personnalisables** forment une seconde couche, les **étapes de l'ordre** :
 - **Validation** : posée au passage de l'état (bouton « Valider l'étape » ou action du cycle), date et auteur, annulable
   par le même avec motif (historique `ordre_execution_historique`).
 - **Contrôle N+1** : case active seulement pour l'état qui l'exige ; N+1 = responsable du service porteur de l'ordre
-  ou un administrateur (E30 ; délégation à un autre membre : module de droits à venir) ; tant qu'il n'est pas coché,
+  ou un administrateur (E30 ; délégation à un membre du service, réalisée le 05/11/2026 : `db/268`, page `/execution/delegations`) ; tant qu'il n'est pas coché,
   l'état suivant ne se valide pas (ou seulement avec alerte, E31).
 - **Ressource principale** : celle de l'ordre par défaut (en clair, grisée), surchargée par état (salarié, équipe,
   matériel, sous-traitant, service) ; reprise comme affectation de la tâche du planning.
@@ -375,7 +375,7 @@ personnalisables** forment une seconde couche, les **étapes de l'ordre** :
 | E27 | « Parcours défini par les modèles » : le modèle de parcours du chantier ou le modèle de saisie du document (`ent_modele`) ? | Le **modèle de parcours** : chaque étape (type d'ordre) y reçoit ses états ; un ordre créé hors parcours prend les états du type | Ok |
 | E28 | États masqués (sans date obligatoire) : comment se valident-ils ? | Dans la liste complète des étapes (bouton « Toutes les étapes ») ou d'office quand l'état à date obligatoire suivant est validé | Ok |
 | E29 | Ordre de validation des états : imposé ou libre ? | Imposé par défaut (un état ne se valide qu'après le précédent), états parallèles possibles par des amonts comme dans le parcours | Ok |
-| E30 | Qui est le N+1 ? | Le responsable du service porteur de l'ordre, sinon celui du service parent, sinon un administrateur ; délégation possible à un membre désigné | Le responsable du service ou un admin et délégation possible (a voir dans le module de droit) |
+| E30 | Qui est le N+1 ? | Le responsable du service porteur de l'ordre, sinon celui du service parent, sinon un administrateur ; délégation possible à un membre désigné | Le responsable du service ou un admin et délégation possible (a voir dans le module de droit). **Réalisé le 05/11/2026** : délégation nominative par service (membre du service ou d'un sous-service, période facultative, `delegation_controle`, `f_controleurs_service`) tenue par le responsable, un administrateur ou le paramétrage ; et droit par profil, nœud `execution/controle` (VALIDER, portée SERVICE ou TOUT) |
 | E31 | Contrôle N+1 non activé : blocage ou alerte ? | Paramétrable par état (bloquant ou alerte) ; tâche du CRM au N+1 quand l'état à contrôler est validé | Ok |
 | E32 | Ressource principale : `ent_responsable_id` ou nouvelle colonne ? | Nouvelle colonne `ent_ressource` (type + identifiant : salarié, équipe, matériel, sous-traitant, service) ; le responsable reste la personne qui suit l'ordre | Ok |
 | E33 | Nature des états (tâche, jalon, attente) : globale à la base, surchargeable ? | Globale à la base (catalogue), durée surchargeable dans le modèle et sur l'ordre ; la nature ne change pas | Ok |

@@ -1,7 +1,7 @@
 import { MODULE_FACULTATIF } from '../codes.js';
 import { ajouterJours } from '@logibtp/socle';
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo, formatNombre, alerter, confirmer, saisir, formatDateHeure } from '@logibtp/socle/ui';
+import { echapper, creerCombo, formatNombre, alerter, confirmer, saisir, formatDate, formatDateHeure, PadSignature } from '@logibtp/socle/ui';
 import { ecrireDuree, lireDuree, ERREUR_POINTAGE } from '@logibtp/pointage';
 import { EcranEtapesAtelier } from '@logibtp/execution/ui';
 import { texte, texteHtml, icone, iconeHtml, langue, messageErreur } from '@logibtp/socle/dictionnaire';
@@ -425,9 +425,11 @@ export class PageBorne extends PageBase {
         <td><button type="button" class="borne-touche" data-moins="${i}">${iconeHtml('moins')}</button> <b>${formatNombre(l.quantite, 2)}</b> ${echapper(l.unite)} <button type="button" class="borne-touche" data-plus="${i}">${iconeHtml('ajouter')}</button></td>
         ${s.mode === 'RETOUR' ? `<td><label><input type="checkbox" data-rebut="${i}" ${l.rebut ? 'checked' : ''}> ${texteHtml('pointage.borne.hors_usage')}</label></td>` : ''}</tr>`).join('')}</tbody></table>` : ''}
       <p><button type="button" class="borne-bouton principal" data-enregistrer ${s.lignes.length ? '' : 'disabled'}>${iconeHtml('pointage_ok')} ${texteHtml('commun.enregistrer')}</button>
+        <button type="button" class="borne-bouton" data-fiche>${iconeHtml('pointage_signature')} ${texteHtml('pointage.borne.fiche_dotation')}</button>
         <button type="button" class="borne-bouton" data-retour>${texteHtml('pointage.borne.retour')}</button></p>`;
     this.#brancherEntete();
     const z = this.zone;
+    z.querySelector('[data-fiche]').addEventListener('click', () => this.#ficheDotation(s));
     z.querySelectorAll('[data-mode]').forEach((b) => b.addEventListener('click', () => { s.mode = b.dataset.mode; s.lignes = []; this.#stock(s); }));
     z.querySelector('[data-dotation]').addEventListener('click', () => { s.dotation = true; s.chantier = null; this.#stock(s); });
     z.querySelectorAll('[data-chantier]').forEach((b) => b.addEventListener('click', () => { s.dotation = false; s.chantier = Number(b.dataset.chantier); this.#stock(s); }));
@@ -456,6 +458,41 @@ export class PageBorne extends PageBase {
         await alerter(r.essai ? texte('pointage.borne.essai_rien') : texte('pointage.borne.stock_enregistre', { pieces: r.pieces.map((x) => x.numero).join(', ') }));
         this.#journee();
       } catch (e) { await alerter(e.message); }
+    });
+    this.#minuterie();
+  }
+
+  /**
+   * Fiche de dotation (module Stock, S26) : remises et retours de dotation depuis la fiche signée précédente, signés par
+   * le salarié sur l'écran ; le serveur édite la fiche (modèle FICHE_DOTATION) et la range dans la GED du salarié.
+   */
+  async #ficheDotation(etatStock) {
+    const j = this.etat.journee;
+    let f;
+    try { f = await appel('GET', `/stock/fiche?jeton=${encodeURIComponent(j.jeton)}`); } catch (e) { this.#erreur(e); return; }
+    if (!f.mouvements.length) { await alerter(texte('pointage.borne.fiche_vide')); return; }
+    this.ecran = () => this.#ficheDotation(etatStock);
+    const q = (x) => (x === null || x === undefined ? '' : formatNombre(x, 2));
+    this.zone.innerHTML = `${this.#entete(texte('pointage.borne.fiche_titre', { du: formatDate(f.du), au: formatDate(f.au) }))}
+      <table class="borne-liste"><thead><tr><th>${texteHtml('pointage.borne.fiche_date')}</th><th>${texteHtml('pointage.borne.fiche_article')}</th>
+        <th>${texteHtml('pointage.borne.fiche_remis')}</th><th>${texteHtml('pointage.borne.fiche_rendu')}</th></tr></thead><tbody>
+      ${f.mouvements.map((m) => `<tr><td>${formatDate(m.date)}</td><td><b>${echapper(m.code)}</b> ${echapper(m.libelle)}</td>
+        <td>${q(m.remis)} ${m.remis ? echapper(m.unite ?? '') : ''}</td><td>${q(m.rendu ?? m.rebut)} ${m.rendu || m.rebut ? echapper(m.unite ?? '') : ''}</td></tr>`).join('')}</tbody></table>
+      <p>${texteHtml('pointage.borne.fiche_engagement')}</p><div data-signature></div>
+      <p><button type="button" class="borne-bouton principal" data-signer disabled>${iconeHtml('pointage_signature')} ${texteHtml('pointage.borne.fiche_signer')}</button>
+        <button type="button" class="borne-bouton" data-retour>${texteHtml('pointage.borne.retour')}</button></p>`;
+    this.#brancherEntete();
+    const signer = this.zone.querySelector('[data-signer]');
+    const pad = new PadSignature(this.zone.querySelector('[data-signature]'), { changer: (vide) => { signer.disabled = vide; this.#minuterie(); } });
+    this.zone.querySelector('[data-retour]').addEventListener('click', () => this.#stock(etatStock));
+    signer.addEventListener('click', async () => {
+      signer.disabled = true;
+      try {
+        const r = await appel('POST', '/stock/fiche', { jeton: j.jeton, signature: pad.enPng() });
+        await alerter(r.essai ? texte('pointage.borne.essai_rien')
+          : [texte('pointage.borne.fiche_signee'), ...(r.avertissements ?? [])].join(' '));
+        this.#journee();
+      } catch (e) { signer.disabled = false; await alerter(e.message); }
     });
     this.#minuterie();
   }

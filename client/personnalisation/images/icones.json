@@ -682,5 +682,9 @@
   "document_btp_precharger": "⇄",
   "navigation_btp_rentabilite_facturation": "📅",
   "navigation_btp_panneau_deplier": "👥",
-  "navigation_btp_panneau_replier": "«"
+  "navigation_btp_panneau_replier": "«",
+  "execution_btp_delegations": "👥",
+  "navigation_btp_execution_delegations": "👥",
+  "stock_btp_piece_comptable": "📒",
+  "pointage_signature": "✍"
 }

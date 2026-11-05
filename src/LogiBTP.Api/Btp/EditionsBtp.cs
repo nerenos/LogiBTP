@@ -55,6 +55,9 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
         };
         // Fiches et listes : société (entête, pied) comme pour les documents.
         if (donnees is not null && demande.Source != "document") donnees["societe"] = await SourceDocumentEdition.Societe(services, ct);
+        // Paramètres de la demande, lus par les sources annexes d'une fiche (période de la fiche de dotation).
+        if (donnees is not null && demande.Source == "fiche" && demande.Parametres is { Count: > 0 } p)
+            donnees["_parametres"] = new JsonObject(p.Select(x => KeyValuePair.Create(x.Key, JsonNode.Parse(x.Value.GetRawText()))));
         return donnees;
     }
 
@@ -126,9 +129,10 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
         foreach (var code in codes)
         {
             // Signature de la réception de pose : image de la table signature, pas une ressource de la GED.
-            if (code is CodeSignatureReception or CodeSignatureSav)
+            if (code is CodeSignatureReception or CodeSignatureSav or DotationFicheBtp.CodeSignature)
             {
-                if (donnees["sources"]?[code == CodeSignatureSav ? "intervention_sav" : "reception_pose"]?["signature_id"] is JsonValue sv && sv.TryGetValue<long>(out var sigId)
+                var annexe = code switch { CodeSignatureSav => "intervention_sav", DotationFicheBtp.CodeSignature => DotationFicheBtp.SourceAnnexe, _ => "reception_pose" };
+                if (donnees["sources"]?[annexe]?["signature_id"] is JsonValue sv && sv.TryGetValue<long>(out var sigId)
                     && await SignatureAsync(services.GetRequiredService<LogiBtpContext>(), pool, sigId, ct) is { } sig) res[code] = sig;
                 continue;
             }
@@ -187,6 +191,7 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
     public override async Task<JsonNode?> SourceAnnexeAsync(IServiceProvider services, string nom, JsonObject donnees, Utilisateur u, CancellationToken ct)
     {
         if (nom == "marche_sous_traitance") return await MarcheSousTraitanceAsync(services.GetRequiredService<LogiBtpContext>(), donnees, ct);
+        if (nom == DotationFicheBtp.SourceAnnexe) return await DotationFicheBtp.SourceAnnexeAsync(services.GetRequiredService<LogiBtpContext>(), donnees, ct);
         if (donnees["document"]?["id"] is not JsonValue v || !v.TryGetValue<long>(out var id)) return null;
         var db = services.GetRequiredService<LogiBtpContext>();
         var sql = nom switch

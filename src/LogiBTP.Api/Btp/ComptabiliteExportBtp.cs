@@ -24,6 +24,9 @@ namespace LogiBTP.Api.Btp;
 /// paiement direct : à défaut, compte du sous-traitant du poste (collectif sous-traitant et son compte auxiliaire) ;
 /// retenue du marché (R) couverte par une échéance RETENUE : portée par l'échéance ; autres retenues (pieds de section) :
 /// postes sur le compte de retenue.</item>
+/// <item>Écarts d'inventaire (type comptable <see cref="TypeStock"/>, pièces S_INVENTAIRE : `InventaireComptableBtp`) :
+/// opération diverse sans tiers ni TVA, une ligne par ligne d'article au compte de stock de la ventilation (montant signé :
+/// boni au débit, mali au crédit), contrepartie en variation des stocks (`tco_cpt_contrepartie` du type ou de son parent).</item>
 /// <item>Tiers : compte auxiliaire et collectif de la relation (client, fournisseur, sous-traitant : compte fournisseur
 /// faute de compte propre) ; TVA : exigibilité de la catégorie, sinon paramètre « TVA sur les débits ».</item>
 /// </list>
@@ -48,6 +51,9 @@ public sealed partial class SpecialisationComptabiliteBtp
     private sealed record CleSql(string Type, string? Nature, string? Taux, string Compte);
 
     [GeneratedRegex("^A[0-9]+$")] private static partial Regex CleAcompte();
+
+    /// <summary>Type comptable des écarts d'inventaire du stock (`db/269`).</summary>
+    public const string TypeStock = "STOCK";
 
     /// <summary>
     /// Genre d'un poste de pied : marqueur du marché, sinon genre recopié de l'élément POSTE_PIED, sinon (lignes saisies
@@ -173,6 +179,17 @@ public sealed partial class SpecialisationComptabiliteBtp
                     var r = ReglesVentilation.Compte(new EntreeVentilation(l.Compte, l.Nature, l.Taux, tco, compteTiersLignes), typesRegle, cles);
                     return new LignePiece(r.Compte, l.Taux, l.Montant ?? 0, r.Erreur);
                 }).ToList();
+            if (tco == TypeStock)
+            {
+                // Opération diverse : compte de stock par la ventilation de chaque ligne, contrepartie en variation.
+                var od = vendues.Zip(ls.Where(l => l.Type is 2 or 3 && (l.Montant ?? 0) != 0 && !SousChiffree(l) && !Exclue(l)),
+                    (v, l) => new LigneOd(v.Erreur is null ? v.Compte : null, l.Libelle ?? d.Objet ?? "", v.Montant)).ToList();
+                od.Add(new LigneOd(Compte(tco, t => t.TcoCptContrepartie), $"Variation des stocks – {d.Objet ?? d.Numero}", -od.Sum(x => x.Montant)));
+                res.Add(new PieceExportee(new PieceComptable(d.Id, type?.TcoJournal ?? tco, d.Date, d.Numero ?? $"#{d.Id}", d.Reference, d.Objet ?? d.Numero ?? "",
+                    type?.TcoSens ?? "ACHAT", 1, null, null, [], [], [], [], [], 0, null, null, Compte(tco, t => t.TcoCptEcartDebit), Compte(tco, t => t.TcoCptEcartCredit),
+                    d.Chantier, od), tco, d.TypeDocument, d.Objet, d.TotalTtc, d.Etat));
+                continue;
+            }
             var ech = echeances[d.Id].ToList();
             var retenueParEcheance = ech.Any(e => e.Nature == "RETENUE");
             var compteRetenue = type?.TcoRetenueCompteTiers == true ? null : Compte(tco, t => t.TcoCptRetenue);

@@ -1,5 +1,5 @@
 import { texte, texteHtml, pluriel, textesParCode, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
-import { urlDocument, urlFiche, TYPE_FICHE } from '../codes.js';
+import { urlDocument, urlFiche, TYPE_FICHE, MODELE_EDITION } from '../codes.js';
 import { dateLocale, aujourdhui } from '@logibtp/socle';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, formatNombre, creerCombo, lirePreferences, ecrirePreferences, formatDate, formatDateHeure, telechargerCsv, celluleCsv, nombreSaisi, saisir } from '@logibtp/socle/ui';
@@ -252,7 +252,7 @@ export class PageFicheDotation extends PageBase {
     this.titre = s ? texte('stock_btp.fiche.titre_salarie', { nom: `${s.prenom} ${s.nom}` }) : texte('stock_btp.routes.fiche_dotation');
     const lignes = (s?.articles ?? []).flatMap((x) => x.mouvements.map((m) => ({ ...m, a: art.get(x.ele) }))).sort((a, b) => new Date(a.date) - new Date(b.date));
     this.conteneur.innerHTML = `<div class="page-parametres fiche-dotation"><div class="entete-page sans-impression"><h1 class="page-titre">${iconeHtml('stock_btp_imprimer')} ${texteHtml('stock_btp.routes.fiche_dotation')}</h1>
-        <button type="button" class="principal" data-imprimer>${iconeHtml('stock_btp_imprimer')} ${texteHtml('stock_btp.inventaire.imprimer')}</button></div>
+        <button type="button" class="principal" data-imprimer title="${texteHtml('stock_btp.fiche.edition_titre')}">${iconeHtml('stock_btp_imprimer')} ${texteHtml('stock_btp.inventaire.imprimer')}</button></div>
       <h2>${texteHtml('stock_btp.fiche.titre')}</h2>
       <p>${texteHtml('stock_btp.fiche.salarie')} <b>${s ? echapper(`${s.prenom} ${s.nom}`) : '—'}</b>${s?.code ? ` (${echapper(s.code)})` : ''}${s?.service ? ` · ${echapper(s.service)}` : ''} · ${texteHtml('stock_btp.fiche.periode', { du: formatDate(d.du), au: formatDate(d.au) })}</p>
       <table class="tableau-compact pleine-largeur"><thead><tr><th>${texteHtml('stock_btp.colonnes.date')}</th><th>${texteHtml('stock_btp.colonnes.article')}</th><th>${texteHtml('commun.libelle')}</th><th>${texteHtml('stock_btp.fiche.remis')}</th><th>${texteHtml('stock_btp.dotations.rendu')}</th><th>${texteHtml('stock_btp.colonnes.piece')}</th></tr></thead><tbody>
@@ -260,8 +260,19 @@ export class PageFicheDotation extends PageBase {
           <td class="nombre">${Number(m.quantite) > 0 ? formatNombre(m.quantite, 2) : ''}</td><td class="nombre">${Number(m.quantite) < 0 ? formatNombre(-m.quantite, 2) : ''}</td>
           <td>${echapper(m.numero ?? '')}</td></tr>`).join('') || `<tr><td colspan="6">${texteHtml('stock_btp.article.aucun_mouvement')}</td></tr>`}</tbody></table>
       <p>${texteHtml('stock_btp.fiche.engagement')}</p>
-      <div class="signatures"><div>${texteHtml('stock_btp.fiche.le_salarie')}<br>${texteHtml('stock_btp.fiche.signature')}</div><div>${texteHtml('stock_btp.fiche.entreprise')}<br>${texteHtml('stock_btp.fiche.signature')}</div></div></div>`;
-    this.conteneur.querySelector('[data-imprimer]').addEventListener('click', () => globalThis.print());
+      <h2>${texteHtml('stock_btp.fiche.signees')}</h2><div data-signees><p class="aide">${texteHtml('stock_btp.article.chargement')}</p></div></div>`;
+    // Impression par le module Édition (modèle FICHE_DOTATION) : même fiche que celle signée à la borne et rangée en GED.
+    const edition = (parametres) => `/edition?${new URLSearchParams({ source: 'fiche', id: `${TYPE_FICHE.SALARIE}/${salarie}`, modele: MODELE_EDITION.FICHE_DOTATION, ...parametres })}`;
+    const ouvrir = (e, url) => { e.preventDefault(); this.app.naviguer(url, { nouvelleFenetre: true }); };
+    this.conteneur.querySelector('[data-imprimer]').addEventListener('click', (e) => ouvrir(e, edition({ p_du: d.du, p_au: d.au })));
+    const zone = this.conteneur.querySelector('[data-signees]');
+    const f = await api.stock.fichesDotation(salarie);
+    zone.innerHTML = `<p class="aide">${f.a_signer.nombre ? echapper(pluriel('stock_btp.fiche.a_signer', f.a_signer.nombre, { du: formatDate(f.a_signer.du), au: formatDate(f.a_signer.au) })) : texteHtml('stock_btp.fiche.rien_a_signer')}</p>
+      ${f.fiches.length ? `<table class="tableau-compact largeur-contenu"><thead><tr><th>${texteHtml('stock_btp.fiche.periode_colonne')}</th><th>${texteHtml('stock_btp.fiche.signee_le')}</th><th>${texteHtml('stock_btp.fiche.lieu')}</th><th class="cellule-boutons"></th></tr></thead><tbody>
+      ${f.fiches.map((x) => `<tr><td>${texteHtml('stock_btp.fiche.periode', { du: formatDate(x.du), au: formatDate(x.au) })}</td><td>${x.signe_le ? `${formatDateHeure(x.signe_le)} ${echapper(x.signataire ?? '')}` : '—'}</td>
+        <td>${texteHtml(`stock_btp.fiche.lieux.${x.lieu}`)}</td><td class="cellule-boutons"><a href="${edition({ p_fiche: x.id })}" data-edition="${x.id}" title="${texteHtml('stock_btp.fiche.reimprimer')}">${iconeHtml('stock_btp_imprimer')}</a></td></tr>`).join('')}</tbody></table>`
+      : `<p class="aide">${texteHtml('stock_btp.fiche.aucune_signee')}</p>`}`;
+    zone.querySelectorAll('[data-edition]').forEach((a) => a.addEventListener('click', (e) => ouvrir(e, a.getAttribute('href'))));
   }
 }
 

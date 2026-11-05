@@ -44,6 +44,7 @@ export const TYPE_DOCUMENT = Object.freeze({
   S_SORTIE: 'S_SORTIE',
   S_TRANSFERT: 'S_TRANSFERT',
   S_RESERVATION: 'S_RESERVATION',
+  S_INVENTAIRE: 'S_INVENTAIRE',
 });
 
 /** Commandes qui reçoivent un accusé de réception (ARC). */
@@ -93,9 +94,10 @@ export const MODULE_FACULTATIF = Object.freeze({
   STOCK: 'stock',
 });
 
-/** Modèles d'édition connus du code (editions/modeles.js) ; un modèle interne n'est jamais le dernier imprimé du document. */
+/** Modèles d'édition connus du code (editions/modeles.js) ; FRAIS_ANNEXES (interne) n'est jamais le dernier imprimé du document. */
 export const MODELE_EDITION = Object.freeze({
   FRAIS_ANNEXES: 'FRAIS_ANNEXES',
+  FICHE_DOTATION: 'FICHE_DOTATION',
 });
 
 /** Rôle d'un type de pièce dans le module Rentabilité (rentabilite_role_type, db/258). */

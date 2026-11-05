@@ -6,6 +6,7 @@ using LogiBTP.Documents.Web;
 using LogiBTP.Domaine;
 using LogiBTP.Execution;
 using LogiBTP.Execution.Web;
+using LogiBTP.Socle;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -137,15 +138,27 @@ public class SpecialisationExecutionBtp(IHttpContextAccessor http) : Specialisat
             new NpgsqlParameter("id", o.Id)).FirstOrDefaultAsync(ct);
     }
 
-    /// <summary>Contrôle du N+1 (E30) : administrateur ou responsable du service porteur de l'ordre (ou de son parent).</summary>
+    /// <summary>Nœud du module Droits qui accorde le contrôle du N+1 par profil (action VALIDER, portée SERVICE ou TOUT).</summary>
+    public const string NoeudControle = "execution/controle";
+
+    /// <summary>
+    /// Contrôle du N+1 (E30) : administrateur, responsable du service porteur de l'ordre (ou de son parent), délégué en
+    /// vigueur de l'un d'eux (`delegation_controle`, `f_controleurs_service`), ou droit VALIDER du nœud
+    /// <see cref="NoeudControle"/> : portée TOUT, ou SERVICE pour un membre du service porteur ou de son parent.
+    /// </summary>
     public override async Task<bool> PeutControlerAsync(ExecutionDbContext db, OrdreEtapes o, Utilisateur u, CancellationToken ct)
     {
         if (u.EstAdmin) return true;
+        var droits = Services.GetService<IDroits>();
+        var portee = droits is null ? null : await droits.PorteeAsync(u, NoeudControle, ActionsDroits.Valider, ct);
+        if (portee == PorteesDroits.Tout) return true;
         if (await IndividuAsync(db, u, ct) is not long ind || o.SrvId is not int srv) return false;
         return await db.Database.SqlQueryRaw<bool>("""
-            SELECT EXISTS (SELECT 1 FROM service s LEFT JOIN service p ON p.srv_id = s.srv_parent_id
-                           WHERE s.srv_id = @s AND (s.srv_responsable_id = @i OR p.srv_responsable_id = @i)) AS "Value"
-            """, new NpgsqlParameter("s", srv), new NpgsqlParameter("i", ind)).FirstAsync(ct);
+            SELECT (EXISTS (SELECT 1 FROM f_controleurs_service(@s, current_date) c WHERE c.ind_id = @i)
+                    OR (@service AND EXISTS (SELECT 1 FROM service s JOIN service_membre m ON m.sme_srv_id IN (s.srv_id, s.srv_parent_id)
+                                             WHERE s.srv_id = @s AND m.sme_ind_id = @i))) AS "Value"
+            """, new NpgsqlParameter("s", srv), new NpgsqlParameter("i", ind),
+            new NpgsqlParameter("service", portee == PorteesDroits.Service)).FirstAsync(ct);
     }
 
     /// <summary>
@@ -242,7 +255,8 @@ public class SpecialisationExecutionBtp(IHttpContextAccessor http) : Specialisat
     }
 
     /// <summary>
-    /// Contrôle du N+1 attendu (E31) : tâche du CRM au responsable du service porteur de l'ordre (module CRM actif),
+    /// Contrôle du N+1 attendu (E31) : tâche du CRM au délégué du contrôle, sinon au responsable du service porteur de
+    /// l'ordre (module CRM actif),
     /// rattachée à l'ordre et au chantier ; un échec est journalisé sans annuler la validation.
     /// </summary>
     private async Task ControlesAsync(ExecutionDbContext db, OrdreEtapes o, SuitesEtapes s, Utilisateur u, CancellationToken ct)
@@ -250,8 +264,11 @@ public class SpecialisationExecutionBtp(IHttpContextAccessor http) : Specialisat
         if (s.AControler.Count == 0 || o.SrvId is not int srv || !await Services.GetRequiredService<ModulesSociete>().EstActifAsync(ModulesFacultatifs.Crm, ct)) return;
         try
         {
+            // Délégué en vigueur d'abord (le responsable lui a confié le contrôle), sinon le responsable du service ou du parent.
             var responsable = await db.Database.SqlQueryRaw<long?>("""
-                SELECT coalesce(s.srv_responsable_id, p.srv_responsable_id) AS "Value" FROM service s LEFT JOIN service p ON p.srv_id = s.srv_parent_id WHERE s.srv_id = @s
+                SELECT coalesce((SELECT c.ind_id FROM f_controleurs_service(@s, current_date) c WHERE c.delegue ORDER BY c.ind_id LIMIT 1),
+                                s.srv_responsable_id, p.srv_responsable_id) AS "Value"
+                FROM service s LEFT JOIN service p ON p.srv_id = s.srv_parent_id WHERE s.srv_id = @s
                 """, new NpgsqlParameter("s", srv)).FirstOrDefaultAsync(ct);
             var numero = await db.Database.SqlQueryRaw<string?>("SELECT coalesce(ent_numero, ent_id::text) AS \"Value\" FROM document WHERE ent_id = @id",
                 new NpgsqlParameter("id", o.Id)).FirstOrDefaultAsync(ct);

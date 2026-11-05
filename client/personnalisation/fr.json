@@ -419,7 +419,17 @@
       "fin": "{{date}} : {{duree}} h enregistrées",
       "fin_essai": "{{date}} : {{duree}} h contrôlées (essai : non enregistrées)",
       "fin_equipe": "pour {{nombre}} personnes",
-      "etape_terminee": "Étape terminée ?"
+      "etape_terminee": "Étape terminée ?",
+      "fiche_dotation": "Ma fiche de dotation",
+      "fiche_vide": "Rien à signer : aucune remise ni aucun retour depuis votre dernière fiche.",
+      "fiche_titre": "Fiche de dotation du {{du}} au {{au}}",
+      "fiche_date": "Date",
+      "fiche_article": "Article",
+      "fiche_remis": "Remis",
+      "fiche_rendu": "Rendu",
+      "fiche_engagement": "Je reconnais avoir reçu ces équipements en bon état avec leurs consignes d'utilisation ; je m'engage à les porter, à signaler toute détérioration et à les restituer à la demande.",
+      "fiche_signer": "Signer ma fiche",
+      "fiche_signee": "Fiche de dotation signée et rangée dans votre dossier."
     },
     "repas": {
       "rechercher": "Rechercher un restaurant (nom, ville)",
@@ -2701,7 +2711,11 @@
       "vers_pmp": "→ PMP",
       "aucune_quantite": "Aucune quantité comptée.",
       "articles_comptes_un": "{{nombre}} article compté",
-      "articles_comptes_autre": "{{nombre}} articles comptés"
+      "articles_comptes_autre": "{{nombre}} articles comptés",
+      "piece": "Pièce des écarts",
+      "piece_titre": "Écarts valorisés du lot, pièce comptable exportée par la Comptabilité (stock et variation des stocks)",
+      "extourne": "Contre-passation",
+      "extourne_titre": "Pièce qui annule en comptabilité les écarts d'un lot annulé après son transfert"
     },
     "magasin": {
       "dotations": {
@@ -2779,9 +2793,20 @@
       "periode": "période du {{du}} au {{au}}",
       "remis": "Remis",
       "engagement": "Je reconnais avoir reçu les équipements ci-dessus, en avoir été informé de l'usage et m'engage à les porter et à les entretenir.",
-      "le_salarie": "Le salarié",
-      "signature": "Date et signature",
-      "entreprise": "Pour l'entreprise"
+      "edition_titre": "Fiche éditée par le module Édition (modèle « Fiche de dotation »), dans une nouvelle fenêtre",
+      "signees": "Fiches signées",
+      "periode_colonne": "Période",
+      "signee_le": "Signée le",
+      "lieu": "Lieu",
+      "lieux": {
+        "BORNE": "Borne d'atelier",
+        "BUREAU": "Bureau"
+      },
+      "reimprimer": "Réimprimer la fiche signée",
+      "aucune_signee": "Aucune fiche signée pour l'instant.",
+      "a_signer_un": "À signer à la borne : {{nombre}} mouvement du {{du}} au {{au}}.",
+      "a_signer_autre": "À signer à la borne : {{nombre}} mouvements du {{du}} au {{au}}.",
+      "rien_a_signer": "Aucun mouvement à signer depuis la dernière fiche."
     }
   },
   "execution_btp": {
@@ -2960,7 +2985,8 @@
       "synthese": "Synthèse de l'exécution",
       "chantier": "Exécution du chantier",
       "parametres": "Modèles de parcours",
-      "atelier": "Étapes à valider"
+      "atelier": "Étapes à valider",
+      "delegations": "Délégations du contrôle N+1"
     },
     "chantier": {
       "titre": "Exécution {{code}}",
@@ -3003,6 +3029,25 @@
       "description": "Description",
       "aucun": "Aucun modèle.",
       "enregistrer": "Enregistrer les modèles"
+    },
+    "delegations": {
+      "titre": "Délégations du contrôle N+1",
+      "aide": "Le contrôle N+1 d'une étape revient au responsable du service porteur de l'ordre (ou de son parent). Il peut le déléguer à un membre du service, pour une période (absence) ou sans fin : le délégué contrôle comme lui et reçoit la tâche du Suivi et les rappels. Le profil peut aussi l'accorder (droit « Contrôle du N+1 des étapes d'ordres »).",
+      "tous": "Tous les services",
+      "aucun": "Aucun service dont vous êtes responsable ni aucune délégation.",
+      "aucune": "Aucune délégation : le responsable contrôle seul.",
+      "ajouter": "Ajouter une délégation",
+      "responsable": "Responsable : {{nom}}",
+      "sans_responsable": "aucun (administrateurs)",
+      "delegue": "Délégué",
+      "du": "Du",
+      "au": "Au",
+      "commentaire": "Commentaire",
+      "trace": "Saisie",
+      "par": "{{par}}, le {{le}}",
+      "en_vigueur": "· en vigueur",
+      "delegue_manquant": "Choisissez le délégué de chaque ligne.",
+      "enregistre": "Délégations du service {{service}} enregistrées"
     }
   },
   "sous_traitance_btp": {
@@ -3334,7 +3379,8 @@
       "compte_paiement_direct": "Paiement direct",
       "compte_prorata": "Prorata",
       "compte_ecart_debit": "Écart d'arrondi (débit)",
-      "compte_ecart_credit": "Écart d'arrondi (crédit)"
+      "compte_ecart_credit": "Écart d'arrondi (crédit)",
+      "compte_contrepartie": "Contrepartie (opérations diverses : variation des stocks)"
     },
     "parametres": {
       "comptes": "Comptes",
@@ -4536,6 +4582,10 @@
         },
         "types_ordres": {
           "libelle": "Types d'ordres (activation, service)…"
+        },
+        "execution_delegations": {
+          "libelle": "Délégations du contrôle N+1",
+          "info": "Membres du service qui contrôlent les étapes à la place du responsable"
         }
       },
       "planning": {

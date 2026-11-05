@@ -945,8 +945,6 @@ button.lien { background: none; border: none; padding: 0; color: var(--lien, #1d
 .frise-stock .frise-point { fill: var(--accent); }
 .frise-stock .frise-rupture { fill: var(--stock-frise-rupture); }
 /* Stock, lot 5 : fiche de dotation à signer. */
-.fiche-dotation .signatures { display: flex; gap: 4rem; margin-top: 2rem; }
-.fiche-dotation .signatures div { flex: 1; min-height: 6rem; border-top: 1px solid var(--bord); padding-top: .4rem; }
 @media print { .fiche-dotation .sans-impression { display: none !important; } .fiche-dotation { color: var(--stock-impression-texte); } }
 
 /* Profils et droits (module Droits) : arbre des droits, lignes héritées grisées. */

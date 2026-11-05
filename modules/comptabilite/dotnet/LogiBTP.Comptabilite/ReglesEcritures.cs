@@ -17,15 +17,19 @@ public sealed record TvaPiece(string Taux, decimal TauxPct, decimal Base, decima
 /// <summary>Échéance du tiers : date, montant, retenue de garantie.</summary>
 public sealed record EcheancePiece(DateOnly? Date, decimal Montant, bool Retenue);
 
+/// <summary>Ligne d'une opération diverse : compte, libellé, montant signé (positif = débit, négatif = crédit).</summary>
+public sealed record LigneOd(string? Compte, string Libelle, decimal Montant);
+
 /// <summary>
 /// Pièce à transférer, vue par la règle : journal, sens (VENTE : tiers au débit ; ACHAT : tiers au crédit), signe (-1 : avoir
 /// saisi en positif), tiers (collectif + compte auxiliaire), lignes, postes HT et TTC, TVA, échéances (vide : net = TTC +
-/// postes TTC), compte de la retenue (null : collectif du tiers), comptes d'écart d'arrondi, analytique.
+/// postes TTC), compte de la retenue (null : collectif du tiers), comptes d'écart d'arrondi, analytique ; opération
+/// diverse (sans tiers ni TVA : écarts d'inventaire du stock) : lignes <c>Od</c> seules, le reste est ignoré.
 /// </summary>
 public sealed record PieceComptable(long Id, string Journal, DateOnly Date, string Numero, string? Reference, string Libelle, string Sens, int Signe,
     string? Collectif, string? CompteTiers, IReadOnlyList<LignePiece> Lignes, IReadOnlyList<PostePiece> PostesHt, IReadOnlyList<PostePiece> PostesTtc,
     IReadOnlyList<TvaPiece> Tva, IReadOnlyList<EcheancePiece> Echeances, decimal TotalTtc, string? CompteRetenue, string? CompteDefaut,
-    string? CompteEcartDebit, string? CompteEcartCredit, string? Analytique);
+    string? CompteEcartDebit, string? CompteEcartCredit, string? Analytique, IReadOnlyList<LigneOd>? Od = null);
 
 /// <summary>Ligne d'écriture : compte général, compte auxiliaire (tiers), libellé, débit ou crédit (positifs), échéance.</summary>
 public sealed record LigneEcriture(string Journal, DateOnly Date, string Piece, string? Reference, string Compte, string? Auxiliaire, string Libelle,
@@ -99,6 +103,12 @@ public static class ReglesEcritures
             var a = Math.Abs(m);
             lignes.Add(new(p.Journal, p.Date, p.Numero, p.Reference, compte, auxiliaire, libelle, debit ? a : 0, debit ? 0 : a, echeance, p.Analytique));
         }
+        // Opération diverse : ses lignes telles quelles (signe de la pièce appliqué), puis le contrôle d'équilibre.
+        if (p.Od is not null)
+        {
+            foreach (var l in p.Od) Ajouter(l.Compte, null, l.Libelle, l.Montant, true, null, "COMPTE_INTROUVABLE");
+            return Equilibrer(p, lignes, erreurs, details);
+        }
         // Produits (vente : crédit) ou charges (achat : débit) : débit naturel de ces lignes = achat.
         var produitDebit = !vente;
         foreach (var l in p.Lignes.Where(l => l.Erreur is not null)) if (!erreurs.Contains(l.Erreur!)) erreurs.Add(l.Erreur!);
@@ -171,7 +181,12 @@ public static class ReglesEcritures
             Ajouter(retenue ? p.CompteRetenue : tiersOk ? p.Collectif : null, tiersOk ? p.CompteTiers : null, retenue ? $"{p.Libelle} – retenue de garantie" : p.Libelle,
                 e.Montant, vente, e.Date, "TIERS_SANS_COMPTE");
         }
-        // Équilibre : petit écart sur le compte d'écart, sinon erreur.
+        return Equilibrer(p, lignes, erreurs, details);
+    }
+
+    /// <summary>Équilibre : petit écart (≤ <see cref="ToleranceEcart"/>) sur le compte d'écart, sinon erreur.</summary>
+    private static Ecriture Equilibrer(PieceComptable p, List<LigneEcriture> lignes, List<string> erreurs, Dictionary<string, List<string>> details)
+    {
         if (erreurs.Count == 0)
         {
             var ecart = lignes.Sum(l => l.Debit) - lignes.Sum(l => l.Credit);

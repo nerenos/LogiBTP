@@ -212,6 +212,7 @@ api.MapModuleSousTraitance().ExigeModule(ModulesFacultatifs.SousTraitance, "Sous
 api.MapModuleStock().ExigeModule(ModulesFacultatifs.Stock, "Stock");
 api.MapGroup("").ExigeModule(ModulesFacultatifs.Stock, "Stock").MapMagasinStock();
 api.MapGroup("").ExigeModule(ModulesFacultatifs.Stock, "Stock").MapStockBorne();
+api.MapGroup("").ExigeModule(ModulesFacultatifs.Stock, "Stock").MapDotationFiche();
 api.MapModulePointage().ExigeModule(ModulesFacultatifs.Pointage, "Pointage MO");
 api.MapModulePlanning().ExigeModule(ModulesFacultatifs.Planning, "Planning");
 api.MapModuleRentabilite().ExigeModule(ModulesFacultatifs.Rentabilite, "Rentabilité");

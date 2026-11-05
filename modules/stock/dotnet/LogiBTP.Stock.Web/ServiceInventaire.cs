@@ -19,6 +19,10 @@ public class LotInventaireEntite
     public DateTimeOffset LinCreeLe { get; set; } = DateTimeOffset.UtcNow;
     public string? LinValidePar { get; set; }
     public DateTimeOffset? LinValideLe { get; set; }
+    /// <summary>Pièce des écarts du lot validé, fournie par l'application (pièce comptable) ; null sans écart valorisé.</summary>
+    public long? LinEntId { get; set; }
+    /// <summary>Pièce qui contre-passe celle des écarts à l'annulation d'un lot déjà transféré en comptabilité.</summary>
+    public long? LinExtourneEntId { get; set; }
 }
 
 public class BordereauEntite
@@ -74,7 +78,7 @@ public sealed record DotationArticleDto(string? Type, int? DureeMois);
 public sealed record FamilleStock(long Id, string Chemin);
 
 public sealed record LotDto(long Id, long Lieu, string? LieuCode, string Date, string Libelle, string Etat, bool Micro, string? Commentaire, string CreePar,
-    string? ValidePar, string? ValideLe, int Bordereaux, int Lignes, int Comptees);
+    string? ValidePar, string? ValideLe, int Bordereaux, int Lignes, int Comptees, long? Piece = null, long? Extourne = null);
 public sealed record LigneBordereauDto(long? Id, long Ele, string? Code, string? Libelle, string? Unite, int Precision, long? Emp, string? EmpCode,
     decimal? Quantite, decimal? Theorique, decimal? Prix, bool AppliquerPmp, string? Commentaire);
 public sealed record BordereauDto(long Id, string Libelle, string? Critere, string? Compteur, int Ordre, List<LigneBordereauDto> Lignes);
@@ -137,7 +141,7 @@ public class ServiceInventaire(StockDbContext db, SpecialisationStock specialisa
             var b = bors.Where(x => x.BorLinId == l.LinId).Select(x => x.BorId).ToHashSet();
             var li = lignes.Where(x => b.Contains(x.BliBorId)).ToList();
             return new LotDto(l.LinId, l.LinLieuId, lieux.GetValueOrDefault(l.LinLieuId)?.Code, M(l.LinDate), l.LinLibelle, l.LinEtat, l.LinMicro, l.LinCommentaire,
-                l.LinCreePar, l.LinValidePar, l.LinValideLe is { } v ? M(v) : null, b.Count, li.Count, li.Count(x => x.BliQuantite is not null));
+                l.LinCreePar, l.LinValidePar, l.LinValideLe is { } v ? M(v) : null, b.Count, li.Count, li.Count(x => x.BliQuantite is not null), l.LinEntId, l.LinExtourneEntId);
         }).ToList();
     }
 
@@ -427,6 +431,12 @@ public class ServiceInventaire(StockDbContext db, SpecialisationStock specialisa
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
         await stock.ValoriserEnAttenteAsync(ct);
+        // Pièce des écarts valorisés (pièce comptable de l'application), écarts lus avant les comptages du lot.
+        if (await specialisation.ApresValidationLotAsync(db, lot, await EcartsAsync(id, ct), u, ct) is { } piece)
+        {
+            lot.LinEntId = piece;
+            await db.SaveChangesAsync(ct);
+        }
         return await LotAsync(id, ct);
     }
 
@@ -441,6 +451,12 @@ public class ServiceInventaire(StockDbContext db, SpecialisationStock specialisa
         lot.LinEtat = "ANNULE";
         await db.SaveChangesAsync(ct);
         await stock.ValoriserEnAttenteAsync(ct);
+        // Pièce des écarts annulée, ou contre-passée si elle a déjà été transférée en comptabilité.
+        if (await specialisation.ApresAnnulationLotAsync(db, lot, u, ct) is { } extourne)
+        {
+            lot.LinExtourneEntId = extourne;
+            await db.SaveChangesAsync(ct);
+        }
         return await LotAsync(id, ct);
     }
 

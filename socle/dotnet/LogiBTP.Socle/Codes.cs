@@ -49,6 +49,15 @@ public static class ActionsDroits
     public static readonly IReadOnlyList<string> Cascade = [Consulter, Modifier, Valider, Creer, Supprimer, Deverrouiller, Forcer];
 }
 
+/// <summary>Portées d'une action accordée par le module Droits (de la plus étroite à la plus large).</summary>
+public static class PorteesDroits
+{
+    public const string Soi = "SOI";
+    public const string Equipe = "EQUIPE";
+    public const string Service = "SERVICE";
+    public const string Tout = "TOUT";
+}
+
 /// <summary>Niveaux de confidentialité (GED, modèles d'édition), du plus ouvert au plus strict.</summary>
 public static class NiveauConfidentialite
 {

@@ -99,6 +99,34 @@
         "total_ttc": 120
       },
       "attendu": { "erreurs": ["DESEQUILIBRE"] }
+    },
+    {
+      "nom": "opération diverse : écarts d'inventaire (boni, mali, contrepartie en variation des stocks), sans tiers ni TVA",
+      "piece": {
+        "journal": "OD",
+        "od": [{ "compte": "321000", "libelle": "Boni ciment", "montant": 120.5 }, { "compte": "321000", "libelle": "Mali sable", "montant": -20.25 },
+               { "compte": "603200", "libelle": "Variation des stocks", "montant": -100.25 }],
+        "total_ttc": 0
+      },
+      "attendu": { "erreurs": [], "lignes": [["321000", null, 120.5, 0], ["321000", null, 0, 20.25], ["603200", null, 0, 100.25]] }
+    },
+    {
+      "nom": "opération diverse : compte de stock manquant",
+      "piece": {
+        "journal": "OD",
+        "od": [{ "compte": null, "libelle": "Boni ciment", "montant": 50 }, { "compte": "603200", "libelle": "Variation des stocks", "montant": -50 }],
+        "total_ttc": 0
+      },
+      "attendu": { "erreurs": ["COMPTE_INTROUVABLE"] }
+    },
+    {
+      "nom": "opération diverse déséquilibrée au-delà de la tolérance",
+      "piece": {
+        "journal": "OD",
+        "od": [{ "compte": "321000", "libelle": "Boni", "montant": 50 }, { "compte": "603200", "libelle": "Variation", "montant": -49 }],
+        "total_ttc": 0
+      },
+      "attendu": { "erreurs": ["DESEQUILIBRE"] }
     }
   ]
 }

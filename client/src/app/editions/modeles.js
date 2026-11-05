@@ -692,7 +692,60 @@ const FRAIS_ANNEXES = [{
   },
 }];
 
-export const MODELES_EDITION = [...BLOCS, ...SOUS_RAPPORTS, ...RAPPORTS, ...AUTRES, ...MARCHES_ST, ...RECEPTIONS, ...BONS_SAV, ...FRAIS_ANNEXES];
+// Module Stock (S26) : fiche de dotation EPI et outillage d'un salarié, source fiche salarié, source annexe
+// dotations_salarie (mouvements de la période — paramètres du, au — ou d'une fiche signée — paramètre fiche —, encore
+// doté, signature) ; image SIGNATURE_DOTATION fournie par le serveur (table signature, DotationFicheBtp.CodeSignature).
+const DOT = 'sources.dotations_salarie';
+const quantiteDot = (cle, titre) => ({ cle, titre, largeur: '18mm', valeur: `{{element.${cle}}}`, format: 'simple:3', alignement: 'droite' });
+const DOTATIONS = [{
+  code: 'FICHE_DOTATION', libelle: 'Fiche de dotation EPI et outillage', genre: 'RAPPORT', cible: 'FICHE', source: 'fiche', types: ['salarie'], ordre: 90,
+  contenu: {
+    format_version: 1, code: 'FICHE_DOTATION', libelle: 'Fiche de dotation EPI et outillage', cible: 'FICHE', source: 'fiche',
+    page: { format: 'A4', orientation: 'portrait', marges: { haut: 10, bas: 10, gauche: 14, droite: 14 } },
+    sources_annexes: ['dotations_salarie'],
+    bandes: [
+      { type: 'PIED_PAGE', contenu: bloc('PIED_INTERNE') },
+      { type: 'TITRE', contenu: { type: 'pile', espacement: 3, enfants: [bloc('ENTETE_SOCIETE'),
+        { type: 'pile', espacement: 1, cadre: { bas: 'normal' }, marges: { bas: 2 }, enfants: [
+          champ('Fiche de dotation – équipements de protection individuelle et outillage', { style: 'titre' }),
+          champ(`=Joindre(" – "; Joindre(" "; ${DOT}.salarie.prenom; ${DOT}.salarie.nom); ${DOT}.salarie.code; ${DOT}.salarie.service)`, { style: 'sous_titre' }),
+          champ(`="Période du " & Date(${DOT}.du) & " au " & Date(${DOT}.au)`),
+        ] }] } },
+      { type: 'CORPS', contenu: { type: 'pile', espacement: 4, enfants: [
+        champ('Remises et retours de la période', { style: 'section', fond: 'fond_section', marges: 1 }),
+        { type: 'tableau', collection: `${DOT}.mouvements`, remplir: false, report: false, vide: 'Aucun mouvement sur la période', colonnes: [
+          { cle: 'date', titre: 'Date', largeur: '20mm', valeur: '{{element.date}}', format: 'date' },
+          { cle: 'code', titre: 'Article', largeur: '24mm', valeur: '{{element.code}}' },
+          { cle: 'libelle', titre: 'Désignation', largeur: '*', valeur: '{{element.libelle}}', html: true },
+          quantiteDot('remis', 'Remis'), quantiteDot('rendu', 'Rendu'), quantiteDot('rebut', 'Hors d’usage'),
+          { cle: 'unite', titre: 'Unité', largeur: '12mm', valeur: '{{element.unite}}' },
+          { cle: 'numero', titre: 'Pièce', largeur: '26mm', valeur: '{{element.numero}}' },
+        ] },
+        champ('Encore en dotation à ce jour', { style: 'section', fond: 'fond_section', marges: 1 }),
+        { type: 'tableau', collection: `${DOT}.dote`, remplir: false, report: false, vide: 'Aucun équipement en dotation', colonnes: [
+          { cle: 'code', titre: 'Article', largeur: '24mm', valeur: '{{element.code}}' },
+          { cle: 'libelle', titre: 'Désignation', largeur: '*', valeur: '{{element.libelle}}', html: true },
+          quantiteDot('quantite', 'Quantité'),
+          { cle: 'unite', titre: 'Unité', largeur: '12mm', valeur: '{{element.unite}}' },
+        ] },
+        champ('Le salarié reconnaît avoir reçu les équipements ci-dessus, en bon état, ainsi que les consignes d’utilisation et d’entretien ; il s’engage à les porter et à les utiliser conformément aux consignes, à signaler toute détérioration et à les restituer à la demande ou à son départ.'),
+        { type: 'rangee', espacement: 10, marges: { haut: 6 }, secable: false, enfants: [
+          { type: 'pile', largeur: '*', enfants: [
+            champ('Le salarié', { style: 'gras' }),
+            champ(`="Signé à la borne d’atelier le " & ${DOT}.signe_le`, { style: 'discret', condition: `${DOT}.signe` }),
+            { type: 'image', ressource: 'SIGNATURE_DOTATION', hauteur: 25, largeur: '60mm', condition: `${DOT}.signe` },
+            champ('Date et signature', { style: 'discret', condition: `NON ${DOT}.signe` }),
+            { type: 'espace', hauteur: 25, condition: `NON ${DOT}.signe` },
+          ] },
+          { type: 'pile', largeur: '*', enfants: [champ('Pour l’entreprise', { style: 'gras' }), champ('Date, nom, qualité et signature', { style: 'discret' }), { type: 'espace', hauteur: 25 }] },
+        ] },
+        champ('Signature numérique simple : image tracée sur l’écran, horodatée par le serveur ; l’empreinte du présent document est conservée.', { style: 'petit', condition: `${DOT}.signe` }),
+      ] } },
+    ],
+  },
+}];
+
+export const MODELES_EDITION = [...BLOCS, ...SOUS_RAPPORTS, ...RAPPORTS, ...AUTRES, ...MARCHES_ST, ...RECEPTIONS, ...BONS_SAV, ...FRAIS_ANNEXES, ...DOTATIONS];
 
 /** Modèle par défaut de chaque type de document (Q12 : un modèle par type). */
 export const DEFAUTS_EDITION = [

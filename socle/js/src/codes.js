@@ -35,6 +35,14 @@ export const ACTION_DROIT = Object.freeze({
   MODIFIER_CODE: 'MODIFIER_CODE',
 });
 
+/** Portées d'une action accordée par le module Droits (de la plus étroite à la plus large). */
+export const PORTEE_DROIT = Object.freeze({
+  SOI: 'SOI',
+  EQUIPE: 'EQUIPE',
+  SERVICE: 'SERVICE',
+  TOUT: 'TOUT',
+});
+
 /** Niveaux de confidentialité (GED, modèles d'édition), du plus ouvert au plus strict. */
 export const NIVEAU_CONFIDENTIALITE = Object.freeze({
   PUBLIC: 'PUBLIC',

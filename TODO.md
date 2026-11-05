@@ -163,17 +163,10 @@ Analyse du 23/10/2026 : [ANALYSE-MODULE-SOUS-TRAITANCE.md](documentation/concept
 
 Analyse du 24/10/2026 : [ANALYSE-MODULE-STOCK.md](documentation/conception/ANALYSE-MODULE-STOCK.md).
 
-- [ ] Lots et numéros de série à analyser (S24) : certificats matière (acier : numéro de coulée, certificat 3.1 en GED,
-  suivi jusqu'au chantier) et futur module SAV (traçabilité des articles vendus, posés et entretenus) ; colonne de
-  traçabilité réservée dans le journal des mouvements dès le lot 1.
-- [ ] Fiche de dotation EPI : modèle du module Édition (PDF rangé en GED, signature sur la borne) à la place de la page
-  imprimée par le navigateur (S26).
-- [ ] Inventaire : pièce comptable (`S_INVENTAIRE` ou écriture d'écart) à produire par le futur module Comptabilité à
-  partir d'un lot validé ; valorisation du stock à date pour la clôture.
-
-### Module Exécution
-
-- [ ] Délégation du contrôle N+1 à un autre membre du service : module de droits (E30).
+- [ ] Lots et numéros de série (S24) : analyse rédigée le 05/11/2026 (§ 11 de l'analyse : modèle, questions S24.1 à
+  S24.12, lots S24-a à S24-d) ; décisions à prendre avant la réalisation.
+- [ ] Clôture : valorisation du stock à date de tous les lieux (état et écriture de variation de fin d'exercice) ; la
+  dépréciation (valeur d'inventaire inférieure au PMP, provision 39x) n'est pas comptabilisée par la pièce des écarts.
 
 ### Application de terrain (poseurs, chefs d'équipe)
 

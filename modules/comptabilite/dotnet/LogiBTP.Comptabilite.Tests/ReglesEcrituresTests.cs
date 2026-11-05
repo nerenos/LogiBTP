@@ -22,7 +22,8 @@ public class ReglesEcrituresTests
             Texte(t["exigibilite"])!, Texte(t["compte_collectee"]), Texte(t["compte_encaissement"]), Texte(t["compte_deductible"]), Texte(t["compte_autoliquidee"]))).ToList(),
         b["echeances"]!.AsArray().Select(e => new EcheancePiece(Date(e!["date"]), Nombre(e["montant"]), e["retenue"]!.GetValue<bool>())).ToList(),
         Nombre(b["total_ttc"]), Texte(b["compte_retenue"]), Texte(b["compte_defaut"]), Texte(b["compte_ecart_debit"]), Texte(b["compte_ecart_credit"]),
-        Texte(b["analytique"]));
+        Texte(b["analytique"]),
+        b["od"] is JsonArray od ? od.Select(l => new LigneOd(Texte(l!["compte"]), Texte(l["libelle"]) ?? "", Nombre(l["montant"]))).ToList() : null);
 
     [Fact]
     public void Ecritures_du_jeu()

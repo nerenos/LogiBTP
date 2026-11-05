@@ -48,6 +48,7 @@ public static class TypesDocument
     public const string SSortie = "S_SORTIE";
     public const string STransfert = "S_TRANSFERT";
     public const string SReservation = "S_RESERVATION";
+    public const string SInventaire = "S_INVENTAIRE";
 
     /// <summary>Commandes qui reçoivent un accusé de réception (ARC).</summary>
     public static readonly string[] Arc = [ACommande, TCommande];
@@ -128,6 +129,7 @@ public static class RolesRentabilite
 public static class ModelesEdition
 {
     public const string FraisAnnexes = "FRAIS_ANNEXES";
+    public const string FicheDotation = "FICHE_DOTATION";
 }
 
 /// <summary>Catégories de la GED posées par le serveur (dge_categorie).</summary>
@@ -139,4 +141,5 @@ public static class CategoriesGed
     public const string PvReception = "pv_reception";
     public const string BonSav = "bon_sav";
     public const string Photo = "photo";
+    public const string Dotation = "dotation";
 }

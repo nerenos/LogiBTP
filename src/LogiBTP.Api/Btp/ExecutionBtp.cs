@@ -260,6 +260,8 @@ public static class ExecutionBtp
         g.MapGet("/documents/{id:long}", (long id, LogiBtpContext db, CancellationToken ct) => LireAsync(db, id, ct));
         g.MapPut("/documents/{id:long}", (long id, ExecutionSaisie s, HttpContext http, LogiBtpContext db, CancellationToken ct) =>
             EnregistrerAsync(db, http.RequestServices, id, s, Utilisateur.Depuis(http), ct));
+        // Délégations du contrôle N+1 (E30).
+        g.MapDelegationsControle();
         g.MapGet("/documents/{id:long}/repartition", (long id, LogiBtpContext db, CancellationToken ct) => RepartitionAsync(db, id, ct));
         // Heures budget d'un chantier par service (commandes validées ; natures MO → services).
         g.MapGet("/chantiers/{id:int}/heures", async (int id, LogiBtpContext db, CancellationToken ct) => Results.Content(await db.Database.SqlQueryRaw<string>("""

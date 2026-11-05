@@ -96,6 +96,19 @@
 
 - [x] **Exécution, lots 2b à 2e** (24/10/2026) : types d'ordres activables, étapes des ordres par états (règles
   répliquées), planning par étapes, validation des étapes depuis l'atelier et la borne.
+- [x] **Délégation du contrôle N+1** (05/11/2026, E30) : le responsable d'un service désigne des membres qui contrôlent
+  les étapes à sa place, pour une période ou sans fin (page `/execution/delegations`, menu Exécution) ; le délégué
+  reçoit la tâche du Suivi et les rappels ; le profil peut aussi accorder le contrôle (droit « Contrôle du N+1 des étapes
+  d'ordres », portée service ou tout).
+
+### Stock
+
+- [x] **Fiche de dotation EPI par le module Édition** (05/11/2026, S26) : modèle « Fiche de dotation », imprimée depuis
+  la fiche salarié ; signée à la borne (✍ Ma fiche de dotation) pour les remises et retours depuis la fiche précédente,
+  PDF rangé dans la GED du salarié ; fiches signées réimprimables.
+- [x] **Pièce comptable de l'inventaire** (05/11/2026) : à la validation d'un lot, pièce « Écarts d'inventaire » des
+  écarts valorisés (lien dans la page du lot), exportée en opération diverse (compte de stock ↔ variation des stocks,
+  type comptable STOCK) ; annulation du lot : pièce annulée, ou contre-passée si elle est déjà transférée.
 
 ### Application de terrain
 

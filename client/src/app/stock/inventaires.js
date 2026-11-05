@@ -3,6 +3,7 @@ import { PageBase } from '@logibtp/navigation';
 import { echapper, formatNombre, creerCombo, nombreSaisi, confirmer } from '@logibtp/socle/ui';
 import { controlerLot, MESSAGES_INVENTAIRE } from '@logibtp/stock';
 import { api } from '../api.js';
+import { urlDocument } from '../codes.js';
 import { choixMultiple } from '../choix-multiple.js';
 import { isoDepuisLocal, dateHeureLocale } from './etat.js';
 
@@ -105,6 +106,8 @@ export class PageInventaire extends PageBase {
     const valeurLocale = new Date(local.getTime() - local.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
     z.innerHTML = `<div class="entete-page"><h1 class="page-titre">${iconeHtml('stock_btp_inventaire')} ${echapper(lot.libelle)}</h1><span>${etatLot(lot.etat)}</span>
         <span class="aide">${echapper(lot.lieu_code ?? '')} · ${texteHtml('stock_btp.inventaire.comptage_du', { date: dateHeureLocale(lot.date) })}</span>
+        ${lot.piece ? `<a href="${urlDocument(lot.piece)}" data-piece="${lot.piece}" class="sans-impression" title="${texteHtml('stock_btp.inventaire.piece_titre')}">${iconeHtml('stock_btp_piece_comptable')} ${texteHtml('stock_btp.inventaire.piece')}</a>` : ''}
+        ${lot.extourne ? `<a href="${urlDocument(lot.extourne)}" data-piece="${lot.extourne}" class="sans-impression" title="${texteHtml('stock_btp.inventaire.extourne_titre')}">${iconeHtml('stock_btp_piece_comptable')} ${texteHtml('stock_btp.inventaire.extourne')}</a>` : ''}
         ${this.brouillon ? `<button type="button" class="principal" data-valider title="${texteHtml('stock_btp.inventaire.valider_titre')}">${iconeHtml('stock_btp_valide')} ${texteHtml('stock_btp.inventaire.valider')}</button><button type="button" data-supprimer>${iconeHtml('supprimer')} ${texteHtml('commun.supprimer')}</button>` : ''}
         ${lot.etat === 'VALIDE' ? `<button type="button" data-annuler title="${texteHtml('stock_btp.inventaire.annuler_titre')}">${iconeHtml('stock_btp_retour')} ${texteHtml('stock_btp.inventaire.annuler')}</button>` : ''}
         <button type="button" data-imprimer title="${texteHtml('stock_btp.inventaire.imprimer_titre')}">${iconeHtml('stock_btp_imprimer')} ${texteHtml('stock_btp.inventaire.imprimer')}</button>
@@ -123,6 +126,7 @@ export class PageInventaire extends PageBase {
     z.querySelector('[data-theoriques]').addEventListener('change', (e) => { this.theoriques = e.target.checked; z.classList.toggle('sans-theoriques', !this.theoriques); });
     z.classList.toggle('sans-theoriques', !this.theoriques);
     z.querySelector('[data-imprimer]').addEventListener('click', () => { if (this.onglet !== 'bordereaux') { this.onglet = 'bordereaux'; this.#rendre(); } globalThis.print(); });
+    z.querySelectorAll('[data-piece]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); this.app.naviguer(urlDocument(a.dataset.piece), { nouvelleFenetre: e.ctrlKey }); }));
     const action = (sel, f) => z.querySelector(sel)?.addEventListener('click', async () => { try { await f(); } catch (e) { this.app.erreur(e); } });
     action('[data-valider]', async () => {
       if (this.modifiee) { this.app.message(texte('stock_btp.inventaire.enregistrer_dabord'), 'avertissement'); return; }

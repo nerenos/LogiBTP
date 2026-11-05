@@ -136,6 +136,8 @@ export const api = {
     enregistrer: (id, s) => appel('PUT', `/execution/documents/${id}`, s),
     repartition: (id) => appel('GET', `/execution/documents/${id}/repartition`),
     heuresChantier: (id) => appel('GET', `/execution/chantiers/${id}/heures`),
+    delegations: () => appel('GET', '/execution/delegations'),
+    enregistrerDelegations: (srv, l) => appel('PUT', `/execution/delegations/${srv}`, l),
     // Lot 2 (module Exécution) : modèles de parcours, synthèse, détail d'un élément, parcours, états imposés.
     modeles: () => appel('GET', '/execution/parcours-modeles'),
     enregistrerModeles: (l) => appel('PUT', '/execution/parcours-modeles', l),
@@ -330,6 +332,7 @@ export const api = {
     salaries: () => appel('GET', '/stock/magasin/salaries'),
     sortieMagasin: (s) => appel('POST', '/stock/magasin/sorties', s),
     retourMagasin: (s) => appel('POST', '/stock/magasin/retours', s),
+    fichesDotation: (salarie) => appel('GET', `/stock/magasin/dotations/fiches?salarie=${salarie}`),
     dotations: ({ du = null, au = null, salarie = null } = {}) => appel('GET', `/stock/magasin/dotations?${new URLSearchParams(Object.fromEntries(Object.entries({ du, au, salarie }).filter(([, v]) => v !== null && v !== '')))}`),
     dotationArticle: (id) => appel('GET', `/stock/articles/${id}/dotation`),
     definirDotation: (id, d) => appel('PUT', `/stock/articles/${id}/dotation`, d),

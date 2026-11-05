@@ -188,6 +188,15 @@ public abstract class SpecialisationStock
     public abstract Task<List<CommandeCreee>> CreerCommandesAsync(StockDbContext db, long lieu, List<LigneACommander> lignes, Utilisateur u, CancellationToken ct);
     /// <summary>Après la revalorisation d'un article (PMP, dernier prix d'achat de l'article).</summary>
     public virtual Task ApresValorisationAsync(StockDbContext db, long ele, Valorisation v, CancellationToken ct) => Task.CompletedTask;
+    /// <summary>
+    /// Après la validation d'un lot d'inventaire (écarts valorisés à la date du lot, hors comptages du lot) : pièce des
+    /// écarts produite par l'application (pièce comptable), son identifiant est gardé dans le lot ; rien par défaut.
+    /// </summary>
+    public virtual Task<long?> ApresValidationLotAsync(StockDbContext db, LotInventaireEntite lot, EcartsLot ecarts, Utilisateur u, CancellationToken ct) =>
+        Task.FromResult<long?>(null);
+    /// <summary>Après l'annulation d'un lot validé : pièce des écarts annulée ou contre-passée (identifiant de la contre-passation).</summary>
+    public virtual Task<long?> ApresAnnulationLotAsync(StockDbContext db, LotInventaireEntite lot, Utilisateur u, CancellationToken ct) =>
+        Task.FromResult<long?>(null);
     /// <summary>Paramètres, emplacements et réévaluations : administrateur par défaut.</summary>
     public virtual Task<bool> PeutGererAsync(StockDbContext db, Utilisateur u, CancellationToken ct) => Task.FromResult(u.EstAdmin);
 }

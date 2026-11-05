@@ -90,10 +90,12 @@ modules/stock/db/093_stock.sql
 modules/stock/db/093b_stock_inventaire.sql
 modules/stock/db/093c_stock_approvisionnement.sql
 modules/stock/db/093d_stock_dotations.sql
+modules/stock/db/093e_stock_inventaire_piece.sql
 modules/comptabilite/db/094_comptabilite.sql
 modules/comptabilite/db/094b_comptabilite_ventilation.sql
 modules/comptabilite/db/094c_comptabilite_export.sql
 modules/comptabilite/db/094d_comptabilite_cles.sql
+modules/comptabilite/db/094e_comptabilite_contrepartie.sql
 modules/crm/db/095_crm_schema.sql
 modules/crm/db/096_crm_rappels.sql
 modules/crm/db/097_crm_demandes.sql
@@ -216,6 +218,9 @@ db/264_preferences_compte.sql rejouable
 db/265_colonnes_retirees.sql rejouable
 db/266_reprises_interface.sql rejouable
 db/267_devis_relance.sql rejouable
+db/268_delegation_controle.sql rejouable
+db/269_inventaire_comptable.sql rejouable
+db/270_dotation_fiche.sql rejouable
 
 # Vues de colonnes des types de documents créés après 176 : rejouée en dernier.
 db/176_documents_vues_types.sql rejouable
