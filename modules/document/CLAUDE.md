@@ -114,7 +114,7 @@ Historique complet et alternatives écartées : [CONCEPTION-REGLES-DOCUMENTS.md]
 
 ## Routes HTTP (préfixe du groupe `api`)
 - Paramétrage : `GET /types-document`, `GET /types-document/{code}/definition`, `GET /unites`, `GET|PUT /etiquettes-ligne`, `GET|PUT /couleurs-type-prix`, `GET /modeles-document`, `GET|PUT /vues-document`, `DELETE /vues-document/{id}`.
-- Documents : `GET /documents?type=`, `GET|PUT|DELETE /documents/{id}`, `POST /documents`, `POST …/valider|indices|reference|copie`, `GET …/historique`, `GET /historique/{hisId}`, `GET …/tracabilite`, `PUT …/origine`.
+- Documents : `GET /documents?type=`, `GET|PUT|DELETE /documents/{id}`, `POST /documents`, `POST …/valider|indices|reference|copie`, `GET …/historique` (versions : `TracabiliteService.Versions`, total HT et nombre de lignes de l'instantané, motif), `GET /historique/{hisId}` (instantané complet ; les deux : droit CONSULTER du type), `GET …/tracabilite`, `PUT …/origine`.
 - Numéro : `PUT /documents/{id}/numero`. Textes des types : `GET|PUT /types-document/{code}/textes`.
 - Verrou : `GET|POST|DELETE /documents/{id}/verrou` (jeton), `DELETE …/verrou/force` ; `PUT /documents/{id}` contrôle le verrou.
 - Transformations : `POST …/transformer`, `POST /documents/plusieurs`, `POST …/sources`, `GET /documents/en-attente?cible=&tiers=`, `GET …/suivi`, `GET …/restes`, `POST /lignes/{ligId}/soldes`, `GET …/lot-archivage` ; `GET|PUT /parametres-documents/seuils-solde` (écriture : administrateur).

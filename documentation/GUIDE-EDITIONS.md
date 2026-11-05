@@ -686,6 +686,18 @@ Présent sur une pièce validée qui porte une révision, ou sur une situation (
 | `revision.total`, `revision.provisoire` | Révision facturée par la pièce (situation : due à ce jour), au moins un index provisoire | montant, booléen |
 | `revision.information` | Situation : pour information (`montant` = à facturer) | booléen |
 
+#### Ventilation des frais annexes (pièces de vente à tranches de frais annexes)
+
+Présent quand le document a au moins une tranche de frais annexes (type de prix F), sinon vide : `frais_annexes` (objet). Lu par le modèle interne `FRAIS_ANNEXES` (rapport de ventilation, bouton « Imprimer » de la vue « Frais annexes » de l'onglet Analyse ; jamais retenu comme dernier modèle imprimé du document). Les tranches F ne figurent jamais dans `lignes[]`.
+
+| Chemin | Libellé | Type |
+|---|---|---|
+| `frais_annexes.prevu`, `.ventile`, `.ecart` | Totaux des tranches de frais | montant |
+| `frais_annexes.lignes_hors_vente`, `.mode_options` | Réglages du document (V, OA, OAM ; C, B) | texte |
+| `frais_annexes.tranches[]` | Tranches de frais : `libelle`, `portee`, `cles` (sinon prorata), `prevu`, `ventile`, `pct_ventile`, `ventile_reel`, `ecart` | collection |
+| `frais_annexes.tranches[].lignes[]` | Lignes de prix qui reçoivent une part : `numero`, `code`, `libelle`, `nature`, `hors_frais`, `part`, `coef_fa`, `montant_ht` | collection |
+| `frais_annexes.tranches[].natures[]` | Parts par nature des feuilles : `code`, `libelle`, `hors_frais`, `part` | collection |
+
 #### Étapes d'un ordre (module Exécution, documents de la famille E)
 
 | Chemin | Libellé | Type |

@@ -1,6 +1,6 @@
 import { texte, texteHtml, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { D } from '@logibtp/socle';
-import { echapper, formatNombre, formatLibre, lireNombre, creerCombo } from '@logibtp/socle/ui';
+import { echapper, formatNombre, formatLibre, lireNombre, creerCombo, celluleCsv, telechargerCsv } from '@logibtp/socle/ui';
 import { TL, estChiffree, estTranche, cleElementVentilation } from '../calcul/index.js';
 import {
   LIBELLES_FA_LIGNES, LIBELLES_FA_MODE, bilanTranche, messagesFrais, ecrireCle, figerVentilation, repartirReste, remplacerCles,
@@ -11,15 +11,19 @@ import {
 // nature, par élément et par tranche jusqu'à la ligne. Les clés de nature (de la tranche ou globales) et d'élément se
 // saisissent ici ; les clés de ligne aussi dans le détail de la ligne. Une part reçue par un ouvrage est attribuée à
 // ses feuilles au prorata de leur montant (quantité totale × PV), comme le moteur répartit une clé de feuille.
+// Le rapport s'exporte en CSV (saisie en cours, `lignesCsv`) et s'imprime par le module Édition (modèle FRAIS_ANNEXES,
+// données `frais_annexes` de la source document calculées par le serveur sur le document enregistré).
 
 const MODES_CLE = ['P', 'M'].map((valeur) => ({ valeur, get libelle() { return texte(`frais_annexes_btp.modes_cle.${valeur}`); } }));
 
 export class RapportFraisAnnexes {
-  constructor(conteneur, { editeur, natures = new Map(), message = () => {} }) {
+  /** imprimer() : impression par le module Édition (modèle FRAIS_ANNEXES du document enregistré) ; absent, pas de bouton. */
+  constructor(conteneur, { editeur, natures = new Map(), message = () => {}, imprimer = null }) {
     this.conteneur = conteneur;
     this.editeur = editeur;
     this.natures = natures;
     this.message = message;
+    this.imprimer = imprimer;
     this.ouverts = new Set(); // tranches de frais dépliées (le temps de la page)
   }
 
@@ -79,6 +83,38 @@ export class RapportFraisAnnexes {
     return res;
   }
 
+  /**
+   * Rapport en lignes CSV (séparateur « ; », décimales à la virgule) : une ligne par tranche de frais et par ligne de prix
+   * de sa portée (part nulle comprise), avec le bilan de la tranche, la tranche de la ligne, sa nature, son montant hors
+   * frais, la part reçue et son coefficient de frais annexes. Les feuilles d'un ouvrage sont regroupées sur sa ligne.
+   */
+  lignesCsv() {
+    const s = this.#structure();
+    const bilans = s.r.frais_annexes ?? [];
+    const libelle = (id) => s.parId.get(id)?.lig_libelle_brut ?? '';
+    const num = (v) => (v === null || v === undefined ? '' : String(v).replace('.', ','));
+    const nature = (id) => { const n = this.natures.get(Number(id)); return n ? n.code : ''; };
+    const colonnes = ['tranche', 'portee', 'prevu', 'ventile', 'ecart', 'tranche_ligne', 'numero', 'code', 'libelle', 'nature', 'hors_frais', 'part', 'coef_fa'];
+    const lignes = [colonnes.map((c) => celluleCsv(texte(`frais_annexes_btp.rapport.csv.${c}`))).join(';')];
+    for (const b of bilans) {
+      const parPrix = new Map();
+      for (const f of this.partsFeuilles(b, s)) {
+        const x = parPrix.get(f.prix.lig_id) ?? { prix: f.prix, tranche: f.tranches[0] ?? b.portee_id, poids: D(0), part: D(0) };
+        x.poids = x.poids.plus(f.poids);
+        x.part = x.part.plus(f.part);
+        parPrix.set(f.prix.lig_id, x);
+      }
+      for (const x of parPrix.values()) {
+        lignes.push([
+          celluleCsv(libelle(b.lig_id)), celluleCsv(libelle(b.portee_id)), num(b.prevu), num(b.ventile), num(b.ecart),
+          celluleCsv(libelle(x.tranche)), celluleCsv(x.prix.lig_numerotation ?? ''), celluleCsv(x.prix.lig_code ?? ''), celluleCsv(x.prix.lig_libelle_brut ?? ''),
+          celluleCsv(nature(x.prix.lig_nat_id)), num(x.poids.toFixed(2)), num(x.part.toFixed(2)), num(x.prix.lig_coef_fa ?? 1),
+        ].join(';'));
+      }
+    }
+    return lignes;
+  }
+
   rendre() {
     const ed = this.editeur;
     const r = ed.resultat;
@@ -94,6 +130,10 @@ export class RapportFraisAnnexes {
       <div class="frais-reglages">
         <label>${texteHtml('frais_annexes_btp.rapport.hors_vente')} <span data-reglage="ent_fa_lignes"></span></label>
         <label>${texteHtml('frais_annexes_btp.rapport.options')} <span data-reglage="ent_fa_mode"></span></label>
+        ${bilans.length ? `<span class="groupe-outils">
+          <button type="button" data-rapport-frais="csv" title="${texteHtml('frais_annexes_btp.rapport.exporter_aide')}">${iconeHtml('telecharger')} ${texteHtml('frais_annexes_btp.rapport.exporter')}</button>
+          ${this.imprimer ? `<button type="button" data-rapport-frais="imprimer" title="${texteHtml('frais_annexes_btp.rapport.imprimer_aide')}">${iconeHtml('frais_annexes_btp_imprimer')} ${texteHtml('frais_annexes_btp.rapport.imprimer')}</button>` : ''}
+        </span>` : ''}
       </div>
       ${messages.length ? `<ul class="frais-messages">${messages.map((m) => `<li><code>${echapper(m.code)}</code> ${echapper(m.message)}</li>`).join('')}</ul>` : ''}
       ${bilans.length ? '' : `<p class="aide">${texteHtml('frais_annexes_btp.rapport.aucune')}</p>`}
@@ -124,6 +164,11 @@ export class RapportFraisAnnexes {
     };
     reglage('ent_fa_lignes', LIBELLES_FA_LIGNES);
     reglage('ent_fa_mode', LIBELLES_FA_MODE);
+    this.conteneur.querySelector('[data-rapport-frais="csv"]')?.addEventListener('click', () => {
+      const d = ed.saisie.document;
+      telechargerCsv(`${texte('frais_annexes_btp.rapport.csv.fichier')}-${d.ent_numero ?? d.ent_id}.csv`, this.lignesCsv());
+    });
+    this.conteneur.querySelector('[data-rapport-frais="imprimer"]')?.addEventListener('click', () => this.imprimer());
 
     this.conteneur.querySelectorAll('[data-plier]').forEach((b) => b.addEventListener('click', () => {
       const id = Number(b.dataset.plier);

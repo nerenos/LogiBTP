@@ -66,9 +66,13 @@ const COLONNES_ELEMENTS = Object.keys(TRIS_ELEMENTS);
 const colonneFiltre = (cle) => ({ code: cle, titre: TRIS_ELEMENTS[cle].titre, format: TRIS_ELEMENTS[cle].texte ? 'texte' : 'nombre', calcul: true });
 
 export class AnalyseCoefficients {
-  /** appel : AppelBibliotheque de la page (prix rechargés depuis la bibliothèque) ; absent, le bouton n'est pas proposé. */
-  constructor(conteneur, { editeur, natures = [], message = () => {}, appel = null }) {
+  /**
+   * appel : AppelBibliotheque de la page (prix rechargés depuis la bibliothèque) ; absent, le bouton n'est pas proposé.
+   * imprimerFrais : impression du rapport de ventilation des frais annexes (module Édition) ; absent, pas de bouton.
+   */
+  constructor(conteneur, { editeur, natures = [], message = () => {}, appel = null, imprimerFrais = null }) {
     this.appel = appel;
+    this.imprimerFrais = imprimerFrais;
     this.conteneur = conteneur;
     this.editeur = editeur;
     this.natures = new Map(natures.map((n) => [n.id, n]));
@@ -410,7 +414,7 @@ export class AnalyseCoefficients {
           <strong>${texteHtml('analyse_btp.frais.titre')}</strong>
           <span class="aide">${texteHtml('analyse_btp.frais.aide')}</span></div>
         <div class="analyse-frais"></div></div>`;
-    this.rapportFrais ??= new RapportFraisAnnexes(null, { editeur: this.editeur, natures: this.natures, message: this.message });
+    this.rapportFrais ??= new RapportFraisAnnexes(null, { editeur: this.editeur, natures: this.natures, message: this.message, imprimer: this.imprimerFrais });
     this.rapportFrais.conteneur = this.conteneur.querySelector('.analyse-frais');
     this.rapportFrais.rendre();
   }

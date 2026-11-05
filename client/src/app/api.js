@@ -705,6 +705,8 @@ export const api = {
   recalculerEcheances: (id) => appel('POST', `/documents/${id}/echeances/recalculer`),
   enregistrerSeuilsSolde: (seuils) => appel('PUT', '/parametres-documents/seuils-solde', seuils),
   historique: (id) => appel('GET', `/documents/${id}/historique`),
+  // Version enregistrée d'un document (instantané de l'état avant une action) : écran de restauration.
+  versionDocument: (hisId) => appel('GET', `/historique/${hisId}`),
   tracabilite: (id) => appel('GET', `/documents/${id}/tracabilite`),
   enregistrerOrigine: (id, origine) => appel('PUT', `/documents/${id}/origine`, origine),
   casTest: (arbitrage) => appel('POST', '/cas-test', arbitrage),

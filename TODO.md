@@ -64,16 +64,16 @@
   M-2026-005-1, BL, factures et avoirs d'avancement, situations). La facture d'avancement SI2026-00002 (validée avant
   le lot 6b) n'a pas de numéro de situation.
 - [ ] Groupes de démonstration (`db/131`) absents des bases existantes (régénéré, non rejoué).
+- [ ] Rapport de ventilation des frais annexes : rejouer le `191` régénéré (modèle d'édition interne `FRAIS_ANNEXES`).
 - [ ] Colonne Livraison des commandes et vue Réservation : `db/176` (`ON CONFLICT DO NOTHING`) ne change pas les vues déjà présentes ; retrait de la colonne Révision du matériel : `db/121` et `db/131` à rejouer ; colonne `mat_heures_revision` gardée en base.
 
 ## Fonctionnel
 
 ### Documents
 
-- [ ] Écran de récupération d'une version précédente d'un document (instantanés `his_instantane`, y compris les clés
-  de ventilation des frais annexes).
-- [ ] Impression et export : ignorer les lignes non éditées (tranches F) ; export et impression du rapport de
-  ventilation des frais annexes (au moment des modules Export / Impression).
+- [ ] Restauration d'une version et rapport des frais annexes (faits le 05/11/2026) : essai dans le navigateur à faire
+  (restaurer puis enregistrer un brouillon, imprimer le rapport `FRAIS_ANNEXES` d'un devis à tranche F) ; une
+  restauration enregistrée est tracée comme une modification (pas d'action RESTAURATION dans l'historique).
 
 ### Module Mail
 

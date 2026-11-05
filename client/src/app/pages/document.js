@@ -1,10 +1,10 @@
 import { texte, texteHtml, icone, iconeHtml, pluriel } from '@logibtp/socle/dictionnaire';
-import { urlDocument, TYPE_FICHE, TYPE_DOCUMENT, TYPES_SOUS_TRAITABLES, MODULE_FACULTATIF, SUJET_FENETRE, CHAMPS_ERREUR_DOCUMENT } from '../codes.js';
+import { urlDocument, TYPE_FICHE, TYPE_DOCUMENT, TYPES_SOUS_TRAITABLES, MODULE_FACULTATIF, SUJET_FENETRE, CHAMPS_ERREUR_DOCUMENT, MODELE_EDITION } from '../codes.js';
 import { FAMILLE_DOCUMENT, STATUT_DOCUMENT, STATUTS_HORS_VIGUEUR, TYPE_AVANCEMENT, estFamilleAchat } from '@logibtp/document';
 import { PageBase } from '@logibtp/navigation';
 import { ExplorateurGed } from '@logibtp/ged/ui';
 import { ArborescenceBtp } from '../ged/arborescence.js';
-import { echapper, formatNombre, actionDe, libelleRaccourci, ouvrirMenuContextuel, basculerAideMemoire, fermerAideMemoire, confirmer, ouvrirDialogue, ouvrirModale, saisir, separateur as separateurZones, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
+import { echapper, formatNombre, formatDateHeure, actionDe, libelleRaccourci, ouvrirMenuContextuel, basculerAideMemoire, fermerAideMemoire, confirmer, ouvrirDialogue, ouvrirModale, saisir, separateur as separateurZones, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
 import { D, aujourdhui, texteDate } from '@logibtp/socle';
 import { ONGLETS_DOCUMENT } from '../raccourcis.js';
 import { Disposition, GestionVuesDocument, PlanDocument, RechercheLignes, NotificationsDocument } from '@logibtp/document/ui';
@@ -34,6 +34,7 @@ const TYPES_SOURCES = /_(RECEPTION|FACTURE|FACTURE_AVT|SITUATION|PRODUCTION|AVOI
 const TYPES_CROISES = [TYPE_AVANCEMENT.SITUATION, TYPE_AVANCEMENT.PRODUCTION];
 const MARCHE_TYPES = [TYPE_DOCUMENT.V_RECEPTION, TYPE_DOCUMENT.V_SITUATION, TYPE_DOCUMENT.V_PRODUCTION, TYPE_DOCUMENT.V_FACTURE_AVT];
 import { afficherTracabilite } from '../documents/tracabilite.js';
+import { saisieRestauree, TABLES_RESTAUREES } from '../documents/restauration.js';
 import { afficherReglements } from '../documents/reglements-document.js';
 import { ouvrirImport, creerDepuisImport, rendreBandeauImport, tracabiliteImport } from '../import/devis-a-verifier.js';
 import { formatImport } from '../import/formats.js';
@@ -238,13 +239,7 @@ export class PageDocument extends PageBase {
       // Bibliothèque dans une autre fenêtre (liste de tous les éléments) ; l'insertion reste par F3 ou par code.
       bibliotheque: () => app.naviguer('/liste/bibliotheque?vue=14', { nouvelleFenetre: true }),
       rechercher: () => { this.disposition.onglet('lignes'); this.recherche?.ouvrir(); },
-      // Aperçu : l'édition lit le document enregistré (les modifications en cours n'y sont pas).
-      apercu: () => {
-        const id = this.editeur?.saisie.document.ent_id;
-        if (!id || id < 0) { app.message(texte('document_btp.page.enregistrer_avant_edition'), 'avertissement'); return; }
-        if (this.modifiee) app.message(texte('document_btp.page.apercu_non_enregistre'), 'avertissement');
-        app.naviguer(`/edition?source=document&id=${id}`, { nouvelleFenetre: true });
-      },
+      apercu: () => this.apercu(),
       // Courriel : destinataires, modèle et pièces « à envoyer » proposés par l'application (module Mail).
       courriel: () => {
         const id = this.editeur?.saisie.document.ent_id;
@@ -491,7 +486,10 @@ export class PageDocument extends PageBase {
     this.editeur.surDepotExterne = (donnees, cibleId, position) => this.appel.deposer(donnees, cibleId, position);
     // Éléments liés aux lignes (unités de l'article, conversion du prix : D2, D3), lus à la demande.
     this.editeur.chargerElement = (id) => this.appel.fournisseur.element(id);
-    this.analyse = new AnalyseCoefficients(this.$('#vue-analyse'), { editeur: this.editeur, natures: this.natures, message: (t, n) => this.app.message(t, n), appel: this.appel });
+    this.analyse = new AnalyseCoefficients(this.$('#vue-analyse'), {
+      editeur: this.editeur, natures: this.natures, message: (t, n) => this.app.message(t, n), appel: this.appel,
+      imprimerFrais: () => this.apercu(MODELE_EDITION.FRAIS_ANNEXES),
+    });
     this.editeur.coefsDefaut = this.coefsDefaut;
     this.editeur.natures = this.natures;
     this.editeur.comptes = this.comptes;
@@ -964,7 +962,38 @@ export class PageDocument extends PageBase {
       naviguer: (url, e) => this.app.naviguer(url, { nouvelleFenetre: Boolean(e?.ctrlKey || e?.shiftKey) }),
       // Réutilisation du fichier source conservé : nouvelle vérification dans une autre fenêtre.
       reimporter: (o) => this.app.naviguer(`${formatImport(o.dor_format).page}?ged=${o.dor_fichier_id}`, { nouvelleFenetre: true }),
+      // Restauration d'une version : document modifiable par cet utilisateur et non bloqué par un autre (verrou).
+      restaurer: this.#modifiable() && !this.editeur.magasin.lectureSeule ? (h) => this.restaurerVersion(h).catch((x) => this.app.erreur(x)) : null,
     }).catch((x) => { zone.innerHTML = `<p class="erreur">${echapper(x.message)}</p>`; });
+  }
+
+  /**
+   * Aperçu de l'édition dans une autre fenêtre (modèle du type ou modèle donné : rapport des frais annexes) : l'édition lit
+   * le document enregistré, les modifications en cours n'y sont pas.
+   */
+  apercu(modele = null) {
+    const id = this.editeur?.saisie.document.ent_id;
+    if (!id || id < 0) { this.app.message(texte('document_btp.page.enregistrer_avant_edition'), 'avertissement'); return; }
+    if (this.modifiee) this.app.message(texte('document_btp.page.apercu_non_enregistre'), 'avertissement');
+    this.app.naviguer(`/edition?source=document&id=${id}${modele ? `&modele=${modele}` : ''}`, { nouvelleFenetre: true });
+  }
+
+  /**
+   * Version précédente rechargée dans l'éditeur (une étape annulable par Ctrl+Z) : l'utilisateur la vérifie, puis
+   * l'enregistre comme toute modification ; tant qu'elle n'est pas enregistrée, rien ne change sur le serveur.
+   */
+  async restaurerVersion(h) {
+    const ed = this.editeur;
+    const quand = formatDateHeure(h.his_date);
+    if (!await confirmer(texte(this.modifiee ? 'document_btp.page.restauration.confirmer_modifie' : 'document_btp.page.restauration.confirmer', { version: h.his_version, date: quand }))) return;
+    const v = await api.versionDocument(h.his_id);
+    const s = saisieRestauree(v.his_instantane, ed.saisie);
+    ed.magasin.modifier((d) => {
+      d.document = s.document;
+      for (const t of TABLES_RESTAUREES) d[t] = s[t];
+    }, texte('document_btp.page.restauration.etape', { version: h.his_version }));
+    this.disposition.onglet('lignes');
+    this.app.message(texte('document_btp.page.restauration.faite', { version: h.his_version, date: quand }), 'succes');
   }
 
   /** Onglet Règlements : échéancier modifiable, règlements et imputations, déductions d'acompte (documents/reglements-document.js). */

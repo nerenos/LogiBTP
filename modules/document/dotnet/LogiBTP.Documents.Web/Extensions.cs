@@ -145,9 +145,14 @@ public static class Extensions
             s.DesignerReference(id, Utilisateur.Depuis(http), ct));
         api.MapPost("/documents/{id:long}/copie", (long id, HttpContext http, DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>
             s.Copier(id, Utilisateur.Depuis(http), ct));
-        api.MapGet("/documents/{id:long}/historique", async (long id, DocumentDbContext<TDoc, TLigne> db, CancellationToken ct) =>
-            await db.Historiques.AsNoTracking().Where(h => h.HisEntId == id).OrderByDescending(h => h.HisId)
-                .Select(h => new { h.HisId, h.HisVersion, h.HisAction, h.HisDate, h.HisUtilisateur }).ToListAsync(ct));
+        api.MapGet("/documents/{id:long}/historique", async (long id, HttpContext http, DocumentDbContext<TDoc, TLigne> db, DocumentService<TDoc, TLigne, TComplet> s,
+            TracabiliteService<TDoc, TLigne, TComplet> t, CancellationToken ct) =>
+        {
+            var tyd = await db.Documents.AsNoTracking().Where(d => d.EntId == id).Select(d => (int?)d.EntTydId).FirstOrDefaultAsync(ct)
+                ?? throw ExceptionMetier.Introuvable($"Document {id}");
+            await s.VerifierDroit(Utilisateur.Depuis(http), tyd, ActionsDroits.Consulter, ct);
+            return await t.Versions(id, ct);
+        });
         // Traçabilité : origine d'un import, documents liés, historique.
         api.MapGet("/documents/{id:long}/tracabilite", (long id, TracabiliteService<TDoc, TLigne, TComplet> s, CancellationToken ct) => s.Lire(id, ct));
         api.MapPut("/documents/{id:long}/origine", async (long id, OrigineDocumentDto o, HttpContext http, TracabiliteService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>
@@ -155,9 +160,16 @@ public static class Extensions
             await s.EnregistrerOrigine(id, o, Utilisateur.Depuis(http), ct);
             return Results.NoContent();
         });
-        api.MapGet("/historique/{hisId:long}", async (long hisId, DocumentDbContext<TDoc, TLigne> db, CancellationToken ct) =>
-            await db.Historiques.AsNoTracking().FirstOrDefaultAsync(h => h.HisId == hisId, ct) is { } h
-                ? Results.Ok(h) : Results.NotFound());
+        // Version enregistrée (instantané complet : entête, lignes, compléments, clés de ventilation) : droit de consultation
+        // du document ; l'écran de restauration la recharge dans l'éditeur, enregistrée ensuite comme toute modification.
+        api.MapGet("/historique/{hisId:long}", async (long hisId, HttpContext http, DocumentDbContext<TDoc, TLigne> db, DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>
+        {
+            if (await db.Historiques.AsNoTracking().FirstOrDefaultAsync(h => h.HisId == hisId, ct) is not { } h) return Results.NotFound();
+            var tyd = await db.Documents.AsNoTracking().Where(d => d.EntId == h.HisEntId).Select(d => (int?)d.EntTydId).FirstOrDefaultAsync(ct);
+            if (tyd is not int t) return Results.NotFound();
+            await s.VerifierDroit(Utilisateur.Depuis(http), t, ActionsDroits.Consulter, ct);
+            return Results.Ok(h);
+        });
 
         // Transformations, suivi des reliquats, soldes, archivage
         api.MapPost("/documents/{id:long}/transformer", (long id, DemandeTransformation d, HttpContext http, TransformationService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>

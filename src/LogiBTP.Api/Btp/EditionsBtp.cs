@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using LogiBTP.Calcul;
 using LogiBTP.Documents;
 using LogiBTP.Documents.Web;
 using LogiBTP.Domaine;
@@ -323,7 +324,8 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
 
     public override async Task ApresImpressionAsync(IServiceProvider services, DemandeEdition demande, string modele, string? presentation, Utilisateur u, CancellationToken ct)
     {
-        if (demande.Source != "document" || !long.TryParse(demande.Id, out var id)) return;
+        // Rapport interne (ventilation des frais annexes) : le modèle de la pièce reste le dernier modèle imprimé.
+        if (demande.Source != "document" || modele == ModelesEdition.FraisAnnexes || !long.TryParse(demande.Id, out var id)) return;
         var db = services.GetRequiredService<LogiBtpContext>();
         var json = new JsonObject { ["modele"] = modele, ["presentation"] = presentation }.ToJsonString();
         await db.Database.ExecuteSqlRawAsync("UPDATE document SET ent_modele_edition = @m::jsonb WHERE ent_id = @id",
@@ -514,6 +516,8 @@ public static class SourceDocumentEdition
             var impute = imputations.Sum(x => x!["montant"]!.GetValue<decimal>());
             ((JsonObject)resultat["totaux"]!)["reste_imputation"] = imputations.Count == 0 ? null : JsonValue.Create(d.EntNetAPayer - impute);
         }
+        // Rapport de ventilation des frais annexes (modèle interne FRAIS_ANNEXES) : vide sans tranche de frais.
+        resultat["frais_annexes"] = r is ResultatCalcul rc && rc.FraisAnnexes.Count > 0 ? await FraisAnnexesAsync(db, rc, lignes, ct) : null;
         // Révision des prix du marché (lots G1, G3) : détail figé à la validation ; vide sans révision.
         resultat["revision"] = d.EntMarcheId is int marcheRevision ? await RevisionPrix.EditionAsync(db, d.EntId, marcheRevision, ct) : null;
         // Ordre (module Exécution, E47) : étapes dans l'ordre (dates prévisionnelles, validation, contrôle, ressource).
@@ -690,6 +694,76 @@ public static class SourceDocumentEdition
 
     private static string Html(string? texte) => System.Net.WebUtility.HtmlEncode(texte ?? "");
 
+    private sealed record NatureSql(int Id, string Code, string Libelle);
+
+    /// <summary>
+    /// Rapport de ventilation des frais annexes (CONCEPTION-VENTILATION-FRAIS.md ; vue « Frais annexes » de l'onglet
+    /// Analyse) : par tranche de frais, bilan (prévu, ventilé, ventilé réel après arrondi, écart, clés ou prorata), lignes de
+    /// prix qui reçoivent une part (hors frais = Σ quantité totale × PV des feuilles, part, coefficient de frais) et parts par
+    /// nature (part d'une ligne attribuée à ses feuilles au prorata de leur montant hors frais, comme l'onglet Analyse).
+    /// Les tranches de frais ne sont jamais imprimées dans les lignes du document (LignesImprimees).
+    /// </summary>
+    private static async Task<JsonObject> FraisAnnexesAsync(LogiBtpContext db, ResultatCalcul r, Dictionary<long, DocumentLigneBtp> parId, CancellationToken ct)
+    {
+        var enfants = r.Lignes.Where(l => l.LigParentId is not null).GroupBy(l => l.LigParentId!.Value).ToDictionary(g => g.Key, g => g.ToList());
+        List<DocumentLigneBtp> Feuilles(DocumentLigneBtp l)
+        {
+            var c = (enfants.GetValueOrDefault(l.LigId) ?? []).Where(TL.EstChiffree).ToList();
+            return c.Count == 0 ? [l] : c.SelectMany(Feuilles).ToList();
+        }
+        static decimal Poids(DocumentLigneBtp x) => (x.LigQteTotale ?? 0) * (x.LigPv ?? 0);
+        var idsNatures = r.Lignes.Where(l => l.LigNatId is not null).Select(l => l.LigNatId!.Value).Distinct().ToArray();
+        var natures = idsNatures.Length == 0 ? new Dictionary<int, NatureSql>()
+            : (await db.Database.SqlQuery<NatureSql>($"SELECT nat_id AS id, nat_code AS code, nat_libelle AS libelle FROM nature_element WHERE nat_id = ANY({idsNatures})")
+                .ToListAsync(ct)).ToDictionary(n => n.Id);
+        string? Libelle(long? id) => id is long i && parId.TryGetValue(i, out var l) ? l.LigLibelleBrut : null;
+
+        var tranches = new JsonArray();
+        foreach (var b in r.FraisAnnexes)
+        {
+            var lignes = new JsonArray();
+            var parNature = new Dictionary<int, (decimal Poids, decimal Part)>();
+            foreach (var g in r.VentilationsLignes.Where(v => v.VflSourceLigId == b.LigId).GroupBy(v => v.VflLigId))
+            {
+                if (!parId.TryGetValue(g.Key, out var l)) continue;
+                var part = g.Sum(v => v.VflMontant);
+                var feuilles = Feuilles(l);
+                var total = feuilles.Sum(Poids);
+                foreach (var f in feuilles)
+                {
+                    if (f.LigNatId is not int nat) continue;
+                    var partFeuille = total == 0 ? (f == feuilles[0] ? part : 0) : part * Poids(f) / total;
+                    var (p, q) = parNature.GetValueOrDefault(nat);
+                    parNature[nat] = (p + Poids(f), q + partFeuille);
+                }
+                lignes.Add(new JsonObject
+                {
+                    ["numero"] = l.LigNumerotation, ["code"] = l.LigCode, ["libelle"] = l.LigLibelleBrut,
+                    ["nature"] = l.LigNatId is int n && natures.TryGetValue(n, out var nl) ? nl.Code : null,
+                    ["hors_frais"] = total, ["part"] = part, ["coef_fa"] = l.LigCoefFa, ["montant_ht"] = l.LigMontantHt,
+                });
+            }
+            tranches.Add(new JsonObject
+            {
+                ["libelle"] = Libelle(b.LigId), ["portee"] = Libelle(b.PorteeId), ["cles"] = b.Cles,
+                ["prevu"] = b.Prevu, ["ventile"] = b.Ventile, ["ventile_reel"] = b.VentileReel, ["ecart"] = b.Ecart,
+                ["pct_ventile"] = b.Prevu == 0 ? null : Math.Round(b.Ventile * 100 / b.Prevu, 1, MidpointRounding.AwayFromZero),
+                ["lignes"] = lignes,
+                ["natures"] = new JsonArray(parNature.OrderByDescending(x => x.Value.Poids).Select(x => (JsonNode?)new JsonObject
+                {
+                    ["code"] = natures.TryGetValue(x.Key, out var nn) ? nn.Code : x.Key.ToString(), ["libelle"] = nn?.Libelle,
+                    ["hors_frais"] = x.Value.Poids, ["part"] = x.Value.Part,
+                }).ToArray()),
+            });
+        }
+        return new JsonObject
+        {
+            ["tranches"] = tranches,
+            ["prevu"] = r.FraisAnnexes.Sum(b => b.Prevu), ["ventile"] = r.FraisAnnexes.Sum(b => b.Ventile), ["ecart"] = r.FraisAnnexes.Sum(b => b.Ecart),
+            ["lignes_hors_vente"] = r.Document.EntFaLignes, ["mode_options"] = r.Document.EntFaMode,
+        };
+    }
+
     /// <summary>
     /// Pied imprimable : totaux calculés non masqués, postes HT / TTC (libellé, base, taux, montant), TVA par taux,
     /// sous-totaux de pied saisis, lignes consolidées du pied global.
@@ -851,6 +925,23 @@ public static class SourceDocumentEdition
             ("etapes[].prevu_le", "Date prévisionnelle", "date"), ("etapes[].valide_le", "Date de validation", "date"), ("etapes[].valide_par", "Validée par", "texte"),
             ("etapes[].controle", "Contrôle du N+1 attendu", "booleen"), ("etapes[].controle_le", "Date du contrôle", "date"), ("etapes[].controle_par", "Contrôlée par", "texte"),
             ("etapes[].ressource", "Ressource principale (étape, sinon ordre)", "texte"), ("etapes[].commentaire", "Commentaire", "texte"));
+        G("Ventilation des frais annexes (modèle FRAIS_ANNEXES)",
+            ("frais_annexes", "Rapport de ventilation (vide sans tranche de frais annexes)", "objet"),
+            ("frais_annexes.prevu", "Total prévu des tranches de frais", "montant"), ("frais_annexes.ventile", "Total ventilé", "montant"), ("frais_annexes.ecart", "Écart total", "montant"),
+            ("frais_annexes.lignes_hors_vente", "Lignes hors vente qui reçoivent des frais (V, OA, OAM)", "texte"), ("frais_annexes.mode_options", "Mode des options (C coefficient, B base)", "texte"),
+            ("frais_annexes.tranches", "Tranches de frais annexes", "collection"), ("frais_annexes.tranches[].libelle", "Tranche de frais", "texte"),
+            ("frais_annexes.tranches[].portee", "Portée (tranche parente)", "texte"), ("frais_annexes.tranches[].cles", "Ventilée par des clés (sinon au prorata)", "booleen"),
+            ("frais_annexes.tranches[].prevu", "Prévu", "montant"), ("frais_annexes.tranches[].ventile", "Ventilé", "montant"),
+            ("frais_annexes.tranches[].pct_ventile", "% ventilé du prévu", "nombre"), ("frais_annexes.tranches[].ventile_reel", "Ventilé réel (après arrondi des PV)", "montant"),
+            ("frais_annexes.tranches[].ecart", "Écart", "montant"),
+            ("frais_annexes.tranches[].lignes", "Lignes de prix qui reçoivent une part", "collection"), ("frais_annexes.tranches[].lignes[].numero", "Numéro", "texte"),
+            ("frais_annexes.tranches[].lignes[].code", "Code", "texte"), ("frais_annexes.tranches[].lignes[].libelle", "Libellé", "texte"),
+            ("frais_annexes.tranches[].lignes[].nature", "Code de la nature", "texte"), ("frais_annexes.tranches[].lignes[].hors_frais", "Montant hors frais (quantité totale × PV des feuilles)", "montant"),
+            ("frais_annexes.tranches[].lignes[].part", "Part reçue", "montant"), ("frais_annexes.tranches[].lignes[].coef_fa", "Coefficient de frais annexes", "nombre"),
+            ("frais_annexes.tranches[].lignes[].montant_ht", "Montant HT de la ligne", "montant"),
+            ("frais_annexes.tranches[].natures", "Parts par nature (feuilles des lignes)", "collection"), ("frais_annexes.tranches[].natures[].code", "Code de la nature", "texte"),
+            ("frais_annexes.tranches[].natures[].libelle", "Nature", "texte"), ("frais_annexes.tranches[].natures[].hors_frais", "Montant hors frais", "montant"),
+            ("frais_annexes.tranches[].natures[].part", "Part reçue", "montant"));
         G("Textes de l'édition",
             ("textes.intro", "Introduction (HTML, avant les lignes)", "html"), ("textes.fin", "Conclusion (HTML, après le pied)", "html"));
         G("Source annexe marche_documents (sources_annexes)",

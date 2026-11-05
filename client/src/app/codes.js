@@ -93,6 +93,11 @@ export const MODULE_FACULTATIF = Object.freeze({
   STOCK: 'stock',
 });
 
+/** Modèles d'édition connus du code (editions/modeles.js) ; un modèle interne n'est jamais le dernier imprimé du document. */
+export const MODELE_EDITION = Object.freeze({
+  FRAIS_ANNEXES: 'FRAIS_ANNEXES',
+});
+
 /** Rôle d'un type de pièce dans le module Rentabilité (rentabilite_role_type, db/258). */
 export const ROLE_RENTABILITE = Object.freeze({
   COMMANDE_VENTE: 'COMMANDE_VENTE',

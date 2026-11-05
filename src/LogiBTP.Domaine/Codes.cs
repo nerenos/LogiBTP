@@ -121,6 +121,15 @@ public static class RolesRentabilite
     public const string Production = "PRODUCTION";
 }
 
+/// <summary>
+/// Modèles d'édition connus du code (client/src/app/editions/modeles.js → db/191). Un modèle interne (rapport de
+/// contrôle) n'est jamais retenu comme dernier modèle imprimé du document.
+/// </summary>
+public static class ModelesEdition
+{
+    public const string FraisAnnexes = "FRAIS_ANNEXES";
+}
+
 /// <summary>Catégories de la GED posées par le serveur (dge_categorie).</summary>
 public static class CategoriesGed
 {

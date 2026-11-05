@@ -647,7 +647,52 @@ const BONS_SAV = [{
   },
 }];
 
-export const MODELES_EDITION = [...BLOCS, ...SOUS_RAPPORTS, ...RAPPORTS, ...AUTRES, ...MARCHES_ST, ...RECEPTIONS, ...BONS_SAV];
+// Rapport interne de ventilation des frais annexes (CONCEPTION-VENTILATION-FRAIS.md ; vue « Frais annexes » de l'onglet
+// Analyse) : données frais_annexes de la source document (tranches, bilan, parts par nature et par ligne de prix). Jamais
+// retenu comme dernier modèle imprimé du document (ModelesEdition.FraisAnnexes).
+const FA = 'frais_annexes';
+const montantFa = (cle, titre, cumul = true) => ({ cle, titre, largeur: '26mm', valeur: `{{element.${cle}}}`, format: 'montant', alignement: 'droite', style: 'montant', ...(cumul ? { cumul: `=element.${cle}` } : {}) });
+const FRAIS_ANNEXES = [{
+  code: 'FRAIS_ANNEXES', libelle: 'Rapport de ventilation des frais annexes', genre: 'RAPPORT', cible: 'DOCUMENT', source: 'document', types: ['V_DEVIS', 'V_COMMANDE'], ordre: 97,
+  contenu: {
+    format_version: 1, code: 'FRAIS_ANNEXES', libelle: 'Rapport de ventilation des frais annexes', cible: 'DOCUMENT', source: 'document',
+    page: { format: 'A4', orientation: 'portrait', marges: { haut: 10, bas: 10, gauche: 12, droite: 12 } },
+    bandes: [
+      { type: 'PIED_PAGE', contenu: bloc('PIED_INTERNE') },
+      { type: 'TITRE', contenu: { type: 'pile', espacement: 1, marges: { bas: 3 }, cadre: { bas: 'normal' }, enfants: [
+        champ('Ventilation des frais annexes', { style: 'titre' }),
+        champ('=Joindre(" – "; document.type.libelle; document.numero; document.objet)', { style: 'sous_titre' }),
+        champ(`=Si(${FA}; "Prévu " & Montant(${FA}.prevu) & " € · ventilé " & Montant(${FA}.ventile) & " € · écart " & Montant(${FA}.ecart) & " €"; "Aucune tranche de frais annexes dans ce document.")`, { style: 'gras' }),
+        champ('Document non validé : rapport de la dernière version enregistrée.', { style: 'discret', condition: 'NON document.verrouille' }),
+      ] } },
+      {
+        type: 'CORPS', mode: 'REPETE', collection: `${FA}.tranches`, options: { garder_avec_suivant: false },
+        contenu: { type: 'pile', espacement: 2, marges: { haut: 3 }, enfants: [
+          champ('{{element.libelle}}', { style: 'section', fond: 'fond_section', marges: 1 }),
+          champ('="Portée : " & PremierNonVide(element.portee; "—") & " · " & Si(element.cles; "ventilée par clés"; "au prorata du montant hors frais")', { style: 'discret' }),
+          champ('="Prévu " & Montant(element.prevu) & " € · ventilé " & Montant(element.ventile) & " € (" & Simple(element.pct_ventile) & " %) · ventilé réel " & Montant(element.ventile_reel) & " € · écart " & Montant(element.ecart) & " €"'),
+          champ('Par nature', { style: 'gras' }),
+          { type: 'tableau', collection: 'element.natures', remplir: false, report: false, vide: 'Aucune nature', total: { libelle: 'Total' }, colonnes: [
+            { cle: 'code', titre: 'Code', largeur: '22mm', valeur: '{{element.code}}' },
+            { cle: 'libelle', titre: 'Nature', largeur: '*', valeur: '{{element.libelle}}' },
+            montantFa('hors_frais', 'Hors frais'), montantFa('part', 'Part reçue'),
+          ] },
+          champ('Par ligne de prix', { style: 'gras' }),
+          { type: 'tableau', collection: 'element.lignes', remplir: false, report: true, vide: 'Aucune ligne ne reçoit de frais', total: { libelle: 'Total' }, colonnes: [
+            { cle: 'numero', titre: 'N°', largeur: '16mm', valeur: '{{element.numero}}' },
+            { cle: 'code', titre: 'Code', largeur: '22mm', valeur: '{{element.code}}' },
+            { cle: 'libelle', titre: 'Libellé', largeur: '*', valeur: '{{element.libelle}}' },
+            { cle: 'nature', titre: 'Nature', largeur: '16mm', valeur: '{{element.nature}}' },
+            montantFa('hors_frais', 'Hors frais'), montantFa('part', 'Part reçue'),
+            { cle: 'coef', titre: 'Coef. FA', largeur: '16mm', valeur: '{{element.coef_fa}}', alignement: 'droite' },
+          ] },
+        ] },
+      },
+    ],
+  },
+}];
+
+export const MODELES_EDITION = [...BLOCS, ...SOUS_RAPPORTS, ...RAPPORTS, ...AUTRES, ...MARCHES_ST, ...RECEPTIONS, ...BONS_SAV, ...FRAIS_ANNEXES];
 
 /** Modèle par défaut de chaque type de document (Q12 : un modèle par type). */
 export const DEFAUTS_EDITION = [

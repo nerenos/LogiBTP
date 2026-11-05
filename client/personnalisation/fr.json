@@ -1011,6 +1011,12 @@
       "intervenants_repris": "{{nombre}} intervenant(s) repris du rattachement",
       "rattachement_enregistre": "Rattachement enregistré",
       "tracabilite_indisponible": "Traçabilité disponible pour les documents enregistrés.",
+      "restauration": {
+        "confirmer": "Recharger la version {{version}} du {{date}} dans l'éditeur ? Rien n'est enregistré tant que vous n'enregistrez pas.",
+        "confirmer_modifie": "Recharger la version {{version}} du {{date}} dans l'éditeur ? Vos modifications non enregistrées seront remplacées (Ctrl+Z pour les retrouver).",
+        "etape": "Restauration de la version {{version}}",
+        "faite": "Version {{version}} du {{date}} rechargée : vérifiez-la puis enregistrez (Ctrl+Z pour revenir en arrière)."
+      },
       "suivi_indisponible": "Suivi disponible pour les documents enregistrés.",
       "pieces_import": "Le fichier importé sera conservé dans les pièces du devis à sa création.",
       "ged_absente": "La GED n'est pas branchée.",
@@ -5720,7 +5726,14 @@
         "CREATION": "Création",
         "MODIFICATION": "Modification",
         "VALIDATION": "Validation",
-        "ANNULATION": "Annulation"
+        "ANNULATION": "Annulation",
+        "APPROBATION": "Approbation",
+        "ENVOI": "Envoi",
+        "VALIDATION_TIERS": "Validation du tiers",
+        "DEVALIDATION": "Dévalidation",
+        "FORCAGE": "Forçage",
+        "REJET": "Rejet",
+        "NUMERO": "Changement de numéro"
       },
       "liens": {
         "TRANSFORMATION": "Transformation",
@@ -5747,9 +5760,16 @@
         "version": "Version",
         "action": "Action",
         "date": "Date",
-        "utilisateur": "Utilisateur"
+        "utilisateur": "Utilisateur",
+        "total_ht": "Total HT",
+        "lignes": "Lignes",
+        "motif": "Motif"
       },
-      "aucune_version": "Aucune version enregistrée."
+      "aucune_version": "Aucune version enregistrée.",
+      "versions_aide": "Chaque version est l'état du document avant l'action indiquée. « Restaurer » la recharge dans l'éditeur : vérifiez-la, puis enregistrez (Ctrl+Z pour revenir en arrière).",
+      "versions_lecture": "Chaque version est l'état du document avant l'action indiquée. Restauration possible sur un document modifiable (un document validé se dévalide d'abord).",
+      "restaurer": "Restaurer",
+      "restaurer_aide": "Recharger la version {{version}} dans l'éditeur (lignes, métrés, variables, clés de ventilation des frais annexes, entête)"
     },
     "transformation": {
       "etapes": {
@@ -7187,7 +7207,27 @@
       "par_tranche": "Par tranche",
       "nombre_invalide": "Nombre invalide",
       "etape_cle": "Clé de frais annexes",
-      "sans_ligne": "Aucune ligne pour recevoir les frais"
+      "sans_ligne": "Aucune ligne pour recevoir les frais",
+      "exporter": "Exporter (CSV)",
+      "exporter_aide": "Rapport de ventilation de la saisie en cours : une ligne par tranche de frais et par ligne de prix de sa portée",
+      "imprimer": "Imprimer",
+      "imprimer_aide": "Rapport de ventilation du document enregistré, par le module Édition (aperçu, PDF)",
+      "csv": {
+        "fichier": "frais-annexes",
+        "tranche": "Tranche de frais",
+        "portee": "Portée",
+        "prevu": "Prévu",
+        "ventile": "Ventilé",
+        "ecart": "Écart",
+        "tranche_ligne": "Tranche de la ligne",
+        "numero": "N°",
+        "code": "Code",
+        "libelle": "Libellé",
+        "nature": "Nature",
+        "hors_frais": "Hors frais",
+        "part": "Part reçue",
+        "coef_fa": "Coef. FA"
+      }
     }
   },
   "annuaire_btp": {
