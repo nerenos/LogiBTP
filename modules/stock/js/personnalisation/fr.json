@@ -31,6 +31,16 @@
     "methodes": {
       "PMP": "Prix moyen pondéré",
       "DERNIER_PA": "Dernier prix d'achat"
+    },
+    "tracabilite": {
+      "erreurs": {
+        "TRA_NUMERO_VIDE": "Lot sans numéro",
+        "TRA_QUANTITE": "Quantité du lot nulle, négative ou illisible",
+        "TRA_DOUBLON": "Même numéro de lot deux fois sur la ligne",
+        "TRA_DEPASSE": "Les lots dépassent la quantité de la ligne",
+        "TRA_SERIE_UNITE": "Un numéro de série vaut une unité",
+        "TRA_INCOMPLET": "Une partie de la quantité reste sans lot"
+      }
     }
   }
 }

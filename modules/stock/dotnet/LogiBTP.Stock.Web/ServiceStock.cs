@@ -51,7 +51,8 @@ public class MouvementEntite
     public long? MvtLigId { get; set; }
     public long? MvtTiersId { get; set; }
     public long? MvtIndId { get; set; }
-    public string? MvtTracabilite { get; set; }
+    /// <summary>Lot ou numéro de série du mouvement (S24), null = sans lot.</summary>
+    public long? MvtLotId { get; set; }
     public DateTimeOffset MvtCreeLe { get; set; } = DateTimeOffset.UtcNow;
 }
 
@@ -66,6 +67,8 @@ public class ComptageEntite
     public string? CptCommentaire { get; set; }
     public long? CptEntId { get; set; }
     public long? CptLinId { get; set; }
+    /// <summary>Lot compté (S24), null = sans lot (comptage de l'article).</summary>
+    public long? CptLotId { get; set; }
     public string? CptPar { get; set; }
     public DateTimeOffset CptLe { get; set; } = DateTimeOffset.UtcNow;
 }
@@ -118,6 +121,8 @@ public class StockDbContext(DbContextOptions<StockDbContext> options) : DbContex
     public DbSet<SeuilEntite> Seuils => Set<SeuilEntite>();
     public DbSet<ArticleDotationEntite> ArticlesDotation => Set<ArticleDotationEntite>();
     public DbSet<LieuParametreEntite> LieuxParametres => Set<LieuParametreEntite>();
+    public DbSet<ArticleSuiviEntite> ArticlesSuivi => Set<ArticleSuiviEntite>();
+    public DbSet<LotArticleEntite> LotsArticle => Set<LotArticleEntite>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -138,6 +143,8 @@ public class StockDbContext(DbContextOptions<StockDbContext> options) : DbContex
         b.Entity<ArticleDotationEntite>().ToTable("stk_article_dotation").HasKey(x => x.SadEleId);
         b.Entity<SeuilEntite>().ToTable("stk_seuil").HasKey(x => new { x.SseEleId, x.SseLieuId });
         b.Entity<LieuParametreEntite>().ToTable("stk_lieu_parametre").HasKey(x => x.SlpLieuId);
+        b.Entity<ArticleSuiviEntite>().ToTable("stk_article_suivi").HasKey(x => x.SasEleId);
+        b.Entity<LotArticleEntite>().ToTable("stk_lot").HasKey(x => x.LotId);
     }
 }
 
@@ -197,6 +204,9 @@ public abstract class SpecialisationStock
     /// <summary>Après l'annulation d'un lot validé : pièce des écarts annulée ou contre-passée (identifiant de la contre-passation).</summary>
     public virtual Task<long?> ApresAnnulationLotAsync(StockDbContext db, LotInventaireEntite lot, Utilisateur u, CancellationToken ct) =>
         Task.FromResult<long?>(null);
+    /// <summary>Noms des tiers (fournisseurs des lots) ; aucun par défaut.</summary>
+    public virtual Task<Dictionary<long, string>> NomsTiersAsync(StockDbContext db, IReadOnlyCollection<long> ids, CancellationToken ct) =>
+        Task.FromResult(new Dictionary<long, string>());
     /// <summary>Paramètres, emplacements et réévaluations : administrateur par défaut.</summary>
     public virtual Task<bool> PeutGererAsync(StockDbContext db, Utilisateur u, CancellationToken ct) => Task.FromResult(u.EstAdmin);
 }
@@ -465,6 +475,7 @@ public static class Extensions
         services.AddScoped<ServiceStock>();
         services.AddScoped<ServiceInventaire>();
         services.AddScoped<ServiceApprovisionnement>();
+        services.AddScoped<ServiceTracabilite>();
         return services;
     }
 
@@ -490,6 +501,7 @@ public static class Extensions
         });
         g.MapInventaires();
         g.MapApprovisionnement();
+        g.MapTracabilite();
         g.MapPost("/revaloriser", async (HttpContext http, ServiceStock s, CancellationToken ct) => Results.Ok(new { articles = await s.RevaloriserToutAsync(Utilisateur.Depuis(http), ct) }));
         return g;
     }

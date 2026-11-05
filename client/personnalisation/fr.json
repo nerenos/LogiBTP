@@ -2807,6 +2807,46 @@
       "a_signer_un": "À signer à la borne : {{nombre}} mouvement du {{du}} au {{au}}.",
       "a_signer_autre": "À signer à la borne : {{nombre}} mouvements du {{du}} au {{au}}.",
       "rien_a_signer": "Aucun mouvement à signer depuis la dernière fiche."
+    },
+    "lots": {
+      "titre_article": "Lots et numéros de série",
+      "suivi": "Suivi",
+      "suivis": {
+        "AUCUN": "Aucun",
+        "LOT": "Par lot",
+        "SERIE": "Par numéro de série"
+      },
+      "perissable": "Périssable",
+      "duree": "Durée théorique",
+      "unites": {
+        "J": "jours",
+        "M": "mois"
+      },
+      "suivi_enregistre": "Suivi de l'article enregistré",
+      "aucun": "Aucun lot pour cet article.",
+      "numero": "N°",
+      "fournisseur": "Fournisseur",
+      "fabrication": "Fabrication",
+      "limite": "Date limite",
+      "coulee": "Coulée",
+      "norme": "Norme",
+      "commentaire": "Commentaire",
+      "lieux": "Lieux",
+      "perime": "Date limite dépassée",
+      "sans_lot_ligne": "Sans lot",
+      "lot_enregistre": "Lot {{numero}} enregistré",
+      "titre_AUCUN": "Lots",
+      "titre_LOT": "Lots",
+      "titre_SERIE": "Numéros de série",
+      "unite": "(quantités en {{unite}})",
+      "disponible": "{{quantite}} en stock",
+      "quantite": "Quantité",
+      "limite_proposee": "Proposée : {{date}} (fabrication, sinon réception, + durée de l'article)",
+      "autre_unite": "Ligne dans une autre unité que celle du stock : le reste sans lot sera calculé à la validation.",
+      "sans_lot": "Sans lot : {{quantite}}",
+      "repartie": "Toute la ligne est répartie entre ses lots.",
+      "ajouter": "Ajouter un lot",
+      "etape": "Lots de la ligne"
     }
   },
   "execution_btp": {

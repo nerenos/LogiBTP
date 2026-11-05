@@ -3,6 +3,7 @@ import { TYPE_FICHE, TYPE_DOCUMENT, TYPES_ARC } from './codes.js';
 import { echapper, formatNombre, formatLibre, lireNombre, creerCombo, ListeDeroulante } from '@logibtp/socle/ui';
 import { rendreExecution, sectionRepartition } from './execution/execution.js';
 import { rendreEntretienOrdre } from './ressources/entretiens-ui.js';
+import { sectionLots } from './stock/lots-ligne.js';
 import { PanneauxDocument, opt } from '@logibtp/document/ui';
 import { estFamilleAchat, FAMILLE_DOCUMENT } from '@logibtp/document';
 import { ventilerFactureRecue, MESSAGES_VENTILATION } from '@logibtp/sous-traitance';
@@ -686,6 +687,15 @@ export class PanneauxBtp extends PanneauxDocument {
     }
     this.sectionFrais(zone, l);
     this.sectionRepartition(zone, l);
+    // Lots et numéros de série (module Stock) : lots de l'article lus une fois par ouverture de la page.
+    if (this.stock) {
+      this.lotsArticles ??= new Map();
+      const lots = (ele) => {
+        if (!this.lotsArticles.has(ele)) this.lotsArticles.set(ele, api.stock.lotsArticle(ele));
+        return this.lotsArticles.get(ele);
+      };
+      sectionLots(zone, l, { editeur: this.editeur, lots, lecture: lecture || !!this.editeur.saisie.document.ent_verrouille });
+    }
     if (!estTranche(l)) return;
     zone.insertAdjacentHTML('beforeend', sectionVariablesTranche(this.editeur, ligId, { modifiable: !this.editeur.magasin.lectureSeule }));
     lierVariablesTranche(zone, this.editeur);

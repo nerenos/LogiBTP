@@ -161,6 +161,7 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         }
         // Stock : date du mouvement, lieux des entrées, sorties et transferts (module Stock, S9, S10).
         MouvementsStockBtp.Controler(document.Document, type, erreurs);
+        await MouvementsStockBtp.ControlerLotsAsync(db, document.Lignes, type, erreurs, ct);
         await ControlerAvancementNumerote(db, document, type, erreurs, ct);
         await ControlerProductionMois(db, document, type, erreurs, ct);
     }

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { stockA, ecartComptage, valoriser, valeurUnitaire, controlerLot, MESSAGES_INVENTAIRE, projeter, minimumJusqua, proposer } from '../src/index.js';
+import { stockA, ecartComptage, valoriser, valeurUnitaire, controlerLot, MESSAGES_INVENTAIRE, projeter, minimumJusqua, proposer, repartirLots, dateLimiteLot, stockParLot, MESSAGES_TRACABILITE } from '../src/index.js';
 
 // Jeux partagés avec ReglesStock.cs et ReglesValorisation.cs (LogiBTP.Stock.Tests).
 const lire = (f) => JSON.parse(fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../tests/cas', f), 'utf8'));
@@ -51,4 +51,17 @@ describe('projection et propositions (jeu partagé)', () => {
   for (const c of jeu.propositions) {
     it(c.nom, () => expect(proposer(c)).toEqual(c.attendu));
   }
+});
+
+describe('lots et numéros de série (jeu partagé)', () => {
+  const jeu = lire('05_tracabilite.json');
+  for (const c of jeu.repartitions) {
+    it(c.nom, () => {
+      const r = repartirLots({ quantite: c.quantite, lots: c.lots, suivi: c.suivi });
+      expect(r).toEqual(c.attendu);
+      for (const x of [...r.erreurs, ...r.avertissements]) expect(MESSAGES_TRACABILITE[x.code]).toBeTruthy();
+    });
+  }
+  for (const c of jeu.dates) it(c.nom, () => expect(dateLimiteLot(c.article, { fabrication: c.fabrication, reception: c.reception })).toBe(c.attendu));
+  for (const c of jeu.stocks) it(c.nom, () => expect(stockParLot({ mouvements: c.mouvements, comptages: c.comptages }, c.t)).toEqual(c.attendu));
 });

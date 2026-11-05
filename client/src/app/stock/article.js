@@ -5,6 +5,7 @@ import { METHODES_VALORISATION } from '@logibtp/stock';
 import { api } from '../api.js';
 import { dateHeureLocale, isoDepuisLocal } from './etat.js';
 import { choixMultiple } from '../choix-multiple.js';
+import { rendreLotsArticle } from './lots-article.js';
 
 // Module Stock, lot 1 (ANALYSE-MODULE-STOCK.md § 5.1, S4, S31) : onglet Stock de la fiche d'un article géré en stock :
 // quantité par lieu à maintenant, valorisation (PMP, dernier prix d'achat avec sa pièce, son fournisseur et sa date,
@@ -33,6 +34,7 @@ export async function rendreStockArticle(corps, { id, message, naviguer }) {
     <table class="tableau-compact"><thead><tr><th>${texteHtml('stock_btp.colonnes.lieu')}</th><th>${texteHtml('stock_btp.colonnes.quantite')}</th><th>${texteHtml('stock_btp.colonnes.dernier_inventaire')}</th></tr></thead><tbody>
       ${f.lieux.map((l) => `<tr><td>${iconeHtml(l.depot ? 'stock_btp_stock' : 'stock_btp_chantier')} ${echapper(l.code)} ${echapper(l.libelle)}${l.depot ? ` <a href="/stock/projection?lieu=${l.lieu}&article=${id}" data-url title="${texteHtml('stock_btp.article.projection_titre')}">${iconeHtml('stock_btp_projection')}</a>` : ''}</td><td class="nombre${Number(l.quantite) < 0 ? ' avertissement' : ''}">${nb(l.quantite)}</td>
         <td>${dateHeureLocale(l.dernier_comptage)}</td></tr>`).join('') || `<tr><td colspan="3" class="aide">${texteHtml('stock_btp.article.aucun_mouvement')}</td></tr>`}</tbody></table>
+    <div data-lots></div>
     <h3>${texteHtml('stock_btp.article.corriger')}</h3>
     <p class="ligne"><label>${texteHtml('stock_btp.colonnes.lieu')} <span data-lieu-correction></span></label> <label>${texteHtml('stock_btp.article.quantite_comptee')} <input data-cq size="8"></label>
       <label>${texteHtml('stock_btp.article.au')} <input type="datetime-local" data-cdate title="${texteHtml('stock_btp.etat.date_titre')}"></label> <label>${texteHtml('stock_btp.article.valeur_inventaire')} <input data-cprix size="8" title="${texteHtml('stock_btp.article.valeur_inventaire_titre')}"></label>
@@ -55,6 +57,8 @@ export async function rendreStockArticle(corps, { id, message, naviguer }) {
         <td class="nombre">${nb(m.prix, 4)}${m.provisoire ? ` ${iconeHtml('stock_btp_provisoire')}` : ''}</td><td class="nombre">${nb(m.pmp, 4)}</td>
         <td>${m.ent_id ? `<a href="${urlDocument(m.ent_id)}" data-piece="${m.ent_id}">${echapper(m.piece ?? '')}</a> <small>${echapper(m.type_piece ?? '')}</small>` : echapper(ORIGINES[m.origine] ?? m.origine)}</td>
         <td>${echapper(m.tiers ?? '')}</td></tr>`).join('') || `<tr><td colspan="7" class="aide">${texteHtml('stock_btp.article.aucun_mouvement')}</td></tr>`}</tbody></table></div>`;
+  // Lots et numéros de série (S24-a) : suivi de l'article, lots et leur stock.
+  rendreLotsArticle(corps.querySelector('[data-lots]'), { id, message }).catch((e) => message(e.message, 'erreur'));
   // Dotation (lot 4) : EPI ou outillage consommable, durée de vie (renouvellement).
   const typeDotation = creerCombo({ options: pairesParCode('stock_btp.types_dotation', ['EPI', 'OUTILLAGE']).map(([valeur, libelle]) => ({ valeur, libelle })), valeur: dotation.type ?? '' });
   corps.querySelector('[data-dotation]').append(typeDotation);

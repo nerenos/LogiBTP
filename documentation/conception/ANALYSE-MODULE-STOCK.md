@@ -45,7 +45,13 @@
 > (pièce `S_INVENTAIRE` des écarts valorisés créée à la validation d'un lot, exportée en opération diverse stock ↔
 > variation des stocks par le module Comptabilité, annulée ou contre-passée à l'annulation du lot : `093e`, `094e`,
 > `db/269`, `Btp/InventaireComptableBtp.cs`). Lots et numéros de série (S24) : analyse au § 11, questions tranchées le 05/11/2026 (lots facultatifs, péremption
-> réglée par article), réalisation par les lots S24-a à S24-d.
+> réglée par article), réalisation par les lots S24-a à S24-d. Lot S24-a réalisé le 05/11/2026 (`tracabilite.js` ↔
+> `ReglesTracabilite.cs`, jeu `05_tracabilite.json`, `093f`, `db/271`, `ServiceTracabilite.cs`, `MouvementsStockBtp` ;
+> section « Lots » du détail de la ligne, section « Lots et numéros de série » de l'onglet Stock de l'article) ; écarts
+> au § 11.3 : le suivi d'un article est une table du module (`stk_article_suivi`) et non des colonnes de l'élément ; la
+> répartition d'une ligne est gardée dans `lig_proprietes.lots` (enregistrée avec la pièce) et matérialisée à la
+> validation par `mvt_lot_id`, sans table `document_ligne_lot` ; `cpt_lot_id` est posé pour l'inventaire par lot
+> (S24-b) ; un comptage de l'article sans lot remet tout son stock « sans lot ».
 
 ## 1. Note d'origine (résumé)
 
@@ -366,7 +372,7 @@ dotation du salarié (`sal_cha_dotation_id`), vues de liste (stock par lieu, mou
 
 | Lot | Contenu |
 |---|---|
-| S24-a | Schéma (`ele_tracabilite`, `ele_perissable`, `ele_duree_peremption`, `stk_lot`, `document_ligne_lot`, `mvt_lot_id`), saisie des lots en réception, mouvements par lot, stock par lot (règle répliquée + jeu), onglet Lots de l'article |
+| S24-a ✔ | Schéma (suivi `stk_article_suivi` : mode, périssable, durée ; `stk_lot` ; répartition `lig_proprietes.lots` ; `mvt_lot_id`, `cpt_lot_id`), saisie des lots en réception, mouvements par lot, stock par lot (règle répliquée + jeu), onglet Lots de l'article |
 | S24-b | Sorties et transferts (proposition FIFO / FEFO), magasin et borne, inventaire par lot, lot INITIAL |
 | S24-c | Certificats (GED, raccourci dans le chantier), traçabilité ascendante et descendante, péremption (notifications), éditions et étiquettes |
 | S24-d | Numéros de série → équipements installés (avec le module SAV) |

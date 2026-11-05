@@ -106,6 +106,9 @@
 - [x] **Fiche de dotation EPI par le module Édition** (05/11/2026, S26) : modèle « Fiche de dotation », imprimée depuis
   la fiche salarié ; signée à la borne (✍ Ma fiche de dotation) pour les remises et retours depuis la fiche précédente,
   PDF rangé dans la GED du salarié ; fiches signées réimprimables.
+- [x] **Lots et numéros de série, lot S24-a** (05/11/2026) : suivi de l'article (aucun, par lot, par numéro de série ;
+  périssable avec durée théorique) dans l'onglet Stock, section « Lots » du détail de la ligne des pièces de stock
+  (facultative, reste sans lot), lots créés à la validation (date limite proposée), mouvements et stock par lot.
 - [x] **Pièce comptable de l'inventaire** (05/11/2026) : à la validation d'un lot, pièce « Écarts d'inventaire » des
   écarts valorisés (lien dans la page du lot), exportée en opération diverse (compte de stock ↔ variation des stocks,
   type comptable STOCK) ; annulation du lot : pièce annulée, ou contre-passée si elle est déjà transférée.
