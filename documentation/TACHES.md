@@ -67,6 +67,10 @@
 ### Structure des affaires
 
 - [x] **Structure des affaires, phase 1** (`db/160`) : projets, affaires, chantiers, marchés, intervenants.
+- [x] **Structure des affaires, phase 2**, réalisée par d'autres lots : traçabilité des quantités (reste à solder, liens
+  recalculés, solde, conversion d'unités `UNITE_TRANSFORMEE`), situations cumulées (avancement, lots 6a et 6b),
+  transformation partielle (« Choisir les lignes et les quantités », reliquat), déduction du paiement direct
+  (Sous-traitance, lot 4 : lien `PAIEMENT_DIRECT`, poste de pied au montant accepté).
 
 ### GED
 

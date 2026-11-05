@@ -139,10 +139,6 @@ comptables, ventilation) et 3 (écritures, export Sage 100).
 - [ ] **Module Comptabilité complet** : journaux tenus, exercices et clôture, saisie d'écritures, lettrage, règlements
   et TVA sur les encaissements (module Règlements), FEC, contre-passation des pièces modifiées après transfert.
 
-### Structure des affaires
-
-- [ ] Phase 2 : traçabilité des quantités, situations cumulées, transformation partielle, déduction du paiement direct.
-
 ### GED
 
 - [ ] Revue des fins de conservation (DETRUIRE : purge proposée, jamais pour le coffre-fort).
