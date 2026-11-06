@@ -31,6 +31,7 @@ export const COUCHES = [
   dossier('../../modules/planning/js/personnalisation'),
   dossier('../../modules/pointage/js/personnalisation'),
   dossier('../../modules/rentabilite/js/personnalisation'),
+  dossier('../../modules/sav/js/personnalisation'),
   dossier('../../modules/sous-traitance/js/personnalisation'),
   dossier('../../modules/stock/js/personnalisation'),
   dossier('.'),

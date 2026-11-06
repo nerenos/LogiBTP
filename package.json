@@ -24,6 +24,7 @@
     "modules/rentabilite/js",
     "modules/sous-traitance/js",
     "modules/stock/js",
+    "modules/sav/js",
     "modules/comptabilite/js",
     "modules/pointage/js",
     "modules/planning/js",

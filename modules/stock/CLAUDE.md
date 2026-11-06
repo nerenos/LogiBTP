@@ -12,6 +12,7 @@
 
 ## Repères
 - Parité (jeux `tests/cas`) : `stock.js` ↔ `ReglesStock.cs` (01 : stock à T = dernier comptage ≤ T + mouvements postérieurs ; un mouvement de la même minute qu'un comptage est déjà compté), `valorisation.js` ↔ `ReglesValorisation.cs` (02 : PMP pondéré par le stock total, le prix si ce stock est nul ou négatif, 6 décimales ; repli = PA de la bibliothèque signalé `REPLI`), `inventaire.js` ↔ `ReglesInventaire.cs` (03), `projection.js` ↔ `ReglesProjection.cs` (04), `tracabilite.js` ↔ `ReglesTracabilite.cs` (05 ; `proposerLots` : FEFO si périssable, sinon FIFO) ; codes `codes.js` ↔ `Codes.cs`.
+- Garantie des équipements (S24-d, `093i`) : `stk_article_suivi.sas_garantie_mois` (1 à 600 mois, article suivi, `STK_GARANTIE`), proposée par le cœur à la pose d'un numéro de série (module SAV) ; le Stock ne connaît pas le SAV.
 - Le module n'écrit jamais de mouvement : le cœur les écrit à la validation de ses pièces, dans leur transaction (`MouvementsStockBtp`).
 - Valoriser les articles en attente (`ValoriserEnAttenteAsync`, marqués par les triggers `f_stk_marquer`) avant toute lecture des valeurs.
 - Dates à la minute ; quantités signées en unité de stock ; un comptage par article, lieu et minute (`STK_COMPTAGE_EXISTANT`) ; lot d'inventaire daté dans le futur refusé.

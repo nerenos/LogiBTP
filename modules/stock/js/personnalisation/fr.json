@@ -7,6 +7,7 @@
     "STK_EMPLACEMENT_CODE": "Code d'emplacement obligatoire",
     "STK_EMPLACEMENT_DOUBLON": "Deux emplacements ont le même code",
     "STK_FOURNISSEUR": "Fournisseur à choisir pour chaque article (tarif principal de la bibliothèque)",
+    "STK_GARANTIE": "Garantie de 1 à 600 mois",
     "STK_GENERATION": "Génération par EMPLACEMENT, FAMILLE, MARQUE ou STOCK",
     "STK_GENERATION_VIDE": "Aucun article pour ces critères",
     "STK_HORIZON": "Délai positif ou nul, frise positive",

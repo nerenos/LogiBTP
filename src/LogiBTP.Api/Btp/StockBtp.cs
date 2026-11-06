@@ -296,7 +296,7 @@ public static class MouvementsStockBtp
         _ => null,
     };
 
-    private static List<LotReparti> LireLots(string? json) => LotsDe(json).Select(x => new LotReparti(x.Numero, Quantite(x.Quantite))).ToList();
+    internal static List<LotReparti> LireLots(string? json) => LotsDe(json).Select(x => new LotReparti(x.Numero, Quantite(x.Quantite))).ToList();
 
     /// <summary>
     /// Lot d'un article : celui du même numéro (et du même fournisseur pour une entrée d'achat), sinon créé — à l'entrée avec

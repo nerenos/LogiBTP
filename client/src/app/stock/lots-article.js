@@ -20,6 +20,7 @@ export async function rendreLotsArticle(zone, { id, message }) {
       <label><input type="checkbox" data-perissable ${s.perissable ? 'checked' : ''}> ${texteHtml('stock_btp.lots.perissable')}</label>
       <label>${texteHtml('stock_btp.lots.duree')} <input data-duree size="4" value="${s.duree ?? ''}" ${s.perissable ? '' : 'disabled'}></label> <span data-unite></span>
       <label title="${texteHtml('stock_btp.lots.certificat_titre')}"><input type="checkbox" data-certificat ${s.certificat ? 'checked' : ''}> ${texteHtml('stock_btp.lots.certificat')}</label>
+      <label title="${texteHtml('stock_btp.lots.garantie_titre')}">${texteHtml('stock_btp.lots.garantie')} <input data-garantie size="4" value="${s.garantie_mois ?? ''}"> ${texteHtml('stock_btp.lots.garantie_unite')}</label>
       <button type="button" data-enr-suivi>${texteHtml('commun.enregistrer')}</button></p>
     ${d.lots.length || Number(d.sans_lot) ? `<table class="tableau-compact lots-article"><thead><tr><th>${texteHtml('stock_btp.lots.numero')}</th><th>${texteHtml('stock_btp.lots.fournisseur')}</th>
       <th>${texteHtml('stock_btp.lots.fabrication')}</th><th>${texteHtml('stock_btp.lots.limite')}</th><th>${texteHtml('stock_btp.lots.coulee')}</th><th>${texteHtml('stock_btp.lots.norme')}</th>
@@ -39,12 +40,13 @@ export async function rendreLotsArticle(zone, { id, message }) {
   const unite = creerCombo({ options: pairesParCode('stock_btp.lots.unites', Object.values(UNITE_DUREE)).map(([valeur, libelle]) => ({ valeur, libelle })), valeur: s.unite, vide: false });
   zone.querySelector('[data-unite]').append(unite);
   const duree = zone.querySelector('[data-duree]');
+  const garantie = zone.querySelector('[data-garantie]');
   zone.querySelector('[data-perissable]').addEventListener('change', (e) => { duree.disabled = !e.target.checked; });
   zone.querySelector('[data-enr-suivi]').addEventListener('click', async () => {
     const perissable = zone.querySelector('[data-perissable]').checked;
     try {
       await api.stock.definirSuiviArticle(id, { suivi: suivi.valeurCombo, perissable, duree: perissable && duree.value.trim() ? Number(duree.value) : null, unite: unite.valeurCombo,
-        certificat: zone.querySelector('[data-certificat]').checked });
+        certificat: zone.querySelector('[data-certificat]').checked, garantie_mois: garantie.value.trim() ? Number(garantie.value) : null });
       message(texte('stock_btp.lots.suivi_enregistre'));
     } catch (e) { message(e.message, 'erreur'); }
   });

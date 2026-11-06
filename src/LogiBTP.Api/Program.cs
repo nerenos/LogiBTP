@@ -13,6 +13,7 @@ using LogiBTP.Personnalisation.Web;
 using LogiBTP.Execution.Web;
 using LogiBTP.Rentabilite.Web;
 using LogiBTP.SousTraitance.Web;
+using LogiBTP.Sav.Web;
 using LogiBTP.Stock.Web;
 using LogiBTP.Comptabilite.Web;
 using LogiBTP.Pointage.Web;
@@ -125,6 +126,8 @@ builder.Services.AddModuleSousTraitance<SpecialisationSousTraitanceBtp>(Base);
 builder.Services.AddModuleComptabilite<SpecialisationComptabiliteBtp>(Base);
 // Module Stock (facultatif) : mouvements, stock à une date-heure, valorisation, emplacements (modules/stock/db/093, db/216).
 builder.Services.AddModuleStock<SpecialisationStockBtp>(Base);
+// Module SAV (facultatif) : équipements installés chez les clients, nés des numéros de série sortis du stock (modules/sav/db/093s, db/273).
+builder.Services.AddModuleSav<SpecialisationSavBtp>(Base);
 // Module Pointage (facultatif) : saisie des heures de main-d'œuvre par chantier (modules/pointage/db/086, db/199).
 builder.Services.AddModulePointage<SpecialisationPointageBtp>(Base);
 // Géocodage des adresses (restaurants proches du chantier, lot 10, A29) : API Adresse, section Geocodage.
@@ -211,6 +214,7 @@ api.MapExecution().ExigeModule(ModulesFacultatifs.Execution, "Exécution");
 api.MapModuleExecution().ExigeModule(ModulesFacultatifs.Execution, "Exécution");
 api.MapModuleSousTraitance().ExigeModule(ModulesFacultatifs.SousTraitance, "Sous-traitance");
 api.MapModuleStock().ExigeModule(ModulesFacultatifs.Stock, "Stock");
+api.MapModuleSav().ExigeModule(ModulesFacultatifs.Sav, "SAV");
 api.MapGroup("").ExigeModule(ModulesFacultatifs.Stock, "Stock").MapMagasinStock();
 api.MapGroup("").ExigeModule(ModulesFacultatifs.Stock, "Stock").MapStockBorne();
 api.MapGroup("").ExigeModule(ModulesFacultatifs.Stock, "Stock").MapDotationFiche();

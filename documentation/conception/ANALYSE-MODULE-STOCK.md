@@ -60,6 +60,16 @@
 > (`STK_LOTS_MANQUANTS`). Écarts : le comptage reste une ligne par article (quantité totale, stock et valeur
 > inchangés) avec sa répartition par lot dans `stk_comptage_lot` (`cpt_lot_id` retirée) ; le lot INITIAL est posé par
 > un comptage neutre à l'activation (la quantité ne change pas) ; la date d'entrée d'un lot est sa date de création.
+> Lot S24-c réalisé (commit f93dff5b : `093h`, `db/272`, `Btp/LotsStockBtp.cs`, page `/stock/lot/:id`, liste
+> `stk_lots`) : certificat exigé par article (`sas_certificat`, lot sans certificat signalé), certificats matière rangés
+> dans la GED du lot (élément `stk_lot`, catégorie `certificat_matiere`) et copiés dans la GED de chaque chantier où le
+> lot sort (file `stk_lot_certificat_copie`, traitée hors de la transaction de la pièce) ; stock présent par lot et lieu
+> (`v_stk_stock_lot`, ensembliste) ; fiche du lot (stock par lieu, mouvements avec leur pièce, comptages, chantiers
+> servis) ; alerte quotidienne de péremption par lieu (`slp_alerte_peremption`, 30 jours, notification `PEREMPTION`) ;
+> lots dans les éditions des pièces (`lignes[].lots`, `lots_texte`) et étiquettes `ETIQUETTES_LOT` (Code 39). Écarts :
+> pas de vue `v_stk_trace_lot` (la traçabilité est lue par la fiche du lot) ; pas de dossier des ouvrages exécutés
+> (S24.6 : copie dans la GED du chantier seulement). Suites : S24-d et clôture du stock, plan
+> [plans/stock.md](../../plans/stock.md) (06/11/2026).
 
 ## 1. Note d'origine (résumé)
 
@@ -382,5 +392,5 @@ dotation du salarié (`sal_cha_dotation_id`), vues de liste (stock par lieu, mou
 |---|---|
 | S24-a ✔ | Schéma (suivi `stk_article_suivi` : mode, périssable, durée ; `stk_lot` ; répartition `lig_proprietes.lots` ; `mvt_lot_id`, `cpt_lot_id`), saisie des lots en réception, mouvements par lot, stock par lot (règle répliquée + jeu), onglet Lots de l'article |
 | S24-b ✔ | Sorties et transferts (proposition FIFO / FEFO), magasin et borne, inventaire par lot, lot INITIAL |
-| S24-c ✔| Certificats (GED, raccourci dans le chantier), traçabilité ascendante et descendante, péremption (notifications), éditions et étiquettes |
-| S24-d | Numéros de série → équipements installés (avec le module SAV) |
+| S24-c ✔ | Certificats (GED, raccourci dans le chantier), traçabilité ascendante et descendante, péremption (notifications), éditions et étiquettes |
+| S24-d | Numéros de série → équipements installés : module SAV (`modules/sav`) et cœur, lots 2 à 6 de [plans/stock.md](../../plans/stock.md) |

@@ -1,0 +1,19 @@
+{
+  "name": "@logibtp/sav",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Module SAV LogiBTP : équipements installés (numéros de série posés chez les clients), garantie et contrôles (règles partagées avec le serveur)",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "@logibtp/socle": "0.2.0"
+  }
+}

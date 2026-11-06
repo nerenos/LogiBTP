@@ -1,0 +1,16 @@
+{
+  "sav": {
+    "equipement": {
+      "erreurs": {
+        "SAV_NUMERO": "Numéro de série obligatoire",
+        "SAV_ARTICLE": "Article obligatoire",
+        "SAV_POSE_FUTURE": "Date de pose dans le futur",
+        "SAV_DUREE": "Durée de garantie de 0 à 600 mois",
+        "SAV_FIN_AVANT_POSE": "Fin de garantie avant la date de pose"
+      }
+    }
+  },
+  "erreurs": {
+    "SAV_ETAT": "Seul un équipement installé se retire ou se remplace"
+  }
+}

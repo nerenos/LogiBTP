@@ -16,6 +16,8 @@ public class ArticleSuiviEntite
     public string SasUnite { get; set; } = UniteDuree.Mois;
     /// <summary>Certificat matière exigé pour chaque lot (S24-c : lots sans certificat signalés).</summary>
     public bool SasCertificat { get; set; }
+    /// <summary>Durée de garantie des équipements posés, en mois (S24-d : numéros de série → équipements du module SAV) ; null = sans garantie.</summary>
+    public int? SasGarantieMois { get; set; }
     public string? SasMajPar { get; set; }
     public DateTimeOffset SasMajLe { get; set; } = DateTimeOffset.UtcNow;
 }
@@ -46,7 +48,7 @@ public class ComptageLotEntite
     public decimal CplQuantite { get; set; }
 }
 
-public sealed record SuiviArticleDto(string Suivi, bool Perissable, int? Duree, string Unite, bool Certificat = false);
+public sealed record SuiviArticleDto(string Suivi, bool Perissable, int? Duree, string Unite, bool Certificat = false, int? GarantieMois = null);
 public sealed record StockLieuLot(long Lieu, string? LieuCode, decimal Quantite);
 public sealed record LotDtoArticle(long? Id, string? Numero, long? Tiers, string? TiersNom, string? Fabrication, string? Limite, string? Coulee, string? Norme,
     string? Commentaire, decimal Quantite, List<StockLieuLot> Lieux, string? Cree);
@@ -127,7 +129,7 @@ public class ServiceTracabilite(StockDbContext db, SpecialisationStock specialis
     public async Task<SuiviArticleDto> SuiviAsync(long ele, CancellationToken ct)
     {
         var s = await db.ArticlesSuivi.AsNoTracking().FirstOrDefaultAsync(x => x.SasEleId == ele, ct);
-        return s is null ? new(SuiviArticle.Aucun, false, null, UniteDuree.Mois) : new(s.SasSuivi, s.SasPerissable, s.SasDuree, s.SasUnite, s.SasCertificat);
+        return s is null ? new(SuiviArticle.Aucun, false, null, UniteDuree.Mois) : new(s.SasSuivi, s.SasPerissable, s.SasDuree, s.SasUnite, s.SasCertificat, s.SasGarantieMois);
     }
 
     /// <summary>Suivi d'un article : mode connu, durée positive (périssable seulement), unité J ou M ; un article sans suivi garde sa ligne.</summary>
@@ -137,6 +139,7 @@ public class ServiceTracabilite(StockDbContext db, SpecialisationStock specialis
         if (!SuiviArticle.Tous.Contains(d.Suivi)) throw ExceptionMetier.Invalide("STK_SUIVI", "Suivi : aucun, par lot ou par numéro de série");
         if (d.Unite is not (UniteDuree.Jours or UniteDuree.Mois)) throw ExceptionMetier.Invalide("STK_DUREE", "Durée en jours ou en mois");
         if (d.Duree is <= 0) throw ExceptionMetier.Invalide("STK_DUREE", "Durée de péremption positive");
+        if (d.GarantieMois is <= 0 or > 600) throw ExceptionMetier.Invalide("STK_GARANTIE", "Garantie de 1 à 600 mois");
         var s = await db.ArticlesSuivi.FirstOrDefaultAsync(x => x.SasEleId == ele, ct);
         var activation = (s?.SasSuivi ?? SuiviArticle.Aucun) == SuiviArticle.Aucun && d.Suivi != SuiviArticle.Aucun;
         if (s is null) db.ArticlesSuivi.Add(s = new ArticleSuiviEntite { SasEleId = ele });
@@ -145,6 +148,7 @@ public class ServiceTracabilite(StockDbContext db, SpecialisationStock specialis
         s.SasDuree = d.Perissable ? d.Duree : null;
         s.SasUnite = d.Unite;
         s.SasCertificat = d.Certificat && d.Suivi != SuiviArticle.Aucun;
+        s.SasGarantieMois = d.Suivi != SuiviArticle.Aucun ? d.GarantieMois : null;
         s.SasMajPar = u.Code;
         s.SasMajLe = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(ct);
