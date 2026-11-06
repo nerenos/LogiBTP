@@ -382,5 +382,5 @@ dotation du salarié (`sal_cha_dotation_id`), vues de liste (stock par lieu, mou
 |---|---|
 | S24-a ✔ | Schéma (suivi `stk_article_suivi` : mode, périssable, durée ; `stk_lot` ; répartition `lig_proprietes.lots` ; `mvt_lot_id`, `cpt_lot_id`), saisie des lots en réception, mouvements par lot, stock par lot (règle répliquée + jeu), onglet Lots de l'article |
 | S24-b ✔ | Sorties et transferts (proposition FIFO / FEFO), magasin et borne, inventaire par lot, lot INITIAL |
-| S24-c | Certificats (GED, raccourci dans le chantier), traçabilité ascendante et descendante, péremption (notifications), éditions et étiquettes |
+| S24-c ✔| Certificats (GED, raccourci dans le chantier), traçabilité ascendante et descendante, péremption (notifications), éditions et étiquettes |
 | S24-d | Numéros de série → équipements installés (avec le module SAV) |

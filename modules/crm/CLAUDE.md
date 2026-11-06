@@ -1,5 +1,7 @@
 # Module CRM – contexte
 
+- Détail à lire avant de toucher une partie (inventaire des fichiers, modèle de données, points de spécialisation, routes) : [CRM.md](../../documentation/modules/CRM.md).
+
 ## Rôle
 - Suivi de la relation et de l'information autour des affaires ([analyse](../../documentation/conception/ANALYSE-MODULE-CRM.md), décisions C1 à C30) : notes (actions, messages, tâches), rappels, demandes (pré-dossiers de veille), suivi des validations des plans, bordereaux de diffusion, fil d'actualité.
 - Facultatif, activé par société (`module_societe`, code `crm`) : désactivé, menus et onglets masqués, routes refusées (409 `MODULE_INACTIF`), données conservées.
@@ -7,20 +9,13 @@
 
 ## Dépendances
 - Dépend de : `@logibtp/socle` (JS), `LogiBTP.Socle` / `LogiBTP.Socle.Web` (`Utilisateur`, `ExceptionMetier`), EF Core Npgsql, HtmlSanitizer (même liste blanche que `htmlSur` et le module Document, sans dépendre de lui). Jamais du cœur ni d'un autre module.
-- Utilisé par : cœur (`SpecialisationCrmBtp` : éléments tiers, contacts, projets, affaires, chantiers, marchés, documents — groupe d'indices —, individu de l'utilisateur par `ind_utilisateur`, services de `db/193` ; `db/194` : élément GED `crm_note`, catégorie `crm` ; écrans `client/src/app/crm/*` et `pages/crm*.js`).
+- Utilisations par le cœur : voir le détail.
 
-## Structure
-- `js/src/notes.js` : `NATURES_NOTE`, `ETATS_NOTE`, `ETATS_CLOS`, `LONGUEUR_OBJET`, `controlerNote`, `MESSAGES_NOTE` ↔ `dotnet/LogiBTP.Crm/ReglesNote.cs` (`Controler`, `Messages`) ; jeu `tests/cas/01_note.json`.
-- `js/src/rappels.js` : `TYPES_RAPPEL`, `SEUILS_DEFAUT`, `controlerRappel`, `MESSAGES_RAPPEL`, `etatRappel`, `comparerRappels` ↔ `dotnet/LogiBTP.Crm/ReglesRappel.cs` (`Controler`, `Etat`, `SeuilsRappel`, `EtatRappel`) ; jeu `tests/cas/02_rappels.json`.
-- `js/src/demandes.js` : `ETATS_DEMANDE`, `MOTIFS_SANS_SUITE`, `ETATS_DEMANDE_CLOS`, `controlerDemande`, `MESSAGES_DEMANDE` ↔ `dotnet/LogiBTP.Crm/ReglesDemande.cs` ; jeu `tests/cas/03_demandes.json`.
-- `js/src/plans.js` (client seulement) : `FORMAT_PLAN_DEFAUT` (`{repere}_{nom}_{indice}`), `CHAMPS_FORMAT_PLAN`, `analyserFormatPlan`, `extraireNomPlan` (repère, nom, lot, indice lus dans le nom d'un fichier de plan ; indice final facultatif : vide = premier) ; test `js/test/plans.test.js`.
-- `js/src/validations.js` : `EFFETS_VISA`, `STATUTS_PLAN`, `etatPlan`, `indiceSuivant` ↔ `dotnet/LogiBTP.Crm/ReglesValidation.cs` (`Etat`, `IndiceSuivant`) ; jeu `tests/cas/04_validations.json`.
-- `dotnet/LogiBTP.Crm.Web` : `ServiceCrm.Fil.cs` (fil d'actualité : `Fil`, `PublierAsync`), `ServiceCrm.Validations.cs` (statuts de visa, plans, indices, visas, bordereaux et tâches de retour), `ServiceCrm.Demandes.cs` (listes, détail, écriture, prise en charge, rendu, transformation en projet, suppression, recherche d'éléments ; `TypesPropres` : `crm_demande`), `ServiceCrm.Rappels.cs` (paramètres, mes rappels, rappels d'une note, ajout, modification, traitement, suppression) ; `Donnees.cs` (entités `CrmTypeNote`, `CrmNote`, `CrmNoteLien`, `CrmNoteDestinataire`, `CrmNoteHistorique`, `CrmDroit`, `CrmConsultation`, `CrmParametre`, `CrmRappel`, `CrmDemande`, `CrmDemandeHistorique`, `CrmStatutVisa`, `CrmPlan`, `CrmPlanIndice`, `CrmVisa`, `CrmDiffusion`, `CrmDiffusionPiece`, `CrmDiffusionDestinataire`, `CrmEvenement`, `CrmDbContext`, `NettoyageHtmlCrm`), `SpecialisationCrm.cs` (`TypesElements`, `DecrireAsync`, `IndividuAsync`, `IndividusAsync`, `ServicesIndividuAsync`, `ServicesAsync`, `CreerProjetAsync`, `RechercherAsync`, `PerimetreAsync`, `DocumentsAsync` : `DocumentFil`) ; les éléments du module (`crm_note`, `crm_demande`, `crm_plan`, `crm_diffusion`) sont décrits par `ServiceCrm.DecrireAsync`, les autres par la spécialisation, `ServiceCrm.cs` (contexte, types de notes, listes par vue, détail, écriture, suppression, prise en charge, rendu, lecture, masquage), `Extensions.cs` (`AddModuleCrm<T>`, `MapModuleCrm` : renvoie le groupe `/crm`, sur lequel le cœur pose `ExigeModule("crm", …)`).
-- `db/099_crm_fil.sql` (rejouable) : `crm_evenement` (événements publiés dans le fil : DIFFUSION, VISA, INDICE, DEMANDE_TRANSFORMEE).
-- `db/098_crm_validations.sql` (rejouable) : `crm_statut_visa` (BPE, VAO acceptés ; REF refusé ; SO neutre), `crm_plan`, `crm_plan_indice` (unique par plan, fichier GED `pin_dge_id`, répertoire GED de l'indice `pin_rge_id`), `crm_diffusion` (BD-AAAA-NNNN, délai de visa), `crm_diffusion_piece`, `crm_diffusion_destinataire` (mode, exemplaires, visa attendu, tâche de retour `dfd_not_id`), `crm_visa` (unique par indice et tiers, bordereau d'origine `vis_dfd_id`) ; `f_crm_element_existe` étendue à `crm_plan`, `crm_diffusion`.
-- `db/097_crm_demandes.sql` (rejouable) : `crm_demande` (numéro DEM-AAAA-NNNN, contraintes motif / projet), `crm_demande_historique` (trigger), `f_crm_element_existe` (éléments du CRM porteurs de pièces : appelée par `f_ged_element_existe` du cœur pour les types `crm_*`).
-- `db/096_crm_rappels.sql` (rejouable) : `crm_parametre` (clés `seuils_rappel` { orange, rouge }, `format_plan` { format }), `crm_rappel` (DATE / AVANT, individu, traité).
-- `db/095_crm_schema.sql` (rejouable) : `crm_type_note`, `crm_note` (trigger d'historique `tr_crm_note_historique`), `crm_note_lien`, `crm_note_destinataire`, `crm_note_historique`, `crm_droit` (SUPERVISER, RGPD par profil ; ADMIN), `crm_consultation`.
+## Repères
+- Parité (jeux `tests/cas`) : `notes.js` ↔ `ReglesNote.cs` (01), `rappels.js` ↔ `ReglesRappel.cs` (02), `demandes.js` ↔ `ReglesDemande.cs` (03), `validations.js` ↔ `ReglesValidation.cs` (04) ; `plans.js` (lecture des noms de fichiers de plans) côté client seulement.
+- HTML des notes nettoyé par la même liste blanche que `htmlSur` et le module Document (`NettoyageHtmlCrm`), sans dépendre de lui.
+- Le cœur pose `ExigeModule("crm", …)` sur le groupe `/crm` (module inactif : 409 `MODULE_INACTIF`).
+- Éléments `crm_*` décrits par `ServiceCrm.DecrireAsync`, les autres par la spécialisation ; `f_crm_element_existe` est appelée par `f_ged_element_existe` du cœur. Scripts `db/095` à `099` rejouables.
 
 ## Règles
 - Note : nature ACTION / MESSAGE / TACHE, état A_FAIRE / EN_COURS / TERMINE / MEMO / ANNULEE (clos : TERMINE, MEMO, ANNULEE). Tâche : responsable ou service, et échéance ; message : un destinataire sauf une réponse (`not_parent_id`) ; privée ou RGPD : jamais dans le fil (`not_dans_fil`, décoché par défaut).
@@ -34,20 +29,11 @@
 - Fil d'actualité : ne stocke rien d'autre que les événements ; réunit les notes cochées « Dans le fil » (jamais privées ni RGPD, sans les réponses), les documents et photos de la GED des éléments du périmètre (fournis par la spécialisation : internes, ni supprimés ni archivés ; image = type MIME image/*), les pièces des notes et les événements ; périmètre agrégé vers le haut (`PerimetreAsync` : projet, affaire, chantier, marché → chantiers, marchés, documents par groupe d'indices ; plus les plans, bordereaux et demandes transformées rattachés) ; global (sans élément) : notes et événements seulement. Chargement par lots : `avant` = date du dernier élément reçu (`suivant` nul : fin) ; photos déposées ensemble (même élément, même auteur, moins de 10 minutes) regroupées ; le client montre trois vignettes et le reste en nombre, les documents s'ouvrent à la demande. Pas de miniatures (second temps).
 - Conservation : jusqu'à l'archivage (module Archivage à venir, `not_archivee_le`) ou la suppression du tiers.
 
-## Routes HTTP (préfixe `/api/crm`)
-- `GET /contexte` (utilisateur, individu, services, droits, types d'éléments, services, types de notes), `POST /elements` ([{ type, id }] → libellé, page, icône).
-- `GET|PUT /types-notes` (PUT : administrateur ; un type retiré utilisé est désactivé).
-- `GET /notes?vue=mes|a_prendre|recues|creees|toutes&type_element=&id_element=&nature=&etat=ouvertes|<code>&srv=&recherche=&page=&taille=` (notes racines, non archivées, triées par échéance puis création).
-- `GET /fil?type_element=&id_element=&avant=&taille=&genres=NOTE,DOCUMENT,PHOTO,EVENEMENT` ([{ genre NOTE | DOCUMENT | PHOTOS | EVENEMENT, quand, par, titre, texte, element, url, note_id, nb_reponses, pieces }], suivant).
-- `GET|PUT /statuts-visa`, `GET /plans?type_element=&id_element=&recherche=`, `GET|PUT|DELETE /plans/{id}`, `POST /plans`, `POST /plans/{id}/indices`, `PUT|DELETE /indices/{id}`, `POST /indices/{id}/visas`, `PUT|DELETE /visas/{id}`, `GET /diffusions?type_element=&id_element=`, `GET /diffusions/{id}`, `POST /diffusions`.
-- `GET /rechercher?type=&texte=` (demandes, plans, documents par numéro ou objet), `GET /demandes?vue=mes|a_prendre|creees|toutes&etat=ouvertes|<code>&recherche=&tiers=&page=&taille=`, `GET|PUT|DELETE /demandes/{id}`, `POST /demandes`, `POST /demandes/{id}/prendre|rendre|projet`.
-- `GET|PUT /parametres` (seuils, `format_plan` : nul au PUT = inchangé, contrôlé `FORMAT_PLAN` ; PUT administrateur), `GET /rappels?tous=` (mes rappels actifs ; visibles seulement par défaut), `POST /notes/{id}/rappels`, `PUT|DELETE /rappels/{id}`, `POST /rappels/{id}/traiter` ; le détail d'une note porte ses rappels.
-- `GET /notes/{id}?reveler=`, `POST /notes`, `PUT /notes/{id}`, `DELETE /notes/{id}`, `POST /notes/{id}/prendre|rendre|lue`.
-
 ## Textes et icônes (module Personnalisation, lot P3i)
-- Textes `crm.*` de `js/personnalisation/fr.json` (tables de libellés et messages des règles) ; icônes `crm_action`, `crm_message`, `crm_tache`. Écrans du CRM dans le cœur : textes `crm_btp.*`, icônes `crm_btp_*` et couleurs `--crm-*` de `client/personnalisation`.
-- `MESSAGES_NOTE.NOTE_OBJET` : accesseur (variable `{{longueur}}`) ; autres messages par `textesParCode`.
-- Tests : `js/test/preparation.js` compose socle + module (clé manquante = échec) ; clés du code vérifiées par `client/test/personnalisation.test.js`.
+- Textes, icônes et couleurs par `js/personnalisation/` (règles et exceptions gardées en littéraux : voir le détail).
 
 ## Tests
 - `npm test --workspace modules/crm/js` ; `dotnet test modules/crm/dotnet/LogiBTP.Crm.Tests` (même jeu).
+
+## Repris du CLAUDE.md racine (à fusionner avec les sections ci-dessus)
+- Module CRM (facultatif, `modules/crm`, activé par société : `module_societe` de `db/193`, `app.moduleActif('crm')`) : notes (actions, messages, tâches) rattachées par (`type_element`, `id_element`) ; contrôle répliqué entre `notes.js` et `ReglesNote.cs` (jeu `01_note.json`), rappels (à date ou avant l'échéance, couleur par les seuils globaux de `crm_parametre`) entre `rappels.js` et `ReglesRappel.cs` (jeu `02_rappels.json`) ; tâche à prendre par un service (membres : `service_membre`), notes privées / RGPD masquées, levée journalisée ; onglet Suivi (`PanneauSuivi`) des documents et des fiches, menu Suivi, courriel glissé → note + GED (`crm_note`) ; demandes (pré-dossiers de veille, `demandes.js` ↔ `ReglesDemande.cs`, jeu `03_demandes.json`) transformées en projet par `SpecialisationCrmBtp.CreerProjetAsync` ; suivi des validations (plans, indices, visas : état `validations.js` ↔ `ReglesValidation.cs`, jeu `04_validations.json` ; un répertoire GED par indice, indice vide = le premier, fichiers déposés à la création du plan, repère / nom / indice lus dans le nom du fichier par `extraireNomPlan` selon le format global `format_plan`) et bordereaux de diffusion (visas attendus et tâches de retour) ; fil d'actualité (notes publiées, documents et photos de la GED par `SpecialisationCrmBtp.DocumentsAsync`, événements `crm_evenement`, périmètre agrégé `PerimetreAsync` ; page centrée et onglet Fil des fiches affaire et chantier : `FilCrm`). Analyse et décisions : [ANALYSE-MODULE-CRM.md](documentation/conception/ANALYSE-MODULE-CRM.md).

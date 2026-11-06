@@ -38,6 +38,12 @@
     "dev": "npm run dev --workspace client",
     "build": "npm run build --workspace client",
     "exporter-resultats": "npm run exporter-resultats --workspaces --if-present",
-    "rapport-dependances": "node scripts/rapport-dependances.mjs"
+    "rapport-dependances": "node scripts/rapport-dependances.mjs",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
+  },
+  "devDependencies": {
+    "vitepress": "^1.6.4"
   }
 }

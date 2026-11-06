@@ -38,3 +38,6 @@
 ## Tests
 - `npm test --workspace modules/entreprises-fr/js` (vitest : jeu partagé, `casseNom`, fournisseur direct avec `fetch` simulé).
 - `dotnet test modules/entreprises-fr/dotnet/LogiBTP.EntreprisesFr.Tests` (ou `dotnet test LogiBTP.slnx`).
+
+## Repris du CLAUDE.md racine (à fusionner avec les sections ci-dessus)
+- Module Entreprises françaises : correspondance d'un résultat de l'API Recherche d'entreprises répliquée entre `correspondance.js` et `Correspondance.cs` (jeu `01_correspondance.json`, entreprise fictive) ; le serveur relaie l'API.

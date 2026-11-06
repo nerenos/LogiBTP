@@ -22,3 +22,6 @@
 
 ## Tests
 - `npm test --workspace modules/calendrier/js` ; `dotnet test modules/calendrier/dotnet/LogiBTP.Calendrier.Tests` (mêmes jeux).
+
+## Repris du CLAUDE.md racine (à fusionner avec les sections ci-dessus)
+- Module Calendrier (`modules/calendrier/CLAUDE.md`) : calendriers de travail (plages en minutes, cycle de N semaines depuis une référence, plages datées), jours fériés par règles (DATE, ANNUEL, NIEME, DERNIER, PAQUES, PERIODE ; catalogue français à cocher) et fermetures par portée (société, calendrier, `service:<id>`), temps de travail (`ajouterMinutesTravail`, `minutesTravail`, `prochainTravail`) répliqués entre `calendrier.js` et `ReglesCalendrier.cs` ; calendrier effectif d'une ressource par le cœur (salarié ou matériel, sinon service, sinon défaut : `CalendriersBtp`, `db/196`) ; page `/parametres/calendriers`.

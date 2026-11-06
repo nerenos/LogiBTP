@@ -1,0 +1,5 @@
+# Import d'un document (cœur) – contexte
+
+Lecture et conversion des formats : `modules/import/CLAUDE.md` ; devis importé en mode de calcul B : `src/calcul/CLAUDE.md`.
+
+- Import d'un document (commun à tous les formats, `client/src/app/import/`) : formats dans `formats.js` ; la page d'import lit le fichier, « Vérifier » le dépose (IndexedDB, `depot-import.js`) et ouvre `/document/import?jeton=` dans une nouvelle fenêtre : brouillon non enregistré, bandeau (contrôle des totaux, rapprochements), rapport des champs non repris en mode débogage seulement ; « Créer le devis » crée, enregistre, conserve le fichier dans la GED du devis (catégorie `import`) et enregistre l'origine (`PUT /api/documents/{id}/origine`, table `document_origine` du module Document). Traçabilité dans l'onglet Suivi (Alt+6, sous les notes du CRM, séparateur et parties réductibles ; `GET /api/documents/{id}/tracabilite`) : origine (télécharger, « Réutiliser l'import » = `/import/optimbtp?ged=<id>`), documents liés, historique.

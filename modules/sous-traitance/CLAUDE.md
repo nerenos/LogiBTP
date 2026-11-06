@@ -27,3 +27,6 @@
 
 ## Tests
 - `npm test --workspace modules/sous-traitance/js` ; `dotnet test modules/sous-traitance/dotnet/LogiBTP.SousTraitance.Tests` (même jeu).
+
+## Repris du CLAUDE.md racine (à fusionner avec les sections ci-dessus)
+- Module Sous-traitance ([analyse](documentation/conception/ANALYSE-MODULE-SOUS-TRAITANCE.md), `modules/sous-traitance/CLAUDE.md`) : famille T du module Document (`019i` : T_AO, T_COMMANDE, T_FACTURE_AVT, T_AVOIR ; familles d'achat A ou T par `FamillesDocument.EstAchat` / `estFamilleAchat` / `f_famille_achat`, jamais de test en dur de la famille A), lot de consultation (`ent_consultation`, `Consultations.cs`), marché à deux sens (`marche.mar_sens` V / ST : sous-traitant, marché de vente lié, montant agréé, garantie, un marché par axe de facturation, `db/211`), commande de sous-traitance validée dans son marché ; pièces exigées et conformité répliquées entre `conformite.js` et `ReglesConformite.cs` (jeu `01_conformite.json`), pièces = documents de la GED (catégorie, `dge_valide_au`), pièces bloquantes à la validation (`ST_PIECES`), rappels, demande par courriel (élément « st_pieces ») ; module `sous_traitance` de `module_societe`.

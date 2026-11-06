@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { lireCas, verifier, verifierErreurs } from '@logibtp/socle/testing';
 import { calculerDocument, comparerResultats } from '../src/index.js';
 
-// Jeux du module Document (moteur générique), partagés avec LogiBTP.Document.Tests (xUnit).
+// Jeux du module Document (moteur générique), partagés avec LogiBTP.Documents.Tests (xUnit).
 const dossier = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../tests/cas');
 
 describe('Module Document : jeux de test partagés du moteur générique', () => {

@@ -47,3 +47,6 @@
 ## Tests
 - `npm test --workspace modules/import/js` (vitest), ou `npm test` à la racine.
 - Côté cœur : `npm test --workspace client`.
+
+## Repris du CLAUDE.md racine (à fusionner avec les sections ci-dessus)
+- Module Import (`modules/import/js`, dépend du seul socle : dictionnaire) : lecture dans le navigateur (zip par `DecompressionStream`, XML, libellés RTF → HTML), conversion en devis neutre (`convertirOptim` : entête, intervenants, lignes, couleurs, `non_repris` : champs renseignés sans équivalent, sorts documentés dans `CHAMPS_*`), rapprochements (`associerUnite`, `associerNature`, `associerTaux`, `associerOption`). OptimBTP : phases → titres, sous-détail → composantes (quantité relative ; QteFixe → absolue), globalisations (IsFA) écartées et réparties par PGU dans le déboursé, calcul « somme des PV » (coefficient de vente de la ligne de prix sur ses composantes), COUL_xx → étiquettes (libellé ou couleur, sinon étiquette propre au document).

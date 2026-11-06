@@ -3,12 +3,12 @@
   <rect x="26" y="4" width="16" height="12" rx="5" fill="#FCA5A5" />
   <rect x="58" y="4" width="16" height="12" rx="5" fill="#FCA5A5" />
   <!-- Corps Lego -->
-  <rect x="10" y="14" width="80" height="78" rx="18" fill="#FEE2E2" />
+  <rect x="10" y="14" width="80" height="68" rx="5" fill="#FEE2E2" />
   
   <!-- Structure imbriquée (Ouvrage) -->
-  <rect x="41" y="32" width="18" height="18" rx="4" fill="#EF4444" />
-  <rect x="26" y="56" width="18" height="18" rx="4" fill="#EF4444" />
-  <rect x="56" y="56" width="18" height="18" rx="4" fill="#EF4444" />
+  <rect x="41" y="24" width="18" height="18" rx="4" fill="#EF4444" />
+  <rect x="26" y="52" width="18" height="18" rx="4" fill="#EF4444" />
+  <rect x="56" y="52" width="18" height="18" rx="4" fill="#EF4444" />
   <!-- Liens d'assemblage -->
-  <path d="M50 50V52M50 52L35 56M50 52L65 56" stroke="#FCA5A5" stroke-width="3" stroke-linecap="round" />
+  <path d="M50 48V42M50 48L35 52M50 48L65 52" stroke="#FCA5A5" stroke-width="3" stroke-linecap="round" />
 </svg>

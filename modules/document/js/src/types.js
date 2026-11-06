@@ -26,7 +26,7 @@ export const accepteEnfants = (l) => l.lig_tyl_id === TL.TITRE || l.lig_tyl_id =
 export const estTranche = (l) => l.lig_tyl_id === TL.TITRE || l.lig_tyl_id === TL.SECTION;
 
 // Colonnes génériques accessibles par les variables {{table.colonne}}. Elles reprennent le DDL du module
-// (modules/document/db) et doivent rester alignées avec LogiBTP.Document (Document, DocumentLigne).
+// (modules/document/db) et doivent rester alignées avec LogiBTP.Documents (Document, DocumentLigne).
 // Un module ou le cœur qui spécialise le document ajoute ses colonnes (voir MoteurDocument.colonnes…).
 export const COLONNES_DOCUMENT = new Set([
   'ent_id', 'ent_tyd_id', 'ent_numero', 'ent_date', 'ent_objet', 'ent_notre_reference', 'ent_reference_externe',

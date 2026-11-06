@@ -24,3 +24,6 @@ Connexions sortantes de l'application à des services externes par OAuth 2.0 : c
 
 ## Tests
 `dotnet test modules/oauth/dotnet/LogiBTP.OAuth.Tests` (règles, assertions ; parcours complet avec un faux fournisseur si `LOGIBTP_TEST_PG` désigne une base où `004` est chargé). Essai réel : `LOGIBTP_TEST_MAIL_GOOGLE_*` du `.env` ; Microsoft : locataire de test à venir.
+
+## Repris du CLAUDE.md racine (à fusionner avec les sections ci-dessus)
+- Module OAuth (`modules/oauth/CLAUDE.md`, [analyse](documentation/conception/ANALYSE-MODULE-OAUTH.md)) : connexions sortantes OAuth 2.0 (Google / Gmail grand public par code + PKCE au lot 1), client, jetons et compte chiffrés, nom d'usage seul affiché, adresse de retour publique commune (`/api/oauth/retour`, société dans le state), renouvellement et rappels d'échéance par base aux personnes autorisées (droits : profils ou `service:<code>`), page `/parametres/connexions` ; fourni aux autres modules par le contrat `IFournisseurJeton` du socle.

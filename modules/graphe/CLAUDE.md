@@ -39,3 +39,6 @@
 
 ## Tests
 - `npm test --workspace modules/graphe/js` (vitest) ; les parcours métier sont testés dans les modules consommateurs (jeu `modules/annuaire/tests/cas/03_graphe.json`).
+
+## Repris du CLAUDE.md racine (à fusionner avec les sections ci-dessus)
+- Module Graphe (`modules/graphe/js`, sans métier) : format { noeuds [cle, type, id, libelle, ordre, distance, depart…], aretes [cle, de, vers, type, libelle, actif] }, `parcourirEnLargeur`, `fusionnerGraphes` (règles de fusion en options), `disposerGraphe` (couches par `ordre`, nœuds `enColonne` empilés sous leur voisin) ; `VueGraphe` (classe mère : zoom, déplacements, survol, panneau, développement, export SVG, réglages dans le navigateur) spécialisée par méthode patron (`chargerGraphe`, `corpsNoeud`, `styleArete`, `boutonsNoeud`…) ou utilisée directement avec les options `charger` / `developper`. Chaque module construit son graphe à partir de ses données (l'annuaire : `construireGraphe` + `GrapheAnnuaire.cs`).

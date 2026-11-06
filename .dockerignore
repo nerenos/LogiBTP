@@ -21,3 +21,4 @@ modules/edition/js/.essais/
 *.tar.gz
 graphify-out/
 .vscode/
+.continue/

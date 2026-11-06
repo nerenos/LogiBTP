@@ -1,5 +1,7 @@
 # Module Métré – contexte
 
+- Détail à lire avant de toucher une partie (inventaire des fichiers, modèle de données, points de spécialisation, routes) : [METRE.md](../../documentation/modules/METRE.md).
+
 ## Rôle
 - Métrés en script ([CONCEPTION-SCRIPT.md](../../documentation/conception/CONCEPTION-SCRIPT.md)) qui donnent la quantité d'une ligne de l'hôte : déclarations typées en tête (chaîne, numérique, booléen ; `local` = interne), affectations et opérations composées, `Si`, `Pour` (`Sortir`, `Continuer`), fonctions, `Renvoyer` = quantité. Variables de calcul à portées (`$$` document, `$` titre, `@@` ouvrage, `@` ligne), lues et écrites par les scripts ou définies par l'hôte (`=` / `+=`).
 - Les anciens métrés saisis en lignes (valeurs, sous-détails, sous-totaux, table `metre_ligne`) n'existent plus : `conversion.js` / `ConversionMetre.cs` les convertissent en scripts (migration des bases au démarrage de l'API : `src/LogiBTP.Api/Btp/ConversionMetresBases.cs`).
@@ -7,29 +9,12 @@
 
 ## Dépendances
 - Dépend de : socle (`Dec`, `D`, `S`, `ZERO`, `arr6`, `arrondir`, `formatNombre`, `analyserReference`, `analyserCibleVariable`, `referencesDe`, `evaluerExpression`, `ErreurCalcul` ; UI : `GrilleArbre`, `formatLibre`, `echapper`) et, pour l'interface seulement, CodeMirror 6 (`@codemirror/state`, `view`, `commands`, `language`, `autocomplete`, `lint`, `@lezer/highlight`). Ne dépend PAS du module Document : il ignore la structure de l'hôte.
-- Utilisé par le cœur : moteur BTP `client/src/calcul/moteur-btp.js` et `src/LogiBTP.Calcul/MoteurDevisBtp.cs` (`Portees`, `evaluerScriptMetre` / `ScriptMetre.Evaluer`, `lignesVariablesScript`, `evaluerVariable` / `Variables.Evaluer`, `repartirVariables`) ; `client/src/app/editeur-btp.js` (hôte du panneau, `DictionnaireBtp extends DictionnaireMetre`) ; `pages/document.js` (`#metre`) et `fiches/fiche-element.js` (composition d'ouvrage) ; `ElementsBibliotheque.cs`, `LogiBtpContext.cs`, `SpecialisationBtp.cs`, `ConversionMetresBases.cs`.
+- Utilisations par le cœur : voir le détail.
 
-## Structure
-- `db/020_metre_schema.sql` : `metre`, `variable_definition` (sans FK vers l'hôte) ; `021_metre_script.sql` : `mtr_script`, `var_type`, `var_valeur_texte` (rejouable).
-- `js/src/script/` : `lexeur.js` (`decouper`, `normaliser`, `MAX_DECIMAL`), `analyseur.js` (`analyserScript` : programme, déclarations avec `parametre` et plages `defaut` / `declaration`, toutes les erreurs d'analyse), `interpreteur.js` (`executerScript`, `exposer`), `fonctions.js` (`FONCTIONS`), `edition.js` (`modifierDeclaration`, `litteral` : réécriture d'une valeur par défaut depuis la grille, JS seul).
-- `js/src/script-metre.js` : `evaluerScriptMetre` (résultat → `mtr_resultat` ; sans erreur : variables numériques non locales publiées en `@` de la ligne, résultat affecté à `mtr_variable`), `lignesVariablesScript` (une ligne `variable_definition` par variable non locale, identifiant conservé par nom), `messageErreurScript`, `estScript`.
-- `js/src/conversion.js` : `convertirMetre`, `convertirContenu` (métrés en lignes → scripts) ; `portees.js` : `Portees` ; `variables.js` : `evaluerVariable`, `repartirVariables`, `parOrdre`.
-- `js/ui/panneau-metre.js` : `PanneauMetre` (sans onglets : éditeur, erreurs cliquables, variables non locales dont les paramètres modifiables ; une ligne sans métré ferme le panneau ; section : variables `$$` du document en grille ; dictionnaire en arbre repliable : Variables et données > Variables / Ligne / Entête…, Fonctions, Structures) ; `editeur-script.js` : `EditeurScript` (langage `StreamLanguage`, complétion, `linter` : erreurs d'analyse locales + erreurs d'exécution du moteur pour le texte calculé), `STRUCTURES`, `modeleFonction` ; `notifications.js` : `NotificationsMetre` ; `dictionnaire.js` : `DictionnaireMetre` ; `metre.css` (couleurs du langage `--code-*`, thèmes clair et sombre ; tiroir placé sous le bandeau de l'hôte par `--decalage-tiroir`).
-- `dotnet/LogiBTP.Metres/Script/` : `Lexeur.cs`, `Analyseur.cs`, `Noeuds.cs`, `Interpreteur.cs` (`Interpreteur.Executer(texte, ContexteScript)` → `ResultatScript`), `Fonctions.cs` (`Catalogue`), `Valeur.cs`.
-- `dotnet/LogiBTP.Metres` : `Domaine.cs` (`Metre`, `VariableDefinition`), `ScriptMetre.cs`, `ConversionMetre.cs` (`Convertir`, `ConvertirContenu`, `ConvertirComposition` JSON, `LigneMetreAncienne`), `Portees.cs`, `Variables.cs` (`Evaluer`, `Repartir`, `RepartitionVariables`). Pas de projet Web ni de routes.
-
-## Modèle de données
-- `metre` (`mtr_id`, `mtr_lig_id` ligne de l'hôte, `mtr_libelle`, `mtr_unt_code`, `mtr_variable` ex. `@surface`, `mtr_resultat`, `mtr_script`).
-- `variable_definition` (`var_ent_id` document, `var_lig_id` null = document, `var_mtr_id` = variable d'un script, `var_portee`, `var_nom`, `var_operation` `=` / `+=`, `var_formule`, `var_ordre`, `var_valeur`, `var_type` N/C/B, `var_valeur_texte`). Les lignes `var_mtr_id` sont produites par le moteur à chaque calcul (`var_formule` = valeur par défaut déclarée) et jamais évaluées comme définitions.
-- Cœur (`db/100_btp.sql`) : FK `fk_mtr_ligne`, `fk_var_document`, `fk_var_ligne` ; colonnes `document_ligne.lig_mtr_id`, `lig_qte_source` (`S` saisie, `M` métré).
-
-## Points de spécialisation
-- `Portees(hote)` : `hote.chaine(portee, ligneId)` → contextes du plus proche au plus lointain, `hote.messagePortee?(portee)` ; écriture au plus proche, lecture en remontant. Cœur : `$` = titres englobants (la ligne si titre), `@@` = ouvrages englobants. C# : `new Portees(chaine, messagePortee)`.
-- Script : contexte `{ resoudre(ref) → décimal | chaîne | booléen, portees, ligneId, ecrire?(ref, valeur), fonctions? }` (C# `ContexteScript`) ; l'hôte décide des données inscriptibles (`ecrire` absent ou refus : `ECRITURE_INTERDITE`) et ajoute ses fonctions (nom normalisé → `{ min, max, signature, description, appliquer }` ; `N`, `C`, `B`, `nombre` exportés) ; les mêmes fonctions vont à l'éditeur par `DictionnaireMetre.fonctions()` (ou l'option `fonctions` de `PanneauMetre`). Cœur : `FONCTIONS_BTP` (`client/src/calcul/fonctions-btp.js`) ↔ `FonctionsBtp.Catalogue` (`src/LogiBTP.Calcul`), passées par les deux `MoteurDevisBtp` et `DictionnaireBtp` (`Conditionnements(quantité; contenance)`, jeu `tests/cas/24_metre_variables_chaines.json`).
-- `DictionnaireMetre(hote)` : `accessible(portee, proprietaireId, ligId)`, `donnees(ligId, options)`, `entrees(ligId, options)` (variables du résultat, y compris celles des scripts).
-- `EditeurScript(conteneur, { texte, surChangement, surEchap, dictionnaire(), fonctions(), diagnostics(texte) })` : `valeur`, `remplacer`, `inserer`, `insererModele` (modèle à champs, Tab : champ suivant), `allerA(ligne, colonne)`, `rafraichirDiagnostics`.
-- `NotificationsMetre(racine, hote, { ouvrir(ligId, mtrId, { ligne, colonne }), surCompte({ erreurs, avertissements }) })` : `messages()`, `rendre()` (suit le magasin de l'hôte) ; `messagesMetres(resultat)` : les mêmes messages sans interface (source « Métrés » du panneau des notifications de la page document).
-- `PanneauMetre(racine, hote, { fermer, message, dictionnaire })` (`fonctions()` surchargeable : fonctions proposées) ; hôte : `magasin`, `saisie` (metres, variables, document.ent_id), `resultat` (metres, variables, erreurs, `scripts` : `[{ mtr_id, erreurs, avertissements }]`), `titreLigne`, `metreDeLigne`, `peutAvoirMetre`, `creerMetre`, `variablesDocumentSur` (facultatif ; cœur : ligne SECTION → variables `$$` du document). Méthodes `suivre(ligId)`, `ouvrir(ligId, mtrId, position?)`, `fermer`, `aideSansMetre`.
+## Repères
+- L'hôte décide des données inscriptibles (`ecrire` du contexte du script, sinon `ECRITURE_INTERDITE`) et ajoute ses fonctions (cœur : `FONCTIONS_BTP` ↔ `FonctionsBtp.Catalogue`).
+- Lignes `variable_definition` à `var_mtr_id` : produites par le moteur à chaque calcul, jamais évaluées comme définitions.
+- Pas de projet Web ni de routes.
 
 ## Règles répliquées JS / C# et jeux de cas
 - `script/*.js` ↔ `Script/*.cs` ; jeux `tests/scripts/*.json` (plusieurs cas par fichier : exemple, déclarations, expressions, instructions, fonctions, portées et données, erreurs d'analyse et d'exécution avec ligne et colonne), `test/cas-script.test.js` ↔ `CasScriptTests.cs`.
@@ -49,8 +34,11 @@
 - Toute règle modifiée : JS + C# + cas, puis `npm test`, `npm run exporter-resultats`, `dotnet test LogiBTP.slnx` (le moteur BTP en dépend).
 
 ## Textes et icônes (module Personnalisation, lot P3q)
-- Textes `metre.*` du `fr.json` du module (`script` : messages du langage et types, `fonctions` : descriptions et arguments, `portees`, `dictionnaire`, `editeur` : structures, `notifications`, `panneau`) ; couleurs du langage et ombre du panneau dans `personnalisation/theme.css` (`--code-*`, `--metre-ombre`) ; icônes `metre_*`. Les jeux comparent les codes, jamais les messages ; le texte des scripts (mots-clés, conversion des métrés en lignes) n'est pas traduit. Tests avec le dictionnaire (`test/preparation.js`).
+- Textes, icônes et couleurs par `js/personnalisation/` (règles et exceptions gardées en littéraux : voir le détail).
 
 ## Tests
 - `npm test --workspace modules/metre/js` (vitest : `test/cas-script.test.js`, `test/conversion.test.js`, `test/editeur-script.test.js` : modèles de fonctions et de structures).
 - `dotnet test modules/metre/dotnet/LogiBTP.Metres.Tests` (`CasScriptTests.cs`, `CasConversionTests.cs`) ; jeux du cœur : `npm test` et `dotnet test LogiBTP.slnx`.
+
+## Repris du CLAUDE.md racine (à fusionner avec les sections ci-dessus)
+- Métré en script ([conception](documentation/conception/CONCEPTION-SCRIPT.md)) : langage répliqué entre `modules/metre/js/src/script/` et `LogiBTP.Metres/Script/` (jeux `modules/metre/tests/scripts`) ; dans les moteurs BTP, `Renvoyer` = quantité, erreurs non bloquantes (quantité saisie conservée), `{{lig_libelle_html}}` seule donnée inscriptible (libellé calculé, texte ajouté échappé), variables non locales régénérées en `variable_definition` (jeu `tests/cas/16_metre_script.json`) ; données techniques de la ligne (`lig_longueur`…, mètres) recopiées de l'élément. Plus de métrés en lignes : `metre_ligne` est convertie en scripts puis supprimée au démarrage de l'API (`ConversionMetresBases`, `ConversionMetre`). Saisie par l'éditeur CodeMirror du module (`EditeurScript`) ; erreurs non bloquantes listées dans le dock des notifications (`NotificationsMetre`).

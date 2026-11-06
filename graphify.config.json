@@ -1,0 +1,24 @@
+{
+  "include": ["src/**/*"],
+  "exclude": [
+    "**/node_modules/**",
+    "**/claude/**",
+    "**/.git/**",
+    "**/.vscode/**",
+     "**/docs/**",
+    "**/dist/**",
+    "**/bin/**",
+    "**/obj/**",
+    "**/documentation/**",
+    "**/build/**",
+    "**/.next/**",
+    "**/graphify-out/**",
+    "**/stockage-ged/**",
+    "**/test/**",
+    "**/tests/**",
+    "**/journaux/**",
+    "**/*.log",
+    "**/*.svg",
+    "**/*.png"
+  ]
+}

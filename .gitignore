@@ -17,3 +17,7 @@ logibtp-api*.tar
 
 # Sorties des essais du module Édition
 modules/edition/js/.essais/
+.continue/
+
+docs/.vitepress/dist
+docs/.vitepress/cache
