@@ -106,11 +106,26 @@ public class CodesTests
     {
         Assert.Empty(Constantes.Ecarts(CasPartages.Chemin("modules", "bibliotheque", "js", "src", "codes.js"), "GESTION_ELEMENT", typeof(GestionElement)));
         Assert.Empty(Constantes.Ecarts(CasPartages.Chemin("modules", "bibliotheque", "js", "src", "codes.js"), "GENRE_POSTE", typeof(GenrePoste)));
+        Assert.Empty(Constantes.Ecarts(CasPartages.Chemin("modules", "bibliotheque", "js", "src", "codes.js"), "SCENARIO_PA", typeof(ScenarioPa)));
     }
 }
 
 public class PremierTarifTests
 {
+    public static IEnumerable<object[]> NomsDesCas()
+        => CasPartages.Lire(CasPartages.Chemin("modules", "bibliotheque", "tests", "cas", "03_premier_tarif.json"))["cas"]!.AsArray().Select(c => new object[] { c!["nom"]!.GetValue<string>() });
+
+    [Theory]
+    [MemberData(nameof(NomsDesCas))]
+    public void Cas_partages_avec_le_js(string nom)
+    {
+        var cas = CasPartages.Lire(CasPartages.Chemin("modules", "bibliotheque", "tests", "cas", "03_premier_tarif.json"))["cas"]!.AsArray().First(c => c!["nom"]!.GetValue<string>() == nom)!;
+        decimal? pa = cas["pa_fixe"] is null ? null : decimal.Parse(cas["pa_fixe"]!.GetValue<string>(), System.Globalization.CultureInfo.InvariantCulture);
+        var r = PremierTarif.Appliquer(cas["autres"]!.GetValue<int>(), cas["principal"]!.GetValue<bool>(), cas["scenario"]?.GetValue<string>(), pa);
+        Assert.Equal(cas["attendu"]!["principal"]!.GetValue<bool>(), r.Principal);
+        Assert.Equal(cas["attendu"]!["scenario"]!.GetValue<string>(), r.Scenario);
+    }
+
     [Fact]
     public void Premier_tarif_sans_pa_devient_principal_et_change_le_scenario()
         => Assert.Equal((true, "FOURNISSEUR_PRINCIPAL"), PremierTarif.Appliquer(0, false, "FIXE", null));

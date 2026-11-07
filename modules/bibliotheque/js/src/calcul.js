@@ -1,5 +1,5 @@
 import { pairesParCode } from '@logibtp/socle/dictionnaire';
-import { GESTION_ELEMENT } from './codes.js';
+import { GESTION_ELEMENT, SCENARIO_PA } from './codes.js';
 import { D, S, arr6, evaluerExpression, ErreurCalcul, aujourdhui } from '@logibtp/socle';
 
 // Prix et unités d'un élément de bibliothèque. Même calcul que CalculElement.cs (jeu partagé
@@ -157,7 +157,7 @@ export function coefficientsEffectifs(e, periodes = [], date = aujourdhui(), { c
  * un élément sans PA saisi (scénario FIXE, PA fixe nul ou zéro) passe au scénario FOURNISSEUR_PRINCIPAL.
  */
 export function reglePremierTarif(autresTarifs, principalDemande, scenario, paFixe) {
-  if (autresTarifs > 0) return { principal: principalDemande, scenario };
-  const sansPa = (scenario ?? 'FIXE') === 'FIXE' && (D(paFixe ?? null) === null || D(paFixe).isZero());
-  return { principal: true, scenario: sansPa ? 'FOURNISSEUR_PRINCIPAL' : scenario };
+  if (autresTarifs > 0) return { principal: principalDemande, scenario: scenario ?? SCENARIO_PA.FIXE };
+  const sansPa = (scenario ?? SCENARIO_PA.FIXE) === SCENARIO_PA.FIXE && (D(paFixe ?? null) === null || D(paFixe).isZero());
+  return { principal: true, scenario: sansPa ? SCENARIO_PA.FOURNISSEUR_PRINCIPAL : (scenario ?? SCENARIO_PA.FIXE) };
 }

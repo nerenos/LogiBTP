@@ -11,6 +11,17 @@ public static class GestionElement
     public const string NonGere = "NON_GERE";
 }
 
+/// <summary>Scénario de prix d'achat d'un élément (ele_scenario_pa).</summary>
+public static class ScenarioPa
+{
+    public const string Fixe = "FIXE";
+    public const string FournisseurPrincipal = "FOURNISSEUR_PRINCIPAL";
+    public const string DernierPa = "DERNIER_PA";
+    public const string MeilleurMin = "MEILLEUR_MIN";
+    public const string MeilleurMax = "MEILLEUR_MAX";
+    public const string Pmp = "PMP";
+}
+
 /// <summary>Genre d'un poste de pied (ele_pied_genre, recopié dans lig_proprietes.genre_poste).</summary>
 public static class GenrePoste
 {

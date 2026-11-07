@@ -56,7 +56,7 @@
   recalculé » (fournisseur mémoire).
 - **Critère de fin** : `npm test` du module vert ; le cas ci-dessus passe.
 
-## Lot 2 : premier tarif principal, scénario FOURNISSEUR_PRINCIPAL (FAIT 08/11/2026 ; écart : règle isolée dans `PremierTarif.Appliquer` (C#) ↔ `reglePremierTarif` (calcul.js), import aussi couvert, cas 01_calcul.json déjà présents ; 2 échecs préexistants de personnalisation.test.js du client, hors lot)
+## Lot 2 : premier tarif principal, scénario FOURNISSEUR_PRINCIPAL (FAIT 08/11/2026 ; écart : règle isolée dans `PremierTarif.Appliquer` (C#) ↔ `reglePremierTarif` (calcul.js), import aussi couvert, cas 01_calcul.json déjà présents ; parité corrigée : import JS aligné, règle limitée à un élément sans tarif avant l’opération, scénario null = FIXE, codes SCENARIO_PA ↔ ScenarioPa, cas partagés 03_premier_tarif.json ; 2 échecs préexistants de personnalisation.test.js du client, hors lot)
 
 - **Module** : `modules/bibliotheque`. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `ServiceBibliotheque.cs` (`EnregistrerTarif :400` ; `ImporterTarifs :433` selon le point ouvert ;

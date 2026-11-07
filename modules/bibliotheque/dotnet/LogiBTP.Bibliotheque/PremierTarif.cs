@@ -6,14 +6,12 @@ namespace LogiBTP.Bibliotheque;
 /// </summary>
 public static class PremierTarif
 {
-    public const string ScenarioFixe = "FIXE";
-    public const string ScenarioFournisseurPrincipal = "FOURNISSEUR_PRINCIPAL";
-
     /// <param name="autresTarifs">Nombre de tarifs déjà présents pour l'élément (hors celui qu'on enregistre).</param>
-    public static (bool Principal, string Scenario) Appliquer(int autresTarifs, bool principalDemande, string scenario, decimal? paFixe)
+    public static (bool Principal, string Scenario) Appliquer(int autresTarifs, bool principalDemande, string? scenario, decimal? paFixe)
     {
-        if (autresTarifs > 0) return (principalDemande, scenario);
-        var sansPa = scenario == ScenarioFixe && (paFixe is null || paFixe == 0);
-        return (true, sansPa ? ScenarioFournisseurPrincipal : scenario);
+        if (autresTarifs > 0) return (principalDemande, scenario ?? ScenarioPa.Fixe);
+        scenario ??= ScenarioPa.Fixe;
+        var sansPa = scenario == ScenarioPa.Fixe && (paFixe is null || paFixe == 0);
+        return (true, sansPa ? ScenarioPa.FournisseurPrincipal : scenario);
     }
 }

@@ -1,0 +1,13 @@
+{
+  "description": "Règle du premier tarif (reglePremierTarif / PremierTarif.Appliquer) : autres = nombre de tarifs de l'élément avant l'opération (enregistrement ou import) ; un scénario absent vaut FIXE.",
+  "cas": [
+    { "nom": "premier tarif sans PA : principal et FOURNISSEUR_PRINCIPAL", "autres": 0, "principal": false, "scenario": "FIXE", "pa_fixe": null, "attendu": { "principal": true, "scenario": "FOURNISSEUR_PRINCIPAL" } },
+    { "nom": "PA fixe à zéro : traité comme sans PA", "autres": 0, "principal": false, "scenario": "FIXE", "pa_fixe": "0", "attendu": { "principal": true, "scenario": "FOURNISSEUR_PRINCIPAL" } },
+    { "nom": "scénario absent : traité comme FIXE", "autres": 0, "principal": false, "scenario": null, "pa_fixe": null, "attendu": { "principal": true, "scenario": "FOURNISSEUR_PRINCIPAL" } },
+    { "nom": "scénario absent avec PA saisi : devient FIXE", "autres": 0, "principal": false, "scenario": null, "pa_fixe": "5", "attendu": { "principal": true, "scenario": "FIXE" } },
+    { "nom": "PA saisi : scénario conservé", "autres": 0, "principal": false, "scenario": "FIXE", "pa_fixe": "5", "attendu": { "principal": true, "scenario": "FIXE" } },
+    { "nom": "autre scénario : conservé", "autres": 0, "principal": false, "scenario": "PMP", "pa_fixe": null, "attendu": { "principal": true, "scenario": "PMP" } },
+    { "nom": "élément ayant déjà un tarif (enregistrement ou import) : rien ne change", "autres": 1, "principal": false, "scenario": "FIXE", "pa_fixe": null, "attendu": { "principal": false, "scenario": "FIXE" } },
+    { "nom": "élément ayant déjà un tarif, principal demandé : conservé", "autres": 2, "principal": true, "scenario": "PMP", "pa_fixe": "0", "attendu": { "principal": true, "scenario": "PMP" } }
+  ]
+}

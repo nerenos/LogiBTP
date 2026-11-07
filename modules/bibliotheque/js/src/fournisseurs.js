@@ -428,6 +428,17 @@ export class FournisseurBibliothequeMemoire {
     });
     const compte = (a) => resultats.filter((r) => r.action === a).length;
     if (!simulation) {
+      // Premier tarif d'un élément (aucun tarif avant l'import ; un tarif mis à jour en est un) : même règle que le service.
+      const groupes = Map.groupBy(aEcrire, (x) => x.v.ele_id);
+      for (const [eleId, groupe] of groupes) {
+        const avant = this.tarifsElements.filter((x) => String(x.ele_id) === String(eleId)).length;
+        if (avant > 0) continue;
+        const premier = (groupe.find((g) => g.v.principal) ?? groupe[0]).v;
+        const element = this.#element(eleId);
+        const regle = reglePremierTarif(avant, premier.principal, element.scenario_pa, element.pa_fixe);
+        premier.principal = regle.principal;
+        element.scenario_pa = regle.scenario;
+      }
       for (const { tarif, v } of aEcrire) {
         if (v.principal) for (const x of this.tarifsElements) if (x.ele_id === v.ele_id && x !== tarif) x.principal = false;
         if (tarif) Object.assign(tarif, v, { maj_par: this.utilisateur });

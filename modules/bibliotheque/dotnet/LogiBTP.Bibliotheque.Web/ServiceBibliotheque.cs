@@ -503,10 +503,12 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
         // Premier tarif d'un élément (aucun tarif en base) : principal, et scénario FOURNISSEUR_PRINCIPAL si l'élément n'a pas de PA saisi.
         foreach (var groupe in aEcrire.GroupBy(x => x.Tarif.TfoEleId))
         {
-            if (await db.Tarifs.AnyAsync(x => x.TfoEleId == groupe.Key && !groupe.Select(g => g.Tarif.TfoId).Contains(x.TfoId), ct)) continue;
+            // Seuls comptent les tarifs déjà en base avant l'import (les nouveaux ne sont pas encore ajoutés) : un tarif mis à jour en est un.
+            var avant = await db.Tarifs.CountAsync(x => x.TfoEleId == groupe.Key, ct);
+            if (avant > 0) continue;
             var premier = groupe.FirstOrDefault(g => g.Tarif.TfoPrincipal).Tarif ?? groupe.First().Tarif;
             var element = await db.Elements.FirstAsync(x => x.EleId == groupe.Key, ct);
-            var (principal, scenario) = PremierTarif.Appliquer(0, premier.TfoPrincipal, element.EleScenarioPa, element.ElePaFixe);
+            var (principal, scenario) = PremierTarif.Appliquer(avant, premier.TfoPrincipal, element.EleScenarioPa, element.ElePaFixe);
             premier.TfoPrincipal = principal;
             element.EleScenarioPa = scenario;
         }

@@ -116,6 +116,27 @@ describe("premier tarif d'un élément", () => {
     expect(e.scenario_pa).toBe('FIXE');
   });
 
+  const jeuPremier = JSON.parse(fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../tests/cas/03_premier_tarif.json'), 'utf8'));
+  for (const c of jeuPremier.cas) {
+    it(`cas partagé : ${c.nom}`, () => {
+      expect(reglePremierTarif(c.autres, c.principal, c.scenario, c.pa_fixe)).toEqual(c.attendu);
+    });
+  }
+
+  it("import : premier tarif d'un élément sans PA principal et FOURNISSEUR_PRINCIPAL ; élément déjà tarifé inchangé", async () => {
+    const { f, e } = nouvelElement();
+    const lignes = [{ element: 'X', unite: 'ml', prix: '10' }];
+    await f.importerTarifs({ tiers_id: 7, fournisseur: 'A', lignes, simulation: false });
+    expect(e.scenario_pa).toBe('FOURNISSEUR_PRINCIPAL');
+    expect((await f.tarifs(1))[0].principal).toBe(true);
+    e.scenario_pa = 'FIXE';
+    await f.importerTarifs({ tiers_id: 7, fournisseur: 'A', lignes: [{ element: 'X', unite: 'ml', prix: '12' }], simulation: false });
+    expect(e.scenario_pa).toBe('FIXE');
+    const autre = nouvelElement({ pa_fixe: '5' });
+    await autre.f.importerTarifs({ tiers_id: 7, fournisseur: 'A', lignes, simulation: false });
+    expect(autre.e.scenario_pa).toBe('FIXE');
+  });
+
   it('règle pure', () => {
     expect(reglePremierTarif(0, false, 'FIXE', 0)).toEqual({ principal: true, scenario: 'FOURNISSEUR_PRINCIPAL' });
     expect(reglePremierTarif(0, false, 'PMP', null)).toEqual({ principal: true, scenario: 'PMP' });
