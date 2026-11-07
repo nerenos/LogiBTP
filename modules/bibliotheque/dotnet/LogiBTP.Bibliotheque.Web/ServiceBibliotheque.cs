@@ -408,6 +408,12 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
         if (debut is { } a && fin is { } b && b < a) throw ExceptionMetier.Invalide("DATES", "Fin de validité avant le début");
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         var t = d.Id > 0 ? await db.Tarifs.FirstOrDefaultAsync(x => x.TfoId == d.Id && x.TfoEleId == eleId, ct) ?? throw ExceptionMetier.Introuvable($"Tarif {d.Id}") : new TarifFournisseur { TfoEleId = eleId };
+        // Premier tarif de l'élément : principal ; élément sans PA saisi : scénario FOURNISSEUR_PRINCIPAL.
+        var element = await db.Elements.FirstAsync(e => e.EleId == eleId, ct);
+        var autres = await db.Tarifs.CountAsync(x => x.TfoEleId == eleId && x.TfoId != d.Id, ct);
+        var (principal, scenario) = PremierTarif.Appliquer(autres, d.Principal, element.EleScenarioPa, element.ElePaFixe);
+        if (element.EleScenarioPa != scenario) element.EleScenarioPa = scenario;
+        d = d with { Principal = principal };
         // Un seul tarif principal par élément.
         if (d.Principal) await db.Tarifs.Where(x => x.TfoEleId == eleId && x.TfoPrincipal && x.TfoId != d.Id).ExecuteUpdateAsync(s => s.SetProperty(x => x.TfoPrincipal, false), ct);
         t.TfoFournisseur = Obligatoire(d.Fournisseur, "Fournisseur"); t.TfoTiersId = d.TiersId; t.TfoReference = Texte(d.Reference); t.TfoLibelle = Texte(d.Libelle);
@@ -494,6 +500,16 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
             return new(crees, maj, erreurs, resultats);
         }
         await using var tx = await db.Database.BeginTransactionAsync(ct);
+        // Premier tarif d'un élément (aucun tarif en base) : principal, et scénario FOURNISSEUR_PRINCIPAL si l'élément n'a pas de PA saisi.
+        foreach (var groupe in aEcrire.GroupBy(x => x.Tarif.TfoEleId))
+        {
+            if (await db.Tarifs.AnyAsync(x => x.TfoEleId == groupe.Key && !groupe.Select(g => g.Tarif.TfoId).Contains(x.TfoId), ct)) continue;
+            var premier = groupe.FirstOrDefault(g => g.Tarif.TfoPrincipal).Tarif ?? groupe.First().Tarif;
+            var element = await db.Elements.FirstAsync(x => x.EleId == groupe.Key, ct);
+            var (principal, scenario) = PremierTarif.Appliquer(0, premier.TfoPrincipal, element.EleScenarioPa, element.ElePaFixe);
+            premier.TfoPrincipal = principal;
+            element.EleScenarioPa = scenario;
+        }
         foreach (var (t, nouveau, _) in aEcrire.Where(x => x.Tarif.TfoPrincipal))
             await db.Tarifs.Where(x => x.TfoEleId == t.TfoEleId && x.TfoPrincipal && x.TfoId != t.TfoId).ExecuteUpdateAsync(s => s.SetProperty(x => x.TfoPrincipal, false), ct);
         foreach (var (t, nouveau, _) in aEcrire) if (nouveau) db.Tarifs.Add(t);

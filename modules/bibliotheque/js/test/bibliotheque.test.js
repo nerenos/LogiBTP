@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { calculerElement, convertir, codeAppel, analyserCodeAppel, coefficientsEffectifs } from '../src/calcul.js';
+import { reglePremierTarif, calculerElement, convertir, codeAppel, analyserCodeAppel, coefficientsEffectifs } from '../src/calcul.js';
 import { FournisseurBibliothequeMemoire } from '../src/fournisseurs.js';
 import { suivreTarifs, signalerTarifs } from '../ui/onglets.js';
 import { entreeDepuisLigne } from '../src/fournisseurs.js';
@@ -87,5 +87,38 @@ describe('onglet Prix : rechargement des tarifs', () => {
     expect(calculerElement(entreeDepuisLigne(elements[0], tarifs)).pa).toBe('10');
     signalerTarifs(1, []);
     expect(vus).toHaveLength(1);
+  });
+});
+
+describe("premier tarif d'un élément", () => {
+  const nouvelElement = (extra = {}) => {
+    const elements = [{ id: 1, bib_id: 1, code: 'X', type: 'ARTICLE', libelle_html: 'X', unite_stock: 'ml', unites: [], proprietes: {},
+      scenario_pa: 'FIXE', pa_fixe: null, coef_fg: '1', coef_benef: '1', coef_remise: '1', pv_fixe: false, ...extra }];
+    return { f: new FournisseurBibliothequeMemoire({ bibliotheques: [{ id: 1, code: 'GEN', libelle: 'G', defaut: true, ordre: 0 }], elements }), e: elements[0] };
+  };
+
+  it('premier tarif : principal et scénario FOURNISSEUR_PRINCIPAL ; second tarif : rien ne change', async () => {
+    const { f, e } = nouvelElement();
+    const r = await f.enregistrerTarif(1, { fournisseur: 'A', unite: 'ml', prix: '10', principal: false });
+    expect(r.tarifs[0].principal).toBe(true);
+    expect(e.scenario_pa).toBe('FOURNISSEUR_PRINCIPAL');
+    expect(r.prix.pa).toBe('10');
+    e.scenario_pa = 'FIXE';
+    const r2 = await f.enregistrerTarif(1, { fournisseur: 'B', unite: 'ml', prix: '8', principal: false });
+    expect(r2.tarifs.find((t) => t.fournisseur === 'B').principal).toBe(false);
+    expect(e.scenario_pa).toBe('FIXE');
+  });
+
+  it('élément avec PA saisi : scénario conservé, premier tarif principal', async () => {
+    const { f, e } = nouvelElement({ pa_fixe: '5' });
+    const r = await f.enregistrerTarif(1, { fournisseur: 'A', unite: 'ml', prix: '10' });
+    expect(r.tarifs[0].principal).toBe(true);
+    expect(e.scenario_pa).toBe('FIXE');
+  });
+
+  it('règle pure', () => {
+    expect(reglePremierTarif(0, false, 'FIXE', 0)).toEqual({ principal: true, scenario: 'FOURNISSEUR_PRINCIPAL' });
+    expect(reglePremierTarif(0, false, 'PMP', null)).toEqual({ principal: true, scenario: 'PMP' });
+    expect(reglePremierTarif(2, false, 'FIXE', null)).toEqual({ principal: false, scenario: 'FIXE' });
   });
 });

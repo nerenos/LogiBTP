@@ -1,5 +1,5 @@
 import { texte, pairesParCode } from '@logibtp/socle/dictionnaire';
-import { calculerElement, coefficientsEffectifs, prixNetTarif, ratio, analyserCodeAppel } from './calcul.js';
+import { calculerElement, coefficientsEffectifs, prixNetTarif, ratio, analyserCodeAppel, reglePremierTarif } from './calcul.js';
 import { texteBrut, S, dateLocale, PROFIL, ErreurApi, appelApi } from '@logibtp/socle';
 
 // Fournisseurs du module Bibliothèque. Même interface pour l'API (routes MapModuleBibliotheque) et pour la mémoire
@@ -298,6 +298,12 @@ export class FournisseurBibliothequeMemoire {
     if (!String(t.fournisseur ?? '').trim() || !t.unite) throw new ErreurBibliotheque(422, 'OBLIGATOIRE', texte('bibliotheque.fournisseur.fournisseur_unite'));
     controlerTarif(t);
     if (t.debut && t.fin && t.fin < t.debut) throw new ErreurBibliotheque(422, 'DATES', texte('bibliotheque.fournisseur.dates'));
+    // Premier tarif de l'élément : principal ; élément sans PA saisi : scénario FOURNISSEUR_PRINCIPAL (comme le service).
+    const element = this.#element(eleId);
+    const autres = this.tarifsElements.filter((x) => String(x.ele_id) === String(eleId) && x.id !== t.id).length;
+    const regle = reglePremierTarif(autres, !!t.principal, element.scenario_pa, element.pa_fixe);
+    element.scenario_pa = regle.scenario;
+    t = { ...t, principal: regle.principal };
     if (t.principal) for (const x of this.tarifsElements) if (String(x.ele_id) === String(eleId)) x.principal = false;
     // Prix net : prix public remisé s'il est renseigné (comme ServiceBibliotheque.EnregistrerTarif).
     t = { ...t, prix: S(prixNetTarif({ ...t, prix: t.prix ?? 0 })) };

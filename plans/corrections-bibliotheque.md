@@ -32,12 +32,12 @@
 
 | Point | Recommandation | Statut |
 |---|---|---|
-| Import de tarifs (`ImporterTarifs`, `:433`) : la règle « premier tarif = principal » s'applique-t-elle aussi aux tarifs importés ? | Oui, même règle pour tout premier tarif d'un élément, quelle que soit sa source. | OUVERT |
+| Import de tarifs (`ImporterTarifs`, `:433`) : la règle « premier tarif = principal » s'applique-t-elle aussi aux tarifs importés ? | Oui, même règle pour tout premier tarif d'un élément, quelle que soit sa source. | TRANCHÉ (oui, appliqué à l'import, lot 2) |
 
 | Lot | Titre | Module | Dépend de | Statut |
 |---|---|---|---|---|
 | 1 | Onglet Prix : rechargement des tarifs | `modules/bibliotheque` | — | FAIT (08/11/2026) |
-| 2 | Premier tarif principal, scénario FOURNISSEUR_PRINCIPAL | `modules/bibliotheque` | — | A FAIRE |
+| 2 | Premier tarif principal, scénario FOURNISSEUR_PRINCIPAL | `modules/bibliotheque` | — | FAIT (08/11/2026) |
 | 3 | Résultat : dernier PA et PMP affichés comme des PR (reproduction puis correction) | `modules/bibliotheque` | 1 | A FAIRE |
 | 4 | Recopie du PMP et du dernier PA par le Stock (seulement si le lot 3 met la cause dans le cœur) | cœur | 3 | A FAIRE |
 | 5 | Onglet Tarifs de la fiche élément : enregistrement à la sortie de ligne | `modules/bibliotheque` | — | A FAIRE |
@@ -56,7 +56,7 @@
   recalculé » (fournisseur mémoire).
 - **Critère de fin** : `npm test` du module vert ; le cas ci-dessus passe.
 
-## Lot 2 : premier tarif principal, scénario FOURNISSEUR_PRINCIPAL (A FAIRE)
+## Lot 2 : premier tarif principal, scénario FOURNISSEUR_PRINCIPAL (FAIT 08/11/2026 ; écart : règle isolée dans `PremierTarif.Appliquer` (C#) ↔ `reglePremierTarif` (calcul.js), import aussi couvert, cas 01_calcul.json déjà présents ; 2 échecs préexistants de personnalisation.test.js du client, hors lot)
 
 - **Module** : `modules/bibliotheque`. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `ServiceBibliotheque.cs` (`EnregistrerTarif :400` ; `ImporterTarifs :433` selon le point ouvert ;

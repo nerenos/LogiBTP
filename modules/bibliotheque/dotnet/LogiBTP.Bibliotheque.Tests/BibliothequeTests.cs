@@ -108,3 +108,18 @@ public class CodesTests
         Assert.Empty(Constantes.Ecarts(CasPartages.Chemin("modules", "bibliotheque", "js", "src", "codes.js"), "GENRE_POSTE", typeof(GenrePoste)));
     }
 }
+
+public class PremierTarifTests
+{
+    [Fact]
+    public void Premier_tarif_sans_pa_devient_principal_et_change_le_scenario()
+        => Assert.Equal((true, "FOURNISSEUR_PRINCIPAL"), PremierTarif.Appliquer(0, false, "FIXE", null));
+
+    [Fact]
+    public void Second_tarif_ne_change_rien()
+        => Assert.Equal((false, "FIXE"), PremierTarif.Appliquer(2, false, "FIXE", null));
+
+    [Fact]
+    public void Element_avec_pa_saisi_garde_son_scenario()
+        => Assert.Equal((true, "FIXE"), PremierTarif.Appliquer(0, false, "FIXE", 5m));
+}

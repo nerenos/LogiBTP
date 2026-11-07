@@ -151,3 +151,13 @@ export function coefficientsEffectifs(e, periodes = [], date = aujourdhui(), { c
   const benef = coefficient(e, periodes, date, 'coef_benef', coef_benef_defaut);
   return { coef_fg: fg.valeur, coef_benef: benef.valeur, sources: { coef_fg: fg.source, coef_benef: benef.source } };
 }
+
+/**
+ * Règle du premier tarif d'un élément (réplique de PremierTarif.Appliquer en C#) : le premier tarif saisi devient principal ;
+ * un élément sans PA saisi (scénario FIXE, PA fixe nul ou zéro) passe au scénario FOURNISSEUR_PRINCIPAL.
+ */
+export function reglePremierTarif(autresTarifs, principalDemande, scenario, paFixe) {
+  if (autresTarifs > 0) return { principal: principalDemande, scenario };
+  const sansPa = (scenario ?? 'FIXE') === 'FIXE' && (D(paFixe ?? null) === null || D(paFixe).isZero());
+  return { principal: true, scenario: sansPa ? 'FOURNISSEUR_PRINCIPAL' : scenario };
+}
