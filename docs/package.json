@@ -1,0 +1,15 @@
+{
+  "name": "logibtp-docs",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "LogiBTP – documentation utilisateur (VitePress, sur sa propre version de Vite, isolée du client)",
+  "scripts": {
+    "dev": "vitepress dev",
+    "build": "vitepress build",
+    "preview": "vitepress preview"
+  },
+  "devDependencies": {
+    "vitepress": "^1.6.4"
+  }
+}
