@@ -61,6 +61,9 @@ public class TypeComptableEntite
     public string? TcoCptEcartCredit { get; set; }
     /// <summary>Contrepartie des opérations diverses du type (variation des stocks des écarts d'inventaire).</summary>
     public string? TcoCptContrepartie { get; set; }
+    /// <summary>Dotation (charge) et reprise (produit) de la provision pour dépréciation des stocks.</summary>
+    public string? TcoCptDotation { get; set; }
+    public string? TcoCptReprise { get; set; }
     public int TcoOrdre { get; set; }
     public bool TcoActif { get; set; } = true;
 }
@@ -143,7 +146,7 @@ public sealed record ResultatGeneration(int Crees, List<string> Refus);
 /// </summary>
 public sealed record TypeComptableDto(string Code, string Libelle, string? Parent, string Sens, string? Journal, string? JournalLibelle,
     string? CompteDefaut, string? CompteRemise, string? CompteRetenue, bool RetenueCompteTiers, string? CompteAcompte, string? ComptePaiementDirect,
-    string? CompteProrata, string? CompteEcartDebit, string? CompteEcartCredit, int Ordre, bool Actif, string? CompteContrepartie = null);
+    string? CompteProrata, string? CompteEcartDebit, string? CompteEcartCredit, int Ordre, bool Actif, string? CompteContrepartie = null, string? CompteDotation = null, string? CompteReprise = null);
 
 /// <summary>Clé de ventilation : type comptable × nature et / ou taux de TVA (codes) → compte.</summary>
 public sealed record CleVentilationDto(string Type, string? Nature, string? Taux, string Compte);

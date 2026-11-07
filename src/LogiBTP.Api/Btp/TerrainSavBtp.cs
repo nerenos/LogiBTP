@@ -19,7 +19,7 @@ namespace LogiBTP.Api.Btp;
 
 public sealed record ChantierSavSaisi(long Client, string? Adresse, string? CodePostal, string? Ville);
 public sealed record InterventionSavCreee(int? ChaId, ChantierSavSaisi? Nouveau, string Objet);
-public sealed record CompteRenduSav(string Constat, string Travaux, List<string>? Fournitures, bool Terminee, bool Absent, string? Nom, string? Qualite, string? Signature, string? Courriel);
+public sealed record CompteRenduSav(string Constat, string Travaux, List<string>? Fournitures, bool Terminee, bool Absent, string? Nom, string? Qualite, string? Signature, string? Courriel, long? Equipement = null);
 
 /// <summary>
 /// Application de terrain, lot 6 (ANALYSE-TERRAIN.md T20 ; Exécution E12, E13, E20, E22) : interventions SAV sous le
@@ -41,7 +41,8 @@ public static partial class TerrainBtp
     private sealed record OrdreSav(long EntId, string? Numero, string? Objet, DateOnly Date, string? Chantier, string? Client, string? Ville, DateOnly? Fait);
     private sealed record ChoixSav(long Id, string Libelle, string? Detail);
     private sealed record CompteRenduLu(long Id, DateOnly Le, string Constat, string Travaux, string Fournitures, bool Terminee, bool Absent, string? Signataire,
-        string? Qualite, long? DgeId, string? Courriel, string Par, DateTimeOffset CreeLe);
+        string? Qualite, long? DgeId, string? Courriel, string Par, DateTimeOffset CreeLe, long? EquipementId, string? Equipement);
+    private sealed record EquipementChoix(long Id, string Numero, string? Article, string? Chantier);
 
     /// <summary>Interventions E_SAV ouvertes de la personne : ressource, service de l'ordre, ou tâche du planning sur l'ordre ou ses étapes.</summary>
     private const string SqlOrdresSav = """
@@ -75,14 +76,15 @@ public static partial class TerrainBtp
         db.Database.SqlQueryRaw<CompteRenduLu>("""
             SELECT i.isv_id AS id, i.isv_le AS le, i.isv_constat AS constat, i.isv_travaux AS travaux, i.isv_fournitures::text AS fournitures, i.isv_terminee AS terminee,
                    i.isv_absent AS absent, s.sig_nom AS signataire, s.sig_qualite AS qualite, i.isv_dge_id AS dge_id, i.isv_courriel AS courriel,
-                   i.isv_cree_par AS par, i.isv_cree_le AS cree_le
-            FROM intervention_sav i LEFT JOIN signature s ON s.sig_id = i.isv_sig_id WHERE i.isv_ent_id = @e ORDER BY i.isv_id DESC
+                   i.isv_cree_par AS par, i.isv_cree_le AS cree_le, i.isv_eqi_id AS equipement_id, q.eqi_numero AS equipement
+            FROM intervention_sav i LEFT JOIN signature s ON s.sig_id = i.isv_sig_id LEFT JOIN equipement_installe q ON q.eqi_id = i.isv_eqi_id WHERE i.isv_ent_id = @e ORDER BY i.isv_id DESC
             """, new NpgsqlParameter("e", ent)).ToListAsync(ct);
 
     private static object CompteRendu(CompteRenduLu c) => new
     {
         id = c.Id, le = c.Le, constat = c.Constat, travaux = c.Travaux, fournitures = JsonDocument.Parse(c.Fournitures).RootElement, terminee = c.Terminee, absent = c.Absent,
         signataire = c.Signataire, qualite = c.Qualite, bon = c.DgeId is not null, courriel = c.Courriel, par = c.Par, cree_le = c.CreeLe,
+        equipement = c.EquipementId is long q ? new { id = q, numero = c.Equipement } : null,
     };
 
     /// <summary>Chantier « Entretien et dépannage » du client (E20), créé à sa première intervention, repris ensuite.</summary>
@@ -134,6 +136,15 @@ public static partial class TerrainBtp
                     """, new NpgsqlParameter("m", motif)).ToListAsync(ct),
             };
         });
+
+        // Équipements installés (module SAV) proposés au compte rendu : par numéro de série, ceux du chantier de l'ordre d'abord.
+        sav.MapGet("/equipements", async (string? recherche, long? ent, LogiBtpContext db, CancellationToken ct) =>
+            await db.Database.SqlQueryRaw<EquipementChoix>("""
+                SELECT v.id, v.numero, concat_ws(' ', v.article, v.article_libelle) AS article, v.chantier
+                FROM v_liste_equipements v
+                WHERE v.etat = 'INSTALLE' AND v.numero ILIKE @m
+                ORDER BY (v.lieu_id IS NOT DISTINCT FROM (SELECT d.ent_chantier_id FROM document d WHERE d.ent_id = @e)) DESC, v.numero LIMIT 30
+                """, new NpgsqlParameter("m", $"%{(recherche ?? "").Trim()}%"), SqlBtp.P("e", ent, NpgsqlTypes.NpgsqlDbType.Bigint)).ToListAsync(ct));
 
         // Nouvelle intervention (E13 : toujours sur un chantier) : ordre validé, la personne en est la ressource.
         sav.MapPost("", async (InterventionSavCreee c, HttpContext http, LogiBtpContext db, DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp> documents, CancellationToken ct) =>
@@ -187,6 +198,9 @@ public static partial class TerrainBtp
             var fournitures = (r.Fournitures ?? []).Select(x => x.Trim()).Where(x => x.Length > 0).ToList();
             var courriel = string.IsNullOrWhiteSpace(r.Courriel) ? null : r.Courriel.Trim();
 
+            if (r.Equipement is long eq && !await db.Database.SqlQueryRaw<bool>("SELECT EXISTS (SELECT 1 FROM equipement_installe WHERE eqi_id = @q) AS \"Value\"", new NpgsqlParameter("q", eq)).FirstAsync(ct))
+                throw ExceptionMetier.Invalide("TERRAIN_SAV_EQUIPEMENT", "Équipement introuvable");
+
             long? sigId = null;
             long isvId;
             await using (var tx = await db.Database.BeginTransactionAsync(ct))
@@ -198,11 +212,11 @@ public static partial class TerrainBtp
                         """, new NpgsqlParameter("e", ent), new NpgsqlParameter("n", r.Nom!.Trim()), SqlBtp.P("q", r.Qualite?.Trim()),
                         new NpgsqlParameter("i", NpgsqlTypes.NpgsqlDbType.Bytea) { Value = image }, new NpgsqlParameter("u", u.Code)).ToListAsync(ct))[0];
                 isvId = (await db.Database.SqlQueryRaw<long>("""
-                    INSERT INTO intervention_sav (isv_ent_id, isv_constat, isv_travaux, isv_fournitures, isv_terminee, isv_absent, isv_sig_id, isv_courriel, isv_cree_par)
-                    VALUES (@e, @c, @t, @f::jsonb, @fin, @abs, @s, @m, @u) RETURNING isv_id AS "Value"
+                    INSERT INTO intervention_sav (isv_ent_id, isv_constat, isv_travaux, isv_fournitures, isv_terminee, isv_absent, isv_sig_id, isv_courriel, isv_cree_par, isv_eqi_id)
+                    VALUES (@e, @c, @t, @f::jsonb, @fin, @abs, @s, @m, @u, @q) RETURNING isv_id AS "Value"
                     """, new NpgsqlParameter("e", ent), new NpgsqlParameter("c", r.Constat.Trim()), new NpgsqlParameter("t", r.Travaux.Trim()),
                     new NpgsqlParameter("f", JsonSerializer.Serialize(fournitures)), new NpgsqlParameter("fin", r.Terminee), new NpgsqlParameter("abs", r.Absent),
-                    SqlBtp.P("s", sigId, NpgsqlTypes.NpgsqlDbType.Bigint), SqlBtp.P("m", courriel), new NpgsqlParameter("u", u.Code)).ToListAsync(ct))[0];
+                    SqlBtp.P("s", sigId, NpgsqlTypes.NpgsqlDbType.Bigint), SqlBtp.P("m", courriel), new NpgsqlParameter("u", u.Code), SqlBtp.P("q", r.Equipement, NpgsqlTypes.NpgsqlDbType.Bigint)).ToListAsync(ct))[0];
                 await tx.CommitAsync(ct);
             }
 

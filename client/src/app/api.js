@@ -227,6 +227,7 @@ export const api = {
     pointerMateriel: (tache, m) => appel('POST', `/terrain/taches/${tache}/materiel`, m),
     interventions: () => appel('GET', '/terrain/sav'),
     choixSav: () => appel('GET', '/terrain/sav/choix'),
+    equipementsSav: (recherche, ordre) => appel('GET', `/terrain/sav/equipements?${new URLSearchParams({ recherche: recherche ?? '', ent: ordre })}`),
     creerIntervention: (c) => appel('POST', '/terrain/sav', c),
     sav: (ordre) => appel('GET', `/terrain/sav/${ordre}`),
     enregistrerSav: (ordre, c) => appel('POST', `/terrain/sav/${ordre}`, c),
@@ -288,12 +289,28 @@ export const api = {
     supprimerPaiement: (id) => appel('DELETE', `/sous-traitance/paiements/${id}`),
   },
   // Module Stock : paramètres, lieux, emplacements, état à une date-heure, fiche de stock d'un article, réévaluation du PMP.
+  // Module SAV : équipements installés chez les clients (numéro de série, garantie, retrait, remplacement).
+  sav: {
+    equipements: (f = {}) => appel('GET', `/sav/equipements?${new URLSearchParams(Object.entries(f).filter(([, v]) => v !== null && v !== undefined && v !== ''))}`),
+    equipement: (id) => appel('GET', `/sav/equipements/${id}`),
+    interventions: (id) => appel('GET', `/sav/equipements/${id}/interventions`),
+    creerEquipement: (e) => appel('POST', '/sav/equipements', e),
+    modifierEquipement: (id, e) => appel('PUT', `/sav/equipements/${id}`, e),
+    retirerEquipement: (id, r) => appel('POST', `/sav/equipements/${id}/retrait`, r),
+    remplacerEquipement: (id, e) => appel('POST', `/sav/equipements/${id}/remplacement`, e),
+  },
   stock: {
     parametres: () => appel('GET', '/stock/parametres'),
     enregistrerParametres: (p) => appel('PUT', '/stock/parametres', p),
     lieux: () => appel('GET', '/stock/lieux'),
     emplacements: (lieu) => appel('GET', `/stock/lieux/${lieu}/emplacements`),
     enregistrerEmplacements: (lieu, l) => appel('PUT', `/stock/lieux/${lieu}/emplacements`, l),
+    // Lot 10 : clôture du stock (aperçu, création, liste, annulation).
+    apercuCloture: ({ date, debut = null }) => appel('GET', `/stock/clotures/apercu?${new URLSearchParams({ date, ...(debut ? { debut } : {}) })}`),
+    cloturer: (c) => appel('POST', '/stock/clotures', c),
+    clotures: () => appel('GET', '/stock/clotures'),
+    annulerCloture: (id) => appel('POST', `/stock/clotures/${id}/annulation`),
+    etatValorise: ({ date = null, lieux = [], zeros = false } = {}) => appel('GET', `/stock/etat-valorise?${new URLSearchParams({ ...(date ? { date } : {}), ...(lieux.length ? { lieux: lieux.join(',') } : {}), zeros: String(zeros) })}`),
     etat: (lieu, { date = null, zeros = false } = {}) => appel('GET', `/stock/lieux/${lieu}/etat?${new URLSearchParams({ ...(date ? { date } : {}), zeros: String(zeros) })}`),
     mouvement: (id) => appel('GET', `/stock/mouvements/${id}`),
     article: (id) => appel('GET', `/stock/articles/${id}`),

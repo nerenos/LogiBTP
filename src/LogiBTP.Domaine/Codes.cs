@@ -85,6 +85,7 @@ public static class ModulesFacultatifs
     public const string Pointage = "pointage";
     public const string Reglement = "reglement";
     public const string Rentabilite = "rentabilite";
+    public const string Sav = "sav";
     public const string SousTraitance = "sous_traitance";
     public const string Stock = "stock";
 }

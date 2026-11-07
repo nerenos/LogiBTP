@@ -1,0 +1,38 @@
+{
+  "description": "Équipements installés (module SAV) : fin de garantie, état de la garantie à une date, contrôle d'un équipement. Partagé entre garantie.js et ReglesGarantie.cs.",
+  "numeros": [
+    { "nom": "espaces retirés et réduits", "numero": "  SN 12   34 ", "attendu": "SN 12 34" },
+    { "nom": "vide", "numero": "   ", "attendu": null },
+    { "nom": "absent", "numero": null, "attendu": null }
+  ],
+  "fins": [
+    { "nom": "fin saisie prioritaire", "pose": "2026-03-15", "duree_mois": 24, "fin_saisie": "2027-01-01", "attendu": "2027-01-01" },
+    { "nom": "fin saisie sans pose", "pose": null, "duree_mois": null, "fin_saisie": "2030-06-30", "attendu": "2030-06-30" },
+    { "nom": "24 mois : veille de l'anniversaire", "pose": "2026-03-15", "duree_mois": 24, "fin_saisie": null, "attendu": "2028-03-14" },
+    { "nom": "fin de mois ramenée avant la veille", "pose": "2026-01-31", "duree_mois": 1, "fin_saisie": null, "attendu": "2026-02-27" },
+    { "nom": "29 février, 12 mois", "pose": "2028-02-29", "duree_mois": 12, "fin_saisie": null, "attendu": "2029-02-27" },
+    { "nom": "premier du mois, 10 ans", "pose": "2026-11-01", "duree_mois": 120, "fin_saisie": null, "attendu": "2036-10-31" },
+    { "nom": "durée nulle : sans garantie", "pose": "2026-03-15", "duree_mois": 0, "fin_saisie": null, "attendu": null },
+    { "nom": "sans durée", "pose": "2026-03-15", "duree_mois": null, "fin_saisie": null, "attendu": null },
+    { "nom": "sans pose", "pose": null, "duree_mois": 24, "fin_saisie": null, "attendu": null }
+  ],
+  "etats": [
+    { "nom": "en cours", "pose": "2026-03-15", "duree_mois": 24, "fin_saisie": null, "date": "2026-11-06", "attendu": { "etat": "EN_COURS", "fin": "2028-03-14", "jours_restants": 494 } },
+    { "nom": "dernier jour couvert", "pose": "2026-03-15", "duree_mois": 24, "fin_saisie": null, "date": "2028-03-14", "attendu": { "etat": "EN_COURS", "fin": "2028-03-14", "jours_restants": 0 } },
+    { "nom": "lendemain de la fin : échue", "pose": "2026-03-15", "duree_mois": 24, "fin_saisie": null, "date": "2028-03-15", "attendu": { "etat": "ECHUE", "fin": "2028-03-14", "jours_restants": null } },
+    { "nom": "fin saisie", "pose": "2026-03-15", "duree_mois": 24, "fin_saisie": "2026-12-31", "date": "2026-12-01", "attendu": { "etat": "EN_COURS", "fin": "2026-12-31", "jours_restants": 30 } },
+    { "nom": "sans garantie", "pose": "2026-03-15", "duree_mois": null, "fin_saisie": null, "date": "2026-11-06", "attendu": { "etat": "SANS", "fin": null, "jours_restants": null } }
+  ],
+  "controles": [
+    { "nom": "équipement complet", "equipement": { "numero": "SN-001", "article": 12, "pose": "2026-11-06", "duree_mois": 24, "fin_saisie": null }, "aujourdhui": "2026-11-06", "attendu": [] },
+    { "nom": "sans pose ni garantie", "equipement": { "numero": "SN-001", "article": 12, "pose": null, "duree_mois": null, "fin_saisie": null }, "aujourdhui": "2026-11-06", "attendu": [] },
+    { "nom": "numéro vide et article absent", "equipement": { "numero": "  ", "article": null, "pose": null, "duree_mois": null, "fin_saisie": null }, "aujourdhui": "2026-11-06", "attendu": ["SAV_NUMERO", "SAV_ARTICLE"] },
+    { "nom": "pose dans le futur", "equipement": { "numero": "SN-001", "article": 12, "pose": "2026-11-07", "duree_mois": 24, "fin_saisie": null }, "aujourdhui": "2026-11-06", "attendu": ["SAV_POSE_FUTURE"] },
+    { "nom": "durée négative", "equipement": { "numero": "SN-001", "article": 12, "pose": null, "duree_mois": -1, "fin_saisie": null }, "aujourdhui": "2026-11-06", "attendu": ["SAV_DUREE"] },
+    { "nom": "durée au-delà de 600 mois", "equipement": { "numero": "SN-001", "article": 12, "pose": null, "duree_mois": 601, "fin_saisie": null }, "aujourdhui": "2026-11-06", "attendu": ["SAV_DUREE"] },
+    { "nom": "durée non entière", "equipement": { "numero": "SN-001", "article": 12, "pose": null, "duree_mois": 2.5, "fin_saisie": null }, "aujourdhui": "2026-11-06", "attendu": ["SAV_DUREE"] },
+    { "nom": "600 mois acceptés", "equipement": { "numero": "SN-001", "article": 12, "pose": null, "duree_mois": 600, "fin_saisie": null }, "aujourdhui": "2026-11-06", "attendu": [] },
+    { "nom": "fin saisie avant la pose", "equipement": { "numero": "SN-001", "article": 12, "pose": "2026-10-01", "duree_mois": null, "fin_saisie": "2026-09-30" }, "aujourdhui": "2026-11-06", "attendu": ["SAV_FIN_AVANT_POSE"] },
+    { "nom": "fin saisie le jour de la pose", "equipement": { "numero": "SN-001", "article": 12, "pose": "2026-10-01", "duree_mois": null, "fin_saisie": "2026-10-01" }, "aujourdhui": "2026-11-06", "attendu": [] }
+  ]
+}

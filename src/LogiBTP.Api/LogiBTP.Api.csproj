@@ -19,6 +19,7 @@
     <ProjectReference Include="..\..\modules\execution\dotnet\LogiBTP.Execution.Web\LogiBTP.Execution.Web.csproj" />
     <ProjectReference Include="..\..\modules\rentabilite\dotnet\LogiBTP.Rentabilite.Web\LogiBTP.Rentabilite.Web.csproj" />
     <ProjectReference Include="..\..\modules\sous-traitance\dotnet\LogiBTP.SousTraitance.Web\LogiBTP.SousTraitance.Web.csproj" />
+    <ProjectReference Include="..\..\modules\sav\dotnet\LogiBTP.Sav.Web\LogiBTP.Sav.Web.csproj" />
     <ProjectReference Include="..\..\modules\stock\dotnet\LogiBTP.Stock.Web\LogiBTP.Stock.Web.csproj" />
     <ProjectReference Include="..\..\modules\comptabilite\dotnet\LogiBTP.Comptabilite.Web\LogiBTP.Comptabilite.Web.csproj" />
     <ProjectReference Include="..\..\modules\pointage\dotnet\LogiBTP.Pointage.Web\LogiBTP.Pointage.Web.csproj" />

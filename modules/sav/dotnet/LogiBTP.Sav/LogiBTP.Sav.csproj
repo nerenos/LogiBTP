@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>LogiBTP.Sav</RootNamespace>
+    <Description>Module SAV LogiBTP : équipements installés et garantie (répliqués avec le paquet JS @logibtp/sav).</Description>
+  </PropertyGroup>
+
+</Project>

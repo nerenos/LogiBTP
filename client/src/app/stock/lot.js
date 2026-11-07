@@ -1,7 +1,7 @@
 import { texte, texteHtml, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, formatNombre, formatDate, formatDateHeure } from '@logibtp/socle/ui';
-import { urlFiche, urlDocument, TYPE_FICHE } from '../codes.js';
+import { urlFiche, urlDocument, TYPE_FICHE, MODULE_FACULTATIF } from '../codes.js';
 import { api } from '../api.js';
 
 // Module Stock, lots et numéros de série, lot S24-c (ANALYSE-MODULE-STOCK.md § 11, S24.5, S24.6) : fiche d'un lot —
@@ -19,6 +19,14 @@ export class PageLotStock extends PageBase {
 
   async #charger() {
     this.lot = await api.stock.lot(this.params.id);
+    // Équipements installés de ce numéro de série (module SAV, lot 5) : même article et même numéro (insensible à la casse).
+    this.lot.equipements = [];
+    if (this.app.moduleActif(MODULE_FACULTATIF.SAV) && this.app.acces('sav') && this.lot.article?.id) {
+      try {
+        const l = await api.sav.equipements({ numero: this.lot.numero, article: this.lot.article.id });
+        this.lot.equipements = l.filter((q) => String(q.numero).toUpperCase() === String(this.lot.numero).toUpperCase());
+      } catch { /* le lien vers les équipements est facultatif */ }
+    }
     this.titre = texte('stock_btp.lot.titre', { numero: this.lot.numero });
     this.#rendre();
   }
@@ -35,6 +43,7 @@ export class PageLotStock extends PageBase {
         ${exige && !l.certificats.length ? `<span class="avertissement">${texteHtml('stock_btp.lot.sans_certificat')}</span>` : ''}</div>
       <table class="tableau-compact largeur-contenu"><tbody>
         <tr><th>${texteHtml('stock_btp.lot.article')}</th><td>${l.article ? lien(urlFiche(TYPE_FICHE.ELEMENT, l.article.id), `${echapper(l.article.code)} ${echapper(l.article.libelle ?? '')}`) : ''}</td></tr>
+        ${l.equipements?.length ? `<tr><th>${texteHtml('stock_btp.lot.equipements')}</th><td>${l.equipements.map((q) => lien(`/sav/equipement/${q.id}`, echapper(q.numero))).join(' · ')}</td></tr>` : ''}
         <tr><th>${texteHtml('stock_btp.lots.suivi')}</th><td>${texteHtml(`stock_btp.lots.suivis.${l.suivi?.suivi ?? 'AUCUN'}`)}${l.suivi?.perissable ? ` · ${texteHtml('stock_btp.lots.perissable')}` : ''}</td></tr>
         <tr><th>${texteHtml('stock_btp.lots.fournisseur')}</th><td>${l.fournisseur ? lien(urlFiche(TYPE_FICHE.PERSONNE, l.fournisseur.id), echapper(l.fournisseur.nom ?? '')) : ''}</td></tr>
         <tr><th>${texteHtml('stock_btp.lots.fabrication')}</th><td>${formatDate(l.fabrication)}</td></tr>

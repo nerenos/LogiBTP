@@ -1,0 +1,22 @@
+# Module Stock : questions ouvertes avant le plan par lots
+
+> Source : [ANALYSE-MODULE-STOCK.md](../documentation/conception/ANALYSE-MODULE-STOCK.md) (06/11/2026). Les lots 1 à 5,
+> S26, la pièce comptable de l'inventaire et S24-a à S24-c sont réalisés (S24-c : commit f93dff5b — certificats,
+> copies dans la GED des chantiers, v_stk_stock_lot, alertes de péremption, lots dans les éditions, ETIQUETTES_LOT).
+> Reste de l'analyse : **S24-d** (numéros de série → équipements installés, « avec le module SAV », qui n'existe pas
+> encore). Restes du TODO : clôture du stock, ouvrages fabriqués par l'atelier.
+>
+> 10 questions, dont 4 bloquantes (B). Réponses à porter dans la colonne Décision ; sans réponse : `OUVERT`.
+
+| N° | Question | Options | Recommandation | Décision |
+|---|---|---|---|---|
+| Q1 (B) | Périmètre du plan ? | (a) S24-d seul ; (b) S24-d + clôture du stock (TODO) ; (c) b + ouvrages fabriqués par l'atelier (TODO des demandes du 25/10) | **(b)** : la clôture prolonge directement la valorisation déjà faite ; les ouvrages fabriqués touchent bibliothèque, exécution et stock et méritent leur propre analyse | ✔ Retenue (06/11/2026) |
+| Q2 (B) | Où vit l'« équipement installé » tant que le module SAV n'existe pas ? | (a) attendre l'analyse du module SAV ; (b) nouveau module `modules/sav` réduit à la table `equipement_installe` et sa fiche (premier lot du futur module), le cœur le remplit à partir des mouvements de stock ; (c) table du cœur rattachée aux interventions E_SAV existantes (`TerrainSavBtp`) | **(b)** : respecte l'architecture (le module Stock ne dépend pas du SAV, le cœur fait le lien) et évite de déplacer une table du cœur plus tard | ✔ Retenue (06/11/2026) |
+| Q3 (B) | Quel événement crée l'équipement d'un article suivi SERIE ? | (a) BL client (`V_RECEPTION`) seulement ; (b) toute sortie ou transfert vers un chantier client (ni dépôt, ni interne, ni dotation) et la facture sans BL ; (c) b + entrée consommée sur un chantier client (S2, achat livré directement) | **(c)** : couvre la pose depuis le dépôt comme l'achat livré sur chantier ; retiré à la dévalidation comme le mouvement | ✔ Retenue (06/11/2026) |
+| Q4 | Date de pose et garantie ? | Date de pose = réception de pose E_PO du chantier si elle existe, sinon date du mouvement ; garantie = durée par article (mois, nouvelle colonne du suivi `stk_article_suivi`) depuis la pose ; ou garantie saisie sur l'équipement seulement | Durée par article proposée, modifiable sur l'équipement | ✔ Retenue (06/11/2026) |
+| Q5 | Numéro de série manquant (S24.2 : jamais obligatoire) ? | (a) pas d'équipement, avertissement `STK_LOTS_MANQUANTS` existant ; (b) équipement « sans numéro » à compléter | **(a)**, plus création manuelle d'un équipement depuis le chantier | ✔ Retenue (06/11/2026) |
+| Q6 | Retour client, dépose, remplacement ? | Retour (`V_RETOUR`) ou transfert inverse → équipement « retiré » (gardé, historique) ; remplacement = nouvel équipement lié à l'ancien (`remplace_id`) | Retenir les deux | ✔ Retenue (06/11/2026) |
+| Q7 | Lien avec les interventions SAV du terrain (E_SAV, lot 6) ? | (a) dans S24-d : intervention rattachée à un équipement (choix par numéro ou code-barres), historique sur la fiche ; (b) plus tard, avec le module SAV complet | **(a)** pour le rattachement et l'historique ; contrats d'entretien restent au « second temps » de l'Exécution | ✔ Retenue (06/11/2026) |
+| Q8 | Recherche d'un numéro de série ? | Page de traçabilité du lot (`/stock/lot`, S24-c) étendue aux équipements ; ou liste `equipements` du module Liste avec recherche par numéro, client, chantier | Les deux : liste dédiée et lien depuis la page du lot | ✔ Retenue (06/11/2026) |
+| Q9 (B, si Q1 = b) | Clôture : que produit-elle ? | (a) état du stock valorisé à une date, tous lieux (PDF / CSV) ; (b) a + OD de variation de stock de fin d'exercice (31x/37x ↔ 603x/7133) par le module Comptabilité ; (c) b + provision pour dépréciation (39x ↔ 6817) à partir des prix d'inventaire saisis (S30) | **(c)** en deux lots : état et variation, puis dépréciation | ✔ Retenue (06/11/2026) |
+| Q10 | Mise à jour de l'analyse pour S24-c ? | Le § 11.5 porte ✔ mais l'en-tête « Réalisation », TODO.md et le CLAUDE.md racine ne mentionnent pas S24-c (écarts éventuels non notés) | Ajouter S24-c et ses écarts à l'en-tête de l'analyse et au TODO dans le premier lot ; CLAUDE.md hors de cette procédure | ✔ Retenue (06/11/2026) |

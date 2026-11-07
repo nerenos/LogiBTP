@@ -90,6 +90,7 @@ export const MODULE_FACULTATIF = Object.freeze({
   POINTAGE: 'pointage',
   REGLEMENT: 'reglement',
   RENTABILITE: 'rentabilite',
+  SAV: 'sav',
   SOUS_TRAITANCE: 'sous_traitance',
   STOCK: 'stock',
 });
