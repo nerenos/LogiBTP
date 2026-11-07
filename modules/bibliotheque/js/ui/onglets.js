@@ -218,7 +218,19 @@ export class OngletUnites {
   }
 }
 
-/** Onglet Tarifs fournisseurs : tableau avec liens (module Tarifs fournisseurs à venir), enregistré ligne à ligne. */
+/** Actions d'une ligne de tarif : ajout pour la ligne vide, suppression pour une ligne existante (l'enregistrement se fait à la sortie de ligne). */
+export const actionsLigneTarif = (t, modifiable) => (!modifiable ? [] : t.id ? ['supprimer'] : ['enregistrer']);
+
+/** Tarif à enregistrer à partir de la saisie d'une ligne. */
+export function tarifDepuisSaisie(t, saisie) {
+  const v = { ...t, ...saisie };
+  for (const c of ['prix', 'prix_public', 'remise1', 'remise2']) v[c] = nombreSaisi(v[c]);
+  v.delai = v.delai === null ? null : Number(nombreSaisi(v.delai));
+  if (v.prix === null && v.prix_public !== null) v.prix = '0';
+  return v;
+}
+
+/** Onglet Tarifs fournisseurs : tableau avec liens (module Tarifs fournisseurs à venir), enregistré à la sortie de chaque ligne. */
 export class OngletTarifs {
   constructor(corps, ctx) {
     this.corps = corps;
@@ -251,31 +263,46 @@ export class OngletTarifs {
       <td><input data-c="code_barre" value="${echapper(t.code_barre ?? '')}" ${ro} style="width:8rem"></td>
       <td><input type="date" data-c="debut" value="${echapper(t.debut ?? '')}" ${ro}></td><td><input type="date" data-c="fin" value="${echapper(t.fin ?? '')}" ${ro}></td>
       <td>${t.lien ? `<a href="${echapper(t.lien)}" target="_blank" rel="noopener" title="${echapper(t.lien)}">${iconeHtml('bibliotheque_lien')}</a>` : ''}<input data-c="lien" value="${echapper(t.lien ?? '')}" placeholder="https://…" ${ro} style="width:9rem"></td>
-      <td class="bib-actions">${modifiable ? `<button type="button" data-action="enregistrer">${iconeHtml(t.id ? 'bibliotheque_enregistrer' : 'ajouter')}</button>${t.id ? `<button type="button" data-action="supprimer" title="${texteHtml('commun.supprimer')}">${iconeHtml('supprimer')}</button>` : ''}` : ''}</td></tr>`;
+      <td class="bib-actions">${actionsLigneTarif(t, modifiable).map((a) => (a === 'enregistrer' ? `<button type="button" data-action="enregistrer">${iconeHtml('ajouter')}</button>` : `<button type="button" data-action="supprimer" title="${texteHtml('commun.supprimer')}">${iconeHtml('supprimer')}</button>`)).join('')}</td></tr>`;
     const lignes = modifiable ? [...tarifs, {}] : tarifs;
     this.corps.innerHTML = `<div class="bib-tarifs"><table class="bib-table"><thead><tr><th title="${texteHtml('bibliotheque.tarifs.colonnes.principal')}">${iconeHtml('bibliotheque_principal')}</th><th>${texteHtml('bibliotheque.tarifs.colonnes.fournisseur')}</th><th>${texteHtml('bibliotheque.tarifs.colonnes.reference')}</th><th>${texteHtml('commun.libelle')}</th><th>${texteHtml('bibliotheque.tarifs.colonnes.prix_public')}</th><th>${texteHtml('bibliotheque.tarifs.colonnes.remise1')}</th><th>${texteHtml('bibliotheque.tarifs.colonnes.remise2')}</th><th>${texteHtml('bibliotheque.tarifs.colonnes.prix')}</th><th>${texteHtml('bibliotheque.prix.colonnes.unite')}</th><th>${texteHtml('bibliotheque.tarifs.colonnes.delai')}</th><th>${texteHtml('bibliotheque.tarifs.colonnes.code_barre')}</th><th>${texteHtml('bibliotheque.tarifs.colonnes.debut')}</th><th>${texteHtml('bibliotheque.tarifs.colonnes.fin')}</th><th>${texteHtml('bibliotheque.tarifs.colonnes.lien')}</th><th></th></tr></thead>
       <tbody>${lignes.map(ligne).join('') || `<tr><td colspan="15" class="aide">${texteHtml('bibliotheque.tarifs.aucun')}</td></tr>`}</tbody></table>
       <p class="aide">${texteHtml('bibliotheque.tarifs.aide', { principal: icone('bibliotheque_principal') })}</p></div>`;
-    this.corps.querySelector('tbody').addEventListener('click', async (e) => {
-      const b = e.target.closest('button[data-action]');
-      if (!b) return;
-      const tr = b.closest('tr');
+    const corpsTable = this.corps.querySelector('tbody');
+    const sales = new Set();
+    // Une ligne existante modifiée s'enregistre quand on la quitte ; la ligne vide garde son bouton d'ajout.
+    const traiter = async (tr, action) => {
       const t = lignes[Number(tr.dataset.i)];
-      const v = { ...t };
-      tr.querySelectorAll('[data-c]').forEach((el) => { v[el.dataset.c] = el.type === 'radio' ? el.checked : el.value || null; });
-      for (const c of ['prix', 'prix_public', 'remise1', 'remise2']) v[c] = nombreSaisi(v[c]);
-      v.delai = v.delai === null ? null : Number(nombreSaisi(v.delai));
-      if (v.prix === null && v.prix_public !== null) v.prix = '0';
+      const saisie = {};
+      tr.querySelectorAll('[data-c]').forEach((el) => { saisie[el.dataset.c] = el.type === 'radio' ? el.checked : el.value || null; });
       try {
-        const r = b.dataset.action === 'supprimer'
+        const r = action === 'supprimer'
           ? (await confirmer(texte('bibliotheque.tarifs.supprimer')) ? await this.ctx.fournisseur.supprimerTarif(this.ctx.id, t.id) : null)
-          : await this.ctx.fournisseur.enregistrerTarif(this.ctx.id, v);
+          : await this.ctx.fournisseur.enregistrerTarif(this.ctx.id, tarifDepuisSaisie(t, saisie));
         if (!r) return;
         this.rendre(r.tarifs);
         signalerTarifs(this.ctx.id, r.tarifs);
         this.ctx.surPrix?.(r.prix);
         this.ctx.message(texte('bibliotheque.tarifs.enregistres', { pa: prix(r.prix.pa), pv_net: prix(r.prix.pv_net) }), 'succes');
-      } catch (x) { this.ctx.message(x.message, 'erreur'); }
+      } catch (x) {
+        tr.classList.add('erreur');
+        tr.title = x.message;
+        this.ctx.message(x.message, 'erreur');
+      }
+    };
+    corpsTable.addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-action]');
+      if (b) traiter(b.closest('tr'), b.dataset.action);
+    });
+    corpsTable.addEventListener('change', (e) => {
+      const tr = e.target.closest('tr[data-i]');
+      if (tr && lignes[Number(tr.dataset.i)]?.id) sales.add(tr);
+    });
+    corpsTable.addEventListener('focusout', (e) => {
+      const tr = e.target.closest('tr[data-i]');
+      if (!tr || !sales.has(tr) || tr.contains(e.relatedTarget)) return;
+      sales.delete(tr);
+      traiter(tr, 'enregistrer');
     });
   }
 }

@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { reglePremierTarif, calculerElement, convertir, codeAppel, analyserCodeAppel, coefficientsEffectifs } from '../src/calcul.js';
 import { FournisseurBibliothequeMemoire } from '../src/fournisseurs.js';
-import { suivreTarifs, signalerTarifs } from '../ui/onglets.js';
+import { suivreTarifs, signalerTarifs, actionsLigneTarif, tarifDepuisSaisie } from '../ui/onglets.js';
 import { entreeDepuisLigne } from '../src/fournisseurs.js';
 import { S } from '@logibtp/socle';
 
@@ -87,6 +87,26 @@ describe('onglet Prix : rechargement des tarifs', () => {
     expect(calculerElement(entreeDepuisLigne(elements[0], tarifs)).pa).toBe('10');
     signalerTarifs(1, []);
     expect(vus).toHaveLength(1);
+  });
+});
+
+describe('onglet Tarifs : enregistrement à la sortie de ligne', () => {
+  it("ligne modifiée : un seul EnregistrerTarif ; aucun bouton d'enregistrement par ligne existante ; ajout conservé", async () => {
+    const elements = [{ id: 1, bib_id: 1, code: 'HA10', type: 'ARTICLE', libelle_html: 'Acier', unite_stock: 'ml',
+      unites: [], proprietes: {}, scenario_pa: 'FIXE', coef_fg: '1', coef_benef: '1', coef_remise: '1', pv_fixe: false }];
+    const f = new FournisseurBibliothequeMemoire({ bibliotheques: [{ id: 1, code: 'GEN', libelle: 'G', defaut: true, ordre: 0 }], elements });
+    let appels = 0;
+    const origine = f.enregistrerTarif.bind(f);
+    f.enregistrerTarif = (...a) => { appels++; return origine(...a); };
+    const r1 = await f.enregistrerTarif(1, tarifDepuisSaisie({}, { fournisseur: 'X', unite: 'ml', prix: '10' }));
+    appels = 0;
+    const t = r1.tarifs[0];
+    const r2 = await f.enregistrerTarif(1, tarifDepuisSaisie(t, { prix: '12,5', remise1: null, delai: null }));
+    expect(appels).toBe(1);
+    expect(r2.tarifs[0].prix).toBe('12.5');
+    expect(actionsLigneTarif(t, true)).toEqual(['supprimer']);
+    expect(actionsLigneTarif({}, true)).toEqual(['enregistrer']);
+    expect(actionsLigneTarif(t, false)).toEqual([]);
   });
 });
 

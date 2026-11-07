@@ -40,7 +40,7 @@
 | 2 | Premier tarif principal, scénario FOURNISSEUR_PRINCIPAL | `modules/bibliotheque` | — | FAIT (08/11/2026) |
 | 3 | Résultat : dernier PA et PMP affichés comme des PR (reproduction puis correction) | `modules/bibliotheque` | 1 | A FAIRE |
 | 4 | Recopie du PMP et du dernier PA par le Stock (seulement si le lot 3 met la cause dans le cœur) | cœur | 3 | FAIT (08/11/2026) |
-| 5 | Onglet Tarifs de la fiche élément : enregistrement à la sortie de ligne | `modules/bibliotheque` | — | A FAIRE |
+| 5 | Onglet Tarifs de la fiche élément : enregistrement à la sortie de ligne | `modules/bibliotheque` | — | FAIT (08/11/2026) |
 | 6 | Onglet Tarifs de la fiche fournisseur : enregistrement à la sortie de ligne | cœur | 5 | A FAIRE |
 
 ---
@@ -105,7 +105,7 @@
 - **Jeux de tests** : test C# : après valorisation, PMP et dernier PA posés dans les colonnes PA de l'élément.
 - **Critère de fin** : `dotnet test LogiBTP.slnx` vert ; le cas de reproduction du lot 3 donne PR = PA × FG.
 
-## Lot 5 : onglet Tarifs de la fiche élément, enregistrement à la sortie de ligne (A FAIRE)
+## Lot 5 : onglet Tarifs de la fiche élément, enregistrement à la sortie de ligne (FAIT 08/11/2026 ; écart : enregistrement au focusout de la ligne modifiée (change puis sortie), helpers purs actionsLigneTarif / tarifDepuisSaisie exportés pour le test sans DOM)
 
 - **Module** : `modules/bibliotheque`. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `modules/bibliotheque/js/ui/onglets.js` (`:238`, bouton d'enregistrement de ligne retiré ; enregistrement
