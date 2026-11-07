@@ -1051,8 +1051,12 @@ public static class SourcesFicheListeEdition
         return new ElementEdite(type, $"{def.Libelle} {Titre(def.Titre, fiche, def) ?? cle}".Trim());
     }
 
+    /// <summary>Préfixe de l'identifiant « liste » de l'état du stock valorisé : <c>stock_etat|date ISO|lieu|zéros</c> (lot 8 du plan Stock).</summary>
+    public const string PrefixeEtatStock = "stock_etat|";
+
     public static async Task<ElementEdite?> ElementListe(IServiceProvider services, string id, Utilisateur u, CancellationToken ct)
     {
+        if (id.StartsWith(PrefixeEtatStock, StringComparison.Ordinal)) return new ElementEdite("stock_etat", "État du stock valorisé");
         if (!long.TryParse(id, out var vue)) return null;
         var v = await services.GetRequiredService<ServiceListe>().Vue(vue, u, ct);
         return new ElementEdite(v.VliTheme, v.VliNom);
@@ -1152,8 +1156,52 @@ public static class SourcesFicheListeEdition
     /// (au plus 5 000 lignes, lues par lots ; valeurs des colonnes à choix remplacées par leur libellé ; `_texte` :
     /// valeurs affichables dans l'ordre des colonnes, pour les étiquettes).
     /// </summary>
+    /// <summary>
+    /// État du stock valorisé (même calcul que la page et le CSV : <c>ServiceStock.EtatValoriseAsync</c>) mis à la forme d'une liste
+    /// imprimable (colonnes, lignes de texte formatées) ; un lieu (ou tous), une date, les articles à zéro ou non.
+    /// </summary>
+    public static async Task<JsonObject?> DonneesEtatStock(IServiceProvider services, string id, CancellationToken ct)
+    {
+        var p = id[PrefixeEtatStock.Length..].Split('|');
+        DateTimeOffset? date = p.Length > 0 && DateTimeOffset.TryParse(p[0], System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind, out var d) ? d : null;
+        var lieux = p.Length > 1 && long.TryParse(p[1], out var l) ? new List<long> { l } : null;
+        var zeros = p.Length > 2 && p[2] == "1";
+        var etat = await services.GetRequiredService<LogiBTP.Stock.Web.ServiceStock>().EtatValoriseAsync(date, lieux, zeros, ct);
+        var codes = etat.Lieux.ToDictionary(x => x.Lieu, x => x.Code);
+        string N(decimal? v, int dec) => v is null ? "" : v.Value.ToString("N" + dec, System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+        JsonObject Col(string cle, string titre, string largeur, string? alignement = null) => new() { ["cle"] = cle, ["titre"] = titre, ["largeur"] = largeur, ["alignement"] = alignement };
+        var colonnes = new JsonArray
+        {
+            Col("code", "Article", "22mm"), Col("libelle", "Libellé", "*"), Col("lieux", "Lieux", "30mm"), Col("quantite", "Quantité", "20mm", "droite"),
+            Col("unite", "Unité", "12mm"), Col("valeur_unitaire", "Valeur unitaire", "22mm", "droite"), Col("valeur", "Valeur", "24mm", "droite"),
+            Col("valeur_inventaire", "Valeur d'inventaire", "24mm", "droite"), Col("ecart", "Écart", "22mm", "droite"),
+        };
+        var lignes = new JsonArray();
+        foreach (var x in etat.Lignes)
+        {
+            lignes.Add(new JsonObject
+            {
+                ["code"] = x.Code, ["libelle"] = x.Libelle,
+                ["lieux"] = string.Join(", ", x.Lieux.Select(q => $"{codes.GetValueOrDefault(q.Lieu, q.Lieu.ToString())} : {N(q.Quantite, x.Precision)}")),
+                ["quantite"] = N(x.Quantite, x.Precision), ["unite"] = x.Unite, ["valeur_unitaire"] = N(x.ValeurUnitaire, 4), ["valeur"] = N(x.Valeur, 2),
+                ["valeur_inventaire"] = N(x.ValeurInventaire, 2), ["ecart"] = x.ValeurInventaire is null ? "" : N(Math.Round(x.ValeurInventaire.Value - (x.Valeur ?? 0), 2, MidpointRounding.AwayFromZero), 2),
+            });
+        }
+        var titre = $"État du stock valorisé au {DateTimeOffset.Parse(etat.Date, System.Globalization.CultureInfo.InvariantCulture):dd/MM/yyyy HH:mm}";
+        return new JsonObject
+        {
+            ["liste"] = new JsonObject
+            {
+                ["nom"] = titre, ["theme"] = "stock_etat", ["recherche"] = null, ["tronquee"] = false, ["nombre"] = lignes.Count,
+                ["methode"] = etat.Methode, ["total"] = $"Valeur : {N(etat.Valeur, 2)} – valeur d'inventaire : {N(etat.ValeurInventaire, 2)}",
+            },
+            ["colonnes"] = colonnes, ["lignes"] = lignes,
+        };
+    }
+
     public static async Task<JsonObject?> DonneesListe(IServiceProvider services, string id, string? recherche, Utilisateur u, CancellationToken ct)
     {
+        if (id.StartsWith(PrefixeEtatStock, StringComparison.Ordinal)) return await DonneesEtatStock(services, id, ct);
         if (!long.TryParse(id, out var vueId)) return null;
         var listes = services.GetRequiredService<ServiceListe>();
         var vue = await listes.Vue(vueId, u, ct);

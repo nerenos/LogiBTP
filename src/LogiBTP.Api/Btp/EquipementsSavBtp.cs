@@ -7,6 +7,7 @@ using LogiBTP.Sav.Web;
 using LogiBTP.Socle;
 using LogiBTP.Stock;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace LogiBTP.Api.Btp;
 
@@ -21,6 +22,25 @@ namespace LogiBTP.Api.Btp;
 /// </summary>
 public static class EquipementsSavBtp
 {
+    public sealed record InterventionEquipement(long Id, long EntId, string? Numero, string? Objet, DateOnly Le, string Constat, string Travaux, bool Terminee, bool Absent);
+
+    /// <summary>
+    /// Historique des interventions SAV d'un équipement (lot 6) : comptes rendus du terrain (`intervention_sav.isv_eqi_id`),
+    /// sous le nœud de droits sav ; route du cœur ajoutée au groupe /api/sav du module.
+    /// </summary>
+    public static RouteGroupBuilder MapInterventionsEquipement(this RouteGroupBuilder api)
+    {
+        var g = api.MapGroup("/sav");
+        g.MapGet("/equipements/{id:long}/interventions", async (long id, LogiBtpContext db, CancellationToken ct) =>
+            await db.Database.SqlQueryRaw<InterventionEquipement>("""
+                SELECT i.isv_id AS id, i.isv_ent_id AS ent_id, d.ent_numero AS numero, d.ent_objet AS objet, i.isv_le AS le, i.isv_constat AS constat,
+                       i.isv_travaux AS travaux, i.isv_terminee AS terminee, i.isv_absent AS absent
+                FROM intervention_sav i JOIN document d ON d.ent_id = i.isv_ent_id
+                WHERE i.isv_eqi_id = @q ORDER BY i.isv_le DESC, i.isv_id DESC
+                """, new NpgsqlParameter("q", id)).ToListAsync(ct));
+        return g;
+    }
+
     private sealed record EnteteSql(DateTimeOffset? DateMouvement, int? Origine, int? Destination, int? Chantier, long? Tiers, string Auteur);
     private sealed record LigneSql(long LigId, long EleId, string? Lots, int? GarantieMois, long? Source);
     private sealed record LieuSql(int Id, long? Tiers);

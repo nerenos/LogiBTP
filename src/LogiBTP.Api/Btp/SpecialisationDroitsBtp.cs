@@ -139,6 +139,7 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
         new("/api/pointage/sous-types", ModeRoute.Parametrage),
         new("/api/pointage/profils", ModeRoute.Parametrage),
         new("/api/stock/parametres", ModeRoute.Parametrage),
+        new("/api/stock/clotures", ModeRoute.Parametrage),
         new("/api/editions-btp/mentions", ModeRoute.Parametrage),
         new("/api/editions/chartes", ModeRoute.Parametrage),
         new("/api/editions/defauts", ModeRoute.Parametrage),

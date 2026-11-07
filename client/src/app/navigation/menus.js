@@ -115,6 +115,8 @@ export const MENUS_METIER = [
       { code: 'stock-dotations', libelle: texte('navigation_btp.menus.stock.stock_dotations.libelle'), iconeHtml: iconeHtml('navigation_btp_stock_dotations'), url: '/stock/dotations', info: texte('navigation_btp.menus.stock.stock_dotations.info') },
       { separateur: true },
       { code: 'stock-etat', libelle: texte('navigation_btp.menus.stock.stock_etat.libelle'), iconeHtml: iconeHtml('navigation_btp_stock_etat'), url: '/stock', info: texte('navigation_btp.menus.stock.stock_etat.info') },
+      { code: 'stock-valorise', libelle: texte('navigation_btp.menus.stock.stock_valorise.libelle'), iconeHtml: iconeHtml('navigation_btp_stock_valorise'), url: '/stock/etat-valorise', info: texte('navigation_btp.menus.stock.stock_valorise.info') },
+      { code: 'stock-clotures', libelle: texte('navigation_btp.menus.stock.stock_clotures.libelle'), iconeHtml: iconeHtml('navigation_btp_stock_clotures'), url: '/stock/clotures', info: texte('navigation_btp.menus.stock.stock_clotures.info') },
       { code: 'stock-mouvements', libelle: texte('navigation_btp.menus.stock.stock_mouvements.libelle'), iconeHtml: iconeHtml('navigation_btp_stock_mouvements'), url: L('stk_mouvements') },
       { code: 'stock-documents', libelle: texte('navigation_btp.menus.stock.stock_documents.libelle'), iconeHtml: iconeHtml('navigation_btp_stock_documents'), url: L('stock_documents'), creation: D('S_TRANSFERT', texte('navigation_btp.menus.stock.stock_documents.creation')) },
       { code: 'stock-appro', libelle: texte('navigation_btp.menus.stock.stock_appro.libelle'), iconeHtml: iconeHtml('navigation_btp_stock_appro'), url: '/stock/approvisionnement', info: texte('navigation_btp.menus.stock.stock_appro.info') },
@@ -124,6 +126,11 @@ export const MENUS_METIER = [
       { code: 'stock-depots', libelle: texte('navigation_btp.menus.stock.stock_depots.libelle'), iconeHtml: iconeHtml('navigation_btp_stock_depots'), url: L('depots'), info: texte('navigation_btp.menus.stock.stock_depots.info') },
       { separateur: true },
       { code: 'stock-parametres', libelle: texte('navigation_btp.menus.stock.stock_parametres.libelle'), iconeHtml: iconeHtml('navigation_btp_stock_parametres'), url: '/parametres/stock' },
+    ],
+  },
+  {
+    code: 'sav', libelle: texte('navigation_btp.menus.sav.libelle'), module: MODULE_FACULTATIF.SAV, droit: 'sav', elements: [
+      { code: 'sav-equipements', libelle: texte('navigation_btp.menus.sav.sav_equipements.libelle'), iconeHtml: iconeHtml('navigation_btp_sav_equipements'), url: L('sav_equipements'), info: texte('navigation_btp.menus.sav.sav_equipements.info'), creation: { url: '/sav/equipement/nouveau', titre: texte('navigation_btp.menus.sav.sav_equipements.creation') } },
     ],
   },
   {

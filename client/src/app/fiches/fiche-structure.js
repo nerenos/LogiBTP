@@ -253,6 +253,8 @@ export class FicheStructure extends FicheLogiBTP {
         `<a href="/liste/${theme}?${new URLSearchParams({ [this.type]: v.code })}" title="${texteHtml('fiches_btp.structure.liste_filtree', { libelle, code: v.code })}">${echapper(libelle)}</a>`).join(' · ')}</b></div>` : '')
       + (this.id !== null && ['chantier', 'marche'].includes(this.type) && this.moduleActif(MODULE_FACULTATIF.REGLEMENT)
         ? `<div class="fiche-info"><span>${texteHtml('fiches_btp.structure.reglements')}</span><b><a href="/reglements?${this.type}=${Number(this.id)}" title="${texteHtml(this.type === TYPE_FICHE.CHANTIER ? 'fiches_btp.reglements_aide_chantier' : 'fiches_btp.reglements_aide_marche')}">${texteHtml('fiches_btp.structure.echeances')}</a></b></div>` : '')
+      + (this.id !== null && this.type === TYPE_FICHE.CHANTIER && this.moduleActif(MODULE_FACULTATIF.SAV) && this.acces('sav')
+        ? `<div class="fiche-info"><span>${texteHtml('sav_btp.equipement.chantier_raccourci')}</span><b><a href="/sav/equipement/nouveau?lieu=${Number(this.id)}">${iconeHtml('sav_btp_equipement')} ${texteHtml('sav_btp.equipement.nouveau_chantier')}</a></b></div>` : '')
       + (this.id !== null && this.type === TYPE_FICHE.CHANTIER && this.moduleActif(MODULE_FACULTATIF.RENTABILITE) && this.acces('rentabilite')
         ? `<div class="fiche-info"><span>${texteHtml('fiches_btp.structure.rentabilite')}</span><b><a href="/rentabilite/chantier/${Number(this.id)}" title="${texteHtml('fiches_btp.structure.rentabilite_aide')}">${iconeHtml('rentabilite_detail')} ${texteHtml('fiches_btp.structure.rentabilite_detail')}</a></b></div>` : '');
   }
@@ -267,6 +269,8 @@ export class FicheStructure extends FicheLogiBTP {
       ...(this.moduleActif(MODULE_FACULTATIF.SOUS_TRAITANCE) ? pairesParCode('fiches_btp.structure.listes', ['marches_st', 'st_commandes', 'st_factures']) : []),
       // Lots sortis vers le chantier (S24-c, colonne chantier de v_liste_stk_lots).
       ...(this.moduleActif(MODULE_FACULTATIF.STOCK) ? pairesParCode('fiches_btp.structure.listes', ['stk_lots']) : []),
+      // Équipements installés chez le client du chantier (module SAV, colonne chantier de v_liste_equipements).
+      ...(this.moduleActif(MODULE_FACULTATIF.SAV) && this.acces('sav') ? pairesParCode('fiches_btp.structure.listes', ['sav_equipements']) : []),
     ];
   }
 

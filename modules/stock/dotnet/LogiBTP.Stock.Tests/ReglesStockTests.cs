@@ -57,6 +57,27 @@ public class ReglesStockTests
     }
 
     [Fact]
+    public void Valorisation_a_date_identique_au_js()
+    {
+        foreach (var c in Jeu("06_valorisation_date.json")["cas"]!.AsArray())
+        {
+            var m = c!["mouvements"]!.AsArray().Select(x => new MouvementValorise(x!["id"]!.GetValue<long>(), x["lieu"]!.GetValue<long>(), Txt(x["date"])!,
+                Dec(x["quantite"]!), DecN(x["prix"]), x["provisoire"]?.GetValue<bool>() ?? false)).ToList();
+            var k = c["comptages"]!.AsArray().Select(x => new ComptageLieu(x!["lieu"]!.GetValue<long>(), Txt(x["date"])!, Dec(x["quantite"]!), DecN(x["prix"]))).ToList();
+            var rv = c["reevaluations"]!.AsArray().Select(x => new Reevaluation(Txt(x!["date"])!, Dec(x["pmp"]!))).ToList();
+            var r = ReglesValorisation.ValoriserEtat(m, k, rv, Txt(c["date"]), c["methode"]!.GetValue<string>(), DecN(c["repli"]));
+            var a = c["attendu"]!;
+            var nom = c["nom"]!.ToString();
+            Assert.True(r.ValeurUnitaire == DecN(a["valeur_unitaire"]) && r.Source == Txt(a["source"]) && r.Provisoire == a["provisoire"]!.GetValue<bool>()
+                && r.PrixInventaire == DecN(a["prix_inventaire"]), $"{nom} : valeur unitaire {r}");
+            Assert.True(r.Quantite == Dec(a["quantite"]!) && r.Valeur == DecN(a["valeur"]) && r.ValeurInventaire == DecN(a["valeur_inventaire"]), $"{nom} : totaux {r}");
+            var l = a["lieux"]!.AsArray();
+            Assert.True(l.Count == r.Lieux.Count && l.Select((x, i) => x!["lieu"]!.GetValue<long>() == r.Lieux[i].Lieu && Dec(x["quantite"]!) == r.Lieux[i].Quantite
+                && DecN(x["valeur"]) == r.Lieux[i].Valeur && DecN(x["valeur_inventaire"]) == r.Lieux[i].ValeurInventaire).All(b => b), $"{nom} : lieux");
+        }
+    }
+
+    [Fact]
     public void Inventaire_identique_au_js()
     {
         static long? L(JsonNode? n) => n is null ? null : n.GetValue<long>();

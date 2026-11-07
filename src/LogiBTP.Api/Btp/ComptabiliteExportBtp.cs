@@ -55,6 +55,12 @@ public sealed partial class SpecialisationComptabiliteBtp
     /// <summary>Type comptable des écarts d'inventaire du stock (`db/269`).</summary>
     public const string TypeStock = "STOCK";
 
+    /// <summary>Types comptables des clés de ventilation de la variation de fin d'exercice et de la dépréciation du stock (`db/276`).</summary>
+    public const string TypeStockVariation = "STOCK_VARIATION";
+    public const string TypeStockProvision = "STOCK_PROVISION";
+
+    private sealed record ClotureNatureSql(long Ent, string? Code, string Libelle, decimal Initial, decimal Final, decimal ProvisionInitiale, decimal ProvisionFinale);
+
     /// <summary>
     /// Genre d'un poste de pied : marqueur du marché, sinon genre recopié de l'élément POSTE_PIED, sinon (lignes saisies
     /// avant le genre) libellé.
@@ -128,6 +134,14 @@ public sealed partial class SpecialisationComptabiliteBtp
             FROM marche_poste m LEFT JOIN personne p ON p.per_id = m.mpo_per_id
             """).ToListAsync(ct)).ToDictionary(p => p.Id);
         var typesPostes = postesMarche.ToDictionary(p => p.Key, p => p.Value.Type);
+        // Natures des clôtures du stock (`db/277`) portées par les pièces exportées : valeurs de début et de fin d'exercice.
+        var clotures = (await db.Database.SqlQuery<ClotureNatureSql>($"""
+            SELECT c.clo_ent_id AS ent, e.nat_code AS code, coalesce(e.nat_libelle, 'Sans nature') AS libelle, n.cln_initial AS initial, n.cln_final AS final,
+                   n.cln_provision_initiale AS provision_initiale, n.cln_provision_finale AS provision_finale
+            FROM stk_cloture c JOIN stk_cloture_nature n ON n.cln_clo_id = c.clo_id LEFT JOIN nature_element e ON e.nat_id = n.cln_nat_id
+            WHERE c.clo_etat = 'ACTIVE' AND c.clo_ent_id = ANY({ents})
+            ORDER BY c.clo_ent_id, n.cln_id
+            """).ToListAsync(ct)).ToLookup(x => x.Ent);
         var typesComptables = await db.TypesComptables.AsNoTracking().ToDictionaryAsync(t => t.TcoCode, ct);
         var typesRegle = typesComptables.Values.Where(t => t.TcoActif).Select(t => new TypeVentilation(t.TcoCode, t.TcoParent, t.TcoCptDefaut)).ToList();
         // Clés enregistrées par identifiant, comparées aux codes des lignes (code du moment de la nature et du taux).
@@ -179,6 +193,26 @@ public sealed partial class SpecialisationComptabiliteBtp
                     var r = ReglesVentilation.Compte(new EntreeVentilation(l.Compte, l.Nature, l.Taux, tco, compteTiersLignes), typesRegle, cles);
                     return new LignePiece(r.Compte, l.Taux, l.Montant ?? 0, r.Erreur);
                 }).ToList();
+            if (tco == TypeStock && clotures.Contains(d.Id))
+            {
+                // Clôture du stock : variation et dépréciation par nature (ReglesStockCompta), comptes des clés de ventilation de chaque type.
+                string? ComptePar(string typeVentilation, string? nature)
+                {
+                    var r = ReglesVentilation.Compte(new EntreeVentilation(null, nature, null, typeVentilation), typesRegle, cles);
+                    return r.Erreur is null ? r.Compte : null;
+                }
+                var natures = clotures[d.Id].Select(n => new StockNature(n.Libelle, ComptePar(TypeStock, n.Code), ComptePar(TypeStockVariation, n.Code),
+                    ComptePar(TypeStockProvision, n.Code), n.Initial, n.Final, n.ProvisionInitiale, n.ProvisionFinale)).ToList();
+                var cloture = ReglesStockCompta.Cloturer(natures, new ComptesDepreciation(Compte(TypeStockProvision, t => t.TcoCptDotation), Compte(TypeStockProvision, t => t.TcoCptReprise)));
+                var lignesOd = cloture.Lignes.ToList();
+                // Compte manquant : ligne sans compte, que l'écriture signale (COMPTE_INTROUVABLE) avec le libellé de la nature en cause.
+                foreach (var (code, noms) in cloture.Details)
+                    foreach (var nom in noms) lignesOd.Add(new LigneOd(null, $"{ReglesStockCompta.Messages[code]} – {nom}", 1));
+                res.Add(new PieceExportee(new PieceComptable(d.Id, type?.TcoJournal ?? tco, d.Date, d.Numero ?? $"#{d.Id}", d.Reference, d.Objet ?? d.Numero ?? "",
+                    type?.TcoSens ?? "ACHAT", 1, null, null, [], [], [], [], [], 0, null, null, Compte(tco, t => t.TcoCptEcartDebit), Compte(tco, t => t.TcoCptEcartCredit),
+                    d.Chantier, lignesOd), tco, d.TypeDocument, d.Objet, d.TotalTtc, d.Etat));
+                continue;
+            }
             if (tco == TypeStock)
             {
                 // Opération diverse : compte de stock par la ventilation de chaque ligne, contrepartie en variation.

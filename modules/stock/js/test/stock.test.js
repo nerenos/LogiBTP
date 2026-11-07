@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { stockA, ecartComptage, valoriser, valeurUnitaire, controlerLot, MESSAGES_INVENTAIRE, projeter, minimumJusqua, proposer, repartirLots, dateLimiteLot, stockParLot, proposerLots, MESSAGES_TRACABILITE } from '../src/index.js';
+import { stockA, ecartComptage, valoriser, valeurUnitaire, valoriserEtat, controlerLot, MESSAGES_INVENTAIRE, projeter, minimumJusqua, proposer, repartirLots, dateLimiteLot, stockParLot, proposerLots, MESSAGES_TRACABILITE } from '../src/index.js';
 
 // Jeux partagés avec ReglesStock.cs et ReglesValorisation.cs (LogiBTP.Stock.Tests).
 const lire = (f) => JSON.parse(fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../tests/cas', f), 'utf8'));
@@ -25,6 +25,14 @@ describe('valorisation (jeu partagé)', () => {
       expect(r).toEqual(attendu);
       const u = valeurUnitaire(r, c.methode, c.repli);
       expect(u).toEqual({ valeur, source, provisoire: Boolean(vp) });
+    });
+  }
+});
+
+describe('stock valorisé à une date, tous lieux (jeu partagé)', () => {
+  for (const c of lire('06_valorisation_date.json').cas) {
+    it(c.nom, () => {
+      expect(valoriserEtat({ mouvements: c.mouvements, comptages: c.comptages, reevaluations: c.reevaluations }, c.date, c.methode, c.repli)).toEqual(c.attendu);
     });
   }
 });

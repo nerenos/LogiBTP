@@ -497,6 +497,24 @@ const AUTRES = [
       ] } }],
     },
   },
+  // État du stock valorisé (lot 8 du plan Stock) : source « liste » dont l'identifiant est « stock_etat|date|lieu|zéros »
+  // (SourcesFicheListeEdition.DonneesEtatStock, même calcul que la page /stock/etat-valorise) ; colonnes fournies par la source.
+  {
+    code: 'ETAT_STOCK_VALORISE', libelle: 'État du stock valorisé', genre: 'RAPPORT', cible: 'LISTE', source: 'liste', types: ['stock_etat'], ordre: 40,
+    contenu: {
+      format_version: 1, code: 'ETAT_STOCK_VALORISE', libelle: 'État du stock valorisé', cible: 'LISTE', source: 'liste',
+      page: { format: 'A4', orientation: 'paysage', flexible: ['A4', 'A3'], marges: { haut: 10, bas: 10, gauche: 10, droite: 10 } },
+      bandes: [
+        { type: 'ENTETE_PAGE', pages: 'SUIVANTES', contenu: champ('{{liste.nom}}', { style: 'gras', cadre: { bas: 'fin' } }) },
+        { type: 'PIED_PAGE', contenu: bloc('PIED_INTERNE') },
+        { type: 'TITRE', contenu: { type: 'pile', marges: { bas: 2 }, enfants: [
+          { type: 'rangee', enfants: [champ('{{liste.nom}}', { style: 'titre', largeur: '*' }), champ('{{liste.nombre}} article(s)', { alignement: 'droite', style: 'discret', largeur: '50mm' })] },
+          champ('{{liste.total}}', { style: 'gras' }),
+        ] } },
+        { type: 'CORPS', contenu: { type: 'tableau', collection: 'lignes', colonnes_source: 'colonnes', report: false, vide: 'Aucun article en stock' } },
+      ],
+    },
+  },
 ];
 
 // Éditions d'un marché de sous-traitance (module Sous-traitance, lot 5 ; ST17, ST29) : source « fiche » du marché et

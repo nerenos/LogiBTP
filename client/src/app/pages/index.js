@@ -14,11 +14,14 @@ import { PageParametresRevision } from './parametres-revision.js';
 import { PagePlanComptable, PageTiersComptables, PageParametresComptabilite, PageVentilation, PageExportComptable } from './comptabilite.js';
 import { PageComparatifConsultation } from './consultation.js';
 import { PageStock, PageMouvementStock } from '../stock/etat.js';
+import { PageEtatValorise } from '../stock/etat-valorise.js';
+import { PageClotures } from '../stock/clotures.js';
 import { PageParametresStock } from '../stock/parametres.js';
 import { PageInventaires, PageInventaire } from '../stock/inventaires.js';
 import { PageApprovisionnement, PageProjection } from '../stock/approvisionnement.js';
 import { PageMagasin, PageDotations, PageSaisiesAValider, PageFicheDotation } from '../stock/magasin.js';
 import { PageLotStock } from '../stock/lot.js';
+import { PageEquipement } from '../sav/equipement.js';
 import { PageParametresGed } from './parametres-ged.js';
 import { PageParametresRaccourcis } from './parametres-raccourcis.js';
 import { PageGraphe } from './graphe.js';
@@ -86,8 +89,11 @@ export const ROUTES = [
   { nom: 'parametres-sous-traitance', chemin: '/parametres/sous-traitance', page: PageParametresSousTraitance, titre: texte('sous_traitance_btp.routes.parametres') },
   { nom: 'consultation-comparatif', chemin: '/consultation/comparatif', page: PageComparatifConsultation, titre: texte('sous_traitance_btp.routes.comparatif') },
   { nom: 'stock', chemin: '/stock', page: PageStock, titre: texte('stock_btp.routes.stock') },
+  { nom: 'etat-valorise', chemin: '/stock/etat-valorise', page: PageEtatValorise, titre: texte('stock_btp.routes.etat_valorise') },
+  { nom: 'clotures-stock', chemin: '/stock/clotures', page: PageClotures, titre: texte('stock_btp.routes.clotures') },
   { nom: 'mouvement-stock', chemin: '/stock/mouvement/:id', page: PageMouvementStock, titre: texte('stock_btp.routes.mouvement') },
   { nom: 'lot-stock', chemin: '/stock/lot/:id', page: PageLotStock, titre: texte('stock_btp.routes.lot') },
+  { nom: 'equipement', chemin: '/sav/equipement/:id', page: PageEquipement, titre: texte('sav_btp.routes.equipement') },
   { nom: 'inventaires', chemin: '/stock/inventaires', page: PageInventaires, titre: texte('stock_btp.routes.inventaires') },
   { nom: 'inventaire', chemin: '/stock/inventaire/:id', page: PageInventaire, titre: texte('stock_btp.routes.inventaire') },
   { nom: 'approvisionnement', chemin: '/stock/approvisionnement', page: PageApprovisionnement, titre: texte('stock_btp.routes.approvisionnement') },

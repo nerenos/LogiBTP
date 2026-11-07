@@ -11,13 +11,13 @@
 | 2 | Module SAV : équipements installés | `modules/sav` (nouveau) | — | FAIT (C# à compiler) |
 | 3 | Durée de garantie des articles suivis | `modules/stock` | — | FAIT |
 | 4 | Équipements créés par les mouvements de stock | cœur | 2, 3 | FAIT (C# à compiler) |
-| 5 | Écrans des équipements | cœur | 4 | A FAIRE |
-| 6 | Interventions SAV rattachées aux équipements | cœur | 5 | A FAIRE |
-| 7 | Stock valorisé à date de tous les lieux | `modules/stock` | — | A FAIRE |
-| 8 | État du stock valorisé (page, CSV, édition) | cœur | 7 | A FAIRE |
-| 9 | Écritures de variation et de dépréciation | `modules/comptabilite` | — | A FAIRE |
-| 10 | Clôture du stock : variation de fin d'exercice | cœur | 7, 9 | A FAIRE |
-| 11 | Clôture du stock : provision pour dépréciation | cœur | 10 | A FAIRE |
+| 5 | Écrans des équipements | cœur | 4 | FAIT |
+| 6 | Interventions SAV rattachées aux équipements | cœur | 5 | FAIT |
+| 7 | Stock valorisé à date de tous les lieux | `modules/stock` | — | FAIT |
+| 8 | État du stock valorisé (page, CSV, édition) | cœur | 7 | PARTIEL |
+| 9 | Écritures de variation et de dépréciation | `modules/comptabilite` | — | FAIT |
+| 10 | Clôture du stock : variation de fin d'exercice | cœur | 7, 9 | FAIT |
+| 11 | Clôture du stock : provision pour dépréciation | cœur | 10 | FAIT |
 
 ---
 
@@ -94,6 +94,11 @@
   `client/personnalisation/fr.json` (`sav_btp.*`), `SpecialisationFicheBtp`.
 - **Règles répliquées** : aucune. **Jeux** : tests de parité des colonnes de liste.
 - **Critère de fin** : liste et fiche ouvertes depuis le menu et depuis la page du lot ; `npm test` vert.
+- **FAIT le 06/11/2026** (non commité). Écarts : page `/sav/equipement/:id` (`client/src/app/sav/equipement.js`) et non fiche
+  de structure (`definitions.js`, `SpecialisationFicheBtp` inchangés) ; vue SQL `db/274_sav_liste.sql` (colonne `chantier`
+  filtrée par `?chantier=CODE`) ; menu « SAV » propre au module ; fiche chantier : raccourci de liste + lien « Nouvel équipement » ;
+  page du lot : numéros d'équipements trouvés par `GET /sav/equipements?numero&article` (aucun C# du cœur touché). Remplacement :
+  même article et chantier, nouveau numéro saisi. `npm test` : seuls les 2 échecs déjà connus. Pas testé dans le navigateur.
 
 ## Lot 6 : interventions SAV rattachées aux équipements
 
@@ -104,6 +109,12 @@
 - **Règles répliquées** : aucune. **Jeux** : aucun nouveau.
 - **Critère de fin** : une intervention saisie au terrain sur un numéro de série apparaît dans l'historique de
   l'équipement ; `npm test` et `dotnet test LogiBTP.slnx` verts.
+- **FAIT le 06/11/2026** (non commité ; C# non compilé). Écarts : script `db/275_sav_interventions_equipement.sql` (274 pris au lot 5) ;
+  colonne `isv_eqi_id` ; `TerrainSavBtp.cs` (champ `Equipement` du compte rendu, `GET /api/terrain/sav/equipements`) ;
+  `EquipementsSavBtp.MapInterventionsEquipement` (`GET /api/sav/equipements/{id}/interventions`, mappé dans `Program.cs`) ;
+  `pages/terrain-sav.js` (recherche par numéro ou code-barres saisi au clavier, ni caméra ni écran dédié `sav-terrain.js`) ;
+  historique sur la page de l'équipement. Opération hors ligne inchangée (le compte rendu porte l'équipement). Pas de test
+  automatisé du terrain (C# et écran non essayés).
 
 ## Lot 7 : stock valorisé à date de tous les lieux
 
@@ -114,6 +125,10 @@
   (`EtatValoriseAsync(date, lieux)`), `093j_stock_etat.sql` si une vue ensembliste est nécessaire.
 - **Règles répliquées** : valeur à date et valeur d'inventaire (jeu ci-dessus).
 - **Critère de fin** : le jeu passe en JS et en C# ; `npm test`, `dotnet test LogiBTP.slnx` verts.
+- **FAIT le 07/11/2026** (non commité ; C# non compilé). Écarts : jeu `06_valorisation_date.json` (9 cas, JS vert) ; règle
+  `valoriserEtat` ↔ `ValoriserEtat` (valeur d'inventaire = prix du dernier comptage chiffré de l'article à la date × quantité du lieu) ;
+  `ComptageLieu` reçoit `Prix` ; `ServiceStock.EtatValoriseAsync` et route `GET /api/stock/etat-valorise` ; aucun SQL (pas de `093j`),
+  tout l'historique ≤ date est rejoué en mémoire (à surveiller sur un gros stock).
 
 ## Lot 8 : état du stock valorisé
 
@@ -123,6 +138,12 @@
   `ETAT_STOCK_VALORISE` (`client/src/app/editions/modeles.js`, `db/191`), route dans `Btp/StockBtp.cs`,
   `SpecialisationDroitsBtp`, textes `stock_btp.*`.
 - **Règles répliquées** : aucune (lot 7). **Critère de fin** : page, CSV et PDF donnent le même total à une date donnée.
+- **PARTIEL, 07/11/2026** (non commité). Fait : page `/stock/etat-valorise` (`client/src/app/stock/etat-valorise.js`, tous lieux ou un seul, date-heure,
+  articles à zéro, recherche), totaux par lieu, valeur d'inventaire et écart, export CSV, menu Stock, textes `stock_btp.valorise.*`,
+  `api.stock.etatValorise` ; aucune route de plus (celle du lot 7 sert) ; `npm test` : seuls les 2 échecs connus. PDF fait le
+  07/11/2026 : modèle `ETAT_STOCK_VALORISE` (`modeles.js`, `db/191` régénéré), source « liste » d'identifiant
+  `stock_etat|date|lieu|zéros` (`SourcesFicheListeEdition.DonneesEtatStock`, mêmes calculs que la page), bouton PDF de la page ;
+  C# non compilé, aucun droit propre au stock vérifié sur cette source, écran, CSV et PDF non essayés dans un navigateur.
 
 ## Lot 9 : écritures de variation et de dépréciation
 
@@ -135,6 +156,13 @@
 - **Ventilation** : un compte par nature d'article (clés de ventilation du type STOCK, décision du 06/11/2026).
 - **Point OUVERT** : comptes par défaut (603x / 31x–37x, 6817 / 7817 / 39x).
 - **Critère de fin** : `dotnet test LogiBTP.slnx` vert avec les nouveaux cas.
+- **FAIT le 07/11/2026** (non commité ; C# non compilé). Écarts : règle `ReglesStockCompta.Cloturer` (nouveau fichier) et jeu à part
+  `04_stock_compta.json` (12 cas, test `ReglesStockComptaTests`) ; `db/094f` (dotation et reprise sur le type comptable, saisis dans
+  Paramètres › Comptabilité, route et DTO `types-comptables` étendus) ; cœur `db/276` : types `STOCK_VARIATION` et `STOCK_PROVISION`
+  créés sans compte, comptes par nature en clés de ventilation (page existante). **Point ouvert tranché par le paramétrage** : aucun
+  compte par défaut imposé, une nature sans compte est écartée et signalée ; à titre indicatif 603x (variation), 39x (provision),
+  6817 (dotation), 7817 (reprise). L'opération n'est pas encore produite de bout en bout (pièce, export, calcul des valeurs initiale
+  et finale) : c'est le lot 10.
 
 ## Lot 10 : clôture du stock, variation de fin d'exercice
 
@@ -145,14 +173,27 @@
   textes.
 - **Critère de fin** : une clôture produit une OD équilibrée égale à la différence entre deux états valorisés ;
   annulée, la pièce disparaît de l'export ; `dotnet test LogiBTP.slnx` vert.
+- **FAIT le 07/11/2026** (non commité ; C# jamais compilé ni exécuté, y compris cette chaîne de bout en bout). Écarts : script
+  `db/277_stock_cloture.sql` (275 et 276 pris ; `stk_cloture` + `stk_cloture_nature`, colonnes de provision prêtes pour le lot 11) ;
+  `Btp/ClotureStockBtp.cs` (aperçu, création, liste, annulation sous `/api/stock/clotures`, droit de paramétrage donc administrateur) ;
+  `InventaireComptableBtp.PieceEcartsAsync` rendue `internal`, lieu facultatif ; pièce S_INVENTAIRE à une ligne par article (± 1 × variation
+  de sa valeur) ; `ComptabiliteExportBtp` : une pièce de clôture est écrite par nature avec `ReglesStockCompta` (comptes des clés de
+  ventilation des types STOCK, STOCK_VARIATION, STOCK_PROVISION), compte manquant = pièce en erreur ; page `/stock/clotures` (menu Stock).
+  Départ par défaut = clôture précédente active, sinon stock initial nul. Annulation refusée (`CLOTURE_TRANSFEREE`) si la pièce est déjà
+  transférée : pas de contre-passation. Le critère « OD égale à la différence entre deux états valorisés » n'a pas de test automatisé.
 
-## Lot 11 : clôture du stock, provision pour dépréciation
+## Lot 11 : clôture du stock, provision pour dépréciation (FAIT, 07/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `Btp/ClotureStockBtp.cs` (provision = valeur à la méthode − valeur d'inventaire saisie, S30 ; reprise
   de la provision de la clôture précédente), page de clôture, textes, `TODO.md` (item Clôture fait).
 - **Critère de fin** : une valeur d'inventaire inférieure au PMP produit la dotation, la clôture suivante la reprend ;
   `dotnet test LogiBTP.slnx` vert.
+- **FAIT le 07/11/2026** (non commité ; C# jamais compilé ni exécuté). Écarts : provision par article = valeur à la méthode −
+  valeur d'inventaire (S30) quand celle-ci est inférieure, cumulée par nature ; provision de départ = `cln_provision_finale`
+  de la clôture active datée du départ (reprise), nature reprise même si absente de l'état ; clôture sans variation de
+  valeur mais avec provision acceptée (lignes à zéro) ; colonnes de provision de l'aperçu et de la page ; la pièce créée est
+  supprimée si sa création échoue. Aucun test automatique de la chaîne (règle `ReglesStockCompta` testée au lot 9).
 
 ## Points ouverts
 

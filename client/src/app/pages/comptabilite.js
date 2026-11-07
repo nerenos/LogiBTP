@@ -386,7 +386,7 @@ export class PageParametresComptabilite extends PageBase {
     const ro = ecrire ? '' : 'readonly';
     const z = this.#section('[data-types]');
     const t = this.types;
-    const comptes = ['compte_defaut', 'compte_remise', 'compte_retenue', 'compte_acompte', 'compte_paiement_direct', 'compte_prorata', 'compte_ecart_debit', 'compte_ecart_credit', 'compte_contrepartie']
+    const comptes = ['compte_defaut', 'compte_remise', 'compte_retenue', 'compte_acompte', 'compte_paiement_direct', 'compte_prorata', 'compte_ecart_debit', 'compte_ecart_credit', 'compte_contrepartie', 'compte_dotation', 'compte_reprise']
       .map((c) => [c, texte(`comptabilite_btp.postes.${c}`), c === 'compte_defaut' ? texte('comptabilite_btp.parametres.defaut_aide') : null]);
     z.innerHTML = `<h2 class="titre-actions">${texteHtml('comptabilite_btp.parametres.types')} ${ecrire ? boutonEnregistrer() : ''}</h2>
       <p class="aide">${texteHtml('comptabilite_btp.parametres.types_aide')}

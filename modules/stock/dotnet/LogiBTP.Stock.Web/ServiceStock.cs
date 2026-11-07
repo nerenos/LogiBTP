@@ -163,6 +163,10 @@ public sealed record EmplacementDto(long? Id, string Code, string? Libelle, stri
 public sealed record LigneEtatStock(long EleId, string Code, string Libelle, string Unite, int Precision, decimal Quantite, decimal? ValeurUnitaire,
     string? Source, bool Provisoire, decimal? Valeur, string? DernierMouvement, List<string> Emplacements);
 public sealed record EtatStock(long Lieu, string Date, string Methode, decimal Valeur, List<LigneEtatStock> Lignes);
+public sealed record LigneEtatValorise(long EleId, string Code, string Libelle, string Unite, int Precision, decimal? ValeurUnitaire, string? Source, bool Provisoire,
+    decimal? PrixInventaire, decimal Quantite, decimal? Valeur, decimal? ValeurInventaire, List<ValeurLieu> Lieux);
+public sealed record TotalLieuValorise(long Lieu, string Code, string Libelle, bool Depot, decimal Valeur, decimal ValeurInventaire);
+public sealed record EtatValoriseStock(string Date, string Methode, decimal Valeur, decimal ValeurInventaire, List<TotalLieuValorise> Lieux, List<LigneEtatValorise> Lignes);
 public sealed record QuantiteLieu(long Lieu, string Code, string Libelle, bool Depot, decimal Quantite, string? DernierComptage);
 public sealed record MouvementDto(long Id, string Date, long Lieu, string? LieuCode, decimal Quantite, decimal? Prix, bool Provisoire, decimal? Pmp,
     string Origine, long? EntId, string? Piece, string? TypePiece, string? Tiers);
@@ -463,6 +467,50 @@ public class ServiceStock(StockDbContext db, SpecialisationStock specialisation)
         lignes = lignes.OrderBy(l => l.Code, StringComparer.OrdinalIgnoreCase).ToList();
         return new EtatStock(lieu, fin, methode, lignes.Sum(l => l.Valeur ?? 0), lignes);
     }
+
+    /// <summary>
+    /// Stock valorisé de tous les lieux (ou de ceux demandés) à une date-heure (lot 7 du plan Stock) : pour chaque article, rejeu de
+    /// ses événements jusqu'à la date (ReglesValorisation.ValoriserEtat) ; quantité et valeur par lieu, valeur d'inventaire (prix du
+    /// dernier comptage chiffré) à part, totaux par lieu. Les articles à quantité nulle dans les lieux retenus ne sont rendus qu'avec `zeros`.
+    /// </summary>
+    public async Task<EtatValoriseStock> EtatValoriseAsync(DateTimeOffset? date, IReadOnlyCollection<long>? lieux, bool zeros, CancellationToken ct)
+    {
+        var t = Instant(date);
+        var fin = M(t);
+        var limite = t.AddMinutes(1);
+        var methode = await MethodeAsync(ct);
+        var mb = await db.Mouvements.AsNoTracking().Where(x => x.MvtDate <= limite).OrderBy(x => x.MvtId)
+            .Select(x => new { x.MvtEleId, x.MvtId, x.MvtLieuId, x.MvtDate, x.MvtQuantite, x.MvtPrix, x.MvtProvisoire }).ToListAsync(ct);
+        var m = mb.Select(x => new { x.MvtEleId, V = new MouvementValorise(x.MvtId, x.MvtLieuId, M(x.MvtDate), x.MvtQuantite, x.MvtPrix, x.MvtProvisoire) }).ToList();
+        var cb = await db.Comptages.AsNoTracking().Where(x => x.CptDate <= limite).OrderBy(x => x.CptId)
+            .Select(x => new { x.CptEleId, x.CptLieuId, x.CptDate, x.CptQuantite, x.CptPrix }).ToListAsync(ct);
+        var c = cb.Select(x => new { x.CptEleId, V = new ComptageLieu(x.CptLieuId, M(x.CptDate), x.CptQuantite, x.CptPrix) }).ToList();
+        var rb = await db.Reevaluations.AsNoTracking().Where(x => x.RevDate <= limite).OrderBy(x => x.RevId)
+            .Select(x => new { x.RevEleId, x.RevDate, x.RevPmp }).ToListAsync(ct);
+        var r = rb.Select(x => new { x.RevEleId, V = new Reevaluation(M(x.RevDate), x.RevPmp) }).ToList();
+        var ids = m.Select(x => x.MvtEleId).Union(c.Select(x => x.CptEleId)).Distinct().ToList();
+        var articles = await specialisation.ArticlesAsync(db, ids, ct);
+        var noms = (await specialisation.LieuxAsync(db, ct)).ToDictionary(l => l.Id);
+        var lignes = new List<LigneEtatValorise>();
+        foreach (var id in ids)
+        {
+            var a = articles.GetValueOrDefault(id);
+            var e = ReglesValorisation.ValoriserEtat(m.Where(x => x.MvtEleId == id).Select(x => x.V).ToList(), c.Where(x => x.CptEleId == id).Select(x => x.V).ToList(),
+                r.Where(x => x.RevEleId == id).Select(x => x.V).ToList(), fin, methode, a?.PaRepli);
+            var ls = e.Lieux.Where(l => lieux is null || lieux.Contains(l.Lieu)).ToList();
+            if (ls.Count == 0 || (!zeros && ls.All(l => l.Quantite == 0))) continue;
+            lignes.Add(new LigneEtatValorise(id, a?.Code ?? id.ToString(), a?.Libelle ?? "", a?.Unite ?? "", a?.Precision ?? 2, e.ValeurUnitaire, e.Source, e.Provisoire,
+                e.PrixInventaire, ls.Sum(l => l.Quantite), ls.Any(l => l.Valeur is not null) ? ls.Sum(l => l.Valeur ?? 0) : null,
+                ls.Any(l => l.ValeurInventaire is not null) ? ls.Sum(l => l.ValeurInventaire ?? 0) : null, ls));
+        }
+        lignes = lignes.OrderBy(l => l.Code, StringComparer.OrdinalIgnoreCase).ToList();
+        var totaux = lignes.SelectMany(l => l.Lieux).GroupBy(l => l.Lieu).Select(g =>
+        {
+            var n = noms.GetValueOrDefault(g.Key);
+            return new TotalLieuValorise(g.Key, n?.Code ?? g.Key.ToString(), n?.Libelle ?? "", n?.Depot ?? false, g.Sum(x => x.Valeur ?? 0), g.Sum(x => x.ValeurInventaire ?? 0));
+        }).OrderBy(x => x.Code, StringComparer.OrdinalIgnoreCase).ToList();
+        return new EtatValoriseStock(fin, methode, totaux.Sum(x => x.Valeur), totaux.Sum(x => x.ValeurInventaire), totaux, lignes);
+    }
 }
 
 public static class Extensions
@@ -490,6 +538,9 @@ public static class Extensions
         g.MapPut("/lieux/{id:long}/emplacements", (long id, List<EmplacementDto> l, HttpContext http, ServiceStock s, CancellationToken ct) =>
             s.EnregistrerEmplacementsAsync(id, l, Utilisateur.Depuis(http), ct));
         g.MapGet("/lieux/{id:long}/etat", (long id, DateTimeOffset? date, bool? zeros, ServiceStock s, CancellationToken ct) => s.EtatAsync(id, date, zeros ?? false, ct));
+        g.MapGet("/etat-valorise", (DateTimeOffset? date, string? lieux, bool? zeros, ServiceStock s, CancellationToken ct) =>
+            s.EtatValoriseAsync(date, string.IsNullOrWhiteSpace(lieux) ? null : lieux.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(x => long.TryParse(x, out var n) ? n : 0).Where(n => n > 0).ToList(), zeros ?? false, ct));
         g.MapGet("/mouvements/{id:long}", (long id, ServiceStock s, CancellationToken ct) => s.MouvementAsync(id, ct));
         g.MapGet("/articles/{id:long}", (long id, ServiceStock s, CancellationToken ct) => s.FicheArticleAsync(id, ct));
         g.MapPost("/articles/{id:long}/pmp", (long id, ReevaluationSaisie r, HttpContext http, ServiceStock s, CancellationToken ct) =>

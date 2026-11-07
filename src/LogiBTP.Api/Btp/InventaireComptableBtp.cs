@@ -87,7 +87,7 @@ public sealed partial class SpecialisationStockBtp
     /// Pièce S_INVENTAIRE validée : lignes d'articles au taux de TVA nul (exonéré de préférence : la pièce n'a pas de TVA,
     /// l'export l'ignore), quantité en unité de stock, PV = PA (coefficients à 1).
     /// </summary>
-    private static async Task<long> PieceEcartsAsync(DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp> documents, LogiBtpContext lb, int lieu,
+    internal static async Task<long> PieceEcartsAsync(DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp> documents, LogiBtpContext lb, int? lieu,
         DateOnly date, string objet, List<(long Ele, string Libelle, decimal Quantite, decimal Prix)> lignes, Utilisateur u, CancellationToken ct)
     {
         var tyd = await TypesDocumentBtp.IdAsync(lb, TypesDocument.SInventaire, ct);
@@ -99,6 +99,7 @@ public sealed partial class SpecialisationStockBtp
         var cree = await documents.Creer(new CreationDocument { EntTydId = tyd, EntObjet = objet.Length > 200 ? objet[..200] : objet }, u, ct);
         var c = await documents.Charger(cree.Document.EntId, ct);
         c.Document.EntDate = date;
+        // Sans lieu (clôture du stock de tous les lieux) : pièce sans dépôt ni chantier.
         c.Document.EntStkOrigineId = lieu;
         c.Document.EntChantierId = lieu;
         var n = 0;

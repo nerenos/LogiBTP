@@ -1,6 +1,6 @@
 import { textesParCode } from '@logibtp/socle/dictionnaire';
 import { D, Dz, S, arrondir } from '@logibtp/socle';
-import { minute } from './stock.js';
+import { minute, stockA } from './stock.js';
 
 // Valorisation d'un article (ANALYSE-MODULE-STOCK.md S4, S29, S30, S31), répliquée dans ReglesValorisation.cs (jeu
 // modules/stock/tests/cas/02_prix.json). Les événements de tous les lieux sont rejoués dans l'ordre des dates-heures
@@ -66,4 +66,45 @@ export function valeurUnitaire(resultat, methode, repli = null) {
   if (v !== null && v !== undefined) return { valeur: v, source: methode === 'DERNIER_PA' ? 'DERNIER_PA' : 'PMP', provisoire: methode === 'DERNIER_PA' && resultat.provisoire };
   const r = D(repli);
   return { valeur: r === null ? null : S(r), source: r === null ? null : 'REPLI', provisoire: false };
+}
+
+const FIN_DES_TEMPS = '9999-12-31T23:59';
+
+/**
+ * Stock valorisé d'un article à une date, tous lieux (lot 7 du plan Stock ; ANALYSE-MODULE-STOCK.md S5, S29, S30, S31),
+ * répliqué dans ReglesValorisation.ValoriserEtat. Entrée : celle de `valoriser` (comptages avec `prix` facultatif),
+ * date (null : maintenant, tout), méthode, repli. Quantité de chaque lieu ayant un événement jusqu'à la date : `stockA`
+ * (dernier comptage, puis mouvements) ; valeur unitaire : `valoriser` jusqu'à la date puis `valeurUnitaire` (repli signalé) ;
+ * valeur d'un lieu = quantité × valeur unitaire, arrondie à 2 décimales. Valeur d'inventaire (S30, gardée à part) : le prix
+ * du dernier comptage chiffré de l'article à la date (tous lieux, le dernier de la liste à date égale) × la quantité du lieu.
+ * Résultat : { valeur_unitaire, source, provisoire, prix_inventaire, quantite, valeur, valeur_inventaire,
+ * lieux: [{ lieu, quantite, valeur, valeur_inventaire }] } (lieux par identifiant croissant ; valeurs null sans valeur unitaire
+ * ni prix d'inventaire ; totaux = sommes des lieux).
+ */
+export function valoriserEtat({ mouvements = [], comptages = [], reevaluations = [] }, date = null, methode = 'PMP', repli = null) {
+  const fin = minute(date) ?? FIN_DES_TEMPS;
+  const avant = (x) => minute(x.date) <= fin;
+  const u = valeurUnitaire(valoriser({ mouvements, comptages, reevaluations }, date), methode, repli);
+  let chiffre = null;
+  for (const c of comptages) {
+    if (avant(c) && !(c.prix === null || c.prix === undefined) && (chiffre === null || minute(c.date) >= minute(chiffre.date))) chiffre = c;
+  }
+  const prixInventaire = chiffre ? D(chiffre.prix) : null;
+  const ids = [...new Set([...mouvements, ...comptages].filter(avant).map((x) => String(x.lieu)))].sort((a, b) => Number(a) - Number(b));
+  let quantite = Dz(0);
+  let valeur = null;
+  let valeurInventaire = null;
+  const lieux = ids.map((id) => {
+    const q = Dz(stockA({ mouvements: mouvements.filter((m) => String(m.lieu) === id), comptages: comptages.filter((c) => String(c.lieu) === id) }, fin).quantite);
+    const v = u.valeur === null ? null : arrondir(q.times(u.valeur), 2);
+    const vi = prixInventaire === null ? null : arrondir(q.times(prixInventaire), 2);
+    quantite = quantite.plus(q);
+    if (v !== null) valeur = (valeur ?? Dz(0)).plus(v);
+    if (vi !== null) valeurInventaire = (valeurInventaire ?? Dz(0)).plus(vi);
+    return { lieu: Number(id), quantite: S(q), valeur: S(v), valeur_inventaire: S(vi) };
+  });
+  return {
+    valeur_unitaire: u.valeur, source: u.source, provisoire: u.provisoire, prix_inventaire: S(prixInventaire),
+    quantite: S(quantite), valeur: S(valeur), valeur_inventaire: S(valeurInventaire), lieux,
+  };
 }

@@ -2433,6 +2433,72 @@
       "mesures": "{{ressources}} ressources, {{taches}} tâches · génération {{generation}} ms · données {{donnees}} ms · dessin {{dessin}} ms"
     }
   },
+  "sav_btp": {
+    "routes": {
+      "equipement": "Équipement installé"
+    },
+    "equipement": {
+      "titre": "Équipement {{numero}}",
+      "nouveau": "Nouvel équipement installé",
+      "numero": "Numéro de série",
+      "article": "Article",
+      "libelle": "Désignation",
+      "chantier": "Chantier",
+      "client": "Client",
+      "pose": "Date de pose",
+      "garantie_mois": "Garantie (mois)",
+      "fin_garantie": "Fin de garantie saisie",
+      "fin_calculee": "Fin de garantie",
+      "commentaire": "Commentaire",
+      "lot": "Lot du stock",
+      "piece": "Pièce d'origine",
+      "origine": "Origine",
+      "retire_le": "Retiré le",
+      "remplace": "Remplace l'équipement",
+      "remplacant": "Remplacé par",
+      "cree": "Créé le",
+      "voir": "Voir l'équipement",
+      "voir_lot": "Voir le lot",
+      "jours_restants": "{{jours}} j restants",
+      "enregistrer": "Enregistrer",
+      "retirer": "Retirer",
+      "remplacer": "Remplacer",
+      "choisir_client": "Choisir le client",
+      "vider_client": "Retirer le client",
+      "retrait_date": "Date du retrait",
+      "remplacement_numero": "Numéro de série du nouvel équipement",
+      "remplacement_confirmer": "Remplacer l'équipement {{ancien}} par {{nouveau}} (même article, même chantier) ?",
+      "enregistre": "Équipement enregistré",
+      "cree_message": "Équipement créé",
+      "retire_message": "Équipement retiré",
+      "remplace_message": "Équipement remplacé",
+      "interventions": "Interventions SAV",
+      "int_date": "Date",
+      "int_ordre": "Ordre",
+      "int_constat": "Constat",
+      "int_travaux": "Travaux",
+      "int_suite": "Suite",
+      "int_terminee": "Terminée",
+      "int_a_reprendre": "À reprendre",
+      "aucune_intervention": "Aucune intervention enregistrée sur cet équipement.",
+      "chantier_raccourci": "Équipements installés",
+      "nouveau_chantier": "Nouvel équipement"
+    },
+    "etats": {
+      "INSTALLE": "Installé",
+      "RETIRE": "Retiré",
+      "REMPLACE": "Remplacé"
+    },
+    "garanties": {
+      "SANS": "Sans garantie connue",
+      "EN_COURS": "Sous garantie",
+      "ECHUE": "Garantie échue"
+    },
+    "origines": {
+      "MOUVEMENT": "Mouvement de stock",
+      "MANUEL": "Saisie manuelle"
+    }
+  },
   "stock_btp": {
     "sources": {
       "PMP": "PMP",
@@ -2451,10 +2517,13 @@
       "dotations": "Dotations des salariés",
       "a_valider": "Saisies de stock à valider",
       "fiche_dotation": "Fiche de dotation",
-      "lot": "Lot de stock"
+      "lot": "Lot de stock",
+      "etat_valorise": "Stock valorisé",
+      "clotures": "Clôture du stock"
     },
     "lot": {
       "titre": "Lot {{numero}}",
+      "equipements": "Équipements installés",
       "article": "Article",
       "cree": "Créé le",
       "stock": "Stock actuel",
@@ -2477,6 +2546,51 @@
       "tiers": "Tiers",
       "vers": "Vers",
       "comptages": "Comptages d'inventaire"
+    },
+    "clotures": {
+      "aide": "Clôture à une date de fin d'exercice : valeur du stock de chaque nature d'article comparée à celle de la clôture précédente (méthode de valorisation de la société). La variation devient une opération diverse exportée avec la comptabilité ; les comptes de stock, de variation et de provision se saisissent dans Comptabilité › Ventilation et Paramètres › Comptabilité.",
+      "date": "Date-heure de clôture",
+      "debut": "Départ",
+      "debut_titre": "Vide : la clôture précédente, sinon stock initial nul",
+      "libelle": "Libellé (facultatif)",
+      "libelle_colonne": "Libellé",
+      "apercu": "Aperçu",
+      "cloturer": "Clôturer",
+      "date_obligatoire": "Choisissez la date de clôture",
+      "apercu_aide": "Stock au {{date}} comparé à celui du {{debut}}.",
+      "aucun_debut": "début (stock initial nul)",
+      "nature": "Nature d'article",
+      "initial": "Valeur au départ",
+      "final": "Valeur à la clôture",
+      "variation": "Variation",
+      "provision_initiale": "Provision au départ",
+      "provision_finale": "Provision à la clôture",
+      "total": "Total",
+      "confirmer": "Clôturer le stock au {{date}} ? Une pièce d'opération diverse sera créée pour la comptabilité.",
+      "cloturee": "Clôture enregistrée",
+      "liste": "Clôtures",
+      "aucune": "Aucune clôture.",
+      "piece": "Pièce",
+      "etat": "État",
+      "transferee": "pièce transférée",
+      "etats": {
+        "ACTIVE": "Active",
+        "ANNULEE": "Annulée"
+      },
+      "annuler": "Annuler",
+      "annuler_confirmer": "Annuler cette clôture ? Sa pièce sort de l'export comptable.",
+      "annulee": "Clôture annulée"
+    },
+    "valorise": {
+      "tous_lieux": "Tous les lieux",
+      "aide": "Stock valorisé de tous les lieux au {{date}} : dernier inventaire et mouvements suivants. Valorisation : {{methode}} (paramètres du stock) ; valeur d'inventaire : prix saisi au dernier inventaire chiffré.",
+      "lieu": "Lieu",
+      "lieux": "Quantités par lieu",
+      "prix_inventaire": "Prix d'inventaire",
+      "valeur_inventaire": "Valeur d'inventaire",
+      "ecart": "Écart d'inventaire",
+      "pdf": "PDF",
+      "pdf_titre": "Imprimer l'état valorisé (PDF) à la date et pour les lieux affichés"
     },
     "etat": {
       "date": "À la date",
@@ -3459,7 +3573,9 @@
       "compte_prorata": "Prorata",
       "compte_ecart_debit": "Écart d'arrondi (débit)",
       "compte_ecart_credit": "Écart d'arrondi (crédit)",
-      "compte_contrepartie": "Contrepartie (opérations diverses : variation des stocks)"
+      "compte_contrepartie": "Contrepartie (opérations diverses : variation des stocks)",
+      "compte_dotation": "Dotation à la provision pour dépréciation des stocks",
+      "compte_reprise": "Reprise sur la provision pour dépréciation des stocks"
     },
     "parametres": {
       "comptes": "Comptes",
@@ -4562,6 +4678,14 @@
           "libelle": "État du stock",
           "info": "Quantités et valeur d'un dépôt à une date-heure"
         },
+        "stock_clotures": {
+          "libelle": "Clôture du stock",
+          "info": "Variation de stock de fin d'exercice, opération diverse pour la comptabilité"
+        },
+        "stock_valorise": {
+          "libelle": "Stock valorisé",
+          "info": "Tous les lieux à une date-heure : valeur de la méthode, valeur d'inventaire, écart"
+        },
         "stock_mouvements": {
           "libelle": "Mouvements de stock"
         },
@@ -4591,6 +4715,14 @@
         },
         "stock_parametres": {
           "libelle": "Valorisation, emplacements et marques…"
+        }
+      },
+      "sav": {
+        "libelle": "SAV",
+        "sav_equipements": {
+          "libelle": "Équipements installés",
+          "info": "Numéros de série posés chez les clients, garantie, remplacement",
+          "creation": "Nouvel équipement installé"
         }
       },
       "execution": {
@@ -5430,7 +5562,8 @@
         "marches_st": "Marchés de sous-traitance",
         "st_commandes": "Commandes de sous-traitance",
         "st_factures": "Factures de sous-traitance",
-        "stk_lots": "Lots de stock"
+        "stk_lots": "Lots de stock",
+        "sav_equipements": "Équipements installés"
       },
       "acomptes": {
         "deductions": {
@@ -7016,6 +7149,8 @@
         "signature": "Il manque la signature du client"
       },
       "titre": "Intervention SAV",
+      "equipement": "Équipement concerné (facultatif)",
+      "equipement_recherche": "N° de série ou code-barres, puis Entrée",
       "hors_ligne": "Hors ligne : cette intervention n'a pas été ouverte sur cet appareil avec le réseau.",
       "titre_ordre": "SAV {{numero}}",
       "historique": "Comptes rendus déjà faits ({{nombre}})",
@@ -8423,6 +8558,7 @@
     "TERRAIN_RECEPTION_ETAT": "Sans réserve, avec réserves ou refusée",
     "TERRAIN_RECEPTION_TYPE": "La réception se signe sur un ordre de pose",
     "TERRAIN_RESERVES": "Au moins une réserve",
+    "TERRAIN_SAV_EQUIPEMENT": "Équipement introuvable",
     "TERRAIN_SAV_OBJET": "Objet de l'intervention obligatoire",
     "TERRAIN_SAV_TEXTE": "Constat et travaux obligatoires",
     "TERRAIN_SAV_TYPE": "Cet ordre n'est pas une intervention SAV",
