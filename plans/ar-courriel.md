@@ -1,0 +1,84 @@
+# Restes du TODO : accusés de réception de commande reçus par courriel (module Mail)
+
+> Plan autonome, index : [corrections-novembre.md](corrections-novembre.md). Analyse :
+> [ANALYSE-CORRECTIONS-NOVEMBRE.md](../documentation/conception/ANALYSE-CORRECTIONS-NOVEMBRE.md) § 1 (Documents, lot 9
+> réalisé). Sujet sans analyse détaillée : questions ouvertes à trancher **au démarrage du plan** ; les lots suivent la
+> recommandation.
+>
+> Contexte utile :
+> - Module Mail : reconnaissance miroir `modules/mail/js/src/reconnaissance.js` ↔
+>   `modules/mail/dotnet/LogiBTP.Mail/ReconnaissanceMail.cs`, jeu `modules/mail/tests/cas/01_reconnaissance.json`
+>   (tests `modules/mail/js/test/reconnaissance.test.js`, `LogiBTP.Mail.Tests/ReconnaissanceMailTests.cs`) ; réception
+>   `modules/mail/dotnet/LogiBTP.Mail.Web/ServiceReceptionMail.cs` (`TraiterAsync :113`, `ReconnaitreAsync :156`,
+>   `RattacherAsync :352`) ; spécialisation `SpecialisationMail.cs` ; codes `modules/mail/js/src/codes.js` ↔
+>   `LogiBTP.Mail/Codes.cs`.
+> - ARC de l'entête d'une commande : `ent_arc_numero`, `ent_arc_date`, `ent_arc_livraison` (`db/238_documents_arc.sql:10-12`),
+>   modifiables hors verrou par `ArcDocument` (`src/LogiBTP.Api/Btp/Structure.cs:25`). Boîte de réception du cœur :
+>   `client/src/app/pages/mail.js`.
+> - Le module Mail ne connaît pas les commandes : le cœur spécialise.
+>
+> Décisions (08/11/2026) : périmètre retenu (Q1 : tout) ; aucun choix de détail pris, voir ci-dessous.
+
+## Questions ouvertes (à trancher au démarrage)
+
+| N° | Question | Recommandation | Statut |
+|---|---|---|---|
+| AO1 | Où chercher le numéro de commande et la date de livraison ? | Objet et corps du message (texte), pas d'analyse des pièces jointes PDF dans ce plan ; motifs d'AR (« accusé de réception », « confirmation de commande », « AR », « ARC ») et numéro au format de la numérotation des commandes. | OUVERT |
+| AO2 | Que fait-on d'un AR reconnu ? | Rattachement automatique du message à la commande trouvée ; numéro et date de livraison **proposés** dans la boîte de réception, appliqués à l'ARC de la commande seulement après validation par l'utilisateur. | OUVERT |
+| AO3 | Commande introuvable ou plusieurs candidates ? | Pas de rattachement ; message marqué « AR à rapprocher » avec les candidates proposées. | OUVERT |
+
+| Lot | Titre | Module | Dépend de | Statut |
+|---|---|---|---|---|
+| 1 | Reconnaissance d'un AR (motifs, numéro, date) | `modules/mail` | AO1 | A FAIRE |
+| 2 | Point d'accroche « AR reconnu » à la réception | `modules/mail` | 1, AO2 | A FAIRE |
+| 3 | Rapprochement de la commande et rattachement | cœur | 2, AO3 | A FAIRE |
+| 4 | Proposition de la livraison confirmée dans la boîte de réception | cœur | 3 | A FAIRE |
+
+---
+
+## Lot 1 : reconnaissance d'un AR (A FAIRE)
+
+- **Module** : `modules/mail`. **Agent** : `lot-dev`. **Modèle** : opus.
+- **Fichiers** : `reconnaissance.js` ↔ `ReconnaissanceMail.cs` (nouvelle reconnaissance : est-ce un AR, numéro de
+  commande candidat, date de livraison), `codes.js` ↔ `Codes.cs` (type de reconnaissance), `01_reconnaissance.json`
+  (ou nouveau `02_accuses_reception.json`), `reconnaissance.test.js`, `ReconnaissanceMailTests.cs`, `CodesTests.cs`.
+- **Dépendances** : AO1 tranchée.
+- **Règles répliquées JS / C#** : détection d'un AR, extraction du numéro et de la date (formats jj/mm/aaaa, « semaine
+  n »…, selon AO1).
+- **Jeux de tests** : AR avec numéro et date ; AR sans date ; message ordinaire non reconnu ; deux numéros candidats.
+- **Critère de fin** : le jeu passe en JS et en C# ; `npm test`, `dotnet test LogiBTP.slnx` verts.
+
+## Lot 2 : point d'accroche « AR reconnu » à la réception (A FAIRE)
+
+- **Module** : `modules/mail`. **Agent** : `lot-dev`. **Modèle** : sonnet.
+- **Fichiers** : `ServiceReceptionMail.cs` (`TraiterAsync :113`, `ReconnaitreAsync :156` : méthode virtuelle appelée
+  pour un AR reconnu, sans effet par défaut ; état « proposition » conservé sur le message), `Donnees.cs` / script
+  `modules/mail/db` si l'état doit être stocké (manifeste), tests `ServiceMailTests.cs`.
+- **Dépendances** : lot 1 ; AO2 tranchée.
+- **Règles répliquées JS / C#** : aucune nouvelle.
+- **Jeux de tests** : C# : AR reconnu → accroche appelée une fois avec numéro et date ; message ordinaire → non appelée.
+- **Critère de fin** : `dotnet test LogiBTP.slnx` vert.
+
+## Lot 3 : rapprochement de la commande et rattachement (A FAIRE)
+
+- **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : opus.
+- **Fichiers** : spécialisation du module Mail dans le cœur (`src/LogiBTP.Api/Btp/`, graphify « spécialisation mail
+  cœur ») : recherche de la commande par numéro (pièces valables seulement, `v_document_valable`), rattachement par
+  `RattacherAsync` (`:352`), marque « AR à rapprocher » sinon ; tests C#.
+- **Dépendances** : lot 2 ; AO3 tranchée.
+- **Règles répliquées JS / C#** : aucune.
+- **Jeux de tests** : numéro trouvé → rattaché ; introuvable → marqué ; deux candidates → marqué avec les candidates ;
+  commande annulée ou remplacée ignorée.
+- **Critère de fin** : `dotnet test LogiBTP.slnx` vert.
+
+## Lot 4 : proposition de la livraison confirmée (A FAIRE)
+
+- **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
+- **Fichiers** : `client/src/app/pages/mail.js` (bandeau de proposition sur le message : numéro d'AR et date de
+  livraison, bouton « Appliquer à la commande »), application par la route de l'ARC (`Structure.cs:25`), textes, test
+  client.
+- **Dépendances** : lot 3 ; après le lot 7 du plan `corrections-marche-document.md` s'il est en cours (même route de
+  l'ARC).
+- **Règles répliquées JS / C#** : aucune.
+- **Jeux de tests** : appliquer → `ent_arc_numero`, `ent_arc_date`, `ent_arc_livraison` posés et tracés ; ignorer → rien.
+- **Critère de fin** : `npm test` et `dotnet test LogiBTP.slnx` verts.

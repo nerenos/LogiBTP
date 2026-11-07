@@ -4,6 +4,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { calculerElement, convertir, codeAppel, analyserCodeAppel, coefficientsEffectifs } from '../src/calcul.js';
 import { FournisseurBibliothequeMemoire } from '../src/fournisseurs.js';
+import { suivreTarifs, signalerTarifs } from '../ui/onglets.js';
+import { entreeDepuisLigne } from '../src/fournisseurs.js';
 import { S } from '@logibtp/socle';
 
 const jeu = JSON.parse(fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../tests/cas/01_calcul.json'), 'utf8'));
@@ -64,5 +66,26 @@ describe('fournisseur en mémoire', () => {
     const { f } = nouveau();
     f.profil = 'SAISIE';
     await expect(f.enregistrerBibliotheque({ code: 'FOUR', libelle: 'Fournisseurs' })).rejects.toMatchObject({ code: 'ACCES_REFUSE' });
+  });
+});
+
+describe('onglet Prix : rechargement des tarifs', () => {
+  it('tarif ajouté depuis la fiche Tarifs, puis onglet Prix : tarif proposé et prix recalculé', async () => {
+    const elements = [{ id: 1, bib_id: 1, code: 'HA10', type: 'ARTICLE', libelle_html: 'Acier', unite_stock: 'ml',
+      unites: [], proprietes: {}, scenario_pa: 'FOURNISSEUR_PRINCIPAL', coef_fg: '1.1', coef_benef: '1.2', coef_remise: '1', pv_fixe: false }];
+    const f = new FournisseurBibliothequeMemoire({ bibliotheques: [{ id: 1, code: 'GEN', libelle: 'G', defaut: true, ordre: 0 }], elements });
+    let tarifs = await f.tarifs(1);
+    const vus = [];
+    const fin = suivreTarifs(async (id) => { tarifs = await f.tarifs(id); vus.push(id); });
+    expect(tarifs).toHaveLength(0);
+    const r = await f.enregistrerTarif(1, { fournisseur: 'X', unite: 'ml', prix: '10', principal: true });
+    signalerTarifs(1, r.tarifs);
+    await new Promise((ok) => setTimeout(ok, 0));
+    fin();
+    expect(vus).toEqual([1]);
+    expect(tarifs).toHaveLength(1);
+    expect(calculerElement(entreeDepuisLigne(elements[0], tarifs)).pa).toBe('10');
+    signalerTarifs(1, []);
+    expect(vus).toHaveLength(1);
   });
 });

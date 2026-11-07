@@ -18,6 +18,13 @@ const json = (v, defaut) => (typeof v === 'string' ? (() => { try { return JSON.
 const nombreSaisi = (s) => { const t = String(s ?? '').trim().replace(/\s/g, '').replace(',', '.'); return t === '' ? null : t; };
 const MESSAGES_ALERTES = textesParCode('bibliotheque.prix.alertes', ['PA_INDISPONIBLE', 'UNITE', 'DONNEE', 'RATIO']);
 
+// Abonnés aux changements de tarifs d'un élément : l'onglet Prix relit les tarifs dès qu'un autre onglet en enregistre.
+const abonnesTarifs = new Set();
+/** Abonne `rappel(idElement, tarifs)` aux changements de tarifs ; renvoie la fonction de désabonnement. */
+export const suivreTarifs = (rappel) => { abonnesTarifs.add(rappel); return () => abonnesTarifs.delete(rappel); };
+/** Signale que les tarifs d'un élément ont changé (enregistrement, suppression). */
+export const signalerTarifs = (id, tarifs) => abonnesTarifs.forEach((r) => r(id, tarifs));
+
 /** Onglet Prix : scénario de PA, coefficients, PV fixe, remise, résultat (par unité) et historique des prix. */
 export class OngletPrix {
   constructor(corps, ctx) {
@@ -26,9 +33,18 @@ export class OngletPrix {
     this.tarifs = [];
     this.rendre();
     if (ctx.id !== null) {
-      ctx.fournisseur.tarifs(ctx.id).then((t) => { this.tarifs = t; this.majResultat(); }).catch(() => {});
+      this.chargerTarifs();
+      this.desabonner = suivreTarifs((id) => {
+        if (!this.corps.isConnected) { this.desabonner?.(); return; }
+        if (String(id) === String(ctx.id)) { this.chargerTarifs(); this.chargerHistorique(); }
+      });
       this.chargerHistorique();
     }
+  }
+
+  /** Relit les tarifs de l'élément puis recalcule le résultat. */
+  chargerTarifs() {
+    return this.ctx.fournisseur.tarifs(this.ctx.id).then((t) => { this.tarifs = t; this.majResultat(); }).catch(() => {});
   }
 
   get ouvrage() { return this.ctx.valeur('type') === 'OUVRAGE'; }
@@ -256,6 +272,7 @@ export class OngletTarifs {
           : await this.ctx.fournisseur.enregistrerTarif(this.ctx.id, v);
         if (!r) return;
         this.rendre(r.tarifs);
+        signalerTarifs(this.ctx.id, r.tarifs);
         this.ctx.surPrix?.(r.prix);
         this.ctx.message(texte('bibliotheque.tarifs.enregistres', { pa: prix(r.prix.pa), pv_net: prix(r.prix.pv_net) }), 'succes');
       } catch (x) { this.ctx.message(x.message, 'erreur'); }
