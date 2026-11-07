@@ -163,11 +163,12 @@ Analyse du 23/10/2026 : [ANALYSE-MODULE-SOUS-TRAITANCE.md](documentation/concept
 
 Analyse du 24/10/2026 : [ANALYSE-MODULE-STOCK.md](documentation/conception/ANALYSE-MODULE-STOCK.md).
 
-- [ ] Lots et numéros de série (S24) : questions tranchées le 05/11/2026 (§ 11 de l'analyse : lots facultatifs, péremption
-  par article périssable avec durée théorique) ; S24-a, S24-b et S24-c réalisés ; reste S24-d (numéros de série →
-  équipements installés : module SAV créé — lot 2, `modules/sav` —, restent la garantie des articles, la création par
-  les mouvements, les écrans et les interventions E_SAV rattachées), lots 3 à 6 de
-  [plans/stock.md](plans/stock.md) (06/11/2026). Écarts de S24-c : pas de dossier des ouvrages exécutés (S24.6).
+
+- [x] Lots et numéros de série (S24) : questions tranchées le 05/11/2026 (§ 11 de l'analyse : lots facultatifs, péremption
+  par article périssable avec durée théorique) ; S24-a, S24-b et S24-c réalisés ; S24-d (numéros de série → équipements
+  installés : module SAV `modules/sav`, garantie des articles, création par les mouvements, écrans, interventions E_SAV
+  rattachées) réalisé par les lots 2 à 6 de [plans/stock.md](plans/stock.md) (06/11/2026, C# non compilé). Écarts de
+  S24-c : pas de dossier des ouvrages exécutés (S24.6).
 - [x] Clôture : valorisation du stock à date de tous les lieux (état et écriture de variation de fin d'exercice, un compte
   par nature d'article) et provision pour dépréciation (valeur d'inventaire inférieure au PMP, 39x) : lots 7 à 11 de
   [plans/stock.md](plans/stock.md) (faits le 07/11/2026, C# non compilé).
