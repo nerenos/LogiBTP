@@ -134,10 +134,10 @@ public static class ClotureStockBtp
                 VALUES ({fin}, {debut}, {libelle}, {a.Methode}, {a.ValeurInitiale}, {a.ValeurFinale}, {u.Code}) RETURNING clo_id AS "Value"
                 """).ToListAsync(ct))[0];
             foreach (var n in a.Natures)
-                await db.Database.ExecuteSqlInterpolatedAsync($"""
-                    INSERT INTO stk_cloture_nature (cln_clo_id, cln_nat_id, cln_initial, cln_final, cln_provision_initiale, cln_provision_finale)
-                    VALUES ({id}, {n.Nature}, {n.Initial}, {n.Final}, {n.ProvisionInitiale}, {n.ProvisionFinale})
-                    """, ct);
+
+                await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO stk_cloture_nature (cln_clo_id, cln_nat_id, cln_initial, cln_final, cln_provision_initiale, cln_provision_finale)
+                    VALUES ({id}, {n.Nature}, {n.Initial}, {n.Final}, {n.ProvisionInitiale}, {n.ProvisionFinale})", ct);
+
             // Pièce d'opération diverse : une ligne par article (quantité ±1, prix = variation de sa valeur), sans lieu.
             var lignes = calcul.Articles.Select(x => (x.Ele, x.Libelle, x.Variation < 0 ? -1m : 1m, Math.Abs(x.Variation))).ToList();
             long piece;

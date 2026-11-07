@@ -99,11 +99,11 @@ docs/
 ## 3. Création du contenu - Par modules (Semaine 3-8)
 
 ### 3.1 Module Cœur : Document + Métré (Priorité haute)
-- [ ] Concepts : Document, Lignes, Métrés, Variables, Ventilations, Frais annexes
-- [ ] Cycle de vie : Brouillon → Validé → Émis → Archivé
-- [ ] Calcul : Moteur de devis, formules, comparateur, écarts arrondi
-- [ ] Éditions : Modèles, pieds, sources annexes, dépôt GED
-- [ ] API : Endpoints document, lignes, métrés, variables, calcul
+- [x] Concepts : Document, Lignes, Métrés, Variables, Ventilations, Frais annexes
+- [x] Cycle de vie : Brouillon → Validé → Émis → Archivé
+- [x] Calcul : Moteur de devis, formules, comparateur, écarts arrondi
+- [x] Éditions : Modèles, pieds, sources annexes, dépôt GED
+- [x] API : Endpoints document, lignes, métrés, variables, calcul
 
 ### 3.2 Module Planning + Pointage (Priorité haute)
 - [ ] Ressources : Salariés, Intérimaires, Matériels, Sous-traitants, Équipes
@@ -267,7 +267,7 @@ npm run dev
 2. [x] Nommer le **Tech Writer** principal (ou désigner un dev volontaire)
 3. [x] Créer le repo `docs` / dossier `docs` dans le mono-repo
 4. [x] Initialiser VitePress avec config de base
-5. [ ] Rédiger la **page d'accueil** et **Getting Started** (quick win)
+5. [x] Rédiger la **page d'accueil** et **Getting Started** (quick win)
 6. [ ] Planifier des **ateliers de 1h par module** avec experts métier
 
 ---

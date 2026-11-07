@@ -342,3 +342,9 @@
 | NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Calcul.Tests |
 | NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Calcul.Tests |
 | NuGet | xunit.runner.visualstudio | 3.1.4 | Apache-2.0 | LogiBTP.Calcul.Tests |
+
+## docs
+
+| Type | Dépendance | Version | Licence | Usage |
+|---|---|---|---|---|
+| npm | vitepress | 1.6.4 | MIT | développement (docs) |
