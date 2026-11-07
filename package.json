@@ -32,7 +32,8 @@
     "modules/navigation/js",
     "modules/import/js",
     "modules/edition/js",
-    "client"
+    "client",
+    "docs"
   ],
   "scripts": {
     "test": "npm test --workspaces --if-present",
@@ -40,11 +41,8 @@
     "build": "npm run build --workspace client",
     "exporter-resultats": "npm run exporter-resultats --workspaces --if-present",
     "rapport-dependances": "node scripts/rapport-dependances.mjs",
-    "docs:dev": "vitepress dev docs",
-    "docs:build": "vitepress build docs",
-    "docs:preview": "vitepress preview docs"
-  },
-  "devDependencies": {
-    "vitepress": "^1.6.4"
+    "docs:dev": "npm run dev --workspace docs",
+    "docs:build": "npm run build --workspace docs",
+    "docs:preview": "npm run preview --workspace docs"
   }
 }
