@@ -39,7 +39,7 @@
 | 1 | Onglet Prix : rechargement des tarifs | `modules/bibliotheque` | — | FAIT (08/11/2026) |
 | 2 | Premier tarif principal, scénario FOURNISSEUR_PRINCIPAL | `modules/bibliotheque` | — | FAIT (08/11/2026) |
 | 3 | Résultat : dernier PA et PMP affichés comme des PR (reproduction puis correction) | `modules/bibliotheque` | 1 | A FAIRE |
-| 4 | Recopie du PMP et du dernier PA par le Stock (seulement si le lot 3 met la cause dans le cœur) | cœur | 3 | A FAIRE |
+| 4 | Recopie du PMP et du dernier PA par le Stock (seulement si le lot 3 met la cause dans le cœur) | cœur | 3 | FAIT (08/11/2026) |
 | 5 | Onglet Tarifs de la fiche élément : enregistrement à la sortie de ligne | `modules/bibliotheque` | — | A FAIRE |
 | 6 | Onglet Tarifs de la fiche fournisseur : enregistrement à la sortie de ligne | cœur | 5 | A FAIRE |
 
@@ -93,7 +93,7 @@
 
 - **Résultat (08/11/2026)** : diagnostic par lecture, aucun code modifié. Onglet Prix (`majResultat`) : PA dans la colonne PA, PR = `calculerElement` ; `calcul.js` et `CalculElement.cs` appliquent déjà FG au dernier PA et au PMP (cas « dernier PA et PMP » de `01_calcul.json`, PMP 12,345678 × 1,1 = 13,580246). Cause : `StockBtp.ApresValorisationAsync` met à jour `ele_pmp` / `ele_dernier_pa` par SQL direct, sans recalculer `ele_pa` / `ele_pr` / `ele_pv` (jamais passés par `CalculElement`), et le prix unitaire des pièces d'achat vient de `MontantHt` (`StockBtp.cs:199`). Issue 3 : traitée au lot 4.
 
-## Lot 4 : recopie du PMP et du dernier PA par le Stock (A FAIRE, conditionnel)
+## Lot 4 : recopie du PMP et du dernier PA par le Stock (FAIT 08/11/2026 ; écart : `ApresValorisationAsync` recalcule PA, PR, PV, PV net par `CalculElement` en une seule écriture (articles seulement), test `ValorisationStockTests` dans `tests/LogiBTP.Calcul.Tests` qui référence désormais `LogiBTP.Api`)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Condition** : à faire seulement si le lot 3 conclut que la cause est dans le cœur ; sinon passer le lot à
