@@ -38,3 +38,20 @@ describe('import des tarifs : lecture du CSV', () => {
     expect(COLONNES_TARIFS.map(([c]) => c)).toContain('prix_public');
   });
 });
+
+// Lot 6 (corrections novembre, B3) : l'onglet Tarifs du fournisseur n'a plus de bouton d'enregistrement par ligne.
+describe('onglet Tarifs du fournisseur : enregistrement à la sortie de ligne', () => {
+  it('une ligne existante n\'a que la suppression, la ligne vide son ajout, rien en lecture seule', async () => {
+    const { actionsLigneTarif, tarifDepuisSaisie } = await import('@logibtp/bibliotheque/ui');
+    expect(actionsLigneTarif({ id: 3 }, true)).toEqual(['supprimer']);
+    expect(actionsLigneTarif({}, true)).toEqual(['enregistrer']);
+    expect(actionsLigneTarif({ id: 3 }, false)).toEqual([]);
+    expect(tarifDepuisSaisie({ id: 3 }, { prix: '12,5', prix_public: null, remise1: null, remise2: null, delai: null }).prix).toBe('12.5');
+  });
+  it('le source de l\'onglet n\'a plus de bouton data-enregistrer sur les lignes existantes', async () => {
+    const { readFileSync } = await import('node:fs');
+    const src = readFileSync(new URL('../src/app/annuaire/tarifs-fournisseur.js', import.meta.url), 'utf8');
+    expect(src).not.toContain('annuaire_btp.tarifs.enregistrer\'');
+    expect(src).toContain('focusout');
+  });
+});

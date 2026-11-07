@@ -41,7 +41,7 @@
 | 3 | Résultat : dernier PA et PMP affichés comme des PR (reproduction puis correction) | `modules/bibliotheque` | 1 | A FAIRE |
 | 4 | Recopie du PMP et du dernier PA par le Stock (seulement si le lot 3 met la cause dans le cœur) | cœur | 3 | FAIT (08/11/2026) |
 | 5 | Onglet Tarifs de la fiche élément : enregistrement à la sortie de ligne | `modules/bibliotheque` | — | FAIT (08/11/2026) |
-| 6 | Onglet Tarifs de la fiche fournisseur : enregistrement à la sortie de ligne | cœur | 5 | A FAIRE |
+| 6 | Onglet Tarifs de la fiche fournisseur : enregistrement à la sortie de ligne | cœur | 5 | FAIT (08/11/2026) |
 
 ---
 
@@ -117,7 +117,7 @@
   d'enregistrement de ligne ; le bouton d'ajout de la ligne vide reste.
 - **Critère de fin** : `npm test` vert ; aucun bouton d'enregistrement par ligne dans l'onglet.
 
-## Lot 6 : onglet Tarifs de la fiche fournisseur, enregistrement à la sortie de ligne (A FAIRE)
+## Lot 6 : onglet Tarifs de la fiche fournisseur, enregistrement à la sortie de ligne (FAIT 08/11/2026 ; écart : aides actionsLigneTarif / tarifDepuisSaisie réexportées par @logibtp/bibliotheque/ui, enregistrement au focusout après change, texte et icône «enregistrer» devenus inutilisés laissés en place)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `client/src/app/annuaire/tarifs-fournisseur.js` (`:41`), test client correspondant (`client/test/`).
