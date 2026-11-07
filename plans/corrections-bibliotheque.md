@@ -73,7 +73,7 @@
   vigueur (s'il manque), passant en JS et en C#.
 - **Critère de fin** : `npm test`, `npm run exporter-resultats`, `dotnet test LogiBTP.slnx` verts.
 
-## Lot 3 : résultat, dernier PA et PMP affichés comme des PR (A FAIRE)
+## Lot 3 : résultat, dernier PA et PMP affichés comme des PR (FAIT le 08/11/2026, issue 3 : cause dans le cœur, voir lot 4)
 
 - **Module** : `modules/bibliotheque`. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Démarche** : **reproduire d'abord** (élément avec dernier PA ou PMP, FG non nuls) ; noter dans le lot la cause
@@ -90,6 +90,8 @@
   « dernier PA » et « PMP » avec FG.
 - **Critère de fin** : la reproduction et sa cause sont notées dans le lot ; le cas passe ; `npm test` (et, si issue 2,
   `npm run exporter-resultats`, `dotnet test LogiBTP.slnx`) verts.
+
+- **Résultat (08/11/2026)** : diagnostic par lecture, aucun code modifié. Onglet Prix (`majResultat`) : PA dans la colonne PA, PR = `calculerElement` ; `calcul.js` et `CalculElement.cs` appliquent déjà FG au dernier PA et au PMP (cas « dernier PA et PMP » de `01_calcul.json`, PMP 12,345678 × 1,1 = 13,580246). Cause : `StockBtp.ApresValorisationAsync` met à jour `ele_pmp` / `ele_dernier_pa` par SQL direct, sans recalculer `ele_pa` / `ele_pr` / `ele_pv` (jamais passés par `CalculElement`), et le prix unitaire des pièces d'achat vient de `MontantHt` (`StockBtp.cs:199`). Issue 3 : traitée au lot 4.
 
 ## Lot 4 : recopie du PMP et du dernier PA par le Stock (A FAIRE, conditionnel)
 
