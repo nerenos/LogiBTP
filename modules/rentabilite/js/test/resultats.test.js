@@ -115,3 +115,17 @@ describe('Saisies prévisionnelles (lot 6)', () => {
     expect(lignes[0].valeurs.debourse.toString()).toBe('0');
   });
 });
+
+describe('Bloc de résultats : produit interne', () => {
+  it('le produit interne du chantier de suivi entre dans ses marges, sans changer les coûts ni les lignes facturées', () => {
+    const interne = [A(I.DEBOURSE, C.PRODUIT_INTERNE, 0, 0, 450, { nat_id: null, periode: { pv: 450 } })];
+    const sans = Object.fromEntries(blocResultats({ agregats: AGREGATS, postes: POSTES }).lignes.map((x) => [x.code, x]));
+    const avec = Object.fromEntries(blocResultats({ agregats: [...AGREGATS, ...interne], postes: POSTES }).lignes.map((x) => [x.code, x]));
+    expect(avec.realise.produit_interne.toString()).toBe('450');
+    expect(avec.realise.brute.toString()).toBe(sans.realise.brute.plus(450).toString());
+    expect(avec.realise.lignes.toString()).toBe(sans.realise.lignes.toString());
+    expect(avec.realise.pa.toString()).toBe(sans.realise.pa.toString());
+    expect(avec.facture.lignes.toString()).toBe(sans.facture.lignes.toString());
+    expect(avec.budget.brute.toString()).toBe(sans.budget.brute.toString());
+  });
+});

@@ -47,7 +47,7 @@
 | 3 | Relevés de compteurs à la borne : serveur | cœur | MO2 | FAIT (08/11/2026) |
 | 4 | Relevés de compteurs à la borne : écran | cœur | 3 | FAIT (08/11/2026) |
 | 5 | Données de démonstration d'entretiens | cœur | MO3 | FAIT (08/11/2026) |
-| 6 | Refacturation interne : composante « produit interne » | `modules/rentabilite` | MO4 | A FAIRE |
+| 6 | Refacturation interne : composante « produit interne » | `modules/rentabilite` | MO4 | FAIT |
 | 7 | Refacturation interne : crédit du chantier de suivi | cœur | 6 | A FAIRE |
 | 8 | Coût par heure proposé comme coût moyen | cœur | MO5 | A FAIRE |
 | 9 | Cartes carburant : lecture du fichier | `modules/import` | MO6 | A FAIRE |
@@ -133,7 +133,7 @@
 - **Critère de fin** : `npm test` vert ; écran des entretiens de la démo non entièrement en retard.
 - **Réalisé / écarts** : fonction pure `client/scripts/entretiens-demo.mjs` (`planifierEntretiensDemo`) : pour chaque plan à périodicité en mois, dernier entretien placé à jour / à échéance proche / en retard en alternance, entretiens antérieurs à la périodicité dans les 12 derniers mois (un plan annuel en retard remonte à 12 mois + 20 jours). Étape ajoutée à `generer-modules-demo.mjs` : événements ENTRETIEN datés avec code de plan (`POST /ressources/materiels/{id}/evenements`), pas d'ordres d'entretien ; non exécutée. Plans sans mois ignorés. Test `entretiens-demo.test.js`. `npm test` : seuls les 2 échecs connus.
 
-## Lot 6 : refacturation interne, composante « produit interne » (A FAIRE)
+## Lot 6 : refacturation interne, composante « produit interne » (FAIT 08/11/2026)
 
 - **Module** : `modules/rentabilite`. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `modules/rentabilite/js/src/codes.js` (`:22`) ↔ `Codes.cs` (nouvelle composante), `indicateurs.js` ↔
@@ -142,8 +142,9 @@
 - **Règles répliquées JS / C#** : marge d'un chantier avec produit interne (JS / C#, même jeu).
 - **Jeux de tests** : chantier de suivi crédité du montant des heures valorisées ailleurs ; total société inchangé.
 - **Critère de fin** : jeu vert en JS et en C# ; `npm test`, `dotnet test LogiBTP.slnx` verts.
+- **Réalisé / écarts** : composante `PRODUIT_INTERNE` (codes.js ↔ Codes.cs, texte fr.json) ; règle `margeChantier` (`js/src/marge.js`) ↔ `Marges.Chantier` (`Marges.cs`, nouveau : le module n'avait pas de marge en C#), jeu `tests/cas/03_marge_produit_interne.json`, tests JS et `MargesTests`. `blocResultats` ajoute `produit_interne` (faits DEBOURSE de cette composante, PV seul, PA/PR nuls) au produit des marges des lignes réalisé, production, facturé et prévisionnel ; les colonnes du Détail et les coûts sont inchangés. Production des faits : lot 7. `npm test` : 2 échecs connus ; `dotnet test` vert.
 
-## Lot 7 : refacturation interne, crédit du chantier de suivi (A FAIRE)
+## Lot 7 : refacturation interne, crédit du chantier de suivi (FAIT 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `RentabiliteBtp.cs` (montant des heures du matériel valorisées sur les chantiers, crédité au chantier de

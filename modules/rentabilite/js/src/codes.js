@@ -28,6 +28,8 @@ export const COMPOSANTE = Object.freeze({
   STOCK: 'STOCK',
   POSTE: 'POSTE',
   ACOMPTE: 'ACOMPTE',
+  // Refacturation interne du matériel (lot 6) : produit crédité au chantier de suivi, sans pièce ni écriture comptable.
+  PRODUIT_INTERNE: 'PRODUIT_INTERNE',
 });
 
 /** Source d'un fait. */
