@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { lundiDe, mobileAffiche, lienItineraire, liensTexte, numeroTel, presaisirJournee, actionsTache, minutesPointees, tachesGardees, jourPointage, adressesAPrecharger, plansTache, plansTacheHtml } from '../src/app/terrain/terrain.js';
+import { lundiDe, mobileAffiche, lienItineraire, liensTexte, numeroTel, presaisirJournee, actionsTache, minutesPointees, tachesGardees, jourPointage, adressesAPrecharger, plansTache, plansTacheHtml, plansAPrecharger } from '../src/app/terrain/terrain.js';
 
 describe('application de terrain', () => {
   it('présaisie : heures du calendrier au prorata des tâches, équipe du chef reprise', () => {
@@ -137,5 +137,16 @@ describe('plans en vigueur d’une tâche (plan terrain-suites, lot 3)', () => {
     expect(replie).toContain('Voir tous les plans (1 autre)');
     expect(replie).toContain('href="/p/21"');
     expect(replie).toContain('Premier indice');
+  });
+});
+
+describe('plans cochés préchargés (plan terrain-suites, lot 4)', () => {
+  it('fichiers des seuls plans cochés, sans doublon', () => {
+    const lectures = [
+      { plans: { 5: [{ terrain: true, fichiers: [{ id: 11 }, { id: 12 }] }, { terrain: false, fichiers: [{ id: 21 }] }] } },
+      { plans: { 6: [{ terrain: true, fichiers: [{ id: 11 }] }] } },
+      { taches: [] }, null,
+    ];
+    expect(plansAPrecharger(lectures)).toEqual([11, 12]);
   });
 });

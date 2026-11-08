@@ -7,7 +7,7 @@ import { MODULE_FACULTATIF, TYPE_DOCUMENT, TYPE_FICHE } from '../codes.js';
 import { echapper, lirePreferences, formatDate, confirmer } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 import { ETATS_TACHE, COULEURS_ETAT } from '../planning/etats.js';
-import { NAVIGATIONS, lundiDe, mobileAffiche, lienItineraire, liensTexte, numeroTel, adressesAPrecharger, actionsTache, minutesPointees, tachesGardees, jourPointage, plansTache, plansTacheHtml } from '../terrain/terrain.js';
+import { NAVIGATIONS, lundiDe, mobileAffiche, lienItineraire, liensTexte, numeroTel, adressesAPrecharger, actionsTache, minutesPointees, tachesGardees, jourPointage, plansTache, plansTacheHtml, plansAPrecharger } from '../terrain/terrain.js';
 import { PointageTerrain } from '../terrain/pointage-terrain.js';
 import { SavTerrain } from '../terrain/sav-terrain.js';
 import { DemandesTerrain } from '../terrain/demandes-terrain.js';
@@ -129,7 +129,8 @@ export class PageTerrain extends PageBase {
 
   /**
    * Préchargement (T10), une fois par jour et par compte, réseau joignable : les lectures de la période sont faites pour
-   * que le service worker les garde, puis les pièces « Terrain » des tâches lues (taille limitée par le service worker).
+   * que le service worker les garde, puis les pièces « Terrain » des tâches lues (taille limitée par le service worker)
+   * et les plans cochés « Terrain » (budget à part).
    */
   async #precharger() {
     if (this.app.apiPerdue || globalThis.navigator?.onLine === false) return;
@@ -140,11 +141,15 @@ export class PageTerrain extends PageBase {
     const premier = await lire(`/api/terrain?${new URLSearchParams({ du: jour, au: jour })}`);
     if (!premier?.personne) return;
     const pieces = new Set();
+    const lectures = [];
     for (const url of adressesAPrecharger(jour, premier.personne.id, { demandes: this.app.peut('terrain/demande', ACTION_DROIT.CONSULTER) })) {
       const r = await lire(url);
+      if (r?.taches) lectures.push(r);
       for (const t of r?.taches ?? []) for (const p of t.pieces ?? []) pieces.add(p.id);
     }
     for (const id of pieces) await fetch(api.terrain.urlPiece(id), { credentials: 'same-origin' }).catch(() => null);
+    // Plans cochés « Terrain » : gardés par le service worker dans leur propre budget (pièces intactes).
+    for (const id of plansAPrecharger(lectures)) await fetch(api.terrain.urlPlan(id), { credentials: 'same-origin' }).catch(() => null);
     try { localStorage.setItem(cle, jour); } catch { /* sans stockage : refait à la prochaine ouverture */ }
   }
 

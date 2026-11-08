@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { traitement, empreinte, cleDonnee, reponseAGarder, reponseEnPanne, erreurHorsLigne, TAILLE_MAX_DONNEE } from '../src/pwa/regles.js';
+import { traitement, empreinte, cleDonnee, reponseAGarder, reponseEnPanne, erreurHorsLigne, TAILLE_MAX_DONNEE, BUDGET_PLANS, estPlanTerrain, plansARetirer } from '../src/pwa/regles.js';
 
 // Service worker (application installable, mode hors ligne) : traitement des requêtes et mise en cache des lectures.
 describe('règles du service worker', () => {
@@ -54,5 +54,30 @@ describe('règles du service worker', () => {
     expect(reponseEnPanne(500, 'application/problem+json')).toBe(false);
     expect(erreurHorsLigne(true)).toMatchObject({ status: 503, code: 'HORS_LIGNE' });
     expect(erreurHorsLigne(false).title).toMatch(/non consultée/);
+  });
+});
+
+describe('plans du terrain gardés hors ligne (plan terrain-suites, lot 4)', () => {
+  const Mo = 1024 * 1024;
+
+  it('reconnus et gardés quel que soit leur type, jusqu’au budget', () => {
+    expect(estPlanTerrain('https://a.fr/api/terrain/plans/12')).toBe(true);
+    expect(estPlanTerrain('https://a.fr/api/terrain/pieces/12')).toBe(false);
+    expect(reponseAGarder({ statut: 200, typeContenu: 'application/pdf', taille: String(10 * Mo), url: 'https://a.fr/api/terrain/plans/12' })).toBe(true);
+    expect(reponseAGarder({ statut: 200, typeContenu: 'application/pdf', taille: String(BUDGET_PLANS + 1), url: 'https://a.fr/api/terrain/plans/12' })).toBe(false);
+    expect(BUDGET_PLANS).toBe(25 * Mo);
+  });
+
+  it('budget atteint : plans les plus anciens retirés, pièces « Terrain » hors du compte', () => {
+    const gardes = [{ cle: 'p1', taille: 10 * Mo }, { cle: 'p2', taille: 10 * Mo }, { cle: 'p3', taille: 4 * Mo }];
+    expect(plansARetirer(gardes, 'p4', 1 * Mo)).toEqual([]);
+    expect(plansARetirer(gardes, 'p4', 6 * Mo)).toEqual(['p1']);
+    expect(plansARetirer(gardes, 'p4', 15 * Mo)).toEqual(['p1', 'p2']);
+    // Plan déjà gardé remplacé : sa taille précédente ne compte pas.
+    expect(plansARetirer(gardes, 'p1', 11 * Mo)).toEqual([]);
+    // Plus grand que le budget : non gardé, rien n'est retiré.
+    expect(plansARetirer(gardes, 'p4', 26 * Mo)).toBeNull();
+    // Les pièces suivent leur propre règle (25 Mo par pièce), indépendante du budget des plans.
+    expect(reponseAGarder({ statut: 200, typeContenu: 'application/pdf', taille: String(20 * Mo), url: 'https://a.fr/api/terrain/pieces/7' })).toBe(true);
   });
 });

@@ -67,12 +67,44 @@ export function cleDonnee(url, methode, corps = '') {
 export const TAILLE_MAX_PIECE = 25 * 1024 * 1024;
 
 /**
+ * Budget des plans du terrain gardés pour le hors ligne (octets, plan terrain-suites lot 4, TS3 b) : cache à part de
+ * celui des pièces « Terrain » ; au-delà, les plans gardés depuis le plus longtemps sont retirés.
+ */
+export const BUDGET_PLANS = 25 * 1024 * 1024;
+
+/** En-tête de la taille d'un plan gardé (octets), lu pour tenir le budget sans relire les fichiers. */
+export const ENTETE_TAILLE = 'X-LogiBTP-Taille';
+
+/** Fichier d'un plan en vigueur de l'application de terrain (`/api/terrain/plans/{id}`), gardé dans son propre cache. */
+export const estPlanTerrain = (url = '') => /\/api\/terrain\/plans\/\d+/.test(url);
+
+/**
+ * Plans à retirer du cache pour garder un plan de `taille` octets sous la clé `cle` : `gardes` = [{ cle, taille }],
+ * du plus ancien au plus récent (la clé déjà gardée est remplacée). Plus grand que le budget : null (non gardé, rien
+ * n'est retiré) ; sinon les clés des plus anciens à retirer jusqu'à tenir dans le budget.
+ */
+export function plansARetirer(gardes, cle, taille, budget = BUDGET_PLANS) {
+  if (!(Number(taille) <= budget)) return null;
+  const autres = gardes.filter((g) => g.cle !== cle);
+  let total = autres.reduce((s, g) => s + (Number(g.taille) || 0), 0) + Number(taille);
+  const retirer = [];
+  for (const g of autres) {
+    if (total <= budget) break;
+    retirer.push(g.cle);
+    total -= Number(g.taille) || 0;
+  }
+  return retirer;
+}
+
+/**
  * Réponse de l'API à garder : succès en JSON, de taille raisonnable (taille inconnue : gardée) ; pièces de
- * l'application de terrain (`/api/terrain/pieces/`) : tout type, jusqu'à TAILLE_MAX_PIECE.
+ * l'application de terrain (`/api/terrain/pieces/`) : tout type, jusqu'à TAILLE_MAX_PIECE ; plans du terrain : tout
+ * type, jusqu'au budget des plans (tenu ensuite par `plansARetirer`).
  */
 export function reponseAGarder({ statut, typeContenu, taille, url = '' }) {
   if (statut !== 200) return false;
   if (/\/api\/terrain\/pieces\//.test(url)) return !(Number(taille) > TAILLE_MAX_PIECE);
+  if (estPlanTerrain(url)) return !(Number(taille) > BUDGET_PLANS);
   if (!/json/i.test(typeContenu ?? '')) return false;
   return !(Number(taille) > TAILLE_MAX_DONNEE);
 }

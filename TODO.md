@@ -126,8 +126,9 @@ Analyse du 23/10/2026 : [ANALYSE-MODULE-SOUS-TRAITANCE.md](documentation/concept
 Plan en 24 lots : [terrain-suites.md](documentation/conception/plans/terrain-suites.md) (décisions TS1 à TS25 du
 08/11/2026 dans [terrain-suites-questions.md](documentation/conception/plans/terrain-suites-questions.md)).
 
-- [ ] Lot 1, écarts : plans au dernier indice validé du suivi des validations (CRM) parmi les pièces du terrain (T6) ;
-  bandeau trop large sur un téléphone (gabarit tactile commun avec le lot 2). Plan : lots 2 à 6.
+- [ ] Lot 1, écarts : bandeau trop large sur un téléphone (gabarit tactile commun avec le lot 2). Plan : lots 5 et 6.
+  Fait le 08/11/2026 (plan, lots 2 à 4) : plans au dernier indice validé du suivi des validations (CRM) parmi les pièces
+  du terrain (T6), case « Terrain » par plan, plans cochés gardés hors ligne dans un budget à part (25 Mo).
 - [ ] Lot 2, écarts : pointage à la ligne d'ordre (`poi_lig_id`) quand la tâche vient d'une ligne (T8). Plan : lot 7.
 - [ ] Lot 3, suites : photos HEIC converties (le navigateur ne sait pas les réduire). Plan : lot 8.
 - [ ] Lot 4, suites : saisie libre hors ligne limitée aux chantiers et ordres déjà lus (journée gardée) ; nouvelle

@@ -19,7 +19,7 @@
 | 1 | Ménage du TODO (points déjà faits) | documentation | — | FAIT (08/11/2026) |
 | 2 | Case « Terrain » d'un plan du suivi des validations | `modules/crm` | — | FAIT (08/11/2026) |
 | 3 | Plans en vigueur sur le terrain | cœur | 2 | FAIT (08/11/2026) |
-| 4 | Plans gardés hors ligne, budget à part | cœur | 3 | A FAIRE |
+| 4 | Plans gardés hors ligne, budget à part | cœur | 3 | FAIT (08/11/2026) |
 | 5 | Bandeau adaptatif sur téléphone | `modules/navigation` | — | A FAIRE |
 | 6 | Menu simplifié du terrain et raccourci vers le menu classique | cœur | 5 | A FAIRE |
 | 7 | Pointage à la ligne d'ordre | cœur | — | A FAIRE |
@@ -99,7 +99,7 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
   `<details>` replié ; textes `terrain_btp.page.plans*`, icône `terrain_btp_plan`, `api.terrain.urlPlan`. Tests :
   `PlansTerrainTests` (C#), `terrain.test.js` (JS). Aucun script SQL.
 
-## Lot 4 : plans gardés hors ligne, budget à part (TS3)
+## Lot 4 : plans gardés hors ligne, budget à part (TS3) (FAIT 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `client/src/pwa/sw.js` (cache des plans séparé de celui des pièces « Terrain », 25 Mo par défaut),
@@ -108,6 +108,15 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
 - **Points ouverts** : taille du budget des plans (25 Mo proposés, comme les pièces) : `OUVERT`, à confirmer au démarrage.
 - **Tests** : JS : budget atteint → plans les plus anciens non gardés, pièces « Terrain » intactes.
 - **Critère de fin** : `npm test` vert ; plan coché ouvert sans réseau après une ouverture en ligne de « Mon terrain ».
+- **Réalisé / écarts** : point OUVERT tranché par la proposition : **25 Mo** (`BUDGET_PLANS` de `client/src/pwa/regles.js`).
+  Règles pures `estPlanTerrain`, `plansARetirer` (plans gardés depuis le plus longtemps retirés jusqu'à tenir dans le
+  budget ; plan plus grand que le budget non gardé, rien retiré ; plan déjà gardé remplacé), `reponseAGarder` étendue ;
+  `sw.js` : cache `logibtp-plans` à part (taille gardée dans l'en-tête `X-LogiBTP-Taille`, plans gardés l'un après
+  l'autre), lu hors ligne, effacé à la déconnexion et au changement de compte comme les données ; pièces « Terrain »
+  inchangées (cache des données, 25 Mo par pièce). Écart : le préchargement est fait par `#precharger` de
+  `pages/terrain.js` (où se trouve celui des pièces), avec la règle pure `plansAPrecharger` dans `terrain/terrain.js`
+  (seuls les plans cochés) ; `operations-terrain.js` non touché. Plans non cochés : gardés s'ils ont été ouverts en
+  ligne, dans le même budget. Tests : `pwa.test.js`, `terrain.test.js`. Aucun script SQL.
 
 ## Lot 5 : bandeau adaptatif sur téléphone (TS4 b)
 

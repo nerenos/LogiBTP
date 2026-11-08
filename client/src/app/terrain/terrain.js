@@ -132,6 +132,17 @@ export function adressesAPrecharger(jour, salarie = null, { demandes = false } =
   ];
 }
 
+/**
+ * Fichiers des plans cochés « Terrain » à précharger (plan terrain-suites, lot 4) depuis les lectures de
+ * `GET /api/terrain` : identifiants sans doublon, dans l'ordre de lecture ; les plans non cochés ne sont gardés que
+ * s'ils ont été ouverts en ligne (budget à part du service worker, `BUDGET_PLANS`).
+ */
+export function plansAPrecharger(lectures) {
+  const ids = new Set();
+  for (const r of lectures) for (const liste of Object.values(r?.plans ?? {})) for (const p of liste) if (p.terrain) for (const f of p.fichiers ?? []) ids.add(f.id);
+  return [...ids];
+}
+
 /** Actions proposées sur la carte d'une tâche, dans l'ordre d'affichage, selon les droits et le contexte. */
 export const ACTIONS_TACHE = Object.freeze(['pointage', 'avancement', 'photos', 'nc', 'demande', 'materiel', 'livraison', 'reception', 'fil']);
 
