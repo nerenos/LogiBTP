@@ -8,7 +8,7 @@ import { texte, texteHtml, icone, iconeHtml, langue, messageErreur } from '@logi
 import { api } from '../api.js';
 import { choixMultiple } from '../choix-multiple.js';
 import { tuilesChoix, filtrerChoix, tuileExacte } from '../pointage/choix-borne.js';
-import { distanceRestaurant, chantierDuJour } from '../pointage/repas.js';
+import { distanceRestaurant, chantierDuJour, corpsRepas, membresRepas } from '../pointage/repas.js';
 import { lignesCompteurs, materielsProposes, corpsReleve } from '../pointage/releves-borne.js';
 import { LIBELLES_UNITE } from '../ressources/compteurs.js';
 
@@ -682,18 +682,26 @@ export class PageBorne extends PageBase {
     const j = this.etat.journee;
     this.ecran = () => this.#repas();
     const chantier = chantierDuJour(this.etat.lignes.map((l) => ({ ...l, date: j.date })), String(j.date).slice(0, 10)) ?? j.proposes[0] ?? null;
+    const equipe = Boolean(this.etat.membres);
+    const nomMembre = (id) => { const s = this.donnees.salaries.find((x) => x.id === id); return s ? `${s.prenom} ${s.nom}` : texte('pointage.synthese.salarie', { id }); };
+    // Équipe : le chef déclare le restaurant pour les membres cochés (tous par défaut).
+    const decoches = () => [...this.zone.querySelectorAll('[data-membre]')].filter((c) => !c.checked).map((c) => Number(c.dataset.membre));
     this.zone.innerHTML = `${this.#entete(texte('pointage.saisie.repas'))}
       <p><input data-recherche class="borne-champ" placeholder="${texteHtml('pointage.repas.rechercher')}" autocomplete="off">
         <button type="button" class="borne-bouton" data-non-trouve>${texteHtml('pointage.repas.non_trouve')}</button>
         ${j.repas ? `<button type="button" class="borne-bouton" data-aucun>${texteHtml('pointage.repas.aucun')}</button>` : ''}
         <button type="button" class="borne-bouton" data-retour>${texteHtml('pointage.borne.retour')}</button></p>
       ${j.repas ? `<p>${texteHtml('pointage.repas.note_html', { restaurant: j.repas.restaurant })}</p>` : ''}
+      ${equipe ? `<p>${texteHtml('pointage.repas.equipe_membres')} ${this.etat.membres.map((m) => `<label class="borne-case"><input type="checkbox" data-membre="${m}" checked> ${echapper(nomMembre(m))}</label>`).join(' ')}</p>` : ''}
       <div class="borne-grille" data-restaurants><p class="aide">${texteHtml('pointage.repas.recherche_proches')}</p></div>`;
     this.#brancherEntete();
     const grille = this.zone.querySelector('[data-restaurants]');
     const enregistrer = async (r) => {
+      if (equipe && !membresRepas(this.etat.membres, decoches()).length) { await alerter(texte('pointage.repas.equipe_aucun_membre')); return; }
       try {
-        const l = await appel('POST', '/repas', { jeton: j.jeton, repas: { date: j.date, cha_id: chantier, ...r } });
+        const rep = await appel('POST', '/repas', corpsRepas({ jeton: j.jeton, repas: { date: j.date, cha_id: chantier, ...r }, equipe: equipe ? this.etat.membres : null, decoches: equipe ? decoches() : [] }));
+        const l = equipe ? rep.repas : rep;
+        if (equipe && rep.refus?.length) await alerter(rep.refus.map((x) => texte('pointage.repas.equipe_refus', { nom: nomMembre(x.salarie), raison: messageErreur(x.code) })).join('\n'));
         j.repas = l.find((x) => String(x.date).slice(0, 10) === String(j.date).slice(0, 10)) ?? null;
         if (this.test) await alerter(texte('pointage.borne.essai_rien'));
         this.#liste();
@@ -762,7 +770,7 @@ export class PageBorne extends PageBase {
       <div class="borne-barre">${lecture ? '' : [60, 240, 420, 480].map((m) => `<button type="button" class="borne-bouton" data-rapide="${m}" title="${texteHtml('pointage.borne.rapide_aide')}">${texteHtml('pointage.borne.heures', { duree: ecrireDuree(m) })}</button>`).join('')}
         <span class="borne-barre-espace"></span>
         ${lecture ? '' : `<button type="button" class="borne-bouton principal" data-enregistrer>${iconeHtml('pointage_ok')} ${texteHtml('commun.enregistrer')}</button> <button type="button" class="borne-bouton" data-ajouter>${iconeHtml('ajouter')} ${texteHtml('commun.ajouter')}</button>`}
-        ${lecture || equipe ? '' : `<button type="button" class="borne-bouton" data-repas title="${texteHtml('pointage.borne.repas_aide')}">${iconeHtml('pointage_repas')} ${j.repas ? echapper(j.repas.restaurant) : texteHtml('pointage.borne.repas')}</button>`}
+        ${lecture ? '' : `<button type="button" class="borne-bouton" data-repas title="${texteHtml('pointage.borne.repas_aide')}">${iconeHtml('pointage_repas')} ${j.repas ? echapper(j.repas.restaurant) : texteHtml('pointage.borne.repas')}</button>`}
         ${lecture ? '' : `<button type="button" class="borne-bouton" data-retour>${texteHtml('pointage.borne.retour')}</button>`} <button type="button" class="borne-bouton" data-terminer>${texteHtml('pointage.borne.terminer')}</button></div>
       <div class="borne-lignes">${this.etat.lignes.map(ligne).join('') || `<p>${texteHtml('pointage.borne.aucun_pointage')}</p>`}</div>
       ${equipe ? `<p class="aide">${texteHtml('pointage.borne.equipe_aide')}</p>` : ''}`;

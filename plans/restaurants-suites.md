@@ -28,7 +28,7 @@
 | Lot | Titre | Module | Dépend de | Statut |
 |---|---|---|---|---|
 | 1 | Repas pour plusieurs salariés à la borne : service | `modules/pointage` | RO1 | FAIT |
-| 2 | Repas dans la saisie d'équipe de la borne | cœur | 1 | A FAIRE |
+| 2 | Repas dans la saisie d'équipe de la borne | cœur | 1 | FAIT |
 | 3 | Vue des repas d'une période | cœur | RO2 | A FAIRE |
 | 4 | Liste des repas (écran, droits) | cœur | 3 | A FAIRE |
 | 5 | Carte des restaurants | cœur | RO3 | A FAIRE |
@@ -48,7 +48,7 @@
 - **Critère de fin** : `dotnet test LogiBTP.slnx` vert.
 - **Réalisé** : `RepasBorne` reçoit `Membres` ; règle pure `ReglesRepas.Repartir` (hors équipe `REPAS_HORS_EQUIPE`, déjà déclaré `REPAS_DEJA`), refus par salarié, jour validé aussi refusé seul ; réponse `RepasEquipeResultat`. Écart : tests sur la règle pure (pas de test de service avec base).
 
-## Lot 2 : repas dans la saisie d'équipe de la borne (A FAIRE)
+## Lot 2 : repas dans la saisie d'équipe de la borne (FAIT 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `client/src/app/pages/borne.js` (saisie d'équipe : choix du restaurant, cases des membres),
@@ -57,6 +57,7 @@
 - **Règles répliquées JS / C#** : aucune.
 - **Jeux de tests** : test client : équipe de trois, un décoché → deux repas envoyés.
 - **Critère de fin** : `npm test` et `dotnet test LogiBTP.slnx` verts.
+- **Réalisé** : bouton Repas aussi en saisie d'équipe ; cases des membres (cochées par défaut), envoi de `membres` (`corpsRepas`, `membresRepas` dans `pointage/repas.js`), refus par salarié affichés. Écarts : `Equipes.cs` inchangé (la borne passe par le module) ; pas de `dotnet test` (aucun C# touché) ; `npm test` : 3 échecs hors lot restants dont `REPAS_DEJA` / `REPAS_HORS_EQUIPE` « plus levé » (lot 1, à régler par `extraire-erreurs`).
 
 ## Lot 3 : vue des repas d'une période (A FAIRE)
 

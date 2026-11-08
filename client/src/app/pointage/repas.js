@@ -84,3 +84,13 @@ export async function rendreRepasSemaine(zone, { api, salarie, jours, pointages,
     } catch (e) { message(e.message, 'erreur'); }
   }));
 }
+
+/** Membres d'une équipe retenus pour un repas déclaré par le chef (tous sauf les décochés), sans doublon. */
+export const membresRepas = (membres, decoches = []) => {
+  const ecartes = new Set(decoches);
+  return [...new Set(membres)].filter((m) => !ecartes.has(m));
+};
+
+/** Corps de la requête `POST /repas` : un repas individuel, ou d'équipe (`membres`) quand la saisie est d'équipe. */
+export const corpsRepas = ({ jeton, repas, equipe = null, decoches = [] }) =>
+  (equipe ? { jeton, repas, membres: membresRepas(equipe, decoches) } : { jeton, repas });
