@@ -253,6 +253,7 @@ export const THEMES_LISTE = [
       { code: 'E_BE', libelle: "Ordre du bureau d'études" }, { code: 'E_BM', libelle: 'Ordre du bureau des méthodes' }, { code: 'E_OF', libelle: 'Ordre de fabrication' }, { code: 'E_CO', libelle: 'Ordre de colisage' }, { code: 'E_LI', libelle: 'Ordre de livraison' }, { code: 'E_SAV', libelle: 'Intervention SAV' }, { code: 'E_OST', libelle: 'Ordre de sous-traitance' }, { code: 'E_DAC', libelle: "Demande d'achat" }, { code: 'E_ENT', libelle: "Ordre d'entretien du matériel" }],
   },
   { thl_code: 'pointages', thl_libelle: 'Pointages', thl_icone: '⏱', thl_ordre: 39, thl_types: [{ code: 'pointage', libelle: 'Pointage' }] },
+  { thl_code: 'repas', thl_libelle: 'Repas des salariés', thl_icone: '🍽', thl_ordre: 40, thl_types: [{ code: 'repas', libelle: 'Repas' }] },
   { thl_code: 'affaires', thl_libelle: 'Affaires', thl_icone: '🗂', thl_ordre: 12, thl_types: [{ code: 'affaire', libelle: 'Affaire' }] },
   { thl_code: 'chantiers', thl_libelle: 'Chantiers', thl_icone: '🏗', thl_ordre: 13, thl_types: [{ code: 'chantier', libelle: 'Chantier' }] },
   { thl_code: 'marches', thl_libelle: 'Marchés', thl_icone: '📜', thl_ordre: 14, thl_types: [{ code: 'marche', libelle: 'Marché' }] },
@@ -820,3 +821,28 @@ VUES_LISTE.push(
   vuePointages(1011, 'Non-conformités', [{ colonne: 'motif', op: 'nonvide' }]),
   vuePointages(1012, 'Temps improductif', [{ colonne: 'productif', op: 'faux' }]),
 );
+
+// Repas des salariés (module Pointage, db/282, vue 1013) : mois en cours par défaut, la période se change par le filtre de la colonne de date.
+VUES_LISTE.push({
+  vli_id: 1013, vli_nom: 'Repas du mois', vli_contexte: null, vli_partage: 'T', vli_proprietaire: 'admin', vli_groupe: null,
+  definition: {
+    theme: 'repas',
+    source: { mode: 'vue', vue: 'repas', colonne_id: 'id', colonne_type: 'type_element' },
+    filtres: [{ colonne: 'date_repas', op: 'periode', valeur: 'mois_en_cours' }],
+    colonnes: [
+      col('date_repas', 'Date', { format: 'date', ...fixe(92), recherche: false }),
+      col('salarie', 'Salarié', { ...prop(2, 130), style: { gras: true } }),
+      col('matricule', 'Matricule', { ...fixe(80), masquee: true }),
+      col('service', 'Service', { ...prop(1.2, 90) }),
+      col('restaurant', 'Restaurant', { ...prop(2, 120) }),
+      col('chantier', 'Chantier', { ...fixe(110) }),
+      col('chantier_libelle', 'Libellé du chantier', { ...prop(2, 120), masquee: true }),
+      col('commentaire', 'Commentaire', { ...prop(2, 100), masquee: true }),
+      col('saisi_par', 'Saisi par', { ...fixe(90), masquee: true }),
+    ],
+    segments: [{ colonne: 'service', titre: 'Service' }, { colonne: 'restaurant', titre: 'Restaurant' }],
+    tri: [{ colonne: 'date_repas', sens: 'desc' }, { colonne: 'salarie', sens: 'asc' }],
+    lignes: 'multi',
+    taille_lot: 100,
+  },
+});

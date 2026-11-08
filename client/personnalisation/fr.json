@@ -4914,6 +4914,10 @@
         "pointages_improductifs": {
           "libelle": "Temps improductif"
         },
+        "repas": {
+          "libelle": "Repas des salariés",
+          "info": "Repas déclarés par période (réservé aux droits RH)"
+        },
         "parametrage_pointage": {
           "libelle": "Paramètres : pas, validation, sous-types…"
         },

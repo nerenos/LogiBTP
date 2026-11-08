@@ -76,6 +76,7 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
             new("pointage/saisie_libre", "Saisie libre du terrain", [ActionsDroits.Creer], Portee: true,
                 Aide: "Travail non planifié saisi sur le terrain : soi (seul), son équipe (le chef compose l'équipe de la tâche)"),
             new("pointage/bornes", "Bornes d'atelier", Simple, Aide: "Appareils, PIN, paramétrage des bornes"),
+            new(SpecialisationListeBtp.NoeudRepas, "Liste des repas des salariés", [ActionsDroits.Consulter], Aide: "Repas déclarés par salarié et par période (réservé aux droits RH) ; refusé : la liste des repas répond 403"),
             new("planning", "Planning", Simple, Icone: "📆"),
             new("terrain", "Application de terrain", [ActionsDroits.Consulter], Icone: "📱", Aide: "Ses tâches du planning, leur adresse, leur contact et les pièces diffusées sur le terrain"),
             new("terrain/livraison", "Réception de livraison sur le terrain", [ActionsDroits.Creer], Aide: "Bon de livraison en brouillon depuis une commande du chantier, validé au bureau"),

@@ -30,7 +30,7 @@
 | 1 | Repas pour plusieurs salariés à la borne : service | `modules/pointage` | RO1 | FAIT |
 | 2 | Repas dans la saisie d'équipe de la borne | cœur | 1 | FAIT |
 | 3 | Vue des repas d'une période | cœur | RO2 | FAIT |
-| 4 | Liste des repas (écran, droits) | cœur | 3 | A FAIRE |
+| 4 | Liste des repas (écran, droits) | cœur | 3 | FAIT |
 | 5 | Carte des restaurants | cœur | RO3 | A FAIRE |
 
 ---
@@ -68,9 +68,9 @@
 - **Règles répliquées JS / C#** : aucune.
 - **Jeux de tests** : script rejoué deux fois ; colonnes de la vue alignées sur la déclaration (tests existants).
 - **Critère de fin** : `npm test` vert ; la vue rend les repas de la base de développement.
-- **Réalisé** : `db/282_liste_repas.sql` (`v_liste_repas` + source de liste `repas`, rejouable), manifeste, `SOURCES_LISTE.repas`, `121` régénéré (1 ligne). Écarts : pas de colonne montant (le repas n'en porte pas) ; script non appliqué aux bases de développement ni testé sur une base (consigne) ; `npm test` client : seuls les 2 échecs anciens restent.
+- **Réalisé** : `db/282_liste_repas.sql` (`v_liste_repas` + source de liste `repas`, rejouable), manifeste, `SOURCES_LISTE.repas`, `121` régénéré (1 ligne). Écarts : pas de colonne montant (le repas n'en porte pas) ; script non appliqué aux bases de développement ; vérifié le 08/11/2026 en transaction annulée sur logibtp_demo et logibtp (création de la vue et de la source sans erreur, 0 repas dans les deux bases, aucune correction nécessaire) ; `npm test` client : seuls les 2 échecs anciens restent.
 
-## Lot 4 : liste des repas, écran et droits (A FAIRE)
+## Lot 4 : liste des repas, écran et droits (FAIT 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : entrée de menu et page de liste (`client/src/app/`), nœud de droits dans `SpecialisationDroitsBtp.Routes`,
@@ -79,6 +79,7 @@
 - **Règles répliquées JS / C#** : aucune.
 - **Jeux de tests** : utilisateur sans droit RH → 403 ; avec droit → liste filtrable par période et exportable.
 - **Critère de fin** : `npm test` et `dotnet test LogiBTP.slnx` verts.
+- **Réalisé** : vue par défaut 1013 « Repas du mois » (filtre `periode` `mois_en_cours` sur `date_repas`), thème `repas`, entrée de menu Pointage `/liste/repas?vue=1013`, nœud de droits `pointage/repas` (Consulter ; refusé par défaut aux profils non totaux), `SpecialisationListeBtp.RestrictionAsync` lève 403 sur la source `repas` sans ce droit ; `121` régénéré. Écarts : nœud dédié plutôt qu'un « droit RH » inexistant ; la route reste `/api/listes` (contrôle dans la restriction de la source, pas dans `Routes`) ; test client seul (pas de test C# du 403) ; `npm test` : seuls les 2 échecs anciens, `dotnet test` vert (copie fraîche).
 
 ## Lot 5 : carte des restaurants (A FAIRE)
 

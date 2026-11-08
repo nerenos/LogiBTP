@@ -237,6 +237,12 @@ public sealed class SpecialisationListeBtp(IServiceScopeFactory scopes) : Specia
 
     private sealed record TypeElement(string Code, string? Famille);
 
+    /// <summary>Nœud de droits de la liste des repas (source « repas », plan restaurants-suites, lot 4).</summary>
+    public const string NoeudRepas = "pointage/repas";
+
+    /// <summary>Code de la source de liste des repas (db/282).</summary>
+    public const string SourceRepas = "repas";
+
     /// <summary>
     /// Droits du module Droits appliqués aux listes : lignes des types de documents (documents/{famille}/{code}) et des
     /// types de fiches (fiches/{type}) que l'utilisateur ne peut pas consulter écartées ; champs confidentiels de la fiche
@@ -246,6 +252,8 @@ public sealed class SpecialisationListeBtp(IServiceScopeFactory scopes) : Specia
     {
         var services = SpecialisationBtp.Http?.HttpContext?.RequestServices;
         if (services?.GetService<IDroits>() is not { } droits) return RestrictionListe.Aucune;
+        if (source.Code == SourceRepas && !await droits.AutoriseAsync(u, NoeudRepas, ActionsDroits.Consulter, ct))
+            throw ExceptionMetier.AccesRefuse(ActionsDroits.Consulter);
         var db = services.GetRequiredService<LogiBtpContext>();
         var types = await db.Database.SqlQueryRaw<TypeElement>("""
             SELECT tyd_code AS "Code", tyd_famille::text AS "Famille" FROM type_document
