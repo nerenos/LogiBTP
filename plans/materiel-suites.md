@@ -46,7 +46,7 @@
 | 2 | Photos de départ et de retour : ligne d'affectation | cœur | 1 | FAIT (08/11/2026) |
 | 3 | Relevés de compteurs à la borne : serveur | cœur | MO2 | FAIT (08/11/2026) |
 | 4 | Relevés de compteurs à la borne : écran | cœur | 3 | FAIT (08/11/2026) |
-| 5 | Données de démonstration d'entretiens | cœur | MO3 | A FAIRE |
+| 5 | Données de démonstration d'entretiens | cœur | MO3 | FAIT (08/11/2026) |
 | 6 | Refacturation interne : composante « produit interne » | `modules/rentabilite` | MO4 | A FAIRE |
 | 7 | Refacturation interne : crédit du chantier de suivi | cœur | 6 | A FAIRE |
 | 8 | Coût par heure proposé comme coût moyen | cœur | MO5 | A FAIRE |
@@ -122,7 +122,7 @@
 - **Règles répliquées JS / C#** : aucune. **Critère de fin** : `npm test` vert (hors 2 échecs connus).
 - **Réalisé / écarts** : page `/ressources/releves-a-valider` (menu Ressources, droit du module) : tableau matériel, salarié, date, compteur, valeur, commentaire ; acceptation, refus avec motif (`saisir`, relevé supprimé). Le serveur filtre par droit de traitement. Pas de test client dédié (écran sans règle).
 
-## Lot 5 : données de démonstration d'entretiens (A FAIRE)
+## Lot 5 : données de démonstration d'entretiens (FAIT 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `client/src/app/demo.js` et/ou `client/scripts/generer-modules-demo.mjs` (historique d'entretiens
@@ -131,6 +131,7 @@
 - **Règles répliquées JS / C#** : aucune.
 - **Jeux de tests** : la démo affiche des entretiens à jour, à échéance proche et en retard.
 - **Critère de fin** : `npm test` vert ; écran des entretiens de la démo non entièrement en retard.
+- **Réalisé / écarts** : fonction pure `client/scripts/entretiens-demo.mjs` (`planifierEntretiensDemo`) : pour chaque plan à périodicité en mois, dernier entretien placé à jour / à échéance proche / en retard en alternance, entretiens antérieurs à la périodicité dans les 12 derniers mois (un plan annuel en retard remonte à 12 mois + 20 jours). Étape ajoutée à `generer-modules-demo.mjs` : événements ENTRETIEN datés avec code de plan (`POST /ressources/materiels/{id}/evenements`), pas d'ordres d'entretien ; non exécutée. Plans sans mois ignorés. Test `entretiens-demo.test.js`. `npm test` : seuls les 2 échecs connus.
 
 ## Lot 6 : refacturation interne, composante « produit interne » (A FAIRE)
 
