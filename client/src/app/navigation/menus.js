@@ -186,6 +186,7 @@ export const MENUS_METIER = [
       { code: 'pointages', libelle: texte('navigation_btp.menus.pointage.pointages.libelle'), iconeHtml: iconeHtml('navigation_btp_pointages'), url: '/liste/pointages?vue=1010' },
       { code: 'pointages-nc', libelle: texte('navigation_btp.menus.pointage.pointages_nc.libelle'), iconeHtml: iconeHtml('navigation_btp_pointages_nc'), url: '/liste/pointages?vue=1011' },
       { code: 'pointages-improductifs', libelle: texte('navigation_btp.menus.pointage.pointages_improductifs.libelle'), iconeHtml: iconeHtml('navigation_btp_pointages_improductifs'), url: '/liste/pointages?vue=1012' },
+      { code: 'pointage-restaurants', libelle: texte('navigation_btp.menus.pointage.pointage_restaurants.libelle'), iconeHtml: iconeHtml('navigation_btp_pointage_restaurants'), url: '/pointage/restaurants', droit: 'pointage', info: texte('navigation_btp.menus.pointage.pointage_restaurants.info') },
       { code: 'repas', libelle: texte('navigation_btp.menus.pointage.repas.libelle'), iconeHtml: iconeHtml('navigation_btp_repas'), url: '/liste/repas?vue=1013', droit: 'pointage/repas', info: texte('navigation_btp.menus.pointage.repas.info') },
       { separateur: true },
       { code: 'parametrage-pointage', libelle: texte('navigation_btp.menus.pointage.parametrage_pointage.libelle'), iconeHtml: iconeHtml('navigation_btp_parametrage_pointage'), url: '/parametres/pointage' },

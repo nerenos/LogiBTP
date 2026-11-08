@@ -70,6 +70,7 @@ import { PagePlanningPrototype } from './planning-prototype.js';
 import { PageBorne, PageParametresBornes, PageGroupePointage } from './borne.js';
 import { PagePlanning, PageParametresPlanning } from './planning.js';
 import { PageEquipes } from './planning-equipes.js';
+import { PageRestaurantsPointage } from './restaurants.js';
 import { PageSaisiePointage, PageSynthesePointage, PageExportPointage, PageParametresPointage, PageCongesPointage } from './pointage.js';
 
 // Routes de l'application. Chaque URL désigne un écran précis : elle se partage, se rouvre dans une autre fenêtre
@@ -140,6 +141,7 @@ export const ROUTES = [
   { nom: 'pointage-synthese', chemin: '/pointage/synthese', page: PageSynthesePointage, titre: texte('pointage.routes.pointage_synthese') },
   { nom: 'pointage-export', chemin: '/pointage/export', page: PageExportPointage, titre: texte('pointage.routes.pointage_export') },
   { nom: 'pointage-conges', chemin: '/pointage/conges', page: PageCongesPointage, titre: texte('pointage.routes.pointage_conges') },
+  { nom: 'pointage-restaurants', chemin: '/pointage/restaurants', page: PageRestaurantsPointage, titre: texte('pointage.routes.pointage_restaurants') },
   { nom: 'parametres-pointage', chemin: '/parametres/pointage', page: PageParametresPointage, titre: texte('pointage.routes.parametres_pointage') },
   { nom: 'notifications', chemin: '/notifications', page: PageNotifications, titre: texte('notifications_btp.boite.titre') },
   { nom: 'parametres-notifications', chemin: '/parametres/notifications', page: PageParametresNotifications, titre: texte('notifications_btp.preferences.titre') },

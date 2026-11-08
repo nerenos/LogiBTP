@@ -23,7 +23,7 @@
 |---|---|---|---|
 | RO1 | Repas en saisie d'équipe : qui déclare, et pour qui ? | Le chef d'équipe déclare un restaurant pour l'équipe, une case par membre (cochée par défaut) ; un membre peut encore corriger le sien seul. Mêmes contrôles que le repas individuel. | ✔ Tranché (08/11/2026) : recommandation retenue |
 | RO2 | Liste des repas d'une période : vue de liste ou page dédiée ? | Vue de liste du module Liste sur une vue `v_liste_repas` (salarié, date, restaurant, chantier, montant), filtre par période, export par la liste ; droits RH. | ✔ Tranché (08/11/2026) : recommandation retenue |
-| RO3 | Carte des restaurants : où, et avec quel fond ? | Onglet carte de la liste des restaurants, en reprenant le composant de carte de `terrain.js` (même fond, même réglages) ; position par le géocodage de `db/239`. | ✔ Tranché (08/11/2026) : recommandation retenue |
+| RO3 | Carte des restaurants : où, et avec quel fond ? | Onglet carte de la liste des restaurants, en reprenant le composant de carte de `terrain.js` (même fond, même réglages) ; position par le géocodage de `db/239`. | ✔ Tranché (08/11/2026) : pas de carte ; liste des restaurants avec lien d'itinéraire |
 
 | Lot | Titre | Module | Dépend de | Statut |
 |---|---|---|---|---|
@@ -31,7 +31,7 @@
 | 2 | Repas dans la saisie d'équipe de la borne | cœur | 1 | FAIT |
 | 3 | Vue des repas d'une période | cœur | RO2 | FAIT |
 | 4 | Liste des repas (écran, droits) | cœur | 3 | FAIT |
-| 5 | Carte des restaurants | cœur | RO3 | A FAIRE |
+| 5 | Liste des restaurants avec itinéraire | cœur | RO3 | FAIT |
 
 ---
 
@@ -81,12 +81,13 @@
 - **Critère de fin** : `npm test` et `dotnet test LogiBTP.slnx` verts.
 - **Réalisé** : vue par défaut 1013 « Repas du mois » (filtre `periode` `mois_en_cours` sur `date_repas`), thème `repas`, entrée de menu Pointage `/liste/repas?vue=1013`, nœud de droits `pointage/repas` (Consulter ; refusé par défaut aux profils non totaux), `SpecialisationListeBtp.RestrictionAsync` lève 403 sur la source `repas` sans ce droit ; `121` régénéré. Écarts : nœud dédié plutôt qu'un « droit RH » inexistant ; la route reste `/api/listes` (contrôle dans la restriction de la source, pas dans `Routes`) ; test client seul (pas de test C# du 403) ; `npm test` : seuls les 2 échecs anciens, `dotnet test` vert (copie fraîche).
 
-## Lot 5 : carte des restaurants (A FAIRE)
+## Lot 5 : liste des restaurants avec lien d'itinéraire (FAIT 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
-- **Fichiers** : composant de carte de `client/src/app/pages/terrain.js` (`#carte :240`, à rendre réutilisable sans
-  changer son comportement), écran des restaurants (graphify « restaurants écran liste »), test client.
+- **Contexte** : `terrain.js` n'a pas de carte géographique, la CSP bloque les tuiles externes et aucun écran ne listait les restaurants ; RO3 tranchée sans carte. Coordonnées existantes (`coordonnee.coo_latitude/longitude`, `db/239`, `GeocodageBtp.cs`) non utilisées ici.
+- **Fichiers** : page `client/src/app/pages/restaurants.js` (route `/pointage/restaurants`, entrée de menu Pointage, droit `pointage`), `lienItineraire` de `client/src/app/terrain/terrain.js` réutilisée, `api.pointage.restaurants` existante (le DTO `RestaurantPointage` reçoit `Adresse`), textes, test client.
 - **Dépendances** : RO3 tranchée.
 - **Règles répliquées JS / C#** : aucune.
-- **Jeux de tests** : restaurants géocodés affichés ; non géocodés listés à part ; carte du terrain inchangée.
+- **Jeux de tests** : adresse connue → lien d'itinéraire du terrain ; sans adresse → pas de lien ; entrée de menu protégée.
 - **Critère de fin** : `npm test` vert.
+- **Réalisé** : page simple (pas de vue de liste : le module Liste n'a pas de colonne lien) ; recherche par nom ou ville ; préférence de navigation du terrain. Écarts : pas de rattachement chantier ou agence (absent des données) ; `DistanceKm` non utilisée ; `dotnet test` voir compte rendu.

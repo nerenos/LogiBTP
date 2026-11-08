@@ -18,7 +18,7 @@ public class RepasEntite
 }
 
 /// <summary>Restaurant proposé (application : tiers de relation RESTAURANT) ; distance au chantier en km si connue.</summary>
-public sealed record RestaurantPointage(long Id, string Nom, string? Ville, decimal? DistanceKm, bool Provisoire = false);
+public sealed record RestaurantPointage(long Id, string Nom, string? Ville, decimal? DistanceKm, bool Provisoire = false, string? Adresse = null);
 
 /// <summary>
 /// Repas d'un jour : restaurant connu, ou nouveau restaurant « non trouvé » (nom, ville : créé par l'application) ;

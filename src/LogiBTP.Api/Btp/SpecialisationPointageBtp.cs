@@ -207,7 +207,7 @@ public class SpecialisationPointageBtp(IHttpContextAccessor http) : Specialisati
                 : x.Latitude is { } la && x.Longitude is { } lo && Geographie.TexteAdresse(x.Ligne1, x.Ligne2, x.Ligne3, x.CodePostal, x.Ville) == x.GeocodeAdresse ? (la, lo) : ((decimal, decimal)?)null;
             return p is { } q ? Geographie.DistanceKm(ce.Lat, ce.Lon, q.Item1, q.Item2) : null;
         }
-        return l.Select(x => new RestaurantPointage(x.Id, x.Nom, x.Ville, Distance(x), x.Provisoire))
+        return l.Select(x => new RestaurantPointage(x.Id, x.Nom, x.Ville, Distance(x), x.Provisoire, Geographie.TexteAdresse(x.Ligne1, x.Ligne2, x.Ligne3, x.CodePostal, x.Ville)))
             .OrderBy(x => x.DistanceKm is null).ThenBy(x => x.DistanceKm).ThenBy(x => x.Nom, StringComparer.CurrentCultureIgnoreCase).ToList();
     }
 

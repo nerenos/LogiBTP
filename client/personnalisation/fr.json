@@ -584,6 +584,17 @@
       "choisir_salarie": "Choisissez le salarié",
       "annuler_confirmer": "Annuler ce congé ?"
     },
+    "restaurants_page": {
+      "titre": "Restaurants",
+      "recherche": "Rechercher un restaurant ou une ville",
+      "nom": "Restaurant",
+      "adresse": "Adresse",
+      "ville": "Ville",
+      "itineraire": "Itinéraire",
+      "sans_adresse": "Adresse non renseignée",
+      "vide": "Aucun restaurant",
+      "nombre": "{n} restaurant(s)"
+    },
     "routes": {
       "borne": "Borne de pointage",
       "parametres_bornes": "Bornes de pointage",
@@ -592,6 +603,7 @@
       "pointage_synthese": "Synthèse des pointages",
       "pointage_export": "Export de paie et valorisation",
       "pointage_conges": "Congés et absences",
+      "pointage_restaurants": "Restaurants",
       "parametres_pointage": "Paramètres du pointage"
     }
   },
@@ -4904,6 +4916,10 @@
         "pointage_conges": {
           "libelle": "Congés et absences",
           "info": "Demandes de congés (pour soi ou ses équipiers), validation RH avec la nature"
+        },
+        "pointage_restaurants": {
+          "libelle": "Restaurants",
+          "info": "Restaurants proposés pour les repas, avec le lien d'itinéraire"
         },
         "pointages": {
           "libelle": "Liste des pointages"
