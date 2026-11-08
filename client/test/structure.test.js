@@ -1,9 +1,19 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import { completerRattachement, controlerIntervenants } from '../src/app/structure/structure.js';
+import { adresseChantierInitiale } from '../src/app/structure/marche-commande.js';
 import { FONCTIONS_INTERVENANT } from '../src/app/structure/donnees.js';
 
 describe('Structure des affaires', () => {
+  it('adresse du chantier créé à l’acceptation : commande, sinon projet, sinon client', () => {
+    const client = { adresse: { ligne1: '1 rue du Client', code_postal: '69001', ville: 'Lyon' } };
+    const projet = { adresse: '2 rue du Projet', code_postal: '69002', ville: 'Villeurbanne' };
+    const commande = { ent_adresse_livraison: { adresse: { ligne1: '3 rue des Travaux', ligne2: 'Bât. B', code_postal: '69003', ville: 'Caluire' } }, ent_contact_client: client };
+    expect(adresseChantierInitiale(commande, projet)).toEqual({ adresse: '3 rue des Travaux, Bât. B', code_postal: '69003', ville: 'Caluire' });
+    expect(adresseChantierInitiale({ ent_contact_client: client }, projet)).toEqual({ adresse: '2 rue du Projet', code_postal: '69002', ville: 'Villeurbanne' });
+    expect(adresseChantierInitiale({ ent_contact_client: client }, null)).toEqual({ adresse: '1 rue du Client', code_postal: '69001', ville: 'Lyon' });
+  });
+
   it('complète le rattachement : marché → chantier → affaire', () => {
     const refs = { chantiers: [{ id: 2, aff_id: 1 }], marches: [{ id: 5, cha_id: 2 }] };
     expect(completerRattachement({ ent_marche_id: 5 }, refs)).toEqual({ ent_projet_id: null, ent_affaire_id: 1, ent_chantier_id: 2, ent_marche_id: 5 });

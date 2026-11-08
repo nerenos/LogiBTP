@@ -109,7 +109,7 @@
 - **Critère de fin** : `npm test` et `dotnet test LogiBTP.slnx` verts ; aucune pièce remplacée visible par défaut.
 - **Écarts** : fichier réel `client/src/app/fiches/fiche-structure.js` et logique dans `structure/structure.js` (`facturesMarche`) ; la route expose aussi `indice` et `reference` des factures et `liste_indices` des situations ; sous détail, sous-traitants annulés affichés.
 
-## Lot 5 : D1, adresse du chantier créé à l'acceptation de la commande (A FAIRE)
+## Lot 5 : D1, adresse du chantier créé à l'acceptation de la commande (FAIT 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `client/src/app/structure/marche-commande.js` (`:49-51`, adresse, code postal et ville pré-remplis :
@@ -118,6 +118,7 @@
 - **Règles répliquées JS / C#** : aucune.
 - **Jeux de tests** : trois cas (adresse de la commande ; repli sur le projet ; repli sur le client).
 - **Critère de fin** : `npm test` vert ; les trois champs sont remplis dans les trois cas.
+- **Écarts** : fonction `adresseChantierInitiale` exportée (testée) ; l'adresse du client vient de `ent_contact_client.adresse` ; référentiel des projets de `Structure.cs` complété de `adresse` et `code_postal`.
 
 ## Lot 6 : D2, précédent et montant de la période dans l'édition (A FAIRE)
 

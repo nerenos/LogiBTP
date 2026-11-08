@@ -37,7 +37,7 @@ public static class Structure
           'affaires', (SELECT coalesce(json_agg(json_build_object('id', aff_id, 'code', aff_code, 'libelle', aff_libelle, 'nature', aff_nature,
                          'statut', aff_statut, 'tiers_id', aff_tiers_id) ORDER BY aff_code), '[]') FROM affaire),
           'projets', (SELECT coalesce(json_agg(json_build_object('id', prj_id, 'code', prj_code, 'libelle', prj_libelle, 'statut', prj_statut,
-                         'tiers_id', prj_tiers_id, 'ville', prj_ville, 'montant_estime', prj_montant_estime) ORDER BY prj_code), '[]') FROM projet),
+                         'tiers_id', prj_tiers_id, 'adresse', prj_adresse, 'code_postal', prj_code_postal, 'ville', prj_ville, 'montant_estime', prj_montant_estime) ORDER BY prj_code), '[]') FROM projet),
           'chantiers', (SELECT coalesce(json_agg(json_build_object('id', cha_id, 'code', cha_code, 'libelle', cha_libelle, 'statut', cha_statut,
                          'aff_id', cha_aff_id, 'prj_id', cha_prj_id, 'tiers_id', cha_tiers_id, 'ville', cha_ville) ORDER BY cha_code), '[]') FROM chantier),
           'marches', (SELECT coalesce(json_agg(json_build_object('id', mar_id, 'code', mar_code, 'libelle', mar_libelle, 'statut', mar_statut,

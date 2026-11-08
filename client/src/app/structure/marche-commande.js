@@ -13,6 +13,23 @@ const ouverts = (liste) => liste.filter((x) => !['CLOS', 'CLOSE', 'SOLDE', 'RESI
 const NOUVEAU = 'nouveau';
 
 /**
+ * Adresse proposée au nouveau chantier : adresse des travaux ou de livraison de la commande, sinon celle du projet,
+ * sinon celle du client (instantané de l'entête) ; { adresse, code_postal, ville } (champs vides si rien).
+ */
+export function adresseChantierInitiale(doc, projet) {
+  const commande = doc.ent_adresse_livraison?.adresse ?? {};
+  const client = doc.ent_contact_client?.adresse ?? {};
+  const ligne = (a) => [a.ligne1, a.ligne2, a.ligne3].filter(Boolean).join(', ');
+  const sources = [
+    { adresse: ligne(commande), code_postal: commande.code_postal, ville: commande.ville },
+    { adresse: projet?.adresse, code_postal: projet?.code_postal, ville: projet?.ville },
+    { adresse: ligne(client), code_postal: client.code_postal, ville: client.ville },
+  ];
+  const source = sources.find((x) => x.adresse || x.code_postal || x.ville);
+  return { adresse: source?.adresse ?? '', code_postal: source?.code_postal ?? '', ville: source?.ville ?? '' };
+}
+
+/**
  * Ouvre le dialogue ; résout { ent_marche_id, cree, avenant } ou null (abandon).
  * refs : référentiels de la structure ; doc : entête de la commande ; totalHt : total HT ;
  * creerChantier(valeurs) → { id } ; creerMarche(valeurs) → { id } ; codePrevisionnel(type, valeurs) → code prévisionnel
@@ -25,6 +42,7 @@ export function proposerMarche({ refs, doc, totalHt, creerChantier, creerMarche,
   // Chantier proposé : celui de la commande, sinon celui de son projet, sinon un nouveau chantier.
   const initial = chantiers.find((c) => c.id === doc.ent_chantier_id) ?? chantiers.find((c) => projet && c.prj_id === projet.id) ?? null;
   const tries = [...chantiers].sort((a, b) => Number(b.tiers_id === client) - Number(a.tiers_id === client) || a.code.localeCompare(b.code));
+  const adresseInitiale = adresseChantierInitiale(doc, projet);
   const comboChantier = creerCombo({
     vide: false, valeur: initial?.id ?? NOUVEAU,
     options: [{ valeur: NOUVEAU, libelle: `${icone('ajouter')} ${texte('structure_btp.marche_commande.nouveau_chantier')}` }, ...tries.map((c) => ({ valeur: c.id, libelle: `${c.code} – ${c.libelle}`, detail: c.ville ?? '' }))],
@@ -46,9 +64,9 @@ export function proposerMarche({ refs, doc, totalHt, creerChantier, creerMarche,
       <div class="grille-champs">
         <label>${texteHtml('commun.code')} <input data-cha="code" class="code-previsionnel" title="${texteHtml('structure_btp.marche_commande.code_aide')}"></label>
         <label class="large">${texteHtml('commun.libelle')} <input data-cha="libelle" required value="${echapper(doc.ent_objet ?? projet?.libelle ?? '')}"></label>
-        <label class="large">${texteHtml('structure_btp.marche_commande.adresse')} <input data-cha="adresse"></label>
-        <label>${texteHtml('structure_btp.marche_commande.code_postal')} <input data-cha="code_postal"></label>
-        <label>${texteHtml('structure_btp.marche_commande.ville')} <input data-cha="ville" value="${echapper(projet?.ville ?? '')}"></label>
+        <label class="large">${texteHtml('structure_btp.marche_commande.adresse')} <input data-cha="adresse" value="${echapper(adresseInitiale.adresse)}"></label>
+        <label>${texteHtml('structure_btp.marche_commande.code_postal')} <input data-cha="code_postal" value="${echapper(adresseInitiale.code_postal)}"></label>
+        <label>${texteHtml('structure_btp.marche_commande.ville')} <input data-cha="ville" value="${echapper(adresseInitiale.ville)}"></label>
         <label class="large">${texteHtml('structure_btp.marche_commande.affaire')} <span data-affaire></span></label>
         <label>${texteHtml('structure_btp.marche_commande.conducteur')} <span data-conducteur></span></label>
         <label>${texteHtml('structure_btp.marche_commande.fin_prevue')} <input type="date" data-cha="date_fin_prevue"></label>
