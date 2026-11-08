@@ -27,7 +27,7 @@
 | 9 | Hors ligne : chantiers et ordres ouverts du service | cœur | — | FAIT (08/11/2026) |
 | 10 | Hors ligne : ordre saisi par son numéro, résolu à l'envoi | cœur | 9 | FAIT (08/11/2026) |
 | 11 | Limite de dépôt de la GED exposée au client | `modules/ged` | — | FAIT (08/11/2026) |
-| 12 | Contrôle de taille des photos à la prise de vue | cœur | 11 | A FAIRE |
+| 12 | Contrôle de taille des photos à la prise de vue | cœur | 11 | FAIT (08/11/2026) |
 | 13 | PV de réception : forme de signature et heure de l'appareil | cœur | — | A FAIRE |
 | 14 | Réserves suivies : base et serveur | cœur | 13 | A FAIRE |
 | 15 | Réserves suivies : levée depuis le terrain et suivi au bureau | cœur | 14 | A FAIRE |
@@ -283,7 +283,7 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
   `FournisseurGedMemoire` refuse aussi un dépôt ou une version trop lourds (`TAILLE`, texte `ged.fournisseur.trop_volumineux`).
   Tests : `ParametresGedTests` (C#), `ged.test.js`. Aucun script SQL.
 
-## Lot 12 : contrôle de taille des photos à la prise de vue (TS12)
+## Lot 12 : contrôle de taille des photos à la prise de vue (TS12) (FAIT 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `client/src/app/terrain/terrain.js` (réduction forcée au-delà de la limite ; « qualité d'origine » trop
@@ -292,6 +292,16 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
 - **Dépendances** : lot 11.
 - **Tests** : JS : photo trop lourde refusée avant d'être gardée.
 - **Critère de fin** : `npm test` vert.
+- **Réalisé / écarts** : écart : la page du terrain ne lit pas `GET /api/ged/parametres` (route de paramétrage, refusée
+  aux profils du terrain) : la limite (`SpecialisationGed.TailleMaxDepot`) est renvoyée en `taille_max_photo` par
+  `GET /api/terrain` (`TerrainBtp.cs`, lecture préchargée), puis gardée sur l'appareil (`memoriserLimitePhotos` /
+  `limitePhotos` d'`operations-terrain.js`, localStorage ; sinon limite par défaut `tailleMaxDepot` du module GED).
+  `terrain/terrain.js` : `decisionPhoto` (garder, réduire, refuser), `preparerPhoto(…, { limite })` : photo trop lourde
+  réduite de force (côté ×0,75 et qualité abaissée jusqu'à 480 px), « qualité d'origine » trop lourde ou photo qui ne
+  tient pas même réduite (navigateur qui ne sait pas réduire compris) : `PhotoTropLourde`, avec la limite en Mo
+  (textes `terrain_btp.actions.photos.trop_lourde*`), levée par `selecteurPhotos().photos()` avant toute garde ou
+  envoi (tâche, non-conformité, demande, livraison, page SAV). Le contrôle se fait à la validation des photos
+  choisies, pas à chaque prise de vue. Tests : `terrain.test.js`, `operations-terrain.test.js`. Aucun script SQL.
 
 ## Lot 13 : PV de réception, forme de signature et heure de l'appareil (TS13 a, TS16 a)
 

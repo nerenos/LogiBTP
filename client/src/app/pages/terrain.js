@@ -13,7 +13,7 @@ import { SavTerrain } from '../terrain/sav-terrain.js';
 import { DemandesTerrain } from '../terrain/demandes-terrain.js';
 import { recevoirLivraison, pointerMateriel } from '../terrain/complements-terrain.js';
 import { saisirAvancement, envoyerPhotos, signalerNonConformite, demanderApprovisionnement } from '../terrain/actions-tache.js';
-import { fournisseurEtapes, OPERATION_TERRAIN } from '../terrain/operations-terrain.js';
+import { fournisseurEtapes, OPERATION_TERRAIN, memoriserLimitePhotos } from '../terrain/operations-terrain.js';
 import { listeOperations, marquerOperation, retirerOperation } from '../hors-ligne/operations.js';
 import { estHorsLigne, ETAT_ATTENTE } from '../hors-ligne/attente.js';
 import { SUJET_ATTENTE } from '../hors-ligne/synchro.js';
@@ -185,6 +185,7 @@ export class PageTerrain extends PageBase {
     }
     try {
       this.donnees = await api.terrain.taches(du, au);
+      memoriserLimitePhotos(this.donnees.taille_max_photo);
       await this.#lireGardees();
     } catch (e) {
       if (!estHorsLigne(e)) { this.app.erreur(e); return; }

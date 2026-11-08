@@ -17,6 +17,7 @@ const { declarerOperation, ecrireOperation, envoyerOperations, lireOperation } =
 const { etatNumero, ETAT_NUMERO } = await import('../src/app/terrain/terrain.js');
 const { ERREUR_TERRAIN } = await import('../src/app/codes.js');
 const { ETAT_ATTENTE } = await import('../src/app/hors-ligne/attente.js');
+const { memoriserLimitePhotos, limitePhotos } = await import('../src/app/terrain/operations-terrain.js');
 
 describe('hors ligne : ordre saisi par son numéro, résolu à l\'envoi (terrain-suites lot 10)', () => {
   it('numéro inconnu gardé « à vérifier », puis marqué refusé quand le serveur ne le connaît pas', async () => {
@@ -37,5 +38,18 @@ describe('hors ligne : ordre saisi par son numéro, résolu à l\'envoi (terrain
     expect(etatNumero({ numero: 'OP-1', ent_id: 4 })).toBeNull();
     expect(etatNumero({ numero: null })).toBeNull();
     expect(etatNumero({ numero: 'OP-1', ent_id: null }, { etat: ETAT_ATTENTE.ERREUR, code: 'POI_VALIDE' })).toBe(ETAT_NUMERO.A_VERIFIER);
+  });
+});
+
+describe('photos du terrain (terrain-suites lot 12)', () => {
+  it('limite de dépôt des photos gardée sur l\'appareil (terrain-suites lot 12), sinon celle par défaut de la GED', () => {
+    const stock = new Map();
+    vi.stubGlobal('localStorage', { getItem: (k) => stock.get(k) ?? null, setItem: (k, v) => stock.set(k, String(v)) });
+    expect(limitePhotos()).toBe(200 * 1024 * 1024);
+    memoriserLimitePhotos(12 * 1024 * 1024);
+    expect(limitePhotos()).toBe(12 * 1024 * 1024);
+    memoriserLimitePhotos(null);
+    expect(limitePhotos()).toBe(12 * 1024 * 1024);
+    vi.unstubAllGlobals();
   });
 });

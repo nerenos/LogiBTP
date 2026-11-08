@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { lundiDe, mobileAffiche, lienItineraire, liensTexte, numeroTel, presaisirJournee, actionsTache, minutesPointees, tachesGardees, jourPointage, adressesAPrecharger, plansTache, plansTacheHtml, plansAPrecharger, ligneDuPointage, champsPhotosHtml, TYPES_PHOTOS, estHeic, completerReferentiel, journeeSansReseau, chercherOrdre } from '../src/app/terrain/terrain.js';
+import { lundiDe, mobileAffiche, lienItineraire, liensTexte, numeroTel, presaisirJournee, actionsTache, minutesPointees, tachesGardees, jourPointage, adressesAPrecharger, plansTache, plansTacheHtml, plansAPrecharger, ligneDuPointage, champsPhotosHtml, TYPES_PHOTOS, estHeic, completerReferentiel, journeeSansReseau, chercherOrdre, preparerPhoto, decisionPhoto, DECISION_PHOTO, PhotoTropLourde } from '../src/app/terrain/terrain.js';
 
 describe('application de terrain', () => {
   it('présaisie : heures du calendrier au prorata des tâches, équipe du chef reprise', () => {
@@ -196,5 +196,21 @@ describe('plans cochés préchargés (plan terrain-suites, lot 4)', () => {
     expect(chercherOrdre('012', j.ordres)).toBeNull();
     expect(chercherOrdre('9999', j.ordres)).toBeNull();
     expect(chercherOrdre('', j.ordres)).toBeNull();
+  });
+  it('photos (terrain-suites lot 12) : contrôle contre la limite de dépôt de la GED avant d\'être gardées', async () => {
+    expect(decisionPhoto(900, 1000)).toBe(DECISION_PHOTO.GARDER);
+    expect(decisionPhoto(1200, 1000)).toBe(DECISION_PHOTO.REDUIRE);
+    expect(decisionPhoto(1200, 1000, { origine: true })).toBe(DECISION_PHOTO.REFUSER);
+    expect(decisionPhoto(1200, null)).toBe(DECISION_PHOTO.GARDER);
+    const lourde = new File([new Uint8Array(3 * 1024 * 1024)], 'chantier.jpg', { type: 'image/jpeg' });
+    const limite = 2 * 1024 * 1024;
+    // Qualité d'origine trop lourde : refusée tout de suite, limite en Mo dans le message.
+    const refus = await preparerPhoto(lourde, { origine: true, limite }).catch((e) => e);
+    expect(refus).toBeInstanceOf(PhotoTropLourde);
+    expect(refus.message).toContain('2');
+    // Navigateur qui ne sait pas réduire (pas de createImageBitmap) : refusée elle aussi, jamais gardée trop lourde.
+    await expect(preparerPhoto(lourde, { limite })).rejects.toBeInstanceOf(PhotoTropLourde);
+    // Sous la limite : inchangée.
+    expect(await preparerPhoto(lourde, { origine: true, limite: 4 * 1024 * 1024 })).toBe(lourde);
   });
 });

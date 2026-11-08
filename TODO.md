@@ -134,11 +134,12 @@ Plan en 24 lots : [terrain-suites.md](documentation/conception/plans/terrain-sui
 - [ ] Lot 3, suites : photos HEIC converties (le navigateur ne sait pas les réduire). Plan : lot 8, fait le 08/11/2026
   (champs photo `image/jpeg,image/png`) : reste l'essai sur un iPhone par l'utilisateur (photo de l'appareil et de la
   galerie arrivées en JPEG réduit dans la GED) ; échec : le point revient en question (TS8).
-- [ ] Lot 4, suites : saisie libre hors ligne limitée aux chantiers et ordres déjà lus (journée gardée) ; nouvelle
+- [x] Lot 4, suites : saisie libre hors ligne limitée aux chantiers et ordres déjà lus (journée gardée) ; nouvelle
   recherche d'un ordre par son numéro impossible hors ligne ; envoi des photos gardées sans contrôle de taille avant
   l'envoi (limite de dépôt de la GED). Plan : lots 9 à 12. Fait le 08/11/2026 : lot 9 (chantiers et ordres ouverts du
   service gardés chaque jour, saisie libre sur une journée jamais lue, ordre cherché par son numéro sur l'appareil) et
-  lot 10 (numéro inconnu de l'appareil gardé, résolu par le serveur à l'envoi, refus `ORDRE_INCONNU` signalé).
+  lot 10 (numéro inconnu de l'appareil gardé, résolu par le serveur à l'envoi, refus `ORDRE_INCONNU` signalé), lots 11
+  et 12 (limite de dépôt de la GED exposée, photos réduites de force ou refusées avant d'être gardées).
 - [ ] Lot 5, suites : valeur juridique de la signature simple à faire confirmer (par l'utilisateur, hors code) ; levée
   des réserves suivie (tâche du CRM seulement) ; demande d'approvisionnement en texte libre (articles de la bibliothèque
   à choisir plus tard) ; réception gardée hors ligne horodatée à l'envoi par le serveur. Plan : lots 13 à 18.

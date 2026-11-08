@@ -170,12 +170,69 @@ export function champsPhotosHtml() {
     <label class="coche"><input type="checkbox" data-origine> ${texteHtml('terrain_btp.actions.photos.origine')}</label>`;
 }
 
+/** Suite donnée à une photo préparée selon la limite de dépôt de la GED (terrain-suites lot 12, TS12). */
+export const DECISION_PHOTO = Object.freeze({ GARDER: 'GARDER', REDUIRE: 'REDUIRE', REFUSER: 'REFUSER' });
+
+/**
+ * Photo de `taille` octets face à la limite de dépôt (`limite`, octets ; absente : aucune) : gardée si elle tient,
+ * sinon réduite de force, ou refusée tout de suite en « qualité d'origine » (jamais réduite).
+ */
+export function decisionPhoto(taille, limite, { origine = false } = {}) {
+  if (!(limite > 0) || !(taille > limite)) return DECISION_PHOTO.GARDER;
+  return origine ? DECISION_PHOTO.REFUSER : DECISION_PHOTO.REDUIRE;
+}
+
+/** Limite de dépôt en Mo affichée (une décimale au plus). */
+export const limiteEnMo = (limite) => Math.round((limite / 1024 / 1024) * 10) / 10;
+
+/** Photo refusée avant d'être gardée ou envoyée : trop lourde pour la GED, même réduite (message avec la limite en Mo). */
+export class PhotoTropLourde extends Error {
+  constructor(nom, limite, { origine = false } = {}) {
+    super(texte(origine ? 'terrain_btp.actions.photos.trop_lourde_origine' : 'terrain_btp.actions.photos.trop_lourde', { nom, mo: limiteEnMo(limite) }));
+    this.name = 'PhotoTropLourde';
+  }
+}
+
+/** JPEG de `fichier` dont le plus grand côté ne dépasse pas `cote` ; null si le navigateur ne sait pas le lire. */
+async function encoderJpeg(fichier, cote, qualite) {
+  if (typeof createImageBitmap !== 'function') return null;
+  try {
+    const image = await createImageBitmap(fichier);
+    const d = dimensionsReduites(image.width, image.height, cote);
+    const canvas = document.createElement('canvas');
+    canvas.width = d.largeur;
+    canvas.height = d.hauteur;
+    canvas.getContext('2d').drawImage(image, 0, 0, d.largeur, d.hauteur);
+    image.close?.();
+    const blob = await new Promise((ok) => canvas.toBlob(ok, 'image/jpeg', qualite));
+    return blob ? new File([blob], fichier.name.replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' }) : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Photo prête à envoyer : réduite en JPEG (qualité 0,85) si elle dépasse `max`, sinon le fichier d'origine ; HEIC
  * reçu malgré tout : converti en JPEG (pleine taille en « qualité d'origine », TS9 b) quand le navigateur sait le
  * lire ; en cas d'échec de lecture (format non affichable par le navigateur) : le fichier d'origine, envoyé tel quel.
+ * Limite de dépôt de la GED (`limite`, octets, lot 12) : photo trop lourde réduite de force (côté et qualité
+ * diminués) ; « qualité d'origine » trop lourde, ou photo qui ne tient pas même réduite : `PhotoTropLourde`.
  */
-export async function preparerPhoto(fichier, { origine = false, max = PHOTO_COTE_MAX } = {}) {
+export async function preparerPhoto(fichier, { origine = false, max = PHOTO_COTE_MAX, limite = null } = {}) {
+  const prete = await reduirePhoto(fichier, { origine, max });
+  const decision = decisionPhoto(prete.size, limite, { origine });
+  if (decision === DECISION_PHOTO.GARDER) return prete;
+  if (decision === DECISION_PHOTO.REFUSER) throw new PhotoTropLourde(fichier.name, limite, { origine: true });
+  for (let cote = Math.round(max * 0.75), qualite = 0.8; cote >= 480; cote = Math.round(cote * 0.75), qualite = Math.max(0.6, qualite - 0.1)) {
+    const r = await encoderJpeg(fichier, cote, qualite);
+    if (!r) break;
+    if (r.size <= limite) return r;
+  }
+  throw new PhotoTropLourde(fichier.name, limite);
+}
+
+/** Réduction par défaut d'une photo (côté `max`, HEIC converti), sans limite de poids. */
+async function reduirePhoto(fichier, { origine, max }) {
   const heic = estHeic(fichier);
   if ((origine && !heic) || typeof createImageBitmap !== 'function') return fichier;
   try {

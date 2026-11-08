@@ -7129,7 +7129,9 @@
         "envoyees_autre": "{{nombre}} photos envoyées",
         "joindre": "Joindre des photos",
         "nombre_un": "{{nombre}} photo",
-        "nombre_autre": "{{nombre}} photos"
+        "nombre_autre": "{{nombre}} photos",
+        "trop_lourde": "Photo {{nom}} trop lourde, même réduite : la limite de dépôt est de {{mo}} Mo",
+        "trop_lourde_origine": "Photo {{nom}} trop lourde en qualité d'origine (limite de dépôt : {{mo}} Mo) : décochez « Qualité d'origine » pour la réduire"
       },
       "avancement": {
         "titre": "Avancement · {{tache}}",

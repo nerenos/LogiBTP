@@ -3,7 +3,7 @@ import { echapper, ouvrirDialogue, formatDate } from '@logibtp/socle/ui';
 import { aujourdhui } from '@logibtp/socle';
 import { api } from '../api.js';
 import { preparerPhoto, champsPhotosHtml } from './terrain.js';
-import { envoyerOuGarder, OPERATION_TERRAIN, formulairePhotos } from './operations-terrain.js';
+import { envoyerOuGarder, OPERATION_TERRAIN, formulairePhotos, limitePhotos } from './operations-terrain.js';
 import { estHorsLigne } from '../hors-ligne/attente.js';
 
 // Application de terrain, lot 3 (ANALYSE-TERRAIN.md, T12, T17) : actions sur une tâche depuis sa carte — avancement
@@ -23,10 +23,15 @@ export function selecteurPhotos(racine) {
   racine.querySelectorAll('input[type="file"]').forEach((i) => i.addEventListener('change', () => { fichiers = [...fichiers, ...i.files]; i.value = ''; afficher(); }));
   return {
     get nombre() { return fichiers.length; },
-    /** Photos prêtes à envoyer (réduites sauf « qualité d'origine ») et commentaire : { fichiers, commentaire }. */
+    /**
+     * Photos prêtes à envoyer (réduites sauf « qualité d'origine ») et commentaire : { fichiers, commentaire }. Limite de
+     * dépôt de la GED (terrain-suites lot 12) : photo trop lourde réduite de force, ou refusée (`PhotoTropLourde`)
+     * avant d'être gardée ou envoyée.
+     */
     async photos(commentaire) {
       const origine = racine.querySelector('[data-origine]').checked;
-      return { fichiers: await Promise.all(fichiers.map((p) => preparerPhoto(p, { origine }))), commentaire: commentaire || null };
+      const limite = limitePhotos();
+      return { fichiers: await Promise.all(fichiers.map((p) => preparerPhoto(p, { origine, limite }))), commentaire: commentaire || null };
     },
   };
 }

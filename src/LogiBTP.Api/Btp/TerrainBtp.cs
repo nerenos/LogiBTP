@@ -63,7 +63,7 @@ public static partial class TerrainBtp
         var g = api.MapGroup("/terrain");
 
         // Tâches de la période (par défaut : aujourd'hui et les six jours suivants) ; personne nulle : compte sans salarié.
-        g.MapGet("", async (string? du, string? au, HttpContext http, LogiBtpContext db, CancellationToken ct) =>
+        g.MapGet("", async (string? du, string? au, HttpContext http, LogiBtpContext db, SpecialisationGed ged, CancellationToken ct) =>
         {
             var (debut, fin) = Periode(du, au);
             if (await ComptesBtp.SalarieAsync(db, Utilisateur.Depuis(http).Code, ct) is not int s)
@@ -97,7 +97,9 @@ public static partial class TerrainBtp
                 chantiers[id.ToString(CultureInfo.InvariantCulture)] = await DefautChantierAsync(db, id, ct);
             // Plans en vigueur du suivi des validations par tâche (TerrainPlansBtp.cs) : clé = identifiant de la tâche.
             var plans = (await PlansTachesAsync(http.RequestServices, db, s, debut, fin, ct)).ToDictionary(x => x.Key.ToString(CultureInfo.InvariantCulture), x => x.Value);
-            return Results.Ok(new { personne = new { id = personne.Id, libelle = personne.Libelle }, du = Jour(debut), au = Jour(fin), taches, chantiers, plans, motifs = await MotifsAsync(db, ct) });
+            return Results.Ok(new { personne = new { id = personne.Id, libelle = personne.Libelle }, du = Jour(debut), au = Jour(fin), taches, chantiers, plans, motifs = await MotifsAsync(db, ct),
+                // Limite de dépôt de la GED (octets) : photos contrôlées sur l'appareil avant d'être gardées ou envoyées (terrain-suites lot 12).
+                taille_max_photo = ged.TailleMaxDepot });
         });
 
         // Valeurs par défaut de la partie mobile d'une tâche sur ce chantier (repères du détail de la tâche du planning).

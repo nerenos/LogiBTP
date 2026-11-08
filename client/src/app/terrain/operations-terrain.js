@@ -1,5 +1,6 @@
 import { texte, icone } from '@logibtp/socle/dictionnaire';
 import { aujourdhui } from '@logibtp/socle';
+import { tailleMaxDepot } from '@logibtp/ged';
 import { api } from '../api.js';
 import { declarerOperation, ecrireOperation } from '../hors-ligne/operations.js';
 import { estHorsLigne } from '../hors-ligne/attente.js';
@@ -15,6 +16,25 @@ export const OPERATION_TERRAIN = Object.freeze({
   ETAPE: 'terrain-etape', REPAS: 'terrain-repas', RECEPTION: 'terrain-reception', DEMANDE: 'terrain-demande', SAV: 'terrain-sav',
   LIVRAISON: 'terrain-livraison', MATERIEL: 'terrain-materiel',
 });
+
+/** Clé du localStorage où l'appareil garde la limite de dépôt de la GED (terrain-suites lot 12). */
+const CLE_LIMITE_PHOTOS = 'logibtp.terrainLimitePhotos';
+
+/**
+ * Limite de dépôt de la GED (octets, `taille_max_photo` de `GET /api/terrain`) gardée sur l'appareil, pour contrôler
+ * les photos même sans réseau.
+ */
+export function memoriserLimitePhotos(octets) {
+  if (!(Number(octets) > 0)) return;
+  try { localStorage.setItem(CLE_LIMITE_PHOTOS, String(Number(octets))); } catch { /* stockage indisponible : limite par défaut */ }
+}
+
+/** Limite de dépôt gardée sur l'appareil, sinon celle par défaut de la GED. */
+export function limitePhotos() {
+  let gardee = null;
+  try { gardee = localStorage.getItem(CLE_LIMITE_PHOTOS); } catch { /* stockage indisponible */ }
+  return tailleMaxDepot({ taille_max_depot: gardee });
+}
 
 /** Formulaire d'envoi de photos gardées ({ fichiers: [File], commentaire }). */
 export const formulairePhotos = ({ fichiers, commentaire }) => {
