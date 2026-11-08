@@ -1,12 +1,41 @@
 {
-  "version": 2,
-  "services": [
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "regions": [
+    "fra1"
+  ],
+  "services": {
+    "application": {
+      "root": "./",
+      "runtime": "container",
+      "entrypoint": "Dockerfile.vercel"
+    },
+    "documentation": {
+      "root": "docs/",
+      "framework": "vitepress",
+      "installCommand": "cd .. && npm ci --workspace docs --include-workspace-root=false --no-audit --no-fund",
+      "buildCommand": "LOGIBTP_DOCS_BASE=/documentation/ npm run build",
+      "outputDirectory": ".vitepress/dist"
+    }
+  },
+  "rewrites": [
     {
-      "src": "Dockerfile.vercel",
-      "runtime": "container"
+      "source": "/documentation/(.*)",
+      "destination": {
+        "service": "documentation"
+      }
+    },
+    {
+      "source": "/(.*)",
+      "destination": {
+        "service": "application"
+      }
     }
   ],
-  "routes": [
-    { "src": "/(.*)", "dest": "/" }
+  "redirects": [
+    {
+      "source": "/documentation",
+      "destination": "/documentation/",
+      "permanent": false
+    }
   ]
 }
