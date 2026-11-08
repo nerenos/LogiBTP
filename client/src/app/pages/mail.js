@@ -1,9 +1,11 @@
 import { texte, texteHtml, pluriel, icone, iconeHtml, textesParCode, pairesParCode, couleurTheme } from '@logibtp/socle/dictionnaire';
 import { pastilleTable } from '../pastilles.js';
 import { urlDocument, SUJET_FENETRE } from '../codes.js';
+
+const TYPE_ELEMENT_DOCUMENT = 'document';
 import { ERREUR_MAIL } from '@logibtp/mail';
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo, confirmer, saisir, formatDateHeure } from '@logibtp/socle/ui';
+import { echapper, creerCombo, confirmer, saisir, formatDateHeure, activerDates } from '@logibtp/socle/ui';
 import { api, ErreurApi } from '../api.js';
 import { zoneRiche } from '../crm/crm.js';
 import { choisirDestinataires, ajouterDestinataires } from '../annuaire/choix.js';
@@ -20,6 +22,22 @@ const taille = (n) => (n > 1024 * 1024 ? texte('mail_btp.taille_mo', { taille: (
 
 export const NATURES = textesParCode('mail_btp.natures', ['ARC', 'REPONSE_DEVIS', 'FACTURE_FOURNISSEUR', 'BL', 'RELANCE', 'AUTRE']);
 const INDICES = textesParCode('mail_btp.indices', ['FIL', 'NUMERO_OBJET', 'NUMERO_TEXTE', 'NUMERO_PIECE', 'NUMERO_PIECE_TEXTE', 'REFERENCE', 'EXPEDITEUR', 'TIERS']);
+
+/** Identifiant de la commande rattachée au courriel (premier lien de type document), sinon null. */
+export const commandeRattachee = (liens) => {
+  const l = (liens ?? []).find((x) => x.type === TYPE_ELEMENT_DOCUMENT);
+  return l ? Number(l.id) : null;
+};
+
+/** Valeurs proposées pour l'ARC de la commande (plan ar-courriel, lot 4) : numéro lu, date de réception du courriel, livraison annoncée. */
+export const propositionArc = (accuse, recuLe) => ({
+  ent_arc_numero: accuse?.numero ?? accuse?.numeros?.[0] ?? '',
+  ent_arc_date: recuLe ? String(recuLe).slice(0, 10) : '',
+  ent_arc_livraison: accuse?.date ?? '',
+});
+
+/** Applique les valeurs validées à l'ARC de la commande (même route que le panneau ARC du document) ; champs vides envoyés à null. */
+export const appliquerArc = (id, valeurs, appel = api.arcDocument) => appel(id, Object.fromEntries(Object.entries(valeurs).map(([k, v]) => [k, v || null])));
 
 export const pastilleMessage = (etat) => pastilleTable(ETATS, etat);
 
@@ -303,6 +321,7 @@ export class PageMessageMail extends PageBase {
           <span class="aide">${p.score} % : ${p.indices.map((i) => echapper(INDICES[i] ?? i)).join(', ')}</span></li>`).join('')}</ul>` : ''}
         <p class="ligne"><span data-type-rattachement></span> <input data-code size="20" placeholder="${texteHtml('mail_btp.message.code')}"> <button type="button" data-rattacher>${iconeHtml('mail_btp_rattacher')} ${texteHtml('mail_btp.message.rattacher')}</button>
           ${m.etat !== 'IGNORE' ? `<button type="button" data-ignorer title="${texteHtml('mail_btp.message.ignorer_titre')}">${iconeHtml('mail_btp_ignorer')} ${texteHtml('mail_btp.message.ignorer')}</button>` : ''}</p>` : ''}
+      ${m.sens === 'R' && d.accuse ? '<div data-accuse></div>' : ''}
       <iframe class="mail-corps" sandbox="allow-popups allow-popups-to-escape-sandbox" title="${texteHtml('mail_btp.message.corps')}" data-corps></iframe>
       ${d.journal.length ? `<h2>${texteHtml('mail_btp.message.journal')}</h2><table class="tableau-compact largeur-contenu"><thead><tr><th>${texteHtml('mail_btp.suivi.le')}</th><th>${texteHtml('mail_btp.suivi.resultat')}</th><th>${texteHtml('mail_btp.message.reponse_serveur')}</th><th class="nombre">${texteHtml('mail_btp.message.duree')}</th></tr></thead><tbody>
         ${d.journal.map((j) => `<tr><td>${formatDateHeure(j.le)}</td><td>${echapper(j.resultat)}</td><td>${echapper([j.code, j.reponse].filter(Boolean).join(' '))}</td>
@@ -328,6 +347,7 @@ export class PageMessageMail extends PageBase {
       const [type, id] = b.dataset.proposition.split('|');
       try { await api.mail.rattacher(m.id, { type, id }); this.app.publier(SUJET_FENETRE.MAIL, {}); await this.charger(); } catch (e) { this.app.erreur(e); }
     }));
+    if (d.accuse) await this.bandeauAccuse(zone.querySelector('[data-accuse]'), d, m);
     const types = await api.mail.typesRattachement().catch(() => []);
     const type = creerCombo({ options: types.map((t) => ({ valeur: t.type, libelle: t.libelle, detail: t.aide })), valeur: types[0]?.type ?? '' });
     zone.querySelector('[data-type-rattachement]')?.replaceWith(type);
@@ -344,6 +364,31 @@ export class PageMessageMail extends PageBase {
       const motif = await saisir(texte('mail_btp.message.ignorer_motif'), '');
       if (motif === null) return;
       try { await api.mail.ignorer(m.id, motif); this.app.publier(SUJET_FENETRE.MAIL, {}); await this.charger(); } catch (e) { this.app.erreur(e); }
+    });
+  }
+
+  /** Bandeau de l'accusé de réception reconnu : valeurs modifiables, appliquées à l'ARC de la commande rattachée après validation. */
+  async bandeauAccuse(bloc, d, m) {
+    const p = propositionArc(d.accuse, m.cree_le);
+    const commande = commandeRattachee(d.liens);
+    let existant = '';
+    if (commande) {
+      const doc = await api.document(commande).catch(() => null);
+      if (doc?.ent_arc_numero || doc?.ent_arc_livraison) existant = `<p class="aide">${texteHtml('mail_btp.accuse.existant', { numero: doc.ent_arc_numero ?? '', livraison: doc.ent_arc_livraison ?? '' })}</p>`;
+    }
+    bloc.innerHTML = `<h2>${texteHtml('mail_btp.accuse.titre')}</h2><p class="aide">${texteHtml('mail_btp.accuse.aide')}</p>${existant}
+      <p class="ligne"><label>${texteHtml('mail_btp.accuse.numero')} <input data-arc="ent_arc_numero" size="14" maxlength="50" value="${echapper(p.ent_arc_numero)}"></label>
+        <label>${texteHtml('mail_btp.accuse.date')} <input type="date" data-arc="ent_arc_date" value="${echapper(p.ent_arc_date)}"></label>
+        <label>${texteHtml('mail_btp.accuse.livraison')} <input type="date" data-arc="ent_arc_livraison" value="${echapper(p.ent_arc_livraison)}"></label>
+        ${d.accuse.semaine ? `<span class="aide">${texteHtml('mail_btp.accuse.semaine', { semaine: d.accuse.semaine })}</span>` : ''}
+        ${commande ? `<button type="button" data-arc-appliquer title="${texteHtml('mail_btp.accuse.appliquer_titre')}">${iconeHtml('mail_btp_valider')} ${texteHtml('mail_btp.accuse.appliquer')}</button>`
+          : `<span class="aide">${texteHtml('mail_btp.accuse.sans_commande')}</span>`}
+        <button type="button" data-arc-ignorer>${iconeHtml('mail_btp_ignorer')} ${texteHtml('mail_btp.accuse.ignorer')}</button></p>`;
+    activerDates(bloc);
+    bloc.querySelector('[data-arc-ignorer]').addEventListener('click', () => { bloc.innerHTML = ''; });
+    bloc.querySelector('[data-arc-appliquer]')?.addEventListener('click', async () => {
+      const valeurs = Object.fromEntries([...bloc.querySelectorAll('[data-arc]')].map((i) => [i.dataset.arc, i.value.trim()]));
+      try { await appliquerArc(commande, valeurs); this.app.message(texte('mail_btp.accuse.applique'), 'succes'); bloc.innerHTML = ''; } catch (e) { this.app.erreur(e); }
     });
   }
 }

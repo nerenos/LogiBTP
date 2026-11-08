@@ -1811,6 +1811,20 @@
       "signalees_autre": "{{nombre}} coordonnées signalées dans l'annuaire",
       "ignorer_motif": "Ignorer ce courriel (il est retiré de la liste et de la GED). Motif :"
     },
+    "accuse": {
+      "titre": "Accusé de réception reconnu",
+      "aide": "Valeurs lues dans le courriel : elles ne sont appliquées à la commande qu'après votre validation.",
+      "numero": "Numéro d'AR",
+      "date": "Date de l'AR",
+      "livraison": "Livraison confirmée",
+      "semaine": "semaine {{semaine}} (lundi proposé)",
+      "existant": "Accusé déjà renseigné sur la commande : {{numero}}, livraison {{livraison}}.",
+      "sans_commande": "Rattachez d'abord le courriel à la commande.",
+      "appliquer": "Appliquer à la commande",
+      "appliquer_titre": "Pose le numéro, la date et la livraison confirmée sur l'accusé de réception de la commande",
+      "ignorer": "Ignorer la proposition",
+      "applique": "Accusé de réception enregistré sur la commande."
+    },
     "hebergeurs": {
       "GMAIL": "Gmail (grand public)",
       "OVH": "Exchange hébergé OVH",

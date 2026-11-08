@@ -32,7 +32,7 @@
 | 1 | Reconnaissance d'un AR (motifs, numéro, date) | `modules/mail` | AO1 | FAIT (08/11/2026) |
 | 2 | Point d'accroche « AR reconnu » à la réception | `modules/mail` | 1, AO2 | FAIT (08/11/2026) |
 | 3 | Rapprochement de la commande et rattachement | cœur | 2, AO3 | FAIT (08/11/2026) |
-| 4 | Proposition de la livraison confirmée dans la boîte de réception | cœur | 3 | A FAIRE |
+| 4 | Proposition de la livraison confirmée dans la boîte de réception | cœur | 3 | FAIT (08/11/2026) |
 
 ---
 
@@ -74,7 +74,7 @@
 - **Critère de fin** : `dotnet test LogiBTP.slnx` vert.
 - **Réalisé** : `AccuseCommandeBtp` (SQL des commandes `A_COMMANDE` / `T_COMMANDE` par `v_document_valable` hors annulées, numéros comparés sans séparateurs ni casse ; `Resoudre`) et surcharges `SpecialisationMailBtp.ParametresAccuseAsync` (préfixes des types ARC) / `AccuseReconnuAsync`. Écart au plan : l'accroche du module renvoie maintenant une `ResolutionAccuse` (élément unique ou candidates) et c'est `ServiceReceptionMail` qui rattache (`RattacherAsync`, origine `REGLE`, règle `ACCUSE_RECEPTION`, sans changer la contrainte `mli_origine`) ou, pour plusieurs candidates, les garde en propositions (indice `ACCUSE_RECEPTION`, état PROPOSE) ; numéro introuvable : le message reste « à rapprocher » avec sa proposition d'AR. Tests : `AccuseCommandeTests` (décisions, comparaison, SQL en base de dev dans une transaction annulée avec `LOGIBTP_TEST_PG`), cas de deux candidates dans `ServiceMailTests`.
 
-## Lot 4 : proposition de la livraison confirmée (A FAIRE)
+## Lot 4 : proposition de la livraison confirmée (FAIT le 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `client/src/app/pages/mail.js` (bandeau de proposition sur le message : numéro d'AR et date de
@@ -85,3 +85,4 @@
 - **Règles répliquées JS / C#** : aucune.
 - **Jeux de tests** : appliquer → `ent_arc_numero`, `ent_arc_date`, `ent_arc_livraison` posés et tracés ; ignorer → rien.
 - **Critère de fin** : `npm test` et `dotnet test LogiBTP.slnx` verts.
+- **Réalisé** : `DetailMessageDto.Accuse` (module Mail, proposition conservée sur le message) ; bandeau `bandeauAccuse` de `mail.js` (numéro, date de l'AR = date de réception du courriel, livraison annoncée, tous modifiables ; boutons « Appliquer à la commande » (route `PUT /structure/documents/{id}/arc` existante, commande = lien de type document) et « Ignorer la proposition ») ; test `client/test/accuse-courriel.test.js`. Écarts : le numéro proposé est le numéro de commande lu dans le courriel (le numéro d'AR du fournisseur n'est pas extrait), à corriger avant validation ; « ignorer » ne masque que l'affichage (pas d'état conservé) ; la traçabilité est celle de la route de l'ARC.

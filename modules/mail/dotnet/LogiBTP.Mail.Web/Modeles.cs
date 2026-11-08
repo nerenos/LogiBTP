@@ -77,7 +77,10 @@ public sealed record PieceDto(string Reference, string Nom, string? Type, long T
 public sealed record LigneJournalDto(long Id, long? Message, long? Lot, long Compte, string? Alias, string Utilisateur, string? Origine, int Destinataires,
     int Nouveaux, List<string> Domaines, string Resultat, string? Code, string? Reponse, int? DureeMs, DateTimeOffset Le);
 public sealed record DetailMessageDto(MessageDto Message, string? CorpsHtml, List<DestinataireDto> Destinataires, List<PieceDto> Pieces, List<LigneJournalDto> Journal,
-    List<LienDto> Liens, string? De, bool Auto, long Compte, List<PropositionDto> Propositions);
+    List<LienDto> Liens, string? De, bool Auto, long Compte, List<PropositionDto> Propositions, AccuseDto? Accuse = null);
+
+/// <summary>Accusé de réception reconnu sur un courriel reçu (plan ar-courriel) : numéro, livraison annoncée (jour, ou lundi de la semaine) à valider par l'utilisateur.</summary>
+public sealed record AccuseDto(string? Motif, string? Numero, List<string> Numeros, DateOnly? Date, short? Semaine, string? Precision);
 
 public sealed record PropositionDto(string Type, string Id, string? Libelle, string? Url, int Score, List<string> Indices);
 
