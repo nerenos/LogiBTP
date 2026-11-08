@@ -45,7 +45,7 @@
 | 1 | Photos de départ et de retour : base et serveur | cœur | MO1 | FAIT (08/11/2026) |
 | 2 | Photos de départ et de retour : ligne d'affectation | cœur | 1 | FAIT (08/11/2026) |
 | 3 | Relevés de compteurs à la borne : serveur | cœur | MO2 | FAIT (08/11/2026) |
-| 4 | Relevés de compteurs à la borne : écran | cœur | 3 | A FAIRE |
+| 4 | Relevés de compteurs à la borne : écran | cœur | 3 | FAIT (08/11/2026) |
 | 5 | Données de démonstration d'entretiens | cœur | MO3 | A FAIRE |
 | 6 | Refacturation interne : composante « produit interne » | `modules/rentabilite` | MO4 | A FAIRE |
 | 7 | Refacturation interne : crédit du chantier de suivi | cœur | 6 | A FAIRE |
@@ -103,7 +103,7 @@
 - **Critère de fin** : `dotnet test LogiBTP.slnx` vert.
 - **Réalisé / écarts** : script `db/280` (non appliqué aux bases) : `mre_a_valider`, `mre_sal_id`, `mre_traite_par/le` ; `CompteursBorneBtp.cs` : `GET /api/pointage/borne/materiel?jeton=` (affectés ce jour / autres), `POST /api/pointage/borne/materiel/releves` (source BORNE, contrôle inchangé, `aValider` si non affecté ; borne d'essai : rien d'écrit), `GET` et `POST /api/ressources/materiels/releves-a-valider[/{id}]` (admin ou responsable du service ; refus = suppression, motif obligatoire). Pas de changement du module Pointage. Tests : `CompteursBorneTests.cs` (règle pure et contrôle ; pas de banc HTTP sur base).
 
-## Lot 4 : relevés de compteurs à la borne, écran (A FAIRE)
+## Lot 4 : relevés de compteurs à la borne, écran (FAIT 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `client/src/app/pages/borne.js` (nouvelle entrée « Compteurs » : matériels affectés, saisie de la
@@ -114,6 +114,7 @@
   signalé « à valider au bureau ».
 - **Jeux de tests** : test client : liste des matériels affectés, saisie, relevé hors affectation à valider, message de refus.
 - **Critère de fin** : `npm test` vert.
+- **Réalisé / écarts** : bouton « Compteurs » de l'écran chantier de la borne, écran `#compteurs` (liste rapide des affectés ce jour, bascule « Autre matériel » et recherche, saisie par unité suivie avec remise à zéro, message « à valider au bureau »), helpers `client/src/app/pointage/releves-borne.js`, test `releves-borne.test.js`. Pas de mode hors ligne (la borne n'utilise pas `hors-ligne/`). Écran de validation au bureau des relevés à valider non fait (reporté au TODO). `npm test` : seuls les 2 échecs connus.
 
 ## Lot 5 : données de démonstration d'entretiens (A FAIRE)
 

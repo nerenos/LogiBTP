@@ -9,6 +9,8 @@ import { api } from '../api.js';
 import { choixMultiple } from '../choix-multiple.js';
 import { tuilesChoix, filtrerChoix, tuileExacte } from '../pointage/choix-borne.js';
 import { distanceRestaurant, chantierDuJour } from '../pointage/repas.js';
+import { lignesCompteurs, materielsProposes, corpsReleve } from '../pointage/releves-borne.js';
+import { LIBELLES_UNITE } from '../ressources/compteurs.js';
 
 // Borne d'atelier (Pointage lot 4, M8, § 6 « quatre touches ») : appareil enregistré par un administrateur (jeton gardé
 // dans le navigateur de la borne, en-tête X-Borne-Jeton, aucune session) ; salarié (initiales) → PIN → chantier ou
@@ -308,8 +310,10 @@ export class PageBorne extends PageBase {
       <p><button type="button" class="borne-bouton principal" data-liste title="${texteHtml('pointage.borne.pointages_jour_aide')}">${iconeHtml('pointage_liste')} ${texteHtml('pointage.borne.pointages_jour')}${n ? ` (${n})` : ''} ${iconeHtml('pointage_passer')}</button>
         <button type="button" class="borne-bouton" data-etapes title="${texteHtml('pointage.borne.etapes_aide')}">${iconeHtml('pointage_ordre')} ${texteHtml('pointage.borne.etapes')}</button>
         <button type="button" class="borne-bouton" data-stock title="${texteHtml('pointage.borne.stock_aide')}">${iconeHtml('pointage_stock')} ${texteHtml('pointage.borne.stock')}</button>
+        <button type="button" class="borne-bouton" data-compteurs title="${texteHtml('pointage.borne.compteurs_aide')}">${iconeHtml('pointage_compteurs')} ${texteHtml('pointage.borne.compteurs')}</button>
         <button type="button" class="borne-bouton" data-terminer>${texteHtml('pointage.borne.terminer')}</button></p>`;
     this.#brancherEntete();
+    this.zone.querySelector('[data-compteurs]').addEventListener('click', () => this.#compteurs());
     this.zone.querySelector('[data-etapes]').addEventListener('click', () => this.#etapes());
     this.zone.querySelector('[data-stock]').addEventListener('click', () => this.#stock());
     const choisir = (cha, ordre) => { this.etat.saisie = { cha_id: cha, ent_id: ordre ?? null }; this.#memoriser(); this.#typeMo(); };
@@ -459,6 +463,64 @@ export class PageBorne extends PageBase {
         this.#journee();
       } catch (e) { await alerter(e.message); }
     });
+    this.#minuterie();
+  }
+
+  /**
+   * Compteurs du matériel (plan materiel-suites, lot 4, MO2) : liste rapide des matériels affectés au salarié ce jour ;
+   * « Autre matériel » ouvre le reste du parc (relevé accepté mais à valider au bureau). Essai : rien n'est enregistré.
+   */
+  async #compteurs(etat = null) {
+    const j = this.etat.journee;
+    let d;
+    try { d = etat?.donnees ?? await appel('GET', `/materiel?jeton=${encodeURIComponent(j.jeton)}`); } catch (e) { this.#erreur(e); return; }
+    const s = etat ?? { donnees: d, tous: false, recherche: '', choisi: null };
+    this.ecran = () => this.#compteurs(s);
+    const liste = materielsProposes(d, { tous: s.tous, recherche: s.recherche });
+    const m = s.choisi ? [...d.affectes, ...d.autres].find((x) => x.id === s.choisi) : null;
+    const carte = (x) => `<button type="button" class="borne-carte ${x.affecte ? 'propose' : ''}" data-materiel="${x.id}"><b>${echapper(x.code)}</b><small>${echapper(x.designation)}</small></button>`;
+    if (!m) {
+      this.zone.innerHTML = `${this.#entete(texte('pointage.borne.ecran_compteurs'))}
+        <p><input data-recherche class="borne-champ" placeholder="${texteHtml('pointage.borne.compteurs_rechercher')}" value="${echapper(s.recherche)}">
+          <button type="button" class="borne-bouton ${s.tous ? 'principal' : ''}" data-tous title="${texteHtml('pointage.borne.compteurs_tous_aide')}">${texteHtml('pointage.borne.compteurs_tous')}</button></p>
+        ${liste.some((x) => x.affecte) ? `<p class="aide">${texteHtml('pointage.borne.compteurs_affectes')}</p>` : ''}
+        <div class="borne-grille">${liste.filter((x) => x.affecte).map(carte).join('')}</div>
+        ${liste.some((x) => !x.affecte) ? `<p class="aide">${texteHtml('pointage.borne.compteurs_autres')}</p>` : ''}
+        <div class="borne-grille">${liste.filter((x) => !x.affecte).slice(0, 60).map(carte).join('')}</div>
+        ${liste.length ? '' : `<p class="aide">${texteHtml('pointage.borne.compteurs_aucun')}</p>`}
+        <p><button type="button" class="borne-bouton" data-retour>${texteHtml('pointage.borne.retour')}</button></p>`;
+      this.#brancherEntete();
+      const z = this.zone;
+      z.querySelector('[data-recherche]').addEventListener('change', (e) => { s.recherche = e.target.value; this.#compteurs(s); });
+      z.querySelector('[data-tous]').addEventListener('click', () => { s.tous = !s.tous; this.#compteurs(s); });
+      z.querySelectorAll('[data-materiel]').forEach((b) => b.addEventListener('click', () => { s.choisi = Number(b.dataset.materiel); this.#compteurs(s); }));
+      z.querySelector('[data-retour]').addEventListener('click', () => this.#journee());
+      this.#minuterie();
+      return;
+    }
+    const lignes = lignesCompteurs(m);
+    this.zone.innerHTML = `${this.#entete(`${m.code} · ${m.designation}`)}
+      <table class="borne-liste"><tbody>${lignes.map((l) => `<tr><td><b>${echapper(LIBELLES_UNITE[l.unite] ?? l.unite)}</b>
+        ${l.dernier !== null && l.dernier !== undefined ? `<small class="aide">${texteHtml('pointage.borne.compteurs_dernier', { valeur: formatNombre(l.dernier, 0), unite: LIBELLES_UNITE[l.unite] ?? l.unite })}</small>` : ''}</td>
+        <td><input data-valeur="${l.unite}" class="borne-champ" inputmode="decimal" placeholder="${texteHtml('pointage.borne.compteurs_valeur')}" autocomplete="off">
+          <label><input type="checkbox" data-remise="${l.unite}"> ${texteHtml('pointage.borne.compteurs_remise')}</label></td>
+        <td><button type="button" class="borne-bouton principal" data-enregistrer="${l.unite}">${iconeHtml('pointage_ok')} ${texteHtml('commun.enregistrer')}</button></td></tr>`).join('')}</tbody></table>
+      <p><button type="button" class="borne-bouton" data-retour>${texteHtml('pointage.borne.retour')}</button></p>`;
+    this.#brancherEntete();
+    const z = this.zone;
+    z.querySelectorAll('[data-enregistrer]').forEach((b) => b.addEventListener('click', async () => {
+      const u = b.dataset.enregistrer;
+      const corps = corpsReleve(j.jeton, m.id, u, z.querySelector(`[data-valeur="${u}"]`).value, { remise: z.querySelector(`[data-remise="${u}"]`).checked });
+      if (!corps) { await alerter(texte('pointage.borne.compteurs_illisible')); return; }
+      try {
+        const r = await appel('POST', '/materiel/releves', corps);
+        await alerter(r.essai ? texte('pointage.borne.essai_rien') : texte(r.aValider ? 'pointage.borne.compteurs_a_valider' : 'pointage.borne.compteurs_enregistre'));
+        s.choisi = null;
+        this.#compteurs(s);
+      } catch (e) { await alerter(e.message); }
+    }));
+    z.querySelector('[data-retour]').addEventListener('click', () => { s.choisi = null; this.#compteurs(s); });
+    z.querySelector('input[data-valeur]')?.focus();
     this.#minuterie();
   }
 
