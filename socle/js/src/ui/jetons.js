@@ -1,4 +1,16 @@
 import { texte, texteHtml, iconeHtml } from '../dictionnaire/index.js';
+import { declarerRaccourcis, actionDe } from './raccourcis.js';
+
+// Touches du champ (groupe jetons, personnalisable). La virgule n'est pas un raccourci mais un séparateur de saisie :
+// elle est traitée sur `input` (comme le collage « a, b »).
+const GROUPE = 'jetons';
+declarerRaccourcis(GROUPE, {
+  libelle: texte('socle.jetons.raccourcis.groupe'),
+  actions: {
+    ajouter: { libelle: texte('socle.jetons.raccourcis.ajouter'), defaut: 'Enter' },
+    retirerDernier: { libelle: texte('socle.jetons.raccourcis.retirer_dernier'), defaut: 'Backspace' },
+  },
+});
 
 /** Sépare un texte saisi ou collé en jetons (virgule, point-virgule ou saut de ligne), espaces retirés, vides ignorés. */
 export function decouperJetons(saisie) {
@@ -18,7 +30,7 @@ export function retirerJeton(liste, jeton) {
 }
 
 /**
- * Saisie de mots-clés en jetons : la valeur est un tableau de textes. Ajout par Entrée ou virgule (ou collage
+ * Saisie de mots-clés en jetons : la valeur est un tableau de textes. Ajout par Entrée (action `ajouter`) ou virgule (séparateur, sur `input`) (ou collage
  * « a, b »), retrait par la croix ou Retour arrière sur saisie vide ; la saisie en cours est ajoutée à la sortie du
  * champ. Doublons ignorés. Rend l'élément ; `valeurJetons` (lecture) et `definirValeur(tableau)` (sans événement) ;
  * événement `change` à chaque modification de la valeur.
@@ -64,8 +76,9 @@ export function creerJetons({ valeur = [], titre = '' } = {}) {
   };
   saisie.placeholder = texte('socle.jetons.saisie');
   saisie.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); valider(); }
-    else if (e.key === 'Backspace' && saisie.value === '' && jetons.length) modifier(jetons.slice(0, -1));
+    const action = actionDe(e, GROUPE);
+    if (action === 'ajouter') { e.preventDefault(); valider(); }
+    else if (action === 'retirerDernier' && saisie.value === '' && jetons.length) modifier(jetons.slice(0, -1));
   });
   saisie.addEventListener('input', () => { if (/[,;\n]/.test(saisie.value)) valider(); });
   saisie.addEventListener('blur', valider);

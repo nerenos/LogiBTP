@@ -67,7 +67,7 @@
 
 ## Lot 2 : P2, composant `creerJetons` (FAIT 08/11/2026)
 
-> Écart : pas de raccourci déclaré (touches Entrée, virgule, Retour arrière traitées dans le champ) ; logique pure testée (`decouperJetons`, `ajouterJetons`, `retirerJeton`), le DOM n est pas testé. Textes `socle.jetons.*` dans `socle/js/personnalisation/fr.json`. `socle/CLAUDE.md` non modifié (à mentionner).
+> Écart : Entrée et Retour arrière passent par le groupe de raccourcis `jetons` (actions `ajouter`, `retirerDernier`, `actionDe`) ; la virgule est un séparateur de saisie traité sur `input`, pas un raccourci ; logique pure testée (`decouperJetons`, `ajouterJetons`, `retirerJeton`), le DOM n est pas testé. Textes `socle.jetons.*` dans `socle/js/personnalisation/fr.json`. `socle/CLAUDE.md` non modifié (à mentionner).
 
 - **Module** : `socle`. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `socle/js/src/ui/jetons.js` (nouveau : valeur en tableau de textes, ajout par Entrée ou virgule,

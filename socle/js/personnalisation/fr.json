@@ -165,6 +165,11 @@
       "fermer": "Fermer (Échap)"
     },
     "jetons": {
+      "raccourcis": {
+        "groupe": "Saisie de mots-clés (jetons)",
+        "ajouter": "Ajouter le mot saisi",
+        "retirer_dernier": "Retirer le dernier mot (saisie vide)"
+      },
       "retirer": "Retirer {{jeton}}",
       "saisie": "Ajouter (Entrée ou virgule)"
     }

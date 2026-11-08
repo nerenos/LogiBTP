@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { decouperJetons, ajouterJetons, retirerJeton } from '../src/ui/jetons.js';
+import { actionDe, touchesDe } from '../src/ui/raccourcis.js';
 import * as socle from '../src/ui/index.js';
 
 describe('jetons (P2)', () => {
@@ -21,5 +22,11 @@ describe('jetons (P2)', () => {
   });
   it('composant exporté par le socle', () => {
     expect(typeof socle.creerJetons).toBe('function');
+  });
+  it('touches du champ par le groupe de raccourcis jetons', () => {
+    expect(actionDe({ key: 'Enter' }, 'jetons')).toBe('ajouter');
+    expect(actionDe({ key: 'Backspace' }, 'jetons')).toBe('retirerDernier');
+    expect(actionDe({ key: ',' }, 'jetons')).toBeNull();
+    expect(touchesDe('jetons', 'ajouter')).toEqual(['Enter']);
   });
 });
