@@ -1,8 +1,10 @@
 import { texte, texteHtml, icone, iconeHtml, textesParCode, couleurTheme } from '@logibtp/socle/dictionnaire';
-import { echapper, ouvrirModale, confirmer } from '@logibtp/socle/ui';
+import { echapper, ouvrirModale, confirmer, creerCombo } from '@logibtp/socle/ui';
 import { normaliserDefinition, FORMATS, TEINTES_PASTILLE, STYLE_VIDE, TOTAUX_COLONNE, CALCULS_INDICATEUR, FORMATS_INDICATEUR } from '../src/modele.js';
 import { compilerFormule, resolveurColonnes } from '../src/formule.js';
 import { OPERATEURS_VUE, COLONNE_USAGE } from '../src/requete.js';
+import { PERIODES_CHOIX, libellePeriode, periodeComplete, nombrePeriode } from '../src/filtres.js';
+import { PERIODE_AVEC_NOMBRE, OPERATEUR_PERIODE } from '../src/codes.js';
 
 const SANS_VALEUR = new Set(['vide', 'nonvide', 'vrai', 'faux']);
 
@@ -10,6 +12,7 @@ const SANS_VALEUR = new Set(['vide', 'nonvide', 'vrai', 'faux']);
 export function libelleFiltreVue(f, titre = f.colonne) {
   const op = OPERATEURS_VUE.find(([v]) => v === f.op)?.[1] ?? f.op;
   if (SANS_VALEUR.has(f.op)) return `${titre} ${op}`;
+  if (f.op === OPERATEUR_PERIODE) return `${titre} ${op} ${libellePeriode(f.valeur, f.nombre ?? null)}`;
   if (f.op === 'dans') return texte('liste.concepteur.filtre_dans', { titre, valeurs: (f.valeurs ?? []).join(', ') });
   if (f.op === 'entre') return texte('liste.concepteur.filtre_entre', { titre, valeur: f.valeur ?? '', valeur2: f.valeur2 ?? '' });
   return `${titre} ${op} ${f.valeur ?? ''}`;
@@ -174,6 +177,7 @@ export class ConcepteurVue {
       for (const f of filtres) {
         if (!f.colonne) erreurs.push(texte('liste.concepteur.erreurs.filtre_colonne', { quoi }));
         else if (!SANS_VALEUR.has(f.op) && f.op !== 'dans' && (f.valeur ?? '') === '') erreurs.push(texte('liste.concepteur.erreurs.filtre_valeur', { quoi, colonne: f.colonne }));
+        else if (f.op === OPERATEUR_PERIODE && !periodeComplete(f.valeur, f.nombre)) erreurs.push(texte('liste.concepteur.erreurs.filtre_periode', { quoi, colonne: f.colonne }));
         else if (f.op === 'entre' && (f.valeur2 ?? '') === '') erreurs.push(texte('liste.concepteur.erreurs.filtre_valeur2', { quoi, colonne: f.colonne }));
         else if (f.op === 'dans' && !(f.valeurs ?? []).length) erreurs.push(texte('liste.concepteur.erreurs.filtre_valeurs', { quoi, colonne: f.colonne }));
       }
@@ -534,7 +538,9 @@ export class ConcepteurVue {
       return `<div class="filtre-vue" data-filtres="${echapper(groupe)}" data-i="${i}">
         <select data-f="colonne">${opt('', texte('liste.concepteur.filtres.colonne'), f.colonne)}${this.colonnesSource.map((c) => opt(c.code, c.code, f.colonne)).join('')}</select>
         <select data-f="op">${OPERATEURS_VUE.map(([v, l]) => opt(v, l, f.op)).join('')}</select>
-        <input data-f="valeur" type="${type}" value="${echapper(f.op === 'dans' ? (f.valeurs ?? []).join(' ; ') : f.valeur ?? '')}" ${SANS_VALEUR.has(f.op) ? 'hidden' : ''} placeholder="${texteHtml(f.op === 'dans' ? 'liste.concepteur.filtres.valeurs' : 'liste.concepteur.filtres.valeur')}">
+        <span data-periode ${f.op === OPERATEUR_PERIODE ? '' : 'hidden'}></span>
+        <input data-f="nombre" type="number" min="1" step="1" value="${echapper(f.nombre ?? '')}" ${f.op === OPERATEUR_PERIODE && PERIODE_AVEC_NOMBRE.includes(f.valeur) ? '' : 'hidden'} placeholder="${texteHtml('liste.concepteur.filtres.periode_nombre')}">
+        <input data-f="valeur" type="${type}" value="${echapper(f.op === 'dans' ? (f.valeurs ?? []).join(' ; ') : f.valeur ?? '')}" ${SANS_VALEUR.has(f.op) || f.op === OPERATEUR_PERIODE ? 'hidden' : ''} placeholder="${texteHtml(f.op === 'dans' ? 'liste.concepteur.filtres.valeurs' : 'liste.concepteur.filtres.valeur')}">
         <input data-f="valeur2" type="${type}" value="${echapper(f.valeur2 ?? '')}" ${f.op === 'entre' ? '' : 'hidden'} placeholder="${texteHtml('liste.menu.et')}">
         <button type="button" data-supprimer-filtre title="${texteHtml('liste.concepteur.filtres.supprimer')}">${iconeHtml('retirer')}</button>
       </div>`;
@@ -544,14 +550,27 @@ export class ConcepteurVue {
   #brancherFiltres(racine, filtres, groupe, rendre) {
     racine.querySelectorAll(`[data-filtres="${CSS.escape(groupe)}"]`).forEach((div) => {
       const f = filtres[Number(div.dataset.i)];
+      // Période : choix par combo (le code est gardé dans la vue, jamais des dates), nombre x pour les périodes paramétrées.
+      const zonePeriode = div.querySelector('[data-periode]');
+      if (zonePeriode && f.op === OPERATEUR_PERIODE) {
+        const combo = creerCombo({ options: PERIODES_CHOIX.map(([valeur, libelle]) => ({ valeur, libelle })), valeur: f.valeur ?? '', titre: texte('liste.concepteur.filtres.periode') });
+        combo.addEventListener('change', () => {
+          f.valeur = combo.valeurCombo || null;
+          if (!PERIODE_AVEC_NOMBRE.includes(f.valeur)) delete f.nombre;
+          rendre();
+        });
+        zonePeriode.append(combo);
+      }
       div.querySelectorAll('[data-f]').forEach((el) => el.addEventListener('change', () => {
         const k = el.dataset.f;
+        if (k === 'nombre') { const n = nombrePeriode(f.valeur, el.value); if (n === null) delete f.nombre; else f.nombre = n; return; }
         if (k === 'valeur' && f.op === 'dans') { f.valeurs = el.value.split(';').map((x) => x.trim()).filter(Boolean); delete f.valeur; }
         else f[k] = el.value || null;
         if (k === 'op' || k === 'colonne') {
           if (f.op === 'dans') { f.valeurs = f.valeur ? [f.valeur] : f.valeurs ?? []; delete f.valeur; } else delete f.valeurs;
           if (SANS_VALEUR.has(f.op)) { delete f.valeur; delete f.valeur2; }
           if (f.op !== 'entre') delete f.valeur2;
+          if (k === 'op') { delete f.nombre; if (f.op === OPERATEUR_PERIODE) f.valeur = null; }
           rendre();
         }
       }));

@@ -1,9 +1,10 @@
 import { texte, texteHtml, iconeHtml } from '@logibtp/socle/dictionnaire';
-import { echapper } from '@logibtp/socle/ui';
+import { echapper, creerCombo } from '@logibtp/socle/ui';
 import { normaliser } from '../src/normaliser.js';
 import {
-  valeursDistinctes, formatsPresents, estNumerique, filtreActif, OPERATEURS_NOMBRE, OPERATEURS_TEXTE,
+  valeursDistinctes, formatsPresents, estNumerique, filtreActif, OPERATEURS_NOMBRE, OPERATEURS_TEXTE, OPERATEURS_DATE, PERIODES_CHOIX, periodeComplete,
 } from '../src/filtres.js';
+import { PERIODE_AVEC_NOMBRE, OPERATEUR_PERIODE } from '../src/codes.js';
 
 // Menu d'une colonne, façon tableur : tri (lignes chargées ou toute la base), filtre par valeurs distinctes,
 // par condition (nombres et dates : supérieur à, égal à, entre… ; textes : contient, commence par…)
@@ -30,7 +31,7 @@ export function ouvrirMenuFiltre({ ancre, colonne, modele, lignes, filtre, appli
   const distinctes = valeursDistinctes(lignes, colonne, modele);
   const formats = formatsPresents(lignes, colonne, modele);
   const numerique = estNumerique(colonne);
-  const ops = numerique ? OPERATEURS_NOMBRE : OPERATEURS_TEXTE;
+  const ops = colonne.format === 'date' ? OPERATEURS_DATE : numerique ? OPERATEURS_NOMBRE : OPERATEURS_TEXTE;
   const retenues = filtre?.valeurs instanceof Set ? filtre.valeurs : null;
   const cond = filtre?.condition ?? {};
   const fmt = filtre?.format ?? {};
@@ -62,7 +63,9 @@ export function ouvrirMenuFiltre({ ancre, colonne, modele, lignes, filtre, appli
       <div class="liste-menu-condition">
         <select data-op>${opt('', '—', cond.op)}${ops.map(([v, l]) => opt(v, l, cond.op)).join('')}</select>
         <input data-a value="${echapper(cond.a ?? '')}" placeholder="${texteHtml(numerique ? (colonne.format === 'date' ? 'liste.menu.saisie_date' : 'liste.menu.saisie_nombre') : 'liste.menu.saisie_texte')}">
-        <input data-b value="${echapper(cond.b ?? '')}" placeholder="${texteHtml('liste.menu.et')}">
+        <input data-b value="${echapper(cond.op === OPERATEUR_PERIODE ? '' : cond.b ?? '')}" placeholder="${texteHtml('liste.menu.et')}">
+        <span data-periode hidden></span>
+        <input data-nombre type="number" min="1" step="1" value="${cond.op === OPERATEUR_PERIODE ? echapper(cond.b ?? '') : ''}" placeholder="${texteHtml('liste.menu.periode_nombre')}" hidden>
       </div>
     </details>
     <details ${filtreActif({ format: fmt }) ? 'open' : ''} ${miseEnForme ? '' : 'hidden'}><summary>${texteHtml('liste.menu.mise_en_forme')}</summary>
@@ -101,10 +104,20 @@ export function ouvrirMenuFiltre({ ancre, colonne, modele, lignes, filtre, appli
     majTout();
   });
   const op = menu.querySelector('[data-op]');
+  const comboPeriode = creerCombo({
+    options: PERIODES_CHOIX.map(([valeur, libelle]) => ({ valeur, libelle })),
+    valeur: cond.op === OPERATEUR_PERIODE ? cond.a ?? '' : '', titre: texte('liste.menu.periode'),
+  });
+  menu.querySelector('[data-periode]').append(comboPeriode);
+  const nombre = menu.querySelector('[data-nombre]');
   const majOp = () => {
-    menu.querySelector('[data-a]').hidden = !op.value || op.value === 'vide' || op.value === 'nonvide';
+    const periode = op.value === OPERATEUR_PERIODE;
+    menu.querySelector('[data-a]').hidden = !op.value || op.value === 'vide' || op.value === 'nonvide' || periode;
     menu.querySelector('[data-b]').hidden = op.value !== 'entre';
+    menu.querySelector('[data-periode]').hidden = !periode;
+    nombre.hidden = !periode || !PERIODE_AVEC_NOMBRE.includes(comboPeriode.valeurCombo);
   };
+  comboPeriode.addEventListener('change', majOp);
   op.addEventListener('change', majOp);
   majOp();
   menu.querySelectorAll('[data-pastilles]').forEach((zone) => zone.querySelectorAll('[data-couleur]').forEach((b) => b.addEventListener('click', () => {
@@ -114,7 +127,10 @@ export function ouvrirMenuFiltre({ ancre, colonne, modele, lignes, filtre, appli
   const lire = () => {
     const cochees = cases.filter((c) => c.checked).map((c) => distinctes[Number(c.dataset.valeur)].texte);
     const valeurs = cochees.length === distinctes.length ? null : new Set(cochees);
-    const condition = op.value ? { op: op.value, a: menu.querySelector('[data-a]').value, b: menu.querySelector('[data-b]').value } : null;
+    // Période : { op, a: code, b: nombre x }, jamais des dates (bornes calculées à la date d'exécution) ; incomplète = pas de condition.
+    const condition = op.value === OPERATEUR_PERIODE
+      ? (periodeComplete(comboPeriode.valeurCombo, nombre.value) ? { op: op.value, a: comboPeriode.valeurCombo, b: nombre.value } : null)
+      : op.value ? { op: op.value, a: menu.querySelector('[data-a]').value, b: menu.querySelector('[data-b]').value } : null;
     const format = {};
     menu.querySelectorAll('[data-pastilles]').forEach((zone) => {
       const v = zone.querySelector('.actif')?.dataset.couleur ?? '';

@@ -28,3 +28,6 @@ export const PERIODE = Object.freeze({
 
 /** Périodes qui demandent un nombre x. */
 export const PERIODE_AVEC_NOMBRE = Object.freeze([PERIODE.DERNIERS_JOURS, PERIODE.DERNIERS_MOIS, PERIODE.PROCHAINS_JOURS]);
+
+/** Opérateur « dans la période » des filtres de date (condition de colonne et filtre fixe de vue). */
+export const OPERATEUR_PERIODE = 'periode';

@@ -4,7 +4,7 @@ export { compilerFormule, resolveurColonnes, ErreurFormule, vrai } from './formu
 export { ModeleVue, normaliserDefinition, FORMATS, TEINTES_PASTILLE, STYLE_VIDE, TOTAUX_COLONNE, CALCULS_INDICATEUR, FORMATS_INDICATEUR, texteIndicateur, dateFr, vraiDonnee } from './modele.js';
 export {
   filtreActif, correspond, comparerValeurs, valeursDistinctes, formatsPresents, nombreDe, estNumerique,
-  OPERATEURS_NOMBRE, OPERATEURS_TEXTE,
+  OPERATEURS_NOMBRE, OPERATEURS_TEXTE, OPERATEURS_DATE, PERIODES_CHOIX, nombrePeriode, periodeComplete, filtreVuePeriode, libellePeriode,
 } from './filtres.js';
 export { filtrer, correspondFiltreVue, filtresEffectifs, resoudrePeriodes, estTypeDate, aujourdhui, COLONNE_USAGE, OPERATEURS_VUE, trier, lot, jusqua, comptesSegment, cleTri, comparerCles, texteBrut, empreinte, agreger, CALCULS_AGREGAT } from './requete.js';
 export { FournisseurApi, FournisseurMemoire, ErreurFournisseur } from './fournisseurs.js';

@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   normaliser, compilerFormule, resolveurColonnes, ModeleVue, FournisseurMemoire, correspond, calculerLargeurs, valeursDistinctes, bornesPeriode,
+  filtreVuePeriode, libellePeriode, resoudrePeriodes, PERIODE, OPERATEURS_DATE,
 } from '../src/index.js';
 
 const dossier = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../tests/cas');
@@ -185,4 +186,31 @@ describe('périodes glissantes (jeu partagé)', () => {
       expect(appel()).toEqual({ debut: c.debut, fin: c.fin });
     });
   }
+});
+
+describe('période choisie dans le filtre de colonne', () => {
+  it('une vue enregistrée garde le code de la période, pas des dates', () => {
+    const f = filtreVuePeriode('date_pose', PERIODE.MOIS_EN_COURS);
+    expect(f).toEqual({ colonne: 'date_pose', op: 'periode', valeur: 'mois_en_cours' });
+    expect(JSON.stringify(f)).not.toMatch(/\d{4}-\d{2}-\d{2}/);
+    const [resolu] = resoudrePeriodes([f], new Map([['date_pose', 'date']]), { reference: '2026-11-08' });
+    expect(resolu.bornes).toEqual({ debut: '2026-11-01', fin: '2026-11-30' });
+  });
+
+  it('période paramétrée : nombre x gardé, saisie invalide ignorée', () => {
+    expect(filtreVuePeriode('d', PERIODE.DERNIERS_JOURS, '30')).toMatchObject({ valeur: 'derniers_jours', nombre: 30 });
+    expect(filtreVuePeriode('d', PERIODE.DERNIERS_JOURS, '2,5')).not.toHaveProperty('nombre');
+    expect(libellePeriode(PERIODE.DERNIERS_JOURS, 30)).toContain('30');
+  });
+
+  it('condition de colonne « dans la période » sur les lignes chargées', () => {
+    const colonne = { code: 'd', format: 'date' };
+    const cellule = (v) => ({ valeur: v, texte: v, style: {} });
+    const filtre = { condition: { op: 'periode', a: 'mois_en_cours', b: '' } };
+    expect(OPERATEURS_DATE.map(([c]) => c)).toContain('periode');
+    expect(correspond(filtre, cellule('2026-11-03'), colonne, '2026-11-08')).toBe(true);
+    expect(correspond(filtre, cellule('2026-10-31'), colonne, '2026-11-08')).toBe(false);
+    expect(correspond({ condition: { op: 'periode', a: 'derniers_jours', b: '' } }, cellule('2026-11-08'), colonne, '2026-11-08')).toBe(false);
+    expect(correspond({ condition: { op: 'periode', a: 'derniers_jours', b: '3' } }, cellule('2026-11-06'), colonne, '2026-11-08')).toBe(true);
+  });
 });

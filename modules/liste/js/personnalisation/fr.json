@@ -12,8 +12,25 @@
       "nonvide": "Non vide",
       "contient": "Contient",
       "commence": "Commence par",
-      "finit": "Se termine par"
+      "finit": "Se termine par",
+      "periode": "Dans la période"
     },
+    "periodes": {
+      "aujourd_hui": "Aujourd'hui",
+      "hier": "Hier",
+      "semaine_en_cours": "Semaine en cours",
+      "semaine_precedente": "Semaine précédente",
+      "mois_en_cours": "Mois en cours",
+      "mois_precedent": "Mois précédent",
+      "trimestre_en_cours": "Trimestre en cours",
+      "annee_en_cours": "Année en cours",
+      "annee_precedente": "Année précédente",
+      "exercice_en_cours": "Exercice en cours",
+      "derniers_jours": "x derniers jours",
+      "derniers_mois": "x derniers mois",
+      "prochains_jours": "x prochains jours"
+    },
+    "periodes_avec_nombre": "{{periode}} (x = {{nombre}})",
     "operateurs_vue": {
       "egal": "égal à",
       "different": "différent de",
@@ -116,6 +133,8 @@
       "tout": "(Tout sélectionner)",
       "vides": "(Vides)",
       "condition": "Condition",
+      "periode": "— période —",
+      "periode_nombre": "x",
       "et": "et",
       "mise_en_forme": "Mise en forme",
       "fond": "Couleur de fond",
@@ -175,6 +194,7 @@
         "filtre_colonne": "{{quoi}} : colonne à choisir",
         "filtre_valeur": "{{quoi}} sur {{colonne}} : valeur à saisir",
         "filtre_valeur2": "{{quoi}} sur {{colonne}} : seconde valeur à saisir",
+        "filtre_periode": "{{quoi}} sur {{colonne}} : période à choisir, avec son nombre x (entier supérieur ou égal à 1) si elle en demande un",
         "filtre_valeurs": "{{quoi}} sur {{colonne}} : valeurs à saisir",
         "quoi_vue": "Filtre de la vue",
         "quoi_indicateur": "Indicateur « {{titre}} »",
@@ -296,7 +316,9 @@
         "sommeil_aide": "Fiches mises en sommeil (avant archivage) : masquées par défaut",
         "sommeil": "Afficher les fiches en sommeil",
         "valeurs": "valeur ; valeur…",
-        "valeur": "valeur"
+        "valeur": "valeur",
+        "periode": "— période —",
+        "periode_nombre": "x"
       },
       "calculees": {
         "titre": "Colonnes calculées",

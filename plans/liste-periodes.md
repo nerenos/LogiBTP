@@ -69,7 +69,7 @@
 - **Critère de fin** : les cas passent en JS et en C# ; `npm test`, `npm run exporter-resultats`, `dotnet test
   LogiBTP.slnx` verts.
 
-## Lot 3 : choix de la période dans le filtre de colonne et l'éditeur de vue (A FAIRE)
+## Lot 3 : choix de la période dans le filtre de colonne et l'éditeur de vue (FAIT le 08/11/2026)
 
 - **Module** : `modules/liste`. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `modules/liste/js/src/filtres.js`, `modules/liste/js/ui/menu-filtre.js`, `modules/liste/js/ui/concepteur.js`
@@ -80,6 +80,7 @@
 - **Jeux de tests** : test JS : choix « mois en cours » dans le filtre de colonne → filtre `periode` dans la vue
   enregistrée (pas de dates fixes).
 - **Critère de fin** : `npm test` vert ; une vue enregistrée avec une période garde le code et non des dates.
+- **Écarts** : ajout de `src/codes.js` (`OPERATEUR_PERIODE`) et `src/index.js` (exports) ; le filtre de colonne reste local aux lignes chargées (condition `periode` évaluée par `correspond`), le filtre fixe de vue se pose dans le concepteur (`filtreVuePeriode`). `npm test` : seuls les 2 échecs connus de `personnalisation.test.js`.
 
 ## Lot 4 : exercice comptable fourni par le cœur (A FAIRE)
 

@@ -1,5 +1,8 @@
-import { pairesParCode } from '@logibtp/socle/dictionnaire';
+import { pairesParCode, texte } from '@logibtp/socle/dictionnaire';
 import { normaliser } from './normaliser.js';
+import { PERIODE, PERIODE_AVEC_NOMBRE, OPERATEUR_PERIODE } from './codes.js';
+import { bornesPeriode } from './periodes.js';
+import { aujourdhui } from './requete.js';
 
 // Filtres et tri des colonnes, façon tableur. Ils portent sur les lignes déjà chargées (pas sur la base) :
 //   valeurs     ensemble des textes affichés retenus (cases à cocher), null = pas de filtre
@@ -10,6 +13,13 @@ export const OPERATEURS_NOMBRE = pairesParCode('liste.operateurs', [
   ['=', 'egal'], ['<>', 'different'], ['>', 'superieur'], ['>=', 'superieur_egal'], ['<', 'inferieur'], ['<=', 'inferieur_egal'],
   'entre', 'vide', 'nonvide',
 ]);
+/** Opérateurs d'une colonne de date : ceux des nombres et la période glissante (condition { op: 'periode', a: code, b: nombre }). */
+export const OPERATEURS_DATE = pairesParCode('liste.operateurs', [
+  ['=', 'egal'], ['<>', 'different'], ['>', 'superieur'], ['>=', 'superieur_egal'], ['<', 'inferieur'], ['<=', 'inferieur_egal'],
+  'entre', 'vide', 'nonvide', OPERATEUR_PERIODE,
+]);
+/** Périodes proposées (code, libellé). */
+export const PERIODES_CHOIX = pairesParCode('liste.periodes', Object.values(PERIODE));
 export const OPERATEURS_TEXTE = pairesParCode('liste.operateurs', ['contient', 'commence', 'finit', ['=', 'egal'], ['<>', 'different'], 'vide', 'nonvide']);
 
 export const filtreActif = (f) => !!f && (f.valeurs instanceof Set || !!f.condition?.op || (f.format && Object.values(f.format).some((v) => v !== null && v !== undefined)));
@@ -31,9 +41,43 @@ export function nombreDe(v) {
   return Number.isNaN(n) ? null : n;
 }
 
-function conditionNombre(op, v, a, b) {
+/** Nombre x d'une période paramétrée saisie (entier ≥ 1) ou null ; null aussi pour une période sans nombre. */
+export function nombrePeriode(code, saisie) {
+  if (!PERIODE_AVEC_NOMBRE.includes(code)) return null;
+  const n = Number(String(saisie ?? '').trim().replace(',', '.'));
+  return Number.isInteger(n) && n >= 1 ? n : null;
+}
+
+/** La période et son nombre sont-ils complets (nombre exigé pour une période paramétrée) ? */
+export const periodeComplete = (code, saisie) => !!code && (!PERIODE_AVEC_NOMBRE.includes(code) || nombrePeriode(code, saisie) !== null);
+
+/**
+ * Filtre fixe de vue enregistrée pour une période choisie dans le filtre de colonne : le code est gardé, jamais les dates
+ * (les bornes sont recalculées à chaque exécution : `resoudrePeriodes`).
+ */
+export function filtreVuePeriode(colonne, code, saisie = null) {
+  const nombre = nombrePeriode(code, saisie);
+  return nombre === null ? { colonne, op: OPERATEUR_PERIODE, valeur: code } : { colonne, op: OPERATEUR_PERIODE, valeur: code, nombre };
+}
+
+/** Libellé d'une période choisie (« Mois en cours », « Derniers jours : 30 »). */
+export function libellePeriode(code, nombre = null) {
+  const libelle = PERIODES_CHOIX.find(([c]) => c === code)?.[1] ?? code;
+  return nombre === null || nombre === undefined ? libelle : texte('liste.periodes_avec_nombre', { periode: libelle, nombre });
+}
+
+/** La date (valeur de la cellule) est-elle dans la période { a: code, b: nombre saisi } à la date de référence ? */
+function conditionPeriode(v, a, b, reference) {
+  if (estVide(v) || !periodeComplete(a, b)) return false;
+  const { debut, fin } = bornesPeriode(a, nombrePeriode(a, b), reference);
+  const jour = String(v).slice(0, 10);
+  return jour >= debut && jour <= fin;
+}
+
+function conditionNombre(op, v, a, b, reference) {
   if (op === 'vide') return estVide(v);
   if (op === 'nonvide') return !estVide(v);
+  if (op === OPERATEUR_PERIODE) return conditionPeriode(v, a, b, reference);
   const x = nombreDe(v), ya = nombreDe(a), yb = nombreDe(b);
   if (x === null || ya === null) return false;
   switch (op) {
@@ -65,12 +109,12 @@ function conditionTexte(op, texte, a) {
 export const estNumerique = (colonne) => colonne.format === 'nombre' || colonne.format === 'date';
 
 /** La cellule ({ valeur, texte, style }) satisfait-elle le filtre de la colonne ? */
-export function correspond(filtre, cellule, colonne) {
+export function correspond(filtre, cellule, colonne, reference = aujourdhui()) {
   if (!filtreActif(filtre)) return true;
   if (filtre.valeurs instanceof Set && !filtre.valeurs.has(cellule.texte)) return false;
   const c = filtre.condition;
   if (c?.op) {
-    const ok = estNumerique(colonne) ? conditionNombre(c.op, cellule.valeur, c.a, c.b) : conditionTexte(c.op, cellule.texte, c.a);
+    const ok = estNumerique(colonne) ? conditionNombre(c.op, cellule.valeur, c.a, c.b, reference) : conditionTexte(c.op, cellule.texte, c.a);
     if (!ok) return false;
   }
   const f = filtre.format;
