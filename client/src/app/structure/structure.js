@@ -8,10 +8,11 @@ import { confirmer } from '@logibtp/socle/ui';
 // commandes clients) et rattachement d'un document par les routes /api/structure.
 
 /** Rattachement complété (les parents suivent l'enfant) : un marché donne son chantier, un chantier son affaire et son projet. */
-// Factures de la gestion du marché : `comptees` (sans annulées ni remplacées) alimente le total ; `avoir` dit si
-// le bouton « Annuler par avoir » est proposé (pièce validée, ni annulée ni remplacée).
-export function facturesMarche(factures, voirAnnulees) {
-  const affichees = factures.filter((x) => voirAnnulees || !x.annule);
+// Factures de la gestion du marché : sans détail, une ligne par référence (indice courant), annulées et remplacées
+// masquées ; avec détail, tous les indices. `comptees` (sans annulées ni remplacées) alimente le total. Le bouton
+// « Annuler par avoir » (peutAnnulerParAvoir) est proposé sur une pièce validée, ni annulée ni remplacée.
+export function facturesMarche(factures, voirDetail) {
+  const affichees = factures.filter((x) => voirDetail || (!x.annule && !x.remplace && x.reference !== false));
   return { affichees, comptees: affichees.filter((x) => !x.annule && !x.remplace) };
 }
 export const peutAnnulerParAvoir = (x) => Boolean(x.valide && !x.annule && !x.remplace);

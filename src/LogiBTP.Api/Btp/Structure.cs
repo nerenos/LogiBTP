@@ -381,11 +381,16 @@ public static class Structure
                 'rang', d.ent_rang_avancement, 'date', d.ent_date, 'statut', d.std_libelle, 'valide', d.ent_verrouille, 'total_ht', d.ent_total_ht,
                 'facturee', EXISTS (SELECT 1 FROM document_lien k JOIN doc f ON f.ent_id = k.lie_cible_ent_id
                                     WHERE k.lie_source_ent_id = d.ent_id AND k.lie_type = 'TRANSFORMATION' AND f.std_code <> '{StatutsDocument.Annule}'),
-                'indices', (SELECT count(*) FROM document g WHERE g.ent_groupe_id = d.ent_groupe_id))
+                'indices', (SELECT count(*) FROM document g WHERE g.ent_groupe_id = d.ent_groupe_id),
+                'liste_indices', (SELECT coalesce(json_agg(json_build_object('ent_id', g.ent_id, 'numero', g.ent_numero, 'indice', g.ent_indice,
+                      'date', g.ent_date, 'statut', g.std_libelle, 'valide', g.ent_verrouille, 'total_ht', g.ent_total_ht,
+                      'annule', g.std_code = '{StatutsDocument.Annule}', 'remplace', g.std_code = '{StatutsDocument.Remplace}') ORDER BY g.ent_id), '[]')
+                  FROM doc g WHERE g.ent_groupe_id = d.ent_groupe_id AND g.ent_id <> d.ent_id AND g.tyd_avancement = 'S'))
                 ORDER BY d.ent_rang_avancement NULLS LAST, d.ent_id), '[]')
               FROM doc d WHERE d.tyd_avancement = 'S' AND d.ent_is_reference),
           'factures', (SELECT coalesce(json_agg(json_build_object('ent_id', d.ent_id, 'type', d.tyd_libelle, 'code', d.tyd_code, 'numero', d.ent_numero,
                 'rang', d.ent_rang_avancement, 'date', d.ent_date, 'statut', d.std_libelle, 'valide', d.ent_verrouille,
+                'indice', d.ent_indice, 'reference', d.ent_is_reference,
                 'annule', d.std_code = '{StatutsDocument.Annule}', 'remplace', d.std_code = '{StatutsDocument.Remplace}',
                 'nature', d.ent_nature_avoir, 'total_ht', d.ent_total_ht, 'total_ttc', d.ent_total_ttc,
                 'net_a_payer', d.ent_net_a_payer) ORDER BY d.ent_rang_avancement NULLS LAST, d.ent_id), '[]')

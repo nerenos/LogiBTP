@@ -95,7 +95,7 @@
 - **Critère de fin** : `npm test` et `dotnet test LogiBTP.slnx` verts ; le total d'un marché avec une facture remplacée
   égale la somme des seules pièces valables.
 
-## Lot 4 : M1, case « Afficher le détail » et indices (A FAIRE)
+## Lot 4 : M1, case « Afficher le détail » et indices (FAIT le 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `fiche-structure.js` (`:561`, la case « Afficher les pièces annulées » devient « Afficher le détail »,
@@ -107,6 +107,7 @@
 - **Jeux de tests** : test client : sans détail, une ligne par référence (indice courant) ; avec détail, tous les indices
   et la colonne Indice.
 - **Critère de fin** : `npm test` et `dotnet test LogiBTP.slnx` verts ; aucune pièce remplacée visible par défaut.
+- **Écarts** : fichier réel `client/src/app/fiches/fiche-structure.js` et logique dans `structure/structure.js` (`facturesMarche`) ; la route expose aussi `indice` et `reference` des factures et `liste_indices` des situations ; sous détail, sous-traitants annulés affichés.
 
 ## Lot 5 : D1, adresse du chantier créé à l'acceptation de la commande (A FAIRE)
 

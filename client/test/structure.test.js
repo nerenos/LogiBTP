@@ -47,3 +47,18 @@ describe('Gestion du marché : pièces remplacées (M2)', () => {
     expect(facturesMarche([valable], false).comptees).toHaveLength(1);
   });
 });
+
+describe('Gestion du marché : case Afficher le détail (M1)', () => {
+  const courant = { ent_id: 3, indice: 'B', reference: true, annule: false, remplace: false, total_ht: '120' };
+  const ancien = { ent_id: 1, indice: 'A', reference: false, annule: false, remplace: true, total_ht: '100' };
+  const annule = { ent_id: 4, indice: 'A', reference: true, annule: true, remplace: false, total_ht: '10' };
+  it('sans détail : une ligne par référence, indice courant', () => {
+    const { affichees } = facturesMarche([ancien, courant, annule], false);
+    expect(affichees.map((x) => x.indice)).toEqual(['B']);
+  });
+  it('avec détail : tous les indices, total hors annulées et remplacées', () => {
+    const { affichees, comptees } = facturesMarche([ancien, courant, annule], true);
+    expect(affichees.map((x) => x.ent_id)).toEqual([1, 3, 4]);
+    expect(comptees.map((x) => x.ent_id)).toEqual([3]);
+  });
+});
