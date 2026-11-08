@@ -791,7 +791,93 @@ const DOTATIONS = [{
   },
 }];
 
-export const MODELES_EDITION = [...BLOCS, ...SOUS_RAPPORTS, ...RAPPORTS, ...AUTRES, ...MARCHES_ST, ...RECEPTIONS, ...BONS_SAV, ...FRAIS_ANNEXES, ...DOTATIONS];
+// Module Relances (plans/relances.md, lot 7, Q12, Q13 b) : lettres d'une relance groupée, source « relance » du serveur
+// (SourceRelanceEdition : societe avec ses mentions, tiers, relance, pieces). Une lettre par groupe, rangée en GED de
+// chaque pièce. RELANCE_1 : premier rappel ; RELANCE_2 : relances suivantes ; MISE_EN_DEMEURE : dernier niveau des
+// factures (recommandé par défaut), mentions de pénalités et d'indemnité citées sans calcul.
+const PIECES_RELANCE = {
+  type: 'tableau', collection: 'pieces', remplir: false, report: false, vide: 'Aucune pièce', total: { libelle: 'Total' }, colonnes: [
+    { cle: 'piece', titre: 'Pièce', largeur: '*', valeur: '{{element.titre}}' },
+    { cle: 'date', titre: 'Date', largeur: '22mm', valeur: '{{Date(element.date)}}' },
+    { cle: 'echeance', titre: 'Échue depuis le', largeur: '28mm', valeur: '{{Date(element.echeance)}}', condition: 'relance.facture' },
+    { cle: 'jours', titre: 'Retard (j)', largeur: '18mm', valeur: '{{element.jours}}', alignement: 'droite' },
+    { cle: 'montant', titre: 'Montant', largeur: '28mm', valeur: '{{element.montant}}', format: 'montant', alignement: 'droite', style: 'montant', cumul: '=element.montant' },
+  ],
+};
+const MENTIONS_RETARD = 'Joindre(" "; societe.mentions.penalites; societe.mentions.indemnite)';
+function lettreRelance({ code, libelle, ordre, titre, paragraphes, mentions = false }) {
+  return {
+    code, libelle, genre: 'RAPPORT', cible: 'DOCUMENT', source: 'relance', types: [], ordre,
+    contenu: {
+      format_version: 1, code, libelle, cible: 'DOCUMENT', source: 'relance',
+      page: { format: 'A4', orientation: 'portrait', marges: { haut: 12, bas: 12, gauche: 18, droite: 18 } },
+      bandes: [
+        { type: 'PIED_PAGE', contenu: { type: 'pile', cadre: { haut: 'fin' }, marges: { haut: 1 }, enfants: [
+          champ('=Joindre(" – "; societe.raison_sociale; Si(societe.forme_juridique; societe.forme_juridique & Si(societe.capital; " au capital de " & societe.capital; ""); Nul); societe.rcs; Si(societe.siret; "SIRET " & societe.siret; Nul); Si(societe.tva; "TVA " & societe.tva; Nul))', { style: 'mentions', alignement: 'centre' }),
+          champ('Page {{Page()}} / {{NbPages()}}', { style: 'discret', alignement: 'droite' }),
+        ] } },
+        { type: 'TITRE', contenu: { type: 'pile', espacement: 5, enfants: [
+          bloc('ENTETE_SOCIETE'),
+          { type: 'rangee', espacement: 6, enfants: [
+            { type: 'pile', largeur: '*', enfants: [
+              champ('Lettre recommandée avec accusé de réception', { style: 'gras', condition: 'relance.recommande' }),
+              champ('="N° " & relance.numero_recommande', { style: 'discret', condition: 'relance.numero_recommande' }),
+            ] },
+            { type: 'pile', largeur: '48%', cadre: 'fin', marges: 3, enfants: [
+              champ('{{tiers.nom}}', { style: 'nom_adresse' }),
+              champ('{{tiers.contact}}'),
+              adresse('tiers.adresse'),
+            ] },
+          ] },
+          champ('="Le " & Date(relance.date; "long")', { alignement: 'droite' }),
+          champ(titre, { style: 'sous_titre' }),
+        ] } },
+        { type: 'CORPS', contenu: { type: 'pile', espacement: 3, enfants: [
+          champ('=Si(tiers.contact; tiers.contact & ","; "Madame, Monsieur,")'),
+          ...paragraphes.map(([texte, condition]) => champ(texte, condition ? { condition } : {})),
+          PIECES_RELANCE,
+          ...(mentions ? [
+            champ(`=Si(EstVide(${MENTIONS_RETARD}); "Conformément à l’article L. 441-10 du code de commerce, ces sommes portent de plein droit des pénalités de retard et donnent lieu à l’indemnité forfaitaire pour frais de recouvrement."; "Conformément à nos conditions de paiement : " & ${MENTIONS_RETARD})`),
+          ] : []),
+          champ('{{relance.commentaire}}', { condition: 'relance.commentaire' }),
+          champ('Nous vous prions d’agréer, Madame, Monsieur, l’expression de nos salutations distinguées.'),
+          { type: 'pile', marges: { haut: 4 }, alignement: 'droite', enfants: [
+            champ('=PremierNonVide(relance.charge; relance.auteur)', { style: 'gras', alignement: 'droite' }),
+            champ('{{societe.raison_sociale}}', { alignement: 'droite' }),
+          ] },
+        ] } },
+      ],
+    },
+  };
+}
+const RELANCES = [
+  lettreRelance({
+    code: 'RELANCE_1', libelle: 'Relance : premier rappel', ordre: 10, titre: '=Si(relance.devis; "Objet : notre proposition"; "Objet : rappel de paiement")',
+    paragraphes: [
+      ['Nous vous avons adressé la proposition ci-dessous et n’avons pas encore reçu votre réponse. Nous restons à votre disposition pour tout renseignement ou pour l’adapter à vos besoins.', 'relance.devis'],
+      ['Sauf erreur ou omission de notre part, les sommes ci-dessous restent impayées à ce jour. Nous vous remercions de bien vouloir procéder à leur règlement dans les meilleurs délais.', 'relance.facture'],
+      ['Si votre règlement a été effectué entre-temps, nous vous prions de ne pas tenir compte de ce courrier.', 'relance.facture'],
+    ],
+  }),
+  lettreRelance({
+    code: 'RELANCE_2', libelle: 'Relance : relance suivante', ordre: 20, titre: '=Si(relance.devis; "Objet : relance de notre proposition"; "Objet : relance de paiement")',
+    paragraphes: [
+      ['Nous revenons vers vous au sujet de la proposition ci-dessous, restée sans réponse. Pouvez-vous nous indiquer la suite que vous souhaitez lui donner ?', 'relance.devis'],
+      ['Malgré notre précédent rappel, les sommes ci-dessous restent impayées à ce jour. Nous vous demandons de bien vouloir procéder à leur règlement sous quinze jours.', 'relance.facture'],
+      ['Si votre règlement a été effectué entre-temps, nous vous prions de ne pas tenir compte de ce courrier.', 'relance.facture'],
+    ],
+  }),
+  lettreRelance({
+    code: 'MISE_EN_DEMEURE', libelle: 'Relance : mise en demeure de payer', ordre: 30, titre: 'Objet : mise en demeure de payer', mentions: true,
+    paragraphes: [
+      ['Malgré nos relances, les sommes ci-dessous restent impayées à ce jour.'],
+      ['="Par la présente, nous vous mettons en demeure de nous régler la somme de " & Montant(relance.montant) & " € dans un délai de huit jours à compter de la réception de cette lettre."'],
+      ['À défaut de règlement dans ce délai, nous nous réservons d’engager toute procédure utile au recouvrement de notre créance, sans autre avis.'],
+    ],
+  }),
+];
+
+export const MODELES_EDITION = [...BLOCS, ...SOUS_RAPPORTS, ...RAPPORTS, ...AUTRES, ...MARCHES_ST, ...RECEPTIONS, ...BONS_SAV, ...FRAIS_ANNEXES, ...DOTATIONS, ...RELANCES];
 
 /** Modèle par défaut de chaque type de document (Q12 : un modèle par type). */
 export const DEFAUTS_EDITION = [

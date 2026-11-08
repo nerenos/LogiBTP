@@ -738,6 +738,20 @@ signée). Les paramètres de la demande d'une fiche (`p_<nom>` de l'adresse de l
 | `lignes[]` | Valeurs mises en forme par code de colonne (`ligne.<code>`), `_texte` (toutes, dans l'ordre), `_titre` (première), `_suite` (suivantes : étiquettes) |
 | `societe.*` | Société |
 
+### 10.8 Données de la source « relance »
+
+Lettre d'une relance groupée (module Relances, une lettre par groupe d'un lot) ; identifiant : relances du journal
+(« 12,13 ») ; modèles fournis RELANCE_1, RELANCE_2, MISE_EN_DEMEURE (dernier niveau des factures). Paramètres de la
+demande lus par la source : `mode`, `date` (aaaa-mm-jj), `commentaire` de l'envoi.
+
+| Chemin | Libellé |
+|---|---|
+| `societe.*` | Société comme pour un document, mentions comprises (`societe.mentions.penalites`, `societe.mentions.indemnite` : citées, jamais calculées) |
+| `tiers.nom`, `tiers.contact`, `tiers.adresse` | Tiers relancé (contact de relance du tiers, coordonnées de l'annuaire) |
+| `relance.nature`, `relance.devis`, `relance.facture`, `relance.niveau`, `relance.mode`, `relance.recommande`, `relance.numero_recommande` | Relance (niveau le plus élevé du groupe) |
+| `relance.date`, `relance.montant`, `relance.jours`, `relance.nombre`, `relance.charge`, `relance.auteur`, `relance.commentaire` | Date de la lettre, total relancé, retard du groupe, signataire |
+| `pieces[]` | `titre`, `type`, `numero`, `date`, `niveau`, `jours`, `montant`, `echeance` (plus ancienne échue), `echeances[]` (échues : `date`, `montant`), `a_echoir[]` |
+
 ---
 
 ## 11. Bonnes pratiques et pièges

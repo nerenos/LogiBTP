@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>LogiBTP.Relances</RootNamespace>
+    <Description>Module Relances LogiBTP : règle des niveaux et calcul des relances dues (règle répliquée avec regles.js).</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\socle\dotnet\LogiBTP.Socle\LogiBTP.Socle.csproj" />
+  </ItemGroup>
+
+</Project>

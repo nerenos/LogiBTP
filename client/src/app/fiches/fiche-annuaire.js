@@ -11,6 +11,7 @@ import { rendrePieces } from '../sous-traitance/pieces.js';
 import { rendrePhoto, urlImage, vignette } from '../annuaire/photo.js';
 import { choixMultiple } from '../choix-multiple.js';
 import { api } from '../api.js';
+import { pastilleRelancesTiers } from '../relances/journal-relances.js';
 import { rendreTarifsFournisseur } from '../annuaire/tarifs-fournisseur.js';
 
 // Fiches de l'annuaire (module Fiche + module Annuaire) : personne (niveau, hiérarchie, casquettes qui déverrouillent
@@ -186,6 +187,8 @@ export class FichePersonne extends FicheAnnuaire {
   /** Statut provisoire (résumé de l'annuaire, hors définition de la fiche). */
   async ouvrir() {
     this.provisoire = this.id !== null && (await this.annuaire.personne(this.id).catch(() => null))?.provisoire === true;
+    // Pastille « relancé N » (module Relances actif, droit de lecture) : relances faites au tiers ces derniers jours.
+    this.pastilleRelances = this.id !== null && this.moduleActif(MODULE_FACULTATIF.RELANCE) && this.acces('relances') ? await pastilleRelancesTiers(this.id, aujourdhui()) : '';
     return super.ouvrir();
   }
 
@@ -234,6 +237,7 @@ export class FichePersonne extends FicheAnnuaire {
     const parts = [vignette(this.urlImage)];
     if (v.societe_base) parts.push(info(texteHtml('fiches_btp.infos.annuaire'), `${iconeHtml('fiches_btp_societe_base')} ${texteHtml('fiches_btp.annuaire.societe_base')}`));
     if (this.provisoire) parts.push(info(texteHtml('fiches_btp.infos.annuaire'), `${iconeHtml('fiches_btp_provisoire')} ${texteHtml('fiches_btp.annuaire.provisoire')}`, true));
+    if (this.pastilleRelances) parts.push(info(texteHtml('fiches_btp.infos.relances'), this.pastilleRelances));
     const tel = principale(coords, 'TELEPHONE');
     const mail = principale(coords, 'EMAIL');
     const adresse = principale(coords, 'ADRESSE');
@@ -279,6 +283,9 @@ export class FichePersonne extends FicheAnnuaire {
       { libelle: `${icone('fiches_btp_valider')} ${texte('fiches_btp.annuaire.valider')}`, titre: texte('fiches_btp.annuaire.valider_aide'), action: () => this.validerProvisoire().catch((x) => this.message(x.message, 'erreur')), visible: !this.estEnSaisie() && this.provisoire },
       { libelle: `${icone('fiches_btp_fusionner')} ${texte('fiches_btp.annuaire.fusionner')}`, titre: texte('fiches_btp.annuaire.fusionner_aide'), action: (e) => this.fusionnerProvisoire(e).catch((x) => this.message(x.message, 'erreur')), visible: !this.estEnSaisie() && this.provisoire },
       { libelle: `${icone('ajouter')} ${texte('fiches_btp.annuaire.etablissement')}`, titre: texte('fiches_btp.annuaire.etablissement_aide'), action: () => this.ouvrirFiche({ type: TYPE_FICHE.PERSONNE, id: `nouveau?parent=${this.id}&niveau=ETABLISSEMENT` }), visible: !this.estEnSaisie() && this.id !== null && this.morale },
+      { libelle: `${icone('relance_suspendre')} ${texte('fiches_btp.annuaire.suspendre_relances')}`, titre: texte('fiches_btp.annuaire.suspendre_relances_aide'),
+        action: (e) => this.ouvrirUrl(`/relances?suspendre=${Number(this.id)}`, e),
+        visible: !this.estEnSaisie() && this.id !== null && this.moduleActif(MODULE_FACULTATIF.RELANCE) && this.acces('relances') },
       ...super.actionsSupplementaires(),
     ];
   }

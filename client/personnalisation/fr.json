@@ -4667,6 +4667,10 @@
           "libelle": "Règlements clients",
           "info": "Échéances, règlements, pointage et cautions (module Règlements)"
         },
+        "relances": {
+          "libelle": "Relances",
+          "info": "Devis envoyés et factures à reste échu : préparer, valider, suspendre (module Relances)"
+        },
         "import_optim": {
           "libelle": "Importer un devis OptimBTP",
           "info": "Fichier .optim : lignes, prix et coefficients repris, champs non repris listés"
@@ -5399,6 +5403,7 @@
     },
     "suivi_nouvelle": "Enregistrez la fiche pour suivre ses notes et ses tâches.",
     "infos": {
+      "relances": "Relances",
       "anciennete": "Ancienneté",
       "annees_un": "{{nombre}} an",
       "annees_autre": "{{nombre}} ans",
@@ -5537,6 +5542,8 @@
       "valider_aide": "Valider la création de ce tiers provisoire (fiche définitive)",
       "fusionner": "Fusionner…",
       "fusionner_aide": "Fusionner ce tiers provisoire avec une fiche existante (valeurs choisies, documents et contacts reportés)",
+      "suspendre_relances": "Suspendre les relances",
+      "suspendre_relances_aide": "Ne plus relancer ce tiers jusqu'à une date (promesse de paiement, litige, échelonnement)",
       "etablissement": "Établissement",
       "etablissement_aide": "Créer un niveau inférieur (établissement, agence, dépôt…) de cette personne",
       "aucune_activite": "Aucune activité",
@@ -6381,6 +6388,44 @@
       "montant_positif": "Montant positif à saisir",
       "impute": "Imputation enregistrée",
       "chargement": "Chargement…"
+    }
+  },
+  "relances_btp": {
+    "routes": {
+      "relances": "Relances"
+    },
+    "aide": "Relances dues des devis envoyés et des factures à reste échu, dans votre portée (pièces dont vous êtes le chargé, ou toutes) ; une facture est relancée chez son payeur s'il est désigné.",
+    "onglets": {
+      "liste": "Liste de travail",
+      "liste_titre": "Relances dues, lot préparé et recommandés en attente de numéro",
+      "suspensions": "Suspensions",
+      "suspensions_titre": "Pièces et tiers à ne pas relancer jusqu'à une date",
+      "regle": "Règle des niveaux",
+      "regle_titre": "Niveaux, délais et modes par nature (modification : administrateur)"
+    },
+    "choisir_tiers": "Tiers à suspendre",
+    "pastille": {
+      "libelle": "relancé {{nombre}}",
+      "aide": "Relances faites à ce tiers ces {{jours}} derniers jours ; dernière le {{date}} (niveau {{niveau}})"
+    },
+    "journal": {
+      "titre": "Relances",
+      "aucune": "Aucune relance faite.",
+      "derniere": "Dernière relance : {{date}} (niveau {{niveau}}).",
+      "colonnes": {
+        "date": "Date",
+        "piece": "Pièce",
+        "niveau": "Niveau",
+        "mode": "Mode",
+        "etat": "État",
+        "montant": "Montant",
+        "auteur": "Auteur",
+        "commentaire": "Commentaire"
+      },
+      "etats": {
+        "ENVOYEE": "Faite",
+        "ATTENTE_NUMERO": "En attente du numéro de recommandé"
+      }
     }
   },
   "hors_ligne_btp": {
@@ -8482,6 +8527,10 @@
       "PRODUIT_INTERNE": "Produit interne : heures du matériel valorisées sur d'autres chantiers",
       "PREVISION": "Saisie prévisionnelle (hors du réel jusqu'à son solde)"
     },
+    "roles_relance": {
+      "DEVIS": "Devis envoyé (relancé après son envoi)",
+      "FACTURE": "Facture (relancée à son reste échu)"
+    },
     "roles": {
       "COMMANDE_VENTE": "Commande client (budget)",
       "FACTURE_VENTE": "Facture client (facturé)",
@@ -8523,10 +8572,11 @@
     },
     "parametres": {
       "roles": "Rôle des types de pièce",
-      "roles_aide": "Le rôle dit comment une pièce d'un type entre dans les indicateurs ; sans rôle, le type est ignoré.",
+      "roles_aide": "Le rôle dit comment une pièce d'un type entre dans les indicateurs ; sans rôle, le type est ignoré. Le rôle dans les relances dit si le type est relancé (devis envoyés, factures à reste échu) ; sans rôle, il ne l'est jamais.",
       "type": "Type",
       "famille": "Famille",
       "role": "Rôle",
+      "role_relance": "Rôle dans les relances",
       "taux": "Taux horaire moyen par service",
       "taux_aide": "Valorise les pointages sans coût horaire et les tâches planifiées (signalés dans « À vérifier »).",
       "service": "Service",

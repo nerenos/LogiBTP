@@ -6,7 +6,7 @@
 
 ## Dépendances
 - .NET seul : `LogiBTP.Notifications.Web` → `LogiBTP.Socle.Web` (`Utilisateur`, `IModulesActifs`, sociétés), EF Core Npgsql. Pas de paquet JS (interface dans le client).
-- Utilisé par : cœur (`Program.cs` : `AddModuleNotifications`, sources `SourceRappelsCrm`, `SourceHabilitations` de `Btp/NotificationsBtp.cs` ; client : cloche du bandeau, `/notifications`, `/parametres/notifications`).
+- Utilisé par : cœur (`Program.cs` : `AddModuleNotifications`, sources `SourceRappelsCrm`, `SourceHabilitations`, `SourceRelancesAPreparer` (relances dues du jour, lot 9) de `Btp/NotificationsBtp.cs` ; client : cloche du bandeau, `/notifications`, `/parametres/notifications`).
 
 ## Structure
 - `ServiceNotification.cs` : `NouvelleNotification` (utilisateur, module, type, titre, texte, niveau INFO / ATTENTION / URGENT, URL, élément, clé), `ISourceNotifications` (`Code`, `Periode`, `Types`, `ProduireAsync(portée, maintenant)`), `ServiceNotification` (`PublierAsync` : préférence écran désactivée ignorée, clé déjà notifiée ignorée ; `BoiteAsync` à traiter / non lues / toutes ; `CompteurAsync` ; `MarquerAsync` lues ou traitées, par identifiants ou tout ; `PreferencesAsync` / `EnregistrerPreferencesAsync` ; `PurgerAsync` ; notifications des modules désactivés masquées par `IModulesActifs`, règle commune E24), entités et `NotificationDbContext`.

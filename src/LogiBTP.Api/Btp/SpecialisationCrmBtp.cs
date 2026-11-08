@@ -12,6 +12,14 @@ namespace LogiBTP.Api.Btp;
 /// </summary>
 public class SpecialisationCrmBtp(IServiceScopeFactory scopes) : SpecialisationCrm
 {
+    /// <summary>Type de note des relances (crm_type_note, module CRM 095) : remet à zéro l'indicateur « Devis à relancer » (db/267).</summary>
+    public const string TypeNoteRelance = "RELANCE";
+
+    /// <summary>Identifiant d'un type de note actif par son code (null : absent ou inactif).</summary>
+    public static async Task<int?> TypeNoteAsync(DbContext db, string code, CancellationToken ct) =>
+        (await db.Database.SqlQueryRaw<int>("SELECT tno_id AS \"Value\" FROM crm_type_note WHERE tno_code = @c AND tno_actif", new NpgsqlParameter("c", code))
+            .ToListAsync(ct)).Cast<int?>().FirstOrDefault();
+
     public override IReadOnlyList<TypeElementCrm> TypesElements { get; } =
     [
         new(TypesFiche.Personne, "Tiers", "🏢"), new(TypesFiche.Individu, "Contact", "👤"), new(TypesFiche.Projet, "Projet", "🎯"), new(TypesFiche.Affaire, "Affaire", "🗂"),

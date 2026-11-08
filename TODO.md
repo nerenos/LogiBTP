@@ -88,9 +88,8 @@ Analyses validées le 23/10/2026 : [ANALYSE-MODULE-MAIL.md](documentation/concep
 - [ ] Essai réel de l'envoi avec les boîtes de test (Gmail en OAuth 2.0, Exchange OVH par mot de passe) : relever les
   quotas réels des hébergeurs et ajuster les limitations par défaut (`Limites.Defaut`).
 - [ ] Envois à brancher quand les fonctions existeront : relevé
-  hebdomadaire signé (Pointage M21), relances des devis et factures (CRM C27) ; double authentification par courriel.
+  hebdomadaire signé (Pointage M21) ; double authentification par courriel.
 - [ ] Création d'un tiers provisoire depuis l'expéditeur d'un courriel reçu ; transfert d'un reçu à un service.
-- [ ] Lot 5 : relances par courriel (CRM C27, avec le module Règlements) : voir « Relances » (Marchés et règlements).
 - [ ] Avant la mise en production : vérification de l'application Google par Google (portée restreinte
   `https://mail.google.com/`), sinon reconnexion des boîtes Gmail tous les 7 jours (mode test) ou mot de passe
   d'application.
@@ -120,9 +119,19 @@ global). Lots à venir :
 
 ### Marchés et règlements
 
-- [ ] Relances des devis et des factures : analyse du 05/11/2026 à valider
-  ([ANALYSE-RELANCES.md](documentation/conception/ANALYSE-RELANCES.md), questions R1 à R18, quatre lots ; comprend le
-  lot 5 du module Mail et C27 du CRM).
+- [x] Relances des devis et des factures : plan [relances.md](plans/relances.md) réalisé en neuf lots le 08/11/2026 (décisions dans
+  [relances-questions.md](plans/relances-questions.md) ; analyse [ANALYSE-RELANCES.md](documentation/conception/ANALYSE-RELANCES.md) ;
+  le lot 5 du module Mail et C27 du CRM y sont absorbés). Lot 9 : calcul de nuit et notification « N relances à préparer »
+  (`SourceRelancesAPreparer`, services de la base par `SpecialisationRelanceNuit`, chaque destinataire compté selon sa portée),
+  mode TACHE des devis (tâche du CRM du jour, CRM actif seulement), pastille « relancé N » de la fiche tiers. Ligne laissée
+  cochée : à déplacer dans `documentation/TACHES.md` par un humain.
+- [ ] Relances, reports du plan : calcul des pénalités de retard pour information (Q13 a : taux à tenir à jour, aujourd'hui
+  mentions citées sans calcul) ; pastille « relancé N » dans l'entête des nouvelles pièces (Q17 : touche la page document) ;
+  blocage du client (Q17 c : paramétrable, aujourd'hui aucun blocage).
+- [ ] Relances, à finir : éditeur de niveaux pour la règle propre d'un tiers (aujourd'hui saisie JSON dans la fiche) ; rôle de
+  relance des types de pièces réglable hors de la page Rentabilité ; rejouer `db/121` et `db/191` sur les bases existantes
+  (vues de liste et modèles de lettres) ; mode TACHE encore listé par l'écran de la liste de travail quand le CRM est inactif
+  (le serveur refuse alors le groupe, `RELANCE_TACHE` : l'écran du module ne reçoit pas la liste des modes admis).
 
 ### Comptabilité
 

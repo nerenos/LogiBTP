@@ -29,6 +29,7 @@ import { PageIntrouvable } from './introuvable.js';
 import { PageImportOptim } from './import-optim.js';
 import { PageImportCarburant } from './import-carburant.js';
 import { PageReglements } from './reglements.js';
+import { PageRelances } from './relances.js';
 import { PageMarchesAFacturer } from './marches-a-facturer.js';
 import { PageEdition } from './edition.js';
 import { PageParametresEditions } from './parametres-editions.js';
@@ -165,6 +166,7 @@ export const ROUTES = [
   { nom: 'import-optim', chemin: '/import/optimbtp', page: PageImportOptim, titre: texte('import_btp.routes.optim') },
   { nom: 'import-carburant', chemin: '/import/carburant', page: PageImportCarburant, titre: texte('import_btp.routes.carburant') },
   { nom: 'reglements', chemin: '/reglements', page: PageReglements, titre: texte('reglements_btp.routes.reglements') },
+  { nom: 'relances', chemin: '/relances', page: PageRelances, titre: texte('relances_btp.routes.relances') },
   { nom: 'marches-a-facturer', chemin: '/marches/a-facturer', page: PageMarchesAFacturer, titre: texte('structure_btp.routes.marches_a_facturer') },
   { nom: 'crm-note', chemin: '/crm/note/:id', page: PageNoteCrm, titre: texte('crm_btp.routes.note') },
   { nom: 'crm-suivi', chemin: '/crm/suivi', page: PageSuiviCrm, titre: texte('crm_btp.routes.suivi') },

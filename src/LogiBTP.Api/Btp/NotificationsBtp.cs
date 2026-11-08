@@ -3,6 +3,9 @@ using LogiBTP.Crm;
 using LogiBTP.Domaine.Ressources;
 using LogiBTP.Domaine;
 using LogiBTP.Notifications.Web;
+using LogiBTP.Relances;
+using LogiBTP.Relances.Web;
+using LogiBTP.Socle.Web;
 using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -372,5 +375,66 @@ public sealed class SourceCertificat(LogiBtpContext db, LogiBTP.Installation.Web
         var aujourdhui = DateOnly.FromDateTime(maintenant.LocalDateTime);
         return admins.Select(a => new NouvelleNotification(a, "installation", "CERTIFICAT", titre, texte, jours < 7 ? NiveauNotification.Urgent : NiveauNotification.Attention,
             "/parametres/installation", null, null, $"certificat:{aujourdhui:yyyy-MM-dd}"));
+    }
+}
+
+/// <summary>
+/// Relances à préparer (plans/relances.md, lot 9, Q15) : le planificateur de chaque base compte les relances dues du jour et
+/// notifie « N relances à préparer » aux personnes qui ont le droit de les préparer (Créer sur le nœud « relances »), une fois
+/// par jour. Jamais d'envoi : la préparation d'un lot et sa validation restent un geste de la personne. Module Relances actif
+/// seulement.
+/// Hors requête HTTP, <see cref="SpecialisationRelanceBtp"/> ne verrait ni le module Règlements ni les droits : le calcul
+/// passe par <see cref="SpecialisationRelanceNuit"/> (services de la portée de la base) et se fait pour chaque destinataire
+/// avec sa propre portée (SOI, EQUIPE, SERVICE, TOUT), comme sa liste de travail. Sans module Droits : administrateurs seuls.
+/// </summary>
+public sealed class SourceRelancesAPreparer(LogiBtpContext db, RelanceDbContext relances, ModulesSociete modules, ILogger<SpecialisationRelanceBtp> journal) : ISourceNotifications
+{
+    public string Code => "relances-a-preparer";
+    public TimeSpan Periode => TimeSpan.FromHours(6);
+    public IReadOnlyList<TypeNotification> Types { get; } = [new("relance", "A_PREPARER", "Relances à préparer")];
+
+    public async Task<IEnumerable<NouvelleNotification>> ProduireAsync(IServiceProvider portee, DateTimeOffset maintenant, CancellationToken ct)
+    {
+        if (!await modules.EstActifAsync(ModulesFacultatifs.Relance, ct)) return [];
+        var service = new ServiceRelance(relances, new SpecialisationRelanceNuit(portee, journal));
+        var destinataires = await DestinatairesAsync(db, portee.GetService<IDroits>(), ct);
+        return await NotificationsAsync(service, destinataires, DateOnly.FromDateTime(maintenant.LocalDateTime), ct);
+    }
+
+    private sealed record LigneCompte(string Code, string Profil);
+
+    /// <summary>Comptes de personnes actifs et valides qui peuvent préparer un lot (Créer sur le nœud) ; sans module Droits : administrateurs.</summary>
+    public static async Task<List<Utilisateur>> DestinatairesAsync(DbContext db, IDroits? droits, CancellationToken ct)
+    {
+        var comptes = await db.Database.SqlQueryRaw<LigneCompte>("""
+            SELECT cpt_code AS code, cpt_profil AS profil FROM compte
+            WHERE cpt_type = 'PERSONNE' AND cpt_actif AND (cpt_valide_jusqu_au IS NULL OR cpt_valide_jusqu_au >= current_date)
+            ORDER BY cpt_code
+            """).ToListAsync(ct);
+        var res = new List<Utilisateur>();
+        foreach (var c in comptes)
+        {
+            var u = new Utilisateur(c.Code, c.Profil);
+            if (droits is null ? u.EstAdmin : await droits.AutoriseAsync(u, SpecialisationRelanceBtp.Noeud, ActionsDroits.Creer, ct)) res.Add(u);
+        }
+        return res;
+    }
+
+    /// <summary>
+    /// Une notification par destinataire ayant au moins une relance due à <paramref name="jour"/> dans sa portée ; clé : un jour,
+    /// un destinataire (une seule notification par jour).
+    /// </summary>
+    public static async Task<List<NouvelleNotification>> NotificationsAsync(ServiceRelance service, IReadOnlyList<Utilisateur> destinataires, DateOnly jour, CancellationToken ct)
+    {
+        var res = new List<NouvelleNotification>();
+        foreach (var u in destinataires)
+        {
+            var n = (await service.Dues(jour, u, ct)).Sum(g => g.Pieces.Count);
+            if (n == 0) continue;
+            res.Add(new NouvelleNotification(u.Code, "relance", "A_PREPARER", n == 1 ? "1 relance à préparer" : $"{n} relances à préparer",
+                "Devis envoyés et factures échues à relancer : préparez le lot puis validez-le, rien n'est envoyé sans votre validation.",
+                NiveauNotification.Info, "/relances", null, null, $"relances-a-preparer:{jour:yyyy-MM-dd}"));
+        }
+        return res;
     }
 }
