@@ -27,6 +27,7 @@ import { PageParametresRaccourcis } from './parametres-raccourcis.js';
 import { PageGraphe } from './graphe.js';
 import { PageIntrouvable } from './introuvable.js';
 import { PageImportOptim } from './import-optim.js';
+import { PageImportCarburant } from './import-carburant.js';
 import { PageReglements } from './reglements.js';
 import { PageMarchesAFacturer } from './marches-a-facturer.js';
 import { PageEdition } from './edition.js';
@@ -160,6 +161,7 @@ export const ROUTES = [
   { nom: 'graphe', chemin: '/annuaire/graphe', page: PageGraphe, titre: texte('pages_btp.routes.graphe') },
   { nom: 'notre-societe', chemin: '/annuaire/societe', page: PageNotreSociete, titre: texte('parametres_btp.societe.titre') },
   { nom: 'import-optim', chemin: '/import/optimbtp', page: PageImportOptim, titre: texte('import_btp.routes.optim') },
+  { nom: 'import-carburant', chemin: '/import/carburant', page: PageImportCarburant, titre: texte('import_btp.routes.carburant') },
   { nom: 'reglements', chemin: '/reglements', page: PageReglements, titre: texte('reglements_btp.routes.reglements') },
   { nom: 'marches-a-facturer', chemin: '/marches/a-facturer', page: PageMarchesAFacturer, titre: texte('structure_btp.routes.marches_a_facturer') },
   { nom: 'crm-note', chemin: '/crm/note/:id', page: PageNoteCrm, titre: texte('crm_btp.routes.note') },

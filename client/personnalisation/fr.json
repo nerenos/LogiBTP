@@ -4022,7 +4022,8 @@
       "verifier": "Vérifier le devis importé"
     },
     "routes": {
-      "optim": "Import d'un devis OptimBTP"
+      "optim": "Import d'un devis OptimBTP",
+      "carburant": "Import des cartes carburant"
     },
     "verification": {
       "etat_html": "<b>Devis importé de {{format}}</b> ({{fichier}}) — non enregistré : vérifiez-le, puis créez-le.",
@@ -4071,7 +4072,20 @@
     },
     "carburant": {
       "resume": "{{ecrits}} plein(s) écrit(s), {{doublons}} doublon(s) ignoré(s), {{non_rapproches}} non rapproché(s), {{erreurs}} ligne(s) en erreur",
-      "erreur_serveur": "Plein refusé par le serveur ({{code}})"
+      "erreur_serveur": "Plein refusé par le serveur ({{code}})",
+      "aide_html": "Fichier CSV d'un fournisseur de cartes carburant (date, carte ou immatriculation, litres, montant, kilométrage). Chaque plein est rapproché d'un matériel par son numéro de carte puis par son immatriculation ; un plein déjà importé est ignoré.",
+      "importer": "Importer les pleins",
+      "importer_aide": "Écrit les pleins dans l'historique des matériels",
+      "lecture_resume": "{{fichier}} : {{nombre}} plein(s) lu(s), {{erreurs}} ligne(s) en erreur",
+      "lus": "Pleins lus",
+      "ecrits": "Pleins écrits",
+      "doublons": "Doublons ignorés",
+      "non_rapproches": "Cartes non rapprochées",
+      "erreurs": "Lignes en erreur",
+      "rangs_doublons": "Lignes ignorées comme doublons",
+      "rangs_non_rapproches": "Lignes sans matériel correspondant (numéro de carte ou immatriculation à renseigner sur la fiche du matériel)",
+      "rangs_erreurs": "Lignes en erreur",
+      "ligne_erreur": "Ligne {{rang}} : {{message}}"
     }
   },
   "authentification_btp": {
@@ -4476,6 +4490,10 @@
         "releves_a_valider": {
           "libelle": "Relevés de compteurs à valider",
           "info": "Relevés saisis à la borne pour un matériel non affecté au salarié ce jour"
+        },
+        "import_carburant": {
+          "libelle": "Import des cartes carburant",
+          "info": "Pleins d'un fichier de cartes carburant, rapprochés des matériels par carte puis immatriculation"
         },
         "parametrage_ressources": {
           "libelle": "Types d'habilitations, motifs, natures MO…"

@@ -193,3 +193,10 @@
 - **Critère de fin** : `npm test` et `dotnet test LogiBTP.slnx` verts ; les pleins importés apparaissent dans la
   rentabilité du matériel.
 - **Réalisé / écarts** : `db/281` (`mat_numero_carte`, manifeste) et champ « N° de carte carburant » de la fiche matériel (`definitions.js`, `db/131` régénéré) ; `POST /api/ressources/materiels/pleins-carburant` (`PleinsCarburantMateriel.cs`, routé dans `MapCompteursMateriel`, droit du préfixe `/api/ressources`) : rapprochement par carte (un seul matériel) puis immatriculation, doublon (matériel, jour, litres, montant) ignoré, plein écrit en événement CARBURANT avec relevé KM si le matériel suit les kilomètres (relevé incohérent : plein écrit sans relevé), rapport `ecrits / doublons / non_rapproches / erreurs`. Client : `import/carburant-import.js` (`importerCarburant`, `resumeCarburant`), `api.ecrirePleinsCarburant`, textes `import_btp.carburant.*`. Écarts : pas de page d'import ni d'entrée dans `formats.js` / `depot-import.js` (format hors document, aucune vérification dans une fenêtre) ; `rapport-import.js` non repris. Tests `PleinsCarburantTests` (C#), `import-carburant.test.js`. `npm test` : 2 échecs connus ; `dotnet test` vert.
+
+## Lot 10b : page d'import des cartes carburant (FAIT 08/11/2026)
+
+- **Module** : cœur. **Agent** : `lot-dev`.
+- **Fichiers** : `client/src/app/import/formats.js` (entrée `CartesCarburant`, type nul), `rapport-import.js` (`rapportCarburant`), `client/src/app/pages/import-carburant.js` (`/import/carburant`), `pages/index.js`, menu Ressources (`navigation/menus.js`), textes `import_btp.carburant.*` et `navigation_btp.menus.ressources.import_carburant`, icône `navigation_btp_import_carburant`, `test/import-carburant.test.js`.
+- **Règles répliquées JS / C#** : aucune.
+- **Réalisé / écarts** : même parcours que l'import de devis (dépôt, aperçu du nombre de pleins lus, bouton « Importer les pleins »), compte rendu : lus, écrits, doublons, non rapprochés, erreurs avec les rangs. `depot-import.js` inchangé : aucune vérification en fenêtre, donc pas de dépôt IndexedDB. `npm test` : 2 échecs connus.

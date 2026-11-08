@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { importerCarburant, resumeCarburant } from '../src/app/import/carburant-import.js';
+import { rapportCarburant } from '../src/app/import/rapport-import.js';
+import { formatImport } from '../src/app/import/formats.js';
 
 const FICHIER = [
   'Date;Carte;Immatriculation;Litres;Montant;Km',
@@ -40,5 +42,16 @@ describe('import des cartes carburant', () => {
     const r = await importerCarburant('Date;Carte;Litres\n', undefined, async () => { appels++; return {}; });
     expect(appels).toBe(0);
     expect(r.ecrits).toBe(0);
+  });
+  it('rapport : pleins écrits, doublons, cartes non rapprochées et lignes en erreur', async () => {
+    const r = await importerCarburant(FICHIER, undefined, async (pleins) => serveur(pleins));
+    const html = rapportCarburant(r);
+    expect(html).toContain('<td class="nombre">2</td>');
+    expect(html).toContain('<p>4</p>');
+    expect(html).toContain('<p>3</p>');
+    expect(html).toContain('<li>');
+  });
+  it('format enregistré avec sa page, sans document créé', () => {
+    expect(formatImport('CartesCarburant')).toMatchObject({ page: '/import/carburant', type: null });
   });
 });
