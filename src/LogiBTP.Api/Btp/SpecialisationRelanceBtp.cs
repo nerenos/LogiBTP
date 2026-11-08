@@ -1,7 +1,15 @@
+using System.Globalization;
+using System.Net;
+using System.Text;
 using System.Text.Json;
+using LogiBTP.Crm;
+using LogiBTP.Crm.Web;
 using LogiBTP.Documents.Web;
 using LogiBTP.Domaine;
 using LogiBTP.Droits.Web;
+using LogiBTP.Editions.Web;
+using LogiBTP.Mail;
+using LogiBTP.Mail.Web;
 using LogiBTP.Reglements.Web;
 using LogiBTP.Relances;
 using LogiBTP.Relances.Web;
@@ -11,6 +19,8 @@ using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using NpgsqlTypes;
 using static LogiBTP.Api.Btp.SqlBtp;
+using DestinataireSaisi = LogiBTP.Mail.Web.DestinataireSaisi;
+using ResultatEnvoi = LogiBTP.Relances.Web.ResultatEnvoi;
 
 namespace LogiBTP.Api.Btp;
 
@@ -21,8 +31,10 @@ namespace LogiBTP.Api.Btp;
 /// Règlements s'il est actif (ServiceReglement), sinon échéances du document tant que le statut n'est pas PAYE (Q8) ;
 /// tiers relancé = intervenant PAYEUR de la facture, sinon le tiers (Q6) ; chargé = responsable de l'affaire
 /// (aff_responsable_ind_id), sinon chargé d'affaires du client (Q9) ; portée du nœud « relances » par chargé.
+/// Lot 6 : envoi par courriel (module Mail, usage RELANCE, modèles par nature et niveau de db/285, lot de priorité
+/// basse, édition de chaque pièce jointe, bascule en courrier sans adresse, Q11, Q21) ; note RELANCE du CRM (Q14).
 /// </summary>
-public sealed class SpecialisationRelanceBtp(IHttpContextAccessor http) : SpecialisationRelance
+public sealed class SpecialisationRelanceBtp(IHttpContextAccessor http, ILogger<SpecialisationRelanceBtp> journal) : SpecialisationRelance
 {
     /// <summary>Nœud des droits : Consulter (liste), Créer (préparer un lot), Valider (envoyer, noter, numéro de recommandé).</summary>
     public const string Noeud = "relances";
@@ -220,6 +232,304 @@ public sealed class SpecialisationRelanceBtp(IHttpContextAccessor http) : Specia
             new NpgsqlParameter("equipe", portee is "EQUIPE" or "SERVICE"), new NpgsqlParameter("service", portee == "SERVICE"),
             new NpgsqlParameter("jour", Aujourdhui)).ToListAsync(ct);
         return new PorteeRelance(false, individus.ToHashSet());
+    }
+
+    // ----- Envoi par courriel (lot 6, Q11, Q20, Q21) -----
+
+    /// <summary>Usage du module Mail (expéditeur, modèles) et origine du lot des courriels d'un lot de relances.</summary>
+    public const string Usage = "RELANCE";
+
+    private const string MarqueTableau = "\u0001tableau\u0001";
+
+    // Pièces d'un envoi : libellé, contacts figés (client, payeur) et intervenants (destinataire), type et groupe d'indices
+    // (dernière édition rangée en GED).
+    private const string SqlPiecesCourriel = """
+        SELECT d.ent_id AS id, t.tyd_code AS type, t.tyd_libelle AS libelle, d.ent_numero AS numero, d.ent_date AS date, d.ent_groupe_id AS groupe_id,
+               d.ent_tiers_id AS tiers_id, d.ent_contact_client::text AS contact_client, d.ent_contact_payeur::text AS contact_payeur,
+               d.ent_intervenants::text AS intervenants
+        FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id
+        WHERE d.ent_id = ANY(@ids) ORDER BY d.ent_id
+        """;
+
+    private const string SqlTiersCourriel = """
+        SELECT per_id AS id, per_raison_sociale AS raison_sociale, per_rel_contact_ind_id AS contact_id, per_rel_commentaire AS commentaire
+        FROM personne WHERE per_id = ANY(@ids)
+        """;
+
+    /// <summary>Pièce d'un envoi lue (SqlPiecesCourriel).</summary>
+    public sealed record PieceCourriel(long Id, string Type, string Libelle, string? Numero, DateOnly Date, long? GroupeId, long? TiersId,
+        string? ContactClient, string? ContactPayeur, string? Intervenants)
+    {
+        public string Titre => $"{Libelle} {Numero ?? $"#{Id}"}";
+    }
+
+    /// <summary>Tiers relancé lu (SqlTiersCourriel) : contact de relance et commentaire (db/284).</summary>
+    public sealed record TiersCourriel(long Id, string? RaisonSociale, long? ContactId, string? Commentaire);
+
+    private sealed record ModeleRelance(long Id, string Type, string Objet, string CorpsHtml, bool Defaut);
+
+    /// <summary>Courriel préparé : destinataire, objet, corps HTML, pièces jointes (« ged:&lt;id&gt; »).</summary>
+    public sealed record CourrielRelance(DestinataireSaisi Destinataire, string Objet, string CorpsHtml, List<string> Pieces);
+
+    private static readonly NumberFormatInfo Fr = new() { NumberGroupSeparator = " ", NumberDecimalSeparator = "," };
+
+    private static string Montant(decimal m) => m.ToString("#,##0.00", Fr) + " €";
+
+    private static string Date(DateOnly d) => d.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
+
+    /// <summary>
+    /// Courriel d'une relance groupée ; tiers sans adresse connue : bascule en courrier (Q21, la lettre est celle du
+    /// lot 7 : journal seul jusque-là).
+    /// </summary>
+    public override async Task<ResultatEnvoi> EnvoyerCourrielAsync(RelanceDbContext db, EnvoiRelance envoi, CancellationToken ct)
+    {
+        var s = Services ?? throw new InvalidOperationException("Envoi d'une relance hors d'une requête");
+        var enAttente = await PiecesEnAttenteAsync(db, new FiltrePieces(Pieces: envoi.Pieces.Select(p => p.PieceId).ToList()), ct);
+        return await CourrielAsync(db, envoi, enAttente, s.GetRequiredService<ServiceEnvoiMail>(), (p, c) => PieceJointeAsync(s, p, envoi.Auteur, c), ct)
+            ?? await BasculerEnCourrierAsync(db, envoi, ct);
+    }
+
+    /// <summary>Envoi en courrier d'un groupe proposé en courriel faute d'adresse (mode inscrit au journal : COURRIER).</summary>
+    public async Task<ResultatEnvoi> BasculerEnCourrierAsync(RelanceDbContext db, EnvoiRelance envoi, CancellationToken ct) =>
+        (await EnvoyerCourrierAsync(db, envoi with { Mode = ModeRelance.Courrier }, ct)) with { Mode = ModeRelance.Courrier };
+
+    /// <summary>
+    /// Met en file le courriel d'une relance groupée (null : aucune adresse, le groupe bascule en courrier) : destinataire,
+    /// modèle de la nature et du niveau, pièces jointes (<paramref name="pieceJointe"/> : dernière édition en GED, sinon
+    /// produite), lot du Mail du lot de relances (priorité basse), élément du courriel = le tiers, liens aux pièces.
+    /// </summary>
+    public static async Task<ResultatEnvoi?> CourrielAsync(DbContext db, EnvoiRelance envoi, IReadOnlyList<PieceEnAttente> enAttente, ServiceEnvoiMail mail,
+        Func<PieceCourriel, CancellationToken, Task<string?>> pieceJointe, CancellationToken ct)
+    {
+        var c = await PreparerCourrielAsync(db, envoi, enAttente, pieceJointe, ct);
+        if (c is null) return null;
+        var lot = await LotMailAsync(db, mail, envoi, ct);
+        var r = await mail.EnvoyerAutomatiqueAsync(new EnvoiAutomatique(Usage, [c.Destinataire], c.Objet, c.CorpsHtml, envoi.Auteur.Code, ReglesEnvoi.Basse,
+            TypesFiche.Personne, envoi.TiersId.ToString(CultureInfo.InvariantCulture), c.Pieces, Lot: lot), ct);
+        // Courriel rattaché à chaque pièce relancée (le Mail le rattache au tiers).
+        await db.Database.ExecuteSqlRawAsync("""
+            INSERT INTO mail_lien (mli_mme_id, mli_type_element, mli_id_element, mli_origine, mli_par)
+            SELECT m, 'document', p::text, 'ENVOI', @u FROM unnest(@messages) m, unnest(@pieces) p
+            ON CONFLICT (mli_mme_id, mli_type_element, mli_id_element) DO NOTHING
+            """, [P("messages", r.Messages.ToArray(), NpgsqlDbType.Array | NpgsqlDbType.Bigint),
+                  P("pieces", envoi.Pieces.Select(p => p.PieceId).Distinct().ToArray(), NpgsqlDbType.Array | NpgsqlDbType.Bigint), new NpgsqlParameter("u", envoi.Auteur.Code)], ct);
+        return new ResultatEnvoi(EtatRelance.Envoyee, CourrielId: r.Messages[0]);
+    }
+
+    /// <summary>
+    /// Lot du Mail d'un lot de relances (un seul pour toutes ses validations, priorité basse, fin signalée à l'auteur) :
+    /// créé au premier courriel, compté ensuite courriel par courriel.
+    /// </summary>
+    private static async Task<long> LotMailAsync(DbContext db, ServiceEnvoiMail mail, EnvoiRelance envoi, CancellationToken ct)
+    {
+        var libelle = $"Relances : lot {envoi.LotId}";
+        var existant = await db.Database.SqlQueryRaw<long>("""
+            SELECT mlo_id AS "Value" FROM mail_lot WHERE mlo_origine = @o AND mlo_libelle = @l ORDER BY mlo_id DESC LIMIT 1
+            """, new NpgsqlParameter("o", Usage), new NpgsqlParameter("l", libelle)).ToListAsync(ct);
+        if (existant.Count == 0) return await mail.CreerLotAsync(Usage, libelle, envoi.Auteur.Code, 1, 1, ct);
+        await db.Database.ExecuteSqlRawAsync("UPDATE mail_lot SET mlo_messages = mlo_messages + 1, mlo_destinataires = mlo_destinataires + 1 WHERE mlo_id = @id",
+            [new NpgsqlParameter("id", existant[0])], ct);
+        return existant[0];
+    }
+
+    /// <summary>
+    /// Courriel d'une relance groupée sans le mettre en file ; null sans adresse. Destinataire (Q11) : contact de relance
+    /// du tiers, sinon contact figé d'une pièce (client si le tiers est celui de la pièce, sinon payeur), sinon
+    /// intervenant de la pièce pour ce tiers, sinon le tiers. Modèle : celui du niveau dans la règle, sinon celui de la
+    /// nature et du niveau (mmo_type « NATURE_n »), sinon le plus haut niveau inférieur, sinon la nature, sinon le modèle
+    /// par défaut de l'usage, sinon un texte minimal.
+    /// </summary>
+    public static async Task<CourrielRelance?> PreparerCourrielAsync(DbContext db, EnvoiRelance envoi, IReadOnlyList<PieceEnAttente> enAttente,
+        Func<PieceCourriel, CancellationToken, Task<string?>> pieceJointe, CancellationToken ct)
+    {
+        var ids = envoi.Pieces.Select(p => p.PieceId).Distinct().ToArray();
+        var pieces = await db.Database.SqlQueryRaw<PieceCourriel>(SqlPiecesCourriel, P("ids", ids, NpgsqlDbType.Array | NpgsqlDbType.Bigint)).ToListAsync(ct);
+        var tiers = (await db.Database.SqlQueryRaw<TiersCourriel>(SqlTiersCourriel, P("ids", new[] { envoi.TiersId }, NpgsqlDbType.Array | NpgsqlDbType.Bigint))
+            .ToListAsync(ct)).FirstOrDefault();
+        var destinataire = await DestinataireAsync(db, envoi.TiersId, tiers?.ContactId, pieces, ct);
+        if (destinataire is null) return null;
+
+        var charge = envoi.ChargeId is long ch ? (await db.Database.SqlQueryRaw<string>(
+            "SELECT nullif(trim(concat_ws(' ', ind_prenom, ind_nom)), '') AS \"Value\" FROM individu WHERE ind_id = @i", new NpgsqlParameter("i", ch)).ToListAsync(ct)).FirstOrDefault() : null;
+        var parId = pieces.ToDictionary(p => p.Id);
+        var attente = enAttente.ToDictionary(p => p.Id);
+        string Titre(long id) => parId.TryGetValue(id, out var p) ? p.Titre : $"#{id}";
+        var echues = envoi.Pieces.SelectMany(p => attente.TryGetValue(p.PieceId, out var a) ? (a.Echeances ?? [])
+                .Where(e => !e.Retenue && e.Date is DateOnly d && d < envoi.Date && e.Reste > 0).Select(e => $"{Titre(p.PieceId)} : {Montant(e.Reste)} au {Date(e.Date!.Value)}") : [])
+            .ToList();
+        var variables = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["tiers"] = tiers?.RaisonSociale, ["contact"] = destinataire.Nom, ["pieces"] = string.Join(", ", envoi.Pieces.Select(p => Titre(p.PieceId))),
+            ["nombre"] = envoi.Pieces.Count.ToString(CultureInfo.InvariantCulture), ["montant"] = Montant(envoi.Pieces.Sum(p => p.Montant)),
+            ["jours_retard"] = envoi.Pieces.Max(p => p.Jours).ToString(CultureInfo.InvariantCulture), ["echeances"] = echues.Count == 0 ? "aucune" : string.Join(" ; ", echues),
+            ["niveau"] = envoi.Niveau.ToString(CultureInfo.InvariantCulture), ["charge"] = charge ?? envoi.Auteur.Code, ["commentaire"] = envoi.Commentaire,
+            ["utilisateur"] = envoi.Auteur.Code, ["date"] = Date(envoi.Date),
+        };
+        var tableau = new StringBuilder("<table><thead><tr><th>Pièce</th><th>Date</th><th>Montant</th><th>Jours</th></tr></thead><tbody>");
+        foreach (var p in envoi.Pieces)
+        {
+            var date = parId.TryGetValue(p.PieceId, out var x) ? Date(x.Date) : "";
+            tableau.Append(CultureInfo.InvariantCulture, $"<tr><td>{WebUtility.HtmlEncode(Titre(p.PieceId))}</td><td>{date}</td><td>{WebUtility.HtmlEncode(Montant(p.Montant))}</td><td>{p.Jours}</td></tr>");
+        }
+        tableau.Append("</tbody></table>");
+
+        var modele = await ModeleAsync(db, envoi, ct);
+        var objet = Adresses.Remplir(modele?.Objet ?? "Relance – {{pieces}}", variables, false);
+        var corps = Adresses.Remplir((modele?.CorpsHtml ?? "<p>Bonjour,</p>{{tableau}}<p>Cordialement,<br>{{charge}}</p>").Replace("{{tableau}}", MarqueTableau), variables, true)
+            .Replace(MarqueTableau, tableau.ToString());
+
+        var jointes = new List<string>();
+        foreach (var p in pieces)
+            if (await pieceJointe(p, ct) is { } r && !jointes.Contains(r)) jointes.Add(r);
+        return new CourrielRelance(destinataire, objet, corps, jointes);
+    }
+
+    private static async Task<ModeleRelance?> ModeleAsync(DbContext db, EnvoiRelance envoi, CancellationToken ct)
+    {
+        var modeles = await db.Database.SqlQueryRaw<ModeleRelance>("""
+            SELECT mmo_id AS id, mmo_type AS type, mmo_objet AS objet, mmo_corps_html AS corps_html, mmo_defaut AS defaut
+            FROM mail_modele WHERE mmo_actif AND (mmo_usage = @u OR mmo_id = @m)
+            """, new NpgsqlParameter("u", Usage), P("m", envoi.ModeleCourriel, NpgsqlDbType.Bigint)).ToListAsync(ct);
+        int? Rang(ModeleRelance m) => m.Type.StartsWith(envoi.Nature + "_", StringComparison.Ordinal) && int.TryParse(m.Type[(envoi.Nature.Length + 1)..], out var n) ? n : null;
+        return modeles.FirstOrDefault(m => m.Id == envoi.ModeleCourriel)
+            ?? modeles.Where(m => Rang(m) is int n && n <= envoi.Niveau).OrderByDescending(m => Rang(m)).FirstOrDefault()
+            ?? modeles.FirstOrDefault(m => m.Type == envoi.Nature)
+            ?? modeles.Where(m => m.Type == "").OrderByDescending(m => m.Defaut).FirstOrDefault();
+    }
+
+    private static async Task<DestinataireSaisi?> DestinataireAsync(DbContext db, long tiers, long? contact, List<PieceCourriel> pieces, CancellationToken ct)
+    {
+        async Task<DestinataireSaisi?> Annuaire(long? ind)
+        {
+            using var inst = await ContactsDocument.Instantane(db, tiers, ind, ct);
+            return inst is null ? null : Adresse(inst.RootElement, tiers, ind);
+        }
+        if (contact is long c && await Annuaire(c) is { } d) return d;
+        foreach (var p in pieces)
+        {
+            var fige = p.TiersId == tiers ? p.ContactClient : p.ContactPayeur;
+            if (fige is null) continue;
+            using var j = JsonDocument.Parse(fige);
+            if (j.RootElement.ValueKind == JsonValueKind.Object && Adresse(j.RootElement, tiers, null) is { } f) return f;
+        }
+        foreach (var p in pieces)
+        {
+            using var j = JsonDocument.Parse(p.Intervenants ?? "[]");
+            if (j.RootElement.ValueKind != JsonValueKind.Array) continue;
+            foreach (var i in j.RootElement.EnumerateArray())
+            {
+                if (!i.TryGetProperty("per_id", out var per) || per.ValueKind != JsonValueKind.Number || per.GetInt64() != tiers) continue;
+                long? ind = i.TryGetProperty("ind_id", out var x) && x.ValueKind == JsonValueKind.Number ? x.GetInt64() : null;
+                if (ind is not null && await Annuaire(ind) is { } a) return a;
+            }
+        }
+        return await Annuaire(null);
+    }
+
+    /// <summary>Adresse valide d'un instantané de l'annuaire (contact figé ou relevé), s'il désigne bien le tiers.</summary>
+    private static DestinataireSaisi? Adresse(JsonElement r, long tiers, long? ind)
+    {
+        if (r.TryGetProperty("per_id", out var per) && per.ValueKind == JsonValueKind.Number && per.GetInt64() != tiers) return null;
+        if (LectureJson.TexteNonVide(r, "email") is not { } email || !Adresses.Valide(email)) return null;
+        var nom = r.TryGetProperty("contact", out var c) && c.ValueKind == JsonValueKind.Object ? LectureJson.TexteNonVide(c, "nom") : null;
+        long? contact = c.ValueKind == JsonValueKind.Object && c.TryGetProperty("ind_id", out var i) && i.ValueKind == JsonValueKind.Number ? i.GetInt64() : ind;
+        return new DestinataireSaisi(email, nom ?? LectureJson.TexteNonVide(r, "raison_sociale"), tiers, contact);
+    }
+
+    /// <summary>Dernière édition d'une pièce rangée en GED (catégorie edition, type et groupe d'indices de la pièce).</summary>
+    public static async Task<long?> DerniereEditionAsync(DbContext db, PieceCourriel p, CancellationToken ct) =>
+        (await db.Database.SqlQueryRaw<long>("""
+            SELECT dge_id AS "Value" FROM document_ged
+            WHERE dge_categorie = @c AND dge_type_element = @t AND dge_id_element = @e AND NOT dge_supprime AND dge_parent_id IS NULL
+            ORDER BY dge_cree_le DESC, dge_id DESC LIMIT 1
+            """, new NpgsqlParameter("c", CategoriesGed.Edition), new NpgsqlParameter("t", p.Type),
+            new NpgsqlParameter("e", (p.GroupeId ?? p.Id).ToString(CultureInfo.InvariantCulture))).ToListAsync(ct)).Cast<long?>().FirstOrDefault();
+
+    /// <summary>
+    /// PDF joint d'une pièce (devis compris) : sa dernière édition rangée en GED, sinon édition produite à l'envoi par le
+    /// modèle par défaut et rangée en GED comme une édition de la pièce (Q11 a) ; une édition impossible fait échouer
+    /// l'envoi du groupe (il reste proposé, l'échec est signalé).
+    /// </summary>
+    private static async Task<string?> PieceJointeAsync(IServiceProvider s, PieceCourriel p, Utilisateur u, CancellationToken ct)
+    {
+        if (await DerniereEditionAsync(s.GetRequiredService<LogiBtpContext>(), p, ct) is long id) return $"ged:{id}";
+        var element = p.Id.ToString(CultureInfo.InvariantCulture);
+        var (pdf, _, preparation) = await s.GetRequiredService<ServiceEdition>().Pdf(s, new DemandeEdition("document", element), false, u, ct);
+        var depot = await s.GetRequiredService<SpecialisationEdition>().DeposerAsync(s,
+            new TacheEdition { EttSource = "document", EttIdElement = element, EttMotif = "ENVOI", EttDemandePar = u.Code, EttCreeLe = DateTimeOffset.UtcNow },
+            pdf, preparation, u, ct);
+        return depot is long d ? $"ged:{d}" : null;
+    }
+
+    // ----- Note RELANCE du CRM (Q14) -----
+
+    /// <summary>Note RELANCE du CRM pour les relances faites (envoyées, notées), si le module est actif ; un échec est journalisé.</summary>
+    public override async Task ApresEnvoiAsync(RelanceDbContext db, IReadOnlyList<RelanceDto> relances, CancellationToken ct)
+    {
+        var s = Services;
+        if (s?.GetService<ModulesSociete>() is not { } m || !await m.EstActifAsync(ModulesFacultatifs.Crm, ct)) return;
+        var crm = s.GetRequiredService<ServiceCrm>();
+        await NoterAsync(db, relances, async (n, u, c) => (await crm.Enregistrer(null, n, u, c)).Note.Id, ct, journal);
+    }
+
+    private static string Par(string mode) => mode switch
+    {
+        ModeRelance.Courriel => "par courriel",
+        ModeRelance.Courrier => "par courrier",
+        ModeRelance.Recommande => "par lettre recommandée",
+        ModeRelance.Tache => "par appel",
+        _ => mode,
+    };
+
+    /// <summary>
+    /// Une note RELANCE (type de note du CRM, action close) par relance groupée faite : rattachée à chaque pièce (groupe
+    /// d'indices : remet à zéro l'indicateur « Devis à relancer », db/267) et au tiers ; liée au courriel (mail_lien
+    /// crm_note) quand il y en a un. Renvoie les notes créées.
+    /// </summary>
+    public static async Task<List<long>> NoterAsync(DbContext db, IReadOnlyList<RelanceDto> relances, Func<NoteSaisie, Utilisateur, CancellationToken, Task<long>> noter,
+        CancellationToken ct, ILogger? journal = null)
+    {
+        var notes = new List<long>();
+        if (relances.Count == 0) return notes;
+        var tno = await SpecialisationCrmBtp.TypeNoteAsync(db, SpecialisationCrmBtp.TypeNoteRelance, ct);
+        var pieces = (await db.Database.SqlQueryRaw<PieceCourriel>(SqlPiecesCourriel,
+            P("ids", relances.Select(r => r.PieceId).Distinct().ToArray(), NpgsqlDbType.Array | NpgsqlDbType.Bigint)).ToListAsync(ct)).ToDictionary(p => p.Id);
+        var tiers = (await db.Database.SqlQueryRaw<TiersCourriel>(SqlTiersCourriel,
+            P("ids", relances.Select(r => r.TiersId).Distinct().ToArray(), NpgsqlDbType.Array | NpgsqlDbType.Bigint)).ToListAsync(ct)).ToDictionary(t => t.Id);
+        foreach (var g in relances.GroupBy(r => (r.LotId, r.LotId is null ? r.Id : r.Groupe)))
+        {
+            var l = g.ToList();
+            var r0 = l[0];
+            try
+            {
+                string Titre(long id) => pieces.TryGetValue(id, out var p) ? p.Titre : $"#{id}";
+                var objet = $"Relance {Par(r0.Mode)} de niveau {l.Max(r => r.Niveau)} : {string.Join(", ", l.Select(r => Titre(r.PieceId)))}";
+                if (objet.Length > ReglesNote.LongueurObjet) objet = objet[..(ReglesNote.LongueurObjet - 1)] + "…";
+                var html = new StringBuilder($"<p>Relance {WebUtility.HtmlEncode(Par(r0.Mode))} du {Date(r0.Date)}")
+                    .Append(r0.CourrielId is long m ? $", courriel n° {m}" : "").Append("</p><ul>");
+                foreach (var r in l)
+                    html.Append(CultureInfo.InvariantCulture, $"<li>{WebUtility.HtmlEncode(Titre(r.PieceId))} : niveau {r.Niveau}, {WebUtility.HtmlEncode(Montant(r.Montant))}, {r.Jours} jours</li>");
+                html.Append("</ul>");
+                if (!string.IsNullOrWhiteSpace(r0.Commentaire)) html.Append("<p>").Append(WebUtility.HtmlEncode(r0.Commentaire)).Append("</p>");
+                if (tiers.GetValueOrDefault(r0.TiersId)?.Commentaire is { Length: > 0 } ct2) html.Append("<p>Commentaire du tiers : ").Append(WebUtility.HtmlEncode(ct2)).Append("</p>");
+                var liens = l.Select(r => new LienSaisi("document", (pieces.GetValueOrDefault(r.PieceId)?.GroupeId ?? r.GroupeId ?? r.PieceId).ToString(CultureInfo.InvariantCulture)))
+                    .Append(new LienSaisi(TypesFiche.Personne, r0.TiersId.ToString(CultureInfo.InvariantCulture))).ToList();
+                liens[0] = liens[0] with { Principal = true };
+                var note = await noter(new NoteSaisie(NatureNote.Action, EtatNote.Memo, tno, null, objet, html.ToString(), null, null, null, false, false, false, liens, null),
+                    new Utilisateur(r0.Auteur, Profils.Admin), ct);
+                notes.Add(note);
+                if (r0.CourrielId is long courriel)
+                    await db.Database.ExecuteSqlRawAsync("""
+                        INSERT INTO mail_lien (mli_mme_id, mli_type_element, mli_id_element, mli_origine, mli_par) VALUES (@m, 'crm_note', @n, 'ENVOI', @u)
+                        ON CONFLICT (mli_mme_id, mli_type_element, mli_id_element) DO NOTHING
+                        """, [new NpgsqlParameter("m", courriel), new NpgsqlParameter("n", note.ToString(CultureInfo.InvariantCulture)), new NpgsqlParameter("u", r0.Auteur)], ct);
+            }
+            catch (Exception e) when (e is not OperationCanceledException && journal is not null)
+            {
+                journal.LogWarning(e, "Relances : note du CRM non posée (lot {Lot}, groupe {Groupe})", r0.LotId, r0.Groupe);
+            }
+        }
+        return notes;
     }
 }
 

@@ -1,10 +1,14 @@
 using LogiBTP.Api.Btp;
 using LogiBTP.Domaine;
+using LogiBTP.Mail.Web;
 using LogiBTP.Reglements.Web;
 using LogiBTP.Relances;
 using LogiBTP.Relances.Web;
 using LogiBTP.Socle.Web;
+using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
+using MimeKit;
 using Npgsql;
 using Xunit;
 
@@ -248,6 +252,178 @@ public class RelancesBtpTests
         Assert.Equal(2, niveaux[normal]);
         Assert.Equal(2, niveaux[invalide]);
         Assert.Equal(1, niveaux[propre]);
+        await tx.RollbackAsync();
+    }
+
+    /// <summary>Faux transport : aucun courriel ne part (la file n'est pas traitée par le test).</summary>
+    private sealed class SansTransport : ITransportMail
+    {
+        public Task EnvoyerAsync(ServeurMail smtp, AuthMail auth, MimeMessage message, CancellationToken ct) => Task.CompletedTask;
+        public Task CopierEnvoyesAsync(ServeurMail imap, AuthMail auth, MimeMessage message, CancellationToken ct) => Task.CompletedTask;
+        public Task TesterAsync(ServeurMail? smtp, AuthMail? a, ServeurMail? imap, AuthMail? b, CancellationToken ct) => Task.CompletedTask;
+        public Task<List<ResultatReleve>> ReleverAsync(ServeurMail imap, AuthMail auth, IReadOnlyList<DossierARelever> dossiers, DateTimeOffset depuis, long tailleMax,
+            bool marquerLus, int max, CancellationToken ct) => Task.FromResult(new List<ResultatReleve>());
+        public Task ApresRattachementAsync(ServeurMail imap, AuthMail auth, string dossier, uint uid, string action, string? cible, CancellationToken ct) => Task.CompletedTask;
+    }
+
+    /// <summary>Pièces jointes « ged:&lt;id&gt; » acceptées telles quelles (la GED n'est pas lue).</summary>
+    private sealed class MailSansGed : SpecialisationMail
+    {
+        public override Task<List<PieceInfo>> PiecesAsync(IReadOnlyList<string> references, Utilisateur u, CancellationToken ct) =>
+            Task.FromResult(references.Select(r => new PieceInfo(r, $"{r[4..]}.pdf", "application/pdf", 10)).ToList());
+    }
+
+    /// <summary>
+    /// Envoi du cœur (SpecialisationRelanceBtp.CourrielAsync, NoterAsync) à une date fixe, pièce jointe = « ged:&lt;pièce&gt; »,
+    /// note du CRM écrite en SQL dans la transaction du test (ServiceCrm ouvre sa propre transaction).
+    /// </summary>
+    private sealed class SpecialisationEnvoi(DateOnly jour, ServiceEnvoiMail mail) : SpecialisationRelance
+    {
+        public List<long> Notes { get; } = [];
+
+        public override Task<List<PieceEnAttente>> PiecesEnAttenteAsync(RelanceDbContext db, FiltrePieces filtre, CancellationToken ct) =>
+            SpecialisationRelanceBtp.PiecesAsync(db, filtre, jour, null, ct);
+
+        public override async Task<LogiBTP.Relances.Web.ResultatEnvoi> EnvoyerCourrielAsync(RelanceDbContext db, EnvoiRelance envoi, CancellationToken ct)
+        {
+            var attente = await PiecesEnAttenteAsync(db, new FiltrePieces(Pieces: envoi.Pieces.Select(p => p.PieceId).ToList()), ct);
+            return await SpecialisationRelanceBtp.CourrielAsync(db, envoi, attente, mail, (p, _) => Task.FromResult<string?>($"ged:{p.Id}"), ct)
+                ?? new LogiBTP.Relances.Web.ResultatEnvoi(EtatRelance.Envoyee, Mode: ModeRelance.Courrier);
+        }
+
+        public override async Task ApresEnvoiAsync(RelanceDbContext db, IReadOnlyList<RelanceDto> relances, CancellationToken ct) =>
+            Notes.AddRange(await SpecialisationRelanceBtp.NoterAsync(db, relances, async (n, u, c) =>
+            {
+                var id = (await db.Database.SqlQueryRaw<long>("""
+                    INSERT INTO crm_note (not_nature, not_etat, not_tno_id, not_objet, not_message_html, not_cree_par) VALUES (@n, @e, @t, @o, @h, @u) RETURNING not_id AS "Value"
+                    """, new NpgsqlParameter("n", n.Nature), new NpgsqlParameter("e", n.Etat), new NpgsqlParameter("t", (object?)n.TnoId ?? DBNull.Value),
+                    new NpgsqlParameter("o", n.Objet), new NpgsqlParameter("h", n.MessageHtml), new NpgsqlParameter("u", u.Code)).ToListAsync(c))[0];
+                foreach (var l in n.Liens!)
+                    await db.Database.ExecuteSqlRawAsync("INSERT INTO crm_note_lien (nli_not_id, nli_type_element, nli_id_element, nli_principal) VALUES (@n, @t, @i, @p)",
+                        [new NpgsqlParameter("n", id), new NpgsqlParameter("t", l.TypeElement), new NpgsqlParameter("i", l.IdElement), new NpgsqlParameter("p", l.Principal)], c);
+                return id;
+            }, ct));
+    }
+
+    /// <summary>
+    /// Base LOGIBTP_TEST_PG (db/283 à 285, Mail et CRM chargés) : validation d'un lot de relances (règle par défaut, devis
+    /// envoyés il y a 40 jours : niveau 2). Tiers à contact figé (deux devis, un groupe) et tiers à contact de relance :
+    /// un courriel par groupe dans la file du Mail (priorité basse, lot du Mail, modèle DEVIS_2, pièces jointes, liens aux
+    /// pièces) ; tiers sans adresse : bascule en COURRIER ; journal ENVOYEE ; note RELANCE par groupe liée aux pièces et
+    /// au courriel ; indicateur « Devis à relancer » remis à zéro (jours_envoye de v_liste_documents). Transaction annulée.
+    /// </summary>
+    [Fact]
+    public async Task Validation_d_un_lot_met_les_courriels_en_file_et_pose_la_note()
+    {
+        var connexion = Environment.GetEnvironmentVariable("LOGIBTP_TEST_PG");
+        if (string.IsNullOrEmpty(connexion)) return;
+        await using var c = new NpgsqlConnection(connexion);
+        await c.OpenAsync();
+        await using var tx = await c.BeginTransactionAsync();
+        async Task<object?> Scalaire(string sql, params (string, object)[] p)
+        {
+            await using var k = new NpgsqlCommand(sql, c, tx);
+            foreach (var (n, v) in p) k.Parameters.AddWithValue(n, v);
+            return await k.ExecuteScalarAsync();
+        }
+        async Task<long> Id(string sql, params (string, object)[] p) => Convert.ToInt64(await Scalaire(sql, p));
+        if (await Scalaire("SELECT 1 FROM mail_modele WHERE mmo_code = 'RELANCE_DEVIS_2'") is null) return;
+        var devis = await Id("SELECT tyd_id FROM type_document WHERE tyd_code = 'V_DEVIS'");
+        if (await Scalaire("SELECT s.std_id FROM statut_document s JOIN type_document t ON t.tyd_id = s.std_tyd_id WHERE t.tyd_code = 'V_DEVIS' AND s.std_code = 'ENVOYE' ORDER BY s.std_id LIMIT 1") is not int envoye) return;
+        await Scalaire("DELETE FROM relance_regle");
+        await Scalaire("UPDATE mail_compte SET mco_actif = false");
+
+        async Task<long> Tiers(string nom) => await Id("INSERT INTO personne (per_niv_code, per_raison_sociale) VALUES ('SOCIETE', @n) RETURNING per_id", ("n", nom));
+        async Task<long> Devis(long tiers, string numero, string? contact = null)
+        {
+            var d = await Id("""
+                INSERT INTO document (ent_tyd_id, ent_std_id, ent_numero, ent_date, ent_cree_par, ent_verrouille, ent_is_reference, ent_tiers_id,
+                  ent_envoye_le, ent_total_ttc, ent_net_a_payer, ent_contact_client)
+                VALUES (@t, @s, @n, @d, 'test', true, true, @tiers, @env, 1200, 1100, @c::jsonb) RETURNING ent_id
+                """, ("t", devis), ("s", envoye), ("n", numero), ("d", Jour.AddDays(-50)), ("tiers", tiers),
+                ("env", new DateTime(2026, 9, 29, 10, 0, 0, DateTimeKind.Utc)), ("c", (object?)contact ?? DBNull.Value));
+            await Scalaire("UPDATE document SET ent_groupe_id = ent_id WHERE ent_id = @i", ("i", d));
+            return d;
+        }
+        var fige = await Tiers("Relance figé");
+        var d1 = await Devis(fige, "DRM1", $$"""{"contact":{"nom":"M. Figé"},"per_id":{{fige}},"raison_sociale":"Relance figé","email":"achats@fige.fr"}""");
+        var d2 = await Devis(fige, "DRM2");
+        var relance = await Tiers("Relance contact");
+        var ind = await Id("INSERT INTO individu (ind_nom, ind_prenom) VALUES ('Compta', 'Claire') RETURNING ind_id");
+        await Scalaire("INSERT INTO rattachement (rat_ind_id, rat_per_id) VALUES (@i, @p)", ("i", ind), ("p", relance));
+        var coo = await Id("INSERT INTO coordonnee (coo_nature, coo_valeur) VALUES ('EMAIL', 'compta@contact.fr') RETURNING coo_id");
+        await Scalaire("INSERT INTO usage_coordonnee (uco_coo_id, uco_ind_id) VALUES (@c, @i)", ("c", coo), ("i", ind));
+        await Scalaire("UPDATE personne SET per_rel_contact_ind_id = @i, per_rel_commentaire = 'Payer par virement' WHERE per_id = @p", ("i", ind), ("p", relance));
+        var d3 = await Devis(relance, "DRM3", $$"""{"per_id":{{relance}},"email":"autre@contact.fr"}""");
+        var muet = await Tiers("Relance sans adresse");
+        var d4 = await Devis(muet, "DRM4");
+        var mesPieces = new[] { d1, d2, d3, d4 };
+
+        var options = new DbContextOptionsBuilder<RelanceDbContext>().UseNpgsql(c).UseSnakeCaseNamingConvention().Options;
+        await using var db = new RelanceDbContext(options);
+        await db.Database.UseTransactionAsync(tx);
+        await using var mailDb = new MailDbContext(new DbContextOptionsBuilder<MailDbContext>().UseNpgsql(c).UseSnakeCaseNamingConvention().Options);
+        await mailDb.Database.UseTransactionAsync(tx);
+        var transport = new SansTransport();
+        var specialisationMail = new MailSansGed();
+        var nettoyage = new NettoyageHtmlMail();
+        var comptes = new ServiceComptesMail(mailDb, new Chiffrement("chaine-de-test"), transport, specialisationMail, nettoyage, NullLogger<ServiceComptesMail>.Instance, TimeProvider.System);
+        var reception = new ServiceReceptionMail(mailDb, comptes, transport, specialisationMail, nettoyage, NullLogger<ServiceReceptionMail>.Instance, TimeProvider.System);
+        var mail = new ServiceEnvoiMail(mailDb, comptes, reception, transport, specialisationMail, nettoyage, NullLogger<ServiceEnvoiMail>.Instance, TimeProvider.System);
+        var code = $"R{Guid.NewGuid():N}"[..16].ToUpperInvariant();
+        var admin = new Utilisateur("admin.test", Profils.Admin);
+        await comptes.CreerAsync(admin, new SaisieCompte(code, $"{code.ToLowerInvariant()}@exemple.fr", null, true, false, "MOT_DE_PASSE", null,
+            new ServeurMail("smtp.exemple.fr", 465, "SSL", null, "secret"), null, null, null, "AUTRE", null, false, null, true, $"Relances {code}"), default);
+
+        var specialisation = new SpecialisationEnvoi(Jour, mail);
+        var service = new ServiceRelance(db, specialisation);
+        var lot = await service.Preparer(new DemandePreparation(Jour), admin, default);
+        Assert.NotNull(lot);
+        var groupes = lot!.Groupes.Where(g => g.Relances.Any(r => mesPieces.Contains(r.PieceId))).ToList();
+        Assert.Equal(3, groupes.Count);
+        Assert.All(groupes, g => Assert.Equal((ModeRelance.Courriel, 2), (g.Mode, g.Niveau)));
+        var resultat = await service.Valider(lot.Id, new ValidationLot(groupes.Select(g => new GroupeValide(g.Groupe)).ToList()), admin, default);
+        Assert.Empty(resultat.Echecs);
+
+        var journal = await db.Relances.AsNoTracking().Where(r => mesPieces.Contains(r.RelEntId)).ToDictionaryAsync(r => r.RelEntId);
+        Assert.All(journal.Values, r => Assert.Equal(EtatRelance.Envoyee, r.RelEtat));
+        Assert.Equal(ModeRelance.Courrier, journal[d4].RelMode);
+        Assert.Null(journal[d4].RelCourrielId);
+        Assert.Equal(journal[d1].RelCourrielId, journal[d2].RelCourrielId);
+
+        // Un courriel par groupe en file, priorité basse, dans le lot du Mail du lot de relances, avec ses pièces et ses liens.
+        var messages = await mailDb.Messages.AsNoTracking().Where(m => m.MmeId == journal[d1].RelCourrielId || m.MmeId == journal[d3].RelCourrielId)
+            .ToDictionaryAsync(m => m.MmeId);
+        Assert.Equal(2, messages.Count);
+        Assert.All(messages.Values, m => Assert.Equal(("A_ENVOYER", "BASSE", SpecialisationRelanceBtp.Usage), (m.MmeEtat, m.MmePriorite, m.MmeUsage)));
+        Assert.Single(messages.Values.Select(m => m.MmeMloId).Distinct());
+        Assert.Equal(2, (await mailDb.Lots.AsNoTracking().FirstAsync(l => l.MloId == messages.Values.First().MmeMloId)).MloMessages);
+        var m1 = messages[journal[d1].RelCourrielId!.Value];
+        Assert.StartsWith("Relance – notre proposition", m1.MmeObjet);
+        Assert.Contains("DRM1", m1.MmeObjet);
+        Assert.Contains("<table>", m1.MmeCorpsHtml);
+        Assert.Contains("M. Figé", m1.MmeCorpsHtml);
+        Assert.Equal(["achats@fige.fr"], await mailDb.Destinataires.AsNoTracking().Where(x => x.MdeMmeId == m1.MmeId).Select(x => x.MdeAdresse).ToListAsync());
+        Assert.Equal([$"ged:{d1}", $"ged:{d2}"], await mailDb.Pieces.AsNoTracking().Where(x => x.MpiMmeId == m1.MmeId).OrderBy(x => x.MpiId).Select(x => x.MpiReference).ToListAsync());
+        Assert.Equal(["compta@contact.fr"], await mailDb.Destinataires.AsNoTracking().Where(x => x.MdeMmeId == journal[d3].RelCourrielId).Select(x => x.MdeAdresse).ToListAsync());
+        var liens = await mailDb.Liens.AsNoTracking().Where(l => l.MliMmeId == m1.MmeId).Select(l => l.MliTypeElement + ":" + l.MliIdElement).ToListAsync();
+        Assert.Contains($"personne:{fige}", liens);
+        Assert.Contains($"document:{d1}", liens);
+        Assert.Contains($"document:{d2}", liens);
+
+        // Notes RELANCE : une par groupe, liées aux pièces (groupe d'indices), au tiers et au courriel ; « Devis à relancer » remis à zéro.
+        Assert.Equal(3, specialisation.Notes.Count);
+        Assert.Equal(3L, Convert.ToInt64(await Scalaire("""
+            SELECT count(*) FROM crm_note n JOIN crm_type_note t ON t.tno_id = n.not_tno_id AND t.tno_code = 'RELANCE' WHERE n.not_id = ANY(@n)
+            """, ("n", specialisation.Notes.ToArray()))));
+        Assert.NotNull(await Scalaire("SELECT 1 FROM crm_note_lien WHERE nli_type_element = 'document' AND nli_id_element = @i", ("i", d2.ToString())));
+        Assert.NotNull(await Scalaire("""
+            SELECT 1 FROM mail_lien k JOIN crm_note_lien l ON l.nli_not_id::text = k.mli_id_element
+            WHERE k.mli_type_element = 'crm_note' AND k.mli_mme_id = @m AND l.nli_type_element = 'document' AND l.nli_id_element = @d
+            """, ("m", m1.MmeId), ("d", d1.ToString())));
+        Assert.NotNull(await Scalaire("SELECT 1 FROM crm_note WHERE not_id = ANY(@n) AND not_message_html LIKE '%Payer par virement%'", ("n", specialisation.Notes.ToArray())));
+        foreach (var d in mesPieces)
+            Assert.Equal(0, Convert.ToInt32(await Scalaire("SELECT jours_envoye FROM v_liste_documents WHERE id = @i", ("i", d))));
         await tx.RollbackAsync();
     }
 }

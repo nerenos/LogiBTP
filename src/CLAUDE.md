@@ -16,7 +16,7 @@
 ## Spécialisation des modules
 - Document + Métré : `SpecialisationBtp`, `LogiBtpContext`, `DocumentBtp`, `DocumentLigneBtp`, `MoteurDevisBtp`, `ComparateurBtp`.
 - Liste : `SpecialisationListeBtp`. Fiche : `SpecialisationFicheBtp` (+ `Intervenants`, `SalariesAnnuaire`, `ElementsBibliotheque`). GED : `SpecialisationGedBtp`.
-- Relances : `SpecialisationRelanceBtp` (pièces relancées par le rôle `type_document.tyd_role_relance`, `db/283`, jamais par code de type ; reste par `ServiceReglement` si Règlements est actif ; nœud `relances`).
+- Relances : `SpecialisationRelanceBtp` (pièces relancées par le rôle `type_document.tyd_role_relance`, `db/283`, jamais par code de type ; reste par `ServiceReglement` si Règlements est actif ; nœud `relances`) ; envoi par courriel (lot 6) : usage RELANCE du Mail, modèle du niveau puis `mmo_type` « NATURE_n » (`db/285`), destinataire contact de relance > contact figé > intervenant > tiers, sans adresse : bascule COURRIER, PDF de chaque pièce (dernière édition GED, sinon produite), un lot du Mail par lot de relances (priorité basse) ; note RELANCE du CRM par groupe (pièces, tiers, `mail_lien` `crm_note`), qui remet à zéro « Devis à relancer » (`db/267`).
 - Bibliothèque : `SpecialisationBibliothequeBtp`, `ElementsBibliotheque`. Annuaire : `ServiceAnnuaire` appelé par `SpecialisationFicheBtp` (`ControlerPersonne`, `Identifiants.Compacter`, champs gérés).
 
 ## Conventions et pièges

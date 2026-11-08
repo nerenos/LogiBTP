@@ -88,9 +88,8 @@ Analyses validées le 23/10/2026 : [ANALYSE-MODULE-MAIL.md](documentation/concep
 - [ ] Essai réel de l'envoi avec les boîtes de test (Gmail en OAuth 2.0, Exchange OVH par mot de passe) : relever les
   quotas réels des hébergeurs et ajuster les limitations par défaut (`Limites.Defaut`).
 - [ ] Envois à brancher quand les fonctions existeront : relevé
-  hebdomadaire signé (Pointage M21), relances des devis et factures (CRM C27) ; double authentification par courriel.
+  hebdomadaire signé (Pointage M21) ; double authentification par courriel.
 - [ ] Création d'un tiers provisoire depuis l'expéditeur d'un courriel reçu ; transfert d'un reçu à un service.
-- [ ] Lot 5 : relances par courriel (CRM C27, avec le module Règlements) : voir « Relances » (Marchés et règlements).
 - [ ] Avant la mise en production : vérification de l'application Google par Google (portée restreinte
   `https://mail.google.com/`), sinon reconnexion des boîtes Gmail tous les 7 jours (mode test) ou mot de passe
   d'application.
@@ -129,7 +128,8 @@ global). Lots à venir :
   `relances`, page `/relances` ; à revoir : choix
   d'une pièce à suspendre depuis l'onglet Suspensions non proposé, préparation de nuit sans requête HTTP à brancher au
   lot 9 — module Règlements alors pris comme inactif) ;
-  lot 5 fait (08/11/2026 : `db/284` surcharge par tiers sur la fiche personne, « ne pas relancer », règle propre en JSON sans éditeur de niveaux, action « Suspendre les relances », rôle de relance des types de pièces dans les paramètres Rentabilité) ; suivant : lot 6 (courriel).
+  lot 5 fait (08/11/2026 : `db/284` surcharge par tiers sur la fiche personne, « ne pas relancer », règle propre en JSON sans éditeur de niveaux, action « Suspendre les relances », rôle de relance des types de pièces dans les paramètres Rentabilité) ;
+  lot 6 fait (08/11/2026 : envoi par courriel, `db/285` modèles par nature et niveau, bascule en courrier sans adresse, PDF des pièces joint, note RELANCE du CRM ; lot 5 du module Mail absorbé et fermé, Q20 ; à revoir : la bascule en courrier n'inscrit que le journal tant que le lot 7 n'est pas fait, les modèles ne sont pas reliés aux niveaux de la règle par défaut — choisis par nature et niveau —, le Mail range le courriel et sa note « Courriel envoyé » sur le tiers) ; suivant : lots 7 à 9.
 
 ### Comptabilité
 

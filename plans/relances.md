@@ -17,8 +17,8 @@
 | 2 | Schéma, journal, suspensions et service du module | `modules/relance` | 1 | FAIT (08/11/2026) |
 | 3 | Écrans du module : liste de travail, règle, suspensions | `modules/relance` | 2 | FAIT (08/11/2026) |
 | 4 | Branchement du cœur : pièces en attente, rôle, droits, portée | cœur | 2, 3 | FAIT (08/11/2026) |
-| 5 | Surcharge par tiers sur la fiche personne | cœur | 4 | A FAIRE |
-| 6 | Envoi par courriel et note du CRM | cœur | 4 | A FAIRE |
+| 5 | Surcharge par tiers sur la fiche personne | cœur | 4 | FAIT (08/11/2026) |
+| 6 | Envoi par courriel et note du CRM | cœur | 4 | FAIT (08/11/2026) |
 | 7 | Lettres, recommandés et mise en demeure | cœur | 6 | A FAIRE |
 | 8 | Suivi : onglets, colonne « Dernière relance », relance notée | cœur | 6 | A FAIRE |
 | 9 | Préparation de nuit, notification, tâche d'appel, pastille | cœur | 6 | A FAIRE |
@@ -162,7 +162,7 @@
   niveaux) ; le contact de relance et le commentaire ne sont lus qu'à l'envoi (lot 6) ; le rôle de relance se règle sur la
   page des paramètres Rentabilité (module Rentabilité requis).
 
-## Lot 6 : envoi par courriel et note du CRM (A FAIRE)
+## Lot 6 : envoi par courriel et note du CRM (FAIT (08/11/2026))
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `src/LogiBTP.Api/Btp/MailBtp.cs` (usage RELANCE existant, modèles par niveau et nature créés par
@@ -174,6 +174,25 @@
 - **Règles répliquées** : aucune.
 - **Critère de fin** : validation d'un lot de relances : un courriel par groupe dans la file du Mail, journal
   `relance` ENVOYEE, note RELANCE posée, indicateur « Devis à relancer » remis à zéro (`db/267`) ; tests serveur verts.
+- **Réalisé** (08/11/2026) : `db/285_relances_mail.sql` (rejouable, rejoué deux fois sur PostgreSQL 16 ; manifeste après
+  `284`) : six modèles `RELANCE_DEVIS_1…3`, `RELANCE_FACTURE_1…3` (usage RELANCE, `mmo_type` « NATURE_n » ; variables
+  tiers, contact, pieces, nombre, montant, jours_retard, echeances, tableau, niveau, charge, commentaire, utilisateur,
+  date) ; `SpecialisationRelanceBtp` : `EnvoyerCourrielAsync` → `CourrielAsync` / `PreparerCourrielAsync` (destinataire :
+  contact de relance `per_rel_contact_ind_id`, sinon contact figé client ou payeur, sinon intervenant, sinon tiers ;
+  modèle du niveau de la règle, sinon nature et niveau, sinon plus haut niveau inférieur ; PDF de chaque pièce, devis
+  compris : dernière édition en GED, sinon produite par le modèle par défaut et rangée en GED, une édition impossible
+  laisse le groupe proposé ; `EnvoyerAutomatiqueAsync` dans un lot du Mail par lot de relances, priorité basse ; élément
+  du courriel = le tiers, `mail_lien` vers chaque pièce), sans adresse : `BasculerEnCourrierAsync` (journal en COURRIER) ;
+  `ApresEnvoiAsync` → `NoterAsync` (CRM actif : une note RELANCE par groupe, action close, liée à chaque pièce par son
+  groupe d'indices et au tiers, commentaire de la validation et du tiers `per_rel_commentaire`, `mail_lien` `crm_note`
+  vers le courriel ; aussi pour une relance notée) ; `SpecialisationCrmBtp.TypeNoteAsync` / `TypeNoteRelance`. Test
+  `RelancesBtpTests.Validation_d_un_lot_met_les_courriels_en_file_et_pose_la_note` (avec `LOGIBTP_TEST_PG` : un courriel
+  par groupe en file BASSE dans un seul lot du Mail, modèle DEVIS_2, pièces jointes et liens, bascule COURRIER, journal
+  ENVOYEE, notes RELANCE liées, `jours_envoye` à 0). Lot 5 du module Mail fermé au TODO (Q20). Points ouverts : la lettre
+  de la bascule en courrier vient au lot 7 (journal seul d'ici là) ; le Mail range le `.eml` et sa note « Courriel
+  envoyé » sur le tiers (élément du courriel), en plus de la note RELANCE des pièces ; les niveaux de la règle par défaut
+  ne désignent pas de modèle (choix par nature et niveau) ; un lot du Mail repris d'une validation à l'autre est compté
+  courriel par courriel (fin signalée trop tôt si la file part entre deux groupes).
 
 ## Lot 7 : lettres, recommandés et mise en demeure (A FAIRE)
 
