@@ -401,19 +401,19 @@ export class Application {
 
   rendreInfos() {
     const s = this.societe;
-    this.bandeau.infos(`${s ? `<span class="bandeau-societe" title="${s.principale ? texteHtml('navigation_btp.application.base_principale') : texteHtml('navigation_btp.application.base_societe', { societe: s.libelle, code: s.code })}">${iconeHtml('authentification_btp_societe')} ${echapper(s.libelle)}</span>` : ''}
+    this.bandeau.infos(`${s ? `<span class="bandeau-societe" title="${s.principale ? texteHtml('navigation_btp.application.base_principale') : texteHtml('navigation_btp.application.base_societe', { societe: s.libelle, code: s.code })}">${iconeHtml('authentification_btp_societe')} <span class="bandeau-info-texte">${echapper(s.libelle)}</span></span>` : ''}
       ${this.#etatApi()}${this.#attentes()}
-      ${this.session?.connecte ? `${this.#usurpation()}${this.#cloche()}<a href="/compte" title="${texteHtml('navigation_btp.application.mon_compte', { nom: this.session.libelle ?? this.session.code })}">${iconeHtml('authentification_btp_compte')} ${echapper(this.utilisateur())} · ${echapper(this.profil())}</a>`
-        : `<a href="/connexion">${iconeHtml('authentification_btp_compte')} ${texteHtml('authentification_btp.connexion.se_connecter')}</a>`}`);
+      ${this.session?.connecte ? `${this.#usurpation()}${this.#cloche()}<a href="/compte" title="${texteHtml('navigation_btp.application.mon_compte', { nom: this.session.libelle ?? this.session.code })}">${iconeHtml('authentification_btp_compte')} <span class="bandeau-info-texte">${echapper(this.utilisateur())} · ${echapper(this.profil())}</span></a>`
+        : `<a href="/connexion">${iconeHtml('authentification_btp_compte')} <span class="bandeau-info-texte">${texteHtml('authentification_btp.connexion.se_connecter')}</span></a>`}`);
   }
 
   /** État de l'API dans le bandeau : vert si connectée, rouge si elle ne répond plus. */
   #etatApi() {
-    if (!this.apiPerdue) return `<span class="etat-api connectee" title="${texteHtml('navigation_btp.application.api_connectee')}">${iconeHtml('navigation_btp_etat_api')} ${texteHtml('navigation_btp.application.api')}</span>`;
+    if (!this.apiPerdue) return `<span class="etat-api connectee" title="${texteHtml('navigation_btp.application.api_connectee')}">${iconeHtml('navigation_btp_etat_api')} <span class="bandeau-info-texte">${texteHtml('navigation_btp.application.api')}</span></span>`;
     const titre = pwaControle()
       ? texteHtml('navigation_btp.application.injoignable_pwa')
       : texteHtml('navigation_btp.application.injoignable');
-    return `<span class="etat-api deconnectee" title="${titre}">${iconeHtml('navigation_btp_etat_api')} ${texteHtml('navigation_btp.application.hors_ligne')}</span>`;
+    return `<span class="etat-api deconnectee" title="${titre}">${iconeHtml('navigation_btp_etat_api')} <span class="bandeau-info-texte">${texteHtml('navigation_btp.application.hors_ligne')}</span></span>`;
   }
 
   /** Envoi des documents enregistrés hors ligne (API joignable, session ouverte). */
@@ -492,7 +492,7 @@ export class Application {
     const us = this.session?.usurpation;
     if (!us) return '';
     const fin = formatHeure(us.fin);
-    return `<button type="button" class="bandeau-usurpation" data-fin-usurpation title="${texteHtml('authentification_btp.usurpation.pastille_aide', { code: this.session.code, compte: us.libelle ?? us.code, fin, motif: us.motif })}">${iconeHtml('authentification_btp_usurpation')} ${texteHtml('authentification_btp.usurpation.pastille', { code: us.code, fin })} ${iconeHtml('retirer')}</button>`;
+    return `<button type="button" class="bandeau-usurpation" data-fin-usurpation title="${texteHtml('authentification_btp.usurpation.pastille_aide', { code: this.session.code, compte: us.libelle ?? us.code, fin, motif: us.motif })}">${iconeHtml('authentification_btp_usurpation')} <span class="bandeau-info-texte">${texteHtml('authentification_btp.usurpation.pastille', { code: us.code, fin })}</span> ${iconeHtml('retirer')}</button>`;
   }
 
   /** Cloche du bandeau : notifications non lues (rouge s'il y en a d'urgentes). */

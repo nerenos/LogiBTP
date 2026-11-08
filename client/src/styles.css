@@ -270,6 +270,7 @@ dialog.dialogue-options { max-width: min(820px, calc(100vw - 32px)); }
 /* Tiroirs (métré) : sous le bandeau de navigation (28 px, modules/navigation). */
 :root { --decalage-tiroir: 28px; }
 :root:has(#bandeau.bandeau-vertical) { --decalage-tiroir: 0px; }
+:root:has(#bandeau.bandeau-telephone) { --decalage-tiroir: 36px; }
 
 /* Frais annexes : détail de la ligne et vue de l'onglet Analyse (frais-annexes-ui.js). */
 .detail-frais { margin-top: 0.6rem; border-top: 1px solid var(--bord); padding-top: 0.4rem; }

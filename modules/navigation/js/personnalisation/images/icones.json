@@ -12,5 +12,7 @@
   "navigation_restaurer": "↺",
   "navigation_fenetres": "🗗",
   "navigation_fenetre": "🗔",
-  "navigation_signaler": "🔔"
+  "navigation_signaler": "🔔",
+  "navigation_menus": "☰",
+  "navigation_bascule_menus": "⇄"
 }

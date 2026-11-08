@@ -20,7 +20,7 @@
 | 2 | Case « Terrain » d'un plan du suivi des validations | `modules/crm` | — | FAIT (08/11/2026) |
 | 3 | Plans en vigueur sur le terrain | cœur | 2 | FAIT (08/11/2026) |
 | 4 | Plans gardés hors ligne, budget à part | cœur | 3 | FAIT (08/11/2026) |
-| 5 | Bandeau adaptatif sur téléphone | `modules/navigation` | — | A FAIRE |
+| 5 | Bandeau adaptatif sur téléphone | `modules/navigation` | — | FAIT (08/11/2026) |
 | 6 | Menu simplifié du terrain et raccourci vers le menu classique | cœur | 5 | A FAIRE |
 | 7 | Pointage à la ligne d'ordre | cœur | — | A FAIRE |
 | 8 | Photos HEIC converties par l'iPhone | cœur | — | A FAIRE |
@@ -118,7 +118,7 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
   (seuls les plans cochés) ; `operations-terrain.js` non touché. Plans non cochés : gardés s'ils ont été ouverts en
   ligne, dans le même budget. Tests : `pwa.test.js`, `terrain.test.js`. Aucun script SQL.
 
-## Lot 5 : bandeau adaptatif sur téléphone (TS4 b)
+## Lot 5 : bandeau adaptatif sur téléphone (TS4 b) (FAIT 08/11/2026)
 
 - **Module** : `modules/navigation`. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `modules/navigation/js/ui/bandeau.js`, sa feuille de style, tests du module.
@@ -129,6 +129,19 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
 - **Règles répliquées** : aucune.
 - **Tests** : JS : bascule simplifié / complet ; capture à 360 px sans défilement horizontal (Playwright).
 - **Critère de fin** : `npm test` vert ; aucune page ne déborde horizontalement à 360 px à cause du bandeau.
+- **Réalisé / écarts** : règles pures dans le nouveau `modules/navigation/js/src/menus.js` (`LARGEUR_TELEPHONE`,
+  `MEDIA_TELEPHONE`, `menusAffiches`, `basculeProposee`, testées dans `navigation.test.js`). `Bandeau` : mode téléphone
+  suivi par `matchMedia` (classe `bandeau-telephone`, quelle que soit la disposition : le panneau latéral n'est jamais
+  pris sur téléphone, la préférence reste gardée), bouton ☰ « Menus » qui ouvre une feuille sous le bandeau, menus en
+  accordéon (rendu du panneau latéral réutilisé, règles CSS communes passées en `bandeau-arbre`), message masqué, bandeau
+  haut de 36 px ; options `simplifie` / `complet` / `surBascule`, méthodes `simplifier()` et `basculerMenus()`, bouton de
+  bascule « Menu classique » / « Menu simplifié » en fin de menus. Textes `navigation.bandeau.menus*`, icônes
+  `navigation_menus`, `navigation_bascule_menus`. Écart : « infos en icônes » demande au cœur de placer le texte des
+  informations dans `.bandeau-info-texte` (masqué sur téléphone, la bulle le garde) : `client/src/app/application.js`
+  (société, API, compte, usurpation) ; `client/src/styles.css` : décalage des tiroirs à 36 px sur téléphone. Ancien
+  défilement horizontal des menus sous 700 px retiré. Vérifié par Playwright (application lancée par Vite, API simulée) :
+  `/terrain` à 360 px sans défilement horizontal, feuille des menus ouverte comprise ; pas de test Playwright permanent
+  (aucun environnement DOM dans les tests du module). Aucun script SQL.
 
 ## Lot 6 : menu simplifié du terrain et raccourci vers le menu classique (TS4 a)
 

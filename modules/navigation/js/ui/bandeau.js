@@ -1,5 +1,6 @@
 import { echapper, ouvrirDialogue, EVENEMENT_NOTIFICATION, formatHeure, declarerRaccourcis, actionDe, touchesDe } from '@logibtp/socle/ui';
 import { texte, texteHtml, iconeHtml } from '@logibtp/socle/dictionnaire';
+import { MEDIA_TELEPHONE, menusAffiches, basculeProposee } from '../src/menus.js';
 
 /** Messages gardés pour l'historique du bandeau (I4). */
 const MAX_HISTORIQUE = 30;
@@ -19,6 +20,15 @@ const MAX_HISTORIQUE = 30;
 // tactile, ascenseur s'il déborde, message et informations fixés en bas ; largeur réglable par la poignée du bord intérieur,
 // masquable, masquage automatique à la sortie du survol). Les changements faits depuis le panneau (largeur, masquage)
 // sont rendus par `surDisposition(disposition)` pour être gardés.
+//
+// Téléphone (`MEDIA_TELEPHONE`, sous 700 px, classe `bandeau-telephone`) : quelle que soit la disposition, le bandeau
+// tient sur la largeur : menus derrière un bouton (feuille sous le bandeau, menus dépliés en accordéon comme le panneau
+// latéral), message masqué, informations en icônes (le texte des informations placé dans `.bandeau-info-texte` est
+// masqué, la bulle `title` le garde).
+//
+// Menus simplifiés (`simplifie` : [...] ou () => [...], liste réduite fournie par l'application ; `simplifier()` la
+// change) : affichés tant que `complet` est faux ; un bouton bascule vers les menus complets et retour
+// (`basculerMenus()`), le choix est rendu par `surBascule(complet)` pour être gardé.
 
 export const DISPOSITION_MENU = Object.freeze({ HAUT: 'haut', DROITE: 'droite', GAUCHE: 'gauche' });
 export const DISPOSITION_DEFAUT = Object.freeze({ mode: DISPOSITION_MENU.HAUT, largeur: 280, masque: false, masquageAuto: false });
@@ -64,10 +74,14 @@ const liste = (e) => (typeof e === 'function' ? e() : e) ?? [];
 
 export class Bandeau {
   /** `retour()` : retour à la page précédente (bouton ◀ après le logo), absent : pas de bouton. */
-  constructor(conteneur, { menus, naviguer, logo = '', accueil = '/', titreApplication = 'LogiBTP', retour = null, disposition = {}, surDisposition = () => {} } = {}) {
+  constructor(conteneur, { menus, naviguer, logo = '', accueil = '/', titreApplication = 'LogiBTP', retour = null, disposition = {}, surDisposition = () => {},
+    simplifie = null, complet = false, surBascule = () => {} } = {}) {
     this.racine = conteneur;
     this.menus = menus;
-    declarerMenus(menus);
+    this.simplifie = simplifie;
+    this.complet = Boolean(complet);
+    this.surBascule = surBascule;
+    declarerMenus(this.#menusDeclares());
     this.naviguer = naviguer;
     this.ouvert = null;
     // Niveaux ouverts : 0 = menu déroulant, 1 = sous-menu ; { el, elements, actif }.
@@ -81,6 +95,7 @@ export class Bandeau {
     this.racine.innerHTML = `
       <a class="bandeau-logo" href="${echapper(accueil)}" title="${texteHtml('navigation.bandeau.accueil', { application: titreApplication })}">${logo || `<span class="bandeau-logo-texte">${echapper(titreApplication)}</span>`}</a>
       ${retour ? `<button type="button" class="bandeau-retour" title="${texteHtml('navigation.bandeau.retour')}" aria-label="${texteHtml('navigation.bandeau.retour')}">${iconeHtml('precedent')}</button>` : ''}
+      <button type="button" class="bandeau-bouton-menus" aria-expanded="false" aria-haspopup="true" title="${texteHtml('navigation.bandeau.menu_principal')}">${iconeHtml('navigation_menus')} <span>${texteHtml('navigation.bandeau.menus')}</span></button>
       <span class="bandeau-outils">
         <button type="button" data-masquage-auto aria-pressed="false" title="${texteHtml('navigation.bandeau.masquage_auto')}">${iconeHtml('navigation_epingler')}</button>
         <button type="button" data-masquer title="${texteHtml('navigation.bandeau.masquer')}" aria-label="${texteHtml('navigation.bandeau.masquer')}">${iconeHtml('navigation_masquer_droite')}</button>
@@ -100,6 +115,7 @@ export class Bandeau {
       this.naviguer(accueil, { nouvelleFenetre: e.ctrlKey || e.shiftKey });
     });
     this.racine.querySelector('.bandeau-retour')?.addEventListener('click', () => retour());
+    this.racine.querySelector('.bandeau-bouton-menus').addEventListener('click', () => (this.feuilleOuverte ? this.#fermerFeuille() : this.#ouvrirFeuille()));
     // Historique des messages (I4) : ceux du bandeau et ceux de la fenêtre des messages du socle.
     this.historique = [];
     this.racine.querySelector('.bandeau-historique').addEventListener('click', () => this.afficherHistorique());
@@ -110,11 +126,12 @@ export class Bandeau {
     });
     this.#evenementsPanneau();
     this.barre.addEventListener('click', (e) => {
-      if (this.vertical) { this.#clicVertical(e); return; }
+      if (e.target.closest('[data-bascule]')) { this.basculerMenus(); return; }
+      if (this.arbre) { this.#clicVertical(e); return; }
       const b = e.target.closest('[data-menu]');
       if (b) this.ouvert === b.dataset.menu ? this.fermer() : this.ouvrir(b.dataset.menu);
     });
-    this.barre.addEventListener('auxclick', (e) => { if (this.vertical && e.button === 1) this.#clicVertical(e, true); });
+    this.barre.addEventListener('auxclick', (e) => { if (this.arbre && e.button === 1) this.#clicVertical(e, true); });
     this.barre.addEventListener('mouseover', (e) => {
       const b = e.target.closest('[data-menu]');
       if (b && this.ouvert && this.ouvert !== b.dataset.menu) this.ouvrir(b.dataset.menu);
@@ -134,6 +151,7 @@ export class Bandeau {
     this.fermetureExterieure = (e) => {
       if (this.racine.contains(e.target)) return;
       if (this.ouvert) this.fermer();
+      if (this.feuilleOuverte) this.#fermerFeuille();
       if (this.racine.classList.contains('bandeau-survol')) this.#replier();
     };
     document.addEventListener('pointerdown', this.fermetureExterieure, true);
@@ -146,11 +164,66 @@ export class Bandeau {
     }, true);
     // Bandeau trop étroit pour les libellés complets : libellés courts (`court`) des menus qui en ont.
     if (typeof ResizeObserver !== 'undefined') new ResizeObserver(() => this.ajuster()).observe(this.racine);
+    // Téléphone : suivi de la largeur de l'écran (rotation, fenêtre redimensionnée).
+    const media = globalThis.matchMedia?.(MEDIA_TELEPHONE);
+    this.telephone = Boolean(media?.matches);
+    media?.addEventListener?.('change', (e) => this.#changerTelephone(e.matches));
     this.disposer(this.disposition);
   }
 
-  /** Panneau sur toute la hauteur, à droite ou à gauche. */
-  get vertical() { return this.disposition.mode === DISPOSITION_MENU.DROITE || this.disposition.mode === DISPOSITION_MENU.GAUCHE; }
+  /** Panneau sur toute la hauteur, à droite ou à gauche (jamais sur téléphone). */
+  get vertical() { return !this.telephone && (this.disposition.mode === DISPOSITION_MENU.DROITE || this.disposition.mode === DISPOSITION_MENU.GAUCHE); }
+  /** Menus rendus en accordéon (panneau latéral ou feuille du téléphone) plutôt qu'en menus déroulants. */
+  get arbre() { return this.vertical || this.telephone; }
+  /** Menus affichés : liste simplifiée tant que les menus complets ne sont pas demandés. */
+  get affiches() { return menusAffiches(this.menus, this.simplifie, this.complet); }
+
+  /** Menus déclarés au groupe de raccourcis : complets, puis ceux de la liste simplifiée absents des complets. */
+  #menusDeclares() {
+    const complets = this.menus ?? [];
+    const codes = new Set(complets.map((m) => m.code));
+    return [...complets, ...(basculeProposee(this.simplifie) ? menusAffiches(complets, this.simplifie).filter((m) => !codes.has(m.code)) : [])];
+  }
+
+  /** Passage en mode téléphone ou retour (largeur de l'écran) : bandeau rendu de nouveau. */
+  #changerTelephone(telephone) {
+    if (telephone === this.telephone) return;
+    this.fermer();
+    this.#fermerFeuille();
+    this.telephone = telephone;
+    this.rendu = false;
+    this.disposer({});
+  }
+
+  /** Feuille des menus du téléphone, sous le bandeau. */
+  get feuilleOuverte() { return this.racine.classList.contains('bandeau-feuille-ouverte'); }
+  #ouvrirFeuille() {
+    if (!this.telephone) return;
+    this.racine.classList.add('bandeau-feuille-ouverte');
+    this.racine.querySelector('.bandeau-bouton-menus').setAttribute('aria-expanded', 'true');
+  }
+  #fermerFeuille() {
+    this.racine.classList.remove('bandeau-feuille-ouverte');
+    this.racine.querySelector('.bandeau-bouton-menus').setAttribute('aria-expanded', 'false');
+  }
+
+  /** Liste réduite des menus (null : aucune, menus complets seuls) ; `complet` donné : choix de la bascule repris. */
+  simplifier(simplifie, { complet } = {}) {
+    this.simplifie = simplifie ?? null;
+    if (complet !== undefined) this.complet = Boolean(complet);
+    this.fermer();
+    if (this.rendu) this.rendre();
+  }
+
+  /** Bascule entre menus simplifiés et complets (sans liste réduite : rien) ; choix rendu par `surBascule`. */
+  basculerMenus(complet = !this.complet) {
+    if (!basculeProposee(this.simplifie)) return;
+    this.complet = Boolean(complet);
+    this.fermer();
+    this.rendre();
+    this.barre.querySelector('[data-bascule]')?.focus({ preventScroll: true });
+    this.surBascule(this.complet);
+  }
   get aGauche() { return this.disposition.mode === DISPOSITION_MENU.GAUCHE; }
 
   /** Applique une disposition ({ mode, largeur, masque, masquageAuto }, complétée par la disposition courante). */
@@ -162,6 +235,8 @@ export class Bandeau {
     if (avant !== d.mode) this.fermer();
     const r = this.racine;
     r.classList.toggle('bandeau-vertical', this.vertical);
+    r.classList.toggle('bandeau-telephone', this.telephone);
+    r.classList.toggle('bandeau-arbre', this.arbre);
     r.classList.toggle('bandeau-gauche', this.aGauche);
     r.classList.toggle('bandeau-masque', this.vertical && d.masque && !d.masquageAuto);
     r.classList.toggle('bandeau-auto', this.vertical && d.masquageAuto);
@@ -237,16 +312,18 @@ export class Bandeau {
 
   /** Panneau masqué (à la main ou automatiquement) : affiché avant un accès au clavier. */
   #afficherPanneau() {
-    if (this.disposition.masquageAuto) this.#deplier();
+    if (this.telephone) this.#ouvrirFeuille();
+    else if (this.disposition.masquageAuto) this.#deplier();
     else if (this.disposition.masque) this.#changerDisposition({ masque: false });
   }
 
   rendre() {
     this.rendu = true;
-    declarerMenus(this.menus);
-    if (this.vertical) { this.#rendreVertical(); return; }
-    this.barre.innerHTML = this.menus.map((m) => `<button type="button" role="menuitem" aria-haspopup="true" data-menu="${echapper(m.code)}"${m.court ? ` title="${echapper(sansEsperluette(m.libelle))}"` : ''}>
-      <span class="bandeau-long">${libelleHtml(m)}</span>${m.court ? `<span class="bandeau-court">${echapper(m.court)}</span>` : ''}</button>`).join('');
+    declarerMenus(this.#menusDeclares());
+    if (this.arbre) { this.#rendreVertical(); return; }
+    this.barre.setAttribute('role', 'menubar');
+    this.barre.innerHTML = this.affiches.map((m) => `<button type="button" role="menuitem" aria-haspopup="true" data-menu="${echapper(m.code)}"${m.court ? ` title="${echapper(sansEsperluette(m.libelle))}"` : ''}>
+      <span class="bandeau-long">${libelleHtml(m)}</span>${m.court ? `<span class="bandeau-court">${echapper(m.court)}</span>` : ''}</button>`).join('') + this.#boutonBascule();
     this.#marquerOuvert();
     this.ajuster();
   }
@@ -298,7 +375,14 @@ export class Bandeau {
     });
   }
 
-  #menu(code) { return this.menus.find((m) => m.code === code); }
+  #menu(code) { return this.affiches.find((m) => m.code === code); }
+
+  /** Bouton de bascule menus simplifiés / complets (liste réduite fournie seulement). */
+  #boutonBascule() {
+    if (!basculeProposee(this.simplifie)) return '';
+    const cle = this.complet ? 'navigation.bandeau.menus_simplifies' : 'navigation.bandeau.menus_complets';
+    return `<button type="button" class="bandeau-bascule" data-bascule aria-pressed="${this.complet}" title="${texteHtml(`${cle}_titre`)}">${iconeHtml('navigation_bascule_menus')} <span class="bandeau-libelle">${texteHtml(cle)}</span></button>`;
+  }
 
   #html(elements) {
     return elements.map((x, i) => {
@@ -383,7 +467,7 @@ export class Bandeau {
 
   #focaliserBarre() {
     this.racine.classList.add('acces-clavier');
-    if (this.vertical) { this.#afficherPanneau(); this.barre.querySelector('[data-ligne]')?.focus(); return; }
+    if (this.arbre) { this.#afficherPanneau(); this.barre.querySelector('[data-ligne]')?.focus(); return; }
     this.barre.querySelector('[data-menu]')?.focus();
   }
 
@@ -394,7 +478,7 @@ export class Bandeau {
     const defilement = this.barre.scrollTop;
     this.lignes.clear();
     this.barre.setAttribute('role', 'tree');
-    this.barre.innerHTML = this.menus.map((m) => {
+    this.barre.innerHTML = this.affiches.map((m) => {
       const ouvert = this.deplies.has(m.code);
       this.lignes.set(m.code, { menu: m });
       return `<div class="bandeau-groupe${ouvert ? ' ouvert' : ''}">
@@ -402,7 +486,7 @@ export class Bandeau {
           <span class="bandeau-libelle">${libelleHtml(m)}</span><span class="bandeau-fleche">${iconeHtml(ouvert ? 'replier' : 'deplier')}</span></button>
         ${ouvert ? `<div role="group">${this.#htmlVertical(liste(m.elements), m.code, 1)}</div>` : ''}
       </div>`;
-    }).join('');
+    }).join('') + this.#boutonBascule();
     this.barre.scrollTop = defilement;
   }
 
@@ -466,13 +550,14 @@ export class Bandeau {
     if (x.action) {
       x.action({ nouvelleFenetre });
       // Coches et informations des menus construits à l'ouverture (thème…) : relues.
-      if (this.vertical) this.#rendreVertical();
+      if (this.arbre) this.#rendreVertical();
     } else if (x.url) this.naviguer(x.url, { nouvelleFenetre });
   }
 
-  /** Après un choix : le panneau à masquage automatique se replie, le focus rend la main à la page. */
+  /** Après un choix : le panneau à masquage automatique (ou la feuille du téléphone) se replie, le focus rend la main à la page. */
   #apresChoix() {
     this.racine.classList.remove('acces-clavier');
+    this.#fermerFeuille();
     if (this.barre.contains(document.activeElement)) document.activeElement.blur();
     this.#replier();
   }
@@ -532,8 +617,9 @@ export class Bandeau {
   }
 
   #menuVoisin(sens) {
-    const i = this.menus.findIndex((m) => m.code === this.ouvert);
-    this.ouvrir(this.menus[(i + sens + this.menus.length) % this.menus.length].code);
+    const menus = this.affiches;
+    const i = menus.findIndex((m) => m.code === this.ouvert);
+    this.ouvrir(menus[(i + sens + menus.length) % menus.length].code);
     this.#deplacer(1);
   }
 
@@ -568,7 +654,7 @@ export class Bandeau {
     // Fenêtre <dialog> au premier plan : le clavier lui appartient.
     if (document.activeElement?.closest?.('dialog[open]')) return;
     this.altSeul = e.key === 'Alt' && !e.ctrlKey && !e.shiftKey && !e.metaKey;
-    if (this.vertical) { this.#clavierVertical(e); return; }
+    if (this.arbre) { this.#clavierVertical(e); return; }
     if (e.altKey && !e.ctrlKey && e.key !== 'Alt') {
       if (e.key === 'Home') { e.preventDefault(); this.naviguer('/', { nouvelleFenetre: false }); return; }
       const m = this.#menuDe(e);
@@ -585,7 +671,7 @@ export class Bandeau {
       else if (e.key === 'Escape') { e.preventDefault(); document.activeElement.blur(); this.racine.classList.remove('acces-clavier'); }
       else {
         // Barre active (Alt seul) : la lettre soulignée seule ouvre son menu.
-        const m = this.menus.find((x) => lettreAcces(x) === e.key.toLowerCase());
+        const m = this.affiches.find((x) => lettreAcces(x) === e.key.toLowerCase());
         if (m) { e.preventDefault(); this.ouvrir(m.code); this.#deplacer(1); }
       }
       return;
@@ -615,7 +701,7 @@ export class Bandeau {
   /** Menu ouvert par un raccourci du groupe menus (Alt + lettre par défaut). */
   #menuDe(e) {
     const code = actionDe(e, GROUPE_MENUS);
-    return code ? this.menus.find((m) => m.code === code) ?? null : null;
+    return code ? this.affiches.find((m) => m.code === code) ?? null : null;
   }
 
   /** Libellé sans lettre d'accès (titres, listes de raccourcis). */

@@ -16,7 +16,12 @@
       "nouvelle_fenetre": "Ouvrir dans une nouvelle fenêtre (Ctrl+clic)",
       "vide": "(vide)",
       "historique": "Derniers messages",
-      "historique_vide": "Aucun message."
+      "historique_vide": "Aucun message.",
+      "menus": "Menus",
+      "menus_complets": "Menu classique",
+      "menus_complets_titre": "Afficher tous les menus de l’application",
+      "menus_simplifies": "Menu simplifié",
+      "menus_simplifies_titre": "Revenir au menu simplifié"
     },
     "accueil": {
       "actualiser_titre": "Actualiser les widgets",
