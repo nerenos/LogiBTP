@@ -28,11 +28,11 @@ public class SpecialisationPlanningBtp(IHttpContextAccessor http) : Specialisati
     public override Task<List<RessourcePlanning>> RessourcesAsync(PlanningDbContext db, FiltreRessources f, CancellationToken ct)
     {
         var types = f.Types is { Count: > 0 } ? f.Types.ToArray() : ReglesAffectations.Types;
-        return db.Database.SqlQueryRaw<RessourcePlanning>("""
+        return db.Database.SqlQueryRaw<RessourcePlanning>($$"""
             SELECT r.type, r.id, r.libelle, r.srv_id, sv.srv_libelle AS service, r.capacite, r.quantite
             FROM v_ressource r LEFT JOIN service sv ON sv.srv_id = r.srv_id
             WHERE r.type <> 'EQUIPE' AND (r.actif OR r.type = 'MATERIEL')
-              AND (@cles IS NULL AND r.type = ANY(@types) AND (@srv IS NULL OR r.srv_id = ANY(@srv) OR r.srv_parent_id = ANY(@srv))
+              AND (@cles IS NULL AND r.type = ANY(@types) AND {{SqlBtp.RessourceUtilisable}} AND (@srv IS NULL OR r.srv_id = ANY(@srv) OR r.srv_parent_id = ANY(@srv))
                    AND (@q IS NULL OR r.libelle ILIKE @q)
                    OR r.type || ':' || r.id = ANY(@cles))
             ORDER BY r.libelle

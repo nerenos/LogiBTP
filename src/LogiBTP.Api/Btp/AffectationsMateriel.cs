@@ -35,10 +35,10 @@ public static class AffectationsMateriel
         """;
 
     /// <summary>Ressources proposées : salariés et intérimaires actifs, sous-traitants actifs, matériels en service.</summary>
-    private const string SqlCibles = """
+    private const string SqlCibles = $$"""
         SELECT coalesce(json_agg(json_build_object('type', x.type, 'id', x.id, 'libelle', x.libelle) ORDER BY x.type, x.libelle), '[]') AS "Value"
         FROM (SELECT r.type, r.id, r.libelle || CASE WHEN r.type IN ('SALARIE', 'INTERIM') THEN coalesce(' (' || r.code || ')', '') ELSE '' END AS libelle
-              FROM v_ressource r WHERE r.actif AND r.type <> 'EQUIPE') x
+              FROM v_ressource r WHERE r.actif AND r.type <> 'EQUIPE' AND {{SqlBtp.RessourceUtilisable}}) x
         """;
 
     /// <summary>

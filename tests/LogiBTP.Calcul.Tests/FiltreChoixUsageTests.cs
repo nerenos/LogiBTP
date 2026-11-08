@@ -31,6 +31,28 @@ public class FiltreChoixUsageTests
     }
 
     [Fact]
+    public void Ressources_a_N_ecartees_des_choix_de_nouvelle_affectation_et_pas_celles_en_sommeil()
+    {
+        var f = SqlBtp.RessourceUtilisable;
+        Assert.Contains("sal_usage = 'N'", f);
+        Assert.Contains("mat_usage = 'N'", f);
+        Assert.Contains("per_usage = 'N'", f);
+        Assert.DoesNotContain("'S'", f);
+        var src = File.ReadAllText(Path.Combine(Racine(), "src/LogiBTP.Api/Btp/SpecialisationPlanningBtp.cs")) + File.ReadAllText(Path.Combine(Racine(), "src/LogiBTP.Api/Btp/AffectationsMateriel.cs"));
+        Assert.Equal(2, src.Split("SqlBtp.RessourceUtilisable").Length - 1);
+        // Pointage, magasin : seuls les choix sans identifiant explicite écartent les N (valeur posée toujours lisible).
+        Assert.Contains("@ids IS NULL AND s.sal_actif AND s.sal_usage <> 'N'", File.ReadAllText(Path.Combine(Racine(), "src/LogiBTP.Api/Btp/SpecialisationPointageBtp.cs")));
+        Assert.Contains("{id}::int IS NULL AND s.sal_actif AND s.sal_usage <> 'N') OR s.sal_id = {id}", File.ReadAllText(Path.Combine(Racine(), "src/LogiBTP.Api/Btp/MagasinBtp.cs")));
+    }
+
+    private static string Racine()
+    {
+        var d = new DirectoryInfo(AppContext.BaseDirectory);
+        while (d is not null && !File.Exists(Path.Combine(d.FullName, "LogiBTP.slnx"))) d = d.Parent;
+        return d!.FullName;
+    }
+
+    [Fact]
     public void Elements_a_N_ecartes_des_recherches_et_pas_ceux_en_sommeil()
     {
         var options = new DbContextOptionsBuilder<BibliothequeDbContext>().UseNpgsql("Host=localhost;Database=x").Options;

@@ -291,7 +291,7 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
 
 ### Demandes du 25/10/2026, suites des lots réalisés
 
-- [ ] « Ne plus utiliser » (db/228) : (annuaire et bibliothèque faits, plan ne-plus-utiliser-tva lot 3 ; reste planning, pointage, magasin) écarter ces fiches des choix de nouvelle saisie (recherche des tiers de l'annuaire, appel de la bibliothèque, ressources du planning, salariés du pointage et du magasin) : point d'accroche à prévoir dans les modules Annuaire et Bibliothèque (colonne du cœur).
+- [x] « Ne plus utiliser » (db/228) : fiches à N écartées des choix de nouvelle saisie (annuaire, bibliothèque, planning, pointage, magasin ; plan ne-plus-utiliser-tva lots 1 à 4).
 - [ ] Fournisseur « TVA intracommunautaire » (db/229) : proposer la catégorie de TVA autoliquidée (module Comptabilité) sur les lignes de ses pièces d'achat ; type de tiers FE à reprendre par le futur module Facturation électronique.
 - [ ] Sécurité de la base (lot 11 réalisé) : `MettreAJour-LogiBTP.ps1` pourrait relancer la préparation et redémarrer la base quand la connexion n'est pas chiffrée (aujourd'hui : relancer l'installeur) ; renouvellement du certificat de la base dans la tâche planifiée (aujourd'hui : à chaque préparation, 60 jours avant l'échéance ; certificat de 730 jours).
 - [ ] Restaurants (lot 10 réalisé) : repas dans la saisie d'équipe de la borne (aujourd'hui : chacun pour soi), liste des repas d'une période (contrôle RH, notes de frais) et carte des restaurants.

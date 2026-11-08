@@ -13,6 +13,16 @@ public static class SqlBtp
     /// <summary>Statuts d'une pièce hors vigueur, pour <c>std_code NOT IN (…)</c> : annulée, remplacée par un indice.</summary>
     public const string HorsVigueur = $"'{StatutsDocument.Annule}', '{StatutsDocument.Remplace}'";
 
+    /// <summary>
+    /// Condition des choix de nouvelle saisie sur la vue <c>v_ressource</c> (alias <c>r</c>) : écarte salariés, matériels et
+    /// sous-traitants « ne plus utiliser » (usage N, db/228) ; ceux en sommeil (S) restent proposés, l'historique reste lisible.
+    /// </summary>
+    public const string RessourceUtilisable = """
+        NOT EXISTS (SELECT 1 FROM salarie u WHERE r.type IN ('SALARIE', 'INTERIM') AND u.sal_id::text = r.id AND u.sal_usage = 'N')
+        AND NOT EXISTS (SELECT 1 FROM materiel u WHERE r.type = 'MATERIEL' AND u.mat_id::text = r.id AND u.mat_usage = 'N')
+        AND NOT EXISTS (SELECT 1 FROM personne u WHERE r.type = 'SOUS_TRAITANT' AND u.per_id::text = r.id AND u.per_usage = 'N')
+        """;
+
     /// <summary>Statuts d'une pièce close : hors vigueur ou soldée.</summary>
     public const string HorsVigueurOuSolde = $"{HorsVigueur}, '{StatutsDocument.Solde}'";
 
