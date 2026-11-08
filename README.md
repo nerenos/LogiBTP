@@ -10,6 +10,8 @@ mdp : visitlogibtp2026
 > ⚠️ **État du projet : Version Alpha (Test)**
 > Ce projet est actuellement en phase d'alpha et mis à disposition à des fins de test. L'application est en évolution constante et nous souhaitons activement recevoir vos avis, signalements de bugs et suggestions pour son amélioration. N'hésitez pas à nous faire part de vos retours !
 
+Documentation développeur simplifié sur [https://logibtp.vercel.app/documentation/](https://logibtp.vercel.app/documentation/)
+
 ## Présentation
 
 LogiBTP est une application web modulaire de gestion d'entreprise (ERP) taillée pour les professionnels du Bâtiment et des Travaux Publics (BTP). Conçue pour être robuste, rapide, utilisable partout (y compris sans connexion réseau) et tout support (Windows, Linux, Mac, Android et IOS pour les clients et Windows/Linux pour la partie serveur), elle couvre l'intégralité du cycle de vie d'un chantier, du devis initial jusqu'à la facturation, la comptabilité et l'analyse de rentabilité.
