@@ -6,6 +6,7 @@ import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, confirmer, saisir, formatDateHeure } from '@logibtp/socle/ui';
 import { api, ErreurApi } from '../api.js';
 import { zoneRiche } from '../crm/crm.js';
+import { choisirDestinataires, ajouterDestinataires } from '../annuaire/choix.js';
 import { pastilleCompteMail } from './parametres-mail.js';
 
 // Libellés par code (module Personnalisation) ; classe de la pastille par état.
@@ -56,7 +57,7 @@ export class PageRedactionMail extends PageBase {
     const b = this.brouillon;
     const el = b.element;
     if (el) this.titre = texte('mail_btp.redaction.titre', { libelle: el.libelle });
-    const champ = (role, libelle) => `<tr><th>${libelle}</th><td><textarea data-role="${role}" rows="1" cols="70" placeholder="${texteHtml('mail_btp.redaction.adresses_aide')}"></textarea></td></tr>`;
+    const champ = (role, libelle) => `<tr><th>${libelle}</th><td><textarea data-role="${role}" rows="1" cols="70" placeholder="${texteHtml('mail_btp.redaction.adresses_aide')}"></textarea>${role === 'a' ? ` <button type="button" class="bouton-icone" data-choisir-contacts title="${texteHtml('mail_btp.redaction.choisir_contacts')}">${iconeHtml('rechercher')}</button>` : ''}</td></tr>`;
     this.conteneur.innerHTML = `<div class="page-parametres page-mail">
       <div class="entete-page"><h1 class="page-titre">${iconeHtml('mail_btp_courriel')} ${echapper(this.titre)}</h1>
         <span><button type="button" class="principal" data-envoyer title="${texteHtml('mail_btp.redaction.envoyer_titre')}">${iconeHtml('mail_btp_envoyer')} ${texteHtml('mail_btp.redaction.envoyer')}</button>
@@ -88,6 +89,13 @@ export class PageRedactionMail extends PageBase {
       this.change = true;
       this.estimer();
     }));
+    this.conteneur.querySelector('[data-choisir-contacts]').addEventListener('click', async () => {
+      const choisis = await choisirDestinataires();
+      if (!choisis.length) return;
+      a.value = ajouterDestinataires(a.value, choisis);
+      this.change = true;
+      this.estimer();
+    });
     this.conteneur.querySelectorAll('textarea, input').forEach((x) => x.addEventListener('change', () => { this.change = true; this.majTaille(); this.estimer(); }));
     expediteur.addEventListener('change', () => this.estimer());
     this.conteneur.querySelector('[data-lien]')?.addEventListener('click', (e) => { e.preventDefault(); this.app.naviguer(b.element.url, { nouvelleFenetre: true }); });

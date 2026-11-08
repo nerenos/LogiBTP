@@ -36,7 +36,7 @@
 
 | Point | Recommandation | Statut |
 |---|---|---|
-| Destinataires visés par la sélection multiple (lot 8) : envoi de courriel d'une pièce, diffusion GED, autres ? | Commencer par les destinataires de l'envoi de courriel d'une pièce ; les autres écrans suivent le même appel. | OUVERT |
+| Destinataires visés par la sélection multiple (lot 8) : envoi de courriel d'une pièce, diffusion GED, autres ? | Commencer par les destinataires de l'envoi de courriel d'une pièce ; les autres écrans suivent le même appel. | TRANCHE : envoi de courriel d une pièce |
 | Noms de couleur des teintes (P1) : quelle correspondance code → couleur ? | Dérivée des variables du thème courant (`--pastille-<code>-*`) : nom de couleur lu dans le dictionnaire de textes, aperçu par la variable ; pas de couleur en dur. | OUVERT |
 
 | Lot | Titre | Module | Dépend de | Statut |
@@ -48,7 +48,7 @@
 | 5 | P1 : nom et aperçu de la couleur dans le choix de teinte | `modules/liste` | — | FAIT (08/11/2026) |
 | 6 | I1 : individus de notre société par poste en choix en liste | cœur | — | FAIT (08/11/2026) |
 | 7 | I1 : contact d'un intervenant dans les contacts du tiers | cœur | 6 | A FAIRE |
-| 8 | I1 : sélection multiple des destinataires | cœur | 6 | A FAIRE |
+| 8 | I1 : sélection multiple des destinataires | cœur | 6 | FAIT (08/11/2026) |
 
 ---
 
@@ -147,7 +147,7 @@
 - **Critère de fin** : `npm test` vert.
 - **Écart** : la vue des contacts n'a pas de colonne de tiers filtrable (« Rattaché à » est un texte) ; le filtre est la recherche initiale sur le nom du tiers, plus `accepter` qui refuse tout contact non rattaché au tiers. Contexte `choix:contact_tiers` = `cleVue` `logibtp.choix.contact_tiers`. Le `<select>` du contact devient un champ en lecture seule avec boutons de liste et de retrait.
 
-## Lot 8 : I1, sélection multiple des destinataires (A FAIRE)
+## Lot 8 : I1, sélection multiple des destinataires (FAIT 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : écran des destinataires retenu au point ouvert (graphify « destinataires envoi courriel »), appel de
@@ -156,3 +156,5 @@
 - **Règles répliquées JS / C#** : aucune.
 - **Jeux de tests** : sélection de trois contacts → trois destinataires ; Échap → aucun changement.
 - **Critère de fin** : `npm test` vert.
+
+Écarts lot 8 (08/11/2026) : écran retenu = rédaction du courriel (`client/src/app/pages/mail.js`, bouton à côté du champ À) ; `choisirDestinataires` et `ajouterDestinataires` dans `client/src/app/annuaire/choix.js` ; test `client/test/choix-destinataires.test.js`. Diffusion GED non traitée.

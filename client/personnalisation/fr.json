@@ -1679,6 +1679,7 @@
       "preparation": "Préparation…",
       "titre": "Courriel : {{libelle}}",
       "adresses_aide": "Nom <adresse@domaine.fr>, …",
+      "choisir_contacts": "Choisir des contacts de l'annuaire (plusieurs possibles)",
       "envoyer_titre": "Mettre le courriel dans la file d'envoi",
       "envoyer": "Envoyer",
       "depuis": "Depuis",
@@ -7602,7 +7603,9 @@
       "nouvel_individu": "Nouvel individu",
       "individu_societe": "Choisir un individu de notre société",
       "rechercher_individu": "Rechercher un individu…",
-      "poste": "Poste : {{poste}}"
+      "poste": "Poste : {{poste}}",
+      "destinataires": "Choisir les destinataires du courriel",
+      "sans_courriel": "Ce contact n'a pas d'adresse de courriel : choisissez-en un autre"
     }
   },
   "bibliotheque_btp": {

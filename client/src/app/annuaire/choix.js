@@ -78,6 +78,31 @@ export async function choisirContactTiers({ tiers = '', idsContacts = [], titre 
   return { ...r, id: Number(r._id) };
 }
 
+/**
+ * Destinataires d'un courriel choisis en une fois dans la liste des contacts (sélection multiple, Ctrl / Maj + clic) :
+ * tableau de { id, nom, adresse } (contacts sans adresse de courriel refusés) ; Échap ou rien de choisi : tableau vide.
+ */
+export async function choisirDestinataires({ titre = texte('annuaire_btp.choix.destinataires'), exclure = [] } = {}) {
+  const exclus = new Set(exclure.map(Number));
+  const r = await choisirDansListe({
+    fournisseur: creerFournisseurListe(), theme: THEME_CONTACTS, vue: VUES_CHOIX.contacts, cleVue: 'logibtp.choix.destinataires', titre, multiple: true,
+    accepter: (l) => {
+      if (exclus.has(Number(l._id))) return texte('annuaire_btp.choix.contact_deja');
+      return String(l.email ?? '').trim() ? null : texte('annuaire_btp.choix.sans_courriel');
+    },
+  });
+  if (!Array.isArray(r)) return [];
+  return r.map((l) => ({ id: Number(l._id), nom: l.nom_complet ?? null, adresse: String(l.email ?? '').trim() })).filter((d) => d.adresse);
+}
+
+/** Ajoute des destinataires choisis ({ nom, adresse }) à la zone d'adresses, sans doublon d'adresse. */
+export function ajouterDestinataires(valeur, choisis) {
+  const presentes = new Set((valeur.match(/[^\s,;<>"]+@[^\s,;<>"]+/g) ?? []).map((x) => x.toLowerCase()));
+  const nouveaux = choisis.filter((d) => !presentes.has(d.adresse.toLowerCase()) && presentes.add(d.adresse.toLowerCase()))
+    .map((d) => (d.nom ? `${d.nom} <${d.adresse}>` : d.adresse));
+  return [valeur.trim(), ...nouveaux].filter(Boolean).join(', ');
+}
+
 /** Rôles de l'annuaire proposés par défaut pour un poste (rédacteur ou poste inconnu : aucun filtre, tous les individus de la société). */
 export function rolesPoste(poste) {
   return ROLES.some((r) => r.code === poste) ? [poste] : [];
