@@ -42,7 +42,7 @@
 | 2 | Point d'accroche `FiltreChoix` de la bibliothèque | `modules/bibliotheque` | — | FAIT |
 | 3 | Spécialisation des deux filtres par le cœur (usage N écarté) | cœur | 1, 2 | FAIT |
 | 4 | « Ne plus utiliser » dans le planning, le pointage et le magasin | cœur | 3 | FAIT |
-| 5 | TVA autoliquidée par défaut sur les lignes d'achat | cœur | — | A FAIRE |
+| 5 | TVA autoliquidée par défaut sur les lignes d'achat | cœur | — | FAIT |
 | 6 | Avertissement de TVA à la validation d'une pièce d'achat | cœur | 5 | A FAIRE |
 | 7 | Zone de déplacement du projet recopiée dans le chantier | cœur | — | A FAIRE |
 
@@ -98,7 +98,7 @@
   magasin ; historique conservé.
 - **Critère de fin** : `dotnet test LogiBTP.slnx` et `npm test` verts.
 
-## Lot 5 : TVA autoliquidée par défaut sur les lignes d'achat (A FAIRE)
+## Lot 5 : TVA autoliquidée par défaut sur les lignes d'achat (FAIT 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : création de ligne des pièces d'achat dans le cœur (page document, graphify « catégorie TVA ligne
@@ -136,3 +136,4 @@
 > Lot 2 FAIT le 08/11/2026 : accroche `FiltreChoix(IQueryable<Element>)` (protégée virtuelle, appliquée à la seule requête de `Rechercher`) dans `ServiceBibliotheque`, option `filtreChoix(element)` du `FournisseurBibliothequeMemoire`. Écart : le cœur spécialise une requête LINQ (pas une condition SQL) ; le projet de tests référence `LogiBTP.Bibliotheque.Web`.
 > Lot 3 FAIT le 08/11/2026 : `ServiceAnnuaireBtp` (`per_usage`/`ind_usage` <> N par sous-requête) et `ServiceBibliothequeBtp` (`ele_usage` lu par `Database.SqlQuery`, colonne hors entité), enregistrés dans `Program.cs` ; tests `tests/LogiBTP.Calcul.Tests/FiltreChoixUsageTests.cs`. Écart : aucun changement client (les fournisseurs API et l'appel F3 passent par le serveur filtré) ; les classes ne sont pas `sealed` (dérivées par le test).
 > Lot 4 FAIT le 08/11/2026 : `SqlBtp.RessourceUtilisable` (N écartés de `v_ressource` : salarié, matériel, sous-traitant) dans les ressources du planning et les cibles d'affectation de matériel ; `sal_usage <> 'N'` dans les salariés du pointage et du magasin (listes sans identifiant seulement, valeur posée lisible) et dans les ressources d'ordre (`ExecutionBtp`). Écart : test par contrôle des fragments SQL (pas de base).
+> Lot 5 FAIT le 08/11/2026 : `tvaAutoliqueeParDefaut` (`client/src/app/comptes.js`), `ReglesBtp.tauxParDefaut` (après le taux du titre et celui du document), `EditeurDevisBtp.tvaAutoliqueeDefaut` ; l'indicateur `TVA_INTRACOM` s'ajoute à `GET /api/comptabilite/tiers/{id}/comptes-lignes` (`ComptabiliteBtp.cs`). Écart : Comptabilité n'est pas un module facultatif (`MODULE_FACULTATIF`), activité = règle de ventilation lue ; seul le fournisseur (pas le sous-traitant) est visé ; test `client/test/tva-autoliquidee-achat.test.js`.

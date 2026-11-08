@@ -86,17 +86,19 @@ public sealed partial class SpecialisationComptabiliteBtp : SpecialisationCompta
 
     public override string? TypeHerite(string typeCompte) => typeCompte == "SOUS_TRAITANT" ? "FOURNISSEUR" : null;
 
-    private sealed record ComptesLignesSql(string? Client, string? Fournisseur, string? SousTraitant);
+    private sealed record ComptesLignesSql(string? Client, string? Fournisseur, string? SousTraitant, bool TvaIntracom);
 
-    /// <summary>Compte de produit (client), de charge (fournisseur) et de sous-traitance (sinon celui du fournisseur), db/247.</summary>
+    /// <summary>Compte de produit (client), de charge (fournisseur) et de sous-traitance (sinon celui du fournisseur), db/247 ; TVA_INTRACOM = « 1 » pour un fournisseur de l'Union européenne (TVA autoliquidée par défaut sur ses lignes).</summary>
     public override async Task<Dictionary<string, string?>> ComptesLignesTiersAsync(ComptabiliteDbContext db, long tiers, CancellationToken ct)
     {
         var c = await db.Database.SqlQuery<ComptesLignesSql>($"""
             SELECT per_cli_compte_produit AS client, per_fou_compte_charge AS fournisseur,
-                   coalesce(per_st_compte_charge, per_fou_compte_charge) AS sous_traitant
+                   coalesce(per_st_compte_charge, per_fou_compte_charge) AS sous_traitant,
+                   coalesce(per_fou_tva_intracom, FALSE) AS tva_intracom
             FROM personne WHERE per_id = {tiers}
             """).FirstOrDefaultAsync(ct);
-        return new() { ["CLIENT"] = c?.Client, ["FOURNISSEUR"] = c?.Fournisseur, ["SOUS_TRAITANT"] = c?.SousTraitant };
+        return new() { ["CLIENT"] = c?.Client, ["FOURNISSEUR"] = c?.Fournisseur, ["SOUS_TRAITANT"] = c?.SousTraitant,
+            ["TVA_INTRACOM"] = c is { TvaIntracom: true } ? "1" : null };
     }
 
     /// <summary>Un compte de sous-traitant égal à son compte fournisseur n'est pas gardé (il en hérite).</summary>

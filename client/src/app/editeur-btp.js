@@ -7,7 +7,7 @@ import { estFamilleAchat } from '@logibtp/document';
 import { DictionnaireMetre } from '@logibtp/metre/ui';
 import { calculerDocument, TL, estChiffree, natureObligatoire } from '../calcul/index.js';
 import { FONCTIONS_BTP } from '../calcul/fonctions-btp.js';
-import { compteLigne, libelleCompte, relationTiers } from './comptes.js';
+import { compteLigne, libelleCompte, relationTiers, tvaAutoliqueeParDefaut } from './comptes.js';
 import { fraisRecus, bilanTranche } from './frais-annexes.js';
 import { unitesArticle, conversionUnite } from './bibliotheque/appel.js';
 
@@ -17,6 +17,16 @@ import { unitesArticle, conversionUnite } from './bibliotheque/appel.js';
 
 /** Règles BTP : coefficients hérités de l'ouvrage, exclusivité des blocages de prix, quantité saisie. */
 export class ReglesBtp extends ReglesDocument {
+  /** Fournie par l'éditeur : taux autoliqué des pièces d'achat d'un fournisseur intracommunautaire (null : aucun). */
+  tvaAutoliquee = () => null;
+
+  /** Titre puis taux du document d'abord (choix explicites), sinon taux autoliqué du fournisseur intracommunautaire. */
+  tauxParDefaut(lignes, id, tauxTva, document = null) {
+    const explicite = ancetres(C, lignes, id).find((t) => t.lig_tyl_id === TL.TITRE && t.lig_tva_id)?.lig_tva_id
+      ?? (document?.ent_tva_id && tauxTva?.some((t) => t.ttv_id === document.ent_tva_id) ? document.ent_tva_id : null);
+    return explicite ?? this.tvaAutoliquee() ?? super.tauxParDefaut(lignes, id, tauxTva, document);
+  }
+
   get champsHeritesOuvrage() { return ['lig_coef_fg', 'lig_coef_benef', ...super.champsHeritesOuvrage]; }
 
   /** Le prorata reste sur les lignes vendues : une ligne entrée dans un ouvrage (et son contenu) repasse à 1. */
@@ -178,7 +188,21 @@ export class EditeurDevisBtp extends EditeurDocument {
     this.ouvrirMetreExterne = ouvrirMetre;
   }
 
-  creerRegles() { return new ReglesBtp(); }
+  creerRegles() {
+    const regles = new ReglesBtp();
+    regles.tvaAutoliquee = () => this.tvaAutoliqueeDefaut();
+    return regles;
+  }
+
+  /** Taux autoliqué par défaut des nouvelles lignes (fournisseur intracommunautaire, Comptabilité active) ou null. */
+  tvaAutoliqueeDefaut() {
+    this.compteTiersDocument();
+    const id = Number(this.saisie?.document?.ent_tiers_id) || null;
+    return tvaAutoliqueeParDefaut({
+      famille: this.definition?.type?.tyd_famille ?? 'V', comptabiliteActive: !!this.regleVentilation,
+      tvaIntracom: !!id && this.comptesTiers?.get(id)?.TVA_INTRACOM === '1', tauxTva: this.definition?.taux_tva ?? [],
+    });
+  }
   creerPressePapiers() { return new PressePapiersBtp(); }
   calculer(entree) { return calculerDocument(entree); }
 
