@@ -289,7 +289,9 @@
 | Type | Dépendance | Version | Licence | Usage |
 |---|---|---|---|---|
 | npm | vitest | 3.2.7 | MIT | développement (modules/relance/js) |
+| NuGet | EFCore.NamingConventions | 10.0.1 | Apache-2.0 | LogiBTP.Relances.Tests |
 | NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Relances.Tests |
+| NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Relances.Web |
 | NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Relances.Tests |
 | NuGet | xunit.runner.visualstudio | 3.1.4 | Apache-2.0 | LogiBTP.Relances.Tests |
 
@@ -302,6 +304,16 @@
 | NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Rentabilite.Web |
 | NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Rentabilite.Tests |
 | NuGet | xunit.runner.visualstudio | 3.1.4 | Apache-2.0 | LogiBTP.Rentabilite.Tests |
+
+## modules/sav
+
+| Type | Dépendance | Version | Licence | Usage |
+|---|---|---|---|---|
+| npm | vitest | 3.2.7 | MIT | développement (modules/sav/js) |
+| NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Sav.Tests |
+| NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Sav.Web |
+| NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Sav.Tests |
+| NuGet | xunit.runner.visualstudio | 3.1.4 | Apache-2.0 | LogiBTP.Sav.Tests |
 
 ## modules/sous-traitance
 

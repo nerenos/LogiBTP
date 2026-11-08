@@ -59,6 +59,7 @@
   </Folder>
   <Folder Name="/modules/relance/">
     <Project Path="modules/relance/dotnet/LogiBTP.Relances/LogiBTP.Relances.csproj" />
+    <Project Path="modules/relance/dotnet/LogiBTP.Relances.Web/LogiBTP.Relances.Web.csproj" />
     <Project Path="modules/relance/dotnet/LogiBTP.Relances.Tests/LogiBTP.Relances.Tests.csproj" />
   </Folder>
   <Folder Name="/modules/crm/">

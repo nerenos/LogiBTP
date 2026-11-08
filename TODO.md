@@ -123,7 +123,9 @@ global). Lots à venir :
 - [ ] Relances des devis et des factures : plan [relances.md](plans/relances.md) (neuf lots, décisions du 08/11/2026 dans
   [relances-questions.md](plans/relances-questions.md) ; analyse [ANALYSE-RELANCES.md](documentation/conception/ANALYSE-RELANCES.md) ;
   comprend le lot 5 du module Mail et C27 du CRM). Lot 1 fait (08/11/2026 : module `modules/relance`, règle des niveaux
-  et calcul des relances dues `regles.js` ↔ `ReglesRelance.cs`) ; suivant : lot 2 (schéma, journal, suspensions, service).
+  et calcul des relances dues `regles.js` ↔ `ReglesRelance.cs`) ; lot 2 fait (08/11/2026 : `modules/relance/db/099t`,
+  `LogiBTP.Relances.Web` : lots préparés et validés, journal, suspensions, routes `/api/relances…` non encore branchées) ;
+  suivant : lot 3 (écrans du module).
 
 ### Comptabilité
 

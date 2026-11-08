@@ -12,6 +12,8 @@ public class CodesTests
     [InlineData("NATURE_RELANCE", typeof(NatureRelance))]
     [InlineData("MODE_RELANCE", typeof(ModeRelance))]
     [InlineData("ETAT_RELANCE", typeof(EtatRelance))]
+    [InlineData("ETAT_LOT_RELANCE", typeof(EtatLotRelance))]
+    [InlineData("MOTIF_SUSPENSION", typeof(MotifSuspension))]
     [InlineData("ERREUR_RELANCE", typeof(ErreurRelance))]
     public void Parite_avec_le_js(string nom, Type type) => Assert.Empty(Constantes.Ecarts(Fichier, nom, type));
 

@@ -14,7 +14,7 @@
 | Lot | Titre | Module | Dépend de | Statut |
 |---|---|---|---|---|
 | 1 | Règle des niveaux et calcul des relances dues | `modules/relance` (nouveau) | — | FAIT (08/11/2026) |
-| 2 | Schéma, journal, suspensions et service du module | `modules/relance` | 1 | A FAIRE |
+| 2 | Schéma, journal, suspensions et service du module | `modules/relance` | 1 | FAIT (08/11/2026) |
 | 3 | Écrans du module : liste de travail, règle, suspensions | `modules/relance` | 2 | A FAIRE |
 | 4 | Branchement du cœur : pièces en attente, rôle, droits, portée | cœur | 2, 3 | A FAIRE |
 | 5 | Surcharge par tiers sur la fiche personne | cœur | 4 | A FAIRE |
@@ -53,7 +53,7 @@
   et nature, Q11) ; une retenue de garantie porte sa date de libération comme date d'échéance ; règle propre d'une pièce
   (surcharge du tiers, lot 5) prise avant celle de sa nature.
 
-## Lot 2 : schéma, journal, suspensions et service du module (A FAIRE)
+## Lot 2 : schéma, journal, suspensions et service du module (FAIT (08/11/2026))
 
 - **Module** : `modules/relance`. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `modules/relance/db/099t_relance.sql` (numéro à confirmer à l'écriture ; rejouable) : `relance_regle`
@@ -69,6 +69,17 @@
 - **Jeux** : tests du service sur une spécialisation de test (préparation, validation partielle, suspension, journal
   qui fait avancer le niveau).
 - **Critère de fin** : script rejoué deux fois sans erreur ; `dotnet test LogiBTP.slnx` vert.
+- **Réalisé** (08/11/2026) : `modules/relance/db/099t_relance.sql` (rejouable, rejoué deux fois sur PostgreSQL 16 ;
+  manifeste après `099r`) : `relance_regle` (clé : nature, niveaux en JSONB, règle par défaut), `relance_lot`,
+  `relance` (pièce `rel_ent_id` et groupe d'indices `rel_ent_groupe_id`, groupe d'envoi `rel_groupe` dans le lot,
+  courriel `rel_courriel_id` au lieu du texte du message), `relance_suspension` (motif LITIGE, PROMESSE, ECHELONNEMENT,
+  AUTRE) ; codes `ETAT_LOT_RELANCE`, `MOTIF_SUSPENSION` et erreurs du service (parité) ; `LogiBTP.Relances.Web`
+  (`SpecialisationRelance` : `PiecesEnAttenteAsync`, `RegleDuTiersAsync` en lot de tiers avec « ne pas relancer » et
+  mode préféré, `PorteeAsync`, `EnvoyerAsync` → `EnvoyerCourrielAsync` / `EnvoyerCourrierAsync` /
+  `EnvoyerRecommandeAsync` / `CreerTacheAsync`, `ApresEnvoiAsync`, `Seuil` ; `ServiceRelance` ; `Extensions` :
+  `AddModuleRelance<T>`, `MapModuleRelance`) ; en plus du plan : relance notée (`POST /relances/notees`, Q22 b, service
+  pour le bouton du lot 8). Validation : un envoi en échec laisse son groupe proposé ; relances non retenues proposées
+  (lot PARTIEL) ; lot clos (ENVOYE) quand plus rien n'est proposé. Tests `ServiceRelanceTests` (7, avec `LOGIBTP_TEST_PG`).
 
 ## Lot 3 : écrans du module, liste de travail, règle, suspensions (A FAIRE)
 
