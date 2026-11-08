@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   normaliser, compilerFormule, resolveurColonnes, ModeleVue, FournisseurMemoire, correspond, calculerLargeurs, valeursDistinctes, bornesPeriode, resoudrePeriodes,
-  filtreVuePeriode, libellePeriode, TEINTES_PASTILLE, resoudrePeriodes, PERIODE, OPERATEURS_DATE,
+  filtreVuePeriode, libellePeriode, TEINTES_PASTILLE, PERIODE, OPERATEURS_DATE,
 } from '../src/index.js';
 
 const dossier = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../tests/cas');

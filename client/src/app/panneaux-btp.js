@@ -475,8 +475,7 @@ export class PanneauxBtp extends PanneauxDocument {
     if (!d.ent_verrouille || !this.arc.livraisonLigne) return;
     const lignes = this.editeur.saisie.lignes.filter((l) => l.lig_id > 0 && this.editeur.regles.estLigneDePrix(this.editeur.saisie.lignes, l));
     if (lignes.length === 0) return;
-    const rangees = lignes.map((l) => `<p class="ligne"><span>${echapper(String(l.lig_numerotation ?? ''))} ${echapper(String(l.lig_libelle_brut ?? '').split('
-')[0])}</span>
+    const rangees = lignes.map((l) => `<p class="ligne"><span>${echapper(String(l.lig_numerotation ?? ''))} ${echapper(String(l.lig_libelle_brut ?? '').split('\n')[0])}</span>
         <input type="date" data-arc-ligne="${l.lig_id}" value="${echapper(l.lig_date_livraison ?? '')}" title="${texteHtml('document_btp.panneaux.arc_ligne_livraison', { ligne: echapper(String(l.lig_numerotation ?? l.lig_id)) })}"></p>`).join('');
     bloc.insertAdjacentHTML('beforeend', `<p class="aide">${texteHtml('document_btp.panneaux.arc_lignes_titre')}</p>${rangees}`);
     activerDates(bloc);
