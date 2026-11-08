@@ -129,7 +129,8 @@ Plan en 24 lots : [terrain-suites.md](documentation/conception/plans/terrain-sui
 - [x] Lot 1, écarts : bandeau trop large sur un téléphone (gabarit tactile commun avec le lot 2). Fait : plan, lots 5 (bandeau adaptatif) et 6 (menu simplifié du terrain).
   Fait le 08/11/2026 (plan, lots 2 à 4) : plans au dernier indice validé du suivi des validations (CRM) parmi les pièces
   du terrain (T6), case « Terrain » par plan, plans cochés gardés hors ligne dans un budget à part (25 Mo).
-- [ ] Lot 2, écarts : pointage à la ligne d'ordre (`poi_lig_id`) quand la tâche vient d'une ligne (T8). Plan : lot 7.
+- [x] Lot 2, écarts : pointage à la ligne d'ordre (`poi_lig_id`) quand la tâche vient d'une ligne (T8). Fait le 08/11/2026 :
+  plan, lot 7 (`db/288`, reprise des pointages existants hors journées validées, à appliquer).
 - [ ] Lot 3, suites : photos HEIC converties (le navigateur ne sait pas les réduire). Plan : lot 8.
 - [ ] Lot 4, suites : saisie libre hors ligne limitée aux chantiers et ordres déjà lus (journée gardée) ; nouvelle
   recherche d'un ordre par son numéro impossible hors ligne ; envoi des photos gardées sans contrôle de taille avant

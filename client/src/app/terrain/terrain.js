@@ -82,6 +82,15 @@ export function presaisirJournee(taches, minutesPrevues, pas = 0) {
     membres: t.chef ? t.membres.map((m) => m.id) : [], groupe: null, nb_groupe: 0, equipe: false }));
 }
 
+/**
+ * Libellé de la ligne d'ordre d'un pointage (terrain-suites lot 7, TS5 a) : celle enregistrée, sinon celle de la tâche
+ * d'origine ligne tant que le pointage reste sur le document de la ligne (règle du serveur, `LigneDuPointage`).
+ */
+export function ligneDuPointage(ligne, tache) {
+  if (ligne.ligne) return ligne.ligne;
+  return tache?.lig_id && tache.ent_id != null && tache.ent_id === ligne.ent_id ? tache.ligne ?? null : null;
+}
+
 /** Côté le plus long d'une photo réduite par défaut (T17 : « qualité d'origine » au choix). */
 export const PHOTO_COTE_MAX = 2000;
 

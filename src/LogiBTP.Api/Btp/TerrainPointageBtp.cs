@@ -26,7 +26,8 @@ public sealed record JourneeTerrain(DateOnly Date, List<LigneTerrain> Lignes, Li
 
 /// <summary>
 /// Application de terrain, lot 2 (ANALYSE-TERRAIN.md, T4, T7, T8, T21, T22) : pointage de la journée de la personne
-/// connectée. Une ligne pointe une tâche du jour (au niveau de détail planifié : chantier, ordre d'origine) ou, en
+/// connectée. Une ligne pointe une tâche du jour (au niveau de détail planifié : chantier, ordre d'origine, ligne
+/// d'ordre d'une tâche d'origine ligne : <c>poi_lig_id</c>, terrain-suites lot 7) ou, en
 /// saisie libre, le chantier et l'ordre choisis ; la saisie libre crée une tâche réalisée non planifiée (origine
 /// <c>terrain</c>, état terminé) affectée à la personne et à son équipe. Équipe : sur une tâche, le chef de l'équipe
 /// affectée pointe pour les membres de la tâche ; en saisie libre, droit « pointage/saisie_libre » à portée EQUIPE
@@ -40,13 +41,22 @@ public static partial class TerrainBtp
     public const string OrigineTerrain = "terrain";
     private const string NoeudSaisieLibre = "pointage/saisie_libre";
 
-    private sealed record TacheJour(long Id, string Libelle, int? ChaId, long? EntId, int? SrvId, int? TypeMo, decimal Poids, bool Chef, string Membres);
-    private sealed record PointageJour(long Id, int ChaId, long? EntId, int TypeMo, string? SousType, int Minutes, string? Motif, string? Commentaire, long? TacId, Guid? Groupe, int NbGroupe);
+    private sealed record TacheJour(long Id, string Libelle, int? ChaId, long? EntId, int? SrvId, int? TypeMo, decimal Poids, bool Chef, string Membres,
+        long? LigId = null, string? Ligne = null);
+    private sealed record PointageJour(long Id, int ChaId, long? EntId, int TypeMo, string? SousType, int Minutes, string? Motif, string? Commentaire, long? TacId, Guid? Groupe, int NbGroupe,
+        long? LigId = null, string? Ligne = null);
+
+    /// <summary>
+    /// Ligne d'ordre portée par le pointage d'une tâche (lot 7, TS5 a) : celle de la tâche d'origine ligne, tant que le
+    /// pointage reste sur le document de la ligne ; sinon aucune (niveau chantier ou ordre).
+    /// </summary>
+    public static long? LigneDuPointage(long? ligneTache, long? documentTache, long? documentPointe) =>
+        ligneTache is not null && documentTache is not null && documentTache == documentPointe ? ligneTache : null;
     private sealed record Equipier(int Id, string Libelle);
 
     /// <summary>Tâches du jour @du de la personne @s : type de MO proposé (service de la tâche ou son parent), poids pour répartir la journée, équipe dont elle est le chef.</summary>
     private const string SqlTachesJour = """
-        SELECT x.tac_id AS id, x.tac_libelle AS libelle, x.cha_id, x.ent_id, x.tac_srv_id AS srv_id,
+        SELECT x.tac_id AS id, x.tac_libelle AS libelle, x.cha_id, x.ent_id, x.tac_srv_id AS srv_id, x.lig_id, x.lig_libelle AS ligne,
           (SELECT n.nat_id FROM nature_element n LEFT JOIN service sv ON sv.srv_id = x.tac_srv_id
            WHERE n.nat_rgn_code = 'MO' AND n.nat_srv_id IN (x.tac_srv_id, sv.srv_parent_id) ORDER BY n.nat_srv_id = x.tac_srv_id DESC, n.nat_code LIMIT 1) AS type_mo,
           coalesce((SELECT a.aff_heures FROM pla_affectation a WHERE a.aff_tac_id = x.tac_id AND a.aff_res_type IN ('SALARIE', 'INTERIM') AND a.aff_res_id = @s::text LIMIT 1), 0)
@@ -106,8 +116,9 @@ public static partial class TerrainBtp
         var pointages = await db.Database.SqlQueryRaw<PointageJour>("""
             SELECT p.poi_id AS id, p.poi_cha_id AS cha_id, p.poi_ent_id AS ent_id, p.poi_type_mo AS type_mo, p.poi_sous_type AS sous_type, p.poi_minutes::int AS minutes,
                    p.poi_motif AS motif, p.poi_commentaire AS commentaire, p.poi_tac_id AS tac_id, p.poi_groupe AS groupe,
-                   (SELECT count(*)::int FROM poi_pointage g WHERE g.poi_groupe = p.poi_groupe AND g.poi_couche = 'SAISIE') AS nb_groupe
-            FROM poi_pointage p WHERE p.poi_sal_id = @s AND p.poi_date = @d AND p.poi_couche = 'SAISIE' ORDER BY p.poi_id
+                   (SELECT count(*)::int FROM poi_pointage g WHERE g.poi_groupe = p.poi_groupe AND g.poi_couche = 'SAISIE') AS nb_groupe,
+                   p.poi_lig_id AS lig_id, nullif(concat_ws(' ', l.lig_code, left(regexp_replace(l.lig_libelle_brut, '\s+', ' ', 'g'), 80)), '') AS ligne
+            FROM poi_pointage p LEFT JOIN document_ligne l ON l.lig_id = p.poi_lig_id WHERE p.poi_sal_id = @s AND p.poi_date = @d AND p.poi_couche = 'SAISIE' ORDER BY p.poi_id
             """, new NpgsqlParameter("s", s), new NpgsqlParameter("d", jour)).ToListAsync(ct);
         var journees = await CalendriersBtp.JourneesAsync(db, services.GetRequiredService<ServiceCalendrier>(), TypesFiche.Salarie, s, jour, jour, ct);
         var libre = await PorteeLibreAsync(services, u, ct);
@@ -122,7 +133,7 @@ public static partial class TerrainBtp
             valide = await pointage.JourBloqueAsync(s, jour, ct),
             taches = taches.Select(t => new
             {
-                id = t.Id, libelle = t.Libelle, cha_id = t.ChaId, ent_id = t.EntId, srv_id = t.SrvId, type_mo = t.TypeMo, poids = t.Poids, chef = t.Chef,
+                id = t.Id, libelle = t.Libelle, cha_id = t.ChaId, ent_id = t.EntId, lig_id = t.LigId, ligne = t.Ligne, srv_id = t.SrvId, type_mo = t.TypeMo, poids = t.Poids, chef = t.Chef,
                 membres = JsonDocument.Parse(t.Membres).RootElement,
             }),
             pointages,
@@ -176,6 +187,8 @@ public static partial class TerrainBtp
         var creees = new Dictionary<int, long>();
         // Tâche d'une ligne : celle choisie, sinon la tâche libre créée ; absente d'une ligne existante = inchangée.
         long? Tache(LigneTerrain l, int i) => l.TacId ?? (creees.TryGetValue(i, out var c) ? c : null);
+        // Ligne d'ordre : tâche d'origine ligne pointée sur le document de la ligne (lot 7) ; saisie libre : aucune (TS7 a).
+        long? Ligne(LigneTerrain l) => l.TacId is long t && taches.TryGetValue(t, out var tj) ? LigneDuPointage(tj.LigId, tj.EntId, l.EntId) : null;
         var salaries = (await specialisation.SalariesAsync(pdb, new FiltreSalaries(null, null,
             [s, .. j.Lignes.SelectMany(l => l.Membres ?? [])]), ct)).ToDictionary(x => x.Id);
         foreach (var (l, i) in nouvellesLibres)
@@ -206,7 +219,7 @@ public static partial class TerrainBtp
                     Guid? groupe = l.Id is null && (l.Membres ?? []).Any(m => m != s) ? groupes[i] = Guid.NewGuid() : null;
                     var garde = !Modifiee(l);
                     return new PointageSaisi(l.Id, j.Date, l.ChaId, l.EntId, l.TypeMo, l.SousType, l.Minutes, garde ? avant[l.Id!.Value].PoiDebut : null,
-                        garde ? avant[l.Id!.Value].PoiFin : null, l.Motif, l.Commentaire, TacId: Tache(l, i), Groupe: groupe);
+                        garde ? avant[l.Id!.Value].PoiFin : null, l.Motif, l.Commentaire, TacId: Tache(l, i), Groupe: groupe, LigId: Ligne(l));
                 })).ToList();
             await pointage.EnregistrerSemaineAsync(s, lundi, new SemaineSaisie(saisie), u, ct);
 
@@ -215,14 +228,14 @@ public static partial class TerrainBtp
             {
                 foreach (var m in (l.Membres ?? []).Where(m => m != s).Distinct().Where(_ => l.Id is null))
                     await AjouterAsync(pdb, pointage, u, m, new PointageSaisi(null, j.Date, l.ChaId, l.EntId, l.TypeMo, l.SousType, l.Minutes, null, null, l.Motif, l.Commentaire,
-                        TacId: Tache(l, i), Groupe: groupes[i]), ct);
+                        TacId: Tache(l, i), Groupe: groupes[i], LigId: Ligne(l)), ct);
                 if (l.Id is long id && avant[id].PoiGroupe is Guid g && Modifiee(l) && l.Equipe)
                 {
                     var e = avant[id];
                     var reference = Signature(e.PoiDate, e.PoiChaId, e.PoiEntId, e.PoiTypeMo, e.PoiSousType, e.PoiMinutes, e.PoiMotif);
                     var autres = await pdb.Pointages.AsNoTracking().Where(p => p.PoiGroupe == g && p.PoiCouche == Couches.Saisie && p.PoiSalId != s).ToListAsync(ct);
                     foreach (var p in autres.Where(p => Signature(p.PoiDate, p.PoiChaId, p.PoiEntId, p.PoiTypeMo, p.PoiSousType, p.PoiMinutes, p.PoiMotif) == reference))
-                        await RemplacerAsync(pdb, pointage, u, p, l, ct);
+                        await RemplacerAsync(pdb, pointage, u, p, l, Ligne(l), ct);
                 }
             }
             await tx.CommitAsync(ct);
@@ -257,12 +270,12 @@ public static partial class TerrainBtp
     }
 
     /// <summary>Remplace un pointage d'un membre du groupe par les valeurs de la ligne (commentaire du membre conservé).</summary>
-    private static async Task RemplacerAsync(PointageDbContext pdb, ServicePointage pointage, Utilisateur u, PointageEntite p, LigneTerrain l, CancellationToken ct)
+    private static async Task RemplacerAsync(PointageDbContext pdb, ServicePointage pointage, Utilisateur u, PointageEntite p, LigneTerrain l, long? ligne, CancellationToken ct)
     {
         var lundi = ReglesPointage.LundiDe(p.PoiDate);
         var semaine = await pdb.Pointages.AsNoTracking().Where(x => x.PoiSalId == p.PoiSalId && x.PoiCouche == Couches.Saisie && x.PoiDate >= lundi && x.PoiDate <= lundi.AddDays(6)).ToListAsync(ct);
         var saisie = semaine.Select(x => x.PoiId == p.PoiId
-            ? new PointageSaisi(x.PoiId, x.PoiDate, l.ChaId, l.EntId, l.TypeMo, l.SousType, l.Minutes, null, null, l.Motif, x.PoiCommentaire)
+            ? new PointageSaisi(x.PoiId, x.PoiDate, l.ChaId, l.EntId, l.TypeMo, l.SousType, l.Minutes, null, null, l.Motif, x.PoiCommentaire, LigId: ligne)
             : new PointageSaisi(x.PoiId, x.PoiDate, x.PoiChaId, x.PoiEntId, x.PoiTypeMo, x.PoiSousType, x.PoiMinutes, x.PoiDebut, x.PoiFin, x.PoiMotif, x.PoiCommentaire)).ToList();
         await pointage.EnregistrerSemaineAsync(p.PoiSalId, lundi, new SemaineSaisie(saisie), u, ct, controleAcces: false);
     }

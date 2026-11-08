@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { lundiDe, mobileAffiche, lienItineraire, liensTexte, numeroTel, presaisirJournee, actionsTache, minutesPointees, tachesGardees, jourPointage, adressesAPrecharger, plansTache, plansTacheHtml, plansAPrecharger } from '../src/app/terrain/terrain.js';
+import { lundiDe, mobileAffiche, lienItineraire, liensTexte, numeroTel, presaisirJournee, actionsTache, minutesPointees, tachesGardees, jourPointage, adressesAPrecharger, plansTache, plansTacheHtml, plansAPrecharger, ligneDuPointage } from '../src/app/terrain/terrain.js';
 
 describe('application de terrain', () => {
   it('présaisie : heures du calendrier au prorata des tâches, équipe du chef reprise', () => {
@@ -9,6 +9,15 @@ describe('application de terrain', () => {
     expect(l[1]).toMatchObject({ id: null, tac_id: 2, ent_id: 4, membres: [9] });
     expect(presaisirJournee([], 480)).toEqual([]);
     expect(presaisirJournee(taches, 0)).toEqual([]);
+  });
+
+  it('ligne d\'ordre d\'un pointage : tâche d\'origine ligne sur son document, sinon enregistrée ou aucune', () => {
+    const tache = { id: 1, ent_id: 4, lig_id: 42, ligne: 'L1 Pose cloisons' };
+    expect(ligneDuPointage({ tac_id: 1, ent_id: 4 }, tache)).toBe('L1 Pose cloisons');
+    expect(ligneDuPointage({ tac_id: 1, ent_id: 5 }, tache)).toBeNull();
+    expect(ligneDuPointage({ tac_id: 2, ent_id: 4 }, { id: 2, ent_id: 4, lig_id: null })).toBeNull();
+    expect(ligneDuPointage({ id: 9, ent_id: 4, ligne: 'L2 Enduit' }, null)).toBe('L2 Enduit');
+    expect(ligneDuPointage({ ent_id: null }, null)).toBeNull();
   });
 
   it('lundi de la semaine', () => {

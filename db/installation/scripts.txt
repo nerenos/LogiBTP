@@ -247,6 +247,7 @@ db/284_personne_relance.sql rejouable
 db/285_relances_mail.sql rejouable
 db/286_relances_lettres.sql rejouable
 db/287_liste_derniere_relance.sql rejouable
+db/288_pointage_ligne_terrain.sql
 
 # Vues de colonnes des types de documents créés après 176 : rejouée en dernier.
 db/176_documents_vues_types.sql rejouable

@@ -7,7 +7,7 @@ import { choisirRestaurant } from '../pointage/repas.js';
 import { choixMultiple } from '../choix-multiple.js';
 import { EcranEtapesAtelier } from '@logibtp/execution/ui';
 import { MODULE_FACULTATIF } from '../codes.js';
-import { completerJournee, presaisirJournee } from './terrain.js';
+import { completerJournee, presaisirJournee, ligneDuPointage } from './terrain.js';
 import { envoyerOuGarder, fournisseurEtapes, OPERATION_TERRAIN } from './operations-terrain.js';
 import { lireOperation, marquerOperation, retirerOperation } from '../hors-ligne/operations.js';
 import { estHorsLigne, ETAT_ATTENTE } from '../hors-ligne/attente.js';
@@ -24,7 +24,7 @@ import { SUJET_ATTENTE } from '../hors-ligne/synchro.js';
 let referentiels = null;
 
 /** Ligne éditable depuis un pointage enregistré. */
-const depuisPointage = (p) => ({ id: p.id, tac_id: p.tac_id, cha_id: p.cha_id, ent_id: p.ent_id, type_mo: p.type_mo, sous_type: p.sous_type, minutes: p.minutes,
+const depuisPointage = (p) => ({ id: p.id, tac_id: p.tac_id, cha_id: p.cha_id, ent_id: p.ent_id, ligne: p.ligne ?? null, type_mo: p.type_mo, sous_type: p.sous_type, minutes: p.minutes,
   motif: p.motif, commentaire: p.commentaire, membres: [], groupe: p.groupe, nb_groupe: p.nb_groupe, equipe: false });
 
 /** Ligne éditable depuis une journée gardée sur l'appareil (corps de l'envoi). */
@@ -202,7 +202,9 @@ export class PointageTerrain {
       const c = this.#chantier(l.cha_id);
       const o = this.#ordre(l.ent_id);
       const titre = t ? echapper(t.libelle) : `${iconeHtml('terrain_btp_libre')} ${texteHtml(l.libre ? 'terrain_btp.pointage.libre' : 'terrain_btp.pointage.libre_enregistree')}`;
-      const lieu = [c && `${icone('terrain_btp_chantier')} ${c.code} ${c.libelle}`, o && `${icone('pointage_ordre')} ${o.numero ?? o.type}`].filter(Boolean).map(echapper).join(' · ');
+      const ligne = ligneDuPointage(l, t);
+      const lieu = [c && `${icone('terrain_btp_chantier')} ${c.code} ${c.libelle}`, o && `${icone('pointage_ordre')} ${o.numero ?? o.type}`,
+        ligne && `${icone('terrain_btp_ligne')} ${ligne}`].filter(Boolean).map(echapper).join(' · ');
       const nc = referentiels.sous_types.find((s) => s.code === l.sous_type)?.non_conformite;
       // Équipe d'une tâche (courte) : cases à cocher ; saisie libre : équipiers choisis par recherche (étiquettes).
       const proposes = l.id || !t?.chef ? [] : t.membres;

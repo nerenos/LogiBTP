@@ -22,7 +22,7 @@
 | 4 | Plans gardés hors ligne, budget à part | cœur | 3 | FAIT (08/11/2026) |
 | 5 | Bandeau adaptatif sur téléphone | `modules/navigation` | — | FAIT (08/11/2026) |
 | 6 | Menu simplifié du terrain et raccourci vers le menu classique | cœur | 5 | FAIT (08/11/2026) |
-| 7 | Pointage à la ligne d'ordre | cœur | — | A FAIRE |
+| 7 | Pointage à la ligne d'ordre | cœur | — | FAIT (08/11/2026) |
 | 8 | Photos HEIC converties par l'iPhone | cœur | — | A FAIRE |
 | 9 | Hors ligne : chantiers et ordres ouverts du service | cœur | — | A FAIRE |
 | 10 | Hors ligne : ordre saisi par son numéro, résolu à l'envoi | cœur | 9 | A FAIRE |
@@ -167,7 +167,7 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
   `navigation_btp.raccourcis.application.menu_classique`. Tests : `client/test/menus.test.js`. Vérifié par Playwright à
   360 px (feuille du menu simplifié, sans défilement horizontal) et à 1280 px. Aucun script SQL.
 
-## Lot 7 : pointage à la ligne d'ordre (TS5 a, TS6 a, TS7 a)
+## Lot 7 : pointage à la ligne d'ordre (TS5 a, TS6 a, TS7 a) (FAIT 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `src/LogiBTP.Api/Btp/TerrainPointageBtp.cs` (tâche d'origine `ligne` : `poi_lig_id`, `poi_ent_id` du
@@ -180,6 +180,20 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
   inchangée ; reprise qui saute les journées validées.
 - **Critère de fin** : `npm test` vert ; script rejoué deux fois sans erreur ; pointage d'une tâche de ligne visible à
   la ligne dans la rentabilité.
+- **Réalisé / écarts** : `SqlTaches` (`TerrainBtp.cs`) : tâche d'origine `ligne` → `lig_id`, libellé de la ligne,
+  document de la ligne (`ent_id`) et chantier de la ligne (`lig_cha_id`, sinon entête), donc aussi pièces et plans de
+  l'ordre sur la carte. `TerrainPointageBtp.cs` : règle pure `LigneDuPointage` (ligne de la tâche tant que le pointage
+  reste sur son document ; saisie libre : jamais, TS7 a), posée sur la personne et les membres d'équipe ; `lig_id` et
+  `ligne` lus avec les tâches et les pointages de la journée. Écart : le module Pointage ne savait pas écrire
+  `poi_lig_id` : `PointageSaisi.LigId` ajouté (absent = inchangé, remis à vide quand l'ordre change ; couche validée :
+  ligne du pointage d'origine resté sur le même ordre, `ServiceSynthese`). Rentabilité : `v_pointages_retenus` reçoit
+  `lig_id` (reprise de 202 dans le script) et le fait d'un pointage porte `afa_lig_id` (`afa_ent_id` laissé vide pour
+  ne pas ranger les heures parmi les pièces). Nouveau script `db/288_pointage_ligne_terrain.sql` (au manifeste, appliqué
+  une fois, rejouable sans erreur) : clé étrangère `fk_poi_ligne` (ON DELETE SET NULL) et index, vue, reprise des
+  pointages SAISIE des tâches d'origine ligne restés sur le chantier et le document de la ligne, journées validées et
+  semaines corrigées exclues (TS6 a). Client : libellé de la ligne sur la carte du pointage (`ligneDuPointage` de
+  `terrain/terrain.js`, icône `terrain_btp_ligne`). Tests : `PointageLigneTerrainTests` (C# ; reprise sur base si
+  `LOGIBTP_TEST_PG`, non exécutée ici), `terrain.test.js`. Script à appliquer par l'utilisateur (non rejoué ici).
 
 ## Lot 8 : photos HEIC converties par l'iPhone (TS8 a, TS9 b)
 

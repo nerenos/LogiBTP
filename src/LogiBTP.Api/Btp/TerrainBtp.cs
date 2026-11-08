@@ -22,7 +22,10 @@ public static partial class TerrainBtp
     /// <summary>Période lue au plus (jours).</summary>
     private const int JoursMax = 31;
 
-    /// <summary>Tâches de la personne @s sur [@du, @au] (dates), avec leur chantier et l'ordre d'origine (ordre ou étape).</summary>
+    /// <summary>
+    /// Tâches de la personne @s sur [@du, @au] (dates), avec leur chantier et l'ordre d'origine (ordre ou étape) ; tâche
+    /// d'origine ligne (terrain-suites lot 7) : la ligne, son document et son chantier (ligne, sinon entête).
+    /// </summary>
     private const string SqlTaches = """
         WITH t AS (
           SELECT DISTINCT t.* FROM pla_tache t JOIN pla_affectation a ON a.aff_tac_id = t.tac_id
@@ -30,11 +33,15 @@ public static partial class TerrainBtp
             AND t.tac_debut < (@au::date + 1) AND t.tac_fin > @du::date
         ), x AS (
           SELECT t.*, c.cha_id, c.cha_code, c.cha_libelle, d.ent_id, d.ent_numero, d.ent_objet, coalesce(d.ent_groupe_id, d.ent_id) AS groupe,
-                 ty.tyd_code, sv.srv_libelle
+                 ty.tyd_code, sv.srv_libelle, lo.lig_id,
+                 nullif(concat_ws(' ', lo.lig_code, left(regexp_replace(lo.lig_libelle_brut, '\s+', ' ', 'g'), 80)), '') AS lig_libelle
           FROM t
-          LEFT JOIN chantier c ON t.tac_type_element = 'chantier' AND t.tac_id_element ~ '^[0-9]+$' AND c.cha_id = t.tac_id_element::int
+          LEFT JOIN document_ligne lo ON lo.lig_id = CASE WHEN t.tac_origine_type = 'ligne' AND t.tac_origine_id ~ '^[0-9]+$' THEN t.tac_origine_id::bigint END
           LEFT JOIN exe_ordre_etape e ON t.tac_origine_type = 'etape' AND e.ore_id::text = t.tac_origine_id
-          LEFT JOIN document d ON d.ent_id = CASE WHEN t.tac_origine_type = 'ordre' AND t.tac_origine_id ~ '^[0-9]+$' THEN t.tac_origine_id::bigint ELSE e.ore_ordre_id END
+          LEFT JOIN document d ON d.ent_id = CASE WHEN t.tac_origine_type = 'ordre' AND t.tac_origine_id ~ '^[0-9]+$' THEN t.tac_origine_id::bigint
+                                                  WHEN lo.lig_id IS NOT NULL THEN lo.lig_ent_id ELSE e.ore_ordre_id END
+          LEFT JOIN chantier c ON c.cha_id = CASE WHEN coalesce(lo.lig_cha_id, d.ent_chantier_id) IS NOT NULL AND lo.lig_id IS NOT NULL THEN coalesce(lo.lig_cha_id, d.ent_chantier_id)
+                                                  WHEN t.tac_type_element = 'chantier' AND t.tac_id_element ~ '^[0-9]+$' THEN t.tac_id_element::int END
           LEFT JOIN type_document ty ON ty.tyd_id = d.ent_tyd_id
           LEFT JOIN service sv ON sv.srv_id = t.tac_srv_id
         )
