@@ -32,7 +32,7 @@
 |---|---|---|---|---|
 | 1 | Commande de renouvellement du certificat de base et code de sortie | cœur | SO1, SO2 | FAIT |
 | 2 | Windows : mise à jour qui relance la préparation, tâche planifiée | `modules/installation` | 1 | FAIT |
-| 3 | Linux : mise à jour et minuterie | `modules/installation` | 1, SO3 | A FAIRE |
+| 3 | Linux : mise à jour et minuterie | `modules/installation` | 1, SO3 | FAIT |
 
 ---
 
@@ -65,7 +65,7 @@
   installé).
 - **Réalisé** : `Commun.ps1` (`Invoquer-InstallationCode` : code 0 ou 10 accepté, `Redemarrer-Base`, `Renouveler-CertificatBase`) ; `MettreAJour-LogiBTP.ps1` (étape 3 : préparation avec `--code-certificat` avant les scripts SQL, retour arrière en cas d'échec, base redémarrée sur le code 10) ; nouveau `Renouveler-Certificats-LogiBTP.ps1` (certificat HTTPS puis certificat de la base) lancé par la tâche « LogiBTP - certificat » (`Installer-LogiBTP.ps1`) ; `INSTALLATION.md`. Écarts : script ajouté (la tâche appelait directement docker) ; essais manuels non faits (interdits sur le poste) : tous les scripts passent l'analyse syntaxique, et les fonctions de redémarrage ont été essayées avec un `docker` simulé (code 10 : redémarrage, code 0 : aucun). Une installation existante doit relancer l'installeur une fois pour recréer la tâche et copier le nouveau script dans `outils`. Base distante (rôle Api) : simple message, redémarrage à faire sur le serveur de la base.
 
-## Lot 3 : Linux, mise à jour et minuterie (A FAIRE)
+## Lot 3 : Linux, mise à jour et minuterie (FAIT le 08/11/2026)
 
 - **Module** : `modules/installation`. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `modules/installation/linux/installer-logibtp.sh` (`minuterie() :185`), `mettre-a-jour-logibtp.sh`,
@@ -74,3 +74,4 @@
 - **Règles répliquées JS / C#** : aucune.
 - **Jeux de tests** : `shellcheck` des scripts ; essai manuel noté dans le lot comme au lot 2.
 - **Critère de fin** : `shellcheck` sans erreur ; essai noté.
+- **Réalisé** : `commun.sh` (`installation_code`, `redemarrer_base`, `renouveler_certificat_base`) ; `mettre-a-jour-logibtp.sh` (préparation avec `--code-certificat` avant les scripts SQL, retour arrière en cas d'échec, base redémarrée sur le code 10) ; nouveau `renouveler-certificats-logibtp.sh` lancé par la minuterie `logibtp-certificat` (`installer-logibtp.sh`) ; `INSTALLATION.md`. Écarts : essais manuels interdits sur le poste : `bash -n` et `shellcheck` (avertissements préexistants seulement), fonctions essayées avec un `docker` simulé (code 10 : redémarrage, 0 : aucun, 3 : échec). Une installation existante relance l'installeur une fois pour recréer la minuterie.

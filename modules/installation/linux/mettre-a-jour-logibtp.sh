@@ -59,6 +59,17 @@ etape "3. Arrêt de l'API et scripts de la nouvelle version"
 compose "$dossier" api stop logibtp-api
 definir_reglage "$dossier" LOGIBTP_IMAGE "$image"
 definir_reglage "$dossier" LOGIBTP_IMAGE_PRECEDENTE "$precedente"
+# Préparation rejouée (rejouable) : chiffre la connexion d'une base installée avant le certificat de la base ; la base n'est
+# redémarrée que si son certificat a été créé ou renouvelé (code 10).
+domaine="$(lire_reglage "$dossier" LOGIBTP_DOMAINE)"
+[[ -n "$domaine" ]] || revenir 'préparation : domaine absent de installation.env'
+code=0
+installation_code "$dossier" installation preparer --domaine "$domaine" --code-certificat || code=$?
+case "$code" in
+    0) ;;
+    10) redemarrer_base "$dossier" || revenir 'préparation : redémarrage de la base en échec' ;;
+    *) revenir "préparation : échec (code $code)" ;;
+esac
 installation "$dossier" installation base mettre-a-jour || revenir 'scripts SQL en échec'
 
 etape '4. Démarrage de la nouvelle version'

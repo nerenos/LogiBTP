@@ -331,13 +331,8 @@ else
 fi
 if ((!sans_taches)); then
     minuterie logibtp-sauvegarde "*-*-* $heure_sauvegarde:00" 'Sauvegarde LogiBTP' "$dossier/outils/sauvegarder-logibtp.sh --dossier $dossier$copie"
-    if [[ "$certificat" == letsencrypt ]]; then
-        renouveler="$dossier/outils/certificat-letsencrypt.sh --dossier $dossier --renouveler"
-    else
-        renouveler="/usr/bin/docker compose --env-file $dossier/installation.env -f $dossier/api/compose.yml run --rm -T logibtp-installation installation certificat renouveler"
-    fi
-    minuterie logibtp-certificat 'Sun *-*-* 03:00:00' 'Renouvellement du certificat LogiBTP' "$renouveler"
-    info "Minuteries systemd : sauvegarde chaque jour à $heure_sauvegarde, renouvellement du certificat chaque dimanche (60 jours avant l'échéance)"
+    minuterie logibtp-certificat 'Sun *-*-* 03:00:00' 'Renouvellement des certificats LogiBTP' "$dossier/outils/renouveler-certificats-logibtp.sh --dossier $dossier"
+    info "Minuteries systemd : sauvegarde chaque jour à $heure_sauvegarde, renouvellement des certificats chaque dimanche (HTTPS, puis base 60 jours avant l'échéance)"
     info 'Contrôle : systemctl list-timers "logibtp-*"'
 fi
 

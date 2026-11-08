@@ -56,6 +56,40 @@ lire_installation() {
     compose "$dossier" api run --rm -T logibtp-installation "$@" 2>/dev/null || true
 }
 
+# Même commande, code de sortie rendu : 0 ou 10 acceptés (10 = certificat de la base créé ou renouvelé), autre = échec.
+installation_code() {
+    local dossier="$1" code=0; shift
+    compose "$dossier" api run --rm -T logibtp-installation "$@" || code=$?
+    if ((code != 0 && code != 10)); then
+        echo "installation $*: échec (code $code)" >&2
+        return "$code"
+    fi
+    return "$code"
+}
+
+# Redémarre PostgreSQL pour qu'il relise son certificat. Base sur un autre serveur : message seulement (à redémarrer là-bas).
+redemarrer_base() {
+    local dossier="$1"
+    if [[ "$(lire_reglage "$dossier" LOGIBTP_ROLE)" == api || "$(lire_reglage "$dossier" LOGIBTP_BASE_DISTANTE)" == 1 ]]; then
+        alerte "Base sur un autre serveur : y redémarrer le conteneur logibtp-base pour qu'il relise son certificat."
+        return 0
+    fi
+    compose "$dossier" base restart
+    compose "$dossier" base up -d --wait
+    info 'Base redémarrée (nouveau certificat pris en compte)'
+}
+
+# Renouvelle le certificat de la base (60 jours avant l'échéance) et redémarre la base seulement s'il a changé.
+renouveler_certificat_base() {
+    local dossier="$1" code=0
+    installation_code "$dossier" installation certificat base-renouveler || code=$?
+    case "$code" in
+        10) redemarrer_base "$dossier" ;;
+        0) info 'Certificat de la base inchangé : base non redémarrée' ;;
+        *) return "$code" ;;
+    esac
+}
+
 # Conteneur d'outils arrêté qui monte un volume sous /v : sert de passage à « docker cp ».
 nouveau_passage() {
     local nom="logibtp-passage-$(head -c 4 /dev/urandom | od -An -tx1 | tr -d ' \n')"
