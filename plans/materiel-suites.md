@@ -33,16 +33,16 @@
 
 | N° | Question | Recommandation | Statut |
 |---|---|---|---|
-| MO1 | Rattachement des photos : colonnes sur l'affectation ou rattachement GED par type d'élément ? | Deux colonnes `maf_ged_depart` / `maf_ged_retour` (identifiant du document GED, comme `per_image_ged`, `db/229`), document classé dans la GED du matériel. | OUVERT |
-| MO2 | Relevé à la borne : qui peut saisir, pour quel matériel ? | Le salarié identifié, pour les matériels qui lui sont affectés ce jour (`materiel_affectation`) ; contrôle `ControlerReleveAsync` inchangé ; source `BORNE`. | OUVERT |
-| MO3 | Démonstration d'entretiens : quel historique ? | Entretiens réalisés répartis sur les 12 derniers mois selon les plans d'entretien, pour qu'une partie seulement soit en retard. | OUVERT |
-| MO4 | Refacturation interne : comment créditer le chantier de suivi du matériel ? | Produit interne calculé dans la Rentabilité (même montant que les heures valorisées sur les chantiers), sans pièce ni écriture comptable. | OUVERT |
-| MO5 | Coût par heure de l'onglet Coûts « proposé » comme coût moyen de la fiche : automatique ou sur action ? | Sur action : bouton « Reprendre comme coût moyen » dans l'onglet Coûts, avec confirmation (`confirmer`). | OUVERT |
-| MO6 | Cartes carburant : formats et rattachement d'un plein à un matériel ? | Fichier CSV par fournisseur de cartes décrit par des correspondances (modèle `correspondances.js`) ; rapprochement par numéro de carte porté par la fiche matériel, sinon immatriculation ; plein écrit en `materiel_evenement` et relevé `CARBURANT`. | OUVERT |
+| MO1 | Rattachement des photos : colonnes sur l'affectation ou rattachement GED par type d'élément ? | Deux colonnes `maf_ged_depart` / `maf_ged_retour` (identifiant du document GED, comme `per_image_ged`, `db/229`), document classé dans la GED du matériel. | ✔ Tranché (08/11/2026) : colonnes sur l'affectation (recommandation retenue). |
+| MO2 | Relevé à la borne : qui peut saisir, pour quel matériel ? | Le salarié identifié, pour les matériels qui lui sont affectés ce jour (`materiel_affectation`) ; contrôle `ControlerReleveAsync` inchangé ; source `BORNE`. | ✔ Tranché (08/11/2026) : le salarié identifié, pour les matériels qui lui sont affectés ce jour avec une liste rapide de choix, mais aussi le reste du matériel avec validation comme pour la saisie de la main-d'œuvre (relevé sur un matériel non affecté accepté mais à valider au bureau, comme les pointages à valider). |
+| MO3 | Démonstration d'entretiens : quel historique ? | Entretiens réalisés répartis sur les 12 derniers mois selon les plans d'entretien, pour qu'une partie seulement soit en retard. | ✔ Tranché (08/11/2026) : recommandation retenue. |
+| MO4 | Refacturation interne : comment créditer le chantier de suivi du matériel ? | Produit interne calculé dans la Rentabilité (même montant que les heures valorisées sur les chantiers), sans pièce ni écriture comptable. | ✔ Tranché (08/11/2026) : recommandation retenue. |
+| MO5 | Coût par heure de l'onglet Coûts « proposé » comme coût moyen de la fiche : automatique ou sur action ? | Sur action : bouton « Reprendre comme coût moyen » dans l'onglet Coûts, avec confirmation (`confirmer`). | ✔ Tranché (08/11/2026) : recommandation retenue. |
+| MO6 | Cartes carburant : formats et rattachement d'un plein à un matériel ? | Fichier CSV par fournisseur de cartes décrit par des correspondances (modèle `correspondances.js`) ; rapprochement par numéro de carte porté par la fiche matériel, sinon immatriculation ; plein écrit en `materiel_evenement` et relevé `CARBURANT`. | ✔ Tranché (08/11/2026) : recommandation retenue. |
 
 | Lot | Titre | Module | Dépend de | Statut |
 |---|---|---|---|---|
-| 1 | Photos de départ et de retour : base et serveur | cœur | MO1 | A FAIRE |
+| 1 | Photos de départ et de retour : base et serveur | cœur | MO1 | FAIT (08/11/2026) |
 | 2 | Photos de départ et de retour : ligne d'affectation | cœur | 1 | A FAIRE |
 | 3 | Relevés de compteurs à la borne : serveur | cœur | MO2 | A FAIRE |
 | 4 | Relevés de compteurs à la borne : écran | cœur | 3 | A FAIRE |
@@ -55,7 +55,7 @@
 
 ---
 
-## Lot 1 : photos de départ et de retour, base et serveur (A FAIRE)
+## Lot 1 : photos de départ et de retour, base et serveur (FAIT 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : nouveau script `db/278_materiel_affectation_photos.sql` (numéro à confirmer, rejouable) et
@@ -66,6 +66,13 @@
 - **Jeux de tests** : C# : photo de départ et de retour enregistrées ; document d'un autre matériel refusé ;
   suppression du document GED → identifiant remis à vide.
 - **Critère de fin** : `dotnet test LogiBTP.slnx` vert ; script rejoué deux fois sans erreur.
+- **Réalisé / écarts** : script `db/279` (et non 278, pris), appliqué aux deux bases de développement et rejoué ; colonnes
+  `maf_ged_depart` / `maf_ged_retour` ; triggers sur `document_ged` (suppression logique ou physique → identifiant vide) ;
+  `AffectationMaterielSaisie` reçoit `GedDepart` / `GedRetour` (vide = photo déjà enregistrée conservée, pour que le client
+  actuel ne les efface pas) ; document refusé (`AFF_PHOTO`, règle `PhotosAffectation`) s'il n'est pas une pièce non supprimée de
+  la GED de ce matériel ; historique JSON : `ged_depart`, `ged_retour`. Aucune nouvelle route (droits inchangés). Tests :
+  `PhotosAffectationTests.cs` (règle pure ; trigger sur la base si `LOGIBTP_TEST_PG`, transaction annulée) ; le refus par la
+  route n'est pas testé de bout en bout (pas de banc d'essai HTTP sur base dans les tests du cœur).
 
 ## Lot 2 : photos de départ et de retour, ligne d'affectation (A FAIRE)
 
@@ -84,10 +91,13 @@
 - **Fichiers** : `CompteursMateriel.cs` (`AjouterReleveAsync :88` avec source `BORNE`, matériels affectés au salarié de
   la borne), route de borne (identification `JetonsBorne`, `ServiceBorne.cs:60`, sans changement du module Pointage),
   rattachement des droits, tests C#.
+- **Précision MO2** : le salarié identifié peut relever les matériels qui lui sont affectés ce jour (liste rapide) mais aussi
+  tout autre matériel ; un relevé sur un matériel non affecté est accepté mais à valider au bureau (comme les pointages à
+  valider).
 - **Dépendances** : MO2 tranchée. Si l'identification de borne n'est pas utilisable depuis le cœur, un lot
   `modules/pointage` (point d'accroche) passe avant : à noter ici.
 - **Règles répliquées JS / C#** : aucune.
-- **Jeux de tests** : relevé accepté pour un matériel affecté ce jour ; refusé pour un autre ; contrôle de valeur
+- **Jeux de tests** : relevé accepté pour un matériel affecté ce jour ; relevé sur un autre matériel accepté mais à valider ; contrôle de valeur
   inférieure maintenu.
 - **Critère de fin** : `dotnet test LogiBTP.slnx` vert.
 
@@ -98,7 +108,9 @@
   valeur), textes, mode hors ligne si la borne le gère déjà (`client/src/app/hors-ligne/operations.js`), test client.
 - **Dépendances** : lot 3.
 - **Règles répliquées JS / C#** : aucune.
-- **Jeux de tests** : test client : liste des matériels affectés, saisie, message de refus.
+- **Précision MO2** : liste rapide des matériels affectés ce jour, plus accès au reste du matériel ; relevé hors affectation
+  signalé « à valider au bureau ».
+- **Jeux de tests** : test client : liste des matériels affectés, saisie, relevé hors affectation à valider, message de refus.
 - **Critère de fin** : `npm test` vert.
 
 ## Lot 5 : données de démonstration d'entretiens (A FAIRE)
