@@ -119,18 +119,19 @@ global). Lots à venir :
 
 ### Marchés et règlements
 
-- [ ] Relances des devis et des factures : plan [relances.md](plans/relances.md) (neuf lots, décisions du 08/11/2026 dans
+- [x] Relances des devis et des factures : plan [relances.md](plans/relances.md) réalisé en neuf lots le 08/11/2026 (décisions dans
   [relances-questions.md](plans/relances-questions.md) ; analyse [ANALYSE-RELANCES.md](documentation/conception/ANALYSE-RELANCES.md) ;
-  comprend le lot 5 du module Mail et C27 du CRM). Lot 1 fait (08/11/2026 : module `modules/relance`, règle des niveaux
-  et calcul des relances dues `regles.js` ↔ `ReglesRelance.cs`) ; lot 2 fait (08/11/2026 : `modules/relance/db/099t`,
-  `LogiBTP.Relances.Web` : lots préparés et validés, journal, suspensions, routes `/api/relances…` non encore branchées) ; lot 3 fait (08/11/2026 : écrans `modules/relance/js/ui`, liste de travail, règle, suspensions ; mode préféré du tiers sans effet sur un niveau RECOMMANDE) ;
-  lot 4 fait (08/11/2026 : cœur branché, `db/283` rôle `tyd_role_relance`, `SpecialisationRelanceBtp`, nœud de droits
-  `relances`, page `/relances` ; à revoir : choix
-  d'une pièce à suspendre depuis l'onglet Suspensions non proposé, préparation de nuit sans requête HTTP à brancher au
-  lot 9 — module Règlements alors pris comme inactif) ;
-  lot 5 fait (08/11/2026 : `db/284` surcharge par tiers sur la fiche personne, « ne pas relancer », règle propre en JSON sans éditeur de niveaux, action « Suspendre les relances », rôle de relance des types de pièces dans les paramètres Rentabilité) ;
-  lot 6 fait (08/11/2026 : envoi par courriel, `db/285` modèles par nature et niveau, bascule en courrier sans adresse, PDF des pièces joint, note RELANCE du CRM ; lot 5 du module Mail absorbé et fermé, Q20 ; à revoir : les modèles ne sont pas reliés aux niveaux de la règle par défaut — choisis par nature et niveau —, le Mail range le courriel et sa note « Courriel envoyé » sur le tiers) ;
-  lot 7 fait (08/11/2026 : lettres COURRIER / RECOMMANDE et bascule du courriel par le module Édition, source « relance », modèles RELANCE_1, RELANCE_2, MISE_EN_DEMEURE — mentions citées sans calcul —, PDF rangé en GED de chaque pièce, catégorie `relance` de `db/286`, recommandé en ATTENTE_NUMERO jusqu'à son numéro ; à revoir : (listes de modèles de la règle fournies au lot 8) le journal ne garde qu'un document GED par lettre (celui de la première pièce, `ResultatEnvoi.GedId` du module), `db/191` généré non rejouable au manifeste : à rejouer sur les bases existantes pour avoir les modèles, pas encore de réimpression d'une lettre depuis l'interface (onglet Suivi, lot 8)) ; lot 8 fait (08/11/2026 : `db/287` colonne « Dernière relance » (`derniere_relance`, reprise de `v_liste_documents` depuis `db/267`) des vues Devis et Factures, journal des relances faites dans l'onglet Suivi de la page document et de la fiche tiers, listes de modèles de courriel et de lettre de la règle fournies par `GET /api/relances/modeles` ; le bouton « Noter une relance faite » de la liste de travail (lot 3) était déjà branché sur `POST /api/relances/notees` ; à revoir : `db/121` et `db/191` à rejouer sur les bases existantes (les vues déjà modifiées gardent leurs colonnes : ajouter « Dernière relance » par le concepteur), pas de réimpression d'une lettre depuis l'onglet Suivi, pas d'action « Noter » depuis l'onglet Suivi) ; suivant : lot 9.
+  le lot 5 du module Mail et C27 du CRM y sont absorbés). Lot 9 : calcul de nuit et notification « N relances à préparer »
+  (`SourceRelancesAPreparer`, services de la base par `SpecialisationRelanceNuit`, chaque destinataire compté selon sa portée),
+  mode TACHE des devis (tâche du CRM du jour, CRM actif seulement), pastille « relancé N » de la fiche tiers. Ligne laissée
+  cochée : à déplacer dans `documentation/TACHES.md` par un humain.
+- [ ] Relances, reports du plan : calcul des pénalités de retard pour information (Q13 a : taux à tenir à jour, aujourd'hui
+  mentions citées sans calcul) ; pastille « relancé N » dans l'entête des nouvelles pièces (Q17 : touche la page document) ;
+  blocage du client (Q17 c : paramétrable, aujourd'hui aucun blocage).
+- [ ] Relances, à finir : éditeur de niveaux pour la règle propre d'un tiers (aujourd'hui saisie JSON dans la fiche) ; rôle de
+  relance des types de pièces réglable hors de la page Rentabilité ; rejouer `db/121` et `db/191` sur les bases existantes
+  (vues de liste et modèles de lettres) ; mode TACHE encore listé par l'écran de la liste de travail quand le CRM est inactif
+  (le serveur refuse alors le groupe, `RELANCE_TACHE` : l'écran du module ne reçoit pas la liste des modes admis).
 
 ### Comptabilité
 

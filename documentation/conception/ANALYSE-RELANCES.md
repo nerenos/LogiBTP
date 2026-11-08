@@ -5,7 +5,9 @@
 > Q18 du module Règlements ([CONCEPTION-MARCHES-REGLEMENTS.md](CONCEPTION-MARCHES-REGLEMENTS.md) : « relances plus
 > tard »), ergonomie Q5 (indicateur « Devis à relancer », [ANALYSE-ERGONOMIE.md](ANALYSE-ERGONOMIE.md)).
 >
-> **État** : questions R1 à R18 ouvertes (§ 6) ; chaque question porte une proposition, la décision reste à prendre.
+> **État** : réalisé le 08/11/2026 en neuf lots (module `modules/relance`, cœur) ; décisions dans
+> [relances-questions.md](../../plans/relances-questions.md), déroulé et écarts dans [relances.md](../../plans/relances.md) ; reports au TODO
+> (pénalités calculées, pastille dans l'entête des pièces, blocage du client). Le texte qui suit est l'analyse d'origine.
 
 ## 1. Demande
 

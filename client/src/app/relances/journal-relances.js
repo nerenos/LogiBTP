@@ -2,6 +2,7 @@ import { texte, texteHtml, textesParCode } from '@logibtp/socle/dictionnaire';
 import { echapper, formatDate, formatNombre } from '@logibtp/socle/ui';
 import { ETAT_RELANCE, MODE_RELANCE } from '@logibtp/relance';
 import { urlDocument } from '../codes.js';
+import { pastille } from '../pastilles.js';
 import { api } from '../api.js';
 
 // Relances faites d'une pièce (et de son groupe d'indices) ou d'un tiers, lues dans le journal du module Relances
@@ -15,6 +16,26 @@ const ETATS = textesParCode('relances_btp.journal.etats', [ETAT_RELANCE.ENVOYEE,
 /** Relances faites, de la plus récente à la plus ancienne. */
 export function relancesFaites(journal) {
   return (journal ?? []).filter((r) => FAITES.has(r.etat)).sort((a, b) => String(b.date).localeCompare(String(a.date)) || b.id - a.id);
+}
+
+/** Fenêtre de la pastille « relancé N » de la fiche tiers (jours avant la date de référence ; plans/relances.md, Q17 b). */
+export const JOURS_PASTILLE = 90;
+
+/** Relances faites dans la fenêtre : de la date de référence (AAAA-MM-JJ) moins `jours` jours, comprise, à cette date. */
+export function relancesRecentes(journal, reference, jours = JOURS_PASTILLE) {
+  const debut = new Date(`${reference}T00:00:00Z`);
+  debut.setUTCDate(debut.getUTCDate() - jours);
+  const limite = debut.toISOString().slice(0, 10);
+  return relancesFaites(journal).filter((r) => String(r.date).slice(0, 10) >= limite && String(r.date).slice(0, 10) <= reference);
+}
+
+/** Pastille « relancé N » d'un tiers (HTML, vide sans relance récente ou sans droit de lecture) ; infobulle : dernière relance. */
+export async function pastilleRelancesTiers(tiers, reference) {
+  let faites;
+  try { faites = relancesRecentes(await api.relances.journal({ tiers }), reference); } catch { return ''; }
+  if (!faites.length) return '';
+  return pastille(texte('relances_btp.pastille.libelle', { nombre: faites.length }), 'attention',
+    { titre: texte('relances_btp.pastille.aide', { jours: JOURS_PASTILLE, date: formatDate(faites[0].date), niveau: faites[0].niveau }) });
 }
 
 /**

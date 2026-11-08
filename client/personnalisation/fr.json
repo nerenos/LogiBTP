@@ -5403,6 +5403,7 @@
     },
     "suivi_nouvelle": "Enregistrez la fiche pour suivre ses notes et ses tâches.",
     "infos": {
+      "relances": "Relances",
       "anciennete": "Ancienneté",
       "annees_un": "{{nombre}} an",
       "annees_autre": "{{nombre}} ans",
@@ -6403,6 +6404,10 @@
       "regle_titre": "Niveaux, délais et modes par nature (modification : administrateur)"
     },
     "choisir_tiers": "Tiers à suspendre",
+    "pastille": {
+      "libelle": "relancé {{nombre}}",
+      "aide": "Relances faites à ce tiers ces {{jours}} derniers jours ; dernière le {{date}} (niveau {{niveau}})"
+    },
     "journal": {
       "titre": "Relances",
       "aucune": "Aucune relance faite.",

@@ -11,6 +11,7 @@ import { rendrePieces } from '../sous-traitance/pieces.js';
 import { rendrePhoto, urlImage, vignette } from '../annuaire/photo.js';
 import { choixMultiple } from '../choix-multiple.js';
 import { api } from '../api.js';
+import { pastilleRelancesTiers } from '../relances/journal-relances.js';
 import { rendreTarifsFournisseur } from '../annuaire/tarifs-fournisseur.js';
 
 // Fiches de l'annuaire (module Fiche + module Annuaire) : personne (niveau, hiérarchie, casquettes qui déverrouillent
@@ -186,6 +187,8 @@ export class FichePersonne extends FicheAnnuaire {
   /** Statut provisoire (résumé de l'annuaire, hors définition de la fiche). */
   async ouvrir() {
     this.provisoire = this.id !== null && (await this.annuaire.personne(this.id).catch(() => null))?.provisoire === true;
+    // Pastille « relancé N » (module Relances actif, droit de lecture) : relances faites au tiers ces derniers jours.
+    this.pastilleRelances = this.id !== null && this.moduleActif(MODULE_FACULTATIF.RELANCE) && this.acces('relances') ? await pastilleRelancesTiers(this.id, aujourdhui()) : '';
     return super.ouvrir();
   }
 
@@ -234,6 +237,7 @@ export class FichePersonne extends FicheAnnuaire {
     const parts = [vignette(this.urlImage)];
     if (v.societe_base) parts.push(info(texteHtml('fiches_btp.infos.annuaire'), `${iconeHtml('fiches_btp_societe_base')} ${texteHtml('fiches_btp.annuaire.societe_base')}`));
     if (this.provisoire) parts.push(info(texteHtml('fiches_btp.infos.annuaire'), `${iconeHtml('fiches_btp_provisoire')} ${texteHtml('fiches_btp.annuaire.provisoire')}`, true));
+    if (this.pastilleRelances) parts.push(info(texteHtml('fiches_btp.infos.relances'), this.pastilleRelances));
     const tel = principale(coords, 'TELEPHONE');
     const mail = principale(coords, 'EMAIL');
     const adresse = principale(coords, 'ADRESSE');

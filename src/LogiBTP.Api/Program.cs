@@ -161,6 +161,7 @@ builder.Services.AddSourceNotifications<SourcePiecesSousTraitance>();
 builder.Services.AddSourceNotifications<SourceStockBtp>();
 builder.Services.AddSourceNotifications<SourcePaiementsDirects>();
 builder.Services.AddSourceNotifications<SourceCertificat>();
+builder.Services.AddSourceNotifications<SourceRelancesAPreparer>();
 builder.Services.AddCanalNotifications<CanalCourrielBtp>();
 // Module OAuth : connexions sortantes OAuth 2.0 (jetons chiffrés, renouvellement, rappels d'échéance ; modules/oauth/db/004) ;
 // fournisseur de jetons du socle (IFournisseurJeton) pour le module Mail ; retour des fournisseurs en route publique.

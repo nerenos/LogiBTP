@@ -245,7 +245,7 @@
   les vues déjà enregistrées gardent leurs colonnes (`db/121` ne remplace que les vues jamais modifiées), pas de réimpression d'une lettre
   ni d'action « Noter » depuis l'onglet Suivi.
 
-## Lot 9 : préparation de nuit, notification, tâche d'appel, pastille (A FAIRE)
+## Lot 9 : préparation de nuit, notification, tâche d'appel, pastille (FAIT (08/11/2026))
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `src/LogiBTP.Api/Btp/NotificationsBtp.cs` (source « relances à préparer » : calcul chaque nuit par base,
@@ -255,6 +255,25 @@
 - **Règles répliquées** : aucune.
 - **Critère de fin** : le planificateur d'une base de démonstration émet la notification ; un devis en mode TACHE crée
   la tâche sans courriel ; suite complète `npm test` et `dotnet test LogiBTP.slnx` verte.
+- **Réalisé** (08/11/2026) : correction du point ouvert du lot 4 : `SpecialisationRelanceBtp` n'est plus scellée et ses services
+  (`Services`) sont virtuels ; `SpecialisationRelanceNuit` (même fichier) les prend dans la portée de la base traitée, donc hors
+  requête HTTP le module Règlements est lu par `ModulesSociete` (`module_societe`) et la portée par `IDroits`. Solution retenue pour
+  la portée : chaque destinataire est compté selon sa propre portée (SOI, EQUIPE, SERVICE, TOUT) par `ServiceRelance.Dues`, plus
+  sûre que de ne notifier que la portée TOUT (personne n'est oublié, personne ne voit le nombre de pièces des autres).
+  `SourceRelancesAPreparer` (`Btp/NotificationsBtp.cs`, `AddSourceNotifications` dans `Program.cs`, type « relance / A_PREPARER »,
+  période 6 h, clé un jour et un destinataire : une notification par jour) : module Relances actif, destinataires = comptes de
+  personnes actifs et valides ayant Créer sur le nœud `relances` (sans module Droits : administrateurs), notification « N relances à
+  préparer » vers `/relances` ; calcul seul, aucun lot créé, aucun envoi. Mode TACHE : `CreerTacheAsync` / `TacheAsync` (tâche du
+  CRM, à faire, type RELANCE, échéance à la fin du jour de la validation, responsable = chargé du devis sinon individu de l'auteur,
+  liens au devis par son groupe d'indices et au tiers, aucun courriel ni lettre) ; CRM inactif : `RELANCE_TACHE`, le groupe reste
+  proposé et l'échec est signalé ; la note RELANCE du lot 6 est encore posée (remet à zéro « Devis à relancer »). Pastille
+  « relancé N » sur la fiche tiers seulement (`pastilleRelancesTiers` de `relances/journal-relances.js` : relances faites des 90
+  derniers jours, infobulle avec la dernière ; textes `relances_btp.pastille`, `fiches_btp.infos.relances`). Tests :
+  `RelancesBtpTests` (`Nuit_notifie_chaque_destinataire_selon_sa_portee`, `Tache_refusee_sans_le_module_crm`,
+  `Devis_en_mode_tache_cree_la_tache_sans_courriel`, avec `LOGIBTP_TEST_PG`), `client/test/journal-relances.test.js`. Vérifié sur la
+  base locale avec l'API : le planificateur publie « 1 relance à préparer » ; avec Playwright : pastille « relancé 1 » sur la
+  fiche d'un tiers relancé. Points ouverts : l'écran de la liste de travail (module) propose TACHE aux devis même sans CRM (le
+  serveur refuse), pas de pastille dans l'entête des nouvelles pièces ni de blocage (Q17, TODO).
 
 ---
 

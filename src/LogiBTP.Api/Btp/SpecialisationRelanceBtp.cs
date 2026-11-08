@@ -36,8 +36,10 @@ namespace LogiBTP.Api.Btp;
 /// Lot 7 : lettre (COURRIER, RECOMMANDE, bascule du courriel) produite par le module Édition (source « relance »,
 /// modèles RELANCE_1, RELANCE_2, MISE_EN_DEMEURE), rangée en GED de chaque pièce (catégorie relance, db/286) ;
 /// recommandé en ATTENTE_NUMERO jusqu'à la saisie de son numéro (Q12).
+/// Lot 9 : mode TACHE des devis (tâche d'appel du CRM, CRM actif seulement, Q16) ; hors requête HTTP (calcul de nuit,
+/// <see cref="SpecialisationRelanceNuit"/>) les services viennent de la portée de la base et non de la requête.
 /// </summary>
-public sealed class SpecialisationRelanceBtp(IHttpContextAccessor http, ILogger<SpecialisationRelanceBtp> journal) : SpecialisationRelance
+public class SpecialisationRelanceBtp(IHttpContextAccessor http, ILogger<SpecialisationRelanceBtp> journal) : SpecialisationRelance
 {
     /// <summary>Nœud des droits : Consulter (liste), Créer (préparer un lot), Valider (envoyer, noter, numéro de recommandé).</summary>
     public const string Noeud = "relances";
@@ -90,7 +92,8 @@ public sealed class SpecialisationRelanceBtp(IHttpContextAccessor http, ILogger<
     /// <summary>Échéance du document (document_echeance) : sans le module Règlements, son montant est dû en entier.</summary>
     public sealed record EcheanceDocument(long Id, DateOnly? Date, decimal Montant, string Nature);
 
-    private IServiceProvider? Services => http.HttpContext?.RequestServices;
+    /// <summary>Services de la requête (module Règlements, droits, CRM, Mail…) ; null hors requête, sauf calcul de nuit.</summary>
+    protected virtual IServiceProvider? Services => http.HttpContext?.RequestServices;
 
     private static DateOnly Aujourdhui => DateOnly.FromDateTime(DateTime.Today);
 
@@ -565,6 +568,59 @@ public sealed class SpecialisationRelanceBtp(IHttpContextAccessor http, ILogger<
         return ModeleParDefaut(envoi.Nature, envoi.Niveau, regle.Niveaux.Max(n => n.Rang));
     }
 
+    // ----- Tâche d'appel du CRM (lot 9, Q16) -----
+
+    /// <summary>Code d'erreur d'un mode TACHE choisi alors que le CRM est inactif ou qu'aucun responsable n'est connu.</summary>
+    public const string ErreurTache = "RELANCE_TACHE";
+
+    /// <summary>
+    /// Mode TACHE d'un devis : une tâche du CRM à échéance du jour de la validation, rattachée au devis (groupe d'indices) et
+    /// au tiers, confiée au chargé d'affaires (à défaut, à celui qui valide) ; aucun courriel, aucune lettre. Proposé
+    /// seulement si le module CRM est actif : sinon le groupe reste proposé et l'échec est signalé (Q16).
+    /// </summary>
+    public override async Task<ResultatEnvoi> CreerTacheAsync(RelanceDbContext db, EnvoiRelance envoi, CancellationToken ct)
+    {
+        var s = Services ?? throw new InvalidOperationException("Envoi d'une relance hors d'une requête");
+        if (s.GetService<ModulesSociete>() is not { } m || !await m.EstActifAsync(ModulesFacultatifs.Crm, ct))
+            throw ExceptionMetier.Invalide(ErreurTache, "Le mode « tâche d'appel » demande le module CRM actif");
+        var crm = s.GetRequiredService<ServiceCrm>();
+        await TacheAsync(db, envoi, async (n, u, c) => (await crm.Enregistrer(null, n, u, c)).Note.Id, ct);
+        return new ResultatEnvoi(EtatRelance.Envoyee);
+    }
+
+    /// <summary>
+    /// Tâche (nature TACHE, à faire, type de note RELANCE) d'un groupe de devis relancés par appel : échéance à la fin du jour
+    /// de l'envoi, responsable = chargé du groupe (individu), sinon individu de l'auteur ; liens : chaque devis (groupe
+    /// d'indices) et le tiers. <paramref name="creer"/> enregistre la note du CRM et renvoie son identifiant.
+    /// </summary>
+    public static async Task<long> TacheAsync(DbContext db, EnvoiRelance envoi, Func<NoteSaisie, Utilisateur, CancellationToken, Task<long>> creer, CancellationToken ct)
+    {
+        var responsable = envoi.ChargeId ?? (await db.Database.SqlQueryRaw<long>("""
+            SELECT ind_id AS "Value" FROM individu WHERE ind_utilisateur = lower(@u) ORDER BY ind_id LIMIT 1
+            """, new NpgsqlParameter("u", envoi.Auteur.Code)).ToListAsync(ct)).Cast<long?>().FirstOrDefault()
+            ?? throw ExceptionMetier.Invalide(ErreurTache, "Aucun responsable pour la tâche d'appel : le devis n'a pas de chargé d'affaires");
+        var tno = await SpecialisationCrmBtp.TypeNoteAsync(db, SpecialisationCrmBtp.TypeNoteRelance, ct);
+        var pieces = (await db.Database.SqlQueryRaw<PieceCourriel>(SqlPiecesCourriel,
+            P("ids", envoi.Pieces.Select(p => p.PieceId).Distinct().ToArray(), NpgsqlDbType.Array | NpgsqlDbType.Bigint)).ToListAsync(ct)).ToDictionary(p => p.Id);
+        var tiers = (await db.Database.SqlQueryRaw<TiersCourriel>(SqlTiersCourriel,
+            P("ids", new[] { envoi.TiersId }, NpgsqlDbType.Array | NpgsqlDbType.Bigint)).ToListAsync(ct)).FirstOrDefault();
+        string Titre(long id) => pieces.TryGetValue(id, out var p) ? p.Titre : $"#{id}";
+        var objet = $"Appeler {tiers?.RaisonSociale ?? $"#{envoi.TiersId}"} : relance de niveau {envoi.Niveau} de {string.Join(", ", envoi.Pieces.Select(p => Titre(p.PieceId)))}";
+        if (objet.Length > ReglesNote.LongueurObjet) objet = objet[..(ReglesNote.LongueurObjet - 1)] + "…";
+        var html = new StringBuilder("<p>Relance par appel à faire aujourd'hui (aucun courriel n'est envoyé).</p><ul>");
+        foreach (var p in envoi.Pieces)
+            html.Append(CultureInfo.InvariantCulture, $"<li>{WebUtility.HtmlEncode(Titre(p.PieceId))} : niveau {p.Niveau}, {WebUtility.HtmlEncode(Montant(p.Montant))}, {p.Jours} jours</li>");
+        html.Append("</ul>");
+        if (!string.IsNullOrWhiteSpace(envoi.Commentaire)) html.Append("<p>").Append(WebUtility.HtmlEncode(envoi.Commentaire)).Append("</p>");
+        if (tiers?.Commentaire is { Length: > 0 } ct2) html.Append("<p>Commentaire du tiers : ").Append(WebUtility.HtmlEncode(ct2)).Append("</p>");
+        var liens = envoi.Pieces.Select(r => new LienSaisi("document", (pieces.GetValueOrDefault(r.PieceId)?.GroupeId ?? r.PieceId).ToString(CultureInfo.InvariantCulture)))
+            .DistinctBy(l => l.IdElement).Append(new LienSaisi(TypesFiche.Personne, envoi.TiersId.ToString(CultureInfo.InvariantCulture))).ToList();
+        liens[0] = liens[0] with { Principal = true };
+        var echeance = new DateTimeOffset(envoi.Date.ToDateTime(new TimeOnly(23, 59)));
+        return await creer(new NoteSaisie(NatureNote.Tache, EtatNote.AFaire, tno, null, objet, html.ToString(), responsable, echeance, null, false, false, false, liens, null),
+            envoi.Auteur, ct);
+    }
+
     // ----- Note RELANCE du CRM (Q14) -----
 
     /// <summary>Note RELANCE du CRM pour les relances faites (envoyées, notées), si le module est actif ; un échec est journalisé.</summary>
@@ -635,6 +691,17 @@ public sealed class SpecialisationRelanceBtp(IHttpContextAccessor http, ILogger<
         }
         return notes;
     }
+}
+
+/// <summary>
+/// Spécialisation des relances pour le calcul de nuit (lot 9, hors requête HTTP) : mêmes règles que la requête, mais les
+/// services (module Règlements pour le reste à payer, droits pour la portée de chaque destinataire, CRM) sont ceux de la
+/// portée de la base traitée. L'activation des modules est lue dans <c>module_societe</c> par <see cref="ModulesSociete"/>.
+/// </summary>
+public sealed class SpecialisationRelanceNuit(IServiceProvider portee, ILogger<SpecialisationRelanceBtp> journal)
+    : SpecialisationRelanceBtp(new HttpContextAccessor(), journal)
+{
+    protected override IServiceProvider? Services => portee;
 }
 
 /// <summary>

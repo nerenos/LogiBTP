@@ -4,7 +4,10 @@ using LogiBTP.Editions;
 using LogiBTP.Editions.Web;
 using LogiBTP.Ged;
 using LogiBTP.Ged.Web;
+using LogiBTP.Crm;
+using LogiBTP.Crm.Web;
 using LogiBTP.Mail.Web;
+using LogiBTP.Notifications.Web;
 using LogiBTP.Reglements.Web;
 using LogiBTP.Relances;
 using LogiBTP.Relances.Web;
@@ -647,6 +650,180 @@ public class RelancesBtpTests
         var lettre = await service.SaisirNumero(journal[f1].RelId, new NumeroRecommande(" 1A 234 567 8901 2 "), admin, default);
         Assert.Equal((EtatRelance.Envoyee, "1A 234 567 8901 2"), (Assert.Single(lettre).Etat, lettre[0].Recommande));
         Assert.Equal(EtatRelance.Envoyee, (await db.Relances.AsNoTracking().FirstAsync(r => r.RelId == journal[f1].RelId)).RelEtat);
+        await tx.RollbackAsync();
+    }
+
+    // ----- Lot 9 : calcul de nuit, notification, tâche d'appel -----
+
+    /// <summary>Droits simulés : portée du nœud « relances » par profil (Créer et Consulter) ; profil absent : refusé.</summary>
+    private sealed class DroitsSimules(Dictionary<string, string> parProfil) : IDroits
+    {
+        public Task<string?> PorteeAsync(Utilisateur u, string noeud, string action, CancellationToken ct) =>
+            Task.FromResult(noeud == SpecialisationRelanceBtp.Noeud && parProfil.TryGetValue(u.Profil, out var p) ? p : null);
+
+        public Task<IReadOnlyList<ProfilDroits>> ProfilsAsync(CancellationToken ct) => Task.FromResult<IReadOnlyList<ProfilDroits>>([]);
+    }
+
+    private static async Task<(NpgsqlConnection, NpgsqlTransaction, Func<string, (string, object)[], Task<object?>>)?> OuvrirAsync(string[] pieces)
+    {
+        var connexion = Environment.GetEnvironmentVariable("LOGIBTP_TEST_PG");
+        if (string.IsNullOrEmpty(connexion)) return null;
+        var c = new NpgsqlConnection(connexion);
+        await c.OpenAsync();
+        var tx = await c.BeginTransactionAsync();
+        async Task<object?> Scalaire(string sql, (string, object)[] p)
+        {
+            await using var k = new NpgsqlCommand(sql, c, tx);
+            foreach (var (n, v) in p) k.Parameters.AddWithValue(n, v);
+            return await k.ExecuteScalarAsync();
+        }
+        foreach (var t in pieces)
+            if (await Scalaire(t, []) is null) { await tx.RollbackAsync(); await c.DisposeAsync(); return null; }
+        return (c, tx, Scalaire);
+    }
+
+    /// <summary>
+    /// Calcul de nuit (hors requête HTTP) : la spécialisation de nuit prend ses services dans la portée de la base. Chaque
+    /// destinataire est compté selon sa propre portée (SOI : ses devis ; TOUT : tous) ; un profil sans le droit de préparer
+    /// n'est pas destinataire ; rien n'est envoyé ni écrit au journal.
+    /// </summary>
+    [Fact]
+    public async Task Nuit_notifie_chaque_destinataire_selon_sa_portee()
+    {
+        var ouvert = await OuvrirAsync(["SELECT 1 FROM type_document WHERE tyd_code = 'V_DEVIS'",
+            "SELECT s.std_id FROM statut_document s JOIN type_document t ON t.tyd_id = s.std_tyd_id WHERE t.tyd_code = 'V_DEVIS' AND s.std_code = 'ENVOYE' LIMIT 1"]);
+        if (ouvert is not var (c, tx, scalaire)) return;
+        await using var _ = c;
+        Task<object?> Scalaire(string sql, params (string, object)[] p) => scalaire(sql, p);
+        async Task<long> Id(string sql, params (string, object)[] p) => Convert.ToInt64(await Scalaire(sql, p));
+        var devis = await Id("SELECT tyd_id FROM type_document WHERE tyd_code = 'V_DEVIS'");
+        var envoye = await Id("SELECT s.std_id FROM statut_document s JOIN type_document t ON t.tyd_id = s.std_tyd_id WHERE t.tyd_code = 'V_DEVIS' AND s.std_code = 'ENVOYE' ORDER BY s.std_id LIMIT 1");
+        await Scalaire("DELETE FROM relance_regle");
+        var suffixe = Guid.NewGuid().ToString("N")[..8];
+        async Task<long> Charge(string utilisateur) => await Id("INSERT INTO individu (ind_nom, ind_utilisateur) VALUES (@n, @u) RETURNING ind_id", ("n", $"Nuit {utilisateur}"), ("u", utilisateur));
+        var soi = $"nuit.soi.{suffixe}";
+        var indSoi = await Charge(soi);
+        var indAutre = await Charge($"nuit.autre.{suffixe}");
+        async Task<long> Devis(long charge, string numero)
+        {
+            var tiers = await Id("INSERT INTO personne (per_niv_code, per_raison_sociale, per_cli_charge_ind_id) VALUES ('SOCIETE', @n, @i) RETURNING per_id", ("n", $"Nuit {numero}"), ("i", charge));
+            var d = await Id("""
+                INSERT INTO document (ent_tyd_id, ent_std_id, ent_numero, ent_date, ent_cree_par, ent_verrouille, ent_is_reference, ent_tiers_id,
+                  ent_envoye_le, ent_total_ttc, ent_net_a_payer)
+                VALUES (@t, @s, @n, @d, 'test', true, true, @tiers, @env, 1200, 1100) RETURNING ent_id
+                """, ("t", devis), ("s", envoye), ("n", numero), ("d", Jour.AddDays(-50)), ("tiers", tiers), ("env", new DateTime(2026, 9, 29, 10, 0, 0, DateTimeKind.Utc)));
+            await Scalaire("UPDATE document SET ent_groupe_id = ent_id WHERE ent_id = @i", ("i", d));
+            return d;
+        }
+        await Devis(indSoi, "NUIT1");
+        await Devis(indSoi, "NUIT2");
+        await Devis(indAutre, "NUIT3");
+
+        var portee = new ServiceCollection().AddSingleton<IDroits>(new DroitsSimules(new() { ["COMMERCIAL"] = "SOI", ["DIRECTION"] = "TOUT" })).BuildServiceProvider();
+        var options = new DbContextOptionsBuilder<RelanceDbContext>().UseNpgsql(c).UseSnakeCaseNamingConvention().Options;
+        await using var db = new RelanceDbContext(options);
+        await db.Database.UseTransactionAsync(tx);
+        var service = new ServiceRelance(db, new SpecialisationRelanceNuit(portee, NullLogger<SpecialisationRelanceBtp>.Instance));
+        var utilisateurs = new[] { new Utilisateur(soi, "COMMERCIAL"), new Utilisateur($"nuit.tout.{suffixe}", "DIRECTION"), new Utilisateur($"nuit.sans.{suffixe}", "SAISIE") };
+
+        // Destinataires : le profil sans droit de préparer n'en est pas un (SourceRelancesAPreparer.DestinatairesAsync, droits simulés).
+        var droits = portee.GetRequiredService<IDroits>();
+        var retenus = new List<Utilisateur>();
+        foreach (var u in utilisateurs) if (await droits.AutoriseAsync(u, SpecialisationRelanceBtp.Noeud, ActionsDroits.Creer, default)) retenus.Add(u);
+        Assert.Equal(2, retenus.Count);
+
+        var proposees = await db.Relances.CountAsync(r => r.RelEtat == EtatRelance.Proposee);
+        var notifications = await SourceRelancesAPreparer.NotificationsAsync(service, retenus, Jour, default);
+        var parUtilisateur = notifications.ToDictionary(n => n.Utilisateur);
+        Assert.Equal("2 relances à préparer", parUtilisateur[soi].Titre);
+        Assert.Equal(("relance", "A_PREPARER", "/relances", $"relances-a-preparer:{Jour:yyyy-MM-dd}"), (parUtilisateur[soi].Module, parUtilisateur[soi].Type, parUtilisateur[soi].Url, parUtilisateur[soi].Cle));
+        var tout = parUtilisateur[$"nuit.tout.{suffixe}"];
+        Assert.True(int.Parse(tout.Titre.Split(' ')[0]) >= 3, tout.Titre);
+        Assert.DoesNotContain(notifications, n => n.Utilisateur.StartsWith("nuit.sans."));
+        // Calcul seul : rien n'a été proposé ni envoyé.
+        Assert.Equal(proposees, await db.Relances.CountAsync(r => r.RelEtat == EtatRelance.Proposee));
+        await tx.RollbackAsync();
+    }
+
+    /// <summary>Hors requête, sans module CRM actif dans la portée : le mode TACHE est refusé (le groupe reste proposé).</summary>
+    [Fact]
+    public async Task Tache_refusee_sans_le_module_crm()
+    {
+        var specialisation = new SpecialisationRelanceNuit(new ServiceCollection().BuildServiceProvider(), NullLogger<SpecialisationRelanceBtp>.Instance);
+        var envoi = new EnvoiRelance(1, 1, 5, 7, NatureRelance.Devis, ModeRelance.Tache, 1, null, null, [new PieceEnvoi(1, 1, 1, 20, 100m)], null, new Utilisateur("test", "UTILISATEUR"), Jour);
+        var e = await Assert.ThrowsAsync<ExceptionMetier>(() => specialisation.CreerTacheAsync(null!, envoi, default));
+        Assert.Equal(SpecialisationRelanceBtp.ErreurTache, e.Code);
+    }
+
+    /// <summary>Spécialisation de test : la tâche du CRM est écrite en SQL dans la transaction du test.</summary>
+    private sealed class SpecialisationTache(DateOnly jour, List<NoteSaisie> taches) : SpecialisationRelance
+    {
+        public override Task<List<PieceEnAttente>> PiecesEnAttenteAsync(RelanceDbContext db, FiltrePieces filtre, CancellationToken ct) =>
+            SpecialisationRelanceBtp.PiecesAsync(db, filtre, jour, null, ct);
+
+        public override async Task<LogiBTP.Relances.Web.ResultatEnvoi> CreerTacheAsync(RelanceDbContext db, EnvoiRelance envoi, CancellationToken ct)
+        {
+            await SpecialisationRelanceBtp.TacheAsync(db, envoi, async (n, u, c) =>
+            {
+                taches.Add(n);
+                return (await db.Database.SqlQueryRaw<long>("""
+                    INSERT INTO crm_note (not_nature, not_etat, not_objet, not_message_html, not_responsable_id, not_echeance, not_cree_par)
+                    VALUES (@n, @e, @o, @h, @r, @d, @u) RETURNING not_id AS "Value"
+                    """, new NpgsqlParameter("n", n.Nature), new NpgsqlParameter("e", n.Etat), new NpgsqlParameter("o", n.Objet), new NpgsqlParameter("h", n.MessageHtml),
+                    new NpgsqlParameter("r", n.ResponsableId), new NpgsqlParameter("d", n.Echeance), new NpgsqlParameter("u", u.Code)).ToListAsync(c))[0];
+            }, ct);
+            return new LogiBTP.Relances.Web.ResultatEnvoi(EtatRelance.Envoyee);
+        }
+    }
+
+    /// <summary>
+    /// Devis relancé en mode TACHE : une tâche du CRM (à faire, échéance du jour, responsable = chargé, rattachée au devis par
+    /// son groupe d'indices et au tiers), le journal le compte comme relance faite, aucun courriel n'est mis en file.
+    /// </summary>
+    [Fact]
+    public async Task Devis_en_mode_tache_cree_la_tache_sans_courriel()
+    {
+        var ouvert = await OuvrirAsync(["SELECT 1 FROM type_document WHERE tyd_code = 'V_DEVIS'", "SELECT 1 FROM information_schema.tables WHERE table_name = 'crm_note'",
+            "SELECT s.std_id FROM statut_document s JOIN type_document t ON t.tyd_id = s.std_tyd_id WHERE t.tyd_code = 'V_DEVIS' AND s.std_code = 'ENVOYE' LIMIT 1"]);
+        if (ouvert is not var (c, tx, scalaire)) return;
+        await using var _ = c;
+        Task<object?> Scalaire(string sql, params (string, object)[] p) => scalaire(sql, p);
+        async Task<long> Id(string sql, params (string, object)[] p) => Convert.ToInt64(await Scalaire(sql, p));
+        var devis = await Id("SELECT tyd_id FROM type_document WHERE tyd_code = 'V_DEVIS'");
+        var envoye = await Id("SELECT s.std_id FROM statut_document s JOIN type_document t ON t.tyd_id = s.std_tyd_id WHERE t.tyd_code = 'V_DEVIS' AND s.std_code = 'ENVOYE' ORDER BY s.std_id LIMIT 1");
+        await Scalaire("DELETE FROM relance_regle");
+        var charge = await Id("INSERT INTO individu (ind_nom) VALUES ('Chargé tâche') RETURNING ind_id");
+        var tiers = await Id("INSERT INTO personne (per_niv_code, per_raison_sociale, per_cli_charge_ind_id) VALUES ('SOCIETE', 'Client tâche', @i) RETURNING per_id", ("i", charge));
+        var piece = await Id("""
+            INSERT INTO document (ent_tyd_id, ent_std_id, ent_numero, ent_date, ent_cree_par, ent_verrouille, ent_is_reference, ent_tiers_id,
+              ent_envoye_le, ent_total_ttc, ent_net_a_payer)
+            VALUES (@t, @s, 'DEV-TACHE', @d, 'test', true, true, @tiers, @env, 1200, 1100) RETURNING ent_id
+            """, ("t", devis), ("s", envoye), ("d", Jour.AddDays(-50)), ("tiers", tiers), ("env", new DateTime(2026, 9, 29, 10, 0, 0, DateTimeKind.Utc)));
+        await Scalaire("UPDATE document SET ent_groupe_id = ent_id WHERE ent_id = @i", ("i", piece));
+        var courriels = await Id("SELECT count(*) FROM mail_message");
+
+        var options = new DbContextOptionsBuilder<RelanceDbContext>().UseNpgsql(c).UseSnakeCaseNamingConvention().Options;
+        await using var db = new RelanceDbContext(options);
+        await db.Database.UseTransactionAsync(tx);
+        var taches = new List<NoteSaisie>();
+        var service = new ServiceRelance(db, new SpecialisationTache(Jour, taches));
+        var u = new Utilisateur("test", "UTILISATEUR");
+        var lot = await service.Preparer(new DemandePreparation(Jour), u, default);
+        var groupe = lot!.Groupes.Single(g => g.Relances.Any(r => r.PieceId == piece));
+        // Le mode du niveau (courriel) est remplacé à la validation par le mode TACHE choisi dans la liste.
+        Assert.Equal(2, groupe.Niveau);
+        var resultat = await service.Valider(lot.Id, new ValidationLot([new GroupeValide(groupe.Groupe, ModeRelance.Tache)]), u, default);
+        Assert.Empty(resultat.Echecs);
+
+        var tache = Assert.Single(taches);
+        Assert.Equal((NatureNote.Tache, EtatNote.AFaire, charge), (tache.Nature, tache.Etat, tache.ResponsableId));
+        Assert.Contains("DEV-TACHE", tache.Objet);
+        Assert.Contains("Client tâche", tache.Objet);
+        Assert.Equal(Jour, DateOnly.FromDateTime(tache.Echeance!.Value.LocalDateTime));
+        Assert.Equal([("document", piece.ToString(), true), (TypesFiche.Personne, tiers.ToString(), false)], tache.Liens!.Select(l => (l.TypeElement, l.IdElement, l.Principal)));
+        var r = await db.Relances.AsNoTracking().SingleAsync(x => x.RelEntId == piece);
+        Assert.Equal((EtatRelance.Envoyee, ModeRelance.Tache, null), (r.RelEtat, r.RelMode, r.RelCourrielId));
+        Assert.Equal(courriels, await Id("SELECT count(*) FROM mail_message"));
         await tx.RollbackAsync();
     }
 }
