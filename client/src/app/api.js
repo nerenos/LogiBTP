@@ -740,6 +740,8 @@ export const api = {
   versionDocument: (hisId) => appel('GET', `/historique/${hisId}`),
   tracabilite: (id) => appel('GET', `/documents/${id}/tracabilite`),
   enregistrerOrigine: (id, origine) => appel('PUT', `/documents/${id}/origine`, origine),
+  // Pleins d'un fichier de cartes carburant (plan materiel-suites, lot 10) : rapprochés et écrits côté serveur.
+  ecrirePleinsCarburant: (pleins) => appel('POST', '/ressources/materiels/pleins-carburant', { pleins }),
   casTest: (arbitrage) => appel('POST', '/cas-test', arbitrage),
   // Verrou de modification d'un document (sans expiration ; déverrouillage manuel par un administrateur).
   verrouDocument: (id, jeton) => appel('GET', `/documents/${id}/verrou?jeton=${jeton}`),

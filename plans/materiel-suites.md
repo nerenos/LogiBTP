@@ -51,7 +51,7 @@
 | 7 | Refacturation interne : crédit du chantier de suivi | cœur | 6 | FAIT (08/11/2026) |
 | 8 | Coût par heure proposé comme coût moyen | cœur | MO5 | A FAIRE |
 | 9 | Cartes carburant : lecture du fichier | `modules/import` | MO6 | FAIT (08/11/2026) |
-| 10 | Cartes carburant : rapprochement et écriture des pleins | cœur | 9 | A FAIRE |
+| 10 | Cartes carburant : rapprochement et écriture des pleins | cœur | 9 | FAIT (08/11/2026) |
 
 ---
 
@@ -180,7 +180,7 @@
 - **Critère de fin** : `npm test` vert.
 - **Réalisé / écarts** : `carburant.js` : `lireFichierCarburant(contenu, correspondances)` (correspondances : colonnes acceptées par champ, séparateur, format de date ; défaut `CORRESPONDANCES_CARBURANT`), pleins `{ rang, date, carte, immatriculation, litres, montant, kilometrage }` (nombres en texte décimal, sans Number), erreurs par ligne ; textes `import.carburant.*` ; 3 tests ajoutés à `import.test.js`.
 
-## Lot 10 : cartes carburant, rapprochement et écriture des pleins (A FAIRE)
+## Lot 10 : cartes carburant, rapprochement et écriture des pleins (FAIT 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `client/src/app/import/formats.js` (`:12`, format carburant), `depot-import.js` (`:13`),
@@ -192,3 +192,4 @@
 - **Jeux de tests** : plein rapproché par carte, par immatriculation, non rapproché (rapport) ; doublon ignoré.
 - **Critère de fin** : `npm test` et `dotnet test LogiBTP.slnx` verts ; les pleins importés apparaissent dans la
   rentabilité du matériel.
+- **Réalisé / écarts** : `db/281` (`mat_numero_carte`, manifeste) et champ « N° de carte carburant » de la fiche matériel (`definitions.js`, `db/131` régénéré) ; `POST /api/ressources/materiels/pleins-carburant` (`PleinsCarburantMateriel.cs`, routé dans `MapCompteursMateriel`, droit du préfixe `/api/ressources`) : rapprochement par carte (un seul matériel) puis immatriculation, doublon (matériel, jour, litres, montant) ignoré, plein écrit en événement CARBURANT avec relevé KM si le matériel suit les kilomètres (relevé incohérent : plein écrit sans relevé), rapport `ecrits / doublons / non_rapproches / erreurs`. Client : `import/carburant-import.js` (`importerCarburant`, `resumeCarburant`), `api.ecrirePleinsCarburant`, textes `import_btp.carburant.*`. Écarts : pas de page d'import ni d'entrée dans `formats.js` / `depot-import.js` (format hors document, aucune vérification dans une fenêtre) ; `rapport-import.js` non repris. Tests `PleinsCarburantTests` (C#), `import-carburant.test.js`. `npm test` : 2 échecs connus ; `dotnet test` vert.

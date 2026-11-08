@@ -4068,6 +4068,10 @@
     },
     "formats": {
       "inconnu": "Format d'import inconnu : {{code}}"
+    },
+    "carburant": {
+      "resume": "{{ecrits}} plein(s) écrit(s), {{doublons}} doublon(s) ignoré(s), {{non_rapproches}} non rapproché(s), {{erreurs}} ligne(s) en erreur",
+      "erreur_serveur": "Plein refusé par le serveur ({{code}})"
     }
   },
   "authentification_btp": {

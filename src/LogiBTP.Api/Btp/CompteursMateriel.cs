@@ -126,6 +126,9 @@ public static class CompteursMateriel
 
     public static IEndpointRouteBuilder MapCompteursMateriel(this IEndpointRouteBuilder api)
     {
+        // Pleins d'un fichier de cartes carburant (plan materiel-suites, lot 10) : rapprochés puis écrits en événements CARBURANT.
+        api.MapPost("/ressources/materiels/pleins-carburant", async (PleinsCarburantSaisis x, HttpContext http, LogiBtpContext db, CancellationToken ct) =>
+            await PleinsCarburantMateriel.EcrireAsync(db, x.Pleins ?? [], Utilisateur.Depuis(http).Code, ct));
         var g = api.MapGroup("/ressources/materiels/{id:int}");
         g.MapGet("/compteurs", (int id, LogiBtpContext db, CancellationToken ct) => HistoriqueAsync(db, id, ct));
         // Heures pointées sur le terrain (application de terrain, lot 7).

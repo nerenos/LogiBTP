@@ -126,7 +126,7 @@ export const TYPES_FICHE = {
         {
           code: 'informations', titre: 'Informations',
           groupes: [
-            { titre: 'Identification', champs: ['code', 'designation', 'famille', 'marque', 'modele', 'numero_serie', 'immatriculation', 'energie', 'usage'] },
+            { titre: 'Identification', champs: ['code', 'designation', 'famille', 'marque', 'modele', 'numero_serie', 'immatriculation', 'numero_carte', 'energie', 'usage'] },
             { titre: 'Dates', champs: ['date_entree', 'date_mise_service', 'fin_garantie', 'date_sortie'] },
             { titre: 'Poids et dimensions', champs: ['poids', 'longueur', 'largeur', 'hauteur'] },
             { titre: 'Location', champs: ['loueur_id', 'location_ent_id', 'fin_location'] },
@@ -173,6 +173,8 @@ export const TYPES_FICHE = {
         // Lot 5a des demandes du 25/10/2026 (db/230).
         c('modele', 'Modèle', 'mat_modele', 'texte', { longueur: 60 }),
         c('immatriculation', 'Immatriculation', 'mat_immatriculation', 'texte', { exemple: 'AA-123-AA', longueur: 20, non_copie: true, aide: 'Unique : un véhicule immatriculé ou un EPI marqué' }),
+        // Plan materiel-suites, lot 10 (db/281) : rapprochement des pleins du fichier des cartes carburant.
+        c('numero_carte', 'N° de carte carburant', 'mat_numero_carte', 'texte', { longueur: 40, non_copie: true, aide: 'Rapproche les pleins du fichier de la carte carburant (sinon par immatriculation)' }),
         c('energie', 'Énergie', 'mat_energie', 'liste', { requete: "SELECT lva_code, lva_libelle FROM liste_valeur WHERE lva_liste = 'ENERGIE' AND lva_actif ORDER BY lva_ordre, lva_code" }),
         // Lot 5c-2 (db/233) : compteurs suivis, valeurs = derniers relevés.
         c('compteurs', 'Compteurs', 'mat_compteurs', 'liste', { obligatoire: true, defaut: 'H', options: options(['H', 'Heures'], ['KM', 'Kilomètres'], ['H_KM', 'Heures et kilomètres'], ['AUCUN', 'Aucun']) }),
