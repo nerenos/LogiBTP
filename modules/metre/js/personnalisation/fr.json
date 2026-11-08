@@ -1,7 +1,4 @@
 {
-  "erreurs": {
-    "RACINE_NEGATIVE": "Racine d'un nombre négatif"
-  },
   "metre": {
     "script": {
       "decrire": {
@@ -199,5 +196,8 @@
       "erreurs_autre": "{{nombre}} erreurs",
       "resultat_html": "Résultat : <strong>{{quantite}}</strong> {{unite}}"
     }
+  },
+  "erreurs": {
+    "RACINE_NEGATIVE": "Racine d'un nombre négatif"
   }
 }

@@ -1,8 +1,4 @@
 {
-  "erreurs": {
-    "ETP_MOTIF": "Motif obligatoire pour annuler la validation d'une étape",
-    "PAR_MODELE": "Code et libellé du modèle obligatoires"
-  },
   "execution": {
     "etapes": {
       "natures": {
@@ -59,5 +55,9 @@
       "introuvable": "Ordre introuvable",
       "validee": "{{numero}} : étape validée"
     }
+  },
+  "erreurs": {
+    "ETP_MOTIF": "Motif obligatoire pour annuler la validation d'une étape",
+    "PAR_MODELE": "Code et libellé du modèle obligatoires"
   }
 }

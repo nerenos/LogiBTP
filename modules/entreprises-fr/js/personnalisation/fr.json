@@ -1,8 +1,4 @@
 {
-  "erreurs": {
-    "INDISPONIBLE": "Annuaire des entreprises injoignable",
-    "RECHERCHE": "Saisissez au moins 3 caractères (nom, SIREN ou SIRET)"
-  },
   "entreprises_fr": {
     "recherche": {
       "titre": "Annuaire des entreprises",
@@ -26,5 +22,9 @@
       "precedents": "Précédents",
       "suivants": "Suivants"
     }
+  },
+  "erreurs": {
+    "INDISPONIBLE": "Annuaire des entreprises injoignable",
+    "RECHERCHE": "Saisissez au moins 3 caractères (nom, SIREN ou SIRET)"
   }
 }

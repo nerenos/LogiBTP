@@ -74,7 +74,6 @@
     "BORNE_LIBELLE": "Libellé obligatoire",
     "BORNE_SALARIE": "Ce salarié ne pointe pas sur cette borne",
     "BORNE_SANS_PIN": "Aucun PIN : le demander au service RH",
-    "REPAS_RESTAURANT": "Restaurant à préciser pour un repas d'équipe",
     "BORNE_TYPE_MO": "Type de main-d'œuvre non proposé par cette borne",
     "CNG_NATURES": "Natures : code (20 caractères au plus, unique) et libellé obligatoires",
     "CNG_VERSION": "Le congé a été modifié entre-temps : le recharger",
@@ -85,6 +84,7 @@
     "POI_SEMAINE_HORS": "Pointage hors de la semaine",
     "POI_VALORISATION": "Mode de valorisation inconnu",
     "POI_ZONE": "Agence obligatoire, zone de 0 à 9",
-    "PRF_CODE": "Code et libellé du profil obligatoires"
+    "PRF_CODE": "Code et libellé du profil obligatoires",
+    "REPAS_RESTAURANT": "Restaurant à préciser pour un repas d'équipe"
   }
 }

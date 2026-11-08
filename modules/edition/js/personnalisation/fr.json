@@ -1,12 +1,4 @@
 {
-  "erreurs": {
-    "CHARTE_INVALIDE": "Charte invalide",
-    "IMPORT_FORMAT": "Paquet de modèles d'édition attendu (format logibtp-edition)",
-    "IMPORT_VERSION": "Paquet d'une version plus récente de l'application",
-    "MODELE_CODE": "Code de modèle obligatoire (80 caractères au plus)",
-    "MODELE_DEFAUT": "Modèle par défaut d'un type : choisir un autre modèle par défaut avant de le supprimer",
-    "MODELE_INVALIDE": "Modèle invalide"
-  },
   "edition": {
     "charte": {
       "defaut": "Charte par défaut",
@@ -168,5 +160,13 @@
         "zero_vide": "Valeur nulle non imprimée (aussi propriété zero_vide: true)."
       }
     }
+  },
+  "erreurs": {
+    "CHARTE_INVALIDE": "Charte invalide",
+    "IMPORT_FORMAT": "Paquet de modèles d'édition attendu (format logibtp-edition)",
+    "IMPORT_VERSION": "Paquet d'une version plus récente de l'application",
+    "MODELE_CODE": "Code de modèle obligatoire (80 caractères au plus)",
+    "MODELE_DEFAUT": "Modèle par défaut d'un type : choisir un autre modèle par défaut avant de le supprimer",
+    "MODELE_INVALIDE": "Modèle invalide"
   }
 }
