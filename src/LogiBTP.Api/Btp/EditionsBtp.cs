@@ -155,6 +155,21 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
         return res;
     }
 
+    /// <summary>
+    /// Source annexe reception_pose (application de terrain, lot 5) : dernière réception de l'ordre, réserves, signataire ;
+    /// heure de réception par le serveur (signe_le, recu_le) et, pour une réception gardée hors ligne, heure de signature
+    /// sur l'appareil (signe_appareil_le, terrain-suites lot 13).
+    /// </summary>
+    public const string SqlSourceReception = """
+        SELECT json_build_object('id', r.rec_id, 'date', r.rec_le, 'etat', r.rec_etat, 'reserves', r.rec_reserves, 'motif', r.rec_motif,
+                 'signataire', s.sig_nom, 'qualite', s.sig_qualite, 'signe_le', to_char(s.sig_le AT TIME ZONE 'Europe/Paris', 'DD/MM/YYYY HH24:MI'),
+                 'recu_le', to_char(coalesce(s.sig_le, r.rec_cree_le) AT TIME ZONE 'Europe/Paris', 'DD/MM/YYYY HH24:MI'),
+                 'signe_appareil_le', to_char(r.rec_signee_appareil_le AT TIME ZONE 'Europe/Paris', 'DD/MM/YYYY HH24:MI'),
+                 'signe', s.sig_image IS NOT NULL, 'signature_id', s.sig_id, 'par', r.rec_cree_par)::text AS "Value"
+        FROM reception_pose r LEFT JOIN signature s ON s.sig_id = r.rec_sig_id
+        WHERE r.rec_ent_id = @id ORDER BY r.rec_id DESC LIMIT 1
+        """;
+
     /// <summary>Code de la ressource image de la signature d'une réception de pose (modèle PV_RECEPTION).</summary>
     public const string CodeSignatureReception = "SIGNATURE_RECEPTION";
     /// <summary>Code de la ressource image de la signature d'un bon d'intervention SAV (modèle BON_SAV).</summary>
@@ -230,13 +245,7 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
                   AND (d.ent_date, d.ent_id) < (cur.ent_date, cur.ent_id)
                 """,
             // Réception de pose (application de terrain, lot 5) : dernière réception de l'ordre, réserves, signataire.
-            "reception_pose" => """
-                SELECT json_build_object('id', r.rec_id, 'date', r.rec_le, 'etat', r.rec_etat, 'reserves', r.rec_reserves, 'motif', r.rec_motif,
-                         'signataire', s.sig_nom, 'qualite', s.sig_qualite, 'signe_le', to_char(s.sig_le AT TIME ZONE 'Europe/Paris', 'DD/MM/YYYY HH24:MI'),
-                         'signe', s.sig_image IS NOT NULL, 'signature_id', s.sig_id, 'par', r.rec_cree_par)::text AS "Value"
-                FROM reception_pose r LEFT JOIN signature s ON s.sig_id = r.rec_sig_id
-                WHERE r.rec_ent_id = @id ORDER BY r.rec_id DESC LIMIT 1
-                """,
+            "reception_pose" => SqlSourceReception,
             // Intervention SAV (application de terrain, lot 6) : dernier compte rendu de l'ordre, signataire.
             "intervention_sav" => """
                 SELECT json_build_object('id', i.isv_id, 'date', i.isv_le, 'constat', i.isv_constat, 'travaux', i.isv_travaux, 'fournitures', i.isv_fournitures,

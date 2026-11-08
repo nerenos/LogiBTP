@@ -649,9 +649,12 @@ const RECEPTIONS = [{
         { type: 'pile', espacement: 1, secable: false, marges: { haut: 6 }, enfants: [
           champ('Le client ou son représentant', { style: 'gras' }),
           champ(`=Joindre(" – "; ${PV}.signataire; ${PV}.qualite)`),
-          champ(`="Signé sur le chantier le " & ${PV}.signe_le`, { style: 'discret', condition: `${PV}.signe` }),
+          // Forme de signature et heures (terrain-suites lot 13, TS13 a, TS16 a) : réception gardée hors ligne, heure de
+          // l'appareil puis heure de réception par le serveur ; signée en ligne, une seule heure.
+          champ(`="Signature électronique simple, " & Si(${PV}.signe_appareil_le; "signée sur l’appareil le " & ${PV}.signe_appareil_le & ", reçue le " & ${PV}.recu_le; "signée et reçue le " & ${PV}.recu_le) & "."`,
+            { style: 'discret', condition: `${PV}.signe` }),
           { type: 'image', ressource: 'SIGNATURE_RECEPTION', hauteur: 30, largeur: '70mm', condition: `${PV}.signe` },
-          champ('Signature numérique simple : image tracée sur l’écran, horodatée par le serveur ; l’empreinte du présent document est conservée.', { style: 'petit' }),
+          champ('Signature électronique simple : image tracée sur l’écran, horodatée par le serveur (et par l’appareil pour une signature sans réseau) ; l’empreinte SHA-256 du présent document est conservée.', { style: 'petit' }),
         ] },
       ] } },
     ],

@@ -36,6 +36,12 @@ export function limitePhotos() {
   return tailleMaxDepot({ taille_max_depot: gardee });
 }
 
+/**
+ * Réception gardée sur l'appareil (terrain-suites lot 13, TS16 a) : heure de signature de l'appareil jointe
+ * (`signee_le`, ISO), imprimée sur le PV avec l'heure de réception par le serveur.
+ */
+export const receptionGardee = (reception, maintenant = new Date()) => ({ ...reception, signee_le: maintenant.toISOString() });
+
 /** Formulaire d'envoi de photos gardées ({ fichiers: [File], commentaire }). */
 export const formulairePhotos = ({ fichiers, commentaire }) => {
   const f = new FormData();
@@ -56,7 +62,8 @@ declarerOperation(OPERATION_TERRAIN.NON_CONFORMITE, {
   },
 });
 declarerOperation(OPERATION_TERRAIN.PHOTOS, { envoyer: (c) => api.terrain.photos(c.tache, formulairePhotos(c.photos)) });
-// Réception signée hors ligne : signature gardée en image ; horodatage du serveur à l'envoi (date de réception saisie gardée).
+// Réception signée hors ligne : signature gardée en image, heure de signature de l'appareil jointe (signee_le) ;
+// horodatage du serveur à l'envoi, les deux imprimés sur le PV (terrain-suites lot 13).
 declarerOperation(OPERATION_TERRAIN.RECEPTION, { envoyer: (c) => api.terrain.enregistrerReception(c.ordre, c.reception) });
 declarerOperation(OPERATION_TERRAIN.DEMANDE, {
   envoyer: async (c) => {

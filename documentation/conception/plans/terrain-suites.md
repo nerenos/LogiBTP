@@ -28,7 +28,7 @@
 | 10 | Hors ligne : ordre saisi par son numéro, résolu à l'envoi | cœur | 9 | FAIT (08/11/2026) |
 | 11 | Limite de dépôt de la GED exposée au client | `modules/ged` | — | FAIT (08/11/2026) |
 | 12 | Contrôle de taille des photos à la prise de vue | cœur | 11 | FAIT (08/11/2026) |
-| 13 | PV de réception : forme de signature et heure de l'appareil | cœur | — | A FAIRE |
+| 13 | PV de réception : forme de signature et heure de l'appareil | cœur | — | FAIT (08/11/2026) |
 | 14 | Réserves suivies : base et serveur | cœur | 13 | A FAIRE |
 | 15 | Réserves suivies : levée depuis le terrain et suivi au bureau | cœur | 14 | A FAIRE |
 | 16 | PV de levée des réserves signé | cœur | 15 | A FAIRE |
@@ -303,7 +303,7 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
   envoi (tâche, non-conformité, demande, livraison, page SAV). Le contrôle se fait à la validation des photos
   choisies, pas à chaque prise de vue. Tests : `terrain.test.js`, `operations-terrain.test.js`. Aucun script SQL.
 
-## Lot 13 : PV de réception, forme de signature et heure de l'appareil (TS13 a, TS16 a)
+## Lot 13 : PV de réception, forme de signature et heure de l'appareil (TS13 a, TS16 a) (FAIT 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : nouveau script `db/2xx_reception_appareil.sql` (heure de signature sur l'appareil dans la réception),
@@ -313,6 +313,16 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
 - **Dépendances** : aucune. Confirmation juridique de la signature simple : **de votre côté**, hors code.
 - **Tests** : C# : les deux heures enregistrées et imprimées ; réception en ligne : une seule heure.
 - **Critère de fin** : `npm test` vert ; script rejoué deux fois sans erreur.
+- **Réalisé / écarts** : `db/289_reception_appareil.sql` (rejouable, `rec_signee_appareil_le` de `reception_pose`).
+  Client : `receptionGardee` d'`operations-terrain.js` joint `signee_le` (heure de l'appareil) à la seule réception
+  gardée hors ligne ; envoyée en ligne, la réception n'en porte pas (une seule heure). Serveur :
+  `ReceptionSaisie.SigneeLe`, `TerrainBtp.HeureAppareil` (heure en avance sur le serveur ramenée à la sienne, UTC),
+  `signee_appareil_le` dans la réponse ; source annexe `reception_pose` sortie en `SpecialisationEditionBtp.SqlSourceReception`
+  (`recu_le`, `signe_appareil_le`). Modèle `PV_RECEPTION` (`client/src/app/editions/modeles.js`, `db/191` régénéré par
+  `npm run generer-vues-liste --workspace client`) : « Signature électronique simple, signée sur l'appareil le…, reçue
+  le… » (sinon « signée et reçue le… ») ; `db/191` à rejouer (modèle fourni réécrit s'il n'est pas modifié localement).
+  Tests : `ReceptionAppareilTests.cs` (rejeu du script et source du PV sur la base de développement si
+  `LOGIBTP_TEST_PG`), `operations-terrain.test.js`.
 
 ## Lot 14 : réserves suivies, base et serveur (TS14 a)
 

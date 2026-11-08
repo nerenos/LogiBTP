@@ -17,7 +17,7 @@ const { declarerOperation, ecrireOperation, envoyerOperations, lireOperation } =
 const { etatNumero, ETAT_NUMERO } = await import('../src/app/terrain/terrain.js');
 const { ERREUR_TERRAIN } = await import('../src/app/codes.js');
 const { ETAT_ATTENTE } = await import('../src/app/hors-ligne/attente.js');
-const { memoriserLimitePhotos, limitePhotos } = await import('../src/app/terrain/operations-terrain.js');
+const { memoriserLimitePhotos, limitePhotos, receptionGardee, envoyerOuGarder, OPERATION_TERRAIN } = await import('../src/app/terrain/operations-terrain.js');
 
 describe('hors ligne : ordre saisi par son numéro, résolu à l\'envoi (terrain-suites lot 10)', () => {
   it('numéro inconnu gardé « à vérifier », puis marqué refusé quand le serveur ne le connaît pas', async () => {
@@ -51,5 +51,26 @@ describe('photos du terrain (terrain-suites lot 12)', () => {
     memoriserLimitePhotos(null);
     expect(limitePhotos()).toBe(12 * 1024 * 1024);
     vi.unstubAllGlobals();
+  });
+});
+
+describe('réception gardée hors ligne (terrain-suites lot 13)', () => {
+  const app = (perdue) => ({ apiPerdue: perdue, utilisateur: () => 'u', publier: () => {}, message: () => {} });
+  const reception = { etat: 'SANS_RESERVE', reserves: [], nom: 'Client', signature: 'data:image/png;base64,x' };
+
+  it('heure de signature de l\'appareil jointe à la réception gardée', async () => {
+    const r = await envoyerOuGarder(app(true), { type: OPERATION_TERRAIN.RECEPTION, id: 7, corps: { ordre: 7, reception: receptionGardee(reception, new Date('2026-11-08T09:30:00Z')) }, libelle: 'PV' },
+      () => { throw new Error('pas d\'envoi'); });
+    expect(r.horsLigne).toBe(true);
+    const gardee = await lireOperation('u', OPERATION_TERRAIN.RECEPTION, 7);
+    expect(gardee.corps.reception).toMatchObject({ etat: 'SANS_RESERVE', signee_le: '2026-11-08T09:30:00.000Z' });
+  });
+
+  it('réception envoyée en ligne : heure du serveur seule', async () => {
+    let envoyee;
+    const r = await envoyerOuGarder(app(false), { type: OPERATION_TERRAIN.RECEPTION, id: 8, corps: { ordre: 8, reception: receptionGardee(reception) }, libelle: 'PV' },
+      async () => { envoyee = reception; return { reception: { id: 1 } }; });
+    expect(r.reponse).toBeTruthy();
+    expect(envoyee.signee_le).toBeUndefined();
   });
 });

@@ -17,7 +17,9 @@ using Npgsql;
 
 namespace LogiBTP.Api.Btp;
 
-public sealed record ReceptionSaisie(string Etat, List<string>? Reserves, string? Motif, string Nom, string? Qualite, string? Signature, string? Courriel);
+/// <summary>Réception saisie sur le terrain ; <c>SigneeLe</c> : heure de l'appareil, envoyée seulement par une réception gardée hors ligne.</summary>
+public sealed record ReceptionSaisie(string Etat, List<string>? Reserves, string? Motif, string Nom, string? Qualite, string? Signature, string? Courriel,
+    DateTimeOffset? SigneeLe = null);
 public sealed record DemandeTerrain(int ChaId, long? EntId, List<string> Articles, string? Commentaire);
 
 /// <summary>
@@ -41,7 +43,7 @@ public static partial class TerrainBtp
     private sealed record OrdreReception(long Id, string? Numero, string? Objet, string Type, long Groupe, int? ChaId, string? Chantier, int? SrvId,
         string? Client, string? Contact, string? Courriel);
     private sealed record ReceptionLue(long Id, DateOnly Le, string Etat, string Reserves, string? Motif, string? Signataire, string? Qualite, long? DgeId,
-        string? Courriel, string Par, DateTimeOffset CreeLe);
+        string? Courriel, string Par, DateTimeOffset CreeLe, DateTimeOffset? SigneeAppareilLe);
     private sealed record EtapeLue(string Code, string Libelle, DateOnly? ValideLe);
     private sealed record ExecutionLue(string? Commentaire, int? SrvId, long? ResponsableId, DateOnly? DebutPrevu, DateOnly? FinPrevue, string? Ressource);
 
@@ -86,7 +88,8 @@ public static partial class TerrainBtp
     private static Task<List<ReceptionLue>> ReceptionsAsync(LogiBtpContext db, long ent, CancellationToken ct) =>
         db.Database.SqlQueryRaw<ReceptionLue>("""
             SELECT r.rec_id AS id, r.rec_le AS le, r.rec_etat AS etat, r.rec_reserves::text AS reserves, r.rec_motif AS motif, s.sig_nom AS signataire,
-                   s.sig_qualite AS qualite, r.rec_dge_id AS dge_id, r.rec_courriel AS courriel, r.rec_cree_par AS par, r.rec_cree_le AS cree_le
+                   s.sig_qualite AS qualite, r.rec_dge_id AS dge_id, r.rec_courriel AS courriel, r.rec_cree_par AS par, r.rec_cree_le AS cree_le,
+                   r.rec_signee_appareil_le AS signee_appareil_le
             FROM reception_pose r LEFT JOIN signature s ON s.sig_id = r.rec_sig_id WHERE r.rec_ent_id = @e ORDER BY r.rec_id DESC
             """, new NpgsqlParameter("e", ent)).ToListAsync(ct);
 
@@ -94,7 +97,16 @@ public static partial class TerrainBtp
     {
         id = r.Id, le = r.Le, etat = r.Etat, reserves = JsonDocument.Parse(r.Reserves).RootElement, motif = r.Motif, signataire = r.Signataire,
         qualite = r.Qualite, pv = r.DgeId is not null, courriel = r.Courriel, par = r.Par, cree_le = r.CreeLe,
+        signee_appareil_le = r.SigneeAppareilLe,
     };
+
+    /// <summary>
+    /// Heure de signature sur l'appareil gardée avec la réception (terrain-suites lot 13, TS16 a) : seulement pour une
+    /// réception envoyée après coup (hors ligne) ; une heure postérieure à celle du serveur (horloge de l'appareil en
+    /// avance) est ramenée à celle du serveur.
+    /// </summary>
+    public static DateTimeOffset? HeureAppareil(DateTimeOffset? signeeLe, DateTimeOffset serveur) =>
+        signeeLe is not { } h ? null : (h > serveur ? serveur : h).ToUniversalTime();
 
     private static async Task<object> ReceptionDetailAsync(LogiBtpContext db, OrdreReception o, CancellationToken ct) => new
     {
@@ -148,10 +160,11 @@ public static partial class TerrainBtp
                     """, new NpgsqlParameter("e", ent), new NpgsqlParameter("n", r.Nom.Trim()), SqlBtp.P("q", r.Qualite?.Trim()),
                     SqlBtp.P("i", image, NpgsqlTypes.NpgsqlDbType.Bytea), new NpgsqlParameter("u", u.Code)).ToListAsync(ct))[0];
                 recId = (await db.Database.SqlQueryRaw<long>("""
-                    INSERT INTO reception_pose (rec_ent_id, rec_etat, rec_reserves, rec_motif, rec_sig_id, rec_courriel, rec_cree_par)
-                    VALUES (@e, @etat, @res::jsonb, @m, @s, @c, @u) RETURNING rec_id AS "Value"
+                    INSERT INTO reception_pose (rec_ent_id, rec_etat, rec_reserves, rec_motif, rec_sig_id, rec_courriel, rec_cree_par, rec_signee_appareil_le)
+                    VALUES (@e, @etat, @res::jsonb, @m, @s, @c, @u, @app) RETURNING rec_id AS "Value"
                     """, new NpgsqlParameter("e", ent), new NpgsqlParameter("etat", r.Etat), new NpgsqlParameter("res", JsonSerializer.Serialize(reserves)),
-                    SqlBtp.P("m", r.Motif?.Trim()), new NpgsqlParameter("s", sigId), SqlBtp.P("c", courriel), new NpgsqlParameter("u", u.Code)).ToListAsync(ct))[0];
+                    SqlBtp.P("m", r.Motif?.Trim()), new NpgsqlParameter("s", sigId), SqlBtp.P("c", courriel), new NpgsqlParameter("u", u.Code),
+                    SqlBtp.P("app", HeureAppareil(r.SigneeLe, DateTimeOffset.UtcNow), NpgsqlTypes.NpgsqlDbType.TimestampTz)).ToListAsync(ct))[0];
                 await tx.CommitAsync(ct);
             }
             var avertissements = new List<string>();

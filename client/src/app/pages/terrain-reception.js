@@ -3,7 +3,7 @@ import { PageBase } from '@logibtp/navigation';
 import { echapper, formatDate, formatDateHeure, PadSignature } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 import { estHorsLigne } from '../hors-ligne/attente.js';
-import { envoyerOuGarder, OPERATION_TERRAIN } from '../terrain/operations-terrain.js';
+import { envoyerOuGarder, OPERATION_TERRAIN, receptionGardee } from '../terrain/operations-terrain.js';
 
 // Application de terrain, lot 5 (ANALYSE-TERRAIN.md T14 à T16) : réception d'un ordre de pose signée par le client sur
 // l'écran. Décision (sans réserve, avec réserves, refus), réserves, motif du refus, signataire, courriel du PV ;
@@ -104,7 +104,9 @@ export class PageReceptionTerrain extends PageBase {
     const bouton = $('[data-signer]');
     bouton.disabled = true;
     try {
-      const r = await envoyerOuGarder(this.app, { type: OPERATION_TERRAIN.RECEPTION, id: this.ordre, corps: { ordre: this.ordre, reception },
+      // Gardée hors ligne : heure de signature sur l'appareil jointe (imprimée sur le PV avec l'heure de réception par le
+      // serveur, terrain-suites lot 13) ; envoyée en ligne : heure du serveur seule.
+      const r = await envoyerOuGarder(this.app, { type: OPERATION_TERRAIN.RECEPTION, id: this.ordre, corps: { ordre: this.ordre, reception: receptionGardee(reception) },
         libelle: this.d.ordre.numero ? texte('terrain_btp.reception.libelle', { numero: this.d.ordre.numero }) : texte('terrain_btp.reception.libelle_ordre'), url: this.urlCourante() }, () => api.terrain.enregistrerReception(this.ordre, reception));
       this.#modifiee = false;
       const res = $('[data-resultat]');
