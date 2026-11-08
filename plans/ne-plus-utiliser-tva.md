@@ -39,7 +39,7 @@
 | Lot | Titre | Module | Dépend de | Statut |
 |---|---|---|---|---|
 | 1 | Point d'accroche `FiltreChoix` de l'annuaire | `modules/annuaire` | — | FAIT |
-| 2 | Point d'accroche `FiltreChoix` de la bibliothèque | `modules/bibliotheque` | — | A FAIRE |
+| 2 | Point d'accroche `FiltreChoix` de la bibliothèque | `modules/bibliotheque` | — | FAIT |
 | 3 | Spécialisation des deux filtres par le cœur (usage N écarté) | cœur | 1, 2 | A FAIRE |
 | 4 | « Ne plus utiliser » dans le planning, le pointage et le magasin | cœur | 3 | A FAIRE |
 | 5 | TVA autoliquidée par défaut sur les lignes d'achat | cœur | — | A FAIRE |
@@ -63,7 +63,7 @@
 - **Critère de fin** : `npm test`, `dotnet test LogiBTP.slnx` verts ; aucun changement de comportement sans
   spécialisation.
 
-## Lot 2 : point d'accroche `FiltreChoix` de la bibliothèque (A FAIRE)
+## Lot 2 : point d'accroche `FiltreChoix` de la bibliothèque (FAIT 08/11/2026)
 
 - **Module** : `modules/bibliotheque`. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `ServiceBibliotheque.cs` (`Rechercher :573` : méthode virtuelle `FiltreChoix`),
@@ -133,3 +133,4 @@
 - **Critère de fin** : `npm test` et `dotnet test LogiBTP.slnx` verts.
 
 > Lot 1 FAIT le 08/11/2026 : accroches `FiltreChoixPersonnes()` / `FiltreChoixIndividus()` (condition SQL, protégées virtuelles) dans `ServiceAnnuaire`, option `filtreChoix: { personne, individu }` du `FournisseurAnnuaireMemoire`. Écart : `Lire` rendue `protected virtual` et le projet de tests référence `LogiBTP.Annuaire.Web` (test C# par capture du SQL, sans base).
+> Lot 2 FAIT le 08/11/2026 : accroche `FiltreChoix(IQueryable<Element>)` (protégée virtuelle, appliquée à la seule requête de `Rechercher`) dans `ServiceBibliotheque`, option `filtreChoix(element)` du `FournisseurBibliothequeMemoire`. Écart : le cœur spécialise une requête LINQ (pas une condition SQL) ; le projet de tests référence `LogiBTP.Bibliotheque.Web`.

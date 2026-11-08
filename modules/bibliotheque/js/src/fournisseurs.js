@@ -108,7 +108,9 @@ export function entreeDepuisLigne(l, tarifs = []) {
  */
 export class FournisseurBibliothequeMemoire {
   constructor({ bibliotheques = [], familles = [], regroupements = [], natures = [], unites = [], elements = [], tarifs = [],
-    parametres = {}, periodes = [], profil = PROFIL.ADMIN, utilisateur = 'demo', horloge = () => Date.now() } = {}) {
+    parametres = {}, periodes = [], profil = PROFIL.ADMIN, utilisateur = 'demo', horloge = () => Date.now(), filtreChoix = null } = {}) {
+    // Point d'accroche : filtreChoix(element) -> faux écarte l'élément des seules recherches (défaut : aucun filtre).
+    this.filtreChoix = filtreChoix;
     this.bibs = structuredClone(bibliotheques);
     this.fams = structuredClone(familles);
     this.rgns = structuredClone(regroupements);
@@ -459,7 +461,7 @@ export class FournisseurBibliothequeMemoire {
   async rechercher({ recherche = '', bib = null, type = null } = {}) {
     const mots = String(recherche).toLowerCase().normalize('NFD').replace(/\p{M}/gu, '').split(/\s+/).filter(Boolean);
     return structuredClone(this.elements
-      .filter((e) => e.actif !== false && (!bib || e.bib_id === Number(bib)) && (!type || e.type === type))
+      .filter((e) => e.actif !== false && (!bib || e.bib_id === Number(bib)) && (!type || e.type === type) && (this.filtreChoix?.(e) ?? true))
       .filter((e) => { const t = `${e.code} ${e.libelle ?? ''} ${e.mots_cles ?? ''} ${e.code_barre ?? ''}`.toLowerCase().normalize('NFD').replace(/\p{M}/gu, ''); return mots.every((m) => t.includes(m)); })
       .sort((a, b) => a.code.localeCompare(b.code)).slice(0, 50)
       .map((e) => ({

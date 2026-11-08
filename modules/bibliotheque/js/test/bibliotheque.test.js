@@ -163,3 +163,19 @@ describe("premier tarif d'un élément", () => {
     expect(reglePremierTarif(2, false, 'FIXE', null)).toEqual({ principal: false, scenario: 'FIXE' });
   });
 });
+
+describe('filtre des choix', () => {
+  const elements = () => ['A', 'B', 'C'].map((code, i) => ({ id: i + 1, bib_id: 1, code, type: 'ARTICLE', libelle: code, unite_stock: 'u' }));
+  const bibliotheques = [{ id: 1, code: 'GEN', libelle: 'G', defaut: true, ordre: 0 }];
+
+  it('sans filtre : tous les éléments', async () => {
+    const f = new FournisseurBibliothequeMemoire({ bibliotheques, elements: elements() });
+    expect((await f.rechercher()).map((e) => e.code)).toEqual(['A', 'B', 'C']);
+  });
+
+  it('élément écarté des choix, présent dans la fiche', async () => {
+    const f = new FournisseurBibliothequeMemoire({ bibliotheques, elements: elements(), filtreChoix: (e) => e.code !== 'B' });
+    expect((await f.rechercher()).map((e) => e.code)).toEqual(['A', 'C']);
+    expect((await f.element(2)).code).toBe('B');
+  });
+});

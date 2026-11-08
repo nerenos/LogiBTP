@@ -138,3 +138,23 @@ public class PremierTarifTests
     public void Element_avec_pa_saisi_garde_son_scenario()
         => Assert.Equal((true, "FIXE"), PremierTarif.Appliquer(0, false, "FIXE", 5m));
 }
+
+/// <summary>Point d'accroche des choix : sans spécialisation aucun filtre, spécialisé l'élément écarté disparaît des recherches.</summary>
+public class FiltreChoixTests
+{
+    private class ServiceFiltre(bool filtre) : LogiBTP.Bibliotheque.Web.ServiceBibliotheque(null!, null!)
+    {
+        public List<string> Codes(IQueryable<LogiBTP.Bibliotheque.Web.Element> source) => FiltreChoix(source).Select(e => e.EleCode).ToList();
+        protected override IQueryable<LogiBTP.Bibliotheque.Web.Element> FiltreChoix(IQueryable<LogiBTP.Bibliotheque.Web.Element> elements)
+            => filtre ? elements.Where(e => e.EleCode != "B") : base.FiltreChoix(elements);
+    }
+
+    private static IQueryable<LogiBTP.Bibliotheque.Web.Element> Elements()
+        => new[] { "A", "B", "C" }.Select(c => new LogiBTP.Bibliotheque.Web.Element { EleCode = c }).AsQueryable();
+
+    [Fact]
+    public void Sans_specialisation_aucun_filtre() => Assert.Equal(["A", "B", "C"], new ServiceFiltre(false).Codes(Elements()));
+
+    [Fact]
+    public void Specialise_l_element_ecarte_disparait_des_choix() => Assert.Equal(["A", "C"], new ServiceFiltre(true).Codes(Elements()));
+}

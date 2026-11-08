@@ -585,12 +585,18 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
         .Select(h => new HistoriqueDto(h.HpeId, h.HpeDate, h.HpeAuteur, h.HpeCommentaire, h.HpeAvant?.RootElement.Clone(), h.HpeApres.RootElement.Clone())).ToList();
 
     /// <summary>
+    /// Point d'accroche des choix : le cœur y écarte des éléments des seules recherches (composition, appel dans les
+    /// documents) ; la fiche, la liste et la lecture par identifiant ne sont pas touchées. Par défaut : aucun filtre.
+    /// </summary>
+    protected virtual IQueryable<Element> FiltreChoix(IQueryable<Element> elements) => elements;
+
+    /// <summary>
     /// Recherche d'éléments (chaque mot dans le code, le libellé, les mots-clés ou le code-barres, sans accent ni casse) :
     /// composition des ouvrages, appel dans les documents.
     /// </summary>
     public virtual async Task<List<ElementRechercheDto>> Rechercher(string? recherche, int? bibId, string? type, CancellationToken ct)
     {
-        var q = from e in db.Elements.AsNoTracking()
+        var q = from e in FiltreChoix(db.Elements.AsNoTracking())
                 join b in db.Bibliotheques.AsNoTracking() on e.EleBibId equals b.BibId
                 where e.EleActif
                 select new { e, b.BibCode };
