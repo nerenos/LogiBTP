@@ -3,7 +3,7 @@ import { texte, texteHtml, iconeHtml, pluriel } from '../dictionnaire/index.js';
 
 // Fenêtre des messages (ergonomie I4, I5) : erreurs et avertissements dans une fenêtre <dialog> non modale, en bas à
 // droite, qui se ferme seule après un décompte (8 s par défaut) ; le décompte s'arrête au survol et définitivement au
-// premier clic dans la fenêtre ; ✕ ou Échap (fenêtre active) la ferment ; plusieurs messages s'empilent.
+// premier clic ou à la première frappe dans la fenêtre (pas au focus donné à l'ouverture, qui est rendu à l'élément actif d'avant) ; ✕ ou Échap (fenêtre active) la ferment ; plusieurs messages s'empilent.
 // `details` : un élément par champ ou ligne en cause ({ libelle, message, aller }) ; `aller()` mène au champ.
 // Chaque message est annoncé par l'événement `logibtp:notification` de window (historique du bandeau).
 
@@ -84,9 +84,8 @@ export function notifier({ titre, message = '', details = [], niveau = 'erreur',
   d.addEventListener('pointerenter', suspendre);
   d.addEventListener('pointerleave', lancer);
   d.addEventListener('pointerdown', figer);
-  d.addEventListener('focusin', figer);
   d.addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape') return;
+    if (e.key !== 'Escape') { figer(); return; }
     e.preventDefault();
     e.stopPropagation();
     fermer();
@@ -97,7 +96,9 @@ export function notifier({ titre, message = '', details = [], niveau = 'erreur',
     details[Number(b.dataset.aller)].aller();
   }));
   conteneur().prepend(d);
+  const avant = document.activeElement;
   d.show?.();
+  if (avant && avant !== document.body && avant !== document.activeElement) avant.focus?.({ preventScroll: true });
   if (delai > 0) lancer();
   return { fermer, element: d };
 }

@@ -242,9 +242,9 @@ public static class ExecutionBtp
     public static Task<List<RessourceOrdre>> RessourcesAsync(LogiBtpContext db, CancellationToken ct) =>
         db.Database.SqlQueryRaw<RessourceOrdre>("""
             SELECT 'SALARIE' AS type, s.sal_id::bigint AS id, concat_ws(' ', s.sal_nom, s.sal_prenom) AS libelle, coalesce(s.sal_code, s.sal_service) AS detail
-              FROM salarie s WHERE s.sal_actif
+              FROM salarie s WHERE s.sal_actif AND s.sal_usage <> 'N'
             UNION ALL SELECT 'EQUIPE', e.equ_id, e.equ_libelle, e.equ_code FROM equipe e WHERE e.equ_active
-            UNION ALL SELECT 'MATERIEL', m.mat_id, m.mat_designation, m.mat_code FROM materiel m
+            UNION ALL SELECT 'MATERIEL', m.mat_id, m.mat_designation, m.mat_code FROM materiel m WHERE m.mat_usage <> 'N'
             UNION ALL SELECT 'SOUS_TRAITANT', t.per_id, t.per_raison_sociale, t.per_st_corps_etat FROM personne t WHERE t.per_casquettes ? 'SOUS_TRAITANT' AND t.per_actif
             UNION ALL SELECT 'SERVICE', v.srv_id, v.srv_libelle, v.srv_code FROM service v WHERE v.srv_actif
             ORDER BY 1, 3

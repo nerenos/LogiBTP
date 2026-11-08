@@ -9,6 +9,7 @@
 // Usage : node client/scripts/generer-modules-demo.mjs [host] [--force]   (host par défaut : demo.localhost)
 // Session : LOGIBTP_COMPTE (administrateur, défaut gerant) et LOGIBTP_MDP ; sans mot de passe, connexion de test.
 import { clientDemo } from './api-demo.mjs';
+import { planifierEntretiensDemo } from './entretiens-demo.mjs';
 
 const hote = process.argv.slice(2).find((a) => !a.startsWith('--')) ?? 'demo.localhost';
 const force = process.argv.includes('--force');
@@ -227,6 +228,22 @@ await etape('Borne de l\'atelier et PIN de trois salariés (1234)', async () => 
   const b = await appel('POST', '/pointage/appareils', { libelle: 'Borne démo — chantier', service: srv('CHANTIER'), pin_exige: false });
   for (const m of membres.slice(0, 3)) await appel('PUT', `/pointage/pins/${m.sal_id}`, { pin: '1234' });
   return `jeton : ${b.jeton} (ouvrir /borne?jeton=…)`;
+});
+
+// ---------------------------------------------------------------- Matériel : historique d'entretiens réalisés (12 mois)
+await etape('Entretiens réalisés du matériel selon les plans (états répartis)', async () => {
+  const echeances = await appel('GET', '/ressources/entretiens/echeances?jours=36500');
+  const dejaFaits = new Set();
+  for (const id of new Set(echeances.map((e) => e.materiel_id))) {
+    const h = await appel('GET', `/ressources/materiels/${id}/compteurs`);
+    for (const ev of h.evenements ?? []) if (ev.type === 'ENTRETIEN' && ev.plan_code) dejaFaits.add(`${id}:${ev.plan_code}`);
+  }
+  const aFaire = planifierEntretiensDemo(echeances, iso(aujourdhui)).filter((f) => !dejaFaits.has(`${f.materiel_id}:${f.code}`));
+  for (const f of aFaire) {
+    await appel('POST', `/ressources/materiels/${f.materiel_id}/evenements`, { type: 'ENTRETIEN', date: f.date, libelle: `Entretien ${f.code}`,
+      description: null, plan_code: f.code, remise: false });
+  }
+  return `${aFaire.length} entretiens`;
 });
 
 // ---------------------------------------------------------------- CRM et notifications

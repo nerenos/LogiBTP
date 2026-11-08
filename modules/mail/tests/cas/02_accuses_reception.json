@@ -1,0 +1,434 @@
+{
+  "description": "Accusé de réception de commande (reconnaitreAccuse ↔ ReconnaissanceMail.ReconnaitreAccuse) : motif (accusé de réception, confirmation de commande, AR, ARC) dans l'objet ou le texte, numéros candidats au format des préfixes de la numérotation des commandes, livraison annoncée après un mot « livraison » (jj/mm/aaaa valide, ou semaine n avec l'année de référence).",
+  "cas": [
+    {
+      "nom": "AR avec numéro et date",
+      "entree": {
+        "objet": "Accusé de réception de votre commande CMD-2026-0042",
+        "texte": "Livraison confirmée le 25/11/2026 sur chantier.",
+        "prefixes": [
+          "CMD"
+        ],
+        "annee_reference": 2026
+      },
+      "attendu": {
+        "type": "ACCUSE_RECEPTION",
+        "motif": "accusé de réception",
+        "numeros": [
+          "CMD-2026-0042"
+        ],
+        "numero": "CMD-2026-0042",
+        "date": "2026-11-25",
+        "semaine": null,
+        "precision": "JOUR"
+      }
+    },
+    {
+      "nom": "AR sans date",
+      "entree": {
+        "objet": "Confirmation de commande CMD 2026/17",
+        "texte": "Merci de votre confiance.",
+        "prefixes": [
+          "CMD"
+        ],
+        "annee_reference": 2026
+      },
+      "attendu": {
+        "type": "ACCUSE_RECEPTION",
+        "motif": "confirmation de commande",
+        "numeros": [
+          "CMD2026/17"
+        ],
+        "numero": "CMD2026/17",
+        "date": null,
+        "semaine": null,
+        "precision": null
+      }
+    },
+    {
+      "nom": "message ordinaire non reconnu",
+      "entree": {
+        "objet": "Relance facture CMD-2026-0042",
+        "texte": "Livraison le 25/11/2026.",
+        "prefixes": [
+          "CMD"
+        ],
+        "annee_reference": 2026
+      },
+      "attendu": {
+        "type": null,
+        "motif": null,
+        "numeros": [],
+        "numero": null,
+        "date": null,
+        "semaine": null,
+        "precision": null
+      }
+    },
+    {
+      "nom": "deux numéros candidats",
+      "entree": {
+        "objet": "ARC CMD-2026-0042",
+        "texte": "Concerne aussi la commande BC2026-9. Livraison prévue semaine n° 47.",
+        "prefixes": [
+          "CMD",
+          "BC"
+        ],
+        "annee_reference": 2026
+      },
+      "attendu": {
+        "type": "ACCUSE_RECEPTION",
+        "motif": "ARC",
+        "numeros": [
+          "CMD-2026-0042",
+          "BC2026-9"
+        ],
+        "numero": null,
+        "date": "2026-11-16",
+        "semaine": 47,
+        "precision": "SEMAINE"
+      }
+    },
+    {
+      "nom": "semaine avec année",
+      "entree": {
+        "objet": "AR",
+        "texte": "Livraison semaine 1/2027 pour CMD-5.",
+        "prefixes": [
+          "CMD"
+        ],
+        "annee_reference": 2026
+      },
+      "attendu": {
+        "type": "ACCUSE_RECEPTION",
+        "motif": "AR",
+        "numeros": [
+          "CMD-5"
+        ],
+        "numero": "CMD-5",
+        "date": "2027-01-04",
+        "semaine": 1,
+        "precision": "SEMAINE"
+      }
+    },
+    {
+      "nom": "semaine sans année de référence",
+      "entree": {
+        "objet": "AR CMD-5",
+        "texte": "Livraison semaine 12.",
+        "prefixes": [
+          "CMD"
+        ]
+      },
+      "attendu": {
+        "type": "ACCUSE_RECEPTION",
+        "motif": "AR",
+        "numeros": [
+          "CMD-5"
+        ],
+        "numero": "CMD-5",
+        "date": null,
+        "semaine": 12,
+        "precision": "SEMAINE"
+      }
+    },
+    {
+      "nom": "date invalide ignorée puis date valide",
+      "entree": {
+        "objet": "AR CMD-5",
+        "texte": "Livraison le 31/02/2026, corrigée : livraison le 28/02/2028.",
+        "prefixes": [
+          "CMD"
+        ]
+      },
+      "attendu": {
+        "type": "ACCUSE_RECEPTION",
+        "motif": "AR",
+        "numeros": [
+          "CMD-5"
+        ],
+        "numero": "CMD-5",
+        "date": "2028-02-28",
+        "semaine": null,
+        "precision": "JOUR"
+      }
+    },
+    {
+      "nom": "date sans mot livraison ignorée",
+      "entree": {
+        "objet": "Accusé de réception CMD-8",
+        "texte": "Commande passée le 05/11/2026.",
+        "prefixes": [
+          "CMD"
+        ]
+      },
+      "attendu": {
+        "type": "ACCUSE_RECEPTION",
+        "motif": "accusé de réception",
+        "numeros": [
+          "CMD-8"
+        ],
+        "numero": "CMD-8",
+        "date": null,
+        "semaine": null,
+        "precision": null
+      }
+    },
+    {
+      "nom": "motif en texte sans préfixe connu",
+      "entree": {
+        "objet": "Bonjour",
+        "texte": "Ceci est un accusé de réception. Livraison 03.12.2026.",
+        "prefixes": []
+      },
+      "attendu": {
+        "type": "ACCUSE_RECEPTION",
+        "motif": "accusé de réception",
+        "numeros": [],
+        "numero": null,
+        "date": "2026-12-03",
+        "semaine": null,
+        "precision": "JOUR"
+      }
+    },
+    {
+      "nom": "AR non reconnu dans un mot",
+      "entree": {
+        "objet": "Garage et parking CMD-1",
+        "texte": "Livraison 03/12/2026.",
+        "prefixes": [
+          "CMD"
+        ]
+      },
+      "attendu": {
+        "type": null,
+        "motif": null,
+        "numeros": [],
+        "numero": null,
+        "date": null,
+        "semaine": null,
+        "precision": null
+      }
+    },
+    {
+      "nom": "Semaine 12 de l'an 0050 : année hors plage ignorée",
+      "entree": {
+        "objet": "Accusé de réception CMD-2026-0042",
+        "texte": "Livraison semaine 12/0050.",
+        "prefixes": [
+          "CMD"
+        ],
+        "annee_reference": 2026
+      },
+      "attendu": {
+        "type": "ACCUSE_RECEPTION",
+        "motif": "accusé de réception",
+        "numeros": [
+          "CMD-2026-0042"
+        ],
+        "numero": "CMD-2026-0042",
+        "date": null,
+        "semaine": null,
+        "precision": null
+      }
+    },
+    {
+      "nom": "Semaine 12 de l'an 0000 ignorée",
+      "entree": {
+        "objet": "Accusé de réception CMD-2026-0042",
+        "texte": "Livraison semaine 12/0000.",
+        "prefixes": [
+          "CMD"
+        ],
+        "annee_reference": 2026
+      },
+      "attendu": {
+        "type": "ACCUSE_RECEPTION",
+        "motif": "accusé de réception",
+        "numeros": [
+          "CMD-2026-0042"
+        ],
+        "numero": "CMD-2026-0042",
+        "date": null,
+        "semaine": null,
+        "precision": null
+      }
+    },
+    {
+      "nom": "Semaine 53 de l'an 9999 ignorée",
+      "entree": {
+        "objet": "Accusé de réception CMD-2026-0042",
+        "texte": "Livraison semaine 53/9999.",
+        "prefixes": [
+          "CMD"
+        ],
+        "annee_reference": 2026
+      },
+      "attendu": {
+        "type": "ACCUSE_RECEPTION",
+        "motif": "accusé de réception",
+        "numeros": [
+          "CMD-2026-0042"
+        ],
+        "numero": "CMD-2026-0042",
+        "date": null,
+        "semaine": null,
+        "precision": null
+      }
+    },
+    {
+      "nom": "Date 01/02/0050 hors plage ignorée",
+      "entree": {
+        "objet": "Accusé de réception CMD-2026-0042",
+        "texte": "Livraison le 01/02/0050.",
+        "prefixes": [
+          "CMD"
+        ],
+        "annee_reference": 2026
+      },
+      "attendu": {
+        "type": "ACCUSE_RECEPTION",
+        "motif": "accusé de réception",
+        "numeros": [
+          "CMD-2026-0042"
+        ],
+        "numero": "CMD-2026-0042",
+        "date": null,
+        "semaine": null,
+        "precision": null
+      }
+    },
+    {
+      "nom": "Semaine 0 ignorée",
+      "entree": {
+        "objet": "Accusé de réception CMD-2026-0042",
+        "texte": "Livraison semaine 0.",
+        "prefixes": [
+          "CMD"
+        ],
+        "annee_reference": 2026
+      },
+      "attendu": {
+        "type": "ACCUSE_RECEPTION",
+        "motif": "accusé de réception",
+        "numeros": [
+          "CMD-2026-0042"
+        ],
+        "numero": "CMD-2026-0042",
+        "date": null,
+        "semaine": null,
+        "precision": null
+      }
+    },
+    {
+      "nom": "Semaine 54 ignorée",
+      "entree": {
+        "objet": "Accusé de réception CMD-2026-0042",
+        "texte": "Livraison semaine 54.",
+        "prefixes": [
+          "CMD"
+        ],
+        "annee_reference": 2026
+      },
+      "attendu": {
+        "type": "ACCUSE_RECEPTION",
+        "motif": "accusé de réception",
+        "numeros": [
+          "CMD-2026-0042"
+        ],
+        "numero": "CMD-2026-0042",
+        "date": null,
+        "semaine": null,
+        "precision": null
+      }
+    },
+    {
+      "nom": "29/02 d'une année bissextile",
+      "entree": {
+        "objet": "Accusé de réception CMD-2026-0042",
+        "texte": "Livraison le 29/02/2028.",
+        "prefixes": [
+          "CMD"
+        ],
+        "annee_reference": 2026
+      },
+      "attendu": {
+        "type": "ACCUSE_RECEPTION",
+        "motif": "accusé de réception",
+        "numeros": [
+          "CMD-2026-0042"
+        ],
+        "numero": "CMD-2026-0042",
+        "date": "2028-02-29",
+        "semaine": null,
+        "precision": "JOUR"
+      }
+    },
+    {
+      "nom": "29/02 d'une année non bissextile ignoré",
+      "entree": {
+        "objet": "Accusé de réception CMD-2026-0042",
+        "texte": "Livraison le 29/02/2027.",
+        "prefixes": [
+          "CMD"
+        ],
+        "annee_reference": 2026
+      },
+      "attendu": {
+        "type": "ACCUSE_RECEPTION",
+        "motif": "accusé de réception",
+        "numeros": [
+          "CMD-2026-0042"
+        ],
+        "numero": "CMD-2026-0042",
+        "date": null,
+        "semaine": null,
+        "precision": null
+      }
+    },
+    {
+      "nom": "Variante semaine no 12/2026",
+      "entree": {
+        "objet": "Accusé de réception CMD-2026-0042",
+        "texte": "Livraison semaine no 12/2026.",
+        "prefixes": [
+          "CMD"
+        ],
+        "annee_reference": 2026
+      },
+      "attendu": {
+        "type": "ACCUSE_RECEPTION",
+        "motif": "accusé de réception",
+        "numeros": [
+          "CMD-2026-0042"
+        ],
+        "numero": "CMD-2026-0042",
+        "date": "2026-03-16",
+        "semaine": 12,
+        "precision": "SEMAINE"
+      }
+    },
+    {
+      "nom": "Semaine 12 avec année de référence hors plage : pas de date",
+      "entree": {
+        "objet": "Accusé de réception CMD-2026-0042",
+        "texte": "Livraison semaine 12.",
+        "prefixes": [
+          "CMD"
+        ],
+        "annee_reference": 50
+      },
+      "attendu": {
+        "type": "ACCUSE_RECEPTION",
+        "motif": "accusé de réception",
+        "numeros": [
+          "CMD-2026-0042"
+        ],
+        "numero": "CMD-2026-0042",
+        "date": null,
+        "semaine": 12,
+        "precision": "SEMAINE"
+      }
+    }
+  ]
+}

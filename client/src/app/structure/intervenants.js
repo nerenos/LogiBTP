@@ -1,9 +1,9 @@
 import { texte, texteHtml, pluriel, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { urlFiche, TYPE_FICHE } from '../codes.js';
-import { echapper } from '@logibtp/socle/ui';
+import { echapper, alerter } from '@logibtp/socle/ui';
 import { creerTiersProvisoire } from '@logibtp/annuaire/ui';
 import { intervenantPropre } from './structure.js';
-import { choisirTiers, relationsFonction } from '../annuaire/choix.js';
+import { choisirTiers, choisirContactTiers, relationsFonction } from '../annuaire/choix.js';
 
 // Intervenants (petit annuaire) d'un projet, d'une affaire, d'un chantier, d'un marché ou d'un document : fonction,
 // tiers de l'annuaire (recherche), contact choisi parmi les rattachements du tiers, coordonnées du contact (courriel,
@@ -92,7 +92,9 @@ export class TableIntervenants {
         ${fixe && this.tiersFige && x.per_id ? '' : `<button type="button" class="bouton-icone" data-liste-tiers title="${texteHtml('structure_btp.intervenants.choisir_tiers')}">${iconeHtml('rechercher')}</button>`}
         ${x.per_id ? `<a href="${urlFiche(TYPE_FICHE.PERSONNE, Number(x.per_id))}" title="${texteHtml('structure_btp.intervenants.ouvrir_tiers')}">${iconeHtml('structure_btp_ouvrir')}</a>` : ''}
         ${fixe && this.tiersFige && x.per_id ? '' : `<button type="button" data-nouveau-tiers title="${texteHtml('structure_btp.intervenants.nouveau_tiers')}">${iconeHtml('ajouter')}</button>`}</td>
-      <td><select data-contact><option value="">${x.ind_id ? echapper(x.contact ?? '') : '—'}</option></select></td>
+      <td class="contact"><input data-contact-nom readonly value="${echapper(x.ind_id ? (x.contact ?? '') : '')}" placeholder="—">
+        <button type="button" class="bouton-icone" data-liste-contact title="${texteHtml('structure_btp.intervenants.choisir_contact')}">${iconeHtml('rechercher')}</button>
+        ${x.ind_id ? `<button type="button" class="bouton-icone" data-retirer-contact title="${texteHtml('structure_btp.intervenants.retirer_contact')}">${iconeHtml('retirer')}</button>` : ''}</td>
       <td class="coordonnees"></td>
       <td><input type="checkbox" data-champ="principal" ${x.principal ? 'checked' : ''}></td>
       <td>${paiement}</td>
@@ -121,11 +123,6 @@ export class TableIntervenants {
     const tel = nature(r?.coordonnees, 'TELEPHONE');
     tr.querySelector('.coordonnees').innerHTML = [email ? `<a href="mailto:${echapper(email)}" title="${texteHtml('structure_btp.intervenants.ecrire')}">${iconeHtml('courriel')} ${echapper(email)}</a>` : '',
       tel ? `<a href="tel:${echapper(tel.replace(/\s/g, ''))}" title="${texteHtml('structure_btp.intervenants.appeler')}">${iconeHtml('telephone')} ${echapper(tel)}</a>` : ''].filter(Boolean).join('<br>');
-    const choix = tr.querySelector('[data-contact]');
-    if (choix) {
-      choix.innerHTML = `<option value="">—</option>${contacts.filter((c) => c.actif !== false || c.ind_id === Number(x.ind_id))
-        .map((c) => `<option value="${c.ind_id}" ${c.ind_id === Number(x.ind_id) ? 'selected' : ''}>${echapper(c.individu)}${c.fonction ? ` (${echapper(c.fonction)})` : ''}</option>`).join('')}`;
-    }
   }
 
   #lier() {
@@ -155,11 +152,22 @@ export class TableIntervenants {
       if (champ === 'fonction' || champ === 'paiement_direct') this.#dessiner();
       this.#changer();
     }));
-    this.el.querySelectorAll('[data-contact]').forEach((el) => el.addEventListener('change', () => {
-      const x = ligne(el);
-      x.ind_id = el.value === '' ? null : Number(el.value);
-      x.contact = el.value === '' ? null : el.selectedOptions[0].textContent.replace(/ \(.*\)$/, '');
-      this.#coordonnees(x, Number(el.closest('tr').dataset.i));
+    // Contact choisi dans la liste des contacts, limité à ceux du tiers de l'intervenant (I1) ; sans tiers : refus.
+    this.el.querySelectorAll('[data-liste-contact]').forEach((bouton) => bouton.addEventListener('click', async () => {
+      const x = ligne(bouton);
+      if (!x.per_id) { await alerter(texte('structure_btp.intervenants.contact_sans_tiers')); return; }
+      const contacts = await this.#contactsDe(Number(x.per_id));
+      const choisi = await choisirContactTiers({
+        tiers: x.tiers ?? '', idsContacts: contacts.filter((c) => c.actif !== false || c.ind_id === Number(x.ind_id)).map((c) => c.ind_id),
+      });
+      if (!choisi) return;
+      Object.assign(x, { ind_id: choisi.id, contact: choisi.nom_complet ?? contacts.find((c) => c.ind_id === choisi.id)?.individu ?? null });
+      this.#dessiner();
+      this.#changer();
+    }));
+    this.el.querySelectorAll('[data-retirer-contact]').forEach((bouton) => bouton.addEventListener('click', () => {
+      Object.assign(ligne(bouton), { ind_id: null, contact: null });
+      this.#dessiner();
       this.#changer();
     }));
     // Tiers absent de l'annuaire : créé provisoire (doublons proposés d'abord), validé ou fusionné plus tard.

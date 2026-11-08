@@ -483,6 +483,7 @@ export const api = {
     // Coûts du matériel (lot 5c-1, db/232) : chantier de suivi créé à la demande.
     coutsMateriel: (materiel, annee) => appel('GET', `/ressources/materiels/${materiel}/couts${annee ? `?annee=${encodeURIComponent(annee)}` : ''}`),
     creerChantierMateriel: (materiel) => appel('POST', `/ressources/materiels/${materiel}/chantier`),
+    reprendreCoutMoyen: (materiel) => appel('POST', `/ressources/materiels/${materiel}/cout-moyen`),
     // Compteurs et événements du matériel (lot 5c-2, db/233).
     pointagesMateriel: (materiel) => appel('GET', `/ressources/materiels/${materiel}/pointages`),
     compteurs: (materiel) => appel('GET', `/ressources/materiels/${materiel}/compteurs`),
@@ -503,6 +504,8 @@ export const api = {
     echeancesMateriel: (materiel) => appel('GET', `/ressources/materiels/${materiel}/echeances`),
     echeancesEntretiens: (jours = 60) => appel('GET', `/ressources/entretiens/echeances?jours=${encodeURIComponent(jours)}`),
     echeancesMateriels: (jours = 60) => appel('GET', `/ressources/materiels/echeances?jours=${encodeURIComponent(jours)}`),
+    relevesAValider: () => appel('GET', '/ressources/materiels/releves-a-valider'),
+    traiterReleve: (id, accepter, motif = null) => appel('POST', `/ressources/materiels/releves-a-valider/${id}`, { accepter, motif }),
     aSurveiller: ({ element = '', jours = 60 } = {}) => appel('GET', `/ressources/habilitations?${new URLSearchParams({ ...(element ? { element } : {}), jours })}`),
     exigeesMateriel: (id) => appel('GET', `/ressources/materiels/${id}/exigees`),
     enregistrerExigeesMateriel: (id, codes) => appel('PUT', `/ressources/materiels/${id}/exigees`, codes),
@@ -737,6 +740,8 @@ export const api = {
   versionDocument: (hisId) => appel('GET', `/historique/${hisId}`),
   tracabilite: (id) => appel('GET', `/documents/${id}/tracabilite`),
   enregistrerOrigine: (id, origine) => appel('PUT', `/documents/${id}/origine`, origine),
+  // Pleins d'un fichier de cartes carburant (plan materiel-suites, lot 10) : rapprochés et écrits côté serveur.
+  ecrirePleinsCarburant: (pleins) => appel('POST', '/ressources/materiels/pleins-carburant', { pleins }),
   casTest: (arbitrage) => appel('POST', '/cas-test', arbitrage),
   // Verrou de modification d'un document (sans expiration ; déverrouillage manuel par un administrateur).
   verrouDocument: (id, jeton) => appel('GET', `/documents/${id}/verrou?jeton=${jeton}`),
@@ -746,6 +751,7 @@ export const api = {
   // Structure des affaires : référentiels des listes de choix, rattachement d'un document (même validé).
   structureReferentiels: () => appel('GET', '/structure/referentiels'),
   rattacherDocument: (id, r) => appel('PUT', `/structure/documents/${id}/rattachement`, r),
+  livraisonLigne: (id, ligId, date) => appel('PUT', `/structure/documents/${id}/lignes/${ligId}/livraison`, { lig_date_livraison: date }),
   arcDocument: (id, arc) => appel('PUT', `/structure/documents/${id}/arc`, arc),
   structureIntervenants: (type, id) => appel('GET', `/structure/intervenants/${type}/${id}`),
   structureDocuments: (perimetre) => appel('POST', '/structure/documents', perimetre),

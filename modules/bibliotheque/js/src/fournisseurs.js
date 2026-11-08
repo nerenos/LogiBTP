@@ -1,5 +1,5 @@
 import { texte, pairesParCode } from '@logibtp/socle/dictionnaire';
-import { calculerElement, coefficientsEffectifs, prixNetTarif, ratio, analyserCodeAppel } from './calcul.js';
+import { calculerElement, coefficientsEffectifs, prixNetTarif, ratio, analyserCodeAppel, reglePremierTarif } from './calcul.js';
 import { texteBrut, S, dateLocale, PROFIL, ErreurApi, appelApi } from '@logibtp/socle';
 
 // Fournisseurs du module Bibliothèque. Même interface pour l'API (routes MapModuleBibliotheque) et pour la mémoire
@@ -108,7 +108,9 @@ export function entreeDepuisLigne(l, tarifs = []) {
  */
 export class FournisseurBibliothequeMemoire {
   constructor({ bibliotheques = [], familles = [], regroupements = [], natures = [], unites = [], elements = [], tarifs = [],
-    parametres = {}, periodes = [], profil = PROFIL.ADMIN, utilisateur = 'demo', horloge = () => Date.now() } = {}) {
+    parametres = {}, periodes = [], profil = PROFIL.ADMIN, utilisateur = 'demo', horloge = () => Date.now(), filtreChoix = null } = {}) {
+    // Point d'accroche : filtreChoix(element) -> faux écarte l'élément des seules recherches (défaut : aucun filtre).
+    this.filtreChoix = filtreChoix;
     this.bibs = structuredClone(bibliotheques);
     this.fams = structuredClone(familles);
     this.rgns = structuredClone(regroupements);
@@ -298,6 +300,12 @@ export class FournisseurBibliothequeMemoire {
     if (!String(t.fournisseur ?? '').trim() || !t.unite) throw new ErreurBibliotheque(422, 'OBLIGATOIRE', texte('bibliotheque.fournisseur.fournisseur_unite'));
     controlerTarif(t);
     if (t.debut && t.fin && t.fin < t.debut) throw new ErreurBibliotheque(422, 'DATES', texte('bibliotheque.fournisseur.dates'));
+    // Premier tarif de l'élément : principal ; élément sans PA saisi : scénario FOURNISSEUR_PRINCIPAL (comme le service).
+    const element = this.#element(eleId);
+    const autres = this.tarifsElements.filter((x) => String(x.ele_id) === String(eleId) && x.id !== t.id).length;
+    const regle = reglePremierTarif(autres, !!t.principal, element.scenario_pa, element.pa_fixe);
+    element.scenario_pa = regle.scenario;
+    t = { ...t, principal: regle.principal };
     if (t.principal) for (const x of this.tarifsElements) if (String(x.ele_id) === String(eleId)) x.principal = false;
     // Prix net : prix public remisé s'il est renseigné (comme ServiceBibliotheque.EnregistrerTarif).
     t = { ...t, prix: S(prixNetTarif({ ...t, prix: t.prix ?? 0 })) };
@@ -422,6 +430,17 @@ export class FournisseurBibliothequeMemoire {
     });
     const compte = (a) => resultats.filter((r) => r.action === a).length;
     if (!simulation) {
+      // Premier tarif d'un élément (aucun tarif avant l'import ; un tarif mis à jour en est un) : même règle que le service.
+      const groupes = Map.groupBy(aEcrire, (x) => x.v.ele_id);
+      for (const [eleId, groupe] of groupes) {
+        const avant = this.tarifsElements.filter((x) => String(x.ele_id) === String(eleId)).length;
+        if (avant > 0) continue;
+        const premier = (groupe.find((g) => g.v.principal) ?? groupe[0]).v;
+        const element = this.#element(eleId);
+        const regle = reglePremierTarif(avant, premier.principal, element.scenario_pa, element.pa_fixe);
+        premier.principal = regle.principal;
+        element.scenario_pa = regle.scenario;
+      }
       for (const { tarif, v } of aEcrire) {
         if (v.principal) for (const x of this.tarifsElements) if (x.ele_id === v.ele_id && x !== tarif) x.principal = false;
         if (tarif) Object.assign(tarif, v, { maj_par: this.utilisateur });
@@ -442,7 +461,7 @@ export class FournisseurBibliothequeMemoire {
   async rechercher({ recherche = '', bib = null, type = null } = {}) {
     const mots = String(recherche).toLowerCase().normalize('NFD').replace(/\p{M}/gu, '').split(/\s+/).filter(Boolean);
     return structuredClone(this.elements
-      .filter((e) => e.actif !== false && (!bib || e.bib_id === Number(bib)) && (!type || e.type === type))
+      .filter((e) => e.actif !== false && (!bib || e.bib_id === Number(bib)) && (!type || e.type === type) && (this.filtreChoix?.(e) ?? true))
       .filter((e) => { const t = `${e.code} ${e.libelle ?? ''} ${e.mots_cles ?? ''} ${e.code_barre ?? ''}`.toLowerCase().normalize('NFD').replace(/\p{M}/gu, ''); return mots.every((m) => t.includes(m)); })
       .sort((a, b) => a.code.localeCompare(b.code)).slice(0, 50)
       .map((e) => ({

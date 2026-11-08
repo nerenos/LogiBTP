@@ -61,6 +61,13 @@ Invoquer-Compose $Dossier 'api' @('stop', 'logibtp-api')
 $reglages['LOGIBTP_IMAGE'] = $Image
 $reglages['LOGIBTP_IMAGE_PRECEDENTE'] = $precedente
 Ecrire-Reglages $Dossier $reglages
+# Préparation rejouée (rejouable) : chiffre la connexion d'une base installée avant le certificat de la base ; la base n'est
+# redémarrée que si son certificat a été créé ou renouvelé (code 10).
+try {
+    $preparer = @('installation', 'preparer', '--domaine', $reglages['LOGIBTP_DOMAINE'], '--code-certificat')
+    if (-not $reglages['LOGIBTP_DOMAINE']) { throw 'domaine absent de installation.env' }
+    if ((Invoquer-InstallationCode $Dossier $preparer) -eq 10) { Redemarrer-Base $Dossier }
+} catch { Revenir "préparation : $($_.Exception.Message)" }
 try { Invoquer-Installation $Dossier @('installation', 'base', 'mettre-a-jour') } catch { Revenir "scripts SQL : $($_.Exception.Message)" }
 
 Ecrire-Etape '4. Démarrage de la nouvelle version'

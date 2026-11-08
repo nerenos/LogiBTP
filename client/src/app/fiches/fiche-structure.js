@@ -9,12 +9,18 @@ import { D, Dz, aujourdhui } from '@logibtp/socle';
 import { FicheLogiBTP } from './fiches.js';
 import { api } from '../api.js';
 import { TableIntervenants } from '../structure/intervenants.js';
-import { controlerIntervenants } from '../structure/structure.js';
+import { controlerIntervenants, facturesMarche, peutAnnulerParAvoir } from '../structure/structure.js';
 import { champRattachement } from '../structure/selection.js';
 import { VueGrapheStructure } from '../structure/graphe-structure.js';
 import { individusStructure } from '../panneaux-btp.js';
 import { creerTiersProvisoire } from '@logibtp/annuaire/ui';
-import { choisirTiers } from '../annuaire/choix.js';
+import { choisirTiers, champIndividuPoste, POSTE } from '../annuaire/choix.js';
+
+/** Poste des champs d'individu de notre société (filtre par défaut du choix en liste, retirable). */
+const POSTE_CHAMP = Object.freeze({
+  conducteur_ind_id: POSTE.CONDUCTEUR, charge_ind_id: POSTE.CHARGE_AFFAIRES, responsable_ind_id: POSTE.CHARGE_AFFAIRES,
+  chef_ind_id: POSTE.CHEF_CHANTIER, metreur_ind_id: POSTE.CHIFFREUR,
+});
 
 // Fiches de la structure des affaires : projet, affaire, chantier, marché. Listes de choix des références (affaire,
 // projet, chantier, commande d'origine, tiers de l'annuaire), code prévisionnel du chrono (module Fiche), préremplissage depuis un
@@ -182,8 +188,9 @@ export class FicheStructure extends FicheLogiBTP {
   }
 
   /**
-   * Individu de notre structure (conducteur de travaux) : combo des individus rattachés à notre société et à ses
-   * agences (`individusStructure`, lue une fois par fiche), l'ID est enregistré ; contrôlé par le serveur.
+   * Individu de notre structure (conducteur de travaux, chargé d'affaires…) : choix dans la liste des individus de notre
+   * société, filtrée par défaut sur le poste du champ (`POSTE_CHAMP`, filtre retirable) ; l'ID est enregistré ; contrôlé
+   * par le serveur. Le nom d'un individu déjà choisi est lu dans `individusStructure` (une fois par fiche).
    */
   #champIndividuSociete(champ, valeur, lecture) {
     const span = document.createElement('span');
@@ -193,14 +200,19 @@ export class FicheStructure extends FicheLogiBTP {
     }
     this.individusSociete.then((liste) => {
       const choisi = liste.find((x) => Number(x.valeur) === Number(valeur));
+      const nom = choisi?.libelle ?? (valeur ? texte('fiches_btp.structure.individu', { id: valeur }) : '');
       if (lecture) {
-        span.innerHTML = valeur ? `<a href="${urlFiche(TYPE_FICHE.INDIVIDU, Number(valeur))}">${echapper(choisi?.libelle ?? texte('fiches_btp.structure.individu', { id: valeur }))}</a>` : '—';
+        span.innerHTML = valeur ? `<a href="${urlFiche(TYPE_FICHE.INDIVIDU, Number(valeur))}">${echapper(nom)}</a>` : '—';
         return;
       }
-      const combo = creerCombo({ valeur: valeur ?? '', options: liste.map((x) => ({ valeur: x.valeur, libelle: x.libelle, detail: x.detail })), titre: champ.aide ?? '' });
-      combo.classList.add('fiche-saisie-champ');
-      combo.addEventListener('change', () => { const v = combo.resoudre(); this.definirValeur(champ.code, v === '' || v === null ? null : Number(v)); });
-      span.replaceChildren(combo);
+      const saisie = champIndividuPoste({
+        poste: POSTE_CHAMP[champ.code] ?? null, valeur: valeur ?? null, libelle: nom, titre: champ.aide ?? '',
+        surChoix: (id, ligne) => {
+          if (id !== null && !liste.some((x) => Number(x.valeur) === id)) liste.push({ valeur: id, libelle: ligne?.nom_complet ?? '', detail: '' });
+          this.definirValeur(champ.code, id);
+        },
+      });
+      span.replaceChildren(saisie);
     });
     return span;
   }
@@ -339,12 +351,12 @@ export class FicheAffaire extends FicheStructure {
 export class FicheChantier extends FicheStructure {
   sourceIntervenants() { return parametre('projet') ? ['projet', parametre('projet')] : null; }
 
-  /** Création depuis un projet obtenu (?projet=) : libellé, client et ville du projet. */
+  /** Création depuis un projet obtenu (?projet=) : libellé, client, ville et zone de déplacement du projet. */
   valeursCreation() {
     const v = super.valeursCreation();
     if (new URLSearchParams(globalThis.location?.search ?? '').get('sens') === 'ST') v.sens = 'ST';
     const prj = (this.refs.projets ?? []).find((p) => p.id === parametre('projet'));
-    if (prj) Object.assign(v, { prj_id: prj.id, libelle: prj.libelle, tiers_id: prj.tiers_id, ville: prj.ville });
+    if (prj) Object.assign(v, { prj_id: prj.id, libelle: prj.libelle, tiers_id: prj.tiers_id, ville: prj.ville, zone: prj.zone ?? null });
     return v;
   }
 
@@ -355,6 +367,7 @@ export class FicheChantier extends FicheStructure {
     const prj = (this.refs.projets ?? []).find((p) => p.id === id);
     if (prj && !this.valeur('tiers_id')) this.definirValeur('tiers_id', prj.tiers_id);
     if (prj && !this.valeur('ville')) this.definirValeur('ville', prj.ville);
+    if (prj && (this.valeur('zone') ?? null) === null && prj.zone != null) this.definirValeur('zone', prj.zone);
   }
 
   /** Zones de déplacement du Pointage (par agence, lot 6 : A26), lues une fois par fiche. */
@@ -496,6 +509,11 @@ export class FicheMarche extends FicheStructure {
     corps.querySelector('[data-groupe="recapitulatif"]')?.after(bloc);
   }
 
+  /** Case « Afficher le détail » de la gestion du marché (préférence d'affichage du navigateur). */
+  voirDetail() {
+    return Boolean(lirePreferences().gestionMarcheDetail);
+  }
+
   async rendreGestion(corps) {
     if (this.id === null) { corps.innerHTML = `<p class="aide">${texteHtml('fiches_btp.structure.gestion.nouvelle')}</p>`; return; }
     if (!this.services.structure.gestion) { corps.innerHTML = `<p class="aide">${texteHtml('fiches_btp.structure.gestion.en_ligne')}</p>`; return; }
@@ -513,10 +531,9 @@ export class FicheMarche extends FicheStructure {
     const somme = (liste, cle) => liste.reduce((s, x) => s.plus(Dz(x[cle])), D(0)).toString();
     const total = (cle) => somme(g.commandes, cle);
     const prevu = total('prevu_ht');
-    const factures = g.factures.filter((x) => this.voirAnnulees || !x.annule);
-    const facturesComptees = factures.filter((x) => !x.annule);
-    const nbAnnulees = g.factures.filter((x) => x.annule).length;
-    const sousTraitants = (g.sous_traitants ?? []).filter((x) => this.voirAnnulees || !x.annule);
+    const { affichees: factures, comptees: facturesComptees } = facturesMarche(g.factures, this.voirDetail());
+    const detail = this.voirDetail();
+    const sousTraitants = (g.sous_traitants ?? []).filter((x) => detail || !x.annule);
     const stComptees = sousTraitants.filter((x) => !x.annule);
     // Module Règlements (facultatif, 11.5) : réglé et reste à payer des pièces validées ; sans lui, pas de colonnes.
     const etats = new Map();
@@ -554,17 +571,17 @@ export class FicheMarche extends FicheStructure {
         <th class="nombre">${texteHtml('fiches_btp.structure.colonnes.cumul_ht')}</th><th class="nombre" title="${texteHtml('fiches_btp.structure.colonnes.avancement_marche_aide')}">${texteHtml('fiches_btp.structure.colonnes.avancement_du_marche')}</th><th></th></tr></thead><tbody>${g.situations.map((x) => `<tr><td>${x.rang ?? ''}</td><td>${lien(x)}</td>
         <td>${echapper(x.indice ?? '')}${x.indices > 1 ? ` <small>${texteHtml('fiches_btp.structure.gestion.indices', { nombre: x.indices })}</small>` : ''}</td><td>${echapper(x.date ?? '')}</td>
         <td>${echapper(x.statut ?? '')}${x.facturee ? ` · ${texteHtml('fiches_btp.structure.gestion.facturee')}` : ''}</td><td class="nombre">${f(x.total_ht)}</td><td class="nombre">${pct(x.total_ht, prevu)}</td>
-        <td>${x.valide && !x.facturee ? `<button type="button" data-facturer="${x.ent_id}">${texteHtml('fiches_btp.structure.gestion.facturer')}</button> <button type="button" data-reviser="${x.ent_id}">${texteHtml('fiches_btp.structure.gestion.reviser')}</button>` : ''}</td></tr>`).join('')}
+        <td>${x.valide && !x.facturee ? `<button type="button" data-facturer="${x.ent_id}">${texteHtml('fiches_btp.structure.gestion.facturer')}</button> <button type="button" data-reviser="${x.ent_id}">${texteHtml('fiches_btp.structure.gestion.reviser')}</button>` : ''}</td></tr>${detail ? (x.liste_indices ?? []).map((i) => `<tr class="indice-detail${i.annule ? ' annulee' : ''}"><td></td><td>${lien(i)}</td><td>${echapper(i.indice ?? '')}</td><td>${echapper(i.date ?? '')}</td><td>${echapper(i.statut ?? '')}</td><td class="nombre">${f(i.total_ht)}</td><td></td><td></td></tr>`).join('') : ''}`).join('')}
         </tbody></table>` : `<p class="aide">${texteHtml('fiches_btp.structure.gestion.aucune_situation')}</p>`)}
 
       ${groupe('factures', texteHtml('fiches_btp.structure.gestion.factures'), [...B(TYPE_DOCUMENT.V_FACTURE_AVT), ...B(TYPE_DOCUMENT.V_REPRISE_AVT)], `
-      ${nbAnnulees ? `<label class="fiche-option"><input type="checkbox" data-annulees ${this.voirAnnulees ? 'checked' : ''}> ${texteHtml('fiches_btp.structure.gestion.voir_annulees', { nombre: nbAnnulees })}</label>` : ''}
-      ${factures.length ? `<table class="tableau-gestion"><thead><tr><th>${texteHtml('fiches_btp.structure.colonnes.n_de_situation')}</th><th>${texteHtml('fiches_btp.structure.colonnes.piece')}</th><th>${texteHtml('fiches_btp.structure.colonnes.type')}</th><th>${texteHtml('fiches_btp.structure.colonnes.date')}</th><th>${texteHtml('fiches_btp.structure.colonnes.statut')}</th>
+      <label class="fiche-option"><input type="checkbox" data-detail ${detail ? 'checked' : ''}> ${texteHtml('fiches_btp.structure.gestion.voir_detail')}</label>
+      ${factures.length ? `<table class="tableau-gestion"><thead><tr><th>${texteHtml('fiches_btp.structure.colonnes.n_de_situation')}</th><th>${texteHtml('fiches_btp.structure.colonnes.piece')}</th>${detail ? `<th>${texteHtml('fiches_btp.structure.colonnes.indice')}</th>` : ''}<th>${texteHtml('fiches_btp.structure.colonnes.type')}</th><th>${texteHtml('fiches_btp.structure.colonnes.date')}</th><th>${texteHtml('fiches_btp.structure.colonnes.statut')}</th>
         <th class="nombre">${texteHtml('fiches_btp.structure.colonnes.ht_net')}</th><th class="nombre">${texteHtml('fiches_btp.structure.colonnes.ttc_net')}</th><th class="nombre">${texteHtml('fiches_btp.structure.colonnes.net_a_payer')}</th>${reglements ? `<th class="nombre">${texteHtml('fiches_btp.structure.colonnes.regle')}</th><th class="nombre">${texteHtml('fiches_btp.structure.colonnes.reste_a_payer')}</th>` : ''}<th></th></tr></thead><tbody>${factures.map((x) => `<tr class="${x.annule ? 'annulee' : ''}">
-        <td>${x.rang ?? ''}</td><td>${lien(x)}</td><td>${echapper(x.type)}${x.nature === 'ANNULATION' ? ` ${texteHtml('fiches_btp.structure.gestion.nature_annulation')}` : x.nature === 'AVANCEMENT' ? ` ${texteHtml('fiches_btp.structure.gestion.nature_avancement')}` : ''}</td>
+        <td>${x.rang ?? ''}</td><td>${lien(x)}</td>${detail ? `<td>${echapper(x.indice ?? '')}</td>` : ''}<td>${echapper(x.type)}${x.nature === 'ANNULATION' ? ` ${texteHtml('fiches_btp.structure.gestion.nature_annulation')}` : x.nature === 'AVANCEMENT' ? ` ${texteHtml('fiches_btp.structure.gestion.nature_avancement')}` : ''}</td>
         <td>${echapper(x.date ?? '')}</td><td>${echapper(x.statut ?? '')}</td><td class="nombre">${f(x.total_ht)}</td><td class="nombre">${f(x.total_ttc)}</td>
-        <td class="nombre">${f(x.net_a_payer)}</td>${regle(x)}<td>${x.valide && !x.annule ? `<button type="button" data-annuler="${x.ent_id}">${texteHtml('fiches_btp.structure.gestion.annuler')}</button>` : ''}</td></tr>`).join('')}
-        </tbody><tfoot><tr><th colspan="5">${texteHtml('commun.total')}${nbAnnulees && this.voirAnnulees ? ` ${texteHtml('fiches_btp.structure.gestion.hors_annulees')}` : ''}</th><th class="nombre">${f(somme(facturesComptees, 'total_ht'))}</th>
+        <td class="nombre">${f(x.net_a_payer)}</td>${regle(x)}<td>${peutAnnulerParAvoir(x) ? `<button type="button" data-annuler="${x.ent_id}">${texteHtml('fiches_btp.structure.gestion.annuler')}</button>` : ''}</td></tr>`).join('')}
+        </tbody><tfoot><tr><th colspan="${detail ? 6 : 5}">${texteHtml('commun.total')}${detail ? ` ${texteHtml('fiches_btp.structure.gestion.hors_annulees')}` : ''}</th><th class="nombre">${f(somme(facturesComptees, 'total_ht'))}</th>
         <th class="nombre">${f(somme(facturesComptees, 'total_ttc'))}</th><th class="nombre">${f(somme(facturesComptees, 'net_a_payer'))}</th>
         ${reglements ? `<th class="nombre">${f(totalRegle('pointe'))}</th><th class="nombre">${f(totalRegle('reste'))}</th>` : ''}<th></th></tr></tfoot></table>`
         : `<p class="aide">${texteHtml('fiches_btp.structure.gestion.aucune_facture')}</p>`}`)}
@@ -599,7 +616,7 @@ export class FicheMarche extends FicheStructure {
     const action = (fn) => async (e) => {
       try { await fn(Number(e.currentTarget.dataset.facturer ?? e.currentTarget.dataset.reviser ?? e.currentTarget.dataset.annuler), e); await recharger(); } catch (x) { this.message(x.message, 'erreur'); }
     };
-    corps.querySelector('[data-annulees]')?.addEventListener('change', (e) => { this.voirAnnulees = e.target.checked; recharger(); });
+    corps.querySelector('[data-detail]')?.addEventListener('change', (e) => { ecrirePreferences({ gestionMarcheDetail: e.target.checked }); recharger(); });
     corps.querySelectorAll('[data-facturer]').forEach((b) => b.addEventListener('click', action(async (id, e) => {
       const r = await this.services.structure.facturerSituation(id);
       this.message(texte('fiches_btp.structure.gestion.facture_creee'), 'succes');

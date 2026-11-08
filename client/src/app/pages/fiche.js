@@ -97,7 +97,7 @@ export class PageFiche extends PageBase {
         habilitations: (corps, p) => rendreHabilitations(corps, { app, ...p }).catch((e) => app.erreur(e)),
         missions: (corps, p) => rendreMissions(corps, { app, annuaire: s.annuaire, ...p }).catch((e) => app.erreur(e)),
         exigees: (corps, p) => rendreHabilitationsExigees(corps, { app, ...p }).catch((e) => app.erreur(e)),
-        affectations: (corps, p) => rendreAffectations(corps, { app, ...p }).catch((e) => app.erreur(e)),
+        affectations: (corps, p) => rendreAffectations(corps, { app, ged: s.ged, utilisateur: app.utilisateur(), ...p }).catch((e) => app.erreur(e)),
         materielAffecte: (corps, p) => rendreMaterielAffecte(corps, { app, ...p }).catch((e) => app.erreur(e)),
         couts: (corps, p) => rendreCoutsMateriel(corps, { app, ...p }).catch((e) => app.erreur(e)),
         compteurs: (corps, p) => rendreCompteursMateriel(corps, { app, ...p }).catch((e) => app.erreur(e)),

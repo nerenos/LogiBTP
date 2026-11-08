@@ -33,6 +33,67 @@ public class ValidationRequeteTests
         Assert.Equal(code, Assert.Throws<ErreurListe>(() => ValidationRequete.Valider(sql)).Code);
 }
 
+/// <summary>Date de référence et début d'exercice d'un cas du jeu partagé (périodes de vue).</summary>
+internal static class CasPeriode
+{
+    public static ConstructeurRequete AvecPeriode(this ConstructeurRequete c, JsonNode? cas)
+    {
+        if (cas?["reference"] is { } r) c.Reference = DateOnly.Parse(r.GetValue<string>());
+        if (cas?["debut_exercice"] is { } e) c.DebutExercice = DateOnly.Parse(e.GetValue<string>());
+        return c;
+    }
+}
+
+public class PeriodesDeVueTests
+{
+    private readonly JsonObject _jeu = CasPartages.Lire(CasPartages.Chemin("modules", "liste", "tests", "cas", "02_requete.json"));
+
+    private SourceResolue Source() => new("SELECT * FROM \"v\"",
+        _jeu["source"]!["colonnes"]!.AsArray().Select(c => new ColonneSource(c!["code"]!.GetValue<string>(), c["type"]!.GetValue<string>())).ToList(),
+        "id", "type_element", null);
+
+    /// <summary>Bornes (paramètres du SQL) et refus des cas « période de vue » du jeu partagé, sans base de données.</summary>
+    [Fact]
+    public void Bornes_et_refus_identiques_au_jeu_partage()
+    {
+        var vus = 0;
+        foreach (var c in _jeu["cas"]!.AsArray().Where(n => n!["filtres"]?.AsArray().Any(f => f!["op"]!.GetValue<string>() == "periode") == true))
+        {
+            var def = new DefinitionVue
+            {
+                Colonnes = Source().Colonnes.Select(x => new ColonneVue { Code = x.Code }).ToList(),
+                Filtres = c!["filtres"].Deserialize<List<FiltreVue>>(JsonCalcul.Options)!,
+            };
+            var construit = new ConstructeurRequete(Source(), def, new DemandeListe()).AvecPeriode(c);
+            if (c["erreur"] is { } erreur)
+            {
+                Assert.Equal(erreur.GetValue<string>(), Assert.Throws<ErreurListe>(() => construit.Lot(2)).Code);
+                continue;
+            }
+            var r = construit.Lot(2);
+            var bornes = c["bornes"]!.AsArray().Select(n => n!.GetValue<string>()).ToArray();
+            var colonne = c["filtres"]![0]!["colonne"]!.GetValue<string>();
+            Assert.Contains($"(s.\"{colonne}\")::date BETWEEN CAST(@p0 AS date) AND CAST(@p1 AS date)", r.Texte);
+            Assert.Equal(bornes, new[] { r.Parametres[0].Valeur?.ToString(), r.Parametres[1].Valeur?.ToString() });
+            vus++;
+        }
+        Assert.True(vus >= 5);
+    }
+
+    /// <summary>Période d'un agrégat sur une colonne inconnue : même refus que le JS, sans base de données.</summary>
+    [Fact]
+    public void Agregats_refuses_comme_le_js()
+    {
+        foreach (var c in _jeu["agregats"]!.AsArray().Where(n => n!["erreur"] is not null))
+        {
+            var agregats = c!["agregats"].Deserialize<List<AgregatListe>>(JsonCalcul.Options)!;
+            var def = new DefinitionVue { Colonnes = Source().Colonnes.Select(x => new ColonneVue { Code = x.Code }).ToList() };
+            var construit = new ConstructeurRequete(Source(), def, new DemandeListe()).AvecPeriode(c);
+            Assert.Equal(c["erreur"]!.GetValue<string>(), Assert.Throws<ErreurListe>(() => construit.Agregats(agregats)).Code);
+        }
+    }
+}
+
 public class ConstructeurRequeteTests
 {
     private static readonly SourceResolue Source = new("SELECT * FROM \"v\"",
@@ -183,13 +244,14 @@ public sealed class IntegrationPostgresTests : IAsyncLifetime
         if (Connexion is null) return;
         _cnx = new NpgsqlConnection(Connexion);
         await _cnx.OpenAsync();
-        await Executer($"CREATE TABLE {_table} (id integer PRIMARY KEY, nom text, ville text, service text, montant numeric, actif boolean, type_element text, etiquettes text[])");
+        await Executer($"CREATE TABLE {_table} (id integer PRIMARY KEY, nom text, ville text, service text, montant numeric, actif boolean, type_element text, etiquettes text[], embauche date)");
         foreach (var l in _jeu["source"]!["lignes"]!.AsArray())
         {
-            await using var cmd = new NpgsqlCommand($"INSERT INTO {_table} VALUES (@id, @nom, @ville, @service, @montant, @actif, @type_element, @etiquettes)", _cnx);
+            await using var cmd = new NpgsqlCommand($"INSERT INTO {_table} VALUES (@id, @nom, @ville, @service, @montant, @actif, @type_element, @etiquettes, @embauche)", _cnx);
             cmd.Parameters.AddWithValue("id", l!["id"]!.GetValue<int>());
             foreach (var c in new[] { "nom", "ville", "service", "type_element" }) cmd.Parameters.Add(new NpgsqlParameter(c, NpgsqlDbType.Text) { Value = (object?)l[c]?.GetValue<string>() ?? DBNull.Value });
             cmd.Parameters.Add(new NpgsqlParameter("montant", NpgsqlDbType.Numeric) { Value = (object?)l["montant"]?.GetValue<decimal>() ?? DBNull.Value });
+            cmd.Parameters.Add(new NpgsqlParameter("embauche", NpgsqlDbType.Date) { Value = l["embauche"] is { } e ? (object)DateOnly.Parse(e.GetValue<string>()).ToDateTime(TimeOnly.MinValue) : DBNull.Value });
             cmd.Parameters.AddWithValue("actif", l["actif"]!.GetValue<bool>());
             cmd.Parameters.Add(new NpgsqlParameter("etiquettes", NpgsqlDbType.Array | NpgsqlDbType.Text)
             {
@@ -236,7 +298,7 @@ public sealed class IntegrationPostgresTests : IAsyncLifetime
     }
 
     private SourceResolue Source() => new($"SELECT * FROM {_table}",
-        [new("id", "integer"), new("nom", "text"), new("ville", "text"), new("service", "text"), new("montant", "numeric"), new("actif", "boolean"), new("type_element", "text"), new("etiquettes", "ARRAY")],
+        [new("id", "integer"), new("nom", "text"), new("ville", "text"), new("service", "text"), new("montant", "numeric"), new("actif", "boolean"), new("type_element", "text"), new("etiquettes", "ARRAY"), new("embauche", "date")],
         "id", "type_element", null);
 
     private static IReadOnlyList<string> Types(JsonNode? types) => types?.AsArray().Select(n => n!.GetValue<string>()).ToList() ?? [];
@@ -276,8 +338,14 @@ public sealed class IntegrationPostgresTests : IAsyncLifetime
             var ids = new List<int>();
             for (var tour = 0; tour < 20; tour++)
             {
-                var constructeur = new ConstructeurRequete(Source(), Def(c["filtres"]), d) { TypesTheme = Types(c["types"]) };
+                var constructeur = new ConstructeurRequete(Source(), Def(c["filtres"]), d) { TypesTheme = Types(c["types"]) }.AvecPeriode(c);
                 var tri = constructeur.Tri();
+                if (c["erreur"] is { } erreur)
+                {
+                    Assert.Equal(erreur.GetValue<string>(), Assert.Throws<ErreurListe>(() => constructeur.Lot(2)).Code);
+                    ids = c["attendu"]!.AsArray().Select(n => n!.GetValue<int>()).ToList();
+                    break;
+                }
                 var lignes = await Lire(constructeur.Lot(2));
                 var suite = lignes.Count > 2;
                 if (suite) lignes.RemoveAt(2);
@@ -309,7 +377,7 @@ public sealed class IntegrationPostgresTests : IAsyncLifetime
         foreach (var c in _jeu["agregats"]!.AsArray())
         {
             var agregats = c!["agregats"].Deserialize<List<AgregatListe>>(JsonCalcul.Options)!;
-            var l = (await Lire(new ConstructeurRequete(Source(), Def(c["filtres"]), Demande(c["requete"])).Agregats(agregats))).Single();
+            var l = (await Lire(new ConstructeurRequete(Source(), Def(c["filtres"]), Demande(c["requete"])).AvecPeriode(c).Agregats(agregats))).Single();
             decimal? Valeur(string cle) => l[cle] is null or DBNull ? null : Convert.ToDecimal(l[cle]);
             var obtenus = new Dictionary<string, decimal?> { ["_lignes"] = Valeur("_lignes") };
             for (var i = 0; i < agregats.Count; i++)

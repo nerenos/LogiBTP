@@ -16,4 +16,6 @@ public static class ErreursPointage
 {
     public const string PoiValide = "POI_VALIDE";
     public const string BorneJeton = "BORNE_JETON";
+    public const string RepasDeja = "REPAS_DEJA";
+    public const string RepasHorsEquipe = "REPAS_HORS_EQUIPE";
 }

@@ -13,6 +13,19 @@ export function tableNonRepris(liste) {
       <td>${x.valeurs.map((v) => echapper(v)).join('<br>')}</td><td class="nombre">${x.lignes ? x.nombre : ''}</td></tr>`).join('')}</tbody></table>`).join('');
 }
 
+/** Compte rendu d'un import de cartes carburant : pleins écrits, doublons, cartes non rapprochées, lignes en erreur (rangs). */
+export function rapportCarburant(r) {
+  const liste = (titre, rangs) => (rangs.length ? `<h4>${texteHtml(titre)}</h4><p>${rangs.map((x) => echapper(String(x))).join(', ')}</p>` : '');
+  return `<table class="table-analyse table-import"><tbody>
+    <tr><th>${texteHtml('import_btp.carburant.lus')}</th><td class="nombre">${r.lus}</td></tr>
+    <tr><th>${texteHtml('import_btp.carburant.ecrits')}</th><td class="nombre">${r.ecrits}</td></tr>
+    <tr><th>${texteHtml('import_btp.carburant.doublons')}</th><td class="nombre">${r.doublons.length}</td></tr>
+    <tr><th>${texteHtml('import_btp.carburant.non_rapproches')}</th><td class="nombre">${r.non_rapproches.length}</td></tr>
+    <tr><th>${texteHtml('import_btp.carburant.erreurs')}</th><td class="nombre">${r.erreurs.length}</td></tr></tbody></table>
+    ${liste('import_btp.carburant.rangs_doublons', r.doublons)}${liste('import_btp.carburant.rangs_non_rapproches', r.non_rapproches)}
+    ${r.erreurs.length ? `<h4>${texteHtml('import_btp.carburant.rangs_erreurs')}</h4><ul class="import-avertissements">${r.erreurs.map((e) => `<li>${texteHtml('import_btp.carburant.ligne_erreur', { rang: e.rang, message: e.message })}</li>`).join('')}</ul>` : ''}`;
+}
+
 /** Rapport conservé avec l'origine du document : non repris, avertissements, rapprochements, écarts de calcul. */
 export function rapportImport(devis, correspondances, ecarts = null) {
   return { non_repris: devis.non_repris, avertissements: [...devis.avertissements, ...messagesCorrespondances(correspondances)], ecarts };

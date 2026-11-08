@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\LogiBTP.Bibliotheque\LogiBTP.Bibliotheque.csproj" />
+    <ProjectReference Include="..\LogiBTP.Bibliotheque.Web\LogiBTP.Bibliotheque.Web.csproj" />
     <ProjectReference Include="..\..\..\..\socle\dotnet\LogiBTP.Socle.Testing\LogiBTP.Socle.Testing.csproj" />
   </ItemGroup>
 

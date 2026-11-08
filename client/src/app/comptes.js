@@ -33,6 +33,18 @@ export function relationTiers(famille) {
   return famille === 'T' ? 'SOUS_TRAITANT' : 'FOURNISSEUR';
 }
 
+/**
+ * Taux de TVA autoliquidé (catégorie A) proposé par défaut sur les nouvelles lignes d'une pièce d'achat d'un fournisseur
+ * de l'Union européenne (`per_fou_tva_intracom`), si le module Comptabilité est actif : identifiant du taux ou null
+ * (le taux reste modifiable ligne par ligne). contexte : { famille (tyd_famille), tvaIntracom, comptabiliteActive,
+ * tauxTva: [{ ttv_id, ttv_categorie, ttv_defaut }] }.
+ */
+export function tvaAutoliqueeParDefaut({ famille = 'V', tvaIntracom = false, comptabiliteActive = false, tauxTva = [] } = {}) {
+  if (!comptabiliteActive || !tvaIntracom || relationTiers(famille) !== 'FOURNISSEUR') return null;
+  const autoliquides = tauxTva.filter((t) => t.ttv_categorie === 'A');
+  return (autoliquides.find((t) => t.ttv_defaut) ?? autoliquides[0])?.ttv_id ?? null;
+}
+
 let regleCompteHerite = compteHeriteParDefaut;
 
 /** Remplace la règle du compte hérité ; sans argument, rétablit la règle par défaut. */

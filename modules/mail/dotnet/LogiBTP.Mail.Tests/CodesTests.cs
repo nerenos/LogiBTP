@@ -10,5 +10,7 @@ public class CodesTests
 
     [Theory]
     [InlineData("ERREUR_MAIL", typeof(ErreursMail))]
+    [InlineData("TYPE_RECONNAISSANCE", typeof(TypeReconnaissance))]
+    [InlineData("PRECISION_LIVRAISON", typeof(PrecisionLivraison))]
     public void Parite_avec_le_js(string nom, Type type) => Assert.Empty(Constantes.Ecarts(Fichier, nom, type));
 }

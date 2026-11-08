@@ -1,5 +1,7 @@
 import { pairesParCode } from '@logibtp/socle/dictionnaire';
 import { motsRecherche, normaliser } from './normaliser.js';
+import { bornesPeriode } from './periodes.js';
+import { ERREUR_LISTE } from './codes.js';
 
 // Sémantique des requêtes de liste (référence du serveur, utilisée par le fournisseur en mémoire et les jeux
 // de test partagés modules/liste/tests/cas) :
@@ -42,8 +44,41 @@ export function filtresEffectifs(definition, connues) {
 /** Opérateurs des filtres fixes d'une vue (même liste que ConstructeurRequete.OperateursVue côté C#). */
 export const OPERATEURS_VUE = pairesParCode('liste.operateurs_vue', [
   ['=', 'egal'], ['<>', 'different'], ['>', 'superieur'], ['>=', 'superieur_egal'], ['<', 'inferieur'], ['<=', 'inferieur_egal'],
-  'entre', 'contient', 'commence', 'finit', 'dans', 'vide', 'nonvide', 'vrai', 'faux',
+  'entre', 'contient', 'commence', 'finit', 'dans', 'vide', 'nonvide', 'vrai', 'faux', 'periode',
 ]);
+
+/** Type de colonne (data_type PostgreSQL) qui porte une date : date ou timestamp. */
+export const estTypeDate = (type) => /^(date|timestamp)/i.test(String(type ?? ''));
+
+/** Date du jour au format AAAA-MM-JJ (jour d'exécution, date locale). */
+export function aujourdhui() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * Filtres « periode » résolus à la date d'exécution : { colonne, op: 'periode', valeur: code, nombre } devient le même
+ * filtre avec ses bornes { debut, fin } (calculées par bornesPeriode). La colonne doit être de type date (types : code
+ * de colonne -> type) sinon erreur PERIODE_COLONNE (colonne inconnue : COLONNE_INCONNUE). Même règle que ConstructeurRequete.ConditionFiltre côté C#.
+ */
+export function resoudrePeriodes(filtres, types, { reference = aujourdhui(), debutExercice = null } = {}) {
+  return (filtres ?? []).map((f) => {
+    if (f.op !== 'periode') return f;
+    if (!types.has(f.colonne)) {
+      const e = new Error(`Colonne ${f.colonne} inconnue de la source`);
+      e.code = ERREUR_LISTE.COLONNE_INCONNUE;
+      e.colonne = f.colonne;
+      throw e;
+    }
+    if (!estTypeDate(types.get(f.colonne))) {
+      const e = new Error(`Période sur la colonne ${f.colonne} : colonne de date attendue`);
+      e.code = ERREUR_LISTE.PERIODE_COLONNE;
+      e.colonne = f.colonne;
+      throw e;
+    }
+    return { ...f, bornes: bornesPeriode(f.valeur, f.nombre ?? null, reference, debutExercice) };
+  });
+}
 
 const vraiTexte = (v) => ['true', 'vrai', '1', 'oui', 't'].includes(String(v ?? '').trim().toLowerCase());
 
@@ -71,6 +106,10 @@ export function correspondFiltreVue(ligne, f) {
     case 'contient': return !estVide(v) && texte.includes(normaliser(f.valeur));
     case 'commence': return !estVide(v) && texte.startsWith(normaliser(f.valeur));
     case 'finit': return !estVide(v) && texte.endsWith(normaliser(f.valeur));
+    case 'periode': {
+      const jour = estVide(v) ? '' : String(v).slice(0, 10);
+      return jour !== '' && !!f.bornes && jour >= f.bornes.debut && jour <= f.bornes.fin;
+    }
     default: break;
   }
   if (estVide(v)) return false;

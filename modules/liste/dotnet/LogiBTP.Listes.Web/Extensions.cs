@@ -33,6 +33,7 @@ public static class Extensions
     public static RouteGroupBuilder MapModuleListe(this RouteGroupBuilder api)
     {
         var g = api.MapGroup("/listes");
+        g.MapGet("/contexte", (ServiceListe s, CancellationToken ct) => s.Contexte(ct));
         g.MapGet("/themes", (ServiceListe s, CancellationToken ct) => s.Themes(ct));
         g.MapPut("/themes/{code}", (string code, ThemeListeDto t, HttpContext http, ServiceListe s, CancellationToken ct) => s.EnregistrerTheme(code, t, Utilisateur.Depuis(http), ct));
         g.MapDelete("/themes/{code}", async (string code, HttpContext http, ServiceListe s, CancellationToken ct) =>

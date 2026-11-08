@@ -32,6 +32,8 @@ public static class Composante
     public const string Stock = "STOCK";
     public const string Poste = "POSTE";
     public const string Acompte = "ACOMPTE";
+    // Refacturation interne du matériel (lot 6) : produit crédité au chantier de suivi, sans pièce ni écriture comptable.
+    public const string ProduitInterne = "PRODUIT_INTERNE";
 }
 
 /// <summary>Source d'un fait.</summary>

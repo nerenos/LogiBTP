@@ -8,6 +8,16 @@ export const GESTION_ELEMENT = Object.freeze({
   NON_GERE: 'NON_GERE',
 });
 
+/** Scénario de prix d'achat d'un élément (ele_scenario_pa). */
+export const SCENARIO_PA = Object.freeze({
+  FIXE: 'FIXE',
+  FOURNISSEUR_PRINCIPAL: 'FOURNISSEUR_PRINCIPAL',
+  DERNIER_PA: 'DERNIER_PA',
+  MEILLEUR_MIN: 'MEILLEUR_MIN',
+  MEILLEUR_MAX: 'MEILLEUR_MAX',
+  PMP: 'PMP',
+});
+
 /** Genre d'un poste de pied (ele_pied_genre, recopié dans lig_proprietes.genre_poste). */
 export const GENRE_POSTE = Object.freeze({
   REMISE: 'REMISE',

@@ -95,6 +95,11 @@ export const MODULE_FACULTATIF = Object.freeze({
   STOCK: 'stock',
 });
 
+/** Avertissements de gestion du cœur à la validation d'une pièce (non bloquants). */
+export const AVERTISSEMENT_GESTION = Object.freeze({
+  TVA_NON_AUTOLIQUEE: 'TVA_NON_AUTOLIQUEE',
+});
+
 /** Modèles d'édition connus du code (editions/modeles.js) ; FRAIS_ANNEXES (interne) n'est jamais le dernier imprimé du document. */
 export const MODELE_EDITION = Object.freeze({
   FRAIS_ANNEXES: 'FRAIS_ANNEXES',

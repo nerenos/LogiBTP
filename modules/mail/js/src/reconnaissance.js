@@ -1,6 +1,7 @@
 // Reconnaissance d'un courriel reçu (module Mail, lot 4), répliquée avec ReconnaissanceMail.cs (jeu partagé
 // tests/cas/01_reconnaissance.json) : nature par les règles, score des candidats fournis par l'application, décision.
 import { sansAccent } from '@logibtp/socle';
+import { TYPE_RECONNAISSANCE, PRECISION_LIVRAISON } from './codes.js';
 
 
 export const SCORES = { NUMERO_OBJET: 70, NUMERO_TEXTE: 60, NUMERO_PIECE: 60, NUMERO_PIECE_TEXTE: 50, REFERENCE: 40, EXPEDITEUR: 20, FIL: 100, TIERS: 50 };
@@ -10,7 +11,7 @@ export const NATURES = ['ARC', 'REPONSE_DEVIS', 'FACTURE_FOURNISSEUR', 'BL', 'RE
 
 /** Minuscules, accents retirés (table du socle), apostrophe typographique droite, espaces resserrés. */
 export function normaliser(texte) {
-  return sansAccent(texte).replace(/’/g, "'").replace(/\s+/g, ' ').trim();
+  return sansAccent(texte).replace(/’/g, "'").replace(/[\s\u0085﻿]+/g, ' ').trim();
 }
 
 const alnum = (c) => c !== undefined && /[a-z0-9]/.test(c);
@@ -86,5 +87,80 @@ export function reconnaitre(entree, regles, seuils = { haut: 80, bas: 40 }) {
     nature: regle?.nature ?? null, regle: regle?.code ?? null, service: regle?.service ?? null, decision,
     retenus: retenus.map(({ type, id, score }) => ({ type, id, score })), propositions: props,
     alerte: decision === 'RATTACHE' && !entree.automatique && action === 'ALERTER',
+  };
+}
+
+/** Motifs par défaut d'un accusé de réception de commande (mots entiers, sans casse ni accents). */
+export const MOTIFS_AR = ['accusé de réception', 'confirmation de commande', 'AR', 'ARC'];
+
+const ECHAPPER = /[.*+?^${}()|[\]\\]/g;
+const LIVRAISON = /livr[a-z]*[^0-9]{0,40}?(?:([0-9]{1,2})[/.-]([0-9]{1,2})[/.-]([0-9]{4})|semaine\s*(?:n\s*°?\s*|no\s*)?([0-9]{1,2})(?:[/-]([0-9]{4}))?)/g;
+
+const bissextile = (a) => (a % 4 === 0 && a % 100 !== 0) || a % 400 === 0;
+const joursDuMois = (a, m) => (m === 2 ? (bissextile(a) ? 29 : 28) : [4, 6, 9, 11].includes(m) ? 30 : 31);
+/** Années reconnues (hors plage : pas de date proposée, comme côté C#). */
+export const ANNEE_MIN = 2000;
+export const ANNEE_MAX = 2099;
+const anneeValable = (a) => a !== null && a !== undefined && a >= ANNEE_MIN && a <= ANNEE_MAX;
+const deuxChiffres = (n) => String(n).padStart(2, '0');
+
+/** Lundi de la semaine n (1 à 53) de l'année : le lundi de la semaine 1 est celui de la semaine du 4 janvier. */
+function lundiDeSemaine(annee, semaine) {
+  const quatre = new Date(0);
+  quatre.setUTCFullYear(annee, 0, 4);
+  const dow = (quatre.getUTCDay() + 6) % 7;
+  quatre.setUTCDate(4 - dow + 7 * (semaine - 1));
+  return quatre.toISOString().slice(0, 10);
+}
+
+/** Numéros candidats : un des préfixes (numérotation des commandes), séparateur facultatif, chiffres (groupes séparés par - ou /). */
+function numerosCandidats(zones, prefixes) {
+  const trouves = [];
+  const ps = (prefixes ?? []).map(normaliser).filter(Boolean).map((p) => p.replace(ECHAPPER, '\\$&'));
+  if (ps.length === 0) return trouves;
+  const re = new RegExp(`(?<![a-z0-9])(?:${ps.join('|')})[-/ ]?[0-9]+(?:[-/][0-9]+)*(?![a-z0-9])`, 'g');
+  for (const z of zones) {
+    for (const m of normaliser(z).matchAll(re)) {
+      const n = m[0].replace(/ /g, '').toUpperCase();
+      if (!trouves.includes(n)) trouves.push(n);
+    }
+  }
+  return trouves;
+}
+
+/** Première livraison annoncée (jj/mm/aaaa valide, ou semaine n) après un mot « livraison » ; null si aucune. */
+function livraisonAnnoncee(zones, anneeReference) {
+  for (const z of zones) {
+    for (const m of normaliser(z).matchAll(LIVRAISON)) {
+      if (m[4] !== undefined) {
+        const semaine = Number(m[4]);
+        if (semaine < 1 || semaine > 53) continue;
+        const annee = m[5] !== undefined ? Number(m[5]) : anneeValable(anneeReference) ? anneeReference : null;
+        if (m[5] !== undefined && !anneeValable(annee)) continue;
+        return { date: annee === null ? null : lundiDeSemaine(annee, semaine), semaine, precision: PRECISION_LIVRAISON.SEMAINE };
+      }
+      const [j, mo, a] = [Number(m[1]), Number(m[2]), Number(m[3])];
+      if (!anneeValable(a) || mo < 1 || mo > 12 || j < 1 || j > joursDuMois(a, mo)) continue;
+      return { date: `${a}-${deuxChiffres(mo)}-${deuxChiffres(j)}`, semaine: null, precision: PRECISION_LIVRAISON.JOUR };
+    }
+  }
+  return null;
+}
+
+/**
+ * Accusé de réception de commande (objet et corps du message, pas les pièces jointes) : { type (ACCUSE_RECEPTION ou null),
+ * motif, numeros (candidats, objet d'abord), numero (le seul candidat, sinon null), date (jj/mm/aaaa ou lundi de la
+ * semaine annoncée, ISO), semaine, precision (JOUR, SEMAINE ou null) }. Entrée : objet, texte, prefixes (numérotation des
+ * commandes), annee_reference (année de la semaine sans année), motifs (défaut MOTIFS_AR).
+ */
+export function reconnaitreAccuse(entree) {
+  const zones = [entree.objet ?? '', entree.texte ?? ''];
+  const motif = (entree.motifs?.length ? entree.motifs : MOTIFS_AR).find((m) => zones.some((z) => contientMot(z, m))) ?? null;
+  if (motif === null) return { type: null, motif: null, numeros: [], numero: null, date: null, semaine: null, precision: null };
+  const numeros = numerosCandidats(zones, entree.prefixes);
+  const l = livraisonAnnoncee(zones, entree.annee_reference);
+  return {
+    type: TYPE_RECONNAISSANCE.ACCUSE_RECEPTION, motif, numeros, numero: numeros.length === 1 ? numeros[0] : null,
+    date: l?.date ?? null, semaine: l?.semaine ?? null, precision: l?.precision ?? null,
   };
 }

@@ -1,5 +1,5 @@
 import { ERREUR_FICHE, LARGEUR_GROUPE, DISPOSITION_GROUPE } from '../src/codes.js';
-import { echapper, formatLibre, htmlSur, editerLibelle, creerCombo, confirmer, formatHeure, notifier, declarerRaccourcis, actionDe, libelleRaccourci, ouvrirMenuContextuel } from '@logibtp/socle/ui';
+import { echapper, formatLibre, htmlSur, editerLibelle, creerCombo, creerJetons, confirmer, formatHeure, notifier, declarerRaccourcis, actionDe, libelleRaccourci, ouvrirMenuContextuel } from '@logibtp/socle/ui';
 import { MODES, LIBELLES_MODES, enSaisie, titreFiche } from '../src/modes.js';
 import { validerFiche, MESSAGES } from '../src/validation.js';
 import { ParametrageFiche } from './parametrage.js';
@@ -11,6 +11,7 @@ const BATTEMENT = 30000;
 // l'application). L'hôte complète le groupe (declarerRaccourcis('fiche', …)) pour ses propres actions, qu'il désigne
 // par la propriété raccourci de l'action (option actions, actionsSupplementaires).
 const ONGLETS = 9;
+const FORMAT_JETONS = 'jetons';
 declarerRaccourcis('fiche', {
   libelle: texte('fiche.raccourcis.groupe'),
   actions: {
@@ -502,6 +503,17 @@ export class FicheBase {
     if (!champ.supplementaire && champ.code === this.definition.chrono?.champ) return this.#champCode(champ, valeur);
     const lecture = !enSaisie(this.mode) || champ.lecture_seule || (champ.saisie === 'creation' && this.mode === MODES.MODIFICATION);
     let el;
+    // Texte à virgules saisi en jetons (format « jetons ») : stockage inchangé, « a, b ».
+    if (!lecture && champ.type === 'texte' && champ.format === FORMAT_JETONS) {
+      el = creerJetons({ valeur: String(valeur ?? '').split(','), titre: champ.libelle });
+      el.classList.add('fiche-saisie-champ');
+      el.addEventListener('change', () => {
+        const cible = champ.supplementaire ? this.saisie.proprietes : this.saisie.valeurs;
+        cible[champ.code] = el.valeurJetons.join(', ');
+        this.#majTitre();
+      });
+      return el;
+    }
     switch (champ.type) {
       case 'zone':
         el = document.createElement('textarea');

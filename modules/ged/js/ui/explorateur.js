@@ -1,6 +1,6 @@
 import { texte, texteHtml, pluriel, pairesParCode, textesParCode, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { NIVEAU_CONFIDENTIALITE, PROFIL } from '@logibtp/socle';
-import { echapper, lirePreferences, ecrirePreferences, creerCombo, confirmer, saisir, formatDate, formatDateHeure, separateur, declarerRaccourcis, actionDe, libelleRaccourci, ouvrirMenuContextuel } from '@logibtp/socle/ui';
+import { echapper, lirePreferences, ecrirePreferences, creerCombo, creerJetons, confirmer, saisir, formatDate, formatDateHeure, separateur, declarerRaccourcis, actionDe, libelleRaccourci, ouvrirMenuContextuel } from '@logibtp/socle/ui';
 import { iconeDocument, formatTaille } from '../src/fichiers.js';
 import { versionsVisibles, etapes, ETAPES, GENRES } from '../src/versions.js';
 import { normaliserRecherche } from '../src/recherche.js';
@@ -955,7 +955,7 @@ export class ExplorateurGed {
         <label>${texteHtml('ged.champs.confidentialite')} <span data-place="confidentialite"></span></label>
         ${tableau('acces_profils', texteHtml('ged.explorateur.acces_profils'), !acces, texteHtml('ged.regles.tous'))}
         ${tableau('acces_utilisateurs', texteHtml('ged.explorateur.acces_utilisateurs'), !acces, texteHtml('ged.regles.tous'))}
-        ${tableau('mots_cles', texteHtml('ged.champs.mots_cles'), !editable, texteHtml('ged.champs.mots_cles_aide'))}
+        <label>${texteHtml('ged.champs.mots_cles')} <span data-place="mots_cles"></span></label>
         <label class="large">${texteHtml('ged.champs.resume')} <textarea rows="2" data-m="resume" ${editable ? '' : 'readonly'} placeholder="${texteHtml('ged.explorateur.resume_aide')}">${echapper(d.resume ?? '')}</textarea></label>
         <label class="large">${texteHtml('ged.champs.notes')} <textarea rows="2" data-m="notes" ${editable ? '' : 'readonly'}>${echapper(d.notes ?? '')}</textarea></label>
         ${this.envoi ? `<label class="coche"><input type="checkbox" data-envoi-detail ${d.a_envoyer ? 'checked' : ''} ${editable ? '' : 'disabled'}> ${iconeHtml('ged_envoi')} ${texteHtml('ged.explorateur.envoi')}</label>` : ''}
@@ -977,6 +977,11 @@ export class ExplorateurGed {
     const confidentialite = creerCombo({ options: CONFIDENTIALITES.map(([valeur, libelle]) => ({ valeur, libelle })), valeur: d.confidentialite ?? NIVEAU_CONFIDENTIALITE.INTERNE, vide: false, titre: texte('ged.champs.confidentialite') });
     categorie.readOnly = lecture;
     confidentialite.readOnly = !acces;
+    const jetons = creerJetons({ valeur: d.mots_cles ?? [], titre: texte('ged.champs.mots_cles') });
+    jetons.classList.toggle('lecture', !editable);
+    jetons.querySelectorAll('input,button').forEach((n) => { n.disabled = !editable; });
+    jetons.addEventListener('change', () => this.#lancer(() => this.#modifier({ mots_cles: jetons.valeurJetons })));
+    z.querySelector('[data-place="mots_cles"]').replaceWith(jetons);
     z.querySelector('[data-place="categorie"]').replaceWith(categorie);
     z.querySelector('[data-place="confidentialite"]').replaceWith(confidentialite);
     categorie.addEventListener('change', () => this.#lancer(() => this.#modifier({ categorie: categorie.valeurCombo || null })));

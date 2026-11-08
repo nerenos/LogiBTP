@@ -51,6 +51,10 @@ public partial class ServiceListe(ListeDbContext db, SpecialisationListe special
         ThlTypes = t.ThlTypes.Deserialize<List<TypeElementTheme>>(JsonCalcul.Options) ?? [],
     };
 
+    /// <summary>Contexte de la société pour l'affichage : début de l'exercice (AAAA-MM-JJ) des périodes « exercice », null = année civile.</summary>
+    public virtual async Task<Dictionary<string, string?>> Contexte(CancellationToken ct) =>
+        new() { ["debut_exercice"] = (await specialisation.DebutExerciceAsync(ct))?.ToString("yyyy-MM-dd") };
+
     public virtual async Task<List<ThemeListeDto>> Themes(CancellationToken ct) =>
         (await db.Themes.AsNoTracking().Where(t => t.ThlActif).OrderBy(t => t.ThlOrdre).ThenBy(t => t.ThlLibelle).ToListAsync(ct)).Select(VersDto).ToList();
 
@@ -323,6 +327,7 @@ public partial class ServiceListe(ListeDbContext db, SpecialisationListe special
         {
             var c = specialisation.Constructeur(source, def, d);
             c.TypesTheme = types;
+            c.DebutExercice = await specialisation.DebutExerciceAsync(ct);
             c.TypesRefuses = restriction.TypesRefuses;
             c.ColonnesMasquees = restriction.ColonnesMasquees;
             return c;

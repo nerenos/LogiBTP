@@ -27,6 +27,7 @@ import { PageParametresRaccourcis } from './parametres-raccourcis.js';
 import { PageGraphe } from './graphe.js';
 import { PageIntrouvable } from './introuvable.js';
 import { PageImportOptim } from './import-optim.js';
+import { PageImportCarburant } from './import-carburant.js';
 import { PageReglements } from './reglements.js';
 import { PageMarchesAFacturer } from './marches-a-facturer.js';
 import { PageEdition } from './edition.js';
@@ -53,6 +54,7 @@ import { PageParametresComptes } from './parametres-comptes.js';
 import { PageParametresDroits } from './parametres-droits.js';
 import { PageParametresRessources } from './parametres-ressources.js';
 import { PageHabilitations } from './habilitations.js';
+import { PageRelevesAValider } from './releves-a-valider.js';
 import { PageParametresCalendriers } from './parametres-calendriers.js';
 import { PageNotifications, PageParametresNotifications } from './notifications.js';
 import { PageParametresConnexions } from './parametres-connexions.js';
@@ -68,6 +70,7 @@ import { PagePlanningPrototype } from './planning-prototype.js';
 import { PageBorne, PageParametresBornes, PageGroupePointage } from './borne.js';
 import { PagePlanning, PageParametresPlanning } from './planning.js';
 import { PageEquipes } from './planning-equipes.js';
+import { PageRestaurantsPointage } from './restaurants.js';
 import { PageSaisiePointage, PageSynthesePointage, PageExportPointage, PageParametresPointage, PageCongesPointage } from './pointage.js';
 
 // Routes de l'application. Chaque URL désigne un écran précis : elle se partage, se rouvre dans une autre fenêtre
@@ -138,6 +141,7 @@ export const ROUTES = [
   { nom: 'pointage-synthese', chemin: '/pointage/synthese', page: PageSynthesePointage, titre: texte('pointage.routes.pointage_synthese') },
   { nom: 'pointage-export', chemin: '/pointage/export', page: PageExportPointage, titre: texte('pointage.routes.pointage_export') },
   { nom: 'pointage-conges', chemin: '/pointage/conges', page: PageCongesPointage, titre: texte('pointage.routes.pointage_conges') },
+  { nom: 'pointage-restaurants', chemin: '/pointage/restaurants', page: PageRestaurantsPointage, titre: texte('pointage.routes.pointage_restaurants') },
   { nom: 'parametres-pointage', chemin: '/parametres/pointage', page: PageParametresPointage, titre: texte('pointage.routes.parametres_pointage') },
   { nom: 'notifications', chemin: '/notifications', page: PageNotifications, titre: texte('notifications_btp.boite.titre') },
   { nom: 'parametres-notifications', chemin: '/parametres/notifications', page: PageParametresNotifications, titre: texte('notifications_btp.preferences.titre') },
@@ -147,6 +151,7 @@ export const ROUTES = [
   { nom: 'mail-message', chemin: '/mail/message/:id', page: PageMessageMail, titre: texte('mail_btp.routes.message') },
   { nom: 'parametres-connexions', chemin: '/parametres/connexions', page: PageParametresConnexions, titre: texte('oauth_btp.connexions.titre') },
   { nom: 'parametres-calendriers', chemin: '/parametres/calendriers', page: PageParametresCalendriers, titre: texte('calendrier_btp.routes.calendriers') },
+  { nom: 'releves-a-valider', chemin: '/ressources/releves-a-valider', page: PageRelevesAValider, titre: texte('ressources_btp.releves_a_valider.titre') },
   { nom: 'habilitations', chemin: '/ressources/habilitations', page: PageHabilitations, titre: texte('ressources_btp.surveiller.titre') },
   { nom: 'parametres-comptes', chemin: '/parametres/comptes', page: PageParametresComptes, titre: texte('authentification_btp.comptes.titre') },
   { nom: 'parametres-installation', chemin: '/parametres/installation', page: PageParametresInstallation, titre: texte('parametres_btp.installation.titre') },
@@ -158,6 +163,7 @@ export const ROUTES = [
   { nom: 'graphe', chemin: '/annuaire/graphe', page: PageGraphe, titre: texte('pages_btp.routes.graphe') },
   { nom: 'notre-societe', chemin: '/annuaire/societe', page: PageNotreSociete, titre: texte('parametres_btp.societe.titre') },
   { nom: 'import-optim', chemin: '/import/optimbtp', page: PageImportOptim, titre: texte('import_btp.routes.optim') },
+  { nom: 'import-carburant', chemin: '/import/carburant', page: PageImportCarburant, titre: texte('import_btp.routes.carburant') },
   { nom: 'reglements', chemin: '/reglements', page: PageReglements, titre: texte('reglements_btp.routes.reglements') },
   { nom: 'marches-a-facturer', chemin: '/marches/a-facturer', page: PageMarchesAFacturer, titre: texte('structure_btp.routes.marches_a_facturer') },
   { nom: 'crm-note', chemin: '/crm/note/:id', page: PageNoteCrm, titre: texte('crm_btp.routes.note') },

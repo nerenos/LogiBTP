@@ -12,8 +12,25 @@
       "nonvide": "Non vide",
       "contient": "Contient",
       "commence": "Commence par",
-      "finit": "Se termine par"
+      "finit": "Se termine par",
+      "periode": "Dans la période"
     },
+    "periodes": {
+      "aujourd_hui": "Aujourd'hui",
+      "hier": "Hier",
+      "semaine_en_cours": "Semaine en cours",
+      "semaine_precedente": "Semaine précédente",
+      "mois_en_cours": "Mois en cours",
+      "mois_precedent": "Mois précédent",
+      "trimestre_en_cours": "Trimestre en cours",
+      "annee_en_cours": "Année en cours",
+      "annee_precedente": "Année précédente",
+      "exercice_en_cours": "Exercice en cours",
+      "derniers_jours": "x derniers jours",
+      "derniers_mois": "x derniers mois",
+      "prochains_jours": "x prochains jours"
+    },
+    "periodes_avec_nombre": "{{periode}} (x = {{nombre}})",
     "operateurs_vue": {
       "egal": "égal à",
       "different": "différent de",
@@ -29,7 +46,8 @@
       "vide": "est vide",
       "nonvide": "n'est pas vide",
       "vrai": "est coché (vrai)",
-      "faux": "n'est pas coché (faux)"
+      "faux": "n'est pas coché (faux)",
+      "periode": "dans la période"
     },
     "formule": {
       "chaine": "Chaîne non terminée",
@@ -54,6 +72,7 @@
       "theme_obligatoire": "Code et libellé du thème obligatoires",
       "requete_hors_ligne": "Requête manuelle indisponible hors ligne",
       "vue_attendue": "Vue ou définition attendue",
+      "periode_colonne": "Période sur la colonne {{colonne}} : colonne de date attendue",
       "source_introuvable": "Source {{source}} introuvable",
       "source_lecture_seule": "Cette source n'est pas modifiable",
       "colonne_non_modifiable": "Colonne {{code}} non modifiable",
@@ -114,6 +133,8 @@
       "tout": "(Tout sélectionner)",
       "vides": "(Vides)",
       "condition": "Condition",
+      "periode": "— période —",
+      "periode_nombre": "x",
       "et": "et",
       "mise_en_forme": "Mise en forme",
       "fond": "Couleur de fond",
@@ -139,6 +160,16 @@
       }
     },
     "concepteur": {
+      "teintes": {
+        "neutre": "gris",
+        "info": "bleu",
+        "envoye": "violet",
+        "succes": "vert",
+        "attention": "orange",
+        "erreur": "rouge",
+        "termine": "gris foncé",
+        "barre": "texte barré"
+      },
       "filtre_dans": "{{titre}} parmi {{valeurs}}",
       "filtre_entre": "{{titre}} entre {{valeur}} et {{valeur2}}",
       "titre": "Concepteur de vue",
@@ -173,6 +204,7 @@
         "filtre_colonne": "{{quoi}} : colonne à choisir",
         "filtre_valeur": "{{quoi}} sur {{colonne}} : valeur à saisir",
         "filtre_valeur2": "{{quoi}} sur {{colonne}} : seconde valeur à saisir",
+        "filtre_periode": "{{quoi}} sur {{colonne}} : période à choisir, avec son nombre x (entier supérieur ou égal à 1) si elle en demande un",
         "filtre_valeurs": "{{quoi}} sur {{colonne}} : valeurs à saisir",
         "quoi_vue": "Filtre de la vue",
         "quoi_indicateur": "Indicateur « {{titre}} »",
@@ -208,7 +240,7 @@
         "total": "Total",
         "total_aide": "Ligne de total en bas de la liste, calculée par la base sur toute la sélection",
         "total_aucun": "Aucun",
-        "valeurs_pastille": "Valeurs (une par ligne : valeur | libellé | teinte : {{teintes}})",
+        "valeurs_pastille": "Valeurs (une par ligne : valeur | libellé | teinte, parmi : {{teintes}})",
         "valeurs_pastille_exemple": "P | En panne | erreur"
       },
       "alignements": {
@@ -294,7 +326,9 @@
         "sommeil_aide": "Fiches mises en sommeil (avant archivage) : masquées par défaut",
         "sommeil": "Afficher les fiches en sommeil",
         "valeurs": "valeur ; valeur…",
-        "valeur": "valeur"
+        "valeur": "valeur",
+        "periode": "— période —",
+        "periode_nombre": "x"
       },
       "calculees": {
         "titre": "Colonnes calculées",

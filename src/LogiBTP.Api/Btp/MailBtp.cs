@@ -408,6 +408,31 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
         return new CandidatsReconnaissance(candidats, tiers, tiers.Select(t => new ElementCible(TypesFiche.Personne, t.ToString())).ToList());
     }
 
+    /// <summary>Préfixes de la numérotation des commandes qui reçoivent un accusé de réception (achat, sous-traitance) ; motifs et année : valeurs par défaut du module.</summary>
+    public override async Task<ParametresAccuse> ParametresAccuseAsync(CancellationToken ct)
+    {
+        var prefixes = await db.Database.SqlQueryRaw<string>(
+            "SELECT DISTINCT tyd_prefixe_numero AS \"Value\" FROM type_document WHERE tyd_code = ANY(@types) AND tyd_prefixe_numero IS NOT NULL AND tyd_prefixe_numero <> ''",
+            new NpgsqlParameter("types", TypesDocument.Arc)).ToListAsync(ct);
+        return new ParametresAccuse(prefixes, null, []);
+    }
+
+    /// <summary>
+    /// Accusé de réception reconnu : commande retrouvée par son numéro parmi les pièces valables non annulées ; une seule
+    /// commande : le courriel y est rattaché ; plusieurs : candidates proposées ; aucune : courriel laissé à rapprocher.
+    /// </summary>
+    public override async Task<ResolutionAccuse?> AccuseReconnuAsync(AccuseRecu a, CancellationToken ct)
+    {
+        var numeros = AccuseCommandeBtp.Comparables(a.Accuse.Numeros);
+        if (numeros.Length == 0) return null;
+        var documents = await db.Database.SqlQueryRaw<DocumentCite>(AccuseCommandeBtp.SqlCommandes,
+            new NpgsqlParameter("types", TypesDocument.Arc), new NpgsqlParameter("numeros", numeros)).ToListAsync(ct);
+        var trouves = new List<ElementTrouve>();
+        foreach (var d in documents)
+            if (await DecrireElementAsync("document", d.EntId.ToString(), ct) is { } e) trouves.Add(e);
+        return AccuseCommandeBtp.Resoudre(trouves);
+    }
+
     private sealed record ContexteAlerte(long? SrvId, long? RedacteurId, string? Redacteur, string TydFamille);
 
     /// <summary>

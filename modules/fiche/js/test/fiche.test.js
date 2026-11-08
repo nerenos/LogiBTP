@@ -163,3 +163,10 @@ describe('paramétrage étendu : RGPD, groupes, requête SQL, mot de passe', () 
     expect(await f.revelerSecret('materiel', 1, 'acces')).toEqual({ valeur: 'nouveau' });
   });
 });
+
+describe('texte à jetons (format jetons)', () => {
+  it('« béton, coffrage » accepté et stocké tel quel', () => {
+    const champ = { code: 'mots_cles', type: 'texte', format: 'jetons', longueur: 500 };
+    expect(validerChamp(champ, 'béton, coffrage')).toBe(null);
+  });
+});

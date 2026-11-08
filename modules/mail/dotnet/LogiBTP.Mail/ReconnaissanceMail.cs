@@ -40,7 +40,7 @@ public static partial class ReconnaissanceMail
     public static readonly string[] Actions = ["ALERTER", "RATTACHER", "IGNORER"];
     public static readonly string[] Natures = ["ARC", "REPONSE_DEVIS", "FACTURE_FOURNISSEUR", "BL", "RELANCE", "AUTRE"];
 
-    [GeneratedRegex(@"\s+")]
+    [GeneratedRegex(@"[\s﻿]+")]
     private static partial Regex Espaces();
 
     /// <summary>Minuscules, accents retirés (table du socle), apostrophe typographique droite, espaces resserrés.</summary>
@@ -126,4 +126,86 @@ public static partial class ReconnaissanceMail
         return new ResultatReconnaissance(regle?.Nature, regle?.Code, regle?.Service, decision, retenus, props,
             decision == "RATTACHE" && !e.Automatique && action == "ALERTER");
     }
+
+    /// <summary>Motifs par défaut d'un accusé de réception de commande (mots entiers, sans casse ni accents).</summary>
+    public static readonly string[] MotifsAr = ["accusé de réception", "confirmation de commande", "AR", "ARC"];
+
+    [GeneratedRegex(@"livr[a-z]*[^0-9]{0,40}?(?:([0-9]{1,2})[/.-]([0-9]{1,2})[/.-]([0-9]{4})|semaine\s*(?:n\s*°?\s*|no\s*)?([0-9]{1,2})(?:[/-]([0-9]{4}))?)")]
+    private static partial Regex Livraison();
+
+    /// <summary>Années reconnues (hors plage : pas de date proposée, comme côté JS).</summary>
+    public const int AnneeMin = 2000, AnneeMax = 2099;
+
+    private static bool AnneeValable(int? a) => a is >= AnneeMin and <= AnneeMax;
+
+    private static bool Bissextile(int a) => (a % 4 == 0 && a % 100 != 0) || a % 400 == 0;
+
+    private static int JoursDuMois(int a, int m) => m == 2 ? (Bissextile(a) ? 29 : 28) : m is 4 or 6 or 9 or 11 ? 30 : 31;
+
+    /// <summary>Lundi de la semaine n (1 à 53) de l'année : le lundi de la semaine 1 est celui de la semaine du 4 janvier.</summary>
+    private static string LundiDeSemaine(int annee, int semaine)
+    {
+        var quatre = new DateOnly(annee, 1, 4);
+        var dow = ((int)quatre.DayOfWeek + 6) % 7;
+        return quatre.AddDays(-dow + 7 * (semaine - 1)).ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>Numéros candidats : un des préfixes (numérotation des commandes), séparateur facultatif, chiffres (groupes séparés par - ou /).</summary>
+    private static List<string> NumerosCandidats(string[] zones, IReadOnlyList<string> prefixes)
+    {
+        var trouves = new List<string>();
+        var ps = prefixes.Select(Normaliser).Where(p => p.Length > 0).Select(Regex.Escape).ToList();
+        if (ps.Count == 0) return trouves;
+        var re = new Regex($"(?<![a-z0-9])(?:{string.Join('|', ps)})[-/ ]?[0-9]+(?:[-/][0-9]+)*(?![a-z0-9])");
+        foreach (var z in zones)
+        {
+            foreach (Match m in re.Matches(Normaliser(z)))
+            {
+                var n = m.Value.Replace(" ", "").ToUpperInvariant();
+                if (!trouves.Contains(n)) trouves.Add(n);
+            }
+        }
+        return trouves;
+    }
+
+    private static (string? Date, int? Semaine, string Precision)? LivraisonAnnoncee(string[] zones, int? anneeReference)
+    {
+        foreach (var z in zones)
+        {
+            foreach (Match m in Livraison().Matches(Normaliser(z)))
+            {
+                if (m.Groups[4].Success)
+                {
+                    var semaine = int.Parse(m.Groups[4].Value);
+                    if (semaine < 1 || semaine > 53) continue;
+                    int? annee = m.Groups[5].Success ? int.Parse(m.Groups[5].Value) : AnneeValable(anneeReference) ? anneeReference : null;
+                    if (m.Groups[5].Success && !AnneeValable(annee)) continue;
+                    return (annee is null ? null : LundiDeSemaine(annee.Value, semaine), semaine, PrecisionLivraison.Semaine);
+                }
+                int j = int.Parse(m.Groups[1].Value), mo = int.Parse(m.Groups[2].Value), a = int.Parse(m.Groups[3].Value);
+                if (!AnneeValable(a) || mo < 1 || mo > 12 || j < 1 || j > JoursDuMois(a, mo)) continue;
+                return ($"{a}-{mo:00}-{j:00}", null, PrecisionLivraison.Jour);
+            }
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Accusé de réception de commande (objet et corps du message, pas les pièces jointes), répliqué avec reconnaitreAccuse
+    /// (jeu tests/cas/02_accuses_reception.json) : motif, numéros candidats, livraison annoncée (jj/mm/aaaa ou semaine n).
+    /// </summary>
+    public static ResultatAccuse ReconnaitreAccuse(EntreeAccuse e)
+    {
+        string[] zones = [e.Objet, e.Texte];
+        var motif = (e.Motifs.Count > 0 ? e.Motifs : MotifsAr).FirstOrDefault(m => zones.Any(z => ContientMot(z, m)));
+        if (motif is null) return new ResultatAccuse(null, null, [], null, null, null, null);
+        var numeros = NumerosCandidats(zones, e.Prefixes);
+        var l = LivraisonAnnoncee(zones, e.AnneeReference);
+        return new ResultatAccuse(TypeReconnaissance.AccuseReception, motif, numeros, numeros.Count == 1 ? numeros[0] : null, l?.Date, l?.Semaine, l?.Precision);
+    }
 }
+
+/// <summary>Courriel à examiner : préfixes de la numérotation des commandes, année des semaines sans année, motifs (défaut MotifsAr).</summary>
+public sealed record EntreeAccuse(string Objet, string Texte, IReadOnlyList<string> Prefixes, int? AnneeReference, IReadOnlyList<string> Motifs);
+
+public sealed record ResultatAccuse(string? Type, string? Motif, IReadOnlyList<string> Numeros, string? Numero, string? Date, int? Semaine, string? Precision);

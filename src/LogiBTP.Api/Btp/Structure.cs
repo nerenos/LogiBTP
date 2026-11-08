@@ -24,6 +24,9 @@ public sealed record RattachementDocument(int? EntProjetId, int? EntAffaireId, i
 /// <summary>Accusé de réception d'une commande (lot 9, A24e) : numéro, date, livraison confirmée.</summary>
 public sealed record ArcDocument(string? EntArcNumero, DateOnly? EntArcDate, DateOnly? EntArcLivraison);
 
+/// <summary>Date de livraison propre d'une ligne de commande validée (lot 7 des corrections de novembre).</summary>
+public sealed record LivraisonLigne(DateOnly? LigDateLivraison);
+
 /// <summary>
 /// Structure des affaires (db/160_structure.sql) : référentiels pour les listes de choix (projets, affaires, chantiers,
 /// marchés, commandes clients) et rattachement d'un document, même validé (classement, pas modification du contenu).
@@ -37,7 +40,7 @@ public static class Structure
           'affaires', (SELECT coalesce(json_agg(json_build_object('id', aff_id, 'code', aff_code, 'libelle', aff_libelle, 'nature', aff_nature,
                          'statut', aff_statut, 'tiers_id', aff_tiers_id) ORDER BY aff_code), '[]') FROM affaire),
           'projets', (SELECT coalesce(json_agg(json_build_object('id', prj_id, 'code', prj_code, 'libelle', prj_libelle, 'statut', prj_statut,
-                         'tiers_id', prj_tiers_id, 'ville', prj_ville, 'montant_estime', prj_montant_estime) ORDER BY prj_code), '[]') FROM projet),
+                         'tiers_id', prj_tiers_id, 'adresse', prj_adresse, 'code_postal', prj_code_postal, 'ville', prj_ville, 'zone', prj_zone, 'montant_estime', prj_montant_estime) ORDER BY prj_code), '[]') FROM projet),
           'chantiers', (SELECT coalesce(json_agg(json_build_object('id', cha_id, 'code', cha_code, 'libelle', cha_libelle, 'statut', cha_statut,
                          'aff_id', cha_aff_id, 'prj_id', cha_prj_id, 'tiers_id', cha_tiers_id, 'ville', cha_ville) ORDER BY cha_code), '[]') FROM chantier),
           'marches', (SELECT coalesce(json_agg(json_build_object('id', mar_id, 'code', mar_code, 'libelle', mar_libelle, 'statut', mar_statut,
@@ -56,6 +59,24 @@ public static class Structure
 
     /// <summary>Types de documents qui reçoivent un accusé de réception (↔ TYPES_ARC de client/src/app/panneaux-btp.js).</summary>
     public static readonly HashSet<string> TypesArc = [.. TypesDocument.Arc];
+
+    /// <summary>
+    /// Date de livraison d'une ligne : acceptée seulement sur une commande fournisseur ou de sous-traitance validée (hors verrou,
+    /// comme l'ARC) ; seule cette date change.
+    /// </summary>
+    public static void ControlerLivraisonLigne(string codeType, bool verrouille)
+    {
+        if (!TypesArc.Contains(codeType)) throw ExceptionMetier.Invalide("LIVRAISON_TYPE", "La date de livraison d'une ligne validée ne concerne que les commandes fournisseur et de sous-traitance");
+        if (!verrouille) throw ExceptionMetier.Invalide("LIVRAISON_NON_VALIDEE", "Commande non validée : la date de livraison se saisit dans le document");
+    }
+
+    /// <summary>Motif de l'historique d'un changement d'ARC (numéro, date, livraison : avant -> après) ; null si rien ne change.</summary>
+    public static string? MotifArc(string? numeroAvant, DateOnly? dateAvant, DateOnly? livraisonAvant, string? numero, DateOnly? date, DateOnly? livraison)
+    {
+        if (numeroAvant == numero && dateAvant == date && livraisonAvant == livraison) return null;
+        static string F(DateOnly? d) => d?.ToString("yyyy-MM-dd") ?? "";
+        return $"ARC numéro {numeroAvant} -> {numero} ; date {F(dateAvant)} -> {F(date)} ; livraison {F(livraisonAvant)} -> {F(livraison)}";
+    }
 
     public static IEndpointRouteBuilder MapStructure(this IEndpointRouteBuilder api)
     {
@@ -94,18 +115,58 @@ public static class Structure
         });
         // Accusé de réception d'une commande fournisseur ou de sous-traitance (db/238), saisi même validée : la livraison
         // confirmée devient la date par défaut des lignes sans date propre (projection du stock).
-        g.MapPut("/documents/{id:long}/arc", async (long id, ArcDocument a, LogiBtpContext db, CancellationToken ct) =>
+        g.MapPut("/documents/{id:long}/arc", async (long id, ArcDocument a, HttpContext http, LogiBtpContext db, CancellationToken ct) =>
         {
             var doc = await db.Documents.FirstOrDefaultAsync(d => d.EntId == id, ct) ?? throw ExceptionMetier.Introuvable($"Document {id}");
             var code = await db.TypesDocument.AsNoTracking().Where(t => t.TydId == doc.EntTydId).Select(t => t.TydCode).FirstAsync(ct);
             if (!TypesArc.Contains(code)) throw ExceptionMetier.Invalide("ARC_TYPE", "L'accusé de réception ne concerne que les commandes fournisseur et de sous-traitance");
             var numero = string.IsNullOrWhiteSpace(a.EntArcNumero) ? null : a.EntArcNumero.Trim();
             if (numero?.Length > 50) throw ExceptionMetier.Invalide("ARC_NUMERO", "Numéro d'accusé de réception : 50 caractères au plus");
+            var motif = MotifArc(doc.EntArcNumero, doc.EntArcDate, doc.EntArcLivraison, numero, a.EntArcDate, a.EntArcLivraison);
+            if (motif is not null)
+                db.Historiques.Add(new DocumentHistorique
+                {
+                    HisEntId = id,
+                    HisVersion = doc.EntVersion,
+                    HisAction = "MODIFICATION",
+                    HisDate = DateTimeOffset.UtcNow,
+                    HisUtilisateur = Utilisateur.Depuis(http).Code,
+                    HisMotif = motif,
+                    HisInstantane = JsonDocument.Parse(JsonSerializer.Serialize(new
+                    {
+                        ancien = new { numero = doc.EntArcNumero, date = doc.EntArcDate, livraison = doc.EntArcLivraison },
+                        nouveau = new { numero, date = a.EntArcDate, livraison = a.EntArcLivraison },
+                    })),
+                });
             doc.EntArcNumero = numero;
             doc.EntArcDate = a.EntArcDate;
             doc.EntArcLivraison = a.EntArcLivraison;
             await db.SaveChangesAsync(ct);
             return Results.Ok(new { ent_arc_numero = doc.EntArcNumero, ent_arc_date = doc.EntArcDate, ent_arc_livraison = doc.EntArcLivraison });
+        });
+        // Date de livraison d'une ligne de commande validée : même chemin que l'ARC, hors verrou (seule la colonne change),
+        // tracée dans l'historique ; f_date_livraison_ligne la reprend pour les prévisions d'approvisionnement.
+        g.MapPut("/documents/{id:long}/lignes/{ligId:long}/livraison", async (long id, long ligId, LivraisonLigne l, HttpContext http, LogiBtpContext db, CancellationToken ct) =>
+        {
+            var doc = await db.Documents.FirstOrDefaultAsync(d => d.EntId == id, ct) ?? throw ExceptionMetier.Introuvable($"Document {id}");
+            var code = await db.TypesDocument.AsNoTracking().Where(t => t.TydId == doc.EntTydId).Select(t => t.TydCode).FirstAsync(ct);
+            ControlerLivraisonLigne(code, doc.EntVerrouille);
+            var ligne = await db.Lignes.FirstOrDefaultAsync(x => x.LigId == ligId && x.LigEntId == id, ct) ?? throw ExceptionMetier.Introuvable($"Ligne {ligId}");
+            var ancienne = ligne.LigDateLivraison;
+            if (ancienne == l.LigDateLivraison) return Results.Ok(new { lig_id = ligId, lig_date_livraison = ancienne });
+            ligne.LigDateLivraison = l.LigDateLivraison;
+            db.Historiques.Add(new DocumentHistorique
+            {
+                HisEntId = id,
+                HisVersion = doc.EntVersion,
+                HisAction = "MODIFICATION",
+                HisDate = DateTimeOffset.UtcNow,
+                HisUtilisateur = Utilisateur.Depuis(http).Code,
+                HisMotif = $"LIVRAISON_LIGNE {ligId} : {ancienne:yyyy-MM-dd} -> {l.LigDateLivraison:yyyy-MM-dd}",
+                HisInstantane = JsonDocument.Parse(JsonSerializer.Serialize(new { lig_id = ligId, ancienne, nouvelle = l.LigDateLivraison })),
+            });
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(new { lig_id = ligId, lig_date_livraison = ligne.LigDateLivraison });
         });
         // Document créé depuis un marché (BL…) : toutes les commandes validées du marché, dans l'ordre (base puis avenants),
         // une section et un bloc de pied par commande (CONCEPTION-ACHATS-MARCHES.md, Q18, Q23).
@@ -381,12 +442,18 @@ public static class Structure
                 'rang', d.ent_rang_avancement, 'date', d.ent_date, 'statut', d.std_libelle, 'valide', d.ent_verrouille, 'total_ht', d.ent_total_ht,
                 'facturee', EXISTS (SELECT 1 FROM document_lien k JOIN doc f ON f.ent_id = k.lie_cible_ent_id
                                     WHERE k.lie_source_ent_id = d.ent_id AND k.lie_type = 'TRANSFORMATION' AND f.std_code <> '{StatutsDocument.Annule}'),
-                'indices', (SELECT count(*) FROM document g WHERE g.ent_groupe_id = d.ent_groupe_id))
+                'indices', (SELECT count(*) FROM document g WHERE g.ent_groupe_id = d.ent_groupe_id),
+                'liste_indices', (SELECT coalesce(json_agg(json_build_object('ent_id', g.ent_id, 'numero', g.ent_numero, 'indice', g.ent_indice,
+                      'date', g.ent_date, 'statut', g.std_libelle, 'valide', g.ent_verrouille, 'total_ht', g.ent_total_ht,
+                      'annule', g.std_code = '{StatutsDocument.Annule}', 'remplace', g.std_code = '{StatutsDocument.Remplace}') ORDER BY g.ent_id), '[]')
+                  FROM doc g WHERE g.ent_groupe_id = d.ent_groupe_id AND g.ent_id <> d.ent_id AND g.tyd_avancement = 'S'))
                 ORDER BY d.ent_rang_avancement NULLS LAST, d.ent_id), '[]')
               FROM doc d WHERE d.tyd_avancement = 'S' AND d.ent_is_reference),
           'factures', (SELECT coalesce(json_agg(json_build_object('ent_id', d.ent_id, 'type', d.tyd_libelle, 'code', d.tyd_code, 'numero', d.ent_numero,
                 'rang', d.ent_rang_avancement, 'date', d.ent_date, 'statut', d.std_libelle, 'valide', d.ent_verrouille,
-                'annule', d.std_code = '{StatutsDocument.Annule}', 'nature', d.ent_nature_avoir, 'total_ht', d.ent_total_ht, 'total_ttc', d.ent_total_ttc,
+                'indice', d.ent_indice, 'reference', d.ent_is_reference,
+                'annule', d.std_code = '{StatutsDocument.Annule}', 'remplace', d.std_code = '{StatutsDocument.Remplace}',
+                'nature', d.ent_nature_avoir, 'total_ht', d.ent_total_ht, 'total_ttc', d.ent_total_ttc,
                 'net_a_payer', d.ent_net_a_payer) ORDER BY d.ent_rang_avancement NULLS LAST, d.ent_id), '[]')
               FROM doc d WHERE d.ent_avt_presentation = 'P'),
           -- Factures et avoirs des sous-traitants en paiement direct ; facture liée : facture du marché portant le

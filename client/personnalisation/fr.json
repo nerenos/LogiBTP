@@ -362,6 +362,21 @@
       "etapes_aide": "Étapes des ordres à valider (module Exécution)",
       "stock": "Stock",
       "stock_aide": "Sortie ou retour d'articles du magasin de l'atelier (module Stock)",
+      "compteurs": "Compteurs",
+      "compteurs_aide": "Relevé des heures ou des kilomètres d'un matériel",
+      "ecran_compteurs": "Compteurs du matériel",
+      "compteurs_affectes": "Matériels qui vous sont affectés aujourd'hui",
+      "compteurs_autres": "Autre matériel",
+      "compteurs_tous": "Autre matériel",
+      "compteurs_tous_aide": "Relever un matériel qui ne vous est pas affecté (relevé à valider au bureau)",
+      "compteurs_aucun": "Aucun matériel ne correspond.",
+      "compteurs_rechercher": "Code ou désignation du matériel",
+      "compteurs_dernier": "Dernier relevé : {{valeur}} {{unite}}",
+      "compteurs_valeur": "Valeur lue",
+      "compteurs_remise": "Compteur remplacé ou remis à zéro",
+      "compteurs_illisible": "Valeur illisible : saisissez un nombre positif.",
+      "compteurs_enregistre": "Relevé enregistré.",
+      "compteurs_a_valider": "Relevé enregistré : ce matériel ne vous est pas affecté aujourd'hui, il sera à valider au bureau.",
       "terminer": "Terminer",
       "autres": "{{nombre}} autre(s) : précisez la saisie.",
       "aucun_tous": "Aucun chantier ni ordre ne correspond.",
@@ -438,6 +453,13 @@
       "note_html": "Repas noté : <b>{{restaurant}}</b>",
       "recherche_proches": "Recherche des restaurants proches…",
       "aucun_trouve": "Aucun restaurant trouvé : « Restaurant non trouvé ».",
+      "equipe_membres": "Repas déclaré pour les membres cochés :",
+      "equipe_aucun_membre": "Cochez au moins un membre de l'équipe.",
+      "equipe_refus": "Repas non enregistré pour {{nom}} : {{raison}}",
+      "refus": {
+        "REPAS_DEJA": "Repas déjà déclaré ce jour pour ce salarié",
+        "REPAS_HORS_EQUIPE": "Ce salarié ne fait pas partie de l'équipe de la borne"
+      },
       "nom": "Nom du restaurant :",
       "ville": "Ville du restaurant (facultatif) :",
       "distance_km": "{{distance}} km",
@@ -562,6 +584,17 @@
       "choisir_salarie": "Choisissez le salarié",
       "annuler_confirmer": "Annuler ce congé ?"
     },
+    "restaurants_page": {
+      "titre": "Restaurants",
+      "recherche": "Rechercher un restaurant ou une ville",
+      "nom": "Restaurant",
+      "adresse": "Adresse",
+      "ville": "Ville",
+      "itineraire": "Itinéraire",
+      "sans_adresse": "Adresse non renseignée",
+      "vide": "Aucun restaurant",
+      "nombre": "{n} restaurant(s)"
+    },
     "routes": {
       "borne": "Borne de pointage",
       "parametres_bornes": "Bornes de pointage",
@@ -570,6 +603,7 @@
       "pointage_synthese": "Synthèse des pointages",
       "pointage_export": "Export de paie et valorisation",
       "pointage_conges": "Congés et absences",
+      "pointage_restaurants": "Restaurants",
       "parametres_pointage": "Paramètres du pointage"
     }
   },
@@ -788,6 +822,9 @@
       "arc_fichier": "Ranger le fichier de l'accusé de réception dans les pièces du document",
       "arc_aide": "La livraison confirmée remplace la livraison prévue pour les lignes sans date propre (projection du stock).",
       "arc_enregistre": "Accusé de réception enregistré",
+      "arc_lignes_titre": "Date de livraison par ligne (commande validée)",
+      "arc_ligne_livraison": "Livraison de la ligne {{ligne}}",
+      "arc_ligne_enregistre": "Date de livraison de la ligne enregistrée",
       "arc_range": "{{nom}} rangé dans les pièces du document",
       "st_avancement": "À l'avancement",
       "st_avancement_aide": "(situation établie pour le sous-traitant)",
@@ -1676,6 +1713,7 @@
       "preparation": "Préparation…",
       "titre": "Courriel : {{libelle}}",
       "adresses_aide": "Nom <adresse@domaine.fr>, …",
+      "choisir_contacts": "Choisir des contacts de l'annuaire (plusieurs possibles)",
       "envoyer_titre": "Mettre le courriel dans la file d'envoi",
       "envoyer": "Envoyer",
       "depuis": "Depuis",
@@ -1772,6 +1810,20 @@
       "signalees_un": "{{nombre}} coordonnée signalée dans l'annuaire",
       "signalees_autre": "{{nombre}} coordonnées signalées dans l'annuaire",
       "ignorer_motif": "Ignorer ce courriel (il est retiré de la liste et de la GED). Motif :"
+    },
+    "accuse": {
+      "titre": "Accusé de réception reconnu",
+      "aide": "Valeurs lues dans le courriel : elles ne sont appliquées à la commande qu'après votre validation.",
+      "numero": "Numéro d'AR",
+      "date": "Date de l'AR",
+      "livraison": "Livraison confirmée",
+      "semaine": "semaine {{semaine}} (lundi proposé)",
+      "existant": "Accusé déjà renseigné sur la commande : {{numero}}, livraison {{livraison}}.",
+      "sans_commande": "Rattachez d'abord le courriel à la commande.",
+      "appliquer": "Appliquer à la commande",
+      "appliquer_titre": "Pose le numéro, la date et la livraison confirmée sur l'accusé de réception de la commande",
+      "ignorer": "Ignorer la proposition",
+      "applique": "Accusé de réception enregistré sur la commande."
     },
     "hebergeurs": {
       "GMAIL": "Gmail (grand public)",
@@ -4003,7 +4055,8 @@
       "verifier": "Vérifier le devis importé"
     },
     "routes": {
-      "optim": "Import d'un devis OptimBTP"
+      "optim": "Import d'un devis OptimBTP",
+      "carburant": "Import des cartes carburant"
     },
     "verification": {
       "etat_html": "<b>Devis importé de {{format}}</b> ({{fichier}}) — non enregistré : vérifiez-le, puis créez-le.",
@@ -4049,6 +4102,23 @@
     },
     "formats": {
       "inconnu": "Format d'import inconnu : {{code}}"
+    },
+    "carburant": {
+      "resume": "{{ecrits}} plein(s) écrit(s), {{doublons}} doublon(s) ignoré(s), {{non_rapproches}} non rapproché(s), {{erreurs}} ligne(s) en erreur",
+      "erreur_serveur": "Plein refusé par le serveur ({{code}})",
+      "aide_html": "Fichier CSV d'un fournisseur de cartes carburant (date, carte ou immatriculation, litres, montant, kilométrage). Chaque plein est rapproché d'un matériel par son numéro de carte puis par son immatriculation ; un plein déjà importé est ignoré.",
+      "importer": "Importer les pleins",
+      "importer_aide": "Écrit les pleins dans l'historique des matériels",
+      "lecture_resume": "{{fichier}} : {{nombre}} plein(s) lu(s), {{erreurs}} ligne(s) en erreur",
+      "lus": "Pleins lus",
+      "ecrits": "Pleins écrits",
+      "doublons": "Doublons ignorés",
+      "non_rapproches": "Cartes non rapprochées",
+      "erreurs": "Lignes en erreur",
+      "rangs_doublons": "Lignes ignorées comme doublons",
+      "rangs_non_rapproches": "Lignes sans matériel correspondant (numéro de carte ou immatriculation à renseigner sur la fiche du matériel)",
+      "rangs_erreurs": "Lignes en erreur",
+      "ligne_erreur": "Ligne {{rang}} : {{message}}"
     }
   },
   "authentification_btp": {
@@ -4449,6 +4519,14 @@
         "habilitations": {
           "libelle": "Habilitations, entretiens et visites à surveiller",
           "info": "Expirées ou à renouveler : CACES, visites médicales, VGP…"
+        },
+        "releves_a_valider": {
+          "libelle": "Relevés de compteurs à valider",
+          "info": "Relevés saisis à la borne pour un matériel non affecté au salarié ce jour"
+        },
+        "import_carburant": {
+          "libelle": "Import des cartes carburant",
+          "info": "Pleins d'un fichier de cartes carburant, rapprochés des matériels par carte puis immatriculation"
         },
         "parametrage_ressources": {
           "libelle": "Types d'habilitations, motifs, natures MO…"
@@ -4853,6 +4931,10 @@
           "libelle": "Congés et absences",
           "info": "Demandes de congés (pour soi ou ses équipiers), validation RH avec la nature"
         },
+        "pointage_restaurants": {
+          "libelle": "Restaurants",
+          "info": "Restaurants proposés pour les repas, avec le lien d'itinéraire"
+        },
         "pointages": {
           "libelle": "Liste des pointages"
         },
@@ -4861,6 +4943,10 @@
         },
         "pointages_improductifs": {
           "libelle": "Temps improductif"
+        },
+        "repas": {
+          "libelle": "Repas des salariés",
+          "info": "Repas déclarés par période (réservé aux droits RH)"
         },
         "parametrage_pointage": {
           "libelle": "Paramètres : pas, validation, sous-types…"
@@ -5715,11 +5801,11 @@
         "reviser": "Réviser",
         "aucune_situation": "Aucune situation.",
         "factures": "Factures et avoirs d'avancement",
-        "voir_annulees": "Afficher les pièces annulées ({{nombre}})",
+        "voir_detail": "Afficher le détail",
         "nature_annulation": "(annulation)",
         "nature_avancement": "(d'avancement)",
         "annuler": "Annuler par avoir…",
-        "hors_annulees": "(hors pièces annulées)",
+        "hors_annulees": "(hors pièces annulées et remplacées)",
         "aucune_facture": "Aucune facture d'avancement.",
         "sous_traitants": "Factures sous-traitants avec paiement direct",
         "sous_traitants_aide": "Sous-traitants : postes « Paiement direct » du marché et intervenants marqués paiement direct (marché, chantier). Facture liée : facture du marché dont le paiement direct du sous-traitant est égal au TTC de la pièce, sinon la première à sa date ou après.",
@@ -5871,7 +5957,10 @@
       },
       "choisir_tiers": "Choisir dans la liste des tiers (F4 ou double-clic dans le champ), filtrée selon la fonction",
       "intervenant": "intervenant",
-      "choix_titre": "Tiers : {{fonction}}"
+      "choix_titre": "Tiers : {{fonction}}",
+      "choisir_contact": "Choisir un contact parmi ceux du tiers",
+      "retirer_contact": "Retirer le contact",
+      "contact_sans_tiers": "Choisissez d'abord le tiers de l'intervenant : son contact se choisit parmi les contacts du tiers"
     },
     "marche_commande": {
       "nouveau_chantier": "Nouveau chantier",
@@ -6421,7 +6510,16 @@
         "AFF_SOI": "Un matériel ne s'affecte pas à lui-même",
         "AFF_CHEVAUCHEMENT": "Une seule affectation à la fois : périodes qui se chevauchent",
         "AFF_BOUCLE": "Matériels porteurs en boucle",
-        "AFF_RETOUR": "État du matériel au retour obligatoire pour terminer l’affectation"
+        "AFF_RETOUR": "État du matériel au retour obligatoire pour terminer l’affectation",
+        "AFF_PHOTO": "Photo d'affectation : le document n'est pas une pièce de la GED de ce matériel"
+      },
+      "photo": {
+        "depart": "Photo de l'état au départ",
+        "retour": "Photo de l'état au retour",
+        "ajouter": "Ajouter la {{sens}}",
+        "remplacer": "Remplacer la {{sens}}",
+        "titre_depart": "Affectation du {{du}} : état au départ",
+        "titre_retour": "Affectation du {{du}} : état au retour"
       },
       "titre": "Affectations",
       "ajouter": "Nouvelle affectation (la précédente se termine la veille)",
@@ -6430,7 +6528,9 @@
         "type": "Affecté à",
         "ressource": "Ressource",
         "depart": "État au départ",
-        "retour": "État au retour"
+        "retour": "État au retour",
+        "photo_depart": "Photo au départ",
+        "photo_retour": "Photo au retour"
       },
       "retirer": "Retirer cette affectation",
       "aucune": "Jamais affecté.",
@@ -6715,6 +6815,9 @@
       "annee": "Année {{annee}}",
       "depuis_entree": "Depuis l'entrée",
       "par_heure_html": "Coût par heure d'utilisation : <b>{{cout}} €</b> ({{heures}} h au compteur).",
+      "reprendre": "Reprendre comme coût moyen",
+      "reprendre_confirmer": "Remplacer le coût moyen horaire de la fiche par {{cout}} € ?",
+      "repris": "Coût moyen de la fiche : {{cout}} €",
       "par_heure_partage": "Coût par heure : sans objet pour un chantier partagé.",
       "par_heure_inconnu": "Coût par heure : heures d'utilisation non renseignées.",
       "non_valorises_un": "{{nombre}} mouvement non valorisé",
@@ -6823,6 +6926,21 @@
         "service": "Service",
         "enregistrees": "Natures enregistrées"
       }
+    },
+    "releves_a_valider": {
+      "titre": "Relevés de compteurs à valider",
+      "aide": "Relevés saisis à la borne pour un matériel non affecté au salarié ce jour : acceptés, ils entrent dans l'historique des compteurs ; refusés, ils sont supprimés (motif obligatoire).",
+      "aucun": "Aucun relevé à valider.",
+      "colonnes": { "materiel": "Matériel", "salarie": "Salarié", "date": "Date", "compteur": "Compteur", "valeur": "Valeur", "commentaire": "Commentaire" },
+      "remise": "remise à zéro",
+      "accepter": "Accepter",
+      "refuser": "Refuser",
+      "accepter_aide": "Accepter le relevé",
+      "refuser_aide": "Refuser le relevé et le supprimer",
+      "motif": "Motif du refus du relevé",
+      "motif_vide": "Le motif du refus est obligatoire",
+      "accepte": "Relevé accepté",
+      "refuse": "Relevé refusé et supprimé"
     },
     "surveiller": {
       "titre": "Habilitations, entretiens et visites à surveiller",
@@ -7591,7 +7709,14 @@
       "tiers_deja": "Tiers déjà choisi : choisissez-en un autre",
       "contact": "Choisir un contact",
       "contact_deja": "Contact déjà choisi : choisissez-en un autre",
-      "nouvel_individu": "Nouvel individu"
+      "contact_tiers": "Choisir un contact de {{tiers}}",
+      "contact_hors_tiers": "Ce contact n'est pas rattaché à ce tiers : choisissez-en un autre",
+      "nouvel_individu": "Nouvel individu",
+      "individu_societe": "Choisir un individu de notre société",
+      "rechercher_individu": "Rechercher un individu…",
+      "poste": "Poste : {{poste}}",
+      "destinataires": "Choisir les destinataires du courriel",
+      "sans_courriel": "Ce contact n'a pas d'adresse de courriel : choisissez-en un autre"
     }
   },
   "bibliotheque_btp": {
@@ -8354,6 +8479,7 @@
       "MATERIEL_LOUE": "Heures de matériel loué (coût par la commande de location)",
       "MATERIEL_SANS_COUT": "Heures de matériel sans coût horaire (fiche ou type)",
       "TACHE_MATERIEL": "Matériel planifié (après son dernier pointage)",
+      "PRODUIT_INTERNE": "Produit interne : heures du matériel valorisées sur d'autres chantiers",
       "PREVISION": "Saisie prévisionnelle (hors du réel jusqu'à son solde)"
     },
     "roles": {
@@ -8507,6 +8633,7 @@
     "CONSULTATION_RETENUE": "Seule une offre validée du lot peut être retenue",
     "CONSULTATION_TYPE": "Ce type de document n'a pas de lot de consultation",
     "CONSULTATION_VIDE": "Pas encore de lot de consultation pour ce document",
+    "COUT_PAR_HEURE_INCONNU": "Le coût par heure du matériel est inconnu : rien à reprendre comme coût moyen",
     "DECALAGE": "Décalage de 0 à 12 mois",
     "ENT_MATERIEL": "Ordre sans matériel",
     "ENT_NATURE": "Nature d'entretien inconnue",

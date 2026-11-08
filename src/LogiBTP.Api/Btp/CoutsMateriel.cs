@@ -124,6 +124,16 @@ public static class CoutsMateriel
             await ChantierMaterielAsync(db, id, ct);
             return Results.Ok(await CoutsAsync(db, id, null, ct));
         });
+        // Reprise du coût par heure calculé comme coût moyen de la fiche (action explicite de l'onglet Coûts, plan materiel-suites MO5).
+        g.MapPost("/{id:int}/cout-moyen", async (int id, LogiBtpContext db, CancellationToken ct) =>
+        {
+            dynamic c = await CoutsAsync(db, id, null, ct);
+            decimal? cout = c.cout_par_heure;
+            if (cout is not { } v) throw ExceptionMetier.Conflit("COUT_PAR_HEURE_INCONNU", "Le coût par heure du matériel est inconnu : rien à reprendre comme coût moyen");
+            await db.Database.ExecuteSqlRawAsync("UPDATE materiel SET mat_cout_horaire = @v WHERE mat_id = @m",
+                [new NpgsqlParameter("v", v), new NpgsqlParameter("m", id)], ct);
+            return Results.Ok(new { cout_moyen = v });
+        });
         return api;
     }
 }

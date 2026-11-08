@@ -292,15 +292,15 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
 
 ### Demandes du 25/10/2026, suites des lots réalisés
 
-- [ ] « Ne plus utiliser » (db/228) : écarter ces fiches des choix de nouvelle saisie (recherche des tiers de l'annuaire, appel de la bibliothèque, ressources du planning, salariés du pointage et du magasin) : point d'accroche à prévoir dans les modules Annuaire et Bibliothèque (colonne du cœur).
-- [ ] Fournisseur « TVA intracommunautaire » (db/229) : proposer la catégorie de TVA autoliquidée (module Comptabilité) sur les lignes de ses pièces d'achat ; type de tiers FE à reprendre par le futur module Facturation électronique.
-- [ ] Sécurité de la base (lot 11 réalisé) : `MettreAJour-LogiBTP.ps1` pourrait relancer la préparation et redémarrer la base quand la connexion n'est pas chiffrée (aujourd'hui : relancer l'installeur) ; renouvellement du certificat de la base dans la tâche planifiée (aujourd'hui : à chaque préparation, 60 jours avant l'échéance ; certificat de 730 jours).
-- [ ] Restaurants (lot 10 réalisé) : repas dans la saisie d'équipe de la borne (aujourd'hui : chacun pour soi), liste des repas d'une période (contrôle RH, notes de frais) et carte des restaurants.
-- [ ] Documents (lot 9 réalisé) : reconnaissance des accusés de réception reçus par courriel (module Mail, lot 4 : numéro de commande, rattachement, proposition de la livraison confirmée) ; date de livraison par ligne modifiable sur une commande validée (aujourd'hui : l'ARC de l'entête seulement).
+- [x] « Ne plus utiliser » (db/228) : fiches à N écartées des choix de nouvelle saisie (annuaire, bibliothèque, planning, pointage, magasin ; plan ne-plus-utiliser-tva lots 1 à 4).
+- [x] Fournisseur « TVA intracommunautaire » (db/229) : catégorie de TVA autoliquidée par défaut sur les nouvelles lignes d'achat (lot 5) et avertissement à la validation (lot 6) du plan ne-plus-utiliser-tva ; type de tiers FE à reprendre par le futur module Facturation électronique.
+- [ ] Sécurité de la base (lot 11 réalisé) : `MettreAJour-LogiBTP.ps1` pourrait relancer la préparation et redémarrer la base quand la connexion n'est pas chiffrée (aujourd'hui : relancer l'installeur) ; renouvellement du certificat de la base dans la tâche planifiée (aujourd'hui : à chaque préparation, 60 jours avant l'échéance ; certificat de 730 jours). Lot 1 du plan securite-base-suites fait (commande `certificat base-renouveler`, code 10) ; lot 2 (Windows) fait (mise à jour et tâche « LogiBTP - certificat » ; essais manuels à faire sur une installation de développement) ; lot 3 (Linux) fait (essais manuels à faire sur une installation de développement).
+- [ ] Restaurants (lot 10 réalisé) : carte des restaurants abandonnée (RO3) au profit de la liste `/pointage/restaurants` avec lien d'itinéraire (plan restaurants-suites, lot 5, fait) ; repas d'équipe à la borne et liste des repas d'une période faits (lots 1 à 4).
+- [ ] Documents (lot 9 réalisé) : (fait le 08/11/2026 : reconnaissance des accusés de réception reçus par courriel, plan ar-courriel lots 1 à 4, livraison confirmée proposée dans la boîte de réception ; date de livraison par ligne modifiable sur une commande validée, PUT /api/structure/documents/{id}/lignes/{ligId}/livraison).
 - [ ] Tarifs fournisseurs (lot 8 réalisé) : formats d'import personnalisés (module Import : correspondance de colonnes enregistrée par fournisseur), remises par famille d'articles et catalogues, unités synonymes à l'import (A18b).
-- [ ] Projet (lot 6) : zone de déplacement du projet reprise par le chantier ouvert depuis le projet (zones du Pointage par agence).
-- [ ] Matériel (lot 5c réalisé) : import des cartes carburant (module Import, M8) ; relevés de compteurs saisis à la borne (source BORNE prévue) ; données de démonstration d'entretiens (aujourd'hui tous en retard faute d'historique).
-- [ ] Refacturation interne du matériel (M4 du lot 5c) : les heures pointées et planifiées sont valorisées sur les chantiers où il travaille (module Rentabilité, lot 5) ; reste à créditer le chantier de suivi du matériel du même montant (produit interne) et à proposer le coût par heure de l'onglet Coûts comme coût moyen de la fiche.
+- [x] Projet (lot 6) : zone de déplacement du projet reprise par le chantier ouvert depuis le projet (fait le 08/11/2026, db/278 : zone estimée du chantier ; les zones validées par agence restent celles du Pointage).
+- [ ] Matériel (lot 5c réalisé) : import des cartes carburant (fait : lecture, rapprochement, écriture et page `/import/carburant`, plan materiel-suites lots 9-10b) ; relevés de compteurs saisis à la borne (fait, plan materiel-suites lots 3-4 ; écran de validation au bureau fait, plan materiel-suites lot 4b : `/ressources/releves-a-valider`) ; données de démonstration d'entretiens (aujourd'hui tous en retard faute d'historique).
+- [ ] Refacturation interne du matériel (M4 du lot 5c) : les heures pointées et planifiées sont valorisées sur les chantiers où il travaille (module Rentabilité, lot 5) ; chantier de suivi crédité (produit interne, lot 7 du plan materiel-suites)  ; coût par heure de l'onglet Coûts repris comme coût moyen de la fiche sur action (fait, plan materiel-suites, lot 8).
 
 ## Interface
 
@@ -308,9 +308,9 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
 
 - [ ] Barres d'outils (suite de E1) : débordement replié dans un menu « ⋯ » en petite largeur (aujourd'hui : retour à
   la ligne des groupes).
-- [ ] Matériel : photo de l'état au retour d'une affectation (dépôt dans la GED du matériel depuis la ligne).
-- [ ] Choix en liste (I1, suite) : individus de notre société au poste voulu (conducteur, chargé d'affaires, rédacteur :
-  combos actuelles) et contact d'un intervenant dans la liste des contacts du tiers ; sélection multiple (destinataires).
+- [ ] Matériel : photo de l'état au départ et au retour d'une affectation : fait (plan materiel-suites, lots 1 et 2), à passer dans TACHES.md par un humain.
+- [ ] Choix en liste (I1, suite) : sélection multiple faite pour les destinataires du courriel d'une pièce (lot 8) ; reste la
+  diffusion GED et les autres écrans, qui suivent le même appel (`choisirDestinataires`).
 - [ ] Champs mois (`<input type="month">`, 13 écrans) : même saisie abrégée que les dates, à étudier.
 ### Personnalisation (textes, thème, images — [analyse](documentation/conception/ANALYSE-MODULE-PERSONNALISATION.md))
 
@@ -353,3 +353,4 @@ Lots P1 (module, chargement, socle et navigation migrés), P2 (erreurs par code)
 
 - [ ] Lots A (code mort sûr) et B (code apparemment inutilisé, à trancher) : en attente des évolutions à venir qui
   touchent ce code ; à reprendre ensuite.
+- [ ] Liste, périodes : écran de saisie du début d'exercice dans les paramètres de la Comptabilité (aujourd'hui clé `debut_exercice` de `parametre_comptabilite`, sans interface ; absent = année civile).

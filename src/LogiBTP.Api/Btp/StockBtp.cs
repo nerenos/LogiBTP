@@ -96,11 +96,69 @@ public sealed partial class SpecialisationStockBtp(IHttpContextAccessor http) : 
         return l.ToDictionary(x => x.Id, x => new PieceStock(x.Id, x.Numero ?? "(brouillon)", x.Type, x.Tiers));
     }
 
-    public override async Task ApresValorisationAsync(StockDbContext db, long ele, Valorisation v, CancellationToken ct) =>
+    private sealed record ElementPrixSql(string Type, string UniteStock, string Unites, string Proprietes, string? Scenario, decimal? PaFixe, decimal? DernierPa, decimal? Pmp,
+        decimal CoefFg, decimal CoefBenef, decimal? Pv, bool PvFixe, decimal CoefRemise, decimal? Pa, decimal? Pr, decimal? PvNet,
+        decimal? Poids, decimal? Surface, decimal? SurfacePeinture, decimal? Volume, decimal? Hauteur, decimal? Largeur, decimal? Epaisseur, decimal? Longueur,
+        decimal? IsolantR, decimal? IsolantLambda, decimal? IsolantU);
+    private sealed record TarifPrixSql(decimal? Prix, decimal? PrixPublic, decimal? Remise1, decimal? Remise2, string? Unite, bool Principal, string? Debut, string? Fin);
+
+    /// <summary>
+    /// Prix de l'article après une valorisation : le PMP et le dernier PA du Stock sont posés dans l'élément, puis PA, PR et PV
+    /// sont recalculés par le calcul du module Bibliothèque (scénario de PA, FG, bénéfice), comme à l'enregistrement de la fiche.
+    /// </summary>
+    public static ResultatElement CalculerPrix(string unites, string proprietes, string uniteStock, string? scenario, decimal? paFixe, decimal? dernierPa, decimal? pmp,
+        decimal coefFg, decimal coefBenef, decimal? pv, bool pvFixe, decimal coefRemise, IReadOnlyDictionary<string, decimal?> techniques, List<TarifCalcul> tarifs) =>
+        CalculElement.Calculer(new EntreeElement
+        {
+            UniteStock = uniteStock,
+            Unites = ServiceBibliotheque.Unites(JsonDocument.Parse(unites).RootElement),
+            Donnees = ServiceBibliotheque.Donnees(JsonDocument.Parse(proprietes).RootElement, techniques),
+            Scenario = scenario, PaFixe = paFixe, DernierPa = dernierPa, Pmp = pmp, Tarifs = tarifs,
+            CoefFg = coefFg, CoefBenef = coefBenef, Pv = pv, PvFixe = pvFixe, CoefRemise = coefRemise,
+        });
+
+    public override async Task ApresValorisationAsync(StockDbContext db, long ele, Valorisation v, CancellationToken ct)
+    {
+        var e = await db.Database.SqlQuery<ElementPrixSql>($"""
+            SELECT ele_type AS type, ele_unt_stock AS unite_stock, ele_unites::text AS unites, ele_proprietes::text AS proprietes, ele_scenario_pa AS scenario,
+                   ele_pa_fixe AS pa_fixe, ele_dernier_pa AS dernier_pa, ele_pmp AS pmp, ele_coef_fg AS coef_fg, ele_coef_benef AS coef_benef, ele_pv AS pv,
+                   ele_pv_fixe AS pv_fixe, ele_coef_remise AS coef_remise, ele_pa AS pa, ele_pr AS pr, ele_pv_net AS pv_net,
+                   ele_poids AS poids, ele_surface AS surface, ele_surface_peinture AS surface_peinture, ele_volume AS volume, ele_hauteur AS hauteur,
+                   ele_largeur AS largeur, ele_epaisseur AS epaisseur, ele_longueur AS longueur,
+                   ele_isolant_r AS isolant_r, ele_isolant_lambda AS isolant_lambda, ele_isolant_u AS isolant_u
+            FROM element WHERE ele_id = {ele}
+            """).FirstOrDefaultAsync(ct);
+        if (e is null) return;
+        if (e.Type != "ARTICLE")
+        {
+            await db.Database.ExecuteSqlInterpolatedAsync($"""
+                UPDATE element SET ele_pmp = {v.Pmp}, ele_dernier_pa = {v.DernierPa}, ele_maj_par = 'stock'
+                WHERE ele_id = {ele} AND (ele_pmp IS DISTINCT FROM {v.Pmp} OR ele_dernier_pa IS DISTINCT FROM {v.DernierPa})
+                """, ct);
+            return;
+        }
+        var tarifs = (await db.Database.SqlQuery<TarifPrixSql>($"""
+            SELECT tfo_prix AS prix, tfo_prix_public AS prix_public, tfo_remise1 AS remise1, tfo_remise2 AS remise2, tfo_unt_code AS unite,
+                   tfo_principal AS principal, to_char(tfo_debut, 'YYYY-MM-DD') AS debut, to_char(tfo_fin, 'YYYY-MM-DD') AS fin
+            FROM tarif_fournisseur WHERE tfo_ele_id = {ele}
+            """).ToListAsync(ct))
+            .Select(t => new TarifCalcul { Prix = t.Prix ?? 0, PrixPublic = t.PrixPublic, Remise1 = t.Remise1, Remise2 = t.Remise2, Unite = t.Unite ?? "", Principal = t.Principal, Debut = t.Debut, Fin = t.Fin })
+            .ToList();
+        var techniques = new Dictionary<string, decimal?>
+        {
+            ["poids"] = e.Poids, ["surface"] = e.Surface, ["surface_peinture"] = e.SurfacePeinture, ["volume"] = e.Volume,
+            ["hauteur"] = e.Hauteur, ["largeur"] = e.Largeur, ["epaisseur"] = e.Epaisseur, ["longueur"] = e.Longueur,
+            ["isolant_r"] = e.IsolantR, ["isolant_lambda"] = e.IsolantLambda, ["isolant_u"] = e.IsolantU,
+        };
+        var r = CalculerPrix(e.Unites, e.Proprietes, e.UniteStock, e.Scenario, e.PaFixe, v.DernierPa, v.Pmp, e.CoefFg, e.CoefBenef, e.Pv, e.PvFixe, e.CoefRemise, techniques, tarifs);
+        if (e.Pmp == v.Pmp && e.DernierPa == v.DernierPa && e.Pa == r.Pa && e.Pr == r.Pr) return;
+        var benef = r.CoefBenef ?? e.CoefBenef;
         await db.Database.ExecuteSqlInterpolatedAsync($"""
-            UPDATE element SET ele_pmp = {v.Pmp}, ele_dernier_pa = {v.DernierPa}, ele_maj_par = 'stock'
-            WHERE ele_id = {ele} AND (ele_pmp IS DISTINCT FROM {v.Pmp} OR ele_dernier_pa IS DISTINCT FROM {v.DernierPa})
+            UPDATE element SET ele_pmp = {v.Pmp}, ele_dernier_pa = {v.DernierPa}, ele_pa = {r.Pa}, ele_pr = {r.Pr}, ele_pv = {r.Pv}, ele_pv_net = {r.PvNet},
+                   ele_coef_benef = {benef}, ele_maj_par = 'stock', ele_commentaire_prix = 'Valorisation du stock'
+            WHERE ele_id = {ele}
             """, ct);
+    }
 
     public override async Task<bool> PeutGererAsync(StockDbContext db, Utilisateur u, CancellationToken ct) =>
         u.EstAdmin || await MagasinierAsync(db.Database, u.Code, ct);

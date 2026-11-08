@@ -27,6 +27,15 @@
       "texte": "texte",
       "parametre_motif": "Paramètre du devis OptimBTP"
     },
+    "carburant": {
+      "erreurs": {
+        "entete": "Fichier de cartes carburant : colonne(s) introuvable(s) : {{colonnes}}",
+        "date": "Date illisible : {{valeur}}",
+        "nombre": "Valeur illisible pour {{colonne}} : {{valeur}}",
+        "litres": "Quantité de litres absente ou non positive",
+        "identification": "Ni numéro de carte ni immatriculation"
+      }
+    },
     "sorts": {
       "REPRIS": "repris",
       "RECALCULE": "recalculé",

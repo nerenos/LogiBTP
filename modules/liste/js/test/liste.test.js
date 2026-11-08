@@ -3,7 +3,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  normaliser, compilerFormule, resolveurColonnes, ModeleVue, FournisseurMemoire, correspond, calculerLargeurs, valeursDistinctes,
+  normaliser, compilerFormule, resolveurColonnes, ModeleVue, FournisseurMemoire, correspond, calculerLargeurs, valeursDistinctes, bornesPeriode, resoudrePeriodes,
+  filtreVuePeriode, libellePeriode, TEINTES_PASTILLE, PERIODE, OPERATEURS_DATE,
 } from '../src/index.js';
 
 const dossier = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../tests/cas');
@@ -29,7 +30,16 @@ describe('requêtes paginées (jeu partagé avec le serveur)', () => {
   for (const c of jeu.cas) {
     it(c.nom, async () => {
       const f = fournisseur(c.types);
-      const demande = { definition: { ...definition, filtres: c.filtres ?? [], theme: 't' }, ...c.requete };
+      const demande = { definition: { ...definition, filtres: c.filtres ?? [], theme: 't' }, ...c.requete, reference: c.reference, debut_exercice: c.debut_exercice };
+      if (c.erreur) {
+        await expect(f.lot({ ...demande, taille: 2 })).rejects.toMatchObject({ code: c.erreur });
+        return;
+      }
+      if (c.bornes) {
+        const types = new Map(jeu.source.colonnes.map((x) => [x.code, x.type]));
+        const [resolu] = resoudrePeriodes(c.filtres, types, { reference: c.reference, debutExercice: c.debut_exercice ?? null });
+        expect([resolu.bornes.debut, resolu.bornes.fin]).toEqual(c.bornes);
+      }
       // Lots de 2 : la concaténation des lots doit donner l'ordre complet.
       const ids = [];
       let apres = null;
@@ -54,7 +64,12 @@ describe('requêtes paginées (jeu partagé avec le serveur)', () => {
 
   for (const c of jeu.agregats) {
     it(`agrégats : ${c.nom}`, async () => {
-      const r = await fournisseur().agregats({ definition: { ...definition, theme: 't' }, ...c.requete, agregats: c.agregats });
+      const demande = { definition: { ...definition, theme: 't' }, ...c.requete, reference: c.reference, agregats: c.agregats };
+      if (c.erreur) {
+        await expect(fournisseur().agregats(demande)).rejects.toMatchObject({ code: c.erreur });
+        return;
+      }
+      const r = await fournisseur().agregats(demande);
       for (const [code, v] of Object.entries(c.attendu)) {
         if (v === null) expect(r[code], code).toBeNull();
         else expect(r[code], code).toBeCloseTo(v, 8);
@@ -170,5 +185,70 @@ describe('largeurs', () => {
     ];
     // 600 - 100 = 500 ; poids 2/1/1 → 250/125/125, la 3e bornée à 80 → 420 restants pour poids 3 → 280/140.
     expect(calculerLargeurs(cols, 600)).toEqual([100, 280, 80, 140]);
+  });
+});
+
+describe('périodes glissantes (jeu partagé)', () => {
+  for (const c of lire('04_periodes.json').cas) {
+    it(c.nom, () => {
+      const appel = () => bornesPeriode(c.code, c.x ?? null, c.reference, c.debut_exercice ?? null);
+      if (c.erreur) { expect(appel).toThrow(expect.objectContaining({ code: c.erreur })); return; }
+      expect(appel()).toEqual({ debut: c.debut, fin: c.fin });
+    });
+  }
+});
+
+describe('période choisie dans le filtre de colonne', () => {
+  it('une vue enregistrée garde le code de la période, pas des dates', () => {
+    const f = filtreVuePeriode('date_pose', PERIODE.MOIS_EN_COURS);
+    expect(f).toEqual({ colonne: 'date_pose', op: 'periode', valeur: 'mois_en_cours' });
+    expect(JSON.stringify(f)).not.toMatch(/\d{4}-\d{2}-\d{2}/);
+    const [resolu] = resoudrePeriodes([f], new Map([['date_pose', 'date']]), { reference: '2026-11-08' });
+    expect(resolu.bornes).toEqual({ debut: '2026-11-01', fin: '2026-11-30' });
+  });
+
+  it('période paramétrée : nombre x gardé, saisie invalide ignorée', () => {
+    expect(filtreVuePeriode('d', PERIODE.DERNIERS_JOURS, '30')).toMatchObject({ valeur: 'derniers_jours', nombre: 30 });
+    expect(filtreVuePeriode('d', PERIODE.DERNIERS_JOURS, '2,5')).not.toHaveProperty('nombre');
+    expect(libellePeriode(PERIODE.DERNIERS_JOURS, 30)).toContain('30');
+  });
+
+  it('condition de colonne « dans la période » sur les lignes chargées', () => {
+    const colonne = { code: 'd', format: 'date' };
+    const cellule = (v) => ({ valeur: v, texte: v, style: {} });
+    const filtre = { condition: { op: 'periode', a: 'mois_en_cours', b: '' } };
+    expect(OPERATEURS_DATE.map(([c]) => c)).toContain('periode');
+    expect(correspond(filtre, cellule('2026-11-03'), colonne, '2026-11-08')).toBe(true);
+    expect(correspond(filtre, cellule('2026-10-31'), colonne, '2026-11-08')).toBe(false);
+    expect(correspond({ condition: { op: 'periode', a: 'derniers_jours', b: '' } }, cellule('2026-11-08'), colonne, '2026-11-08')).toBe(false);
+    expect(correspond({ condition: { op: 'periode', a: 'derniers_jours', b: '3' } }, cellule('2026-11-06'), colonne, '2026-11-08')).toBe(true);
+  });
+});
+
+describe('exercice comptable fourni aux périodes', () => {
+  const colonne = { format: 'date' };
+  const cellule = (v) => ({ valeur: v, texte: v });
+  const filtre = { condition: { op: 'periode', a: 'exercice_en_cours' } };
+
+  it('filtre de colonne : exercice décalé ou année civile', () => {
+    expect(correspond(filtre, cellule('2026-08-15'), colonne, '2026-11-08', '2000-07-01')).toBe(true);
+    expect(correspond(filtre, cellule('2026-03-15'), colonne, '2026-11-08', '2000-07-01')).toBe(false);
+    expect(correspond(filtre, cellule('2026-03-15'), colonne, '2026-11-08', null)).toBe(true);
+  });
+
+  it('fournisseur : contexte de la société et filtre de vue', async () => {
+    const f = new FournisseurMemoire({ sources: { s: { ...structuredClone(lire('02_requete.json').source) } }, debutExercice: '2000-07-01' });
+    expect(await f.contexteSociete()).toEqual({ debut_exercice: '2000-07-01' });
+    expect(await new FournisseurMemoire({}).contexteSociete()).toEqual({ debut_exercice: null });
+  });
+});
+
+describe('teintes de pastille (P1)', () => {
+  const fr = JSON.parse(fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../personnalisation/fr.json'), 'utf8'));
+  it('chaque teinte a un nom de couleur au dictionnaire', () => {
+    for (const t of TEINTES_PASTILLE) expect(fr.liste.concepteur.teintes[t], t).toBeTruthy();
+  });
+  it('codes inchangés', () => {
+    expect(TEINTES_PASTILLE).toEqual(['neutre', 'info', 'envoye', 'succes', 'attention', 'erreur', 'termine', 'barre']);
   });
 });

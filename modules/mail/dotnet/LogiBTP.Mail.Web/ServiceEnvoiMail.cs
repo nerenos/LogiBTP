@@ -538,7 +538,8 @@ public sealed class ServiceEnvoiMail(MailDbContext db, ServiceComptesMail compte
         var pieces = await db.Pieces.AsNoTracking().Where(p => p.MpiMmeId == id).Select(p => new PieceDto(p.MpiReference, p.MpiNom, p.MpiType, p.MpiTaille)).ToListAsync(ct);
         var lignes = await db.Journal.AsNoTracking().Where(j => j.MjoMmeId == id).OrderBy(j => j.MjoLe).ToListAsync(ct);
         return new DetailMessageDto(dto, m.MmeCorpsHtml, dest, pieces, lignes.Select(Ligne).ToList(), await reception.LiensAsync(id, ct), m.MmeDe, m.MmeAuto, m.MmeMcoId,
-            await reception.PropositionsAsync(id, ct));
+            await reception.PropositionsAsync(id, ct),
+            m.MmeArMotif is null ? null : new AccuseDto(m.MmeArMotif, m.MmeArNumero, m.MmeArNumeros ?? [], m.MmeArDate, m.MmeArSemaine, m.MmeArPrecision));
     }
 
     private async Task<MessageEntite> Lisible(Utilisateur u, long id, CancellationToken ct)

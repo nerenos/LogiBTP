@@ -1,0 +1,66 @@
+{
+  "nom": "Première situation : précédent nul",
+  "description": "Première situation (présentation C) : précédent 0, période = cumul.",
+  "entree": {
+    "document": {
+      "ent_id": 1,
+      "ent_precision_montant": 2,
+      "ent_avt_presentation": "C"
+    },
+    "taux_tva": [
+      {
+        "ttv_id": 1,
+        "ttv_code": "T20",
+        "ttv_libelle": "TVA 20 %",
+        "ttv_taux": 20,
+        "ttv_categorie": "N"
+      }
+    ],
+    "lignes": [
+      {
+        "lig_id": 1,
+        "lig_parent_id": null,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Ligne 1",
+        "lig_qte": 10,
+        "lig_pv": 100,
+        "lig_tva_id": 1,
+        "lig_avt_mode": "P",
+        "lig_avt_valeur": 30,
+        "lig_avt_montant_marche": 1000,
+        "lig_avt_qte_marche": 10,
+        "lig_avt_montant_precedent": 0,
+        "lig_avt_qte_precedent": 0.0,
+        "lig_avt_pct_precedent": 0.0
+      },
+      {
+        "lig_id": 2,
+        "lig_parent_id": null,
+        "lig_ordre": 2,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Ligne 2",
+        "lig_qte": 3,
+        "lig_pv": 333.33,
+        "lig_tva_id": 1,
+        "lig_avt_mode": "M",
+        "lig_avt_valeur": 333.33,
+        "lig_avt_montant_marche": 1000,
+        "lig_avt_qte_marche": 3,
+        "lig_avt_montant_precedent": 0,
+        "lig_avt_qte_precedent": 0,
+        "lig_avt_pct_precedent": 0
+      }
+    ]
+  },
+  "attendu": {
+    "erreurs": [],
+    "document": {
+      "ent_total_ht": 633.33
+    },
+    "situation": {
+      "precedent": 0,
+      "periode": 633.33
+    }
+  }
+}

@@ -1,6 +1,6 @@
 import { texte, texteHtml, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { TYPE_FICHE, TYPE_DOCUMENT, TYPES_ARC } from './codes.js';
-import { echapper, formatNombre, formatLibre, lireNombre, creerCombo, ListeDeroulante } from '@logibtp/socle/ui';
+import { echapper, formatNombre, formatLibre, lireNombre, creerCombo, ListeDeroulante, activerDates } from '@logibtp/socle/ui';
 import { rendreExecution, sectionRepartition } from './execution/execution.js';
 import { rendreEntretienOrdre } from './ressources/entretiens-ui.js';
 import { sectionLots } from './stock/lots-ligne.js';
@@ -18,6 +18,7 @@ import {
   ORIGINES_ADRESSE, memeAdresse, adresseIdentiqueAuClient, payeurIdentiqueAuClient, lignesAdresse, saisirAdresse, choisirAdresse,
 } from './structure/adresses.js';
 import { api } from './api.js';
+import { champIndividuPoste, POSTE } from './annuaire/choix.js';
 import {
   bilanTranche, partsLigne, dansPortee, cleLigne, ecrireCle, figerVentilation, repartirReste, remplacerCles,
 } from './frais-annexes.js';
@@ -341,15 +342,14 @@ export class PanneauxBtp extends PanneauxDocument {
     const m = this.editeur.magasin;
     this.redacteursCharges = await this.redacteurs();
     if (!place.isConnected) return; // entête redessiné pendant le chargement
-    const champ = creerCombo({ options: this.redacteursCharges, valeur: this.editeur.saisie.document.ent_redacteur_id ?? '' });
-    champ.dataset.redacteur = '';
-    champ.title = place.title;
-    champ.readOnly = !!m.lectureSeule;
-    champ.addEventListener('change', () => {
-      const v = champ.valeurCombo;
-      const id = v === '' || v === null ? null : Number(v);
-      if (id !== (this.editeur.saisie.document.ent_redacteur_id ?? null)) m.modifier((b) => { b.document.ent_redacteur_id = id; }, texte('document_btp.panneaux.redacteur'));
+    const id = this.editeur.saisie.document.ent_redacteur_id ?? null;
+    const champ = champIndividuPoste({
+      poste: POSTE.REDACTEUR, valeur: id, libelle: id === null ? '' : this.libelleRedacteur(id), titre: place.title, lectureSeule: !!m.lectureSeule,
+      surChoix: (nouveau) => {
+        if (nouveau !== (this.editeur.saisie.document.ent_redacteur_id ?? null)) m.modifier((b) => { b.document.ent_redacteur_id = nouveau; }, texte('document_btp.panneaux.redacteur'));
+      },
     });
+    champ.dataset.redacteur = '';
     place.replaceWith(champ);
   }
 
@@ -446,6 +446,7 @@ export class PanneauxBtp extends PanneauxDocument {
         <button type="button" data-arc-enregistrer title="${texteHtml('document_btp.panneaux.arc_enregistrer')}">${iconeHtml('enregistrer')}</button>
         <label class="bouton-fichier" title="${texteHtml('document_btp.panneaux.arc_fichier')}">${icone('document_btp_piece')}<input type="file" data-arc-fichier hidden></label></p>
       <p class="aide">${texteHtml('document_btp.panneaux.arc_aide')}</p>`;
+    this.rendreLivraisonsLignes(bloc, d);
     const valeur = (cle) => bloc.querySelector(`[data-arc="${cle}"]`).value.trim() || null;
     bloc.querySelector('[data-arc-enregistrer]').addEventListener('click', async () => {
       try {
@@ -464,6 +465,29 @@ export class PanneauxBtp extends PanneauxDocument {
         this.editeur.surMessage?.(texte('document_btp.panneaux.arc_range', { nom: fichier.name }), 'succes');
       } catch (x) { this.editeur.surMessage?.(x.message, 'erreur'); }
     });
+  }
+
+  /**
+   * Commande validée : date de livraison propre de chaque ligne de prix, enregistrée à part (PUT .../lignes/{id}/livraison),
+   * reprise par les prévisions d'approvisionnement du Stock.
+   */
+  rendreLivraisonsLignes(bloc, d) {
+    if (!d.ent_verrouille || !this.arc.livraisonLigne) return;
+    const lignes = this.editeur.saisie.lignes.filter((l) => l.lig_id > 0 && this.editeur.regles.estLigneDePrix(this.editeur.saisie.lignes, l));
+    if (lignes.length === 0) return;
+    const rangees = lignes.map((l) => `<p class="ligne"><span>${echapper(String(l.lig_numerotation ?? ''))} ${echapper(String(l.lig_libelle_brut ?? '').split('\n')[0])}</span>
+        <input type="date" data-arc-ligne="${l.lig_id}" value="${echapper(l.lig_date_livraison ?? '')}" title="${texteHtml('document_btp.panneaux.arc_ligne_livraison', { ligne: echapper(String(l.lig_numerotation ?? l.lig_id)) })}"></p>`).join('');
+    bloc.insertAdjacentHTML('beforeend', `<p class="aide">${texteHtml('document_btp.panneaux.arc_lignes_titre')}</p>${rangees}`);
+    activerDates(bloc);
+    bloc.querySelectorAll('[data-arc-ligne]').forEach((champ) => champ.addEventListener('change', async () => {
+      const ligne = lignes.find((l) => String(l.lig_id) === champ.dataset.arcLigne);
+      try {
+        const r = await this.arc.livraisonLigne(d.ent_id, ligne.lig_id, champ.value.trim() || null);
+        ligne.lig_date_livraison = r.lig_date_livraison;
+        this.editeur.surMessage?.(texte('document_btp.panneaux.arc_ligne_enregistre'), 'succes');
+        this.editeur.grille?.rendre();
+      } catch (e) { this.editeur.surMessage?.(e.message, 'erreur'); }
+    }));
   }
 
   /**

@@ -7,6 +7,7 @@
 import { Dz } from '@logibtp/socle';
 import { INDICATEUR, COMPOSANTE } from './codes.js';
 import { filtrerOrdre } from './indicateurs.js';
+import { margeChantier } from './marge.js';
 
 /** Lignes du bloc, dans l'ordre d'affichage. */
 export const LIGNES_RESULTATS = Object.freeze(['budget', 'realise', 'production', 'facture', 'reste_facturer', 'previsionnel']);
@@ -16,8 +17,6 @@ const somme = (agregats, filtre, champ, periode) => agregats.filter(filtre)
     const v = a[periode ? `${champ}_periode` : champ];
     return v === null || v === undefined ? s : s.plus(Dz(v));
   }, Dz(0));
-
-const pourcent = (a, b) => (b.isZero() ? null : a.times(100).dividedBy(b));
 
 /** Postes par libellé (Map libellé → Decimal) d'un indicateur. */
 function postesDe(postes, indicateur, periode) {
@@ -73,24 +72,26 @@ export function blocResultats({ agregats, postes = [], ordre, periode = false })
   const restePostes = new Map(postesDe(p, INDICATEUR.BUDGET, false));
   for (const [l, v] of postesDe(p, INDICATEUR.FACTURE, false)) restePostes.set(l, (restePostes.get(l) ?? Dz(0)).minus(v));
 
-  const ligne = (code, lignes, postesLigne, coutPa, coutPr) => {
-    const brute = lignes.minus(coutPa);
-    const nette = lignes.minus(coutPr);
+  // Produit interne (lot 6, refacturation interne du matériel) : crédité au chantier de suivi, compté avec le HT des lignes
+  // dans les marges des lignes de réalisation (réalisé, production, facturé) ; flux de la période, cumul pour le prévisionnel.
+  const produitInterne = (cumule = false) => (cumule ? cumul : flux)((x) => x.composante === COMPOSANTE.PRODUIT_INTERNE, 'pv');
+  const ligne = (code, lignes, postesLigne, coutPa, coutPr, interne = Dz(0)) => {
+    const m = margeChantier({ lignes, produitInterne: interne, pa: coutPa, pr: coutPr });
     return {
-      code, lignes, postes: postesLigne, net: lignes.plus(totalPostes(postesLigne)), pa: coutPa, pr: coutPr,
-      brute, taux_brute: pourcent(brute, lignes), nette, taux_nette: pourcent(nette, lignes),
+      code, lignes, postes: postesLigne, net: lignes.plus(totalPostes(postesLigne)), pa: coutPa, pr: coutPr, produit_interne: interne,
+      brute: m.brute, taux_brute: m.taux_brute, nette: m.nette, taux_nette: m.taux_nette,
     };
   };
   const lignes = [
     ligne('budget', budgetLignes, budgetPostes, pa.budget, pr.budget),
-    ligne('realise', realiseLignes, new Map(), pa.debourse, pr.debourse),
+    ligne('realise', realiseLignes, new Map(), pa.debourse, pr.debourse, produitInterne()),
     ...(a.some((x) => x.indicateur === INDICATEUR.PRODUCTION)
-      ? [ligne('production', flux(ind(INDICATEUR.PRODUCTION), 'pv'), new Map(), pa.debourse, pr.debourse)] : []),
-    ligne('facture', factureLignes, facturePostes, pa.debourse, pr.debourse),
+      ? [ligne('production', flux(ind(INDICATEUR.PRODUCTION), 'pv'), new Map(), pa.debourse, pr.debourse, produitInterne())] : []),
+    ligne('facture', factureLignes, facturePostes, pa.debourse, pr.debourse, produitInterne()),
     ligne('reste_facturer', resteLignes, restePostes, pa.reste, pr.reste),
     // Prévisionnel à terminaison : budget PV et budget prévu (cumul) ; dépensé, dépense prévue et reste à dépenser.
     ligne('previsionnel', cumul(sansPoste(INDICATEUR.BUDGET), 'pv').plus(cumul(ind(INDICATEUR.PREVU_BUDGET), 'pv')), postesDe(p, INDICATEUR.BUDGET, false),
-      pa.terminaison, pr.terminaison),
+      pa.terminaison, pr.terminaison, produitInterne(true)),
   ];
   const libelles = [...new Set(lignes.flatMap((l) => [...l.postes.keys()]))].sort((x, y) => x.localeCompare(y, 'fr'));
   return { libelles, lignes };

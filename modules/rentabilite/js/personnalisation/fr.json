@@ -23,7 +23,8 @@
       "MATERIEL": "Matériel",
       "STOCK": "Stock",
       "POSTE": "Postes de pied",
-      "ACOMPTE": "Factures d'acompte"
+      "ACOMPTE": "Factures d'acompte",
+      "PRODUIT_INTERNE": "Produit interne (matériel)"
     },
     "colonnes": {
       "budget": {

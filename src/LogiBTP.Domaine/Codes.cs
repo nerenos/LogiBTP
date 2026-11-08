@@ -76,6 +76,12 @@ public static class TypesRessource
     public const string Materiel = "MATERIEL";
 }
 
+/// <summary>Codes des avertissements de gestion du cœur à la validation d'une pièce (non bloquants).</summary>
+public static class AvertissementsGestion
+{
+    public const string TvaNonAutoliquee = "TVA_NON_AUTOLIQUEE";
+}
+
 /// <summary>Modules facultatifs d'une société (module_societe) : <c>EstActifAsync</c>, <c>ExigeModule</c>.</summary>
 public static class ModulesFacultatifs
 {

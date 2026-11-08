@@ -2,12 +2,14 @@ import { texte, texteHtml, pluriel, iconeHtml, textesParCode } from '@logibtp/so
 import { pastille } from '../pastilles.js';
 import { urlFiche, TYPE_FICHE } from '../codes.js';
 import { ajouterJours, aujourdhui } from '@logibtp/socle';
-import { echapper, creerCombo, formatNombre } from '@logibtp/socle/ui';
+import { echapper, creerCombo, formatNombre, confirmer } from '@logibtp/socle/ui';
 import { api } from '../api.js';
+import { reprendreCoutMoyen } from './cout-moyen.js';
 import {
   ETATS_HABILITATION, MESSAGES_RESSOURCES, etatHabilitation, controlerHabilitation, controlerMissions, finValidite,
 } from './regles.js';
-import { TYPES_AFFECTATION, LIBELLES_AFFECTATION, MESSAGES_AFFECTATIONS, controlerAffectations, affectationA } from './affectations.js';
+import { TYPES_AFFECTATION, LIBELLES_AFFECTATION, MESSAGES_AFFECTATIONS, controlerAffectations, affectationA, photosAffectation, definirPhoto } from './affectations.js';
+import { urlImage } from '../annuaire/photo.js';
 
 // Écrans du référentiel des ressources (db/195) : habilitations d'un salarié ou d'un matériel, missions d'un intérimaire,
 // habilitations exigées du conducteur d'un matériel. Enregistrés à part de la fiche (bouton propre), en ligne seulement.
@@ -166,7 +168,7 @@ export async function rendreMissions(corps, { app, salarie, annuaire }) {
  * Condition du matériel (db/252) : au départ (celle du matériel, affichée) et au retour (obligatoire pour terminer
  * l'affectation d'un matériel identifié ; endommagé ou hors service : événement et notification).
  */
-export async function rendreAffectations(corps, { app, materiel, identifie = false }) {
+export async function rendreAffectations(corps, { app, materiel, identifie = false, ged = null, utilisateur = null }) {
   const [historique, cibles, conditions] = await Promise.all([api.ressources.affectations(materiel), api.ressources.ciblesAffectation(),
     api.listesValeurs.lire('ETAT_MATERIEL').catch(() => [])]);
   const libelleCondition = (c) => conditions.find((x) => x.code === c)?.libelle ?? c ?? '';
@@ -174,19 +176,32 @@ export async function rendreAffectations(corps, { app, materiel, identifie = fal
   const options = (type) => cibles.filter((c) => c.type === type && !(type === 'MATERIEL' && String(c.id) === String(materiel))).map((c) => ({ valeur: c.id, libelle: c.libelle }));
   let saisie = historique.map((a) => ({ ...a }));
   let modifiee = false;
+  // Photos de l'état au départ et au retour (db/279) : vignettes des documents de la GED du matériel, lues une fois.
+  const urls = new Map();
+  const chargerUrls = () => Promise.all(saisie.flatMap((a) => photosAffectation(a)).filter((p) => p.id && !urls.has(p.id))
+    .map(async (p) => urls.set(p.id, await urlImage(ged, p.id))));
+  await chargerUrls();
+  const cellulePhoto = (a, sens) => {
+    const p = photosAffectation(a).find((x) => x.sens === sens);
+    const url = p.id ? urls.get(p.id) : null;
+    const titre = texte(`ressources_btp.affectations.photo.${sens}`);
+    return `${url ? `<a href="${echapper(url)}" target="_blank" rel="noopener" title="${echapper(titre)}"><img class="element-vignette" src="${echapper(url)}" alt="${echapper(titre)}"></a>` : ''}
+      ${ged && p.deposable ? action(`data-photo="${sens}"`, 'ressources_btp_photo', texte(`ressources_btp.affectations.photo.${p.id ? 'remplacer' : 'ajouter'}`, { sens: titre })) : ''}`;
+  };
   const rendre = () => {
     const encours = affectationA(saisie, aujourdhui());
     corps.innerHTML = `<div class="ressources-affectations"><div class="titre-actions"><h3>${texteHtml('ressources_btp.affectations.titre')}</h3>
         <span class="titre-actions-boutons">${action('data-ajouter', 'ajouter', texte('ressources_btp.affectations.ajouter'))}
           <button type="button" class="principal" data-enregistrer ${modifiee ? '' : 'disabled'}>${texteHtml('commun.enregistrer')}</button></span></div>
       <p class="aide">${texteHtml('ressources_btp.affectations.aide')}</p>
-      <table class="tableau-compact largeur-contenu"><thead><tr><th>${texteHtml('ressources_btp.affectations.colonnes.type')}</th><th>${texteHtml('ressources_btp.affectations.colonnes.ressource')}</th><th>${texteHtml('ressources_btp.colonnes.du')}</th><th>${texteHtml('ressources_btp.colonnes.au')}</th><th>${texteHtml('ressources_btp.affectations.colonnes.depart')}</th><th>${texteHtml('ressources_btp.affectations.colonnes.retour')}</th><th>${texteHtml('ressources_btp.colonnes.commentaire')}</th><th></th><th></th></tr></thead><tbody>
+      <table class="tableau-compact largeur-contenu"><thead><tr><th>${texteHtml('ressources_btp.affectations.colonnes.type')}</th><th>${texteHtml('ressources_btp.affectations.colonnes.ressource')}</th><th>${texteHtml('ressources_btp.colonnes.du')}</th><th>${texteHtml('ressources_btp.colonnes.au')}</th><th>${texteHtml('ressources_btp.affectations.colonnes.depart')}</th><th>${texteHtml('ressources_btp.affectations.colonnes.retour')}</th><th>${texteHtml('ressources_btp.affectations.colonnes.photo_depart')}</th><th>${texteHtml('ressources_btp.affectations.colonnes.photo_retour')}</th><th>${texteHtml('ressources_btp.colonnes.commentaire')}</th><th></th><th></th></tr></thead><tbody>
       ${saisie.map((a, i) => `<tr data-i="${i}"><td data-type></td><td data-ressource></td>
         <td><input type="date" data-c="du" value="${echapper(a.du ?? '')}"></td><td><input type="date" data-c="au" value="${echapper(a.au ?? '')}"></td>
         <td>${echapper(libelleCondition(a.depart))}</td><td data-retour></td>
+        <td>${cellulePhoto(a, 'depart')}</td><td>${cellulePhoto(a, 'retour')}</td>
         <td><input data-c="commentaire" value="${echapper(a.commentaire ?? '')}" size="28" maxlength="200"></td>
         <td>${i === encours ? `<span class="pastille-compte ok">${texteHtml('ressources_btp.en_cours')}</span>` : ''}</td>
-        <td class="cellule-boutons">${action('data-retirer', 'retirer', texte('ressources_btp.affectations.retirer'))}</td></tr>`).join('') || `<tr><td colspan="9" class="aide">${texteHtml('ressources_btp.affectations.aucune')}</td></tr>`}</tbody></table>
+        <td class="cellule-boutons">${action('data-retirer', 'retirer', texte('ressources_btp.affectations.retirer'))}</td></tr>`).join('') || `<tr><td colspan="11" class="aide">${texteHtml('ressources_btp.affectations.aucune')}</td></tr>`}</tbody></table>
       <p class="connexion-erreur" data-erreur hidden></p></div>`;
     corps.querySelectorAll('tr[data-i]').forEach((tr) => {
       const a = saisie[Number(tr.dataset.i)];
@@ -203,6 +218,26 @@ export async function rendreAffectations(corps, { app, materiel, identifie = fal
         retour.addEventListener('change', () => { a.retour = retour.valeurCombo || null; modifiee = true; corps.querySelector('[data-enregistrer]').disabled = false; });
         tr.querySelector('[data-retour]').append(retour);
       }
+      // Dépôt d'une photo dans la GED du matériel, rattachée à l'affectation à l'enregistrement.
+      tr.querySelectorAll('[data-photo]').forEach((b) => b.addEventListener('click', () => {
+        const entree = document.createElement('input');
+        entree.type = 'file';
+        entree.accept = 'image/*';
+        entree.addEventListener('change', async () => {
+          const fichier = entree.files[0];
+          if (!fichier) return;
+          try {
+            const d = await ged.deposer({ fichier, meta: {
+              titre: texte(`ressources_btp.affectations.photo.titre_${b.dataset.photo}`, { du: jour(a.du) }), categorie: 'photo', type_element: TYPE_FICHE.MATERIEL,
+              id_element: String(materiel), date_document: aujourdhui(), auteur: utilisateur } });
+            definirPhoto(a, b.dataset.photo, Number(d.id));
+            await chargerUrls();
+            modifiee = true;
+            rendre();
+          } catch (e) { app.erreur(e); }
+        });
+        entree.click();
+      }));
       tr.querySelectorAll('[data-c]').forEach((c) => c.addEventListener('change', () => { a[c.dataset.c] = c.value || null; modifiee = true; rendre(); }));
       tr.querySelector('[data-retirer]').addEventListener('click', () => { saisie.splice(Number(tr.dataset.i), 1); modifiee = true; rendre(); });
     });
@@ -280,7 +315,16 @@ export async function rendreCoutsMateriel(corps, { app, materiel }) {
       ${ligne(`${texteHtml('ressources_btp.couts.depuis_entree')}${d.date_entree ? ` (${jour(d.date_entree)})` : ''}`, d.total_depuis_entree, null, 'total')}</tfoot></table>
       <p>${d.cout_par_heure != null ? texteHtml('ressources_btp.couts.par_heure_html', { cout: formatNombre(d.cout_par_heure, 2), heures: formatNombre(d.heures, 0) })
         : `<span class="aide">${texteHtml(c.partage ? 'ressources_btp.couts.par_heure_partage' : 'ressources_btp.couts.par_heure_inconnu')}</span>`}
+        ${d.cout_par_heure != null ? `<button type="button" data-reprendre>${texteHtml('ressources_btp.couts.reprendre')}</button>` : ''}
         ${Number(d.non_valorises) ? ` <span class="pastille-compte attention">${pluriel('ressources_btp.couts.non_valorises', d.non_valorises)}</span>` : ''}</p></div>`;
+    corps.querySelector('[data-reprendre]')?.addEventListener('click', async () => {
+      try {
+        const cout = formatNombre(d.cout_par_heure, 2);
+        if (await reprendreCoutMoyen({ confirmer, reprendre: () => api.ressources.reprendreCoutMoyen(materiel), message: texte('ressources_btp.couts.reprendre_confirmer', { cout }) })) {
+          app.message(texte('ressources_btp.couts.repris', { cout }), 'succes');
+        }
+      } catch (e) { app.erreur(e); }
+    });
     const annee = creerCombo({ options: d.annees.map((a) => ({ valeur: a, libelle: String(a) })), valeur: d.annee, vide: false });
     annee.addEventListener('change', async () => {
       try { rendre(await api.ressources.coutsMateriel(materiel, annee.valeurCombo)); } catch (e) { app.erreur(e); }

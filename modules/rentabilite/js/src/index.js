@@ -5,5 +5,6 @@ export * from './codes.js';
 export { lirePeriode, controlerPeriode, raccourciPeriode } from './periodes.js';
 export { COLONNES_LISTE, arbreListe, lignesListe, clesJusqua, arrondiAffiche } from './liste.js';
 export { LIGNES_RESULTATS, blocResultats } from './resultats.js';
+export { margeChantier } from './marge.js';
 export { montantPrevu, controlerFacturation, comparerFacturation, moisDe, moisEntre } from './facturation.js';
 export { seriesEvolution, echelle } from './evolution.js';

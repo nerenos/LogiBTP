@@ -2,6 +2,7 @@ import { texte, texteHtml, icone, iconeHtml } from '@logibtp/socle/dictionnaire'
 import { urlFiche, TYPE_FICHE } from '../codes.js';
 import { echapper, formatNombre, confirmer, ouvrirDialogue, telechargerCsv, nombreSaisi } from '@logibtp/socle/ui';
 import { prixNetTarif } from '@logibtp/bibliotheque';
+import { actionsLigneTarif, tarifDepuisSaisie } from '@logibtp/bibliotheque/ui';
 import { lireCsvTarifs, modeleCsvTarifs, COLONNES_TARIFS } from './import-tarifs.js';
 
 // Onglet Tarifs de la fiche d'un fournisseur (lot 8 des demandes du 25/10/2026, A10 et A12) : tarifs de la bibliothèque
@@ -38,8 +39,9 @@ export async function rendreTarifsFournisseur(corps, { bibliotheque, tiers, mess
       <td><input data-c="code_barre" value="${echapper(t.code_barre ?? '')}" size="11"></td>
       <td><input type="date" data-c="debut" value="${jour(t.debut)}"></td><td><input type="date" data-c="fin" value="${jour(t.fin)}"></td>
       <td><input type="checkbox" data-c="principal" ${t.principal ? 'checked' : ''} title="${texteHtml('annuaire_btp.tarifs.principal')}"></td>
-      <td class="cellule-boutons">${modifiable ? `<button type="button" class="bouton-icone" data-enregistrer title="${texteHtml(t.id ? 'annuaire_btp.tarifs.enregistrer' : 'annuaire_btp.tarifs.ajouter')}">${iconeHtml(t.id ? 'annuaire_btp_tarif_enregistrer' : 'ajouter')}</button>
-        ${t.id ? `<button type="button" class="bouton-icone" data-supprimer title="${texteHtml('annuaire_btp.tarifs.retirer')}">${iconeHtml('retirer')}</button>` : ''}` : ''}</td></tr>`;
+      <td class="cellule-boutons">${actionsLigneTarif(t, modifiable).map((a) => (a === 'enregistrer'
+        ? `<button type="button" class="bouton-icone" data-enregistrer title="${texteHtml('annuaire_btp.tarifs.ajouter')}">${iconeHtml('ajouter')}</button>`
+        : `<button type="button" class="bouton-icone" data-supprimer title="${texteHtml('annuaire_btp.tarifs.retirer')}">${iconeHtml('retirer')}</button>`)).join('')}</td></tr>`;
     const lignes = modifiable ? [...tarifs, nouveau] : tarifs;
     corps.innerHTML = `<div class="annuaire-tarifs"><div class="titre-actions"><h3>${texteHtml('annuaire_btp.tarifs.titre')}</h3><span class="titre-actions-boutons">
         ${modifiable ? `<button type="button" class="bouton-icone" data-importer title="${texteHtml('annuaire_btp.tarifs.importer')}">${iconeHtml('annuaire_btp_tarif_importer')}</button>
@@ -67,12 +69,11 @@ export async function rendreTarifsFournisseur(corps, { bibliotheque, tiers, mess
     });
     corps.querySelectorAll('tr[data-i]').forEach((tr) => {
       const t = lignes[Number(tr.dataset.i)];
-      tr.querySelector('[data-enregistrer]')?.addEventListener('click', async () => {
-        const v = { ...t };
-        tr.querySelectorAll('[data-c]').forEach((el) => { if (el.dataset.c !== 'recherche') v[el.dataset.c] = el.type === 'checkbox' ? el.checked : el.value || null; });
-        for (const c of ['prix', 'prix_public', 'remise1', 'remise2']) v[c] = nombreSaisi(v[c]);
-        v.delai = v.delai === null ? null : Number(nombreSaisi(v.delai));
-        if (v.prix === null) v.prix = v.prix_public === null ? null : '0';
+      // Une ligne existante modifiée s'enregistre quand on la quitte ; la ligne vide garde son bouton d'ajout.
+      const enregistrer = async () => {
+        const saisie = {};
+        tr.querySelectorAll('[data-c]').forEach((el) => { if (el.dataset.c !== 'recherche') saisie[el.dataset.c] = el.type === 'checkbox' ? el.checked : el.value || null; });
+        const v = tarifDepuisSaisie(t, saisie);
         const eleId = t.id ? t.ele_id : nouveau.ele_id;
         if (!eleId) { message(texte('annuaire_btp.tarifs.choisir'), 'avertissement'); return; }
         if (v.prix === null) { message(texte('annuaire_btp.tarifs.sans_prix'), 'avertissement'); return; }
@@ -82,8 +83,18 @@ export async function rendreTarifsFournisseur(corps, { bibliotheque, tiers, mess
           if (!t.id) nouveau = { principal: false };
           message(texte('annuaire_btp.tarifs.enregistre'), 'succes');
           rendre();
-        } catch (e) { message(e.message, 'erreur'); }
-      });
+        } catch (e) { tr.classList.add('erreur'); tr.title = e.message; message(e.message, 'erreur'); }
+      };
+      tr.querySelector('[data-enregistrer]')?.addEventListener('click', enregistrer);
+      if (t.id) {
+        let sale = false;
+        tr.addEventListener('change', () => { sale = true; });
+        tr.addEventListener('focusout', (e) => {
+          if (!sale || tr.contains(e.relatedTarget)) return;
+          sale = false;
+          enregistrer();
+        });
+      }
       tr.querySelector('[data-supprimer]')?.addEventListener('click', async () => {
         if (!await confirmer(texte('annuaire_btp.tarifs.retirer_confirmer'))) return;
         try { await bibliotheque.supprimerTarif(t.ele_id, t.id); tarifs = await bibliotheque.tarifsTiers(tiers.id); rendre(); } catch (e) { message(e.message, 'erreur'); }

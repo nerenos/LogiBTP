@@ -1,8 +1,10 @@
 import { texte, texteHtml, icone, iconeHtml, textesParCode, couleurTheme } from '@logibtp/socle/dictionnaire';
-import { echapper, ouvrirModale, confirmer } from '@logibtp/socle/ui';
+import { echapper, ouvrirModale, confirmer, creerCombo } from '@logibtp/socle/ui';
 import { normaliserDefinition, FORMATS, TEINTES_PASTILLE, STYLE_VIDE, TOTAUX_COLONNE, CALCULS_INDICATEUR, FORMATS_INDICATEUR } from '../src/modele.js';
 import { compilerFormule, resolveurColonnes } from '../src/formule.js';
 import { OPERATEURS_VUE, COLONNE_USAGE } from '../src/requete.js';
+import { PERIODES_CHOIX, libellePeriode, periodeComplete, nombrePeriode } from '../src/filtres.js';
+import { PERIODE_AVEC_NOMBRE, OPERATEUR_PERIODE } from '../src/codes.js';
 
 const SANS_VALEUR = new Set(['vide', 'nonvide', 'vrai', 'faux']);
 
@@ -10,6 +12,7 @@ const SANS_VALEUR = new Set(['vide', 'nonvide', 'vrai', 'faux']);
 export function libelleFiltreVue(f, titre = f.colonne) {
   const op = OPERATEURS_VUE.find(([v]) => v === f.op)?.[1] ?? f.op;
   if (SANS_VALEUR.has(f.op)) return `${titre} ${op}`;
+  if (f.op === OPERATEUR_PERIODE) return `${titre} ${op} ${libellePeriode(f.valeur, f.nombre ?? null)}`;
   if (f.op === 'dans') return texte('liste.concepteur.filtre_dans', { titre, valeurs: (f.valeurs ?? []).join(', ') });
   if (f.op === 'entre') return texte('liste.concepteur.filtre_entre', { titre, valeur: f.valeur ?? '', valeur2: f.valeur2 ?? '' });
   return `${titre} ${op} ${f.valeur ?? ''}`;
@@ -25,6 +28,10 @@ export function libelleFiltreVue(f, titre = f.colonne) {
 //                        format, teinte (le total de pied d'une colonne se choisit dans la mise en forme)
 
 const LIB_FORMATS = textesParCode('liste.formats', ['texte', 'nombre', 'date', 'coche', 'combo', 'picto', 'pastille']);
+/** Choix de teinte : libellé « code (couleur) », aperçu par la variable `--pastille-<teinte>-texte` du thème. */
+export const optionsTeintes = (teintes = TEINTES_PASTILLE.filter((t) => t !== 'barre')) => teintes.map((t) => ({
+  valeur: t, libelle: `${t} (${texte(`liste.concepteur.teintes.${t}`)})`, couleur: `var(--pastille-${t === 'barre' ? 'neutre' : t}-texte)`,
+}));
 const opt = (v, l, courant) => `<option value="${echapper(v ?? '')}" ${String(courant ?? '') === String(v ?? '') ? 'selected' : ''}>${echapper(l)}</option>`;
 const premiereLigne = (t) => String(t ?? '').replace(/\s*\n\s*/g, ' ');
 
@@ -174,6 +181,7 @@ export class ConcepteurVue {
       for (const f of filtres) {
         if (!f.colonne) erreurs.push(texte('liste.concepteur.erreurs.filtre_colonne', { quoi }));
         else if (!SANS_VALEUR.has(f.op) && f.op !== 'dans' && (f.valeur ?? '') === '') erreurs.push(texte('liste.concepteur.erreurs.filtre_valeur', { quoi, colonne: f.colonne }));
+        else if (f.op === OPERATEUR_PERIODE && !periodeComplete(f.valeur, f.nombre)) erreurs.push(texte('liste.concepteur.erreurs.filtre_periode', { quoi, colonne: f.colonne }));
         else if (f.op === 'entre' && (f.valeur2 ?? '') === '') erreurs.push(texte('liste.concepteur.erreurs.filtre_valeur2', { quoi, colonne: f.colonne }));
         else if (f.op === 'dans' && !(f.valeurs ?? []).length) erreurs.push(texte('liste.concepteur.erreurs.filtre_valeurs', { quoi, colonne: f.colonne }));
       }
@@ -302,7 +310,7 @@ export class ConcepteurVue {
           <select data-col="total">${opt('', texte('liste.concepteur.champs.total_aucun'), c.total)}${Object.entries(TOTAUX_COLONNE).map(([v, l]) => opt(v, l, c.total)).join('')}</select></label>
         <label>${texteHtml('liste.concepteur.champs.alignement')} <select data-col="alignement">${['', 'gauche', 'centre', 'droite'].map((a) => opt(a, texte(`liste.concepteur.alignements.${a || 'auto'}`), c.alignement)).join('')}</select></label>
         <label class="large" ${['combo', 'picto', 'pastille'].includes(c.format) ? '' : 'hidden'}>${c.format === 'pastille'
-          ? texteHtml('liste.concepteur.champs.valeurs_pastille', { teintes: TEINTES_PASTILLE.join(', ') }) : texteHtml('liste.concepteur.champs.valeurs')}
+          ? texteHtml('liste.concepteur.champs.valeurs_pastille', { teintes: TEINTES_PASTILLE.map((t) => `${t} (${texte(`liste.concepteur.teintes.${t}`)})`).join(', ') }) : texteHtml('liste.concepteur.champs.valeurs')}
           <textarea rows="4" data-options placeholder="${texteHtml(`liste.concepteur.champs.${c.format === 'pastille' ? 'valeurs_pastille_exemple' : 'valeurs_exemple'}`)}">${echapper(c.options.map((o) => [o.valeur, o.libelle, c.format === 'pastille' ? o.teinte : o.picto].filter((x) => x !== undefined && x !== null && x !== '').join(' | ')).join('\n'))}</textarea></label>
         <fieldset class="large"><legend>${texteHtml('liste.concepteur.onglets.forme')}</legend>
           ${couleur('couleur', texteHtml('liste.concepteur.couleur_texte'))}${couleur('fond', texteHtml('liste.concepteur.couleur_fond'))}
@@ -534,7 +542,9 @@ export class ConcepteurVue {
       return `<div class="filtre-vue" data-filtres="${echapper(groupe)}" data-i="${i}">
         <select data-f="colonne">${opt('', texte('liste.concepteur.filtres.colonne'), f.colonne)}${this.colonnesSource.map((c) => opt(c.code, c.code, f.colonne)).join('')}</select>
         <select data-f="op">${OPERATEURS_VUE.map(([v, l]) => opt(v, l, f.op)).join('')}</select>
-        <input data-f="valeur" type="${type}" value="${echapper(f.op === 'dans' ? (f.valeurs ?? []).join(' ; ') : f.valeur ?? '')}" ${SANS_VALEUR.has(f.op) ? 'hidden' : ''} placeholder="${texteHtml(f.op === 'dans' ? 'liste.concepteur.filtres.valeurs' : 'liste.concepteur.filtres.valeur')}">
+        <span data-periode ${f.op === OPERATEUR_PERIODE ? '' : 'hidden'}></span>
+        <input data-f="nombre" type="number" min="1" step="1" value="${echapper(f.nombre ?? '')}" ${f.op === OPERATEUR_PERIODE && PERIODE_AVEC_NOMBRE.includes(f.valeur) ? '' : 'hidden'} placeholder="${texteHtml('liste.concepteur.filtres.periode_nombre')}">
+        <input data-f="valeur" type="${type}" value="${echapper(f.op === 'dans' ? (f.valeurs ?? []).join(' ; ') : f.valeur ?? '')}" ${SANS_VALEUR.has(f.op) || f.op === OPERATEUR_PERIODE ? 'hidden' : ''} placeholder="${texteHtml(f.op === 'dans' ? 'liste.concepteur.filtres.valeurs' : 'liste.concepteur.filtres.valeur')}">
         <input data-f="valeur2" type="${type}" value="${echapper(f.valeur2 ?? '')}" ${f.op === 'entre' ? '' : 'hidden'} placeholder="${texteHtml('liste.menu.et')}">
         <button type="button" data-supprimer-filtre title="${texteHtml('liste.concepteur.filtres.supprimer')}">${iconeHtml('retirer')}</button>
       </div>`;
@@ -544,14 +554,27 @@ export class ConcepteurVue {
   #brancherFiltres(racine, filtres, groupe, rendre) {
     racine.querySelectorAll(`[data-filtres="${CSS.escape(groupe)}"]`).forEach((div) => {
       const f = filtres[Number(div.dataset.i)];
+      // Période : choix par combo (le code est gardé dans la vue, jamais des dates), nombre x pour les périodes paramétrées.
+      const zonePeriode = div.querySelector('[data-periode]');
+      if (zonePeriode && f.op === OPERATEUR_PERIODE) {
+        const combo = creerCombo({ options: PERIODES_CHOIX.map(([valeur, libelle]) => ({ valeur, libelle })), valeur: f.valeur ?? '', titre: texte('liste.concepteur.filtres.periode') });
+        combo.addEventListener('change', () => {
+          f.valeur = combo.valeurCombo || null;
+          if (!PERIODE_AVEC_NOMBRE.includes(f.valeur)) delete f.nombre;
+          rendre();
+        });
+        zonePeriode.append(combo);
+      }
       div.querySelectorAll('[data-f]').forEach((el) => el.addEventListener('change', () => {
         const k = el.dataset.f;
+        if (k === 'nombre') { const n = nombrePeriode(f.valeur, el.value); if (n === null) delete f.nombre; else f.nombre = n; return; }
         if (k === 'valeur' && f.op === 'dans') { f.valeurs = el.value.split(';').map((x) => x.trim()).filter(Boolean); delete f.valeur; }
         else f[k] = el.value || null;
         if (k === 'op' || k === 'colonne') {
           if (f.op === 'dans') { f.valeurs = f.valeur ? [f.valeur] : f.valeurs ?? []; delete f.valeur; } else delete f.valeurs;
           if (SANS_VALEUR.has(f.op)) { delete f.valeur; delete f.valeur2; }
           if (f.op !== 'entre') delete f.valeur2;
+          if (k === 'op') { delete f.nombre; if (f.op === OPERATEUR_PERIODE) f.valeur = null; }
           rendre();
         }
       }));
@@ -574,7 +597,7 @@ export class ConcepteurVue {
             <label>${texteHtml('liste.concepteur.indicateurs.calcul')} <select data-ind="calcul">${Object.entries(CALCULS_INDICATEUR).map(([v, l]) => opt(v, l, ind.calcul)).join('')}</select></label>
             <label ${['compte', 'ratio'].includes(ind.calcul) ? 'hidden' : ''}>${texteHtml('liste.concepteur.indicateurs.colonne')} <select data-ind="colonne">${opt('', texte('liste.concepteur.indicateurs.aucune_colonne'), ind.colonne)}${numeriques.map((c) => opt(c.code, c.code, ind.colonne)).join('')}</select></label>
             <label>${texteHtml('liste.concepteur.champs.format')} <select data-ind="format">${Object.entries(FORMATS_INDICATEUR).map(([v, l]) => opt(v, l, ind.format)).join('')}</select></label>
-            <label>${texteHtml('liste.concepteur.indicateurs.teinte')} <select data-ind="teinte">${TEINTES_PASTILLE.filter((t) => t !== 'barre').map((t) => opt(t, t, ind.teinte)).join('')}</select></label>
+            <label>${texteHtml('liste.concepteur.indicateurs.teinte')} <span data-ind-teinte></span></label>
             <label class="large">${texteHtml('liste.concepteur.champs.bulle')} <input data-ind="bulle" value="${echapper(ind.bulle ?? '')}"></label>
           </div>
           <div class="filtres-indicateur"><strong>${texteHtml(`liste.concepteur.indicateurs.${ind.calcul === 'ratio' ? 'numerateur' : 'filtres'}`)}</strong>
@@ -604,6 +627,10 @@ export class ConcepteurVue {
           rendre();
         }
       }));
+      // Teinte : nom de la couleur et aperçu par la variable du thème (le code reste celui enregistré).
+      const combo = creerCombo({ options: optionsTeintes(), valeur: ind.teinte ?? 'neutre', vide: false, titre: texte('liste.concepteur.indicateurs.teinte') });
+      combo.addEventListener('change', () => { ind.teinte = combo.valeurCombo || 'neutre'; });
+      fs.querySelector('[data-ind-teinte]').append(combo);
       this.#brancherFiltres(fs, ind.filtres, `ind-${i}`, rendre);
       if (ind.calcul === 'ratio') this.#brancherFiltres(fs, ind.denominateur, `den-${i}`, rendre);
       fs.querySelectorAll('[data-ajouter-filtre]').forEach((b) => b.addEventListener('click', () => { ind[b.dataset.ajouterFiltre].push(this.#nouveauFiltre()); rendre(); }));

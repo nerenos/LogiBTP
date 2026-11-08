@@ -65,6 +65,12 @@ public abstract class SpecialisationMail
     /// <summary>Alerte à traiter après un rattachement automatique : service de la règle (code) ou celui que l'application déduit de l'élément.</summary>
     public virtual Task AlerterAsync(MessageRattache m, ElementTrouve element, string? nature, string? service, CancellationToken ct) => Task.CompletedTask;
 
+    /// <summary>Paramètres de la reconnaissance d'un accusé de réception de commande : préfixes de la numérotation des commandes, année des semaines sans année, motifs (vide : motifs par défaut). Sans préfixe, aucun numéro n'est reconnu.</summary>
+    public virtual Task<ParametresAccuse> ParametresAccuseAsync(CancellationToken ct) => Task.FromResult(new ParametresAccuse([], null, []));
+
+    /// <summary>Accusé de réception de commande reconnu à la réception (appelé une fois par courriel, proposition déjà conservée sur le message) : l'application cherche la commande ; élément unique → courriel rattaché, sinon candidats proposés. Sans effet par défaut (null).</summary>
+    public virtual Task<ResolutionAccuse?> AccuseReconnuAsync(AccuseRecu a, CancellationToken ct) => Task.FromResult<ResolutionAccuse?>(null);
+
     /// <summary>Adresse signalée non remise dans l'annuaire (proposé par l'alerte d'un avis de non-remise) ; renvoie les coordonnées marquées.</summary>
     public virtual Task<int> MarquerAdresseAsync(string adresse, string motif, Utilisateur u, CancellationToken ct) => Task.FromResult(0);
 }

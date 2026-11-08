@@ -14,6 +14,7 @@ modules/calendrier/db/006_calendrier.sql
 modules/mail/db/007_mail.sql
 modules/mail/db/007b_mail_reception.sql
 modules/mail/db/007c_mail_reconnaissance.sql
+modules/mail/db/007d_mail_accuse.sql
 modules/notification/db/008_notification.sql
 modules/droits/db/009_droits.sql
 modules/document/db/010_document_schema.sql
@@ -234,6 +235,11 @@ db/274_sav_liste.sql rejouable
 db/275_sav_interventions_equipement.sql rejouable
 db/276_comptabilite_stock.sql rejouable
 db/277_stock_cloture.sql rejouable
+db/278_chantier_zone.sql rejouable
+db/279_materiel_affectation_photos.sql rejouable
+db/280_materiel_releve_borne.sql rejouable
+db/281_materiel_carte_carburant.sql rejouable
+db/282_liste_repas.sql rejouable
 
 # Vues de colonnes des types de documents créés après 176 : rejouée en dernier.
 db/176_documents_vues_types.sql rejouable

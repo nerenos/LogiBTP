@@ -1,0 +1,284 @@
+{
+ "description": "Bornes [début, fin] (incluses) des périodes glissantes, à date de référence fixe ; semaine du lundi au dimanche, exercice = année civile sans début d'exercice (periodes.js ↔ Periodes.cs).",
+ "cas": [
+  {
+   "nom": "aujourd'hui",
+   "code": "aujourd_hui",
+   "reference": "2026-11-08",
+   "debut": "2026-11-08",
+   "fin": "2026-11-08"
+  },
+  {
+   "nom": "hier au 1er janvier",
+   "code": "hier",
+   "reference": "2026-01-01",
+   "debut": "2025-12-31",
+   "fin": "2025-12-31"
+  },
+  {
+   "nom": "semaine en cours un dimanche",
+   "code": "semaine_en_cours",
+   "reference": "2026-11-08",
+   "debut": "2026-11-02",
+   "fin": "2026-11-08"
+  },
+  {
+   "nom": "semaine en cours un lundi",
+   "code": "semaine_en_cours",
+   "reference": "2026-11-02",
+   "debut": "2026-11-02",
+   "fin": "2026-11-08"
+  },
+  {
+   "nom": "semaine en cours à cheval sur deux années",
+   "code": "semaine_en_cours",
+   "reference": "2026-01-01",
+   "debut": "2025-12-29",
+   "fin": "2026-01-04"
+  },
+  {
+   "nom": "semaine précédente",
+   "code": "semaine_precedente",
+   "reference": "2026-11-04",
+   "debut": "2026-10-26",
+   "fin": "2026-11-01"
+  },
+  {
+   "nom": "mois en cours en année bissextile",
+   "code": "mois_en_cours",
+   "reference": "2024-02-29",
+   "debut": "2024-02-01",
+   "fin": "2024-02-29"
+  },
+  {
+   "nom": "mois précédent depuis un 31 mars",
+   "code": "mois_precedent",
+   "reference": "2026-03-31",
+   "debut": "2026-02-01",
+   "fin": "2026-02-28"
+  },
+  {
+   "nom": "mois précédent depuis le 31 janvier",
+   "code": "mois_precedent",
+   "reference": "2026-01-31",
+   "debut": "2025-12-01",
+   "fin": "2025-12-31"
+  },
+  {
+   "nom": "trimestre en cours (4e)",
+   "code": "trimestre_en_cours",
+   "reference": "2026-11-08",
+   "debut": "2026-10-01",
+   "fin": "2026-12-31"
+  },
+  {
+   "nom": "trimestre en cours au 31 janvier",
+   "code": "trimestre_en_cours",
+   "reference": "2026-01-31",
+   "debut": "2026-01-01",
+   "fin": "2026-03-31"
+  },
+  {
+   "nom": "trimestre en cours au 31 mars",
+   "code": "trimestre_en_cours",
+   "reference": "2026-03-31",
+   "debut": "2026-01-01",
+   "fin": "2026-03-31"
+  },
+  {
+   "nom": "trimestre en cours au 1er avril",
+   "code": "trimestre_en_cours",
+   "reference": "2026-04-01",
+   "debut": "2026-04-01",
+   "fin": "2026-06-30"
+  },
+  {
+   "nom": "année en cours",
+   "code": "annee_en_cours",
+   "reference": "2024-02-29",
+   "debut": "2024-01-01",
+   "fin": "2024-12-31"
+  },
+  {
+   "nom": "année précédente",
+   "code": "annee_precedente",
+   "reference": "2024-02-29",
+   "debut": "2023-01-01",
+   "fin": "2023-12-31"
+  },
+  {
+   "nom": "année précédente au 1er janvier",
+   "code": "annee_precedente",
+   "reference": "2026-01-01",
+   "debut": "2025-01-01",
+   "fin": "2025-12-31"
+  },
+  {
+   "nom": "exercice sans paramètre = année civile",
+   "code": "exercice_en_cours",
+   "reference": "2026-11-08",
+   "debut": "2026-01-01",
+   "fin": "2026-12-31"
+  },
+  {
+   "nom": "exercice décalé (juillet), après le début",
+   "code": "exercice_en_cours",
+   "reference": "2026-11-08",
+   "debut_exercice": "2020-07-01",
+   "debut": "2026-07-01",
+   "fin": "2027-06-30"
+  },
+  {
+   "nom": "exercice décalé, avant le début",
+   "code": "exercice_en_cours",
+   "reference": "2026-03-15",
+   "debut_exercice": "2020-07-01",
+   "debut": "2025-07-01",
+   "fin": "2026-06-30"
+  },
+  {
+   "nom": "exercice décalé, premier jour",
+   "code": "exercice_en_cours",
+   "reference": "2026-07-01",
+   "debut_exercice": "2020-07-01",
+   "debut": "2026-07-01",
+   "fin": "2027-06-30"
+  },
+  {
+   "nom": "exercice décalé, dernier jour",
+   "code": "exercice_en_cours",
+   "reference": "2026-06-30",
+   "debut_exercice": "2020-07-01",
+   "debut": "2025-07-01",
+   "fin": "2026-06-30"
+  },
+  {
+   "nom": "exercice commençant un 29 février",
+   "code": "exercice_en_cours",
+   "reference": "2025-03-10",
+   "debut_exercice": "2020-02-29",
+   "debut": "2025-02-28",
+   "fin": "2026-02-27"
+  },
+  {
+   "nom": "7 derniers jours",
+   "code": "derniers_jours",
+   "reference": "2026-11-08",
+   "x": 7,
+   "debut": "2026-11-02",
+   "fin": "2026-11-08"
+  },
+  {
+   "nom": "1 dernier jour",
+   "code": "derniers_jours",
+   "reference": "2026-11-08",
+   "x": 1,
+   "debut": "2026-11-08",
+   "fin": "2026-11-08"
+  },
+  {
+   "nom": "3 derniers jours à cheval sur février",
+   "code": "derniers_jours",
+   "reference": "2026-03-02",
+   "x": 3,
+   "debut": "2026-02-28",
+   "fin": "2026-03-02"
+  },
+  {
+   "nom": "2 derniers jours avec le 29 février",
+   "code": "derniers_jours",
+   "reference": "2024-03-01",
+   "x": 2,
+   "debut": "2024-02-29",
+   "fin": "2024-03-01"
+  },
+  {
+   "nom": "1 dernier mois depuis un 31 mars",
+   "code": "derniers_mois",
+   "reference": "2026-03-31",
+   "x": 1,
+   "debut": "2026-03-01",
+   "fin": "2026-03-31"
+  },
+  {
+   "nom": "3 derniers mois",
+   "code": "derniers_mois",
+   "reference": "2026-11-08",
+   "x": 3,
+   "debut": "2026-08-09",
+   "fin": "2026-11-08"
+  },
+  {
+   "nom": "12 derniers mois depuis le 29 février",
+   "code": "derniers_mois",
+   "reference": "2024-02-29",
+   "x": 12,
+   "debut": "2023-03-01",
+   "fin": "2024-02-29"
+  },
+  {
+   "nom": "5 prochains jours à cheval sur deux années",
+   "code": "prochains_jours",
+   "reference": "2026-12-30",
+   "x": 5,
+   "debut": "2026-12-30",
+   "fin": "2027-01-03"
+  },
+  {
+   "nom": "nombre nul refusé",
+   "code": "derniers_jours",
+   "reference": "2026-11-08",
+   "x": 0,
+   "erreur": "PERIODE_NOMBRE"
+  },
+  {
+   "nom": "nombre absent refusé",
+   "code": "prochains_jours",
+   "reference": "2026-11-08",
+   "erreur": "PERIODE_NOMBRE"
+  },
+  {
+   "nom": "semaine précédente à cheval sur deux années",
+   "code": "semaine_precedente",
+   "reference": "2026-01-07",
+   "debut": "2025-12-29",
+   "fin": "2026-01-04"
+  },
+  {
+   "nom": "mois précédent depuis un 31 janvier",
+   "code": "mois_precedent",
+   "reference": "2026-01-31",
+   "debut": "2025-12-01",
+   "fin": "2025-12-31"
+  },
+  {
+   "nom": "derniers mois : un mois depuis un 31 janvier",
+   "code": "derniers_mois",
+   "reference": "2026-01-31",
+   "x": 1,
+   "debut": "2026-01-01",
+   "fin": "2026-01-31"
+  },
+  {
+   "nom": "derniers mois : deux mois à cheval sur décembre-janvier, fin de mois ajustée",
+   "code": "derniers_mois",
+   "reference": "2026-01-30",
+   "x": 2,
+   "debut": "2025-12-01",
+   "fin": "2026-01-30"
+  },
+  {
+   "nom": "nombre non entier refusé",
+   "code": "derniers_jours",
+   "reference": "2026-11-08",
+   "x": 2.5,
+   "erreur": "PERIODE_NOMBRE"
+  },
+  {
+   "nom": "période inconnue",
+   "code": "bidule",
+   "reference": "2026-11-08",
+   "erreur": "PERIODE_INCONNUE"
+  }
+ ]
+}

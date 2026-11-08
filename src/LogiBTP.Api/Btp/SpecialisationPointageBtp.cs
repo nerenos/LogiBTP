@@ -124,7 +124,7 @@ public class SpecialisationPointageBtp(IHttpContextAccessor http) : Specialisati
             FROM salarie s
             LEFT JOIN service_membre sm ON sm.sme_ind_id = s.sal_ind_id AND sm.sme_principal
             LEFT JOIN service sv ON sv.srv_id = sm.sme_srv_id
-            WHERE (@ids IS NULL AND s.sal_actif AND (s.sal_date_sortie IS NULL OR s.sal_date_sortie >= current_date - 31)
+            WHERE (@ids IS NULL AND s.sal_actif AND s.sal_usage <> 'N' AND (s.sal_date_sortie IS NULL OR s.sal_date_sortie >= current_date - 31)
                    AND (@srv IS NULL OR sv.srv_id = @srv OR sv.srv_parent_id = @srv)
                    AND (@srvs IS NULL OR sv.srv_id = ANY(@srvs) OR sv.srv_parent_id = ANY(@srvs))
                    AND (@fct IS NULL OR s.sal_poste = ANY(@fct))
@@ -207,7 +207,7 @@ public class SpecialisationPointageBtp(IHttpContextAccessor http) : Specialisati
                 : x.Latitude is { } la && x.Longitude is { } lo && Geographie.TexteAdresse(x.Ligne1, x.Ligne2, x.Ligne3, x.CodePostal, x.Ville) == x.GeocodeAdresse ? (la, lo) : ((decimal, decimal)?)null;
             return p is { } q ? Geographie.DistanceKm(ce.Lat, ce.Lon, q.Item1, q.Item2) : null;
         }
-        return l.Select(x => new RestaurantPointage(x.Id, x.Nom, x.Ville, Distance(x), x.Provisoire))
+        return l.Select(x => new RestaurantPointage(x.Id, x.Nom, x.Ville, Distance(x), x.Provisoire, Geographie.TexteAdresse(x.Ligne1, x.Ligne2, x.Ligne3, x.CodePostal, x.Ville)))
             .OrderBy(x => x.DistanceKm is null).ThenBy(x => x.DistanceKm).ThenBy(x => x.Nom, StringComparer.CurrentCultureIgnoreCase).ToList();
     }
 

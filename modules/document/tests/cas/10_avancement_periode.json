@@ -122,6 +122,7 @@
     ]
   },
   "attendu": {
+    "situation": null,
     "erreurs": [
       "LIGNE_DEPASSEE"
     ],

@@ -541,7 +541,11 @@ export class PanneauxDocument {
     const r = editeur.resultat;
     const d = r.document;
     const pm = editeur.saisie.document.ent_precision_montant ?? 2;
-    const extra = this.lignesTotaux(d);
+    // Situation (présentation C) : précédent et montant de la période en information, le total restant le cumul.
+    const situation = r.situation
+      ? [[texte('document.panneaux.situation_precedent'), formatNombre(r.situation.precedent, pm)], [texte('document.panneaux.situation_periode'), formatNombre(r.situation.periode, pm)]]
+      : [];
+    const extra = [...this.lignesTotaux(d), ...situation];
     if (compact) {
       const detailTva = r.tva.map((t) => texte('document.panneaux.tva_detail', { code: t.tva_code, montant: formatNombre(t.tva_montant_net, pm), base: formatNombre(t.tva_base_ht, pm) })).join(' · ');
       // Erreur de calcul : totaux signalés en attention (D5).

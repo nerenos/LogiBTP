@@ -45,7 +45,7 @@ describe("fusion d'un tiers provisoire (jeu partagé 04_fusion.json)", () => {
 });
 
 /** Annuaire de test : une société, un établissement, un individu salarié de la société et client particulier. */
-function annuaire() {
+function annuaire(options = {}) {
   return new FournisseurAnnuaireMemoire({
     niveaux: [{ code: 'SOCIETE', libelle: 'Société', ordre: 1 }, { code: 'ETABLISSEMENT', libelle: 'Établissement', ordre: 2 }, { code: 'PARTICULIER', libelle: 'Particulier', morale: false, ordre: 9 }],
     casquettes: [{ code: 'CLIENT', libelle: 'Client', groupes: ['client'] }, { code: 'FOURNISSEUR', libelle: 'Fournisseur', groupes: ['fournisseur'] }],
@@ -69,6 +69,7 @@ function annuaire() {
       { id: 4, coo_id: 3, ind_id: 1, usage: 'PERSONNELLE', principal: true, ordre: 0 },
       { id: 5, coo_id: 4, rat_id: 1, usage: 'PORTABLE', principal: true, ordre: 0 },
     ],
+    ...options,
   });
 }
 
@@ -171,6 +172,18 @@ describe('annuaire en mémoire', () => {
     expect((await a.rechercherPersonnes({ casquette: 'CLIENT' }))).toEqual([]);
     expect((await a.rechercherIndividus({ recherche: 'jean' }))[0].nom_complet).toBe('M. Jean Ab');
     expect(coordonneesParDefaut().map((c) => c.nature)).toEqual(['ADRESSE', 'TELEPHONE', 'EMAIL']);
+  });
+
+  it('filtre des choix : tiers et individu écartés des choix, présents dans la fiche', async () => {
+    const base = annuaire();
+    const tous = (await base.rechercherPersonnes()).map((p) => p.id);
+    const individus = (await base.rechercherIndividus()).map((i) => i.id);
+    const ecarte = tous[0];
+    const a = annuaire({ filtreChoix: { personne: (p) => p.id !== ecarte, individu: (i) => i.id !== individus[0] } });
+    expect((await a.rechercherPersonnes()).map((p) => p.id)).toEqual(tous.filter((id) => id !== ecarte));
+    expect((await a.rechercherIndividus()).map((i) => i.id)).toEqual(individus.slice(1));
+    expect((await a.personne(ecarte)).id).toBe(ecarte);
+    expect((await base.rechercherPersonnes()).map((p) => p.id)).toEqual(tous);
   });
 });
 

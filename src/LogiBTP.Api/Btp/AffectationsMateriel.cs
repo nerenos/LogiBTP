@@ -6,8 +6,12 @@ using Npgsql;
 
 namespace LogiBTP.Api.Btp;
 
-/// <summary>Affectation saisie d'un matériel : type, ressource, période, commentaire, condition du matériel au retour.</summary>
-public sealed record AffectationMaterielSaisie(string Type, string? Ressource, DateOnly? Du, DateOnly? Au, string? Commentaire, string? Retour = null);
+/// <summary>
+/// Affectation saisie d'un matériel : type, ressource, période, commentaire, condition du matériel au retour, photos de l'état
+/// au départ et au retour (documents de la GED du matériel, db/279 ; vides = photo déjà enregistrée conservée).
+/// </summary>
+public sealed record AffectationMaterielSaisie(string Type, string? Ressource, DateOnly? Du, DateOnly? Au, string? Commentaire, string? Retour = null,
+    long? GedDepart = null, long? GedRetour = null);
 
 /// <summary>
 /// Affectations du matériel (db/231, lot 5b des demandes du 25/10/2026) : historique d'un matériel (saisi en entier,
@@ -18,6 +22,15 @@ public sealed record AffectationMaterielSaisie(string Type, string? Ressource, D
 /// materiel_etat) ; retour endommagé ou hors service → événement du matériel et notification au responsable de son
 /// service, sinon aux administrateurs.
 /// </summary>
+/// <summary>Règle des photos d'affectation : chaque document désigné doit être une pièce non supprimée de la GED du matériel.</summary>
+public static class PhotosAffectation
+{
+    public const string CodeRefus = "AFF_PHOTO";
+
+    /// <summary>Documents désignés qui ne figurent pas parmi les documents valides du matériel.</summary>
+    public static List<long> Refusees(IEnumerable<long> designes, IEnumerable<long> valides) => designes.Except(valides).ToList();
+}
+
 public static class AffectationsMateriel
 {
 
@@ -30,15 +43,16 @@ public static class AffectationsMateriel
     private const string SqlHistorique = $"""
         SELECT coalesce(json_agg(json_build_object('type', a.maf_type, 'ressource', a.maf_ressource, 'libelle', {Libelle},
                'du', a.maf_du, 'au', a.maf_au, 'commentaire', a.maf_commentaire, 'maj_par', a.maf_maj_par,
-               'depart', a.maf_condition_depart, 'retour', a.maf_condition_retour, 'retour_requis', a.maf_retour_requis) ORDER BY a.maf_du), '[]') AS "Value"
+               'depart', a.maf_condition_depart, 'retour', a.maf_condition_retour, 'retour_requis', a.maf_retour_requis,
+               'ged_depart', a.maf_ged_depart, 'ged_retour', a.maf_ged_retour) ORDER BY a.maf_du), '[]') AS "Value"
         FROM materiel_affectation a WHERE a.maf_mat_id = @m
         """;
 
     /// <summary>Ressources proposées : salariés et intérimaires actifs, sous-traitants actifs, matériels en service.</summary>
-    private const string SqlCibles = """
+    private const string SqlCibles = $$"""
         SELECT coalesce(json_agg(json_build_object('type', x.type, 'id', x.id, 'libelle', x.libelle) ORDER BY x.type, x.libelle), '[]') AS "Value"
         FROM (SELECT r.type, r.id, r.libelle || CASE WHEN r.type IN ('SALARIE', 'INTERIM') THEN coalesce(' (' || r.code || ')', '') ELSE '' END AS libelle
-              FROM v_ressource r WHERE r.actif AND r.type <> 'EQUIPE') x
+              FROM v_ressource r WHERE r.actif AND r.type <> 'EQUIPE' AND {{SqlBtp.RessourceUtilisable}}) x
         """;
 
     /// <summary>
@@ -66,7 +80,7 @@ public static class AffectationsMateriel
         """;
 
     private sealed record Porteur(string Mat, string Ressource);
-    private sealed record Existante(string Type, string Ressource, DateOnly Du, string? Depart, string? Retour, bool RetourRequis);
+    private sealed record Existante(string Type, string Ressource, DateOnly Du, string? Depart, string? Retour, bool RetourRequis, long? GedDepart, long? GedRetour);
     private sealed record EtatMateriel(string Mode, string Condition, string? Responsable, string Libelle);
 
     /// <summary>Conditions qui signalent un retour à traiter (événement et notification).</summary>
@@ -85,7 +99,7 @@ public static class AffectationsMateriel
         // Affectations enregistrées (même type, ressource et début) : condition au départ et retour exigé ou non.
         var existantes = await db.Database.SqlQueryRaw<Existante>("""
             SELECT maf_type AS type, maf_ressource AS ressource, maf_du AS du, maf_condition_depart AS depart, maf_condition_retour AS retour,
-                   maf_retour_requis AS retour_requis
+                   maf_retour_requis AS retour_requis, maf_ged_depart AS ged_depart, maf_ged_retour AS ged_retour
             FROM materiel_affectation WHERE maf_mat_id = @m
             """, new NpgsqlParameter("m", materiel)).ToListAsync(ct);
         Existante? Avant(AffectationMaterielSaisie a) => existantes.FirstOrDefault(x => x.Type == a.Type && x.Ressource == a.Ressource?.Trim() && x.Du == a.Du);
@@ -94,6 +108,19 @@ public static class AffectationsMateriel
         if (erreurs.Count > 0)
         {
             throw ExceptionMetier.Invalide(erreurs[0].Code, string.Join(" ; ", erreurs.Select(e => $"affectation {e.Affectation + 1} : {e.Code}").Distinct()));
+        }
+        // Photos : documents de la GED de ce matériel, non supprimés.
+        var photos = liste.SelectMany(a => new[] { a.GedDepart, a.GedRetour }).Where(x => x is not null).Select(x => x!.Value).Distinct().ToList();
+        if (photos.Count > 0)
+        {
+            var valides = await db.Database.SqlQueryRaw<long>("""
+                SELECT dge_id AS "Value" FROM document_ged
+                WHERE dge_id = ANY(@d) AND dge_type_element = 'materiel' AND dge_id_element = @m AND NOT dge_supprime
+                """, new NpgsqlParameter("d", photos.ToArray()), new NpgsqlParameter("m", materiel.ToString(System.Globalization.CultureInfo.InvariantCulture))).ToListAsync(ct);
+            if (PhotosAffectation.Refusees(photos, valides).Count > 0)
+            {
+                throw ExceptionMetier.Invalide(PhotosAffectation.CodeRefus, "Photo d'affectation : le document n'est pas une pièce de la GED de ce matériel");
+            }
         }
         // Porteurs actuels des autres matériels : un matériel ne peut pas porter, même indirectement, son porteur.
         var aujourdhui = DateOnly.FromDateTime(DateTime.Today);
@@ -117,14 +144,15 @@ public static class AffectationsMateriel
             var avant = Avant(a);
             await db.Database.ExecuteSqlRawAsync("""
                 INSERT INTO materiel_affectation (maf_mat_id, maf_type, maf_ressource, maf_du, maf_au, maf_commentaire, maf_maj_par,
-                                                  maf_condition_depart, maf_condition_retour, maf_retour_requis)
-                VALUES (@m, @t, @r, @du, @au, @c, @u, @dep, @ret, @req)
+                                                  maf_condition_depart, maf_condition_retour, maf_retour_requis, maf_ged_depart, maf_ged_retour)
+                VALUES (@m, @t, @r, @du, @au, @c, @u, @dep, @ret, @req, @gd, @gr)
                 """,
                 [new NpgsqlParameter("m", materiel), new NpgsqlParameter("t", a.Type), new NpgsqlParameter("r", a.Ressource!.Trim()),
                  new NpgsqlParameter("du", a.Du!.Value), SqlBtp.P("au", a.Au),
                  SqlBtp.P("c", a.Commentaire?.Trim()), new NpgsqlParameter("u", u.Code),
                  new NpgsqlParameter("dep", (object?)(avant is null ? etat.Condition : avant.Depart) ?? DBNull.Value),
-                 SqlBtp.P("ret", a.Retour), new NpgsqlParameter("req", avant?.RetourRequis ?? true)], ct);
+                 SqlBtp.P("ret", a.Retour), new NpgsqlParameter("req", avant?.RetourRequis ?? true),
+                 SqlBtp.P("gd", a.GedDepart ?? avant?.GedDepart), SqlBtp.P("gr", a.GedRetour ?? avant?.GedRetour)], ct);
         }
         var signaler = retour is not null && ConditionsASignaler.Contains(retour.Retour);
         if (retour is not null)

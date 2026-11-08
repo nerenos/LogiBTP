@@ -1,0 +1,14 @@
+{
+  "description": "Marge d'un chantier avec produit interne (lot 6, refacturation interne du matériel : margeChantier ↔ Marges.Chantier) : le produit interne s'ajoute au HT des lignes du chantier de suivi ; marges brute (− PA) et nette (− PR) en montant et en % du produit, taux null si produit nul. Taux comparés à 2 décimales.",
+  "marges": [
+    { "nom": "sans produit interne", "lignes": "1000", "produit_interne": "0", "pa": "600", "pr": "660", "attendu": { "produit": "1000", "brute": "400", "taux_brute": "40.00", "nette": "340", "taux_nette": "34.00" } },
+    { "nom": "chantier de suivi crédité des heures valorisées ailleurs", "lignes": "0", "produit_interne": "450", "pa": "300", "pr": "330", "attendu": { "produit": "450", "brute": "150", "taux_brute": "33.33", "nette": "120", "taux_nette": "26.67" } },
+    { "nom": "lignes et produit interne", "lignes": "1000", "produit_interne": "500", "pa": "900", "pr": "990", "attendu": { "produit": "1500", "brute": "600", "taux_brute": "40.00", "nette": "510", "taux_nette": "34.00" } },
+    { "nom": "produit nul : pas de taux", "lignes": "0", "produit_interne": "0", "pa": "50", "pr": "55", "attendu": { "produit": "0", "brute": "-50", "taux_brute": null, "nette": "-55", "taux_nette": null } }
+  ],
+  "repartition": {
+    "description": "Total société inchangé : le produit interne crédité au chantier de suivi égale les heures valorisées sur les autres chantiers (10 h à 45 sur deux chantiers).",
+    "heures_valorisees": ["270", "180"],
+    "produit_interne_suivi": "450"
+  }
+}

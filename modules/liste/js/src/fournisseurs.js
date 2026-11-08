@@ -2,10 +2,11 @@ import { texte } from '@logibtp/socle/dictionnaire';
 import { lireStockage, ecrireStockage, ErreurApi, appelApi } from '@logibtp/socle';
 import { ERREUR_LISTE } from './codes.js';
 import { normaliserDefinition } from './modele.js';
-import { filtrer, trier, lot, jusqua, comptesSegment, empreinte, filtresEffectifs, agreger, colonnesAgregats } from './requete.js';
+import { filtrer, trier, lot, jusqua, comptesSegment, empreinte, filtresEffectifs, resoudrePeriodes, agreger, colonnesAgregats } from './requete.js';
 
 // Fournisseurs de données d'une liste. Même interface pour l'API et pour la mémoire (démo hors ligne, tests) :
 //
+//   contexteSociete()             → { debut_exercice } début de l'exercice comptable (AAAA-MM-JJ, null = année civile)
 //   themes()                      → [{ thl_code, thl_libelle, thl_icone, thl_ordre, thl_types: [{ code, libelle }], thl_actif, thl_vli_defaut }]
 //   enregistrerTheme(theme)       supprimerTheme(code)    (profil ADMIN)
 //   vues(contexte, theme)         → [{ vli_id, vli_nom, vli_contexte, vli_theme, vli_partage, vli_proprietaire, modifiable }]
@@ -42,6 +43,8 @@ export class FournisseurApi {
     return { vue_id, definition, recherche, segments, tri, filtres, ...extra };
   }
 
+  /** Contexte de la société : { debut_exercice } (début de l'exercice comptable, null = année civile). */
+  contexteSociete() { return this.appel('GET', '/contexte'); }
   themes() { return this.appel('GET', '/themes'); }
   enregistrerTheme(t) { return this.appel('PUT', `/themes/${encodeURIComponent(t.thl_code)}`, t); }
   supprimerTheme(code) { return this.appel('DELETE', `/themes/${encodeURIComponent(code)}`); }
@@ -70,7 +73,8 @@ export class FournisseurApi {
  * localStorage si `cleStockage` est fourni (démo hors ligne uniquement).
  */
 export class FournisseurMemoire {
-  constructor({ sources = {}, vues = [], themes = [], utilisateur = 'demo', cleStockage = null } = {}) {
+  constructor({ sources = {}, vues = [], themes = [], utilisateur = 'demo', cleStockage = null, debutExercice = null } = {}) {
+    this.debutExercice = debutExercice;
     this.sourcesDonnees = sources;
     this.utilisateur = utilisateur;
     this.cleStockage = cleStockage;
@@ -95,6 +99,9 @@ export class FournisseurMemoire {
     ecrireStockage(this.cleStockage, this.vuesStockees);
     ecrireStockage(`${this.cleStockage}.themes`, this.themesStockes);
   }
+
+  /** Contexte de la société : l'exercice est fourni par l'appelant (option debutExercice), sinon année civile. */
+  async contexteSociete() { return { debut_exercice: this.debutExercice ?? null }; }
 
   async themes() {
     return structuredClone(this.themesStockes.filter((t) => t.thl_actif !== false).sort((a, b) => (a.thl_ordre ?? 0) - (b.thl_ordre ?? 0) || a.thl_libelle.localeCompare(b.thl_libelle)));
@@ -204,9 +211,20 @@ export class FournisseurMemoire {
     });
     const recherche = def.colonnes.filter((c) => !c.calcul && c.recherche && connues.has(c.code)).map((c) => c.code);
     const tri = (d.tri ?? []).filter((t) => connues.has(t.colonne));
-    const filtres = [...filtresEffectifs(def, connues), ...(d.filtres ?? []).filter((f) => connues.has(f.colonne))];
+    const filtres = this.#periodes([...filtresEffectifs(def, connues), ...(d.filtres ?? []).filter((f) => connues.has(f.colonne))], s, d);
+    const agregats = (d.agregats ?? []).map((a) => ({ ...a, filtres: this.#periodes(a.filtres ?? [], s, d), denominateur: this.#periodes(a.denominateur ?? [], s, d) }));
     const types = (this.themesStockes.find((t) => t.thl_code === def.theme)?.thl_types ?? []).map((t) => t.code);
-    return { lignes, recherche, tri, filtres, types };
+    return { lignes, recherche, tri, filtres, types, agregats };
+  }
+
+  /** Filtres « periode » résolus à la date d'exécution (d.reference : date fixée par les tests) ; colonne non date refusée. */
+  #periodes(filtres, source, d) {
+    try {
+      return resoudrePeriodes(filtres, new Map(source.colonnes.map((c) => [c.code, c.type])), { reference: d.reference ?? undefined, debutExercice: d.debut_exercice ?? this.debutExercice ?? null });
+    } catch (e) {
+      if (e.code === ERREUR_LISTE.PERIODE_COLONNE) throw new ErreurFournisseur(422, e.code, texte('liste.fournisseur.periode_colonne', { colonne: e.colonne }));
+      throw new ErreurFournisseur(422, e.code ?? ERREUR_LISTE.PERIODE_INCONNUE, e.message);
+    }
   }
 
   async lot(d) {
@@ -224,8 +242,8 @@ export class FournisseurMemoire {
 
   /** Agrégats sur toute la sélection (demande.agregats : totaux, indicateurs). */
   async agregats(d) {
-    const { lignes, recherche, filtres, types } = await this.#lignesSource(d);
-    return agreger(filtrer(lignes, { ...d, filtres, types }, recherche), d.agregats ?? []);
+    const { lignes, recherche, filtres, types, agregats } = await this.#lignesSource(d);
+    return agreger(filtrer(lignes, { ...d, filtres, types }, recherche), agregats);
   }
 
   async controle(d, curseur) {

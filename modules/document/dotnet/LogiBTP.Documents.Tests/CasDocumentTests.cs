@@ -38,6 +38,11 @@ public class CasDocumentTests
         var fautes = new List<string>();
         CasPartages.VerifierErreurs(a["erreurs"], res.Erreurs.Select(e => e.Code), fautes);
         if (a["document"] is JsonObject doc) CasPartages.Verifier(doc, r["document"]!.AsObject(), "document", fautes);
+        if (a.ContainsKey("situation"))
+        {
+            if (a["situation"] is JsonObject sit) CasPartages.Verifier(sit, r["situation"] as JsonObject, "situation", fautes);
+            else Assert.Null(r["situation"]);
+        }
         foreach (var (id, att) in a["lignes"]?.AsObject() ?? [])
             CasPartages.Verifier(att!.AsObject(), CasPartages.Trouver(r["lignes"]!.AsArray(), "lig_id", id), $"lignes[{id}]", fautes);
         foreach (var att in a["tva"]?.AsArray() ?? [])

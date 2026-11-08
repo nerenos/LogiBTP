@@ -148,3 +148,39 @@ public class GrapheAnnuaireTests
         Assert.True(JsonNode.DeepEquals(c["attendu"], obtenu), $"{nom} : obtenu {obtenu!.ToJsonString()}");
     }
 }
+
+/// <summary>Point d'accroche des choix : sans spécialisation aucun filtre, spécialisé la condition s'ajoute aux seules recherches.</summary>
+public class FiltreChoixTests
+{
+    private class ServiceCapture(bool filtre) : LogiBTP.Annuaire.Web.ServiceAnnuaire(null!, null!)
+    {
+        public readonly List<string> Requetes = [];
+        protected override string? FiltreChoixPersonnes() => filtre ? "per_actif" : null;
+        protected override string? FiltreChoixIndividus() => filtre ? "ind_actif" : null;
+        protected override Task<List<Dictionary<string, object?>>> Lire(string sql, IReadOnlyList<object?> parametres, CancellationToken ct)
+        {
+            Requetes.Add(sql);
+            return Task.FromResult(new List<Dictionary<string, object?>>());
+        }
+    }
+
+    [Fact]
+    public async Task Sans_specialisation_aucun_filtre()
+    {
+        var s = new ServiceCapture(false);
+        await s.RechercherPersonnes("abc", null, 30, CancellationToken.None);
+        await s.RechercherIndividus(null, 30, CancellationToken.None);
+        Assert.All(s.Requetes, r => Assert.DoesNotContain("_actif)", r));
+        Assert.DoesNotContain("WHERE", s.Requetes[1]);
+    }
+
+    [Fact]
+    public async Task Specialise_la_condition_s_ajoute_aux_recherches()
+    {
+        var s = new ServiceCapture(true);
+        await s.RechercherPersonnes("abc", null, 30, CancellationToken.None);
+        await s.RechercherIndividus(null, 30, CancellationToken.None);
+        Assert.Contains("AND (per_actif)", s.Requetes[0]);
+        Assert.Contains("WHERE (ind_actif)", s.Requetes[1]);
+    }
+}

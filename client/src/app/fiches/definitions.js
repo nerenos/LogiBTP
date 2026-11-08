@@ -126,7 +126,7 @@ export const TYPES_FICHE = {
         {
           code: 'informations', titre: 'Informations',
           groupes: [
-            { titre: 'Identification', champs: ['code', 'designation', 'famille', 'marque', 'modele', 'numero_serie', 'immatriculation', 'energie', 'usage'] },
+            { titre: 'Identification', champs: ['code', 'designation', 'famille', 'marque', 'modele', 'numero_serie', 'immatriculation', 'numero_carte', 'energie', 'usage'] },
             { titre: 'Dates', champs: ['date_entree', 'date_mise_service', 'fin_garantie', 'date_sortie'] },
             { titre: 'Poids et dimensions', champs: ['poids', 'longueur', 'largeur', 'hauteur'] },
             { titre: 'Location', champs: ['loueur_id', 'location_ent_id', 'fin_location'] },
@@ -173,6 +173,8 @@ export const TYPES_FICHE = {
         // Lot 5a des demandes du 25/10/2026 (db/230).
         c('modele', 'Modèle', 'mat_modele', 'texte', { longueur: 60 }),
         c('immatriculation', 'Immatriculation', 'mat_immatriculation', 'texte', { exemple: 'AA-123-AA', longueur: 20, non_copie: true, aide: 'Unique : un véhicule immatriculé ou un EPI marqué' }),
+        // Plan materiel-suites, lot 10 (db/281) : rapprochement des pleins du fichier des cartes carburant.
+        c('numero_carte', 'N° de carte carburant', 'mat_numero_carte', 'texte', { longueur: 40, non_copie: true, aide: 'Rapproche les pleins du fichier de la carte carburant (sinon par immatriculation)' }),
         c('energie', 'Énergie', 'mat_energie', 'liste', { requete: "SELECT lva_code, lva_libelle FROM liste_valeur WHERE lva_liste = 'ENERGIE' AND lva_actif ORDER BY lva_ordre, lva_code" }),
         // Lot 5c-2 (db/233) : compteurs suivis, valeurs = derniers relevés.
         c('compteurs', 'Compteurs', 'mat_compteurs', 'liste', { obligatoire: true, defaut: 'H', options: options(['H', 'Heures'], ['KM', 'Kilomètres'], ['H_KM', 'Heures et kilomètres'], ['AUCUN', 'Aucun']) }),
@@ -290,7 +292,7 @@ export const TYPES_FICHE = {
         c('cpt_code', 'Compte comptable', 'ele_cpt_code', 'texte', { longueur: 20 }),
         c('tva_code', 'Code TVA', 'ele_tva_code', 'texte', { longueur: 10, aide: 'Code du taux de TVA du poste (T20…), vide : TVA du document' }),
         // Lot 7 des demandes du 25/10/2026 (module 064).
-        c('mots_cles', 'Mots-clés', 'ele_mots_cles', 'texte', { longueur: 500, largeur: 'plein', aide: 'Mots de recherche séparés par des virgules (domino, sucre, connecteur rapide…) : appel F3 et listes' }),
+        c('mots_cles', 'Mots-clés', 'ele_mots_cles', 'texte', { format: 'jetons', longueur: 500, largeur: 'plein', aide: 'Mots de recherche séparés par des virgules (domino, sucre, connecteur rapide…) : appel F3 et listes' }),
         c('code_barre', 'Code-barres', 'ele_code_barre', 'texte', { longueur: 50, non_copie: true, aide: 'EAN… unique dans la bibliothèque ; lu au lecteur dans la colonne Code d\'un document' }),
         c('description_html', 'Description technique', 'ele_description_html', 'html', { aide: 'Reprise par les éditions (lignes[].description_html)' }),
         c('delai_livraison', 'Délai de livraison (jours)', 'ele_delai_livraison', 'nombre', { format: '9999', aide: 'Délai global de l\'élément' }),
@@ -551,7 +553,7 @@ export const TYPES_FICHE = {
         code: 'informations', titre: 'Chantier',
         groupes: [
           { titre: 'Identification', champs: ['code', 'libelle', 'aff_id', 'prj_id', 'tiers_id'] },
-          { titre: 'Adresse', champs: ['adresse', 'code_postal', 'ville', 'contact_ind_id'] },
+          { titre: 'Adresse', champs: ['adresse', 'code_postal', 'ville', 'zone', 'contact_ind_id'] },
           { titre: 'Suivi', champs: ['statut', 'date_ouverture', 'code_analytique'] },
           { titre: 'Travaux', champs: ['debut_prevu', 'date_fin_prevue', 'debut_reel', 'fin_reelle'] },
           { titre: 'Équipe', champs: ['charge_ind_id', 'conducteur_ind_id', 'chef_ind_id'] },
@@ -572,6 +574,7 @@ export const TYPES_FICHE = {
         c('adresse', 'Adresse', 'cha_adresse', 'texte', { longueur: 200, largeur: 'plein' }),
         c('code_postal', 'Code postal', 'cha_code_postal', 'texte', { longueur: 10 }),
         c('ville', 'Ville', 'cha_ville', 'texte', { longueur: 100 }),
+        c('zone', 'Zone de déplacement', 'cha_zone', 'nombre', { format: '9', aide: 'Zone estimée (0 à 9), reprise du projet ; les zones validées par agence sont celles du Pointage' }),
         c('contact_ind_id', 'Contact sur place', 'cha_contact_ind_id', 'nombre', { reference: 'individu', aide: 'Le client ou un salarié : repris dans l\'adresse des travaux et de livraison des documents' }),
         c('statut', 'Statut', 'cha_statut', 'liste', { obligatoire: true, defaut: 'OUVERT', options: options(['OUVERT', 'Ouvert'], ['TERMINE', 'Terminé'], ['CLOS', 'Clos']) }),
         c('date_ouverture', 'Ouverture', 'cha_date_ouverture', 'date'),

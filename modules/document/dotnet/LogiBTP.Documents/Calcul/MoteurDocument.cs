@@ -341,6 +341,7 @@ public class MoteurDocument<TDoc, TLigne>
     protected sealed record Avancement(decimal Montant, decimal Qte);
 
     private readonly Dictionary<long, Avancement?> avancements = [];
+    private readonly Dictionary<long, (decimal Cumul, decimal Precedent)> infosSituation = [];
 
     /// <summary>
     /// Avancement d'une ligne de prix (CONCEPTION-ACHATS-MARCHES.md, Q24 ; avancement() de moteur-document.js) : saisi en %
@@ -385,6 +386,7 @@ public class MoteurDocument<TDoc, TLigne>
         var periode = Doc.EntAvtPresentation == "P";
         var a = new Avancement(periode ? m - (l.LigAvtMontantPrecedent ?? 0) : m, periode ? q - (l.LigAvtQtePrecedent ?? 0) : q);
         avancements[l.LigId] = a;
+        infosSituation[l.LigId] = (m, l.LigAvtMontantPrecedent ?? 0);
         return a;
     }
 
@@ -416,12 +418,14 @@ public class MoteurDocument<TDoc, TLigne>
         if (Math.Abs(m) > Math.Abs(mc)) Erreur(p.LigId, "LIGNE_DEPASSEE", "Poste du pied au-delà de son montant dans la commande", false);
         p.LigAvtMontantCumul = m;
         p.LigAvtPct = mc == 0 ? 0 : Arr6(m / mc * 100);
+        infosSituation[p.LigId] = (m, p.LigAvtMontantPrecedent ?? 0);
         return Doc.EntAvtPresentation == "P" ? m - (p.LigAvtMontantPrecedent ?? 0) : m;
     }
 
     protected virtual void PasseQuantites()
     {
         avancements.Clear();
+        infosSituation.Clear();
         AvantQuantites();
         foreach (var l in Ordre)
         {
@@ -1117,6 +1121,19 @@ public class MoteurDocument<TDoc, TLigne>
 
     // ------------------------------------------------------------------ résultat
 
+    /// <summary>Information d'une situation (présentation C ; infoSituation() de moteur-document.js) : précédent et période = cumul − précédent. Null hors situation.</summary>
+    private InfoSituation? InfoSituation()
+    {
+        if (Doc.EntAvtPresentation != "C") return null;
+        decimal cumul = 0, precedent = 0;
+        foreach (var i in infosSituation.Values)
+        {
+            cumul += i.Cumul;
+            precedent += i.Precedent;
+        }
+        return new InfoSituation(Arrondir(precedent, PrecMontant), Arrondir(cumul - precedent, PrecMontant));
+    }
+
     /// <summary>Résultat du calcul ; une spécialisation renvoie son propre type (métrés, variables…).</summary>
     protected virtual ResultatDocument<TDoc, TLigne> CreerResultat() => Remplir(new ResultatDocument<TDoc, TLigne>());
 
@@ -1128,6 +1145,7 @@ public class MoteurDocument<TDoc, TLigne>
         r.Tva = Tva;
         r.Pied = Pied;
         r.PiedsSections = PiedsSections;
+        r.Situation = InfoSituation();
         r.Erreurs = Erreurs;
         r.Avertissements = Avertissements;
         return r;

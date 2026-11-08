@@ -129,6 +129,10 @@
       "ent_total_ht": 2050.61,
       "ent_total_tva": 410.12
     },
+    "situation": {
+      "precedent": 400,
+      "periode": 1650.61
+    },
     "lignes": {
       "1": {
         "lig_avt_montant_cumul": 300,

@@ -19,6 +19,7 @@ namespace LogiBTP.Api.Btp;
 ///   par la clé des données) et certificat du domaine et de son joker ; certificat renouveler [--avant N] : nouveau
 ///   certificat N jours (60) avant l'échéance ; certificat importer --certificat F [--cle K] [--origine IMPORTE|LETSENCRYPT] :
 ///   certificat fourni (PKCS#12 : mot de passe dans LOGIBTP_CERTIFICAT_MOT_DE_PASSE) ; certificat etat ;
+///   certificat base-renouveler : certificat de la base N jours (60) avant l'échéance, code de sortie 10 si changé ;
 ///   certificat base --nom N --adresses-api A : base sur une autre machine (TLS) ; base droits : roles.sql sur toutes les bases ;
 ///   sauvegarde chiffrer|dechiffrer DOSSIER : fichiers d'un jeu de sauvegarde chiffrés par la clé des données ;
 ///   base mettre-a-jour : scripts du manifeste non appliqués, droits, conversions, sur toutes les bases ; base adopter :
@@ -31,10 +32,11 @@ public static class CommandeInstallation
     private const string RoleSchema = "logibtp_schema";
 
     private static readonly string Usage = """
-        Usage : installation preparer --domaine D [--deploiement LOCAL|INTERNET] [--confiance CIDR,…] [--reseau CIDR] [--memoire Mo] [--libelle L] [--base-hote H]
+        Usage : installation preparer --domaine D [--deploiement LOCAL|INTERNET] [--confiance CIDR,…] [--reseau CIDR] [--memoire Mo] [--libelle L] [--base-hote H] [--code-certificat]
                 installation base creer
                 installation societe ajouter CODE [--libelle L]
                 installation societes | scripts verifier | conversions | etat
+                installation certificat base-renouveler (code 10 : certificat de la base créé ou renouvelé, à redémarrer)
                 installation certificat creer [--organisation O] [--jours N] [--nouvelle-racine] | renouveler [--avant N]
                 installation certificat importer --certificat F [--cle K] [--origine IMPORTE|LETSENCRYPT] | etat
                 installation certificat base --nom N --adresses-api A [--certificat F --cle K] | installation base droits
@@ -61,6 +63,7 @@ public static class CommandeInstallation
                 ("certificat", "renouveler") => RenouvelerCertificat(args, dossier, sortie),
                 ("certificat", "importer") => ImporterCertificat(args, dossier, sortie),
                 ("certificat", "etat") => EtatCertificat(sortie),
+                ("certificat", "base-renouveler") => RenouvelerBase(dossier, sortie),
                 ("certificat", "base") => CertificatBase(args, dossier, sortie),
                 ("base", "droits") => await DroitsBasesAsync(dossier, sortie),
                 ("base", "mettre-a-jour") => await MettreAJourAsync(dossier, sortie),
@@ -122,7 +125,7 @@ public static class CommandeInstallation
         var dossierBase = DossierBase();
         Directory.CreateDirectory(dossierBase);
         // TLS de la base toujours actif (A35) : certificat de la base émis avant d'écrire une configuration « ssl = on ».
-        CertificatBaseLocal(Configuration(dossier), env, domaine, sortie);
+        var certificatChange = RenouvelerCertificatBase(Configuration(dossier), env, domaine, dossierBase, Certificats(), DateTimeOffset.Now, sortie);
         var config = Configuration(dossier);
         var reglages = Reglages(config);
         File.WriteAllText(Path.Combine(dossierBase, "pg_hba.conf"), ConfigurationPostgres.PgHba(reglages));
@@ -137,7 +140,9 @@ public static class CommandeInstallation
         }
         else if (!File.Exists(mdp)) File.WriteAllText(mdp, "");
         sortie.WriteLine($"Configuration de PostgreSQL écrite dans {dossierBase} (réseau {reglages.Reseau}, {reglages.MemoireMo} Mo)");
-        return 0;
+        // Rejouable : l'option --code-certificat demande le code 10 quand le certificat de la base a été créé ou renouvelé
+        // (mise à jour : la base n'est redémarrée que dans ce cas) ; sans elle le code reste 0 (installeurs existants).
+        return certificatChange && args.Contains("--code-certificat") ? CodeCertificatBaseChange : 0;
     }
 
     // ---------------------------------------------------------------- bases
@@ -313,30 +318,55 @@ public static class CommandeInstallation
         return 0;
     }
 
+    /// <summary>Code de sortie « certificat de base créé ou renouvelé » : la base doit être redémarrée pour le lire (0 : inchangé).</summary>
+    public const int CodeCertificatBaseChange = 10;
+    private const int JoursAvantEcheanceBase = 60;
+
+    /// <summary>
+    /// Le certificat de la base est à émettre : TLS du serveur non encore actif, fichiers absents ou échéance à moins de
+    /// 60 jours (fin = null si le certificat est illisible ou absent).
+    /// </summary>
+    public static bool CertificatBaseAEmettre(bool tlsActif, DateTime? fin, DateTime maintenant) =>
+        !tlsActif || fin is null || fin.Value <= maintenant.AddDays(JoursAvantEcheanceBase);
+
     /// <summary>
     /// Certificat de la base sur le même hôte que l'API (lot 11 des demandes du 25/10/2026, A35) : émis par l'autorité
     /// LogiBTP (créée au besoin) pour le nom de la base dans le domaine (LOGIBTP_BASE_HOTE s'il en fait partie, sinon
     /// base.&lt;domaine&gt;), renouvelé à 60 jours de son échéance ; l'API vérifie la chaîne par la racine (VerifyCA : l'hôte
     /// Docker « logibtp-base » n'est pas un nom du domaine) sauf réglage déjà posé (VerifyFull d'une base distante).
+    /// Rend vrai si le certificat a été créé ou renouvelé.
     /// </summary>
-    private static void CertificatBaseLocal(IConfiguration config, string env, string domaine, TextWriter sortie)
+    public static bool RenouvelerCertificatBase(IConfiguration config, string env, string domaine, string dossierBase,
+        DossierCertificats d, DateTimeOffset maintenant, TextWriter sortie)
     {
-        var dossierBase = DossierBase();
         var crt = Path.Combine(dossierBase, "base.crt");
-        if (config[VariablesEnv.BaseSslServeur] is "1" or "true" or "on" && File.Exists(crt) && File.Exists(Path.Combine(dossierBase, "base.key"))
-            && X509Certificate2.CreateFromPem(File.ReadAllText(crt)).NotAfter > DateTime.Now.AddDays(60))
-            return;
+        DateTime? fin = null;
+        if (File.Exists(crt) && File.Exists(Path.Combine(dossierBase, "base.key")))
+            fin = X509Certificate2.CreateFromPem(File.ReadAllText(crt)).NotAfter;
+        var tls = config[VariablesEnv.BaseSslServeur] is "1" or "true" or "on";
+        if (!CertificatBaseAEmettre(tls, fin, maintenant.DateTime)) return false;
         var hote = config[VariablesEnv.BaseHote];
         var nom = hote is not null && hote.EndsWith("." + domaine, StringComparison.OrdinalIgnoreCase) ? hote.ToLowerInvariant() : "base." + domaine;
-        var d = Certificats();
-        var (racine, cleRacine) = Racine(d, domaine, Exiger(config, ExtensionsConfiguration.CleChiffrement), false, null, DateTimeOffset.Now, sortie);
-        var emis = AutoriteCertificats.Emettre(racine, cleRacine, [nom], DateTimeOffset.Now);
+        var (racine, cleRacine) = Racine(d, domaine, Exiger(config, ExtensionsConfiguration.CleChiffrement), false, null, maintenant, sortie);
+        var emis = AutoriteCertificats.Emettre(racine, cleRacine, [nom], maintenant);
         EcrireCertificatBase(dossierBase, emis.CertificatPem, emis.ClePem);
         var valeurs = new Dictionary<string, string> { [VariablesEnv.BaseSslServeur] = "1" };
         if (string.IsNullOrWhiteSpace(config[VariablesEnv.BaseSsl])) valeurs[VariablesEnv.BaseSsl] = "VerifyCA";
         if (string.IsNullOrWhiteSpace(config[VariablesEnv.BaseRacine])) valeurs[VariablesEnv.BaseRacine] = d.Racine.Replace('\\', '/');
         RemplacerEnv(env, valeurs);
         sortie.WriteLine($"Certificat de la base {nom} valable jusqu'au {emis.Certificat.NotAfter:dd/MM/yyyy} : TLS de la base actif (redémarrer le conteneur logibtp-base)");
+        return true;
+    }
+
+    /// <summary>Renouvellement seul du certificat de la base (tâche planifiée, minuterie) : code 10 si changé, sinon 0.</summary>
+    private static int RenouvelerBase(string dossier, TextWriter sortie)
+    {
+        var config = Configuration(dossier);
+        var domaine = Exiger(config, VariablesEnv.Domaine);
+        Directory.CreateDirectory(DossierBase());
+        var change = RenouvelerCertificatBase(config, Path.Combine(dossier, ".env"), domaine, DossierBase(), Certificats(), DateTimeOffset.Now, sortie);
+        if (!change) sortie.WriteLine("Certificat de la base valable encore plus de 60 jours : rien à faire");
+        return change ? CodeCertificatBaseChange : 0;
     }
 
     private static void EcrireCertificatBase(string dossierBase, string crt, string cle)
