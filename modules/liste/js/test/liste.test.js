@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   normaliser, compilerFormule, resolveurColonnes, ModeleVue, FournisseurMemoire, correspond, calculerLargeurs, valeursDistinctes, bornesPeriode, resoudrePeriodes,
-  filtreVuePeriode, libellePeriode, resoudrePeriodes, PERIODE, OPERATEURS_DATE,
+  filtreVuePeriode, libellePeriode, TEINTES_PASTILLE, resoudrePeriodes, PERIODE, OPERATEURS_DATE,
 } from '../src/index.js';
 
 const dossier = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../tests/cas');
@@ -240,5 +240,15 @@ describe('exercice comptable fourni aux périodes', () => {
     const f = new FournisseurMemoire({ sources: { s: { ...structuredClone(lire('02_requete.json').source) } }, debutExercice: '2000-07-01' });
     expect(await f.contexteSociete()).toEqual({ debut_exercice: '2000-07-01' });
     expect(await new FournisseurMemoire({}).contexteSociete()).toEqual({ debut_exercice: null });
+  });
+});
+
+describe('teintes de pastille (P1)', () => {
+  const fr = JSON.parse(fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../personnalisation/fr.json'), 'utf8'));
+  it('chaque teinte a un nom de couleur au dictionnaire', () => {
+    for (const t of TEINTES_PASTILLE) expect(fr.liste.concepteur.teintes[t], t).toBeTruthy();
+  });
+  it('codes inchangés', () => {
+    expect(TEINTES_PASTILLE).toEqual(['neutre', 'info', 'envoye', 'succes', 'attention', 'erreur', 'termine', 'barre']);
   });
 });

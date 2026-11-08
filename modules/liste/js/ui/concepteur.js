@@ -28,6 +28,10 @@ export function libelleFiltreVue(f, titre = f.colonne) {
 //                        format, teinte (le total de pied d'une colonne se choisit dans la mise en forme)
 
 const LIB_FORMATS = textesParCode('liste.formats', ['texte', 'nombre', 'date', 'coche', 'combo', 'picto', 'pastille']);
+/** Choix de teinte : libellé « code (couleur) », aperçu par la variable `--pastille-<teinte>-texte` du thème. */
+export const optionsTeintes = (teintes = TEINTES_PASTILLE.filter((t) => t !== 'barre')) => teintes.map((t) => ({
+  valeur: t, libelle: `${t} (${texte(`liste.concepteur.teintes.${t}`)})`, couleur: `var(--pastille-${t === 'barre' ? 'neutre' : t}-texte)`,
+}));
 const opt = (v, l, courant) => `<option value="${echapper(v ?? '')}" ${String(courant ?? '') === String(v ?? '') ? 'selected' : ''}>${echapper(l)}</option>`;
 const premiereLigne = (t) => String(t ?? '').replace(/\s*\n\s*/g, ' ');
 
@@ -306,7 +310,7 @@ export class ConcepteurVue {
           <select data-col="total">${opt('', texte('liste.concepteur.champs.total_aucun'), c.total)}${Object.entries(TOTAUX_COLONNE).map(([v, l]) => opt(v, l, c.total)).join('')}</select></label>
         <label>${texteHtml('liste.concepteur.champs.alignement')} <select data-col="alignement">${['', 'gauche', 'centre', 'droite'].map((a) => opt(a, texte(`liste.concepteur.alignements.${a || 'auto'}`), c.alignement)).join('')}</select></label>
         <label class="large" ${['combo', 'picto', 'pastille'].includes(c.format) ? '' : 'hidden'}>${c.format === 'pastille'
-          ? texteHtml('liste.concepteur.champs.valeurs_pastille', { teintes: TEINTES_PASTILLE.join(', ') }) : texteHtml('liste.concepteur.champs.valeurs')}
+          ? texteHtml('liste.concepteur.champs.valeurs_pastille', { teintes: TEINTES_PASTILLE.map((t) => `${t} (${texte(`liste.concepteur.teintes.${t}`)})`).join(', ') }) : texteHtml('liste.concepteur.champs.valeurs')}
           <textarea rows="4" data-options placeholder="${texteHtml(`liste.concepteur.champs.${c.format === 'pastille' ? 'valeurs_pastille_exemple' : 'valeurs_exemple'}`)}">${echapper(c.options.map((o) => [o.valeur, o.libelle, c.format === 'pastille' ? o.teinte : o.picto].filter((x) => x !== undefined && x !== null && x !== '').join(' | ')).join('\n'))}</textarea></label>
         <fieldset class="large"><legend>${texteHtml('liste.concepteur.onglets.forme')}</legend>
           ${couleur('couleur', texteHtml('liste.concepteur.couleur_texte'))}${couleur('fond', texteHtml('liste.concepteur.couleur_fond'))}
@@ -593,7 +597,7 @@ export class ConcepteurVue {
             <label>${texteHtml('liste.concepteur.indicateurs.calcul')} <select data-ind="calcul">${Object.entries(CALCULS_INDICATEUR).map(([v, l]) => opt(v, l, ind.calcul)).join('')}</select></label>
             <label ${['compte', 'ratio'].includes(ind.calcul) ? 'hidden' : ''}>${texteHtml('liste.concepteur.indicateurs.colonne')} <select data-ind="colonne">${opt('', texte('liste.concepteur.indicateurs.aucune_colonne'), ind.colonne)}${numeriques.map((c) => opt(c.code, c.code, ind.colonne)).join('')}</select></label>
             <label>${texteHtml('liste.concepteur.champs.format')} <select data-ind="format">${Object.entries(FORMATS_INDICATEUR).map(([v, l]) => opt(v, l, ind.format)).join('')}</select></label>
-            <label>${texteHtml('liste.concepteur.indicateurs.teinte')} <select data-ind="teinte">${TEINTES_PASTILLE.filter((t) => t !== 'barre').map((t) => opt(t, t, ind.teinte)).join('')}</select></label>
+            <label>${texteHtml('liste.concepteur.indicateurs.teinte')} <span data-ind-teinte></span></label>
             <label class="large">${texteHtml('liste.concepteur.champs.bulle')} <input data-ind="bulle" value="${echapper(ind.bulle ?? '')}"></label>
           </div>
           <div class="filtres-indicateur"><strong>${texteHtml(`liste.concepteur.indicateurs.${ind.calcul === 'ratio' ? 'numerateur' : 'filtres'}`)}</strong>
@@ -623,6 +627,10 @@ export class ConcepteurVue {
           rendre();
         }
       }));
+      // Teinte : nom de la couleur et aperçu par la variable du thème (le code reste celui enregistré).
+      const combo = creerCombo({ options: optionsTeintes(), valeur: ind.teinte ?? 'neutre', vide: false, titre: texte('liste.concepteur.indicateurs.teinte') });
+      combo.addEventListener('change', () => { ind.teinte = combo.valeurCombo || 'neutre'; });
+      fs.querySelector('[data-ind-teinte]').append(combo);
       this.#brancherFiltres(fs, ind.filtres, `ind-${i}`, rendre);
       if (ind.calcul === 'ratio') this.#brancherFiltres(fs, ind.denominateur, `den-${i}`, rendre);
       fs.querySelectorAll('[data-ajouter-filtre]').forEach((b) => b.addEventListener('click', () => { ind[b.dataset.ajouterFiltre].push(this.#nouveauFiltre()); rendre(); }));

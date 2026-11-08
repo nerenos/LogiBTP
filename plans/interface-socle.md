@@ -45,7 +45,7 @@
 | 2 | P2 : composant `creerJetons` | `socle` | — | FAIT (08/11/2026) |
 | 3 | P2 : mots-clés en jetons dans la fiche élément | `modules/bibliotheque` | 2 | A FAIRE |
 | 4 | P2 : mots-clés en jetons dans la GED | `modules/ged` | 2 | FAIT (08/11/2026) |
-| 5 | P1 : nom et aperçu de la couleur dans le choix de teinte | `modules/liste` | — | A FAIRE |
+| 5 | P1 : nom et aperçu de la couleur dans le choix de teinte | `modules/liste` | — | FAIT (08/11/2026) |
 | 6 | I1 : individus de notre société par poste en choix en liste | cœur | — | A FAIRE |
 | 7 | I1 : contact d'un intervenant dans les contacts du tiers | cœur | 6 | A FAIRE |
 | 8 | I1 : sélection multiple des destinataires | cœur | 6 | A FAIRE |
@@ -107,7 +107,9 @@
 - **Jeux de tests** : dépôt avec deux jetons → `dge_mots_cles` à deux valeurs ; modification ; retrait.
 - **Critère de fin** : `npm test` vert.
 
-## Lot 5 : P1, nom et aperçu de la couleur dans le choix de teinte (A FAIRE)
+## Lot 5 : P1, nom et aperçu de la couleur dans le choix de teinte (FAIT 08/11/2026)
+
+> Écart : le choix de teinte est le `<select>` des indicateurs, remplacé par `creerCombo` (option `couleur` = `var(--pastille-<teinte>-texte)`) ; la saisie des valeurs de pastille reste un texte, son aide affiche « code (couleur) ». Noms au dictionnaire `liste.concepteur.teintes.*` ; test sur le dictionnaire et les codes, le DOM n'est pas testé. Point ouvert « noms de couleur » tranché ainsi.
 
 - **Module** : `modules/liste`. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `modules/liste/js/src/modele.js` (`:21`, `TEINTES_PASTILLE` inchangé), choix de teinte du concepteur

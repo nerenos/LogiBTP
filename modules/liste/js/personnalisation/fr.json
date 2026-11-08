@@ -160,6 +160,16 @@
       }
     },
     "concepteur": {
+      "teintes": {
+        "neutre": "gris",
+        "info": "bleu",
+        "envoye": "violet",
+        "succes": "vert",
+        "attention": "orange",
+        "erreur": "rouge",
+        "termine": "gris foncé",
+        "barre": "texte barré"
+      },
       "filtre_dans": "{{titre}} parmi {{valeurs}}",
       "filtre_entre": "{{titre}} entre {{valeur}} et {{valeur2}}",
       "titre": "Concepteur de vue",
@@ -230,7 +240,7 @@
         "total": "Total",
         "total_aide": "Ligne de total en bas de la liste, calculée par la base sur toute la sélection",
         "total_aucun": "Aucun",
-        "valeurs_pastille": "Valeurs (une par ligne : valeur | libellé | teinte : {{teintes}})",
+        "valeurs_pastille": "Valeurs (une par ligne : valeur | libellé | teinte, parmi : {{teintes}})",
         "valeurs_pastille_exemple": "P | En panne | erreur"
       },
       "alignements": {
