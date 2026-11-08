@@ -456,6 +456,10 @@
       "equipe_membres": "Repas déclaré pour les membres cochés :",
       "equipe_aucun_membre": "Cochez au moins un membre de l'équipe.",
       "equipe_refus": "Repas non enregistré pour {{nom}} : {{raison}}",
+      "refus": {
+        "REPAS_DEJA": "Repas déjà déclaré ce jour pour ce salarié",
+        "REPAS_HORS_EQUIPE": "Ce salarié ne fait pas partie de l'équipe de la borne"
+      },
       "nom": "Nom du restaurant :",
       "ville": "Ville du restaurant (facultatif) :",
       "distance_km": "{{distance}} km",

@@ -69,6 +69,8 @@ const PIN_VIDE = icone('pointage_pin_vide');
 
 const initiales = (s) => `${s.prenom?.[0] ?? ''}${s.nom?.[0] ?? ''}`.toUpperCase();
 
+const raisonRefusRepas = (code) => (code === ERREUR_POINTAGE.REPAS_DEJA || code === ERREUR_POINTAGE.REPAS_HORS_EQUIPE ? texte(`pointage.repas.refus.${code}`) : messageErreur(code));
+
 export class PageBorne extends PageBase {
   icone = icone('pointage_borne');
 
@@ -701,7 +703,7 @@ export class PageBorne extends PageBase {
       try {
         const rep = await appel('POST', '/repas', corpsRepas({ jeton: j.jeton, repas: { date: j.date, cha_id: chantier, ...r }, equipe: equipe ? this.etat.membres : null, decoches: equipe ? decoches() : [] }));
         const l = equipe ? rep.repas : rep;
-        if (equipe && rep.refus?.length) await alerter(rep.refus.map((x) => texte('pointage.repas.equipe_refus', { nom: nomMembre(x.salarie), raison: messageErreur(x.code) })).join('\n'));
+        if (equipe && rep.refus?.length) await alerter(rep.refus.map((x) => texte('pointage.repas.equipe_refus', { nom: nomMembre(x.salarie), raison: raisonRefusRepas(x.code) })).join('\n'));
         j.repas = l.find((x) => String(x.date).slice(0, 10) === String(j.date).slice(0, 10)) ?? null;
         if (this.test) await alerter(texte('pointage.borne.essai_rien'));
         this.#liste();
