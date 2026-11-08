@@ -143,6 +143,7 @@
 - **Jeux de tests** : chantier de suivi crédité du montant des heures valorisées ailleurs ; total société inchangé.
 - **Critère de fin** : jeu vert en JS et en C# ; `npm test`, `dotnet test LogiBTP.slnx` verts.
 - **Réalisé / écarts** : composante `PRODUIT_INTERNE` (codes.js ↔ Codes.cs, texte fr.json) ; règle `margeChantier` (`js/src/marge.js`) ↔ `Marges.Chantier` (`Marges.cs`, nouveau : le module n'avait pas de marge en C#), jeu `tests/cas/03_marge_produit_interne.json`, tests JS et `MargesTests`. `blocResultats` ajoute `produit_interne` (faits DEBOURSE de cette composante, PV seul, PA/PR nuls) au produit des marges des lignes réalisé, production, facturé et prévisionnel ; les colonnes du Détail et les coûts sont inchangés. Production des faits : lot 7. `npm test` : 2 échecs connus ; `dotnet test` vert.
+- Revue de parité (08/11/2026) : `margeChantier` ↔ `Marges.Chantier` en parité ; le bloc de résultats (`resultats.js`, produit interne par ligne) reste propre au client (présentation sans équivalent serveur), `Marges.Chantier` n'a pas encore d'appelant serveur.
 
 ## Lot 7 : refacturation interne, crédit du chantier de suivi (FAIT 08/11/2026)
 
@@ -156,7 +157,7 @@
 - **Critère de fin** : `dotnet test LogiBTP.slnx` et `npm test` verts.
 - **Réalisé / écarts** : `RentabiliteBtp.cs` : pour un chantier de suivi, lecture des `pointage_materiel` des matériels dont `mat_cha_id` est ce chantier pointés ailleurs, faits DEBOURSE `PRODUIT_INTERNE` (PV = heures × coût horaire effectif, 0 si loué ou sans coût ; PA/PR nuls), `MontantProduitInterne` (même arrondi que le déboursé), règle `PRODUIT_INTERNE` (texte client), `VersionRegles` 6 (recalcul). `CoutsMateriel.cs` et `rentabilite.js` inchangés (`#materiel` = paramètres, rien à y ajouter ; les coûts ne reprennent pas le produit). Tests `ProduitInterneMaterielTests` (règle pure, pas de banc base). `npm test` : 2 échecs connus ; `dotnet test` vert.
 
-## Lot 8 : coût par heure proposé comme coût moyen (A FAIRE)
+## Lot 8 : coût par heure proposé comme coût moyen (FAIT 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : onglet Coûts de la fiche matériel (graphify « onglet Coûts matériel »), `CoutsMateriel.cs`
@@ -165,6 +166,7 @@
 - **Règles répliquées JS / C#** : aucune.
 - **Jeux de tests** : reprise → coût moyen de la fiche = coût par heure affiché ; annulation → inchangé.
 - **Critère de fin** : `npm test` vert.
+- **Réalisé / écarts** : bouton « Reprendre comme coût moyen » dans l'onglet Coûts (visible si un coût par heure existe), `confirmer` puis `POST /ressources/materiels/{id}/cout-moyen` (`CoutsMateriel.cs`, écrit `mat_cout_horaire`, 409 `COUT_PAR_HEURE_INCONNU` sinon) ; logique de confirmation dans `ressources/cout-moyen.js`, test `cout-moyen.test.js` (reprise / annulation) ; textes fr.json. Route couverte par le préfixe `/api/ressources`.
 
 ## Lot 9 : cartes carburant, lecture du fichier (A FAIRE)
 

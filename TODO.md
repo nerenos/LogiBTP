@@ -299,7 +299,7 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
 - [ ] Tarifs fournisseurs (lot 8 réalisé) : formats d'import personnalisés (module Import : correspondance de colonnes enregistrée par fournisseur), remises par famille d'articles et catalogues, unités synonymes à l'import (A18b).
 - [x] Projet (lot 6) : zone de déplacement du projet reprise par le chantier ouvert depuis le projet (fait le 08/11/2026, db/278 : zone estimée du chantier ; les zones validées par agence restent celles du Pointage).
 - [ ] Matériel (lot 5c réalisé) : import des cartes carburant (module Import, M8) ; relevés de compteurs saisis à la borne (fait, plan materiel-suites lots 3-4 ; écran de validation au bureau fait, plan materiel-suites lot 4b : `/ressources/releves-a-valider`) ; données de démonstration d'entretiens (aujourd'hui tous en retard faute d'historique).
-- [ ] Refacturation interne du matériel (M4 du lot 5c) : les heures pointées et planifiées sont valorisées sur les chantiers où il travaille (module Rentabilité, lot 5) ; chantier de suivi crédité (produit interne, lot 7 du plan materiel-suites) ; reste à proposer le coût par heure de l'onglet Coûts comme coût moyen de la fiche.
+- [ ] Refacturation interne du matériel (M4 du lot 5c) : les heures pointées et planifiées sont valorisées sur les chantiers où il travaille (module Rentabilité, lot 5) ; chantier de suivi crédité (produit interne, lot 7 du plan materiel-suites)  ; coût par heure de l'onglet Coûts repris comme coût moyen de la fiche sur action (fait, plan materiel-suites, lot 8).
 
 ## Interface
 

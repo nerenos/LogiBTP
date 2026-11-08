@@ -483,6 +483,7 @@ export const api = {
     // Coûts du matériel (lot 5c-1, db/232) : chantier de suivi créé à la demande.
     coutsMateriel: (materiel, annee) => appel('GET', `/ressources/materiels/${materiel}/couts${annee ? `?annee=${encodeURIComponent(annee)}` : ''}`),
     creerChantierMateriel: (materiel) => appel('POST', `/ressources/materiels/${materiel}/chantier`),
+    reprendreCoutMoyen: (materiel) => appel('POST', `/ressources/materiels/${materiel}/cout-moyen`),
     // Compteurs et événements du matériel (lot 5c-2, db/233).
     pointagesMateriel: (materiel) => appel('GET', `/ressources/materiels/${materiel}/pointages`),
     compteurs: (materiel) => appel('GET', `/ressources/materiels/${materiel}/compteurs`),

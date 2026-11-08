@@ -2,8 +2,9 @@ import { texte, texteHtml, pluriel, iconeHtml, textesParCode } from '@logibtp/so
 import { pastille } from '../pastilles.js';
 import { urlFiche, TYPE_FICHE } from '../codes.js';
 import { ajouterJours, aujourdhui } from '@logibtp/socle';
-import { echapper, creerCombo, formatNombre } from '@logibtp/socle/ui';
+import { echapper, creerCombo, formatNombre, confirmer } from '@logibtp/socle/ui';
 import { api } from '../api.js';
+import { reprendreCoutMoyen } from './cout-moyen.js';
 import {
   ETATS_HABILITATION, MESSAGES_RESSOURCES, etatHabilitation, controlerHabilitation, controlerMissions, finValidite,
 } from './regles.js';
@@ -314,7 +315,16 @@ export async function rendreCoutsMateriel(corps, { app, materiel }) {
       ${ligne(`${texteHtml('ressources_btp.couts.depuis_entree')}${d.date_entree ? ` (${jour(d.date_entree)})` : ''}`, d.total_depuis_entree, null, 'total')}</tfoot></table>
       <p>${d.cout_par_heure != null ? texteHtml('ressources_btp.couts.par_heure_html', { cout: formatNombre(d.cout_par_heure, 2), heures: formatNombre(d.heures, 0) })
         : `<span class="aide">${texteHtml(c.partage ? 'ressources_btp.couts.par_heure_partage' : 'ressources_btp.couts.par_heure_inconnu')}</span>`}
+        ${d.cout_par_heure != null ? `<button type="button" data-reprendre>${texteHtml('ressources_btp.couts.reprendre')}</button>` : ''}
         ${Number(d.non_valorises) ? ` <span class="pastille-compte attention">${pluriel('ressources_btp.couts.non_valorises', d.non_valorises)}</span>` : ''}</p></div>`;
+    corps.querySelector('[data-reprendre]')?.addEventListener('click', async () => {
+      try {
+        const cout = formatNombre(d.cout_par_heure, 2);
+        if (await reprendreCoutMoyen({ confirmer, reprendre: () => api.ressources.reprendreCoutMoyen(materiel), message: texte('ressources_btp.couts.reprendre_confirmer', { cout }) })) {
+          app.message(texte('ressources_btp.couts.repris', { cout }), 'succes');
+        }
+      } catch (e) { app.erreur(e); }
+    });
     const annee = creerCombo({ options: d.annees.map((a) => ({ valeur: a, libelle: String(a) })), valeur: d.annee, vide: false });
     annee.addEventListener('change', async () => {
       try { rendre(await api.ressources.coutsMateriel(materiel, annee.valeurCombo)); } catch (e) { app.erreur(e); }
