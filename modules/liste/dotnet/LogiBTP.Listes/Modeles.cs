@@ -28,6 +28,8 @@ public sealed class FiltreVue
     public string Op { get; set; } = "=";
     public string? Valeur { get; set; }
     public string? Valeur2 { get; set; }
+    /// <summary>Nombre x des périodes paramétrées (opérateur « periode » : la valeur est alors le code de période).</summary>
+    public int? Nombre { get; set; }
     public List<string>? Valeurs { get; set; }
 }
 

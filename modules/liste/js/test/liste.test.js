@@ -29,7 +29,11 @@ describe('requêtes paginées (jeu partagé avec le serveur)', () => {
   for (const c of jeu.cas) {
     it(c.nom, async () => {
       const f = fournisseur(c.types);
-      const demande = { definition: { ...definition, filtres: c.filtres ?? [], theme: 't' }, ...c.requete };
+      const demande = { definition: { ...definition, filtres: c.filtres ?? [], theme: 't' }, ...c.requete, reference: c.reference, debut_exercice: c.debut_exercice };
+      if (c.erreur) {
+        await expect(f.lot({ ...demande, taille: 2 })).rejects.toMatchObject({ code: c.erreur });
+        return;
+      }
       // Lots de 2 : la concaténation des lots doit donner l'ordre complet.
       const ids = [];
       let apres = null;
@@ -54,7 +58,7 @@ describe('requêtes paginées (jeu partagé avec le serveur)', () => {
 
   for (const c of jeu.agregats) {
     it(`agrégats : ${c.nom}`, async () => {
-      const r = await fournisseur().agregats({ definition: { ...definition, theme: 't' }, ...c.requete, agregats: c.agregats });
+      const r = await fournisseur().agregats({ definition: { ...definition, theme: 't' }, ...c.requete, reference: c.reference, agregats: c.agregats });
       for (const [code, v] of Object.entries(c.attendu)) {
         if (v === null) expect(r[code], code).toBeNull();
         else expect(r[code], code).toBeCloseTo(v, 8);

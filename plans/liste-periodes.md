@@ -33,7 +33,7 @@
 | Lot | Titre | Module | Dépend de | Statut |
 |---|---|---|---|---|
 | 1 | Codes et bornes des périodes (JS / C#) | `modules/liste` | — | FAIT |
-| 2 | Opérateur de vue `periode` dans la requête (JS / C#) | `modules/liste` | 1 | A FAIRE |
+| 2 | Opérateur de vue `periode` dans la requête (JS / C#) | `modules/liste` | 1 | FAIT |
 | 3 | Choix de la période dans le filtre de colonne et l'éditeur de vue | `modules/liste` | 2 | A FAIRE |
 | 4 | Exercice comptable fourni par le cœur | cœur | 1 | A FAIRE |
 
@@ -54,7 +54,7 @@
 - **Réalisé (08/11/2026)** : recommandations des points ouverts retenues (x derniers jours aujourd'hui compris ; date de référence fournie par l'appelant, sans fuseau dans le calcul). Écarts : ajout des codes d'erreur `PERIODE_INCONNUE` et `PERIODE_NOMBRE` (`ERREUR_LISTE`) ; `PERIODE_AVEC_NOMBRE` en JS ; début d'exercice = date dont seuls mois et jour comptent.
 - **Critère de fin** : le jeu passe en JS et en C# ; parité des codes verte ; `npm test`, `dotnet test LogiBTP.slnx` verts.
 
-## Lot 2 : opérateur de vue `periode` dans la requête (A FAIRE)
+## Lot 2 : opérateur de vue `periode` dans la requête (FAIT, 08/11/2026)
 
 - **Module** : `modules/liste`. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `ConstructeurRequete.cs` (`:30`, `ValeurFiltre :174`, `ConditionFiltre :182` : `periode` → condition
@@ -65,6 +65,7 @@
   d'erreur du module).
 - **Jeux de tests** : cas de `02_requete.json` : vue « mois en cours » exécutée à deux dates de référence différentes →
   bornes différentes ; « x derniers jours » ; colonne non date refusée.
+- **Réalisé (08/11/2026)** : filtre `{ colonne, op: 'periode', valeur: code, nombre }` ; date de référence et début d'exercice fournis par l'appelant (`Reference` / `DebutExercice` du constructeur, `reference` / `debut_exercice` de la demande du fournisseur mémoire, date du jour par défaut). Écarts : code d'erreur `PERIODE_COLONNE` ajouté (JS / C#) ; jeu `02_requete.json` enrichi d'une colonne `embauche` (date) et de cas portant `reference`, `bornes`, `erreur` ; filtres d'agrégats aussi résolus ; test C# sans base des bornes (`PeriodesDeVueTests`) en plus du test PostgreSQL.
 - **Critère de fin** : les cas passent en JS et en C# ; `npm test`, `npm run exporter-resultats`, `dotnet test
   LogiBTP.slnx` verts.
 

@@ -29,7 +29,8 @@
       "vide": "est vide",
       "nonvide": "n'est pas vide",
       "vrai": "est coché (vrai)",
-      "faux": "n'est pas coché (faux)"
+      "faux": "n'est pas coché (faux)",
+      "periode": "dans la période"
     },
     "formule": {
       "chaine": "Chaîne non terminée",
@@ -54,6 +55,7 @@
       "theme_obligatoire": "Code et libellé du thème obligatoires",
       "requete_hors_ligne": "Requête manuelle indisponible hors ligne",
       "vue_attendue": "Vue ou définition attendue",
+      "periode_colonne": "Période sur la colonne {{colonne}} : colonne de date attendue",
       "source_introuvable": "Source {{source}} introuvable",
       "source_lecture_seule": "Cette source n'est pas modifiable",
       "colonne_non_modifiable": "Colonne {{code}} non modifiable",

@@ -29,7 +29,7 @@ public partial class ConstructeurRequete
     /// <summary>Opérateurs des filtres fixes (même liste que OPERATEURS_VUE côté JS).</summary>
     public static readonly IReadOnlySet<string> OperateursVue = new HashSet<string>(StringComparer.Ordinal)
     {
-        "=", "<>", ">", ">=", "<", "<=", "entre", "contient", "commence", "finit", "dans", "vide", "nonvide", "vrai", "faux",
+        "=", "<>", ">", ">=", "<", "<=", "entre", "contient", "commence", "finit", "dans", "vide", "nonvide", "vrai", "faux", "periode",
     };
 
     [GeneratedRegex(@"^(smallint|integer|bigint|numeric|decimal|real|double precision|money)")]
@@ -51,6 +51,12 @@ public partial class ConstructeurRequete
         if (!_colonnes.ContainsKey(source.ColonneId)) throw new ErreurListe("COLONNE_ID", $"Colonne identifiant {source.ColonneId} absente de la source");
         if (source.ColonneType is { } t && !_colonnes.ContainsKey(t)) throw new ErreurListe("COLONNE_TYPE", $"Colonne type d'élément {t} absente de la source");
     }
+
+    /// <summary>Jour d'exécution pour les filtres « periode » (absent = date du jour du serveur ; fixé par les tests).</summary>
+    public DateOnly? Reference { get; set; }
+
+    /// <summary>Début d'exercice (seuls mois et jour comptent) pour la période « exercice en cours » ; absent = année civile.</summary>
+    public DateOnly? DebutExercice { get; set; }
 
     /// <summary>Types d'élément du thème de la vue (vide = tous), fixés par le service.</summary>
     public IReadOnlyList<string> TypesTheme { get; set; } = [];
@@ -178,11 +184,31 @@ public partial class ConstructeurRequete
         return Typee(colonne, v).Valeur;
     }
 
+    /// <summary>Type PostgreSQL qui porte une date : date ou timestamp (même règle que estTypeDate, requete.js).</summary>
+    private static bool EstTypeDate(string type) =>
+        type.StartsWith("date", StringComparison.OrdinalIgnoreCase) || type.StartsWith("timestamp", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Filtre « periode » : jour de la colonne entre les bornes de la période (valeur = code, nombre = x), calculées à la
+    /// date d'exécution. Colonne d'un autre type refusée (PERIODE_COLONNE). Même règle que resoudrePeriodes (requete.js).
+    /// </summary>
+    private string ConditionPeriode(FiltreVue f, string col)
+    {
+        if (!EstTypeDate(_colonnes[f.Colonne].Type))
+            throw new ErreurListe(ErreursListe.PeriodeColonne, $"Période sur la colonne {f.Colonne} : colonne de date attendue");
+        (DateOnly Debut, DateOnly Fin) bornes;
+        try { bornes = Periodes.Bornes(f.Valeur ?? "", f.Nombre, Reference ?? DateOnly.FromDateTime(DateTime.Today), DebutExercice); }
+        catch (ErreurPeriode e) { throw new ErreurListe(e.Code, e.Message); }
+        var (debut, fin) = bornes;
+        return $"({col})::date BETWEEN CAST({P(debut.ToString("yyyy-MM-dd"))} AS date) AND CAST({P(fin.ToString("yyyy-MM-dd"))} AS date)";
+    }
+
     /// <summary>Condition SQL d'un filtre fixe ; même sémantique que correspondFiltreVue (requete.js).</summary>
     protected virtual string ConditionFiltre(FiltreVue f)
     {
         if (!OperateursVue.Contains(f.Op)) throw new ErreurListe("FILTRE_OPERATEUR", $"Opérateur de filtre inconnu : {f.Op}");
         var col = Col(f.Colonne);
+        if (f.Op == "periode") return ConditionPeriode(f, col);
         string Motif(string debut, string fin) =>
             $"f_sans_accent({Texte(f.Colonne)}) LIKE f_sans_accent({P(debut + EchapperLike(f.Valeur ?? "") + fin)}) ESCAPE '\\'";
         if (EstTableau(f.Colonne))

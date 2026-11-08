@@ -6,6 +6,7 @@ export const ERREUR_LISTE = Object.freeze({
   REQUETE_HORS_LIGNE: 'REQUETE_HORS_LIGNE',
   PERIODE_INCONNUE: 'PERIODE_INCONNUE',
   PERIODE_NOMBRE: 'PERIODE_NOMBRE',
+  PERIODE_COLONNE: 'PERIODE_COLONNE',
 });
 
 /** Périodes glissantes des filtres de date (bornes calculées à la date d'exécution : `periodes.js`). */
