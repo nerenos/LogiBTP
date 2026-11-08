@@ -10,3 +10,4 @@ export { filtrer, correspondFiltreVue, filtresEffectifs, COLONNE_USAGE, OPERATEU
 export { FournisseurApi, FournisseurMemoire, ErreurFournisseur } from './fournisseurs.js';
 export { calculerLargeurs } from './largeurs.js';
 export * from './codes.js';
+export { bornesPeriode } from './periodes.js';

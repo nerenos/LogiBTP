@@ -32,14 +32,14 @@
 
 | Lot | Titre | Module | Dépend de | Statut |
 |---|---|---|---|---|
-| 1 | Codes et bornes des périodes (JS / C#) | `modules/liste` | — | A FAIRE |
+| 1 | Codes et bornes des périodes (JS / C#) | `modules/liste` | — | FAIT |
 | 2 | Opérateur de vue `periode` dans la requête (JS / C#) | `modules/liste` | 1 | A FAIRE |
 | 3 | Choix de la période dans le filtre de colonne et l'éditeur de vue | `modules/liste` | 2 | A FAIRE |
 | 4 | Exercice comptable fourni par le cœur | cœur | 1 | A FAIRE |
 
 ---
 
-## Lot 1 : codes et bornes des périodes (A FAIRE)
+## Lot 1 : codes et bornes des périodes (FAIT, 08/11/2026)
 
 - **Module** : `modules/liste`. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `modules/liste/js/src/codes.js` ↔ `modules/liste/dotnet/LogiBTP.Listes/Codes.cs` (`PERIODE` : un code par
@@ -51,6 +51,7 @@
   selon les points ouverts.
 - **Jeux de tests** : `04_periodes.json` : chaque code à une date de référence fixe, cas limites (lundi, 31 janvier,
   29 février, 1er janvier, exercice décalé).
+- **Réalisé (08/11/2026)** : recommandations des points ouverts retenues (x derniers jours aujourd'hui compris ; date de référence fournie par l'appelant, sans fuseau dans le calcul). Écarts : ajout des codes d'erreur `PERIODE_INCONNUE` et `PERIODE_NOMBRE` (`ERREUR_LISTE`) ; `PERIODE_AVEC_NOMBRE` en JS ; début d'exercice = date dont seuls mois et jour comptent.
 - **Critère de fin** : le jeu passe en JS et en C# ; parité des codes verte ; `npm test`, `dotnet test LogiBTP.slnx` verts.
 
 ## Lot 2 : opérateur de vue `periode` dans la requête (A FAIRE)

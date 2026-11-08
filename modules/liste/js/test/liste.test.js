@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  normaliser, compilerFormule, resolveurColonnes, ModeleVue, FournisseurMemoire, correspond, calculerLargeurs, valeursDistinctes,
+  normaliser, compilerFormule, resolveurColonnes, ModeleVue, FournisseurMemoire, correspond, calculerLargeurs, valeursDistinctes, bornesPeriode,
 } from '../src/index.js';
 
 const dossier = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../tests/cas');
@@ -171,4 +171,14 @@ describe('largeurs', () => {
     // 600 - 100 = 500 ; poids 2/1/1 → 250/125/125, la 3e bornée à 80 → 420 restants pour poids 3 → 280/140.
     expect(calculerLargeurs(cols, 600)).toEqual([100, 280, 80, 140]);
   });
+});
+
+describe('périodes glissantes (jeu partagé)', () => {
+  for (const c of lire('04_periodes.json').cas) {
+    it(c.nom, () => {
+      const appel = () => bornesPeriode(c.code, c.x ?? null, c.reference, c.debut_exercice ?? null);
+      if (c.erreur) { expect(appel).toThrow(expect.objectContaining({ code: c.erreur })); return; }
+      expect(appel()).toEqual({ debut: c.debut, fin: c.fin });
+    });
+  }
 });
