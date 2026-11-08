@@ -16,7 +16,7 @@
 
 | Lot | Titre | Module | Dépend de | Statut |
 |---|---|---|---|---|
-| 1 | Ménage du TODO (points déjà faits) | documentation | — | A FAIRE |
+| 1 | Ménage du TODO (points déjà faits) | documentation | — | FAIT (08/11/2026) |
 | 2 | Case « Terrain » d'un plan du suivi des validations | `modules/crm` | — | A FAIRE |
 | 3 | Plans en vigueur sur le terrain | cœur | 2 | A FAIRE |
 | 4 | Plans gardés hors ligne, budget à part | cœur | 3 | A FAIRE |
@@ -46,7 +46,7 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
 
 ---
 
-## Lot 1 : ménage du TODO
+## Lot 1 : ménage du TODO (FAIT 08/11/2026)
 
 - **Module** : documentation. **Agent** : `lot-dev`. **Modèle** : haiku.
 - **Fichiers** : `TODO.md` (§ Application de terrain), `documentation/TACHES.md` n'est pas touché (réservé aux humains).
@@ -55,6 +55,8 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
   contrats d'entretien renvoyés à une analyse à part.
 - **Règles répliquées** : aucune. **Tests** : aucun.
 - **Critère de fin** : TODO.md relu, liens valides.
+- **Réalisé / écarts** : la ligne « Lot 7, suites » était cochée dans `main` alors que ses points restent à faire : décochée ;
+  chaque ligne renvoie aux lots du plan ; contrats d'entretien sur une ligne à part.
 
 ## Lot 2 : case « Terrain » d'un plan du suivi des validations (TS2)
 

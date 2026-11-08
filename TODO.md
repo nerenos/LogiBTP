@@ -123,23 +123,29 @@ Analyse du 23/10/2026 : [ANALYSE-MODULE-SOUS-TRAITANCE.md](documentation/concept
 
 ### Application de terrain (poseurs, chefs d'équipe)
 
+Plan en 24 lots : [terrain-suites.md](documentation/conception/plans/terrain-suites.md) (décisions TS1 à TS25 du
+08/11/2026 dans [terrain-suites-questions.md](documentation/conception/plans/terrain-suites-questions.md)).
+
 - [ ] Lot 1, écarts : plans au dernier indice validé du suivi des validations (CRM) parmi les pièces du terrain (T6) ;
-  bandeau trop large sur un téléphone (gabarit tactile commun avec le lot 2).
-- [ ] Lot 2, écarts : pointage à la ligne d'ordre (`poi_lig_id`) quand la tâche vient d'une ligne (T8).
-- [ ] Lot 3, suites : photos HEIC converties
-  (le navigateur ne sait pas les réduire).
+  bandeau trop large sur un téléphone (gabarit tactile commun avec le lot 2). Plan : lots 2 à 6.
+- [ ] Lot 2, écarts : pointage à la ligne d'ordre (`poi_lig_id`) quand la tâche vient d'une ligne (T8). Plan : lot 7.
+- [ ] Lot 3, suites : photos HEIC converties (le navigateur ne sait pas les réduire). Plan : lot 8.
 - [ ] Lot 4, suites : saisie libre hors ligne limitée aux chantiers et ordres déjà lus (journée gardée) ; nouvelle
   recherche d'un ordre par son numéro impossible hors ligne ; envoi des photos gardées sans contrôle de taille avant
-  l'envoi (limite de dépôt de la GED).
-- [ ] Lot 5, suites : valeur juridique de la signature simple à faire confirmer ; levée des réserves suivie (tâche du CRM
-  seulement) ; demande d'approvisionnement en texte libre (articles de la bibliothèque à choisir plus tard) ; réception
-  gardée hors ligne horodatée à l'envoi par le serveur.
-- [x] Lot 7, suites : bibliothèque simplifiée sur le terrain (T18) ; heures de matériel non valorisées dans le coût du
-  chantier (aucun coût horaire du matériel) ; pointage et relevés de matériel à la borne ; réception d'une commande à options
-  ou variantes (refusée) ; avancement réel par marché quand un chantier en porte plusieurs (aujourd'hui : tout le chantier).
+  l'envoi (limite de dépôt de la GED). Plan : lots 9 à 12.
+- [ ] Lot 5, suites : valeur juridique de la signature simple à faire confirmer (par l'utilisateur, hors code) ; levée
+  des réserves suivie (tâche du CRM seulement) ; demande d'approvisionnement en texte libre (articles de la bibliothèque
+  à choisir plus tard) ; réception gardée hors ligne horodatée à l'envoi par le serveur. Plan : lots 13 à 18.
+- [ ] Lot 7, suites : bibliothèque simplifiée sur le terrain (T18) ; pointage des heures de matériel à la borne ;
+  réception d'une commande à options ou variantes (refusée) ; avancement réel par marché quand un chantier en porte
+  plusieurs (aujourd'hui : tout le chantier). Plan : lots 17 à 21. Déjà faits ailleurs : valorisation des heures de
+  matériel (module Rentabilité, lot 5, `db/261`) et relevés de compteurs à la borne
+  ([materiel-suites.md](documentation/conception/plans/materiel-suites.md), lots 3 et 4).
 - [ ] Lot 6, suites : temps et fournitures du bon de SAV non repris dans la facture (facture = transformation au bureau) ;
   création d'une intervention impossible hors ligne ; chantier « Entretien et dépannage » créé sans passer par le chrono
-  des chantiers (code `SAV-<client>`) ; contrats d'entretien (Exécution, second temps).
+  des chantiers (code `SAV-<client>`). Plan : lots 22 à 24.
+- [ ] Contrats d'entretien (Exécution, second temps) : analyse à part à écrire (`ANALYSE-CONTRATS-ENTRETIEN.md`), hors
+  du plan du terrain (TS25).
 
 ### Import
 
