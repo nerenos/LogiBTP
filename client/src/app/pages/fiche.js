@@ -12,6 +12,8 @@ import { rendreHabilitations, rendreMissions, rendreHabilitationsExigees, rendre
 import { rendreCompteursMateriel } from '../ressources/compteurs-ui.js';
 import { LISTE_PAR_TYPE } from '../application.js';
 import { voisins } from '../suite-liste.js';
+import { afficherJournalRelances } from '../relances/journal-relances.js';
+import { ACTION_DROIT } from '@logibtp/socle';
 import { api } from '../api.js';
 
 // Fiches dont les pièces peuvent être diffusées sur le terrain (case 📱 de la GED, application de terrain).
@@ -39,6 +41,9 @@ export class PageFiche extends PageBase {
     const s = await app.services();
     const voisinage = nouveau ? null : voisins(urlFiche(type, this.params.id));
     this.voisinage = voisinage;
+    // Onglet Suivi : notes du CRM (module actif) et, sur la fiche d'un tiers, relances faites (module Relances, droit de lecture).
+    const crm = app.moduleActif(MODULE_FACULTATIF.CRM);
+    const relances = type === TYPE_FICHE.PERSONNE && app.moduleActif(MODULE_FACULTATIF.RELANCE) && app.peut('relances', ACTION_DROIT.CONSULTER);
     this.fiche = new Classe({
       conteneur: this.conteneur.querySelector('.page-fiche-corps'), fournisseur: s.fiche, type,
       id: nouveau ? null : this.params.id, mode: nouveau ? 'creation' : 'consultation',
@@ -71,10 +76,18 @@ export class PageFiche extends PageBase {
         modifiable, admin: app.estAdmin(), utilisateur: app.utilisateur(), message: (t, n) => app.message(t, n), terrain: TYPES_TERRAIN.has(typeElement),
       }),
       // Onglet Suivi (module CRM actif, en ligne) : notes, tâches et courriels des tiers, contacts et de la structure.
-      suivi: app.moduleActif(MODULE_FACULTATIF.CRM) && TYPES_SUIVI.has(type) ? (corps, { type: t, id }) => {
-        const p = new PanneauSuivi(corps, { app, type: t, id });
-        p.ouvrir().catch((e) => app.erreur(e));
-        return p;
+      suivi: (crm || relances) && TYPES_SUIVI.has(type) ? (corps, { type: t, id }) => {
+        // Relances faites au tiers (module Relances actif) au-dessus des notes du CRM.
+        const zoneRelances = relances ? document.createElement('section') : null;
+        const zoneCrm = crm ? document.createElement('div') : null;
+        corps.replaceChildren(...[zoneRelances, zoneCrm].filter(Boolean));
+        if (zoneRelances) {
+          zoneRelances.className = 'trac-bloc trac-relances';
+          afficherJournalRelances(zoneRelances, { filtre: { tiers: id }, pieces: true, naviguer: (url, e) => app.naviguer(url, { nouvelleFenetre: Boolean(e && (e.ctrlKey || e.shiftKey || e.metaKey)) }) });
+        }
+        const p = zoneCrm ? new PanneauSuivi(zoneCrm, { app, type: t, id }) : null;
+        p?.ouvrir().catch((e) => app.erreur(e));
+        return p ?? { fermer() {} };
       } : null,
       // Onglet Fil des fiches affaire et chantier (module CRM actif, en ligne) : fil d'actualité de l'élément.
       fil: app.moduleActif(MODULE_FACULTATIF.CRM) ? (corps, { type: t, id, libelle }) => {

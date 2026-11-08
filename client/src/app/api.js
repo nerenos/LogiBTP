@@ -91,6 +91,7 @@ export const api = {
     creerSuspension: (s) => appel('POST', '/relances/suspensions', s),
     modifierSuspension: (id, s) => appel('PUT', `/relances/suspensions/${id}`, s),
     supprimerSuspension: (id) => appel('DELETE', `/relances/suspensions/${id}`),
+    modeles: () => appel('GET', '/relances/modeles'),
     libelles: (pieces = [], tiers = []) => appel('GET', `/relances/libelles?${new URLSearchParams([...pieces.map((p) => ['pieces', p]), ...tiers.map((t) => ['tiers', t])])}`),
   },
   rentabilite: {

@@ -220,7 +220,7 @@
   (`med_id` non exposé par l'Édition), un seul document GED au journal par lettre, `db/191` à rejouer sur les bases
   existantes ; le script du lot 8 devient `db/287`.
 
-## Lot 8 : suivi, onglets, colonne « Dernière relance », relance notée (A FAIRE)
+## Lot 8 : suivi, onglets, colonne « Dernière relance », relance notée (FAIT (08/11/2026))
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `db/287_liste_derniere_relance.sql` (286 pris par le lot 7) (reprise de `v_liste_documents` **à partir de `db/267`** : colonne
@@ -229,6 +229,21 @@
   relance faite » dans la liste de travail (inscrit au journal, Q22 b).
 - **Règles répliquées** : aucune.
 - **Critère de fin** : la colonne et les onglets montrent la dernière relance ; une relance notée fait avancer le niveau.
+- **Réalisé** (08/11/2026) : `db/287_liste_derniere_relance.sql` (rejouable, rejoué deux fois sur PostgreSQL 16 ; manifeste après
+  `286` ; reprise de `v_liste_documents` de `db/267`, aucun script intermédiaire ne l'avait reprise) : colonne `derniere_relance`
+  (date de la dernière relance ENVOYEE ou ATTENTE_NUMERO du journal, pièce ou groupe d'indices) ; `client/src/app/vues-liste.js`
+  (source Documents, colonne « Dernière relance » des vues Devis et Factures, `db/121` régénéré) ; `relances/journal-relances.js`
+  (relances faites, dernière relance et table) affiché dans la traçabilité de l'onglet Suivi de la page document
+  (`documents/tracabilite.js`) et dans l'onglet Suivi de la fiche tiers (`pages/fiche.js`, avec ou sans CRM, droit de lecture du nœud
+  `relances`) ; ajout du cœur : `GET /api/relances/modeles` (`RoutesRelancesBtp` : modèles de courriel d'usage RELANCE avec leur
+  nature, modèles d'édition de la source « relance » avec `med_id`), lu par `/relances` à l'ouverture de l'onglet Règle et fourni à
+  `ParametresRelances` (mise en demeure réservée aux factures) ; le bouton « Noter une relance faite » (liste de travail, lot 3)
+  était déjà branché sur `POST /api/relances/notees` (Q22 b). Tests : `RelancesBtpTests.Relance_notee_renseigne_la_colonne_et_fait_avancer_le_niveau`
+  (avec `LOGIBTP_TEST_PG` : niveau 2 dû, relance notée, colonne renseignée, plus rien de dû, niveau 3 vingt jours plus tard),
+  `client/test/journal-relances.test.js`. Vérifié avec Playwright sur l'API et Vite locaux : colonne dans la liste des devis, journal dans
+  l'onglet Suivi du document et de la fiche tiers, six modèles de courriel et trois lettres dans les combos de la règle. Points ouverts :
+  les vues déjà enregistrées gardent leurs colonnes (`db/121` ne remplace que les vues jamais modifiées), pas de réimpression d'une lettre
+  ni d'action « Noter » depuis l'onglet Suivi.
 
 ## Lot 9 : préparation de nuit, notification, tâche d'appel, pastille (A FAIRE)
 

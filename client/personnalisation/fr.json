@@ -6402,7 +6402,26 @@
       "regle": "Règle des niveaux",
       "regle_titre": "Niveaux, délais et modes par nature (modification : administrateur)"
     },
-    "choisir_tiers": "Tiers à suspendre"
+    "choisir_tiers": "Tiers à suspendre",
+    "journal": {
+      "titre": "Relances",
+      "aucune": "Aucune relance faite.",
+      "derniere": "Dernière relance : {{date}} (niveau {{niveau}}).",
+      "colonnes": {
+        "date": "Date",
+        "piece": "Pièce",
+        "niveau": "Niveau",
+        "mode": "Mode",
+        "etat": "État",
+        "montant": "Montant",
+        "auteur": "Auteur",
+        "commentaire": "Commentaire"
+      },
+      "etats": {
+        "ENVOYEE": "Faite",
+        "ATTENTE_NUMERO": "En attente du numéro de recommandé"
+      }
+    }
   },
   "hors_ligne_btp": {
     "etats": {

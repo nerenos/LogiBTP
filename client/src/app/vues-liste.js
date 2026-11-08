@@ -17,6 +17,8 @@ export const SOURCES_LISTE = {
       ['alerte', 'text'], ['numero_situation', 'integer'], ['facture', 'text'], ['chantiers', 'ARRAY'], ['statut_code', 'text'], ['etat', 'text'],
       // db/253 : indicateurs des listes (âge en jours, jours depuis l'envoi).
       ['age_jours', 'integer'], ['jours_envoye', 'integer'],
+      // db/287 : dernière relance du journal (module Relances).
+      ['derniere_relance', 'date'],
     ],
   },
   // Ordres du module Exécution (db/197 : v_liste_ordres = documents de la famille E + exécution).
@@ -399,6 +401,8 @@ const COLONNES_AVANCEMENT = [
   col('numero_situation', 'N° sit.', { ...fixe(64), alignement: 'centre', ...nombre(0), recherche: false }),
   col('facture', 'Facture / situation', { ...fixe(130) }),
 ];
+// Devis et factures : dernière relance du journal du module Relances (db/287), après le statut.
+const COLONNE_DERNIERE_RELANCE = col('derniere_relance', 'Dernière\nrelance', { format: 'date', ...fixe(96), recherche: false, bulle: 'Date de la dernière relance faite (module Relances)' });
 const vueDocuments = (vli_id, vli_nom, theme, indicateurs = []) => {
   const definition = { ...structuredClone(documents.definition), theme, segments: [{ colonne: 'etat', titre: 'Statut' }], indicateurs };
   // Ligne de total (L3) : montants d'un même type de pièces (pas dans la vue Documents, qui mélange les familles).
@@ -406,6 +410,10 @@ const vueDocuments = (vli_id, vli_nom, theme, indicateurs = []) => {
   if (['situations', 'factures'].includes(theme)) {
     const i = definition.colonnes.findIndex((c) => c.code === 'numero');
     definition.colonnes.splice(i + 1, 0, ...structuredClone(COLONNES_AVANCEMENT));
+  }
+  if (['devis', 'factures'].includes(theme)) {
+    const i = definition.colonnes.findIndex((c) => c.code === 'etat');
+    definition.colonnes.splice(i + 1, 0, structuredClone(COLONNE_DERNIERE_RELANCE));
   }
   return { ...structuredClone(documents), vli_id, vli_nom, definition };
 };

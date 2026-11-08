@@ -115,5 +115,6 @@ Référence lue à la demande (hors contexte par défaut). Les règles sont dans
 - `284_personne_relance.sql` : surcharge de relance par tiers (`per_rel_regle`, `per_rel_ne_pas_relancer`, `per_rel_contact_ind_id`, `per_rel_mode`, `per_rel_commentaire`) ; rejouable
 - `285_relances_mail.sql` : modèles de courriel des relances (module Mail, usage RELANCE, `mmo_type` `DEVIS_1`…`FACTURE_3` : un par nature et niveau, variables tiers, pièces, montant, jours de retard, échéances, tableau) ; rejouable
 - `286_relances_lettres.sql` : catégorie GED « relance » des lettres de relance (modèles RELANCE_1, RELANCE_2, MISE_EN_DEMEURE de la source « relance » dans le 191 généré) ; rejouable
+- `287_liste_derniere_relance.sql` : reprise de `v_liste_documents` (depuis 267) : colonne `derniere_relance` (journal `relance`, pièce ou groupe d'indices) ; rejouable
 - `270_dotation_fiche.sql` : fiches de dotation signées (`dotation_fiche` : salarié, dates, instants `dfi_debut` exclu / `dfi_fin` inclus sur `mvt_cree_le`, signature, PDF de la GED, lieu), catégorie GED `dotation` ; rejouable.
 - `271_stock_tracabilite.sql` : lots et numéros de série (S24-a, module Stock `093f`) : clés étrangères du suivi des articles et des lots (article, fournisseur) ; répartition d'une ligne dans `lig_proprietes.lots` ; rejouable.

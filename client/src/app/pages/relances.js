@@ -4,7 +4,8 @@ import { echapper, lireStockage, ecrireStockage } from '@logibtp/socle/ui';
 import { ACTION_DROIT } from '@logibtp/socle';
 import { ListeRelances, ParametresRelances, PanneauSuspensions } from '@logibtp/relance/ui';
 import { choisirPersonne } from '@logibtp/annuaire/ui';
-import { MODULE_FACULTATIF, urlDocument } from '../codes.js';
+import { NATURE_RELANCE } from '@logibtp/relance';
+import { MODULE_FACULTATIF, MODELE_EDITION, urlDocument } from '../codes.js';
 import { api } from '../api.js';
 
 // Module Relances, lot 4 du cœur (plans/relances.md) : page /relances qui monte les écrans du module (liste de travail,
@@ -20,6 +21,7 @@ export class PageRelances extends PageBase {
   icone = icone('relances_btp_page');
   #pieces = new Map();
   #tiers = new Map();
+  #modeles = { courriel: [], edition: [] };
 
   urlCourante() { return '/relances'; }
 
@@ -33,6 +35,11 @@ export class PageRelances extends PageBase {
       Object.entries(l.pieces ?? {}).forEach(([id, v]) => this.#pieces.set(Number(id), v));
       Object.entries(l.tiers ?? {}).forEach(([id, v]) => this.#tiers.set(Number(id), v));
     } catch { /* libellés par défaut du module */ }
+  }
+
+  /** Modèles de courriel (usage RELANCE) et d'édition (lettres) proposés par la règle ; listes vides si la lecture échoue. */
+  async #chargerModeles() {
+    try { this.#modeles = await api.relances.modeles(); } catch { /* listes vides : la règle reste modifiable sans modèle */ }
   }
 
   async #lot(id) {
@@ -116,6 +123,11 @@ export class PageRelances extends PageBase {
       peut: { modifier: this.app.estAdmin() },
       api: { regles: () => api.relances.regles(), enregistrer: (nature, r) => api.relances.enregistrerRegle(nature, r) },
       reglements: this.app.moduleActif(MODULE_FACULTATIF.REGLEMENT),
+      // Un modèle de courriel sans nature (type libre) convient aux deux ; la mise en demeure ne concerne que les factures.
+      modeles: {
+        courriel: (nature) => (this.#modeles.courriel ?? []).filter((m) => !m.nature || m.nature === nature),
+        edition: (nature) => (this.#modeles.edition ?? []).filter((m) => nature === NATURE_RELANCE.FACTURE || m.code !== MODELE_EDITION.MISE_EN_DEMEURE),
+      },
       erreur,
     });
 
@@ -129,6 +141,7 @@ export class PageRelances extends PageBase {
       ONGLETS.forEach((x) => { zone(x).hidden = x !== o; });
       if (charges.has(o)) return;
       charges.add(o);
+      if (o === 'regle') await this.#chargerModeles();
       await { liste: this.liste, suspensions: this.suspensions, regle: this.regle }[o].charger();
     };
     this.conteneur.querySelectorAll('[data-onglet]').forEach((b) => b.addEventListener('click', () => afficher(b.dataset.onglet)));

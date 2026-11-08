@@ -651,6 +651,19 @@ public static class RoutesRelancesBtp
           'tiers', (SELECT coalesce(json_object_agg(per_id, per_raison_sociale), json_build_object()) FROM personne WHERE per_id = ANY(@tiers)))::text AS "Value"
         """;
 
+    // Listes de modèles de l'écran de la règle (plans/relances.md lot 8) : modèles de courriel actifs d'usage RELANCE
+    // (nature déduite de mmo_type « NATURE_n »), modèles d'édition actifs de la source « relance » (identifiant med_id que
+    // la règle conserve par niveau, non exposé par l'API Édition).
+    private const string SqlModeles = """
+        SELECT json_build_object(
+          'courriel', (SELECT coalesce(json_agg(json_build_object('id', mmo_id, 'libelle', mmo_libelle,
+                         'nature', CASE WHEN split_part(mmo_type, '_', 1) IN (@devis, @facture) THEN split_part(mmo_type, '_', 1) END)
+                       ORDER BY mmo_type, mmo_libelle), '[]'::json) FROM mail_modele WHERE mmo_actif AND mmo_usage = @usage),
+          'edition', (SELECT coalesce(json_agg(json_build_object('id', med_id, 'libelle', med_libelle, 'code', med_code)
+                       ORDER BY med_ordre, med_libelle), '[]'::json) FROM modele_edition
+                       WHERE med_actif AND med_genre = 'RAPPORT' AND med_source = @source))::text AS "Value"
+        """;
+
     public static TBuilder DroitsRelances<TBuilder>(this TBuilder routes) where TBuilder : IEndpointConventionBuilder =>
         routes.AddEndpointFilter(async (contexte, suite) =>
         {
@@ -665,6 +678,10 @@ public static class RoutesRelancesBtp
     {
         api.MapGet("/relances/libelles", (long[]? pieces, long[]? tiers, LogiBtpContext db, CancellationToken ct) =>
             db.JsonAsync(SqlLibelles, ct, P("pieces", pieces ?? [], NpgsqlDbType.Array | NpgsqlDbType.Bigint), P("tiers", tiers ?? [], NpgsqlDbType.Array | NpgsqlDbType.Bigint)));
+        // Modèles proposés par l'écran de la règle (nœud relances en lecture, comme le reste de /api/relances).
+        api.MapGet("/relances/modeles", (LogiBtpContext db, CancellationToken ct) =>
+            db.JsonAsync(SqlModeles, ct, P("devis", NatureRelance.Devis), P("facture", NatureRelance.Facture),
+                P("usage", SpecialisationRelanceBtp.Usage), P("source", SourceRelanceEdition.Source)));
         return api;
     }
 }

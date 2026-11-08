@@ -260,6 +260,57 @@ public class RelancesBtpTests
         await tx.RollbackAsync();
     }
 
+    /// <summary>
+    /// Base LOGIBTP_TEST_PG (db/283 et db/287 chargés) : un devis envoyé il y a 40 jours est dû au niveau 2 ; la relance notée
+    /// (Q22 b) l'inscrit au journal : colonne derniere_relance de v_liste_documents renseignée, plus rien de dû ce jour-là,
+    /// niveau 3 dû 20 jours plus tard (le niveau avance). Transaction annulée.
+    /// </summary>
+    [Fact]
+    public async Task Relance_notee_renseigne_la_colonne_et_fait_avancer_le_niveau()
+    {
+        var connexion = Environment.GetEnvironmentVariable("LOGIBTP_TEST_PG");
+        if (string.IsNullOrEmpty(connexion)) return;
+        await using var c = new NpgsqlConnection(connexion);
+        await c.OpenAsync();
+        await using var tx = await c.BeginTransactionAsync();
+        async Task<object?> Scalaire(string sql, params (string, object)[] p)
+        {
+            await using var k = new NpgsqlCommand(sql, c, tx);
+            foreach (var (n, v) in p) k.Parameters.AddWithValue(n, v);
+            return await k.ExecuteScalarAsync();
+        }
+        async Task<long> Id(string sql, params (string, object)[] p) => Convert.ToInt64(await Scalaire(sql, p));
+        if (await Scalaire("SELECT 1 FROM information_schema.columns WHERE table_name = 'v_liste_documents' AND column_name = 'derniere_relance'") is null) return;
+        var devis = await Id("SELECT tyd_id FROM type_document WHERE tyd_code = 'V_DEVIS'");
+        if (await Scalaire("SELECT s.std_id FROM statut_document s JOIN type_document t ON t.tyd_id = s.std_tyd_id WHERE t.tyd_code = 'V_DEVIS' AND s.std_code = 'ENVOYE' ORDER BY s.std_id LIMIT 1") is not int envoye) return;
+        await Scalaire("DELETE FROM relance_regle");
+        var tiers = await Id("INSERT INTO personne (per_niv_code, per_raison_sociale) VALUES ('SOCIETE', 'Relance notee') RETURNING per_id");
+        var piece = await Id("""
+            INSERT INTO document (ent_tyd_id, ent_std_id, ent_numero, ent_date, ent_cree_par, ent_verrouille, ent_is_reference, ent_tiers_id,
+              ent_envoye_le, ent_total_ttc, ent_net_a_payer)
+            VALUES (@t, @s, 'DEV-NOTEE', @d, 'test', true, true, @tiers, @env, 1200, 1100) RETURNING ent_id
+            """, ("t", devis), ("s", envoye), ("d", Jour.AddDays(-50)), ("tiers", tiers), ("env", new DateTime(2026, 9, 29, 10, 0, 0, DateTimeKind.Utc)));
+        await Scalaire("UPDATE document SET ent_groupe_id = ent_id WHERE ent_id = @i", ("i", piece));
+        Task<object?> Derniere() => Scalaire("SELECT derniere_relance FROM v_liste_documents WHERE id = @i", ("i", piece));
+        Assert.True(await Derniere() is DBNull);
+
+        var options = new DbContextOptionsBuilder<RelanceDbContext>().UseNpgsql(c).UseSnakeCaseNamingConvention().Options;
+        await using var db = new RelanceDbContext(options);
+        await db.Database.UseTransactionAsync(tx);
+        var u = new Utilisateur("test", "UTILISATEUR");
+        async Task<int?> Niveau(DateOnly jour) =>
+            (await new ServiceRelance(db, new SpecialisationAuJour(jour)).Dues(jour, u, default)).SelectMany(g => g.Pieces).FirstOrDefault(x => x.Id == piece)?.Niveau;
+        Assert.Equal(2, await Niveau(Jour));
+
+        var notee = await new ServiceRelance(db, new SpecialisationAuJour(Jour)).Noter(new RelanceNotee(piece, ModeRelance.Courriel, Jour, "Appel du client"), u, default);
+        Assert.Equal(2, notee.Niveau);
+        Assert.Equal(EtatRelance.Envoyee, notee.Etat);
+        Assert.Equal(Jour, (DateOnly)(await Derniere())!);
+        Assert.Null(await Niveau(Jour));
+        Assert.Equal(3, await Niveau(Jour.AddDays(20)));
+        await tx.RollbackAsync();
+    }
+
     /// <summary>Faux transport : aucun courriel ne part (la file n'est pas traitée par le test).</summary>
     private sealed class SansTransport : ITransportMail
     {
