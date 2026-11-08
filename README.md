@@ -1,5 +1,12 @@
 # LogiBTP
 
+Application en mode test sur [https://logibtp.vercel.app/](https://logibtp.vercel.app/)
+```
+login : visiteur
+mdp : visitlogibtp2026
+```
+> Remise à zéro des données : La réinitialisation ou le purgeage des données de test restera possible à tout moment pour poursuivre les phases de recette.
+
 > ⚠️ **État du projet : Version Alpha (Test)**
 > Ce projet est actuellement en phase d'alpha et mis à disposition à des fins de test. L'application est en évolution constante et nous souhaitons activement recevoir vos avis, signalements de bugs et suggestions pour son amélioration. N'hésitez pas à nous faire part de vos retours !
 
