@@ -41,7 +41,7 @@
 | Lot | Titre | Module | Dépend de | Statut |
 |---|---|---|---|---|
 | 1 | D3 : contrôle de date sans les pièces remplacées ni le groupe | `modules/document` | — | FAIT |
-| 2 | D2 : précédent et montant de la période d'une situation (moteur et pied) | `modules/document` | — | A FAIRE |
+| 2 | D2 : précédent et montant de la période d'une situation (moteur et pied) | `modules/document` | — | FAIT |
 | 3 | M2 : pièces remplacées, bouton d'avoir et total des factures | cœur | — | A FAIRE |
 | 4 | M1 : case « Afficher le détail » et indices de la gestion du marché | cœur | 3 | A FAIRE |
 | 5 | D1 : adresse du chantier créé à l'acceptation de la commande | cœur | — | A FAIRE |

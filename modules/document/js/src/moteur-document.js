@@ -340,6 +340,7 @@ export class MoteurDocument {
       qte: periode ? q.minus(Dz(l.lig_avt_qte_precedent)) : q,
     };
     this.avancements.set(l.lig_id, a);
+    this.infosSituation.set(l.lig_id, { cumul: m, precedent: Dz(l.lig_avt_montant_precedent) });
     return a;
   }
 
@@ -371,11 +372,13 @@ export class MoteurDocument {
     if (m.abs().gt(mc.abs())) this.erreur(p.lig_id, 'LIGNE_DEPASSEE', 'Poste du pied au-delà de son montant dans la commande', false);
     p.lig_avt_montant_cumul = S(m);
     p.lig_avt_pct = mc.isZero() ? S(ZERO) : S(arr6(m.div(mc).times(100)));
+    this.infosSituation.set(p.lig_id, { cumul: m, precedent: Dz(p.lig_avt_montant_precedent) });
     return this.doc.ent_avt_presentation === 'P' ? m.minus(Dz(p.lig_avt_montant_precedent)) : m;
   }
 
   passeQuantites() {
     this.avancements = new Map();
+    this.infosSituation = new Map();
     this.avantQuantites();
     for (const l of this.ordre) {
       if (!estPied(l) && !this.enErreur.has(l.lig_id)) {
@@ -969,9 +972,25 @@ export class MoteurDocument {
       tva: this.tva,
       pied: this.pied,
       pieds_sections: this.piedsSections,
+      situation: this.infoSituation(),
       erreurs: this.erreurs,
       avertissements: this.avertissements,
     });
+  }
+
+  /**
+   * Information d'une situation (présentation C) : précédent et montant de la période (cumul − précédent) des lignes
+   * d'avancement et des postes du pied ; le total du document reste le cumul. Null hors situation.
+   */
+  infoSituation() {
+    if (this.doc.ent_avt_presentation !== 'C') return null;
+    let cumul = ZERO;
+    let precedent = ZERO;
+    for (const i of this.infosSituation.values()) {
+      cumul = cumul.plus(i.cumul);
+      precedent = precedent.plus(i.precedent);
+    }
+    return { precedent: S(arrondir(precedent, this.precMontant)), periode: S(arrondir(cumul.minus(precedent), this.precMontant)) };
   }
 
   /** Ajout des données propres à une spécialisation (métrés, variables…). */

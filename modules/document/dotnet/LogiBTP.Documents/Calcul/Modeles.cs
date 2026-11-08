@@ -29,6 +29,8 @@ public class ResultatDocument<TDoc, TLigne>
     public List<EntreePied> Pied { get; set; } = [];
     /// <summary>Pieds des sections qui portent le leur (document à plusieurs sections) ; Pied est alors le pied global.</summary>
     public List<PiedSection> PiedsSections { get; set; } = [];
+    /// <summary>Situation de travaux (présentation C) : précédent et montant de la période, en information ; null sinon.</summary>
+    public InfoSituation? Situation { get; set; }
     public List<MessageCalcul> Erreurs { get; set; } = [];
     public List<MessageCalcul> Avertissements { get; set; } = [];
 }
@@ -41,6 +43,9 @@ public class ResultatDocument<TDoc, TLigne>
 /// </summary>
 public sealed record EntreePied(string Genre, string Cle, long? LigId, List<long>? Lignes, decimal Montant, bool Masque,
     string? Libelle = null, string? Mode = null, int? Sens = null, decimal? Base = null, decimal? Taux = null);
+
+/// <summary>Information d'une situation : précédent et montant de la période (cumul − précédent) ; le total reste le cumul.</summary>
+public sealed record InfoSituation(decimal Precedent, decimal Periode);
 
 /// <summary>Pied d'une section qui porte le sien (structure comme celle du pied du document).</summary>
 public sealed record PiedSection(long LigId, List<EntreePied> Pied);

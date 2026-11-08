@@ -15,6 +15,10 @@ describe('Module Document : jeux de test partagés du moteur générique', () =>
       const fautes = [];
       verifierErreurs(a.erreurs, res.erreurs, fautes);
       if (a.document) verifier(a.document, res.document, 'document', fautes);
+      if ('situation' in a) {
+        if (a.situation === null) expect(res.situation ?? null, 'situation').toBeNull();
+        else verifier(a.situation, res.situation, 'situation', fautes);
+      }
       for (const [id, att] of Object.entries(a.lignes ?? {})) verifier(att, res.lignes.find((l) => l.lig_id === Number(id)), `lignes[${id}]`, fautes);
       for (const att of a.tva ?? []) verifier(att, res.tva.find((t) => t.tva_code === att.tva_code), `tva[${att.tva_code}]`, fautes);
       if (a.pied) {

@@ -262,6 +262,8 @@
       "tva": "TVA",
       "ttc": "TTC",
       "net": "Net à payer",
+      "situation_precedent": "Précédent",
+      "situation_periode": "Montant de la période",
       "totaux": "Totaux",
       "tva_base": "{{code}} · base {{base}}",
       "tva_annulation": "Annulation {{code}}",
