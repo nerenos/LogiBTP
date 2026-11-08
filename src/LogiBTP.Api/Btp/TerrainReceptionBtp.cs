@@ -117,6 +117,7 @@ public static partial class TerrainBtp
             FROM exe_ordre_etape e LEFT JOIN exe_etat_catalogue c ON c.etc_code = e.ore_code WHERE e.ore_ordre_id = @e AND e.ore_code = @c
             """, new NpgsqlParameter("e", o.Id), new NpgsqlParameter("c", EtapeReception)).FirstOrDefaultAsync(ct),
         receptions = (await ReceptionsAsync(db, o.Id, ct)).Select(Reception),
+        reserves = await ReservesAsync(db, o.Id, ct),
     };
 
     /// <summary>Image PNG d'une data URL (signature tracée) ; refus si ce n'est pas un PNG ou s'il est trop lourd.</summary>
@@ -165,6 +166,8 @@ public static partial class TerrainBtp
                     """, new NpgsqlParameter("e", ent), new NpgsqlParameter("etat", r.Etat), new NpgsqlParameter("res", JsonSerializer.Serialize(reserves)),
                     SqlBtp.P("m", r.Motif?.Trim()), new NpgsqlParameter("s", sigId), SqlBtp.P("c", courriel), new NpgsqlParameter("u", u.Code),
                     SqlBtp.P("app", HeureAppareil(r.SigneeLe, DateTimeOffset.UtcNow), NpgsqlTypes.NpgsqlDbType.TimestampTz)).ToListAsync(ct))[0];
+                // Réserves suivies une par une (terrain-suites lot 14) ; la tâche du CRM reste créée plus bas comme alerte.
+                await EcrireReservesAsync(db, recId, ent, ReservesSuivies(r.Etat, reserves), ct);
                 await tx.CommitAsync(ct);
             }
             var avertissements = new List<string>();
@@ -209,7 +212,7 @@ public static partial class TerrainBtp
                     var liens = new List<LienSaisi> { new("document", o.Groupe.ToString(CultureInfo.InvariantCulture), true) };
                     if (o.ChaId is int c) liens.Add(new(TypesFiche.Chantier, c.ToString(CultureInfo.InvariantCulture)));
                     await services.GetRequiredService<ServiceCrm>().Enregistrer(null, new NoteSaisie(NatureNote.Tache, EtatNote.AFaire, null, srv,
-                        $"Réserves à lever (réception de {o.Numero}) : {string.Join(" ; ", reserves)}", null, null, DateTimeOffset.UtcNow.AddDays(7), null, false, false, false, liens, null), u, ct);
+                        LibelleTacheReserves(o.Numero, reserves), null, null, DateTimeOffset.UtcNow.AddDays(7), null, false, false, false, liens, null), u, ct);
                 });
             if (r.Etat == "REFUSEE")
                 await SuiteAsync(avertissements, "Ordre non bloqué", async () =>
@@ -245,6 +248,7 @@ public static partial class TerrainBtp
                 """, new NpgsqlParameter("r", rec), new NpgsqlParameter("e", ent)).FirstOrDefaultAsync(ct) ?? throw ExceptionMetier.Introuvable("PV de réception");
             return await ged.Contenu(version, false, http, u, ct);
         });
+        g.MapReservesReception();
 
         // Demande d'approvisionnement (T18) : ordre E_DAP brouillon sur un chantier de la personne, une ligne de texte par article.
         g.MapPost("/demandes", async (DemandeTerrain dm, HttpContext http, LogiBtpContext db,
@@ -300,6 +304,10 @@ public static partial class TerrainBtp
         }).ExigeDroit("terrain/demande", ActionsDroits.Consulter);
         return g;
     }
+
+    /// <summary>Libellé de la tâche du CRM des réserves (alerte du service de l'ordre, gardée avec les réserves suivies).</summary>
+    public static string LibelleTacheReserves(string? numero, IEnumerable<string> reserves) =>
+        $"Réserves à lever (réception de {numero}) : {string.Join(" ; ", reserves)}";
 
     private static async Task SuiteAsync(List<string> avertissements, string libelle, Func<Task> suite)
     {

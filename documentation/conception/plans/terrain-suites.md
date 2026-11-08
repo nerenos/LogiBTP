@@ -29,7 +29,7 @@
 | 11 | Limite de dépôt de la GED exposée au client | `modules/ged` | — | FAIT (08/11/2026) |
 | 12 | Contrôle de taille des photos à la prise de vue | cœur | 11 | FAIT (08/11/2026) |
 | 13 | PV de réception : forme de signature et heure de l'appareil | cœur | — | FAIT (08/11/2026) |
-| 14 | Réserves suivies : base et serveur | cœur | 13 | A FAIRE |
+| 14 | Réserves suivies : base et serveur | cœur | 13 | FAIT (08/11/2026) |
 | 15 | Réserves suivies : levée depuis le terrain et suivi au bureau | cœur | 14 | A FAIRE |
 | 16 | PV de levée des réserves signé | cœur | 15 | A FAIRE |
 | 17 | Bibliothèque simplifiée : serveur | cœur | — | A FAIRE |
@@ -324,7 +324,7 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
   Tests : `ReceptionAppareilTests.cs` (rejeu du script et source du PV sur la base de développement si
   `LOGIBTP_TEST_PG`), `operations-terrain.test.js`.
 
-## Lot 14 : réserves suivies, base et serveur (TS14 a)
+## Lot 14 : réserves suivies, base et serveur (TS14 a) (FAIT 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : nouveau script `db/2xx_reception_reserves.sql` (table des réserves : réception, libellé, photo GED,
@@ -337,6 +337,18 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
 - **Tests** : C# : réception avec deux réserves ; levée par une personne affectée ; levée refusée hors périmètre ;
   tâche du CRM toujours créée.
 - **Critère de fin** : `npm test` vert ; `CodesTests` vert ; script rejoué deux fois sans erreur.
+- **Réalisé / écarts** : `db/290_reception_reserves.sql` (rejouable) : table `reception_reserve` (réception, ordre,
+  rang, libellé, photo GED `rre_dge_id`, état, levée le / sur l'appareil / par / commentaire / photo). Codes
+  `ETAT_RESERVE` (`codes.js`) ↔ `EtatsReserve` (`Codes.cs`), `CodesTests`. Nouveau `Btp/TerrainReservesBtp.cs` :
+  `ReservesSuivies` + `EcrireReservesAsync` dans la transaction de la réception (la tâche du CRM reste créée,
+  `LibelleTacheReserves`), `GET /api/terrain/receptions/{ent}/reserves`, `POST …/reserves/{res}/levee` (formulaire :
+  `commentaire`, `levee_le` de l'appareil, `photo` déposée dans la GED de l'ordre par le compte de service des
+  éditions), `LeverReserveAsync` (contrôle `OrdreReceptionAsync`, mêmes règles que la réception ; levée rejouée sans
+  effet, pour les envois de l'appareil) ; réserves aussi rendues par `GET /api/terrain/receptions/{ent}`. Routes : sous
+  le préfixe déjà déclaré `/api/terrain/receptions` (commentaire ajouté dans `SpecialisationDroitsBtp.Routes`, pas de
+  nouvelle entrée). Photo de la réserve à la réception : colonne prête, pas encore saisie (la réception envoie des
+  libellés). Point OUVERT tranché par la proposition : pas de reprise des réserves des tâches du CRM. Tests :
+  `ReservesReceptionTests.cs` (levée et refus sur la base de développement si `LOGIBTP_TEST_PG`).
 
 ## Lot 15 : réserves suivies, levée depuis le terrain et suivi au bureau (TS14 a)
 

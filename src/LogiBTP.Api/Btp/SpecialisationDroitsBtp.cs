@@ -213,7 +213,8 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
         new("/api/terrain/etapes", ModeRoute.Action, "terrain", ActionsDroits.Consulter),
         new("/api/terrain/taches", ModeRoute.Action, "terrain", ActionsDroits.Consulter),
         // Réception de pose et demande d'approvisionnement : ordres et chantiers de son planning (contrôlé par la route ;
-        // la demande crée un ordre E_DAP sous le droit CREER de son type).
+        // la demande crée un ordre E_DAP sous le droit CREER de son type). Réserves suivies et leur levée
+        // (receptions/{ent}/reserves, terrain-suites lot 14) : mêmes règles que la réception.
         new("/api/terrain/receptions", ModeRoute.Action, "terrain", ActionsDroits.Consulter),
         // Demandes : nœud terrain/demande (Consulter : ses demandes ; Créer : nouvelle demande, posé par la route).
         new("/api/terrain/demandes", ModeRoute.Action, "terrain", ActionsDroits.Consulter),
