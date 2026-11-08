@@ -48,7 +48,7 @@
 | 4 | Relevés de compteurs à la borne : écran | cœur | 3 | FAIT (08/11/2026) |
 | 5 | Données de démonstration d'entretiens | cœur | MO3 | FAIT (08/11/2026) |
 | 6 | Refacturation interne : composante « produit interne » | `modules/rentabilite` | MO4 | FAIT |
-| 7 | Refacturation interne : crédit du chantier de suivi | cœur | 6 | A FAIRE |
+| 7 | Refacturation interne : crédit du chantier de suivi | cœur | 6 | FAIT (08/11/2026) |
 | 8 | Coût par heure proposé comme coût moyen | cœur | MO5 | A FAIRE |
 | 9 | Cartes carburant : lecture du fichier | `modules/import` | MO6 | A FAIRE |
 | 10 | Cartes carburant : rapprochement et écriture des pleins | cœur | 9 | A FAIRE |
@@ -154,6 +154,7 @@
 - **Règles répliquées JS / C#** : aucune nouvelle (lot 6).
 - **Jeux de tests** : matériel pointé 10 h sur deux chantiers → chantier de suivi crédité du même total.
 - **Critère de fin** : `dotnet test LogiBTP.slnx` et `npm test` verts.
+- **Réalisé / écarts** : `RentabiliteBtp.cs` : pour un chantier de suivi, lecture des `pointage_materiel` des matériels dont `mat_cha_id` est ce chantier pointés ailleurs, faits DEBOURSE `PRODUIT_INTERNE` (PV = heures × coût horaire effectif, 0 si loué ou sans coût ; PA/PR nuls), `MontantProduitInterne` (même arrondi que le déboursé), règle `PRODUIT_INTERNE` (texte client), `VersionRegles` 6 (recalcul). `CoutsMateriel.cs` et `rentabilite.js` inchangés (`#materiel` = paramètres, rien à y ajouter ; les coûts ne reprennent pas le produit). Tests `ProduitInterneMaterielTests` (règle pure, pas de banc base). `npm test` : 2 échecs connus ; `dotnet test` vert.
 
 ## Lot 8 : coût par heure proposé comme coût moyen (A FAIRE)
 

@@ -50,7 +50,7 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
     public const string NoeudPrevisions = "rentabilite/previsions";
     public const string NoeudFacturation = "rentabilite/facturation";
 
-    public override int VersionRegles => 5;
+    public override int VersionRegles => 6;
 
     /// <summary>Règles appliquées (afa_regle), affichées dans la page des faits.</summary>
     public static class Regles
@@ -96,7 +96,15 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
         public const string MaterielLoue = "MATERIEL_LOUE";
         public const string MaterielSansCout = "MATERIEL_SANS_COUT";
         public const string TacheMateriel = "TACHE_MATERIEL";
+        public const string ProduitInterne = "PRODUIT_INTERNE";
     }
+
+    /// <summary>
+    /// Produit interne d'un pointage de matériel sur un autre chantier (plan materiel-suites, lot 7, MO4) : même montant que le
+    /// déboursé valorisé sur ce chantier (heures × coût horaire effectif) ; 0 si le matériel est loué à la date ou sans coût.
+    /// </summary>
+    public static decimal MontantProduitInterne(int minutes, decimal? coutHoraire, bool loue) =>
+        loue || coutHoraire is not { } c ? 0m : Math.Round(minutes / 60m * c, 6, MidpointRounding.AwayFromZero);
 
     public override IReadOnlyList<string> ReglesControle { get; } =
         [Regles.PointageNonValorise, Regles.PointageTauxService, Regles.StockNonValorise, Regles.TacheSansTaux, Regles.MaterielSansCout];
@@ -230,7 +238,13 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
             SELECT pma_id, pma_mat_id AS mat_id, pma_date AS date, pma_minutes AS minutes, pma_tac_id AS tac_id
             FROM pointage_materiel WHERE pma_cha_id = {chantier}
             """).ToListAsync(ct);
-        var materielsPointes = pointagesMateriel.Select(p => p.MatId).ToArray();
+        // Produit interne (lot 7, MO4) : heures des matériels suivis par ce chantier, pointées sur d'autres chantiers.
+        var pointagesAilleurs = await db.Database.SqlQuery<PointageMaterielSql>($"""
+            SELECT p.pma_id, p.pma_mat_id AS mat_id, p.pma_date AS date, p.pma_minutes AS minutes, p.pma_tac_id AS tac_id
+            FROM pointage_materiel p JOIN materiel m ON m.mat_id = p.pma_mat_id
+            WHERE m.mat_cha_id = {chantier} AND p.pma_cha_id IS DISTINCT FROM {chantier}
+            """).ToListAsync(ct);
+        var materielsPointes = pointagesMateriel.Concat(pointagesAilleurs).Select(p => p.MatId).ToArray();
         var tachesPointees = pointagesMateriel.Where(p => p.TacId is not null).Select(p => p.TacId!.Value).Distinct().ToArray();
         Dictionary<long, long?> oeTachesMateriel = tachesPointees.Length == 0 ? [] : (await db.Database.SqlQuery<OrdreSql>($"""
             SELECT t.tac_id AS ent, f_rentabilite_ordre(t.tac_origine_id::bigint) AS oe FROM pla_tache t
@@ -311,6 +325,7 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
             FROM materiel m WHERE m.mat_id = ANY({idsMateriel})
             """).ToListAsync(ct)).ToDictionary(m => m.Id);
         c.PointagesMateriel(pointagesMateriel, oeTachesMateriel);
+        c.ProduitInterne(pointagesAilleurs);
         if (taches.Count > 0)
         {
             var salaries = taches.Where(t => t.ResType == "SALARIE" && int.TryParse(t.ResId, out _)).Select(t => int.Parse(t.ResId!)).Distinct().ToArray();
@@ -778,6 +793,18 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
                 var ordre = x.TacId is { } t ? oes.GetValueOrDefault(t) : null;
                 Ajouter(Indicateur.Debourse, Composante.Materiel, x.Date, null, null, NatureMateriel, pa, pa * Coef(NatureMateriel, x.Date), 0, regle, ordre,
                     m?.Libelle, heures, "h", null, SourceFait.PointageMateriel, x.PmaId);
+            }
+        }
+
+        /// <summary>Produit interne du chantier de suivi d'un matériel : PV seul, déboursé nul (marge : <c>Marges.Chantier</c>).</summary>
+        public void ProduitInterne(List<PointageMaterielSql> pointages)
+        {
+            foreach (var x in pointages)
+            {
+                var m = Materiels.GetValueOrDefault(x.MatId);
+                var pv = MontantProduitInterne(x.Minutes, m?.Cout, m is not null && m.Loue(x.Date));
+                Ajouter(Indicateur.Debourse, Composante.ProduitInterne, x.Date, null, null, null, 0, 0, pv, Regles.ProduitInterne, null,
+                    m?.Libelle, x.Minutes / 60m, "h", null, SourceFait.PointageMateriel, x.PmaId);
             }
         }
 

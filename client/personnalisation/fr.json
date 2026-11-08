@@ -8413,6 +8413,7 @@
       "MATERIEL_LOUE": "Heures de matériel loué (coût par la commande de location)",
       "MATERIEL_SANS_COUT": "Heures de matériel sans coût horaire (fiche ou type)",
       "TACHE_MATERIEL": "Matériel planifié (après son dernier pointage)",
+      "PRODUIT_INTERNE": "Produit interne : heures du matériel valorisées sur d'autres chantiers",
       "PREVISION": "Saisie prévisionnelle (hors du réel jusqu'à son solde)"
     },
     "roles": {
