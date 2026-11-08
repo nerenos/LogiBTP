@@ -24,19 +24,19 @@
 
 | N° | Question | Recommandation | Statut |
 |---|---|---|---|
-| SO1 | Mise à jour : comment savoir que la connexion n'est pas chiffrée ? | Ne pas détecter : relancer toujours la préparation (rejouable) à la mise à jour ; elle rend un code de sortie « certificat de base créé ou renouvelé », et le script ne redémarre la base que dans ce cas. | OUVERT |
-| SO2 | Renouvellement du certificat de la base : quelle tâche ? | La tâche hebdomadaire « LogiBTP - certificat » existante, qui appelle aussi le renouvellement du certificat de base (même seuil de 60 jours) puis redémarre la base s'il a changé. | OUVERT |
-| SO3 | Linux : même traitement ? | Oui, par la minuterie existante (`minuterie()`) et le script de mise à jour Linux. | OUVERT |
+| SO1 | Mise à jour : comment savoir que la connexion n'est pas chiffrée ? | Ne pas détecter : relancer toujours la préparation (rejouable) à la mise à jour ; elle rend un code de sortie « certificat de base créé ou renouvelé », et le script ne redémarre la base que dans ce cas. | ✔ Tranché (08/11/2026) : recommandation retenue (code de sortie certificat de base créé ou renouvelé ; la base n'est redémarrée que dans ce cas). |
+| SO2 | Renouvellement du certificat de la base : quelle tâche ? | La tâche hebdomadaire « LogiBTP - certificat » existante, qui appelle aussi le renouvellement du certificat de base (même seuil de 60 jours) puis redémarre la base s'il a changé. | ✔ Tranché (08/11/2026) : recommandation retenue. |
+| SO3 | Linux : même traitement ? | Oui, par la minuterie existante (`minuterie()`) et le script de mise à jour Linux. | ✔ Tranché (08/11/2026) : recommandation retenue. |
 
 | Lot | Titre | Module | Dépend de | Statut |
 |---|---|---|---|---|
-| 1 | Commande de renouvellement du certificat de base et code de sortie | cœur | SO1, SO2 | A FAIRE |
+| 1 | Commande de renouvellement du certificat de base et code de sortie | cœur | SO1, SO2 | FAIT |
 | 2 | Windows : mise à jour qui relance la préparation, tâche planifiée | `modules/installation` | 1 | A FAIRE |
 | 3 | Linux : mise à jour et minuterie | `modules/installation` | 1, SO3 | A FAIRE |
 
 ---
 
-## Lot 1 : commande de renouvellement du certificat de base et code de sortie (A FAIRE)
+## Lot 1 : commande de renouvellement du certificat de base et code de sortie (FAIT le 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `CommandeInstallation.cs` (`ExecuterAsync :45` : sous-commande de renouvellement du certificat de base,
@@ -48,6 +48,7 @@
 - **Jeux de tests** : certificat à plus de 60 jours → code « inchangé » ; à moins de 60 jours ou absent → renouvelé,
   code « changé » ; préparation rejouée deux fois → second passage « inchangé ».
 - **Critère de fin** : `dotnet test LogiBTP.slnx` vert.
+- **Réalisé** : `CommandeInstallation.RenouvelerCertificatBase` (public, testable avec des chemins factices ; remplace `CertificatBaseLocal`), décision pure `CertificatBaseAEmettre` (seuil de 60 jours), nouvelle sous-commande `installation certificat base-renouveler` (code 10 = `CodeCertificatBaseChange` si créé ou renouvelé, sinon 0), aide mise à jour. Écart : `preparer` ne rend le code 10 que si on lui passe `--code-certificat` (sans l'option, 0 comme avant : `Invoquer-Installation` des installeurs traiterait le code 10 en échec) ; les lots 2 et 3 passent cette option à la mise à jour. Tests : `CertificatBaseTests` (plus de 60 jours inchangé, moins ou absent renouvelé, préparation rejouée : second passage inchangé).
 
 ## Lot 2 : Windows, mise à jour et tâche planifiée (A FAIRE)
 
