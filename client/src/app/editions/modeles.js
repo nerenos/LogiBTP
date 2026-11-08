@@ -168,6 +168,13 @@ const BLOCS = [
                   ],
                 },
                 {
+                  // Situation (présentation C) : le total reste le cumul ; précédent et période en information.
+                  type: 'pile', condition: 'document.situation', marges: { haut: 1 }, enfants: [
+                    { type: 'rangee', enfants: [champ('Précédent', { style: 'petit', largeur: '*' }), champ('{{document.situation.precedent}}', { format: 'montant', style: 'montant', alignement: 'droite', largeur: '28mm' })] },
+                    { type: 'rangee', enfants: [champ('Montant de la période', { style: 'petit', largeur: '*' }), champ('{{document.situation.periode}}', { format: 'montant', style: 'montant', alignement: 'droite', largeur: '28mm' })] },
+                  ],
+                },
+                {
                   // Avoirs imputés (module Règlements) et reste après imputation.
                   type: 'pile', condition: 'Compte(imputations) > 0', enfants: [
                     {

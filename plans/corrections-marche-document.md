@@ -45,7 +45,7 @@
 | 3 | M2 : pièces remplacées, bouton d'avoir et total des factures | cœur | — | FAIT |
 | 4 | M1 : case « Afficher le détail » et indices de la gestion du marché | cœur | 3 | A FAIRE |
 | 5 | D1 : adresse du chantier créé à l'acceptation de la commande | cœur | — | A FAIRE |
-| 6 | D2 : précédent et montant de la période dans l'édition de la situation | cœur | 2 | A FAIRE |
+| 6 | D2 : précédent et montant de la période dans l'édition de la situation | cœur | 2 | FAIT |
 | 7 | Date de livraison par ligne d'une commande validée | cœur | — | A FAIRE |
 
 ---
@@ -120,7 +120,7 @@
 - **Critère de fin** : `npm test` vert ; les trois champs sont remplis dans les trois cas.
 - **Écarts** : fonction `adresseChantierInitiale` exportée (testée) ; l'adresse du client vient de `ent_contact_client.adresse` ; référentiel des projets de `Structure.cs` complété de `adresse` et `code_postal`.
 
-## Lot 6 : D2, précédent et montant de la période dans l'édition (A FAIRE)
+## Lot 6 : D2, précédent et montant de la période dans l'édition (FAIT le 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : modèle d'édition de la situation (`client/src/app/editions/modeles.js`, `piece() :317`, et le
@@ -130,6 +130,7 @@
 - **Jeux de tests** : édition d'une situation avec précédent : les deux lignes apparaissent ; facture P inchangée.
 - **Critère de fin** : `npm test` vert ; aperçu de l'édition d'une situation montrant « Précédent » et « Montant de la
   période ».
+- **Écarts** : lignes ajoutées au bloc `TOTAUX_DOCUMENT` (sous le net à payer) ; variable `document.situation` (precedent, periode) exposée par `EditionsBtp.cs` et ajoutée à son dictionnaire (là, pas dans un `dictionnaire-modele.js`) ; test `client/test/modeles-situation.test.js` structurel ; `dotnet test` bloqué par l'API en marche, compilation de l'API vérifiée dans un dossier distinct.
 
 ## Lot 7 : date de livraison par ligne d'une commande validée (A FAIRE)
 
