@@ -4,6 +4,7 @@ export { GrilleArbre } from './grille.js';
 export { Magasin } from './etat.js';
 export { ListeDeroulante, AssistantFormule } from './liste-deroulante.js';
 export { creerCombo, comboDepuisSelect, activerCombos } from './combo.js';
+export { creerJetons, decouperJetons, ajouterJetons, retirerJeton } from './jetons.js';
 export { champDate, activerDates } from './champ-date.js';
 export { lireNombre, nombreSaisi, formatNombre, formatLibre, formatDate, formatDateHeure, formatHeure, htmlSur, echapper, estHtml, decoderEntites } from './format.js';
 export { lirePreferences, ecrirePreferences, lireStockage, ecrireStockage } from './preferences.js';

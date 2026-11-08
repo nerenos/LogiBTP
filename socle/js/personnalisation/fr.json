@@ -163,6 +163,10 @@
       "points_autre": "{{nombre}} points à vérifier",
       "aller": "Aller",
       "fermer": "Fermer (Échap)"
+    },
+    "jetons": {
+      "retirer": "Retirer {{jeton}}",
+      "saisie": "Ajouter (Entrée ou virgule)"
     }
   },
   "erreurs": {

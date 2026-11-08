@@ -283,3 +283,11 @@ button.lien { background: none; border: none; padding: 0; color: var(--accent); 
 .groupe-outils[hidden], .groupe-outils:empty { display: none; }
 .separateur-outils { align-self: stretch; width: 1px; margin: 0.15rem 0.25rem; background: var(--outils-separateur); }
 .liste-avertissements { margin: 0.3rem 0 0.6rem; padding-left: 1.2rem; }
+
+/* Jetons (mots-clés) */
+.jetons { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25em; padding: 0.2em 0.35em; background: var(--surface); border: 1px solid var(--bord); border-radius: 4px; }
+.jetons:focus-within { box-shadow: 0 0 0 2px var(--accent-clair); }
+.jetons .jeton { display: inline-flex; align-items: center; gap: 0.2em; padding: 0.05em 0.2em 0.05em 0.5em; background: var(--accent-clair); color: var(--texte); border-radius: 999px; }
+.jetons .jeton-retirer { min-width: 0; padding: 0 0.25em; border: 0; background: transparent; color: var(--discret); cursor: pointer; }
+.jetons .jeton-retirer:hover { color: var(--erreur); }
+.jetons .jetons-saisie { flex: 1 1 8em; min-width: 6em; border: 0; outline: none; background: transparent; color: var(--texte); }

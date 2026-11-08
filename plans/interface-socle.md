@@ -42,7 +42,7 @@
 | Lot | Titre | Module | Dépend de | Statut |
 |---|---|---|---|---|
 | 1 | P3 : décompte des notifications non figé à l'ouverture | `socle` | — | FAIT (08/11/2026) |
-| 2 | P2 : composant `creerJetons` | `socle` | — | A FAIRE |
+| 2 | P2 : composant `creerJetons` | `socle` | — | FAIT (08/11/2026) |
 | 3 | P2 : mots-clés en jetons dans la fiche élément | `modules/bibliotheque` | 2 | A FAIRE |
 | 4 | P2 : mots-clés en jetons dans la GED | `modules/ged` | 2 | A FAIRE |
 | 5 | P1 : nom et aperçu de la couleur dans le choix de teinte | `modules/liste` | — | A FAIRE |
@@ -65,7 +65,9 @@
   niveau erreur → même comportement ; fin du décompte → fermeture.
 - **Critère de fin** : `npm test` vert ; une notification ouverte sans interaction se ferme après le délai.
 
-## Lot 2 : P2, composant `creerJetons` (A FAIRE)
+## Lot 2 : P2, composant `creerJetons` (FAIT 08/11/2026)
+
+> Écart : pas de raccourci déclaré (touches Entrée, virgule, Retour arrière traitées dans le champ) ; logique pure testée (`decouperJetons`, `ajouterJetons`, `retirerJeton`), le DOM n est pas testé. Textes `socle.jetons.*` dans `socle/js/personnalisation/fr.json`. `socle/CLAUDE.md` non modifié (à mentionner).
 
 - **Module** : `socle`. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `socle/js/src/ui/jetons.js` (nouveau : valeur en tableau de textes, ajout par Entrée ou virgule,
