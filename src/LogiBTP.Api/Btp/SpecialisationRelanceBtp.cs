@@ -33,6 +33,9 @@ namespace LogiBTP.Api.Btp;
 /// (aff_responsable_ind_id), sinon chargé d'affaires du client (Q9) ; portée du nœud « relances » par chargé.
 /// Lot 6 : envoi par courriel (module Mail, usage RELANCE, modèles par nature et niveau de db/285, lot de priorité
 /// basse, édition de chaque pièce jointe, bascule en courrier sans adresse, Q11, Q21) ; note RELANCE du CRM (Q14).
+/// Lot 7 : lettre (COURRIER, RECOMMANDE, bascule du courriel) produite par le module Édition (source « relance »,
+/// modèles RELANCE_1, RELANCE_2, MISE_EN_DEMEURE), rangée en GED de chaque pièce (catégorie relance, db/286) ;
+/// recommandé en ATTENTE_NUMERO jusqu'à la saisie de son numéro (Q12).
 /// </summary>
 public sealed class SpecialisationRelanceBtp(IHttpContextAccessor http, ILogger<SpecialisationRelanceBtp> journal) : SpecialisationRelance
 {
@@ -91,13 +94,14 @@ public sealed class SpecialisationRelanceBtp(IHttpContextAccessor http, ILogger<
 
     private static DateOnly Aujourdhui => DateOnly.FromDateTime(DateTime.Today);
 
-    public override async Task<List<PieceEnAttente>> PiecesEnAttenteAsync(RelanceDbContext db, FiltrePieces filtre, CancellationToken ct)
+    public override async Task<List<PieceEnAttente>> PiecesEnAttenteAsync(RelanceDbContext db, FiltrePieces filtre, CancellationToken ct) =>
+        await PiecesAsync(db, filtre, Aujourdhui, await EcheancesReglementAsync(Services, ct), ct);
+
+    /// <summary>Lecture des échéances ouvertes du module Règlements s'il est actif pour la société ; null sinon.</summary>
+    public static async Task<Func<IReadOnlyCollection<long>, CancellationToken, Task<List<EcheanceDto>>>?> EcheancesReglementAsync(IServiceProvider? s, CancellationToken ct)
     {
-        var s = Services;
         var reglement = s?.GetService<ModulesSociete>() is { } m && await m.EstActifAsync(ModulesFacultatifs.Reglement, ct) ? s.GetService<ServiceReglement>() : null;
-        Func<IReadOnlyCollection<long>, CancellationToken, Task<List<EcheanceDto>>>? echeances = reglement is null ? null
-            : (pieces, c) => reglement.Echeances(new FiltreEcheances(Sens: "E", Pieces: pieces), true, c);
-        return await PiecesAsync(db, filtre, Aujourdhui, echeances, ct);
+        return reglement is null ? null : (pieces, c) => reglement.Echeances(new FiltreEcheances(Sens: "E", Pieces: pieces), true, c);
     }
 
     /// <summary>
@@ -277,10 +281,7 @@ public sealed class SpecialisationRelanceBtp(IHttpContextAccessor http, ILogger<
 
     private static string Date(DateOnly d) => d.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
 
-    /// <summary>
-    /// Courriel d'une relance groupée ; tiers sans adresse connue : bascule en courrier (Q21, la lettre est celle du
-    /// lot 7 : journal seul jusque-là).
-    /// </summary>
+    /// <summary>Courriel d'une relance groupée ; tiers sans adresse connue : bascule en courrier, avec sa lettre (Q21).</summary>
     public override async Task<ResultatEnvoi> EnvoyerCourrielAsync(RelanceDbContext db, EnvoiRelance envoi, CancellationToken ct)
     {
         var s = Services ?? throw new InvalidOperationException("Envoi d'une relance hors d'une requête");
@@ -459,6 +460,109 @@ public sealed class SpecialisationRelanceBtp(IHttpContextAccessor http, ILogger<
             new TacheEdition { EttSource = "document", EttIdElement = element, EttMotif = "ENVOI", EttDemandePar = u.Code, EttCreeLe = DateTimeOffset.UtcNow },
             pdf, preparation, u, ct);
         return depot is long d ? $"ged:{d}" : null;
+    }
+
+    // ----- Lettres et recommandés (lot 7, Q12, Q13 b) -----
+
+    /// <summary>Lettre simple : PDF du module Édition rangé en GED de chaque pièce ; ENVOYEE.</summary>
+    public override Task<ResultatEnvoi> EnvoyerCourrierAsync(RelanceDbContext db, EnvoiRelance envoi, CancellationToken ct) => LettreServeurAsync(db, envoi, ct);
+
+    /// <summary>Lettre recommandée : même lettre, en ATTENTE_NUMERO jusqu'à la saisie de son numéro (PUT /api/relances/{id}/recommande).</summary>
+    public override Task<ResultatEnvoi> EnvoyerRecommandeAsync(RelanceDbContext db, EnvoiRelance envoi, CancellationToken ct) => LettreServeurAsync(db, envoi, ct);
+
+    private Task<ResultatEnvoi> LettreServeurAsync(RelanceDbContext db, EnvoiRelance envoi, CancellationToken ct)
+    {
+        var s = Services ?? throw new InvalidOperationException("Envoi d'une relance hors d'une requête");
+        return LettreAsync(db, envoi, ProduireLettre(s, envoi), RangerLettre(s, envoi.Auteur), ct);
+    }
+
+    /// <summary>PDF d'une lettre produit par le module Édition (moteur du serveur) : octets, pages, libellé, nom du fichier, alertes du moteur (JSON).</summary>
+    public sealed record LettreProduite(byte[] Pdf, int Pages, string Libelle, string NomFichier, string Alertes = "[]");
+
+    /// <summary>Lettre à ranger en GED d'une pièce : type et groupe d'indices de la pièce, titre, date, résumé, PDF.</summary>
+    public sealed record LettreARanger(string TypeElement, string IdElement, string Titre, DateOnly Date, string Resume, string Modele, LettreProduite Lettre);
+
+    /// <summary>Production par le module Édition : source « relance », modèle choisi, paramètres de l'envoi (mode, date, commentaire).</summary>
+    public static Func<string, string, CancellationToken, Task<LettreProduite>> ProduireLettre(IServiceProvider s, EnvoiRelance envoi) => async (modele, id, ct) =>
+    {
+        var parametres = new Dictionary<string, JsonElement>
+        {
+            ["mode"] = JsonSerializer.SerializeToElement(envoi.Mode),
+            ["date"] = JsonSerializer.SerializeToElement(envoi.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
+        };
+        if (!string.IsNullOrWhiteSpace(envoi.Commentaire)) parametres["commentaire"] = JsonSerializer.SerializeToElement(envoi.Commentaire);
+        var (pdf, nom, preparation) = await s.GetRequiredService<ServiceEdition>().Pdf(s, new DemandeEdition(SourceRelanceEdition.Source, id, modele, Parametres: parametres),
+            false, envoi.Auteur, ct);
+        return new LettreProduite(pdf.Octets, pdf.Pages, preparation.Element, nom, pdf.AlertesJson);
+    };
+
+    /// <summary>Dépôt dans la GED du serveur (catégorie relance, confidentialité interne) ; renvoie le document créé.</summary>
+    public static Func<LettreARanger, CancellationToken, Task<long>> RangerLettre(IServiceProvider s, Utilisateur u) => async (l, ct) =>
+    {
+        await using var flux = new MemoryStream(l.Lettre.Pdf);
+        var fichier = new FormFile(flux, 0, l.Lettre.Pdf.Length, "fichier", l.Lettre.NomFichier) { Headers = new HeaderDictionary(), ContentType = "application/pdf" };
+        var depot = await s.GetRequiredService<LogiBTP.Ged.Web.ServiceGed>().DeposerFichier(fichier, new LogiBTP.Ged.Web.MetaDepot
+        {
+            Titre = l.Titre, Categorie = CategoriesGed.Relance, TypeElement = l.TypeElement, IdElement = l.IdElement, Auteur = u.Code,
+            DateDocument = l.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), Confidentialite = NiveauConfidentialite.Interne, Resume = l.Resume,
+            MotsCles = ["relance", l.Modele.ToLowerInvariant()],
+        }, u, ct);
+        return depot.Id;
+    };
+
+    /// <summary>
+    /// Lettre d'une relance groupée (une par groupe) : modèle du niveau dans la règle, sinon modèle par défaut
+    /// (<see cref="ModeleParDefaut"/>) ; PDF produit une fois (<paramref name="produire"/>), rangé en GED de chaque pièce
+    /// (<paramref name="ranger"/>, groupe d'indices de la pièce, catégorie relance) ; ENVOYEE, ou ATTENTE_NUMERO pour un
+    /// recommandé ; document GED de la première pièce gardé au journal. Une production ou un dépôt impossible fait
+    /// échouer l'envoi du groupe (il reste proposé, l'échec est signalé).
+    /// </summary>
+    public static async Task<ResultatEnvoi> LettreAsync(DbContext db, EnvoiRelance envoi, Func<string, string, CancellationToken, Task<LettreProduite>> produire,
+        Func<LettreARanger, CancellationToken, Task<long>> ranger, CancellationToken ct)
+    {
+        var modele = await ModeleLettreAsync(db, envoi, ct);
+        var lettre = await produire(modele, SourceRelanceEdition.Identifiant(envoi.Pieces.Select(p => p.RelanceId)), ct);
+        var pieces = await db.Database.SqlQueryRaw<PieceCourriel>(SqlPiecesCourriel,
+            P("ids", envoi.Pieces.Select(p => p.PieceId).Distinct().ToArray(), NpgsqlDbType.Array | NpgsqlDbType.Bigint)).ToListAsync(ct);
+        var recommande = envoi.Mode == ModeRelance.Recommande;
+        var resume = $"Lettre de relance {Par(envoi.Mode)}, niveau {envoi.Niveau} ({modele}), {lettre.Pages} page(s) : {string.Join(", ", pieces.Select(p => p.Titre))}";
+        long? premier = null;
+        foreach (var element in pieces.GroupBy(p => (p.Type, (p.GroupeId ?? p.Id).ToString(CultureInfo.InvariantCulture))))
+        {
+            var id = await ranger(new LettreARanger(element.Key.Type, element.Key.Item2, $"{lettre.Libelle} du {Date(envoi.Date)}", envoi.Date, resume, modele, lettre), ct);
+            premier ??= id;
+        }
+        return new ResultatEnvoi(recommande ? EtatRelance.AttenteNumero : EtatRelance.Envoyee, GedId: premier);
+    }
+
+    /// <summary>
+    /// Modèle par défaut d'une lettre (Q13 b) : dernier niveau de la règle d'une facture (ou au-delà : répétition) →
+    /// mise en demeure ; niveau 1 → RELANCE_1 ; sinon RELANCE_2.
+    /// </summary>
+    public static string ModeleParDefaut(string nature, int niveau, int dernierNiveau) =>
+        nature == NatureRelance.Facture && niveau >= dernierNiveau ? ModelesEdition.MiseEnDemeure
+        : niveau <= 1 ? ModelesEdition.Relance1 : ModelesEdition.Relance2;
+
+    /// <summary>
+    /// Modèle de la lettre : celui du niveau dans la règle (identifiant de modele_edition, actif, de la source relance),
+    /// sinon le modèle par défaut selon le dernier niveau de la règle du tiers (surcharge), sinon de la nature
+    /// (relance_regle), sinon de la règle par défaut.
+    /// </summary>
+    public static async Task<string> ModeleLettreAsync(DbContext db, EnvoiRelance envoi, CancellationToken ct)
+    {
+        if (envoi.ModeleEdition is long m && (await db.Database.SqlQueryRaw<string>("""
+                SELECT med_code AS "Value" FROM modele_edition WHERE med_id = @m AND med_actif AND med_genre = 'RAPPORT' AND med_source = @s
+                """, new NpgsqlParameter("m", m), new NpgsqlParameter("s", SourceRelanceEdition.Source)).ToListAsync(ct)).FirstOrDefault() is { } code)
+            return code;
+        var regle = (await SurchargesAsync(db, [envoi.TiersId], ct)).GetValueOrDefault(envoi.TiersId)?.Regle;
+        if (regle is null)
+        {
+            var niveaux = (await db.Database.SqlQueryRaw<string>("SELECT rrg_niveaux::text AS \"Value\" FROM relance_regle WHERE rrg_nature = @n",
+                new NpgsqlParameter("n", envoi.Nature)).ToListAsync(ct)).FirstOrDefault();
+            var lus = niveaux is null ? null : JsonSerializer.Deserialize<List<NiveauRelance>>(niveaux, JsonCalcul.Options);
+            regle = lus is { Count: > 0 } ? new RegleRelance(lus) : ReglesRelance.RegleParDefaut(envoi.Nature);
+        }
+        return ModeleParDefaut(envoi.Nature, envoi.Niveau, regle.Niveaux.Max(n => n.Rang));
     }
 
     // ----- Note RELANCE du CRM (Q14) -----

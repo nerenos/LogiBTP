@@ -23,16 +23,19 @@ namespace LogiBTP.Api.Btp;
 /// <summary>
 /// Spécialisation du module Édition par le cœur : sources « document » (pièces commerciales), « fiche » et « liste »
 /// (lot 6) ; données agrégées côté serveur en un appel (§ 3.10) ; dernier modèle imprimé gardé sur le document (Q13).
+/// Source « relance » (plans/relances.md, lot 7) : lettre d'une relance groupée (identifiant : relances du journal).
 /// </summary>
 public sealed class SpecialisationEditionBtp : SpecialisationEdition
 {
     public override IReadOnlyList<SourceEdition> Sources { get; } =
-        [new("document", "Documents", "DOCUMENT"), new("fiche", "Fiches", "FICHE"), new("liste", "Listes", "LISTE")];
+        [new("document", "Documents", "DOCUMENT"), new("fiche", "Fiches", "FICHE"), new("liste", "Listes", "LISTE"),
+         new(SourceRelanceEdition.Source, "Relances", "DOCUMENT")];
 
     public override async Task<ElementEdite?> ElementAsync(IServiceProvider services, string source, string id, Utilisateur u, CancellationToken ct)
     {
         if (source == "fiche") return await SourcesFicheListeEdition.ElementFiche(services, id, u, ct);
         if (source == "liste") return await SourcesFicheListeEdition.ElementListe(services, id, u, ct);
+        if (source == SourceRelanceEdition.Source) return await SourceRelanceEdition.Element(services, id, u, ct);
         if (source != "document" || !long.TryParse(id, out var entId)) return null;
         var db = services.GetRequiredService<LogiBtpContext>();
         var d = await (from e in db.Documents.AsNoTracking() join t in db.TypesDocument.AsNoTracking() on e.EntTydId equals t.TydId
@@ -51,10 +54,11 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
             "fiche" => await SourcesFicheListeEdition.DonneesFiche(services, demande.Id, u, ct),
             "liste" => await SourcesFicheListeEdition.DonneesListe(services, demande.Id,
                 demande.Parametres?.GetValueOrDefault("recherche") is { ValueKind: JsonValueKind.String } r ? r.GetString() : null, u, ct),
+            SourceRelanceEdition.Source => await SourceRelanceEdition.Lire(services, demande, ct),
             _ => null,
         };
         // Fiches et listes : société (entête, pied) comme pour les documents.
-        if (donnees is not null && demande.Source != "document") donnees["societe"] = await SourceDocumentEdition.Societe(services, ct);
+        if (donnees is not null && demande.Source is not ("document" or SourceRelanceEdition.Source)) donnees["societe"] = await SourceDocumentEdition.Societe(services, ct);
         // Paramètres de la demande, lus par les sources annexes d'une fiche (période de la fiche de dotation).
         if (donnees is not null && demande.Source == "fiche" && demande.Parametres is { Count: > 0 } p)
             donnees["_parametres"] = new JsonObject(p.Select(x => KeyValuePair.Create(x.Key, JsonNode.Parse(x.Value.GetRawText()))));
@@ -66,6 +70,7 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
         "document" => SourceDocumentEdition.Dictionnaire(),
         "fiche" => SourcesFicheListeEdition.DictionnaireFiche(),
         "liste" => SourcesFicheListeEdition.DictionnaireListe(),
+        SourceRelanceEdition.Source => SourceRelanceEdition.Dictionnaire(),
         _ => [],
     };
 
@@ -609,6 +614,40 @@ public static class SourceDocumentEdition
         var o = JsonSerializer.SerializeToNode(d, JsonCalcul.Options)!.AsObject();
         foreach (var cle in new[] { "ent_intervenants", "ent_contact_client", "ent_contact_payeur", "ent_num_format" }) o.Remove(cle);
         return o;
+    }
+
+    private const string SqlSociete = """
+        SELECT coalesce((SELECT json_build_object('per_id', per_id, 'raison_sociale', per_raison_sociale, 'forme_juridique', per_forme_juridique,
+                 'capital', per_capital, 'rcs', per_rcs, 'naf', per_naf, 'siret', per_siret, 'tva', per_tva_intra,
+                 'mentions', (SELECT pae_valeur FROM parametre_edition WHERE pae_cle = 'mentions'))::text
+               FROM personne WHERE per_societe_base), '{{}}') AS "Value"
+        """;
+
+    /// <summary>
+    /// Société au format de la source « document » (identité, forme juridique et capital imprimables, coordonnées de
+    /// l'annuaire, mentions de Paramètres › Éditions) : pour les sources qui citent les mentions (lettres de relance).
+    /// </summary>
+    public static async Task<JsonObject> SocieteComplete(DbContext db, CancellationToken ct)
+    {
+        var societe = JsonNode.Parse(await db.Database.SqlQueryRaw<string>(SqlSociete).FirstAsync(ct))!.AsObject();
+        if (societe["per_id"] is JsonValue p && await ContactsDocument.Instantane(db, p.GetValue<long>(), null, ct) is { } inst)
+        {
+            var co = Coordonnees(JsonNode.Parse(inst.RootElement.GetRawText()));
+            societe["adresse"] = co?["adresse"]?.DeepClone();
+            societe["telephone"] = co?["telephone"]?.DeepClone();
+            societe["courriel"] = co?["courriel"]?.DeepClone();
+        }
+        if (societe["forme_juridique"]?.GetValue<string>() is { } forme) societe["forme_juridique"] = FormesJuridiques.GetValueOrDefault(forme, forme);
+        societe["capital"] = societe["capital"] is JsonValue cap && cap.TryGetValue<decimal>(out var capital) ? $"{Milliers(capital)} €" : null;
+        if (societe["mentions"] is not JsonObject) societe["mentions"] = new JsonObject();
+        return societe;
+    }
+
+    /// <summary>Coordonnées d'un tiers (et d'un contact) relevées dans l'annuaire, au format des éditions ; null si inconnu.</summary>
+    public static async Task<JsonObject?> CoordonneesAnnuaire(DbContext db, long perId, long? indId, CancellationToken ct)
+    {
+        using var inst = await ContactsDocument.Instantane(db, perId, indId, ct);
+        return inst is null ? null : Coordonnees(JsonNode.Parse(inst.RootElement.GetRawText()));
     }
 
     /// <summary>Coordonnées d'un instantané (ContactsDocument) au format des éditions : nom, contact, lignes d'adresse.</summary>
@@ -1280,6 +1319,170 @@ public static class SourcesFicheListeEdition
             ["liste"] = new JsonObject { ["nom"] = vue.VliNom, ["theme"] = vue.VliTheme, ["recherche"] = recherche, ["tronquee"] = tronquee, ["nombre"] = lignes.Count },
             ["colonnes"] = colonnes, ["lignes"] = lignes,
         };
+    }
+}
+
+/// <summary>
+/// Source d'édition « relance » (plans/relances.md, lot 7, Q12, Q13 b) : lettre d'une relance groupée, identifiée par
+/// les relances du journal qu'elle porte (« 12,13,14 », celles d'un même groupe d'un lot). Données : société (identité,
+/// coordonnées, mentions : pénalités et indemnité citées sans calcul), tiers relancé (contact de relance, sinon le
+/// tiers, coordonnées de l'annuaire), relance (nature, niveau le plus élevé, mode, recommandé, date, montant total,
+/// jours de retard du groupe, chargé, commentaire), pièces (niveau, jours, montant relancé, échéances échues et à
+/// échoir à la date). Paramètres de la demande lus par la source : mode, date (aaaa-mm-jj) et commentaire de l'envoi
+/// (avant l'inscription au journal). Droits : nœud « relances » en consultation, portée par chargé.
+/// </summary>
+public static class SourceRelanceEdition
+{
+    public const string Source = "relance";
+
+    /// <summary>Type de l'élément édité (modèles sans type : tous les modèles de la source sont proposés).</summary>
+    public const string Type = "RELANCE";
+
+    private const string SqlLignes = """
+        SELECT r.rel_id AS id, r.rel_ent_id AS piece_id, r.rel_nature AS nature, r.rel_tiers_id AS tiers_id, r.rel_charge_id AS charge_id,
+               r.rel_niveau AS niveau, r.rel_mode AS mode, r.rel_date AS date, r.rel_montant AS montant, r.rel_jours AS jours,
+               r.rel_recommande AS recommande, r.rel_commentaire AS commentaire, r.rel_auteur AS auteur,
+               t.tyd_libelle AS libelle, d.ent_numero AS numero, d.ent_date AS date_piece,
+               p.per_raison_sociale AS tiers, p.per_rel_contact_ind_id AS contact_id,
+               nullif(trim(concat_ws(' ', i.ind_prenom, i.ind_nom)), '') AS charge
+        FROM relance r
+        JOIN document d ON d.ent_id = r.rel_ent_id
+        JOIN type_document t ON t.tyd_id = d.ent_tyd_id
+        LEFT JOIN personne p ON p.per_id = r.rel_tiers_id
+        LEFT JOIN individu i ON i.ind_id = r.rel_charge_id
+        WHERE r.rel_id = ANY(@ids)
+        ORDER BY r.rel_id
+        """;
+
+    /// <summary>Relance du journal portée par la lettre (SqlLignes).</summary>
+    public sealed record LigneRelance(long Id, long PieceId, string Nature, long TiersId, long? ChargeId, int Niveau, string Mode, DateOnly Date,
+        decimal Montant, int Jours, string? Recommande, string? Commentaire, string Auteur, string Libelle, string? Numero, DateOnly DatePiece,
+        string? Tiers, long? ContactId, string? Charge)
+    {
+        public string Titre => $"{Libelle} {Numero ?? $"#{PieceId}"}";
+    }
+
+    /// <summary>Identifiant d'une lettre : relances du journal, croissantes, séparées par des virgules.</summary>
+    public static string Identifiant(IEnumerable<long> relances) => string.Join(',', relances.Distinct().Order());
+
+    /// <summary>Relances d'un identifiant de lettre ; vide s'il est illisible.</summary>
+    public static long[] Relances(string id)
+    {
+        var res = new List<long>();
+        foreach (var x in id.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (!long.TryParse(x, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var r)) return [];
+            res.Add(r);
+        }
+        return [.. res.Distinct()];
+    }
+
+    public static async Task<List<LigneRelance>> LignesAsync(DbContext db, string id, CancellationToken ct)
+    {
+        var ids = Relances(id);
+        return ids.Length == 0 ? []
+            : await db.Database.SqlQueryRaw<LigneRelance>(SqlLignes, SqlBtp.P("ids", ids, NpgsqlDbType.Array | NpgsqlDbType.Bigint)).ToListAsync(ct);
+    }
+
+    /// <summary>Élément édité : libellé « Relance de niveau N – tiers » ; null si inconnu ou hors des droits et de la portée.</summary>
+    public static async Task<ElementEdite?> Element(IServiceProvider services, string id, Utilisateur u, CancellationToken ct)
+    {
+        var db = services.GetRequiredService<LogiBtpContext>();
+        var lignes = await LignesAsync(db, id, ct);
+        if (lignes.Count == 0) return null;
+        if (services.GetService<IDroits>() is { } droits)
+        {
+            var portee = await droits.PorteeAsync(u, SpecialisationRelanceBtp.Noeud, ActionsDroits.Consulter, ct);
+            var couverts = await SpecialisationRelanceBtp.PorteeAsync(db, u.Code, portee, ct);
+            if (lignes.Any(l => !couverts.Couvre(l.ChargeId))) return null;
+        }
+        return new ElementEdite(Type, Libelle(lignes));
+    }
+
+    private static string Libelle(List<LigneRelance> lignes) =>
+        $"Relance de niveau {lignes.Max(l => l.Niveau)} – {lignes[0].Tiers ?? $"#{lignes[0].TiersId}"}";
+
+    private static string? Parametre(DemandeEdition d, string nom) =>
+        d.Parametres?.GetValueOrDefault(nom) is { ValueKind: JsonValueKind.String } v ? v.GetString() : null;
+
+    public static async Task<JsonObject?> Lire(IServiceProvider services, DemandeEdition demande, CancellationToken ct)
+    {
+        var db = services.GetRequiredService<LogiBtpContext>();
+        var lignes = await LignesAsync(db, demande.Id, ct);
+        if (lignes.Count == 0) return null;
+        var mode = Parametre(demande, "mode") ?? lignes[0].Mode;
+        var date = DateOnly.TryParseExact(Parametre(demande, "date"), "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.None, out var d) ? d : lignes.Max(l => l.Date);
+        var attente = await SpecialisationRelanceBtp.PiecesAsync(db, new LogiBTP.Relances.Web.FiltrePieces(Pieces: lignes.Select(l => l.PieceId).Distinct().ToList()),
+            date, await SpecialisationRelanceBtp.EcheancesReglementAsync(services, ct), ct);
+        return await Donnees(db, lignes, attente, mode, date, Parametre(demande, "commentaire"), ct);
+    }
+
+    /// <summary>Données de la lettre depuis le journal et les pièces en attente à la date (échéances échues et à échoir).</summary>
+    public static async Task<JsonObject> Donnees(DbContext db, List<LigneRelance> lignes, IReadOnlyList<LogiBTP.Relances.Web.PieceEnAttente> attente,
+        string mode, DateOnly date, string? commentaire, CancellationToken ct)
+    {
+        var r0 = lignes[0];
+        var tiers = (r0.ContactId is long c ? await SourceDocumentEdition.CoordonneesAnnuaire(db, r0.TiersId, c, ct) : null)
+                    ?? await SourceDocumentEdition.CoordonneesAnnuaire(db, r0.TiersId, null, ct)
+                    ?? new JsonObject { ["nom"] = r0.Tiers, ["adresse"] = new JsonArray() };
+        var parPiece = attente.ToDictionary(p => p.Id);
+        static string Jour(DateOnly x) => x.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+        JsonArray Echeances(long piece, bool echues) => new([.. (parPiece.GetValueOrDefault(piece)?.Echeances ?? [])
+            .Where(e => !e.Retenue && e.Reste > 0 && e.Date is DateOnly x && (x < date) == echues)
+            .Select(e => (JsonNode?)new JsonObject { ["date"] = Jour(e.Date!.Value), ["montant"] = e.Reste })]);
+        var pieces = new JsonArray([.. lignes.Select(l => (JsonNode?)new JsonObject
+        {
+            ["id"] = l.PieceId, ["titre"] = l.Titre, ["type"] = l.Libelle, ["numero"] = l.Numero, ["date"] = Jour(l.DatePiece),
+            ["niveau"] = l.Niveau, ["jours"] = l.Jours, ["montant"] = l.Montant,
+            ["echeance"] = (parPiece.GetValueOrDefault(l.PieceId)?.Echeances ?? []).Where(e => !e.Retenue && e.Reste > 0 && e.Date is DateOnly x && x < date)
+                .Select(e => Jour(e.Date!.Value)).Order().FirstOrDefault(),
+            ["echeances"] = Echeances(l.PieceId, true), ["a_echoir"] = Echeances(l.PieceId, false),
+        })]);
+        return new JsonObject
+        {
+            ["societe"] = await SourceDocumentEdition.SocieteComplete(db, ct),
+            ["tiers"] = tiers,
+            ["relance"] = new JsonObject
+            {
+                ["nature"] = r0.Nature, ["devis"] = r0.Nature == RolesRelance.Devis, ["facture"] = r0.Nature == RolesRelance.Facture,
+                ["niveau"] = lignes.Max(l => l.Niveau), ["mode"] = mode, ["recommande"] = mode == LogiBTP.Relances.ModeRelance.Recommande,
+                ["numero_recommande"] = lignes.Select(l => l.Recommande).FirstOrDefault(n => n is not null),
+                ["date"] = Jour(date), ["montant"] = lignes.Sum(l => l.Montant), ["jours"] = lignes.Max(l => l.Jours), ["nombre"] = lignes.Count,
+                ["charge"] = r0.Charge, ["auteur"] = r0.Auteur, ["commentaire"] = commentaire ?? r0.Commentaire,
+            },
+            ["pieces"] = pieces,
+        };
+    }
+
+    public static JsonArray Dictionnaire()
+    {
+        var d = new List<(string Groupe, string Chemin, string Libelle, string Type)>();
+        void G(string groupe, params (string Chemin, string Libelle, string Type)[] champs) => d.AddRange(champs.Select(c => (groupe, c.Chemin, c.Libelle, c.Type)));
+        G("Société",
+            ("societe.raison_sociale", "Raison sociale", "texte"), ("societe.forme_juridique", "Forme juridique (libellé)", "texte"),
+            ("societe.capital", "Capital (« 250 000 € »)", "texte"), ("societe.rcs", "RCS", "texte"), ("societe.siret", "SIRET", "texte"),
+            ("societe.tva", "TVA intracommunautaire", "texte"), ("societe.naf", "Code NAF", "texte"), ("societe.adresse", "Adresse (lignes)", "liste"),
+            ("societe.telephone", "Téléphone", "texte"), ("societe.courriel", "Courriel", "texte"),
+            ("societe.mentions.penalites", "Pénalités de retard (mention, sans calcul)", "texte"),
+            ("societe.mentions.indemnite", "Indemnité forfaitaire de recouvrement (mention, sans calcul)", "texte"),
+            ("societe.mentions.libre", "Mention libre", "texte"));
+        G("Tiers relancé",
+            ("tiers.nom", "Raison sociale", "texte"), ("tiers.contact", "Contact (contact de relance du tiers)", "texte"), ("tiers.adresse", "Adresse (lignes)", "liste"),
+            ("tiers.courriel", "Courriel", "texte"), ("tiers.telephone", "Téléphone", "texte"), ("tiers.code", "Code", "texte"));
+        G("Relance",
+            ("relance.nature", "Nature (DEVIS, FACTURE)", "texte"), ("relance.devis", "Relance de devis", "booleen"), ("relance.facture", "Relance de factures", "booleen"),
+            ("relance.niveau", "Niveau le plus élevé du groupe", "nombre"), ("relance.mode", "Mode (COURRIER, RECOMMANDE…)", "texte"),
+            ("relance.recommande", "Lettre recommandée", "booleen"), ("relance.numero_recommande", "Numéro du recommandé (après sa saisie)", "texte"),
+            ("relance.date", "Date de la lettre", "date"), ("relance.montant", "Montant relancé (total)", "montant"), ("relance.jours", "Jours de retard du groupe", "nombre"),
+            ("relance.nombre", "Nombre de pièces", "nombre"), ("relance.charge", "Chargé (signataire)", "texte"), ("relance.auteur", "Auteur de l'envoi", "texte"),
+            ("relance.commentaire", "Commentaire de l'envoi", "texte"));
+        G("Pièces relancées",
+            ("pieces", "Pièces de la lettre", "collection"), ("pieces[].titre", "Type et numéro", "texte"), ("pieces[].type", "Type", "texte"),
+            ("pieces[].numero", "Numéro", "texte"), ("pieces[].date", "Date de la pièce", "date"), ("pieces[].niveau", "Niveau propre", "nombre"),
+            ("pieces[].jours", "Jours de retard", "nombre"), ("pieces[].montant", "Montant relancé (reste échu, montant du devis)", "montant"),
+            ("pieces[].echeance", "Plus ancienne échéance échue", "date"), ("pieces[].echeances", "Échéances échues (date, montant)", "collection"), ("pieces[].a_echoir", "Échéances à échoir, pour information (date, montant)", "collection"));
+        return SourceDocumentEdition.VersJson(d);
     }
 }
 

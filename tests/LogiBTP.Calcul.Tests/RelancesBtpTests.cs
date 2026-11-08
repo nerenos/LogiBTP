@@ -1,5 +1,9 @@
 using LogiBTP.Api.Btp;
 using LogiBTP.Domaine;
+using LogiBTP.Editions;
+using LogiBTP.Editions.Web;
+using LogiBTP.Ged;
+using LogiBTP.Ged.Web;
 using LogiBTP.Mail.Web;
 using LogiBTP.Reglements.Web;
 using LogiBTP.Relances;
@@ -7,6 +11,7 @@ using LogiBTP.Relances.Web;
 using LogiBTP.Socle.Web;
 using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using MimeKit;
 using Npgsql;
@@ -424,6 +429,173 @@ public class RelancesBtpTests
         Assert.NotNull(await Scalaire("SELECT 1 FROM crm_note WHERE not_id = ANY(@n) AND not_message_html LIKE '%Payer par virement%'", ("n", specialisation.Notes.ToArray())));
         foreach (var d in mesPieces)
             Assert.Equal(0, Convert.ToInt32(await Scalaire("SELECT jours_envoye FROM v_liste_documents WHERE id = @i", ("i", d))));
+        await tx.RollbackAsync();
+    }
+
+    // ----- Lettres et recommandés (lot 7) -----
+
+    [Theory]
+    [InlineData("FACTURE", 3, 3, "MISE_EN_DEMEURE")]
+    [InlineData("FACTURE", 4, 3, "MISE_EN_DEMEURE")]
+    [InlineData("FACTURE", 2, 3, "RELANCE_2")]
+    [InlineData("FACTURE", 1, 3, "RELANCE_1")]
+    [InlineData("DEVIS", 3, 3, "RELANCE_2")]
+    [InlineData("DEVIS", 1, 3, "RELANCE_1")]
+    public void Modele_par_defaut_de_la_lettre(string nature, int niveau, int dernier, string attendu) =>
+        Assert.Equal(attendu, SpecialisationRelanceBtp.ModeleParDefaut(nature, niveau, dernier));
+
+    [Fact]
+    public void Identifiant_d_une_lettre()
+    {
+        Assert.Equal("3,7,12", SourceRelanceEdition.Identifiant([12, 3, 7, 3]));
+        Assert.Equal([3L, 7L], SourceRelanceEdition.Relances("3, 7"));
+        Assert.Empty(SourceRelanceEdition.Relances("3,x"));
+        Assert.Empty(SourceRelanceEdition.Relances(""));
+    }
+
+    /// <summary>Lettres du cœur : PDF produit par le vrai module Édition (Jint), dépôt GED remplacé (ServiceGed ouvre sa transaction).</summary>
+    private sealed class SpecialisationLettres(DateOnly jour, IServiceProvider services, Func<SpecialisationRelanceBtp.LettreARanger, CancellationToken, Task<long>> ranger)
+        : SpecialisationRelance
+    {
+        public override Task<List<PieceEnAttente>> PiecesEnAttenteAsync(RelanceDbContext db, FiltrePieces filtre, CancellationToken ct) =>
+            SpecialisationRelanceBtp.PiecesAsync(db, filtre, jour, null, ct);
+
+        public override Task<LogiBTP.Relances.Web.ResultatEnvoi> EnvoyerCourrierAsync(RelanceDbContext db, EnvoiRelance envoi, CancellationToken ct) =>
+            SpecialisationRelanceBtp.LettreAsync(db, envoi, SpecialisationRelanceBtp.ProduireLettre(services, envoi), ranger, ct);
+
+        public override Task<LogiBTP.Relances.Web.ResultatEnvoi> EnvoyerRecommandeAsync(RelanceDbContext db, EnvoiRelance envoi, CancellationToken ct) =>
+            SpecialisationRelanceBtp.LettreAsync(db, envoi, SpecialisationRelanceBtp.ProduireLettre(services, envoi), ranger, ct);
+    }
+
+    /// <summary>
+    /// Base LOGIBTP_TEST_PG (db/283 à 286 et db/191 rejoué : modèles RELANCE_1, RELANCE_2, MISE_EN_DEMEURE) : règle des
+    /// factures 15 j courrier puis 30 j recommandé, des devis 15 j courrier. Deux devis d'un tiers (un groupe, niveau 1) :
+    /// lettre RELANCE_1 produite en PDF par le moteur du serveur, sans alerte, rangée en GED de chaque devis (catégorie
+    /// relance, groupe d'indices), journal ENVOYEE avec le document GED. Facture échue depuis 40 jours (niveau 2, dernier) :
+    /// MISE_EN_DEMEURE en recommandé, données citant les mentions sans calcul, ATTENTE_NUMERO, puis ENVOYEE après la
+    /// saisie du numéro. Transaction annulée.
+    /// </summary>
+    [Fact]
+    public async Task Validation_en_courrier_range_la_lettre_en_ged_et_le_recommande_attend_son_numero()
+    {
+        var connexion = Environment.GetEnvironmentVariable("LOGIBTP_TEST_PG");
+        if (string.IsNullOrEmpty(connexion)) return;
+        await using var c = new NpgsqlConnection(connexion);
+        await c.OpenAsync();
+        await using var tx = await c.BeginTransactionAsync();
+        async Task<object?> Scalaire(string sql, params (string, object)[] p)
+        {
+            await using var k = new NpgsqlCommand(sql, c, tx);
+            foreach (var (n, v) in p) k.Parameters.AddWithValue(n, v);
+            return await k.ExecuteScalarAsync();
+        }
+        async Task<long> Id(string sql, params (string, object)[] p) => Convert.ToInt64(await Scalaire(sql, p));
+        if (await Scalaire("SELECT 1 FROM modele_edition WHERE med_code = 'MISE_EN_DEMEURE' AND med_source = 'relance'") is null) return;
+        async Task<int?> Statut(string type, string code) => await Scalaire("""
+            SELECT s.std_id FROM statut_document s JOIN type_document t ON t.tyd_id = s.std_tyd_id WHERE t.tyd_code = @t AND s.std_code = @c ORDER BY s.std_id LIMIT 1
+            """, ("t", type), ("c", code)) is int i ? i : null;
+        if (await Statut("V_DEVIS", "ENVOYE") is not int envoye || await Statut("V_FACTURE", "VALIDE") is not int valide) return;
+        var devis = await Id("SELECT tyd_id FROM type_document WHERE tyd_code = 'V_DEVIS'");
+        var facture = await Id("SELECT tyd_id FROM type_document WHERE tyd_code = 'V_FACTURE'");
+        await Scalaire("DELETE FROM relance_regle");
+        await Scalaire("""
+            INSERT INTO relance_regle (rrg_nature, rrg_niveaux, rrg_modifie_par) VALUES
+              ('FACTURE', '[{"rang":1,"delai":15,"mode":"COURRIER"},{"rang":2,"delai":30,"mode":"RECOMMANDE"}]', 'test'),
+              ('DEVIS', '[{"rang":1,"delai":15,"mode":"COURRIER"}]', 'test')
+            """);
+
+        async Task<long> Tiers(string nom) => await Id("INSERT INTO personne (per_niv_code, per_raison_sociale) VALUES ('SOCIETE', @n) RETURNING per_id", ("n", nom));
+        async Task<long> Piece(long type, int statut, long tiers, string numero, DateOnly date)
+        {
+            var d = await Id("""
+                INSERT INTO document (ent_tyd_id, ent_std_id, ent_numero, ent_date, ent_cree_par, ent_verrouille, ent_is_reference, ent_tiers_id,
+                  ent_envoye_le, ent_total_ttc, ent_net_a_payer)
+                VALUES (@t, @s, @n, @d, 'test', true, true, @tiers, @env, 1200, 1100) RETURNING ent_id
+                """, ("t", type), ("s", statut), ("n", numero), ("d", date), ("tiers", tiers), ("env", date.ToDateTime(new TimeOnly(10, 0), DateTimeKind.Utc)));
+            await Scalaire("UPDATE document SET ent_groupe_id = ent_id WHERE ent_id = @i", ("i", d));
+            return d;
+        }
+        var prospect = await Tiers("Lettre prospect");
+        var d1 = await Piece(devis, envoye, prospect, "DLT1", Jour.AddDays(-20));
+        var d2 = await Piece(devis, envoye, prospect, "DLT2", Jour.AddDays(-20));
+        var mauvais = await Tiers("Lettre mauvais payeur");
+        var f1 = await Piece(facture, valide, mauvais, "FLT1", Jour.AddDays(-70));
+        await Scalaire("INSERT INTO document_echeance (ech_ent_id, ech_rang, ech_montant, ech_date) VALUES (@e, 1, 1100, @d)", ("e", f1), ("d", Jour.AddDays(-40)));
+        var mesPieces = new[] { d1, d2, f1 };
+
+        DbContextOptions<T> Options<T>() where T : DbContext => new DbContextOptionsBuilder<T>().UseNpgsql(c).UseSnakeCaseNamingConvention().Options;
+        await using var db = new RelanceDbContext(Options<RelanceDbContext>());
+        await db.Database.UseTransactionAsync(tx);
+        await using var logi = new LogiBtpContext(Options<LogiBtpContext>());
+        await logi.Database.UseTransactionAsync(tx);
+        await using var editionDb = new EditionDbContext(Options<EditionDbContext>());
+        await editionDb.Database.UseTransactionAsync(tx);
+        await using var gedDb = new GedDbContext(Options<GedDbContext>());
+        await gedDb.Database.UseTransactionAsync(tx);
+        using var pool = new PoolMoteursEdition(1);
+        var specialisationEdition = new SpecialisationEditionBtp();
+        var sc = new ServiceCollection();
+        sc.AddSingleton(logi).AddSingleton(editionDb).AddSingleton(gedDb).AddSingleton(pool).AddSingleton<SpecialisationEdition>(specialisationEdition)
+            .AddSingleton(new ServiceEdition(editionDb, specialisationEdition, pool))
+            .AddSingleton(new ServiceGed(gedDb, new SpecialisationGed(), new StockageGed(Path.Combine(Path.GetTempPath(), "logibtp-relances-" + Guid.NewGuid().ToString("N")))));
+        await using var services = sc.BuildServiceProvider();
+
+        // Dépôt GED : document de la pièce inséré dans la transaction du test (trigger : élément existant).
+        var rangees = new List<SpecialisationRelanceBtp.LettreARanger>();
+        async Task<long> Ranger(SpecialisationRelanceBtp.LettreARanger l, CancellationToken ct)
+        {
+            rangees.Add(l);
+            return await Id("""
+                INSERT INTO document_ged (dge_titre, dge_categorie, dge_type_element, dge_id_element, dge_cree_par, dge_resume)
+                VALUES (@t, @c, @y, @e, 'test', @r) RETURNING dge_id
+                """, ("t", l.Titre), ("c", CategoriesGed.Relance), ("y", l.TypeElement), ("e", l.IdElement), ("r", l.Resume));
+        }
+
+        var admin = new Utilisateur("admin.test", Profils.Admin);
+        var service = new ServiceRelance(db, new SpecialisationLettres(Jour, services, Ranger));
+        var lot = await service.Preparer(new DemandePreparation(Jour), admin, default);
+        Assert.NotNull(lot);
+        var groupes = lot!.Groupes.Where(g => g.Relances.Any(r => mesPieces.Contains(r.PieceId))).ToList();
+        Assert.Equal(2, groupes.Count);
+        var gDevis = groupes.Single(g => g.TiersId == prospect);
+        var gFacture = groupes.Single(g => g.TiersId == mauvais);
+        Assert.Equal((ModeRelance.Courrier, 1, 2), (gDevis.Mode, gDevis.Niveau, gDevis.Relances.Count));
+        Assert.Equal((ModeRelance.Recommande, 2), (gFacture.Mode, gFacture.Niveau));
+
+        // Données de la mise en demeure : recommandé, montant relancé, échéance échue, mentions de la société (sans calcul).
+        var donnees = await SourceRelanceEdition.Lire(services, new DemandeEdition(SourceRelanceEdition.Source,
+            SourceRelanceEdition.Identifiant(gFacture.Relances.Select(r => r.Id)), Parametres: new() { ["mode"] = System.Text.Json.JsonSerializer.SerializeToElement(ModeRelance.Recommande) }), default);
+        Assert.NotNull(donnees);
+        Assert.True(donnees!["relance"]!["recommande"]!.GetValue<bool>());
+        Assert.Equal(1100m, donnees["relance"]!["montant"]!.GetValue<decimal>());
+        Assert.Equal(Jour.AddDays(-40).ToString("yyyy-MM-dd"), donnees["pieces"]![0]!["echeance"]!.GetValue<string>());
+        Assert.Equal("Lettre mauvais payeur", donnees["tiers"]!["nom"]!.GetValue<string>());
+        Assert.IsType<System.Text.Json.Nodes.JsonObject>(donnees["societe"]!["mentions"]);
+
+        var resultat = await service.Valider(lot.Id, new ValidationLot([new GroupeValide(gDevis.Groupe), new GroupeValide(gFacture.Groupe)]), admin, default);
+        Assert.Empty(resultat.Echecs);
+
+        // Une lettre par groupe, rangée en GED de chaque pièce ; PDF réel du moteur, sans alerte.
+        Assert.Equal(3, rangees.Count);
+        Assert.All(rangees, l => Assert.Equal("%PDF", System.Text.Encoding.ASCII.GetString(l.Lettre.Pdf, 0, 4)));
+        Assert.All(rangees, l => Assert.Equal("[]", l.Lettre.Alertes));
+        Assert.Equal([$"V_DEVIS:{d1}:{ModelesEdition.Relance1}", $"V_DEVIS:{d2}:{ModelesEdition.Relance1}", $"V_FACTURE:{f1}:{ModelesEdition.MiseEnDemeure}"],
+            rangees.Select(l => $"{l.TypeElement}:{l.IdElement}:{l.Modele}").Order());
+        Assert.Same(rangees[0].Lettre, rangees.First(l => l.IdElement == d2.ToString()).Lettre);
+        Assert.Equal(2L, Convert.ToInt64(await Scalaire("SELECT count(*) FROM document_ged WHERE dge_categorie = 'relance' AND dge_type_element = 'V_DEVIS' AND dge_id_element = ANY(@e)",
+            ("e", new[] { d1.ToString(), d2.ToString() }))));
+
+        var journal = await db.Relances.AsNoTracking().Where(r => mesPieces.Contains(r.RelEntId)).ToDictionaryAsync(r => r.RelEntId);
+        Assert.Equal((EtatRelance.Envoyee, ModeRelance.Courrier), (journal[d1].RelEtat, journal[d1].RelMode));
+        Assert.NotNull(journal[d1].RelGedId);
+        Assert.Equal(EtatRelance.AttenteNumero, journal[f1].RelEtat);
+        Assert.NotNull(journal[f1].RelGedId);
+        Assert.Null(journal[f1].RelRecommande);
+
+        // Saisie du numéro du recommandé : la lettre passe ENVOYEE.
+        var lettre = await service.SaisirNumero(journal[f1].RelId, new NumeroRecommande(" 1A 234 567 8901 2 "), admin, default);
+        Assert.Equal((EtatRelance.Envoyee, "1A 234 567 8901 2"), (Assert.Single(lettre).Etat, lettre[0].Recommande));
+        Assert.Equal(EtatRelance.Envoyee, (await db.Relances.AsNoTracking().FirstAsync(r => r.RelId == journal[f1].RelId)).RelEtat);
         await tx.RollbackAsync();
     }
 }

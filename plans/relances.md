@@ -19,7 +19,7 @@
 | 4 | Branchement du cœur : pièces en attente, rôle, droits, portée | cœur | 2, 3 | FAIT (08/11/2026) |
 | 5 | Surcharge par tiers sur la fiche personne | cœur | 4 | FAIT (08/11/2026) |
 | 6 | Envoi par courriel et note du CRM | cœur | 4 | FAIT (08/11/2026) |
-| 7 | Lettres, recommandés et mise en demeure | cœur | 6 | A FAIRE |
+| 7 | Lettres, recommandés et mise en demeure | cœur | 6 | FAIT (08/11/2026) |
 | 8 | Suivi : onglets, colonne « Dernière relance », relance notée | cœur | 6 | A FAIRE |
 | 9 | Préparation de nuit, notification, tâche d'appel, pastille | cœur | 6 | A FAIRE |
 
@@ -194,7 +194,7 @@
   ne désignent pas de modèle (choix par nature et niveau) ; un lot du Mail repris d'une validation à l'autre est compté
   courriel par courriel (fin signalée trop tôt si la file part entre deux groupes).
 
-## Lot 7 : lettres, recommandés et mise en demeure (A FAIRE)
+## Lot 7 : lettres, recommandés et mise en demeure (FAIT (08/11/2026))
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `src/LogiBTP.Api/Btp/EditionsBtp.cs` (source de données « relance » : tiers, pièces, montants,
@@ -205,11 +205,25 @@
 - **Règles répliquées** : aucune.
 - **Critère de fin** : validation en mode COURRIER produit le PDF rangé en GED ; un recommandé passe à ENVOYEE après la
   saisie du numéro.
+- **Réalisé** (08/11/2026) : source d'édition « relance » (`SourceRelanceEdition` dans `Btp/EditionsBtp.cs` : identifiant =
+  relances du journal de la lettre ; société avec ses mentions, tiers au contact de relance, relance, pièces avec échéances
+  échues et à échoir ; paramètres mode, date, commentaire de l'envoi ; droits du nœud `relances` et portée par chargé) ;
+  modèles RELANCE_1, RELANCE_2, MISE_EN_DEMEURE dans `client/src/app/editions/modeles.js` (→ `db/191` régénéré ; codes
+  `MODELE_EDITION` ↔ `ModelesEdition`) ; `db/286_relances_lettres.sql` (catégorie GED `relance`, rejouable, manifeste) ;
+  `SpecialisationRelanceBtp` : `EnvoyerCourrierAsync` / `EnvoyerRecommandeAsync` (et donc la bascule du lot 6) →
+  `LettreAsync` : modèle du niveau de la règle (`med_id`), sinon `ModeleParDefaut` (dernier niveau de la règle d'une
+  facture → MISE_EN_DEMEURE, niveau 1 → RELANCE_1, sinon RELANCE_2), un PDF par groupe produit par le moteur du serveur,
+  rangé en GED de chaque pièce (type, groupe d'indices) ; ENVOYEE, ou ATTENTE_NUMERO jusqu'à la saisie (route du module).
+  Tests : `RelancesBtpTests` (modèle par défaut, identifiant, test PostgreSQL : PDF réel produit par Jint sans alerte,
+  dépôt GED simulé par un INSERT dans la transaction du test car `ServiceGed` ouvre la sienne, recommandé ENVOYEE après
+  le numéro), `client/test/modeles-relance.test.js`. Points ouverts : listes de modèles non fournies à l'écran de la règle
+  (`med_id` non exposé par l'Édition), un seul document GED au journal par lettre, `db/191` à rejouer sur les bases
+  existantes ; le script du lot 8 devient `db/287`.
 
 ## Lot 8 : suivi, onglets, colonne « Dernière relance », relance notée (A FAIRE)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
-- **Fichiers** : `db/286_liste_derniere_relance.sql` (reprise de `v_liste_documents` **à partir de `db/267`** : colonne
+- **Fichiers** : `db/287_liste_derniere_relance.sql` (286 pris par le lot 7) (reprise de `v_liste_documents` **à partir de `db/267`** : colonne
   `derniere_relance`), colonnes des vues de devis et de factures (`client/src/app/vues-liste.js`), onglet Suivi de la page
   document (`client/src/app/documents/tracabilite.js`) et de la fiche tiers (relances du journal), bouton « Noter une
   relance faite » dans la liste de travail (inscrit au journal, Q22 b).

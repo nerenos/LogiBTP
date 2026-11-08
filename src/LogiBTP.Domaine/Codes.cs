@@ -148,6 +148,10 @@ public static class ModelesEdition
 {
     public const string FraisAnnexes = "FRAIS_ANNEXES";
     public const string FicheDotation = "FICHE_DOTATION";
+    // Lettres de relance (source « relance », plans/relances.md lot 7) ; MISE_EN_DEMEURE : dernier niveau des factures.
+    public const string Relance1 = "RELANCE_1";
+    public const string Relance2 = "RELANCE_2";
+    public const string MiseEnDemeure = "MISE_EN_DEMEURE";
 }
 
 /// <summary>Catégories de la GED posées par le serveur (dge_categorie).</summary>
@@ -160,4 +164,5 @@ public static class CategoriesGed
     public const string BonSav = "bon_sav";
     public const string Photo = "photo";
     public const string Dotation = "dotation";
+    public const string Relance = "relance";
 }

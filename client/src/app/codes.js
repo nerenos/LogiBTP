@@ -105,6 +105,10 @@ export const AVERTISSEMENT_GESTION = Object.freeze({
 export const MODELE_EDITION = Object.freeze({
   FRAIS_ANNEXES: 'FRAIS_ANNEXES',
   FICHE_DOTATION: 'FICHE_DOTATION',
+  // Lettres de relance (source « relance ») ; MISE_EN_DEMEURE : dernier niveau des factures.
+  RELANCE_1: 'RELANCE_1',
+  RELANCE_2: 'RELANCE_2',
+  MISE_EN_DEMEURE: 'MISE_EN_DEMEURE',
 });
 
 /** Rôle d'un type de pièce dans le module Rentabilité (rentabilite_role_type, db/258). */
