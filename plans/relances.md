@@ -81,7 +81,7 @@
   pour le bouton du lot 8). Validation : un envoi en échec laisse son groupe proposé ; relances non retenues proposées
   (lot PARTIEL) ; lot clos (ENVOYE) quand plus rien n'est proposé. Tests `ServiceRelanceTests` (7, avec `LOGIBTP_TEST_PG`).
 
-## Lot 3 : écrans du module, liste de travail, règle, suspensions (A FAIRE)
+## Lot 3 : écrans du module, liste de travail, règle, suspensions (FAIT (08/11/2026))
 
 - **Module** : `modules/relance`. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `modules/relance/js/ui/liste-relances.js` (relances proposées regroupées par tiers et chargé, cochées
@@ -92,6 +92,15 @@
 - **Règles répliquées** : aucune. Aucun texte, icône ni couleur en dur ; raccourcis par `declarerRaccourcis`.
 - **Critère de fin** : `npm test` vert ; écrans affichés sur des données de test (page de démonstration du module ou
   test du rendu).
+- **Réalisé** (08/11/2026) : `modules/relance/js/ui` : `liste-relances.js` (`ListeRelances` : dues par tiers puis chargé, lot
+  préparé coché par défaut, mode par `creerCombo`, commentaire, validation par `confirmer`, échecs d'envoi signalés,
+  annulation des non retenues, recommandés en attente de numéro, relance notée Q22 b, suspension depuis une pièce),
+  `parametres-relances.js` (règle par nature, contrôle par `controlerRegle`, avertissement sans Règlements Q8),
+  `suspensions.js`, `modeles.js` (état et calculs sans DOM), `relance.css` ; `js/personnalisation` (textes, icônes,
+  thème), couche déclarée dans `client/personnalisation/couches.js`, exports `./ui` ; tests `modeles`, `ecrans` (clés,
+  icônes, conventions), `import` (raccourcis). Pas de DOM dans vitest : rendu non testé, page de démonstration non faite.
+  Correction du lot 2 : le mode préféré du tiers ne remplace plus un niveau en RECOMMANDE (Q13), test ajouté. Les
+  recommandés en attente sont relus lot par lot (20 derniers) faute de route dédiée.
 
 ## Lot 4 : branchement du cœur, pièces en attente, rôle, droits, portée (A FAIRE)
 

@@ -3,7 +3,7 @@
 - Plan par lots : [relances.md](../../plans/relances.md) ; analyse : [ANALYSE-RELANCES.md](../../documentation/conception/ANALYSE-RELANCES.md) ; décisions : [relances-questions.md](../../plans/relances-questions.md).
 
 ## Rôle
-- Relances des devis envoyés et des factures à reste échu : règle des niveaux, calcul des relances dues (répliqué JS ↔ C#), regroupement ; journal, suspensions, lots préparés puis validés (lot 2) ; à venir : écrans (lot 3).
+- Relances des devis envoyés et des factures à reste échu : règle des niveaux, calcul des relances dues (répliqué JS ↔ C#), regroupement ; journal, suspensions, lots préparés puis validés (lot 2) ; écrans (lot 3).
 - Sans métier : ne connaît ni les pièces, ni les échéances, ni les contacts ; le cœur les fournira par `SpecialisationRelanceBtp` (lot 4, méthode patron). Module facultatif `MODULE_FACULTATIF.RELANCE` (lot 4).
 
 ## Dépendances
@@ -24,6 +24,10 @@
 
 ## Routes HTTP (préfixe `/api/relances`, droits rattachés au lot 4 du cœur)
 - `GET ?date=` (dues groupées), `GET /regles`, `PUT /regles/{nature}` (administrateur), `GET /lots?etat=`, `POST /lots` (204 si rien), `GET /lots/{id}`, `POST /lots/{id}/valider`, `POST /lots/{id}/annuler`, `PUT /{id}/recommande`, `POST /notees`, `GET /journal?piece=&groupe=&tiers=`, `GET|POST /suspensions`, `PUT|DELETE /suspensions/{id}`.
+
+## Écrans (lot 3, `js/ui`, export `@logibtp/relance/ui`)
+- `ListeRelances` (liste de travail : dues par tiers, lot coché par défaut, mode `creerCombo`, validation `confirmer`, recommandés en attente de numéro, relance notée), `ParametresRelances` (règle par nature, `controlerRegle`, avertissement sans Règlements), `PanneauSuspensions` ; `modeles.js` = état et calculs sans DOM (testés). Reçoivent `api` (fonctions d'appel), `peut`, libellés et ouvertures par paramètres ; page `/relances` du cœur : lot 4. Raccourcis : groupes `relances`, `relances_parametres`, `relances_suspensions`.
+- Textes, icônes, thème : `js/personnalisation` (couche dans `client/personnalisation/couches.js`) ; clés vérifiées par `test/ecrans.test.js`. Le mode préféré du tiers ne remplace jamais un niveau en RECOMMANDE (Q13).
 
 ## Tests
 - `npm test --workspace modules/relance/js` ; `dotnet test modules/relance/dotnet/LogiBTP.Relances.Tests` (même jeu, parité des codes ; `ServiceRelanceTests` seulement si `LOGIBTP_TEST_PG` désigne une base où `099t` est chargé).

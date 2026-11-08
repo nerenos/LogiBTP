@@ -143,7 +143,8 @@ public class ServiceRelance(RelanceDbContext db, SpecialisationRelance specialis
         var dues = ReglesRelance.Dues(regles, aCalculer, date, specialisation.Seuil).Select(d =>
         {
             var prefere = surcharges.GetValueOrDefault(d.Tiers)?.ModePrefere;
-            return prefere is not null && ModeAdmis(prefere, d.Nature) ? d with { Mode = prefere } : d;
+            // Un niveau en RECOMMANDE (mise en demeure, Q13) n'est jamais remplacé par le mode préféré du tiers.
+            return d.Mode != ModeRelance.Recommande && prefere is not null && ModeAdmis(prefere, d.Nature) ? d with { Mode = prefere } : d;
         }).ToList();
         return new Calcul(dues, pieces.ToDictionary(p => p.Id), regles, surcharges, portee);
     }

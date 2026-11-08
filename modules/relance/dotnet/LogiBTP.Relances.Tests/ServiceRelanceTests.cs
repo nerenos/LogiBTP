@@ -237,6 +237,20 @@ public sealed class ServiceRelanceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Le_mode_prefere_du_tiers_ne_remplace_jamais_un_niveau_recommande()
+    {
+        if (Connexion is null) return;
+        // Facture à 61 jours : dernier niveau en RECOMMANDE (mise en demeure) ; facture à 20 jours : niveau en courriel.
+        _specialisation.Pieces.AddRange([Facture(1, 100, 61), Facture(2, 101, 20)]);
+        _specialisation.Surcharges[Id(100)] = new SurchargeTiers(ModePrefere: ModeRelance.Courrier);
+        _specialisation.Surcharges[Id(101)] = new SurchargeTiers(ModePrefere: ModeRelance.Courrier);
+        await using var db = Db();
+        var dues = await Service(db).Dues(Jour, Admin, default);
+        Assert.Equal(ModeRelance.Recommande, dues.Single(g => g.TiersId == Id(100)).Mode);
+        Assert.Equal(ModeRelance.Courrier, dues.Single(g => g.TiersId == Id(101)).Mode);
+    }
+
+    [Fact]
     public async Task Portee_et_surcharges_du_tiers()
     {
         if (Connexion is null) return;

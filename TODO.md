@@ -124,8 +124,8 @@ global). Lots à venir :
   [relances-questions.md](plans/relances-questions.md) ; analyse [ANALYSE-RELANCES.md](documentation/conception/ANALYSE-RELANCES.md) ;
   comprend le lot 5 du module Mail et C27 du CRM). Lot 1 fait (08/11/2026 : module `modules/relance`, règle des niveaux
   et calcul des relances dues `regles.js` ↔ `ReglesRelance.cs`) ; lot 2 fait (08/11/2026 : `modules/relance/db/099t`,
-  `LogiBTP.Relances.Web` : lots préparés et validés, journal, suspensions, routes `/api/relances…` non encore branchées) ;
-  suivant : lot 3 (écrans du module).
+  `LogiBTP.Relances.Web` : lots préparés et validés, journal, suspensions, routes `/api/relances…` non encore branchées) ; lot 3 fait (08/11/2026 : écrans `modules/relance/js/ui`, liste de travail, règle, suspensions ; mode préféré du tiers sans effet sur un niveau RECOMMANDE) ;
+  suivant : lot 4 (branchement du cœur).
 
 ### Comptabilité
 
