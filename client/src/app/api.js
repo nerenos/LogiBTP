@@ -246,6 +246,9 @@ export const api = {
     // Réserves suivies (terrain-suites lots 14, 15) ; levée : FormData (commentaire, levee_le, photo).
     reserves: (ordre) => appel('GET', `/terrain/receptions/${ordre}/reserves`),
     leverReserve: (ordre, reserve, formulaire) => appel('POST', `/terrain/receptions/${ordre}/reserves/${reserve}/levee`, formulaire),
+    // PV de levée des réserves signé par le client (terrain-suites lot 16).
+    signerPvLevee: (ordre, pv) => appel('POST', `/terrain/receptions/${ordre}/levee`, pv),
+    urlPvLevee: (ordre, levee) => `/api/terrain/receptions/${ordre}/levees/${levee}/pv`,
     demande: (d) => appel('POST', '/terrain/demandes', d),
     demandes: () => appel('GET', '/terrain/demandes'),
     livraisons: (chantier) => appel('GET', `/terrain/livraisons?chantier=${chantier}`),

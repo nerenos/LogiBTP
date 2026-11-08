@@ -3,7 +3,7 @@ import { PageBase } from '@logibtp/navigation';
 import { echapper, formatDate, formatDateHeure, PadSignature, ouvrirDialogue } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 import { estHorsLigne } from '../hors-ligne/attente.js';
-import { envoyerOuGarder, OPERATION_TERRAIN, receptionGardee, formulaireLevee } from '../terrain/operations-terrain.js';
+import { envoyerOuGarder, OPERATION_TERRAIN, receptionGardee, formulaireLevee, pvLeveeAttendu } from '../terrain/operations-terrain.js';
 import { selecteurPhotos, boutonPrincipal } from '../terrain/actions-tache.js';
 import { ETAT_RESERVE } from '../codes.js';
 import { lireOperation } from '../hors-ligne/operations.js';
@@ -14,7 +14,8 @@ import { lireOperation } from '../hors-ligne/operations.js';
 // « Réception », crée la tâche des réserves, bloque l'ordre refusé et envoie le PV au client (TerrainReceptionBtp.cs).
 // Hors ligne : réception gardée sur l'appareil (signature comprise), envoyée au retour du réseau.
 // Terrain-suites lot 15 : réserves suivies de l'ordre et leur levée (commentaire, photo), gardée hors ligne avec l'heure
-// de l'appareil (TerrainReservesBtp.cs).
+// de l'appareil (TerrainReservesBtp.cs). Lot 16 : toutes levées, PV de levée des réserves signé par le client (édité,
+// rangé dans la GED de l'ordre et envoyé par le serveur), gardé hors ligne avec l'heure de l'appareil.
 
 const ETATS = Object.freeze(Object.fromEntries([['SANS_RESERVE', 'terrain_btp_sans_reserve'], ['AVEC_RESERVES', 'terrain_btp_nc'], ['REFUSEE', 'terrain_btp_refus']]
   .map(([code, nom]) => [code, Object.freeze({
@@ -44,6 +45,7 @@ export class PageReceptionTerrain extends PageBase {
         : `<p class="carte avertissement">${echapper(e.message)}</p>`;
       return;
     }
+    this.pvLeveeGarde = Boolean(await lireOperation(this.app.utilisateur(), OPERATION_TERRAIN.PV_LEVEE, this.ordre).catch(() => null));
     // Levées gardées sur l'appareil, pas encore envoyées : marquées « sur l'appareil ».
     this.d.reserves = await Promise.all((this.d.reserves ?? []).map(async (r) => (r.etat === ETAT_RESERVE.OUVERTE
       && await lireOperation(this.app.utilisateur(), OPERATION_TERRAIN.LEVEE_RESERVE, r.id).catch(() => null) ? { ...r, gardee: true } : r)));
@@ -65,6 +67,7 @@ export class PageReceptionTerrain extends PageBase {
         <ul>${d.receptions.map((r) => `<li>${formatDateHeure(r.cree_le)} · ${echapper(ETATS[r.etat]?.libelle ?? r.etat)} · ${echapper(r.signataire ?? '')}
           ${r.pv ? ` · <a href="${echapper(api.terrain.urlPv(this.ordre, r.id))}" target="_blank" rel="noopener">${iconeHtml('terrain_btp_piece')} ${texteHtml('terrain_btp.reception.pv')}</a>` : ''}</li>`).join('')}</ul></details>` : ''}
       <div data-reserves-suivies></div>
+      <div data-pv-levee></div>
       <div class="terrain-onglets" role="radiogroup" aria-label="${texteHtml('terrain_btp.reception.decision')}">${Object.entries(ETATS).map(([cle, e]) =>
         `<button type="button" role="radio" data-etat="${cle}" aria-selected="${cle === this.etat}">${iconeHtml(e.icone)} ${echapper(e.libelle)}</button>`).join('')}</div>
       <p class="aide" data-aide-etat>${echapper(ETATS[this.etat].aide)}</p>
@@ -99,7 +102,7 @@ export class PageReceptionTerrain extends PageBase {
   #rendreReserves() {
     const zone = this.conteneur.querySelector('[data-reserves-suivies]');
     const reserves = this.d.reserves ?? [];
-    if (!reserves.length) { zone.innerHTML = ''; return; }
+    if (!reserves.length) { zone.innerHTML = ''; this.#rendrePvLevee(); return; }
     const ouvertes = reserves.filter((r) => r.etat === ETAT_RESERVE.OUVERTE && !r.gardee).length;
     zone.innerHTML = `<div class="carte"><b>${iconeHtml('terrain_btp_reserve')} ${texteHtml('terrain_btp.reception.reserves_suivies.titre')}</b>
       <span class="aide">${texteHtml(ouvertes ? 'terrain_btp.reception.reserves_suivies.ouvertes' : 'terrain_btp.reception.reserves_suivies.toutes_levees', { nombre: ouvertes })}</span>
@@ -110,6 +113,63 @@ export class PageReceptionTerrain extends PageBase {
           : `${iconeHtml('terrain_btp_reserve')} ${texteHtml('terrain_btp.reception.reserves_suivies.ouverte', { date: formatDate(r.recue_le) })}`}</small>
         ${r.etat === ETAT_RESERVE.OUVERTE && !r.gardee ? `<button type="button" class="terrain-bouton" data-lever="${r.id}">${iconeHtml('terrain_btp_reserve_levee')} ${texteHtml('terrain_btp.reception.reserves_suivies.lever')}</button>` : ''}</li>`).join('')}</ul></div>`;
     zone.querySelectorAll('[data-lever]').forEach((b) => b.addEventListener('click', () => this.#lever(reserves.find((r) => r.id === Number(b.dataset.lever)))));
+    this.#rendrePvLevee();
+  }
+
+  /** PV de levée des réserves : PV déjà signés (liens), formulaire de signature quand toutes les réserves sont levées. */
+  #rendrePvLevee() {
+    const zone = this.conteneur.querySelector('[data-pv-levee]');
+    const d = this.d;
+    const levees = d.levees ?? [];
+    const signer = !this.pvLeveeGarde && pvLeveeAttendu(d);
+    zone.innerHTML = `${levees.length ? `<p class="aide">${levees.map((l) => `${iconeHtml('terrain_btp_piece')} ${texteHtml('terrain_btp.reception.pv_levee.signe', { date: formatDateHeure(l.cree_le), signataire: l.signataire ?? '' })}
+        ${l.pv ? ` · <a href="${echapper(api.terrain.urlPvLevee(this.ordre, l.id))}" target="_blank" rel="noopener">${texteHtml('terrain_btp.reception.pv')}</a>` : ''}`).join('<br>')}</p>` : ''}
+      ${this.pvLeveeGarde ? `<p class="carte">${iconeHtml('terrain_btp_attente')} ${texteHtml('terrain_btp.reception.pv_levee.gardee')}</p>` : ''}
+      ${signer ? `<div class="carte"><b>${iconeHtml('terrain_btp_reserve_levee')} ${texteHtml('terrain_btp.reception.pv_levee.titre')}</b>
+        <p class="aide">${texteHtml('terrain_btp.reception.pv_levee.aide')}</p>
+        <div class="terrain-champs">
+          <label>${texteHtml('terrain_btp.reception.nom')} <input data-levee-nom autocomplete="name" value="${echapper(d.client.contact ?? d.client.nom ?? '')}"></label>
+          <label>${texteHtml('terrain_btp.reception.qualite')} <input data-levee-qualite value="${texteHtml('terrain_btp.reception.qualite_defaut')}" placeholder="${texteHtml('terrain_btp.reception.qualite_exemple')}"></label>
+        </div>
+        <label class="terrain-champ">${texteHtml('terrain_btp.reception.envoyer_pv')} <input type="email" data-levee-courriel inputmode="email" value="${echapper(d.client.courriel ?? '')}" placeholder="${texteHtml('terrain_btp.reception.courriel_aide')}"></label>
+        <div class="terrain-champ"><span>${texteHtml('terrain_btp.reception.signature')} <small class="aide">${texteHtml('terrain_btp.reception.signature_obligatoire')}</small></span><div data-levee-signature></div></div>
+        <div class="terrain-enregistrer"><button type="button" class="principal" data-signer-levee>${iconeHtml('terrain_btp_reserve_levee')} ${texteHtml('terrain_btp.reception.pv_levee.valider')}</button></div>
+        <div data-levee-resultat></div></div>` : ''}`;
+    if (!signer) return;
+    this.padLevee = new PadSignature(zone.querySelector('[data-levee-signature]'), { changer: () => { this.#modifiee = true; } });
+    zone.querySelector('[data-signer-levee]').addEventListener('click', () => this.#signerPvLevee());
+  }
+
+  async #signerPvLevee() {
+    const $ = (s) => this.conteneur.querySelector(s);
+    const pv = {
+      nom: $('[data-levee-nom]').value.trim(),
+      qualite: $('[data-levee-qualite]').value.trim() || null,
+      signature: this.padLevee.enPng(),
+      courriel: $('[data-levee-courriel]').value.trim() || null,
+    };
+    const manque = !pv.nom ? 'nom' : !pv.signature ? 'signature' : null;
+    if (manque) { this.app.message(texte(`terrain_btp.reception.manque.${manque}`), 'avertissement'); return; }
+    const bouton = $('[data-signer-levee]');
+    bouton.disabled = true;
+    try {
+      const r = await envoyerOuGarder(this.app, { type: OPERATION_TERRAIN.PV_LEVEE, id: this.ordre, corps: { ordre: this.ordre, pv: receptionGardee(pv) },
+        libelle: texte('terrain_btp.reception.pv_levee.libelle', { numero: this.d.ordre.numero ?? '' }), url: this.urlCourante() }, () => api.terrain.signerPvLevee(this.ordre, pv));
+      this.#modifiee = false;
+      if (r.horsLigne) {
+        this.pvLeveeGarde = true;
+      } else {
+        this.d.levees = [r.reponse.levee, ...(this.d.levees ?? [])];
+        this.d.pv_levee_attendu = false;
+        this.d.reserves = (this.d.reserves ?? []).map((x) => ({ ...x, pv_levee: x.pv_levee ?? r.reponse.levee.id }));
+        this.app.message(texte('terrain_btp.reception.pv_levee.enregistre'), 'succes');
+        r.reponse.avertissements.forEach((a) => this.app.message(a, 'avertissement'));
+      }
+      this.#rendrePvLevee();
+    } catch (e) {
+      this.app.erreur(e);
+      bouton.disabled = false;
+    }
   }
 
   /** Levée d'une réserve : commentaire et photo ; serveur injoignable : gardée sur l'appareil avec son heure. */
@@ -132,6 +192,7 @@ export class PageReceptionTerrain extends PageBase {
             () => api.terrain.leverReserve(this.ordre, reserve.id, formulaireLevee(levee)));
             if (r.reponse) {
               this.d.reserves = r.reponse.reserves;
+              this.d.pv_levee_attendu = r.reponse.pv_levee_attendu;
               this.app.message(texte('terrain_btp.reception.reserves_suivies.levee_ok'), 'succes');
             } else {
               this.d.reserves = this.d.reserves.map((x) => (x.id === reserve.id ? { ...x, gardee: true } : x));

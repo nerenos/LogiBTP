@@ -134,9 +134,12 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
         foreach (var code in codes)
         {
             // Signature de la réception de pose : image de la table signature, pas une ressource de la GED.
-            if (code is CodeSignatureReception or CodeSignatureSav or DotationFicheBtp.CodeSignature)
+            if (code is CodeSignatureReception or CodeSignatureSav or CodeSignatureLevee or DotationFicheBtp.CodeSignature)
             {
-                var annexe = code switch { CodeSignatureSav => "intervention_sav", DotationFicheBtp.CodeSignature => DotationFicheBtp.SourceAnnexe, _ => "reception_pose" };
+                var annexe = code switch
+                {
+                    CodeSignatureSav => "intervention_sav", CodeSignatureLevee => SourceLevee, DotationFicheBtp.CodeSignature => DotationFicheBtp.SourceAnnexe, _ => "reception_pose",
+                };
                 if (donnees["sources"]?[annexe]?["signature_id"] is JsonValue sv && sv.TryGetValue<long>(out var sigId)
                     && await SignatureAsync(services.GetRequiredService<LogiBtpContext>(), pool, sigId, ct) is { } sig) res[code] = sig;
                 continue;
@@ -172,6 +175,30 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
 
     /// <summary>Code de la ressource image de la signature d'une réception de pose (modèle PV_RECEPTION).</summary>
     public const string CodeSignatureReception = "SIGNATURE_RECEPTION";
+    /// <summary>Code de la ressource image de la signature d'un PV de levée des réserves (modèle PV_LEVEE_RESERVES).</summary>
+    public const string CodeSignatureLevee = "SIGNATURE_LEVEE";
+    /// <summary>Source annexe du PV de levée des réserves (terrain-suites lot 16).</summary>
+    public const string SourceLevee = "levee_reserves";
+
+    /// <summary>
+    /// Source annexe levee_reserves : dernier PV de levée de l'ordre, signataire, heures (reçu par le serveur, signé sur
+    /// l'appareil), date de la réception, réserves couvertes (libellé, levée le — heure de l'appareil s'il y en a une —,
+    /// par qui, commentaire).
+    /// </summary>
+    public const string SqlSourceLevee = """
+        SELECT json_build_object('id', l.rlv_id, 'date', (l.rlv_cree_le AT TIME ZONE 'Europe/Paris')::date, 'signataire', s.sig_nom, 'qualite', s.sig_qualite,
+                 'recu_le', to_char(coalesce(s.sig_le, l.rlv_cree_le) AT TIME ZONE 'Europe/Paris', 'DD/MM/YYYY HH24:MI'),
+                 'signe_appareil_le', to_char(l.rlv_signee_appareil_le AT TIME ZONE 'Europe/Paris', 'DD/MM/YYYY HH24:MI'),
+                 'signe', s.sig_image IS NOT NULL, 'signature_id', s.sig_id, 'par', l.rlv_cree_par,
+                 'reception_le', (SELECT min(r.rec_le) FROM reception_reserve x JOIN reception_pose r ON r.rec_id = x.rre_rec_id WHERE x.rre_rlv_id = l.rlv_id),
+                 'reserves', (SELECT coalesce(json_agg(json_build_object('libelle', x.rre_libelle,
+                                'levee_le', to_char(coalesce(x.rre_levee_appareil_le, x.rre_levee_le) AT TIME ZONE 'Europe/Paris', 'DD/MM/YYYY'),
+                                'par', x.rre_levee_par, 'commentaire', x.rre_levee_commentaire) ORDER BY x.rre_rec_id, x.rre_ordre), '[]')
+                              FROM reception_reserve x WHERE x.rre_rlv_id = l.rlv_id))::text AS "Value"
+        FROM reception_levee l LEFT JOIN signature s ON s.sig_id = l.rlv_sig_id
+        WHERE l.rlv_ent_id = @id ORDER BY l.rlv_id DESC LIMIT 1
+        """;
+
     /// <summary>Code de la ressource image de la signature d'un bon d'intervention SAV (modèle BON_SAV).</summary>
     public const string CodeSignatureSav = "SIGNATURE_SAV";
 
@@ -246,6 +273,8 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
                 """,
             // Réception de pose (application de terrain, lot 5) : dernière réception de l'ordre, réserves, signataire.
             "reception_pose" => SqlSourceReception,
+            // PV de levée des réserves (terrain-suites lot 16) : dernier PV de levée de l'ordre, réserves couvertes.
+            SourceLevee => SqlSourceLevee,
             // Intervention SAV (application de terrain, lot 6) : dernier compte rendu de l'ordre, signataire.
             "intervention_sav" => """
                 SELECT json_build_object('id', i.isv_id, 'date', i.isv_le, 'constat', i.isv_constat, 'travaux', i.isv_travaux, 'fournitures', i.isv_fournitures,

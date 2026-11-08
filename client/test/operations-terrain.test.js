@@ -17,7 +17,7 @@ const { declarerOperation, ecrireOperation, envoyerOperations, lireOperation } =
 const { etatNumero, ETAT_NUMERO } = await import('../src/app/terrain/terrain.js');
 const { ERREUR_TERRAIN } = await import('../src/app/codes.js');
 const { ETAT_ATTENTE } = await import('../src/app/hors-ligne/attente.js');
-const { memoriserLimitePhotos, limitePhotos, receptionGardee, envoyerOuGarder, OPERATION_TERRAIN, formulaireLevee } = await import('../src/app/terrain/operations-terrain.js');
+const { memoriserLimitePhotos, limitePhotos, receptionGardee, envoyerOuGarder, OPERATION_TERRAIN, formulaireLevee, pvLeveeAttendu } = await import('../src/app/terrain/operations-terrain.js');
 const { api } = await import('../src/app/api.js');
 
 describe('hors ligne : ordre saisi par son numéro, résolu à l\'envoi (terrain-suites lot 10)', () => {
@@ -102,5 +102,15 @@ describe('levée d\'une réserve gardée hors ligne (terrain-suites lot 15)', ()
     const f = formulaireLevee({ commentaire: null, photos: null });
     expect(f.get('levee_le')).toBeNull();
     expect(f.get('photo')).toBeNull();
+  });
+});
+
+describe('PV de levée des réserves (terrain-suites lot 16)', () => {
+  it('à signer quand le serveur l\'attend, ou quand chaque réserve est levée ou gardée levée sur l\'appareil', () => {
+    expect(pvLeveeAttendu({ pv_levee_attendu: true, reserves: [] })).toBe(true);
+    expect(pvLeveeAttendu({ reserves: [{ etat: 'LEVEE' }, { etat: 'OUVERTE', gardee: true }] })).toBe(true);
+    expect(pvLeveeAttendu({ reserves: [{ etat: 'LEVEE' }, { etat: 'OUVERTE' }] })).toBe(false);
+    expect(pvLeveeAttendu({ pv_levee_attendu: false, reserves: [{ etat: 'LEVEE', pv_levee: 3 }] })).toBe(false);
+    expect(pvLeveeAttendu({ reserves: [] })).toBe(false);
   });
 });

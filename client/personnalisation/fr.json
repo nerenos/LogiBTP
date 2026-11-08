@@ -7350,6 +7350,15 @@
         "photo": "Photo de la levée (facultative, la première choisie est gardée)",
         "libelle": "Levée de « {{reserve}} » ({{numero}})",
         "levee_ok": "Réserve levée"
+      },
+      "pv_levee": {
+        "titre": "PV de levée des réserves",
+        "aide": "Toutes les réserves sont levées : faites signer au client le procès-verbal de levée.",
+        "valider": "Valider le PV de levée",
+        "signe": "PV de levée signé le {{date}} par {{signataire}}",
+        "gardee": "PV de levée signé et gardé sur cet appareil : il sera édité et envoyé au retour du réseau.",
+        "libelle": "PV de levée des réserves de {{numero}}",
+        "enregistre": "PV de levée des réserves enregistré"
       }
     },
     "chargement": "Chargement…",

@@ -2,6 +2,7 @@ import { texte, icone } from '@logibtp/socle/dictionnaire';
 import { aujourdhui } from '@logibtp/socle';
 import { tailleMaxDepot } from '@logibtp/ged';
 import { api } from '../api.js';
+import { ETAT_RESERVE } from '../codes.js';
 import { declarerOperation, ecrireOperation } from '../hors-ligne/operations.js';
 import { estHorsLigne } from '../hors-ligne/attente.js';
 import { SUJET_ATTENTE } from '../hors-ligne/synchro.js';
@@ -15,6 +16,7 @@ export const OPERATION_TERRAIN = Object.freeze({
   JOURNEE: 'terrain-journee', AVANCEMENT: 'terrain-avancement', NON_CONFORMITE: 'terrain-nc', PHOTOS: 'terrain-photos',
   ETAPE: 'terrain-etape', REPAS: 'terrain-repas', RECEPTION: 'terrain-reception', DEMANDE: 'terrain-demande', SAV: 'terrain-sav',
   LIVRAISON: 'terrain-livraison', MATERIEL: 'terrain-materiel', LEVEE_RESERVE: 'terrain-levee-reserve',
+  PV_LEVEE: 'terrain-pv-levee',
 });
 
 /** Clé du localStorage où l'appareil garde la limite de dépôt de la GED (terrain-suites lot 12). */
@@ -37,8 +39,8 @@ export function limitePhotos() {
 }
 
 /**
- * Réception gardée sur l'appareil (terrain-suites lot 13, TS16 a) : heure de signature de l'appareil jointe
- * (`signee_le`, ISO), imprimée sur le PV avec l'heure de réception par le serveur.
+ * Réception (ou PV de levée des réserves, lot 16) gardée sur l'appareil (terrain-suites lot 13, TS16 a) : heure de
+ * signature de l'appareil jointe (`signee_le`, ISO), imprimée sur le PV avec l'heure de réception par le serveur.
  */
 export const receptionGardee = (reception, maintenant = new Date()) => ({ ...reception, signee_le: maintenant.toISOString() });
 
@@ -54,6 +56,13 @@ export const formulaireLevee = ({ commentaire, levee_le: leveeLe, photos }) => {
   if (photo) f.append('photo', photo, photo.name);
   return f;
 };
+
+/**
+ * PV de levée des réserves à faire signer (terrain-suites lot 16) : signalé par le serveur, ou, sans réseau, quand
+ * chaque réserve est levée ou gardée levée sur l'appareil, l'une au moins gardée.
+ */
+export const pvLeveeAttendu = (d) => Boolean(d?.pv_levee_attendu)
+  || ((d?.reserves ?? []).length > 0 && d.reserves.every((r) => r.etat === ETAT_RESERVE.LEVEE || r.gardee) && d.reserves.some((r) => r.gardee));
 
 /** Formulaire d'envoi de photos gardées ({ fichiers: [File], commentaire }). */
 export const formulairePhotos = ({ fichiers, commentaire }) => {
@@ -81,6 +90,9 @@ declarerOperation(OPERATION_TERRAIN.RECEPTION, { envoyer: (c) => api.terrain.enr
 // Levée d'une réserve gardée hors ligne : heure de l'appareil jointe (levee_le), photo gardée réduite ; une levée déjà
 // reçue par le serveur n'est pas changée (envoi rejoué sans effet).
 declarerOperation(OPERATION_TERRAIN.LEVEE_RESERVE, { envoyer: (c) => api.terrain.leverReserve(c.ordre, c.reserve, formulaireLevee(c)) });
+// PV de levée signé hors ligne (terrain-suites lot 16) : envoyé après les levées gardées (file dans l'ordre de saisie),
+// heure de signature de l'appareil jointe (signee_le, receptionGardee).
+declarerOperation(OPERATION_TERRAIN.PV_LEVEE, { envoyer: (c) => api.terrain.signerPvLevee(c.ordre, c.pv) });
 declarerOperation(OPERATION_TERRAIN.DEMANDE, {
   envoyer: async (c) => {
     await api.terrain.demande(c.demande);

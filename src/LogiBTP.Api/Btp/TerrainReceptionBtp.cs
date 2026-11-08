@@ -118,7 +118,31 @@ public static partial class TerrainBtp
             """, new NpgsqlParameter("e", o.Id), new NpgsqlParameter("c", EtapeReception)).FirstOrDefaultAsync(ct),
         receptions = (await ReceptionsAsync(db, o.Id, ct)).Select(Reception),
         reserves = await ReservesAsync(db, o.Id, ct),
+        levees = await LeveesAsync(db, o.Id, ct),
+        pv_levee_attendu = await PvLeveeAttenduAsync(db, o.Id, ct),
     };
+
+    /// <summary>
+    /// PV signé d'un ordre édité par le module Édition (compte de service), rangé dans la GED de l'ordre (catégorie
+    /// pv_reception) avec son empreinte SHA-256, gardée avec la signature (sig_empreinte, sig_dge_id). Renvoie la pièce.
+    /// Réception de pose (PV_RECEPTION) et levée des réserves (PV_LEVEE_RESERVES, terrain-suites lot 16).
+    /// </summary>
+    private static async Task<long> EditerPvAsync(IServiceProvider services, LogiBtpContext db, OrdreReception o, string modele, string nomFichier, string titre,
+        string resume, long sigId, Utilisateur u, CancellationToken ct)
+    {
+        var (pdf, _, _) = await services.GetRequiredService<ServiceEdition>().Pdf(services, new DemandeEdition("document", o.Id.ToString(CultureInfo.InvariantCulture), modele), false, ServeurEditions, ct);
+        var empreinte = Convert.ToHexStringLower(SHA256.HashData(pdf.Octets));
+        await using var flux = new MemoryStream(pdf.Octets);
+        var fichier = new FormFile(flux, 0, pdf.Octets.Length, "fichier", nomFichier) { Headers = new HeaderDictionary(), ContentType = "application/pdf" };
+        var d = await services.GetRequiredService<ServiceGed>().DeposerFichier(fichier, new MetaDepot
+        {
+            Titre = titre, Categorie = CategoriesGed.PvReception, TypeElement = o.Type, IdElement = o.Groupe.ToString(CultureInfo.InvariantCulture), Auteur = u.Code,
+            Resume = $"{resume} ; empreinte SHA-256 {empreinte}",
+        }, ServeurEditions, ct);
+        await db.Database.ExecuteSqlRawAsync("UPDATE signature SET sig_empreinte = @h, sig_dge_id = @d WHERE sig_id = @s",
+            [new NpgsqlParameter("h", empreinte), new NpgsqlParameter("d", d.Id), new NpgsqlParameter("s", sigId)], ct);
+        return d.Id;
+    }
 
     /// <summary>Image PNG d'une data URL (signature tracée) ; refus si ce n'est pas un PNG ou s'il est trop lourd.</summary>
     private static byte[]? ImageSignature(string? dataUrl)
@@ -174,22 +198,11 @@ public static partial class TerrainBtp
             long? dge = null;
             try
             {
-                var (pdf, _, _) = await services.GetRequiredService<ServiceEdition>().Pdf(services, new DemandeEdition("document", ent.ToString(CultureInfo.InvariantCulture), ModelePv), false, ServeurEditions, ct);
-                var empreinte = Convert.ToHexStringLower(SHA256.HashData(pdf.Octets));
-                await using var flux = new MemoryStream(pdf.Octets);
-                var nom = $"PV-reception-{(o.Numero ?? ent.ToString(CultureInfo.InvariantCulture))}-{DateTime.Today:yyyyMMdd}.pdf";
-                var fichier = new FormFile(flux, 0, pdf.Octets.Length, "fichier", nom) { Headers = new HeaderDictionary(), ContentType = "application/pdf" };
-                var d = await services.GetRequiredService<ServiceGed>().DeposerFichier(fichier, new MetaDepot
-                {
-                    Titre = $"PV de réception {o.Numero} du {DateTime.Today:dd/MM/yyyy}", Categorie = CategoriesGed.PvReception, TypeElement = o.Type,
-                    IdElement = o.Groupe.ToString(CultureInfo.InvariantCulture), Auteur = u.Code,
-                    Resume = $"Réception {r.Etat switch { "SANS_RESERVE" => "sans réserve", "AVEC_RESERVES" => "avec réserves", _ => "refusée" }}, signée par {r.Nom.Trim()} ; empreinte SHA-256 {empreinte}",
-                }, ServeurEditions, ct);
-                dge = d.Id;
-                await db.Database.ExecuteSqlRawAsync("UPDATE signature SET sig_empreinte = @h, sig_dge_id = @d WHERE sig_id = @s",
-                    [new NpgsqlParameter("h", empreinte), new NpgsqlParameter("d", d.Id), new NpgsqlParameter("s", sigId)], ct);
+                dge = await EditerPvAsync(services, db, o, ModelePv, $"PV-reception-{(o.Numero ?? ent.ToString(CultureInfo.InvariantCulture))}-{DateTime.Today:yyyyMMdd}.pdf",
+                    $"PV de réception {o.Numero} du {DateTime.Today:dd/MM/yyyy}",
+                    $"Réception {r.Etat switch { "SANS_RESERVE" => "sans réserve", "AVEC_RESERVES" => "avec réserves", _ => "refusée" }}, signée par {r.Nom.Trim()}", sigId, u, ct);
                 await db.Database.ExecuteSqlRawAsync("UPDATE reception_pose SET rec_dge_id = @d WHERE rec_id = @r",
-                    [new NpgsqlParameter("d", d.Id), new NpgsqlParameter("r", recId)], ct);
+                    [new NpgsqlParameter("d", dge), new NpgsqlParameter("r", recId)], ct);
             }
             catch (Exception e) when (e is not OperationCanceledException)
             {

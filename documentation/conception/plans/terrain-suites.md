@@ -31,7 +31,7 @@
 | 13 | PV de réception : forme de signature et heure de l'appareil | cœur | — | FAIT (08/11/2026) |
 | 14 | Réserves suivies : base et serveur | cœur | 13 | FAIT (08/11/2026) |
 | 15 | Réserves suivies : levée depuis le terrain et suivi au bureau | cœur | 14 | FAIT (08/11/2026) |
-| 16 | PV de levée des réserves signé | cœur | 15 | A FAIRE |
+| 16 | PV de levée des réserves signé | cœur | 15 | FAIT (08/11/2026) |
 | 17 | Bibliothèque simplifiée : serveur | cœur | — | A FAIRE |
 | 18 | Bibliothèque simplifiée : écran et articles des demandes d'approvisionnement | cœur | 17 | A FAIRE |
 | 19 | Pointage des heures de matériel à la borne | cœur | — | A FAIRE |
@@ -372,7 +372,7 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
   Aucun script SQL. Tests : `operations-terrain.test.js` (levée gardée puis envoyée). La vérification « levée au bureau »
   reste à faire sur la base de l'utilisateur (`db/290` appliqué).
 
-## Lot 16 : PV de levée des réserves signé (TS14 a)
+## Lot 16 : PV de levée des réserves signé (TS14 a) (FAIT 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : nouveau modèle d'édition `PV_LEVEE_RESERVES` (données système des éditions), `TerrainReceptionBtp.cs`
@@ -381,6 +381,20 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
 - **Dépendances** : lot 15.
 - **Tests** : C# : PV produit à la dernière levée, empreinte enregistrée.
 - **Critère de fin** : `npm test` vert ; PV de levée rangé dans la GED de l'ordre.
+- **Réalisé / écarts** : `db/291_reception_levee.sql` (rejouable) : table `reception_levee` (signature, PV GED,
+  courriel, heure de l'appareil) et `reception_reserve.rre_rlv_id` (réserves constatées par le PV). Modèle
+  `PV_LEVEE_RESERVES` (`client/src/app/editions/modeles.js`, `db/191` régénéré : à rejouer) : constat, réserves levées
+  (date de levée, commentaire), signataire, « Signature électronique simple, signée sur l'appareil le…, reçue le… »,
+  image `SIGNATURE_LEVEE` ; source annexe `levee_reserves` (`SpecialisationEditionBtp.SqlSourceLevee`). Serveur
+  (`TerrainReservesBtp.cs`) : `PvLeveeAttendu` (plus aucune réserve ouverte, au moins une levée non constatée),
+  `EnregistrerLeveeAsync`, `SignerPvLeveeAsync`, `POST /api/terrain/receptions/{ent}/levee`, `GET …/levees/{rlv}/pv` ;
+  édition, rangement GED (catégorie `pv_reception`, pas de nouvelle catégorie) et empreinte par `EditerPvAsync`, sorti
+  de la réception et commun aux deux PV ; courriel par l'usage `reception_pose` du module Mail. Écart : le PV n'est pas
+  édité tout seul à la dernière levée (il faut la signature du client) : la dernière levée rend `pv_levee_attendu` et la
+  page de réception propose le PV à signer (`PadSignature`), gardé hors ligne avec l'heure de l'appareil (opération
+  `PV_LEVEE`, envoyée après les levées gardées). Tests : `PvLeveeReservesTests.cs` (PV produit à la dernière levée et
+  empreinte sur la base de développement si `LOGIBTP_TEST_PG`), `modeles-pv-terrain.test.js` (deux PV : modèle valide,
+  deux heures hors ligne, une en ligne), `operations-terrain.test.js`.
 
 ## Lot 17 : bibliothèque simplifiée, serveur (TS17 b, TS15 a)
 

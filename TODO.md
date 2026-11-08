@@ -145,7 +145,8 @@ Plan en 24 lots : [terrain-suites.md](documentation/conception/plans/terrain-sui
   à choisir plus tard) ; réception gardée hors ligne horodatée à l'envoi par le serveur. Plan : lots 13 à 18. Fait le
   08/11/2026 : lot 13 (heure de l'appareil gardée avec la réception hors ligne, `db/289`, forme de signature et les deux
   heures sur le PV, `db/191` à rejouer) ; lot 14 (réserves suivies une par une, `db/290`, levée par le serveur), lot 15 (levée depuis le terrain, gardée
-  hors ligne, réserves dans le panneau « Exécution » de l'ordre).
+  hors ligne, réserves dans le panneau « Exécution » de l'ordre),
+  lot 16 (PV de levée des réserves signé, `db/291`, modèle `PV_LEVEE_RESERVES` par `db/191` à rejouer).
 - [ ] Lot 7, suites : bibliothèque simplifiée sur le terrain (T18) ; pointage des heures de matériel à la borne ;
   réception d'une commande à options ou variantes (refusée) ; avancement réel par marché quand un chantier en porte
   plusieurs (aujourd'hui : tout le chantier). Plan : lots 17 à 21. Déjà faits ailleurs : valorisation des heures de
