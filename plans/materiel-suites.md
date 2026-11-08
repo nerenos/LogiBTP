@@ -44,7 +44,7 @@
 |---|---|---|---|---|
 | 1 | Photos de départ et de retour : base et serveur | cœur | MO1 | FAIT (08/11/2026) |
 | 2 | Photos de départ et de retour : ligne d'affectation | cœur | 1 | FAIT (08/11/2026) |
-| 3 | Relevés de compteurs à la borne : serveur | cœur | MO2 | A FAIRE |
+| 3 | Relevés de compteurs à la borne : serveur | cœur | MO2 | FAIT (08/11/2026) |
 | 4 | Relevés de compteurs à la borne : écran | cœur | 3 | A FAIRE |
 | 5 | Données de démonstration d'entretiens | cœur | MO3 | A FAIRE |
 | 6 | Refacturation interne : composante « produit interne » | `modules/rentabilite` | MO4 | A FAIRE |
@@ -86,7 +86,7 @@
 - **Critère de fin** : `npm test` vert.
 - **Réalisé / écarts** : deux colonnes « Photo au départ / au retour » dans `rendreAffectations` (vignette cliquable ouvrant l'image, bouton de dépôt par `ged.deposer`, catégorie photo, type d'élément matériel) ; photo de retour déposable une fois l'affectation terminée ; l'identifiant est enregistré avec l'affectation (`ged_depart` / `ged_retour`). Helpers `photosAffectation` / `definirPhoto` (`affectations.js`), message `AFF_PHOTO`, icône `ressources_btp_photo`. Test sur les helpers (pas de banc DOM pour l'écran). `npm test` : seuls les 2 échecs connus.
 
-## Lot 3 : relevés de compteurs à la borne, serveur (A FAIRE)
+## Lot 3 : relevés de compteurs à la borne, serveur (FAIT 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `CompteursMateriel.cs` (`AjouterReleveAsync :88` avec source `BORNE`, matériels affectés au salarié de
@@ -101,6 +101,7 @@
 - **Jeux de tests** : relevé accepté pour un matériel affecté ce jour ; relevé sur un autre matériel accepté mais à valider ; contrôle de valeur
   inférieure maintenu.
 - **Critère de fin** : `dotnet test LogiBTP.slnx` vert.
+- **Réalisé / écarts** : script `db/280` (non appliqué aux bases) : `mre_a_valider`, `mre_sal_id`, `mre_traite_par/le` ; `CompteursBorneBtp.cs` : `GET /api/pointage/borne/materiel?jeton=` (affectés ce jour / autres), `POST /api/pointage/borne/materiel/releves` (source BORNE, contrôle inchangé, `aValider` si non affecté ; borne d'essai : rien d'écrit), `GET` et `POST /api/ressources/materiels/releves-a-valider[/{id}]` (admin ou responsable du service ; refus = suppression, motif obligatoire). Pas de changement du module Pointage. Tests : `CompteursBorneTests.cs` (règle pure et contrôle ; pas de banc HTTP sur base).
 
 ## Lot 4 : relevés de compteurs à la borne, écran (A FAIRE)
 

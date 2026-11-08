@@ -250,6 +250,7 @@ api.MapRessources();
 api.MapAffectationsMateriel();
 api.MapCoutsMateriel();
 api.MapCompteursMateriel();
+api.MapCompteursBorne();
 api.MapEntretiensMateriel();
 api.MapPlansEntretien();
 api.MapReglementsStructure();
