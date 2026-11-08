@@ -18,6 +18,7 @@ import {
   ORIGINES_ADRESSE, memeAdresse, adresseIdentiqueAuClient, payeurIdentiqueAuClient, lignesAdresse, saisirAdresse, choisirAdresse,
 } from './structure/adresses.js';
 import { api } from './api.js';
+import { champIndividuPoste, POSTE } from './annuaire/choix.js';
 import {
   bilanTranche, partsLigne, dansPortee, cleLigne, ecrireCle, figerVentilation, repartirReste, remplacerCles,
 } from './frais-annexes.js';
@@ -341,15 +342,14 @@ export class PanneauxBtp extends PanneauxDocument {
     const m = this.editeur.magasin;
     this.redacteursCharges = await this.redacteurs();
     if (!place.isConnected) return; // entête redessiné pendant le chargement
-    const champ = creerCombo({ options: this.redacteursCharges, valeur: this.editeur.saisie.document.ent_redacteur_id ?? '' });
-    champ.dataset.redacteur = '';
-    champ.title = place.title;
-    champ.readOnly = !!m.lectureSeule;
-    champ.addEventListener('change', () => {
-      const v = champ.valeurCombo;
-      const id = v === '' || v === null ? null : Number(v);
-      if (id !== (this.editeur.saisie.document.ent_redacteur_id ?? null)) m.modifier((b) => { b.document.ent_redacteur_id = id; }, texte('document_btp.panneaux.redacteur'));
+    const id = this.editeur.saisie.document.ent_redacteur_id ?? null;
+    const champ = champIndividuPoste({
+      poste: POSTE.REDACTEUR, valeur: id, libelle: id === null ? '' : this.libelleRedacteur(id), titre: place.title, lectureSeule: !!m.lectureSeule,
+      surChoix: (nouveau) => {
+        if (nouveau !== (this.editeur.saisie.document.ent_redacteur_id ?? null)) m.modifier((b) => { b.document.ent_redacteur_id = nouveau; }, texte('document_btp.panneaux.redacteur'));
+      },
     });
+    champ.dataset.redacteur = '';
     place.replaceWith(champ);
   }
 

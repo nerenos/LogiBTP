@@ -59,6 +59,9 @@ export const ROLES = [
   { code: 'UTILISATEUR', libelle: 'Utilisateur LogiBTP', icone: '🔑', ordre: 60 },
 ].map((x) => ({ ...x, actif: true }));
 
+/** Postes des individus de notre société (codes de rôle de l'annuaire) : filtre par défaut des choix en liste ; rédacteur : aucun filtre. */
+export const POSTE = Object.freeze({ CONDUCTEUR: 'CONDUCTEUR', CHARGE_AFFAIRES: 'CHARGE_AFFAIRES', CHEF_CHANTIER: 'CHEF_CHANTIER', CHIFFREUR: 'CHIFFREUR', REDACTEUR: 'REDACTEUR' });
+
 /** Chiffres complétés de leur clé de Luhn (SIREN fictifs : 8 chiffres + clé ; SIRET : SIREN + 4 chiffres + clé). */
 function avecCle(chiffres) {
   for (let c = 0; c <= 9; c++) if (luhn(`${chiffres}${c}`)) return `${chiffres}${c}`;

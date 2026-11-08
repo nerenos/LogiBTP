@@ -1,7 +1,10 @@
-import { texte, icone } from '@logibtp/socle/dictionnaire';
+import { texte, icone, iconeHtml, texteHtml } from '@logibtp/socle/dictionnaire';
+import { echapper } from '@logibtp/socle/ui';
 import { choisirDansListe } from '@logibtp/liste/ui';
 import { definirChoixAnnuaire } from '@logibtp/annuaire/ui';
-import { CASQUETTES } from './donnees.js';
+import { CASQUETTES, ROLES } from './donnees.js';
+
+export { POSTE } from './donnees.js';
 import { creerFournisseurListe } from '../listes.js';
 import { VUES_CHOIX } from '../vues-liste.js';
 
@@ -52,6 +55,54 @@ export async function choisirContact({ titre = texte('annuaire_btp.choix.contact
   });
   if (!r || 'creer' in r) return r;
   return { ...r, id: Number(r._id) };
+}
+
+/** Rôles de l'annuaire proposés par défaut pour un poste (rédacteur ou poste inconnu : aucun filtre, tous les individus de la société). */
+export function rolesPoste(poste) {
+  return ROLES.some((r) => r.code === poste) ? [poste] : [];
+}
+
+/**
+ * Individu de notre société choisi dans la liste (vue « Notre société »), filtré par défaut sur le poste (pastille
+ * retirable) : résumé { id, nom_complet… } ou null. Options : poste, titre, exclure (ids), recherche.
+ */
+export async function choisirIndividuPoste({ poste = null, titre = texte('annuaire_btp.choix.individu_societe'), exclure = [], recherche = '' } = {}) {
+  const exclus = new Set(exclure.map(Number));
+  const roles = rolesPoste(poste);
+  const r = await choisirDansListe({
+    fournisseur: creerFournisseurListe(), theme: THEME_CONTACTS, vue: VUES_CHOIX.societe, titre, recherche,
+    filtres: roles.length ? { roles } : {},
+    libellesFiltres: { roles: texte('annuaire_btp.choix.poste', { poste: roles.map((c) => ROLES.find((x) => x.code === c)?.libelle ?? c).join(texte('annuaire_btp.choix.ou')) }) },
+    accepter: (l) => (exclus.has(Number(l._id)) ? texte('annuaire_btp.choix.contact_deja') : null),
+  });
+  if (!r || 'creer' in r) return null;
+  return { ...r, id: Number(r._id) };
+}
+
+/**
+ * Champ d'un individu de notre société par poste : saisie directe du nom (Entrée, F4, double-clic ou bouton ouvrent la
+ * liste de choix, le texte saisi en recherche) ; vider le champ efface l'individu. `surChoix(id | null, ligne)` est
+ * appelé à chaque changement. Retourne un <span> (propriété `valeurIndividu`).
+ */
+export function champIndividuPoste({ poste = null, valeur = null, libelle = '', titre = '', surChoix = () => {}, lectureSeule = false } = {}) {
+  const span = document.createElement('span');
+  span.className = 'champ-tiers';
+  span.valeurIndividu = valeur ?? null;
+  span.innerHTML = `<input type="search" class="fiche-saisie-champ" value="${echapper(libelle)}" placeholder="${texteHtml('annuaire_btp.choix.rechercher_individu')}" title="${echapper(titre)}" ${lectureSeule ? 'readonly' : ''}>
+    <button type="button" class="bouton-icone" data-liste-individu ${lectureSeule ? 'disabled' : ''} title="${texteHtml('annuaire_btp.choix.individu_societe')}">${iconeHtml('rechercher')}</button>`;
+  const input = span.querySelector('input');
+  const ouvrir = async () => {
+    const choisi = await choisirIndividuPoste({ poste, recherche: span.valeurIndividu ? '' : input.value.trim() });
+    if (!choisi) return;
+    span.valeurIndividu = choisi.id;
+    input.value = choisi.nom_complet ?? '';
+    surChoix(choisi.id, choisi);
+  };
+  span.querySelector('[data-liste-individu]').addEventListener('click', ouvrir);
+  input.addEventListener('keydown', (e) => { if (e.key === 'F4' || e.key === 'Enter') { e.preventDefault(); ouvrir(); } });
+  input.addEventListener('dblclick', ouvrir);
+  input.addEventListener('input', () => { if (input.value === '' && span.valeurIndividu !== null) { span.valeurIndividu = null; surChoix(null, null); } });
+  return span;
 }
 
 /** Choix de l'annuaire (personnes, individus) remplacés par les listes ; appelé au démarrage de l'application. */

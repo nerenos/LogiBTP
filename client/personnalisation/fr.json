@@ -7594,7 +7594,10 @@
       "tiers_deja": "Tiers déjà choisi : choisissez-en un autre",
       "contact": "Choisir un contact",
       "contact_deja": "Contact déjà choisi : choisissez-en un autre",
-      "nouvel_individu": "Nouvel individu"
+      "nouvel_individu": "Nouvel individu",
+      "individu_societe": "Choisir un individu de notre société",
+      "rechercher_individu": "Rechercher un individu…",
+      "poste": "Poste : {{poste}}"
     }
   },
   "bibliotheque_btp": {

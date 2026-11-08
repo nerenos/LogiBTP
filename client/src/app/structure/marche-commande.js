@@ -1,5 +1,6 @@
 import { texte, texteHtml, icone } from '@logibtp/socle/dictionnaire';
 import { TYPE_FICHE } from '../codes.js';
+import { champIndividuPoste, POSTE } from '../annuaire/choix.js';
 import { aujourdhui } from '@logibtp/socle';
 import { echapper, formatNombre, creerCombo, ouvrirModale } from '@logibtp/socle/ui';
 
@@ -35,7 +36,7 @@ export function adresseChantierInitiale(doc, projet) {
  * creerChantier(valeurs) → { id } ; creerMarche(valeurs) → { id } ; codePrevisionnel(type, valeurs) → code prévisionnel
  * (texte indicatif ; code vide = calculé par le chrono à la création).
  */
-export function proposerMarche({ refs, doc, totalHt, creerChantier, creerMarche, individus = [], codePrevisionnel = async () => '' }) {
+export function proposerMarche({ refs, doc, totalHt, creerChantier, creerMarche, codePrevisionnel = async () => '' }) {
   const chantiers = ouverts(refs.chantiers ?? []);
   const client = doc.ent_tiers_id ?? null;
   const projet = (refs.projets ?? []).find((p) => p.id === doc.ent_projet_id) ?? null;
@@ -92,8 +93,8 @@ export function proposerMarche({ refs, doc, totalHt, creerChantier, creerMarche,
   const $ = (s) => dlg.querySelector(s);
   $('[data-chantier]').append(comboChantier);
   // Conducteur de travaux : individu de notre structure (annuaire).
-  const comboConducteur = creerCombo({ options: individus.map((x) => ({ valeur: x.valeur, libelle: x.libelle, detail: x.detail })) });
-  $('[data-conducteur]').replaceWith(comboConducteur);
+  const champConducteur = champIndividuPoste({ poste: POSTE.CONDUCTEUR });
+  $('[data-conducteur]').replaceWith(champConducteur);
   $('[data-affaire]').append(comboAffaire);
   $('[data-nature]').append(comboNature);
   const choix = () => dlg.querySelector('[name="choix"]:checked').value;
@@ -151,7 +152,7 @@ export function proposerMarche({ refs, doc, totalHt, creerChantier, creerMarche,
           const v = Object.fromEntries([...dlg.querySelectorAll('[data-cha]')].map((el) => [el.dataset.cha, el.type === 'checkbox' ? el.checked : (el.value.trim() || null)]));
           if (!v.libelle) { erreur(texte('structure_btp.marche_commande.erreurs.libelle_chantier')); return; }
           const cree = await creerChantier({
-            ...v, conducteur_ind_id: comboConducteur.resoudre() === '' ? null : Number(comboConducteur.resoudre()), tiers_id: client, aff_id: comboAffaire.valeurCombo === '' ? null : Number(comboAffaire.valeurCombo),
+            ...v, conducteur_ind_id: champConducteur.valeurIndividu, tiers_id: client, aff_id: comboAffaire.valeurCombo === '' ? null : Number(comboAffaire.valeurCombo),
             prj_id: projet?.id ?? null, statut: 'OUVERT', date_ouverture: aujourdhui(),
           });
           chaId = cree.id;

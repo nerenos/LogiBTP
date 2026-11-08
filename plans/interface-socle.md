@@ -46,7 +46,7 @@
 | 3 | P2 : mots-clés en jetons dans la fiche élément | `modules/bibliotheque` | 2 | A FAIRE |
 | 4 | P2 : mots-clés en jetons dans la GED | `modules/ged` | 2 | FAIT (08/11/2026) |
 | 5 | P1 : nom et aperçu de la couleur dans le choix de teinte | `modules/liste` | — | FAIT (08/11/2026) |
-| 6 | I1 : individus de notre société par poste en choix en liste | cœur | — | A FAIRE |
+| 6 | I1 : individus de notre société par poste en choix en liste | cœur | — | FAIT (08/11/2026) |
 | 7 | I1 : contact d'un intervenant dans les contacts du tiers | cœur | 6 | A FAIRE |
 | 8 | I1 : sélection multiple des destinataires | cœur | 6 | A FAIRE |
 
@@ -121,7 +121,9 @@
   inchangé.
 - **Critère de fin** : `npm test` vert (y compris les tests de textes de la Personnalisation).
 
-## Lot 6 : I1, individus de notre société par poste en choix en liste (A FAIRE)
+## Lot 6 : I1, individus de notre société par poste en choix en liste (FAIT 08/11/2026)
+
+> Écart : pas de nouvelle vue ni de script `db/` : la vue existante « Notre société » (id 26, `VUES_CHOIX.societe`) est filtrée par défaut sur le rôle du poste (`POSTE`, `annuaire/donnees.js` ; rédacteur : aucun filtre), pastille retirable. Composant `champIndividuPoste` (saisie du nom, Entrée / F4 / bouton ouvrent la liste) remplaçant les combos de `marche-commande.js`, de `fiche-structure.js` (poste par code de champ, `POSTE_CHAMP`) et du rédacteur de `panneaux-btp.js` ; `parametres-services.js` (responsable de service, membres) inchangé. Le DOM n'est pas testé (pas de jsdom) : test de `choisirIndividuPoste`.
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `client/src/app/annuaire/choix.js` (contextes `choix:conducteur`, `choix:charge_affaires`,

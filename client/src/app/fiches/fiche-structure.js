@@ -14,7 +14,13 @@ import { champRattachement } from '../structure/selection.js';
 import { VueGrapheStructure } from '../structure/graphe-structure.js';
 import { individusStructure } from '../panneaux-btp.js';
 import { creerTiersProvisoire } from '@logibtp/annuaire/ui';
-import { choisirTiers } from '../annuaire/choix.js';
+import { choisirTiers, champIndividuPoste, POSTE } from '../annuaire/choix.js';
+
+/** Poste des champs d'individu de notre société (filtre par défaut du choix en liste, retirable). */
+const POSTE_CHAMP = Object.freeze({
+  conducteur_ind_id: POSTE.CONDUCTEUR, charge_ind_id: POSTE.CHARGE_AFFAIRES, responsable_ind_id: POSTE.CHARGE_AFFAIRES,
+  chef_ind_id: POSTE.CHEF_CHANTIER, metreur_ind_id: POSTE.CHIFFREUR,
+});
 
 // Fiches de la structure des affaires : projet, affaire, chantier, marché. Listes de choix des références (affaire,
 // projet, chantier, commande d'origine, tiers de l'annuaire), code prévisionnel du chrono (module Fiche), préremplissage depuis un
@@ -182,8 +188,9 @@ export class FicheStructure extends FicheLogiBTP {
   }
 
   /**
-   * Individu de notre structure (conducteur de travaux) : combo des individus rattachés à notre société et à ses
-   * agences (`individusStructure`, lue une fois par fiche), l'ID est enregistré ; contrôlé par le serveur.
+   * Individu de notre structure (conducteur de travaux, chargé d'affaires…) : choix dans la liste des individus de notre
+   * société, filtrée par défaut sur le poste du champ (`POSTE_CHAMP`, filtre retirable) ; l'ID est enregistré ; contrôlé
+   * par le serveur. Le nom d'un individu déjà choisi est lu dans `individusStructure` (une fois par fiche).
    */
   #champIndividuSociete(champ, valeur, lecture) {
     const span = document.createElement('span');
@@ -193,14 +200,19 @@ export class FicheStructure extends FicheLogiBTP {
     }
     this.individusSociete.then((liste) => {
       const choisi = liste.find((x) => Number(x.valeur) === Number(valeur));
+      const nom = choisi?.libelle ?? (valeur ? texte('fiches_btp.structure.individu', { id: valeur }) : '');
       if (lecture) {
-        span.innerHTML = valeur ? `<a href="${urlFiche(TYPE_FICHE.INDIVIDU, Number(valeur))}">${echapper(choisi?.libelle ?? texte('fiches_btp.structure.individu', { id: valeur }))}</a>` : '—';
+        span.innerHTML = valeur ? `<a href="${urlFiche(TYPE_FICHE.INDIVIDU, Number(valeur))}">${echapper(nom)}</a>` : '—';
         return;
       }
-      const combo = creerCombo({ valeur: valeur ?? '', options: liste.map((x) => ({ valeur: x.valeur, libelle: x.libelle, detail: x.detail })), titre: champ.aide ?? '' });
-      combo.classList.add('fiche-saisie-champ');
-      combo.addEventListener('change', () => { const v = combo.resoudre(); this.definirValeur(champ.code, v === '' || v === null ? null : Number(v)); });
-      span.replaceChildren(combo);
+      const saisie = champIndividuPoste({
+        poste: POSTE_CHAMP[champ.code] ?? null, valeur: valeur ?? null, libelle: nom, titre: champ.aide ?? '',
+        surChoix: (id, ligne) => {
+          if (id !== null && !liste.some((x) => Number(x.valeur) === id)) liste.push({ valeur: id, libelle: ligne?.nom_complet ?? '', detail: '' });
+          this.definirValeur(champ.code, id);
+        },
+      });
+      span.replaceChildren(saisie);
     });
     return span;
   }

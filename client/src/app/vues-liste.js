@@ -636,7 +636,7 @@ const OPTIONS_CASQUETTES = CASQUETTES.map((c) => ({ valeur: c.code, libelle: c.l
 const OPTIONS_NIVEAUX = NIVEAUX.map((n) => ({ valeur: n.code, libelle: n.libelle, picto: n.icone }));
 const OPTIONS_ROLES = ROLES.map((r) => ({ valeur: r.code, libelle: r.libelle, picto: r.icone }));
 /** Vues ouvertes d'abord par les fenêtres de choix (I1, `annuaire/choix.js`) : toutes les lignes, filtre de l'appel retirable. */
-export const VUES_CHOIX = Object.freeze({ tiers: 20, contacts: 25 });
+export const VUES_CHOIX = Object.freeze({ tiers: 20, contacts: 25, societe: 26 });
 const vuePersonnes = (vli_id, vli_nom, casquettes = null, filtres = []) => ({
   vli_id, vli_nom, vli_contexte: null, vli_partage: 'T', vli_proprietaire: 'admin', vli_groupe: null,
   definition: {
@@ -706,7 +706,7 @@ const vueIndividus = (vli_id, vli_nom, filtres = []) => ({
 });
 VUES_LISTE.push(
   vueIndividus(VUES_CHOIX.contacts, 'Tous les contacts'),
-  vueIndividus(26, 'Notre société (rôles internes)', [{ colonne: 'roles', op: 'nonvide' }]),
+  vueIndividus(VUES_CHOIX.societe, 'Notre société (rôles internes)', [{ colonne: 'roles', op: 'nonvide' }]),
 );
 
 // Ordres du module Exécution (identifiants 1000 et suivants : jamais en conflit avec les vues créées par les utilisateurs).

@@ -16,7 +16,7 @@ import { envoyerDocument, SUJET_ATTENTE } from '../hors-ligne/synchro.js';
 import { appliquerReponse } from '../documents/reponse.js';
 import { sousTraiter } from '../sous-traitance/sous-traiter.js';
 import { EditeurDevisBtp, DictionnaireBtp } from '../editeur-btp.js';
-import { PanneauxBtp, individusSociete, individusStructure } from '../panneaux-btp.js';
+import { PanneauxBtp, individusSociete } from '../panneaux-btp.js';
 import { AnalyseCoefficients } from '../analyse-coefs.js';
 import { messagesFrais } from '../frais-annexes.js';
 import { EnvoiBibliotheque } from '../bibliotheque/envoi.js';
@@ -1323,7 +1323,6 @@ export class PageDocument extends PageBase {
     const doc = this.editeur.saisie.document;
     const r = await proposerMarche({
       refs: this.structure, doc, totalHt: this.editeur.resultat.document?.ent_total_ht ?? null,
-      individus: await individusStructure(this.servicesAnnuaire).catch(() => []),
       creerChantier: async (valeurs) => creerFicheCodeLibre(this.servicesFiche, TYPE_FICHE.CHANTIER, { valeurs, proprietes: {} }),
       // Le marché reprend les intervenants du chantier.
       creerMarche: async (valeurs) => creerFicheCodeLibre(this.servicesFiche, TYPE_FICHE.MARCHE, {
