@@ -15,8 +15,8 @@
 |---|---|---|---|---|
 | 1 | Règle des niveaux et calcul des relances dues | `modules/relance` (nouveau) | — | FAIT (08/11/2026) |
 | 2 | Schéma, journal, suspensions et service du module | `modules/relance` | 1 | FAIT (08/11/2026) |
-| 3 | Écrans du module : liste de travail, règle, suspensions | `modules/relance` | 2 | A FAIRE |
-| 4 | Branchement du cœur : pièces en attente, rôle, droits, portée | cœur | 2, 3 | A FAIRE |
+| 3 | Écrans du module : liste de travail, règle, suspensions | `modules/relance` | 2 | FAIT (08/11/2026) |
+| 4 | Branchement du cœur : pièces en attente, rôle, droits, portée | cœur | 2, 3 | FAIT (08/11/2026) |
 | 5 | Surcharge par tiers sur la fiche personne | cœur | 4 | A FAIRE |
 | 6 | Envoi par courriel et note du CRM | cœur | 4 | A FAIRE |
 | 7 | Lettres, recommandés et mise en demeure | cœur | 6 | A FAIRE |
@@ -102,7 +102,7 @@
   Correction du lot 2 : le mode préféré du tiers ne remplace plus un niveau en RECOMMANDE (Q13), test ajouté. Les
   recommandés en attente sont relus lot par lot (20 derniers) faute de route dédiée.
 
-## Lot 4 : branchement du cœur, pièces en attente, rôle, droits, portée (A FAIRE)
+## Lot 4 : branchement du cœur, pièces en attente, rôle, droits, portée (FAIT (08/11/2026))
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `db/283_relances.sql` (numéro à confirmer ; `ALTER TABLE type_document` : rôle `ROLE_RELANCE` DEVIS /
@@ -120,6 +120,26 @@
   Règlements, payeur distinct, portée).
 - **Critère de fin** : `dotnet test LogiBTP.slnx` et `npm test` verts ; `/relances` liste les pièces dues d'une base de
   démonstration.
+- **Réalisé** (08/11/2026) : `db/283_relances.sql` (rejouable, rejoué deux fois sur PostgreSQL 16 ; manifeste après
+  `282`) : `module_societe` « relance », `type_document.tyd_role_relance` (DEVIS sur V_DEVIS ; FACTURE sur V_FACTURE,
+  V_FACTURE_AVT, V_FACTURE_ACOMPTE ; posés à la création de la colonne seulement) ; codes `ROLE_RELANCE` ↔ `RolesRelance`
+  et `MODULE_FACULTATIF.RELANCE` (parité `CodesTests`) ; `Btp/SpecialisationRelanceBtp.cs` : pièces valables non
+  annulées (`PerimetreDocuments`), devis ENVOYE non rejetés, non expirés, non transformés (groupe d'indices compris),
+  départ = envoi, montant TTC, groupe d'indices `ent_groupe_id` ; factures : échéances ouvertes de `ServiceReglement`
+  si Règlements est actif (part cautionnée d'une retenue exigible à la date de la pièce, reste à la libération), sinon
+  échéances du document (sans échéance : net à payer) tant que le statut n'est pas PAYE ; tiers = intervenant PAYEUR,
+  sinon le tiers ; chargé = `aff_responsable_ind_id`, sinon `per_cli_charge_ind_id` ; portée SOI / EQUIPE (équipiers du
+  jour) / SERVICE (membres des services dont on est responsable) / TOUT ; `RoutesRelancesBtp` : Créer exigé pour
+  `POST /api/relances/lots` (même gabarit que la lecture), route du cœur `GET /api/relances/libelles` (libellés des
+  pièces et des tiers d'un lot ou d'une suspension) ; nœud `relances` (CONSULTER, CREER, VALIDER, portée) ; routes :
+  `/api/relances` en module, `/lots/{id}/annuler` Créer, `/lots/{id}/valider`, `/{id}/recommande`, `/notees` Valider ;
+  page `client/src/app/pages/relances.js` (onglets liste de travail, suspensions, règle ; onglet retenu dans le
+  navigateur), menu Ventes › Relances, `api.relances`. Tests `RelancesBtpTests` (5 sans base, 1 avec `LOGIBTP_TEST_PG` :
+  devis expiré, remplacé, annulé, transformé, rejeté, brouillon ; facture payée sans et avec Règlements ; payeur ;
+  chargé de l'affaire ou du client ; portée). `/relances` vérifiée avec Playwright sur une base locale (devis et facture
+  dus listés, lot préparé avec ses libellés). Points ouverts : rôle non modifiable par écran ; pas de choix de pièce dans
+  l'onglet Suspensions (suspension d'une pièce depuis la liste de travail) ; sans requête HTTP (préparation de nuit,
+  lot 9), le module Règlements est pris comme inactif et la portée comme TOUT.
 
 ## Lot 5 : surcharge par tiers sur la fiche personne (A FAIRE)
 

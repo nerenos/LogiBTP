@@ -16,6 +16,7 @@
 ## Spécialisation des modules
 - Document + Métré : `SpecialisationBtp`, `LogiBtpContext`, `DocumentBtp`, `DocumentLigneBtp`, `MoteurDevisBtp`, `ComparateurBtp`.
 - Liste : `SpecialisationListeBtp`. Fiche : `SpecialisationFicheBtp` (+ `Intervenants`, `SalariesAnnuaire`, `ElementsBibliotheque`). GED : `SpecialisationGedBtp`.
+- Relances : `SpecialisationRelanceBtp` (pièces relancées par le rôle `type_document.tyd_role_relance`, `db/283`, jamais par code de type ; reste par `ServiceReglement` si Règlements est actif ; nœud `relances`).
 - Bibliothèque : `SpecialisationBibliothequeBtp`, `ElementsBibliotheque`. Annuaire : `ServiceAnnuaire` appelé par `SpecialisationFicheBtp` (`ControlerPersonne`, `Identifiants.Compacter`, champs gérés).
 
 ## Conventions et pièges

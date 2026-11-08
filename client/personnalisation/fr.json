@@ -4667,6 +4667,10 @@
           "libelle": "Règlements clients",
           "info": "Échéances, règlements, pointage et cautions (module Règlements)"
         },
+        "relances": {
+          "libelle": "Relances",
+          "info": "Devis envoyés et factures à reste échu : préparer, valider, suspendre (module Relances)"
+        },
         "import_optim": {
           "libelle": "Importer un devis OptimBTP",
           "info": "Fichier .optim : lignes, prix et coefficients repris, champs non repris listés"
@@ -6382,6 +6386,21 @@
       "impute": "Imputation enregistrée",
       "chargement": "Chargement…"
     }
+  },
+  "relances_btp": {
+    "routes": {
+      "relances": "Relances"
+    },
+    "aide": "Relances dues des devis envoyés et des factures à reste échu, dans votre portée (pièces dont vous êtes le chargé, ou toutes) ; une facture est relancée chez son payeur s'il est désigné.",
+    "onglets": {
+      "liste": "Liste de travail",
+      "liste_titre": "Relances dues, lot préparé et recommandés en attente de numéro",
+      "suspensions": "Suspensions",
+      "suspensions_titre": "Pièces et tiers à ne pas relancer jusqu'à une date",
+      "regle": "Règle des niveaux",
+      "regle_titre": "Niveaux, délais et modes par nature (modification : administrateur)"
+    },
+    "choisir_tiers": "Tiers à suspendre"
   },
   "hors_ligne_btp": {
     "etats": {

@@ -28,6 +28,7 @@ using LogiBTP.Notifications.Web;
 using LogiBTP.OAuth.Web;
 using LogiBTP.Mail.Web;
 using LogiBTP.Reglements.Web;
+using LogiBTP.Relances.Web;
 using LogiBTP.Socle.Web;
 using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
@@ -103,6 +104,9 @@ builder.Services.AddScoped<ServiceAnnuaire, ServiceAnnuaireBtp>();
 builder.Services.AddScoped<ServiceBibliotheque, ServiceBibliothequeBtp>();
 // Module Règlements (facultatif) : règlements, cautions, pointage des échéances des pièces (modules/reglement/db/080, db/175).
 builder.Services.AddModuleReglement<SpecialisationReglementBtp>(Base);
+// Module Relances (facultatif) : règle des niveaux, journal, suspensions, lots validés (modules/relance/db/099t, db/283) ;
+// pièces en attente, tiers payeur, chargé et portée par Btp/SpecialisationRelanceBtp.cs.
+builder.Services.AddModuleRelance<SpecialisationRelanceBtp>(Base);
 // Module CRM (facultatif) : notes, rappels, demandes, suivi des validations, diffusion, fil (modules/crm/db/095…).
 builder.Services.AddModuleCrm<SpecialisationCrmBtp>(Base);
 // Module Entreprises françaises : recherche dans l'annuaire des entreprises de l'État (API publique, sans clé).
@@ -212,6 +216,7 @@ api.MapModuleAnnuaire();
 api.MapModuleEntreprisesFr();
 // Modules facultatifs : sous-groupe propre, pour que le filtre d'activation ne touche que leurs routes.
 api.MapGroup("").ExigeModule(ModulesFacultatifs.Reglement, "Règlements").MapModuleReglement();
+api.MapGroup("").ExigeModule(ModulesFacultatifs.Relance, "Relances").DroitsRelances().MapModuleRelance().MapLibellesRelances();
 api.MapModuleCrm().ExigeModule(ModulesFacultatifs.Crm, "CRM");
 api.MapExecution().ExigeModule(ModulesFacultatifs.Execution, "Exécution");
 api.MapModuleExecution().ExigeModule(ModulesFacultatifs.Execution, "Exécution");

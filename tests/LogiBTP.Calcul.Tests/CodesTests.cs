@@ -18,6 +18,7 @@ public class CodesTests
     [InlineData("ARRONDI_REVISION", typeof(ArrondiRevision))]
     [InlineData("MODULE_FACULTATIF", typeof(ModulesFacultatifs))]
     [InlineData("ROLE_RENTABILITE", typeof(RolesRentabilite))]
+    [InlineData("ROLE_RELANCE", typeof(RolesRelance))]
     [InlineData("MODELE_EDITION", typeof(ModelesEdition))]
     [InlineData("AVERTISSEMENT_GESTION", typeof(AvertissementsGestion))]
     [InlineData("STATUT_DOCUMENT_BTP", typeof(StatutsDocumentBtp))]

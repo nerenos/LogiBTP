@@ -90,6 +90,7 @@ public static class ModulesFacultatifs
     public const string Planning = "planning";
     public const string Pointage = "pointage";
     public const string Reglement = "reglement";
+    public const string Relance = "relance";
     public const string Rentabilite = "rentabilite";
     public const string Sav = "sav";
     public const string SousTraitance = "sous_traitance";
@@ -127,6 +128,16 @@ public static class RolesRentabilite
     public const string MouvementStock = "MOUVEMENT_STOCK";
     public const string RecuAcompte = "RECU_ACOMPTE";
     public const string Production = "PRODUCTION";
+}
+
+/// <summary>
+/// Rôle d'un type de pièce dans le module Relances (type_document.tyd_role_relance, db/283) : pièces relancées par
+/// Btp/SpecialisationRelanceBtp.cs ; mêmes valeurs que NatureRelance du module ; type sans rôle : jamais relancé.
+/// </summary>
+public static class RolesRelance
+{
+    public const string Devis = "DEVIS";
+    public const string Facture = "FACTURE";
 }
 
 /// <summary>

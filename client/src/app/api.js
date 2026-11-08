@@ -74,6 +74,25 @@ export const api = {
     journal: (profil = '') => appel('GET', `/droits/journal?${new URLSearchParams({ profil })}`),
   },
   // Module Exécution : exécution d'un ordre (état, motif, affectation, dates), répartition, heures budget d'un chantier.
+  // Module Relances (routes du module, plans/relances.md) et libellés des pièces et des tiers (cœur, lot 4).
+  relances: {
+    dues: (date) => appel('GET', `/relances${date ? `?${new URLSearchParams({ date })}` : ''}`),
+    regles: () => appel('GET', '/relances/regles'),
+    enregistrerRegle: (nature, r) => appel('PUT', `/relances/regles/${encodeURIComponent(nature)}`, r),
+    lots: (etat) => appel('GET', `/relances/lots${etat ? `?${new URLSearchParams({ etat })}` : ''}`),
+    preparer: (date) => appel('POST', '/relances/lots', date ? { date } : {}),
+    lot: (id) => appel('GET', `/relances/lots/${id}`),
+    valider: (id, corps) => appel('POST', `/relances/lots/${id}/valider`, corps),
+    annuler: (id, corps) => appel('POST', `/relances/lots/${id}/annuler`, corps ?? {}),
+    numero: (id, numero) => appel('PUT', `/relances/${id}/recommande`, { numero }),
+    noter: (corps) => appel('POST', '/relances/notees', corps),
+    journal: (f = {}) => appel('GET', `/relances/journal?${new URLSearchParams(Object.entries(f).filter(([, v]) => v !== undefined && v !== null && v !== ''))}`),
+    suspensions: (f = {}) => appel('GET', `/relances/suspensions?${new URLSearchParams(Object.entries(f).filter(([, v]) => v !== undefined && v !== null && v !== ''))}`),
+    creerSuspension: (s) => appel('POST', '/relances/suspensions', s),
+    modifierSuspension: (id, s) => appel('PUT', `/relances/suspensions/${id}`, s),
+    supprimerSuspension: (id) => appel('DELETE', `/relances/suspensions/${id}`),
+    libelles: (pieces = [], tiers = []) => appel('GET', `/relances/libelles?${new URLSearchParams([...pieces.map((p) => ['pieces', p]), ...tiers.map((t) => ['tiers', t])])}`),
+  },
   rentabilite: {
     file: () => appel('GET', '/rentabilite/file'),
     recalculerTout: () => appel('POST', '/rentabilite/recalculer-tout'),

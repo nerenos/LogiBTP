@@ -82,6 +82,7 @@ export const MENUS_METIER = [
       { code: 'factures', libelle: texte('navigation_btp.menus.ventes.factures.libelle'), iconeHtml: iconeHtml('navigation_btp_factures'), url: L('factures'), creation: D('V_FACTURE', texte('navigation_btp.menus.ventes.factures.creation')) },
       { code: 'documents', libelle: texte('navigation_btp.menus.ventes.documents.libelle'), iconeHtml: iconeHtml('navigation_btp_documents'), url: L('documents') },
       { code: 'reglements-clients', libelle: texte('navigation_btp.menus.ventes.reglements_clients.libelle'), iconeHtml: iconeHtml('navigation_btp_reglements_clients'), url: '/reglements?sens=E', info: texte('navigation_btp.menus.ventes.reglements_clients.info'), module: MODULE_FACULTATIF.REGLEMENT },
+      { code: 'relances', libelle: texte('navigation_btp.menus.ventes.relances.libelle'), iconeHtml: iconeHtml('navigation_btp_relances'), url: '/relances', info: texte('navigation_btp.menus.ventes.relances.info'), module: MODULE_FACULTATIF.RELANCE, droit: 'relances' },
       { separateur: true },
       { code: 'import-optim', libelle: texte('navigation_btp.menus.ventes.import_optim.libelle'), iconeHtml: iconeHtml('navigation_btp_import_optim'), url: '/import/optimbtp', info: texte('navigation_btp.menus.ventes.import_optim.info') },
     ],

@@ -89,6 +89,7 @@ export const MODULE_FACULTATIF = Object.freeze({
   PLANNING: 'planning',
   POINTAGE: 'pointage',
   REGLEMENT: 'reglement',
+  RELANCE: 'relance',
   RENTABILITE: 'rentabilite',
   SAV: 'sav',
   SOUS_TRAITANCE: 'sous_traitance',
@@ -125,6 +126,12 @@ export const ROLE_RENTABILITE = Object.freeze({
   MOUVEMENT_STOCK: 'MOUVEMENT_STOCK',
   RECU_ACOMPTE: 'RECU_ACOMPTE',
   PRODUCTION: 'PRODUCTION',
+});
+
+/** Rôle d'un type de pièce dans le module Relances (type_document.tyd_role_relance, db/283) ; sans rôle : jamais relancé. */
+export const ROLE_RELANCE = Object.freeze({
+  DEVIS: 'DEVIS',
+  FACTURE: 'FACTURE',
 });
 
 /** Sujets publiés entre les fenêtres de l'application (app.publier / app.abonner). */
