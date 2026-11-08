@@ -82,7 +82,7 @@
 - **Critère de fin** : `npm test` vert ; une vue enregistrée avec une période garde le code et non des dates.
 - **Écarts** : ajout de `src/codes.js` (`OPERATEUR_PERIODE`) et `src/index.js` (exports) ; le filtre de colonne reste local aux lignes chargées (condition `periode` évaluée par `correspond`), le filtre fixe de vue se pose dans le concepteur (`filtreVuePeriode`). `npm test` : seuls les 2 échecs connus de `personnalisation.test.js`.
 
-## Lot 4 : exercice comptable fourni par le cœur (A FAIRE)
+## Lot 4 : exercice comptable fourni par le cœur (FAIT le 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : spécialisation du module Liste dans le cœur (`src/LogiBTP.Api/Btp/`, à localiser par graphify
@@ -93,3 +93,4 @@
 - **Jeux de tests** : C# : Comptabilité active avec exercice décalé → « exercice en cours » suit l'exercice ; inactive →
   année civile.
 - **Critère de fin** : `dotnet test LogiBTP.slnx` et `npm test` verts.
+- **Écarts** : le module Comptabilité ne portait pas de début d'exercice et n'est pas dans `MODULE_FACULTATIF` : lecture du paramètre `debut_exercice` (JSON, date AAAA-MM-JJ) de `parametre_comptabilite`, absent = année civile (`ExerciceListeBtp`, `SpecialisationListeBtp.DebutExerciceAsync`) ; crochet `SpecialisationListe.DebutExerciceAsync` et route `GET /api/listes/contexte` dans le module (`contexteSociete()` du fournisseur, lu par `ListeDonnees.demarrer`, passé à `correspond`) ; pas d'écran de saisie du paramètre (reporté, TODO.md).

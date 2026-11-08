@@ -67,17 +67,17 @@ export function libellePeriode(code, nombre = null) {
 }
 
 /** La date (valeur de la cellule) est-elle dans la période { a: code, b: nombre saisi } à la date de référence ? */
-function conditionPeriode(v, a, b, reference) {
+function conditionPeriode(v, a, b, reference, debutExercice) {
   if (estVide(v) || !periodeComplete(a, b)) return false;
-  const { debut, fin } = bornesPeriode(a, nombrePeriode(a, b), reference);
+  const { debut, fin } = bornesPeriode(a, nombrePeriode(a, b), reference, debutExercice);
   const jour = String(v).slice(0, 10);
   return jour >= debut && jour <= fin;
 }
 
-function conditionNombre(op, v, a, b, reference) {
+function conditionNombre(op, v, a, b, reference, debutExercice) {
   if (op === 'vide') return estVide(v);
   if (op === 'nonvide') return !estVide(v);
-  if (op === OPERATEUR_PERIODE) return conditionPeriode(v, a, b, reference);
+  if (op === OPERATEUR_PERIODE) return conditionPeriode(v, a, b, reference, debutExercice);
   const x = nombreDe(v), ya = nombreDe(a), yb = nombreDe(b);
   if (x === null || ya === null) return false;
   switch (op) {
@@ -109,12 +109,12 @@ function conditionTexte(op, texte, a) {
 export const estNumerique = (colonne) => colonne.format === 'nombre' || colonne.format === 'date';
 
 /** La cellule ({ valeur, texte, style }) satisfait-elle le filtre de la colonne ? */
-export function correspond(filtre, cellule, colonne, reference = aujourdhui()) {
+export function correspond(filtre, cellule, colonne, reference = aujourdhui(), debutExercice = null) {
   if (!filtreActif(filtre)) return true;
   if (filtre.valeurs instanceof Set && !filtre.valeurs.has(cellule.texte)) return false;
   const c = filtre.condition;
   if (c?.op) {
-    const ok = estNumerique(colonne) ? conditionNombre(c.op, cellule.valeur, c.a, c.b, reference) : conditionTexte(c.op, cellule.texte, c.a);
+    const ok = estNumerique(colonne) ? conditionNombre(c.op, cellule.valeur, c.a, c.b, reference, debutExercice) : conditionTexte(c.op, cellule.texte, c.a);
     if (!ok) return false;
   }
   const f = filtre.format;

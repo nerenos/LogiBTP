@@ -96,6 +96,7 @@ export class ListeDonnees {
     this.fabriqueActionsVue = actionsVue ?? null;
     this.actionsElements = null;
     this.themes = [];
+    this.debutExercice = null;
     this.theme = themeFixe;        // code du thème affiché, null = toutes les vues
     this.formats = formats ?? new FormatsCellule();
     this.cleVue = cleVue ?? `logibtp.liste.${contexte ?? 'toutes'}`;
@@ -314,6 +315,8 @@ export class ListeDonnees {
 
   /** Charge les thèmes et les vues, puis ouvre la vue demandée, la dernière utilisée du thème ou la première. */
   async demarrer(vueId = null) {
+    // Début de l'exercice comptable de la société (périodes « exercice » du filtre de colonne) ; absent : année civile.
+    this.debutExercice = (await this.fournisseur.contexteSociete?.().catch(() => null))?.debut_exercice ?? null;
     await this.chargerThemes();
     if (this.theme === null && this.prefs.theme && this.themes.some((t) => t.thl_code === this.prefs.theme)) this.theme = this.prefs.theme;
     this.#afficherTheme();
@@ -947,7 +950,7 @@ export class ListeDonnees {
   /** Lignes affichées : lignes chargées filtrées par les filtres de colonnes, triées localement si demandé. */
   lignesAffichees(lignes = this.lignes) {
     const actifs = [...this.filtres].filter(([, f]) => filtreActif(f)).map(([code, f]) => [this.modele.parCode.get(code), f]).filter(([c]) => c);
-    let res = actifs.length ? lignes.filter((l) => actifs.every(([c, f]) => correspond(f, this.#cellule(l, c), c))) : lignes;
+    let res = actifs.length ? lignes.filter((l) => actifs.every(([c, f]) => correspond(f, this.#cellule(l, c), c, undefined, this.debutExercice))) : lignes;
     if (this.triLocal && lignes === this.lignes) {
       const c = this.modele.parCode.get(this.triLocal.code);
       if (c) {

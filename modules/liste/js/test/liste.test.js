@@ -224,3 +224,21 @@ describe('période choisie dans le filtre de colonne', () => {
     expect(correspond({ condition: { op: 'periode', a: 'derniers_jours', b: '3' } }, cellule('2026-11-06'), colonne, '2026-11-08')).toBe(true);
   });
 });
+
+describe('exercice comptable fourni aux périodes', () => {
+  const colonne = { format: 'date' };
+  const cellule = (v) => ({ valeur: v, texte: v });
+  const filtre = { condition: { op: 'periode', a: 'exercice_en_cours' } };
+
+  it('filtre de colonne : exercice décalé ou année civile', () => {
+    expect(correspond(filtre, cellule('2026-08-15'), colonne, '2026-11-08', '2000-07-01')).toBe(true);
+    expect(correspond(filtre, cellule('2026-03-15'), colonne, '2026-11-08', '2000-07-01')).toBe(false);
+    expect(correspond(filtre, cellule('2026-03-15'), colonne, '2026-11-08', null)).toBe(true);
+  });
+
+  it('fournisseur : contexte de la société et filtre de vue', async () => {
+    const f = new FournisseurMemoire({ sources: { s: { ...structuredClone(lire('02_requete.json').source) } }, debutExercice: '2000-07-01' });
+    expect(await f.contexteSociete()).toEqual({ debut_exercice: '2000-07-01' });
+    expect(await new FournisseurMemoire({}).contexteSociete()).toEqual({ debut_exercice: null });
+  });
+});

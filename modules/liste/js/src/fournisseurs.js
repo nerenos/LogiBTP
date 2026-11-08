@@ -6,6 +6,7 @@ import { filtrer, trier, lot, jusqua, comptesSegment, empreinte, filtresEffectif
 
 // Fournisseurs de données d'une liste. Même interface pour l'API et pour la mémoire (démo hors ligne, tests) :
 //
+//   contexteSociete()             → { debut_exercice } début de l'exercice comptable (AAAA-MM-JJ, null = année civile)
 //   themes()                      → [{ thl_code, thl_libelle, thl_icone, thl_ordre, thl_types: [{ code, libelle }], thl_actif, thl_vli_defaut }]
 //   enregistrerTheme(theme)       supprimerTheme(code)    (profil ADMIN)
 //   vues(contexte, theme)         → [{ vli_id, vli_nom, vli_contexte, vli_theme, vli_partage, vli_proprietaire, modifiable }]
@@ -42,6 +43,8 @@ export class FournisseurApi {
     return { vue_id, definition, recherche, segments, tri, filtres, ...extra };
   }
 
+  /** Contexte de la société : { debut_exercice } (début de l'exercice comptable, null = année civile). */
+  contexteSociete() { return this.appel('GET', '/contexte'); }
   themes() { return this.appel('GET', '/themes'); }
   enregistrerTheme(t) { return this.appel('PUT', `/themes/${encodeURIComponent(t.thl_code)}`, t); }
   supprimerTheme(code) { return this.appel('DELETE', `/themes/${encodeURIComponent(code)}`); }
@@ -70,7 +73,8 @@ export class FournisseurApi {
  * localStorage si `cleStockage` est fourni (démo hors ligne uniquement).
  */
 export class FournisseurMemoire {
-  constructor({ sources = {}, vues = [], themes = [], utilisateur = 'demo', cleStockage = null } = {}) {
+  constructor({ sources = {}, vues = [], themes = [], utilisateur = 'demo', cleStockage = null, debutExercice = null } = {}) {
+    this.debutExercice = debutExercice;
     this.sourcesDonnees = sources;
     this.utilisateur = utilisateur;
     this.cleStockage = cleStockage;
@@ -95,6 +99,9 @@ export class FournisseurMemoire {
     ecrireStockage(this.cleStockage, this.vuesStockees);
     ecrireStockage(`${this.cleStockage}.themes`, this.themesStockes);
   }
+
+  /** Contexte de la société : l'exercice est fourni par l'appelant (option debutExercice), sinon année civile. */
+  async contexteSociete() { return { debut_exercice: this.debutExercice ?? null }; }
 
   async themes() {
     return structuredClone(this.themesStockes.filter((t) => t.thl_actif !== false).sort((a, b) => (a.thl_ordre ?? 0) - (b.thl_ordre ?? 0) || a.thl_libelle.localeCompare(b.thl_libelle)));
@@ -213,7 +220,7 @@ export class FournisseurMemoire {
   /** Filtres « periode » résolus à la date d'exécution (d.reference : date fixée par les tests) ; colonne non date refusée. */
   #periodes(filtres, source, d) {
     try {
-      return resoudrePeriodes(filtres, new Map(source.colonnes.map((c) => [c.code, c.type])), { reference: d.reference ?? undefined, debutExercice: d.debut_exercice ?? null });
+      return resoudrePeriodes(filtres, new Map(source.colonnes.map((c) => [c.code, c.type])), { reference: d.reference ?? undefined, debutExercice: d.debut_exercice ?? this.debutExercice ?? null });
     } catch (e) {
       if (e.code === ERREUR_LISTE.PERIODE_COLONNE) throw new ErreurFournisseur(422, e.code, texte('liste.fournisseur.periode_colonne', { colonne: e.colonne }));
       throw new ErreurFournisseur(422, e.code ?? ERREUR_LISTE.PERIODE_INCONNUE, e.message);

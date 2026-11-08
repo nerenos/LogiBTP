@@ -48,6 +48,12 @@ public class SpecialisationListe
     /// </summary>
     public virtual Task<RestrictionListe> RestrictionAsync(SourceResolue source, Utilisateur u, CancellationToken ct) => Task.FromResult(RestrictionListe.Aucune);
 
+    /// <summary>
+    /// Début de l'exercice comptable (seuls son mois et son jour comptent) pour la période « exercice en cours » des filtres
+    /// de date ; absent : année civile. Par défaut : aucun (le cœur le lit dans le module Comptabilité).
+    /// </summary>
+    public virtual Task<DateOnly?> DebutExerciceAsync(CancellationToken ct) => Task.FromResult<DateOnly?>(null);
+
     public virtual ConstructeurRequete Constructeur(SourceResolue source, DefinitionVue definition, DemandeListe demande) =>
         new(source, definition, demande);
 }

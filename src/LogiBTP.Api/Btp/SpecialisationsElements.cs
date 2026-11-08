@@ -267,6 +267,14 @@ public sealed class SpecialisationListeBtp(IServiceScopeFactory scopes) : Specia
         return new RestrictionListe(refuses, masquees);
     }
 
+    /// <summary>Début de l'exercice lu dans le paramétrage du module Comptabilité ; sans paramètre, année civile.</summary>
+    public override async Task<DateOnly?> DebutExerciceAsync(CancellationToken ct)
+    {
+        if (SpecialisationBtp.Http?.HttpContext?.RequestServices.GetService<LogiBtpContext>() is not { } db) return null;
+        var json = await db.Database.SqlQueryRaw<string>("SELECT pcp_valeur::text AS \"Value\" FROM parametre_comptabilite WHERE pcp_cle = {0}", ExerciceListeBtp.CleParametre).FirstOrDefaultAsync(ct);
+        return ExerciceListeBtp.Debut(json);
+    }
+
     public override async Task ValiderModification(SourceResolue source, string id, IReadOnlyDictionary<string, string?> valeurs, Utilisateur u, CancellationToken ct)
     {
         if (source.Code is null || !FicheParSource.TryGetValue(source.Code, out var type)) return;
