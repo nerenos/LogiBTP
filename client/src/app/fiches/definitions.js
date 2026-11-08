@@ -551,7 +551,7 @@ export const TYPES_FICHE = {
         code: 'informations', titre: 'Chantier',
         groupes: [
           { titre: 'Identification', champs: ['code', 'libelle', 'aff_id', 'prj_id', 'tiers_id'] },
-          { titre: 'Adresse', champs: ['adresse', 'code_postal', 'ville', 'contact_ind_id'] },
+          { titre: 'Adresse', champs: ['adresse', 'code_postal', 'ville', 'zone', 'contact_ind_id'] },
           { titre: 'Suivi', champs: ['statut', 'date_ouverture', 'code_analytique'] },
           { titre: 'Travaux', champs: ['debut_prevu', 'date_fin_prevue', 'debut_reel', 'fin_reelle'] },
           { titre: 'Équipe', champs: ['charge_ind_id', 'conducteur_ind_id', 'chef_ind_id'] },
@@ -572,6 +572,7 @@ export const TYPES_FICHE = {
         c('adresse', 'Adresse', 'cha_adresse', 'texte', { longueur: 200, largeur: 'plein' }),
         c('code_postal', 'Code postal', 'cha_code_postal', 'texte', { longueur: 10 }),
         c('ville', 'Ville', 'cha_ville', 'texte', { longueur: 100 }),
+        c('zone', 'Zone de déplacement', 'cha_zone', 'nombre', { format: '9', aide: 'Zone estimée (0 à 9), reprise du projet ; les zones validées par agence sont celles du Pointage' }),
         c('contact_ind_id', 'Contact sur place', 'cha_contact_ind_id', 'nombre', { reference: 'individu', aide: 'Le client ou un salarié : repris dans l\'adresse des travaux et de livraison des documents' }),
         c('statut', 'Statut', 'cha_statut', 'liste', { obligatoire: true, defaut: 'OUVERT', options: options(['OUVERT', 'Ouvert'], ['TERMINE', 'Terminé'], ['CLOS', 'Clos']) }),
         c('date_ouverture', 'Ouverture', 'cha_date_ouverture', 'date'),

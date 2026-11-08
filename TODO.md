@@ -297,7 +297,7 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
 - [ ] Restaurants (lot 10 réalisé) : repas dans la saisie d'équipe de la borne (aujourd'hui : chacun pour soi), liste des repas d'une période (contrôle RH, notes de frais) et carte des restaurants.
 - [ ] Documents (lot 9 réalisé) : reconnaissance des accusés de réception reçus par courriel (module Mail, lot 4 : numéro de commande, rattachement, proposition de la livraison confirmée) ; (fait le 08/11/2026 : date de livraison par ligne modifiable sur une commande validée, PUT /api/structure/documents/{id}/lignes/{ligId}/livraison).
 - [ ] Tarifs fournisseurs (lot 8 réalisé) : formats d'import personnalisés (module Import : correspondance de colonnes enregistrée par fournisseur), remises par famille d'articles et catalogues, unités synonymes à l'import (A18b).
-- [ ] Projet (lot 6) : zone de déplacement du projet reprise par le chantier ouvert depuis le projet (zones du Pointage par agence).
+- [x] Projet (lot 6) : zone de déplacement du projet reprise par le chantier ouvert depuis le projet (fait le 08/11/2026, db/278 : zone estimée du chantier ; les zones validées par agence restent celles du Pointage).
 - [ ] Matériel (lot 5c réalisé) : import des cartes carburant (module Import, M8) ; relevés de compteurs saisis à la borne (source BORNE prévue) ; données de démonstration d'entretiens (aujourd'hui tous en retard faute d'historique).
 - [ ] Refacturation interne du matériel (M4 du lot 5c) : les heures pointées et planifiées sont valorisées sur les chantiers où il travaille (module Rentabilité, lot 5) ; reste à créditer le chantier de suivi du matériel du même montant (produit interne) et à proposer le coût par heure de l'onglet Coûts comme coût moyen de la fiche.
 

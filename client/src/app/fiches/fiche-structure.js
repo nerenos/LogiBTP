@@ -351,12 +351,12 @@ export class FicheAffaire extends FicheStructure {
 export class FicheChantier extends FicheStructure {
   sourceIntervenants() { return parametre('projet') ? ['projet', parametre('projet')] : null; }
 
-  /** Création depuis un projet obtenu (?projet=) : libellé, client et ville du projet. */
+  /** Création depuis un projet obtenu (?projet=) : libellé, client, ville et zone de déplacement du projet. */
   valeursCreation() {
     const v = super.valeursCreation();
     if (new URLSearchParams(globalThis.location?.search ?? '').get('sens') === 'ST') v.sens = 'ST';
     const prj = (this.refs.projets ?? []).find((p) => p.id === parametre('projet'));
-    if (prj) Object.assign(v, { prj_id: prj.id, libelle: prj.libelle, tiers_id: prj.tiers_id, ville: prj.ville });
+    if (prj) Object.assign(v, { prj_id: prj.id, libelle: prj.libelle, tiers_id: prj.tiers_id, ville: prj.ville, zone: prj.zone ?? null });
     return v;
   }
 
@@ -367,6 +367,7 @@ export class FicheChantier extends FicheStructure {
     const prj = (this.refs.projets ?? []).find((p) => p.id === id);
     if (prj && !this.valeur('tiers_id')) this.definirValeur('tiers_id', prj.tiers_id);
     if (prj && !this.valeur('ville')) this.definirValeur('ville', prj.ville);
+    if (prj && (this.valeur('zone') ?? null) === null && prj.zone != null) this.definirValeur('zone', prj.zone);
   }
 
   /** Zones de déplacement du Pointage (par agence, lot 6 : A26), lues une fois par fiche. */

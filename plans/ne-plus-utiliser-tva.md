@@ -122,7 +122,7 @@
   Comptabilité inactive → rien.
 - **Critère de fin** : `dotnet test LogiBTP.slnx` et `npm test` verts.
 
-## Lot 7 : zone de déplacement du projet recopiée dans le chantier (A FAIRE)
+## Lot 7 : zone de déplacement du projet recopiée dans le chantier (FAIT)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : création du chantier depuis le projet (graphify « ouvrir chantier depuis projet » ; valeurs déjà
@@ -138,3 +138,4 @@
 > Lot 4 FAIT le 08/11/2026 : `SqlBtp.RessourceUtilisable` (N écartés de `v_ressource` : salarié, matériel, sous-traitant) dans les ressources du planning et les cibles d'affectation de matériel ; `sal_usage <> 'N'` dans les salariés du pointage et du magasin (listes sans identifiant seulement, valeur posée lisible) et dans les ressources d'ordre (`ExecutionBtp`). Écart : test par contrôle des fragments SQL (pas de base).
 > Lot 5 FAIT le 08/11/2026 : `tvaAutoliqueeParDefaut` (`client/src/app/comptes.js`), `ReglesBtp.tauxParDefaut` (après le taux du titre et celui du document), `EditeurDevisBtp.tvaAutoliqueeDefaut` ; l'indicateur `TVA_INTRACOM` s'ajoute à `GET /api/comptabilite/tiers/{id}/comptes-lignes` (`ComptabiliteBtp.cs`). Écart : Comptabilité n'est pas un module facultatif (`MODULE_FACULTATIF`), activité = règle de ventilation lue ; seul le fournisseur (pas le sous-traitant) est visé ; test `client/test/tva-autoliquidee-achat.test.js`.
 > Lot 6 FAIT le 08/11/2026 : `TvaAchatBtp.Avertir` (`src/LogiBTP.Api/Btp/TvaAchatBtp.cs`) appelé par `AvertissementsAsync` de `SpecialisationBtp` (VALIDER, famille A, fournisseur `per_fou_tva_intracom`) ; code `AvertissementsGestion.TvaNonAutoliquee` ↔ `AVERTISSEMENT_GESTION` (`codes.js`), cas dans `CodesTests` et `TvaAchatTests`. Écart : message en français construit côté serveur, comme les autres avertissements de gestion (pas de clé de dictionnaire) ; Comptabilité non facultative, donc considérée active côté serveur.
+> Lot 7 FAIT le 08/11/2026 : colonne `cha_zone` (db/278, manifeste) et champ « Zone de déplacement » de la fiche chantier, préremplie par `valeursCreation` / `choisirReference` depuis `prj_zone` (référentiel projets de `Structure.cs` complété) ; test `client/test/chantier-zone-projet.test.js`. Écart : le chantier n'avait pas de zone propre (zones du Pointage par agence), d'où la zone estimée `cha_zone` ; pas de dotnet test (SQL de référentiel seul modifié).
