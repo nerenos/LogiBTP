@@ -252,14 +252,10 @@ if (-not $SansTaches) {
     $copie = if ($CopieSauvegardes) { " -Copie `"$CopieSauvegardes`"" } else { '' }
     $sauvegarde = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$Dossier\outils\Sauvegarder-LogiBTP.ps1`" -Dossier `"$Dossier`"$copie"
     Register-ScheduledTask -TaskName 'LogiBTP - sauvegarde' -Action $sauvegarde -Trigger (New-ScheduledTaskTrigger -Daily -At $HeureSauvegarde) -Principal $principal -Force | Out-Null
-    $renouveler = if ($Certificat -eq 'LetsEncrypt') {
-        New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$Dossier\outils\Certificat-LetsEncrypt.ps1`" -Dossier `"$Dossier`" -Renouveler"
-    }
-    else {
-        New-ScheduledTaskAction -Execute 'docker.exe' -Argument "compose --env-file `"$Dossier\installation.env`" -f `"$Dossier\api\compose.yml`" run --rm -T logibtp-installation installation certificat renouveler"
-    }
+    # Certificat HTTPS (Let's Encrypt ou autorité LogiBTP) puis certificat de la base, redémarrée seulement s'il a changé.
+    $renouveler = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$Dossier\outils\Renouveler-Certificats-LogiBTP.ps1`" -Dossier `"$Dossier`""
     Register-ScheduledTask -TaskName 'LogiBTP - certificat' -Action $renouveler -Trigger (New-ScheduledTaskTrigger -Weekly -DaysOfWeek Sunday -At '03:00') -Principal $principal -Force | Out-Null
-    Ecrire-Info "Tâches planifiées : sauvegarde chaque jour à $HeureSauvegarde, renouvellement du certificat chaque dimanche (60 jours avant l'échéance)"
+    Ecrire-Info "Tâches planifiées : sauvegarde chaque jour à $HeureSauvegarde, renouvellement des certificats (HTTPS et base) chaque dimanche (60 jours avant l'échéance)"
 }
 
 # ---------------------------------------------------------------- 10. rapport

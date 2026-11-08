@@ -31,7 +31,7 @@
 | Lot | Titre | Module | Dépend de | Statut |
 |---|---|---|---|---|
 | 1 | Commande de renouvellement du certificat de base et code de sortie | cœur | SO1, SO2 | FAIT |
-| 2 | Windows : mise à jour qui relance la préparation, tâche planifiée | `modules/installation` | 1 | A FAIRE |
+| 2 | Windows : mise à jour qui relance la préparation, tâche planifiée | `modules/installation` | 1 | FAIT |
 | 3 | Linux : mise à jour et minuterie | `modules/installation` | 1, SO3 | A FAIRE |
 
 ---
@@ -50,7 +50,7 @@
 - **Critère de fin** : `dotnet test LogiBTP.slnx` vert.
 - **Réalisé** : `CommandeInstallation.RenouvelerCertificatBase` (public, testable avec des chemins factices ; remplace `CertificatBaseLocal`), décision pure `CertificatBaseAEmettre` (seuil de 60 jours), nouvelle sous-commande `installation certificat base-renouveler` (code 10 = `CodeCertificatBaseChange` si créé ou renouvelé, sinon 0), aide mise à jour. Écart : `preparer` ne rend le code 10 que si on lui passe `--code-certificat` (sans l'option, 0 comme avant : `Invoquer-Installation` des installeurs traiterait le code 10 en échec) ; les lots 2 et 3 passent cette option à la mise à jour. Tests : `CertificatBaseTests` (plus de 60 jours inchangé, moins ou absent renouvelé, préparation rejouée : second passage inchangé).
 
-## Lot 2 : Windows, mise à jour et tâche planifiée (A FAIRE)
+## Lot 2 : Windows, mise à jour et tâche planifiée (FAIT le 08/11/2026)
 
 - **Module** : `modules/installation`. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `MettreAJour-LogiBTP.ps1` (préparation relancée avant `:67`, redémarrage de la base sur le code
@@ -63,6 +63,7 @@
   → base chiffrée sans relancer l'installeur ; tâche lancée à la main avec certificat neuf → pas de redémarrage.
 - **Critère de fin** : les deux essais notés dans le lot ; scripts analysés sans erreur (`PSScriptAnalyzer` s'il est
   installé).
+- **Réalisé** : `Commun.ps1` (`Invoquer-InstallationCode` : code 0 ou 10 accepté, `Redemarrer-Base`, `Renouveler-CertificatBase`) ; `MettreAJour-LogiBTP.ps1` (étape 3 : préparation avec `--code-certificat` avant les scripts SQL, retour arrière en cas d'échec, base redémarrée sur le code 10) ; nouveau `Renouveler-Certificats-LogiBTP.ps1` (certificat HTTPS puis certificat de la base) lancé par la tâche « LogiBTP - certificat » (`Installer-LogiBTP.ps1`) ; `INSTALLATION.md`. Écarts : script ajouté (la tâche appelait directement docker) ; essais manuels non faits (interdits sur le poste) : tous les scripts passent l'analyse syntaxique, et les fonctions de redémarrage ont été essayées avec un `docker` simulé (code 10 : redémarrage, code 0 : aucun). Une installation existante doit relancer l'installeur une fois pour recréer la tâche et copier le nouveau script dans `outils`. Base distante (rôle Api) : simple message, redémarrage à faire sur le serveur de la base.
 
 ## Lot 3 : Linux, mise à jour et minuterie (A FAIRE)
 

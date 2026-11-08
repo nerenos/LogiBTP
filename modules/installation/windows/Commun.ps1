@@ -81,6 +81,35 @@ function Lire-Installation([string]$Dossier, [string[]]$Arguments) {
     return ((& docker @tout 2>$null) -join "`n")
 }
 
+# Même commande, code de sortie rendu : 0 (rien à faire) ou 10 (certificat de la base créé ou renouvelé : la base est à
+# redémarrer). Tout autre code est une erreur (Invoquer-Installation traiterait le 10 en échec).
+function Invoquer-InstallationCode([string]$Dossier, [string[]]$Arguments) {
+    $ErrorActionPreference = 'Continue'
+    $tout = @('compose', '--env-file', (Join-Path $Dossier 'installation.env'), '-f', (Join-Path $Dossier 'api\compose.yml'), 'run', '--rm', '-T', 'logibtp-installation') + $Arguments
+    & docker @tout | Out-Host
+    $code = $LASTEXITCODE
+    if ($code -ne 0 -and $code -ne 10) { throw "installation $($Arguments -join ' ') : échec (code $code)" }
+    return $code
+}
+
+# Redémarre PostgreSQL pour qu'il relise son certificat. Base sur un autre serveur : message seulement (à redémarrer là-bas).
+function Redemarrer-Base([string]$Dossier) {
+    $r = Lire-Reglages $Dossier
+    if ($r['LOGIBTP_ROLE'] -eq 'Api' -or $r['LOGIBTP_BASE_DISTANTE'] -eq '1') {
+        Ecrire-Alerte 'Base sur un autre serveur : y redémarrer le conteneur logibtp-base pour qu''il relise son certificat.'
+        return
+    }
+    Invoquer-Compose $Dossier 'base' @('restart')
+    Invoquer-Compose $Dossier 'base' @('up', '-d', '--wait')
+    Ecrire-Info 'Base redémarrée (nouveau certificat pris en compte)'
+}
+
+# Renouvelle le certificat de la base (60 jours avant l'échéance) et redémarre la base seulement s'il a changé.
+function Renouveler-CertificatBase([string]$Dossier) {
+    if ((Invoquer-InstallationCode $Dossier @('installation', 'certificat', 'base-renouveler')) -eq 10) { Redemarrer-Base $Dossier }
+    else { Ecrire-Info 'Certificat de la base inchangé : base non redémarrée' }
+}
+
 # Conteneur d'outils arrêté qui monte un volume sous /v : sert de passage à « docker cp ».
 function Nouveau-Passage([string]$Image, [string]$Volume) {
     $nom = 'logibtp-passage-' + [Guid]::NewGuid().ToString('N').Substring(0, 8)
