@@ -70,6 +70,14 @@ public static class Structure
         if (!verrouille) throw ExceptionMetier.Invalide("LIVRAISON_NON_VALIDEE", "Commande non validée : la date de livraison se saisit dans le document");
     }
 
+    /// <summary>Motif de l'historique d'un changement d'ARC (numéro, date, livraison : avant -> après) ; null si rien ne change.</summary>
+    public static string? MotifArc(string? numeroAvant, DateOnly? dateAvant, DateOnly? livraisonAvant, string? numero, DateOnly? date, DateOnly? livraison)
+    {
+        if (numeroAvant == numero && dateAvant == date && livraisonAvant == livraison) return null;
+        static string F(DateOnly? d) => d?.ToString("yyyy-MM-dd") ?? "";
+        return $"ARC numéro {numeroAvant} -> {numero} ; date {F(dateAvant)} -> {F(date)} ; livraison {F(livraisonAvant)} -> {F(livraison)}";
+    }
+
     public static IEndpointRouteBuilder MapStructure(this IEndpointRouteBuilder api)
     {
         var g = api.MapGroup("/structure");
@@ -107,13 +115,29 @@ public static class Structure
         });
         // Accusé de réception d'une commande fournisseur ou de sous-traitance (db/238), saisi même validée : la livraison
         // confirmée devient la date par défaut des lignes sans date propre (projection du stock).
-        g.MapPut("/documents/{id:long}/arc", async (long id, ArcDocument a, LogiBtpContext db, CancellationToken ct) =>
+        g.MapPut("/documents/{id:long}/arc", async (long id, ArcDocument a, HttpContext http, LogiBtpContext db, CancellationToken ct) =>
         {
             var doc = await db.Documents.FirstOrDefaultAsync(d => d.EntId == id, ct) ?? throw ExceptionMetier.Introuvable($"Document {id}");
             var code = await db.TypesDocument.AsNoTracking().Where(t => t.TydId == doc.EntTydId).Select(t => t.TydCode).FirstAsync(ct);
             if (!TypesArc.Contains(code)) throw ExceptionMetier.Invalide("ARC_TYPE", "L'accusé de réception ne concerne que les commandes fournisseur et de sous-traitance");
             var numero = string.IsNullOrWhiteSpace(a.EntArcNumero) ? null : a.EntArcNumero.Trim();
             if (numero?.Length > 50) throw ExceptionMetier.Invalide("ARC_NUMERO", "Numéro d'accusé de réception : 50 caractères au plus");
+            var motif = MotifArc(doc.EntArcNumero, doc.EntArcDate, doc.EntArcLivraison, numero, a.EntArcDate, a.EntArcLivraison);
+            if (motif is not null)
+                db.Historiques.Add(new DocumentHistorique
+                {
+                    HisEntId = id,
+                    HisVersion = doc.EntVersion,
+                    HisAction = "MODIFICATION",
+                    HisDate = DateTimeOffset.UtcNow,
+                    HisUtilisateur = Utilisateur.Depuis(http).Code,
+                    HisMotif = motif,
+                    HisInstantane = JsonDocument.Parse(JsonSerializer.Serialize(new
+                    {
+                        ancien = new { numero = doc.EntArcNumero, date = doc.EntArcDate, livraison = doc.EntArcLivraison },
+                        nouveau = new { numero, date = a.EntArcDate, livraison = a.EntArcLivraison },
+                    })),
+                });
             doc.EntArcNumero = numero;
             doc.EntArcDate = a.EntArcDate;
             doc.EntArcLivraison = a.EntArcLivraison;
