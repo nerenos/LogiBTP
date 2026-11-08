@@ -163,6 +163,7 @@ Analyse du 23/10/2026 : [ANALYSE-MODULE-SOUS-TRAITANCE.md](documentation/concept
 
 Analyse du 24/10/2026 : [ANALYSE-MODULE-STOCK.md](documentation/conception/ANALYSE-MODULE-STOCK.md).
 
+
 - [x] Lots et numéros de série (S24) : questions tranchées le 05/11/2026 (§ 11 de l'analyse : lots facultatifs, péremption
   par article périssable avec durée théorique) ; S24-a, S24-b et S24-c réalisés ; S24-d (numéros de série → équipements
   installés : module SAV `modules/sav`, garantie des articles, création par les mouvements, écrans, interventions E_SAV
