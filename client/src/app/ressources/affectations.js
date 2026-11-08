@@ -10,7 +10,7 @@ export const TYPES_AFFECTATION = Object.values(TYPE_RESSOURCE);
 
 export const LIBELLES_AFFECTATION = textesParCode('ressources_btp.affectations.types', ['SALARIE', 'INTERIM', 'SOUS_TRAITANT', 'MATERIEL']);
 
-export const MESSAGES_AFFECTATIONS = textesParCode('ressources_btp.affectations.erreurs', ['AFF_TYPE', 'AFF_CIBLE', 'AFF_DATE', 'AFF_SOI', 'AFF_CHEVAUCHEMENT', 'AFF_BOUCLE', 'AFF_RETOUR']);
+export const MESSAGES_AFFECTATIONS = textesParCode('ressources_btp.affectations.erreurs', ['AFF_TYPE', 'AFF_CIBLE', 'AFF_DATE', 'AFF_SOI', 'AFF_CHEVAUCHEMENT', 'AFF_BOUCLE', 'AFF_RETOUR', 'AFF_PHOTO']);
 
 const ordinal = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 const FIN = '9999-12-31';
@@ -36,4 +36,17 @@ export function controlerAffectations(materiel, affectations, { identifie = fals
 export function affectationA(affectations, date) {
   const i = affectations.findIndex((a) => a.du && a.du <= date && (!a.au || a.au >= date));
   return i < 0 ? null : i;
+}
+
+const CHAMPS_PHOTO = { depart: 'ged_depart', retour: 'ged_retour' };
+
+/** Photos d'une affectation [{ sens, champ, id, deposable }] : départ toujours déposable, retour une fois l'affectation terminée. */
+export function photosAffectation(a) {
+  return Object.entries(CHAMPS_PHOTO).map(([sens, champ]) => ({ sens, champ, id: a[champ] ?? null, deposable: sens === 'depart' || Boolean(a.au) }));
+}
+
+/** Pose l'identifiant du document de la GED comme photo de départ ou de retour de l'affectation. */
+export function definirPhoto(a, sens, id) {
+  a[CHAMPS_PHOTO[sens]] = id;
+  return a;
 }

@@ -43,7 +43,7 @@
 | Lot | Titre | Module | Dépend de | Statut |
 |---|---|---|---|---|
 | 1 | Photos de départ et de retour : base et serveur | cœur | MO1 | FAIT (08/11/2026) |
-| 2 | Photos de départ et de retour : ligne d'affectation | cœur | 1 | A FAIRE |
+| 2 | Photos de départ et de retour : ligne d'affectation | cœur | 1 | FAIT (08/11/2026) |
 | 3 | Relevés de compteurs à la borne : serveur | cœur | MO2 | A FAIRE |
 | 4 | Relevés de compteurs à la borne : écran | cœur | 3 | A FAIRE |
 | 5 | Données de démonstration d'entretiens | cœur | MO3 | A FAIRE |
@@ -74,7 +74,7 @@
   `PhotosAffectationTests.cs` (règle pure ; trigger sur la base si `LOGIBTP_TEST_PG`, transaction annulée) ; le refus par la
   route n'est pas testé de bout en bout (pas de banc d'essai HTTP sur base dans les tests du cœur).
 
-## Lot 2 : photos de départ et de retour, ligne d'affectation (A FAIRE)
+## Lot 2 : photos de départ et de retour, ligne d'affectation (FAIT 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : écran des affectations du matériel (`client/src/app/ressources/`, graphify « affectations matériel
@@ -84,6 +84,7 @@
 - **Règles répliquées JS / C#** : aucune.
 - **Jeux de tests** : test client : dépôt de la photo de départ depuis la ligne ; retour → photo de retour ; vignettes.
 - **Critère de fin** : `npm test` vert.
+- **Réalisé / écarts** : deux colonnes « Photo au départ / au retour » dans `rendreAffectations` (vignette cliquable ouvrant l'image, bouton de dépôt par `ged.deposer`, catégorie photo, type d'élément matériel) ; photo de retour déposable une fois l'affectation terminée ; l'identifiant est enregistré avec l'affectation (`ged_depart` / `ged_retour`). Helpers `photosAffectation` / `definirPhoto` (`affectations.js`), message `AFF_PHOTO`, icône `ressources_btp_photo`. Test sur les helpers (pas de banc DOM pour l'écran). `npm test` : seuls les 2 échecs connus.
 
 ## Lot 3 : relevés de compteurs à la borne, serveur (A FAIRE)
 

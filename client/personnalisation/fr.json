@@ -6428,7 +6428,16 @@
         "AFF_SOI": "Un matériel ne s'affecte pas à lui-même",
         "AFF_CHEVAUCHEMENT": "Une seule affectation à la fois : périodes qui se chevauchent",
         "AFF_BOUCLE": "Matériels porteurs en boucle",
-        "AFF_RETOUR": "État du matériel au retour obligatoire pour terminer l’affectation"
+        "AFF_RETOUR": "État du matériel au retour obligatoire pour terminer l’affectation",
+        "AFF_PHOTO": "Photo d'affectation : le document n'est pas une pièce de la GED de ce matériel"
+      },
+      "photo": {
+        "depart": "Photo de l'état au départ",
+        "retour": "Photo de l'état au retour",
+        "ajouter": "Ajouter la {{sens}}",
+        "remplacer": "Remplacer la {{sens}}",
+        "titre_depart": "Affectation du {{du}} : état au départ",
+        "titre_retour": "Affectation du {{du}} : état au retour"
       },
       "titre": "Affectations",
       "ajouter": "Nouvelle affectation (la précédente se termine la veille)",
@@ -6437,7 +6446,9 @@
         "type": "Affecté à",
         "ressource": "Ressource",
         "depart": "État au départ",
-        "retour": "État au retour"
+        "retour": "État au retour",
+        "photo_depart": "Photo au départ",
+        "photo_retour": "Photo au retour"
       },
       "retirer": "Retirer cette affectation",
       "aucune": "Jamais affecté.",

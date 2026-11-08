@@ -6,7 +6,7 @@ import {
   ajouterMois, etatHabilitation, habilitationsManquantes, controlerHabilitation, controlerMissions, missionEnCours, MESSAGES_RESSOURCES,
 } from '../src/app/ressources/regles.js';
 import { finsPeriodes, periodesDepuisLignes, lignesDepuisPeriodes, controlerEquipe, MESSAGES_EQUIPES } from '../src/app/ressources/equipes.js';
-import { controlerAffectations, affectationA } from '../src/app/ressources/affectations.js';
+import { controlerAffectations, affectationA, photosAffectation, definirPhoto } from '../src/app/ressources/affectations.js';
 import { controlerReleves, compteurA, cumuls, controlerEvenement, MESSAGES_COMPTEURS } from '../src/app/ressources/compteurs.js';
 import { plansEffectifs, cumulA, moyenneUsage, echeanceEntretien } from '../src/app/ressources/entretiens.js';
 
@@ -40,6 +40,24 @@ describe('équipes (jeu partagé)', () => {
   for (const c of j.periodes) it(`aller-retour : ${c.nom}`, () => expect(lignesDepuisPeriodes(periodesDepuisLignes(c.lignes, c.debuts))).toEqual(lignesDepuisPeriodes(c.attendu)));
   for (const c of j.controles) it(`contrôle : ${c.nom}`, () => expect(controlerEquipe(c.equipe)).toEqual(c.attendu));
   it('chaque code a un libellé', () => { for (const c of j.controles.flatMap((x) => x.attendu)) expect(MESSAGES_EQUIPES[c.code]).toBeTruthy(); });
+});
+
+describe("photos de départ et de retour d'une affectation", () => {
+  it('dépôt de la photo de départ depuis la ligne', () => {
+    const a = { du: '2026-11-01', au: null };
+    expect(photosAffectation(a).find((p) => p.sens === 'depart')).toMatchObject({ id: null, deposable: true });
+    definirPhoto(a, 'depart', 12);
+    expect(a.ged_depart).toBe(12);
+    expect(photosAffectation(a).find((p) => p.sens === 'depart').id).toBe(12);
+  });
+  it("photo de retour seulement une fois l'affectation terminée", () => {
+    const a = { du: '2026-11-01', au: null, ged_retour: 5 };
+    expect(photosAffectation(a).find((p) => p.sens === 'retour')).toMatchObject({ id: 5, deposable: false });
+    a.au = '2026-11-05';
+    expect(photosAffectation(a).find((p) => p.sens === 'retour').deposable).toBe(true);
+    definirPhoto(a, 'retour', 9);
+    expect(a.ged_retour).toBe(9);
+  });
 });
 
 describe('affectations du matériel (jeu partagé)', () => {
