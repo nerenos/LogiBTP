@@ -10,7 +10,7 @@
     "STK_GARANTIE": "Garantie de 1 à 600 mois",
     "STK_GENERATION": "Génération par EMPLACEMENT, FAMILLE, MARQUE ou STOCK",
     "STK_GENERATION_VIDE": "Aucun article pour ces critères",
-    "STK_HORIZON": "Délai positif ou nul, frise positive",
+    "STK_HORIZON": "Délais positifs ou nuls, frise positive",
     "STK_INVENTAIRE": "Le lot comporte des erreurs",
     "STK_INVENTAIRE_VIDE": "Aucune quantité comptée dans le lot",
     "STK_LOT_NON_VALIDE": "Seul un lot validé s'annule (un brouillon se supprime)",
