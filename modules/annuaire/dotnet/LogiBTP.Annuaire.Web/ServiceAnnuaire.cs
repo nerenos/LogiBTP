@@ -132,7 +132,7 @@ public partial class ServiceAnnuaire(AnnuaireDbContext db, SpecialisationAnnuair
 
     // ------------------------------------------------------------------ lecture SQL (vues de l'annuaire)
 
-    protected async Task<List<Dictionary<string, object?>>> Lire(string sql, IReadOnlyList<object?> parametres, CancellationToken ct)
+    protected virtual async Task<List<Dictionary<string, object?>>> Lire(string sql, IReadOnlyList<object?> parametres, CancellationToken ct)
     {
         var cnx = (NpgsqlConnection)db.Database.GetDbConnection();
         var ouverte = cnx.State == ConnectionState.Open;
@@ -178,6 +178,15 @@ public partial class ServiceAnnuaire(AnnuaireDbContext db, SpecialisationAnnuair
     public static IReadOnlyList<string> Mots(string? recherche) =>
         (recherche ?? "").Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Take(8).ToList();
 
+    /// <summary>
+    /// Point d'accroche : condition SQL (sur <c>v_annuaire_personnes</c>) qui écarte des tiers des seuls choix de recherche
+    /// (la fiche, la liste et la lecture par identifiant ne sont pas touchées). Par défaut : aucun filtre.
+    /// </summary>
+    protected virtual string? FiltreChoixPersonnes() => null;
+
+    /// <summary>Même accroche pour les individus (condition sur <c>v_annuaire_individus</c>).</summary>
+    protected virtual string? FiltreChoixIndividus() => null;
+
     public virtual async Task<List<ResumePersonne>> RechercherPersonnes(string? recherche, string? casquette, int limite, CancellationToken ct)
     {
         var p = new List<object?>();
@@ -185,6 +194,7 @@ public partial class ServiceAnnuaire(AnnuaireDbContext db, SpecialisationAnnuair
         var conditions = Mots(recherche).Select(m =>
             $"f_annuaire_normaliser(concat_ws(' ', per_code, per_raison_sociale, per_nom_commercial, per_siret, per_siren, ville)) LIKE '%' || f_annuaire_normaliser({P(m)}) || '%'").ToList();
         if (Texte(casquette) is { } c) conditions.Add($"jsonb_exists(per_casquettes, {P(c)})");
+        if (FiltreChoixPersonnes() is { } filtre) conditions.Add($"({filtre})");
         var where = conditions.Count == 0 ? "" : " WHERE " + string.Join(" AND ", conditions);
         var lignes = await Lire($"{SelectPersonnes}{where} ORDER BY per_actif DESC, per_raison_sociale, per_id LIMIT {P(Math.Clamp(limite, 1, 200))}", p, ct);
         return lignes.Select(VersResume).ToList();
@@ -196,6 +206,7 @@ public partial class ServiceAnnuaire(AnnuaireDbContext db, SpecialisationAnnuair
         string P(object? v) { p.Add(v); return $"@p{p.Count - 1}"; }
         var conditions = Mots(recherche).Select(m =>
             $"f_annuaire_normaliser(concat_ws(' ', ind_nom, ind_prenom, email, telephone, portable, personnes)) LIKE '%' || f_annuaire_normaliser({P(m)}) || '%'").ToList();
+        if (FiltreChoixIndividus() is { } filtre) conditions.Add($"({filtre})");
         var where = conditions.Count == 0 ? "" : " WHERE " + string.Join(" AND ", conditions);
         var lignes = await Lire($"SELECT * FROM v_annuaire_individus{where} ORDER BY ind_nom, ind_prenom, ind_id LIMIT {P(Math.Clamp(limite, 1, 200))}", p, ct);
         return lignes.Select(VersResumeIndividu).ToList();

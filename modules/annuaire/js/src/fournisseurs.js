@@ -115,7 +115,9 @@ export const libelleIndividu = (i) => [i?.civilite, i?.prenom, i?.nom].filter(Bo
  */
 export class FournisseurAnnuaireMemoire {
   constructor({ niveaux = [], casquettes = [], types_lien = [], roles = [], personnes = [], individus = [], rattachements = [], liens = [],
-    coordonnees = [], usages = [], profil = PROFIL.ADMIN, utilisateur = 'demo', horloge = () => Date.now() } = {}) {
+    coordonnees = [], usages = [], profil = PROFIL.ADMIN, utilisateur = 'demo', horloge = () => Date.now(), filtreChoix = {} } = {}) {
+    // Point d'accroche : { personne(p), individu(i) } -> faux écarte la fiche des seuls choix de recherche (défaut : aucun filtre).
+    this.filtreChoix = filtreChoix;
     this.refs = { niveaux: structuredClone(niveaux), casquettes: structuredClone(casquettes), 'types-lien': structuredClone(types_lien), roles: structuredClone(roles) };
     this.personnes = structuredClone(personnes);
     this.individus = structuredClone(individus);
@@ -201,14 +203,14 @@ export class FournisseurAnnuaireMemoire {
   async rechercherPersonnes({ recherche = '', casquette = '', limite = 30 } = {}) {
     const m = mots(recherche);
     return this.personnes
-      .filter((p) => (!casquette || (p.casquettes ?? []).includes(casquette)) && correspond(m, p.code, p.raison_sociale, p.nom_commercial, p.siret, p.siren, p.ville))
+      .filter((p) => (this.filtreChoix.personne?.(p) ?? true) && (!casquette || (p.casquettes ?? []).includes(casquette)) && correspond(m, p.code, p.raison_sociale, p.nom_commercial, p.siret, p.siren, p.ville))
       .sort((a, b) => Number(b.actif !== false) - Number(a.actif !== false) || String(a.raison_sociale).localeCompare(String(b.raison_sociale), 'fr'))
       .slice(0, limite).map((p) => this.#resumePersonne(p));
   }
 
   async rechercherIndividus({ recherche = '', limite = 30 } = {}) {
     const m = mots(recherche);
-    return this.individus.filter((i) => correspond(m, i.nom, i.prenom, i.email, i.telephone, i.portable, i.personnes))
+    return this.individus.filter((i) => (this.filtreChoix.individu?.(i) ?? true) && correspond(m, i.nom, i.prenom, i.email, i.telephone, i.portable, i.personnes))
       .sort((a, b) => String(a.nom).localeCompare(String(b.nom), 'fr') || String(a.prenom).localeCompare(String(b.prenom), 'fr'))
       .slice(0, limite).map((i) => this.#resumeIndividu(i));
   }

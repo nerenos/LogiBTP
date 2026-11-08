@@ -38,7 +38,7 @@
 
 | Lot | Titre | Module | Dépend de | Statut |
 |---|---|---|---|---|
-| 1 | Point d'accroche `FiltreChoix` de l'annuaire | `modules/annuaire` | — | A FAIRE |
+| 1 | Point d'accroche `FiltreChoix` de l'annuaire | `modules/annuaire` | — | FAIT |
 | 2 | Point d'accroche `FiltreChoix` de la bibliothèque | `modules/bibliotheque` | — | A FAIRE |
 | 3 | Spécialisation des deux filtres par le cœur (usage N écarté) | cœur | 1, 2 | A FAIRE |
 | 4 | « Ne plus utiliser » dans le planning, le pointage et le magasin | cœur | 3 | A FAIRE |
@@ -48,7 +48,7 @@
 
 ---
 
-## Lot 1 : point d'accroche `FiltreChoix` de l'annuaire (A FAIRE)
+## Lot 1 : point d'accroche `FiltreChoix` de l'annuaire (FAIT 08/11/2026)
 
 - **Module** : `modules/annuaire`. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `ServiceAnnuaire.cs` (recherche des tiers et `RechercherIndividus :193` : méthode virtuelle
@@ -131,3 +131,5 @@
 - **Règles répliquées JS / C#** : aucune.
 - **Jeux de tests** : projet à zone 3 → chantier créé en zone 3, modifiable ; projet sans zone → chantier sans zone.
 - **Critère de fin** : `npm test` et `dotnet test LogiBTP.slnx` verts.
+
+> Lot 1 FAIT le 08/11/2026 : accroches `FiltreChoixPersonnes()` / `FiltreChoixIndividus()` (condition SQL, protégées virtuelles) dans `ServiceAnnuaire`, option `filtreChoix: { personne, individu }` du `FournisseurAnnuaireMemoire`. Écart : `Lire` rendue `protected virtual` et le projet de tests référence `LogiBTP.Annuaire.Web` (test C# par capture du SQL, sans base).
