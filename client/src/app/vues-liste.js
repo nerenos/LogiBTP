@@ -48,6 +48,16 @@ export const SOURCES_LISTE = {
       ['saisi_le', 'timestamp with time zone'], ['semaine', 'date'], ['taux', 'numeric'], ['cout', 'numeric'], ['valorisation', 'text'],
     ],
   },
+  // Repas des salariés du module Pointage (db/282 : v_liste_repas, un repas par salarié et par jour).
+  repas: {
+    libelle: 'Repas des salariés', vue: 'v_liste_repas', colonne_id: 'id', colonne_type: 'type_element',
+    colonnes: [
+      ['id', 'bigint'], ['type_element', 'text'], ['date_repas', 'date'], ['salarie', 'text'], ['matricule', 'text'], ['salarie_id', 'integer'],
+      ['service', 'text'], ['service_id', 'integer'], ['restaurant', 'text'], ['restaurant_id', 'bigint'], ['chantier', 'text'],
+      ['chantier_libelle', 'text'], ['chantier_id', 'integer'], ['commentaire', 'text'], ['appareil', 'text'], ['saisi_par', 'text'],
+      ['saisi_le', 'timestamp with time zone'], ['semaine', 'date'],
+    ],
+  },
   // Structure des affaires (db/160_structure.sql) : projets, affaires, chantiers, marchés.
   projets: {
     libelle: 'Projets (chiffrage)', vue: 'v_liste_projets', colonne_id: 'id', colonne_type: 'type_element',

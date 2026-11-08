@@ -8,6 +8,7 @@ INSERT INTO source_liste (sli_code, sli_libelle, sli_vue, sli_colonne_id, sli_co
  ('documents', 'Documents (devis, commandes, factures…)', 'v_liste_documents', 'id', 'type_element', NULL, FALSE),
  ('ordres', 'Ordres (exécution)', 'v_liste_ordres', 'id', 'type_element', NULL, FALSE),
  ('pointages', 'Pointages (main-d''œuvre)', 'v_liste_pointages', 'id', 'type_element', NULL, FALSE),
+ ('repas', 'Repas des salariés', 'v_liste_repas', 'id', 'type_element', NULL, FALSE),
  ('projets', 'Projets (chiffrage)', 'v_liste_projets', 'id', 'type_element', NULL, FALSE),
  ('affaires', 'Affaires', 'v_liste_affaires', 'id', 'type_element', NULL, FALSE),
  ('chantiers', 'Chantiers', 'v_liste_chantiers', 'id', 'type_element', NULL, FALSE),

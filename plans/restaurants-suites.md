@@ -29,7 +29,7 @@
 |---|---|---|---|---|
 | 1 | Repas pour plusieurs salariés à la borne : service | `modules/pointage` | RO1 | FAIT |
 | 2 | Repas dans la saisie d'équipe de la borne | cœur | 1 | FAIT |
-| 3 | Vue des repas d'une période | cœur | RO2 | A FAIRE |
+| 3 | Vue des repas d'une période | cœur | RO2 | FAIT |
 | 4 | Liste des repas (écran, droits) | cœur | 3 | A FAIRE |
 | 5 | Carte des restaurants | cœur | RO3 | A FAIRE |
 
@@ -59,7 +59,7 @@
 - **Critère de fin** : `npm test` et `dotnet test LogiBTP.slnx` verts.
 - **Réalisé** : bouton Repas aussi en saisie d'équipe ; cases des membres (cochées par défaut), envoi de `membres` (`corpsRepas`, `membresRepas` dans `pointage/repas.js`), refus par salarié affichés. Écarts : `Equipes.cs` inchangé (la borne passe par le module) ; pas de `dotnet test` (aucun C# touché) ; `npm test` : 3 échecs hors lot restants dont `REPAS_DEJA` / `REPAS_HORS_EQUIPE` « plus levé » (lot 1, à régler par `extraire-erreurs`).
 
-## Lot 3 : vue des repas d'une période (A FAIRE)
+## Lot 3 : vue des repas d'une période (FAIT 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : nouveau script `db/<numéro>_liste_repas.sql` (`v_liste_repas`, rejouable) et `db/installation/scripts.txt`,
@@ -68,6 +68,7 @@
 - **Règles répliquées JS / C#** : aucune.
 - **Jeux de tests** : script rejoué deux fois ; colonnes de la vue alignées sur la déclaration (tests existants).
 - **Critère de fin** : `npm test` vert ; la vue rend les repas de la base de développement.
+- **Réalisé** : `db/282_liste_repas.sql` (`v_liste_repas` + source de liste `repas`, rejouable), manifeste, `SOURCES_LISTE.repas`, `121` régénéré (1 ligne). Écarts : pas de colonne montant (le repas n'en porte pas) ; script non appliqué aux bases de développement ni testé sur une base (consigne) ; `npm test` client : seuls les 2 échecs anciens restent.
 
 ## Lot 4 : liste des repas, écran et droits (A FAIRE)
 
