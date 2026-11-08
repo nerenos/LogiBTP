@@ -3293,6 +3293,15 @@
       "en_vigueur": "· en vigueur",
       "delegue_manquant": "Choisissez le délégué de chaque ligne.",
       "enregistre": "Délégations du service {{service}} enregistrées"
+    },
+    "reserves": {
+      "titre": "Réserves de la réception",
+      "ouvertes": "{{nombre}} ouverte(s) sur {{total}}",
+      "toutes_levees": "Toutes les réserves sont levées",
+      "ouverte": "Ouverte (réception du {{date}})",
+      "levee": "Levée le {{date}} par {{par}}",
+      "levee_appareil": "signée sur l'appareil le {{date}}",
+      "photo": "photo de la levée dans les pièces de l'ordre"
     }
   },
   "sous_traitance_btp": {
@@ -7328,7 +7337,20 @@
       "enregistree_etat": "Réception enregistrée ({{etat}}).",
       "ouvrir_pv": "Ouvrir le PV signé",
       "pv_envoye": "PV envoyé à {{courriel}}.",
-      "enregistree": "Réception enregistrée"
+      "enregistree": "Réception enregistrée",
+      "reserves_suivies": {
+        "titre": "Réserves à lever",
+        "ouvertes": "{{nombre}} encore ouverte(s)",
+        "toutes_levees": "toutes levées",
+        "ouverte": "Ouverte depuis la réception du {{date}}",
+        "levee": "Levée le {{date}} par {{par}}",
+        "gardee": "Levée gardée sur cet appareil : envoyée au retour du réseau",
+        "lever": "Lever la réserve",
+        "lever_titre": "Levée de la réserve",
+        "photo": "Photo de la levée (facultative, la première choisie est gardée)",
+        "libelle": "Levée de « {{reserve}} » ({{numero}})",
+        "levee_ok": "Réserve levée"
+      }
     },
     "chargement": "Chargement…",
     "etape_validee": "Étape « {{etape}} » : validée le {{date}}",

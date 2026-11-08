@@ -1,6 +1,6 @@
 import { texte, texteHtml, textesParCode, pluriel, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
-import { urlDocument, MODULE_FACULTATIF, SUJET_FENETRE } from '../codes.js';
-import { echapper, creerCombo, formatNombre, formatDateHeure } from '@logibtp/socle/ui';
+import { urlDocument, MODULE_FACULTATIF, SUJET_FENETRE, TYPE_DOCUMENT, ETAT_RESERVE } from '../codes.js';
+import { echapper, creerCombo, formatNombre, formatDate, formatDateHeure } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 import { rendreEtapes, optionsRessources, ressourceDe } from './etapes.js';
 
@@ -62,6 +62,7 @@ export async function rendreExecution(bloc, { app, entId, typeCode, individus, s
     <p><button type="button" class="principal" data-enregistrer>${texteHtml('execution_btp.panneau.enregistrer')}</button></p>
     ${x.heures?.length ? `<p class="aide">${texteHtml('execution_btp.panneau.heures')} ${x.heures.map((h) => `${h.service ? echapper(h.service) : texteHtml('execution_btp.panneau.sans_service')} ${texteHtml('execution_btp.panneau.nb_heures', { heures: nombre(h.heures) })}`).join(' · ')}${x.heures_realisees ? ` · ${texteHtml('execution_btp.panneau.realise', { heures: nombre(x.heures_realisees) })}` : ''}</p>` : ''}
     <div data-planning-ordre></div>
+    <div data-reserves-ordre></div>
     ${budget ? `<h4>${texteHtml('execution_btp.panneau.budget')}</h4><table><thead><tr><th></th><th class="nombre">${texteHtml('execution_btp.panneau.debourse')}</th><th class="nombre">${texteHtml('execution_btp.panneau.vente')}</th><th class="nombre">${texteHtml('execution_btp.panneau.heures_titre')}</th></tr></thead><tbody>
       ${ligneBudget(texteHtml('execution_btp.panneau.vendu'), budget.vendu)}${reference ? ligneBudget(texteHtml('execution_btp.panneau.reference', { date: formatDateHeure(reference.le) }), reference) : ''}${ligneBudget(texteHtml('execution_btp.panneau.planifie'), budget.planifie)}</tbody></table>
       ${reference && budget.planifie?.pr !== null ? `<p class="aide">${texteHtml('execution_btp.panneau.derive', { montant: nombre(Number(budget.planifie.pr ?? 0) - Number(reference.pr ?? 0)) })}</p>` : `<p class="aide">${texteHtml('execution_btp.panneau.fige')}</p>`}` : ''}
@@ -87,6 +88,7 @@ export async function rendreExecution(bloc, { app, entId, typeCode, individus, s
     surChange: () => { app.publier(SUJET_FENETRE.ENREGISTRE, { type: typeCode, ids: [entId] }); surChange(); rendreExecution(bloc, { app, entId, typeCode, individus, surChange }); },
   });
   bloc.querySelectorAll('[data-c]').forEach((c) => c.addEventListener('change', () => { s[c.dataset.c] = c.value || null; }));
+  if (typeCode === TYPE_DOCUMENT.E_PO) rendreReservesOrdre(bloc.querySelector('[data-reserves-ordre]'), entId);
   if (app.moduleActif(MODULE_FACULTATIF.PLANNING)) rendrePlanningOrdre(bloc.querySelector('[data-planning-ordre]'), { app, entId, recharger: () => rendreExecution(bloc, { app, entId, typeCode, individus, surChange }) });
   bloc.querySelector('[data-enregistrer]').addEventListener('click', async () => {
     const erreur = bloc.querySelector('[data-erreur]');
@@ -99,6 +101,22 @@ export async function rendreExecution(bloc, { app, entId, typeCode, individus, s
       await rendreExecution(bloc, { app, entId, typeCode, individus, surChange });
     } catch (e) { erreur.textContent = e.message; erreur.hidden = false; }
   });
+}
+
+/**
+ * Réserves suivies d'un ordre de pose (terrain-suites lot 15) : réserves de ses réceptions signées sur le terrain, état,
+ * levée (date, par qui, heure de l'appareil, commentaire). Lecture seule : la levée se fait sur le terrain.
+ */
+async function rendreReservesOrdre(zone, entId) {
+  const reserves = await api.execution.reserves(entId).catch(() => []);
+  if (!reserves.length) return;
+  const ouvertes = reserves.filter((r) => r.etat === ETAT_RESERVE.OUVERTE).length;
+  zone.innerHTML = `<h4>${texteHtml('execution_btp.reserves.titre')}</h4>
+    <p class="aide">${ouvertes ? texteHtml('execution_btp.reserves.ouvertes', { nombre: ouvertes, total: reserves.length }) : texteHtml('execution_btp.reserves.toutes_levees')}</p>
+    <ul class="liste-simple">${reserves.map((r) => `<li>${r.etat === ETAT_RESERVE.LEVEE ? iconeHtml('execution_btp_reserve_levee') : iconeHtml('execution_btp_reserve_ouverte')} ${echapper(r.libelle)}
+      <br><small class="aide">${r.etat === ETAT_RESERVE.LEVEE
+    ? `${texteHtml('execution_btp.reserves.levee', { date: formatDateHeure(r.levee_le), par: r.levee_par ?? '' })}${r.levee_appareil_le ? ` (${texteHtml('execution_btp.reserves.levee_appareil', { date: formatDateHeure(r.levee_appareil_le) })})` : ''}${r.commentaire ? ` · ${echapper(r.commentaire)}` : ''}${r.photo_levee ? ` · ${texteHtml('execution_btp.reserves.photo')}` : ''}`
+    : texteHtml('execution_btp.reserves.ouverte', { date: formatDate(r.recue_le) })}</small></li>`).join('')}</ul>`;
 }
 
 /**

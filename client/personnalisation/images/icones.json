@@ -714,5 +714,9 @@
   "execution_btp_delegations": "👥",
   "navigation_btp_execution_delegations": "👥",
   "stock_btp_piece_comptable": "📒",
-  "pointage_signature": "✍"
+  "pointage_signature": "✍",
+  "terrain_btp_reserve": "📌",
+  "terrain_btp_reserve_levee": "✔",
+  "execution_btp_reserve_ouverte": "📌",
+  "execution_btp_reserve_levee": "✔"
 }

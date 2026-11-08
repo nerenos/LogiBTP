@@ -14,7 +14,7 @@ import { SUJET_ATTENTE } from '../hors-ligne/synchro.js';
 export const OPERATION_TERRAIN = Object.freeze({
   JOURNEE: 'terrain-journee', AVANCEMENT: 'terrain-avancement', NON_CONFORMITE: 'terrain-nc', PHOTOS: 'terrain-photos',
   ETAPE: 'terrain-etape', REPAS: 'terrain-repas', RECEPTION: 'terrain-reception', DEMANDE: 'terrain-demande', SAV: 'terrain-sav',
-  LIVRAISON: 'terrain-livraison', MATERIEL: 'terrain-materiel',
+  LIVRAISON: 'terrain-livraison', MATERIEL: 'terrain-materiel', LEVEE_RESERVE: 'terrain-levee-reserve',
 });
 
 /** Clé du localStorage où l'appareil garde la limite de dépôt de la GED (terrain-suites lot 12). */
@@ -42,6 +42,19 @@ export function limitePhotos() {
  */
 export const receptionGardee = (reception, maintenant = new Date()) => ({ ...reception, signee_le: maintenant.toISOString() });
 
+/**
+ * Formulaire de levée d'une réserve (terrain-suites lot 15) : commentaire, heure de l'appareil (`levee_le`, levée
+ * gardée hors ligne seulement) et photo de la levée (la première choisie).
+ */
+export const formulaireLevee = ({ commentaire, levee_le: leveeLe, photos }) => {
+  const f = new FormData();
+  if (commentaire) f.append('commentaire', commentaire);
+  if (leveeLe) f.append('levee_le', leveeLe);
+  const photo = photos?.fichiers?.[0];
+  if (photo) f.append('photo', photo, photo.name);
+  return f;
+};
+
 /** Formulaire d'envoi de photos gardées ({ fichiers: [File], commentaire }). */
 export const formulairePhotos = ({ fichiers, commentaire }) => {
   const f = new FormData();
@@ -65,6 +78,9 @@ declarerOperation(OPERATION_TERRAIN.PHOTOS, { envoyer: (c) => api.terrain.photos
 // Réception signée hors ligne : signature gardée en image, heure de signature de l'appareil jointe (signee_le) ;
 // horodatage du serveur à l'envoi, les deux imprimés sur le PV (terrain-suites lot 13).
 declarerOperation(OPERATION_TERRAIN.RECEPTION, { envoyer: (c) => api.terrain.enregistrerReception(c.ordre, c.reception) });
+// Levée d'une réserve gardée hors ligne : heure de l'appareil jointe (levee_le), photo gardée réduite ; une levée déjà
+// reçue par le serveur n'est pas changée (envoi rejoué sans effet).
+declarerOperation(OPERATION_TERRAIN.LEVEE_RESERVE, { envoyer: (c) => api.terrain.leverReserve(c.ordre, c.reserve, formulaireLevee(c)) });
 declarerOperation(OPERATION_TERRAIN.DEMANDE, {
   envoyer: async (c) => {
     await api.terrain.demande(c.demande);

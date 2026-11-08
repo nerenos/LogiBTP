@@ -155,6 +155,8 @@ export const api = {
     document: (id) => appel('GET', `/execution/documents/${id}`),
     enregistrer: (id, s) => appel('PUT', `/execution/documents/${id}`, s),
     repartition: (id) => appel('GET', `/execution/documents/${id}/repartition`),
+    // Réserves suivies d'un ordre de pose (terrain-suites lot 15) : réserves de ses réceptions et leur levée.
+    reserves: (id) => appel('GET', `/execution/documents/${id}/reserves`),
     heuresChantier: (id) => appel('GET', `/execution/chantiers/${id}/heures`),
     delegations: () => appel('GET', '/execution/delegations'),
     enregistrerDelegations: (srv, l) => appel('PUT', `/execution/delegations/${srv}`, l),
@@ -241,6 +243,9 @@ export const api = {
     reception: (ordre) => appel('GET', `/terrain/receptions/${ordre}`),
     enregistrerReception: (ordre, r) => appel('POST', `/terrain/receptions/${ordre}`, r),
     urlPv: (ordre, reception) => `/api/terrain/receptions/${ordre}/pv/${reception}`,
+    // Réserves suivies (terrain-suites lots 14, 15) ; levée : FormData (commentaire, levee_le, photo).
+    reserves: (ordre) => appel('GET', `/terrain/receptions/${ordre}/reserves`),
+    leverReserve: (ordre, reserve, formulaire) => appel('POST', `/terrain/receptions/${ordre}/reserves/${reserve}/levee`, formulaire),
     demande: (d) => appel('POST', '/terrain/demandes', d),
     demandes: () => appel('GET', '/terrain/demandes'),
     livraisons: (chantier) => appel('GET', `/terrain/livraisons?chantier=${chantier}`),

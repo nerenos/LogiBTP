@@ -17,7 +17,8 @@ const { declarerOperation, ecrireOperation, envoyerOperations, lireOperation } =
 const { etatNumero, ETAT_NUMERO } = await import('../src/app/terrain/terrain.js');
 const { ERREUR_TERRAIN } = await import('../src/app/codes.js');
 const { ETAT_ATTENTE } = await import('../src/app/hors-ligne/attente.js');
-const { memoriserLimitePhotos, limitePhotos, receptionGardee, envoyerOuGarder, OPERATION_TERRAIN } = await import('../src/app/terrain/operations-terrain.js');
+const { memoriserLimitePhotos, limitePhotos, receptionGardee, envoyerOuGarder, OPERATION_TERRAIN, formulaireLevee } = await import('../src/app/terrain/operations-terrain.js');
+const { api } = await import('../src/app/api.js');
 
 describe('hors ligne : ordre saisi par son numéro, résolu à l\'envoi (terrain-suites lot 10)', () => {
   it('numéro inconnu gardé « à vérifier », puis marqué refusé quand le serveur ne le connaît pas', async () => {
@@ -72,5 +73,34 @@ describe('réception gardée hors ligne (terrain-suites lot 13)', () => {
       async () => { envoyee = reception; return { reception: { id: 1 } }; });
     expect(r.reponse).toBeTruthy();
     expect(envoyee.signee_le).toBeUndefined();
+  });
+});
+
+describe('levée d\'une réserve gardée hors ligne (terrain-suites lot 15)', () => {
+  it('levée gardée avec l\'heure de l\'appareil et sa photo, puis envoyée au retour du réseau', async () => {
+    const app = { apiPerdue: true, utilisateur: () => 'levee', publier: () => {}, message: () => {} };
+    const photo = new File(['x'], 'levee.jpg', { type: 'image/jpeg' });
+    const levee = { ordre: 7, reserve: 31, commentaire: 'Joint refait', photos: { fichiers: [photo], commentaire: 'Joint refait' } };
+    const r = await envoyerOuGarder(app, { type: OPERATION_TERRAIN.LEVEE_RESERVE, id: 31, corps: { ...levee, levee_le: '2026-11-08T09:30:00.000Z' }, libelle: 'Levée' },
+      () => { throw new Error('pas d\'envoi'); });
+    expect(r.horsLigne).toBe(true);
+    expect(await lireOperation('levee', OPERATION_TERRAIN.LEVEE_RESERVE, 31)).toBeTruthy();
+
+    const envoi = vi.spyOn(api.terrain, 'leverReserve').mockResolvedValue({ levee: true, ouvertes: 0, reserves: [] });
+    const res = await envoyerOperations('levee');
+    expect(res.envoyees).toBe(1);
+    const [ordre, reserve, formulaire] = envoi.mock.calls[0];
+    expect([ordre, reserve]).toEqual([7, 31]);
+    expect(formulaire.get('commentaire')).toBe('Joint refait');
+    expect(formulaire.get('levee_le')).toBe('2026-11-08T09:30:00.000Z');
+    expect(formulaire.get('photo').name).toBe('levee.jpg');
+    expect(await lireOperation('levee', OPERATION_TERRAIN.LEVEE_RESERVE, 31)).toBeUndefined();
+    envoi.mockRestore();
+  });
+
+  it('levée en ligne : ni heure de l\'appareil ni photo si aucune choisie', () => {
+    const f = formulaireLevee({ commentaire: null, photos: null });
+    expect(f.get('levee_le')).toBeNull();
+    expect(f.get('photo')).toBeNull();
   });
 });

@@ -30,7 +30,7 @@
 | 12 | Contrôle de taille des photos à la prise de vue | cœur | 11 | FAIT (08/11/2026) |
 | 13 | PV de réception : forme de signature et heure de l'appareil | cœur | — | FAIT (08/11/2026) |
 | 14 | Réserves suivies : base et serveur | cœur | 13 | FAIT (08/11/2026) |
-| 15 | Réserves suivies : levée depuis le terrain et suivi au bureau | cœur | 14 | A FAIRE |
+| 15 | Réserves suivies : levée depuis le terrain et suivi au bureau | cœur | 14 | FAIT (08/11/2026) |
 | 16 | PV de levée des réserves signé | cœur | 15 | A FAIRE |
 | 17 | Bibliothèque simplifiée : serveur | cœur | — | A FAIRE |
 | 18 | Bibliothèque simplifiée : écran et articles des demandes d'approvisionnement | cœur | 17 | A FAIRE |
@@ -350,7 +350,7 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
   libellés). Point OUVERT tranché par la proposition : pas de reprise des réserves des tâches du CRM. Tests :
   `ReservesReceptionTests.cs` (levée et refus sur la base de développement si `LOGIBTP_TEST_PG`).
 
-## Lot 15 : réserves suivies, levée depuis le terrain et suivi au bureau (TS14 a)
+## Lot 15 : réserves suivies, levée depuis le terrain et suivi au bureau (TS14 a) (FAIT 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `client/src/app/pages/terrain-reception.js` (liste des réserves de l'ordre, levée avec photo, gardée
@@ -359,6 +359,18 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
 - **Dépendances** : lot 14.
 - **Tests** : JS : levée gardée hors ligne puis envoyée.
 - **Critère de fin** : `npm test` vert ; une réserve levée sur le terrain apparaît levée au bureau.
+- **Réalisé / écarts** : `pages/terrain-reception.js` : carte « Réserves à lever » (état, levée, commentaire), bouton
+  « Lever la réserve » (dialogue : commentaire, photo par `selecteurPhotos`, la première gardée), envoi par
+  `envoyerOuGarder` ; hors ligne, levée gardée avec l'heure de l'appareil (`levee_le`) et marquée « sur l'appareil »,
+  y compris à la réouverture (`lireOperation`). Écart : le type d'opération `LEVEE_RESERVE` et son envoi
+  (`formulaireLevee`) sont déclarés dans `terrain/operations-terrain.js` comme les autres opérations du terrain, pas dans
+  `hors-ligne/operations.js` (file générique, inchangée). API : `api.terrain.reserves` / `leverReserve`,
+  `api.execution.reserves`. Bureau : panneau « Exécution » d'un ordre E_PO (`execution/execution.js`,
+  `rendreReservesOrdre`, lecture seule) sur `GET /api/execution/documents/{id}/reserves` (`ExecutionBtp.cs`, préfixe
+  `/api/execution` déjà déclaré). Textes `terrain_btp.reception.reserves_suivies.*`, `execution_btp.reserves.*` ; icônes
+  `terrain_btp_reserve`, `terrain_btp_reserve_levee`, `execution_btp_reserve_ouverte`, `execution_btp_reserve_levee`.
+  Aucun script SQL. Tests : `operations-terrain.test.js` (levée gardée puis envoyée). La vérification « levée au bureau »
+  reste à faire sur la base de l'utilisateur (`db/290` appliqué).
 
 ## Lot 16 : PV de levée des réserves signé (TS14 a)
 
