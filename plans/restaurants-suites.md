@@ -21,13 +21,13 @@
 
 | N° | Question | Recommandation | Statut |
 |---|---|---|---|
-| RO1 | Repas en saisie d'équipe : qui déclare, et pour qui ? | Le chef d'équipe déclare un restaurant pour l'équipe, une case par membre (cochée par défaut) ; un membre peut encore corriger le sien seul. Mêmes contrôles que le repas individuel. | OUVERT |
-| RO2 | Liste des repas d'une période : vue de liste ou page dédiée ? | Vue de liste du module Liste sur une vue `v_liste_repas` (salarié, date, restaurant, chantier, montant), filtre par période, export par la liste ; droits RH. | OUVERT |
-| RO3 | Carte des restaurants : où, et avec quel fond ? | Onglet carte de la liste des restaurants, en reprenant le composant de carte de `terrain.js` (même fond, même réglages) ; position par le géocodage de `db/239`. | OUVERT |
+| RO1 | Repas en saisie d'équipe : qui déclare, et pour qui ? | Le chef d'équipe déclare un restaurant pour l'équipe, une case par membre (cochée par défaut) ; un membre peut encore corriger le sien seul. Mêmes contrôles que le repas individuel. | ✔ Tranché (08/11/2026) : recommandation retenue |
+| RO2 | Liste des repas d'une période : vue de liste ou page dédiée ? | Vue de liste du module Liste sur une vue `v_liste_repas` (salarié, date, restaurant, chantier, montant), filtre par période, export par la liste ; droits RH. | ✔ Tranché (08/11/2026) : recommandation retenue |
+| RO3 | Carte des restaurants : où, et avec quel fond ? | Onglet carte de la liste des restaurants, en reprenant le composant de carte de `terrain.js` (même fond, même réglages) ; position par le géocodage de `db/239`. | ✔ Tranché (08/11/2026) : recommandation retenue |
 
 | Lot | Titre | Module | Dépend de | Statut |
 |---|---|---|---|---|
-| 1 | Repas pour plusieurs salariés à la borne : service | `modules/pointage` | RO1 | A FAIRE |
+| 1 | Repas pour plusieurs salariés à la borne : service | `modules/pointage` | RO1 | FAIT |
 | 2 | Repas dans la saisie d'équipe de la borne | cœur | 1 | A FAIRE |
 | 3 | Vue des repas d'une période | cœur | RO2 | A FAIRE |
 | 4 | Liste des repas (écran, droits) | cœur | 3 | A FAIRE |
@@ -35,7 +35,7 @@
 
 ---
 
-## Lot 1 : repas pour plusieurs salariés à la borne, service (A FAIRE)
+## Lot 1 : repas pour plusieurs salariés à la borne, service (FAIT 08/11/2026)
 
 - **Module** : `modules/pointage`. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `ServiceBorne.cs` (`RepasBorne :49` : liste de salariés ; `RepasAsync :452`), `ServiceRepas.cs`
@@ -46,6 +46,7 @@
 - **Jeux de tests** : repas déclaré pour trois membres → trois repas ; un membre déjà déclaré ce jour → refus pour lui
   seul, les autres enregistrés ; salarié hors équipe refusé.
 - **Critère de fin** : `dotnet test LogiBTP.slnx` vert.
+- **Réalisé** : `RepasBorne` reçoit `Membres` ; règle pure `ReglesRepas.Repartir` (hors équipe `REPAS_HORS_EQUIPE`, déjà déclaré `REPAS_DEJA`), refus par salarié, jour validé aussi refusé seul ; réponse `RepasEquipeResultat`. Écart : tests sur la règle pure (pas de test de service avec base).
 
 ## Lot 2 : repas dans la saisie d'équipe de la borne (A FAIRE)
 

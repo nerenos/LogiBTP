@@ -12,4 +12,6 @@ export const ETAT_CONGE = Object.freeze({
 export const ERREUR_POINTAGE = Object.freeze({
   POI_VALIDE: 'POI_VALIDE',
   BORNE_JETON: 'BORNE_JETON',
+  REPAS_DEJA: 'REPAS_DEJA',
+  REPAS_HORS_EQUIPE: 'REPAS_HORS_EQUIPE',
 });

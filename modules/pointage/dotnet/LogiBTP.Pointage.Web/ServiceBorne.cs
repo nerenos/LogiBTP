@@ -46,7 +46,9 @@ public sealed record PointageBorne(string Jeton, DateOnly Date, int ChaId, long?
 /// <summary>Journée d'un salarié à la borne : date choisie (jours passés de la fenêtre de rattrapage).</summary>
 public sealed record JourneeBorne(string Jeton, DateOnly Date);
 /// <summary>Repas du jour saisi à la borne (lot 10, A29) par le salarié identifié.</summary>
-public sealed record RepasBorne(string Jeton, RepasSaisi Repas);
+public sealed record RepasBorne(string Jeton, RepasSaisi Repas, List<int>? Membres = null);
+/// <summary>Résultat d'un repas d'équipe : salariés enregistrés, refusés (par salarié), repas du salarié identifié.</summary>
+public sealed record RepasEquipeResultat(List<int> Enregistres, List<RefusRepas> Refus, List<RepasDto> Repas);
 /// <summary>Ligne de la journée saisie à la borne (identifiant absent : nouvelle).</summary>
 public sealed record LigneBorne(long? Id, int ChaId, long? EntId, int TypeMo, string? SousType, int Minutes, string? Motif, string? Commentaire);
 /// <summary>Journée complète saisie à la borne : remplace les pointages saisis du jour (les autres jours sont inchangés).</summary>
@@ -449,11 +451,12 @@ public sealed class ServiceBorne(PointageDbContext db, SpecialisationPointage sp
     }
 
     /// <summary>Repas du jour du salarié identifié (date de la fenêtre de rattrapage) ; essai : contrôlé, rien d'écrit.</summary>
-    public async Task<List<RepasDto>> RepasAsync(HttpContext http, RepasBorne r, CancellationToken ct)
+    public async Task<object> RepasAsync(HttpContext http, RepasBorne r, CancellationToken ct)
     {
         var a = await AppareilAsync(http, ct);
         var salarie = Identifie(a, r.Jeton);
         ControlerDate(r.Repas.Date);
+        if (r.Membres is { Count: > 0 }) return await RepasEquipeAsync(http, a, salarie, r, ct);
         var s = (await specialisation.SalariesAsync(db, new FiltreSalaries(null, null, [salarie]), ct)).First();
         var repas = services.GetRequiredService<ServiceRepas>();
         if (!EnTest(http)) return await repas.EnregistrerAsync(s, r.Repas, Auteur(a), a.PapLibelle, ct);
@@ -464,6 +467,49 @@ public sealed class ServiceBorne(PointageDbContext db, SpecialisationPointage sp
         await tx.RollbackAsync(ct);
         db.ChangeTracker.Clear();
         return res;
+    }
+
+    /// <summary>
+    /// Repas déclaré par le chef pour plusieurs salariés (équipe de la borne) : chacun contrôlé seul (hors équipe, déjà
+    /// déclaré ce jour, jour validé : refus pour lui seul), les autres enregistrés. Essai : contrôlé, rien d'écrit.
+    /// </summary>
+    private async Task<RepasEquipeResultat> RepasEquipeAsync(HttpContext http, AppareilEntite a, int chef, RepasBorne r, CancellationToken ct)
+    {
+        var saisi = r.Repas;
+        if (saisi.RestaurantId is null && string.IsNullOrWhiteSpace(saisi.Nouveau))
+            throw ExceptionMetier.Invalide("REPAS_RESTAURANT", "Restaurant à préciser pour un repas d'équipe");
+        var membres = r.Membres!.Distinct().ToList();
+        var equipe = (await SalariesBorneAsync(a, ct)).Select(x => x.Id).Append(chef).ToHashSet();
+        var deja = (await db.Repas.AsNoTracking().Where(x => x.PrpDate == saisi.Date && membres.Contains(x.PrpSalId)).Select(x => x.PrpSalId).ToListAsync(ct)).ToHashSet();
+        var rep = ReglesRepas.Repartir(membres, equipe, deja);
+        var service = services.GetRequiredService<ServiceRepas>();
+        var auteur = Auteur(a);
+        var enregistres = new List<int>();
+        var refus = new List<RefusRepas>(rep.Refus);
+        var tx = EnTest(http) ? await db.Database.BeginTransactionAsync(ct) : null;
+        try
+        {
+            // Un restaurant « non trouvé » est créé une seule fois pour toute l'équipe (pas en essai : hors transaction).
+            if (!string.IsNullOrWhiteSpace(saisi.Nouveau) && rep.Acceptes.Count > 0 && tx is null)
+            {
+                var nouveau = await specialisation.CreerRestaurantAsync(db, saisi.Nouveau.Trim(), string.IsNullOrWhiteSpace(saisi.Ville) ? null : saisi.Ville.Trim(), auteur, ct);
+                saisi = saisi with { RestaurantId = nouveau.Id, Nouveau = null, Ville = null };
+            }
+            else if (tx is not null && !string.IsNullOrWhiteSpace(saisi.Nouveau)) saisi = saisi with { RestaurantId = null, Nouveau = null, Ville = null };
+            foreach (var m in rep.Acceptes)
+            {
+                if (saisi.RestaurantId is null) { enregistres.Add(m); continue; }
+                var s = (await specialisation.SalariesAsync(db, new FiltreSalaries(null, null, [m]), ct)).FirstOrDefault();
+                if (s is null) { refus.Add(new RefusRepas(m, ErreursPointage.RepasHorsEquipe)); continue; }
+                try { await service.EnregistrerAsync(s, saisi, auteur, a.PapLibelle, ct); enregistres.Add(m); }
+                catch (ExceptionMetier e) { db.ChangeTracker.Clear(); refus.Add(new RefusRepas(m, e.Code)); }
+            }
+        }
+        finally
+        {
+            if (tx is not null) { await tx.RollbackAsync(ct); await tx.DisposeAsync(); db.ChangeTracker.Clear(); }
+        }
+        return new RepasEquipeResultat(enregistres, refus, await service.LireAsync(chef, saisi.Date, saisi.Date, ct));
     }
 
     /// <summary>Ordre reconnu par son numéro (QR code ou saisie) : identifiant, chantier.</summary>
