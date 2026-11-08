@@ -40,7 +40,7 @@ public static partial class ReconnaissanceMail
     public static readonly string[] Actions = ["ALERTER", "RATTACHER", "IGNORER"];
     public static readonly string[] Natures = ["ARC", "REPONSE_DEVIS", "FACTURE_FOURNISSEUR", "BL", "RELANCE", "AUTRE"];
 
-    [GeneratedRegex(@"\s+")]
+    [GeneratedRegex(@"[\s﻿]+")]
     private static partial Regex Espaces();
 
     /// <summary>Minuscules, accents retirés (table du socle), apostrophe typographique droite, espaces resserrés.</summary>
@@ -133,6 +133,11 @@ public static partial class ReconnaissanceMail
     [GeneratedRegex(@"livr[a-z]*[^0-9]{0,40}?(?:([0-9]{1,2})[/.-]([0-9]{1,2})[/.-]([0-9]{4})|semaine\s*(?:n\s*°?\s*|no\s*)?([0-9]{1,2})(?:[/-]([0-9]{4}))?)")]
     private static partial Regex Livraison();
 
+    /// <summary>Années reconnues (hors plage : pas de date proposée, comme côté JS).</summary>
+    public const int AnneeMin = 2000, AnneeMax = 2099;
+
+    private static bool AnneeValable(int? a) => a is >= AnneeMin and <= AnneeMax;
+
     private static bool Bissextile(int a) => (a % 4 == 0 && a % 100 != 0) || a % 400 == 0;
 
     private static int JoursDuMois(int a, int m) => m == 2 ? (Bissextile(a) ? 29 : 28) : m is 4 or 6 or 9 or 11 ? 30 : 31;
@@ -173,11 +178,12 @@ public static partial class ReconnaissanceMail
                 {
                     var semaine = int.Parse(m.Groups[4].Value);
                     if (semaine < 1 || semaine > 53) continue;
-                    int? annee = m.Groups[5].Success ? int.Parse(m.Groups[5].Value) : anneeReference;
+                    int? annee = m.Groups[5].Success ? int.Parse(m.Groups[5].Value) : AnneeValable(anneeReference) ? anneeReference : null;
+                    if (m.Groups[5].Success && !AnneeValable(annee)) continue;
                     return (annee is null ? null : LundiDeSemaine(annee.Value, semaine), semaine, PrecisionLivraison.Semaine);
                 }
                 int j = int.Parse(m.Groups[1].Value), mo = int.Parse(m.Groups[2].Value), a = int.Parse(m.Groups[3].Value);
-                if (mo < 1 || mo > 12 || j < 1 || j > JoursDuMois(a, mo)) continue;
+                if (!AnneeValable(a) || mo < 1 || mo > 12 || j < 1 || j > JoursDuMois(a, mo)) continue;
                 return ($"{a}-{mo:00}-{j:00}", null, PrecisionLivraison.Jour);
             }
         }

@@ -11,7 +11,7 @@ export const NATURES = ['ARC', 'REPONSE_DEVIS', 'FACTURE_FOURNISSEUR', 'BL', 'RE
 
 /** Minuscules, accents retirés (table du socle), apostrophe typographique droite, espaces resserrés. */
 export function normaliser(texte) {
-  return sansAccent(texte).replace(/’/g, "'").replace(/\s+/g, ' ').trim();
+  return sansAccent(texte).replace(/’/g, "'").replace(/[\s\u0085﻿]+/g, ' ').trim();
 }
 
 const alnum = (c) => c !== undefined && /[a-z0-9]/.test(c);
@@ -98,12 +98,19 @@ const LIVRAISON = /livr[a-z]*[^0-9]{0,40}?(?:([0-9]{1,2})[/.-]([0-9]{1,2})[/.-](
 
 const bissextile = (a) => (a % 4 === 0 && a % 100 !== 0) || a % 400 === 0;
 const joursDuMois = (a, m) => (m === 2 ? (bissextile(a) ? 29 : 28) : [4, 6, 9, 11].includes(m) ? 30 : 31);
+/** Années reconnues (hors plage : pas de date proposée, comme côté C#). */
+export const ANNEE_MIN = 2000;
+export const ANNEE_MAX = 2099;
+const anneeValable = (a) => a !== null && a !== undefined && a >= ANNEE_MIN && a <= ANNEE_MAX;
 const deuxChiffres = (n) => String(n).padStart(2, '0');
 
 /** Lundi de la semaine n (1 à 53) de l'année : le lundi de la semaine 1 est celui de la semaine du 4 janvier. */
 function lundiDeSemaine(annee, semaine) {
-  const dow = (new Date(Date.UTC(annee, 0, 4)).getUTCDay() + 6) % 7;
-  return new Date(Date.UTC(annee, 0, 4 - dow + 7 * (semaine - 1))).toISOString().slice(0, 10);
+  const quatre = new Date(0);
+  quatre.setUTCFullYear(annee, 0, 4);
+  const dow = (quatre.getUTCDay() + 6) % 7;
+  quatre.setUTCDate(4 - dow + 7 * (semaine - 1));
+  return quatre.toISOString().slice(0, 10);
 }
 
 /** Numéros candidats : un des préfixes (numérotation des commandes), séparateur facultatif, chiffres (groupes séparés par - ou /). */
@@ -128,11 +135,12 @@ function livraisonAnnoncee(zones, anneeReference) {
       if (m[4] !== undefined) {
         const semaine = Number(m[4]);
         if (semaine < 1 || semaine > 53) continue;
-        const annee = m[5] !== undefined ? Number(m[5]) : anneeReference ?? null;
+        const annee = m[5] !== undefined ? Number(m[5]) : anneeValable(anneeReference) ? anneeReference : null;
+        if (m[5] !== undefined && !anneeValable(annee)) continue;
         return { date: annee === null ? null : lundiDeSemaine(annee, semaine), semaine, precision: PRECISION_LIVRAISON.SEMAINE };
       }
       const [j, mo, a] = [Number(m[1]), Number(m[2]), Number(m[3])];
-      if (mo < 1 || mo > 12 || j < 1 || j > joursDuMois(a, mo)) continue;
+      if (!anneeValable(a) || mo < 1 || mo > 12 || j < 1 || j > joursDuMois(a, mo)) continue;
       return { date: `${a}-${deuxChiffres(mo)}-${deuxChiffres(j)}`, semaine: null, precision: PRECISION_LIVRAISON.JOUR };
     }
   }
