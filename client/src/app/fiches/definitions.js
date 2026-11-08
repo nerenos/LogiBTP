@@ -290,7 +290,7 @@ export const TYPES_FICHE = {
         c('cpt_code', 'Compte comptable', 'ele_cpt_code', 'texte', { longueur: 20 }),
         c('tva_code', 'Code TVA', 'ele_tva_code', 'texte', { longueur: 10, aide: 'Code du taux de TVA du poste (T20…), vide : TVA du document' }),
         // Lot 7 des demandes du 25/10/2026 (module 064).
-        c('mots_cles', 'Mots-clés', 'ele_mots_cles', 'texte', { longueur: 500, largeur: 'plein', aide: 'Mots de recherche séparés par des virgules (domino, sucre, connecteur rapide…) : appel F3 et listes' }),
+        c('mots_cles', 'Mots-clés', 'ele_mots_cles', 'texte', { format: 'jetons', longueur: 500, largeur: 'plein', aide: 'Mots de recherche séparés par des virgules (domino, sucre, connecteur rapide…) : appel F3 et listes' }),
         c('code_barre', 'Code-barres', 'ele_code_barre', 'texte', { longueur: 50, non_copie: true, aide: 'EAN… unique dans la bibliothèque ; lu au lecteur dans la colonne Code d\'un document' }),
         c('description_html', 'Description technique', 'ele_description_html', 'html', { aide: 'Reprise par les éditions (lignes[].description_html)' }),
         c('delai_livraison', 'Délai de livraison (jours)', 'ele_delai_livraison', 'nombre', { format: '9999', aide: 'Délai global de l\'élément' }),

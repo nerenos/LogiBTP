@@ -81,7 +81,9 @@
   initiale.
 - **Critère de fin** : `npm test` vert ; composant exporté par le socle.
 
-## Lot 3 : P2, mots-clés en jetons dans la fiche élément (A FAIRE)
+## Lot 3 : P2, mots-clés en jetons dans la fiche élément (FAIT 08/11/2026)
+
+> Écart : la saisie est dans le module Fiche (`fiche.js`, champ texte de format `jetons`, valeur réécrite « a, b ») et la définition du cœur (`client/src/app/fiches/definitions.js`), pas dans `onglets.js` ; aucun changement C# (format inconnu accepté par la validation) ; tests dans `modules/fiche/js/test/fiche.test.js` et `client/test/mots-cles-jetons.test.js`.
 
 - **Module** : `modules/bibliotheque`. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : saisie des mots-clés de la fiche élément (`modules/bibliotheque/js/ui/onglets.js`, à localiser par
