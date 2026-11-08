@@ -585,16 +585,18 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         {
             if (d.EntDate > Aujourdhui) controles.Add(new MessageCalcul(null, "DATE_FUTURE", "La date du document est dans le futur"));
             if (d.EntDateExterne > Aujourdhui) controles.Add(new MessageCalcul(null, "DATE_FUTURE", "La date du fournisseur est dans le futur"));
-            // Numérotation continue : pas avant la dernière pièce numérotée du même type.
+            // Numérotation continue : pas avant la dernière pièce numérotée du même type (hors REMPLACE et groupe d'indices).
             if (type.TydNumerotationContinue && d.EntNumero is null)
             {
-                var derniere = await db.Documents.AsNoTracking()
-                    .Where(x => x.EntTydId == type.TydId && x.EntNumero != null && x.EntId != d.EntId && x.EntDate > d.EntDate)
-                    .OrderByDescending(x => x.EntDate).Select(x => new { x.EntNumero, x.EntDate }).FirstOrDefaultAsync(ct);
+                var candidates = await (from x in db.Documents.AsNoTracking()
+                                        join s in db.StatutsDocument.AsNoTracking() on x.EntStdId equals s.StdId
+                                        where x.EntTydId == type.TydId && x.EntNumero != null && x.EntId != d.EntId && x.EntDate > d.EntDate
+                                        select new PieceChronologie(x.EntId, x.EntNumero, x.EntDate, x.EntGroupeId, s.StdCode)).ToListAsync(ct);
+                var derniere = ChronologiePieces.Derniere(candidates, d.EntId, d.EntGroupeId, d.EntDate);
                 if (derniere is not null)
                 {
                     controles.Add(new MessageCalcul(null, "DATE_ANTERIEURE",
-                        $"La pièce {derniere.EntNumero} est datée du {derniere.EntDate:dd/MM/yyyy} : la date du document ne peut pas la précéder"));
+                        $"La pièce {derniere.Numero} est datée du {derniere.Date:dd/MM/yyyy} : la date du document ne peut pas la précéder"));
                 }
             }
         }

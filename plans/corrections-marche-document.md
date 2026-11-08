@@ -40,7 +40,7 @@
 
 | Lot | Titre | Module | Dépend de | Statut |
 |---|---|---|---|---|
-| 1 | D3 : contrôle de date sans les pièces remplacées ni le groupe | `modules/document` | — | A FAIRE |
+| 1 | D3 : contrôle de date sans les pièces remplacées ni le groupe | `modules/document` | — | FAIT |
 | 2 | D2 : précédent et montant de la période d'une situation (moteur et pied) | `modules/document` | — | A FAIRE |
 | 3 | M2 : pièces remplacées, bouton d'avoir et total des factures | cœur | — | A FAIRE |
 | 4 | M1 : case « Afficher le détail » et indices de la gestion du marché | cœur | 3 | A FAIRE |
@@ -50,7 +50,9 @@
 
 ---
 
-## Lot 1 : D3, contrôle de date sans les pièces remplacées ni le groupe (A FAIRE)
+## Lot 1 : D3, contrôle de date sans les pièces remplacées ni le groupe (FAIT le 08/11/2026)
+
+> Écart : la règle est extraite dans `ChronologiePieces.cs` (fonction pure, la requête SQL ne fait que lister les candidates avec leur statut) pour être testable sans base ; tests dans `ChronologiePiecesTests.cs`.
 
 - **Module** : `modules/document`. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `DocumentService.cs` (`:588-597`, requête de la dernière pièce numérotée du même type : exclure le
