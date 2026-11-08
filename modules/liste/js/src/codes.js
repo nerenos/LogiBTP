@@ -7,6 +7,7 @@ export const ERREUR_LISTE = Object.freeze({
   PERIODE_INCONNUE: 'PERIODE_INCONNUE',
   PERIODE_NOMBRE: 'PERIODE_NOMBRE',
   PERIODE_COLONNE: 'PERIODE_COLONNE',
+  COLONNE_INCONNUE: 'COLONNE_INCONNUE',
 });
 
 /** Périodes glissantes des filtres de date (bornes calculées à la date d'exécution : `periodes.js`). */

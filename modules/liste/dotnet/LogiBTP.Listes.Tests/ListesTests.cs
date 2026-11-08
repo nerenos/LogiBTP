@@ -72,11 +72,25 @@ public class PeriodesDeVueTests
             }
             var r = construit.Lot(2);
             var bornes = c["bornes"]!.AsArray().Select(n => n!.GetValue<string>()).ToArray();
-            Assert.Contains("(s.\"embauche\")::date BETWEEN CAST(@p0 AS date) AND CAST(@p1 AS date)", r.Texte);
+            var colonne = c["filtres"]![0]!["colonne"]!.GetValue<string>();
+            Assert.Contains($"(s.\"{colonne}\")::date BETWEEN CAST(@p0 AS date) AND CAST(@p1 AS date)", r.Texte);
             Assert.Equal(bornes, new[] { r.Parametres[0].Valeur?.ToString(), r.Parametres[1].Valeur?.ToString() });
             vus++;
         }
         Assert.True(vus >= 5);
+    }
+
+    /// <summary>Période d'un agrégat sur une colonne inconnue : même refus que le JS, sans base de données.</summary>
+    [Fact]
+    public void Agregats_refuses_comme_le_js()
+    {
+        foreach (var c in _jeu["agregats"]!.AsArray().Where(n => n!["erreur"] is not null))
+        {
+            var agregats = c!["agregats"].Deserialize<List<AgregatListe>>(JsonCalcul.Options)!;
+            var def = new DefinitionVue { Colonnes = Source().Colonnes.Select(x => new ColonneVue { Code = x.Code }).ToList() };
+            var construit = new ConstructeurRequete(Source(), def, new DemandeListe()).AvecPeriode(c);
+            Assert.Equal(c["erreur"]!.GetValue<string>(), Assert.Throws<ErreurListe>(() => construit.Agregats(agregats)).Code);
+        }
     }
 }
 

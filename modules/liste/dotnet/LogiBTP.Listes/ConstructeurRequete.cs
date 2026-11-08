@@ -94,7 +94,7 @@ public partial class ConstructeurRequete
     protected string Col(string code) =>
         Connue(code) ? "s." + Identifiant(code)
         : _colonnes.ContainsKey(code) ? throw new ErreurListe("COLONNE_CONFIDENTIELLE", $"Colonne {code} confidentielle")
-        : throw new ErreurListe("COLONNE_INCONNUE", $"Colonne {code} inconnue de la source");
+        : throw new ErreurListe(ErreursListe.ColonneInconnue, $"Colonne {code} inconnue de la source");
 
     /// <summary>Valeur de curseur convertie au type de la colonne (texte si le type n'est pas reconnu).</summary>
     protected (string Colonne, string Valeur) Typee(string code, string? valeur)
@@ -190,7 +190,8 @@ public partial class ConstructeurRequete
 
     /// <summary>
     /// Filtre « periode » : jour de la colonne entre les bornes de la période (valeur = code, nombre = x), calculées à la
-    /// date d'exécution. Colonne d'un autre type refusée (PERIODE_COLONNE). Même règle que resoudrePeriodes (requete.js).
+    /// date d'exécution (jour de la colonne : ::date pour un timestamp, comme slice(0, 10) d'une date ISO côté JS ; une colonne
+    /// timestamptz suit le fuseau de la session). Colonne inconnue refusée (COLONNE_INCONNUE), d'un autre type (PERIODE_COLONNE). Même règle que resoudrePeriodes (requete.js).
     /// </summary>
     private string ConditionPeriode(FiltreVue f, string col)
     {

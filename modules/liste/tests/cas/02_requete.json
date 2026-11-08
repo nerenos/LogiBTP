@@ -37,6 +37,10 @@
       {
         "code": "embauche",
         "type": "date"
+      },
+      {
+        "code": "embauche_le",
+        "type": "timestamp"
       }
     ],
     "colonne_id": "id",
@@ -53,7 +57,8 @@
           "Client",
           "Fournisseur"
         ],
-        "embauche": "2026-11-08"
+        "embauche": "2026-11-08",
+        "embauche_le": "2026-11-08T23:30:00"
       },
       {
         "id": 2,
@@ -66,7 +71,8 @@
         "etiquettes": [
           "Client"
         ],
-        "embauche": "2026-11-03"
+        "embauche": "2026-11-03",
+        "embauche_le": "2026-11-09T00:10:00"
       },
       {
         "id": 3,
@@ -822,6 +828,40 @@
       "requete": {},
       "attendu": [],
       "erreur": "PERIODE_INCONNUE"
+    },
+    {
+      "nom": "période de vue sur une colonne timestamp : le jour de l'horodatage décide (23h30 le jour même, 00h10 le lendemain)",
+      "reference": "2026-11-08",
+      "requete": {},
+      "filtres": [
+        {
+          "colonne": "embauche_le",
+          "op": "periode",
+          "valeur": "aujourd_hui"
+        }
+      ],
+      "attendu": [
+        1
+      ],
+      "bornes": [
+        "2026-11-08",
+        "2026-11-08"
+      ]
+    },
+    {
+      "nom": "période de vue : nombre décimal refusé",
+      "reference": "2026-11-08",
+      "requete": {},
+      "filtres": [
+        {
+          "colonne": "embauche",
+          "op": "periode",
+          "valeur": "derniers_jours",
+          "nombre": 2.5
+        }
+      ],
+      "attendu": [],
+      "erreur": "PERIODE_NOMBRE"
     }
   ],
   "segments": [
@@ -1138,6 +1178,26 @@
         "_lignes": 7,
         "n": 3
       }
+    },
+    {
+      "nom": "période d'agrégat sur une colonne inconnue : refusée",
+      "reference": "2026-11-08",
+      "requete": {},
+      "agregats": [
+        {
+          "code": "n",
+          "calcul": "compte",
+          "filtres": [
+            {
+              "colonne": "inexistante",
+              "op": "periode",
+              "valeur": "mois_en_cours"
+            }
+          ]
+        }
+      ],
+      "attendu": {},
+      "erreur": "COLONNE_INCONNUE"
     }
   ]
 }

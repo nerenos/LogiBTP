@@ -215,8 +215,8 @@ export class FournisseurMemoire {
     try {
       return resoudrePeriodes(filtres, new Map(source.colonnes.map((c) => [c.code, c.type])), { reference: d.reference ?? undefined, debutExercice: d.debut_exercice ?? null });
     } catch (e) {
-      if (e.code === ERREUR_LISTE.PERIODE_COLONNE) throw new ErreurFournisseur(422, e.code, texte('liste.fournisseur.periode_colonne', { colonne: filtres.find((f) => f.op === 'periode')?.colonne }));
-      throw new ErreurFournisseur(422, e.code ?? 'PERIODE', e.message);
+      if (e.code === ERREUR_LISTE.PERIODE_COLONNE) throw new ErreurFournisseur(422, e.code, texte('liste.fournisseur.periode_colonne', { colonne: e.colonne }));
+      throw new ErreurFournisseur(422, e.code ?? ERREUR_LISTE.PERIODE_INCONNUE, e.message);
     }
   }
 

@@ -10,6 +10,7 @@ public static class ErreursListe
     public const string PeriodeInconnue = "PERIODE_INCONNUE";
     public const string PeriodeNombre = "PERIODE_NOMBRE";
     public const string PeriodeColonne = "PERIODE_COLONNE";
+    public const string ColonneInconnue = "COLONNE_INCONNUE";
 }
 
 /// <summary>Périodes glissantes des filtres de date (bornes calculées à la date d'exécution : Periodes.cs).</summary>

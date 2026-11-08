@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  normaliser, compilerFormule, resolveurColonnes, ModeleVue, FournisseurMemoire, correspond, calculerLargeurs, valeursDistinctes, bornesPeriode,
+  normaliser, compilerFormule, resolveurColonnes, ModeleVue, FournisseurMemoire, correspond, calculerLargeurs, valeursDistinctes, bornesPeriode, resoudrePeriodes,
   filtreVuePeriode, libellePeriode, resoudrePeriodes, PERIODE, OPERATEURS_DATE,
 } from '../src/index.js';
 
@@ -35,6 +35,11 @@ describe('requêtes paginées (jeu partagé avec le serveur)', () => {
         await expect(f.lot({ ...demande, taille: 2 })).rejects.toMatchObject({ code: c.erreur });
         return;
       }
+      if (c.bornes) {
+        const types = new Map(jeu.source.colonnes.map((x) => [x.code, x.type]));
+        const [resolu] = resoudrePeriodes(c.filtres, types, { reference: c.reference, debutExercice: c.debut_exercice ?? null });
+        expect([resolu.bornes.debut, resolu.bornes.fin]).toEqual(c.bornes);
+      }
       // Lots de 2 : la concaténation des lots doit donner l'ordre complet.
       const ids = [];
       let apres = null;
@@ -59,7 +64,12 @@ describe('requêtes paginées (jeu partagé avec le serveur)', () => {
 
   for (const c of jeu.agregats) {
     it(`agrégats : ${c.nom}`, async () => {
-      const r = await fournisseur().agregats({ definition: { ...definition, theme: 't' }, ...c.requete, reference: c.reference, agregats: c.agregats });
+      const demande = { definition: { ...definition, theme: 't' }, ...c.requete, reference: c.reference, agregats: c.agregats };
+      if (c.erreur) {
+        await expect(fournisseur().agregats(demande)).rejects.toMatchObject({ code: c.erreur });
+        return;
+      }
+      const r = await fournisseur().agregats(demande);
       for (const [code, v] of Object.entries(c.attendu)) {
         if (v === null) expect(r[code], code).toBeNull();
         else expect(r[code], code).toBeCloseTo(v, 8);

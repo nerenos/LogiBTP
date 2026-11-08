@@ -59,14 +59,21 @@ export function aujourdhui() {
 /**
  * Filtres « periode » résolus à la date d'exécution : { colonne, op: 'periode', valeur: code, nombre } devient le même
  * filtre avec ses bornes { debut, fin } (calculées par bornesPeriode). La colonne doit être de type date (types : code
- * de colonne -> type) sinon erreur PERIODE_COLONNE. Même règle que ConstructeurRequete.ConditionFiltre côté C#.
+ * de colonne -> type) sinon erreur PERIODE_COLONNE (colonne inconnue : COLONNE_INCONNUE). Même règle que ConstructeurRequete.ConditionFiltre côté C#.
  */
 export function resoudrePeriodes(filtres, types, { reference = aujourdhui(), debutExercice = null } = {}) {
   return (filtres ?? []).map((f) => {
     if (f.op !== 'periode') return f;
+    if (!types.has(f.colonne)) {
+      const e = new Error(`Colonne ${f.colonne} inconnue de la source`);
+      e.code = ERREUR_LISTE.COLONNE_INCONNUE;
+      e.colonne = f.colonne;
+      throw e;
+    }
     if (!estTypeDate(types.get(f.colonne))) {
       const e = new Error(`Période sur la colonne ${f.colonne} : colonne de date attendue`);
       e.code = ERREUR_LISTE.PERIODE_COLONNE;
+      e.colonne = f.colonne;
       throw e;
     }
     return { ...f, bornes: bornesPeriode(f.valeur, f.nombre ?? null, reference, debutExercice) };
