@@ -7,3 +7,16 @@ public static class ErreursMail
 {
     public const string MailConfirmation = "MAIL_CONFIRMATION";
 }
+
+/// <summary>Type d'une reconnaissance spécialisée d'un courriel.</summary>
+public static class TypeReconnaissance
+{
+    public const string AccuseReception = "ACCUSE_RECEPTION";
+}
+
+/// <summary>Précision de la livraison annoncée par un accusé de réception.</summary>
+public static class PrecisionLivraison
+{
+    public const string Jour = "JOUR";
+    public const string Semaine = "SEMAINE";
+}

@@ -23,20 +23,20 @@
 
 | N° | Question | Recommandation | Statut |
 |---|---|---|---|
-| AO1 | Où chercher le numéro de commande et la date de livraison ? | Objet et corps du message (texte), pas d'analyse des pièces jointes PDF dans ce plan ; motifs d'AR (« accusé de réception », « confirmation de commande », « AR », « ARC ») et numéro au format de la numérotation des commandes. | OUVERT |
-| AO2 | Que fait-on d'un AR reconnu ? | Rattachement automatique du message à la commande trouvée ; numéro et date de livraison **proposés** dans la boîte de réception, appliqués à l'ARC de la commande seulement après validation par l'utilisateur. | OUVERT |
-| AO3 | Commande introuvable ou plusieurs candidates ? | Pas de rattachement ; message marqué « AR à rapprocher » avec les candidates proposées. | OUVERT |
+| AO1 | Où chercher le numéro de commande et la date de livraison ? | Objet et corps du message (texte), pas d'analyse des pièces jointes PDF dans ce plan ; motifs d'AR (« accusé de réception », « confirmation de commande », « AR », « ARC ») et numéro au format de la numérotation des commandes. | ✔ Tranché (08/11/2026) : recommandation retenue |
+| AO2 | Que fait-on d'un AR reconnu ? | Rattachement automatique du message à la commande trouvée ; numéro et date de livraison **proposés** dans la boîte de réception, appliqués à l'ARC de la commande seulement après validation par l'utilisateur. | ✔ Tranché (08/11/2026) : recommandation retenue |
+| AO3 | Commande introuvable ou plusieurs candidates ? | Pas de rattachement ; message marqué « AR à rapprocher » avec les candidates proposées. | ✔ Tranché (08/11/2026) : recommandation retenue |
 
 | Lot | Titre | Module | Dépend de | Statut |
 |---|---|---|---|---|
-| 1 | Reconnaissance d'un AR (motifs, numéro, date) | `modules/mail` | AO1 | A FAIRE |
+| 1 | Reconnaissance d'un AR (motifs, numéro, date) | `modules/mail` | AO1 | FAIT (08/11/2026) |
 | 2 | Point d'accroche « AR reconnu » à la réception | `modules/mail` | 1, AO2 | A FAIRE |
 | 3 | Rapprochement de la commande et rattachement | cœur | 2, AO3 | A FAIRE |
 | 4 | Proposition de la livraison confirmée dans la boîte de réception | cœur | 3 | A FAIRE |
 
 ---
 
-## Lot 1 : reconnaissance d'un AR (A FAIRE)
+## Lot 1 : reconnaissance d'un AR (FAIT le 08/11/2026)
 
 - **Module** : `modules/mail`. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `reconnaissance.js` ↔ `ReconnaissanceMail.cs` (nouvelle reconnaissance : est-ce un AR, numéro de
@@ -47,6 +47,7 @@
   n »…, selon AO1).
 - **Jeux de tests** : AR avec numéro et date ; AR sans date ; message ordinaire non reconnu ; deux numéros candidats.
 - **Critère de fin** : le jeu passe en JS et en C# ; `npm test`, `dotnet test LogiBTP.slnx` verts.
+- **Réalisé** : `reconnaitreAccuse` ↔ `ReconnaitreAccuse` (préfixes de numérotation et année de référence fournis par l'appelant ; livraison reconnue seulement après un mot « livraison ») ; jeu séparé `02_accuses_reception.json`, `AccuseReceptionTests.cs` ; codes `TYPE_RECONNAISSANCE`, `PRECISION_LIVRAISON`.
 
 ## Lot 2 : point d'accroche « AR reconnu » à la réception (A FAIRE)
 
