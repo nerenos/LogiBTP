@@ -79,6 +79,14 @@ public static partial class TerrainBtp
             if (await ComptesBtp.SalarieAsync(db, u.Code, ct) is not int s) return Results.Ok(new { personne = (object?)null, date = jour });
             return Results.Ok(await JourneeAsync(db, services, u, s, jour, ct));
         });
+        // Hors ligne (terrain-suites lot 9, TS10 b, TS11 b) : chantiers et ordres ouverts proposés à la saisie libre et à
+        // la recherche d'un ordre par son numéro sans réseau, préchargés chaque jour.
+        g.MapGet("/journee/chantiers", async (HttpContext http, LogiBtpContext db, IServiceProvider services, CancellationToken ct) =>
+        {
+            var u = Utilisateur.Depuis(http);
+            if (await ComptesBtp.SalarieAsync(db, u.Code, ct) is not int s) return Results.Ok(new { personne = (object?)null });
+            return Results.Ok(await ChantiersHorsLigneAsync(db, services, u, s, ct));
+        });
         g.MapPut("/journee", async (JourneeTerrain j, HttpContext http, LogiBtpContext db, IServiceProvider services, CancellationToken ct) =>
         {
             var u = Utilisateur.Depuis(http);
@@ -141,6 +149,50 @@ public static partial class TerrainBtp
             chantiers, ordres = await specialisation.OrdresAsync(pdb, chantiers.Select(c => c.Id).ToList(), ct),
             motifs = await MotifsAsync(db, ct),
         };
+    }
+
+    /// <summary>Périmètre des chantiers gardés hors ligne : service principal de la personne, sinon son planning à un mois (lot 9).</summary>
+    public static string PerimetreHorsLigne(int? servicePrincipal) => servicePrincipal is null ? PerimetrePlanning : PerimetreService;
+    public const string PerimetreService = "SERVICE";
+    public const string PerimetrePlanning = "PLANNING";
+
+    /// <summary>
+    /// Chantiers gardés hors ligne pour la personne @s (lot 9, TS10 b) : chantiers ouverts (hors dotations, sauf entretien
+    /// en cours) de son service principal ou de ses services fils (@srv : un ordre en vigueur non terminé ou une tâche
+    /// du planning à un mois de ce service), chantiers de son planning à un mois (seul critère sans service principal :
+    /// @srv nul) et chantiers internes.
+    /// </summary>
+    public const string SqlChantiersHorsLigne = $"""
+        WITH srv AS (SELECT v.srv_id FROM service v WHERE v.srv_id = @srv OR v.srv_parent_id = @srv)
+        SELECT c.cha_id AS id, c.cha_code AS code, c.cha_libelle AS libelle, FALSE AS clos, c.cha_interne AS interne,
+               c.cha_ville AS ville, t.per_raison_sociale AS client
+        FROM chantier c LEFT JOIN personne t ON t.per_id = c.cha_tiers_id
+        WHERE c.cha_interne
+           OR c.cha_statut = 'OUVERT' AND (NOT f_chantier_dotation(c.cha_id) OR f_chantier_entretien_ouvert(c.cha_id)) AND (
+                EXISTS (SELECT 1 FROM pla_tache k JOIN pla_affectation a ON a.aff_tac_id = k.tac_id
+                        WHERE a.aff_res_type IN ('SALARIE', 'INTERIM') AND a.aff_res_id = @s::text AND k.tac_type_element = 'chantier' AND k.tac_id_element = c.cha_id::text
+                          AND k.tac_debut < current_date + 31 AND k.tac_fin > current_date - 31)
+             OR EXISTS (SELECT 1 FROM pla_tache k JOIN srv ON srv.srv_id = k.tac_srv_id
+                        WHERE k.tac_type_element = 'chantier' AND k.tac_id_element = c.cha_id::text AND k.tac_debut < current_date + 31 AND k.tac_fin > current_date - 31)
+             OR EXISTS (SELECT 1 FROM document d JOIN srv ON srv.srv_id = d.ent_srv_id JOIN type_document ty ON ty.tyd_id = d.ent_tyd_id JOIN statut_document st ON st.std_id = d.ent_std_id
+                        WHERE d.ent_chantier_id = c.cha_id AND ty.tyd_famille = 'E' AND d.ent_is_reference AND st.std_code NOT IN ({SqlBtp.HorsVigueur})
+                          AND coalesce(d.ent_exe_etat, '') <> 'TERMINE'))
+        ORDER BY c.cha_interne, c.cha_code
+        LIMIT 5000
+        """;
+
+    /// <summary>Chantiers et ordres ouverts gardés hors ligne (lot 9) ; sans droit de saisie libre : aucun.</summary>
+    private static async Task<object> ChantiersHorsLigneAsync(LogiBtpContext db, IServiceProvider services, Utilisateur u, int s, CancellationToken ct)
+    {
+        var libre = await PorteeLibreAsync(services, u, ct);
+        var srv = await db.Database.SqlQueryRaw<int?>("""
+            SELECT sm.sme_srv_id AS "Value" FROM salarie sa JOIN service_membre sm ON sm.sme_ind_id = sa.sal_ind_id AND sm.sme_principal WHERE sa.sal_id = @s
+            """, new NpgsqlParameter("s", s)).FirstOrDefaultAsync(ct);
+        var pdb = services.GetRequiredService<PointageDbContext>();
+        List<ChantierPointage> chantiers = libre is null ? [] : await pdb.Database.SqlQueryRaw<ChantierPointage>(SqlChantiersHorsLigne, new NpgsqlParameter("s", s),
+            SqlBtp.P("srv", srv, NpgsqlTypes.NpgsqlDbType.Integer)).ToListAsync(ct);
+        List<OrdrePointage> ordres = chantiers.Count == 0 ? [] : await services.GetRequiredService<SpecialisationPointage>().OrdresAsync(pdb, chantiers.Select(c => c.Id).ToList(), ct);
+        return new { personne = new { id = s }, libre, perimetre = PerimetreHorsLigne(srv), chantiers, ordres };
     }
 
     private static string Signature(DateOnly d, int cha, long? ent, int type, string? st, int min, string? motif) => $"{d}|{cha}|{ent}|{type}|{st}|{min}|{motif}";

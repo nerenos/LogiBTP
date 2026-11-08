@@ -24,7 +24,7 @@
 | 6 | Menu simplifié du terrain et raccourci vers le menu classique | cœur | 5 | FAIT (08/11/2026) |
 | 7 | Pointage à la ligne d'ordre | cœur | — | FAIT (08/11/2026) |
 | 8 | Photos HEIC converties par l'iPhone | cœur | — | FAIT (08/11/2026) |
-| 9 | Hors ligne : chantiers et ordres ouverts du service | cœur | — | A FAIRE |
+| 9 | Hors ligne : chantiers et ordres ouverts du service | cœur | — | FAIT (08/11/2026) |
 | 10 | Hors ligne : ordre saisi par son numéro, résolu à l'envoi | cœur | 9 | A FAIRE |
 | 11 | Limite de dépôt de la GED exposée au client | `modules/ged` | — | A FAIRE |
 | 12 | Contrôle de taille des photos à la prise de vue | cœur | 11 | A FAIRE |
@@ -218,7 +218,7 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
   (Vite, API simulée) à 360 px (jour et semaine : barre de 336 px dans 336 px, aucun défilement horizontal), 500 px et
   1280 px (une seule rangée, inchangée). Aucun script SQL.
 
-## Lot 9 : hors ligne, chantiers et ordres ouverts du service (TS10 b, TS11 b)
+## Lot 9 : hors ligne, chantiers et ordres ouverts du service (TS10 b, TS11 b) (FAIT 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `src/LogiBTP.Api/Btp/TerrainPointageBtp.cs` (route de lecture : chantiers ouverts du service principal
@@ -230,6 +230,20 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
 - **Tests** : C# : périmètre du service ; JS : recherche d'un ordre préchargé sans réseau.
 - **Critère de fin** : `npm test` vert ; saisie libre sur un chantier du service jamais ouvert, sans réseau, envoyée au
   retour.
+- **Réalisé / écarts** : route `GET /api/terrain/journee/chantiers` (`TerrainPointageBtp.cs`, sous le droit du pointage
+  de la journée ; sans droit de saisie libre : aucun chantier) : `SqlChantiersHorsLigne`, chantiers ouverts (hors
+  dotations, sauf entretien en cours) portant un ordre en vigueur non terminé ou une tâche du planning à un mois du
+  service principal de la personne ou d'un service fils, plus les chantiers de son planning à un mois et les chantiers
+  internes ; leurs ordres ouverts (`OrdresAsync` du pointage). Point OUVERT tranché par la proposition : personne sans
+  service principal → chantiers de son planning à un mois (`PerimetreHorsLigne`, renvoyé en `perimetre`). Client :
+  adresse ajoutée au préchargement quotidien (`adressesAPrecharger`) ; `terrain/terrain.js` : `completerReferentiel`
+  (sans réseau, chantiers et ordres gardés ajoutés à ceux de la journée), `journeeSansReseau` (journée jamais lue :
+  saisie libre seulement, `connus` vide donc aucun pointage du serveur retiré, bandeau `terrain_btp.pointage.sans_reseau`),
+  `chercherOrdre` (numéro exact sans casse ni espaces, sinon le seul qui le contient) ; `pointage-terrain.js` : champ
+  « N° d'ordre » de la saisie libre (chantier et ordre choisis d'un coup, en ligne comme hors ligne). Écart : la
+  journée lue en ligne garde sa liste de chantiers (tous les chantiers ouverts) ; les équipiers ne sont pas proposés
+  sur une journée jamais lue. Tests : `ChantiersHorsLigneTerrainTests` (C# ; périmètre sur base si `LOGIBTP_TEST_PG`,
+  non exécuté ici), `terrain.test.js`. Aucun script SQL.
 
 ## Lot 10 : hors ligne, ordre saisi par son numéro, résolu à l'envoi (TS11 a)
 

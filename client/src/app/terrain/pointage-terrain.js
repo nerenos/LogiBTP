@@ -7,7 +7,7 @@ import { choisirRestaurant } from '../pointage/repas.js';
 import { choixMultiple } from '../choix-multiple.js';
 import { EcranEtapesAtelier } from '@logibtp/execution/ui';
 import { MODULE_FACULTATIF } from '../codes.js';
-import { completerJournee, presaisirJournee, ligneDuPointage } from './terrain.js';
+import { completerJournee, presaisirJournee, ligneDuPointage, completerReferentiel, journeeSansReseau, chercherOrdre } from './terrain.js';
 import { envoyerOuGarder, fournisseurEtapes, OPERATION_TERRAIN } from './operations-terrain.js';
 import { lireOperation, marquerOperation, retirerOperation } from '../hors-ligne/operations.js';
 import { estHorsLigne, ETAT_ATTENTE } from '../hors-ligne/attente.js';
@@ -20,6 +20,8 @@ import { SUJET_ATTENTE } from '../hors-ligne/synchro.js';
 // Serveur : TerrainPointageBtp.cs (mêmes contrôles et blocages que la saisie au bureau).
 // Lot 4 : serveur injoignable, la journée est gardée sur l'appareil (file d'opérations) et rouverte telle quelle ;
 // refusée à l'envoi : bandeau avec la raison, Réessayer ou Abandonner ma saisie.
+// terrain-suites lot 9 (TS10 b, TS11 b) : sans réseau, chantiers et ordres ouverts du service gardés sur l'appareil
+// (saisie libre sur un chantier jamais ouvert, même une journée jamais lue) ; ordre cherché par son numéro.
 
 let referentiels = null;
 
@@ -45,10 +47,17 @@ export class PointageTerrain {
     try {
       referentiels ??= await api.pointage.referentiels();
       this.d = await api.terrain.journee(jour);
+      // Sans réseau (réponse gardée) : chantiers et ordres ouverts du service ajoutés à ceux de la journée.
+      if ((this.app.apiPerdue || globalThis.navigator?.onLine === false) && this.d.libre) this.d = completerReferentiel(this.d, await api.terrain.chantiersJournee().catch(() => null));
     } catch (e) {
       if (!estHorsLigne(e)) { this.app.erreur(e); return; }
-      this.zone.innerHTML = `<p class="carte avertissement">${iconeHtml('terrain_btp_hors_ligne')} ${texteHtml('terrain_btp.pointage.hors_ligne')}</p>`;
-      return;
+      // Journée jamais lue sur l'appareil : saisie libre seulement, sur les chantiers gardés.
+      const d = referentiels ? journeeSansReseau(jour, await api.terrain.chantiersJournee().catch(() => null)) : null;
+      if (!d) {
+        this.zone.innerHTML = `<p class="carte avertissement">${iconeHtml('terrain_btp_hors_ligne')} ${texteHtml('terrain_btp.pointage.hors_ligne')}</p>`;
+        return;
+      }
+      this.d = d;
     }
     // Journée gardée sur l'appareil et pas encore envoyée : elle remplace celle du serveur.
     this.lignes = this.operation ? this.operation.corps.lignes.map(depuisOperation) : (this.d.pointages ?? []).map(depuisPointage);
@@ -100,6 +109,7 @@ export class PointageTerrain {
     const sansLigne = d.taches.filter((t) => !this.lignes.some((l) => l.tac_id === t.id));
     this.zone.innerHTML = `<div class="terrain-pointage">
       ${this.#bandeauOperation()}
+      ${d.sansReseau ? `<p class="carte avertissement">${iconeHtml('terrain_btp_hors_ligne')} ${texteHtml('terrain_btp.pointage.sans_reseau')}</p>` : ''}
       <p class="terrain-bilan" data-bilan></p>
       ${lecture ? `<p class="carte">${iconeHtml('verrou')} ${texteHtml('terrain_btp.pointage.validee')}</p>` : ''}
       ${!lecture && sansLigne.length ? `<div class="terrain-a-pointer"><b>${texteHtml('terrain_btp.pointage.a_pointer')}</b>${sansLigne.map((t) => `<button type="button" class="terrain-bouton" data-pointer="${t.id}">${iconeHtml('ajouter')} ${echapper(t.libelle)}${t.chef && t.membres.length ? ` · ${iconeHtml('pointage_equipe')} ${t.membres.length + 1}` : ''}</button>`).join('')}</div>` : ''}
@@ -211,7 +221,7 @@ export class PointageTerrain {
       const libreEquipe = !l.id && l.libre && this.d.equipiers.length > 0;
       return `<div class="terrain-saisie" data-i="${i}">
         <p class="terrain-ligne"><b>${titre}</b>${lecture ? '' : `<button type="button" class="terrain-bouton" data-retirer aria-label="${texteHtml('terrain_btp.pointage.retirer')}" title="${texteHtml(l.groupe ? 'terrain_btp.pointage.retirer_seul' : 'terrain_btp.pointage.retirer')}">${iconeHtml('retirer')}</button>`}</p>
-        ${l.libre ? `<div class="terrain-champs"><label>${texteHtml('terrain_btp.pointage.chantier')} <span data-combo="chantier"></span></label><label>${texteHtml('terrain_btp.pointage.ordre')} <span data-combo="ordre"></span></label></div>` : lieu ? `<p class="aide">${lieu}</p>` : ''}
+        ${l.libre ? `<div class="terrain-champs"><label>${texteHtml('terrain_btp.pointage.numero')} <input data-numero inputmode="search" size="12" placeholder="${texteHtml('terrain_btp.pointage.numero_exemple')}" ${lecture ? 'readonly' : ''}></label><label>${texteHtml('terrain_btp.pointage.chantier')} <span data-combo="chantier"></span></label><label>${texteHtml('terrain_btp.pointage.ordre')} <span data-combo="ordre"></span></label></div>` : lieu ? `<p class="aide">${lieu}</p>` : ''}
         <div class="terrain-champs">
           <label>${texteHtml('terrain_btp.pointage.type')} <span data-combo="type"></span></label>
           <label>${texteHtml('terrain_btp.pointage.activite')} <span data-combo="sous-type"></span></label>
@@ -245,6 +255,17 @@ export class PointageTerrain {
           if (srv && !l.type_mo) { l.type_mo = referentiels.types_mo.find((t) => t.srv_id === srv)?.id ?? null; this.#rendreLignes(lecture); }
         }, true);
       }
+      // Ordre cherché par son numéro parmi les ordres connus de l'appareil : chantier et ordre choisis d'un coup.
+      bloc.querySelector('[data-numero]')?.addEventListener('change', (e) => {
+        if (!e.target.value.trim()) return;
+        const o = chercherOrdre(e.target.value, this.d.ordres);
+        if (!o) { this.app.message(texte('terrain_btp.pointage.ordre_inconnu', { numero: e.target.value.trim() }), 'avertissement'); return; }
+        l.cha_id = o.cha_id;
+        l.ent_id = o.id;
+        if (o.srv_id && !l.type_mo) l.type_mo = referentiels.types_mo.find((t) => t.srv_id === o.srv_id)?.id ?? null;
+        this.#changer();
+        this.#rendreLignes(lecture);
+      });
       combo('type', referentiels.types_mo.map((t) => ({ valeur: t.id, libelle: t.libelle, detail: t.code })), l.type_mo, (v) => { l.type_mo = v == null ? null : Number(v); });
       combo('sous-type', referentiels.sous_types.map((s) => ({ valeur: s.code, libelle: s.libelle })), l.sous_type, (v) => { l.sous_type = v; this.#rendreLignes(lecture); }, true);
       const champ = (sel, changer) => bloc.querySelector(sel)?.addEventListener('change', (e) => { changer(e.target); this.#changer(); });

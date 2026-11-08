@@ -229,6 +229,8 @@ export const api = {
     chantier: (id) => appel('GET', `/terrain/chantiers/${id}`),
     journee: (date) => appel('GET', `/terrain/journee?date=${date}`),
     enregistrerJournee: (j) => appel('PUT', '/terrain/journee', j),
+    /** Chantiers et ordres ouverts gardés pour la saisie libre sans réseau (plan terrain-suites, lot 9). */
+    chantiersJournee: () => appel('GET', '/terrain/journee/chantiers'),
     etapes: (ordres = []) => appel('GET', `/terrain/etapes${ordres.length ? `?ordres=${ordres.join(',')}` : ''}`),
     ordreEtapes: async (numero) => (await appel('GET', `/terrain/etapes?numero=${encodeURIComponent(numero)}`)).ordres[0] ?? null,
     validerEtape: (entId, code) => appel('POST', '/terrain/etapes/valider', { ent_id: entId, code }),

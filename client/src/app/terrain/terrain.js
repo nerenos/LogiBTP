@@ -91,6 +91,44 @@ export function ligneDuPointage(ligne, tache) {
   return tache?.lig_id && tache.ent_id != null && tache.ent_id === ligne.ent_id ? tache.ligne ?? null : null;
 }
 
+/** Ajoute à `liste` les éléments de `autres` absents (même `id`), sans modifier les listes reçues. */
+const unir = (liste = [], autres = []) => [...liste, ...autres.filter((a) => !liste.some((x) => x.id === a.id))];
+
+/**
+ * Journée complétée sans réseau (terrain-suites lot 9, TS10 b) par les chantiers et ordres ouverts gardés sur l'appareil
+ * (`GET /api/terrain/journee/chantiers`) : saisie libre et recherche d'un ordre sur un chantier jamais ouvert.
+ */
+export function completerReferentiel(journee, gardes) {
+  if (!gardes?.chantiers?.length) return journee;
+  return { ...journee, chantiers: unir(journee.chantiers, gardes.chantiers), ordres: unir(journee.ordres, gardes.ordres) };
+}
+
+/**
+ * Journée jamais lue sur l'appareil, sans réseau (lot 9) : aucune tâche ni pointage connus, saisie libre seulement sur
+ * les chantiers gardés ; `connus` vide à l'envoi, donc aucun pointage du serveur retiré. Null sans droit de saisie libre.
+ */
+export function journeeSansReseau(jour, gardes) {
+  if (!gardes?.personne || !gardes.libre) return null;
+  return { personne: gardes.personne, date: jour, minutes_prevues: 0, valide: false, taches: [], pointages: [], libre: gardes.libre, equipiers: [],
+    chantiers: gardes.chantiers ?? [], ordres: gardes.ordres ?? [], motifs: [], sansReseau: true };
+}
+
+/** Numéro d'ordre comparé sans casse ni espaces. */
+const numeroNormalise = (n) => String(n ?? '').replace(/\s+/g, '').toUpperCase();
+
+/**
+ * Ordre cherché par son numéro parmi les ordres connus de l'appareil (lot 9, TS11 b) : numéro exact (sans casse ni
+ * espaces), sinon le seul ordre dont le numéro contient la saisie ; null si aucun ou plusieurs.
+ */
+export function chercherOrdre(numero, ordres = []) {
+  const n = numeroNormalise(numero);
+  if (!n) return null;
+  const exact = ordres.find((o) => numeroNormalise(o.numero) === n);
+  if (exact) return exact;
+  const proches = ordres.filter((o) => o.numero && numeroNormalise(o.numero).includes(n));
+  return proches.length === 1 ? proches[0] : null;
+}
+
 /** Côté le plus long d'une photo réduite par défaut (T17 : « qualité d'origine » au choix). */
 export const PHOTO_COTE_MAX = 2000;
 
@@ -145,7 +183,7 @@ export async function preparerPhoto(fichier, { origine = false, max = PHOTO_COTE
 /**
  * Lectures à garder sur l'appareil pour le hors ligne (T10) : tâches de chaque jour et de chaque semaine, de la
  * semaine en cours et de la suivante ; journées de pointage et repas de la semaine en cours ; référentiels du
- * pointage, ordres et étapes. Adresses identiques à celles de la page (le service worker garde les réponses par adresse).
+ * pointage, ordres et étapes ; chantiers et ordres ouverts de la saisie libre sans réseau (terrain-suites lot 9). Adresses identiques à celles de la page (le service worker garde les réponses par adresse).
  */
 export function adressesAPrecharger(jour, salarie = null, { demandes = false } = {}) {
   const lundi = lundiDe(jour);
@@ -156,7 +194,7 @@ export function adressesAPrecharger(jour, salarie = null, { demandes = false } =
     ...[lundi, ajouterJours(lundi, 7)].map((d) => `/api/terrain?${params({ du: d, au: ajouterJours(d, 6) })}`),
     ...jours.slice(0, 7).map((d) => `/api/terrain/journee?date=${d}`),
     ...(salarie ? jours.slice(0, 7).map((d) => `/api/pointage/repas/${salarie}?du=${d}&au=${d}`) : []),
-    '/api/pointage/referentiels', '/api/terrain/etapes',
+    '/api/pointage/referentiels', '/api/terrain/etapes', '/api/terrain/journee/chantiers',
     ...(demandes ? ['/api/terrain/demandes'] : []),
   ];
 }

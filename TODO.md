@@ -136,7 +136,8 @@ Plan en 24 lots : [terrain-suites.md](documentation/conception/plans/terrain-sui
   galerie arrivées en JPEG réduit dans la GED) ; échec : le point revient en question (TS8).
 - [ ] Lot 4, suites : saisie libre hors ligne limitée aux chantiers et ordres déjà lus (journée gardée) ; nouvelle
   recherche d'un ordre par son numéro impossible hors ligne ; envoi des photos gardées sans contrôle de taille avant
-  l'envoi (limite de dépôt de la GED). Plan : lots 9 à 12.
+  l'envoi (limite de dépôt de la GED). Plan : lots 9 à 12. Fait le 08/11/2026 : lot 9 (chantiers et ordres ouverts du
+  service gardés chaque jour, saisie libre sur une journée jamais lue, ordre cherché par son numéro sur l'appareil).
 - [ ] Lot 5, suites : valeur juridique de la signature simple à faire confirmer (par l'utilisateur, hors code) ; levée
   des réserves suivie (tâche du CRM seulement) ; demande d'approvisionnement en texte libre (articles de la bibliothèque
   à choisir plus tard) ; réception gardée hors ligne horodatée à l'envoi par le serveur. Plan : lots 13 à 18.

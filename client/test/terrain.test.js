@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { lundiDe, mobileAffiche, lienItineraire, liensTexte, numeroTel, presaisirJournee, actionsTache, minutesPointees, tachesGardees, jourPointage, adressesAPrecharger, plansTache, plansTacheHtml, plansAPrecharger, ligneDuPointage, champsPhotosHtml, TYPES_PHOTOS, estHeic } from '../src/app/terrain/terrain.js';
+import { lundiDe, mobileAffiche, lienItineraire, liensTexte, numeroTel, presaisirJournee, actionsTache, minutesPointees, tachesGardees, jourPointage, adressesAPrecharger, plansTache, plansTacheHtml, plansAPrecharger, ligneDuPointage, champsPhotosHtml, TYPES_PHOTOS, estHeic, completerReferentiel, journeeSansReseau, chercherOrdre } from '../src/app/terrain/terrain.js';
 
 describe('application de terrain', () => {
   it('présaisie : heures du calendrier au prorata des tâches, équipe du chef reprise', () => {
@@ -104,7 +104,8 @@ describe('hors ligne', () => {
     expect(a).toContain('/api/terrain/journee?date=2026-11-01');
     expect(a).not.toContain('/api/terrain/journee?date=2026-11-02');
     expect(a).toContain('/api/pointage/repas/12?du=2026-10-30&au=2026-10-30');
-    expect(a.length).toBe(14 + 2 + 7 + 7 + 2);
+    expect(a).toContain('/api/terrain/journee/chantiers');
+    expect(a.length).toBe(14 + 2 + 7 + 7 + 3);
   });
 
   it('actions d\'une tâche selon les droits : sans chantier aucune, réception sur un ordre de pose seulement', () => {
@@ -174,5 +175,26 @@ describe('plans cochés préchargés (plan terrain-suites, lot 4)', () => {
       { taches: [] }, null,
     ];
     expect(plansAPrecharger(lectures)).toEqual([11, 12]);
+  });
+  it('hors ligne (terrain-suites lot 9) : ordre préchargé trouvé par son numéro sans réseau, chantiers du service ajoutés', () => {
+    const gardes = { personne: { id: 12 }, libre: 'SOI', chantiers: [{ id: 3, code: 'C3' }, { id: 4, code: 'C4' }],
+      ordres: [{ id: 30, cha_id: 3, numero: 'OP-2026-0012' }, { id: 31, cha_id: 4, numero: 'OP-2026-0125' }, { id: 32, cha_id: 4, numero: 'OP-2026-0126' }] };
+    // Journée jamais lue : saisie libre seulement, aucun pointage connu (rien de retiré au serveur).
+    const d = journeeSansReseau('2026-11-09', gardes);
+    expect(d).toMatchObject({ personne: { id: 12 }, taches: [], pointages: [], libre: 'SOI', sansReseau: true });
+    expect(d.chantiers).toHaveLength(2);
+    expect(journeeSansReseau('2026-11-09', { ...gardes, libre: null })).toBeNull();
+    expect(journeeSansReseau('2026-11-09', null)).toBeNull();
+    // Journée gardée : chantiers et ordres du service ajoutés, sans doublon.
+    const j = completerReferentiel({ chantiers: [{ id: 3, code: 'C3' }], ordres: [{ id: 30, cha_id: 3, numero: 'OP-2026-0012' }] }, gardes);
+    expect(j.chantiers.map((c) => c.id)).toEqual([3, 4]);
+    expect(j.ordres.map((o) => o.id)).toEqual([30, 31, 32]);
+    expect(completerReferentiel(j, null)).toBe(j);
+    // Numéro exact sans casse ni espaces, sinon le seul qui le contient.
+    expect(chercherOrdre(' op-2026-0012 ', j.ordres)?.id).toBe(30);
+    expect(chercherOrdre('0125', j.ordres)?.id).toBe(31);
+    expect(chercherOrdre('012', j.ordres)).toBeNull();
+    expect(chercherOrdre('9999', j.ordres)).toBeNull();
+    expect(chercherOrdre('', j.ordres)).toBeNull();
   });
 });

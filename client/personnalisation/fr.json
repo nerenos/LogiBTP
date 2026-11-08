@@ -7161,6 +7161,10 @@
     },
     "pointage": {
       "hors_ligne": "Hors ligne : cette journée n'a pas été consultée sur cet appareil, elle n'est pas disponible. Ouvrez « Mon terrain » avec le réseau pour la garder.",
+      "sans_reseau": "Hors ligne : cette journée n'a pas été consultée sur cet appareil. Ses tâches ne sont pas affichées ; la saisie libre reste possible sur les chantiers de votre service, envoyée au retour du réseau (les pointages déjà enregistrés sont conservés).",
+      "numero": "N° d'ordre",
+      "numero_exemple": "Rechercher",
+      "ordre_inconnu": "Ordre {{numero}} inconnu de cet appareil : choisissez le chantier et l'ordre dans les listes",
       "sans_salarie": "Votre compte n'est lié à aucun salarié.",
       "validee": "Journée validée : consultation seulement (une correction se demande au service RH).",
       "a_pointer": "À pointer",
