@@ -29,3 +29,9 @@ public static class PeriodesListe
     public const string DerniersMois = "derniers_mois";
     public const string ProchainsJours = "prochains_jours";
 }
+
+/// <summary>Périodes qui demandent un nombre x (parité : PERIODE_AVEC_NOMBRE de codes.js).</summary>
+public static class PeriodesAvecNombre
+{
+    public static readonly string[] Codes = [PeriodesListe.DerniersJours, PeriodesListe.DerniersMois, PeriodesListe.ProchainsJours];
+}

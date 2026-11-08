@@ -238,6 +238,43 @@
    "erreur": "PERIODE_NOMBRE"
   },
   {
+   "nom": "semaine précédente à cheval sur deux années",
+   "code": "semaine_precedente",
+   "reference": "2026-01-07",
+   "debut": "2025-12-29",
+   "fin": "2026-01-04"
+  },
+  {
+   "nom": "mois précédent depuis un 31 janvier",
+   "code": "mois_precedent",
+   "reference": "2026-01-31",
+   "debut": "2025-12-01",
+   "fin": "2025-12-31"
+  },
+  {
+   "nom": "derniers mois : un mois depuis un 31 janvier",
+   "code": "derniers_mois",
+   "reference": "2026-01-31",
+   "x": 1,
+   "debut": "2026-01-01",
+   "fin": "2026-01-31"
+  },
+  {
+   "nom": "derniers mois : deux mois à cheval sur décembre-janvier, fin de mois ajustée",
+   "code": "derniers_mois",
+   "reference": "2026-01-30",
+   "x": 2,
+   "debut": "2025-12-01",
+   "fin": "2026-01-30"
+  },
+  {
+   "nom": "nombre non entier refusé",
+   "code": "derniers_jours",
+   "reference": "2026-11-08",
+   "x": 2.5,
+   "erreur": "PERIODE_NOMBRE"
+  },
+  {
    "nom": "période inconnue",
    "code": "bidule",
    "reference": "2026-11-08",

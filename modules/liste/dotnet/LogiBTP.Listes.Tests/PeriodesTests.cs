@@ -16,7 +16,7 @@ public class PeriodesTests
     public void Bornes_du_jeu(string nom)
     {
         var c = Cas.First(n => n!["nom"]!.GetValue<string>() == nom)!;
-        var x = c["x"]?.GetValue<int>();
+        double? x = c["x"]?.GetValue<double>();
         var reference = DateOnly.Parse(c["reference"]!.GetValue<string>());
         var exercice = c["debut_exercice"] is { } e ? DateOnly.Parse(e.GetValue<string>()) : (DateOnly?)null;
         var code = c["code"]!.GetValue<string>();

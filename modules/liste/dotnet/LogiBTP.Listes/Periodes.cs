@@ -13,7 +13,7 @@ public sealed class ErreurPeriode(string code, string message) : Exception(messa
 public static class Periodes
 {
     /// <summary>Bornes [début, fin] d'une période ; <paramref name="debutExercice"/> : seuls son mois et son jour comptent (absent = année civile).</summary>
-    public static (DateOnly Debut, DateOnly Fin) Bornes(string code, int? x, DateOnly reference, DateOnly? debutExercice = null)
+    public static (DateOnly Debut, DateOnly Fin) Bornes(string code, double? x, DateOnly reference, DateOnly? debutExercice = null)
     {
         var a = reference.Year;
         var m = reference.Month;
@@ -22,7 +22,7 @@ public static class Periodes
         (DateOnly, DateOnly) Annee(int aa) => (new DateOnly(aa, 1, 1), new DateOnly(aa, 12, 31));
         var lundi = reference.AddDays(-(((int)reference.DayOfWeek + 6) % 7));
 
-        if (code is PeriodesListe.DerniersJours or PeriodesListe.DerniersMois or PeriodesListe.ProchainsJours && (x is null || x < 1))
+        if (PeriodesAvecNombre.Codes.Contains(code) && (x is null || x < 1 || x != Math.Floor(x.Value)))
             throw new ErreurPeriode(ErreursListe.PeriodeNombre, $"Période {code} : nombre entier supérieur ou égal à 1 attendu");
         switch (code)
         {
@@ -45,9 +45,9 @@ public static class Periodes
                 DateOnly DebutDe(int aa) => new(aa, de.Month, Math.Min(de.Day, DateTime.DaysInMonth(aa, de.Month)));
                 var debut = DebutDe(a) > reference ? DebutDe(a - 1) : DebutDe(a);
                 return (debut, debut.AddMonths(12).AddDays(-1));
-            case PeriodesListe.DerniersJours: return (reference.AddDays(-(x!.Value - 1)), reference);
-            case PeriodesListe.DerniersMois: return (reference.AddMonths(-x!.Value).AddDays(1), reference);
-            case PeriodesListe.ProchainsJours: return (reference, reference.AddDays(x!.Value - 1));
+            case PeriodesListe.DerniersJours: return (reference.AddDays(-((int)x!.Value - 1)), reference);
+            case PeriodesListe.DerniersMois: return (reference.AddMonths(-(int)x!.Value).AddDays(1), reference);
+            case PeriodesListe.ProchainsJours: return (reference, reference.AddDays((int)x!.Value - 1));
             default: throw new ErreurPeriode(ErreursListe.PeriodeInconnue, $"Période inconnue : {code}");
         }
     }
