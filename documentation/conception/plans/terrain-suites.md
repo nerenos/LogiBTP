@@ -17,7 +17,7 @@
 | Lot | Titre | Module | Dépend de | Statut |
 |---|---|---|---|---|
 | 1 | Ménage du TODO (points déjà faits) | documentation | — | FAIT (08/11/2026) |
-| 2 | Case « Terrain » d'un plan du suivi des validations | `modules/crm` | — | A FAIRE |
+| 2 | Case « Terrain » d'un plan du suivi des validations | `modules/crm` | — | FAIT (08/11/2026) |
 | 3 | Plans en vigueur sur le terrain | cœur | 2 | A FAIRE |
 | 4 | Plans gardés hors ligne, budget à part | cœur | 3 | A FAIRE |
 | 5 | Bandeau adaptatif sur téléphone | `modules/navigation` | — | A FAIRE |
@@ -58,7 +58,7 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
 - **Réalisé / écarts** : la ligne « Lot 7, suites » était cochée dans `main` alors que ses points restent à faire : décochée ;
   chaque ligne renvoie aux lots du plan ; contrats d'entretien sur une ligne à part.
 
-## Lot 2 : case « Terrain » d'un plan du suivi des validations (TS2)
+## Lot 2 : case « Terrain » d'un plan du suivi des validations (TS2) (FAIT 08/11/2026)
 
 - **Module** : `modules/crm`. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : nouveau script `modules/crm/db/098b_crm_plan_terrain.sql` (`crm_plan.pla_terrain BOOLEAN NOT NULL
@@ -69,6 +69,12 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
 - **Tests** : C# : case enregistrée et relue ; JS : rendu de la case.
 - **Critère de fin** : `npm test` vert ; script rejoué deux fois sans erreur ; case visible et gardée dans le suivi des
   validations.
+- **Réalisé / écarts** : script `modules/crm/db/098b_crm_plan_terrain.sql` (rejouable, au manifeste après `098`) ;
+  `CrmPlan.PlaTerrain`, `PlanSaisi.Terrain` (nul : inchangé, donc non coché à la création), `PlanDto.Terrain` ;
+  recopie et lecture extraites (`ServiceCrm.RemplirPlan`, `EnPlanDto`) pour le test C# `PlanTerrainTests` (le module
+  n'a pas de test sur base). Écart : la fiche du plan est dans le cœur (`client/src/app/pages/crm-plan.js`) ; le
+  module fournit la case (`caseTerrainPlan` de `js/src/plans.js`, textes `crm.plans.terrain*`), testée dans
+  `plans.test.js`. Script à appliquer par l'utilisateur (non rejoué ici).
 
 ## Lot 3 : plans en vigueur sur le terrain (TS1, TS2)
 

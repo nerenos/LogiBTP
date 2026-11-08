@@ -69,7 +69,9 @@
     "plans": {
       "champ_inconnu": "Champ inconnu : {{champ}} (champs : {{champs}})",
       "aucun_champ": "Le format doit contenir au moins un champ ({repere}, {nom}…)",
-      "separateur": "Deux champs doivent être séparés par un texte fixe"
+      "separateur": "Deux champs doivent être séparés par un texte fixe",
+      "terrain": "Terrain",
+      "terrain_titre": "Montrer ce plan en tête des pièces sur le terrain (indice en vigueur seul)"
     }
   },
   "erreurs": {
