@@ -7,7 +7,7 @@ import { choisirRestaurant } from '../pointage/repas.js';
 import { choixMultiple } from '../choix-multiple.js';
 import { EcranEtapesAtelier } from '@logibtp/execution/ui';
 import { MODULE_FACULTATIF } from '../codes.js';
-import { completerJournee, presaisirJournee, ligneDuPointage, completerReferentiel, journeeSansReseau, chercherOrdre } from './terrain.js';
+import { completerJournee, presaisirJournee, ligneDuPointage, completerReferentiel, journeeSansReseau, chercherOrdre, etatNumero, ETAT_NUMERO } from './terrain.js';
 import { envoyerOuGarder, fournisseurEtapes, OPERATION_TERRAIN } from './operations-terrain.js';
 import { lireOperation, marquerOperation, retirerOperation } from '../hors-ligne/operations.js';
 import { estHorsLigne, ETAT_ATTENTE } from '../hors-ligne/attente.js';
@@ -22,6 +22,8 @@ import { SUJET_ATTENTE } from '../hors-ligne/synchro.js';
 // refusée à l'envoi : bandeau avec la raison, Réessayer ou Abandonner ma saisie.
 // terrain-suites lot 9 (TS10 b, TS11 b) : sans réseau, chantiers et ordres ouverts du service gardés sur l'appareil
 // (saisie libre sur un chantier jamais ouvert, même une journée jamais lue) ; ordre cherché par son numéro.
+// Lot 10 (TS11 a) : numéro inconnu de l'appareil gardé tel quel (« à vérifier »), résolu par le serveur à l'envoi ;
+// inconnu du serveur : journée refusée (ORDRE_INCONNU), la ligne est marquée refusée.
 
 let referentiels = null;
 
@@ -219,9 +221,12 @@ export class PointageTerrain {
       // Équipe d'une tâche (courte) : cases à cocher ; saisie libre : équipiers choisis par recherche (étiquettes).
       const proposes = l.id || !t?.chef ? [] : t.membres;
       const libreEquipe = !l.id && l.libre && this.d.equipiers.length > 0;
+      const numero = etatNumero(l, this.operation);
+      const aideNumero = numero ? `<p class="aide${numero === ETAT_NUMERO.REFUSE ? ' avertissement' : ''}">${iconeHtml(numero === ETAT_NUMERO.REFUSE ? 'terrain_btp_refus' : 'terrain_btp_attente')} ${texteHtml(numero === ETAT_NUMERO.REFUSE ? 'terrain_btp.pointage.numero_refuse' : 'terrain_btp.pointage.numero_a_verifier', { numero: l.numero })}</p>` : '';
       return `<div class="terrain-saisie" data-i="${i}">
         <p class="terrain-ligne"><b>${titre}</b>${lecture ? '' : `<button type="button" class="terrain-bouton" data-retirer aria-label="${texteHtml('terrain_btp.pointage.retirer')}" title="${texteHtml(l.groupe ? 'terrain_btp.pointage.retirer_seul' : 'terrain_btp.pointage.retirer')}">${iconeHtml('retirer')}</button>`}</p>
-        ${l.libre ? `<div class="terrain-champs"><label>${texteHtml('terrain_btp.pointage.numero')} <input data-numero inputmode="search" size="12" placeholder="${texteHtml('terrain_btp.pointage.numero_exemple')}" ${lecture ? 'readonly' : ''}></label><label>${texteHtml('terrain_btp.pointage.chantier')} <span data-combo="chantier"></span></label><label>${texteHtml('terrain_btp.pointage.ordre')} <span data-combo="ordre"></span></label></div>` : lieu ? `<p class="aide">${lieu}</p>` : ''}
+        ${l.libre ? `<div class="terrain-champs"><label>${texteHtml('terrain_btp.pointage.numero')} <input data-numero inputmode="search" size="12" placeholder="${texteHtml('terrain_btp.pointage.numero_exemple')}" value="${echapper(l.numero ?? '')}" ${lecture ? 'readonly' : ''}></label><label>${texteHtml('terrain_btp.pointage.chantier')} <span data-combo="chantier"></span></label><label>${texteHtml('terrain_btp.pointage.ordre')} <span data-combo="ordre"></span></label></div>` : lieu ? `<p class="aide">${lieu}</p>` : ''}
+        ${aideNumero}
         <div class="terrain-champs">
           <label>${texteHtml('terrain_btp.pointage.type')} <span data-combo="type"></span></label>
           <label>${texteHtml('terrain_btp.pointage.activite')} <span data-combo="sous-type"></span></label>
@@ -247,10 +252,11 @@ export class PointageTerrain {
       };
       if (l.libre) {
         combo('chantier', this.d.chantiers.map((c) => ({ valeur: c.id, libelle: `${c.code} ${c.libelle}`, detail: c.ville ?? '' })), l.cha_id, (v) => {
-          l.cha_id = v == null ? null : Number(v); l.ent_id = null; this.#rendreLignes(lecture);
+          l.cha_id = v == null ? null : Number(v); l.ent_id = null; l.numero = null; this.#rendreLignes(lecture);
         });
         combo('ordre', this.d.ordres.filter((o) => o.cha_id === l.cha_id).map((o) => ({ valeur: o.id, libelle: o.numero ?? o.type, detail: o.objet ?? '' })), l.ent_id, (v) => {
           l.ent_id = v == null ? null : Number(v);
+          if (l.ent_id) l.numero = null;
           const srv = this.#ordre(l.ent_id)?.srv_id;
           if (srv && !l.type_mo) { l.type_mo = referentiels.types_mo.find((t) => t.srv_id === srv)?.id ?? null; this.#rendreLignes(lecture); }
         }, true);
@@ -259,7 +265,15 @@ export class PointageTerrain {
       bloc.querySelector('[data-numero]')?.addEventListener('change', (e) => {
         if (!e.target.value.trim()) return;
         const o = chercherOrdre(e.target.value, this.d.ordres);
-        if (!o) { this.app.message(texte('terrain_btp.pointage.ordre_inconnu', { numero: e.target.value.trim() }), 'avertissement'); return; }
+        if (!o) {
+          // Inconnu de l'appareil : gardé tel quel, chantier et ordre résolus par le serveur à l'envoi.
+          Object.assign(l, { numero: e.target.value.trim(), cha_id: null, ent_id: null });
+          this.app.message(texte('terrain_btp.pointage.ordre_inconnu', { numero: l.numero }), 'avertissement');
+          this.#changer();
+          this.#rendreLignes(lecture);
+          return;
+        }
+        l.numero = null;
         l.cha_id = o.cha_id;
         l.ent_id = o.id;
         if (o.srv_id && !l.type_mo) l.type_mo = referentiels.types_mo.find((t) => t.srv_id === o.srv_id)?.id ?? null;
@@ -287,14 +301,15 @@ export class PointageTerrain {
 
   /** Enregistre la journée ; renvoie vrai si c'est fait. */
   async enregistrer() {
-    const incompletes = this.lignes.filter((l) => !l.cha_id || !l.type_mo || !(l.minutes > 0));
+    // Chantier obligatoire, sauf ligne libre portant un numéro d'ordre à résoudre à l'envoi (lot 10).
+    const incompletes = this.lignes.filter((l) => !(l.cha_id || (l.numero && !l.id)) || !l.type_mo || !(l.minutes > 0));
     if (incompletes.length) { this.app.message(texte('terrain_btp.pointage.incomplete'), 'avertissement'); return false; }
     const corps = {
       date: this.jour,
       // Pointages du jour connus de l'appareil : seuls ceux-là peuvent être retirés (un pointage ajouté ailleurs reste).
       connus: (this.d.pointages ?? []).map((p) => p.id),
       lignes: this.lignes.map((l) => ({ id: l.id, tac_id: l.tac_id, cha_id: l.cha_id, ent_id: l.ent_id, type_mo: l.type_mo, sous_type: l.sous_type, minutes: l.minutes,
-        motif: l.motif, commentaire: l.commentaire, membres: l.id ? null : l.membres, equipe: l.equipe })),
+        motif: l.motif, commentaire: l.commentaire, membres: l.id ? null : l.membres, equipe: l.equipe, numero: l.ent_id ? null : l.numero ?? null })),
     };
     let r;
     try {

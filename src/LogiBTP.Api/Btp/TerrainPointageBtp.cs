@@ -14,9 +14,15 @@ namespace LogiBTP.Api.Btp;
 /// <summary>
 /// Ligne de la journée du terrain : pointage de la personne, sur une tâche ou en saisie libre ; nouvelle : aussi pour
 /// les membres choisis ; d'une saisie d'équipe : <c>Equipe</c> applique la modification aux membres encore identiques.
+/// <c>Numero</c> (terrain-suites lot 10, TS11 a) : numéro d'ordre saisi sans réseau, inconnu de l'appareil (chantier
+/// et ordre vides), résolu à l'envoi (<see cref="TerrainBtp.ResoudreNumero"/>).
 /// </summary>
-public sealed record LigneTerrain(long? Id, long? TacId, int ChaId, long? EntId, int TypeMo, string? SousType, int Minutes, string? Motif,
-    string? Commentaire, List<int>? Membres, bool Equipe = false);
+public sealed record LigneTerrain(long? Id, long? TacId, int? ChaId, long? EntId, int TypeMo, string? SousType, int Minutes, string? Motif,
+    string? Commentaire, List<int>? Membres, bool Equipe = false, string? Numero = null)
+{
+    /// <summary>Chantier de la ligne, une fois le numéro d'ordre résolu.</summary>
+    public int Chantier => ChaId ?? throw ExceptionMetier.Invalide("TERRAIN_CHANTIER", "Chaque ligne a un chantier");
+}
 /// <summary>
 /// Journée envoyée. <c>Connus</c> : pointages du jour que l'appareil connaissait (lus avec la journée) ; seuls
 /// ceux-là peuvent être retirés, un pointage ajouté entre-temps ailleurs (bureau, borne, autre appareil, saisie hors
@@ -195,6 +201,45 @@ public static partial class TerrainBtp
         return new { personne = new { id = s }, libre, perimetre = PerimetreHorsLigne(srv), chantiers, ordres };
     }
 
+    /// <summary>Ordre trouvé par son numéro (lot 10).</summary>
+    public sealed record OrdreNumero(long Id, int ChaId);
+
+    /// <summary>Numéro d'ordre comparé sans casse ni espaces (même règle que <c>chercherOrdre</c> du client).</summary>
+    public static string NumeroNormalise(string? numero) => System.Text.RegularExpressions.Regex.Replace(numero ?? "", @"\s+", "").ToUpperInvariant();
+
+    /// <summary>
+    /// Ligne nouvelle portant un numéro d'ordre saisi sans réseau (lot 10, TS11 a) : ordre et chantier de l'unique ordre
+    /// en vigueur de ce numéro ; aucun ou plusieurs : refus <see cref="ErreursTerrain.OrdreInconnu"/> (journée gardée en
+    /// erreur sur l'appareil, règle T9). Ordre déjà choisi ou ligne existante : inchangée.
+    /// </summary>
+    public static LigneTerrain ResoudreNumero(LigneTerrain l, IReadOnlyList<OrdreNumero> trouves)
+    {
+        if (l.Id is not null || l.EntId is not null || string.IsNullOrWhiteSpace(l.Numero)) return l;
+        if (trouves.Count != 1)
+            throw ExceptionMetier.Invalide(ErreursTerrain.OrdreInconnu, $"Ordre {l.Numero.Trim()} inconnu", new { numero = l.Numero.Trim() });
+        return l with { EntId = trouves[0].Id, ChaId = trouves[0].ChaId };
+    }
+
+    /// <summary>Résout les numéros d'ordre des lignes de la journée (ordres d'exécution en vigueur non terminés, sur un chantier).</summary>
+    private static async Task<JourneeTerrain> ResoudreNumerosAsync(LogiBtpContext db, JourneeTerrain j, CancellationToken ct)
+    {
+        if (!j.Lignes.Any(l => l.Id is null && l.EntId is null && !string.IsNullOrWhiteSpace(l.Numero))) return j;
+        var lignes = new List<LigneTerrain>();
+        foreach (var l in j.Lignes)
+        {
+            var trouves = l.Id is null && l.EntId is null && !string.IsNullOrWhiteSpace(l.Numero)
+                ? await db.Database.SqlQueryRaw<OrdreNumero>($"""
+                    SELECT d.ent_id AS id, d.ent_chantier_id AS cha_id FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id JOIN statut_document st ON st.std_id = d.ent_std_id
+                    WHERE t.tyd_famille = 'E' AND d.ent_is_reference AND d.ent_chantier_id IS NOT NULL AND upper(regexp_replace(d.ent_numero, '\s+', '', 'g')) = @n
+                      AND st.std_code NOT IN ({SqlBtp.HorsVigueur}) AND coalesce(d.ent_exe_etat, '') <> 'TERMINE'
+                    LIMIT 2
+                    """, new NpgsqlParameter("n", NumeroNormalise(l.Numero))).ToListAsync(ct)
+                : [];
+            lignes.Add(ResoudreNumero(l, trouves));
+        }
+        return j with { Lignes = lignes };
+    }
+
     private static string Signature(DateOnly d, int cha, long? ent, int type, string? st, int min, string? motif) => $"{d}|{cha}|{ent}|{type}|{st}|{min}|{motif}";
 
     /// <summary>Remplace les pointages saisis de la journée de la personne par les lignes (les autres jours sont inchangés).</summary>
@@ -204,6 +249,7 @@ public static partial class TerrainBtp
         var pdb = services.GetRequiredService<PointageDbContext>();
         var specialisation = services.GetRequiredService<SpecialisationPointage>();
         var taches = (await TachesJourAsync(db, s, j.Date, ct)).ToDictionary(t => t.Id);
+        j = await ResoudreNumerosAsync(db, j, ct);
         var lundi = ReglesPointage.LundiDe(j.Date);
         var semaine = await pdb.Pointages.AsNoTracking().Where(x => x.PoiSalId == s && x.PoiCouche == Couches.Saisie && x.PoiDate >= lundi && x.PoiDate <= lundi.AddDays(6)).ToListAsync(ct);
         var avant = semaine.Where(x => x.PoiDate == j.Date).ToDictionary(x => x.PoiId);
@@ -249,9 +295,9 @@ public static partial class TerrainBtp
             var srv = await db.Database.SqlQueryRaw<int?>("SELECT nat_srv_id AS \"Value\" FROM nature_element WHERE nat_id = @n", new NpgsqlParameter("n", l.TypeMo)).FirstOrDefaultAsync(ct);
             var libelle = await db.Database.SqlQueryRaw<string>("""
                 SELECT '🛠 ' || coalesce((SELECT d.ent_numero FROM document d WHERE d.ent_id = @e), c.cha_code) AS "Value" FROM chantier c WHERE c.cha_id = @c
-                """, SqlBtp.P("e", l.EntId), new NpgsqlParameter("c", l.ChaId)).FirstOrDefaultAsync(ct) ?? "🛠 Saisie libre";
+                """, SqlBtp.P("e", l.EntId), new NpgsqlParameter("c", l.Chantier)).FirstOrDefaultAsync(ct) ?? "🛠 Saisie libre";
             creees[i] = await planning.CreerIdAsync(new TacheSaisie(2, LiaisonsBtp.DateHeure(j.Date), LiaisonsBtp.DateHeure(j.Date.AddDays(1)), null, personnes.Count,
-                srv ?? salaries.GetValueOrDefault(s)?.SrvId, TypesFiche.Chantier, l.ChaId.ToString(), $"{libelle} (saisie libre)",
+                srv ?? salaries.GetValueOrDefault(s)?.SrvId, TypesFiche.Chantier, l.Chantier.ToString(), $"{libelle} (saisie libre)",
                 personnes.Select(p => new AffectationSaisie(salaries[p].Interimaire ? "INTERIM" : "SALARIE", p.ToString())).ToList(),
                 OrigineTerrain, s.ToString(), $"Saisie libre du terrain par {u.Code}", 100, null, "TERMINEE"), u, ct, true);
         }
@@ -270,7 +316,7 @@ public static partial class TerrainBtp
                 {
                     Guid? groupe = l.Id is null && (l.Membres ?? []).Any(m => m != s) ? groupes[i] = Guid.NewGuid() : null;
                     var garde = !Modifiee(l);
-                    return new PointageSaisi(l.Id, j.Date, l.ChaId, l.EntId, l.TypeMo, l.SousType, l.Minutes, garde ? avant[l.Id!.Value].PoiDebut : null,
+                    return new PointageSaisi(l.Id, j.Date, l.Chantier, l.EntId, l.TypeMo, l.SousType, l.Minutes, garde ? avant[l.Id!.Value].PoiDebut : null,
                         garde ? avant[l.Id!.Value].PoiFin : null, l.Motif, l.Commentaire, TacId: Tache(l, i), Groupe: groupe, LigId: Ligne(l));
                 })).ToList();
             await pointage.EnregistrerSemaineAsync(s, lundi, new SemaineSaisie(saisie), u, ct);
@@ -279,7 +325,7 @@ public static partial class TerrainBtp
             foreach (var (l, i) in j.Lignes.Select((l, i) => (l, i)))
             {
                 foreach (var m in (l.Membres ?? []).Where(m => m != s).Distinct().Where(_ => l.Id is null))
-                    await AjouterAsync(pdb, pointage, u, m, new PointageSaisi(null, j.Date, l.ChaId, l.EntId, l.TypeMo, l.SousType, l.Minutes, null, null, l.Motif, l.Commentaire,
+                    await AjouterAsync(pdb, pointage, u, m, new PointageSaisi(null, j.Date, l.Chantier, l.EntId, l.TypeMo, l.SousType, l.Minutes, null, null, l.Motif, l.Commentaire,
                         TacId: Tache(l, i), Groupe: groupes[i], LigId: Ligne(l)), ct);
                 if (l.Id is long id && avant[id].PoiGroupe is Guid g && Modifiee(l) && l.Equipe)
                 {
@@ -301,7 +347,7 @@ public static partial class TerrainBtp
 
         // Non-conformités nouvelles ; tâches libres de la personne devenues sans pointage : retirées.
         foreach (var l in j.Lignes.Where(l => !string.IsNullOrWhiteSpace(l.Motif) && (l.Id is not long id || avant[id].PoiMotif != l.Motif.Trim())))
-            await specialisation.ApresNonConformiteAsync(pdb, services, u, salaries[s], l.ChaId, l.EntId, l.Motif!.Trim(), ct);
+            await specialisation.ApresNonConformiteAsync(pdb, services, u, salaries[s], l.Chantier, l.EntId, l.Motif!.Trim(), ct);
         var orphelines = await db.Database.SqlQueryRaw<TacheExistante>("""
             SELECT t.tac_id AS id, t.tac_version AS version FROM pla_tache t
             WHERE t.tac_origine_type = 'terrain' AND t.tac_origine_id = @s::text AND NOT EXISTS (SELECT 1 FROM poi_pointage p WHERE p.poi_tac_id = t.tac_id)
@@ -327,7 +373,7 @@ public static partial class TerrainBtp
         var lundi = ReglesPointage.LundiDe(p.PoiDate);
         var semaine = await pdb.Pointages.AsNoTracking().Where(x => x.PoiSalId == p.PoiSalId && x.PoiCouche == Couches.Saisie && x.PoiDate >= lundi && x.PoiDate <= lundi.AddDays(6)).ToListAsync(ct);
         var saisie = semaine.Select(x => x.PoiId == p.PoiId
-            ? new PointageSaisi(x.PoiId, x.PoiDate, l.ChaId, l.EntId, l.TypeMo, l.SousType, l.Minutes, null, null, l.Motif, x.PoiCommentaire, LigId: ligne)
+            ? new PointageSaisi(x.PoiId, x.PoiDate, l.Chantier, l.EntId, l.TypeMo, l.SousType, l.Minutes, null, null, l.Motif, x.PoiCommentaire, LigId: ligne)
             : new PointageSaisi(x.PoiId, x.PoiDate, x.PoiChaId, x.PoiEntId, x.PoiTypeMo, x.PoiSousType, x.PoiMinutes, x.PoiDebut, x.PoiFin, x.PoiMotif, x.PoiCommentaire)).ToList();
         await pointage.EnregistrerSemaineAsync(p.PoiSalId, lundi, new SemaineSaisie(saisie), u, ct, controleAcces: false);
     }

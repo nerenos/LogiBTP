@@ -163,6 +163,9 @@ export const urlDocument = (id) => `/document/${id}`;
 /** Préférences de l'application dans le localStorage (recopiée dans public/demarrage-theme.js). */
 export const CLE_PREFERENCES_NAVIGATION = 'logibtp.navigation';
 
+/** Erreurs du terrain testées par l'interface (Codes.cs : ErreursTerrain) ; ORDRE_INCONNU : plan terrain-suites, lot 10. */
+export const ERREUR_TERRAIN = Object.freeze({ ORDRE_INCONNU: 'ORDRE_INCONNU' });
+
 /** États affichés d'un document dans les listes, calculés par v_liste_documents (db/253, Q3 : jamais de statut posé). */
 export const ETAT_LISTE_DOCUMENT = Object.freeze({ EXPIRE: 'EXPIRE', REFUSE: 'REFUSE' });
 

@@ -166,3 +166,10 @@ public static class CategoriesGed
     public const string Dotation = "dotation";
     public const string Relance = "relance";
 }
+
+/// <summary>Erreurs du terrain testées par l'interface (client/src/app/codes.js : ERREUR_TERRAIN).</summary>
+public static class ErreursTerrain
+{
+    /// <summary>Numéro d'ordre saisi sans réseau, inconnu à l'envoi (plan terrain-suites, lot 10).</summary>
+    public const string OrdreInconnu = "ORDRE_INCONNU";
+}

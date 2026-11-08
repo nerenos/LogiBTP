@@ -25,7 +25,7 @@
 | 7 | Pointage à la ligne d'ordre | cœur | — | FAIT (08/11/2026) |
 | 8 | Photos HEIC converties par l'iPhone | cœur | — | FAIT (08/11/2026) |
 | 9 | Hors ligne : chantiers et ordres ouverts du service | cœur | — | FAIT (08/11/2026) |
-| 10 | Hors ligne : ordre saisi par son numéro, résolu à l'envoi | cœur | 9 | A FAIRE |
+| 10 | Hors ligne : ordre saisi par son numéro, résolu à l'envoi | cœur | 9 | FAIT (08/11/2026) |
 | 11 | Limite de dépôt de la GED exposée au client | `modules/ged` | — | A FAIRE |
 | 12 | Contrôle de taille des photos à la prise de vue | cœur | 11 | A FAIRE |
 | 13 | PV de réception : forme de signature et heure de l'appareil | cœur | — | A FAIRE |
@@ -245,7 +245,7 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
   sur une journée jamais lue. Tests : `ChantiersHorsLigneTerrainTests` (C# ; périmètre sur base si `LOGIBTP_TEST_PG`,
   non exécuté ici), `terrain.test.js`. Aucun script SQL.
 
-## Lot 10 : hors ligne, ordre saisi par son numéro, résolu à l'envoi (TS11 a)
+## Lot 10 : hors ligne, ordre saisi par son numéro, résolu à l'envoi (TS11 a) (FAIT 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `client/src/app/terrain/pointage-terrain.js` (numéro inconnu de l'appareil accepté, marqué « à
@@ -255,6 +255,18 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
 - **Dépendances** : lot 9.
 - **Tests** : C# : numéro résolu, numéro inconnu refusé ; JS : saisie gardée puis marquée refusée.
 - **Critère de fin** : `npm test` vert ; `CodesTests` du cœur vert.
+- **Réalisé / écarts** : `TerrainPointageBtp.cs` : `LigneTerrain` reçoit `Numero` et un chantier facultatif
+  (`Chantier` : refus `TERRAIN_CHANTIER` s'il reste vide) ; `ResoudreNumerosAsync` au début de l'enregistrement de la
+  journée (ligne nouvelle sans ordre : ordre d'exécution en vigueur non terminé, sur un chantier, de ce numéro sans
+  casse ni espaces, `NumeroNormalise`) et règle pure `ResoudreNumero` (aucun ou plusieurs ordres : refus 422
+  `ORDRE_INCONNU`, détail `numero`). Codes : `ErreursTerrain` (`Codes.cs`) ↔ `ERREUR_TERRAIN` (`codes.js`), ajouté à
+  `CodesTests`. Écart : aucun nouveau type d'opération : la journée gardée (`terrain-journee`) porte le numéro de la
+  ligne ; `hors-ligne/operations.js` garde en plus le code d'erreur du refus (`code`). Client : numéro inconnu de
+  l'appareil gardé tel quel (chantier et ordre vides, ligne acceptée à l'enregistrement), état `etatNumero`
+  (`terrain/terrain.js` : « à vérifier », refusé quand la journée gardée est refusée pour `ORDRE_INCONNU`) affiché
+  sous la ligne ; le numéro est effacé dès qu'un chantier ou un ordre est choisi. En ligne, même résolution par le
+  serveur (refus affiché tout de suite). Tests : `NumeroOrdreTerrainTests` (C#), `operations-terrain.test.js`
+  (saisie gardée puis marquée refusée). Aucun script SQL.
 
 ## Lot 11 : limite de dépôt de la GED exposée au client (TS12)
 

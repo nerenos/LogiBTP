@@ -3,7 +3,7 @@
 // et sous le même verrou que les documents (synchro.js). Chaque type déclare son envoi (`declarerOperation`). Pas de
 // fusion : un refus du serveur garde l'opération sur le poste, marquée ERREUR avec la raison, à réessayer ou abandonner.
 // Entrée : { cle (compte:type:id), compte, type, id, corps (données de l'envoi, Blob et File compris), libelle, url
-// (page où la saisie se reprend), etat (ATTENTE | ERREUR), erreur, le }. Une opération de même clé remplace la
+// (page où la saisie se reprend), etat (ATTENTE | ERREUR), erreur, code (code d'erreur du serveur), le }. Une opération de même clé remplace la
 // précédente (dernière saisie d'une journée, d'un avancement du jour).
 import { magasinIdb } from '@logibtp/socle/ui';
 import { ETAT_ATTENTE, estHorsLigne } from './attente.js';
@@ -25,7 +25,7 @@ export const cleOperation = (compte, type, id) => `${compte}:${type}:${id}`;
 
 /** Écrit (ou remplace) une opération en attente. */
 export async function ecrireOperation({ compte, type, id, corps, libelle, url = null }) {
-  const e = { cle: cleOperation(compte, type, id), compte, type, id: String(id), corps, libelle, url, etat: ETAT_ATTENTE.ATTENTE, erreur: null, le: new Date().toISOString() };
+  const e = { cle: cleOperation(compte, type, id), compte, type, id: String(id), corps, libelle, url, etat: ETAT_ATTENTE.ATTENTE, erreur: null, code: null, le: new Date().toISOString() };
   await magasin('readwrite', (m) => m.put(e));
   return e;
 }
@@ -65,7 +65,7 @@ export async function envoyerOperations(compte) {
       envoyees++;
     } catch (x) {
       if (estHorsLigne(x) || x?.statut === 401) break;
-      refusees.push(await marquerOperation(e.cle, { etat: ETAT_ATTENTE.ERREUR, erreur: x.message }));
+      refusees.push(await marquerOperation(e.cle, { etat: ETAT_ATTENTE.ERREUR, erreur: x.message, code: x.code ?? null }));
     }
   }
   return { envoyees, refusees };

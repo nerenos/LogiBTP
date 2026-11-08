@@ -3,6 +3,8 @@
 import { textesParCode, texte, texteHtml, pluriel, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { echapper } from '@logibtp/socle/ui';
 import { ajouterJours } from '@logibtp/socle';
+import { ETAT_ATTENTE } from '../hors-ligne/attente.js';
+import { ERREUR_TERRAIN } from '../codes.js';
 
 /** Applications de navigation proposées (préférence `terrainNavigation` du navigateur, T11). */
 export const NAVIGATIONS = textesParCode('terrain_btp.navigations', ['AUTO', 'GOOGLE', 'WAZE', 'APPLE']);
@@ -111,6 +113,18 @@ export function journeeSansReseau(jour, gardes) {
   if (!gardes?.personne || !gardes.libre) return null;
   return { personne: gardes.personne, date: jour, minutes_prevues: 0, valide: false, taches: [], pointages: [], libre: gardes.libre, equipiers: [],
     chantiers: gardes.chantiers ?? [], ordres: gardes.ordres ?? [], motifs: [], sansReseau: true };
+}
+
+/** État d'un numéro d'ordre saisi sans réseau, inconnu de l'appareil (terrain-suites lot 10, TS11 a). */
+export const ETAT_NUMERO = Object.freeze({ A_VERIFIER: 'A_VERIFIER', REFUSE: 'REFUSE' });
+
+/**
+ * État du numéro d'une ligne de saisie libre : aucun (ordre choisi ou pas de numéro), « à vérifier » (résolu par le
+ * serveur à l'envoi), refusé (journée gardée refusée à l'envoi pour un ordre inconnu, `ERREUR_TERRAIN.ORDRE_INCONNU`).
+ */
+export function etatNumero(ligne, operation = null) {
+  if (!ligne?.numero || ligne.ent_id) return null;
+  return operation?.etat === ETAT_ATTENTE.ERREUR && operation.code === ERREUR_TERRAIN.ORDRE_INCONNU ? ETAT_NUMERO.REFUSE : ETAT_NUMERO.A_VERIFIER;
 }
 
 /** Numéro d'ordre comparé sans casse ni espaces. */
