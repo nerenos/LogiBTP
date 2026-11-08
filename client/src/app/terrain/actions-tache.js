@@ -2,7 +2,7 @@ import { texte, texteHtml, pluriel, icone, iconeHtml } from '@logibtp/socle/dict
 import { echapper, ouvrirDialogue, formatDate } from '@logibtp/socle/ui';
 import { aujourdhui } from '@logibtp/socle';
 import { api } from '../api.js';
-import { preparerPhoto } from './terrain.js';
+import { preparerPhoto, champsPhotosHtml } from './terrain.js';
 import { envoyerOuGarder, OPERATION_TERRAIN, formulairePhotos } from './operations-terrain.js';
 import { estHorsLigne } from '../hors-ligne/attente.js';
 
@@ -15,11 +15,7 @@ import { estHorsLigne } from '../hors-ligne/attente.js';
 /** Sélecteur de photos (prise de vue, galerie en lot), case « qualité d'origine » ; `photos()` : fichiers choisis. */
 export function selecteurPhotos(racine) {
   let fichiers = [];
-  racine.innerHTML = `<div class="terrain-actions">
-      <label class="terrain-bouton">${iconeHtml('terrain_btp_photo')} ${texteHtml('terrain_btp.actions.photos.prendre')}<input type="file" accept="image/*" capture="environment" hidden data-prise></label>
-      <label class="terrain-bouton">${iconeHtml('terrain_btp_galerie')} ${texteHtml('terrain_btp.actions.photos.galerie')}<input type="file" accept="image/*" multiple hidden data-galerie></label></div>
-    <p class="aide" data-choisies>${texteHtml('terrain_btp.actions.photos.aucune')}</p>
-    <label class="coche"><input type="checkbox" data-origine> ${texteHtml('terrain_btp.actions.photos.origine')}</label>`;
+  racine.innerHTML = champsPhotosHtml();
   const afficher = () => {
     racine.querySelector('[data-choisies]').textContent = fichiers.length
       ? texte('terrain_btp.actions.photos.choisies', { photos: pluriel('terrain_btp.actions.photos.nombre', fichiers.length), noms: fichiers.map((f) => f.name).join(', ') }) : texte('terrain_btp.actions.photos.aucune');

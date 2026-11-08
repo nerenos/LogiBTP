@@ -1005,6 +1005,16 @@ button.lien { background: none; border: none; padding: 0; color: var(--lien, #1d
 .terrain-statut { --couleur: var(--discret); }
 .terrain-demande { --couleur: var(--accent); }
 .terrain-periode [data-reglages] { min-width: 44px; justify-content: center; }
+/* Page du terrain placée dans un conteneur de page lui-même « page-terrain » : ni double marge ni largeur minimale
+   ajoutée (débordait de 24 px à 360 px). */
+.page-terrain .page-terrain { min-width: 0; padding-left: 0; padding-right: 0; }
+/* Téléphone étroit (plan terrain-suites, lot 8) : période sur toute la largeur entre ◀ et ▶, « Aujourd'hui » et ⚙ dessous. */
+@media (max-width: 480px) {
+  .terrain-periode { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 0.4rem 0.5rem; }
+  .terrain-periode b { min-width: 0; }
+  .terrain-periode [data-aujourdhui] { grid-column: 1 / 3; }
+  .terrain-periode [data-reglages] { grid-column: 3; padding: 0; }
+}
 .terrain-detail p { margin: 0; }
 .terrain-ligne { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
 .terrain-bouton { display: inline-flex; align-items: center; padding: 0 0.9rem; border: 1px solid var(--bord); background: var(--surface); text-decoration: none; color: inherit; white-space: nowrap; }

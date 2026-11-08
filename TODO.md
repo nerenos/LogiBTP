@@ -131,7 +131,9 @@ Plan en 24 lots : [terrain-suites.md](documentation/conception/plans/terrain-sui
   du terrain (T6), case « Terrain » par plan, plans cochés gardés hors ligne dans un budget à part (25 Mo).
 - [x] Lot 2, écarts : pointage à la ligne d'ordre (`poi_lig_id`) quand la tâche vient d'une ligne (T8). Fait le 08/11/2026 :
   plan, lot 7 (`db/288`, reprise des pointages existants hors journées validées, à appliquer).
-- [ ] Lot 3, suites : photos HEIC converties (le navigateur ne sait pas les réduire). Plan : lot 8.
+- [ ] Lot 3, suites : photos HEIC converties (le navigateur ne sait pas les réduire). Plan : lot 8, fait le 08/11/2026
+  (champs photo `image/jpeg,image/png`) : reste l'essai sur un iPhone par l'utilisateur (photo de l'appareil et de la
+  galerie arrivées en JPEG réduit dans la GED) ; échec : le point revient en question (TS8).
 - [ ] Lot 4, suites : saisie libre hors ligne limitée aux chantiers et ordres déjà lus (journée gardée) ; nouvelle
   recherche d'un ordre par son numéro impossible hors ligne ; envoi des photos gardées sans contrôle de taille avant
   l'envoi (limite de dépôt de la GED). Plan : lots 9 à 12.

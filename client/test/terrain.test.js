@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { lundiDe, mobileAffiche, lienItineraire, liensTexte, numeroTel, presaisirJournee, actionsTache, minutesPointees, tachesGardees, jourPointage, adressesAPrecharger, plansTache, plansTacheHtml, plansAPrecharger, ligneDuPointage } from '../src/app/terrain/terrain.js';
+import { lundiDe, mobileAffiche, lienItineraire, liensTexte, numeroTel, presaisirJournee, actionsTache, minutesPointees, tachesGardees, jourPointage, adressesAPrecharger, plansTache, plansTacheHtml, plansAPrecharger, ligneDuPointage, champsPhotosHtml, TYPES_PHOTOS, estHeic } from '../src/app/terrain/terrain.js';
 
 describe('application de terrain', () => {
   it('présaisie : heures du calendrier au prorata des tâches, équipe du chef reprise', () => {
@@ -18,6 +18,23 @@ describe('application de terrain', () => {
     expect(ligneDuPointage({ tac_id: 2, ent_id: 4 }, { id: 2, ent_id: 4, lig_id: null })).toBeNull();
     expect(ligneDuPointage({ id: 9, ent_id: 4, ligne: 'L2 Enduit' }, null)).toBe('L2 Enduit');
     expect(ligneDuPointage({ ent_id: null }, null)).toBeNull();
+  });
+
+  it('champs photo sans image/* ni HEIC : l\'iPhone transcode en JPEG', () => {
+    expect(TYPES_PHOTOS).toBe('image/jpeg,image/png');
+    const champs = [...champsPhotosHtml().matchAll(/<input type="file"[^>]*>/g)].map((m) => m[0]);
+    expect(champs).toHaveLength(2);
+    for (const c of champs) expect(c).toContain('accept="image/jpeg,image/png"');
+    expect(champs[0]).toContain('capture="environment"');
+    expect(champs[1]).toContain('multiple');
+    expect(champsPhotosHtml()).not.toMatch(/image\/\*|heic/i);
+  });
+
+  it('photo HEIC reconnue par son type ou son extension', () => {
+    expect(estHeic({ type: 'image/heic', name: 'a' })).toBe(true);
+    expect(estHeic({ type: '', name: 'IMG_0001.HEIF' })).toBe(true);
+    expect(estHeic({ type: 'image/jpeg', name: 'IMG_0001.jpg' })).toBe(false);
+    expect(estHeic(null)).toBe(false);
   });
 
   it('lundi de la semaine', () => {

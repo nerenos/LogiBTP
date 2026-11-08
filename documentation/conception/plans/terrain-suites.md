@@ -23,7 +23,7 @@
 | 5 | Bandeau adaptatif sur téléphone | `modules/navigation` | — | FAIT (08/11/2026) |
 | 6 | Menu simplifié du terrain et raccourci vers le menu classique | cœur | 5 | FAIT (08/11/2026) |
 | 7 | Pointage à la ligne d'ordre | cœur | — | FAIT (08/11/2026) |
-| 8 | Photos HEIC converties par l'iPhone | cœur | — | A FAIRE |
+| 8 | Photos HEIC converties par l'iPhone | cœur | — | FAIT (08/11/2026) |
 | 9 | Hors ligne : chantiers et ordres ouverts du service | cœur | — | A FAIRE |
 | 10 | Hors ligne : ordre saisi par son numéro, résolu à l'envoi | cœur | 9 | A FAIRE |
 | 11 | Limite de dépôt de la GED exposée au client | `modules/ged` | — | A FAIRE |
@@ -195,7 +195,7 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
   `terrain/terrain.js`, icône `terrain_btp_ligne`). Tests : `PointageLigneTerrainTests` (C# ; reprise sur base si
   `LOGIBTP_TEST_PG`, non exécutée ici), `terrain.test.js`. Script à appliquer par l'utilisateur (non rejoué ici).
 
-## Lot 8 : photos HEIC converties par l'iPhone (TS8 a, TS9 b)
+## Lot 8 : photos HEIC converties par l'iPhone (TS8 a, TS9 b) (FAIT 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : haiku.
 - **Fichiers** : `client/src/app/terrain/actions-tache.js` (champs fichier `accept="image/jpeg,image/png"` au lieu de
@@ -205,6 +205,18 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
 - **Tests** : JS : attribut `accept` des champs photo.
 - **Critère de fin** : `npm test` vert ; **essai sur un iPhone par l'utilisateur** : photo de l'appareil et de la
   galerie arrivées en JPEG réduit dans la GED. Si l'essai échoue, le point revient en question (pas de secours prévu).
+- **Réalisé / écarts** : `terrain/terrain.js` : `TYPES_PHOTOS` (`image/jpeg,image/png`) et `champsPhotosHtml()` (champs
+  de la prise de vue et de la galerie, repris par `selecteurPhotos` d'`actions-tache.js`, seul sélecteur des photos du
+  terrain : tâche, non-conformité, livraison, page SAV ; la page de réception n'a pas de champ photo). Écart : TS9 b
+  appliqué aussi au HEIC reçu malgré tout (navigateur qui ne transcode pas) : `preparerPhoto` le convertit en JPEG
+  (pleine taille en « qualité d'origine ») quand le navigateur sait le lire (`estHeic`), sinon il part tel quel comme
+  avant. Tests : `terrain.test.js` (attribut `accept`, `estHeic`). Essai sur iPhone à faire par l'utilisateur (TODO.md).
+  Hors plan, demandé avec le lot : barre de période de `/terrain` coupée à 360 px (⚙ hors de l'écran) : la page du
+  terrain, placée dans un conteneur lui-même `page-terrain`, ajoutait sa marge et sa largeur minimale de 360 px
+  (débord de 24 px) : `.page-terrain .page-terrain` sans marge latérale ni largeur minimale ; sous 480 px, la période
+  prend la largeur entre ◀ et ▶, « Aujourd'hui » et ⚙ passent dessous (`client/src/styles.css`). Vérifié par Playwright
+  (Vite, API simulée) à 360 px (jour et semaine : barre de 336 px dans 336 px, aucun défilement horizontal), 500 px et
+  1280 px (une seule rangée, inchangée). Aucun script SQL.
 
 ## Lot 9 : hors ligne, chantiers et ordres ouverts du service (TS10 b, TS11 b)
 

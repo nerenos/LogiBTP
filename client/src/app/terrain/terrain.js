@@ -101,15 +101,35 @@ export function dimensionsReduites(largeur, hauteur, max = PHOTO_COTE_MAX) {
 }
 
 /**
- * Photo prête à envoyer : réduite en JPEG (qualité 0,85) si elle dépasse `max`, sinon le fichier d'origine ; en cas
- * d'échec de lecture (format non affichable par le navigateur, HEIC…) : le fichier d'origine.
+ * Types acceptés par les champs photo du terrain (terrain-suites lot 8, TS8 a) : sans `image/heic` ni `image/*`,
+ * Safari sur iPhone transcode la photo (appareil ou galerie) en JPEG avant de la donner à la page.
+ */
+export const TYPES_PHOTOS = 'image/jpeg,image/png';
+
+/** Photo HEIC ou HEIF (type ou extension) : reçue malgré tout (navigateur qui ne transcode pas). */
+export const estHeic = (fichier) => /^image\/hei[cf]/i.test(fichier?.type ?? '') || /\.hei[cf]$/i.test(fichier?.name ?? '');
+
+/** Champs de la prise de vue et du lot de la galerie, case « qualité d'origine » (sélecteur de `actions-tache.js`). */
+export function champsPhotosHtml() {
+  return `<div class="terrain-actions">
+      <label class="terrain-bouton">${iconeHtml('terrain_btp_photo')} ${texteHtml('terrain_btp.actions.photos.prendre')}<input type="file" accept="${TYPES_PHOTOS}" capture="environment" hidden data-prise></label>
+      <label class="terrain-bouton">${iconeHtml('terrain_btp_galerie')} ${texteHtml('terrain_btp.actions.photos.galerie')}<input type="file" accept="${TYPES_PHOTOS}" multiple hidden data-galerie></label></div>
+    <p class="aide" data-choisies>${texteHtml('terrain_btp.actions.photos.aucune')}</p>
+    <label class="coche"><input type="checkbox" data-origine> ${texteHtml('terrain_btp.actions.photos.origine')}</label>`;
+}
+
+/**
+ * Photo prête à envoyer : réduite en JPEG (qualité 0,85) si elle dépasse `max`, sinon le fichier d'origine ; HEIC
+ * reçu malgré tout : converti en JPEG (pleine taille en « qualité d'origine », TS9 b) quand le navigateur sait le
+ * lire ; en cas d'échec de lecture (format non affichable par le navigateur) : le fichier d'origine, envoyé tel quel.
  */
 export async function preparerPhoto(fichier, { origine = false, max = PHOTO_COTE_MAX } = {}) {
-  if (origine || typeof createImageBitmap !== 'function') return fichier;
+  const heic = estHeic(fichier);
+  if ((origine && !heic) || typeof createImageBitmap !== 'function') return fichier;
   try {
     const image = await createImageBitmap(fichier);
-    const d = dimensionsReduites(image.width, image.height, max);
-    if (!d.reduite) { image.close?.(); return fichier; }
+    const d = dimensionsReduites(image.width, image.height, origine ? Infinity : max);
+    if (!d.reduite && !heic) { image.close?.(); return fichier; }
     const canvas = document.createElement('canvas');
     canvas.width = d.largeur;
     canvas.height = d.hauteur;
