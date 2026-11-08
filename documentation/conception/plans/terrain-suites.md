@@ -21,7 +21,7 @@
 | 3 | Plans en vigueur sur le terrain | cœur | 2 | FAIT (08/11/2026) |
 | 4 | Plans gardés hors ligne, budget à part | cœur | 3 | FAIT (08/11/2026) |
 | 5 | Bandeau adaptatif sur téléphone | `modules/navigation` | — | FAIT (08/11/2026) |
-| 6 | Menu simplifié du terrain et raccourci vers le menu classique | cœur | 5 | A FAIRE |
+| 6 | Menu simplifié du terrain et raccourci vers le menu classique | cœur | 5 | FAIT (08/11/2026) |
 | 7 | Pointage à la ligne d'ordre | cœur | — | A FAIRE |
 | 8 | Photos HEIC converties par l'iPhone | cœur | — | A FAIRE |
 | 9 | Hors ligne : chantiers et ordres ouverts du service | cœur | — | A FAIRE |
@@ -143,7 +143,7 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
   `/terrain` à 360 px sans défilement horizontal, feuille des menus ouverte comprise ; pas de test Playwright permanent
   (aucun environnement DOM dans les tests du module). Aucun script SQL.
 
-## Lot 6 : menu simplifié du terrain et raccourci vers le menu classique (TS4 a)
+## Lot 6 : menu simplifié du terrain et raccourci vers le menu classique (TS4 a) (FAIT 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `client/src/app/navigation/menus.js` (menu du terrain : Mon terrain, Pointage, Mes demandes, SAV selon
@@ -155,6 +155,17 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
   (proposé : non, pages du terrain seulement).
 - **Tests** : JS : menu simplifié sur `/terrain`, complet ailleurs ; raccourci qui bascule et se souvient.
 - **Critère de fin** : `npm test` vert ; sur téléphone, « Mon terrain » montre le menu simplifié et le raccourci.
+- **Réalisé / écarts** : point OUVERT tranché par la proposition : menu simplifié par défaut sur les pages du terrain
+  seulement, quel que soit le profil. `navigation/menus.js` : `estPageTerrain` (`/terrain`, `/terrain/reception/:id`,
+  `/terrain/sav/:id`) et `menusTerrain(app)` (un menu « Terrain » : Mon terrain, Pointage, Mes demandes, SAV, liens vers
+  les onglets de `/terrain`, mêmes droits que ces onglets ; sans accès à Mon terrain : menus complets).
+  `application.js` : `#majMenuTerrain` (appelé par `majPage`) pose ou retire la liste simplifiée du bandeau ; choix « Menu
+  classique » gardé dans les préférences du navigateur (`menuClassique` de `logibtp.navigation`, `localStorage`), repris
+  sur toutes les pages du terrain ; raccourci `menuClassique` du groupe `application` (`raccourcis.js`, Ctrl+Maj+M par
+  défaut, personnalisable) en plus du bouton du bandeau. Module Navigation : un menu seul dans la liste simplifiée est
+  déplié d'emblée dans la feuille du téléphone. Textes `navigation_btp.menus.terrain_simplifie.*`,
+  `navigation_btp.raccourcis.application.menu_classique`. Tests : `client/test/menus.test.js`. Vérifié par Playwright à
+  360 px (feuille du menu simplifié, sans défilement horizontal) et à 1280 px. Aucun script SQL.
 
 ## Lot 7 : pointage à la ligne d'ordre (TS5 a, TS6 a, TS7 a)
 

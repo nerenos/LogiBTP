@@ -91,6 +91,7 @@ export class Bandeau {
     // Panneau latéral : menus et sous-menus dépliés (chemins « code » ou « code/i/j »), éléments par chemin.
     this.deplies = new Set();
     this.lignes = new Map();
+    this.#deplierSeul();
     this.racine.classList.add('bandeau');
     this.racine.innerHTML = `
       <a class="bandeau-logo" href="${echapper(accueil)}" title="${texteHtml('navigation.bandeau.accueil', { application: titreApplication })}">${logo || `<span class="bandeau-logo-texte">${echapper(titreApplication)}</span>`}</a>
@@ -212,7 +213,14 @@ export class Bandeau {
     this.simplifie = simplifie ?? null;
     if (complet !== undefined) this.complet = Boolean(complet);
     this.fermer();
+    this.#deplierSeul();
     if (this.rendu) this.rendre();
+  }
+
+  /** Un seul menu affiché (liste simplifiée) : déplié d'emblée dans l'accordéon. */
+  #deplierSeul() {
+    const affiches = this.affiches;
+    if (affiches.length === 1) this.deplies.add(affiches[0].code);
   }
 
   /** Bascule entre menus simplifiés et complets (sans liste réduite : rien) ; choix rendu par `surBascule`. */
@@ -220,6 +228,7 @@ export class Bandeau {
     if (!basculeProposee(this.simplifie)) return;
     this.complet = Boolean(complet);
     this.fermer();
+    this.#deplierSeul();
     this.rendre();
     this.barre.querySelector('[data-bascule]')?.focus({ preventScroll: true });
     this.surBascule(this.complet);

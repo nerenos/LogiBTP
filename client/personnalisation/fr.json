@@ -4910,6 +4910,13 @@
           "libelle": "Paramètres : heures travaillées, jours masqués…"
         }
       },
+      "terrain_simplifie": {
+        "libelle": "&Terrain",
+        "terrain": "Mon terrain",
+        "pointage": "Pointage",
+        "demandes": "Mes demandes",
+        "sav": "SAV"
+      },
       "terrain": {
         "libelle": "Terra&in",
         "terrain": {
@@ -5222,7 +5229,8 @@
         "precedente": "Fiche ou document précédent de la liste",
         "suivante": "Fiche ou document suivant de la liste",
         "parametres": "Paramètres",
-        "raccourcis": "Personnaliser les raccourcis"
+        "raccourcis": "Personnaliser les raccourcis",
+        "menu_classique": "Menu classique ou simplifié (pages du terrain)"
       },
       "document": {
         "groupe": "Page document",

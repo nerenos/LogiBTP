@@ -22,7 +22,7 @@ import { listeAttente, ETATS_ATTENTE, urlAttente, ETAT_ATTENTE } from './hors-li
 import { envoyerAttentes, SUJET_ATTENTE } from './hors-ligne/synchro.js';
 import { listeOperations } from './hors-ligne/operations.js';
 import './terrain/operations-terrain.js';
-import { menus } from './navigation/menus.js';
+import { menus, menusTerrain, estPageTerrain } from './navigation/menus.js';
 import { ROUTES } from './pages/index.js';
 import { CLE_PREFERENCES_NAVIGATION, urlDocument, urlFiche, TYPE_DOCUMENT, SUJET_FENETRE } from './codes.js';
 import { texte, texteHtml, pluriel, icone, iconeHtml, messageErreur } from '@logibtp/socle/dictionnaire';
@@ -40,7 +40,7 @@ export const LISTE_PAR_TYPE = {
 export class Application {
   constructor() {
     this.societe = null;
-    this.preferences = new Preferences(CLE_PREFERENCES_NAVIGATION, { nouvelleFenetre: false, theme: 'auto', densite: 'confortable', menu: { ...DISPOSITION_DEFAUT } });
+    this.preferences = new Preferences(CLE_PREFERENCES_NAVIGATION, { nouvelleFenetre: false, theme: 'auto', densite: 'confortable', menu: { ...DISPOSITION_DEFAUT }, menuClassique: false });
     appliquerTheme(this.preferences.get('theme'));
     appliquerDensite(this.preferences.get('densite'));
     // Thème et disposition du menu changés dans une autre fenêtre de la session (même localStorage) : appliqués ici aussi.
@@ -70,6 +70,8 @@ export class Application {
     this.bandeau = new Bandeau(document.querySelector('#bandeau'), {
       menus: menus(this), naviguer: (url, o) => this.naviguer(url, o), logo: logoApplication(), titreApplication: texte('application.nom'), retour: () => this.retour(),
       disposition: this.preferences.get('menu'), surDisposition: (d) => this.preferences.set('menu', d),
+      // Menu simplifié des pages du terrain (posé par #majMenuTerrain) : choix « Menu classique » gardé dans le navigateur.
+      complet: this.preferences.get('menuClassique'), surBascule: (complet) => this.preferences.set('menuClassique', complet),
     });
     // Application installable : le service worker garde le client et les données consultées (mode hors ligne).
     enregistrerServiceWorker({
@@ -371,6 +373,7 @@ export class Application {
       suivante: page?.suivant && (() => page.suivant()),
       parametres: () => this.naviguer('/parametres'),
       raccourcis: () => this.naviguer('/parametres/raccourcis'),
+      menuClassique: this.bandeau?.simplifie && (() => this.bandeau.basculerMenus()),
     };
     const f = !e.defaultPrevented && fonctions[actionDe(e, 'application')];
     if (f) {
@@ -391,12 +394,24 @@ export class Application {
 
   /** Titre du document et annonce aux autres fenêtres quand la page, son titre ou ses modifications changent. */
   majPage() {
+    this.#majMenuTerrain();
     const e = this.etatFenetre();
     const signature = `${e.url}|${e.titre}|${e.modifiee}`;
     document.title = `${e.modifiee ? `${icone('modifie')} ` : ''}${e.titre ? `${e.titre} – ` : ''}LogiBTP${this.societe && !this.societe.principale ? ` (${this.societe.libelle})` : ''}`;
     if (signature === this.signature) return;
     this.signature = signature;
     this.fenetres?.annoncer();
+  }
+
+  /**
+   * Pages du terrain (`/terrain`, réception, bon de SAV) : menu simplifié (`menusTerrain`), bascule vers le menu
+   * classique gardée dans le navigateur ; ailleurs, menus complets.
+   */
+  #majMenuTerrain() {
+    const terrain = Boolean(this.session?.connecte) && estPageTerrain(location.pathname);
+    if (!this.bandeau || terrain === this.pageTerrain) return;
+    this.pageTerrain = terrain;
+    this.bandeau.simplifier(terrain ? () => menusTerrain(this) : null, { complet: this.preferences.get('menuClassique') });
   }
 
   rendreInfos() {
