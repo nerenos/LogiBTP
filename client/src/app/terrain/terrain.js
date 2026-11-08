@@ -1,6 +1,7 @@
 // Application de terrain (ANALYSE-TERRAIN.md) : règles sans interface de la page /terrain (testées par
 // test/terrain.test.js) : partie mobile d'une tâche complétée par son chantier, lien d'itinéraire, liens saisis.
-import { textesParCode } from '@logibtp/socle/dictionnaire';
+import { textesParCode, texte, texteHtml, pluriel, iconeHtml } from '@logibtp/socle/dictionnaire';
+import { echapper } from '@logibtp/socle/ui';
 import { ajouterJours } from '@logibtp/socle';
 
 /** Applications de navigation proposées (préférence `terrainNavigation` du navigateur, T11). */
@@ -165,4 +166,28 @@ export function jourPointage(tache, jourAffiche, aujourdhui) {
   const fin = tache.fin.endsWith('T00:00') ? ajouterJours(tache.fin.slice(0, 10), -1) : tache.fin.slice(0, 10);
   const jour = jourAffiche >= debut && jourAffiche <= fin ? jourAffiche : debut;
   return jour > aujourdhui ? aujourdhui : jour;
+}
+
+/**
+ * Plans en vigueur d'une tâche (plan terrain-suites, lot 3 ; TS2 b), lus dans `plans` de `GET /api/terrain` (clé :
+ * identifiant de la tâche) : cochés « Terrain » en tête, les autres plans validés derrière « Voir tous les plans ».
+ */
+export function plansTache(tache, plans = {}) {
+  const liste = plans?.[tache?.id] ?? [];
+  return { entete: liste.filter((p) => p.terrain), autres: liste.filter((p) => !p.terrain) };
+}
+
+/** Indice affiché d'un plan : l'indice vide est le premier (avant A). */
+const libelleIndice = (i) => (i ? texte('terrain_btp.page.plan_indice', { indice: i }) : texte('terrain_btp.page.plan_premier_indice'));
+
+/**
+ * Bloc des plans d'une tâche (vide sans plan) : un lien par fichier de l'indice en vigueur ; plans non cochés repliés
+ * sous « Voir tous les plans ». `url(id)` : adresse du fichier, `taille(octets)` : taille affichée.
+ */
+export function plansTacheHtml({ entete, autres }, { url, taille = () => '' }) {
+  if (!entete.length && !autres.length) return '';
+  const liens = (liste) => liste.flatMap((p) => p.fichiers.map((f) => `<a class="terrain-piece terrain-plan" href="${echapper(url(f.id))}" target="_blank" rel="noopener">
+        ${iconeHtml('terrain_btp_plan')} <span>${echapper(`${p.repere} – ${p.nom}`)}</span><small class="aide">${echapper([libelleIndice(p.indice), p.fichiers.length > 1 ? f.titre : null, f.nom_fichier, taille(f.taille)].filter(Boolean).join(' · '))}</small></a>`)).join('');
+  return `<div class="terrain-pieces terrain-plans" title="${texteHtml('terrain_btp.page.plans_titre')}"><b>${texteHtml('terrain_btp.page.plans')}</b>${liens(entete)}${autres.length
+    ? `<details class="terrain-plans-autres"><summary>${echapper(pluriel('terrain_btp.page.plans_autres', autres.length))}</summary>${liens(autres)}</details>` : ''}</div>`;
 }

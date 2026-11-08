@@ -7,7 +7,7 @@ import { MODULE_FACULTATIF, TYPE_DOCUMENT, TYPE_FICHE } from '../codes.js';
 import { echapper, lirePreferences, formatDate, confirmer } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 import { ETATS_TACHE, COULEURS_ETAT } from '../planning/etats.js';
-import { NAVIGATIONS, lundiDe, mobileAffiche, lienItineraire, liensTexte, numeroTel, adressesAPrecharger, actionsTache, minutesPointees, tachesGardees, jourPointage } from '../terrain/terrain.js';
+import { NAVIGATIONS, lundiDe, mobileAffiche, lienItineraire, liensTexte, numeroTel, adressesAPrecharger, actionsTache, minutesPointees, tachesGardees, jourPointage, plansTache, plansTacheHtml } from '../terrain/terrain.js';
 import { PointageTerrain } from '../terrain/pointage-terrain.js';
 import { SavTerrain } from '../terrain/sav-terrain.js';
 import { DemandesTerrain } from '../terrain/demandes-terrain.js';
@@ -235,7 +235,7 @@ export class PageTerrain extends PageBase {
 
   /**
    * Carte d'une tâche affichée sous le jour `jour` : résumé (horaires, chantier, ordre, état, pointage du jour), détail
-   * dépliable (lieu, contact, consignes, actions, pièces).
+   * dépliable (lieu, contact, consignes, actions, plans en vigueur, pièces).
    */
   #carte(t, jour) {
     const m = mobileAffiche(t, this.donnees.chantiers);
@@ -266,6 +266,7 @@ export class PageTerrain extends PageBase {
       t.memo && `<p class="aide">${echapper(t.memo)}</p>`,
       actions.length && `<div class="terrain-actions">${actions
         .map((a) => `<button type="button" class="terrain-bouton" data-action-tache="${a}" data-tache="${t.id}"${a === 'pointage' ? ` data-jour="${jourPointer}"` : ''}>${iconeHtml(`terrain_btp_${a}`)} ${texteHtml(`terrain_btp.page.actions.${a}`)}</button>`).join('')}</div>`,
+      plansTacheHtml(plansTache(t, this.donnees.plans), { url: (id) => api.terrain.urlPlan(id), taille }),
       t.pieces.length && `<div class="terrain-pieces"><b>${texteHtml('terrain_btp.page.pieces')}</b>${t.pieces.map((p) => `<a class="terrain-piece" href="${echapper(api.terrain.urlPiece(p.id))}" target="_blank" rel="noopener">
         ${iconeHtml('terrain_btp_piece')} <span>${echapper(p.titre)}</span><small class="aide">${echapper([p.nom_fichier, taille(p.taille)].filter(Boolean).join(' · '))}</small></a>`).join('')}</div>`,
     ].filter(Boolean);

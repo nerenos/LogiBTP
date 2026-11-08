@@ -18,7 +18,7 @@
 |---|---|---|---|---|
 | 1 | Ménage du TODO (points déjà faits) | documentation | — | FAIT (08/11/2026) |
 | 2 | Case « Terrain » d'un plan du suivi des validations | `modules/crm` | — | FAIT (08/11/2026) |
-| 3 | Plans en vigueur sur le terrain | cœur | 2 | A FAIRE |
+| 3 | Plans en vigueur sur le terrain | cœur | 2 | FAIT (08/11/2026) |
 | 4 | Plans gardés hors ligne, budget à part | cœur | 3 | A FAIRE |
 | 5 | Bandeau adaptatif sur téléphone | `modules/navigation` | — | A FAIRE |
 | 6 | Menu simplifié du terrain et raccourci vers le menu classique | cœur | 5 | A FAIRE |
@@ -76,7 +76,7 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
   module fournit la case (`caseTerrainPlan` de `js/src/plans.js`, textes `crm.plans.terrain*`), testée dans
   `plans.test.js`. Script à appliquer par l'utilisateur (non rejoué ici).
 
-## Lot 3 : plans en vigueur sur le terrain (TS1, TS2)
+## Lot 3 : plans en vigueur sur le terrain (TS1, TS2) (FAIT 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `src/LogiBTP.Api/Btp/TerrainBtp.cs` (plans du chantier, de ses marchés et de l'ordre d'origine : indice
@@ -88,6 +88,16 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
 - **Tests** : C# : indice B diffusé et visé BPE montré, indice C en attente ignoré, plan refusé absent, plan coché en
   tête ; JS : affichage replié des autres plans.
 - **Critère de fin** : `npm test` vert ; sur `/terrain`, un plan coché au dernier indice validé s'ouvre depuis la carte.
+- **Réalisé / écarts** : nouveau `src/LogiBTP.Api/Btp/TerrainPlansBtp.cs` (partie de `TerrainBtp`, au lieu d'alourdir
+  `TerrainBtp.cs`) : `PlansEnVigueur` (règle `ReglesValidation.Etat` du module reprise, cochés en tête puis lot et
+  repère), `plans` ajouté à `GET /api/terrain` (clé : tâche ; plans du chantier, de ses marchés et de l'ordre d'origine,
+  élément CRM `document` = groupe d'indices), route `GET /api/terrain/plans/{id}` (fichier d'un plan en vigueur d'une
+  tâche à ±30 jours ; couverte par le préfixe `/api/terrain` du nœud `terrain`, aucune ligne ajoutée aux `Routes`).
+  Fichiers montrés : celui de l'indice (`pin_dge_id`) et ceux de son répertoire GED (`pin_rge_id`), mêmes filtres de
+  confidentialité que les pièces ; plan en vigueur sans fichier visible absent ; module CRM inactif : aucun plan.
+  Client : `plansTache` / `plansTacheHtml` (`terrain/terrain.js`), bloc avant les pièces, autres plans dans un
+  `<details>` replié ; textes `terrain_btp.page.plans*`, icône `terrain_btp_plan`, `api.terrain.urlPlan`. Tests :
+  `PlansTerrainTests` (C#), `terrain.test.js` (JS). Aucun script SQL.
 
 ## Lot 4 : plans gardés hors ligne, budget à part (TS3)
 

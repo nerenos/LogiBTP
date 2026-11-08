@@ -7241,6 +7241,12 @@
       "herite": "(chantier)",
       "appeler": "Appeler",
       "pieces": "Pièces",
+      "plans": "Plans",
+      "plans_titre": "Plans au dernier indice bon pour exécution (suivi des validations)",
+      "plan_indice": "Indice {{indice}}",
+      "plan_premier_indice": "Premier indice",
+      "plans_autres_un": "Voir tous les plans ({{nombre}} autre)",
+      "plans_autres_autre": "Voir tous les plans ({{nombre}} autres)",
       "sans_information": "Aucune information de terrain pour cette tâche.",
       "actions": {
         "pointage": "Pointer",

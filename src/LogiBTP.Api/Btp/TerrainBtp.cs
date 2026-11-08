@@ -14,7 +14,8 @@ namespace LogiBTP.Api.Btp;
 /// (adresse des travaux, contact sur place et son téléphone) et les pièces de la GED diffusées sur le terrain
 /// (<c>dge_terrain</c>) du chantier, de ses marchés et de l'ordre d'origine de la tâche (ordre ou étape d'ordre).
 /// Pièces confidentielles, secrètes ou à accès restreint jamais proposées. Minutes pointées par la personne sur chaque
-/// tâche, par jour de la période (état visuel des cartes). Routes <c>/api/terrain</c> (nœud « terrain »).
+/// tâche, par jour de la période (état visuel des cartes) ; plans en vigueur du suivi des validations par tâche
+/// (<c>plans</c>, TerrainPlansBtp.cs). Routes <c>/api/terrain</c> (nœud « terrain »).
 /// </summary>
 public static partial class TerrainBtp
 {
@@ -87,7 +88,9 @@ public static partial class TerrainBtp
             var chantiers = new Dictionary<string, object?>();
             foreach (var id in taches.Where(t => t.GetProperty("chantier").ValueKind == JsonValueKind.Object).Select(t => t.GetProperty("chantier").GetProperty("id").GetInt32()).Distinct())
                 chantiers[id.ToString(CultureInfo.InvariantCulture)] = await DefautChantierAsync(db, id, ct);
-            return Results.Ok(new { personne = new { id = personne.Id, libelle = personne.Libelle }, du = Jour(debut), au = Jour(fin), taches, chantiers, motifs = await MotifsAsync(db, ct) });
+            // Plans en vigueur du suivi des validations par tâche (TerrainPlansBtp.cs) : clé = identifiant de la tâche.
+            var plans = (await PlansTachesAsync(http.RequestServices, db, s, debut, fin, ct)).ToDictionary(x => x.Key.ToString(CultureInfo.InvariantCulture), x => x.Value);
+            return Results.Ok(new { personne = new { id = personne.Id, libelle = personne.Libelle }, du = Jour(debut), au = Jour(fin), taches, chantiers, plans, motifs = await MotifsAsync(db, ct) });
         });
 
         // Valeurs par défaut de la partie mobile d'une tâche sur ce chantier (repères du détail de la tâche du planning).
@@ -109,7 +112,7 @@ public static partial class TerrainBtp
                 ?? throw ExceptionMetier.Introuvable($"Pièce {id}");
             return await ged.Contenu(version, telecharger == true, http, u, ct);
         });
-        return g.MapJournee().MapOrdresTerrain().MapReceptionTerrain().MapSavTerrain().MapComplementsTerrain();
+        return g.MapPlansTerrain().MapJournee().MapOrdresTerrain().MapReceptionTerrain().MapSavTerrain().MapComplementsTerrain();
     }
 
     /// <summary>Motifs de non-conformité proposés (paramètres des ressources) ; tout autre motif reste saisissable.</summary>

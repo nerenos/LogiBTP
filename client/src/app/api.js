@@ -254,6 +254,8 @@ export const api = {
     photosSav: (ordre, formulaire) => appel('POST', `/terrain/sav/${ordre}/photos`, formulaire),
     urlBonSav: (ordre, compteRendu) => `/api/terrain/sav/${ordre}/bon/${compteRendu}`,
     urlPiece: (id, telecharger = false) => `/api/terrain/pieces/${id}${telecharger ? '?telecharger=true' : ''}`,
+    /** Fichier d'un plan en vigueur d'une tâche (suivi des validations, plan terrain-suites lot 3). */
+    urlPlan: (id, telecharger = false) => `/api/terrain/plans/${id}${telecharger ? '?telecharger=true' : ''}`,
   },
   planning: {
     vues: () => appel('GET', '/planning/vues'),

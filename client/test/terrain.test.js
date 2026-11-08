@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { lundiDe, mobileAffiche, lienItineraire, liensTexte, numeroTel, presaisirJournee, actionsTache, minutesPointees, tachesGardees, jourPointage, adressesAPrecharger } from '../src/app/terrain/terrain.js';
+import { lundiDe, mobileAffiche, lienItineraire, liensTexte, numeroTel, presaisirJournee, actionsTache, minutesPointees, tachesGardees, jourPointage, adressesAPrecharger, plansTache, plansTacheHtml } from '../src/app/terrain/terrain.js';
 
 describe('application de terrain', () => {
   it('présaisie : heures du calendrier au prorata des tâches, équipe du chef reprise', () => {
@@ -109,5 +109,33 @@ describe('hors ligne', () => {
   it('préchargement : mes demandes avec le droit seulement', () => {
     expect(adressesAPrecharger('2026-10-30', 12)).not.toContain('/api/terrain/demandes');
     expect(adressesAPrecharger('2026-10-30', 12, { demandes: true })).toContain('/api/terrain/demandes');
+  });
+});
+
+describe('plans en vigueur d’une tâche (plan terrain-suites, lot 3)', () => {
+  const plans = {
+    5: [
+      { id: 1, repere: 'R01', nom: 'Plan de masse', indice: 'B', terrain: true, fichiers: [{ id: 11, titre: 'R01_B.pdf', nom_fichier: 'R01_B.pdf', taille: 2048 }] },
+      { id: 2, repere: 'R02', nom: 'Coupe', indice: '', terrain: false, fichiers: [{ id: 21, titre: 'R02.pdf', nom_fichier: 'R02.pdf', taille: null }] },
+    ],
+  };
+
+  it('cochés en tête, les autres à part ; tâche sans plan : rien', () => {
+    const p = plansTache({ id: 5 }, plans);
+    expect(p.entete.map((x) => x.id)).toEqual([1]);
+    expect(p.autres.map((x) => x.id)).toEqual([2]);
+    expect(plansTache({ id: 6 }, plans)).toEqual({ entete: [], autres: [] });
+    expect(plansTacheHtml(plansTache({ id: 6 }, plans), { url: (id) => `/p/${id}` })).toBe('');
+  });
+
+  it('autres plans repliés sous « Voir tous les plans »', () => {
+    const html = plansTacheHtml(plansTache({ id: 5 }, plans), { url: (id) => `/p/${id}` });
+    const [tete, replie] = html.split('<details');
+    expect(tete).toContain('href="/p/11"');
+    expect(tete).toContain('Indice B');
+    expect(replie).not.toMatch(/^[^>]*\bopen\b/);
+    expect(replie).toContain('Voir tous les plans (1 autre)');
+    expect(replie).toContain('href="/p/21"');
+    expect(replie).toContain('Premier indice');
   });
 });
