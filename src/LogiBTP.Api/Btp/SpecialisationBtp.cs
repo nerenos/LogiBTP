@@ -282,6 +282,7 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         // Lots et numéros de série (S24.2) : entrée d'un article suivi dont une partie reste sans lot.
         await MouvementsStockBtp.AvertirLotsAsync(db, document.Lignes, type, avertissements, ct);
         var d = document.Document;
+        await AvertirTvaAutoliqueeAsync(db, document, type, avertissements, ct);
         var parId = document.Lignes.ToDictionary(l => l.LigId);
         // Lignes vendues : lignes de prix hors composantes d'ouvrage, options et frais annexes.
         var vendues = document.Lignes.Where(l => TL.EstChiffree(l) && !(l.LigParentId is long p && parId.TryGetValue(p, out var parent) && parent.LigTylId == TL.Ouvrage)
@@ -367,6 +368,22 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
             }
         }
     }
+
+    /// <summary>
+    /// Pièce d'achat d'un fournisseur intracommunautaire (Comptabilité active) : une ligne de prix dont la TVA n'est pas
+    /// autoliquidée est signalée (avertissement non bloquant, numéros des lignes en cause).
+    /// </summary>
+    private static async Task AvertirTvaAutoliqueeAsync(DocumentDbContext<DocumentBtp, DocumentLigneBtp> db, DocumentCompletBtp document, TypeDocument type,
+        List<MessageCalcul> avertissements, CancellationToken ct)
+    {
+        if (document.Document.EntTiersId is not long tiers || type.TydFamille != FamillesDocument.Achat) return;
+        var intracom = (await db.Database.SqlQuery<bool>($"SELECT coalesce(per_fou_tva_intracom, FALSE) AS \"Value\" FROM personne WHERE per_id = {tiers}").ToListAsync(ct)).FirstOrDefault();
+        if (!intracom) return;
+        var categories = await db.Database.SqlQuery<TauxCategorie>($"SELECT ttv_id AS id, ttv_categorie AS categorie FROM taux_tva").ToListAsync(ct);
+        TvaAchatBtp.Avertir(type.TydFamille, intracom, true, document.Lignes, categories.ToDictionary(c => c.Id, c => c.Categorie), avertissements);
+    }
+
+    private sealed record TauxCategorie(int Id, string Categorie);
 
     /// <summary>Frais annexes et coefficient de prorata réservés aux ventes (règle FRAIS_ANNEXES, P11 ; controlesValidation).</summary>
     private static async Task ControlerFraisAnnexes(DocumentDbContext<DocumentBtp, DocumentLigneBtp> db, DocumentCompletBtp document, TypeDocument type,

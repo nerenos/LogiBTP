@@ -110,7 +110,7 @@
   Comptabilité inactive → rien ; fournisseur ordinaire → rien.
 - **Critère de fin** : `npm test` vert.
 
-## Lot 6 : avertissement de TVA à la validation d'une pièce d'achat (A FAIRE)
+## Lot 6 : avertissement de TVA à la validation d'une pièce d'achat (FAIT 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : contrôle à la validation des pièces d'achat (spécialisation du module Document dans le cœur, graphify
@@ -137,3 +137,4 @@
 > Lot 3 FAIT le 08/11/2026 : `ServiceAnnuaireBtp` (`per_usage`/`ind_usage` <> N par sous-requête) et `ServiceBibliothequeBtp` (`ele_usage` lu par `Database.SqlQuery`, colonne hors entité), enregistrés dans `Program.cs` ; tests `tests/LogiBTP.Calcul.Tests/FiltreChoixUsageTests.cs`. Écart : aucun changement client (les fournisseurs API et l'appel F3 passent par le serveur filtré) ; les classes ne sont pas `sealed` (dérivées par le test).
 > Lot 4 FAIT le 08/11/2026 : `SqlBtp.RessourceUtilisable` (N écartés de `v_ressource` : salarié, matériel, sous-traitant) dans les ressources du planning et les cibles d'affectation de matériel ; `sal_usage <> 'N'` dans les salariés du pointage et du magasin (listes sans identifiant seulement, valeur posée lisible) et dans les ressources d'ordre (`ExecutionBtp`). Écart : test par contrôle des fragments SQL (pas de base).
 > Lot 5 FAIT le 08/11/2026 : `tvaAutoliqueeParDefaut` (`client/src/app/comptes.js`), `ReglesBtp.tauxParDefaut` (après le taux du titre et celui du document), `EditeurDevisBtp.tvaAutoliqueeDefaut` ; l'indicateur `TVA_INTRACOM` s'ajoute à `GET /api/comptabilite/tiers/{id}/comptes-lignes` (`ComptabiliteBtp.cs`). Écart : Comptabilité n'est pas un module facultatif (`MODULE_FACULTATIF`), activité = règle de ventilation lue ; seul le fournisseur (pas le sous-traitant) est visé ; test `client/test/tva-autoliquidee-achat.test.js`.
+> Lot 6 FAIT le 08/11/2026 : `TvaAchatBtp.Avertir` (`src/LogiBTP.Api/Btp/TvaAchatBtp.cs`) appelé par `AvertissementsAsync` de `SpecialisationBtp` (VALIDER, famille A, fournisseur `per_fou_tva_intracom`) ; code `AvertissementsGestion.TvaNonAutoliquee` ↔ `AVERTISSEMENT_GESTION` (`codes.js`), cas dans `CodesTests` et `TvaAchatTests`. Écart : message en français construit côté serveur, comme les autres avertissements de gestion (pas de clé de dictionnaire) ; Comptabilité non facultative, donc considérée active côté serveur.
