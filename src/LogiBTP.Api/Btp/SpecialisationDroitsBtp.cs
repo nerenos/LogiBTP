@@ -218,6 +218,8 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
         new("/api/terrain/receptions", ModeRoute.Action, "terrain", ActionsDroits.Consulter),
         // Demandes : nœud terrain/demande (Consulter : ses demandes ; Créer : nouvelle demande, posé par la route).
         new("/api/terrain/demandes", ModeRoute.Action, "terrain", ActionsDroits.Consulter),
+        // Bibliothèque simplifiée (terrain-suites lot 17) : articles des demandes, nœud terrain/demande (Consulter).
+        new("/api/terrain/bibliotheque", ModeRoute.Action, "terrain/demande", ActionsDroits.Consulter),
         // SAV du terrain : droit à part, refusé par défaut (T20).
         new("/api/terrain/sav", ModeRoute.Module, "execution/sav"),
         // Livraison : chantiers de son planning (contrôlé par la route), bon brouillon créé par le serveur.

@@ -149,7 +149,8 @@ Plan en 24 lots : [terrain-suites.md](documentation/conception/plans/terrain-sui
   lot 16 (PV de levée des réserves signé, `db/291`, modèle `PV_LEVEE_RESERVES` par `db/191` à rejouer).
 - [ ] Lot 7, suites : bibliothèque simplifiée sur le terrain (T18) ; pointage des heures de matériel à la borne ;
   réception d'une commande à options ou variantes (refusée) ; avancement réel par marché quand un chantier en porte
-  plusieurs (aujourd'hui : tout le chantier). Plan : lots 17 à 21. Déjà faits ailleurs : valorisation des heures de
+  plusieurs (aujourd'hui : tout le chantier). Plan : lots 17 à 21 (fait le 08/11/2026 : lot 17, serveur de la
+  bibliothèque simplifiée). Déjà faits ailleurs : valorisation des heures de
   matériel (module Rentabilité, lot 5, `db/261`) et relevés de compteurs à la borne
   ([materiel-suites.md](documentation/conception/plans/materiel-suites.md), lots 3 et 4).
 - [ ] Lot 6, suites : temps et fournitures du bon de SAV non repris dans la facture (facture = transformation au bureau) ;

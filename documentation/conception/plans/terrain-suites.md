@@ -32,7 +32,7 @@
 | 14 | Réserves suivies : base et serveur | cœur | 13 | FAIT (08/11/2026) |
 | 15 | Réserves suivies : levée depuis le terrain et suivi au bureau | cœur | 14 | FAIT (08/11/2026) |
 | 16 | PV de levée des réserves signé | cœur | 15 | FAIT (08/11/2026) |
-| 17 | Bibliothèque simplifiée : serveur | cœur | — | A FAIRE |
+| 17 | Bibliothèque simplifiée : serveur | cœur | — | FAIT (08/11/2026) |
 | 18 | Bibliothèque simplifiée : écran et articles des demandes d'approvisionnement | cœur | 17 | A FAIRE |
 | 19 | Pointage des heures de matériel à la borne | cœur | — | A FAIRE |
 | 20 | Réception d'une commande à options ou variantes | cœur | — | A FAIRE |
@@ -396,7 +396,7 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
   empreinte sur la base de développement si `LOGIBTP_TEST_PG`), `modeles-pv-terrain.test.js` (deux PV : modèle valide,
   deux heures hors ligne, une en ligne), `operations-terrain.test.js`.
 
-## Lot 17 : bibliothèque simplifiée, serveur (TS17 b, TS15 a)
+## Lot 17 : bibliothèque simplifiée, serveur (TS17 b, TS15 a) (FAIT 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : nouveau `src/LogiBTP.Api/Btp/TerrainBibliothequeBtp.cs` (recherche d'articles par code ou libellé,
@@ -406,6 +406,18 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
 - **Dépendances** : aucune.
 - **Tests** : C# : recherche, articles du chantier, aucun prix d'achat renvoyé.
 - **Critère de fin** : `npm test` vert.
+- **Réalisé / écarts** : point OUVERT tranché par la proposition : routes `/api/terrain/bibliotheque` sous le nœud
+  `terrain/demande` (Consulter), pas de nouveau nœud. `src/LogiBTP.Api/Btp/TerrainBibliothequeBtp.cs` (partie de
+  `TerrainBtp`) : `GET /api/terrain/bibliotheque/articles?recherche=` (articles actifs, ni ouvrages ni ensembles ;
+  chaque mot, cinq au plus, dans le code, le libellé, les mots-clés ou le code-barres, sans accent ni casse ;
+  bibliothèque par défaut en tête, 30 au plus), `…/articles/{id}` (fiche réduite `SqlFicheArticle` : code, libellé,
+  bibliothèque, unité de stock et d'achat, conditionnements = conversions `ele_unites`, photo `ele_image_ged`, notices de
+  la catégorie GED `notice_technique` de l'élément), `…/chantiers/{cha}` (chantier de son planning ; éléments des
+  lignes, composantes comprises, des commandes valables non annulées de ses marchés par `marche_document` et
+  `v_document_valable`, 500 au plus), `…/pieces/{id}` (photo ou notice d'un article, jamais confidentielle ni à accès
+  restreint). Aucun prix renvoyé (ni achat, ni revient, ni vente). Aucun script SQL. Tests :
+  `BibliothequeTerrainTests.cs` (aucune colonne de prix dans les requêtes, mots de la recherche, route et droit ; sur la
+  base de développement si `LOGIBTP_TEST_PG` : article d'un marché rendu par le chantier et par la recherche).
 
 ## Lot 18 : bibliothèque simplifiée, écran et articles des demandes d'approvisionnement (TS17 b, TS15 a)
 

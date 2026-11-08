@@ -121,7 +121,7 @@ public static partial class TerrainBtp
                 ?? throw ExceptionMetier.Introuvable($"Pièce {id}");
             return await ged.Contenu(version, telecharger == true, http, u, ct);
         });
-        return g.MapPlansTerrain().MapJournee().MapOrdresTerrain().MapReceptionTerrain().MapSavTerrain().MapComplementsTerrain();
+        return g.MapPlansTerrain().MapJournee().MapOrdresTerrain().MapReceptionTerrain().MapSavTerrain().MapComplementsTerrain().MapBibliothequeTerrain();
     }
 
     /// <summary>Motifs de non-conformité proposés (paramètres des ressources) ; tout autre motif reste saisissable.</summary>
