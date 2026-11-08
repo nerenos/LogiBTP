@@ -367,7 +367,7 @@ export function menus(app) {
 export function catalogueRaccourcis(app = null) {
   return [
     ...MENUS_METIER.flatMap((m) => (app ? elementsMenu(app, m) : m.elements).filter((e) => e.url && e.code).map((e) => ({ code: e.code, libelle: e.libelle, icone: e.icone, iconeHtml: e.iconeHtml, url: e.url, groupe: Bandeau.libelle(m.libelle), creation: e.creation })),),
-    { code: 'preferences', libelle: texte('navigation_btp.menus.parametres.preferences.libelle'), iconeHtml: iconeHtml('navigation_btp_preferences'), url: '/parametres', groupe: Bandeau.libelle(texte('navigation_btp.menus.parametres.libelle')), creation: D('preferences', texte('navigation_btp.menus.parametres.preferences.creation')) },
+    { code: 'preferences', libelle: texte('navigation_btp.menus.parametres.preferences.libelle'), iconeHtml: iconeHtml('navigation_btp_preferences'), url: '/parametres', groupe: Bandeau.libelle(texte('navigation_btp.menus.parametres.libelle')) },
   ];
 }
 
