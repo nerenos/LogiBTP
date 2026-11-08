@@ -284,6 +284,15 @@
 | NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Reglements.Tests |
 | NuGet | xunit.runner.visualstudio | 3.1.4 | Apache-2.0 | LogiBTP.Reglements.Tests |
 
+## modules/relance
+
+| Type | Dépendance | Version | Licence | Usage |
+|---|---|---|---|---|
+| npm | vitest | 3.2.7 | MIT | développement (modules/relance/js) |
+| NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Relances.Tests |
+| NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Relances.Tests |
+| NuGet | xunit.runner.visualstudio | 3.1.4 | Apache-2.0 | LogiBTP.Relances.Tests |
+
 ## modules/rentabilite
 
 | Type | Dépendance | Version | Licence | Usage |

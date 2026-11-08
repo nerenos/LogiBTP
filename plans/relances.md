@@ -13,7 +13,7 @@
 
 | Lot | Titre | Module | Dépend de | Statut |
 |---|---|---|---|---|
-| 1 | Règle des niveaux et calcul des relances dues | `modules/relance` (nouveau) | — | A FAIRE |
+| 1 | Règle des niveaux et calcul des relances dues | `modules/relance` (nouveau) | — | FAIT (08/11/2026) |
 | 2 | Schéma, journal, suspensions et service du module | `modules/relance` | 1 | A FAIRE |
 | 3 | Écrans du module : liste de travail, règle, suspensions | `modules/relance` | 2 | A FAIRE |
 | 4 | Branchement du cœur : pièces en attente, rôle, droits, portée | cœur | 2, 3 | A FAIRE |
@@ -25,7 +25,7 @@
 
 ---
 
-## Lot 1 : règle des niveaux et calcul des relances dues (A FAIRE)
+## Lot 1 : règle des niveaux et calcul des relances dues (FAIT (08/11/2026))
 
 - **Module** : `modules/relance` (nouveau, dépend du socle seul). **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `modules/relance/js/package.json` (`@logibtp/relance`), `js/src/index.js`, `js/src/codes.js` ↔
@@ -46,6 +46,12 @@
   échéances futures, regroupement à niveaux mêlés) ; parité des codes.
 - **Critère de fin** : `npm test --workspace @logibtp/relance` et `dotnet test LogiBTP.slnx` verts, le jeu passe en JS
   et en C#.
+- **Réalisé** (08/11/2026) : `modules/relance` (`@logibtp/relance`, `LogiBTP.Relances`, `LogiBTP.Relances.Tests`,
+  `CLAUDE.md`) ; `regles.js` ↔ `ReglesRelance.cs` (`regleParDefaut`, `controlerRegle` avec `ERREUR_RELANCE`,
+  `niveauAtteint`, `relanceDue`, `relancesDues`, `regrouper`) ; jeu `01_niveaux.json` (39 cas JS, mêmes cas en C#) ;
+  regroupement aussi par **nature** (devis et factures d'un même tiers jamais dans la même relance : modèles par niveau
+  et nature, Q11) ; une retenue de garantie porte sa date de libération comme date d'échéance ; règle propre d'une pièce
+  (surcharge du tiers, lot 5) prise avant celle de sa nature.
 
 ## Lot 2 : schéma, journal, suspensions et service du module (A FAIRE)
 
@@ -155,8 +161,7 @@
 
 ## Points ouverts
 
-- **OUVERT** : `CLAUDE.md` du nouveau module `modules/relance` (la procédure ne modifie aucun CLAUDE.md ; pour le module
-  SAV, l'utilisateur l'avait demandé). À trancher avant le lot 1.
+- `CLAUDE.md` du nouveau module `modules/relance` : demandé par l'utilisateur, créé au lot 1.
 - Reportés au TODO à la fin du plan : calcul des pénalités de retard pour information (Q13 a, taux à tenir à jour) ;
   pastille « relancé N » dans l'entête des nouvelles pièces (Q17) ; blocage du client (Q17 c).
 - Décisions par défaut à relire : Q4 à Q6, Q8, Q11 à Q13, Q15 à Q22, Q24.

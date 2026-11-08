@@ -120,9 +120,10 @@ global). Lots à venir :
 
 ### Marchés et règlements
 
-- [ ] Relances des devis et des factures : analyse du 05/11/2026 à valider
-  ([ANALYSE-RELANCES.md](documentation/conception/ANALYSE-RELANCES.md), questions R1 à R18, quatre lots ; comprend le
-  lot 5 du module Mail et C27 du CRM).
+- [ ] Relances des devis et des factures : plan [relances.md](plans/relances.md) (neuf lots, décisions du 08/11/2026 dans
+  [relances-questions.md](plans/relances-questions.md) ; analyse [ANALYSE-RELANCES.md](documentation/conception/ANALYSE-RELANCES.md) ;
+  comprend le lot 5 du module Mail et C27 du CRM). Lot 1 fait (08/11/2026 : module `modules/relance`, règle des niveaux
+  et calcul des relances dues `regles.js` ↔ `ReglesRelance.cs`) ; suivant : lot 2 (schéma, journal, suspensions, service).
 
 ### Comptabilité
 

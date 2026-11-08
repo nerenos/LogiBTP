@@ -57,6 +57,10 @@
     <Project Path="modules/reglement/dotnet/LogiBTP.Reglements.Web/LogiBTP.Reglements.Web.csproj" />
     <Project Path="modules/reglement/dotnet/LogiBTP.Reglements.Tests/LogiBTP.Reglements.Tests.csproj" />
   </Folder>
+  <Folder Name="/modules/relance/">
+    <Project Path="modules/relance/dotnet/LogiBTP.Relances/LogiBTP.Relances.csproj" />
+    <Project Path="modules/relance/dotnet/LogiBTP.Relances.Tests/LogiBTP.Relances.Tests.csproj" />
+  </Folder>
   <Folder Name="/modules/crm/">
     <Project Path="modules/crm/dotnet/LogiBTP.Crm/LogiBTP.Crm.csproj" />
     <Project Path="modules/crm/dotnet/LogiBTP.Crm.Web/LogiBTP.Crm.Web.csproj" />

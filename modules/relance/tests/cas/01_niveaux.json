@@ -1,0 +1,162 @@
+{
+  "description": "Règle des niveaux et relances dues (regles.js ↔ ReglesRelance.cs) : règle par défaut, contrôles, niveau atteint (répétition du dernier), départ d'un devis ou d'une facture (échéance échue la plus ancienne non soldée), relance faite (pas de rattrapage double, relance faite en retard), arrêt et suspension, retenue de garantie, échéances futures, seuil, regroupement par tiers, chargé, nature et mode à niveaux mêlés.",
+  "regles": {
+    "standard": { "niveaux": [
+      { "rang": 1, "delai": 15, "mode": "COURRIEL", "modele_courriel": 11, "modele_edition": 21 },
+      { "rang": 2, "delai": 30, "mode": "COURRIEL", "modele_courriel": 12, "modele_edition": 22 },
+      { "rang": 3, "delai": 60, "mode": "COURRIEL", "modele_courriel": 13, "modele_edition": 23 } ], "repeter": false, "intervalle": null },
+    "repete": { "niveaux": [
+      { "rang": 1, "delai": 15, "mode": "COURRIEL", "modele_courriel": 11, "modele_edition": 21 },
+      { "rang": 2, "delai": 30, "mode": "COURRIEL", "modele_courriel": 12, "modele_edition": 22 },
+      { "rang": 3, "delai": 60, "mode": "COURRIER", "modele_courriel": 13, "modele_edition": 23 } ], "repeter": true, "intervalle": 30 },
+    "facture": { "niveaux": [
+      { "rang": 1, "delai": 15, "mode": "COURRIEL", "modele_courriel": 41, "modele_edition": 51 },
+      { "rang": 2, "delai": 30, "mode": "COURRIEL", "modele_courriel": 42, "modele_edition": 52 },
+      { "rang": 3, "delai": 60, "mode": "RECOMMANDE", "modele_courriel": 43, "modele_edition": 53 } ], "repeter": false, "intervalle": null },
+    "courte": { "niveaux": [
+      { "rang": 1, "delai": 5, "mode": "COURRIEL", "modele_courriel": 31, "modele_edition": null },
+      { "rang": 2, "delai": 10, "mode": "COURRIEL", "modele_courriel": 32, "modele_edition": null } ], "repeter": false, "intervalle": null }
+  },
+  "defauts": [
+    { "nature": "DEVIS", "attendu": { "niveaux": [
+      { "rang": 1, "delai": 15, "mode": "COURRIEL", "modele_courriel": null, "modele_edition": null },
+      { "rang": 2, "delai": 30, "mode": "COURRIEL", "modele_courriel": null, "modele_edition": null },
+      { "rang": 3, "delai": 60, "mode": "COURRIEL", "modele_courriel": null, "modele_edition": null } ], "repeter": false, "intervalle": null } },
+    { "nature": "FACTURE", "attendu": { "niveaux": [
+      { "rang": 1, "delai": 15, "mode": "COURRIEL", "modele_courriel": null, "modele_edition": null },
+      { "rang": 2, "delai": 30, "mode": "COURRIEL", "modele_courriel": null, "modele_edition": null },
+      { "rang": 3, "delai": 60, "mode": "RECOMMANDE", "modele_courriel": null, "modele_edition": null } ], "repeter": false, "intervalle": null } }
+  ],
+  "controles": [
+    { "nom": "règle valable", "nature": "FACTURE", "regle": "facture", "attendu": [] },
+    { "nom": "sans niveau", "nature": "DEVIS", "regle": { "niveaux": [], "repeter": false, "intervalle": null }, "attendu": ["RELANCE_REGLE_SANS_NIVEAU"] },
+    { "nom": "six niveaux", "nature": "DEVIS", "regle": { "niveaux": [
+      { "rang": 1, "delai": 1, "mode": "COURRIEL" }, { "rang": 2, "delai": 2, "mode": "COURRIEL" }, { "rang": 3, "delai": 3, "mode": "COURRIEL" },
+      { "rang": 4, "delai": 4, "mode": "COURRIEL" }, { "rang": 5, "delai": 5, "mode": "COURRIEL" }, { "rang": 6, "delai": 6, "mode": "COURRIEL" } ], "repeter": false, "intervalle": null },
+      "attendu": ["RELANCE_REGLE_TROP_DE_NIVEAUX"] },
+    { "nom": "délais non croissants", "nature": "DEVIS", "regle": { "niveaux": [
+      { "rang": 1, "delai": 15, "mode": "COURRIEL" }, { "rang": 2, "delai": 15, "mode": "COURRIER" } ], "repeter": false, "intervalle": null },
+      "attendu": ["RELANCE_NIVEAU_DELAI"] },
+    { "nom": "rang manquant", "nature": "DEVIS", "regle": { "niveaux": [
+      { "rang": 1, "delai": 15, "mode": "COURRIEL" }, { "rang": 3, "delai": 30, "mode": "COURRIEL" } ], "repeter": false, "intervalle": null },
+      "attendu": ["RELANCE_NIVEAU_RANG"] },
+    { "nom": "tâche d'appel sur une facture", "nature": "FACTURE", "regle": { "niveaux": [
+      { "rang": 1, "delai": 15, "mode": "TACHE" } ], "repeter": false, "intervalle": null }, "attendu": ["RELANCE_NIVEAU_MODE"] },
+    { "nom": "tâche d'appel sur un devis", "nature": "DEVIS", "regle": { "niveaux": [
+      { "rang": 1, "delai": 15, "mode": "TACHE" } ], "repeter": false, "intervalle": null }, "attendu": [] },
+    { "nom": "répétition sans intervalle", "nature": "DEVIS", "regle": { "niveaux": [
+      { "rang": 1, "delai": 15, "mode": "COURRIEL" } ], "repeter": true, "intervalle": null }, "attendu": ["RELANCE_REGLE_INTERVALLE"] },
+    { "nom": "délai nul et mode inconnu", "nature": "DEVIS", "regle": { "niveaux": [
+      { "rang": 1, "delai": 0, "mode": "FAX" } ], "repeter": false, "intervalle": null }, "attendu": ["RELANCE_NIVEAU_DELAI", "RELANCE_NIVEAU_MODE"] }
+  ],
+  "niveaux": [
+    { "nom": "avant le premier niveau", "regle": "standard", "depart": "2026-10-01", "date": "2026-10-15", "attendu": null },
+    { "nom": "premier niveau le jour même", "regle": "standard", "depart": "2026-10-01", "date": "2026-10-16", "attendu": { "rang": 1, "repetition": 0, "palier": "2026-10-16", "jours": 15 } },
+    { "nom": "changement d'année", "regle": "standard", "depart": "2025-12-20", "date": "2026-01-04", "attendu": { "rang": 1, "repetition": 0, "palier": "2026-01-04", "jours": 15 } },
+    { "nom": "dernier niveau sans répétition", "regle": "standard", "depart": "2026-01-01", "date": "2026-06-01", "attendu": { "rang": 3, "repetition": 0, "palier": "2026-03-02", "jours": 151 } },
+    { "nom": "dernier niveau avant sa répétition", "regle": "repete", "depart": "2026-01-01", "date": "2026-03-31", "attendu": { "rang": 3, "repetition": 0, "palier": "2026-03-02", "jours": 89 } },
+    { "nom": "première répétition", "regle": "repete", "depart": "2026-01-01", "date": "2026-04-01", "attendu": { "rang": 3, "repetition": 1, "palier": "2026-04-01", "jours": 90 } }
+  ],
+  "dues": [
+    { "nom": "devis avant le premier niveau", "regle": "standard", "date": "2026-11-08",
+      "piece": { "id": 1, "nature": "DEVIS", "tiers": 1, "charge": 7, "depart": "2026-10-30", "montant": "5000" }, "attendu": null },
+    { "nom": "devis au premier niveau", "regle": "standard", "date": "2026-11-08",
+      "piece": { "id": 1, "nature": "DEVIS", "tiers": 1, "charge": 7, "depart": "2026-10-20", "montant": "5000" },
+      "attendu": { "id": 1, "nature": "DEVIS", "tiers": 1, "charge": 7, "niveau": 1, "repetition": 0, "mode": "COURRIEL", "modele_courriel": 11, "modele_edition": 21,
+        "depart": "2026-10-20", "palier": "2026-11-04", "jours": 19, "montant": "5000", "echues": [], "futures": [] } },
+    { "nom": "devis jamais relancé : seul le niveau atteint", "regle": "standard", "date": "2026-11-08",
+      "piece": { "id": 2, "nature": "DEVIS", "tiers": 1, "charge": null, "depart": "2026-08-01", "montant": "1200.50" },
+      "attendu": { "id": 2, "nature": "DEVIS", "tiers": 1, "charge": null, "niveau": 3, "repetition": 0, "mode": "COURRIEL", "modele_courriel": 13, "modele_edition": 23,
+        "depart": "2026-08-01", "palier": "2026-09-30", "jours": 99, "montant": "1200.5", "echues": [], "futures": [] } },
+    { "nom": "niveau atteint déjà fait", "regle": "standard", "date": "2026-11-08",
+      "piece": { "id": 3, "nature": "DEVIS", "tiers": 1, "depart": "2026-09-20", "montant": "800", "derniere": { "niveau": 2, "date": "2026-10-25" } }, "attendu": null },
+    { "nom": "relance faite en retard : le niveau suivant garde sa date", "regle": "standard", "date": "2026-11-08",
+      "piece": { "id": 3, "nature": "DEVIS", "tiers": 1, "depart": "2026-09-20", "montant": "800", "derniere": { "niveau": 1, "date": "2026-10-25" } },
+      "attendu": { "id": 3, "nature": "DEVIS", "tiers": 1, "charge": null, "niveau": 2, "repetition": 0, "mode": "COURRIEL", "modele_courriel": 12, "modele_edition": 22,
+        "depart": "2026-09-20", "palier": "2026-10-20", "jours": 49, "montant": "800", "echues": [], "futures": [] } },
+    { "nom": "dernier niveau fait, sans répétition", "regle": "standard", "date": "2026-11-08",
+      "piece": { "id": 4, "nature": "DEVIS", "tiers": 1, "depart": "2026-07-01", "montant": "800", "derniere": { "niveau": 3, "date": "2026-09-01" } }, "attendu": null },
+    { "nom": "répétition due du dernier niveau", "regle": "repete", "date": "2026-11-08",
+      "piece": { "id": 4, "nature": "DEVIS", "tiers": 1, "depart": "2026-07-01", "montant": "800", "derniere": { "niveau": 3, "date": "2026-10-01" } },
+      "attendu": { "id": 4, "nature": "DEVIS", "tiers": 1, "charge": null, "niveau": 3, "repetition": 2, "mode": "COURRIER", "modele_courriel": 13, "modele_edition": 23,
+        "depart": "2026-07-01", "palier": "2026-10-29", "jours": 130, "montant": "800", "echues": [], "futures": [] } },
+    { "nom": "répétition déjà faite", "regle": "repete", "date": "2026-11-08",
+      "piece": { "id": 4, "nature": "DEVIS", "tiers": 1, "depart": "2026-07-01", "montant": "800", "derniere": { "niveau": 3, "date": "2026-10-30" } }, "attendu": null },
+    { "nom": "relance faite au-delà du niveau atteint", "regle": "standard", "date": "2026-11-08",
+      "piece": { "id": 5, "nature": "DEVIS", "tiers": 1, "depart": "2026-10-20", "montant": "800", "derniere": { "niveau": 3, "date": "2026-10-01" } }, "attendu": null },
+    { "nom": "pièce suspendue jusqu'à la date comprise", "regle": "standard", "date": "2026-11-08",
+      "piece": { "id": 6, "nature": "DEVIS", "tiers": 1, "depart": "2026-10-20", "montant": "800", "suspendue_jusqu_au": "2026-11-08" }, "attendu": null },
+    { "nom": "suspension terminée", "regle": "standard", "date": "2026-11-08",
+      "piece": { "id": 6, "nature": "DEVIS", "tiers": 1, "depart": "2026-10-20", "montant": "800", "suspendue_jusqu_au": "2026-11-07" },
+      "attendu": { "id": 6, "nature": "DEVIS", "tiers": 1, "charge": null, "niveau": 1, "repetition": 0, "mode": "COURRIEL", "modele_courriel": 11, "modele_edition": 21,
+        "depart": "2026-10-20", "palier": "2026-11-04", "jours": 19, "montant": "800", "echues": [], "futures": [] } },
+    { "nom": "pièce arrêtée", "regle": "standard", "date": "2026-11-08",
+      "piece": { "id": 7, "nature": "DEVIS", "tiers": 1, "depart": "2026-08-01", "montant": "800", "arretee": true }, "attendu": null },
+    { "nom": "devis sans date d'envoi", "regle": "standard", "date": "2026-11-08",
+      "piece": { "id": 8, "nature": "DEVIS", "tiers": 1, "depart": null, "montant": "800" }, "attendu": null },
+    { "nom": "facture : départ à l'échéance échue la plus ancienne non soldée, échéance future listée", "regle": "facture", "date": "2026-11-08",
+      "piece": { "id": 10, "nature": "FACTURE", "tiers": 2, "charge": 7, "echeances": [
+        { "id": 104, "date": "2026-12-01", "reste": "700" },
+        { "id": 103, "date": "2026-10-31", "reste": "500" },
+        { "id": 101, "date": "2026-09-15", "reste": "0" },
+        { "id": 102, "date": "2026-10-01", "reste": "1000.50" } ] },
+      "attendu": { "id": 10, "nature": "FACTURE", "tiers": 2, "charge": 7, "niveau": 2, "repetition": 0, "mode": "COURRIEL", "modele_courriel": 42, "modele_edition": 52,
+        "depart": "2026-10-01", "palier": "2026-10-31", "jours": 38, "montant": "1500.5", "echues": [102, 103],
+        "futures": [ { "id": 104, "date": "2026-12-01", "reste": "700", "retenue": false } ] } },
+    { "nom": "facture : échéance du jour non échue", "regle": "facture", "date": "2026-11-08",
+      "piece": { "id": 11, "nature": "FACTURE", "tiers": 2, "echeances": [
+        { "id": 111, "date": "2026-10-24", "reste": "300" }, { "id": 112, "date": "2026-11-08", "reste": "300" } ] },
+      "attendu": { "id": 11, "nature": "FACTURE", "tiers": 2, "charge": null, "niveau": 1, "repetition": 0, "mode": "COURRIEL", "modele_courriel": 41, "modele_edition": 51,
+        "depart": "2026-10-24", "palier": "2026-11-08", "jours": 15, "montant": "300", "echues": [111],
+        "futures": [ { "id": 112, "date": "2026-11-08", "reste": "300", "retenue": false } ] } },
+    { "nom": "facture : mise en demeure en recommandé au dernier niveau", "regle": "facture", "date": "2026-11-08",
+      "piece": { "id": 12, "nature": "FACTURE", "tiers": 2, "echeances": [ { "id": 121, "date": "2026-09-01", "reste": "2000" } ] },
+      "attendu": { "id": 12, "nature": "FACTURE", "tiers": 2, "charge": null, "niveau": 3, "repetition": 0, "mode": "RECOMMANDE", "modele_courriel": 43, "modele_edition": 53,
+        "depart": "2026-09-01", "palier": "2026-10-31", "jours": 68, "montant": "2000", "echues": [121], "futures": [] } },
+    { "nom": "facture : retenue de garantie avant sa libération", "regle": "facture", "date": "2026-11-08",
+      "piece": { "id": 13, "nature": "FACTURE", "tiers": 2, "echeances": [
+        { "id": 131, "date": "2026-08-01", "reste": "0" }, { "id": 132, "date": "2027-06-30", "reste": "500", "retenue": true } ] }, "attendu": null },
+    { "nom": "facture : retenue de garantie libérée", "regle": "facture", "date": "2026-11-08",
+      "piece": { "id": 13, "nature": "FACTURE", "tiers": 2, "echeances": [
+        { "id": 131, "date": "2026-08-01", "reste": "0" }, { "id": 132, "date": "2026-10-01", "reste": "500", "retenue": true } ] },
+      "attendu": { "id": 13, "nature": "FACTURE", "tiers": 2, "charge": null, "niveau": 2, "repetition": 0, "mode": "COURRIEL", "modele_courriel": 42, "modele_edition": 52,
+        "depart": "2026-10-01", "palier": "2026-10-31", "jours": 38, "montant": "500", "echues": [132], "futures": [] } },
+    { "nom": "facture : retenue sans date de libération listée pour information", "regle": "facture", "date": "2026-11-08",
+      "piece": { "id": 14, "nature": "FACTURE", "tiers": 2, "echeances": [
+        { "id": 142, "date": null, "reste": "500", "retenue": true }, { "id": 141, "date": "2026-10-20", "reste": "200" } ] },
+      "attendu": { "id": 14, "nature": "FACTURE", "tiers": 2, "charge": null, "niveau": 1, "repetition": 0, "mode": "COURRIEL", "modele_courriel": 41, "modele_edition": 51,
+        "depart": "2026-10-20", "palier": "2026-11-04", "jours": 19, "montant": "200", "echues": [141],
+        "futures": [ { "id": 142, "date": null, "reste": "500", "retenue": true } ] } },
+    { "nom": "facture : reste sous le seuil", "regle": "facture", "date": "2026-11-08", "seuil": "0.01",
+      "piece": { "id": 15, "nature": "FACTURE", "tiers": 2, "echeances": [ { "id": 151, "date": "2026-09-01", "reste": "0.01" } ] }, "attendu": null },
+    { "nom": "facture : départ recalculé après paiement, relance déjà plus haute", "regle": "facture", "date": "2026-11-08",
+      "piece": { "id": 16, "nature": "FACTURE", "tiers": 2, "echeances": [
+        { "id": 161, "date": "2026-08-01", "reste": "0" }, { "id": 162, "date": "2026-10-20", "reste": "400" } ], "derniere": { "niveau": 3, "date": "2026-10-05" } }, "attendu": null }
+  ],
+  "groupes": [
+    { "nom": "regroupement à niveaux mêlés, règle propre d'un tiers", "date": "2026-11-08", "regles": { "DEVIS": "standard", "FACTURE": "facture" },
+      "pieces": [
+        { "id": 101, "nature": "FACTURE", "tiers": 1, "charge": 7, "echeances": [ { "id": 1011, "date": "2026-09-01", "reste": "1000" } ] },
+        { "id": 102, "nature": "FACTURE", "tiers": 1, "charge": 7, "echeances": [ { "id": 1021, "date": "2026-10-20", "reste": "250" } ] },
+        { "id": 103, "nature": "FACTURE", "tiers": 1, "charge": 7, "echeances": [ { "id": 1031, "date": "2026-10-01", "reste": "300" } ] },
+        { "id": 104, "nature": "FACTURE", "tiers": 1, "charge": 8, "echeances": [ { "id": 1041, "date": "2026-10-20", "reste": "100" } ] },
+        { "id": 105, "nature": "DEVIS", "tiers": 1, "charge": 7, "depart": "2026-10-20", "montant": "5000" },
+        { "id": 106, "nature": "FACTURE", "tiers": 2, "charge": null, "echeances": [ { "id": 1061, "date": "2026-10-24", "reste": "80" } ] },
+        { "id": 107, "nature": "FACTURE", "tiers": 1, "charge": 7, "regle": "courte", "echeances": [ { "id": 1071, "date": "2026-11-01", "reste": "40.25" } ] },
+        { "id": 108, "nature": "FACTURE", "tiers": 1, "charge": 7, "echeances": [ { "id": 1081, "date": "2026-11-01", "reste": "999" } ] }
+      ],
+      "attendu": [
+        { "tiers": 1, "charge": 7, "nature": "FACTURE", "mode": "RECOMMANDE", "niveau": 3, "modele_courriel": 43, "modele_edition": 53, "jours": 68, "montant": "1000",
+          "pieces": [ { "id": 101, "niveau": 3, "repetition": 0, "jours": 68, "montant": "1000" } ] },
+        { "tiers": 1, "charge": 7, "nature": "FACTURE", "mode": "COURRIEL", "niveau": 2, "modele_courriel": 42, "modele_edition": 52, "jours": 38, "montant": "590.25",
+          "pieces": [ { "id": 102, "niveau": 1, "repetition": 0, "jours": 19, "montant": "250" }, { "id": 103, "niveau": 2, "repetition": 0, "jours": 38, "montant": "300" },
+            { "id": 107, "niveau": 1, "repetition": 0, "jours": 7, "montant": "40.25" } ] },
+        { "tiers": 1, "charge": 8, "nature": "FACTURE", "mode": "COURRIEL", "niveau": 1, "modele_courriel": 41, "modele_edition": 51, "jours": 19, "montant": "100",
+          "pieces": [ { "id": 104, "niveau": 1, "repetition": 0, "jours": 19, "montant": "100" } ] },
+        { "tiers": 1, "charge": 7, "nature": "DEVIS", "mode": "COURRIEL", "niveau": 1, "modele_courriel": 11, "modele_edition": 21, "jours": 19, "montant": "5000",
+          "pieces": [ { "id": 105, "niveau": 1, "repetition": 0, "jours": 19, "montant": "5000" } ] },
+        { "tiers": 2, "charge": null, "nature": "FACTURE", "mode": "COURRIEL", "niveau": 1, "modele_courriel": 41, "modele_edition": 51, "jours": 15, "montant": "80",
+          "pieces": [ { "id": 106, "niveau": 1, "repetition": 0, "jours": 15, "montant": "80" } ] }
+      ] }
+  ]
+}
