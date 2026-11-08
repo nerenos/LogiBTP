@@ -42,7 +42,7 @@
 |---|---|---|---|---|
 | 1 | D3 : contrôle de date sans les pièces remplacées ni le groupe | `modules/document` | — | FAIT |
 | 2 | D2 : précédent et montant de la période d'une situation (moteur et pied) | `modules/document` | — | FAIT |
-| 3 | M2 : pièces remplacées, bouton d'avoir et total des factures | cœur | — | A FAIRE |
+| 3 | M2 : pièces remplacées, bouton d'avoir et total des factures | cœur | — | FAIT |
 | 4 | M1 : case « Afficher le détail » et indices de la gestion du marché | cœur | 3 | A FAIRE |
 | 5 | D1 : adresse du chantier créé à l'acceptation de la commande | cœur | — | A FAIRE |
 | 6 | D2 : précédent et montant de la période dans l'édition de la situation | cœur | 2 | A FAIRE |
@@ -82,7 +82,7 @@
 - **Critère de fin** : le cas passe en JS et en C# ; `npm test`, `npm run exporter-resultats`, `dotnet test LogiBTP.slnx`
   verts ; aucun écart sur les autres jeux.
 
-## Lot 3 : M2, pièces remplacées, bouton d'avoir et total des factures (A FAIRE)
+## Lot 3 : M2, pièces remplacées, bouton d'avoir et total des factures (FAIT le 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `src/LogiBTP.Api/Btp/Structure.cs` (`:394-398`, ajouter `remplace` d'après le statut `REMPLACE`),

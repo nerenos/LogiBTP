@@ -9,7 +9,7 @@ import { D, Dz, aujourdhui } from '@logibtp/socle';
 import { FicheLogiBTP } from './fiches.js';
 import { api } from '../api.js';
 import { TableIntervenants } from '../structure/intervenants.js';
-import { controlerIntervenants } from '../structure/structure.js';
+import { controlerIntervenants, facturesMarche, peutAnnulerParAvoir } from '../structure/structure.js';
 import { champRattachement } from '../structure/selection.js';
 import { VueGrapheStructure } from '../structure/graphe-structure.js';
 import { individusStructure } from '../panneaux-btp.js';
@@ -513,8 +513,7 @@ export class FicheMarche extends FicheStructure {
     const somme = (liste, cle) => liste.reduce((s, x) => s.plus(Dz(x[cle])), D(0)).toString();
     const total = (cle) => somme(g.commandes, cle);
     const prevu = total('prevu_ht');
-    const factures = g.factures.filter((x) => this.voirAnnulees || !x.annule);
-    const facturesComptees = factures.filter((x) => !x.annule);
+    const { affichees: factures, comptees: facturesComptees } = facturesMarche(g.factures, this.voirAnnulees);
     const nbAnnulees = g.factures.filter((x) => x.annule).length;
     const sousTraitants = (g.sous_traitants ?? []).filter((x) => this.voirAnnulees || !x.annule);
     const stComptees = sousTraitants.filter((x) => !x.annule);
@@ -563,7 +562,7 @@ export class FicheMarche extends FicheStructure {
         <th class="nombre">${texteHtml('fiches_btp.structure.colonnes.ht_net')}</th><th class="nombre">${texteHtml('fiches_btp.structure.colonnes.ttc_net')}</th><th class="nombre">${texteHtml('fiches_btp.structure.colonnes.net_a_payer')}</th>${reglements ? `<th class="nombre">${texteHtml('fiches_btp.structure.colonnes.regle')}</th><th class="nombre">${texteHtml('fiches_btp.structure.colonnes.reste_a_payer')}</th>` : ''}<th></th></tr></thead><tbody>${factures.map((x) => `<tr class="${x.annule ? 'annulee' : ''}">
         <td>${x.rang ?? ''}</td><td>${lien(x)}</td><td>${echapper(x.type)}${x.nature === 'ANNULATION' ? ` ${texteHtml('fiches_btp.structure.gestion.nature_annulation')}` : x.nature === 'AVANCEMENT' ? ` ${texteHtml('fiches_btp.structure.gestion.nature_avancement')}` : ''}</td>
         <td>${echapper(x.date ?? '')}</td><td>${echapper(x.statut ?? '')}</td><td class="nombre">${f(x.total_ht)}</td><td class="nombre">${f(x.total_ttc)}</td>
-        <td class="nombre">${f(x.net_a_payer)}</td>${regle(x)}<td>${x.valide && !x.annule ? `<button type="button" data-annuler="${x.ent_id}">${texteHtml('fiches_btp.structure.gestion.annuler')}</button>` : ''}</td></tr>`).join('')}
+        <td class="nombre">${f(x.net_a_payer)}</td>${regle(x)}<td>${peutAnnulerParAvoir(x) ? `<button type="button" data-annuler="${x.ent_id}">${texteHtml('fiches_btp.structure.gestion.annuler')}</button>` : ''}</td></tr>`).join('')}
         </tbody><tfoot><tr><th colspan="5">${texteHtml('commun.total')}${nbAnnulees && this.voirAnnulees ? ` ${texteHtml('fiches_btp.structure.gestion.hors_annulees')}` : ''}</th><th class="nombre">${f(somme(facturesComptees, 'total_ht'))}</th>
         <th class="nombre">${f(somme(facturesComptees, 'total_ttc'))}</th><th class="nombre">${f(somme(facturesComptees, 'net_a_payer'))}</th>
         ${reglements ? `<th class="nombre">${f(totalRegle('pointe'))}</th><th class="nombre">${f(totalRegle('reste'))}</th>` : ''}<th></th></tr></tfoot></table>`

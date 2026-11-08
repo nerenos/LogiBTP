@@ -31,3 +31,19 @@ describe('Structure des affaires', () => {
     expect(lignes).toEqual(FONCTIONS_INTERVENANT);
   });
 });
+
+import { facturesMarche, peutAnnulerParAvoir } from '../src/app/structure/structure.js';
+
+describe('Gestion du marché : pièces remplacées (M2)', () => {
+  const valable = { ent_id: 1, valide: true, annule: false, remplace: false, total_ht: '100' };
+  const remplacee = { ent_id: 2, valide: true, annule: false, remplace: true, total_ht: '40' };
+  it('une facture remplacée est absente du total et sans bouton d\'avoir', () => {
+    const { comptees } = facturesMarche([valable, remplacee], false);
+    expect(comptees.map((x) => x.ent_id)).toEqual([1]);
+    expect(peutAnnulerParAvoir(remplacee)).toBe(false);
+  });
+  it('une facture valable garde bouton et total', () => {
+    expect(peutAnnulerParAvoir(valable)).toBe(true);
+    expect(facturesMarche([valable], false).comptees).toHaveLength(1);
+  });
+});

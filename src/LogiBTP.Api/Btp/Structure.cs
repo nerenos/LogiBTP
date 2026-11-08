@@ -386,7 +386,8 @@ public static class Structure
               FROM doc d WHERE d.tyd_avancement = 'S' AND d.ent_is_reference),
           'factures', (SELECT coalesce(json_agg(json_build_object('ent_id', d.ent_id, 'type', d.tyd_libelle, 'code', d.tyd_code, 'numero', d.ent_numero,
                 'rang', d.ent_rang_avancement, 'date', d.ent_date, 'statut', d.std_libelle, 'valide', d.ent_verrouille,
-                'annule', d.std_code = '{StatutsDocument.Annule}', 'nature', d.ent_nature_avoir, 'total_ht', d.ent_total_ht, 'total_ttc', d.ent_total_ttc,
+                'annule', d.std_code = '{StatutsDocument.Annule}', 'remplace', d.std_code = '{StatutsDocument.Remplace}',
+                'nature', d.ent_nature_avoir, 'total_ht', d.ent_total_ht, 'total_ttc', d.ent_total_ttc,
                 'net_a_payer', d.ent_net_a_payer) ORDER BY d.ent_rang_avancement NULLS LAST, d.ent_id), '[]')
               FROM doc d WHERE d.ent_avt_presentation = 'P'),
           -- Factures et avoirs des sous-traitants en paiement direct ; facture liée : facture du marché portant le
