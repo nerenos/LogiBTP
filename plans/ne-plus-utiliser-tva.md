@@ -40,7 +40,7 @@
 |---|---|---|---|---|
 | 1 | Point d'accroche `FiltreChoix` de l'annuaire | `modules/annuaire` | — | FAIT |
 | 2 | Point d'accroche `FiltreChoix` de la bibliothèque | `modules/bibliotheque` | — | FAIT |
-| 3 | Spécialisation des deux filtres par le cœur (usage N écarté) | cœur | 1, 2 | A FAIRE |
+| 3 | Spécialisation des deux filtres par le cœur (usage N écarté) | cœur | 1, 2 | FAIT |
 | 4 | « Ne plus utiliser » dans le planning, le pointage et le magasin | cœur | 3 | A FAIRE |
 | 5 | TVA autoliquidée par défaut sur les lignes d'achat | cœur | — | A FAIRE |
 | 6 | Avertissement de TVA à la validation d'une pièce d'achat | cœur | 5 | A FAIRE |
@@ -74,7 +74,7 @@
 - **Jeux de tests** : même modèle que le lot 1, sur un élément.
 - **Critère de fin** : `npm test`, `dotnet test LogiBTP.slnx` verts.
 
-## Lot 3 : spécialisation des deux filtres par le cœur (A FAIRE)
+## Lot 3 : spécialisation des deux filtres par le cœur (FAIT 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : spécialisations du cœur de l'annuaire et de la bibliothèque (`src/LogiBTP.Api/Btp/`, graphify
@@ -134,3 +134,4 @@
 
 > Lot 1 FAIT le 08/11/2026 : accroches `FiltreChoixPersonnes()` / `FiltreChoixIndividus()` (condition SQL, protégées virtuelles) dans `ServiceAnnuaire`, option `filtreChoix: { personne, individu }` du `FournisseurAnnuaireMemoire`. Écart : `Lire` rendue `protected virtual` et le projet de tests référence `LogiBTP.Annuaire.Web` (test C# par capture du SQL, sans base).
 > Lot 2 FAIT le 08/11/2026 : accroche `FiltreChoix(IQueryable<Element>)` (protégée virtuelle, appliquée à la seule requête de `Rechercher`) dans `ServiceBibliotheque`, option `filtreChoix(element)` du `FournisseurBibliothequeMemoire`. Écart : le cœur spécialise une requête LINQ (pas une condition SQL) ; le projet de tests référence `LogiBTP.Bibliotheque.Web`.
+> Lot 3 FAIT le 08/11/2026 : `ServiceAnnuaireBtp` (`per_usage`/`ind_usage` <> N par sous-requête) et `ServiceBibliothequeBtp` (`ele_usage` lu par `Database.SqlQuery`, colonne hors entité), enregistrés dans `Program.cs` ; tests `tests/LogiBTP.Calcul.Tests/FiltreChoixUsageTests.cs`. Écart : aucun changement client (les fournisseurs API et l'appel F3 passent par le serveur filtré) ; les classes ne sont pas `sealed` (dérivées par le test).

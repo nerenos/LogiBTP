@@ -98,6 +98,9 @@ builder.Services.AddModuleBibliotheque<SpecialisationBibliothequeBtp>(Base);
 // Module Annuaire : personnes, individus, rattachements, liens, coordonnées partagées (modules/annuaire/db/070) ;
 // fiches personne et individu par le module Fiche (champs gérés délégués à ServiceAnnuaire).
 builder.Services.AddModuleAnnuaire<SpecialisationAnnuaireBtp>(Base);
+// « Ne plus utiliser » : le cœur spécialise les points d'accroche FiltreChoix (dernier enregistrement retenu).
+builder.Services.AddScoped<ServiceAnnuaire, ServiceAnnuaireBtp>();
+builder.Services.AddScoped<ServiceBibliotheque, ServiceBibliothequeBtp>();
 // Module Règlements (facultatif) : règlements, cautions, pointage des échéances des pièces (modules/reglement/db/080, db/175).
 builder.Services.AddModuleReglement<SpecialisationReglementBtp>(Base);
 // Module CRM (facultatif) : notes, rappels, demandes, suivi des validations, diffusion, fil (modules/crm/db/095…).
