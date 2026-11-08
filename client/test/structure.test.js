@@ -72,3 +72,14 @@ describe('Gestion du marché : case Afficher le détail (M1)', () => {
     expect(comptees.map((x) => x.ent_id)).toEqual([3]);
   });
 });
+
+describe('Date de livraison par ligne d’une commande validée', () => {
+  it('route, appel client et textes déclarés', () => {
+    const lire = (f) => fs.readFileSync(new URL(f, import.meta.url), 'utf8');
+    expect(lire('../src/app/api.js')).toContain('/lignes/${ligId}/livraison');
+    expect(lire('../src/app/pages/document.js')).toContain('livraisonLigne');
+    expect(lire('../src/app/panneaux-btp.js')).toContain('rendreLivraisonsLignes');
+    const textes = JSON.parse(lire('../personnalisation/fr.json')).document_btp.panneaux;
+    for (const cle of ['arc_lignes_titre', 'arc_ligne_livraison', 'arc_ligne_enregistre']) expect(textes[cle]).toBeTruthy();
+  });
+});

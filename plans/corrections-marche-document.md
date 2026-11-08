@@ -132,7 +132,7 @@
   période ».
 - **Écarts** : lignes ajoutées au bloc `TOTAUX_DOCUMENT` (sous le net à payer) ; variable `document.situation` (precedent, periode) exposée par `EditionsBtp.cs` et ajoutée à son dictionnaire (là, pas dans un `dictionnaire-modele.js`) ; test `client/test/modeles-situation.test.js` structurel ; `dotnet test` bloqué par l'API en marche, compilation de l'API vérifiée dans un dossier distinct.
 
-## Lot 7 : date de livraison par ligne d'une commande validée (A FAIRE)
+## Lot 7 : date de livraison par ligne d'une commande validée (FAIT le 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `Structure.cs` (`ArcDocument :25` et sa route : reprendre le même chemin hors verrou pour
@@ -147,3 +147,4 @@
   refusée sur une pièce d'un autre type ; `f_date_livraison_ligne` prend la nouvelle date (approvisionnement du Stock).
 - **Critère de fin** : `npm test` et `dotnet test LogiBTP.slnx` verts ; la date modifiée apparaît dans les prévisions
   d'approvisionnement.
+- **Écarts** : route `PUT /api/structure/documents/{id}/lignes/{ligId}/livraison` (le verrou n'est pas franchi : l'ARC écrit déjà hors `VerrouDocumentService`) ; l'ARC ne laisse pas de trace, l'historique reçoit une entrée `MODIFICATION` avec motif ; saisie dans le panneau ARC (`rendreLivraisonsLignes`) ; test C# sur le contrôle (`LivraisonLigneTests`), pas de test d'intégration PostgreSQL de `f_date_livraison_ligne` (déjà lue par `StockApprovisionnementBtp`) ; tests C# lancés dans une copie.

@@ -24,6 +24,9 @@ public sealed record RattachementDocument(int? EntProjetId, int? EntAffaireId, i
 /// <summary>Accusé de réception d'une commande (lot 9, A24e) : numéro, date, livraison confirmée.</summary>
 public sealed record ArcDocument(string? EntArcNumero, DateOnly? EntArcDate, DateOnly? EntArcLivraison);
 
+/// <summary>Date de livraison propre d'une ligne de commande validée (lot 7 des corrections de novembre).</summary>
+public sealed record LivraisonLigne(DateOnly? LigDateLivraison);
+
 /// <summary>
 /// Structure des affaires (db/160_structure.sql) : référentiels pour les listes de choix (projets, affaires, chantiers,
 /// marchés, commandes clients) et rattachement d'un document, même validé (classement, pas modification du contenu).
@@ -56,6 +59,16 @@ public static class Structure
 
     /// <summary>Types de documents qui reçoivent un accusé de réception (↔ TYPES_ARC de client/src/app/panneaux-btp.js).</summary>
     public static readonly HashSet<string> TypesArc = [.. TypesDocument.Arc];
+
+    /// <summary>
+    /// Date de livraison d'une ligne : acceptée seulement sur une commande fournisseur ou de sous-traitance validée (hors verrou,
+    /// comme l'ARC) ; seule cette date change.
+    /// </summary>
+    public static void ControlerLivraisonLigne(string codeType, bool verrouille)
+    {
+        if (!TypesArc.Contains(codeType)) throw ExceptionMetier.Invalide("LIVRAISON_TYPE", "La date de livraison d'une ligne validée ne concerne que les commandes fournisseur et de sous-traitance");
+        if (!verrouille) throw ExceptionMetier.Invalide("LIVRAISON_NON_VALIDEE", "Commande non validée : la date de livraison se saisit dans le document");
+    }
 
     public static IEndpointRouteBuilder MapStructure(this IEndpointRouteBuilder api)
     {
@@ -106,6 +119,30 @@ public static class Structure
             doc.EntArcLivraison = a.EntArcLivraison;
             await db.SaveChangesAsync(ct);
             return Results.Ok(new { ent_arc_numero = doc.EntArcNumero, ent_arc_date = doc.EntArcDate, ent_arc_livraison = doc.EntArcLivraison });
+        });
+        // Date de livraison d'une ligne de commande validée : même chemin que l'ARC, hors verrou (seule la colonne change),
+        // tracée dans l'historique ; f_date_livraison_ligne la reprend pour les prévisions d'approvisionnement.
+        g.MapPut("/documents/{id:long}/lignes/{ligId:long}/livraison", async (long id, long ligId, LivraisonLigne l, HttpContext http, LogiBtpContext db, CancellationToken ct) =>
+        {
+            var doc = await db.Documents.FirstOrDefaultAsync(d => d.EntId == id, ct) ?? throw ExceptionMetier.Introuvable($"Document {id}");
+            var code = await db.TypesDocument.AsNoTracking().Where(t => t.TydId == doc.EntTydId).Select(t => t.TydCode).FirstAsync(ct);
+            ControlerLivraisonLigne(code, doc.EntVerrouille);
+            var ligne = await db.Lignes.FirstOrDefaultAsync(x => x.LigId == ligId && x.LigEntId == id, ct) ?? throw ExceptionMetier.Introuvable($"Ligne {ligId}");
+            var ancienne = ligne.LigDateLivraison;
+            if (ancienne == l.LigDateLivraison) return Results.Ok(new { lig_id = ligId, lig_date_livraison = ancienne });
+            ligne.LigDateLivraison = l.LigDateLivraison;
+            db.Historiques.Add(new DocumentHistorique
+            {
+                HisEntId = id,
+                HisVersion = doc.EntVersion,
+                HisAction = "MODIFICATION",
+                HisDate = DateTimeOffset.UtcNow,
+                HisUtilisateur = Utilisateur.Depuis(http).Code,
+                HisMotif = $"LIVRAISON_LIGNE {ligId} : {ancienne:yyyy-MM-dd} -> {l.LigDateLivraison:yyyy-MM-dd}",
+                HisInstantane = JsonDocument.Parse(JsonSerializer.Serialize(new { lig_id = ligId, ancienne, nouvelle = l.LigDateLivraison })),
+            });
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(new { lig_id = ligId, lig_date_livraison = ligne.LigDateLivraison });
         });
         // Document créé depuis un marché (BL…) : toutes les commandes validées du marché, dans l'ordre (base puis avenants),
         // une section et un bloc de pied par commande (CONCEPTION-ACHATS-MARCHES.md, Q18, Q23).

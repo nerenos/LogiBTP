@@ -746,6 +746,7 @@ export const api = {
   // Structure des affaires : référentiels des listes de choix, rattachement d'un document (même validé).
   structureReferentiels: () => appel('GET', '/structure/referentiels'),
   rattacherDocument: (id, r) => appel('PUT', `/structure/documents/${id}/rattachement`, r),
+  livraisonLigne: (id, ligId, date) => appel('PUT', `/structure/documents/${id}/lignes/${ligId}/livraison`, { lig_date_livraison: date }),
   arcDocument: (id, arc) => appel('PUT', `/structure/documents/${id}/arc`, arc),
   structureIntervenants: (type, id) => appel('GET', `/structure/intervenants/${type}/${id}`),
   structureDocuments: (perimetre) => appel('POST', '/structure/documents', perimetre),

@@ -472,6 +472,7 @@ export class PageDocument extends PageBase {
       // Accusé de réception des commandes (lot 9, A24e) : enregistré à part, fichier rangé dans la GED du document.
       arc: {
         enregistrer: (id, arc) => api.arcDocument(id, arc),
+        livraisonLigne: (id, ligId, date) => api.livraisonLigne(id, ligId, date),
         deposer: async (fichier, numero) => {
           const d = this.editeur.saisie.document;
           await this.servicesGed.deposer({ fichier, nom_fichier: fichier.name, meta: { titre: texte('document_btp.page.arc_titre', { numero: numero ?? d.ent_numero ?? '' }).trim(), categorie: 'arc',
