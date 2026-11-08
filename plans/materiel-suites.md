@@ -50,7 +50,7 @@
 | 6 | Refacturation interne : composante « produit interne » | `modules/rentabilite` | MO4 | FAIT |
 | 7 | Refacturation interne : crédit du chantier de suivi | cœur | 6 | FAIT (08/11/2026) |
 | 8 | Coût par heure proposé comme coût moyen | cœur | MO5 | A FAIRE |
-| 9 | Cartes carburant : lecture du fichier | `modules/import` | MO6 | A FAIRE |
+| 9 | Cartes carburant : lecture du fichier | `modules/import` | MO6 | FAIT (08/11/2026) |
 | 10 | Cartes carburant : rapprochement et écriture des pleins | cœur | 9 | A FAIRE |
 
 ---
@@ -168,7 +168,7 @@
 - **Critère de fin** : `npm test` vert.
 - **Réalisé / écarts** : bouton « Reprendre comme coût moyen » dans l'onglet Coûts (visible si un coût par heure existe), `confirmer` puis `POST /ressources/materiels/{id}/cout-moyen` (`CoutsMateriel.cs`, écrit `mat_cout_horaire`, 409 `COUT_PAR_HEURE_INCONNU` sinon) ; logique de confirmation dans `ressources/cout-moyen.js`, test `cout-moyen.test.js` (reprise / annulation) ; textes fr.json. Route couverte par le préfixe `/api/ressources`.
 
-## Lot 9 : cartes carburant, lecture du fichier (A FAIRE)
+## Lot 9 : cartes carburant, lecture du fichier (FAIT 08/11/2026)
 
 - **Module** : `modules/import`. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `modules/import/js/src/carburant.js` (nouveau : lecture CSV décrite par correspondances, sur le modèle
@@ -178,6 +178,7 @@
 - **Jeux de tests** : fichier d'exemple → pleins (date, carte, immatriculation, litres, montant, kilométrage) ; ligne
   mal formée signalée.
 - **Critère de fin** : `npm test` vert.
+- **Réalisé / écarts** : `carburant.js` : `lireFichierCarburant(contenu, correspondances)` (correspondances : colonnes acceptées par champ, séparateur, format de date ; défaut `CORRESPONDANCES_CARBURANT`), pleins `{ rang, date, carte, immatriculation, litres, montant, kilometrage }` (nombres en texte décimal, sans Number), erreurs par ligne ; textes `import.carburant.*` ; 3 tests ajoutés à `import.test.js`.
 
 ## Lot 10 : cartes carburant, rapprochement et écriture des pleins (A FAIRE)
 

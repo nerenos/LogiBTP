@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { deflateRawSync } from 'node:zlib';
 import {
   lireZip, analyserXml, rtfEnHtml, rtfEnTexte, lireFichierOptim, convertirOptim,
-  associerUnite, associerNature, associerTaux, associerOption,
+  associerUnite, associerNature, associerTaux, associerOption, lireFichierCarburant,
 } from '../src/index.js';
 
 /** Archive zip minimale (un fichier compressé en deflate). */
@@ -125,5 +125,38 @@ describe('Module Import : correspondances', () => {
     ].map((n) => associerNature(n, natures))).toEqual([2, 1, 3, 4, null]);
     expect(associerTaux(20, [{ id: 4, taux: 20, categorie: 'A' }, { id: 1, taux: '20.000000', categorie: 'N' }])).toBe(1);
     expect(associerOption({ code: 'Vir45', libelle: 'Virement à 45 jours' }, [{ code: 'CHQ', libelle: 'Chèque' }, { code: 'VIR', libelle: 'Virement' }])).toBe('VIR');
+  });
+});
+
+describe('cartes carburant (plan materiel-suites, MO6)', () => {
+  const FICHIER = [
+    'Date;Numéro carte;Plaque;Litres;Montant;Km',
+    '05/11/2026;7001;AB-123-CD;45,5;"82,35";120 450',
+    '06/11/2026;;EF-456-GH;30;55,10;',
+    '',
+    '31/02/2026;7002;AB-123-CD;20;40;100',
+    '07/11/2026;7003;AB-123-CD;abc;40;100',
+    '08/11/2026;;;20;40;100',
+  ].join('\r\n');
+
+  it('fichier d exemple : pleins lus, lignes mal formées signalées', () => {
+    const { pleins, erreurs } = lireFichierCarburant(FICHIER);
+    expect(pleins).toEqual([
+      { rang: 1, date: '2026-11-05', carte: '7001', immatriculation: 'AB-123-CD', litres: '45.5', montant: '82.35', kilometrage: '120450' },
+      { rang: 2, date: '2026-11-06', carte: '', immatriculation: 'EF-456-GH', litres: '30', montant: '55.10', kilometrage: '' },
+    ]);
+    expect(erreurs.map((e) => e.rang)).toEqual([4, 5, 6]);
+  });
+
+  it('en-tête sans colonne des litres : fichier refusé', () => {
+    const r = lireFichierCarburant('Date;Carte\r\n05/11/2026;7001');
+    expect(r.pleins).toEqual([]);
+    expect(r.erreurs[0].rang).toBe(0);
+  });
+
+  it('correspondances du fournisseur : colonnes, séparateur et date ISO', () => {
+    const c = { separateur: ',', formatDate: 'AAAA-MM-JJ', colonnes: { date: ['jour'], carte: ['pan'], litres: ['vol'] } };
+    const { pleins } = lireFichierCarburant('Jour,PAN,Vol\n2026-11-05,9,12.5', c);
+    expect(pleins[0]).toMatchObject({ date: '2026-11-05', carte: '9', litres: '12.5', montant: '' });
   });
 });
