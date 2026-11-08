@@ -129,7 +129,7 @@ public static class CoutsMateriel
         {
             dynamic c = await CoutsAsync(db, id, null, ct);
             decimal? cout = c.cout_par_heure;
-            if (cout is not { } v) return Results.Conflict(new { code = "COUT_PAR_HEURE_INCONNU" });
+            if (cout is not { } v) throw ExceptionMetier.Conflit("COUT_PAR_HEURE_INCONNU", "Le coût par heure du matériel est inconnu : rien à reprendre comme coût moyen");
             await db.Database.ExecuteSqlRawAsync("UPDATE materiel SET mat_cout_horaire = @v WHERE mat_id = @m",
                 [new NpgsqlParameter("v", v), new NpgsqlParameter("m", id)], ct);
             return Results.Ok(new { cout_moyen = v });

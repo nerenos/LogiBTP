@@ -8570,6 +8570,7 @@
     "CONSULTATION_RETENUE": "Seule une offre validée du lot peut être retenue",
     "CONSULTATION_TYPE": "Ce type de document n'a pas de lot de consultation",
     "CONSULTATION_VIDE": "Pas encore de lot de consultation pour ce document",
+    "COUT_PAR_HEURE_INCONNU": "Le coût par heure du matériel est inconnu : rien à reprendre comme coût moyen",
     "DECALAGE": "Décalage de 0 à 12 mois",
     "ENT_MATERIEL": "Ordre sans matériel",
     "ENT_NATURE": "Nature d'entretien inconnue",
