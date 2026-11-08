@@ -1,7 +1,14 @@
 import { defineConfig } from 'vitepress'
 
+// Adresse de la documentation : « / » en local ; sous /documentation/ sur la démonstration Vercel (vercel.json à la
+// racine : LOGIBTP_DOCS_BASE=/documentation/), écrite alors dans dist/documentation/ pour que le service statique
+// réponde au chemin d'origine.
+const base = process.env.LOGIBTP_DOCS_BASE ?? '/'
+
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
+  base,
+  outDir: `.vitepress/dist${base === '/' ? '' : base.replace(/\/$/, '')}`,
   lang: 'fr-FR',
   title: "LogiBTP",
   description: "Documentation officielle de LogiBTP - ERP modulaire open source pour le BTP",

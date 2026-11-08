@@ -354,3 +354,12 @@ Lots P1 (module, chargement, socle et navigation migrés), P2 (erreurs par code)
 - [ ] Lots A (code mort sûr) et B (code apparemment inutilisé, à trancher) : en attente des évolutions à venir qui
   touchent ce code ; à reprendre ensuite.
 - [ ] Liste, périodes : écran de saisie du début d'exercice dans les paramètres de la Comptabilité (aujourd'hui clé `debut_exercice` de `parametre_comptabilite`, sans interface ; absent = année civile).
+
+## Démonstration sur Vercel ([guide](documentation/DEPLOIEMENT-VERCEL.md))
+
+- [ ] **Mise en ligne** (côté utilisateur) : base Neon, initialisation (`scripts/demo/initialiser-base-demo.sh`),
+  compte des visiteurs, projet Vercel et variables ; services et Container Runtime de Vercel en bêta : premier
+  déploiement à vérifier (aiguillage `/documentation/`, en-têtes `X-Forwarded-*` reçus par le conteneur).
+- [ ] Séparer les données de démonstration des données de référence du manifeste (une base de démonstration
+  aujourd'hui = toute base neuve).
+- [ ] Remise à zéro automatique des données de la démonstration (branche Neon remise à zéro chaque nuit).
