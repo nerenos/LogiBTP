@@ -41,7 +41,7 @@
 
 | Lot | Titre | Module | Dépend de | Statut |
 |---|---|---|---|---|
-| 1 | P3 : décompte des notifications non figé à l'ouverture | `socle` | — | A FAIRE |
+| 1 | P3 : décompte des notifications non figé à l'ouverture | `socle` | — | FAIT (08/11/2026) |
 | 2 | P2 : composant `creerJetons` | `socle` | — | A FAIRE |
 | 3 | P2 : mots-clés en jetons dans la fiche élément | `modules/bibliotheque` | 2 | A FAIRE |
 | 4 | P2 : mots-clés en jetons dans la GED | `modules/ged` | 2 | A FAIRE |
@@ -52,7 +52,9 @@
 
 ---
 
-## Lot 1 : P3, décompte des notifications non figé à l'ouverture (A FAIRE)
+## Lot 1 : P3, décompte des notifications non figé à l'ouverture (FAIT 08/11/2026)
+
+> Écart : pas d'environnement DOM dans les tests du socle, le test emploie un faux `document`. `d.show()` est gardé, le focus est rendu à l'élément actif d'avant.
 
 - **Module** : `socle`. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `socle/js/src/ui/notification.js` (`:87` : figer sur `pointerdown` / `keydown` dans la fenêtre au lieu de

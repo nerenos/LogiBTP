@@ -39,3 +39,46 @@ describe('infobulles (I8)', () => {
     expect(positionBulle({ left: 0, top: 200, width: 30, bottom: 220 }, bulle, vue).left).toBe(6);
   });
 });
+
+describe('décompte de la fenêtre des messages (P3)', () => {
+  function faux() {
+    const ecouteurs = {};
+    const classes = new Set();
+    const noeud = { querySelector: () => ({ addEventListener() {} }), querySelectorAll: () => [] };
+    const d = {
+      ...noeud, className: '', isConnected: true, setAttribute() {}, innerHTML: '',
+      classList: { add: (c) => classes.add(c), remove: (c) => classes.delete(c) },
+      addEventListener: (t, f) => { ecouteurs[t] = f; },
+      show() { document.activeElement = d; }, close() {}, remove() { d.isConnected = false; },
+    };
+    return { d, ecouteurs, classes };
+  }
+  async function ouvrir(options) {
+    const { notifier } = await import('../src/ui/notification.js');
+    const f = faux();
+    const saisie = { focus() { globalThis.document.activeElement = saisie; } };
+    globalThis.document = { activeElement: saisie, body: { append() {} }, createElement: (t) => (t === 'dialog' ? f.d : { prepend() {}, setAttribute() {}, isConnected: true }) };
+    const r = notifier({ message: 'x', ...options });
+    return { ...f, saisie, r };
+  }
+  it('ouverture : décompte actif et focus inchangé ; clic ou frappe : figé ; fin : fermeture', async () => {
+    const { vi } = await import('vitest');
+    vi.useFakeTimers();
+    for (const niveau of ['info', 'erreur']) {
+      for (const geste of ['pointerdown', 'keydown']) {
+        const o = await ouvrir({ niveau, delai: 1000 });
+        expect(globalThis.document.activeElement).toBe(o.saisie);
+        expect(o.classes.has('figee')).toBe(false);
+        o.ecouteurs[geste]({ key: 'a' });
+        expect(o.classes.has('figee')).toBe(true);
+        vi.advanceTimersByTime(2000);
+        expect(o.d.isConnected).toBe(true);
+      }
+      const o = await ouvrir({ niveau, delai: 1000 });
+      vi.advanceTimersByTime(1001);
+      expect(o.d.isConnected).toBe(false);
+    }
+    vi.useRealTimers();
+    delete globalThis.document;
+  });
+});
