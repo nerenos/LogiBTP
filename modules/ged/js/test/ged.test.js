@@ -51,6 +51,14 @@ describe('fournisseur mémoire', () => {
     expect((await g.lister({ recherche: 'PLAN' })).length).toBe(1);
   });
 
+  it('mots-clés en jetons : dépôt à deux valeurs, modification, retrait', async () => {
+    const g = creer();
+    const d = await g.deposer({ fichier: fichier('x', 'a.txt'), meta: { titre: 'A', mots_cles: ['béton', 'coffrage'] } });
+    expect(d.mots_cles).toEqual(['béton', 'coffrage']);
+    expect((await g.modifier(d.id, { mots_cles: ['béton', 'coffrage', 'dalle'] })).mots_cles).toHaveLength(3);
+    expect((await g.modifier(d.id, { mots_cles: ['dalle'] })).mots_cles).toEqual(['dalle']);
+  });
+
   it('coffre-fort : verrouillé, chaîné, vérifiable, ni modification ni purge', async () => {
     const g = creer();
     const a = await g.deposer({ fichier: fichier('%PDF devis', 'devis.pdf', 'application/pdf'), meta: { titre: 'Devis signé', categorie: 'devis_signe', coffre: true } });

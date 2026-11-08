@@ -1,5 +1,5 @@
 import { texte, texteHtml, pluriel, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
-import { echapper, creerCombo, ouvrirModale } from '@logibtp/socle/ui';
+import { echapper, creerCombo, creerJetons, ouvrirModale } from '@logibtp/socle/ui';
 import { estMail, titreDepuisNom, dateDepuisFichier, formatTaille, iconeDocument } from '../src/fichiers.js';
 import { lireMail } from '../src/mails.js';
 import { classer } from '../src/classification.js';
@@ -112,7 +112,7 @@ export class DialogueDepot {
       <label>${texteHtml('ged.champs.date')} <input type="date" data-m="date_document" value="${echapper(meta.date_document ?? '')}" ${commun ? `title="${p}"` : ''}></label>
       <label>${texteHtml('ged.champs.auteur')} <input data-m="auteur" value="${echapper(meta.auteur ?? '')}" placeholder="${p}"></label>
       <label>${texteHtml('ged.champs.confidentialite')} <span data-place="confidentialite"></span></label>
-      <label>${texteHtml('ged.champs.mots_cles')} <input data-m="mots_cles" value="${echapper(meta.mots_cles ?? '')}" placeholder="${texteHtml('ged.champs.mots_cles_aide')}"></label>
+      <label>${texteHtml('ged.champs.mots_cles')} <span data-place="mots_cles"></span></label>
       <label class="coche" title="${texteHtml('ged.champs.coffre_aide')}"><input type="checkbox" data-m="coffre" ${meta.coffre ? 'checked' : ''}> ${texteHtml('ged.champs.coffre')}</label>
       ${mail ? `<label class="coche"><input type="checkbox" data-sens ${sens === 'envoye' ? 'checked' : ''}> ${texteHtml('ged.depot.mail_envoye')}</label>` : ''}
       <label class="large">${texteHtml('ged.champs.resume')} <textarea rows="2" data-m="resume" placeholder="${p}">${echapper(meta.resume ?? '')}</textarea></label>
@@ -126,6 +126,9 @@ export class DialogueDepot {
     categorie.placeholder = propose?.categorie ? texte('ged.depot.proposee', { libelle: this.#libelleCategorie(propose.categorie) }) : texte('ged.depot.selon_fichier');
     const confidentialite = creerCombo({ options: CONFIDENTIALITES.map(([valeur, libelle]) => ({ valeur, libelle })), valeur: meta.confidentialite ?? '', titre: texte('ged.champs.confidentialite') });
     confidentialite.placeholder = propose?.confidentialite ? texte('ged.depot.proposee', { libelle: libelleConfidentialite(propose.confidentialite) }) : libelleConfidentialite(NIVEAU_CONFIDENTIALITE.INTERNE);
+    const jetons = creerJetons({ valeur: motsCles(meta.mots_cles), titre: texte('ged.champs.mots_cles') });
+    jetons.addEventListener('change', () => { meta.mots_cles = jetons.valeurJetons.join(', '); });
+    zone.querySelector('[data-place="mots_cles"]').replaceWith(jetons);
     zone.querySelector('[data-place="categorie"]').replaceWith(categorie);
     zone.querySelector('[data-place="confidentialite"]').replaceWith(confidentialite);
     categorie.addEventListener('change', () => {

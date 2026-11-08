@@ -44,7 +44,7 @@
 | 1 | P3 : décompte des notifications non figé à l'ouverture | `socle` | — | FAIT (08/11/2026) |
 | 2 | P2 : composant `creerJetons` | `socle` | — | FAIT (08/11/2026) |
 | 3 | P2 : mots-clés en jetons dans la fiche élément | `modules/bibliotheque` | 2 | A FAIRE |
-| 4 | P2 : mots-clés en jetons dans la GED | `modules/ged` | 2 | A FAIRE |
+| 4 | P2 : mots-clés en jetons dans la GED | `modules/ged` | 2 | FAIT (08/11/2026) |
 | 5 | P1 : nom et aperçu de la couleur dans le choix de teinte | `modules/liste` | — | A FAIRE |
 | 6 | I1 : individus de notre société par poste en choix en liste | cœur | — | A FAIRE |
 | 7 | I1 : contact d'un intervenant dans les contacts du tiers | cœur | 6 | A FAIRE |
@@ -95,7 +95,9 @@
 - **Jeux de tests** : « béton, coffrage » → deux jetons ; enregistrement → `ele_mots_cles` = « béton, coffrage ».
 - **Critère de fin** : `npm test` vert ; aucune reprise de données.
 
-## Lot 4 : P2, mots-clés en jetons dans la GED (A FAIRE)
+## Lot 4 : P2, mots-clés en jetons dans la GED (FAIT 08/11/2026)
+
+> Écart : saisie dans `depot.js` (meta gardée en texte « a, b », converti en tableau à l'envoi) et dans l'onglet infos de `explorateur.js` (jetons désactivés hors édition) ; clé `ged.champs.mots_cles_aide` devenue inutilisée ; tests ajoutés au fournisseur mémoire de `ged.test.js` (le DOM n'est pas testé).
 
 - **Module** : `modules/ged`. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : saisie des mots-clés d'un document (`modules/ged/js/ui/depot.js`, `apercu.js` ou `explorateur.js`, à
