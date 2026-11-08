@@ -126,3 +126,9 @@ public sealed record DemandeAdresse(string Adresse);
 
 /// <summary>Signal à publier (notification) : erreur d'envoi, blocage, quota, volume inhabituel, départ d'un courriel en attente.</summary>
 public sealed record SignalMail(string Genre, string Titre, string? Texte, string Niveau, string? Url, string Cle, string? TypeElement = null, string? IdElement = null);
+
+/// <summary>Paramètres fournis par l'application à la reconnaissance des accusés de réception (préfixes de numérotation des commandes, année de référence, motifs).</summary>
+public sealed record ParametresAccuse(IReadOnlyList<string> Prefixes, int? AnneeReference, IReadOnlyList<string> Motifs);
+
+/// <summary>Accusé de réception reconnu dans un courriel reçu : message, compte, objet et résultat de la reconnaissance (numéro, livraison annoncée).</summary>
+public sealed record AccuseRecu(long Id, long Compte, string Objet, ResultatAccuse Accuse);

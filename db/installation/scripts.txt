@@ -14,6 +14,7 @@ modules/calendrier/db/006_calendrier.sql
 modules/mail/db/007_mail.sql
 modules/mail/db/007b_mail_reception.sql
 modules/mail/db/007c_mail_reconnaissance.sql
+modules/mail/db/007d_mail_accuse.sql
 modules/notification/db/008_notification.sql
 modules/droits/db/009_droits.sql
 modules/document/db/010_document_schema.sql

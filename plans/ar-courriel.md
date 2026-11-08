@@ -30,7 +30,7 @@
 | Lot | Titre | Module | Dépend de | Statut |
 |---|---|---|---|---|
 | 1 | Reconnaissance d'un AR (motifs, numéro, date) | `modules/mail` | AO1 | FAIT (08/11/2026) |
-| 2 | Point d'accroche « AR reconnu » à la réception | `modules/mail` | 1, AO2 | A FAIRE |
+| 2 | Point d'accroche « AR reconnu » à la réception | `modules/mail` | 1, AO2 | FAIT (08/11/2026) |
 | 3 | Rapprochement de la commande et rattachement | cœur | 2, AO3 | A FAIRE |
 | 4 | Proposition de la livraison confirmée dans la boîte de réception | cœur | 3 | A FAIRE |
 
@@ -47,9 +47,9 @@
   n »…, selon AO1).
 - **Jeux de tests** : AR avec numéro et date ; AR sans date ; message ordinaire non reconnu ; deux numéros candidats.
 - **Critère de fin** : le jeu passe en JS et en C# ; `npm test`, `dotnet test LogiBTP.slnx` verts.
-- **Réalisé** : `reconnaitreAccuse` ↔ `ReconnaitreAccuse` (préfixes de numérotation et année de référence fournis par l'appelant ; livraison reconnue seulement après un mot « livraison ») ; jeu séparé `02_accuses_reception.json`, `AccuseReceptionTests.cs` ; codes `TYPE_RECONNAISSANCE`, `PRECISION_LIVRAISON`.
+- **Réalisé** : `reconnaitreAccuse` ↔ `ReconnaitreAccuse` (préfixes de numérotation et année de référence fournis par l'appelant ; livraison reconnue seulement après un mot « livraison ») ; jeu séparé `02_accuses_reception.json`, `AccuseReceptionTests.cs` ; codes `TYPE_RECONNAISSANCE`, `PRECISION_LIVRAISON`. Correction de parité : années reconnues de 2000 à 2099 seulement (sinon pas de date, sans exception), `setUTCFullYear` côté JS ; `Normaliser` aligne U+0085 et U+FEFF.
 
-## Lot 2 : point d'accroche « AR reconnu » à la réception (A FAIRE)
+## Lot 2 : point d'accroche « AR reconnu » à la réception (FAIT le 08/11/2026)
 
 - **Module** : `modules/mail`. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `ServiceReceptionMail.cs` (`TraiterAsync :113`, `ReconnaitreAsync :156` : méthode virtuelle appelée
@@ -59,6 +59,7 @@
 - **Règles répliquées JS / C#** : aucune nouvelle.
 - **Jeux de tests** : C# : AR reconnu → accroche appelée une fois avec numéro et date ; message ordinaire → non appelée.
 - **Critère de fin** : `dotnet test LogiBTP.slnx` vert.
+- **Réalisé** : `SpecialisationMail.ParametresAccuseAsync` (préfixes, année de référence, motifs fournis par le cœur) et `AccuseReconnuAsync` (sans effet par défaut) ; `ServiceReceptionMail.ReconnaitreAccuseAsync` appelée après la reconnaissance, sauf courrier ignoré ou dossier « à traiter » ; proposition conservée sur le message (script `007d_mail_accuse.sql`, colonnes `mme_ar_*`) ; un échec de l'accroche est journalisé sans bloquer la réception ; test `Accuse_de_reception_reconnu_a_la_reception` (exécuté seulement avec `LOGIBTP_TEST_PG`).
 
 ## Lot 3 : rapprochement de la commande et rattachement (A FAIRE)
 

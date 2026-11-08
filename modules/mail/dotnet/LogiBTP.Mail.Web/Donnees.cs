@@ -118,6 +118,13 @@ public class MessageEntite
     public DateTimeOffset MmeCreeLe { get; set; }
     public DateTimeOffset? MmeEnvoyeLe { get; set; }
     public string? MmeNature { get; set; }
+    // Accusé de réception de commande reconnu (plan ar-courriel, lot 2) : proposition conservée sur le message.
+    public string? MmeArMotif { get; set; }
+    public List<string>? MmeArNumeros { get; set; }
+    public string? MmeArNumero { get; set; }
+    public DateOnly? MmeArDate { get; set; }
+    public short? MmeArSemaine { get; set; }
+    public string? MmeArPrecision { get; set; }
 }
 
 public class DestinataireEntite

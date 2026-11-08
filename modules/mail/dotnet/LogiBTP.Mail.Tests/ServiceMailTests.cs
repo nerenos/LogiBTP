@@ -95,6 +95,15 @@ public sealed class ServiceMailTests : IAsyncLifetime
 
         public List<(long Message, string Element)> Rattaches { get; } = [];
         public List<long> Purges { get; } = [];
+        public List<AccuseRecu> Accuses { get; } = [];
+
+        public override Task<ParametresAccuse> ParametresAccuseAsync(CancellationToken ct) => Task.FromResult(new ParametresAccuse(["CMD"], 2026, []));
+
+        public override Task AccuseReconnuAsync(AccuseRecu a, CancellationToken ct)
+        {
+            Accuses.Add(a);
+            return Task.CompletedTask;
+        }
 
         public override Task<DepotRecu> RecevoirAsync(CourrielRecu c, CancellationToken ct) =>
             Task.FromResult(new DepotRecu(1000 + c.Id, c.Pieces.Select((p, i) => new PieceInfo($"ged:{2000 + i}", p.Nom, p.Type, p.Octets.Length)).ToList()));
@@ -166,6 +175,16 @@ public sealed class ServiceMailTests : IAsyncLifetime
         var b = new BodyBuilder { HtmlBody = "<p>Bon pour accord</p><img src=\"https://suivi.exemple/pixel.png\"><script>x()</script>" };
         b.Attachments.Add("devis-signe.pdf", [1, 2, 3], ContentType.Parse("application/pdf"));
         m.Body = b.ToMessageBody();
+        return Eml(m);
+    }
+
+    /// <summary>Accusé de réception de commande d'un fournisseur (numéro et livraison dans le corps).</summary>
+    private static byte[] AccuseFournisseur()
+    {
+        var m = new MimeMessage { Subject = "Accusé de réception de votre commande CMD-2026-0042", MessageId = "ar-1@fournisseur.fr" };
+        m.From.Add(new MailboxAddress("Négoce", "ventes@fournisseur.fr"));
+        m.To.Add(new MailboxAddress("", "commercial@exemple.fr"));
+        m.Body = new TextPart("plain") { Text = "Livraison confirmée le 25/11/2026." };
         return Eml(m);
     }
 
@@ -256,6 +275,28 @@ public sealed class ServiceMailTests : IAsyncLifetime
         Assert.Empty(await reception.RecusAsync(Admin, "a-rapprocher", c.Id, 1, 50, default));
         Assert.Empty(await reception.RecusAsync(new Utilisateur("autre", "SAISIE"), "tous", c.Id, 1, 50, default));
         await Assert.ThrowsAsync<ExceptionMetier>(() => reception.ReleverMaintenantAsync(new Utilisateur("autre", "SAISIE"), c.Id, default));
+    }
+
+    [Fact]
+    public async Task Accuse_de_reception_reconnu_a_la_reception()
+    {
+        if (Connexion is null) return;
+        await using var db = Db();
+        var (comptes, _) = Services(db);
+        var reception = new ServiceReceptionMail(db, comptes, _transport, _specialisation, new NettoyageHtmlMail(), new Journal<ServiceReceptionMail>(), _horloge);
+        var c = await comptes.CreerAsync(Admin, new SaisieCompte(_code, $"{_code.ToLowerInvariant()}@exemple.fr", null, true, true, "MOT_DE_PASSE", null,
+            new ServeurMail("smtp.exemple.fr", 465, "SSL", null, "secret"), new ServeurMail("imap.exemple.fr", 993, "SSL", null, "secret"), null, null, "AUTRE", null,
+            false, null, true, $"Boîte {_code}", new OptionsCompte(), [new DossierCompte("INBOX", "RECEPTION")]), default);
+        _transport.Boite.Add(AccuseFournisseur());
+        _transport.Boite.Add(CourrielClient());
+        Assert.Equal(2, await reception.ReleverMaintenantAsync(Admin, c.Id, default));
+
+        // Accroche appelée une fois, pour l'accusé seulement, avec le numéro et la livraison ; proposition conservée sur le message.
+        var a = Assert.Single(_specialisation.Accuses.Where(x => x.Compte == c.Id)).Accuse;
+        Assert.Equal(("CMD-2026-0042", "2026-11-25", "JOUR"), (a.Numero, a.Date, a.Precision));
+        var m = await db.Messages.AsNoTracking().SingleAsync(x => x.MmeMcoId == c.Id && x.MmeArNumero != null);
+        Assert.Equal(new DateOnly(2026, 11, 25), m.MmeArDate);
+        Assert.Single(await db.Messages.AsNoTracking().Where(x => x.MmeMcoId == c.Id && x.MmeSens == "R" && x.MmeArMotif == null).ToListAsync());
     }
 
     [Fact]

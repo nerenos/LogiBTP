@@ -144,8 +144,38 @@ public sealed class ServiceReceptionMail(MailDbContext db, ServiceComptesMail co
         m.MmeEtat = "A_RAPPROCHER";
         await db.SaveChangesAsync(ct);
         // Dossier « à traiter » ou drapeau « à suivre » (option du compte) : toujours à rapprocher par une personne.
-        if (r.Role != "A_TRAITER" && !(o.DrapeauASuivre && r.Drapeau)) await ReconnaitreAsync(m, lu, depot, ct);
+        if (r.Role != "A_TRAITER" && !(o.DrapeauASuivre && r.Drapeau)) {
+            await ReconnaitreAsync(m, lu, depot, ct);
+            if (m.MmeEtat != "IGNORE") await ReconnaitreAccuseAsync(m, lu, ct);
+        }
         return true;
+    }
+
+    /// <summary>
+    /// Accusé de réception de commande (plan ar-courriel, lot 2) : objet et texte examinés avec les paramètres de l'application ;
+    /// proposition (numéro, livraison annoncée) conservée sur le message, puis point d'accroche appelé une fois. Un échec de
+    /// l'accroche n'interrompt pas la réception.
+    /// </summary>
+    private async Task ReconnaitreAccuseAsync(MessageEntite m, CourrielLu lu, CancellationToken ct)
+    {
+        try
+        {
+            var p = await specialisation.ParametresAccuseAsync(ct);
+            var a = ReconnaissanceMail.ReconnaitreAccuse(new EntreeAccuse(lu.Objet, lu.Texte, p.Prefixes, p.AnneeReference ?? Maintenant.Year, p.Motifs));
+            if (a.Type is null) return;
+            m.MmeArMotif = a.Motif;
+            m.MmeArNumeros = a.Numeros.ToList();
+            m.MmeArNumero = a.Numero;
+            m.MmeArDate = a.Date is null ? null : DateOnly.ParseExact(a.Date, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+            m.MmeArSemaine = (short?)a.Semaine;
+            m.MmeArPrecision = a.Precision;
+            await db.SaveChangesAsync(ct);
+            await specialisation.AccuseReconnuAsync(new AccuseRecu(m.MmeId, m.MmeMcoId, m.MmeObjet, a), ct);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            journal.LogWarning(e, "Mail : accusé de réception du courriel {Id} non traité", m.MmeId);
+        }
     }
 
     /// <summary>
