@@ -1121,7 +1121,6 @@ public class MoteurDocument<TDoc, TLigne>
 
     // ------------------------------------------------------------------ résultat
 
-    /// <summary>Résultat du calcul ; une spécialisation renvoie son propre type (métrés, variables…).</summary>
     /// <summary>Information d'une situation (présentation C ; infoSituation() de moteur-document.js) : précédent et période = cumul − précédent. Null hors situation.</summary>
     private InfoSituation? InfoSituation()
     {
@@ -1135,6 +1134,7 @@ public class MoteurDocument<TDoc, TLigne>
         return new InfoSituation(Arrondir(precedent, PrecMontant), Arrondir(cumul - precedent, PrecMontant));
     }
 
+    /// <summary>Résultat du calcul ; une spécialisation renvoie son propre type (métrés, variables…).</summary>
     protected virtual ResultatDocument<TDoc, TLigne> CreerResultat() => Remplir(new ResultatDocument<TDoc, TLigne>());
 
     protected TResultat Remplir<TResultat>(TResultat r) where TResultat : ResultatDocument<TDoc, TLigne>

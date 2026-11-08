@@ -1,0 +1,118 @@
+{
+  "nom": "Situation : postes du pied en montant",
+  "description": "Situation (présentation C) : mêmes lignes que le jeu 12. Cumuls : 300 + 500 − 40 + 30 + 60 = 850 ; précédent 100 − 5 = 95 ; période 755 (chemin avancementPied vers infosSituation).",
+  "entree": {
+    "document": {
+      "ent_id": 1,
+      "ent_precision_montant": 2,
+      "ent_avt_presentation": "C"
+    },
+    "taux_tva": [
+      {
+        "ttv_id": 1,
+        "ttv_code": "T20",
+        "ttv_libelle": "TVA 20 %",
+        "ttv_taux": 20,
+        "ttv_categorie": "N"
+      }
+    ],
+    "lignes": [
+      {
+        "lig_id": 1,
+        "lig_parent_id": null,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Lot 1",
+        "lig_qte": 10,
+        "lig_pv": 100,
+        "lig_tva_id": 1,
+        "lig_avt_mode": "P",
+        "lig_avt_valeur": 30,
+        "lig_avt_montant_marche": 1000,
+        "lig_avt_qte_marche": 10,
+        "lig_avt_montant_precedent": 100,
+        "lig_avt_qte_precedent": 1,
+        "lig_avt_pct_precedent": 10
+      },
+      {
+        "lig_id": 2,
+        "lig_parent_id": null,
+        "lig_ordre": 2,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Lot 2",
+        "lig_qte": 10,
+        "lig_pv": 100,
+        "lig_tva_id": 1,
+        "lig_avt_mode": "P",
+        "lig_avt_valeur": 50,
+        "lig_avt_montant_marche": 1000,
+        "lig_avt_qte_marche": 10
+      },
+      {
+        "lig_id": 11,
+        "lig_parent_id": null,
+        "lig_ordre": 3,
+        "lig_tyl_id": 8,
+        "lig_libelle_html": "Remise forfaitaire",
+        "lig_pied_mode": "M",
+        "lig_pied_valeur": 100,
+        "lig_pied_sens": -1,
+        "lig_avt_mode": "A",
+        "lig_avt_montant_marche": -100,
+        "lig_avt_montant_precedent": -5
+      },
+      {
+        "lig_id": 12,
+        "lig_parent_id": null,
+        "lig_ordre": 4,
+        "lig_tyl_id": 8,
+        "lig_libelle_html": "Port",
+        "lig_pied_mode": "M",
+        "lig_pied_valeur": 60,
+        "lig_pied_sens": 1,
+        "lig_avt_mode": "M",
+        "lig_avt_valeur": 30,
+        "lig_avt_montant_marche": 60
+      },
+      {
+        "lig_id": 13,
+        "lig_parent_id": null,
+        "lig_ordre": 5,
+        "lig_tyl_id": 8,
+        "lig_libelle_html": "Frais",
+        "lig_pied_mode": "M",
+        "lig_pied_valeur": 50,
+        "lig_pied_sens": 1,
+        "lig_avt_mode": "P",
+        "lig_avt_valeur": 120,
+        "lig_avt_montant_marche": 50
+      },
+      {
+        "lig_id": 14,
+        "lig_parent_id": null,
+        "lig_ordre": 6,
+        "lig_tyl_id": 10,
+        "lig_libelle_html": "TVA"
+      },
+      {
+        "lig_id": 15,
+        "lig_parent_id": null,
+        "lig_ordre": 7,
+        "lig_tyl_id": 9,
+        "lig_libelle_html": "Retenue de garantie",
+        "lig_pied_mode": "P",
+        "lig_pied_valeur": 5,
+        "lig_pied_sens": -1
+      }
+    ]
+  },
+  "attendu": {
+    "erreurs": [
+      "LIGNE_DEPASSEE"
+    ],
+    "situation": {
+      "precedent": 95,
+      "periode": 755
+    }
+  }
+}

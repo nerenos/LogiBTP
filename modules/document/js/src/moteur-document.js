@@ -47,6 +47,8 @@ export class MoteurDocument {
     this.traitees = new Set();
     this.qteEnCours = null;
     this.px = new Map();
+    this.avancements = new Map();
+    this.infosSituation = new Map();
     this.tva = [];
     this.pied = [];
     this.lignes = this.preparerLignes(e.lignes ?? []);
