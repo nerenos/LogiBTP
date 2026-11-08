@@ -327,6 +327,7 @@ export const TYPES_FICHE = {
           groupes: [
             { code: 'facturation_electronique', titre: 'Facturation électronique', champs: ['fe_type', 'assujetti_tva', 'fe_format', 'fe_plateforme', 'fe_adresse', 'fe_code_routage', 'fe_code_service', 'fe_engagement'] },
             { titre: 'Règlement', champs: ['mode_reglement', 'delai_paiement', 'devise', 'iban', 'bic'] },
+            { code: 'relances', titre: 'Relances', champs: ['rel_ne_pas_relancer', 'rel_mode', 'rel_contact_ind_id', 'rel_regle', 'rel_commentaire'] },
           ],
         },
         {
@@ -390,6 +391,13 @@ export const TYPES_FICHE = {
         c('devise', 'Devise', 'per_devise', 'texte', { defaut: 'EUR', longueur: 3 }),
         c('iban', 'IBAN', 'per_iban', 'texte', { longueur: 42, non_copie: true }),
         c('bic', 'BIC', 'per_bic', 'texte', { longueur: 11 }),
+        // Relances (module Relances, db/284) : surcharge du tiers sur la règle de sa nature (Btp/SpecialisationRelanceBtp).
+        c('rel_ne_pas_relancer', 'Ne pas relancer', 'per_rel_ne_pas_relancer', 'booleen', { defaut: false, aide: 'Le tiers sort de la liste de travail des relances' }),
+        c('rel_mode', 'Mode de relance préféré', 'per_rel_mode', 'liste', { options: options(['COURRIEL', 'Courriel'], ['COURRIER', 'Lettre simple'], ['RECOMMANDE', 'Lettre recommandée'], ['TACHE', "Tâche d'appel (CRM)"]),
+          aide: 'Remplace le mode du niveau, sauf pour une lettre recommandée' }),
+        c('rel_contact_ind_id', 'Contact de relance', 'per_rel_contact_ind_id', 'nombre', { reference: 'individu', aide: 'Destinataire des relances de ce tiers (sinon le contact de la pièce)' }),
+        c('rel_regle', 'Règle de relance propre', 'per_rel_regle', 'json', { aide: 'Niveaux propres au tiers : {"niveaux":[{"rang":1,"delai":15,"mode":"COURRIEL"}],"repeter":false,"intervalle":null} ; vide : règle de la nature ; règle invalide : ignorée' }),
+        c('rel_commentaire', 'Commentaire de relance', 'per_rel_commentaire', 'zone'),
         c('commentaire', 'Notes', 'per_commentaire', 'zone'),
         // Champs déverrouillés par les relations (groupes de l'onglet Par relation).
         c('cli_compte', 'Compte client', 'per_cli_compte', 'texte', { longueur: 20, aide: 'Compte auxiliaire (411…)' }),

@@ -12,6 +12,7 @@ import '@logibtp/graphe/ui/graphe.css';
 import '@logibtp/planning/ui/planning.css';
 import '@logibtp/execution/ui/atelier.css';
 import '@logibtp/rentabilite/ui/rentabilite.css';
+import '@logibtp/relance/ui/relance.css';
 import '@logibtp/annuaire/ui/annuaire.css';
 import '@logibtp/entreprises-fr/ui/entreprises.css';
 import './styles.css';

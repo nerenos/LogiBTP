@@ -5,7 +5,7 @@ import { PageBase } from '@logibtp/navigation';
 import { ExplorateurGed } from '@logibtp/ged/ui';
 import { ArborescenceBtp } from '../ged/arborescence.js';
 import { echapper, formatNombre, formatDateHeure, actionDe, libelleRaccourci, ouvrirMenuContextuel, basculerAideMemoire, fermerAideMemoire, confirmer, ouvrirDialogue, ouvrirModale, saisir, separateur as separateurZones, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
-import { D, aujourdhui, texteDate } from '@logibtp/socle';
+import { D, aujourdhui, texteDate, ACTION_DROIT } from '@logibtp/socle';
 import { ONGLETS_DOCUMENT } from '../raccourcis.js';
 import { Disposition, GestionVuesDocument, PlanDocument, RechercheLignes, NotificationsDocument } from '@logibtp/document/ui';
 import { PanneauMetre, messagesMetres } from '@logibtp/metre/ui';
@@ -960,6 +960,8 @@ export class PageDocument extends PageBase {
     if (!d.ent_id) { zone.innerHTML = `<p class="aide">${texteHtml('document_btp.page.tracabilite_indisponible')}</p>`; return; }
     afficherTracabilite(zone, {
       entId: d.ent_id, ged: this.servicesGed, debogage: Boolean(this.editeur.vue?.debogage),
+      // Relances faites (module Relances actif, droit de lecture) : pièce et indices de son groupe.
+      relances: this.app.moduleActif(MODULE_FACULTATIF.RELANCE) && this.app.peut('relances', ACTION_DROIT.CONSULTER) ? { piece: d.ent_id, groupe: d.ent_groupe_id ?? d.ent_id } : null,
       naviguer: (url, e) => this.app.naviguer(url, { nouvelleFenetre: Boolean(e?.ctrlKey || e?.shiftKey) }),
       // Réutilisation du fichier source conservé : nouvelle vérification dans une autre fenêtre.
       reimporter: (o) => this.app.naviguer(`${formatImport(o.dor_format).page}?ged=${o.dor_fichier_id}`, { nouvelleFenetre: true }),

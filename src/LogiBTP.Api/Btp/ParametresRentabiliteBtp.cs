@@ -13,7 +13,7 @@ namespace LogiBTP.Api.Btp;
 /// </summary>
 public static class ParametresRentabiliteBtp
 {
-    public sealed record RoleType(string Type, string Libelle, string Famille, string? Role);
+    public sealed record RoleType(string Type, string Libelle, string Famille, string? Role, string? RoleRelance = null);
     public sealed record TauxService(int SrvId, string Service, decimal? Taux);
     public sealed record CoefNature(int? NatId, DateOnly Depuis, decimal Coef);
     public sealed record ServiceLu(int Id, string Libelle);
@@ -26,7 +26,7 @@ public static class ParametresRentabiliteBtp
         api.MapGet("/rentabilite/parametres", async (LogiBtpContext db, CancellationToken ct) => new
         {
             roles = await db.Database.SqlQuery<RoleType>($"""
-                SELECT t.tyd_code AS type, t.tyd_libelle AS libelle, t.tyd_famille AS famille, x.rrt_role AS role
+                SELECT t.tyd_code AS type, t.tyd_libelle AS libelle, t.tyd_famille AS famille, x.rrt_role AS role, t.tyd_role_relance AS role_relance
                 FROM type_document t LEFT JOIN rentabilite_role_type x ON x.rrt_tyd_code = t.tyd_code
                 WHERE t.tyd_actif ORDER BY t.tyd_famille, t.tyd_code
                 """).ToListAsync(ct),
@@ -60,9 +60,17 @@ public static class ParametresRentabiliteBtp
             var connus = typeof(RolesRentabilite).GetFields().Select(f => (string)f.GetValue(null)!).ToHashSet();
             if (roles.FirstOrDefault(r => r.Role is { } x && !connus.Contains(x)) is { } inconnu)
                 throw ExceptionMetier.Invalide("RENTABILITE_ROLE", $"Rôle inconnu : {inconnu.Role}");
+            var relances = typeof(RolesRelance).GetFields().Select(f => (string)f.GetValue(null)!).ToHashSet();
+            if (roles.FirstOrDefault(r => !string.IsNullOrEmpty(r.RoleRelance) && !relances.Contains(r.RoleRelance)) is { } mauvais)
+                throw ExceptionMetier.Invalide("RELANCE_ROLE", $"Rôle de relance inconnu : {mauvais.RoleRelance}");
             await using var tx = await db.Database.BeginTransactionAsync(ct);
             foreach (var r in roles)
             {
+                // Rôle dans le module Relances (db/283) : DEVIS, FACTURE ou aucun.
+                await db.Database.ExecuteSqlInterpolatedAsync($"""
+                    UPDATE type_document SET tyd_role_relance = {(string.IsNullOrWhiteSpace(r.RoleRelance) ? null : r.RoleRelance)}
+                    WHERE tyd_code = {r.Type} AND tyd_role_relance IS DISTINCT FROM {(string.IsNullOrWhiteSpace(r.RoleRelance) ? null : r.RoleRelance)}
+                    """, ct);
                 if (string.IsNullOrWhiteSpace(r.Role))
                     await db.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM rentabilite_role_type WHERE rrt_tyd_code = {r.Type}", ct);
                 else
