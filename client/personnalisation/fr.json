@@ -5874,7 +5874,10 @@
       },
       "choisir_tiers": "Choisir dans la liste des tiers (F4 ou double-clic dans le champ), filtrée selon la fonction",
       "intervenant": "intervenant",
-      "choix_titre": "Tiers : {{fonction}}"
+      "choix_titre": "Tiers : {{fonction}}",
+      "choisir_contact": "Choisir un contact parmi ceux du tiers",
+      "retirer_contact": "Retirer le contact",
+      "contact_sans_tiers": "Choisissez d'abord le tiers de l'intervenant : son contact se choisit parmi les contacts du tiers"
     },
     "marche_commande": {
       "nouveau_chantier": "Nouveau chantier",
@@ -7594,6 +7597,8 @@
       "tiers_deja": "Tiers déjà choisi : choisissez-en un autre",
       "contact": "Choisir un contact",
       "contact_deja": "Contact déjà choisi : choisissez-en un autre",
+      "contact_tiers": "Choisir un contact de {{tiers}}",
+      "contact_hors_tiers": "Ce contact n'est pas rattaché à ce tiers : choisissez-en un autre",
       "nouvel_individu": "Nouvel individu",
       "individu_societe": "Choisir un individu de notre société",
       "rechercher_individu": "Rechercher un individu…",

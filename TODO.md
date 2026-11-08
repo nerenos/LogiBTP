@@ -308,8 +308,8 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
 - [ ] Barres d'outils (suite de E1) : débordement replié dans un menu « ⋯ » en petite largeur (aujourd'hui : retour à
   la ligne des groupes).
 - [ ] Matériel : photo de l'état au retour d'une affectation (dépôt dans la GED du matériel depuis la ligne).
-- [ ] Choix en liste (I1, suite) : contact d'un intervenant dans la liste des contacts du tiers ; sélection multiple
-  (destinataires). Individus de notre société par poste : fait (plan interface-socle, lot 6).
+- [ ] Choix en liste (I1, suite) : sélection multiple (destinataires). Individus de notre société par poste et contact d'un
+  intervenant parmi ceux du tiers : faits (plan interface-socle, lots 6 et 7).
 - [ ] Champs mois (`<input type="month">`, 13 écrans) : même saisie abrégée que les dates, à étudier.
 ### Personnalisation (textes, thème, images — [analyse](documentation/conception/ANALYSE-MODULE-PERSONNALISATION.md))
 

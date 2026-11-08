@@ -57,6 +57,27 @@ export async function choisirContact({ titre = texte('annuaire_btp.choix.contact
   return { ...r, id: Number(r._id) };
 }
 
+/**
+ * Contact choisi parmi ceux d'un tiers (contexte `choix:contact_tiers`, intervenants) : vue « Tous les contacts »,
+ * recherche initiale sur le nom du tiers, contacts refusés s'ils ne sont pas rattachés au tiers (`idsContacts`, ids des
+ * individus rattachés). Résumé { id, nom_complet… } ou null ; sans tiers, aucun choix (null).
+ */
+export async function choisirContactTiers({ tiers = '', idsContacts = [], titre = null, exclure = [] } = {}) {
+  if (!tiers) return null;
+  const rattaches = new Set(idsContacts.map(Number));
+  const exclus = new Set(exclure.map(Number));
+  const r = await choisirDansListe({
+    fournisseur: creerFournisseurListe(), theme: THEME_CONTACTS, vue: VUES_CHOIX.contacts, cleVue: 'logibtp.choix.contact_tiers',
+    titre: titre ?? texte('annuaire_btp.choix.contact_tiers', { tiers }), recherche: tiers,
+    accepter: (l) => {
+      if (exclus.has(Number(l._id))) return texte('annuaire_btp.choix.contact_deja');
+      return rattaches.has(Number(l._id)) ? null : texte('annuaire_btp.choix.contact_hors_tiers');
+    },
+  });
+  if (!r || 'creer' in r) return null;
+  return { ...r, id: Number(r._id) };
+}
+
 /** Rôles de l'annuaire proposés par défaut pour un poste (rédacteur ou poste inconnu : aucun filtre, tous les individus de la société). */
 export function rolesPoste(poste) {
   return ROLES.some((r) => r.code === poste) ? [poste] : [];

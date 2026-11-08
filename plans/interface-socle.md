@@ -136,7 +136,7 @@
   filtre retirable ; saisie directe conservée.
 - **Critère de fin** : `npm test` vert ; plus de combo d'individus par poste dans les écrans visés.
 
-## Lot 7 : I1, contact d'un intervenant dans les contacts du tiers (A FAIRE)
+## Lot 7 : I1, contact d'un intervenant dans les contacts du tiers (FAIT 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `client/src/app/structure/intervenants.js` (choix du contact par `choisirDansListe` filtré sur les
@@ -145,6 +145,7 @@
 - **Règles répliquées JS / C#** : aucune.
 - **Jeux de tests** : intervenant avec tiers → seuls ses contacts ; sans tiers → choix refusé avec message (`texte()`).
 - **Critère de fin** : `npm test` vert.
+- **Écart** : la vue des contacts n'a pas de colonne de tiers filtrable (« Rattaché à » est un texte) ; le filtre est la recherche initiale sur le nom du tiers, plus `accepter` qui refuse tout contact non rattaché au tiers. Contexte `choix:contact_tiers` = `cleVue` `logibtp.choix.contact_tiers`. Le `<select>` du contact devient un champ en lecture seule avec boutons de liste et de retrait.
 
 ## Lot 8 : I1, sélection multiple des destinataires (A FAIRE)
 
