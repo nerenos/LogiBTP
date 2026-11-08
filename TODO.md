@@ -126,9 +126,10 @@ global). Lots à venir :
   et calcul des relances dues `regles.js` ↔ `ReglesRelance.cs`) ; lot 2 fait (08/11/2026 : `modules/relance/db/099t`,
   `LogiBTP.Relances.Web` : lots préparés et validés, journal, suspensions, routes `/api/relances…` non encore branchées) ; lot 3 fait (08/11/2026 : écrans `modules/relance/js/ui`, liste de travail, règle, suspensions ; mode préféré du tiers sans effet sur un niveau RECOMMANDE) ;
   lot 4 fait (08/11/2026 : cœur branché, `db/283` rôle `tyd_role_relance`, `SpecialisationRelanceBtp`, nœud de droits
-  `relances`, page `/relances` ; à revoir : rôle `ROLE_RELANCE` non modifiable depuis l'écran des types de pièces, choix
+  `relances`, page `/relances` ; à revoir : choix
   d'une pièce à suspendre depuis l'onglet Suspensions non proposé, préparation de nuit sans requête HTTP à brancher au
-  lot 9 — module Règlements alors pris comme inactif) ; suivant : lot 5 (surcharge par tiers) et lot 6 (courriel).
+  lot 9 — module Règlements alors pris comme inactif) ;
+  lot 5 fait (08/11/2026 : `db/284` surcharge par tiers sur la fiche personne, « ne pas relancer », règle propre en JSON sans éditeur de niveaux, action « Suspendre les relances », rôle de relance des types de pièces dans les paramètres Rentabilité) ; suivant : lot 6 (courriel).
 
 ### Comptabilité
 

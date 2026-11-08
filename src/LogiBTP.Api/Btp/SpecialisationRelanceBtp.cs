@@ -164,6 +164,42 @@ public sealed class SpecialisationRelanceBtp(IHttpContextAccessor http) : Specia
               WHERE @service AND (v.srv_responsable_id IN (SELECT ind_id FROM moi) OR p.srv_responsable_id IN (SELECT ind_id FROM moi))
         """;
 
+    // Surcharge des tiers (db/284, Q6, Q21) : règle propre, « ne pas relancer », mode préféré (le contact et le commentaire
+    // servent à l'envoi, lot 6). Les tiers sans surcharge sont absents.
+    private const string SqlSurcharges = """
+        SELECT per_id AS id, per_rel_regle::text AS regle, per_rel_ne_pas_relancer AS ne_pas_relancer, per_rel_mode AS mode
+        FROM personne
+        WHERE per_id = ANY(@tiers) AND (per_rel_ne_pas_relancer OR per_rel_regle IS NOT NULL OR per_rel_mode IS NOT NULL)
+        """;
+
+    /// <summary>Surcharge d'un tiers lue (SqlSurcharges).</summary>
+    public sealed record LigneSurcharge(long Id, string? Regle, bool NePasRelancer, string? Mode);
+
+    public override async Task<Dictionary<long, SurchargeTiers>> RegleDuTiersAsync(RelanceDbContext db, IReadOnlyCollection<long> tiers, CancellationToken ct) =>
+        await SurchargesAsync(db, tiers, ct);
+
+    /// <summary>
+    /// Surcharges des tiers listés. Une règle propre invalide (niveaux, délais, modes contrôlés comme pour une facture)
+    /// est ignorée : le tiers garde la règle de la nature.
+    /// </summary>
+    public static async Task<Dictionary<long, SurchargeTiers>> SurchargesAsync(DbContext db, IReadOnlyCollection<long> tiers, CancellationToken ct)
+    {
+        var lignes = await db.Database.SqlQueryRaw<LigneSurcharge>(SqlSurcharges, P("tiers", tiers.ToArray(), NpgsqlDbType.Array | NpgsqlDbType.Bigint)).ToListAsync(ct);
+        return lignes.ToDictionary(l => l.Id, l => new SurchargeTiers(LireRegle(l.Regle), l.NePasRelancer, l.Mode));
+    }
+
+    /// <summary>Règle propre d'un tiers (JSON snake_case) ; null si absente, illisible ou invalide.</summary>
+    public static RegleRelance? LireRegle(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try
+        {
+            var regle = JsonSerializer.Deserialize<RegleRelance>(json, JsonCalcul.Options);
+            return regle is not null && ReglesRelance.Controler(regle, NatureRelance.Facture).Count == 0 ? regle : null;
+        }
+        catch (JsonException) { return null; }
+    }
+
     /// <summary>
     /// Portée (Q9) du nœud « relances » pour Consulter : TOUT, sinon les pièces dont le chargé est l'un des individus
     /// couverts (SOI, EQUIPE, SERVICE) ; refusée : aucune pièce. Sans le module Droits : TOUT.

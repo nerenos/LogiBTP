@@ -141,7 +141,7 @@
   l'onglet Suspensions (suspension d'une pièce depuis la liste de travail) ; sans requête HTTP (préparation de nuit,
   lot 9), le module Règlements est pris comme inactif et la portée comme TOUT.
 
-## Lot 5 : surcharge par tiers sur la fiche personne (A FAIRE)
+## Lot 5 : surcharge par tiers sur la fiche personne (FAIT (08/11/2026))
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `db/284_personne_relance.sql` (`ALTER TABLE personne` : règle propre, « ne pas relancer », contact de
@@ -150,6 +150,17 @@
   la fiche, `SpecialisationRelanceBtp.RegleDuTiersAsync`, textes du cœur.
 - **Règles répliquées** : aucune.
 - **Critère de fin** : un tiers « ne pas relancer » sort de la liste ; une règle propre change le niveau dû (test serveur).
+- **Réalisé** (08/11/2026) : `db/284_personne_relance.sql` (rejouable, rejoué deux fois sur PostgreSQL 16 ; manifeste après
+  `283`) : `personne.per_rel_regle` (JSONB), `per_rel_ne_pas_relancer`, `per_rel_contact_ind_id`, `per_rel_mode` (CHECK
+  sur `MODE_RELANCE`), `per_rel_commentaire` ; fiche personne (`definitions.js`, onglet Facturation et règlement, groupe
+  Relances ; `db/131` régénéré) ; `SpecialisationRelanceBtp.RegleDuTiersAsync` (règle propre invalide ignorée, contrôlée
+  comme une facture : pas de mode TACHE) ; action « Suspendre les relances » de la fiche (ouvre `/relances?suspendre=<tiers>` :
+  onglet Suspensions, saisie ouverte sur le tiers) ; rôle de relance d'un type de pièce (`tyd_role_relance`) modifiable avec
+  les rôles Rentabilité (`creerCombo`, `PUT /rentabilite/parametres/roles`). Tests `RelancesBtpTests` (règle illisible ou
+  invalide ignorée ; avec `LOGIBTP_TEST_PG` : tiers « ne pas relancer » absent de la liste, règle propre à 30 jours ramène
+  le niveau dû de 2 à 1, règle invalide sans effet). Points ouverts : la règle propre se saisit en JSON (pas d'éditeur de
+  niveaux) ; le contact de relance et le commentaire ne sont lus qu'à l'envoi (lot 6) ; le rôle de relance se règle sur la
+  page des paramètres Rentabilité (module Rentabilité requis).
 
 ## Lot 6 : envoi par courriel et note du CRM (A FAIRE)
 

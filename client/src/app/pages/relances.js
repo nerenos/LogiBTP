@@ -132,6 +132,14 @@ export class PageRelances extends PageBase {
       await { liste: this.liste, suspensions: this.suspensions, regle: this.regle }[o].charger();
     };
     this.conteneur.querySelectorAll('[data-onglet]').forEach((b) => b.addEventListener('click', () => afficher(b.dataset.onglet)));
+    // Suspension d'un tiers depuis sa fiche (/relances?suspendre=<tiers>) : onglet des suspensions, saisie ouverte.
+    const tiers = Number(this.requete?.suspendre);
+    if (ecrire && Number.isInteger(tiers) && tiers > 0) {
+      await this.#completer([], [tiers]);
+      await afficher('suspensions');
+      await this.suspensions.nouvelle({ tiers_id: tiers });
+      return;
+    }
     await afficher(onglet);
   }
 }

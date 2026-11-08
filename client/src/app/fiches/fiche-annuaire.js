@@ -279,6 +279,9 @@ export class FichePersonne extends FicheAnnuaire {
       { libelle: `${icone('fiches_btp_valider')} ${texte('fiches_btp.annuaire.valider')}`, titre: texte('fiches_btp.annuaire.valider_aide'), action: () => this.validerProvisoire().catch((x) => this.message(x.message, 'erreur')), visible: !this.estEnSaisie() && this.provisoire },
       { libelle: `${icone('fiches_btp_fusionner')} ${texte('fiches_btp.annuaire.fusionner')}`, titre: texte('fiches_btp.annuaire.fusionner_aide'), action: (e) => this.fusionnerProvisoire(e).catch((x) => this.message(x.message, 'erreur')), visible: !this.estEnSaisie() && this.provisoire },
       { libelle: `${icone('ajouter')} ${texte('fiches_btp.annuaire.etablissement')}`, titre: texte('fiches_btp.annuaire.etablissement_aide'), action: () => this.ouvrirFiche({ type: TYPE_FICHE.PERSONNE, id: `nouveau?parent=${this.id}&niveau=ETABLISSEMENT` }), visible: !this.estEnSaisie() && this.id !== null && this.morale },
+      { libelle: `${icone('relance_suspendre')} ${texte('fiches_btp.annuaire.suspendre_relances')}`, titre: texte('fiches_btp.annuaire.suspendre_relances_aide'),
+        action: (e) => this.ouvrirUrl(`/relances?suspendre=${Number(this.id)}`, e),
+        visible: !this.estEnSaisie() && this.id !== null && this.moduleActif(MODULE_FACULTATIF.RELANCE) && this.acces('relances') },
       ...super.actionsSupplementaires(),
     ];
   }

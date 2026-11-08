@@ -3,6 +3,7 @@ using LogiBTP.Domaine;
 using LogiBTP.Reglements.Web;
 using LogiBTP.Relances;
 using LogiBTP.Relances.Web;
+using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Xunit;
@@ -162,6 +163,91 @@ public class RelancesBtpTests
         Assert.True(soi.Couvre(charge) && !soi.Couvre(autre) && !soi.Couvre(null));
         Assert.True((await SpecialisationRelanceBtp.PorteeAsync(db, utilisateur, "TOUT", default)).Couvre(null));
         Assert.False((await SpecialisationRelanceBtp.PorteeAsync(db, utilisateur, null, default)).Couvre(charge));
+        await tx.RollbackAsync();
+    }
+
+    /// <summary>Spécialisation du cœur à une date fixe (les devis expirent par rapport à elle).</summary>
+    private sealed class SpecialisationAuJour(DateOnly jour) : SpecialisationRelance
+    {
+        public override Task<List<PieceEnAttente>> PiecesEnAttenteAsync(RelanceDbContext db, FiltrePieces filtre, CancellationToken ct) =>
+            SpecialisationRelanceBtp.PiecesAsync(db, filtre, jour, null, ct);
+
+        public override Task<Dictionary<long, SurchargeTiers>> RegleDuTiersAsync(RelanceDbContext db, IReadOnlyCollection<long> tiers, CancellationToken ct) =>
+            SpecialisationRelanceBtp.SurchargesAsync(db, tiers, ct);
+    }
+
+    [Fact]
+    public void Regle_propre_invalide_ou_absente_est_ignoree()
+    {
+        Assert.Null(SpecialisationRelanceBtp.LireRegle(null));
+        Assert.Null(SpecialisationRelanceBtp.LireRegle("pas du json"));
+        Assert.Null(SpecialisationRelanceBtp.LireRegle("""{"niveaux":[]}"""));
+        Assert.Null(SpecialisationRelanceBtp.LireRegle("""{"niveaux":[{"rang":1,"delai":30,"mode":"INCONNU"}]}"""));
+        var r = SpecialisationRelanceBtp.LireRegle("""{"niveaux":[{"rang":1,"delai":30,"mode":"COURRIER"},{"rang":2,"delai":45,"mode":"RECOMMANDE"}],"repeter":false,"intervalle":null}""");
+        Assert.Equal([new NiveauRelance(1, 30, "COURRIER"), new NiveauRelance(2, 45, "RECOMMANDE")], r!.Niveaux);
+    }
+
+    /// <summary>
+    /// Base LOGIBTP_TEST_PG (db/283 et db/284 chargés) : un tiers « ne pas relancer » sort de la liste de travail ; une
+    /// règle propre change le niveau dû (40 jours depuis l'envoi : niveau 2 de la règle par défaut, niveau 1 d'une règle
+    /// propre à 30 jours et mode préféré) ; un tiers sans surcharge garde la règle de la nature. Transaction annulée.
+    /// </summary>
+    [Fact]
+    public async Task Surcharge_du_tiers_lue_dans_la_base()
+    {
+        var connexion = Environment.GetEnvironmentVariable("LOGIBTP_TEST_PG");
+        if (string.IsNullOrEmpty(connexion)) return;
+        await using var c = new NpgsqlConnection(connexion);
+        await c.OpenAsync();
+        await using var tx = await c.BeginTransactionAsync();
+        async Task<object?> Scalaire(string sql, params (string, object)[] p)
+        {
+            await using var k = new NpgsqlCommand(sql, c, tx);
+            foreach (var (n, v) in p) k.Parameters.AddWithValue(n, v);
+            return await k.ExecuteScalarAsync();
+        }
+        async Task<long> Id(string sql, params (string, object)[] p) => Convert.ToInt64(await Scalaire(sql, p));
+        if (await Scalaire("SELECT 1 FROM information_schema.columns WHERE table_name = 'personne' AND column_name = 'per_rel_regle'") is null) return;
+        var devis = await Id("SELECT tyd_id FROM type_document WHERE tyd_code = 'V_DEVIS'");
+        if (await Scalaire("SELECT s.std_id FROM statut_document s JOIN type_document t ON t.tyd_id = s.std_tyd_id WHERE t.tyd_code = 'V_DEVIS' AND s.std_code = 'ENVOYE' ORDER BY s.std_id LIMIT 1") is not int envoye) return;
+        await Scalaire("DELETE FROM relance_regle");
+
+        async Task<long> Tiers(string nom, string? regle = null, bool ne = false, string? mode = null)
+        {
+            var t = await Id("""
+                INSERT INTO personne (per_niv_code, per_raison_sociale, per_rel_regle, per_rel_ne_pas_relancer, per_rel_mode)
+                VALUES ('SOCIETE', @n, @r::jsonb, @ne, @m) RETURNING per_id
+                """, ("n", nom), ("r", (object?)regle ?? DBNull.Value), ("ne", ne), ("m", (object?)mode ?? DBNull.Value));
+            var d = await Id("""
+                INSERT INTO document (ent_tyd_id, ent_std_id, ent_numero, ent_date, ent_cree_par, ent_verrouille, ent_is_reference, ent_tiers_id,
+                  ent_envoye_le, ent_total_ttc, ent_net_a_payer)
+                VALUES (@t, @s, @n, @d, 'test', true, true, @tiers, @env, 1200, 1100) RETURNING ent_id
+                """, ("t", devis), ("s", envoye), ("n", nom), ("d", Jour.AddDays(-50)), ("tiers", t), ("env", new DateTime(2026, 9, 29, 10, 0, 0, DateTimeKind.Utc)));
+            await Scalaire("UPDATE document SET ent_groupe_id = ent_id WHERE ent_id = @i", ("i", d));
+            return t;
+        }
+        var normal = await Tiers("Surcharge normal");
+        var exclu = await Tiers("Surcharge exclu", ne: true);
+        var propre = await Tiers("Surcharge propre", """{"niveaux":[{"rang":1,"delai":30,"mode":"COURRIER"}],"repeter":false,"intervalle":null}""", mode: "COURRIER");
+        var invalide = await Tiers("Surcharge invalide", """{"niveaux":[]}""");
+
+        var options = new DbContextOptionsBuilder<RelanceDbContext>().UseNpgsql(c).UseSnakeCaseNamingConvention().Options;
+        await using var db = new RelanceDbContext(options);
+        await db.Database.UseTransactionAsync(tx);
+        var specialisation = new SpecialisationAuJour(Jour);
+        var surcharges = await specialisation.RegleDuTiersAsync(db, [normal, exclu, propre, invalide], default);
+        Assert.DoesNotContain(normal, surcharges.Keys);
+        Assert.True(surcharges[exclu].NePasRelancer);
+        Assert.Null(surcharges[invalide].Regle);
+        Assert.Equal("COURRIER", surcharges[propre].ModePrefere);
+
+        var dues = await new ServiceRelance(db, specialisation).Dues(Jour, new Utilisateur("test", "UTILISATEUR"), default);
+        var mesTiers = new[] { normal, exclu, propre, invalide };
+        var niveaux = dues.Where(g => mesTiers.Contains(g.TiersId)).ToDictionary(g => g.TiersId, g => g.Niveau);
+        Assert.DoesNotContain(exclu, niveaux.Keys);
+        Assert.Equal(2, niveaux[normal]);
+        Assert.Equal(2, niveaux[invalide]);
+        Assert.Equal(1, niveaux[propre]);
         await tx.RollbackAsync();
     }
 }
