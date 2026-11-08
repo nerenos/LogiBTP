@@ -1,0 +1,8 @@
+/* Module Relances : couleurs des écrans (liste de travail, règle, suspensions), surchargeables par le cœur et l'installation. */
+:root {
+  --relance-groupe-fond: color-mix(in srgb, var(--accent) 8%, transparent);
+  --relance-niveau-fond: color-mix(in srgb, var(--accent) 18%, transparent);
+  --relance-avertissement: #b45309;
+  --relance-erreur: #b91c1c;
+  --relance-suspension-terminee: #6b7280;
+}

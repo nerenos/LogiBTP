@@ -90,6 +90,7 @@ public static class ModulesFacultatifs
     public const string Planning = "planning";
     public const string Pointage = "pointage";
     public const string Reglement = "reglement";
+    public const string Relance = "relance";
     public const string Rentabilite = "rentabilite";
     public const string Sav = "sav";
     public const string SousTraitance = "sous_traitance";
@@ -130,6 +131,16 @@ public static class RolesRentabilite
 }
 
 /// <summary>
+/// Rôle d'un type de pièce dans le module Relances (type_document.tyd_role_relance, db/283) : pièces relancées par
+/// Btp/SpecialisationRelanceBtp.cs ; mêmes valeurs que NatureRelance du module ; type sans rôle : jamais relancé.
+/// </summary>
+public static class RolesRelance
+{
+    public const string Devis = "DEVIS";
+    public const string Facture = "FACTURE";
+}
+
+/// <summary>
 /// Modèles d'édition connus du code (client/src/app/editions/modeles.js → db/191). Un modèle interne (rapport de
 /// contrôle) n'est jamais retenu comme dernier modèle imprimé du document.
 /// </summary>
@@ -137,6 +148,10 @@ public static class ModelesEdition
 {
     public const string FraisAnnexes = "FRAIS_ANNEXES";
     public const string FicheDotation = "FICHE_DOTATION";
+    // Lettres de relance (source « relance », plans/relances.md lot 7) ; MISE_EN_DEMEURE : dernier niveau des factures.
+    public const string Relance1 = "RELANCE_1";
+    public const string Relance2 = "RELANCE_2";
+    public const string MiseEnDemeure = "MISE_EN_DEMEURE";
 }
 
 /// <summary>Catégories de la GED posées par le serveur (dge_categorie).</summary>
@@ -149,4 +164,5 @@ public static class CategoriesGed
     public const string BonSav = "bon_sav";
     public const string Photo = "photo";
     public const string Dotation = "dotation";
+    public const string Relance = "relance";
 }

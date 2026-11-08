@@ -82,6 +82,7 @@ export const MENUS_METIER = [
       { code: 'factures', libelle: texte('navigation_btp.menus.ventes.factures.libelle'), iconeHtml: iconeHtml('navigation_btp_factures'), url: L('factures'), creation: D('V_FACTURE', texte('navigation_btp.menus.ventes.factures.creation')) },
       { code: 'documents', libelle: texte('navigation_btp.menus.ventes.documents.libelle'), iconeHtml: iconeHtml('navigation_btp_documents'), url: L('documents') },
       { code: 'reglements-clients', libelle: texte('navigation_btp.menus.ventes.reglements_clients.libelle'), iconeHtml: iconeHtml('navigation_btp_reglements_clients'), url: '/reglements?sens=E', info: texte('navigation_btp.menus.ventes.reglements_clients.info'), module: MODULE_FACULTATIF.REGLEMENT },
+      { code: 'relances', libelle: texte('navigation_btp.menus.ventes.relances.libelle'), iconeHtml: iconeHtml('navigation_btp_relances'), url: '/relances', info: texte('navigation_btp.menus.ventes.relances.info'), module: MODULE_FACULTATIF.RELANCE, droit: 'relances' },
       { separateur: true },
       { code: 'import-optim', libelle: texte('navigation_btp.menus.ventes.import_optim.libelle'), iconeHtml: iconeHtml('navigation_btp_import_optim'), url: '/import/optimbtp', info: texte('navigation_btp.menus.ventes.import_optim.info') },
     ],
@@ -366,7 +367,7 @@ export function menus(app) {
 export function catalogueRaccourcis(app = null) {
   return [
     ...MENUS_METIER.flatMap((m) => (app ? elementsMenu(app, m) : m.elements).filter((e) => e.url && e.code).map((e) => ({ code: e.code, libelle: e.libelle, icone: e.icone, iconeHtml: e.iconeHtml, url: e.url, groupe: Bandeau.libelle(m.libelle), creation: e.creation })),),
-    { code: 'preferences', libelle: texte('navigation_btp.menus.parametres.preferences.libelle'), iconeHtml: iconeHtml('navigation_btp_preferences'), url: '/parametres', groupe: Bandeau.libelle(texte('navigation_btp.menus.parametres.libelle')), creation: D('preferences', texte('navigation_btp.menus.parametres.preferences.creation')) },
+    { code: 'preferences', libelle: texte('navigation_btp.menus.parametres.preferences.libelle'), iconeHtml: iconeHtml('navigation_btp_preferences'), url: '/parametres', groupe: Bandeau.libelle(texte('navigation_btp.menus.parametres.libelle')) },
   ];
 }
 

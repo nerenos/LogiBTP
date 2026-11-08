@@ -109,6 +109,7 @@ modules/crm/db/097_crm_demandes.sql
 modules/crm/db/098_crm_validations.sql
 modules/crm/db/099_crm_fil.sql
 modules/rentabilite/db/099r_rentabilite.sql rejouable
+modules/relance/db/099t_relance.sql rejouable
 db/100_btp.sql
 db/110_reference.sql
 db/115_bibliotheque.sql
@@ -240,6 +241,11 @@ db/279_materiel_affectation_photos.sql rejouable
 db/280_materiel_releve_borne.sql rejouable
 db/281_materiel_carte_carburant.sql rejouable
 db/282_liste_repas.sql rejouable
+db/283_relances.sql rejouable
+db/284_personne_relance.sql rejouable
+db/285_relances_mail.sql rejouable
+db/286_relances_lettres.sql rejouable
+db/287_liste_derniere_relance.sql rejouable
 
 # Vues de colonnes des types de documents créés après 176 : rejouée en dernier.
 db/176_documents_vues_types.sql rejouable

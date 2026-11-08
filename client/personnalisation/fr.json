@@ -4667,6 +4667,10 @@
           "libelle": "Règlements clients",
           "info": "Échéances, règlements, pointage et cautions (module Règlements)"
         },
+        "relances": {
+          "libelle": "Relances",
+          "info": "Devis envoyés et factures à reste échu : préparer, valider, suspendre (module Relances)"
+        },
         "import_optim": {
           "libelle": "Importer un devis OptimBTP",
           "info": "Fichier .optim : lignes, prix et coefficients repris, champs non repris listés"
@@ -5399,6 +5403,7 @@
     },
     "suivi_nouvelle": "Enregistrez la fiche pour suivre ses notes et ses tâches.",
     "infos": {
+      "relances": "Relances",
       "anciennete": "Ancienneté",
       "annees_un": "{{nombre}} an",
       "annees_autre": "{{nombre}} ans",
@@ -5537,6 +5542,8 @@
       "valider_aide": "Valider la création de ce tiers provisoire (fiche définitive)",
       "fusionner": "Fusionner…",
       "fusionner_aide": "Fusionner ce tiers provisoire avec une fiche existante (valeurs choisies, documents et contacts reportés)",
+      "suspendre_relances": "Suspendre les relances",
+      "suspendre_relances_aide": "Ne plus relancer ce tiers jusqu'à une date (promesse de paiement, litige, échelonnement)",
       "etablissement": "Établissement",
       "etablissement_aide": "Créer un niveau inférieur (établissement, agence, dépôt…) de cette personne",
       "aucune_activite": "Aucune activité",
@@ -6383,6 +6390,44 @@
       "chargement": "Chargement…"
     }
   },
+  "relances_btp": {
+    "routes": {
+      "relances": "Relances"
+    },
+    "aide": "Relances dues des devis envoyés et des factures à reste échu, dans votre portée (pièces dont vous êtes le chargé, ou toutes) ; une facture est relancée chez son payeur s'il est désigné.",
+    "onglets": {
+      "liste": "Liste de travail",
+      "liste_titre": "Relances dues, lot préparé et recommandés en attente de numéro",
+      "suspensions": "Suspensions",
+      "suspensions_titre": "Pièces et tiers à ne pas relancer jusqu'à une date",
+      "regle": "Règle des niveaux",
+      "regle_titre": "Niveaux, délais et modes par nature (modification : administrateur)"
+    },
+    "choisir_tiers": "Tiers à suspendre",
+    "pastille": {
+      "libelle": "relancé {{nombre}}",
+      "aide": "Relances faites à ce tiers ces {{jours}} derniers jours ; dernière le {{date}} (niveau {{niveau}})"
+    },
+    "journal": {
+      "titre": "Relances",
+      "aucune": "Aucune relance faite.",
+      "derniere": "Dernière relance : {{date}} (niveau {{niveau}}).",
+      "colonnes": {
+        "date": "Date",
+        "piece": "Pièce",
+        "niveau": "Niveau",
+        "mode": "Mode",
+        "etat": "État",
+        "montant": "Montant",
+        "auteur": "Auteur",
+        "commentaire": "Commentaire"
+      },
+      "etats": {
+        "ENVOYEE": "Faite",
+        "ATTENTE_NUMERO": "En attente du numéro de recommandé"
+      }
+    }
+  },
   "hors_ligne_btp": {
     "etats": {
       "ATTENTE": "En attente d’envoi",
@@ -6931,7 +6976,14 @@
       "titre": "Relevés de compteurs à valider",
       "aide": "Relevés saisis à la borne pour un matériel non affecté au salarié ce jour : acceptés, ils entrent dans l'historique des compteurs ; refusés, ils sont supprimés (motif obligatoire).",
       "aucun": "Aucun relevé à valider.",
-      "colonnes": { "materiel": "Matériel", "salarie": "Salarié", "date": "Date", "compteur": "Compteur", "valeur": "Valeur", "commentaire": "Commentaire" },
+      "colonnes": {
+        "materiel": "Matériel",
+        "salarie": "Salarié",
+        "date": "Date",
+        "compteur": "Compteur",
+        "valeur": "Valeur",
+        "commentaire": "Commentaire"
+      },
       "remise": "remise à zéro",
       "accepter": "Accepter",
       "refuser": "Refuser",
@@ -8482,6 +8534,10 @@
       "PRODUIT_INTERNE": "Produit interne : heures du matériel valorisées sur d'autres chantiers",
       "PREVISION": "Saisie prévisionnelle (hors du réel jusqu'à son solde)"
     },
+    "roles_relance": {
+      "DEVIS": "Devis envoyé (relancé après son envoi)",
+      "FACTURE": "Facture (relancée à son reste échu)"
+    },
     "roles": {
       "COMMANDE_VENTE": "Commande client (budget)",
       "FACTURE_VENTE": "Facture client (facturé)",
@@ -8523,10 +8579,11 @@
     },
     "parametres": {
       "roles": "Rôle des types de pièce",
-      "roles_aide": "Le rôle dit comment une pièce d'un type entre dans les indicateurs ; sans rôle, le type est ignoré.",
+      "roles_aide": "Le rôle dit comment une pièce d'un type entre dans les indicateurs ; sans rôle, le type est ignoré. Le rôle dans les relances dit si le type est relancé (devis envoyés, factures à reste échu) ; sans rôle, il ne l'est jamais.",
       "type": "Type",
       "famille": "Famille",
       "role": "Rôle",
+      "role_relance": "Rôle dans les relances",
       "taux": "Taux horaire moyen par service",
       "taux_aide": "Valorise les pointages sans coût horaire et les tâches planifiées (signalés dans « À vérifier »).",
       "service": "Service",
@@ -8626,15 +8683,27 @@
   "erreurs": {
     "ACOMPTE_EMIS": "La facture ou le reçu de cet acompte existe déjà",
     "AFF_BOUCLE": "Matériels porteurs en boucle : le porteur choisi est lui-même porté par ce matériel",
+    "AFF_PHOTO": "Photo d'affectation : le document n'est pas une pièce de la GED de ce matériel",
     "ARC_NUMERO": "Numéro d'accusé de réception : 50 caractères au plus",
     "ARC_TYPE": "L'accusé de réception ne concerne que les commandes fournisseur et de sous-traitance",
     "ATELIER_SALARIE": "Votre compte n'est lié à aucun salarié : l'écran de l'atelier propose les étapes d'un salarié",
     "BLOCAGES_EXCLUSIFS": "PV fixe et PV affiché fixe sont exclusifs : seul le PV fixe est retenu",
+    "CLOTURE_ANNULEE": "Clôture déjà annulée",
+    "CLOTURE_DATE": "Date de clôture obligatoire",
+    "CLOTURE_DATE_FUTURE": "Clôture à une date à venir refusée",
+    "CLOTURE_DEBUT": "La date de départ doit précéder la date de clôture",
+    "CLOTURE_DOUBLON": "Une clôture existe déjà à cette date",
+    "CLOTURE_TRANSFEREE": "La pièce de la clôture est transférée en comptabilité : annulez d'abord son lot d'export",
+    "CLOTURE_VIDE": "Aucune variation de stock à comptabiliser",
     "CONSULTATION_RETENUE": "Seule une offre validée du lot peut être retenue",
     "CONSULTATION_TYPE": "Ce type de document n'a pas de lot de consultation",
     "CONSULTATION_VIDE": "Pas encore de lot de consultation pour ce document",
     "COUT_PAR_HEURE_INCONNU": "Le coût par heure du matériel est inconnu : rien à reprendre comme coût moyen",
     "DECALAGE": "Décalage de 0 à 12 mois",
+    "DELEGATION_DOUBLE": "Une même personne a deux délégations qui se chevauchent",
+    "DELEGATION_MEMBRE": "Le délégué doit être un membre actif du service",
+    "DELEGATION_PERIODE": "La fin de la délégation précède son début",
+    "DELEGATION_RESPONSABLE": "Le responsable du service contrôle déjà",
     "ENT_MATERIEL": "Ordre sans matériel",
     "ENT_NATURE": "Nature d'entretien inconnue",
     "EQU_VERROU": "Le verrou de modification de l'équipe n'est plus détenu : elle est rechargée",
@@ -8648,6 +8717,8 @@
     "FA_PIED": "Frais annexe de pied non ventilé : à remplacer par une tranche de frais annexes",
     "FA_SANS_RECEPTRICE": "Aucune ligne pour recevoir les frais annexes de la tranche",
     "FORMULE": "Libellé du modèle obligatoire",
+    "LIVRAISON_NON_VALIDEE": "Commande non validée : la date de livraison se saisit dans le document",
+    "LIVRAISON_TYPE": "La date de livraison d'une ligne validée ne concerne que les commandes fournisseur et de sous-traitance",
     "MARCHE_CREATION": "Commande d'un marché : créez ce document depuis la fiche du marché (toutes ses commandes)",
     "MARCHE_SANS_COMMANDE": "Le marché n'a pas de commande validée",
     "MARCHE_VENTE": "Seul un marché de vente se facture par avancement",
@@ -8659,10 +8730,14 @@
     "PLANNING_SANS_TACHE": "Aucune tâche du planning pour cet ordre",
     "PLAN_CODE": "Code du plan obligatoire : lettres, chiffres et _ (20 au plus)",
     "PLAN_NATURE": "Nature inconnue",
+    "PREFERENCE_CLE": "Clé de préférence invalide (minuscules, chiffres, « _ . - », 60 caractères au plus).",
+    "PREFERENCE_VALEUR": "La préférence doit être un objet JSON.",
     "PV_AFFICHE_FIXE": "Le PV affiché fixe est réservé aux lignes de prix",
     "REL_LIE": "Relevé introuvable ou lié à un événement ou à un ordre",
+    "REL_MATERIEL": "Matériel obligatoire",
     "RENTABILITE_COEF": "Un coefficient de frais généraux est strictement positif",
     "RENTABILITE_COEF_DOUBLON": "Deux coefficients pour la même nature à la même date",
+    "RENTABILITE_COUT_MATERIEL": "Un coût horaire de matériel est positif ou nul",
     "RENTABILITE_TAUX": "Un taux horaire est positif ou nul",
     "REV_FERME": "Marché à prix ferme : aucune révision",
     "REV_RIEN": "Aucune régularisation de révision à facturer",
@@ -8672,6 +8747,8 @@
     "SERVICE_NIVEAUX": "Deux niveaux de services au plus (service, sous-service)",
     "STK_ARTICLE": "Article non géré en stock",
     "STK_BORNE_DEPOT": "Aucun dépôt de stock pour cette borne (paramétrage des bornes)",
+    "STK_CERTIFICAT": "Fichier du certificat attendu",
+    "STK_FICHE_VIDE": "Aucune dotation à signer depuis la dernière fiche",
     "STK_MOTIF": "Motif obligatoire pour refuser une saisie",
     "ST_CIBLE": "Appel d'offres ou commande de sous-traitance",
     "ST_LIGNES": "Aucune ligne de prix dans la sélection",

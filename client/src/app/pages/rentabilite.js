@@ -5,7 +5,7 @@ import { aujourdhui, Dz, ACTION_DROIT } from '@logibtp/socle';
 import { COUT, COLONNES_DETAIL, COLONNES_PREVISION, INDICATEUR, COLONNES_LISTE, NIVEAU_LISTE, RACCOURCI_PERIODE, BORNE_PERIODE, ERREUR_PERIODE, lirePeriode, controlerPeriode, raccourciPeriode } from '@logibtp/rentabilite';
 import { TableauDetail, TableauFaits, TableauListe, TableauResultats, PanneauPrevisions, PanneauFacturation, TableauFacturationListe, GraphiquesEvolution } from '@logibtp/rentabilite/ui';
 import { choisirPersonne } from '@logibtp/annuaire/ui';
-import { TYPE_FICHE, ROLE_RENTABILITE, urlFiche, urlDocument } from '../codes.js';
+import { TYPE_FICHE, ROLE_RENTABILITE, ROLE_RELANCE, urlFiche, urlDocument } from '../codes.js';
 import { api } from '../api.js';
 import { champRattachement } from '../structure/selection.js';
 
@@ -808,12 +808,20 @@ export class PageParametresRentabilite extends PageBase {
   #roles(roles, admin) {
     const zone = this.conteneur.querySelector('[data-roles]');
     const options = Object.values(ROLE_RENTABILITE).map((r) => ({ valeur: r, libelle: texte(`rentabilite_btp.roles.${r}`), detail: r }));
+    const optionsRelance = Object.values(ROLE_RELANCE).map((r) => ({ valeur: r, libelle: texte(`rentabilite_btp.roles_relance.${r}`), detail: r }));
     zone.innerHTML = `<table class="tableau-compact"><thead><tr><th>${texteHtml('rentabilite_btp.parametres.type')}</th><th>${texteHtml('rentabilite_btp.parametres.famille')}</th>
-      <th>${texteHtml('rentabilite_btp.parametres.role')}</th></tr></thead><tbody>${roles.map((r, i) => `<tr data-i="${i}"><td>${echapper(r.libelle)} <small>${echapper(r.type)}</small></td>
-      <td>${echapper(r.famille)}</td><td data-role></td></tr>`).join('')}</tbody></table>`;
+      <th>${texteHtml('rentabilite_btp.parametres.role')}</th><th>${texteHtml('rentabilite_btp.parametres.role_relance')}</th></tr></thead><tbody>${roles.map((r, i) => `<tr data-i="${i}"><td>${echapper(r.libelle)} <small>${echapper(r.type)}</small></td>
+      <td>${echapper(r.famille)}</td><td data-role></td><td data-role-relance></td></tr>`).join('')}</tbody></table>`;
     zone.querySelectorAll('tr[data-i]').forEach((tr) => {
       const r = roles[Number(tr.dataset.i)];
-      if (!admin) { tr.querySelector('[data-role]').textContent = r.role ? texte(`rentabilite_btp.roles.${r.role}`) : '—'; return; }
+      if (!admin) {
+        tr.querySelector('[data-role]').textContent = r.role ? texte(`rentabilite_btp.roles.${r.role}`) : '—';
+        tr.querySelector('[data-role-relance]').textContent = r.role_relance ? texte(`rentabilite_btp.roles_relance.${r.role_relance}`) : '—';
+        return;
+      }
+      const relance = creerCombo({ options: optionsRelance, valeur: r.role_relance ?? '', vide: true });
+      relance.addEventListener('change', () => { r.role_relance = relance.valeurCombo || null; this.#modifie = true; });
+      tr.querySelector('[data-role-relance]').append(relance);
       const c = creerCombo({ options, valeur: r.role ?? '', vide: true });
       c.addEventListener('change', () => { r.role = c.valeurCombo || null; this.#modifie = true; });
       tr.querySelector('[data-role]').append(c);

@@ -1,0 +1,21 @@
+{
+  "name": "@logibtp/relance",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Module Relances LogiBTP : règle des niveaux, calcul des relances dues des devis et des factures, regroupement par tiers",
+  "exports": {
+    ".": "./src/index.js",
+    "./ui": "./ui/index.js",
+    "./ui/relance.css": "./ui/relance.css"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@logibtp/socle": "0.2.0"
+  },
+  "devDependencies": {
+    "vitest": "^5.1.0"
+  }
+}

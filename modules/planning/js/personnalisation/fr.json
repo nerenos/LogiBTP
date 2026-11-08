@@ -1,20 +1,4 @@
 {
-  "erreurs": {
-    "DEP_TACHE": "Tâche précédente inconnue",
-    "PLA_AVANCEMENT": "Avancement de 0 à 100 %",
-    "PLA_DATE": "Date prévisionnelle invalide",
-    "PLA_HEURES_TRAVAIL": "Heures travaillées : heures entières, le début avant la fin",
-    "PLA_JALON": "Libellé du jalon obligatoire",
-    "PLA_LIBELLE": "Libellé obligatoire",
-    "PLA_MODE": "Mode de calcul inconnu",
-    "PLA_NOTIFICATION": "État ou notification inconnus",
-    "PLA_PARAMETRE": "Seuil (0 à 100 %) ou horizon (1 à 365 jours) invalide",
-    "PLA_PARENT": "Une tâche ne peut pas être sa propre tâche principale",
-    "PLA_REPETITION": "Fréquence inconnue ou nombre hors de 1 à 52",
-    "PLA_SCISSION": "Instant hors de la tâche",
-    "PLA_VERSION": "La tâche a été modifiée par ailleurs : elle est rechargée",
-    "PLA_VUE": "Vue d'un autre utilisateur ou vue globale"
-  },
   "planning": {
     "calcul": {
       "erreurs": {
@@ -81,5 +65,21 @@
       "glisser_copie": "copie",
       "glisser_fin": "fin {{date}}"
     }
+  },
+  "erreurs": {
+    "DEP_TACHE": "Tâche précédente inconnue",
+    "PLA_AVANCEMENT": "Avancement de 0 à 100 %",
+    "PLA_DATE": "Date prévisionnelle invalide",
+    "PLA_HEURES_TRAVAIL": "Heures travaillées : heures entières, le début avant la fin",
+    "PLA_JALON": "Libellé du jalon obligatoire",
+    "PLA_LIBELLE": "Libellé obligatoire",
+    "PLA_MODE": "Mode de calcul inconnu",
+    "PLA_NOTIFICATION": "État ou notification inconnus",
+    "PLA_PARAMETRE": "Seuil (0 à 100 %) ou horizon (1 à 365 jours) invalide",
+    "PLA_PARENT": "Une tâche ne peut pas être sa propre tâche principale",
+    "PLA_REPETITION": "Fréquence inconnue ou nombre hors de 1 à 52",
+    "PLA_SCISSION": "Instant hors de la tâche",
+    "PLA_VERSION": "La tâche a été modifiée par ailleurs : elle est rechargée",
+    "PLA_VUE": "Vue d'un autre utilisateur ou vue globale"
   }
 }

@@ -1,0 +1,138 @@
+{
+  "relance": {
+    "tiers_sans_nom": "Tiers n° {{id}}",
+    "piece_sans_nom": "Pièce n° {{id}}",
+    "niveau_n": "Niveau {{niveau}}",
+    "jours": "{{jours}} j",
+    "natures": {
+      "DEVIS": "Devis",
+      "FACTURE": "Facture"
+    },
+    "modes": {
+      "COURRIEL": "Courriel",
+      "COURRIER": "Lettre simple",
+      "RECOMMANDE": "Lettre recommandée",
+      "TACHE": "Tâche d'appel (CRM)"
+    },
+    "motifs": {
+      "LITIGE": "Litige",
+      "PROMESSE": "Promesse de paiement",
+      "ECHELONNEMENT": "Échelonnement",
+      "AUTRE": "Autre"
+    },
+    "etats_lot": {
+      "PREPARE": "préparé",
+      "PARTIEL": "partiellement envoyé",
+      "ENVOYE": "envoyé"
+    },
+    "raccourcis": {
+      "groupe": "Relances (liste de travail)",
+      "preparer": "Préparer un lot",
+      "valider": "Valider le lot",
+      "actualiser": "Actualiser la liste",
+      "groupe_parametres": "Relances (paramètres)",
+      "enregistrer": "Enregistrer la règle",
+      "groupe_suspensions": "Relances (suspensions)",
+      "nouvelle_suspension": "Nouvelle suspension"
+    },
+    "liste": {
+      "titre": "Relances à faire",
+      "date": "Relances dues au",
+      "actualiser": "Actualiser",
+      "actualiser_titre": "Recalculer les relances dues à cette date",
+      "preparer": "Préparer un lot",
+      "preparer_titre": "Proposer les relances dues pour les valider ensuite",
+      "aucun_lot": "Aucun lot à valider. Préparez un lot pour proposer les relances dues.",
+      "aucune_due": "Aucune relance due à cette date.",
+      "autres_lots": "{{nombre}} autre(s) lot(s) attendent aussi leur validation.",
+      "dues": "Relances dues ({{nombre}} pièces)",
+      "sans_charge": "Sans chargé d'affaires",
+      "ouvrir_piece": "Ouvrir la pièce (Ctrl+clic : nouvelle fenêtre)",
+      "noter_titre": "Noter une relance déjà faite hors de l'application",
+      "suspendre_titre": "Suspendre les relances de cette pièce",
+      "rien_a_preparer": "Aucune relance à préparer à cette date."
+    },
+    "lot": {
+      "titre": "Lot n° {{id}} du {{date}} ({{etat}})",
+      "retenir": "Retenir cette relance",
+      "mode": "Mode",
+      "commentaire": "Commentaire",
+      "valider": "Valider et envoyer ({{nombre}})",
+      "annuler": "Annuler les relances non retenues",
+      "rien_a_annuler": "Toutes les relances proposées sont retenues.",
+      "confirmer_annulation": "Annuler {{nombre}} relance(s) proposée(s) non retenue(s) ? Elles seront recalculées au prochain lot.",
+      "confirmer_titre": "Envoyer les relances",
+      "confirmer": "Envoyer {{groupes}} relance(s) groupée(s) pour {{montant}} ? Les relances non cochées restent proposées.",
+      "envoyer": "Envoyer",
+      "echecs_titre": "Envois en échec",
+      "echec": "Groupe {{groupe}} :"
+    },
+    "attente": {
+      "titre": "Recommandés en attente de numéro",
+      "pieces": "{{nombre}} pièce(s)",
+      "saisir": "Saisir le numéro",
+      "question": "Numéro de la lettre recommandée"
+    },
+    "noter": {
+      "titre": "Noter une relance faite",
+      "mode": "Mode utilisé",
+      "date": "Date"
+    },
+    "regle": {
+      "titre": "Règle de relance",
+      "sans_reglements": "Le module Règlements n'est pas actif : les factures sont relancées tant qu'elles ne sont pas payées, pour leur net à payer.",
+      "rang": "Niveau",
+      "delai": "Délai depuis le départ",
+      "jours": "jours",
+      "mode": "Mode",
+      "modele_courriel": "Modèle de courriel",
+      "modele_edition": "Modèle de lettre",
+      "repeter": "Répéter le dernier niveau",
+      "intervalle": "tous les",
+      "ajouter": "Ajouter un niveau",
+      "retirer": "Retirer ce niveau",
+      "defaut": "Règle par défaut",
+      "confirmer_defaut": "Remplacer la règle en cours de modification par la règle par défaut ?",
+      "enregistrer": "Enregistrer",
+      "erreurs": {
+        "RELANCE_REGLE_SANS_NIVEAU": "La règle doit avoir au moins un niveau.",
+        "RELANCE_REGLE_TROP_DE_NIVEAUX": "La règle a trop de niveaux (5 au plus).",
+        "RELANCE_NIVEAU_RANG": "Les niveaux doivent être numérotés 1, 2, 3…",
+        "RELANCE_NIVEAU_DELAI": "Les délais doivent être des nombres entiers de jours, croissants.",
+        "RELANCE_NIVEAU_MODE": "Un niveau a un mode non admis (la tâche d'appel n'existe que pour les devis).",
+        "RELANCE_REGLE_INTERVALLE": "Indiquez l'intervalle de répétition en jours."
+      }
+    },
+    "suspensions": {
+      "titre": "Suspensions de relances",
+      "nouvelle": "Nouvelle suspension",
+      "modifier": "Modifier la suspension",
+      "supprimer": "Supprimer la suspension",
+      "aucune": "Aucune suspension.",
+      "aucune_cible": "aucune pièce ni tiers choisi",
+      "cible": "Pièce ou tiers",
+      "motif": "Motif",
+      "jusqu_au": "Jusqu'au (compris)",
+      "etat": "État",
+      "active": "Active",
+      "terminee": "Terminée",
+      "commentaire": "Commentaire",
+      "auteur": "Saisie par",
+      "choisir_piece": "Choisir une pièce",
+      "choisir_tiers": "Choisir un tiers",
+      "confirmer_suppression": "Supprimer la suspension de {{cible}} ? Ses relances reprendront.",
+      "manque": {
+        "cible": "Choisissez une pièce ou un tiers.",
+        "motif": "Choisissez un motif.",
+        "jusqu_au": "Indiquez la date de fin de la suspension."
+      }
+    }
+  },
+  "erreurs": {
+    "RELANCE_LOT_CLOS": "Lot de relances clos",
+    "RELANCE_NUMERO_VIDE": "Numéro du recommandé obligatoire",
+    "RELANCE_PAS_EN_ATTENTE_NUMERO": "Relance non en attente de numéro",
+    "RELANCE_SUSPENSION_CIBLE": "Suspendre une pièce ou un tiers",
+    "RELANCE_SUSPENSION_DATE": "Suspension échue"
+  }
+}

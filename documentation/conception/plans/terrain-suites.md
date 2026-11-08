@@ -2,7 +2,7 @@
 
 > Plan de la procédure `analyse-lots`, phase 2 (08/11/2026). Questions et décisions :
 > [terrain-suites-questions.md](terrain-suites-questions.md). Analyse d'origine :
-> [ANALYSE-TERRAIN.md](../documentation/conception/ANALYSE-TERRAIN.md). Source : TODO.md § « Application de terrain ».
+> [ANALYSE-TERRAIN.md](../ANALYSE-TERRAIN.md). Source : TODO.md § « Application de terrain ».
 >
 > **Plan à valider par l'utilisateur avant tout développement.** Hors plan : contrats d'entretien (TS25, analyse à part).
 > Points déjà faits ailleurs, cochés dans TODO.md par le lot 1 : heures de matériel valorisées (Rentabilité lot 5,

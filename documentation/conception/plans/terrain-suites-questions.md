@@ -1,7 +1,7 @@
 # Application de terrain : écarts et suites, questions ouvertes
 
 > Phase 1 de la procédure `analyse-lots` (08/11/2026). Source : TODO.md § « Application de terrain (poseurs, chefs
-> d'équipe) » et [ANALYSE-TERRAIN.md](../documentation/conception/ANALYSE-TERRAIN.md) (écarts des lots 1 à 7, § 9).
+> d'équipe) » et [ANALYSE-TERRAIN.md](../ANALYSE-TERRAIN.md) (écarts des lots 1 à 7, § 9).
 > Une question sans réponse reste `OUVERT` dans le plan. **B** = bloquante (change la découpe ou le modèle de données).
 
 ## Décisions du 08/11/2026

@@ -1,25 +1,4 @@
 {
-  "erreurs": {
-    "INV_QUANTITE": "Quantité comptée positive ou nulle obligatoire",
-    "STK_COMMANDE_VIDE": "Aucune quantité à commander",
-    "STK_COMPTAGE_EXISTANT": "Article déjà compté dans ce lieu à la même date-heure par un autre lot",
-    "STK_EMPLACEMENT": "Emplacement d'un autre lieu",
-    "STK_EMPLACEMENT_CODE": "Code d'emplacement obligatoire",
-    "STK_EMPLACEMENT_DOUBLON": "Deux emplacements ont le même code",
-    "STK_FOURNISSEUR": "Fournisseur à choisir pour chaque article (tarif principal de la bibliothèque)",
-    "STK_GARANTIE": "Garantie de 1 à 600 mois",
-    "STK_GENERATION": "Génération par EMPLACEMENT, FAMILLE, MARQUE ou STOCK",
-    "STK_GENERATION_VIDE": "Aucun article pour ces critères",
-    "STK_HORIZON": "Délai positif ou nul, frise positive",
-    "STK_INVENTAIRE": "Le lot comporte des erreurs",
-    "STK_INVENTAIRE_VIDE": "Aucune quantité comptée dans le lot",
-    "STK_LOT_NON_VALIDE": "Seul un lot validé s'annule (un brouillon se supprime)",
-    "STK_LOT_VALIDE": "Lot d'inventaire déjà validé ou annulé",
-    "STK_MARQUE_CODE": "Code de marque obligatoire et unique",
-    "STK_METHODE": "Méthode de valorisation inconnue (PMP ou DERNIER_PA)",
-    "STK_PMP": "PMP positif ou nul obligatoire",
-    "STK_SEUIL_DOUBLON": "Un article en double dans les seuils"
-  },
   "stock": {
     "inventaire": {
       "erreurs": {
@@ -43,5 +22,27 @@
         "TRA_INCOMPLET": "Une partie de la quantité reste sans lot"
       }
     }
+  },
+  "erreurs": {
+    "INV_QUANTITE": "Quantité comptée positive ou nulle obligatoire",
+    "STK_COMMANDE_VIDE": "Aucune quantité à commander",
+    "STK_COMPTAGE_EXISTANT": "Article déjà compté dans ce lieu à la même date-heure par un autre lot",
+    "STK_EMPLACEMENT": "Emplacement d'un autre lieu",
+    "STK_EMPLACEMENT_CODE": "Code d'emplacement obligatoire",
+    "STK_EMPLACEMENT_DOUBLON": "Deux emplacements ont le même code",
+    "STK_FOURNISSEUR": "Fournisseur à choisir pour chaque article (tarif principal de la bibliothèque)",
+    "STK_GARANTIE": "Garantie de 1 à 600 mois",
+    "STK_GENERATION": "Génération par EMPLACEMENT, FAMILLE, MARQUE ou STOCK",
+    "STK_GENERATION_VIDE": "Aucun article pour ces critères",
+    "STK_HORIZON": "Délais positifs ou nuls, frise positive",
+    "STK_INVENTAIRE": "Le lot comporte des erreurs",
+    "STK_INVENTAIRE_VIDE": "Aucune quantité comptée dans le lot",
+    "STK_LOT_NON_VALIDE": "Seul un lot validé s'annule (un brouillon se supprime)",
+    "STK_LOT_VALIDE": "Lot d'inventaire déjà validé ou annulé",
+    "STK_MARQUE_CODE": "Code de marque obligatoire et unique",
+    "STK_METHODE": "Méthode de valorisation inconnue (PMP ou DERNIER_PA)",
+    "STK_PMP": "PMP positif ou nul obligatoire",
+    "STK_SEUIL_DOUBLON": "Un article en double dans les seuils",
+    "STK_SUIVI": "Suivi : aucun, par lot ou par numéro de série"
   }
 }
