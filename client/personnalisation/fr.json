@@ -4469,6 +4469,10 @@
           "libelle": "Habilitations, entretiens et visites à surveiller",
           "info": "Expirées ou à renouveler : CACES, visites médicales, VGP…"
         },
+        "releves_a_valider": {
+          "libelle": "Relevés de compteurs à valider",
+          "info": "Relevés saisis à la borne pour un matériel non affecté au salarié ce jour"
+        },
         "parametrage_ressources": {
           "libelle": "Types d'habilitations, motifs, natures MO…"
         }
@@ -6856,6 +6860,21 @@
         "service": "Service",
         "enregistrees": "Natures enregistrées"
       }
+    },
+    "releves_a_valider": {
+      "titre": "Relevés de compteurs à valider",
+      "aide": "Relevés saisis à la borne pour un matériel non affecté au salarié ce jour : acceptés, ils entrent dans l'historique des compteurs ; refusés, ils sont supprimés (motif obligatoire).",
+      "aucun": "Aucun relevé à valider.",
+      "colonnes": { "materiel": "Matériel", "salarie": "Salarié", "date": "Date", "compteur": "Compteur", "valeur": "Valeur", "commentaire": "Commentaire" },
+      "remise": "remise à zéro",
+      "accepter": "Accepter",
+      "refuser": "Refuser",
+      "accepter_aide": "Accepter le relevé",
+      "refuser_aide": "Refuser le relevé et le supprimer",
+      "motif": "Motif du refus du relevé",
+      "motif_vide": "Le motif du refus est obligatoire",
+      "accepte": "Relevé accepté",
+      "refuse": "Relevé refusé et supprimé"
     },
     "surveiller": {
       "titre": "Habilitations, entretiens et visites à surveiller",

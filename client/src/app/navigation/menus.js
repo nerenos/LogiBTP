@@ -27,6 +27,7 @@ export const MENUS_METIER = [
       { code: 'materiels', libelle: texte('navigation_btp.menus.ressources.materiels.libelle'), iconeHtml: iconeHtml('navigation_btp_materiels'), url: L('materiels'), creation: F(TYPE_FICHE.MATERIEL, texte('navigation_btp.menus.ressources.materiels.creation')) },
       { separateur: true },
       { code: 'habilitations', libelle: texte('navigation_btp.menus.ressources.habilitations.libelle'), iconeHtml: iconeHtml('navigation_btp_habilitations'), url: '/ressources/habilitations', info: texte('navigation_btp.menus.ressources.habilitations.info') },
+      { code: 'releves-a-valider', libelle: texte('navigation_btp.menus.ressources.releves_a_valider.libelle'), iconeHtml: iconeHtml('navigation_btp_releves_a_valider'), url: '/ressources/releves-a-valider', info: texte('navigation_btp.menus.ressources.releves_a_valider.info') },
       { code: 'parametrage-ressources', libelle: texte('navigation_btp.menus.ressources.parametrage_ressources.libelle'), iconeHtml: iconeHtml('navigation_btp_parametrage_ressources'), url: '/parametres/ressources' },
     ],
   },

@@ -116,6 +116,12 @@
 - **Critère de fin** : `npm test` vert.
 - **Réalisé / écarts** : bouton « Compteurs » de l'écran chantier de la borne, écran `#compteurs` (liste rapide des affectés ce jour, bascule « Autre matériel » et recherche, saisie par unité suivie avec remise à zéro, message « à valider au bureau »), helpers `client/src/app/pointage/releves-borne.js`, test `releves-borne.test.js`. Pas de mode hors ligne (la borne n'utilise pas `hors-ligne/`). Écran de validation au bureau des relevés à valider non fait (reporté au TODO). `npm test` : seuls les 2 échecs connus.
 
+## Lot 4b : validation au bureau des relevés de la borne (FAIT 2026-11-08)
+
+- **Module** : cœur. **Fichiers** : `client/src/app/pages/releves-a-valider.js`, `api.js`, `pages/index.js`, `navigation/menus.js`, `personnalisation/fr.json` et `images/icones.json`.
+- **Règles répliquées JS / C#** : aucune. **Critère de fin** : `npm test` vert (hors 2 échecs connus).
+- **Réalisé / écarts** : page `/ressources/releves-a-valider` (menu Ressources, droit du module) : tableau matériel, salarié, date, compteur, valeur, commentaire ; acceptation, refus avec motif (`saisir`, relevé supprimé). Le serveur filtre par droit de traitement. Pas de test client dédié (écran sans règle).
+
 ## Lot 5 : données de démonstration d'entretiens (A FAIRE)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.

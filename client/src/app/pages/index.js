@@ -53,6 +53,7 @@ import { PageParametresComptes } from './parametres-comptes.js';
 import { PageParametresDroits } from './parametres-droits.js';
 import { PageParametresRessources } from './parametres-ressources.js';
 import { PageHabilitations } from './habilitations.js';
+import { PageRelevesAValider } from './releves-a-valider.js';
 import { PageParametresCalendriers } from './parametres-calendriers.js';
 import { PageNotifications, PageParametresNotifications } from './notifications.js';
 import { PageParametresConnexions } from './parametres-connexions.js';
@@ -147,6 +148,7 @@ export const ROUTES = [
   { nom: 'mail-message', chemin: '/mail/message/:id', page: PageMessageMail, titre: texte('mail_btp.routes.message') },
   { nom: 'parametres-connexions', chemin: '/parametres/connexions', page: PageParametresConnexions, titre: texte('oauth_btp.connexions.titre') },
   { nom: 'parametres-calendriers', chemin: '/parametres/calendriers', page: PageParametresCalendriers, titre: texte('calendrier_btp.routes.calendriers') },
+  { nom: 'releves-a-valider', chemin: '/ressources/releves-a-valider', page: PageRelevesAValider, titre: texte('ressources_btp.releves_a_valider.titre') },
   { nom: 'habilitations', chemin: '/ressources/habilitations', page: PageHabilitations, titre: texte('ressources_btp.surveiller.titre') },
   { nom: 'parametres-comptes', chemin: '/parametres/comptes', page: PageParametresComptes, titre: texte('authentification_btp.comptes.titre') },
   { nom: 'parametres-installation', chemin: '/parametres/installation', page: PageParametresInstallation, titre: texte('parametres_btp.installation.titre') },

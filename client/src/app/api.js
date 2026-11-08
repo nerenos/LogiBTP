@@ -503,6 +503,8 @@ export const api = {
     echeancesMateriel: (materiel) => appel('GET', `/ressources/materiels/${materiel}/echeances`),
     echeancesEntretiens: (jours = 60) => appel('GET', `/ressources/entretiens/echeances?jours=${encodeURIComponent(jours)}`),
     echeancesMateriels: (jours = 60) => appel('GET', `/ressources/materiels/echeances?jours=${encodeURIComponent(jours)}`),
+    relevesAValider: () => appel('GET', '/ressources/materiels/releves-a-valider'),
+    traiterReleve: (id, accepter, motif = null) => appel('POST', `/ressources/materiels/releves-a-valider/${id}`, { accepter, motif }),
     aSurveiller: ({ element = '', jours = 60 } = {}) => appel('GET', `/ressources/habilitations?${new URLSearchParams({ ...(element ? { element } : {}), jours })}`),
     exigeesMateriel: (id) => appel('GET', `/ressources/materiels/${id}/exigees`),
     enregistrerExigeesMateriel: (id, codes) => appel('PUT', `/ressources/materiels/${id}/exigees`, codes),
