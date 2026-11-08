@@ -132,3 +132,6 @@ public sealed record ParametresAccuse(IReadOnlyList<string> Prefixes, int? Annee
 
 /// <summary>Accusé de réception reconnu dans un courriel reçu : message, compte, objet et résultat de la reconnaissance (numéro, livraison annoncée).</summary>
 public sealed record AccuseRecu(long Id, long Compte, string Objet, ResultatAccuse Accuse);
+
+/// <summary>Résolution d'un accusé de réception par l'application : élément unique trouvé (le courriel y est rattaché), sinon candidats proposés (courriel « à rapprocher »).</summary>
+public sealed record ResolutionAccuse(ElementTrouve? Rattache, IReadOnlyList<ElementTrouve> Candidats);

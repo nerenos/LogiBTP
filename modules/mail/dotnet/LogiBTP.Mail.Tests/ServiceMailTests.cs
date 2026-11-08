@@ -96,13 +96,14 @@ public sealed class ServiceMailTests : IAsyncLifetime
         public List<(long Message, string Element)> Rattaches { get; } = [];
         public List<long> Purges { get; } = [];
         public List<AccuseRecu> Accuses { get; } = [];
+        public ResolutionAccuse? Resolution { get; set; }
 
         public override Task<ParametresAccuse> ParametresAccuseAsync(CancellationToken ct) => Task.FromResult(new ParametresAccuse(["CMD"], 2026, []));
 
-        public override Task AccuseReconnuAsync(AccuseRecu a, CancellationToken ct)
+        public override Task<ResolutionAccuse?> AccuseReconnuAsync(AccuseRecu a, CancellationToken ct)
         {
             Accuses.Add(a);
-            return Task.CompletedTask;
+            return Task.FromResult(Resolution);
         }
 
         public override Task<DepotRecu> RecevoirAsync(CourrielRecu c, CancellationToken ct) =>
@@ -287,6 +288,7 @@ public sealed class ServiceMailTests : IAsyncLifetime
         var c = await comptes.CreerAsync(Admin, new SaisieCompte(_code, $"{_code.ToLowerInvariant()}@exemple.fr", null, true, true, "MOT_DE_PASSE", null,
             new ServeurMail("smtp.exemple.fr", 465, "SSL", null, "secret"), new ServeurMail("imap.exemple.fr", 993, "SSL", null, "secret"), null, null, "AUTRE", null,
             false, null, true, $"Boîte {_code}", new OptionsCompte(), [new DossierCompte("INBOX", "RECEPTION")]), default);
+        _specialisation.Resolution = new ResolutionAccuse(null, [new ElementTrouve("document", "7", "Commande 7", null), new ElementTrouve("document", "8", "Commande 8", null)]);
         _transport.Boite.Add(AccuseFournisseur());
         _transport.Boite.Add(CourrielClient());
         Assert.Equal(2, await reception.ReleverMaintenantAsync(Admin, c.Id, default));
@@ -296,6 +298,9 @@ public sealed class ServiceMailTests : IAsyncLifetime
         Assert.Equal(("CMD-2026-0042", "2026-11-25", "JOUR"), (a.Numero, a.Date, a.Precision));
         var m = await db.Messages.AsNoTracking().SingleAsync(x => x.MmeMcoId == c.Id && x.MmeArNumero != null);
         Assert.Equal(new DateOnly(2026, 11, 25), m.MmeArDate);
+        // Deux candidates : pas de rattachement, courriel « à rapprocher » avec les candidates proposées.
+        Assert.Equal("PROPOSE", m.MmeEtat);
+        Assert.Equal(["document:7", "document:8"], (await db.Propositions.AsNoTracking().Where(x => x.MprMmeId == m.MmeId).ToListAsync()).Select(x => $"{x.MprTypeElement}:{x.MprIdElement}").Order());
         Assert.Single(await db.Messages.AsNoTracking().Where(x => x.MmeMcoId == c.Id && x.MmeSens == "R" && x.MmeArMotif == null).ToListAsync());
     }
 

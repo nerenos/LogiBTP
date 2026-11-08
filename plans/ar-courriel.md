@@ -31,7 +31,7 @@
 |---|---|---|---|---|
 | 1 | Reconnaissance d'un AR (motifs, numéro, date) | `modules/mail` | AO1 | FAIT (08/11/2026) |
 | 2 | Point d'accroche « AR reconnu » à la réception | `modules/mail` | 1, AO2 | FAIT (08/11/2026) |
-| 3 | Rapprochement de la commande et rattachement | cœur | 2, AO3 | A FAIRE |
+| 3 | Rapprochement de la commande et rattachement | cœur | 2, AO3 | FAIT (08/11/2026) |
 | 4 | Proposition de la livraison confirmée dans la boîte de réception | cœur | 3 | A FAIRE |
 
 ---
@@ -59,9 +59,9 @@
 - **Règles répliquées JS / C#** : aucune nouvelle.
 - **Jeux de tests** : C# : AR reconnu → accroche appelée une fois avec numéro et date ; message ordinaire → non appelée.
 - **Critère de fin** : `dotnet test LogiBTP.slnx` vert.
-- **Réalisé** : `SpecialisationMail.ParametresAccuseAsync` (préfixes, année de référence, motifs fournis par le cœur) et `AccuseReconnuAsync` (sans effet par défaut) ; `ServiceReceptionMail.ReconnaitreAccuseAsync` appelée après la reconnaissance, sauf courrier ignoré ou dossier « à traiter » ; proposition conservée sur le message (script `007d_mail_accuse.sql`, colonnes `mme_ar_*`) ; un échec de l'accroche est journalisé sans bloquer la réception ; test `Accuse_de_reception_reconnu_a_la_reception` (exécuté seulement avec `LOGIBTP_TEST_PG`).
+- **Réalisé** : `SpecialisationMail.ParametresAccuseAsync` (préfixes, année de référence, motifs fournis par le cœur) et `AccuseReconnuAsync` (sans effet par défaut) ; `ServiceReceptionMail.ReconnaitreAccuseAsync` appelée après la reconnaissance, sauf courrier ignoré ou dossier « à traiter » ; proposition conservée sur le message (script `007d_mail_accuse.sql`, colonnes `mme_ar_*`, essayé le 08/11/2026 sur la base de dev 5433 dans une transaction annulée : six colonnes créées, aucune erreur, rien conservé) ; un échec de l'accroche est journalisé sans bloquer la réception ; test `Accuse_de_reception_reconnu_a_la_reception` (exécuté seulement avec `LOGIBTP_TEST_PG`).
 
-## Lot 3 : rapprochement de la commande et rattachement (A FAIRE)
+## Lot 3 : rapprochement de la commande et rattachement (FAIT le 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : spécialisation du module Mail dans le cœur (`src/LogiBTP.Api/Btp/`, graphify « spécialisation mail
@@ -72,6 +72,7 @@
 - **Jeux de tests** : numéro trouvé → rattaché ; introuvable → marqué ; deux candidates → marqué avec les candidates ;
   commande annulée ou remplacée ignorée.
 - **Critère de fin** : `dotnet test LogiBTP.slnx` vert.
+- **Réalisé** : `AccuseCommandeBtp` (SQL des commandes `A_COMMANDE` / `T_COMMANDE` par `v_document_valable` hors annulées, numéros comparés sans séparateurs ni casse ; `Resoudre`) et surcharges `SpecialisationMailBtp.ParametresAccuseAsync` (préfixes des types ARC) / `AccuseReconnuAsync`. Écart au plan : l'accroche du module renvoie maintenant une `ResolutionAccuse` (élément unique ou candidates) et c'est `ServiceReceptionMail` qui rattache (`RattacherAsync`, origine `REGLE`, règle `ACCUSE_RECEPTION`, sans changer la contrainte `mli_origine`) ou, pour plusieurs candidates, les garde en propositions (indice `ACCUSE_RECEPTION`, état PROPOSE) ; numéro introuvable : le message reste « à rapprocher » avec sa proposition d'AR. Tests : `AccuseCommandeTests` (décisions, comparaison, SQL en base de dev dans une transaction annulée avec `LOGIBTP_TEST_PG`), cas de deux candidates dans `ServiceMailTests`.
 
 ## Lot 4 : proposition de la livraison confirmée (A FAIRE)
 

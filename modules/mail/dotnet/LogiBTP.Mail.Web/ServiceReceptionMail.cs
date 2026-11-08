@@ -170,12 +170,26 @@ public sealed class ServiceReceptionMail(MailDbContext db, ServiceComptesMail co
             m.MmeArSemaine = (short?)a.Semaine;
             m.MmeArPrecision = a.Precision;
             await db.SaveChangesAsync(ct);
-            await specialisation.AccuseReconnuAsync(new AccuseRecu(m.MmeId, m.MmeMcoId, m.MmeObjet, a), ct);
+            var res = await specialisation.AccuseReconnuAsync(new AccuseRecu(m.MmeId, m.MmeMcoId, m.MmeObjet, a), ct);
+            if (res?.Rattache is { } element) await RattacherAsync(m, element, "REGLE", null, TypeReconnaissance.AccuseReception, Fond, ct);
+            else if (res is { Candidats.Count: > 0 } && m.MmeEtat != "RAPPROCHE") await ProposerCandidatsAsync(m, res.Candidats, ct);
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
             journal.LogWarning(e, "Mail : accusé de réception du courriel {Id} non traité", m.MmeId);
         }
+    }
+
+    /// <summary>Accusé sans commande unique (plan ar-courriel, lot 3) : candidates gardées comme propositions (indice « accusé de réception »), courriel « à rapprocher » par une personne.</summary>
+    private async Task ProposerCandidatsAsync(MessageEntite m, IReadOnlyList<ElementTrouve> candidats, CancellationToken ct)
+    {
+        var deja = await db.Propositions.AsNoTracking().Where(x => x.MprMmeId == m.MmeId).Select(x => x.MprTypeElement + ":" + x.MprIdElement).ToListAsync(ct);
+        db.Propositions.AddRange(candidats.Where(e => !deja.Contains(e.Type + ":" + e.Id)).Select(e => new PropositionEntite
+        {
+            MprMmeId = m.MmeId, MprTypeElement = e.Type, MprIdElement = e.Id, MprScore = 0, MprIndices = [TypeReconnaissance.AccuseReception],
+        }));
+        m.MmeEtat = "PROPOSE";
+        await db.SaveChangesAsync(ct);
     }
 
     /// <summary>
