@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { sha256, texteEntree, empreinteEntree, verifierChaine, editionsAPurger, FournisseurGedMemoire, lireMail, genreApercu, normaliserRecherche } from '../src/index.js';
+import { sha256, texteEntree, empreinteEntree, verifierChaine, editionsAPurger, FournisseurGedMemoire, lireMail, genreApercu, normaliserRecherche, tailleMaxDepot, depotTropLourd, TAILLE_MAX_DEPOT_DEFAUT } from '../src/index.js';
 
 const dossier = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../tests/cas');
 const lire = (f) => JSON.parse(fs.readFileSync(path.join(dossier, f), 'utf8'));
@@ -167,5 +167,19 @@ describe('intégrité, statistiques et recherche', () => {
     const titres = async (r) => (await g.lister({ recherche: r })).map((d) => d.titre);
     expect(await titres('oeuvre')).toEqual(['Plan']);
     expect(await titres('REGLER facture')).toEqual(['Mail']);
+  });
+});
+
+describe('limite de dépôt exposée au client (plan terrain-suites, lot 11)', () => {
+  it('limite des paramètres, sinon celle par défaut ; fichier plus lourd refusé au dépôt', async () => {
+    expect(tailleMaxDepot({ taille_max_depot: 1024 })).toBe(1024);
+    expect(tailleMaxDepot({})).toBe(TAILLE_MAX_DEPOT_DEFAUT);
+    expect(tailleMaxDepot(null)).toBe(200 * 1024 * 1024);
+    expect(depotTropLourd(1025, { taille_max_depot: 1024 })).toBe(true);
+    expect(depotTropLourd(1024, { taille_max_depot: 1024 })).toBe(false);
+    const g = new FournisseurGedMemoire({ parametres: { taille_max_depot: 4 } });
+    expect((await g.parametres()).taille_max_depot).toBe(4);
+    await expect(g.deposer({ fichier: new Blob(['12345']), nom_fichier: 'a.txt', meta: { titre: 'A' } })).rejects.toMatchObject({ code: 'TAILLE' });
+    expect((await g.deposer({ fichier: new Blob(['1234']), nom_fichier: 'b.txt', meta: { titre: 'B' } })).titre).toBe('B');
   });
 });

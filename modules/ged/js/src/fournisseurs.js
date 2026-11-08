@@ -10,7 +10,8 @@ import { extraireTexte, ETATS_INDEX } from './texte.js';
 
 // Fournisseurs de la GED. Même interface pour l'API (routes MapModuleGed) et pour la mémoire (démo hors ligne, tests) :
 //
-//   parametres()                         → { editions_conservees, taille_apercu_max, adresse_copie_cachee, categories,
+//   parametres()                         → { editions_conservees, taille_apercu_max, taille_max_depot (limite d'un dépôt,
+//                                            octets : spécialisation du serveur), adresse_copie_cachee, categories,
 //                                            regles_classification }
 //   lister({ type_element, id_element, recherche, supprimes, coffre, archives, sans_element })
 //                                        → documents (version courante, nb_pieces) ; archives : documents archivés
@@ -114,9 +115,19 @@ export class FournisseurGedApi {
   indexerEnAttente() { return this.appel('POST', '/indexation'); }
 }
 
+/** Taille maximale d'un dépôt par défaut (octets), comme `SpecialisationGed.TailleMaxDepot`. */
+export const TAILLE_MAX_DEPOT_DEFAUT = 200 * 1024 * 1024;
+
+/** Limite de dépôt des paramètres lus (`parametres()`), sinon celle par défaut (plan terrain-suites, lot 11). */
+export const tailleMaxDepot = (parametres) => (Number(parametres?.taille_max_depot) > 0 ? Number(parametres.taille_max_depot) : TAILLE_MAX_DEPOT_DEFAUT);
+
+/** Fichier refusé au dépôt (plus lourd que la limite des paramètres) : même règle que `ServiceGed.LireFormulaire`. */
+export const depotTropLourd = (taille, parametres) => Number(taille) > tailleMaxDepot(parametres);
+
 export const PARAMETRES_DEFAUT = {
   editions_conservees: 5,
   taille_apercu_max: 15 * 1024 * 1024,
+  taille_max_depot: TAILLE_MAX_DEPOT_DEFAUT,
   adresse_copie_cachee: '',
   categories: [
     { code: 'devis_signe', libelle: 'Devis signé', coffre: true }, { code: 'facture_recue', libelle: 'Facture reçue', coffre: true },
@@ -333,6 +344,7 @@ export class FournisseurGedMemoire {
     if (m.parent_id !== null && m.parent_id !== undefined) this.controlerParent(null, m.parent_id);
     const saisie = nettoye(m.confidentialite) ? confidentialite(m.confidentialite) : null;
     const blob = fichier instanceof Blob ? fichier : new Blob([fichier]);
+    this.#controlerTaille(blob);
     const nom = nom_fichier ?? fichier?.name ?? 'document';
     const { texte: contenu, etat } = await extraireTexte(blob, nom, blob.type);
     const classe = classer({ nom_fichier: nom, type_mime: blob.type, titre: m.titre, texte: contenu ?? m.mail?.message ?? null, expediteur: m.mail?.de ?? null,
@@ -402,11 +414,17 @@ export class FournisseurGedMemoire {
     d.repertoire_id = r.id;
   }
 
+  /** Fichier plus lourd que la limite de dépôt : refus TAILLE (comme le serveur). */
+  #controlerTaille(blob) {
+    if (depotTropLourd(blob.size, this.params)) throw new ErreurGed(422, 'TAILLE', texte('ged.fournisseur.trop_volumineux', { mo: Math.floor(tailleMaxDepot(this.params) / 1024 / 1024) }));
+  }
+
   async nouvelleVersion(id, { fichier, nom_fichier, genre = GENRES.EDITION, etape = null, etat = null, commentaire = null }) {
     const d = this.#doc(id);
     if (d.coffre) throw new ErreurGed(422, 'COFFRE', texte('ged.fournisseur.coffre_version'));
     if (d.supprime) throw new ErreurGed(422, 'SUPPRIME', texte('ged.fournisseur.supprime'));
     const blob = fichier instanceof Blob ? fichier : new Blob([fichier]);
+    this.#controlerTaille(blob);
     Object.assign(d, await this.#indexation(blob, nom_fichier ?? fichier?.name ?? 'document'));
     await this.#ajouterVersion(d, { fichier: blob, nom_fichier: nom_fichier ?? fichier?.name, genre, etape, etat, commentaire });
     return this.document(id);

@@ -26,7 +26,7 @@
 | 8 | Photos HEIC converties par l'iPhone | cœur | — | FAIT (08/11/2026) |
 | 9 | Hors ligne : chantiers et ordres ouverts du service | cœur | — | FAIT (08/11/2026) |
 | 10 | Hors ligne : ordre saisi par son numéro, résolu à l'envoi | cœur | 9 | FAIT (08/11/2026) |
-| 11 | Limite de dépôt de la GED exposée au client | `modules/ged` | — | A FAIRE |
+| 11 | Limite de dépôt de la GED exposée au client | `modules/ged` | — | FAIT (08/11/2026) |
 | 12 | Contrôle de taille des photos à la prise de vue | cœur | 11 | A FAIRE |
 | 13 | PV de réception : forme de signature et heure de l'appareil | cœur | — | A FAIRE |
 | 14 | Réserves suivies : base et serveur | cœur | 13 | A FAIRE |
@@ -268,7 +268,7 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
   serveur (refus affiché tout de suite). Tests : `NumeroOrdreTerrainTests` (C#), `operations-terrain.test.js`
   (saisie gardée puis marquée refusée). Aucun script SQL.
 
-## Lot 11 : limite de dépôt de la GED exposée au client (TS12)
+## Lot 11 : limite de dépôt de la GED exposée au client (TS12) (FAIT 08/11/2026)
 
 - **Module** : `modules/ged`. **Agent** : `lot-dev`. **Modèle** : haiku.
 - **Fichiers** : `LogiBTP.Ged.Web/ServiceGed.cs` (route de lecture de `TailleMaxDepot`, ou champ ajouté à une lecture
@@ -276,6 +276,12 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
 - **Dépendances** : aucune.
 - **Tests** : C# : valeur renvoyée = spécialisation.
 - **Critère de fin** : `npm test` vert.
+- **Réalisé / écarts** : champ ajouté à une lecture existante (pas de nouvelle route) : `taille_max_depot` (octets) de
+  `GET /api/ged/parametres` (`ParametresGedDto.TailleMaxDepot`, rempli par `ServiceGed.ParametresDepuis` depuis
+  `SpecialisationGed.TailleMaxDepot`, jamais depuis la base). `modules/ged/js/src/fournisseurs.js` :
+  `TAILLE_MAX_DEPOT_DEFAUT`, `tailleMaxDepot(parametres)`, `depotTropLourd(taille, parametres)` (exportés par l'index) ;
+  `FournisseurGedMemoire` refuse aussi un dépôt ou une version trop lourds (`TAILLE`, texte `ged.fournisseur.trop_volumineux`).
+  Tests : `ParametresGedTests` (C#), `ged.test.js`. Aucun script SQL.
 
 ## Lot 12 : contrôle de taille des photos à la prise de vue (TS12)
 

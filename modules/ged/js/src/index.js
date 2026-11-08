@@ -3,7 +3,7 @@ export { sha256, horodatage, texteEntree, empreinteEntree, verifierChaine, EMPRE
 export { editionsAPurger, versionsVisibles, etapes, GENRES, ETAPES } from './versions.js';
 export { genreApercu, estMail, extension, iconeDocument, formatTaille, titreDepuisNom, dateDepuisFichier } from './fichiers.js';
 export { lireMail, texteDeHtml } from './mails.js';
-export { FournisseurGedApi, FournisseurGedMemoire, ErreurGed, PARAMETRES_DEFAUT } from './fournisseurs.js';
+export { FournisseurGedApi, FournisseurGedMemoire, ErreurGed, PARAMETRES_DEFAUT, TAILLE_MAX_DEPOT_DEFAUT, tailleMaxDepot, depotTropLourd } from './fournisseurs.js';
 export { normaliserRecherche, texteRecherche } from './recherche.js';
 export { accesAutorise, peutChangerAcces, plusStricte, libelleConfidentialite, CONFIDENTIALITES } from './acces.js';
 export { classer, REGLES_CLASSIFICATION_DEFAUT, TEXTE_CLASSIFICATION_MAX } from './classification.js';

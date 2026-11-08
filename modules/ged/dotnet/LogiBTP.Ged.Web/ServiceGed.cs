@@ -39,13 +39,22 @@ public class ServiceGed(GedDbContext db, SpecialisationGed specialisation, Stock
 
     public virtual async Task<ParametresGedDto> Parametres(CancellationToken ct)
     {
-        var p = await db.Parametres.AsNoTracking().ToDictionaryAsync(x => x.PgeCle, x => x.PgeValeur.RootElement.Clone(), ct);
-        var r = new ParametresGedDto { Categories = JsonSerializer.SerializeToElement(Array.Empty<object>()) };
+        var r = ParametresDepuis(await db.Parametres.AsNoTracking().ToDictionaryAsync(x => x.PgeCle, x => x.PgeValeur.RootElement.Clone(), ct));
+        r.ReglesClassification = (await db.ReglesClassification.AsNoTracking().OrderBy(x => x.RcgPriorite).ThenBy(x => x.RcgId).ToListAsync(ct)).Select(VersDto).ToList();
+        return r;
+    }
+
+    /// <summary>
+    /// Paramètres lus de <c>parametre_ged</c> (clé → valeur), plus la limite de dépôt de la spécialisation
+    /// (<see cref="SpecialisationGed.TailleMaxDepot"/>, exposée au client : contrôle avant l'envoi, plan terrain-suites lot 11).
+    /// </summary>
+    public ParametresGedDto ParametresDepuis(IReadOnlyDictionary<string, JsonElement> p)
+    {
+        var r = new ParametresGedDto { Categories = JsonSerializer.SerializeToElement(Array.Empty<object>()), TailleMaxDepot = specialisation.TailleMaxDepot };
         if (p.TryGetValue("editions_conservees", out var e) && e.ValueKind == JsonValueKind.Number) r.EditionsConservees = e.GetInt32();
         if (p.TryGetValue("taille_apercu_max", out var t) && t.ValueKind == JsonValueKind.Number) r.TailleApercuMax = t.GetInt64();
         if (p.TryGetValue("adresse_copie_cachee", out var a) && a.ValueKind == JsonValueKind.String) r.AdresseCopieCachee = a.GetString() ?? "";
         if (p.TryGetValue("categories", out var c)) r.Categories = c;
-        r.ReglesClassification = (await db.ReglesClassification.AsNoTracking().OrderBy(x => x.RcgPriorite).ThenBy(x => x.RcgId).ToListAsync(ct)).Select(VersDto).ToList();
         return r;
     }
 
