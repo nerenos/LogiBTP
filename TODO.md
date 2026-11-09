@@ -147,11 +147,11 @@ Plan en 24 lots : [terrain-suites.md](documentation/conception/plans/terrain-sui
   heures sur le PV, `db/191` à rejouer) ; lot 14 (réserves suivies une par une, `db/290`, levée par le serveur), lot 15 (levée depuis le terrain, gardée
   hors ligne, réserves dans le panneau « Exécution » de l'ordre),
   lot 16 (PV de levée des réserves signé, `db/291`, modèle `PV_LEVEE_RESERVES` par `db/191` à rejouer).
-- [ ] Lot 7, suites : pointage des heures de matériel à la borne ;
+- [x] Lot 7, suites : pointage des heures de matériel à la borne ;
   réception d'une commande à options ou variantes (refusée) ; avancement réel par marché quand un chantier en porte
   plusieurs (aujourd'hui : tout le chantier). Plan : lots 17 à 21 (fait le 08/11/2026 : lots 17 et 18, bibliothèque
   simplifiée et articles des demandes d'approvisionnement ; lot 19, heures de matériel à la borne, `db/292` ; lot 20, commande à options reçue si ses choix sont connus par un
-  bon précédent, sinon au bureau). Déjà faits ailleurs : valorisation des heures de
+  bon précédent, sinon au bureau ; lot 21, avancement réel par marché, tâches rattachées par leur origine). Déjà faits ailleurs : valorisation des heures de
   matériel (module Rentabilité, lot 5, `db/261`) et relevés de compteurs à la borne
   ([materiel-suites.md](documentation/conception/plans/materiel-suites.md), lots 3 et 4).
 - [ ] Lot 6, suites : temps et fournitures du bon de SAV non repris dans la facture (facture = transformation au bureau) ;

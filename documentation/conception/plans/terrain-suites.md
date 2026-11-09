@@ -36,7 +36,7 @@
 | 18 | Bibliothèque simplifiée : écran et articles des demandes d'approvisionnement | cœur | 17 | FAIT (08/11/2026) |
 | 19 | Pointage des heures de matériel à la borne | cœur | — | FAIT (08/11/2026) |
 | 20 | Réception d'une commande à options ou variantes | cœur | — | FAIT (08/11/2026) |
-| 21 | Avancement réel par marché | cœur | — | A FAIRE |
+| 21 | Avancement réel par marché | cœur | — | FAIT (08/11/2026) |
 | 22 | Facture brouillon depuis le bon de SAV | cœur | — | A FAIRE |
 | 23 | Création d'une intervention SAV hors ligne | cœur | 9 | A FAIRE |
 | 24 | Chantier « Entretien et dépannage » par le chrono des chantiers | cœur | — | A FAIRE |
@@ -485,7 +485,7 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
   (`ChoixConnus`, `LignesSelonChoix`, `ChoixCommandeAsync`), `terrain/complements-terrain.js`. Aucun script SQL, module
   Document inchangé. Tests : `LivraisonOptionsTerrainTests.cs`.
 
-## Lot 21 : avancement réel par marché (TS20 a)
+## Lot 21 : avancement réel par marché (TS20 a) (FAIT 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `src/LogiBTP.Api/Btp/TerrainComplementsBtp.cs` (comparaison de l'onglet Gestion du marché : tâches du
@@ -494,6 +494,16 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
 - **Dépendances** : aucune (lot 7 utile mais non requis).
 - **Tests** : C# : chantier à deux marchés, avancement propre à chacun ; chantier à un marché inchangé.
 - **Critère de fin** : `npm test` vert.
+- **Réalisé / écarts** : écart de fichier : la route `GET /api/liaisons/marches/{id}/avancement` est dans
+  `src/LogiBTP.Api/Btp/LiaisonsBtp.cs` (pas `TerrainComplementsBtp.cs`) ; règle dans le nouveau
+  `src/LogiBTP.Api/Btp/AvancementMarche.cs` (`SqlTachesChantier`, `Repartir`, `Reel`, `Calculer`). Marché d'une tâche par
+  son origine : ordre, ligne d'un document ou étape d'un ordre → document → `ent_marche_id`, sinon sa place dans
+  `marche_document`, sinon la commande du marché dont il est issu (`document_lien`). Chantier à un marché : toutes ses
+  tâches (inchangé) ; à plusieurs : tâches du marché, tâches de niveau chantier exclues et citées (`exclues`), celles
+  d'un autre marché ignorées ; réponse enrichie de `plusieurs` et `exclues`. Onglet Gestion (`fiches/fiche-structure.js`) :
+  « Réel sur le marché », aide et mention des tâches exclues (textes `fiches_btp.structure.avancement.*`). Moyenne
+  calculée en C# (dixième, demi vers l'infini, comme le `round` SQL d'avant). Aucun script SQL. Tests :
+  `AvancementMarcheTests.cs` (deux marchés, un marché inchangé).
 
 ## Lot 22 : facture brouillon depuis le bon de SAV (TS21 a, TS22 c)
 

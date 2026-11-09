@@ -5811,9 +5811,12 @@
       "avancement": {
         "titre": "Avancement réel et situations",
         "reel_html": "Réel sur le chantier : <b>{{reel}}</b>",
+        "reel_marche_html": "Réel sur le marché : <b>{{reel}}</b>",
         "dernier": "(dernier relevé le {{date}})",
         "situe_html": "situé : <b>{{situe}}</b>",
-        "aide": "Réel = moyenne des tâches pondérée par leurs heures ; un chantier à plusieurs marchés compte toutes ses tâches."
+        "aide": "Réel = moyenne des tâches pondérée par leurs heures, une tâche sans relevé comptant pour 0.",
+        "aide_plusieurs": "Chantier à plusieurs marchés : seules les tâches de ce marché, par leur ordre ou leur ligne d'origine, sont comptées.",
+        "exclues": "{{nombre}} tâche(s) de niveau chantier, sans marché d'origine, exclue(s) de la moyenne : {{liste}}."
       },
       "gestion": {
         "nouvelle": "Enregistrez la fiche pour gérer le marché.",
