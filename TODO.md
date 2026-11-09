@@ -87,8 +87,8 @@ Analyse du 23/10/2026 : [ANALYSE-MODULE-SOUS-TRAITANCE.md](documentation/concept
 - [ ] Module Facturation électronique (réception obligatoire depuis le 01/09/2026) : analyse faite le 09/11/2026
   ([ANALYSE-FACTURATION-ELECTRONIQUE.md](documentation/conception/ANALYSE-FACTURATION-ELECTRONIQUE.md)), questions
   tranchées ([facturation-electronique-questions.md](documentation/conception/plans/facturation-electronique-questions.md)), plan en 29 lots
-  à valider ([facturation-electronique.md](documentation/conception/plans/facturation-electronique.md)) ;
-  en attendant, saisie libre des factures reçues (ST22).
+  à valider ([facturation-electronique.md](documentation/conception/plans/facturation-electronique.md)) ; lot 1 fait
+  le 09/11/2026 (codes, modèle EN16931, règles du cycle de vie) ; en attendant, saisie libre des factures reçues (ST22).
 
 ### Import
 

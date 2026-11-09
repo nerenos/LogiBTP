@@ -25,7 +25,7 @@
 | Lot | Titre | Module | Dépend de | Statut |
 |---|---|---|---|---|
 | | **Partie A : socle commun et réception** | | | |
-| 1 | Codes, modèle sémantique EN16931, règles du cycle de vie | `modules/facture-electronique` (nouveau) | — | A FAIRE |
+| 1 | Codes, modèle sémantique EN16931, règles du cycle de vie | `modules/facture-electronique` (nouveau) | — | FAIT (09/11/2026) |
 | 2 | Lecture CII D22B et Factur-X (XML embarqué), XSD | module | 1 | A FAIRE |
 | 3 | Lecture UBL 2.1 (Invoice, CreditNote) | module | 1, 2 | A FAIRE |
 | 4 | Schematrons FNFE : artefacts versionnés, validation par SaxonJS (tests et outil) | module | 2, 3 | A FAIRE |
@@ -62,7 +62,7 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
 
 ## Partie A : socle commun et réception
 
-## Lot 1 : codes, modèle sémantique EN16931, règles du cycle de vie (A FAIRE)
+## Lot 1 : codes, modèle sémantique EN16931, règles du cycle de vie — FAIT (09/11/2026)
 
 - **Module** : `modules/facture-electronique` (nouveau, dépend du socle seul). **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `modules/facture-electronique/js/package.json` (`@logibtp/facture-electronique`), `js/src/index.js`,
@@ -81,6 +81,19 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
 - **Jeux** : `01_cycle_vie.json` (transitions permises et refusées, terminaux, motifs, statut affiché) ; parité des codes.
 - **Critère de fin** : `npm test --workspace @logibtp/facture-electronique` et `dotnet test LogiBTP.slnx` verts, le jeu
   passe en JS et en C#. `CLAUDE.md` du module créé (comme pour Relances).
+- **Réalisé** : `modules/facture-electronique` : `CLAUDE.md`, `js/package.json`, `js/src/{index,codes,cycle-vie}.js`,
+  `js/test/cycle-vie.test.js`, `tests/cas/01_cycle_vie.json` (motifs par statut générés depuis l'onglet « Tableau des
+  motifs de STATUTS »), `dotnet/LogiBTP.FactureElectronique/{Codes,ReglesCycleVie,ModeleFacture}.cs`,
+  `dotnet/LogiBTP.FactureElectronique.Tests/{CodesTests,ReglesCycleVieTests}.cs` ; enregistré dans `package.json` racine
+  (et `package-lock.json`), `LogiBTP.slnx` ; `DEPENDANCES.md` régénéré (vitest 5.1.0 partout, version réellement installée). Tests : 120 en JS, 30 en C# (suite .NET : 1032).
+  Écarts : `PROFIL_FACTURE` au lieu de `PROFIL` (déjà un code du socle) ; ajout de `SENS_FACTURE` (E / R : rôle vendeur
+  ou acheteur, distinct de `SENS_FLUX` In / Out de l'API), `EMETTEUR_STATUT`, `CODE_NOTE`, `SOUS_TYPE_LIGNE`,
+  `ETAT_ACCUSE`, `NIVEAU_ACCUSE`, `MOTIF_ACCUSE` (reasonCode du swagger) ; `CADRE_FACTURATION` complet B1 à M9 (8 et 9 :
+  multi-vendeurs, bidirectionnelle) ; `STATUT_CDV` : 200 à 214, 220, 221, 224 à 228 et 501 Irrecevable (motifs IRR_*),
+  sans 250 à 601 ; `MOTIF_STATUT` compte 51 codes (schematron et annexe), non 50. Règles retenues pour l'enchaînement
+  (statut posé par la société seulement) : rien après un terminal, facture émise : rien avant Déposée, Déposée une
+  fois, Complétée seulement après Suspendue ; statut reçu contrôlé sur code, émetteur, motif et action. Statut affiché :
+  rang interne (Annulée le plus avancé, affacturage au rang 85). `ModeleFacture.cs` sans équivalent JS (lot 16).
 
 ## Lot 2 : lecture CII D22B et Factur-X, XSD (A FAIRE)
 

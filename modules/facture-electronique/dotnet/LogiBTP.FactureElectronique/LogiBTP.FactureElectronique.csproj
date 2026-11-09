@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>LogiBTP.FactureElectronique</RootNamespace>
+    <Description>Module Facturation électronique LogiBTP : codes des normes, modèle sémantique EN16931, règles du cycle de vie (répliquées avec cycle-vie.js).</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\socle\dotnet\LogiBTP.Socle\LogiBTP.Socle.csproj" />
+  </ItemGroup>
+
+</Project>

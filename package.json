@@ -16,6 +16,7 @@
     "modules/entreprises-fr/js",
     "modules/reglement/js",
     "modules/relance/js",
+    "modules/facture-electronique/js",
     "modules/crm/js",
     "modules/authentification/js",
     "modules/droits/js",

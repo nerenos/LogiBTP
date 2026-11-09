@@ -1,0 +1,19 @@
+{
+  "name": "@logibtp/facture-electronique",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Module Facturation électronique LogiBTP : codes EN16931 et XP Z12-012 / Z12-013, règles du cycle de vie des factures",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@logibtp/socle": "0.2.0"
+  },
+  "devDependencies": {
+    "vitest": "^5.1.0"
+  }
+}
