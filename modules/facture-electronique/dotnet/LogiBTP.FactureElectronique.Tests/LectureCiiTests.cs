@@ -12,15 +12,18 @@ public partial class LectureCiiTests
 {
     internal static string Dossier(params string[] parties) => CasPartages.Chemin(["modules", "facture-electronique", "tests", "exemples", .. parties]);
 
-    /// <summary>Tous les XML d'exemple : chemin relatif à tests/exemples et Factur-X ou non (dossier factur-x/).</summary>
-    public static TheoryData<string> Exemples()
+    /// <summary>XML d'exemple d'une syntaxe (chemins relatifs à tests/exemples, triés) : UBL sous ubl/ ou nommés *_UBL*.xml, CII sinon.</summary>
+    internal static List<string> Fichiers(bool ubl)
     {
         var racine = Dossier();
-        var donnees = new TheoryData<string>();
-        foreach (var f in Directory.GetFiles(racine, "*.xml", SearchOption.AllDirectories).Order(StringComparer.Ordinal))
-            donnees.Add(Path.GetRelativePath(racine, f).Replace('\\', '/'));
-        return donnees;
+        return Directory.GetFiles(racine, "*.xml", SearchOption.AllDirectories)
+            .Select(f => Path.GetRelativePath(racine, f).Replace('\\', '/'))
+            .Where(r => (r.StartsWith("ubl/", StringComparison.Ordinal) || Path.GetFileName(r).Contains("_UBL", StringComparison.Ordinal)) == ubl)
+            .Order(StringComparer.Ordinal).ToList();
     }
+
+    /// <summary>Tous les XML CII d'exemple : chemin relatif à tests/exemples et Factur-X ou non (dossier factur-x/).</summary>
+    public static TheoryData<string> Exemples() => new(Fichiers(ubl: false));
 
     internal static Facture Lire(string relatif) =>
         LectureCii.Lire(File.ReadAllBytes(Dossier(relatif)), facturX: relatif.StartsWith("factur-x/", StringComparison.Ordinal));

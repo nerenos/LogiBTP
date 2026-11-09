@@ -6,7 +6,7 @@ using System.Xml.Schema;
 
 namespace LogiBTP.FactureElectronique.Formats;
 
-/// <summary>Jeu de schémas XSD d'une facture (artefacts/xsd, paquet FNFE 1.4.0.04 : voir artefacts/VERSION).</summary>
+/// <summary>Jeu de schémas XSD d'une facture (artefacts/xsd, paquet FNFE 1.4.0.04 : voir artefacts/VERSION ; UBL 2.1 OASIS du même paquet).</summary>
 public enum JeuXsd
 {
     /// <summary>UN/CEFACT CrossIndustryInvoice D22B uncoupled (CII seul, EN16931 et EXTENDED-CTC-FR).</summary>
@@ -17,6 +17,10 @@ public enum JeuXsd
     FacturXEn16931,
     /// <summary>Factur-X 1.09.2 EXTENDED.</summary>
     FacturXExtended,
+    /// <summary>OASIS UBL 2.1 Invoice (EN16931 et EXTENDED-CTC-FR).</summary>
+    UblInvoice,
+    /// <summary>OASIS UBL 2.1 CreditNote (EN16931 et EXTENDED-CTC-FR).</summary>
+    UblCreditNote,
 }
 
 /// <summary>
@@ -37,6 +41,8 @@ public static class ValidationXsd
         JeuXsd.FacturXBasicWl => ("factur-x/basicwl", "Factur-X_BASICWL.xsd"),
         JeuXsd.FacturXEn16931 => ("factur-x/en16931", "Factur-X_EN16931.xsd"),
         JeuXsd.FacturXExtended => ("factur-x/extended", "Factur-X_EXTENDED.xsd"),
+        JeuXsd.UblInvoice => ("ubl-2.1/maindoc", "UBL-Invoice-2.1.xsd"),
+        JeuXsd.UblCreditNote => ("ubl-2.1/maindoc", "UBL-CreditNote-2.1.xsd"),
         _ => throw new ArgumentOutOfRangeException(nameof(jeu)),
     };
 
@@ -61,7 +67,10 @@ public static class ValidationXsd
         var jeuSchemas = new XmlSchemaSet { XmlResolver = resolveur };
         var uri = new Uri($"{Schema}://xsd/{dossier}/{racine}");
         using var flux = (Stream)resolveur.GetEntity(uri, null, typeof(Stream))!;
-        using var lecteur = XmlReader.Create(flux, new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = resolveur }, uri.AbsoluteUri);
+        // Schémas embarqués (de confiance) : le XSD xmldsig d'UBL porte une DTD interne (entités sans référence externe),
+        // d'où DtdProcessing.Parse ; toute référence externe reste refusée par le résolveur. Le XML lu, lui, n'a jamais de DTD.
+        var reglages = new XmlReaderSettings { DtdProcessing = DtdProcessing.Parse, XmlResolver = resolveur, MaxCharactersFromEntities = 1_000_000 };
+        using var lecteur = XmlReader.Create(flux, reglages, uri.AbsoluteUri);
         jeuSchemas.Add(null, lecteur);
         jeuSchemas.Compile();
         return jeuSchemas;

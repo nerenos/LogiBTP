@@ -1,6 +1,6 @@
 using System.Globalization;
-using System.Xml;
 using System.Xml.Linq;
+using static LogiBTP.FactureElectronique.Formats.OutilsLecture;
 
 namespace LogiBTP.FactureElectronique.Formats;
 
@@ -51,20 +51,7 @@ public static class LectureCii
     }
 
     /// <summary>Charge le XML sans DTD ni résolution externe (XML_ILLISIBLE si mal formé), lignes conservées pour les messages XSD.</summary>
-    public static XDocument Charger(byte[] xml)
-    {
-        var reglages = new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null };
-        try
-        {
-            using var flux = new MemoryStream(xml, writable: false);
-            using var lecteur = XmlReader.Create(flux, reglages);
-            return XDocument.Load(lecteur, LoadOptions.SetLineInfo);
-        }
-        catch (XmlException e)
-        {
-            throw new ExceptionLectureFacture(ErreurFe.XmlIllisible, $"XML mal formé : {e.Message}");
-        }
-    }
+    public static XDocument Charger(byte[] xml) => OutilsLecture.Charger(xml);
 
     /// <summary>Profil (<see cref="ProfilFacture"/>) et jeu XSD d'un identifiant de spécification BT-24 (PROFIL_INCONNU sinon).</summary>
     public static (string Profil, JeuXsd Jeu) Profil(string? specification, bool facturX) => specification switch
@@ -178,8 +165,9 @@ public static class LectureCii
         Texte(e, "LineOne"), Texte(e, "LineTwo"), Texte(e, "LineThree"), Texte(e, "CityName"), Texte(e, "PostcodeCode"),
         Texte(e, "CountrySubDivisionName"), Texte(e, "CountryID") ?? "");
 
+    // BT-41 / BT-56 : PersonName seul ; DepartmentName (BT-41-0, sans terme EN16931 ni équivalent UBL) n'est pas lu.
     private static Contact? Contact(XElement? e) => e is null ? null : new Contact(
-        Texte(e, "PersonName") ?? Texte(e, "DepartmentName"),
+        Texte(e, "PersonName"),
         Texte(e, "TelephoneUniversalCommunication", "CompleteNumber"),
         Texte(e, "EmailURIUniversalCommunication", "URIID"));
 
@@ -211,12 +199,7 @@ public static class LectureCii
         var taxe = document ? e.Element(Ram + "CategoryTradeTax") : null;
         return new RemiseCharge
         {
-            Charge = indicateur?.ToLowerInvariant() switch
-            {
-                "true" => true,
-                "false" => false,
-                _ => throw new ExceptionLectureFacture(ErreurFe.DonneeInvalide, $"Indicateur de remise ou charge illisible : {indicateur ?? "absent"}"),
-            },
+            Charge = OutilsLecture.Indicateur(indicateur),
             Montant = ExigerValeur(Montant(e, "ActualAmount"), document ? "BT-92" : "BT-136"),
             Assiette = Montant(e, "BasisAmount"),
             Pourcentage = Montant(e, "CalculationPercent"),
@@ -327,22 +310,11 @@ public static class LectureCii
         return string.IsNullOrEmpty(valeur) ? null : valeur;
     }
 
-    private static string? Joindre(IEnumerable<string?> textes, string separateur = " ")
-    {
-        var liste = textes.Where(t => !string.IsNullOrEmpty(t)).ToList();
-        return liste.Count == 0 ? null : string.Join(separateur, liste);
-    }
-
     private static decimal? Montant(XElement? e, string nom)
     {
         var x = e?.Element(Ram + nom);
         return x is null ? null : Decimal(x, nom);
     }
-
-    private static decimal Decimal(XElement e, string terme) =>
-        decimal.TryParse(e.Value.Trim(), NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var d)
-            ? d
-            : throw new ExceptionLectureFacture(ErreurFe.DonneeInvalide, $"Nombre illisible ({terme}) : {e.Value}");
 
     /// <summary>Date d'un conteneur (enfant udt:DateTimeString, qdt:DateTimeString ou udt:DateString, format 102).</summary>
     private static DateOnly? Date(XElement? conteneur, string terme)
@@ -354,11 +326,4 @@ public static class LectureCii
             return d;
         throw new ExceptionLectureFacture(ErreurFe.DonneeInvalide, $"Date illisible ({terme}) : {e.Value} (format {format})");
     }
-
-    private static ExceptionLectureFacture Absent(string terme) =>
-        new(ErreurFe.DonneeInvalide, $"Terme obligatoire absent : {terme}", [terme]);
-
-    private static T Exiger<T>(T? valeur, string terme) where T : class => valeur ?? throw Absent(terme);
-
-    private static T ExigerValeur<T>(T? valeur, string terme) where T : struct => valeur ?? throw Absent(terme);
 }

@@ -27,7 +27,7 @@
 | | **Partie A : socle commun et réception** | | | |
 | 1 | Codes, modèle sémantique EN16931, règles du cycle de vie | `modules/facture-electronique` (nouveau) | — | FAIT (09/11/2026) |
 | 2 | Lecture CII D22B et Factur-X (XML embarqué), XSD | module | 1 | FAIT (09/11/2026) |
-| 3 | Lecture UBL 2.1 (Invoice, CreditNote) | module | 1, 2 | A FAIRE |
+| 3 | Lecture UBL 2.1 (Invoice, CreditNote) | module | 1, 2 | FAIT (09/11/2026) |
 | 4 | Schematrons FNFE : artefacts versionnés, validation par SaxonJS (tests et outil) | module | 2, 3 | A FAIRE |
 | 5 | CDAR : écriture et lecture des statuts | module | 1 | A FAIRE |
 | 6 | Connecteur : contrat, AFNOR XP Z12-013 (Flow, Directory), plateforme simulée, dépôt manuel | module | 1, 5 | A FAIRE |
@@ -126,13 +126,36 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   vide ; exemples BASIC WL : adresse électronique au schéma EM (courriel), non 0225 ; erreur `DONNEE_INVALIDE` pour un
   terme obligatoire absent ou une date / un nombre illisible ; tout CII (y compris XML Factur-X) conforme au XSD D22B.
 
-## Lot 3 : lecture UBL 2.1 (A FAIRE)
+## Lot 3 : lecture UBL 2.1 — FAIT (09/11/2026)
 
 - **Module** : `modules/facture-electronique`. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `Formats/LectureUbl.cs` (Invoice et CreditNote → `ModeleFacture`), `artefacts/xsd/ubl-2.1/` (XSD
   OASIS nécessaires), `Formats/Lecture.cs` (détection de la syntaxe : CII, UBL, PDF Factur-X), tests `LectureUblTests.cs`,
   comparaison CII ↔ UBL des mêmes cas FNFE (UC1–UC5, UC13 existent dans les deux syntaxes).
 - **Critère de fin** : chaque cas FNFE donne le même modèle en CII et en UBL (test d'égalité) ; `dotnet test` vert.
+- **Réalisé** : `dotnet/LogiBTP.FactureElectronique/Formats/{LectureUbl,Lecture,OutilsLecture}.cs` (`Lecture.Detecter` /
+  `Lecture.Lire` → `FactureLue(Syntaxe, Facture)` : PDF si « %PDF- » dans le premier Ko, sinon racine XML CII, UBL Invoice
+  ou CreditNote, autre racine `SYNTAXE_INCONNUE` ; `OutilsLecture` : chargement sûr, décimaux, termes obligatoires,
+  partagés avec `LectureCii`), `ValidationXsd.cs` (`JeuXsd.UblInvoice`, `UblCreditNote`), `artefacts/xsd/ubl-2.1/`
+  (maindoc Invoice et CreditNote, 13 `common/` importés, OASIS UBL 2.1 OS du paquet FNFE ; `artefacts/VERSION`),
+  `tests/exemples/ubl/{en16931,extended-ctc-fr}/` (les 13 cas FNFE, jumeaux des CII), `tests/exemples/logibtp/`
+  (`S5_PAYEUR_EXTENDED-CTC-FR_UBL.xml`, jumeau du S5 CII ; `AVOIR_F202500011_EN16931_{CII,UBL}.xml`, avoir 381 en
+  CreditNote, aucun exemple FNFE n'en ayant), tests `LectureUblTests.cs` (égalité du modèle sérialisé en JSON pour les
+  15 paires CII ↔ UBL, XSD, termes propres à l'UBL, détection, erreurs) ; codes JS ↔ C# : `CODE_EXIGIBILITE_TVA`
+  (UNTDID 2475) et `CODE_EXIGIBILITE_TVA_UBL` (UNTDID 2005), `TYPE_DOCUMENT_REFERENCE.PROJET_AVOIR_UBL` (50),
+  `SCHEMA_IDENTIFIANT.CREANCIER_SEPA` et `TVA_UBL`. Corrections du lot 1 : historique `null` traité comme vide dans
+  `ReglesCycleVie.cs` et `cycle-vie.js` (trois cas ajoutés à `01_cycle_vie.json`) ; le commentaire au-dessus
+  d'`ERREUR_FE` dans `codes.js` était déjà corrigé au lot 2. Tests : 141 en C# pour le module (suite .NET : 1143), 124
+  en JS. Écarts : le modèle garde les conventions du CII (BT-8 UBL 3 / 35 / 432 lu 5 / 29 / 72 ; BT-21 tiré du
+  préfixe « #CODE# » de la note) ; CII : `DepartmentName` (BT-41-0, sans terme EN16931 ni équivalent UBL) n'est plus lu
+  comme nom du contact (BT-41 = `PersonName`) ; UBL : rabais BT-147 nul non retenu (l'`AllowanceCharge` du prix sert
+  aussi à porter le prix brut), `InvoicePeriod` sans date (BT-8 seul) → pas de période, identifiant SEPA (BT-90) hors
+  identifiants de la partie ; CreditNote : BT-9 en `PaymentMeans/PaymentDueDate`, BT-11 en
+  `AdditionalDocumentReference` de type 50 ; sous-ligne (EXT-FR-FE-162/163) lue dans le `BillingReference` de ligne
+  qui porte un `DocumentStatusCode`, un autre `BillingReference` de ligne étant la facture antérieure (EXT-FR-FE-BG-06) ;
+  profils UBL acceptés : EN16931, ses CIUS (`…#compliant#…` hors Factur-X BASIC) et EXTENDED-CTC-FR ; le XSD xmldsig
+  d'UBL portant une DTD interne, les XSD embarqués sont lus avec `DtdProcessing.Parse` (résolveur limité à
+  l'assemblage ; le XML reçu reste sans DTD).
 
 ## Lot 4 : schematrons FNFE, validation par SaxonJS (A FAIRE)
 

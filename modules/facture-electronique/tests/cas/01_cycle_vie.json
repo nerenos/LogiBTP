@@ -103,6 +103,8 @@
     {"nom": "émise : irrecevable, antivirus", "entree": {"sens": "E", "historique": ["200", "201"], "statut": "501", "emetteur": "PA_R", "motif": "IRR_ANTIVIRUS", "action": null, "b2g": false}, "attendu": []},
     {"nom": "émise : erreur de routage, motif d'irrecevabilité", "entree": {"sens": "E", "historique": ["200", "201"], "statut": "221", "emetteur": "PA_R", "motif": "IRR_SYNTAX", "action": null, "b2g": false}, "attendu": ["MOTIF_NON_AUTORISE"]},
     {"nom": "émise : demande de paiement direct (sous-traitant)", "entree": {"sens": "E", "historique": ["200", "201", "202", "203"], "statut": "224", "emetteur": "VENDEUR", "motif": null, "action": null, "b2g": false}, "attendu": []},
+    {"nom": "reçue : historique null traité comme vide", "entree": {"sens": "R", "historique": null, "statut": "204", "emetteur": "ACHETEUR", "motif": null, "action": null, "b2g": false}, "attendu": []},
+    {"nom": "émise : historique null, rien avant dépôt", "entree": {"sens": "E", "historique": null, "statut": "212", "emetteur": "VENDEUR", "motif": null, "action": null, "b2g": false}, "attendu": ["TRANSITION_INTERDITE"]},
     {"nom": "émise : erreurs cumulées", "entree": {"sens": "E", "historique": [], "statut": "207", "emetteur": "PA_R", "motif": "ZZZ", "action": "ZZZ", "b2g": false}, "attendu": ["EMETTEUR_NON_AUTORISE", "MOTIF_INCONNU", "ACTION_INCONNUE"]}
   ],
   "posables": [
@@ -112,10 +114,12 @@
     {"nom": "émise : rien après refus", "sens": "E", "historique": ["200", "210"], "attendu": []},
     {"nom": "reçue : à réception", "sens": "R", "historique": [], "attendu": ["204", "205", "206", "207", "208", "210", "211", "220"]},
     {"nom": "reçue : rien après rejet", "sens": "R", "historique": ["213"], "attendu": []},
+    {"nom": "reçue : historique null traité comme vide", "sens": "R", "historique": null, "attendu": ["204", "205", "206", "207", "208", "210", "211", "220"]},
     {"nom": "sens inconnu", "sens": "X", "historique": [], "attendu": []}
   ],
   "affiches": [
     {"nom": "aucun statut", "historique": [], "attendu": null},
+    {"nom": "historique null", "historique": null, "attendu": null},
     {"nom": "déposée", "historique": ["200"], "attendu": "200"},
     {"nom": "cycle normal", "historique": ["200", "201", "202", "203", "204", "205"], "attendu": "205"},
     {"nom": "plus avancé, pas le plus récent", "historique": ["200", "201", "205", "203"], "attendu": "205"},

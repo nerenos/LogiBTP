@@ -275,6 +275,8 @@ public static class TypeDocumentReference
     public const string AppelOffres = "50";
     public const string ObjetFacture = "130";
     public const string Justificatif = "916";
+    /// <summary>UBL CreditNote : BT-11 (projet) porté par AdditionalDocumentReference de ce type (pas de ProjectReference).</summary>
+    public const string ProjetAvoirUbl = "50";
 }
 
 /// <summary>Schéma d'identifiant (ISO 6523 ICD, schemeID) et d'immatriculation fiscale (VA, FC).</summary>
@@ -286,6 +288,26 @@ public static class SchemaIdentifiant
     public const string AdresseElectronique = "0225";
     public const string Tva = "VA";
     public const string Fiscal = "FC";
+    /// <summary>UBL : identifiant de créancier SEPA (BT-90) dans PartyIdentification, hors identifiants de la partie.</summary>
+    public const string CreancierSepa = "SEPA";
+    /// <summary>UBL : TaxScheme/ID du numéro de TVA (BT-31, BT-48, BT-63) ; tout autre régime porte l'identifiant fiscal (BT-32).</summary>
+    public const string TvaUbl = "VAT";
+}
+
+/// <summary>BT-8 : code de date d'exigibilité de la TVA, valeur du modèle (UNTDID 2475, CII DueDateTypeCode).</summary>
+public static class CodeExigibiliteTva
+{
+    public const string DateFacture = "5";
+    public const string DateLivraison = "29";
+    public const string DatePaiement = "72";
+}
+
+/// <summary>BT-8 en UBL (UNTDID 2005, InvoicePeriod/DescriptionCode), converti en <see cref="CodeExigibiliteTva"/> à la lecture.</summary>
+public static class CodeExigibiliteTvaUbl
+{
+    public const string DateFacture = "3";
+    public const string DateLivraison = "35";
+    public const string DatePaiement = "432";
 }
 
 /// <summary>Type d'un flux (flowType de XP Z12-013).</summary>

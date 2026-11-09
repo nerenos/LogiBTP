@@ -235,6 +235,7 @@ export const TYPE_DOCUMENT_REFERENCE = Object.freeze({
   APPEL_OFFRES: '50',
   OBJET_FACTURE: '130',
   JUSTIFICATIF: '916',
+  PROJET_AVOIR_UBL: '50', // UBL CreditNote : BT-11 en AdditionalDocumentReference
 });
 
 /** Schéma d'identifiant (ISO 6523 ICD) et d'immatriculation fiscale (VA, FC). */
@@ -245,6 +246,22 @@ export const SCHEMA_IDENTIFIANT = Object.freeze({
   ADRESSE_ELECTRONIQUE: '0225',
   TVA: 'VA',
   FISCAL: 'FC',
+  CREANCIER_SEPA: 'SEPA', // UBL : BT-90 dans PartyIdentification
+  TVA_UBL: 'VAT', // UBL : TaxScheme/ID du numéro de TVA
+});
+
+/** BT-8 : code de date d'exigibilité de la TVA, valeur du modèle (UNTDID 2475, CII DueDateTypeCode). */
+export const CODE_EXIGIBILITE_TVA = Object.freeze({
+  DATE_FACTURE: '5',
+  DATE_LIVRAISON: '29',
+  DATE_PAIEMENT: '72',
+});
+
+/** BT-8 en UBL (UNTDID 2005, InvoicePeriod/DescriptionCode), converti en CODE_EXIGIBILITE_TVA à la lecture. */
+export const CODE_EXIGIBILITE_TVA_UBL = Object.freeze({
+  DATE_FACTURE: '3',
+  DATE_LIVRAISON: '35',
+  DATE_PAIEMENT: '432',
 });
 
 /** Type d'un flux (flowType de XP Z12-013). */

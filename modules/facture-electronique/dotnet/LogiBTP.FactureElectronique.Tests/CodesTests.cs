@@ -25,6 +25,8 @@ public class CodesTests
     [InlineData("SPECIFICATION_FACTURE", typeof(SpecificationFacture))]
     [InlineData("TYPE_DOCUMENT_REFERENCE", typeof(TypeDocumentReference))]
     [InlineData("SCHEMA_IDENTIFIANT", typeof(SchemaIdentifiant))]
+    [InlineData("CODE_EXIGIBILITE_TVA", typeof(CodeExigibiliteTva))]
+    [InlineData("CODE_EXIGIBILITE_TVA_UBL", typeof(CodeExigibiliteTvaUbl))]
     [InlineData("TYPE_FLUX", typeof(TypeFlux))]
     [InlineData("SENS_FLUX", typeof(SensFlux))]
     [InlineData("REGLE_TRAITEMENT", typeof(RegleTraitement))]

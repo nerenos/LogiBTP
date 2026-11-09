@@ -23,5 +23,12 @@
 - Erreurs : `ExceptionLectureFacture` (`Code` d'`ERREUR_FE` : `XML_ILLISIBLE`, `SYNTAXE_INCONNUE`, `XSD_INVALIDE` avec les messages en `Details`, `PROFIL_INCONNU`, `DONNEE_INVALIDE`, `PDF_ILLISIBLE`, `XML_ABSENT`).
 - Artefacts : `artefacts/` (XSD, `VERSION`, `LICENCE` Apache-2.0 du paquet FNFE 1.4.0.04) ; exemples : `tests/exemples/` (CII EN16931 et EXTENDED-CTC-FR, Factur-X BASIC WL / EXTENDED, trois PDF, `VERSION`), `tests/exemples/logibtp/` (cas construits : S5 avec payeur, agent, projet, pièce jointe, facture antérieure en ligne). Mise à jour : recopier les dossiers du paquet sans modification et mettre à jour les `VERSION`.
 
+## Repères (lot 3 : lecture UBL, C# seul)
+- `Formats/LectureUbl.cs` : UBL 2.1 `Invoice` ou `CreditNote` → même `Facture` que le CII (onglets « Flux 2 UBL EN16931 FR » / « EXT-CTC-FR ») ; conventions du CII : BT-8 UNTDID 2005 → 2475 (`CODE_EXIGIBILITE_TVA_UBL` → `CODE_EXIGIBILITE_TVA`), BT-21 du préfixe `#CODE#` de la note ; raison sociale = `RegistrationName`, à défaut `PartyName` ; sous-ligne = `BillingReference` de ligne avec `DocumentStatusCode`, autre `BillingReference` de ligne = facture antérieure ; CreditNote : BT-9 `PaymentMeans/PaymentDueDate`, BT-11 `AdditionalDocumentReference` type 50 ; rabais nul ignoré ; BT-90 (`SEPA`) hors identifiants. Profils : EN16931, CIUS `#compliant#`, EXTENDED-CTC-FR.
+- `Formats/Lecture.cs` : point d'entrée (`Detecter`, `Lire` → `FactureLue(Syntaxe, Facture)`) : PDF (« %PDF- » dans le premier Ko) → Factur-X, sinon racine XML → CII ou UBL, sinon `SYNTAXE_INCONNUE`. `Formats/OutilsLecture.cs` : outils communs (chargement sans DTD, décimaux, termes obligatoires).
+- XSD `artefacts/xsd/ubl-2.1/` (`JeuXsd.UblInvoice`, `UblCreditNote`) ; XSD embarqués lus avec DTD interne permise (xmldsig), références externes refusées.
+- Égalité CII ↔ UBL : `LectureUblTests` compare le modèle sérialisé en JSON de chaque paire (13 cas FNFE `tests/exemples/{cii,ubl}/`, jumeaux `logibtp/*_CII.xml` / `*_UBL.xml`) ; tout nouveau cas dans les deux syntaxes s'y ajoute en jumeaux.
+- Contact CII : BT-41 = `PersonName` seul (`DepartmentName` BT-41-0 non lu).
+
 ## Tests
 - `npm test --workspace @logibtp/facture-electronique` ; `dotnet test modules/facture-electronique/dotnet/LogiBTP.FactureElectronique.Tests` (même jeu, parité des codes).

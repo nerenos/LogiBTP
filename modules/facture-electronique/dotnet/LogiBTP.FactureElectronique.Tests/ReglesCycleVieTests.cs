@@ -11,6 +11,8 @@ public class ReglesCycleVieTests
 
     private static string? Texte(JsonNode? n) => n?.GetValue<string>();
     private static List<string> Liste(JsonNode? n) => n?.AsArray().Select(x => x!.GetValue<string>()).ToList() ?? [];
+    /// <summary>Historique du jeu : null gardé tel quel (absent en JS), pour vérifier qu'il est traité comme vide.</summary>
+    private static List<string>? Historique(JsonNode? n) => n is null ? null : Liste(n);
     private static IEnumerable<JsonNode> Cas(string section) => Jeu[section]!.AsArray().Select(c => c!);
 
     [Fact]
@@ -50,7 +52,7 @@ public class ReglesCycleVieTests
         {
             var e = c["entree"]!;
             var obtenu = ReglesCycleVie.Controler(new StatutPropose(
-                Texte(e["sens"])!, Liste(e["historique"]), Texte(e["statut"])!, Texte(e["emetteur"]), Texte(e["motif"]), Texte(e["action"]),
+                Texte(e["sens"])!, Historique(e["historique"]), Texte(e["statut"])!, Texte(e["emetteur"]), Texte(e["motif"]), Texte(e["action"]),
                 e["b2g"]!.GetValue<bool>()));
             Assert.True(Liste(c["attendu"]).SequenceEqual(obtenu), $"{c["nom"]} : obtenu [{string.Join(", ", obtenu)}]");
         }
@@ -61,7 +63,7 @@ public class ReglesCycleVieTests
     {
         foreach (var c in Cas("posables"))
         {
-            var obtenu = ReglesCycleVie.StatutsPosables(Texte(c["sens"]), Liste(c["historique"]));
+            var obtenu = ReglesCycleVie.StatutsPosables(Texte(c["sens"]), Historique(c["historique"]));
             Assert.True(Liste(c["attendu"]).SequenceEqual(obtenu), $"{c["nom"]} : obtenu [{string.Join(", ", obtenu)}]");
         }
     }
@@ -69,6 +71,6 @@ public class ReglesCycleVieTests
     [Fact]
     public void Statut_affiche()
     {
-        foreach (var c in Cas("affiches")) Assert.True(Texte(c["attendu"]) == ReglesCycleVie.StatutAffiche(Liste(c["historique"])), $"{c["nom"]}");
+        foreach (var c in Cas("affiches")) Assert.True(Texte(c["attendu"]) == ReglesCycleVie.StatutAffiche(Historique(c["historique"])), $"{c["nom"]}");
     }
 }

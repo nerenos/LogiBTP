@@ -1,8 +1,8 @@
 namespace LogiBTP.FactureElectronique;
 
-/// <summary>Statut à contrôler avant de le poser ou à sa réception (historique : codes dans l'ordre chronologique).</summary>
+/// <summary>Statut à contrôler avant de le poser ou à sa réception (historique : codes dans l'ordre chronologique ; null = aucun).</summary>
 public sealed record StatutPropose(
-    string Sens, IReadOnlyList<string> Historique, string Statut, string? Emetteur, string? Motif = null, string? Action = null, bool B2g = false);
+    string Sens, IReadOnlyList<string>? Historique, string Statut, string? Emetteur, string? Motif = null, string? Action = null, bool B2g = false);
 
 /// <summary>
 /// Règles du cycle de vie d'une facture (flux 6), répliquées avec modules/facture-electronique/js/src/cycle-vie.js (jeu
@@ -160,8 +160,9 @@ public static class ReglesCycleVie
     /// Erreurs d'enchaînement d'un statut posé par la société après un historique : rien après un statut terminal ;
     /// facture émise : rien avant Déposée ; Déposée une seule fois ; Complétée seulement en réponse à une Suspendue.
     /// </summary>
-    private static List<string> ErreursEnchainement(string sens, IReadOnlyList<string> historique, string statut)
+    private static List<string> ErreursEnchainement(string sens, IReadOnlyList<string>? historiqueLu, string statut)
     {
+        var historique = historiqueLu ?? [];
         var erreurs = new List<string>();
         if (historique.Any(Terminal)) erreurs.Add(ErreurFe.StatutTerminal);
         var interdite = (sens == SensFacture.Emise && !historique.Contains(StatutCdv.Deposee))
@@ -196,7 +197,7 @@ public static class ReglesCycleVie
     }
 
     /// <summary>Statuts que la société peut poser après un historique, dans l'ordre de <see cref="StatutCdv.Tous"/> (vide si sens inconnu).</summary>
-    public static List<string> StatutsPosables(string? sens, IReadOnlyList<string> historique)
+    public static List<string> StatutsPosables(string? sens, IReadOnlyList<string>? historique)
     {
         var role = EmetteurDuSens(sens);
         if (role is null) return [];
@@ -205,10 +206,11 @@ public static class ReglesCycleVie
 
     /// <summary>
     /// Statut affiché d'une facture d'après son historique (ordre chronologique) : le premier statut terminal s'il y en a,
-    /// sinon le plus avancé (à rang égal, le plus récent) ; codes inconnus ignorés ; null sans statut.
+    /// sinon le plus avancé (à rang égal, le plus récent) ; codes inconnus ignorés ; null sans statut (historique null = vide).
     /// </summary>
-    public static string? StatutAffiche(IReadOnlyList<string> historique)
+    public static string? StatutAffiche(IReadOnlyList<string>? historiqueLu)
     {
+        var historique = historiqueLu ?? [];
         var terminal = historique.FirstOrDefault(Terminal);
         if (terminal is not null) return terminal;
         string? affiche = null;

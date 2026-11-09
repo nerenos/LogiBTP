@@ -138,7 +138,8 @@ export const obligatoirePpf = (statut) => STATUTS_OBLIGATOIRES_PPF.includes(stat
  * chronologique) : rien après un statut terminal ; facture émise : rien avant Déposée ; Déposée une seule fois ;
  * Complétée seulement en réponse à une Suspendue.
  */
-function erreursEnchainement(sens, historique, statut) {
+function erreursEnchainement(sens, historiqueLu, statut) {
+  const historique = historiqueLu ?? [];
   const erreurs = [];
   if (historique.some(statutTerminal)) erreurs.push(ERREUR_FE.STATUT_TERMINAL);
   const interdite = (sens === SENS_FACTURE.EMISE && !historique.includes(S.DEPOSEE))
@@ -154,7 +155,7 @@ function erreursEnchainement(sens, historique, statut) {
  * s'appliquent qu'au statut posé par la société (émetteur = rôle du sens) ; un statut reçu est contrôlé sur son code,
  * son émetteur, son motif et son action.
  */
-export function controlerStatut({ sens, historique = [], statut, emetteur, motif = null, action = null, b2g = false }) {
+export function controlerStatut({ sens, historique = null, statut, emetteur, motif = null, action = null, b2g = false }) {
   const role = emetteurDuSens(sens);
   if (!role) return [ERREUR_FE.SENS_INCONNU];
   if (!connu(statut)) return [ERREUR_FE.STATUT_INCONNU];
@@ -170,7 +171,7 @@ export function controlerStatut({ sens, historique = [], statut, emetteur, motif
 }
 
 /** Statuts que la société peut poser après un historique, dans l'ordre de STATUT_CDV ([] si sens inconnu). */
-export function statutsPosables(sens, historique = []) {
+export function statutsPosables(sens, historique = null) {
   const role = emetteurDuSens(sens);
   if (!role) return [];
   return STATUTS.filter((s) => EMETTEURS[s].includes(role) && erreursEnchainement(sens, historique, s).length === 0);
@@ -178,9 +179,10 @@ export function statutsPosables(sens, historique = []) {
 
 /**
  * Statut affiché d'une facture d'après son historique (ordre chronologique) : le premier statut terminal s'il y en a,
- * sinon le plus avancé (à rang égal, le plus récent) ; codes inconnus ignorés ; null sans statut.
+ * sinon le plus avancé (à rang égal, le plus récent) ; codes inconnus ignorés ; null sans statut (historique null = vide).
  */
-export function statutAffiche(historique = []) {
+export function statutAffiche(historiqueLu = null) {
+  const historique = historiqueLu ?? [];
   const terminal = historique.find(statutTerminal);
   if (terminal) return terminal;
   let affiche = null;
