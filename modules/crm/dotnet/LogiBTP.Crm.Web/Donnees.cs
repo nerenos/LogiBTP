@@ -163,6 +163,8 @@ public class CrmPlan
     public string PlaNom { get; set; } = "";
     public string? PlaLot { get; set; }
     public string? PlaFinition { get; set; }
+    /// <summary>Plan montré en tête sur le terrain (098b).</summary>
+    public bool PlaTerrain { get; set; }
     public string? PlaMessageHtml { get; set; }
     public string? PlaTypeElement { get; set; }
     public string? PlaIdElement { get; set; }

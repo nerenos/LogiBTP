@@ -126,7 +126,7 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
     private sealed record SoldeSql(long LigId, DateOnly Date);
     private sealed record CoefSql(int? NatId, DateOnly Depuis, decimal Coef);
     private sealed record PointageSql(long PoiId, DateOnly Date, long? OrdreId, int? NatureId, int? SrvId, int Minutes, decimal? Cout, string? Salarie,
-        bool Interim, decimal? TauxMission);
+        bool Interim, decimal? TauxMission, long? LigId = null);
     private sealed record PointageMaterielSql(long PmaId, int MatId, DateOnly Date, int Minutes, long? TacId);
     private sealed record MaterielSql(int Id, decimal? Cout, bool Loueur, DateOnly? FinLocation, DateOnly? Derniere, string? Libelle)
     {
@@ -219,7 +219,8 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
             SELECT p.poi_id, p.date_pointage AS date, p.ordre_id, p.nature_id, p.srv_id, p.minutes::int AS minutes, p.cout,
                    nullif(concat_ws(' ', s.sal_prenom, s.sal_nom), '') AS salarie, coalesce(s.sal_statut = 'INTERIM', FALSE) AS interim,
                    CASE WHEN s.sal_statut = 'INTERIM' THEN (SELECT m.mis_taux_horaire FROM mission_interim m WHERE m.mis_sal_id = s.sal_id
-                        AND p.date_pointage BETWEEN m.mis_debut AND m.mis_fin ORDER BY m.mis_debut DESC LIMIT 1) END AS taux_mission
+                        AND p.date_pointage BETWEEN m.mis_debut AND m.mis_fin ORDER BY m.mis_debut DESC LIMIT 1) END AS taux_mission,
+                   p.lig_id
             FROM v_pointages_retenus p LEFT JOIN salarie s ON s.sal_id = p.sal_id
             WHERE p.chantier_id = {chantier}
             """).ToListAsync(ct);
@@ -474,12 +475,12 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
 
         private void Ajouter(string indicateur, string composante, DateOnly date, PieceSql? p, LigneSql? l, int? nature, decimal pa, decimal pr, decimal pv,
             string regle, long? ordre, string? libelle = null, decimal? qte = null, string? unite = null, decimal? heures = null, string source = SourceFait.Document,
-            long? sourceId = null)
+            long? sourceId = null, long? ligId = null)
         {
             if (pa == 0 && pr == 0 && pv == 0 && (heures ?? 0) == 0 && regle is not (Regles.PointageNonValorise or Regles.StockNonValorise or Regles.TacheSansTaux or Regles.MaterielLoue
             or Regles.MaterielSansCout)) return;
             Faits.Add(new Fait(chantier, ordre, p?.Marche, indicateur, composante, date, nature, qte, unite, pa, pr, pv, heures, source, p?.Type, p?.EntId,
-                l?.LigId, sourceId, regle, libelle ?? l?.Libelle));
+                ligId ?? l?.LigId, sourceId, regle, libelle ?? l?.Libelle));
         }
 
         private IEnumerable<(PieceSql P, LigneSql L)> VenduesDuChantier(params string[] roles) =>
@@ -760,6 +761,7 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
 
         // ------------------------------------------------------------- pointages, stock, matériel, planning
 
+        /// <summary>Pointages retenus : déboursé de MO ; pointage d'une ligne d'ordre (terrain-suites lot 7) : fait rattaché à la ligne.</summary>
         public void Pointages(List<PointageSql> pointages, Dictionary<long, long?> oes)
         {
             foreach (var x in pointages)
@@ -773,7 +775,7 @@ public sealed class SpecialisationRentabiliteBtp : SpecialisationRentabilite
                     : (0m, Regles.PointageNonValorise);
                 var ordre = x.OrdreId is { } o ? oes.GetValueOrDefault(o) : null;
                 Ajouter(Indicateur.Debourse, Composante.Mo, x.Date, null, null, x.NatureId, pa, pa * Coef(x.NatureId, x.Date), 0, regle, ordre, x.Salarie, heures, "h",
-                    heures, SourceFait.Pointage, x.PoiId);
+                    heures, SourceFait.Pointage, x.PoiId, x.LigId);
             }
         }
 

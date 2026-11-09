@@ -8,12 +8,16 @@ namespace LogiBTP.Api.Btp;
 
 public sealed record ReleveBorne(string Jeton, int? Materiel, string? Unite, decimal? Valeur, bool Remise, string? Commentaire);
 public sealed record TraitementReleve(bool Accepter, string? Motif);
+public sealed record HeureMaterielBorne(int Materiel, int ChaId, int Minutes);
+public sealed record HeuresMaterielBorne(string Jeton, DateOnly Date, List<HeureMaterielBorne>? Lignes);
 
 /// <summary>
 /// Relevés de compteurs saisis à la borne (plan materiel-suites, lot 3, MO2) : le salarié identifié relève les matériels
 /// qui lui sont affectés ce jour (liste rapide) ou tout autre matériel ; un relevé hors affectation est accepté (contrôle
 /// de <see cref="CompteursMateriel.ControlerReleveAsync"/> inchangé, source BORNE) mais « à valider au bureau » (db/280) ;
 /// traitement par un administrateur ou le responsable du service du salarié : le refus supprime le relevé. Borne d'essai : rien n'est écrit.
+/// Heures de matériel (plan terrain-suites, lot 19, TS18 a) : durée sur les matériels affectés du jour, chantier de la
+/// journée, dans <c>pointage_materiel</c> source BORNE (db/292), déboursé du chantier comme les heures du terrain.
 /// </summary>
 public static class CompteursBorneBtp
 {
@@ -22,12 +26,29 @@ public static class CompteursBorneBtp
     /// <summary>Un relevé est à valider au bureau quand le matériel n'est pas affecté au salarié ce jour.</summary>
     public static bool AValider(IEnumerable<int> affectesAuJour, int materiel) => !affectesAuJour.Contains(materiel);
 
+    /// <summary>
+    /// Heures de matériel pointées à la borne (plan terrain-suites, lot 19, TS18 a) : refus d'une ligne, ou null.
+    /// Matériel affecté au salarié ce jour seulement (pas celui d'un autre), chantier de sa journée, durée d'un jour au plus.
+    /// </summary>
+    public static (string Code, string Message)? RefusHeure(IEnumerable<int> affectesAuJour, IEnumerable<int> chantiersDuJour, HeureMaterielBorne l) =>
+        !affectesAuJour.Contains(l.Materiel) ? ("BORNE_MATERIEL", $"Le matériel {l.Materiel} ne vous est pas affecté ce jour")
+        : !chantiersDuJour.Contains(l.ChaId) ? ("BORNE_CHANTIER", "Chantier absent des heures de la journée")
+        : l.Minutes is <= 0 or > 1440 ? ("BORNE_DUREE", "Durée du matériel invalide")
+        : null;
+
     private sealed record MaterielSql(int Id, string Code, string Designation, string Compteurs, int Heures, int? Kilometres);
     private sealed record AValiderSql(int Id, int Materiel, string Code, string Designation, DateOnly Date, string Unite, decimal Valeur, bool Remise, int? Salarie, string? Nom, string? Commentaire);
 
     private const string SqlAffectes = """
         SELECT DISTINCT a.maf_mat_id AS "Value" FROM materiel_affectation a
         WHERE a.maf_type = 'SALARIE' AND a.maf_ressource = @s::text AND a.maf_du <= @d AND (a.maf_au IS NULL OR a.maf_au >= @d)
+        """;
+
+    private sealed record MaterielHeuresSql(int Id, string Code, string Designation);
+    private sealed record PointeSql(int Materiel, int ChaId, int Minutes);
+
+    private const string SqlChantiersDuJour = """
+        SELECT DISTINCT poi_cha_id AS "Value" FROM poi_pointage WHERE poi_couche = 'SAISIE' AND poi_sal_id = @s AND poi_date = @d
         """;
 
     private static Task<List<int>> AffectesAsync(LogiBtpContext db, int salarie, DateOnly jour, CancellationToken ct) =>
@@ -75,6 +96,47 @@ public static class CompteursBorneBtp
                  new NpgsqlParameter("r", x.Remise), SqlBtp.P("c", x.Commentaire?.Trim()), new NpgsqlParameter("p", auteur.Code),
                  new NpgsqlParameter("a", aValider), new NpgsqlParameter("s", s)], ct);
             return Results.Ok(new { essai = false, aValider });
+        });
+
+        // Heures de matériel de la journée (lot 19) : matériels affectés ce jour (compteurs suivis ou non), chantiers pointés, durées déjà saisies.
+        b.MapGet("/heures", async (string jeton, DateOnly date, HttpContext http, LogiBtpContext db, ServiceBorne borne, CancellationToken ct) =>
+        {
+            var (s, _, _) = await borne.SalarieIdentifieAsync(http, jeton, ct);
+            var affectes = await AffectesAsync(db, s, date, ct);
+            var materiels = await db.Database.SqlQueryRaw<MaterielHeuresSql>("""
+                SELECT mat_id AS id, mat_code AS code, mat_designation AS designation FROM materiel WHERE mat_id = ANY(@m) ORDER BY mat_code
+                """, new NpgsqlParameter("m", affectes.ToArray())).ToListAsync(ct);
+            var chantiers = await db.Database.SqlQueryRaw<int>(SqlChantiersDuJour, new NpgsqlParameter("s", s), new NpgsqlParameter("d", date)).ToListAsync(ct);
+            var pointes = await db.Database.SqlQueryRaw<PointeSql>("""
+                SELECT pma_mat_id AS materiel, pma_cha_id AS cha_id, pma_minutes AS minutes FROM pointage_materiel
+                WHERE pma_source = 'BORNE' AND pma_sal_id = @s AND pma_date = @d AND pma_cha_id IS NOT NULL ORDER BY pma_id
+                """, new NpgsqlParameter("s", s), new NpgsqlParameter("d", date)).ToListAsync(ct);
+            return new { materiels, chantiers, pointes };
+        });
+        // Remplace les heures de matériel de la borne du salarié pour ce jour (source BORNE, sans tâche). Borne d'essai : rien n'est écrit.
+        b.MapPut("/heures", async (HeuresMaterielBorne x, HttpContext http, LogiBtpContext db, ServiceBorne borne, CancellationToken ct) =>
+        {
+            var (s, appareil, test) = await borne.SalarieIdentifieAsync(http, x.Jeton, ct);
+            if (x.Date > DateOnly.FromDateTime(DateTime.Today)) throw ExceptionMetier.Invalide("BORNE_DATE", "Pointage d'un jour à venir");
+            var lignes = x.Lignes ?? [];
+            var affectes = await AffectesAsync(db, s, x.Date, ct);
+            var chantiers = test ? lignes.Select(l => l.ChaId).ToList()
+                : await db.Database.SqlQueryRaw<int>(SqlChantiersDuJour, new NpgsqlParameter("s", s), new NpgsqlParameter("d", x.Date)).ToListAsync(ct);
+            foreach (var l in lignes)
+                if (RefusHeure(affectes, chantiers, l) is { } refus) throw ExceptionMetier.Invalide(refus.Code, refus.Message);
+            if (test) return Results.Ok(new { essai = true });
+            var auteur = await ComptesBtp.AuteurBorneAsync(db, s, appareil, ct);
+            await using var tr = await db.Database.BeginTransactionAsync(ct);
+            await db.Database.ExecuteSqlRawAsync("DELETE FROM pointage_materiel WHERE pma_source = 'BORNE' AND pma_sal_id = @s AND pma_date = @d",
+                [new NpgsqlParameter("s", s), new NpgsqlParameter("d", x.Date)], ct);
+            foreach (var l in lignes)
+                await db.Database.ExecuteSqlRawAsync("""
+                    INSERT INTO pointage_materiel (pma_mat_id, pma_cha_id, pma_sal_id, pma_date, pma_minutes, pma_par, pma_source)
+                    VALUES (@m, @c, @s, @d, @n, @u, 'BORNE')
+                    """, [new NpgsqlParameter("m", l.Materiel), new NpgsqlParameter("c", l.ChaId), new NpgsqlParameter("s", s),
+                        new NpgsqlParameter("d", x.Date), new NpgsqlParameter("n", l.Minutes), new NpgsqlParameter("u", auteur.Code)], ct);
+            await tr.CommitAsync(ct);
+            return Results.Ok(new { essai = false });
         });
 
         // Relevés de la borne à valider (droits de l'écran Ressources) : ceux que l'utilisateur peut traiter.

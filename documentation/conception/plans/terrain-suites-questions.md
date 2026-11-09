@@ -1,8 +1,17 @@
 # Application de terrain : écarts et suites, questions ouvertes
 
 > Phase 1 de la procédure `analyse-lots` (08/11/2026). Source : TODO.md § « Application de terrain (poseurs, chefs
-> d'équipe) » et [ANALYSE-TERRAIN.md](../documentation/conception/ANALYSE-TERRAIN.md) (écarts des lots 1 à 7, § 9).
+> d'équipe) » et [ANALYSE-TERRAIN.md](../ANALYSE-TERRAIN.md) (écarts des lots 1 à 7, § 9).
 > Une question sans réponse reste `OUVERT` dans le plan. **B** = bloquante (change la découpe ou le modèle de données).
+
+## Décisions du 08/11/2026
+
+Réponses de l'utilisateur : **TS1 a** (dernier indice diffusé visé ACCEPTE, indices plus récents ignorés) ; **TS2 b, avec
+les autres** (case « Terrain » par plan : plans cochés en tête, les autres plans validés accessibles par « Voir tous les
+plans ») ; **TS3 b** (budget hors ligne à part pour les plans) ; **TS4 a + b** (menu simplifié par défaut sur les pages
+du terrain, raccourci vers le menu classique ; bandeau adaptatif pour toute l'application) ; **TS8 a** (conversion par
+l'iPhone seulement, pas de bibliothèque de secours) ; **TS10 b** (tous les chantiers ouverts du service de la personne).
+Toutes les autres questions : recommandation retenue. Plan : [terrain-suites.md](terrain-suites.md).
 
 ## 0. Points déjà levés par d'autres chantiers (à confirmer, puis à cocher dans TODO.md)
 

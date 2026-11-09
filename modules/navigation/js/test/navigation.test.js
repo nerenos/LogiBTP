@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { correspondre, construire, analyser, Routeur, PageBase, afficherApercu, CLE_APERCU } from '../src/routeur.js';
 import { GestionFenetres, sessionAProposer, optionsFenetre, CLE_PRECEDENTE, CLE_SESSION } from '../src/fenetres.js';
 import { Preferences, deplacer, inserer } from '../src/preferences.js';
+import { menusAffiches, basculeProposee, MEDIA_TELEPHONE, LARGEUR_TELEPHONE } from '../src/menus.js';
 
 describe('routes', () => {
   it('paramètres obligatoires et facultatifs', () => {
@@ -267,5 +268,30 @@ describe('préférences', () => {
     expect(inserer(['a', 'b'], 'x', 0)).toEqual(['x', 'a', 'b']);
     expect(inserer(['a', 'b'], 'x')).toEqual(['a', 'b', 'x']);
     expect(inserer(['a', 'b'], 'x', 9)).toEqual(['a', 'b', 'x']);
+  });
+});
+
+describe('bandeau : menus simplifiés et téléphone', () => {
+  const complets = [{ code: 'a' }, { code: 'b' }, { code: 'c' }];
+  const reduits = [{ code: 'terrain' }];
+
+  it('liste simplifiée affichée tant que les menus complets ne sont pas demandés', () => {
+    expect(menusAffiches(complets, reduits, false)).toBe(reduits);
+    expect(menusAffiches(complets, reduits, true)).toBe(complets);
+    expect(menusAffiches(complets, () => reduits)).toBe(reduits);
+  });
+
+  it('sans liste simplifiée : menus complets, aucune bascule', () => {
+    expect(menusAffiches(complets, null, false)).toBe(complets);
+    expect(menusAffiches(complets, () => null)).toBe(complets);
+    expect(menusAffiches(undefined)).toEqual([]);
+    expect(basculeProposee(null)).toBe(false);
+    expect(basculeProposee(() => null)).toBe(false);
+    expect(basculeProposee(reduits)).toBe(true);
+  });
+
+  it('mode téléphone sous 700 px', () => {
+    expect(LARGEUR_TELEPHONE).toBe(700);
+    expect(MEDIA_TELEPHONE).toBe('(max-width: 700px)');
   });
 });

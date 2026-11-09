@@ -123,23 +123,45 @@ Analyse du 23/10/2026 : [ANALYSE-MODULE-SOUS-TRAITANCE.md](documentation/concept
 
 ### Application de terrain (poseurs, chefs d'équipe)
 
-- [ ] Lot 1, écarts : plans au dernier indice validé du suivi des validations (CRM) parmi les pièces du terrain (T6) ;
-  bandeau trop large sur un téléphone (gabarit tactile commun avec le lot 2).
-- [ ] Lot 2, écarts : pointage à la ligne d'ordre (`poi_lig_id`) quand la tâche vient d'une ligne (T8).
-- [ ] Lot 3, suites : photos HEIC converties
-  (le navigateur ne sait pas les réduire).
-- [ ] Lot 4, suites : saisie libre hors ligne limitée aux chantiers et ordres déjà lus (journée gardée) ; nouvelle
+Plan en 24 lots : [terrain-suites.md](documentation/conception/plans/terrain-suites.md) (décisions TS1 à TS25 du
+08/11/2026 dans [terrain-suites-questions.md](documentation/conception/plans/terrain-suites-questions.md)).
+
+- [x] Lot 1, écarts : bandeau trop large sur un téléphone (gabarit tactile commun avec le lot 2). Fait : plan, lots 5 (bandeau adaptatif) et 6 (menu simplifié du terrain).
+  Fait le 08/11/2026 (plan, lots 2 à 4) : plans au dernier indice validé du suivi des validations (CRM) parmi les pièces
+  du terrain (T6), case « Terrain » par plan, plans cochés gardés hors ligne dans un budget à part (25 Mo).
+- [x] Lot 2, écarts : pointage à la ligne d'ordre (`poi_lig_id`) quand la tâche vient d'une ligne (T8). Fait le 08/11/2026 :
+  plan, lot 7 (`db/288`, reprise des pointages existants hors journées validées, à appliquer).
+- [ ] Lot 3, suites : photos HEIC converties (le navigateur ne sait pas les réduire). Plan : lot 8, fait le 08/11/2026
+  (champs photo `image/jpeg,image/png`) : reste l'essai sur un iPhone par l'utilisateur (photo de l'appareil et de la
+  galerie arrivées en JPEG réduit dans la GED) ; échec : le point revient en question (TS8).
+- [x] Lot 4, suites : saisie libre hors ligne limitée aux chantiers et ordres déjà lus (journée gardée) ; nouvelle
   recherche d'un ordre par son numéro impossible hors ligne ; envoi des photos gardées sans contrôle de taille avant
-  l'envoi (limite de dépôt de la GED).
-- [ ] Lot 5, suites : valeur juridique de la signature simple à faire confirmer ; levée des réserves suivie (tâche du CRM
-  seulement) ; demande d'approvisionnement en texte libre (articles de la bibliothèque à choisir plus tard) ; réception
-  gardée hors ligne horodatée à l'envoi par le serveur.
-- [x] Lot 7, suites : bibliothèque simplifiée sur le terrain (T18) ; heures de matériel non valorisées dans le coût du
-  chantier (aucun coût horaire du matériel) ; pointage et relevés de matériel à la borne ; réception d'une commande à options
-  ou variantes (refusée) ; avancement réel par marché quand un chantier en porte plusieurs (aujourd'hui : tout le chantier).
-- [ ] Lot 6, suites : temps et fournitures du bon de SAV non repris dans la facture (facture = transformation au bureau) ;
+  l'envoi (limite de dépôt de la GED). Plan : lots 9 à 12. Fait le 08/11/2026 : lot 9 (chantiers et ordres ouverts du
+  service gardés chaque jour, saisie libre sur une journée jamais lue, ordre cherché par son numéro sur l'appareil) et
+  lot 10 (numéro inconnu de l'appareil gardé, résolu par le serveur à l'envoi, refus `ORDRE_INCONNU` signalé), lots 11
+  et 12 (limite de dépôt de la GED exposée, photos réduites de force ou refusées avant d'être gardées).
+- [ ] Lot 5, suites : valeur juridique de la signature simple à faire confirmer (par l'utilisateur, hors code) ; levée
+  des réserves suivie (tâche du CRM seulement) ; demande d'approvisionnement en texte libre (articles de la bibliothèque
+  à choisir plus tard) ; réception gardée hors ligne horodatée à l'envoi par le serveur. Plan : lots 13 à 18. Fait le
+  08/11/2026 : lot 13 (heure de l'appareil gardée avec la réception hors ligne, `db/289`, forme de signature et les deux
+  heures sur le PV, `db/191` à rejouer) ; lot 14 (réserves suivies une par une, `db/290`, levée par le serveur), lot 15 (levée depuis le terrain, gardée
+  hors ligne, réserves dans le panneau « Exécution » de l'ordre),
+  lot 16 (PV de levée des réserves signé, `db/291`, modèle `PV_LEVEE_RESERVES` par `db/191` à rejouer).
+- [x] Lot 7, suites : pointage des heures de matériel à la borne ;
+  réception d'une commande à options ou variantes (refusée) ; avancement réel par marché quand un chantier en porte
+  plusieurs (aujourd'hui : tout le chantier). Plan : lots 17 à 21 (fait le 08/11/2026 : lots 17 et 18, bibliothèque
+  simplifiée et articles des demandes d'approvisionnement ; lot 19, heures de matériel à la borne, `db/292` ; lot 20, commande à options reçue si ses choix sont connus par un
+  bon précédent, sinon au bureau ; lot 21, avancement réel par marché, tâches rattachées par leur origine). Déjà faits ailleurs : valorisation des heures de
+  matériel (module Rentabilité, lot 5, `db/261`) et relevés de compteurs à la borne
+  ([materiel-suites.md](documentation/conception/plans/materiel-suites.md), lots 3 et 4).
+- [x] Lot 6, suites : temps et fournitures du bon de SAV non repris dans la facture (facture = transformation au bureau) ;
   création d'une intervention impossible hors ligne ; chantier « Entretien et dépannage » créé sans passer par le chrono
-  des chantiers (code `SAV-<client>`) ; contrats d'entretien (Exécution, second temps).
+  des chantiers (code `SAV-<client>`). Plan : lots 22 à 24. Fait le 08/11/2026 : lot 22 (bouton « Facturer » de
+  l'ordre SAV : facture brouillon, temps au prix de l'article « Main-d'œuvre SAV » désigné, `db/293`) ; lot 23
+  (intervention créée hors ligne, numéro provisoire, créée à l'envoi sans doublon, `db/294`) ; lot 24 (chantier
+  « Entretien et dépannage » par le chrono des chantiers, retrouvé par l'affaire SAV et le client).
+- [ ] Contrats d'entretien (Exécution, second temps) : analyse à part à écrire (`ANALYSE-CONTRATS-ENTRETIEN.md`), hors
+  du plan du terrain (TS25).
 
 ### Import
 

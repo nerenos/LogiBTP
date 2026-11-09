@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extraireNomPlan, analyserFormatPlan, FORMAT_PLAN_DEFAUT } from '../src/plans.js';
+import { extraireNomPlan, analyserFormatPlan, FORMAT_PLAN_DEFAUT, caseTerrainPlan } from '../src/plans.js';
 
 describe('nom des fichiers de plans', () => {
   it('format par défaut : repère, nom, indice', () => {
@@ -22,5 +22,14 @@ describe('nom des fichiers de plans', () => {
     expect(analyserFormatPlan('{repere}{nom}').erreur).toMatch(/séparés/);
     expect(analyserFormatPlan('{x}_{nom}').erreur).toMatch(/inconnu/);
     expect(analyserFormatPlan('plan').erreur).toMatch(/au moins/);
+  });
+});
+
+describe('case « Terrain » d’un plan', () => {
+  it('cochée ou non selon le plan, avec son libellé', () => {
+    const cochee = caseTerrainPlan(true);
+    expect(cochee).toContain('type="checkbox" data-terrain checked');
+    expect(cochee).toContain('Terrain');
+    expect(caseTerrainPlan(false)).not.toContain('checked');
   });
 });

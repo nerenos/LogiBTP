@@ -576,6 +576,7 @@
   "terrain_btp_avancement": "📈",
   "terrain_btp_nc": "⚠",
   "terrain_btp_demande": "📦",
+  "terrain_btp_bibliotheque": "📚",
   "terrain_btp_pointage": "⏱",
   "terrain_btp_fil": "📰",
   "terrain_btp_libre": "🛠",
@@ -590,6 +591,8 @@
   "terrain_btp_appeler": "📞",
   "terrain_btp_lien": "🔗",
   "terrain_btp_piece": "📄",
+  "terrain_btp_plan": "📐",
+  "terrain_btp_ligne": "↳",
   "terrain_btp_reglages": "⚙",
   "terrain_btp_photos": "📷",
   "terrain_btp_sans_reserve": "✅",
@@ -712,5 +715,10 @@
   "execution_btp_delegations": "👥",
   "navigation_btp_execution_delegations": "👥",
   "stock_btp_piece_comptable": "📒",
-  "pointage_signature": "✍"
+  "pointage_signature": "✍",
+  "terrain_btp_reserve": "📌",
+  "terrain_btp_reserve_levee": "✔",
+  "execution_btp_reserve_ouverte": "📌",
+  "execution_btp_reserve_levee": "✔",
+  "execution_btp_facturer": "🧾"
 }

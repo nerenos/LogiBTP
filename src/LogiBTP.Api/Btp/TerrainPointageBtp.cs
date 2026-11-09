@@ -14,9 +14,15 @@ namespace LogiBTP.Api.Btp;
 /// <summary>
 /// Ligne de la journée du terrain : pointage de la personne, sur une tâche ou en saisie libre ; nouvelle : aussi pour
 /// les membres choisis ; d'une saisie d'équipe : <c>Equipe</c> applique la modification aux membres encore identiques.
+/// <c>Numero</c> (terrain-suites lot 10, TS11 a) : numéro d'ordre saisi sans réseau, inconnu de l'appareil (chantier
+/// et ordre vides), résolu à l'envoi (<see cref="TerrainBtp.ResoudreNumero"/>).
 /// </summary>
-public sealed record LigneTerrain(long? Id, long? TacId, int ChaId, long? EntId, int TypeMo, string? SousType, int Minutes, string? Motif,
-    string? Commentaire, List<int>? Membres, bool Equipe = false);
+public sealed record LigneTerrain(long? Id, long? TacId, int? ChaId, long? EntId, int TypeMo, string? SousType, int Minutes, string? Motif,
+    string? Commentaire, List<int>? Membres, bool Equipe = false, string? Numero = null)
+{
+    /// <summary>Chantier de la ligne, une fois le numéro d'ordre résolu.</summary>
+    public int Chantier => ChaId ?? throw ExceptionMetier.Invalide("TERRAIN_CHANTIER", "Chaque ligne a un chantier");
+}
 /// <summary>
 /// Journée envoyée. <c>Connus</c> : pointages du jour que l'appareil connaissait (lus avec la journée) ; seuls
 /// ceux-là peuvent être retirés, un pointage ajouté entre-temps ailleurs (bureau, borne, autre appareil, saisie hors
@@ -26,7 +32,8 @@ public sealed record JourneeTerrain(DateOnly Date, List<LigneTerrain> Lignes, Li
 
 /// <summary>
 /// Application de terrain, lot 2 (ANALYSE-TERRAIN.md, T4, T7, T8, T21, T22) : pointage de la journée de la personne
-/// connectée. Une ligne pointe une tâche du jour (au niveau de détail planifié : chantier, ordre d'origine) ou, en
+/// connectée. Une ligne pointe une tâche du jour (au niveau de détail planifié : chantier, ordre d'origine, ligne
+/// d'ordre d'une tâche d'origine ligne : <c>poi_lig_id</c>, terrain-suites lot 7) ou, en
 /// saisie libre, le chantier et l'ordre choisis ; la saisie libre crée une tâche réalisée non planifiée (origine
 /// <c>terrain</c>, état terminé) affectée à la personne et à son équipe. Équipe : sur une tâche, le chef de l'équipe
 /// affectée pointe pour les membres de la tâche ; en saisie libre, droit « pointage/saisie_libre » à portée EQUIPE
@@ -40,13 +47,22 @@ public static partial class TerrainBtp
     public const string OrigineTerrain = "terrain";
     private const string NoeudSaisieLibre = "pointage/saisie_libre";
 
-    private sealed record TacheJour(long Id, string Libelle, int? ChaId, long? EntId, int? SrvId, int? TypeMo, decimal Poids, bool Chef, string Membres);
-    private sealed record PointageJour(long Id, int ChaId, long? EntId, int TypeMo, string? SousType, int Minutes, string? Motif, string? Commentaire, long? TacId, Guid? Groupe, int NbGroupe);
+    private sealed record TacheJour(long Id, string Libelle, int? ChaId, long? EntId, int? SrvId, int? TypeMo, decimal Poids, bool Chef, string Membres,
+        long? LigId = null, string? Ligne = null);
+    private sealed record PointageJour(long Id, int ChaId, long? EntId, int TypeMo, string? SousType, int Minutes, string? Motif, string? Commentaire, long? TacId, Guid? Groupe, int NbGroupe,
+        long? LigId = null, string? Ligne = null);
+
+    /// <summary>
+    /// Ligne d'ordre portée par le pointage d'une tâche (lot 7, TS5 a) : celle de la tâche d'origine ligne, tant que le
+    /// pointage reste sur le document de la ligne ; sinon aucune (niveau chantier ou ordre).
+    /// </summary>
+    public static long? LigneDuPointage(long? ligneTache, long? documentTache, long? documentPointe) =>
+        ligneTache is not null && documentTache is not null && documentTache == documentPointe ? ligneTache : null;
     private sealed record Equipier(int Id, string Libelle);
 
     /// <summary>Tâches du jour @du de la personne @s : type de MO proposé (service de la tâche ou son parent), poids pour répartir la journée, équipe dont elle est le chef.</summary>
     private const string SqlTachesJour = """
-        SELECT x.tac_id AS id, x.tac_libelle AS libelle, x.cha_id, x.ent_id, x.tac_srv_id AS srv_id,
+        SELECT x.tac_id AS id, x.tac_libelle AS libelle, x.cha_id, x.ent_id, x.tac_srv_id AS srv_id, x.lig_id, x.lig_libelle AS ligne,
           (SELECT n.nat_id FROM nature_element n LEFT JOIN service sv ON sv.srv_id = x.tac_srv_id
            WHERE n.nat_rgn_code = 'MO' AND n.nat_srv_id IN (x.tac_srv_id, sv.srv_parent_id) ORDER BY n.nat_srv_id = x.tac_srv_id DESC, n.nat_code LIMIT 1) AS type_mo,
           coalesce((SELECT a.aff_heures FROM pla_affectation a WHERE a.aff_tac_id = x.tac_id AND a.aff_res_type IN ('SALARIE', 'INTERIM') AND a.aff_res_id = @s::text LIMIT 1), 0)
@@ -68,6 +84,14 @@ public static partial class TerrainBtp
             var u = Utilisateur.Depuis(http);
             if (await ComptesBtp.SalarieAsync(db, u.Code, ct) is not int s) return Results.Ok(new { personne = (object?)null, date = jour });
             return Results.Ok(await JourneeAsync(db, services, u, s, jour, ct));
+        });
+        // Hors ligne (terrain-suites lot 9, TS10 b, TS11 b) : chantiers et ordres ouverts proposés à la saisie libre et à
+        // la recherche d'un ordre par son numéro sans réseau, préchargés chaque jour.
+        g.MapGet("/journee/chantiers", async (HttpContext http, LogiBtpContext db, IServiceProvider services, CancellationToken ct) =>
+        {
+            var u = Utilisateur.Depuis(http);
+            if (await ComptesBtp.SalarieAsync(db, u.Code, ct) is not int s) return Results.Ok(new { personne = (object?)null });
+            return Results.Ok(await ChantiersHorsLigneAsync(db, services, u, s, ct));
         });
         g.MapPut("/journee", async (JourneeTerrain j, HttpContext http, LogiBtpContext db, IServiceProvider services, CancellationToken ct) =>
         {
@@ -106,8 +130,9 @@ public static partial class TerrainBtp
         var pointages = await db.Database.SqlQueryRaw<PointageJour>("""
             SELECT p.poi_id AS id, p.poi_cha_id AS cha_id, p.poi_ent_id AS ent_id, p.poi_type_mo AS type_mo, p.poi_sous_type AS sous_type, p.poi_minutes::int AS minutes,
                    p.poi_motif AS motif, p.poi_commentaire AS commentaire, p.poi_tac_id AS tac_id, p.poi_groupe AS groupe,
-                   (SELECT count(*)::int FROM poi_pointage g WHERE g.poi_groupe = p.poi_groupe AND g.poi_couche = 'SAISIE') AS nb_groupe
-            FROM poi_pointage p WHERE p.poi_sal_id = @s AND p.poi_date = @d AND p.poi_couche = 'SAISIE' ORDER BY p.poi_id
+                   (SELECT count(*)::int FROM poi_pointage g WHERE g.poi_groupe = p.poi_groupe AND g.poi_couche = 'SAISIE') AS nb_groupe,
+                   p.poi_lig_id AS lig_id, nullif(concat_ws(' ', l.lig_code, left(regexp_replace(l.lig_libelle_brut, '\s+', ' ', 'g'), 80)), '') AS ligne
+            FROM poi_pointage p LEFT JOIN document_ligne l ON l.lig_id = p.poi_lig_id WHERE p.poi_sal_id = @s AND p.poi_date = @d AND p.poi_couche = 'SAISIE' ORDER BY p.poi_id
             """, new NpgsqlParameter("s", s), new NpgsqlParameter("d", jour)).ToListAsync(ct);
         var journees = await CalendriersBtp.JourneesAsync(db, services.GetRequiredService<ServiceCalendrier>(), TypesFiche.Salarie, s, jour, jour, ct);
         var libre = await PorteeLibreAsync(services, u, ct);
@@ -122,7 +147,7 @@ public static partial class TerrainBtp
             valide = await pointage.JourBloqueAsync(s, jour, ct),
             taches = taches.Select(t => new
             {
-                id = t.Id, libelle = t.Libelle, cha_id = t.ChaId, ent_id = t.EntId, srv_id = t.SrvId, type_mo = t.TypeMo, poids = t.Poids, chef = t.Chef,
+                id = t.Id, libelle = t.Libelle, cha_id = t.ChaId, ent_id = t.EntId, lig_id = t.LigId, ligne = t.Ligne, srv_id = t.SrvId, type_mo = t.TypeMo, poids = t.Poids, chef = t.Chef,
                 membres = JsonDocument.Parse(t.Membres).RootElement,
             }),
             pointages,
@@ -130,6 +155,89 @@ public static partial class TerrainBtp
             chantiers, ordres = await specialisation.OrdresAsync(pdb, chantiers.Select(c => c.Id).ToList(), ct),
             motifs = await MotifsAsync(db, ct),
         };
+    }
+
+    /// <summary>Périmètre des chantiers gardés hors ligne : service principal de la personne, sinon son planning à un mois (lot 9).</summary>
+    public static string PerimetreHorsLigne(int? servicePrincipal) => servicePrincipal is null ? PerimetrePlanning : PerimetreService;
+    public const string PerimetreService = "SERVICE";
+    public const string PerimetrePlanning = "PLANNING";
+
+    /// <summary>
+    /// Chantiers gardés hors ligne pour la personne @s (lot 9, TS10 b) : chantiers ouverts (hors dotations, sauf entretien
+    /// en cours) de son service principal ou de ses services fils (@srv : un ordre en vigueur non terminé ou une tâche
+    /// du planning à un mois de ce service), chantiers de son planning à un mois (seul critère sans service principal :
+    /// @srv nul) et chantiers internes.
+    /// </summary>
+    public const string SqlChantiersHorsLigne = $"""
+        WITH srv AS (SELECT v.srv_id FROM service v WHERE v.srv_id = @srv OR v.srv_parent_id = @srv)
+        SELECT c.cha_id AS id, c.cha_code AS code, c.cha_libelle AS libelle, FALSE AS clos, c.cha_interne AS interne,
+               c.cha_ville AS ville, t.per_raison_sociale AS client
+        FROM chantier c LEFT JOIN personne t ON t.per_id = c.cha_tiers_id
+        WHERE c.cha_interne
+           OR c.cha_statut = 'OUVERT' AND (NOT f_chantier_dotation(c.cha_id) OR f_chantier_entretien_ouvert(c.cha_id)) AND (
+                EXISTS (SELECT 1 FROM pla_tache k JOIN pla_affectation a ON a.aff_tac_id = k.tac_id
+                        WHERE a.aff_res_type IN ('SALARIE', 'INTERIM') AND a.aff_res_id = @s::text AND k.tac_type_element = 'chantier' AND k.tac_id_element = c.cha_id::text
+                          AND k.tac_debut < current_date + 31 AND k.tac_fin > current_date - 31)
+             OR EXISTS (SELECT 1 FROM pla_tache k JOIN srv ON srv.srv_id = k.tac_srv_id
+                        WHERE k.tac_type_element = 'chantier' AND k.tac_id_element = c.cha_id::text AND k.tac_debut < current_date + 31 AND k.tac_fin > current_date - 31)
+             OR EXISTS (SELECT 1 FROM document d JOIN srv ON srv.srv_id = d.ent_srv_id JOIN type_document ty ON ty.tyd_id = d.ent_tyd_id JOIN statut_document st ON st.std_id = d.ent_std_id
+                        WHERE d.ent_chantier_id = c.cha_id AND ty.tyd_famille = 'E' AND d.ent_is_reference AND st.std_code NOT IN ({SqlBtp.HorsVigueur})
+                          AND coalesce(d.ent_exe_etat, '') <> 'TERMINE'))
+        ORDER BY c.cha_interne, c.cha_code
+        LIMIT 5000
+        """;
+
+    /// <summary>Chantiers et ordres ouverts gardés hors ligne (lot 9) ; sans droit de saisie libre : aucun.</summary>
+    private static async Task<object> ChantiersHorsLigneAsync(LogiBtpContext db, IServiceProvider services, Utilisateur u, int s, CancellationToken ct)
+    {
+        var libre = await PorteeLibreAsync(services, u, ct);
+        var srv = await db.Database.SqlQueryRaw<int?>("""
+            SELECT sm.sme_srv_id AS "Value" FROM salarie sa JOIN service_membre sm ON sm.sme_ind_id = sa.sal_ind_id AND sm.sme_principal WHERE sa.sal_id = @s
+            """, new NpgsqlParameter("s", s)).FirstOrDefaultAsync(ct);
+        var pdb = services.GetRequiredService<PointageDbContext>();
+        List<ChantierPointage> chantiers = libre is null ? [] : await pdb.Database.SqlQueryRaw<ChantierPointage>(SqlChantiersHorsLigne, new NpgsqlParameter("s", s),
+            SqlBtp.P("srv", srv, NpgsqlTypes.NpgsqlDbType.Integer)).ToListAsync(ct);
+        List<OrdrePointage> ordres = chantiers.Count == 0 ? [] : await services.GetRequiredService<SpecialisationPointage>().OrdresAsync(pdb, chantiers.Select(c => c.Id).ToList(), ct);
+        return new { personne = new { id = s }, libre, perimetre = PerimetreHorsLigne(srv), chantiers, ordres };
+    }
+
+    /// <summary>Ordre trouvé par son numéro (lot 10).</summary>
+    public sealed record OrdreNumero(long Id, int ChaId);
+
+    /// <summary>Numéro d'ordre comparé sans casse ni espaces (même règle que <c>chercherOrdre</c> du client).</summary>
+    public static string NumeroNormalise(string? numero) => System.Text.RegularExpressions.Regex.Replace(numero ?? "", @"\s+", "").ToUpperInvariant();
+
+    /// <summary>
+    /// Ligne nouvelle portant un numéro d'ordre saisi sans réseau (lot 10, TS11 a) : ordre et chantier de l'unique ordre
+    /// en vigueur de ce numéro ; aucun ou plusieurs : refus <see cref="ErreursTerrain.OrdreInconnu"/> (journée gardée en
+    /// erreur sur l'appareil, règle T9). Ordre déjà choisi ou ligne existante : inchangée.
+    /// </summary>
+    public static LigneTerrain ResoudreNumero(LigneTerrain l, IReadOnlyList<OrdreNumero> trouves)
+    {
+        if (l.Id is not null || l.EntId is not null || string.IsNullOrWhiteSpace(l.Numero)) return l;
+        if (trouves.Count != 1)
+            throw ExceptionMetier.Invalide(ErreursTerrain.OrdreInconnu, $"Ordre {l.Numero.Trim()} inconnu", new { numero = l.Numero.Trim() });
+        return l with { EntId = trouves[0].Id, ChaId = trouves[0].ChaId };
+    }
+
+    /// <summary>Résout les numéros d'ordre des lignes de la journée (ordres d'exécution en vigueur non terminés, sur un chantier).</summary>
+    private static async Task<JourneeTerrain> ResoudreNumerosAsync(LogiBtpContext db, JourneeTerrain j, CancellationToken ct)
+    {
+        if (!j.Lignes.Any(l => l.Id is null && l.EntId is null && !string.IsNullOrWhiteSpace(l.Numero))) return j;
+        var lignes = new List<LigneTerrain>();
+        foreach (var l in j.Lignes)
+        {
+            var trouves = l.Id is null && l.EntId is null && !string.IsNullOrWhiteSpace(l.Numero)
+                ? await db.Database.SqlQueryRaw<OrdreNumero>($"""
+                    SELECT d.ent_id AS id, d.ent_chantier_id AS cha_id FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id JOIN statut_document st ON st.std_id = d.ent_std_id
+                    WHERE t.tyd_famille = 'E' AND d.ent_is_reference AND d.ent_chantier_id IS NOT NULL AND upper(regexp_replace(d.ent_numero, '\s+', '', 'g')) = @n
+                      AND st.std_code NOT IN ({SqlBtp.HorsVigueur}) AND coalesce(d.ent_exe_etat, '') <> 'TERMINE'
+                    LIMIT 2
+                    """, new NpgsqlParameter("n", NumeroNormalise(l.Numero))).ToListAsync(ct)
+                : [];
+            lignes.Add(ResoudreNumero(l, trouves));
+        }
+        return j with { Lignes = lignes };
     }
 
     private static string Signature(DateOnly d, int cha, long? ent, int type, string? st, int min, string? motif) => $"{d}|{cha}|{ent}|{type}|{st}|{min}|{motif}";
@@ -141,6 +249,7 @@ public static partial class TerrainBtp
         var pdb = services.GetRequiredService<PointageDbContext>();
         var specialisation = services.GetRequiredService<SpecialisationPointage>();
         var taches = (await TachesJourAsync(db, s, j.Date, ct)).ToDictionary(t => t.Id);
+        j = await ResoudreNumerosAsync(db, j, ct);
         var lundi = ReglesPointage.LundiDe(j.Date);
         var semaine = await pdb.Pointages.AsNoTracking().Where(x => x.PoiSalId == s && x.PoiCouche == Couches.Saisie && x.PoiDate >= lundi && x.PoiDate <= lundi.AddDays(6)).ToListAsync(ct);
         var avant = semaine.Where(x => x.PoiDate == j.Date).ToDictionary(x => x.PoiId);
@@ -176,6 +285,8 @@ public static partial class TerrainBtp
         var creees = new Dictionary<int, long>();
         // Tâche d'une ligne : celle choisie, sinon la tâche libre créée ; absente d'une ligne existante = inchangée.
         long? Tache(LigneTerrain l, int i) => l.TacId ?? (creees.TryGetValue(i, out var c) ? c : null);
+        // Ligne d'ordre : tâche d'origine ligne pointée sur le document de la ligne (lot 7) ; saisie libre : aucune (TS7 a).
+        long? Ligne(LigneTerrain l) => l.TacId is long t && taches.TryGetValue(t, out var tj) ? LigneDuPointage(tj.LigId, tj.EntId, l.EntId) : null;
         var salaries = (await specialisation.SalariesAsync(pdb, new FiltreSalaries(null, null,
             [s, .. j.Lignes.SelectMany(l => l.Membres ?? [])]), ct)).ToDictionary(x => x.Id);
         foreach (var (l, i) in nouvellesLibres)
@@ -184,9 +295,9 @@ public static partial class TerrainBtp
             var srv = await db.Database.SqlQueryRaw<int?>("SELECT nat_srv_id AS \"Value\" FROM nature_element WHERE nat_id = @n", new NpgsqlParameter("n", l.TypeMo)).FirstOrDefaultAsync(ct);
             var libelle = await db.Database.SqlQueryRaw<string>("""
                 SELECT '🛠 ' || coalesce((SELECT d.ent_numero FROM document d WHERE d.ent_id = @e), c.cha_code) AS "Value" FROM chantier c WHERE c.cha_id = @c
-                """, SqlBtp.P("e", l.EntId), new NpgsqlParameter("c", l.ChaId)).FirstOrDefaultAsync(ct) ?? "🛠 Saisie libre";
+                """, SqlBtp.P("e", l.EntId), new NpgsqlParameter("c", l.Chantier)).FirstOrDefaultAsync(ct) ?? "🛠 Saisie libre";
             creees[i] = await planning.CreerIdAsync(new TacheSaisie(2, LiaisonsBtp.DateHeure(j.Date), LiaisonsBtp.DateHeure(j.Date.AddDays(1)), null, personnes.Count,
-                srv ?? salaries.GetValueOrDefault(s)?.SrvId, TypesFiche.Chantier, l.ChaId.ToString(), $"{libelle} (saisie libre)",
+                srv ?? salaries.GetValueOrDefault(s)?.SrvId, TypesFiche.Chantier, l.Chantier.ToString(), $"{libelle} (saisie libre)",
                 personnes.Select(p => new AffectationSaisie(salaries[p].Interimaire ? "INTERIM" : "SALARIE", p.ToString())).ToList(),
                 OrigineTerrain, s.ToString(), $"Saisie libre du terrain par {u.Code}", 100, null, "TERMINEE"), u, ct, true);
         }
@@ -205,8 +316,8 @@ public static partial class TerrainBtp
                 {
                     Guid? groupe = l.Id is null && (l.Membres ?? []).Any(m => m != s) ? groupes[i] = Guid.NewGuid() : null;
                     var garde = !Modifiee(l);
-                    return new PointageSaisi(l.Id, j.Date, l.ChaId, l.EntId, l.TypeMo, l.SousType, l.Minutes, garde ? avant[l.Id!.Value].PoiDebut : null,
-                        garde ? avant[l.Id!.Value].PoiFin : null, l.Motif, l.Commentaire, TacId: Tache(l, i), Groupe: groupe);
+                    return new PointageSaisi(l.Id, j.Date, l.Chantier, l.EntId, l.TypeMo, l.SousType, l.Minutes, garde ? avant[l.Id!.Value].PoiDebut : null,
+                        garde ? avant[l.Id!.Value].PoiFin : null, l.Motif, l.Commentaire, TacId: Tache(l, i), Groupe: groupe, LigId: Ligne(l));
                 })).ToList();
             await pointage.EnregistrerSemaineAsync(s, lundi, new SemaineSaisie(saisie), u, ct);
 
@@ -214,15 +325,15 @@ public static partial class TerrainBtp
             foreach (var (l, i) in j.Lignes.Select((l, i) => (l, i)))
             {
                 foreach (var m in (l.Membres ?? []).Where(m => m != s).Distinct().Where(_ => l.Id is null))
-                    await AjouterAsync(pdb, pointage, u, m, new PointageSaisi(null, j.Date, l.ChaId, l.EntId, l.TypeMo, l.SousType, l.Minutes, null, null, l.Motif, l.Commentaire,
-                        TacId: Tache(l, i), Groupe: groupes[i]), ct);
+                    await AjouterAsync(pdb, pointage, u, m, new PointageSaisi(null, j.Date, l.Chantier, l.EntId, l.TypeMo, l.SousType, l.Minutes, null, null, l.Motif, l.Commentaire,
+                        TacId: Tache(l, i), Groupe: groupes[i], LigId: Ligne(l)), ct);
                 if (l.Id is long id && avant[id].PoiGroupe is Guid g && Modifiee(l) && l.Equipe)
                 {
                     var e = avant[id];
                     var reference = Signature(e.PoiDate, e.PoiChaId, e.PoiEntId, e.PoiTypeMo, e.PoiSousType, e.PoiMinutes, e.PoiMotif);
                     var autres = await pdb.Pointages.AsNoTracking().Where(p => p.PoiGroupe == g && p.PoiCouche == Couches.Saisie && p.PoiSalId != s).ToListAsync(ct);
                     foreach (var p in autres.Where(p => Signature(p.PoiDate, p.PoiChaId, p.PoiEntId, p.PoiTypeMo, p.PoiSousType, p.PoiMinutes, p.PoiMotif) == reference))
-                        await RemplacerAsync(pdb, pointage, u, p, l, ct);
+                        await RemplacerAsync(pdb, pointage, u, p, l, Ligne(l), ct);
                 }
             }
             await tx.CommitAsync(ct);
@@ -236,7 +347,7 @@ public static partial class TerrainBtp
 
         // Non-conformités nouvelles ; tâches libres de la personne devenues sans pointage : retirées.
         foreach (var l in j.Lignes.Where(l => !string.IsNullOrWhiteSpace(l.Motif) && (l.Id is not long id || avant[id].PoiMotif != l.Motif.Trim())))
-            await specialisation.ApresNonConformiteAsync(pdb, services, u, salaries[s], l.ChaId, l.EntId, l.Motif!.Trim(), ct);
+            await specialisation.ApresNonConformiteAsync(pdb, services, u, salaries[s], l.Chantier, l.EntId, l.Motif!.Trim(), ct);
         var orphelines = await db.Database.SqlQueryRaw<TacheExistante>("""
             SELECT t.tac_id AS id, t.tac_version AS version FROM pla_tache t
             WHERE t.tac_origine_type = 'terrain' AND t.tac_origine_id = @s::text AND NOT EXISTS (SELECT 1 FROM poi_pointage p WHERE p.poi_tac_id = t.tac_id)
@@ -257,12 +368,12 @@ public static partial class TerrainBtp
     }
 
     /// <summary>Remplace un pointage d'un membre du groupe par les valeurs de la ligne (commentaire du membre conservé).</summary>
-    private static async Task RemplacerAsync(PointageDbContext pdb, ServicePointage pointage, Utilisateur u, PointageEntite p, LigneTerrain l, CancellationToken ct)
+    private static async Task RemplacerAsync(PointageDbContext pdb, ServicePointage pointage, Utilisateur u, PointageEntite p, LigneTerrain l, long? ligne, CancellationToken ct)
     {
         var lundi = ReglesPointage.LundiDe(p.PoiDate);
         var semaine = await pdb.Pointages.AsNoTracking().Where(x => x.PoiSalId == p.PoiSalId && x.PoiCouche == Couches.Saisie && x.PoiDate >= lundi && x.PoiDate <= lundi.AddDays(6)).ToListAsync(ct);
         var saisie = semaine.Select(x => x.PoiId == p.PoiId
-            ? new PointageSaisi(x.PoiId, x.PoiDate, l.ChaId, l.EntId, l.TypeMo, l.SousType, l.Minutes, null, null, l.Motif, x.PoiCommentaire)
+            ? new PointageSaisi(x.PoiId, x.PoiDate, l.Chantier, l.EntId, l.TypeMo, l.SousType, l.Minutes, null, null, l.Motif, x.PoiCommentaire, LigId: ligne)
             : new PointageSaisi(x.PoiId, x.PoiDate, x.PoiChaId, x.PoiEntId, x.PoiTypeMo, x.PoiSousType, x.PoiMinutes, x.PoiDebut, x.PoiFin, x.PoiMotif, x.PoiCommentaire)).ToList();
         await pointage.EnregistrerSemaineAsync(p.PoiSalId, lundi, new SemaineSaisie(saisie), u, ct, controleAcces: false);
     }

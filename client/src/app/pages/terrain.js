@@ -7,13 +7,13 @@ import { MODULE_FACULTATIF, TYPE_DOCUMENT, TYPE_FICHE } from '../codes.js';
 import { echapper, lirePreferences, formatDate, confirmer } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 import { ETATS_TACHE, COULEURS_ETAT } from '../planning/etats.js';
-import { NAVIGATIONS, lundiDe, mobileAffiche, lienItineraire, liensTexte, numeroTel, adressesAPrecharger, actionsTache, minutesPointees, tachesGardees, jourPointage } from '../terrain/terrain.js';
+import { NAVIGATIONS, lundiDe, mobileAffiche, lienItineraire, liensTexte, numeroTel, adressesAPrecharger, actionsTache, minutesPointees, tachesGardees, jourPointage, plansTache, plansTacheHtml, plansAPrecharger } from '../terrain/terrain.js';
 import { PointageTerrain } from '../terrain/pointage-terrain.js';
 import { SavTerrain } from '../terrain/sav-terrain.js';
 import { DemandesTerrain } from '../terrain/demandes-terrain.js';
 import { recevoirLivraison, pointerMateriel } from '../terrain/complements-terrain.js';
 import { saisirAvancement, envoyerPhotos, signalerNonConformite, demanderApprovisionnement } from '../terrain/actions-tache.js';
-import { fournisseurEtapes, OPERATION_TERRAIN } from '../terrain/operations-terrain.js';
+import { fournisseurEtapes, OPERATION_TERRAIN, memoriserLimitePhotos, articlesAPrecharger } from '../terrain/operations-terrain.js';
 import { listeOperations, marquerOperation, retirerOperation } from '../hors-ligne/operations.js';
 import { estHorsLigne, ETAT_ATTENTE } from '../hors-ligne/attente.js';
 import { SUJET_ATTENTE } from '../hors-ligne/synchro.js';
@@ -129,7 +129,8 @@ export class PageTerrain extends PageBase {
 
   /**
    * Préchargement (T10), une fois par jour et par compte, réseau joignable : les lectures de la période sont faites pour
-   * que le service worker les garde, puis les pièces « Terrain » des tâches lues (taille limitée par le service worker).
+   * que le service worker les garde, puis les pièces « Terrain » des tâches lues (taille limitée par le service worker)
+   * et les plans cochés « Terrain » (budget à part).
    */
   async #precharger() {
     if (this.app.apiPerdue || globalThis.navigator?.onLine === false) return;
@@ -140,11 +141,18 @@ export class PageTerrain extends PageBase {
     const premier = await lire(`/api/terrain?${new URLSearchParams({ du: jour, au: jour })}`);
     if (!premier?.personne) return;
     const pieces = new Set();
-    for (const url of adressesAPrecharger(jour, premier.personne.id, { demandes: this.app.peut('terrain/demande', ACTION_DROIT.CONSULTER) })) {
+    const lectures = [];
+    const sav = this.app.moduleActif(MODULE_FACULTATIF.EXECUTION) && this.app.peut('execution/sav', ACTION_DROIT.CONSULTER);
+    for (const url of adressesAPrecharger(jour, premier.personne.id, { demandes: this.app.peut('terrain/demande', ACTION_DROIT.CONSULTER), sav })) {
       const r = await lire(url);
+      if (r?.taches) lectures.push(r);
       for (const t of r?.taches ?? []) for (const p of t.pieces ?? []) pieces.add(p.id);
     }
     for (const id of pieces) await fetch(api.terrain.urlPiece(id), { credentials: 'same-origin' }).catch(() => null);
+    // Plans cochés « Terrain » : gardés par le service worker dans leur propre budget (pièces intactes).
+    for (const id of plansAPrecharger(lectures)) await fetch(api.terrain.urlPlan(id), { credentials: 'same-origin' }).catch(() => null);
+    // Articles des chantiers (bibliothèque simplifiée des demandes, terrain-suites lot 18).
+    if (this.app.peut('terrain/demande', ACTION_DROIT.CONSULTER)) for (const url of articlesAPrecharger(lectures)) await lire(url);
     try { localStorage.setItem(cle, jour); } catch { /* sans stockage : refait à la prochaine ouverture */ }
   }
 
@@ -180,6 +188,7 @@ export class PageTerrain extends PageBase {
     }
     try {
       this.donnees = await api.terrain.taches(du, au);
+      memoriserLimitePhotos(this.donnees.taille_max_photo);
       await this.#lireGardees();
     } catch (e) {
       if (!estHorsLigne(e)) { this.app.erreur(e); return; }
@@ -235,7 +244,7 @@ export class PageTerrain extends PageBase {
 
   /**
    * Carte d'une tâche affichée sous le jour `jour` : résumé (horaires, chantier, ordre, état, pointage du jour), détail
-   * dépliable (lieu, contact, consignes, actions, pièces).
+   * dépliable (lieu, contact, consignes, actions, plans en vigueur, pièces).
    */
   #carte(t, jour) {
     const m = mobileAffiche(t, this.donnees.chantiers);
@@ -266,6 +275,7 @@ export class PageTerrain extends PageBase {
       t.memo && `<p class="aide">${echapper(t.memo)}</p>`,
       actions.length && `<div class="terrain-actions">${actions
         .map((a) => `<button type="button" class="terrain-bouton" data-action-tache="${a}" data-tache="${t.id}"${a === 'pointage' ? ` data-jour="${jourPointer}"` : ''}>${iconeHtml(`terrain_btp_${a}`)} ${texteHtml(`terrain_btp.page.actions.${a}`)}</button>`).join('')}</div>`,
+      plansTacheHtml(plansTache(t, this.donnees.plans), { url: (id) => api.terrain.urlPlan(id), taille }),
       t.pieces.length && `<div class="terrain-pieces"><b>${texteHtml('terrain_btp.page.pieces')}</b>${t.pieces.map((p) => `<a class="terrain-piece" href="${echapper(api.terrain.urlPiece(p.id))}" target="_blank" rel="noopener">
         ${iconeHtml('terrain_btp_piece')} <span>${echapper(p.titre)}</span><small class="aide">${echapper([p.nom_fichier, taille(p.taille)].filter(Boolean).join(' · '))}</small></a>`).join('')}</div>`,
     ].filter(Boolean);

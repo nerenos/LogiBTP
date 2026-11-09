@@ -7,7 +7,8 @@
 // - Personnalisation (/personnalisation/ : fr.json, theme.css, images, modifiables sur le serveur) : réseau d'abord,
 //   dernière copie gardée (cache propre, conservé à la déconnexion), sinon celle de l'installation du client.
 // - Lectures de l'API (GET, et POST de lecture des listes) : réseau d'abord, réponse gardée ; serveur injoignable :
-//   dernière réponse gardée, marquée par l'en-tête X-LogiBTP-Hors-Ligne (date de mise en cache).
+//   dernière réponse gardée, marquée par l'en-tête X-LogiBTP-Hors-Ligne (date de mise en cache). Plans du terrain
+//   (/api/terrain/plans/) : cache à part, budget BUDGET_PLANS, les plus anciens retirés au-delà.
 // - Écritures : réseau seul ; serveur injoignable : 503 HORS_LIGNE (la saisie des documents est mise en attente par
 //   l'application, pas par le service worker).
 // - Données propres au compte : effacées à la déconnexion et quand un autre compte se connecte (message de la page).
@@ -20,6 +21,8 @@ const FICHIERS = __FICHIERS__;
 const CACHE_APPLICATION = `logibtp-application-${VERSION}`;
 const CACHE_DONNEES = 'logibtp-donnees';
 const CACHE_PERSONNALISATION = 'logibtp-personnalisation';
+// Plans du terrain gardés (budget BUDGET_PLANS à part des pièces « Terrain ») : données du compte, comme CACHE_DONNEES.
+const CACHE_PLANS = 'logibtp-plans';
 const CLE_COMPTE = '/__logibtp/compte';
 
 self.addEventListener('install', (e) => {
@@ -39,7 +42,7 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('message', (e) => {
   const m = e.data ?? {};
   if (m.type === 'compte') e.waitUntil(changerCompte(String(m.code ?? '')));
-  else if (m.type === 'purger') e.waitUntil(caches.delete(CACHE_DONNEES));
+  else if (m.type === 'purger') e.waitUntil(Promise.all([caches.delete(CACHE_DONNEES), caches.delete(CACHE_PLANS)]));
 });
 
 async function changerCompte(code) {
@@ -48,6 +51,7 @@ async function changerCompte(code) {
   if (actuel === code) return;
   if (actuel !== null) {
     await caches.delete(CACHE_DONNEES);
+    await caches.delete(CACHE_PLANS);
     await (await caches.open(CACHE_DONNEES)).put(CLE_COMPTE, new Response(code));
   } else await c.put(CLE_COMPTE, new Response(code));
 }
@@ -73,11 +77,12 @@ async function donnee(requete) {
   } catch { /* serveur injoignable */ }
   if (reponse && !reponseEnPanne(reponse.status, reponse.headers.get('Content-Type'))) {
     if (reponseAGarder({ statut: reponse.status, typeContenu: reponse.headers.get('Content-Type'), taille: reponse.headers.get('Content-Length'), url: requete.url })) {
-      garder(cle, reponse.clone()).catch(() => {});
+      if (estPlanTerrain(requete.url)) garderPlanEnFile(cle, reponse.clone());
+      else garder(cle, reponse.clone()).catch(() => {});
     }
     return reponse;
   }
-  const garde = await caches.open(CACHE_DONNEES).then((c) => c.match(cle));
+  const garde = await caches.open(estPlanTerrain(requete.url) ? CACHE_PLANS : CACHE_DONNEES).then((c) => c.match(cle));
   if (!garde) return json(erreurHorsLigne(false), 503);
   const entetes = new Headers(garde.headers);
   entetes.set(ENTETE_HORS_LIGNE, garde.headers.get(ENTETE_CACHE_LE) ?? '');
@@ -95,6 +100,26 @@ async function garder(cle, reponse) {
   if (++ecritures % 100 !== 0) return;
   const cles = await c.keys();
   for (const k of cles.slice(0, Math.max(0, cles.length - MAX_DONNEES))) if (!k.url.endsWith(CLE_COMPTE)) await c.delete(k);
+}
+
+// Plans gardés l'un après l'autre (préchargement) : le budget est calculé sur un cache à jour.
+let filePlans = Promise.resolve();
+const garderPlanEnFile = (cle, reponse) => { filePlans = filePlans.then(() => garderPlan(cle, reponse)).catch(() => {}); };
+
+// Plan du terrain : gardé dans son cache tant que le budget le permet, les plans gardés depuis le plus longtemps retirés.
+async function garderPlan(cle, reponse) {
+  const corps = await reponse.blob();
+  const c = await caches.open(CACHE_PLANS);
+  const gardes = [];
+  for (const k of await c.keys()) gardes.push({ cle: k.url, taille: Number((await c.match(k))?.headers.get(ENTETE_TAILLE)) || 0 });
+  const retirer = plansARetirer(gardes, cle, corps.size);
+  if (!retirer) return;
+  for (const k of retirer) await c.delete(k);
+  const entetes = new Headers(reponse.headers);
+  entetes.set(ENTETE_CACHE_LE, new Date().toISOString());
+  entetes.set(ENTETE_TAILLE, String(corps.size));
+  await c.delete(cle);
+  await c.put(cle, new Response(corps, { status: reponse.status, statusText: reponse.statusText, headers: entetes }));
 }
 
 async function ecriture(requete) {
