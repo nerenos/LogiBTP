@@ -272,6 +272,8 @@ export const api = {
     choixSav: () => appel('GET', '/terrain/sav/choix'),
     equipementsSav: (recherche, ordre) => appel('GET', `/terrain/sav/equipements?${new URLSearchParams({ recherche: recherche ?? '', ent: ordre })}`),
     creerIntervention: (c) => appel('POST', '/terrain/sav', c),
+    // Intervention créée hors ligne, retrouvée après l'envoi par l'identifiant de l'appareil (terrain-suites lot 23).
+    interventionAppareil: (appareil) => appel('GET', `/terrain/sav/appareil/${encodeURIComponent(appareil)}`),
     sav: (ordre) => appel('GET', `/terrain/sav/${ordre}`),
     enregistrerSav: (ordre, c) => appel('POST', `/terrain/sav/${ordre}`, c),
     photosSav: (ordre, formulaire) => appel('POST', `/terrain/sav/${ordre}/photos`, formulaire),

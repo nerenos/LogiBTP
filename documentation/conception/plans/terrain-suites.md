@@ -38,7 +38,7 @@
 | 20 | Réception d'une commande à options ou variantes | cœur | — | FAIT (08/11/2026) |
 | 21 | Avancement réel par marché | cœur | — | FAIT (08/11/2026) |
 | 22 | Facture brouillon depuis le bon de SAV | cœur | — | FAIT (08/11/2026) |
-| 23 | Création d'une intervention SAV hors ligne | cœur | 9 | A FAIRE |
+| 23 | Création d'une intervention SAV hors ligne | cœur | 9 | FAIT (08/11/2026) |
 | 24 | Chantier « Entretien et dépannage » par le chrono des chantiers | cœur | — | A FAIRE |
 
 Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4, 5-6, 7, 8, 9-10, 11-12, 13-16, 17-18,
@@ -533,7 +533,7 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
   `execution_btp_facturer`. Aucune règle des moteurs modifiée. Tests : `FacturationSavTests.cs` (bon de 2 h et deux
   fournitures → trois lignes, route sans validation, second clic refusé).
 
-## Lot 23 : création d'une intervention SAV hors ligne (TS23 a)
+## Lot 23 : création d'une intervention SAV hors ligne (TS23 a) (FAIT 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `client/src/app/terrain/sav-terrain.js` (création sur l'appareil, numéro provisoire), `hors-ligne/
@@ -542,6 +542,19 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
 - **Dépendances** : lot 9.
 - **Tests** : JS : création et compte rendu gardés puis envoyés dans l'ordre ; C# : renvoi en double sans doublon.
 - **Critère de fin** : `npm test` vert ; intervention créée sans réseau puis visible au bureau avec son numéro définitif.
+- **Réalisé / écarts** : script `db/294_sav_creation_hors_ligne.sql` (table `intervention_sav_appareil` : identifiant
+  UUID de l'appareil → ordre créé, par personne). Serveur (`TerrainSavBtp.cs`) : `POST /api/terrain/sav` accepte
+  `appareil` (renvoi : ordre déjà créé rendu, sans doublon ; `SqlInterventionAppareil`, `SqlRetenirAppareil`), nouvelle
+  route `GET /api/terrain/sav/appareil/{uuid}` (intervention locale rouverte après l'envoi). Client :
+  `terrain/operations-terrain.js` (opération `terrain-sav-creation`, `interventionGardee`, `numeroProvisoireSav`,
+  `idSavLocal` / `appareilSav`, `ordreSav` : le compte rendu d'une intervention locale retrouve son ordre par
+  l'identifiant de l'appareil), `terrain/sav-terrain.js` (création gardée sans réseau, interventions de l'appareil en
+  tête de l'onglet SAV, droit de création lu des droits du compte sans réseau), `pages/terrain-sav.js`
+  (`/terrain/sav/local-<uuid>` : renseignée sur l'appareil, équipement non proposé). Écart : les clients déjà lus sont
+  ceux de `GET /api/terrain/sav/choix` gardés par le service worker, préchargés chaque jour avec les interventions
+  (`adressesAPrecharger`, option `sav`, dans `terrain/terrain.js`), pas une liste à part dans `operations-terrain.js`.
+  Tests : `client/test/operations-terrain.test.js` (création et compte rendu gardés puis envoyés dans l'ordre),
+  `CreationSavHorsLigneTests.cs` (renvoi en double sans doublon, sur la base si `LOGIBTP_TEST_PG`).
 
 ## Lot 24 : chantier « Entretien et dépannage » par le chrono des chantiers (TS24 a)
 

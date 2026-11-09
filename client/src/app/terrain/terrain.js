@@ -254,9 +254,9 @@ async function reduirePhoto(fichier, { origine, max }) {
 /**
  * Lectures à garder sur l'appareil pour le hors ligne (T10) : tâches de chaque jour et de chaque semaine, de la
  * semaine en cours et de la suivante ; journées de pointage et repas de la semaine en cours ; référentiels du
- * pointage, ordres et étapes ; chantiers et ordres ouverts de la saisie libre sans réseau (terrain-suites lot 9). Adresses identiques à celles de la page (le service worker garde les réponses par adresse).
+ * pointage, ordres et étapes ; chantiers et ordres ouverts de la saisie libre sans réseau (terrain-suites lot 9) ; interventions SAV et leurs choix de création (lot 23). Adresses identiques à celles de la page (le service worker garde les réponses par adresse).
  */
-export function adressesAPrecharger(jour, salarie = null, { demandes = false } = {}) {
+export function adressesAPrecharger(jour, salarie = null, { demandes = false, sav = false } = {}) {
   const lundi = lundiDe(jour);
   const jours = Array.from({ length: 14 }, (_, i) => ajouterJours(lundi, i));
   const params = (o) => new URLSearchParams(o).toString();
@@ -267,6 +267,8 @@ export function adressesAPrecharger(jour, salarie = null, { demandes = false } =
     ...(salarie ? jours.slice(0, 7).map((d) => `/api/pointage/repas/${salarie}?du=${d}&au=${d}`) : []),
     '/api/pointage/referentiels', '/api/terrain/etapes', '/api/terrain/journee/chantiers',
     ...(demandes ? ['/api/terrain/demandes'] : []),
+    // SAV : interventions ouvertes et chantiers ou clients proposés à la création hors ligne (terrain-suites lot 23).
+    ...(sav ? ['/api/terrain/sav', '/api/terrain/sav/choix'] : []),
   ];
 }
 

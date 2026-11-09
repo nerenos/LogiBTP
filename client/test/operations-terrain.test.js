@@ -114,3 +114,35 @@ describe('PV de levée des réserves (terrain-suites lot 16)', () => {
     expect(pvLeveeAttendu({ reserves: [] })).toBe(false);
   });
 });
+
+describe('intervention SAV créée hors ligne (terrain-suites lot 23)', () => {
+  it('création et compte rendu gardés sur l\'appareil, puis envoyés dans l\'ordre, le compte rendu sur l\'ordre créé', async () => {
+    const { interventionGardee, idSavLocal, appareilSav, nouvelAppareilSav, numeroProvisoireSav } = await import('../src/app/terrain/operations-terrain.js');
+    const app = { apiPerdue: true, utilisateur: () => 'sav', publier: () => {}, message: () => {} };
+    const appareil = nouvelAppareilSav();
+    expect(appareilSav(idSavLocal(appareil))).toBe(appareil);
+    expect(appareilSav('42')).toBeNull();
+    const gardee = interventionGardee({ appareil, objet: 'Fuite', cha_id: 4, chantier: 'CH-4 Résidence' });
+    expect(gardee.creation).toEqual({ appareil, cha_id: 4, objet: 'Fuite', nouveau: null });
+    expect(gardee.affichage.ordre).toMatchObject({ id: null, numero: numeroProvisoireSav(appareil), chantier: 'CH-4 Résidence' });
+
+    const appels = [];
+    const creer = vi.spyOn(api.terrain, 'creerIntervention').mockImplementation(async (c) => { appels.push(['creer', c.appareil]); return { ent_id: 77, numero: 'SAV-0077' }; });
+    const enregistrer = vi.spyOn(api.terrain, 'enregistrerSav').mockImplementation(async (ordre) => { appels.push(['compte_rendu', ordre]); return {}; });
+    const r1 = await envoyerOuGarder(app, { type: OPERATION_TERRAIN.SAV_CREATION, id: appareil, corps: gardee, libelle: 'SAV' }, () => api.terrain.creerIntervention(gardee.creation));
+    expect(r1.horsLigne).toBe(true);
+    const compteRendu = { constat: 'Joint usé', travaux: 'Joint changé', fournitures: ['Joint'], terminee: true, absent: true };
+    const r2 = await envoyerOuGarder(app, { type: OPERATION_TERRAIN.SAV, id: `${appareil}:1`, corps: { ordre: null, creation: gardee.creation, compteRendu, photos: null }, libelle: 'SAV' },
+      () => api.terrain.enregistrerSav(null, compteRendu));
+    expect(r2.horsLigne).toBe(true);
+    expect(appels).toEqual([]);
+
+    const r = await envoyerOperations('sav');
+    expect(r).toMatchObject({ envoyees: 2, refusees: [] });
+    // Création d'abord ; le compte rendu retrouve le même ordre par l'identifiant de l'appareil (création idempotente).
+    expect(appels).toEqual([['creer', appareil], ['creer', appareil], ['compte_rendu', 77]]);
+    expect(await lireOperation('sav', OPERATION_TERRAIN.SAV_CREATION, appareil)).toBeUndefined();
+    creer.mockRestore();
+    enregistrer.mockRestore();
+  });
+});

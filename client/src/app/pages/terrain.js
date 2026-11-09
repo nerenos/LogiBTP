@@ -142,7 +142,8 @@ export class PageTerrain extends PageBase {
     if (!premier?.personne) return;
     const pieces = new Set();
     const lectures = [];
-    for (const url of adressesAPrecharger(jour, premier.personne.id, { demandes: this.app.peut('terrain/demande', ACTION_DROIT.CONSULTER) })) {
+    const sav = this.app.moduleActif(MODULE_FACULTATIF.EXECUTION) && this.app.peut('execution/sav', ACTION_DROIT.CONSULTER);
+    for (const url of adressesAPrecharger(jour, premier.personne.id, { demandes: this.app.peut('terrain/demande', ACTION_DROIT.CONSULTER), sav })) {
       const r = await lire(url);
       if (r?.taches) lectures.push(r);
       for (const t of r?.taches ?? []) for (const p of t.pieces ?? []) pieces.add(p.id);

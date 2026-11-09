@@ -16,7 +16,7 @@ export const OPERATION_TERRAIN = Object.freeze({
   JOURNEE: 'terrain-journee', AVANCEMENT: 'terrain-avancement', NON_CONFORMITE: 'terrain-nc', PHOTOS: 'terrain-photos',
   ETAPE: 'terrain-etape', REPAS: 'terrain-repas', RECEPTION: 'terrain-reception', DEMANDE: 'terrain-demande', SAV: 'terrain-sav',
   LIVRAISON: 'terrain-livraison', MATERIEL: 'terrain-materiel', LEVEE_RESERVE: 'terrain-levee-reserve',
-  PV_LEVEE: 'terrain-pv-levee',
+  PV_LEVEE: 'terrain-pv-levee', SAV_CREATION: 'terrain-sav-creation',
 });
 
 /** Clé du localStorage où l'appareil garde la limite de dépôt de la GED (terrain-suites lot 12). */
@@ -74,6 +74,39 @@ export function articlesAPrecharger(lectures) {
   return [...ids].map((id) => api.terrain.bibliotheque.urlChantier(id));
 }
 
+/** Adresse d'une intervention SAV créée sur l'appareil (terrain-suites lot 23) : /terrain/sav/local-<identifiant>. */
+const PREFIXE_SAV_LOCAL = 'local-';
+export const idSavLocal = (appareil) => `${PREFIXE_SAV_LOCAL}${appareil}`;
+/** Identifiant d'appareil d'une adresse d'intervention locale, sinon null (ordre du serveur). */
+export const appareilSav = (id) => (String(id ?? '').startsWith(PREFIXE_SAV_LOCAL) ? String(id).slice(PREFIXE_SAV_LOCAL.length) : null);
+/** Identifiant donné par l'appareil à une nouvelle intervention (création idempotente côté serveur). */
+export const nouvelAppareilSav = () => globalThis.crypto.randomUUID();
+/** Numéro provisoire d'une intervention créée sur l'appareil (le numéro définitif est donné par le serveur à l'envoi). */
+export const numeroProvisoireSav = (appareil) => texte('terrain_btp.sav.numero_provisoire', { code: String(appareil).slice(0, 6).toUpperCase() });
+
+/**
+ * Intervention SAV créée sans réseau (terrain-suites lot 23, TS23 a) : `creation` = corps de `POST /api/terrain/sav`
+ * avec l'identifiant de l'appareil ; `affichage` = même forme que `GET /api/terrain/sav/{id}` (numéro provisoire,
+ * chantier ou client choisi parmi ceux déjà lus), pour ouvrir et renseigner l'intervention sur l'appareil.
+ */
+export function interventionGardee({ appareil, objet, cha_id: chaId = null, nouveau = null, chantier = null, client = null, adresse = null }) {
+  return {
+    appareil,
+    creation: { appareil, cha_id: chaId, objet, nouveau },
+    affichage: {
+      ordre: { id: null, numero: numeroProvisoireSav(appareil), objet, chantier },
+      client: { nom: client, contact: null, courriel: null },
+      adresse, comptes_rendus: [],
+    },
+  };
+}
+
+/** Ordre d'un compte rendu SAV : connu, sinon créé (ou retrouvé, sans doublon) par l'identifiant de l'appareil. */
+export async function ordreSav(c) {
+  if (c.ordre) return c.ordre;
+  return (await api.terrain.creerIntervention(c.creation)).ent_id;
+}
+
 /** Formulaire d'envoi de photos gardées ({ fichiers: [File], commentaire }). */
 export const formulairePhotos = ({ fichiers, commentaire }) => {
   const f = new FormData();
@@ -109,10 +142,14 @@ declarerOperation(OPERATION_TERRAIN.DEMANDE, {
     if (c.photos?.fichiers?.length && c.tache) await api.terrain.photos(c.tache, formulairePhotos(c.photos));
   },
 });
+// Intervention créée hors ligne (terrain-suites lot 23) : envoyée avant son compte rendu (file dans l'ordre de saisie) ;
+// le compte rendu d'une intervention locale retrouve son ordre par l'identifiant de l'appareil (renvoi sans doublon).
+declarerOperation(OPERATION_TERRAIN.SAV_CREATION, { envoyer: (c) => api.terrain.creerIntervention(c.creation) });
 declarerOperation(OPERATION_TERRAIN.SAV, {
   envoyer: async (c) => {
-    if (c.photos?.fichiers?.length) await api.terrain.photosSav(c.ordre, formulairePhotos(c.photos));
-    await api.terrain.enregistrerSav(c.ordre, c.compteRendu);
+    const ordre = await ordreSav(c);
+    if (c.photos?.fichiers?.length) await api.terrain.photosSav(ordre, formulairePhotos(c.photos));
+    await api.terrain.enregistrerSav(ordre, c.compteRendu);
   },
 });
 declarerOperation(OPERATION_TERRAIN.LIVRAISON, {

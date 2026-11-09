@@ -18,7 +18,8 @@ using Npgsql;
 namespace LogiBTP.Api.Btp;
 
 public sealed record ChantierSavSaisi(long Client, string? Adresse, string? CodePostal, string? Ville);
-public sealed record InterventionSavCreee(int? ChaId, ChantierSavSaisi? Nouveau, string Objet);
+/// <summary>Nouvelle intervention ; <c>Appareil</c> : identifiant donné par l'appareil à une intervention créée hors ligne (création idempotente, db/294).</summary>
+public sealed record InterventionSavCreee(int? ChaId, ChantierSavSaisi? Nouveau, string Objet, Guid? Appareil = null);
 public sealed record CompteRenduSav(string Constat, string Travaux, List<string>? Fournitures, bool Terminee, bool Absent, string? Nom, string? Qualite, string? Signature, string? Courriel, long? Equipement = null);
 
 /// <summary>
@@ -100,6 +101,19 @@ public static partial class TerrainBtp
         return id;
     }
 
+    /// <summary>Ordre déjà créé pour cet identifiant d'appareil par cette personne (terrain-suites lot 23), sinon null.</summary>
+    public const string SqlInterventionAppareil = "SELECT isa_ent_id AS \"Value\" FROM intervention_sav_appareil WHERE isa_appareil = @a AND isa_cree_par = @u";
+
+    /// <summary>Identifiant d'appareil retenu pour l'ordre créé ; un identifiant déjà pris n'est pas remplacé.</summary>
+    public const string SqlRetenirAppareil = "INSERT INTO intervention_sav_appareil (isa_appareil, isa_ent_id, isa_cree_par) VALUES (@a, @e, @u) ON CONFLICT (isa_appareil) DO NOTHING";
+
+    private static async Task<long?> InterventionAppareilAsync(LogiBtpContext db, Guid appareil, string compte, CancellationToken ct) =>
+        (await db.Database.SqlQueryRaw<long>(SqlInterventionAppareil, new NpgsqlParameter("a", appareil), new NpgsqlParameter("u", compte)).ToListAsync(ct))
+            .Select(x => (long?)x).FirstOrDefault();
+
+    private static async Task<object> InterventionCreeeAsync(LogiBtpContext db, long id, CancellationToken ct) =>
+        new { ent_id = id, numero = await db.Database.SqlQueryRaw<string?>("SELECT ent_numero AS \"Value\" FROM document WHERE ent_id = @e", new NpgsqlParameter("e", id)).FirstAsync(ct) };
+
     private static RouteGroupBuilder MapSavTerrain(this RouteGroupBuilder g)
     {
         var sav = g.MapGroup("/sav");
@@ -151,6 +165,8 @@ public static partial class TerrainBtp
         {
             var u = Utilisateur.Depuis(http);
             var s = await ComptesBtp.SalarieAsync(db, u.Code, ct) ?? throw ExceptionMetier.Invalide("TERRAIN_PERSONNE", "Compte sans salarié lié");
+            // Intervention créée hors ligne (terrain-suites lot 23) : un renvoi rend l'ordre déjà créé, sans doublon.
+            if (c.Appareil is Guid dejaAppareil && await InterventionAppareilAsync(db, dejaAppareil, u.Code, ct) is long deja) return await InterventionCreeeAsync(db, deja, ct);
             var objet = (c.Objet ?? "").Trim();
             if (objet.Length == 0) throw ExceptionMetier.Invalide("TERRAIN_SAV_OBJET", "Objet de l'intervention obligatoire");
             var chantier = c.ChaId ?? (c.Nouveau is { } n ? await ChantierSavAsync(db, n, ct) : throw ExceptionMetier.Invalide("TERRAIN_CHANTIER", "Chantier obligatoire"));
@@ -170,8 +186,15 @@ public static partial class TerrainBtp
             await documents.Valider(id, new DemandeVersion { EntVersion = version }, systeme, ct);
             await db.Database.ExecuteSqlRawAsync("UPDATE document SET ent_ressource = jsonb_build_object('type', 'SALARIE', 'id', @s::text) WHERE ent_id = @e",
                 [new NpgsqlParameter("s", s), new NpgsqlParameter("e", id)], ct);
-            return new { ent_id = id, numero = await db.Database.SqlQueryRaw<string?>("SELECT ent_numero AS \"Value\" FROM document WHERE ent_id = @e", new NpgsqlParameter("e", id)).FirstAsync(ct) };
+            if (c.Appareil is Guid appareil)
+                await db.Database.ExecuteSqlRawAsync(SqlRetenirAppareil, [new NpgsqlParameter("a", appareil), new NpgsqlParameter("e", id), new NpgsqlParameter("u", u.Code)], ct);
+            return await InterventionCreeeAsync(db, id, ct);
         });
+
+        // Intervention créée hors ligne, retrouvée par l'identifiant de l'appareil (page rouverte après l'envoi).
+        sav.MapGet("/appareil/{appareil:guid}", async (Guid appareil, HttpContext http, LogiBtpContext db, CancellationToken ct) =>
+            await InterventionAppareilAsync(db, appareil, Utilisateur.Depuis(http).Code, ct) is long id
+                ? await InterventionCreeeAsync(db, id, ct) : throw ExceptionMetier.Introuvable("Intervention"));
 
         sav.MapGet("/{ent:long}", async (long ent, HttpContext http, LogiBtpContext db, CancellationToken ct) =>
         {

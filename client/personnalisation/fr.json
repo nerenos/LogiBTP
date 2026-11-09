@@ -7119,7 +7119,11 @@
         "code_postal": "Code postal",
         "ville": "Ville"
       },
-      "choisir": "Choisissez un chantier ou un client"
+      "choisir": "Choisissez un chantier ou un client",
+      "numero_provisoire": "Provisoire {{code}}",
+      "sur_appareil": "créée sur l'appareil, envoyée au retour du réseau",
+      "creation": "Nouvelle intervention {{numero}}",
+      "choix_hors_ligne": "Hors ligne : chantiers et clients non lus sur cet appareil ; ouvrez une première fois l'onglet SAV avec le réseau."
     },
     "complements": {
       "sans_reseau": "Hors ligne : à ouvrir une première fois avec le réseau"
@@ -7408,6 +7412,7 @@
       "equipement": "Équipement concerné (facultatif)",
       "equipement_recherche": "N° de série ou code-barres, puis Entrée",
       "hors_ligne": "Hors ligne : cette intervention n'a pas été ouverte sur cet appareil avec le réseau.",
+      "locale_introuvable": "Intervention créée sur l'appareil introuvable : déjà envoyée, ouvrez-la depuis l'onglet SAV.",
       "titre_ordre": "SAV {{numero}}",
       "historique": "Comptes rendus déjà faits ({{nombre}})",
       "terminee": "Terminée",
