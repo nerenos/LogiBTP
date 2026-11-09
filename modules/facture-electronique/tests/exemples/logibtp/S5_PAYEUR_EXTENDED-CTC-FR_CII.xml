@@ -311,8 +311,8 @@ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
             <ram:AdditionalReferencedDocument>
                 <ram:IssuerAssignedID>SITUATION-03</ram:IssuerAssignedID>
                 <ram:TypeCode>916</ram:TypeCode>
-                <ram:Name>RELEVE</ram:Name>
-                <ram:AttachmentBinaryObject mimeCode="text/plain" filename="releve.txt">UmVsZXbDqSBkZSB0cmF2YXV4</ram:AttachmentBinaryObject>
+                <ram:Name>DOCUMENT_ANNEXE</ram:Name>
+                <ram:AttachmentBinaryObject mimeCode="text/csv" filename="releve.csv">UmVsZXbDqSBkZSB0cmF2YXV4</ram:AttachmentBinaryObject>
             </ram:AdditionalReferencedDocument>
             <ram:BuyerAgentTradeParty>
                 <ram:Name>MAITRE D OEUVRE</ram:Name>

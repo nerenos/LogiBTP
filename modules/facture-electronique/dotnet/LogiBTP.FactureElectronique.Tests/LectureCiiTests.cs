@@ -173,7 +173,7 @@ public partial class LectureCiiTests
         Assert.Equal("MARCHE-2026-014", f.References.Contrat);
 
         var pj = Assert.Single(f.PiecesJointes);
-        Assert.Equal(("SITUATION-03", "RELEVE", "text/plain", "releve.txt"), (pj.Reference, pj.Description, pj.TypeMime, pj.NomFichier));
+        Assert.Equal(("SITUATION-03", "DOCUMENT_ANNEXE", "text/csv", "releve.csv"), (pj.Reference, pj.Description, pj.TypeMime, pj.NomFichier));
         Assert.Equal("Relevé de travaux", Encoding.UTF8.GetString(pj.Contenu!));
 
         Assert.Equal(new FactureAnterieure("F202600010", new DateOnly(2026, 4, 15), TypeFacture.Acompte), Assert.Single(f.FacturesAnterieures));

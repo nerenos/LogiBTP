@@ -15,6 +15,9 @@ cle-construction.secret
 journaux/
 logibtp-api*.tar
 
+# Schematrons FNFE compilés en SEF (npm run compiler-schematrons)
+modules/facture-electronique/js/.sef/
+
 # Sorties des essais du module Édition
 modules/edition/js/.essais/
 .continue/

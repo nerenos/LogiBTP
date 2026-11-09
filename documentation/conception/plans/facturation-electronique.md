@@ -28,7 +28,7 @@
 | 1 | Codes, modèle sémantique EN16931, règles du cycle de vie | `modules/facture-electronique` (nouveau) | — | FAIT (09/11/2026) |
 | 2 | Lecture CII D22B et Factur-X (XML embarqué), XSD | module | 1 | FAIT (09/11/2026) |
 | 3 | Lecture UBL 2.1 (Invoice, CreditNote) | module | 1, 2 | FAIT (09/11/2026) |
-| 4 | Schematrons FNFE : artefacts versionnés, validation par SaxonJS (tests et outil) | module | 2, 3 | A FAIRE |
+| 4 | Schematrons FNFE : artefacts versionnés, validation par SaxonJS (tests et outil) | module | 2, 3 | FAIT (09/11/2026) |
 | 5 | CDAR : écriture et lecture des statuts | module | 1 | A FAIRE |
 | 6 | Connecteur : contrat, AFNOR XP Z12-013 (Flow, Directory), plateforme simulée, dépôt manuel | module | 1, 5 | A FAIRE |
 | 7 | OAuth : flux CLIENT pour un fournisseur GENERIQUE (si absent) | `modules/oauth` | — | A FAIRE |
@@ -157,7 +157,7 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   d'UBL portant une DTD interne, les XSD embarqués sont lus avec `DtdProcessing.Parse` (résolveur limité à
   l'assemblage ; le XML reçu reste sans DTD).
 
-## Lot 4 : schematrons FNFE, validation par SaxonJS (A FAIRE)
+## Lot 4 : schematrons FNFE, validation par SaxonJS — FAIT (09/11/2026)
 
 - **Module** : `modules/facture-electronique`. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `artefacts/schematrons/` (EN16931 CII / UBL, EXTENDED-CTC-FR, BR-FR-Flux2 CII / UBL standard et
@@ -169,6 +169,33 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   (lot 16) et lit les accusés de la PA.
 - **Critère de fin** : `npm run valider-facture` sur les exemples FNFE sans erreur fatale ; tests verts ; dépendances
   rapportées. Procédure de mise à jour des artefacts décrite dans le `CLAUDE.md` du module.
+- **Réalisé** : `artefacts/schematrons/{en16931,extended-ctc-fr,factur-x/{basicwl,en16931,extended},br-fr-flux2,cdar}/`
+  (16 fichiers, 8,6 Mo : XSLT des dossiers `2xslt` du paquet FNFE 1.4.0.04 copiés sans modification, avec les
+  `_codedb.xml` de Factur-X lus par `document()` ; BR-FR-Flux2 identique dans les cinq dossiers CII / Factur-X et les
+  deux UBL : une copie ; `artefacts/VERSION` : origine, versions et licences — FNFE Apache-2.0, schematrons EN16931 de
+  la Commission EUPL 1.2), `js/outils/schematrons.js` (catalogue `SCHEMATRONS` / `JEUX_XSD`, compilation en SEF par
+  `xslt3` en parallèle, `npm run compiler-schematrons [-- --forcer]`), `js/outils/valider.js` (`validerFacture`,
+  `controlesAEnchainer`, `extraireXmlFacturX` ; `npm run valider-facture -- <fichier>… [--warning] [--facturx] [--json]`,
+  à la racine et dans le workspace), `js/test/schematrons.test.js` (59 tests : les 40 exemples FNFE et LogiBTP, XML et
+  PDF, sans erreur fatale et en trois étapes ; cas altérés BR-FR-01 fatal puis avertissement en version WARNING,
+  BR-CO EN16931, BR-FR-04 en UBL, XSD qui arrête l'enchaînement ; choix des contrôles ; erreurs `SYNTAXE_INCONNUE`,
+  `XML_ILLISIBLE`, `XML_ABSENT`) ; codes JS ↔ C# `ETAPE_CONTROLE` (XSD, PROFIL, FRANCE) et `NIVEAU_CONTROLE` (flag
+  SVRL : fatal, warning, information) ; dépendances de développement du workspace `saxon-js` et `xslt3` 2.7.0 (licence
+  Saxonica : gratuite, redistribution binaire sans modification, pas open source), `xmllint-wasm` 5.3.0 (MIT) pour
+  l'étape XSD ; `.gitignore` : `modules/facture-electronique/js/.sef/`. Décisions : SEF non versionnés (5 Mo chacun,
+  61 Mo en tout) mais générés par le script (une minute sur 4 cœurs) et recompilés d'eux-mêmes quand un XSLT change
+  (empreinte SHA-256 + chemin) ; étape XSD en Node par libxml2 en WebAssembly (pas de binaire système ni d'appel au
+  .NET) ; une erreur XSD arrête l'enchaînement. Durée d'une validation (SEF chargés) : 150 à 900 ms (XSD 60 à 200 ms,
+  schematron du profil 40 à 630 ms — Factur-X EXTENDED le plus lent —, BR-FR-Flux2 50 à 160 ms) ; premier
+  chargement d'un SEF environ 1 s ; suite JS du module 15 s (75 s avec la compilation). Écarts : un XML seul au BT-24
+  propre à Factur-X (BASIC WL, BASIC, EXTENDED Factur-X / ZUGFeRD) est contrôlé avec le XSD et le schematron Factur-X
+  (le serveur prend D22B) ; EXTENDED-CTC-FR passe par le schematron EXTENDED-CTC-FR-CII même dans un Factur-X ; CDAR :
+  BR-FR-CDV seul (XSD CDAR au lot 5, vérifié sur un exemple du paquet) ; PDF : XML extrait des flux FlateDecode
+  (pas de lecteur PDF en Node) ; assertion sans `flag` (schematrons Factur-X) comptée fatale. Corrections du lot 3 : le
+  cas `logibtp/S5_PAYEUR_EXTENDED-CTC-FR_{CII,UBL}.xml` était refusé (BT-123 « RELEVE » hors liste BR-FR-17 →
+  `DOCUMENT_ANNEXE` ; type MIME `text/plain` hors BR-FREXT-CL-24 → `text/csv` ; UBL-SR-43 : `DocumentTypeCode` 916
+  retiré d'une pièce jointe UBL), tests de lecture ajustés. Tests : 183 en JS pour le module, 143 en C# (suite .NET :
+  1145).
 
 ## Lot 5 : CDAR, écriture et lecture des statuts (A FAIRE)
 

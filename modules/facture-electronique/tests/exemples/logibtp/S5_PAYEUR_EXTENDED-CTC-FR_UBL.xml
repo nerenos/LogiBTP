@@ -39,10 +39,9 @@
      </cac:ContractDocumentReference>
      <cac:AdditionalDocumentReference>
           <cbc:ID>SITUATION-03</cbc:ID>
-          <cbc:DocumentTypeCode>916</cbc:DocumentTypeCode>
-          <cbc:DocumentDescription>RELEVE</cbc:DocumentDescription>
+          <cbc:DocumentDescription>DOCUMENT_ANNEXE</cbc:DocumentDescription>
           <cac:Attachment>
-               <cbc:EmbeddedDocumentBinaryObject mimeCode="text/plain" filename="releve.txt">UmVsZXbDqSBkZSB0cmF2YXV4</cbc:EmbeddedDocumentBinaryObject>
+               <cbc:EmbeddedDocumentBinaryObject mimeCode="text/csv" filename="releve.csv">UmVsZXbDqSBkZSB0cmF2YXV4</cbc:EmbeddedDocumentBinaryObject>
           </cac:Attachment>
      </cac:AdditionalDocumentReference>
      <cac:ProjectReference>

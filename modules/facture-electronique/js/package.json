@@ -8,12 +8,17 @@
     ".": "./src/index.js"
   },
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run",
+    "compiler-schematrons": "node outils/schematrons.js",
+    "valider-facture": "node outils/valider.js"
   },
   "dependencies": {
     "@logibtp/socle": "0.2.0"
   },
   "devDependencies": {
-    "vitest": "^5.1.0"
+    "saxon-js": "2.7.0",
+    "vitest": "^5.1.0",
+    "xmllint-wasm": "5.3.0",
+    "xslt3": "2.7.0"
   }
 }

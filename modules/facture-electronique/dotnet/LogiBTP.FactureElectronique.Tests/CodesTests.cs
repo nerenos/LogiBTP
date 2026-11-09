@@ -31,6 +31,8 @@ public class CodesTests
     [InlineData("SENS_FLUX", typeof(SensFlux))]
     [InlineData("REGLE_TRAITEMENT", typeof(RegleTraitement))]
     [InlineData("ETAT_ACCUSE", typeof(EtatAccuse))]
+    [InlineData("ETAPE_CONTROLE", typeof(EtapeControle))]
+    [InlineData("NIVEAU_CONTROLE", typeof(NiveauControle))]
     [InlineData("NIVEAU_ACCUSE", typeof(NiveauAccuse))]
     [InlineData("MOTIF_ACCUSE", typeof(MotifAccuse))]
     [InlineData("ETAT_FLUX", typeof(EtatFlux))]

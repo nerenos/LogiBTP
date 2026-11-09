@@ -137,7 +137,7 @@ public class LectureUblTests
         Assert.Equal(("COMMUNE DE MAVILLE", "400000006", "MA VILLE"), (f.Payeur!.RaisonSociale, f.Payeur.Siren, f.Payeur.Adresse?.Localite));
         Assert.Equal(("MAITRE D OEUVRE", "300000007"), (f.AgentAcheteur!.RaisonSociale, f.AgentAcheteur.Siren));
         var pj = Assert.Single(f.PiecesJointes);
-        Assert.Equal(("SITUATION-03", "RELEVE", "releve.txt"), (pj.Reference, pj.Description, pj.NomFichier));
+        Assert.Equal(("SITUATION-03", "DOCUMENT_ANNEXE", "releve.csv"), (pj.Reference, pj.Description, pj.NomFichier));
         Assert.Equal("Relevé de travaux", Encoding.UTF8.GetString(pj.Contenu!));
         Assert.Equal(new FactureAnterieureLigne("F202600010", TypeFacture.Acompte, new DateOnly(2026, 4, 15), "1"), f.Lignes[0].FactureAnterieure);
         Assert.Null(f.Lignes[0].SousType);

@@ -314,6 +314,20 @@ export const ETAT_ACCUSE = Object.freeze({
   ERREUR: 'Error',
 });
 
+/** Étape de la validation d'une facture (note explicative FNFE 1.4.0 : XSD, puis schematron du profil, puis BR-FR-Flux2). */
+export const ETAPE_CONTROLE = Object.freeze({
+  XSD: 'XSD',
+  PROFIL: 'PROFIL',
+  FRANCE: 'FRANCE',
+});
+
+/** Niveau d'un contrôle de schematron (attribut flag du SVRL ; « fatal » rejette la facture). */
+export const NIVEAU_CONTROLE = Object.freeze({
+  FATAL: 'fatal',
+  AVERTISSEMENT: 'warning',
+  INFORMATION: 'information',
+});
+
 /** Niveau d'un détail d'accusé (XP Z12-013). */
 export const NIVEAU_ACCUSE = Object.freeze({
   ERREUR: 'Error',

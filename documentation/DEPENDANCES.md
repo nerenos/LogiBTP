@@ -144,7 +144,10 @@
 
 | Type | Dépendance | Version | Licence | Usage |
 |---|---|---|---|---|
+| npm | saxon-js | 2.7.0 | SEE LICENSE IN LICENSE.txt | développement (modules/facture-electronique/js) |
 | npm | vitest | 5.1.0 | MIT | développement (modules/facture-electronique/js) |
+| npm | xmllint-wasm | 5.3.0 | MIT | développement (modules/facture-electronique/js) |
+| npm | xslt3 | 2.7.0 | SEE LICENSE IN LICENSE.txt | développement (modules/facture-electronique/js) |
 | NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.FactureElectronique.Tests |
 | NuGet | PdfPig | 0.1.16 | Apache-2.0 | LogiBTP.FactureElectronique |
 | NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.FactureElectronique.Tests |

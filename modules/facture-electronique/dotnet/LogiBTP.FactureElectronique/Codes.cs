@@ -364,6 +364,22 @@ public static class EtatAccuse
     public const string Erreur = "Error";
 }
 
+/// <summary>Étape de la validation d'une facture (note explicative FNFE 1.4.0 : XSD, puis schematron du profil, puis BR-FR-Flux2).</summary>
+public static class EtapeControle
+{
+    public const string Xsd = "XSD";
+    public const string Profil = "PROFIL";
+    public const string France = "FRANCE";
+}
+
+/// <summary>Niveau d'un contrôle de schematron (attribut flag du SVRL ; « fatal » rejette la facture).</summary>
+public static class NiveauControle
+{
+    public const string Fatal = "fatal";
+    public const string Avertissement = "warning";
+    public const string Information = "information";
+}
+
 /// <summary>Niveau d'un détail d'accusé (XP Z12-013).</summary>
 public static class NiveauAccuse
 {
