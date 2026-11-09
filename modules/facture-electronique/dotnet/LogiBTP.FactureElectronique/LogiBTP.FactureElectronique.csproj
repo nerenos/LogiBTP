@@ -2,11 +2,21 @@
 
   <PropertyGroup>
     <RootNamespace>LogiBTP.FactureElectronique</RootNamespace>
-    <Description>Module Facturation électronique LogiBTP : codes des normes, modèle sémantique EN16931, règles du cycle de vie (répliquées avec cycle-vie.js).</Description>
+    <Description>Module Facturation électronique LogiBTP : codes des normes, modèle sémantique EN16931, règles du cycle de vie (répliquées avec cycle-vie.js), lecture CII D22B et Factur-X, validation XSD.</Description>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\socle\dotnet\LogiBTP.Socle\LogiBTP.Socle.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Extraction du factur-x.xml embarqué d'un PDF/A-3 (Apache-2.0). -->
+    <PackageReference Include="PdfPig" Version="0.1.16" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Schémas XSD du paquet FNFE 1.4.0.04 (artefacts/VERSION), embarqués sous le nom xsd/<dossier>/<fichier>. -->
+    <EmbeddedResource Include="..\..\artefacts\xsd\**\*.xsd" LogicalName="xsd/$([System.String]::Copy('%(RecursiveDir)').Replace('\','/'))%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>

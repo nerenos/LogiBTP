@@ -257,6 +257,37 @@ public static class ProfilFacture
     public const string NonDefini = "Undefined";
 }
 
+/// <summary>Identifiant de spécification (BT-24, GuidelineSpecifiedDocumentContextParameter) : profils Factur-X et CII.</summary>
+public static class SpecificationFacture
+{
+    public const string Minimum = "urn:factur-x.eu:1p0:minimum";
+    public const string BasicWl = "urn:factur-x.eu:1p0:basicwl";
+    public const string Basic = "urn:cen.eu:en16931:2017#compliant#urn:factur-x.eu:1p0:basic";
+    public const string En16931 = "urn:cen.eu:en16931:2017";
+    public const string Extended = "urn:cen.eu:en16931:2017#conformant#urn:factur-x.eu:1p0:extended";
+    public const string ExtendedZugferd = "urn:cen.eu:en16931:2017#conformant#urn:zugferd.de:2p0:extended";
+    public const string ExtendedCtcFr = "urn:cen.eu:en16931:2017#conformant#urn.cpro.gouv.fr:1p0:extended-ctc-fr";
+}
+
+/// <summary>Type de document référencé (UNTDID 1001, AdditionalReferencedDocument/TypeCode) : BT-17, BT-18, BT-122.</summary>
+public static class TypeDocumentReference
+{
+    public const string AppelOffres = "50";
+    public const string ObjetFacture = "130";
+    public const string Justificatif = "916";
+}
+
+/// <summary>Schéma d'identifiant (ISO 6523 ICD, schemeID) et d'immatriculation fiscale (VA, FC).</summary>
+public static class SchemaIdentifiant
+{
+    public const string Siren = "0002";
+    public const string Siret = "0009";
+    public const string CodeRoutage = "0224";
+    public const string AdresseElectronique = "0225";
+    public const string Tva = "VA";
+    public const string Fiscal = "FC";
+}
+
 /// <summary>Type d'un flux (flowType de XP Z12-013).</summary>
 public static class TypeFlux
 {
@@ -368,7 +399,7 @@ public static class EvenementFe
     public const string ImportManuel = "IMPORT_MANUEL";
 }
 
-/// <summary>Erreurs du contrôle d'un statut de cycle de vie.</summary>
+/// <summary>Erreurs du contrôle d'un statut de cycle de vie et de la lecture d'une facture (lot 2).</summary>
 public static class ErreurFe
 {
     public const string SensInconnu = "SENS_INCONNU";
@@ -380,4 +411,18 @@ public static class ErreurFe
     public const string ActionInconnue = "ACTION_INCONNUE";
     public const string StatutTerminal = "STATUT_TERMINAL";
     public const string TransitionInterdite = "TRANSITION_INTERDITE";
+    /// <summary>Lecture : XML mal formé.</summary>
+    public const string XmlIllisible = "XML_ILLISIBLE";
+    /// <summary>Lecture : élément racine d'une syntaxe non prise en charge.</summary>
+    public const string SyntaxeInconnue = "SYNTAXE_INCONNUE";
+    /// <summary>Lecture : XML non conforme au schéma XSD.</summary>
+    public const string XsdInvalide = "XSD_INVALIDE";
+    /// <summary>Lecture : profil (BT-24) absent ou non reconnu.</summary>
+    public const string ProfilInconnu = "PROFIL_INCONNU";
+    /// <summary>Lecture : terme obligatoire absent, date ou montant illisible.</summary>
+    public const string DonneeInvalide = "DONNEE_INVALIDE";
+    /// <summary>Factur-X : PDF illisible.</summary>
+    public const string PdfIllisible = "PDF_ILLISIBLE";
+    /// <summary>Factur-X : pas de fichier factur-x.xml embarqué.</summary>
+    public const string XmlAbsent = "XML_ABSENT";
 }

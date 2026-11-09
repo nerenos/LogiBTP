@@ -219,6 +219,34 @@ export const PROFIL_FACTURE = Object.freeze({
   NON_DEFINI: 'Undefined',
 });
 
+/** Identifiant de spécification (BT-24) : profils Factur-X et CII. */
+export const SPECIFICATION_FACTURE = Object.freeze({
+  MINIMUM: 'urn:factur-x.eu:1p0:minimum',
+  BASIC_WL: 'urn:factur-x.eu:1p0:basicwl',
+  BASIC: 'urn:cen.eu:en16931:2017#compliant#urn:factur-x.eu:1p0:basic',
+  EN16931: 'urn:cen.eu:en16931:2017',
+  EXTENDED: 'urn:cen.eu:en16931:2017#conformant#urn:factur-x.eu:1p0:extended',
+  EXTENDED_ZUGFERD: 'urn:cen.eu:en16931:2017#conformant#urn:zugferd.de:2p0:extended',
+  EXTENDED_CTC_FR: 'urn:cen.eu:en16931:2017#conformant#urn.cpro.gouv.fr:1p0:extended-ctc-fr',
+});
+
+/** Type de document référencé (UNTDID 1001) : BT-17, BT-18, BT-122. */
+export const TYPE_DOCUMENT_REFERENCE = Object.freeze({
+  APPEL_OFFRES: '50',
+  OBJET_FACTURE: '130',
+  JUSTIFICATIF: '916',
+});
+
+/** Schéma d'identifiant (ISO 6523 ICD) et d'immatriculation fiscale (VA, FC). */
+export const SCHEMA_IDENTIFIANT = Object.freeze({
+  SIREN: '0002',
+  SIRET: '0009',
+  CODE_ROUTAGE: '0224',
+  ADRESSE_ELECTRONIQUE: '0225',
+  TVA: 'VA',
+  FISCAL: 'FC',
+});
+
 /** Type d'un flux (flowType de XP Z12-013). */
 export const TYPE_FLUX = Object.freeze({
   FACTURE_CLIENT: 'CustomerInvoice',
@@ -322,7 +350,7 @@ export const EVENEMENT_FE = Object.freeze({
   IMPORT_MANUEL: 'IMPORT_MANUEL',
 });
 
-/** Erreurs du contrôle d'un statut de cycle de vie. */
+/** Erreurs du contrôle d'un statut de cycle de vie et de la lecture d'une facture (lot 2). */
 export const ERREUR_FE = Object.freeze({
   SENS_INCONNU: 'SENS_INCONNU',
   STATUT_INCONNU: 'STATUT_INCONNU',
@@ -333,4 +361,12 @@ export const ERREUR_FE = Object.freeze({
   ACTION_INCONNUE: 'ACTION_INCONNUE',
   STATUT_TERMINAL: 'STATUT_TERMINAL',
   TRANSITION_INTERDITE: 'TRANSITION_INTERDITE',
+  // Lecture des factures (serveur, lot 2)
+  XML_ILLISIBLE: 'XML_ILLISIBLE',
+  SYNTAXE_INCONNUE: 'SYNTAXE_INCONNUE',
+  XSD_INVALIDE: 'XSD_INVALIDE',
+  PROFIL_INCONNU: 'PROFIL_INCONNU',
+  DONNEE_INVALIDE: 'DONNEE_INVALIDE',
+  PDF_ILLISIBLE: 'PDF_ILLISIBLE',
+  XML_ABSENT: 'XML_ABSENT',
 });

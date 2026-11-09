@@ -26,7 +26,7 @@
 |---|---|---|---|---|
 | | **Partie A : socle commun et réception** | | | |
 | 1 | Codes, modèle sémantique EN16931, règles du cycle de vie | `modules/facture-electronique` (nouveau) | — | FAIT (09/11/2026) |
-| 2 | Lecture CII D22B et Factur-X (XML embarqué), XSD | module | 1 | A FAIRE |
+| 2 | Lecture CII D22B et Factur-X (XML embarqué), XSD | module | 1 | FAIT (09/11/2026) |
 | 3 | Lecture UBL 2.1 (Invoice, CreditNote) | module | 1, 2 | A FAIRE |
 | 4 | Schematrons FNFE : artefacts versionnés, validation par SaxonJS (tests et outil) | module | 2, 3 | A FAIRE |
 | 5 | CDAR : écriture et lecture des statuts | module | 1 | A FAIRE |
@@ -95,7 +95,7 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   fois, Complétée seulement après Suspendue ; statut reçu contrôlé sur code, émetteur, motif et action. Statut affiché :
   rang interne (Annulée le plus avancé, affacturage au rang 85). `ModeleFacture.cs` sans équivalent JS (lot 16).
 
-## Lot 2 : lecture CII D22B et Factur-X, XSD (A FAIRE)
+## Lot 2 : lecture CII D22B et Factur-X, XSD — FAIT (09/11/2026)
 
 - **Module** : `modules/facture-electronique`. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `dotnet/LogiBTP.FactureElectronique/Formats/LectureCii.cs` (XML CII → `ModeleFacture`, profils
@@ -109,6 +109,22 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
 - **Critère de fin** : tous les exemples FNFE CII et Factur-X lus (numéro, dates, parties, SIREN, adresses
   électroniques, lignes, TVA, totaux, notes, cadre, facture antérieure, PAYEUR) ; `dotnet test` vert ;
   `npm run rapport-dependances` relancé.
+- **Réalisé** : `dotnet/LogiBTP.FactureElectronique/Formats/{LectureCii,ValidationXsd,ExtractionFacturX,ExceptionLectureFacture}.cs`,
+  csproj (PdfPig 0.1.16, déjà utilisé par la GED : lit l'arbre `/EmbeddedFiles` ; XSD embarqués en ressources),
+  `artefacts/xsd/{cii-d22b,factur-x/{basicwl,en16931,extended}}` + `artefacts/{VERSION,LICENCE}` (paquet FNFE 1.4.0.04,
+  sans modification), `tests/exemples/` (CII EN16931 UC1–UC5, UC4b, UC13 ; EXTENDED-CTC-FR UC10–UC13 ; Factur-X
+  BASIC WL et EXTENDED ; `VERSION`), `tests/exemples/logibtp/S5_PAYEUR_EXTENDED-CTC-FR_CII.xml` (cas construit),
+  tests `LectureCiiTests.cs`, `ExtractionFacturXTests.cs` ; codes ajoutés JS ↔ C# : `SPECIFICATION_FACTURE` (BT-24),
+  `TYPE_DOCUMENT_REFERENCE` (50, 130, 916), `SCHEMA_IDENTIFIANT` (0002, 0009, 0224, 0225, VA, FC), 7 codes de lecture
+  dans `ERREUR_FE` ; `ModeleFacture.cs` : `Facture.Specification` (BT-24 lu) ; `DEPENDANCES.md` régénéré. Tests : 93 en
+  C# pour le module (suite .NET : 1095), 120 en JS. Écarts : les exemples FNFE ne portent ni PAYEUR, ni agent, ni
+  facture antérieure en ligne, d'où le cas construit S5 (XSD D22B vérifié) ; XML Factur-X EN16931 identiques aux CII
+  EN16931 (non recopiés) ; trois PDF recopiés sur quinze (un par profil, ~1,1 Mo), les quinze du paquet lus une fois
+  hors dépôt ; profil BASIC accepté (XSD Factur-X EN16931, le paquet n'a pas celui de BASIC), MINIMUM refusé
+  (`PROFIL_INCONNU`) ; Factur-X EXTENDED et EXTENDED-CTC-FR tous deux au profil `Extended-CTC-FR`
+  (`Facture.Specification` les distingue) ; lignes de groupe ou d'information sans quantité ni prix lues à 0, unité
+  vide ; exemples BASIC WL : adresse électronique au schéma EM (courriel), non 0225 ; erreur `DONNEE_INVALIDE` pour un
+  terme obligatoire absent ou une date / un nombre illisible ; tout CII (y compris XML Factur-X) conforme au XSD D22B.
 
 ## Lot 3 : lecture UBL 2.1 (A FAIRE)
 

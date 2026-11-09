@@ -28,6 +28,8 @@ public sealed record Facture
     public required string CadreFacturation { get; init; }
     /// <summary>BT-24 : profil (<see cref="ProfilFacture"/>).</summary>
     public string Profil { get; init; } = ProfilFacture.En16931;
+    /// <summary>BT-24 : identifiant de spécification tel que lu (<see cref="SpecificationFacture"/>), qui distingue Factur-X EXTENDED et EXTENDED-CTC-FR.</summary>
+    public string? Specification { get; init; }
 
     /// <summary>Références de l'acheteur et du contrat (BT-10 à BT-19).</summary>
     public ReferencesFacture References { get; init; } = new();
@@ -222,7 +224,7 @@ public sealed record LigneFacture
     public string? SousType { get; init; }
     /// <summary>BT-127 : note de ligne.</summary>
     public string? Note { get; init; }
-    /// <summary>BT-129 : quantité facturée (4 décimales).</summary>
+    /// <summary>BT-129 : quantité facturée (4 décimales ; 0 sur une ligne de groupe ou d'information qui n'en porte pas, unité et prix net de même).</summary>
     public required decimal Quantite { get; init; }
     /// <summary>BT-130 : unité (UN/ECE recommandation 20).</summary>
     public required string Unite { get; init; }

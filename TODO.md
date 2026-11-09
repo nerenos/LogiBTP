@@ -88,7 +88,8 @@ Analyse du 23/10/2026 : [ANALYSE-MODULE-SOUS-TRAITANCE.md](documentation/concept
   ([ANALYSE-FACTURATION-ELECTRONIQUE.md](documentation/conception/ANALYSE-FACTURATION-ELECTRONIQUE.md)), questions
   tranchées ([facturation-electronique-questions.md](documentation/conception/plans/facturation-electronique-questions.md)), plan en 29 lots
   à valider ([facturation-electronique.md](documentation/conception/plans/facturation-electronique.md)) ; lot 1 fait
-  le 09/11/2026 (codes, modèle EN16931, règles du cycle de vie) ; en attendant, saisie libre des factures reçues (ST22).
+  le 09/11/2026 (codes, modèle EN16931, règles du cycle de vie), lot 2 le 09/11/2026 (lecture CII D22B et Factur-X,
+  XSD) ; en attendant, saisie libre des factures reçues (ST22).
 
 ### Import
 

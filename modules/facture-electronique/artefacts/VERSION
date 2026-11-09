@@ -1,0 +1,9 @@
+Origine : dépôt GitHub fnfempe/France_RFE (Forum National de la Facture Électronique et des Marchés Publics Électroniques), paquet 1.4.0.04
+(commit 97ba0f3d4ef2abed5780e9490d5c3a2be832ab1d du 05/09/2026), dossier FNFE_RFE_INVOICE. Licence Apache-2.0 : voir LICENCE.
+
+xsd/cii-d22b/         CII/1xsd-CII_D22B_uncoupled/      UN/CEFACT CrossIndustryInvoice D22B (uncoupled), XP Z12-012 V1.4
+xsd/factur-x/basicwl/ Factur-X/BASICWL/1xsd/            Factur-X 1.09.2 BASIC WL
+xsd/factur-x/en16931/ Factur-X/EN16931/1xsd/            Factur-X 1.09.2 EN16931
+xsd/factur-x/extended/ Factur-X/EXTENDED/1xsd/          Factur-X 1.09.2 EXTENDED
+
+Fichiers copiés sans modification (copie le 09/11/2026, lot 2 du plan Facturation électronique).
