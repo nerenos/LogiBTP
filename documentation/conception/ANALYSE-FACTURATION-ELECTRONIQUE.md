@@ -4,6 +4,10 @@
 > analyse et ses questions [facturation-electronique-questions.md](plans/facturation-electronique-questions.md)),
 > puis plan par lots `plans/facturation-electronique.md` après les réponses.
 >
+> **État** : questions tranchées le 09/11/2026 ; plan en 29 lots, deux parties (réception puis émission), avec une trace
+> complète des étapes : [facturation-electronique.md](plans/facturation-electronique.md), à valider. Le § 7 ci-dessous
+> est le découpage provisoire d'origine.
+>
 > Points de départ : TODO « Module Facturation électronique » (ST22 de
 > [ANALYSE-MODULE-SOUS-TRAITANCE.md](ANALYSE-MODULE-SOUS-TRAITANCE.md)), § 3.5 de
 > [CONCEPTION-EDITION.md](CONCEPTION-EDITION.md), A14 de [ANALYSE-DEMANDES-2026-10.md](ANALYSE-DEMANDES-2026-10.md)
