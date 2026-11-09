@@ -45,6 +45,7 @@ export const JEUX_XSD = Object.freeze({
   FACTUR_X_EXTENDED: Object.freeze({ dossier: 'factur-x/extended', principal: 'Factur-X_EXTENDED.xsd' }),
   UBL_INVOICE: Object.freeze({ dossier: 'ubl-2.1', principal: 'maindoc/UBL-Invoice-2.1.xsd' }),
   UBL_CREDIT_NOTE: Object.freeze({ dossier: 'ubl-2.1', principal: 'maindoc/UBL-CreditNote-2.1.xsd' }),
+  CDAR_D22B: Object.freeze({ dossier: 'cdar-d22b', principal: 'CrossDomainAcknowledgementAndResponse_100pD22B.xsd' }),
 });
 
 /** Chemin du SEF d'un schematron (chemin relatif du catalogue). */

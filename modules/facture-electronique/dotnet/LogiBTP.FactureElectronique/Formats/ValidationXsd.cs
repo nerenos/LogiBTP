@@ -6,7 +6,7 @@ using System.Xml.Schema;
 
 namespace LogiBTP.FactureElectronique.Formats;
 
-/// <summary>Jeu de schémas XSD d'une facture (artefacts/xsd, paquet FNFE 1.4.0.04 : voir artefacts/VERSION ; UBL 2.1 OASIS du même paquet).</summary>
+/// <summary>Jeu de schémas XSD d'une facture ou d'un CDAR (artefacts/xsd, paquet FNFE 1.4.0.04 : voir artefacts/VERSION ; UBL 2.1 OASIS du même paquet).</summary>
 public enum JeuXsd
 {
     /// <summary>UN/CEFACT CrossIndustryInvoice D22B uncoupled (CII seul, EN16931 et EXTENDED-CTC-FR).</summary>
@@ -21,6 +21,8 @@ public enum JeuXsd
     UblInvoice,
     /// <summary>OASIS UBL 2.1 CreditNote (EN16931 et EXTENDED-CTC-FR).</summary>
     UblCreditNote,
+    /// <summary>UN/CEFACT CrossDomainAcknowledgementAndResponse D22B uncoupled (CDAR, cycle de vie).</summary>
+    CdarD22B,
 }
 
 /// <summary>
@@ -43,6 +45,7 @@ public static class ValidationXsd
         JeuXsd.FacturXExtended => ("factur-x/extended", "Factur-X_EXTENDED.xsd"),
         JeuXsd.UblInvoice => ("ubl-2.1/maindoc", "UBL-Invoice-2.1.xsd"),
         JeuXsd.UblCreditNote => ("ubl-2.1/maindoc", "UBL-CreditNote-2.1.xsd"),
+        JeuXsd.CdarD22B => ("cdar-d22b", "CrossDomainAcknowledgementAndResponse_100pD22B.xsd"),
         _ => throw new ArgumentOutOfRangeException(nameof(jeu)),
     };
 

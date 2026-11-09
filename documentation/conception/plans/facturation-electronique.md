@@ -29,7 +29,7 @@
 | 2 | Lecture CII D22B et Factur-X (XML embarqué), XSD | module | 1 | FAIT (09/11/2026) |
 | 3 | Lecture UBL 2.1 (Invoice, CreditNote) | module | 1, 2 | FAIT (09/11/2026) |
 | 4 | Schematrons FNFE : artefacts versionnés, validation par SaxonJS (tests et outil) | module | 2, 3 | FAIT (09/11/2026) |
-| 5 | CDAR : écriture et lecture des statuts | module | 1 | A FAIRE |
+| 5 | CDAR : écriture et lecture des statuts | module | 1 | FAIT (09/11/2026) |
 | 6 | Connecteur : contrat, AFNOR XP Z12-013 (Flow, Directory), plateforme simulée, dépôt manuel | module | 1, 5 | A FAIRE |
 | 7 | OAuth : flux CLIENT pour un fournisseur GENERIQUE (si absent) | `modules/oauth` | — | A FAIRE |
 | 8 | Schéma, file des flux, statuts, **journal des étapes chaîné**, relève par base, service et routes | module | 6 | A FAIRE |
@@ -197,7 +197,7 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   retiré d'une pièce jointe UBL), tests de lecture ajustés. Tests : 183 en JS pour le module, 143 en C# (suite .NET :
   1145).
 
-## Lot 5 : CDAR, écriture et lecture des statuts (A FAIRE)
+## Lot 5 : CDAR, écriture et lecture des statuts — FAIT (09/11/2026)
 
 - **Module** : `modules/facture-electronique`. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `Formats/Cdar.cs` (statut → CDAR D22B : facture référencée MDT-87 et date, code MDT-105, motif, action,
@@ -205,6 +205,35 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   `artefacts/xsd/cdar-d22b/`, tests `CdarTests.cs` (les 60 exemples CDAR FNFE lus ; aller-retour écriture → lecture ;
   XSD), `js/test/cdar.test.js` (schematron BR-FR-CDV sur les CDAR écrits, via l'outil du lot 4).
 - **Critère de fin** : exemples FNFE lus, CDAR écrits valides (XSD et schematron BR-FR-CDV) ; tests verts.
+- **Réalisé** : `Formats/ModeleCdar.cs` (modèle : `MessageCdar` → `AccuseCdar` (MDB-03) → `StatutFactureCdar` (MDG-32) →
+  `DetailStatutCdar` (MDG-37) → `CaracteristiqueCdar` (MDG-43), `PartieCdar`, `PieceJointeCdar`, `NoteCdar` ; entrée
+  `StatutAEcrire` + `FactureReferencee`, `MontantEncaisse` ; sortie `StatutLu` ; `ExceptionCdar`), `Formats/Cdar.cs`
+  (`Construire` : contrôle par `ReglesCycleVie.Controler` puis données obligatoires BR-FR-CDV (MDT-87, MDT-100 et
+  MDT-129 sauf Irrecevable, MDT-215 d'Encaissée, MDT-38 et rôle non WK en phase de traitement, MDT-73 des destinataires
+  hors plateformes) ; rôle déduit de l'émetteur (WK, SE, BY, AB), phase MDT-77 (305 pour 200, 201, 202, 203, 213, 221,
+  501 ; 23 sinon), code UNTDID 1373 MDT-88 de l'onglet « Acteurs CDV », PPF ajouté en destinataire d'un statut
+  obligatoire, message pour le seul PPF en profil einvoicingF2 sans MDT-2, identifiant par défaut
+  numéro_statut_date-heure tenu en 50 caractères ; `Ecrire` (UTF-8 sans BOM, validé par le XSD) ; `Lire` (XSD,
+  termes MDT-4, MDT-8, MDT-87, MDT-105 exigés) ; `StatutsLus` (émetteur déduit du rôle — Rejetée de plateforme : PA-R si
+  un acheteur est destinataire —, B2G si l'expéditeur est Chorus Pro, contrôle par `ReglesCycleVie`)),
+  `ValidationXsd` (`JeuXsd.CdarD22B`), `Lecture.Detecter` reconnaît un CDAR (`Lecture.Lire` le refuse :
+  `SYNTAXE_INCONNUE`) ; `artefacts/xsd/cdar-d22b/` (14 XSD du paquet FNFE 1.4.0.04 copiés sans modification),
+  `tests/exemples/cdar/fnfe/` (les 59 CDAR de `Z.example/TEST/CDAR`), `tests/exemples/cdar/logibtp/` (17 CDAR écrits :
+  200 à 225 et 501, dont Encaissée à deux taux, Encaissée pour le PPF, litige avec données invalides et attendues,
+  paiement direct avec pièce jointe) ; codes JS ↔ C# `ROLE_CDAR`, `TYPE_ACCUSE_CDAR`, `PROCESSUS_CDV`, `PROFIL_CDV`,
+  `CARACTERISTIQUE_CDV`, `MATRICULE_PLATEFORME`, `SCHEMA_IDENTIFIANT.PLATEFORME` (0238) ; outil Node : étape XSD CDAR
+  D22B avant BR-FR-CDV (`JEUX_XSD.CDAR_D22B`). Tests : `CdarTests.cs` (98 : exemples FNFE lus, statut admis par le
+  cycle de vie, réécrits et relus à l'identique du modèle ; émetteur déduit ; 17 cas écrits identiques aux fichiers de
+  référence — régénérés par `LOGIBTP_REGENERER_CDAR=1` —, relus à l'identique ; refus du cycle de vie et données
+  absentes ; erreurs de lecture), `js/test/cdar.test.js` (82 : les 76 CDAR sans erreur fatale ni avertissement en
+  XSD puis BR-FR-CDV ; cas altérés BR-FR-CDV-14, -15, -08, CL-09, XSD). Écarts : `STATUTS_MOTIF_OBLIGATOIRE` élargi à
+  Approuvée partiellement, Suspendue et Irrecevable (BR-FR-CDV-15 fatal ; le lot 1 tenait le motif de Suspendue pour
+  facultatif) dans les deux langages et le jeu `01_cycle_vie.json` ; Erreur de routage et Irrecevable écrits en phase
+  305 sans MDT-88 (le code 5 de l'onglet n'y est pas admis, BR-FR-CDV-CL-05) ; pièce jointe facultative pour 224 (rien
+  ne l'impose dans le schematron) ; libellés de statut, motif et action recopiés s'ils sont fournis (pas de libellé
+  en dur) ; un message mono-document (MDT-74 faux) par statut écrit, la lecture prenant les blocs multiples ; refus
+  B2G : motifs propres seulement si l'expéditeur est Chorus Pro (matricule 9999), à fournir par l'appelant. Tests : 266
+  en JS pour le module, 247 en C# (suite .NET : 1249).
 
 ## Lot 6 : connecteur de plateforme (A FAIRE)
 

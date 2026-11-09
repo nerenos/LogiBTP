@@ -131,8 +131,8 @@ public static class StatutCdv
     /// <summary>Statuts terminaux : plus de statut obligatoire ensuite (STATUTS_TERMINAUX).</summary>
     public static readonly string[] Terminaux = [Refusee, Rejetee];
 
-    /// <summary>Statuts dont le motif est obligatoire (STATUTS_MOTIF_OBLIGATOIRE).</summary>
-    public static readonly string[] MotifObligatoire = [EnLitige, Refusee, Rejetee];
+    /// <summary>Statuts dont le motif est obligatoire (STATUTS_MOTIF_OBLIGATOIRE, BR-FR-CDV-15).</summary>
+    public static readonly string[] MotifObligatoire = [ApprouveePartiellement, EnLitige, Suspendue, Refusee, Rejetee, Irrecevable];
 
     /// <summary>Statuts obligatoirement transmis au PPF (STATUTS_OBLIGATOIRES_PPF).</summary>
     public static readonly string[] ObligatoiresPpf = [Deposee, Refusee, Encaissee, Rejetee];
@@ -288,10 +288,83 @@ public static class SchemaIdentifiant
     public const string AdresseElectronique = "0225";
     public const string Tva = "VA";
     public const string Fiscal = "FC";
+    /// <summary>CDAR : matricule d'une plateforme (PA, PPF, Chorus Pro).</summary>
+    public const string Plateforme = "0238";
     /// <summary>UBL : identifiant de créancier SEPA (BT-90) dans PartyIdentification, hors identifiants de la partie.</summary>
     public const string CreancierSepa = "SEPA";
     /// <summary>UBL : TaxScheme/ID du numéro de TVA (BT-31, BT-48, BT-63) ; tout autre régime porte l'identifiant fiscal (BT-32).</summary>
     public const string TvaUbl = "VAT";
+}
+
+/// <summary>CDAR : matricule (schéma 0238) des plateformes publiques.</summary>
+public static class MatriculePlateforme
+{
+    public const string Ppf = "0000";
+    /// <summary>Refusée B2G : motifs propres (BR-FR-CDV-CL-09) si l'expéditeur est Chorus Pro.</summary>
+    public const string ChorusPro = "9999";
+}
+
+/// <summary>CDAR : rôle d'une partie du message (UNCL 3035, BR-FR-CDV-CL-02 à CL-04, CL-07, CL-08).</summary>
+public static class RoleCdar
+{
+    public const string Acheteur = "BY";
+    public const string RepresentantAcheteur = "AB";
+    public const string Affactureur = "DL";
+    public const string Vendeur = "SE";
+    public const string AgentVendeur = "SR";
+    public const string Plateforme = "WK";
+    public const string Ppf = "DFH";
+    public const string Beneficiaire = "PE";
+    public const string Payeur = "PR";
+    public const string Facturant = "II";
+    public const string Facture = "IV";
+}
+
+/// <summary>CDAR MDT-77 : phase du statut (UNCL 1001, BR-FR-CDV-09).</summary>
+public static class TypeAccuseCdar
+{
+    /// <summary>Phase de traitement.</summary>
+    public const string Information = "23";
+    /// <summary>Phase de transmission.</summary>
+    public const string Acquittement = "305";
+}
+
+/// <summary>CDAR MDT-2 : processus métier (BR-FR-CDV-CL-01).</summary>
+public static class ProcessusCdv
+{
+    public const string Reglemente = "REGULATED";
+    public const string NonReglemente = "NON_REGULATED";
+    public const string B2C = "B2C";
+    public const string B2CInt = "B2CINT";
+    public const string B2BInt = "B2BINT";
+    public const string HorsReforme = "OUTOFSCOPE";
+}
+
+/// <summary>CDAR MDT-3 : profil du message (BR-FR-CDV-02 ; einvoicingF2 : message pour le seul PPF).</summary>
+public static class ProfilCdv
+{
+    public const string Facture = "urn.cpro.gouv.fr:1p0:CDV:invoice";
+    public const string Ppf = "urn.cpro.gouv.fr:1p0:CDV:einvoicingF2";
+}
+
+/// <summary>CDAR MDT-207 : nature d'une caractéristique du détail de statut (BR-FR-CDV-CL-11).</summary>
+public static class CaracteristiqueCdv
+{
+    /// <summary>Montant encaissé TTC, avec le taux de TVA (Encaissée, BR-FR-CDV-14).</summary>
+    public const string MontantEncaisse = "MEN";
+    public const string MontantPaye = "MPA";
+    public const string ResteAPayer = "RAP";
+    public const string Escompte = "ESC";
+    public const string Rabais = "RAB";
+    public const string Remise = "REM";
+    public const string MontantHtApprouve = "MAP";
+    public const string MontantTtcApprouve = "MAPTTC";
+    public const string MontantHtNonApprouve = "MNA";
+    public const string MontantTtcNonApprouve = "MNATTC";
+    public const string CoordonneesBancaires = "CBB";
+    public const string DonneeInvalide = "DIV";
+    public const string DonneeValideAttendue = "DVA";
+    public const string DonneeAPrendre = "MAJ";
 }
 
 /// <summary>BT-8 : code de date d'exigibilité de la TVA, valeur du modèle (UNTDID 2475, CII DueDateTypeCode).</summary>

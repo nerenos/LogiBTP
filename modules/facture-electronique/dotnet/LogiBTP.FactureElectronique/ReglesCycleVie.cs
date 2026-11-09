@@ -150,7 +150,7 @@ public static class ReglesCycleVie
     /// <summary>Statut terminal (Rejetée, Refusée).</summary>
     public static bool Terminal(string? statut) => StatutCdv.Terminaux.Contains(statut);
 
-    /// <summary>Motif obligatoire (En litige, Refusée, Rejetée).</summary>
+    /// <summary>Motif obligatoire (BR-FR-CDV-15 : Approuvée partiellement, En litige, Suspendue, Refusée, Rejetée, Irrecevable).</summary>
     public static bool MotifObligatoire(string? statut) => StatutCdv.MotifObligatoire.Contains(statut);
 
     /// <summary>Statut obligatoirement transmis au PPF (Déposée, Refusée, Encaissée, Rejetée).</summary>

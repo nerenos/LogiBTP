@@ -4,14 +4,15 @@ import { join, relative } from 'node:path';
 import {
   ERREUR_FE, ETAPE_CONTROLE, NIVEAU_CONTROLE, PROFIL_FACTURE, SPECIFICATION_FACTURE, SYNTAXE,
 } from '../src/codes.js';
-import { RACINE_MODULE, SCHEMATRONS, compilerSchematrons } from '../outils/schematrons.js';
+import { JEUX_XSD, RACINE_MODULE, SCHEMATRONS, compilerSchematrons } from '../outils/schematrons.js';
 import { controlesAEnchainer, validerFacture } from '../outils/valider.js';
 
 // Schematrons FNFE 1.4.0.04 par SaxonJS (lot 4). Les SEF sont compilés au premier lancement (une minute environ),
 // puis réutilisés tant que les XSLT ne changent pas (npm run compiler-schematrons).
 const EXEMPLES = join(RACINE_MODULE, 'tests', 'exemples');
 const lister = (d) => readdirSync(d).flatMap((n) => (statSync(join(d, n)).isDirectory() ? lister(join(d, n)) : [join(d, n)]));
-const fichiers = lister(EXEMPLES).filter((f) => /\.(xml|pdf)$/.test(f)).sort();
+// CDAR (cdar/) : cdar.test.js.
+const fichiers = lister(EXEMPLES).filter((f) => /\.(xml|pdf)$/.test(f) && !relative(EXEMPLES, f).startsWith('cdar')).sort();
 const lire = (chemin) => readFileSync(join(EXEMPLES, chemin), 'utf8');
 const CII_EN16931 = 'cii/en16931/UC1_F202500003_00-INV_20250701_EN16931_FX_CII_Commentee.xml';
 const UBL_EN16931 = 'ubl/en16931/UC1_F202500003_00-INV_20250701_EN16931_UBL_Commentee.xml';
@@ -102,9 +103,9 @@ describe('choix des contrôles selon la syntaxe et le profil', () => {
       expect([plan.xsd.principal, ...plan.schematrons.map((s) => s.schematron)]).toEqual([xsd, profil, france]);
     });
   }
-  it('CDAR : BR-FR-CDV seul (XSD au lot 5)', () => {
+  it('CDAR : XSD CDAR D22B puis BR-FR-CDV seul', () => {
     const plan = controlesAEnchainer({ syntaxe: SYNTAXE.CDAR });
-    expect([plan.xsd, plan.profil, plan.schematrons]).toEqual([null, PROFIL_FACTURE.NON_DEFINI,
+    expect([plan.xsd, plan.profil, plan.schematrons]).toEqual([JEUX_XSD.CDAR_D22B, PROFIL_FACTURE.NON_DEFINI,
       [{ etape: ETAPE_CONTROLE.FRANCE, schematron: SCHEMATRONS.BR_FR_CDV }]]);
   });
   it('MINIMUM ou profil absent : PROFIL_INCONNU', () => {

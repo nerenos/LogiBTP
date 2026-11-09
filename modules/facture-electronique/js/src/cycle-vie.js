@@ -127,7 +127,7 @@ export function motifsAutorises(statut, { emetteur = null, b2g = false } = {}) {
 /** Statut terminal (Rejetée, Refusée). */
 export const statutTerminal = (statut) => STATUTS_TERMINAUX.includes(statut);
 
-/** Motif obligatoire (En litige, Refusée, Rejetée). */
+/** Motif obligatoire (BR-FR-CDV-15 : Approuvée partiellement, En litige, Suspendue, Refusée, Rejetée, Irrecevable). */
 export const motifObligatoire = (statut) => STATUTS_MOTIF_OBLIGATOIRE.includes(statut);
 
 /** Statut obligatoirement transmis au PPF (Déposée, Refusée, Encaissée, Rejetée). */

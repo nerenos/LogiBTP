@@ -115,8 +115,9 @@ export const STATUT_CDV = Object.freeze({
 /** Statuts terminaux : plus de statut obligatoire ensuite (le vendeur annule par un avoir interne). */
 export const STATUTS_TERMINAUX = Object.freeze([STATUT_CDV.REFUSEE, STATUT_CDV.REJETEE]);
 
-/** Statuts dont le motif est obligatoire. */
-export const STATUTS_MOTIF_OBLIGATOIRE = Object.freeze([STATUT_CDV.EN_LITIGE, STATUT_CDV.REFUSEE, STATUT_CDV.REJETEE]);
+/** Statuts dont le motif est obligatoire (BR-FR-CDV-15, schematron CDAR 1.4.0.04). */
+export const STATUTS_MOTIF_OBLIGATOIRE = Object.freeze([STATUT_CDV.APPROUVEE_PARTIELLEMENT, STATUT_CDV.EN_LITIGE,
+  STATUT_CDV.SUSPENDUE, STATUT_CDV.REFUSEE, STATUT_CDV.REJETEE, STATUT_CDV.IRRECEVABLE]);
 
 /** Statuts obligatoirement transmis au PPF. */
 export const STATUTS_OBLIGATOIRES_PPF = Object.freeze([STATUT_CDV.DEPOSEE, STATUT_CDV.REFUSEE, STATUT_CDV.ENCAISSEE, STATUT_CDV.REJETEE]);
@@ -246,8 +247,70 @@ export const SCHEMA_IDENTIFIANT = Object.freeze({
   ADRESSE_ELECTRONIQUE: '0225',
   TVA: 'VA',
   FISCAL: 'FC',
+  PLATEFORME: '0238', // CDAR : matricule d'une plateforme (PA, PPF, Chorus Pro)
   CREANCIER_SEPA: 'SEPA', // UBL : BT-90 dans PartyIdentification
   TVA_UBL: 'VAT', // UBL : TaxScheme/ID du numéro de TVA
+});
+
+/** CDAR : matricule (schéma 0238) des plateformes publiques. */
+export const MATRICULE_PLATEFORME = Object.freeze({
+  PPF: '0000',
+  CHORUS_PRO: '9999', // Refusée B2G : motifs propres (BR-FR-CDV-CL-09) si l'expéditeur est Chorus Pro
+});
+
+/** CDAR : rôle d'une partie du message (UNCL 3035, BR-FR-CDV-CL-02 à CL-04, CL-07, CL-08). */
+export const ROLE_CDAR = Object.freeze({
+  ACHETEUR: 'BY',
+  REPRESENTANT_ACHETEUR: 'AB',
+  AFFACTUREUR: 'DL',
+  VENDEUR: 'SE',
+  AGENT_VENDEUR: 'SR',
+  PLATEFORME: 'WK',
+  PPF: 'DFH',
+  BENEFICIAIRE: 'PE',
+  PAYEUR: 'PR',
+  FACTURANT: 'II',
+  FACTURE: 'IV',
+});
+
+/** CDAR MDT-77 : phase du statut (UNCL 1001, BR-FR-CDV-09). */
+export const TYPE_ACCUSE_CDAR = Object.freeze({
+  INFORMATION: '23', // phase de traitement
+  ACQUITTEMENT: '305', // phase de transmission
+});
+
+/** CDAR MDT-2 : processus métier (BR-FR-CDV-CL-01). */
+export const PROCESSUS_CDV = Object.freeze({
+  REGLEMENTE: 'REGULATED',
+  NON_REGLEMENTE: 'NON_REGULATED',
+  B2C: 'B2C',
+  B2C_INT: 'B2CINT',
+  B2B_INT: 'B2BINT',
+  HORS_REFORME: 'OUTOFSCOPE',
+});
+
+/** CDAR MDT-3 : profil du message (BR-FR-CDV-02 ; einvoicingF2 : message pour le seul PPF). */
+export const PROFIL_CDV = Object.freeze({
+  FACTURE: 'urn.cpro.gouv.fr:1p0:CDV:invoice',
+  PPF: 'urn.cpro.gouv.fr:1p0:CDV:einvoicingF2',
+});
+
+/** CDAR MDT-207 : nature d'une caractéristique du détail de statut (BR-FR-CDV-CL-11). */
+export const CARACTERISTIQUE_CDV = Object.freeze({
+  MONTANT_ENCAISSE: 'MEN', // TTC, avec le taux de TVA (Encaissée, BR-FR-CDV-14)
+  MONTANT_PAYE: 'MPA',
+  RESTE_A_PAYER: 'RAP',
+  ESCOMPTE: 'ESC',
+  RABAIS: 'RAB',
+  REMISE: 'REM',
+  MONTANT_HT_APPROUVE: 'MAP',
+  MONTANT_TTC_APPROUVE: 'MAPTTC',
+  MONTANT_HT_NON_APPROUVE: 'MNA',
+  MONTANT_TTC_NON_APPROUVE: 'MNATTC',
+  COORDONNEES_BANCAIRES: 'CBB',
+  DONNEE_INVALIDE: 'DIV',
+  DONNEE_VALIDE_ATTENDUE: 'DVA',
+  DONNEE_A_PRENDRE: 'MAJ',
 });
 
 /** BT-8 : code de date d'exigibilité de la TVA, valeur du modèle (UNTDID 2475, CII DueDateTypeCode). */

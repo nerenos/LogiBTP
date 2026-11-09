@@ -79,8 +79,8 @@ const SPECIFICATIONS_FACTUR_X = [SPECIFICATION_FACTURE.BASIC_WL, SPECIFICATION_F
  */
 export function controlesAEnchainer({ syntaxe, specification, avoir = false, facturX = false, warning = false }) {
   if (syntaxe === SYNTAXE.CDAR) {
-    // XSD CDAR D22B : lot 5 (artefacts/xsd/cdar-d22b).
-    return { profil: PROFIL_FACTURE.NON_DEFINI, facturX: false, xsd: null, schematrons: [
+    // CDAR : XSD CDAR D22B puis BR-FR-CDV (pas de schematron de profil).
+    return { profil: PROFIL_FACTURE.NON_DEFINI, facturX: false, xsd: JEUX_XSD.CDAR_D22B, schematrons: [
       { etape: ETAPE_CONTROLE.FRANCE, schematron: warning ? SCHEMATRONS.BR_FR_CDV_WARNING : SCHEMATRONS.BR_FR_CDV }] };
   }
   const S = SPECIFICATION_FACTURE;
@@ -137,7 +137,7 @@ async function controlerXsd(xml, jeu) {
   const fichiers = fichiersDuJeu(jeu);
   const principal = fichiers.find((f) => f.fileName === `xsd/${jeu.principal}`);
   const res = await validateXML({
-    xml: { fileName: 'facture.xml', contents: xml },
+    xml: { fileName: 'document.xml', contents: xml },
     schema: principal,
     preload: fichiers.filter((f) => f !== principal),
     maxMemoryPages: 4096,

@@ -12,12 +12,13 @@ public partial class LectureCiiTests
 {
     internal static string Dossier(params string[] parties) => CasPartages.Chemin(["modules", "facture-electronique", "tests", "exemples", .. parties]);
 
-    /// <summary>XML d'exemple d'une syntaxe (chemins relatifs à tests/exemples, triés) : UBL sous ubl/ ou nommés *_UBL*.xml, CII sinon.</summary>
+    /// <summary>XML d'exemple d'une syntaxe (chemins relatifs à tests/exemples, triés, hors CDAR de cdar/) : UBL sous ubl/ ou nommés *_UBL*.xml, CII sinon.</summary>
     internal static List<string> Fichiers(bool ubl)
     {
         var racine = Dossier();
         return Directory.GetFiles(racine, "*.xml", SearchOption.AllDirectories)
             .Select(f => Path.GetRelativePath(racine, f).Replace('\\', '/'))
+            .Where(r => !r.StartsWith("cdar/", StringComparison.Ordinal))
             .Where(r => (r.StartsWith("ubl/", StringComparison.Ordinal) || Path.GetFileName(r).Contains("_UBL", StringComparison.Ordinal)) == ubl)
             .Order(StringComparer.Ordinal).ToList();
     }

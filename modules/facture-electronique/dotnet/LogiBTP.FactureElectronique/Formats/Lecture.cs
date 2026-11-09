@@ -18,7 +18,7 @@ public static class Lecture
     private const int ZoneEntetePdf = 1024;
     private static readonly byte[] EntetePdf = Encoding.ASCII.GetBytes("%PDF-");
 
-    /// <summary>Syntaxe d'un contenu reçu (<see cref="Syntaxe"/>) ; XML_ILLISIBLE ou SYNTAXE_INCONNUE sinon.</summary>
+    /// <summary>Syntaxe d'un contenu reçu (<see cref="Syntaxe"/> : Factur-X, CII, UBL ou CDAR) ; XML_ILLISIBLE ou SYNTAXE_INCONNUE sinon.</summary>
     public static string Detecter(byte[] contenu) => EstPdf(contenu) ? Syntaxe.FacturX : Detecter(OutilsLecture.Charger(contenu));
 
     /// <summary>Lit une facture reçue (PDF Factur-X, XML CII ou UBL) et rend la syntaxe détectée.</summary>
@@ -27,6 +27,8 @@ public static class Lecture
         if (EstPdf(contenu)) return new FactureLue(Syntaxe.FacturX, ExtractionFacturX.Lire(contenu, validerXsd));
         var document = OutilsLecture.Charger(contenu);
         var syntaxe = Detecter(document);
+        if (syntaxe == Syntaxe.Cdar)
+            throw new ExceptionLectureFacture(ErreurFe.SyntaxeInconnue, "Message de cycle de vie CDAR, pas une facture : lire par Cdar.Lire");
         return new FactureLue(syntaxe, syntaxe == Syntaxe.Cii ? LectureCii.Lire(document, validerXsd: validerXsd) : LectureUbl.Lire(document, validerXsd));
     }
 
@@ -35,6 +37,7 @@ public static class Lecture
         var nom = document.Root?.Name;
         if (nom == LectureCii.Rsm + "CrossIndustryInvoice") return Syntaxe.Cii;
         if (nom == LectureUbl.EspaceFacture + "Invoice" || nom == LectureUbl.EspaceAvoir + "CreditNote") return Syntaxe.Ubl;
+        if (nom == Cdar.Rsm + "CrossDomainAcknowledgementAndResponse") return Syntaxe.Cdar;
         throw new ExceptionLectureFacture(ErreurFe.SyntaxeInconnue, $"Syntaxe de facture non reconnue (élément racine {nom})");
     }
 
