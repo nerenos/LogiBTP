@@ -57,6 +57,8 @@ export const MENUS_METIER = [
       { code: 'textes', libelle: texte('navigation_btp.menus.bibliotheque.textes.libelle'), iconeHtml: iconeHtml('navigation_btp_textes'), url: '/liste/bibliotheque?vue=1400', creation: F(TYPE_FICHE.ELEMENT, texte('navigation_btp.menus.bibliotheque.textes.creation'), '?type=TEXTE') },
       { code: 'elements', libelle: texte('navigation_btp.menus.bibliotheque.elements.libelle'), iconeHtml: iconeHtml('navigation_btp_elements'), url: '/liste/bibliotheque?vue=14', creation: F(TYPE_FICHE.ELEMENT, texte('navigation_btp.menus.bibliotheque.elements.creation')) },
       { separateur: true },
+      { code: 'sav-equipements', libelle: texte('navigation_btp.menus.sav.sav_equipements.libelle'), iconeHtml: iconeHtml('navigation_btp_sav_equipements'), url: L('sav_equipements'), info: texte('navigation_btp.menus.sav.sav_equipements.info'), creation: { url: '/sav/equipement/nouveau', titre: texte('navigation_btp.menus.sav.sav_equipements.creation') } },
+      { separateur: true },
       { code: 'parametrage-bibliotheque', libelle: texte('navigation_btp.menus.bibliotheque.parametrage_bibliotheque.libelle'), iconeHtml: iconeHtml('navigation_btp_parametrage_bibliotheque'), url: '/parametres/bibliotheque' },
     ],
   },
@@ -130,11 +132,6 @@ export const MENUS_METIER = [
       { code: 'stock-depots', libelle: texte('navigation_btp.menus.stock.stock_depots.libelle'), iconeHtml: iconeHtml('navigation_btp_stock_depots'), url: L('depots'), info: texte('navigation_btp.menus.stock.stock_depots.info') },
       { separateur: true },
       { code: 'stock-parametres', libelle: texte('navigation_btp.menus.stock.stock_parametres.libelle'), iconeHtml: iconeHtml('navigation_btp_stock_parametres'), url: '/parametres/stock' },
-    ],
-  },
-  {
-    code: 'sav', libelle: texte('navigation_btp.menus.sav.libelle'), module: MODULE_FACULTATIF.SAV, droit: 'sav', elements: [
-      { code: 'sav-equipements', libelle: texte('navigation_btp.menus.sav.sav_equipements.libelle'), iconeHtml: iconeHtml('navigation_btp_sav_equipements'), url: L('sav_equipements'), info: texte('navigation_btp.menus.sav.sav_equipements.info'), creation: { url: '/sav/equipement/nouveau', titre: texte('navigation_btp.menus.sav.sav_equipements.creation') } },
     ],
   },
   {
