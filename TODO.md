@@ -156,7 +156,8 @@ Plan en 24 lots : [terrain-suites.md](documentation/conception/plans/terrain-sui
   ([materiel-suites.md](documentation/conception/plans/materiel-suites.md), lots 3 et 4).
 - [ ] Lot 6, suites : temps et fournitures du bon de SAV non repris dans la facture (facture = transformation au bureau) ;
   création d'une intervention impossible hors ligne ; chantier « Entretien et dépannage » créé sans passer par le chrono
-  des chantiers (code `SAV-<client>`). Plan : lots 22 à 24.
+  des chantiers (code `SAV-<client>`). Plan : lots 22 à 24. Fait le 08/11/2026 : lot 22 (bouton « Facturer » de
+  l'ordre SAV : facture brouillon, temps au prix de l'article « Main-d'œuvre SAV » désigné, `db/293`).
 - [ ] Contrats d'entretien (Exécution, second temps) : analyse à part à écrire (`ANALYSE-CONTRATS-ENTRETIEN.md`), hors
   du plan du terrain (TS25).
 

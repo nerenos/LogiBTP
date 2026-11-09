@@ -719,5 +719,6 @@
   "terrain_btp_reserve": "📌",
   "terrain_btp_reserve_levee": "✔",
   "execution_btp_reserve_ouverte": "📌",
-  "execution_btp_reserve_levee": "✔"
+  "execution_btp_reserve_levee": "✔",
+  "execution_btp_facturer": "🧾"
 }

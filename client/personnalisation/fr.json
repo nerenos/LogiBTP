@@ -3308,6 +3308,25 @@
       "levee": "Levée le {{date}} par {{par}}",
       "levee_appareil": "signée sur l'appareil le {{date}}",
       "photo": "photo de la levée dans les pièces de l'ordre"
+    },
+    "facturation_sav": {
+      "titre": "Facturation de l'intervention",
+      "bon": "Bon : {{heures}} h de temps, {{fournitures}} fourniture(s)",
+      "factures": "Factures :",
+      "sans_numero": "(sans numéro)",
+      "brouillon": "(brouillon)",
+      "facturer": "Facturer",
+      "sans_article": "Facturation depuis le bon indisponible : aucun article « Main-d'œuvre SAV » n'est désigné dans Paramètres › Exécution.",
+      "deja_brouillon": "Une facture brouillon de cette intervention existe déjà : complétez-la ou annulez-la avant d'en créer une autre.",
+      "confirmer": "Créer une facture brouillon : {{heures}} h au prix de l'article {{article}} et {{fournitures}} fourniture(s) à chiffrer ? Elle ne sera pas validée.",
+      "creee": "Facture brouillon {{numero}} créée",
+      "parametre_titre": "Facturation des interventions SAV",
+      "parametre_aide": "Article de la bibliothèque dont le prix, la TVA et le compte servent à facturer le temps des interventions SAV (bouton « Facturer » de l'ordre). Sans article, le bouton est masqué.",
+      "parametre_article": "Article « Main-d'œuvre SAV » (code ou BIB:CODE)",
+      "parametre_prix": "{{prix}} par {{unite}}",
+      "parametre_aucun": "Aucun article désigné",
+      "parametre_enregistrer": "Enregistrer l'article",
+      "parametre_enregistre": "Article de facturation SAV enregistré"
     }
   },
   "sous_traitance_btp": {

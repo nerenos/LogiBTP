@@ -147,6 +147,7 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
         new("/api/editions/chartes", ModeRoute.Parametrage),
         new("/api/editions/defauts", ModeRoute.Parametrage),
         new("/api/execution/parcours-modeles", ModeRoute.Parametrage),
+        new("/api/execution/sav-parametres", ModeRoute.Parametrage),
         new("/api/rentabilite/parametres", ModeRoute.Parametrage),
         // Module Document : définitions et référentiels lus par la page document.
         new("/api/documents", ModeRoute.Module, "documents"),

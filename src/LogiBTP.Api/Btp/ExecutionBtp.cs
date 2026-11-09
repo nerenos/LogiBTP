@@ -265,6 +265,8 @@ public static class ExecutionBtp
         g.MapGet("/documents/{id:long}/repartition", (long id, LogiBtpContext db, CancellationToken ct) => RepartitionAsync(db, id, ct));
         // Réserves suivies d'un ordre de pose et leur levée sur le terrain (plan terrain-suites, lot 15 ; db/290).
         g.MapGet("/documents/{id:long}/reserves", (long id, LogiBtpContext db, CancellationToken ct) => TerrainBtp.ReservesAsync(db, id, ct));
+        // Facture brouillon depuis le bon de SAV et son article « Main-d'œuvre SAV » (plan terrain-suites, lot 22 ; db/293).
+        g.MapFacturationSav();
         // Heures budget d'un chantier par service (commandes validées ; natures MO → services).
         g.MapGet("/chantiers/{id:int}/heures", async (int id, LogiBtpContext db, CancellationToken ct) => Results.Content(await db.Database.SqlQueryRaw<string>("""
             SELECT coalesce(json_agg(json_build_object('srv_id', h.srv_id, 'service', s.srv_libelle, 'heures', h.heures) ORDER BY s.srv_ordre), '[]')::text AS "Value"

@@ -37,7 +37,7 @@
 | 19 | Pointage des heures de matériel à la borne | cœur | — | FAIT (08/11/2026) |
 | 20 | Réception d'une commande à options ou variantes | cœur | — | FAIT (08/11/2026) |
 | 21 | Avancement réel par marché | cœur | — | FAIT (08/11/2026) |
-| 22 | Facture brouillon depuis le bon de SAV | cœur | — | A FAIRE |
+| 22 | Facture brouillon depuis le bon de SAV | cœur | — | FAIT (08/11/2026) |
 | 23 | Création d'une intervention SAV hors ligne | cœur | 9 | A FAIRE |
 | 24 | Chantier « Entretien et dépannage » par le chrono des chantiers | cœur | — | A FAIRE |
 
@@ -505,7 +505,7 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
   calculée en C# (dixième, demi vers l'infini, comme le `round` SQL d'avant). Aucun script SQL. Tests :
   `AvancementMarcheTests.cs` (deux marchés, un marché inchangé).
 
-## Lot 22 : facture brouillon depuis le bon de SAV (TS21 a, TS22 c)
+## Lot 22 : facture brouillon depuis le bon de SAV (TS21 a, TS22 c) (FAIT 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `src/LogiBTP.Api/Btp/TerrainSavBtp.cs` ou nouveau `FacturationSavBtp.cs` (facture brouillon : temps au
@@ -518,6 +518,20 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
 - **Tests** : C# : bon de 2 h et deux fournitures → facture brouillon de trois lignes, non validée ; second clic refusé
   si une facture brouillon existe déjà.
 - **Critère de fin** : `npm test` vert ; `dotnet test` des moteurs inchangé (aucune règle de calcul modifiée).
+- **Réalisé / écarts** : point OUVERT tranché par la proposition : sans article désigné, bouton masqué avec
+  l'explication. Script `db/293_sav_facturation.sql` (table `parametre_sav`, une ligne : `psa_ele_mo_id`). Nouveau
+  `src/LogiBTP.Api/Btp/FacturationSavBtp.cs` (branché par `ExecutionBtp`) : `GET|PUT /api/execution/sav-parametres`
+  (article saisi par « CODE » ou « BIB:CODE », `ModeRoute.Parametrage`, `ExigerParametres`), `GET|POST
+  /api/execution/documents/{id}/facturation-sav` (état : article, heures, fournitures, factures liées ; création).
+  Temps = pointages retenus de l'ordre (`v_cout_mo_chantier`), sinon heures réalisées de ses lignes ; ligne de temps à
+  l'article (unité de stock, PV de l'article imposé, coefficients, nature, compte, TVA du code de l'article sinon TVA
+  normale par défaut) ; une ligne sans prix par fourniture des comptes rendus. Facture V_FACTURE créée et enregistrée
+  sous les droits de l'utilisateur, jamais validée, liée à l'ordre (`document_lien` TRANSFORMATION) ; second clic refusé
+  (`SAV_FACTURE_BROUILLON`, 409) tant qu'une facture brouillon liée existe. Écart : pas de tâche du CRM « à facturer »
+  modifiée ; bouton dans le panneau « Exécution » de l'ordre SAV (`client/src/app/execution/execution.js`), paramètre
+  dans Paramètres › Exécution (`pages/execution.js`), textes `execution_btp.facturation_sav.*`, icône
+  `execution_btp_facturer`. Aucune règle des moteurs modifiée. Tests : `FacturationSavTests.cs` (bon de 2 h et deux
+  fournitures → trois lignes, route sans validation, second clic refusé).
 
 ## Lot 23 : création d'une intervention SAV hors ligne (TS23 a)
 

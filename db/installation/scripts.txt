@@ -252,6 +252,7 @@ db/289_reception_appareil.sql rejouable
 db/290_reception_reserves.sql rejouable
 db/291_reception_levee.sql rejouable
 db/292_pointage_materiel_borne.sql rejouable
+db/293_sav_facturation.sql rejouable
 
 # Vues de colonnes des types de documents créés après 176 : rejouée en dernier.
 db/176_documents_vues_types.sql rejouable

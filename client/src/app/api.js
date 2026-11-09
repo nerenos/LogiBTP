@@ -157,6 +157,11 @@ export const api = {
     repartition: (id) => appel('GET', `/execution/documents/${id}/repartition`),
     // Réserves suivies d'un ordre de pose (terrain-suites lot 15) : réserves de ses réceptions et leur levée.
     reserves: (id) => appel('GET', `/execution/documents/${id}/reserves`),
+    // Facture brouillon depuis le bon de SAV (terrain-suites lot 22) : état, création ; article « Main-d'œuvre SAV ».
+    facturationSav: (id) => appel('GET', `/execution/documents/${id}/facturation-sav`),
+    facturerSav: (id) => appel('POST', `/execution/documents/${id}/facturation-sav`),
+    parametresSav: () => appel('GET', '/execution/sav-parametres'),
+    enregistrerParametresSav: (p) => appel('PUT', '/execution/sav-parametres', p),
     heuresChantier: (id) => appel('GET', `/execution/chantiers/${id}/heures`),
     delegations: () => appel('GET', '/execution/delegations'),
     enregistrerDelegations: (srv, l) => appel('PUT', `/execution/delegations/${srv}`, l),
