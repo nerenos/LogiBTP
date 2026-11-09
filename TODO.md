@@ -14,18 +14,6 @@
 
 ## Fonctionnel
 
-
-### Marchés et règlements
-
-- [ ] Relances des devis et des factures : analyse du 05/11/2026 à valider
-  ([ANALYSE-RELANCES.md](documentation/conception/ANALYSE-RELANCES.md), questions R1 à R18, quatre lots ; comprend le lot 5 du module Mail et C27 du CRM).
-
-### Documents
-
-- [ ] Restauration d'une version et rapport des frais annexes (faits le 05/11/2026) : essai dans le navigateur à faire
-  (restaurer puis enregistrer un brouillon, imprimer le rapport `FRAIS_ANNEXES` d'un devis à tranche F) ; une
-  restauration enregistrée est tracée comme une modification (pas d'action RESTAURATION dans l'historique).
-
 ### Module Mail
 
 Analyses validées le 23/10/2026 : [ANALYSE-MODULE-MAIL.md](documentation/conception/ANALYSE-MODULE-MAIL.md),
@@ -52,9 +40,6 @@ Analyses validées le 23/10/2026 : [ANALYSE-MODULE-MAIL.md](documentation/concep
   rafraîchissement rotatif, machines connues, double facteur par courriel, exclusion d'IP, identifiants API, deux clés
   (`.env`, données) ; profil par défaut = saisie mobile (A5 révisée) ; à reprendre par le Mail (comptes, boîtes,
   « À rapprocher ») et l'OAuth (reconnexion des connexions).
-- [ ] **Avant une exposition sur internet** ([analyse des droits, § 10](documentation/conception/ANALYSE-MODULE-DROITS.md)) :
-  reste les prérequis DNS et certificat joker dans l'installeur (§ 10.6) et la CSP bloquante posée par le proxy ;
-  en-têtes, CSP en rapport, contrôle de l'`Origin`, CORS, débit, proxys (lot 4) et HTML sans script (lot 5) : faits.
 - [ ] **Module de partage de fichiers** (auto-hébergé ou kDrive d'Infomaniak) : lien de téléchargement à la place des
   pièces jointes trop lourdes pour un courriel.
 
@@ -67,24 +52,6 @@ global). Lots à venir :
 
 - [ ] Imputation d'un avoir ou d'un trop-perçu sur une facture (partie document faite le 31/10/2026 : onglet Règlements,
   éditions, reste à payer) : écritures avec le module Comptabilité complet.
-
-### Marchés et règlements
-
-- [x] Relances des devis et des factures : plan [relances.md](documentation/conception/plans/relances.md) réalisé en neuf lots le 08/11/2026 (décisions dans
-  [relances-questions.md](documentation/conception/plans/relances-questions.md) ; analyse [ANALYSE-RELANCES.md](documentation/conception/ANALYSE-RELANCES.md) ;
-  le lot 5 du module Mail et C27 du CRM y sont absorbés). Lot 9 : calcul de nuit et notification « N relances à préparer »
-  (`SourceRelancesAPreparer`, services de la base par `SpecialisationRelanceNuit`, chaque destinataire compté selon sa portée),
-  mode TACHE des devis (tâche du CRM du jour, CRM actif seulement), pastille « relancé N » de la fiche tiers. Ligne laissée
-  cochée : à déplacer dans `documentation/TACHES.md` par un humain.
-- [ ] Relances, reports du plan : calcul des pénalités de retard pour information (Q13 a : taux à tenir à jour, aujourd'hui
-  mentions citées sans calcul) ; pastille « relancé N » dans l'entête des nouvelles pièces (Q17 : touche la page document) ;
-  blocage du client (Q17 c : paramétrable, aujourd'hui aucun blocage).
-- [ ] Relances, à finir : éditeur de niveaux pour la règle propre d'un tiers (aujourd'hui saisie JSON dans la fiche) ; rôle de
-  relance des types de pièces réglable hors de la page Rentabilité ; rejouer `db/121` et `db/191` sur les bases existantes
-  (vues de liste et modèles de lettres) ; mode TACHE encore listé par l'écran de la liste de travail quand le CRM est inactif
-  (le serveur refuse alors le groupe, `RELANCE_TACHE` : l'écran du module ne reçoit pas la liste des modes admis).
-- [ ] Relances des devis et des factures : analyse du 05/11/2026 à valider
-  ([ANALYSE-RELANCES.md](documentation/conception/ANALYSE-RELANCES.md), questions R1 à R18, quatre lots ; comprend le lot 5 du module Mail et C27 du CRM).
 
 ### Comptabilité
 
@@ -120,26 +87,6 @@ Analyse du 23/10/2026 : [ANALYSE-MODULE-SOUS-TRAITANCE.md](documentation/concept
 - [ ] Module Facturation électronique (réception obligatoire depuis le 01/09/2026) à analyser : formats (Factur-X,
   UBL, CII), connexion à la plateforme agréée, commun aux ventes, aux achats et à la sous-traitance ; en attendant,
   saisie libre des factures reçues (ST22).
-
-### Application de terrain (poseurs, chefs d'équipe)
-
-- [ ] Lot 1, écarts : plans au dernier indice validé du suivi des validations (CRM) parmi les pièces du terrain (T6) ;
-  bandeau trop large sur un téléphone (gabarit tactile commun avec le lot 2).
-- [ ] Lot 2, écarts : pointage à la ligne d'ordre (`poi_lig_id`) quand la tâche vient d'une ligne (T8).
-- [ ] Lot 3, suites : photos HEIC converties
-  (le navigateur ne sait pas les réduire).
-- [ ] Lot 4, suites : saisie libre hors ligne limitée aux chantiers et ordres déjà lus (journée gardée) ; nouvelle
-  recherche d'un ordre par son numéro impossible hors ligne ; envoi des photos gardées sans contrôle de taille avant
-  l'envoi (limite de dépôt de la GED).
-- [ ] Lot 5, suites : valeur juridique de la signature simple à faire confirmer ; levée des réserves suivie (tâche du CRM
-  seulement) ; demande d'approvisionnement en texte libre (articles de la bibliothèque à choisir plus tard) ; réception
-  gardée hors ligne horodatée à l'envoi par le serveur.
-- [x] Lot 7, suites : bibliothèque simplifiée sur le terrain (T18) ; heures de matériel non valorisées dans le coût du
-  chantier (aucun coût horaire du matériel) ; pointage et relevés de matériel à la borne ; réception d'une commande à options
-  ou variantes (refusée) ; avancement réel par marché quand un chantier en porte plusieurs (aujourd'hui : tout le chantier).
-- [ ] Lot 6, suites : temps et fournitures du bon de SAV non repris dans la facture (facture = transformation au bureau) ;
-  création d'une intervention impossible hors ligne ; chantier « Entretien et dépannage » créé sans passer par le chrono
-  des chantiers (code `SAV-<client>`) ; contrats d'entretien (Exécution, second temps).
 
 ### Import
 
@@ -185,10 +132,5 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
   bibliothèque, panneaux du document, annuaire, graphe…). Séparateurs à proportion (onglet Analyse, arbres de la
   bibliothèque) : restés propres (part en % et non largeur).
 
-## Revue du code du 27/10/2026 ([rapport](documentation/REVUE-CODE-2026-10-27.md))
-
-- [ ] Lots A (code mort sûr) et B (code apparemment inutilisé, à trancher) : en attente des évolutions à venir qui
-  touchent ce code ; à reprendre ensuite.
-- [ ] Liste, périodes : écran de saisie du début d'exercice dans les paramètres de la Comptabilité (aujourd'hui clé `debut_exercice` de `parametre_comptabilite`, sans interface ; absent = année civile).
 
 

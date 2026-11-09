@@ -65,10 +65,10 @@ const gabarit = () => `
       <button role="tab" data-onglet-vue="entete" title="${texteHtml('document_btp.page.onglets.entete_aide', { raccourci: libelleRaccourci('ongletEntete', 'document') })}">${texteHtml('document_btp.page.onglets.entete')}</button>
       <button role="tab" data-onglet-vue="reglements" title="${texteHtml('document_btp.page.onglets.reglements_aide', { raccourci: libelleRaccourci('ongletReglements', 'document') })}">${texteHtml('document_btp.page.onglets.reglements')}</button>
       <button role="tab" data-onglet-vue="lignes" title="${texteHtml('document_btp.page.onglets.lignes_aide', { raccourci: libelleRaccourci('ongletLignes', 'document') })}">${texteHtml('document_btp.page.onglets.lignes')}</button>
-      <button role="tab" data-onglet-vue="analyse" title="${texteHtml('document_btp.page.onglets.analyse_aide', { raccourci: libelleRaccourci('ongletAnalyse', 'document') })}">${texteHtml('document_btp.page.onglets.analyse')}</button>
-      <button role="tab" data-onglet-vue="pieces" title="${texteHtml('document_btp.page.onglets.pieces_aide', { raccourci: libelleRaccourci('ongletPieces', 'document') })}">${texteHtml('document_btp.page.onglets.pieces')}</button>
-      <button role="tab" data-onglet-vue="suivi" title="${texteHtml('document_btp.page.onglets.suivi_aide', { raccourci: libelleRaccourci('ongletSuivi', 'document') })}">${texteHtml('document_btp.page.onglets.suivi')}</button>
-      <button role="tab" data-onglet-vue="options" title="${texteHtml('document_btp.page.onglets.options_aide', { raccourci: libelleRaccourci('ongletOptions', 'document') })}">${texteHtml('document_btp.page.onglets.options')}</button>
+      <button role="tab" data-onglet-vue="analyse" title="${texteHtml('document_btp.page.onglets.analyse_aide', { raccourci: libelleRaccourci('ongletAnalyse', 'document') })}">${iconeHtml('document_btp_analyse')}</button>
+      <button role="tab" data-onglet-vue="pieces" title="${texteHtml('document_btp.page.onglets.pieces_aide', { raccourci: libelleRaccourci('ongletPieces', 'document') })}">${iconeHtml('navigation_btp_ged')}</button>
+      <button role="tab" data-onglet-vue="suivi" title="${texteHtml('document_btp.page.onglets.suivi_aide', { raccourci: libelleRaccourci('ongletSuivi', 'document') })}">${iconeHtml('document_btp_suivi')}</button>
+      <button role="tab" data-onglet-vue="options" title="${texteHtml('document_btp.page.onglets.options_aide', { raccourci: libelleRaccourci('ongletOptions', 'document') })}">${iconeHtml('document_btp_options')}</button>
     </nav>
     <div class="groupe groupe-outils">
       <button data-action="annuler" title="${texteHtml('document_btp.page.annuler')}">${iconeHtml('document_btp_annuler')}</button>

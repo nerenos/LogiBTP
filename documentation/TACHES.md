@@ -144,6 +144,26 @@
   réserves, refus), PV édité et rangé dans la GED de l'ordre avec son empreinte, réserves au CRM, ordre bloqué au refus,
   PV envoyé au client par courriel ; demande d'approvisionnement depuis une tâche ; pad de signature du socle.
 
+### Application de terrain (poseurs, chefs d'équipe)
+
+- [x] Lot 1, écarts : plans au dernier indice validé du suivi des validations (CRM) parmi les pièces du terrain (T6) ;
+  bandeau trop large sur un téléphone (gabarit tactile commun avec le lot 2).
+- [x] Lot 2, écarts : pointage à la ligne d'ordre (`poi_lig_id`) quand la tâche vient d'une ligne (T8).
+- [x] Lot 3, suites : photos HEIC converties
+  (le navigateur ne sait pas les réduire).
+- [x] Lot 4, suites : saisie libre hors ligne limitée aux chantiers et ordres déjà lus (journée gardée) ; nouvelle
+  recherche d'un ordre par son numéro impossible hors ligne ; envoi des photos gardées sans contrôle de taille avant
+  l'envoi (limite de dépôt de la GED).
+- [x] Lot 5, suites : valeur juridique de la signature simple à faire confirmer ; levée des réserves suivie (tâche du CRM
+  seulement) ; demande d'approvisionnement en texte libre (articles de la bibliothèque à choisir plus tard) ; réception
+  gardée hors ligne horodatée à l'envoi par le serveur.
+- [x] Lot 6, suites : temps et fournitures du bon de SAV non repris dans la facture (facture = transformation au bureau) ;
+  création d'une intervention impossible hors ligne ; chantier « Entretien et dépannage » créé sans passer par le chrono
+  des chantiers (code `SAV-<client>`) ; contrats d'entretien (Exécution, second temps).
+- [x] Lot 7, suites : bibliothèque simplifiée sur le terrain (T18) ; heures de matériel non valorisées dans le coût du
+  chantier (aucun coût horaire du matériel) ; pointage et relevés de matériel à la borne ; réception d'une commande à options
+  ou variantes (refusée) ; avancement réel par marché quand un chantier en porte plusieurs (aujourd'hui : tout le chantier).
+
 ### Import
 
 ### Installation
@@ -238,7 +258,6 @@ Lots P1 (module, chargement, socle et navigation migrés), P2 (erreurs par code)
 
 Analyse du 24/10/2026 : [ANALYSE-MODULE-STOCK.md](documentation/conception/ANALYSE-MODULE-STOCK.md).
 
-
 - [x] Lots et numéros de série (S24) : questions tranchées le 05/11/2026 (§ 11 de l'analyse : lots facultatifs, péremption
   par article périssable avec durée théorique) ; S24-a, S24-b et S24-c réalisés ; S24-d (numéros de série → équipements
   installés : module SAV `modules/sav`, garantie des articles, création par les mouvements, écrans, interventions E_SAV
@@ -248,12 +267,14 @@ Analyse du 24/10/2026 : [ANALYSE-MODULE-STOCK.md](documentation/conception/ANALY
   par nature d'article) et provision pour dépréciation (valeur d'inventaire inférieure au PMP, 39x) : lots 7 à 11 de
   [plans/stock.md](plans/stock.md) (faits le 07/11/2026, C# non compilé).
 
-  ### Droits 
-  - [x] **Avant une exposition sur internet** ([analyse des droits, § 10](documentation/conception/ANALYSE-MODULE-DROITS.md)) :
+### Droits 
+- [x] **Avant une exposition sur internet** ([analyse des droits, § 10](documentation/conception/ANALYSE-MODULE-DROITS.md)) :
   reste les prérequis DNS et certificat joker dans l'installeur (§ 10.6) et la CSP bloquante posée par le proxy ;
   en-têtes, CSP en rapport, contrôle de l'`Origin`, CORS, débit, proxys (lot 4) et HTML sans script (lot 5) : faits.
 
-- [x] **Module de droits** ([analyse](documentation/conception/ANALYSE-MODULE-DROITS.md), lots 1 à 5 réalisés : profils, arbre, refus par défaut des routes, montants de validation, usurpation, listes filtrées, JWT et rafraîchissement rotatif, machines connues, double facteur, exclusion d'IP, identifiants d'API, sécurité web, journaux, .env chiffré, rôles PostgreSQL) :
+- [x] **Module de droits** ([analyse](documentation/conception/ANALYSE-MODULE-DROITS.md), lots 1 à 5 réalisés : profils, arbre, refus par défaut des routes, montants de      
+  validation, usurpation, listes filtrées, JWT et rafraîchissement rotatif, machines connues, double facteur, exclusion d'IP, identifiants d'API, sécurité web, journaux, .env 
+  chiffré, rôles PostgreSQL) :
   droits fins par profil, portée et élément, montants de validation, usurpation, RGPD, JWT avec
   rafraîchissement rotatif, machines connues, double facteur par courriel, exclusion d'IP, identifiants API, deux clés
   (`.env`, données) ; profil par défaut = saisie mobile (A5 révisée) ; à reprendre par le Mail (comptes, boîtes,
@@ -273,3 +294,29 @@ Décisions du 31/10/2026 : `PIED_GLOBAL` gardé (prorata dans le pied de chaque 
 global). Lots à venir :
 
 - [x] Imputation d'un avoir ou d'un trop-perçu sur une facture (partie document faite le 31/10/2026 : onglet Règlements, éditions, reste à payer) : écritures avec le module Comptabilité complet.
+
+### Documents
+
+- [x] Restauration d'une version et rapport des frais annexes (faits le 05/11/2026) : essai dans le navigateur à faire
+  (restaurer puis enregistrer un brouillon, imprimer le rapport `FRAIS_ANNEXES` d'un devis à tranche F) ; une
+  restauration enregistrée est tracée comme une modification (pas d'action RESTAURATION dans l'historique).
+
+### Marchés et règlements
+
+- [x] Relances des devis et des factures : analyse du 05/11/2026 à valider
+  ([ANALYSE-RELANCES.md](documentation/conception/ANALYSE-RELANCES.md), questions R1 à R18, quatre lots ; comprend le lot 5 du module Mail et C27 du CRM).
+- [x] Relances des devis et des factures : plan [relances.md](documentation/conception/plans/relances.md) réalisé en neuf lots le 08/11/2026 (décisions dans
+  [relances-questions.md](documentation/conception/plans/relances-questions.md) ; analyse [ANALYSE-RELANCES.md](documentation/conception/ANALYSE-RELANCES.md) ;
+  le lot 5 du module Mail et C27 du CRM y sont absorbés). Lot 9 : calcul de nuit et notification « N relances à préparer »
+  (`SourceRelancesAPreparer`, services de la base par `SpecialisationRelanceNuit`, chaque destinataire compté selon sa portée),
+  mode TACHE des devis (tâche du CRM du jour, CRM actif seulement), pastille « relancé N » de la fiche tiers. Ligne laissée
+  cochée : à déplacer dans `documentation/TACHES.md` par un humain.
+- [x] Relances, reports du plan : calcul des pénalités de retard pour information (Q13 a : taux à tenir à jour, aujourd'hui
+  mentions citées sans calcul) ; pastille « relancé N » dans l'entête des nouvelles pièces (Q17 : touche la page document) ;
+  blocage du client (Q17 c : paramétrable, aujourd'hui aucun blocage).
+- [x] Relances, à finir : éditeur de niveaux pour la règle propre d'un tiers (aujourd'hui saisie JSON dans la fiche) ; rôle de
+  relance des types de pièces réglable hors de la page Rentabilité ; rejouer `db/121` et `db/191` sur les bases existantes
+  (vues de liste et modèles de lettres) ; mode TACHE encore listé par l'écran de la liste de travail quand le CRM est inactif
+  (le serveur refuse alors le groupe, `RELANCE_TACHE` : l'écran du module ne reçoit pas la liste des modes admis).
+- [x] Relances des devis et des factures : analyse du 05/11/2026 à valider
+  ([ANALYSE-RELANCES.md](documentation/conception/ANALYSE-RELANCES.md), questions R1 à R18, quatre lots ; comprend le lot 5 du module Mail et C27 du CRM).
