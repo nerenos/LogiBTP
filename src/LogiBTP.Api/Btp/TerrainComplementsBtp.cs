@@ -2,6 +2,8 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using LogiBTP.Crm;
 using LogiBTP.Crm.Web;
+using System.Text.Json;
+using LogiBTP.Documents;
 using LogiBTP.Documents.Web;
 using LogiBTP.Domaine;
 using LogiBTP.Socle;
@@ -12,6 +14,7 @@ using Npgsql;
 namespace LogiBTP.Api.Btp;
 
 public sealed record LigneLivree(long LigId, decimal Qte);
+public sealed record LigneLivrable(long LigId, string Libelle, decimal Qte, decimal Reste);
 public sealed record LivraisonTerrain(List<LigneLivree> Lignes, string? NumeroBl, string? Commentaire);
 public sealed record MaterielTerrain(int MatId, DateOnly Date, int? Minutes, decimal? Heures, decimal? Kilometres, decimal? Litres, decimal? Cout, string? Commentaire);
 
@@ -41,6 +44,66 @@ public static partial class TerrainBtp
             throw ExceptionMetier.Introuvable($"Chantier {chantier} de votre planning");
     }
 
+    /// <summary>
+    /// Commande à options ou variantes (plan terrain-suites, lot 20, TS19) : la commande ne garde pas ses choix, ils sont
+    /// faits à chaque transformation et tracés sur le lien (<c>lie_choix</c>, module Document). Choix connus = ceux de la
+    /// première transformation précédente (ordre de l'appelant) qui couvre toutes les unités (et ses bases de variantes écartées) ; aucune unité : liste vide ;
+    /// inconnus : null (réception refusée sur le terrain, faite au bureau).
+    /// </summary>
+    public static List<ChoixOption>? ChoixConnus(IReadOnlyCollection<UniteOption> unites, IEnumerable<IReadOnlyDictionary<long, bool>> precedents)
+    {
+        if (unites.Count == 0) return [];
+        var c = precedents.FirstOrDefault(p => unites.All(u => p.ContainsKey(u.LigId)));
+        if (c is null) return null;
+        // Bases de variantes : gardées par défaut, écartées si le choix précédent l'a dit.
+        var bases = unites.Where(u => u.BaseId is long b && c.ContainsKey(b)).Select(u => u.BaseId!.Value).Distinct();
+        return unites.Select(u => u.LigId).Concat(bases).Distinct().Order().Select(id => new ChoixOption { LigId = id, Retenue = c[id] }).ToList();
+    }
+
+    /// <summary>
+    /// Lignes d'une commande selon les choix (règle de <c>TransformationService.Preparer</c>) : écartées = lignes des
+    /// options et variantes non retenues et des bases de variantes écartées ; options retenues = leurs lignes de prix
+    /// (ouvrage ou élément hors écart d'arrondi, parent direct non ouvrage), proposées en plus des lignes vendues.
+    /// </summary>
+    public static (HashSet<long> Ecartees, List<long> OptionsRetenues) LignesSelonChoix(IReadOnlyCollection<DocumentLigneBtp> lignes, IReadOnlyCollection<UniteOption> unites, IReadOnlyCollection<ChoixOption> choix)
+    {
+        var parId = lignes.ToDictionary(l => l.LigId);
+        var retenue = choix.GroupBy(c => c.LigId).ToDictionary(g => g.Key, g => g.Last().Retenue);
+        var retenues = unites.Where(u => retenue.GetValueOrDefault(u.LigId)).Select(u => u.LigId).ToHashSet();
+        var ecarteesRacines = unites.Where(u => !retenue.GetValueOrDefault(u.LigId)).Select(u => u.LigId)
+            .Concat(unites.Where(u => u.BaseId is long b && retenue.TryGetValue(b, out var r) && !r).Select(u => u.BaseId!.Value)).ToHashSet();
+        bool Dans(DocumentLigneBtp l, HashSet<long> racines)
+        {
+            for (var x = l; ; x = parId[x.LigParentId!.Value])
+            {
+                if (racines.Contains(x.LigId)) return true;
+                if (x.LigParentId is not long p || !parId.ContainsKey(p)) return false;
+            }
+        }
+        var ecartees = lignes.Where(l => Dans(l, ecarteesRacines)).Select(l => l.LigId).ToHashSet();
+        var options = lignes.Where(l => !ecartees.Contains(l.LigId) && Dans(l, retenues) && l.LigTylId is TL.Ouvrage or TL.Element && !l.LigIsEcartArrondi
+                && !(l.LigParentId is long p && parId.TryGetValue(p, out var parent) && parent.LigTylId == TL.Ouvrage))
+            .Select(l => l.LigId).OrderBy(x => x).ToList();
+        return (ecartees, options);
+    }
+
+    private sealed record LienChoix(long Cible, string Choix);
+    private sealed record QteLien(long LigId, decimal Qte);
+    private static readonly JsonSerializerOptions JsonChoix = new() { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
+
+    /// <summary>Choix des options d'une commande d'après ses transformations précédentes (validées d'abord, puis les plus récentes).</summary>
+    private static async Task<List<ChoixOption>?> ChoixCommandeAsync(LogiBtpContext db, long ent, IReadOnlyCollection<UniteOption> unites, CancellationToken ct)
+    {
+        if (unites.Count == 0) return [];
+        var liens = await db.Database.SqlQueryRaw<LienChoix>("""
+            SELECT l.lie_cible_ent_id AS cible, l.lie_choix::text AS choix FROM document_lien l JOIN document d ON d.ent_id = l.lie_cible_ent_id
+            WHERE l.lie_source_ent_id = @e AND l.lie_choix IS NOT NULL ORDER BY d.ent_verrouille DESC, l.lie_cible_ent_id DESC
+            """, new NpgsqlParameter("e", ent)).ToListAsync(ct);
+        var precedents = liens.Select(l => (IReadOnlyDictionary<long, bool>)(JsonSerializer.Deserialize<List<ChoixOption>>(l.Choix, JsonChoix) ?? [])
+            .GroupBy(c => c.LigId).ToDictionary(g => g.Key, g => g.Last().Retenue));
+        return ChoixConnus(unites, precedents);
+    }
+
     private static string SansBalises(string? html) => System.Net.WebUtility.HtmlDecode(Regex.Replace(html ?? "", "<[^>]+>", " ")).Trim();
 
     private static RouteGroupBuilder MapComplementsTerrain(this RouteGroupBuilder g)
@@ -61,11 +124,30 @@ public static partial class TerrainBtp
             var res = new List<object>();
             foreach (var c in commandes)
             {
-                var suivi = await transformations.Suivi(await documents.Charger(c.EntId, ct), ct);
-                var lignes = suivi.Select(l => new { lig_id = l.LigId, libelle = SansBalises(l.Libelle), qte = l.Qte,
-                        reste = l.Etapes.FirstOrDefault(e => e.Etape == EtapeReceptionLivraison)?.Reliquat ?? 0 })
-                    .Where(l => l.reste > 0).ToList();
-                if (lignes.Count > 0) res.Add(new { ent_id = c.EntId, numero = c.Numero, objet = c.Objet, fournisseur = c.Fournisseur, lignes });
+                var doc = await documents.Charger(c.EntId, ct);
+                // Options et variantes (lot 20) : seules les lignes retenues sont proposées, si les choix sont connus.
+                var unites = Options.Unites(doc.Lignes);
+                var choix = await ChoixCommandeAsync(db, c.EntId, unites, ct);
+                if (choix is null)
+                {
+                    res.Add(new { ent_id = c.EntId, numero = c.Numero, objet = c.Objet, fournisseur = c.Fournisseur, options_a_choisir = true, lignes = Array.Empty<LigneLivrable>() });
+                    continue;
+                }
+                var (ecartees, options) = LignesSelonChoix(doc.Lignes, unites, choix);
+                var suivi = await transformations.Suivi(doc, ct);
+                var lignes = suivi.Where(l => !ecartees.Contains(l.LigId)).Select(l => new LigneLivrable(l.LigId, SansBalises(l.Libelle), l.Qte,
+                        l.Etapes.FirstOrDefault(e => e.Etape == EtapeReceptionLivraison)?.Reliquat ?? 0)).ToList();
+                if (options.Count > 0)
+                {
+                    var recues = (await db.Database.SqlQueryRaw<QteLien>("""
+                        SELECT lil_source_lig_id AS lig_id, sum(lil_qte) AS qte FROM document_ligne_lien WHERE lil_source_lig_id = ANY(@l) AND lil_etape = @e GROUP BY lil_source_lig_id
+                        """, new NpgsqlParameter("l", options.ToArray()), new NpgsqlParameter("e", EtapeReceptionLivraison)).ToListAsync(ct)).ToDictionary(x => x.LigId, x => x.Qte);
+                    var parId = doc.Lignes.ToDictionary(l => l.LigId);
+                    lignes.AddRange(options.Select(id => parId[id]).Select(l => new LigneLivrable(l.LigId, SansBalises(l.LigLibelleBrut), l.LigQteVendue ?? 0,
+                        (l.LigQteVendue ?? 0) - recues.GetValueOrDefault(l.LigId))));
+                }
+                lignes = lignes.Where(l => l.Reste > 0).ToList();
+                if (lignes.Count > 0) res.Add(new { ent_id = c.EntId, numero = c.Numero, objet = c.Objet, fournisseur = c.Fournisseur, options_a_choisir = false, lignes = lignes.ToArray() });
             }
             return new { commandes = res };
         });
@@ -82,7 +164,10 @@ public static partial class TerrainBtp
             var lignes = (l.Lignes ?? []).Where(x => x.Qte > 0).Select(x => new LigneATransformer { LigId = x.LigId, Qte = x.Qte }).ToList();
             if (lignes.Count == 0) throw ExceptionMetier.Invalide("TERRAIN_LIVRAISON", "Au moins une quantité reçue");
             var systeme = new Utilisateur(u.Code, Profils.Borne);
-            var cree = await transformations.Transformer(ent, new DemandeTransformation { CibleTydId = await TypesDocumentBtp.IdAsync(db, TypesDocument.AReception, ct), Lignes = lignes }, systeme, ct);
+            // Options et variantes (lot 20) : choix des transformations précédentes, sinon réception faite au bureau.
+            var choix = await ChoixCommandeAsync(db, ent, Options.Unites((await documents.Charger(ent, ct)).Lignes), ct)
+                ?? throw ExceptionMetier.Invalide("TERRAIN_LIVRAISON_OPTIONS", "Commande à options ou variantes pas encore choisies : réception à faire au bureau");
+            var cree = await transformations.Transformer(ent, new DemandeTransformation { CibleTydId = await TypesDocumentBtp.IdAsync(db, TypesDocument.AReception, ct), Lignes = lignes, Choix = choix }, systeme, ct);
             var id = cree.Document.EntId;
             var bl = l.NumeroBl?.Trim();
             if (!string.IsNullOrEmpty(bl))

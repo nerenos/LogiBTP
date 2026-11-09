@@ -30,6 +30,8 @@ export async function recevoirLivraison(app, tache) {
     boutons: [{ libelle: texte('commun.annuler'), valeur: false }],
     construire: (dlg, fermer) => {
       const lignes = () => {
+        // Commande à options ou variantes pas encore choisies (plan terrain-suites, lot 20) : réception au bureau.
+        if (commande.options_a_choisir) { dlg.querySelector('[data-lignes]').innerHTML = `<p class="aide">${iconeHtml('avertissement')} ${texteHtml('terrain_btp.livraison.options_bureau')}</p>`; return; }
         dlg.querySelector('[data-lignes]').innerHTML = commande.lignes.map((l) => `<p class="terrain-ligne"><span>${echapper(l.libelle)}</span>
           <input type="number" min="0" step="any" inputmode="decimal" size="6" data-ligne="${l.lig_id}" value="${l.reste}" aria-label="${texteHtml('terrain_btp.livraison.quantite')}"></p>`).join('');
       };

@@ -35,7 +35,7 @@
 | 17 | Bibliothèque simplifiée : serveur | cœur | — | FAIT (08/11/2026) |
 | 18 | Bibliothèque simplifiée : écran et articles des demandes d'approvisionnement | cœur | 17 | FAIT (08/11/2026) |
 | 19 | Pointage des heures de matériel à la borne | cœur | — | FAIT (08/11/2026) |
-| 20 | Réception d'une commande à options ou variantes | cœur | — | A FAIRE |
+| 20 | Réception d'une commande à options ou variantes | cœur | — | FAIT (08/11/2026) |
 | 21 | Avancement réel par marché | cœur | — | A FAIRE |
 | 22 | Facture brouillon depuis le bon de SAV | cœur | — | A FAIRE |
 | 23 | Création d'une intervention SAV hors ligne | cœur | 9 | A FAIRE |
@@ -465,7 +465,7 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
   « Comme mes heures »). Écart : saisie d'équipe non concernée (heures du chef seulement par sa propre journée). Tests :
   `client/test/releves-borne.test.js`, `CompteursBorneTests.cs` (durée acceptée, matériel d'un autre refusé).
 
-## Lot 20 : réception d'une commande à options ou variantes (TS19)
+## Lot 20 : réception d'une commande à options ou variantes (TS19) (FAIT 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `src/LogiBTP.Api/Btp/TerrainComplementsBtp.cs` (livraison), `terrain/complements-terrain.js`, tests C#.
@@ -474,6 +474,16 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
 - **Dépendances** : aucune.
 - **Tests** : C# : commande avec option retenue et option écartée → seule la retenue est proposée.
 - **Critère de fin** : `npm test` vert ; écart consigné dans ce plan si le refus est gardé.
+- **Réalisé / écarts** : vérification du module Document : une commande ne garde pas ses choix ; ils sont faits à
+  chaque transformation (`DemandeTransformation.Choix`, tous obligatoires, sinon `OPTION_NON_TRAITEE`) et tracés sur le
+  lien (`document_lien.lie_choix`). Décision TS19 donc mixte : **a** quand une transformation précédente de la commande
+  (bon de livraison fait au bureau, validé d'abord, puis le plus récent) couvre toutes ses options et variantes — choix
+  repris, seules les lignes retenues proposées (lignes vendues hors options écartées et bases de variantes écartées,
+  plus les lignes de prix des options retenues, reliquat à l'étape RECEPTION) — ; **b** sinon : commande listée avec
+  `options_a_choisir`, message « réception au bureau » dans la fenêtre (`terrain_btp.livraison.options_bureau`), refus
+  `TERRAIN_LIVRAISON_OPTIONS` à l'envoi (saisie gardée hors ligne comprise). `src/LogiBTP.Api/Btp/TerrainComplementsBtp.cs`
+  (`ChoixConnus`, `LignesSelonChoix`, `ChoixCommandeAsync`), `terrain/complements-terrain.js`. Aucun script SQL, module
+  Document inchangé. Tests : `LivraisonOptionsTerrainTests.cs`.
 
 ## Lot 21 : avancement réel par marché (TS20 a)
 

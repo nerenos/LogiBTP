@@ -7103,6 +7103,7 @@
       "sans_reseau": "Hors ligne : à ouvrir une première fois avec le réseau"
     },
     "livraison": {
+      "options_bureau": "Commande à options ou variantes pas encore choisies : la réception se fait au bureau (le premier bon de livraison y fixe les choix).",
       "aucune": "Aucune commande à recevoir sur ce chantier",
       "titre": "Livraison · {{chantier}}",
       "commande": "Commande",
