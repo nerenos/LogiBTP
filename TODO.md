@@ -150,7 +150,7 @@ Plan en 24 lots : [terrain-suites.md](documentation/conception/plans/terrain-sui
 - [ ] Lot 7, suites : pointage des heures de matériel à la borne ;
   réception d'une commande à options ou variantes (refusée) ; avancement réel par marché quand un chantier en porte
   plusieurs (aujourd'hui : tout le chantier). Plan : lots 17 à 21 (fait le 08/11/2026 : lots 17 et 18, bibliothèque
-  simplifiée et articles des demandes d'approvisionnement). Déjà faits ailleurs : valorisation des heures de
+  simplifiée et articles des demandes d'approvisionnement ; lot 19, heures de matériel à la borne, `db/292`). Déjà faits ailleurs : valorisation des heures de
   matériel (module Rentabilité, lot 5, `db/261`) et relevés de compteurs à la borne
   ([materiel-suites.md](documentation/conception/plans/materiel-suites.md), lots 3 et 4).
 - [ ] Lot 6, suites : temps et fournitures du bon de SAV non repris dans la facture (facture = transformation au bureau) ;

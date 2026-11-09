@@ -35,4 +35,25 @@ public class CompteursBorneTests
     {
         Assert.Equal("BORNE", CompteursBorneBtp.SourceBorne);
     }
+
+    // Heures de matériel à la borne (db/292, plan terrain-suites, lot 19, TS18 a).
+    [Fact]
+    public void Duree_enregistree_pour_un_materiel_affecte_sur_un_chantier_de_la_journee()
+    {
+        Assert.Null(CompteursBorneBtp.RefusHeure([4, 7], [12, 15], new HeureMaterielBorne(7, 15, 240)));
+    }
+
+    [Fact]
+    public void Materiel_d_un_autre_refuse()
+    {
+        Assert.Equal("BORNE_MATERIEL", CompteursBorneBtp.RefusHeure([4, 7], [12], new HeureMaterielBorne(9, 12, 60))?.Code);
+    }
+
+    [Fact]
+    public void Chantier_hors_journee_et_duree_invalide_refuses()
+    {
+        Assert.Equal("BORNE_CHANTIER", CompteursBorneBtp.RefusHeure([4], [12], new HeureMaterielBorne(4, 99, 60))?.Code);
+        Assert.Equal("BORNE_DUREE", CompteursBorneBtp.RefusHeure([4], [12], new HeureMaterielBorne(4, 12, 0))?.Code);
+        Assert.Equal("BORNE_DUREE", CompteursBorneBtp.RefusHeure([4], [12], new HeureMaterielBorne(4, 12, 1500))?.Code);
+    }
 }

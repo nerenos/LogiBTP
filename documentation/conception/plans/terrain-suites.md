@@ -34,7 +34,7 @@
 | 16 | PV de levée des réserves signé | cœur | 15 | FAIT (08/11/2026) |
 | 17 | Bibliothèque simplifiée : serveur | cœur | — | FAIT (08/11/2026) |
 | 18 | Bibliothèque simplifiée : écran et articles des demandes d'approvisionnement | cœur | 17 | FAIT (08/11/2026) |
-| 19 | Pointage des heures de matériel à la borne | cœur | — | A FAIRE |
+| 19 | Pointage des heures de matériel à la borne | cœur | — | FAIT (08/11/2026) |
 | 20 | Réception d'une commande à options ou variantes | cœur | — | A FAIRE |
 | 21 | Avancement réel par marché | cœur | — | A FAIRE |
 | 22 | Facture brouillon depuis le bon de SAV | cœur | — | A FAIRE |
@@ -443,7 +443,7 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
   { code, libelle, quantite, unite }. Aucun script SQL. Tests : `client/test/bibliotheque-terrain.test.js` (choix sans
   réseau, ligne de demande, préchargement), `DemandeArticlesTerrainTests.cs` (ligne E_DAP portant l'article, unité).
 
-## Lot 19 : pointage des heures de matériel à la borne (TS18 a)
+## Lot 19 : pointage des heures de matériel à la borne (TS18 a) (FAIT 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `client/src/app/pages/borne.js` (après les heures : durée sur les matériels affectés du jour),
@@ -452,6 +452,18 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
 - **Dépendances** : aucune.
 - **Tests** : C# : durée enregistrée pour un matériel affecté, refus d'un matériel d'un autre ; JS : écran.
 - **Critère de fin** : `npm test` vert ; heures pointées à la borne visibles en déboursé du chantier (rentabilité).
+- **Réalisé / écarts** : `db/292_pointage_materiel_borne.sql` (colonne `pma_source` TERRAIN par défaut ou BORNE ; même
+  table, donc même déboursé du chantier par `db/261`, rien à changer côté rentabilité). Serveur dans
+  `src/LogiBTP.Api/Btp/CompteursBorneBtp.cs` (routes de la borne déjà publiques sous `/api/pointage/borne`, identification
+  `ServiceBorne.SalarieIdentifieAsync`, module Pointage inchangé) : `GET /api/pointage/borne/materiel/heures?jeton=&date=`
+  (matériels affectés ce jour au salarié, `materiel_affectation` SALARIE, compteurs suivis ou non ; durées BORNE déjà
+  saisies) et `PUT …/heures` (remplace les heures BORNE du salarié pour ce jour ; `RefusHeure` : matériel d'un autre
+  `BORNE_MATERIEL`, chantier absent de la journée pointée `BORNE_CHANTIER`, durée `BORNE_DUREE` ; jour à venir refusé ;
+  borne d'essai : rien n'est écrit). Client : `pointage/releves-borne.js` (`chantiersJournee`, `lignesHeuresMateriel`,
+  `corpsHeuresMateriel`), `pages/borne.js` (`#heuresMateriel` après l'enregistrement d'une journée individuelle, avant
+  l'étape des ordres ; écran passé sans matériel affecté ; chantier par `creerCombo` si la journée en a plusieurs,
+  « Comme mes heures »). Écart : saisie d'équipe non concernée (heures du chef seulement par sa propre journée). Tests :
+  `client/test/releves-borne.test.js`, `CompteursBorneTests.cs` (durée acceptée, matériel d'un autre refusé).
 
 ## Lot 20 : réception d'une commande à options ou variantes (TS19)
 
