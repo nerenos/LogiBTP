@@ -39,7 +39,7 @@
 | 21 | Avancement réel par marché | cœur | — | FAIT (08/11/2026) |
 | 22 | Facture brouillon depuis le bon de SAV | cœur | — | FAIT (08/11/2026) |
 | 23 | Création d'une intervention SAV hors ligne | cœur | 9 | FAIT (08/11/2026) |
-| 24 | Chantier « Entretien et dépannage » par le chrono des chantiers | cœur | — | A FAIRE |
+| 24 | Chantier « Entretien et dépannage » par le chrono des chantiers | cœur | — | FAIT (08/11/2026) |
 
 Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4, 5-6, 7, 8, 9-10, 11-12, 13-16, 17-18,
 19, 20, 21, 22, 23, 24). Un commit par lot.
@@ -556,7 +556,7 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
   Tests : `client/test/operations-terrain.test.js` (création et compte rendu gardés puis envoyés dans l'ordre),
   `CreationSavHorsLigneTests.cs` (renvoi en double sans doublon, sur la base si `LOGIBTP_TEST_PG`).
 
-## Lot 24 : chantier « Entretien et dépannage » par le chrono des chantiers (TS24 a)
+## Lot 24 : chantier « Entretien et dépannage » par le chrono des chantiers (TS24 a) (FAIT 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : haiku.
 - **Fichiers** : `src/LogiBTP.Api/Btp/TerrainSavBtp.cs` (code par le chrono des chantiers au lieu de `SAV-<client>` ;
@@ -564,3 +564,9 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
 - **Dépendances** : aucune.
 - **Tests** : C# : nouveau client → code du chrono ; client ayant déjà un `SAV-<client>` → chantier réutilisé.
 - **Critère de fin** : `npm test` vert.
+- **Réalisé / écarts** : `TerrainSavBtp.cs` : chantier existant retrouvé par l'affaire de gestion SAV et le client
+  (`SqlChantierSavClient`, l'ouvert d'abord ; anciens `SAV-<client>` compris), plus par son code ; nouveau chantier :
+  code du chrono des chantiers (`IChronosFiches.AttribuerAsync`, type `chantier`), `SAV-<client>` seulement sans chrono
+  (`CodeChantierSav`), créé par `ChantiersTechniques.CreerAsync` comme avant. Aucun script SQL. Tests :
+  `ChantierSavTests.cs` (code du chrono, recherche sans le code, chantier `SAV-<client>` réutilisé sur la base si
+  `LOGIBTP_TEST_PG`).

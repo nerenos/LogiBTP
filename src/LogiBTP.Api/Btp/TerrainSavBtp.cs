@@ -25,7 +25,8 @@ public sealed record CompteRenduSav(string Constat, string Travaux, List<string>
 /// <summary>
 /// Application de terrain, lot 6 (ANALYSE-TERRAIN.md T20 ; Exécution E12, E13, E20, E22) : interventions SAV sous le
 /// nœud execution/sav, refusé par défaut. Une intervention est un ordre E_SAV, toujours sur un chantier : celui du
-/// client, ou un chantier « Entretien et dépannage » créé à la première intervention (affaire de gestion SAV). La
+/// client, ou un chantier « Entretien et dépannage » créé à la première intervention (affaire de gestion SAV, code du
+/// chrono des chantiers depuis terrain-suites lot 24). La
 /// personne qui la crée en devient la ressource ; le serveur crée la pièce au profil système BORNE, le droit de la
 /// personne venant de la route. Compte rendu : constat, travaux, fournitures, signature simple (client absent :
 /// sans signature), bon édité (modèle BON_SAV) et rangé dans la GED de l'ordre avec son empreinte ; suites indépendantes
@@ -88,12 +89,32 @@ public static partial class TerrainBtp
         equipement = c.EquipementId is long q ? new { id = q, numero = c.Equipement } : null,
     };
 
-    /// <summary>Chantier « Entretien et dépannage » du client (E20), créé à sa première intervention, repris ensuite.</summary>
-    private static async Task<int> ChantierSavAsync(LogiBtpContext db, ChantierSavSaisi n, CancellationToken ct)
+    /// <summary>
+    /// Chantier « Entretien et dépannage » existant du client (terrain-suites lot 24) : chantier de l'affaire de gestion
+    /// SAV portant ce client (codes <c>SAV-&lt;client&gt;</c> d'avant compris), l'ouvert d'abord, sinon le plus ancien.
+    /// </summary>
+    public const string SqlChantierSavClient = """
+        SELECT c.cha_id AS "Value" FROM chantier c JOIN affaire a ON a.aff_id = c.cha_aff_id
+        WHERE a.aff_code = 'SAV' AND c.cha_tiers_id = @p
+        ORDER BY (c.cha_statut = 'OUVERT') DESC, c.cha_id LIMIT 1
+        """;
+
+    /// <summary>Code d'un nouveau chantier SAV : celui du chrono des chantiers ; sans chrono, <c>SAV-&lt;client&gt;</c> comme avant.</summary>
+    public static string CodeChantierSav(string? chrono, long client) => string.IsNullOrWhiteSpace(chrono) ? $"SAV-{client}" : chrono;
+
+    /// <summary>
+    /// Chantier « Entretien et dépannage » du client (E20), créé à sa première intervention, repris ensuite : retrouvé par
+    /// l'affaire de gestion SAV et le client ; nouveau : code du chrono des chantiers (terrain-suites lot 24, TS24 a).
+    /// </summary>
+    private static async Task<int> ChantierSavAsync(LogiBtpContext db, IServiceProvider services, ChantierSavSaisi n, CancellationToken ct)
     {
         var nom = await db.Database.SqlQueryRaw<string?>("SELECT per_raison_sociale AS \"Value\" FROM personne WHERE per_id = @p", new NpgsqlParameter("p", n.Client)).FirstOrDefaultAsync(ct)
             ?? throw ExceptionMetier.Introuvable($"Client {n.Client}");
-        var id = await ChantiersTechniques.CreerAsync(db, $"SAV-{n.Client}", "-S", $"Entretien et dépannage – {nom}", "SAV", "OUVERT", false, "Créé depuis une intervention SAV du terrain", ct);
+        string? chrono = null;
+        var existant = (await db.Database.SqlQueryRaw<int>(SqlChantierSavClient, new NpgsqlParameter("p", n.Client)).ToListAsync(ct)).Select(x => (int?)x).FirstOrDefault();
+        if (existant is null && services.GetService<IChronosFiches>() is { } chronos)
+            chrono = await chronos.AttribuerAsync(TypesFiche.Chantier, new Dictionary<string, object?>(), ct);
+        var id = existant ?? await ChantiersTechniques.CreerAsync(db, CodeChantierSav(chrono, n.Client), "-S", $"Entretien et dépannage – {nom}", "SAV", "OUVERT", false, "Créé depuis une intervention SAV du terrain", ct);
         await db.Database.ExecuteSqlRawAsync("""
             UPDATE chantier SET cha_tiers_id = coalesce(cha_tiers_id, @p), cha_adresse = coalesce(cha_adresse, @a), cha_code_postal = coalesce(cha_code_postal, @cp), cha_ville = coalesce(cha_ville, @v)
             WHERE cha_id = @c
@@ -161,7 +182,8 @@ public static partial class TerrainBtp
                 """, new NpgsqlParameter("m", $"%{(recherche ?? "").Trim()}%"), SqlBtp.P("e", ent, NpgsqlTypes.NpgsqlDbType.Bigint)).ToListAsync(ct));
 
         // Nouvelle intervention (E13 : toujours sur un chantier) : ordre validé, la personne en est la ressource.
-        sav.MapPost("", async (InterventionSavCreee c, HttpContext http, LogiBtpContext db, DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp> documents, CancellationToken ct) =>
+        sav.MapPost("", async (InterventionSavCreee c, HttpContext http, LogiBtpContext db, DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp> documents,
+            IServiceProvider services, CancellationToken ct) =>
         {
             var u = Utilisateur.Depuis(http);
             var s = await ComptesBtp.SalarieAsync(db, u.Code, ct) ?? throw ExceptionMetier.Invalide("TERRAIN_PERSONNE", "Compte sans salarié lié");
@@ -169,7 +191,7 @@ public static partial class TerrainBtp
             if (c.Appareil is Guid dejaAppareil && await InterventionAppareilAsync(db, dejaAppareil, u.Code, ct) is long deja) return await InterventionCreeeAsync(db, deja, ct);
             var objet = (c.Objet ?? "").Trim();
             if (objet.Length == 0) throw ExceptionMetier.Invalide("TERRAIN_SAV_OBJET", "Objet de l'intervention obligatoire");
-            var chantier = c.ChaId ?? (c.Nouveau is { } n ? await ChantierSavAsync(db, n, ct) : throw ExceptionMetier.Invalide("TERRAIN_CHANTIER", "Chantier obligatoire"));
+            var chantier = c.ChaId ?? (c.Nouveau is { } n ? await ChantierSavAsync(db, services, n, ct) : throw ExceptionMetier.Invalide("TERRAIN_CHANTIER", "Chantier obligatoire"));
             var systeme = new Utilisateur(u.Code, Profils.Borne);
             var cree = await documents.Creer(new CreationDocument { EntTydId = await TypesDocumentBtp.IdAsync(db, TypesDocument.ESav, ct), EntObjet = objet.Length > 200 ? objet[..200] : objet }, systeme, ct);
             var id = cree.Document.EntId;
