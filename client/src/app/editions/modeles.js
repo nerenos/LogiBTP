@@ -649,9 +649,46 @@ const RECEPTIONS = [{
         { type: 'pile', espacement: 1, secable: false, marges: { haut: 6 }, enfants: [
           champ('Le client ou son représentant', { style: 'gras' }),
           champ(`=Joindre(" – "; ${PV}.signataire; ${PV}.qualite)`),
-          champ(`="Signé sur le chantier le " & ${PV}.signe_le`, { style: 'discret', condition: `${PV}.signe` }),
+          // Forme de signature et heures (terrain-suites lot 13, TS13 a, TS16 a) : réception gardée hors ligne, heure de
+          // l'appareil puis heure de réception par le serveur ; signée en ligne, une seule heure.
+          champ(`="Signature électronique simple, " & Si(${PV}.signe_appareil_le; "signée sur l’appareil le " & ${PV}.signe_appareil_le & ", reçue le " & ${PV}.recu_le; "signée et reçue le " & ${PV}.recu_le) & "."`,
+            { style: 'discret', condition: `${PV}.signe` }),
           { type: 'image', ressource: 'SIGNATURE_RECEPTION', hauteur: 30, largeur: '70mm', condition: `${PV}.signe` },
-          champ('Signature numérique simple : image tracée sur l’écran, horodatée par le serveur ; l’empreinte du présent document est conservée.', { style: 'petit' }),
+          champ('Signature électronique simple : image tracée sur l’écran, horodatée par le serveur (et par l’appareil pour une signature sans réseau) ; l’empreinte SHA-256 du présent document est conservée.', { style: 'petit' }),
+        ] },
+      ] } },
+    ],
+  },
+}];
+
+// Terrain-suites lot 16 (TS14 a) : procès-verbal de levée des réserves d'un ordre de pose, signé sur le terrain une fois
+// toutes les réserves levées ; source annexe levee_reserves (dernier PV de levée de l'ordre, réserves couvertes), image
+// SIGNATURE_LEVEE fournie par le serveur depuis la table signature (EditionsBtp.CodeSignatureLevee).
+const LV = 'sources.levee_reserves';
+const LEVEES = [{
+  code: 'PV_LEVEE_RESERVES', libelle: 'Procès-verbal de levée des réserves', genre: 'RAPPORT', cible: 'DOCUMENT', source: 'document', types: ['E_PO'], ordre: 98,
+  contenu: {
+    format_version: 1, code: 'PV_LEVEE_RESERVES', libelle: 'Procès-verbal de levée des réserves', cible: 'DOCUMENT', source: 'document',
+    page: { format: 'A4', orientation: 'portrait', marges: { haut: 10, bas: 10, gauche: 12, droite: 12 } },
+    sources_annexes: ['levee_reserves'],
+    bandes: [
+      { type: 'PIED_PAGE', contenu: bloc('PIED_VENTES_ACHATS') },
+      { type: 'TITRE', nom: 'entete', contenu: { type: 'pile', espacement: 4, enfants: [
+        bloc('ENTETE_SOCIETE'), bloc('COORDONNEES_DOCUMENT', { titre: 'Procès-verbal de levée des réserves', libelle_adresse: 'Adresse des travaux' }),
+      ] } },
+      { type: 'CORPS', nom: 'levee', contenu: { type: 'pile', espacement: 3, enfants: [
+        champ('Constat', { style: 'section', fond: 'fond_section', marges: 1 }),
+        champ(`="Les réserves formulées lors de la réception" & Si(${LV}.reception_le; " du " & Date(${LV}.reception_le; "long"); "") & " ont été levées. La levée est constatée contradictoirement par le présent procès-verbal."`, { style: 'gras' }),
+        retrait('Date du constat', `Date(${LV}.date; "long")`, `${LV}.date`),
+        champ('Réserves levées', { style: 'section', fond: 'fond_section', marges: 1 }),
+        { type: 'repete', collection: `${LV}.reserves`, contenu: champ('="• " & element.libelle & " — levée le " & element.levee_le & Si(element.commentaire; " (" & element.commentaire & ")"; "")') },
+        { type: 'pile', espacement: 1, secable: false, marges: { haut: 6 }, enfants: [
+          champ('Le client ou son représentant', { style: 'gras' }),
+          champ(`=Joindre(" – "; ${LV}.signataire; ${LV}.qualite)`),
+          champ(`="Signature électronique simple, " & Si(${LV}.signe_appareil_le; "signée sur l’appareil le " & ${LV}.signe_appareil_le & ", reçue le " & ${LV}.recu_le; "signée et reçue le " & ${LV}.recu_le) & "."`,
+            { style: 'discret', condition: `${LV}.signe` }),
+          { type: 'image', ressource: 'SIGNATURE_LEVEE', hauteur: 30, largeur: '70mm', condition: `${LV}.signe` },
+          champ('Signature électronique simple : image tracée sur l’écran, horodatée par le serveur (et par l’appareil pour une signature sans réseau) ; l’empreinte SHA-256 du présent document est conservée.', { style: 'petit' }),
         ] },
       ] } },
     ],
@@ -877,7 +914,7 @@ const RELANCES = [
   }),
 ];
 
-export const MODELES_EDITION = [...BLOCS, ...SOUS_RAPPORTS, ...RAPPORTS, ...AUTRES, ...MARCHES_ST, ...RECEPTIONS, ...BONS_SAV, ...FRAIS_ANNEXES, ...DOTATIONS, ...RELANCES];
+export const MODELES_EDITION = [...BLOCS, ...SOUS_RAPPORTS, ...RAPPORTS, ...AUTRES, ...MARCHES_ST, ...RECEPTIONS, ...LEVEES, ...BONS_SAV, ...FRAIS_ANNEXES, ...DOTATIONS, ...RELANCES];
 
 /** Modèle par défaut de chaque type de document (Q12 : un modèle par type). */
 export const DEFAUTS_EDITION = [

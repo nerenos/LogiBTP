@@ -16,6 +16,7 @@ declarerRaccourcis('application', {
     suivante: { libelle: texte('navigation_btp.raccourcis.application.suivante'), defaut: 'Alt+PageDown' },
     parametres: { libelle: texte('navigation_btp.raccourcis.application.parametres'), defaut: [] },
     raccourcis: { libelle: texte('navigation_btp.raccourcis.application.raccourcis'), defaut: [] },
+    menuClassique: { libelle: texte('navigation_btp.raccourcis.application.menu_classique'), defaut: 'Ctrl+Shift+M' },
   },
 });
 

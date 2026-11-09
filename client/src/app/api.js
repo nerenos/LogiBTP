@@ -155,6 +155,13 @@ export const api = {
     document: (id) => appel('GET', `/execution/documents/${id}`),
     enregistrer: (id, s) => appel('PUT', `/execution/documents/${id}`, s),
     repartition: (id) => appel('GET', `/execution/documents/${id}/repartition`),
+    // Réserves suivies d'un ordre de pose (terrain-suites lot 15) : réserves de ses réceptions et leur levée.
+    reserves: (id) => appel('GET', `/execution/documents/${id}/reserves`),
+    // Facture brouillon depuis le bon de SAV (terrain-suites lot 22) : état, création ; article « Main-d'œuvre SAV ».
+    facturationSav: (id) => appel('GET', `/execution/documents/${id}/facturation-sav`),
+    facturerSav: (id) => appel('POST', `/execution/documents/${id}/facturation-sav`),
+    parametresSav: () => appel('GET', '/execution/sav-parametres'),
+    enregistrerParametresSav: (p) => appel('PUT', '/execution/sav-parametres', p),
     heuresChantier: (id) => appel('GET', `/execution/chantiers/${id}/heures`),
     delegations: () => appel('GET', '/execution/delegations'),
     enregistrerDelegations: (srv, l) => appel('PUT', `/execution/delegations/${srv}`, l),
@@ -229,6 +236,8 @@ export const api = {
     chantier: (id) => appel('GET', `/terrain/chantiers/${id}`),
     journee: (date) => appel('GET', `/terrain/journee?date=${date}`),
     enregistrerJournee: (j) => appel('PUT', '/terrain/journee', j),
+    /** Chantiers et ordres ouverts gardés pour la saisie libre sans réseau (plan terrain-suites, lot 9). */
+    chantiersJournee: () => appel('GET', '/terrain/journee/chantiers'),
     etapes: (ordres = []) => appel('GET', `/terrain/etapes${ordres.length ? `?ordres=${ordres.join(',')}` : ''}`),
     ordreEtapes: async (numero) => (await appel('GET', `/terrain/etapes?numero=${encodeURIComponent(numero)}`)).ordres[0] ?? null,
     validerEtape: (entId, code) => appel('POST', '/terrain/etapes/valider', { ent_id: entId, code }),
@@ -239,8 +248,22 @@ export const api = {
     reception: (ordre) => appel('GET', `/terrain/receptions/${ordre}`),
     enregistrerReception: (ordre, r) => appel('POST', `/terrain/receptions/${ordre}`, r),
     urlPv: (ordre, reception) => `/api/terrain/receptions/${ordre}/pv/${reception}`,
+    // Réserves suivies (terrain-suites lots 14, 15) ; levée : FormData (commentaire, levee_le, photo).
+    reserves: (ordre) => appel('GET', `/terrain/receptions/${ordre}/reserves`),
+    leverReserve: (ordre, reserve, formulaire) => appel('POST', `/terrain/receptions/${ordre}/reserves/${reserve}/levee`, formulaire),
+    // PV de levée des réserves signé par le client (terrain-suites lot 16).
+    signerPvLevee: (ordre, pv) => appel('POST', `/terrain/receptions/${ordre}/levee`, pv),
+    urlPvLevee: (ordre, levee) => `/api/terrain/receptions/${ordre}/levees/${levee}/pv`,
     demande: (d) => appel('POST', '/terrain/demandes', d),
     demandes: () => appel('GET', '/terrain/demandes'),
+    // Bibliothèque simplifiée (terrain-suites lots 17, 18) : fiche réduite sans prix ; articles du chantier gardés hors ligne.
+    bibliotheque: {
+      articles: (recherche) => appel('GET', `/terrain/bibliotheque/articles?${new URLSearchParams({ recherche })}`),
+      article: (id) => appel('GET', `/terrain/bibliotheque/articles/${id}`),
+      chantier: (chantier) => appel('GET', `/terrain/bibliotheque/chantiers/${chantier}`),
+      urlChantier: (chantier) => `/api/terrain/bibliotheque/chantiers/${chantier}`,
+      urlPiece: (id, telecharger = false) => `/api/terrain/bibliotheque/pieces/${id}${telecharger ? '?telecharger=true' : ''}`,
+    },
     livraisons: (chantier) => appel('GET', `/terrain/livraisons?chantier=${chantier}`),
     enregistrerLivraison: (commande, l) => appel('POST', `/terrain/livraisons/${commande}`, l),
     materiels: (tache) => appel('GET', `/terrain/taches/${tache}/materiels`),
@@ -249,11 +272,15 @@ export const api = {
     choixSav: () => appel('GET', '/terrain/sav/choix'),
     equipementsSav: (recherche, ordre) => appel('GET', `/terrain/sav/equipements?${new URLSearchParams({ recherche: recherche ?? '', ent: ordre })}`),
     creerIntervention: (c) => appel('POST', '/terrain/sav', c),
+    // Intervention créée hors ligne, retrouvée après l'envoi par l'identifiant de l'appareil (terrain-suites lot 23).
+    interventionAppareil: (appareil) => appel('GET', `/terrain/sav/appareil/${encodeURIComponent(appareil)}`),
     sav: (ordre) => appel('GET', `/terrain/sav/${ordre}`),
     enregistrerSav: (ordre, c) => appel('POST', `/terrain/sav/${ordre}`, c),
     photosSav: (ordre, formulaire) => appel('POST', `/terrain/sav/${ordre}/photos`, formulaire),
     urlBonSav: (ordre, compteRendu) => `/api/terrain/sav/${ordre}/bon/${compteRendu}`,
     urlPiece: (id, telecharger = false) => `/api/terrain/pieces/${id}${telecharger ? '?telecharger=true' : ''}`,
+    /** Fichier d'un plan en vigueur d'une tâche (suivi des validations, plan terrain-suites lot 3). */
+    urlPlan: (id, telecharger = false) => `/api/terrain/plans/${id}${telecharger ? '?telecharger=true' : ''}`,
   },
   planning: {
     vues: () => appel('GET', '/planning/vues'),

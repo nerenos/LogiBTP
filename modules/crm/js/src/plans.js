@@ -6,7 +6,7 @@
 // nom « Plan de masse », indice B. Un indice en fin de format est facultatif (« R01_Plan de masse.pdf » : indice
 // vide, le premier) ; il s'écrit en une ou deux lettres majuscules. L'extension est retirée ; les « _ » restants du
 // nom deviennent des espaces quand le séparateur n'est pas « _ ».
-import { texte } from '@logibtp/socle/dictionnaire';
+import { texte, texteHtml } from '@logibtp/socle/dictionnaire';
 
 export const FORMAT_PLAN_DEFAUT = '{repere}_{nom}_{indice}';
 export const CHAMPS_FORMAT_PLAN = ['repere', 'nom', 'lot', 'indice', '*'];
@@ -65,4 +65,12 @@ export function extraireNomPlan(nomFichier, format = FORMAT_PLAN_DEFAUT) {
     r[c] = v;
   });
   return r;
+}
+
+/**
+ * Case « Terrain » de la fiche d'un plan (plan terrain-suites, lot 2) : plan coché montré en tête des pièces de
+ * l'application de terrain, à son indice en vigueur seul ; les autres plans validés restent sous « Voir tous les plans ».
+ */
+export function caseTerrainPlan(coche) {
+  return `<label class="crm-case-terrain" title="${texteHtml('crm.plans.terrain_titre')}"><input type="checkbox" data-terrain${coche ? ' checked' : ''}> ${texteHtml('crm.plans.terrain')}</label>`;
 }

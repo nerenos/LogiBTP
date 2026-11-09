@@ -1,6 +1,8 @@
 import { texte, icone } from '@logibtp/socle/dictionnaire';
 import { aujourdhui } from '@logibtp/socle';
+import { tailleMaxDepot } from '@logibtp/ged';
 import { api } from '../api.js';
+import { ETAT_RESERVE } from '../codes.js';
 import { declarerOperation, ecrireOperation } from '../hors-ligne/operations.js';
 import { estHorsLigne } from '../hors-ligne/attente.js';
 import { SUJET_ATTENTE } from '../hors-ligne/synchro.js';
@@ -13,8 +15,97 @@ import { SUJET_ATTENTE } from '../hors-ligne/synchro.js';
 export const OPERATION_TERRAIN = Object.freeze({
   JOURNEE: 'terrain-journee', AVANCEMENT: 'terrain-avancement', NON_CONFORMITE: 'terrain-nc', PHOTOS: 'terrain-photos',
   ETAPE: 'terrain-etape', REPAS: 'terrain-repas', RECEPTION: 'terrain-reception', DEMANDE: 'terrain-demande', SAV: 'terrain-sav',
-  LIVRAISON: 'terrain-livraison', MATERIEL: 'terrain-materiel',
+  LIVRAISON: 'terrain-livraison', MATERIEL: 'terrain-materiel', LEVEE_RESERVE: 'terrain-levee-reserve',
+  PV_LEVEE: 'terrain-pv-levee', SAV_CREATION: 'terrain-sav-creation',
 });
+
+/** Clé du localStorage où l'appareil garde la limite de dépôt de la GED (terrain-suites lot 12). */
+const CLE_LIMITE_PHOTOS = 'logibtp.terrainLimitePhotos';
+
+/**
+ * Limite de dépôt de la GED (octets, `taille_max_photo` de `GET /api/terrain`) gardée sur l'appareil, pour contrôler
+ * les photos même sans réseau.
+ */
+export function memoriserLimitePhotos(octets) {
+  if (!(Number(octets) > 0)) return;
+  try { localStorage.setItem(CLE_LIMITE_PHOTOS, String(Number(octets))); } catch { /* stockage indisponible : limite par défaut */ }
+}
+
+/** Limite de dépôt gardée sur l'appareil, sinon celle par défaut de la GED. */
+export function limitePhotos() {
+  let gardee = null;
+  try { gardee = localStorage.getItem(CLE_LIMITE_PHOTOS); } catch { /* stockage indisponible */ }
+  return tailleMaxDepot({ taille_max_depot: gardee });
+}
+
+/**
+ * Réception (ou PV de levée des réserves, lot 16) gardée sur l'appareil (terrain-suites lot 13, TS16 a) : heure de
+ * signature de l'appareil jointe (`signee_le`, ISO), imprimée sur le PV avec l'heure de réception par le serveur.
+ */
+export const receptionGardee = (reception, maintenant = new Date()) => ({ ...reception, signee_le: maintenant.toISOString() });
+
+/**
+ * Formulaire de levée d'une réserve (terrain-suites lot 15) : commentaire, heure de l'appareil (`levee_le`, levée
+ * gardée hors ligne seulement) et photo de la levée (la première choisie).
+ */
+export const formulaireLevee = ({ commentaire, levee_le: leveeLe, photos }) => {
+  const f = new FormData();
+  if (commentaire) f.append('commentaire', commentaire);
+  if (leveeLe) f.append('levee_le', leveeLe);
+  const photo = photos?.fichiers?.[0];
+  if (photo) f.append('photo', photo, photo.name);
+  return f;
+};
+
+/**
+ * PV de levée des réserves à faire signer (terrain-suites lot 16) : signalé par le serveur, ou, sans réseau, quand
+ * chaque réserve est levée ou gardée levée sur l'appareil, l'une au moins gardée.
+ */
+export const pvLeveeAttendu = (d) => Boolean(d?.pv_levee_attendu)
+  || ((d?.reserves ?? []).length > 0 && d.reserves.every((r) => r.etat === ETAT_RESERVE.LEVEE || r.gardee) && d.reserves.some((r) => r.gardee));
+
+/**
+ * Articles des chantiers à garder hors ligne (bibliothèque simplifiée, terrain-suites lot 18) : adresses des articles
+ * de chaque chantier des tâches lues (`GET /api/terrain`), sans doublon, gardées par le service worker.
+ */
+export function articlesAPrecharger(lectures) {
+  const ids = new Set();
+  for (const r of lectures ?? []) for (const t of r?.taches ?? []) if (t.chantier?.id) ids.add(t.chantier.id);
+  return [...ids].map((id) => api.terrain.bibliotheque.urlChantier(id));
+}
+
+/** Adresse d'une intervention SAV créée sur l'appareil (terrain-suites lot 23) : /terrain/sav/local-<identifiant>. */
+const PREFIXE_SAV_LOCAL = 'local-';
+export const idSavLocal = (appareil) => `${PREFIXE_SAV_LOCAL}${appareil}`;
+/** Identifiant d'appareil d'une adresse d'intervention locale, sinon null (ordre du serveur). */
+export const appareilSav = (id) => (String(id ?? '').startsWith(PREFIXE_SAV_LOCAL) ? String(id).slice(PREFIXE_SAV_LOCAL.length) : null);
+/** Identifiant donné par l'appareil à une nouvelle intervention (création idempotente côté serveur). */
+export const nouvelAppareilSav = () => globalThis.crypto.randomUUID();
+/** Numéro provisoire d'une intervention créée sur l'appareil (le numéro définitif est donné par le serveur à l'envoi). */
+export const numeroProvisoireSav = (appareil) => texte('terrain_btp.sav.numero_provisoire', { code: String(appareil).slice(0, 6).toUpperCase() });
+
+/**
+ * Intervention SAV créée sans réseau (terrain-suites lot 23, TS23 a) : `creation` = corps de `POST /api/terrain/sav`
+ * avec l'identifiant de l'appareil ; `affichage` = même forme que `GET /api/terrain/sav/{id}` (numéro provisoire,
+ * chantier ou client choisi parmi ceux déjà lus), pour ouvrir et renseigner l'intervention sur l'appareil.
+ */
+export function interventionGardee({ appareil, objet, cha_id: chaId = null, nouveau = null, chantier = null, client = null, adresse = null }) {
+  return {
+    appareil,
+    creation: { appareil, cha_id: chaId, objet, nouveau },
+    affichage: {
+      ordre: { id: null, numero: numeroProvisoireSav(appareil), objet, chantier },
+      client: { nom: client, contact: null, courriel: null },
+      adresse, comptes_rendus: [],
+    },
+  };
+}
+
+/** Ordre d'un compte rendu SAV : connu, sinon créé (ou retrouvé, sans doublon) par l'identifiant de l'appareil. */
+export async function ordreSav(c) {
+  if (c.ordre) return c.ordre;
+  return (await api.terrain.creerIntervention(c.creation)).ent_id;
+}
 
 /** Formulaire d'envoi de photos gardées ({ fichiers: [File], commentaire }). */
 export const formulairePhotos = ({ fichiers, commentaire }) => {
@@ -36,18 +127,29 @@ declarerOperation(OPERATION_TERRAIN.NON_CONFORMITE, {
   },
 });
 declarerOperation(OPERATION_TERRAIN.PHOTOS, { envoyer: (c) => api.terrain.photos(c.tache, formulairePhotos(c.photos)) });
-// Réception signée hors ligne : signature gardée en image ; horodatage du serveur à l'envoi (date de réception saisie gardée).
+// Réception signée hors ligne : signature gardée en image, heure de signature de l'appareil jointe (signee_le) ;
+// horodatage du serveur à l'envoi, les deux imprimés sur le PV (terrain-suites lot 13).
 declarerOperation(OPERATION_TERRAIN.RECEPTION, { envoyer: (c) => api.terrain.enregistrerReception(c.ordre, c.reception) });
+// Levée d'une réserve gardée hors ligne : heure de l'appareil jointe (levee_le), photo gardée réduite ; une levée déjà
+// reçue par le serveur n'est pas changée (envoi rejoué sans effet).
+declarerOperation(OPERATION_TERRAIN.LEVEE_RESERVE, { envoyer: (c) => api.terrain.leverReserve(c.ordre, c.reserve, formulaireLevee(c)) });
+// PV de levée signé hors ligne (terrain-suites lot 16) : envoyé après les levées gardées (file dans l'ordre de saisie),
+// heure de signature de l'appareil jointe (signee_le, receptionGardee).
+declarerOperation(OPERATION_TERRAIN.PV_LEVEE, { envoyer: (c) => api.terrain.signerPvLevee(c.ordre, c.pv) });
 declarerOperation(OPERATION_TERRAIN.DEMANDE, {
   envoyer: async (c) => {
     await api.terrain.demande(c.demande);
     if (c.photos?.fichiers?.length && c.tache) await api.terrain.photos(c.tache, formulairePhotos(c.photos));
   },
 });
+// Intervention créée hors ligne (terrain-suites lot 23) : envoyée avant son compte rendu (file dans l'ordre de saisie) ;
+// le compte rendu d'une intervention locale retrouve son ordre par l'identifiant de l'appareil (renvoi sans doublon).
+declarerOperation(OPERATION_TERRAIN.SAV_CREATION, { envoyer: (c) => api.terrain.creerIntervention(c.creation) });
 declarerOperation(OPERATION_TERRAIN.SAV, {
   envoyer: async (c) => {
-    if (c.photos?.fichiers?.length) await api.terrain.photosSav(c.ordre, formulairePhotos(c.photos));
-    await api.terrain.enregistrerSav(c.ordre, c.compteRendu);
+    const ordre = await ordreSav(c);
+    if (c.photos?.fichiers?.length) await api.terrain.photosSav(ordre, formulairePhotos(c.photos));
+    await api.terrain.enregistrerSav(ordre, c.compteRendu);
   },
 });
 declarerOperation(OPERATION_TERRAIN.LIVRAISON, {

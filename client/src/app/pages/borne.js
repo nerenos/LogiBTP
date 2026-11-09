@@ -9,7 +9,7 @@ import { api } from '../api.js';
 import { choixMultiple } from '../choix-multiple.js';
 import { tuilesChoix, filtrerChoix, tuileExacte } from '../pointage/choix-borne.js';
 import { distanceRestaurant, chantierDuJour, corpsRepas, membresRepas } from '../pointage/repas.js';
-import { lignesCompteurs, materielsProposes, corpsReleve } from '../pointage/releves-borne.js';
+import { lignesCompteurs, materielsProposes, corpsReleve, chantiersJournee, lignesHeuresMateriel, corpsHeuresMateriel } from '../pointage/releves-borne.js';
 import { LIBELLES_UNITE } from '../ressources/compteurs.js';
 
 // Borne d'atelier (Pointage lot 4, M8, § 6 « quatre touches ») : appareil enregistré par un administrateur (jeton gardé
@@ -898,9 +898,62 @@ export class PageBorne extends PageBase {
       this.#minuterie(8000);
     };
     // Pointage sur un ordre : son étape en cours est proposée (E52), sinon retour à l'accueil.
-    const ordres = membres ? [] : await this.#ordresAEtape();
-    if (ordres.length) { await this.#etapes({ ordres, titre: texte('pointage.borne.etape_terminee'), apres: fin }); return; }
-    fin();
+    const suite = async () => {
+      const ordres = membres ? [] : await this.#ordresAEtape();
+      if (ordres.length) { await this.#etapes({ ordres, titre: texte('pointage.borne.etape_terminee'), apres: fin }); return; }
+      fin();
+    };
+    // Matériels affectés ce jour (plan terrain-suites, lot 19) : leurs heures avant la suite ; saisie individuelle seulement.
+    if (!membres && await this.#heuresMateriel(lignes, suite)) return;
+    await suite();
+  }
+
+  /**
+   * Heures de matériel (plan terrain-suites, lot 19, TS18 a) : une durée par matériel affecté au salarié ce jour, sur un
+   * chantier de sa journée (déboursé du chantier, source BORNE). Faux si aucun matériel n'est affecté (écran passé).
+   */
+  async #heuresMateriel(lignesJournee, apres) {
+    const j = this.etat.journee;
+    let d;
+    try { d = await appel('GET', `/materiel/heures?jeton=${encodeURIComponent(j.jeton)}&date=${j.date}`); } catch { return false; }
+    if (!d.materiels.length) return false;
+    const chantiers = chantiersJournee(lignesJournee);
+    if (!chantiers.length) return false;
+    const lignes = lignesHeuresMateriel(d, lignesJournee);
+    const nomChantier = (id) => { const c = j.chantiers.find((x) => x.id === id); return c ? `${c.code} ${c.libelle ?? ''}`.trim() : texte('pointage.borne.chantier', { id }); };
+    this.ecran = () => this.#journee();
+    this.zone.innerHTML = `${this.#entete(texte('pointage.borne.ecran_materiel'))}
+      <p class="aide">${texteHtml('pointage.borne.materiel_aide')}</p>
+      <table class="borne-liste"><tbody>${lignes.map((l, i) => `<tr><td><b>${echapper(l.code)}</b> <small>${echapper(l.designation)}</small></td>
+        <td><input class="borne-duree-champ" data-duree="${i}" value="${ecrireDuree(l.minutes)}" inputmode="decimal" aria-label="${texteHtml('pointage.borne.duree')}" autocomplete="off">
+          <button type="button" class="borne-bouton" data-comme="${i}" title="${texteHtml('pointage.borne.materiel_comme_aide')}">${texteHtml('pointage.borne.materiel_comme')}</button></td>
+        <td data-chantier="${i}">${chantiers.length === 1 ? echapper(nomChantier(chantiers[0])) : ''}</td></tr>`).join('')}</tbody></table>
+      <p><button type="button" class="borne-bouton principal" data-enregistrer>${iconeHtml('pointage_ok')} ${texteHtml('commun.enregistrer')}</button>
+        <button type="button" class="borne-bouton" data-passer>${texteHtml('pointage.borne.materiel_passer')}</button></p>`;
+    this.#brancherEntete();
+    const z = this.zone;
+    const combos = chantiers.length > 1
+      ? lignes.map((l, i) => {
+        const c = creerCombo({ options: chantiers.map((id) => ({ valeur: id, libelle: nomChantier(id) })), valeur: l.cha_id, vide: false, titre: texte('pointage.borne.materiel_chantier') });
+        z.querySelector(`[data-chantier="${i}"]`).append(c);
+        return c;
+      })
+      : [];
+    const total = lignesJournee.reduce((s, l) => s + (l.minutes > 0 ? l.minutes : 0), 0);
+    z.querySelectorAll('[data-comme]').forEach((b) => b.addEventListener('click', () => { z.querySelector(`[data-duree="${b.dataset.comme}"]`).value = ecrireDuree(total); }));
+    z.querySelector('[data-passer]').addEventListener('click', () => apres());
+    z.querySelector('[data-enregistrer]').addEventListener('click', async () => {
+      const saisies = lignes.map((l, i) => ({ ...l, minutes: lireDuree(z.querySelector(`[data-duree="${i}"]`).value), cha_id: combos[i] ? Number(combos[i].valeurCombo) : chantiers[0] }));
+      if (saisies.some((l) => l.minutes === null || l.minutes > 1440)) { await alerter(texte('pointage.borne.duree_invalide')); return; }
+      try {
+        const r = await appel('PUT', '/materiel/heures', corpsHeuresMateriel(j.jeton, j.date, saisies));
+        if (r.essai) await alerter(texte('pointage.borne.essai_rien'));
+      } catch (e) { await alerter(e.message); return; }
+      await apres();
+    });
+    z.querySelector('[data-duree]')?.focus();
+    this.#minuterie();
+    return true;
   }
 }
 

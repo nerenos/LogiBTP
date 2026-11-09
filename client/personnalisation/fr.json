@@ -377,6 +377,12 @@
       "compteurs_illisible": "Valeur illisible : saisissez un nombre positif.",
       "compteurs_enregistre": "Relevé enregistré.",
       "compteurs_a_valider": "Relevé enregistré : ce matériel ne vous est pas affecté aujourd'hui, il sera à valider au bureau.",
+      "ecran_materiel": "Heures du matériel",
+      "materiel_aide": "Durée d'utilisation de chaque matériel qui vous est affecté ce jour, sur un chantier de votre journée (laisser vide si non utilisé).",
+      "materiel_comme": "Comme mes heures",
+      "materiel_comme_aide": "Reprendre le total de vos heures du jour",
+      "materiel_chantier": "Chantier du matériel",
+      "materiel_passer": "Passer",
       "terminer": "Terminer",
       "autres": "{{nombre}} autre(s) : précisez la saisie.",
       "aucun_tous": "Aucun chantier ni ordre ne correspond.",
@@ -3293,6 +3299,34 @@
       "en_vigueur": "· en vigueur",
       "delegue_manquant": "Choisissez le délégué de chaque ligne.",
       "enregistre": "Délégations du service {{service}} enregistrées"
+    },
+    "reserves": {
+      "titre": "Réserves de la réception",
+      "ouvertes": "{{nombre}} ouverte(s) sur {{total}}",
+      "toutes_levees": "Toutes les réserves sont levées",
+      "ouverte": "Ouverte (réception du {{date}})",
+      "levee": "Levée le {{date}} par {{par}}",
+      "levee_appareil": "signée sur l'appareil le {{date}}",
+      "photo": "photo de la levée dans les pièces de l'ordre"
+    },
+    "facturation_sav": {
+      "titre": "Facturation de l'intervention",
+      "bon": "Bon : {{heures}} h de temps, {{fournitures}} fourniture(s)",
+      "factures": "Factures :",
+      "sans_numero": "(sans numéro)",
+      "brouillon": "(brouillon)",
+      "facturer": "Facturer",
+      "sans_article": "Facturation depuis le bon indisponible : aucun article « Main-d'œuvre SAV » n'est désigné dans Paramètres › Exécution.",
+      "deja_brouillon": "Une facture brouillon de cette intervention existe déjà : complétez-la ou annulez-la avant d'en créer une autre.",
+      "confirmer": "Créer une facture brouillon : {{heures}} h au prix de l'article {{article}} et {{fournitures}} fourniture(s) à chiffrer ? Elle ne sera pas validée.",
+      "creee": "Facture brouillon {{numero}} créée",
+      "parametre_titre": "Facturation des interventions SAV",
+      "parametre_aide": "Article de la bibliothèque dont le prix, la TVA et le compte servent à facturer le temps des interventions SAV (bouton « Facturer » de l'ordre). Sans article, le bouton est masqué.",
+      "parametre_article": "Article « Main-d'œuvre SAV » (code ou BIB:CODE)",
+      "parametre_prix": "{{prix}} par {{unite}}",
+      "parametre_aucun": "Aucun article désigné",
+      "parametre_enregistrer": "Enregistrer l'article",
+      "parametre_enregistre": "Article de facturation SAV enregistré"
     }
   },
   "sous_traitance_btp": {
@@ -4910,6 +4944,13 @@
           "libelle": "Paramètres : heures travaillées, jours masqués…"
         }
       },
+      "terrain_simplifie": {
+        "libelle": "&Terrain",
+        "terrain": "Mon terrain",
+        "pointage": "Pointage",
+        "demandes": "Mes demandes",
+        "sav": "SAV"
+      },
       "terrain": {
         "libelle": "Terra&in",
         "terrain": {
@@ -5222,7 +5263,8 @@
         "precedente": "Fiche ou document précédent de la liste",
         "suivante": "Fiche ou document suivant de la liste",
         "parametres": "Paramètres",
-        "raccourcis": "Personnaliser les raccourcis"
+        "raccourcis": "Personnaliser les raccourcis",
+        "menu_classique": "Menu classique ou simplifié (pages du terrain)"
       },
       "document": {
         "groupe": "Page document",
@@ -5788,9 +5830,12 @@
       "avancement": {
         "titre": "Avancement réel et situations",
         "reel_html": "Réel sur le chantier : <b>{{reel}}</b>",
+        "reel_marche_html": "Réel sur le marché : <b>{{reel}}</b>",
         "dernier": "(dernier relevé le {{date}})",
         "situe_html": "situé : <b>{{situe}}</b>",
-        "aide": "Réel = moyenne des tâches pondérée par leurs heures ; un chantier à plusieurs marchés compte toutes ses tâches."
+        "aide": "Réel = moyenne des tâches pondérée par leurs heures, une tâche sans relevé comptant pour 0.",
+        "aide_plusieurs": "Chantier à plusieurs marchés : seules les tâches de ce marché, par leur ordre ou leur ligne d'origine, sont comptées.",
+        "exclues": "{{nombre}} tâche(s) de niveau chantier, sans marché d'origine, exclue(s) de la moyenne : {{liste}}."
       },
       "gestion": {
         "nouvelle": "Enregistrez la fiche pour gérer le marché.",
@@ -7074,12 +7119,17 @@
         "code_postal": "Code postal",
         "ville": "Ville"
       },
-      "choisir": "Choisissez un chantier ou un client"
+      "choisir": "Choisissez un chantier ou un client",
+      "numero_provisoire": "Provisoire {{code}}",
+      "sur_appareil": "créée sur l'appareil, envoyée au retour du réseau",
+      "creation": "Nouvelle intervention {{numero}}",
+      "choix_hors_ligne": "Hors ligne : chantiers et clients non lus sur cet appareil ; ouvrez une première fois l'onglet SAV avec le réseau."
     },
     "complements": {
       "sans_reseau": "Hors ligne : à ouvrir une première fois avec le réseau"
     },
     "livraison": {
+      "options_bureau": "Commande à options ou variantes pas encore choisies : la réception se fait au bureau (le premier bon de livraison y fixe les choix).",
       "aucune": "Aucune commande à recevoir sur ce chantier",
       "titre": "Livraison · {{chantier}}",
       "commande": "Commande",
@@ -7121,7 +7171,9 @@
         "envoyees_autre": "{{nombre}} photos envoyées",
         "joindre": "Joindre des photos",
         "nombre_un": "{{nombre}} photo",
-        "nombre_autre": "{{nombre}} photos"
+        "nombre_autre": "{{nombre}} photos",
+        "trop_lourde": "Photo {{nom}} trop lourde, même réduite : la limite de dépôt est de {{mo}} Mo",
+        "trop_lourde_origine": "Photo {{nom}} trop lourde en qualité d'origine (limite de dépôt : {{mo}} Mo) : décochez « Qualité d'origine » pour la réduire"
       },
       "avancement": {
         "titre": "Avancement · {{tache}}",
@@ -7143,8 +7195,12 @@
       },
       "demande": {
         "titre": "Demande d'approvisionnement · {{tache}}",
-        "articles": "Articles demandés (un par ligne, quantité comprise)",
+        "articles": "Autres besoins (texte libre, un par ligne, quantité comprise)",
         "exemple": "20 sacs de colle C2\n1 rouleau de bande",
+        "choisis": "Articles de la bibliothèque",
+        "ajouter": "Ajouter un article de la bibliothèque",
+        "quantite": "Quantité",
+        "unite": "Unité",
         "commentaire": "Commentaire (date souhaitée, lieu de livraison…)",
         "envoyer": "Envoyer la demande",
         "photos": "Demande d'approvisionnement : {{articles}}",
@@ -7153,6 +7209,12 @@
     },
     "pointage": {
       "hors_ligne": "Hors ligne : cette journée n'a pas été consultée sur cet appareil, elle n'est pas disponible. Ouvrez « Mon terrain » avec le réseau pour la garder.",
+      "sans_reseau": "Hors ligne : cette journée n'a pas été consultée sur cet appareil. Ses tâches ne sont pas affichées ; la saisie libre reste possible sur les chantiers de votre service, envoyée au retour du réseau (les pointages déjà enregistrés sont conservés).",
+      "numero": "N° d'ordre",
+      "numero_exemple": "Rechercher",
+      "ordre_inconnu": "Ordre {{numero}} inconnu de cet appareil : gardé tel quel, vérifié à l'envoi de la journée",
+      "numero_a_verifier": "Ordre {{numero}} à vérifier : chantier et ordre retrouvés à l'envoi",
+      "numero_refuse": "Ordre {{numero}} refusé à l'envoi : numéro inconnu. Corrigez le numéro ou choisissez le chantier et l'ordre",
       "sans_salarie": "Votre compte n'est lié à aucun salarié.",
       "validee": "Journée validée : consultation seulement (une correction se demande au service RH).",
       "a_pointer": "À pointer",
@@ -7241,6 +7303,12 @@
       "herite": "(chantier)",
       "appeler": "Appeler",
       "pieces": "Pièces",
+      "plans": "Plans",
+      "plans_titre": "Plans au dernier indice bon pour exécution (suivi des validations)",
+      "plan_indice": "Indice {{indice}}",
+      "plan_premier_indice": "Premier indice",
+      "plans_autres_un": "Voir tous les plans ({{nombre}} autre)",
+      "plans_autres_autre": "Voir tous les plans ({{nombre}} autres)",
       "sans_information": "Aucune information de terrain pour cette tâche.",
       "actions": {
         "pointage": "Pointer",
@@ -7306,7 +7374,29 @@
       "enregistree_etat": "Réception enregistrée ({{etat}}).",
       "ouvrir_pv": "Ouvrir le PV signé",
       "pv_envoye": "PV envoyé à {{courriel}}.",
-      "enregistree": "Réception enregistrée"
+      "enregistree": "Réception enregistrée",
+      "reserves_suivies": {
+        "titre": "Réserves à lever",
+        "ouvertes": "{{nombre}} encore ouverte(s)",
+        "toutes_levees": "toutes levées",
+        "ouverte": "Ouverte depuis la réception du {{date}}",
+        "levee": "Levée le {{date}} par {{par}}",
+        "gardee": "Levée gardée sur cet appareil : envoyée au retour du réseau",
+        "lever": "Lever la réserve",
+        "lever_titre": "Levée de la réserve",
+        "photo": "Photo de la levée (facultative, la première choisie est gardée)",
+        "libelle": "Levée de « {{reserve}} » ({{numero}})",
+        "levee_ok": "Réserve levée"
+      },
+      "pv_levee": {
+        "titre": "PV de levée des réserves",
+        "aide": "Toutes les réserves sont levées : faites signer au client le procès-verbal de levée.",
+        "valider": "Valider le PV de levée",
+        "signe": "PV de levée signé le {{date}} par {{signataire}}",
+        "gardee": "PV de levée signé et gardé sur cet appareil : il sera édité et envoyé au retour du réseau.",
+        "libelle": "PV de levée des réserves de {{numero}}",
+        "enregistre": "PV de levée des réserves enregistré"
+      }
     },
     "chargement": "Chargement…",
     "etape_validee": "Étape « {{etape}} » : validée le {{date}}",
@@ -7322,6 +7412,7 @@
       "equipement": "Équipement concerné (facultatif)",
       "equipement_recherche": "N° de série ou code-barres, puis Entrée",
       "hors_ligne": "Hors ligne : cette intervention n'a pas été ouverte sur cet appareil avec le réseau.",
+      "locale_introuvable": "Intervention créée sur l'appareil introuvable : déjà envoyée, ouvrez-la depuis l'onglet SAV.",
       "titre_ordre": "SAV {{numero}}",
       "historique": "Comptes rendus déjà faits ({{nombre}})",
       "terminee": "Terminée",
@@ -7345,6 +7436,24 @@
     "reglages": {
       "titre": "Application de terrain",
       "retour": "Retour à « Mon terrain »"
+    },
+    "bibliotheque": {
+      "titre": "Bibliothèque · {{chantier}}",
+      "recherche": "Code ou libellé",
+      "chercher": "Chercher dans la bibliothèque",
+      "du_chantier": "Articles des marchés du chantier ; « Chercher dans la bibliothèque » pour les autres.",
+      "resultats": "Articles du chantier, puis résultats de la bibliothèque.",
+      "aucun": "Aucun article.",
+      "hors_ligne": "Hors ligne : seuls les articles du chantier gardés sur cet appareil sont proposés.",
+      "indisponible": "Hors ligne : les articles de ce chantier n'ont pas été gardés sur cet appareil ; saisissez le besoin en texte libre.",
+      "choisir": "Choisir",
+      "photo": "Photo de {{article}}",
+      "unite": "Unité : {{unite}}",
+      "unite_achat": "achat : {{unite}}",
+      "conditionnements": "Conditionnements",
+      "conditionnement": "1 {{unite}} = {{formule}} {{stock}}",
+      "notices": "Notices techniques",
+      "ligne": "{{code}} {{libelle}} · {{quantite}} {{unite}}"
     },
     "demandes": {
       "aide": "Demandes d'approvisionnement faites depuis vos tâches (90 derniers jours). Une nouvelle demande se fait depuis la carte d'une tâche.",

@@ -4,14 +4,16 @@ import { echapper, formatDateHeure, PadSignature, creerCombo } from '@logibtp/so
 import { api } from '../api.js';
 import { MODULE_FACULTATIF } from '../codes.js';
 import { estHorsLigne } from '../hors-ligne/attente.js';
-import { envoyerOuGarder, OPERATION_TERRAIN, formulairePhotos } from '../terrain/operations-terrain.js';
+import { lireOperation } from '../hors-ligne/operations.js';
+import { envoyerOuGarder, OPERATION_TERRAIN, formulairePhotos, appareilSav, ordreSav } from '../terrain/operations-terrain.js';
 import { selecteurPhotos } from '../terrain/actions-tache.js';
 
 // Application de terrain, lot 6 (ANALYSE-TERRAIN.md T20 ; Exécution E12, E22) : compte rendu d'une intervention SAV
 // (droit execution/sav) : constat, travaux, fournitures, photos, intervention terminée ou à reprendre, signature du client
 // ou client absent, courriel de confirmation. Le serveur édite le bon (modèle BON_SAV), le range dans la GED de l'ordre
 // avec son empreinte, valide les étapes et prévient le bureau (TerrainSavBtp.cs). Hors ligne : compte rendu gardé sur
-// l'appareil (signature et photos comprises), envoyé au retour du réseau.
+// l'appareil (signature et photos comprises), envoyé au retour du réseau ; intervention créée sur l'appareil
+// (/terrain/sav/local-<identifiant>, terrain-suites lot 23) : renseignée de même, son ordre est créé à l'envoi.
 
 export class PageSavTerrain extends PageBase {
   icone = icone('terrain_btp_sav');
@@ -23,8 +25,10 @@ export class PageSavTerrain extends PageBase {
 
   async ouvrir() {
     this.titre = texte('terrain_btp.sav_page.titre');
-    this.ordre = Number(this.params.id);
+    this.appareil = appareilSav(this.params.id);
+    this.ordre = this.appareil ? null : Number(this.params.id);
     this.conteneur.innerHTML = `<div class="page-terrain" data-sav><p class="aide">${texteHtml('terrain_btp.chargement')}</p></div>`;
+    if (this.appareil) { await this.#ouvrirLocale(); return; }
     try {
       this.d = await api.terrain.sav(this.ordre);
       this.avecEquipement = this.app.moduleActif(MODULE_FACULTATIF.SAV) && this.app.acces('sav');
@@ -34,6 +38,25 @@ export class PageSavTerrain extends PageBase {
         : `<p class="carte avertissement">${echapper(e.message)}</p>`;
       return;
     }
+    this.titre = texte('terrain_btp.sav_page.titre_ordre', { numero: this.d.ordre.numero ?? '' }).trim();
+    this.#rendre();
+  }
+
+  /** Intervention créée sur l'appareil : gardée, sinon déjà envoyée (ordre retrouvé par l'identifiant de l'appareil). */
+  async #ouvrirLocale() {
+    const gardee = await lireOperation(this.app.utilisateur(), OPERATION_TERRAIN.SAV_CREATION, this.appareil).catch(() => null);
+    if (!gardee) {
+      try {
+        const r = await api.terrain.interventionAppareil(this.appareil);
+        await this.app.naviguer(`/terrain/sav/${r.ent_id}`, { remplacer: true });
+      } catch (e) {
+        this.conteneur.querySelector('[data-sav]').innerHTML = `<p class="carte avertissement">${estHorsLigne(e) ? `${iconeHtml('terrain_btp_hors_ligne')} ` : ''}${texteHtml('terrain_btp.sav_page.locale_introuvable')}</p>`;
+      }
+      return;
+    }
+    this.creation = gardee.corps.creation;
+    this.d = gardee.corps.affichage;
+    this.avecEquipement = false;
     this.titre = texte('terrain_btp.sav_page.titre_ordre', { numero: this.d.ordre.numero ?? '' }).trim();
     this.#rendre();
   }
@@ -113,8 +136,11 @@ export class PageSavTerrain extends PageBase {
     bouton.disabled = true;
     try {
       const photos = this.photos.nombre ? await this.photos.photos(texte('terrain_btp.sav_page.libelle', { numero: this.d.ordre.numero ?? '' }).trim()) : null;
-      const r = await envoyerOuGarder(this.app, { type: OPERATION_TERRAIN.SAV, id: `${this.ordre}:${Date.now()}`, corps: { ordre: this.ordre, compteRendu, photos },
+      // Intervention créée sur l'appareil : l'ordre est créé (ou retrouvé) à l'envoi par l'identifiant de l'appareil.
+      const corps = { ordre: this.ordre, creation: this.creation ?? null, compteRendu, photos };
+      const r = await envoyerOuGarder(this.app, { type: OPERATION_TERRAIN.SAV, id: `${this.ordre ?? this.appareil}:${Date.now()}`, corps,
         libelle: texte('terrain_btp.sav_page.libelle', { numero: this.d.ordre.numero ?? '' }).trim(), url: this.urlCourante() }, async () => {
+        this.ordre = await ordreSav(corps);
         // Photos d'abord : un compte rendu enregistré peut terminer l'ordre.
         if (photos) await api.terrain.photosSav(this.ordre, formulairePhotos(photos));
         return api.terrain.enregistrerSav(this.ordre, compteRendu);

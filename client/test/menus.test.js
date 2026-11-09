@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { elementsVisibles, menus, catalogueRaccourcis } from '../src/app/navigation/menus.js';
+import { elementsVisibles, menus, catalogueRaccourcis, menusTerrain, estPageTerrain } from '../src/app/navigation/menus.js';
+import { menusAffiches, Preferences } from '@logibtp/navigation';
 import { catalogueWidgets } from '../src/app/navigation/widgets.js';
 
 // Menus filtrés par les modules actifs de la société (db/193 : module_societe).
@@ -88,5 +89,41 @@ describe('répartition des menus', () => {
   it('codes des raccourcis uniques', () => {
     const codes = catalogueRaccourcis().map((e) => e.code);
     expect(new Set(codes).size).toBe(codes.length);
+  });
+});
+
+describe('menu simplifié du terrain (lot 6 du plan terrain-suites)', () => {
+  const droits = (refus = []) => ({ ...app(), peut: (noeud) => !refus.includes(noeud), acces: () => true });
+  const codes = (a) => menusTerrain(a)?.[0].elements.map((e) => e.code);
+
+  it('menu simplifié sur les pages du terrain, complet ailleurs', () => {
+    expect(estPageTerrain('/terrain')).toBe(true);
+    expect(estPageTerrain('/terrain/reception/12')).toBe(true);
+    expect(estPageTerrain('/terrain/sav/7')).toBe(true);
+    expect(estPageTerrain('/')).toBe(false);
+    expect(estPageTerrain('/pointage/saisie')).toBe(false);
+    expect(estPageTerrain('/terrain/autre/1')).toBe(false);
+  });
+
+  it('éléments selon les droits et les modules, comme les onglets de Mon terrain', () => {
+    expect(codes(droits())).toEqual(['terrain-jour', 'terrain-pointage', 'terrain-demandes', 'terrain-sav']);
+    expect(codes(droits(['execution/sav', 'terrain/demande']))).toEqual(['terrain-jour', 'terrain-pointage']);
+    expect(codes({ ...droits(), moduleActif: (c) => c !== 'execution' })).toEqual(['terrain-jour', 'terrain-pointage', 'terrain-demandes']);
+    // Sans accès à Mon terrain : pas de menu simplifié, menus complets.
+    expect(menusTerrain({ ...droits(), acces: (n) => n !== 'terrain' })).toBeNull();
+    expect(menusTerrain(droits())[0].elements[1].url).toBe('/terrain?onglet=pointage');
+  });
+
+  it('raccourci « Menu classique » : bascule gardée dans les préférences du navigateur', () => {
+    const memoire = new Map();
+    const stockage = { getItem: (k) => memoire.get(k) ?? null, setItem: (k, v) => memoire.set(k, v), removeItem: (k) => memoire.delete(k) };
+    const a = droits();
+    const complets = menus(a);
+    const simplifie = () => menusTerrain(a);
+    const prefs = new Preferences('nav', { menuClassique: false }, stockage);
+    expect(menusAffiches(complets, simplifie, prefs.get('menuClassique')).map((m) => m.code)).toEqual(['terrain-simplifie']);
+    prefs.set('menuClassique', true);
+    const relues = new Preferences('nav', { menuClassique: false }, stockage);
+    expect(menusAffiches(complets, simplifie, relues.get('menuClassique'))).toBe(complets);
   });
 });

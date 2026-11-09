@@ -51,6 +51,7 @@
       "boucle": "Un document ne peut pas être une pièce jointe de lui-même ou de ses pièces jointes",
       "repertoire_introuvable": "Répertoire {{id}} introuvable",
       "titre_obligatoire": "Titre obligatoire",
+      "trop_volumineux": "Fichier trop volumineux (maximum {{mo}} Mo)",
       "coffre_classement": "Document du coffre-fort : seules les informations de classement sont modifiables",
       "droit_refuse": "Droit {{droit}} refusé",
       "coffre_lie": "Document du coffre-fort : il reste lié à son élément",

@@ -14,14 +14,18 @@ namespace LogiBTP.Api.Btp;
 /// (adresse des travaux, contact sur place et son téléphone) et les pièces de la GED diffusées sur le terrain
 /// (<c>dge_terrain</c>) du chantier, de ses marchés et de l'ordre d'origine de la tâche (ordre ou étape d'ordre).
 /// Pièces confidentielles, secrètes ou à accès restreint jamais proposées. Minutes pointées par la personne sur chaque
-/// tâche, par jour de la période (état visuel des cartes). Routes <c>/api/terrain</c> (nœud « terrain »).
+/// tâche, par jour de la période (état visuel des cartes) ; plans en vigueur du suivi des validations par tâche
+/// (<c>plans</c>, TerrainPlansBtp.cs). Routes <c>/api/terrain</c> (nœud « terrain »).
 /// </summary>
 public static partial class TerrainBtp
 {
     /// <summary>Période lue au plus (jours).</summary>
     private const int JoursMax = 31;
 
-    /// <summary>Tâches de la personne @s sur [@du, @au] (dates), avec leur chantier et l'ordre d'origine (ordre ou étape).</summary>
+    /// <summary>
+    /// Tâches de la personne @s sur [@du, @au] (dates), avec leur chantier et l'ordre d'origine (ordre ou étape) ; tâche
+    /// d'origine ligne (terrain-suites lot 7) : la ligne, son document et son chantier (ligne, sinon entête).
+    /// </summary>
     private const string SqlTaches = """
         WITH t AS (
           SELECT DISTINCT t.* FROM pla_tache t JOIN pla_affectation a ON a.aff_tac_id = t.tac_id
@@ -29,11 +33,15 @@ public static partial class TerrainBtp
             AND t.tac_debut < (@au::date + 1) AND t.tac_fin > @du::date
         ), x AS (
           SELECT t.*, c.cha_id, c.cha_code, c.cha_libelle, d.ent_id, d.ent_numero, d.ent_objet, coalesce(d.ent_groupe_id, d.ent_id) AS groupe,
-                 ty.tyd_code, sv.srv_libelle
+                 ty.tyd_code, sv.srv_libelle, lo.lig_id,
+                 nullif(concat_ws(' ', lo.lig_code, left(regexp_replace(lo.lig_libelle_brut, '\s+', ' ', 'g'), 80)), '') AS lig_libelle
           FROM t
-          LEFT JOIN chantier c ON t.tac_type_element = 'chantier' AND t.tac_id_element ~ '^[0-9]+$' AND c.cha_id = t.tac_id_element::int
+          LEFT JOIN document_ligne lo ON lo.lig_id = CASE WHEN t.tac_origine_type = 'ligne' AND t.tac_origine_id ~ '^[0-9]+$' THEN t.tac_origine_id::bigint END
           LEFT JOIN exe_ordre_etape e ON t.tac_origine_type = 'etape' AND e.ore_id::text = t.tac_origine_id
-          LEFT JOIN document d ON d.ent_id = CASE WHEN t.tac_origine_type = 'ordre' AND t.tac_origine_id ~ '^[0-9]+$' THEN t.tac_origine_id::bigint ELSE e.ore_ordre_id END
+          LEFT JOIN document d ON d.ent_id = CASE WHEN t.tac_origine_type = 'ordre' AND t.tac_origine_id ~ '^[0-9]+$' THEN t.tac_origine_id::bigint
+                                                  WHEN lo.lig_id IS NOT NULL THEN lo.lig_ent_id ELSE e.ore_ordre_id END
+          LEFT JOIN chantier c ON c.cha_id = CASE WHEN coalesce(lo.lig_cha_id, d.ent_chantier_id) IS NOT NULL AND lo.lig_id IS NOT NULL THEN coalesce(lo.lig_cha_id, d.ent_chantier_id)
+                                                  WHEN t.tac_type_element = 'chantier' AND t.tac_id_element ~ '^[0-9]+$' THEN t.tac_id_element::int END
           LEFT JOIN type_document ty ON ty.tyd_id = d.ent_tyd_id
           LEFT JOIN service sv ON sv.srv_id = t.tac_srv_id
         )
@@ -55,7 +63,7 @@ public static partial class TerrainBtp
         var g = api.MapGroup("/terrain");
 
         // Tâches de la période (par défaut : aujourd'hui et les six jours suivants) ; personne nulle : compte sans salarié.
-        g.MapGet("", async (string? du, string? au, HttpContext http, LogiBtpContext db, CancellationToken ct) =>
+        g.MapGet("", async (string? du, string? au, HttpContext http, LogiBtpContext db, SpecialisationGed ged, CancellationToken ct) =>
         {
             var (debut, fin) = Periode(du, au);
             if (await ComptesBtp.SalarieAsync(db, Utilisateur.Depuis(http).Code, ct) is not int s)
@@ -87,7 +95,11 @@ public static partial class TerrainBtp
             var chantiers = new Dictionary<string, object?>();
             foreach (var id in taches.Where(t => t.GetProperty("chantier").ValueKind == JsonValueKind.Object).Select(t => t.GetProperty("chantier").GetProperty("id").GetInt32()).Distinct())
                 chantiers[id.ToString(CultureInfo.InvariantCulture)] = await DefautChantierAsync(db, id, ct);
-            return Results.Ok(new { personne = new { id = personne.Id, libelle = personne.Libelle }, du = Jour(debut), au = Jour(fin), taches, chantiers, motifs = await MotifsAsync(db, ct) });
+            // Plans en vigueur du suivi des validations par tâche (TerrainPlansBtp.cs) : clé = identifiant de la tâche.
+            var plans = (await PlansTachesAsync(http.RequestServices, db, s, debut, fin, ct)).ToDictionary(x => x.Key.ToString(CultureInfo.InvariantCulture), x => x.Value);
+            return Results.Ok(new { personne = new { id = personne.Id, libelle = personne.Libelle }, du = Jour(debut), au = Jour(fin), taches, chantiers, plans, motifs = await MotifsAsync(db, ct),
+                // Limite de dépôt de la GED (octets) : photos contrôlées sur l'appareil avant d'être gardées ou envoyées (terrain-suites lot 12).
+                taille_max_photo = ged.TailleMaxDepot });
         });
 
         // Valeurs par défaut de la partie mobile d'une tâche sur ce chantier (repères du détail de la tâche du planning).
@@ -109,7 +121,7 @@ public static partial class TerrainBtp
                 ?? throw ExceptionMetier.Introuvable($"Pièce {id}");
             return await ged.Contenu(version, telecharger == true, http, u, ct);
         });
-        return g.MapJournee().MapOrdresTerrain().MapReceptionTerrain().MapSavTerrain().MapComplementsTerrain();
+        return g.MapPlansTerrain().MapJournee().MapOrdresTerrain().MapReceptionTerrain().MapSavTerrain().MapComplementsTerrain().MapBibliothequeTerrain();
     }
 
     /// <summary>Motifs de non-conformité proposés (paramètres des ressources) ; tout autre motif reste saisissable.</summary>

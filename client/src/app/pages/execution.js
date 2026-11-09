@@ -250,7 +250,8 @@ export class PageParametresExecution extends PageBase {
     this.conteneur.innerHTML = `<div class="page-parametres"><h1 class="page-titre">${iconeHtml('execution_btp_synthese')} ${texteHtml('execution_btp.modeles.titre')}</h1>
       <p class="aide">${texteHtml('execution_btp.modeles.aide')}</p><div data-corps></div>
       <h2>${texteHtml('execution_btp.modeles.catalogue')}</h2><div data-catalogue></div>
-      <h2>${texteHtml('execution_btp.modeles.types')}</h2><div data-types></div></div>`;
+      <h2>${texteHtml('execution_btp.modeles.types')}</h2><div data-types></div>
+      <h2>${texteHtml('execution_btp.facturation_sav.parametre_titre')}</h2><div data-sav></div></div>`;
     const corps = this.conteneur.querySelector('[data-corps]');
     const admin = this.app.estAdmin();
     const [modeles, services] = await Promise.all([api.execution.modeles(), api.services()]);
@@ -258,6 +259,7 @@ export class PageParametresExecution extends PageBase {
     const zTypes = this.conteneur.querySelector('[data-types]');
     await rendreCatalogueEtats(zCatalogue, { app: this.app, services, apres: () => rendreEtatsTypes(zTypes, { app: this.app }) });
     await rendreEtatsTypes(zTypes, { app: this.app });
+    await rendreParametreSav(this.conteneur.querySelector('[data-sav]'), { app: this.app, admin });
     let courant = modeles[0] ?? null;
     let modifie = false;
     this.#modifie = () => modifie;
@@ -294,6 +296,26 @@ export class PageParametresExecution extends PageBase {
     };
     rendre();
   }
+}
+
+/**
+ * Article « Main-d'œuvre SAV » (terrain-suites lot 22, db/293) : prix horaire, TVA et compte du temps facturé depuis le
+ * bon de SAV ; saisi par son code (« CODE » ou « BIB:CODE »), vide : aucun (bouton « Facturer » masqué).
+ */
+async function rendreParametreSav(zone, { app, admin }) {
+  const { article } = await api.execution.parametresSav().catch(() => ({ article: null }));
+  const valeur = article ? `${article.bib}:${article.code}` : '';
+  zone.innerHTML = `<p class="aide">${texteHtml('execution_btp.facturation_sav.parametre_aide')}</p>
+    <p class="ligne"><label>${texteHtml('execution_btp.facturation_sav.parametre_article')} <input data-article size="24" value="${echapper(valeur)}" ${admin ? '' : 'readonly'}></label>
+      ${article ? `<span>${echapper(article.libelle.replace(/<[^>]*>/g, ''))} · ${texteHtml('execution_btp.facturation_sav.parametre_prix', { prix: article.pv ?? '', unite: article.unite })}</span>` : `<span class="aide">${texteHtml('execution_btp.facturation_sav.parametre_aucun')}</span>`}
+      ${admin ? `<button type="button" data-enregistrer-sav>${texteHtml('execution_btp.facturation_sav.parametre_enregistrer')}</button>` : ''}</p>`;
+  zone.querySelector('[data-enregistrer-sav]')?.addEventListener('click', async () => {
+    try {
+      await api.execution.enregistrerParametresSav({ article: zone.querySelector('[data-article]').value.trim() || null });
+      app.message(texte('execution_btp.facturation_sav.parametre_enregistre'), 'succes');
+      await rendreParametreSav(zone, { app, admin });
+    } catch (e) { app.erreur(e); }
+  });
 }
 
 /**

@@ -493,17 +493,22 @@ export class FicheMarche extends FicheStructure {
    * net à payer, annulés masqués et réaffichables ; totaux), factures des sous-traitants en paiement direct (facture du
    * marché liée ; totaux), acomptes, postes de pied.
    */
-  /** Avancement réel des tâches du chantier (terrain, T12) comparé à l'avancement situé, sous le récapitulatif. */
+  /**
+   * Avancement réel des tâches du chantier (terrain, T12) comparé à l'avancement situé, sous le récapitulatif ; chantier
+   * à plusieurs marchés (plan terrain-suites, lot 21) : tâches du marché par leur origine, tâches de niveau chantier exclues et citées.
+   */
   async rendreAvancementReel(corps, situe) {
     let a;
     try { a = await this.services.structure.avancementReel(Number(this.id)); } catch { return; }
-    if (!a.taches.length) return;
+    const exclues = a.exclues ?? [];
+    if (!a.taches.length && !exclues.length) return;
     const bloc = document.createElement('details');
     bloc.className = 'groupe-gestion';
     const n = (v) => (v == null ? '–' : `${formatNombre(v, 1).replace(/,0$/, '')} %`);
     bloc.innerHTML = `<summary><h3>${texteHtml('fiches_btp.structure.avancement.titre')}</h3></summary>
-      <p>${texteHtml('fiches_btp.structure.avancement.reel_html', { reel: n(a.reel) })}${a.dernier ? ` ${texteHtml('fiches_btp.structure.avancement.dernier', { date: formatDate(a.dernier) })}` : ''} · ${texteHtml('fiches_btp.structure.avancement.situe_html', { situe: situe || '–' })}
-        <span class="aide">${texteHtml('fiches_btp.structure.avancement.aide')}</span></p>
+      <p>${texteHtml(a.plusieurs ? 'fiches_btp.structure.avancement.reel_marche_html' : 'fiches_btp.structure.avancement.reel_html', { reel: n(a.reel) })}${a.dernier ? ` ${texteHtml('fiches_btp.structure.avancement.dernier', { date: formatDate(a.dernier) })}` : ''} · ${texteHtml('fiches_btp.structure.avancement.situe_html', { situe: situe || '–' })}
+        <span class="aide">${texteHtml('fiches_btp.structure.avancement.aide')}${a.plusieurs ? ` ${texteHtml('fiches_btp.structure.avancement.aide_plusieurs')}` : ''}</span></p>
+      ${exclues.length ? `<p class="aide">${texteHtml('fiches_btp.structure.avancement.exclues', { nombre: exclues.length, liste: exclues.map((t) => t.libelle).join(', ') })}</p>` : ''}
       <table class="tableau-gestion"><thead><tr><th>${texteHtml('fiches_btp.structure.colonnes.tache')}</th><th class="nombre">${texteHtml('fiches_btp.structure.colonnes.heures')}</th><th class="nombre">${texteHtml('fiches_btp.structure.colonnes.reel')}</th><th>${texteHtml('fiches_btp.structure.colonnes.releve')}</th></tr></thead>
       <tbody>${a.taches.map((t) => `<tr><td>${echapper(t.libelle)}</td><td class="nombre">${formatNombre(t.heures, 1)}</td><td class="nombre">${n(t.pourcent)}</td><td>${t.le ? formatDate(t.le) : ''}</td></tr>`).join('')}</tbody></table>`;
     corps.querySelector('[data-groupe="recapitulatif"]')?.after(bloc);

@@ -148,11 +148,13 @@ public sealed class ServiceSynthese(PointageDbContext db, SpecialisationPointage
         if (saisis.Any(p => p.Date < lundi || p.Date > dimanche)) throw ExceptionMetier.Invalide("POI_SEMAINE_HORS", "Pointage hors de la semaine");
         if (saisis.Any(p => p.ChaId is null || p.TypeMo is null)) throw ExceptionMetier.Invalide("POI_CHANTIER", "Chantier et type de main-d'œuvre obligatoires");
         var origines = await db.Pointages.AsNoTracking().Where(p => p.PoiSalId == salarie && p.PoiCouche == Couches.Saisie && p.PoiDate >= lundi && p.PoiDate <= dimanche)
-            .Select(p => p.PoiId).ToListAsync(ct);
+            .ToDictionaryAsync(p => p.PoiId, ct);
+        // Ligne de l'ordre : celle posée, sinon celle du pointage d'origine resté sur le même ordre.
+        long? Ligne(PointageSaisi p) => p.LigId ?? (p.OrigineId is long o && origines.TryGetValue(o, out var x) && x.PoiEntId == p.EntId ? x.PoiLigId : null);
         var nouveaux = saisis.Select(p => new PointageEntite
         {
-            PoiCouche = Couches.Valide, PoiOrigineId = p.OrigineId is long o && origines.Contains(o) ? o : null, PoiSalId = salarie, PoiDate = p.Date,
-            PoiChaId = p.ChaId!.Value, PoiEntId = p.EntId, PoiTypeMo = p.TypeMo!.Value, PoiSousType = p.SousType, PoiMinutes = (short)p.Minutes,
+            PoiCouche = Couches.Valide, PoiOrigineId = p.OrigineId is long o && origines.ContainsKey(o) ? o : null, PoiSalId = salarie, PoiDate = p.Date,
+            PoiChaId = p.ChaId!.Value, PoiEntId = p.EntId, PoiLigId = Ligne(p), PoiTypeMo = p.TypeMo!.Value, PoiSousType = p.SousType, PoiMinutes = (short)p.Minutes,
             PoiDebut = (short?)p.Debut, PoiFin = (short?)p.Fin, PoiMotif = string.IsNullOrWhiteSpace(p.Motif) ? null : p.Motif.Trim(),
             PoiCommentaire = string.IsNullOrWhiteSpace(p.Commentaire) ? null : p.Commentaire, PoiSaisiPar = u.Code,
         }).ToList();

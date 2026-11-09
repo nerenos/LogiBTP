@@ -1,5 +1,6 @@
 import { texte, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { TYPE_FICHE, MODULE_FACULTATIF } from '../codes.js';
+import { ACTION_DROIT } from '@logibtp/socle';
 import { Bandeau, DISPOSITION_MENU } from '@logibtp/navigation/ui';
 import { THEMES, DENSITES } from '@logibtp/socle/ui';
 
@@ -361,6 +362,32 @@ export function menus(app) {
       },
     },
   ];
+}
+
+/** Pages du terrain (téléphone) : menu simplifié par défaut (Mon terrain, réception, bon de SAV). */
+export function estPageTerrain(chemin) {
+  return chemin === '/terrain' || /^\/terrain\/(reception|sav)\/[^/]+$/.test(chemin ?? '');
+}
+
+/**
+ * Menu simplifié du terrain (bandeau, option `simplifie` du module Navigation) : Mon terrain, Pointage, Mes demandes,
+ * SAV, selon les mêmes droits que les onglets de « Mon terrain » ; aucun élément permis (Mon terrain absent) : null,
+ * menus complets.
+ */
+export function menusTerrain(app) {
+  const mesTerrain = MENUS_METIER.flatMap((m) => m.elements).find((e) => e.code === 'terrain');
+  if (!visible(app, mesTerrain)) return null;
+  const execution = app.moduleActif?.(MODULE_FACULTATIF.EXECUTION) !== false;
+  const peut = (noeud) => app.peut?.(noeud, ACTION_DROIT.CONSULTER) !== false;
+  const onglet = (cle, icone, libelle, permis = true) => (permis ? [{ code: `terrain-${cle}`, libelle: texte(libelle), iconeHtml: iconeHtml(icone), url: `/terrain?onglet=${cle}`, fenetre: false }] : []);
+  return [{
+    code: 'terrain-simplifie', libelle: texte('navigation_btp.menus.terrain_simplifie.libelle'), elements: [
+      ...onglet('jour', 'navigation_btp_terrain', 'navigation_btp.menus.terrain_simplifie.terrain'),
+      ...onglet('pointage', 'terrain_btp_pointage', 'navigation_btp.menus.terrain_simplifie.pointage'),
+      ...onglet('demandes', 'terrain_btp_demande', 'navigation_btp.menus.terrain_simplifie.demandes', peut('terrain/demande')),
+      ...onglet('sav', 'terrain_btp_sav', 'navigation_btp.menus.terrain_simplifie.sav', execution && peut('execution/sav')),
+    ],
+  }];
 }
 
 /** Raccourcis proposés à l'accueil : éléments de menu métier ayant une URL. */

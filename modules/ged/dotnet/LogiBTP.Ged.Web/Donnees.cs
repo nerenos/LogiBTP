@@ -321,6 +321,8 @@ public sealed class ParametresGedDto
     public int EditionsConservees { get; set; } = 5;
     public long TailleApercuMax { get; set; } = 15 * 1024 * 1024;
     public string AdresseCopieCachee { get; set; } = "";
+    /// <summary>Taille maximale d'un fichier déposé (octets, <see cref="SpecialisationGed.TailleMaxDepot"/>), en lecture seule.</summary>
+    public long TailleMaxDepot { get; set; } = 200L * 1024 * 1024;
     public JsonElement Categories { get; set; }
     /// <summary>Règles de classification (proposition de catégorie dans le dialogue de dépôt).</summary>
     public List<RegleClassificationDto> ReglesClassification { get; set; } = [];

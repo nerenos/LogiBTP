@@ -7,9 +7,9 @@ namespace LogiBTP.Crm.Web;
 /// <summary>Statut de visa lu ou saisi.</summary>
 public sealed record StatutVisaDto(string Code, string Libelle, string Effet, int Ordre, bool Actif);
 
-/// <summary>Plan saisi.</summary>
+/// <summary>Plan saisi ; case « Terrain » nulle : inchangée (non cochée à la création).</summary>
 public sealed record PlanSaisi(string Repere, string? RepereCctp, string Nom, string? Lot, string? Finition, string? MessageHtml, string? TypeElement, string? IdElement,
-    DateTimeOffset? MajLe = null);
+    DateTimeOffset? MajLe = null, bool? Terrain = null);
 
 /// <summary>Visa lu : tiers, contact, attendu, statut reçu, observation, plan annoté, bordereau d'origine.</summary>
 public sealed record VisaDto(long Id, long IndiceId, long TiersId, ElementDecrit? Tiers, long? IndId, ElementDecrit? Contact, DateOnly? AttenduLe, string? Statut,
@@ -18,9 +18,9 @@ public sealed record VisaDto(long Id, long IndiceId, long TiersId, ElementDecrit
 /// <summary>Indice lu avec ses visas.</summary>
 public sealed record IndiceDto(long Id, string Indice, DateOnly? Date, string? Motif, long? DgeId, long? RgeId, string CreePar, DateTimeOffset CreeLe, List<VisaDto> Visas);
 
-/// <summary>Plan lu : saisie, élément, état calculé (ReglesValidation), nombre d'indices.</summary>
+/// <summary>Plan lu : saisie, élément, état calculé (ReglesValidation), nombre d'indices, case « Terrain » (montré en tête sur le terrain).</summary>
 public sealed record PlanDto(long Id, string Repere, string? RepereCctp, string Nom, string? Lot, string? Finition, string? MessageHtml, string? TypeElement,
-    string? IdElement, ElementDecrit? Element, EtatPlan Etat, string CreePar, DateTimeOffset MajLe, int NbIndices);
+    string? IdElement, ElementDecrit? Element, EtatPlan Etat, string CreePar, DateTimeOffset MajLe, int NbIndices, bool Terrain = false);
 
 /// <summary>Plan détaillé : indices et visas.</summary>
 public sealed record PlanDetail(PlanDto Plan, List<IndiceDto> Indices);
@@ -132,10 +132,27 @@ public partial class ServiceCrm
         {
             var siens = indices.Where(i => i.PinPlaId == p.PlaId).Select(i => new IndiceAEvaluer(i.PinIndice, i.PinDate,
                 visas.Where(v => v.VisPinId == i.PinId).Select(v => new VisaAEvaluer(v.VisStvCode, v.VisAttenduLe)).ToList())).ToList();
-            return new PlanDto(p.PlaId, p.PlaRepere, p.PlaRepereCctp, p.PlaNom, p.PlaLot, p.PlaFinition, p.PlaMessageHtml, p.PlaTypeElement, p.PlaIdElement,
-                p.PlaTypeElement is string t && p.PlaIdElement is string id ? elements.GetValueOrDefault((t, id)) : null,
-                ReglesValidation.Etat(siens, effets, aujourdhui), p.PlaCreePar, p.PlaMajLe, siens.Count);
+            return EnPlanDto(p, p.PlaTypeElement is string t && p.PlaIdElement is string id ? elements.GetValueOrDefault((t, id)) : null,
+                ReglesValidation.Etat(siens, effets, aujourdhui), siens.Count);
         }).ToList();
+    }
+
+    /// <summary>Plan lu depuis son entité (élément décrit et état calculés à part).</summary>
+    public static PlanDto EnPlanDto(CrmPlan p, ElementDecrit? element, EtatPlan etat, int nbIndices) =>
+        new(p.PlaId, p.PlaRepere, p.PlaRepereCctp, p.PlaNom, p.PlaLot, p.PlaFinition, p.PlaMessageHtml, p.PlaTypeElement, p.PlaIdElement,
+            element, etat, p.PlaCreePar, p.PlaMajLe, nbIndices, p.PlaTerrain);
+
+    /// <summary>Champs saisis recopiés dans l'entité (hors message, nettoyé à part) ; case « Terrain » nulle : inchangée.</summary>
+    public static void RemplirPlan(CrmPlan p, PlanSaisi s)
+    {
+        p.PlaRepere = s.Repere.Trim();
+        p.PlaRepereCctp = string.IsNullOrWhiteSpace(s.RepereCctp) ? null : s.RepereCctp.Trim();
+        p.PlaNom = s.Nom.Trim();
+        p.PlaLot = string.IsNullOrWhiteSpace(s.Lot) ? null : s.Lot.Trim();
+        p.PlaFinition = string.IsNullOrWhiteSpace(s.Finition) ? null : s.Finition.Trim();
+        p.PlaTypeElement = string.IsNullOrWhiteSpace(s.TypeElement) ? null : s.TypeElement;
+        p.PlaIdElement = string.IsNullOrWhiteSpace(s.IdElement) ? null : s.IdElement;
+        if (s.Terrain is bool terrain) p.PlaTerrain = terrain;
     }
 
     public async Task<PlanDetail> Plan(long id, CancellationToken ct)
@@ -182,14 +199,8 @@ public partial class ServiceCrm
             }
         }
         else p = db.Plans.Add(new CrmPlan { PlaCreePar = u.Code, PlaCreeLe = DateTimeOffset.UtcNow }).Entity;
-        p.PlaRepere = s.Repere.Trim();
-        p.PlaRepereCctp = string.IsNullOrWhiteSpace(s.RepereCctp) ? null : s.RepereCctp.Trim();
-        p.PlaNom = s.Nom.Trim();
-        p.PlaLot = string.IsNullOrWhiteSpace(s.Lot) ? null : s.Lot.Trim();
-        p.PlaFinition = string.IsNullOrWhiteSpace(s.Finition) ? null : s.Finition.Trim();
+        RemplirPlan(p, s);
         p.PlaMessageHtml = nettoyage.Nettoyer(s.MessageHtml);
-        p.PlaTypeElement = string.IsNullOrWhiteSpace(s.TypeElement) ? null : s.TypeElement;
-        p.PlaIdElement = string.IsNullOrWhiteSpace(s.IdElement) ? null : s.IdElement;
         p.PlaMajPar = u.Code;
         p.PlaMajLe = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(ct);

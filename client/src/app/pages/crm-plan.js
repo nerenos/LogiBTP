@@ -8,7 +8,7 @@ import { choisirPersonne } from '@logibtp/annuaire/ui';
 import { api } from '../api.js';
 import { zoneRiche, lienElement } from '../crm/crm.js';
 import { PanneauSuivi } from '../crm/panneau-suivi.js';
-import { extraireNomPlan } from '@logibtp/crm';
+import { extraireNomPlan, caseTerrainPlan } from '@logibtp/crm';
 import { pastillePlan } from './crm-plans.js';
 
 /** Indice affiché : l'indice vide est le premier (avant A). */
@@ -18,7 +18,7 @@ const nomRepertoire = (i) => (i ? texte('crm_btp.plan.indice', { indice: i }) : 
 
 /**
  * Plan ou pièce technique (module CRM, suivi des validations) : `/crm/plan/<id>` ou
- * `/crm/plan/nouveau?type_element=&id_element=`. Repère, repère CCTP, nom, lot, finition, message ; indices (A, B…)
+ * `/crm/plan/nouveau?type_element=&id_element=`. Repère, repère CCTP, nom, lot, finition, case « Terrain », message ; indices (A, B…)
  * avec date de diffusion, motif et fichiers (pièces du plan dans la GED, un répertoire par indice ; l'indice vide est le
  * premier) ; visas attendus et reçus par tiers ; notes. Création : fichiers déposés avec le plan, repère, nom et indice
  * lus dans le nom du premier fichier selon le format des paramètres du CRM (`extraireNomPlan`).
@@ -35,7 +35,7 @@ export class PagePlanCrm extends PageBase {
     if (this.params.id === 'nouveau') {
       this.detail = null;
       const r = this.requete;
-      this.saisie = { repere: '', repere_cctp: '', nom: '', lot: '', finition: '', message_html: null, type_element: r.type_element ?? null, id_element: r.id_element ?? null, indice: '' };
+      this.saisie = { repere: '', repere_cctp: '', nom: '', lot: '', finition: '', terrain: false, message_html: null, type_element: r.type_element ?? null, id_element: r.id_element ?? null, indice: '' };
       this.element = r.type_element ? (await api.crm.elements([{ type: r.type_element, id: String(r.id_element) }]))[0] : null;
       this.titre = texte('crm_btp.plans.nouveau');
     } else await this.charger(Number(this.params.id));
@@ -45,7 +45,7 @@ export class PagePlanCrm extends PageBase {
   async charger(id) {
     this.detail = await api.crm.plan(id);
     const p = this.detail.plan;
-    this.saisie = { repere: p.repere, repere_cctp: p.repere_cctp ?? '', nom: p.nom, lot: p.lot ?? '', finition: p.finition ?? '', message_html: p.message_html,
+    this.saisie = { repere: p.repere, repere_cctp: p.repere_cctp ?? '', nom: p.nom, lot: p.lot ?? '', finition: p.finition ?? '', terrain: Boolean(p.terrain), message_html: p.message_html,
       type_element: p.type_element, id_element: p.id_element, maj_le: p.maj_le };
     this.element = p.element;
     this.titre = `${p.repere} – ${p.nom}`;
@@ -69,6 +69,7 @@ export class PagePlanCrm extends PageBase {
           <label>${texteHtml('crm_btp.plans.lot')} <input data-c="lot" maxlength="80" value="${echapper(s.lot)}"></label>
           <label>${texteHtml('crm_btp.plans.repere_cctp')} <input data-c="repere_cctp" maxlength="40" value="${echapper(s.repere_cctp)}"></label>
           <label>${texteHtml('crm_btp.plan.finition')} <input data-c="finition" maxlength="120" value="${echapper(s.finition)}" placeholder="${texteHtml('crm_btp.plan.finition_aide')}"></label>
+          ${caseTerrainPlan(s.terrain)}
           ${d ? '' : `<label>${texteHtml('crm_btp.plans.indice')} <input data-c="indice" maxlength="5" size="5" value="${echapper(s.indice)}" placeholder="${texteHtml('crm_btp.plan.indice_aide')}" title="${texteHtml('crm_btp.plan.indice_titre')}"></label>`}
         </div>
         ${d ? '' : `<div class="crm-depot" data-depot-plan><label class="crm-photos"><input type="file" data-fichiers-plan multiple hidden>${iconeHtml('crm_btp_fichiers')} ${texteHtml('crm_btp.plan.fichiers')}</label>
@@ -86,6 +87,7 @@ export class PagePlanCrm extends PageBase {
       </section><aside class="crm-note-cote">${d ? `<h2>${texteHtml('crm_btp.plan.pieces')}</h2><div data-pieces class="crm-pieces"></div>` : ''}</aside></div></div>`;
     const $ = (sel) => this.conteneur.querySelector(sel);
     this.conteneur.querySelectorAll('input[data-c]').forEach((i) => i.addEventListener('input', () => { s[i.dataset.c] = i.value; this.modifie = true; }));
+    $('[data-terrain]').addEventListener('change', (e) => { s.terrain = e.target.checked; this.modifie = true; });
     if (!d) this.brancherFichiersNouveaux();
     this.message = zoneRiche(s.message_html, { surChange: () => { this.modifie = true; } });
     $('[data-message]').replaceWith(this.message.element);

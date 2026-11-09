@@ -22,7 +22,7 @@ import { listeAttente, ETATS_ATTENTE, urlAttente, ETAT_ATTENTE } from './hors-li
 import { envoyerAttentes, SUJET_ATTENTE } from './hors-ligne/synchro.js';
 import { listeOperations } from './hors-ligne/operations.js';
 import './terrain/operations-terrain.js';
-import { menus } from './navigation/menus.js';
+import { menus, menusTerrain, estPageTerrain } from './navigation/menus.js';
 import { ROUTES } from './pages/index.js';
 import { CLE_PREFERENCES_NAVIGATION, urlDocument, urlFiche, TYPE_DOCUMENT, SUJET_FENETRE } from './codes.js';
 import { texte, texteHtml, pluriel, icone, iconeHtml, messageErreur } from '@logibtp/socle/dictionnaire';
@@ -40,7 +40,7 @@ export const LISTE_PAR_TYPE = {
 export class Application {
   constructor() {
     this.societe = null;
-    this.preferences = new Preferences(CLE_PREFERENCES_NAVIGATION, { nouvelleFenetre: false, theme: 'auto', densite: 'confortable', menu: { ...DISPOSITION_DEFAUT } });
+    this.preferences = new Preferences(CLE_PREFERENCES_NAVIGATION, { nouvelleFenetre: false, theme: 'auto', densite: 'confortable', menu: { ...DISPOSITION_DEFAUT }, menuClassique: false });
     appliquerTheme(this.preferences.get('theme'));
     appliquerDensite(this.preferences.get('densite'));
     // Thème et disposition du menu changés dans une autre fenêtre de la session (même localStorage) : appliqués ici aussi.
@@ -70,6 +70,8 @@ export class Application {
     this.bandeau = new Bandeau(document.querySelector('#bandeau'), {
       menus: menus(this), naviguer: (url, o) => this.naviguer(url, o), logo: logoApplication(), titreApplication: texte('application.nom'), retour: () => this.retour(),
       disposition: this.preferences.get('menu'), surDisposition: (d) => this.preferences.set('menu', d),
+      // Menu simplifié des pages du terrain (posé par #majMenuTerrain) : choix « Menu classique » gardé dans le navigateur.
+      complet: this.preferences.get('menuClassique'), surBascule: (complet) => this.preferences.set('menuClassique', complet),
     });
     // Application installable : le service worker garde le client et les données consultées (mode hors ligne).
     enregistrerServiceWorker({
@@ -371,6 +373,7 @@ export class Application {
       suivante: page?.suivant && (() => page.suivant()),
       parametres: () => this.naviguer('/parametres'),
       raccourcis: () => this.naviguer('/parametres/raccourcis'),
+      menuClassique: this.bandeau?.simplifie && (() => this.bandeau.basculerMenus()),
     };
     const f = !e.defaultPrevented && fonctions[actionDe(e, 'application')];
     if (f) {
@@ -391,6 +394,7 @@ export class Application {
 
   /** Titre du document et annonce aux autres fenêtres quand la page, son titre ou ses modifications changent. */
   majPage() {
+    this.#majMenuTerrain();
     const e = this.etatFenetre();
     const signature = `${e.url}|${e.titre}|${e.modifiee}`;
     document.title = `${e.modifiee ? `${icone('modifie')} ` : ''}${e.titre ? `${e.titre} – ` : ''}LogiBTP${this.societe && !this.societe.principale ? ` (${this.societe.libelle})` : ''}`;
@@ -399,21 +403,32 @@ export class Application {
     this.fenetres?.annoncer();
   }
 
+  /**
+   * Pages du terrain (`/terrain`, réception, bon de SAV) : menu simplifié (`menusTerrain`), bascule vers le menu
+   * classique gardée dans le navigateur ; ailleurs, menus complets.
+   */
+  #majMenuTerrain() {
+    const terrain = Boolean(this.session?.connecte) && estPageTerrain(location.pathname);
+    if (!this.bandeau || terrain === this.pageTerrain) return;
+    this.pageTerrain = terrain;
+    this.bandeau.simplifier(terrain ? () => menusTerrain(this) : null, { complet: this.preferences.get('menuClassique') });
+  }
+
   rendreInfos() {
     const s = this.societe;
-    this.bandeau.infos(`${s ? `<span class="bandeau-societe" title="${s.principale ? texteHtml('navigation_btp.application.base_principale') : texteHtml('navigation_btp.application.base_societe', { societe: s.libelle, code: s.code })}">${iconeHtml('authentification_btp_societe')} ${echapper(s.libelle)}</span>` : ''}
+    this.bandeau.infos(`${s ? `<span class="bandeau-societe" title="${s.principale ? texteHtml('navigation_btp.application.base_principale') : texteHtml('navigation_btp.application.base_societe', { societe: s.libelle, code: s.code })}">${iconeHtml('authentification_btp_societe')} <span class="bandeau-info-texte">${echapper(s.libelle)}</span></span>` : ''}
       ${this.#etatApi()}${this.#attentes()}
-      ${this.session?.connecte ? `${this.#usurpation()}${this.#cloche()}<a href="/compte" title="${texteHtml('navigation_btp.application.mon_compte', { nom: this.session.libelle ?? this.session.code })}">${iconeHtml('authentification_btp_compte')} ${echapper(this.utilisateur())} · ${echapper(this.profil())}</a>`
-        : `<a href="/connexion">${iconeHtml('authentification_btp_compte')} ${texteHtml('authentification_btp.connexion.se_connecter')}</a>`}`);
+      ${this.session?.connecte ? `${this.#usurpation()}${this.#cloche()}<a href="/compte" title="${texteHtml('navigation_btp.application.mon_compte', { nom: this.session.libelle ?? this.session.code })}">${iconeHtml('authentification_btp_compte')} <span class="bandeau-info-texte">${echapper(this.utilisateur())} · ${echapper(this.profil())}</span></a>`
+        : `<a href="/connexion">${iconeHtml('authentification_btp_compte')} <span class="bandeau-info-texte">${texteHtml('authentification_btp.connexion.se_connecter')}</span></a>`}`);
   }
 
   /** État de l'API dans le bandeau : vert si connectée, rouge si elle ne répond plus. */
   #etatApi() {
-    if (!this.apiPerdue) return `<span class="etat-api connectee" title="${texteHtml('navigation_btp.application.api_connectee')}">${iconeHtml('navigation_btp_etat_api')} ${texteHtml('navigation_btp.application.api')}</span>`;
+    if (!this.apiPerdue) return `<span class="etat-api connectee" title="${texteHtml('navigation_btp.application.api_connectee')}">${iconeHtml('navigation_btp_etat_api')} <span class="bandeau-info-texte">${texteHtml('navigation_btp.application.api')}</span></span>`;
     const titre = pwaControle()
       ? texteHtml('navigation_btp.application.injoignable_pwa')
       : texteHtml('navigation_btp.application.injoignable');
-    return `<span class="etat-api deconnectee" title="${titre}">${iconeHtml('navigation_btp_etat_api')} ${texteHtml('navigation_btp.application.hors_ligne')}</span>`;
+    return `<span class="etat-api deconnectee" title="${titre}">${iconeHtml('navigation_btp_etat_api')} <span class="bandeau-info-texte">${texteHtml('navigation_btp.application.hors_ligne')}</span></span>`;
   }
 
   /** Envoi des documents enregistrés hors ligne (API joignable, session ouverte). */
@@ -492,7 +507,7 @@ export class Application {
     const us = this.session?.usurpation;
     if (!us) return '';
     const fin = formatHeure(us.fin);
-    return `<button type="button" class="bandeau-usurpation" data-fin-usurpation title="${texteHtml('authentification_btp.usurpation.pastille_aide', { code: this.session.code, compte: us.libelle ?? us.code, fin, motif: us.motif })}">${iconeHtml('authentification_btp_usurpation')} ${texteHtml('authentification_btp.usurpation.pastille', { code: us.code, fin })} ${iconeHtml('retirer')}</button>`;
+    return `<button type="button" class="bandeau-usurpation" data-fin-usurpation title="${texteHtml('authentification_btp.usurpation.pastille_aide', { code: this.session.code, compte: us.libelle ?? us.code, fin, motif: us.motif })}">${iconeHtml('authentification_btp_usurpation')} <span class="bandeau-info-texte">${texteHtml('authentification_btp.usurpation.pastille', { code: us.code, fin })}</span> ${iconeHtml('retirer')}</button>`;
   }
 
   /** Cloche du bandeau : notifications non lues (rouge s'il y en a d'urgentes). */

@@ -147,6 +147,7 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
         new("/api/editions/chartes", ModeRoute.Parametrage),
         new("/api/editions/defauts", ModeRoute.Parametrage),
         new("/api/execution/parcours-modeles", ModeRoute.Parametrage),
+        new("/api/execution/sav-parametres", ModeRoute.Parametrage),
         new("/api/rentabilite/parametres", ModeRoute.Parametrage),
         // Module Document : définitions et référentiels lus par la page document.
         new("/api/documents", ModeRoute.Module, "documents"),
@@ -213,10 +214,13 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
         new("/api/terrain/etapes", ModeRoute.Action, "terrain", ActionsDroits.Consulter),
         new("/api/terrain/taches", ModeRoute.Action, "terrain", ActionsDroits.Consulter),
         // Réception de pose et demande d'approvisionnement : ordres et chantiers de son planning (contrôlé par la route ;
-        // la demande crée un ordre E_DAP sous le droit CREER de son type).
+        // la demande crée un ordre E_DAP sous le droit CREER de son type). Réserves suivies et leur levée
+        // (receptions/{ent}/reserves, terrain-suites lot 14) : mêmes règles que la réception.
         new("/api/terrain/receptions", ModeRoute.Action, "terrain", ActionsDroits.Consulter),
         // Demandes : nœud terrain/demande (Consulter : ses demandes ; Créer : nouvelle demande, posé par la route).
         new("/api/terrain/demandes", ModeRoute.Action, "terrain", ActionsDroits.Consulter),
+        // Bibliothèque simplifiée (terrain-suites lot 17) : articles des demandes, nœud terrain/demande (Consulter).
+        new("/api/terrain/bibliotheque", ModeRoute.Action, "terrain/demande", ActionsDroits.Consulter),
         // SAV du terrain : droit à part, refusé par défaut (T20).
         new("/api/terrain/sav", ModeRoute.Module, "execution/sav"),
         // Livraison : chantiers de son planning (contrôlé par la route), bon brouillon créé par le serveur.

@@ -25,13 +25,6 @@
 .bandeau-message-texte { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; cursor: pointer; }
 .bandeau-historique { border: none; background: none; padding: 0 0.15rem; color: var(--discret); cursor: pointer; }
 .bandeau-message-texte.erreur { color: var(--erreur); }
-/* Téléphone (application de terrain) : les menus défilent dans le bandeau au lieu d'élargir la page ; message masqué. */
-@media (max-width: 700px) {
-  .bandeau-menus { flex: 1 1 auto; min-width: 0; overflow-x: auto; scrollbar-width: none; }
-  .bandeau-menus::-webkit-scrollbar { display: none; }
-  .bandeau-menus button { height: 27px; }
-  .bandeau-message { display: none; }
-}
 .bandeau-message-texte.avertissement { color: var(--alerte); }
 .bandeau-message-texte.succes { color: var(--succes); }
 .bandeau-historique-liste { margin: 0; padding-left: 1.1rem; max-height: 60vh; overflow: auto; min-width: min(34rem, 80vw); }
@@ -76,6 +69,34 @@
 /* Outils, poignée et languette : propres au panneau à droite. */
 .bandeau-outils, .bandeau-poignee, .bandeau-languette { display: none; }
 
+/* Bascule menus simplifiés / complets (liste réduite fournie par l'application). */
+.bandeau-menus .bandeau-bascule { color: var(--discret); }
+.bandeau-arbre .bandeau-bascule {
+  display: flex; align-items: center; gap: 0.5rem; width: 100%; min-height: 46px; padding: 0 0.9rem; border: 0;
+  border-top: 1px solid var(--bord); border-radius: 0; background: transparent; color: var(--discret); text-align: left; cursor: pointer; height: auto;
+}
+.bandeau-arbre .bandeau-bascule:hover, .bandeau-arbre .bandeau-bascule:focus-visible { background: var(--accent-clair); color: var(--accent); outline: none; }
+
+/* Téléphone (classe `bandeau-telephone`, sous 700 px, quelle que soit la disposition) : le bandeau tient sur la largeur ;
+   menus derrière un bouton (feuille sous le bandeau, en accordéon), message masqué, informations en icônes. */
+.bandeau-bouton-menus { display: none; }
+.bandeau.bandeau-telephone { height: 36px; font-size: 14px; padding: 0 0.3rem; min-width: 0; }
+.bandeau-telephone .bandeau-bouton-menus {
+  flex: none; display: flex; align-items: center; gap: 0.3rem; border: 0; border-radius: 0; background: transparent;
+  color: inherit; padding: 0 0.6rem; font: inherit; font-weight: 600; cursor: pointer;
+}
+.bandeau-telephone .bandeau-bouton-menus[aria-expanded="true"] { background: var(--accent-clair); color: var(--accent); }
+.bandeau-telephone .bandeau-menus {
+  display: none; position: absolute; top: 100%; left: 0; right: 0; max-height: calc(100vh - 44px); overflow-x: hidden; overflow-y: auto;
+  overscroll-behavior: contain; background: var(--surface); border-top: 1px solid var(--bord); border-bottom: 2px solid var(--accent);
+}
+.bandeau-telephone.bandeau-feuille-ouverte .bandeau-menus { display: block; }
+.bandeau-telephone .bandeau-deroulant, .bandeau-telephone .bandeau-message { display: none; }
+.bandeau-telephone .bandeau-infos { margin-left: auto; min-width: 0; flex-shrink: 1; gap: 0.6rem; padding: 0 0.5rem 0 0.2rem; }
+.bandeau-telephone .bandeau-infos > * { flex: none; }
+.bandeau-telephone .bandeau-info-texte { display: none; }
+.bandeau-telephone .bandeau-societe { padding: 0 0.3rem; }
+
 /* Menu sur toute la hauteur (dispositions 'droite' et 'gauche') : le corps passe en ligne, pages à côté. */
 body:has(> .bandeau-vertical) { flex-direction: row; }
 body:has(> .bandeau-vertical) > .pages { flex: 1; min-width: 0; min-height: 0; }
@@ -98,29 +119,29 @@ body:has(> .bandeau-vertical) > .pages { flex: 1; min-width: 0; min-height: 0; }
   border-top: 1px solid var(--bord); padding: 0.3rem 0; scrollbar-gutter: stable;
 }
 .bandeau-vertical .bandeau-deroulant { display: none; }
-.bandeau-vertical .bandeau-groupe + .bandeau-groupe { border-top: 1px solid var(--bord); }
-.bandeau-vertical .bandeau-titre {
+.bandeau-arbre .bandeau-groupe + .bandeau-groupe { border-top: 1px solid var(--bord); }
+.bandeau-arbre .bandeau-titre {
   display: flex; align-items: center; justify-content: space-between; width: 100%; height: auto; min-height: 46px;
   padding: 0 0.9rem; border: 0; border-radius: 0; background: transparent; text-align: left; font-weight: 600; cursor: pointer;
 }
-.bandeau-vertical .bandeau-titre:hover, .bandeau-vertical .bandeau-titre:focus-visible { background: var(--accent-clair); color: var(--accent); outline: none; }
-.bandeau-vertical .bandeau-groupe.ouvert > .bandeau-titre { color: var(--accent); }
-.bandeau-vertical .bandeau-element {
+.bandeau-arbre .bandeau-titre:hover, .bandeau-arbre .bandeau-titre:focus-visible { background: var(--accent-clair); color: var(--accent); outline: none; }
+.bandeau-arbre .bandeau-groupe.ouvert > .bandeau-titre { color: var(--accent); }
+.bandeau-arbre .bandeau-element {
   grid-template-columns: 1.1rem 1.6rem minmax(0, 1fr) 2.4rem 2.4rem; min-height: 42px; gap: 0.15rem; cursor: pointer;
   padding: 0.2rem 0.2rem 0.2rem calc(0.25rem + (var(--profondeur, 1) - 1) * 1.1rem);
 }
-.bandeau-vertical .bandeau-element:hover { background: var(--titre-fond); }
-.bandeau-vertical .bandeau-element:focus-visible { background: var(--accent); color: #fff; outline: none; }
-.bandeau-vertical .bandeau-element:focus-visible small { color: #e8efff; }
-.bandeau-vertical .bandeau-element.sous-ouvert { background: var(--accent-clair); }
-.bandeau-vertical .bandeau-element.desactive { cursor: default; }
-.bandeau-vertical .bandeau-element .bandeau-icone .icone-image { height: 2.2rem; width: 2.2rem; margin-left: -0.7rem; }
-.bandeau-vertical .bandeau-libelle { overflow-wrap: anywhere; min-width: 0; }
-.bandeau-vertical .bandeau-libelle small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bandeau-vertical .bandeau-fenetre { align-self: stretch; min-height: 38px; border-radius: 6px; }
-.bandeau-vertical .bandeau-fenetre:hover { background: var(--accent-clair); }
-.bandeau-vertical .bandeau-separateur span { padding-left: 1.2rem; }
-.bandeau-vertical .bandeau-vide { padding-left: calc(1rem + var(--profondeur, 1) * 1.1rem); }
+.bandeau-arbre .bandeau-element:hover { background: var(--titre-fond); }
+.bandeau-arbre .bandeau-element:focus-visible { background: var(--accent); color: #fff; outline: none; }
+.bandeau-arbre .bandeau-element:focus-visible small { color: #e8efff; }
+.bandeau-arbre .bandeau-element.sous-ouvert { background: var(--accent-clair); }
+.bandeau-arbre .bandeau-element.desactive { cursor: default; }
+.bandeau-arbre .bandeau-element .bandeau-icone .icone-image { height: 2.2rem; width: 2.2rem; margin-left: -0.7rem; }
+.bandeau-arbre .bandeau-libelle { overflow-wrap: anywhere; min-width: 0; }
+.bandeau-arbre .bandeau-libelle small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bandeau-arbre .bandeau-fenetre { align-self: stretch; min-height: 38px; border-radius: 6px; }
+.bandeau-arbre .bandeau-fenetre:hover { background: var(--accent-clair); }
+.bandeau-arbre .bandeau-separateur span { padding-left: 1.2rem; }
+.bandeau-arbre .bandeau-vide { padding-left: calc(1rem + var(--profondeur, 1) * 1.1rem); }
 .bandeau-vertical .bandeau-message { grid-area: message; margin: 0; max-width: none; padding: 0 0.7rem; }
 .bandeau-vertical .bandeau-message-texte { white-space: normal; }
 .bandeau-vertical .bandeau-message:has(.bandeau-message-texte:not(:empty)) { padding: 0.4rem 0.7rem; border-top: 1px solid var(--bord); }

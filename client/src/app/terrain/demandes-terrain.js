@@ -2,6 +2,7 @@ import { texte, texteHtml, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { echapper, formatDate } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 import { estHorsLigne } from '../hors-ligne/attente.js';
+import { libelleLigneArticle } from './bibliotheque-terrain.js';
 
 // Application de terrain : onglet « Mes demandes » (droit terrain/demande, Consulter) : demandes d'approvisionnement
 // (ordres E_DAP) créées par la personne depuis ses tâches, des 90 derniers jours, avec leur statut, leur état
@@ -36,7 +37,9 @@ export class DemandesTerrain {
 
   #carte(d) {
     const exe = execution(d.execution);
-    const articles = (d.articles ?? []).map(texteDe).filter(Boolean).map((a) => `<li>${echapper(a)}</li>`).join('');
+    // Ligne d'article de la bibliothèque (terrain-suites lot 18) : objet { code, libelle, quantite, unite } ; sinon texte libre.
+    const articles = (d.articles ?? []).map((a) => (a && typeof a === 'object' ? libelleLigneArticle({ ...a, libelle: texteDe(a.libelle) }) : texteDe(a)))
+      .filter(Boolean).map((a) => `<li>${echapper(a)}</li>`).join('');
     const suites = (d.suites ?? []).map((s) => `<li>${echapper([s.type, s.numero, s.statut && `(${s.statut})`].filter(Boolean).join(' '))}</li>`).join('');
     return `<details class="terrain-tache terrain-demande" data-statut="${echapper(d.statut ?? '')}">
       <summary><span class="terrain-horaires">${echapper(formatDate(d.date))}</span>

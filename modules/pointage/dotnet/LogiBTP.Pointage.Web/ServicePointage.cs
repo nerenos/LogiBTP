@@ -184,10 +184,11 @@ public sealed record FiltreSalaries(int? Service, string? Recherche, IReadOnlyCo
 
 /// <summary>
 /// Pointage saisi dans la grille d'une semaine (identifiant absent : nouveau). Tâche du planning d'origine et groupe
-/// d'une saisie d'équipe : posés par l'application ; absents d'une ligne existante = inchangés.
+/// d'une saisie d'équipe : posés par l'application ; absents d'une ligne existante = inchangés. Ligne de l'ordre
+/// (<c>LigId</c>, posée par l'application) : absente = inchangée, retirée quand l'ordre change.
 /// </summary>
 public sealed record PointageSaisi(long? Id, DateOnly Date, int? ChaId, long? EntId, int? TypeMo, string? SousType, int Minutes,
-    int? Debut, int? Fin, string? Motif, string? Commentaire, long? OrigineId = null, long? TacId = null, Guid? Groupe = null);
+    int? Debut, int? Fin, string? Motif, string? Commentaire, long? OrigineId = null, long? TacId = null, Guid? Groupe = null, long? LigId = null);
 public sealed record SemaineSaisie(List<PointageSaisi> Pointages);
 
 /// <summary>
@@ -485,10 +486,12 @@ public sealed class ServicePointage(PointageDbContext db, SpecialisationPointage
             e ??= new PointageEntite { PoiSalId = salarie, PoiCouche = Couches.Saisie };
             var change = nouveau || e.PoiDate != p.Date || e.PoiChaId != p.ChaId || e.PoiEntId != p.EntId || e.PoiTypeMo != p.TypeMo || e.PoiSousType != p.SousType
                 || e.PoiMinutes != p.Minutes || e.PoiDebut != p.Debut || e.PoiFin != p.Fin || e.PoiMotif != p.Motif || e.PoiCommentaire != p.Commentaire
-                || p.TacId is long tac && e.PoiTacId != tac || p.Groupe is Guid g && e.PoiGroupe != g;
+                || p.TacId is long tac && e.PoiTacId != tac || p.Groupe is Guid g && e.PoiGroupe != g || p.LigId is long lig && e.PoiLigId != lig;
             if (!change) continue;
             if (p.TacId is not null) e.PoiTacId = p.TacId;
             if (p.Groupe is not null) e.PoiGroupe = p.Groupe;
+            if (p.LigId is not null) e.PoiLigId = p.LigId;
+            else if (e.PoiEntId != p.EntId) e.PoiLigId = null;
             e.PoiDate = p.Date;
             e.PoiChaId = p.ChaId!.Value;
             e.PoiEntId = p.EntId;

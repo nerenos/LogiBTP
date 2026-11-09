@@ -22,6 +22,8 @@ public class CodesTests
     [InlineData("MODELE_EDITION", typeof(ModelesEdition))]
     [InlineData("AVERTISSEMENT_GESTION", typeof(AvertissementsGestion))]
     [InlineData("STATUT_DOCUMENT_BTP", typeof(StatutsDocumentBtp))]
+    [InlineData("ERREUR_TERRAIN", typeof(ErreursTerrain))]
+    [InlineData("ETAT_RESERVE", typeof(EtatsReserve))]
     public void Parite_avec_le_js(string nom, Type type) => Assert.Empty(Constantes.Ecarts(Fichier, nom, type));
 
     [Fact]
