@@ -33,7 +33,7 @@
 | 15 | Réserves suivies : levée depuis le terrain et suivi au bureau | cœur | 14 | FAIT (08/11/2026) |
 | 16 | PV de levée des réserves signé | cœur | 15 | FAIT (08/11/2026) |
 | 17 | Bibliothèque simplifiée : serveur | cœur | — | FAIT (08/11/2026) |
-| 18 | Bibliothèque simplifiée : écran et articles des demandes d'approvisionnement | cœur | 17 | A FAIRE |
+| 18 | Bibliothèque simplifiée : écran et articles des demandes d'approvisionnement | cœur | 17 | FAIT (08/11/2026) |
 | 19 | Pointage des heures de matériel à la borne | cœur | — | A FAIRE |
 | 20 | Réception d'une commande à options ou variantes | cœur | — | A FAIRE |
 | 21 | Avancement réel par marché | cœur | — | A FAIRE |
@@ -419,7 +419,7 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
   `BibliothequeTerrainTests.cs` (aucune colonne de prix dans les requêtes, mots de la recherche, route et droit ; sur la
   base de développement si `LOGIBTP_TEST_PG` : article d'un marché rendu par le chantier et par la recherche).
 
-## Lot 18 : bibliothèque simplifiée, écran et articles des demandes d'approvisionnement (TS17 b, TS15 a)
+## Lot 18 : bibliothèque simplifiée, écran et articles des demandes d'approvisionnement (TS17 b, TS15 a) (FAIT 08/11/2026)
 
 - **Module** : cœur. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : nouveau `client/src/app/terrain/bibliotheque-terrain.js`, `terrain/complements-terrain.js` (ligne de
@@ -428,6 +428,20 @@ Ordre proposé : 1, puis les groupes indépendants dans l'ordre du tableau (2-4,
 - **Dépendances** : lot 17.
 - **Tests** : JS : choix d'un article sans réseau ; C# : ligne E_DAP portant l'article.
 - **Critère de fin** : `npm test` vert ; demande avec un article de la bibliothèque visible au bureau.
+- **Réalisé / écarts** : nouveau `client/src/app/terrain/bibliotheque-terrain.js` (`choisirArticle` : articles du
+  chantier filtrés sur l'appareil par `filtrerArticles` — code et libellé, sans accent ni casse —, « Chercher dans la
+  bibliothèque » avec le réseau, fiche réduite : photo, unités, conditionnements, notices ; `unitesArticle`,
+  `ligneDemande`, `libelleLigneArticle`). Écart : la ligne de demande est dans `terrain/actions-tache.js`
+  (`demanderApprovisionnement`, où vit la fenêtre de la demande), pas dans `complements-terrain.js` : articles choisis
+  (quantité, unité par `creerCombo`) puis besoins en texte libre, toujours possibles. `operations-terrain.js` :
+  `articlesAPrecharger` (articles des chantiers des tâches lues, préchargés par `pages/terrain.js` sous le droit
+  `terrain/demande`) ; `pwa/regles.js` garde aussi les photos et notices des articles (`/api/terrain/bibliotheque/pieces/`).
+  Serveur (`TerrainReceptionBtp.cs`, `TerrainBibliothequeBtp.cs`) : `DemandeTerrain.Lignes` ({ ele, quantite, unite }) →
+  lignes d'élément de l'E_DAP (`LigneArticleDemande` : `lig_art_id`, code, libellé, quantité, unité de l'article —
+  `UniteDemande`, refus `TERRAIN_DEMANDE_UNITE` —, prix laissé au bureau, PA 0), écrites avant le texte libre ;
+  `articles` toujours accepté (demandes gardées avant la mise à jour) ; Mes demandes rend les lignes d'article en objet
+  { code, libelle, quantite, unite }. Aucun script SQL. Tests : `client/test/bibliotheque-terrain.test.js` (choix sans
+  réseau, ligne de demande, préchargement), `DemandeArticlesTerrainTests.cs` (ligne E_DAP portant l'article, unité).
 
 ## Lot 19 : pointage des heures de matériel à la borne (TS18 a)
 

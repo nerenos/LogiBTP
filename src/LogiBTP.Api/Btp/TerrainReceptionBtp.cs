@@ -20,7 +20,13 @@ namespace LogiBTP.Api.Btp;
 /// <summary>Réception saisie sur le terrain ; <c>SigneeLe</c> : heure de l'appareil, envoyée seulement par une réception gardée hors ligne.</summary>
 public sealed record ReceptionSaisie(string Etat, List<string>? Reserves, string? Motif, string Nom, string? Qualite, string? Signature, string? Courriel,
     DateTimeOffset? SigneeLe = null);
-public sealed record DemandeTerrain(int ChaId, long? EntId, List<string> Articles, string? Commentaire);
+/// <summary>
+/// Demande du terrain : <c>Articles</c> en texte libre (une ligne de texte chacun) ; <c>Lignes</c> (terrain-suites lot 18) :
+/// articles de la bibliothèque simplifiée (élément, quantité, unité), écrits avant le texte libre.
+/// </summary>
+public sealed record DemandeTerrain(int ChaId, long? EntId, List<string>? Articles, string? Commentaire, List<LigneDemandeTerrain>? Lignes = null);
+/// <summary>Article de la bibliothèque demandé : unité de stock, d'achat ou d'une conversion de l'article (défaut : achat, sinon stock).</summary>
+public sealed record LigneDemandeTerrain(long Ele, decimal? Quantite, string? Unite);
 
 /// <summary>
 /// Application de terrain, lot 5 (ANALYSE-TERRAIN.md T14 à T16, T18) : réception d'un ordre de pose signée sur le
@@ -270,10 +276,12 @@ public static partial class TerrainBtp
             var u = Utilisateur.Depuis(http);
             var s = await ComptesBtp.SalarieAsync(db, u.Code, ct) ?? throw ExceptionMetier.Invalide("TERRAIN_PERSONNE", "Compte sans salarié lié");
             var articles = (dm.Articles ?? []).Select(a => a.Trim()).Where(a => a.Length > 0).ToList();
-            if (articles.Count == 0) throw ExceptionMetier.Invalide("TERRAIN_DEMANDE", "Au moins un article ou besoin");
+            var choisis = await ArticlesDemandeAsync(db, dm.Lignes ?? [], ct);
+            if (articles.Count + choisis.Count == 0) throw ExceptionMetier.Invalide("TERRAIN_DEMANDE", "Au moins un article ou besoin");
             await ExigerChantierPlanningAsync(db, s, dm.ChaId, ct);
             var tyd = await TypesDocumentBtp.IdAsync(db, TypesDocument.EDap, ct);
-            var objet = $"Demande du terrain : {articles[0]}{(articles.Count > 1 ? $" (+{articles.Count - 1})" : "")}";
+            var noms = choisis.Select(a => a.Libelle).Concat(articles).ToList();
+            var objet = $"Demande du terrain : {noms[0]}{(noms.Count > 1 ? $" (+{noms.Count - 1})" : "")}";
             var cree = await documents.Creer(new CreationDocument { EntTydId = tyd, EntObjet = objet.Length > 200 ? objet[..200] : objet }, u, ct);
             var c = await documents.Charger(cree.Document.EntId, ct);
             c.Document.EntChantierId = dm.ChaId;
@@ -281,6 +289,14 @@ public static partial class TerrainBtp
             c.Document.EntAdresseLivraison ??= await AdressesDocument.Chantier(db, dm.ChaId, ct);
             var lignes = string.IsNullOrWhiteSpace(dm.Commentaire) ? articles : [.. articles, $"Note : {dm.Commentaire.Trim()}"];
             var i = 0;
+            var tva = choisis.Count == 0 ? null : await db.TauxTva.Where(t => t.TtvCategorie == "N" && t.TtvActif).OrderByDescending(t => t.TtvDefaut).ThenByDescending(t => t.TtvTaux)
+                .Select(t => (int?)t.TtvId).FirstOrDefaultAsync(ct);
+            foreach (var a in choisis)
+            {
+                i++;
+                foreach (var x in c.Lignes.Where(x => x.LigParentId is null && x.LigOrdre >= i)) x.LigOrdre++;
+                c.Lignes.Add(LigneArticleDemande(c.Document.EntId, i, a, tva));
+            }
             foreach (var a in lignes)
             {
                 i++;
@@ -301,8 +317,10 @@ public static partial class TerrainBtp
                   'id', d.ent_id, 'numero', d.ent_numero, 'date', d.ent_date, 'cree_le', to_char(d.ent_cree_le, 'YYYY-MM-DD"T"HH24:MI'), 'objet', d.ent_objet,
                   'statut', s.std_code, 'statut_libelle', s.std_libelle, 'execution', d.ent_exe_etat,
                   'chantier', CASE WHEN c.cha_id IS NOT NULL THEN json_build_object('id', c.cha_id, 'code', c.cha_code, 'libelle', c.cha_libelle) END,
-                  'articles', (SELECT coalesce(json_agg(l.lig_libelle_html ORDER BY l.lig_ordre), '[]') FROM document_ligne l
-                               WHERE l.lig_ent_id = d.ent_id AND l.lig_tyl_id = {{TL.Texte}} AND l.lig_parent_id IS NULL),
+                  'articles', (SELECT coalesce(json_agg(CASE WHEN l.lig_tyl_id = {{TL.Element}}
+                                 THEN json_build_object('code', l.lig_code, 'libelle', l.lig_libelle_html, 'quantite', trim_scale(l.lig_qte), 'unite', l.lig_unt_code)
+                                 ELSE to_json(l.lig_libelle_html) END ORDER BY l.lig_ordre), '[]') FROM document_ligne l
+                               WHERE l.lig_ent_id = d.ent_id AND l.lig_tyl_id IN ({{TL.Texte}}, {{TL.Element}}) AND l.lig_parent_id IS NULL),
                   'suites', (SELECT coalesce(json_agg(json_build_object('numero', x.ent_numero, 'type', tx.tyd_libelle, 'statut', sx.std_libelle) ORDER BY x.ent_id), '[]')
                              FROM document_lien k JOIN document x ON x.ent_id = k.lie_cible_ent_id JOIN type_document tx ON tx.tyd_id = x.ent_tyd_id
                              JOIN statut_document sx ON sx.std_id = x.ent_std_id

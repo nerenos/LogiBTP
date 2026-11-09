@@ -1,4 +1,6 @@
 using System.Text.Json;
+using LogiBTP.Documents;
+using LogiBTP.Domaine;
 using LogiBTP.Ged.Web;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
@@ -81,6 +83,57 @@ public static partial class TerrainBtp
         ORDER BY b.bib_defaut DESC, e.ele_code, e.ele_id
         LIMIT {{ArticlesRechercheMax}}
         """;
+
+    /// <summary>Article de la bibliothèque retenu pour une ligne de demande E_DAP (terrain-suites lot 18).</summary>
+    public sealed record ArticleDemande(long Ele, string Code, string Libelle, string LibelleHtml, decimal Quantite, string Unite, int? NatId);
+
+    private sealed record ElementDemande(long Id, string Code, string? Libelle, string LibelleHtml, string UntStock, string? UntAchat, string? UntVente, string Unites, int? NatId);
+
+    /// <summary>
+    /// Unité d'une ligne de demande : celle demandée si l'article la connaît (stock, achat, vente ou une de ses
+    /// conversions), sinon refus ; rien de demandé : unité d'achat, sinon de stock.
+    /// </summary>
+    public static string UniteDemande(string? demandee, string stock, string? achat, string? vente, IEnumerable<string> conversions)
+    {
+        var u = demandee?.Trim();
+        if (string.IsNullOrEmpty(u)) return string.IsNullOrEmpty(achat) ? stock : achat;
+        if (u == stock || u == achat || u == vente || conversions.Contains(u)) return u;
+        throw ExceptionMetier.Invalide("TERRAIN_DEMANDE_UNITE", $"Unité {u} inconnue de l'article");
+    }
+
+    /// <summary>Articles demandés : articles actifs proposés au terrain, quantité positive (défaut 1), unité de l'article.</summary>
+    private static async Task<List<ArticleDemande>> ArticlesDemandeAsync(LogiBtpContext db, List<LigneDemandeTerrain> lignes, CancellationToken ct)
+    {
+        if (lignes.Count == 0) return [];
+        var ids = lignes.Select(l => l.Ele).Distinct().ToArray();
+        var elements = (await db.Database.SqlQueryRaw<ElementDemande>($"""
+            SELECT e.ele_id AS id, e.ele_code AS code, e.ele_libelle AS libelle, e.ele_libelle_html AS libelle_html, e.ele_unt_stock AS unt_stock,
+                   e.ele_unt_achat AS unt_achat, e.ele_unt_vente AS unt_vente, e.ele_unites::text AS unites, e.ele_nat_id AS nat_id
+            FROM element e WHERE e.ele_id = ANY(@ids) AND {SqlArticleTerrain}
+            """, new NpgsqlParameter("ids", ids)).ToListAsync(ct)).ToDictionary(e => e.Id);
+        var res = new List<ArticleDemande>();
+        foreach (var l in lignes)
+        {
+            if (!elements.TryGetValue(l.Ele, out var e)) throw ExceptionMetier.Introuvable($"Article {l.Ele}");
+            var quantite = l.Quantite ?? 1;
+            if (quantite <= 0) throw ExceptionMetier.Invalide("TERRAIN_DEMANDE_QUANTITE", "Quantité positive");
+            using var conversions = JsonDocument.Parse(e.Unites);
+            var unites = conversions.RootElement.ValueKind == JsonValueKind.Array
+                ? conversions.RootElement.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.Object && x.TryGetProperty("unite", out var v) && v.ValueKind == JsonValueKind.String)
+                    .Select(x => x.GetProperty("unite").GetString()!).ToList()
+                : [];
+            res.Add(new ArticleDemande(e.Id, e.Code, string.IsNullOrWhiteSpace(e.Libelle) ? e.Code : e.Libelle, e.LibelleHtml, quantite,
+                UniteDemande(l.Unite, e.UntStock, e.UntAchat, e.UntVente, unites), e.NatId));
+        }
+        return res;
+    }
+
+    /// <summary>Ligne d'article d'une demande E_DAP : élément, code, libellé, quantité et unité ; prix laissé au bureau.</summary>
+    public static DocumentLigneBtp LigneArticleDemande(long ent, int ordre, ArticleDemande a, int? tva) => new()
+    {
+        LigId = -ordre, LigEntId = ent, LigOrdre = ordre, LigTylId = TL.Element, LigArtId = a.Ele, LigCode = a.Code, LigLibelleHtml = a.LibelleHtml,
+        LigQte = a.Quantite, LigUntCode = a.Unite, LigPa = 0, LigNatId = a.NatId, LigTvaId = tva, LigTypePrix = "V",
+    };
 
     private static RouteGroupBuilder MapBibliothequeTerrain(this RouteGroupBuilder g)
     {

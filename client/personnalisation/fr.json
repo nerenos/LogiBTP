@@ -7162,8 +7162,12 @@
       },
       "demande": {
         "titre": "Demande d'approvisionnement · {{tache}}",
-        "articles": "Articles demandés (un par ligne, quantité comprise)",
+        "articles": "Autres besoins (texte libre, un par ligne, quantité comprise)",
         "exemple": "20 sacs de colle C2\n1 rouleau de bande",
+        "choisis": "Articles de la bibliothèque",
+        "ajouter": "Ajouter un article de la bibliothèque",
+        "quantite": "Quantité",
+        "unite": "Unité",
         "commentaire": "Commentaire (date souhaitée, lieu de livraison…)",
         "envoyer": "Envoyer la demande",
         "photos": "Demande d'approvisionnement : {{articles}}",
@@ -7398,6 +7402,24 @@
     "reglages": {
       "titre": "Application de terrain",
       "retour": "Retour à « Mon terrain »"
+    },
+    "bibliotheque": {
+      "titre": "Bibliothèque · {{chantier}}",
+      "recherche": "Code ou libellé",
+      "chercher": "Chercher dans la bibliothèque",
+      "du_chantier": "Articles des marchés du chantier ; « Chercher dans la bibliothèque » pour les autres.",
+      "resultats": "Articles du chantier, puis résultats de la bibliothèque.",
+      "aucun": "Aucun article.",
+      "hors_ligne": "Hors ligne : seuls les articles du chantier gardés sur cet appareil sont proposés.",
+      "indisponible": "Hors ligne : les articles de ce chantier n'ont pas été gardés sur cet appareil ; saisissez le besoin en texte libre.",
+      "choisir": "Choisir",
+      "photo": "Photo de {{article}}",
+      "unite": "Unité : {{unite}}",
+      "unite_achat": "achat : {{unite}}",
+      "conditionnements": "Conditionnements",
+      "conditionnement": "1 {{unite}} = {{formule}} {{stock}}",
+      "notices": "Notices techniques",
+      "ligne": "{{code}} {{libelle}} · {{quantite}} {{unite}}"
     },
     "demandes": {
       "aide": "Demandes d'approvisionnement faites depuis vos tâches (90 derniers jours). Une nouvelle demande se fait depuis la carte d'une tâche.",

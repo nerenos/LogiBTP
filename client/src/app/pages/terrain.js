@@ -13,7 +13,7 @@ import { SavTerrain } from '../terrain/sav-terrain.js';
 import { DemandesTerrain } from '../terrain/demandes-terrain.js';
 import { recevoirLivraison, pointerMateriel } from '../terrain/complements-terrain.js';
 import { saisirAvancement, envoyerPhotos, signalerNonConformite, demanderApprovisionnement } from '../terrain/actions-tache.js';
-import { fournisseurEtapes, OPERATION_TERRAIN, memoriserLimitePhotos } from '../terrain/operations-terrain.js';
+import { fournisseurEtapes, OPERATION_TERRAIN, memoriserLimitePhotos, articlesAPrecharger } from '../terrain/operations-terrain.js';
 import { listeOperations, marquerOperation, retirerOperation } from '../hors-ligne/operations.js';
 import { estHorsLigne, ETAT_ATTENTE } from '../hors-ligne/attente.js';
 import { SUJET_ATTENTE } from '../hors-ligne/synchro.js';
@@ -150,6 +150,8 @@ export class PageTerrain extends PageBase {
     for (const id of pieces) await fetch(api.terrain.urlPiece(id), { credentials: 'same-origin' }).catch(() => null);
     // Plans cochés « Terrain » : gardés par le service worker dans leur propre budget (pièces intactes).
     for (const id of plansAPrecharger(lectures)) await fetch(api.terrain.urlPlan(id), { credentials: 'same-origin' }).catch(() => null);
+    // Articles des chantiers (bibliothèque simplifiée des demandes, terrain-suites lot 18).
+    if (this.app.peut('terrain/demande', ACTION_DROIT.CONSULTER)) for (const url of articlesAPrecharger(lectures)) await lire(url);
     try { localStorage.setItem(cle, jour); } catch { /* sans stockage : refait à la prochaine ouverture */ }
   }
 

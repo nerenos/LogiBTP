@@ -1,10 +1,11 @@
 import { texte, texteHtml, pluriel, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
-import { echapper, ouvrirDialogue, formatDate } from '@logibtp/socle/ui';
+import { echapper, ouvrirDialogue, formatDate, creerCombo } from '@logibtp/socle/ui';
 import { aujourdhui } from '@logibtp/socle';
 import { api } from '../api.js';
 import { preparerPhoto, champsPhotosHtml } from './terrain.js';
 import { envoyerOuGarder, OPERATION_TERRAIN, formulairePhotos, limitePhotos } from './operations-terrain.js';
 import { estHorsLigne } from '../hors-ligne/attente.js';
+import { choisirArticle, unitesArticle, ligneDemande } from './bibliotheque-terrain.js';
 
 // Application de terrain, lot 3 (ANALYSE-TERRAIN.md, T12, T17) : actions sur une tâche depuis sa carte — avancement
 // réel du jour, photos (prise de vue ou lot de la galerie, réduites sauf « qualité d'origine »), non-conformité
@@ -124,24 +125,50 @@ export async function signalerNonConformite(app, tache, motifs = []) {
 }
 
 /**
- * Demande d'approvisionnement (E_DAP, lot 5) depuis une tâche : articles demandés (un par ligne), commentaire, photos
- * jointes (GED de la tâche). Le serveur crée la demande sur le chantier de la tâche ; vrai si envoyée.
+ * Demande d'approvisionnement (E_DAP, lot 5) depuis une tâche : articles choisis dans la bibliothèque simplifiée
+ * (quantité, unité de l'article ; terrain-suites lot 18), autres besoins en texte libre (un par ligne), commentaire,
+ * photos jointes (GED de la tâche). Le serveur crée la demande sur le chantier de la tâche ; vrai si envoyée.
  */
 export async function demanderApprovisionnement(app, tache) {
+  /** Articles choisis : { article, quantite, unite } (champs de la fenêtre). */
+  const choisis = [];
   return ouvrirDialogue({
     titre: `${icone('terrain_btp_demande')} ${texte('terrain_btp.actions.demande.titre', { tache: tache.libelle })}`,
-    html: `<p><label>${texteHtml('terrain_btp.actions.demande.articles')}<br><textarea data-articles rows="5" cols="34" placeholder="${texteHtml('terrain_btp.actions.demande.exemple')}"></textarea></label></p>
+    html: `<div><b>${texteHtml('terrain_btp.actions.demande.choisis')}</b><ul class="terrain-liens" data-choisis></ul>
+        <button type="button" data-bibliotheque>${iconeHtml('terrain_btp_bibliotheque')} ${texteHtml('terrain_btp.actions.demande.ajouter')}</button></div>
+      <p><label>${texteHtml('terrain_btp.actions.demande.articles')}<br><textarea data-articles rows="4" cols="34" placeholder="${texteHtml('terrain_btp.actions.demande.exemple')}"></textarea></label></p>
       <p><label>${texteHtml('terrain_btp.actions.demande.commentaire')}<br><textarea data-commentaire rows="2" cols="34"></textarea></label></p>
       <details><summary>${iconeHtml('terrain_btp_photo')} ${texteHtml('terrain_btp.actions.photos.joindre')}</summary><div data-photos></div></details>`,
     boutons: [{ libelle: texte('commun.annuler'), valeur: false }],
     construire: (dlg, fermer) => {
       const s = selecteurPhotos(dlg.querySelector('[data-photos]'));
+      const liste = dlg.querySelector('[data-choisis]');
+      const ajouter = (article) => {
+        const li = document.createElement('li');
+        li.className = 'ligne';
+        li.innerHTML = `<span><b>${echapper(article.code)}</b> ${echapper(article.libelle)}</span>
+          <input type="number" data-quantite min="0" step="any" inputmode="decimal" size="5" value="1" title="${texteHtml('terrain_btp.actions.demande.quantite')}">
+          <button type="button" data-retirer title="${texteHtml('commun.retirer')}">${iconeHtml('retirer')}</button>`;
+        const unites = unitesArticle(article);
+        const unite = creerCombo({ options: unites.map((u) => ({ valeur: u, libelle: u })), valeur: unites[0] ?? '', vide: false, titre: texte('terrain_btp.actions.demande.unite') });
+        li.querySelector('[data-retirer]').before(unite);
+        const choix = { article, quantite: li.querySelector('[data-quantite]'), unite };
+        choisis.push(choix);
+        li.querySelector('[data-retirer]').addEventListener('click', () => { choisis.splice(choisis.indexOf(choix), 1); li.remove(); });
+        liste.append(li);
+      };
+      dlg.querySelector('[data-bibliotheque]').addEventListener('click', async () => {
+        const article = await choisirArticle(app, tache.chantier);
+        if (article) ajouter(article);
+      });
       boutonPrincipal(dlg, texte('terrain_btp.actions.demande.envoyer'), async () => {
         const articles = dlg.querySelector('[data-articles]').value.split('\n').map((x) => x.trim()).filter(Boolean);
-        if (!articles.length) { dlg.querySelector('[data-articles]').focus(); return; }
-        const demande = { cha_id: tache.chantier.id, ent_id: tache.ordre?.id ?? null, articles, commentaire: dlg.querySelector('[data-commentaire]').value.trim() || null };
+        const lignes = choisis.map((c) => ligneDemande(c.article, c.quantite.value, c.unite.resoudre()));
+        if (!articles.length && !lignes.length) { dlg.querySelector('[data-articles]').focus(); return; }
+        const demande = { cha_id: tache.chantier.id, ent_id: tache.ordre?.id ?? null, articles, lignes, commentaire: dlg.querySelector('[data-commentaire]').value.trim() || null };
+        const noms = [...choisis.map((c) => c.article.libelle), ...articles];
         try {
-          const photos = s.nombre ? await s.photos(texte('terrain_btp.actions.demande.photos', { articles: articles.join(', ') })) : null;
+          const photos = s.nombre ? await s.photos(texte('terrain_btp.actions.demande.photos', { articles: noms.join(', ') })) : null;
           const r = await envoyerOuGarder(app, { type: OPERATION_TERRAIN.DEMANDE, id: Date.now(), corps: { demande, tache: tache.id, photos },
             libelle: texte('terrain_btp.actions.demande.titre', { tache: tache.libelle }) }, async () => {
             const rep = await api.terrain.demande(demande);

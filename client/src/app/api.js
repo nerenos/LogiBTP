@@ -251,6 +251,14 @@ export const api = {
     urlPvLevee: (ordre, levee) => `/api/terrain/receptions/${ordre}/levees/${levee}/pv`,
     demande: (d) => appel('POST', '/terrain/demandes', d),
     demandes: () => appel('GET', '/terrain/demandes'),
+    // Bibliothèque simplifiée (terrain-suites lots 17, 18) : fiche réduite sans prix ; articles du chantier gardés hors ligne.
+    bibliotheque: {
+      articles: (recherche) => appel('GET', `/terrain/bibliotheque/articles?${new URLSearchParams({ recherche })}`),
+      article: (id) => appel('GET', `/terrain/bibliotheque/articles/${id}`),
+      chantier: (chantier) => appel('GET', `/terrain/bibliotheque/chantiers/${chantier}`),
+      urlChantier: (chantier) => `/api/terrain/bibliotheque/chantiers/${chantier}`,
+      urlPiece: (id, telecharger = false) => `/api/terrain/bibliotheque/pieces/${id}${telecharger ? '?telecharger=true' : ''}`,
+    },
     livraisons: (chantier) => appel('GET', `/terrain/livraisons?chantier=${chantier}`),
     enregistrerLivraison: (commande, l) => appel('POST', `/terrain/livraisons/${commande}`, l),
     materiels: (tache) => appel('GET', `/terrain/taches/${tache}/materiels`),

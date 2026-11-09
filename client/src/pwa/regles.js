@@ -103,7 +103,8 @@ export function plansARetirer(gardes, cle, taille, budget = BUDGET_PLANS) {
  */
 export function reponseAGarder({ statut, typeContenu, taille, url = '' }) {
   if (statut !== 200) return false;
-  if (/\/api\/terrain\/pieces\//.test(url)) return !(Number(taille) > TAILLE_MAX_PIECE);
+  // Pièces des tâches et photos ou notices des articles de la bibliothèque simplifiée (terrain-suites lot 18).
+  if (/\/api\/terrain\/(bibliotheque\/)?pieces\//.test(url)) return !(Number(taille) > TAILLE_MAX_PIECE);
   if (estPlanTerrain(url)) return !(Number(taille) > BUDGET_PLANS);
   if (!/json/i.test(typeContenu ?? '')) return false;
   return !(Number(taille) > TAILLE_MAX_DONNEE);

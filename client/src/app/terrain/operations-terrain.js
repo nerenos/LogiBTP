@@ -64,6 +64,16 @@ export const formulaireLevee = ({ commentaire, levee_le: leveeLe, photos }) => {
 export const pvLeveeAttendu = (d) => Boolean(d?.pv_levee_attendu)
   || ((d?.reserves ?? []).length > 0 && d.reserves.every((r) => r.etat === ETAT_RESERVE.LEVEE || r.gardee) && d.reserves.some((r) => r.gardee));
 
+/**
+ * Articles des chantiers à garder hors ligne (bibliothèque simplifiée, terrain-suites lot 18) : adresses des articles
+ * de chaque chantier des tâches lues (`GET /api/terrain`), sans doublon, gardées par le service worker.
+ */
+export function articlesAPrecharger(lectures) {
+  const ids = new Set();
+  for (const r of lectures ?? []) for (const t of r?.taches ?? []) if (t.chantier?.id) ids.add(t.chantier.id);
+  return [...ids].map((id) => api.terrain.bibliotheque.urlChantier(id));
+}
+
 /** Formulaire d'envoi de photos gardées ({ fichiers: [File], commentaire }). */
 export const formulairePhotos = ({ fichiers, commentaire }) => {
   const f = new FormData();
