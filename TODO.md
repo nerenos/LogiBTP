@@ -84,9 +84,10 @@ Analyse du 23/10/2026 : [ANALYSE-MODULE-SOUS-TRAITANCE.md](documentation/concept
 - [ ] Faire relire le cadre réglementaire (§ 3 : vigilance, autoliquidation, autofacturation, paiement direct) par
   l'expert-comptable ; écritures du paiement direct, de la délégation et de l'autoliquidation à préciser avec le
   module Comptabilité (ST14, ST15).
-- [ ] Module Facturation électronique (réception obligatoire depuis le 01/09/2026) à analyser : formats (Factur-X,
-  UBL, CII), connexion à la plateforme agréée, commun aux ventes, aux achats et à la sous-traitance ; en attendant,
-  saisie libre des factures reçues (ST22).
+- [ ] Module Facturation électronique (réception obligatoire depuis le 01/09/2026) : analyse faite le 09/11/2026
+  ([ANALYSE-FACTURATION-ELECTRONIQUE.md](documentation/conception/ANALYSE-FACTURATION-ELECTRONIQUE.md)), questions
+  en attente de réponse ([facturation-electronique-questions.md](documentation/conception/plans/facturation-electronique-questions.md)) ;
+  en attendant, saisie libre des factures reçues (ST22).
 
 ### Import
 
