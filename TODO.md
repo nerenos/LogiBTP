@@ -94,7 +94,7 @@ Analyse du 23/10/2026 : [ANALYSE-MODULE-SOUS-TRAITANCE.md](documentation/concept
   statuts), lot 6 le 09/11/2026 (connecteurs : AFNOR XP Z12-013, plateforme simulée, dépôt manuel), lot 7 le
   10/11/2026 (OAuth GENERIQUE en flux CLIENT), lot 8 le 10/11/2026 (schéma, file avec reprises, statuts, journal des
   étapes chaîné, relève par curseur, service et routes `/api/facture-electronique`), lot 9 le 10/11/2026 (écrans du
-  module, chronologie réutilisable, page de démonstration), lot 10 le 10/11/2026 (catégorie EN16931 et VATEX des catégories de TVA), lot 11 le 10/11/2026 (branchement du cœur : activation, droits, GED, signaux, page, onglet Chronologie), lot 12 le 10/11/2026 (réception : facture reçue → pièce d'achat ou de sous-traitance en brouillon, fournisseur, commande, chantier, GED au coffre, liste « Factures reçues à traiter », étapes du journal), lot 13 le 10/11/2026 (statuts posés à la réception : 204 à la création, 205 à la validation, 207 et 210 par boutons, 211 au règlement émis, CDAR par la file, statuts non envoyés par code, création de la pièce reprise sans doublon).
+  module, chronologie réutilisable, page de démonstration), lot 10 le 10/11/2026 (catégorie EN16931 et VATEX des catégories de TVA), lot 11 le 10/11/2026 (branchement du cœur : activation, droits, GED, signaux, page, onglet Chronologie), lot 12 le 10/11/2026 (réception : facture reçue → pièce d'achat ou de sous-traitance en brouillon, fournisseur, commande, chantier, GED au coffre, liste « Factures reçues à traiter », étapes du journal), lot 13 le 10/11/2026 (statuts posés à la réception : 204 à la création, 205 à la validation, 207 et 210 par boutons, 211 au règlement émis, CDAR par la file, statuts non envoyés par code, création de la pièce reprise sans doublon), lot 14 le 10/11/2026 (réception hors plateforme : Factur-X ou XML glissé sur la liste à traiter ou une facture d'achat, pièce jointe d'un courriel reçu, sans statut envoyé ; avoirs reçus → avoir d'achat rattaché à sa facture).
   - [ ] **SQL à appliquer par l'utilisateur** (lot 10) : `modules/comptabilite/db/094g_comptabilite_tva_en16931.sql` (rejouable, au
     manifeste) sur `logibtp` et `logibtp_demo` par `installation base mettre-a-jour`.
   - [ ] **SQL à appliquer par l'utilisateur** (lot 8, jamais appliqué par Claude) : `modules/facture-electronique/db/099f_facture_electronique.sql`
@@ -119,7 +119,7 @@ Analyse du 23/10/2026 : [ANALYSE-MODULE-SOUS-TRAITANCE.md](documentation/concept
     référence et date du fournisseur, rapport de `document_origine`), GED de la pièce (original, lisible et pièces
     jointes à l'étape RECEPTION, au coffre), chronologie complète de la pièce ; vérifié par `ReceptionFactureBtpTests`
     (exemples FNFE ; de bout en bout sur une base jetable par `LOGIBTP_TEST_PG_JETABLE`).
-  - [ ] Réception, décisions reportées : avoir reçu (BT-3 381…) laissé à traiter sans pièce ; facture de sous-traitance
+  - [ ] Réception, décisions reportées : facture de sous-traitance
     créée par transformation de la commande avec les montants reçus à ventiler (saisie RECUE), sans avancement repris
     ligne à ligne (lot 15) ; écarts de prix avec la commande visibles à la validation (avertissement `PRIX_ACHAT_ECART`),
     pas à la réception.
@@ -133,8 +133,22 @@ Analyse du 23/10/2026 : [ANALYSE-MODULE-SOUS-TRAITANCE.md](documentation/concept
   - [ ] Statuts posés, décisions reportées : 205 et 211 posés par les points d'accroche (validation, pointage) dans leur
     transaction mais sur la connexion du module (un échec de la validation ou du règlement après le point d'accroche
     laisserait le statut posé) et seulement en requête HTTP (services de la requête) ; 211 posé au premier règlement
-    émis qui pointe la pièce, sans montant ; dévalidation ou suppression du règlement sans statut d'annulation ;
-    lisible et pièces jointes d'un brouillon repris rangés une seconde fois en GED (seul l'original est réutilisé).
+    émis qui pointe la pièce, sans montant ; dévalidation ou suppression du règlement sans statut d'annulation.
+  - [ ] **SQL à appliquer par l'utilisateur** (lot 14, jamais appliqué par Claude hors des bases jetables des tests),
+    par `installation base mettre-a-jour` sur `logibtp` et `logibtp_demo` :
+    `modules/facture-electronique/db/099i_facture_electronique_hors_plateforme.sql` (rejouable : `ffl_hors_plateforme` ;
+    sans lui, le module ne lit plus `fe_flux`).
+  - [ ] Lot 14 non vérifié en navigateur : glisser-déposer d'un Factur-X ou d'un XML sur la liste « Factures reçues à
+    traiter » (et bouton « Importer une facture ») et sur la page d'une facture ou d'un avoir d'achat (cadre de la zone,
+    GED de l'onglet Pièces non perturbée), bouton « Créer la facture » des pièces jointes d'un courriel reçu, origine
+    « hors plateforme » au détail du flux ; vérifié par les tests (`ReceptionFactureBtpTests` de bout en bout,
+    `ServiceFactureElectroniqueTests`, `client/test/depot-facture.test.js`).
+  - [ ] Réception hors plateforme et avoirs, décisions reportées : un Factur-X glissé sur une facture d'achat crée sa
+    propre pièce (pas de rattachement à la pièce ouverte, un doublon désigne la pièce existante) ; « Créer la facture »
+    proposé sur tout courriel reçu, rattaché ou non ; avoir reçu toujours en A_AVOIR (pas de T_AVOIR pour un avoir de
+    sous-traitance), facture d'origine cherchée parmi les A_FACTURE / A_FACTURE_AVT seulement, rattachée par un lien de
+    transformation sans lien de lignes ; pas de Paiement transmis (211) pour un avoir ; nouvel exemple d'avoir négatif
+    seulement en mémoire dans les tests (pas de fichier jumeau CII / UBL).
   - [ ] Base jetable complète (manifeste seul) désignée par `LOGIBTP_TEST_PG` : trois tests échouent déjà sans le lot 12
     (`IntegrationPostgresTests.Agregats_identiques_au_js` et `Lots_par_cle_identiques_au_js` : colonnes de démonstration
     absentes ; `RelancesBtpTests.Devis_en_mode_tache_cree_la_tache_sans_courriel` : date attendue fixe) ; sans variable,

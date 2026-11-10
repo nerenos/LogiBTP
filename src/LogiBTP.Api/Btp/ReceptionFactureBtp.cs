@@ -47,6 +47,9 @@ public sealed record PreparationLignes(List<LignePreparee> Lignes, List<string> 
 /// rapport de reprise) ; pièces jointes (BG-24, BR-FR-17) en GED de la pièce, étape RECEPTION, au coffre (Q21). Doublon
 /// (même fournisseur, même référence externe, facture d'achat ou de sous-traitance non annulée) refusé, tracé par le module.
 /// Création idempotente (lot 13) : brouillon déjà créé pour le flux repris ; Prise en charge (204) posée au rattachement.
+/// Avoir reçu (lot 14 : BT-3 381 et autres types d'avoir, UBL CreditNote) : avoir d'achat A_AVOIR en brouillon, montants
+/// rendus positifs (<see cref="EnPositif"/>), facture d'origine (BT-25) du même fournisseur rattachée quand elle est
+/// retrouvée (lien de transformation). Fichiers déjà rangés en GED de la pièce (même contenu) réutilisés, pas redéposés.
 /// </summary>
 public sealed class ReceptionFactureBtp(IServiceProvider services, ILogger journal, Utilisateur service)
 {
@@ -55,6 +58,15 @@ public sealed class ReceptionFactureBtp(IServiceProvider services, ILogger journ
 
     /// <summary>Pièces d'une facture de fournisseur, où se cherche un doublon (même fournisseur, même référence externe).</summary>
     public static readonly string[] TypesFactureRecue = [TypesDocument.AFacture, TypesDocument.TFactureAvt];
+
+    /// <summary>Pièces d'un avoir de fournisseur, où se cherche un doublon d'avoir reçu (lot 14).</summary>
+    public static readonly string[] TypesAvoirRecu = [TypesDocument.AAvoir];
+
+    /// <summary>Pièces créées par la réception (brouillon repris d'un flux).</summary>
+    public static readonly string[] TypesPieceRecue = [.. TypesFactureRecue, .. TypesAvoirRecu];
+
+    /// <summary>Factures d'achat où se cherche la facture d'origine d'un avoir reçu (BT-25).</summary>
+    public static readonly string[] TypesFactureOrigine = [TypesDocument.AFacture, TypesDocument.AFactureAvt];
 
     /// <summary>Unités UN/ECE (recommandation 20) → unités du référentiel LogiBTP (les synonymes de la table unite priment).</summary>
     public static readonly IReadOnlyDictionary<string, string> UnitesUnece = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -221,9 +233,20 @@ public sealed class ReceptionFactureBtp(IServiceProvider services, ILogger journ
         return res;
     }
 
-    /// <summary>Facture ou avoir : seuls les types de facture (BT-3) donnent une pièce ; un avoir reçu reste à traiter.</summary>
+    /// <summary>Avoir (BT-3 : 381, 261, 262, 396, 502, 503) : donne un avoir d'achat (lot 14), sinon une facture.</summary>
     public static bool EstAvoir(string typeFacture) => typeFacture is TypeFacture.Avoir or TypeFacture.AvoirAutofacture or TypeFacture.AvoirRemiseGlobale
         or TypeFacture.AvoirAffacture or TypeFacture.AvoirAutofactureAffacture or TypeFacture.AvoirAcompte;
+
+    /// <summary>
+    /// Montants d'un avoir reçu dans le sens de l'avoir d'achat (A_AVOIR, totaux positifs, déduits par son type) : un avoir
+    /// émis en négatif (total HT de la facture négatif) voit ses quantités et ses montants inversés ; sinon inchangé.
+    /// </summary>
+    public static PreparationLignes EnPositif(PreparationLignes p)
+    {
+        if (p.TotalFacture >= 0) return p;
+        var lignes = p.Lignes.Select(l => l.Type == TL.Element ? l with { Qte = -l.Qte, Montant = -l.Montant } : l).ToList();
+        return p with { Lignes = lignes, TotalLignes = -p.TotalLignes, TotalFacture = -p.TotalFacture };
+    }
 
     // ---------------------------------------------------------------- création
 
@@ -236,10 +259,11 @@ public sealed class ReceptionFactureBtp(IServiceProvider services, ILogger journ
 
     private DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp> Documents => services.GetRequiredService<DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp>>();
 
-    /// <summary>Pièce en brouillon d'une facture reçue, refus (doublon), ou null (avoir, facture illisible : reste à traiter).</summary>
+    /// <summary>Pièce en brouillon d'une facture ou d'un avoir reçu, refus (doublon), ou null (facture illisible, pièce non créée : reste à traiter).</summary>
     public async Task<PieceRecueFe?> CreerAsync(FactureRecueFe recue, CancellationToken ct)
     {
-        if (recue.Facture is not { } f || EstAvoir(f.TypeFacture)) return null;
+        if (recue.Facture is not { } f) return null;
+        var avoir = EstAvoir(f.TypeFacture);
         var db = services.GetRequiredService<LogiBtpContext>();
         // Reprise (lot 13) : la pièce est créée hors de la transaction du flux ; un échec ensuite annule le flux, pas la
         // pièce. Le brouillon déjà créé pour ce flux (même connecteur et même identifiant de la plateforme, ou même flux)
@@ -262,6 +286,7 @@ public sealed class ReceptionFactureBtp(IServiceProvider services, ILogger journ
             ["flux"] = recue.Flux.FflId, ["connecteur"] = recue.Flux.FflConnecteur, ["id_flux"] = recue.Flux.FflIdFlux, ["syntaxe"] = recue.Syntaxe, ["profil"] = f.Profil, ["type_facture"] = f.TypeFacture, ["cadre"] = f.CadreFacturation,
             ["numero"] = f.Numero, ["siren"] = siren, ["siret"] = siret,
         };
+        if (recue.Flux.FflHorsPlateforme) rapport["hors_plateforme"] = true;
 
         if (fournisseur is not null)
         {
@@ -271,12 +296,12 @@ public sealed class ReceptionFactureBtp(IServiceProvider services, ILogger journ
                 WHERE t.tyd_code = ANY(@types) AND d.ent_tiers_id = @tiers AND d.ent_is_reference
                   AND s.std_code <> ALL(@hors) AND regexp_replace(upper(coalesce(d.ent_reference_externe, '')), '[^A-Z0-9]', '', 'g') = @ref
                 ORDER BY d.ent_id LIMIT 1
-                """, new NpgsqlParameter("types", TypesFactureRecue), new NpgsqlParameter("tiers", fournisseur.Id), new NpgsqlParameter("hors", SqlBtp.StatutsHorsVigueur),
+                """, new NpgsqlParameter("types", avoir ? TypesAvoirRecu : TypesFactureRecue), new NpgsqlParameter("tiers", fournisseur.Id), new NpgsqlParameter("hors", SqlBtp.StatutsHorsVigueur),
                 new NpgsqlParameter("ref", Comparable(f.Numero))).ToListAsync(ct)).FirstOrDefault();
             if (doublon is not null)
             {
                 return PieceRecueFe.Refusee(ErreurFe.FactureEnDouble,
-                    $"Facture {f.Numero} du fournisseur déjà enregistrée ({doublon.Numero ?? $"document {doublon.Id}"})",
+                    $"{(avoir ? "Avoir" : "Facture")} {f.Numero} du fournisseur déjà enregistré{(avoir ? "" : "e")} ({doublon.Numero ?? $"document {doublon.Id}"})",
                     new ElementFe(TypesElementFe.Document, doublon.Id.ToString(CultureInfo.InvariantCulture)), new { tiers = fournisseur.Id, type = doublon.Type });
             }
         }
@@ -307,7 +332,7 @@ public sealed class ReceptionFactureBtp(IServiceProvider services, ILogger journ
         rapport["fournisseur"] = new { id = tiers, provisoire, cree = fournisseur is null };
 
         var references = new[] { f.References.Commande, f.References.Contrat, f.References.Objet }.Where(r => !string.IsNullOrWhiteSpace(r)).Select(r => r!).ToList();
-        var commandeSt = await CommandeSousTraitanceAsync(db, tiers, references, ct);
+        var commandeSt = avoir ? null : await CommandeSousTraitanceAsync(db, tiers, references, ct);
         var tva = await db.Database.SqlQueryRaw<TauxTvaRecu>("""
             SELECT t.ttv_id AS id, t.ttv_code AS code, t.ttv_taux AS taux, t.ttv_categorie AS comportement,
                    c.ctv_categorie_en16931 AS categorie_en16931, t.ttv_defaut AS defaut
@@ -316,6 +341,11 @@ public sealed class ReceptionFactureBtp(IServiceProvider services, ILogger journ
         var unites = (await db.Database.SqlQueryRaw<LigneUnite>("SELECT unt_code AS code, unt_synonymes AS synonymes FROM unite WHERE unt_actif").ToListAsync(ct))
             .ToDictionary(u => u.Code, u => u.Synonymes);
         var preparation = PreparerLignes(f, tva, unites);
+        if (avoir)
+        {
+            if (preparation.TotalFacture < 0) rapport["montants_inverses"] = true;
+            preparation = EnPositif(preparation);
+        }
         rapport["total_facture_ht"] = preparation.TotalFacture;
         rapport["total_lignes_ht"] = preparation.TotalLignes;
         if (preparation.TvaNonReconnues.Count > 0) rapport["tva_non_reconnues"] = preparation.TvaNonReconnues;
@@ -332,7 +362,7 @@ public sealed class ReceptionFactureBtp(IServiceProvider services, ILogger journ
             }
             else
             {
-                (ent, reponse) = await AchatAsync(db, tiers, f, preparation, rapport, ct);
+                (ent, reponse) = await AchatAsync(db, tiers, f, preparation, rapport, avoir, ct);
             }
         }
         catch (ExceptionMetier e)
@@ -344,6 +374,7 @@ public sealed class ReceptionFactureBtp(IServiceProvider services, ILogger journ
         if (reponse.Avertissements.Count > 0) rapport["avertissements"] = reponse.Avertissements.Select(a => new { a.Code, a.Message }).ToList();
         if (reponse.Erreurs.Count > 0) rapport["erreurs"] = reponse.Erreurs.Select(a => new { a.Code, a.Message }).ToList();
 
+        if (avoir) await RattacherFactureOrigineAsync(db, tiers, ent, f, rapport, ct);
         var type = await TypesDocumentBtp.CodeAsync(db, ent, ct) ?? "";
         var groupe = await db.Documents.Where(d => d.EntId == ent).Select(d => d.EntGroupeId ?? d.EntId).FirstAsync(ct);
         var jointes = new List<long>();
@@ -366,7 +397,7 @@ public sealed class ReceptionFactureBtp(IServiceProvider services, ILogger journ
 
     /// <summary>
     /// Brouillon déjà créé pour un flux reçu (document_origine IMPORT : rapport du même connecteur et du même identifiant
-    /// de la plateforme, sinon du même flux), facture d'achat ou de sous-traitance encore en BROUILLON ; sinon null.
+    /// de la plateforme, sinon du même flux), facture d'achat ou de sous-traitance ou avoir d'achat encore en BROUILLON ; sinon null.
     /// </summary>
     public static async Task<Trouve?> BrouillonDuFluxAsync(LogiBtpContext db, FluxFe flux, CancellationToken ct) =>
         (await db.Database.SqlQueryRaw<Trouve>("""
@@ -376,7 +407,7 @@ public sealed class ReceptionFactureBtp(IServiceProvider services, ILogger journ
               AND ((@id_flux IS NOT NULL AND o.dor_rapport->>'connecteur' = @connecteur AND o.dor_rapport->>'id_flux' = @id_flux)
                    OR (@flux > 0 AND o.dor_rapport->>'flux' = @flux::text))
             ORDER BY d.ent_id LIMIT 1
-            """, new NpgsqlParameter("types", TypesFactureRecue), new NpgsqlParameter("brouillon", StatutsDocument.Brouillon),
+            """, new NpgsqlParameter("types", TypesPieceRecue), new NpgsqlParameter("brouillon", StatutsDocument.Brouillon),
             SqlBtp.P("id_flux", flux.FflIdFlux, NpgsqlTypes.NpgsqlDbType.Text), new NpgsqlParameter("connecteur", flux.FflConnecteur),
             new NpgsqlParameter("flux", flux.FflId)).ToListAsync(ct)).FirstOrDefault();
 
@@ -434,12 +465,13 @@ public sealed class ReceptionFactureBtp(IServiceProvider services, ILogger journ
     /// la facture sur les lignes reprises, les autres ajoutées), sinon pièce libre ; chantier par les références.
     /// </summary>
     private async Task<(long, ReponseEnregistrement<DocumentCompletBtp>)> AchatAsync(LogiBtpContext db, long tiers, Facture f, PreparationLignes p,
-        Dictionary<string, object?> rapport, CancellationToken ct)
+        Dictionary<string, object?> rapport, bool avoir, CancellationToken ct)
     {
-        var cible = await TypesDocumentBtp.IdAsync(db, TypesDocument.AFacture, ct);
+        var cible = await TypesDocumentBtp.IdAsync(db, avoir ? TypesDocument.AAvoir : TypesDocument.AFacture, ct);
         DocumentCompletBtp? c = null;
         var rapprochees = new Dictionary<string, LigneCommandeRecue>();
-        if (f.References.Commande is { Length: > 0 } bt13)
+        // Avoir : pièce libre (la facture d'origine est rattachée ensuite), jamais par transformation de la commande.
+        if (!avoir && f.References.Commande is { Length: > 0 } bt13)
         {
             var commandes = (await db.Database.SqlQueryRaw<Trouve>(
                     $"SELECT x.ent_id AS id, x.ent_numero AS numero, '' AS type FROM ({AccuseCommandeBtp.SqlCommandes}) x WHERE x.ent_tiers_id = @tiers",
@@ -480,7 +512,7 @@ public sealed class ReceptionFactureBtp(IServiceProvider services, ILogger journ
             c.Document.EntProjetId = r.Projet;
             if (r.Chantier is not null) rapport["chantier"] = r.Chantier;
         }
-        Entete(c.Document, f);
+        Entete(c.Document, f, avoir);
         var ent = c.Document.EntId;
 
         // Lignes reprises de la commande : prix et TVA de la facture (prix fixe ; écart signalé par PRIX_ACHAT_ECART).
@@ -517,12 +549,41 @@ public sealed class ReceptionFactureBtp(IServiceProvider services, ILogger journ
         return (ent, await Documents.Enregistrer(ent, c, service, ct));
     }
 
+    /// <summary>
+    /// Avoir reçu : facture d'origine (BT-25 des factures antérieures) du même fournisseur parmi ses factures d'achat de
+    /// référence non annulées (référence externe comparée sans séparateurs) ; une seule trouvée → lien de transformation
+    /// facture → avoir (comme un avoir créé depuis la facture), notée au rapport ; sinon les numéros cherchés y sont notés.
+    /// </summary>
+    private static async Task RattacherFactureOrigineAsync(LogiBtpContext db, long tiers, long avoir, Facture f, Dictionary<string, object?> rapport, CancellationToken ct)
+    {
+        var numeros = f.FacturesAnterieures.Select(x => Comparable(x.Numero)).Where(x => x.Length > 0).Distinct().ToArray();
+        if (numeros.Length == 0) return;
+        var trouvees = await db.Database.SqlQueryRaw<Trouve>("""
+            SELECT d.ent_id AS id, d.ent_numero AS numero, t.tyd_code AS type FROM document d
+            JOIN type_document t ON t.tyd_id = d.ent_tyd_id JOIN statut_document s ON s.std_id = d.ent_std_id
+            WHERE t.tyd_code = ANY(@types) AND d.ent_tiers_id = @tiers AND d.ent_is_reference AND d.ent_id <> @avoir
+              AND s.std_code <> ALL(@hors) AND regexp_replace(upper(coalesce(d.ent_reference_externe, '')), '[^A-Z0-9]', '', 'g') = ANY(@refs)
+            ORDER BY d.ent_id
+            """, new NpgsqlParameter("types", TypesFactureOrigine), new NpgsqlParameter("tiers", tiers), new NpgsqlParameter("avoir", avoir),
+            new NpgsqlParameter("hors", SqlBtp.StatutsHorsVigueur), new NpgsqlParameter("refs", numeros)).ToListAsync(ct);
+        if (trouvees.Count != 1)
+        {
+            rapport["facture_origine_introuvable"] = f.FacturesAnterieures.Select(x => x.Numero).ToList();
+            return;
+        }
+        var origine = trouvees[0];
+        await db.Database.ExecuteSqlRawAsync("""
+            INSERT INTO document_lien (lie_source_ent_id, lie_cible_ent_id, lie_type) VALUES (@s, @c, 'TRANSFORMATION') ON CONFLICT DO NOTHING
+            """, [new NpgsqlParameter("s", origine.Id), new NpgsqlParameter("c", avoir)], ct);
+        rapport["facture_origine"] = new { id = origine.Id, numero = origine.Numero, type = origine.Type };
+    }
+
     /// <summary>Entête d'une pièce reçue : numéro et date du fournisseur, objet.</summary>
-    private static void Entete(DocumentBtp d, Facture f)
+    private static void Entete(DocumentBtp d, Facture f, bool avoir = false)
     {
         d.EntReferenceExterne = f.Numero.Length > 100 ? f.Numero[..100] : f.Numero;
         d.EntDateExterne = f.DateEmission;
-        var objet = $"Facture {f.Numero} – {f.Vendeur.RaisonSociale}";
+        var objet = $"{(avoir ? "Avoir" : "Facture")} {f.Numero} – {f.Vendeur.RaisonSociale}";
         d.EntObjet ??= objet.Length > 200 ? objet[..200] : objet;
     }
 
@@ -534,6 +595,8 @@ public sealed class ReceptionFactureBtp(IServiceProvider services, ILogger journ
     {
         try
         {
+            // Même contenu déjà rangé en GED de la pièce (brouillon repris, lot 13 : vue lisible, pièces jointes) : réutilisé.
+            if (await DejaRangeAsync(typeElement, groupe, contenu, ct) is long deja) return deja;
             var ged = services.GetRequiredService<ServiceGed>();
             await using var flux = new MemoryStream(contenu);
             var formulaire = new FormFile(flux, 0, contenu.Length, "fichier", nom)
@@ -555,5 +618,18 @@ public sealed class ReceptionFactureBtp(IServiceProvider services, ILogger journ
             journal.LogWarning("Facturation électronique : fichier {Nom} non rangé en GED ({Erreur})", nom, Masquage.Texte(e.Message));
             return null;
         }
+    }
+
+    /// <summary>Document de la GED d'une pièce (catégorie facture_electronique, non supprimé) dont une version a ce contenu (SHA-256), sinon null.</summary>
+    public async Task<long?> DejaRangeAsync(string typeElement, long groupe, byte[] contenu, CancellationToken ct)
+    {
+        var empreinte = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(contenu));
+        return (await services.GetRequiredService<LogiBtpContext>().Database.SqlQueryRaw<long>("""
+            SELECT g.dge_id AS "Value" FROM document_ged g
+            WHERE g.dge_type_element = @t AND g.dge_id_element = @e AND g.dge_categorie = @c AND NOT g.dge_supprime
+              AND EXISTS (SELECT 1 FROM version_ged v WHERE v.vge_document = g.dge_id AND v.vge_empreinte = @h)
+            ORDER BY g.dge_id LIMIT 1
+            """, new NpgsqlParameter("t", typeElement), new NpgsqlParameter("e", groupe.ToString(CultureInfo.InvariantCulture)),
+            new NpgsqlParameter("c", CategoriesGed.FactureElectronique), new NpgsqlParameter("h", empreinte)).ToListAsync(ct)).Select(x => (long?)x).FirstOrDefault();
     }
 }

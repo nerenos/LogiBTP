@@ -81,7 +81,7 @@ export class DetailFlux {
     const { peut } = this.#o;
     const meta = [
       ['sens', texte(`facture_electronique.sens.${f.sens}`)], ['type', libelleType(f.type)], ['syntaxe', libelleCode('syntaxes', f.syntaxe)], ['profil', f.profil ? libelleCode('profils', f.profil) : ''], ['regle', f.regle],
-      ['numero', f.numero], ['nom', f.nom], ['connecteur', libelleConnecteur(f.connecteur)], ['id_suivi', f.id_suivi], ['id_flux', f.id_flux],
+      ['numero', f.numero], ['nom', f.nom], ['connecteur', libelleConnecteur(f.connecteur)], ['hors_plateforme', f.hors_plateforme ? texte('facture_electronique.detail.hors_plateforme') : ''], ['id_suivi', f.id_suivi], ['id_flux', f.id_flux],
       ['accuse', f.accuse ? libelleCode('accuses', f.accuse) : ''], ['essais', f.essais || ''],
       ['prochain_essai', formatDateHeure(f.prochain_essai)], ['depose_le', formatDateHeure(f.depose_le)], ['modifie_pa_le', formatDateHeure(f.modifie_pa_le)],
       ['cree_le', formatDateHeure(f.cree_le)], ['empreinte', empreinteCourte(f.empreinte)],

@@ -41,6 +41,7 @@ import { formatImport } from '../import/formats.js';
 import { PanneauSuivi } from '../crm/panneau-suivi.js';
 import { voisins } from '../suite-liste.js';
 import { afficherChronologieDocument, ongletChronologieVisible, requeteFluxPiece, NOEUD_FE } from '../documents/chronologie-document.js';
+import { activerDepotFactures, TYPES_DEPOT_FACTURE } from '../facture-electronique/depot-facture.js';
 import { apiFe } from '../facture-electronique/api-fe.js';
 
 // Document (devis, facture…) dans l'éditeur du cœur, toujours lu dans la base : /document/<id>,
@@ -200,6 +201,11 @@ export class PageDocument extends PageBase {
     const app = this.app;
     this.conteneur.innerHTML = gabarit();
     this.conteneur.classList.add('page-document');
+    // Factur-X ou XML glissé sur une facture d'achat (lot 14 de la facturation électronique) : facture reçue hors
+    // plateforme, pièce créée en brouillon comme pour un flux reçu (ouverte ensuite) ; la GED garde ses propres dépôts.
+    this.retirerDepotFacture = activerDepotFactures(this.conteneur, {
+      app, accepte: () => TYPES_DEPOT_FACTURE.includes(this.editeur?.definition?.type?.tyd_code),
+    });
     this.disposition = new Disposition({
       racine: this.conteneur,
       // Notifications du document : en bas, ouvertes par le compteur ⚠ de la barre (Alt+7).
@@ -1519,6 +1525,7 @@ export class PageDocument extends PageBase {
   }
 
   fermer() {
+    this.retirerDepotFacture?.();
     fermerAideMemoire();
     this.desabonnerEnvoi?.();
     this.desabonnerAttente?.();

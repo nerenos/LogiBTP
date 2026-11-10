@@ -56,6 +56,8 @@ public class FluxFe
     public DateTimeOffset? FflProchainEssai { get; set; }
     public string? FflDerniereErreur { get; set; }
     public string? FflCurseur { get; set; }
+    /// <summary>Facture reçue hors plateforme (glissée, pièce jointe d'un courriel ; lot 14) : aucun statut posé n'est envoyé (099i).</summary>
+    public bool FflHorsPlateforme { get; set; }
     public DateTimeOffset? FflDeposeLe { get; set; }
     public DateTimeOffset? FflModifiePaLe { get; set; }
     public DateTimeOffset FflCreeLe { get; set; }

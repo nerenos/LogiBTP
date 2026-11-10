@@ -1,0 +1,15 @@
+{
+  "description": "Fichier proposé comme facture reçue hors plateforme (lot 14 : glisser-déposer, pièce jointe d'un courriel) : js/src/reception.js estFichierFacture ↔ ReglesReception.EstFichierFacture. Factur-X (PDF) ou XML CII / UBL : extension .pdf ou .xml du nom (casse ignorée, espaces autour retirés), ou type MIME application/pdf, application/xml, text/xml (paramètres après « ; » ignorés). Le contenu reste contrôlé par la lecture du serveur.",
+  "cas": [
+    {"nom": "PDF par l'extension", "fichier": "facture.pdf", "type": null, "attendu": true},
+    {"nom": "XML en majuscules", "fichier": "FACTURE.XML", "type": null, "attendu": true},
+    {"nom": "extension entourée d'espaces", "fichier": "  F2025.xml  ", "type": "", "attendu": true},
+    {"nom": "PDF par le type", "fichier": "piece", "type": "application/pdf", "attendu": true},
+    {"nom": "XML texte avec jeu de caractères", "fichier": "piece", "type": "text/xml; charset=utf-8", "attendu": true},
+    {"nom": "XML application en majuscules", "fichier": "piece", "type": "APPLICATION/XML", "attendu": true},
+    {"nom": "image", "fichier": "photo.jpg", "type": "image/jpeg", "attendu": false},
+    {"nom": "extension au milieu du nom", "fichier": "facture.pdf.exe", "type": "application/octet-stream", "attendu": false},
+    {"nom": "courriel", "fichier": "message.eml", "type": "message/rfc822", "attendu": false},
+    {"nom": "sans nom ni type", "fichier": null, "type": null, "attendu": false}
+  ]
+}

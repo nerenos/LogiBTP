@@ -342,6 +342,7 @@
         "numero": "Numéro",
         "nom": "Fichier",
         "connecteur": "Connecteur",
+        "hors_plateforme": "Origine",
         "id_suivi": "Identifiant de suivi",
         "id_flux": "Identifiant de dépôt",
         "accuse": "Accusé",
@@ -373,7 +374,8 @@
         "message": "Message",
         "http": "HTTP",
         "request_id": "Request-Id"
-      }
+      },
+      "hors_plateforme": "Reçue hors plateforme : statuts posés gardés au journal, jamais envoyés"
     },
     "chronologie": {
       "titre": "Chronologie",

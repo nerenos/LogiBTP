@@ -6530,6 +6530,16 @@
           "210": "Refuser la facture reçue"
         }
       }
+    },
+    "depot": {
+      "importer": "Importer une facture",
+      "importer_aide": "Factur-X (PDF) ou XML CII / UBL reçu hors plateforme : pièce créée en brouillon comme pour une facture reçue, sans statut envoyé (on peut aussi glisser le fichier sur la liste)",
+      "courriel": "Créer la facture",
+      "courriel_aide": "Facture reçue hors plateforme : pièce créée en brouillon depuis ce Factur-X ou ce XML, sans statut envoyé",
+      "creee": "{{nom}} : facture {{numero}} reçue hors plateforme, pièce créée en brouillon à vérifier",
+      "a_traiter": "{{nom}} : facture {{numero}} reçue hors plateforme, à traiter ({{erreur}})",
+      "non_reconnu": "Seul un Factur-X (PDF) ou un XML CII / UBL se dépose comme facture reçue",
+      "erreur": "Facture {{nom}} non reçue"
     }
   },
   "hors_ligne_btp": {

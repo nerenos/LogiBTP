@@ -34,6 +34,8 @@ public static class TypesDocument
     public const string AReception = "A_RECEPTION";
     public const string ARetour = "A_RETOUR";
     public const string AFacture = "A_FACTURE";
+    public const string AFactureAvt = "A_FACTURE_AVT";
+    public const string AAvoir = "A_AVOIR";
     public const string TAo = "T_AO";
     public const string TCommande = "T_COMMANDE";
     public const string TFactureAvt = "T_FACTURE_AVT";

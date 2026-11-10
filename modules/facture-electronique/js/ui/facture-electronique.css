@@ -41,3 +41,6 @@
 /* Fenêtre d'un statut posé : motif et commentaire. */
 .fe-dialogue-statut .dialogue-saisie { display: flex; flex-direction: column; gap: 0.25rem; margin-top: 0.5rem; }
 .fe-dialogue-statut textarea { min-width: 28rem; }
+
+/* Zone qui accepte une facture glissée (hors plateforme, lot 14 : liste des factures reçues, page d'une facture d'achat). */
+.fe-depot-cible { outline: 2px dashed var(--fe-depot-cible); outline-offset: -4px; background: var(--fe-depot-cible-fond); }

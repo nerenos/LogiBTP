@@ -9,4 +9,6 @@
   --fe-chrono-plateforme: color-mix(in srgb, var(--accent) 10%, transparent);
   --fe-chrono-utilisateur: color-mix(in srgb, #7c3aed 10%, transparent);
   --fe-chrono-erreur: color-mix(in srgb, #b91c1c 10%, transparent);
+  --fe-depot-cible: var(--accent);
+  --fe-depot-cible-fond: color-mix(in srgb, var(--accent) 8%, transparent);
 }

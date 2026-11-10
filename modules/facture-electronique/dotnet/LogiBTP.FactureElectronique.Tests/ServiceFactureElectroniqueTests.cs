@@ -344,6 +344,36 @@ public sealed class ServiceFactureElectroniqueTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Facture_hors_plateforme_meme_traitement_sans_statut_envoye()
+    {
+        if (Connexion is null) return;
+        await Connecteur(ConnecteurFe.Simule);
+        await using var db = Db();
+        var s = Service(db);
+        // Factur-X ou XML glissé (lot 14) : flux reçu du connecteur MANUEL marqué hors plateforme, pièce créée et rattachée,
+        // Prise en charge (204) posée au journal sans CDAR, puis Approuvée (205) de même.
+        specialisation.Element = new ElementFe("ACHAT", numero + "H");
+        specialisation.StatutsCreation.Add(new StatutAPoser(StatutCdv.PriseEnCharge));
+        var f = await s.Importer(new ImportManuel("glissee.xml", Convert.ToBase64String(Facture("H")), HorsPlateforme: true), Admin, default);
+        specialisation.StatutsCreation.Clear();
+        Assert.Equal((EtatFlux.Traite, ConnecteurFe.Manuel, SensFlux.Entrant, true, numero + "H"), (f.Etat, f.Connecteur, f.Sens, f.HorsPlateforme, f.IdElement));
+        Assert.Equal(["IMPORT_MANUEL:>RECU", "LECTURE:RECU>RECU", "PIECE_CREEE:RECU>RECU", "RATTACHEMENT:RECU>TRAITE", "STATUT_POSE:>204"], await Etapes(db, f.Id));
+        var pec = Assert.Single((await s.Detail(f.Id, default)).Statuts);
+        Assert.Null(pec.FluxCdarId);
+        var approuvee = await s.PoserStatutApplicationAsync(f.Id, new StatutAPoser(StatutCdv.Approuvee), "compta", default);
+        Assert.Null(approuvee.FluxCdarId);
+        var c = (await s.Chronologie(f.Id, null, null, default))[^1];
+        Assert.False(c.Detail!.Value.GetProperty("envoye").GetBoolean());
+        Assert.True(c.Detail!.Value.GetProperty("hors_plateforme").GetBoolean());
+        Assert.False(await db.Flux.AnyAsync(x => x.FflSyntaxe == Syntaxe.Cdar && x.FflIdElement == numero + "H"));
+        // Un statut CDAR ne se reçoit pas hors plateforme.
+        var cdar = await Assert.ThrowsAsync<ExceptionMetier>(() => s.ImporterHorsPlateformeAsync(
+            File.ReadAllBytes(Directory.EnumerateFiles(LogiBTP.Socle.Testing.CasPartages.Chemin("modules", "facture-electronique", "tests", "exemples", "cdar", "fnfe"), "*.xml").Order().First()),
+            "statut.xml", null, Admin, default));
+        Assert.Equal(ErreurFe.DemandeInvalide, cdar.Code);
+    }
+
+    [Fact]
     public async Task Depot_manuel_confirme_avec_magasin_en_base()
     {
         if (Connexion is null) return;

@@ -38,7 +38,7 @@
 | 11 | Branchement du cœur : activation, droits, spécialisation, paramètres, notifications, onglet Chronologie | cœur | 8, 9, 7 | FAIT (10/11/2026) |
 | 12 | Réception : flux reçu → pièce d'achat ou de sous-traitance en brouillon, rattachements, liste à traiter | cœur | 11, 2, 3, 10 | FAIT (10/11/2026) |
 | 13 | Réception : statuts posés (204, 205, 207, 210) et Paiement transmis (211) | cœur | 12, 5 | FAIT (10/11/2026) |
-| 14 | Réception hors plateforme : Factur-X ou XML glissé ou reçu par courriel | cœur | 12 | A FAIRE |
+| 14 | Réception hors plateforme : Factur-X ou XML glissé ou reçu par courriel, avoirs reçus | cœur | 12 | FAIT (10/11/2026) |
 | 15 | Réception de sous-traitance : cadre S5, bloc PAYEUR, demande de paiement direct (224) | cœur | 12, 13 | A FAIRE |
 | | **Partie B : émission et e-reporting** | | | |
 | 16 | Contrôle de complétude (JS ↔ C#) et écriture CII D22B (EN16931, EXTENDED-CTC-FR) | module | 1, 4 | A FAIRE |
@@ -546,13 +546,43 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   transaction (connexion du module) ; 211 sans montant, au premier règlement ; non vérifié en navigateur (TODO).
   **Script à appliquer par l'utilisateur** : `099h_facture_electronique_statuts.sql`.
 
-## Lot 14 : réception hors plateforme (A FAIRE)
+## Lot 14 : réception hors plateforme — FAIT (10/11/2026)
 
 - **Cœur**. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : glisser-déposer d'un Factur-X ou d'un XML sur la liste à traiter ou sur la page d'une facture
   d'achat ; pièce jointe Factur-X d'un courriel rattaché (`MailBtp.cs`, proposition « Créer la facture ») ; même
   traitement que le lot 12 (flux de sens R, connecteur MANUEL) ; tests.
 - **Critère de fin** : un Factur-X glissé crée la même pièce qu'un flux reçu, sans statut envoyé ; tests verts.
+- **Réalisé** : module : `099i_facture_electronique_hors_plateforme.sql` (rejouable, au manifeste après 099h :
+  `ffl_hors_plateforme`) ; `ImportManuel.HorsPlateforme` et `ServiceFactureElectronique.ImporterHorsPlateformeAsync`
+  (facture seule, CDAR refusé `DEMANDE_INVALIDE` ; même chemin que l'import : connecteur MANUEL, étape IMPORT_MANUEL avec
+  `hors_plateforme` et l'origine, lecture, pièce créée ou doublon, rattachement) ; `PoserAsync` : flux hors plateforme →
+  statut gardé au journal sans CDAR (`envoye` faux, `hors_plateforme` au détail) ; `FluxDto.HorsPlateforme`, origine
+  affichée au détail du flux ; règle miroir `estFichierFacture` (`js/src/reception.js`) ↔ `ReglesReception.EstFichierFacture`
+  (jeu `tests/cas/03_fichiers_facture.json` : extension .pdf / .xml ou type MIME). Cœur : `ReceptionFactureBtp` : avoir
+  reçu (BT-3 381, 261, 262, 396, 502, 503 ; UBL CreditNote) → `A_AVOIR` en brouillon (pièce libre, jamais de commande),
+  montants positifs (`EnPositif` : avoir émis en négatif inversé, noté au rapport), facture d'origine BT-25 du même
+  fournisseur (A_FACTURE / A_FACTURE_AVT de référence non annulée, référence externe sans séparateurs ; une seule) rattachée
+  par un lien TRANSFORMATION, sinon numéros cherchés au rapport ; doublon d'avoir parmi les A_AVOIR ; brouillon repris :
+  A_AVOIR compris ; 205 à la validation d'un A_AVOIR ; GED : un contenu déjà rangé pour la pièce (même SHA-256, catégorie
+  facture_electronique) est réutilisé (`DejaRangeAsync`) : vue lisible et pièces jointes d'un brouillon repris non
+  redéposées (point du lot 13). `Btp/ReceptionHorsPlateformeBtp.cs` : route `POST /api/facture-electronique/courriels/{id}/facture`
+  (référence de la pièce : courriel reçu lisible par l'utilisateur, pièce Factur-X ou XML ; Modifier du nœud, déclarée
+  dans `SpecialisationDroitsBtp.Routes`, sous `ExigeModule`). Codes `TYPE_DOCUMENT.A_FACTURE_AVT` / `A_AVOIR` ↔
+  `TypesDocument`. Client : `facture-electronique/depot-facture.js` (zone de dépôt : fichiers seuls, dépôt déjà pris par
+  la GED laissé, module actif et Modifier ; import `hors_plateforme`, pièce créée ouverte, sinon flux à traiter ouvert
+  avec l'erreur) branchée sur la liste « Factures reçues à traiter » (et bouton « Importer une facture ») et sur la page
+  des A_FACTURE, A_FACTURE_AVT, A_AVOIR, T_FACTURE_AVT ; bouton « Créer la facture » sur les pièces jointes Factur-X / XML
+  d'un courriel reçu (`pages/mail.js`) ; textes `facture_electronique_btp.depot.*`, icône, couleurs `--fe-depot-cible*`.
+  Tests : `ServiceFactureElectroniqueTests` (hors plateforme : étapes, 204 et 205 sans CDAR, CDAR refusé),
+  `ReglesReceptionTests` / `reception.test.js` (jeu 03), `ReceptionFactureBtpTests` (exemple d'avoir `AVOIR_F202500011` en
+  UBL et CII : lignes positives, BT-25 ; variante négative en mémoire ; de bout en bout sur la base jetable : facture
+  glissée → A_FACTURE en brouillon, origine, sans CDAR, liste à traiter ; avoir UBL → A_AVOIR rattaché à la facture ;
+  doublon d'avoir ; GED sans second dépôt), `FactureElectroniqueBtpTests` (route du courriel), `client/test/depot-facture.test.js`.
+  Écarts : un Factur-X glissé sur une facture d'achat crée sa propre pièce (pas de rattachement à la pièce ouverte ; un
+  doublon désigne la pièce existante) ; « Créer la facture » proposé sur tout courriel reçu, rattaché ou non ; avoir
+  d'une facture de sous-traitance reçu en A_AVOIR ; non vérifié en navigateur (TODO). **Script à appliquer par
+  l'utilisateur** : `099i_facture_electronique_hors_plateforme.sql`.
 
 ## Lot 15 : réception de sous-traitance (A FAIRE)
 

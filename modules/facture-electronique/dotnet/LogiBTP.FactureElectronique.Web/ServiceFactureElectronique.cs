@@ -27,7 +27,7 @@ public sealed record FluxDto(
     long Id, string Sens, string Type, string Syntaxe, string? Profil, string? Regle, string Nom, string? Numero, string? IdSuivi,
     string? IdFlux, string Connecteur, string Empreinte, long? GedOriginalId, long? GedConvertiId, long? GedLisibleId, string? TypeElement,
     string? IdElement, string Etat, string? Accuse, JsonElement? AccuseDetails, int Essais, DateTimeOffset? ProchainEssai,
-    string? DerniereErreur, DateTimeOffset? DeposeLe, DateTimeOffset? ModifiePaLe, DateTimeOffset CreeLe, string? StatutAffiche);
+    string? DerniereErreur, DateTimeOffset? DeposeLe, DateTimeOffset? ModifiePaLe, DateTimeOffset CreeLe, string? StatutAffiche, bool HorsPlateforme = false);
 
 /// <summary>Statut d'une facture.</summary>
 public sealed record StatutDto(
@@ -68,8 +68,12 @@ public sealed record FluxAEmettre(byte[] Contenu, string Nom)
 /// <summary>Confirmation d'un dépôt manuel : accusé Ok ou Error rendu par le portail de la PA, motif et message d'un refus.</summary>
 public sealed record ConfirmationDepot(string Etat, string? Motif = null, string? Message = null);
 
-/// <summary>Import manuel d'un fichier reçu hors connexion : nom, contenu en base 64, type du statut (CDAR).</summary>
-public sealed record ImportManuel(string Nom, string Contenu, string? TypeStatut = null);
+/// <summary>
+/// Import manuel d'un fichier reçu hors connexion : nom, contenu en base 64, type du statut (CDAR). Hors plateforme
+/// (lot 14 : facture glissée sur une liste ou une pièce, reçue en dehors de toute plateforme) : facture seule, aucun
+/// statut posé envoyé.
+/// </summary>
+public sealed record ImportManuel(string Nom, string Contenu, string? TypeStatut = null, bool HorsPlateforme = false);
 
 /// <summary>
 /// Statut posé par la société sur une facture : code, motif, action, montant et taux (Encaissée), commentaire (note du
@@ -331,7 +335,7 @@ public class ServiceFactureElectronique(
     /// plateforme) : rien, le flux existant est rendu (relève idempotente).
     /// </summary>
     public async Task<FluxFe> EnregistrerEntrantAsync(string connecteur, Flux meta, FichierFlux original, string? curseur, string evenement,
-        string acteur, string? utilisateur, CancellationToken ct)
+        string acteur, string? utilisateur, CancellationToken ct, bool horsPlateforme = false, object? origine = null)
     {
         var connu = await db.Flux.FirstOrDefaultAsync(x => x.FflConnecteur == connecteur && x.FflIdFlux == meta.IdFlux, ct);
         if (connu is not null) return connu;
@@ -342,7 +346,7 @@ public class ServiceFactureElectronique(
             FflOrigineRegle = meta.OrigineRegle, FflNom = meta.Nom, FflIdSuivi = null, FflIdFlux = meta.IdFlux, FflConnecteur = connecteur,
             FflEmpreinte = ConnecteurPlateforme.Empreinte(original.Contenu), FflEtat = EtatFlux.Recu, FflAccuse = meta.Accuse.Etat,
             FflCurseur = curseur, FflDeposeLe = meta.DeposeLe, FflModifiePaLe = meta.ModifieLe, FflCreeLe = maintenant, FflModifieLe = maintenant,
-            FflCreePar = utilisateur ?? "",
+            FflCreePar = utilisateur ?? "", FflHorsPlateforme = horsPlateforme,
         };
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         db.Flux.Add(f);
@@ -351,7 +355,11 @@ public class ServiceFactureElectronique(
         await JournalFe.AjouterAsync(db, EtapeFe.Du(f, evenement, acteur, utilisateur) with
         {
             EtatApres = EtatFlux.Recu,
-            Detail = new { id_flux = meta.IdFlux, meta.Nom, meta.Syntaxe, meta.Type, meta.Profil, regle = meta.RegleTraitement, f.FflEmpreinte, f.FflConnecteur },
+            Detail = new
+            {
+                id_flux = meta.IdFlux, meta.Nom, meta.Syntaxe, meta.Type, meta.Profil, regle = meta.RegleTraitement, f.FflEmpreinte, f.FflConnecteur,
+                hors_plateforme = horsPlateforme ? true : (bool?)null, origine,
+            },
         }, ct);
         if (f.FflSyntaxe == Syntaxe.Cdar) await TraiterStatutsRecusAsync(f, original.Contenu, ct);
         else if (SyntaxesFacture.Contains(f.FflSyntaxe)) await TraiterFactureRecueAsync(f, original.Contenu, ct);
@@ -636,7 +644,8 @@ public class ServiceFactureElectronique(
         var erreurs = ReglesCycleVie.Controler(new StatutPropose(sensFacture, historique, a.Code, emetteur, motif, action));
         if (erreurs.Count > 0) throw ExceptionMetier.Invalide(erreurs[0], $"Statut {a.Code} refusé : {string.Join(", ", erreurs)}", new { erreurs });
         var p = await ParametreAsync(ct);
-        var envoyer = a.Cdar is { Length: > 0 } || ReglesParametresFe.AEnvoyer(a.Code, p.FpaStatutsNonEnvoyes);
+        // Facture reçue hors plateforme (lot 14) : aucune plateforme à prévenir, le statut reste au journal.
+        var envoyer = !f.FflHorsPlateforme && (a.Cdar is { Length: > 0 } || ReglesParametresFe.AEnvoyer(a.Code, p.FpaStatutsNonEnvoyes));
         var date = Maintenant;
         byte[]? cdar = null;
         if (envoyer)
@@ -676,7 +685,11 @@ public class ServiceFactureElectronique(
         await JournalFe.AjouterAsync(db, EtapeFe.Du(f, EvenementFe.StatutPose, acteur, utilisateur) with
         {
             EtatAvant = avant, EtatApres = apres,
-            Detail = new { statut = a.Code, motif, action, a.Montant, a.Taux, commentaire, origine = a.Origine, envoye = cdarId is not null, flux_cdar = cdarId },
+            Detail = new
+            {
+                statut = a.Code, motif, action, a.Montant, a.Taux, commentaire, origine = a.Origine, envoye = cdarId is not null, flux_cdar = cdarId,
+                hors_plateforme = f.FflHorsPlateforme ? true : (bool?)null,
+            },
         }, ct);
         if (tx is not null) await tx.CommitAsync(ct);
         await specialisation.StatutPoseAsync(new StatutSignaleFe(statut, f, avant, apres), ct);
@@ -778,7 +791,10 @@ public class ServiceFactureElectronique(
         return await DtoAsync(f, ct);
     }
 
-    /// <summary>Import d'un fichier reçu hors connexion (facture ou CDAR) : enregistré et traité comme un flux reçu (étape IMPORT_MANUEL).</summary>
+    /// <summary>
+    /// Import d'un fichier reçu hors connexion (facture ou CDAR) : enregistré et traité comme un flux reçu (étape
+    /// IMPORT_MANUEL). Hors plateforme : voir <see cref="ImporterHorsPlateformeAsync"/>.
+    /// </summary>
     public async Task<FluxDto> Importer(ImportManuel i, Utilisateur u, CancellationToken ct)
     {
         specialisation.Exiger(u, ActionsDroits.Modifier);
@@ -791,6 +807,7 @@ public class ServiceFactureElectronique(
         {
             throw ExceptionMetier.Invalide(ErreurFe.DemandeInvalide, "Contenu attendu en base 64");
         }
+        if (i.HorsPlateforme) return await ImporterHorsPlateformeAsync(contenu, i.Nom, null, u, ct);
         var connecteur = ConnecteurManuel();
         var meta = connecteur.Importer(contenu, i.Nom, i.TypeStatut ?? TypeFlux.CdvFactureClient);
         var f = await EnregistrerEntrantAsync(ConnecteurFe.Manuel, meta, new FichierFlux(contenu, i.Nom, TypeMime(meta.Syntaxe)), null,
@@ -798,7 +815,36 @@ public class ServiceFactureElectronique(
         return await DtoAsync(f, ct);
     }
 
-    // ---------------------------------------------------------------- consultation
+    /// <summary>
+    /// Facture reçue hors plateforme (lot 14) : Factur-X ou XML CII / UBL glissé sur une liste ou une pièce, ou pièce
+    /// jointe d'un courriel. Même traitement qu'un flux reçu (sens R, connecteur MANUEL, étape IMPORT_MANUEL : lecture,
+    /// pièce créée ou doublon refusé, rattachement) ; le flux est marqué hors plateforme : ses statuts posés restent au
+    /// journal, aucun CDAR n'est envoyé. Un statut CDAR est refusé (DEMANDE_INVALIDE). <paramref name="origine"/> :
+    /// provenance notée au journal (courriel…).
+    /// </summary>
+    public async Task<FluxDto> ImporterHorsPlateformeAsync(byte[] contenu, string nom, object? origine, Utilisateur u, CancellationToken ct)
+    {
+        specialisation.Exiger(u, ActionsDroits.Modifier);
+        if (EstCdar(contenu))
+            throw ExceptionMetier.Invalide(ErreurFe.DemandeInvalide, "Facture attendue : un statut (CDAR) ne se reçoit que d'une plateforme");
+        var meta = ConnecteurManuel().Importer(contenu ?? [], nom, TypeFlux.CdvFactureClient);
+        var f = await EnregistrerEntrantAsync(ConnecteurFe.Manuel, meta, new FichierFlux(contenu!, nom, TypeMime(meta.Syntaxe)), null,
+            EvenementFe.ImportManuel, ActeurFe.Utilisateur, u.Code, ct, horsPlateforme: true, origine: origine);
+        return await DtoAsync(f, ct);
+    }
+
+    private static bool EstCdar(byte[]? contenu)
+    {
+        if (contenu is not { Length: > 0 }) return false;
+        try
+        {
+            return Lecture.Detecter(contenu) == Syntaxe.Cdar;
+        }
+        catch (ExceptionLectureFacture)
+        {
+            return false;
+        }
+    }
 
     public async Task<List<FluxDto>> Liste(FiltreFlux filtre, CancellationToken ct)
     {
@@ -874,7 +920,7 @@ public class ServiceFactureElectronique(
     public static FluxDto Dto(FluxFe f, string? statutAffiche) => new(f.FflId, f.FflSens, f.FflType, f.FflSyntaxe, f.FflProfil, f.FflRegle, f.FflNom,
         f.FflNumero, f.FflIdSuivi, f.FflIdFlux, f.FflConnecteur, f.FflEmpreinte, f.FflGedOriginalId, f.FflGedConvertiId, f.FflGedLisibleId,
         f.FflTypeElement, f.FflIdElement, f.FflEtat, f.FflAccuse, f.FflAccuseDetails is null ? null : JsonSerializer.Deserialize<JsonElement>(f.FflAccuseDetails),
-        f.FflEssais, f.FflProchainEssai, f.FflDerniereErreur, f.FflDeposeLe, f.FflModifiePaLe, f.FflCreeLe, statutAffiche);
+        f.FflEssais, f.FflProchainEssai, f.FflDerniereErreur, f.FflDeposeLe, f.FflModifiePaLe, f.FflCreeLe, statutAffiche, f.FflHorsPlateforme);
 
     public static StatutDto Dto(StatutFe s) => new(s.FstId, s.FstFflId, s.FstNumeroFacture, s.FstSensFacture, s.FstCode, s.FstMotif, s.FstAction,
         s.FstMontant, s.FstTaux, s.FstEmetteur, s.FstSens, s.FstFflCdarId, s.FstGedCdarId, s.FstDate, JsonSerializer.Deserialize<JsonElement>(s.FstErreurs));

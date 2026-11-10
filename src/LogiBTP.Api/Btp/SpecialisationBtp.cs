@@ -442,8 +442,8 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
             if (type.TydCode == TypesDocument.EOe) await ExecutionBtp.FigerBudgetAsync(db, entId, "validation", ct);
             return;
         }
-        // Facture reçue par la plateforme (module Facturation électronique, lot 13) : Approuvée (205) à la validation.
-        if (type.TydCode is TypesDocument.AFacture or TypesDocument.TFactureAvt && Http?.HttpContext?.RequestServices is { } requete)
+        // Facture ou avoir reçu (module Facturation électronique, lots 13 et 14) : Approuvée (205) à la validation.
+        if (type.TydCode is TypesDocument.AFacture or TypesDocument.TFactureAvt or TypesDocument.AAvoir && Http?.HttpContext?.RequestServices is { } requete)
         {
             await new StatutsReceptionBtp(requete, requete.GetRequiredService<ILoggerFactory>().CreateLogger<StatutsReceptionBtp>())
                 .ApprouverAsync(entId, Utilisateur.Depuis(Http.HttpContext).Code, ct);

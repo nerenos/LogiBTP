@@ -113,6 +113,7 @@ modules/crm/db/099_crm_fil.sql
 modules/facture-electronique/db/099f_facture_electronique.sql rejouable
 modules/facture-electronique/db/099g_facture_electronique_reception.sql rejouable
 modules/facture-electronique/db/099h_facture_electronique_statuts.sql rejouable
+modules/facture-electronique/db/099i_facture_electronique_hors_plateforme.sql rejouable
 modules/rentabilite/db/099r_rentabilite.sql rejouable
 modules/relance/db/099t_relance.sql rejouable
 db/100_btp.sql

@@ -35,7 +35,8 @@ public class FactureElectroniqueBtpTests
         builder.Services.AddSingleton(new SocieteCourante(null, "Essai", "Host=localhost;Database=essai"));
         builder.Services.AddModuleFactureElectronique<SpecialisationFactureElectroniqueBtp>((_, o) => o.UseNpgsql("Host=localhost"), new ConfigurationBuilder().Build());
         var app = builder.Build();
-        app.MapGroup("/api").MapGroup("").ExigeModule(ModulesFacultatifs.FactureElectronique, "Facturation électronique").MapModuleFactureElectronique();
+        app.MapGroup("/api").MapGroup("").ExigeModule(ModulesFacultatifs.FactureElectronique, "Facturation électronique").MapModuleFactureElectronique()
+            .MapReceptionHorsPlateforme();
         return [.. ((IEndpointRouteBuilder)app).DataSources.SelectMany(d => d.Endpoints).OfType<RouteEndpoint>()
             .SelectMany(e => (e.Metadata.GetMetadata<HttpMethodMetadata>()?.HttpMethods ?? ["GET"]).Select(m => (e.RoutePattern.RawText!, m)))];
     }
@@ -95,6 +96,8 @@ public class FactureElectroniqueBtpTests
         Assert.False(Permis(modification, "/api/facture-electronique/parametres", "PUT", Saisie));
         Assert.True(Permis(modification, "/api/facture-electronique/parametres", "PUT", new Utilisateur("admin", Profils.Admin)));
         Assert.Contains(routes, x => x.Gabarit == "/api/facture-electronique/chronologie");
+        // Facture d'une pièce jointe d'un courriel (lot 14, route du cœur) : Modifier.
+        Assert.Contains(routes, x => x.Gabarit == "/api/facture-electronique/courriels/{id:long}/facture");
     }
 
     [Fact]

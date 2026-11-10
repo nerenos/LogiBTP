@@ -730,5 +730,6 @@
   "facture_electronique_btp_flux": "📋",
   "facture_electronique_btp_depot": "📤",
   "facture_electronique_btp_parametres": "⚙",
+  "facture_electronique_btp_importer": "📥",
   "document_btp_chronologie": "🕓"
 }

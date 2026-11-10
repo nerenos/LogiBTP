@@ -173,11 +173,47 @@ public class ReceptionFactureBtpTests
     }
 
     [Fact]
-    public void Avoirs_restent_a_traiter()
+    public void Avoirs_reconnus_par_le_type_BT3()
     {
         Assert.True(ReceptionFactureBtp.EstAvoir(TypeFacture.Avoir));
+        Assert.True(ReceptionFactureBtp.EstAvoir(TypeFacture.AvoirAcompte));
         Assert.False(ReceptionFactureBtp.EstAvoir(TypeFacture.Facture));
         Assert.False(ReceptionFactureBtp.EstAvoir(TypeFacture.Acompte));
+    }
+
+    /// <summary>Exemple d'avoir (381, UBL CreditNote et CII jumeaux) : facture d'origine BT-25, montants positifs gardés.</summary>
+    [Theory]
+    [InlineData("logibtp/AVOIR_F202500011_EN16931_UBL.xml")]
+    [InlineData("logibtp/AVOIR_F202500011_EN16931_CII.xml")]
+    public void Avoir_recu_lignes_positives_et_facture_d_origine(string relatif)
+    {
+        var f = Lecture.Lire(File.ReadAllBytes(Dossier(relatif))).Facture;
+        Assert.True(ReceptionFactureBtp.EstAvoir(f.TypeFacture));
+        Assert.Equal("F202500003", Assert.Single(f.FacturesAnterieures).Numero);
+        var p = ReceptionFactureBtp.EnPositif(ReceptionFactureBtp.PreparerLignes(f, Tva, Unites));
+        Assert.Equal(10000m, p.TotalLignes);
+        Assert.All(p.Lignes.Where(l => l.Type == TL.Element), l => Assert.True(l.Montant > 0));
+    }
+
+    [Fact]
+    public void Avoir_emis_en_negatif_remis_dans_le_sens_de_l_avoir_d_achat()
+    {
+        var f = Lecture.Lire(File.ReadAllBytes(Dossier("logibtp/AVOIR_F202500011_EN16931_CII.xml"))).Facture;
+        // Même avoir, quantités et montants négatifs (certains émetteurs) : quantités inversées, prix gardés.
+        var negatif = f with
+        {
+            Lignes = [.. f.Lignes.Select(l => l with { Quantite = -l.Quantite, MontantNet = -l.MontantNet })],
+            Totaux = f.Totaux with { TotalHt = -f.Totaux.TotalHt },
+        };
+        var brut = ReceptionFactureBtp.PreparerLignes(negatif, Tva, Unites);
+        Assert.Equal(-10000m, brut.TotalLignes);
+        var p = ReceptionFactureBtp.EnPositif(brut);
+        Assert.Equal((10000m, 10000m), (p.TotalLignes, p.TotalFacture));
+        var positif = ReceptionFactureBtp.PreparerLignes(f, Tva, Unites).Lignes.Where(l => l.Type == TL.Element).Select(l => (l.Qte, l.Pv, l.Montant));
+        Assert.Equal(positif, p.Lignes.Where(l => l.Type == TL.Element).Select(l => (l.Qte, l.Pv, l.Montant)));
+        // Avoir déjà positif : inchangé.
+        var deja = ReceptionFactureBtp.PreparerLignes(f, Tva, Unites);
+        Assert.Same(deja, ReceptionFactureBtp.EnPositif(deja));
     }
 
     // ---------------------------------------------------------------- de bout en bout (base jetable)
@@ -336,6 +372,91 @@ public class ReceptionFactureBtpTests
         Assert.Equal(numero, await Scalaire("SELECT ent_reference_externe FROM document WHERE ent_id = @e", ("e", entCommande)));
         Assert.Equal("BROUILLON", await Scalaire("SELECT s.std_code FROM document d JOIN statut_document s ON s.std_id = d.ent_std_id WHERE d.ent_id = @e", ("e", entCommande)));
         Assert.Equal((long)facture.Lignes.Count, await Scalaire("SELECT count(*) FROM document_ligne WHERE lig_ent_id = @e AND lig_tyl_id = @t", ("e", entCommande), ("t", (int)TL.Element)));
+    }
+
+    [Fact]
+    public async Task Facture_glissee_hors_plateforme_puis_avoir_recu_rattache_a_sa_facture()
+    {
+        if (await PreparerAsync() is not { } prepare) return;
+        var (c, services, _) = prepare;
+        await using var _c = c;
+        await using var _s = services;
+        async Task<object?> Scalaire(string sql, params (string, object)[] p)
+        {
+            await using var k = new NpgsqlCommand(sql, c);
+            foreach (var (n, v) in p) k.Parameters.AddWithValue(n, v);
+            var r = await k.ExecuteScalarAsync();
+            return r is DBNull ? null : r;
+        }
+        await using (var k = new NpgsqlCommand("SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE column_name = 'ffl_hors_plateforme')", c))
+        {
+            if (await k.ExecuteScalarAsync() is not true) return;
+        }
+        var admin = new Utilisateur("admin.test", Profils.Admin);
+        var numero = "F" + Random.Shared.NextInt64(100_000_000, 999_999_999);
+        var siren = Siren();
+        var contenu = FactureUnique(numero, siren);
+
+        // 1. Facture glissée (lot 14) : même pièce qu'un flux reçu (facture d'achat en brouillon, origine, GED), connecteur
+        //    MANUEL hors plateforme, Prise en charge gardée au journal sans CDAR.
+        FluxDto f;
+        FluxDetailDto d;
+        using (var scope = services.CreateScope())
+        {
+            var fe = scope.ServiceProvider.GetRequiredService<ServiceFactureElectronique>();
+            f = await fe.Importer(new ImportManuel($"{numero}.xml", Convert.ToBase64String(contenu), HorsPlateforme: true), admin, default);
+            d = await fe.Detail(f.Id, default);
+        }
+        Assert.Equal((EtatFlux.Traite, ConnecteurFe.Manuel, SensFlux.Entrant, true, TypesElementFe.Document), (f.Etat, f.Connecteur, f.Sens, f.HorsPlateforme, f.TypeElement));
+        var ent = long.Parse(f.IdElement!);
+        var facture = Lecture.Lire(contenu).Facture;
+        Assert.Equal(TypesDocument.AFacture, await Scalaire("SELECT t.tyd_code FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id WHERE d.ent_id = @e", ("e", ent)));
+        Assert.Equal("BROUILLON", await Scalaire("SELECT s.std_code FROM document d JOIN statut_document s ON s.std_id = d.ent_std_id WHERE d.ent_id = @e", ("e", ent)));
+        Assert.Equal(facture.Totaux.TotalHt, (decimal)(await Scalaire("SELECT ent_total_ht FROM document WHERE ent_id = @e", ("e", ent)))!);
+        Assert.Equal(numero, await Scalaire("SELECT ent_reference_externe FROM document WHERE ent_id = @e", ("e", ent)));
+        Assert.Equal(f.GedOriginalId, await Scalaire("SELECT dor_fichier_id FROM document_origine WHERE dor_ent_id = @e", ("e", ent)));
+        Assert.Equal(true, await Scalaire("SELECT (dor_rapport->>'hors_plateforme')::boolean FROM document_origine WHERE dor_ent_id = @e", ("e", ent)));
+        Assert.Equal([EvenementFe.ImportManuel, EvenementFe.Lecture, EvenementFe.PieceCreee, EvenementFe.Rattachement, EvenementFe.StatutPose], d.Chronologie.Select(x => x.Type));
+        Assert.Null(Assert.Single(d.Statuts).FluxCdarId);
+        Assert.Equal(0L, await Scalaire("SELECT count(*) FROM fe_flux WHERE ffl_syntaxe = 'CDAR' AND ffl_type_element = 'DOCUMENT' AND ffl_id_element = @e", ("e", ent.ToString(System.Globalization.CultureInfo.InvariantCulture))));
+        Assert.Equal(true, await Scalaire("SELECT a_traiter FROM v_liste_fe_recues WHERE flux_id = @f", ("f", f.Id)));
+
+        // 2. Avoir reçu (UBL CreditNote 381) sur cette facture : avoir d'achat en brouillon, montants positifs, facture d'origine rattachée.
+        var numeroAvoir = "A" + Random.Shared.NextInt64(100_000_000, 999_999_999);
+        var xml = Encoding.UTF8.GetString(File.ReadAllBytes(Dossier("logibtp/AVOIR_F202500011_EN16931_UBL.xml")))
+            .Replace("F202500011", numeroAvoir).Replace("F202500003", numero).Replace("100000009", siren);
+        FluxDto a;
+        using (var scope = services.CreateScope())
+            a = await scope.ServiceProvider.GetRequiredService<ServiceFactureElectronique>()
+                .ImporterHorsPlateformeAsync(Encoding.UTF8.GetBytes(xml), $"{numeroAvoir}.xml", new { essai = true }, admin, default);
+        Assert.Equal((EtatFlux.Traite, Syntaxe.Ubl), (a.Etat, a.Syntaxe));
+        var avoir = long.Parse(a.IdElement!);
+        Assert.Equal(TypesDocument.AAvoir, await Scalaire("SELECT t.tyd_code FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id WHERE d.ent_id = @e", ("e", avoir)));
+        Assert.Equal("BROUILLON", await Scalaire("SELECT s.std_code FROM document d JOIN statut_document s ON s.std_id = d.ent_std_id WHERE d.ent_id = @e", ("e", avoir)));
+        Assert.Equal(10000m, (decimal)(await Scalaire("SELECT ent_total_ht FROM document WHERE ent_id = @e", ("e", avoir)))!);
+        Assert.Equal(await Scalaire("SELECT ent_tiers_id FROM document WHERE ent_id = @e", ("e", ent)), await Scalaire("SELECT ent_tiers_id FROM document WHERE ent_id = @e", ("e", avoir)));
+        Assert.Equal(1L, await Scalaire("SELECT count(*) FROM document_lien WHERE lie_source_ent_id = @f AND lie_cible_ent_id = @a AND lie_type = 'TRANSFORMATION'", ("f", ent), ("a", avoir)));
+        Assert.Equal(ent, await Scalaire("SELECT (dor_rapport->'facture_origine'->>'id')::bigint FROM document_origine WHERE dor_ent_id = @e", ("e", avoir)));
+
+        // 3. Même avoir glissé une seconde fois : doublon refusé (avoir déjà enregistré), resté à traiter.
+        using (var scope = services.CreateScope())
+        {
+            var fe = scope.ServiceProvider.GetRequiredService<ServiceFactureElectronique>();
+            var bis = await fe.ImporterHorsPlateformeAsync(Encoding.UTF8.GetBytes(xml), $"{numeroAvoir}-bis.xml", null, admin, default);
+            Assert.Equal((EtatFlux.Recu, null), (bis.Etat, bis.IdElement));
+            Assert.Equal(ErreurFe.FactureEnDouble, Assert.Single((await fe.Detail(bis.Id, default)).Erreurs).Code);
+        }
+
+        // 4. GED : un même contenu n'est rangé qu'une fois pour la pièce (brouillon repris : lisible, pièces jointes).
+        using (var scope = services.CreateScope())
+        {
+            var reception = new ReceptionFactureBtp(scope.ServiceProvider, NullLogger.Instance, admin);
+            var groupe = (long)(await Scalaire("SELECT coalesce(ent_groupe_id, ent_id) FROM document WHERE ent_id = @e", ("e", avoir)))!;
+            var octets = Encoding.UTF8.GetBytes($"lisible {numeroAvoir}");
+            var premier = await reception.DeposerAsync(TypesDocument.AAvoir, groupe, "lisible.txt", octets, "text/plain", "Lisible", null, default);
+            Assert.NotNull(premier);
+            Assert.Equal(premier, await reception.DeposerAsync(TypesDocument.AAvoir, groupe, "lisible-bis.txt", octets, "text/plain", "Lisible", null, default));
+        }
     }
 
     /// <summary>Base jetable complète prête pour la réception (module actif, plateforme simulée), ou null sans base.</summary>
