@@ -1,0 +1,12 @@
+/* Module Facturation électronique : couleurs des écrans (pastilles d'état, chronologie), surchargeables par le cœur et l'installation. */
+:root {
+  --fe-succes: #15803d;
+  --fe-attente: #b45309;
+  --fe-erreur: #b91c1c;
+  --fe-neutre: #6b7280;
+  --fe-pastille-fond: color-mix(in srgb, currentColor 12%, transparent);
+  --fe-chrono-trait: color-mix(in srgb, var(--accent) 40%, transparent);
+  --fe-chrono-plateforme: color-mix(in srgb, var(--accent) 10%, transparent);
+  --fe-chrono-utilisateur: color-mix(in srgb, #7c3aed 10%, transparent);
+  --fe-chrono-erreur: color-mix(in srgb, #b91c1c 10%, transparent);
+}

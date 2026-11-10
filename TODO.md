@@ -93,11 +93,15 @@ Analyse du 23/10/2026 : [ANALYSE-MODULE-SOUS-TRAITANCE.md](documentation/concept
   (schematrons FNFE par SaxonJS, outil `npm run valider-facture`), lot 5 le 09/11/2026 (CDAR : écriture et lecture des
   statuts), lot 6 le 09/11/2026 (connecteurs : AFNOR XP Z12-013, plateforme simulée, dépôt manuel), lot 7 le
   10/11/2026 (OAuth GENERIQUE en flux CLIENT), lot 8 le 10/11/2026 (schéma, file avec reprises, statuts, journal des
-  étapes chaîné, relève par curseur, service et routes `/api/facture-electronique`) ; en attendant, saisie
-  libre des factures reçues (ST22).
+  étapes chaîné, relève par curseur, service et routes `/api/facture-electronique`), lot 9 le 10/11/2026 (écrans du
+  module, chronologie réutilisable, page de démonstration) ; en attendant, saisie libre des factures reçues (ST22).
   - [ ] **SQL à appliquer par l'utilisateur** (lot 8, jamais appliqué par Claude) : `modules/facture-electronique/db/099f_facture_electronique.sql`
     (rejouable, au manifeste) sur `logibtp` et `logibtp_demo` par `installation base mettre-a-jour` ; le module n'est
     pas encore branché dans le cœur (lot 11 : droits des routes, spécialisation, tâche de fond).
+  - [ ] Écrans du lot 9 vérifiés par leurs tests et par un rendu sans affichage (Chrome headless) de la page de
+    démonstration (`npm run demo --workspace @logibtp/facture-electronique`, port 5181) : essayer en navigateur les
+    fenêtres (accusé du dépôt manuel, import d'un fichier, nouvelle tentative), les combos des filtres, les dates et
+    les raccourcis, puis sur l'API réelle quand le cœur aura branché le module (lot 11).
 
 ### Import
 

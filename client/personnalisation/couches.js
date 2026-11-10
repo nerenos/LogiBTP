@@ -19,6 +19,7 @@ export const COUCHES = [
   dossier('../../modules/edition/js/personnalisation'),
   dossier('../../modules/entreprises-fr/js/personnalisation'),
   dossier('../../modules/execution/js/personnalisation'),
+  dossier('../../modules/facture-electronique/js/personnalisation'),
   dossier('../../modules/fiche/js/personnalisation'),
   dossier('../../modules/ged/js/personnalisation'),
   dossier('../../modules/graphe/js/personnalisation'),

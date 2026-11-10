@@ -1,0 +1,29 @@
+{
+  "description": "Contrôle des paramètres du module avant l'enregistrement (js/ui/modeles.js controlerParametres ↔ ReglesParametresFe.Controler) : champs en défaut dans l'ordre du formulaire, vide = valables. Chaque cas modifie les paramètres de base.",
+  "connecteurs": ["AFNOR", "SIMULE", "MANUEL"],
+  "base": {
+    "actif": true, "connecteur": "SIMULE", "connexion_oauth": null, "adresse_flux": null, "adresse_annuaire": null,
+    "organisation": null, "adresse_electronique": "123456789_FACTURES", "schema_adresse": "0225", "syntaxe": "CII",
+    "profil": "CIUS", "frequence_releve": 15, "delai_secondes": 30, "decoupage_ereporting": "UNIQUE"
+  },
+  "cas": [
+    {"nom": "plateforme simulée sans adresse", "modif": {}, "attendu": []},
+    {"nom": "connecteur inconnu", "modif": {"connecteur": "AUTRE"}, "attendu": ["connecteur"]},
+    {"nom": "AFNOR sans adresse ni connexion", "modif": {"connecteur": "AFNOR"}, "attendu": ["adresse_flux", "connexion_oauth"]},
+    {"nom": "AFNOR complet", "modif": {"connecteur": "AFNOR", "adresse_flux": "https://pa.exemple.fr/flow", "connexion_oauth": 3}, "attendu": []},
+    {"nom": "AFNOR adresse blanche", "modif": {"connecteur": "AFNOR", "adresse_flux": "   ", "connexion_oauth": 3}, "attendu": ["adresse_flux"]},
+    {"nom": "adresse relative", "modif": {"adresse_flux": "pa.exemple.fr/flow"}, "attendu": ["adresse_flux"]},
+    {"nom": "adresse FTP", "modif": {"adresse_annuaire": "ftp://pa.exemple.fr"}, "attendu": ["adresse_annuaire"]},
+    {"nom": "adresse avec espace", "modif": {"adresse_annuaire": "https://pa exemple.fr"}, "attendu": ["adresse_annuaire"]},
+    {"nom": "adresses http entourées d'espaces", "modif": {"adresse_flux": " http://localhost:5080/flow ", "adresse_annuaire": "https://pa.exemple.fr/annuaire"}, "attendu": []},
+    {"nom": "organisation de 64 caractères", "modif": {"organisation": "0123456789012345678901234567890123456789012345678901234567890123"}, "attendu": []},
+    {"nom": "organisation de 65 caractères", "modif": {"organisation": "01234567890123456789012345678901234567890123456789012345678901234"}, "attendu": ["organisation"]},
+    {"nom": "syntaxe CDAR refusée", "modif": {"syntaxe": "CDAR"}, "attendu": ["syntaxe"]},
+    {"nom": "Factur-X EXTENDED-CTC-FR", "modif": {"syntaxe": "Factur-X", "profil": "Extended-CTC-FR"}, "attendu": []},
+    {"nom": "profil non défini refusé", "modif": {"profil": "Undefined"}, "attendu": ["profil"]},
+    {"nom": "fréquence aux bornes", "modif": {"frequence_releve": 1440, "delai_secondes": 5}, "attendu": []},
+    {"nom": "fréquence et délai hors bornes", "modif": {"frequence_releve": 0, "delai_secondes": 601}, "attendu": ["frequence_releve", "delai_secondes"]},
+    {"nom": "découpage inconnu", "modif": {"decoupage_ereporting": "MENSUEL"}, "attendu": ["decoupage_ereporting"]},
+    {"nom": "tout faux, dans l'ordre du formulaire", "modif": {"connecteur": "AFNOR", "adresse_annuaire": "x", "syntaxe": "X", "profil": "X", "frequence_releve": 2000, "delai_secondes": 1, "decoupage_ereporting": ""}, "attendu": ["adresse_flux", "adresse_annuaire", "connexion_oauth", "syntaxe", "profil", "frequence_releve", "delai_secondes", "decoupage_ereporting"]}
+  ]
+}

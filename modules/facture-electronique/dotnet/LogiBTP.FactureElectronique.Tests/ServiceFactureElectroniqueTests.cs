@@ -138,6 +138,13 @@ public sealed class ServiceFactureElectroniqueTests : IAsyncLifetime
         Assert.Equal(TypeDocumentFlux.Original, Assert.Single(d.Fichiers).Document);
         Assert.Equal(Facture(), (await s.Fichier(f.Id, null, default)).Contenu);
         Assert.Single(await s.Chronologie(null, "DOCUMENT", numero, default), x => x.Type == EvenementFe.Depot);
+        Assert.DoesNotContain(await s.Liste(new FiltreFlux(Erreurs: true, Limite: 500), default), x => x.Id == f.Id);
+        Assert.Contains(await s.Liste(new FiltreFlux(Erreurs: false, Limite: 500), default), x => x.Id == f.Id);
+        // Filtre des jours de création (horloge du test : 10/11/2026), bornes comprises.
+        var jour = DateOnly.FromDateTime(horloge.GetUtcNow().UtcDateTime);
+        Assert.Contains(await s.Liste(new FiltreFlux(Du: jour, Au: jour, Limite: 500), default), x => x.Id == f.Id);
+        Assert.DoesNotContain(await s.Liste(new FiltreFlux(Du: jour.AddDays(1), Limite: 500), default), x => x.Id == f.Id);
+        Assert.DoesNotContain(await s.Liste(new FiltreFlux(Au: jour.AddDays(-1), Limite: 500), default), x => x.Id == f.Id);
     }
 
     [Fact]
@@ -179,6 +186,12 @@ public sealed class ServiceFactureElectroniqueTests : IAsyncLifetime
         var g = await s.MettreEnFileAsync(new FluxAEmettre(Facture("C"), $"{numero}C.xml"), null, default);
         Assert.Equal(new ResultatFile(0, 0, 1), await file.TraiterAsync(10, default));
         Assert.Equal(["PRODUCTION:>A_ENVOYER", "ERREUR:A_ENVOYER>ERREUR"], await Etapes(db, g.Id));
+
+        // Filtre du tableau des flux : avec erreur enregistrée.
+        var enErreur = await s.Liste(new FiltreFlux(Sens: SensFlux.Sortant, Erreurs: true, Limite: 500), default);
+        Assert.Contains(enErreur, x => x.Id == f.Id);
+        Assert.Contains(enErreur, x => x.Id == g.Id);
+        Assert.DoesNotContain(await s.Liste(new FiltreFlux(Erreurs: false, Limite: 500), default), x => x.Id == g.Id);
     }
 
     [Fact]

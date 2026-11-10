@@ -33,7 +33,7 @@
 | 6 | Connecteur : contrat, AFNOR XP Z12-013 (Flow, Directory), plateforme simulée, dépôt manuel | module | 1, 5 | FAIT (09/11/2026) |
 | 7 | OAuth : flux CLIENT pour un fournisseur GENERIQUE (si absent) | `modules/oauth` | — | FAIT (10/11/2026) |
 | 8 | Schéma, file des flux, statuts, **journal des étapes chaîné**, relève par base, service et routes | module | 6 | FAIT (10/11/2026) |
-| 9 | Écrans du module : paramètres, tableau des flux, détail et chronologie, dépôt et import manuels | module | 8 | A FAIRE |
+| 9 | Écrans du module : paramètres, tableau des flux, détail et chronologie, dépôt et import manuels | module | 8 | FAIT (10/11/2026) |
 | 10 | Catégories de TVA : catégorie EN16931 et code VATEX | `modules/comptabilite` | — | A FAIRE |
 | 11 | Branchement du cœur : activation, droits, spécialisation, paramètres, notifications, onglet Chronologie | cœur | 8, 9, 7 | A FAIRE |
 | 12 | Réception : flux reçu → pièce d'achat ou de sous-traitance en brouillon, rattachements, liste à traiter | cœur | 11, 2, 3, 10 | A FAIRE |
@@ -366,7 +366,7 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   rattachées aux droits tant que le cœur ne les monte pas (lot 11). **Script à appliquer par l'utilisateur** :
   `099f_facture_electronique.sql` (par `installation base mettre-a-jour`).
 
-## Lot 9 : écrans du module (A FAIRE)
+## Lot 9 : écrans du module — FAIT (10/11/2026)
 
 - **Module** : `modules/facture-electronique`. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `js/ui/parametres-fe.js` (connecteur, connexion OAuth, adresses, formats, essai de connexion
@@ -378,6 +378,32 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   `activerDates` ; raccourcis par `declarerRaccourcis`.
 - **Critère de fin** : `npm test` vert ; écrans montés dans la page de démonstration du module avec la plateforme
   simulée.
+- **Réalisé** : `js/ui/` : `modeles.js` (fonctions pures : `controlerParametres` ↔ `ReglesParametresFe.Controler`
+  (nouveau, C#, jeu partagé `tests/cas/02_parametres.json`, utilisé par `EnregistrerParametres` : PARAMETRE_INVALIDE
+  liste les champs en défaut), requête et pages du tableau, gravités, `actionsFlux` comme le serveur (nouvelle
+  tentative, dépôt manuel en attente), documents proposés, chronologie par jour, détail JSON à plat, base 64),
+  `parametres-fe.js` (`ParametresFe` : connecteur, connexion OAuth fournie par l'hôte, adresses, Organization-Id,
+  adresse électronique, syntaxe, profil, relève, délai, découpage ; essai `GET /sante` sur les paramètres enregistrés,
+  enregistrement proposé d'abord s'ils sont modifiés), `tableau-flux.js` (`TableauFlux` : filtres sens, état, type,
+  statut affiché, erreurs, jours de création, gardés dans le `localStorage` ; pages par identifiant ; relève à la
+  demande ; vérification de la chaîne du journal), `detail-flux.js` (`DetailFlux` : métadonnées, accusé, fichiers à
+  télécharger, statuts, erreurs, chronologie ; nouvelle tentative confirmée, accusé du dépôt manuel),
+  `chronologie.js` (`Chronologie` et `chronologieHtml`, réutilisables par le cœur : étapes par jour, type, acteur,
+  avant → après (état de file ou statut), détail et empreinte dépliables, préférence du navigateur ; mode élément
+  avec lien vers chaque flux), `depot-manuel.js` (`PanneauDepotManuel`, `confirmerDepotManuel`, `importerFichier`,
+  `telechargerDocumentFlux`), `api.js` (`creerApiFe` : routes du module sur le transport de l'hôte), `index.js`,
+  `facture-electronique.css` ; `js/personnalisation/` (`fr.json`, `images/icones.json`, `theme.css`), couche déclarée
+  dans `client/personnalisation/couches.js` ; raccourcis par groupe (`facture_electronique_*`). Routes : filtres
+  `erreurs` (avec ou sans `fe_erreur`) et `du` / `au` (jours de création, UTC) ajoutés à `GET /flux` (testés dans
+  `ServiceFactureElectroniqueTests`). Page de démonstration `js/demo/` (`npm run demo --workspace
+  @logibtp/facture-electronique`, Vite ajouté en développement) : API simulée en mémoire au comportement de la
+  plateforme simulée (accusé Ok ou Error « REJET », statuts 200 → 205, dépôt manuel, import, journal chaîné), onglets
+  Paramètres, Flux, Dépôt manuel, Chronologie d'une pièce, détail par `#flux=<id>`. Tests JS : `modeles.test.js`
+  (jeu partagé, tableau, actions, chronologie), `ecrans.test.js` (clés, icônes, codes, ni fenêtre, `<select>`,
+  touche, couleur ni stockage en dur, démonstration comprise), `import.test.js` (raccourcis, routes) ; module : 304
+  tests JS, 305 C#. Écarts : statut affiché filtré sur les flux chargés (calculé, pas en base) ; le module Liste ne s'y
+  prête pas (vues générées par le cœur) ; connexions OAuth fournies par l'hôte (le module ne dépend pas d'OAuth) ;
+  écrans rendus en Chrome sans affichage, fenêtres non essayées en navigateur (TODO). Aucun SQL.
 
 ## Lot 10 : catégories de TVA, catégorie EN16931 et VATEX (A FAIRE)
 

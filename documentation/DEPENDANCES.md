@@ -145,6 +145,7 @@
 | Type | Dépendance | Version | Licence | Usage |
 |---|---|---|---|---|
 | npm | saxon-js | 2.7.0 | SEE LICENSE IN LICENSE.txt | développement (modules/facture-electronique/js) |
+| npm | vite | 7.3.7 | MIT | développement (modules/facture-electronique/js) |
 | npm | vitest | 5.1.0 | MIT | développement (modules/facture-electronique/js) |
 | npm | xmllint-wasm | 5.3.0 | MIT | développement (modules/facture-electronique/js) |
 | npm | xslt3 | 2.7.0 | SEE LICENSE IN LICENSE.txt | développement (modules/facture-electronique/js) |

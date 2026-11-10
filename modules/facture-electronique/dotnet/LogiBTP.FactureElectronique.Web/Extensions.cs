@@ -77,7 +77,8 @@ public static class Extensions
             s.EnregistrerParametres(p, Utilisateur.Depuis(http), ct));
         g.MapGet("/sante", (ServiceFactureElectronique s, CancellationToken ct) => s.Sante(ct));
         g.MapGet("/flux", (string? sens, string? etat, string? type, string? type_element, string? id_element, long? avant, int? limite,
-            ServiceFactureElectronique s, CancellationToken ct) => s.Liste(new FiltreFlux(sens, etat, type, type_element, id_element, avant, limite), ct));
+            bool? erreurs, DateOnly? du, DateOnly? au, ServiceFactureElectronique s, CancellationToken ct) =>
+            s.Liste(new FiltreFlux(sens, etat, type, type_element, id_element, avant, limite, erreurs, du, au), ct));
         g.MapGet("/flux/{id:long}", (long id, ServiceFactureElectronique s, CancellationToken ct) => s.Detail(id, ct));
         g.MapGet("/flux/{id:long}/fichier", async (long id, string? document, ServiceFactureElectronique s, CancellationToken ct) =>
         {

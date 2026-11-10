@@ -1,0 +1,35 @@
+/* Module Facturation électronique : paramètres, tableau des flux, détail, chronologie, dépôt manuel. Couleurs : variables de personnalisation/theme.css. */
+.fe-actions, .fe-filtres { display: flex; flex-wrap: wrap; gap: 0.75em; align-items: center; }
+.fe-table td.montant, .fe-table th.montant { text-align: right; white-space: nowrap; }
+.fe-table tr[data-flux] { cursor: pointer; }
+.fe-parametres th { text-align: left; font-weight: normal; padding-right: 1em; }
+.fe-parametres input[type="number"] { width: 6em; }
+.fe-parametres [aria-invalid="true"] { outline: 2px solid var(--fe-erreur); }
+.fe-erreurs, .fe-erreurs li { color: var(--fe-erreur); list-style: none; padding-left: 0; }
+.fe-sante.fe-succes { color: var(--fe-succes); }
+.fe-sante.fe-erreur, p.fe-erreur { color: var(--fe-erreur); }
+.fe-pastille { display: inline-block; border-radius: 3px; padding: 0 0.4em; font-size: 0.9em; background: var(--fe-pastille-fond); white-space: nowrap; }
+.fe-pastille.fe-succes { color: var(--fe-succes); }
+.fe-pastille.fe-attente { color: var(--fe-attente); }
+.fe-pastille.fe-erreur { color: var(--fe-erreur); }
+.fe-pastille.fe-neutre { color: var(--fe-neutre); }
+.fe-erreur-courte { max-width: 24em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fe-erreur); }
+.fe-detail { display: grid; gap: 1em; grid-template-columns: repeat(auto-fit, minmax(28em, 1fr)); }
+.fe-detail-chronologie { grid-column: 1 / -1; }
+.fe-meta { display: grid; grid-template-columns: max-content 1fr; gap: 0.2em 1em; margin: 0; }
+.fe-meta dt { opacity: 0.8; }
+.fe-meta dd { margin: 0; overflow-wrap: anywhere; }
+.fe-chrono-entete { display: flex; gap: 1em; align-items: center; }
+.fe-chrono-jour h4 { margin: 0.75em 0 0.25em; }
+.fe-chrono { list-style: none; margin: 0; padding-left: 1em; border-left: 2px solid var(--fe-chrono-trait); }
+.fe-etape { display: flex; flex-wrap: wrap; gap: 0.25em 1em; padding: 0.3em 0.5em; margin-block: 0.2em; border-radius: 3px; }
+.fe-etape-plateforme { background: var(--fe-chrono-plateforme); }
+.fe-etape-utilisateur { background: var(--fe-chrono-utilisateur); }
+.fe-etape-erreur { background: var(--fe-chrono-erreur); color: var(--fe-erreur); }
+.fe-chrono-heure { font-variant-numeric: tabular-nums; opacity: 0.8; }
+.fe-chrono-type { font-weight: 600; }
+.fe-etat-avant { opacity: 0.7; }
+.fe-chrono-acteur { opacity: 0.85; }
+.fe-chrono-detail { flex-basis: 100%; display: grid; grid-template-columns: max-content 1fr; gap: 0 1em; margin: 0.2em 0 0 1.5em; font-size: 0.9em; }
+.fe-chrono-detail dd { margin: 0; overflow-wrap: anywhere; }
+.fe-chrono-empreinte { flex-basis: 100%; font-family: monospace; font-size: 0.85em; opacity: 0.7; margin-left: 1.5em; }

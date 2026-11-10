@@ -41,9 +41,9 @@ public sealed record FichierDto(string Document, string Nom, string TypeMime, lo
 /// <summary>Détail d'un flux : statuts, erreurs, fichiers, chronologie.</summary>
 public sealed record FluxDetailDto(FluxDto Flux, List<StatutDto> Statuts, List<ErreurDto> Erreurs, List<FichierDto> Fichiers, List<EvenementDto> Chronologie);
 
-/// <summary>Filtre de la liste des flux (page par identifiant décroissant : <see cref="Avant"/> = dernier identifiant de la page précédente).</summary>
+/// <summary>Filtre de la liste des flux (<see cref="Erreurs"/> : avec ou sans erreur enregistrée ; <see cref="Du"/> / <see cref="Au"/> : jours de création, bornes comprises, en UTC ; page par identifiant décroissant : <see cref="Avant"/> = dernier identifiant de la page précédente).</summary>
 public sealed record FiltreFlux(string? Sens = null, string? Etat = null, string? Type = null, string? TypeElement = null, string? IdElement = null,
-    long? Avant = null, int? Limite = null);
+    long? Avant = null, int? Limite = null, bool? Erreurs = null, DateOnly? Du = null, DateOnly? Au = null);
 
 /// <summary>
 /// Flux à émettre, produit par l'application : contenu et nom ; syntaxe (détectée si absente), profil et numéro (lus
@@ -110,19 +110,9 @@ public class ServiceFactureElectronique(
     public async Task<ParametresFeDto> EnregistrerParametres(ParametresFeDto d, Utilisateur u, CancellationToken ct)
     {
         specialisation.ExigerParametrage(u);
-        static ExceptionMetier Invalide(string m) => ExceptionMetier.Invalide(ErreurFe.ParametreInvalide, m);
-        if (!fabrique.Codes.Contains(d.Connecteur)) throw Invalide($"Connecteur inconnu : {d.Connecteur}");
-        if (d.Syntaxe is not (Syntaxe.Cii or Syntaxe.Ubl or Syntaxe.FacturX)) throw Invalide($"Syntaxe inconnue : {d.Syntaxe}");
-        if (d.Profil is not (ProfilFacture.Basic or ProfilFacture.En16931 or ProfilFacture.ExtendedCtcFr)) throw Invalide($"Profil inconnu : {d.Profil}");
-        if (d.DecoupageEreporting is not (DecoupageEreporting.Unique or DecoupageEreporting.Plusieurs)) throw Invalide("Découpage de l'e-reporting inconnu");
-        if (d.FrequenceReleve is < 1 or > 1440) throw Invalide("Fréquence de relève de 1 à 1440 minutes");
-        if (d.DelaiSecondes is < 5 or > 600) throw Invalide("Délai d'attente de 5 à 600 secondes");
-        foreach (var a in new[] { d.AdresseFlux, d.AdresseAnnuaire })
-            if (!string.IsNullOrWhiteSpace(a) && !(Uri.TryCreate(a, UriKind.Absolute, out var uri) && uri.Scheme is "https" or "http"))
-                throw Invalide($"Adresse invalide : {a}");
-        if (d.Connecteur == ConnecteurFe.Afnor && (string.IsNullOrWhiteSpace(d.AdresseFlux) || d.ConnexionOauth is null))
-            throw Invalide("Connecteur AFNOR : adresse du Flow Service et connexion OAuth obligatoires");
-        if (d.Organisation is { Length: > ConnecteurPlateforme.LongueurIdentifiant }) throw Invalide("Organisation de 64 caractères au plus");
+        var champs = ReglesParametresFe.Controler(d, fabrique.Codes);
+        if (champs.Count > 0)
+            throw ExceptionMetier.Invalide(ErreurFe.ParametreInvalide, string.Join(" ; ", champs.Select(c => $"{c} : {ReglesParametresFe.Messages[c]}")));
 
         var p = await db.Parametres.FirstOrDefaultAsync(ct);
         if (p is null) db.Parametres.Add(p = new ParametreFe());
@@ -608,6 +598,9 @@ public class ServiceFactureElectronique(
         if (filtre.Etat is not null) q = q.Where(f => f.FflEtat == filtre.Etat);
         if (filtre.Type is not null) q = q.Where(f => f.FflType == filtre.Type);
         if (filtre.TypeElement is not null) q = q.Where(f => f.FflTypeElement == filtre.TypeElement && f.FflIdElement == filtre.IdElement);
+        if (filtre.Erreurs is bool erreurs) q = q.Where(f => db.Erreurs.Any(e => e.FerFflId == f.FflId) == erreurs);
+        if (filtre.Du is DateOnly du) { var d = new DateTimeOffset(du.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero); q = q.Where(f => f.FflCreeLe >= d); }
+        if (filtre.Au is DateOnly au) { var a = new DateTimeOffset(au.AddDays(1).ToDateTime(TimeOnly.MinValue), TimeSpan.Zero); q = q.Where(f => f.FflCreeLe < a); }
         if (filtre.Avant is long avant) q = q.Where(f => f.FflId < avant);
         var lignes = await q.OrderByDescending(f => f.FflId).Take(Math.Clamp(filtre.Limite ?? 50, 1, 500)).ToListAsync(ct);
         var ids = lignes.Select(f => f.FflId).ToList();
