@@ -180,6 +180,7 @@ public sealed class PassageFactureElectronique(IServiceProvider services, IOptio
             {
                 await using var portee = services.CreerPorteeSociete(societe);
                 var sp = portee.ServiceProvider;
+                if (!await sp.GetRequiredService<SpecialisationFactureElectronique>().ActifAsync(ct)) continue;
                 if (!(await sp.GetRequiredService<ServiceFactureElectronique>().ParametreAsync(ct)).FpaActif) continue;
                 await sp.GetRequiredService<FileFlux>().TraiterAsync(options.Value.FluxParPassage, ct);
                 await sp.GetRequiredService<ReleveFlux>().ReleverAsync(false, null, ct);

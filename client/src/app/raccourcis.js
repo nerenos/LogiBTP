@@ -30,6 +30,7 @@ declarerRaccourcis('document', {
     ongletPieces: { libelle: texte('navigation_btp.raccourcis.document.ongletPieces'), defaut: 'Alt+5' },
     ongletSuivi: { libelle: texte('navigation_btp.raccourcis.document.ongletSuivi'), defaut: 'Alt+6' },
     ongletOptions: { libelle: texte('navigation_btp.raccourcis.document.ongletOptions'), defaut: 'Alt+8' },
+    ongletChronologie: { libelle: texte('navigation_btp.raccourcis.document.ongletChronologie'), defaut: 'Alt+9' },
     rechercher: { libelle: texte('navigation_btp.raccourcis.document.rechercher'), defaut: 'Ctrl+F' },
     valider: { libelle: texte('navigation_btp.raccourcis.document.valider'), defaut: [] },
     transformer: { libelle: texte('navigation_btp.raccourcis.document.transformer'), defaut: [] },
@@ -75,4 +76,4 @@ declarerRaccourcis('pointage', {
 });
 
 /** Onglet de la page document désigné par une action. */
-export const ONGLETS_DOCUMENT = { ongletEntete: 'entete', ongletReglements: 'reglements', ongletLignes: 'lignes', ongletAnalyse: 'analyse', ongletPieces: 'pieces', ongletSuivi: 'suivi', ongletOptions: 'options' };
+export const ONGLETS_DOCUMENT = { ongletEntete: 'entete', ongletReglements: 'reglements', ongletLignes: 'lignes', ongletAnalyse: 'analyse', ongletPieces: 'pieces', ongletSuivi: 'suivi', ongletOptions: 'options', ongletChronologie: 'chronologie' };

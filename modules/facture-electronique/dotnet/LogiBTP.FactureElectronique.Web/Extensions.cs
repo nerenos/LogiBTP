@@ -28,7 +28,9 @@ public static class Extensions
         services.TryAddSingleton(s => new PlateformesSimulees(s.GetRequiredService<TimeProvider>(),
             magasin is null ? null : b => magasin(b, ConnecteurFe.Simule), simulation));
         services.TryAddSingleton(_ => new DepotsManuels(magasin is null ? null : b => magasin(b, ConnecteurFe.Manuel)));
-        services.TryAddSingleton(s => new FabriqueConnecteurs(s, s.GetServices<EnregistrementConnecteur>()));
+        // Fabrique par portée : le jeton (IFournisseurJeton, module OAuth) et la société sont ceux de la requête ou de la
+        // portée de la base (tâche de fond), jamais ceux du conteneur racine.
+        services.TryAddScoped(s => new FabriqueConnecteurs(s, s.GetServices<EnregistrementConnecteur>()));
         return services;
     }
 
@@ -46,7 +48,8 @@ public static class Extensions
         where TSpecialisation : SpecialisationFactureElectronique
     {
         services.AddDbContext<FactureElectroniqueDbContext>(options);
-        services.AddSingleton<SpecialisationFactureElectronique, TSpecialisation>();
+        // Spécialisation par portée : l'application y lit les services de la requête ou de la base (GED, notifications…).
+        services.AddScoped<SpecialisationFactureElectronique, TSpecialisation>();
         services.TryAddSingleton<MagasinsFluxBase>();
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton(s => new PlateformesSimulees(s.GetRequiredService<TimeProvider>(),

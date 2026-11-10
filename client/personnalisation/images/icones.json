@@ -723,5 +723,11 @@
   "terrain_btp_reserve_levee": "✔",
   "execution_btp_reserve_ouverte": "📌",
   "execution_btp_reserve_levee": "✔",
-  "execution_btp_facturer": "🧾"
+  "execution_btp_facturer": "🧾",
+  "navigation_btp_facture_electronique": "🧾",
+  "facture_electronique_btp_page": "🧾",
+  "facture_electronique_btp_flux": "📋",
+  "facture_electronique_btp_depot": "📤",
+  "facture_electronique_btp_parametres": "⚙",
+  "document_btp_chronologie": "🕓"
 }

@@ -57,6 +57,8 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
             new("reglement", "Règlements", Simple, Icone: "💶"),
             new(SpecialisationRelanceBtp.Noeud, "Relances", [ActionsDroits.Consulter, ActionsDroits.Creer, ActionsDroits.Valider], Portee: true, Icone: "📨",
                 Aide: "Devis envoyés et factures à reste échu ; Créer : préparer un lot ; Valider : envoyer, noter une relance faite, saisir un numéro de recommandé ; portée : pièces dont on est le chargé (soi, son équipe, son service) ou tout"),
+            new(SpecialisationFactureElectroniqueBtp.Noeud, "Facturation électronique", Lecture, Icone: "🧾",
+                Aide: "Flux émis et reçus de la plateforme agréée, statuts, chronologie des pièces ; Modifier : nouvelle tentative, dépôt et import manuels, relève ; paramètres de la plateforme : nœud Paramètres"),
             new("execution", "Exécution", Simple, Icone: "🧭"),
             new(SpecialisationExecutionBtp.NoeudControle, "Contrôle du N+1 des étapes d'ordres", [ActionsDroits.Valider], Portee: true,
                 Aide: "En plus du responsable du service porteur et de ses délégués : portée service (ordres des services dont on est membre) ou tout"),
@@ -149,6 +151,7 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
         new("/api/execution/parcours-modeles", ModeRoute.Parametrage),
         new("/api/execution/sav-parametres", ModeRoute.Parametrage),
         new("/api/rentabilite/parametres", ModeRoute.Parametrage),
+        new("/api/facture-electronique/parametres", ModeRoute.Parametrage),
         // Module Document : définitions et référentiels lus par la page document.
         new("/api/documents", ModeRoute.Module, "documents"),
         new("/api/calcul", ModeRoute.Module, "documents"),
@@ -193,6 +196,13 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
         new("/api/relances/lots/{id}/valider", ModeRoute.Action, SpecialisationRelanceBtp.Noeud, ActionsDroits.Valider),
         new("/api/relances/{id}/recommande", ModeRoute.Action, SpecialisationRelanceBtp.Noeud, ActionsDroits.Valider),
         new("/api/relances/notees", ModeRoute.Action, SpecialisationRelanceBtp.Noeud, ActionsDroits.Valider),
+        // Module Facturation électronique : lecture (flux, détail, fichiers, chronologies, santé, vérification du journal)
+        // Consulter ; actions sur un flux (nouvelle tentative, dépôt manuel confirmé, import, relève) : Modifier.
+        new("/api/facture-electronique", ModeRoute.Module, SpecialisationFactureElectroniqueBtp.Noeud),
+        new("/api/facture-electronique/flux/{id}/tentative", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),
+        new("/api/facture-electronique/flux/{id}/depot-manuel", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),
+        new("/api/facture-electronique/import", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),
+        new("/api/facture-electronique/releve", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),
         new("/api/execution", ModeRoute.Module, "execution"),
         new("/api/liaisons", ModeRoute.Module, "planning"),
         new("/api/sous-traitance", ModeRoute.Module, "sous_traitance"),

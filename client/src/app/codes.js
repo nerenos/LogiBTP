@@ -86,6 +86,7 @@ export const TYPE_RESSOURCE = Object.freeze({
 export const MODULE_FACULTATIF = Object.freeze({
   CRM: 'crm',
   EXECUTION: 'execution',
+  FACTURE_ELECTRONIQUE: 'facture_electronique',
   PLANNING: 'planning',
   POINTAGE: 'pointage',
   REGLEMENT: 'reglement',
@@ -130,6 +131,20 @@ export const ROLE_RENTABILITE = Object.freeze({
   MOUVEMENT_STOCK: 'MOUVEMENT_STOCK',
   RECU_ACOMPTE: 'RECU_ACOMPTE',
   PRODUCTION: 'PRODUCTION',
+});
+
+/** Type d'élément du cœur rattaché à un flux de facturation électronique (fe_flux.ffl_type_element) : pièce (ent_id). */
+export const TYPE_ELEMENT_FE = Object.freeze({
+  DOCUMENT: 'DOCUMENT',
+});
+
+/** Signaux de notification de la facturation électronique (db/295, types du module « facture_electronique »). */
+export const SIGNAL_FE = Object.freeze({
+  RECUE: 'RECUE',
+  REJET: 'REJET',
+  REFUS: 'REFUS',
+  LITIGE: 'LITIGE',
+  ERREUR_FILE: 'ERREUR_FILE',
 });
 
 /** Rôle d'un type de pièce dans le module Relances (type_document.tyd_role_relance, db/283) ; sans rôle : jamais relancé. */

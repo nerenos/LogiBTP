@@ -35,7 +35,7 @@
 | 8 | Schéma, file des flux, statuts, **journal des étapes chaîné**, relève par base, service et routes | module | 6 | FAIT (10/11/2026) |
 | 9 | Écrans du module : paramètres, tableau des flux, détail et chronologie, dépôt et import manuels | module | 8 | FAIT (10/11/2026) |
 | 10 | Catégories de TVA : catégorie EN16931 et code VATEX | `modules/comptabilite` | — | FAIT (10/11/2026) |
-| 11 | Branchement du cœur : activation, droits, spécialisation, paramètres, notifications, onglet Chronologie | cœur | 8, 9, 7 | A FAIRE |
+| 11 | Branchement du cœur : activation, droits, spécialisation, paramètres, notifications, onglet Chronologie | cœur | 8, 9, 7 | FAIT (10/11/2026) |
 | 12 | Réception : flux reçu → pièce d'achat ou de sous-traitance en brouillon, rattachements, liste à traiter | cœur | 11, 2, 3, 10 | A FAIRE |
 | 13 | Réception : statuts posés (204, 205, 207, 210) et Paiement transmis (211) | cœur | 12, 5 | A FAIRE |
 | 14 | Réception hors plateforme : Factur-X ou XML glissé ou reçu par courriel | cœur | 12 | A FAIRE |
@@ -421,7 +421,7 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   écran des catégories (`creerCombo` de la catégorie, saisie du VATEX, textes `comptabilite_btp.*`). Le module ne dépend
   pas de la facture électronique. Script à appliquer par l'utilisateur.
 
-## Lot 11 : branchement du cœur (A FAIRE)
+## Lot 11 : branchement du cœur — FAIT (10/11/2026)
 
 - **Cœur**. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `src/LogiBTP.Api/Btp/FactureElectroniqueBtp.cs` (`SpecialisationFactureElectroniqueBtp`), `Program.cs`
@@ -432,6 +432,30 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   événements du flux + historique du document), `db/installation/scripts.txt`.
 - **Critère de fin** : module activable et désactivable sans erreur ; routes refusées sans droit (403) ; onglet visible
   sur une pièce liée à un flux de la plateforme simulée ; `npm test` et `dotnet test LogiBTP.slnx` verts.
+- **Réalisé** : `src/LogiBTP.Api/Btp/FactureElectroniqueBtp.cs` (`SpecialisationFactureElectroniqueBtp`, par portée :
+  `ActifAsync` = module `facture_electronique` actif pour la base (`ModulesSociete`, cache de 30 s par base), la tâche de
+  fond saute une base désactivée ; fichiers d'un flux rattaché à une pièce (`TYPE_ELEMENT_FE.DOCUMENT`, `ent_id`) rangés
+  dans la GED de la pièce (type et groupe d'indices, catégorie `facture_electronique`, stockage sous `SocieteCourante.Base`),
+  relus par `LireFichierAsync`, GED indisponible journalisée sans bloquer la file ; signaux RECUE (facture reçue), REJET
+  (accusé Error ou statut 213), REFUS (210), LITIGE (207), ERREUR_FILE publiés aux comptes qui consultent le nœud,
+  niveau et activation lus dans `facture_electronique_signal`, clé anti-doublon, types de préférences) ; module : la
+  spécialisation et `FabriqueConnecteurs` passent **par portée** (jeton `IFournisseurJeton` du module OAuth et société
+  de la requête ou de la base, jamais du conteneur racine), crochet `ActifAsync` lu par `PassageFactureElectronique`,
+  filtre `type_element` / `id_element` dans l'API simulée de la démonstration. `Program.cs` : `AddModuleFactureElectronique`,
+  routes sous `ExigeModule(ModulesFacultatifs.FactureElectronique)`, types de notification. Codes `MODULE_FACULTATIF`,
+  `TYPE_ELEMENT_FE`, `SIGNAL_FE` (`codes.js` ↔ `Codes.cs`, `CodesTests`). Droits : nœud `facture_electronique`
+  (Consulter, Modifier) au catalogue, `/api/facture-electronique` en module, tentative, dépôt manuel, import et relève
+  en action Modifier, paramètres en `Parametrage`. `db/295_facture_electronique.sql` (rejouable, au manifeste après
+  099f : activation désactivée à la création, droits copiés du nœud `comptabilite`, catégorie GED, signaux).
+  Client : page `pages/facture-electronique.js` (onglets Flux avec détail, Dépôt manuel, Paramètres avec les connexions
+  OAuth ; `?flux=<id>`), menu Ventes (module et droit), transport `facture-electronique/api-fe.js`, CSS du module ;
+  onglet **Chronologie** de la page document (`documents/chronologie-document.js` : composant `Chronologie` du module
+  en mode élément + historique des versions du document ; masqué sans module, sans droit ou sans flux ; Alt+9).
+  Tests : `FactureElectroniqueBtpTests.cs` (toutes les routes du module déclarées, refusées sans droit comme
+  `UseDroits` (403), Consulter en lecture, Modifier pour agir, paramètres au nœud Paramètres ; inscriptions par
+  portée ; signaux), `client/test/facture-electronique.test.js` (onglet visible et rendu sur une pièce émise par la
+  plateforme simulée, masqué sinon ; menu). Écrans non vérifiés en navigateur (TODO) ; script à appliquer par
+  l'utilisateur.
 
 ## Lot 12 : réception, flux reçu → pièce en brouillon (A FAIRE)
 

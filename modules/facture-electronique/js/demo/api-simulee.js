@@ -158,7 +158,7 @@ export function creerApiSimulee() {
     async flux(requete) {
       const q = new URLSearchParams(requete);
       let l = [...flux].sort((a, b) => b.id - a.id);
-      for (const k of ['sens', 'etat', 'type']) if (q.get(k)) l = l.filter((x) => x[k] === q.get(k));
+      for (const k of ['sens', 'etat', 'type', 'type_element', 'id_element']) if (q.get(k)) l = l.filter((x) => x[k] === q.get(k));
       if (q.get('erreurs')) l = l.filter((x) => erreurs.some((e) => e.flux_id === x.id) === (q.get('erreurs') === 'true'));
       if (q.get('du')) l = l.filter((x) => x.cree_le.slice(0, 10) >= q.get('du'));
       if (q.get('au')) l = l.filter((x) => x.cree_le.slice(0, 10) <= q.get('au'));

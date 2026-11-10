@@ -11,6 +11,7 @@ using LogiBTP.Editions.Web;
 using LogiBTP.EntreprisesFr.Web;
 using LogiBTP.Personnalisation.Web;
 using LogiBTP.Execution.Web;
+using LogiBTP.FactureElectronique.Web;
 using LogiBTP.Rentabilite.Web;
 using LogiBTP.SousTraitance.Web;
 using LogiBTP.Sav.Web;
@@ -107,6 +108,10 @@ builder.Services.AddModuleReglement<SpecialisationReglementBtp>(Base);
 // Module Relances (facultatif) : règle des niveaux, journal, suspensions, lots validés (modules/relance/db/099t, db/283) ;
 // pièces en attente, tiers payeur, chargé et portée par Btp/SpecialisationRelanceBtp.cs.
 builder.Services.AddModuleRelance<SpecialisationRelanceBtp>(Base);
+// Module Facturation électronique (facultatif, désactivé à la création : db/295) : file des flux, relève par base, journal
+// chaîné, plateforme simulée et dépôt manuel tenus en base (modules/facture-electronique/db/099f) ; jeton de la plateforme
+// par IFournisseurJeton (module OAuth) ; GED, signaux et activation par Btp/FactureElectroniqueBtp.cs.
+builder.Services.AddModuleFactureElectronique<SpecialisationFactureElectroniqueBtp>(Base, builder.Configuration);
 // Module CRM (facultatif) : notes, rappels, demandes, suivi des validations, diffusion, fil (modules/crm/db/095…).
 builder.Services.AddModuleCrm<SpecialisationCrmBtp>(Base);
 // Module Entreprises françaises : recherche dans l'annuaire des entreprises de l'État (API publique, sans clé).
@@ -172,6 +177,7 @@ ServiceNotification.TypesDirects.AddRange(SpecialisationOAuthBtp.Types);
 builder.Services.AddModuleMail<SpecialisationMailBtp>(Base, builder.Configuration.GetSection("Mail"));
 ServiceNotification.TypesDirects.AddRange(SpecialisationMailBtp.Types);
 ServiceNotification.TypesDirects.AddRange(SpecialisationAuthentificationBtp.Types);
+ServiceNotification.TypesDirects.AddRange(SpecialisationFactureElectroniqueBtp.Types);
 ServiceNotification.TypesDirects.Add(new("ressources", "MATERIEL_RETOUR", "Matériel rendu endommagé ou hors service"));
 builder.Services.PostConfigure<OptionsAuthentification>(o =>
 {
@@ -218,6 +224,7 @@ api.MapModuleEntreprisesFr();
 // Modules facultatifs : sous-groupe propre, pour que le filtre d'activation ne touche que leurs routes.
 api.MapGroup("").ExigeModule(ModulesFacultatifs.Reglement, "Règlements").MapModuleReglement();
 api.MapGroup("").ExigeModule(ModulesFacultatifs.Relance, "Relances").DroitsRelances().MapModuleRelance().MapLibellesRelances();
+api.MapGroup("").ExigeModule(ModulesFacultatifs.FactureElectronique, "Facturation électronique").MapModuleFactureElectronique();
 api.MapModuleCrm().ExigeModule(ModulesFacultatifs.Crm, "CRM");
 api.MapExecution().ExigeModule(ModulesFacultatifs.Execution, "Exécution");
 api.MapModuleExecution().ExigeModule(ModulesFacultatifs.Execution, "Exécution");

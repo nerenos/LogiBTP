@@ -934,7 +934,8 @@
         "reglements": "Règlements",
         "reglements_aide": "{{raccourci}} : condition et mode de règlement, échéancier, règlements, imputations et déductions d’acompte",
         "options": "Options",
-        "options_aide": "{{raccourci}} : modèle de saisie, décimales, numérotation, calcul des ouvrages, bibliothèque, étiquettes"
+        "options_aide": "{{raccourci}} : modèle de saisie, décimales, numérotation, calcul des ouvrages, bibliothèque, étiquettes",
+        "chronologie_aide": "Chronologie : étapes de la facturation électronique de la pièce et historique du document ({{raccourci}})"
       },
       "actions": {
         "valider_aide": "Valider et bloquer le document",
@@ -4723,6 +4724,10 @@
         "marches_a_facturer": {
           "libelle": "Marchés à facturer du mois",
           "info": "Marchés en cours sans situation du mois : créer les situations d'un clic ou noter « pas d'avancement »"
+        },
+        "facture_electronique": {
+          "libelle": "Facturation électronique",
+          "info": "Flux émis et reçus de la plateforme agréée, statuts, dépôt et import manuels, paramètres (module Facturation électronique)"
         }
       },
       "achats": {
@@ -5293,7 +5298,8 @@
         "notificationSuivante": "Notification suivante (ligne)",
         "notificationPrecedente": "Notification précédente (ligne)",
         "ongletReglements": "Onglet Règlements",
-        "ongletOptions": "Onglet Options"
+        "ongletOptions": "Onglet Options",
+        "ongletChronologie": "Onglet Chronologie (facturation électronique)"
       },
       "fiche": {
         "imprimer": "Imprimer la fiche"
@@ -6482,6 +6488,25 @@
         "ENVOYEE": "Faite",
         "ATTENTE_NUMERO": "En attente du numéro de recommandé"
       }
+    }
+  },
+  "facture_electronique_btp": {
+    "routes": {
+      "page": "Facturation électronique"
+    },
+    "aide": "Factures émises et reçues par la plateforme agréée : état de chaque flux, accusés, statuts du cycle de vie et journal des étapes. Les actions sur un flux demandent le droit Modifier ; les paramètres de la plateforme, le droit de paramétrage.",
+    "onglets": {
+      "flux": "Flux",
+      "flux_titre": "Flux émis et reçus, détail et chronologie d'un flux",
+      "depot": "Dépôt manuel",
+      "depot_titre": "Flux à déposer sur le portail de la plateforme, import d'un fichier reçu",
+      "parametres": "Paramètres",
+      "parametres_titre": "Plateforme, connexion, adresses, syntaxe et relève"
+    },
+    "element_document": "Pièce n° {{id}}",
+    "document": {
+      "historique": "Historique du document",
+      "chargement": "Chargement de la chronologie…"
     }
   },
   "hors_ligne_btp": {

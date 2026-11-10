@@ -26,10 +26,16 @@ public sealed record SignalementFe(string Evenement, FluxFe Flux, string Etat, s
 /// éléments, crée la pièce d'une facture reçue, est avertie des statuts reçus et posés, range les fichiers en GED,
 /// reçoit les signalements et contrôle les droits. Le module ne modifie jamais une pièce de l'application : il signale,
 /// l'application décide. Sans spécialisation : aucun rattachement, rien en GED (fichiers gardés dans fe_fichier),
-/// aucun signalement, paramétrage réservé à l'administrateur ou au droit de modifier les paramètres.
+/// aucun signalement, toujours actif, paramétrage réservé à l'administrateur ou au droit de modifier les paramètres.
 /// </summary>
 public class SpecialisationFactureElectronique
 {
+    /// <summary>
+    /// Module actif pour la société de la portée (activation par l'application) ; faux : la tâche de fond ne traite ni la
+    /// file ni la relève de cette base. Par défaut : actif.
+    /// </summary>
+    public virtual Task<bool> ActifAsync(CancellationToken ct) => Task.FromResult(true);
+
     /// <summary>Élément existant auquel rattacher une facture reçue (pièce déjà saisie…) ; null : aucun.</summary>
     public virtual Task<ElementFe?> ElementDuFluxAsync(FactureRecueFe recue, CancellationToken ct) => Task.FromResult<ElementFe?>(null);
 

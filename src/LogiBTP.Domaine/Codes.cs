@@ -87,6 +87,7 @@ public static class ModulesFacultatifs
 {
     public const string Crm = "crm";
     public const string Execution = "execution";
+    public const string FactureElectronique = "facture_electronique";
     public const string Planning = "planning";
     public const string Pointage = "pointage";
     public const string Reglement = "reglement";
@@ -165,6 +166,30 @@ public static class CategoriesGed
     public const string Photo = "photo";
     public const string Dotation = "dotation";
     public const string Relance = "relance";
+    public const string FactureElectronique = "facture_electronique";
+}
+
+/// <summary>
+/// Type d'élément du cœur rattaché à un flux de facturation électronique (fe_flux.ffl_type_element, plans/
+/// facturation-electronique.md lot 11) : DOCUMENT = pièce (identifiant ent_id) ; onglet Chronologie de la page document.
+/// </summary>
+public static class TypesElementFe
+{
+    public const string Document = "DOCUMENT";
+}
+
+/// <summary>
+/// Signaux de notification de la facturation électronique (db/295 : facture_electronique_signal, niveau et activation
+/// par société) : facture reçue, rejet (accusé en erreur ou statut 213), refus (210), litige (207), erreur de la file.
+/// Types de notification du module « facture_electronique ».
+/// </summary>
+public static class SignauxFe
+{
+    public const string Recue = "RECUE";
+    public const string Rejet = "REJET";
+    public const string Refus = "REFUS";
+    public const string Litige = "LITIGE";
+    public const string ErreurFile = "ERREUR_FILE";
 }
 
 /// <summary>Erreurs du terrain testées par l'interface (client/src/app/codes.js : ERREUR_TERRAIN).</summary>
