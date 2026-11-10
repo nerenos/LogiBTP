@@ -31,7 +31,7 @@
 | 4 | Schematrons FNFE : artefacts versionnés, validation par SaxonJS (tests et outil) | module | 2, 3 | FAIT (09/11/2026) |
 | 5 | CDAR : écriture et lecture des statuts | module | 1 | FAIT (09/11/2026) |
 | 6 | Connecteur : contrat, AFNOR XP Z12-013 (Flow, Directory), plateforme simulée, dépôt manuel | module | 1, 5 | FAIT (09/11/2026) |
-| 7 | OAuth : flux CLIENT pour un fournisseur GENERIQUE (si absent) | `modules/oauth` | — | A FAIRE |
+| 7 | OAuth : flux CLIENT pour un fournisseur GENERIQUE (si absent) | `modules/oauth` | — | FAIT (10/11/2026) |
 | 8 | Schéma, file des flux, statuts, **journal des étapes chaîné**, relève par base, service et routes | module | 6 | A FAIRE |
 | 9 | Écrans du module : paramètres, tableau des flux, détail et chronologie, dépôt et import manuels | module | 8 | A FAIRE |
 | 10 | Catégories de TVA : catégorie EN16931 et code VATEX | `modules/comptabilite` | — | A FAIRE |
@@ -287,7 +287,7 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   CDAR déposé déduit du rôle de l'émetteur (vendeur → CustomerInvoiceLC, sinon SupplierInvoiceLC). Tests : 290 en C#
   pour le module, 266 en JS (inchangés).
 
-## Lot 7 : OAuth, flux CLIENT pour un fournisseur GENERIQUE (A FAIRE)
+## Lot 7 : OAuth, flux CLIENT pour un fournisseur GENERIQUE (FAIT (10/11/2026))
 
 - **Module** : `modules/oauth`. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : selon l'existant (`ServiceOAuth.cs`, `ReglesOAuth.cs`, page de paramétrage du module) ; jeu de test.
@@ -295,6 +295,11 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   portées) fonctionne ; sinon l'ajouter. Rien sur la facturation électronique (le module reste sans métier).
 - **Critère de fin** : test d'obtention d'un jeton `client_credentials` sur un fournisseur GENERIQUE ; si rien n'est à
   changer, le lot passe à FAIT avec la preuve du test existant.
+- **Réalisé** : rien à changer dans `ServiceOAuth` / `ClientOAuth` : GENERIQUE en flux CLIENT était déjà géré (adresse du
+  jeton obligatoire à l'enregistrement du client, portées saisies, `ClientCredentialsAsync` renouvelé par `JetonAsync`).
+  Ajout de `LogiBTP.OAuth.Tests/ClientOAuthGeneriqueTests.cs` (faux point de jeton en mémoire : adresse saisie,
+  grant_type, client_id, secret, portées, renouvellement) ; libellé du flux CLIENT neutralisé dans
+  `client/personnalisation/fr.json` ; `modules/oauth/CLAUDE.md` mis à jour. Aucun SQL.
 
 ## Lot 8 : schéma, file, statuts, journal des étapes, relève, service (A FAIRE)
 

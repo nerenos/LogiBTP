@@ -4450,7 +4450,7 @@
     },
     "flux": {
       "CODE_PKCE": "Délégué : connexion à la page du fournisseur",
-      "CLIENT": "Application (client credentials, Microsoft)",
+      "CLIENT": "Application (client credentials : Microsoft ou autre fournisseur)",
       "COMPTE_SERVICE": "Compte de service (Google Workspace)"
     },
     "connexions": {
