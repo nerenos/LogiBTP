@@ -36,13 +36,18 @@ export function corpsParametres(p) {
   return corps;
 }
 
-const vide = (s) => s === null || s === undefined || String(s).trim() === '';
+// Blancs communs au JS et au C# (ReglesParametresFe.EstBlanc) : \s de JS (dont U+FEFF) + U+0085 et U+001C à U+001F.
+const BLANCS = '\\s\\u0085\\u001C-\\u001F';
+const DEBUT_FIN_BLANCS = new RegExp(`^[${BLANCS}]+|[${BLANCS}]+$`, 'g');
+const UN_BLANC = new RegExp(`[${BLANCS}]`);
+const rogner = (s) => String(s).replace(DEBUT_FIN_BLANCS, '');
+const vide = (s) => s === null || s === undefined || rogner(s) === '';
 
 /** Adresse vide, ou absolue en http(s) sans espace (ReglesParametresFe.AdresseValable). */
 export function adresseValable(a) {
   if (vide(a)) return true;
-  const t = String(a).trim();
-  if (/\s/.test(t)) return false;
+  const t = rogner(a);
+  if (UN_BLANC.test(t)) return false;
   try {
     const u = new URL(t);
     return (u.protocol === 'https:' || u.protocol === 'http:') && u.hostname.length > 0;
@@ -65,7 +70,7 @@ export function controlerParametres(p, connecteurs = Object.values(CONNECTEUR_FE
   if (!adresseValable(p.adresse_flux) || (afnor && vide(p.adresse_flux))) champs.push('adresse_flux');
   if (!adresseValable(p.adresse_annuaire)) champs.push('adresse_annuaire');
   if (afnor && (p.connexion_oauth === null || p.connexion_oauth === undefined || p.connexion_oauth === '')) champs.push('connexion_oauth');
-  if (!vide(p.organisation) && String(p.organisation).trim().length > LONGUEUR_ORGANISATION) champs.push('organisation');
+  if (!vide(p.organisation) && rogner(p.organisation).length > LONGUEUR_ORGANISATION) champs.push('organisation');
   if (!SYNTAXES_EMISSION.includes(p.syntaxe)) champs.push('syntaxe');
   if (!PROFILS_EMISSION.includes(p.profil)) champs.push('profil');
   if (horsBornes(p.frequence_releve, FREQUENCE_RELEVE)) champs.push('frequence_releve');

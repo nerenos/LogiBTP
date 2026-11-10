@@ -403,7 +403,7 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   touche, couleur ni stockage en dur, démonstration comprise), `import.test.js` (raccourcis, routes) ; module : 304
   tests JS, 305 C#. Écarts : statut affiché filtré sur les flux chargés (calculé, pas en base) ; le module Liste ne s'y
   prête pas (vues générées par le cœur) ; connexions OAuth fournies par l'hôte (le module ne dépend pas d'OAuth) ;
-  écrans rendus en Chrome sans affichage, fenêtres non essayées en navigateur (TODO). Aucun SQL.
+  écrans rendus en Chrome sans affichage, fenêtres non essayées en navigateur (TODO). Aucun SQL. Parité des blancs (revue) : `\s` de JS + U+0085 et U+001C à U+001F, U+FEFF compris côté C# (`EstBlanc`, `Rogner`) ; jeu `02_parametres.json` complété (U+FEFF, organisation entourée d'espaces).
 
 ## Lot 10 : catégories de TVA, catégorie EN16931 et VATEX — FAIT (10/11/2026)
 

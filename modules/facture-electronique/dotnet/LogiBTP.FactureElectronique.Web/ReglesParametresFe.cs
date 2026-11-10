@@ -34,10 +34,10 @@ public static class ReglesParametresFe
         var champs = new List<string>();
         var afnor = d.Connecteur == ConnecteurFe.Afnor;
         if (!connecteurs.Contains(d.Connecteur)) champs.Add("connecteur");
-        if (!AdresseValable(d.AdresseFlux) || (afnor && string.IsNullOrWhiteSpace(d.AdresseFlux))) champs.Add("adresse_flux");
+        if (!AdresseValable(d.AdresseFlux) || (afnor && Vide(d.AdresseFlux))) champs.Add("adresse_flux");
         if (!AdresseValable(d.AdresseAnnuaire)) champs.Add("adresse_annuaire");
         if (afnor && d.ConnexionOauth is null) champs.Add("connexion_oauth");
-        if (d.Organisation is { } o && o.Trim().Length > ConnecteurPlateforme.LongueurIdentifiant) champs.Add("organisation");
+        if (d.Organisation is { } o && Rogner(o).Length > ConnecteurPlateforme.LongueurIdentifiant) champs.Add("organisation");
         if (d.Syntaxe is not (Syntaxe.Cii or Syntaxe.Ubl or Syntaxe.FacturX)) champs.Add("syntaxe");
         if (d.Profil is not (ProfilFacture.Basic or ProfilFacture.En16931 or ProfilFacture.ExtendedCtcFr)) champs.Add("profil");
         if (d.FrequenceReleve is < FrequenceMin or > FrequenceMax) champs.Add("frequence_releve");
@@ -49,8 +49,22 @@ public static class ReglesParametresFe
     /// <summary>Adresse vide, ou absolue en http(s) sans espace.</summary>
     public static bool AdresseValable(string? a)
     {
-        if (string.IsNullOrWhiteSpace(a)) return true;
-        var t = a.Trim();
-        return !t.Any(char.IsWhiteSpace) && Uri.TryCreate(t, UriKind.Absolute, out var uri) && uri.Scheme is "https" or "http" && uri.Host.Length > 0;
+        if (a is null || Vide(a)) return true;
+        var t = Rogner(a);
+        return !t.Any(EstBlanc) && Uri.TryCreate(t, UriKind.Absolute, out var uri) && uri.Scheme is "https" or "http" && uri.Host.Length > 0;
     }
+
+    /// <summary>Blanc au sens du JS (<c>\s</c>, dont U+FEFF) et du .NET (U+0085, U+001C à U+001F) : même définition des deux côtés.</summary>
+    public static bool EstBlanc(char c) => char.IsWhiteSpace(c) || c == '\uFEFF';
+
+    public static string Rogner(string s)
+    {
+        var d = 0;
+        var f = s.Length;
+        while (d < f && EstBlanc(s[d])) d++;
+        while (f > d && EstBlanc(s[f - 1])) f--;
+        return s[d..f];
+    }
+
+    public static bool Vide(string? s) => s is null || Rogner(s).Length == 0;
 }
