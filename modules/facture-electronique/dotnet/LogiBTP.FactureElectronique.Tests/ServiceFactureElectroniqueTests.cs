@@ -34,8 +34,10 @@ public sealed class ServiceFactureElectroniqueTests : IAsyncLifetime
         public List<SignalementFe> Signalements { get; } = [];
         public List<StatutSignaleFe> Statuts { get; } = [];
         public ElementFe? Element { get; set; }
+        public PieceRecueFe? Refus { get; set; }
 
-        public override Task<ElementFe?> CreerPieceRecueAsync(FactureRecueFe recue, CancellationToken ct) => Task.FromResult(Element);
+        public override Task<PieceRecueFe?> CreerPieceRecueAsync(FactureRecueFe recue, CancellationToken ct) =>
+            Task.FromResult(Refus ?? (Element is null ? null : PieceRecueFe.Creee(Element, new { recue.Facture!.Numero })));
         public override Task StatutRecuAsync(StatutSignaleFe statut, CancellationToken ct) { Statuts.Add(statut); return Task.CompletedTask; }
         public override Task SignalerAsync(SignalementFe s, CancellationToken ct) { Signalements.Add(s); return Task.CompletedTask; }
     }
@@ -257,7 +259,21 @@ public sealed class ServiceFactureElectroniqueTests : IAsyncLifetime
         await new ReleveFlux(s).ReleverAsync(true, null, default);
         var recue = Assert.Single(await s.Liste(new FiltreFlux(Sens: SensFlux.Entrant, TypeElement: "ACHAT", IdElement: numero), default));
         Assert.Equal((EtatFlux.Traite, numero + "R", TypeFlux.FactureFournisseur), (recue.Etat, recue.Numero, recue.Type));
-        Assert.Equal(["RECEPTION:>RECU", "RATTACHEMENT:RECU>TRAITE"], await Etapes(db, recue.Id));
+        Assert.Equal(["RECEPTION:>RECU", "LECTURE:RECU>RECU", "PIECE_CREEE:RECU>RECU", "RATTACHEMENT:RECU>TRAITE"], await Etapes(db, recue.Id));
+        // Chronologie de l'élément : toutes les étapes du flux rattaché, réception et lecture comprises ; vue lisible gardée.
+        Assert.Equal(4, (await s.Chronologie(null, "ACHAT", numero, default)).Count(x => x.FluxId == recue.Id));
+        Assert.Contains((await s.Detail(recue.Id, default)).Fichiers, x => x.Document == TypeDocumentFlux.Lisible);
+        Assert.Contains(specialisation.Signalements, x => x.Flux.FflId == recue.Id && x.Evenement == EvenementFe.Reception && x.Etat == EtatFlux.Traite);
+
+        // Doublon refusé par l'application : tracé (étape DOUBLON, erreur), la facture reste à traiter.
+        specialisation.Refus = PieceRecueFe.Refusee(ErreurFe.FactureEnDouble, "Déjà saisie", new ElementFe("ACHAT", numero));
+        Plateforme.RecevoirFacture(Facture("D"), "double.xml");
+        await new ReleveFlux(s).ReleverAsync(true, null, default);
+        var double_ = (await s.Liste(new FiltreFlux(Sens: SensFlux.Entrant), default)).First(x => x.Numero == numero + "D");
+        Assert.Equal((EtatFlux.Recu, null), (double_.Etat, double_.IdElement));
+        Assert.Equal(["RECEPTION:>RECU", "LECTURE:RECU>RECU", "DOUBLON:RECU>RECU"], await Etapes(db, double_.Id));
+        Assert.Equal(ErreurFe.FactureEnDouble, Assert.Single((await s.Detail(double_.Id, default)).Erreurs).Code);
+        specialisation.Refus = null;
 
         // Import manuel d'une facture illisible : refusé ; d'une facture : reçue, à traiter.
         var e = await Assert.ThrowsAsync<ExceptionConnecteur>(() => s.Importer(new ImportManuel("x.xml", Convert.ToBase64String("<pas"u8.ToArray())), Admin, default));
@@ -265,7 +281,7 @@ public sealed class ServiceFactureElectroniqueTests : IAsyncLifetime
         specialisation.Element = null;
         var i = await s.Importer(new ImportManuel("import.xml", Convert.ToBase64String(Facture("I"))), Admin, default);
         Assert.Equal((EtatFlux.Recu, ConnecteurFe.Manuel, numero + "I"), (i.Etat, i.Connecteur, i.Numero));
-        Assert.Equal(["IMPORT_MANUEL:>RECU"], await Etapes(db, i.Id));
+        Assert.Equal(["IMPORT_MANUEL:>RECU", "LECTURE:RECU>RECU"], await Etapes(db, i.Id));
         Assert.Equal(Admin.Code, (await s.Chronologie(i.Id, null, null, default))[0].Utilisateur);
     }
 

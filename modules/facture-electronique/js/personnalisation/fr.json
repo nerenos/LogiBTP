@@ -118,7 +118,10 @@
       "ACTION_UTILISATEUR": "Action d'un utilisateur",
       "AVOIR_INTERNE": "Avoir interne",
       "RATTACHEMENT": "Rattachement",
-      "IMPORT_MANUEL": "Import manuel"
+      "IMPORT_MANUEL": "Import manuel",
+      "LECTURE": "Lecture de la facture",
+      "PIECE_CREEE": "Pièce créée",
+      "DOUBLON": "Facture en double refusée"
     },
     "accuses": {
       "Pending": "En attente",

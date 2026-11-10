@@ -508,6 +508,10 @@ public static class EvenementFe
     public const string AvoirInterne = "AVOIR_INTERNE";
     public const string Rattachement = "RATTACHEMENT";
     public const string ImportManuel = "IMPORT_MANUEL";
+    // Réception (lot 12) : facture lue, pièce créée par l'application, création refusée pour une facture en double.
+    public const string Lecture = "LECTURE";
+    public const string PieceCreee = "PIECE_CREEE";
+    public const string Doublon = "DOUBLON";
 }
 
 /// <summary>Auteur d'une étape du journal fe_evenement : utilisateur, LogiBTP (file, relève), plateforme (accusé, statut reçu).</summary>
@@ -596,6 +600,8 @@ public static class ErreurFe
     public const string EtatFluxInvalide = "ETAT_FLUX_INVALIDE";
     /// <summary>Paramètres du module invalides (connecteur, adresses, fréquence de relève).</summary>
     public const string ParametreInvalide = "PARAMETRE_INVALIDE";
+    // Réception (lot 12) : facture déjà enregistrée chez l'application (même fournisseur, même numéro).
+    public const string FactureEnDouble = "FACTURE_EN_DOUBLE";
 }
 
 /// <summary>Connecteur de plateforme (lot 6) : AFNOR XP Z12-013, plateforme simulée, dépôt manuel ; une PA propre s'ajoute à la fabrique.</summary>

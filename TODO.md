@@ -94,7 +94,7 @@ Analyse du 23/10/2026 : [ANALYSE-MODULE-SOUS-TRAITANCE.md](documentation/concept
   statuts), lot 6 le 09/11/2026 (connecteurs : AFNOR XP Z12-013, plateforme simulée, dépôt manuel), lot 7 le
   10/11/2026 (OAuth GENERIQUE en flux CLIENT), lot 8 le 10/11/2026 (schéma, file avec reprises, statuts, journal des
   étapes chaîné, relève par curseur, service et routes `/api/facture-electronique`), lot 9 le 10/11/2026 (écrans du
-  module, chronologie réutilisable, page de démonstration), lot 10 le 10/11/2026 (catégorie EN16931 et VATEX des catégories de TVA), lot 11 le 10/11/2026 (branchement du cœur : activation, droits, GED, signaux, page, onglet Chronologie) ; en attendant, saisie libre des factures reçues (ST22).
+  module, chronologie réutilisable, page de démonstration), lot 10 le 10/11/2026 (catégorie EN16931 et VATEX des catégories de TVA), lot 11 le 10/11/2026 (branchement du cœur : activation, droits, GED, signaux, page, onglet Chronologie), lot 12 le 10/11/2026 (réception : facture reçue → pièce d'achat ou de sous-traitance en brouillon, fournisseur, commande, chantier, GED au coffre, liste « Factures reçues à traiter », étapes du journal).
   - [ ] **SQL à appliquer par l'utilisateur** (lot 10) : `modules/comptabilite/db/094g_comptabilite_tva_en16931.sql` (rejouable, au
     manifeste) sur `logibtp` et `logibtp_demo` par `installation base mettre-a-jour`.
   - [ ] **SQL à appliquer par l'utilisateur** (lot 8, jamais appliqué par Claude) : `modules/facture-electronique/db/099f_facture_electronique.sql`
@@ -107,7 +107,27 @@ Analyse du 23/10/2026 : [ANALYSE-MODULE-SOUS-TRAITANCE.md](documentation/concept
     les connexions OAuth, `?flux=<id>`), menu Ventes, onglet Chronologie de la page document (Alt+9, masqué sans flux),
     notifications des signaux ; vérifié seulement par les tests (rendu sur la plateforme simulée, décisions des droits).
   - [ ] Signaux de notification : pas encore d'écran pour régler le niveau et l'activation de `facture_electronique_signal`
-    (valeurs du script) ; fichiers d'une facture reçue rangés en GED quand la pièce sera créée (lot 12).
+    (valeurs du script).
+  - [ ] **SQL à appliquer par l'utilisateur** (lot 12, jamais appliqué par Claude), par `installation base mettre-a-jour`
+    sur `logibtp` et `logibtp_demo` : `modules/facture-electronique/db/099g_facture_electronique_reception.sql`
+    (rejouable : étapes LECTURE, PIECE_CREEE, DOUBLON du journal), `db/121_listes_parametrage.sql` (régénéré, rejouable :
+    source, thème et vue 1014 « Factures reçues à traiter »), `db/296_facture_electronique_reception.sql` (rejouable :
+    vue `v_liste_fe_recues`). Sur une base créée par le manifeste, `ctv_categorie_en16931` est vide (094g passe avant
+    les catégories de db/223) : la réception retombe sur le comportement du taux ; rejouer 094g pour la remplir.
+  - [ ] Lot 12 non vérifié en navigateur : liste « Factures reçues à traiter » (menu Ventes, `/liste/fe_recues?vue=1014`,
+    ouverture d'une ligne sans pièce vers `/facture-electronique?flux=<id>`), pièce en brouillon créée (lignes, TVA,
+    référence et date du fournisseur, rapport de `document_origine`), GED de la pièce (original, lisible et pièces
+    jointes à l'étape RECEPTION, au coffre), chronologie complète de la pièce ; vérifié par `ReceptionFactureBtpTests`
+    (exemples FNFE ; de bout en bout sur une base jetable par `LOGIBTP_TEST_PG_JETABLE`).
+  - [ ] Réception, décisions reportées : avoir reçu (BT-3 381…) laissé à traiter sans pièce ; facture de sous-traitance
+    créée par transformation de la commande avec les montants reçus à ventiler (saisie RECUE), sans avancement repris
+    ligne à ligne (lot 15) ; pièce créée hors de la transaction du flux (contextes distincts) : un échec après la
+    création laisse le brouillon, la relève suivante le signale en doublon ; écarts de prix avec la commande visibles à
+    la validation (avertissement `PRIX_ACHAT_ECART`), pas à la réception.
+  - [ ] Base jetable complète (manifeste seul) désignée par `LOGIBTP_TEST_PG` : trois tests échouent déjà sans le lot 12
+    (`IntegrationPostgresTests.Agregats_identiques_au_js` et `Lots_par_cle_identiques_au_js` : colonnes de démonstration
+    absentes ; `RelancesBtpTests.Devis_en_mode_tache_cree_la_tache_sans_courriel` : date attendue fixe) ; sans variable,
+    `dotnet test LogiBTP.slnx` est vert.
   - [ ] Écrans du lot 9 vérifiés par leurs tests et par un rendu sans affichage (Chrome headless) de la page de
     démonstration (`npm run demo --workspace @logibtp/facture-electronique`, port 5181) : essayer en navigateur les
     fenêtres (accusé du dépôt manuel, import d'un fichier, nouvelle tentative), les combos des filtres, les dates et

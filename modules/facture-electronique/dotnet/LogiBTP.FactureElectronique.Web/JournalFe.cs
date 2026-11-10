@@ -96,13 +96,18 @@ public static class JournalFe
     public static IQueryable<EvenementFeEntite> Lire(FactureElectroniqueDbContext db) =>
         db.Evenements.FromSqlRaw(Selection).AsNoTracking();
 
-    /// <summary>Chronologie d'un flux, ou d'un élément de l'application (toutes ses étapes, tous flux confondus).</summary>
+    /// <summary>Chronologie d'un flux, ou d'un élément de l'application (toutes ses étapes et celles de ses flux, tous flux confondus).</summary>
     public static async Task<List<EvenementDto>> ChronologieAsync(FactureElectroniqueDbContext db, long? fluxId, string? typeElement, string? idElement,
         CancellationToken ct)
     {
         var q = Lire(db);
         if (fluxId is long f) q = q.Where(e => e.FevFflId == f);
-        if (typeElement is not null) q = q.Where(e => e.FevTypeElement == typeElement && e.FevIdElement == idElement);
+        // Élément : ses étapes et toutes celles des flux qui lui sont rattachés (réception et lecture d'avant le rattachement).
+        if (typeElement is not null)
+        {
+            var flux = db.Flux.Where(x => x.FflTypeElement == typeElement && x.FflIdElement == idElement).Select(x => (long?)x.FflId);
+            q = q.Where(e => (e.FevTypeElement == typeElement && e.FevIdElement == idElement) || flux.Contains(e.FevFflId));
+        }
         var lignes = await q.OrderBy(e => e.FevRang).ToListAsync(ct);
         return [.. lignes.Select(Dto)];
     }

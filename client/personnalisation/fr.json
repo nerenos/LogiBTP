@@ -4728,6 +4728,10 @@
         "facture_electronique": {
           "libelle": "Facturation électronique",
           "info": "Flux émis et reçus de la plateforme agréée, statuts, dépôt et import manuels, paramètres (module Facturation électronique)"
+        },
+        "fe_recues": {
+          "libelle": "Factures reçues à traiter",
+          "info": "Factures électroniques reçues sans pièce (à rattacher ou à saisir) ou dont la pièce créée en brouillon reste à vérifier et à valider"
         }
       },
       "achats": {

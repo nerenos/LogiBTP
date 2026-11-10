@@ -39,5 +39,8 @@
   "fe_evenement_action_utilisateur": "👆",
   "fe_evenement_avoir_interne": "↩",
   "fe_evenement_rattachement": "📌",
-  "fe_evenement_import_manuel": "📂"
+  "fe_evenement_import_manuel": "📂",
+  "fe_evenement_lecture": "📖",
+  "fe_evenement_piece_creee": "🧾",
+  "fe_evenement_doublon": "⛔"
 }

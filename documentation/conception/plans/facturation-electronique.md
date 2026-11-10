@@ -36,7 +36,7 @@
 | 9 | Écrans du module : paramètres, tableau des flux, détail et chronologie, dépôt et import manuels | module | 8 | FAIT (10/11/2026) |
 | 10 | Catégories de TVA : catégorie EN16931 et code VATEX | `modules/comptabilite` | — | FAIT (10/11/2026) |
 | 11 | Branchement du cœur : activation, droits, spécialisation, paramètres, notifications, onglet Chronologie | cœur | 8, 9, 7 | FAIT (10/11/2026) |
-| 12 | Réception : flux reçu → pièce d'achat ou de sous-traitance en brouillon, rattachements, liste à traiter | cœur | 11, 2, 3, 10 | A FAIRE |
+| 12 | Réception : flux reçu → pièce d'achat ou de sous-traitance en brouillon, rattachements, liste à traiter | cœur | 11, 2, 3, 10 | FAIT (10/11/2026) |
 | 13 | Réception : statuts posés (204, 205, 207, 210) et Paiement transmis (211) | cœur | 12, 5 | A FAIRE |
 | 14 | Réception hors plateforme : Factur-X ou XML glissé ou reçu par courriel | cœur | 12 | A FAIRE |
 | 15 | Réception de sous-traitance : cadre S5, bloc PAYEUR, demande de paiement direct (224) | cœur | 12, 13 | A FAIRE |
@@ -457,7 +457,7 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   plateforme simulée, masqué sinon ; menu). Écrans non vérifiés en navigateur (TODO) ; script à appliquer par
   l'utilisateur.
 
-## Lot 12 : réception, flux reçu → pièce en brouillon (A FAIRE)
+## Lot 12 : réception, flux reçu → pièce en brouillon — FAIT (10/11/2026)
 
 - **Cœur**. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `Btp/ReceptionFactureBtp.cs` (modèle → `A_FACTURE` ou `T_FACTURE_AVT` en BROUILLON : fournisseur par
@@ -470,6 +470,40 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   la commande en avertissements existants.
 - **Critère de fin** : une facture reçue de la plateforme simulée crée la pièce en brouillon rattachée, PDF en GED,
   chronologie complète ; tests verts.
+- **Réalisé** : `src/LogiBTP.Api/Btp/ReceptionFactureBtp.cs` (appelé par `SpecialisationFactureElectroniqueBtp.CreerPieceRecueAsync`) :
+  avoir (BT-3) laissé à traiter ; fournisseur par SIREN puis SIRET (`ChoisirFournisseur` : fiche définitive avant
+  provisoire, SIRET de la facture puis tête parmi les établissements du SIREN), sinon fiche provisoire (`CreerProvisoire`,
+  relation FOURNISSEUR, SIREN et TVA repris) ; doublon (même fournisseur, même référence externe comparée sans
+  séparateurs, A_FACTURE ou T_FACTURE_AVT de référence non annulée ni remplacée) refusé ; commande de sous-traitance
+  du fournisseur désignée par BT-12 / BT-13 / BT-18 (numéro, ou code de son marché ST) → T_FACTURE_AVT par
+  transformation, montants reçus à ventiler (`ent_st_saisie` RECUE, contrôle ST8 existant) ; sinon A_FACTURE :
+  commande d'achat de BT-13 du fournisseur (`AccuseCommandeBtp.SqlCommandes`, pièces valables) → transformation des
+  lignes rapprochées (`Rapprocher` : BT-132 = numérotation ou identifiant, puis article BT-155/156 = code, puis libellé),
+  quantité et prix net de la facture en prix fixe (écart : avertissement `PRIX_ACHAT_ECART` existant à la validation),
+  autres lignes ajoutées avant le pied ; commande non transformable ou aucune ligne rapprochée : pièce libre, chantier
+  par BT-11 / BT-18 (code du chantier) ou BT-12 (code du marché), affaire et projet du chantier ; lignes
+  (`PreparerLignes` : feuilles de l'arbre des sous-lignes en éléments au prix net ramené à la quantité de base, groupes
+  et informations en textes, remises et charges du document, BASIC WL sans ligne : une ligne par ventilation de TVA ;
+  unités UN/ECE par synonyme de `unite` puis correspondance) ; TVA (`ChoisirTva` : catégorie EN16931 de
+  `ctv_categorie_en16931`, à défaut proposée par `ReglesTva` ; S au même taux, AE → taux autoliquidé, K → intracom,
+  Z / G / O → exonéré) ; référence externe BT-1, `ent_date_externe` BT-2 ; jamais validée ; `document_origine` IMPORT
+  (format = syntaxe, fichier = original en GED posé au rangement, référence, rapport : flux, fournisseur, commande,
+  totaux, TVA et unités non reconnues, avertissements) ; pièces jointes BG-24 en GED. GED : fichiers d'un flux reçu
+  rangés à l'étape RECEPTION puis au coffre (Q21) ; notification RECUE « pièce créée en brouillon, à vérifier ».
+  Module : `PieceRecueFe` (créée / refusée), étapes `LECTURE` (résumé lu), `PIECE_CREEE`, `DOUBLON` (erreur
+  `FACTURE_EN_DOUBLE`, facture restée RECU) en plus de RECEPTION et RATTACHEMENT (codes JS ↔ C#, textes, icônes,
+  `099g` rejouable au manifeste) ; au rattachement, fichiers gardés rangés en GED de l'élément et vue lisible
+  téléchargée de la plateforme ; chronologie d'un élément = ses étapes et celles des flux rattachés. Cœur :
+  `db/296_facture_electronique_reception.sql` (rejouable : `v_liste_fe_recues`, résumé lu dans l'étape LECTURE, à
+  traiter = sans pièce ou pièce en brouillon), source, thème et vue 1014 « Factures reçues à traiter » dans
+  `vues-liste.js` (`db/121` régénéré), menu Ventes, ligne sans pièce ouverte sur le flux (`TYPE_ELEMENT_FE.FLUX` ↔
+  `TypesElementFe.Flux`), `EtapesGed.Reception`. Tests : `ReceptionFactureBtpTests.cs` (lignes au total HT de chaque
+  exemple FNFE dont PDF, sous-lignes, TVA dont AE, unités, fournisseur, rapprochement ; de bout en bout sur une base
+  jetable `LOGIBTP_TEST_PG_JETABLE` : Factur-X UC1 de la plateforme simulée → A_FACTURE en brouillon d'un tiers
+  provisoire, PDF en GED à l'étape RECEPTION au coffre, origine, chronologie RECEPTION → LECTURE → PIECE_CREEE →
+  RATTACHEMENT, liste à traiter ; seconde réception refusée en doublon ; CII avec BT-13 → transformation de la
+  commande), `ServiceFactureElectroniqueTests` (étapes, doublon, lisible), `client/test/liste-fe-recues.test.js`.
+  Écrans non vérifiés en navigateur (TODO) ; scripts à appliquer par l'utilisateur.
 
 ## Lot 13 : réception, statuts posés (A FAIRE)
 

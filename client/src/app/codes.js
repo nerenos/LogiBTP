@@ -136,6 +136,8 @@ export const ROLE_RENTABILITE = Object.freeze({
 /** Type d'élément du cœur rattaché à un flux de facturation électronique (fe_flux.ffl_type_element) : pièce (ent_id). */
 export const TYPE_ELEMENT_FE = Object.freeze({
   DOCUMENT: 'DOCUMENT',
+  /** Ligne de la liste « Factures reçues à traiter » sans pièce (db/296) : flux reçu, ouvert dans la page du module. */
+  FLUX: 'fe_flux',
 });
 
 /** Signaux de notification de la facturation électronique (db/295, types du module « facture_electronique »). */

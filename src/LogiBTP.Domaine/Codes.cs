@@ -176,6 +176,14 @@ public static class CategoriesGed
 public static class TypesElementFe
 {
     public const string Document = "DOCUMENT";
+    /// <summary>Ligne de la liste « Factures reçues à traiter » sans pièce (db/296) : flux reçu, ouvert dans la page du module.</summary>
+    public const string Flux = "fe_flux";
+}
+
+/// <summary>Étapes des versions de la GED employées par le cœur (modules/ged : VALIDATION, ENVOI, RECEPTION…).</summary>
+public static class EtapesGed
+{
+    public const string Reception = "RECEPTION";
 }
 
 /// <summary>

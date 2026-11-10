@@ -20,7 +20,9 @@ namespace LogiBTP.Api.Btp;
 /// de notifications (facture reçue, rejet, refus, litige, erreur de la file : niveau et activation par société dans
 /// facture_electronique_signal) aux comptes qui consultent le nœud « facture_electronique ». Le jeton de la plateforme
 /// vient de l'<c>IFournisseurJeton</c> du module OAuth (fabrique des connecteurs par portée). Création de la pièce
-/// reçue et rattachements : lot 12. Spécialisation par portée : services de la requête ou de la portée de la base.
+/// reçue en brouillon et rattachements (lot 12) : <see cref="ReceptionFactureBtp"/> ; fichiers d'un flux reçu rangés à
+/// l'étape RECEPTION et au coffre, original noté dans document_origine. Spécialisation par portée : services de la
+/// requête ou de la portée de la base.
 /// </summary>
 public sealed class SpecialisationFactureElectroniqueBtp(IServiceProvider services, ILogger<SpecialisationFactureElectroniqueBtp> journal)
     : SpecialisationFactureElectronique
@@ -55,6 +57,13 @@ public sealed class SpecialisationFactureElectroniqueBtp(IServiceProvider servic
     public override async Task<bool> ActifAsync(CancellationToken ct) =>
         await services.GetRequiredService<ModulesSociete>().EstActifAsync(ModulesFacultatifs.FactureElectronique, ct);
 
+    // ----- Réception (lot 12) -----
+
+    private ReceptionFactureBtp Reception => new(services, journal, Service);
+
+    /// <summary>Pièce en brouillon d'une facture reçue (A_FACTURE ou T_FACTURE_AVT), doublon refusé, ou null (reste à traiter).</summary>
+    public override Task<PieceRecueFe?> CreerPieceRecueAsync(FactureRecueFe recue, CancellationToken ct) => Reception.CreerAsync(recue, ct);
+
     // ----- GED -----
 
     private sealed record PieceGed(string Type, long Groupe, string? Numero);
@@ -80,6 +89,19 @@ public sealed class SpecialisationFactureElectroniqueBtp(IServiceProvider servic
                 """, new NpgsqlParameter("e", ent)).ToListAsync(ct)).FirstOrDefault();
             if (piece is null) return null;
             var nom = fichier.Nom ?? flux.FflNom;
+            var titre = $"Facture électronique {flux.FflNumero ?? piece.Numero ?? flux.FflNom} ({document})";
+            var resume = $"Flux {flux.FflId} ({flux.FflSens}, {flux.FflSyntaxe}), document {document}";
+            // Facture reçue (Q21) : étape RECEPTION, au coffre ; l'original devient le fichier source de document_origine.
+            if (flux.FflSens == SensFlux.Entrant)
+            {
+                var id = await Reception.DeposerAsync(piece.Type, piece.Groupe, nom, fichier.Contenu, fichier.TypeMime, titre, resume, ct);
+                if (id is long g && document == TypeDocumentFlux.Original)
+                {
+                    await db.Database.ExecuteSqlRawAsync("UPDATE document_origine SET dor_fichier_id = @g WHERE dor_ent_id = @e AND dor_fichier_id IS NULL",
+                        [new NpgsqlParameter("g", g), new NpgsqlParameter("e", ent)], ct);
+                }
+                return id;
+            }
             await using var contenu = new MemoryStream(fichier.Contenu);
             var formulaire = new FormFile(contenu, 0, fichier.Contenu.Length, "fichier", nom)
             {
@@ -87,9 +109,9 @@ public sealed class SpecialisationFactureElectroniqueBtp(IServiceProvider servic
             };
             var depot = await services.GetRequiredService<ServiceGed>().DeposerFichier(formulaire, new MetaDepot
             {
-                Titre = $"Facture électronique {flux.FflNumero ?? piece.Numero ?? flux.FflNom} ({document})", Categorie = CategoriesGed.FactureElectronique,
+                Titre = titre, Categorie = CategoriesGed.FactureElectronique,
                 TypeElement = piece.Type, IdElement = piece.Groupe.ToString(CultureInfo.InvariantCulture), Auteur = Service.Code,
-                Confidentialite = NiveauConfidentialite.Interne, Resume = $"Flux {flux.FflId} ({flux.FflSens}, {flux.FflSyntaxe}), document {document}",
+                Confidentialite = NiveauConfidentialite.Interne, Resume = resume,
                 MotsCles = ["facture_electronique", document.ToLowerInvariant()],
             }, Service, ct);
             return depot.Id;
@@ -144,6 +166,7 @@ public sealed class SpecialisationFactureElectroniqueBtp(IServiceProvider servic
         return signal switch
         {
             SignauxFe.Recue => ($"Facture électronique reçue{n}", "Facture reçue de la plateforme, à rattacher ou à saisir"),
+            SignauxFe.Recue + PieceCreee => ($"Facture électronique reçue{n}", "Pièce créée en brouillon : à vérifier puis à valider"),
             SignauxFe.Rejet => ($"Facture électronique{n} rejetée", detail.Length == 0 ? null : detail),
             SignauxFe.Refus => ($"Facture électronique{n} refusée par le client", detail.Length == 0 ? null : detail),
             SignauxFe.Litige => ($"Facture électronique{n} en litige", detail.Length == 0 ? null : detail),
@@ -151,9 +174,13 @@ public sealed class SpecialisationFactureElectroniqueBtp(IServiceProvider servic
         };
     }
 
+    /// <summary>Suffixe du libellé d'une facture reçue rattachée à sa pièce (brouillon à vérifier).</summary>
+    private const string PieceCreee = ":piece";
+
     public override Task SignalerAsync(SignalementFe s, CancellationToken ct) =>
         SignalDe(s) is { } signal
-            ? PublierAsync(signal, s.Flux, s.Flux.FflNumero, s.Code, s.Message, $"fe:{signal}:{s.Flux.FflId}:{s.Flux.FflEssais}", ct)
+            ? PublierAsync(signal, s.Flux, s.Flux.FflNumero, s.Code, s.Message, $"fe:{signal}:{s.Flux.FflId}:{s.Flux.FflEssais}", ct,
+                signal == SignauxFe.Recue && PieceDu(s.Flux) is not null ? signal + PieceCreee : signal)
             : Task.CompletedTask;
 
     public override Task StatutRecuAsync(StatutSignaleFe s, CancellationToken ct) =>
@@ -165,17 +192,18 @@ public sealed class SpecialisationFactureElectroniqueBtp(IServiceProvider servic
 
     private sealed record LigneCompte(string Code, string Profil);
 
-    private async Task PublierAsync(string signal, FluxFe? flux, string? numero, string? code, string? message, string cle, CancellationToken ct)
+    private async Task PublierAsync(string signal, FluxFe? flux, string? numero, string? code, string? message, string cle, CancellationToken ct,
+        string? libelle = null)
     {
         try
         {
             var db = services.GetRequiredService<LogiBtpContext>();
             var reglage = await ReglageAsync(db, signal, ct);
             if (!reglage.Actif) return;
-            var (titre, texte) = Libelle(signal, numero, code, message);
+            var (titre, texte) = Libelle(libelle ?? signal, numero, code, message);
             var destinataires = await DestinatairesAsync(db, services.GetService<IDroits>(), ct);
             await services.GetRequiredService<ServiceNotification>().PublierAsync(destinataires.Select(d => new NouvelleNotification(d, ModuleNotification, signal,
-                titre, texte, reglage.Niveau, Url(flux), flux is null ? null : "fe_flux", flux?.FflId.ToString(CultureInfo.InvariantCulture), cle)), ct);
+                titre, texte, reglage.Niveau, Url(flux), flux is null ? null : TypesElementFe.Flux, flux?.FflId.ToString(CultureInfo.InvariantCulture), cle)), ct);
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {

@@ -442,6 +442,10 @@ export const EVENEMENT_FE = Object.freeze({
   AVOIR_INTERNE: 'AVOIR_INTERNE',
   RATTACHEMENT: 'RATTACHEMENT',
   IMPORT_MANUEL: 'IMPORT_MANUEL',
+  // Réception (lot 12) : facture lue, pièce créée par l'application, création refusée pour une facture en double.
+  LECTURE: 'LECTURE',
+  PIECE_CREEE: 'PIECE_CREEE',
+  DOUBLON: 'DOUBLON',
 });
 
 /** Auteur d'une étape du journal fe_evenement : utilisateur, LogiBTP (file, relève), plateforme (accusé, statut reçu). */
@@ -502,6 +506,8 @@ export const ERREUR_FE = Object.freeze({
   FLUX_INTROUVABLE: 'FLUX_INTROUVABLE',
   ETAT_FLUX_INVALIDE: 'ETAT_FLUX_INVALIDE',
   PARAMETRE_INVALIDE: 'PARAMETRE_INVALIDE',
+  // Réception (lot 12) : facture déjà enregistrée chez l'application (même fournisseur, même numéro).
+  FACTURE_EN_DOUBLE: 'FACTURE_EN_DOUBLE',
 });
 
 /** Connecteur de plateforme (lot 6) : AFNOR XP Z12-013, plateforme simulée, dépôt manuel ; une PA propre s'ajoute à la fabrique. */

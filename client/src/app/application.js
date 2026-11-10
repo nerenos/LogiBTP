@@ -24,7 +24,7 @@ import { listeOperations } from './hors-ligne/operations.js';
 import './terrain/operations-terrain.js';
 import { menus, menusTerrain, estPageTerrain } from './navigation/menus.js';
 import { ROUTES } from './pages/index.js';
-import { CLE_PREFERENCES_NAVIGATION, urlDocument, urlFiche, TYPE_DOCUMENT, SUJET_FENETRE } from './codes.js';
+import { CLE_PREFERENCES_NAVIGATION, urlDocument, urlFiche, TYPE_DOCUMENT, TYPE_ELEMENT_FE, SUJET_FENETRE } from './codes.js';
 import { texte, texteHtml, pluriel, icone, iconeHtml, messageErreur } from '@logibtp/socle/dictionnaire';
 import { logoApplication } from '../personnalisation.js';
 
@@ -334,6 +334,8 @@ export class Application {
     if (type === 'mouvement_stock') return `/stock/mouvement/${id}`;
     if (type === 'stk_lot') return `/stock/lot/${id}`;
     if (type === 'equipement') return `/sav/equipement/${id}`;
+    // Facture électronique reçue sans pièce (liste « Factures reçues à traiter ») : détail du flux dans la page du module.
+    if (type === TYPE_ELEMENT_FE.FLUX) return `/facture-electronique?flux=${id}`;
     const f = ficheDeLigne({ id, type });
     return f ? urlFiche(f.type, f.id) : null;
   }

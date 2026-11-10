@@ -725,6 +725,7 @@
   "execution_btp_reserve_levee": "✔",
   "execution_btp_facturer": "🧾",
   "navigation_btp_facture_electronique": "🧾",
+  "navigation_btp_fe_recues": "📥",
   "facture_electronique_btp_page": "🧾",
   "facture_electronique_btp_flux": "📋",
   "facture_electronique_btp_depot": "📤",

@@ -357,6 +357,31 @@ public class ServiceFactureElectronique(
         await specialisation.SignalerAsync(new SignalementFe(EvenementFe.Erreur, f, f.FflEtat, code, Masquage.Texte(message)), ct);
     }
 
+    /// <summary>Résumé d'une facture lue, inscrit au journal (étape LECTURE) : en-tête, parties, références, totaux.</summary>
+    public static object ResumeLecture(Facture x, string syntaxe) => new
+    {
+        numero = x.Numero, date = x.DateEmission, type = x.TypeFacture, cadre = x.CadreFacturation, profil = x.Profil, syntaxe, devise = x.Devise,
+        vendeur = new
+        {
+            raison_sociale = x.Vendeur.RaisonSociale, siren = x.Vendeur.Siren, numero_tva = x.Vendeur.NumeroTva,
+            siret = x.Vendeur.Identifiants.FirstOrDefault(i => i.Schema == SchemaIdentifiant.Siret)?.Valeur,
+        },
+        acheteur = new { raison_sociale = x.Acheteur.RaisonSociale, siren = x.Acheteur.Siren },
+        references = new
+        {
+            commande = x.References.Commande, contrat = x.References.Contrat, projet = x.References.Projet, objet = x.References.Objet,
+            acheteur = x.References.Acheteur,
+        },
+        total_ht = x.Totaux.TotalHt, total_tva = x.Totaux.TotalTva, total_ttc = x.Totaux.TotalTtc, net_a_payer = x.Totaux.NetAPayer,
+        lignes = x.Lignes.Count, pieces_jointes = x.PiecesJointes.Count, payeur = x.Payeur?.RaisonSociale,
+    };
+
+    /// <summary>
+    /// Facture reçue : lecture (étape LECTURE, ou ERREUR si illisible), puis élément existant, sinon pièce créée par
+    /// l'application (étape PIECE_CREEE) ou refusée pour doublon (étape DOUBLON, erreur FACTURE_EN_DOUBLE, la facture reste
+    /// à traiter) ; rattachée : étape RATTACHEMENT (RECU → TRAITE), fichiers gardés rangés en GED de l'élément, vue
+    /// lisible téléchargée de la plateforme si elle en fournit une. Signalement RECEPTION dans tous les cas lus.
+    /// </summary>
     private async Task TraiterFactureRecueAsync(FluxFe f, byte[] contenu, CancellationToken ct)
     {
         FactureLue lue;
@@ -372,24 +397,96 @@ public class ServiceFactureElectronique(
         f.FflNumero = lue.Facture.Numero;
         if (f.FflProfil is null or ProfilFacture.NonDefini) f.FflProfil = lue.Facture.Profil;
         await db.SaveChangesAsync(ct);
+        await JournalFe.AjouterAsync(db, EtapeFe.Du(f, EvenementFe.Lecture, ActeurFe.Systeme) with
+        {
+            EtatAvant = f.FflEtat, EtatApres = f.FflEtat, Detail = ResumeLecture(lue.Facture, lue.Syntaxe),
+        }, ct);
         var recue = new FactureRecueFe(f, lue.Facture, lue.Syntaxe);
         var existant = await specialisation.ElementDuFluxAsync(recue, ct);
-        var element = existant ?? await specialisation.CreerPieceRecueAsync(recue, ct);
+        var element = existant;
         if (element is null)
         {
-            await specialisation.SignalerAsync(new SignalementFe(EvenementFe.Reception, f, f.FflEtat), ct);
-            return;
+            var piece = await specialisation.CreerPieceRecueAsync(recue, ct);
+            if (piece?.Refus is { } refus)
+            {
+                AjouterErreur(f, refus, piece.Message);
+                f.FflModifieLe = Maintenant;
+                await db.SaveChangesAsync(ct);
+                await JournalFe.AjouterAsync(db, EtapeFe.Du(f, EvenementFe.Doublon, ActeurFe.Systeme) with
+                {
+                    EtatAvant = f.FflEtat, EtatApres = f.FflEtat,
+                    Detail = new { code = refus, message = piece.Message, type_element = piece.Element?.Type, id_element = piece.Element?.Id, detail = piece.Detail },
+                }, ct);
+            }
+            else if (piece?.Element is { } cree)
+            {
+                element = cree;
+                f.FflTypeElement = cree.Type;
+                f.FflIdElement = cree.Id;
+                f.FflModifieLe = Maintenant;
+                await db.SaveChangesAsync(ct);
+                await JournalFe.AjouterAsync(db, EtapeFe.Du(f, EvenementFe.PieceCreee, ActeurFe.Systeme) with
+                {
+                    EtatAvant = f.FflEtat, EtatApres = f.FflEtat, Detail = piece.Detail,
+                }, ct);
+            }
         }
-        var avant = f.FflEtat;
-        f.FflTypeElement = element.Type;
-        f.FflIdElement = element.Id;
-        f.FflEtat = EtatFlux.Traite;
-        f.FflModifieLe = Maintenant;
-        await db.SaveChangesAsync(ct);
-        await JournalFe.AjouterAsync(db, EtapeFe.Du(f, EvenementFe.Rattachement, ActeurFe.Systeme) with
+        if (element is not null)
         {
-            EtatAvant = avant, EtatApres = f.FflEtat, Detail = new { numero = f.FflNumero, cree = existant is null },
-        }, ct);
+            var avant = f.FflEtat;
+            f.FflTypeElement = element.Type;
+            f.FflIdElement = element.Id;
+            f.FflEtat = EtatFlux.Traite;
+            f.FflModifieLe = Maintenant;
+            await db.SaveChangesAsync(ct);
+            await RangerFichiersAsync(f, ct);
+            var lisible = await TelechargerLisibleAsync(f, ct);
+            await JournalFe.AjouterAsync(db, EtapeFe.Du(f, EvenementFe.Rattachement, ActeurFe.Systeme) with
+            {
+                EtatAvant = avant, EtatApres = f.FflEtat,
+                Detail = new { numero = f.FflNumero, cree = existant is null, ged_original = f.FflGedOriginalId, ged_lisible = f.FflGedLisibleId, lisible },
+            }, ct);
+        }
+        await specialisation.SignalerAsync(new SignalementFe(EvenementFe.Reception, f, f.FflEtat), ct);
+    }
+
+    /// <summary>Fichiers gardés d'un flux rangés en GED par l'application (après un rattachement) ; ceux déjà rangés restent.</summary>
+    private async Task RangerFichiersAsync(FluxFe f, CancellationToken ct)
+    {
+        foreach (var x in await db.Fichiers.AsNoTracking().Where(x => x.FfiFflId == f.FflId).ToListAsync(ct))
+        {
+            var deja = x.FfiDocument switch
+            {
+                TypeDocumentFlux.Original => f.FflGedOriginalId,
+                TypeDocumentFlux.Converti => f.FflGedConvertiId,
+                TypeDocumentFlux.Lisible => f.FflGedLisibleId,
+                _ => null,
+            };
+            if (deja is null) await GarderFichierAsync(f, x.FfiDocument, new FichierFlux(x.FfiContenu, x.FfiNom, x.FfiTypeMime), ct);
+        }
+    }
+
+    /// <summary>
+    /// Vue lisible d'une facture reçue d'une plateforme (ReadableView), gardée et rangée ; vrai si obtenue. Une plateforme
+    /// qui n'en fournit pas (ou injoignable) n'empêche pas le rattachement : le fichier reste téléchargeable plus tard.
+    /// </summary>
+    private async Task<bool> TelechargerLisibleAsync(FluxFe f, CancellationToken ct)
+    {
+        if (f.FflGedLisibleId is not null || await db.Fichiers.AnyAsync(x => x.FfiFflId == f.FflId && x.FfiDocument == TypeDocumentFlux.Lisible, ct)) return true;
+        if (f.FflIdFlux is null || f.FflConnecteur == ConnecteurFe.Manuel) return false;
+        var p = await ParametreAsync(ct);
+        if (p.FpaConnecteur != f.FflConnecteur) return false;
+        FichierFlux fichier;
+        try
+        {
+            fichier = await Connecteur(p).TelechargerAsync(f.FflIdFlux, TypeDocumentFlux.Lisible, ct);
+        }
+        catch (ExceptionConnecteur)
+        {
+            return false;
+        }
+        await GarderFichierAsync(f, TypeDocumentFlux.Lisible, fichier, ct);
+        return true;
     }
 
     /// <summary>Sens de la facture visée par un flux de statuts : CustomerInvoiceLC → facture émise, sinon reçue.</summary>
