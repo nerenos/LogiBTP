@@ -94,7 +94,7 @@ Analyse du 23/10/2026 : [ANALYSE-MODULE-SOUS-TRAITANCE.md](documentation/concept
   statuts), lot 6 le 09/11/2026 (connecteurs : AFNOR XP Z12-013, plateforme simulée, dépôt manuel), lot 7 le
   10/11/2026 (OAuth GENERIQUE en flux CLIENT), lot 8 le 10/11/2026 (schéma, file avec reprises, statuts, journal des
   étapes chaîné, relève par curseur, service et routes `/api/facture-electronique`), lot 9 le 10/11/2026 (écrans du
-  module, chronologie réutilisable, page de démonstration), lot 10 le 10/11/2026 (catégorie EN16931 et VATEX des catégories de TVA), lot 11 le 10/11/2026 (branchement du cœur : activation, droits, GED, signaux, page, onglet Chronologie), lot 12 le 10/11/2026 (réception : facture reçue → pièce d'achat ou de sous-traitance en brouillon, fournisseur, commande, chantier, GED au coffre, liste « Factures reçues à traiter », étapes du journal).
+  module, chronologie réutilisable, page de démonstration), lot 10 le 10/11/2026 (catégorie EN16931 et VATEX des catégories de TVA), lot 11 le 10/11/2026 (branchement du cœur : activation, droits, GED, signaux, page, onglet Chronologie), lot 12 le 10/11/2026 (réception : facture reçue → pièce d'achat ou de sous-traitance en brouillon, fournisseur, commande, chantier, GED au coffre, liste « Factures reçues à traiter », étapes du journal), lot 13 le 10/11/2026 (statuts posés à la réception : 204 à la création, 205 à la validation, 207 et 210 par boutons, 211 au règlement émis, CDAR par la file, statuts non envoyés par code, création de la pièce reprise sans doublon).
   - [ ] **SQL à appliquer par l'utilisateur** (lot 10) : `modules/comptabilite/db/094g_comptabilite_tva_en16931.sql` (rejouable, au
     manifeste) sur `logibtp` et `logibtp_demo` par `installation base mettre-a-jour`.
   - [ ] **SQL à appliquer par l'utilisateur** (lot 8, jamais appliqué par Claude) : `modules/facture-electronique/db/099f_facture_electronique.sql`
@@ -121,9 +121,20 @@ Analyse du 23/10/2026 : [ANALYSE-MODULE-SOUS-TRAITANCE.md](documentation/concept
     (exemples FNFE ; de bout en bout sur une base jetable par `LOGIBTP_TEST_PG_JETABLE`).
   - [ ] Réception, décisions reportées : avoir reçu (BT-3 381…) laissé à traiter sans pièce ; facture de sous-traitance
     créée par transformation de la commande avec les montants reçus à ventiler (saisie RECUE), sans avancement repris
-    ligne à ligne (lot 15) ; pièce créée hors de la transaction du flux (contextes distincts) : un échec après la
-    création laisse le brouillon, la relève suivante le signale en doublon ; écarts de prix avec la commande visibles à
-    la validation (avertissement `PRIX_ACHAT_ECART`), pas à la réception.
+    ligne à ligne (lot 15) ; écarts de prix avec la commande visibles à la validation (avertissement `PRIX_ACHAT_ECART`),
+    pas à la réception.
+  - [ ] **SQL à appliquer par l'utilisateur** (lot 13, jamais appliqué par Claude hors des bases jetables des tests),
+    par `installation base mettre-a-jour` sur `logibtp` et `logibtp_demo` :
+    `modules/facture-electronique/db/099h_facture_electronique_statuts.sql` (rejouable : `fpa_statuts_non_envoyes`).
+  - [ ] Lot 13 non vérifié en navigateur : bloc « Statut de la facture reçue » de l'onglet Chronologie (boutons En
+    litige et Refuser, Alt+Shift+L / Alt+Shift+X, fenêtre du motif et du commentaire), cases « Statuts posés envoyés »
+    des paramètres du module ; vérifié par les tests (`ReceptionFactureBtpTests` de bout en bout sur la base jetable,
+    `ServiceFactureElectroniqueTests`, `client/test/facture-electronique.test.js`).
+  - [ ] Statuts posés, décisions reportées : 205 et 211 posés par les points d'accroche (validation, pointage) dans leur
+    transaction mais sur la connexion du module (un échec de la validation ou du règlement après le point d'accroche
+    laisserait le statut posé) et seulement en requête HTTP (services de la requête) ; 211 posé au premier règlement
+    émis qui pointe la pièce, sans montant ; dévalidation ou suppression du règlement sans statut d'annulation ;
+    lisible et pièces jointes d'un brouillon repris rangés une seconde fois en GED (seul l'original est réutilisé).
   - [ ] Base jetable complète (manifeste seul) désignée par `LOGIBTP_TEST_PG` : trois tests échouent déjà sans le lot 12
     (`IntegrationPostgresTests.Agregats_identiques_au_js` et `Lots_par_cle_identiques_au_js` : colonnes de démonstration
     absentes ; `RelancesBtpTests.Devis_en_mode_tache_cree_la_tache_sans_courriel` : date attendue fixe) ; sans variable,

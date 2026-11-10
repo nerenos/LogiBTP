@@ -1,5 +1,5 @@
 {
-  "description": "Cycle de vie des factures (cycle-vie.js ↔ ReglesCycleVie.cs) : rôle selon le sens, émetteurs, statuts terminaux, motif obligatoire, statuts obligatoires vers le PPF, motifs autorisés par statut (onglet « Tableau des motifs de STATUTS » de l'annexe A XP Z12-012 V1.4), contrôle d'un statut posé ou reçu (transitions permises et refusées), statuts posables, statut affiché.",
+  "description": "Cycle de vie des factures (cycle-vie.js ↔ ReglesCycleVie.cs) : rôle selon le sens, émetteurs, statuts terminaux, motif obligatoire, statuts obligatoires vers le PPF, motifs autorisés par statut (onglet « Tableau des motifs de STATUTS » de l'annexe A XP Z12-012 V1.4), contrôle d'un statut posé ou reçu (transitions permises et refusées, refus impossible après Approuvée ou Paiement transmis), statuts posables, statut affiché.",
   "sens": [
     {"sens": "E", "attendu": "VENDEUR"},
     {"sens": "R", "attendu": "ACHETEUR"},
@@ -85,6 +85,9 @@
     {"nom": "reçue : suspendue sans motif (BR-FR-CDV-15)", "entree": {"sens": "R", "historique": ["204"], "statut": "208", "emetteur": "ACHETEUR", "motif": null, "action": null, "b2g": false}, "attendu": ["MOTIF_OBLIGATOIRE"]},
     {"nom": "reçue : approuvée partiellement sans motif (BR-FR-CDV-15)", "entree": {"sens": "R", "historique": ["204"], "statut": "206", "emetteur": "ACHETEUR", "motif": null, "action": null, "b2g": false}, "attendu": ["MOTIF_OBLIGATOIRE"]},
     {"nom": "reçue : paiement transmis", "entree": {"sens": "R", "historique": ["204", "205"], "statut": "211", "emetteur": "ACHETEUR", "motif": null, "action": null, "b2g": false}, "attendu": []},
+    {"nom": "reçue : refus impossible après approbation", "entree": {"sens": "R", "historique": ["204", "205"], "statut": "210", "emetteur": "ACHETEUR", "motif": "DOUBLON", "action": null, "b2g": false}, "attendu": ["TRANSITION_INTERDITE"]},
+    {"nom": "reçue : refus impossible après paiement transmis", "entree": {"sens": "R", "historique": ["204", "211"], "statut": "210", "emetteur": "ACHETEUR", "motif": "DOUBLON", "action": null, "b2g": false}, "attendu": ["TRANSITION_INTERDITE"]},
+    {"nom": "reçue : refus après litige", "entree": {"sens": "R", "historique": ["204", "207"], "statut": "210", "emetteur": "ACHETEUR", "motif": "DOUBLON", "action": null, "b2g": false}, "attendu": []},
     {"nom": "émise : encaissée après dépôt", "entree": {"sens": "E", "historique": ["200", "201", "202", "203", "205"], "statut": "212", "emetteur": "VENDEUR", "motif": null, "action": null, "b2g": false}, "attendu": []},
     {"nom": "émise : encaissée avant dépôt", "entree": {"sens": "E", "historique": [], "statut": "212", "emetteur": "VENDEUR", "motif": null, "action": null, "b2g": false}, "attendu": ["TRANSITION_INTERDITE"]},
     {"nom": "émise : encaissée par l'acheteur", "entree": {"sens": "E", "historique": ["200"], "statut": "212", "emetteur": "ACHETEUR", "motif": null, "action": null, "b2g": false}, "attendu": ["EMETTEUR_NON_AUTORISE"]},
@@ -115,6 +118,7 @@
     {"nom": "émise : rien après refus", "sens": "E", "historique": ["200", "210"], "attendu": []},
     {"nom": "reçue : à réception", "sens": "R", "historique": [], "attendu": ["204", "205", "206", "207", "208", "210", "211", "220"]},
     {"nom": "reçue : rien après rejet", "sens": "R", "historique": ["213"], "attendu": []},
+    {"nom": "reçue : approuvée, plus de refus", "sens": "R", "historique": ["204", "205"], "attendu": ["204", "205", "206", "207", "208", "211", "220"]},
     {"nom": "reçue : historique null traité comme vide", "sens": "R", "historique": null, "attendu": ["204", "205", "206", "207", "208", "210", "211", "220"]},
     {"nom": "sens inconnu", "sens": "X", "historique": [], "attendu": []}
   ],

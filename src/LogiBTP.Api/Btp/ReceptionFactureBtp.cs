@@ -46,6 +46,7 @@ public sealed record PreparationLignes(List<LignePreparee> Lignes, List<string> 
 /// date externe = date de la facture (BT-2) ; document_origine IMPORT (format = syntaxe, fichier = original en GED,
 /// rapport de reprise) ; pièces jointes (BG-24, BR-FR-17) en GED de la pièce, étape RECEPTION, au coffre (Q21). Doublon
 /// (même fournisseur, même référence externe, facture d'achat ou de sous-traitance non annulée) refusé, tracé par le module.
+/// Création idempotente (lot 13) : brouillon déjà créé pour le flux repris ; Prise en charge (204) posée au rattachement.
 /// </summary>
 public sealed class ReceptionFactureBtp(IServiceProvider services, ILogger journal, Utilisateur service)
 {
@@ -226,7 +227,8 @@ public sealed class ReceptionFactureBtp(IServiceProvider services, ILogger journ
 
     // ---------------------------------------------------------------- création
 
-    private sealed record Trouve(long Id, string? Numero, string Type);
+    /// <summary>Pièce trouvée : identifiant, numéro, code du type.</summary>
+    public sealed record Trouve(long Id, string? Numero, string Type);
 
     private sealed record LigneUnite(string Code, string[] Synonymes);
 
@@ -239,6 +241,16 @@ public sealed class ReceptionFactureBtp(IServiceProvider services, ILogger journ
     {
         if (recue.Facture is not { } f || EstAvoir(f.TypeFacture)) return null;
         var db = services.GetRequiredService<LogiBtpContext>();
+        // Reprise (lot 13) : la pièce est créée hors de la transaction du flux ; un échec ensuite annule le flux, pas la
+        // pièce. Le brouillon déjà créé pour ce flux (même connecteur et même identifiant de la plateforme, ou même flux)
+        // est rattaché, sans doublon ni nouvelle pièce ; la Prise en charge est reposée avec le flux.
+        if (await BrouillonDuFluxAsync(db, recue.Flux, ct) is { } repris)
+        {
+            return PieceRecueFe.Creee(new ElementFe(TypesElementFe.Document, repris.Id.ToString(CultureInfo.InvariantCulture)), new
+            {
+                ent_id = repris.Id, type = repris.Type, reprise = true,
+            }) with { Statuts = StatutsReceptionBtp.ALaCreation(repris.Id, reprise: true) };
+        }
         var (siren, siret) = Identifiants(f.Vendeur);
         var candidats = siren is null && siret is null ? [] : await db.Database.SqlQueryRaw<FournisseurCandidat>("""
             SELECT per_id AS id, per_siren AS siren, per_siret AS siret, per_provisoire AS provisoire, per_parent_id AS parent
@@ -247,7 +259,7 @@ public sealed class ReceptionFactureBtp(IServiceProvider services, ILogger journ
         var fournisseur = ChoisirFournisseur(siren, siret, candidats);
         var rapport = new Dictionary<string, object?>
         {
-            ["flux"] = recue.Flux.FflId, ["syntaxe"] = recue.Syntaxe, ["profil"] = f.Profil, ["type_facture"] = f.TypeFacture, ["cadre"] = f.CadreFacturation,
+            ["flux"] = recue.Flux.FflId, ["connecteur"] = recue.Flux.FflConnecteur, ["id_flux"] = recue.Flux.FflIdFlux, ["syntaxe"] = recue.Syntaxe, ["profil"] = f.Profil, ["type_facture"] = f.TypeFacture, ["cadre"] = f.CadreFacturation,
             ["numero"] = f.Numero, ["siren"] = siren, ["siret"] = siret,
         };
 
@@ -349,8 +361,24 @@ public sealed class ReceptionFactureBtp(IServiceProvider services, ILogger journ
         return PieceRecueFe.Creee(new ElementFe(TypesElementFe.Document, ent.ToString(CultureInfo.InvariantCulture)), new
         {
             ent_id = ent, type, tiers, provisoire, rapport,
-        });
+        }) with { Statuts = StatutsReceptionBtp.ALaCreation(ent) };
     }
+
+    /// <summary>
+    /// Brouillon déjà créé pour un flux reçu (document_origine IMPORT : rapport du même connecteur et du même identifiant
+    /// de la plateforme, sinon du même flux), facture d'achat ou de sous-traitance encore en BROUILLON ; sinon null.
+    /// </summary>
+    public static async Task<Trouve?> BrouillonDuFluxAsync(LogiBtpContext db, FluxFe flux, CancellationToken ct) =>
+        (await db.Database.SqlQueryRaw<Trouve>("""
+            SELECT d.ent_id AS id, d.ent_numero AS numero, t.tyd_code AS type FROM document_origine o
+            JOIN document d ON d.ent_id = o.dor_ent_id JOIN type_document t ON t.tyd_id = d.ent_tyd_id JOIN statut_document s ON s.std_id = d.ent_std_id
+            WHERE o.dor_type = 'IMPORT' AND t.tyd_code = ANY(@types) AND s.std_code = @brouillon
+              AND ((@id_flux IS NOT NULL AND o.dor_rapport->>'connecteur' = @connecteur AND o.dor_rapport->>'id_flux' = @id_flux)
+                   OR (@flux > 0 AND o.dor_rapport->>'flux' = @flux::text))
+            ORDER BY d.ent_id LIMIT 1
+            """, new NpgsqlParameter("types", TypesFactureRecue), new NpgsqlParameter("brouillon", StatutsDocument.Brouillon),
+            SqlBtp.P("id_flux", flux.FflIdFlux, NpgsqlTypes.NpgsqlDbType.Text), new NpgsqlParameter("connecteur", flux.FflConnecteur),
+            new NpgsqlParameter("flux", flux.FflId)).ToListAsync(ct)).FirstOrDefault();
 
     /// <summary>Commande de sous-traitance valable du fournisseur désignée par une référence : numéro de la commande, ou code de son marché de sous-traitance.</summary>
     private static async Task<Trouve?> CommandeSousTraitanceAsync(LogiBtpContext db, long tiers, List<string> references, CancellationToken ct)

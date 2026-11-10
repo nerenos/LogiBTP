@@ -3,7 +3,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { texte, existe, icone } from '@logibtp/socle/dictionnaire';
 import {
   ETAT_FLUX, STATUT_CDV, EVENEMENT_FE, ACTEUR_FE, SENS_FLUX, SENS_STATUT, CONNECTEUR_FE, DECOUPAGE_EREPORTING, ETAT_ACCUSE, MOTIF_ACCUSE,
-  TYPE_FLUX, TYPE_DOCUMENT_FLUX, EMETTEUR_STATUT, ACTION_CDV, SYNTAXE, PROFIL_FACTURE,
+  TYPE_FLUX, TYPE_DOCUMENT_FLUX, EMETTEUR_STATUT, ACTION_CDV, SYNTAXE, PROFIL_FACTURE, MOTIF_STATUT,
 } from '../src/index.js';
 import { controlerParametres, parametresPourEdition } from '../ui/modeles.js';
 
@@ -44,12 +44,13 @@ describe('textes, icônes et conventions des écrans', () => {
     par('documents', Object.values(TYPE_DOCUMENT_FLUX));
     par('emetteurs', Object.values(EMETTEUR_STATUT));
     par('actions_cdv', Object.values(ACTION_CDV));
+    par('motifs_statut', Object.values(MOTIF_STATUT));
     par('syntaxes', Object.values(SYNTAXE));
     par('profils', Object.values(PROFIL_FACTURE));
     // Une erreur de chaque champ des paramètres (tout faux).
     const faux = controlerParametres({ ...parametresPourEdition(), connecteur: 'X', adresse_flux: 'x', adresse_annuaire: 'x', organisation: 'x'.repeat(65),
-      syntaxe: 'X', profil: 'X', frequence_releve: 0, delai_secondes: 0, decoupage_ereporting: 'X' });
-    expect(faux.length).toBe(9);
+      syntaxe: 'X', profil: 'X', frequence_releve: 0, delai_secondes: 0, decoupage_ereporting: 'X', statuts_non_envoyes: ['X'] });
+    expect(faux.length).toBe(10);
     par('parametres.erreurs', [...faux, 'connexion_oauth']);
     par('parametres.champs', Object.keys(parametresPourEdition()));
     par('colonnes', ['sens', 'type', 'numero', 'nom', 'etat', 'statut', 'element', 'essais', 'cree_le', 'erreur']);

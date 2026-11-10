@@ -1,13 +1,13 @@
 // Module Facturation électronique, paramètres de la plateforme (fe_parametre) : connecteur, connexion OAuth, adresses
 // du Flow Service et du Directory Service, Organization-Id, adresse électronique de la société, syntaxe et profil par
-// défaut, relève, délai, découpage de l'e-reporting ; essai de connexion (GET /sante, healthcheck de la plateforme).
+// défaut, relève, délai, découpage de l'e-reporting, statuts posés envoyés ou non (par code) ; essai de connexion (GET /sante, healthcheck de la plateforme).
 // Contrôle local par controlerParametres (même règle que le serveur) ; enregistrement réservé au paramétrage.
 import { texte, texteHtml, iconeHtml, existe, messageErreur } from '@logibtp/socle/dictionnaire';
 import { echapper, creerCombo, confirmer, alerter, declarerRaccourcis, actionDe } from '@logibtp/socle/ui';
 import { DECOUPAGE_EREPORTING, CONNECTEUR_FE } from '../src/codes.js';
 import {
   parametresPourEdition, corpsParametres, controlerParametres, parametresModifies, dureeMs, SYNTAXES_EMISSION, PROFILS_EMISSION,
-  FREQUENCE_RELEVE, DELAI_SECONDES, LONGUEUR_ORGANISATION,
+  FREQUENCE_RELEVE, DELAI_SECONDES, LONGUEUR_ORGANISATION, STATUTS_PARAMETRABLES, basculerStatutEnvoye,
 } from './modeles.js';
 
 export const GROUPE_RACCOURCIS_PARAMETRES = 'facture_electronique_parametres';
@@ -98,6 +98,9 @@ export class ParametresFe {
         ${ligne('frequence_releve', `<input type="number" min="${FREQUENCE_RELEVE.min}" max="${FREQUENCE_RELEVE.max}" step="1" data-champ="frequence_releve" value="${p.frequence_releve ?? ''}" ${dis} ${marque('frequence_releve')}> ${texteHtml('facture_electronique.parametres.minutes')}`)}
         ${ligne('delai_secondes', `<input type="number" min="${DELAI_SECONDES.min}" max="${DELAI_SECONDES.max}" step="1" data-champ="delai_secondes" value="${p.delai_secondes ?? ''}" ${dis} ${marque('delai_secondes')}> ${texteHtml('facture_electronique.parametres.secondes')}`)}
         ${ligne('decoupage_ereporting', '<span data-combo="decoupage_ereporting"></span>', texteHtml('facture_electronique.parametres.aides.decoupage_ereporting'))}
+        ${ligne('statuts_non_envoyes', `<span class="fe-statuts-envoyes" ${marque('statuts_non_envoyes')}>${STATUTS_PARAMETRABLES.map((c) => `<label><input type="checkbox" data-statut-envoye="${c}"
+          ${(p.statuts_non_envoyes ?? []).includes(c) ? '' : 'checked'} ${dis}> ${echapper(texte('facture_electronique.statut_code', { code: c, libelle: texte(`facture_electronique.statuts.${c}`) }))}</label>`).join('')}</span>`,
+          texteHtml('facture_electronique.parametres.aides.statuts_non_envoyes'))}
       </tbody></table>
       ${erreurs.length ? `<ul class="fe-erreurs">${erreurs.map((c) => `<li>${iconeHtml('fe_avertissement')} ${echapper(texte(`facture_electronique.parametres.erreurs.${c}`, {
         min_frequence: FREQUENCE_RELEVE.min, max_frequence: FREQUENCE_RELEVE.max, min_delai: DELAI_SECONDES.min, max_delai: DELAI_SECONDES.max, longueur: LONGUEUR_ORGANISATION }))}</li>`).join('')}</ul>` : ''}
@@ -121,6 +124,13 @@ export class ParametresFe {
 
   #changement(e) {
     const t = e.target;
+    if (t.dataset.statutEnvoye) {
+      this.#p = { ...this.#p, statuts_non_envoyes: basculerStatutEnvoye(this.#p.statuts_non_envoyes, t.dataset.statutEnvoye, t.checked) };
+      this.#sante = null;
+      this.#rendre();
+      this.#zone.querySelector(`[data-statut-envoye="${t.dataset.statutEnvoye}"]`)?.focus();
+      return;
+    }
     const champ = t.dataset.champ;
     if (!champ) return;
     let v;

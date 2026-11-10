@@ -430,7 +430,8 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
     /// <summary>
     /// Validation : commande client inscrite à son marché (base ou avenant, montant recalculé, db/170) ; document
     /// d'avancement d'un marché : numéro de situation (Q29 : le suivant, sauf numéro saisi) et, pour une facture ou un
-    /// avoir d'avancement, documents précédents déduits figés (13.7, document_deduction).
+    /// avoir d'avancement, documents précédents déduits figés (13.7, document_deduction) ; facture reçue par la plateforme :
+    /// Approuvée (205, <see cref="StatutsReceptionBtp"/>).
     /// </summary>
     public override async Task ApresValidationAsync(DocumentDbContext<DocumentBtp, DocumentLigneBtp> db, long entId, TypeDocument type, CancellationToken ct)
     {
@@ -440,6 +441,12 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
             await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE document SET ent_exe_etat = 'A_FAIRE' WHERE ent_id = {entId} AND ent_exe_etat IS NULL", ct);
             if (type.TydCode == TypesDocument.EOe) await ExecutionBtp.FigerBudgetAsync(db, entId, "validation", ct);
             return;
+        }
+        // Facture reçue par la plateforme (module Facturation électronique, lot 13) : Approuvée (205) à la validation.
+        if (type.TydCode is TypesDocument.AFacture or TypesDocument.TFactureAvt && Http?.HttpContext?.RequestServices is { } requete)
+        {
+            await new StatutsReceptionBtp(requete, requete.GetRequiredService<ILoggerFactory>().CreateLogger<StatutsReceptionBtp>())
+                .ApprouverAsync(entId, Utilisateur.Depuis(Http.HttpContext).Code, ct);
         }
         // Stock : mouvements des livraisons, réceptions, factures sans livraison et transferts (module Stock, § 4).
         await MouvementsStockBtp.EcrireAsync(db, entId, type, ct);

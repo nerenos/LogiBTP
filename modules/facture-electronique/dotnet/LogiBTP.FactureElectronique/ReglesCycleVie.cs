@@ -158,7 +158,8 @@ public static class ReglesCycleVie
 
     /// <summary>
     /// Erreurs d'enchaînement d'un statut posé par la société après un historique : rien après un statut terminal ;
-    /// facture émise : rien avant Déposée ; Déposée une seule fois ; Complétée seulement en réponse à une Suspendue.
+    /// facture émise : rien avant Déposée ; Déposée une seule fois ; Complétée seulement en réponse à une Suspendue ; Refusée
+    /// impossible après Approuvée ou Paiement transmis.
     /// </summary>
     private static List<string> ErreursEnchainement(string sens, IReadOnlyList<string>? historiqueLu, string statut)
     {
@@ -168,7 +169,8 @@ public static class ReglesCycleVie
         var interdite = (sens == SensFacture.Emise && !historique.Contains(StatutCdv.Deposee))
             || (statut == StatutCdv.Deposee && historique.Contains(StatutCdv.Deposee))
             || (statut == StatutCdv.Completee
-                && historique.LastOrDefault(h => h == StatutCdv.Suspendue || h == StatutCdv.Completee) != StatutCdv.Suspendue);
+                && historique.LastOrDefault(h => h == StatutCdv.Suspendue || h == StatutCdv.Completee) != StatutCdv.Suspendue)
+            || (statut == StatutCdv.Refusee && historique.Any(h => h == StatutCdv.Approuvee || h == StatutCdv.PaiementTransmis));
         if (interdite) erreurs.Add(ErreurFe.TransitionInterdite);
         return erreurs;
     }

@@ -10,6 +10,7 @@ using LogiBTP.FactureElectronique.Formats;
 using LogiBTP.FactureElectronique.Web;
 using LogiBTP.FactureElectronique.Web.Connecteurs;
 using LogiBTP.Ged.Web;
+using LogiBTP.Reglements.Web;
 using LogiBTP.Socle;
 using LogiBTP.Socle.Testing;
 using LogiBTP.Socle.Web;
@@ -205,6 +206,7 @@ public class ReceptionFactureBtpTests
         s.AddModuleAnnuaire<SpecialisationAnnuaireBtp>(Base);
         s.AddScoped<ServiceAnnuaire, ServiceAnnuaireBtp>();
         s.AddModuleFactureElectronique<SpecialisationFactureElectroniqueBtp>(Base);
+        s.AddModuleReglement<SpecialisationReglementBtp>(Base);
         s.AddScoped<ModulesSociete>();
         return s.BuildServiceProvider();
     }
@@ -281,8 +283,9 @@ public class ReceptionFactureBtpTests
         Assert.Equal(true, await Scalaire("SELECT dge_coffre FROM document_ged WHERE dge_id = @g", ("g", pdf.GedOriginalId.Value)));
         Assert.Equal(TypesDocument.AFacture, await Scalaire("SELECT dge_type_element FROM document_ged WHERE dge_id = @g", ("g", pdf.GedOriginalId.Value)));
         Assert.NotNull(pdf.GedLisibleId);
-        // Chronologie complète de la pièce : reçue, lue, pièce créée, rattachée.
-        Assert.Equal([EvenementFe.Reception, EvenementFe.Lecture, EvenementFe.PieceCreee, EvenementFe.Rattachement], await Chronologie(ent));
+        // Chronologie complète de la pièce : reçue, lue, pièce créée, rattachée, Prise en charge posée (lot 13) et son CDAR produit.
+        Assert.Equal([EvenementFe.Reception, EvenementFe.Lecture, EvenementFe.PieceCreee, EvenementFe.Rattachement, EvenementFe.Production, EvenementFe.StatutPose],
+            await Chronologie(ent));
         // Liste « Factures reçues à traiter » : la pièce en brouillon.
         Assert.Equal(true, await Scalaire("SELECT a_traiter FROM v_liste_fe_recues WHERE flux_id = @f AND type_element = @t AND id = @e", ("f", pdf.Id), ("t", TypesDocument.AFacture), ("e", ent)));
 
@@ -333,5 +336,207 @@ public class ReceptionFactureBtpTests
         Assert.Equal(numero, await Scalaire("SELECT ent_reference_externe FROM document WHERE ent_id = @e", ("e", entCommande)));
         Assert.Equal("BROUILLON", await Scalaire("SELECT s.std_code FROM document d JOIN statut_document s ON s.std_id = d.ent_std_id WHERE d.ent_id = @e", ("e", entCommande)));
         Assert.Equal((long)facture.Lignes.Count, await Scalaire("SELECT count(*) FROM document_ligne WHERE lig_ent_id = @e AND lig_tyl_id = @t", ("e", entCommande), ("t", (int)TL.Element)));
+    }
+
+    /// <summary>Base jetable complète prête pour la réception (module actif, plateforme simulée), ou null sans base.</summary>
+    private static async Task<(NpgsqlConnection, ServiceProvider, PlateformeSimulee)?> PreparerAsync()
+    {
+        var connexion = Environment.GetEnvironmentVariable("LOGIBTP_TEST_PG_JETABLE");
+        if (string.IsNullOrEmpty(connexion)) return null;
+        var c = new NpgsqlConnection(connexion);
+        await c.OpenAsync();
+        await using (var k = new NpgsqlCommand("SELECT to_regclass('v_liste_fe_recues') IS NOT NULL AND EXISTS (SELECT 1 FROM information_schema.columns WHERE column_name = 'fpa_statuts_non_envoyes')", c))
+        {
+            if (await k.ExecuteScalarAsync() is not true) { await c.DisposeAsync(); return null; }
+        }
+        await using (var k = new NpgsqlCommand("UPDATE module_societe SET mod_actif = TRUE WHERE mod_code = 'facture_electronique'", c)) await k.ExecuteNonQueryAsync();
+        var services = Services(connexion);
+        using (var scope = services.CreateScope())
+        {
+            var fe = scope.ServiceProvider.GetRequiredService<ServiceFactureElectronique>();
+            var p = await fe.Parametres(default);
+            await fe.EnregistrerParametres(p with { Connecteur = ConnecteurFe.Simule, Actif = true, AdresseFlux = null, ConnexionOauth = null, StatutsNonEnvoyes = [] },
+                new Utilisateur("admin.test", Profils.Admin), default);
+            await new ReleveFlux(fe).ReleverAsync(true, null, default);
+        }
+        return (c, services, services.GetRequiredService<PlateformesSimulees>().Pour(services.GetRequiredService<SocieteCourante>().Base!));
+    }
+
+    /// <summary>Facture CII de l'exemple UC1 sous un numéro et un SIREN de vendeur propres au test (fournisseur provisoire neuf).</summary>
+    private static byte[] FactureUnique(string numero, string siren) =>
+        Encoding.UTF8.GetBytes(Encoding.UTF8.GetString(File.ReadAllBytes(Dossier("cii/en16931/UC1_F202500003_00-INV_20250701_EN16931_FX_CII_Commentee.xml")))
+            .Replace("F202500003", numero).Replace("100000009", siren));
+
+    private static string Siren()
+    {
+        // SIREN valide (clé de Luhn) tiré au hasard.
+        while (true)
+        {
+            var s = Random.Shared.NextInt64(100_000_000, 999_999_999).ToString(System.Globalization.CultureInfo.InvariantCulture);
+            var somme = s.Select((c, i) => { var d = (c - '0') * (i % 2 == 1 ? 2 : 1); return d > 9 ? d - 9 : d; }).Sum();
+            if (somme % 10 == 0) return s;
+        }
+    }
+
+    [Fact]
+    public async Task Statuts_poses_a_la_reception_204_205_211_puis_204_207_210_et_refus_apres_approbation()
+    {
+        if (await PreparerAsync() is not { } prepare) return;
+        var (c, services, plateforme) = prepare;
+        await using var _c = c;
+        await using var _s = services;
+        var admin = new Utilisateur("admin.test", Profils.Admin);
+        async Task<object?> Scalaire(string sql, params (string, object)[] p)
+        {
+            await using var k = new NpgsqlCommand(sql, c);
+            foreach (var (n, v) in p) k.Parameters.AddWithValue(n, v);
+            var r = await k.ExecuteScalarAsync();
+            return r is DBNull ? null : r;
+        }
+        async Task<FluxDto> Recevoir(byte[] contenu, string nom)
+        {
+            var meta = plateforme.RecevoirFacture(contenu, nom);
+            using var scope = services.CreateScope();
+            var fe = scope.ServiceProvider.GetRequiredService<ServiceFactureElectronique>();
+            await new ReleveFlux(fe).ReleverAsync(true, null, default);
+            return (await fe.Liste(new FiltreFlux(Sens: SensFlux.Entrant), default)).First(x => x.IdFlux == meta.IdFlux);
+        }
+        async Task<FluxDetailDto> Detail(long id)
+        {
+            using var scope = services.CreateScope();
+            return await scope.ServiceProvider.GetRequiredService<ServiceFactureElectronique>().Detail(id, default);
+        }
+
+        // 1. 204 → 205 → 211 : prise en charge à la création, approuvée à la validation, paiement transmis au règlement émis.
+        var numero = "F" + Random.Shared.NextInt64(100_000_000, 999_999_999);
+        var flux = await Recevoir(FactureUnique(numero, Siren()), $"{numero}.xml");
+        var ent = long.Parse(flux.IdElement!);
+        var d = await Detail(flux.Id);
+        Assert.Equal([StatutCdv.PriseEnCharge], d.Statuts.Select(x => x.Code));
+        Assert.Equal(StatutCdv.PriseEnCharge, d.Flux.StatutAffiche);
+        Assert.NotNull(d.Statuts[0].FluxCdarId);
+        using (var scope = services.CreateScope())
+        {
+            // Validation de la pièce (point d'accroche ApresValidationAsync : services de la requête, appelé ici directement).
+            var documents = scope.ServiceProvider.GetRequiredService<DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp>>();
+            var nature = await Scalaire("SELECT nat_id FROM nature_element ORDER BY nat_id LIMIT 1");
+            await Scalaire("UPDATE document_ligne SET lig_nat_id = @n WHERE lig_ent_id = @e AND lig_tyl_id = @t AND lig_nat_id IS NULL", ("n", nature!), ("e", ent), ("t", (int)TL.Element));
+            var version = (int)(await Scalaire("SELECT ent_version FROM document WHERE ent_id = @e", ("e", ent)))!;
+            await documents.Valider(ent, new DemandeVersion { EntVersion = version }, admin, default);
+            var statuts = new StatutsReceptionBtp(scope.ServiceProvider, NullLogger.Instance);
+            Assert.True(await statuts.ApprouverAsync(ent, admin.Code, default));
+            Assert.False(await statuts.ApprouverAsync(ent, admin.Code, default)); // déjà posée : ignorée
+        }
+        using (var scope = services.CreateScope())
+        {
+            // Refus impossible après Approuvée (ReglesCycleVie) : 422 TRANSITION_INTERDITE.
+            var fe = scope.ServiceProvider.GetRequiredService<ServiceFactureElectronique>();
+            var e = await Assert.ThrowsAsync<ExceptionMetier>(() => fe.PoserStatutAsync(flux.Id, new StatutAPoser(StatutCdv.Refusee, MotifStatut.Doublon), admin, default));
+            Assert.Equal((422, ErreurFe.TransitionInterdite), (e.Statut, e.Code));
+        }
+        using (var scope = services.CreateScope())
+        {
+            // Règlement émis qui pointe l'échéance de la pièce : Paiement transmis (pièces payées lues dans la transaction du règlement).
+            var reglements = scope.ServiceProvider.GetRequiredService<ServiceReglement>();
+            var echeance = (long)(await Scalaire("SELECT ech_id FROM document_echeance WHERE ech_ent_id = @e ORDER BY ech_rang LIMIT 1", ("e", ent)))!;
+            var montant = (decimal)(await Scalaire("SELECT ech_montant FROM document_echeance WHERE ech_id = @i", ("i", echeance)))!;
+            var tiers = (long)(await Scalaire("SELECT ent_tiers_id FROM document WHERE ent_id = @e", ("e", ent)))!;
+            await reglements.EnregistrerReglement(null, new ReglementSaisi(tiers, "D", DateOnly.FromDateTime(DateTime.Today), "VIREMENT", montant, numero, null,
+                [new PointageSaisi(echeance, montant)]), admin, default);
+            var payees = await StatutsReceptionBtp.PiecesPayeesAsync(scope.ServiceProvider.GetRequiredService<ReglementDbContext>(), [echeance], default);
+            Assert.Equal([ent], payees);
+            Assert.Equal(1, await new StatutsReceptionBtp(scope.ServiceProvider, NullLogger.Instance).PaiementTransmisAsync(payees, admin.Code, default));
+        }
+        d = await Detail(flux.Id);
+        Assert.Equal([StatutCdv.PriseEnCharge, StatutCdv.Approuvee, StatutCdv.PaiementTransmis], d.Statuts.Select(x => x.Code));
+        Assert.All(d.Statuts, x => Assert.Equal((SensStatut.Pose, EmetteurStatut.Acheteur), (x.Sens, x.Emetteur)));
+        Assert.Equal(StatutCdv.PaiementTransmis, d.Flux.StatutAffiche);
+        // Chaque statut : un CDAR déposé par la file sur la plateforme simulée, acquitté.
+        using (var scope = services.CreateScope())
+        {
+            var fe = scope.ServiceProvider.GetRequiredService<ServiceFactureElectronique>();
+            await new FileFlux(fe).TraiterAsync(50, default);
+        }
+        foreach (var x in d.Statuts) Assert.Equal(EtatFlux.Envoye, (await Detail(x.FluxCdarId!.Value)).Flux.Etat);
+        Assert.Equal(3, d.Chronologie.Count(x => x.Type == EvenementFe.StatutPose));
+
+        // 2. 204 → 207 → 210 : litige puis refus par les boutons (motifs de la liste autorisée) ; Refusée part aussi au PPF.
+        var numero2 = "F" + Random.Shared.NextInt64(100_000_000, 999_999_999);
+        var flux2 = await Recevoir(FactureUnique(numero2, Siren()), $"{numero2}.xml");
+        using (var scope = services.CreateScope())
+        {
+            var fe = scope.ServiceProvider.GetRequiredService<ServiceFactureElectronique>();
+            var litige = await fe.PoserStatutAsync(flux2.Id, new StatutAPoser(StatutCdv.EnLitige, MotifStatut.QteErr) { Commentaire = "Quantité livrée : 8" }, admin, default);
+            Assert.NotNull(litige.FluxCdarId);
+            var sansMotif = await Assert.ThrowsAsync<ExceptionMetier>(() => fe.PoserStatutAsync(flux2.Id, new StatutAPoser(StatutCdv.Refusee), admin, default));
+            Assert.Equal(ErreurFe.MotifObligatoire, sansMotif.Code);
+            var refus = await fe.PoserStatutAsync(flux2.Id, new StatutAPoser(StatutCdv.Refusee, MotifStatut.Doublon), admin, default);
+            var cdar = Cdar.Lire((await fe.Fichier(refus.FluxCdarId!.Value, null, default)).Contenu);
+            Assert.Contains(cdar.Destinataires, x => x.Role == RoleCdar.Ppf);
+            // Rien après Refusée : ni approbation ni paiement.
+            var ent2 = long.Parse(flux2.IdElement!);
+            Assert.False(await new StatutsReceptionBtp(scope.ServiceProvider, NullLogger.Instance).ApprouverAsync(ent2, admin.Code, default));
+            var terminal = await Assert.ThrowsAsync<ExceptionMetier>(() => fe.PoserStatutAsync(flux2.Id, new StatutAPoser(StatutCdv.EnLitige, MotifStatut.Autre), admin, default));
+            Assert.Equal(ErreurFe.StatutTerminal, terminal.Code);
+        }
+        var d2 = await Detail(flux2.Id);
+        Assert.Equal([StatutCdv.PriseEnCharge, StatutCdv.EnLitige, StatutCdv.Refusee], d2.Statuts.Select(x => x.Code));
+        Assert.Equal(StatutCdv.Refusee, d2.Flux.StatutAffiche);
+        Assert.Equal($"{EvenementFe.StatutPose}:{StatutCdv.EnLitige}>{StatutCdv.Refusee}",
+            d2.Chronologie.Where(x => x.Type == EvenementFe.StatutPose).Select(x => $"{x.Type}:{x.EtatAvant}>{x.EtatApres}").Last());
+    }
+
+    [Fact]
+    public async Task Brouillon_deja_cree_pour_le_flux_repris_sans_doublon()
+    {
+        if (await PreparerAsync() is not { } prepare) return;
+        var (c, services, plateforme) = prepare;
+        await using var _c = c;
+        await using var _s = services;
+        async Task<object?> Scalaire(string sql, params (string, object)[] p)
+        {
+            await using var k = new NpgsqlCommand(sql, c);
+            foreach (var (n, v) in p) k.Parameters.AddWithValue(n, v);
+            var r = await k.ExecuteScalarAsync();
+            return r is DBNull ? null : r;
+        }
+        var numero = "F" + Random.Shared.NextInt64(100_000_000, 999_999_999);
+        var contenu = FactureUnique(numero, Siren());
+        var meta = plateforme.RecevoirFacture(contenu, $"{numero}.xml");
+        // Premier passage interrompu après la création de la pièce : le flux (et son journal) est annulé, la pièce reste.
+        long ent;
+        using (var scope = services.CreateScope())
+        {
+            var specialisation = scope.ServiceProvider.GetRequiredService<SpecialisationFactureElectronique>();
+            var perdu = new FluxFe { FflId = 0, FflSens = SensFlux.Entrant, FflConnecteur = ConnecteurFe.Simule, FflIdFlux = meta.IdFlux, FflNom = meta.Nom, FflSyntaxe = Syntaxe.Cii };
+            var lue = Lecture.Lire(contenu);
+            var cree = await specialisation.CreerPieceRecueAsync(new FactureRecueFe(perdu, lue.Facture, lue.Syntaxe), default);
+            ent = long.Parse(cree!.Element!.Id);
+            // Un second appel pour ce même flux rend le même brouillon (reprise), pas un doublon.
+            var repris = await specialisation.CreerPieceRecueAsync(new FactureRecueFe(perdu, lue.Facture, lue.Syntaxe), default);
+            Assert.Null(repris!.Refus);
+            Assert.Equal(cree.Element, repris.Element);
+            Assert.Equal(StatutCdv.PriseEnCharge, Assert.Single(repris.Statuts).Code);
+        }
+        // Relève suivante : le brouillon est rattaché, étapes reprises, sans erreur de doublon ni nouvelle pièce.
+        FluxDetailDto d;
+        using (var scope = services.CreateScope())
+        {
+            var fe = scope.ServiceProvider.GetRequiredService<ServiceFactureElectronique>();
+            await new ReleveFlux(fe).ReleverAsync(true, null, default);
+            var flux = (await fe.Liste(new FiltreFlux(Sens: SensFlux.Entrant), default)).First(x => x.IdFlux == meta.IdFlux);
+            d = await fe.Detail(flux.Id, default);
+        }
+        Assert.Equal((EtatFlux.Traite, ent.ToString(System.Globalization.CultureInfo.InvariantCulture)), (d.Flux.Etat, d.Flux.IdElement));
+        Assert.Empty(d.Erreurs);
+        Assert.Equal([EvenementFe.Reception, EvenementFe.Lecture, EvenementFe.PieceCreee, EvenementFe.Rattachement, EvenementFe.StatutPose],
+            d.Chronologie.Select(x => x.Type));
+        Assert.True(d.Chronologie.First(x => x.Type == EvenementFe.PieceCreee).Detail?.GetProperty("reprise").GetBoolean(), d.Chronologie.First(x => x.Type == EvenementFe.PieceCreee).Detail?.GetRawText());
+        Assert.Equal(1L, await Scalaire("""
+            SELECT count(*) FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id
+            WHERE t.tyd_code = ANY(@t) AND d.ent_reference_externe = @n
+            """, ("t", ReceptionFactureBtp.TypesFactureRecue), ("n", numero)));
+        // Original rangé une seule fois en GED de la pièce (fichier de document_origine réutilisé).
+        Assert.Equal(d.Flux.GedOriginalId, await Scalaire("SELECT dor_fichier_id FROM document_origine WHERE dor_ent_id = @e", ("e", ent)));
     }
 }

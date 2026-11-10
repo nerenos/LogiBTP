@@ -17,6 +17,7 @@ export function creerApiFe({ json, fichier }) {
     tentative: (id) => json('POST', r(`/flux/${id}/tentative`)),
     confirmerDepot: (id, corps) => json('POST', r(`/flux/${id}/depot-manuel`), corps),
     importer: (corps) => json('POST', r('/import'), corps),
+    poserStatut: (id, corps) => json('POST', r(`/flux/${id}/statut`), corps),
     relever: () => json('POST', r('/releve')),
     verifierJournal: () => json('GET', r('/journal/verification')),
   };

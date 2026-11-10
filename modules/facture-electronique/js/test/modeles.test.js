@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
+import * as m from '../ui/modeles.js';
 import { CONNECTEUR_FE, ETAT_FLUX, SENS_FLUX, STATUT_CDV, EVENEMENT_FE, ACTEUR_FE, TYPE_DOCUMENT_FLUX, ETAT_ACCUSE, MOTIF_ACCUSE } from '../src/index.js';
 import {
   controlerParametres, adresseValable, parametresPourEdition, corpsParametres, parametresModifies, dureeMs, requeteFlux, filtresValables,
@@ -137,5 +138,35 @@ describe('dépôt et import manuels', () => {
   it('corps de la confirmation', () => {
     expect(corpsConfirmation({ etat: ETAT_ACCUSE.OK, motif: MOTIF_ACCUSE.VIRUS, message: 'm' })).toEqual({ etat: 'Ok' });
     expect(corpsConfirmation({ etat: ETAT_ACCUSE.ERREUR, motif: MOTIF_ACCUSE.SCHEMA_INVALIDE, message: '  ' })).toEqual({ etat: 'Error', motif: 'InvalidSchema', message: null });
+  });
+});
+
+describe('statuts posés (lot 13)', () => {
+  it('boutons proposés selon l\'historique : refus impossible après Approuvée, rien après Refusée', () => {
+    const codes = ['207', '210'];
+    expect(m.statutsProposes('In', ['204'], codes)).toEqual(['207', '210']);
+    expect(m.statutsProposes('In', ['204', '207'], codes)).toEqual(['207', '210']);
+    expect(m.statutsProposes('In', ['204', '205'], codes)).toEqual(['207']);
+    expect(m.statutsProposes('In', ['204', '210'], codes)).toEqual([]);
+    expect(m.historiqueStatuts({ statuts: [{ code: '204' }, { code: '205' }] })).toEqual(['204', '205']);
+  });
+  it('motifs de la liste autorisée et demande valable', () => {
+    const { motifs, obligatoire } = m.motifsProposes('In', '210');
+    expect(obligatoire).toBe(true);
+    expect(motifs).toContain('DOUBLON');
+    expect(motifs).not.toContain('RETRAIT_MAN_SERV');
+    expect(m.demandeStatutValable('In', { code: '210' })).toBe(false);
+    expect(m.demandeStatutValable('In', { code: '210', motif: 'DOUBLON' })).toBe(true);
+    expect(m.demandeStatutValable('In', { code: '207', motif: 'REJ_SEMAN' })).toBe(false);
+    expect(m.demandeStatutValable('In', { code: '204' })).toBe(true);
+    expect(m.demandeStatutValable('In', { code: '207', motif: 'QTE_ERR', commentaire: 'x'.repeat(501) })).toBe(false);
+  });
+  it('statuts paramétrables : posés par la société, hors ceux qu\'exige le PPF', () => {
+    expect(m.STATUTS_PARAMETRABLES).toEqual(expect.arrayContaining(['204', '205', '207', '211']));
+    expect(m.STATUTS_PARAMETRABLES).not.toContain('210');
+    expect(m.STATUTS_PARAMETRABLES).not.toContain('212');
+    expect(m.STATUTS_PARAMETRABLES).not.toContain('200');
+    expect(m.basculerStatutEnvoye(['211'], '204', false)).toEqual(['204', '211']);
+    expect(m.basculerStatutEnvoye(['204', '211'], '204', true)).toEqual(['211']);
   });
 });

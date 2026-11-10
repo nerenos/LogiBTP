@@ -37,7 +37,7 @@
 | 10 | Catégories de TVA : catégorie EN16931 et code VATEX | `modules/comptabilite` | — | FAIT (10/11/2026) |
 | 11 | Branchement du cœur : activation, droits, spécialisation, paramètres, notifications, onglet Chronologie | cœur | 8, 9, 7 | FAIT (10/11/2026) |
 | 12 | Réception : flux reçu → pièce d'achat ou de sous-traitance en brouillon, rattachements, liste à traiter | cœur | 11, 2, 3, 10 | FAIT (10/11/2026) |
-| 13 | Réception : statuts posés (204, 205, 207, 210) et Paiement transmis (211) | cœur | 12, 5 | A FAIRE |
+| 13 | Réception : statuts posés (204, 205, 207, 210) et Paiement transmis (211) | cœur | 12, 5 | FAIT (10/11/2026) |
 | 14 | Réception hors plateforme : Factur-X ou XML glissé ou reçu par courriel | cœur | 12 | A FAIRE |
 | 15 | Réception de sous-traitance : cadre S5, bloc PAYEUR, demande de paiement direct (224) | cœur | 12, 13 | A FAIRE |
 | | **Partie B : émission et e-reporting** | | | |
@@ -505,7 +505,7 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   commande), `ServiceFactureElectroniqueTests` (étapes, doublon, lisible), `client/test/liste-fe-recues.test.js`.
   Écrans non vérifiés en navigateur (TODO) ; scripts à appliquer par l'utilisateur.
 
-## Lot 13 : réception, statuts posés (A FAIRE)
+## Lot 13 : réception, statuts posés — FAIT (10/11/2026)
 
 - **Cœur**. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `Btp/StatutsReceptionBtp.cs` (Prise en charge 204 à la création, Approuvée 205 à la validation, En
@@ -516,6 +516,35 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   déposé par la file + événement.
 - **Critère de fin** : enchaînement 204 → 205 → 211 et 204 → 207 → 210 sur la plateforme simulée, refus d'une
   transition interdite ; tests verts.
+- **Réalisé** : règle (JS ↔ C#, jeu `01_cycle_vie.json`) : Refusée interdite après Approuvée ou Paiement transmis
+  (`TRANSITION_INTERDITE`). Module : `ServiceFactureElectronique.PoserAsync` (contrôle `ReglesCycleVie`, CDAR écrit par
+  `CdarDuStatut` depuis l'original : auteur acheteur, destinataire vendeur, adresse électronique de la facture ou des
+  paramètres, PPF ajouté pour 210, motif, commentaire en note ; mis en file par `MettreEnFileAsync` ; `fe_statut` POSE ;
+  étape STATUT_POSE avec origine et `envoye` ; dans la transaction en cours s'il y en a une), `PoserStatutAsync`
+  (utilisateur, droit Modifier) et `PoserStatutApplicationAsync` (acteur SYSTEME) ; route `POST /flux/{id}/statut`
+  (`DemandeStatut` : code, motif, action, commentaire ; nœud `facture_electronique`, Modifier) ; `PieceRecueFe.Statuts`
+  posés après RATTACHEMENT dans la transaction de la réception (refus gardé en `fe_erreur`) ; paramètre
+  `statuts_non_envoyes` (`099h` rejouable, au manifeste ; `ReglesParametresFe.StatutsParametrables` ↔
+  `STATUTS_PARAMETRABLES` : statuts du vendeur ou de l'acheteur hors 210 et 212 exigés par le PPF, jeu
+  `02_parametres.json`) : statut gardé au journal sans CDAR ; écrans : cases « Statuts posés envoyés » des paramètres,
+  `demanderStatut` (fenêtre `<dialog>` du socle, motif par `creerCombo` de `motifsAutorises`, commentaire),
+  `statutsProposes` / `motifsProposes` / `demandeStatutValable` (`modeles.js`), libellés des 51 motifs, icônes
+  `fe_statut_207` / `fe_statut_210`. Cœur : `Btp/StatutsReceptionBtp.cs` (204 `ALaCreation`, 205 `ApprouverAsync` depuis
+  `SpecialisationBtp.ApresValidationAsync` pour A_FACTURE / T_FACTURE_AVT, 211 `PaiementTransmisAsync` depuis
+  `SpecialisationReglementBtp.ApresPointageAsync` pour les pièces pointées par un décaissement hors imputation
+  (`PiecesPayeesAsync`) ; statut déjà posé ou plus posable ignoré, refus journalisé sans bloquer) ;
+  `ReceptionFactureBtp` : création idempotente (`BrouillonDuFluxAsync` : brouillon de `document_origine` du même
+  connecteur + identifiant de la plateforme, ou du même flux, repris avant le contrôle du doublon ; rapport complété de
+  `connecteur` et `id_flux`) et original déjà en GED réutilisé (`RangerAsync`). Client : onglet Chronologie, bloc
+  « Statut de la facture reçue » (statut affiché, boutons En litige / Refuser selon `statutsProposes` et le droit
+  Modifier, raccourcis du groupe `document_statuts_fe`). Tests : `ServiceFactureElectroniqueTests` (204 à la création,
+  CDAR en file lu comme 204 de l'acheteur, 205, 210 refusé après 205, motif hors liste, statut non envoyé, paramètre
+  invalide, file → ENVOYE), `ReceptionFactureBtpTests` sur la base jetable (204 → 205 (pièce validée) → 211 (règlement
+  émis) avec trois CDAR déposés sur la plateforme simulée ; 204 → 207 → 210, Refusée sans motif refusée, rien après
+  Refusée ; brouillon repris sans doublon), `client/test/facture-electronique.test.js`, `modeles.test.js`. Écarts :
+  205 et 211 posés par les points d'accroche seulement en requête HTTP (services de la requête) et hors de leur
+  transaction (connexion du module) ; 211 sans montant, au premier règlement ; non vérifié en navigateur (TODO).
+  **Script à appliquer par l'utilisateur** : `099h_facture_electronique_statuts.sql`.
 
 ## Lot 14 : réception hors plateforme (A FAIRE)
 

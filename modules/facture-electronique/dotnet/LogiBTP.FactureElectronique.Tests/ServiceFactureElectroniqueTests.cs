@@ -1,4 +1,5 @@
 using System.Text;
+using LogiBTP.FactureElectronique.Formats;
 using LogiBTP.FactureElectronique.Web;
 using LogiBTP.FactureElectronique.Web.Connecteurs;
 using LogiBTP.Socle.Web;
@@ -35,9 +36,12 @@ public sealed class ServiceFactureElectroniqueTests : IAsyncLifetime
         public List<StatutSignaleFe> Statuts { get; } = [];
         public ElementFe? Element { get; set; }
         public PieceRecueFe? Refus { get; set; }
+        public List<StatutAPoser> StatutsCreation { get; } = [];
+        public List<StatutSignaleFe> Poses { get; } = [];
 
         public override Task<PieceRecueFe?> CreerPieceRecueAsync(FactureRecueFe recue, CancellationToken ct) =>
-            Task.FromResult(Refus ?? (Element is null ? null : PieceRecueFe.Creee(Element, new { recue.Facture!.Numero })));
+            Task.FromResult(Refus ?? (Element is null ? null : PieceRecueFe.Creee(Element, new { recue.Facture!.Numero }) with { Statuts = [.. StatutsCreation] }));
+        public override Task StatutPoseAsync(StatutSignaleFe statut, CancellationToken ct) { Poses.Add(statut); return Task.CompletedTask; }
         public override Task StatutRecuAsync(StatutSignaleFe statut, CancellationToken ct) { Statuts.Add(statut); return Task.CompletedTask; }
         public override Task SignalerAsync(SignalementFe s, CancellationToken ct) { Signalements.Add(s); return Task.CompletedTask; }
     }
@@ -283,6 +287,60 @@ public sealed class ServiceFactureElectroniqueTests : IAsyncLifetime
         Assert.Equal((EtatFlux.Recu, ConnecteurFe.Manuel, numero + "I"), (i.Etat, i.Connecteur, i.Numero));
         Assert.Equal(["IMPORT_MANUEL:>RECU", "LECTURE:RECU>RECU"], await Etapes(db, i.Id));
         Assert.Equal(Admin.Code, (await s.Chronologie(i.Id, null, null, default))[0].Utilisateur);
+    }
+
+    [Fact]
+    public async Task Statuts_poses_cdar_en_file_transition_refusee_et_statut_non_envoye()
+    {
+        if (Connexion is null) return;
+        await Connecteur(ConnecteurFe.Simule);
+        await using var db = Db();
+        var s = Service(db);
+        // Prise en charge (204) posée dès le rattachement de la pièce créée, dans la transaction de la réception.
+        specialisation.Element = new ElementFe("ACHAT", numero + "S");
+        specialisation.StatutsCreation.Add(new StatutAPoser(StatutCdv.PriseEnCharge) { Origine = new { piece = "creee" } });
+        Plateforme.RecevoirFacture(Facture("S"), "statuts.xml");
+        await new ReleveFlux(s).ReleverAsync(true, null, default);
+        specialisation.StatutsCreation.Clear();
+        var recue = Assert.Single(await s.Liste(new FiltreFlux(Sens: SensFlux.Entrant, TypeElement: "ACHAT", IdElement: numero + "S"), default));
+        Assert.Equal(["RECEPTION:>RECU", "LECTURE:RECU>RECU", "PIECE_CREEE:RECU>RECU", "RATTACHEMENT:RECU>TRAITE", "STATUT_POSE:>204"], await Etapes(db, recue.Id));
+        var d = await s.Detail(recue.Id, default);
+        var pec = Assert.Single(d.Statuts);
+        Assert.Equal((StatutCdv.PriseEnCharge, SensStatut.Pose, EmetteurStatut.Acheteur), (pec.Code, pec.Sens, pec.Emetteur));
+        Assert.NotNull(pec.FluxCdarId);
+        // CDAR en file (A_ENVOYER, cycle de vie d'une facture fournisseur), rattaché au même élément, lu comme un 204 de l'acheteur.
+        var cdar = (await s.Detail(pec.FluxCdarId!.Value, default)).Flux;
+        Assert.Equal((EtatFlux.AEnvoyer, Syntaxe.Cdar, TypeFlux.CdvFactureFournisseur, "ACHAT", numero + "S"), (cdar.Etat, cdar.Syntaxe, cdar.Type, cdar.TypeElement, cdar.IdElement));
+        var lu = Cdar.StatutsLus(Cdar.Lire((await s.Fichier(cdar.Id, null, default)).Contenu), SensFacture.Recue, []);
+        Assert.Equal((StatutCdv.PriseEnCharge, EmetteurStatut.Acheteur), (Assert.Single(lu).Statut, lu[0].Emetteur));
+        Assert.Empty(lu[0].Erreurs);
+
+        // Approuvée (205) posée par l'utilisateur ; Refusée (210) ensuite interdite ; motif hors liste refusé.
+        var approuvee = await s.PoserStatutAsync(recue.Id, new StatutAPoser(StatutCdv.Approuvee), Admin, default);
+        Assert.NotNull(approuvee.FluxCdarId);
+        var refus = await Assert.ThrowsAsync<ExceptionMetier>(() => s.PoserStatutAsync(recue.Id, new StatutAPoser(StatutCdv.Refusee, MotifStatut.Doublon), Admin, default));
+        Assert.Equal(ErreurFe.TransitionInterdite, refus.Code);
+        var motif = await Assert.ThrowsAsync<ExceptionMetier>(() => s.PoserStatutAsync(recue.Id, new StatutAPoser(StatutCdv.EnLitige, MotifStatut.RejSeman), Admin, default));
+        Assert.Equal(ErreurFe.MotifNonAutorise, motif.Code);
+
+        // Statut non envoyé (paramètre par code) : gardé au journal sans CDAR ; Refusée (exigée par le PPF) non paramétrable.
+        var p = await s.Parametres(default);
+        var invalide = await Assert.ThrowsAsync<ExceptionMetier>(() => s.EnregistrerParametres(p with { StatutsNonEnvoyes = [StatutCdv.Refusee] }, Admin, default));
+        Assert.Equal(ErreurFe.ParametreInvalide, invalide.Code);
+        await s.EnregistrerParametres(p with { StatutsNonEnvoyes = [StatutCdv.PaiementTransmis] }, Admin, default);
+        Assert.Equal([StatutCdv.PaiementTransmis], (await s.Parametres(default)).StatutsNonEnvoyes);
+        var paiement = await s.PoserStatutApplicationAsync(recue.Id, new StatutAPoser(StatutCdv.PaiementTransmis), "compta", default);
+        Assert.Null(paiement.FluxCdarId);
+        Assert.Equal("STATUT_POSE:205>211", (await Etapes(db, recue.Id))[^1]);
+        Assert.Equal(ActeurFe.Systeme, (await s.Chronologie(recue.Id, null, null, default))[^1].Acteur);
+        Assert.Equal([StatutCdv.PriseEnCharge, StatutCdv.Approuvee, StatutCdv.PaiementTransmis], specialisation.Poses.Where(x => x.Facture?.FflId == recue.Id).Select(x => x.Statut.FstCode));
+        await s.EnregistrerParametres(p with { StatutsNonEnvoyes = [] }, Admin, default);
+
+        // La file dépose les deux CDAR sur la plateforme simulée.
+        Assert.True((await new FileFlux(s).TraiterAsync(20, default)).Deposes >= 2);
+        db.ChangeTracker.Clear();
+        Assert.Equal(EtatFlux.Envoye, (await s.Detail(approuvee.FluxCdarId!.Value, default)).Flux.Etat);
+        Assert.Equal(EtatFlux.Envoye, (await s.Detail(pec.FluxCdarId.Value, default)).Flux.Etat);
     }
 
     [Fact]

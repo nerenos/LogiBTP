@@ -94,6 +94,13 @@ public sealed class SpecialisationFactureElectroniqueBtp(IServiceProvider servic
             // Facture reçue (Q21) : étape RECEPTION, au coffre ; l'original devient le fichier source de document_origine.
             if (flux.FflSens == SensFlux.Entrant)
             {
+                // Brouillon repris (lot 13) : l'original est déjà en GED de la pièce (fichier de document_origine).
+                if (document == TypeDocumentFlux.Original && (await db.Database.SqlQueryRaw<long?>(
+                        "SELECT dor_fichier_id AS \"Value\" FROM document_origine WHERE dor_ent_id = @e", new NpgsqlParameter("e", ent)).ToListAsync(ct))
+                        .FirstOrDefault() is long deja)
+                {
+                    return deja;
+                }
                 var id = await Reception.DeposerAsync(piece.Type, piece.Groupe, nom, fichier.Contenu, fichier.TypeMime, titre, resume, ct);
                 if (id is long g && document == TypeDocumentFlux.Original)
                 {

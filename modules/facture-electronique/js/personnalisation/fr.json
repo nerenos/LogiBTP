@@ -100,6 +100,59 @@
       "CNA": "Remboursement attendu",
       "OTH": "Autre"
     },
+    "motifs_statut": {
+      "NON_TRANSMISE": "Facture non transmise au destinataire",
+      "JUSTIF_ABS": "Justificatif absent ou insuffisant",
+      "ROUTAGE_ERR": "Erreur de routage",
+      "RETRAIT_MAN_SERV": "Retrait de la mission de service",
+      "ST_CT_NON_DECLAR": "Sous-traitant ou cotraitant non déclaré",
+      "SUPPR_COMP_AVOIR": "Suppression ou compensation par avoir",
+      "TRANSF_PMNT_REGIE": "Paiement transféré à une régie",
+      "CONTACT_ACHTR": "Contacter l'acheteur",
+      "AUTRE": "Autre motif",
+      "COORD_BANC_ERR": "Coordonnées bancaires erronées",
+      "TX_TVA_ERR": "Taux de TVA erroné",
+      "MONTANTTOTAL_ERR": "Montant total erroné",
+      "CALCUL_ERR": "Erreur de calcul",
+      "NON_CONFORME": "Facture non conforme",
+      "DOUBLON": "Facture en double",
+      "DEST_INC": "Destinataire inconnu",
+      "DEST_ERR": "Destinataire erroné",
+      "TRANSAC_INC": "Transaction inconnue",
+      "EMMET_INC": "Émetteur inconnu",
+      "CONTRAT_TERM": "Contrat terminé",
+      "DOUBLE_FACT": "Facturation en double",
+      "CMD_ERR": "Commande erronée ou absente",
+      "ADR_ERR": "Adresse erronée",
+      "SIRET_ERR": "SIRET erroné",
+      "CODE_ROUTAGE_ERR": "Code de routage erroné",
+      "REF_CT_ABSENT": "Référence du contrat absente",
+      "REF_ERR": "Référence erronée",
+      "PU_ERR": "Prix unitaire erroné",
+      "REM_ERR": "Remise erronée",
+      "QTE_ERR": "Quantité erronée",
+      "ART_ERR": "Article erroné",
+      "MODPAI_ERR": "Mode de paiement erroné",
+      "QUALITE_ERR": "Qualité non conforme",
+      "LIVR_INCOMP": "Livraison incomplète",
+      "REJ_SEMAN": "Rejet sémantique",
+      "REJ_UNI": "Rejet d'unicité",
+      "REJ_COH": "Rejet de cohérence",
+      "REJ_ADR": "Rejet d'adressage",
+      "REJ_CONT_B2G": "Rejet des contrôles B2G",
+      "REJ_REF_PJ": "Pièce jointe référencée absente",
+      "REJ_ASS_PJ": "Pièce jointe mal associée",
+      "IRR_VIDE_F": "Fichier vide",
+      "IRR_TYPE_F": "Type de fichier non admis",
+      "IRR_SYNTAX": "Syntaxe non admise",
+      "IRR_TAILLE_PJ": "Pièce jointe trop volumineuse",
+      "IRR_NOM_PJ": "Nom de pièce jointe invalide",
+      "IRR_VID_PJ": "Pièce jointe vide",
+      "IRR_EXT_DOC": "Extension de document non admise",
+      "IRR_TAILLE_F": "Fichier trop volumineux",
+      "IRR_ANTIVIRUS": "Fichier refusé par l'antivirus",
+      "IRR_NOM_F": "Nom de fichier invalide"
+    },
     "acteurs": {
       "UTILISATEUR": "Utilisateur",
       "SYSTEME": "LogiBTP",
@@ -187,7 +240,8 @@
         "profil": "Profil par défaut",
         "frequence_releve": "Fréquence de relève",
         "delai_secondes": "Délai d'attente",
-        "decoupage_ereporting": "Découpage de l'e-reporting"
+        "decoupage_ereporting": "Découpage de l'e-reporting",
+        "statuts_non_envoyes": "Statuts posés envoyés"
       },
       "aides": {
         "actif": "Dépôts et relèves de fond",
@@ -198,7 +252,8 @@
         "organisation": "Identifiant donné par la plateforme, si elle l'exige",
         "adresse_electronique": "Adresse de réception inscrite à l'annuaire",
         "schema_adresse": "Code EAS (0225 : SIREN suivi d'un suffixe)",
-        "decoupage_ereporting": "Choix de la société pour la transmission des données"
+        "decoupage_ereporting": "Choix de la société pour la transmission des données",
+        "statuts_non_envoyes": "Décochés : gardés au journal sans CDAR ; Refusée et Encaissée partent toujours (PPF)"
       },
       "minutes": "minutes",
       "secondes": "secondes",
@@ -217,7 +272,8 @@
         "profil": "Profil inconnu.",
         "frequence_releve": "Fréquence de relève de {{min_frequence}} à {{max_frequence}} minutes.",
         "delai_secondes": "Délai d'attente de {{min_delai}} à {{max_delai}} secondes.",
-        "decoupage_ereporting": "Découpage de l'e-reporting inconnu."
+        "decoupage_ereporting": "Découpage de l'e-reporting inconnu.",
+        "statuts_non_envoyes": "Statut non paramétrable (inconnu, posé par une plateforme ou exigé par le PPF)."
       }
     },
     "filtres": {
@@ -397,6 +453,15 @@
       "emettre": "Émettre une facture d'essai",
       "numero": "Numéro de la facture (« REJET » dans le numéro : refusée par la plateforme)",
       "chronologie_element": "Chronologie de la pièce {{element}}"
+    },
+    "statut_pose": {
+      "titre": "{{statut}} : facture {{numero}}",
+      "aide_motif_obligatoire": "Choisir le motif dans la liste de la norme ; le statut part en message de cycle de vie à la plateforme.",
+      "aide_motif_facultatif": "Le statut part en message de cycle de vie à la plateforme.",
+      "motif": "Motif",
+      "commentaire": "Commentaire (transmis au fournisseur)",
+      "poser": "Poser le statut",
+      "pose": "Statut {{statut}} posé."
     }
   }
 }

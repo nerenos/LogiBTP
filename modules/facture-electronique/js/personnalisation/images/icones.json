@@ -42,5 +42,7 @@
   "fe_evenement_import_manuel": "📂",
   "fe_evenement_lecture": "📖",
   "fe_evenement_piece_creee": "🧾",
-  "fe_evenement_doublon": "⛔"
+  "fe_evenement_doublon": "⛔",
+  "fe_statut_207": "⚖",
+  "fe_statut_210": "✖"
 }

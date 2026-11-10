@@ -4,7 +4,9 @@
 import {
   CONNECTEUR_FE, SYNTAXE, PROFIL_FACTURE, DECOUPAGE_EREPORTING, SENS_FLUX, ETAT_FLUX, STATUT_CDV, EVENEMENT_FE, ACTEUR_FE,
   TYPE_DOCUMENT_FLUX, TYPE_FLUX, ETAT_ACCUSE,
+  EMETTEUR_STATUT, STATUTS_OBLIGATOIRES_PPF, SENS_FACTURE,
 } from '../src/codes.js';
+import { emetteursStatut, emetteurDuSens, statutsPosables, motifsAutorises, motifObligatoire } from '../src/cycle-vie.js';
 
 /** Longueur maximale de l'Organization-Id (ConnecteurPlateforme.LongueurIdentifiant). */
 export const LONGUEUR_ORGANISATION = 64;
@@ -17,6 +19,12 @@ export const SYNTAXES_EMISSION = Object.freeze([SYNTAXE.CII, SYNTAXE.UBL, SYNTAX
 export const PROFILS_EMISSION = Object.freeze([PROFIL_FACTURE.BASIC, PROFIL_FACTURE.EN16931, PROFIL_FACTURE.EXTENDED_CTC_FR]);
 /** Types de statut admis à l'import d'un CDAR (ConnecteurManuel.Importer). */
 export const TYPES_STATUT_IMPORT = Object.freeze([TYPE_FLUX.CDV_FACTURE_CLIENT, TYPE_FLUX.CDV_FACTURE_FOURNISSEUR]);
+/**
+ * Statuts que la société pose (émetteur vendeur ou acheteur) dont l'envoi se règle par code (paramètre
+ * statuts_non_envoyes) ; ceux que le PPF exige (Refusée, Encaissée) partent toujours. ReglesParametresFe.StatutsParametrables.
+ */
+export const STATUTS_PARAMETRABLES = Object.freeze(Object.values(STATUT_CDV).filter((s) =>
+  emetteursStatut(s).some((e) => e === EMETTEUR_STATUT.VENDEUR || e === EMETTEUR_STATUT.ACHETEUR) && !STATUTS_OBLIGATOIRES_PPF.includes(s)));
 /** Taille de page du tableau des flux. */
 export const LIMITE_PAGE = 50;
 
@@ -26,8 +34,16 @@ export function parametresPourEdition(p = {}) {
     actif: false, connecteur: CONNECTEUR_FE.SIMULE, connexion_oauth: null, adresse_flux: null, adresse_annuaire: null,
     organisation: null, adresse_electronique: null, schema_adresse: SCHEMA_ADRESSE_DEFAUT, syntaxe: SYNTAXE.CII,
     profil: PROFIL_FACTURE.EN16931, frequence_releve: 15, delai_secondes: 30, decoupage_ereporting: DECOUPAGE_EREPORTING.UNIQUE,
+    statuts_non_envoyes: [],
     ...Object.fromEntries(Object.entries(p ?? {}).filter(([, v]) => v !== undefined)),
   };
+}
+
+/** Statuts non envoyés après le choix d'un code (coché = envoyé), dans l'ordre de STATUTS_PARAMETRABLES. */
+export function basculerStatutEnvoye(nonEnvoyes, code, envoye) {
+  const l = new Set(nonEnvoyes ?? []);
+  if (envoye) l.delete(code); else l.add(code);
+  return STATUTS_PARAMETRABLES.filter((c) => l.has(c));
 }
 
 /** Corps de PUT /parametres (sans la liste en lecture seule des connecteurs). */
@@ -76,6 +92,8 @@ export function controlerParametres(p, connecteurs = Object.values(CONNECTEUR_FE
   if (horsBornes(p.frequence_releve, FREQUENCE_RELEVE)) champs.push('frequence_releve');
   if (horsBornes(p.delai_secondes, DELAI_SECONDES)) champs.push('delai_secondes');
   if (!Object.values(DECOUPAGE_EREPORTING).includes(p.decoupage_ereporting)) champs.push('decoupage_ereporting');
+  const nonEnvoyes = p.statuts_non_envoyes ?? [];
+  if (!Array.isArray(nonEnvoyes) || nonEnvoyes.some((s) => !STATUTS_PARAMETRABLES.includes(s))) champs.push('statuts_non_envoyes');
   return champs;
 }
 
@@ -265,3 +283,37 @@ export function base64(contenu) {
 export function corpsConfirmation({ etat, motif = null, message = null }) {
   return etat === ETAT_ACCUSE.OK ? { etat } : { etat, motif: motif || null, message: (message ?? '').trim() || null };
 }
+
+// ---------------------------------------------------------------- statuts posés (lot 13)
+
+/** Sens de la facture d'un flux : sortant → émise, entrant → reçue. */
+export const sensFactureDuFlux = (sensFlux) => (sensFlux === SENS_FLUX.SORTANT ? SENS_FACTURE.EMISE : SENS_FACTURE.RECUE);
+
+/** Codes des statuts d'une facture dans l'ordre chronologique (détail d'un flux : statuts rendus dans cet ordre). */
+export const historiqueStatuts = (detail) => (detail?.statuts ?? []).map((s) => s.code);
+
+/**
+ * Statuts proposés à l'utilisateur sur une facture (boutons) : parmi `codes`, dans leur ordre, ceux que la société peut
+ * poser après l'historique (statutsPosables : rien après un terminal, refus impossible après Approuvée…). Le serveur
+ * reste juge (PoserStatutAsync).
+ */
+export function statutsProposes(sensFlux, historique, codes) {
+  const posables = statutsPosables(sensFactureDuFlux(sensFlux), historique);
+  return codes.filter((c) => posables.includes(c));
+}
+
+/** Motifs de la liste autorisée pour un statut posé par la société (émetteur = rôle du sens) et s'il est obligatoire. */
+export function motifsProposes(sensFlux, code) {
+  const emetteur = emetteurDuSens(sensFactureDuFlux(sensFlux));
+  return { motifs: [...motifsAutorises(code, { emetteur })], obligatoire: motifObligatoire(code) };
+}
+
+/** Demande valable : motif de la liste s'il en a une (obligatoire selon BR-FR-CDV-15), commentaire de 500 caractères au plus. */
+export function demandeStatutValable(sensFlux, { code, motif = null, commentaire = null }) {
+  const { motifs, obligatoire } = motifsProposes(sensFlux, code);
+  if (motif ? !motifs.includes(motif) : obligatoire) return false;
+  return (commentaire ?? '').length <= LONGUEUR_COMMENTAIRE_STATUT;
+}
+
+/** Longueur maximale du commentaire d'un statut posé (ServiceFactureElectronique.LongueurCommentaire). */
+export const LONGUEUR_COMMENTAIRE_STATUT = 500;

@@ -1016,6 +1016,8 @@ export class PageDocument extends PageBase {
       entId: d.ent_id, apiFe,
       historique: async () => (await api.tracabilite(d.ent_id))?.historique ?? [],
       ouvrirFlux: (id, nouvelleFenetre) => this.app.naviguer(`/facture-electronique?flux=${id}`, { nouvelleFenetre }),
+      peutModifier: this.app.peut(NOEUD_FE, ACTION_DROIT.MODIFIER),
+      message: (m) => this.app.message(m, 'succes'),
       erreur: (e) => this.app.erreur(e),
     }).catch((x) => { zone.innerHTML = `<p class="erreur">${echapper(x.message)}</p>`; });
   }

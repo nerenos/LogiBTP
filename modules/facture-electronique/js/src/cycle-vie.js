@@ -136,7 +136,7 @@ export const obligatoirePpf = (statut) => STATUTS_OBLIGATOIRES_PPF.includes(stat
 /**
  * Erreurs d'enchaînement d'un statut posé par la société (le rôle du sens) après un historique (codes dans l'ordre
  * chronologique) : rien après un statut terminal ; facture émise : rien avant Déposée ; Déposée une seule fois ;
- * Complétée seulement en réponse à une Suspendue.
+ * Complétée seulement en réponse à une Suspendue ; Refusée impossible après Approuvée ou Paiement transmis.
  */
 function erreursEnchainement(sens, historiqueLu, statut) {
   const historique = historiqueLu ?? [];
@@ -144,7 +144,8 @@ function erreursEnchainement(sens, historiqueLu, statut) {
   if (historique.some(statutTerminal)) erreurs.push(ERREUR_FE.STATUT_TERMINAL);
   const interdite = (sens === SENS_FACTURE.EMISE && !historique.includes(S.DEPOSEE))
     || (statut === S.DEPOSEE && historique.includes(S.DEPOSEE))
-    || (statut === S.COMPLETEE && historique.filter((h) => h === S.SUSPENDUE || h === S.COMPLETEE).at(-1) !== S.SUSPENDUE);
+    || (statut === S.COMPLETEE && historique.filter((h) => h === S.SUSPENDUE || h === S.COMPLETEE).at(-1) !== S.SUSPENDUE)
+    || (statut === S.REFUSEE && historique.some((h) => h === S.APPROUVEE || h === S.PAIEMENT_TRANSMIS));
   if (interdite) erreurs.push(ERREUR_FE.TRANSITION_INTERDITE);
   return erreurs;
 }

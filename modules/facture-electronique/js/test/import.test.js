@@ -22,6 +22,7 @@ it('les appels suivent les routes du module', async () => {
   await api.confirmerDepot(7, { etat: 'Ok' });
   await api.importer({ nom: 'a.xml', contenu: 'PA==' });
   await api.sante();
+  await api.poserStatut(7, { code: '207', motif: 'QTE_ERR' });
   expect(appels).toEqual([
     ['GET', '/facture-electronique/flux?sens=Out&limite=50', undefined],
     ['GET', '/facture-electronique/flux/7', undefined],
@@ -30,5 +31,6 @@ it('les appels suivent les routes du module', async () => {
     ['POST', '/facture-electronique/flux/7/depot-manuel', { etat: 'Ok' }],
     ['POST', '/facture-electronique/import', { nom: 'a.xml', contenu: 'PA==' }],
     ['GET', '/facture-electronique/sante', undefined],
+    ['POST', '/facture-electronique/flux/7/statut', { code: '207', motif: 'QTE_ERR' }],
   ]);
 });

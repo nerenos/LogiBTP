@@ -8,6 +8,11 @@
   },
   "cas": [
     {"nom": "plateforme simulée sans adresse", "modif": {}, "attendu": []},
+    {"nom": "prise en charge et approbation non envoyées", "modif": {"statuts_non_envoyes": ["204", "205"]}, "attendu": []},
+    {"nom": "aucun statut non envoyé", "modif": {"statuts_non_envoyes": []}, "attendu": []},
+    {"nom": "refus non envoyé (exigé par le PPF)", "modif": {"statuts_non_envoyes": ["210"]}, "attendu": ["statuts_non_envoyes"]},
+    {"nom": "statut d'une plateforme non paramétrable", "modif": {"statuts_non_envoyes": ["200"]}, "attendu": ["statuts_non_envoyes"]},
+    {"nom": "statut inconnu", "modif": {"statuts_non_envoyes": ["999"]}, "attendu": ["statuts_non_envoyes"]},
     {"nom": "connecteur inconnu", "modif": {"connecteur": "AUTRE"}, "attendu": ["connecteur"]},
     {"nom": "AFNOR sans adresse ni connexion", "modif": {"connecteur": "AFNOR"}, "attendu": ["adresse_flux", "connexion_oauth"]},
     {"nom": "AFNOR complet", "modif": {"connecteur": "AFNOR", "adresse_flux": "https://pa.exemple.fr/flow", "connexion_oauth": 3}, "attendu": []},

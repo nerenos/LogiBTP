@@ -17,6 +17,9 @@ public sealed record ParametresFeDto(
 {
     /// <summary>Connecteurs disponibles (lecture seule).</summary>
     public IReadOnlyList<string> Connecteurs { get; init; } = [];
+
+    /// <summary>Statuts posés gardés au journal sans CDAR envoyé (ReglesParametresFe.StatutsParametrables).</summary>
+    public IReadOnlyList<string> StatutsNonEnvoyes { get; init; } = [];
 }
 
 /// <summary>Flux (liste et détail).</summary>
@@ -68,12 +71,20 @@ public sealed record ConfirmationDepot(string Etat, string? Motif = null, string
 /// <summary>Import manuel d'un fichier reçu hors connexion : nom, contenu en base 64, type du statut (CDAR).</summary>
 public sealed record ImportManuel(string Nom, string Contenu, string? TypeStatut = null);
 
-/// <summary>Statut posé par la société sur une facture : code, motif, action, montant et taux (Encaissée), CDAR écrit à déposer.</summary>
+/// <summary>
+/// Statut posé par la société sur une facture : code, motif, action, montant et taux (Encaissée), commentaire (note du
+/// CDAR) ; CDAR déjà écrit à déposer (sinon écrit par le module), origine dans l'application (journal, sans contrôle).
+/// </summary>
 public sealed record StatutAPoser(string Code, string? Motif = null, string? Action = null, decimal? Montant = null, decimal? Taux = null)
 {
+    public string? Commentaire { get; init; }
     public byte[]? Cdar { get; init; }
     public string? NomCdar { get; init; }
+    public object? Origine { get; init; }
 }
+
+/// <summary>Statut demandé par un utilisateur (route POST /flux/{id}/statut) : code, motif de la liste autorisée, action, commentaire.</summary>
+public sealed record DemandeStatut(string Code, string? Motif = null, string? Action = null, string? Commentaire = null);
 
 /// <summary>
 /// Services du module Facturation électronique sur la base de la société courante : paramètres, mise en file d'un flux
@@ -104,7 +115,7 @@ public class ServiceFactureElectronique(
 
     private ParametresFeDto Dto(ParametreFe p) => new(p.FpaActif, p.FpaConnecteur, p.FpaConnexionOauth, p.FpaAdresseFlux, p.FpaAdresseAnnuaire,
         p.FpaOrganisation, p.FpaAdresseElectronique, p.FpaSchemaAdresse, p.FpaSyntaxe, p.FpaProfil, p.FpaFrequenceReleve, p.FpaDelaiSecondes,
-        p.FpaDecoupageEreporting) { Connecteurs = fabrique.Codes };
+        p.FpaDecoupageEreporting) { Connecteurs = fabrique.Codes, StatutsNonEnvoyes = p.FpaStatutsNonEnvoyes };
 
     /// <summary>Enregistre les paramètres (droit de paramétrage ; PARAMETRE_INVALIDE si incohérents).</summary>
     public async Task<ParametresFeDto> EnregistrerParametres(ParametresFeDto d, Utilisateur u, CancellationToken ct)
@@ -129,6 +140,7 @@ public class ServiceFactureElectronique(
         p.FpaFrequenceReleve = d.FrequenceReleve;
         p.FpaDelaiSecondes = d.DelaiSecondes;
         p.FpaDecoupageEreporting = d.DecoupageEreporting;
+        p.FpaStatutsNonEnvoyes = [.. (d.StatutsNonEnvoyes ?? []).Distinct().Order(StringComparer.Ordinal)];
         p.FpaModifieLe = Maintenant;
         p.FpaModifiePar = u.Code;
         await db.SaveChangesAsync(ct);
@@ -161,7 +173,10 @@ public class ServiceFactureElectronique(
     /// Met un flux en file (A_ENVOYER, dépôt par <see cref="FileFlux"/>) : fichier gardé et rangé, étape PRODUCTION.
     /// Même identifiant de suivi et même contenu : le flux existant est rendu (doublon sans effet) ; contenu différent : 409.
     /// </summary>
-    public async Task<FluxDto> MettreEnFileAsync(FluxAEmettre a, Utilisateur? u, CancellationToken ct)
+    public Task<FluxDto> MettreEnFileAsync(FluxAEmettre a, Utilisateur? u, CancellationToken ct) =>
+        MettreEnFileAsync(a, u is null ? ActeurFe.Systeme : ActeurFe.Utilisateur, u?.Code, ct);
+
+    private async Task<FluxDto> MettreEnFileAsync(FluxAEmettre a, string acteur, string? utilisateur, CancellationToken ct)
     {
         if (a.Contenu is null || a.Contenu.Length == 0) throw ExceptionMetier.Invalide(ErreurFe.DemandeInvalide, "Fichier vide");
         if (string.IsNullOrWhiteSpace(a.Nom) || a.Nom.Length > ConnecteurPlateforme.LongueurNom)
@@ -201,15 +216,16 @@ public class ServiceFactureElectronique(
             FflSens = SensFlux.Sortant, FflType = type, FflSyntaxe = syntaxe, FflProfil = profil, FflRegle = a.Regle, FflNom = a.Nom,
             FflNumero = numero, FflIdSuivi = a.IdSuivi ?? Guid.NewGuid().ToString("N"), FflConnecteur = p.FpaConnecteur, FflEmpreinte = empreinte,
             FflTypeElement = a.TypeElement, FflIdElement = a.IdElement, FflEtat = EtatFlux.AEnvoyer, FflProchainEssai = maintenant,
-            FflCreeLe = maintenant, FflModifieLe = maintenant, FflCreePar = u?.Code ?? "",
+            FflCreeLe = maintenant, FflModifieLe = maintenant, FflCreePar = utilisateur ?? "",
         };
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        // Dans la transaction en cours s'il y en a une (statut posé à la réception), sinon dans la sienne.
+        await using var tx = db.Database.CurrentTransaction is null ? await db.Database.BeginTransactionAsync(ct) : null;
         db.Flux.Add(flux);
         try
         {
             await db.SaveChangesAsync(ct);
         }
-        catch (DbUpdateException e) when (e.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        catch (DbUpdateException e) when (tx is not null && e.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
         {
             await tx.RollbackAsync(ct);
             db.ChangeTracker.Clear();
@@ -218,12 +234,12 @@ public class ServiceFactureElectronique(
         }
         var fichier = new FichierFlux(a.Contenu, a.Nom, TypeMime(syntaxe));
         await GarderFichierAsync(flux, TypeDocumentFlux.Original, fichier, ct);
-        await JournalFe.AjouterAsync(db, EtapeFe.Du(flux, EvenementFe.Production, u is null ? ActeurFe.Systeme : ActeurFe.Utilisateur, u?.Code) with
+        await JournalFe.AjouterAsync(db, EtapeFe.Du(flux, EvenementFe.Production, acteur, utilisateur) with
         {
             EtatApres = EtatFlux.AEnvoyer,
             Detail = new { flux.FflNom, flux.FflSyntaxe, flux.FflProfil, flux.FflType, flux.FflIdSuivi, flux.FflEmpreinte, taille = a.Contenu.Length, flux.FflConnecteur },
         }, ct);
-        await tx.CommitAsync(ct);
+        if (tx is not null) await tx.CommitAsync(ct);
         return await DtoAsync(flux, ct);
     }
 
@@ -404,9 +420,11 @@ public class ServiceFactureElectronique(
         var recue = new FactureRecueFe(f, lue.Facture, lue.Syntaxe);
         var existant = await specialisation.ElementDuFluxAsync(recue, ct);
         var element = existant;
+        IReadOnlyList<StatutAPoser> statuts = [];
         if (element is null)
         {
             var piece = await specialisation.CreerPieceRecueAsync(recue, ct);
+            statuts = piece?.Refus is null ? piece?.Statuts ?? [] : [];
             if (piece?.Refus is { } refus)
             {
                 AjouterErreur(f, refus, piece.Message);
@@ -446,6 +464,19 @@ public class ServiceFactureElectronique(
                 EtatAvant = avant, EtatApres = f.FflEtat,
                 Detail = new { numero = f.FflNumero, cree = existant is null, ged_original = f.FflGedOriginalId, ged_lisible = f.FflGedLisibleId, lisible },
             }, ct);
+            foreach (var a in statuts)
+            {
+                try
+                {
+                    await PoserAsync(f, a, ActeurFe.Systeme, null, ct);
+                }
+                catch (ExceptionMetier e)
+                {
+                    // Statut non posable (CDAR incomplet…) : la pièce reste rattachée, l'erreur est gardée sur le flux.
+                    AjouterErreur(f, e.Code, $"Statut {a.Code} non posé : {e.Message}");
+                    await db.SaveChangesAsync(ct);
+                }
+            }
         }
         await specialisation.SignalerAsync(new SignalementFe(EvenementFe.Reception, f, f.FflEtat), ct);
     }
@@ -567,48 +598,129 @@ public class ServiceFactureElectronique(
     // ---------------------------------------------------------------- statut posé
 
     /// <summary>
-    /// Statut posé par la société sur la facture d'un flux (contrôlé par <see cref="ReglesCycleVie.Controler"/>, émetteur =
-    /// rôle du sens) ; son CDAR, s'il est fourni, est mis en file. Étape STATUT_POSE.
+    /// Statut posé par un utilisateur sur la facture d'un flux (route POST /flux/{id}/statut : droit Modifier du module).
+    /// Voir <see cref="PoserAsync"/>.
     /// </summary>
     public async Task<StatutDto> PoserStatutAsync(long fluxId, StatutAPoser a, Utilisateur u, CancellationToken ct)
     {
         specialisation.Exiger(u, ActionsDroits.Modifier);
-        var f = await Charger(fluxId, ct);
+        return await PoserAsync(await Charger(fluxId, ct), a, ActeurFe.Utilisateur, u.Code, ct);
+    }
+
+    /// <summary>
+    /// Statut posé par l'application sans action dans le module (validation d'une pièce, règlement enregistré) : pas de
+    /// droit du module exigé, acteur SYSTEME, utilisateur à l'origine noté. Voir <see cref="PoserAsync"/>.
+    /// </summary>
+    public async Task<StatutDto> PoserStatutApplicationAsync(long fluxId, StatutAPoser a, string? utilisateur, CancellationToken ct) =>
+        await PoserAsync(await Charger(fluxId, ct), a, ActeurFe.Systeme, utilisateur, ct);
+
+    /// <summary>
+    /// Statut posé par la société sur la facture d'un flux : contrôlé par <see cref="ReglesCycleVie.Controler"/> (émetteur =
+    /// rôle du sens ; refus : code de la première erreur, toutes en détail), puis CDAR (fourni, sinon écrit par
+    /// <see cref="CdarDuStatut"/> depuis l'original de la facture) mis en file pour la plateforme, sauf si le code est parmi
+    /// les statuts non envoyés des paramètres (<see cref="ReglesParametresFe.AEnvoyer"/>) ; statut enregistré (fe_statut,
+    /// sens POSE) et étape STATUT_POSE (avant / après = statut affiché). Dans la transaction en cours s'il y en a une (réception),
+    /// sinon dans la sienne ; l'application est avertie ensuite (<see cref="SpecialisationFactureElectronique.StatutPoseAsync"/>).
+    /// </summary>
+    public async Task<StatutDto> PoserAsync(FluxFe f, StatutAPoser a, string acteur, string? utilisateur, CancellationToken ct)
+    {
         if (!TypesFacture.Contains(f.FflType) || f.FflNumero is null)
             throw ExceptionMetier.Invalide(ErreurFe.EtatFluxInvalide, "Statut posé seulement sur une facture");
         var sensFacture = f.FflSens == SensFlux.Sortant ? SensFacture.Emise : SensFacture.Recue;
         var emetteur = ReglesCycleVie.EmetteurDuSens(sensFacture)!;
+        var motif = string.IsNullOrWhiteSpace(a.Motif) ? null : a.Motif.Trim();
+        var action = string.IsNullOrWhiteSpace(a.Action) ? null : a.Action.Trim();
+        var commentaire = string.IsNullOrWhiteSpace(a.Commentaire) ? null : a.Commentaire.Trim();
+        if (commentaire is { Length: > LongueurCommentaire }) throw ExceptionMetier.Invalide(ErreurFe.DemandeInvalide, $"Commentaire de {LongueurCommentaire} caractères au plus");
         var historique = await HistoriqueAsync(f.FflId, f.FflNumero, ct);
-        var erreurs = ReglesCycleVie.Controler(new StatutPropose(sensFacture, historique, a.Code, emetteur, a.Motif, a.Action));
-        if (erreurs.Count > 0) throw ExceptionMetier.Invalide(erreurs[0], $"Statut {a.Code} refusé", new { erreurs });
-        var avant = ReglesCycleVie.StatutAffiche(historique);
-        long? cdarId = null;
-        if (a.Cdar is { Length: > 0 })
+        var erreurs = ReglesCycleVie.Controler(new StatutPropose(sensFacture, historique, a.Code, emetteur, motif, action));
+        if (erreurs.Count > 0) throw ExceptionMetier.Invalide(erreurs[0], $"Statut {a.Code} refusé : {string.Join(", ", erreurs)}", new { erreurs });
+        var p = await ParametreAsync(ct);
+        var envoyer = a.Cdar is { Length: > 0 } || ReglesParametresFe.AEnvoyer(a.Code, p.FpaStatutsNonEnvoyes);
+        var date = Maintenant;
+        byte[]? cdar = null;
+        if (envoyer)
         {
-            var cdar = await MettreEnFileAsync(new FluxAEmettre(a.Cdar, a.NomCdar ?? $"{f.FflNumero}_CDV-{a.Code}.xml")
+            try
+            {
+                cdar = a.Cdar is { Length: > 0 } c ? c : await CdarDuStatut(f, sensFacture, a with { Motif = motif, Action = action, Commentaire = commentaire }, historique, date, ct);
+            }
+            catch (ExceptionCdar e)
+            {
+                throw ExceptionMetier.Invalide(e.Code, $"CDAR du statut {a.Code} : {e.Message}", new { erreurs = e.Details });
+            }
+        }
+        var avant = ReglesCycleVie.StatutAffiche(historique);
+        var apres = ReglesCycleVie.StatutAffiche([.. historique, a.Code]);
+        var externe = db.Database.CurrentTransaction is not null;
+        await using var tx = externe ? null : await db.Database.BeginTransactionAsync(ct);
+        long? cdarId = null;
+        if (cdar is not null)
+        {
+            var flux = await MettreEnFileAsync(new FluxAEmettre(cdar, a.NomCdar ?? $"{f.FflNumero}_CDV-{a.Code}_{date:yyyyMMddHHmmss}.xml")
             {
                 Syntaxe = Syntaxe.Cdar, Type = sensFacture == SensFacture.Emise ? TypeFlux.CdvFactureClient : TypeFlux.CdvFactureFournisseur,
                 Numero = f.FflNumero, TypeElement = f.FflTypeElement, IdElement = f.FflIdElement,
-            }, u, ct);
-            cdarId = cdar.Id;
+            }, acteur, utilisateur, ct);
+            cdarId = flux.Id;
         }
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
         var statut = new StatutFe
         {
-            FstFflId = f.FflId, FstNumeroFacture = f.FflNumero, FstSensFacture = sensFacture, FstCode = a.Code, FstMotif = a.Motif, FstAction = a.Action,
-            FstMontant = a.Montant, FstTaux = a.Taux, FstEmetteur = emetteur, FstSens = SensStatut.Pose, FstFflCdarId = cdarId, FstDate = Maintenant,
-            FstCreeLe = Maintenant, FstCreePar = u.Code,
+            FstFflId = f.FflId, FstNumeroFacture = f.FflNumero, FstSensFacture = sensFacture, FstCode = a.Code, FstMotif = motif, FstAction = action,
+            FstMontant = a.Montant, FstTaux = a.Taux, FstEmetteur = emetteur, FstSens = SensStatut.Pose, FstFflCdarId = cdarId, FstDate = date,
+            FstCreeLe = date, FstCreePar = utilisateur ?? "",
+            FstDetail = commentaire is null && a.Origine is null ? null : JsonSerializer.Serialize(new { commentaire, origine = a.Origine }, JsonCalcul.Options),
         };
         db.Statuts.Add(statut);
         await db.SaveChangesAsync(ct);
-        var apres = ReglesCycleVie.StatutAffiche([.. historique, a.Code]);
-        await JournalFe.AjouterAsync(db, EtapeFe.Du(f, EvenementFe.StatutPose, ActeurFe.Utilisateur, u.Code) with
+        await JournalFe.AjouterAsync(db, EtapeFe.Du(f, EvenementFe.StatutPose, acteur, utilisateur) with
         {
-            EtatAvant = avant, EtatApres = apres, Detail = new { statut = a.Code, a.Motif, a.Action, a.Montant, a.Taux, flux_cdar = cdarId },
+            EtatAvant = avant, EtatApres = apres,
+            Detail = new { statut = a.Code, motif, action, a.Montant, a.Taux, commentaire, origine = a.Origine, envoye = cdarId is not null, flux_cdar = cdarId },
         }, ct);
-        await tx.CommitAsync(ct);
+        if (tx is not null) await tx.CommitAsync(ct);
         await specialisation.StatutPoseAsync(new StatutSignaleFe(statut, f, avant, apres), ct);
         return Dto(statut);
+    }
+
+    /// <summary>Longueur maximale du commentaire d'un statut posé (note du CDAR).</summary>
+    public const int LongueurCommentaire = 500;
+
+    /// <summary>
+    /// CDAR d'un statut posé par la société, écrit depuis l'original de la facture (fe_fichier) : facture reçue, auteur =
+    /// acheteur, destinataire = vendeur ; facture émise, l'inverse. Identifiant de l'auteur = SIREN, adresse électronique
+    /// de la facture (BT-49 / BT-34), à défaut celle des paramètres pour la société, puis le SIREN. PPF ajouté par
+    /// <see cref="Cdar.Construire"/> pour un statut qu'il exige. Contrôle complet (cycle de vie, données BR-FR-CDV, XSD).
+    /// </summary>
+    private async Task<byte[]> CdarDuStatut(FluxFe f, string sensFacture, StatutAPoser a, IReadOnlyList<string> historique, DateTimeOffset date,
+        CancellationToken ct)
+    {
+        var original = await db.Fichiers.AsNoTracking().FirstOrDefaultAsync(x => x.FfiFflId == f.FflId && x.FfiDocument == TypeDocumentFlux.Original, ct)
+            ?? throw new ExceptionCdar(ErreurFe.RessourceIntrouvable, $"Original de la facture du flux {f.FflId} absent");
+        Facture facture;
+        try
+        {
+            facture = Lecture.Lire(original.FfiContenu, validerXsd: false).Facture;
+        }
+        catch (ExceptionLectureFacture e)
+        {
+            throw new ExceptionCdar(e.Code, e.Message);
+        }
+        var p = await ParametreAsync(ct);
+        PartieCdar Partie(Partie x, string? role, bool societe) => new(role, x.Siren, x.Siren is null ? null : SchemaIdentifiant.Siren, x.RaisonSociale,
+            x.AdresseElectronique?.Valeur ?? (societe ? p.FpaAdresseElectronique : null) ?? x.Siren,
+            x.AdresseElectronique?.Schema ?? (societe && p.FpaAdresseElectronique is not null ? p.FpaSchemaAdresse : SchemaIdentifiant.AdresseElectronique));
+        var recue = sensFacture == SensFacture.Recue;
+        var auteur = recue ? Partie(facture.Acheteur, null, true) : Partie(facture.Vendeur, null, true);
+        var destinataire = recue ? Partie(facture.Vendeur, RoleCdar.Vendeur, false) : Partie(facture.Acheteur, RoleCdar.Acheteur, false);
+        var reference = new FactureReferencee(facture.Numero, facture.TypeFacture, facture.DateEmission, facture.Vendeur.Siren, f.FflDeposeLe?.UtcDateTime);
+        var d = date.UtcDateTime;
+        return Cdar.Ecrire(new StatutAEcrire(sensFacture, a.Code, ReglesCycleVie.EmetteurDuSens(sensFacture)!, reference, auteur, [destinataire], d, d)
+        {
+            Historique = historique, Motif = a.Motif, Action = a.Action,
+            Notes = a.Commentaire is null ? [] : [new NoteCdar(a.Commentaire)],
+            Encaissements = a.Montant is decimal m && a.Taux is decimal t ? [new MontantEncaisse(m, t, facture.Devise)] : [],
+        });
     }
 
     // ---------------------------------------------------------------- actions de l'utilisateur

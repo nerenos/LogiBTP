@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { creerApiSimulee } from '../../modules/facture-electronique/js/demo/api-simulee.js';
-import { ongletChronologieVisible, requeteFluxPiece, chronologieDocumentHtml, historiqueDocumentHtml, libelleElementFe } from '../src/app/documents/chronologie-document.js';
+import {
+  ongletChronologieVisible, requeteFluxPiece, chronologieDocumentHtml, historiqueDocumentHtml, libelleElementFe, boutonsStatuts, statutsFactureHtml,
+  factureRecue, requeteFacturesRecues, GROUPE_RACCOURCIS_STATUTS_FE,
+} from '../src/app/documents/chronologie-document.js';
+import { actionDe } from '@logibtp/socle/ui';
 import { nomFichier } from '../src/app/facture-electronique/api-fe.js';
 import { menus } from '../src/app/navigation/menus.js';
 import { ONGLETS_DOCUMENT } from '../src/app/raccourcis.js';
@@ -56,6 +60,30 @@ describe('onglet Chronologie de la page document', () => {
   it('raccourci de l\'onglet et requête des flux de la pièce', () => {
     expect(ONGLETS_DOCUMENT.ongletChronologie).toBe('chronologie');
     expect(Object.fromEntries(new URLSearchParams(requeteFluxPiece(12)))).toEqual({ type_element: 'DOCUMENT', id_element: '12', limite: '1' });
+  });
+});
+
+describe('statuts posés sur une facture reçue (lot 13)', () => {
+  const detail = (codes, affiche = codes.at(-1) ?? null) => ({ flux: { id: 5, sens: 'In', numero: 'F-1', statut_affiche: affiche }, statuts: codes.map((code) => ({ code })) });
+  it('boutons En litige et Refuser selon le cycle de vie et le droit', () => {
+    expect(boutonsStatuts(detail(['204']), true)).toEqual(['207', '210']);
+    expect(boutonsStatuts(detail(['204', '207']), true)).toEqual(['207', '210']);
+    expect(boutonsStatuts(detail(['204', '205']), true)).toEqual(['207']);
+    expect(boutonsStatuts(detail(['204', '207', '210']), true)).toEqual([]);
+    expect(boutonsStatuts(detail(['204']), false)).toEqual([]);
+    const html = statutsFactureHtml(detail(['204', '205']), true);
+    expect(html).toContain('data-poser-statut="207"');
+    expect(html).not.toContain('data-poser-statut="210"');
+    expect(statutsFactureHtml(null, true)).toBe('');
+  });
+  it('facture reçue de la pièce (CDAR exclus), requête et raccourcis', () => {
+    const flux = [{ id: 9, sens: 'Out', type: 'SupplierInvoiceLC', numero: 'F-1' }, { id: 7, sens: 'In', type: 'SupplierInvoice', numero: 'F-1' }];
+    expect(factureRecue(flux)?.id).toBe(7);
+    expect(factureRecue([])).toBeNull();
+    expect(Object.fromEntries(new URLSearchParams(requeteFacturesRecues(12)))).toMatchObject({ type_element: 'DOCUMENT', id_element: '12', sens: 'In' });
+    const touche = (key, o = {}) => ({ key, ctrlKey: false, shiftKey: false, altKey: false, metaKey: false, ...o });
+    expect(actionDe(touche('L', { altKey: true, shiftKey: true }), GROUPE_RACCOURCIS_STATUTS_FE)).toBe('207');
+    expect(actionDe(touche('X', { altKey: true, shiftKey: true }), GROUPE_RACCOURCIS_STATUTS_FE)).toBe('210');
   });
 });
 

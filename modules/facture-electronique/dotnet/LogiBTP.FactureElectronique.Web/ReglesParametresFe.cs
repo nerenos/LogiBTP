@@ -27,7 +27,20 @@ public static class ReglesParametresFe
         ["frequence_releve"] = $"Fréquence de relève de {FrequenceMin} à {FrequenceMax} minutes",
         ["delai_secondes"] = $"Délai d'attente de {DelaiMin} à {DelaiMax} secondes",
         ["decoupage_ereporting"] = "Découpage de l'e-reporting inconnu",
+        ["statuts_non_envoyes"] = "Statut non paramétrable (inconnu, posé par une plateforme ou exigé par le PPF)",
     };
+
+    /// <summary>
+    /// Statuts que la société pose (émetteur vendeur ou acheteur) dont l'envoi se règle par code ; ceux que le PPF exige
+    /// (Refusée, Encaissée) partent toujours. Miroir de <c>STATUTS_PARAMETRABLES</c> (js/ui/modeles.js).
+    /// </summary>
+    public static readonly IReadOnlyList<string> StatutsParametrables = StatutCdv.Tous
+        .Where(s => ReglesCycleVie.EmetteursStatut(s).Any(e => e is EmetteurStatut.Vendeur or EmetteurStatut.Acheteur) && !ReglesCycleVie.ObligatoirePpf(s))
+        .ToArray();
+
+    /// <summary>Statut posé à envoyer en CDAR : toujours s'il est exigé par le PPF, sinon sauf s'il est parmi les codes non envoyés.</summary>
+    public static bool AEnvoyer(string statut, IReadOnlyCollection<string>? nonEnvoyes) =>
+        ReglesCycleVie.ObligatoirePpf(statut) || nonEnvoyes is null || !nonEnvoyes.Contains(statut);
 
     public static List<string> Controler(ParametresFeDto d, IReadOnlyCollection<string> connecteurs)
     {
@@ -43,6 +56,7 @@ public static class ReglesParametresFe
         if (d.FrequenceReleve is < FrequenceMin or > FrequenceMax) champs.Add("frequence_releve");
         if (d.DelaiSecondes is < DelaiMin or > DelaiMax) champs.Add("delai_secondes");
         if (d.DecoupageEreporting is not (DecoupageEreporting.Unique or DecoupageEreporting.Plusieurs)) champs.Add("decoupage_ereporting");
+        if ((d.StatutsNonEnvoyes ?? []).Any(s => !StatutsParametrables.Contains(s))) champs.Add("statuts_non_envoyes");
         return champs;
     }
 

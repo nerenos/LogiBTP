@@ -33,3 +33,11 @@
 .fe-chrono-detail { flex-basis: 100%; display: grid; grid-template-columns: max-content 1fr; gap: 0 1em; margin: 0.2em 0 0 1.5em; font-size: 0.9em; }
 .fe-chrono-detail dd { margin: 0; overflow-wrap: anywhere; }
 .fe-chrono-empreinte { flex-basis: 100%; font-family: monospace; font-size: 0.85em; opacity: 0.7; margin-left: 1.5em; }
+
+/* Paramètres : statuts posés envoyés ou non (lot 13). */
+.fe-statuts-envoyes { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; }
+.fe-statuts-envoyes label { white-space: nowrap; }
+
+/* Fenêtre d'un statut posé : motif et commentaire. */
+.fe-dialogue-statut .dialogue-saisie { display: flex; flex-direction: column; gap: 0.25rem; margin-top: 0.5rem; }
+.fe-dialogue-statut textarea { min-width: 28rem; }

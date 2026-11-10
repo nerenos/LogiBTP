@@ -6510,7 +6510,26 @@
     "element_document": "Pièce n° {{id}}",
     "document": {
       "historique": "Historique du document",
-      "chargement": "Chargement de la chronologie…"
+      "chargement": "Chargement de la chronologie…",
+      "statuts": {
+        "titre": "Statut de la facture reçue",
+        "actuel": "Statut : {{statut}}",
+        "aucun": "Aucun statut posé",
+        "boutons": {
+          "207": "Mettre en litige",
+          "210": "Refuser la facture"
+        },
+        "aides": {
+          "207": "Statut En litige (207) envoyé au fournisseur, avec le motif de la liste de la norme",
+          "210": "Statut Refusée (210) envoyé au fournisseur et au PPF ; impossible après l'approbation"
+        },
+        "pose": "Statut {{statut}} posé : message de cycle de vie mis en file.",
+        "raccourcis": {
+          "groupe": "Chronologie : statut de la facture reçue",
+          "207": "Mettre la facture reçue en litige",
+          "210": "Refuser la facture reçue"
+        }
+      }
     }
   },
   "hors_ligne_btp": {

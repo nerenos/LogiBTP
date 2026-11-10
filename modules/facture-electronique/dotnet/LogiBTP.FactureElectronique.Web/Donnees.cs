@@ -22,6 +22,8 @@ public class ParametreFe
     public int FpaFrequenceReleve { get; set; } = 15;
     public int FpaDelaiSecondes { get; set; } = 100;
     public string FpaDecoupageEreporting { get; set; } = DecoupageEreporting.Unique;
+    /// <summary>Statuts posés sans CDAR envoyé (db/099h ; ReglesParametresFe.AEnvoyer).</summary>
+    public string[] FpaStatutsNonEnvoyes { get; set; } = [];
     public DateTimeOffset FpaModifieLe { get; set; }
     public string FpaModifiePar { get; set; } = "";
 }

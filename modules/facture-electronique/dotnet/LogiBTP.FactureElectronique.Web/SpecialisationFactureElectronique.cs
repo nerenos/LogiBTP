@@ -13,10 +13,13 @@ public sealed record FactureRecueFe(FluxFe Flux, Facture? Facture, string? Synta
 /// Réponse de l'application à une facture reçue (lot 12) : pièce créée (<see cref="Element"/>, <see cref="Detail"/>
 /// inscrit au journal à l'étape PIECE_CREEE), ou création refusée (<see cref="Refus"/> : code d'<see cref="ErreurFe"/>,
 /// <see cref="ErreurFe.FactureEnDouble"/> pour un doublon, message, élément déjà enregistré dans <see cref="Element"/>) : étape
-/// DOUBLON, la facture reste à traiter.
+/// DOUBLON, la facture reste à traiter. <see cref="Statuts"/> (lot 13) : statuts que la société pose dès le rattachement
+/// de la pièce créée (Prise en charge), dans la transaction de la réception, après l'étape RATTACHEMENT.
 /// </summary>
 public sealed record PieceRecueFe(ElementFe? Element, object? Detail = null, string? Refus = null, string? Message = null)
 {
+    public IReadOnlyList<StatutAPoser> Statuts { get; init; } = [];
+
     public static PieceRecueFe Creee(ElementFe element, object? detail = null) => new(element, detail);
     public static PieceRecueFe Refusee(string code, string message, ElementFe? existant = null, object? detail = null) => new(existant, detail, code, message);
 }

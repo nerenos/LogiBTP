@@ -95,6 +95,8 @@ public static class Extensions
             s.NouvelleTentative(id, Utilisateur.Depuis(http), ct));
         g.MapPost("/flux/{id:long}/depot-manuel", (long id, ConfirmationDepot c, HttpContext http, ServiceFactureElectronique s, CancellationToken ct) =>
             s.ConfirmerDepotManuel(id, c, Utilisateur.Depuis(http), ct));
+        g.MapPost("/flux/{id:long}/statut", (long id, DemandeStatut d, HttpContext http, ServiceFactureElectronique s, CancellationToken ct) =>
+            s.PoserStatutAsync(id, new StatutAPoser(d.Code, d.Motif, d.Action) { Commentaire = d.Commentaire }, Utilisateur.Depuis(http), ct));
         g.MapPost("/import", (ImportManuel i, HttpContext http, ServiceFactureElectronique s, CancellationToken ct) =>
             s.Importer(i, Utilisateur.Depuis(http), ct));
         g.MapPost("/releve", (HttpContext http, SpecialisationFactureElectronique sp, ReleveFlux r, CancellationToken ct) =>
