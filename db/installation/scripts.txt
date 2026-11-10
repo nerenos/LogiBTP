@@ -103,6 +103,7 @@ modules/comptabilite/db/094c_comptabilite_export.sql
 modules/comptabilite/db/094d_comptabilite_cles.sql
 modules/comptabilite/db/094e_comptabilite_contrepartie.sql
 modules/comptabilite/db/094f_comptabilite_stock.sql
+modules/comptabilite/db/094g_comptabilite_tva_en16931.sql
 modules/crm/db/095_crm_schema.sql
 modules/crm/db/096_crm_rappels.sql
 modules/crm/db/097_crm_demandes.sql

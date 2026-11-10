@@ -34,7 +34,7 @@
 | 7 | OAuth : flux CLIENT pour un fournisseur GENERIQUE (si absent) | `modules/oauth` | — | FAIT (10/11/2026) |
 | 8 | Schéma, file des flux, statuts, **journal des étapes chaîné**, relève par base, service et routes | module | 6 | FAIT (10/11/2026) |
 | 9 | Écrans du module : paramètres, tableau des flux, détail et chronologie, dépôt et import manuels | module | 8 | FAIT (10/11/2026) |
-| 10 | Catégories de TVA : catégorie EN16931 et code VATEX | `modules/comptabilite` | — | A FAIRE |
+| 10 | Catégories de TVA : catégorie EN16931 et code VATEX | `modules/comptabilite` | — | FAIT (10/11/2026) |
 | 11 | Branchement du cœur : activation, droits, spécialisation, paramètres, notifications, onglet Chronologie | cœur | 8, 9, 7 | A FAIRE |
 | 12 | Réception : flux reçu → pièce d'achat ou de sous-traitance en brouillon, rattachements, liste à traiter | cœur | 11, 2, 3, 10 | A FAIRE |
 | 13 | Réception : statuts posés (204, 205, 207, 210) et Paiement transmis (211) | cœur | 12, 5 | A FAIRE |
@@ -405,13 +405,21 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   prête pas (vues générées par le cœur) ; connexions OAuth fournies par l'hôte (le module ne dépend pas d'OAuth) ;
   écrans rendus en Chrome sans affichage, fenêtres non essayées en navigateur (TODO). Aucun SQL.
 
-## Lot 10 : catégories de TVA, catégorie EN16931 et VATEX (A FAIRE)
+## Lot 10 : catégories de TVA, catégorie EN16931 et VATEX — FAIT (10/11/2026)
 
 - **Module** : `modules/comptabilite`. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `db/094g_comptabilite_tva_en16931.sql` (`ctv_categorie_en16931` S / E / AE / K / G / O / Z,
   `ctv_vatex` ; valeurs proposées depuis `ctv_comportement`), `Donnees.cs`, `SpecialisationComptabilite.cs` (lecture,
   enregistrement), écran des catégories, `js/src/codes.js` ↔ `Codes.cs` si un code s'ajoute, `CodesTests`.
 - **Critère de fin** : tests du module verts ; la catégorie autoliquidation donne AE / `VATEX-FR-AE`.
+- **Réalisé** : `modules/comptabilite/db/094g_comptabilite_tva_en16931.sql` (rejouable, au manifeste après `094f` :
+  `ctv_categorie_en16931` S / E / AE / K / G / O / Z avec contrainte, `ctv_vatex`, valeurs proposées depuis
+  `ctv_comportement` seulement quand elles sont vides : N → S, A et I → AE / `VATEX-FR-AE`, E → E / `VATEX-EU-132`) ;
+  `Donnees.cs` (entité, `CategorieTvaDto` : `CategorieEn16931`, `Vatex`), `ServiceComptabilite` (lecture, enregistrement,
+  `TVA_EN16931`, même proposition si vides) ; `js/src/codes.js` ↔ `Codes.cs` (`CATEGORIE_EN16931`, `VATEX`,
+  `COMPORTEMENT_TVA`, `CodesTests`), `js/src/tva.js` `proposerEn16931` ↔ `ReglesTva.cs`, jeu `05_tva_en16931.json` ;
+  écran des catégories (`creerCombo` de la catégorie, saisie du VATEX, textes `comptabilite_btp.*`). Le module ne dépend
+  pas de la facture électronique. Script à appliquer par l'utilisateur.
 
 ## Lot 11 : branchement du cœur (A FAIRE)
 

@@ -3561,6 +3561,15 @@
       "FOURNISSEUR": "Fournisseur",
       "SOUS_TRAITANT": "Sous-traitant"
     },
+    "categories_en16931": {
+      "S": "S – Taux normal",
+      "E": "E – Exonérée",
+      "AE": "AE – Autoliquidation",
+      "K": "K – Livraison intracommunautaire",
+      "G": "G – Export hors UE",
+      "O": "O – Hors champ de la TVA",
+      "Z": "Z – Taux zéro"
+    },
     "comportements_tva": {
       "N": "Normale",
       "A": "Autoliquidation",
@@ -3703,6 +3712,8 @@
       "categories_aide": "Le comportement est celui du calcul des pièces ; la mention réglementaire est proposée aux taux de la catégorie (imprimée sur les pièces). Textes à faire relire par l'expert-comptable.",
       "comportement": "Comportement",
       "mention": "Mention réglementaire",
+      "categorie_en16931": "Catégorie EN 16931",
+      "vatex": "Code VATEX",
       "exigibilite": "Exigibilité",
       "retirer_categorie": "Retirer (catégorie sans taux)",
       "exigibilite_vide": "Vide : selon le paramètre de la société",
