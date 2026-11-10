@@ -91,7 +91,8 @@ Analyse du 23/10/2026 : [ANALYSE-MODULE-SOUS-TRAITANCE.md](documentation/concept
   le 09/11/2026 (codes, modèle EN16931, règles du cycle de vie), lot 2 le 09/11/2026 (lecture CII D22B et Factur-X,
   XSD), lot 3 le 09/11/2026 (lecture UBL 2.1 Invoice et CreditNote, détection de la syntaxe), lot 4 le 09/11/2026
   (schematrons FNFE par SaxonJS, outil `npm run valider-facture`), lot 5 le 09/11/2026 (CDAR : écriture et lecture des
-  statuts) ; en attendant, saisie
+  statuts), lot 6 le 09/11/2026 (connecteurs : AFNOR XP Z12-013, plateforme simulée, dépôt manuel ; état en mémoire
+  jusqu'au schéma du lot 8) ; en attendant, saisie
   libre des factures reçues (ST22).
 
 ### Import

@@ -64,6 +64,7 @@
   </Folder>
   <Folder Name="/modules/facture-electronique/">
     <Project Path="modules/facture-electronique/dotnet/LogiBTP.FactureElectronique/LogiBTP.FactureElectronique.csproj" />
+    <Project Path="modules/facture-electronique/dotnet/LogiBTP.FactureElectronique.Web/LogiBTP.FactureElectronique.Web.csproj" />
     <Project Path="modules/facture-electronique/dotnet/LogiBTP.FactureElectronique.Tests/LogiBTP.FactureElectronique.Tests.csproj" />
   </Folder>
   <Folder Name="/modules/crm/">

@@ -30,7 +30,7 @@
 | 3 | Lecture UBL 2.1 (Invoice, CreditNote) | module | 1, 2 | FAIT (09/11/2026) |
 | 4 | Schematrons FNFE : artefacts versionnés, validation par SaxonJS (tests et outil) | module | 2, 3 | FAIT (09/11/2026) |
 | 5 | CDAR : écriture et lecture des statuts | module | 1 | FAIT (09/11/2026) |
-| 6 | Connecteur : contrat, AFNOR XP Z12-013 (Flow, Directory), plateforme simulée, dépôt manuel | module | 1, 5 | A FAIRE |
+| 6 | Connecteur : contrat, AFNOR XP Z12-013 (Flow, Directory), plateforme simulée, dépôt manuel | module | 1, 5 | FAIT (09/11/2026) |
 | 7 | OAuth : flux CLIENT pour un fournisseur GENERIQUE (si absent) | `modules/oauth` | — | A FAIRE |
 | 8 | Schéma, file des flux, statuts, **journal des étapes chaîné**, relève par base, service et routes | module | 6 | A FAIRE |
 | 9 | Écrans du module : paramètres, tableau des flux, détail et chronologie, dépôt et import manuels | module | 8 | A FAIRE |
@@ -235,7 +235,7 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   B2G : motifs propres seulement si l'expéditeur est Chorus Pro (matricule 9999), à fournir par l'appelant. Tests : 266
   en JS pour le module, 247 en C# (suite .NET : 1249).
 
-## Lot 6 : connecteur de plateforme (A FAIRE)
+## Lot 6 : connecteur de plateforme — FAIT (09/11/2026)
 
 - **Module** : `modules/facture-electronique`. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `dotnet/LogiBTP.FactureElectronique.Web/Connecteurs/ConnecteurPlateforme.cs` (classe mère, méthode
@@ -249,6 +249,43 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   enregistrée), tests `ConnecteurAfnorTests.cs` (serveur HTTP de test : contrat des swaggers), `ConnecteurSimuleTests.cs`.
 - **Critère de fin** : le connecteur AFNOR passe les tests de contrat (dépôt, recherche paginée, téléchargement des
   trois `docType`, annuaire, erreurs) ; la plateforme simulée enchaîne dépôt → accusé → statuts ; `dotnet test` vert.
+- **Réalisé** : projet `dotnet/LogiBTP.FactureElectronique.Web` (Socle, Socle.Web, `Microsoft.AspNetCore.App` ; ni EF
+  ni schéma), dossier `Connecteurs/` : `ModeleConnecteur.cs` (`ParametresConnecteur` : code, base, adresses Flow et
+  Directory, connexion OAuth, `Organization-Id`, délai ; `FluxADeposer`, `FluxDepose`, `Flux`, `AccuseFlux`,
+  `CriteresFlux`, `PageFlux`, `FichierFlux`, abonnement, `EtatSante` ; annuaire : `UniteLegale`, `Etablissement`,
+  `CodeRoutage`, `LigneAnnuaire`, `RechercheAnnuaire`), `ExceptionConnecteur.cs` (dérive d'`ExceptionMetier` ; code,
+  statut HTTP, `errorCode` de la PA, `Request-Id`, `Reessayable` pour 408, 429, 5xx sauf 501 et PA injoignable),
+  `ConnecteurPlateforme.cs` (méthode patron : contrôles avant envoi — fichier ≤ 100 Mo, nom ≤ 255, identifiants ≤ 64,
+  énumérations, limite 1 à 100, SIREN / SIRET, code de routage —, SHA-256, puis étapes protégées ; `DeposerAsync`,
+  `RechercherAsync`, `RechercherToutAsync` (toutes les pages, dernier curseur), `FluxAsync` (Metadata),
+  `TelechargerAsync` (Original, Converted, ReadableView), `AbonnerAsync` (réservé), `SanteAsync` (sans exception),
+  annuaire en 8 opérations ; annuaire et abonnement `FONCTION_NON_PRISE_EN_CHARGE` par défaut), `ConnecteurAfnor.cs`
+  (multipart `flowInfo` JSON + `file` en application/xml ou application/pdf, `Request-Id` UUID par appel,
+  `Organization-Id`, Bearer par `IFournisseurJeton` sans dépendre d'OAuth, curseur, `docType`, chemins
+  `code-insee:` / `siret:` / `code:` et `include`, statuts 400–503 → `ERREUR_FE`, délai, message de la PA passé par
+  `Masquage` ; journal : méthode, chemin, statut, Request-Id, durée, jamais d'en-tête ni de jeton ; points de
+  surcharge `AdresseFlux`, `AdresseAnnuaire`, `PreparerAsync`, `ErreurAsync`), `PlateformeSimulee.cs` (accusé Pending
+  puis Ok / Error après un délai ; règles : EmptyFlow, FileSizeExceeded, ChecksumMismatch, AlreadyExistingFlow,
+  FlowTypeError, InvalidSchema, numéro contenant « REJET » → OtherTechnicalError ; statuts 200 → 205 programmés, écrits
+  par `Cdar.Ecrire` en flux entrants CustomerInvoiceLC ; factures et statuts reçus de démonstration ; Converted =
+  XML d'un Factur-X, ReadableView = résumé texte ; curseur « rang:N » ; temps par `TimeProvider` ; magasin
+  `IMagasinFlux` / `MagasinFluxMemoire`, remplaçable au lot 8 ; registre `PlateformesSimulees` par base),
+  `AnnuaireSimule.cs`, `ConnecteurSimule.cs`, `ConnecteurManuel.cs` (dépôt tenu localement en Pending, Original
+  téléchargeable, `Confirmer` Ok / Error, `Importer` facture ou CDAR reçus ; registre `DepotsManuels` par base),
+  `FabriqueConnecteurs.cs` (AFNOR, SIMULE, MANUEL ; `EnregistrementConnecteur` d'une PA, même code = remplacement),
+  `Extensions.cs` (`AddConnecteursFactureElectronique`, `AddConnecteurPlateforme`). Codes JS ↔ C# : `CONNECTEUR_FE`,
+  `TYPE_DOCUMENT_FLUX`, `ORIGINE_REGLE`, `OPERATEUR_ANNUAIRE`, `TYPE_PLATEFORME_ANNUAIRE`, `ETAT_LIGNE_ANNUAIRE`,
+  15 `ERREUR_FE` du connecteur. Swaggers recopiés sans modification dans `artefacts/api/` (`VERSION`). Tests :
+  `ServeurAfnorTest.cs` (PA locale Kestrel sur 127.0.0.1 adossée à la plateforme simulée : jeton, Request-Id,
+  multipart, énumérations lues dans les swaggers), `ConnecteurAfnorTests.cs` (33 : énumérations identiques aux
+  swaggers, chemins appelés présents dans les swaggers, dépôt, pagination, trois `docType`, annuaire, 11 statuts
+  d'erreur, délai, port fermé, jeton absent des journaux, fabrique et PA dérivée), `ConnecteurSimuleTests.cs` (4 :
+  dépôt → accusé → 200 à 205 relus par `Cdar.StatutsLus` sans erreur, relève idempotente, règles d'Error, reçus,
+  connecteur manuel). Écarts : le Directory Service ne déclare ni `Request-Id` ni `Organization-Id`, envoyés quand
+  même (ignorés par une PA conforme) ; `Metadata` passe par `FluxAsync`, pas par `TelechargerAsync` ; abonnement :
+  création seule (liste et suppression non faites, Q11) ; connexion OAuth exigée (pas d'accès anonyme) ; type d'un
+  CDAR déposé déduit du rôle de l'émetteur (vendeur → CustomerInvoiceLC, sinon SupplierInvoiceLC). Tests : 290 en C#
+  pour le module, 266 en JS (inchangés).
 
 ## Lot 7 : OAuth, flux CLIENT pour un fournisseur GENERIQUE (A FAIRE)
 

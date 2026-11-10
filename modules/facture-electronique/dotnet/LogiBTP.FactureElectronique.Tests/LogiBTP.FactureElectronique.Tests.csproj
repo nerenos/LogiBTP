@@ -12,7 +12,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Serveur HTTP local des tests du connecteur AFNOR (Kestrel sur 127.0.0.1, aucun accès réseau extérieur). -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\LogiBTP.FactureElectronique\LogiBTP.FactureElectronique.csproj" />
+    <ProjectReference Include="..\LogiBTP.FactureElectronique.Web\LogiBTP.FactureElectronique.Web.csproj" />
     <ProjectReference Include="..\..\..\..\socle\dotnet\LogiBTP.Socle.Testing\LogiBTP.Socle.Testing.csproj" />
   </ItemGroup>
 

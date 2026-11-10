@@ -536,4 +536,82 @@ public static class ErreurFe
     public const string PdfIllisible = "PDF_ILLISIBLE";
     /// <summary>Factur-X : pas de fichier factur-x.xml embarqué.</summary>
     public const string XmlAbsent = "XML_ABSENT";
+    // Connecteur de plateforme (lot 6) : demande refusée avant l'envoi, puis réponses de la plateforme (XP Z12-013, 400 à 503).
+    /// <summary>Connecteur : code de connecteur non enregistré dans la fabrique.</summary>
+    public const string ConnecteurInconnu = "CONNECTEUR_INCONNU";
+    /// <summary>Connecteur : paramètre absent ou invalide (adresse de l'API, connexion OAuth).</summary>
+    public const string ParametreConnecteur = "PARAMETRE_CONNECTEUR";
+    /// <summary>Connecteur : fonction non offerte par ce connecteur (annuaire du dépôt manuel, abonnement, 501).</summary>
+    public const string FonctionNonPriseEnCharge = "FONCTION_NON_PRISE_EN_CHARGE";
+    /// <summary>Connecteur : demande refusée avant l'envoi (fichier vide, nom ou identifiant trop long, SIREN, curseur…).</summary>
+    public const string DemandeInvalide = "DEMANDE_INVALIDE";
+    /// <summary>400 : requête refusée par la plateforme.</summary>
+    public const string RequeteRefusee = "REQUETE_REFUSEE";
+    /// <summary>401 : jeton absent, expiré ou refusé.</summary>
+    public const string NonAuthentifie = "NON_AUTHENTIFIE";
+    /// <summary>403 : accès refusé (organisation, délégation).</summary>
+    public const string AccesRefusePlateforme = "ACCES_REFUSE_PLATEFORME";
+    /// <summary>404 : flux, fichier ou ligne d'annuaire introuvable.</summary>
+    public const string RessourceIntrouvable = "RESSOURCE_INTROUVABLE";
+    /// <summary>408 ou délai d'attente dépassé.</summary>
+    public const string DelaiDepasse = "DELAI_DEPASSE";
+    /// <summary>413 : fichier trop volumineux (100 Mo au plus).</summary>
+    public const string FichierTropGros = "FICHIER_TROP_GROS";
+    /// <summary>422 : données incohérentes.</summary>
+    public const string DonneesIncoherentes = "DONNEES_INCOHERENTES";
+    /// <summary>429 : trop de requêtes.</summary>
+    public const string TropDeRequetes = "TROP_DE_REQUETES";
+    /// <summary>500 et autres réponses inattendues de la plateforme.</summary>
+    public const string ErreurPlateforme = "ERREUR_PLATEFORME";
+    /// <summary>503 ou plateforme injoignable.</summary>
+    public const string PlateformeIndisponible = "PLATEFORME_INDISPONIBLE";
+    /// <summary>Réponse de la plateforme illisible ou contraire au contrat.</summary>
+    public const string ReponseIllisible = "REPONSE_ILLISIBLE";
+}
+
+/// <summary>Connecteur de plateforme (lot 6) : AFNOR XP Z12-013, plateforme simulée, dépôt manuel ; une PA propre s'ajoute à la fabrique.</summary>
+public static class ConnecteurFe
+{
+    public const string Afnor = "AFNOR";
+    public const string Simule = "SIMULE";
+    public const string Manuel = "MANUEL";
+}
+
+/// <summary>Document d'un flux à télécharger (docType de GET /v1/flows/{flowId}).</summary>
+public static class TypeDocumentFlux
+{
+    public const string Metadonnees = "Metadata";
+    public const string Original = "Original";
+    public const string Converti = "Converted";
+    public const string Lisible = "ReadableView";
+}
+
+/// <summary>Origine de la règle de traitement d'un flux (processingRuleSource) : fournie au dépôt ou calculée par la plateforme.</summary>
+public static class OrigineRegle
+{
+    public const string Fournie = "Input";
+    public const string Calculee = "Computed";
+}
+
+/// <summary>Opérateur d'un filtre de recherche dans l'annuaire (Directory Service).</summary>
+public static class OperateurAnnuaire
+{
+    public const string Egal = "strict";
+    public const string Contient = "contains";
+    public const string CommencePar = "startWith";
+}
+
+/// <summary>Type de plateforme de réception d'une ligne d'annuaire (platformType) : plateforme agréée ou PPF.</summary>
+public static class TypePlateformeAnnuaire
+{
+    public const string Pa = "WK";
+    public const string Ppf = "DFH";
+}
+
+/// <summary>État d'une ligne d'annuaire (directoryLineStatus).</summary>
+public static class EtatLigneAnnuaire
+{
+    public const string Active = "Enabled";
+    public const string Inactive = "Disabled";
+    public const string AVenir = "Upcoming";
 }

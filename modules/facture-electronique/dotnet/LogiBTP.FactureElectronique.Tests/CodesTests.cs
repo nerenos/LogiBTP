@@ -44,6 +44,12 @@ public class CodesTests
     [InlineData("ETAT_FLUX", typeof(EtatFlux))]
     [InlineData("EVENEMENT_FE", typeof(EvenementFe))]
     [InlineData("ERREUR_FE", typeof(ErreurFe))]
+    [InlineData("CONNECTEUR_FE", typeof(ConnecteurFe))]
+    [InlineData("TYPE_DOCUMENT_FLUX", typeof(TypeDocumentFlux))]
+    [InlineData("ORIGINE_REGLE", typeof(OrigineRegle))]
+    [InlineData("OPERATEUR_ANNUAIRE", typeof(OperateurAnnuaire))]
+    [InlineData("TYPE_PLATEFORME_ANNUAIRE", typeof(TypePlateformeAnnuaire))]
+    [InlineData("ETAT_LIGNE_ANNUAIRE", typeof(EtatLigneAnnuaire))]
     public void Parite_avec_le_js(string nom, Type type) => Assert.Empty(Constantes.Ecarts(Fichier, nom, type));
 
     [Fact]

@@ -463,4 +463,61 @@ export const ERREUR_FE = Object.freeze({
   DONNEE_INVALIDE: 'DONNEE_INVALIDE',
   PDF_ILLISIBLE: 'PDF_ILLISIBLE',
   XML_ABSENT: 'XML_ABSENT',
+  // Connecteur de plateforme (serveur, lot 6) : demande refusée avant l'envoi, puis réponses de la plateforme (400 à 503)
+  CONNECTEUR_INCONNU: 'CONNECTEUR_INCONNU',
+  PARAMETRE_CONNECTEUR: 'PARAMETRE_CONNECTEUR',
+  FONCTION_NON_PRISE_EN_CHARGE: 'FONCTION_NON_PRISE_EN_CHARGE',
+  DEMANDE_INVALIDE: 'DEMANDE_INVALIDE',
+  REQUETE_REFUSEE: 'REQUETE_REFUSEE',
+  NON_AUTHENTIFIE: 'NON_AUTHENTIFIE',
+  ACCES_REFUSE_PLATEFORME: 'ACCES_REFUSE_PLATEFORME',
+  RESSOURCE_INTROUVABLE: 'RESSOURCE_INTROUVABLE',
+  DELAI_DEPASSE: 'DELAI_DEPASSE',
+  FICHIER_TROP_GROS: 'FICHIER_TROP_GROS',
+  DONNEES_INCOHERENTES: 'DONNEES_INCOHERENTES',
+  TROP_DE_REQUETES: 'TROP_DE_REQUETES',
+  ERREUR_PLATEFORME: 'ERREUR_PLATEFORME',
+  PLATEFORME_INDISPONIBLE: 'PLATEFORME_INDISPONIBLE',
+  REPONSE_ILLISIBLE: 'REPONSE_ILLISIBLE',
+});
+
+/** Connecteur de plateforme (lot 6) : AFNOR XP Z12-013, plateforme simulée, dépôt manuel ; une PA propre s'ajoute à la fabrique. */
+export const CONNECTEUR_FE = Object.freeze({
+  AFNOR: 'AFNOR',
+  SIMULE: 'SIMULE',
+  MANUEL: 'MANUEL',
+});
+
+/** Document d'un flux à télécharger (docType de GET /v1/flows/{flowId}). */
+export const TYPE_DOCUMENT_FLUX = Object.freeze({
+  METADONNEES: 'Metadata',
+  ORIGINAL: 'Original',
+  CONVERTI: 'Converted',
+  LISIBLE: 'ReadableView',
+});
+
+/** Origine de la règle de traitement d'un flux (processingRuleSource) : fournie au dépôt ou calculée par la plateforme. */
+export const ORIGINE_REGLE = Object.freeze({
+  FOURNIE: 'Input',
+  CALCULEE: 'Computed',
+});
+
+/** Opérateur d'un filtre de recherche dans l'annuaire (Directory Service). */
+export const OPERATEUR_ANNUAIRE = Object.freeze({
+  EGAL: 'strict',
+  CONTIENT: 'contains',
+  COMMENCE_PAR: 'startWith',
+});
+
+/** Type de plateforme de réception d'une ligne d'annuaire (platformType) : plateforme agréée ou PPF. */
+export const TYPE_PLATEFORME_ANNUAIRE = Object.freeze({
+  PA: 'WK',
+  PPF: 'DFH',
+});
+
+/** État d'une ligne d'annuaire (directoryLineStatus). */
+export const ETAT_LIGNE_ANNUAIRE = Object.freeze({
+  ACTIVE: 'Enabled',
+  INACTIVE: 'Disabled',
+  A_VENIR: 'Upcoming',
 });

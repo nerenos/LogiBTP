@@ -12,6 +12,11 @@ xsd/ubl-2.1/          UBL/1xsd_UBL2.1/{maindoc,common}/  OASIS UBL 2.1 OS (04/11
 xsd/cdar-d22b/        CDAR/1xsd-CDAR_D22B_uncoupled/    UN/CEFACT CrossDomainAcknowledgementAndResponse D22B (uncoupled) : CDAR
                       du cycle de vie des factures (lot 5)
 
+api/                  Z.notes_&_docs/XP_Z12_013_Annex/   API XP Z12-013 (OpenAPI 3.0.3, version 1.3.0) : annexe A
+                      « ANNEXE A -XP Z12-013 - Flow_Service-1.3.0-swagger.json » → flow-service-1.3.0.json, annexe B
+                      « ANNEXE B -XP Z12-013 -  AFNOR-Directory_Service-1.3.0-swagger..json » → directory-service-1.3.0.json
+                      (renommés seulement ; contrat des tests du connecteur AFNOR, lot 6)
+
 Schematrons compilés en XSLT 2.0 (dossiers 2xslt/ du paquet ; lot 4) :
 schematrons/en16931/          CII/EN16931/2xslt/, UBL/EN16931/2xslt/   EN16931-{CII,UBL}-validation.xslt, schematrons de la
                               norme EN16931 de la Commission européenne, version 1.3.16 du 30/03/2026, licence EUPL 1.2
@@ -25,4 +30,4 @@ schematrons/br-fr-flux2/      CII/EN16931/2xslt/, UBL/EN16931/2xslt/   BR-FR-Flu
 schematrons/cdar/             CDAR/2xslt/   BR-FR-CDV-Schematron-CDAR.xslt et _WARNING.xslt
 
 Fichiers copiés sans modification (copie le 09/11/2026, lot 2 du plan Facturation électronique ; ubl-2.1 au lot 3 ;
-schematrons au lot 4 ; cdar-d22b au lot 5).
+schematrons au lot 4 ; cdar-d22b au lot 5 ; api au lot 6).
