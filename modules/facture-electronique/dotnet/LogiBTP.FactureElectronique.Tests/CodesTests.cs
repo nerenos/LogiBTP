@@ -50,6 +50,9 @@ public class CodesTests
     [InlineData("OPERATEUR_ANNUAIRE", typeof(OperateurAnnuaire))]
     [InlineData("TYPE_PLATEFORME_ANNUAIRE", typeof(TypePlateformeAnnuaire))]
     [InlineData("ETAT_LIGNE_ANNUAIRE", typeof(EtatLigneAnnuaire))]
+    [InlineData("ACTEUR_FE", typeof(ActeurFe))]
+    [InlineData("SENS_STATUT", typeof(SensStatut))]
+    [InlineData("DECOUPAGE_EREPORTING", typeof(DecoupageEreporting))]
     public void Parite_avec_le_js(string nom, Type type) => Assert.Empty(Constantes.Ecarts(Fichier, nom, type));
 
     [Fact]

@@ -510,6 +510,28 @@ public static class EvenementFe
     public const string ImportManuel = "IMPORT_MANUEL";
 }
 
+/// <summary>Auteur d'une étape du journal fe_evenement : utilisateur, LogiBTP (file, relève), plateforme (accusé, statut reçu).</summary>
+public static class ActeurFe
+{
+    public const string Utilisateur = "UTILISATEUR";
+    public const string Systeme = "SYSTEME";
+    public const string Plateforme = "PLATEFORME";
+}
+
+/// <summary>Sens d'un statut de cycle de vie dans fe_statut : reçu de la plateforme, ou posé par la société.</summary>
+public static class SensStatut
+{
+    public const string Recu = "RECU";
+    public const string Pose = "POSE";
+}
+
+/// <summary>Découpage de l'e-reporting choisi par la société (Q20) : un envoi unique par période, ou plusieurs envois.</summary>
+public static class DecoupageEreporting
+{
+    public const string Unique = "UNIQUE";
+    public const string Plusieurs = "PLUSIEURS";
+}
+
 /// <summary>Erreurs du contrôle d'un statut de cycle de vie et de la lecture d'une facture (lot 2).</summary>
 public static class ErreurFe
 {
@@ -567,6 +589,13 @@ public static class ErreurFe
     public const string PlateformeIndisponible = "PLATEFORME_INDISPONIBLE";
     /// <summary>Réponse de la plateforme illisible ou contraire au contrat.</summary>
     public const string ReponseIllisible = "REPONSE_ILLISIBLE";
+    // File, relève et journal (lot 8).
+    /// <summary>Flux inconnu de la base de la société.</summary>
+    public const string FluxIntrouvable = "FLUX_INTROUVABLE";
+    /// <summary>Action impossible dans l'état du flux (nouvelle tentative d'un flux acquitté, confirmation d'un dépôt non manuel…).</summary>
+    public const string EtatFluxInvalide = "ETAT_FLUX_INVALIDE";
+    /// <summary>Paramètres du module invalides (connecteur, adresses, fréquence de relève).</summary>
+    public const string ParametreInvalide = "PARAMETRE_INVALIDE";
 }
 
 /// <summary>Connecteur de plateforme (lot 6) : AFNOR XP Z12-013, plateforme simulée, dépôt manuel ; une PA propre s'ajoute à la fabrique.</summary>

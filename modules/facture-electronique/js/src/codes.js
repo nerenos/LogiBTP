@@ -444,6 +444,25 @@ export const EVENEMENT_FE = Object.freeze({
   IMPORT_MANUEL: 'IMPORT_MANUEL',
 });
 
+/** Auteur d'une étape du journal fe_evenement : utilisateur, LogiBTP (file, relève), plateforme (accusé, statut reçu). */
+export const ACTEUR_FE = Object.freeze({
+  UTILISATEUR: 'UTILISATEUR',
+  SYSTEME: 'SYSTEME',
+  PLATEFORME: 'PLATEFORME',
+});
+
+/** Sens d'un statut de cycle de vie dans fe_statut : reçu de la plateforme, ou posé par la société. */
+export const SENS_STATUT = Object.freeze({
+  RECU: 'RECU',
+  POSE: 'POSE',
+});
+
+/** Découpage de l'e-reporting choisi par la société (Q20) : un envoi unique par période, ou plusieurs envois. */
+export const DECOUPAGE_EREPORTING = Object.freeze({
+  UNIQUE: 'UNIQUE',
+  PLUSIEURS: 'PLUSIEURS',
+});
+
 /** Erreurs du contrôle d'un statut de cycle de vie et de la lecture d'une facture (lot 2). */
 export const ERREUR_FE = Object.freeze({
   SENS_INCONNU: 'SENS_INCONNU',
@@ -479,6 +498,10 @@ export const ERREUR_FE = Object.freeze({
   ERREUR_PLATEFORME: 'ERREUR_PLATEFORME',
   PLATEFORME_INDISPONIBLE: 'PLATEFORME_INDISPONIBLE',
   REPONSE_ILLISIBLE: 'REPONSE_ILLISIBLE',
+  // File, relève et journal (serveur, lot 8)
+  FLUX_INTROUVABLE: 'FLUX_INTROUVABLE',
+  ETAT_FLUX_INVALIDE: 'ETAT_FLUX_INVALIDE',
+  PARAMETRE_INVALIDE: 'PARAMETRE_INVALIDE',
 });
 
 /** Connecteur de plateforme (lot 6) : AFNOR XP Z12-013, plateforme simulée, dépôt manuel ; une PA propre s'ajoute à la fabrique. */

@@ -91,9 +91,13 @@ Analyse du 23/10/2026 : [ANALYSE-MODULE-SOUS-TRAITANCE.md](documentation/concept
   le 09/11/2026 (codes, modèle EN16931, règles du cycle de vie), lot 2 le 09/11/2026 (lecture CII D22B et Factur-X,
   XSD), lot 3 le 09/11/2026 (lecture UBL 2.1 Invoice et CreditNote, détection de la syntaxe), lot 4 le 09/11/2026
   (schematrons FNFE par SaxonJS, outil `npm run valider-facture`), lot 5 le 09/11/2026 (CDAR : écriture et lecture des
-  statuts), lot 6 le 09/11/2026 (connecteurs : AFNOR XP Z12-013, plateforme simulée, dépôt manuel ; état en mémoire
-  jusqu'au schéma du lot 8) ; en attendant, saisie
+  statuts), lot 6 le 09/11/2026 (connecteurs : AFNOR XP Z12-013, plateforme simulée, dépôt manuel), lot 7 le
+  10/11/2026 (OAuth GENERIQUE en flux CLIENT), lot 8 le 10/11/2026 (schéma, file avec reprises, statuts, journal des
+  étapes chaîné, relève par curseur, service et routes `/api/facture-electronique`) ; en attendant, saisie
   libre des factures reçues (ST22).
+  - [ ] **SQL à appliquer par l'utilisateur** (lot 8, jamais appliqué par Claude) : `modules/facture-electronique/db/099f_facture_electronique.sql`
+    (rejouable, au manifeste) sur `logibtp` et `logibtp_demo` par `installation base mettre-a-jour` ; le module n'est
+    pas encore branché dans le cœur (lot 11 : droits des routes, spécialisation, tâche de fond).
 
 ### Import
 

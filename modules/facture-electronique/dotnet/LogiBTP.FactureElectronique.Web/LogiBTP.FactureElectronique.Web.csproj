@@ -2,11 +2,15 @@
 
   <PropertyGroup>
     <RootNamespace>LogiBTP.FactureElectronique.Web</RootNamespace>
-    <Description>Module Facturation électronique LogiBTP, partie serveur : connecteurs de plateforme (AFNOR XP Z12-013 Flow Service et Directory Service 1.3.0, plateforme simulée, dépôt manuel) et leur fabrique ; jeton par le contrat IFournisseurJeton du socle.</Description>
+    <Description>Module Facturation électronique LogiBTP, partie serveur : connecteurs de plateforme (AFNOR XP Z12-013 Flow Service et Directory Service 1.3.0, plateforme simulée, dépôt manuel) et leur fabrique ; jeton par le contrat IFournisseurJeton du socle ; schéma, file des flux, statuts, journal chaîné, relève et routes (EF Core).</Description>
   </PropertyGroup>
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
   </ItemGroup>
 
   <ItemGroup>

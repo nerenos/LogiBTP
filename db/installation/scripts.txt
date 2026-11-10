@@ -109,6 +109,7 @@ modules/crm/db/097_crm_demandes.sql
 modules/crm/db/098_crm_validations.sql
 modules/crm/db/098b_crm_plan_terrain.sql rejouable
 modules/crm/db/099_crm_fil.sql
+modules/facture-electronique/db/099f_facture_electronique.sql rejouable
 modules/rentabilite/db/099r_rentabilite.sql rejouable
 modules/relance/db/099t_relance.sql rejouable
 db/100_btp.sql

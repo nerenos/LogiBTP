@@ -32,7 +32,7 @@
 | 5 | CDAR : écriture et lecture des statuts | module | 1 | FAIT (09/11/2026) |
 | 6 | Connecteur : contrat, AFNOR XP Z12-013 (Flow, Directory), plateforme simulée, dépôt manuel | module | 1, 5 | FAIT (09/11/2026) |
 | 7 | OAuth : flux CLIENT pour un fournisseur GENERIQUE (si absent) | `modules/oauth` | — | FAIT (10/11/2026) |
-| 8 | Schéma, file des flux, statuts, **journal des étapes chaîné**, relève par base, service et routes | module | 6 | A FAIRE |
+| 8 | Schéma, file des flux, statuts, **journal des étapes chaîné**, relève par base, service et routes | module | 6 | FAIT (10/11/2026) |
 | 9 | Écrans du module : paramètres, tableau des flux, détail et chronologie, dépôt et import manuels | module | 8 | A FAIRE |
 | 10 | Catégories de TVA : catégorie EN16931 et code VATEX | `modules/comptabilite` | — | A FAIRE |
 | 11 | Branchement du cœur : activation, droits, spécialisation, paramètres, notifications, onglet Chronologie | cœur | 8, 9, 7 | A FAIRE |
@@ -301,7 +301,7 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   grant_type, client_id, secret, portées, renouvellement) ; libellé du flux CLIENT neutralisé dans
   `client/personnalisation/fr.json` ; `modules/oauth/CLAUDE.md` mis à jour. Aucun SQL.
 
-## Lot 8 : schéma, file, statuts, journal des étapes, relève, service (A FAIRE)
+## Lot 8 : schéma, file, statuts, journal des étapes, relève, service — FAIT (10/11/2026)
 
 - **Module** : `modules/facture-electronique`. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `db/099f_facture_electronique.sql` (rejouable) : `fe_parametre` (par société : connecteur, connexion
@@ -324,6 +324,47 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   `AlreadyExistingFlow` = succès ; un événement par étape et par changement d'état, sans exception.
 - **Critère de fin** : tests de la file (reprises, doublon), de la relève (curseur, idempotence) et du journal (ajout
   seul, chaîne vérifiée, altération détectée) verts ; script ajouté au manifeste ; SQL non appliqué.
+- **Réalisé** : `modules/facture-electronique/db/099f_facture_electronique.sql` (rejouable, au manifeste après
+  `099_crm_fil`) : `fe_parametre` (une ligne : actif, connecteur, connexion OAuth, adresses, Organization-Id, adresse
+  électronique et schéma, syntaxe et profil par défaut, fréquence de relève, délai, découpage `DECOUPAGE_EREPORTING`),
+  `fe_flux` (sens, type, syntaxe, profil, règle, numéro lu, `ffl_id_suivi` unique, `ffl_id_flux` unique par connecteur,
+  empreinte, GED original / converti / lisible, élément `ffl_type_element` / `ffl_id_element`, état `ETAT_FLUX`, accusé
+  et détails, essais, prochain essai, dernière erreur, curseur), `fe_fichier` (fichiers gardés : le dépôt part de
+  l'original), `fe_statut` (`SENS_STATUT` reçu / posé, facture connue ou numéro seul, CDAR porteur, erreurs du
+  contrôle), `fe_erreur`, `fe_evenement` (rang, flux, élément, type `EVENEMENT_FE`, avant / après, acteur `ACTEUR_FE`,
+  utilisateur, détail JSONB, horodatage, empreintes ; trigger `fn_fe_evenement_chainer` : verrou de transaction, rang
+  suivant, heure du serveur à la milliseconde, SHA-256(précédente | rang | horodatage | type | flux | élément | avant |
+  après | acteur | utilisateur | détail::text) ; UPDATE, DELETE et TRUNCATE refusés, TRUNCATE de `fe_flux` aussi),
+  `fe_releve` (curseur par sens), `fe_magasin` + séquence (plateforme simulée et dépôt manuel en base).
+  `dotnet/LogiBTP.FactureElectronique.Web/` (EF Core Npgsql ajouté) : `Donnees.cs`, `JournalFe.cs` (écriture par INSERT,
+  détail sans champ sensible et masqué, chronologie d'un flux ou d'un élément, `Verifier` : rangs consécutifs,
+  chaînage, empreinte), `SpecialisationFactureElectronique.cs` (`ElementDuFluxAsync`, `CreerPieceRecueAsync`,
+  `StatutRecuAsync`, `StatutPoseAsync`, `RangerAsync`, `LireFichierAsync`, `SignalerAsync`, `ExigerParametrage`,
+  `Exiger`), `ServiceFactureElectronique.cs` (paramètres contrôlés `PARAMETRE_INVALIDE`, `MettreEnFileAsync` : doublon
+  même suivi et même fichier = flux existant, autre fichier = 409 ; réception : facture lue puis rattachée ou créée par
+  l'application, CDAR → statuts de la facture visée par numéro et sens ; accusé : Ok ou AlreadyExistingFlow seul →
+  ACQUITTE, Error → ERREUR + `fe_erreur` + signalement ; `PoserStatutAsync` contrôlé par `ReglesCycleVie` ; nouvelle
+  tentative, dépôt manuel confirmé, import manuel, fichier, chronologie, vérification), `FileFlux.cs` (un flux par
+  transaction, `FOR UPDATE SKIP LOCKED`, reprises 1 / 5 / 15 / 60 min puis ERREUR, tâche `PassageFactureElectronique`
+  par base active, base sans schéma ignorée), `ReleveFlux.cs` (curseur par sens, fréquence, idempotente par connecteur +
+  flowId, un échec n'avance pas le curseur), `MagasinFluxBase.cs` (`IMagasinFlux` en base, cache par base et magasin),
+  `Extensions.cs` (`AddModuleFactureElectronique<T>`, `MapModuleFactureElectronique` ; `AddConnecteursFactureElectronique`
+  prend désormais un magasin par base **et** par magasin). Codes JS ↔ C# ajoutés : `ACTEUR_FE`, `SENS_STATUT`,
+  `DECOUPAGE_EREPORTING`, `ERREUR_FE.FLUX_INTROUVABLE`, `ETAT_FLUX_INVALIDE`, `PARAMETRE_INVALIDE`. Routes
+  (`/api/facture-electronique`) : `GET|PUT /parametres`, `GET /sante`, `GET /flux`, `GET /flux/{id}`,
+  `GET /flux/{id}/fichier?document=`, `GET /flux/{id}/chronologie`, `GET /chronologie?type_element=&id_element=`,
+  `POST /flux/{id}/tentative`, `POST /flux/{id}/depot-manuel`, `POST /import`, `POST /releve`,
+  `GET /journal/verification`. Tests : `JournalFeTests` (5, sans base) et `ServiceFactureElectroniqueTests` (6, base
+  `LOGIBTP_TEST_PG` où 099f est chargé : dépôt et doublon, reprises puis erreur et nouvelle tentative, relève avec accusés,
+  statuts 200 → 205, curseur et idempotence, AlreadyExistingFlow, facture reçue rattachée et import, dépôt manuel avec
+  magasin en base, journal en ajout seul, chaîne vérifiée, altération détectée) ; module : 304 tests C# (dont les 6 de
+  base, verts avec la base jetable), 266 JS. Écarts : un flux CDAR reçu a ses propres étapes (RECEPTION puis CONTROLE
+  RECU → TRAITE) et chaque statut une étape STATUT_RECU sur le flux de la facture (avant / après = statut affiché) ;
+  horodatage du journal = heure du serveur PostgreSQL ; fichiers gardés dans `fe_fichier` même rangés en GED ;
+  nouvelle tentative d'un flux refusé = nouveau dépôt sous un nouvel identifiant de suivi ; `PoserStatutAsync` sans
+  route (lot 13) ; magasin en base gardé en cache par processus (une instance de l'API par base) ; routes non
+  rattachées aux droits tant que le cœur ne les monte pas (lot 11). **Script à appliquer par l'utilisateur** :
+  `099f_facture_electronique.sql` (par `installation base mettre-a-jour`).
 
 ## Lot 9 : écrans du module (A FAIRE)
 
