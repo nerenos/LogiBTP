@@ -11,6 +11,8 @@ xsd/ubl-2.1/          UBL/1xsd_UBL2.1/{maindoc,common}/  OASIS UBL 2.1 OS (04/11
                       redistribution permises sans modification), repris tels quels dans le paquet FNFE.
 xsd/cdar-d22b/        CDAR/1xsd-CDAR_D22B_uncoupled/    UN/CEFACT CrossDomainAcknowledgementAndResponse D22B (uncoupled) : CDAR
                       du cycle de vie des factures (lot 5)
+xsd/flux10/           Flux10/xsd/                        E-reporting (flux 10) : ereporting.xsd (Report), report, transaction,
+                      payment, parametre (lot 19)
 
 api/                  Z.notes_&_docs/XP_Z12_013_Annex/   API XP Z12-013 (OpenAPI 3.0.3, version 1.3.0) : annexe A
                       « ANNEXE A -XP Z12-013 - Flow_Service-1.3.0-swagger.json » → flow-service-1.3.0.json, annexe B
@@ -28,6 +30,8 @@ schematrons/br-fr-flux2/      CII/EN16931/2xslt/, UBL/EN16931/2xslt/   BR-FR-Flu
                               et _WARNING.xslt, XP Z12-012 V1.4.0 ; identiques dans tous les dossiers du paquet (CII,
                               EXTENDED-CTC-FR, Factur-X) : une seule copie
 schematrons/cdar/             CDAR/2xslt/   BR-FR-CDV-Schematron-CDAR.xslt et _WARNING.xslt
+schematrons/flux10/           Flux10/       Flux10.xslt (compilé de Flux10.sch, « PPF — Flux 10 e-reporting — v1.8 », annexe 7
+                              v1.8 ; 150 assertions sans @id ni @flag : fatales) ; Flux10.sch non recopié
 
 Fichiers copiés sans modification (copie le 09/11/2026, lot 2 du plan Facturation électronique ; ubl-2.1 au lot 3 ;
-schematrons au lot 4 ; cdar-d22b au lot 5 ; api au lot 6).
+schematrons au lot 4 ; cdar-d22b au lot 5 ; api au lot 6 ; xsd/flux10 et schematrons/flux10 le 11/11/2026, lot 19).

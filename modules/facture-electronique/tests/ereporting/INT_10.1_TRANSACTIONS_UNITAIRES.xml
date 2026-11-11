@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Report>
+  <ReportDocument>
+    <Id>LB-20261101-101-001</Id>
+    <IssueDateTime>
+      <DateTimeString>20261201093000</DateTimeString>
+    </IssueDateTime>
+    <TypeCode>IN</TypeCode>
+    <Sender>
+      <Id schemeId="0238">0001</Id>
+      <Name>PLATEFORME SIMULEE</Name>
+      <RoleCode>WK</RoleCode>
+    </Sender>
+    <Issuer>
+      <Id schemeId="0002">200000008</Id>
+      <Name>BTP EXEMPLE</Name>
+      <RoleCode>SE</RoleCode>
+    </Issuer>
+  </ReportDocument>
+  <TransactionsReport>
+    <ReportPeriod>
+      <StartDate>20261101</StartDate>
+      <EndDate>20261110</EndDate>
+    </ReportPeriod>
+    <Invoice>
+      <ID>F202611001</ID>
+      <IssueDate>20261102</IssueDate>
+      <TypeCode>380</TypeCode>
+      <CurrencyCode>EUR</CurrencyCode>
+      <DueDate>20261202</DueDate>
+      <IncludedNote>
+        <Subject>PMT</Subject>
+        <Content>Indemnité forfaitaire pour frais de recouvrement en cas de retard de paiement : 40 €.</Content>
+      </IncludedNote>
+      <IncludedNote>
+        <Subject>PMD</Subject>
+        <Content>Pénalités de retard : trois fois le taux d'intérêt légal.</Content>
+      </IncludedNote>
+      <IncludedNote>
+        <Subject>AAB</Subject>
+        <Content>Pas d'escompte pour paiement anticipé.</Content>
+      </IncludedNote>
+      <IncludedNote>
+        <Subject>BAR</Subject>
+        <Content>B2B</Content>
+      </IncludedNote>
+      <BusinessProcess>
+        <ID>S1</ID>
+        <TypeID>urn.cpro.gouv.fr:1p0:ereporting</TypeID>
+      </BusinessProcess>
+      <Seller>
+        <CompanyId schemeId="0002">200000008</CompanyId>
+        <TaxRegistrationId qualifyingId="VAT">FR37200000008</TaxRegistrationId>
+        <PostalAddress>
+          <CountryId>FR</CountryId>
+        </PostalAddress>
+      </Seller>
+      <Buyer>
+        <CompanyId schemeId="0223">DE123456789</CompanyId>
+        <TaxRegistrationId qualifyingId="VAT">DE123456789</TaxRegistrationId>
+        <PostalAddress>
+          <CountryId>DE</CountryId>
+        </PostalAddress>
+      </Buyer>
+      <MonetaryTotal>
+        <TaxExclusiveAmount>1255.00</TaxExclusiveAmount>
+        <TaxAmount CurrencyCode="EUR">151.00</TaxAmount>
+      </MonetaryTotal>
+      <TaxSubTotal>
+        <TaxableAmount>255.00</TaxableAmount>
+        <TaxAmount>51.00</TaxAmount>
+        <TaxCategory>
+          <Code>S</Code>
+          <Percent>20</Percent>
+        </TaxCategory>
+      </TaxSubTotal>
+      <TaxSubTotal>
+        <TaxableAmount>1000.00</TaxableAmount>
+        <TaxAmount>100.00</TaxAmount>
+        <TaxCategory>
+          <Code>S</Code>
+          <Percent>10</Percent>
+        </TaxCategory>
+      </TaxSubTotal>
+      <Line>
+        <BilledQuantity UnitCode="MTK">10</BilledQuantity>
+        <Price>
+          <PriceAmount>25.5</PriceAmount>
+        </Price>
+        <Product>
+          <Name>Carrelage posé</Name>
+        </Product>
+      </Line>
+      <Line>
+        <BilledQuantity UnitCode="C62">1</BilledQuantity>
+        <Price>
+          <PriceAmount>1000</PriceAmount>
+        </Price>
+        <Product>
+          <Name>Rénovation salle de bains</Name>
+        </Product>
+      </Line>
+    </Invoice>
+    <Invoice>
+      <ID>F202611002</ID>
+      <IssueDate>20261104</IssueDate>
+      <TypeCode>380</TypeCode>
+      <CurrencyCode>EUR</CurrencyCode>
+      <DueDate>20261204</DueDate>
+      <BusinessProcess>
+        <ID>S1</ID>
+        <TypeID>urn.cpro.gouv.fr:1p0:ereporting</TypeID>
+      </BusinessProcess>
+      <Seller>
+        <CompanyId schemeId="0002">200000008</CompanyId>
+        <TaxRegistrationId qualifyingId="VAT">FR37200000008</TaxRegistrationId>
+        <PostalAddress>
+          <CountryId>FR</CountryId>
+        </PostalAddress>
+      </Seller>
+      <Buyer>
+        <CompanyId schemeId="0223">DE123456789</CompanyId>
+        <TaxRegistrationId qualifyingId="VAT">DE123456789</TaxRegistrationId>
+        <PostalAddress>
+          <CountryId>DE</CountryId>
+        </PostalAddress>
+      </Buyer>
+      <MonetaryTotal>
+        <TaxExclusiveAmount>100.00</TaxExclusiveAmount>
+        <TaxAmount CurrencyCode="EUR">0.00</TaxAmount>
+      </MonetaryTotal>
+      <TaxSubTotal>
+        <TaxableAmount>100.00</TaxableAmount>
+        <TaxAmount>0.00</TaxAmount>
+        <TaxCategory>
+          <Code>AE</Code>
+          <Percent>0</Percent>
+          <TaxExemptionReason>Autoliquidation</TaxExemptionReason>
+          <TaxExemptionReasonCode>VATEX-EU-AE</TaxExemptionReasonCode>
+        </TaxCategory>
+      </TaxSubTotal>
+      <Line>
+        <BilledQuantity UnitCode="C62">1</BilledQuantity>
+        <Price>
+          <PriceAmount>100</PriceAmount>
+        </Price>
+        <Product>
+          <Name>Étude de structure</Name>
+        </Product>
+      </Line>
+    </Invoice>
+    <Invoice>
+      <ID>F202611003</ID>
+      <IssueDate>20261109</IssueDate>
+      <TypeCode>380</TypeCode>
+      <CurrencyCode>EUR</CurrencyCode>
+      <BusinessProcess>
+        <ID>B1</ID>
+        <TypeID>urn.cpro.gouv.fr:1p0:ereporting</TypeID>
+      </BusinessProcess>
+      <Seller>
+        <CompanyId schemeId="0002">200000008</CompanyId>
+        <TaxRegistrationId qualifyingId="VAT">FR37200000008</TaxRegistrationId>
+        <PostalAddress>
+          <CountryId>FR</CountryId>
+        </PostalAddress>
+      </Seller>
+      <Buyer>
+        <CompanyId schemeId="0227">CHE123456789</CompanyId>
+        <PostalAddress>
+          <CountryId>CH</CountryId>
+        </PostalAddress>
+      </Buyer>
+      <Delivery>
+        <Date>20261109</Date>
+        <Location>
+          <LineOne>Rue du Lac 4</LineOne>
+          <CityName>GENEVE</CityName>
+          <PostalZone>1201</PostalZone>
+          <CountryId>CH</CountryId>
+        </Location>
+      </Delivery>
+      <MonetaryTotal>
+        <TaxExclusiveAmount>2500.00</TaxExclusiveAmount>
+        <TaxAmount CurrencyCode="EUR">0.00</TaxAmount>
+      </MonetaryTotal>
+      <TaxSubTotal>
+        <TaxableAmount>2500.00</TaxableAmount>
+        <TaxAmount>0.00</TaxAmount>
+        <TaxCategory>
+          <Code>G</Code>
+          <Percent>0</Percent>
+          <TaxExemptionReason>Exportation hors UE</TaxExemptionReason>
+          <TaxExemptionReasonCode>VATEX-EU-G</TaxExemptionReasonCode>
+        </TaxCategory>
+      </TaxSubTotal>
+    </Invoice>
+    <Invoice>
+      <ID>A202611001</ID>
+      <IssueDate>20261110</IssueDate>
+      <TypeCode>381</TypeCode>
+      <CurrencyCode>EUR</CurrencyCode>
+      <BusinessProcess>
+        <ID>B1</ID>
+        <TypeID>urn.cpro.gouv.fr:1p0:ereporting</TypeID>
+      </BusinessProcess>
+      <ReferencedDocument>
+        <ID>F202611003</ID>
+        <IssueDate>20261109</IssueDate>
+      </ReferencedDocument>
+      <Seller>
+        <CompanyId schemeId="0002">200000008</CompanyId>
+        <TaxRegistrationId qualifyingId="VAT">FR37200000008</TaxRegistrationId>
+        <PostalAddress>
+          <CountryId>FR</CountryId>
+        </PostalAddress>
+      </Seller>
+      <Buyer>
+        <CompanyId schemeId="0227">CHE123456789</CompanyId>
+        <PostalAddress>
+          <CountryId>CH</CountryId>
+        </PostalAddress>
+      </Buyer>
+      <MonetaryTotal>
+        <TaxExclusiveAmount>250.00</TaxExclusiveAmount>
+        <TaxAmount CurrencyCode="EUR">0.00</TaxAmount>
+      </MonetaryTotal>
+      <TaxSubTotal>
+        <TaxableAmount>250.00</TaxableAmount>
+        <TaxAmount>0.00</TaxAmount>
+        <TaxCategory>
+          <Code>G</Code>
+          <Percent>0</Percent>
+          <TaxExemptionReason>Exportation hors UE</TaxExemptionReason>
+          <TaxExemptionReasonCode>VATEX-EU-G</TaxExemptionReasonCode>
+        </TaxCategory>
+      </TaxSubTotal>
+    </Invoice>
+  </TransactionsReport>
+</Report>

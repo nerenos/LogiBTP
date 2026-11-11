@@ -297,6 +297,11 @@ public static class SchemaIdentifiant
     public const string CreancierSepa = "SEPA";
     /// <summary>UBL : TaxScheme/ID du numéro de TVA (BT-31, BT-48, BT-63) ; tout autre régime porte l'identifiant fiscal (BT-32).</summary>
     public const string TvaUbl = "VAT";
+    // E-reporting (flux 10, G2.19) : identifiant d'une entreprise sans SIREN.
+    public const string UeHorsFrance = "0223";
+    public const string HorsUe = "0227";
+    public const string Ridet = "0228";
+    public const string Tahiti = "0229";
 }
 
 /// <summary>CDAR : matricule (schéma 0238) des plateformes publiques.</summary>
@@ -537,6 +542,136 @@ public static class DecoupageEreporting
 {
     public const string Unique = "UNIQUE";
     public const string Plusieurs = "PLUSIEURS";
+}
+
+/// <summary>E-reporting (flux 10) : sous-flux, dans l'ordre de l'annexe A XP Z12-012 (onglet « E-REPORTING - Flux 10 »).</summary>
+public static class SousFluxEreporting
+{
+    /// <summary>TG-8 : factures B2B internationales.</summary>
+    public const string TransactionsUnitaires = "10.1";
+    /// <summary>TG-34 : encaissements de ces factures.</summary>
+    public const string PaiementsUnitaires = "10.2";
+    /// <summary>TG-31 : ventes B2C cumulées par jour.</summary>
+    public const string TransactionsAgregees = "10.3";
+    /// <summary>TG-37 : encaissements B2C cumulés par jour.</summary>
+    public const string PaiementsAgreges = "10.4";
+
+    public static readonly string[] Tous = [TransactionsUnitaires, PaiementsUnitaires, TransactionsAgregees, PaiementsAgreges];
+}
+
+/// <summary>E-reporting TT-4 : type de transmission (G8.01 ; CO et MO de l'annexe A absents du XSD du paquet FNFE).</summary>
+public static class TypeTransmission
+{
+    public const string Initiale = "IN";
+    public const string Rectificative = "RE";
+}
+
+/// <summary>E-reporting TT-81 : catégorie des transactions agrégées (G1.68).</summary>
+public static class CategorieTransactions
+{
+    /// <summary>Livraisons de biens soumises à la TVA.</summary>
+    public const string Biens = "TLB1";
+    /// <summary>Prestations de services soumises à la TVA.</summary>
+    public const string Services = "TPS1";
+    /// <summary>Opérations non soumises à la TVA en France.</summary>
+    public const string NonTaxables = "TNT1";
+    /// <summary>Régime de TVA sur la marge.</summary>
+    public const string Marge = "TMA1";
+
+    public static readonly string[] Toutes = [Biens, Services, NonTaxables, Marge];
+}
+
+/// <summary>E-reporting TT-29 : profil des transactions unitaires (S1.12).</summary>
+public static class ProfilEreporting
+{
+    public const string Transactions = "urn.cpro.gouv.fr:1p0:ereporting";
+}
+
+/// <summary>Régime de TVA de la société, qui fixe la périodicité de l'e-reporting (<see cref="ReglesEreporting.Periodicite"/>).</summary>
+public static class RegimeEreporting
+{
+    public const string ReelNormalMensuel = "REEL_NORMAL_MENSUEL";
+    public const string ReelNormalTrimestriel = "REEL_NORMAL_TRIMESTRIEL";
+    public const string Simplifie = "SIMPLIFIE";
+    public const string Franchise = "FRANCHISE";
+}
+
+/// <summary>Durée d'une période d'e-reporting.</summary>
+public static class PeriodiciteEreporting
+{
+    public const string Decade = "DECADE";
+    public const string Mois = "MOIS";
+    public const string Bimestre = "BIMESTRE";
+}
+
+/// <summary>
+/// Règles contrôlées sur une transmission d'e-reporting avant l'envoi (<see cref="ReglesEreporting.Controler"/>) : codes des
+/// règles de gestion de l'annexe 7 v1.8 (schematron Flux10 du paquet FNFE), plus LOGIBTP-PERIODE (date hors période).
+/// </summary>
+public static class RegleEreporting
+{
+    /// <summary>type de facture.</summary>
+    public const string G101 = "G1.01";
+    /// <summary>cadre de facturation.</summary>
+    public const string G102 = "G1.02";
+    /// <summary>identifiant de facture.</summary>
+    public const string G105 = "G1.05";
+    /// <summary>date AAAAMMJJ, année 2000 à 2099 (G1.36).</summary>
+    public const string G109 = "G1.09";
+    /// <summary>devise ISO 4217.</summary>
+    public const string G110 = "G1.10";
+    /// <summary>montant : 2 décimales, 19 chiffres.</summary>
+    public const string G114 = "G1.14";
+    /// <summary>montant encaissé : positif, 6 décimales, 19 chiffres.</summary>
+    public const string G116 = "G1.16";
+    /// <summary>taux de TVA.</summary>
+    public const string G124 = "G1.24";
+    /// <summary>facture antérieure d'un avoir ou d'une rectificative.</summary>
+    public const string G132 = "G1.32";
+    /// <summary>motif d'exonération.</summary>
+    public const string G140 = "G1.40";
+    /// <summary>totaux = somme des ventilations.</summary>
+    public const string G153 = "G1.53";
+    /// <summary>acompte en cadre définitif.</summary>
+    public const string G160 = "G1.60";
+    /// <summary>catégorie de transactions.</summary>
+    public const string G168 = "G1.68";
+    /// <summary>TVA du vendeur si exonération.</summary>
+    public const string G1102 = "G1.102";
+    /// <summary>identifiant de transmission.</summary>
+    public const string G1104 = "G1.104";
+    /// <summary>code pays.</summary>
+    public const string G201 = "G2.01";
+    /// <summary>type d'identifiant d'une entreprise.</summary>
+    public const string G219 = "G2.19";
+    /// <summary>catégorie de TVA.</summary>
+    public const string G231 = "G2.31";
+    /// <summary>numéro de TVA.</summary>
+    public const string G233 = "G2.33";
+    /// <summary>VATEX-FR-CNWVAT réservé aux avoirs.</summary>
+    public const string G621 = "G6.21";
+    /// <summary>émetteur : matricule de plateforme.</summary>
+    public const string G622 = "G6.22";
+    /// <summary>TVA de la facture en euros.</summary>
+    public const string G623 = "G6.23";
+    /// <summary>fin de période après le début.</summary>
+    public const string G625 = "G6.25";
+    /// <summary>déclarant : SIREN.</summary>
+    public const string G626 = "G6.26";
+    /// <summary>encaissement en euros.</summary>
+    public const string G627 = "G6.27";
+    /// <summary>identifiant de l'acheteur (B2B international).</summary>
+    public const string G628 = "G6.28";
+    /// <summary>un seul rapport par transmission.</summary>
+    public const string G629 = "G6.29";
+    /// <summary>rôle de l'émetteur.</summary>
+    public const string G751 = "G7.51";
+    /// <summary>rôle du déclarant.</summary>
+    public const string G752 = "G7.52";
+    /// <summary>type de transmission.</summary>
+    public const string G801 = "G8.01";
+    /// <summary>transaction ou paiement daté hors de la période de la transmission.</summary>
+    public const string Periode = "LOGIBTP-PERIODE";
 }
 
 /// <summary>Code de motif d'exonération (VATEX, BT-121) attendu d'une ventilation autoliquidée (catégorie AE) : autoliquidation française.</summary>

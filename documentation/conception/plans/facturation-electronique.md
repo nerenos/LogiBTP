@@ -44,7 +44,7 @@
 | 16 | Contrôle de complétude (JS ↔ C#) et écriture CII D22B (EN16931, EXTENDED-CTC-FR) | module | 1, 4 | FAIT (11/11/2026) |
 | 17 | Écriture UBL 2.1 (Invoice, CreditNote) | module | 16 | A FAIRE |
 | 18 | PDF/A-3 et fichier associé | `modules/edition` | — | A FAIRE |
-| 19 | E-reporting : modèle des transactions et paiements, écriture du flux 10 (10.1 à 10.4), découpage des envois | module | 1, 8 | A FAIRE |
+| 19 | E-reporting : modèle des transactions et paiements, écriture du flux 10 (10.1 à 10.4), découpage des envois | module | 1, 8 | FAIT (11/11/2026) |
 | 20 | Annuaire sur la fiche personne et vérification de nuit (option) | cœur | 11, 6 | A FAIRE |
 | 21 | Paramètres d'émission BTP : code BT-3 par type, nature biens / services / mixte, notes légales | cœur | 11, 10 | A FAIRE |
 | 22 | Document de vente → modèle : factures, acomptes, définitives, avoirs ; contrôle dans l'éditeur | cœur | 21, 16 | A FAIRE |
@@ -694,7 +694,7 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   `verapdf --flavour 3b modules/edition/tests/resultats-js/05_pdfa.js.pdf` (résultat à noter ici). Limites : annexes PDF
   copiées non contrôlées (elles peuvent rompre la conformité), images JPEG CMJN incompatibles avec l'OutputIntent RGB.
 
-## Lot 19 : e-reporting, écriture du flux 10 (A FAIRE)
+## Lot 19 : e-reporting, écriture du flux 10 — FAIT (11/11/2026)
 
 - **Module** : `modules/facture-electronique`. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `ModeleEreporting.cs` (transactions unitaires et agrégées, paiements, période), `Formats/EcritureFlux10.cs`
@@ -704,6 +704,32 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
 - **Prérequis** : périodicité et règles de rectification lues dans les spécifications externes DGFiP / AIFE v3.x
   (lien noté dans le lot).
 - **Critère de fin** : flux 10.1 à 10.4 valides au XSD sur des jeux B2C et international ; tests verts.
+- **Réalisé** : artefacts `artefacts/xsd/flux10/` (ereporting, report, transaction, payment, parametre) et
+  `artefacts/schematrons/flux10/Flux10.xslt` (« PPF — Flux 10 e-reporting — v1.8 », annexe 7 v1.8) recopiés sans modification
+  du paquet FNFE 1.4.0.04 (`VERSION`) ; codes JS ↔ C# `SOUS_FLUX_EREPORTING` (10.1 à 10.4), `TYPE_TRANSMISSION` (IN, RE),
+  `CATEGORIE_TRANSACTIONS` (TLB1, TPS1, TNT1, TMA1), `PROFIL_EREPORTING`, `REGIME_EREPORTING`, `PERIODICITE_EREPORTING`,
+  `REGLE_EREPORTING` (31 règles de l'annexe 7 + `LOGIBTP-PERIODE`), `SCHEMA_IDENTIFIANT` 0223 / 0227 / 0228 / 0229 (`CodesTests`) ;
+  `ModeleEreporting.cs` (`TransmissionEreporting` TB-0 → `RapportTransactions` (`TransactionUnitaire` TG-8, `TransactionsAgregees`
+  TG-31) ou `RapportPaiements` (`PaiementUnitaire` TG-34, `PaiementsAgreges` TG-37) ; données brutes `VenteB2C`,
+  `EncaissementEreporting`, `DonneesEreporting`, `ContexteEnvoi`, `EnvoiEreporting`, `EcartEreporting`) ; `ReglesEreporting.cs`
+  (`Periodicite` / `Periode` selon le régime, `Agreger` par jour, catégorie, devise, option sur les débits puis taux, `AgregerPaiements`,
+  `PaiementsUnitaires`, `TransactionDe(Facture)` BT → TT, `Entreprise`, `Decouper` : un envoi par sous-flux et par période (UNIQUE)
+  ou par sous-flux et par jour (PLUSIEURS), type de flux XP Z12-013 du sous-flux, TT-1 « préfixe-AAAAMMJJ-sous-flux-rang[-REn] »,
+  correction n ≥ 1 → RE ; `Controler` : règles du schematron Flux10 avant l'envoi) ; `Formats/EcritureFlux10.cs` (ordre des XSD,
+  XSD vérifié, `JeuXsd.Flux10`) ; outil Node : `JEUX_XSD.FLUX10`, `SCHEMATRONS.FLUX10`, racine `Report` → `SYNTAXE.FRR`
+  (XSD puis Flux10). Tests : jeu `tests/cas/06_ereporting.json` (13 périodes, 4 agrégations, 2 paiements, 4 découpages) par
+  `ReglesEreportingTests`, `EcritureFlux10Tests` (5 références `tests/ereporting/` : B2C 10.3, 10.4, 10.3 rectificative,
+  international 10.1 (dont une facture extraite du modèle EN16931, autoliquidation, export, avoir) et 10.2, régénérées par
+  `LOGIBTP_REGENERER_FLUX10=1` ; 20 altérations signalées par `Controler`), `js/test/flux10.test.js` (références sans erreur
+  fatale au XSD et au schematron, 12 altérations refusées). Écarts : prérequis non rempli, spécifications externes DGFiP v3.x
+  absentes du dépôt et non téléchargées : périodicité tirée de leur calendrier connu (réel normal mensuel : transactions par
+  décade, paiements par mois ; réel normal trimestriel et simplifié : mois ; franchise : bimestre), **à confirmer** (TODO) ;
+  rectificative = transmission RE de la même période avec les données fournies (contenu exact à confirmer) ; CO / MO et
+  TG-2 References de l'annexe A non écrits (absents du XSD, refusés par G8.01) ; un envoi par sous-flux (les types de flux
+  XP Z12-013 distinguent unitaire et agrégé), le regroupement par type de déclaration restant à la PA ; Sender = la
+  plateforme (0238, WK, exigé par G6.22 / G7.51), fourni par l'appelant ; assertions du schematron sans @id : la règle se
+  lit en tête du message ; lignes sans adresse de livraison (TG-41, absente du modèle de facture) ; régime de TVA de la
+  société non paramétré (lot 28).
 
 ## Lot 20 : annuaire sur la fiche personne (A FAIRE)
 

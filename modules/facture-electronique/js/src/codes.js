@@ -252,6 +252,11 @@ export const SCHEMA_IDENTIFIANT = Object.freeze({
   PLATEFORME: '0238', // CDAR : matricule d'une plateforme (PA, PPF, Chorus Pro)
   CREANCIER_SEPA: 'SEPA', // UBL : BT-90 dans PartyIdentification
   TVA_UBL: 'VAT', // UBL : TaxScheme/ID du numéro de TVA
+  // E-reporting (flux 10, G2.19) : identifiant d'une entreprise sans SIREN
+  UE_HORS_FRANCE: '0223',
+  HORS_UE: '0227',
+  RIDET: '0228',
+  TAHITI: '0229',
 });
 
 /** CDAR : matricule (schéma 0238) des plateformes publiques. */
@@ -467,6 +472,86 @@ export const SENS_STATUT = Object.freeze({
 export const DECOUPAGE_EREPORTING = Object.freeze({
   UNIQUE: 'UNIQUE',
   PLUSIEURS: 'PLUSIEURS',
+});
+
+/** E-reporting (flux 10) : sous-flux, dans l'ordre de l'annexe A XP Z12-012 (onglet « E-REPORTING - Flux 10 »). */
+export const SOUS_FLUX_EREPORTING = Object.freeze({
+  TRANSACTIONS_UNITAIRES: '10.1', // TG-8 : factures B2B internationales
+  PAIEMENTS_UNITAIRES: '10.2', // TG-34 : encaissements de ces factures
+  TRANSACTIONS_AGREGEES: '10.3', // TG-31 : ventes B2C cumulées par jour
+  PAIEMENTS_AGREGES: '10.4', // TG-37 : encaissements B2C cumulés par jour
+});
+
+/** E-reporting TT-4 : type de transmission (G8.01 ; CO et MO de l'annexe A absents du XSD du paquet FNFE). */
+export const TYPE_TRANSMISSION = Object.freeze({
+  INITIALE: 'IN',
+  RECTIFICATIVE: 'RE',
+});
+
+/** E-reporting TT-81 : catégorie des transactions agrégées (G1.68). */
+export const CATEGORIE_TRANSACTIONS = Object.freeze({
+  BIENS: 'TLB1', // livraisons de biens soumises à la TVA
+  SERVICES: 'TPS1', // prestations de services soumises à la TVA
+  NON_TAXABLES: 'TNT1', // opérations non soumises à la TVA en France
+  MARGE: 'TMA1', // régime de TVA sur la marge
+});
+
+/** E-reporting TT-29 : profil des transactions unitaires (S1.12). */
+export const PROFIL_EREPORTING = Object.freeze({
+  TRANSACTIONS: 'urn.cpro.gouv.fr:1p0:ereporting',
+});
+
+/** Régime de TVA de la société, qui fixe la périodicité de l'e-reporting (ReglesEreporting.Periode). */
+export const REGIME_EREPORTING = Object.freeze({
+  REEL_NORMAL_MENSUEL: 'REEL_NORMAL_MENSUEL',
+  REEL_NORMAL_TRIMESTRIEL: 'REEL_NORMAL_TRIMESTRIEL',
+  SIMPLIFIE: 'SIMPLIFIE',
+  FRANCHISE: 'FRANCHISE',
+});
+
+/** Durée d'une période d'e-reporting. */
+export const PERIODICITE_EREPORTING = Object.freeze({
+  DECADE: 'DECADE',
+  MOIS: 'MOIS',
+  BIMESTRE: 'BIMESTRE',
+});
+
+/**
+ * Règles contrôlées sur une transmission d'e-reporting avant l'envoi (ReglesEreporting.Controler, C#) : codes des
+ * règles de gestion de l'annexe 7 v1.8 (schematron Flux10 du paquet FNFE), plus LOGIBTP-PERIODE (date hors période).
+ */
+export const REGLE_EREPORTING = Object.freeze({
+  G1_01: 'G1.01', // type de facture
+  G1_02: 'G1.02', // cadre de facturation
+  G1_05: 'G1.05', // identifiant de facture
+  G1_09: 'G1.09', // date AAAAMMJJ, année 2000 à 2099 (G1.36)
+  G1_10: 'G1.10', // devise ISO 4217
+  G1_14: 'G1.14', // montant : 2 décimales, 19 chiffres
+  G1_16: 'G1.16', // montant encaissé : positif, 6 décimales, 19 chiffres
+  G1_24: 'G1.24', // taux de TVA
+  G1_32: 'G1.32', // facture antérieure d'un avoir ou d'une rectificative
+  G1_40: 'G1.40', // motif d'exonération
+  G1_53: 'G1.53', // totaux = somme des ventilations
+  G1_60: 'G1.60', // acompte en cadre définitif
+  G1_68: 'G1.68', // catégorie de transactions
+  G1_102: 'G1.102', // TVA du vendeur si exonération
+  G1_104: 'G1.104', // identifiant de transmission
+  G2_01: 'G2.01', // code pays
+  G2_19: 'G2.19', // type d'identifiant d'une entreprise
+  G2_31: 'G2.31', // catégorie de TVA
+  G2_33: 'G2.33', // numéro de TVA
+  G6_21: 'G6.21', // VATEX-FR-CNWVAT réservé aux avoirs
+  G6_22: 'G6.22', // émetteur : matricule de plateforme
+  G6_23: 'G6.23', // TVA de la facture en euros
+  G6_25: 'G6.25', // fin de période après le début
+  G6_26: 'G6.26', // déclarant : SIREN
+  G6_27: 'G6.27', // encaissement en euros
+  G6_28: 'G6.28', // identifiant de l'acheteur (B2B international)
+  G6_29: 'G6.29', // un seul rapport par transmission
+  G7_51: 'G7.51', // rôle de l'émetteur
+  G7_52: 'G7.52', // rôle du déclarant
+  G8_01: 'G8.01', // type de transmission
+  PERIODE: 'LOGIBTP-PERIODE', // transaction ou paiement daté hors de la période de la transmission
 });
 
 /** Code de motif d'exonération (VATEX, BT-121) attendu d'une ventilation autoliquidée (catégorie AE) : autoliquidation française. */

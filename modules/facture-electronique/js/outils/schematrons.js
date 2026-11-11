@@ -35,6 +35,7 @@ export const SCHEMATRONS = Object.freeze({
   BR_FR_UBL_WARNING: 'br-fr-flux2/BR-FR-Flux2-Schematron-UBL_WARNING.xslt',
   BR_FR_CDV: 'cdar/BR-FR-CDV-Schematron-CDAR.xslt',
   BR_FR_CDV_WARNING: 'cdar/BR-FR-CDV-Schematron-CDAR_WARNING.xslt',
+  FLUX10: 'flux10/Flux10.xslt', // e-reporting (annexe 7 v1.8)
 });
 
 /** Jeux XSD (mêmes que `JeuXsd` de ValidationXsd.cs) : dossier sous artefacts/xsd et schéma principal. */
@@ -46,6 +47,7 @@ export const JEUX_XSD = Object.freeze({
   UBL_INVOICE: Object.freeze({ dossier: 'ubl-2.1', principal: 'maindoc/UBL-Invoice-2.1.xsd' }),
   UBL_CREDIT_NOTE: Object.freeze({ dossier: 'ubl-2.1', principal: 'maindoc/UBL-CreditNote-2.1.xsd' }),
   CDAR_D22B: Object.freeze({ dossier: 'cdar-d22b', principal: 'CrossDomainAcknowledgementAndResponse_100pD22B.xsd' }),
+  FLUX10: Object.freeze({ dossier: 'flux10', principal: 'ereporting.xsd' }),
 });
 
 /** Chemin du SEF d'un schematron (chemin relatif du catalogue). */
