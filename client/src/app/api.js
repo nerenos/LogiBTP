@@ -765,6 +765,11 @@ export const api = {
   emissionFeDocument: (id) => appel('GET', `/facture-electronique/documents/${id}/emission`),
   // Lot 22 : contrôle de la facture électronique construite depuis la pièce enregistrée (complétude, écarts de l'émission).
   controleFeDocument: (id) => appel('GET', `/facture-electronique/documents/${id}/controle`),
+  // Lot 24 : émission de la pièce validée (état, bouton « Émettre ») ; option de la société (émission automatique).
+  envoiFeDocument: (id) => appel('GET', `/facture-electronique/documents/${id}/envoi`),
+  emettreFeDocument: (id) => appel('POST', `/facture-electronique/documents/${id}/envoi`),
+  optionEmissionFe: () => appel('GET', '/facture-electronique/emission/option'),
+  definirOptionEmissionFe: (automatique) => appel('PUT', '/facture-electronique/emission/option', { automatique }),
   // Annulation par avoir (pièce et, dans un marché, pièces d'avancement suivantes) : liste puis annulation.
   piecesAnnulation: (id) => appel('GET', `/structure/documents/${id}/annulation`),
   annulerParAvoir: (id) => appel('POST', `/structure/documents/${id}/annulation`),

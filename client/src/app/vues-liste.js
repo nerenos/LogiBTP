@@ -1,5 +1,5 @@
 import { CASQUETTES, NIVEAUX, ROLES } from './annuaire/donnees.js';
-import { ETAT_LISTE_DOCUMENT, PASTILLES_ETAT_DOCUMENT, PASTILLES_STATUT_STRUCTURE } from './codes.js';
+import { ETAT_LISTE_DOCUMENT, PASTILLES_EMISSION_FE_LISTE, PASTILLES_ETAT_DOCUMENT, PASTILLES_STATUT_STRUCTURE } from './codes.js';
 
 // Thèmes, sources et vues de liste fournis par le cœur. Ces définitions alimentent le
 // script db/121_vues_liste.sql (généré par client/scripts/generer-vues-liste.mjs) : une seule source de vérité.
@@ -19,6 +19,8 @@ export const SOURCES_LISTE = {
       ['age_jours', 'integer'], ['jours_envoye', 'integer'],
       // db/287 : dernière relance du journal (module Relances).
       ['derniere_relance', 'date'],
+      // db/300 : facture électronique de la pièce (statut du cycle de vie affiché, sinon état de l'émission).
+      ['statut_fe', 'text'],
     ],
   },
   // Ordres du module Exécution (db/197 : v_liste_ordres = documents de la famille E + exécution).
@@ -413,6 +415,9 @@ const COLONNES_AVANCEMENT = [
   col('facture', 'Facture / situation', { ...fixe(130) }),
 ];
 // Devis et factures : dernière relance du journal du module Relances (db/287), après le statut.
+// Factures : facture électronique de la pièce (lot 24, db/300), après la dernière relance.
+const COLONNE_STATUT_FE = col('statut_fe', 'Facture\nélectronique', { format: 'pastille', ...fixe(120), options: PASTILLES_EMISSION_FE_LISTE, recherche: false,
+  bulle: 'Statut du cycle de vie de la facture électronique émise (plateforme), sinon état de l\'émission' });
 const COLONNE_DERNIERE_RELANCE = col('derniere_relance', 'Dernière\nrelance', { format: 'date', ...fixe(96), recherche: false, bulle: 'Date de la dernière relance faite (module Relances)' });
 const vueDocuments = (vli_id, vli_nom, theme, indicateurs = []) => {
   const definition = { ...structuredClone(documents.definition), theme, segments: [{ colonne: 'etat', titre: 'Statut' }], indicateurs };
@@ -425,6 +430,10 @@ const vueDocuments = (vli_id, vli_nom, theme, indicateurs = []) => {
   if (['devis', 'factures'].includes(theme)) {
     const i = definition.colonnes.findIndex((c) => c.code === 'etat');
     definition.colonnes.splice(i + 1, 0, structuredClone(COLONNE_DERNIERE_RELANCE));
+  }
+  if (theme === 'factures') {
+    const i = definition.colonnes.findIndex((c) => c.code === 'derniere_relance');
+    definition.colonnes.splice(i + 1, 0, structuredClone(COLONNE_STATUT_FE));
   }
   return { ...structuredClone(documents), vli_id, vli_nom, definition };
 };

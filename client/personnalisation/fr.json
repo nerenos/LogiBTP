@@ -921,6 +921,8 @@
       "nature_fe": "Nature (facture électronique)",
       "nature_fe_aide": "Nature biens, services ou mixte de la pièce émise (cadre de facturation) : calculée sur les lignes vendues d'après leurs natures (ouvrages : services), ou imposée",
       "nature_fe_calculee": "Calculée : {{nature}}",
+      "fe_differe": "Envoyer plus tard (facture électronique)",
+      "fe_differe_aide": "La pièce validée ne part pas sur la plateforme : bouton « Émettre » de la pièce pour l'envoyer ensuite",
       "natures_fe": { "B": "Biens", "S": "Services", "M": "Mixte" }
     },
     "page": {
@@ -1061,6 +1063,31 @@
           "PAIEMENT_ABSENT": "Ni condition de paiement ni échéance",
           "ACOMPTE_ABSENT": "Facture d'acompte déduite introuvable (non validée ou annulée)",
           "ORIGINE_ABSENTE": "Facture d'origine de l'avoir introuvable"
+        }
+      },
+      "envoi_fe": {
+        "titre": "Facture électronique",
+        "aide": "Émission de la pièce validée vers la plateforme agréée : statut du cycle de vie reçu, sinon état de l'émission (détail dans l'onglet Chronologie)",
+        "non_emise": "non émise",
+        "syntaxe": "({{syntaxe}})",
+        "erreur": "Erreur : {{erreur}}",
+        "emettre": "Émettre",
+        "emettre_aide": "Envoyer la pièce validée à la plateforme (pièce validée avant l'activation du module, envoi différé, échec ou tiers vérifié depuis)",
+        "confirmer": "Émettre cette pièce en facture électronique ?",
+        "indisponible": "État de la facture électronique indisponible : {{erreur}}",
+        "pastilles": {
+          "A_EMETTRE": "À émettre",
+          "DIFFEREE": "Envoi différé",
+          "EN_FILE": "En cours d'envoi",
+          "ERREUR": "En erreur",
+          "HORS_FLUX": "Envoi habituel"
+        },
+        "motifs": {
+          "B2C": "client particulier",
+          "INTERNATIONAL": "client international (e-reporting)",
+          "HORS_ANNUAIRE": "client absent de l'annuaire",
+          "INCOMPLETE": "données à compléter",
+          "PRODUCTION": "production du fichier impossible"
         }
       },
       "attente": {
@@ -6585,6 +6612,14 @@
         "PAIEMENT_DIRECT_NON_PREVU": "Le marché de sous-traitance n'est ni en paiement direct ni en délégation de paiement.",
         "PAYEUR_DIFFERENT": "Payeur {{payeur}} différent du maître d'ouvrage du marché ({{maitre_ouvrage}})."
       }
+    },
+    "options": {
+      "titre": "Options de l'application",
+      "emission_automatique": "Émettre les factures à la validation",
+      "emission_automatique_aide": "Une facture validée part aussitôt vers la plateforme (sauf « Envoyer plus tard ») ; sinon chaque pièce s'émet par son bouton « Émettre »",
+      "annuaire_nuit": "Vérifier les tiers dans l'annuaire chaque nuit",
+      "annuaire_nuit_aide": "Vérification de fond des tiers professionnels dans l'annuaire des plateformes, entre 1 h et 6 h",
+      "enregistre": "Option enregistrée"
     }
   },
   "hors_ligne_btp": {

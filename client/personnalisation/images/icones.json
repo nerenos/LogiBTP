@@ -733,5 +733,6 @@
   "facture_electronique_btp_paiement_direct": "🤝",
   "facture_electronique_btp_parametres": "⚙",
   "facture_electronique_btp_importer": "📥",
+  "facture_electronique_btp_emettre": "📤",
   "document_btp_chronologie": "🕓"
 }

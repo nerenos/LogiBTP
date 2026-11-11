@@ -31,6 +31,39 @@ export class PageFactureElectronique extends PageBase {
     } catch { this.#connexions = []; }
   }
 
+  /**
+   * Options de l'application (lots 20 et 24) : vérification de nuit des tiers dans l'annuaire, émission automatique des
+   * factures à la validation ; cases modifiables avec le droit de paramétrage.
+   */
+  async #afficherOptions(parametrer) {
+    const zone = this.conteneur.querySelector('[data-zone-options-btp]');
+    let annuaire;
+    let emission;
+    try {
+      [annuaire, emission] = await Promise.all([api.annuaireFe.option(), api.optionEmissionFe()]);
+    } catch (x) {
+      this.app.erreur(x);
+      return;
+    }
+    const coche = (cle, valeur) => `<label class="coche" title="${texteHtml(`facture_electronique_btp.options.${cle}_aide`)}">
+      <input type="checkbox" data-option-fe="${cle}"${valeur ? ' checked' : ''}${parametrer ? '' : ' disabled'}> ${texteHtml(`facture_electronique_btp.options.${cle}`)}</label>`;
+    zone.innerHTML = `<fieldset class="options-fe-btp"><legend>${iconeHtml('facture_electronique_btp_parametres')} ${texteHtml('facture_electronique_btp.options.titre')}</legend>
+      ${coche('emission_automatique', emission?.automatique ?? true)}<br>${coche('annuaire_nuit', annuaire?.nuit ?? false)}</fieldset>`;
+    const ecrire = {
+      emission_automatique: (v) => api.definirOptionEmissionFe(v),
+      annuaire_nuit: (v) => api.annuaireFe.definirOption(v),
+    };
+    zone.querySelectorAll('[data-option-fe]').forEach((el) => el.addEventListener('change', async () => {
+      try {
+        await ecrire[el.dataset.optionFe](el.checked);
+        this.app.message(texte('facture_electronique_btp.options.enregistre'), 'succes');
+      } catch (x) {
+        el.checked = !el.checked;
+        this.app.erreur(x);
+      }
+    }));
+  }
+
   async ouvrir() {
     this.titre = texte('facture_electronique_btp.routes.page');
     const modifier = this.app.peut(NOEUD_FE, ACTION_DROIT.MODIFIER);
@@ -42,7 +75,7 @@ export class PageFactureElectronique extends PageBase {
       <p class="aide">${texteHtml('facture_electronique_btp.aide')}</p>
       <section data-zone="flux" hidden><div data-zone-tableau></div><div data-zone-detail hidden></div></section>
       <section data-zone="depot" hidden></section>
-      <section data-zone="parametres" hidden></section></div>`;
+      <section data-zone="parametres" hidden><div data-zone-parametres-fe></div><div data-zone-options-btp></div></section></div>`;
     const zone = (o) => this.conteneur.querySelector(`[data-zone="${o}"]`);
     const zoneDetail = this.conteneur.querySelector('[data-zone-detail]');
     const erreur = (e) => this.app.erreur(e);
@@ -61,7 +94,7 @@ export class PageFactureElectronique extends PageBase {
     this.tableau = new TableauFlux(this.conteneur.querySelector('[data-zone-tableau]'), { ...commun, apresEcriture: () => this.depot.charger() });
     this.detail = new DetailFlux(zoneDetail, { ...commun, apresEcriture: () => Promise.all([this.tableau.charger(), this.depot.charger()]) });
     this.depot = new PanneauDepotManuel(zone('depot'), { ...commun, apresEcriture: () => this.tableau.charger() });
-    this.parametres = new ParametresFe(zone('parametres'), {
+    this.parametres = new ParametresFe(this.conteneur.querySelector('[data-zone-parametres-fe]'), {
       peut: { modifier: parametrer }, api: apiFe, connexions: () => this.#connexions, erreur,
     });
 
@@ -75,7 +108,7 @@ export class PageFactureElectronique extends PageBase {
       ONGLETS.forEach((x) => { zone(x).hidden = x !== o; });
       if (charges.has(o)) return;
       charges.add(o);
-      if (o === 'parametres') await this.#chargerConnexions();
+      if (o === 'parametres') await Promise.all([this.#chargerConnexions(), this.#afficherOptions(parametrer)]);
       await { flux: this.tableau, depot: this.depot, parametres: this.parametres }[o].charger();
     };
     this.conteneur.querySelectorAll('[data-onglet]').forEach((b) => b.addEventListener('click', () => afficher(b.dataset.onglet)));

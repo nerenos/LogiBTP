@@ -40,7 +40,8 @@ export function extraireXmlFacturX(pdf) {
     throw new ErreurValidation(ERREUR_FE.PDF_ILLISIBLE, 'Le fichier n\'est pas un PDF.');
   }
   const texte = pdf.toString('latin1');
-  const motif = /stream\r?\n/g;
+  // Mot-clé « stream » d'un flux, pas la fin « endstream » du flux précédent (flux compressés à la suite).
+  const motif = /(?<!end)stream\r?\n/g;
   for (let m = motif.exec(texte); m; m = motif.exec(texte)) {
     const debut = m.index + m[0].length;
     const fin = texte.indexOf('endstream', debut);
@@ -50,7 +51,7 @@ export function extraireXmlFacturX(pdf) {
     try { contenu = inflateSync(brut); } catch { contenu = brut; }
     const tete = contenu.subarray(0, 4096).toString('utf8');
     if (tete.includes('CrossIndustryInvoice')) return contenu.toString('utf8').replace(/\s+$/, '');
-    motif.lastIndex = fin;
+    motif.lastIndex = fin + 'endstream'.length;
   }
   throw new ErreurValidation(ERREUR_FE.XML_ABSENT, 'Aucun XML Factur-X (CrossIndustryInvoice) embarqué dans le PDF.');
 }

@@ -31,6 +31,10 @@ public class CodesTests
     [InlineData("NATURE_FE", typeof(NaturesFe))]
     [InlineData("SITUATION_CADRE_FE", typeof(SituationsCadreFe))]
     [InlineData("ECART_EMISSION_FE", typeof(EcartsEmissionFe))]
+    [InlineData("ETAT_EMISSION_FE", typeof(EtatsEmissionFe))]
+    [InlineData("MOTIF_EMISSION_FE", typeof(MotifsEmissionFe))]
+    [InlineData("PASTILLE_EMISSION_FE", typeof(PastillesEmissionFe))]
+    [InlineData("ERREUR_EMISSION_FE", typeof(ErreursEmissionFe))]
     [InlineData("GARANTIE_MARCHE", typeof(GarantiesMarche))]
     public void Parite_avec_le_js(string nom, Type type) => Assert.Empty(Constantes.Ecarts(Fichier, nom, type));
 

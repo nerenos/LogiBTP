@@ -186,6 +186,7 @@ public static class TypesElementFe
 public static class EtapesGed
 {
     public const string Reception = "RECEPTION";
+    public const string Envoi = "ENVOI";
 }
 
 /// <summary>Avertissement d'émission lié à l'annuaire des plateformes (lot 20) : tiers absent de l'annuaire ou jamais vérifié.</summary>
@@ -239,6 +240,51 @@ public static class EcartsEmissionFe
     public const string PaiementAbsent = "PAIEMENT_ABSENT";
     public const string AcompteAbsent = "ACOMPTE_ABSENT";
     public const string OrigineAbsente = "ORIGINE_ABSENTE";
+}
+
+/// <summary>
+/// État de l'émission d'une pièce de vente en facture électronique (lot 24, document_fe_emission.dfe_etat, db/300) : à
+/// émettre (tâche de fond), envoyer plus tard ou émission manuelle (bouton « Émettre »), émise (flux en file), échec de la
+/// production, hors flux 2 (tiers particulier, international ou absent de l'annuaire : envoi habituel).
+/// </summary>
+public static class EtatsEmissionFe
+{
+    public const string AEmettre = "A_EMETTRE";
+    public const string Differee = "DIFFEREE";
+    public const string Emise = "EMISE";
+    public const string Echec = "ECHEC";
+    public const string HorsFlux = "HORS_FLUX";
+}
+
+/// <summary>Motif d'une pièce hors flux 2 ou d'un échec de l'émission (document_fe_emission.dfe_motif, lot 24).</summary>
+public static class MotifsEmissionFe
+{
+    public const string B2C = "B2C";
+    public const string International = "INTERNATIONAL";
+    public const string HorsAnnuaire = "HORS_ANNUAIRE";
+    public const string Incomplete = "INCOMPLETE";
+    public const string Production = "PRODUCTION";
+}
+
+/// <summary>
+/// Pastille « Facture électronique » d'une pièce (colonne statut_fe de v_liste_documents, db/300) hors statuts du cycle de
+/// vie : flux en file ou déposé sans statut, flux en erreur ou échec de l'émission.
+/// </summary>
+public static class PastillesEmissionFe
+{
+    public const string AEmettre = "A_EMETTRE";
+    public const string Differee = "DIFFEREE";
+    public const string EnFile = "EN_FILE";
+    public const string Erreur = "ERREUR";
+    public const string HorsFlux = "HORS_FLUX";
+}
+
+/// <summary>Erreurs de l'émission d'une pièce (validation refusée, bouton « Émettre »), lot 24.</summary>
+public static class ErreursEmissionFe
+{
+    public const string Incomplete = "FE_INCOMPLETE";
+    public const string DejaEmise = "FE_DEJA_EMISE";
+    public const string NonEmettable = "FE_NON_EMETTABLE";
 }
 
 /// <summary>

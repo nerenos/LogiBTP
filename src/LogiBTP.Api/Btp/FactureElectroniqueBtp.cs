@@ -69,6 +69,9 @@ public sealed class SpecialisationFactureElectroniqueBtp(IServiceProvider servic
 
     private sealed record PieceGed(string Type, long Groupe, string? Numero);
 
+    /// <summary>Types de flux d'une facture (émise ou reçue), hors statuts CDAR et e-reporting.</summary>
+    private static readonly HashSet<string> TypesFluxFacture = [TypeFlux.FactureClient, TypeFlux.FactureFournisseur];
+
     /// <summary>Pièce d'un flux rattaché à un document du cœur (type d'élément DOCUMENT), sinon null.</summary>
     public static long? PieceDu(FluxFe flux) =>
         flux.FflTypeElement == TypesElementFe.Document && long.TryParse(flux.FflIdElement, NumberStyles.None, CultureInfo.InvariantCulture, out var id) ? id : null;
@@ -115,13 +118,20 @@ public sealed class SpecialisationFactureElectroniqueBtp(IServiceProvider servic
             {
                 Headers = new HeaderDictionary(), ContentType = fichier.TypeMime ?? "application/octet-stream",
             };
-            var depot = await services.GetRequiredService<ServiceGed>().DeposerFichier(formulaire, new MetaDepot
+            var ged = services.GetRequiredService<ServiceGed>();
+            var depot = await ged.DeposerFichier(formulaire, new MetaDepot
             {
                 Titre = titre, Categorie = CategoriesGed.FactureElectronique,
                 TypeElement = piece.Type, IdElement = piece.Groupe.ToString(CultureInfo.InvariantCulture), Auteur = Service.Code,
                 Confidentialite = NiveauConfidentialite.Interne, Resume = resume,
                 MotsCles = ["facture_electronique", document.ToLowerInvariant()],
             }, Service, ct);
+            // Facture émise (lot 24) : l'original déposé (CII, UBL ou Factur-X) à l'étape ENVOI et au coffre.
+            if (flux.FflSens == SensFlux.Sortant && document == TypeDocumentFlux.Original && TypesFluxFacture.Contains(flux.FflType))
+            {
+                await ged.Etape(depot.Id, new DemandeEtape { Etape = EtapesGed.Envoi, Etat = EtapesGed.Envoi, Commentaire = titre }, Service, ct);
+                await ged.MettreAuCoffre(depot.Id, new DemandeCoffre { Motif = $"Émission {titre}" }, Service, ct);
+            }
             return depot.Id;
         }
         catch (Exception e) when (e is not OperationCanceledException)
@@ -199,6 +209,12 @@ public sealed class SpecialisationFactureElectroniqueBtp(IServiceProvider servic
     /// </summary>
     public override async Task StatutRecuAsync(StatutSignaleFe s, CancellationToken ct)
     {
+        // Facture émise (lot 24) : statut affiché recopié sur l'émission de la pièce (pastille, colonne des listes).
+        if (s.Facture is { FflSens: SensFlux.Sortant } emise && PieceDu(emise) is long ent)
+        {
+            try { await EnvoiFactureBtp.StatutRecuAsync(services.GetRequiredService<LogiBtpContext>(), ent, emise.FflId, s.AfficheApres, ct); }
+            catch (PostgresException e) when (e.SqlState == PostgresErrorCodes.UndefinedTable) { }
+        }
         var suite = await new PaiementDirectRecuBtp(services, journal).StatutRecuAsync(s, ct);
         if (SignalDuStatut(s.Statut.FstCode) is { } signal)
             await PublierAsync(signal, s.Facture, s.Statut.FstNumeroFacture, s.Statut.FstCode, suite?.Message ?? s.Statut.FstMotif, $"fe:{signal}:statut:{s.Statut.FstId}", ct);

@@ -578,7 +578,8 @@ public static partial class EmissionFactureBtp
             ? await db.Database.SqlQueryRaw<LignePersonneSql>(SqlPersonne + " WHERE " + filtre).FirstOrDefaultAsync(ct)
             : await db.Database.SqlQueryRaw<LignePersonneSql>(SqlPersonne + " WHERE " + filtre, valeur).FirstOrDefaultAsync(ct);
         if (l is null) return null;
-        var snap = instantane ?? await ContactsDocument.Instantane(db, l.Id, null, ct);
+        // Instantané figé de la pièce ; JSON null (pièce validée sans contact figé) : fiche du tiers relue.
+        var snap = instantane is { RootElement.ValueKind: JsonValueKind.Object } ? instantane : await ContactsDocument.Instantane(db, l.Id, null, ct);
         var contact = Champ(snap, "contact") is { ValueKind: JsonValueKind.Object } c && c.TryGetProperty("nom", out var n) ? n.GetString() : null;
         string? Texte(string nom) => Champ(snap, nom) is { ValueKind: JsonValueKind.String } v ? v.GetString() : null;
         var partie = new PartieEmissionFe

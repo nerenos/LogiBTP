@@ -1,5 +1,7 @@
 // Codes du cœur côté client, répliqués dans src/LogiBTP.Domaine/Codes.cs (parité vérifiée par CodesTests.cs).
 
+import { STATUT_CDV } from '@logibtp/facture-electronique';
+
 /** Types de fiches du cœur (clés de TYPES_FICHE, type d'élément de la GED, du CRM et du planning). */
 export const TYPE_FICHE = Object.freeze({
   SALARIE: 'salarie',
@@ -187,6 +189,77 @@ export const ECART_EMISSION_FE = Object.freeze({
   PAIEMENT_ABSENT: 'PAIEMENT_ABSENT',
   ACOMPTE_ABSENT: 'ACOMPTE_ABSENT',
   ORIGINE_ABSENTE: 'ORIGINE_ABSENTE',
+});
+
+/**
+ * État de l'émission d'une pièce de vente en facture électronique (lot 24, document_fe_emission.dfe_etat, db/300) : à
+ * émettre (tâche de fond), envoyer plus tard ou émission manuelle (bouton « Émettre »), émise (flux en file), échec de
+ * la production, hors flux 2 (tiers particulier, international ou absent de l'annuaire : envoi habituel).
+ */
+export const ETAT_EMISSION_FE = Object.freeze({
+  A_EMETTRE: 'A_EMETTRE',
+  DIFFEREE: 'DIFFEREE',
+  EMISE: 'EMISE',
+  ECHEC: 'ECHEC',
+  HORS_FLUX: 'HORS_FLUX',
+});
+
+/** Motif d'une pièce hors flux 2 ou d'un échec de l'émission (document_fe_emission.dfe_motif, lot 24). */
+export const MOTIF_EMISSION_FE = Object.freeze({
+  B2C: 'B2C',
+  INTERNATIONAL: 'INTERNATIONAL',
+  HORS_ANNUAIRE: 'HORS_ANNUAIRE',
+  INCOMPLETE: 'INCOMPLETE',
+  PRODUCTION: 'PRODUCTION',
+});
+
+/**
+ * Pastille « Facture électronique » d'une pièce (colonne statut_fe de v_liste_documents, page document) hors statuts du
+ * cycle de vie (STATUT_CDV du module) : flux en file ou déposé sans statut, flux en erreur ou échec de l'émission.
+ */
+export const PASTILLE_EMISSION_FE = Object.freeze({
+  A_EMETTRE: 'A_EMETTRE',
+  DIFFEREE: 'DIFFEREE',
+  EN_FILE: 'EN_FILE',
+  ERREUR: 'ERREUR',
+  HORS_FLUX: 'HORS_FLUX',
+});
+
+/**
+ * Pastilles de la colonne « Facture électronique » des listes de factures (vues-liste.js, db/121) : états de l'émission
+ * puis statuts du cycle de vie (codes STATUT_CDV du module) ; libellés gardés en base avec la vue.
+ */
+export const PASTILLES_EMISSION_FE_LISTE = Object.freeze([
+  { valeur: PASTILLE_EMISSION_FE.A_EMETTRE, libelle: 'À émettre', teinte: 'info' },
+  { valeur: PASTILLE_EMISSION_FE.DIFFEREE, libelle: 'Envoi différé', teinte: 'neutre' },
+  { valeur: PASTILLE_EMISSION_FE.EN_FILE, libelle: 'En cours d\'envoi', teinte: 'envoye' },
+  { valeur: PASTILLE_EMISSION_FE.ERREUR, libelle: 'En erreur', teinte: 'erreur' },
+  { valeur: PASTILLE_EMISSION_FE.HORS_FLUX, libelle: 'Envoi habituel', teinte: 'neutre' },
+  { valeur: STATUT_CDV.DEPOSEE, libelle: 'Déposée', teinte: 'envoye' },
+  { valeur: STATUT_CDV.EMISE, libelle: 'Émise', teinte: 'envoye' },
+  { valeur: STATUT_CDV.RECUE, libelle: 'Reçue', teinte: 'envoye' },
+  { valeur: STATUT_CDV.MISE_A_DISPOSITION, libelle: 'Mise à disposition', teinte: 'envoye' },
+  { valeur: STATUT_CDV.PRISE_EN_CHARGE, libelle: 'Prise en charge', teinte: 'info' },
+  { valeur: STATUT_CDV.APPROUVEE, libelle: 'Approuvée', teinte: 'succes' },
+  { valeur: STATUT_CDV.APPROUVEE_PARTIELLEMENT, libelle: 'Approuvée partiellement', teinte: 'attention' },
+  { valeur: STATUT_CDV.EN_LITIGE, libelle: 'En litige', teinte: 'attention' },
+  { valeur: STATUT_CDV.SUSPENDUE, libelle: 'Suspendue', teinte: 'attention' },
+  { valeur: STATUT_CDV.COMPLETEE, libelle: 'Complétée', teinte: 'info' },
+  { valeur: STATUT_CDV.REFUSEE, libelle: 'Refusée', teinte: 'erreur' },
+  { valeur: STATUT_CDV.PAIEMENT_TRANSMIS, libelle: 'Paiement transmis', teinte: 'succes' },
+  { valeur: STATUT_CDV.ENCAISSEE, libelle: 'Encaissée', teinte: 'termine' },
+  { valeur: STATUT_CDV.REJETEE, libelle: 'Rejetée', teinte: 'erreur' },
+  { valeur: STATUT_CDV.VISEE, libelle: 'Visée', teinte: 'info' },
+  { valeur: STATUT_CDV.ANNULEE, libelle: 'Annulée', teinte: 'barre' },
+  { valeur: STATUT_CDV.ERREUR_ROUTAGE, libelle: 'Erreur de routage', teinte: 'erreur' },
+  { valeur: STATUT_CDV.IRRECEVABLE, libelle: 'Irrecevable', teinte: 'erreur' },
+]);
+
+/** Erreurs de l'émission d'une pièce (validation refusée, bouton « Émettre »), lot 24. */
+export const ERREUR_EMISSION_FE = Object.freeze({
+  INCOMPLETE: 'FE_INCOMPLETE',
+  DEJA_EMISE: 'FE_DEJA_EMISE',
+  NON_EMETTABLE: 'FE_NON_EMETTABLE',
 });
 
 /** Signaux de notification de la facturation électronique (db/295, types du module « facture_electronique »). */

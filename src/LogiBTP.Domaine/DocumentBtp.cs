@@ -45,6 +45,8 @@ public class DocumentBtp : Document
     public DateOnly? EntMoisRevision { get; set; }
     // Facturation électronique (db/299) : nature de la pièce imposée (B, S, M ; NaturesFe), vide : calculée sur les lignes vendues.
     public string? EntFeNature { get; set; }
+    // Facturation électronique (db/300) : envoyer plus tard (pièce validée sans être émise, bouton « Émettre »).
+    public bool EntFeDiffere { get; set; }
     // Approvisionnement (db/218) : date de besoin d'une réservation, date de livraison prévue d'une commande fournisseur.
     public DateOnly? EntDateBesoin { get; set; }
     public DateOnly? EntDateLivraison { get; set; }

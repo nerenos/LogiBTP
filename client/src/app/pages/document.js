@@ -42,6 +42,7 @@ import { PanneauSuivi } from '../crm/panneau-suivi.js';
 import { voisins } from '../suite-liste.js';
 import { afficherChronologieDocument, ongletChronologieVisible, requeteFluxPiece, NOEUD_FE } from '../documents/chronologie-document.js';
 import { rendreCompletudeFe } from '../documents/completude-fe.js';
+import { rendreEnvoiFe } from '../documents/envoi-fe.js';
 import { activerDepotFactures, TYPES_DEPOT_FACTURE } from '../facture-electronique/depot-facture.js';
 import { apiFe } from '../facture-electronique/api-fe.js';
 
@@ -114,6 +115,7 @@ const gabarit = () => `
   <div class="document-attente" hidden></div>
   <div class="document-import" hidden></div>
   <div class="document-completude-fe" hidden></div>
+  <div class="document-envoi-fe" hidden></div>
   <main class="document-zone">
     <section id="vue-entete" class="vue vue-entete" role="tabpanel">
       <div id="entete" class="panneau entete"></div>
@@ -719,6 +721,13 @@ export class PageDocument extends PageBase {
     rendreCompletudeFe(this, {
       zone: this.$('.document-completude-fe'), moduleActif: this.app.moduleActif(MODULE_FACULTATIF.FACTURE_ELECTRONIQUE),
       peutConsulter: this.app.peut(NOEUD_FE, ACTION_DROIT.CONSULTER), types: this.emissionFe?.types, controler: (id) => api.controleFeDocument(id),
+    });
+    // Lot 24 : pastille de l'émission de la pièce validée et bouton « Émettre ».
+    rendreEnvoiFe(this, {
+      zone: this.$('.document-envoi-fe'), moduleActif: this.app.moduleActif(MODULE_FACULTATIF.FACTURE_ELECTRONIQUE),
+      peutConsulter: this.app.peut(NOEUD_FE, ACTION_DROIT.CONSULTER), peutModifier: this.app.peut(NOEUD_FE, ACTION_DROIT.MODIFIER),
+      types: this.emissionFe?.types, lire: (id) => api.envoiFeDocument(id), emettre: (id) => api.emettreFeDocument(id), confirmer,
+      erreur: (x) => this.app.erreur(x),
     });
     this.app.majPage();
   }

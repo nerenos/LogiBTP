@@ -49,7 +49,7 @@
 | 21 | Paramètres d'émission BTP : code BT-3 par type, nature biens / services / mixte, notes légales | cœur | 11, 10 | FAIT (11/11/2026) |
 | 22 | Document de vente → modèle : factures, acomptes, définitives, avoirs ; contrôle dans l'éditeur | cœur | 21, 16 | FAIT (11/11/2026) |
 | 23 | Document de vente → modèle : situations (période), pied BTP, retenue, références de chantier | cœur | 22 | A FAIRE |
-| 24 | Émission à la validation : CII ou Factur-X, GED et coffre, dépôt, pastille | cœur | 22, 23, 17, 18, 20 | A FAIRE |
+| 24 | Émission à la validation : CII ou Factur-X, GED et coffre, dépôt, pastille | cœur | 22, 23, 17, 18, 20 | FAIT (11/11/2026) |
 | 25 | Rejet et refus → avoir interne ; litige et suspension de relance | cœur | 24 | A FAIRE |
 | 26 | Statut Encaissée (212) depuis les règlements, liste à valider | cœur | 24 | A FAIRE |
 | 27 | Sous-traitance et cotraitance émises (S5, S6), B2G par la PA | cœur | 24 | A FAIRE |
@@ -855,7 +855,7 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   du net à payer de LogiBTP), à valider (TODO) ; BG-14 plutôt que BG-26 (période de ligne) ou BT-72 ; aucune règle du moteur
   modifiée (pas de réplique JS) ; aucun script SQL.
 
-## Lot 24 : émission à la validation (A FAIRE)
+## Lot 24 : émission à la validation — FAIT (11/11/2026)
 
 - **Cœur**. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : déclencheur à la validation (Q23 : automatique, option « envoyer plus tard », bouton « Émettre » pour les
@@ -865,6 +865,37 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   listes de factures, tiers B2C ou hors annuaire : envoi habituel (aucun flux 2), tests.
 - **Critère de fin** : une facture validée part vers la plateforme simulée, reçoit Déposée puis Mise à disposition,
   chronologie complète ; Factur-X validé par l'outil du lot 4 ; tests verts.
+- **Réalisé** : `db/300_facture_electronique_envoi.sql` (rejouable, au manifeste après 299 : `document.ent_fe_differe` « Envoyer
+  plus tard », `facture_electronique_emission_option` émission automatique à la validation (active par défaut, Q23),
+  `document_fe_emission` (état `ETAT_EMISSION_FE` A_EMETTRE / DIFFEREE / EMISE / ECHEC / HORS_FLUX, motif `MOTIF_EMISSION_FE`,
+  syntaxe, flux, statut affiché, essais, erreur), `v_liste_documents` reprise de 287 avec `statut_fe` en fin de liste) ; `db/121`
+  régénéré (colonne « Facture électronique » des vues de factures, pastilles `PASTILLES_EMISSION_FE_LISTE`). Codes `ETAT_EMISSION_FE`,
+  `MOTIF_EMISSION_FE`, `PASTILLE_EMISSION_FE`, `ERREUR_EMISSION_FE` (`codes.js` ↔ `Codes.cs`, `CodesTests`), `EtapesGed.Envoi`.
+  `src/LogiBTP.Api/Btp/EnvoiFactureBtp.cs` : contrôle Q5 à la validation (`SpecialisationBtp.ControlerValidationAsync` : type émis,
+  module actif, client B2B / B2G émis par la plateforme, écarts bloquants de la complétude et de l'émission → `FE_INCOMPLETE`, sauf
+  droit FORCER du type, alors avertissement), avertissement de l'annuaire du lot 20 et du forçage (`AvertissementsAsync`),
+  inscription dans la transaction de la validation (`ApresValidationAsync`), `EmettreAsync` (hors flux 2 : client particulier,
+  international ou absent de l'annuaire → HORS_FLUX, envoi habituel ; syntaxe `per_fe_format` du tiers, sinon des paramètres du
+  module ; CII, UBL, ou Factur-X = PDF/A-3b de l'édition de la pièce par l'option `pdf.pdfa` du lot 18 avec le CII en
+  `factur-x.xml` (Alternative) et le schéma d'extension XMP Factur-X fourni par le cœur (`OptionFacturX`) ; mise en file du module
+  → étape PRODUCTION, original rangé en GED de la pièce à l'étape ENVOI et au coffre), tâche de fond `PassageEnvoiFe` (base par
+  base, reprise d'un échec de production trois fois), statut affiché recopié à chaque statut reçu (`StatutRecuAsync`), routes
+  `GET|POST /api/facture-electronique/documents/{id}/envoi` (état ; bouton « Émettre » : pièce validée avant l'activation, différée,
+  en échec, hors flux ou flux en erreur ; déjà émise : 409 `FE_DEJA_EMISE`) et `GET|PUT …/emission/option` (paramétrage).
+  Module Édition : `ServiceEdition.Pdf` / `Env` acceptent l'option PDF/A de l'hôte. Client : pastille et bouton « Émettre » de la
+  page document (`documents/envoi-fe.js`, fenêtre `confirmer` du socle), case « Envoyer plus tard » de l'onglet Options, cases
+  « Émettre les factures à la validation » et « Vérifier les tiers dans l'annuaire chaque nuit » (option du lot 20) dans
+  Facturation électronique › Paramètres. Corrigé du lot 22 : instantané JSON `null` d'une pièce validée qui retirait l'adresse
+  du client ; outil `valider-facture` : `endstream` n'est plus pris pour un début de flux (Factur-X aux flux compressés à la
+  suite). Tests : `EnvoiFactureBtpTests` (règles sans base ; Factur-X du moteur d'édition dans Jint relu par le module,
+  référence `tests/emission-fe/ecrits/FACTURE_FX.pdf` ; base jetable : facture validée → A_EMETTRE → Factur-X en file, GED ENVOI
+  et coffre, dépôt sur la plateforme simulée, accusé, Déposée, Émise, Reçue, Mise à disposition, chronologie PRODUCTION → DEPOT →
+  ACCUSE → 4 STATUT_RECU, colonne `statut_fe` = 203, « Émettre » refusé ensuite ; client B2B sans SIREN : validation refusée,
+  passé B2C : HORS_FLUX ; Factur-X réel `VALIDEE_FX.pdf`), `client/test/emission-facture.test.js` (les deux Factur-X sans erreur
+  fatale à l'outil du lot 4, libellés des pastilles et motifs, zone et bouton, colonne des listes). Écarts : forçage par le droit
+  FORCER sans motif (un administrateur valide toujours, la pièce reste en échec INCOMPLETE jusqu'à « Émettre ») ; tiers jamais
+  vérifié émis ; Factur-X d'un modèle par défaut distinct du PDF de la validation ; avertissement PEPPOL-EN16931-R008 gardé
+  (livraison vide) ; écrans non vérifiés en navigateur (TODO). **Script à appliquer par l'utilisateur** : `db/300` puis `db/121`.
 
 ## Lot 25 : rejet, refus, litige (A FAIRE)
 

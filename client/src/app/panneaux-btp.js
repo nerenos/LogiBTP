@@ -337,7 +337,10 @@ export class PanneauxBtp extends PanneauxDocument {
     const libelle = (n) => texte(`document_btp.panneaux.natures_fe.${n}`);
     return [`<label title="${texteHtml('document_btp.panneaux.nature_fe_aide')}">${texteHtml('document_btp.panneaux.nature_fe')}
       <select data-champ="ent_fe_nature">${opt('', texte('document_btp.panneaux.nature_fe_calculee', { nature: libelle(calculee) }), d.ent_fe_nature ?? '')}${Object.values(NATURE_FE)
-        .map((n) => opt(n, libelle(n), d.ent_fe_nature ?? '')).join('')}</select></label>`];
+        .map((n) => opt(n, libelle(n), d.ent_fe_nature ?? '')).join('')}</select></label>`,
+    // Lot 24 (Q23) : pièce validée sans être émise (bouton « Émettre » de la pièce ensuite).
+    `<label class="coche" title="${texteHtml('document_btp.panneaux.fe_differe_aide')}"><input type="checkbox" data-champ="ent_fe_differe"${d.ent_fe_differe ? ' checked' : ''}>
+      ${texteHtml('document_btp.panneaux.fe_differe')}</label>`];
   }
 
   /** Individus de notre société (annuaire), proposés comme rédacteurs : [{ valeur, libelle, detail }]. */

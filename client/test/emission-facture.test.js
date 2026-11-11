@@ -2,11 +2,13 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { texte, texteHtml, existe } from '@logibtp/socle/dictionnaire';
-import { REGLE_COMPLETUDE, NIVEAU_COMPLETUDE, NIVEAU_CONTROLE, SYNTAXE } from '@logibtp/facture-electronique';
+import { REGLE_COMPLETUDE, NIVEAU_COMPLETUDE, NIVEAU_CONTROLE, SYNTAXE, STATUT_CDV } from '@logibtp/facture-electronique';
 import { compilerSchematrons } from '../../modules/facture-electronique/js/outils/schematrons.js';
 import { validerFacture } from '../../modules/facture-electronique/js/outils/valider.js';
-import { ECART_EMISSION_FE } from '../src/app/codes.js';
+import { ECART_EMISSION_FE, MOTIF_EMISSION_FE, PASTILLE_EMISSION_FE, PASTILLES_EMISSION_FE_LISTE, TYPE_DOCUMENT } from '../src/app/codes.js';
 import { bandeauCompletudeFeHtml, libelleEcartFe, completudeFeVisible } from '../src/app/documents/completude-fe.js';
+import { envoiFeHtml, envoiFeVisible, libellePastilleFe, teintePastilleFe } from '../src/app/documents/envoi-fe.js';
+import { VUES_LISTE } from '../src/app/vues-liste.js';
 
 // Facturation électronique, lot 22 : pièces de vente de démonstration écrites par EmissionFactureTests.cs
 // (tests/emission-fe/ecrits/, jeu 02_pieces.json) contrôlées par l'outil du module : XSD, schematron du profil et BR-FR-Flux2,
@@ -77,5 +79,67 @@ describe('bandeau de complétude de la pièce', () => {
     expect(completudeFeVisible({ moduleActif: true, peutConsulter: false, entId: 4, code: 'V_FACTURE', types })).toBe(false);
     expect(completudeFeVisible({ moduleActif: true, peutConsulter: true, entId: -4, code: 'V_FACTURE', types })).toBe(false);
     expect(completudeFeVisible({ moduleActif: true, peutConsulter: true, entId: 4, code: 'V_DEVIS', types })).toBe(false);
+  });
+});
+
+// Lot 24 : Factur-X (PDF/A-3 du moteur d'édition + CII associé) écrits par EnvoiFactureBtpTests.cs : facture de démonstration
+// (FACTURE_FX.pdf, sans base) et facture validée sur la base jetable puis émise (VALIDEE_FX.pdf), contrôlés par l'outil du lot 4.
+describe('Factur-X émis : aucune erreur fatale', () => {
+  const pdfs = readdirSync(DOSSIER).filter((f) => f.endsWith('_FX.pdf')).sort();
+  it('Factur-X de la facture de démonstration présent', () => expect(pdfs).toContain('FACTURE_FX.pdf'));
+  for (const f of pdfs) {
+    it(f, async () => {
+      const r = await validerFacture(`${DOSSIER}${f}`);
+      expect(fatals(r)).toEqual([]);
+      expect(r.valide).toBe(true);
+      expect(r.syntaxe).toBe(SYNTAXE.FACTUR_X);
+    }, LONG);
+  }
+});
+
+describe('émission de la pièce validée (pastille, bouton Émettre, colonne des listes)', () => {
+  it('libellé et teinte de chaque pastille, libellé de chaque motif', () => {
+    for (const p of Object.values(PASTILLE_EMISSION_FE)) {
+      expect(existe(`document_btp.page.envoi_fe.pastilles.${p}`), p).toBe(true);
+      expect(PASTILLES_EMISSION_FE_LISTE.some((o) => o.valeur === p), p).toBe(true);
+    }
+    for (const m of Object.values(MOTIF_EMISSION_FE)) expect(existe(`document_btp.page.envoi_fe.motifs.${m}`), m).toBe(true);
+    for (const o of PASTILLES_EMISSION_FE_LISTE.filter((x) => !Object.values(PASTILLE_EMISSION_FE).includes(x.valeur))) {
+      expect(Object.values(STATUT_CDV)).toContain(o.valeur);
+      expect(existe(`facture_electronique.statuts.${o.valeur}`), o.valeur).toBe(true);
+    }
+    expect(libellePastilleFe(STATUT_CDV.MISE_A_DISPOSITION)).toBe(texte(`facture_electronique.statuts.${STATUT_CDV.MISE_A_DISPOSITION}`));
+    expect(libellePastilleFe(PASTILLE_EMISSION_FE.EN_FILE)).toBe(texte(`document_btp.page.envoi_fe.pastilles.${PASTILLE_EMISSION_FE.EN_FILE}`));
+    expect(teintePastilleFe(STATUT_CDV.REJETEE)).toBe('erreur');
+    expect(teintePastilleFe('INCONNU')).toBe('neutre');
+  });
+
+  it('zone : pastille, motif, erreur, bouton selon le droit', () => {
+    const etat = { applicable: true, etat: 'EMISE', pastille: STATUT_CDV.DEPOSEE, syntaxe: SYNTAXE.FACTUR_X, emettable: false };
+    const html = envoiFeHtml(etat, { peutModifier: true });
+    expect(html).toContain(`data-pastille-fe="${STATUT_CDV.DEPOSEE}"`);
+    expect(html).not.toContain('data-action-fe');
+    const echec = envoiFeHtml({ applicable: true, etat: 'ECHEC', pastille: PASTILLE_EMISSION_FE.ERREUR, motif: MOTIF_EMISSION_FE.INCOMPLETE, erreur: 'BR-FR-12 (BT-49)', emettable: true }, { peutModifier: true });
+    expect(echec).toContain('data-action-fe="emettre"');
+    expect(echec).toContain('BR-FR-12');
+    expect(echec).toContain(texteHtml(`document_btp.page.envoi_fe.motifs.${MOTIF_EMISSION_FE.INCOMPLETE}`));
+    expect(envoiFeHtml({ applicable: true, emettable: true }, { peutModifier: false })).not.toContain('data-action-fe');
+    expect(envoiFeHtml({ applicable: true, emettable: true }, { peutModifier: true })).toContain(texteHtml('document_btp.page.envoi_fe.non_emise'));
+    expect(envoiFeHtml({ applicable: false })).toBe('');
+  });
+
+  it('visible : module actif, droit, pièce validée d\'un type émis', () => {
+    const types = { [TYPE_DOCUMENT.V_FACTURE]: '380' };
+    const document = { ent_id: 4, ent_verrouille: true };
+    expect(envoiFeVisible({ moduleActif: true, peutConsulter: true, document, code: TYPE_DOCUMENT.V_FACTURE, types })).toBe(true);
+    expect(envoiFeVisible({ moduleActif: true, peutConsulter: true, document: { ...document, ent_verrouille: false }, code: TYPE_DOCUMENT.V_FACTURE, types })).toBe(false);
+    expect(envoiFeVisible({ moduleActif: false, peutConsulter: true, document, code: TYPE_DOCUMENT.V_FACTURE, types })).toBe(false);
+  });
+
+  it('colonne « Facture électronique » des listes de factures seulement', () => {
+    const factures = VUES_LISTE.find((v) => v.definition.theme === 'factures');
+    expect(factures.definition.colonnes.map((c) => c.code)).toContain('statut_fe');
+    const devis = VUES_LISTE.find((v) => v.definition.theme === 'devis');
+    expect(devis.definition.colonnes.map((c) => c.code)).not.toContain('statut_fe');
   });
 });

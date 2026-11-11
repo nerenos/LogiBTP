@@ -13,7 +13,9 @@ export const COLONNES_DOCUMENT_BTP = new Set(['ent_mode_calcul_ouvrage', 'ent_co
   // Révision des prix (db/250) : mois des travaux d'une facture d'avancement.
   'ent_mois_revision',
   // Facturation électronique (db/299) : nature de la pièce imposée (B, S, M), vide : calculée.
-  'ent_fe_nature']);
+  'ent_fe_nature',
+  // Facturation électronique (db/300) : envoyer plus tard (pièce validée sans être émise).
+  'ent_fe_differe']);
 
 export const COLONNES_LIGNE_BTP = new Set([
   'lig_nat_id', 'lig_ptv_id', 'lig_mtr_id', 'lig_qte_source', 'lig_qte_base', 'lig_coef_perte',

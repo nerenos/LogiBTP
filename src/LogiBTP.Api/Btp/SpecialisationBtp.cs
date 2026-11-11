@@ -164,6 +164,10 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         await MouvementsStockBtp.ControlerLotsAsync(db, document.Lignes, type, erreurs, ct);
         await ControlerAvancementNumerote(db, document, type, erreurs, ct);
         await ControlerProductionMois(db, document, type, erreurs, ct);
+        // Facturation électronique (lot 24, Q5) : complétude bloquante pour un tiers B2B / B2G, sauf droit FORCER.
+        var requete = Http?.HttpContext;
+        await EnvoiFactureBtp.ControlerAsync((LogiBtpContext)db, document.Document.EntId, type, requete is null ? null : Utilisateur.Depuis(requete),
+            requete?.RequestServices.GetService<IDroits>(), erreurs, ct);
     }
 
     /// <summary>
@@ -279,6 +283,10 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         IReadOnlyDictionary<string, System.Text.Json.Nodes.JsonNode?> regles, string action, List<MessageCalcul> avertissements, CancellationToken ct)
     {
         if (action != "VALIDER") return;
+        // Facturation électronique (lots 20 et 24) : tiers hors annuaire ou jamais vérifié, écarts passés par forçage.
+        var requete = Http?.HttpContext;
+        await EnvoiFactureBtp.AvertirAsync((LogiBtpContext)db, document.Document, type, requete is null ? null : Utilisateur.Depuis(requete),
+            requete?.RequestServices.GetService<IDroits>(), avertissements, ct);
         // Lots et numéros de série (S24.2) : entrée d'un article suivi dont une partie reste sans lot.
         await MouvementsStockBtp.AvertirLotsAsync(db, document.Lignes, type, avertissements, ct);
         var d = document.Document;
@@ -465,6 +473,8 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
             await db.Database.ExecuteSqlInterpolatedAsync(
                 $"INSERT INTO edition_tache (ett_source, ett_id_element, ett_motif, ett_coffre, ett_demande_par) VALUES ('document', {entId.ToString()}, 'VALIDATION', {coffre}, 'validation')", ct);
         }
+        // Facturation électronique (lot 24, Q23) : pièce d'un type émis inscrite à émettre (ou différée), traitée après la validation.
+        await EnvoiFactureBtp.PlanifierAsync(db, entId, type, Http?.HttpContext is { } hc ? Utilisateur.Depuis(hc).Code : null, ct);
         if (type.TydCode is TypesDocument.VCommande or TypesDocument.TCommande) await db.Database.ExecuteSqlInterpolatedAsync($"SELECT f_marche_commande({entId})", ct);
         // Déductions d'acompte de la pièce (facture ou avoir d'avancement), relues sur ses lignes.
         if (type.TydAvancement == "F" || type.TydCode == TypesDocument.VAvoir) await Acomptes.Ecrire((LogiBtpContext)db, entId, ct);
@@ -606,6 +616,7 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         cible.EntDateLivraison = saisie.EntDateLivraison;
         cible.EntMoisRevision = saisie.EntMoisRevision is DateOnly m ? new DateOnly(m.Year, m.Month, 1) : null;
         cible.EntFeNature = saisie.EntFeNature is NaturesFe.Biens or NaturesFe.Services or NaturesFe.Mixte ? saisie.EntFeNature : null;
+        cible.EntFeDiffere = saisie.EntFeDiffere;
     }
 
     /// <summary>Ventes : payeur et adresse des travaux identiques au client restent vides (lot F).</summary>
