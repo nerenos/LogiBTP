@@ -58,10 +58,11 @@ docs/
 │   ├── document/                 # Module Cœur : Document commercial BTP [Fait]
 │   ├── metre/                    # Module Métré & Quantités scriptées [Fait]
 │   ├── bibliotheque/             # Module Référentiel des prix & Articles [Fait]
-│   ├── planning-pointage/
-│   ├── execution/
-│   ├── stock/
-│   ├── sous-traitance/
+│   ├── planning/                 # Module Planning & Ordonnancement [Fait]
+│   ├── pointage/                 # Module Pointage & Variables de Paie [Fait]
+│   ├── execution/                # Module Exécution & Ordres de Travaux [Fait]
+│   ├── stock/                    # Module Stock, Dépôts & Traçabilité [Fait]
+│   ├── sous-traitance/           # Module Sous-traitance & Agrément [Fait]
 │   ├── terrain-mobile/
 │   ├── crm/
 │   ├── ged-bibliotheque/
@@ -93,4 +94,9 @@ docs/
    - [x] `docs/modules/document/index.md` (Concepts, cycle de vie, calcul miroir, transformations)
    - [x] `docs/modules/metre/index.md` (Langage script, portées $$/$/@@/@, fonctions BTP, CodeMirror 6)
    - [x] `docs/modules/bibliotheque/index.md` (Multi-bibliothèques, cascades de prix, multi-unités, mercuriales)
+   - [x] `docs/modules/planning/index.md` (Affectations, charges, dépendances, temps réel)
+   - [x] `docs/modules/pointage/index.md` (Saisie bureau, borne, repas géolocalisés, double validation, paie)
+   - [x] `docs/modules/execution/index.md` (Ordres famille E, parcours services, étapes, contrôle N+1, borne atelier)
+   - [x] `docs/modules/stock/index.md` (Formule de stock, PMP, lots/séries FEFO/FIFO, inventaires, magasin, dotations)
+   - [x] `docs/modules/sous-traitance/index.md` (Conformité Loi 1975, pièces bloquantes, paiement direct, retenues)
 7. [ ] Planifier des **ateliers de 1h par module** avec experts métier

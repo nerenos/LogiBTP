@@ -23,9 +23,14 @@ export default defineConfig({
       {
         text: 'Modules',
         items: [
-          { text: 'Module Document', link: '/modules/document/' },
-          { text: 'Module Métré', link: '/modules/metre/' },
-          { text: 'Module Bibliothèque', link: '/modules/bibliotheque/' }
+          { text: 'Document & Facturation', link: '/modules/document/' },
+          { text: 'Métré & Quantités', link: '/modules/metre/' },
+          { text: 'Bibliothèque & Prix', link: '/modules/bibliotheque/' },
+          { text: 'Planning des équipes', link: '/modules/planning/' },
+          { text: 'Pointage & Paie', link: '/modules/pointage/' },
+          { text: 'Exécution des travaux', link: '/modules/execution/' },
+          { text: 'Stock & Dépôts', link: '/modules/stock/' },
+          { text: 'Sous-traitance & Agrément', link: '/modules/sous-traitance/' }
         ]
       },
       { text: 'Plan de formation', link: '/plan-formation' }
@@ -34,11 +39,16 @@ export default defineConfig({
     sidebar: {
       '/modules/': [
         {
-          text: 'Modules Cœur BTP',
+          text: 'Modules Métier BTP',
           items: [
-            { text: 'Module Document', link: '/modules/document/' },
-            { text: 'Module Métré', link: '/modules/metre/' },
-            { text: 'Module Bibliothèque', link: '/modules/bibliotheque/' }
+            { text: 'Document & Facturation', link: '/modules/document/' },
+            { text: 'Métré & Quantités', link: '/modules/metre/' },
+            { text: 'Bibliothèque & Prix', link: '/modules/bibliotheque/' },
+            { text: 'Planning des équipes', link: '/modules/planning/' },
+            { text: 'Pointage & Paie', link: '/modules/pointage/' },
+            { text: 'Exécution des travaux', link: '/modules/execution/' },
+            { text: 'Stock & Dépôts', link: '/modules/stock/' },
+            { text: 'Sous-traitance & Agrément', link: '/modules/sous-traitance/' }
           ]
         },
         {
@@ -64,11 +74,16 @@ export default defineConfig({
           ]
         },
         {
-          text: 'Modules Cœur BTP',
+          text: 'Modules Métier BTP',
           items: [
-            { text: 'Module Document', link: '/modules/document/' },
-            { text: 'Module Métré', link: '/modules/metre/' },
-            { text: 'Module Bibliothèque', link: '/modules/bibliotheque/' }
+            { text: 'Document & Facturation', link: '/modules/document/' },
+            { text: 'Métré & Quantités', link: '/modules/metre/' },
+            { text: 'Bibliothèque & Prix', link: '/modules/bibliotheque/' },
+            { text: 'Planning des équipes', link: '/modules/planning/' },
+            { text: 'Pointage & Paie', link: '/modules/pointage/' },
+            { text: 'Exécution des travaux', link: '/modules/execution/' },
+            { text: 'Stock & Dépôts', link: '/modules/stock/' },
+            { text: 'Sous-traitance & Agrément', link: '/modules/sous-traitance/' }
           ]
         }
       ],
@@ -84,11 +99,16 @@ export default defineConfig({
           ]
         },
         {
-          text: 'Modules Cœur BTP',
+          text: 'Modules Métier BTP',
           items: [
-            { text: 'Module Document', link: '/modules/document/' },
-            { text: 'Module Métré', link: '/modules/metre/' },
-            { text: 'Module Bibliothèque', link: '/modules/bibliotheque/' }
+            { text: 'Document & Facturation', link: '/modules/document/' },
+            { text: 'Métré & Quantités', link: '/modules/metre/' },
+            { text: 'Bibliothèque & Prix', link: '/modules/bibliotheque/' },
+            { text: 'Planning des équipes', link: '/modules/planning/' },
+            { text: 'Pointage & Paie', link: '/modules/pointage/' },
+            { text: 'Exécution des travaux', link: '/modules/execution/' },
+            { text: 'Stock & Dépôts', link: '/modules/stock/' },
+            { text: 'Sous-traitance & Agrément', link: '/modules/sous-traitance/' }
           ]
         }
       ]
