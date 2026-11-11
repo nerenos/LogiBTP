@@ -1,4 +1,4 @@
-// Module Facturation électronique LogiBTP : codes des normes (EN16931, XP Z12-012, XP Z12-013), règles du cycle de vie.
+// Module Facturation électronique LogiBTP : codes des normes (EN16931, XP Z12-012, XP Z12-013), règles du cycle de vie, contrôle de complétude des factures émises (lot 16).
 export {
   emetteurDuSens, emetteursStatut, motifsAutorises, statutTerminal, motifObligatoire, obligatoirePpf, controlerStatut,
   statutsPosables, statutAffiche,
@@ -11,6 +11,11 @@ export {
   CODE_EXIGIBILITE_TVA_UBL, TYPE_FLUX, SENS_FLUX,
   REGLE_TRAITEMENT, ETAT_ACCUSE, ETAPE_CONTROLE, NIVEAU_CONTROLE, NIVEAU_ACCUSE, MOTIF_ACCUSE, ETAT_FLUX, EVENEMENT_FE, ERREUR_FE,
   CONNECTEUR_FE, TYPE_DOCUMENT_FLUX, ORIGINE_REGLE, OPERATEUR_ANNUAIRE, TYPE_PLATEFORME_ANNUAIRE, ETAT_LIGNE_ANNUAIRE,
-  ACTEUR_FE, SENS_STATUT, DECOUPAGE_EREPORTING, CODE_EXONERATION, ECART_RECEPTION,
+  ACTEUR_FE, SENS_STATUT, DECOUPAGE_EREPORTING, CODE_EXONERATION, ECART_RECEPTION, TYPE_PIECE_JOINTE, NIVEAU_COMPLETUDE,
+  REGLE_COMPLETUDE,
 } from './codes.js';
 export { estFichierFacture, EXTENSIONS_FACTURE, TYPES_MIME_FACTURE, controlerSousTraitance } from './reception.js';
+export {
+  controlerCompletude, completudeBloquante, CADRES_NON_EMIS, TYPES_AUTOFACTURE, TYPES_RECTIFICATIFS, TYPES_AVOIR, TYPES_ACOMPTE,
+  TAUX_TVA_ADMIS,
+} from './completude.js';

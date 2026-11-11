@@ -41,7 +41,7 @@
 | 14 | Réception hors plateforme : Factur-X ou XML glissé ou reçu par courriel, avoirs reçus | cœur | 12 | FAIT (10/11/2026) |
 | 15 | Réception de sous-traitance : cadre S5, bloc PAYEUR, demande de paiement direct (224) | cœur | 12, 13 | A FAIRE |
 | | **Partie B : émission et e-reporting** | | | |
-| 16 | Contrôle de complétude (JS ↔ C#) et écriture CII D22B (EN16931, EXTENDED-CTC-FR) | module | 1, 4 | A FAIRE |
+| 16 | Contrôle de complétude (JS ↔ C#) et écriture CII D22B (EN16931, EXTENDED-CTC-FR) | module | 1, 4 | FAIT (11/11/2026) |
 | 17 | Écriture UBL 2.1 (Invoice, CreditNote) | module | 16 | A FAIRE |
 | 18 | PDF/A-3 et fichier associé | `modules/edition` | — | A FAIRE |
 | 19 | E-reporting : modèle des transactions et paiements, écriture du flux 10 (10.1 à 10.4), découpage des envois | module | 1, 8 | A FAIRE |
@@ -619,7 +619,7 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
 
 ## Partie B : émission et e-reporting
 
-## Lot 16 : contrôle de complétude et écriture CII (A FAIRE)
+## Lot 16 : contrôle de complétude et écriture CII — FAIT (11/11/2026)
 
 - **Module** : `modules/facture-electronique`. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `js/src/completude.js` ↔ `dotnet/LogiBTP.FactureElectronique/ReglesCompletude.cs`, `tests/cas/02_completude.json`,
@@ -631,6 +631,27 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   liste { règle, niveau bloquant / avertissement, donnée }.
 - **Critère de fin** : jeu de complétude identique en JS et en C# ; factures écrites sans erreur fatale aux schematrons
   EN16931 et BR-FR-Flux2 ; tests verts.
+- **Réalisé** : codes JS ↔ C# `REGLE_COMPLETUDE` (46 règles : `LOGIBTP-PROFIL`, `LOGIBTP-CADRE`, BR-FR-01 à 32 utiles,
+  BR-FR-CO-03 à 12, BR-FR-DEC-01 à 04, BR-CO-10 à 17), `NIVEAU_COMPLETUDE` (BLOQUANT, AVERTISSEMENT), `TYPE_PIECE_JOINTE`
+  (BR-FR-17), `TRAITEMENT.B2C_INT` (B2CINT, admis par BR-FR-20), `CODE_NOTE.MENTION_TAXE` (TXD), `ERREUR_FE`
+  `PROFIL_NON_ECRIT` et `DONNEE_HORS_PROFIL` (`CodesTests`) ; `js/src/completude.js` (`controlerCompletude(facture,
+  { bloquant })`, `completudeBloquante`) ↔ `ReglesCompletude.cs` (`Controler(facture, bloquant)`, `Bloquante`,
+  `Decimales`, `Chiffres`, `Json` : modèle `ModeleFacture.cs` en camelCase, partagé avec le navigateur), résultat
+  `{ regle, niveau, donnee (terme BT ou groupe), ligne (BT-126) }` dans l'ordre des contrôles, arrondi unique du socle ;
+  jeu `tests/cas/05_completude.json` (59 cas : base conforme + modifications par chemin) ; `Formats/EcritureCii.cs`
+  (`Ecrire`, `Document`, `Specification`, `Extensions`, `Montant`, `Nombre` : ordre du XSD D22B, tout ce que lit
+  `LectureCii`, XSD vérifié) ; tests `ReglesCompletudeTests`, `EcritureCiiTests` (les 15 CII d’exemple écrits puis relus
+  au même modèle ; exemples complets sans écart bloquant sauf cadres 8 / 9 ; fichiers de référence
+  `tests/exemples/ecrits/` régénérés par `LOGIBTP_REGENERER_CII=1` : 12 exemples hors multi-vendeurs et 5 cas du jeu),
+  `js/test/completude.test.js` ; les 17 CII écrits passent XSD, schematron du profil et BR-FR-Flux2 sans erreur fatale
+  (`schematrons.test.js`, `npm run valider-facture`). Écarts : jeu numéroté 05 (02 déjà pris par les paramètres) ; règles
+  du schematron 1.4.0.04 (pas de CO-06 : CO-07 échéance, CO-08 définitive après acompte, CO-09 déjà payée, CO-12 devise)
+  et BR-FR-03, 17, 18, 20, 23 à 26, 31 ajoutées ; BR-CO-10 sur les lignes DETAIL ou sans sous-type (règle EXTENDED-CTC-FR) ;
+  niveau d'après Q5 (option `bloquant` fournie par l'appelant selon le tiers) ; cadres 8 / 9 non émis (`LOGIBTP-CADRE`) ;
+  données EXTENDED-CTC-FR refusées à l'écriture EN16931 (`DONNEE_HORS_PROFIL`) et signalées par `LOGIBTP-PROFIL` ;
+  BASIC non écrit ; nombres sans arrondi (montants « 0.00 », autres sans zéro de fin) ; BT-11 avec le nom
+  « Project reference » ; avertissement EXTENDED-CTC-FR `BR-FXEXT-*-08rev` sur les CII écrits à TVA exonérée ou
+  autoliquidée (motif d'exonération de ligne absent du modèle, TODO).
 
 ## Lot 17 : écriture UBL (A FAIRE)
 

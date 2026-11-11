@@ -72,6 +72,7 @@ public static class Traitement
     public const string B2B = "B2B";
     public const string B2BInt = "B2BINT";
     public const string B2C = "B2C";
+    public const string B2CInt = "B2CINT";
     public const string HorsReforme = "OUTOFSCOPE";
     public const string ArchivageSeul = "ARCHIVEONLY";
 }
@@ -83,6 +84,8 @@ public static class CodeNote
     public const string Penalites = "PMD";
     public const string Escompte = "AAB";
     public const string Traitement = "BAR";
+    /// <summary>BR-FR-06 : une fois au plus.</summary>
+    public const string MentionTaxe = "TXD";
 }
 
 /// <summary>Sous-type de ligne EXT-FR-FE-163 (profil EXTENDED-CTC-FR) : détail, regroupement, information.</summary>
@@ -586,6 +589,9 @@ public static class ErreurFe
     public const string PdfIllisible = "PDF_ILLISIBLE";
     /// <summary>Factur-X : pas de fichier factur-x.xml embarqué.</summary>
     public const string XmlAbsent = "XML_ABSENT";
+    // Écriture des factures (lot 16)
+    public const string ProfilNonEcrit = "PROFIL_NON_ECRIT";
+    public const string DonneeHorsProfil = "DONNEE_HORS_PROFIL";
     // Connecteur de plateforme (lot 6) : demande refusée avant l'envoi, puis réponses de la plateforme (XP Z12-013, 400 à 503).
     /// <summary>Connecteur : code de connecteur non enregistré dans la fabrique.</summary>
     public const string ConnecteurInconnu = "CONNECTEUR_INCONNU";
@@ -673,4 +679,86 @@ public static class EtatLigneAnnuaire
     public const string Active = "Enabled";
     public const string Inactive = "Disabled";
     public const string AVenir = "Upcoming";
+}
+
+/// <summary>Type d'une pièce jointe (BT-123, liste BR-FR-17) ; LISIBLE une fois au plus (BR-FR-18).</summary>
+public static class TypePieceJointe
+{
+    public const string Rib = "RIB";
+    public const string Lisible = "LISIBLE";
+    public const string FeuilleDeStyle = "FEUILLE_DE_STYLE";
+    public const string Pja = "PJA";
+    public const string BordereauSuivi = "BORDEREAU_SUIVI";
+    public const string DocumentAnnexe = "DOCUMENT_ANNEXE";
+    public const string BonLivraison = "BON_LIVRAISON";
+    public const string BonCommande = "BON_COMMANDE";
+    public const string BordereauSuiviValidation = "BORDEREAU_SUIVI_VALIDATION";
+    public const string EtatAcompte = "ETAT_ACOMPTE";
+    public const string FacturePaiementDirect = "FACTURE_PAIEMENT_DIRECT";
+    public const string RecapitulatifCotraitance = "RECAPITULATIF_COTRAITANCE";
+
+    /// <summary>Types admis (BR-FR-17).</summary>
+    public static readonly IReadOnlyList<string> Tous = [Rib, Lisible, FeuilleDeStyle, Pja, BordereauSuivi, DocumentAnnexe, BonLivraison, BonCommande, BordereauSuiviValidation, EtatAcompte, FacturePaiementDirect, RecapitulatifCotraitance];
+}
+
+/// <summary>Niveau d'un écart du contrôle de complétude (lot 16, Q5) : bloquant pour un tiers B2B / B2G, avertissement sinon.</summary>
+public static class NiveauCompletude
+{
+    public const string Bloquant = "BLOQUANT";
+    public const string Avertissement = "AVERTISSEMENT";
+}
+
+/// <summary>
+/// Règle du contrôle de complétude d'une facture émise (lot 16 : <c>completude.js</c> ↔ <see cref="ReglesCompletude"/>) :
+/// règles françaises du schematron BR-FR-Flux2 (FNFE 1.4.0.04), sommes EN16931 (BR-CO), et deux règles propres à LogiBTP
+/// (profil écrit, cadre émis).
+/// </summary>
+public static class RegleCompletude
+{
+    public const string Profil = "LOGIBTP-PROFIL";
+    public const string Cadre = "LOGIBTP-CADRE";
+    public const string BrFr01 = "BR-FR-01";
+    public const string BrFr02 = "BR-FR-02";
+    public const string BrFr03 = "BR-FR-03";
+    public const string BrFr04 = "BR-FR-04";
+    public const string BrFr05 = "BR-FR-05";
+    public const string BrFr06 = "BR-FR-06";
+    public const string BrFr08 = "BR-FR-08";
+    public const string BrFr09 = "BR-FR-09";
+    public const string BrFr10 = "BR-FR-10";
+    public const string BrFr11 = "BR-FR-11";
+    public const string BrFr12 = "BR-FR-12";
+    public const string BrFr13 = "BR-FR-13";
+    public const string BrFr15 = "BR-FR-15";
+    public const string BrFr16 = "BR-FR-16";
+    public const string BrFr17 = "BR-FR-17";
+    public const string BrFr18 = "BR-FR-18";
+    public const string BrFr20 = "BR-FR-20";
+    public const string BrFr21 = "BR-FR-21";
+    public const string BrFr22 = "BR-FR-22";
+    public const string BrFr23 = "BR-FR-23";
+    public const string BrFr24 = "BR-FR-24";
+    public const string BrFr25 = "BR-FR-25";
+    public const string BrFr26 = "BR-FR-26";
+    public const string BrFr31 = "BR-FR-31";
+    public const string BrFr32 = "BR-FR-32";
+    public const string BrFrCo03 = "BR-FR-CO-03";
+    public const string BrFrCo04 = "BR-FR-CO-04";
+    public const string BrFrCo05 = "BR-FR-CO-05";
+    public const string BrFrCo07 = "BR-FR-CO-07";
+    public const string BrFrCo08 = "BR-FR-CO-08";
+    public const string BrFrCo09 = "BR-FR-CO-09";
+    public const string BrFrCo12 = "BR-FR-CO-12";
+    public const string BrFrDec01 = "BR-FR-DEC-01";
+    public const string BrFrDec02 = "BR-FR-DEC-02";
+    public const string BrFrDec03 = "BR-FR-DEC-03";
+    public const string BrFrDec04 = "BR-FR-DEC-04";
+    public const string BrCo10 = "BR-CO-10";
+    public const string BrCo11 = "BR-CO-11";
+    public const string BrCo12 = "BR-CO-12";
+    public const string BrCo13 = "BR-CO-13";
+    public const string BrCo14 = "BR-CO-14";
+    public const string BrCo15 = "BR-CO-15";
+    public const string BrCo16 = "BR-CO-16";
+    public const string BrCo17 = "BR-CO-17";
 }

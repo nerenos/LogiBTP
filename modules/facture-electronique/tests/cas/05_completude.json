@@ -1,0 +1,1224 @@
+{
+ "description": "Contrôle de complétude d'une facture émise (lot 16) : js/src/completude.js controlerCompletude ↔ ReglesCompletude.Controler. Chaque cas part de « base » (modèle sémantique de ModeleFacture.cs en JSON, propriétés en camelCase, montants en chaînes) et applique « modifications » (chemin à points, index de liste numérique ; null efface la valeur ; une liste est remplacée entière). « bloquant » (vrai par défaut) : facture transmise à un tiers B2B / B2G (Q5), sinon les règles fatales sont des avertissements. « attendu » : écarts dans l'ordre des contrôles (règle REGLE_COMPLETUDE, niveau NIVEAU_COMPLETUDE, terme BT ou groupe, ligne BT-126).",
+ "base": {
+  "numero": "F202611001",
+  "dateEmission": "2026-11-02",
+  "typeFacture": "380",
+  "devise": "EUR",
+  "dateEcheance": "2026-12-02",
+  "cadreFacturation": "S1",
+  "profil": "CIUS",
+  "references": {
+   "acheteur": "SERVICE-TRAVAUX",
+   "projet": "CH-2026-001",
+   "contrat": "MARCHE-2026-014"
+  },
+  "conditionsPaiement": "Paiement à 30 jours fin de mois",
+  "notes": [
+   {
+    "codeSujet": "PMT",
+    "texte": "Indemnité forfaitaire pour frais de recouvrement en cas de retard de paiement : 40 €."
+   },
+   {
+    "codeSujet": "PMD",
+    "texte": "Pénalités de retard : trois fois le taux d'intérêt légal."
+   },
+   {
+    "codeSujet": "AAB",
+    "texte": "Pas d'escompte pour paiement anticipé."
+   },
+   {
+    "codeSujet": "BAR",
+    "texte": "B2B"
+   }
+  ],
+  "vendeur": {
+   "raisonSociale": "BTP EXEMPLE",
+   "siren": "200000008",
+   "identifiants": [
+    {
+     "valeur": "20000000800012",
+     "schema": "0009"
+    }
+   ],
+   "numeroTva": "FR37200000008",
+   "adresseElectronique": {
+    "valeur": "200000008",
+    "schema": "0225"
+   },
+   "adresse": {
+    "ligne1": "1 rue des Artisans",
+    "localite": "LYON",
+    "codePostal": "69001",
+    "codePays": "FR"
+   }
+  },
+  "acheteur": {
+   "raisonSociale": "CLIENT SA",
+   "siren": "100000009",
+   "numeroTva": "FR88100000009",
+   "adresseElectronique": {
+    "valeur": "100000009_FACTURES",
+    "schema": "0225"
+   },
+   "adresse": {
+    "ligne1": "35 rue d'ici",
+    "localite": "PARIS",
+    "codePostal": "75018",
+    "codePays": "FR"
+   }
+  },
+  "moyensPaiement": [
+   {
+    "code": "30",
+    "reference": "F202611001",
+    "iban": "FR7630006000011234567890189",
+    "bic": "AGRIFRPP"
+   }
+  ],
+  "totaux": {
+   "totalLignes": "1255.00",
+   "totalHt": "1255.00",
+   "totalTva": "151.00",
+   "totalTtc": "1406.00",
+   "netAPayer": "1406.00"
+  },
+  "detailsTva": [
+   {
+    "base": "255.00",
+    "montant": "51.00",
+    "categorie": "S",
+    "taux": "20"
+   },
+   {
+    "base": "1000.00",
+    "montant": "100.00",
+    "categorie": "S",
+    "taux": "10"
+   }
+  ],
+  "lignes": [
+   {
+    "identifiant": "1",
+    "quantite": "10",
+    "unite": "MTK",
+    "montantNet": "255.00",
+    "prixNet": "25.5",
+    "categorieTva": "S",
+    "tauxTva": "20",
+    "nom": "Carrelage posé"
+   },
+   {
+    "identifiant": "2",
+    "quantite": "1",
+    "unite": "C62",
+    "montantNet": "1000.00",
+    "prixNet": "1000",
+    "categorieTva": "S",
+    "tauxTva": "10",
+    "nom": "Rénovation salle de bains"
+   }
+  ]
+ },
+ "cas": [
+  {
+   "nom": "facture de base conforme",
+   "modifications": {},
+   "attendu": []
+  },
+  {
+   "nom": "base en avertissement (tiers B2C) : aucun écart",
+   "modifications": {},
+   "attendu": [],
+   "bloquant": false
+  },
+  {
+   "nom": "sous-traitance S5 en EXTENDED-CTC-FR, payeur et autoliquidation",
+   "modifications": {
+    "profil": "Extended-CTC-FR",
+    "cadreFacturation": "S5",
+    "payeur": {
+     "raisonSociale": "COMMUNE DE MAVILLE",
+     "siren": "400000006",
+     "adresseElectronique": {
+      "valeur": "400000006",
+      "schema": "0225"
+     }
+    },
+    "lignes.0.categorieTva": "AE",
+    "lignes.0.tauxTva": "0",
+    "lignes.1.categorieTva": "AE",
+    "lignes.1.tauxTva": "0",
+    "detailsTva": [
+     {
+      "base": "1255.00",
+      "montant": "0.00",
+      "categorie": "AE",
+      "taux": "0",
+      "motifExoneration": "Autoliquidation",
+      "codeExoneration": "VATEX-FR-AE"
+     }
+    ],
+    "totaux.totalTva": "0.00",
+    "totaux.totalTtc": "1255.00",
+    "totaux.netAPayer": "1255.00"
+   },
+   "attendu": []
+  },
+  {
+   "nom": "cadre multi-vendeurs non émis",
+   "modifications": {
+    "cadreFacturation": "S8"
+   },
+   "attendu": [
+    {
+     "regle": "LOGIBTP-CADRE",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-23",
+     "ligne": null
+    }
+   ]
+  },
+  {
+   "nom": "profil BASIC non écrit",
+   "modifications": {
+    "profil": "Basic"
+   },
+   "attendu": [
+    {
+     "regle": "LOGIBTP-PROFIL",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-24",
+     "ligne": null
+    }
+   ]
+  },
+  {
+   "nom": "payeur et sous-ligne en EN16931",
+   "modifications": {
+    "payeur": {
+     "raisonSociale": "COMMUNE",
+     "siren": "400000006"
+    },
+    "lignes.1.ligneParente": "1",
+    "lignes.1.sousType": "DETAIL"
+   },
+   "attendu": [
+    {
+     "regle": "LOGIBTP-PROFIL",
+     "niveau": "BLOQUANT",
+     "donnee": "EXT-FR-FE-BG-02",
+     "ligne": null
+    },
+    {
+     "regle": "LOGIBTP-PROFIL",
+     "niveau": "BLOQUANT",
+     "donnee": "EXT-FR-FE-162",
+     "ligne": "2"
+    },
+    {
+     "regle": "LOGIBTP-PROFIL",
+     "niveau": "BLOQUANT",
+     "donnee": "EXT-FR-FE-163",
+     "ligne": "2"
+    }
+   ]
+  },
+  {
+   "nom": "numéro trop long et avec espace",
+   "modifications": {
+    "numero": "F 2026 11111111111111111111111111111111111"
+   },
+   "attendu": [
+    {
+     "regle": "BR-FR-01",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-1",
+     "ligne": null
+    },
+    {
+     "regle": "BR-FR-02",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-1",
+     "ligne": null
+    }
+   ]
+  },
+  {
+   "nom": "numéro vide",
+   "modifications": {
+    "numero": ""
+   },
+   "attendu": [
+    {
+     "regle": "BR-FR-02",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-1",
+     "ligne": null
+    }
+   ]
+  },
+  {
+   "nom": "numéro avec barre et tiret admis",
+   "modifications": {
+    "numero": "F-2026/11_001+A"
+   },
+   "attendu": []
+  },
+  {
+   "nom": "date d'émission hors 2000-2099",
+   "modifications": {
+    "dateEmission": "1999-12-31"
+   },
+   "attendu": [
+    {
+     "regle": "BR-FR-03",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-2",
+     "ligne": null
+    }
+   ]
+  },
+  {
+   "nom": "type non autorisé",
+   "modifications": {
+    "typeFacture": "326"
+   },
+   "attendu": [
+    {
+     "regle": "BR-FR-04",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-3",
+     "ligne": null
+    }
+   ]
+  },
+  {
+   "nom": "notes PMT absente, PMD en double",
+   "modifications": {
+    "notes": [
+     {
+      "codeSujet": "PMD",
+      "texte": "a"
+     },
+     {
+      "codeSujet": "PMD",
+      "texte": "b"
+     },
+     {
+      "codeSujet": "AAB",
+      "texte": "c"
+     },
+     {
+      "codeSujet": "BAR",
+      "texte": "B2B"
+     }
+    ]
+   },
+   "attendu": [
+    {
+     "regle": "BR-FR-05",
+     "niveau": "BLOQUANT",
+     "donnee": "PMT",
+     "ligne": null
+    },
+    {
+     "regle": "BR-FR-06",
+     "niveau": "BLOQUANT",
+     "donnee": "PMD",
+     "ligne": null
+    }
+   ]
+  },
+  {
+   "nom": "note BAR invalide et doublée",
+   "modifications": {
+    "notes": [
+     {
+      "codeSujet": "PMT",
+      "texte": "a"
+     },
+     {
+      "codeSujet": "PMD",
+      "texte": "b"
+     },
+     {
+      "codeSujet": "AAB",
+      "texte": "c"
+     },
+     {
+      "codeSujet": "BAR",
+      "texte": "B2G"
+     },
+     {
+      "codeSujet": "BAR",
+      "texte": "B2C"
+     }
+    ]
+   },
+   "attendu": [
+    {
+     "regle": "BR-FR-20",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-22",
+     "ligne": null
+    },
+    {
+     "regle": "BR-FR-31",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-21",
+     "ligne": null
+    }
+   ]
+  },
+  {
+   "nom": "BAR B2CINT admis, sans SIREN de l'acheteur",
+   "modifications": {
+    "notes.3.texte": "B2CINT",
+    "acheteur.siren": null
+   },
+   "attendu": []
+  },
+  {
+   "nom": "cadre inconnu",
+   "modifications": {
+    "cadreFacturation": "X1"
+   },
+   "attendu": [
+    {
+     "regle": "BR-FR-08",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-23",
+     "ligne": null
+    }
+   ]
+  },
+  {
+   "nom": "SIREN du vendeur absent",
+   "modifications": {
+    "vendeur.siren": null,
+    "vendeur.identifiants": []
+   },
+   "attendu": [
+    {
+     "regle": "BR-FR-10",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-30",
+     "ligne": null
+    }
+   ]
+  },
+  {
+   "nom": "SIREN du vendeur sur 8 chiffres",
+   "modifications": {
+    "vendeur.siren": "20000000",
+    "vendeur.identifiants": []
+   },
+   "attendu": [
+    {
+     "regle": "BR-FR-10",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-30",
+     "ligne": null
+    },
+    {
+     "regle": "BR-FR-32",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-30",
+     "ligne": null
+    }
+   ]
+  },
+  {
+   "nom": "SIRET qui ne commence pas par le SIREN",
+   "modifications": {
+    "vendeur.identifiants": [
+     {
+      "valeur": "30000000800012",
+      "schema": "0009"
+     }
+    ]
+   },
+   "attendu": [
+    {
+     "regle": "BR-FR-09",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-29",
+     "ligne": null
+    }
+   ]
+  },
+  {
+   "nom": "B2B sans SIREN de l'acheteur",
+   "modifications": {
+    "acheteur.siren": null
+   },
+   "attendu": [
+    {
+     "regle": "BR-FR-11",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-47",
+     "ligne": null
+    }
+   ]
+  },
+  {
+   "nom": "adresse électronique de l'acheteur absente",
+   "modifications": {
+    "acheteur.adresseElectronique": null
+   },
+   "attendu": [
+    {
+     "regle": "BR-FR-12",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-49",
+     "ligne": null
+    },
+    {
+     "regle": "BR-FR-21",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-49",
+     "ligne": null
+    }
+   ]
+  },
+  {
+   "nom": "adresse électronique du vendeur absente",
+   "modifications": {
+    "vendeur.adresseElectronique": null
+   },
+   "attendu": [
+    {
+     "regle": "BR-FR-13",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-34",
+     "ligne": null
+    }
+   ]
+  },
+  {
+   "nom": "B2B : adresse de l'acheteur sans son SIREN",
+   "modifications": {
+    "acheteur.adresseElectronique.valeur": "CLIENT_FACTURES"
+   },
+   "attendu": [
+    {
+     "regle": "BR-FR-21",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-49",
+     "ligne": null
+    }
+   ]
+  },
+  {
+   "nom": "autofacture B2B : adresse du vendeur au schéma courriel",
+   "modifications": {
+    "typeFacture": "389",
+    "vendeur.adresseElectronique.schema": "EM"
+   },
+   "attendu": [
+    {
+     "regle": "BR-FR-22",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-34",
+     "ligne": null
+    }
+   ]
+  },
+  {
+   "nom": "adresse électronique avec @ et code de routage trop long",
+   "modifications": {
+    "acheteur.adresseElectronique.valeur": "100000009@client",
+    "acheteur.identifiants": [
+     {
+      "valeur": "RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR",
+      "schema": "0224"
+     }
+    ]
+   },
+   "attendu": [
+    {
+     "regle": "BR-FR-23",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-49",
+     "ligne": null
+    },
+    {
+     "regle": "BR-FR-26",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-46",
+     "ligne": null
+    }
+   ]
+  },
+  {
+   "nom": "adresse électronique de plus de 125 caractères",
+   "modifications": {
+    "acheteur.adresseElectronique.valeur": "100000009AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+   },
+   "attendu": [
+    {
+     "regle": "BR-FR-25",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-49",
+     "ligne": null
+    }
+   ]
+  },
+  {
+   "nom": "code de routage avec espace",
+   "modifications": {
+    "acheteur.identifiants": [
+     {
+      "valeur": "SERVICE 1",
+      "schema": "0224"
+     }
+    ]
+   },
+   "attendu": [
+    {
+     "regle": "BR-FR-24",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-46",
+     "ligne": null
+    }
+   ]
+  },
+  {
+   "nom": "catégorie de TVA L sur une ligne et une ventilation",
+   "modifications": {
+    "lignes.0.categorieTva": "L",
+    "detailsTva.0.categorie": "L"
+   },
+   "attendu": [
+    {
+     "regle": "BR-FR-15",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-118",
+     "ligne": null
+    },
+    {
+     "regle": "BR-FR-15",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-151",
+     "ligne": "1"
+    }
+   ]
+  },
+  {
+   "nom": "ligne sans catégorie de TVA",
+   "modifications": {
+    "lignes.1.categorieTva": null
+   },
+   "attendu": [
+    {
+     "regle": "BR-FR-15",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-151",
+     "ligne": "2"
+    }
+   ]
+  },
+  {
+   "nom": "taux de TVA 19 hors liste",
+   "modifications": {
+    "lignes.0.tauxTva": "19",
+    "detailsTva.0.taux": "19",
+    "detailsTva.0.montant": "48.45",
+    "totaux.totalTva": "148.45",
+    "totaux.totalTtc": "1403.45",
+    "totaux.netAPayer": "1403.45"
+   },
+   "attendu": [
+    {
+     "regle": "BR-FR-16",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-119",
+     "ligne": null
+    },
+    {
+     "regle": "BR-FR-16",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-152",
+     "ligne": "1"
+    }
+   ]
+  },
+  {
+   "nom": "taux 20.00 et 5.50 admis en valeur",
+   "modifications": {
+    "lignes.0.tauxTva": "20.00",
+    "detailsTva.0.taux": "20.00"
+   },
+   "attendu": []
+  },
+  {
+   "nom": "pièce jointe de type inconnu et deux LISIBLE",
+   "modifications": {
+    "piecesJointes": [
+     {
+      "reference": "A",
+      "description": "RELEVE"
+     },
+     {
+      "reference": "B",
+      "description": "LISIBLE"
+     },
+     {
+      "reference": "C",
+      "description": "LISIBLE"
+     }
+    ]
+   },
+   "attendu": [
+    {
+     "regle": "BR-FR-17",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-123",
+     "ligne": null
+    },
+    {
+     "regle": "BR-FR-18",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-123",
+     "ligne": null
+    }
+   ]
+  },
+  {
+   "nom": "avoir de remise globale sans période",
+   "modifications": {
+    "typeFacture": "262",
+    "facturesAnterieures": [
+     {
+      "numero": "F202610001",
+      "date": "2026-10-01"
+     }
+    ]
+   },
+   "attendu": [
+    {
+     "regle": "BR-FR-CO-03",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-3",
+     "ligne": null
+    }
+   ]
+  },
+  {
+   "nom": "rectificative avec deux factures antérieures",
+   "modifications": {
+    "typeFacture": "384",
+    "facturesAnterieures": [
+     {
+      "numero": "F202610001",
+      "date": "2026-10-01"
+     },
+     {
+      "numero": "F202610002",
+      "date": "2026-10-02"
+     }
+    ]
+   },
+   "attendu": [
+    {
+     "regle": "BR-FR-CO-04",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-3",
+     "ligne": null
+    }
+   ]
+  },
+  {
+   "nom": "avoir sans facture antérieure",
+   "modifications": {
+    "typeFacture": "381"
+   },
+   "attendu": [
+    {
+     "regle": "BR-FR-CO-05",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-3",
+     "ligne": null
+    }
+   ]
+  },
+  {
+   "nom": "avoir avec facture antérieure sans date",
+   "modifications": {
+    "typeFacture": "381",
+    "facturesAnterieures": [
+     {
+      "numero": "F202610001"
+     }
+    ]
+   },
+   "attendu": [
+    {
+     "regle": "BR-FR-CO-05",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-3",
+     "ligne": null
+    }
+   ]
+  },
+  {
+   "nom": "avoir : facture antérieure datée en entête",
+   "modifications": {
+    "typeFacture": "381",
+    "facturesAnterieures": [
+     {
+      "numero": "F202610001",
+      "date": "2026-10-01"
+     }
+    ]
+   },
+   "attendu": []
+  },
+  {
+   "nom": "avoir EXTENDED : facture antérieure sur chaque ligne de détail",
+   "modifications": {
+    "typeFacture": "381",
+    "profil": "Extended-CTC-FR",
+    "lignes.0.factureAnterieure": {
+     "numero": "F202610001",
+     "date": "2026-10-01"
+    },
+    "lignes.1.factureAnterieure": {
+     "numero": "F202610002",
+     "date": "2026-10-02",
+     "type": "380"
+    }
+   },
+   "attendu": []
+  },
+  {
+   "nom": "échéance avant la date d'émission",
+   "modifications": {
+    "dateEcheance": "2026-11-01"
+   },
+   "attendu": [
+    {
+     "regle": "BR-FR-CO-07",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-9",
+     "ligne": null
+    }
+   ]
+  },
+  {
+   "nom": "acompte : échéance antérieure admise",
+   "modifications": {
+    "typeFacture": "386",
+    "dateEcheance": "2026-10-15"
+   },
+   "attendu": []
+  },
+  {
+   "nom": "définitive après acompte de type acompte",
+   "modifications": {
+    "cadreFacturation": "S4",
+    "typeFacture": "386"
+   },
+   "attendu": [
+    {
+     "regle": "BR-FR-CO-08",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-23",
+     "ligne": null
+    }
+   ]
+  },
+  {
+   "nom": "facture déjà payée sans montant payé ni échéance",
+   "modifications": {
+    "cadreFacturation": "S2",
+    "dateEcheance": null
+   },
+   "attendu": [
+    {
+     "regle": "BR-FR-CO-09",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-113",
+     "ligne": null
+    },
+    {
+     "regle": "BR-FR-CO-09",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-115",
+     "ligne": null
+    },
+    {
+     "regle": "BR-FR-CO-09",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-9",
+     "ligne": null
+    }
+   ]
+  },
+  {
+   "nom": "facture déjà payée conforme",
+   "modifications": {
+    "cadreFacturation": "B2",
+    "totaux.dejaPaye": "1406.00",
+    "totaux.netAPayer": "0.00"
+   },
+   "attendu": []
+  },
+  {
+   "nom": "devise USD sans devise de TVA",
+   "modifications": {
+    "devise": "USD"
+   },
+   "attendu": [
+    {
+     "regle": "BR-FR-CO-12",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-6",
+     "ligne": null
+    },
+    {
+     "regle": "BR-FR-CO-12",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-111",
+     "ligne": null
+    }
+   ]
+  },
+  {
+   "nom": "montant de ligne à 3 décimales",
+   "modifications": {
+    "lignes.0.montantNet": "255.001"
+   },
+   "attendu": [
+    {
+     "regle": "BR-FR-DEC-01",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-131",
+     "ligne": "1"
+    }
+   ]
+  },
+  {
+   "nom": "quantité à 5 décimales et prix négatif",
+   "modifications": {
+    "lignes.0.quantite": "10.00001",
+    "lignes.1.prixNet": "-1000"
+   },
+   "attendu": [
+    {
+     "regle": "BR-FR-DEC-02",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-129",
+     "ligne": "1"
+    },
+    {
+     "regle": "BR-FR-DEC-03",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-146",
+     "ligne": "2"
+    }
+   ]
+  },
+  {
+   "nom": "prix à 6 décimales et zéros de fin admis",
+   "modifications": {
+    "lignes.0.prixNet": "25.500000",
+    "lignes.0.quantite": "10.0000",
+    "totaux.totalHt": "1255.0000"
+   },
+   "attendu": []
+  },
+  {
+   "nom": "taux à 3 décimales",
+   "modifications": {
+    "lignes.1.tauxTva": "10.001"
+   },
+   "attendu": [
+    {
+     "regle": "BR-FR-16",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-152",
+     "ligne": "2"
+    },
+    {
+     "regle": "BR-FR-DEC-04",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-152",
+     "ligne": "2"
+    }
+   ]
+  },
+  {
+   "nom": "total des lignes faux",
+   "modifications": {
+    "totaux.totalLignes": "1250.00"
+   },
+   "attendu": [
+    {
+     "regle": "BR-CO-10",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-106",
+     "ligne": null
+    },
+    {
+     "regle": "BR-CO-13",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-109",
+     "ligne": null
+    }
+   ]
+  },
+  {
+   "nom": "remise de document sans total des remises",
+   "modifications": {
+    "remisesCharges": [
+     {
+      "charge": false,
+      "montant": "55.00",
+      "categorieTva": "S",
+      "tauxTva": "10"
+     }
+    ],
+    "totaux.totalHt": "1200.00"
+   },
+   "attendu": [
+    {
+     "regle": "BR-CO-11",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-107",
+     "ligne": null
+    },
+    {
+     "regle": "BR-CO-13",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-109",
+     "ligne": null
+    },
+    {
+     "regle": "BR-CO-15",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-112",
+     "ligne": null
+    }
+   ]
+  },
+  {
+   "nom": "remise et charge de document cohérentes",
+   "modifications": {
+    "remisesCharges": [
+     {
+      "charge": false,
+      "montant": "55.00",
+      "categorieTva": "S",
+      "tauxTva": "10",
+      "motif": "Remise"
+     },
+     {
+      "charge": true,
+      "montant": "10.00",
+      "categorieTva": "S",
+      "tauxTva": "10",
+      "motif": "Transport"
+     }
+    ],
+    "totaux.totalRemises": "55.00",
+    "totaux.totalCharges": "10.00",
+    "totaux.totalHt": "1210.00",
+    "detailsTva.1.base": "955.00",
+    "detailsTva.1.montant": "95.50",
+    "totaux.totalTva": "146.50",
+    "totaux.totalTtc": "1356.50",
+    "totaux.netAPayer": "1356.50"
+   },
+   "attendu": []
+  },
+  {
+   "nom": "total des charges sans charge",
+   "modifications": {
+    "totaux.totalCharges": "5.00"
+   },
+   "attendu": [
+    {
+     "regle": "BR-CO-12",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-108",
+     "ligne": null
+    },
+    {
+     "regle": "BR-CO-13",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-109",
+     "ligne": null
+    }
+   ]
+  },
+  {
+   "nom": "total des charges nul sans charge admis",
+   "modifications": {
+    "totaux.totalCharges": "0.00"
+   },
+   "attendu": []
+  },
+  {
+   "nom": "total de TVA faux",
+   "modifications": {
+    "totaux.totalTva": "150.00"
+   },
+   "attendu": [
+    {
+     "regle": "BR-CO-14",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-110",
+     "ligne": null
+    },
+    {
+     "regle": "BR-CO-15",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-112",
+     "ligne": null
+    }
+   ]
+  },
+  {
+   "nom": "net à payer faux, acompte déduit",
+   "modifications": {
+    "totaux.dejaPaye": "400.00"
+   },
+   "attendu": [
+    {
+     "regle": "BR-CO-16",
+     "niveau": "BLOQUANT",
+     "donnee": "BT-115",
+     "ligne": null
+    }
+   ]
+  },
+  {
+   "nom": "net à payer avec acompte déduit et arrondi",
+   "modifications": {
+    "totaux.dejaPaye": "400.00",
+    "totaux.arrondi": "0.01",
+    "totaux.netAPayer": "1006.01"
+   },
+   "attendu": []
+  },
+  {
+   "nom": "TVA de la ventilation mal arrondie : avertissement",
+   "modifications": {
+    "detailsTva.0.montant": "51.01",
+    "detailsTva.1.montant": "99.99"
+   },
+   "attendu": [
+    {
+     "regle": "BR-CO-17",
+     "niveau": "AVERTISSEMENT",
+     "donnee": "BT-117",
+     "ligne": null
+    },
+    {
+     "regle": "BR-CO-17",
+     "niveau": "AVERTISSEMENT",
+     "donnee": "BT-117",
+     "ligne": null
+    }
+   ]
+  },
+  {
+   "nom": "TVA au demi-centime arrondie vers l'infini",
+   "modifications": {
+    "lignes.1.montantNet": "0.05",
+    "lignes.1.prixNet": "0.05",
+    "detailsTva.1.base": "0.05",
+    "detailsTva.1.montant": "0.01",
+    "totaux.totalLignes": "255.05",
+    "totaux.totalHt": "255.05",
+    "totaux.totalTva": "51.01",
+    "totaux.totalTtc": "306.06",
+    "totaux.netAPayer": "306.06"
+   },
+   "attendu": []
+  },
+  {
+   "nom": "EXTENDED : sommes sur les lignes de détail, ligne de groupe et d'information",
+   "modifications": {
+    "profil": "Extended-CTC-FR",
+    "lignes": [
+     {
+      "identifiant": "1",
+      "sousType": "GROUP",
+      "quantite": "1",
+      "unite": "C62",
+      "montantNet": "1255.00",
+      "prixNet": "1255",
+      "nom": "Lot carrelage"
+     },
+     {
+      "identifiant": "2",
+      "ligneParente": "1",
+      "sousType": "DETAIL",
+      "quantite": "10",
+      "unite": "MTK",
+      "montantNet": "255.00",
+      "prixNet": "25.5",
+      "categorieTva": "S",
+      "tauxTva": "20",
+      "nom": "Carrelage"
+     },
+     {
+      "identifiant": "3",
+      "ligneParente": "1",
+      "sousType": "DETAIL",
+      "quantite": "1",
+      "unite": "C62",
+      "montantNet": "1000.00",
+      "prixNet": "1000",
+      "categorieTva": "S",
+      "tauxTva": "10",
+      "nom": "Salle de bains"
+     },
+     {
+      "identifiant": "4",
+      "sousType": "INFORMATION",
+      "quantite": "0",
+      "unite": "",
+      "montantNet": "0.00",
+      "prixNet": "0",
+      "nom": "Information"
+     }
+    ]
+   },
+   "attendu": []
+  },
+  {
+   "nom": "plusieurs écarts en avertissement (tiers B2C)",
+   "modifications": {
+    "notes.3.texte": "B2C",
+    "vendeur.siren": null,
+    "vendeur.identifiants": [],
+    "totaux.totalTva": "150.00"
+   },
+   "attendu": [
+    {
+     "regle": "BR-FR-10",
+     "niveau": "AVERTISSEMENT",
+     "donnee": "BT-30",
+     "ligne": null
+    },
+    {
+     "regle": "BR-CO-14",
+     "niveau": "AVERTISSEMENT",
+     "donnee": "BT-110",
+     "ligne": null
+    },
+    {
+     "regle": "BR-CO-15",
+     "niveau": "AVERTISSEMENT",
+     "donnee": "BT-112",
+     "ligne": null
+    }
+   ],
+   "bloquant": false
+  }
+ ]
+}

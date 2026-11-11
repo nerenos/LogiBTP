@@ -66,6 +66,7 @@ export const TRAITEMENT = Object.freeze({
   B2B: 'B2B',
   B2B_INT: 'B2BINT',
   B2C: 'B2C',
+  B2C_INT: 'B2CINT',
   HORS_REFORME: 'OUTOFSCOPE',
   ARCHIVAGE_SEUL: 'ARCHIVEONLY',
 });
@@ -76,6 +77,7 @@ export const CODE_NOTE = Object.freeze({
   PENALITES: 'PMD',
   ESCOMPTE: 'AAB',
   TRAITEMENT: 'BAR',
+  MENTION_TAXE: 'TXD', // BR-FR-06 : une fois au plus
 });
 
 /** Sous-type de ligne EXT-FR-FE-163 (profil EXTENDED-CTC-FR) : détail, regroupement, information. */
@@ -508,6 +510,9 @@ export const ERREUR_FE = Object.freeze({
   DONNEE_INVALIDE: 'DONNEE_INVALIDE',
   PDF_ILLISIBLE: 'PDF_ILLISIBLE',
   XML_ABSENT: 'XML_ABSENT',
+  // Écriture des factures (serveur, lot 16)
+  PROFIL_NON_ECRIT: 'PROFIL_NON_ECRIT',
+  DONNEE_HORS_PROFIL: 'DONNEE_HORS_PROFIL',
   // Connecteur de plateforme (serveur, lot 6) : demande refusée avant l'envoi, puis réponses de la plateforme (400 à 503)
   CONNECTEUR_INCONNU: 'CONNECTEUR_INCONNU',
   PARAMETRE_CONNECTEUR: 'PARAMETRE_CONNECTEUR',
@@ -571,4 +576,80 @@ export const ETAT_LIGNE_ANNUAIRE = Object.freeze({
   ACTIVE: 'Enabled',
   INACTIVE: 'Disabled',
   A_VENIR: 'Upcoming',
+});
+
+/** Type d'une pièce jointe (BT-123, liste BR-FR-17) ; LISIBLE une fois au plus (BR-FR-18). */
+export const TYPE_PIECE_JOINTE = Object.freeze({
+  RIB: 'RIB',
+  LISIBLE: 'LISIBLE',
+  FEUILLE_DE_STYLE: 'FEUILLE_DE_STYLE',
+  PJA: 'PJA',
+  BORDEREAU_SUIVI: 'BORDEREAU_SUIVI',
+  DOCUMENT_ANNEXE: 'DOCUMENT_ANNEXE',
+  BON_LIVRAISON: 'BON_LIVRAISON',
+  BON_COMMANDE: 'BON_COMMANDE',
+  BORDEREAU_SUIVI_VALIDATION: 'BORDEREAU_SUIVI_VALIDATION',
+  ETAT_ACOMPTE: 'ETAT_ACOMPTE',
+  FACTURE_PAIEMENT_DIRECT: 'FACTURE_PAIEMENT_DIRECT',
+  RECAPITULATIF_COTRAITANCE: 'RECAPITULATIF_COTRAITANCE',
+});
+
+/** Niveau d'un écart du contrôle de complétude (lot 16, Q5) : bloquant pour un tiers B2B / B2G, avertissement sinon. */
+export const NIVEAU_COMPLETUDE = Object.freeze({
+  BLOQUANT: 'BLOQUANT',
+  AVERTISSEMENT: 'AVERTISSEMENT',
+});
+
+/**
+ * Règle du contrôle de complétude d'une facture émise (lot 16 : completude.js ↔ ReglesCompletude.cs) : règles françaises
+ * du schematron BR-FR-Flux2 (FNFE 1.4.0.04), sommes EN16931 (BR-CO), et deux règles propres à LogiBTP (profil écrit,
+ * cadre émis).
+ */
+export const REGLE_COMPLETUDE = Object.freeze({
+  PROFIL: 'LOGIBTP-PROFIL',
+  CADRE: 'LOGIBTP-CADRE',
+  BR_FR_01: 'BR-FR-01',
+  BR_FR_02: 'BR-FR-02',
+  BR_FR_03: 'BR-FR-03',
+  BR_FR_04: 'BR-FR-04',
+  BR_FR_05: 'BR-FR-05',
+  BR_FR_06: 'BR-FR-06',
+  BR_FR_08: 'BR-FR-08',
+  BR_FR_09: 'BR-FR-09',
+  BR_FR_10: 'BR-FR-10',
+  BR_FR_11: 'BR-FR-11',
+  BR_FR_12: 'BR-FR-12',
+  BR_FR_13: 'BR-FR-13',
+  BR_FR_15: 'BR-FR-15',
+  BR_FR_16: 'BR-FR-16',
+  BR_FR_17: 'BR-FR-17',
+  BR_FR_18: 'BR-FR-18',
+  BR_FR_20: 'BR-FR-20',
+  BR_FR_21: 'BR-FR-21',
+  BR_FR_22: 'BR-FR-22',
+  BR_FR_23: 'BR-FR-23',
+  BR_FR_24: 'BR-FR-24',
+  BR_FR_25: 'BR-FR-25',
+  BR_FR_26: 'BR-FR-26',
+  BR_FR_31: 'BR-FR-31',
+  BR_FR_32: 'BR-FR-32',
+  BR_FR_CO_03: 'BR-FR-CO-03',
+  BR_FR_CO_04: 'BR-FR-CO-04',
+  BR_FR_CO_05: 'BR-FR-CO-05',
+  BR_FR_CO_07: 'BR-FR-CO-07',
+  BR_FR_CO_08: 'BR-FR-CO-08',
+  BR_FR_CO_09: 'BR-FR-CO-09',
+  BR_FR_CO_12: 'BR-FR-CO-12',
+  BR_FR_DEC_01: 'BR-FR-DEC-01',
+  BR_FR_DEC_02: 'BR-FR-DEC-02',
+  BR_FR_DEC_03: 'BR-FR-DEC-03',
+  BR_FR_DEC_04: 'BR-FR-DEC-04',
+  BR_CO_10: 'BR-CO-10',
+  BR_CO_11: 'BR-CO-11',
+  BR_CO_12: 'BR-CO-12',
+  BR_CO_13: 'BR-CO-13',
+  BR_CO_14: 'BR-CO-14',
+  BR_CO_15: 'BR-CO-15',
+  BR_CO_16: 'BR-CO-16',
+  BR_CO_17: 'BR-CO-17',
 });

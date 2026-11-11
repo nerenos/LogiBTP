@@ -55,6 +55,9 @@ public class CodesTests
     [InlineData("DECOUPAGE_EREPORTING", typeof(DecoupageEreporting))]
     [InlineData("CODE_EXONERATION", typeof(CodeExoneration))]
     [InlineData("ECART_RECEPTION", typeof(EcartReception))]
+    [InlineData("TYPE_PIECE_JOINTE", typeof(TypePieceJointe))]
+    [InlineData("NIVEAU_COMPLETUDE", typeof(NiveauCompletude))]
+    [InlineData("REGLE_COMPLETUDE", typeof(RegleCompletude))]
     public void Parite_avec_le_js(string nom, Type type) => Assert.Empty(Constantes.Ecarts(Fichier, nom, type));
 
     [Fact]
