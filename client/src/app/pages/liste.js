@@ -11,6 +11,7 @@ import { marquerArticles } from '../stock/marquer.js';
 import { memoriserSuite } from '../suite-liste.js';
 import { transformerDocument } from '../documents/transformation.js';
 import { choisirRattachement } from '../structure/selection.js';
+import { activerDepotFactures, choisirFactures, peutDeposerFacture, SOURCE_FE_RECUES } from '../facture-electronique/depot-facture.js';
 
 /**
  * Types de documents créables depuis une vue : types du thème actifs pour la société, restreints au type filtré par la
@@ -171,14 +172,18 @@ export class PageListe extends PageBase {
       groupeTheme: (t) => groupesThemes().get(t.thl_code) ?? null,
       creation: (vue) => creationDepuisVue(vue, app, this.liste?.themes ?? []),
       actionsElements: (vue) => actionsDepuisVue(vue, app, s, this.liste?.themes ?? []),
-      // Impression de la vue (recherche en cours comprise) ou d'étiquettes (module Édition).
-      actionsVue: (vue) => (vue?.vli_id ? [{
+      // Impression de la vue (recherche en cours comprise) ou d'étiquettes (module Édition) ; factures reçues à traiter :
+      // import d'une facture reçue hors plateforme (lot 14 de la facturation électronique).
+      actionsVue: (vue) => [...(vue?.definition?.source?.vue === SOURCE_FE_RECUES && peutDeposerFacture(app) ? [{
+        icone: icone('facture_electronique_btp_importer'), libelle: texte('facture_electronique_btp.depot.importer'), titre: texte('facture_electronique_btp.depot.importer_aide'),
+        action: () => choisirFactures(app),
+      }] : []), ...(vue?.vli_id ? [{
         icone: icone('pages_btp_imprimer'), libelle: texte('pages_btp.fiche.imprimer'), titre: texte('pages_btp.liste.imprimer_aide'),
         action: () => {
           const recherche = this.liste?.recherche ? `&recherche=${encodeURIComponent(this.liste.recherche)}` : '';
           app.naviguer(`/edition?source=liste&id=${vue.vli_id}${recherche}`, { nouvelleFenetre: true });
         },
-      }] : []),
+      }] : [])],
       surVue: ({ theme, vue }) => { this.filtre?.rendre(); this.#vueChoisie(theme, vue); },
       filtresVue: (vue) => {
         if (!this.filtre) return {};
@@ -201,6 +206,10 @@ export class PageListe extends PageBase {
           texte: `${ligne.code ?? ''} ${ligne.libelle ?? ''}`.trim(),
         }
         : null),
+    });
+    // Factur-X ou XML glissé sur la liste des factures reçues : même traitement qu'un flux reçu (lot 14), liste revérifiée.
+    this.retirerDepot = activerDepotFactures(this.conteneur.querySelector('.page-liste-zone'), {
+      app, accepte: () => this.liste?.vue?.definition?.source?.vue === SOURCE_FE_RECUES, apres: () => this.liste.verifier().catch(() => {}),
     });
     if (refs) {
       this.filtre = new FiltreRattachement(this.conteneur.querySelector('.page-liste-filtre'), {
@@ -228,6 +237,7 @@ export class PageListe extends PageBase {
   async reprendre() { this.liste.verifier().catch(() => {}); }
 
   fermer() {
+    this.retirerDepot?.();
     this.desabonner?.forEach((f) => f());
     this.liste?.detruire();
   }

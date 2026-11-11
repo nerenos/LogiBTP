@@ -430,7 +430,8 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
     /// <summary>
     /// Validation : commande client inscrite à son marché (base ou avenant, montant recalculé, db/170) ; document
     /// d'avancement d'un marché : numéro de situation (Q29 : le suivant, sauf numéro saisi) et, pour une facture ou un
-    /// avoir d'avancement, documents précédents déduits figés (13.7, document_deduction).
+    /// avoir d'avancement, documents précédents déduits figés (13.7, document_deduction) ; facture reçue par la plateforme :
+    /// Approuvée (205, <see cref="StatutsReceptionBtp"/>).
     /// </summary>
     public override async Task ApresValidationAsync(DocumentDbContext<DocumentBtp, DocumentLigneBtp> db, long entId, TypeDocument type, CancellationToken ct)
     {
@@ -441,6 +442,15 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
             if (type.TydCode == TypesDocument.EOe) await ExecutionBtp.FigerBudgetAsync(db, entId, "validation", ct);
             return;
         }
+        // Facture ou avoir reçu (module Facturation électronique, lots 13 et 14) : Approuvée (205) à la validation.
+        if (type.TydCode is TypesDocument.AFacture or TypesDocument.TFactureAvt or TypesDocument.AAvoir && Http?.HttpContext?.RequestServices is { } requete)
+        {
+            await new StatutsReceptionBtp(requete, requete.GetRequiredService<ILoggerFactory>().CreateLogger<StatutsReceptionBtp>())
+                .ApprouverAsync(entId, Utilisateur.Depuis(Http.HttpContext).Code, ct);
+        }
+        // Facture de sous-traitance (lot 15) : demande de paiement direct (224) déjà reçue → demande de paiement enregistrée.
+        if (type.TydCode == TypesDocument.TFactureAvt)
+            await PaiementDirectRecuBtp.ApresValidationAsync(db, entId, Http?.HttpContext is { } h ? Utilisateur.Depuis(h).Code : PaiementDirectRecuBtp.Auteur, ct);
         // Stock : mouvements des livraisons, réceptions, factures sans livraison et transferts (module Stock, § 4).
         await MouvementsStockBtp.EcrireAsync(db, entId, type, ct);
         // Lots sortis vers un chantier : leurs certificats matière y seront copiés (file traitée hors de la transaction, S24.6).

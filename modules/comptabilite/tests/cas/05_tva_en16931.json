@@ -1,0 +1,10 @@
+{
+  "description": "Catégorie de TVA EN 16931 et code VATEX proposés depuis le comportement de la catégorie de TVA (tva.js ↔ ReglesTva.cs).",
+  "cas": [
+    { "nom": "normale : standard", "comportement": "N", "attendu": { "categorie": "S", "vatex": null } },
+    { "nom": "autoliquidation : AE et VATEX-FR-AE", "comportement": "A", "attendu": { "categorie": "AE", "vatex": "VATEX-FR-AE" } },
+    { "nom": "intracommunautaire : autoliquidation", "comportement": "I", "attendu": { "categorie": "AE", "vatex": "VATEX-FR-AE" } },
+    { "nom": "exonérée : E et motif d'exonération", "comportement": "E", "attendu": { "categorie": "E", "vatex": "VATEX-EU-132" } },
+    { "nom": "comportement inconnu", "comportement": "X", "attendu": null }
+  ]
+}

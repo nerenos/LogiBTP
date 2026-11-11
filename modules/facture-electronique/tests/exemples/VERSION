@@ -1,0 +1,16 @@
+Origine : dépôt GitHub fnfempe/France_RFE, paquet 1.4.0.04 (commit 97ba0f3d4ef2abed5780e9490d5c3a2be832ab1d du 05/09/2026),
+dossier FNFE_RFE_INVOICE/Z.example/TEST. Licence Apache-2.0 : voir ../../artefacts/LICENCE.
+
+cii/en16931/          Z.example/TEST/CII/EN16931/          (identiques aux XML de Z.example/TEST/FX/EN16931/, non recopiés)
+cii/extended-ctc-fr/  Z.example/TEST/CII/EXTENDED-CTC-FR/
+factur-x/basicwl/     Z.example/TEST/FX/BASICWL/           (XML et un PDF : F20260023)
+factur-x/en16931/     Z.example/TEST/FX/EN16931/           (un PDF : UC1 ; ses XML sont ceux de cii/en16931)
+factur-x/extended/    Z.example/TEST/FX/EXTENDED/          (XML et un PDF : UC13 F202600037)
+ubl/en16931/          Z.example/TEST/UBL/EN16931/          (lot 3 : mêmes cas que cii/en16931)
+ubl/extended-ctc-fr/  Z.example/TEST/UBL/EXTENDED-CTC-FR/  (lot 3 : mêmes cas que cii/extended-ctc-fr)
+cdar/fnfe/            Z.example/TEST/CDAR/                 (lot 5 : les 59 CDAR, entre PA et _POUR_PPF)
+
+Fichiers copiés sans modification (09/11/2026, lot 2). Les autres PDF du paquet (même XML embarqué que les XML copiés)
+ne sont pas recopiés pour limiter la taille du dépôt. logibtp/ : cas construits par LogiBTP (hors paquet FNFE), en
+jumeaux *_CII.xml / *_UBL.xml quand ils existent dans les deux syntaxes (S5 payeur, avoir CreditNote F202500011).
+cdar/logibtp/ : CDAR écrits par Formats/Cdar.cs (fichiers de référence de CdarTests.cs, LOGIBTP_REGENERER_CDAR=1).

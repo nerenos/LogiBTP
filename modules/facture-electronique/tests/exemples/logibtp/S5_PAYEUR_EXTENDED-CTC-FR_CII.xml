@@ -1,0 +1,417 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!-- Cas LogiBTP (lot 2) dérivé de l'exemple FNFE UC13_F202600037 EXTENDED-CTC-FR : cadre S5, payeur (EXT-FR-FE-BG-02), agent de l'acheteur (EXT-FR-FE-BG-01), projet, contrat, pièce jointe, facture antérieure (BG-3 et EXT-FR-FE-BG-06). Totaux inchangés. -->
+<rsm:CrossIndustryInvoice xmlns:qdt="urn:un:unece:uncefact:data:standard:QualifiedDataType:100"
+xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100"
+xmlns:rsm="urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100"
+xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+     <rsm:ExchangedDocumentContext>
+          <ram:BusinessProcessSpecifiedDocumentContextParameter>
+               <ram:ID>S5</ram:ID>
+          </ram:BusinessProcessSpecifiedDocumentContextParameter>
+          <ram:GuidelineSpecifiedDocumentContextParameter>
+               <ram:ID>urn:cen.eu:en16931:2017#conformant#urn.cpro.gouv.fr:1p0:extended-ctc-fr</ram:ID>
+          </ram:GuidelineSpecifiedDocumentContextParameter>
+     </rsm:ExchangedDocumentContext>
+     <rsm:ExchangedDocument>
+          <ram:ID>F202600037</ram:ID>
+          <ram:TypeCode>380</ram:TypeCode>
+          <ram:IssueDateTime>
+               <udt:DateTimeString format="102">20260602</udt:DateTimeString>
+          </ram:IssueDateTime>
+          <ram:IncludedNote>
+               <ram:Content>COMPENSATION AVEC AUTOFACTURE AUTOF202600028</ram:Content>
+               <ram:SubjectCode>PAI</ram:SubjectCode>
+          </ram:IncludedNote>
+          <ram:IncludedNote>
+               <ram:Content>COOP1 SARL au capital de 100 000 EUR</ram:Content>
+               <ram:SubjectCode>REG</ram:SubjectCode>
+          </ram:IncludedNote>
+          <ram:IncludedNote>
+               <ram:Content>RCS MAVILLE 200 000 008</ram:Content>
+               <ram:SubjectCode>ABL</ram:SubjectCode>
+          </ram:IncludedNote>
+          <ram:IncludedNote>
+               <ram:Content>55 avenue de là-bas,06000 MAVILLE, FR – contact@coop1.fr - www.coop1.fr  – N° TVA : FR37 200 000 008</ram:Content>
+               <ram:SubjectCode>AAI</ram:SubjectCode>
+          </ram:IncludedNote>
+          <ram:IncludedNote>
+               <ram:Content>Tout retard de paiement engendre une pénalité exigible à compter de la date d'échéance, calculée sur la base de trois fois le taux d'intérêt légal. </ram:Content>
+               <ram:SubjectCode>PMD</ram:SubjectCode>
+          </ram:IncludedNote>
+          <ram:IncludedNote>
+               <ram:Content>Indemnité forfaitaire pour frais de recouvrement en cas de retard de paiement : 40 €.</ram:Content>
+               <ram:SubjectCode>PMT</ram:SubjectCode>
+          </ram:IncludedNote>
+          <ram:IncludedNote>
+               <ram:Content>Les réglements reçus avant la date d'échéance ne donneront pas lieu à escompte.</ram:Content>
+               <ram:SubjectCode>AAB</ram:SubjectCode>
+          </ram:IncludedNote>
+     </rsm:ExchangedDocument>
+     <rsm:SupplyChainTradeTransaction>
+          <ram:IncludedSupplyChainTradeLineItem>
+               <ram:AssociatedDocumentLineDocument>
+                    <ram:LineID>1</ram:LineID>
+               </ram:AssociatedDocumentLineDocument>
+               <ram:SpecifiedTradeProduct>
+                    <ram:Name>CNIEL</ram:Name>
+                    <ram:Description>COTISATION</ram:Description>
+               </ram:SpecifiedTradeProduct>
+               <ram:SpecifiedLineTradeAgreement>
+                     <ram:GrossPriceProductTradePrice>
+                         <ram:ChargeAmount>0.1070</ram:ChargeAmount>
+                         <ram:BasisQuantity unitCode="LTR">1.0000</ram:BasisQuantity>
+                     </ram:GrossPriceProductTradePrice>
+                    <ram:NetPriceProductTradePrice>
+                         <ram:ChargeAmount>0.1070</ram:ChargeAmount>
+                         <ram:BasisQuantity unitCode="LTR">1.0000</ram:BasisQuantity>
+                    </ram:NetPriceProductTradePrice>
+               </ram:SpecifiedLineTradeAgreement>
+               <ram:SpecifiedLineTradeDelivery>
+                    <ram:BilledQuantity unitCode="LTR">43.8100</ram:BilledQuantity>
+               </ram:SpecifiedLineTradeDelivery>
+               <ram:SpecifiedLineTradeSettlement>
+                    <ram:ApplicableTradeTax>
+                         <ram:TypeCode>VAT</ram:TypeCode>
+                         <ram:ExemptionReason>Exo1</ram:ExemptionReason>
+                         <ram:CategoryCode>E</ram:CategoryCode>
+                         <ram:DueDateTypeCode>5</ram:DueDateTypeCode>
+                         <ram:RateApplicablePercent>0.00</ram:RateApplicablePercent>
+                    </ram:ApplicableTradeTax>
+                    <ram:BillingSpecifiedPeriod>
+                         <ram:StartDateTime>
+                              <udt:DateTimeString format="102">20260501</udt:DateTimeString>
+                         </ram:StartDateTime>
+                         <ram:EndDateTime>
+                              <udt:DateTimeString format="102">20260531</udt:DateTimeString>
+                         </ram:EndDateTime>
+                    </ram:BillingSpecifiedPeriod>
+                    <ram:SpecifiedTradeSettlementLineMonetarySummation>
+                         <ram:LineTotalAmount>4.69</ram:LineTotalAmount>
+                    </ram:SpecifiedTradeSettlementLineMonetarySummation>
+                <ram:InvoiceReferencedDocument>
+                    <ram:IssuerAssignedID>F202600010</ram:IssuerAssignedID>
+                    <ram:LineID>1</ram:LineID>
+                    <ram:TypeCode>386</ram:TypeCode>
+                    <ram:FormattedIssueDateTime>
+                        <qdt:DateTimeString format="102">20260415</qdt:DateTimeString>
+                    </ram:FormattedIssueDateTime>
+                </ram:InvoiceReferencedDocument>
+               </ram:SpecifiedLineTradeSettlement>
+          </ram:IncludedSupplyChainTradeLineItem>
+          <ram:IncludedSupplyChainTradeLineItem>
+               <ram:AssociatedDocumentLineDocument>
+                    <ram:LineID>2</ram:LineID>
+               </ram:AssociatedDocumentLineDocument>
+               <ram:SpecifiedTradeProduct>
+                    <ram:Name>CNIEL</ram:Name>
+                    <ram:Description>COTISATION Part assujettie</ram:Description>
+               </ram:SpecifiedTradeProduct>
+               <ram:SpecifiedLineTradeAgreement>
+                     <ram:GrossPriceProductTradePrice>
+                         <ram:ChargeAmount>1.1130</ram:ChargeAmount>
+                         <ram:BasisQuantity unitCode="LTR">1.0000</ram:BasisQuantity>
+                     </ram:GrossPriceProductTradePrice>
+                    <ram:NetPriceProductTradePrice>
+                         <ram:ChargeAmount>1.1130</ram:ChargeAmount>
+                         <ram:BasisQuantity unitCode="LTR">1.0000</ram:BasisQuantity>
+                    </ram:NetPriceProductTradePrice>
+               </ram:SpecifiedLineTradeAgreement>
+               <ram:SpecifiedLineTradeDelivery>
+                    <ram:BilledQuantity unitCode="LTR">43.8100</ram:BilledQuantity>
+               </ram:SpecifiedLineTradeDelivery>
+               <ram:SpecifiedLineTradeSettlement>
+                    <ram:ApplicableTradeTax>
+                         <ram:TypeCode>VAT</ram:TypeCode>
+                         <ram:CategoryCode>S</ram:CategoryCode>
+                         <ram:DueDateTypeCode>5</ram:DueDateTypeCode>
+                         <ram:RateApplicablePercent>20.00</ram:RateApplicablePercent>
+                    </ram:ApplicableTradeTax>
+                    <ram:BillingSpecifiedPeriod>
+                         <ram:StartDateTime>
+                              <udt:DateTimeString format="102">20260501</udt:DateTimeString>
+                         </ram:StartDateTime>
+                         <ram:EndDateTime>
+                              <udt:DateTimeString format="102">20260531</udt:DateTimeString>
+                         </ram:EndDateTime>
+                    </ram:BillingSpecifiedPeriod>
+                    <ram:SpecifiedTradeSettlementLineMonetarySummation>
+                         <ram:LineTotalAmount>48.76</ram:LineTotalAmount>
+                    </ram:SpecifiedTradeSettlementLineMonetarySummation>
+               </ram:SpecifiedLineTradeSettlement>
+          </ram:IncludedSupplyChainTradeLineItem>
+          <ram:IncludedSupplyChainTradeLineItem>
+               <ram:AssociatedDocumentLineDocument>
+                    <ram:LineID>3</ram:LineID>
+               </ram:AssociatedDocumentLineDocument>
+               <ram:SpecifiedTradeProduct>
+                    <ram:Name>CNIEL</ram:Name>
+                    <ram:Description>COTISATION Labo</ram:Description>
+               </ram:SpecifiedTradeProduct>
+               <ram:SpecifiedLineTradeAgreement>
+                     <ram:GrossPriceProductTradePrice>
+                         <ram:ChargeAmount>0.3900</ram:ChargeAmount>
+                         <ram:BasisQuantity unitCode="LTR">1.0000</ram:BasisQuantity>
+                     </ram:GrossPriceProductTradePrice>
+                    <ram:NetPriceProductTradePrice>
+                         <ram:ChargeAmount>0.3900</ram:ChargeAmount>
+                         <ram:BasisQuantity unitCode="LTR">1.0000</ram:BasisQuantity>
+                    </ram:NetPriceProductTradePrice>
+               </ram:SpecifiedLineTradeAgreement>
+               <ram:SpecifiedLineTradeDelivery>
+                    <ram:BilledQuantity unitCode="LTR">43.8100</ram:BilledQuantity>
+               </ram:SpecifiedLineTradeDelivery>
+               <ram:SpecifiedLineTradeSettlement>
+                    <ram:ApplicableTradeTax>
+                         <ram:TypeCode>VAT</ram:TypeCode>
+                         <ram:CategoryCode>S</ram:CategoryCode>
+                         <ram:DueDateTypeCode>5</ram:DueDateTypeCode>
+                         <ram:RateApplicablePercent>20.00</ram:RateApplicablePercent>
+                    </ram:ApplicableTradeTax>
+                    <ram:BillingSpecifiedPeriod>
+                         <ram:StartDateTime>
+                              <udt:DateTimeString format="102">20260501</udt:DateTimeString>
+                         </ram:StartDateTime>
+                         <ram:EndDateTime>
+                              <udt:DateTimeString format="102">20260531</udt:DateTimeString>
+                         </ram:EndDateTime>
+                    </ram:BillingSpecifiedPeriod>
+                    <ram:SpecifiedTradeSettlementLineMonetarySummation>
+                         <ram:LineTotalAmount>17.09</ram:LineTotalAmount>
+                    </ram:SpecifiedTradeSettlementLineMonetarySummation>
+               </ram:SpecifiedLineTradeSettlement>
+          </ram:IncludedSupplyChainTradeLineItem>
+          <ram:IncludedSupplyChainTradeLineItem>
+               <ram:AssociatedDocumentLineDocument>
+                    <ram:LineID>4</ram:LineID>
+               </ram:AssociatedDocumentLineDocument>
+               <ram:SpecifiedTradeProduct>
+                    <ram:Name>CNIEL</ram:Name>
+                    <ram:Description>COTISATION Cliquest</ram:Description>
+               </ram:SpecifiedTradeProduct>
+               <ram:SpecifiedLineTradeAgreement>
+                     <ram:GrossPriceProductTradePrice>
+                         <ram:ChargeAmount>0.0150</ram:ChargeAmount>
+                         <ram:BasisQuantity unitCode="LTR">1.0000</ram:BasisQuantity>
+                     </ram:GrossPriceProductTradePrice>
+                    <ram:NetPriceProductTradePrice>
+                         <ram:ChargeAmount>0.0150</ram:ChargeAmount>
+                         <ram:BasisQuantity unitCode="LTR">1.0000</ram:BasisQuantity>
+                    </ram:NetPriceProductTradePrice>
+               </ram:SpecifiedLineTradeAgreement>
+               <ram:SpecifiedLineTradeDelivery>
+                    <ram:BilledQuantity unitCode="LTR">43.8100</ram:BilledQuantity>
+               </ram:SpecifiedLineTradeDelivery>
+               <ram:SpecifiedLineTradeSettlement>
+                    <ram:ApplicableTradeTax>
+                         <ram:TypeCode>VAT</ram:TypeCode>
+                         <ram:ExemptionReason>Exo1</ram:ExemptionReason>
+                         <ram:CategoryCode>E</ram:CategoryCode>
+                         <ram:DueDateTypeCode>5</ram:DueDateTypeCode>
+                         <ram:RateApplicablePercent>0.00</ram:RateApplicablePercent>
+                    </ram:ApplicableTradeTax>
+                    <ram:BillingSpecifiedPeriod>
+                         <ram:StartDateTime>
+                              <udt:DateTimeString format="102">20260501</udt:DateTimeString>
+                         </ram:StartDateTime>
+                         <ram:EndDateTime>
+                              <udt:DateTimeString format="102">20260531</udt:DateTimeString>
+                         </ram:EndDateTime>
+                    </ram:BillingSpecifiedPeriod>
+                    <ram:SpecifiedTradeSettlementLineMonetarySummation>
+                         <ram:LineTotalAmount>0.66</ram:LineTotalAmount>
+                    </ram:SpecifiedTradeSettlementLineMonetarySummation>
+               </ram:SpecifiedLineTradeSettlement>
+          </ram:IncludedSupplyChainTradeLineItem>
+          <ram:IncludedSupplyChainTradeLineItem>
+               <ram:AssociatedDocumentLineDocument>
+                    <ram:LineID>5</ram:LineID>
+               </ram:AssociatedDocumentLineDocument>
+               <ram:SpecifiedTradeProduct>
+                    <ram:Name>TANK</ram:Name>
+                    <ram:Description>Mise à disposition</ram:Description>
+               </ram:SpecifiedTradeProduct>
+               <ram:SpecifiedLineTradeAgreement>
+                     <ram:GrossPriceProductTradePrice>
+                         <ram:ChargeAmount>3.0490</ram:ChargeAmount>
+                         <ram:BasisQuantity unitCode="LTR">1.0000</ram:BasisQuantity>
+                     </ram:GrossPriceProductTradePrice>
+                    <ram:NetPriceProductTradePrice>
+                         <ram:ChargeAmount>3.0490</ram:ChargeAmount>
+                         <ram:BasisQuantity unitCode="LTR">1.0000</ram:BasisQuantity>
+                    </ram:NetPriceProductTradePrice>
+               </ram:SpecifiedLineTradeAgreement>
+               <ram:SpecifiedLineTradeDelivery>
+                    <ram:BilledQuantity unitCode="LTR">43.8100</ram:BilledQuantity>
+               </ram:SpecifiedLineTradeDelivery>
+               <ram:SpecifiedLineTradeSettlement>
+                    <ram:ApplicableTradeTax>
+                         <ram:TypeCode>VAT</ram:TypeCode>
+                         <ram:CategoryCode>S</ram:CategoryCode>
+                         <ram:DueDateTypeCode>5</ram:DueDateTypeCode>
+                         <ram:RateApplicablePercent>20.00</ram:RateApplicablePercent>
+                    </ram:ApplicableTradeTax>
+                    <ram:BillingSpecifiedPeriod>
+                         <ram:StartDateTime>
+                              <udt:DateTimeString format="102">20260501</udt:DateTimeString>
+                         </ram:StartDateTime>
+                         <ram:EndDateTime>
+                              <udt:DateTimeString format="102">20260531</udt:DateTimeString>
+                         </ram:EndDateTime>
+                    </ram:BillingSpecifiedPeriod>
+                    <ram:SpecifiedTradeSettlementLineMonetarySummation>
+                         <ram:LineTotalAmount>133.58</ram:LineTotalAmount>
+                    </ram:SpecifiedTradeSettlementLineMonetarySummation>
+               </ram:SpecifiedLineTradeSettlement>
+          </ram:IncludedSupplyChainTradeLineItem>
+          <ram:ApplicableHeaderTradeAgreement>
+               <ram:SellerTradeParty>
+                    <ram:Name>COOP1</ram:Name>
+                    <ram:Description>SARL AU CAPITAL DE 100 000 EUROS</ram:Description>
+                    <ram:SpecifiedLegalOrganization>
+                         <ram:ID schemeID="0002">200000008</ram:ID>
+                    </ram:SpecifiedLegalOrganization>
+                    <ram:PostalTradeAddress>
+                         <ram:PostcodeCode>06000</ram:PostcodeCode>
+                         <ram:LineOne>55 avenue de là-bas</ram:LineOne>
+                         <ram:LineTwo>acheteur ligne 2</ram:LineTwo>
+                         <ram:CityName>MA VILLE</ram:CityName>
+                         <ram:CountryID>FR</ram:CountryID>
+                    </ram:PostalTradeAddress>
+                    <ram:URIUniversalCommunication>
+                         <ram:URIID schemeID="0225">200000008_STATUTS</ram:URIID>
+                    </ram:URIUniversalCommunication>
+                    <ram:SpecifiedTaxRegistration>
+                         <ram:ID schemeID="VA">FR37288100000008</ram:ID>
+                    </ram:SpecifiedTaxRegistration>
+               </ram:SellerTradeParty>
+               <ram:BuyerTradeParty>
+                    <ram:GlobalID schemeID="0088">3654789851</ram:GlobalID>
+                    <ram:Name>AGRI1</ram:Name>
+                    <ram:SpecifiedLegalOrganization>
+                         <ram:ID schemeID="0002">100000009</ram:ID>
+                    </ram:SpecifiedLegalOrganization>
+                    <ram:PostalTradeAddress>
+                         <ram:PostcodeCode>75018</ram:PostcodeCode>
+                         <ram:LineOne>35 rue d'ici</ram:LineOne>
+                         <ram:LineTwo>ligne 2 vendeur</ram:LineTwo>
+                         <ram:CityName>PARIS</ram:CityName>
+                         <ram:CountryID>FR</ram:CountryID>
+                    </ram:PostalTradeAddress>
+                    <ram:URIUniversalCommunication>
+                         <ram:URIID schemeID="0225">100000009</ram:URIID>
+                    </ram:URIUniversalCommunication>
+                    <ram:SpecifiedTaxRegistration>
+                         <ram:ID schemeID="VA">FR88100000009</ram:ID>
+                    </ram:SpecifiedTaxRegistration>
+               </ram:BuyerTradeParty>
+            <ram:ContractReferencedDocument>
+                <ram:IssuerAssignedID>MARCHE-2026-014</ram:IssuerAssignedID>
+            </ram:ContractReferencedDocument>
+            <ram:AdditionalReferencedDocument>
+                <ram:IssuerAssignedID>SITUATION-03</ram:IssuerAssignedID>
+                <ram:TypeCode>916</ram:TypeCode>
+                <ram:Name>DOCUMENT_ANNEXE</ram:Name>
+                <ram:AttachmentBinaryObject mimeCode="text/csv" filename="releve.csv">UmVsZXbDqSBkZSB0cmF2YXV4</ram:AttachmentBinaryObject>
+            </ram:AdditionalReferencedDocument>
+            <ram:BuyerAgentTradeParty>
+                <ram:Name>MAITRE D OEUVRE</ram:Name>
+                <ram:RoleCode>AB</ram:RoleCode>
+                <ram:SpecifiedLegalOrganization>
+                    <ram:ID schemeID="0002">300000007</ram:ID>
+                </ram:SpecifiedLegalOrganization>
+                <ram:URIUniversalCommunication>
+                    <ram:URIID schemeID="0225">300000007</ram:URIID>
+                </ram:URIUniversalCommunication>
+            </ram:BuyerAgentTradeParty>
+            <ram:SpecifiedProcuringProject>
+                <ram:ID>CH-2026-001</ram:ID>
+                <ram:Name>Chantier école</ram:Name>
+            </ram:SpecifiedProcuringProject>
+          </ram:ApplicableHeaderTradeAgreement>
+          <ram:ApplicableHeaderTradeDelivery>
+               <ram:ShipToTradeParty>
+                    <ram:Name>A LA FERME</ram:Name>
+                    <ram:PostalTradeAddress>
+                         <ram:PostcodeCode>75018</ram:PostcodeCode>
+                         <ram:LineOne>35 rue d'ici</ram:LineOne>
+                         <ram:LineTwo>ligne 2 vendeur</ram:LineTwo>
+                         <ram:CityName>PARIS</ram:CityName>
+                         <ram:CountryID>FR</ram:CountryID>
+                    </ram:PostalTradeAddress>
+               </ram:ShipToTradeParty>
+          </ram:ApplicableHeaderTradeDelivery>
+          <ram:ApplicableHeaderTradeSettlement>
+               <ram:PaymentReference>F202600037_100000009</ram:PaymentReference>
+               <ram:InvoiceCurrencyCode>EUR</ram:InvoiceCurrencyCode>
+               <ram:PayerTradeParty>
+                <ram:Name>COMMUNE DE MAVILLE</ram:Name>
+                <ram:RoleCode>PR</ram:RoleCode>
+                <ram:SpecifiedLegalOrganization>
+                    <ram:ID schemeID="0002">400000006</ram:ID>
+                </ram:SpecifiedLegalOrganization>
+                <ram:PostalTradeAddress>
+                    <ram:PostcodeCode>06000</ram:PostcodeCode>
+                    <ram:LineOne>1 place de la mairie</ram:LineOne>
+                    <ram:CityName>MA VILLE</ram:CityName>
+                    <ram:CountryID>FR</ram:CountryID>
+                </ram:PostalTradeAddress>
+                <ram:URIUniversalCommunication>
+                    <ram:URIID schemeID="0225">400000006</ram:URIID>
+                </ram:URIUniversalCommunication>
+            </ram:PayerTradeParty>
+            <ram:SpecifiedTradeSettlementPaymentMeans>
+                    <ram:TypeCode>97</ram:TypeCode>
+                    <ram:Information>COMPENSATION</ram:Information>
+               </ram:SpecifiedTradeSettlementPaymentMeans>
+               <ram:ApplicableTradeTax>
+                    <ram:CalculatedAmount>39.89</ram:CalculatedAmount>
+                    <ram:TypeCode>VAT</ram:TypeCode>
+                    <ram:BasisAmount>199.43</ram:BasisAmount>
+                    <ram:CategoryCode>S</ram:CategoryCode>
+                    <ram:DueDateTypeCode>5</ram:DueDateTypeCode>
+                    <ram:RateApplicablePercent>20.00</ram:RateApplicablePercent>
+               </ram:ApplicableTradeTax>
+               <ram:ApplicableTradeTax>
+                    <ram:CalculatedAmount>0.00</ram:CalculatedAmount>
+                    <ram:TypeCode>VAT</ram:TypeCode>
+                    <ram:ExemptionReason>Exo1</ram:ExemptionReason>
+                    <ram:BasisAmount>5.35</ram:BasisAmount>
+                    <ram:CategoryCode>E</ram:CategoryCode>
+                    <ram:DueDateTypeCode>5</ram:DueDateTypeCode>
+                    <ram:RateApplicablePercent>0.00</ram:RateApplicablePercent>
+               </ram:ApplicableTradeTax>
+               <ram:BillingSpecifiedPeriod>
+                    <ram:StartDateTime>
+                         <udt:DateTimeString format="102">20260501</udt:DateTimeString>
+                    </ram:StartDateTime>
+                    <ram:EndDateTime>
+                         <udt:DateTimeString format="102">20260531</udt:DateTimeString>
+                    </ram:EndDateTime>
+               </ram:BillingSpecifiedPeriod>
+               <ram:SpecifiedTradePaymentTerms>
+                    <ram:Description>PAIEMENT 30 JOURS NET</ram:Description>
+                    <ram:DueDateDateTime>
+                         <udt:DateTimeString format="102">20260702</udt:DateTimeString>
+                    </ram:DueDateDateTime>
+               </ram:SpecifiedTradePaymentTerms>
+               <ram:SpecifiedTradeSettlementHeaderMonetarySummation>
+                    <ram:LineTotalAmount>204.78</ram:LineTotalAmount>
+                    <ram:ChargeTotalAmount>0.00</ram:ChargeTotalAmount>
+                    <ram:AllowanceTotalAmount>0.00</ram:AllowanceTotalAmount>
+                    <ram:TaxBasisTotalAmount>204.78</ram:TaxBasisTotalAmount>
+                    <ram:TaxTotalAmount currencyID="EUR">39.89</ram:TaxTotalAmount>
+                    <ram:GrandTotalAmount>244.67</ram:GrandTotalAmount>
+                    <ram:TotalPrepaidAmount>244.67</ram:TotalPrepaidAmount>
+                    <ram:DuePayableAmount>0.00</ram:DuePayableAmount>
+               </ram:SpecifiedTradeSettlementHeaderMonetarySummation>
+            <ram:InvoiceReferencedDocument>
+                <ram:IssuerAssignedID>F202600010</ram:IssuerAssignedID>
+                <ram:TypeCode>386</ram:TypeCode>
+                <ram:FormattedIssueDateTime>
+                    <qdt:DateTimeString format="102">20260415</qdt:DateTimeString>
+                </ram:FormattedIssueDateTime>
+            </ram:InvoiceReferencedDocument>
+          </ram:ApplicableHeaderTradeSettlement>
+     </rsm:SupplyChainTradeTransaction>
+</rsm:CrossIndustryInvoice>

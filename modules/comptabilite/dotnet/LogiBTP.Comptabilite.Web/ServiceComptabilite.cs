@@ -156,7 +156,7 @@ public sealed class ServiceComptabilite(ComptabiliteDbContext db, Specialisation
 
     public async Task<List<CategorieTvaDto>> CategoriesTvaAsync(CancellationToken ct) =>
         await db.CategoriesTva.AsNoTracking().OrderBy(x => x.CtvOrdre).ThenBy(x => x.CtvCode)
-            .Select(x => new CategorieTvaDto(x.CtvCode, x.CtvLibelle, x.CtvComportement, x.CtvMention, x.CtvExigibilite, x.CtvOrdre, x.CtvActif)).ToListAsync(ct);
+            .Select(x => new CategorieTvaDto(x.CtvCode, x.CtvLibelle, x.CtvComportement, x.CtvMention, x.CtvExigibilite, x.CtvOrdre, x.CtvActif, x.CtvCategorieEn16931, x.CtvVatex)).ToListAsync(ct);
 
     /// <summary>Liste complète : une catégorie retirée est supprimée si aucun taux ne s'y rattache.</summary>
     public async Task<List<CategorieTvaDto>> EnregistrerCategoriesTvaAsync(List<CategorieTvaDto> l, CancellationToken ct)
@@ -166,6 +166,8 @@ public sealed class ServiceComptabilite(ComptabiliteDbContext db, Specialisation
             if (string.IsNullOrWhiteSpace(c.Code) || string.IsNullOrWhiteSpace(c.Libelle)) throw ExceptionMetier.Invalide("TVA_CATEGORIE", "Code et libellé de la catégorie obligatoires");
             if (c.Comportement is not ("N" or "A" or "I" or "E")) throw ExceptionMetier.Invalide("TVA_COMPORTEMENT", $"{c.Libelle} : comportement inconnu");
             if (c.Exigibilite is not (null or "E" or "D")) throw ExceptionMetier.Invalide("TVA_EXIGIBILITE", $"{c.Libelle} : exigibilité inconnue");
+            if (!string.IsNullOrWhiteSpace(c.CategorieEn16931) && !CategorieEn16931.Toutes.Contains(c.CategorieEn16931.Trim().ToUpperInvariant()))
+                throw ExceptionMetier.Invalide("TVA_EN16931", $"{c.Libelle} : catégorie EN 16931 inconnue");
         }
         var codes = l.Select(c => c.Code.Trim().ToUpperInvariant()).ToList();
         if (codes.Distinct().Count() != codes.Count) throw ExceptionMetier.Invalide("TVA_DOUBLON", "Même catégorie deux fois");
@@ -186,6 +188,12 @@ public sealed class ServiceComptabilite(ComptabiliteDbContext db, Specialisation
             x.CtvExigibilite = c.Exigibilite;
             x.CtvOrdre = (i + 1) * 10;
             x.CtvActif = c.Actif;
+            // Catégorie et VATEX vides : proposés depuis le comportement.
+            var propose = ReglesTva.Proposer(c.Comportement);
+            x.CtvCategorieEn16931 = string.IsNullOrWhiteSpace(c.CategorieEn16931) ? propose?.Categorie : c.CategorieEn16931.Trim().ToUpperInvariant();
+            x.CtvVatex = string.IsNullOrWhiteSpace(c.Vatex)
+                ? (string.IsNullOrWhiteSpace(c.CategorieEn16931) || c.CategorieEn16931.Trim().ToUpperInvariant() == propose?.Categorie ? propose?.Vatex : null)
+                : c.Vatex.Trim();
         }
         await db.SaveChangesAsync(ct);
         return await CategoriesTvaAsync(ct);

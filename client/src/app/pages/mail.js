@@ -10,6 +10,8 @@ import { api, ErreurApi } from '../api.js';
 import { zoneRiche } from '../crm/crm.js';
 import { choisirDestinataires, ajouterDestinataires } from '../annuaire/choix.js';
 import { pastilleCompteMail } from './parametres-mail.js';
+import { estFichierFacture } from '@logibtp/facture-electronique';
+import { factureDuCourriel, peutDeposerFacture } from '../facture-electronique/depot-facture.js';
 
 // Libellés par code (module Personnalisation) ; classe de la pastille par état.
 const CLASSES_ETATS = { A_ENVOYER: 'attention', EN_COURS: 'attention', ENVOYE: 'ok', ERREUR: 'erreur', ANNULE: 'neutre', SUSPENDU: 'erreur', BROUILLON: 'neutre',
@@ -278,6 +280,12 @@ export function brancherMessages(zone, app) {
   zone.querySelectorAll('tr[data-id]').forEach((tr) => tr.addEventListener('click', () => app.naviguer(`/mail/message/${tr.dataset.id}`, { nouvelleFenetre: true })));
 }
 
+/**
+ * « Créer la facture » proposé sur une pièce jointe d'un courriel reçu : Factur-X (PDF) ou XML (règle du module),
+ * facturation électronique active et droit Modifier de son nœud.
+ */
+export const proposerFacture = (message, piece, app) => message?.sens === 'R' && estFichierFacture(piece?.nom, piece?.type) && peutDeposerFacture(app);
+
 /** Détail d'un courriel : état, attente ou erreur, destinataires, pièces, journal ; annuler (en attente) ou relancer (erreur). */
 export class PageMessageMail extends PageBase {
   icone = icone('mail_btp_courriel');
@@ -310,7 +318,8 @@ export class PageMessageMail extends PageBase {
             <button type="button" data-marquer="${echapper(x.adresse)}" title="${texteHtml('mail_btp.message.signaler_titre')}">${iconeHtml('avertissement')} ${texteHtml('mail_btp.message.signaler')}</button>` : ''}`).join(', ')}</td></tr>` : '').join('')}
         <tr><th>${texteHtml('mail_btp.message.cree')}</th><td>${texteHtml('mail_btp.message.cree_par', { date: formatDateHeure(m.cree_le), nom: m.cree_par })}</td></tr>
         <tr><th>${m.envoye_le ? texteHtml('mail_btp.message.envoye') : texteHtml('mail_btp.message.depart_prevu')}</th><td>${formatDateHeure(m.envoye_le ?? m.prochain_essai)}${m.tentatives ? ` · ${echapper(pluriel('mail_btp.message.essais', m.tentatives))}` : ''}</td></tr>
-        ${d.pieces.length ? `<tr><th>${texteHtml('mail_btp.message.pieces')}</th><td>${d.pieces.map((p) => `${iconeHtml('mail_btp_piece')} ${echapper(p.nom)} <span class="aide">${taille(p.taille)}</span>`).join('<br>')}</td></tr>` : ''}
+        ${d.pieces.length ? `<tr><th>${texteHtml('mail_btp.message.pieces')}</th><td>${d.pieces.map((p, i) => `${iconeHtml('mail_btp_piece')} ${echapper(p.nom)} <span class="aide">${taille(p.taille)}</span>${proposerFacture(m, p, this.app)
+          ? ` <button type="button" data-facture="${i}" title="${texteHtml('facture_electronique_btp.depot.courriel_aide')}">${iconeHtml('facture_electronique_btp_importer')} ${texteHtml('facture_electronique_btp.depot.courriel')}</button>` : ''}`).join('<br>')}</td></tr>` : ''}
       </tbody></table>
       ${m.sens === 'R' ? `<h2>${texteHtml('mail_btp.message.rattachements')}</h2>${d.liens.length ? `<ul>${d.liens.map((l) => `<li>${l.url ? `<a href="${echapper(l.url)}" data-lien>${echapper(l.libelle ?? `${l.type} ${l.id}`)}</a>` : echapper(l.libelle ?? `${l.type} ${l.id}`)}
           <span class="aide">${echapper(l.origine.toLowerCase())}${l.score != null ? ` ${l.score} %` : ''}, ${echapper(l.par)}</span>
@@ -333,6 +342,12 @@ export class PageMessageMail extends PageBase {
     });
     action('[data-annuler]', () => api.mail.annuler(m.id));
     action('[data-relancer]', () => api.mail.relancer(m.id));
+    // Pièce jointe Factur-X ou XML d'un courriel reçu : facture créée par le même traitement qu'un flux reçu (lot 14).
+    zone.querySelectorAll('[data-facture]').forEach((b) => b.addEventListener('click', async () => {
+      b.disabled = true;
+      await factureDuCourriel(this.app, m.id, d.pieces[Number(b.dataset.facture)]);
+      b.disabled = false;
+    }));
     zone.querySelector('[data-element]')?.addEventListener('click', () => this.app.naviguer(urlDocument(m.id_element), { nouvelleFenetre: true }));
     zone.querySelectorAll('[data-lien]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); this.app.naviguer(a.getAttribute('href'), { nouvelleFenetre: true }); }));
     zone.querySelectorAll('[data-marquer]').forEach((b) => b.addEventListener('click', async () => {

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rsm:CrossDomainAcknowledgementAndResponse xmlns:rsm="urn:un:unece:uncefact:data:standard:CrossDomainAcknowledgementAndResponse:100" xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100" xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100" xmlns:qdt="urn:un:unece:uncefact:data:standard:QualifiedDataType:100">
+  <rsm:ExchangedDocumentContext>
+    <ram:BusinessProcessSpecifiedDocumentContextParameter>
+      <ram:ID>REGULATED</ram:ID>
+    </ram:BusinessProcessSpecifiedDocumentContextParameter>
+    <ram:GuidelineSpecifiedDocumentContextParameter>
+      <ram:ID>urn.cpro.gouv.fr:1p0:CDV:invoice</ram:ID>
+    </ram:GuidelineSpecifiedDocumentContextParameter>
+  </rsm:ExchangedDocumentContext>
+  <rsm:ExchangedDocument>
+    <ram:ID>F202600101_501_20261109095500</ram:ID>
+    <ram:Name>F202600101_501_20261109095500</ram:Name>
+    <ram:IssueDateTime>
+      <udt:DateTimeString format="204">20261109100000</udt:DateTimeString>
+    </ram:IssueDateTime>
+    <ram:SenderTradeParty>
+      <ram:RoleCode>WK</ram:RoleCode>
+    </ram:SenderTradeParty>
+    <ram:IssuerTradeParty>
+      <ram:RoleCode>WK</ram:RoleCode>
+    </ram:IssuerTradeParty>
+    <ram:RecipientTradeParty>
+      <ram:GlobalID schemeID="0238">0003</ram:GlobalID>
+      <ram:Name>PA-E VENDEUR</ram:Name>
+      <ram:RoleCode>WK</ram:RoleCode>
+    </ram:RecipientTradeParty>
+  </rsm:ExchangedDocument>
+  <rsm:AcknowledgementDocument>
+    <ram:MultipleReferencesIndicator>
+      <udt:Indicator>false</udt:Indicator>
+    </ram:MultipleReferencesIndicator>
+    <ram:TypeCode>305</ram:TypeCode>
+    <ram:IssueDateTime>
+      <udt:DateTimeString format="204">20261109095500</udt:DateTimeString>
+    </ram:IssueDateTime>
+    <ram:ReferenceReferencedDocument>
+      <ram:IssuerAssignedID>F202600101</ram:IssuerAssignedID>
+      <ram:ProcessConditionCode>501</ram:ProcessConditionCode>
+      <ram:SpecifiedDocumentStatus>
+        <ram:ReasonCode>IRR_SYNTAX</ram:ReasonCode>
+        <ram:SequenceNumeric>1</ram:SequenceNumeric>
+      </ram:SpecifiedDocumentStatus>
+    </ram:ReferenceReferencedDocument>
+  </rsm:AcknowledgementDocument>
+</rsm:CrossDomainAcknowledgementAndResponse>

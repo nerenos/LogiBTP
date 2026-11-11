@@ -40,6 +40,9 @@ import { ouvrirImport, creerDepuisImport, rendreBandeauImport, tracabiliteImport
 import { formatImport } from '../import/formats.js';
 import { PanneauSuivi } from '../crm/panneau-suivi.js';
 import { voisins } from '../suite-liste.js';
+import { afficherChronologieDocument, ongletChronologieVisible, requeteFluxPiece, NOEUD_FE } from '../documents/chronologie-document.js';
+import { activerDepotFactures, TYPES_DEPOT_FACTURE } from '../facture-electronique/depot-facture.js';
+import { apiFe } from '../facture-electronique/api-fe.js';
 
 // Document (devis, facture…) dans l'éditeur du cœur, toujours lu dans la base : /document/<id>,
 // /document/nouveau?type=<code>, /document/import?jeton=<jeton> (devis importé à vérifier avant sa création, ouvert
@@ -68,6 +71,7 @@ const gabarit = () => `
       <button role="tab" data-onglet-vue="analyse" title="${texteHtml('document_btp.page.onglets.analyse_aide', { raccourci: libelleRaccourci('ongletAnalyse', 'document') })}">${iconeHtml('document_btp_analyse')}</button>
       <button role="tab" data-onglet-vue="pieces" title="${texteHtml('document_btp.page.onglets.pieces_aide', { raccourci: libelleRaccourci('ongletPieces', 'document') })}">${iconeHtml('navigation_btp_ged')}</button>
       <button role="tab" data-onglet-vue="suivi" title="${texteHtml('document_btp.page.onglets.suivi_aide', { raccourci: libelleRaccourci('ongletSuivi', 'document') })}">${iconeHtml('document_btp_suivi')}</button>
+      <button role="tab" data-onglet-vue="chronologie" hidden title="${texteHtml('document_btp.page.onglets.chronologie_aide', { raccourci: libelleRaccourci('ongletChronologie', 'document') })}">${iconeHtml('document_btp_chronologie')}</button>
       <button role="tab" data-onglet-vue="options" title="${texteHtml('document_btp.page.onglets.options_aide', { raccourci: libelleRaccourci('ongletOptions', 'document') })}">${iconeHtml('document_btp_options')}</button>
     </nav>
     <div class="groupe groupe-outils">
@@ -129,6 +133,8 @@ const gabarit = () => `
         <div id="tracabilite" class="suivi-contenu"></div>
       </div>
     </section>
+    <!-- Chronologie (facturation électronique, lot 11) : étapes des flux de la pièce, puis historique du document. -->
+    <section id="vue-chronologie" class="vue vue-chronologie" role="tabpanel"></section>
     <section id="vue-options" class="vue vue-options" role="tabpanel"><div id="options" class="panneau entete"></div></section>
     <section id="vue-reglements" class="vue vue-reglements" role="tabpanel"></section>
     <section id="vue-lignes" class="vue vue-lignes" role="tabpanel">
@@ -195,6 +201,11 @@ export class PageDocument extends PageBase {
     const app = this.app;
     this.conteneur.innerHTML = gabarit();
     this.conteneur.classList.add('page-document');
+    // Factur-X ou XML glissé sur une facture d'achat (lot 14 de la facturation électronique) : facture reçue hors
+    // plateforme, pièce créée en brouillon comme pour un flux reçu (ouverte ensuite) ; la GED garde ses propres dépôts.
+    this.retirerDepotFacture = activerDepotFactures(this.conteneur, {
+      app, accepte: () => TYPES_DEPOT_FACTURE.includes(this.editeur?.definition?.type?.tyd_code),
+    });
     this.disposition = new Disposition({
       racine: this.conteneur,
       // Notifications du document : en bas, ouvertes par le compteur ⚠ de la barre (Alt+7).
@@ -205,6 +216,7 @@ export class PageDocument extends PageBase {
         if (o === 'pieces') this.afficherPieces();
         if (o === 'suivi') { this.afficherSuivi(); this.afficherTracabilite(); }
         if (o === 'reglements') this.afficherReglements();
+        if (o === 'chronologie') this.afficherChronologie();
       },
       // Plan fermé : le filtre d'affichage qu'il a posé est retiré.
       surDock: (id, visible) => { if (id === 'plan' && !visible && this.editeur?.filtre !== null) this.editeur?.filtrer(null); },
@@ -273,7 +285,12 @@ export class PageDocument extends PageBase {
       if (e.defaultPrevented) return;
       const action = actionDe(e, 'document');
       if (!action) return;
-      if (ONGLETS_DOCUMENT[action]) { e.preventDefault(); this.disposition.onglet(ONGLETS_DOCUMENT[action]); return; }
+      if (ONGLETS_DOCUMENT[action]) {
+        e.preventDefault();
+        // Onglet masqué (Chronologie d'une pièce sans flux…) : raccourci sans effet.
+        if (!this.$(`[data-onglet-vue="${ONGLETS_DOCUMENT[action]}"]`)?.hidden) this.disposition.onglet(ONGLETS_DOCUMENT[action]);
+        return;
+      }
       if (action === 'rechercher') {
         if (!this.recherche) return;
         e.preventDefault();
@@ -692,6 +709,7 @@ export class PageDocument extends PageBase {
     // Onglet Règlements : pièces de vente et d'achat (pas les ordres d'exécution) ; rafraîchi à chaque changement de version.
     this.$('[data-onglet-vue="reglements"]').hidden = typeDoc?.tyd_famille === FAMILLE_DOCUMENT.EXECUTION;
     if (this.disposition?.p.onglet === 'reglements' && this.reglementsCle !== this.cleTracabilite()) this.afficherReglements();
+    this.#majOngletChronologie();
     this.app.majPage();
   }
 
@@ -967,6 +985,46 @@ export class PageDocument extends PageBase {
       reimporter: (o) => this.app.naviguer(`${formatImport(o.dor_format).page}?ged=${o.dor_fichier_id}`, { nouvelleFenetre: true }),
       // Restauration d'une version : document modifiable par cet utilisateur et non bloqué par un autre (verrou).
       restaurer: this.#modifiable() && !this.editeur.magasin.lectureSeule ? (h) => this.restaurerVersion(h).catch((x) => this.app.erreur(x)) : null,
+    }).catch((x) => { zone.innerHTML = `<p class="erreur">${echapper(x.message)}</p>`; });
+  }
+
+  /**
+   * Onglet Chronologie (facturation électronique) : proposé si le module est actif, si l'utilisateur consulte le nœud et
+   * si la pièce enregistrée est liée à au moins un flux (lu une fois par pièce) ; rafraîchi à chaque version.
+   */
+  async #majOngletChronologie() {
+    const bouton = this.$('[data-onglet-vue="chronologie"]');
+    const entId = this.editeur?.saisie.document.ent_id;
+    const moduleActif = this.app.moduleActif(MODULE_FACULTATIF.FACTURE_ELECTRONIQUE);
+    const peutConsulter = this.app.peut(NOEUD_FE, ACTION_DROIT.CONSULTER);
+    if (!bouton) return;
+    // Onglet masqué alors qu'il était retenu (pièce sans flux, module désactivé) : retour à l'entête.
+    const masquer = () => { bouton.hidden = true; if (this.disposition?.p.onglet === 'chronologie') this.disposition.onglet('entete'); };
+    if (!moduleActif || !peutConsulter || !(entId > 0)) { masquer(); return; }
+    if (this.chronologiePiece !== entId) {
+      this.chronologiePiece = entId;
+      this.chronologieFlux = [];
+      try { this.chronologieFlux = (await apiFe.flux(requeteFluxPiece(entId))) ?? []; } catch { /* sans flux lisible : onglet masqué */ }
+    }
+    if (this.editeur?.saisie.document.ent_id !== entId) return;
+    if (!ongletChronologieVisible({ moduleActif, peutConsulter, entId, flux: this.chronologieFlux })) { masquer(); return; }
+    bouton.hidden = false;
+    if (this.disposition?.p.onglet === 'chronologie' && this.chronologieCle !== this.cleTracabilite()) this.afficherChronologie();
+  }
+
+  /** Onglet Chronologie : étapes des flux de la pièce (composant du module) et historique des versions du document. */
+  afficherChronologie() {
+    const zone = this.$('#vue-chronologie');
+    const d = this.editeur?.saisie.document;
+    if (!zone || !d?.ent_id) return;
+    this.chronologieCle = this.cleTracabilite();
+    afficherChronologieDocument(zone, {
+      entId: d.ent_id, apiFe,
+      historique: async () => (await api.tracabilite(d.ent_id))?.historique ?? [],
+      ouvrirFlux: (id, nouvelleFenetre) => this.app.naviguer(`/facture-electronique?flux=${id}`, { nouvelleFenetre }),
+      peutModifier: this.app.peut(NOEUD_FE, ACTION_DROIT.MODIFIER),
+      message: (m) => this.app.message(m, 'succes'),
+      erreur: (e) => this.app.erreur(e),
     }).catch((x) => { zone.innerHTML = `<p class="erreur">${echapper(x.message)}</p>`; });
   }
 
@@ -1467,6 +1525,7 @@ export class PageDocument extends PageBase {
   }
 
   fermer() {
+    this.retirerDepotFacture?.();
     fermerAideMemoire();
     this.desabonnerEnvoi?.();
     this.desabonnerAttente?.();

@@ -201,6 +201,16 @@ export const SOURCES_LISTE = {
       ['actif', 'boolean'], ['modifie_le', 'timestamp with time zone'], ['usage', 'text'],
     ],
   },
+  // Factures électroniques reçues (db/296 : v_liste_fe_recues, lot 12 de la facturation électronique) : pièce créée ou flux à traiter.
+  fe_recues: {
+    libelle: 'Factures électroniques reçues', vue: 'v_liste_fe_recues', colonne_id: 'id', colonne_type: 'type_element',
+    colonnes: [
+      ['id', 'bigint'], ['type_element', 'text'], ['flux_id', 'bigint'], ['recue_le', 'timestamp with time zone'], ['numero', 'text'],
+      ['fournisseur', 'text'], ['siren', 'text'], ['date_facture', 'date'], ['total_ht', 'numeric'], ['total_ttc', 'numeric'], ['etat', 'text'],
+      ['syntaxe', 'text'], ['connecteur', 'text'], ['piece_id', 'bigint'], ['type_piece', 'text'], ['numero_piece', 'text'], ['statut_piece', 'text'],
+      ['piece_validee', 'boolean'], ['fournisseur_provisoire', 'boolean'], ['erreur', 'text'], ['a_traiter', 'boolean'],
+    ],
+  },
   ged: {
     libelle: 'Documents (GED)', vue: 'v_liste_ged', colonne_id: 'id', colonne_type: 'type_element',
     colonnes: [
@@ -284,6 +294,7 @@ export const THEMES_LISTE = [
   { thl_code: 'bibliotheque', thl_libelle: 'Bibliothèque', thl_icone: '📚', thl_ordre: 65, thl_types: [{ code: 'element', libelle: 'Élément' }] },
   { thl_code: 'tiers', thl_libelle: 'Tiers', thl_icone: '🏢', thl_ordre: 15, thl_types: [{ code: 'personne', libelle: 'Personne' }] },
   { thl_code: 'contacts', thl_libelle: 'Contacts', thl_icone: '👤', thl_ordre: 16, thl_types: [{ code: 'individu', libelle: 'Individu' }] },
+  { thl_code: 'fe_recues', thl_libelle: 'Factures électroniques reçues', thl_icone: '📥', thl_ordre: 37, thl_types: [] },
   { thl_code: 'ged', thl_libelle: 'Documents (GED)', thl_icone: '📎', thl_ordre: 70, thl_types: [{ code: 'document_ged', libelle: 'Document' }] },
   {
     thl_code: 'ressources', thl_libelle: 'Ressources', thl_icone: '🧰', thl_ordre: 60,
@@ -850,6 +861,42 @@ VUES_LISTE.push({
     ],
     segments: [{ colonne: 'service', titre: 'Service' }, { colonne: 'restaurant', titre: 'Restaurant' }],
     tri: [{ colonne: 'date_repas', sens: 'desc' }, { colonne: 'salarie', sens: 'asc' }],
+    lignes: 'multi',
+    taille_lot: 100,
+  },
+});
+
+// Factures électroniques reçues à traiter (lot 12 de la facturation électronique, db/296, vue 1014) : sans pièce (à
+// rattacher ou à saisir, doublon refusé) ou pièce en brouillon (jamais validée automatiquement).
+const ETATS_FLUX_RECU = [
+  { valeur: 'RECU', libelle: 'Reçue', teinte: 'info' }, { valeur: 'TRAITE', libelle: 'Pièce créée', teinte: 'succes' },
+  { valeur: 'ERREUR', libelle: 'En erreur', teinte: 'erreur' }, { valeur: 'ABANDONNE', libelle: 'Abandonnée', teinte: 'neutre' },
+];
+VUES_LISTE.push({
+  vli_id: 1014, vli_nom: 'Factures reçues à traiter', vli_contexte: null, vli_partage: 'T', vli_proprietaire: 'admin', vli_groupe: null,
+  definition: {
+    theme: 'fe_recues',
+    source: { mode: 'vue', vue: 'fe_recues', colonne_id: 'id', colonne_type: 'type_element' },
+    filtres: [{ colonne: 'a_traiter', op: 'vrai' }],
+    colonnes: [
+      col('recue_le', 'Reçue le', { format: 'date', ...fixe(92), recherche: false }),
+      col('fournisseur', 'Fournisseur', { ...prop(2.5, 140), style: { gras: true } }),
+      col('fournisseur_provisoire', 'Tiers\nprov.', { format: 'coche', ...fixe(56), recherche: false, bulle: 'Fiche provisoire créée à la réception, à valider ou à fusionner' }),
+      col('numero', 'N° du\nfournisseur', { ...fixe(120) }),
+      col('date_facture', 'Date de\nla facture', { format: 'date', ...fixe(92), recherche: false }),
+      col('total_ht', 'Total\nHT', { ...nombre(), ...fixe(100), recherche: false }),
+      col('total_ttc', 'Total\nTTC', { ...nombre(), ...fixe(100), recherche: false }),
+      col('etat', 'État', { format: 'pastille', ...fixe(100), options: ETATS_FLUX_RECU }),
+      col('type_piece', 'Pièce', { ...fixe(110) }),
+      col('numero_piece', 'N° de\nla pièce', { ...fixe(110) }),
+      col('statut_piece', 'Statut', { format: 'pastille', ...fixe(100), options: PASTILLES_ETAT_DOCUMENT }),
+      col('erreur', 'Erreur', { ...prop(2, 120) }),
+      col('siren', 'SIREN', { ...fixe(90), masquee: true }),
+      col('syntaxe', 'Format', { ...fixe(80), masquee: true }),
+      col('connecteur', 'Plateforme', { ...fixe(90), masquee: true }),
+    ],
+    segments: [{ colonne: 'etat', titre: 'État' }, { colonne: 'type_piece', titre: 'Pièce' }],
+    tri: [{ colonne: 'recue_le', sens: 'desc' }],
     lignes: 'multi',
     taille_lot: 100,
   },
