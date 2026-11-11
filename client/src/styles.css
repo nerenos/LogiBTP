@@ -74,6 +74,8 @@
 
 /* Paramètres */
 .page-parametres { flex: 1; min-height: 0; overflow: auto; padding: 0.8rem 1.2rem 2rem; display: flex; flex-direction: column; gap: 0.8rem; }
+/* Tableau à la largeur de son contenu posé directement dans la page : non étiré par la colonne flex. */
+.page-parametres > table.largeur-contenu { align-self: flex-start; }
 /* Vues de paramétrage : un tableau prend la largeur de son contenu, calé à gauche, au lieu d'étirer ses colonnes sur
    toute la largeur (lisibilité) ; un tableau qui doit occuper la largeur porte la classe pleine-largeur. */
 .page-parametres table:not(.pleine-largeur):not(.tableau-compact), .themes-table, .concepteur-table { width: auto; max-width: 100%; }

@@ -106,36 +106,36 @@ docs/
 - [x] API : Endpoints document, lignes, métrés, variables, calcul
 
 ### 3.2 Module Planning + Pointage (Priorité haute)
-- [ ] Ressources : Salariés, Intérimaires, Matériels, Sous-traitants, Équipes
-- [ ] Calendriers : Effectifs, fermetures, journées travaillées
-- [ ] Pointage terrain : Borne, journée, non-conformités, restaurants
-- [ ] Liaison Planning → Pointage : Tâches, affectations, jalons
-- [ ] API : Journees, pointages, équipes, calendriers, restaurants
+- [x] Ressources : Salariés, Intérimaires, Matériels, Sous-traitants, Équipes
+- [x] Calendriers : Effectifs, fermetures, journées travaillées
+- [x] Pointage terrain : Borne, journée, non-conformités, restaurants
+- [x] Liaison Planning → Pointage : Tâches, affectations, jalons
+- [x] API : Journees, pointages, équipes, calendriers, restaurants
 
 ### 3.3 Module Exécution (Priorité haute)
-- [ ] Ordres d'exécution : Types (E_OE, E_OI, E_RP...), budget, répartition
-- [ ] Étapes : Planification, validation, contrôle, délégation
-- [ ] Atelier / Borne : Validation étapes, pointage borne
-- [ ] Éditions : Ordres, étapes, avancement
-- [ ] API : Documents exécution, répartition, types, ressources, atelier
+- [x] Ordres d'exécution : Types (E_OE, E_OI, E_RP...), budget, répartition
+- [x] Étapes : Planification, validation, contrôle, délégation
+- [x] Atelier / Borne : Validation étapes, pointage borne
+- [x] Éditions : Ordres, étapes, avancement
+- [x] API : Documents exécution, répartition, types, ressources, atelier
 
 ### 3.4 Module Stock (Priorité moyenne)
-- [ ] Articles : Éléments STOCK, unités, PMP, PA, lots/séries
-- [ ] Mouvements : Entrée/Sortie/Transfert, valorisation, dotation
-- [ ] Magasin : Sorties/retours, dotations salarié, renouvellements EPI
-- [ ] Approvisionnement : Prévisions, commandes fournisseurs
-- [ ] Borne stock : Sortie/retour terrain, validation responsable
-- [ ] Inventaire comptable : Écarts, réévaluation PMP
-- [ ] API : Mouvements, articles, prévisions, magasin, bornes, inventaire
+- [x] Articles : Éléments STOCK, unités, PMP, PA, lots/séries
+- [x] Mouvements : Entrée/Sortie/Transfert, valorisation, dotation
+- [x] Magasin : Sorties/retours, dotations salarié, renouvellements EPI
+- [x] Approvisionnement : Prévisions, commandes fournisseurs
+- [x] Borne stock : Sortie/retour terrain, validation responsable
+- [x] Inventaire comptable : Écarts, réévaluation PMP
+- [x] API : Mouvements, articles, prévisions, magasin, bornes, inventaire
 
 ### 3.5 Module Sous-traitance (Priorité moyenne)
-- [ ] Marchés ST : Sens, nature, garantie, pièces DGE
-- [ ] Consultations : Lots, offres, comparatif, envoi/relance
-- [ ] Commandes/Factures ST : Pièces bloquantes, factures reçues, avancement
-- [ ] Paiement direct : Lien, postes, applicatif
-- [ ] Retenues : Garantie, libération, cautions
-- [ ] Assistant : Comparatif, transformation, suivi engagé/réalisé
-- [ ] API : Consultation, marchés ST, pièces, paiements, retenues
+- [x] Marchés ST : Sens, nature, garantie, pièces DGE
+- [x] Consultations : Lots, offres, comparatif, envoi/relance
+- [x] Commandes/Factures ST : Pièces bloquantes, factures reçues, avancement
+- [x] Paiement direct : Lien, postes, applicatif
+- [x] Retenues : Garantie, libération, cautions
+- [x] Assistant : Comparatif, transformation, suivi engagé/réalisé
+- [x] API : Consultation, marchés ST, pièces, paiements, retenues
 
 ### 3.6 Module Terrain - Application mobile (Priorité moyenne)
 - [ ] Vue journalière : Tâches, équipiers, pièces DGE, chantiers

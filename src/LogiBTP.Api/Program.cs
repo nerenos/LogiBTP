@@ -75,7 +75,9 @@ builder.Services.AddHostedService<CopiesCertificatsLots>();
 
 // Une base par société, choisie par le sous-domaine (section Societes ; sans sous-domaine : ConnectionStrings:LogiBTP).
 builder.Services.AddSocietes(builder.Configuration);
-void Base(IServiceProvider sp, DbContextOptionsBuilder o) => o.UseNpgsql(sp.GetRequiredService<SocieteCourante>().Connexion).UseSnakeCaseNamingConvention();
+// Les requêtes SQL brutes à une ligne (SqlQuery(...).FirstAsync()) sont voulues : l'avertissement EF « First sans OrderBy » n'y apporte rien.
+void Base(IServiceProvider sp, DbContextOptionsBuilder o) => o.UseNpgsql(sp.GetRequiredService<SocieteCourante>().Connexion).UseSnakeCaseNamingConvention()
+    .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.CoreEventId.RowLimitingOperationWithoutOrderByWarning));
 builder.Services.AddDbContext<LogiBtpContext>(Base);
 
 builder.Services.ConfigureHttpJsonOptions(o =>

@@ -48,5 +48,9 @@
     "docs:dev": "npm run dev --workspace docs",
     "docs:build": "npm run build --workspace docs",
     "docs:preview": "npm run preview --workspace docs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.0",
+    "@types/node": "^26.6.6"
   }
 }

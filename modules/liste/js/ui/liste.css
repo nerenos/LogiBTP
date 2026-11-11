@@ -54,7 +54,14 @@ body.deplacement-colonne, body.deplacement-colonne * { cursor: grabbing !importa
 
 /* Segments : boutons de valeurs, filtre appliqué par la base */
 /* Corps : tableau + panneau des segments ancrable (gauche, droite, bas), redimensionnable, réductible */
-.liste-corps { flex: 1; min-height: 0; display: grid; }
+.liste-corps { flex: 1; min-height: 0; display: grid; position: relative; }
+/* Écran de chargement d'une liste lente (affiché après DELAI_ATTENTE) : voile sur le corps, roue et texte centrés. */
+.liste-chargement { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .6rem;
+  background: color-mix(in srgb, var(--surface) 70%, transparent); color: var(--discret); cursor: progress; }
+.liste-chargement[hidden] { display: none; }
+.liste-chargement-roue { width: 2rem; height: 2rem; border-radius: 50%; border: 3px solid var(--accent-clair); border-top-color: var(--accent); animation: liste-roue .8s linear infinite; }
+@keyframes liste-roue { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .liste-chargement-roue { animation-duration: 2.4s; } }
 .liste-corps.dock-droite { grid-template-columns: minmax(0, 1fr) 6px var(--panneau-largeur); grid-template-areas: "zone sep panneau"; }
 .liste-corps.dock-gauche { grid-template-columns: var(--panneau-largeur) 6px minmax(0, 1fr); grid-template-areas: "panneau sep zone"; }
 .liste-corps.dock-bas { grid-template-rows: minmax(0, 1fr) 6px var(--panneau-hauteur); grid-template-columns: minmax(0, 1fr); grid-template-areas: "zone" "sep" "panneau"; }

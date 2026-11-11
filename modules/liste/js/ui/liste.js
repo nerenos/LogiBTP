@@ -1,6 +1,6 @@
 import { texte, texteHtml, pluriel, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { ERREUR_LISTE } from '../src/codes.js';
-import { echapper, lireNombre, creerCombo, ouvrirMenuContextuel, confirmer, lireStockage, ecrireStockage, declarerRaccourcis, actionDe, libelleRaccourci } from '@logibtp/socle/ui';
+import { echapper, lireNombre, creerCombo, ouvrirMenuContextuel, confirmer, lireStockage, ecrireStockage, declarerRaccourcis, actionDe, libelleRaccourci, densiteCompacte } from '@logibtp/socle/ui';
 import { ModeleVue, normaliserDefinition, vraiDonnee, texteIndicateur, TOTAUX_COLONNE } from '../src/modele.js';
 import { filtreActif, correspond, comparerValeurs, estNumerique } from '../src/filtres.js';
 import { calculerLargeurs } from '../src/largeurs.js';
@@ -45,6 +45,8 @@ const LARGEUR_COIN = 30;
 const TAILLE_REFERENCE = 13;
 const DELAI_RECHERCHE = 350;
 const DUREE_MARQUE = 4000;
+/** Délai (ms) avant d'afficher l'écran de chargement d'une liste lente (premier lot d'un chargement). */
+const DELAI_ATTENTE = 400;
 
 /**
  * Liste de données (classe mère) : chargement par lots au défilement, recherche « contient » et segments
@@ -133,6 +135,8 @@ export class ListeDonnees {
     window.removeEventListener('focus', this.surFocus);
     this.observateur?.disconnect();
     this.redim?.disconnect();
+    this.observateurDensite?.disconnect();
+    clearTimeout(this.minuterieAttente);
   }
 
   visible() { return this.racine.offsetParent !== null && document.visibilityState === 'visible'; }
@@ -195,6 +199,9 @@ export class ListeDonnees {
             <div class="liste-segments"></div>
           </div>
         </aside>
+        <div class="liste-chargement" role="status" aria-live="polite" hidden>
+          <span class="liste-chargement-roue" aria-hidden="true"></span><span>${texteHtml('liste.liste.chargement')}</span>
+        </div>
       </div>
       </div>
       <div class="liste-separateur-vues" title="${texteHtml('liste.vues.separateur')}"></div>
@@ -231,6 +238,12 @@ export class ListeDonnees {
     });
     r.querySelector('[data-action="tout"]').addEventListener('click', () => this.basculerTout());
     r.querySelector('[data-action="indicateurs"]').addEventListener('click', () => this.basculerIndicateurs());
+    // Densité compacte : ni bandeau d'indicateurs ni bouton ; suivie en direct (changement depuis le menu).
+    this.compacte = densiteCompacte();
+    if (typeof MutationObserver !== 'undefined' && document.documentElement) {
+      this.observateurDensite = new MutationObserver(() => this.#surDensite());
+      this.observateurDensite.observe(document.documentElement, { attributes: true, attributeFilter: ['data-densite'] });
+    }
     r.querySelector('.liste-indicateurs').addEventListener('click', (e) => {
       const b = e.target.closest('[data-indicateur]');
       if (b) this.choisirIndicateur(b.dataset.indicateur);
@@ -541,6 +554,7 @@ export class ListeDonnees {
     this.enCours = false;
     this.marques.clear();
     this.totauxBase = null;
+    this.#attente(false);
     this.rendreCorps();
     if (!this.vue) return;
     this.chargerAgregats();
@@ -566,6 +580,11 @@ export class ListeDonnees {
   async #chargerLot(gen) {
     this.enCours = true;
     this.#rendreSuite();
+    // Premier lot (ouverture, filtre, tri) : écran de chargement s'il tarde ; les lots suivants gardent l'indication du bas.
+    if (!this.lignes.length) {
+      clearTimeout(this.minuterieAttente);
+      this.minuterieAttente = setTimeout(() => { if (gen === this.generation && this.enCours) this.#attente(true); }, DELAI_ATTENTE);
+    }
     try {
       const r = await this.fournisseur.lot({ ...this.demande(), apres: this.suite, taille: this.definition.taille_lot });
       if (gen !== this.generation) return;
@@ -577,9 +596,17 @@ export class ListeDonnees {
     } finally {
       if (gen === this.generation) {
         this.enCours = false;
+        this.#attente(false);
         this.#rendreSuite();
       }
     }
+  }
+
+  /** Écran de chargement sur le corps de la liste (minuterie arrêtée au masquage). */
+  #attente(visible) {
+    if (!visible) clearTimeout(this.minuterieAttente);
+    const e = this.racine.querySelector('.liste-chargement');
+    if (e) e.hidden = !visible;
   }
 
   /**
@@ -1028,9 +1055,22 @@ export class ListeDonnees {
 
   #indicateurs() { return this.modele ? this.definition.indicateurs ?? [] : []; }
 
-  /** Bandeau d'indicateurs affiché : la vue en déclare et l'utilisateur ne l'a pas masqué (préférence par vue). */
+  /**
+   * Bandeau d'indicateurs affiché : densité confortable, la vue en déclare et l'utilisateur ne l'a pas masqué
+   * (préférence par vue).
+   */
   get indicateursAffiches() {
-    return this.#indicateurs().length > 0 && this.prefs.indicateurs?.[String(this.vue?.vli_id ?? 'nouvelle')] !== false;
+    return !this.compacte && this.#indicateurs().length > 0 && this.prefs.indicateurs?.[String(this.vue?.vli_id ?? 'nouvelle')] !== false;
+  }
+
+  /** Densité changée : bandeau et bouton suivent ; un filtre d'indicateur ne reste pas posé sans bandeau. */
+  #surDensite() {
+    const compacte = densiteCompacte();
+    if (compacte === this.compacte) return;
+    this.compacte = compacte;
+    if (compacte && this.filtreIndicateur) { this.filtreIndicateur = null; this.#appliquerIndicateurs(); this.recharger(); this.rafraichirSegments().catch(() => {}); return; }
+    this.#appliquerIndicateurs();
+    if (this.indicateursAffiches) this.chargerAgregats();
   }
 
   basculerIndicateurs() {
@@ -1058,7 +1098,7 @@ export class ListeDonnees {
   #appliquerIndicateurs() {
     const b = this.racine.querySelector('[data-action="indicateurs"]');
     const affiches = this.indicateursAffiches;
-    b.hidden = !this.#indicateurs().length;
+    b.hidden = this.compacte || !this.#indicateurs().length;
     b.setAttribute('aria-pressed', String(affiches));
     b.classList.toggle('actif', affiches);
     b.title = texte(`liste.liste.indicateurs_${affiches ? 'masquer' : 'afficher'}`);
