@@ -1,0 +1,620 @@
+{
+  "nom": "05_pdfa",
+  "description": "Lot 18 (facturation électronique) : même devis que 01_devis_demo produit en PDF/A-3b générique : métadonnées XMP avec un schéma d'extension fourni par l'appelant, OutputIntent sRGB (profil ICC livré), fichier associé /AF (AFRelationship Data) dans EmbeddedFiles, identifiant /ID déterministe. PDF non compressé de contrôle veraPDF : tests/resultats-js/05_pdfa.js.pdf.",
+  "donnees": "donnees/devis-demo.json",
+  "env": {
+    "aujourdhui": "2026-10-18",
+    "pdf": {
+      "titre": "Devis DV2026-00001",
+      "auteur": "BTP Démonstration",
+      "sujet": "Devis",
+      "date": "2026-10-18T00:00:00Z",
+      "pdfa": {
+        "conformite": "B",
+        "fichiers": [
+          {
+            "nom": "donnees.xml",
+            "type": "text/xml",
+            "relation": "Data",
+            "description": "Données structurées de la pièce",
+            "base64": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPGRvbm5lZXM+PHBpZWNlIG51bWVybz0iRFYyMDI2LTAwMDAxIj5QacOoY2Ugam9pbnRlIGTigJllc3NhaSAoZG9ubsOpZXMgc3RydWN0dXLDqWVzKTwvcGllY2U+PC9kb25uZWVzPgo="
+          }
+        ],
+        "schemas": [
+          {
+            "schema": "Schéma d'essai du module Édition",
+            "espace": "urn:logibtp:edition:essai:1p0#",
+            "prefixe": "essai",
+            "proprietes": [
+              {
+                "nom": "NomFichier",
+                "type": "Text",
+                "categorie": "external",
+                "description": "Nom du fichier associé",
+                "valeur": "donnees.xml"
+              },
+              {
+                "nom": "Version",
+                "type": "Text",
+                "categorie": "external",
+                "description": "Version du format",
+                "valeur": "1.0"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "modele": {
+    "format_version": 1,
+    "code": "ESSAI_DEVIS",
+    "libelle": "Devis (essai du moteur)",
+    "page": {
+      "format": "A4",
+      "orientation": "portrait",
+      "flexible": [
+        "A4",
+        "A3"
+      ],
+      "marges": {
+        "haut": 10,
+        "bas": 10,
+        "gauche": 12,
+        "droite": 12
+      }
+    },
+    "parametres": [
+      {
+        "nom": "composantes",
+        "libelle": "Imprimer les composantes des ouvrages",
+        "type": "booleen",
+        "defaut": false
+      }
+    ],
+    "bandes": [
+      {
+        "type": "FOND_PAGE",
+        "nom": "filigrane",
+        "condition": "NON document.verrouille",
+        "contenu": {
+          "type": "absolu",
+          "x": 40,
+          "y": 190,
+          "largeur": 200,
+          "contenu": {
+            "type": "champ",
+            "valeur": "PROVISOIRE",
+            "style": "filigrane",
+            "rotation": -35,
+            "multiligne": "une"
+          }
+        }
+      },
+      {
+        "type": "ENTETE_PAGE",
+        "pages": "SUIVANTES",
+        "contenu": {
+          "type": "rangee",
+          "cadre": {
+            "bas": "fin"
+          },
+          "marges": {
+            "bas": 1
+          },
+          "enfants": [
+            {
+              "type": "champ",
+              "valeur": "{{societe.raison_sociale}}",
+              "style": "gras",
+              "largeur": "*"
+            },
+            {
+              "type": "champ",
+              "valeur": "{{document.type.libelle}} {{document.numero}} du {{Date(document.date)}}",
+              "alignement": "droite",
+              "largeur": "*"
+            }
+          ]
+        }
+      },
+      {
+        "type": "PIED_PAGE",
+        "contenu": {
+          "type": "pile",
+          "cadre": {
+            "haut": "fin"
+          },
+          "marges": {
+            "haut": 1
+          },
+          "enfants": [
+            {
+              "type": "champ",
+              "style": "mentions",
+              "alignement": "centre",
+              "valeur": "{{societe.raison_sociale}} – {{societe.forme_juridique}} au capital de {{societe.capital}} – {{societe.rcs}} – SIRET {{societe.siret}} – TVA {{societe.tva}}"
+            },
+            {
+              "type": "champ",
+              "style": "mentions",
+              "alignement": "centre",
+              "valeur": "Assurance décennale : {{societe.decennale.assureur}}, police {{societe.decennale.police}}, couverture {{societe.decennale.couverture}}"
+            },
+            {
+              "type": "rangee",
+              "enfants": [
+                {
+                  "type": "champ",
+                  "style": "discret",
+                  "valeur": "Édité le {{Date(Aujourdhui())}}",
+                  "largeur": "*"
+                },
+                {
+                  "type": "champ",
+                  "style": "discret",
+                  "valeur": "Page {{Page()}} / {{NbPages()}}",
+                  "alignement": "droite",
+                  "largeur": "30mm"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "type": "TITRE",
+        "nom": "entete",
+        "contenu": {
+          "type": "pile",
+          "espacement": 4,
+          "enfants": [
+            {
+              "type": "rangee",
+              "espacement": 6,
+              "enfants": [
+                {
+                  "type": "pile",
+                  "largeur": "55%",
+                  "enfants": [
+                    {
+                      "type": "champ",
+                      "valeur": "{{societe.raison_sociale}}",
+                      "style": "titre"
+                    },
+                    {
+                      "type": "repete",
+                      "collection": "societe.adresse",
+                      "contenu": {
+                        "type": "champ",
+                        "valeur": "{{element}}"
+                      }
+                    },
+                    {
+                      "type": "champ",
+                      "valeur": "=Joindre(\" – \"; societe.telephone; societe.courriel)",
+                      "style": "discret"
+                    }
+                  ]
+                },
+                {
+                  "type": "pile",
+                  "largeur": "*",
+                  "cadre": "fin",
+                  "marges": 3,
+                  "enfants": [
+                    {
+                      "type": "champ",
+                      "valeur": "{{client.nom}}",
+                      "style": "nom_adresse"
+                    },
+                    {
+                      "type": "repete",
+                      "collection": "client.adresse",
+                      "contenu": {
+                        "type": "champ",
+                        "valeur": "{{element}}"
+                      }
+                    },
+                    {
+                      "type": "champ",
+                      "valeur": "{{client.courriel}}",
+                      "style": "discret"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "rangee",
+              "espacement": 6,
+              "enfants": [
+                {
+                  "type": "pile",
+                  "largeur": "55%",
+                  "fond": "fond_titre",
+                  "marges": 2,
+                  "enfants": [
+                    {
+                      "type": "champ",
+                      "valeur": "{{document.type.libelle}} n° {{document.numero}}",
+                      "style": "sous_titre"
+                    },
+                    {
+                      "type": "champ",
+                      "valeur": "=Retrait(Gras(\"Date : \"); Date(document.date; \"long\"))"
+                    },
+                    {
+                      "type": "champ",
+                      "valeur": "=Si(document.validite_jours; Retrait(Gras(\"Validité : \"); document.validite_jours & \" jours\"); Nul)"
+                    },
+                    {
+                      "type": "champ",
+                      "valeur": "=Retrait(Gras(\"Objet : \"); document.objet)"
+                    },
+                    {
+                      "type": "champ",
+                      "valeur": "=Retrait(Gras(\"Rédacteur : \"); redacteur.nom)"
+                    }
+                  ]
+                },
+                {
+                  "type": "pile",
+                  "largeur": "*",
+                  "marges": 2,
+                  "enfants": [
+                    {
+                      "type": "champ",
+                      "valeur": "Adresse des travaux",
+                      "style": "petit"
+                    },
+                    {
+                      "type": "champ",
+                      "valeur": "{{adresse_travaux.libelle}}",
+                      "style": "gras"
+                    },
+                    {
+                      "type": "repete",
+                      "collection": "adresse_travaux.adresse",
+                      "contenu": {
+                        "type": "champ",
+                        "valeur": "{{element}}"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "champ",
+              "valeur": "{{textes.intro}}",
+              "html": true
+            }
+          ]
+        }
+      },
+      {
+        "type": "CORPS",
+        "nom": "lignes",
+        "contenu": {
+          "type": "tableau",
+          "nom": "lignes",
+          "collection": "lignes",
+          "remplir": true,
+          "report": {
+            "libelle": "Report",
+            "libelle_a_reporter": "À reporter"
+          },
+          "colonnes": [
+            {
+              "cle": "num",
+              "titre": "N°",
+              "largeur": "13mm",
+              "valeur": "{{ligne.numero}}",
+              "style": "petit"
+            },
+            {
+              "cle": "lib",
+              "titre": "Désignation",
+              "largeur": "*",
+              "valeur": "{{ligne.libelle_html}}",
+              "html": true
+            },
+            {
+              "cle": "qte",
+              "titre": "Qté",
+              "largeur": "15mm",
+              "valeur": "{{ligne.qte}}",
+              "alignement": "droite",
+              "format": "nombre:2",
+              "style": "montant",
+              "zero_vide": true
+            },
+            {
+              "cle": "u",
+              "titre": "U",
+              "largeur": "8mm",
+              "valeur": "{{ligne.unite}}",
+              "alignement": "centre"
+            },
+            {
+              "cle": "pu",
+              "titre": "PU HT",
+              "largeur": "19mm",
+              "valeur": "{{ligne.pu}}",
+              "alignement": "droite",
+              "format": "montant",
+              "style": "montant"
+            },
+            {
+              "cle": "mt",
+              "titre": "Montant HT",
+              "largeur": "22mm",
+              "valeur": "{{ligne.montant}}",
+              "alignement": "droite",
+              "format": "montant",
+              "style": "montant",
+              "cumul": "=Si(ligne.compte_total; ligne.montant; Nul)"
+            }
+          ],
+          "gabarits": [
+            {
+              "condition": "ligne.composante ET NON Parametre(\"composantes\")",
+              "masquer": true
+            },
+            {
+              "condition": "ligne.type = \"SECTION\"",
+              "fond": "fond_section",
+              "style": "section",
+              "garder_avec_suivant": true,
+              "bordures": {
+                "haut": "fin",
+                "bas": "fin"
+              },
+              "cellules": [
+                {
+                  "de": "num",
+                  "a": "lib",
+                  "valeur": "{{ligne.libelle_html}}",
+                  "html": true
+                },
+                {
+                  "de": "qte",
+                  "a": "mt",
+                  "valeur": "{{ligne.montant}}",
+                  "alignement": "droite",
+                  "format": "montant"
+                }
+              ]
+            },
+            {
+              "condition": "ligne.type = \"TITRE\"",
+              "fond": "fond_titre",
+              "style": "titre_ligne",
+              "garder_avec_suivant": true,
+              "cellules": [
+                {
+                  "colonne": "num",
+                  "valeur": "{{ligne.numero}}"
+                },
+                {
+                  "de": "lib",
+                  "a": "pu",
+                  "valeur": "{{ligne.libelle_html}}",
+                  "html": true,
+                  "retrait": "=ligne.niveau * 2"
+                },
+                {
+                  "colonne": "mt",
+                  "valeur": "{{ligne.montant}}",
+                  "alignement": "droite",
+                  "format": "montant"
+                }
+              ]
+            },
+            {
+              "condition": "ligne.type = \"TEXTE\"",
+              "cellules": [
+                {
+                  "de": "lib",
+                  "a": "mt",
+                  "valeur": "{{ligne.libelle_html}}",
+                  "html": true,
+                  "style": "discret"
+                }
+              ]
+            },
+            {
+              "condition": "ligne.type = \"SOUS_TOTAL\"",
+              "style": "sous_total",
+              "cellules": [
+                {
+                  "de": "num",
+                  "a": "pu",
+                  "valeur": "{{ligne.libelle_html}}",
+                  "html": true,
+                  "alignement": "droite"
+                },
+                {
+                  "colonne": "mt",
+                  "valeur": "{{ligne.montant}}",
+                  "alignement": "droite",
+                  "format": "montant"
+                }
+              ]
+            },
+            {
+              "condition": "ligne.composante",
+              "style": "composante",
+              "lie_au_precedent": true,
+              "surcharges": {
+                "lib": {
+                  "retrait": "=ligne.niveau * 2"
+                }
+              }
+            },
+            {
+              "surcharges": {
+                "lib": {
+                  "retrait": "=ligne.niveau * 2"
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "RESUME",
+        "nom": "totaux",
+        "options": {
+          "bas_de_page": true
+        },
+        "contenu": {
+          "type": "rangee",
+          "espacement": 6,
+          "marges": {
+            "haut": 3
+          },
+          "enfants": [
+            {
+              "type": "pile",
+              "largeur": "*",
+              "enfants": [
+                {
+                  "type": "champ",
+                  "valeur": "{{textes.fin}}",
+                  "html": true
+                },
+                {
+                  "type": "rangee",
+                  "marges": {
+                    "haut": 2
+                  },
+                  "enfants": [
+                    {
+                      "type": "qr",
+                      "valeur": "https://btp-demo.fr/verifier/{{document.numero}}",
+                      "taille": 18,
+                      "largeur": "22mm"
+                    },
+                    {
+                      "type": "code39",
+                      "valeur": "{{document.numero}}",
+                      "taille": 22,
+                      "largeur": "*"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "pile",
+              "largeur": "70mm",
+              "cadre": "normal",
+              "marges": 2,
+              "enfants": [
+                {
+                  "type": "rangee",
+                  "enfants": [
+                    {
+                      "type": "champ",
+                      "valeur": "Total HT",
+                      "largeur": "*"
+                    },
+                    {
+                      "type": "champ",
+                      "valeur": "{{totaux.ht}}",
+                      "format": "montant",
+                      "style": "montant",
+                      "alignement": "droite",
+                      "largeur": "30mm"
+                    }
+                  ]
+                },
+                {
+                  "type": "repete",
+                  "collection": "tva",
+                  "contenu": {
+                    "type": "rangee",
+                    "enfants": [
+                      {
+                        "type": "champ",
+                        "valeur": "TVA {{Pourcent(element.taux; 1)}} sur {{Montant(element.base)}}",
+                        "style": "petit",
+                        "largeur": "*"
+                      },
+                      {
+                        "type": "champ",
+                        "valeur": "{{element.montant}}",
+                        "format": "montant",
+                        "style": "montant",
+                        "alignement": "droite",
+                        "largeur": "30mm"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "trait",
+                  "trait": "fin"
+                },
+                {
+                  "type": "rangee",
+                  "enfants": [
+                    {
+                      "type": "champ",
+                      "valeur": "Total TTC",
+                      "style": "gras",
+                      "largeur": "*"
+                    },
+                    {
+                      "type": "champ",
+                      "valeur": "{{totaux.ttc}}",
+                      "format": "montant",
+                      "style": "total",
+                      "alignement": "droite",
+                      "largeur": "30mm"
+                    }
+                  ]
+                },
+                {
+                  "type": "rangee",
+                  "fond": "fond_total",
+                  "enfants": [
+                    {
+                      "type": "champ",
+                      "valeur": "Net à payer",
+                      "style": "gras",
+                      "largeur": "*"
+                    },
+                    {
+                      "type": "champ",
+                      "valeur": "{{totaux.net}}",
+                      "format": "monnaie",
+                      "style": "total",
+                      "alignement": "droite",
+                      "largeur": "35mm"
+                    }
+                  ]
+                },
+                {
+                  "type": "espace",
+                  "hauteur": 2
+                },
+                {
+                  "type": "champ",
+                  "valeur": "Bon pour accord, date et signature :",
+                  "style": "petit"
+                },
+                {
+                  "type": "espace",
+                  "hauteur": 14
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

@@ -668,7 +668,7 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   de paiement refusés (`DONNEE_INVALIDE`) ; ligne parente sans sous-type refusée ; BT-13 vide si seule la commande vendeur est
   donnée ; cadres 8 / 9 non émis comme en CII ; mêmes avertissements `BR-FREXT-*-08rev` que le CII.
 
-## Lot 18 : PDF/A-3 et fichier associé (A FAIRE)
+## Lot 18 : PDF/A-3 et fichier associé (FAIT le 11/11/2026)
 
 - **Module** : `modules/edition`. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `js/src/rendu-pdf.js` (option PDF/A-3 : métadonnées XMP avec schéma d'extension fourni par
@@ -678,6 +678,21 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   PDF toujours déterministe.
 - **Critère de fin** : PDF produit valide PDF/A-3b au contrôle veraPDF (lancé à la main, hors CI, résultat noté dans le
   plan) ; tests Node et C# verts.
+- **Réalisé** : `js/src/pdfa.js` (`normaliserPdfa`, `paquetXmp`, `appliquerPdfa`, `RELATIONS_PDFA`, `profilSrgbLivre`) branché
+  sur `produirePdf` par l'option `pdf.pdfa` ({ conformite B par défaut, fichiers [{ nom, octets ou base64, type MIME,
+  relation, description }], schemas d'extension XMP [{ schema, espace, prefixe, proprietes [{ nom, type, categorie,
+  description, valeur }] }], icc ou icc_base64, condition }) : XMP UTF-8 non compressé (dc, xmp, pdf, pdfaid 3 / B,
+  pdfaExtension et valeurs de l'appelant), OutputIntent GTS_PDFA1 sRGB, flux EmbeddedFile (Subtype MIME, Params Size /
+  CreationDate / ModDate), Filespec F / UF / AFRelationship, arbre EmbeddedFiles trié, `/AF` du catalogue, `/ID` tiré
+  d'une empreinte des entrées (déterministe) ; sans option, PDF inchangé à l'octet. Profil ICC livré :
+  `js/src/profil-srgb.js` (base64) et `js/couleurs/sRGB-lcms-v2.icc`, profil sRGB intégré de Little CMS 2.14 (licence MIT,
+  mention « No copyright, use freely ») écrit sur la machine par la bibliothèque système en version 2.1, rien de
+  téléchargé. Tests : `test/pdfa.test.js` (7 cas), jeu de parité `tests/cas/05_pdfa.json` (devis 01 en PDF/A-3b avec un XML
+  associé et un schéma d'extension) identique à l'octet entre Node et Jint ; paquet serveur reconstruit. Aucune fonction de
+  formule ajoutée (`CATALOGUE_FONCTIONS` inchangé). **Contrôle veraPDF à lancer à la main** (non fait, veraPDF absent de
+  la machine) : après `npm run exporter-resultats --workspace modules/edition/js`,
+  `verapdf --flavour 3b modules/edition/tests/resultats-js/05_pdfa.js.pdf` (résultat à noter ici). Limites : annexes PDF
+  copiées non contrôlées (elles peuvent rompre la conformité), images JPEG CMJN incompatibles avec l'OutputIntent RGB.
 
 ## Lot 19 : e-reporting, écriture du flux 10 (A FAIRE)
 

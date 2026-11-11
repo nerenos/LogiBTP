@@ -2,6 +2,7 @@
 // Même code dans le navigateur et côté serveur (Jint, paquet `serveur/entree.js`).
 export { editer, fragmentsBande, assembler } from './rapport.js';
 export { produirePdf } from './rendu-pdf.js';
+export { RELATIONS_PDFA, profilSrgbLivre, paquetXmp, normaliserPdfa } from './pdfa.js';
 export { pageSvg, policesCss, familleCss } from './rendu-svg.js';
 export { Polices, fontkitEdition, cleFace } from './polices.js';
 export { mettreEnLignes, styleTexte } from './texte.js';
