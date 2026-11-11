@@ -36,7 +36,7 @@ public class FactureElectroniqueBtpTests
         builder.Services.AddModuleFactureElectronique<SpecialisationFactureElectroniqueBtp>((_, o) => o.UseNpgsql("Host=localhost"), new ConfigurationBuilder().Build());
         var app = builder.Build();
         app.MapGroup("/api").MapGroup("").ExigeModule(ModulesFacultatifs.FactureElectronique, "Facturation électronique").MapModuleFactureElectronique()
-            .MapReceptionHorsPlateforme().MapAnnuaireFe();
+            .MapReceptionHorsPlateforme().MapAnnuaireFe().MapEmissionFe();
         return [.. ((IEndpointRouteBuilder)app).DataSources.SelectMany(d => d.Endpoints).OfType<RouteEndpoint>()
             .SelectMany(e => (e.Metadata.GetMetadata<HttpMethodMetadata>()?.HttpMethods ?? ["GET"]).Select(m => (e.RoutePattern.RawText!, m)))];
     }

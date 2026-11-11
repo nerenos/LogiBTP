@@ -760,6 +760,9 @@ export const api = {
   avancementDocument: (id) => appel('GET', `/structure/documents/${id}/avancement`),
   croiseesDocument: (id, { repli = false } = {}) => appel('GET', `/structure/documents/${id}/croisees${repli ? '?repli=true' : ''}`),
   acomptesDocument: (id) => appel('GET', `/structure/documents/${id}/acomptes`),
+  // Facturation électronique (lot 21) : BT-3 par type, nature par nature d'article, mentions ; paramètres d'émission d'une pièce.
+  referentielEmissionFe: () => appel('GET', '/facture-electronique/emission/referentiel'),
+  emissionFeDocument: (id) => appel('GET', `/facture-electronique/documents/${id}/emission`),
   // Annulation par avoir (pièce et, dans un marché, pièces d'avancement suivantes) : liste puis annulation.
   piecesAnnulation: (id) => appel('GET', `/structure/documents/${id}/annulation`),
   annulerParAvoir: (id) => appel('POST', `/structure/documents/${id}/annulation`),

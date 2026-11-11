@@ -1,0 +1,1484 @@
+{
+ "description": "Paramètres d'émission BTP d'une facture électronique (plans/facturation-electronique.md, lot 21) : client/src/calcul/emission-fe.js ↔ src/LogiBTP.Calcul/EmissionFeBtp.cs. natures_fe et mentions communes, remplacées par celles du cas ; type_document pour information (BT-3 du type = type_facture, db/299). Types de ligne : 1 titre, 2 ouvrage, 3 élément, 4 texte, 8 pied HT, 11 section.",
+ "natures_fe": {
+  "1": "S",
+  "2": "B",
+  "5": "S"
+ },
+ "mentions": {
+  "indemnite": "Indemnité forfaitaire pour frais de recouvrement : 40 €.",
+  "penalites": "Pénalités de retard : trois fois le taux d'intérêt légal.",
+  "escompte": "Pas d'escompte pour paiement anticipé.",
+  "tva_debits": false
+ },
+ "cas": [
+  {
+   "nom": "facture de travaux (ouvrage) : 380, S1",
+   "type_document": "V_FACTURE",
+   "entree": {
+    "type_facture": "380",
+    "lignes": [
+     {
+      "lig_id": 1,
+      "lig_parent_id": null,
+      "lig_tyl_id": 11,
+      "lig_type_prix": "V",
+      "lig_nat_id": null
+     },
+     {
+      "lig_id": 2,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 2,
+      "lig_type_prix": "V",
+      "lig_nat_id": 5
+     },
+     {
+      "lig_id": 3,
+      "lig_parent_id": 2,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 2
+     },
+     {
+      "lig_id": 4,
+      "lig_parent_id": 2,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 1
+     }
+    ]
+   },
+   "attendu": {
+    "type_facture": "380",
+    "nature": "S",
+    "situation": "DEPOT",
+    "cadre": "S1",
+    "code_exigibilite_tva": null,
+    "notes": [
+     {
+      "code_sujet": "PMT",
+      "texte": "Indemnité forfaitaire pour frais de recouvrement : 40 €."
+     },
+     {
+      "code_sujet": "PMD",
+      "texte": "Pénalités de retard : trois fois le taux d'intérêt légal."
+     },
+     {
+      "code_sujet": "AAB",
+      "texte": "Pas d'escompte pour paiement anticipé."
+     }
+    ]
+   }
+  },
+  {
+   "nom": "facture de négoce (éléments de matériaux) : B1",
+   "type_document": "V_FACTURE",
+   "entree": {
+    "type_facture": "380",
+    "lignes": [
+     {
+      "lig_id": 1,
+      "lig_parent_id": null,
+      "lig_tyl_id": 11,
+      "lig_type_prix": "V",
+      "lig_nat_id": null
+     },
+     {
+      "lig_id": 2,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 2
+     },
+     {
+      "lig_id": 3,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 2
+     }
+    ]
+   },
+   "attendu": {
+    "type_facture": "380",
+    "nature": "B",
+    "situation": "DEPOT",
+    "cadre": "B1",
+    "code_exigibilite_tva": null,
+    "notes": [
+     {
+      "code_sujet": "PMT",
+      "texte": "Indemnité forfaitaire pour frais de recouvrement : 40 €."
+     },
+     {
+      "code_sujet": "PMD",
+      "texte": "Pénalités de retard : trois fois le taux d'intérêt légal."
+     },
+     {
+      "code_sujet": "AAB",
+      "texte": "Pas d'escompte pour paiement anticipé."
+     }
+    ]
+   }
+  },
+  {
+   "nom": "facture mixte (ouvrage et matériaux vendus seuls) : M1",
+   "type_document": "V_FACTURE",
+   "entree": {
+    "type_facture": "380",
+    "lignes": [
+     {
+      "lig_id": 1,
+      "lig_parent_id": null,
+      "lig_tyl_id": 11,
+      "lig_type_prix": "V",
+      "lig_nat_id": null
+     },
+     {
+      "lig_id": 2,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 2,
+      "lig_type_prix": "V",
+      "lig_nat_id": 5
+     },
+     {
+      "lig_id": 3,
+      "lig_parent_id": 2,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 2
+     },
+     {
+      "lig_id": 4,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 2
+     }
+    ]
+   },
+   "attendu": {
+    "type_facture": "380",
+    "nature": "M",
+    "situation": "DEPOT",
+    "cadre": "M1",
+    "code_exigibilite_tva": null,
+    "notes": [
+     {
+      "code_sujet": "PMT",
+      "texte": "Indemnité forfaitaire pour frais de recouvrement : 40 €."
+     },
+     {
+      "code_sujet": "PMD",
+      "texte": "Pénalités de retard : trois fois le taux d'intérêt légal."
+     },
+     {
+      "code_sujet": "AAB",
+      "texte": "Pas d'escompte pour paiement anticipé."
+     }
+    ]
+   }
+  },
+  {
+   "nom": "facture d'avancement sans acompte : S1",
+   "type_document": "V_FACTURE_AVT",
+   "entree": {
+    "type_facture": "380",
+    "lignes": [
+     {
+      "lig_id": 1,
+      "lig_parent_id": null,
+      "lig_tyl_id": 11,
+      "lig_type_prix": "V",
+      "lig_nat_id": null
+     },
+     {
+      "lig_id": 2,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 2,
+      "lig_type_prix": "V",
+      "lig_nat_id": 5
+     },
+     {
+      "lig_id": 3,
+      "lig_parent_id": 2,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 2
+     },
+     {
+      "lig_id": 4,
+      "lig_parent_id": 2,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 1
+     }
+    ]
+   },
+   "attendu": {
+    "type_facture": "380",
+    "nature": "S",
+    "situation": "DEPOT",
+    "cadre": "S1",
+    "code_exigibilite_tva": null,
+    "notes": [
+     {
+      "code_sujet": "PMT",
+      "texte": "Indemnité forfaitaire pour frais de recouvrement : 40 €."
+     },
+     {
+      "code_sujet": "PMD",
+      "texte": "Pénalités de retard : trois fois le taux d'intérêt légal."
+     },
+     {
+      "code_sujet": "AAB",
+      "texte": "Pas d'escompte pour paiement anticipé."
+     }
+    ]
+   }
+  },
+  {
+   "nom": "facture d'avancement qui déduit une facture d'acompte : S4",
+   "type_document": "V_FACTURE_AVT",
+   "entree": {
+    "type_facture": "380",
+    "lignes": [
+     {
+      "lig_id": 1,
+      "lig_parent_id": null,
+      "lig_tyl_id": 11,
+      "lig_type_prix": "V",
+      "lig_nat_id": null
+     },
+     {
+      "lig_id": 2,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 2,
+      "lig_type_prix": "V",
+      "lig_nat_id": 5
+     },
+     {
+      "lig_id": 3,
+      "lig_parent_id": 2,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 2
+     },
+     {
+      "lig_id": 4,
+      "lig_parent_id": 2,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 1
+     }
+    ],
+    "deduit_acompte": true
+   },
+   "attendu": {
+    "type_facture": "380",
+    "nature": "S",
+    "situation": "DEFINITIVE_APRES_ACOMPTE",
+    "cadre": "S4",
+    "code_exigibilite_tva": null,
+    "notes": [
+     {
+      "code_sujet": "PMT",
+      "texte": "Indemnité forfaitaire pour frais de recouvrement : 40 €."
+     },
+     {
+      "code_sujet": "PMD",
+      "texte": "Pénalités de retard : trois fois le taux d'intérêt légal."
+     },
+     {
+      "code_sujet": "AAB",
+      "texte": "Pas d'escompte pour paiement anticipé."
+     }
+    ]
+   }
+  },
+  {
+   "nom": "facture définitive mixte après acompte : M4",
+   "type_document": "V_FACTURE",
+   "entree": {
+    "type_facture": "380",
+    "lignes": [
+     {
+      "lig_id": 1,
+      "lig_parent_id": null,
+      "lig_tyl_id": 11,
+      "lig_type_prix": "V",
+      "lig_nat_id": null
+     },
+     {
+      "lig_id": 2,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 2,
+      "lig_type_prix": "V",
+      "lig_nat_id": 5
+     },
+     {
+      "lig_id": 3,
+      "lig_parent_id": 2,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 2
+     },
+     {
+      "lig_id": 4,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 2
+     }
+    ],
+    "deduit_acompte": true
+   },
+   "attendu": {
+    "type_facture": "380",
+    "nature": "M",
+    "situation": "DEFINITIVE_APRES_ACOMPTE",
+    "cadre": "M4",
+    "code_exigibilite_tva": null,
+    "notes": [
+     {
+      "code_sujet": "PMT",
+      "texte": "Indemnité forfaitaire pour frais de recouvrement : 40 €."
+     },
+     {
+      "code_sujet": "PMD",
+      "texte": "Pénalités de retard : trois fois le taux d'intérêt légal."
+     },
+     {
+      "code_sujet": "AAB",
+      "texte": "Pas d'escompte pour paiement anticipé."
+     }
+    ]
+   }
+  },
+  {
+   "nom": "facture d'acompte : 386, cadre 1 même avec déduction",
+   "type_document": "V_FACTURE_ACOMPTE",
+   "entree": {
+    "type_facture": "386",
+    "lignes": [
+     {
+      "lig_id": 1,
+      "lig_parent_id": null,
+      "lig_tyl_id": 11,
+      "lig_type_prix": "V",
+      "lig_nat_id": null
+     },
+     {
+      "lig_id": 2,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 2,
+      "lig_type_prix": "V",
+      "lig_nat_id": 5
+     },
+     {
+      "lig_id": 3,
+      "lig_parent_id": 2,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 2
+     },
+     {
+      "lig_id": 4,
+      "lig_parent_id": 2,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 1
+     }
+    ],
+    "deduit_acompte": true
+   },
+   "attendu": {
+    "type_facture": "386",
+    "nature": "S",
+    "situation": "DEPOT",
+    "cadre": "S1",
+    "code_exigibilite_tva": null,
+    "notes": [
+     {
+      "code_sujet": "PMT",
+      "texte": "Indemnité forfaitaire pour frais de recouvrement : 40 €."
+     },
+     {
+      "code_sujet": "PMD",
+      "texte": "Pénalités de retard : trois fois le taux d'intérêt légal."
+     },
+     {
+      "code_sujet": "AAB",
+      "texte": "Pas d'escompte pour paiement anticipé."
+     }
+    ]
+   }
+  },
+  {
+   "nom": "avoir d'une facture : 381",
+   "type_document": "V_AVOIR",
+   "entree": {
+    "type_facture": "381",
+    "type_origine": "380",
+    "lignes": [
+     {
+      "lig_id": 1,
+      "lig_parent_id": null,
+      "lig_tyl_id": 11,
+      "lig_type_prix": "V",
+      "lig_nat_id": null
+     },
+     {
+      "lig_id": 2,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 2
+     },
+     {
+      "lig_id": 3,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 2
+     }
+    ]
+   },
+   "attendu": {
+    "type_facture": "381",
+    "nature": "B",
+    "situation": "DEPOT",
+    "cadre": "B1",
+    "code_exigibilite_tva": null,
+    "notes": [
+     {
+      "code_sujet": "PMT",
+      "texte": "Indemnité forfaitaire pour frais de recouvrement : 40 €."
+     },
+     {
+      "code_sujet": "PMD",
+      "texte": "Pénalités de retard : trois fois le taux d'intérêt légal."
+     },
+     {
+      "code_sujet": "AAB",
+      "texte": "Pas d'escompte pour paiement anticipé."
+     }
+    ]
+   }
+  },
+  {
+   "nom": "avoir d'une facture d'acompte : 503",
+   "type_document": "V_AVOIR",
+   "entree": {
+    "type_facture": "381",
+    "type_origine": "386",
+    "lignes": [
+     {
+      "lig_id": 1,
+      "lig_parent_id": null,
+      "lig_tyl_id": 11,
+      "lig_type_prix": "V",
+      "lig_nat_id": null
+     },
+     {
+      "lig_id": 2,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 2,
+      "lig_type_prix": "V",
+      "lig_nat_id": 5
+     },
+     {
+      "lig_id": 3,
+      "lig_parent_id": 2,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 2
+     },
+     {
+      "lig_id": 4,
+      "lig_parent_id": 2,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 1
+     }
+    ]
+   },
+   "attendu": {
+    "type_facture": "503",
+    "nature": "S",
+    "situation": "DEPOT",
+    "cadre": "S1",
+    "code_exigibilite_tva": null,
+    "notes": [
+     {
+      "code_sujet": "PMT",
+      "texte": "Indemnité forfaitaire pour frais de recouvrement : 40 €."
+     },
+     {
+      "code_sujet": "PMD",
+      "texte": "Pénalités de retard : trois fois le taux d'intérêt légal."
+     },
+     {
+      "code_sujet": "AAB",
+      "texte": "Pas d'escompte pour paiement anticipé."
+     }
+    ]
+   }
+  },
+  {
+   "nom": "type jamais émis (devis) : rien",
+   "type_document": "V_DEVIS",
+   "entree": {
+    "type_facture": null,
+    "lignes": [
+     {
+      "lig_id": 1,
+      "lig_parent_id": null,
+      "lig_tyl_id": 11,
+      "lig_type_prix": "V",
+      "lig_nat_id": null
+     },
+     {
+      "lig_id": 2,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 2,
+      "lig_type_prix": "V",
+      "lig_nat_id": 5
+     },
+     {
+      "lig_id": 3,
+      "lig_parent_id": 2,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 2
+     },
+     {
+      "lig_id": 4,
+      "lig_parent_id": 2,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 1
+     }
+    ]
+   },
+   "attendu": null
+  },
+  {
+   "nom": "surcharge de l'entête : biens",
+   "type_document": "V_FACTURE",
+   "entree": {
+    "type_facture": "380",
+    "lignes": [
+     {
+      "lig_id": 1,
+      "lig_parent_id": null,
+      "lig_tyl_id": 11,
+      "lig_type_prix": "V",
+      "lig_nat_id": null
+     },
+     {
+      "lig_id": 2,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 2,
+      "lig_type_prix": "V",
+      "lig_nat_id": 5
+     },
+     {
+      "lig_id": 3,
+      "lig_parent_id": 2,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 2
+     },
+     {
+      "lig_id": 4,
+      "lig_parent_id": 2,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 1
+     }
+    ],
+    "ent_fe_nature": "B"
+   },
+   "attendu": {
+    "type_facture": "380",
+    "nature": "B",
+    "situation": "DEPOT",
+    "cadre": "B1",
+    "code_exigibilite_tva": null,
+    "notes": [
+     {
+      "code_sujet": "PMT",
+      "texte": "Indemnité forfaitaire pour frais de recouvrement : 40 €."
+     },
+     {
+      "code_sujet": "PMD",
+      "texte": "Pénalités de retard : trois fois le taux d'intérêt légal."
+     },
+     {
+      "code_sujet": "AAB",
+      "texte": "Pas d'escompte pour paiement anticipé."
+     }
+    ]
+   }
+  },
+  {
+   "nom": "surcharge invalide ignorée",
+   "type_document": "V_FACTURE",
+   "entree": {
+    "type_facture": "380",
+    "lignes": [
+     {
+      "lig_id": 1,
+      "lig_parent_id": null,
+      "lig_tyl_id": 11,
+      "lig_type_prix": "V",
+      "lig_nat_id": null
+     },
+     {
+      "lig_id": 2,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 2
+     },
+     {
+      "lig_id": 3,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 2
+     }
+    ],
+    "ent_fe_nature": "X"
+   },
+   "attendu": {
+    "type_facture": "380",
+    "nature": "B",
+    "situation": "DEPOT",
+    "cadre": "B1",
+    "code_exigibilite_tva": null,
+    "notes": [
+     {
+      "code_sujet": "PMT",
+      "texte": "Indemnité forfaitaire pour frais de recouvrement : 40 €."
+     },
+     {
+      "code_sujet": "PMD",
+      "texte": "Pénalités de retard : trois fois le taux d'intérêt légal."
+     },
+     {
+      "code_sujet": "AAB",
+      "texte": "Pas d'escompte pour paiement anticipé."
+     }
+    ]
+   }
+  },
+  {
+   "nom": "déjà payée : B2",
+   "type_document": "V_FACTURE",
+   "entree": {
+    "type_facture": "380",
+    "lignes": [
+     {
+      "lig_id": 1,
+      "lig_parent_id": null,
+      "lig_tyl_id": 11,
+      "lig_type_prix": "V",
+      "lig_nat_id": null
+     },
+     {
+      "lig_id": 2,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 2
+     },
+     {
+      "lig_id": 3,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 2
+     }
+    ],
+    "deja_payee": true
+   },
+   "attendu": {
+    "type_facture": "380",
+    "nature": "B",
+    "situation": "DEJA_PAYEE",
+    "cadre": "B2",
+    "code_exigibilite_tva": null,
+    "notes": [
+     {
+      "code_sujet": "PMT",
+      "texte": "Indemnité forfaitaire pour frais de recouvrement : 40 €."
+     },
+     {
+      "code_sujet": "PMD",
+      "texte": "Pénalités de retard : trois fois le taux d'intérêt légal."
+     },
+     {
+      "code_sujet": "AAB",
+      "texte": "Pas d'escompte pour paiement anticipé."
+     }
+    ]
+   }
+  },
+  {
+   "nom": "définitive après acompte prime sur déjà payée",
+   "type_document": "V_FACTURE",
+   "entree": {
+    "type_facture": "380",
+    "lignes": [
+     {
+      "lig_id": 1,
+      "lig_parent_id": null,
+      "lig_tyl_id": 11,
+      "lig_type_prix": "V",
+      "lig_nat_id": null
+     },
+     {
+      "lig_id": 2,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 2,
+      "lig_type_prix": "V",
+      "lig_nat_id": 5
+     },
+     {
+      "lig_id": 3,
+      "lig_parent_id": 2,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 2
+     },
+     {
+      "lig_id": 4,
+      "lig_parent_id": 2,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 1
+     }
+    ],
+    "deduit_acompte": true,
+    "deja_payee": true
+   },
+   "attendu": {
+    "type_facture": "380",
+    "nature": "S",
+    "situation": "DEFINITIVE_APRES_ACOMPTE",
+    "cadre": "S4",
+    "code_exigibilite_tva": null,
+    "notes": [
+     {
+      "code_sujet": "PMT",
+      "texte": "Indemnité forfaitaire pour frais de recouvrement : 40 €."
+     },
+     {
+      "code_sujet": "PMD",
+      "texte": "Pénalités de retard : trois fois le taux d'intérêt légal."
+     },
+     {
+      "code_sujet": "AAB",
+      "texte": "Pas d'escompte pour paiement anticipé."
+     }
+    ]
+   }
+  },
+  {
+   "nom": "sous-traitant : S5, nature services même pour des matériaux",
+   "type_document": "V_FACTURE_AVT",
+   "entree": {
+    "type_facture": "380",
+    "lignes": [
+     {
+      "lig_id": 1,
+      "lig_parent_id": null,
+      "lig_tyl_id": 11,
+      "lig_type_prix": "V",
+      "lig_nat_id": null
+     },
+     {
+      "lig_id": 2,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 2
+     },
+     {
+      "lig_id": 3,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 2
+     }
+    ],
+    "role": "SOUS_TRAITANT",
+    "deduit_acompte": true
+   },
+   "attendu": {
+    "type_facture": "380",
+    "nature": "S",
+    "situation": "SOUS_TRAITANT",
+    "cadre": "S5",
+    "code_exigibilite_tva": null,
+    "notes": [
+     {
+      "code_sujet": "PMT",
+      "texte": "Indemnité forfaitaire pour frais de recouvrement : 40 €."
+     },
+     {
+      "code_sujet": "PMD",
+      "texte": "Pénalités de retard : trois fois le taux d'intérêt légal."
+     },
+     {
+      "code_sujet": "AAB",
+      "texte": "Pas d'escompte pour paiement anticipé."
+     }
+    ]
+   }
+  },
+  {
+   "nom": "cotraitant : S6",
+   "type_document": "V_FACTURE",
+   "entree": {
+    "type_facture": "380",
+    "lignes": [
+     {
+      "lig_id": 1,
+      "lig_parent_id": null,
+      "lig_tyl_id": 11,
+      "lig_type_prix": "V",
+      "lig_nat_id": null
+     },
+     {
+      "lig_id": 2,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 2,
+      "lig_type_prix": "V",
+      "lig_nat_id": 5
+     },
+     {
+      "lig_id": 3,
+      "lig_parent_id": 2,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 2
+     },
+     {
+      "lig_id": 4,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 2
+     }
+    ],
+    "role": "COTRAITANT"
+   },
+   "attendu": {
+    "type_facture": "380",
+    "nature": "S",
+    "situation": "COTRAITANT",
+    "cadre": "S6",
+    "code_exigibilite_tva": null,
+    "notes": [
+     {
+      "code_sujet": "PMT",
+      "texte": "Indemnité forfaitaire pour frais de recouvrement : 40 €."
+     },
+     {
+      "code_sujet": "PMD",
+      "texte": "Pénalités de retard : trois fois le taux d'intérêt légal."
+     },
+     {
+      "code_sujet": "AAB",
+      "texte": "Pas d'escompte pour paiement anticipé."
+     }
+    ]
+   }
+  },
+  {
+   "nom": "TVA sur les débits, services : BT-8 = 5",
+   "type_document": "V_FACTURE",
+   "entree": {
+    "type_facture": "380",
+    "lignes": [
+     {
+      "lig_id": 1,
+      "lig_parent_id": null,
+      "lig_tyl_id": 11,
+      "lig_type_prix": "V",
+      "lig_nat_id": null
+     },
+     {
+      "lig_id": 2,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 2,
+      "lig_type_prix": "V",
+      "lig_nat_id": 5
+     },
+     {
+      "lig_id": 3,
+      "lig_parent_id": 2,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 2
+     },
+     {
+      "lig_id": 4,
+      "lig_parent_id": 2,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 1
+     }
+    ],
+    "mentions": {
+     "indemnite": "Indemnité forfaitaire pour frais de recouvrement : 40 €.",
+     "penalites": "Pénalités de retard : trois fois le taux d'intérêt légal.",
+     "escompte": "Pas d'escompte pour paiement anticipé.",
+     "tva_debits": true
+    }
+   },
+   "attendu": {
+    "type_facture": "380",
+    "nature": "S",
+    "situation": "DEPOT",
+    "cadre": "S1",
+    "code_exigibilite_tva": "5",
+    "notes": [
+     {
+      "code_sujet": "PMT",
+      "texte": "Indemnité forfaitaire pour frais de recouvrement : 40 €."
+     },
+     {
+      "code_sujet": "PMD",
+      "texte": "Pénalités de retard : trois fois le taux d'intérêt légal."
+     },
+     {
+      "code_sujet": "AAB",
+      "texte": "Pas d'escompte pour paiement anticipé."
+     }
+    ]
+   }
+  },
+  {
+   "nom": "TVA sur les débits, mixte : BT-8 = 5",
+   "type_document": "V_FACTURE",
+   "entree": {
+    "type_facture": "380",
+    "lignes": [
+     {
+      "lig_id": 1,
+      "lig_parent_id": null,
+      "lig_tyl_id": 11,
+      "lig_type_prix": "V",
+      "lig_nat_id": null
+     },
+     {
+      "lig_id": 2,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 2,
+      "lig_type_prix": "V",
+      "lig_nat_id": 5
+     },
+     {
+      "lig_id": 3,
+      "lig_parent_id": 2,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 2
+     },
+     {
+      "lig_id": 4,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 2
+     }
+    ],
+    "mentions": {
+     "indemnite": "Indemnité forfaitaire pour frais de recouvrement : 40 €.",
+     "penalites": "Pénalités de retard : trois fois le taux d'intérêt légal.",
+     "escompte": "Pas d'escompte pour paiement anticipé.",
+     "tva_debits": true
+    }
+   },
+   "attendu": {
+    "type_facture": "380",
+    "nature": "M",
+    "situation": "DEPOT",
+    "cadre": "M1",
+    "code_exigibilite_tva": "5",
+    "notes": [
+     {
+      "code_sujet": "PMT",
+      "texte": "Indemnité forfaitaire pour frais de recouvrement : 40 €."
+     },
+     {
+      "code_sujet": "PMD",
+      "texte": "Pénalités de retard : trois fois le taux d'intérêt légal."
+     },
+     {
+      "code_sujet": "AAB",
+      "texte": "Pas d'escompte pour paiement anticipé."
+     }
+    ]
+   }
+  },
+  {
+   "nom": "TVA sur les débits, biens : pas de BT-8",
+   "type_document": "V_FACTURE",
+   "entree": {
+    "type_facture": "380",
+    "lignes": [
+     {
+      "lig_id": 1,
+      "lig_parent_id": null,
+      "lig_tyl_id": 11,
+      "lig_type_prix": "V",
+      "lig_nat_id": null
+     },
+     {
+      "lig_id": 2,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 2
+     },
+     {
+      "lig_id": 3,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 2
+     }
+    ],
+    "mentions": {
+     "indemnite": "Indemnité forfaitaire pour frais de recouvrement : 40 €.",
+     "penalites": "Pénalités de retard : trois fois le taux d'intérêt légal.",
+     "escompte": "Pas d'escompte pour paiement anticipé.",
+     "tva_debits": true
+    }
+   },
+   "attendu": {
+    "type_facture": "380",
+    "nature": "B",
+    "situation": "DEPOT",
+    "cadre": "B1",
+    "code_exigibilite_tva": null,
+    "notes": [
+     {
+      "code_sujet": "PMT",
+      "texte": "Indemnité forfaitaire pour frais de recouvrement : 40 €."
+     },
+     {
+      "code_sujet": "PMD",
+      "texte": "Pénalités de retard : trois fois le taux d'intérêt légal."
+     },
+     {
+      "code_sujet": "AAB",
+      "texte": "Pas d'escompte pour paiement anticipé."
+     }
+    ]
+   }
+  },
+  {
+   "nom": "composantes, option, pour mémoire, frais annexes et écart d'arrondi écartés",
+   "type_document": "V_FACTURE",
+   "entree": {
+    "type_facture": "380",
+    "lignes": [
+     {
+      "lig_id": 1,
+      "lig_parent_id": null,
+      "lig_tyl_id": 11,
+      "lig_type_prix": "V",
+      "lig_nat_id": null
+     },
+     {
+      "lig_id": 2,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 2
+     },
+     {
+      "lig_id": 3,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 2,
+      "lig_type_prix": "O",
+      "lig_nat_id": 5
+     },
+     {
+      "lig_id": 4,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 1,
+      "lig_type_prix": "F",
+      "lig_nat_id": null
+     },
+     {
+      "lig_id": 5,
+      "lig_parent_id": 4,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 1
+     },
+     {
+      "lig_id": 6,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "M",
+      "lig_nat_id": 1
+     },
+     {
+      "lig_id": 7,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 1,
+      "lig_is_ecart_arrondi": true
+     },
+     {
+      "lig_id": 8,
+      "lig_parent_id": null,
+      "lig_tyl_id": 8,
+      "lig_type_prix": "V",
+      "lig_nat_id": 1
+     }
+    ]
+   },
+   "attendu": {
+    "type_facture": "380",
+    "nature": "B",
+    "situation": "DEPOT",
+    "cadre": "B1",
+    "code_exigibilite_tva": null,
+    "notes": [
+     {
+      "code_sujet": "PMT",
+      "texte": "Indemnité forfaitaire pour frais de recouvrement : 40 €."
+     },
+     {
+      "code_sujet": "PMD",
+      "texte": "Pénalités de retard : trois fois le taux d'intérêt légal."
+     },
+     {
+      "code_sujet": "AAB",
+      "texte": "Pas d'escompte pour paiement anticipé."
+     }
+    ]
+   }
+  },
+  {
+   "nom": "élément de matériaux dans un titre en option écarté",
+   "type_document": "V_FACTURE",
+   "entree": {
+    "type_facture": "380",
+    "lignes": [
+     {
+      "lig_id": 1,
+      "lig_parent_id": null,
+      "lig_tyl_id": 11,
+      "lig_type_prix": "V",
+      "lig_nat_id": null
+     },
+     {
+      "lig_id": 2,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 1,
+      "lig_type_prix": "O",
+      "lig_nat_id": null
+     },
+     {
+      "lig_id": 3,
+      "lig_parent_id": 2,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 2
+     },
+     {
+      "lig_id": 4,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 2,
+      "lig_type_prix": "V",
+      "lig_nat_id": 5
+     }
+    ]
+   },
+   "attendu": {
+    "type_facture": "380",
+    "nature": "S",
+    "situation": "DEPOT",
+    "cadre": "S1",
+    "code_exigibilite_tva": null,
+    "notes": [
+     {
+      "code_sujet": "PMT",
+      "texte": "Indemnité forfaitaire pour frais de recouvrement : 40 €."
+     },
+     {
+      "code_sujet": "PMD",
+      "texte": "Pénalités de retard : trois fois le taux d'intérêt légal."
+     },
+     {
+      "code_sujet": "AAB",
+      "texte": "Pas d'escompte pour paiement anticipé."
+     }
+    ]
+   }
+  },
+  {
+   "nom": "élément sans nature ou de nature sans nat_fe_nature : services",
+   "type_document": "V_FACTURE",
+   "entree": {
+    "type_facture": "380",
+    "lignes": [
+     {
+      "lig_id": 1,
+      "lig_parent_id": null,
+      "lig_tyl_id": 11,
+      "lig_type_prix": "V",
+      "lig_nat_id": null
+     },
+     {
+      "lig_id": 2,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": null
+     },
+     {
+      "lig_id": 3,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 9
+     }
+    ]
+   },
+   "attendu": {
+    "type_facture": "380",
+    "nature": "S",
+    "situation": "DEPOT",
+    "cadre": "S1",
+    "code_exigibilite_tva": null,
+    "notes": [
+     {
+      "code_sujet": "PMT",
+      "texte": "Indemnité forfaitaire pour frais de recouvrement : 40 €."
+     },
+     {
+      "code_sujet": "PMD",
+      "texte": "Pénalités de retard : trois fois le taux d'intérêt légal."
+     },
+     {
+      "code_sujet": "AAB",
+      "texte": "Pas d'escompte pour paiement anticipé."
+     }
+    ]
+   }
+  },
+  {
+   "nom": "ouvrage de nature matériaux : services (fourniture et pose)",
+   "type_document": "V_FACTURE",
+   "entree": {
+    "type_facture": "380",
+    "lignes": [
+     {
+      "lig_id": 1,
+      "lig_parent_id": null,
+      "lig_tyl_id": 11,
+      "lig_type_prix": "V",
+      "lig_nat_id": null
+     },
+     {
+      "lig_id": 2,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 2,
+      "lig_type_prix": "V",
+      "lig_nat_id": 2
+     },
+     {
+      "lig_id": 3,
+      "lig_parent_id": 2,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 2
+     }
+    ]
+   },
+   "attendu": {
+    "type_facture": "380",
+    "nature": "S",
+    "situation": "DEPOT",
+    "cadre": "S1",
+    "code_exigibilite_tva": null,
+    "notes": [
+     {
+      "code_sujet": "PMT",
+      "texte": "Indemnité forfaitaire pour frais de recouvrement : 40 €."
+     },
+     {
+      "code_sujet": "PMD",
+      "texte": "Pénalités de retard : trois fois le taux d'intérêt légal."
+     },
+     {
+      "code_sujet": "AAB",
+      "texte": "Pas d'escompte pour paiement anticipé."
+     }
+    ]
+   }
+  },
+  {
+   "nom": "aucune ligne vendue : services",
+   "type_document": "V_FACTURE",
+   "entree": {
+    "type_facture": "380",
+    "lignes": [
+     {
+      "lig_id": 1,
+      "lig_parent_id": null,
+      "lig_tyl_id": 11,
+      "lig_type_prix": "V",
+      "lig_nat_id": null
+     },
+     {
+      "lig_id": 2,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 4,
+      "lig_type_prix": "V",
+      "lig_nat_id": null
+     }
+    ]
+   },
+   "attendu": {
+    "type_facture": "380",
+    "nature": "S",
+    "situation": "DEPOT",
+    "cadre": "S1",
+    "code_exigibilite_tva": null,
+    "notes": [
+     {
+      "code_sujet": "PMT",
+      "texte": "Indemnité forfaitaire pour frais de recouvrement : 40 €."
+     },
+     {
+      "code_sujet": "PMD",
+      "texte": "Pénalités de retard : trois fois le taux d'intérêt légal."
+     },
+     {
+      "code_sujet": "AAB",
+      "texte": "Pas d'escompte pour paiement anticipé."
+     }
+    ]
+   }
+  },
+  {
+   "nom": "mention vide : pas de note AAB",
+   "type_document": "V_FACTURE",
+   "entree": {
+    "type_facture": "380",
+    "lignes": [
+     {
+      "lig_id": 1,
+      "lig_parent_id": null,
+      "lig_tyl_id": 11,
+      "lig_type_prix": "V",
+      "lig_nat_id": null
+     },
+     {
+      "lig_id": 2,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 2,
+      "lig_type_prix": "V",
+      "lig_nat_id": 5
+     },
+     {
+      "lig_id": 3,
+      "lig_parent_id": 2,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 2
+     },
+     {
+      "lig_id": 4,
+      "lig_parent_id": 2,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 1
+     }
+    ],
+    "mentions": {
+     "indemnite": "Indemnité forfaitaire pour frais de recouvrement : 40 €.",
+     "penalites": "Pénalités de retard : trois fois le taux d'intérêt légal.",
+     "escompte": "  ",
+     "tva_debits": false
+    }
+   },
+   "attendu": {
+    "type_facture": "380",
+    "nature": "S",
+    "situation": "DEPOT",
+    "cadre": "S1",
+    "code_exigibilite_tva": null,
+    "notes": [
+     {
+      "code_sujet": "PMT",
+      "texte": "Indemnité forfaitaire pour frais de recouvrement : 40 €."
+     },
+     {
+      "code_sujet": "PMD",
+      "texte": "Pénalités de retard : trois fois le taux d'intérêt légal."
+     }
+    ]
+   }
+  },
+  {
+   "nom": "mentions absentes : aucune note",
+   "type_document": "V_FACTURE",
+   "entree": {
+    "type_facture": "380",
+    "lignes": [
+     {
+      "lig_id": 1,
+      "lig_parent_id": null,
+      "lig_tyl_id": 11,
+      "lig_type_prix": "V",
+      "lig_nat_id": null
+     },
+     {
+      "lig_id": 2,
+      "lig_parent_id": 1,
+      "lig_tyl_id": 2,
+      "lig_type_prix": "V",
+      "lig_nat_id": 5
+     },
+     {
+      "lig_id": 3,
+      "lig_parent_id": 2,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 2
+     },
+     {
+      "lig_id": 4,
+      "lig_parent_id": 2,
+      "lig_tyl_id": 3,
+      "lig_type_prix": "V",
+      "lig_nat_id": 1
+     }
+    ],
+    "mentions": {}
+   },
+   "attendu": {
+    "type_facture": "380",
+    "nature": "S",
+    "situation": "DEPOT",
+    "cadre": "S1",
+    "code_exigibilite_tva": null,
+    "notes": []
+   }
+  }
+ ]
+}

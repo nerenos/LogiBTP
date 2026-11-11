@@ -43,6 +43,8 @@ public class DocumentBtp : Document
     public int? EntStkDestinationId { get; set; }
     // Révision des prix (db/250) : mois des travaux d'une facture d'avancement (vide : mois de la date de la pièce).
     public DateOnly? EntMoisRevision { get; set; }
+    // Facturation électronique (db/299) : nature de la pièce imposée (B, S, M ; NaturesFe), vide : calculée sur les lignes vendues.
+    public string? EntFeNature { get; set; }
     // Approvisionnement (db/218) : date de besoin d'une réservation, date de livraison prévue d'une commande fournisseur.
     public DateOnly? EntDateBesoin { get; set; }
     public DateOnly? EntDateLivraison { get; set; }

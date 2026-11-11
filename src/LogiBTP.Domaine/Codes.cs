@@ -202,6 +202,27 @@ public static class PlateformeAnnuaireFe
     public const string Ppf = "PPF";
 }
 
+/// <summary>Nature d'une pièce émise en facture électronique (lot 21, Q8) : lettre du cadre BT-23 (biens, services, mixte).</summary>
+public static class NaturesFe
+{
+    public const string Biens = "B";
+    public const string Services = "S";
+    public const string Mixte = "M";
+}
+
+/// <summary>
+/// Situation de la pièce émise qui fixe le chiffre du cadre BT-23 (lot 21) : dépôt simple (1), déjà payée (2), définitive
+/// après acompte (4), émise comme sous-traitant (5) ou cotraitant (6).
+/// </summary>
+public static class SituationsCadreFe
+{
+    public const string Depot = "DEPOT";
+    public const string DejaPayee = "DEJA_PAYEE";
+    public const string DefinitiveApresAcompte = "DEFINITIVE_APRES_ACOMPTE";
+    public const string SousTraitant = "SOUS_TRAITANT";
+    public const string Cotraitant = "COTRAITANT";
+}
+
 /// <summary>
 /// Signaux de notification de la facturation électronique (db/295 : facture_electronique_signal, niveau et activation
 /// par société) : facture reçue, rejet (accusé en erreur ou statut 213), refus (210), litige (207), erreur de la file.

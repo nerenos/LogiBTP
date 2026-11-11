@@ -28,6 +28,8 @@ public class CodesTests
     [InlineData("SIGNAL_FE", typeof(SignauxFe))]
     [InlineData("AVERTISSEMENT_ANNUAIRE_FE", typeof(AvertissementAnnuaireFe))]
     [InlineData("PLATEFORME_ANNUAIRE_FE", typeof(PlateformeAnnuaireFe))]
+    [InlineData("NATURE_FE", typeof(NaturesFe))]
+    [InlineData("SITUATION_CADRE_FE", typeof(SituationsCadreFe))]
     [InlineData("GARANTIE_MARCHE", typeof(GarantiesMarche))]
     public void Parite_avec_le_js(string nom, Type type) => Assert.Empty(Constantes.Ecarts(Fichier, nom, type));
 

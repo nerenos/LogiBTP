@@ -917,7 +917,11 @@
         "mode_unite": "€ par unité"
       },
       "mois_revision": "Mois des travaux",
-      "mois_revision_aide": "Mois des travaux de la période pour la révision des prix (vide : mois de la date de la pièce)"
+      "mois_revision_aide": "Mois des travaux de la période pour la révision des prix (vide : mois de la date de la pièce)",
+      "nature_fe": "Nature (facture électronique)",
+      "nature_fe_aide": "Nature biens, services ou mixte de la pièce émise (cadre de facturation) : calculée sur les lignes vendues d'après leurs natures (ouvrages : services), ou imposée",
+      "nature_fe_calculee": "Calculée : {{nature}}",
+      "natures_fe": { "B": "Biens", "S": "Services", "M": "Mixte" }
     },
     "page": {
       "onglets": {

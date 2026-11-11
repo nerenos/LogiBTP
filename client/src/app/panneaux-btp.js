@@ -1,5 +1,5 @@
 import { texte, texteHtml, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
-import { TYPE_FICHE, TYPE_DOCUMENT, TYPES_ARC } from './codes.js';
+import { TYPE_FICHE, TYPE_DOCUMENT, TYPES_ARC, NATURE_FE } from './codes.js';
 import { echapper, formatNombre, formatLibre, lireNombre, creerCombo, ListeDeroulante, activerDates } from '@logibtp/socle/ui';
 import { rendreExecution, sectionRepartition } from './execution/execution.js';
 import { rendreEntretienOrdre } from './ressources/entretiens-ui.js';
@@ -9,6 +9,7 @@ import { estFamilleAchat, FAMILLE_DOCUMENT } from '@logibtp/document';
 import { ventilerFactureRecue, MESSAGES_VENTILATION } from '@logibtp/sous-traitance';
 import { D, S } from '@logibtp/socle';
 import { TL, estChiffree, estTranche, natureObligatoire, controlesValidation } from '../calcul/index.js';
+import { naturePiece } from '../calcul/emission-fe.js';
 import { sectionVariablesTranche, lierVariablesTranche } from './variables-tranche.js';
 import { TableIntervenants } from './structure/intervenants.js';
 import { intervenantPropre, changerNiveau } from './structure/structure.js';
@@ -87,8 +88,11 @@ function suivreChoix(champ) {
  */
 export class PanneauxBtp extends PanneauxDocument {
   /** options.bibliotheques : bibliothèques proposées pour l'appel des éléments (bibliothèque du document). */
-  constructor(editeur, { bibliotheques = [], structure = null, rattacher = null, annuaire = null, intervenants = null, actualiserPrix = null, versBibliotheque = null, execution = null, stock = null, choisirTexte = null, arc = null } = {}) {
+  constructor(editeur, { bibliotheques = [], structure = null, rattacher = null, annuaire = null, intervenants = null, actualiserPrix = null, versBibliotheque = null, execution = null, stock = null, choisirTexte = null, arc = null, emissionFe = null } = {}) {
     super(editeur);
+    // Facturation électronique active (lot 21) : référentiel d'émission { types (BT-3 par code de type), natures (nat_id → B / S) } ;
+    // onglet Options des types émis : nature de la pièce calculée (emission-fe.js ↔ EmissionFeBtp.cs) ou imposée.
+    this.emissionFe = emissionFe;
     // Accusé de réception des commandes (lot 9, A24e) : { enregistrer(entId, arc), deposer(fichier) } posé par la page en ligne.
     this.arc = arc;
     // Module Stock actif : { lieux() } (dépôts et chantiers qui tiennent un stock) ; bloc Stock de l'entête des pièces qui mouvementent.
@@ -321,7 +325,19 @@ export class PanneauxBtp extends PanneauxDocument {
       <select data-champ="ent_mode_calcul_ouvrage">${['V', 'D', 'B'].map((m) => opt(m, texte(`document_btp.panneaux.modes_calcul.${m}`), d.ent_mode_calcul_ouvrage)).join('')}</select></label>`,
     `<label title="${texteHtml('document_btp.panneaux.bibliotheque_aide')}">${texteHtml('document_btp.panneaux.bibliotheque')}
       <select data-champ="ent_bib_id" data-entier>${opt('', defaut ? texte('document_btp.panneaux.bibliotheque_defaut_code', { code: defaut.code }) : texte('document_btp.panneaux.bibliotheque_defaut'), d.ent_bib_id ?? '')}${this.bibliotheques.filter((b) => b.actif || b.id === d.ent_bib_id)
-        .map((b) => opt(String(b.id), `${b.code} – ${b.libelle}`, d.ent_bib_id === null || d.ent_bib_id === undefined ? '' : String(d.ent_bib_id))).join('')}</select></label>`];
+        .map((b) => opt(String(b.id), `${b.code} – ${b.libelle}`, d.ent_bib_id === null || d.ent_bib_id === undefined ? '' : String(d.ent_bib_id))).join('')}</select></label>`,
+    ...this.champNatureFe(d)];
+  }
+
+  /** Nature de la pièce émise en facture électronique (cadre BT-23) : calculée sur les lignes vendues, ou imposée (ent_fe_nature). */
+  champNatureFe(d) {
+    const code = this.editeur.definition.type?.tyd_code;
+    if (!this.emissionFe?.types?.[code]) return [];
+    const calculee = naturePiece(this.editeur.saisie.lignes ?? [], { naturesFe: this.emissionFe.natures ?? {} });
+    const libelle = (n) => texte(`document_btp.panneaux.natures_fe.${n}`);
+    return [`<label title="${texteHtml('document_btp.panneaux.nature_fe_aide')}">${texteHtml('document_btp.panneaux.nature_fe')}
+      <select data-champ="ent_fe_nature">${opt('', texte('document_btp.panneaux.nature_fe_calculee', { nature: libelle(calculee) }), d.ent_fe_nature ?? '')}${Object.values(NATURE_FE)
+        .map((n) => opt(n, libelle(n), d.ent_fe_nature ?? '')).join('')}</select></label>`];
   }
 
   /** Individus de notre société (annuaire), proposés comme rédacteurs : [{ valeur, libelle, detail }]. */

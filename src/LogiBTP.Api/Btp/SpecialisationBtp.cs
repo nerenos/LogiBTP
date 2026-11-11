@@ -605,6 +605,7 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         cible.EntDateBesoin = saisie.EntDateBesoin;
         cible.EntDateLivraison = saisie.EntDateLivraison;
         cible.EntMoisRevision = saisie.EntMoisRevision is DateOnly m ? new DateOnly(m.Year, m.Month, 1) : null;
+        cible.EntFeNature = saisie.EntFeNature is NaturesFe.Biens or NaturesFe.Services or NaturesFe.Mixte ? saisie.EntFeNature : null;
     }
 
     /// <summary>Ventes : payeur et adresse des travaux identiques au client restent vides (lot F).</summary>

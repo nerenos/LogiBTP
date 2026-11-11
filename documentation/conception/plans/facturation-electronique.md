@@ -46,7 +46,7 @@
 | 18 | PDF/A-3 et fichier associé | `modules/edition` | — | A FAIRE |
 | 19 | E-reporting : modèle des transactions et paiements, écriture du flux 10 (10.1 à 10.4), découpage des envois | module | 1, 8 | FAIT (11/11/2026) |
 | 20 | Annuaire sur la fiche personne et vérification de nuit (option) | cœur | 11, 6 | A FAIRE |
-| 21 | Paramètres d'émission BTP : code BT-3 par type, nature biens / services / mixte, notes légales | cœur | 11, 10 | A FAIRE |
+| 21 | Paramètres d'émission BTP : code BT-3 par type, nature biens / services / mixte, notes légales | cœur | 11, 10 | FAIT (11/11/2026) |
 | 22 | Document de vente → modèle : factures, acomptes, définitives, avoirs ; contrôle dans l'éditeur | cœur | 21, 16 | A FAIRE |
 | 23 | Document de vente → modèle : situations (période), pied BTP, retenue, références de chantier | cœur | 22 | A FAIRE |
 | 24 | Émission à la validation : CII ou Factur-X, GED et coffre, dépôt, pastille | cœur | 22, 23, 17, 18, 20 | A FAIRE |
@@ -752,7 +752,7 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   (`CodesTests`) ; `AnnuaireFeBtpTests`. Écart : le bouton est dans `fiche-annuaire.js` (fiches personne), pas de case à cocher
   de l'option de nuit dans l'interface (API seule).
 
-## Lot 21 : paramètres d'émission BTP (A FAIRE)
+## Lot 21 : paramètres d'émission BTP — FAIT (11/11/2026)
 
 - **Cœur**. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `db/3xx` (`type_document.tyd_fe_type_facture` BT-3 : V_FACTURE 380, V_FACTURE_AVT 380, facture
@@ -761,6 +761,27 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   l'éditeur l'affiche (`client/src/calcul/` ↔ `src/LogiBTP.Calcul/`), notes PMT / PMD / AAB depuis les mentions de la
   société (`db/190`), paramètre TVA sur les débits, cas de test.
 - **Critère de fin** : chaque type de vente donne son BT-3 et son cadre ; jeu de cas JS ↔ C# vert.
+- **Réalisé** : `db/299_facture_electronique_emission.sql` (rejouable, au manifeste après 298 : `type_document.tyd_fe_type_facture`
+  avec contrainte BR-FR-04, posé à la création de la colonne : V_FACTURE et V_FACTURE_AVT 380, V_FACTURE_ACOMPTE 386, V_AVOIR 381 ;
+  `nature_element.nat_fe_nature` B / S proposé par le regroupement (MATERIAUX → B, autres → S) ; `document.ent_fe_nature` B / S / M,
+  surcharge de l'entête) ; codes `NATURE_FE` et `SITUATION_CADRE_FE` (`codes.js` ↔ `Codes.cs`, `CodesTests`) ; règle répliquée
+  `client/src/calcul/emission-fe.js` ↔ `src/LogiBTP.Calcul/EmissionFeBtp.cs` (le projet Calcul référence le module pour ses codes) :
+  lignes vendues (lignes de prix sans ancêtre ouvrage, hors pied, écart d'arrondi et type de prix hors total hérité), nature d'une
+  ligne (ouvrage : services ; élément : `nat_fe_nature`, services par défaut), nature de la pièce (surcharge, sinon B ou S
+  unanimes, M si mêlées, services sans ligne), BT-3 (celui du type ; avoir d'une facture d'acompte : 503), situation du cadre
+  (sous-traitant 5 et cotraitant 6 en services, puis facture 380 qui déduit une facture d'acompte 4, puis déjà payée 2, sinon 1),
+  BT-8 = 5 pour des services ou du mixte avec l'option TVA sur les débits (`mentions.tva_debits` de `db/190`), notes PMT
+  (indemnité), PMD (pénalités), AAB (escompte) des mentions non vides ; jeu `tests/emission-fe/01_emission.json` (26 cas, chaque
+  type de vente émis) par `client/test/emission-fe.test.js` et `EmissionFeTests.cs`. Serveur : `Btp/EmissionFeDonneesBtp.cs`
+  (entrée lue en base : BT-3 du type et de la source d'un avoir par lien TRANSFORMATION ou ANNULATION, lignes, natures, surcharge,
+  déduction `acompte_deduction` d'un acompte CA, mentions ; routes `GET /api/facture-electronique/emission/referentiel` et
+  `GET /api/facture-electronique/documents/{id}/emission`, nœud `facture_electronique` en Consulter). Entité `DocumentBtp.EntFeNature`
+  (`colonnes-btp.js`, `CopierEnteteSaisie` : valeur hors B / S / M vidée). Éditeur : onglet Options des types émis (module actif)
+  « Nature (facture électronique) » : « Calculée : … » par la règle JS ou imposée (`creerCombo` par `activerCombos`, textes
+  `document_btp.panneaux.nature_fe*`). Écarts : rôle sous-traitant / cotraitant et pièce déjà payée fournis par l'appelant
+  (lots 24, 27) ; cadre 4 lu dans les déductions écrites à la validation (brouillon : cadre 1) ; pas d'écran de paramétrage du BT-3
+  par type ni de la nature par nature d'article (valeurs du script) ; TVA sur les débits prise dans les mentions de la société
+  (déjà imprimée), pas dans `ctv_exigibilite`. Script à appliquer par l'utilisateur.
 
 ## Lot 22 : document de vente → modèle, cas simples (A FAIRE)
 

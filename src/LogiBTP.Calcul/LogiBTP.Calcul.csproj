@@ -8,6 +8,8 @@
   <ItemGroup>
     <ProjectReference Include="..\LogiBTP.Domaine\LogiBTP.Domaine.csproj" />
     <ProjectReference Include="..\..\modules\metre\dotnet\LogiBTP.Metres\LogiBTP.Metres.csproj" />
+    <!-- Codes BT-3, BT-23, notes et BT-8 des paramètres d'émission (EmissionFeBtp.cs, lot 21). -->
+    <ProjectReference Include="..\..\modules\facture-electronique\dotnet\LogiBTP.FactureElectronique\LogiBTP.FactureElectronique.csproj" />
   </ItemGroup>
 
 </Project>

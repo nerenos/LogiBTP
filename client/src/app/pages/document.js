@@ -317,6 +317,8 @@ export class PageDocument extends PageBase {
     // Bibliothèque : appel par code (colonne Code), F3, bibliothèque du document (entête).
     const s = await app.services();
     this.bibliotheques = await s.bibliotheque.bibliotheques().catch(() => []);
+    // Facturation électronique active : référentiel d'émission (nature de la pièce dans l'onglet Options) ; sans droit : rien.
+    this.emissionFe = app.moduleActif?.(MODULE_FACULTATIF.FACTURE_ELECTRONIQUE) ? await api.referentielEmissionFe().catch(() => null) : null;
     // Structure des affaires : listes de choix du rattachement (entête) et marché proposé à la validation d'une commande.
     this.servicesStructure = s.structure;
     this.servicesFiche = s.fiche;
@@ -486,6 +488,7 @@ export class PageDocument extends PageBase {
       execution: this.app.moduleActif(MODULE_FACULTATIF.EXECUTION) ? { app: this.app, individus: () => individusSociete(this.servicesAnnuaire) } : null,
       // Pièces qui mouvementent le stock (module Stock actif) : lieux d'origine et de destination.
       stock: this.app.moduleActif(MODULE_FACULTATIF.STOCK) ? { lieux: () => api.stock.lieux() } : null,
+      emissionFe: this.emissionFe,
       // Accusé de réception des commandes (lot 9, A24e) : enregistré à part, fichier rangé dans la GED du document.
       arc: {
         enregistrer: (id, arc) => api.arcDocument(id, arc),

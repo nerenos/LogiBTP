@@ -154,6 +154,25 @@ export const PLATEFORME_ANNUAIRE_FE = Object.freeze({
   PPF: 'PPF',
 });
 
+/** Nature d'une pièce émise en facture électronique (lot 21, Q8) : lettre du cadre BT-23 (biens, services, mixte). */
+export const NATURE_FE = Object.freeze({
+  BIENS: 'B',
+  SERVICES: 'S',
+  MIXTE: 'M',
+});
+
+/**
+ * Situation de la pièce émise qui fixe le chiffre du cadre BT-23 (lot 21) : dépôt simple (1), déjà payée (2), définitive
+ * après acompte (4), émise comme sous-traitant (5) ou cotraitant (6).
+ */
+export const SITUATION_CADRE_FE = Object.freeze({
+  DEPOT: 'DEPOT',
+  DEJA_PAYEE: 'DEJA_PAYEE',
+  DEFINITIVE_APRES_ACOMPTE: 'DEFINITIVE_APRES_ACOMPTE',
+  SOUS_TRAITANT: 'SOUS_TRAITANT',
+  COTRAITANT: 'COTRAITANT',
+});
+
 /** Signaux de notification de la facturation électronique (db/295, types du module « facture_electronique »). */
 export const SIGNAL_FE = Object.freeze({
   RECUE: 'RECUE',
