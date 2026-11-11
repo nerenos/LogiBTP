@@ -15,7 +15,7 @@ using Xunit;
 namespace LogiBTP.Calcul.Tests;
 
 /// <summary>
-/// Pièces de vente de démonstration → facture électronique (lot 22, Btp/EmissionFactureBtp.cs), jeu tests/emission-fe/02_pieces.json :
+/// Pièces de vente de démonstration → facture électronique (lots 22 et 23 : situations en période ou en cumul, pied BTP ; Btp/EmissionFactureBtp.cs), jeu tests/emission-fe/02_pieces.json :
 /// calcul par MoteurDevisBtp, paramètres d'émission (lot 21), construction, complétude sans écart, CII et UBL écrits, relus au même
 /// modèle et égaux aux références tests/emission-fe/ecrits/ (régénérées par LOGIBTP_REGENERER_EMISSION=1), contrôlées aux schematrons
 /// par client/test/emission-facture.test.js.
@@ -88,6 +88,7 @@ public class EmissionFactureTests
             Iban = c["sans_iban"]?.GetValue<bool>() == true ? null : Texte(p["iban"]), Bic = Texte(p["bic"]),
             Origines = (c["origines"]?.AsArray() ?? []).Select(o => new AnterieureEmissionFe(Texte(o!["numero"]), Date(o["date"]))).ToList(),
             Acomptes = (c["acomptes"]?.AsObject() ?? []).ToDictionary(x => x.Key, x => (AnterieureEmissionFe?)new AnterieureEmissionFe(Texte(x.Value!["numero"]), Date(x.Value["date"]))),
+            Chantier = Texte(c["chantier"]), Marche = Texte(c["marche"]), Projet = Texte(c["projet"]), DebutPeriode = Date(c["debut_periode"]),
         };
     }
 
@@ -116,10 +117,11 @@ public class EmissionFactureTests
         Assert.Equal((c["attendu_completude"]?.AsArray() ?? []).Select(x => Texte(x)).ToList(), controle.Completude.Select(x => (string?)x.Regle).ToList());
         if (c["attendu_emission"] is not null) return;
 
-        // Sommes : la facture reprend les totaux du moteur (HT, TVA, TTC).
-        Assert.Equal(e.Document.EntTotalHt, f.Totaux.TotalHt);
-        Assert.Equal(e.Document.EntTotalTva, f.Totaux.TotalTva);
-        Assert.Equal(e.Document.EntTotalTtc, f.Totaux.TotalTtc);
+        // Sommes : la facture reprend les totaux du moteur (HT, TVA, TTC) ; situation en cumul : ceux de la période attendus.
+        var t = c["attendu_totaux"];
+        Assert.Equal(t is null ? e.Document.EntTotalHt : t["ht"]!.GetValue<decimal>(), f.Totaux.TotalHt);
+        Assert.Equal(t is null ? e.Document.EntTotalTva : t["tva"]!.GetValue<decimal>(), f.Totaux.TotalTva);
+        Assert.Equal(t is null ? e.Document.EntTotalTtc : t["ttc"]!.GetValue<decimal>(), f.Totaux.TotalTtc);
         Assert.True(controle.Bloquant);
 
         var cii = EcritureCii.Ecrire(f);
@@ -146,7 +148,7 @@ public class EmissionFactureTests
     public void Facture_ouvrage_option_et_pied()
     {
         var f = EmissionFactureBtp.Construire(Entree(Piece("FACTURE"))).Facture;
-        // Ouvrage facturé seul (ses composantes non), option hors total exclue ; remise de pied répartie par taux ; retenue hors facture.
+        // Ouvrage facturé seul (ses composantes non), option hors total exclue ; remise de pied répartie par taux ; retenue hors facture (note ABU, BT-20).
         Assert.Equal(["Dalle béton armé", "Isolation des combles"], f.Lignes.Select(l => l.Nom).ToList());
         Assert.Equal(["MTK", "MTK"], f.Lignes.Select(l => l.Unite).ToList());
         Assert.All(f.RemisesCharges, r => { Assert.False(r.Charge); Assert.Equal("Remise commerciale", r.Motif); });
@@ -172,6 +174,51 @@ public class EmissionFactureTests
         Assert.Equal("F-2026-0101", avoir.FacturesAnterieures.Single().Numero);
         Assert.Null(avoir.DateEcheance);
         Assert.True(avoir.Totaux.TotalHt > 0);
+    }
+
+    [Fact]
+    public void Situation_en_periode_pied_btp_et_references()
+    {
+        var e = Entree(Piece("SITUATION_PERIODE"));
+        var f = EmissionFactureBtp.Construire(e).Facture;
+        Assert.Equal("380 S1", $"{f.TypeFacture} {f.CadreFacturation}");
+        // Ligne de période nulle (réseaux) omise ; montants et quantités de la période.
+        Assert.Equal(["Terrassement en pleine masse", "Semelles de fondation", "Isolation des combles"], f.Lignes.Select(l => l.Nom).ToList());
+        Assert.Equal([500m, 462.96m, 333.33m], f.Lignes.Select(l => l.MontantNet).ToList());
+        Assert.Equal([20m, 3m], f.Lignes.Take(2).Select(l => l.Quantite).ToList());
+        // Compte prorata HT (avancement global) : remise du document par taux, motif = libellé du poste.
+        Assert.All(f.RemisesCharges, r => { Assert.False(r.Charge); Assert.Equal("Compte prorata", r.Motif); });
+        Assert.Equal(e.Lignes.Single(l => l.LigId == 5).LigMontantHt, -f.RemisesCharges.Sum(r => r.Montant));
+        // Retenue et paiement direct hors facture : total porté, conditions de paiement, retenue en note ABU.
+        Assert.Equal(f.Totaux.TotalTtc, f.Totaux.NetAPayer);
+        Assert.Null(f.Totaux.DejaPaye);
+        var retenue = e.Lignes.Single(l => l.LigId == 8).LigMontantHt!.Value;
+        var note = Assert.Single(f.Notes, n => n.CodeSujet == CodeNote.Reserve);
+        Assert.Equal($"Retenue de garantie (5 %) : {retenue:0.00} EUR".Replace(',', '.'), note.Texte);
+        Assert.Equal($"30 jours fin de mois ; {note.Texte} ; Paiement direct – Électricité Martin : -300.00 EUR", f.ConditionsPaiement);
+        Assert.Equal(e.Document.EntNetAPayer, f.Totaux.TotalTtc + retenue - 300m);
+        // Période BG-14 et références du chantier, du marché et du projet.
+        Assert.Equal(new Periode(new DateOnly(2026, 10, 31), new DateOnly(2026, 11, 30)), f.Periode);
+        Assert.Equal(("CH-2026-002", "M-2026-002-1", "P-2026-014", "CH-2026-002"), (f.References.Projet, f.References.Contrat, f.References.AppelOffres, f.References.Objet));
+    }
+
+    [Fact]
+    public void Situation_en_cumul_emise_en_periode()
+    {
+        var e = Entree(Piece("SITUATION_CUMUL"));
+        var periode = EmissionFactureBtp.Construire(Entree(Piece("SITUATION_PERIODE"))).Facture;
+        var f = EmissionFactureBtp.Construire(e).Facture;
+        Assert.Equal("C", e.Document.EntAvtPresentation);
+        // Mêmes lignes de période que la facture d'avancement, quel que soit le cumul porté par la pièce.
+        Assert.Equal(periode.Lignes.Select(l => (l.Nom, l.MontantNet, l.Quantite)), f.Lignes.Select(l => (l.Nom, l.MontantNet, l.Quantite)));
+        Assert.True(e.Document.EntTotalHt > f.Totaux.TotalHt);
+        // TVA de chaque taux recalculée sur la base de la période (BR-CO-17 exact), sommes BR-CO sans écart.
+        Assert.All(f.DetailsTva, t => Assert.Equal(ArrondiCalcul.Arrondir(t.Base * t.Taux!.Value / 100m, 2), t.Montant));
+        Assert.Empty(ReglesCompletude.Controler(f, true));
+        // Remise de pied en % sans avancement répartie par taux en plus du compte prorata.
+        Assert.Contains(f.RemisesCharges, r => r.Motif == "Compte prorata ; Remise de fin de chantier");
+        Assert.Equal(new Periode(new DateOnly(2026, 11, 1), new DateOnly(2026, 11, 30)), f.Periode);
+        Assert.Single(f.Notes, n => n.CodeSujet == CodeNote.Reserve);
     }
 
     [Fact]
@@ -257,6 +304,59 @@ public class EmissionFactureTests
         var (xml, nom) = await EmissionFactureBtp.XmlAsync(db, id, Syntaxe.Ubl, default);
         Assert.Equal("F-LOT22-1_UBL.xml", nom);
         Assert.Equal(f.Numero, LectureUbl.Lire(xml).Numero);
+        await tx.RollbackAsync();
+    }
+
+    /// <summary>
+    /// Base jetable : deux factures d'avancement d'un marché de la démonstration (situations 1 et 2, transaction annulée) ;
+    /// la seconde porte les codes du chantier, du marché et du projet, et sa période part du lendemain de la première.
+    /// </summary>
+    [Fact]
+    public async Task Situation_de_la_base_references_et_periode()
+    {
+        var connexion = Environment.GetEnvironmentVariable("LOGIBTP_TEST_PG_JETABLE");
+        if (string.IsNullOrEmpty(connexion)) return;
+        await using var c = new NpgsqlConnection(connexion);
+        await c.OpenAsync();
+        await using (var k = new NpgsqlCommand("""
+            SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE column_name = 'tyd_fe_type_facture')
+               AND EXISTS (SELECT 1 FROM marche m JOIN chantier h ON h.cha_id = m.mar_cha_id)
+            """, c))
+        {
+            if (await k.ExecuteScalarAsync() is not true) return;
+        }
+        await using var tx = await c.BeginTransactionAsync();
+        long id;
+        string chantier, marche;
+        string? projet;
+        await using (var k = new NpgsqlCommand("""
+            WITH m AS (SELECT m.mar_id, m.mar_code, h.cha_code, p.prj_code FROM marche m JOIN chantier h ON h.cha_id = m.mar_cha_id
+                       LEFT JOIN projet p ON p.prj_id = h.cha_prj_id ORDER BY (p.prj_id IS NULL), m.mar_id LIMIT 1),
+            d AS (INSERT INTO document (ent_tyd_id, ent_numero, ent_date, ent_std_id, ent_tiers_id, ent_cree_par, ent_total_ht, ent_total_tva,
+                                       ent_total_ttc, ent_net_a_payer, ent_verrouille, ent_marche_id, ent_avt_presentation, ent_rang_avancement)
+                SELECT t.tyd_id, v.numero, v.date, (SELECT std_id FROM statut_document ORDER BY std_id LIMIT 1),
+                       (SELECT per_id FROM personne WHERE NOT per_societe_base AND per_siren IS NOT NULL ORDER BY per_id LIMIT 1), 'test',
+                       100, 20, 120, 120, TRUE, m.mar_id, 'P', v.rang
+                FROM type_document t, m, (VALUES ('F-LOT23-1', DATE '2026-10-31', 1), ('F-LOT23-2', DATE '2026-11-30', 2)) AS v(numero, date, rang)
+                WHERE t.tyd_code = 'V_FACTURE_AVT' RETURNING ent_id, ent_rang_avancement)
+            SELECT (SELECT ent_id FROM d WHERE ent_rang_avancement = 2), m.cha_code, m.mar_code, m.prj_code FROM m
+            """, c, tx))
+        await using (var r = await k.ExecuteReaderAsync())
+        {
+            Assert.True(await r.ReadAsync());
+            id = r.GetInt64(0);
+            chantier = r.GetString(1);
+            marche = r.GetString(2);
+            projet = r.IsDBNull(3) ? null : r.GetString(3);
+        }
+        var options = new DbContextOptionsBuilder<LogiBtpContext>().UseNpgsql(c).UseSnakeCaseNamingConvention().Options;
+        await using var db = new LogiBtpContext(options);
+        await db.Database.UseTransactionAsync(tx);
+        var e = (await EmissionFactureBtp.EntreeAsync(db, id, default))!;
+        Assert.Equal((chantier, marche, projet, new DateOnly(2026, 11, 1)), (e.Chantier, e.Marche, e.Projet, e.DebutPeriode));
+        var f = EmissionFactureBtp.Construire(e).Facture;
+        Assert.Equal(new Periode(new DateOnly(2026, 11, 1), new DateOnly(2026, 11, 30)), f.Periode);
+        Assert.Equal((chantier, marche), (f.References.Projet, f.References.Contrat));
         await tx.RollbackAsync();
     }
 }

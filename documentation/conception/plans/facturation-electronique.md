@@ -823,7 +823,7 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   adresse de livraison) ; pas de pièces de démonstration en base (jeu construit) ; références de chantier, période et retenue au
   lot 23 ; contrôle sur la pièce enregistrée seulement (modifications en cours non contrôlées).
 
-## Lot 23 : situations et pied BTP (A FAIRE)
+## Lot 23 : situations et pied BTP — FAIT (11/11/2026)
 
 - **Cœur**. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `EmissionFactureBtp.cs` (situation en **montants de période** quelle que soit `ent_avt_presentation`,
@@ -832,6 +832,28 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   marché ; arrondis aux deux décimales cohérents avec `MoteurDevisBtp`), tests sur des situations cumulées et en période.
 - **Critère de fin** : situations de la démonstration valides (sommes BR-CO exactes) ; tests verts ; écarts d'arrondi
   documentés si la tolérance EXTENDED-CTC-FR est nécessaire.
+- **Réalisé** : `src/LogiBTP.Api/Btp/EmissionFactureBtp.cs` : pièce d'avancement (`ent_avt_presentation` P ou C) émise en
+  montants de la période (Q10) : en présentation C, ligne et poste de pied saisis en avancement = cumul − précédent (montant et
+  quantité), poste de pied HT sans avancement au prorata période / cumul des lignes vendues, reprise d'acompte = cumul − précédent,
+  base de chaque taux = lignes + postes de la période et TVA recalculée par l'arrondi unique (BR-CO-17 exact) ; lignes de période
+  nulle omises (sauf toutes) ; période BG-14 du lendemain de la pièce d'avancement précédente (même périmètre que le pied
+  d'avancement de l'édition : déductions figées, sinon factures valables du marché de rang inférieur ; à défaut premier du mois)
+  à la date de la pièce ; postes de pied HT (compte prorata, frais, remises, saisis ou en avancement) en remises / charges du
+  document par taux (base − lignes, motif = libellés) ; postes TTC autres que les acomptes (retenue, paiement direct, prorata ou
+  frais après TVA) hors facture : total porté, texte « libellé (taux %) : montant devise » de la période ajouté aux conditions
+  de paiement (BT-20), retenue (`lig_pied_retenue` ou poste « R ») en note ABU (`CODE_NOTE.RESERVE` ↔ `CodeNote.Reserve`,
+  `CodesTests`) ; références BT-11 et BT-18 = code du chantier (de la pièce, sinon du marché), BT-12 = code du marché, BT-17 =
+  code du projet d'origine (de la pièce, sinon du chantier). Tests : cas `SITUATION_PERIODE` (facture d'avancement en période :
+  %, quantité, montant, ligne nulle omise, compte prorata en avancement global, retenue et paiement direct) et `SITUATION_CUMUL`
+  (même marché en cumul, remise en % sans avancement répartie sur deux taux ; totaux de période attendus 1 244,16 / 216,84 /
+  1 461,00 calculés à la main) de `tests/emission-fe/02_pieces.json`, `EmissionFactureTests` (sommes BR-CO sans écart, TVA
+  exacte par taux, mêmes lignes de période dans les deux présentations, note ABU, BT-20, BG-14, références ; base jetable :
+  deux factures d'avancement d'un marché de démonstration, références et période lues en base) ; XML écrits (CII, UBL, Factur-X)
+  sans erreur fatale ni avertissement aux schematrons (`npm run valider-facture`, `emission-facture.test.js`). Écarts : aucun
+  besoin de la tolérance EXTENDED-CTC-FR (sommes exactes, profil EN16931 gardé ; le schematron EN16931 tolère d'ailleurs 1 sur
+  BR-CO-17) ; paiement direct et autres postes TTC non déduits du montant dû (BT-115 = TTC − acomptes de trésorerie, différent
+  du net à payer de LogiBTP), à valider (TODO) ; BG-14 plutôt que BG-26 (période de ligne) ou BT-72 ; aucune règle du moteur
+  modifiée (pas de réplique JS) ; aucun script SQL.
 
 ## Lot 24 : émission à la validation (A FAIRE)
 

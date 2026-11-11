@@ -11,6 +11,7 @@
   <cbc:Note>#PMD#Pénalités de retard : trois fois le taux d'intérêt légal.</cbc:Note>
   <cbc:Note>#AAB#Pas d'escompte pour paiement anticipé.</cbc:Note>
   <cbc:Note>#BAR#B2B</cbc:Note>
+  <cbc:Note>#ABU#Retenue de garantie (5 %) : -99.43 EUR</cbc:Note>
   <cbc:DocumentCurrencyCode>EUR</cbc:DocumentCurrencyCode>
   <cac:OrderReference>
     <cbc:ID>CMD-4512</cbc:ID>
@@ -100,7 +101,7 @@
     </cac:PayeeFinancialAccount>
   </cac:PaymentMeans>
   <cac:PaymentTerms>
-    <cbc:Note>30 jours fin de mois</cbc:Note>
+    <cbc:Note>30 jours fin de mois ; Retenue de garantie (5 %) : -99.43 EUR</cbc:Note>
   </cac:PaymentTerms>
   <cac:AllowanceCharge>
     <cbc:ChargeIndicator>false</cbc:ChargeIndicator>

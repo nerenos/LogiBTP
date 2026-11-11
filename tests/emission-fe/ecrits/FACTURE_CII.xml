@@ -30,6 +30,10 @@
       <ram:Content>B2B</ram:Content>
       <ram:SubjectCode>BAR</ram:SubjectCode>
     </ram:IncludedNote>
+    <ram:IncludedNote>
+      <ram:Content>Retenue de garantie (5 %) : -99.43 EUR</ram:Content>
+      <ram:SubjectCode>ABU</ram:SubjectCode>
+    </ram:IncludedNote>
   </rsm:ExchangedDocument>
   <rsm:SupplyChainTradeTransaction>
     <ram:IncludedSupplyChainTradeLineItem>
@@ -200,7 +204,7 @@
         </ram:CategoryTradeTax>
       </ram:SpecifiedTradeAllowanceCharge>
       <ram:SpecifiedTradePaymentTerms>
-        <ram:Description>30 jours fin de mois</ram:Description>
+        <ram:Description>30 jours fin de mois ; Retenue de garantie (5 %) : -99.43 EUR</ram:Description>
         <ram:DueDateDateTime>
           <udt:DateTimeString format="102">20261231</udt:DateTimeString>
         </ram:DueDateDateTime>

@@ -86,6 +86,8 @@ public static class CodeNote
     public const string Traitement = "BAR";
     /// <summary>BR-FR-06 : une fois au plus.</summary>
     public const string MentionTaxe = "TXD";
+    /// <summary>Clause de réserve : retenue de garantie des situations de travaux (cœur, lot 23).</summary>
+    public const string Reserve = "ABU";
 }
 
 /// <summary>Sous-type de ligne EXT-FR-FE-163 (profil EXTENDED-CTC-FR) : détail, regroupement, information.</summary>

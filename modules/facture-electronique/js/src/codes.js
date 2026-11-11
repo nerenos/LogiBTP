@@ -78,6 +78,7 @@ export const CODE_NOTE = Object.freeze({
   ESCOMPTE: 'AAB',
   TRAITEMENT: 'BAR',
   MENTION_TAXE: 'TXD', // BR-FR-06 : une fois au plus
+  RESERVE: 'ABU', // clause de réserve : retenue de garantie des situations de travaux (cœur, lot 23)
 });
 
 /** Sous-type de ligne EXT-FR-FE-163 (profil EXTENDED-CTC-FR) : détail, regroupement, information. */

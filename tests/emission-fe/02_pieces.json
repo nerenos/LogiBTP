@@ -118,6 +118,48 @@
       }
     },
     {
+      "nom": "SITUATION_PERIODE",
+      "description": "Facture d'avancement (V_FACTURE_AVT, présentation P : montants de la période) n° 3 du marché : lignes en %, en quantité, en montant, ligne de période nulle omise, compte prorata HT saisi en avancement (remise du document), retenue de garantie TTC (note ABU et BT-20) et paiement direct d'un sous-traitant (BT-20), hors facture ; période BG-14 depuis le lendemain de la situation précédente ; références BT-11 / BT-18 (chantier), BT-12 (marché), BT-17 (projet).",
+      "type_facture": "380",
+      "numero": "F-2026-0130", "date": "2026-11-30", "echeance": "2026-12-31", "debut_periode": "2026-10-31",
+      "chantier": "CH-2026-002", "marche": "M-2026-002-1", "projet": "P-2026-014",
+      "entree": {
+        "document": { "ent_id": 108, "ent_mode_calcul_ouvrage": "V", "ent_precision_montant": 2, "ent_avt_presentation": "P" },
+        "lignes": [
+          { "lig_id": 1, "lig_ordre": 1, "lig_tyl_id": 3, "lig_libelle_html": "Terrassement en pleine masse", "lig_qte": 100, "lig_unt_code": "m3", "lig_pv": 25, "lig_pv_fixe": true, "lig_tva_id": 1, "lig_nat_id": 1, "lig_avt_mode": "P", "lig_avt_valeur": 60, "lig_avt_montant_marche": 2500, "lig_avt_qte_marche": 100, "lig_avt_montant_precedent": 1000, "lig_avt_qte_precedent": 40, "lig_avt_pct_precedent": 40 },
+          { "lig_id": 2, "lig_ordre": 2, "lig_tyl_id": 3, "lig_libelle_html": "Semelles de fondation", "lig_qte": 8, "lig_unt_code": "m3", "lig_pv": 154.32, "lig_pv_fixe": true, "lig_tva_id": 1, "lig_nat_id": 1, "lig_avt_mode": "Q", "lig_avt_valeur": 3, "lig_avt_montant_marche": 1234.56, "lig_avt_qte_marche": 8, "lig_avt_montant_precedent": 0, "lig_avt_qte_precedent": 0, "lig_avt_pct_precedent": 0 },
+          { "lig_id": 3, "lig_ordre": 3, "lig_tyl_id": 3, "lig_libelle_html": "Réseaux enterrés", "lig_qte": 1, "lig_unt_code": "ft", "lig_pv": 800, "lig_pv_fixe": true, "lig_tva_id": 1, "lig_nat_id": 1, "lig_avt_mode": "P", "lig_avt_valeur": 25, "lig_avt_montant_marche": 800, "lig_avt_qte_marche": 1, "lig_avt_montant_precedent": 200, "lig_avt_qte_precedent": 0.25, "lig_avt_pct_precedent": 25 },
+          { "lig_id": 4, "lig_ordre": 4, "lig_tyl_id": 3, "lig_libelle_html": "Isolation des combles", "lig_qte": 40, "lig_unt_code": "m2", "lig_pv": 18.5, "lig_pv_fixe": true, "lig_tva_id": 2, "lig_nat_id": 1, "lig_avt_mode": "M", "lig_avt_valeur": 333.33, "lig_avt_montant_marche": 740, "lig_avt_qte_marche": 40, "lig_avt_montant_precedent": 0, "lig_avt_qte_precedent": 0, "lig_avt_pct_precedent": 0 },
+          { "lig_id": 5, "lig_ordre": 5, "lig_tyl_id": 8, "lig_libelle_html": "Compte prorata", "lig_pied_mode": "M", "lig_pied_valeur": 120, "lig_pied_sens": -1, "lig_avt_mode": "A", "lig_avt_montant_marche": -120, "lig_avt_montant_precedent": -30 },
+          { "lig_id": 7, "lig_ordre": 7, "lig_tyl_id": 10, "lig_libelle_html": "TVA" },
+          { "lig_id": 8, "lig_ordre": 8, "lig_tyl_id": 9, "lig_libelle_html": "Retenue de garantie", "lig_pied_mode": "P", "lig_pied_base": "TOTAL_TTC", "lig_pied_valeur": 5, "lig_pied_sens": -1, "lig_pied_retenue": true, "lig_proprietes": { "poste_marche": "R" } },
+          { "lig_id": 9, "lig_ordre": 9, "lig_tyl_id": 9, "lig_libelle_html": "Paiement direct – Électricité Martin", "lig_pied_mode": "M", "lig_pied_valeur": 300, "lig_pied_sens": -1, "lig_proprietes": { "poste_marche": "12" } }
+        ]
+      }
+    },
+    {
+      "nom": "SITUATION_CUMUL",
+      "description": "Même pièce présentée en cumul (présentation C) : émise en montants de la période (cumul − précédent de chaque ligne et du compte prorata), remise de pied en % sans avancement au prorata période / cumul des lignes, répartie par taux, TVA recalculée sur la base de la période, retenue au prorata période / cumul du TTC ; période BG-14 depuis le premier du mois.",
+      "type_facture": "380",
+      "numero": "F-2026-0131", "date": "2026-11-30", "echeance": "2026-12-31",
+      "chantier": "CH-2026-002", "marche": "M-2026-002-1", "projet": "P-2026-014",
+      "attendu_totaux": { "ht": 1244.16, "tva": 216.84, "ttc": 1461.00 },
+      "entree": {
+        "document": { "ent_id": 109, "ent_mode_calcul_ouvrage": "V", "ent_precision_montant": 2, "ent_avt_presentation": "C" },
+        "lignes": [
+          { "lig_id": 1, "lig_ordre": 1, "lig_tyl_id": 3, "lig_libelle_html": "Terrassement en pleine masse", "lig_qte": 100, "lig_unt_code": "m3", "lig_pv": 25, "lig_pv_fixe": true, "lig_tva_id": 1, "lig_nat_id": 1, "lig_avt_mode": "P", "lig_avt_valeur": 60, "lig_avt_montant_marche": 2500, "lig_avt_qte_marche": 100, "lig_avt_montant_precedent": 1000, "lig_avt_qte_precedent": 40, "lig_avt_pct_precedent": 40 },
+          { "lig_id": 2, "lig_ordre": 2, "lig_tyl_id": 3, "lig_libelle_html": "Semelles de fondation", "lig_qte": 8, "lig_unt_code": "m3", "lig_pv": 154.32, "lig_pv_fixe": true, "lig_tva_id": 1, "lig_nat_id": 1, "lig_avt_mode": "Q", "lig_avt_valeur": 3, "lig_avt_montant_marche": 1234.56, "lig_avt_qte_marche": 8, "lig_avt_montant_precedent": 0, "lig_avt_qte_precedent": 0, "lig_avt_pct_precedent": 0 },
+          { "lig_id": 3, "lig_ordre": 3, "lig_tyl_id": 3, "lig_libelle_html": "Réseaux enterrés", "lig_qte": 1, "lig_unt_code": "ft", "lig_pv": 800, "lig_pv_fixe": true, "lig_tva_id": 1, "lig_nat_id": 1, "lig_avt_mode": "P", "lig_avt_valeur": 25, "lig_avt_montant_marche": 800, "lig_avt_qte_marche": 1, "lig_avt_montant_precedent": 200, "lig_avt_qte_precedent": 0.25, "lig_avt_pct_precedent": 25 },
+          { "lig_id": 4, "lig_ordre": 4, "lig_tyl_id": 3, "lig_libelle_html": "Isolation des combles", "lig_qte": 40, "lig_unt_code": "m2", "lig_pv": 18.5, "lig_pv_fixe": true, "lig_tva_id": 2, "lig_nat_id": 1, "lig_avt_mode": "M", "lig_avt_valeur": 333.33, "lig_avt_montant_marche": 740, "lig_avt_qte_marche": 40, "lig_avt_montant_precedent": 0, "lig_avt_qte_precedent": 0, "lig_avt_pct_precedent": 0 },
+          { "lig_id": 5, "lig_ordre": 5, "lig_tyl_id": 8, "lig_libelle_html": "Compte prorata", "lig_pied_mode": "M", "lig_pied_valeur": 120, "lig_pied_sens": -1, "lig_avt_mode": "A", "lig_avt_montant_marche": -120, "lig_avt_montant_precedent": -30 },
+          { "lig_id": 6, "lig_ordre": 6, "lig_tyl_id": 8, "lig_libelle_html": "Remise de fin de chantier", "lig_pied_mode": "P", "lig_pied_base": "CUMUL", "lig_pied_valeur": 2, "lig_pied_sens": -1 },
+          { "lig_id": 7, "lig_ordre": 7, "lig_tyl_id": 10, "lig_libelle_html": "TVA" },
+          { "lig_id": 8, "lig_ordre": 8, "lig_tyl_id": 9, "lig_libelle_html": "Retenue de garantie", "lig_pied_mode": "P", "lig_pied_base": "TOTAL_TTC", "lig_pied_valeur": 5, "lig_pied_sens": -1, "lig_pied_retenue": true, "lig_proprietes": { "poste_marche": "R" } },
+          { "lig_id": 9, "lig_ordre": 9, "lig_tyl_id": 9, "lig_libelle_html": "Paiement direct – Électricité Martin", "lig_pied_mode": "M", "lig_pied_valeur": 300, "lig_pied_sens": -1, "lig_proprietes": { "poste_marche": "12" } }
+        ]
+      }
+    },
+    {
       "nom": "INCOMPLETE",
       "description": "Brouillon sans numéro ni tiers, ligne sans taux, virement sans IBAN : écarts de l'émission et de la complétude, non écrit.",
       "type_facture": "380", "sans_acheteur": true, "sans_iban": true, "sans_mentions": true,

@@ -67,6 +67,12 @@ public sealed record EntreeFactureBtp
     public IReadOnlyList<AnterieureEmissionFe> Origines { get; init; } = [];
     /// <summary>Factures d'acompte déduites, par marqueur de poste « A&lt;mac_id&gt; » (null : acompte sans facture valable).</summary>
     public IReadOnlyDictionary<string, AnterieureEmissionFe?> Acomptes { get; init; } = new Dictionary<string, AnterieureEmissionFe?>();
+    /// <summary>Codes du chantier (BT-11, BT-18), du marché (BT-12) et du projet d'origine (appel d'offres, BT-17).</summary>
+    public string? Chantier { get; init; }
+    public string? Marche { get; init; }
+    public string? Projet { get; init; }
+    /// <summary>Pièce d'avancement : début de la période (lendemain de la pièce d'avancement précédente ; null : premier du mois).</summary>
+    public DateOnly? DebutPeriode { get; init; }
 }
 
 /// <summary>Facture construite et écarts propres à LogiBTP (<see cref="EcartsEmissionFe"/>, niveau <see cref="NiveauCompletude"/>).</summary>
@@ -88,6 +94,14 @@ public sealed record ControleEmissionFe(bool Applicable, string? TypeFacture, st
 /// électronique (0225, à défaut le SIREN), code de routage (0224), adresse postale, contact. Paiement : condition (BT-20),
 /// première échéance (BT-9, pas sur un avoir), moyen (UNTDID 4461) et IBAN de la société. Le serveur seul construit le
 /// modèle : l'éditeur affiche le résultat du contrôle de la pièce enregistrée (aucune règle répliquée).
+/// Situations et pied BTP (lot 23, Q10) : une pièce d'avancement est émise en montants de la période quelle que soit sa
+/// présentation (C : cumul − précédent de chaque ligne et de chaque poste de pied saisi en avancement ; poste de pied HT sans
+/// avancement au prorata période / cumul des lignes ; TVA recalculée sur la base de la période par l'arrondi unique), lignes
+/// de période nulle omises, période BG-14 (lendemain de la pièce précédente, sinon premier du mois → date de la pièce) ;
+/// postes de pied HT (prorata, frais, remises) en remises ou charges du document ; postes TTC autres que les acomptes
+/// (retenue de garantie, paiement direct, prorata ou frais après TVA) hors facture : la facture porte le total, ils figurent
+/// dans les conditions de paiement (BT-20) et la retenue en note ABU ; références BT-11 et BT-18 (chantier), BT-12
+/// (marché), BT-17 (projet d'origine, appel d'offres).
 /// Routes : GET /api/facture-electronique/documents/{id}/controle et …/{id}/xml?syntaxe=CII|UBL (EmissionFeDonneesBtp).
 /// </summary>
 public static partial class EmissionFactureBtp
@@ -152,6 +166,9 @@ public static partial class EmissionFactureBtp
 
     private static bool EstAcompte(DocumentLigne l) => PosteMarche(l) is { } c && c.StartsWith('A');
 
+    /// <summary>Ligne ou poste de pied saisi en avancement (lig_avt_mode).</summary>
+    private static bool Avance(DocumentLigne l) => !string.IsNullOrEmpty(l.LigAvtMode);
+
     /// <summary>Lignes facturées : lignes de prix sans ancêtre ouvrage, hors pied, de type de prix vendu (hérité), montant calculé.</summary>
     public static List<DocumentLigneBtp> LignesFacturees(IReadOnlyList<DocumentLigneBtp> lignes)
     {
@@ -178,6 +195,8 @@ public static partial class EmissionFactureBtp
         public decimal Base;
         public decimal Tva;
         public decimal Lignes;
+        /// <summary>Situation présentée en cumul : postes de pied HT de la période.</summary>
+        public decimal Pied;
         public List<string> Postes = [];
     }
 
@@ -211,6 +230,10 @@ public static partial class EmissionFactureBtp
         void Ecart(string code, string donnee, string? ligne = null, string? n = null) => ecarts.Add(new EcartCompletude(code, n ?? niveau, donnee, ligne));
 
         var avoir = ReglesCompletude.TypesAvoir.Contains(p.TypeFacture);
+        // Pièce d'avancement (lot 23, Q10) : émise en montants de la période ; présentée en cumul (C), la période est recalculée.
+        var avancement = !string.IsNullOrEmpty(d.EntAvtPresentation);
+        var cumul = d.EntAvtPresentation == "C";
+        decimal MontantPeriode(DocumentLigne l) => cumul && Avance(l) ? (l.LigMontantHt ?? 0) - (l.LigAvtMontantPrecedent ?? 0) : l.LigMontantHt ?? 0;
         // Avoir saisi en négatif (avoir d'avancement) : montants inversés, l'avoir porte des montants positifs.
         var signe = avoir && d.EntTotalHt < 0 ? -1m : 1m;
 
@@ -243,13 +266,19 @@ public static partial class EmissionFactureBtp
         {
             if (Cle(t.TvaTtvId, t.TvaTaux) is not { } k) continue;
             var g = groupes[k];
+            g.Mention ??= g.Categorie == LogiBTP.FactureElectronique.CategorieTva.Normale ? null : t.TvaMention;
+            // Cumul : base et TVA de la période calculées plus bas (lignes et postes de la période).
+            if (cumul) continue;
             g.Base += signe * A2(t.TvaBaseHt);
             g.Tva += signe * A2(t.TvaMontantNet);
-            g.Mention ??= g.Categorie == LogiBTP.FactureElectronique.CategorieTva.Normale ? null : t.TvaMention;
         }
 
-        // Lignes vendues.
+        // Lignes vendues, en montants de la période (présentation C : cumul − précédent des lignes saisies en avancement) ;
+        // pièce d'avancement : lignes de période nulle omises (sauf si toutes le sont).
         var vendues = LignesFacturees(e.Lignes);
+        var cumulVendues = vendues.Sum(l => l.LigMontantHt!.Value);
+        var periodeVendues = vendues.Sum(MontantPeriode);
+        if (avancement && vendues.Any(l => A2(MontantPeriode(l)) != 0)) vendues = vendues.Where(l => A2(MontantPeriode(l)) != 0).ToList();
         var numeros = vendues.Select(l => l.LigNumerotation).ToList();
         var parNumero = numeros.All(n => !string.IsNullOrWhiteSpace(n)) && numeros.Distinct(StringComparer.Ordinal).Count() == numeros.Count;
         var lignes = new List<LigneFacture>();
@@ -276,7 +305,24 @@ public static partial class EmissionFactureBtp
             var cle = Cle(l.LigTvaId, l.LigTauxTva);
             if (cle is null) Ecart(EcartsEmissionFe.TvaAbsente, "BT-151", id);
             var unite = l.LigUntCode is { } u && UnitesEmises.TryGetValue(u.Trim(), out var x) ? x : UniteDefaut;
-            lignes.Add(Ligne(id, Texte(l) ?? l.LigCode ?? id, signe * (l.LigQteVendue ?? l.LigQte ?? 1), signe * l.LigMontantHt!.Value, unite, cle, l.LigCode));
+            var quantite = cumul && Avance(l) ? (l.LigAvtQteCumul ?? l.LigQteVendue ?? 0) - (l.LigAvtQtePrecedent ?? 0) : l.LigQteVendue ?? l.LigQte ?? 1;
+            lignes.Add(Ligne(id, Texte(l) ?? l.LigCode ?? id, signe * quantite, signe * MontantPeriode(l), unite, cle, l.LigCode));
+        }
+
+        // Montant réparti par catégorie et taux au prorata des lignes (le dernier groupe reçoit le reste).
+        List<((string, decimal) Cle, decimal Part)> Repartir(decimal montant)
+        {
+            var bases = groupes.Values.Where(g => g.Lignes != 0).OrderBy(g => g.Categorie, StringComparer.Ordinal).ThenBy(g => g.Taux).ToList();
+            var total = bases.Sum(g => g.Lignes);
+            var parts = new List<((string, decimal), decimal)>();
+            var reste = montant;
+            for (var i = 0; i < bases.Count; i++)
+            {
+                var part = i == bases.Count - 1 || total == 0 ? reste : A2(montant * bases[i].Lignes / total);
+                reste -= part;
+                parts.Add(((bases[i].Categorie, bases[i].Taux), part));
+            }
+            return parts;
         }
 
         // Reprises d'acompte (postes HT « A<mac_id> » des factures définitives) : ligne négative par taux, au prorata des lignes.
@@ -292,22 +338,9 @@ public static partial class EmissionFactureBtp
             e.Acomptes.TryGetValue(PosteMarche(r)!, out var acompte);
             if (acompte?.Numero is null) Ecart(EcartsEmissionFe.AcompteAbsent, "BG-3");
             Anterieure(acompte);
-            var montant = signe * r.LigMontantHt!.Value;
-            List<((string, decimal) Cle, decimal Part)> parts;
-            if (Cle(r.LigTvaId, null) is { } propre) parts = [(propre, montant)];
-            else
-            {
-                var bases = groupes.Values.Where(g => g.Lignes != 0).OrderBy(g => g.Categorie, StringComparer.Ordinal).ThenBy(g => g.Taux).ToList();
-                var total = bases.Sum(g => g.Lignes);
-                parts = [];
-                var reste = montant;
-                for (var i = 0; i < bases.Count; i++)
-                {
-                    var part = i == bases.Count - 1 || total == 0 ? reste : A2(montant * bases[i].Lignes / total);
-                    reste -= part;
-                    parts.Add(((bases[i].Categorie, bases[i].Taux), part));
-                }
-            }
+            // Cumul : reprise de la période (cumul − précédent).
+            var montant = signe * (cumul ? r.LigMontantHt!.Value - (r.LigAvtMontantPrecedent ?? 0) : r.LigMontantHt!.Value);
+            var parts = Cle(r.LigTvaId, null) is { } propre ? [(propre, montant)] : Repartir(montant);
             var nom = Texte(r) ?? PosteMarche(r)!;
             foreach (var (cle, part) in parts.Where(x => x.Part != 0))
             {
@@ -324,6 +357,23 @@ public static partial class EmissionFactureBtp
             if (Texte(r) is not { } t) continue;
             var cles = Cle(r.LigTvaId, null) is { } k ? [k] : groupes.Keys.ToList();
             foreach (var c in cles) if (!groupes[c].Postes.Contains(t)) groupes[c].Postes.Add(t);
+        }
+
+        // Cumul : base de la période = lignes + postes de pied HT de la période (saisis en avancement : cumul − précédent ;
+        // sinon au prorata période / cumul des lignes vendues) ; TVA recalculée sur la base (arrondi unique, BR-CO-17 exact).
+        if (cumul)
+        {
+            var ratio = cumulVendues == 0 ? 0m : periodeVendues / cumulVendues;
+            foreach (var r in piedHt.Where(l => !EstAcompte(l)))
+            {
+                var montant = signe * (Avance(r) ? MontantPeriode(r) : A2(r.LigMontantHt!.Value * ratio));
+                foreach (var (c, part) in Cle(r.LigTvaId, null) is { } propre ? [(propre, montant)] : Repartir(montant)) groupes[c].Pied += part;
+            }
+            foreach (var g in groupes.Values)
+            {
+                g.Base = A2(g.Lignes + g.Pied);
+                g.Tva = CategoriesTaxees.Contains(g.Categorie) ? A2(g.Base * g.Taux / 100m) : 0m;
+            }
         }
 
         // Remise ou charge du document par catégorie et taux : base de la ventilation − lignes (postes de pied HT, écarts).
@@ -392,18 +442,47 @@ public static partial class EmissionFactureBtp
                     : new MoyenPaiement(code, numero));
             }
         }
-        var conditions = string.IsNullOrWhiteSpace(e.ConditionsPaiement) ? null : e.ConditionsPaiement.Trim();
+        // Postes TTC autres que les acomptes (retenue de garantie, paiement direct, prorata ou frais après TVA) : hors facture, la
+        // facture porte le total ; montant de la période (cumul : cumul − précédent, ou au prorata période / cumul du TTC) dans
+        // les conditions de paiement (BT-20), retenue de garantie en note ABU (clause de réserve).
+        var devise = string.IsNullOrWhiteSpace(d.EntDevise) ? "EUR" : d.EntDevise;
+        var ratioTtc = d.EntTotalTtc == 0 ? 0m : totalTtc / (signe * d.EntTotalTtc);
+        var horsFacture = new List<string>();
+        var reserves = new List<string>();
+        foreach (var r in e.Lignes.Where(l => l.LigTylId == TL.PiedTtc && (l.LigTypePrix ?? "V") == "V" && !EstAcompte(l) && l.LigMontantHt is decimal m && m != 0)
+                     .OrderBy(l => l.LigOrdre))
+        {
+            var montant = A2(signe * (!cumul ? r.LigMontantHt!.Value : Avance(r) ? MontantPeriode(r) : r.LigMontantHt!.Value * ratioTtc));
+            if (montant == 0) continue;
+            var pct = r.LigPiedMode == "P" && r.LigPiedValeur is decimal v0 ? $" ({EcritureCii.Nombre(v0)} %)" : "";
+            var texte = $"{Texte(r) ?? PosteMarche(r)}{pct} : {montant.ToString("0.00", CultureInfo.InvariantCulture)} {devise}";
+            horsFacture.Add(texte);
+            if (r.LigPiedRetenue || PosteMarche(r) == PostesMarche.CleRetenue) reserves.Add(texte);
+        }
+        var conditions = string.Join(" ; ", new[] { string.IsNullOrWhiteSpace(e.ConditionsPaiement) ? null : e.ConditionsPaiement.Trim() }
+            .Concat(horsFacture).Where(x => x is not null));
+        if (conditions.Length == 0) conditions = null;
         DateOnly? echeance = avoir ? null : e.Echeance;
         var net = totalTtc - dejaPaye;
         if (net > 0 && conditions is null && echeance is null) Ecart(EcartsEmissionFe.PaiementAbsent, "BT-20");
 
         var notes = new List<NoteFacture>(p.Notes) { new(CodeNote.Traitement, TraitementDe(acheteurFe?.TypeFe)) };
+        if (reserves.Count > 0) notes.Add(new NoteFacture(CodeNote.Reserve, string.Join(" ; ", reserves)));
+
+        // Période de facturation (BG-14, BR-FR-CO-17) d'une pièce d'avancement : lendemain de la précédente, sinon premier du mois.
+        Periode? periode = null;
+        if (avancement)
+        {
+            var debut = e.DebutPeriode ?? MoisFacturation.Debut(d.EntDate);
+            periode = new Periode(debut > d.EntDate ? d.EntDate : debut, d.EntDate);
+        }
+        string? Code(string? x) => string.IsNullOrWhiteSpace(x) ? null : x.Trim();
         var facture = new Facture
         {
             Numero = numero,
             DateEmission = d.EntDate,
             TypeFacture = p.TypeFacture,
-            Devise = string.IsNullOrWhiteSpace(d.EntDevise) ? "EUR" : d.EntDevise,
+            Devise = devise,
             CodeExigibiliteTva = p.CodeExigibiliteTva,
             DateEcheance = echeance,
             CadreFacturation = p.Cadre,
@@ -412,7 +491,9 @@ public static partial class EmissionFactureBtp
             {
                 Acheteur = string.IsNullOrWhiteSpace(acheteurFe?.CodeService) ? null : acheteurFe.CodeService,
                 Commande = string.IsNullOrWhiteSpace(d.EntReferenceExterne) ? null : d.EntReferenceExterne.Trim(),
+                Projet = Code(e.Chantier), Contrat = Code(e.Marche), AppelOffres = Code(e.Projet), Objet = Code(e.Chantier),
             },
+            Periode = periode,
             ConditionsPaiement = conditions,
             Notes = notes,
             FacturesAnterieures = anterieures,
@@ -447,6 +528,29 @@ public static partial class EmissionFactureBtp
         string? AdresseFe, string? Routage, string? TypeFe, string? Service, string Pays, string? Iban, string? Bic, string? Mode, string? Delai);
     private sealed record LigneTauxSql(int Id, decimal Taux, string Comportement, string? Categorie, string? Vatex, string? Mention);
     private sealed record LigneAnterieureSql(string? Numero, DateOnly? Date, string? Cle);
+    private sealed record LigneReferencesSql(string? Chantier, string? Marche, string? Projet, DateOnly? Precedente);
+
+    /// <summary>
+    /// Codes du chantier (de la pièce, sinon du marché), du marché et du projet (de la pièce, sinon du chantier) ; date de la
+    /// dernière pièce d'avancement du marché facturée avant celle-ci (comme le pied d'avancement de l'édition : déductions figées,
+    /// sinon factures et avoirs d'avancement valables non annulés et reprises, de numéro de situation inférieur, datés au plus tard
+    /// le jour de la pièce).
+    /// </summary>
+    private const string SqlReferences = """
+        SELECT c.cha_code AS chantier, m.mar_code AS marche, p.prj_code AS projet,
+               (SELECT max(x.ent_date) FROM document x JOIN type_document tx ON tx.tyd_id = x.ent_tyd_id
+                WHERE d.ent_avt_presentation IS NOT NULL AND x.ent_id <> d.ent_id AND x.ent_date <= d.ent_date
+                  AND (x.ent_id IN (SELECT k.ded_deduit_ent_id FROM document_deduction k WHERE k.ded_ent_id = d.ent_id)
+                       OR (NOT EXISTS (SELECT 1 FROM document_deduction k WHERE k.ded_ent_id = d.ent_id)
+                           AND x.ent_marche_id = d.ent_marche_id AND f_document_valable(x.ent_id, FALSE)
+                           AND (x.ent_avt_presentation = 'P' OR tx.tyd_avancement = 'R')
+                           AND (x.ent_rang_avancement IS NULL OR d.ent_rang_avancement IS NULL OR x.ent_rang_avancement < d.ent_rang_avancement)))) AS precedente
+        FROM document d
+        LEFT JOIN marche m ON m.mar_id = d.ent_marche_id
+        LEFT JOIN chantier c ON c.cha_id = coalesce(d.ent_chantier_id, m.mar_cha_id)
+        LEFT JOIN projet p ON p.prj_id = coalesce(d.ent_projet_id, c.cha_prj_id)
+        WHERE d.ent_id = {0}
+        """;
 
     private const string SqlPersonne = """
         SELECT per_id AS id, per_raison_sociale AS raison_sociale, per_nom_commercial AS nom_commercial, per_siren::text AS siren,
@@ -529,6 +633,7 @@ public static partial class EmissionFactureBtp
             FROM marche_acompte a LEFT JOIN document f ON f.ent_id = a.mac_piece_ent_id AND f_document_valable(f.ent_id, FALSE)
             WHERE ('A' || a.mac_id) IN (SELECT l.lig_proprietes->>'poste_marche' FROM document_ligne l WHERE l.lig_ent_id = {0})
             """, id).ToListAsync(ct);
+        var references = await db.Database.SqlQueryRaw<LigneReferencesSql>(SqlReferences, id).FirstAsync(ct);
 
         return new EntreeFactureBtp
         {
@@ -539,6 +644,8 @@ public static partial class EmissionFactureBtp
             ModeReglement = d.EntModeReglement ?? client?.Ligne.Mode, Iban = societe?.Ligne.Iban, Bic = societe?.Ligne.Bic,
             Origines = origines.Where(o => o.Numero is not null).Select(o => new AnterieureEmissionFe(o.Numero, o.Date)).ToList(),
             Acomptes = acomptes.ToDictionary(a => a.Cle!, a => a.Numero is null ? null : new AnterieureEmissionFe(a.Numero, a.Date)),
+            Chantier = references.Chantier, Marche = references.Marche, Projet = references.Projet,
+            DebutPeriode = references.Precedente?.AddDays(1),
         };
     }
 
