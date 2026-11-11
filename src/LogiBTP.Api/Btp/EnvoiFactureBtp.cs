@@ -20,7 +20,11 @@ namespace LogiBTP.Api.Btp;
 /// statut_fe de v_liste_documents), erreur, bouton « Émettre » proposé.
 /// </summary>
 public sealed record EtatEnvoiFe(bool Applicable, string? Etat, string? Motif, string? Syntaxe, long? FluxId, string? EtatFlux, string? Statut,
-    string? Pastille, string? Erreur, bool Emettable);
+    string? Pastille, string? Erreur, bool Emettable)
+{
+    /// <summary>Avoir interne d'une facture rejetée ou refusée : proposé, ou fait (lot 25, <see cref="RejetFactureBtp"/>).</summary>
+    public AnnulationFe? Annulation { get; init; }
+}
 
 /// <summary>Option de la société : émission automatique à la validation (Q23), sinon bouton « Émettre ».</summary>
 public sealed record OptionEmissionFe(bool Automatique);
@@ -143,13 +147,13 @@ public static class EnvoiFactureBtp
     // ---------------------------------------------------------------- lecture en base
 
     private sealed record LignePiece(long Id, string? Numero, bool Verrouille, bool Valable, string? TypeFacture, int TydId, string Famille, string Code,
-        string? FeType, string? Pays, bool? DansAnnuaire, string? Format, bool Differe);
+        string? FeType, string? Pays, bool? DansAnnuaire, string? Format, bool Differe, bool ValableAnnulee);
 
     private const string SqlPiece = """
         SELECT d.ent_id AS id, d.ent_numero AS numero, d.ent_verrouille AS verrouille, f_document_valable(d.ent_id, FALSE) AS valable,
                t.tyd_fe_type_facture AS type_facture, t.tyd_id, t.tyd_famille::text AS famille, t.tyd_code AS code,
                p.per_fe_type AS fe_type, p.per_pays::text AS pays, p.per_fe_dans_annuaire AS dans_annuaire, p.per_fe_format AS format,
-               d.ent_fe_differe AS differe
+               d.ent_fe_differe AS differe, f_document_valable(d.ent_id, TRUE) AS valable_annulee
         FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id LEFT JOIN personne p ON p.per_id = d.ent_tiers_id
         WHERE d.ent_id = @id
         """;
@@ -188,8 +192,14 @@ public static class EnvoiFactureBtp
             FROM document_fe_emission e LEFT JOIN fe_flux f ON f.ffl_id = e.dfe_flux_id WHERE e.dfe_ent_id = @id
             """, new NpgsqlParameter("id", id)).ToListAsync(ct)).FirstOrDefault();
         var applicable = p.TypeFacture is not null;
+        // Avoir interne (lot 25) : annulé d'office avec sa facture, il reste émettable pour l'archivage seul.
+        var annulation = applicable ? await RejetFactureBtp.AnnulationAsync(db, id, e?.Statut, p.Verrouille && p.Valable, ct) : null;
+        var valable = p.Verrouille && (annulation is { EstAvoir: true } ? p.ValableAnnulee : p.Valable);
         return new EtatEnvoiFe(applicable, e?.Etat, e?.Motif, e?.Syntaxe, e?.FluxId, e?.EtatFlux, e?.Statut, Pastille(e?.Etat, e?.EtatFlux, e?.Statut),
-            e?.Erreur, Emettable(applicable, p.Verrouille && p.Valable, e?.Etat, e?.EtatFlux));
+            e?.Erreur, Emettable(applicable, valable, e?.Etat, e?.EtatFlux) && !(annulation is { EstAvoir: true } && annulation.Transmission == TransmissionsAvoirInterneFe.Aucune))
+        {
+            Annulation = annulation,
+        };
     }
 
     // ---------------------------------------------------------------- validation (points d'accroche de SpecialisationBtp)
@@ -289,7 +299,9 @@ public static class EnvoiFactureBtp
         var db = services.GetRequiredService<LogiBtpContext>();
         var p = await PieceAsync(db, id, ct) ?? throw ExceptionMetier.Introuvable("Document");
         var avant = await EtatAsync(db, id, ct);
-        if (!avant.Applicable || !p.Verrouille || !p.Valable)
+        // Avoir interne d'une facture rejetée ou refusée (lot 25) : annulé, déposé pour archivage seul.
+        var archivage = avant.Annulation is { EstAvoir: true, Transmission: TransmissionsAvoirInterneFe.ArchivageSeul };
+        if (!avant.Applicable || !p.Verrouille || !(archivage ? p.ValableAnnulee : p.Valable))
             throw ExceptionMetier.Invalide(ErreursEmissionFe.NonEmettable, "Seule une pièce de vente validée d'un type émis peut partir en facture électronique");
         if (!avant.Emettable)
             throw ExceptionMetier.Conflit(ErreursEmissionFe.DejaEmise, "Facture électronique déjà émise : suivez-la dans l'onglet Chronologie");
@@ -305,6 +317,7 @@ public static class EnvoiFactureBtp
             return await EtatAsync(db, id, ct);
         }
         var entree = await EmissionFactureBtp.EntreeAsync(db, id, ct) ?? throw ExceptionMetier.Introuvable("Document");
+        if (archivage) entree = entree with { ArchivageSeul = true };
         var construite = EmissionFactureBtp.Construire(entree);
         var bloquants = Bloquants(EmissionFactureBtp.Controler(entree));
         if (bloquants.Count > 0)
@@ -335,7 +348,7 @@ public static class EnvoiFactureBtp
         }
         var flux = await fe.MettreEnFileAsync(new FluxAEmettre(contenu, NomFichier(f.Numero, syntaxe))
         {
-            Syntaxe = syntaxe, Profil = f.Profil, Numero = f.Numero,
+            Syntaxe = syntaxe, Profil = f.Profil, Numero = f.Numero, Regle = archivage ? RegleTraitement.ArchivageSeul : null,
             TypeElement = TypesElementFe.Document, IdElement = id.ToString(CultureInfo.InvariantCulture),
         }, u, ct);
         await EcrireEtatAsync(db, id, EtatsEmissionFe.Emise, null, syntaxe, flux.Id, null, par, ct);

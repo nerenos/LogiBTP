@@ -936,6 +936,12 @@ public class ServiceFactureElectronique(
 
     public Task<VerificationJournal> VerifierJournal(CancellationToken ct) => JournalFe.VerifierAsync(db, ct);
 
+    /// <summary>
+    /// Étape décidée par l'application (avoir interne d'une facture rejetée ou refusée, action d'un utilisateur…) inscrite
+    /// au journal : le module n'en tire aucune conséquence sur ses flux.
+    /// </summary>
+    public Task JournaliserAsync(EtapeFe e, CancellationToken ct) => JournalFe.AjouterAsync(db, e, ct);
+
     // ---------------------------------------------------------------- DTO
 
     private async Task<FluxDto> DtoAsync(FluxFe f, CancellationToken ct) =>

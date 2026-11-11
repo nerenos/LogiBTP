@@ -73,6 +73,8 @@ public sealed record EntreeFactureBtp
     public string? Projet { get; init; }
     /// <summary>Pièce d'avancement : début de la période (lendemain de la pièce d'avancement précédente ; null : premier du mois).</summary>
     public DateOnly? DebutPeriode { get; init; }
+    /// <summary>Avoir interne d'annulation d'une facture rejetée ou refusée déposé pour archivage seul (lot 25) : note BAR ARCHIVEONLY.</summary>
+    public bool ArchivageSeul { get; init; }
 }
 
 /// <summary>Facture construite et écarts propres à LogiBTP (<see cref="EcartsEmissionFe"/>, niveau <see cref="NiveauCompletude"/>).</summary>
@@ -466,7 +468,7 @@ public static partial class EmissionFactureBtp
         var net = totalTtc - dejaPaye;
         if (net > 0 && conditions is null && echeance is null) Ecart(EcartsEmissionFe.PaiementAbsent, "BT-20");
 
-        var notes = new List<NoteFacture>(p.Notes) { new(CodeNote.Traitement, TraitementDe(acheteurFe?.TypeFe)) };
+        var notes = new List<NoteFacture>(p.Notes) { new(CodeNote.Traitement, e.ArchivageSeul ? Traitement.ArchivageSeul : TraitementDe(acheteurFe?.TypeFe)) };
         if (reserves.Count > 0) notes.Add(new NoteFacture(CodeNote.Reserve, string.Join(" ; ", reserves)));
 
         // Période de facturation (BG-14, BR-FR-CO-17) d'une pièce d'avancement : lendemain de la précédente, sinon premier du mois.

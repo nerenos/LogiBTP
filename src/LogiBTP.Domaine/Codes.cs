@@ -264,6 +264,18 @@ public static class MotifsEmissionFe
     public const string HorsAnnuaire = "HORS_ANNUAIRE";
     public const string Incomplete = "INCOMPLETE";
     public const string Production = "PRODUCTION";
+    /// <summary>Avoir interne d'annulation d'une facture rejetée ou refusée, non déposé (lot 25).</summary>
+    public const string AvoirInterne = "AVOIR_INTERNE";
+}
+
+/// <summary>
+/// Transmission de l'avoir interne d'annulation d'une facture émise rejetée (213) ou refusée (210), choisie par
+/// l'utilisateur (lot 25, Q14) : déposé pour archivage seul (note BAR ARCHIVEONLY, règle ArchiveOnly), ou non déposé.
+/// </summary>
+public static class TransmissionsAvoirInterneFe
+{
+    public const string ArchivageSeul = "ARCHIVAGE_SEUL";
+    public const string Aucune = "AUCUNE";
 }
 
 /// <summary>
@@ -285,6 +297,8 @@ public static class ErreursEmissionFe
     public const string Incomplete = "FE_INCOMPLETE";
     public const string DejaEmise = "FE_DEJA_EMISE";
     public const string NonEmettable = "FE_NON_EMETTABLE";
+    /// <summary>Avoir interne refusé : statut non rejeté ni refusé, pièce déjà annulée, pièces d'avancement suivantes (lot 25).</summary>
+    public const string AnnulationImpossible = "FE_ANNULATION_IMPOSSIBLE";
 }
 
 /// <summary>

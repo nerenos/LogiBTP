@@ -211,6 +211,16 @@ export const MOTIF_EMISSION_FE = Object.freeze({
   HORS_ANNUAIRE: 'HORS_ANNUAIRE',
   INCOMPLETE: 'INCOMPLETE',
   PRODUCTION: 'PRODUCTION',
+  AVOIR_INTERNE: 'AVOIR_INTERNE',
+});
+
+/**
+ * Transmission de l'avoir interne d'annulation d'une facture émise rejetée (213) ou refusée (210), choisie par
+ * l'utilisateur (lot 25, Q14) : déposé pour archivage seul (note BAR ARCHIVEONLY), ou non déposé.
+ */
+export const TRANSMISSION_AVOIR_INTERNE_FE = Object.freeze({
+  ARCHIVAGE_SEUL: 'ARCHIVAGE_SEUL',
+  AUCUNE: 'AUCUNE',
 });
 
 /**
@@ -260,6 +270,7 @@ export const ERREUR_EMISSION_FE = Object.freeze({
   INCOMPLETE: 'FE_INCOMPLETE',
   DEJA_EMISE: 'FE_DEJA_EMISE',
   NON_EMETTABLE: 'FE_NON_EMETTABLE',
+  ANNULATION_IMPOSSIBLE: 'FE_ANNULATION_IMPOSSIBLE',
 });
 
 /** Signaux de notification de la facturation électronique (db/295, types du module « facture_electronique »). */

@@ -923,7 +923,11 @@
       "nature_fe_calculee": "Calculée : {{nature}}",
       "fe_differe": "Envoyer plus tard (facture électronique)",
       "fe_differe_aide": "La pièce validée ne part pas sur la plateforme : bouton « Émettre » de la pièce pour l'envoyer ensuite",
-      "natures_fe": { "B": "Biens", "S": "Services", "M": "Mixte" }
+      "natures_fe": {
+        "B": "Biens",
+        "S": "Services",
+        "M": "Mixte"
+      }
     },
     "page": {
       "onglets": {
@@ -1087,7 +1091,33 @@
           "INTERNATIONAL": "client international (e-reporting)",
           "HORS_ANNUAIRE": "client absent de l'annuaire",
           "INCOMPLETE": "données à compléter",
-          "PRODUCTION": "production du fichier impossible"
+          "PRODUCTION": "production du fichier impossible",
+          "AVOIR_INTERNE": "avoir interne non déposé"
+        },
+        "annulation": {
+          "proposee": "Facture {{statut}} : à annuler par un avoir interne puis à refaire",
+          "bouton": "Annuler par avoir interne",
+          "bouton_aide": "Crée l'avoir d'annulation daté du jour (les deux pièces passent au statut Annulé) puis une nouvelle facture en brouillon, ou remet en cours la situation d'une pièce d'avancement",
+          "titre": "Annulation par avoir interne",
+          "confirmer": "La facture a été {{statut}}. Créer l'avoir interne d'annulation, daté du jour, puis une nouvelle facture en brouillon (situation remise en cours pour une pièce d'avancement) ? Le statut des deux pièces passe à Annulé.",
+          "archivage": "Déposer l'avoir sur la plateforme pour archivage seul (non transmis au client)",
+          "archivage_aide": "Note BAR ARCHIVEONLY : l'avoir est gardé par la plateforme sans être adressé au client ; décoché, il n'est pas déposé",
+          "ok": "Créer l'avoir",
+          "avoir": "Annulée par l'avoir interne {{numero}}",
+          "nouvelle_facture": "Nouvelle facture : {{numero}}",
+          "de_la_facture": "Avoir interne d'annulation de la facture {{statut}}",
+          "ouvrir_facture": "Ouvrir la facture annulée",
+          "brouillon": "brouillon",
+          "transmissions": {
+            "ARCHIVAGE_SEUL": "déposé pour archivage seul",
+            "AUCUNE": "non déposé"
+          },
+          "statuts": {
+            "210": "refusée par le client",
+            "213": "rejetée par la plateforme"
+          },
+          "cree": "Avoir interne {{numero}} créé : la facture et son avoir sont annulés",
+          "ouvrir_copie": "Ouvrir la nouvelle facture (brouillon) ou la situation remise en cours ?"
         }
       },
       "attente": {

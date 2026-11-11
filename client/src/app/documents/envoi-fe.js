@@ -2,10 +2,13 @@
 // validée avant l'activation du module, envoi différé, échec ou hors flux). Le serveur décide (Btp/EnvoiFactureBtp.cs) :
 // GET /api/facture-electronique/documents/{id}/envoi (état), POST …/envoi (émission). Statut affiché = statut du cycle de
 // vie du flux (libellés du module), sinon état de l'émission ; mêmes codes que la colonne « Facture électronique » des listes.
+// Lot 25 : facture rejetée (213) ou refusée (210) → avoir interne proposé (annulation de l'état, décidée par le serveur,
+// Btp/RejetFactureBtp.cs), confirmé dans une fenêtre du socle (dépôt pour archivage seul ou non), POST …/annulation ;
+// facture annulée : avoir et nouvelle facture ; avoir interne : facture annulée. Rien ne change sans l'utilisateur.
 
 import { texte, texteHtml, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { echapper } from '@logibtp/socle/ui';
-import { PASTILLES_EMISSION_FE_LISTE, PASTILLE_EMISSION_FE } from '../codes.js';
+import { PASTILLES_EMISSION_FE_LISTE, PASTILLE_EMISSION_FE, TRANSMISSION_AVOIR_INTERNE_FE } from '../codes.js';
 
 const ETATS_PASTILLE = new Set(Object.values(PASTILLE_EMISSION_FE));
 
@@ -24,6 +27,58 @@ export function teintePastilleFe(code) {
   return PASTILLES_EMISSION_FE_LISTE.find((o) => o.valeur === code)?.teinte ?? 'neutre';
 }
 
+/** Libellé d'un statut de rejet ou de refus dans les phrases de l'annulation (texte du statut à défaut). */
+function statutAnnulation(statut) {
+  const cle = `document_btp.page.envoi_fe.annulation.statuts.${statut}`;
+  const t = texte(cle);
+  return t === cle ? texte(`facture_electronique.statuts.${statut}`) : t;
+}
+
+/** Lien vers une pièce (ouverte par la page). */
+function lienPiece(id, libelle) {
+  return `<button type="button" class="lien" data-ouvrir-fe="${echapper(String(id))}">${echapper(libelle)}</button>`;
+}
+
+/** Partie « avoir interne » de la zone : proposition (bouton si droit Modifier), avoir et nouvelle facture, ou facture annulée. */
+export function annulationFeHtml(a, { peutModifier = false } = {}) {
+  if (!a) return '';
+  const brouillon = texte('document_btp.page.envoi_fe.annulation.brouillon');
+  if (a.proposee) {
+    const bouton = peutModifier
+      ? ` <button type="button" data-action-fe="annuler" title="${texteHtml('document_btp.page.envoi_fe.annulation.bouton_aide')}">${iconeHtml('facture_electronique_btp_avoir_interne')} ${texteHtml('document_btp.page.envoi_fe.annulation.bouton')}</button>`
+      : '';
+    return ` <span class="aide" data-annulation-fe="proposee">${texteHtml('document_btp.page.envoi_fe.annulation.proposee', { statut: statutAnnulation(a.statut) })}</span>${bouton}`;
+  }
+  const transmission = a.transmission ? ` <span class="aide">(${texteHtml(`document_btp.page.envoi_fe.annulation.transmissions.${a.transmission}`)})</span>` : '';
+  if (a.est_avoir) {
+    return ` <span class="aide" data-annulation-fe="avoir">${texteHtml('document_btp.page.envoi_fe.annulation.de_la_facture', { statut: statutAnnulation(a.statut) })}</span>${transmission}`
+      + (a.facture_id ? ` ${lienPiece(a.facture_id, texte('document_btp.page.envoi_fe.annulation.ouvrir_facture'))}` : '');
+  }
+  if (!a.avoir_id) return '';
+  const avoir = lienPiece(a.avoir_id, texte('document_btp.page.envoi_fe.annulation.avoir', { numero: a.avoir_numero ?? brouillon }));
+  const copie = a.copie_id ? ` ${lienPiece(a.copie_id, texte('document_btp.page.envoi_fe.annulation.nouvelle_facture', { numero: a.copie_numero ?? brouillon }))}` : '';
+  return ` <span data-annulation-fe="faite">${avoir}${transmission}${copie}</span>`;
+}
+
+/**
+ * Fenêtre de confirmation de l'avoir interne (ouvrirDialogue du socle) : rend la transmission choisie
+ * (TRANSMISSION_AVOIR_INTERNE_FE : case cochée → archivage seul) ou null si l'utilisateur renonce.
+ */
+export function demanderAnnulationFe(ouvrirDialogue, statut) {
+  const html = `<p class="dialogue-message">${texteHtml('document_btp.page.envoi_fe.annulation.confirmer', { statut: statutAnnulation(statut) })}</p>
+    <label title="${texteHtml('document_btp.page.envoi_fe.annulation.archivage_aide')}"><input type="checkbox" data-archivage-fe checked> ${texteHtml('document_btp.page.envoi_fe.annulation.archivage')}</label>`;
+  return ouvrirDialogue({
+    titre: texte('document_btp.page.envoi_fe.annulation.titre'), html, valeurAnnulation: null,
+    boutons: [
+      { libelle: texte('commun.annuler'), valeur: null },
+      {
+        libelle: texte('document_btp.page.envoi_fe.annulation.ok'), principal: true,
+        valeur: (d) => (d.querySelector('[data-archivage-fe]')?.checked ? TRANSMISSION_AVOIR_INTERNE_FE.ARCHIVAGE_SEUL : TRANSMISSION_AVOIR_INTERNE_FE.AUCUNE),
+      },
+    ],
+  });
+}
+
 /** Contenu de la zone (vide : rien à afficher). */
 export function envoiFeHtml(etat, { peutModifier = false } = {}) {
   if (!etat?.applicable) return '';
@@ -37,14 +92,15 @@ export function envoiFeHtml(etat, { peutModifier = false } = {}) {
     ? ` <button type="button" data-action-fe="emettre" title="${texteHtml('document_btp.page.envoi_fe.emettre_aide')}">${iconeHtml('facture_electronique_btp_emettre')} ${texteHtml('document_btp.page.envoi_fe.emettre')}</button>`
     : '';
   return `<div class="envoi-fe" title="${texteHtml('document_btp.page.envoi_fe.aide')}">${iconeHtml('facture_electronique_btp_page')}
-    <b>${texteHtml('document_btp.page.envoi_fe.titre')}</b> ${pastille}${motif}${syntaxe}${erreur}${bouton}</div>`;
+    <b>${texteHtml('document_btp.page.envoi_fe.titre')}</b> ${pastille}${motif}${syntaxe}${erreur}${bouton}${annulationFeHtml(etat.annulation, { peutModifier })}</div>`;
 }
 
 /**
  * Met à jour la zone de l'émission de la page document (relue à chaque version enregistrée de la pièce) ; « Émettre »
  * demande confirmation (fenêtre du socle fournie par l'appelant) puis relit l'état.
  */
-export async function rendreEnvoiFe(page, { zone, moduleActif, peutConsulter, peutModifier, types, lire, emettre, confirmer, erreur }) {
+export async function rendreEnvoiFe(page, options) {
+  const { zone, moduleActif, peutConsulter, peutModifier, types, lire, emettre, confirmer, erreur, annuler, dialogue, ouvrir, apresAnnulation } = options;
   if (!zone) return;
   const d = page.editeur?.saisie.document;
   const code = page.editeur?.definition.type?.tyd_code;
@@ -77,6 +133,19 @@ export async function rendreEnvoiFe(page, { zone, moduleActif, peutConsulter, pe
       erreur(x);
     }
     page.envoiFeCle = null;
-    await rendreEnvoiFe(page, { zone, moduleActif, peutConsulter, peutModifier, types, lire, emettre, confirmer, erreur });
+    await rendreEnvoiFe(page, options);
   });
+  zone.querySelector('[data-action-fe="annuler"]')?.addEventListener('click', async () => {
+    const transmission = await demanderAnnulationFe(dialogue, etat.annulation?.statut);
+    if (!transmission) return;
+    try {
+      const apres = await annuler(d.ent_id, transmission);
+      // La pièce vient d'être annulée : relue (statut, verrou) par la page, qui redessine la zone.
+      page.envoiFeCle = null;
+      await apresAnnulation?.(apres);
+    } catch (x) {
+      erreur(x);
+    }
+  });
+  zone.querySelectorAll('[data-ouvrir-fe]').forEach((b) => b.addEventListener('click', () => ouvrir?.(Number(b.dataset.ouvrirFe))));
 }

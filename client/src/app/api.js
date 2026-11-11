@@ -768,6 +768,7 @@ export const api = {
   // Lot 24 : émission de la pièce validée (état, bouton « Émettre ») ; option de la société (émission automatique).
   envoiFeDocument: (id) => appel('GET', `/facture-electronique/documents/${id}/envoi`),
   emettreFeDocument: (id) => appel('POST', `/facture-electronique/documents/${id}/envoi`),
+  annulerFeDocument: (id, transmission) => appel('POST', `/facture-electronique/documents/${id}/annulation`, { transmission }),
   optionEmissionFe: () => appel('GET', '/facture-electronique/emission/option'),
   definirOptionEmissionFe: (automatique) => appel('PUT', '/facture-electronique/emission/option', { automatique }),
   // Annulation par avoir (pièce et, dans un marché, pièces d'avancement suivantes) : liste puis annulation.

@@ -728,8 +728,24 @@ export class PageDocument extends PageBase {
       peutConsulter: this.app.peut(NOEUD_FE, ACTION_DROIT.CONSULTER), peutModifier: this.app.peut(NOEUD_FE, ACTION_DROIT.MODIFIER),
       types: this.emissionFe?.types, lire: (id) => api.envoiFeDocument(id), emettre: (id) => api.emettreFeDocument(id), confirmer,
       erreur: (x) => this.app.erreur(x),
+      // Lot 25 : avoir interne d'une facture rejetée ou refusée (fenêtre du socle), pièces liées ouvertes dans une fenêtre.
+      annuler: (id, transmission) => api.annulerFeDocument(id, transmission), dialogue: ouvrirDialogue,
+      ouvrir: (id) => this.app.naviguer(urlDocument(id), { nouvelleFenetre: true }),
+      apresAnnulation: (r) => this.#apresAvoirInterne(r),
     });
     this.app.majPage();
+  }
+
+  /** Après l'avoir interne d'une facture rejetée ou refusée : pièce relue, nouvelle facture proposée à l'ouverture. */
+  async #apresAvoirInterne(r) {
+    const d = this.editeur.saisie.document;
+    const a = r?.annulation;
+    this.app.publier(SUJET_FENETRE.ENREGISTRE, { ids: [d.ent_id, a?.avoir_id, a?.copie_id].filter(Boolean) });
+    await this.chargerDocument(d.ent_id);
+    this.app.message(texte('document_btp.page.envoi_fe.annulation.cree', { numero: a?.avoir_numero ?? '' }), 'succes');
+    if (a?.copie_id && await confirmer(texte('document_btp.page.envoi_fe.annulation.ouvrir_copie'))) {
+      await this.app.naviguer(urlDocument(a.copie_id), { nouvelleFenetre: true });
+    }
   }
 
   /** Bandeau de la saisie enregistrée sur ce poste et pas encore envoyée (état, date, erreur). */

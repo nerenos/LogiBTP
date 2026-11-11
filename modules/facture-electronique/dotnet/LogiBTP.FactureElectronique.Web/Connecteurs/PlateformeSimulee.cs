@@ -5,8 +5,11 @@ using LogiBTP.FactureElectronique.Formats;
 
 namespace LogiBTP.FactureElectronique.Web.Connecteurs;
 
-/// <summary>Statut programmé par la plateforme simulée après un accusé Ok : code (<see cref="StatutCdv"/>) et émetteur (<see cref="EmetteurStatut"/>).</summary>
-public sealed record StatutProgramme(string Statut, string Emetteur);
+/// <summary>
+/// Statut programmé par la plateforme simulée après un accusé Ok : code (<see cref="StatutCdv"/>), émetteur
+/// (<see cref="EmetteurStatut"/>) et motif (<see cref="MotifStatut"/>, obligatoire pour Rejetée, Refusée, En litige…).
+/// </summary>
+public sealed record StatutProgramme(string Statut, string Emetteur, string? Motif = null);
 
 /// <summary>
 /// Règles de démonstration de la plateforme simulée : délai de l'accusé, intervalle entre deux statuts programmés,
@@ -303,7 +306,7 @@ public sealed class PlateformeSimulee(IMagasinFlux etat, TimeProvider horloge, O
         var date = quand.UtcDateTime;
         return Cdar.Ecrire(new StatutAEcrire(SensFacture.Emise, s.Statut, s.Emetteur, reference, auteur, [Partie(f.Vendeur, RoleCdar.Vendeur)], date, date)
         {
-            Historique = flux.Historique,
+            Historique = flux.Historique, Motif = s.Motif,
         });
     }
 

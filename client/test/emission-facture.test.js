@@ -5,9 +5,9 @@ import { texte, texteHtml, existe } from '@logibtp/socle/dictionnaire';
 import { REGLE_COMPLETUDE, NIVEAU_COMPLETUDE, NIVEAU_CONTROLE, SYNTAXE, STATUT_CDV } from '@logibtp/facture-electronique';
 import { compilerSchematrons } from '../../modules/facture-electronique/js/outils/schematrons.js';
 import { validerFacture } from '../../modules/facture-electronique/js/outils/valider.js';
-import { ECART_EMISSION_FE, MOTIF_EMISSION_FE, PASTILLE_EMISSION_FE, PASTILLES_EMISSION_FE_LISTE, TYPE_DOCUMENT } from '../src/app/codes.js';
+import { ECART_EMISSION_FE, MOTIF_EMISSION_FE, PASTILLE_EMISSION_FE, PASTILLES_EMISSION_FE_LISTE, TRANSMISSION_AVOIR_INTERNE_FE, TYPE_DOCUMENT } from '../src/app/codes.js';
 import { bandeauCompletudeFeHtml, libelleEcartFe, completudeFeVisible } from '../src/app/documents/completude-fe.js';
-import { envoiFeHtml, envoiFeVisible, libellePastilleFe, teintePastilleFe } from '../src/app/documents/envoi-fe.js';
+import { annulationFeHtml, demanderAnnulationFe, envoiFeHtml, envoiFeVisible, libellePastilleFe, teintePastilleFe } from '../src/app/documents/envoi-fe.js';
 import { VUES_LISTE } from '../src/app/vues-liste.js';
 
 // Facturation électronique, lot 22 : pièces de vente de démonstration écrites par EmissionFactureTests.cs
@@ -141,5 +141,49 @@ describe('émission de la pièce validée (pastille, bouton Émettre, colonne de
     expect(factures.definition.colonnes.map((c) => c.code)).toContain('statut_fe');
     const devis = VUES_LISTE.find((v) => v.definition.theme === 'devis');
     expect(devis.definition.colonnes.map((c) => c.code)).not.toContain('statut_fe');
+  });
+});
+
+// Lot 25 : avoir interne d'une facture rejetée (213) ou refusée (210), proposé par le serveur (annulation de l'état),
+// confirmé par la fenêtre du socle (dépôt pour archivage seul ou non).
+describe('avoir interne d\'une facture rejetée ou refusée', () => {
+  it('libellés des transmissions et des statuts de rejet ou de refus', () => {
+    for (const t of Object.values(TRANSMISSION_AVOIR_INTERNE_FE)) expect(existe(`document_btp.page.envoi_fe.annulation.transmissions.${t}`), t).toBe(true);
+    for (const s of [STATUT_CDV.REJETEE, STATUT_CDV.REFUSEE]) expect(existe(`document_btp.page.envoi_fe.annulation.statuts.${s}`), s).toBe(true);
+  });
+
+  it('proposition : bouton selon le droit, rien sans proposition', () => {
+    const a = { proposee: true, statut: STATUT_CDV.REJETEE };
+    const html = annulationFeHtml(a, { peutModifier: true });
+    expect(html).toContain('data-action-fe="annuler"');
+    expect(html).toContain(texteHtml('document_btp.page.envoi_fe.annulation.statuts.213'));
+    expect(annulationFeHtml(a, { peutModifier: false })).not.toContain('data-action-fe');
+    expect(annulationFeHtml(null)).toBe('');
+    expect(annulationFeHtml({ proposee: false, statut: STATUT_CDV.DEPOSEE })).toBe('');
+    const zone = envoiFeHtml({ applicable: true, etat: 'EMISE', pastille: STATUT_CDV.REFUSEE, statut: STATUT_CDV.REFUSEE, emettable: false, annulation: { proposee: true, statut: STATUT_CDV.REFUSEE } }, { peutModifier: true });
+    expect(zone).toContain('data-annulation-fe="proposee"');
+  });
+
+  it('facture annulée : avoir et nouvelle facture ; avoir : facture annulée', () => {
+    const faite = annulationFeHtml({ proposee: false, statut: STATUT_CDV.REFUSEE, transmission: TRANSMISSION_AVOIR_INTERNE_FE.ARCHIVAGE_SEUL, avoir_id: 8, avoir_numero: 'AV-1', copie_id: 9 });
+    expect(faite).toContain('data-ouvrir-fe="8"');
+    expect(faite).toContain('data-ouvrir-fe="9"');
+    expect(faite).toContain('AV-1');
+    expect(faite).toContain(texteHtml('document_btp.page.envoi_fe.annulation.transmissions.ARCHIVAGE_SEUL'));
+    const avoir = annulationFeHtml({ est_avoir: true, statut: STATUT_CDV.REJETEE, transmission: TRANSMISSION_AVOIR_INTERNE_FE.AUCUNE, facture_id: 7, avoir_id: 8 });
+    expect(avoir).toContain('data-annulation-fe="avoir"');
+    expect(avoir).toContain('data-ouvrir-fe="7"');
+  });
+
+  it('fenêtre de confirmation : case cochée → archivage seul, décochée → non déposé, renoncement → null', async () => {
+    let options;
+    const dialogue = (o) => { options = o; return Promise.resolve(null); };
+    expect(await demanderAnnulationFe(dialogue, STATUT_CDV.REJETEE)).toBeNull();
+    expect(options.html).toContain('data-archivage-fe checked');
+    const ok = options.boutons.find((b) => b.principal);
+    const fenetre = (coche) => ({ querySelector: () => ({ checked: coche }) });
+    expect(ok.valeur(fenetre(true))).toBe(TRANSMISSION_AVOIR_INTERNE_FE.ARCHIVAGE_SEUL);
+    expect(ok.valeur(fenetre(false))).toBe(TRANSMISSION_AVOIR_INTERNE_FE.AUCUNE);
+    expect(options.boutons.find((b) => !b.principal).valeur).toBeNull();
   });
 });

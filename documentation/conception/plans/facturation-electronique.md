@@ -50,7 +50,7 @@
 | 22 | Document de vente → modèle : factures, acomptes, définitives, avoirs ; contrôle dans l'éditeur | cœur | 21, 16 | FAIT (11/11/2026) |
 | 23 | Document de vente → modèle : situations (période), pied BTP, retenue, références de chantier | cœur | 22 | A FAIRE |
 | 24 | Émission à la validation : CII ou Factur-X, GED et coffre, dépôt, pastille | cœur | 22, 23, 17, 18, 20 | FAIT (11/11/2026) |
-| 25 | Rejet et refus → avoir interne ; litige et suspension de relance | cœur | 24 | A FAIRE |
+| 25 | Rejet et refus → avoir interne ; litige et suspension de relance | cœur | 24 | FAIT (11/11/2026) |
 | 26 | Statut Encaissée (212) depuis les règlements, liste à valider | cœur | 24 | A FAIRE |
 | 27 | Sous-traitance et cotraitance émises (S5, S6), B2G par la PA | cœur | 24 | A FAIRE |
 | 28 | E-reporting : collecte et extraction des ventes et encaissements, envoi unitaire ou groupé | cœur | 19, 24, 26 | A FAIRE |
@@ -897,7 +897,7 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   vérifié émis ; Factur-X d'un modèle par défaut distinct du PDF de la validation ; avertissement PEPPOL-EN16931-R008 gardé
   (livraison vide) ; écrans non vérifiés en navigateur (TODO). **Script à appliquer par l'utilisateur** : `db/300` puis `db/121`.
 
-## Lot 25 : rejet, refus, litige (A FAIRE)
+## Lot 25 : rejet, refus, litige — FAIT (11/11/2026)
 
 - **Cœur**. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : sur Rejetée (213) ou Refusée (210) : notification, proposition d'avoir interne d'annulation
@@ -906,6 +906,35 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   relance (module Relances, Q17) et levée à Approuvée ; tests.
 - **Critère de fin** : scénarios rejet, refus et litige sur la plateforme simulée ; aucun changement de statut du
   document sans action de l'utilisateur ; tests verts.
+- **Réalisé** : `db/301_facture_electronique_rejet.sql` (rejouable, au manifeste après 300 : `document_fe_annulation` — facture,
+  avoir, nouvelle facture, statut 210 / 213, transmission, auteur —, type d'avoir V_AVOIR donné à V_FACTURE qui n'en avait pas).
+  Codes `TRANSMISSION_AVOIR_INTERNE_FE` (ARCHIVAGE_SEUL, AUCUNE), `MOTIF_EMISSION_FE.AVOIR_INTERNE`,
+  `ERREUR_EMISSION_FE.ANNULATION_IMPOSSIBLE` (`codes.js` ↔ `Codes.cs`, `CodesTests`). `src/LogiBTP.Api/Btp/RejetFactureBtp.cs` :
+  proposition (`Proposee` : statut affiché Rejetée ou Refusée, pièce validée non annulée, pas encore d'avoir) rendue dans
+  `EtatEnvoiFe.Annulation` (aussi sur l'avoir : facture annulée) ; `AnnulerAsync` (route `POST /api/facture-electronique/documents/{id}/annulation`,
+  nœud `facture_electronique` Modifier, `DemandeAnnulationFe` : transmission) : `AnnulerParAvoirDans` dans une transaction
+  (lien ANNULATION, avoir daté du jour même pour une pièce transférée en comptabilité, qui reste T), inscription de l'avoir
+  (ARCHIVAGE_SEUL : A_EMETTRE sans délai, émis par la tâche de fond avec la note BAR ARCHIVEONLY et la règle ArchiveOnly, sa
+  facture d'origine annulée en BG-3 ; AUCUNE : HORS_FLUX motif AVOIR_INTERNE, jamais émettable), puis copie en nouvelle
+  facture en brouillon (lien COPIE) ou, pour une pièce d'avancement, situation remise en cours (`Structure.SituationServieAsync`,
+  extrait de l'annulation du marché) ; pièces d'avancement suivantes : refus `FE_ANNULATION_IMPOSSIBLE` ; étape AVOIR_INTERNE
+  de l'utilisateur au journal (`ServiceFactureElectronique.JournaliserAsync`, ajouté au module) ; `RelanceAsync` appelé à chaque
+  statut reçu d'une facture émise (`SpecialisationFactureElectroniqueBtp.StatutRecuAsync`) : En litige → `relance_suspension`
+  (motif LITIGE, jusqu'au 31/12/9999, auteur `facture_electronique`, une seule), Approuvée → suspensions de cet auteur levées.
+  Notifications de rejet, refus et litige : celles du lot 11. Module Document : `Copier` remet l'état comptable à vide (copie
+  d'une pièce transférée). Module : `StatutProgramme` de la plateforme simulée avec un motif (gardé par le magasin en base).
+  Client : `documents/envoi-fe.js` (`annulationFeHtml` : proposition et bouton « Annuler par avoir interne » selon le droit
+  Modifier, avoir et nouvelle facture ouvrables, facture d'un avoir ; `demanderAnnulationFe` : fenêtre `ouvrirDialogue` du
+  socle, case « Déposer pour archivage seul » cochée par défaut), page document (pièce relue, nouvelle facture proposée à
+  l'ouverture par `confirmer`), textes `document_btp.page.envoi_fe.annulation.*`, icône `facture_electronique_btp_avoir_interne`.
+  Tests : `RejetFactureBtpTests` (règles sans base ; base jetable et plateforme simulée à horloge avancée minute par minute :
+  Déposée → Rejetée : proposition sans changement de la pièce, avoir confirmé, deux pièces Annulé, avoir du jour, nouvelle
+  facture brouillon, avoir Factur-X déposé ArchiveOnly avec la note ARCHIVEONLY, étape AVOIR_INTERNE, seconde demande refusée ;
+  Refusée d'une pièce transférée datée du mois précédent : avoir du jour non déposé, pièce restée T, copie non transférée ;
+  En litige → une suspension, Approuvée → levée, suspension de l'utilisateur gardée), `client/test/emission-facture.test.js`.
+  Écarts : levée à Approuvée seulement (pas à 206) ; pièce d'avancement suivie d'autres : refusée, pas d'annulation en
+  cascade depuis la facture électronique ; écrans non vérifiés en navigateur (TODO). **Script à appliquer par
+  l'utilisateur** : `db/301`.
 
 ## Lot 26 : statut Encaissée (A FAIRE)
 

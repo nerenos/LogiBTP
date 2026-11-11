@@ -214,6 +214,12 @@ public sealed class SpecialisationFactureElectroniqueBtp(IServiceProvider servic
         {
             try { await EnvoiFactureBtp.StatutRecuAsync(services.GetRequiredService<LogiBtpContext>(), ent, emise.FflId, s.AfficheApres, ct); }
             catch (PostgresException e) when (e.SqlState == PostgresErrorCodes.UndefinedTable) { }
+            // Lot 25 (Q17) : En litige → relance de la pièce suspendue, levée à Approuvée ; un échec ne bloque pas la relève.
+            try { await RejetFactureBtp.RelanceAsync(services.GetRequiredService<LogiBtpContext>(), ent, s.Statut.FstCode, s.Statut.FstMotif, ct); }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                journal.LogWarning("Facturation électronique : relance de la pièce {Piece} non suspendue ni levée ({Erreur})", ent, Masquage.Texte(e.Message));
+            }
         }
         var suite = await new PaiementDirectRecuBtp(services, journal).StatutRecuAsync(s, ct);
         if (SignalDuStatut(s.Statut.FstCode) is { } signal)

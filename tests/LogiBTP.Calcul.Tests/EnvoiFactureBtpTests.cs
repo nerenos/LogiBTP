@@ -35,8 +35,12 @@ namespace LogiBTP.Calcul.Tests;
 /// coffre), dépôt sur la plateforme simulée, Déposée puis Mise à disposition, chronologie, colonne des listes ; validation
 /// refusée pour un client professionnel incomplet ; client particulier hors flux.
 /// </summary>
+[Collection(EnvoiFactureBtpTests.CollectionBase)]
 public class EnvoiFactureBtpTests
 {
+    /// <summary>Tests qui émettent sur la base jetable (même client, même file) : jamais en parallèle.</summary>
+    public const string CollectionBase = "Emission FE sur la base jetable";
+
     [Theory]
     [InlineData("B2B", "FR", true, null)]
     [InlineData("B2B", "FR", null, null)]
@@ -144,9 +148,11 @@ public class EnvoiFactureBtpTests
         ],
     };
 
-    private static ServiceProvider Services(string connexion)
+    /// <summary>Services de l'émission sur une base (plateforme simulée <paramref name="simulation"/>, horloge <paramref name="horloge"/>).</summary>
+    internal static ServiceProvider Services(string connexion, OptionsPlateformeSimulee? simulation = null, TimeProvider? horloge = null)
     {
         var s = new ServiceCollection();
+        if (horloge is not null) s.AddSingleton(horloge);
         var racine = Path.Combine(Path.GetTempPath(), "logibtp-envoi-" + Guid.NewGuid().ToString("N"));
         s.AddLogging();
         s.AddSingleton<IConfiguration>(new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["Ged:Repertoire"] = racine }).Build());
@@ -159,7 +165,7 @@ public class EnvoiFactureBtpTests
         s.AddModuleGed<SpecialisationGedBtp>(Base);
         s.AddModuleAnnuaire<SpecialisationAnnuaireBtp>(Base);
         s.AddScoped<ServiceAnnuaire, ServiceAnnuaireBtp>();
-        s.AddModuleFactureElectronique<SpecialisationFactureElectroniqueBtp>(Base, null, Simulation);
+        s.AddModuleFactureElectronique<SpecialisationFactureElectroniqueBtp>(Base, null, simulation ?? Simulation);
         s.AddModuleReglement<SpecialisationReglementBtp>(Base);
         s.AddModuleEdition<SpecialisationEditionBtp>(Base, 1);
         s.AddScoped<ModulesSociete>();
