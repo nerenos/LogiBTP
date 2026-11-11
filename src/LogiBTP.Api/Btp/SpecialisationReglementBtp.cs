@@ -50,7 +50,8 @@ public sealed class SpecialisationReglementBtp : SpecialisationReglement
 
     /// <summary>
     /// État de paiement des pièces des échéances touchées (P19) : T quand toutes les échéances hors retenue de garantie
-    /// sont réglées, P quand l'une est pointée, sinon aucun ; statut recalculé (PAYE, PAYE_PARTIEL).
+    /// sont réglées, P quand l'une est pointée, sinon aucun ; statut recalculé (PAYE, PAYE_PARTIEL). Facture reçue par la
+    /// plateforme payée par un règlement émis : Paiement transmis (<see cref="StatutsReceptionBtp"/>).
     /// </summary>
     public override async Task ApresPointageAsync(ReglementDbContext db, IReadOnlyCollection<long> echeances, CancellationToken ct)
     {
@@ -72,6 +73,16 @@ public sealed class SpecialisationReglementBtp : SpecialisationReglement
         await db.Database.SqlQuery<string>($"""
             SELECT coalesce(f_document_statut(ech_ent_id), '') AS "Value" FROM (SELECT DISTINCT ech_ent_id FROM document_echeance WHERE ech_id = ANY({ids})) x
             """).ToListAsync(ct);
+        // Facture reçue par la plateforme payée par un règlement émis : Paiement transmis (211, module Facturation électronique, lot 13).
+        if (SpecialisationBtp.Http?.HttpContext is { } http)
+        {
+            var payees = await StatutsReceptionBtp.PiecesPayeesAsync(db, ids, ct);
+            if (payees.Count > 0)
+            {
+                await new StatutsReceptionBtp(http.RequestServices, http.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger<StatutsReceptionBtp>())
+                    .PaiementTransmisAsync(payees, LogiBTP.Socle.Web.Utilisateur.Depuis(http).Code, ct);
+            }
+        }
     }
 
     public override async Task<List<TiersReglement>> TiersAsync(ReglementDbContext db, CancellationToken ct)

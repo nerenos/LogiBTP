@@ -40,6 +40,8 @@ public class CategorieTvaEntite
     public string? CtvExigibilite { get; set; }
     public int CtvOrdre { get; set; }
     public bool CtvActif { get; set; } = true;
+    public string? CtvCategorieEn16931 { get; set; }
+    public string? CtvVatex { get; set; }
 }
 
 public class TypeComptableEntite
@@ -113,7 +115,7 @@ public sealed record CompteDto(string Code, string Libelle, string Type, string 
 
 public sealed record CollectifDto(string Code, string Libelle, string? Compte, int Ordre);
 
-public sealed record CategorieTvaDto(string Code, string Libelle, string Comportement, string? Mention, string? Exigibilite, int Ordre, bool Actif);
+public sealed record CategorieTvaDto(string Code, string Libelle, string Comportement, string? Mention, string? Exigibilite, int Ordre, bool Actif, string? CategorieEn16931 = null, string? Vatex = null);
 
 /// <summary>
 /// Taux de TVA vu par le module (table de l'application) : catégorie, comportement du calcul, mention, comptes de TVA

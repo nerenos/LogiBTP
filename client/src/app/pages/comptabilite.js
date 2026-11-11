@@ -2,7 +2,7 @@ import { texte, texteHtml, textesParCode, pairesParCode, pluriel, icone, iconeHt
 import { urlFiche, TYPE_FICHE, urlDocument } from '../codes.js';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, confirmer, alerter, formatNombre, formatDateHeure } from '@logibtp/socle/ui';
-import { normaliserCompte, normaliserCompteTiers, MESSAGES_COMPTES, compteVentilation, ORIGINES_VENTILATION } from '@logibtp/comptabilite';
+import { CATEGORIES_EN16931, proposerEn16931, normaliserCompte, normaliserCompteTiers, MESSAGES_COMPTES, compteVentilation, ORIGINES_VENTILATION } from '@logibtp/comptabilite';
 import { api } from '../api.js';
 
 // Module Comptabilité, base, lot 1 (ANALYSE-MODULE-COMPTABILITE.md § 4.1 à 4.3) : plan comptable (`/comptabilite/plan`),
@@ -19,6 +19,7 @@ const SENS_COMPTE = options('comptabilite_btp.sens_compte', ['VENTE', 'ACHAT', '
 /** Types de comptes de tiers (SpecialisationComptabiliteBtp). */
 export const TYPES_COMPTE_TIERS = textesParCode('comptabilite_btp.types_tiers', ['CLIENT', 'FOURNISSEUR', 'SOUS_TRAITANT']);
 const COMPORTEMENTS_TVA = options('comptabilite_btp.comportements_tva', ['N', 'A', 'I', 'E']);
+const CATEGORIES_EN16931_OPTIONS = options('comptabilite_btp.categories_en16931', CATEGORIES_EN16931);
 const EXIGIBILITES = options('comptabilite_btp.exigibilites', ['E', 'D']);
 
 const libelleOption = (liste, v) => liste.find((o) => o.valeur === v)?.libelle ?? v ?? '';
@@ -461,24 +462,31 @@ export class PageParametresComptabilite extends PageBase {
     const z = this.#section('[data-categories]');
     z.innerHTML = `<h2 class="titre-actions">${texteHtml('comptabilite_btp.parametres.categories')} ${ecrire ? `<span><button type="button" data-ajouter>${iconeHtml('ajouter')} ${texteHtml('comptabilite_btp.parametres.categorie')}</button> <button type="button" class="principal" data-enregistrer>${texteHtml('commun.enregistrer')}</button></span>` : ''}</h2>
       <p class="aide">${texteHtml('comptabilite_btp.parametres.categories_aide')}</p>
-      <table class="tableau-compact"><thead><tr><th>${texteHtml('commun.code')}</th><th>${texteHtml('commun.libelle')}</th><th>${texteHtml('comptabilite_btp.parametres.comportement')}</th><th>${texteHtml('comptabilite_btp.parametres.mention')}</th><th>${texteHtml('comptabilite_btp.parametres.exigibilite')}</th><th>${texteHtml('comptabilite_btp.plan.actif')}</th>
+      <table class="tableau-compact"><thead><tr><th>${texteHtml('commun.code')}</th><th>${texteHtml('commun.libelle')}</th><th>${texteHtml('comptabilite_btp.parametres.comportement')}</th><th>${texteHtml('comptabilite_btp.parametres.mention')}</th><th>${texteHtml('comptabilite_btp.parametres.categorie_en16931')}</th><th>${texteHtml('comptabilite_btp.parametres.vatex')}</th><th>${texteHtml('comptabilite_btp.parametres.exigibilite')}</th><th>${texteHtml('comptabilite_btp.plan.actif')}</th>
       <th class="cellule-boutons"></th></tr></thead><tbody>
       ${l.map((c, i) => `<tr data-i="${i}"><td><input data-c="code" size="16" value="${echapper(c.code)}" ${ecrire && !c._existant ? '' : 'readonly'}></td>
         <td><input data-c="libelle" size="30" value="${echapper(c.libelle)}" ${ro}></td><td data-comportement></td>
-        <td><textarea data-c="mention" rows="2" cols="50" ${ro}>${echapper(c.mention ?? '')}</textarea></td><td data-exigibilite></td>
+        <td><textarea data-c="mention" rows="2" cols="50" ${ro}>${echapper(c.mention ?? '')}</textarea></td><td data-en16931></td>
+        <td><input data-c="vatex" size="16" value="${echapper(c.vatex ?? '')}" ${ro}></td><td data-exigibilite></td>
         <td><input type="checkbox" data-c="actif" ${c.actif ? 'checked' : ''} ${ecrire ? '' : 'disabled'}></td>
         <td class="cellule-boutons">${ecrire ? `${boutonsOrdre(i, l.length)}<button type="button" data-retirer title="${texteHtml('comptabilite_btp.parametres.retirer_categorie')}">${iconeHtml('retirer')}</button>` : ''}</td></tr>`).join('')}
       </tbody></table>`;
     z.querySelectorAll('tr[data-i]').forEach((tr) => {
       const c = l[Number(tr.dataset.i)];
-      poserCombo(tr, '[data-comportement]', { options: COMPORTEMENTS_TVA, valeur: c.comportement, vide: false, lecture: !ecrire }, (v) => { c.comportement = v; });
+      poserCombo(tr, '[data-comportement]', { options: COMPORTEMENTS_TVA, valeur: c.comportement, vide: false, lecture: !ecrire }, (v) => {
+        c.comportement = v;
+        // Catégorie EN 16931 et VATEX proposés depuis le comportement tant qu'ils sont vides.
+        const p = proposerEn16931(v);
+        if (p && !c.categorie_en16931) { c.categorie_en16931 = p.categorie; if (!c.vatex) c.vatex = p.vatex; this.#rendreCategories(); }
+      });
+      poserCombo(tr, '[data-en16931]', { options: CATEGORIES_EN16931_OPTIONS, valeur: c.categorie_en16931, lecture: !ecrire }, (v) => { c.categorie_en16931 = v || null; });
       poserCombo(tr, '[data-exigibilite]', { options: EXIGIBILITES, valeur: c.exigibilite, lecture: !ecrire, titre: texte('comptabilite_btp.parametres.exigibilite_vide') }, (v) => { c.exigibilite = v; });
       tr.querySelectorAll('[data-c]').forEach((x) => x.addEventListener('change', () => { c[x.dataset.c] = x.type === 'checkbox' ? x.checked : x.value; }));
       tr.querySelector('[data-retirer]')?.addEventListener('click', () => { l.splice(l.indexOf(c), 1); this.#rendreCategories(); });
       lierOrdre(tr, l, c, () => this.#rendreCategories());
     });
     z.querySelector('[data-ajouter]')?.addEventListener('click', () => {
-      l.push({ code: '', libelle: '', comportement: 'N', mention: '', exigibilite: null, ordre: 0, actif: true });
+      l.push({ code: '', libelle: '', comportement: 'N', mention: '', exigibilite: null, categorie_en16931: proposerEn16931('N').categorie, vatex: null, ordre: 0, actif: true });
       this.#rendreCategories();
     });
     z.querySelector('[data-enregistrer]')?.addEventListener('click', async () => {

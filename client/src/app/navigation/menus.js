@@ -86,6 +86,8 @@ export const MENUS_METIER = [
       { code: 'documents', libelle: texte('navigation_btp.menus.ventes.documents.libelle'), iconeHtml: iconeHtml('navigation_btp_documents'), url: L('documents') },
       { code: 'reglements-clients', libelle: texte('navigation_btp.menus.ventes.reglements_clients.libelle'), iconeHtml: iconeHtml('navigation_btp_reglements_clients'), url: '/reglements?sens=E', info: texte('navigation_btp.menus.ventes.reglements_clients.info'), module: MODULE_FACULTATIF.REGLEMENT },
       { code: 'relances', libelle: texte('navigation_btp.menus.ventes.relances.libelle'), iconeHtml: iconeHtml('navigation_btp_relances'), url: '/relances', info: texte('navigation_btp.menus.ventes.relances.info'), module: MODULE_FACULTATIF.RELANCE, droit: 'relances' },
+      { code: 'facture-electronique', libelle: texte('navigation_btp.menus.ventes.facture_electronique.libelle'), iconeHtml: iconeHtml('navigation_btp_facture_electronique'), url: '/facture-electronique', info: texte('navigation_btp.menus.ventes.facture_electronique.info'), module: MODULE_FACULTATIF.FACTURE_ELECTRONIQUE, droit: 'facture_electronique' },
+      { code: 'fe-recues', libelle: texte('navigation_btp.menus.ventes.fe_recues.libelle'), iconeHtml: iconeHtml('navigation_btp_fe_recues'), url: '/liste/fe_recues?vue=1014', info: texte('navigation_btp.menus.ventes.fe_recues.info'), module: MODULE_FACULTATIF.FACTURE_ELECTRONIQUE, droit: 'facture_electronique' },
       { separateur: true },
       { code: 'import-optim', libelle: texte('navigation_btp.menus.ventes.import_optim.libelle'), iconeHtml: iconeHtml('navigation_btp_import_optim'), url: '/import/optimbtp', info: texte('navigation_btp.menus.ventes.import_optim.info') },
     ],

@@ -1,0 +1,33 @@
+Origine : dépôt GitHub fnfempe/France_RFE (Forum National de la Facture Électronique et des Marchés Publics Électroniques), paquet 1.4.0.04
+(commit 97ba0f3d4ef2abed5780e9490d5c3a2be832ab1d du 05/09/2026), dossier FNFE_RFE_INVOICE. Licence Apache-2.0 : voir LICENCE.
+
+xsd/cii-d22b/         CII/1xsd-CII_D22B_uncoupled/      UN/CEFACT CrossIndustryInvoice D22B (uncoupled), XP Z12-012 V1.4
+xsd/factur-x/basicwl/ Factur-X/BASICWL/1xsd/            Factur-X 1.09.2 BASIC WL
+xsd/factur-x/en16931/ Factur-X/EN16931/1xsd/            Factur-X 1.09.2 EN16931
+xsd/factur-x/extended/ Factur-X/EXTENDED/1xsd/          Factur-X 1.09.2 EXTENDED
+xsd/ubl-2.1/          UBL/1xsd_UBL2.1/{maindoc,common}/  OASIS UBL 2.1 OS (04/11/2013) : maindoc Invoice et CreditNote, et les
+                      common/ qu'ils importent (sans UBL-CoreComponentParameters-2.1.xsd, non importé). Copyright OASIS
+                      Open 2013, distribués par OASIS sous sa politique de propriété intellectuelle (copie et
+                      redistribution permises sans modification), repris tels quels dans le paquet FNFE.
+xsd/cdar-d22b/        CDAR/1xsd-CDAR_D22B_uncoupled/    UN/CEFACT CrossDomainAcknowledgementAndResponse D22B (uncoupled) : CDAR
+                      du cycle de vie des factures (lot 5)
+
+api/                  Z.notes_&_docs/XP_Z12_013_Annex/   API XP Z12-013 (OpenAPI 3.0.3, version 1.3.0) : annexe A
+                      « ANNEXE A -XP Z12-013 - Flow_Service-1.3.0-swagger.json » → flow-service-1.3.0.json, annexe B
+                      « ANNEXE B -XP Z12-013 -  AFNOR-Directory_Service-1.3.0-swagger..json » → directory-service-1.3.0.json
+                      (renommés seulement ; contrat des tests du connecteur AFNOR, lot 6)
+
+Schematrons compilés en XSLT 2.0 (dossiers 2xslt/ du paquet ; lot 4) :
+schematrons/en16931/          CII/EN16931/2xslt/, UBL/EN16931/2xslt/   EN16931-{CII,UBL}-validation.xslt, schematrons de la
+                              norme EN16931 de la Commission européenne, version 1.3.16 du 30/03/2026, licence EUPL 1.2
+                              (mention en tête des fichiers), redistribués tels quels dans le paquet FNFE.
+schematrons/extended-ctc-fr/  CII/EXTENDED-CTC-FR/2xslt/, UBL/EXTENDED-CTC-FR/2xslt/   EXTENDED-CTC-FR-{CII,UBL}.xslt (FNFE)
+schematrons/factur-x/<profil>/ Factur-X/{BASICWL,EN16931,EXTENDED}/2xslt/   FACTUR-X_<profil>.xslt et leur _codedb.xml
+                              (lu par document()), Factur-X 1.09.2 du 04/08/2026
+schematrons/br-fr-flux2/      CII/EN16931/2xslt/, UBL/EN16931/2xslt/   BR-FR-Flux2-Schematron-{CII,UBL}.xslt (standard, « fatal »)
+                              et _WARNING.xslt, XP Z12-012 V1.4.0 ; identiques dans tous les dossiers du paquet (CII,
+                              EXTENDED-CTC-FR, Factur-X) : une seule copie
+schematrons/cdar/             CDAR/2xslt/   BR-FR-CDV-Schematron-CDAR.xslt et _WARNING.xslt
+
+Fichiers copiés sans modification (copie le 09/11/2026, lot 2 du plan Facturation électronique ; ubl-2.1 au lot 3 ;
+schematrons au lot 4 ; cdar-d22b au lot 5 ; api au lot 6).

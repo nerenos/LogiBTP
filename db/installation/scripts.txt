@@ -103,12 +103,17 @@ modules/comptabilite/db/094c_comptabilite_export.sql
 modules/comptabilite/db/094d_comptabilite_cles.sql
 modules/comptabilite/db/094e_comptabilite_contrepartie.sql
 modules/comptabilite/db/094f_comptabilite_stock.sql
+modules/comptabilite/db/094g_comptabilite_tva_en16931.sql
 modules/crm/db/095_crm_schema.sql
 modules/crm/db/096_crm_rappels.sql
 modules/crm/db/097_crm_demandes.sql
 modules/crm/db/098_crm_validations.sql
 modules/crm/db/098b_crm_plan_terrain.sql rejouable
 modules/crm/db/099_crm_fil.sql
+modules/facture-electronique/db/099f_facture_electronique.sql rejouable
+modules/facture-electronique/db/099g_facture_electronique_reception.sql rejouable
+modules/facture-electronique/db/099h_facture_electronique_statuts.sql rejouable
+modules/facture-electronique/db/099i_facture_electronique_hors_plateforme.sql rejouable
 modules/rentabilite/db/099r_rentabilite.sql rejouable
 modules/relance/db/099t_relance.sql rejouable
 db/100_btp.sql
@@ -254,6 +259,9 @@ db/291_reception_levee.sql rejouable
 db/292_pointage_materiel_borne.sql rejouable
 db/293_sav_facturation.sql rejouable
 db/294_sav_creation_hors_ligne.sql rejouable
+db/295_facture_electronique.sql rejouable
+db/296_facture_electronique_reception.sql rejouable
+db/297_facture_electronique_sous_traitance.sql rejouable
 
 # Vues de colonnes des types de documents créés après 176 : rejouée en dernier.
 db/176_documents_vues_types.sql rejouable

@@ -1,9 +1,10 @@
-import { texteHtml, iconeHtml, textesParCode } from '@logibtp/socle/dictionnaire';
+import { texte, texteHtml, iconeHtml, textesParCode } from '@logibtp/socle/dictionnaire';
 import { urlDocument } from '../codes.js';
 import { echapper, formatDate, formatDateHeure, formatNombre } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 import { tableNonRepris } from '../import/rapport-import.js';
 import { afficherJournalRelances } from '../relances/journal-relances.js';
+import { ECART_RECEPTION } from '@logibtp/facture-electronique';
 
 // Onglet Traçabilité d'un document : origine (import : format, fichier source conservé dans la GED, réutilisable),
 // documents dont il est issu et documents qui en sont issus (transformations, copies), historique des versions (total HT
@@ -14,6 +15,22 @@ const ACTIONS = textesParCode('documents_btp.tracabilite.actions', ['CREATION', 
   'VALIDATION_TIERS', 'DEVALIDATION', 'FORCAGE', 'REJET', 'NUMERO']);
 const LIENS = textesParCode('documents_btp.tracabilite.liens', ['TRANSFORMATION', 'COPIE']);
 const date = (d, heure = false) => (heure ? formatDateHeure(d) : formatDate(d));
+
+/**
+ * Facture électronique de sous-traitance reçue (plans/facturation-electronique.md, lot 15), lue du rapport d'origine :
+ * paiement direct (cadre S5 avec un payeur : marché, contrat, payeur) et écarts signalés à la réception (ECART_RECEPTION :
+ * payeur, autoliquidation, contrat), toujours affichés (pas seulement en débogage) ; vide sans paiement direct ni écart.
+ */
+export function receptionSousTraitanceHtml(rapport) {
+  const pd = rapport?.paiement_direct ?? null;
+  const ecarts = (rapport?.ecarts ?? []).filter((e) => Object.values(ECART_RECEPTION).includes(e?.code));
+  if (!pd && !ecarts.length) return '';
+  const vide = texte('facture_electronique_btp.sous_traitance.inconnu');
+  return `<div class="trac-sous-traitance">${pd ? `<p data-paiement-direct>${iconeHtml('facture_electronique_btp_paiement_direct')} ${texteHtml('facture_electronique_btp.sous_traitance.paiement_direct', {
+    marche: pd.code_marche ?? pd.contrat ?? vide, payeur: pd.payeur?.raison_sociale ?? vide })}</p>` : ''}
+    ${ecarts.length ? `<ul class="import-avertissements" data-ecarts>${ecarts.map((e) => `<li data-ecart="${echapper(e.code)}">${iconeHtml('avertissement')} ${texteHtml(`facture_electronique_btp.sous_traitance.ecarts.${e.code}`, {
+    payeur: e.payeur ?? vide, maitre_ouvrage: e.maitre_ouvrage ?? vide, contrat: e.contrat ?? vide })}</li>`).join('')}</ul>` : ''}</div>`;
+}
 
 /** Version la plus récente d'un document de la GED (pour télécharger ou réutiliser le fichier source). */
 export async function derniereVersionGed(ged, id) {
@@ -37,6 +54,7 @@ export async function afficherTracabilite(zone, { entId, ged, debogage, naviguer
   zone.innerHTML = `<div class="tracabilite">
     <section class="trac-bloc"><h3>${texteHtml('documents_btp.tracabilite.origine')}</h3>${o ? `
       <p>${iconeHtml('documents_btp_importe')} ${texteHtml('documents_btp.tracabilite.importe_html', { format: o.dor_format, date: date(o.dor_date, true), utilisateur: o.dor_utilisateur })}${o.dor_reference ? ` — ${texteHtml('documents_btp.tracabilite.reference_html', { reference: o.dor_reference })}` : ''}.</p>
+      ${receptionSousTraitanceHtml(rapport)}
       <p>${texteHtml('documents_btp.tracabilite.fichier', { nom: o.dor_nom_fichier ?? '—' })}${o.dor_fichier_id ? ` ${texteHtml('documents_btp.tracabilite.conserve')}` : ` <span class="aide">${texteHtml('documents_btp.tracabilite.non_conserve')}</span>`}</p>
       <div class="boutons">${o.dor_fichier_id && ged ? `<button type="button" data-trac="telecharger">${iconeHtml('telecharger')} ${texteHtml('documents_btp.tracabilite.telecharger')}</button>
         <button type="button" data-trac="reimporter" title="${texteHtml('documents_btp.tracabilite.reimporter_aide')}">${iconeHtml('documents_btp_reimporter')} ${texteHtml('documents_btp.tracabilite.reimporter')}</button>` : ''}</div>

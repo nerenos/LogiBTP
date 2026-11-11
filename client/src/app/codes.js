@@ -30,6 +30,8 @@ export const TYPE_DOCUMENT = Object.freeze({
   A_RECEPTION: 'A_RECEPTION',
   A_RETOUR: 'A_RETOUR',
   A_FACTURE: 'A_FACTURE',
+  A_FACTURE_AVT: 'A_FACTURE_AVT',
+  A_AVOIR: 'A_AVOIR',
   T_AO: 'T_AO',
   T_COMMANDE: 'T_COMMANDE',
   T_FACTURE_AVT: 'T_FACTURE_AVT',
@@ -86,6 +88,7 @@ export const TYPE_RESSOURCE = Object.freeze({
 export const MODULE_FACULTATIF = Object.freeze({
   CRM: 'crm',
   EXECUTION: 'execution',
+  FACTURE_ELECTRONIQUE: 'facture_electronique',
   PLANNING: 'planning',
   POINTAGE: 'pointage',
   REGLEMENT: 'reglement',
@@ -130,6 +133,30 @@ export const ROLE_RENTABILITE = Object.freeze({
   MOUVEMENT_STOCK: 'MOUVEMENT_STOCK',
   RECU_ACOMPTE: 'RECU_ACOMPTE',
   PRODUCTION: 'PRODUCTION',
+});
+
+/** Type d'élément du cœur rattaché à un flux de facturation électronique (fe_flux.ffl_type_element) : pièce (ent_id). */
+export const TYPE_ELEMENT_FE = Object.freeze({
+  DOCUMENT: 'DOCUMENT',
+  /** Ligne de la liste « Factures reçues à traiter » sans pièce (db/296) : flux reçu, ouvert dans la page du module. */
+  FLUX: 'fe_flux',
+});
+
+/** Signaux de notification de la facturation électronique (db/295, types du module « facture_electronique »). */
+export const SIGNAL_FE = Object.freeze({
+  RECUE: 'RECUE',
+  REJET: 'REJET',
+  REFUS: 'REFUS',
+  LITIGE: 'LITIGE',
+  ERREUR_FILE: 'ERREUR_FILE',
+  // Demande de paiement direct (statut 224) reçue d'un sous-traitant (lot 15, db/297).
+  PAIEMENT_DIRECT: 'PAIEMENT_DIRECT',
+});
+
+/** Garantie de paiement d'un marché de sous-traitance (marche.mar_garantie) qui ouvre une demande de paiement (module Sous-traitance, 092b). */
+export const GARANTIE_MARCHE = Object.freeze({
+  PAIEMENT_DIRECT: 'PAIEMENT_DIRECT',
+  DELEGATION: 'DELEGATION',
 });
 
 /** Rôle d'un type de pièce dans le module Relances (type_document.tyd_role_relance, db/283) ; sans rôle : jamais relancé. */
