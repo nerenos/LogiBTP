@@ -897,3 +897,16 @@ public static class RegleCompletude
     public const string BrCo16 = "BR-CO-16";
     public const string BrCo17 = "BR-CO-17";
 }
+
+/// <summary>Moyen de paiement BT-81 (UNTDID 4461) écrit à l'émission (lot 22) ; virement : IBAN BT-84 exigé (BR-61).</summary>
+public static class MoyenPaiementFe
+{
+    public const string NonDefini = "1";
+    public const string Especes = "10";
+    public const string Cheque = "20";
+    public const string Virement = "30";
+    public const string Carte = "48";
+    public const string Prelevement = "49";
+    public const string VirementSepa = "58";
+    public const string PrelevementSepa = "59";
+}

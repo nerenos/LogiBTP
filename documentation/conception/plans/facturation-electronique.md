@@ -47,7 +47,7 @@
 | 19 | E-reporting : modèle des transactions et paiements, écriture du flux 10 (10.1 à 10.4), découpage des envois | module | 1, 8 | FAIT (11/11/2026) |
 | 20 | Annuaire sur la fiche personne et vérification de nuit (option) | cœur | 11, 6 | A FAIRE |
 | 21 | Paramètres d'émission BTP : code BT-3 par type, nature biens / services / mixte, notes légales | cœur | 11, 10 | FAIT (11/11/2026) |
-| 22 | Document de vente → modèle : factures, acomptes, définitives, avoirs ; contrôle dans l'éditeur | cœur | 21, 16 | A FAIRE |
+| 22 | Document de vente → modèle : factures, acomptes, définitives, avoirs ; contrôle dans l'éditeur | cœur | 21, 16 | FAIT (11/11/2026) |
 | 23 | Document de vente → modèle : situations (période), pied BTP, retenue, références de chantier | cœur | 22 | A FAIRE |
 | 24 | Émission à la validation : CII ou Factur-X, GED et coffre, dépôt, pastille | cœur | 22, 23, 17, 18, 20 | A FAIRE |
 | 25 | Rejet et refus → avoir interne ; litige et suspension de relance | cœur | 24 | A FAIRE |
@@ -783,7 +783,7 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   par type ni de la nature par nature d'article (valeurs du script) ; TVA sur les débits prise dans les mentions de la société
   (déjà imprimée), pas dans `ctv_exigibilite`. Script à appliquer par l'utilisateur.
 
-## Lot 22 : document de vente → modèle, cas simples (A FAIRE)
+## Lot 22 : document de vente → modèle, cas simples — FAIT (11/11/2026)
 
 - **Cœur**. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `Btp/EmissionFactureBtp.cs` (facture, avoir avec facture antérieure BG-3, facture d'acompte 386,
@@ -792,6 +792,36 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   affichage des résultats de complétude dans l'éditeur (bandeau de la pièce), tests sur des pièces de démonstration
   (écriture CII → schematrons par l'outil).
 - **Critère de fin** : factures, avoirs, acomptes et définitives de la démonstration sans erreur fatale ; tests verts.
+- **Réalisé** : `src/LogiBTP.Api/Btp/EmissionFactureBtp.cs` (`Construire(EntreeFactureBtp)` sans base, `Controler`, `EntreeAsync`,
+  `ControleAsync`, `XmlAsync`) : profil EN16931 ; BT-3, cadre, BT-8 et notes PMT / PMD / AAB du lot 21, note BAR du type du tiers
+  (`per_fe_type` : B2B / B2G → B2B, INTERNATIONAL → B2BINT, B2C) ; lignes = lignes de prix vendues sans ancêtre ouvrage (option et
+  type de prix hors total exclus, écarts d'arrondi compris), quantité signée et prix net positif (BR-FR-DEC-03), unités UN/ECE
+  (inverse de `UnitesUnece`, défaut C62), identifiant = numérotation si unique ; TVA par `ctv_categorie_en16931` / `ctv_vatex`
+  (à défaut `ReglesTva.Proposer`), taux écrit 0 hors S et Z, ventilation regroupée par catégorie et taux depuis `document_tva`
+  (mention en motif d'exonération) ; postes de pied HT et écarts : remise ou charge du document par catégorie et taux (base −
+  lignes, motif = libellés des postes, codes 95 / ZZZ) ; reprise d'acompte (poste HT `A<mac_id>`) en lignes négatives
+  (quantité −1) par taux au prorata, facture d'acompte (pièce valable non annulée) en BG-3 ; acompte de trésorerie (poste TTC
+  `A…`) en BT-113 ; retenue et autres postes TTC hors facture (lot 23) ; avoir : facture d'origine valable en BG-3, sans
+  échéance, avoir saisi en négatif écrit en positif ; parties : SIREN, SIRET 0009, TVA, adresse électronique 0225 (à défaut le
+  SIREN), code de routage 0224, adresse de l'instantané, contact ; livraison = adresse des travaux (intracommunautaire : adresse
+  et date de l'acheteur) ; BT-13 = référence externe, BT-10 = code service ; paiement : condition (BT-20), première échéance
+  normale (BT-9), moyen UNTDID 4461 (`MOYEN_PAIEMENT` du module ↔ `MoyenPaiementFe`, `CodesTests`) et IBAN de la société.
+  Écarts propres `ECART_EMISSION_FE` (`codes.js` ↔ `EcartsEmissionFe`, `CodesTests` : numéro provisoire, société, tiers,
+  adresse, TVA de ligne, IBAN, paiement, acompte, origine), niveau bloquant pour un tiers B2B / B2G (Q5). Routes
+  `GET /api/facture-electronique/documents/{id}/controle` et `…/{id}/xml?syntaxe=CII|UBL` (nœud `facture_electronique`,
+  Consulter). Éditeur : bandeau `documents/completude-fe.js` (pièce enregistrée d'un type émis, module actif et droit ;
+  relu à chaque version), libellés des 46 règles `REGLE_COMPLETUDE` et des niveaux dans les textes du module
+  (`facture_electronique.completude.*`, reportés du lot 16), textes `document_btp.page.completude_fe.*`. Corrigé du lot 21 :
+  alias SQL en snake_case (le contexte est en convention snake_case, `EmissionFeDonneesBtp` échouait en base) et accolades
+  retirées du SQL des mentions. Tests : jeu `tests/emission-fe/02_pieces.json` (facture avec ouvrage, option, remise de pied et
+  retenue, avoir, acompte 386, définitive M4 avec reprise, avoir d'acompte 503, autoliquidation AE, pièce incomplète) par
+  `EmissionFactureTests.cs` (calcul par `MoteurDevisBtp`, totaux du moteur repris, complétude sans écart, CII et UBL relus au
+  même modèle, références `tests/emission-fe/ecrits/` régénérées par `LOGIBTP_REGENERER_EMISSION=1` ; pièce insérée dans une
+  transaction annulée sur la base jetable `LOGIBTP_TEST_PG_JETABLE`) ; `client/test/emission-facture.test.js` : les 12 XML sans
+  erreur fatale (XSD, schematron EN16931, BR-FR-Flux2) et les 6 CII en Factur-X EN16931, libellés, bandeau. Écarts : pas de
+  Factur-X PDF (lot 24) ; avertissement PEPPOL-EN16931-R008 en Factur-X (élément de livraison vide écrit par `EcritureCii` sans
+  adresse de livraison) ; pas de pièces de démonstration en base (jeu construit) ; références de chantier, période et retenue au
+  lot 23 ; contrôle sur la pièce enregistrée seulement (modifications en cours non contrôlées).
 
 ## Lot 23 : situations et pied BTP (A FAIRE)
 

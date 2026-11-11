@@ -15,7 +15,8 @@ public sealed record ReferentielEmissionFe(IReadOnlyDictionary<string, string> T
 /// natures des lignes (nature_element.nat_fe_nature), surcharge de l'entête (ent_fe_nature), déduction d'une facture
 /// d'acompte (acompte_deduction d'un acompte en mode chiffre d'affaires), mentions de la société (db/190). Rôle sous-traitant
 /// ou cotraitant et pièce déjà payée : fournis par l'appelant (lots 24 et 27).
-/// Routes : GET /api/facture-electronique/emission/referentiel, GET /api/facture-electronique/documents/{id}/emission.
+/// Routes : GET /api/facture-electronique/emission/referentiel, GET /api/facture-electronique/documents/{id}/emission ;
+/// lot 22 (EmissionFactureBtp) : GET …/documents/{id}/controle, GET …/documents/{id}/xml?syntaxe=CII|UBL.
 /// </summary>
 public static class EmissionFeDonneesBtp
 {
@@ -28,22 +29,22 @@ public static class EmissionFeDonneesBtp
     public static async Task<MentionsEmissionFe> MentionsAsync(DbContext db, CancellationToken ct)
     {
         var m = await db.Database.SqlQueryRaw<LigneMentionsSql>("""
-            SELECT v->>'indemnite' AS "Indemnite", v->>'penalites' AS "Penalites", v->>'escompte' AS "Escompte",
-                   coalesce((v->>'tva_debits')::boolean, FALSE) AS "TvaDebits"
-            FROM (SELECT coalesce((SELECT pae_valeur FROM parametre_edition WHERE pae_cle = 'mentions'), '{}'::jsonb) AS v) x
+            SELECT v->>'indemnite' AS indemnite, v->>'penalites' AS penalites, v->>'escompte' AS escompte,
+                   coalesce((v->>'tva_debits')::boolean, FALSE) AS tva_debits
+            FROM (SELECT coalesce((SELECT pae_valeur FROM parametre_edition WHERE pae_cle = 'mentions'), jsonb_build_object()) AS v) x
             """).FirstAsync(ct);
         return new MentionsEmissionFe(m.Indemnite, m.Penalites, m.Escompte, m.TvaDebits);
     }
 
     public static async Task<Dictionary<int, string>> NaturesAsync(DbContext db, CancellationToken ct) =>
         (await db.Database.SqlQueryRaw<LigneNatureSql>(
-            "SELECT nat_id AS \"Id\", nat_fe_nature::text AS \"Nature\" FROM nature_element WHERE nat_fe_nature IS NOT NULL").ToListAsync(ct))
+            "SELECT nat_id AS id, nat_fe_nature::text AS nature FROM nature_element WHERE nat_fe_nature IS NOT NULL").ToListAsync(ct))
         .ToDictionary(x => x.Id, x => x.Nature);
 
     public static async Task<ReferentielEmissionFe> ReferentielAsync(DbContext db, CancellationToken ct)
     {
         var types = await db.Database.SqlQueryRaw<LigneTypeSql>(
-            "SELECT tyd_code AS \"Code\", tyd_fe_type_facture AS \"Type\" FROM type_document WHERE tyd_fe_type_facture IS NOT NULL").ToListAsync(ct);
+            "SELECT tyd_code AS code, tyd_fe_type_facture AS type FROM type_document WHERE tyd_fe_type_facture IS NOT NULL").ToListAsync(ct);
         return new ReferentielEmissionFe(types.ToDictionary(x => x.Code, x => x.Type), await NaturesAsync(db, ct), await MentionsAsync(db, ct));
     }
 
@@ -51,7 +52,7 @@ public static class EmissionFeDonneesBtp
     public static async Task<EntreeEmissionFe?> EntreeAsync(DbContext db, long id, string? role, bool dejaPayee, CancellationToken ct)
     {
         var d = await db.Database.SqlQueryRaw<LigneDocumentSql>("""
-            SELECT t.tyd_fe_type_facture AS "TypeFacture", d.ent_fe_nature::text AS "Nature"
+            SELECT t.tyd_fe_type_facture AS type_facture, d.ent_fe_nature::text AS nature
             FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id WHERE d.ent_id = {0}
             """, id).FirstOrDefaultAsync(ct);
         if (d is null) return null;
@@ -62,8 +63,8 @@ public static class EmissionFeDonneesBtp
             ORDER BY s.ent_id LIMIT 1
             """, id).FirstOrDefaultAsync(ct);
         var lignes = await db.Database.SqlQueryRaw<LigneSql>("""
-            SELECT lig_id AS "Id", lig_parent_id AS "Parent", lig_tyl_id AS "Type", lig_type_prix AS "TypePrix", lig_nat_id AS "Nature",
-                   coalesce(lig_is_ecart_arrondi, FALSE) AS "Ecart"
+            SELECT lig_id AS id, lig_parent_id AS parent, lig_tyl_id AS type, lig_type_prix AS type_prix, lig_nat_id AS nature,
+                   coalesce(lig_is_ecart_arrondi, FALSE) AS ecart
             FROM document_ligne WHERE lig_ent_id = {0}
             """, id).ToListAsync(ct);
         var deduit = await db.Database.SqlQueryRaw<bool>("""
@@ -100,6 +101,14 @@ public static class EmissionFeDonneesBtp
             ReferentielAsync(http.RequestServices.GetRequiredService<LogiBtpContext>(), ct));
         api.MapGet("/facture-electronique/documents/{id:long}/emission", async (long id, HttpContext http, CancellationToken ct) =>
             Results.Ok(await ParametresAsync(http.RequestServices.GetRequiredService<LogiBtpContext>(), id, null, false, ct)));
+        // Lot 22 : modèle de la facture électronique d'une pièce enregistrée, complétude (bandeau de l'éditeur) et XML écrit.
+        api.MapGet("/facture-electronique/documents/{id:long}/controle", async (long id, HttpContext http, CancellationToken ct) =>
+            Results.Ok(await EmissionFactureBtp.ControleAsync(http.RequestServices.GetRequiredService<LogiBtpContext>(), id, ct)));
+        api.MapGet("/facture-electronique/documents/{id:long}/xml", async (long id, string? syntaxe, HttpContext http, CancellationToken ct) =>
+        {
+            var (contenu, nom) = await EmissionFactureBtp.XmlAsync(http.RequestServices.GetRequiredService<LogiBtpContext>(), id, syntaxe, ct);
+            return Results.File(contenu, "application/xml", nom);
+        });
         return api;
     }
 }

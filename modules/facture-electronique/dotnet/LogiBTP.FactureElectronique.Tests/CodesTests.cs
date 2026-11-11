@@ -65,6 +65,7 @@ public class CodesTests
     [InlineData("REGIME_EREPORTING", typeof(RegimeEreporting))]
     [InlineData("PERIODICITE_EREPORTING", typeof(PeriodiciteEreporting))]
     [InlineData("REGLE_EREPORTING", typeof(RegleEreporting))]
+    [InlineData("MOYEN_PAIEMENT", typeof(MoyenPaiementFe))]
     public void Parite_avec_le_js(string nom, Type type) => Assert.Empty(Constantes.Ecarts(Fichier, nom, type));
 
     [Fact]

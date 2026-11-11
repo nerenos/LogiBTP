@@ -224,6 +224,24 @@ public static class SituationsCadreFe
 }
 
 /// <summary>
+/// Écarts de l'émission d'une pièce de vente en facture électronique (lot 22, Btp/EmissionFactureBtp.cs), en plus de la
+/// complétude du module : société ou tiers sans fiche, adresse postale, taux de TVA de ligne, IBAN d'un virement, conditions
+/// de paiement, facture d'acompte déduite ou facture d'origine d'un avoir introuvable ; numéro provisoire (brouillon).
+/// </summary>
+public static class EcartsEmissionFe
+{
+    public const string NumeroProvisoire = "NUMERO_PROVISOIRE";
+    public const string SocieteAbsente = "SOCIETE_ABSENTE";
+    public const string TiersAbsent = "TIERS_ABSENT";
+    public const string AdresseAbsente = "ADRESSE_ABSENTE";
+    public const string TvaAbsente = "TVA_ABSENTE";
+    public const string IbanAbsent = "IBAN_ABSENT";
+    public const string PaiementAbsent = "PAIEMENT_ABSENT";
+    public const string AcompteAbsent = "ACOMPTE_ABSENT";
+    public const string OrigineAbsente = "ORIGINE_ABSENTE";
+}
+
+/// <summary>
 /// Signaux de notification de la facturation électronique (db/295 : facture_electronique_signal, niveau et activation
 /// par société) : facture reçue, rejet (accusé en erreur ou statut 213), refus (210), litige (207), erreur de la file.
 /// Types de notification du module « facture_electronique ».

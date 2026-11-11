@@ -41,6 +41,7 @@ import { formatImport } from '../import/formats.js';
 import { PanneauSuivi } from '../crm/panneau-suivi.js';
 import { voisins } from '../suite-liste.js';
 import { afficherChronologieDocument, ongletChronologieVisible, requeteFluxPiece, NOEUD_FE } from '../documents/chronologie-document.js';
+import { rendreCompletudeFe } from '../documents/completude-fe.js';
 import { activerDepotFactures, TYPES_DEPOT_FACTURE } from '../facture-electronique/depot-facture.js';
 import { apiFe } from '../facture-electronique/api-fe.js';
 
@@ -112,6 +113,7 @@ const gabarit = () => `
   <div class="document-verrou" hidden></div>
   <div class="document-attente" hidden></div>
   <div class="document-import" hidden></div>
+  <div class="document-completude-fe" hidden></div>
   <main class="document-zone">
     <section id="vue-entete" class="vue vue-entete" role="tabpanel">
       <div id="entete" class="panneau entete"></div>
@@ -713,6 +715,11 @@ export class PageDocument extends PageBase {
     this.$('[data-onglet-vue="reglements"]').hidden = typeDoc?.tyd_famille === FAMILLE_DOCUMENT.EXECUTION;
     if (this.disposition?.p.onglet === 'reglements' && this.reglementsCle !== this.cleTracabilite()) this.afficherReglements();
     this.#majOngletChronologie();
+    // Facturation électronique (lot 22) : complétude de la facture électronique de la pièce enregistrée.
+    rendreCompletudeFe(this, {
+      zone: this.$('.document-completude-fe'), moduleActif: this.app.moduleActif(MODULE_FACULTATIF.FACTURE_ELECTRONIQUE),
+      peutConsulter: this.app.peut(NOEUD_FE, ACTION_DROIT.CONSULTER), types: this.emissionFe?.types, controler: (id) => api.controleFeDocument(id),
+    });
     this.app.majPage();
   }
 

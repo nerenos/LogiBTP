@@ -738,3 +738,15 @@ export const REGLE_COMPLETUDE = Object.freeze({
   BR_CO_16: 'BR-CO-16',
   BR_CO_17: 'BR-CO-17',
 });
+
+/** Moyen de paiement BT-81 (UNTDID 4461) écrit à l'émission (lot 22) ; virement : IBAN BT-84 exigé (BR-61). */
+export const MOYEN_PAIEMENT = Object.freeze({
+  NON_DEFINI: '1',
+  ESPECES: '10',
+  CHEQUE: '20',
+  VIREMENT: '30',
+  CARTE: '48',
+  PRELEVEMENT: '49',
+  VIREMENT_SEPA: '58',
+  PRELEVEMENT_SEPA: '59',
+});

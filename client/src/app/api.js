@@ -763,6 +763,8 @@ export const api = {
   // Facturation électronique (lot 21) : BT-3 par type, nature par nature d'article, mentions ; paramètres d'émission d'une pièce.
   referentielEmissionFe: () => appel('GET', '/facture-electronique/emission/referentiel'),
   emissionFeDocument: (id) => appel('GET', `/facture-electronique/documents/${id}/emission`),
+  // Lot 22 : contrôle de la facture électronique construite depuis la pièce enregistrée (complétude, écarts de l'émission).
+  controleFeDocument: (id) => appel('GET', `/facture-electronique/documents/${id}/controle`),
   // Annulation par avoir (pièce et, dans un marché, pièces d'avancement suivantes) : liste puis annulation.
   piecesAnnulation: (id) => appel('GET', `/structure/documents/${id}/annulation`),
   annulerParAvoir: (id) => appel('POST', `/structure/documents/${id}/annulation`),

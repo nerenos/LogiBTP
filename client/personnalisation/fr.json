@@ -1041,6 +1041,28 @@
       "tout_afficher": "Tout afficher",
       "document": "Document",
       "creer_devis": "Créer le devis",
+      "completude_fe": {
+        "titre": "Facture électronique",
+        "aide": "Contrôle de la facture électronique produite depuis la pièce enregistrée (complétude EN 16931 et règles françaises) : bloquant pour un client professionnel ou public, avertissement sinon",
+        "complete": "complète, prête à l'émission",
+        "bloquants": "{{nombre}} écart(s) bloquant(s)",
+        "avertissements": "{{nombre}} avertissement(s)",
+        "type_cadre": "Type {{type}}, cadre {{cadre}}",
+        "donnee": "Donnée {{donnee}}",
+        "ligne": "ligne {{ligne}}",
+        "indisponible": "Contrôle de la facture électronique indisponible : {{erreur}}",
+        "ecarts": {
+          "NUMERO_PROVISOIRE": "Numéro provisoire : le numéro de la facture est attribué à la validation",
+          "SOCIETE_ABSENTE": "Fiche de la société de la base absente de l'annuaire",
+          "TIERS_ABSENT": "Client de la pièce absent",
+          "ADRESSE_ABSENTE": "Adresse postale absente (société ou client)",
+          "TVA_ABSENTE": "Ligne sans taux de TVA",
+          "IBAN_ABSENT": "Règlement par virement sans IBAN de la société",
+          "PAIEMENT_ABSENT": "Ni condition de paiement ni échéance",
+          "ACOMPTE_ABSENT": "Facture d'acompte déduite introuvable (non validée ou annulée)",
+          "ORIGINE_ABSENTE": "Facture d'origine de l'avoir introuvable"
+        }
+      },
       "attente": {
         "conflit": "le document a été modifié sur le serveur pendant la saisie hors ligne. Vos modifications (enregistrées sur ce poste le {{le}}) sont conservées.",
         "comparer_aide": "Comparer ma saisie à la version du serveur et trancher",

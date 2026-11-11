@@ -173,6 +173,22 @@ export const SITUATION_CADRE_FE = Object.freeze({
   COTRAITANT: 'COTRAITANT',
 });
 
+/**
+ * Écarts de l'émission d'une pièce de vente en facture électronique (lot 22, Btp/EmissionFactureBtp.cs), en plus de la
+ * complétude du module : données de LogiBTP manquantes ou provisoires (bandeau de la pièce dans l'éditeur).
+ */
+export const ECART_EMISSION_FE = Object.freeze({
+  NUMERO_PROVISOIRE: 'NUMERO_PROVISOIRE',
+  SOCIETE_ABSENTE: 'SOCIETE_ABSENTE',
+  TIERS_ABSENT: 'TIERS_ABSENT',
+  ADRESSE_ABSENTE: 'ADRESSE_ABSENTE',
+  TVA_ABSENTE: 'TVA_ABSENTE',
+  IBAN_ABSENT: 'IBAN_ABSENT',
+  PAIEMENT_ABSENT: 'PAIEMENT_ABSENT',
+  ACOMPTE_ABSENT: 'ACOMPTE_ABSENT',
+  ORIGINE_ABSENTE: 'ORIGINE_ABSENTE',
+});
+
 /** Signaux de notification de la facturation électronique (db/295, types du module « facture_electronique »). */
 export const SIGNAL_FE = Object.freeze({
   RECUE: 'RECUE',

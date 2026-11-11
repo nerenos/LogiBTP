@@ -1,0 +1,136 @@
+{
+  "description": "Pièces de vente de démonstration → facture électronique EN 16931 (plans/facturation-electronique.md, lot 22) : src/LogiBTP.Api/Btp/EmissionFactureBtp.cs. Chaque pièce est calculée par MoteurDevisBtp (entree), ses paramètres d'émission par EmissionFeBtp (lot 21), puis construite, contrôlée (aucun écart attendu sauf ceux du cas) et écrite en CII et en UBL dans tests/emission-fe/ecrits/ (LOGIBTP_REGENERER_EMISSION=1), contrôlés aux schematrons par client/test/emission-facture.test.js. Types de ligne : 1 titre, 2 ouvrage, 3 élément, 8 pied HT, 9 pied TTC, 10 TVA. Natures : 1 services, 2 biens.",
+  "natures_fe": { "1": "S", "2": "B" },
+  "mentions": {
+    "indemnite": "Indemnité forfaitaire pour frais de recouvrement en cas de retard de paiement : 40 €.",
+    "penalites": "Pénalités de retard : trois fois le taux d'intérêt légal.",
+    "escompte": "Pas d'escompte pour paiement anticipé.",
+    "tva_debits": false
+  },
+  "taux": [
+    { "id": 1, "taux": 20, "comportement": "N", "categorie": "S" },
+    { "id": 2, "taux": 10, "comportement": "N", "categorie": "S" },
+    { "id": 3, "taux": 20, "comportement": "A", "categorie": "AE", "vatex": "VATEX-FR-AE", "mention": "Autoliquidation – article 283-2 nonies du CGI" }
+  ],
+  "vendeur": {
+    "raison_sociale": "BTP DEMO", "siren": "200000008", "siret": "20000000800012", "numero_tva": "FR37200000008", "adresse_fe": "200000008",
+    "adresse": { "ligne1": "1 rue des Artisans", "localite": "LYON", "code_postal": "69001", "code_pays": "FR" }
+  },
+  "acheteur": {
+    "raison_sociale": "CLIENT DEMO SA", "siren": "100000009", "siret": "10000000900017", "numero_tva": "FR88100000009", "adresse_fe": "100000009_FACTURES",
+    "type_fe": "B2B",
+    "adresse": { "ligne1": "35 avenue du Parc", "localite": "PARIS", "code_postal": "75018", "code_pays": "FR" },
+    "contact": { "nom": "Mme Durand", "telephone": "0102030405", "courriel": "compta@client-demo.fr" }
+  },
+  "paiement": { "mode": "VIREMENT", "iban": "FR7630006000011234567890189", "bic": "AGRIFRPP", "conditions": "30 jours fin de mois" },
+  "pieces": [
+    {
+      "nom": "FACTURE",
+      "description": "Facture de travaux (V_FACTURE) : ouvrage et ses composantes, éléments à 20 % et 10 % (remise de ligne), option hors total, remise commerciale de pied (remises du document par taux), retenue de garantie TTC (hors facture), adresse des travaux.",
+      "type_facture": "380",
+      "numero": "F-2026-0101", "date": "2026-11-02", "echeance": "2026-12-31", "reference": "CMD-4512",
+      "livraison": { "nom": "Chantier Les Tilleuls", "adresse": { "ligne1": "12 rue des Tilleuls", "localite": "VILLEURBANNE", "code_postal": "69100", "code_pays": "FR" } },
+      "entree": {
+        "document": { "ent_id": 101, "ent_mode_calcul_ouvrage": "V", "ent_precision_montant": 2 },
+        "lignes": [
+          { "lig_id": 1, "lig_ordre": 1, "lig_tyl_id": 1, "lig_libelle_html": "Gros œuvre", "lig_tva_id": 1 },
+          { "lig_id": 2, "lig_parent_id": 1, "lig_ordre": 1, "lig_tyl_id": 2, "lig_libelle_html": "Dalle béton armé", "lig_qte": 25, "lig_unt_code": "m2", "lig_tva_id": 1, "lig_nat_id": 1 },
+          { "lig_id": 3, "lig_parent_id": 2, "lig_ordre": 1, "lig_tyl_id": 3, "lig_libelle_html": "Béton C25/30", "lig_qte": 0.15, "lig_unt_code": "m3", "lig_pv": 120, "lig_pv_fixe": true, "lig_tva_id": 1, "lig_nat_id": 2 },
+          { "lig_id": 4, "lig_parent_id": 2, "lig_ordre": 2, "lig_tyl_id": 3, "lig_libelle_html": "Main-d'œuvre", "lig_qte": 0.5, "lig_unt_code": "h", "lig_pv": 45, "lig_pv_fixe": true, "lig_tva_id": 1, "lig_nat_id": 1 },
+          { "lig_id": 5, "lig_parent_id": 1, "lig_ordre": 2, "lig_tyl_id": 3, "lig_libelle_html": "Isolation des combles", "lig_qte": 40, "lig_unt_code": "m2", "lig_pv": 18.5, "lig_pv_fixe": true, "lig_coef_remise": 0.95, "lig_tva_id": 2, "lig_nat_id": 1 },
+          { "lig_id": 6, "lig_ordre": 2, "lig_tyl_id": 3, "lig_libelle_html": "Option peinture", "lig_qte": 1, "lig_pv": 800, "lig_pv_fixe": true, "lig_type_prix": "O", "lig_tva_id": 1, "lig_nat_id": 1 },
+          { "lig_id": 7, "lig_ordre": 3, "lig_tyl_id": 8, "lig_libelle_html": "Remise commerciale", "lig_pied_mode": "P", "lig_pied_base": "CUMUL", "lig_pied_valeur": 3, "lig_pied_sens": -1 },
+          { "lig_id": 8, "lig_ordre": 4, "lig_tyl_id": 10, "lig_libelle_html": "TVA" },
+          { "lig_id": 9, "lig_ordre": 5, "lig_tyl_id": 9, "lig_libelle_html": "Retenue de garantie", "lig_pied_mode": "P", "lig_pied_base": "TOTAL_TTC", "lig_pied_valeur": 5, "lig_pied_sens": -1, "lig_pied_retenue": true }
+        ]
+      }
+    },
+    {
+      "nom": "AVOIR",
+      "description": "Avoir partiel (V_AVOIR) de la facture F-2026-0101 : facture d'origine en BG-3, sans échéance.",
+      "type_facture": "381", "type_origine": "380",
+      "numero": "AV-2026-0007", "date": "2026-11-09",
+      "origines": [{ "numero": "F-2026-0101", "date": "2026-11-02" }],
+      "entree": {
+        "document": { "ent_id": 102, "ent_mode_calcul_ouvrage": "V", "ent_precision_montant": 2 },
+        "lignes": [
+          { "lig_id": 1, "lig_ordre": 1, "lig_tyl_id": 3, "lig_libelle_html": "Isolation des combles : surface non réalisée", "lig_qte": 5, "lig_unt_code": "m2", "lig_pv": 17.575, "lig_pv_fixe": true, "lig_tva_id": 2, "lig_nat_id": 1 },
+          { "lig_id": 2, "lig_ordre": 2, "lig_tyl_id": 10, "lig_libelle_html": "TVA" }
+        ]
+      }
+    },
+    {
+      "nom": "ACOMPTE",
+      "description": "Facture d'acompte (V_FACTURE_ACOMPTE, mode chiffre d'affaires) : 386, une ligne par taux du marché, échéance.",
+      "type_facture": "386",
+      "numero": "FA-2026-0003", "date": "2026-10-05", "echeance": "2026-10-20",
+      "entree": {
+        "document": { "ent_id": 103, "ent_mode_calcul_ouvrage": "V", "ent_precision_montant": 2 },
+        "lignes": [
+          { "lig_id": 1, "lig_ordre": 1, "lig_tyl_id": 3, "lig_libelle_html": "Acompte n° 1 à la commande", "lig_qte": 1, "lig_pv": 1500, "lig_pv_fixe": true, "lig_tva_id": 1, "lig_nat_id": 1 },
+          { "lig_id": 2, "lig_ordre": 2, "lig_tyl_id": 3, "lig_libelle_html": "Acompte n° 1 à la commande", "lig_qte": 1, "lig_pv": 500, "lig_pv_fixe": true, "lig_tva_id": 2, "lig_nat_id": 1 },
+          { "lig_id": 3, "lig_ordre": 3, "lig_tyl_id": 10, "lig_libelle_html": "TVA" }
+        ]
+      }
+    },
+    {
+      "nom": "DEFINITIVE",
+      "description": "Facture définitive après acompte (V_FACTURE, déduction de l'acompte A1 en mode chiffre d'affaires) : biens et services (M4), facture d'acompte en BG-3, reprise en lignes négatives par taux (quantité −1).",
+      "type_facture": "380", "deduit_acompte": true,
+      "numero": "F-2026-0120", "date": "2026-11-10", "echeance": "2026-12-31",
+      "acomptes": { "A1": { "numero": "FA-2026-0003", "date": "2026-10-05" } },
+      "entree": {
+        "document": { "ent_id": 104, "ent_mode_calcul_ouvrage": "V", "ent_precision_montant": 2 },
+        "lignes": [
+          { "lig_id": 1, "lig_ordre": 1, "lig_tyl_id": 3, "lig_libelle_html": "Fourniture de menuiseries", "lig_qte": 6, "lig_unt_code": "u", "lig_pv": 650, "lig_pv_fixe": true, "lig_tva_id": 1, "lig_nat_id": 2 },
+          { "lig_id": 2, "lig_ordre": 2, "lig_tyl_id": 3, "lig_libelle_html": "Pose des menuiseries", "lig_qte": 1, "lig_unt_code": "ft", "lig_pv": 1250, "lig_pv_fixe": true, "lig_tva_id": 2, "lig_nat_id": 1 },
+          { "lig_id": 3, "lig_ordre": 3, "lig_tyl_id": 8, "lig_libelle_html": "Déduction de l'acompte n° 1", "lig_pied_mode": "M", "lig_pied_valeur": 2000, "lig_pied_sens": -1, "lig_proprietes": { "poste_marche": "A1" } },
+          { "lig_id": 4, "lig_ordre": 4, "lig_tyl_id": 10, "lig_libelle_html": "TVA" }
+        ]
+      }
+    },
+    {
+      "nom": "AVOIR_ACOMPTE",
+      "description": "Avoir (V_AVOIR) de la facture d'acompte FA-2026-0003 : 503, facture d'origine en BG-3.",
+      "type_facture": "381", "type_origine": "386",
+      "numero": "AV-2026-0008", "date": "2026-10-12",
+      "origines": [{ "numero": "FA-2026-0003", "date": "2026-10-05" }],
+      "entree": {
+        "document": { "ent_id": 105, "ent_mode_calcul_ouvrage": "V", "ent_precision_montant": 2 },
+        "lignes": [
+          { "lig_id": 1, "lig_ordre": 1, "lig_tyl_id": 3, "lig_libelle_html": "Annulation de l'acompte n° 1", "lig_qte": 1, "lig_pv": 1500, "lig_pv_fixe": true, "lig_tva_id": 1, "lig_nat_id": 1 },
+          { "lig_id": 2, "lig_ordre": 2, "lig_tyl_id": 3, "lig_libelle_html": "Annulation de l'acompte n° 1", "lig_qte": 1, "lig_pv": 500, "lig_pv_fixe": true, "lig_tva_id": 2, "lig_nat_id": 1 },
+          { "lig_id": 3, "lig_ordre": 3, "lig_tyl_id": 10, "lig_libelle_html": "TVA" }
+        ]
+      }
+    },
+    {
+      "nom": "AUTOLIQUIDATION",
+      "description": "Facture de travaux en autoliquidation (catégorie AE, VATEX-FR-AE, taux écrit 0) à un client assujetti.",
+      "type_facture": "380",
+      "numero": "F-2026-0125", "date": "2026-11-11", "echeance": "2026-12-11",
+      "entree": {
+        "document": { "ent_id": 106, "ent_mode_calcul_ouvrage": "V", "ent_precision_montant": 2 },
+        "lignes": [
+          { "lig_id": 1, "lig_ordre": 1, "lig_tyl_id": 3, "lig_libelle_html": "Travaux de plâtrerie", "lig_qte": 120, "lig_unt_code": "m2", "lig_pv": 32, "lig_pv_fixe": true, "lig_tva_id": 3, "lig_nat_id": 1 },
+          { "lig_id": 2, "lig_ordre": 2, "lig_tyl_id": 10, "lig_libelle_html": "TVA" }
+        ]
+      }
+    },
+    {
+      "nom": "INCOMPLETE",
+      "description": "Brouillon sans numéro ni tiers, ligne sans taux, virement sans IBAN : écarts de l'émission et de la complétude, non écrit.",
+      "type_facture": "380", "sans_acheteur": true, "sans_iban": true, "sans_mentions": true,
+      "date": "2026-11-11",
+      "attendu_emission": ["NUMERO_PROVISOIRE", "TVA_ABSENTE", "TIERS_ABSENT", "IBAN_ABSENT"],
+      "attendu_completude": ["BR-FR-05", "BR-FR-05", "BR-FR-05", "BR-FR-11", "BR-FR-12", "BR-FR-21", "BR-FR-15"],
+      "entree": {
+        "document": { "ent_id": 107, "ent_mode_calcul_ouvrage": "V", "ent_precision_montant": 2 },
+        "lignes": [
+          { "lig_id": 1, "lig_ordre": 1, "lig_tyl_id": 3, "lig_libelle_html": "Dépannage", "lig_qte": 1, "lig_pv": 90, "lig_pv_fixe": true, "lig_nat_id": 1 },
+          { "lig_id": 2, "lig_ordre": 2, "lig_tyl_id": 10, "lig_libelle_html": "TVA" }
+        ]
+      }
+    }
+  ]
+}
