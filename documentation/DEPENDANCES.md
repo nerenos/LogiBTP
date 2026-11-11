@@ -10,7 +10,7 @@
 |---|---|---|---|---|
 | npm | decimal.js | 10.6.0 | MIT | exécution (socle/js) |
 | npm | immer | 10.2.0 | MIT | exécution (socle/js) |
-| npm | vitest | 3.2.7 | MIT | développement (socle/js) |
+| npm | vitest | 5.1.0 | MIT | développement (socle/js) |
 | NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Socle.Tests |
 | NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Socle.Tests |
 | NuGet | xunit.runner.visualstudio | 3.1.4 | Apache-2.0 | LogiBTP.Socle.Tests |
@@ -19,7 +19,7 @@
 
 | Type | Dépendance | Version | Licence | Usage |
 |---|---|---|---|---|
-| npm | vitest | 3.2.7 | MIT | développement (modules/annuaire/js) |
+| npm | vitest | 5.1.0 | MIT | développement (modules/annuaire/js) |
 | NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Annuaire.Tests |
 | NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Annuaire.Web |
 | NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Annuaire.Tests |
@@ -29,7 +29,7 @@
 
 | Type | Dépendance | Version | Licence | Usage |
 |---|---|---|---|---|
-| npm | vitest | 3.2.7 | MIT | développement (modules/authentification/js) |
+| npm | vitest | 5.1.0 | MIT | développement (modules/authentification/js) |
 | NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Authentification.Tests |
 | NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Authentification.Web |
 | NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Authentification.Tests |
@@ -39,7 +39,7 @@
 
 | Type | Dépendance | Version | Licence | Usage |
 |---|---|---|---|---|
-| npm | vitest | 3.2.7 | MIT | développement (modules/bibliotheque/js) |
+| npm | vitest | 5.1.0 | MIT | développement (modules/bibliotheque/js) |
 | NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Bibliotheque.Tests |
 | NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Bibliotheque.Web |
 | NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Bibliotheque.Tests |
@@ -49,7 +49,7 @@
 
 | Type | Dépendance | Version | Licence | Usage |
 |---|---|---|---|---|
-| npm | vitest | 3.2.7 | MIT | développement (modules/calendrier/js) |
+| npm | vitest | 5.1.0 | MIT | développement (modules/calendrier/js) |
 | NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Calendrier.Tests |
 | NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Calendrier.Web |
 | NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Calendrier.Tests |
@@ -59,7 +59,7 @@
 
 | Type | Dépendance | Version | Licence | Usage |
 |---|---|---|---|---|
-| npm | vitest | 3.2.7 | MIT | développement (modules/comptabilite/js) |
+| npm | vitest | 5.1.0 | MIT | développement (modules/comptabilite/js) |
 | NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Comptabilite.Tests |
 | NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Comptabilite.Web |
 | NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Comptabilite.Tests |
@@ -69,7 +69,7 @@
 
 | Type | Dépendance | Version | Licence | Usage |
 |---|---|---|---|---|
-| npm | vitest | 3.2.7 | MIT | développement (modules/crm/js) |
+| npm | vitest | 5.1.0 | MIT | développement (modules/crm/js) |
 | NuGet | HtmlSanitizer | 9.2.1039 | MIT | LogiBTP.Crm.Web |
 | NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Crm.Tests |
 | NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Crm.Web |
@@ -80,7 +80,7 @@
 
 | Type | Dépendance | Version | Licence | Usage |
 |---|---|---|---|---|
-| npm | vitest | 3.2.7 | MIT | développement (modules/document/js) |
+| npm | vitest | 5.1.0 | MIT | développement (modules/document/js) |
 | NuGet | HtmlSanitizer | 9.2.1039 | MIT | LogiBTP.Documents.Web |
 | NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Documents.Tests |
 | NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Documents.Web |
@@ -91,7 +91,7 @@
 
 | Type | Dépendance | Version | Licence | Usage |
 |---|---|---|---|---|
-| npm | vitest | 3.2.7 | MIT | développement (modules/droits/js) |
+| npm | vitest | 5.1.0 | MIT | développement (modules/droits/js) |
 | NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Droits.Tests |
 | NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Droits.Web |
 | NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Droits.Tests |
@@ -105,7 +105,7 @@
 | npm | esbuild | 0.28.2 | MIT | développement (modules/edition/js) |
 | npm | pdf-lib | 1.17.1 | MIT | exécution (modules/edition/js) |
 | npm | qrcode-generator | 2.0.4 | MIT | exécution (modules/edition/js) |
-| npm | vitest | 3.2.7 | MIT | développement (modules/edition/js) |
+| npm | vitest | 5.1.0 | MIT | développement (modules/edition/js) |
 | NuGet | Jint | 4.17.0 | BSD-2-Clause | LogiBTP.Editions |
 | NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Editions.Tests |
 | NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Editions.Web |
@@ -125,7 +125,7 @@
 
 | Type | Dépendance | Version | Licence | Usage |
 |---|---|---|---|---|
-| npm | vitest | 3.2.7 | MIT | développement (modules/entreprises-fr/js) |
+| npm | vitest | 5.1.0 | MIT | développement (modules/entreprises-fr/js) |
 | NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.EntreprisesFr.Tests |
 | NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.EntreprisesFr.Tests |
 | NuGet | xunit.runner.visualstudio | 3.1.4 | Apache-2.0 | LogiBTP.EntreprisesFr.Tests |
@@ -134,7 +134,7 @@
 
 | Type | Dépendance | Version | Licence | Usage |
 |---|---|---|---|---|
-| npm | vitest | 3.2.7 | MIT | développement (modules/execution/js) |
+| npm | vitest | 5.1.0 | MIT | développement (modules/execution/js) |
 | NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Execution.Tests |
 | NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Execution.Web |
 | NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Execution.Tests |
@@ -144,7 +144,7 @@
 
 | Type | Dépendance | Version | Licence | Usage |
 |---|---|---|---|---|
-| npm | vitest | 3.2.7 | MIT | développement (modules/fiche/js) |
+| npm | vitest | 5.1.0 | MIT | développement (modules/fiche/js) |
 | NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Fiches.Tests |
 | NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Fiches.Web |
 | NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Fiches.Tests |
@@ -156,7 +156,7 @@
 |---|---|---|---|---|
 | npm | @kenjiuno/msgreader | 1.28.0 | Apache-2.0 | exécution (modules/ged/js) |
 | npm | postal-mime | 2.7.6 | MIT-0 | exécution (modules/ged/js) |
-| npm | vitest | 3.2.7 | MIT | développement (modules/ged/js) |
+| npm | vitest | 5.1.0 | MIT | développement (modules/ged/js) |
 | NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Ged.Tests |
 | NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Ged.Web |
 | NuGet | PdfPig | 0.1.16 | Apache-2.0 | LogiBTP.Ged.Web |
@@ -167,13 +167,13 @@
 
 | Type | Dépendance | Version | Licence | Usage |
 |---|---|---|---|---|
-| npm | vitest | 3.2.7 | MIT | développement (modules/graphe/js) |
+| npm | vitest | 5.1.0 | MIT | développement (modules/graphe/js) |
 
 ## modules/import
 
 | Type | Dépendance | Version | Licence | Usage |
 |---|---|---|---|---|
-| npm | vitest | 3.2.7 | MIT | développement (modules/import/js) |
+| npm | vitest | 5.1.0 | MIT | développement (modules/import/js) |
 
 ## modules/installation
 
@@ -188,7 +188,7 @@
 
 | Type | Dépendance | Version | Licence | Usage |
 |---|---|---|---|---|
-| npm | vitest | 3.2.7 | MIT | développement (modules/liste/js) |
+| npm | vitest | 5.1.0 | MIT | développement (modules/liste/js) |
 | NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Listes.Tests |
 | NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Listes.Web |
 | NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Listes.Tests |
@@ -198,7 +198,7 @@
 
 | Type | Dépendance | Version | Licence | Usage |
 |---|---|---|---|---|
-| npm | vitest | 3.2.7 | MIT | développement (modules/mail/js) |
+| npm | vitest | 5.1.0 | MIT | développement (modules/mail/js) |
 | NuGet | EFCore.NamingConventions | 10.0.1 | Apache-2.0 | LogiBTP.Mail.Tests |
 | NuGet | HtmlSanitizer | 9.2.1039 | MIT | LogiBTP.Mail.Web |
 | NuGet | MailKit | 4.18.2 | MIT | LogiBTP.Mail.Web |
@@ -218,7 +218,7 @@
 | npm | @codemirror/state | 6.7.6 | MIT | exécution (modules/metre/js) |
 | npm | @codemirror/view | 6.43.14 | MIT | exécution (modules/metre/js) |
 | npm | @lezer/highlight | 1.2.5 | MIT | exécution (modules/metre/js) |
-| npm | vitest | 3.2.7 | MIT | développement (modules/metre/js) |
+| npm | vitest | 5.1.0 | MIT | développement (modules/metre/js) |
 | NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Metres.Tests |
 | NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Metres.Tests |
 | NuGet | xunit.runner.visualstudio | 3.1.4 | Apache-2.0 | LogiBTP.Metres.Tests |
@@ -227,7 +227,7 @@
 
 | Type | Dépendance | Version | Licence | Usage |
 |---|---|---|---|---|
-| npm | vitest | 3.2.7 | MIT | développement (modules/navigation/js) |
+| npm | vitest | 5.1.0 | MIT | développement (modules/navigation/js) |
 
 ## modules/notification
 
@@ -249,7 +249,7 @@
 
 | Type | Dépendance | Version | Licence | Usage |
 |---|---|---|---|---|
-| npm | vitest | 3.2.7 | MIT | développement (modules/personnalisation/js) |
+| npm | vitest | 5.1.0 | MIT | développement (modules/personnalisation/js) |
 | NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Personnalisation.Tests |
 | NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Personnalisation.Tests |
 | NuGet | xunit.runner.visualstudio | 3.1.4 | Apache-2.0 | LogiBTP.Personnalisation.Tests |
@@ -258,7 +258,7 @@
 
 | Type | Dépendance | Version | Licence | Usage |
 |---|---|---|---|---|
-| npm | vitest | 3.2.7 | MIT | développement (modules/planning/js) |
+| npm | vitest | 5.1.0 | MIT | développement (modules/planning/js) |
 | NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Planning.Tests |
 | NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Planning.Web |
 | NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Planning.Tests |
@@ -268,7 +268,7 @@
 
 | Type | Dépendance | Version | Licence | Usage |
 |---|---|---|---|---|
-| npm | vitest | 3.2.7 | MIT | développement (modules/pointage/js) |
+| npm | vitest | 5.1.0 | MIT | développement (modules/pointage/js) |
 | NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Pointage.Tests |
 | NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Pointage.Web |
 | NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Pointage.Tests |
@@ -278,7 +278,7 @@
 
 | Type | Dépendance | Version | Licence | Usage |
 |---|---|---|---|---|
-| npm | vitest | 3.2.7 | MIT | développement (modules/reglement/js) |
+| npm | vitest | 5.1.0 | MIT | développement (modules/reglement/js) |
 | NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Reglements.Tests |
 | NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Reglements.Web |
 | NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Reglements.Tests |
@@ -288,7 +288,7 @@
 
 | Type | Dépendance | Version | Licence | Usage |
 |---|---|---|---|---|
-| npm | vitest | 3.2.7 | MIT | développement (modules/relance/js) |
+| npm | vitest | 5.1.0 | MIT | développement (modules/relance/js) |
 | NuGet | EFCore.NamingConventions | 10.0.1 | Apache-2.0 | LogiBTP.Relances.Tests |
 | NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Relances.Tests |
 | NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Relances.Web |
@@ -299,7 +299,7 @@
 
 | Type | Dépendance | Version | Licence | Usage |
 |---|---|---|---|---|
-| npm | vitest | 3.2.7 | MIT | développement (modules/rentabilite/js) |
+| npm | vitest | 5.1.0 | MIT | développement (modules/rentabilite/js) |
 | NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Rentabilite.Tests |
 | NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Rentabilite.Web |
 | NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Rentabilite.Tests |
@@ -309,7 +309,7 @@
 
 | Type | Dépendance | Version | Licence | Usage |
 |---|---|---|---|---|
-| npm | vitest | 3.2.7 | MIT | développement (modules/sav/js) |
+| npm | vitest | 5.1.0 | MIT | développement (modules/sav/js) |
 | NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Sav.Tests |
 | NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Sav.Web |
 | NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Sav.Tests |
@@ -319,7 +319,7 @@
 
 | Type | Dépendance | Version | Licence | Usage |
 |---|---|---|---|---|
-| npm | vitest | 3.2.7 | MIT | développement (modules/sous-traitance/js) |
+| npm | vitest | 5.1.0 | MIT | développement (modules/sous-traitance/js) |
 | NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.SousTraitance.Tests |
 | NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.SousTraitance.Web |
 | NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.SousTraitance.Tests |
@@ -329,7 +329,7 @@
 
 | Type | Dépendance | Version | Licence | Usage |
 |---|---|---|---|---|
-| npm | vitest | 3.2.7 | MIT | développement (modules/stock/js) |
+| npm | vitest | 5.1.0 | MIT | développement (modules/stock/js) |
 | NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Stock.Tests |
 | NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Stock.Web |
 | NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Stock.Tests |
@@ -347,7 +347,7 @@
 | npm | @fontsource-variable/inter | 5.3.0 | OFL-1.1 | exécution (client) |
 | npm | @lezer/highlight | 1.2.5 | MIT | exécution (client) |
 | npm | vite | 7.3.7 | MIT | développement (client) |
-| npm | vitest | 3.2.7 | MIT | développement (client) |
+| npm | vitest | 5.1.0 | MIT | développement (client) |
 
 ## cœur (src)
 
@@ -369,3 +369,9 @@
 | Type | Dépendance | Version | Licence | Usage |
 |---|---|---|---|---|
 | npm | vitepress | 1.6.4 | MIT | développement (docs) |
+
+## playwright-report
+
+| Type | Dépendance | Version | Licence | Usage |
+|---|---|---|---|---|
+| police | playwright-report/trace/codicon.DCmgc-ay.ttf | — | ? | licence absente |
