@@ -1,0 +1,333 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Invoice xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2" xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2" xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2">
+  <cbc:UBLVersionID>2.1</cbc:UBLVersionID>
+  <cbc:CustomizationID>urn:cen.eu:en16931:2017#conformant#urn.cpro.gouv.fr:1p0:extended-ctc-fr</cbc:CustomizationID>
+  <cbc:ProfileID>S5</cbc:ProfileID>
+  <cbc:ID>F202600037</cbc:ID>
+  <cbc:IssueDate>2026-06-02</cbc:IssueDate>
+  <cbc:DueDate>2026-07-02</cbc:DueDate>
+  <cbc:InvoiceTypeCode>380</cbc:InvoiceTypeCode>
+  <cbc:Note>#PAI#COMPENSATION AVEC AUTOFACTURE AUTOF202600028</cbc:Note>
+  <cbc:Note>#REG#COOP1 SARL au capital de 100 000 EUR</cbc:Note>
+  <cbc:Note>#ABL#RCS MAVILLE 200 000 008</cbc:Note>
+  <cbc:Note>#AAI#55 avenue de là-bas,06000 MAVILLE, FR – contact@coop1.fr - www.coop1.fr  – N° TVA : FR37 200 000 008</cbc:Note>
+  <cbc:Note>#PMD#Tout retard de paiement engendre une pénalité exigible à compter de la date d'échéance, calculée sur la base de trois fois le taux d'intérêt légal.</cbc:Note>
+  <cbc:Note>#PMT#Indemnité forfaitaire pour frais de recouvrement en cas de retard de paiement : 40 €.</cbc:Note>
+  <cbc:Note>#AAB#Les réglements reçus avant la date d'échéance ne donneront pas lieu à escompte.</cbc:Note>
+  <cbc:DocumentCurrencyCode>EUR</cbc:DocumentCurrencyCode>
+  <cac:InvoicePeriod>
+    <cbc:StartDate>2026-05-01</cbc:StartDate>
+    <cbc:EndDate>2026-05-31</cbc:EndDate>
+    <cbc:DescriptionCode>3</cbc:DescriptionCode>
+  </cac:InvoicePeriod>
+  <cac:BillingReference>
+    <cac:InvoiceDocumentReference>
+      <cbc:ID>F202600010</cbc:ID>
+      <cbc:IssueDate>2026-04-15</cbc:IssueDate>
+      <cbc:DocumentTypeCode>386</cbc:DocumentTypeCode>
+    </cac:InvoiceDocumentReference>
+  </cac:BillingReference>
+  <cac:ContractDocumentReference>
+    <cbc:ID>MARCHE-2026-014</cbc:ID>
+  </cac:ContractDocumentReference>
+  <cac:AdditionalDocumentReference>
+    <cbc:ID>SITUATION-03</cbc:ID>
+    <cbc:DocumentDescription>DOCUMENT_ANNEXE</cbc:DocumentDescription>
+    <cac:Attachment>
+      <cbc:EmbeddedDocumentBinaryObject mimeCode="text/csv" filename="releve.csv">UmVsZXbDqSBkZSB0cmF2YXV4</cbc:EmbeddedDocumentBinaryObject>
+    </cac:Attachment>
+  </cac:AdditionalDocumentReference>
+  <cac:ProjectReference>
+    <cbc:ID>CH-2026-001</cbc:ID>
+  </cac:ProjectReference>
+  <cac:AccountingSupplierParty>
+    <cac:Party>
+      <cbc:EndpointID schemeID="0225">200000008_STATUTS</cbc:EndpointID>
+      <cac:PostalAddress>
+        <cbc:StreetName>55 avenue de là-bas</cbc:StreetName>
+        <cbc:AdditionalStreetName>acheteur ligne 2</cbc:AdditionalStreetName>
+        <cbc:CityName>MA VILLE</cbc:CityName>
+        <cbc:PostalZone>06000</cbc:PostalZone>
+        <cac:Country>
+          <cbc:IdentificationCode>FR</cbc:IdentificationCode>
+        </cac:Country>
+      </cac:PostalAddress>
+      <cac:PartyTaxScheme>
+        <cbc:CompanyID>FR37288100000008</cbc:CompanyID>
+        <cac:TaxScheme>
+          <cbc:ID>VAT</cbc:ID>
+        </cac:TaxScheme>
+      </cac:PartyTaxScheme>
+      <cac:PartyLegalEntity>
+        <cbc:RegistrationName>COOP1</cbc:RegistrationName>
+        <cbc:CompanyID schemeID="0002">200000008</cbc:CompanyID>
+      </cac:PartyLegalEntity>
+    </cac:Party>
+  </cac:AccountingSupplierParty>
+  <cac:AccountingCustomerParty>
+    <cac:Party>
+      <cbc:EndpointID schemeID="0225">100000009</cbc:EndpointID>
+      <cac:PartyIdentification>
+        <cbc:ID schemeID="0088">3654789851</cbc:ID>
+      </cac:PartyIdentification>
+      <cac:PostalAddress>
+        <cbc:StreetName>35 rue d'ici</cbc:StreetName>
+        <cbc:AdditionalStreetName>ligne 2 vendeur</cbc:AdditionalStreetName>
+        <cbc:CityName>PARIS</cbc:CityName>
+        <cbc:PostalZone>75018</cbc:PostalZone>
+        <cac:Country>
+          <cbc:IdentificationCode>FR</cbc:IdentificationCode>
+        </cac:Country>
+      </cac:PostalAddress>
+      <cac:PartyTaxScheme>
+        <cbc:CompanyID>FR88100000009</cbc:CompanyID>
+        <cac:TaxScheme>
+          <cbc:ID>VAT</cbc:ID>
+        </cac:TaxScheme>
+      </cac:PartyTaxScheme>
+      <cac:PartyLegalEntity>
+        <cbc:RegistrationName>AGRI1</cbc:RegistrationName>
+        <cbc:CompanyID schemeID="0002">100000009</cbc:CompanyID>
+      </cac:PartyLegalEntity>
+      <cac:AgentParty>
+        <cbc:EndpointID schemeID="0225">300000007</cbc:EndpointID>
+        <cac:PartyLegalEntity>
+          <cbc:RegistrationName>MAITRE D OEUVRE</cbc:RegistrationName>
+          <cbc:CompanyID schemeID="0002">300000007</cbc:CompanyID>
+        </cac:PartyLegalEntity>
+      </cac:AgentParty>
+    </cac:Party>
+  </cac:AccountingCustomerParty>
+  <cac:Delivery>
+    <cac:DeliveryLocation>
+      <cac:Address>
+        <cbc:StreetName>35 rue d'ici</cbc:StreetName>
+        <cbc:AdditionalStreetName>ligne 2 vendeur</cbc:AdditionalStreetName>
+        <cbc:CityName>PARIS</cbc:CityName>
+        <cbc:PostalZone>75018</cbc:PostalZone>
+        <cac:Country>
+          <cbc:IdentificationCode>FR</cbc:IdentificationCode>
+        </cac:Country>
+      </cac:Address>
+    </cac:DeliveryLocation>
+    <cac:DeliveryParty>
+      <cac:PartyName>
+        <cbc:Name>A LA FERME</cbc:Name>
+      </cac:PartyName>
+    </cac:DeliveryParty>
+  </cac:Delivery>
+  <cac:PaymentMeans>
+    <cbc:PaymentMeansCode>97</cbc:PaymentMeansCode>
+    <cbc:PaymentID>F202600037_100000009</cbc:PaymentID>
+    <cac:PaymentMandate>
+      <cac:PayerParty>
+        <cbc:EndpointID schemeID="0225">400000006</cbc:EndpointID>
+        <cac:PostalAddress>
+          <cbc:StreetName>1 place de la mairie</cbc:StreetName>
+          <cbc:CityName>MA VILLE</cbc:CityName>
+          <cbc:PostalZone>06000</cbc:PostalZone>
+          <cac:Country>
+            <cbc:IdentificationCode>FR</cbc:IdentificationCode>
+          </cac:Country>
+        </cac:PostalAddress>
+        <cac:PartyLegalEntity>
+          <cbc:RegistrationName>COMMUNE DE MAVILLE</cbc:RegistrationName>
+          <cbc:CompanyID schemeID="0002">400000006</cbc:CompanyID>
+        </cac:PartyLegalEntity>
+      </cac:PayerParty>
+    </cac:PaymentMandate>
+  </cac:PaymentMeans>
+  <cac:PaymentTerms>
+    <cbc:Note>PAIEMENT 30 JOURS NET</cbc:Note>
+  </cac:PaymentTerms>
+  <cac:TaxTotal>
+    <cbc:TaxAmount currencyID="EUR">39.89</cbc:TaxAmount>
+    <cac:TaxSubtotal>
+      <cbc:TaxableAmount currencyID="EUR">199.43</cbc:TaxableAmount>
+      <cbc:TaxAmount currencyID="EUR">39.89</cbc:TaxAmount>
+      <cac:TaxCategory>
+        <cbc:ID>S</cbc:ID>
+        <cbc:Percent>20</cbc:Percent>
+        <cac:TaxScheme>
+          <cbc:ID>VAT</cbc:ID>
+        </cac:TaxScheme>
+      </cac:TaxCategory>
+    </cac:TaxSubtotal>
+    <cac:TaxSubtotal>
+      <cbc:TaxableAmount currencyID="EUR">5.35</cbc:TaxableAmount>
+      <cbc:TaxAmount currencyID="EUR">0.00</cbc:TaxAmount>
+      <cac:TaxCategory>
+        <cbc:ID>E</cbc:ID>
+        <cbc:Percent>0</cbc:Percent>
+        <cbc:TaxExemptionReason>Exo1</cbc:TaxExemptionReason>
+        <cac:TaxScheme>
+          <cbc:ID>VAT</cbc:ID>
+        </cac:TaxScheme>
+      </cac:TaxCategory>
+    </cac:TaxSubtotal>
+  </cac:TaxTotal>
+  <cac:LegalMonetaryTotal>
+    <cbc:LineExtensionAmount currencyID="EUR">204.78</cbc:LineExtensionAmount>
+    <cbc:TaxExclusiveAmount currencyID="EUR">204.78</cbc:TaxExclusiveAmount>
+    <cbc:TaxInclusiveAmount currencyID="EUR">244.67</cbc:TaxInclusiveAmount>
+    <cbc:AllowanceTotalAmount currencyID="EUR">0.00</cbc:AllowanceTotalAmount>
+    <cbc:ChargeTotalAmount currencyID="EUR">0.00</cbc:ChargeTotalAmount>
+    <cbc:PrepaidAmount currencyID="EUR">244.67</cbc:PrepaidAmount>
+    <cbc:PayableAmount currencyID="EUR">0.00</cbc:PayableAmount>
+  </cac:LegalMonetaryTotal>
+  <cac:InvoiceLine>
+    <cbc:ID>1</cbc:ID>
+    <cbc:InvoicedQuantity unitCode="LTR">43.81</cbc:InvoicedQuantity>
+    <cbc:LineExtensionAmount currencyID="EUR">4.69</cbc:LineExtensionAmount>
+    <cac:InvoicePeriod>
+      <cbc:StartDate>2026-05-01</cbc:StartDate>
+      <cbc:EndDate>2026-05-31</cbc:EndDate>
+    </cac:InvoicePeriod>
+    <cac:BillingReference>
+      <cac:InvoiceDocumentReference>
+        <cbc:ID>F202600010</cbc:ID>
+        <cbc:IssueDate>2026-04-15</cbc:IssueDate>
+        <cbc:DocumentTypeCode>386</cbc:DocumentTypeCode>
+      </cac:InvoiceDocumentReference>
+      <cac:BillingReferenceLine>
+        <cbc:ID>1</cbc:ID>
+      </cac:BillingReferenceLine>
+    </cac:BillingReference>
+    <cac:Item>
+      <cbc:Description>COTISATION</cbc:Description>
+      <cbc:Name>CNIEL</cbc:Name>
+      <cac:ClassifiedTaxCategory>
+        <cbc:ID>E</cbc:ID>
+        <cbc:Percent>0</cbc:Percent>
+        <cac:TaxScheme>
+          <cbc:ID>VAT</cbc:ID>
+        </cac:TaxScheme>
+      </cac:ClassifiedTaxCategory>
+    </cac:Item>
+    <cac:Price>
+      <cbc:PriceAmount currencyID="EUR">0.107</cbc:PriceAmount>
+      <cbc:BaseQuantity unitCode="LTR">1</cbc:BaseQuantity>
+      <cac:AllowanceCharge>
+        <cbc:ChargeIndicator>false</cbc:ChargeIndicator>
+        <cbc:Amount currencyID="EUR">0</cbc:Amount>
+        <cbc:BaseAmount currencyID="EUR">0.107</cbc:BaseAmount>
+      </cac:AllowanceCharge>
+    </cac:Price>
+  </cac:InvoiceLine>
+  <cac:InvoiceLine>
+    <cbc:ID>2</cbc:ID>
+    <cbc:InvoicedQuantity unitCode="LTR">43.81</cbc:InvoicedQuantity>
+    <cbc:LineExtensionAmount currencyID="EUR">48.76</cbc:LineExtensionAmount>
+    <cac:InvoicePeriod>
+      <cbc:StartDate>2026-05-01</cbc:StartDate>
+      <cbc:EndDate>2026-05-31</cbc:EndDate>
+    </cac:InvoicePeriod>
+    <cac:Item>
+      <cbc:Description>COTISATION Part assujettie</cbc:Description>
+      <cbc:Name>CNIEL</cbc:Name>
+      <cac:ClassifiedTaxCategory>
+        <cbc:ID>S</cbc:ID>
+        <cbc:Percent>20</cbc:Percent>
+        <cac:TaxScheme>
+          <cbc:ID>VAT</cbc:ID>
+        </cac:TaxScheme>
+      </cac:ClassifiedTaxCategory>
+    </cac:Item>
+    <cac:Price>
+      <cbc:PriceAmount currencyID="EUR">1.113</cbc:PriceAmount>
+      <cbc:BaseQuantity unitCode="LTR">1</cbc:BaseQuantity>
+      <cac:AllowanceCharge>
+        <cbc:ChargeIndicator>false</cbc:ChargeIndicator>
+        <cbc:Amount currencyID="EUR">0</cbc:Amount>
+        <cbc:BaseAmount currencyID="EUR">1.113</cbc:BaseAmount>
+      </cac:AllowanceCharge>
+    </cac:Price>
+  </cac:InvoiceLine>
+  <cac:InvoiceLine>
+    <cbc:ID>3</cbc:ID>
+    <cbc:InvoicedQuantity unitCode="LTR">43.81</cbc:InvoicedQuantity>
+    <cbc:LineExtensionAmount currencyID="EUR">17.09</cbc:LineExtensionAmount>
+    <cac:InvoicePeriod>
+      <cbc:StartDate>2026-05-01</cbc:StartDate>
+      <cbc:EndDate>2026-05-31</cbc:EndDate>
+    </cac:InvoicePeriod>
+    <cac:Item>
+      <cbc:Description>COTISATION Labo</cbc:Description>
+      <cbc:Name>CNIEL</cbc:Name>
+      <cac:ClassifiedTaxCategory>
+        <cbc:ID>S</cbc:ID>
+        <cbc:Percent>20</cbc:Percent>
+        <cac:TaxScheme>
+          <cbc:ID>VAT</cbc:ID>
+        </cac:TaxScheme>
+      </cac:ClassifiedTaxCategory>
+    </cac:Item>
+    <cac:Price>
+      <cbc:PriceAmount currencyID="EUR">0.39</cbc:PriceAmount>
+      <cbc:BaseQuantity unitCode="LTR">1</cbc:BaseQuantity>
+      <cac:AllowanceCharge>
+        <cbc:ChargeIndicator>false</cbc:ChargeIndicator>
+        <cbc:Amount currencyID="EUR">0</cbc:Amount>
+        <cbc:BaseAmount currencyID="EUR">0.39</cbc:BaseAmount>
+      </cac:AllowanceCharge>
+    </cac:Price>
+  </cac:InvoiceLine>
+  <cac:InvoiceLine>
+    <cbc:ID>4</cbc:ID>
+    <cbc:InvoicedQuantity unitCode="LTR">43.81</cbc:InvoicedQuantity>
+    <cbc:LineExtensionAmount currencyID="EUR">0.66</cbc:LineExtensionAmount>
+    <cac:InvoicePeriod>
+      <cbc:StartDate>2026-05-01</cbc:StartDate>
+      <cbc:EndDate>2026-05-31</cbc:EndDate>
+    </cac:InvoicePeriod>
+    <cac:Item>
+      <cbc:Description>COTISATION Cliquest</cbc:Description>
+      <cbc:Name>CNIEL</cbc:Name>
+      <cac:ClassifiedTaxCategory>
+        <cbc:ID>E</cbc:ID>
+        <cbc:Percent>0</cbc:Percent>
+        <cac:TaxScheme>
+          <cbc:ID>VAT</cbc:ID>
+        </cac:TaxScheme>
+      </cac:ClassifiedTaxCategory>
+    </cac:Item>
+    <cac:Price>
+      <cbc:PriceAmount currencyID="EUR">0.015</cbc:PriceAmount>
+      <cbc:BaseQuantity unitCode="LTR">1</cbc:BaseQuantity>
+      <cac:AllowanceCharge>
+        <cbc:ChargeIndicator>false</cbc:ChargeIndicator>
+        <cbc:Amount currencyID="EUR">0</cbc:Amount>
+        <cbc:BaseAmount currencyID="EUR">0.015</cbc:BaseAmount>
+      </cac:AllowanceCharge>
+    </cac:Price>
+  </cac:InvoiceLine>
+  <cac:InvoiceLine>
+    <cbc:ID>5</cbc:ID>
+    <cbc:InvoicedQuantity unitCode="LTR">43.81</cbc:InvoicedQuantity>
+    <cbc:LineExtensionAmount currencyID="EUR">133.58</cbc:LineExtensionAmount>
+    <cac:InvoicePeriod>
+      <cbc:StartDate>2026-05-01</cbc:StartDate>
+      <cbc:EndDate>2026-05-31</cbc:EndDate>
+    </cac:InvoicePeriod>
+    <cac:Item>
+      <cbc:Description>Mise à disposition</cbc:Description>
+      <cbc:Name>TANK</cbc:Name>
+      <cac:ClassifiedTaxCategory>
+        <cbc:ID>S</cbc:ID>
+        <cbc:Percent>20</cbc:Percent>
+        <cac:TaxScheme>
+          <cbc:ID>VAT</cbc:ID>
+        </cac:TaxScheme>
+      </cac:ClassifiedTaxCategory>
+    </cac:Item>
+    <cac:Price>
+      <cbc:PriceAmount currencyID="EUR">3.049</cbc:PriceAmount>
+      <cbc:BaseQuantity unitCode="LTR">1</cbc:BaseQuantity>
+      <cac:AllowanceCharge>
+        <cbc:ChargeIndicator>false</cbc:ChargeIndicator>
+        <cbc:Amount currencyID="EUR">0</cbc:Amount>
+        <cbc:BaseAmount currencyID="EUR">3.049</cbc:BaseAmount>
+      </cac:AllowanceCharge>
+    </cac:Price>
+  </cac:InvoiceLine>
+</Invoice>

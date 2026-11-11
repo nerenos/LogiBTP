@@ -17,14 +17,14 @@ namespace LogiBTP.FactureElectronique.Tests;
 public class EcritureCiiTests
 {
     /// <summary>Décimaux comparés sans zéro de fin (le CII écrit « 100.00 », un prix « 0.107 »).</summary>
-    private sealed class DecimalNormalise : JsonConverter<decimal>
+    internal sealed class DecimalNormalise : JsonConverter<decimal>
     {
         public override decimal Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) => reader.GetDecimal();
         public override void Write(Utf8JsonWriter writer, decimal value, JsonSerializerOptions options) =>
             writer.WriteRawValue(EcritureCii.Nombre(value));
     }
 
-    private static readonly JsonSerializerOptions Json = new()
+    internal static readonly JsonSerializerOptions Json = new()
     {
         WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping, Converters = { new DecimalNormalise() },
     };

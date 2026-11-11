@@ -653,11 +653,20 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   « Project reference » ; avertissement EXTENDED-CTC-FR `BR-FXEXT-*-08rev` sur les CII écrits à TVA exonérée ou
   autoliquidée (motif d'exonération de ligne absent du modèle, TODO).
 
-## Lot 17 : écriture UBL (A FAIRE)
+## Lot 17 : écriture UBL (FAIT le 11/11/2026)
 
 - **Module** : `modules/facture-electronique`. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `Formats/EcritureUbl.cs` (Invoice, CreditNote pour les avoirs), tests aller-retour et schematrons.
 - **Critère de fin** : mêmes modèles écrits en UBL et en CII, relus égaux, valides ; tests verts.
+- **Réalisé** : `Formats/EcritureUbl.cs` (`Ecrire`, `Document`, `EstAvoir` : CreditNote pour `TypesAvoir`, Invoice sinon ; ordre des
+  XSD UBL 2.1, XSD vérifié, conversions inverses de `LectureUbl` : BT-8 2475 vers 2005, BT-21 en préfixe `#CODE#`, sous-type et
+  ligne parente en BillingReference de ligne, BT-11 d'un avoir en AdditionalDocumentReference 50) ; `EcritureUblTests` (les 15
+  CII d'exemple et les 5 cas du jeu écrits en UBL et en CII, relus au même modèle ; 17 UBL de référence
+  `tests/exemples/ecrits/*_UBL.xml`, régénérés par `LOGIBTP_REGENERER_CII=1`, jumeaux des CII écrits) ; les 17 UBL passent XSD,
+  schematron du profil et BR-FR-Flux2 sans erreur fatale (`schematrons.test.js`, `npm run valider-facture`). Écarts :
+  bénéficiaire et représentant fiscal écrits en PartyName seul (nom commercial perdu) ; payeur et échéance d'un avoir sans moyen
+  de paiement refusés (`DONNEE_INVALIDE`) ; ligne parente sans sous-type refusée ; BT-13 vide si seule la commande vendeur est
+  donnée ; cadres 8 / 9 non émis comme en CII ; mêmes avertissements `BR-FREXT-*-08rev` que le CII.
 
 ## Lot 18 : PDF/A-3 et fichier associé (A FAIRE)
 
