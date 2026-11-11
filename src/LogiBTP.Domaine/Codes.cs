@@ -188,6 +188,20 @@ public static class EtapesGed
     public const string Reception = "RECEPTION";
 }
 
+/// <summary>Avertissement d'émission lié à l'annuaire des plateformes (lot 20) : tiers absent de l'annuaire ou jamais vérifié.</summary>
+public static class AvertissementAnnuaireFe
+{
+    public const string HorsAnnuaire = "HORS_ANNUAIRE";
+    public const string NonVerifie = "NON_VERIFIE";
+}
+
+/// <summary>Plateforme de réception inscrite sur la fiche d'un tiers depuis l'annuaire (lot 20) : plateforme agréée ou PPF.</summary>
+public static class PlateformeAnnuaireFe
+{
+    public const string Pa = "PA";
+    public const string Ppf = "PPF";
+}
+
 /// <summary>
 /// Signaux de notification de la facturation électronique (db/295 : facture_electronique_signal, niveau et activation
 /// par société) : facture reçue, rejet (accusé en erreur ou statut 213), refus (210), litige (207), erreur de la file.

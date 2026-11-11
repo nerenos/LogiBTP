@@ -152,6 +152,7 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
         new("/api/execution/sav-parametres", ModeRoute.Parametrage),
         new("/api/rentabilite/parametres", ModeRoute.Parametrage),
         new("/api/facture-electronique/parametres", ModeRoute.Parametrage),
+        new("/api/facture-electronique/annuaire/option", ModeRoute.Parametrage),
         // Module Document : définitions et référentiels lus par la page document.
         new("/api/documents", ModeRoute.Module, "documents"),
         new("/api/calcul", ModeRoute.Module, "documents"),
@@ -205,6 +206,7 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
         new("/api/facture-electronique/import", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),
         new("/api/facture-electronique/courriels/{id}/facture", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),
         new("/api/facture-electronique/releve", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),
+        new("/api/facture-electronique/annuaire/personnes/{id}/verification", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),
         new("/api/execution", ModeRoute.Module, "execution"),
         new("/api/liaisons", ModeRoute.Module, "planning"),
         new("/api/sous-traitance", ModeRoute.Module, "sous_traitance"),

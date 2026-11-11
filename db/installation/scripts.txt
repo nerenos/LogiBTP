@@ -262,6 +262,7 @@ db/294_sav_creation_hors_ligne.sql rejouable
 db/295_facture_electronique.sql rejouable
 db/296_facture_electronique_reception.sql rejouable
 db/297_facture_electronique_sous_traitance.sql rejouable
+db/298_facture_electronique_annuaire.sql rejouable
 
 # Vues de colonnes des types de documents créés après 176 : rejouée en dernier.
 db/176_documents_vues_types.sql rejouable

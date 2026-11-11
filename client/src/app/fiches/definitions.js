@@ -325,7 +325,7 @@ export const TYPES_FICHE = {
         {
           code: 'facturation', titre: 'Facturation et règlement',
           groupes: [
-            { code: 'facturation_electronique', titre: 'Facturation électronique', champs: ['fe_type', 'assujetti_tva', 'fe_format', 'fe_plateforme', 'fe_adresse', 'fe_code_routage', 'fe_code_service', 'fe_engagement'] },
+            { code: 'facturation_electronique', titre: 'Facturation électronique', champs: ['fe_type', 'assujetti_tva', 'fe_format', 'fe_plateforme', 'fe_adresse', 'fe_code_routage', 'fe_suffixe', 'fe_code_service', 'fe_engagement', 'fe_verifie_le'] },
             { titre: 'Règlement', champs: ['mode_reglement', 'delai_paiement', 'devise', 'iban', 'bic'] },
             { code: 'relances', titre: 'Relances', champs: ['rel_ne_pas_relancer', 'rel_mode', 'rel_contact_ind_id', 'rel_regle', 'rel_commentaire'] },
           ],
@@ -372,6 +372,8 @@ export const TYPES_FICHE = {
         c('fe_plateforme', 'Plateforme de réception (PA)', 'per_fe_plateforme', 'texte', { longueur: 100, aide: 'Plateforme agréée choisie par le destinataire' }),
         c('fe_adresse', 'Adresse de facturation électronique', 'per_fe_adresse', 'texte', { longueur: 150, aide: 'Identifiant de l\'annuaire de facturation (SIREN, SIREN_SUFFIXE…)' }),
         c('fe_code_routage', 'Code de routage', 'per_fe_code_routage', 'texte', { longueur: 100 }),
+        c('fe_suffixe', 'Suffixe d\'adressage', 'per_fe_suffixe', 'texte', { longueur: 100, aide: 'Repris de la ligne d\'annuaire (Vérifier dans l\'annuaire)' }),
+        c('fe_verifie_le', 'Vérifié dans l\'annuaire le', 'per_fe_verifie_le', 'date', { lecture_seule: true, non_copie: true }),
         c('fe_code_service', 'Code service (Chorus Pro)', 'per_fe_code_service', 'texte', { longueur: 100 }),
         c('fe_engagement', 'N° d\'engagement obligatoire', 'per_fe_engagement', 'booleen', { defaut: false }),
         // Modes de règlement et conditions de paiement paramétrables (module Document : mode_reglement, condition_paiement).

@@ -90,6 +90,9 @@ public sealed record StatutAPoser(string Code, string? Motif = null, string? Act
 /// <summary>Statut demandé par un utilisateur (route POST /flux/{id}/statut) : code, motif de la liste autorisée, action, commentaire.</summary>
 public sealed record DemandeStatut(string Code, string? Motif = null, string? Action = null, string? Commentaire = null);
 
+/// <summary>Ligne d'annuaire retenue pour un tiers : trouvée ou non, adresse, type de plateforme (WK, DFH), code de routage, suffixe.</summary>
+public sealed record ResultatAnnuaireFe(bool Trouve, string? Adresse, string? TypePlateforme, string? CodeRoutage, string? Suffixe);
+
 /// <summary>
 /// Services du module Facturation électronique sur la base de la société courante : paramètres, mise en file d'un flux
 /// à émettre, enregistrement des flux reçus (factures, statuts CDAR), accusés des flux déposés, consultation (liste,
@@ -170,6 +173,27 @@ public class ServiceFactureElectronique(
 
     /// <summary>Disponibilité de la plateforme (healthcheck).</summary>
     public async Task<EtatSante> Sante(CancellationToken ct) => await (await ConnecteurAsync(ct)).SanteAsync(ct);
+
+    /// <summary>
+    /// Interroge l'annuaire (Directory Service) de la plateforme pour un SIREN (et un SIRET facultatif) : ligne active la plus
+    /// précise (SIRET identique, puis ligne sans SIRET ni suffixe, puis première) ; aucune ligne active : <c>Trouve</c> faux.
+    /// </summary>
+    public async Task<ResultatAnnuaireFe> InterrogerAnnuaireAsync(string siren, string? siret, CancellationToken ct)
+    {
+        var connecteur = await ConnecteurAsync(ct);
+        var r = await connecteur.RechercherLignesAnnuaireAsync(new RechercheAnnuaire([new FiltreAnnuaire("siren", siren)]) { Limite = 50 }, ct);
+        return ChoisirLigneAnnuaire(r.Resultats, siret);
+    }
+
+    /// <summary>Choix de la ligne d'annuaire d'un tiers (règle de <see cref="InterrogerAnnuaireAsync"/>).</summary>
+    public static ResultatAnnuaireFe ChoisirLigneAnnuaire(IEnumerable<LigneAnnuaire> lignes, string? siret)
+    {
+        var l = lignes.Where(x => x.Etat == EtatLigneAnnuaire.Active)
+            .OrderBy(x => !string.IsNullOrEmpty(siret) && x.Siret == siret ? 0 : x.Siret is null && x.Suffixe is null ? 1 : 2)
+            .ThenBy(x => x.IdentifiantAdressage, StringComparer.Ordinal).FirstOrDefault();
+        return l is null ? new(false, null, null, null, null)
+            : new(true, l.IdentifiantAdressage, l.TypePlateforme, l.IdentifiantRoutage, l.Suffixe);
+    }
 
     // ---------------------------------------------------------------- émission : mise en file
 

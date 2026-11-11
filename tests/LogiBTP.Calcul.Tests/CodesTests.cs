@@ -26,6 +26,8 @@ public class CodesTests
     [InlineData("ETAT_RESERVE", typeof(EtatsReserve))]
     [InlineData("TYPE_ELEMENT_FE", typeof(TypesElementFe))]
     [InlineData("SIGNAL_FE", typeof(SignauxFe))]
+    [InlineData("AVERTISSEMENT_ANNUAIRE_FE", typeof(AvertissementAnnuaireFe))]
+    [InlineData("PLATEFORME_ANNUAIRE_FE", typeof(PlateformeAnnuaireFe))]
     [InlineData("GARANTIE_MARCHE", typeof(GarantiesMarche))]
     public void Parite_avec_le_js(string nom, Type type) => Assert.Empty(Constantes.Ecarts(Fichier, nom, type));
 

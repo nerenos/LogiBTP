@@ -22,6 +22,12 @@ async function pdfEdition(demande, imprimer) {
 }
 
 export const api = {
+  // Facturation électronique, lot 20 : annuaire des plateformes sur la fiche personne (vérification, option de nuit).
+  annuaireFe: {
+    verifier: (id) => appel('POST', `/facture-electronique/annuaire/personnes/${id}/verification`),
+    option: () => appel('GET', '/facture-electronique/annuaire/option'),
+    definirOption: (nuit) => appel('PUT', '/facture-electronique/annuaire/option', { nuit }),
+  },
   // Module Authentification : session, connexion (et connexion de test sans mot de passe en développement), mot de passe.
   auth: {
     session: () => appel('GET', '/auth/session'),

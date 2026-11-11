@@ -36,7 +36,7 @@ public class FactureElectroniqueBtpTests
         builder.Services.AddModuleFactureElectronique<SpecialisationFactureElectroniqueBtp>((_, o) => o.UseNpgsql("Host=localhost"), new ConfigurationBuilder().Build());
         var app = builder.Build();
         app.MapGroup("/api").MapGroup("").ExigeModule(ModulesFacultatifs.FactureElectronique, "Facturation électronique").MapModuleFactureElectronique()
-            .MapReceptionHorsPlateforme();
+            .MapReceptionHorsPlateforme().MapAnnuaireFe();
         return [.. ((IEndpointRouteBuilder)app).DataSources.SelectMany(d => d.Endpoints).OfType<RouteEndpoint>()
             .SelectMany(e => (e.Metadata.GetMetadata<HttpMethodMetadata>()?.HttpMethods ?? ["GET"]).Select(m => (e.RoutePattern.RawText!, m)))];
     }
@@ -87,7 +87,7 @@ public class FactureElectroniqueBtpTests
         var routes = RoutesDuModule();
         var lecture = Avec(ActionsDroits.Consulter);
         var modification = Avec(ActionsDroits.Consulter, ActionsDroits.Modifier);
-        foreach (var (g, m) in routes.Where(x => !x.Gabarit.Contains("/parametres", StringComparison.Ordinal)))
+        foreach (var (g, m) in routes.Where(x => !x.Gabarit.Contains("/parametres", StringComparison.Ordinal) && !x.Gabarit.EndsWith("/annuaire/option", StringComparison.Ordinal)))
         {
             Assert.Equal(HttpMethods.IsGet(m), Permis(lecture, g, m, Saisie));
             Assert.True(Permis(modification, g, m, Saisie), $"{m} {g}");
@@ -96,6 +96,10 @@ public class FactureElectroniqueBtpTests
         Assert.False(Permis(modification, "/api/facture-electronique/parametres", "PUT", Saisie));
         Assert.True(Permis(modification, "/api/facture-electronique/parametres", "PUT", new Utilisateur("admin", Profils.Admin)));
         Assert.Contains(routes, x => x.Gabarit == "/api/facture-electronique/chronologie");
+        // Annuaire (lot 20) : vérification d'une fiche = Modifier du nœud ; option de nuit = paramétrage.
+        Assert.Contains(routes, x => x.Gabarit == "/api/facture-electronique/annuaire/personnes/{id:long}/verification");
+        Assert.False(Permis(modification, "/api/facture-electronique/annuaire/option", "PUT", Saisie));
+        Assert.True(Permis(modification, "/api/facture-electronique/annuaire/option", "PUT", new Utilisateur("admin", Profils.Admin)));
         // Facture d'une pièce jointe d'un courriel (lot 14, route du cœur) : Modifier.
         Assert.Contains(routes, x => x.Gabarit == "/api/facture-electronique/courriels/{id:long}/facture");
     }

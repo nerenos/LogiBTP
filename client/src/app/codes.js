@@ -142,6 +142,18 @@ export const TYPE_ELEMENT_FE = Object.freeze({
   FLUX: 'fe_flux',
 });
 
+/** Avertissement d'émission lié à l'annuaire des plateformes (lot 20). */
+export const AVERTISSEMENT_ANNUAIRE_FE = Object.freeze({
+  HORS_ANNUAIRE: 'HORS_ANNUAIRE',
+  NON_VERIFIE: 'NON_VERIFIE',
+});
+
+/** Plateforme de réception inscrite sur la fiche d'un tiers depuis l'annuaire (lot 20). */
+export const PLATEFORME_ANNUAIRE_FE = Object.freeze({
+  PA: 'PA',
+  PPF: 'PPF',
+});
+
 /** Signaux de notification de la facturation électronique (db/295, types du module « facture_electronique »). */
 export const SIGNAL_FE = Object.freeze({
   RECUE: 'RECUE',

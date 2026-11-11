@@ -731,7 +731,7 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   lit en tête du message ; lignes sans adresse de livraison (TG-41, absente du modèle de facture) ; régime de TVA de la
   société non paramétré (lot 28).
 
-## Lot 20 : annuaire sur la fiche personne (A FAIRE)
+## Lot 20 : annuaire sur la fiche personne (FAIT le 11/11/2026)
 
 - **Cœur**. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : bouton « Vérifier dans l'annuaire » de la fiche personne (`client/src/app/fiches/fiche-annuaire.js`) :
@@ -740,6 +740,17 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   avertissement à l'émission si le tiers n'est pas dans l'annuaire ; tests.
 - **Critère de fin** : vérification sur la plateforme simulée met la fiche à jour ; option de nuit désactivée par
   défaut ; tests verts.
+- **Réalisé** : `db/298_facture_electronique_annuaire.sql` (rejouable, manifeste : `per_fe_suffixe`, `per_fe_verifie_le`,
+  `per_fe_dans_annuaire` ; table `facture_electronique_annuaire_option`, nuit désactivée par défaut) ; module
+  `ServiceFactureElectronique.InterrogerAnnuaireAsync` / `ChoisirLigneAnnuaire` (ligne active : SIRET identique, puis sans SIRET
+  ni suffixe) ; cœur `Btp/AnnuaireFeBtp.cs` : vérification d'un tiers (adresse, plateforme PA / PPF, code de routage, suffixe),
+  routes `POST /api/facture-electronique/annuaire/personnes/{id}/verification` (Modifier du nœud) et `GET|PUT .../annuaire/option`
+  (paramétrage), `PassageAnnuaireFe` (30 min, entre 1 h et 6 h, un passage par jour et par base, 500 tiers actifs français au
+  plus, plateforme indisponible : arrêt), `Avertissement` à l'émission (`HORS_ANNUAIRE`, `NON_VERIFIE`, rien pour B2C ou
+  international ; à brancher au lot 24) ; client : bouton « Vérifier dans l'annuaire » de la fiche personne (module actif et
+  droit), champs suffixe et date de vérification, `db/131` régénéré ; codes `AVERTISSEMENT_ANNUAIRE_FE`, `PLATEFORME_ANNUAIRE_FE`
+  (`CodesTests`) ; `AnnuaireFeBtpTests`. Écart : le bouton est dans `fiche-annuaire.js` (fiches personne), pas de case à cocher
+  de l'option de nuit dans l'interface (API seule).
 
 ## Lot 21 : paramètres d'émission BTP (A FAIRE)
 

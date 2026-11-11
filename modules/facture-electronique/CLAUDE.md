@@ -71,3 +71,4 @@
 
 ## Tests
 - `npm test --workspace @logibtp/facture-electronique` (dont `modeles.test.js` / `ecrans.test.js` / `import.test.js` : écrans, jeu `02_parametres.json` ; `schematrons.test.js` : tous les exemples sans erreur fatale, cas altérés, choix des contrôles ; `cdar.test.js` : CDAR FNFE et écrits) ; `dotnet test modules/facture-electronique/dotnet/LogiBTP.FactureElectronique.Tests` (même jeu, parité des codes ; `ServiceFactureElectroniqueTests` seulement si `LOGIBTP_TEST_PG` désigne une base jetable où `099f` est chargé : ses tests suspendent un trigger dans une transaction annulée et sortent de la file les restes des passages précédents).
+- Annuaire (lot 20) : `ServiceFactureElectronique.InterrogerAnnuaireAsync` (ligne active la plus précise) ; fiche personne, option de nuit et avertissement d'émission dans le cœur (`Btp/AnnuaireFeBtp.cs`).
