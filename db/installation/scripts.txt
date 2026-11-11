@@ -266,6 +266,7 @@ db/298_facture_electronique_annuaire.sql rejouable
 db/299_facture_electronique_emission.sql rejouable
 db/300_facture_electronique_envoi.sql rejouable
 db/301_facture_electronique_rejet.sql rejouable
+db/302_facture_electronique_encaissee.sql rejouable
 
 # Vues de colonnes des types de documents créés après 176 : rejouée en dernier.
 db/176_documents_vues_types.sql rejouable

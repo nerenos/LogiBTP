@@ -85,6 +85,13 @@ public sealed record StatutAPoser(string Code, string? Motif = null, string? Act
     public byte[]? Cdar { get; init; }
     public string? NomCdar { get; init; }
     public object? Origine { get; init; }
+    /// <summary>Montants encaissés par taux (Encaissée, plusieurs taux : MDT-215 / MDT-224 répétés) ; remplace Montant et Taux.</summary>
+    public IReadOnlyList<MontantEncaisse>? Encaissements { get; init; }
+
+    /// <summary>Montants encaissés écrits dans le CDAR : la liste, sinon Montant et Taux s'ils sont donnés.</summary>
+    internal IReadOnlyList<MontantEncaisse> EncaissementsDe(string? devise) =>
+        Encaissements is { Count: > 0 } l ? l.Select(e => e with { Devise = e.Devise ?? devise }).ToList()
+        : Montant is decimal m && Taux is decimal t ? [new MontantEncaisse(m, t, devise)] : [];
 }
 
 /// <summary>Statut demandé par un utilisateur (route POST /flux/{id}/statut) : code, motif de la liste autorisée, action, commentaire.</summary>
@@ -700,20 +707,29 @@ public class ServiceFactureElectronique(
         var statut = new StatutFe
         {
             FstFflId = f.FflId, FstNumeroFacture = f.FflNumero, FstSensFacture = sensFacture, FstCode = a.Code, FstMotif = motif, FstAction = action,
-            FstMontant = a.Montant, FstTaux = a.Taux, FstEmetteur = emetteur, FstSens = SensStatut.Pose, FstFflCdarId = cdarId, FstDate = date,
+            FstMontant = a.Encaissements is { Count: > 0 } le ? le.Sum(x => x.Montant) : a.Montant,
+            FstTaux = a.Encaissements is { Count: > 0 } lt ? (lt.Count == 1 ? lt[0].TauxTva : null) : a.Taux, FstEmetteur = emetteur, FstSens = SensStatut.Pose, FstFflCdarId = cdarId, FstDate = date,
             FstCreeLe = date, FstCreePar = utilisateur ?? "",
-            FstDetail = commentaire is null && a.Origine is null ? null : JsonSerializer.Serialize(new { commentaire, origine = a.Origine }, JsonCalcul.Options),
+            FstDetail = commentaire is null && a.Origine is null && a.Encaissements is not { Count: > 0 } ? null
+                : a.Encaissements is { Count: > 0 } ld ? JsonSerializer.Serialize(new { commentaire, origine = a.Origine, encaissements = ld }, JsonCalcul.Options)
+                : JsonSerializer.Serialize(new { commentaire, origine = a.Origine }, JsonCalcul.Options),
         };
         db.Statuts.Add(statut);
         await db.SaveChangesAsync(ct);
         await JournalFe.AjouterAsync(db, EtapeFe.Du(f, EvenementFe.StatutPose, acteur, utilisateur) with
         {
             EtatAvant = avant, EtatApres = apres,
-            Detail = new
-            {
-                statut = a.Code, motif, action, a.Montant, a.Taux, commentaire, origine = a.Origine, envoye = cdarId is not null, flux_cdar = cdarId,
-                hors_plateforme = f.FflHorsPlateforme ? true : (bool?)null,
-            },
+            Detail = a.Encaissements is { Count: > 0 } lj
+                ? new
+                {
+                    statut = a.Code, motif, action, encaissements = lj, commentaire, origine = a.Origine, envoye = cdarId is not null, flux_cdar = cdarId,
+                    hors_plateforme = f.FflHorsPlateforme ? true : (bool?)null,
+                }
+                : new
+                {
+                    statut = a.Code, motif, action, a.Montant, a.Taux, commentaire, origine = a.Origine, envoye = cdarId is not null, flux_cdar = cdarId,
+                    hors_plateforme = f.FflHorsPlateforme ? true : (bool?)null,
+                } as object,
         }, ct);
         if (tx is not null) await tx.CommitAsync(ct);
         await specialisation.StatutPoseAsync(new StatutSignaleFe(statut, f, avant, apres), ct);
@@ -756,7 +772,7 @@ public class ServiceFactureElectronique(
         {
             Historique = historique, Motif = a.Motif, Action = a.Action,
             Notes = a.Commentaire is null ? [] : [new NoteCdar(a.Commentaire)],
-            Encaissements = a.Montant is decimal m && a.Taux is decimal t ? [new MontantEncaisse(m, t, facture.Devise)] : [],
+            Encaissements = a.EncaissementsDe(facture.Devise),
         });
     }
 

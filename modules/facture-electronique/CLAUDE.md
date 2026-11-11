@@ -74,4 +74,5 @@
 - Annuaire (lot 20) : `ServiceFactureElectronique.InterrogerAnnuaireAsync` (ligne active la plus précise) ; fiche personne, option de nuit et avertissement d'émission dans le cœur (`Btp/AnnuaireFeBtp.cs`).
 - Émission à la validation (lot 24, cœur `Btp/EnvoiFactureBtp.cs`) : le cœur met en file par `MettreEnFileAsync` (CII, UBL ou Factur-X PDF/A-3 de l'édition), suit `document_fe_emission` (`db/300`) ; `valider-facture` lit un Factur-X aux flux compressés à la suite.
 - Rejet, refus, litige (lot 25, cœur `Btp/RejetFactureBtp.cs`) : avoir interne (`db/301`) noté au journal par `JournaliserAsync` ; plateforme simulée : `StatutProgramme` avec motif.
+- Encaissée (lot 26, cœur `Btp/StatutEncaisseeBtp.cs`, `db/302`) : `StatutAPoser.Encaissements` pour un CDAR à plusieurs taux (montants signés, négatif = annulation d'encaissement).
 - Émission depuis une pièce (lot 22, cœur `Btp/EmissionFactureBtp.cs`) : codes `MOYEN_PAIEMENT` (BT-81) ; libellés des règles de complétude `facture_electronique.completude.regles.<REGLE_COMPLETUDE>` et niveaux `…completude.niveaux` (tout code ajouté prend son libellé : `client/test/emission-facture.test.js`).

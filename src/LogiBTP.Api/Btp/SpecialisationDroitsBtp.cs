@@ -206,6 +206,7 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
         new("/api/facture-electronique/flux/{id}/depot-manuel", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),
         new("/api/facture-electronique/flux/{id}/statut", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),
         new("/api/facture-electronique/documents/{id}/annulation", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),
+        new("/api/facture-electronique/encaissements/validation", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),
         new("/api/facture-electronique/import", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),
         new("/api/facture-electronique/courriels/{id}/facture", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),
         new("/api/facture-electronique/releve", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),

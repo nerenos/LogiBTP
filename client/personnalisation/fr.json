@@ -6593,7 +6593,37 @@
       "depot": "Dépôt manuel",
       "depot_titre": "Flux à déposer sur le portail de la plateforme, import d'un fichier reçu",
       "parametres": "Paramètres",
-      "parametres_titre": "Plateforme, connexion, adresses, syntaxe et relève"
+      "parametres_titre": "Plateforme, connexion, adresses, syntaxe et relève",
+      "encaissements": "Encaissements",
+      "encaissements_titre": "Statuts Encaissée à valider avant l'envoi (factures de services sans TVA sur les débits)"
+    },
+    "encaissements": {
+      "aide": "Règlements reçus pointés sur les factures émises de services ou mixtes sans option de TVA sur les débits : chaque versement (échéance, versement partiel, retenue libérée) donne un statut Encaissée avec le montant encaissé par taux de TVA, envoyé à la plateforme et au PPF après votre validation. Un règlement diminué ou supprimé après l'envoi donne une annulation d'encaissement (montants négatifs).",
+      "aucune": "Aucun statut Encaissée à envoyer.",
+      "aucune_cochee": "Cochez au moins une ligne.",
+      "tout": "Tout cocher ou tout décocher",
+      "colonnes": {
+        "piece": "Facture",
+        "tiers": "Client",
+        "reglement": "Règlement",
+        "montant": "Pointé",
+        "encaisse": "Encaissé par taux"
+      },
+      "taux": "{{taux}} % : {{montant}}",
+      "separateur": " · ",
+      "sans_montant": "aucun montant à déclarer",
+      "reglement_supprime": "Règlement supprimé",
+      "annulation": "Annulation",
+      "annulation_aide": "Annulation d'encaissement : règlement diminué ou supprimé après l'envoi du statut Encaissée",
+      "envoyer": "Envoyer les statuts Encaissée",
+      "envoyer_aide": "Pose le statut Encaissée (212) de chaque ligne cochée : message de cycle de vie mis en file pour la plateforme",
+      "ecarter": "Écarter",
+      "ecarter_aide": "Retire les lignes cochées de la liste sans rien envoyer",
+      "confirmer_envoyer": "Envoyer {{nombre}} statut(s) Encaissée à la plateforme ?",
+      "confirmer_ecarter": "Écarter {{nombre}} ligne(s) sans rien envoyer ?",
+      "resultat": "{{envoyes}} statut(s) Encaissée envoyé(s), {{ecartes}} ligne(s) écartée(s).",
+      "perimees": "{{nombre}} ligne(s) ont changé depuis la lecture : liste relue, à vérifier.",
+      "erreur": "Statut Encaissée non posé : {{message}}"
     },
     "element_document": "Pièce n° {{id}}",
     "document": {

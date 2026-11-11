@@ -735,5 +735,9 @@
   "facture_electronique_btp_importer": "📥",
   "facture_electronique_btp_emettre": "📤",
   "facture_electronique_btp_avoir_interne": "↩️",
+  "facture_electronique_btp_encaissements": "💶",
+  "facture_electronique_btp_envoyer_encaissee": "📤",
+  "facture_electronique_btp_ecarter_encaissee": "🚫",
+  "facture_electronique_btp_annulation_encaissement": "↩️",
   "document_btp_chronologie": "🕓"
 }

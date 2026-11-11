@@ -292,6 +292,16 @@ public static class PastillesEmissionFe
 }
 
 /// <summary>Erreurs de l'émission d'une pièce (validation refusée, bouton « Émettre »), lot 24.</summary>
+/// <summary>
+/// Encaissement déclaré d'une facture émise (document_fe_encaissement, db/302, lot 26) : statut Encaissée (212) envoyé à
+/// la plateforme, ou écarté par l'utilisateur depuis la liste à valider (rien d'envoyé).
+/// </summary>
+public static class EtatsEncaissementFe
+{
+    public const string Envoye = "ENVOYE";
+    public const string Ecarte = "ECARTE";
+}
+
 public static class ErreursEmissionFe
 {
     public const string Incomplete = "FE_INCOMPLETE";

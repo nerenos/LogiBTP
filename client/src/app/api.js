@@ -769,6 +769,9 @@ export const api = {
   envoiFeDocument: (id) => appel('GET', `/facture-electronique/documents/${id}/envoi`),
   emettreFeDocument: (id) => appel('POST', `/facture-electronique/documents/${id}/envoi`),
   annulerFeDocument: (id, transmission) => appel('POST', `/facture-electronique/documents/${id}/annulation`, { transmission }),
+  // Lot 26 : statuts Encaissée (212) à valider (pointages des règlements reçus non déclarés), envoyés ou écartés.
+  encaissementsFe: (piece) => appel('GET', `/facture-electronique/encaissements${piece ? `?piece=${piece}` : ''}`),
+  validerEncaissementsFe: (propositions, ecarter = false) => appel('POST', '/facture-electronique/encaissements/validation', { propositions, ecarter }),
   optionEmissionFe: () => appel('GET', '/facture-electronique/emission/option'),
   definirOptionEmissionFe: (automatique) => appel('PUT', '/facture-electronique/emission/option', { automatique }),
   // Annulation par avoir (pièce et, dans un marché, pièces d'avancement suivantes) : liste puis annulation.

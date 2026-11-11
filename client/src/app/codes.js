@@ -266,6 +266,15 @@ export const PASTILLES_EMISSION_FE_LISTE = Object.freeze([
 ]);
 
 /** Erreurs de l'émission d'une pièce (validation refusée, bouton « Émettre »), lot 24. */
+/**
+ * Encaissement déclaré d'une facture émise (document_fe_encaissement, db/302, lot 26) : statut Encaissée (212) envoyé à
+ * la plateforme, ou écarté par l'utilisateur depuis la liste à valider (rien d'envoyé).
+ */
+export const ETAT_ENCAISSEMENT_FE = Object.freeze({
+  ENVOYE: 'ENVOYE',
+  ECARTE: 'ECARTE',
+});
+
 export const ERREUR_EMISSION_FE = Object.freeze({
   INCOMPLETE: 'FE_INCOMPLETE',
   DEJA_EMISE: 'FE_DEJA_EMISE',

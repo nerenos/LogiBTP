@@ -51,7 +51,7 @@
 | 23 | Document de vente → modèle : situations (période), pied BTP, retenue, références de chantier | cœur | 22 | A FAIRE |
 | 24 | Émission à la validation : CII ou Factur-X, GED et coffre, dépôt, pastille | cœur | 22, 23, 17, 18, 20 | FAIT (11/11/2026) |
 | 25 | Rejet et refus → avoir interne ; litige et suspension de relance | cœur | 24 | FAIT (11/11/2026) |
-| 26 | Statut Encaissée (212) depuis les règlements, liste à valider | cœur | 24 | A FAIRE |
+| 26 | Statut Encaissée (212) depuis les règlements, liste à valider | cœur | 24 | FAIT (11/11/2026) |
 | 27 | Sous-traitance et cotraitance émises (S5, S6), B2G par la PA | cœur | 24 | A FAIRE |
 | 28 | E-reporting : collecte et extraction des ventes et encaissements, envoi unitaire ou groupé | cœur | 19, 24, 26 | A FAIRE |
 | 29 | Archivage (rétention), démonstration, documentation | cœur | 24, 28 | A FAIRE |
@@ -936,13 +936,39 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   cascade depuis la facture électronique ; écrans non vérifiés en navigateur (TODO). **Script à appliquer par
   l'utilisateur** : `db/301`.
 
-## Lot 26 : statut Encaissée (A FAIRE)
+## Lot 26 : statut Encaissée — FAIT (11/11/2026)
 
 - **Cœur**. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : proposition d'un statut 212 par règlement pointé d'une facture de services sans option sur les débits
   (montant encaissé, taux de TVA ; par échéance et par versement partiel), liste à valider avant envoi (comme les
   relances, Q15), annulation d'encaissement (cas 34), tests.
 - **Critère de fin** : encaissements partiels et total d'une situation donnent les bons CDAR ; tests verts.
+- **Réalisé** : `db/302_facture_electronique_encaissee.sql` (rejouable, au manifeste après 301 : `document_fe_encaissement`,
+  journal des encaissements déclarés par règlement × échéance — montant pointé signé, montants par taux envoyés, état
+  `ETAT_ENCAISSEMENT_FE` ENVOYE / ECARTE, statut et flux du CDAR — ; colonnes `dfe_lu_flux_id`, `dfe_cadre`, `dfe_exigibilite`,
+  `dfe_devise`, `dfe_ventilation` de `document_fe_emission` : cadre BT-23, BT-8 et TTC par taux lus une fois dans l'original
+  déposé). Codes `ETAT_ENCAISSEMENT_FE` (`codes.js` ↔ `Codes.cs`, `CodesTests`). Règle répliquée `client/src/calcul/encaissement-fe.js`
+  ↔ `src/LogiBTP.Calcul/EncaissementFeBtp.cs` (jeu `tests/emission-fe/03_encaissement.json`, 9 cas, par
+  `client/test/encaissement-fe.test.js` et `EncaissementFeTests.cs`) : facture concernée (cadre S* ou M*, BT-8 ≠ 5), part des
+  services d'une facture mixte (HT des lignes vendues de services / HT des lignes vendues), montants au cumul des pointages
+  (total arrondi une fois, réparti au prorata du TTC de chaque taux, le dernier taux reçoit le reste), chaque proposition =
+  montant au nouveau cumul − déjà déclaré du taux (versements partiels compensés au centime, facture soldée = TTC exact de
+  chaque taux), annulation = écart de signe contraire. Module : `StatutAPoser.Encaissements` (Encaissée à plusieurs taux,
+  MDT-215 / MDT-224 répétés ; `fe_statut` : somme et taux unique). Serveur : `Btp/StatutEncaisseeBtp.cs` (propositions jamais
+  stockées : pointages des règlements reçus hors imputation − encaissements déclarés, factures `EMISE`, statut 212 posable
+  après Déposée et avant Rejetée / Refusée ; validation : propositions recalculées, montant changé = périmée, envoi par
+  `PoserStatutApplicationAsync` et ligne ENVOYE dans la même transaction, écart sans CDAR ; routes
+  `GET /api/facture-electronique/encaissements[?piece=]` et `POST …/encaissements/validation`, nœud `facture_electronique`
+  en Modifier). Client : onglet « Encaissements » de la page Facturation électronique (`facture-electronique/encaissements-fe.js` :
+  lignes cochées par défaut, montants par taux, annulation signalée, « Envoyer » et « Écarter » après `confirmer` du socle),
+  textes `facture_electronique_btp.encaissements.*`, icônes. Tests : `StatutEncaisseeBtpTests` sur la base jetable et la
+  plateforme simulée (situation de services à 20 % et 10 % : rien avant Déposée ; versement partiel de 100 → CDAR 62,07 /
+  37,93 ; solde de l'échéance nette et retenue libérée → CDAR 108,93 / 66,57 et 9,00 / 5,50, total = 180 / 110 ; proposition
+  périmée ; règlement supprimé → annulation −108,93 / −66,57 en CDAR ; écart sans envoi ; facture de biens B1 jamais
+  proposée). Écarts : part des services d'une facture mixte globale (pas par taux) et sur le cumul d'une situation ; montants
+  au prorata du TTC émis (paiement direct hors facture : seul l'encaissé est déclaré) ; pas de notification de la liste ni
+  d'envoi automatique (Q15 (b)) ; onglet non vérifié en navigateur (TODO). **Script à appliquer par l'utilisateur** :
+  `db/302`.
 
 ## Lot 27 : sous-traitance, cotraitance et B2G émises (A FAIRE)
 

@@ -1,0 +1,559 @@
+{
+ "description": "Statut Encaissée (212) d'une facture émise (plans/facturation-electronique.md, lot 26 ; Q15, XP Z12-014 cas 26 et 34) : client/src/calcul/encaissement-fe.js ↔ src/LogiBTP.Calcul/EncaissementFeBtp.cs. Montants en chaînes décimales, comparés en valeur. Ventilation = TTC par taux de la facture émise, du signe de ses échéances. Types de ligne : 2 ouvrage, 3 élément, 11 section.",
+ "concerne": [
+  {
+   "cadre": "S1",
+   "code_exigibilite": null,
+   "attendu": true
+  },
+  {
+   "cadre": "M4",
+   "code_exigibilite": null,
+   "attendu": true
+  },
+  {
+   "cadre": "S5",
+   "code_exigibilite": "72",
+   "attendu": true
+  },
+  {
+   "cadre": "B1",
+   "code_exigibilite": null,
+   "attendu": false
+  },
+  {
+   "cadre": "S1",
+   "code_exigibilite": "5",
+   "attendu": false
+  },
+  {
+   "cadre": "M1",
+   "code_exigibilite": "5",
+   "attendu": false
+  },
+  {
+   "cadre": null,
+   "code_exigibilite": null,
+   "attendu": false
+  }
+ ],
+ "natures_fe": {
+  "1": "S",
+  "2": "B"
+ },
+ "part_services": [
+  {
+   "nom": "mixte : ouvrage (services) et fourniture (biens)",
+   "lignes": [
+    {
+     "lig_id": 1,
+     "lig_parent_id": null,
+     "lig_tyl_id": 11,
+     "lig_type_prix": "V",
+     "lig_nat_id": null,
+     "lig_montant_ht": "1000"
+    },
+    {
+     "lig_id": 2,
+     "lig_parent_id": 1,
+     "lig_tyl_id": 2,
+     "lig_type_prix": "V",
+     "lig_nat_id": null,
+     "lig_montant_ht": "600"
+    },
+    {
+     "lig_id": 3,
+     "lig_parent_id": 2,
+     "lig_tyl_id": 3,
+     "lig_type_prix": "V",
+     "lig_nat_id": 2,
+     "lig_montant_ht": "200"
+    },
+    {
+     "lig_id": 4,
+     "lig_parent_id": 1,
+     "lig_tyl_id": 3,
+     "lig_type_prix": "V",
+     "lig_nat_id": 2,
+     "lig_montant_ht": "400"
+    },
+    {
+     "lig_id": 5,
+     "lig_parent_id": 1,
+     "lig_tyl_id": 3,
+     "lig_type_prix": "O",
+     "lig_nat_id": 1,
+     "lig_montant_ht": "999"
+    }
+   ],
+   "attendu": {
+    "services": "600",
+    "total": "1000"
+   }
+  },
+  {
+   "nom": "services seuls",
+   "lignes": [
+    {
+     "lig_id": 1,
+     "lig_parent_id": null,
+     "lig_tyl_id": 3,
+     "lig_type_prix": "V",
+     "lig_nat_id": 1,
+     "lig_montant_ht": "150"
+    }
+   ],
+   "attendu": {
+    "services": "150",
+    "total": "150"
+   }
+  }
+ ],
+ "cas": [
+  {
+   "nom": "situation de services à deux taux : deux versements partiels puis le solde donnent le TTC de chaque taux",
+   "entree": {
+    "ventilation": [
+     {
+      "taux": "20",
+      "montant": "1200"
+     },
+     {
+      "taux": "10",
+      "montant": "550"
+     }
+    ],
+    "cumul": "0",
+    "declare": [],
+    "ecarts": [
+     {
+      "cle": "1:1",
+      "montant": "500"
+     },
+     {
+      "cle": "2:1",
+      "montant": "700"
+     },
+     {
+      "cle": "3:1",
+      "montant": "550"
+     }
+    ]
+   },
+   "attendu": [
+    {
+     "cle": "1:1",
+     "montant": "500",
+     "annulation": false,
+     "encaissements": [
+      {
+       "taux": "20",
+       "montant": "342.86"
+      },
+      {
+       "taux": "10",
+       "montant": "157.14"
+      }
+     ]
+    },
+    {
+     "cle": "2:1",
+     "montant": "700",
+     "annulation": false,
+     "encaissements": [
+      {
+       "taux": "20",
+       "montant": "480"
+      },
+      {
+       "taux": "10",
+       "montant": "220"
+      }
+     ]
+    },
+    {
+     "cle": "3:1",
+     "montant": "550",
+     "annulation": false,
+     "encaissements": [
+      {
+       "taux": "20",
+       "montant": "377.14"
+      },
+      {
+       "taux": "10",
+       "montant": "172.86"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "nom": "premier versement déjà déclaré : la suite part des montants envoyés par taux",
+   "entree": {
+    "ventilation": [
+     {
+      "taux": "20",
+      "montant": "1200"
+     },
+     {
+      "taux": "10",
+      "montant": "550"
+     }
+    ],
+    "cumul": "500",
+    "declare": [
+     {
+      "taux": "20",
+      "montant": "342.86"
+     },
+     {
+      "taux": "10",
+      "montant": "157.14"
+     }
+    ],
+    "ecarts": [
+     {
+      "cle": "2:1",
+      "montant": "700"
+     },
+     {
+      "cle": "3:1",
+      "montant": "550"
+     }
+    ]
+   },
+   "attendu": [
+    {
+     "cle": "2:1",
+     "montant": "700",
+     "annulation": false,
+     "encaissements": [
+      {
+       "taux": "20",
+       "montant": "480"
+      },
+      {
+       "taux": "10",
+       "montant": "220"
+      }
+     ]
+    },
+    {
+     "cle": "3:1",
+     "montant": "550",
+     "annulation": false,
+     "encaissements": [
+      {
+       "taux": "20",
+       "montant": "377.14"
+      },
+      {
+       "taux": "10",
+       "montant": "172.86"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "nom": "annulation d'encaissement (cas 34) : règlement supprimé après l'envoi, montants négatifs",
+   "entree": {
+    "ventilation": [
+     {
+      "taux": "20",
+      "montant": "1200"
+     },
+     {
+      "taux": "10",
+      "montant": "550"
+     }
+    ],
+    "cumul": "1200",
+    "declare": [
+     {
+      "taux": "20",
+      "montant": "822.86"
+     },
+     {
+      "taux": "10",
+      "montant": "377.14"
+     }
+    ],
+    "ecarts": [
+     {
+      "cle": "2:1",
+      "montant": "-700"
+     }
+    ]
+   },
+   "attendu": [
+    {
+     "cle": "2:1",
+     "montant": "-700",
+     "annulation": true,
+     "encaissements": [
+      {
+       "taux": "20",
+       "montant": "-480"
+      },
+      {
+       "taux": "10",
+       "montant": "-220"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "nom": "règlement diminué puis nouveau versement : l'écart négatif puis le positif",
+   "entree": {
+    "ventilation": [
+     {
+      "taux": "20",
+      "montant": "1200"
+     }
+    ],
+    "cumul": "1200",
+    "declare": [
+     {
+      "taux": "20",
+      "montant": "1200"
+     }
+    ],
+    "ecarts": [
+     {
+      "cle": "1:1",
+      "montant": "-200"
+     },
+     {
+      "cle": "4:1",
+      "montant": "200"
+     }
+    ]
+   },
+   "attendu": [
+    {
+     "cle": "1:1",
+     "montant": "-200",
+     "annulation": true,
+     "encaissements": [
+      {
+       "taux": "20",
+       "montant": "-200"
+      }
+     ]
+    },
+    {
+     "cle": "4:1",
+     "montant": "200",
+     "annulation": false,
+     "encaissements": [
+      {
+       "taux": "20",
+       "montant": "200"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "nom": "facture mixte : seule la part des services est encaissée",
+   "entree": {
+    "ventilation": [
+     {
+      "taux": "20",
+      "montant": "1200"
+     }
+    ],
+    "services_ht": "600",
+    "total_ht": "1000",
+    "cumul": "0",
+    "declare": [],
+    "ecarts": [
+     {
+      "cle": "1:1",
+      "montant": "600"
+     },
+     {
+      "cle": "2:1",
+      "montant": "600"
+     }
+    ]
+   },
+   "attendu": [
+    {
+     "cle": "1:1",
+     "montant": "600",
+     "annulation": false,
+     "encaissements": [
+      {
+       "taux": "20",
+       "montant": "360"
+      }
+     ]
+    },
+    {
+     "cle": "2:1",
+     "montant": "600",
+     "annulation": false,
+     "encaissements": [
+      {
+       "taux": "20",
+       "montant": "360"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "nom": "avoir de services remboursé : montant négatif, pas une annulation",
+   "entree": {
+    "ventilation": [
+     {
+      "taux": "20",
+      "montant": "-600"
+     }
+    ],
+    "cumul": "0",
+    "declare": [],
+    "ecarts": [
+     {
+      "cle": "5:2",
+      "montant": "-600"
+     }
+    ]
+   },
+   "attendu": [
+    {
+     "cle": "5:2",
+     "montant": "-600",
+     "annulation": false,
+     "encaissements": [
+      {
+       "taux": "20",
+       "montant": "-600"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "nom": "écart nul ignoré, taux répétés regroupés",
+   "entree": {
+    "ventilation": [
+     {
+      "taux": "20",
+      "montant": "1000"
+     },
+     {
+      "taux": "20",
+      "montant": "200"
+     }
+    ],
+    "cumul": "0",
+    "declare": [],
+    "ecarts": [
+     {
+      "cle": "1:1",
+      "montant": "0"
+     },
+     {
+      "cle": "2:1",
+      "montant": "1200"
+     }
+    ]
+   },
+   "attendu": [
+    {
+     "cle": "2:1",
+     "montant": "1200",
+     "annulation": false,
+     "encaissements": [
+      {
+       "taux": "20",
+       "montant": "1200"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "nom": "centime : la somme des taux suit le pointage, le dernier taux reçoit le reste",
+   "entree": {
+    "ventilation": [
+     {
+      "taux": "20",
+      "montant": "0.03"
+     },
+     {
+      "taux": "10",
+      "montant": "0.03"
+     }
+    ],
+    "cumul": "0",
+    "declare": [],
+    "ecarts": [
+     {
+      "cle": "1:1",
+      "montant": "0.01"
+     },
+     {
+      "cle": "2:1",
+      "montant": "0.05"
+     }
+    ]
+   },
+   "attendu": [
+    {
+     "cle": "1:1",
+     "montant": "0.01",
+     "annulation": false,
+     "encaissements": [
+      {
+       "taux": "20",
+       "montant": "0.01"
+      }
+     ]
+    },
+    {
+     "cle": "2:1",
+     "montant": "0.05",
+     "annulation": false,
+     "encaissements": [
+      {
+       "taux": "20",
+       "montant": "0.02"
+      },
+      {
+       "taux": "10",
+       "montant": "0.03"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "nom": "sans ventilation : proposition sans montant",
+   "entree": {
+    "ventilation": [],
+    "cumul": "0",
+    "declare": [],
+    "ecarts": [
+     {
+      "cle": "1:1",
+      "montant": "100"
+     }
+    ]
+   },
+   "attendu": [
+    {
+     "cle": "1:1",
+     "montant": "100",
+     "annulation": false,
+     "encaissements": []
+    }
+   ]
+  }
+ ]
+}
