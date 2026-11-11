@@ -20,6 +20,11 @@ export function appliquerDensite(choix, racine = globalThis.document?.documentEl
   else delete racine.dataset.densite;
 }
 
+/** Densité compacte en cours (lue sur <html data-densite>, posée par appliquerDensite). */
+export function densiteCompacte(racine = globalThis.document?.documentElement) {
+  return racine?.dataset.densite === 'compacte';
+}
+
 export function appliquerTheme(choix, racine = globalThis.document?.documentElement) {
   if (!racine) return;
   if (choix === 'clair') racine.dataset.theme = 'light';
