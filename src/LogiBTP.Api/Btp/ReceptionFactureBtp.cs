@@ -50,6 +50,12 @@ public sealed record PreparationLignes(List<LignePreparee> Lignes, List<string> 
 /// Avoir reçu (lot 14 : BT-3 381 et autres types d'avoir, UBL CreditNote) : avoir d'achat A_AVOIR en brouillon, montants
 /// rendus positifs (<see cref="EnPositif"/>), facture d'origine (BT-25) du même fournisseur rattachée quand elle est
 /// retrouvée (lien de transformation). Fichiers déjà rangés en GED de la pièce (même contenu) réutilisés, pas redéposés.
+/// Sous-traitance (lot 15) : sans commande de sous-traitance, le marché de sous-traitance du fournisseur désigné par une
+/// référence (code du marché) donne une T_FACTURE_AVT libre sur ce marché ; cadre S5 (BT-23) avec un bloc payeur
+/// (EXT-FR-FE-BG-02) : facture en paiement direct, rattachée au marché et au contrat (commande) retrouvés
+/// (<c>paiement_direct</c> du rapport) ; autoliquidation (AE / VATEX-FR-AE) contrôlée avec per_st_autoliquidation du
+/// sous-traitant (<see cref="ReglesReception.ControlerSousTraitance"/>) ; écarts (<see cref="EcartReception"/>) notés au
+/// rapport (<c>ecarts</c>), jamais bloquants.
 /// </summary>
 public sealed class ReceptionFactureBtp(IServiceProvider services, ILogger journal, Utilisateur service)
 {
@@ -257,6 +263,37 @@ public sealed class ReceptionFactureBtp(IServiceProvider services, ILogger journ
 
     private sealed record Rattachements(int? Chantier, int? Affaire, int? Projet, int? Marche);
 
+    /// <summary>
+    /// Marché de sous-traitance d'une facture reçue : identifiant, code, chantier (affaire, projet), garantie de paiement
+    /// (<see cref="GarantiesMarche"/>), maître d'ouvrage (tiers du marché de vente lié, sinon du chantier).
+    /// </summary>
+    public sealed record MarcheRecu(int Id, string? Code, int? Chantier, int? Affaire, int? Projet, string? Garantie, long? MaitreOuvrage,
+        string? MaitreOuvrageSiren, string? MaitreOuvrageNom);
+
+    /// <summary>
+    /// Écarts propres au paiement direct d'une facture reçue en S5 avec un payeur (<see cref="EcartReception"/>) : contrat
+    /// (marché de sous-traitance) non retrouvé ; marché sans paiement direct ni délégation de paiement ; SIREN du payeur
+    /// autre que celui du maître d'ouvrage (comparé seulement quand les deux sont connus).
+    /// </summary>
+    public static List<string> EcartsPaiementDirect(MarcheRecu? marche, Partie? payeur)
+    {
+        if (marche is null) return [EcartReception.ContratIntrouvable];
+        var ecarts = new List<string>();
+        if (marche.Garantie is not (GarantiesMarche.PaiementDirect or GarantiesMarche.Delegation)) ecarts.Add(EcartReception.PaiementDirectNonPrevu);
+        var siren = payeur is null ? null : Identifiants(payeur).Siren;
+        var maitre = marche.MaitreOuvrageSiren is { } m ? Comparable(m) : null;
+        if (siren is not null && maitre is { Length: 9 } && siren != maitre) ecarts.Add(EcartReception.PayeurDifferent);
+        return ecarts;
+    }
+
+    /// <summary>Mode de la demande de paiement d'un marché de sous-traitance (module Sous-traitance, spd_mode) : DIRECT, DELEGATION, ou null.</summary>
+    public static string? ModePaiement(string? garantie) => garantie switch
+    {
+        GarantiesMarche.PaiementDirect => "DIRECT",
+        GarantiesMarche.Delegation => "DELEGATION",
+        _ => null,
+    };
+
     private DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp> Documents => services.GetRequiredService<DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp>>();
 
     /// <summary>Pièce en brouillon d'une facture ou d'un avoir reçu, refus (doublon), ou null (facture illisible, pièce non créée : reste à traiter).</summary>
@@ -333,6 +370,30 @@ public sealed class ReceptionFactureBtp(IServiceProvider services, ILogger journ
 
         var references = new[] { f.References.Commande, f.References.Contrat, f.References.Objet }.Where(r => !string.IsNullOrWhiteSpace(r)).Select(r => r!).ToList();
         var commandeSt = avoir ? null : await CommandeSousTraitanceAsync(db, tiers, references, ct);
+        // Sous-traitance (lot 15) : marché de la commande, sinon marché de sous-traitance du fournisseur désigné par une référence.
+        var marcheSt = avoir ? null : await MarcheSousTraitanceAsync(db, tiers, references, commandeSt, ct);
+        var ecarts = new List<object>();
+        if (!avoir && (commandeSt is not null || marcheSt is not null || f.CadreFacturation == CadreFacturation.S5 || f.Payeur is not null))
+        {
+            var attendue = (await db.Database.SqlQueryRaw<bool>("SELECT per_st_autoliquidation AS \"Value\" FROM personne WHERE per_id = @p",
+                new NpgsqlParameter("p", tiers)).ToListAsync(ct)).Select(x => (bool?)x).FirstOrDefault();
+            var controle = ReglesReception.ControlerSousTraitance(f.CadreFacturation, f.Payeur is not null, ReglesReception.Ventilations(f), attendue);
+            var payeur = f.Payeur is { } py ? new { raison_sociale = py.RaisonSociale, siren = Identifiants(py).Siren } : null;
+            var maitre = marcheSt?.MaitreOuvrage is long mo ? new { id = mo, siren = marcheSt.MaitreOuvrageSiren?.Trim(), raison_sociale = marcheSt.MaitreOuvrageNom } : null;
+            var codes = controle.Ecarts.ToList();
+            if (controle.PaiementDirect) codes.AddRange(EcartsPaiementDirect(marcheSt, f.Payeur));
+            ecarts.AddRange(codes.Select(c => new { code = c, payeur = payeur?.raison_sociale, maitre_ouvrage = maitre?.raison_sociale, contrat = f.References.Contrat }));
+            rapport["sous_traitance"] = new { autoliquidation_attendue = attendue, marche = marcheSt?.Id, code_marche = marcheSt?.Code };
+            if (controle.PaiementDirect)
+            {
+                rapport["paiement_direct"] = new
+                {
+                    marche = marcheSt?.Id, code_marche = marcheSt?.Code, contrat = f.References.Contrat, commande = commandeSt?.Id, mode = ModePaiement(marcheSt?.Garantie),
+                    payeur, maitre_ouvrage = maitre,
+                };
+            }
+        }
+        if (ecarts.Count > 0) rapport["ecarts"] = ecarts;
         var tva = await db.Database.SqlQueryRaw<TauxTvaRecu>("""
             SELECT t.ttv_id AS id, t.ttv_code AS code, t.ttv_taux AS taux, t.ttv_categorie AS comportement,
                    c.ctv_categorie_en16931 AS categorie_en16931, t.ttv_defaut AS defaut
@@ -362,7 +423,8 @@ public sealed class ReceptionFactureBtp(IServiceProvider services, ILogger journ
             }
             else
             {
-                (ent, reponse) = await AchatAsync(db, tiers, f, preparation, rapport, avoir, ct);
+                (ent, reponse) = await AchatAsync(db, tiers, f, preparation, rapport, avoir, ct, marcheSt);
+                if (marcheSt is not null) rapport["marche_sous_traitance"] = new { id = marcheSt.Id, code = marcheSt.Code };
             }
         }
         catch (ExceptionMetier e)
@@ -429,6 +491,28 @@ public sealed class ReceptionFactureBtp(IServiceProvider services, ILogger journ
         return l.Count == 1 ? l[0] : null;
     }
 
+    /// <summary>
+    /// Marché de sous-traitance d'une facture reçue (lot 15) : celui de la commande de sous-traitance retrouvée, sinon le
+    /// seul marché de sous-traitance du fournisseur dont le code est l'une des références (BT-12, BT-13, BT-18) ; null sinon.
+    /// </summary>
+    private static async Task<MarcheRecu?> MarcheSousTraitanceAsync(LogiBtpContext db, long tiers, List<string> references, Trouve? commande, CancellationToken ct)
+    {
+        var refs = AccuseCommandeBtp.Comparables(references);
+        if (commande is null && refs.Length == 0) return null;
+        var l = await db.Database.SqlQueryRaw<MarcheRecu>("""
+            SELECT m.mar_id AS id, m.mar_code AS code, m.mar_cha_id AS chantier, c.cha_aff_id AS affaire, c.cha_prj_id AS projet, m.mar_garantie AS garantie,
+                   mo.per_id AS maitre_ouvrage, mo.per_siren::text AS maitre_ouvrage_siren, mo.per_raison_sociale AS maitre_ouvrage_nom
+            FROM marche m LEFT JOIN chantier c ON c.cha_id = m.mar_cha_id
+            LEFT JOIN marche v ON v.mar_id = m.mar_marche_vente_id
+            LEFT JOIN personne mo ON mo.per_id = coalesce(v.mar_tiers_id, c.cha_tiers_id)
+            WHERE m.mar_sens = 'ST' AND m.mar_tiers_id = @tiers
+              AND ((@commande > 0 AND m.mar_id = (SELECT d.ent_marche_id FROM document d WHERE d.ent_id = @commande))
+                   OR (@commande = 0 AND regexp_replace(upper(coalesce(m.mar_code, '')), '[^A-Z0-9]', '', 'g') = ANY(@refs)))
+            ORDER BY m.mar_id
+            """, new NpgsqlParameter("tiers", tiers), new NpgsqlParameter("commande", commande?.Id ?? 0L), new NpgsqlParameter("refs", refs)).ToListAsync(ct);
+        return l.Count == 1 ? l[0] : null;
+    }
+
     /// <summary>Chantier par BT-11 / BT-18 (code du chantier), sinon par le marché de BT-12 (code du marché) ; affaire et projet du chantier.</summary>
     private static async Task<Rattachements> RattachementsAsync(LogiBtpContext db, Facture f, CancellationToken ct)
     {
@@ -462,16 +546,18 @@ public sealed class ReceptionFactureBtp(IServiceProvider services, ILogger journ
 
     /// <summary>
     /// Facture d'achat : par transformation de la commande de BT-13 quand des lignes s'y rapprochent (quantités et prix de
-    /// la facture sur les lignes reprises, les autres ajoutées), sinon pièce libre ; chantier par les références.
+    /// la facture sur les lignes reprises, les autres ajoutées), sinon pièce libre ; chantier par les références. Marché de
+    /// sous-traitance retrouvé sans commande (lot 15) : facture de sous-traitance T_FACTURE_AVT libre sur ce marché
+    /// (chantier, affaire et projet du marché ; montants reçus à ventiler, saisie RECUE).
     /// </summary>
     private async Task<(long, ReponseEnregistrement<DocumentCompletBtp>)> AchatAsync(LogiBtpContext db, long tiers, Facture f, PreparationLignes p,
-        Dictionary<string, object?> rapport, bool avoir, CancellationToken ct)
+        Dictionary<string, object?> rapport, bool avoir, CancellationToken ct, MarcheRecu? marche = null)
     {
-        var cible = await TypesDocumentBtp.IdAsync(db, avoir ? TypesDocument.AAvoir : TypesDocument.AFacture, ct);
+        var cible = await TypesDocumentBtp.IdAsync(db, avoir ? TypesDocument.AAvoir : marche is not null ? TypesDocument.TFactureAvt : TypesDocument.AFacture, ct);
         DocumentCompletBtp? c = null;
         var rapprochees = new Dictionary<string, LigneCommandeRecue>();
         // Avoir : pièce libre (la facture d'origine est rattachée ensuite), jamais par transformation de la commande.
-        if (!avoir && f.References.Commande is { Length: > 0 } bt13)
+        if (!avoir && marche is null && f.References.Commande is { Length: > 0 } bt13)
         {
             var commandes = (await db.Database.SqlQueryRaw<Trouve>(
                     $"SELECT x.ent_id AS id, x.ent_numero AS numero, '' AS type FROM ({AccuseCommandeBtp.SqlCommandes}) x WHERE x.ent_tiers_id = @tiers",
@@ -506,13 +592,21 @@ public sealed class ReceptionFactureBtp(IServiceProvider services, ILogger journ
         {
             var cree = await Documents.Creer(new CreationDocument { EntTydId = cible, EntTiersId = tiers }, service, ct);
             c = await Documents.Charger(cree.Document.EntId, ct);
-            var r = await RattachementsAsync(db, f, ct);
+            var r = marche is not null ? new Rattachements(marche.Chantier, marche.Affaire, marche.Projet, marche.Id) : await RattachementsAsync(db, f, ct);
             c.Document.EntChantierId = r.Chantier;
             c.Document.EntAffaireId = r.Affaire;
             c.Document.EntProjetId = r.Projet;
             if (r.Chantier is not null) rapport["chantier"] = r.Chantier;
         }
         Entete(c.Document, f, avoir);
+        if (marche is not null)
+        {
+            c.Document.EntMarcheId = marche.Id;
+            c.Document.EntStSaisie = "RECUE";
+            c.Document.EntStRecuHt = f.Totaux.TotalHt;
+            c.Document.EntStRecuTva = f.Totaux.TotalTva;
+            c.Document.EntStRecuTtc = f.Totaux.TotalTtc;
+        }
         var ent = c.Document.EntId;
 
         // Lignes reprises de la commande : prix et TVA de la facture (prix fixe ; écart signalé par PRIX_ACHAT_ECART).

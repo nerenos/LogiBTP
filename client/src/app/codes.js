@@ -149,6 +149,14 @@ export const SIGNAL_FE = Object.freeze({
   REFUS: 'REFUS',
   LITIGE: 'LITIGE',
   ERREUR_FILE: 'ERREUR_FILE',
+  // Demande de paiement direct (statut 224) reçue d'un sous-traitant (lot 15, db/297).
+  PAIEMENT_DIRECT: 'PAIEMENT_DIRECT',
+});
+
+/** Garantie de paiement d'un marché de sous-traitance (marche.mar_garantie) qui ouvre une demande de paiement (module Sous-traitance, 092b). */
+export const GARANTIE_MARCHE = Object.freeze({
+  PAIEMENT_DIRECT: 'PAIEMENT_DIRECT',
+  DELEGATION: 'DELEGATION',
 });
 
 /** Rôle d'un type de pièce dans le module Relances (type_document.tyd_role_relance, db/283) ; sans rôle : jamais relancé. */

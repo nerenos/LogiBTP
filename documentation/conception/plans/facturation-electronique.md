@@ -584,7 +584,7 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   d'une facture de sous-traitance reçu en A_AVOIR ; non vérifié en navigateur (TODO). **Script à appliquer par
   l'utilisateur** : `099i_facture_electronique_hors_plateforme.sql`.
 
-## Lot 15 : réception de sous-traitance (A FAIRE)
+## Lot 15 : réception de sous-traitance — FAIT (10/11/2026)
 
 - **Cœur**. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `ReceptionFactureBtp.cs` (cadre S5 et bloc PAYEUR → facture de sous-traitance en paiement direct
@@ -592,6 +592,28 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   sous-traitant, autoliquidation contrôlée avec `per_st_autoliquidation`, tests.
 - **Critère de fin** : cas UC13 FNFE et un cas de paiement direct reçus et rattachés ; tests verts. **Fin de la
   partie A : validation de l'utilisateur avant le lot 16.**
+- **Réalisé** : module : règle miroir `controlerSousTraitance` (`js/src/reception.js`) ↔ `ReglesReception.ControlerSousTraitance`
+  (jeu `tests/cas/04_sous_traitance.json` : paiement direct = cadre S5 avec un payeur ; écarts PAYEUR_ABSENT, PAYEUR_HORS_S5,
+  AUTOLIQUIDATION_ABSENTE / INATTENDUE (ventilations BG-23 comparées à l'autoliquidation attendue), VATEX_AUTOLIQUIDATION),
+  codes `ECART_RECEPTION` et `CODE_EXONERATION` (`codes.js` ↔ `Codes.cs`, `CodesTests`). Cœur : `ReceptionFactureBtp` :
+  marché de sous-traitance de la commande retrouvée, sinon du fournisseur par son code dans BT-12 / BT-13 / BT-18 →
+  T_FACTURE_AVT libre sur le marché (chantier, affaire, projet, saisie RECUE) ; S5 et payeur → `paiement_direct` au
+  rapport d'origine (marché, contrat, commande, mode DIRECT / DELEGATION, payeur, maître d'ouvrage = tiers du marché de
+  vente lié sinon du chantier) et écarts CONTRAT_INTROUVABLE, PAIEMENT_DIRECT_NON_PREVU, PAYEUR_DIFFERENT
+  (`EcartsPaiementDirect`) ; autoliquidation contrôlée avec `per_st_autoliquidation` ; écarts au rapport (`ecarts`),
+  jamais bloquants. `Btp/PaiementDirectRecuBtp.cs` : 224 reçu (lu, enregistré dans `fe_statut` et tracé STATUT_RECU au
+  journal `fe_evenement` sur la pièce par le module) → demande de paiement `stt_paiement_direct` (RECUE, reçue le jour du
+  224, montant de `ReglesPaiementDirect.Montant`) pour une T_FACTURE_AVT validée d'un marché en paiement direct ou
+  délégation ; brouillon : enregistrée à sa validation (`SpecialisationBtp.ApresValidationAsync`) ; signal
+  PAIEMENT_DIRECT (`SIGNAL_FE` ↔ `SignauxFe`, `db/297` rejouable au manifeste), codes `GARANTIE_MARCHE` ↔
+  `GarantiesMarche`. Client : onglet Traçabilité, bloc paiement direct et écarts lisibles (`receptionSousTraitanceHtml`,
+  textes `facture_electronique_btp.sous_traitance.*`, icône). Tests : `ReglesReceptionTests` / `reception.test.js`,
+  `ReceptionFactureBtpTests` (exemple FNFE UC13 F202600037 hors paiement direct et sa variante S5 avec payeur ; de bout en
+  bout sur la base jetable : facture S5 → T_FACTURE_AVT sur le marché avec paiement direct et écart d'autoliquidation,
+  224 tracé sur la pièce puis demande à la validation ; seconde facture validée avant son 224 → demande à la réception,
+  payeur différent signalé, 224 répété sans seconde demande), `client/test/sous-traitance-recue.test.js`. Aucun exemple
+  224 dans le dépôt FNFE : CDAR 224 de référence du module (`cdar/logibtp`). Écarts et points ouverts : TODO.md.
+  **Script à appliquer par l'utilisateur** : `db/297_facture_electronique_sous_traitance.sql`.
 
 ---
 

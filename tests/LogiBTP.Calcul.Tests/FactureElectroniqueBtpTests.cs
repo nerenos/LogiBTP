@@ -153,7 +153,10 @@ public class FactureElectroniqueBtpTests
         Assert.Equal("facture_electronique", ModulesFacultatifs.FactureElectronique);
         var script = File.ReadAllText(CasPartages.Chemin("db", "295_facture_electronique.sql"));
         Assert.Contains("'facture_electronique'", script);
-        foreach (var s in typeof(SignauxFe).GetFields().Select(x => (string)x.GetValue(null)!)) Assert.Contains($"('{s}'", script);
+        // Signaux insérés par 295, puis PAIEMENT_DIRECT par 297 (lot 15, contrainte des codes élargie).
+        var signaux = script + File.ReadAllText(CasPartages.Chemin("db", "297_facture_electronique_sous_traitance.sql"));
+        foreach (var s in typeof(SignauxFe).GetFields().Select(x => (string)x.GetValue(null)!)) Assert.Contains($"('{s}'", signaux);
+        Assert.Contains("db/297_facture_electronique_sous_traitance.sql rejouable", File.ReadAllText(CasPartages.Chemin("db", "installation", "scripts.txt")));
         Assert.Contains("db/295_facture_electronique.sql rejouable", File.ReadAllText(CasPartages.Chemin("db", "installation", "scripts.txt")));
     }
 }

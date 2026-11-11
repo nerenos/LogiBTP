@@ -6540,6 +6540,20 @@
       "a_traiter": "{{nom}} : facture {{numero}} reçue hors plateforme, à traiter ({{erreur}})",
       "non_reconnu": "Seul un Factur-X (PDF) ou un XML CII / UBL se dépose comme facture reçue",
       "erreur": "Facture {{nom}} non reçue"
+    },
+    "sous_traitance": {
+      "paiement_direct": "Facture de sous-traitance en paiement direct (cadre S5) : marché {{marche}}, payée par {{payeur}}.",
+      "inconnu": "non indiqué",
+      "ecarts": {
+        "PAYEUR_ABSENT": "Cadre S5 (sous-traitant) sans bloc payeur : le maître d'ouvrage qui paie n'est pas désigné.",
+        "PAYEUR_HORS_S5": "Payeur {{payeur}} désigné sans le cadre S5 : la facture n'est pas traitée en paiement direct.",
+        "AUTOLIQUIDATION_ABSENTE": "TVA facturée alors que le sous-traitant est en autoliquidation (catégorie AE attendue) : à vérifier avant de valider.",
+        "AUTOLIQUIDATION_INATTENDUE": "TVA autoliquidée (AE) alors que le sous-traitant n'est pas en autoliquidation : à vérifier avant de valider.",
+        "VATEX_AUTOLIQUIDATION": "Autoliquidation sans le motif d'exonération VATEX-FR-AE.",
+        "CONTRAT_INTROUVABLE": "Contrat {{contrat}} du paiement direct non retrouvé parmi les marchés de sous-traitance du fournisseur.",
+        "PAIEMENT_DIRECT_NON_PREVU": "Le marché de sous-traitance n'est ni en paiement direct ni en délégation de paiement.",
+        "PAYEUR_DIFFERENT": "Payeur {{payeur}} différent du maître d'ouvrage du marché ({{maitre_ouvrage}})."
+      }
     }
   },
   "hors_ligne_btp": {

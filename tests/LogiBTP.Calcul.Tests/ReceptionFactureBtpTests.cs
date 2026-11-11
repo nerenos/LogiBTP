@@ -660,4 +660,148 @@ public class ReceptionFactureBtpTests
         // Original rangé une seule fois en GED de la pièce (fichier de document_origine réutilisé).
         Assert.Equal(d.Flux.GedOriginalId, await Scalaire("SELECT dor_fichier_id FROM document_origine WHERE dor_ent_id = @e", ("e", ent)));
     }
+
+    // ---------------------------------------------------------------- sous-traitance (lot 15)
+
+    private static ReceptionFactureBtp.MarcheRecu Marche(string? garantie, string? siren) =>
+        new(1, "ST-1", 2, 3, 4, garantie, siren is null ? null : 9, siren, "MOA");
+
+    [Fact]
+    public void Ecarts_du_paiement_direct_contrat_garantie_et_payeur()
+    {
+        var payeur = new Partie { RaisonSociale = "COMMUNE DE MAVILLE", Siren = "400000006" };
+        Assert.Equal([EcartReception.ContratIntrouvable], ReceptionFactureBtp.EcartsPaiementDirect(null, payeur));
+        Assert.Empty(ReceptionFactureBtp.EcartsPaiementDirect(Marche(GarantiesMarche.PaiementDirect, "400000006"), payeur));
+        Assert.Empty(ReceptionFactureBtp.EcartsPaiementDirect(Marche(GarantiesMarche.Delegation, "400 000 006"), payeur));
+        Assert.Equal([EcartReception.PaiementDirectNonPrevu], ReceptionFactureBtp.EcartsPaiementDirect(Marche("CAUTION", "400000006"), payeur));
+        Assert.Equal([EcartReception.PayeurDifferent], ReceptionFactureBtp.EcartsPaiementDirect(Marche(GarantiesMarche.PaiementDirect, "500000005"), payeur));
+        // SIREN inconnu d'un côté : pas de comparaison.
+        Assert.Empty(ReceptionFactureBtp.EcartsPaiementDirect(Marche(GarantiesMarche.PaiementDirect, null), payeur));
+        Assert.Empty(ReceptionFactureBtp.EcartsPaiementDirect(Marche(GarantiesMarche.PaiementDirect, "500000005"), new Partie { RaisonSociale = "X" }));
+        Assert.Equal(("DIRECT", "DELEGATION", (string?)null), (ReceptionFactureBtp.ModePaiement(GarantiesMarche.PaiementDirect),
+            ReceptionFactureBtp.ModePaiement(GarantiesMarche.Delegation), ReceptionFactureBtp.ModePaiement(null)));
+    }
+
+    [Fact]
+    public void Exemple_UC13_FNFE_hors_sous_traitance_et_sa_variante_S5_en_paiement_direct()
+    {
+        // Exemple FNFE UC13 (cadre B1, sans payeur) : pas de paiement direct ; variante LogiBTP en S5 avec le payeur : paiement direct.
+        var fnfe = Lecture.Lire(File.ReadAllBytes(Dossier("cii/extended-ctc-fr/UC13_F202600037_EXTENDED-CTC-FR_CII_Commentee.xml"))).Facture;
+        Assert.False(ReglesReception.ControlerSousTraitance(fnfe.CadreFacturation, fnfe.Payeur is not null, ReglesReception.Ventilations(fnfe), null).PaiementDirect);
+        var s5 = Lecture.Lire(File.ReadAllBytes(Dossier("logibtp/S5_PAYEUR_EXTENDED-CTC-FR_CII.xml"))).Facture;
+        Assert.Equal((CadreFacturation.S5, "COMMUNE DE MAVILLE", "MARCHE-2026-014"), (s5.CadreFacturation, s5.Payeur?.RaisonSociale, s5.References.Contrat));
+        Assert.Equal("400000006", ReceptionFactureBtp.Identifiants(s5.Payeur!).Siren);
+        Assert.Equal([], ReglesReception.ControlerSousTraitance(s5.CadreFacturation, true, ReglesReception.Ventilations(s5), null).Ecarts);
+    }
+
+    /// <summary>
+    /// Cas 13 (paiement direct d'un sous-traitant, XP Z12-014 ; exemple FNFE UC13 F202600037 en cadre S5 avec le payeur) de
+    /// bout en bout sur la base jetable : sous-traitant, maître d'ouvrage, chantier, marché de vente et marché de
+    /// sous-traitance en paiement direct ; facture reçue → T_FACTURE_AVT en brouillon sur le marché (paiement direct,
+    /// payeur, écart d'autoliquidation au rapport) ; statut 224 reçu → tracé au journal sur la pièce, demande de paiement
+    /// enregistrée à la validation (reçue le jour du 224) ; seconde facture validée avant son 224 → demande enregistrée à la
+    /// réception du statut ; payeur autre que le maître d'ouvrage signalé.
+    /// </summary>
+    [Fact]
+    public async Task Facture_S5_du_sous_traitant_en_paiement_direct_puis_demande_224_rattachee()
+    {
+        if (await PreparerAsync() is not { } prepare) return;
+        var (c, services, plateforme) = prepare;
+        await using var _c = c;
+        await using var _s = services;
+        var admin = new Utilisateur("admin.test", Profils.Admin);
+        async Task<object?> Scalaire(string sql, params (string, object)[] p)
+        {
+            await using var k = new NpgsqlCommand(sql, c);
+            foreach (var (n, v) in p) k.Parameters.AddWithValue(n, v);
+            var r = await k.ExecuteScalarAsync();
+            return r is DBNull ? null : r;
+        }
+        if (await Scalaire("SELECT to_regclass('stt_paiement_direct')::text") is null) return;
+        await Scalaire("UPDATE module_societe SET mod_actif = TRUE WHERE mod_code = 'sous_traitance'");
+        async Task<FluxDto> Relever(string idFlux)
+        {
+            using var scope = services.CreateScope();
+            var fe = scope.ServiceProvider.GetRequiredService<ServiceFactureElectronique>();
+            await new ReleveFlux(fe).ReleverAsync(true, null, default);
+            return (await fe.Liste(new FiltreFlux(Sens: SensFlux.Entrant), default)).First(x => x.IdFlux == idFlux);
+        }
+        async Task Valider(long ent)
+        {
+            using var scope = services.CreateScope();
+            var documents = scope.ServiceProvider.GetRequiredService<DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp>>();
+            var nature = await Scalaire("SELECT nat_id FROM nature_element ORDER BY nat_id LIMIT 1");
+            await Scalaire("UPDATE document_ligne SET lig_nat_id = @n WHERE lig_ent_id = @e AND lig_tyl_id = @t AND lig_nat_id IS NULL", ("n", nature!), ("e", ent), ("t", (int)TL.Element));
+            var version = (int)(await Scalaire("SELECT ent_version FROM document WHERE ent_id = @e", ("e", ent)))!;
+            await documents.Valider(ent, new DemandeVersion { EntVersion = version }, admin, default);
+        }
+
+        // Structure : sous-traitant (SIREN du vendeur), maître d'ouvrage (SIREN du payeur), chantier, marché de vente, marché ST en paiement direct.
+        var (sirenSt, sirenMoa) = (Siren(), Siren());
+        var suffixe = Random.Shared.Next(100_000, 999_999).ToString(System.Globalization.CultureInfo.InvariantCulture);
+        var st = (long)(await Scalaire("INSERT INTO personne (per_raison_sociale, per_niv_code, per_siren) VALUES ('COOP1 ' || @s, 'SOCIETE', @siren) RETURNING per_id", ("s", suffixe), ("siren", sirenSt)))!;
+        var moa = (long)(await Scalaire("INSERT INTO personne (per_raison_sociale, per_niv_code, per_siren) VALUES ('COMMUNE DE MAVILLE ' || @s, 'COLLECTIVITE', @siren) RETURNING per_id", ("s", suffixe), ("siren", sirenMoa)))!;
+        var chantier = (int)(await Scalaire("INSERT INTO chantier (cha_code, cha_libelle, cha_tiers_id) VALUES ('CH-' || @s, 'Chantier école', @m) RETURNING cha_id", ("s", suffixe), ("m", moa)))!;
+        var vente = (int)(await Scalaire("INSERT INTO marche (mar_code, mar_libelle, mar_cha_id, mar_tiers_id, mar_sens) VALUES ('MV-' || @s, 'Marché de vente', @c, @m, 'V') RETURNING mar_id",
+            ("s", suffixe), ("c", chantier), ("m", moa)))!;
+        var codeMarche = "MST-" + suffixe;
+        var marche = (int)(await Scalaire("""
+            INSERT INTO marche (mar_code, mar_libelle, mar_cha_id, mar_tiers_id, mar_sens, mar_marche_vente_id, mar_garantie, mar_nature)
+            VALUES (@code, 'Marché de sous-traitance', @c, @t, 'ST', @v, @g, 'U') RETURNING mar_id
+            """, ("code", codeMarche), ("c", chantier), ("t", st), ("v", vente), ("g", GarantiesMarche.PaiementDirect)))!;
+        string Facture(string numero, string sirenPayeur) => Encoding.UTF8.GetString(File.ReadAllBytes(Dossier("logibtp/S5_PAYEUR_EXTENDED-CTC-FR_CII.xml")))
+            .Replace("F202600037", numero).Replace("200000008", sirenSt).Replace("MARCHE-2026-014", codeMarche).Replace("400000006", sirenPayeur);
+        byte[] Demande224(string numero) => Encoding.UTF8.GetBytes(Encoding.UTF8.GetString(File.ReadAllBytes(Dossier("cdar/logibtp/CDV-224_Demande_paiement_direct.xml")))
+            .Replace("F202600101", numero));
+
+        // 1. Facture S5 avec le payeur : T_FACTURE_AVT en brouillon sur le marché de sous-traitance, paiement direct au rapport.
+        var numero = "F" + Random.Shared.NextInt64(100_000_000, 999_999_999);
+        var flux = await Relever(plateforme.RecevoirFacture(Encoding.UTF8.GetBytes(Facture(numero, sirenMoa)), $"{numero}.xml").IdFlux);
+        Assert.Equal((EtatFlux.Traite, TypesElementFe.Document), (flux.Etat, flux.TypeElement));
+        var ent = long.Parse(flux.IdElement!);
+        Assert.Equal(TypesDocument.TFactureAvt, await Scalaire("SELECT t.tyd_code FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id WHERE d.ent_id = @e", ("e", ent)));
+        Assert.Equal("BROUILLON", await Scalaire("SELECT s.std_code FROM document d JOIN statut_document s ON s.std_id = d.ent_std_id WHERE d.ent_id = @e", ("e", ent)));
+        Assert.Equal((object)marche, await Scalaire("SELECT ent_marche_id FROM document WHERE ent_id = @e", ("e", ent)));
+        Assert.Equal((object)chantier, await Scalaire("SELECT ent_chantier_id FROM document WHERE ent_id = @e", ("e", ent)));
+        Assert.Equal((object)st, await Scalaire("SELECT ent_tiers_id FROM document WHERE ent_id = @e", ("e", ent)));
+        Assert.Equal(("RECUE", 204.78m), ((string)(await Scalaire("SELECT ent_st_saisie FROM document WHERE ent_id = @e", ("e", ent)))!,
+            (decimal)(await Scalaire("SELECT ent_st_recu_ht FROM document WHERE ent_id = @e", ("e", ent)))!));
+        string? Rapport(string chemin, long e) => (string?)Scalaire($"SELECT dor_rapport #>> '{{{chemin}}}' FROM document_origine WHERE dor_ent_id = @e AND dor_type = 'IMPORT'", ("e", e)).Result;
+        Assert.Equal(marche.ToString(System.Globalization.CultureInfo.InvariantCulture), Rapport("paiement_direct,marche", ent));
+        Assert.Equal("DIRECT", Rapport("paiement_direct,mode", ent));
+        Assert.Equal(sirenMoa, Rapport("paiement_direct,payeur,siren", ent));
+        Assert.Equal(moa.ToString(System.Globalization.CultureInfo.InvariantCulture), Rapport("paiement_direct,maitre_ouvrage,id", ent));
+        // Autoliquidation attendue (per_st_autoliquidation, défaut vrai) et TVA facturée (S, E) : écart signalé, pièce créée quand même.
+        Assert.Equal($"[\"{EcartReception.AutoliquidationAbsente}\"]", await Scalaire("SELECT jsonb_path_query_array(dor_rapport, '$.ecarts[*].code')::text FROM document_origine WHERE dor_ent_id = @e", ("e", ent)));
+
+        // 2. Statut 224 du sous-traitant : lu, enregistré sur le flux de la facture, tracé au journal de la pièce ; brouillon → pas encore de demande.
+        var cdar = await Relever(plateforme.RecevoirStatut(Demande224(numero), $"{numero}_224.xml", TypeFlux.CdvFactureFournisseur).IdFlux);
+        Assert.Equal(EtatFlux.Traite, cdar.Etat);
+        Assert.Equal(1L, await Scalaire("SELECT count(*) FROM fe_statut WHERE fst_ffl_id = @f AND fst_code = @c AND fst_sens = @s",
+            ("f", flux.Id), ("c", StatutCdv.DemandePaiementDirect), ("s", SensStatut.Recu)));
+        Assert.Equal(1L, await Scalaire("""
+            SELECT count(*) FROM fe_evenement WHERE fev_type = @t AND fev_type_element = @te AND fev_id_element = @e AND fev_detail->>'statut' = @c
+            """, ("t", EvenementFe.StatutRecu), ("te", TypesElementFe.Document), ("e", ent.ToString(System.Globalization.CultureInfo.InvariantCulture)), ("c", StatutCdv.DemandePaiementDirect)));
+        Assert.Equal(0L, await Scalaire("SELECT count(*) FROM stt_paiement_direct WHERE spd_facture_id = @e", ("e", ent)));
+        // Validation (jamais automatique) : la demande reçue est enregistrée, reçue le jour du 224 ; montant HT (marché autoliquidé).
+        await Valider(ent);
+        Assert.Equal("DIRECT|RECUE|204.78", await Scalaire("SELECT spd_mode || '|' || spd_etat || '|' || spd_montant_demande FROM stt_paiement_direct WHERE spd_facture_id = @e AND spd_marche_id = @m",
+            ("e", ent), ("m", marche)));
+        Assert.Equal(true, await Scalaire("""
+            SELECT p.spd_recue_le = (SELECT min(fst_date)::date FROM fe_statut WHERE fst_ffl_id = @f AND fst_code = '224') FROM stt_paiement_direct p WHERE p.spd_facture_id = @e
+            """, ("e", ent), ("f", flux.Id)));
+
+        // 3. Seconde facture, payeur autre que le maître d'ouvrage : écart ; validée avant son 224 → demande enregistrée à la réception du statut.
+        var numero2 = "F" + Random.Shared.NextInt64(100_000_000, 999_999_999);
+        var flux2 = await Relever(plateforme.RecevoirFacture(Encoding.UTF8.GetBytes(Facture(numero2, Siren())), $"{numero2}.xml").IdFlux);
+        var ent2 = long.Parse(flux2.IdElement!);
+        Assert.Contains(EcartReception.PayeurDifferent, (string)(await Scalaire("SELECT jsonb_path_query_array(dor_rapport, '$.ecarts[*].code')::text FROM document_origine WHERE dor_ent_id = @e", ("e", ent2)))!);
+        await Valider(ent2);
+        Assert.Equal(0L, await Scalaire("SELECT count(*) FROM stt_paiement_direct WHERE spd_facture_id = @e", ("e", ent2)));
+        await Relever(plateforme.RecevoirStatut(Demande224(numero2), $"{numero2}_224.xml", TypeFlux.CdvFactureFournisseur).IdFlux);
+        Assert.Equal("RECUE", await Scalaire("SELECT spd_etat FROM stt_paiement_direct WHERE spd_facture_id = @e", ("e", ent2)));
+        // Un second 224 de la même facture : aucune seconde demande.
+        await Relever(plateforme.RecevoirStatut(Demande224(numero2), $"{numero2}_224_bis.xml", TypeFlux.CdvFactureFournisseur).IdFlux);
+        Assert.Equal(1L, await Scalaire("SELECT count(*) FROM stt_paiement_direct WHERE spd_facture_id = @e", ("e", ent2)));
+    }
 }

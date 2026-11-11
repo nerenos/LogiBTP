@@ -200,6 +200,15 @@ public static class SignauxFe
     public const string Refus = "REFUS";
     public const string Litige = "LITIGE";
     public const string ErreurFile = "ERREUR_FILE";
+    /// <summary>Demande de paiement direct (statut 224) reçue d'un sous-traitant (lot 15, db/297).</summary>
+    public const string PaiementDirect = "PAIEMENT_DIRECT";
+}
+
+/// <summary>Garantie de paiement d'un marché de sous-traitance (marche.mar_garantie) qui ouvre une demande de paiement (module Sous-traitance, 092b).</summary>
+public static class GarantiesMarche
+{
+    public const string PaiementDirect = "PAIEMENT_DIRECT";
+    public const string Delegation = "DELEGATION";
 }
 
 /// <summary>Erreurs du terrain testées par l'interface (client/src/app/codes.js : ERREUR_TERRAIN).</summary>

@@ -44,13 +44,14 @@ public sealed class SpecialisationFactureElectroniqueBtp(IServiceProvider servic
         new(ModuleNotification, SignauxFe.Refus, "Factures électroniques refusées"),
         new(ModuleNotification, SignauxFe.Litige, "Factures électroniques en litige"),
         new(ModuleNotification, SignauxFe.ErreurFile, "Erreurs de la file des factures électroniques"),
+        new(ModuleNotification, SignauxFe.PaiementDirect, "Demandes de paiement direct reçues des sous-traitants"),
     ];
 
     /// <summary>Niveau par défaut d'un signal (table facture_electronique_signal absente ou sans ligne).</summary>
     public static string NiveauParDefaut(string signal) => signal switch
     {
         SignauxFe.Rejet or SignauxFe.Refus => NiveauNotification.Urgent,
-        SignauxFe.Litige or SignauxFe.ErreurFile => NiveauNotification.Attention,
+        SignauxFe.Litige or SignauxFe.ErreurFile or SignauxFe.PaiementDirect => NiveauNotification.Attention,
         _ => NiveauNotification.Info,
     };
 
@@ -153,12 +154,13 @@ public sealed class SpecialisationFactureElectroniqueBtp(IServiceProvider servic
         _ => null,
     };
 
-    /// <summary>Signal d'un statut reçu : Rejetée (213), Refusée (210), En litige (207) ; sinon null.</summary>
+    /// <summary>Signal d'un statut reçu : Rejetée (213), Refusée (210), En litige (207), Demande de paiement direct (224, lot 15) ; sinon null.</summary>
     public static string? SignalDuStatut(string code) => code switch
     {
         StatutCdv.Rejetee => SignauxFe.Rejet,
         StatutCdv.Refusee => SignauxFe.Refus,
         StatutCdv.EnLitige => SignauxFe.Litige,
+        StatutCdv.DemandePaiementDirect => SignauxFe.PaiementDirect,
         _ => null,
     };
 
@@ -177,6 +179,7 @@ public sealed class SpecialisationFactureElectroniqueBtp(IServiceProvider servic
             SignauxFe.Rejet => ($"Facture électronique{n} rejetée", detail.Length == 0 ? null : detail),
             SignauxFe.Refus => ($"Facture électronique{n} refusée par le client", detail.Length == 0 ? null : detail),
             SignauxFe.Litige => ($"Facture électronique{n} en litige", detail.Length == 0 ? null : detail),
+            SignauxFe.PaiementDirect => ($"Demande de paiement direct reçue pour la facture{n}", string.IsNullOrWhiteSpace(message) ? null : message),
             _ => ($"Facture électronique{n} : erreur de la file", detail.Length == 0 ? null : detail),
         };
     }
@@ -190,10 +193,16 @@ public sealed class SpecialisationFactureElectroniqueBtp(IServiceProvider servic
                 signal == SignauxFe.Recue && PieceDu(s.Flux) is not null ? signal + PieceCreee : signal)
             : Task.CompletedTask;
 
-    public override Task StatutRecuAsync(StatutSignaleFe s, CancellationToken ct) =>
-        SignalDuStatut(s.Statut.FstCode) is { } signal
-            ? PublierAsync(signal, s.Facture, s.Statut.FstNumeroFacture, s.Statut.FstCode, s.Statut.FstMotif, $"fe:{signal}:statut:{s.Statut.FstId}", ct)
-            : Task.CompletedTask;
+    /// <summary>
+    /// Statut reçu : demande de paiement direct (224, lot 15) enregistrée pour la facture du sous-traitant
+    /// (<see cref="PaiementDirectRecuBtp"/>), puis signal publié (rejet, refus, litige, paiement direct).
+    /// </summary>
+    public override async Task StatutRecuAsync(StatutSignaleFe s, CancellationToken ct)
+    {
+        var suite = await new PaiementDirectRecuBtp(services, journal).StatutRecuAsync(s, ct);
+        if (SignalDuStatut(s.Statut.FstCode) is { } signal)
+            await PublierAsync(signal, s.Facture, s.Statut.FstNumeroFacture, s.Statut.FstCode, suite?.Message ?? s.Statut.FstMotif, $"fe:{signal}:statut:{s.Statut.FstId}", ct);
+    }
 
     private sealed record ReglageSignal(string Niveau, bool Actif);
 

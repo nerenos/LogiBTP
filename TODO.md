@@ -94,7 +94,7 @@ Analyse du 23/10/2026 : [ANALYSE-MODULE-SOUS-TRAITANCE.md](documentation/concept
   statuts), lot 6 le 09/11/2026 (connecteurs : AFNOR XP Z12-013, plateforme simulée, dépôt manuel), lot 7 le
   10/11/2026 (OAuth GENERIQUE en flux CLIENT), lot 8 le 10/11/2026 (schéma, file avec reprises, statuts, journal des
   étapes chaîné, relève par curseur, service et routes `/api/facture-electronique`), lot 9 le 10/11/2026 (écrans du
-  module, chronologie réutilisable, page de démonstration), lot 10 le 10/11/2026 (catégorie EN16931 et VATEX des catégories de TVA), lot 11 le 10/11/2026 (branchement du cœur : activation, droits, GED, signaux, page, onglet Chronologie), lot 12 le 10/11/2026 (réception : facture reçue → pièce d'achat ou de sous-traitance en brouillon, fournisseur, commande, chantier, GED au coffre, liste « Factures reçues à traiter », étapes du journal), lot 13 le 10/11/2026 (statuts posés à la réception : 204 à la création, 205 à la validation, 207 et 210 par boutons, 211 au règlement émis, CDAR par la file, statuts non envoyés par code, création de la pièce reprise sans doublon), lot 14 le 10/11/2026 (réception hors plateforme : Factur-X ou XML glissé sur la liste à traiter ou une facture d'achat, pièce jointe d'un courriel reçu, sans statut envoyé ; avoirs reçus → avoir d'achat rattaché à sa facture).
+  module, chronologie réutilisable, page de démonstration), lot 10 le 10/11/2026 (catégorie EN16931 et VATEX des catégories de TVA), lot 11 le 10/11/2026 (branchement du cœur : activation, droits, GED, signaux, page, onglet Chronologie), lot 12 le 10/11/2026 (réception : facture reçue → pièce d'achat ou de sous-traitance en brouillon, fournisseur, commande, chantier, GED au coffre, liste « Factures reçues à traiter », étapes du journal), lot 13 le 10/11/2026 (statuts posés à la réception : 204 à la création, 205 à la validation, 207 et 210 par boutons, 211 au règlement émis, CDAR par la file, statuts non envoyés par code, création de la pièce reprise sans doublon), lot 14 le 10/11/2026 (réception hors plateforme : Factur-X ou XML glissé sur la liste à traiter ou une facture d'achat, pièce jointe d'un courriel reçu, sans statut envoyé ; avoirs reçus → avoir d'achat rattaché à sa facture), lot 15 le 10/11/2026 (réception de sous-traitance : cadre S5 et payeur → T_FACTURE_AVT en paiement direct sur le marché, statut 224 → demande de paiement, autoliquidation contrôlée avec `per_st_autoliquidation`) ; **fin de la partie A : validation de l'utilisateur avant le lot 16**.
   - [ ] **SQL à appliquer par l'utilisateur** (lot 10) : `modules/comptabilite/db/094g_comptabilite_tva_en16931.sql` (rejouable, au
     manifeste) sur `logibtp` et `logibtp_demo` par `installation base mettre-a-jour`.
   - [ ] **SQL à appliquer par l'utilisateur** (lot 8, jamais appliqué par Claude) : `modules/facture-electronique/db/099f_facture_electronique.sql`
@@ -149,6 +149,22 @@ Analyse du 23/10/2026 : [ANALYSE-MODULE-SOUS-TRAITANCE.md](documentation/concept
     sous-traitance), facture d'origine cherchée parmi les A_FACTURE / A_FACTURE_AVT seulement, rattachée par un lien de
     transformation sans lien de lignes ; pas de Paiement transmis (211) pour un avoir ; nouvel exemple d'avoir négatif
     seulement en mémoire dans les tests (pas de fichier jumeau CII / UBL).
+  - [ ] **SQL à appliquer par l'utilisateur** (lot 15, jamais appliqué par Claude hors des bases jetables des tests),
+    par `installation base mettre-a-jour` sur `logibtp` et `logibtp_demo` : `db/297_facture_electronique_sous_traitance.sql`
+    (rejouable : signal de notification PAIEMENT_DIRECT, contrainte des codes de `facture_electronique_signal` élargie).
+  - [ ] Lot 15 non vérifié en navigateur : bloc « paiement direct » et écarts de la réception (payeur, autoliquidation,
+    contrat) dans l'onglet Traçabilité d'une facture de sous-traitance reçue, notification « Demande de paiement direct
+    reçue » ; vérifié par les tests (`ReceptionFactureBtpTests` de bout en bout sur la base jetable, jeu
+    `tests/cas/04_sous_traitance.json`, `client/test/sous-traitance-recue.test.js`).
+  - [ ] Sous-traitance reçue, décisions reportées : 224 rattaché seulement par le numéro de la facture (flux reçu du
+    même numéro, sans contrôle du SIREN du vendeur) ; 224 d'une facture inconnue du module (saisie à la main, papier)
+    tracé sans rattachement à une pièce ; facture jointe au 224 non rangée en GED ni lue ; demande de paiement
+    enregistrée par le cœur en SQL (`PaiementDirectRecuBtp`, même règle de montant `ReglesPaiementDirect.Montant`) sans
+    la tâche du CRM que crée la saisie manuelle (`ApresDemandeAsync`) ; marché de sous-traitance retrouvé par son code
+    dans une référence (BT-12, BT-13, BT-18) sans commande : T_FACTURE_AVT libre sur le marché, même hors cadre S5 ;
+    contrôle de l'autoliquidation sur `per_st_autoliquidation` du sous-traitant seulement (défaut vrai, `mar_autoliquidation`
+    du marché non comparé) ; cadres S6 (cotraitance) et S3 (B2G par Chorus Pro) non traités ; validation des choix
+    fiscaux par l'expert-comptable (cadre S5, autoliquidation) toujours à faire.
   - [ ] Base jetable complète (manifeste seul) désignée par `LOGIBTP_TEST_PG` : trois tests échouent déjà sans le lot 12
     (`IntegrationPostgresTests.Agregats_identiques_au_js` et `Lots_par_cle_identiques_au_js` : colonnes de démonstration
     absentes ; `RelancesBtpTests.Devis_en_mode_tache_cree_la_tache_sans_courriel` : date attendue fixe) ; sans variable,

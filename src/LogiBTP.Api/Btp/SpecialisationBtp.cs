@@ -448,6 +448,9 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
             await new StatutsReceptionBtp(requete, requete.GetRequiredService<ILoggerFactory>().CreateLogger<StatutsReceptionBtp>())
                 .ApprouverAsync(entId, Utilisateur.Depuis(Http.HttpContext).Code, ct);
         }
+        // Facture de sous-traitance (lot 15) : demande de paiement direct (224) déjà reçue → demande de paiement enregistrée.
+        if (type.TydCode == TypesDocument.TFactureAvt)
+            await PaiementDirectRecuBtp.ApresValidationAsync(db, entId, Http?.HttpContext is { } h ? Utilisateur.Depuis(h).Code : PaiementDirectRecuBtp.Auteur, ct);
         // Stock : mouvements des livraisons, réceptions, factures sans livraison et transferts (module Stock, § 4).
         await MouvementsStockBtp.EcrireAsync(db, entId, type, ct);
         // Lots sortis vers un chantier : leurs certificats matière y seront copiés (file traitée hors de la transaction, S24.6).

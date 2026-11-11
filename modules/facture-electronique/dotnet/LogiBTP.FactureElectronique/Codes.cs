@@ -536,6 +536,30 @@ public static class DecoupageEreporting
     public const string Plusieurs = "PLUSIEURS";
 }
 
+/// <summary>Code de motif d'exonération (VATEX, BT-121) attendu d'une ventilation autoliquidée (catégorie AE) : autoliquidation française.</summary>
+public static class CodeExoneration
+{
+    public const string Autoliquidation = "VATEX-FR-AE";
+}
+
+/// <summary>
+/// Écarts signalés à la réception d'une facture de sous-traitance (lot 15) : jamais bloquants, notés au rapport de la
+/// pièce. Payeur (EXT-FR-FE-BG-02) et cadre S5 (BT-23) ; autoliquidation (AE / VATEX-FR-AE) comparée à celle attendue du
+/// sous-traitant ; contrat du paiement direct (BT-12) non retrouvé, sans paiement direct prévu, ou payeur autre que le
+/// maître d'ouvrage.
+/// </summary>
+public static class EcartReception
+{
+    public const string PayeurAbsent = "PAYEUR_ABSENT";
+    public const string PayeurHorsS5 = "PAYEUR_HORS_S5";
+    public const string AutoliquidationAbsente = "AUTOLIQUIDATION_ABSENTE";
+    public const string AutoliquidationInattendue = "AUTOLIQUIDATION_INATTENDUE";
+    public const string VatexAutoliquidation = "VATEX_AUTOLIQUIDATION";
+    public const string ContratIntrouvable = "CONTRAT_INTROUVABLE";
+    public const string PaiementDirectNonPrevu = "PAIEMENT_DIRECT_NON_PREVU";
+    public const string PayeurDifferent = "PAYEUR_DIFFERENT";
+}
+
 /// <summary>Erreurs du contrôle d'un statut de cycle de vie et de la lecture d'une facture (lot 2).</summary>
 public static class ErreurFe
 {

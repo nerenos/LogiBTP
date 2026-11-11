@@ -467,6 +467,28 @@ export const DECOUPAGE_EREPORTING = Object.freeze({
   PLUSIEURS: 'PLUSIEURS',
 });
 
+/** Code de motif d'exonération (VATEX, BT-121) attendu d'une ventilation autoliquidée (catégorie AE) : autoliquidation française. */
+export const CODE_EXONERATION = Object.freeze({
+  AUTOLIQUIDATION: 'VATEX-FR-AE',
+});
+
+/**
+ * Écarts signalés à la réception d'une facture de sous-traitance (lot 15) : jamais bloquants, notés au rapport de la
+ * pièce. Payeur (EXT-FR-FE-BG-02) et cadre S5 (BT-23) ; autoliquidation (AE / VATEX-FR-AE) comparée à celle attendue du
+ * sous-traitant ; contrat du paiement direct (BT-12) non retrouvé, sans paiement direct prévu, ou payeur autre que le
+ * maître d'ouvrage.
+ */
+export const ECART_RECEPTION = Object.freeze({
+  PAYEUR_ABSENT: 'PAYEUR_ABSENT',
+  PAYEUR_HORS_S5: 'PAYEUR_HORS_S5',
+  AUTOLIQUIDATION_ABSENTE: 'AUTOLIQUIDATION_ABSENTE',
+  AUTOLIQUIDATION_INATTENDUE: 'AUTOLIQUIDATION_INATTENDUE',
+  VATEX_AUTOLIQUIDATION: 'VATEX_AUTOLIQUIDATION',
+  CONTRAT_INTROUVABLE: 'CONTRAT_INTROUVABLE',
+  PAIEMENT_DIRECT_NON_PREVU: 'PAIEMENT_DIRECT_NON_PREVU',
+  PAYEUR_DIFFERENT: 'PAYEUR_DIFFERENT',
+});
+
 /** Erreurs du contrôle d'un statut de cycle de vie et de la lecture d'une facture (lot 2). */
 export const ERREUR_FE = Object.freeze({
   SENS_INCONNU: 'SENS_INCONNU',

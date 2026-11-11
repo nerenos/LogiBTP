@@ -1,0 +1,17 @@
+{
+  "description": "Contrôle d'une facture de sous-traitance reçue (lot 15) : js/src/reception.js controlerSousTraitance ↔ ReglesReception.ControlerSousTraitance. Paiement direct = cadre S5 (BT-23) avec un bloc payeur (EXT-FR-FE-BG-02). Écarts (ECART_RECEPTION, jamais bloquants, dans cet ordre) : PAYEUR_ABSENT (S5 sans payeur), PAYEUR_HORS_S5 (payeur sans S5), AUTOLIQUIDATION_ABSENTE (autoliquidation attendue du sous-traitant, per_st_autoliquidation, et une ventilation BG-23 hors AE), AUTOLIQUIDATION_INATTENDUE (non attendue et une ventilation AE), VATEX_AUTOLIQUIDATION (ventilation AE sans le code VATEX-FR-AE, casse et espaces ignorés). autoliquidation null : attente inconnue, seul le VATEX est contrôlé.",
+  "cas": [
+    {"nom": "paiement direct autoliquidé conforme", "cadre": "S5", "payeur": true, "tva": [{"categorie": "AE", "vatex": "VATEX-FR-AE"}], "autoliquidation": true, "paiement_direct": true, "ecarts": []},
+    {"nom": "cadre en minuscules, VATEX entouré d'espaces", "cadre": " s5 ", "payeur": true, "tva": [{"categorie": "ae", "vatex": " vatex-fr-ae "}], "autoliquidation": true, "paiement_direct": true, "ecarts": []},
+    {"nom": "S5 sans payeur", "cadre": "S5", "payeur": false, "tva": [{"categorie": "AE", "vatex": "VATEX-FR-AE"}], "autoliquidation": true, "paiement_direct": false, "ecarts": ["PAYEUR_ABSENT"]},
+    {"nom": "payeur sans cadre S5", "cadre": "S1", "payeur": true, "tva": [{"categorie": "AE", "vatex": "VATEX-FR-AE"}], "autoliquidation": true, "paiement_direct": false, "ecarts": ["PAYEUR_HORS_S5"]},
+    {"nom": "exemple UC13 en S5 : TVA facturée alors que l'autoliquidation est attendue", "cadre": "S5", "payeur": true, "tva": [{"categorie": "S", "vatex": null}, {"categorie": "E", "vatex": null}], "autoliquidation": true, "paiement_direct": true, "ecarts": ["AUTOLIQUIDATION_ABSENTE"]},
+    {"nom": "une ventilation AE et une ventilation normale", "cadre": "S5", "payeur": true, "tva": [{"categorie": "AE", "vatex": "VATEX-FR-AE"}, {"categorie": "S", "vatex": null}], "autoliquidation": true, "paiement_direct": true, "ecarts": ["AUTOLIQUIDATION_ABSENTE"]},
+    {"nom": "autoliquidation non attendue", "cadre": "S1", "payeur": false, "tva": [{"categorie": "AE", "vatex": "VATEX-FR-AE"}], "autoliquidation": false, "paiement_direct": false, "ecarts": ["AUTOLIQUIDATION_INATTENDUE"]},
+    {"nom": "AE sans VATEX", "cadre": "S1", "payeur": false, "tva": [{"categorie": "AE", "vatex": null}], "autoliquidation": true, "paiement_direct": false, "ecarts": ["VATEX_AUTOLIQUIDATION"]},
+    {"nom": "AE avec un autre VATEX et autoliquidation non attendue", "cadre": "S5", "payeur": true, "tva": [{"categorie": "AE", "vatex": "VATEX-EU-AE"}], "autoliquidation": false, "paiement_direct": true, "ecarts": ["AUTOLIQUIDATION_INATTENDUE", "VATEX_AUTOLIQUIDATION"]},
+    {"nom": "attente inconnue : TVA normale sans écart", "cadre": "S5", "payeur": true, "tva": [{"categorie": "S", "vatex": null}], "autoliquidation": null, "paiement_direct": true, "ecarts": []},
+    {"nom": "sans ventilation", "cadre": "B1", "payeur": false, "tva": [], "autoliquidation": true, "paiement_direct": false, "ecarts": []},
+    {"nom": "sans cadre", "cadre": null, "payeur": false, "tva": [{"categorie": "S", "vatex": null}], "autoliquidation": false, "paiement_direct": false, "ecarts": []}
+  ]
+}
