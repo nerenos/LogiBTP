@@ -385,3 +385,9 @@
 | Type | Dépendance | Version | Licence | Usage |
 |---|---|---|---|---|
 | npm | vitepress | 1.6.4 | MIT | développement (docs) |
+
+## playwright-report
+
+| Type | Dépendance | Version | Licence | Usage |
+|---|---|---|---|---|
+| police | playwright-report/trace/codicon.DCmgc-ay.ttf | — | ? | licence absente |

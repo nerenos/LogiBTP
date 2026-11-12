@@ -315,15 +315,15 @@ export const TYPES_FICHE = {
           code: 'identite', titre: 'Identité',
           groupes: [
             { titre: 'Identification', champs: ['niveau', 'raison_sociale', 'nom_commercial', 'sigle', 'code', 'parent_id', 'usage', 'societe_base'] },
-            { code: 'casquettes', titre: 'Relations avec nous', champs: ['casquettes'], largeur: 'plein' },
-            { code: 'activites', titre: 'Activités', champs: ['activites'], largeur: 'plein' },
             { code: 'entreprise', titre: 'Entreprise', champs: ['pays', 'siren', 'siret', 'tva_intra', 'identifiant_etranger', 'naf', 'forme_juridique', 'forme_libelle',
               'capital', 'rcs', 'date_creation', 'effectif', 'etat_administratif', 'siege', 'service_public'] },
+            { code: 'casquettes', titre: 'Relations avec nous', champs: ['casquettes'], disposition: 'flex' },
+            { code: 'activites', titre: 'Activités', champs: ['activites'], disposition: 'flex' },
             { titre: 'Notes', champs: ['commentaire'], largeur: 'plein' },
           ],
         },
         {
-          code: 'facturation', titre: 'Facturation et règlement',
+          code: 'facturation', titre: 'Facturation et règlement', court: 'Fact. rég.',
           groupes: [
             { code: 'facturation_electronique', titre: 'Facturation électronique', champs: ['fe_type', 'assujetti_tva', 'fe_format', 'fe_plateforme', 'fe_adresse', 'fe_code_routage', 'fe_suffixe', 'fe_code_service', 'fe_engagement', 'fe_verifie_le'] },
             { titre: 'Règlement', champs: ['mode_reglement', 'delai_paiement', 'devise', 'iban', 'bic'] },
@@ -331,7 +331,7 @@ export const TYPES_FICHE = {
           ],
         },
         {
-          code: 'casquettes', titre: 'Par relation',
+          code: 'casquettes', titre: 'Par relation', court: 'Relations',
           groupes: [
             { code: 'client', titre: 'Client', champs: ['cli_charge_ind_id', 'cli_mode_reglement', 'cli_delai_paiement', 'cli_compte', 'cli_collectif', 'cli_compte_produit', 'cli_categorie', 'cli_encours_max', 'cli_remise'] },
             { code: 'fournisseur', titre: 'Fournisseur', champs: ['fou_mode_reglement', 'fou_delai_paiement', 'fou_tva_intracom', 'fou_compte', 'fou_collectif', 'fou_compte_charge', 'fou_numero_client', 'fou_franco', 'fou_delai_livraison'] },

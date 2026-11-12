@@ -31,7 +31,7 @@
 - Identifiants SQL tirés de la définition du type (contrôlés, entre guillemets), valeurs en paramètres converties au type `information_schema` (`CacheTypesColonnes`, indexé par base).
 - Types, droits et paramétrage du cœur : modifier `client/src/app/fiches/definitions.js` puis `npm run generer-vues-liste --workspace client` (régénère `db/131_fiches_parametrage.sql` avec `db/121`, 116, 141, 150, 161, 163) ; ne jamais éditer `db/131` à la main.
 - Colonnes métier ajoutées par `ALTER TABLE` dans le cœur ; noms DDL snake_case préfixés.
-- Affichage des champs supplémentaires (`FicheBase.sections`) : regroupés par `groupe` dans l'ordre paramétré, après les groupes de l'onglet `section`, sinon dans Informations complémentaires ; chaque onglet porte `champs` (programme) et `supplementairesSection` (erreurs, navigation). Une fiche fille qui filtre les groupes garde ceux marqués `supplementaire` (`fiche-annuaire.js`).
+- Affichage des champs supplémentaires (`FicheBase.sections`) : regroupés par `groupe` dans l'ordre paramétré, après les groupes de l'onglet `section`, sinon dans Informations complémentaires ; chaque onglet porte `champs` (programme) et `supplementairesSection` (erreurs, navigation). Un groupe peut remplacer la classe par défaut de son conteneur avec `classe_conteneur`. Une fiche fille qui filtre les groupes garde ceux marqués `supplementaire` (`fiche-annuaire.js`).
 - Champs `liste` : `creerCombo` du socle (valeur lue par `valeurCombo`, événement `change` ; en lecture, champ en lecture seule sans flèche).
 - Dans `SpecialisationFiche.cs`, le commentaire de `AvantEcritureAsync` est mal placé (au-dessus de `AvantSuppressionAsync`).
 

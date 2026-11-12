@@ -72,7 +72,7 @@
       "confidentiel_aide": "Afficher les informations confidentielles (accès journalisé)",
       "parametrer": "Paramétrer",
       "parametrer_aide": "Paramétrer la fiche : champs obligatoires et champs supplémentaires",
-      "session": "Visible (session)",
+      "session": "RGPD",
       "session_aide": "Ne pas masquer les informations confidentielles pendant cette session (onglet du navigateur)",
       "verrou_html": "En cours de modification par <strong>{{utilisateur}}</strong> depuis {{heure}}",
       "reprendre_main": "Reprendre la main",
