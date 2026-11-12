@@ -20,6 +20,15 @@ export const TYPE_AVANCEMENT = Object.freeze({
   PRODUCTION: 'D',
 });
 
+/**
+ * Nature d'un avoir (ent_nature_avoir) : ANNULATION, annulation d'une pièce par un avoir qui la reprend entièrement
+ * (avancement compris : il garde les précédents de la pièce annulée) ; AVANCEMENT, facture d'avancement de période négative.
+ */
+export const NATURE_AVOIR = Object.freeze({
+  ANNULATION: 'ANNULATION',
+  AVANCEMENT: 'AVANCEMENT',
+});
+
 /** Statuts de documents connus du code (les autres statuts d'un type sont du paramétrage). */
 export const STATUT_DOCUMENT = Object.freeze({
   BROUILLON: 'BROUILLON',

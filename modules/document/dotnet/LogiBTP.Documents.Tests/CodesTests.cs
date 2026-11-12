@@ -12,5 +12,6 @@ public class CodesTests
     [InlineData("FAMILLE_DOCUMENT", typeof(FamillesDocument))]
     [InlineData("STATUT_DOCUMENT", typeof(StatutsDocument))]
     [InlineData("TYPE_AVANCEMENT", typeof(TypesAvancement))]
+    [InlineData("NATURE_AVOIR", typeof(NaturesAvoir))]
     public void Parite_avec_le_js(string nom, Type type) => Assert.Empty(Constantes.Ecarts(Fichier, nom, type));
 }

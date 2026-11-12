@@ -257,7 +257,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
     public async Task<TComplet> Charger(long id, CancellationToken ct)
     {
         var d = await persistance.Charger(id, ct);
-        if (d.Document.EntAvtPresentation is not null && !d.Document.EntVerrouille) await AppliquerPrecedents(d.Lignes, id, ct);
+        if (RelirePrecedents(d.Document) && !d.Document.EntVerrouille) await AppliquerPrecedents(d.Lignes, id, ct);
         return d;
     }
 
@@ -393,7 +393,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         var saisie = JsonCalcul.Cloner(d);
         saisie.Document = e;
         // Avancement : précédents relus (un autre document d'avancement a pu être validé entre-temps).
-        if (e.EntAvtPresentation is not null) await AppliquerPrecedents(saisie.Lignes, id, ct);
+        if (RelirePrecedents(e)) await AppliquerPrecedents(saisie.Lignes, id, ct);
         var entree = await Entree(saisie, ct);
         var handler = handlers.Pour(type);
         var controles = new List<MessageCalcul>();
@@ -512,7 +512,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
 
         var saisie = JsonCalcul.Cloner(avant);
         // Avancement : précédents relus, comme à l'enregistrement (validation d'un autre document entre-temps).
-        if (saisie.Document.EntAvtPresentation is not null) await AppliquerPrecedents(saisie.Lignes, id, ct);
+        if (RelirePrecedents(saisie.Document)) await AppliquerPrecedents(saisie.Lignes, id, ct);
         await specialisation.CompleterValidationAsync(db, saisie, type, ct);
         var entree = await Entree(saisie, ct);
         var handler = handlers.Pour(type);
@@ -535,7 +535,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         {
             type = await Type(avoir, ct);
             r.Document.EntTydId = type.TydId;
-            r.Document.EntNatureAvoir = "AVANCEMENT";
+            r.Document.EntNatureAvoir = NaturesAvoir.Avancement;
         }
         // Pièce comptable (factures, avoirs) : à transférer à la comptabilité, sans écriture si le total est nul (13.9).
         // Une pièce déjà transférée (nouvelle version après dévalidation) reste transférée : le comptable corrige (P22).
@@ -917,6 +917,12 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         foreach (var l in avt) EcrirePrecedent(l, p.GetValueOrDefault(l.LigAvtSourceLigId!.Value));
     }
 
+    /// <summary>
+    /// Précédents à relire avant l'enregistrement ou la validation : document d'avancement, sauf l'avoir d'annulation, qui
+    /// garde ceux de la pièce annulée (relus, ils prendraient la pièce annulée elle-même et l'avoir tomberait à zéro).
+    /// </summary>
+    public static bool RelirePrecedents(TDoc d) => d.EntAvtPresentation is not null && d.EntNatureAvoir != NaturesAvoir.Annulation;
+
     public static void EcrirePrecedent(TLigne l, Precedent? p)
     {
         l.LigAvtMontantPrecedent = p?.Montant ?? 0;
@@ -1144,12 +1150,13 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         doc.EntCopieDeId = null;
         doc.EntIntermediaire = false;
         doc.EntDateValidite = null;
-        doc.EntStdId = (await Statut(doc.EntTydId, "BROUILLON", ct)).StdId;
         doc.EntCreeLe = DateTimeOffset.UtcNow;
         doc.EntCreePar = u.Code;
         doc.EntModifieLe = null;
         doc.EntModifiePar = null;
         preparer(doc);
+        // Brouillon du type de la copie, connu après la préparation (une transformation ou un avoir change de type).
+        doc.EntStdId = (await Statut(doc.EntTydId, StatutsDocument.Brouillon, ct)).StdId;
         doc.EntProprietes ??= JsonDocument.Parse("{}");
         doc.EntEtiquettes ??= JsonDocument.Parse("[]");
         db.Documents.Add(doc);

@@ -362,8 +362,26 @@ export class Bandeau {
     zone.textContent = contenu;
     zone.title = contenu;
     zone.className = `bandeau-message-texte ${niveau}`;
+    this.#placerMessage(zone);
     clearTimeout(this.minuterieMessage);
-    this.minuterieMessage = setTimeout(() => { zone.textContent = ''; zone.removeAttribute('title'); zone.className = 'bandeau-message-texte'; }, niveau === 'erreur' ? 10000 : 6000);
+    this.minuterieMessage = setTimeout(() => {
+      zone.textContent = '';
+      zone.removeAttribute('title');
+      zone.className = 'bandeau-message-texte';
+      zone.parentElement.classList.remove('bandeau-message-flottant');
+    }, niveau === 'erreur' ? 10000 : 6000);
+  }
+
+  /**
+   * Message sans place dans le bandeau (écran étroit, menus qui occupent la largeur, téléphone) : affiché en entier sous
+   * le bandeau, à droite (`bandeau-message-flottant`), au lieu d'être tronqué ou masqué. Menu vertical : toujours en place.
+   */
+  #placerMessage(zone) {
+    const bloc = zone.parentElement;
+    bloc.classList.remove('bandeau-message-flottant');
+    if (this.vertical || !zone.textContent) return;
+    const tronque = zone.scrollWidth > zone.clientWidth + 1 || zone.clientWidth < 40;
+    if (this.telephone || tronque) bloc.classList.add('bandeau-message-flottant');
   }
 
   /** Ajoute un message à l'historique (le plus récent en tête). */
