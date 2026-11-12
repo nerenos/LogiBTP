@@ -8,6 +8,7 @@ using LogiBTP.Documents;
 using LogiBTP.Domaine;
 using LogiBTP.FactureElectronique;
 using LogiBTP.FactureElectronique.Formats;
+using LogiBTP.Ged;
 using LogiBTP.Socle;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
@@ -29,6 +30,8 @@ public sealed record PartieEmissionFe
     public string? TypeFe { get; init; }
     /// <summary>per_fe_code_service (référence de l'acheteur BT-10, B2G).</summary>
     public string? CodeService { get; init; }
+    /// <summary>per_fe_engagement : numéro d'engagement (BT-13) exigé par la structure publique (B2G, lot 27).</summary>
+    public bool EngagementObligatoire { get; init; }
     public string Pays { get; init; } = "FR";
     public AdressePostale? Adresse { get; init; }
     public Contact? Contact { get; init; }
@@ -75,6 +78,10 @@ public sealed record EntreeFactureBtp
     public DateOnly? DebutPeriode { get; init; }
     /// <summary>Avoir interne d'annulation d'une facture rejetée ou refusée déposé pour archivage seul (lot 25) : note BAR ARCHIVEONLY.</summary>
     public bool ArchivageSeul { get; init; }
+    /// <summary>Sous-traitant en paiement direct (lot 27) : payeur EXT-FR-FE-BG-02 (intervenant PAYEUR), profil EXTENDED-CTC-FR.</summary>
+    public PartieEmissionFe? Payeur { get; init; }
+    /// <summary>Pièces jointes (BG-24) : récapitulatif de cotraitance d'un cotraitant (lot 27, GED recapitulatif_cotraitance).</summary>
+    public IReadOnlyList<PieceJointe> PiecesJointes { get; init; } = [];
 }
 
 /// <summary>Facture construite et écarts propres à LogiBTP (<see cref="EcartsEmissionFe"/>, niveau <see cref="NiveauCompletude"/>).</summary>
@@ -125,7 +132,15 @@ public static partial class EmissionFactureBtp
     public const string MotifCharge = "ZZZ";
 
     private static readonly HashSet<string> CategoriesTaxees = [LogiBTP.FactureElectronique.CategorieTva.Normale, LogiBTP.FactureElectronique.CategorieTva.TauxZero];
-    private static readonly HashSet<string> TypesBloquants = ["B2B", "B2G"];
+    private static readonly HashSet<string> TypesBloquants = ["B2B", TypeFeB2g];
+    /// <summary>per_fe_type d'une structure publique (Chorus Pro, par la plateforme : Q19 (a)).</summary>
+    public const string TypeFeB2g = "B2G";
+    /// <summary>Types MIME permis d'une pièce jointe embarquée (BR-CL-24 d'EN 16931) ; autre type : référence seule.</summary>
+    public static readonly IReadOnlySet<string> TypesMimeJoints = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "application/pdf", "image/png", "image/jpeg", "text/csv",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.oasis.opendocument.spreadsheet",
+    };
 
     [GeneratedRegex("<[^>]+>")]
     private static partial Regex Balises();
@@ -244,6 +259,20 @@ public static partial class EmissionFactureBtp
         {
             numero = $"PROV-{d.EntId.ToString(CultureInfo.InvariantCulture)}";
             Ecart(EcartsEmissionFe.NumeroProvisoire, "BT-1", null, NiveauCompletude.Avertissement);
+        }
+
+        // B2G par la plateforme (lot 27, Q19 (a)) : SIRET de la structure publique, code service (BT-10) et numéro
+        // d'engagement (BT-13 = référence externe de la pièce) quand la fiche l'exige.
+        if (acheteurFe?.TypeFe == TypeFeB2g)
+        {
+            if (string.IsNullOrWhiteSpace(acheteurFe.Siret)) Ecart(EcartsEmissionFe.SiretAbsent, "BT-46");
+            if (string.IsNullOrWhiteSpace(acheteurFe.CodeService)) Ecart(EcartsEmissionFe.CodeServiceAbsent, "BT-10", null, NiveauCompletude.Avertissement);
+            if (acheteurFe.EngagementObligatoire && string.IsNullOrWhiteSpace(d.EntReferenceExterne)) Ecart(EcartsEmissionFe.EngagementAbsent, "BT-13");
+        }
+        // Cotraitance (cadre S6) : récapitulatif de cotraitance joint (BT-123 RECAPITULATIF_COTRAITANCE).
+        if (p.Situation == SituationsCadreFe.Cotraitant && !e.PiecesJointes.Any(x => x.Description == TypePieceJointe.RecapitulatifCotraitance))
+        {
+            Ecart(EcartsEmissionFe.RecapitulatifAbsent, "BG-24", null, NiveauCompletude.Avertissement);
         }
 
         // Taux de la ventilation et des lignes, regroupés par catégorie EN 16931 et taux écrit.
@@ -423,6 +452,7 @@ public static partial class EmissionFactureBtp
         var acheteur = acheteurFe is { } a0 ? Partie(a0, true) : new Partie { RaisonSociale = "" };
         if (e.Vendeur is not null && vendeur.Adresse is null) Ecart(EcartsEmissionFe.AdresseAbsente, "BG-5");
         if (acheteurFe is not null && acheteur.Adresse is null) Ecart(EcartsEmissionFe.AdresseAbsente, "BG-8");
+        var payeur = p.Situation == SituationsCadreFe.SousTraitant && e.Payeur is { } py ? Partie(py, false) : null;
 
         // Livraison : adresse des travaux ; intracommunautaire sans elle : adresse et date de l'acheteur (BR-IC-11 / 12).
         Livraison? livraison = e.AdresseLivraison is { } al ? new Livraison(e.NomLivraison, null, null, al) : null;
@@ -465,6 +495,13 @@ public static partial class EmissionFactureBtp
             .Concat(horsFacture).Where(x => x is not null));
         if (conditions.Length == 0) conditions = null;
         DateOnly? echeance = avoir ? null : e.Echeance;
+        // Déjà payée (cadre 2, BR-FR-CO-09, lot 27) : acomptes de trésorerie égaux au TTC ; BT-9 = échéance, sinon date de la pièce.
+        var cadre = p.Cadre;
+        if (!avoir && p.Situation == SituationsCadreFe.Depot && EmissionFeBtp.DejaPayee(totalTtc, dejaPaye))
+        {
+            cadre = EmissionFeBtp.Cadre(p.Nature, SituationsCadreFe.DejaPayee);
+            echeance ??= d.EntDate;
+        }
         var net = totalTtc - dejaPaye;
         if (net > 0 && conditions is null && echeance is null) Ecart(EcartsEmissionFe.PaiementAbsent, "BT-20");
 
@@ -487,8 +524,9 @@ public static partial class EmissionFactureBtp
             Devise = devise,
             CodeExigibiliteTva = p.CodeExigibiliteTva,
             DateEcheance = echeance,
-            CadreFacturation = p.Cadre,
-            Profil = ProfilFacture.En16931,
+            CadreFacturation = cadre,
+            // Payeur (sous-traitant en paiement direct) : terme EXT-FR-FE-BG-02 du profil EXTENDED-CTC-FR.
+            Profil = payeur is null ? ProfilFacture.En16931 : ProfilFacture.ExtendedCtcFr,
             References = new ReferencesFacture
             {
                 Acheteur = string.IsNullOrWhiteSpace(acheteurFe?.CodeService) ? null : acheteurFe.CodeService,
@@ -501,6 +539,8 @@ public static partial class EmissionFactureBtp
             FacturesAnterieures = anterieures,
             Vendeur = vendeur,
             Acheteur = acheteur,
+            Payeur = payeur,
+            PiecesJointes = e.PiecesJointes,
             Livraison = livraison,
             MoyensPaiement = moyens,
             RemisesCharges = remisesCharges,
@@ -527,7 +567,9 @@ public static partial class EmissionFactureBtp
     // ---------------------------------------------------------------- lecture en base
 
     private sealed record LignePersonneSql(long Id, string RaisonSociale, string? NomCommercial, string? Siren, string? Siret, string? Tva,
-        string? AdresseFe, string? Routage, string? TypeFe, string? Service, string Pays, string? Iban, string? Bic, string? Mode, string? Delai);
+        string? AdresseFe, string? Routage, string? TypeFe, string? Service, string Pays, string? Iban, string? Bic, string? Mode, string? Delai,
+        bool Engagement);
+    private sealed record LignePieceJointeSql(long Id, string Titre, string NomFichier, string? TypeMime, string Chemin);
     private sealed record LigneTauxSql(int Id, decimal Taux, string Comportement, string? Categorie, string? Vatex, string? Mention);
     private sealed record LigneAnterieureSql(string? Numero, DateOnly? Date, string? Cle);
     private sealed record LigneReferencesSql(string? Chantier, string? Marche, string? Projet, DateOnly? Precedente);
@@ -558,7 +600,8 @@ public static partial class EmissionFactureBtp
         SELECT per_id AS id, per_raison_sociale AS raison_sociale, per_nom_commercial AS nom_commercial, per_siren::text AS siren,
                per_siret::text AS siret, per_tva_intra AS tva, per_fe_adresse AS adresse_fe, per_fe_code_routage AS routage,
                per_fe_type AS type_fe, per_fe_code_service AS service, per_pays::text AS pays, per_iban AS iban, per_bic AS bic,
-               coalesce(per_cli_mode_reglement, per_mode_reglement) AS mode, coalesce(per_cli_delai_paiement, per_delai_paiement) AS delai
+               coalesce(per_cli_mode_reglement, per_mode_reglement) AS mode, coalesce(per_cli_delai_paiement, per_delai_paiement) AS delai,
+               per_fe_engagement AS engagement
         FROM personne
         """;
 
@@ -587,15 +630,65 @@ public static partial class EmissionFactureBtp
         var partie = new PartieEmissionFe
         {
             RaisonSociale = l.RaisonSociale, NomCommercial = l.NomCommercial, Siren = l.Siren, Siret = l.Siret, NumeroTva = l.Tva,
-            AdresseFe = l.AdresseFe, CodeRoutage = l.Routage, TypeFe = l.TypeFe, CodeService = l.Service, Pays = l.Pays,
+            AdresseFe = l.AdresseFe, CodeRoutage = l.Routage, TypeFe = l.TypeFe, CodeService = l.Service, EngagementObligatoire = l.Engagement, Pays = l.Pays,
             Adresse = Adresse(Champ(snap, "adresse"), l.Pays),
             Contact = contact is null && Texte("telephone") is null && Texte("email") is null ? null : new Contact(contact, Texte("telephone"), Texte("email")),
         };
         return (partie, l);
     }
 
-    /// <summary>Entrée de la construction lue en base (null : pièce introuvable ou type jamais émis).</summary>
-    public static async Task<EntreeFactureBtp?> EntreeAsync(LogiBtpContext db, long id, CancellationToken ct)
+    /// <summary>
+    /// Payeur d'un sous-traitant (lot 27) : intervenant PAYEUR de la pièce (ent_intervenants), sinon de son marché de vente.
+    /// </summary>
+    private const string SqlPayeur = """
+        SELECT coalesce(
+            (SELECT (x->>'per_id')::bigint FROM document d, jsonb_array_elements(CASE WHEN jsonb_typeof(d.ent_intervenants) = 'array'
+                                                                                     THEN d.ent_intervenants ELSE '[]'::jsonb END) x
+             WHERE d.ent_id = {0} AND x->>'fonction' = 'PAYEUR' AND coalesce(x->>'per_id', '') <> '' LIMIT 1),
+            (SELECT i.itv_per_id FROM document d JOIN intervenant i ON i.itv_mar_id = d.ent_marche_id
+             WHERE d.ent_id = {0} AND i.itv_fin_code = 'PAYEUR' AND i.itv_per_id IS NOT NULL ORDER BY i.itv_principal DESC, i.itv_ordre LIMIT 1)) AS "Value"
+        """;
+
+    /// <summary>
+    /// Récapitulatif de cotraitance (lot 27) : dernier document GED de catégorie recapitulatif_cotraitance de la pièce (groupe
+    /// d'indices), sinon de son marché, et le contenu de sa dernière version.
+    /// </summary>
+    private const string SqlRecapitulatif = """
+        SELECT g.dge_id AS id, g.dge_titre AS titre, v.vge_nom_fichier AS nom_fichier, v.vge_type_mime AS type_mime, c.cge_chemin AS chemin
+        FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id
+        JOIN document_ged g ON NOT g.dge_supprime AND g.dge_parent_id IS NULL AND g.dge_categorie = {1}
+             AND ((g.dge_type_element = t.tyd_code AND g.dge_id_element = coalesce(d.ent_groupe_id, d.ent_id)::text)
+                  OR (d.ent_marche_id IS NOT NULL AND g.dge_type_element = {2} AND g.dge_id_element = d.ent_marche_id::text))
+        JOIN LATERAL (SELECT * FROM version_ged x WHERE x.vge_document = g.dge_id ORDER BY x.vge_numero DESC LIMIT 1) v ON TRUE
+        JOIN contenu_ged c ON c.cge_empreinte = v.vge_empreinte
+        WHERE d.ent_id = {0}
+        ORDER BY (g.dge_type_element = {2}), g.dge_cree_le DESC, g.dge_id DESC
+        LIMIT 1
+        """;
+
+    /// <summary>
+    /// Pièce jointe RECAPITULATIF_COTRAITANCE d'un document GED : référence GED-&lt;id&gt; ; contenu embarqué si le stockage est
+    /// fourni (émission) et le type MIME permis (BR-CL-24), sinon référence seule (contrôle de l'éditeur).
+    /// </summary>
+    private static async Task<PieceJointe?> RecapitulatifAsync(LogiBtpContext db, long id, StockageGed? stockage, CancellationToken ct)
+    {
+        var r = await db.Database.SqlQueryRaw<LignePieceJointeSql>(SqlRecapitulatif, id, CategoriesGed.RecapitulatifCotraitance, TypesFiche.Marche)
+            .FirstOrDefaultAsync(ct);
+        if (r is null) return null;
+        var reference = $"GED-{r.Id.ToString(CultureInfo.InvariantCulture)}";
+        if (stockage is null || r.TypeMime is null || !TypesMimeJoints.Contains(r.TypeMime) || !stockage.Existe(r.Chemin))
+            return new PieceJointe(reference, TypePieceJointe.RecapitulatifCotraitance);
+        await using var flux = stockage.Ouvrir(r.Chemin);
+        using var memoire = new MemoryStream();
+        await flux.CopyToAsync(memoire, ct);
+        return new PieceJointe(reference, TypePieceJointe.RecapitulatifCotraitance, null, memoire.ToArray(), r.TypeMime, r.NomFichier);
+    }
+
+    /// <summary>
+    /// Entrée de la construction lue en base (null : pièce introuvable ou type jamais émis). <paramref name="stockage"/> : stockage
+    /// de la GED de la société pour embarquer le récapitulatif de cotraitance (émission) ; absent : référence seule.
+    /// </summary>
+    public static async Task<EntreeFactureBtp?> EntreeAsync(LogiBtpContext db, long id, CancellationToken ct, StockageGed? stockage = null)
     {
         var parametres = await EmissionFeDonneesBtp.EntreeAsync(db, id, null, false, ct) is { } entree ? EmissionFeBtp.Parametres(entree) : null;
         if (parametres is null) return null;
@@ -637,6 +730,15 @@ public static partial class EmissionFactureBtp
             WHERE ('A' || a.mac_id) IN (SELECT l.lig_proprietes->>'poste_marche' FROM document_ligne l WHERE l.lig_ent_id = {0})
             """, id).ToListAsync(ct);
         var references = await db.Database.SqlQueryRaw<LigneReferencesSql>(SqlReferences, id).FirstAsync(ct);
+        // Sous-traitance et cotraitance émises (lot 27) : payeur d'un sous-traitant, récapitulatif d'un cotraitant.
+        PartieEmissionFe? payeur = null;
+        if (parametres.Situation == SituationsCadreFe.SousTraitant
+            && await db.Database.SqlQueryRaw<long?>(SqlPayeur, id).FirstOrDefaultAsync(ct) is long payeurId)
+        {
+            payeur = (await PersonneAsync(db, "per_id = {0}", payeurId, null, ct))?.Partie;
+        }
+        var jointes = parametres.Situation == SituationsCadreFe.Cotraitant && await RecapitulatifAsync(db, id, stockage, ct) is { } recap
+            ? new List<PieceJointe> { recap } : [];
 
         return new EntreeFactureBtp
         {
@@ -649,6 +751,7 @@ public static partial class EmissionFactureBtp
             Acomptes = acomptes.ToDictionary(a => a.Cle!, a => a.Numero is null ? null : new AnterieureEmissionFe(a.Numero, a.Date)),
             Chantier = references.Chantier, Marche = references.Marche, Projet = references.Projet,
             DebutPeriode = references.Precedente?.AddDays(1),
+            Payeur = payeur, PiecesJointes = jointes,
         };
     }
 

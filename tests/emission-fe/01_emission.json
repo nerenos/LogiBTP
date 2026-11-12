@@ -1,5 +1,5 @@
 {
- "description": "Paramètres d'émission BTP d'une facture électronique (plans/facturation-electronique.md, lot 21) : client/src/calcul/emission-fe.js ↔ src/LogiBTP.Calcul/EmissionFeBtp.cs. natures_fe et mentions communes, remplacées par celles du cas ; type_document pour information (BT-3 du type = type_facture, db/299). Types de ligne : 1 titre, 2 ouvrage, 3 élément, 4 texte, 8 pied HT, 11 section.",
+ "description": "Paramètres d'émission BTP d'une facture électronique (plans/facturation-electronique.md, lot 21) : client/src/calcul/emission-fe.js ↔ src/LogiBTP.Calcul/EmissionFeBtp.cs. natures_fe et mentions communes, remplacées par celles du cas ; type_document pour information (BT-3 du type = type_facture, db/299). Types de ligne : 1 titre, 2 ouvrage, 3 élément, 4 texte, 8 pied HT, 11 section. deja_payee (lot 27) : estDejaPayee ↔ EmissionFeBtp.DejaPayee (total TTC positif entièrement couvert par le déjà payé BT-113, aux deux décimales) ; montants en texte.",
  "natures_fe": {
   "1": "S",
   "2": "B",
@@ -1479,6 +1479,44 @@
     "code_exigibilite_tva": null,
     "notes": []
    }
+  }
+ ],
+ "deja_payee": [
+  {
+   "nom": "acompte de trésorerie égal au TTC : déjà payée",
+   "total_ttc": "1200.00",
+   "deja_paye": "1200",
+   "attendu": true
+  },
+  {
+   "nom": "égalité aux deux décimales",
+   "total_ttc": "1200.004",
+   "deja_paye": "1200.00",
+   "attendu": true
+  },
+  {
+   "nom": "payée en partie",
+   "total_ttc": "1200.00",
+   "deja_paye": "1199.99",
+   "attendu": false
+  },
+  {
+   "nom": "rien de payé",
+   "total_ttc": "1200.00",
+   "deja_paye": null,
+   "attendu": false
+  },
+  {
+   "nom": "payé au-delà du TTC : pas le cadre 2",
+   "total_ttc": "1200.00",
+   "deja_paye": "1300.00",
+   "attendu": false
+  },
+  {
+   "nom": "pièce à 0 : pas le cadre 2",
+   "total_ttc": "0",
+   "deja_paye": "0",
+   "attendu": false
   }
  ]
 }

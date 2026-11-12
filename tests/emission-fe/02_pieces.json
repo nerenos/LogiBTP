@@ -1,5 +1,5 @@
 {
-  "description": "Pièces de vente de démonstration → facture électronique EN 16931 (plans/facturation-electronique.md, lot 22) : src/LogiBTP.Api/Btp/EmissionFactureBtp.cs. Chaque pièce est calculée par MoteurDevisBtp (entree), ses paramètres d'émission par EmissionFeBtp (lot 21), puis construite, contrôlée (aucun écart attendu sauf ceux du cas) et écrite en CII et en UBL dans tests/emission-fe/ecrits/ (LOGIBTP_REGENERER_EMISSION=1), contrôlés aux schematrons par client/test/emission-facture.test.js. Types de ligne : 1 titre, 2 ouvrage, 3 élément, 8 pied HT, 9 pied TTC, 10 TVA. Natures : 1 services, 2 biens.",
+  "description": "Pièces de vente de démonstration → facture électronique EN 16931 (plans/facturation-electronique.md, lot 22) : src/LogiBTP.Api/Btp/EmissionFactureBtp.cs. Chaque pièce est calculée par MoteurDevisBtp (entree), ses paramètres d'émission par EmissionFeBtp (lot 21), puis construite, contrôlée (aucun écart attendu sauf ceux du cas) et écrite en CII et en UBL dans tests/emission-fe/ecrits/ (LOGIBTP_REGENERER_EMISSION=1), contrôlés aux schematrons par client/test/emission-facture.test.js. Types de ligne : 1 titre, 2 ouvrage, 3 élément, 8 pied HT, 9 pied TTC, 10 TVA. Natures : 1 services, 2 biens. Lot 27 : role (SOUS_TRAITANT, COTRAITANT) comme marche.mar_fe_role, acheteur (champs remplaçant ceux de l'acheteur commun : structure publique B2G, code service, engagement obligatoire), payeur (paiement direct d'un sous-traitant), pieces_jointes (récapitulatif de cotraitance, contenu en texte), cadre attendu.",
   "natures_fe": { "1": "S", "2": "B" },
   "mentions": {
     "indemnite": "Indemnité forfaitaire pour frais de recouvrement en cas de retard de paiement : 40 €.",
@@ -171,6 +171,113 @@
         "lignes": [
           { "lig_id": 1, "lig_ordre": 1, "lig_tyl_id": 3, "lig_libelle_html": "Dépannage", "lig_qte": 1, "lig_pv": 90, "lig_pv_fixe": true, "lig_nat_id": 1 },
           { "lig_id": 2, "lig_ordre": 2, "lig_tyl_id": 10, "lig_libelle_html": "TVA" }
+        ]
+      }
+    },
+    {
+      "nom": "B2G",
+      "description": "Facture de travaux à une structure publique (B2G par la plateforme, Q19 (a)) : code service en BT-10, numéro d'engagement exigé par la fiche en BT-13 (référence externe), SIRET de la structure ; dépôt en règle B2G.",
+      "type_facture": "380",
+      "numero": "F-2026-0140",
+      "date": "2026-11-12",
+      "echeance": "2026-12-12",
+      "reference": "ENG-2026-004512",
+      "acheteur": {"raison_sociale": "COMMUNE DE BELLEROCHE", "siren": "216900001", "siret": "21690000100015", "numero_tva": null, "adresse_fe": "216900001", "type_fe": "B2G", "code_service": "SERVICES-TECHNIQUES", "engagement": true, "adresse": {"ligne1": "Place de la Mairie", "localite": "BELLEROCHE", "code_postal": "69420", "code_pays": "FR"}, "contact": null},
+      "cadre": "S1",
+      "entree": {
+        "document": {"ent_id": 110, "ent_mode_calcul_ouvrage": "V", "ent_precision_montant": 2},
+        "lignes": [
+          {"lig_id": 1, "lig_ordre": 1, "lig_tyl_id": 3, "lig_libelle_html": "Réfection de la toiture de l'école", "lig_qte": 1, "lig_unt_code": "ft", "lig_pv": 18500, "lig_pv_fixe": true, "lig_tva_id": 1, "lig_nat_id": 1},
+          {"lig_id": 2, "lig_ordre": 2, "lig_tyl_id": 10, "lig_libelle_html": "TVA"}
+        ]
+      }
+    },
+    {
+      "nom": "B2G_SANS_ENGAGEMENT",
+      "description": "Même structure publique sans numéro d'engagement ni code service : engagement exigé (bloquant), code service signalé (avertissement), non écrit.",
+      "type_facture": "380",
+      "numero": "F-2026-0141",
+      "date": "2026-11-12",
+      "echeance": "2026-12-12",
+      "acheteur": {"raison_sociale": "COMMUNE DE BELLEROCHE", "siren": "216900001", "siret": "21690000100015", "numero_tva": null, "adresse_fe": "216900001", "type_fe": "B2G", "code_service": null, "engagement": true, "adresse": {"ligne1": "Place de la Mairie", "localite": "BELLEROCHE", "code_postal": "69420", "code_pays": "FR"}, "contact": null},
+      "attendu_emission": ["CODE_SERVICE_ABSENT", "ENGAGEMENT_ABSENT"],
+      "entree": {
+        "document": {"ent_id": 111, "ent_mode_calcul_ouvrage": "V", "ent_precision_montant": 2},
+        "lignes": [
+          {"lig_id": 1, "lig_ordre": 1, "lig_tyl_id": 3, "lig_libelle_html": "Réfection de la toiture de l'école", "lig_qte": 1, "lig_unt_code": "ft", "lig_pv": 18500, "lig_pv_fixe": true, "lig_tva_id": 1, "lig_nat_id": 1},
+          {"lig_id": 2, "lig_ordre": 2, "lig_tyl_id": 10, "lig_libelle_html": "TVA"}
+        ]
+      }
+    },
+    {
+      "nom": "COTRAITANCE",
+      "description": "Facture d'un cotraitant au maître d'ouvrage (marché de vente mar_fe_role = COTRAITANT) : cadre S6, récapitulatif de cotraitance joint (BT-123 RECAPITULATIF_COTRAITANCE, CSV embarqué).",
+      "type_facture": "380",
+      "numero": "F-2026-0150",
+      "date": "2026-11-12",
+      "echeance": "2026-12-31",
+      "role": "COTRAITANT",
+      "cadre": "S6",
+      "chantier": "CH-2026-003",
+      "marche": "M-2026-003-1",
+      "pieces_jointes": [{"reference": "GED-501", "type_mime": "text/csv", "nom_fichier": "recapitulatif_cotraitance.csv", "texte": "membre;lot;montant_ht\nBTP DEMO;Gros oeuvre;24000.00\nELEC SUD;Electricite;9500.00\n"}],
+      "entree": {
+        "document": {"ent_id": 112, "ent_mode_calcul_ouvrage": "V", "ent_precision_montant": 2},
+        "lignes": [
+          {"lig_id": 1, "lig_ordre": 1, "lig_tyl_id": 3, "lig_libelle_html": "Gros œuvre – lot 1 du groupement", "lig_qte": 1, "lig_unt_code": "ft", "lig_pv": 24000, "lig_pv_fixe": true, "lig_tva_id": 1, "lig_nat_id": 1},
+          {"lig_id": 2, "lig_ordre": 2, "lig_tyl_id": 10, "lig_libelle_html": "TVA"}
+        ]
+      }
+    },
+    {
+      "nom": "COTRAITANCE_SANS_RECAPITULATIF",
+      "description": "Cotraitant sans récapitulatif en GED : avertissement, non écrit.",
+      "type_facture": "380",
+      "numero": "F-2026-0151",
+      "date": "2026-11-12",
+      "echeance": "2026-12-31",
+      "role": "COTRAITANT",
+      "attendu_emission": ["RECAPITULATIF_ABSENT"],
+      "entree": {
+        "document": {"ent_id": 113, "ent_mode_calcul_ouvrage": "V", "ent_precision_montant": 2},
+        "lignes": [
+          {"lig_id": 1, "lig_ordre": 1, "lig_tyl_id": 3, "lig_libelle_html": "Gros œuvre – lot 1 du groupement", "lig_qte": 1, "lig_unt_code": "ft", "lig_pv": 24000, "lig_pv_fixe": true, "lig_tva_id": 1, "lig_nat_id": 1},
+          {"lig_id": 2, "lig_ordre": 2, "lig_tyl_id": 10, "lig_libelle_html": "TVA"}
+        ]
+      }
+    },
+    {
+      "nom": "SOUS_TRAITANCE",
+      "description": "Facture d'un sous-traitant à l'entreprise principale (mar_fe_role = SOUS_TRAITANT) en paiement direct : cadre S5 même pour des matériaux, payeur = maître d'ouvrage (intervenant PAYEUR, EXT-FR-FE-BG-02, profil EXTENDED-CTC-FR), autoliquidation AE.",
+      "type_facture": "380",
+      "numero": "F-2026-0160",
+      "date": "2026-11-12",
+      "echeance": "2026-12-31",
+      "role": "SOUS_TRAITANT",
+      "cadre": "S5",
+      "payeur": {"raison_sociale": "SCI LES TILLEULS", "siren": "300000004", "siret": "30000000400011", "adresse_fe": "300000004", "adresse": {"ligne1": "5 place Bellecour", "localite": "LYON", "code_postal": "69002", "code_pays": "FR"}},
+      "entree": {
+        "document": {"ent_id": 114, "ent_mode_calcul_ouvrage": "V", "ent_precision_montant": 2},
+        "lignes": [
+          {"lig_id": 1, "lig_ordre": 1, "lig_tyl_id": 3, "lig_libelle_html": "Électricité – tranche 1", "lig_qte": 1, "lig_unt_code": "ft", "lig_pv": 6200, "lig_pv_fixe": true, "lig_tva_id": 3, "lig_nat_id": 1},
+          {"lig_id": 2, "lig_ordre": 2, "lig_tyl_id": 3, "lig_libelle_html": "Fourniture de tableaux électriques", "lig_qte": 2, "lig_unt_code": "u", "lig_pv": 450, "lig_pv_fixe": true, "lig_tva_id": 3, "lig_nat_id": 2},
+          {"lig_id": 3, "lig_ordre": 3, "lig_tyl_id": 10, "lig_libelle_html": "TVA"}
+        ]
+      }
+    },
+    {
+      "nom": "DEJA_PAYEE",
+      "description": "Facture entièrement réglée par un acompte de trésorerie (poste TTC « A5 » égal au TTC) : cadre S2 (BR-FR-CO-09 : déjà payé = TTC, net à payer 0, BT-9 = date de la pièce sans échéance).",
+      "type_facture": "380",
+      "numero": "F-2026-0170",
+      "date": "2026-11-12",
+      "cadre": "S2",
+      "entree": {
+        "document": {"ent_id": 115, "ent_mode_calcul_ouvrage": "V", "ent_precision_montant": 2},
+        "lignes": [
+          {"lig_id": 1, "lig_ordre": 1, "lig_tyl_id": 3, "lig_libelle_html": "Dépannage plomberie", "lig_qte": 1, "lig_unt_code": "ft", "lig_pv": 1000, "lig_pv_fixe": true, "lig_tva_id": 1, "lig_nat_id": 1},
+          {"lig_id": 2, "lig_ordre": 2, "lig_tyl_id": 10, "lig_libelle_html": "TVA"},
+          {"lig_id": 3, "lig_ordre": 3, "lig_tyl_id": 9, "lig_libelle_html": "Acompte de trésorerie versé", "lig_pied_mode": "M", "lig_pied_valeur": 1200, "lig_pied_sens": -1, "lig_proprietes": {"poste_marche": "A5"}}
         ]
       }
     }

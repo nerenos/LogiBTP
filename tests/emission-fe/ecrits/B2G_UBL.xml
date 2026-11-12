@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Invoice xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2" xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2" xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2">
+  <cbc:UBLVersionID>2.1</cbc:UBLVersionID>
+  <cbc:CustomizationID>urn:cen.eu:en16931:2017</cbc:CustomizationID>
+  <cbc:ProfileID>S1</cbc:ProfileID>
+  <cbc:ID>F-2026-0140</cbc:ID>
+  <cbc:IssueDate>2026-11-12</cbc:IssueDate>
+  <cbc:DueDate>2026-12-12</cbc:DueDate>
+  <cbc:InvoiceTypeCode>380</cbc:InvoiceTypeCode>
+  <cbc:Note>#PMT#Indemnité forfaitaire pour frais de recouvrement en cas de retard de paiement : 40 €.</cbc:Note>
+  <cbc:Note>#PMD#Pénalités de retard : trois fois le taux d'intérêt légal.</cbc:Note>
+  <cbc:Note>#AAB#Pas d'escompte pour paiement anticipé.</cbc:Note>
+  <cbc:Note>#BAR#B2B</cbc:Note>
+  <cbc:DocumentCurrencyCode>EUR</cbc:DocumentCurrencyCode>
+  <cbc:BuyerReference>SERVICES-TECHNIQUES</cbc:BuyerReference>
+  <cac:OrderReference>
+    <cbc:ID>ENG-2026-004512</cbc:ID>
+  </cac:OrderReference>
+  <cac:AccountingSupplierParty>
+    <cac:Party>
+      <cbc:EndpointID schemeID="0225">200000008</cbc:EndpointID>
+      <cac:PartyIdentification>
+        <cbc:ID schemeID="0009">20000000800012</cbc:ID>
+      </cac:PartyIdentification>
+      <cac:PostalAddress>
+        <cbc:StreetName>1 rue des Artisans</cbc:StreetName>
+        <cbc:CityName>LYON</cbc:CityName>
+        <cbc:PostalZone>69001</cbc:PostalZone>
+        <cac:Country>
+          <cbc:IdentificationCode>FR</cbc:IdentificationCode>
+        </cac:Country>
+      </cac:PostalAddress>
+      <cac:PartyTaxScheme>
+        <cbc:CompanyID>FR37200000008</cbc:CompanyID>
+        <cac:TaxScheme>
+          <cbc:ID>VAT</cbc:ID>
+        </cac:TaxScheme>
+      </cac:PartyTaxScheme>
+      <cac:PartyLegalEntity>
+        <cbc:RegistrationName>BTP DEMO</cbc:RegistrationName>
+        <cbc:CompanyID schemeID="0002">200000008</cbc:CompanyID>
+      </cac:PartyLegalEntity>
+    </cac:Party>
+  </cac:AccountingSupplierParty>
+  <cac:AccountingCustomerParty>
+    <cac:Party>
+      <cbc:EndpointID schemeID="0225">216900001</cbc:EndpointID>
+      <cac:PartyIdentification>
+        <cbc:ID schemeID="0009">21690000100015</cbc:ID>
+      </cac:PartyIdentification>
+      <cac:PostalAddress>
+        <cbc:StreetName>Place de la Mairie</cbc:StreetName>
+        <cbc:CityName>BELLEROCHE</cbc:CityName>
+        <cbc:PostalZone>69420</cbc:PostalZone>
+        <cac:Country>
+          <cbc:IdentificationCode>FR</cbc:IdentificationCode>
+        </cac:Country>
+      </cac:PostalAddress>
+      <cac:PartyLegalEntity>
+        <cbc:RegistrationName>COMMUNE DE BELLEROCHE</cbc:RegistrationName>
+        <cbc:CompanyID schemeID="0002">216900001</cbc:CompanyID>
+      </cac:PartyLegalEntity>
+    </cac:Party>
+  </cac:AccountingCustomerParty>
+  <cac:PaymentMeans>
+    <cbc:PaymentMeansCode>30</cbc:PaymentMeansCode>
+    <cbc:PaymentID>F-2026-0140</cbc:PaymentID>
+    <cac:PayeeFinancialAccount>
+      <cbc:ID>FR7630006000011234567890189</cbc:ID>
+      <cac:FinancialInstitutionBranch>
+        <cbc:ID>AGRIFRPP</cbc:ID>
+      </cac:FinancialInstitutionBranch>
+    </cac:PayeeFinancialAccount>
+  </cac:PaymentMeans>
+  <cac:PaymentTerms>
+    <cbc:Note>30 jours fin de mois</cbc:Note>
+  </cac:PaymentTerms>
+  <cac:TaxTotal>
+    <cbc:TaxAmount currencyID="EUR">3700.00</cbc:TaxAmount>
+    <cac:TaxSubtotal>
+      <cbc:TaxableAmount currencyID="EUR">18500.00</cbc:TaxableAmount>
+      <cbc:TaxAmount currencyID="EUR">3700.00</cbc:TaxAmount>
+      <cac:TaxCategory>
+        <cbc:ID>S</cbc:ID>
+        <cbc:Percent>20</cbc:Percent>
+        <cac:TaxScheme>
+          <cbc:ID>VAT</cbc:ID>
+        </cac:TaxScheme>
+      </cac:TaxCategory>
+    </cac:TaxSubtotal>
+  </cac:TaxTotal>
+  <cac:LegalMonetaryTotal>
+    <cbc:LineExtensionAmount currencyID="EUR">18500.00</cbc:LineExtensionAmount>
+    <cbc:TaxExclusiveAmount currencyID="EUR">18500.00</cbc:TaxExclusiveAmount>
+    <cbc:TaxInclusiveAmount currencyID="EUR">22200.00</cbc:TaxInclusiveAmount>
+    <cbc:PayableAmount currencyID="EUR">22200.00</cbc:PayableAmount>
+  </cac:LegalMonetaryTotal>
+  <cac:InvoiceLine>
+    <cbc:ID>1</cbc:ID>
+    <cbc:InvoicedQuantity unitCode="LS">1</cbc:InvoicedQuantity>
+    <cbc:LineExtensionAmount currencyID="EUR">18500.00</cbc:LineExtensionAmount>
+    <cac:Item>
+      <cbc:Name>Réfection de la toiture de l'école</cbc:Name>
+      <cac:ClassifiedTaxCategory>
+        <cbc:ID>S</cbc:ID>
+        <cbc:Percent>20</cbc:Percent>
+        <cac:TaxScheme>
+          <cbc:ID>VAT</cbc:ID>
+        </cac:TaxScheme>
+      </cac:ClassifiedTaxCategory>
+    </cac:Item>
+    <cac:Price>
+      <cbc:PriceAmount currencyID="EUR">18500</cbc:PriceAmount>
+    </cac:Price>
+  </cac:InvoiceLine>
+</Invoice>

@@ -1066,7 +1066,11 @@
           "IBAN_ABSENT": "Règlement par virement sans IBAN de la société",
           "PAIEMENT_ABSENT": "Ni condition de paiement ni échéance",
           "ACOMPTE_ABSENT": "Facture d'acompte déduite introuvable (non validée ou annulée)",
-          "ORIGINE_ABSENTE": "Facture d'origine de l'avoir introuvable"
+          "ORIGINE_ABSENTE": "Facture d'origine de l'avoir introuvable",
+          "ENGAGEMENT_ABSENT": "Numéro d'engagement exigé par la structure publique : à saisir dans la référence externe de la pièce",
+          "CODE_SERVICE_ABSENT": "Code service de la structure publique absent de sa fiche (exigé par certaines structures)",
+          "SIRET_ABSENT": "SIRET de la structure publique absent de sa fiche",
+          "RECAPITULATIF_ABSENT": "Récapitulatif de cotraitance absent de la GED de la pièce et du marché"
         }
       },
       "envoi_fe": {

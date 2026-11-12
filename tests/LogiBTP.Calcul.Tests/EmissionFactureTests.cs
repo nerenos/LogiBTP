@@ -41,6 +41,7 @@ public class EmissionFactureTests
     {
         RaisonSociale = Texte(p["raison_sociale"])!, Siren = Texte(p["siren"]), Siret = Texte(p["siret"]), NumeroTva = Texte(p["numero_tva"]),
         AdresseFe = Texte(p["adresse_fe"]), TypeFe = Texte(p["type_fe"]), Adresse = Adresse(p["adresse"]),
+        CodeService = Texte(p["code_service"]), EngagementObligatoire = p["engagement"]?.GetValue<bool>() ?? false,
         Contact = p["contact"] is { } c ? new Contact(Texte(c["nom"]), Texte(c["telephone"]), Texte(c["courriel"])) : null,
     };
 
@@ -76,13 +77,16 @@ public class EmissionFactureTests
         {
             TypeFacture = Texte(c["type_facture"]), TypeOrigine = Texte(c["type_origine"]), Lignes = r.Lignes,
             NaturesFe = J["natures_fe"]!.AsObject().ToDictionary(x => int.Parse(x.Key), x => x.Value!.GetValue<string>()),
-            DeduitAcompte = c["deduit_acompte"]?.GetValue<bool>() ?? false, Mentions = mentions,
+            DeduitAcompte = c["deduit_acompte"]?.GetValue<bool>() ?? false, Mentions = mentions, Role = Texte(c["role"]),
         })!;
         var p = J["paiement"]!;
         return new EntreeFactureBtp
         {
             Document = d, Lignes = r.Lignes, Tva = r.Tva, Taux = taux, Parametres = parametres,
-            Vendeur = Partie(J["vendeur"]!), Acheteur = c["sans_acheteur"]?.GetValue<bool>() == true ? null : Partie(J["acheteur"]!),
+            Vendeur = Partie(J["vendeur"]!), Acheteur = c["sans_acheteur"]?.GetValue<bool>() == true ? null : Partie(c["acheteur"] ?? J["acheteur"]!),
+            Payeur = c["payeur"] is { } py ? Partie(py) : null,
+            PiecesJointes = (c["pieces_jointes"]?.AsArray() ?? []).Select(x => new PieceJointe(Texte(x!["reference"])!, TypePieceJointe.RecapitulatifCotraitance, null,
+                Encoding.UTF8.GetBytes(Texte(x["texte"])!), Texte(x["type_mime"]), Texte(x["nom_fichier"]))).ToList(),
             AdresseLivraison = Adresse(c["livraison"]?["adresse"]), NomLivraison = Texte(c["livraison"]?["nom"]),
             ConditionsPaiement = Texte(p["conditions"]), Echeance = Date(c["echeance"]), ModeReglement = Texte(p["mode"]),
             Iban = c["sans_iban"]?.GetValue<bool>() == true ? null : Texte(p["iban"]), Bic = Texte(p["bic"]),
@@ -142,6 +146,56 @@ public class EmissionFactureTests
         Assert.Equal("386 S1", Cadre("ACOMPTE"));
         Assert.Equal("380 M4", Cadre("DEFINITIVE"));
         Assert.Equal("503 S1", Cadre("AVOIR_ACOMPTE"));
+        // Lot 27 : cadre attendu de chaque pièce qui le précise (B2G, cotraitant, sous-traitant, déjà payée).
+        foreach (var p in J["pieces"]!.AsArray().Where(x => x!["cadre"] is not null))
+        {
+            Assert.Equal(Texte(p!["cadre"]), EmissionFactureBtp.Construire(Entree(p)).Facture.CadreFacturation);
+        }
+    }
+
+    [Fact]
+    public void B2g_code_service_engagement_et_regle_de_depot()
+    {
+        var e = Entree(Piece("B2G"));
+        var f = EmissionFactureBtp.Construire(e).Facture;
+        Assert.Equal(("SERVICES-TECHNIQUES", "ENG-2026-004512"), (f.References.Acheteur, f.References.Commande));
+        Assert.Contains(f.Acheteur.Identifiants, i => i.Valeur == "21690000100015" && i.Schema == SchemaIdentifiant.Siret);
+        Assert.Contains(f.Notes, n => n.CodeSujet == CodeNote.Traitement && n.Texte == Traitement.B2B);
+        Assert.True(EmissionFactureBtp.Controler(e).Bloquant);
+        Assert.Equal(RegleTraitement.B2G, EnvoiFactureBtp.RegleDepot(false, e.Acheteur?.TypeFe));
+        Assert.Null(EnvoiFactureBtp.RegleDepot(false, "B2B"));
+        Assert.Equal(RegleTraitement.ArchivageSeul, EnvoiFactureBtp.RegleDepot(true, "B2G"));
+        // Sans engagement exigé : bloquant ; sans code service : avertissement ; sans SIRET : bloquant.
+        var sans = EmissionFactureBtp.Construire(Entree(Piece("B2G_SANS_ENGAGEMENT"))).Ecarts;
+        Assert.Equal([NiveauCompletude.Avertissement, NiveauCompletude.Bloquant], sans.Select(x => x.Niveau).ToList());
+        var sansSiret = EmissionFactureBtp.Construire(e with { Acheteur = e.Acheteur! with { Siret = null } }).Ecarts;
+        Assert.Equal(EcartsEmissionFe.SiretAbsent, Assert.Single(sansSiret).Regle);
+    }
+
+    [Fact]
+    public void Cotraitance_et_sous_traitance_emises()
+    {
+        var co = EmissionFactureBtp.Construire(Entree(Piece("COTRAITANCE"))).Facture;
+        var pj = Assert.Single(co.PiecesJointes);
+        Assert.Equal((TypePieceJointe.RecapitulatifCotraitance, "text/csv"), (pj.Description, pj.TypeMime));
+        Assert.Equal(ProfilFacture.En16931, co.Profil);
+        var sans = EmissionFactureBtp.Construire(Entree(Piece("COTRAITANCE_SANS_RECAPITULATIF"))).Ecarts;
+        Assert.Equal(NiveauCompletude.Avertissement, Assert.Single(sans).Niveau);
+        var st = EmissionFactureBtp.Construire(Entree(Piece("SOUS_TRAITANCE"))).Facture;
+        Assert.Equal((CadreFacturation.S5, ProfilFacture.ExtendedCtcFr, "SCI LES TILLEULS"), (st.CadreFacturation, st.Profil, st.Payeur?.RaisonSociale));
+        Assert.All(st.DetailsTva, t => Assert.Equal(LogiBTP.FactureElectronique.CategorieTva.Autoliquidation, t.Categorie));
+        // Payeur seulement pour un sous-traitant : ignoré pour un titulaire.
+        var titulaire = Entree(Piece("SOUS_TRAITANCE"));
+        titulaire = titulaire with { Parametres = titulaire.Parametres with { Situation = SituationsCadreFe.Depot, Cadre = CadreFacturation.M1 } };
+        Assert.Null(EmissionFactureBtp.Construire(titulaire).Facture.Payeur);
+    }
+
+    [Fact]
+    public void Deja_payee_par_acompte_de_tresorerie()
+    {
+        var f = EmissionFactureBtp.Construire(Entree(Piece("DEJA_PAYEE"))).Facture;
+        Assert.Equal((CadreFacturation.S2, 1200m, 0m), (f.CadreFacturation, f.Totaux.DejaPaye!.Value, f.Totaux.NetAPayer));
+        Assert.Equal(new DateOnly(2026, 11, 12), f.DateEcheance);
     }
 
     [Fact]
@@ -358,5 +412,116 @@ public class EmissionFactureTests
         Assert.Equal(new Periode(new DateOnly(2026, 11, 1), new DateOnly(2026, 11, 30)), f.Periode);
         Assert.Equal((chantier, marche), (f.References.Projet, f.References.Contrat));
         await tx.RollbackAsync();
+    }
+
+    /// <summary>
+    /// Base jetable (lot 27, db/303 chargé) : marché de vente où nous sommes cotraitant avec un récapitulatif en GED (contenu sur
+    /// un stockage temporaire) → S6 et pièce jointe embarquée ; même marché passé en sous-traitance avec un intervenant PAYEUR →
+    /// S5, payeur et EXTENDED-CTC-FR ; client B2G exigeant l'engagement, sans référence externe → ENGAGEMENT_ABSENT bloquant.
+    /// </summary>
+    [Fact]
+    public async Task Cotraitance_sous_traitance_et_b2g_de_la_base()
+    {
+        var connexion = Environment.GetEnvironmentVariable("LOGIBTP_TEST_PG_JETABLE");
+        if (string.IsNullOrEmpty(connexion)) return;
+        await using var c = new NpgsqlConnection(connexion);
+        await c.OpenAsync();
+        await using (var k = new NpgsqlCommand("""
+            SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE column_name = 'mar_fe_role') AND EXISTS (SELECT 1 FROM chantier)
+            """, c))
+        {
+            if (await k.ExecuteScalarAsync() is not true) return;
+        }
+        var racine = Directory.CreateTempSubdirectory("logibtp-lot27-").FullName;
+        try
+        {
+            var recap = Encoding.UTF8.GetBytes("membre;montant_ht\nBTP DEMO;24000.00\n");
+            var empreinte = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(recap));
+            var chemin = LogiBTP.Ged.StockageGed.CheminRelatif(empreinte);
+            Directory.CreateDirectory(Path.Combine(racine, Path.GetDirectoryName(chemin)!));
+            await File.WriteAllBytesAsync(Path.Combine(racine, chemin), recap);
+
+            await using var tx = await c.BeginTransactionAsync();
+            long id, client, payeur;
+            await using (var k = new NpgsqlCommand("""
+                WITH t AS (SELECT per_id FROM personne WHERE NOT per_societe_base AND per_siren IS NOT NULL ORDER BY per_id LIMIT 2),
+                m AS (INSERT INTO marche (mar_code, mar_libelle, mar_cha_id, mar_tiers_id, mar_sens, mar_fe_role)
+                      SELECT 'M-LOT27-1', 'Groupement', (SELECT cha_id FROM chantier ORDER BY cha_id LIMIT 1), (SELECT min(per_id) FROM t), 'V', 'COTRAITANT'
+                      RETURNING mar_id, mar_tiers_id),
+                d AS (INSERT INTO document (ent_tyd_id, ent_numero, ent_date, ent_std_id, ent_tiers_id, ent_cree_par, ent_total_ht, ent_total_tva,
+                                           ent_total_ttc, ent_net_a_payer, ent_verrouille, ent_marche_id, ent_mode_reglement)
+                      SELECT y.tyd_id, 'F-LOT27-1', DATE '2026-11-12', (SELECT std_id FROM statut_document ORDER BY std_id LIMIT 1),
+                             m.mar_tiers_id, 'test', 150, 30, 180, 180, TRUE, m.mar_id, 'CHEQUE'
+                      FROM type_document y, m WHERE y.tyd_code = 'V_FACTURE' RETURNING ent_id),
+                l AS (INSERT INTO document_ligne (lig_ent_id, lig_ordre, lig_tyl_id, lig_libelle_html, lig_libelle_brut, lig_qte, lig_qte_vendue, lig_pv,
+                                                  lig_pv_remise, lig_montant_ht, lig_tva_id, lig_taux_tva, lig_type_prix, lig_unt_code)
+                      SELECT ent_id, 1, 3, 'Travaux', 'Travaux', 3, 3, 50, 50, 150, 1, 20, 'V', 'h' FROM d RETURNING lig_ent_id),
+                v AS (INSERT INTO document_tva (tva_ent_id, tva_ttv_id, tva_code, tva_taux, tva_categorie, tva_base_ht, tva_montant, tva_montant_annulation, tva_montant_net)
+                      SELECT DISTINCT lig_ent_id, 1, 'T20', 20, 'N', 150, 30, 0, 30 FROM l RETURNING tva_ent_id),
+                i AS (INSERT INTO intervenant (itv_mar_id, itv_fin_code, itv_per_id) SELECT m.mar_id, 'PAYEUR', (SELECT max(per_id) FROM t) FROM m RETURNING itv_per_id)
+                SELECT (SELECT tva_ent_id FROM v), (SELECT mar_tiers_id FROM m), (SELECT itv_per_id FROM i)
+                """, c, tx))
+            await using (var r = await k.ExecuteReaderAsync())
+            {
+                Assert.True(await r.ReadAsync());
+                (id, client, payeur) = (r.GetInt64(0), r.GetInt64(1), r.GetInt64(2));
+            }
+            await using (var k = new NpgsqlCommand("""
+                INSERT INTO contenu_ged (cge_empreinte, cge_taille, cge_chemin) VALUES (@e, @t, @c) ON CONFLICT DO NOTHING;
+                WITH g AS (INSERT INTO document_ged (dge_titre, dge_categorie, dge_type_element, dge_id_element, dge_cree_par)
+                           SELECT 'Récapitulatif', 'recapitulatif_cotraitance', 'marche', ent_marche_id::text, 'test' FROM document WHERE ent_id = @id
+                           RETURNING dge_id)
+                INSERT INTO version_ged (vge_document, vge_numero, vge_genre, vge_empreinte, vge_nom_fichier, vge_type_mime, vge_taille, vge_auteur)
+                SELECT dge_id, 1, 'edition', @e, 'recapitulatif.csv', 'text/csv', @t, 'test' FROM g;
+                """, c, tx))
+            {
+                k.Parameters.AddWithValue("e", empreinte);
+                k.Parameters.AddWithValue("t", (long)recap.Length);
+                k.Parameters.AddWithValue("c", chemin);
+                k.Parameters.AddWithValue("id", id);
+                await k.ExecuteNonQueryAsync();
+            }
+            var options = new DbContextOptionsBuilder<LogiBtpContext>().UseNpgsql(c).UseSnakeCaseNamingConvention().Options;
+            await using var db = new LogiBtpContext(options);
+            await db.Database.UseTransactionAsync(tx);
+
+            // Cotraitant : S6, récapitulatif embarqué depuis le stockage ; sans stockage (bandeau) : référence seule.
+            var e = (await EmissionFactureBtp.EntreeAsync(db, id, default, new LogiBTP.Ged.StockageGed(racine)))!;
+            var f = EmissionFactureBtp.Construire(e).Facture;
+            Assert.Equal(CadreFacturation.S6, f.CadreFacturation);
+            var pj = Assert.Single(f.PiecesJointes);
+            Assert.Equal((TypePieceJointe.RecapitulatifCotraitance, "recapitulatif.csv"), (pj.Description, pj.NomFichier));
+            Assert.Equal(recap, pj.Contenu);
+            Assert.Null(Assert.Single((await EmissionFactureBtp.EntreeAsync(db, id, default))!.PiecesJointes).Contenu);
+            Assert.DoesNotContain(EmissionFactureBtp.Construire(e).Ecarts, x => x.Regle == EcartsEmissionFe.RecapitulatifAbsent);
+            Assert.Equal(f.Numero, LectureCii.Lire(EcritureCii.Ecrire(f)).Numero);
+
+            // Sous-traitant : S5, payeur = intervenant PAYEUR du marché, profil EXTENDED-CTC-FR.
+            await db.Database.ExecuteSqlRawAsync("UPDATE marche SET mar_fe_role = 'SOUS_TRAITANT' WHERE mar_code = 'M-LOT27-1'");
+            f = EmissionFactureBtp.Construire((await EmissionFactureBtp.EntreeAsync(db, id, default))!).Facture;
+            Assert.Equal((CadreFacturation.S5, ProfilFacture.ExtendedCtcFr), (f.CadreFacturation, f.Profil));
+            Assert.NotNull(f.Payeur);
+            Assert.Empty(f.PiecesJointes);
+
+            // Titulaire d'une structure publique exigeant l'engagement : bloquant sans référence externe.
+            await db.Database.ExecuteSqlRawAsync("UPDATE marche SET mar_fe_role = NULL WHERE mar_code = 'M-LOT27-1'");
+            await db.Database.ExecuteSqlRawAsync(
+                "UPDATE personne SET per_fe_type = 'B2G', per_fe_engagement = TRUE, per_fe_code_service = 'SERVICE-1' WHERE per_id = {0}", client);
+            var controle = await EmissionFactureBtp.ControleAsync(db, id, default);
+            Assert.Equal(CadreFacturation.S1, controle.Cadre);
+            Assert.Contains(controle.Emission, x => x.Regle == EcartsEmissionFe.EngagementAbsent && x.Niveau == NiveauCompletude.Bloquant);
+            await db.Database.ExecuteSqlRawAsync("UPDATE document SET ent_reference_externe = 'ENG-42' WHERE ent_id = {0}", id);
+            e = (await EmissionFactureBtp.EntreeAsync(db, id, default))!;
+            f = EmissionFactureBtp.Construire(e).Facture;
+            Assert.DoesNotContain(EmissionFactureBtp.Construire(e).Ecarts, x => x.Regle == EcartsEmissionFe.EngagementAbsent);
+            Assert.Equal(("SERVICE-1", "ENG-42"), (f.References.Acheteur, f.References.Commande));
+            Assert.Equal(RegleTraitement.B2G, EnvoiFactureBtp.RegleDepot(false, e.Acheteur?.TypeFe));
+            Assert.NotEqual(client, payeur);
+            await tx.RollbackAsync();
+        }
+        finally
+        {
+            Directory.Delete(racine, true);
+        }
     }
 }

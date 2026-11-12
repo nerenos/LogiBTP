@@ -316,7 +316,7 @@ public static class EnvoiFactureBtp
             await EcrireEtatAsync(db, id, EtatsEmissionFe.HorsFlux, motif, null, null, null, par, ct);
             return await EtatAsync(db, id, ct);
         }
-        var entree = await EmissionFactureBtp.EntreeAsync(db, id, ct) ?? throw ExceptionMetier.Introuvable("Document");
+        var entree = await EmissionFactureBtp.EntreeAsync(db, id, ct, services.GetService<LogiBTP.Ged.StockageGed>()) ?? throw ExceptionMetier.Introuvable("Document");
         if (archivage) entree = entree with { ArchivageSeul = true };
         var construite = EmissionFactureBtp.Construire(entree);
         var bloquants = Bloquants(EmissionFactureBtp.Controler(entree));
@@ -348,12 +348,19 @@ public static class EnvoiFactureBtp
         }
         var flux = await fe.MettreEnFileAsync(new FluxAEmettre(contenu, NomFichier(f.Numero, syntaxe))
         {
-            Syntaxe = syntaxe, Profil = f.Profil, Numero = f.Numero, Regle = archivage ? RegleTraitement.ArchivageSeul : null,
+            Syntaxe = syntaxe, Profil = f.Profil, Numero = f.Numero, Regle = RegleDepot(archivage, entree.Acheteur?.TypeFe),
             TypeElement = TypesElementFe.Document, IdElement = id.ToString(CultureInfo.InvariantCulture),
         }, u, ct);
         await EcrireEtatAsync(db, id, EtatsEmissionFe.Emise, null, syntaxe, flux.Id, null, par, ct);
         return await EtatAsync(db, id, ct);
     }
+
+    /// <summary>
+    /// Règle de traitement du dépôt (processingRule XP Z12-013) : avoir interne pour archivage seul (lot 25), structure publique
+    /// B2G (lot 27, Q19 (a) : la plateforme achemine vers Chorus Pro), sinon celle de la plateforme (non précisée).
+    /// </summary>
+    public static string? RegleDepot(bool archivage, string? typeFe) =>
+        archivage ? RegleTraitement.ArchivageSeul : typeFe == EmissionFactureBtp.TypeFeB2g ? RegleTraitement.B2G : null;
 
     /// <summary>Factur-X : PDF de l'édition de la pièce (modèle par défaut) en PDF/A-3b, XML CII associé.</summary>
     public static async Task<byte[]> FacturXAsync(IServiceProvider services, long id, byte[] xml, string? profil, Utilisateur u, CancellationToken ct)

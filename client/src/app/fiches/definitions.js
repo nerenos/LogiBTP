@@ -619,6 +619,7 @@ export const TYPES_FICHE = {
           { titre: 'Identification', champs: ['code', 'libelle', 'sens', 'cha_id', 'tiers_id', 'ent_id'] },
           { titre: 'Conditions', champs: ['nature', 'montant_ht', 'depassement_autorise', 'retenue_pct', 'date', 'date_reception', 'reserves', 'reserves_levees_le', 'statut'] },
           { titre: 'Sous-traitance', champs: ['marche_vente_id', 'garantie', 'montant_agree', 'autoliquidation', 'debut_contractuel', 'fin_contractuelle'] },
+          { code: 'facturation_electronique', titre: 'Facturation électronique', champs: ['fe_role'] },
           { titre: 'Commentaire', champs: ['commentaire'], largeur: 'plein' },
         ],
       }, {
@@ -637,6 +638,7 @@ export const TYPES_FICHE = {
         c('garantie', 'Garantie de paiement', 'mar_garantie', 'liste', { options: options(['PAIEMENT_DIRECT', 'Paiement direct (public)'], ['DELEGATION', 'Délégation de paiement (privé)'], ['CAUTION', 'Caution (privé)'], ['AUCUNE', 'Aucune']) }),
         c('montant_agree', 'Montant agréé (DC4)', 'mar_montant_agree', 'nombre', { format: '999999999999.99', aide: 'Plafond du paiement direct agréé par le maître d\'ouvrage' }),
         c('autoliquidation', 'Autoliquidation de la TVA', 'mar_autoliquidation', 'booleen', { defaut: true, aide: 'Travaux de construction sous-traités : le sous-traitant facture HT' }),
+        c('fe_role', 'Notre place dans le marché', 'mar_fe_role', 'liste', { options: options(['SOUS_TRAITANT', 'Sous-traitant (cadre S5)'], ['COTRAITANT', 'Cotraitant (cadre S6)']), aide: 'Marché de vente : vide = titulaire ou entreprise générale ; sous-traitant ou membre d\'un groupement (récapitulatif de cotraitance en GED de la pièce ou du marché) pour le cadre des factures électroniques émises' }),
         c('debut_contractuel', 'Début contractuel', 'mar_debut_contractuel', 'date'),
         c('fin_contractuelle', 'Fin contractuelle', 'mar_fin_contractuelle', 'date', { aide: 'Délai d\'exécution du sous-traitant (jalon du planning)' }),
         c('nature', 'Nature', 'mar_nature', 'liste', { obligatoire: true, defaut: 'P', options: options(['P', 'Marché privé'], ['U', 'Marché public']) }),

@@ -1,6 +1,7 @@
 using LogiBTP.Documents;
 using LogiBTP.Domaine;
 using LogiBTP.FactureElectronique;
+using LogiBTP.Socle;
 
 namespace LogiBTP.Calcul;
 
@@ -96,6 +97,16 @@ public static class EmissionFeBtp
         if (role is SituationsCadreFe.SousTraitant or SituationsCadreFe.Cotraitant) return role;
         if (type == TypeFacture.Facture && deduitAcompte) return SituationsCadreFe.DefinitiveApresAcompte;
         return dejaPayee ? SituationsCadreFe.DejaPayee : SituationsCadreFe.Depot;
+    }
+
+    /// <summary>
+    /// Pièce déjà payée (cadre 2, BR-FR-CO-09 ; lot 27) : total TTC positif entièrement couvert par le montant déjà payé
+    /// (BT-113 : acomptes de trésorerie déduits), aux deux décimales ; répliqué par estDejaPayee (emission-fe.js).
+    /// </summary>
+    public static bool DejaPayee(decimal totalTtc, decimal? dejaPaye)
+    {
+        var total = ArrondiCalcul.Arrondir(totalTtc, 2);
+        return total > 0 && dejaPaye is decimal p && ArrondiCalcul.Arrondir(p, 2) == total;
     }
 
     /// <summary>Cadre BT-23 d'une nature dans une situation.</summary>

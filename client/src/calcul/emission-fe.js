@@ -3,6 +3,7 @@
 // TVA sur les débits) et notes légales PMT / PMD / AAB. Répliqué dans src/LogiBTP.Calcul/EmissionFeBtp.cs
 // (jeu tests/emission-fe/01_emission.json).
 import { TL, estChiffree, estPied } from '@logibtp/document';
+import { D, arrondir } from '@logibtp/socle';
 import { TYPE_FACTURE, CADRE_FACTURATION, CODE_NOTE, CODE_EXIGIBILITE_TVA } from '@logibtp/facture-electronique';
 import { NATURE_FE, SITUATION_CADRE_FE } from '../app/codes.js';
 
@@ -80,6 +81,16 @@ export function situationCadre({ role = null, type = null, deduitAcompte = false
   if (type === TYPE_FACTURE.FACTURE && deduitAcompte) return SITUATION_CADRE_FE.DEFINITIVE_APRES_ACOMPTE;
   if (dejaPayee) return SITUATION_CADRE_FE.DEJA_PAYEE;
   return SITUATION_CADRE_FE.DEPOT;
+}
+
+/**
+ * Pièce déjà payée (cadre 2, BR-FR-CO-09 ; lot 27) : total TTC positif entièrement couvert par le montant déjà payé
+ * (BT-113 : acomptes de trésorerie déduits), aux deux décimales. Répliqué par EmissionFeBtp.DejaPayee.
+ */
+export function estDejaPayee(totalTtc, dejaPaye) {
+  if (vide(totalTtc) || vide(dejaPaye)) return false;
+  const total = arrondir(D(totalTtc), 2);
+  return total.gt(0) && arrondir(D(dejaPaye), 2).eq(total);
 }
 
 /** Cadre BT-23 d'une nature dans une situation (sous-traitant, cotraitant : S5, S6 quelle que soit la nature). */

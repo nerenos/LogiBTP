@@ -14,7 +14,9 @@ public sealed record ReferentielEmissionFe(IReadOnlyDictionary<string, string> T
 /// (type_document.tyd_fe_type_facture, db/299) et de la facture d'origine d'un avoir (lien TRANSFORMATION ou ANNULATION),
 /// natures des lignes (nature_element.nat_fe_nature), surcharge de l'entête (ent_fe_nature), déduction d'une facture
 /// d'acompte (acompte_deduction d'un acompte en mode chiffre d'affaires), mentions de la société (db/190). Rôle sous-traitant
-/// ou cotraitant et pièce déjà payée : fournis par l'appelant (lots 24 et 27).
+/// ou cotraitant (lot 27) : celui donné par l'appelant, sinon notre place dans le marché de vente de la pièce (marche.mar_fe_role,
+/// db/303) ; pièce déjà payée : donnée par l'appelant, ou cadre 2 posé par EmissionFactureBtp.Construire quand les acomptes de
+/// trésorerie couvrent le TTC (EmissionFeBtp.DejaPayee).
 /// Routes : GET /api/facture-electronique/emission/referentiel, GET /api/facture-electronique/documents/{id}/emission ;
 /// lot 22 (EmissionFactureBtp) : GET …/documents/{id}/controle, GET …/documents/{id}/xml?syntaxe=CII|UBL.
 /// </summary>
@@ -23,7 +25,7 @@ public static class EmissionFeDonneesBtp
     private sealed record LigneTypeSql(string Code, string Type);
     private sealed record LigneNatureSql(int Id, string Nature);
     private sealed record LigneMentionsSql(string? Indemnite, string? Penalites, string? Escompte, bool TvaDebits);
-    private sealed record LigneDocumentSql(string? TypeFacture, string? Nature);
+    private sealed record LigneDocumentSql(string? TypeFacture, string? Nature, string? Role);
     private sealed record LigneSql(long Id, long? Parent, short Type, string? TypePrix, int? Nature, bool Ecart);
 
     public static async Task<MentionsEmissionFe> MentionsAsync(DbContext db, CancellationToken ct)
@@ -52,7 +54,8 @@ public static class EmissionFeDonneesBtp
     public static async Task<EntreeEmissionFe?> EntreeAsync(DbContext db, long id, string? role, bool dejaPayee, CancellationToken ct)
     {
         var d = await db.Database.SqlQueryRaw<LigneDocumentSql>("""
-            SELECT t.tyd_fe_type_facture AS type_facture, d.ent_fe_nature::text AS nature
+            SELECT t.tyd_fe_type_facture AS type_facture, d.ent_fe_nature::text AS nature,
+                   (SELECT m.mar_fe_role FROM marche m WHERE m.mar_id = d.ent_marche_id AND m.mar_sens = 'V') AS role
             FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id WHERE d.ent_id = {0}
             """, id).FirstOrDefaultAsync(ct);
         if (d is null) return null;
@@ -81,7 +84,7 @@ public static class EmissionFeDonneesBtp
                 LigId = l.Id, LigParentId = l.Parent, LigTylId = l.Type, LigTypePrix = l.TypePrix ?? "V", LigNatId = l.Nature, LigIsEcartArrondi = l.Ecart,
             }).ToList(),
             NaturesFe = await NaturesAsync(db, ct),
-            Role = role is SituationsCadreFe.SousTraitant or SituationsCadreFe.Cotraitant ? role : null,
+            Role = (role ?? d.Role) is SituationsCadreFe.SousTraitant or SituationsCadreFe.Cotraitant ? role ?? d.Role : null,
             DeduitAcompte = deduit,
             DejaPayee = dejaPayee,
             Mentions = await MentionsAsync(db, ct),

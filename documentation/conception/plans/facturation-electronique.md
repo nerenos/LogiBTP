@@ -52,7 +52,7 @@
 | 24 | Émission à la validation : CII ou Factur-X, GED et coffre, dépôt, pastille | cœur | 22, 23, 17, 18, 20 | FAIT (11/11/2026) |
 | 25 | Rejet et refus → avoir interne ; litige et suspension de relance | cœur | 24 | FAIT (11/11/2026) |
 | 26 | Statut Encaissée (212) depuis les règlements, liste à valider | cœur | 24 | FAIT (11/11/2026) |
-| 27 | Sous-traitance et cotraitance émises (S5, S6), B2G par la PA | cœur | 24 | A FAIRE |
+| 27 | Sous-traitance et cotraitance émises (S5, S6), B2G par la PA | cœur | 24 | FAIT (12/11/2026) |
 | 28 | E-reporting : collecte et extraction des ventes et encaissements, envoi unitaire ou groupé | cœur | 19, 24, 26 | A FAIRE |
 | 29 | Archivage (rétention), démonstration, documentation | cœur | 24, 28 | A FAIRE |
 
@@ -970,12 +970,38 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   d'envoi automatique (Q15 (b)) ; onglet non vérifié en navigateur (TODO). **Script à appliquer par l'utilisateur** :
   `db/302`.
 
-## Lot 27 : sous-traitance, cotraitance et B2G émises (A FAIRE)
+## Lot 27 : sous-traitance, cotraitance et B2G émises — FAIT (12/11/2026)
 
 - **Cœur**. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : facture d'un titulaire au maître d'ouvrage intégrant les sous-traitants ; cotraitance (cadre S6,
   RECAPITULATIF_COTRAITANCE) ; B2G par la PA (code service, numéro d'engagement de la fiche, Q19) ; tests.
 - **Critère de fin** : cas B2G et cotraitance valides à l'outil ; tests verts.
+- **Réalisé** : `db/303_facture_electronique_cotraitance.sql` (rejouable, au manifeste après 302 : `marche.mar_fe_role` vide
+  = titulaire, SOUS_TRAITANT, COTRAITANT — valeurs de `SITUATION_CADRE_FE` —, catégorie GED `recapitulatif_cotraitance`) ;
+  `db/131` régénéré (fiche marché : groupe « Facturation électronique », champ « Notre place dans le marché »). Rôle du lot 21
+  fourni : `EmissionFeDonneesBtp.EntreeAsync` lit `mar_fe_role` du marché de vente de la pièce (rôle de l'appelant prioritaire).
+  Cadre 2 fourni : règle répliquée `estDejaPayee` (`client/src/calcul/emission-fe.js`) ↔ `EmissionFeBtp.DejaPayee` (TTC positif
+  égal au déjà payé BT-113 aux deux décimales ; jeu `01_emission.json`, section `deja_payee`, 6 cas), appliquée par
+  `EmissionFactureBtp.Construire` à une pièce en situation de dépôt (acomptes de trésorerie couvrant le TTC → B2 / S2 / M2,
+  BT-9 = échéance sinon date de la pièce, BR-FR-CO-09). `EmissionFactureBtp` : sous-traitant (S5) en paiement direct → payeur
+  EXT-FR-FE-BG-02 = intervenant PAYEUR de la pièce (`ent_intervenants`) sinon du marché, profil EXTENDED-CTC-FR ; cotraitant (S6)
+  → pièce jointe RECAPITULATIF_COTRAITANCE (BT-123) = dernier document GED de la catégorie de la pièce, sinon du marché,
+  référence `GED-<id>`, contenu embarqué à l'émission (`EntreeAsync(…, StockageGed)` appelé par `EnvoiFactureBtp.EmettreAsync`)
+  si son type MIME est permis (BR-CL-24), référence seule dans le bandeau ; B2G (Q19 (a)) : BT-10 = `per_fe_code_service`, BT-13 =
+  référence externe (numéro d'engagement), SIRET exigé, dépôt en règle de traitement B2G (`EnvoiFactureBtp.RegleDepot`). Écarts
+  `ECART_EMISSION_FE` (`codes.js` ↔ `EcartsEmissionFe`, `CodesTests`) : ENGAGEMENT_ABSENT (bloquant, `per_fe_engagement` sans
+  référence externe), SIRET_ABSENT (bloquant), CODE_SERVICE_ABSENT et RECAPITULATIF_ABSENT (avertissements), libellés
+  `document_btp.page.completude_fe.ecarts.*` ; `CategoriesGed.RecapitulatifCotraitance`. Facture du titulaire intégrant les
+  sous-traitants : traitement du lot 23 gardé (total porté, paiement direct des sous-traitants hors facture en BT-20). Tests :
+  pièces `B2G`, `B2G_SANS_ENGAGEMENT`, `COTRAITANCE`, `COTRAITANCE_SANS_RECAPITULATIF`, `SOUS_TRAITANCE` (autoliquidation AE et
+  payeur), `DEJA_PAYEE` du jeu `02_pieces.json` par `EmissionFactureTests` (cadres, références, niveaux, relecture CII / UBL,
+  écrits `tests/emission-fe/ecrits/`), base jetable (marché cotraitant avec récapitulatif en GED sur un stockage temporaire →
+  S6 et pièce jointe embarquée ; sous-traitant → S5, payeur, EXTENDED ; client B2G exigeant l'engagement → bloquant puis BT-10 /
+  BT-13) ; `npm run valider-facture` : les 8 XML (CII, UBL) et les 4 CII en Factur-X sans erreur fatale (avertissements connus
+  BR-FXEXT-AE-08rev du sous-traitant en autoliquidation et PEPPOL-EN16931-R008). Écarts : cadre S3 (sous-traitant B2G en
+  paiement direct par Chorus Pro) non émis (S5 gardé) ; pas de drapeau « code service obligatoire » sur la fiche (avertissement
+  seulement) ; récapitulatif produit hors LogiBTP (rangé à la main en GED), un seul joint ; payeur sans contrôle de la garantie du
+  marché ; champ du marché non vérifié en navigateur (TODO). **Script à appliquer par l'utilisateur** : `db/303` puis `db/131`.
 
 ## Lot 28 : e-reporting, collecte et envoi (A FAIRE)
 

@@ -69,4 +69,21 @@ public class EmissionFeTests
         var types = J["cas"]!.AsArray().Where(c => c!["attendu"] is not null).Select(c => c!["type_document"]!.GetValue<string>()).Distinct().Order(StringComparer.Ordinal).ToList();
         Assert.Equal(["V_AVOIR", "V_FACTURE", "V_FACTURE_ACOMPTE", "V_FACTURE_AVT"], types);
     }
+
+    public static TheoryData<string> NomsDejaPayee()
+    {
+        var d = new TheoryData<string>();
+        foreach (var c in J["deja_payee"]!.AsArray()) d.Add(c!["nom"]!.GetValue<string>());
+        return d;
+    }
+
+    /// <summary>Pièce déjà payée (cadre 2, lot 27) : même résultat que estDejaPayee (emission-fe.js).</summary>
+    [Theory]
+    [MemberData(nameof(NomsDejaPayee))]
+    public void Deja_payee_identique_au_js(string nom)
+    {
+        var c = J["deja_payee"]!.AsArray().First(x => x!["nom"]!.GetValue<string>() == nom)!;
+        decimal? Montant(JsonNode? n) => n is null ? null : decimal.Parse(n.GetValue<string>(), System.Globalization.CultureInfo.InvariantCulture);
+        Assert.Equal(c["attendu"]!.GetValue<bool>(), EmissionFeBtp.DejaPayee(Montant(c["total_ttc"])!.Value, Montant(c["deja_paye"])));
+    }
 }

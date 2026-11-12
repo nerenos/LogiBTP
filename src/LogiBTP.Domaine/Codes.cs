@@ -169,6 +169,8 @@ public static class CategoriesGed
     public const string Dotation = "dotation";
     public const string Relance = "relance";
     public const string FactureElectronique = "facture_electronique";
+    /// <summary>Récapitulatif de cotraitance joint à la facture émise d'un cotraitant (db/303, lot 27).</summary>
+    public const string RecapitulatifCotraitance = "recapitulatif_cotraitance";
 }
 
 /// <summary>
@@ -240,6 +242,14 @@ public static class EcartsEmissionFe
     public const string PaiementAbsent = "PAIEMENT_ABSENT";
     public const string AcompteAbsent = "ACOMPTE_ABSENT";
     public const string OrigineAbsente = "ORIGINE_ABSENTE";
+    /// <summary>B2G (lot 27) : numéro d'engagement (BT-13, référence externe) exigé par le tiers (per_fe_engagement).</summary>
+    public const string EngagementAbsent = "ENGAGEMENT_ABSENT";
+    /// <summary>B2G : code service (BT-10, per_fe_code_service) vide (avertissement : exigé par certaines structures publiques).</summary>
+    public const string CodeServiceAbsent = "CODE_SERVICE_ABSENT";
+    /// <summary>B2G : SIRET de la structure publique (BT-46, schéma 0009) vide.</summary>
+    public const string SiretAbsent = "SIRET_ABSENT";
+    /// <summary>Cotraitance (cadre S6) : aucun récapitulatif de cotraitance en GED de la pièce ni du marché (avertissement).</summary>
+    public const string RecapitulatifAbsent = "RECAPITULATIF_ABSENT";
 }
 
 /// <summary>
