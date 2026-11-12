@@ -286,6 +286,18 @@ test('créer un devis complet', async ({ page }) => {
 });
 ```
 
+Scénarios réels dans `e2e/` (comptes dans `e2e/.env`, API et client lancés, base avec la démonstration) :
+
+| Fichier | Parcours |
+|---------|----------|
+| `salarie.spec.ts`, `materiel.spec.ts` | Création d'une fiche |
+| `droits.spec.ts` | Refus des routes sans session ou sans droit |
+| `commercial-devis.spec.ts` | Demande CRM → projet → devis rattaché → envoyé → révision (indice B) → copie → retour à une version précédente → validé par le client |
+| `commercial-situations.spec.ts` | Devis accepté → commande → informations → validation dans un nouveau marché → situations 1 et 2 et leurs factures d'avancement → annulation de la facture 2 par avoir, reprise de la situation 2, nouvelle facture → prévisionnel de facturation du chantier |
+| `commercial-facture-reglement.spec.ts` | Facture directe avec tiers payeur → règlement pointé (facture payée) |
+
+Aides communes de la page document (entête, grille, menu ▾, transformation, annuaire, attente sur la limite de débit 429) : `e2e/outils/documents.ts`. Les étapes d'un fichier s'enchaînent (`test.describe.serial`, une page partagée) ; les fichiers sont indépendants. Lancement : `npx playwright test e2e/commercial-*.spec.ts --project=chromium`.
+
 ---
 
 ## 📊 Couverture visée
