@@ -13,6 +13,13 @@ export const COMPTES = {
 
 export type Role = keyof typeof COMPTES;
 
+/**
+ * Étiquette des scénarios qui ont besoin de l'API, d'une base et des comptes de `e2e/.env` : à poser sur le
+ * `test.describe` de chacun (`{ tag: TAG_API }`). Ils sont exclus de la CI GitHub (`grepInvert` de
+ * playwright.config.ts quand CI est posée) et ne se jouent que sur un poste de développement.
+ */
+export const TAG_API = '@api';
+
 function compte(role: Role) {
   const variables = COMPTES[role];
   const identifiant = process.env[variables.identifiant];

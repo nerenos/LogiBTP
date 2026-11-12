@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { seConnecter } from './outils/connexion';
+import { seConnecter, TAG_API } from './outils/connexion';
 import {
   TIERS, suffixe, patienterSurLimiteDebit, attendreMessage, attendreDocument, idDocument, numeroDocument, attendreStatut,
   attendreTotalHt, onglet, enregistrer, valider, saisirObjet, ajouterIntervenant, ajouterLigne, vueColonnes,
@@ -9,7 +9,7 @@ import {
  * Cycle commercial, partie 3 : facture directe et encaissement.
  * Facture sans commande, avec un tiers payeur distinct du client → règlement saisi et pointé sur la facture.
  */
-test.describe.serial('Cycle commercial : facture directe avec tiers payeur et règlement', () => {
+test.describe.serial('Cycle commercial : facture directe avec tiers payeur et règlement', { tag: TAG_API }, () => {
   test.describe.configure({ timeout: 90000 });
 
   const s = suffixe();
