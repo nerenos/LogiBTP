@@ -1,0 +1,132 @@
+{
+  "description": "E-reporting (flux 10, lot 19) : ReglesEreporting.cs (C# seul). periodes : Periodicite et Periode d'un jour selon le régime de TVA (REGIME_EREPORTING) et le sous-flux (SOUS_FLUX_EREPORTING). agregation : ventes B2C → transactions agrégées 10.3 (par jour, catégorie TT-81, devise, option sur les débits, puis par taux ; totaux = sommes arrondies à 2 décimales ; nombre = ventes cumulées). paiements : encaissements B2C → 10.4 (par jour puis par taux) et encaissements de factures → 10.2 (par jour, facture, puis taux). decoupage : envois d'une période (UNIQUE : un par sous-flux ; PLUSIEURS : un par sous-flux et par jour), identifiant TT-1 « préfixe-AAAAMMJJ-sous-flux-rang[-REn] », type IN, ou RE pour une correction de rang n.",
+  "periodes": [
+    {"regime": "REEL_NORMAL_MENSUEL", "sous_flux": "10.3", "jour": "2026-09-01", "periodicite": "DECADE", "debut": "2026-09-01", "fin": "2026-09-10"},
+    {"regime": "REEL_NORMAL_MENSUEL", "sous_flux": "10.1", "jour": "2026-09-10", "periodicite": "DECADE", "debut": "2026-09-01", "fin": "2026-09-10"},
+    {"regime": "REEL_NORMAL_MENSUEL", "sous_flux": "10.3", "jour": "2026-09-11", "periodicite": "DECADE", "debut": "2026-09-11", "fin": "2026-09-20"},
+    {"regime": "REEL_NORMAL_MENSUEL", "sous_flux": "10.3", "jour": "2026-09-30", "periodicite": "DECADE", "debut": "2026-09-21", "fin": "2026-09-30"},
+    {"regime": "REEL_NORMAL_MENSUEL", "sous_flux": "10.1", "jour": "2028-02-25", "periodicite": "DECADE", "debut": "2028-02-21", "fin": "2028-02-29"},
+    {"regime": "REEL_NORMAL_MENSUEL", "sous_flux": "10.4", "jour": "2026-09-15", "periodicite": "MOIS", "debut": "2026-09-01", "fin": "2026-09-30"},
+    {"regime": "REEL_NORMAL_MENSUEL", "sous_flux": "10.2", "jour": "2027-02-01", "periodicite": "MOIS", "debut": "2027-02-01", "fin": "2027-02-28"},
+    {"regime": "REEL_NORMAL_TRIMESTRIEL", "sous_flux": "10.3", "jour": "2026-10-31", "periodicite": "MOIS", "debut": "2026-10-01", "fin": "2026-10-31"},
+    {"regime": "SIMPLIFIE", "sous_flux": "10.1", "jour": "2026-11-11", "periodicite": "MOIS", "debut": "2026-11-01", "fin": "2026-11-30"},
+    {"regime": "SIMPLIFIE", "sous_flux": "10.4", "jour": "2026-12-31", "periodicite": "MOIS", "debut": "2026-12-01", "fin": "2026-12-31"},
+    {"regime": "FRANCHISE", "sous_flux": "10.3", "jour": "2026-09-15", "periodicite": "BIMESTRE", "debut": "2026-09-01", "fin": "2026-10-31"},
+    {"regime": "FRANCHISE", "sous_flux": "10.4", "jour": "2026-12-01", "periodicite": "BIMESTRE", "debut": "2026-11-01", "fin": "2026-12-31"},
+    {"regime": "FRANCHISE", "sous_flux": "10.3", "jour": "2027-02-28", "periodicite": "BIMESTRE", "debut": "2027-01-01", "fin": "2027-02-28"}
+  ],
+  "periodes_refusees": [
+    {"regime": "MENSUEL", "sous_flux": "10.3"},
+    {"regime": "SIMPLIFIE", "sous_flux": "10.5"}
+  ],
+  "agregation": [
+    {
+      "nom": "deux jours, biens et services, taux mêlés",
+      "ventes": [
+        {"date": "2026-09-02", "categorie": "TPS1", "ventilation": [{"taux": "10", "base": "1000.00", "tva": "100.00"}, {"taux": "20", "base": "250.50", "tva": "50.10"}]},
+        {"date": "2026-09-02", "categorie": "TLB1", "ventilation": [{"taux": "20", "base": "80.00", "tva": "16.00"}]},
+        {"date": "2026-09-02", "categorie": "TPS1", "ventilation": [{"taux": "5.5", "base": "3000.00", "tva": "165.00"}, {"taux": "10", "base": "120.40", "tva": "12.04"}]},
+        {"date": "2026-09-01", "categorie": "TPS1", "ventilation": [{"taux": "10", "base": "500.00", "tva": "50.00"}]}
+      ],
+      "attendu": [
+        {"date": "2026-09-01", "categorie": "TPS1", "devise": "EUR", "exigibilite": null, "total_ht": "500.00", "total_tva": "50.00", "nombre": 1, "ventilation": [{"taux": "10", "base": "500.00", "tva": "50.00"}]},
+        {"date": "2026-09-02", "categorie": "TLB1", "devise": "EUR", "exigibilite": null, "total_ht": "80.00", "total_tva": "16.00", "nombre": 1, "ventilation": [{"taux": "20", "base": "80.00", "tva": "16.00"}]},
+        {"date": "2026-09-02", "categorie": "TPS1", "devise": "EUR", "exigibilite": null, "total_ht": "4370.90", "total_tva": "327.14", "nombre": 2, "ventilation": [{"taux": "5.5", "base": "3000.00", "tva": "165.00"}, {"taux": "10", "base": "1120.40", "tva": "112.04"}, {"taux": "20", "base": "250.50", "tva": "50.10"}]}
+      ]
+    },
+    {
+      "nom": "option sur les débits séparée, avoir B2C négatif, non taxable à 0 %",
+      "ventes": [
+        {"date": "2026-09-03", "categorie": "TPS1", "ventilation": [{"taux": "10", "base": "200.00", "tva": "20.00"}]},
+        {"date": "2026-09-03", "categorie": "TPS1", "exigibilite": "5", "ventilation": [{"taux": "10", "base": "300.00", "tva": "30.00"}]},
+        {"date": "2026-09-03", "categorie": "TPS1", "ventilation": [{"taux": "10", "base": "-50.00", "tva": "-5.00"}]},
+        {"date": "2026-09-03", "categorie": "TNT1", "ventilation": [{"taux": "0", "base": "1200.00", "tva": "0.00"}]}
+      ],
+      "attendu": [
+        {"date": "2026-09-03", "categorie": "TPS1", "devise": "EUR", "exigibilite": null, "total_ht": "150.00", "total_tva": "15.00", "nombre": 2, "ventilation": [{"taux": "10", "base": "150.00", "tva": "15.00"}]},
+        {"date": "2026-09-03", "categorie": "TPS1", "devise": "EUR", "exigibilite": "5", "total_ht": "300.00", "total_tva": "30.00", "nombre": 1, "ventilation": [{"taux": "10", "base": "300.00", "tva": "30.00"}]},
+        {"date": "2026-09-03", "categorie": "TNT1", "devise": "EUR", "exigibilite": null, "total_ht": "1200.00", "total_tva": "0.00", "nombre": 1, "ventilation": [{"taux": "0", "base": "1200.00", "tva": "0.00"}]}
+      ]
+    },
+    {
+      "nom": "sommes arrondies à 2 décimales (demi vers l'infini)",
+      "ventes": [
+        {"date": "2026-09-04", "categorie": "TPS1", "ventilation": [{"taux": "20", "base": "10.005", "tva": "2.001"}]},
+        {"date": "2026-09-04", "categorie": "TPS1", "ventilation": [{"taux": "20", "base": "10.000", "tva": "2.000"}]}
+      ],
+      "attendu": [
+        {"date": "2026-09-04", "categorie": "TPS1", "devise": "EUR", "exigibilite": null, "total_ht": "20.01", "total_tva": "4.00", "nombre": 2, "ventilation": [{"taux": "20", "base": "20.01", "tva": "4.00"}]}
+      ]
+    },
+    {"nom": "aucune vente", "ventes": [], "attendu": []}
+  ],
+  "paiements": [
+    {
+      "nom": "encaissements B2C de deux jours (10.4)",
+      "encaissements": [
+        {"date": "2026-09-05", "montants": [{"taux": "10", "montant": "1100.00"}]},
+        {"date": "2026-09-02", "montants": [{"taux": "10", "montant": "550.00"}, {"taux": "5.5", "montant": "1055.00"}]},
+        {"date": "2026-09-05", "montants": [{"taux": "10", "montant": "220.00"}, {"taux": "20", "montant": "60.00"}]}
+      ],
+      "agreges": [
+        {"date": "2026-09-02", "montants": [{"taux": "5.5", "montant": "1055.00"}, {"taux": "10", "montant": "550.00"}]},
+        {"date": "2026-09-05", "montants": [{"taux": "10", "montant": "1320.00"}, {"taux": "20", "montant": "60.00"}]}
+      ]
+    },
+    {
+      "nom": "encaissements de factures internationales (10.2), deux versements le même jour fusionnés",
+      "encaissements": [
+        {"date": "2026-09-20", "facture": "F2026-0912", "date_facture": "2026-09-08", "montants": [{"taux": "0", "montant": "5000.00"}]},
+        {"date": "2026-09-12", "facture": "F2026-0911", "date_facture": "2026-09-07", "montants": [{"taux": "20", "montant": "1200.00"}]},
+        {"date": "2026-09-20", "facture": "F2026-0912", "date_facture": "2026-09-08", "montants": [{"taux": "0", "montant": "2500.00"}]}
+      ],
+      "unitaires": [
+        {"facture": "F2026-0911", "date_facture": "2026-09-07", "date": "2026-09-12", "montants": [{"taux": "20", "montant": "1200.00"}]},
+        {"facture": "F2026-0912", "date_facture": "2026-09-08", "date": "2026-09-20", "montants": [{"taux": "0", "montant": "7500.00"}]}
+      ]
+    }
+  ],
+  "decoupage": {
+    "periode_transactions": {"debut": "2026-09-01", "fin": "2026-09-10"},
+    "periode_paiements": {"debut": "2026-09-01", "fin": "2026-09-30"},
+    "factures": [{"numero": "F2026-0901", "date": "2026-09-03"}, {"numero": "F2026-0902", "date": "2026-09-03"}, {"numero": "F2026-0903", "date": "2026-09-07"}],
+    "ventes": [
+      {"date": "2026-09-02", "categorie": "TPS1", "ventilation": [{"taux": "10", "base": "100.00", "tva": "10.00"}]},
+      {"date": "2026-09-04", "categorie": "TPS1", "ventilation": [{"taux": "10", "base": "200.00", "tva": "20.00"}]}
+    ],
+    "encaissements_factures": [{"date": "2026-09-15", "facture": "F2026-0901", "date_facture": "2026-09-03", "montants": [{"taux": "0", "montant": "100.00"}]}],
+    "encaissements_b2c": [
+      {"date": "2026-09-02", "montants": [{"taux": "10", "montant": "110.00"}]},
+      {"date": "2026-09-25", "montants": [{"taux": "10", "montant": "220.00"}]}
+    ],
+    "cas": [
+      {"nom": "un envoi par sous-flux", "decoupage": "UNIQUE", "prefixe": "LB", "role": "SE", "correction": 0, "attendu": [
+        {"sous_flux": "10.1", "type_flux": "UnitaryCustomerTransactionReport", "jour": null, "id": "LB-20260901-101-001", "type": "IN", "elements": 3},
+        {"sous_flux": "10.2", "type_flux": "UnitaryCustomerPaymentReport", "jour": null, "id": "LB-20260901-102-001", "type": "IN", "elements": 1},
+        {"sous_flux": "10.3", "type_flux": "AggregatedCustomerTransactionReport", "jour": null, "id": "LB-20260901-103-001", "type": "IN", "elements": 2},
+        {"sous_flux": "10.4", "type_flux": "AggregatedCustomerPaymentReport", "jour": null, "id": "LB-20260901-104-001", "type": "IN", "elements": 2}
+      ]},
+      {"nom": "un envoi par sous-flux et par jour", "decoupage": "PLUSIEURS", "prefixe": "LB", "role": "SE", "correction": 0, "attendu": [
+        {"sous_flux": "10.1", "type_flux": "UnitaryCustomerTransactionReport", "jour": "2026-09-03", "id": "LB-20260901-101-001", "type": "IN", "elements": 2},
+        {"sous_flux": "10.1", "type_flux": "UnitaryCustomerTransactionReport", "jour": "2026-09-07", "id": "LB-20260901-101-002", "type": "IN", "elements": 1},
+        {"sous_flux": "10.2", "type_flux": "UnitaryCustomerPaymentReport", "jour": "2026-09-15", "id": "LB-20260901-102-001", "type": "IN", "elements": 1},
+        {"sous_flux": "10.3", "type_flux": "AggregatedCustomerTransactionReport", "jour": "2026-09-02", "id": "LB-20260901-103-001", "type": "IN", "elements": 1},
+        {"sous_flux": "10.3", "type_flux": "AggregatedCustomerTransactionReport", "jour": "2026-09-04", "id": "LB-20260901-103-002", "type": "IN", "elements": 1},
+        {"sous_flux": "10.4", "type_flux": "AggregatedCustomerPaymentReport", "jour": "2026-09-02", "id": "LB-20260901-104-001", "type": "IN", "elements": 1},
+        {"sous_flux": "10.4", "type_flux": "AggregatedCustomerPaymentReport", "jour": "2026-09-25", "id": "LB-20260901-104-002", "type": "IN", "elements": 1}
+      ]},
+      {"nom": "deuxième correction de la période, préfixe par défaut (SIREN du déclarant)", "decoupage": "UNIQUE", "prefixe": null, "role": "SE", "correction": 2, "attendu": [
+        {"sous_flux": "10.1", "type_flux": "UnitaryCustomerTransactionReport", "jour": null, "id": "100000009-20260901-101-001-RE2", "type": "RE", "elements": 3},
+        {"sous_flux": "10.2", "type_flux": "UnitaryCustomerPaymentReport", "jour": null, "id": "100000009-20260901-102-001-RE2", "type": "RE", "elements": 1},
+        {"sous_flux": "10.3", "type_flux": "AggregatedCustomerTransactionReport", "jour": null, "id": "100000009-20260901-103-001-RE2", "type": "RE", "elements": 2},
+        {"sous_flux": "10.4", "type_flux": "AggregatedCustomerPaymentReport", "jour": null, "id": "100000009-20260901-104-001-RE2", "type": "RE", "elements": 2}
+      ]},
+      {"nom": "déclarant acheteur : acquisitions internationales", "decoupage": "UNIQUE", "prefixe": "LB", "role": "BY", "correction": 0, "attendu": [
+        {"sous_flux": "10.1", "type_flux": "UnitarySupplierTransactionReport", "jour": null, "id": "LB-20260901-101-001", "type": "IN", "elements": 3},
+        {"sous_flux": "10.2", "type_flux": "UnitaryCustomerPaymentReport", "jour": null, "id": "LB-20260901-102-001", "type": "IN", "elements": 1},
+        {"sous_flux": "10.3", "type_flux": "AggregatedCustomerTransactionReport", "jour": null, "id": "LB-20260901-103-001", "type": "IN", "elements": 2},
+        {"sous_flux": "10.4", "type_flux": "AggregatedCustomerPaymentReport", "jour": null, "id": "LB-20260901-104-001", "type": "IN", "elements": 2}
+      ]}
+    ]
+  }
+}

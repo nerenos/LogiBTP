@@ -22,6 +22,12 @@ async function pdfEdition(demande, imprimer) {
 }
 
 export const api = {
+  // Facturation électronique, lot 20 : annuaire des plateformes sur la fiche personne (vérification, option de nuit).
+  annuaireFe: {
+    verifier: (id) => appel('POST', `/facture-electronique/annuaire/personnes/${id}/verification`),
+    option: () => appel('GET', '/facture-electronique/annuaire/option'),
+    definirOption: (nuit) => appel('PUT', '/facture-electronique/annuaire/option', { nuit }),
+  },
   // Module Authentification : session, connexion (et connexion de test sans mot de passe en développement), mot de passe.
   auth: {
     session: () => appel('GET', '/auth/session'),
@@ -754,6 +760,31 @@ export const api = {
   avancementDocument: (id) => appel('GET', `/structure/documents/${id}/avancement`),
   croiseesDocument: (id, { repli = false } = {}) => appel('GET', `/structure/documents/${id}/croisees${repli ? '?repli=true' : ''}`),
   acomptesDocument: (id) => appel('GET', `/structure/documents/${id}/acomptes`),
+  // Facturation électronique (lot 21) : BT-3 par type, nature par nature d'article, mentions ; paramètres d'émission d'une pièce.
+  referentielEmissionFe: () => appel('GET', '/facture-electronique/emission/referentiel'),
+  emissionFeDocument: (id) => appel('GET', `/facture-electronique/documents/${id}/emission`),
+  // Lot 22 : contrôle de la facture électronique construite depuis la pièce enregistrée (complétude, écarts de l'émission).
+  controleFeDocument: (id) => appel('GET', `/facture-electronique/documents/${id}/controle`),
+  // Lot 24 : émission de la pièce validée (état, bouton « Émettre ») ; option de la société (émission automatique).
+  envoiFeDocument: (id) => appel('GET', `/facture-electronique/documents/${id}/envoi`),
+  emettreFeDocument: (id) => appel('POST', `/facture-electronique/documents/${id}/envoi`),
+  annulerFeDocument: (id, transmission) => appel('POST', `/facture-electronique/documents/${id}/annulation`, { transmission }),
+  // Lot 26 : statuts Encaissée (212) à valider (pointages des règlements reçus non déclarés), envoyés ou écartés.
+  encaissementsFe: (piece) => appel('GET', `/facture-electronique/encaissements${piece ? `?piece=${piece}` : ''}`),
+  validerEncaissementsFe: (propositions, ecarter = false) => appel('POST', '/facture-electronique/encaissements/validation', { propositions, ecarter }),
+  // Lot 28 : e-reporting (option de la société, périodes, préparation, envoi, correction, relance).
+  ereportingFe: {
+    option: () => appel('GET', '/facture-electronique/ereporting/option'),
+    definirOption: (option) => appel('PUT', '/facture-electronique/ereporting/option', option),
+    periodes: (nature) => appel('GET', `/facture-electronique/ereporting/periodes${nature ? `?nature=${encodeURIComponent(nature)}` : ''}`),
+    periode: (id) => appel('GET', `/facture-electronique/ereporting/periodes/${id}`),
+    preparer: (nature, jour) => appel('POST', '/facture-electronique/ereporting/periodes/preparation', { nature, jour }),
+    envoyer: (id) => appel('POST', `/facture-electronique/ereporting/periodes/${id}/envoi`),
+    corriger: (id) => appel('POST', `/facture-electronique/ereporting/periodes/${id}/correction`),
+    relancer: (id) => appel('POST', `/facture-electronique/ereporting/periodes/${id}/relance`),
+  },
+  optionEmissionFe: () => appel('GET', '/facture-electronique/emission/option'),
+  definirOptionEmissionFe: (automatique) => appel('PUT', '/facture-electronique/emission/option', { automatique }),
   // Annulation par avoir (pièce et, dans un marché, pièces d'avancement suivantes) : liste puis annulation.
   piecesAnnulation: (id) => appel('GET', `/structure/documents/${id}/annulation`),
   annulerParAvoir: (id) => appel('POST', `/structure/documents/${id}/annulation`),

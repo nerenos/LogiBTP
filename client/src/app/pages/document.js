@@ -41,6 +41,8 @@ import { formatImport } from '../import/formats.js';
 import { PanneauSuivi } from '../crm/panneau-suivi.js';
 import { voisins } from '../suite-liste.js';
 import { afficherChronologieDocument, ongletChronologieVisible, requeteFluxPiece, NOEUD_FE } from '../documents/chronologie-document.js';
+import { rendreCompletudeFe } from '../documents/completude-fe.js';
+import { rendreEnvoiFe } from '../documents/envoi-fe.js';
 import { activerDepotFactures, TYPES_DEPOT_FACTURE } from '../facture-electronique/depot-facture.js';
 import { apiFe } from '../facture-electronique/api-fe.js';
 
@@ -112,6 +114,8 @@ const gabarit = () => `
   <div class="document-verrou" hidden></div>
   <div class="document-attente" hidden></div>
   <div class="document-import" hidden></div>
+  <div class="document-completude-fe" hidden></div>
+  <div class="document-envoi-fe" hidden></div>
   <main class="document-zone">
     <section id="vue-entete" class="vue vue-entete" role="tabpanel">
       <div id="entete" class="panneau entete"></div>
@@ -317,6 +321,8 @@ export class PageDocument extends PageBase {
     // Bibliothèque : appel par code (colonne Code), F3, bibliothèque du document (entête).
     const s = await app.services();
     this.bibliotheques = await s.bibliotheque.bibliotheques().catch(() => []);
+    // Facturation électronique active : référentiel d'émission (nature de la pièce dans l'onglet Options) ; sans droit : rien.
+    this.emissionFe = app.moduleActif?.(MODULE_FACULTATIF.FACTURE_ELECTRONIQUE) ? await api.referentielEmissionFe().catch(() => null) : null;
     // Structure des affaires : listes de choix du rattachement (entête) et marché proposé à la validation d'une commande.
     this.servicesStructure = s.structure;
     this.servicesFiche = s.fiche;
@@ -486,6 +492,7 @@ export class PageDocument extends PageBase {
       execution: this.app.moduleActif(MODULE_FACULTATIF.EXECUTION) ? { app: this.app, individus: () => individusSociete(this.servicesAnnuaire) } : null,
       // Pièces qui mouvementent le stock (module Stock actif) : lieux d'origine et de destination.
       stock: this.app.moduleActif(MODULE_FACULTATIF.STOCK) ? { lieux: () => api.stock.lieux() } : null,
+      emissionFe: this.emissionFe,
       // Accusé de réception des commandes (lot 9, A24e) : enregistré à part, fichier rangé dans la GED du document.
       arc: {
         enregistrer: (id, arc) => api.arcDocument(id, arc),
@@ -710,7 +717,35 @@ export class PageDocument extends PageBase {
     this.$('[data-onglet-vue="reglements"]').hidden = typeDoc?.tyd_famille === FAMILLE_DOCUMENT.EXECUTION;
     if (this.disposition?.p.onglet === 'reglements' && this.reglementsCle !== this.cleTracabilite()) this.afficherReglements();
     this.#majOngletChronologie();
+    // Facturation électronique (lot 22) : complétude de la facture électronique de la pièce enregistrée.
+    rendreCompletudeFe(this, {
+      zone: this.$('.document-completude-fe'), moduleActif: this.app.moduleActif(MODULE_FACULTATIF.FACTURE_ELECTRONIQUE),
+      peutConsulter: this.app.peut(NOEUD_FE, ACTION_DROIT.CONSULTER), types: this.emissionFe?.types, controler: (id) => api.controleFeDocument(id),
+    });
+    // Lot 24 : pastille de l'émission de la pièce validée et bouton « Émettre ».
+    rendreEnvoiFe(this, {
+      zone: this.$('.document-envoi-fe'), moduleActif: this.app.moduleActif(MODULE_FACULTATIF.FACTURE_ELECTRONIQUE),
+      peutConsulter: this.app.peut(NOEUD_FE, ACTION_DROIT.CONSULTER), peutModifier: this.app.peut(NOEUD_FE, ACTION_DROIT.MODIFIER),
+      types: this.emissionFe?.types, lire: (id) => api.envoiFeDocument(id), emettre: (id) => api.emettreFeDocument(id), confirmer,
+      erreur: (x) => this.app.erreur(x),
+      // Lot 25 : avoir interne d'une facture rejetée ou refusée (fenêtre du socle), pièces liées ouvertes dans une fenêtre.
+      annuler: (id, transmission) => api.annulerFeDocument(id, transmission), dialogue: ouvrirDialogue,
+      ouvrir: (id) => this.app.naviguer(urlDocument(id), { nouvelleFenetre: true }),
+      apresAnnulation: (r) => this.#apresAvoirInterne(r),
+    });
     this.app.majPage();
+  }
+
+  /** Après l'avoir interne d'une facture rejetée ou refusée : pièce relue, nouvelle facture proposée à l'ouverture. */
+  async #apresAvoirInterne(r) {
+    const d = this.editeur.saisie.document;
+    const a = r?.annulation;
+    this.app.publier(SUJET_FENETRE.ENREGISTRE, { ids: [d.ent_id, a?.avoir_id, a?.copie_id].filter(Boolean) });
+    await this.chargerDocument(d.ent_id);
+    this.app.message(texte('document_btp.page.envoi_fe.annulation.cree', { numero: a?.avoir_numero ?? '' }), 'succes');
+    if (a?.copie_id && await confirmer(texte('document_btp.page.envoi_fe.annulation.ouvrir_copie'))) {
+      await this.app.naviguer(urlDocument(a.copie_id), { nouvelleFenetre: true });
+    }
   }
 
   /** Bandeau de la saisie enregistrée sur ce poste et pas encore envoyée (état, date, erreur). */

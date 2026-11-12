@@ -1,4 +1,4 @@
-// Validation d'une facture ou d'un CDAR par les contrôles FNFE (note explicative 1.4.0) : étape 1 XSD de la syntaxe
+// Validation d'une facture, d'un CDAR ou d'un flux 10 (e-reporting : XSD ereporting puis schematron Flux10) par les contrôles FNFE (note explicative 1.4.0) : étape 1 XSD de la syntaxe
 // (xmllint-wasm), étape 2 schematron du profil (EN16931, EXTENDED-CTC-FR ou Factur-X), étape 3 BR-FR-Flux2 (BR-FR-CDV
 // pour un CDAR), par SaxonJS. Outil de développement et de test seulement (Q6) : le serveur valide XSD + complétude.
 //
@@ -40,7 +40,8 @@ export function extraireXmlFacturX(pdf) {
     throw new ErreurValidation(ERREUR_FE.PDF_ILLISIBLE, 'Le fichier n\'est pas un PDF.');
   }
   const texte = pdf.toString('latin1');
-  const motif = /stream\r?\n/g;
+  // Mot-clé « stream » d'un flux, pas la fin « endstream » du flux précédent (flux compressés à la suite).
+  const motif = /(?<!end)stream\r?\n/g;
   for (let m = motif.exec(texte); m; m = motif.exec(texte)) {
     const debut = m.index + m[0].length;
     const fin = texte.indexOf('endstream', debut);
@@ -50,7 +51,7 @@ export function extraireXmlFacturX(pdf) {
     try { contenu = inflateSync(brut); } catch { contenu = brut; }
     const tete = contenu.subarray(0, 4096).toString('utf8');
     if (tete.includes('CrossIndustryInvoice')) return contenu.toString('utf8').replace(/\s+$/, '');
-    motif.lastIndex = fin;
+    motif.lastIndex = fin + 'endstream'.length;
   }
   throw new ErreurValidation(ERREUR_FE.XML_ABSENT, 'Aucun XML Factur-X (CrossIndustryInvoice) embarqué dans le PDF.');
 }
@@ -65,6 +66,7 @@ function decrire(doc) {
   if (ns === NS.UBL_INVOICE && nom === 'Invoice') return { syntaxe: SYNTAXE.UBL, specification, avoir: false };
   if (ns === NS.UBL_CREDIT_NOTE && nom === 'CreditNote') return { syntaxe: SYNTAXE.UBL, specification, avoir: true };
   if (ns === NS.CDAR && nom === 'CrossDomainAcknowledgementAndResponse') return { syntaxe: SYNTAXE.CDAR, specification: '' };
+  if (ns === '' && nom === 'Report') return { syntaxe: SYNTAXE.FRR, specification: '' };
   throw new ErreurValidation(ERREUR_FE.SYNTAXE_INCONNUE, `Racine non reconnue : {${ns}}${nom}`);
 }
 
@@ -82,6 +84,11 @@ export function controlesAEnchainer({ syntaxe, specification, avoir = false, fac
     // CDAR : XSD CDAR D22B puis BR-FR-CDV (pas de schematron de profil).
     return { profil: PROFIL_FACTURE.NON_DEFINI, facturX: false, xsd: JEUX_XSD.CDAR_D22B, schematrons: [
       { etape: ETAPE_CONTROLE.FRANCE, schematron: warning ? SCHEMATRONS.BR_FR_CDV_WARNING : SCHEMATRONS.BR_FR_CDV }] };
+  }
+  if (syntaxe === SYNTAXE.FRR) {
+    // E-reporting (flux 10) : XSD ereporting puis schematron Flux10 (pas de version WARNING).
+    return { profil: PROFIL_FACTURE.NON_DEFINI, facturX: false, xsd: JEUX_XSD.FLUX10, schematrons: [
+      { etape: ETAPE_CONTROLE.FRANCE, schematron: SCHEMATRONS.FLUX10 }] };
   }
   const S = SPECIFICATION_FACTURE;
   const ubl = syntaxe === SYNTAXE.UBL;
@@ -181,7 +188,7 @@ async function controlerSchematron(doc, etape, schematron) {
 }
 
 /**
- * Valide une facture (CII, UBL, XML Factur-X ou PDF Factur-X) ou un CDAR.
+ * Valide une facture (CII, UBL, XML Factur-X ou PDF Factur-X), un CDAR ou un flux 10 d'e-reporting.
  * @param {string|Buffer} source chemin de fichier, ou contenu (Buffer d'un PDF ou d'un XML, chaîne XML)
  * @param {{ warning?: boolean, facturX?: boolean }} options `warning` : versions WARNING de BR-FR (réception jusqu'au
  *   1er octobre 2026) ; `facturX` : XML CII contrôlé comme XML d'un Factur-X (forcé pour un PDF)

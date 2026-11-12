@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Report>
+  <ReportDocument>
+    <Id>LB-20261101-102-001</Id>
+    <IssueDateTime>
+      <DateTimeString>20261201093000</DateTimeString>
+    </IssueDateTime>
+    <TypeCode>IN</TypeCode>
+    <Sender>
+      <Id schemeId="0238">0001</Id>
+      <Name>PLATEFORME SIMULEE</Name>
+      <RoleCode>WK</RoleCode>
+    </Sender>
+    <Issuer>
+      <Id schemeId="0002">200000008</Id>
+      <Name>BTP EXEMPLE</Name>
+      <RoleCode>SE</RoleCode>
+    </Issuer>
+  </ReportDocument>
+  <PaymentsReport>
+    <ReportPeriod>
+      <StartDate>20261101</StartDate>
+      <EndDate>20261130</EndDate>
+    </ReportPeriod>
+    <Invoice>
+      <InvoiceID>F202611001</InvoiceID>
+      <IssueDate>20261102</IssueDate>
+      <Payment>
+        <Date>20261116</Date>
+        <SubTotals>
+          <TaxPercent>20</TaxPercent>
+          <CurrencyCode>EUR</CurrencyCode>
+          <Amount>1200.00</Amount>
+        </SubTotals>
+      </Payment>
+    </Invoice>
+    <Invoice>
+      <InvoiceID>F202611002</InvoiceID>
+      <IssueDate>20261104</IssueDate>
+      <Payment>
+        <Date>20261130</Date>
+        <SubTotals>
+          <TaxPercent>0</TaxPercent>
+          <CurrencyCode>EUR</CurrencyCode>
+          <Amount>100.00</Amount>
+        </SubTotals>
+      </Payment>
+    </Invoice>
+  </PaymentsReport>
+</Report>

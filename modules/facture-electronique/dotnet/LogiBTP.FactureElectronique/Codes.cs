@@ -72,6 +72,7 @@ public static class Traitement
     public const string B2B = "B2B";
     public const string B2BInt = "B2BINT";
     public const string B2C = "B2C";
+    public const string B2CInt = "B2CINT";
     public const string HorsReforme = "OUTOFSCOPE";
     public const string ArchivageSeul = "ARCHIVEONLY";
 }
@@ -83,6 +84,10 @@ public static class CodeNote
     public const string Penalites = "PMD";
     public const string Escompte = "AAB";
     public const string Traitement = "BAR";
+    /// <summary>BR-FR-06 : une fois au plus.</summary>
+    public const string MentionTaxe = "TXD";
+    /// <summary>Clause de réserve : retenue de garantie des situations de travaux (cœur, lot 23).</summary>
+    public const string Reserve = "ABU";
 }
 
 /// <summary>Sous-type de ligne EXT-FR-FE-163 (profil EXTENDED-CTC-FR) : détail, regroupement, information.</summary>
@@ -294,6 +299,11 @@ public static class SchemaIdentifiant
     public const string CreancierSepa = "SEPA";
     /// <summary>UBL : TaxScheme/ID du numéro de TVA (BT-31, BT-48, BT-63) ; tout autre régime porte l'identifiant fiscal (BT-32).</summary>
     public const string TvaUbl = "VAT";
+    // E-reporting (flux 10, G2.19) : identifiant d'une entreprise sans SIREN.
+    public const string UeHorsFrance = "0223";
+    public const string HorsUe = "0227";
+    public const string Ridet = "0228";
+    public const string Tahiti = "0229";
 }
 
 /// <summary>CDAR : matricule (schéma 0238) des plateformes publiques.</summary>
@@ -536,6 +546,136 @@ public static class DecoupageEreporting
     public const string Plusieurs = "PLUSIEURS";
 }
 
+/// <summary>E-reporting (flux 10) : sous-flux, dans l'ordre de l'annexe A XP Z12-012 (onglet « E-REPORTING - Flux 10 »).</summary>
+public static class SousFluxEreporting
+{
+    /// <summary>TG-8 : factures B2B internationales.</summary>
+    public const string TransactionsUnitaires = "10.1";
+    /// <summary>TG-34 : encaissements de ces factures.</summary>
+    public const string PaiementsUnitaires = "10.2";
+    /// <summary>TG-31 : ventes B2C cumulées par jour.</summary>
+    public const string TransactionsAgregees = "10.3";
+    /// <summary>TG-37 : encaissements B2C cumulés par jour.</summary>
+    public const string PaiementsAgreges = "10.4";
+
+    public static readonly string[] Tous = [TransactionsUnitaires, PaiementsUnitaires, TransactionsAgregees, PaiementsAgreges];
+}
+
+/// <summary>E-reporting TT-4 : type de transmission (G8.01 ; CO et MO de l'annexe A absents du XSD du paquet FNFE).</summary>
+public static class TypeTransmission
+{
+    public const string Initiale = "IN";
+    public const string Rectificative = "RE";
+}
+
+/// <summary>E-reporting TT-81 : catégorie des transactions agrégées (G1.68).</summary>
+public static class CategorieTransactions
+{
+    /// <summary>Livraisons de biens soumises à la TVA.</summary>
+    public const string Biens = "TLB1";
+    /// <summary>Prestations de services soumises à la TVA.</summary>
+    public const string Services = "TPS1";
+    /// <summary>Opérations non soumises à la TVA en France.</summary>
+    public const string NonTaxables = "TNT1";
+    /// <summary>Régime de TVA sur la marge.</summary>
+    public const string Marge = "TMA1";
+
+    public static readonly string[] Toutes = [Biens, Services, NonTaxables, Marge];
+}
+
+/// <summary>E-reporting TT-29 : profil des transactions unitaires (S1.12).</summary>
+public static class ProfilEreporting
+{
+    public const string Transactions = "urn.cpro.gouv.fr:1p0:ereporting";
+}
+
+/// <summary>Régime de TVA de la société, qui fixe la périodicité de l'e-reporting (<see cref="ReglesEreporting.Periodicite"/>).</summary>
+public static class RegimeEreporting
+{
+    public const string ReelNormalMensuel = "REEL_NORMAL_MENSUEL";
+    public const string ReelNormalTrimestriel = "REEL_NORMAL_TRIMESTRIEL";
+    public const string Simplifie = "SIMPLIFIE";
+    public const string Franchise = "FRANCHISE";
+}
+
+/// <summary>Durée d'une période d'e-reporting.</summary>
+public static class PeriodiciteEreporting
+{
+    public const string Decade = "DECADE";
+    public const string Mois = "MOIS";
+    public const string Bimestre = "BIMESTRE";
+}
+
+/// <summary>
+/// Règles contrôlées sur une transmission d'e-reporting avant l'envoi (<see cref="ReglesEreporting.Controler"/>) : codes des
+/// règles de gestion de l'annexe 7 v1.8 (schematron Flux10 du paquet FNFE), plus LOGIBTP-PERIODE (date hors période).
+/// </summary>
+public static class RegleEreporting
+{
+    /// <summary>type de facture.</summary>
+    public const string G101 = "G1.01";
+    /// <summary>cadre de facturation.</summary>
+    public const string G102 = "G1.02";
+    /// <summary>identifiant de facture.</summary>
+    public const string G105 = "G1.05";
+    /// <summary>date AAAAMMJJ, année 2000 à 2099 (G1.36).</summary>
+    public const string G109 = "G1.09";
+    /// <summary>devise ISO 4217.</summary>
+    public const string G110 = "G1.10";
+    /// <summary>montant : 2 décimales, 19 chiffres.</summary>
+    public const string G114 = "G1.14";
+    /// <summary>montant encaissé : positif, 6 décimales, 19 chiffres.</summary>
+    public const string G116 = "G1.16";
+    /// <summary>taux de TVA.</summary>
+    public const string G124 = "G1.24";
+    /// <summary>facture antérieure d'un avoir ou d'une rectificative.</summary>
+    public const string G132 = "G1.32";
+    /// <summary>motif d'exonération.</summary>
+    public const string G140 = "G1.40";
+    /// <summary>totaux = somme des ventilations.</summary>
+    public const string G153 = "G1.53";
+    /// <summary>acompte en cadre définitif.</summary>
+    public const string G160 = "G1.60";
+    /// <summary>catégorie de transactions.</summary>
+    public const string G168 = "G1.68";
+    /// <summary>TVA du vendeur si exonération.</summary>
+    public const string G1102 = "G1.102";
+    /// <summary>identifiant de transmission.</summary>
+    public const string G1104 = "G1.104";
+    /// <summary>code pays.</summary>
+    public const string G201 = "G2.01";
+    /// <summary>type d'identifiant d'une entreprise.</summary>
+    public const string G219 = "G2.19";
+    /// <summary>catégorie de TVA.</summary>
+    public const string G231 = "G2.31";
+    /// <summary>numéro de TVA.</summary>
+    public const string G233 = "G2.33";
+    /// <summary>VATEX-FR-CNWVAT réservé aux avoirs.</summary>
+    public const string G621 = "G6.21";
+    /// <summary>émetteur : matricule de plateforme.</summary>
+    public const string G622 = "G6.22";
+    /// <summary>TVA de la facture en euros.</summary>
+    public const string G623 = "G6.23";
+    /// <summary>fin de période après le début.</summary>
+    public const string G625 = "G6.25";
+    /// <summary>déclarant : SIREN.</summary>
+    public const string G626 = "G6.26";
+    /// <summary>encaissement en euros.</summary>
+    public const string G627 = "G6.27";
+    /// <summary>identifiant de l'acheteur (B2B international).</summary>
+    public const string G628 = "G6.28";
+    /// <summary>un seul rapport par transmission.</summary>
+    public const string G629 = "G6.29";
+    /// <summary>rôle de l'émetteur.</summary>
+    public const string G751 = "G7.51";
+    /// <summary>rôle du déclarant.</summary>
+    public const string G752 = "G7.52";
+    /// <summary>type de transmission.</summary>
+    public const string G801 = "G8.01";
+    /// <summary>transaction ou paiement daté hors de la période de la transmission.</summary>
+    public const string Periode = "LOGIBTP-PERIODE";
+}
+
 /// <summary>Code de motif d'exonération (VATEX, BT-121) attendu d'une ventilation autoliquidée (catégorie AE) : autoliquidation française.</summary>
 public static class CodeExoneration
 {
@@ -586,6 +726,9 @@ public static class ErreurFe
     public const string PdfIllisible = "PDF_ILLISIBLE";
     /// <summary>Factur-X : pas de fichier factur-x.xml embarqué.</summary>
     public const string XmlAbsent = "XML_ABSENT";
+    // Écriture des factures (lot 16)
+    public const string ProfilNonEcrit = "PROFIL_NON_ECRIT";
+    public const string DonneeHorsProfil = "DONNEE_HORS_PROFIL";
     // Connecteur de plateforme (lot 6) : demande refusée avant l'envoi, puis réponses de la plateforme (XP Z12-013, 400 à 503).
     /// <summary>Connecteur : code de connecteur non enregistré dans la fabrique.</summary>
     public const string ConnecteurInconnu = "CONNECTEUR_INCONNU";
@@ -673,4 +816,99 @@ public static class EtatLigneAnnuaire
     public const string Active = "Enabled";
     public const string Inactive = "Disabled";
     public const string AVenir = "Upcoming";
+}
+
+/// <summary>Type d'une pièce jointe (BT-123, liste BR-FR-17) ; LISIBLE une fois au plus (BR-FR-18).</summary>
+public static class TypePieceJointe
+{
+    public const string Rib = "RIB";
+    public const string Lisible = "LISIBLE";
+    public const string FeuilleDeStyle = "FEUILLE_DE_STYLE";
+    public const string Pja = "PJA";
+    public const string BordereauSuivi = "BORDEREAU_SUIVI";
+    public const string DocumentAnnexe = "DOCUMENT_ANNEXE";
+    public const string BonLivraison = "BON_LIVRAISON";
+    public const string BonCommande = "BON_COMMANDE";
+    public const string BordereauSuiviValidation = "BORDEREAU_SUIVI_VALIDATION";
+    public const string EtatAcompte = "ETAT_ACOMPTE";
+    public const string FacturePaiementDirect = "FACTURE_PAIEMENT_DIRECT";
+    public const string RecapitulatifCotraitance = "RECAPITULATIF_COTRAITANCE";
+
+    /// <summary>Types admis (BR-FR-17).</summary>
+    public static readonly IReadOnlyList<string> Tous = [Rib, Lisible, FeuilleDeStyle, Pja, BordereauSuivi, DocumentAnnexe, BonLivraison, BonCommande, BordereauSuiviValidation, EtatAcompte, FacturePaiementDirect, RecapitulatifCotraitance];
+}
+
+/// <summary>Niveau d'un écart du contrôle de complétude (lot 16, Q5) : bloquant pour un tiers B2B / B2G, avertissement sinon.</summary>
+public static class NiveauCompletude
+{
+    public const string Bloquant = "BLOQUANT";
+    public const string Avertissement = "AVERTISSEMENT";
+}
+
+/// <summary>
+/// Règle du contrôle de complétude d'une facture émise (lot 16 : <c>completude.js</c> ↔ <see cref="ReglesCompletude"/>) :
+/// règles françaises du schematron BR-FR-Flux2 (FNFE 1.4.0.04), sommes EN16931 (BR-CO), et deux règles propres à LogiBTP
+/// (profil écrit, cadre émis).
+/// </summary>
+public static class RegleCompletude
+{
+    public const string Profil = "LOGIBTP-PROFIL";
+    public const string Cadre = "LOGIBTP-CADRE";
+    public const string BrFr01 = "BR-FR-01";
+    public const string BrFr02 = "BR-FR-02";
+    public const string BrFr03 = "BR-FR-03";
+    public const string BrFr04 = "BR-FR-04";
+    public const string BrFr05 = "BR-FR-05";
+    public const string BrFr06 = "BR-FR-06";
+    public const string BrFr08 = "BR-FR-08";
+    public const string BrFr09 = "BR-FR-09";
+    public const string BrFr10 = "BR-FR-10";
+    public const string BrFr11 = "BR-FR-11";
+    public const string BrFr12 = "BR-FR-12";
+    public const string BrFr13 = "BR-FR-13";
+    public const string BrFr15 = "BR-FR-15";
+    public const string BrFr16 = "BR-FR-16";
+    public const string BrFr17 = "BR-FR-17";
+    public const string BrFr18 = "BR-FR-18";
+    public const string BrFr20 = "BR-FR-20";
+    public const string BrFr21 = "BR-FR-21";
+    public const string BrFr22 = "BR-FR-22";
+    public const string BrFr23 = "BR-FR-23";
+    public const string BrFr24 = "BR-FR-24";
+    public const string BrFr25 = "BR-FR-25";
+    public const string BrFr26 = "BR-FR-26";
+    public const string BrFr31 = "BR-FR-31";
+    public const string BrFr32 = "BR-FR-32";
+    public const string BrFrCo03 = "BR-FR-CO-03";
+    public const string BrFrCo04 = "BR-FR-CO-04";
+    public const string BrFrCo05 = "BR-FR-CO-05";
+    public const string BrFrCo07 = "BR-FR-CO-07";
+    public const string BrFrCo08 = "BR-FR-CO-08";
+    public const string BrFrCo09 = "BR-FR-CO-09";
+    public const string BrFrCo12 = "BR-FR-CO-12";
+    public const string BrFrDec01 = "BR-FR-DEC-01";
+    public const string BrFrDec02 = "BR-FR-DEC-02";
+    public const string BrFrDec03 = "BR-FR-DEC-03";
+    public const string BrFrDec04 = "BR-FR-DEC-04";
+    public const string BrCo10 = "BR-CO-10";
+    public const string BrCo11 = "BR-CO-11";
+    public const string BrCo12 = "BR-CO-12";
+    public const string BrCo13 = "BR-CO-13";
+    public const string BrCo14 = "BR-CO-14";
+    public const string BrCo15 = "BR-CO-15";
+    public const string BrCo16 = "BR-CO-16";
+    public const string BrCo17 = "BR-CO-17";
+}
+
+/// <summary>Moyen de paiement BT-81 (UNTDID 4461) écrit à l'émission (lot 22) ; virement : IBAN BT-84 exigé (BR-61).</summary>
+public static class MoyenPaiementFe
+{
+    public const string NonDefini = "1";
+    public const string Especes = "10";
+    public const string Cheque = "20";
+    public const string Virement = "30";
+    public const string Carte = "48";
+    public const string Prelevement = "49";
+    public const string VirementSepa = "58";
+    public const string PrelevementSepa = "59";
 }

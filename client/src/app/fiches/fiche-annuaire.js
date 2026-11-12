@@ -1,5 +1,5 @@
 import { texte, texteHtml, pluriel, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
-import { urlFiche, TYPE_FICHE, MODULE_FACULTATIF } from '../codes.js';
+import { urlFiche, TYPE_FICHE, MODULE_FACULTATIF, AVERTISSEMENT_ANNUAIRE_FE } from '../codes.js';
 import { aujourdhui } from '@logibtp/socle';
 import { MODES } from '@logibtp/fiche';
 import { echapper, formatNombre, confirmer } from '@logibtp/socle/ui';
@@ -280,6 +280,9 @@ export class FichePersonne extends FicheAnnuaire {
   actionsSupplementaires() {
     return [
       { libelle: `${icone('fiches_btp_entreprises')} ${texte('fiches_btp.annuaire.entreprises')}`, titre: texte('fiches_btp.annuaire.entreprises_aide'), action: () => this.importerEntreprise(), visible: this.estEnSaisie() && this.morale },
+      { libelle: `${icone('fiches_btp_annuaire_fe')} ${texte('fiches_btp.annuaire.verifier_fe')}`, titre: texte('fiches_btp.annuaire.verifier_fe_aide'),
+        action: () => this.verifierAnnuaireFe().catch((x) => this.message(x.message, 'erreur')),
+        visible: !this.estEnSaisie() && this.id !== null && this.morale && this.moduleActif(MODULE_FACULTATIF.FACTURE_ELECTRONIQUE) && this.acces('facture_electronique') },
       { libelle: `${icone('fiches_btp_valider')} ${texte('fiches_btp.annuaire.valider')}`, titre: texte('fiches_btp.annuaire.valider_aide'), action: () => this.validerProvisoire().catch((x) => this.message(x.message, 'erreur')), visible: !this.estEnSaisie() && this.provisoire },
       { libelle: `${icone('fiches_btp_fusionner')} ${texte('fiches_btp.annuaire.fusionner')}`, titre: texte('fiches_btp.annuaire.fusionner_aide'), action: (e) => this.fusionnerProvisoire(e).catch((x) => this.message(x.message, 'erreur')), visible: !this.estEnSaisie() && this.provisoire },
       { libelle: `${icone('ajouter')} ${texte('fiches_btp.annuaire.etablissement')}`, titre: texte('fiches_btp.annuaire.etablissement_aide'), action: () => this.ouvrirFiche({ type: TYPE_FICHE.PERSONNE, id: `nouveau?parent=${this.id}&niveau=ETABLISSEMENT` }), visible: !this.estEnSaisie() && this.id !== null && this.morale },
@@ -398,6 +401,15 @@ export class FichePersonne extends FicheAnnuaire {
       bibliotheque: this.services.bibliotheque, tiers: { id: Number(this.id), nom: this.valeur('raison_sociale') || this.valeur('code') || `Tiers ${this.id}` },
       message: (t, n) => this.message(t, n), ouvrir: (type, id, e) => this.ouvrirFiche({ type, id }, e),
     });
+  }
+
+  /** Vérifie le tiers dans l'annuaire des plateformes (lot 20) : adresse, plateforme, code de routage et suffixe repris de la ligne trouvée. */
+  async verifierAnnuaireFe() {
+    const r = await api.annuaireFe.verifier(Number(this.id));
+    await this.recharger();
+    this.rendre();
+    if (r.trouve) this.message(texte('fiches_btp.annuaire.verifie_fe', { adresse: r.adresse, plateforme: r.plateforme }), 'succes');
+    else this.message(texte(r.avertissement === AVERTISSEMENT_ANNUAIRE_FE.HORS_ANNUAIRE ? 'fiches_btp.annuaire.hors_annuaire_fe' : 'fiches_btp.annuaire.absent_fe'), 'avertissement');
   }
 
   /** Reprise depuis l'annuaire des entreprises : identité, identifiants, adresse et dirigeants (contacts). */

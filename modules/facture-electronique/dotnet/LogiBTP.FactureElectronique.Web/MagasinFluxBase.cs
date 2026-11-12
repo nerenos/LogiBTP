@@ -30,7 +30,7 @@ public sealed class MagasinFluxBase : IMagasinFlux
         flux = new(Charger, LazyThreadSafetyMode.ExecutionAndPublication);
     }
 
-    private sealed record StatutAVenir(string Statut, string Emetteur, DateTimeOffset Echeance);
+    private sealed record StatutAVenir(string Statut, string Emetteur, DateTimeOffset Echeance, string? Motif = null);
 
     private sealed record EtatMagasin(Flux Flux, AccuseFlux? AccuseFinal, DateTimeOffset? AccuseLe, List<StatutAVenir> AVenir, List<string> Historique);
 
@@ -42,7 +42,7 @@ public sealed class MagasinFluxBase : IMagasinFlux
 
     public void Enregistrer(FluxLocal f)
     {
-        var etat = new EtatMagasin(f.Flux, f.AccuseFinal, f.AccuseLe, [.. f.AVenir.Select(a => new StatutAVenir(a.Statut.Statut, a.Statut.Emetteur, a.Echeance))],
+        var etat = new EtatMagasin(f.Flux, f.AccuseFinal, f.AccuseLe, [.. f.AVenir.Select(a => new StatutAVenir(a.Statut.Statut, a.Statut.Emetteur, a.Echeance, a.Statut.Motif))],
             [.. f.Historique]);
         using var c = source.CreateCommand("""
             INSERT INTO fe_magasin (fma_magasin, fma_id_flux, fma_rang, fma_etat, fma_original, fma_modifie_le)
@@ -75,7 +75,7 @@ public sealed class MagasinFluxBase : IMagasinFlux
             resultat[r.GetString(0)] = new FluxLocal(e.Flux, (byte[])r[3], r.GetInt64(1))
             {
                 AccuseFinal = e.AccuseFinal, AccuseLe = e.AccuseLe,
-                AVenir = [.. e.AVenir.Select(a => (new StatutProgramme(a.Statut, a.Emetteur), a.Echeance))],
+                AVenir = [.. e.AVenir.Select(a => (new StatutProgramme(a.Statut, a.Emetteur, a.Motif), a.Echeance))],
                 Historique = e.Historique,
             };
         }

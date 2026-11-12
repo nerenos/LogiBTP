@@ -96,6 +96,19 @@
   border: 1px solid var(--accent, #1d5fbf); border-radius: 6px; }
 .document-attente.probleme { border-color: var(--erreur); background: var(--alerte-fond); }
 .document-verrou button.danger { border-color: var(--erreur); color: var(--erreur); }
+/* Facturation électronique (lot 22) : complétude de la facture électronique de la pièce enregistrée. */
+.document-completude-fe[hidden] { display: none; }
+.document-completude-fe { margin: 0.4rem 1rem 0; flex: none; }
+.document-completude-fe .completude-fe { padding: 0.35rem 0.7rem; border: 1px solid var(--bord); border-radius: 6px; }
+.document-completude-fe .completude-fe.probleme { border-color: var(--erreur); background: var(--alerte-fond); }
+.document-completude-fe summary { cursor: pointer; }
+.document-completude-fe ul { margin: 0.3rem 0 0; padding-left: 1.2rem; }
+.document-completude-fe li.bloquant b { color: var(--erreur); }
+/* Facturation électronique, lot 24 : émission de la pièce validée (pastille, bouton « Émettre »). */
+.document-envoi-fe[hidden] { display: none; }
+.document-envoi-fe { margin: 0.4rem 1rem 0; flex: none; }
+.document-envoi-fe .envoi-fe { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; padding: 0.35rem 0.7rem; border: 1px solid var(--bord); border-radius: 6px; }
+.options-fe-btp { margin-top: 1rem; }
 
 /* Bibliothèque : fiche élément */
 .page-bibliotheque { max-width: none; }

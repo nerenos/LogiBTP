@@ -8,6 +8,7 @@ import { normaliserTrueType, prefixeSousEnsemble } from './truetype.js';
 import { fontkitEdition, cleFace } from './polices.js';
 import { rectanglesQr } from './codes.js';
 import { mmVersPt } from './unites.js';
+import { normaliserPdfa, appliquerPdfa } from './pdfa.js';
 
 // Sous-ensembles de police écrits par fontkit (signature « true », sommes de contrôle nulles) : normalisés avant
 // d'être intégrés, pour que tout lecteur les accepte (truetype.js). Installé une fois.
@@ -44,7 +45,10 @@ const tiret = (t) => (t.pointille ? `[${nb(mmVersPt(t.epaisseur * 4))} ${nb(mmVe
  * @param polices instance de Polices (octets des faces)
  * @param opts { ressources: { code: { type: 'png'|'jpeg', octets } }, titre, auteur, sujet, date (ISO),
  *               annexes ([Uint8Array] : PDF ajoutés à la fin), compresser (défaut vrai), deflate (compression zlib fournie par l'hôte, à la place de pako : Jint),
- *               chronos (objet rempli des durées) }
+ *               chronos (objet rempli des durées),
+ *               pdfa (option PDF/A-3, pdfa.js : { conformite ('B' par défaut), fichiers: [{ nom, octets, type (MIME),
+ *               relation (AFRelationship), description }], schemas (extensions XMP de l'appelant), icc (profil RGB,
+ *               sRGB livré par défaut), condition (OutputConditionIdentifier) }) }
  * @returns Promise<Uint8Array>
  */
 export async function produirePdf(resultat, polices, opts = {}) {
@@ -62,6 +66,14 @@ export async function produirePdf(resultat, polices, opts = {}) {
   doc.setModificationDate(date);
   doc.setLanguage('fr-FR');
   const compresser = opts.compresser !== false;
+  const pdfa = opts.pdfa ? normaliserPdfa(opts.pdfa) : null;
+  const contenus = []; // contenus des pages : entrées de l'identifiant /ID du PDF/A
+  // Flux d'octets (ou de texte) compressé selon l'option, par l'hôte si une compression est fournie.
+  const fluxDe = (donnees, dict = {}) => {
+    if (!compresser) return doc.context.stream(donnees, dict);
+    if (opts.deflate) return doc.context.stream(opts.deflate(typeof donnees === 'string' ? octetsTexte(donnees) : donnees), { ...dict, Filter: 'FlateDecode' });
+    return doc.context.flateStream(donnees, dict);
+  };
 
   const policesPdf = new Map();
   const policePdf = async (style) => {
@@ -138,16 +150,17 @@ export async function produirePdf(resultat, polices, opts = {}) {
       }
     }
     const contenu = c.join('\n');
-    let flux;
-    if (!compresser) flux = doc.context.stream(contenu);
-    else if (opts.deflate) flux = doc.context.stream(opts.deflate(octetsTexte(contenu)), { Filter: 'FlateDecode' });
-    else flux = doc.context.flateStream(contenu);
-    pg.node.set(PDFName.of('Contents'), doc.context.register(flux));
+    if (pdfa) contenus.push(contenu);
+    pg.node.set(PDFName.of('Contents'), doc.context.register(fluxDe(contenu)));
   }
   // Annexes PDF (conditions générales, plans de la GED) ajoutées à la fin.
   for (const annexe of opts.annexes ?? []) {
     const source = await PDFDocument.load(annexe, { ignoreEncryption: true, updateMetadata: false });
     for (const pg of await doc.copyPages(source, source.getPageIndices())) doc.addPage(pg);
+  }
+  if (pdfa) {
+    appliquerPdfa(doc, pdfa, { titre: opts.titre ?? 'Édition', auteur: opts.auteur, sujet: opts.sujet, createur: 'LogiBTP',
+      producteur: 'LogiBTP – module Édition', date }, fluxDe, contenus);
   }
   if (chronos) { chronos.dessin = Date.now() - t0; t0 = Date.now(); }
   const octets = await doc.save({ useObjectStreams: false });

@@ -152,6 +152,9 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
         new("/api/execution/sav-parametres", ModeRoute.Parametrage),
         new("/api/rentabilite/parametres", ModeRoute.Parametrage),
         new("/api/facture-electronique/parametres", ModeRoute.Parametrage),
+        new("/api/facture-electronique/annuaire/option", ModeRoute.Parametrage),
+        new("/api/facture-electronique/emission/option", ModeRoute.Parametrage),
+        new("/api/facture-electronique/ereporting/option", ModeRoute.Parametrage),
         // Module Document : définitions et référentiels lus par la page document.
         new("/api/documents", ModeRoute.Module, "documents"),
         new("/api/calcul", ModeRoute.Module, "documents"),
@@ -197,14 +200,23 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
         new("/api/relances/{id}/recommande", ModeRoute.Action, SpecialisationRelanceBtp.Noeud, ActionsDroits.Valider),
         new("/api/relances/notees", ModeRoute.Action, SpecialisationRelanceBtp.Noeud, ActionsDroits.Valider),
         // Module Facturation électronique : lecture (flux, détail, fichiers, chronologies, santé, vérification du journal)
-        // Consulter ; actions sur un flux (nouvelle tentative, dépôt manuel confirmé, import, relève) : Modifier.
+        // Consulter ; actions sur un flux (nouvelle tentative, dépôt manuel confirmé, import, relève) : Modifier ; état de
+        // l'émission d'une pièce (GET …/documents/{id}/envoi) en lecture, bouton « Émettre » (POST) en écriture (lot 24).
         new("/api/facture-electronique", ModeRoute.Module, SpecialisationFactureElectroniqueBtp.Noeud),
         new("/api/facture-electronique/flux/{id}/tentative", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),
         new("/api/facture-electronique/flux/{id}/depot-manuel", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),
         new("/api/facture-electronique/flux/{id}/statut", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),
+        new("/api/facture-electronique/documents/{id}/annulation", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),
+        new("/api/facture-electronique/encaissements/validation", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),
+        // E-reporting (lot 28) : périodes en lecture ; préparation, envoi, correction et relance d'une période : Modifier.
+        new("/api/facture-electronique/ereporting/periodes/preparation", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),
+        new("/api/facture-electronique/ereporting/periodes/{id}/envoi", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),
+        new("/api/facture-electronique/ereporting/periodes/{id}/correction", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),
+        new("/api/facture-electronique/ereporting/periodes/{id}/relance", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),
         new("/api/facture-electronique/import", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),
         new("/api/facture-electronique/courriels/{id}/facture", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),
         new("/api/facture-electronique/releve", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),
+        new("/api/facture-electronique/annuaire/personnes/{id}/verification", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),
         new("/api/execution", ModeRoute.Module, "execution"),
         new("/api/liaisons", ModeRoute.Module, "planning"),
         new("/api/sous-traitance", ModeRoute.Module, "sous_traitance"),

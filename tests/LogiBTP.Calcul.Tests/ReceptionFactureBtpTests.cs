@@ -33,6 +33,7 @@ namespace LogiBTP.Calcul.Tests;
 /// compris) : facture reçue de la plateforme simulée → pièce en brouillon rattachée, PDF en GED (étape RECEPTION, coffre),
 /// chronologie complète, liste à traiter, doublon refusé et tracé, commande de BT-13 transformée.
 /// </summary>
+[Collection(EnvoiFactureBtpTests.CollectionBase)]
 public class ReceptionFactureBtpTests
 {
     private static string Dossier(params string[] parties) => CasPartages.Chemin(["modules", "facture-electronique", "tests", "exemples", .. parties]);

@@ -61,7 +61,9 @@ export function ongletChronologieVisible({ moduleActif, peutConsulter, entId, fl
 /** Libellé d'un élément d'une étape (chronologie d'une pièce : la pièce elle-même). */
 export const libelleElementFe = (type, id) => (type === TYPE_ELEMENT_FE.DOCUMENT
   ? texte('facture_electronique_btp.element_document', { id })
-  : texte('facture_electronique.element', { type, id }));
+  : type === TYPE_ELEMENT_FE.PERIODE_EREPORTING
+    ? texte('facture_electronique_btp.element_ereporting', { id })
+    : texte('facture_electronique.element', { type, id }));
 
 /** Historique des versions du document, de la plus récente à la plus ancienne (versions de /documents/{id}/tracabilite). */
 export function historiqueDocumentHtml(historique) {

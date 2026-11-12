@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Report>
+  <ReportDocument>
+    <Id>LB-20261101-103-001-RE1</Id>
+    <IssueDateTime>
+      <DateTimeString>20261205140000</DateTimeString>
+    </IssueDateTime>
+    <TypeCode>RE</TypeCode>
+    <Sender>
+      <Id schemeId="0238">0001</Id>
+      <Name>PLATEFORME SIMULEE</Name>
+      <RoleCode>WK</RoleCode>
+    </Sender>
+    <Issuer>
+      <Id schemeId="0002">200000008</Id>
+      <Name>BTP EXEMPLE</Name>
+      <RoleCode>SE</RoleCode>
+    </Issuer>
+  </ReportDocument>
+  <TransactionsReport>
+    <ReportPeriod>
+      <StartDate>20261101</StartDate>
+      <EndDate>20261110</EndDate>
+    </ReportPeriod>
+    <Transactions>
+      <Date>20261102</Date>
+      <TransactionsCurrency>EUR</TransactionsCurrency>
+      <CategoryCode>TLB1</CategoryCode>
+      <TaxExclusiveAmount>320.00</TaxExclusiveAmount>
+      <TaxTotal>64.00</TaxTotal>
+      <TransactionsCount>1</TransactionsCount>
+      <TaxSubtotal>
+        <TaxPercent>20</TaxPercent>
+        <TaxableAmount>320.00</TaxableAmount>
+        <TaxTotal>64.00</TaxTotal>
+      </TaxSubtotal>
+    </Transactions>
+    <Transactions>
+      <Date>20261102</Date>
+      <TransactionsCurrency>EUR</TransactionsCurrency>
+      <CategoryCode>TPS1</CategoryCode>
+      <TaxExclusiveAmount>6650.40</TaxExclusiveAmount>
+      <TaxTotal>584.04</TaxTotal>
+      <TransactionsCount>2</TransactionsCount>
+      <TaxSubtotal>
+        <TaxPercent>5.5</TaxPercent>
+        <TaxableAmount>1800.00</TaxableAmount>
+        <TaxTotal>99.00</TaxTotal>
+      </TaxSubtotal>
+      <TaxSubtotal>
+        <TaxPercent>10</TaxPercent>
+        <TaxableAmount>4850.40</TaxableAmount>
+        <TaxTotal>485.04</TaxTotal>
+      </TaxSubtotal>
+    </Transactions>
+    <Transactions>
+      <Date>20261106</Date>
+      <TransactionsCurrency>EUR</TransactionsCurrency>
+      <TaxDueDateTypeCode>5</TaxDueDateTypeCode>
+      <CategoryCode>TPS1</CategoryCode>
+      <TaxExclusiveAmount>980.00</TaxExclusiveAmount>
+      <TaxTotal>196.00</TaxTotal>
+      <TransactionsCount>1</TransactionsCount>
+      <TaxSubtotal>
+        <TaxPercent>20</TaxPercent>
+        <TaxableAmount>980.00</TaxableAmount>
+        <TaxTotal>196.00</TaxTotal>
+      </TaxSubtotal>
+    </Transactions>
+  </TransactionsReport>
+</Report>

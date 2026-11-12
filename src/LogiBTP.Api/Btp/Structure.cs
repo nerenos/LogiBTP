@@ -321,14 +321,7 @@ public static class Structure
                     new NpgsqlParameter("id", id)).ToListAsync(ct);
                 if (pieces.Count == 0) throw ExceptionMetier.Invalide("ANNULATION_IMPOSSIBLE", "Pièce déjà annulée ou non validée");
                 foreach (var p in pieces) avoirs.Add(await transformations.AnnulerParAvoirDans(p, u, ct));
-                // Dernière situation (de référence) dont une pièce annulée est issue.
-                situation = await db.Database.SqlQuery<long?>($"""
-                    SELECT s.ent_id AS "Value" FROM document s
-                    JOIN type_document t ON t.tyd_id = s.ent_tyd_id AND t.tyd_avancement = 'S'
-                    JOIN document_lien l ON l.lie_source_ent_id = s.ent_id AND l.lie_type = 'TRANSFORMATION'
-                    WHERE l.lie_cible_ent_id = ANY({pieces.ToArray()}) AND s.ent_is_reference AND s.ent_verrouille
-                    ORDER BY s.ent_rang_avancement DESC NULLS LAST, s.ent_id DESC LIMIT 1
-                    """).FirstOrDefaultAsync(ct);
+                situation = await SituationServieAsync(db, pieces, ct);
                 await tx.CommitAsync(ct);
             }
             long? revision = situation is long sid ? (await documents.CreerIndice(sid, u, ct)).Document.EntId : null;
@@ -476,7 +469,21 @@ public static class Structure
         FROM
         """ + " " + SqlCascade;
 
-    private const string SqlCascade = """
+    /// <summary>Dernière situation (de référence) dont une des pièces d'avancement annulées est issue, sinon null.</summary>
+    internal static Task<long?> SituationServieAsync(LogiBtpContext db, IReadOnlyCollection<long> pieces, CancellationToken ct) =>
+        db.Database.SqlQuery<long?>($"""
+            SELECT s.ent_id AS "Value" FROM document s
+            JOIN type_document t ON t.tyd_id = s.ent_tyd_id AND t.tyd_avancement = 'S'
+            JOIN document_lien l ON l.lie_source_ent_id = s.ent_id AND l.lie_type = 'TRANSFORMATION'
+            WHERE l.lie_cible_ent_id = ANY({pieces.ToArray()}) AND s.ent_is_reference AND s.ent_verrouille
+            ORDER BY s.ent_rang_avancement DESC NULLS LAST, s.ent_id DESC LIMIT 1
+            """).FirstOrDefaultAsync(ct);
+
+    /// <summary>
+    /// Pièces annulées avec une pièce (alias x) : elle-même et, pour une pièce d'avancement d'un marché, toutes les pièces
+    /// d'avancement valables suivantes ; paramètre @id.
+    /// </summary>
+    internal const string SqlCascade = """
         document d
         JOIN document x ON f_document_valable(x.ent_id, FALSE) AND (x.ent_id = d.ent_id OR (d.ent_marche_id IS NOT NULL AND d.ent_avt_presentation = 'P'
             AND x.ent_marche_id = d.ent_marche_id AND x.ent_avt_presentation = 'P'

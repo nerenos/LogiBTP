@@ -43,7 +43,10 @@ public class MoteurEditionTests(MoteurPartage partage, ITestOutputHelper sortie)
 
         // Octets identiques sans compression (pako côté navigateur, zlib .NET côté serveur).
         var envBrut = JsonNode.Parse(env)!.AsObject();
-        envBrut["pdf"] = new JsonObject { ["titre"] = envBrut["pdf"]?["titre"]?.GetValue<string>(), ["date"] = envBrut["pdf"]?["date"]?.GetValue<string>(), ["compresser"] = false };
+        // Options du PDF du cas (titre, date, PDF/A…) gardées, compression coupée.
+        var pdfBrut = envBrut["pdf"]?.DeepClone().AsObject() ?? new JsonObject();
+        pdfBrut["compresser"] = false;
+        envBrut["pdf"] = pdfBrut;
         var brut = partage.Moteur.Pdf(modele, donnees.ToJsonString(), envBrut.ToJsonString());
         var shaBrut = Convert.ToHexStringLower(SHA256.HashData(brut.Octets));
         if (shaBrut != js["pdf_brut_sha256"]!.GetValue<string>())

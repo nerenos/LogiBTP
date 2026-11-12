@@ -66,6 +66,7 @@ export const TRAITEMENT = Object.freeze({
   B2B: 'B2B',
   B2B_INT: 'B2BINT',
   B2C: 'B2C',
+  B2C_INT: 'B2CINT',
   HORS_REFORME: 'OUTOFSCOPE',
   ARCHIVAGE_SEUL: 'ARCHIVEONLY',
 });
@@ -76,6 +77,8 @@ export const CODE_NOTE = Object.freeze({
   PENALITES: 'PMD',
   ESCOMPTE: 'AAB',
   TRAITEMENT: 'BAR',
+  MENTION_TAXE: 'TXD', // BR-FR-06 : une fois au plus
+  RESERVE: 'ABU', // clause de réserve : retenue de garantie des situations de travaux (cœur, lot 23)
 });
 
 /** Sous-type de ligne EXT-FR-FE-163 (profil EXTENDED-CTC-FR) : détail, regroupement, information. */
@@ -250,6 +253,11 @@ export const SCHEMA_IDENTIFIANT = Object.freeze({
   PLATEFORME: '0238', // CDAR : matricule d'une plateforme (PA, PPF, Chorus Pro)
   CREANCIER_SEPA: 'SEPA', // UBL : BT-90 dans PartyIdentification
   TVA_UBL: 'VAT', // UBL : TaxScheme/ID du numéro de TVA
+  // E-reporting (flux 10, G2.19) : identifiant d'une entreprise sans SIREN
+  UE_HORS_FRANCE: '0223',
+  HORS_UE: '0227',
+  RIDET: '0228',
+  TAHITI: '0229',
 });
 
 /** CDAR : matricule (schéma 0238) des plateformes publiques. */
@@ -467,6 +475,86 @@ export const DECOUPAGE_EREPORTING = Object.freeze({
   PLUSIEURS: 'PLUSIEURS',
 });
 
+/** E-reporting (flux 10) : sous-flux, dans l'ordre de l'annexe A XP Z12-012 (onglet « E-REPORTING - Flux 10 »). */
+export const SOUS_FLUX_EREPORTING = Object.freeze({
+  TRANSACTIONS_UNITAIRES: '10.1', // TG-8 : factures B2B internationales
+  PAIEMENTS_UNITAIRES: '10.2', // TG-34 : encaissements de ces factures
+  TRANSACTIONS_AGREGEES: '10.3', // TG-31 : ventes B2C cumulées par jour
+  PAIEMENTS_AGREGES: '10.4', // TG-37 : encaissements B2C cumulés par jour
+});
+
+/** E-reporting TT-4 : type de transmission (G8.01 ; CO et MO de l'annexe A absents du XSD du paquet FNFE). */
+export const TYPE_TRANSMISSION = Object.freeze({
+  INITIALE: 'IN',
+  RECTIFICATIVE: 'RE',
+});
+
+/** E-reporting TT-81 : catégorie des transactions agrégées (G1.68). */
+export const CATEGORIE_TRANSACTIONS = Object.freeze({
+  BIENS: 'TLB1', // livraisons de biens soumises à la TVA
+  SERVICES: 'TPS1', // prestations de services soumises à la TVA
+  NON_TAXABLES: 'TNT1', // opérations non soumises à la TVA en France
+  MARGE: 'TMA1', // régime de TVA sur la marge
+});
+
+/** E-reporting TT-29 : profil des transactions unitaires (S1.12). */
+export const PROFIL_EREPORTING = Object.freeze({
+  TRANSACTIONS: 'urn.cpro.gouv.fr:1p0:ereporting',
+});
+
+/** Régime de TVA de la société, qui fixe la périodicité de l'e-reporting (ReglesEreporting.Periode). */
+export const REGIME_EREPORTING = Object.freeze({
+  REEL_NORMAL_MENSUEL: 'REEL_NORMAL_MENSUEL',
+  REEL_NORMAL_TRIMESTRIEL: 'REEL_NORMAL_TRIMESTRIEL',
+  SIMPLIFIE: 'SIMPLIFIE',
+  FRANCHISE: 'FRANCHISE',
+});
+
+/** Durée d'une période d'e-reporting. */
+export const PERIODICITE_EREPORTING = Object.freeze({
+  DECADE: 'DECADE',
+  MOIS: 'MOIS',
+  BIMESTRE: 'BIMESTRE',
+});
+
+/**
+ * Règles contrôlées sur une transmission d'e-reporting avant l'envoi (ReglesEreporting.Controler, C#) : codes des
+ * règles de gestion de l'annexe 7 v1.8 (schematron Flux10 du paquet FNFE), plus LOGIBTP-PERIODE (date hors période).
+ */
+export const REGLE_EREPORTING = Object.freeze({
+  G1_01: 'G1.01', // type de facture
+  G1_02: 'G1.02', // cadre de facturation
+  G1_05: 'G1.05', // identifiant de facture
+  G1_09: 'G1.09', // date AAAAMMJJ, année 2000 à 2099 (G1.36)
+  G1_10: 'G1.10', // devise ISO 4217
+  G1_14: 'G1.14', // montant : 2 décimales, 19 chiffres
+  G1_16: 'G1.16', // montant encaissé : positif, 6 décimales, 19 chiffres
+  G1_24: 'G1.24', // taux de TVA
+  G1_32: 'G1.32', // facture antérieure d'un avoir ou d'une rectificative
+  G1_40: 'G1.40', // motif d'exonération
+  G1_53: 'G1.53', // totaux = somme des ventilations
+  G1_60: 'G1.60', // acompte en cadre définitif
+  G1_68: 'G1.68', // catégorie de transactions
+  G1_102: 'G1.102', // TVA du vendeur si exonération
+  G1_104: 'G1.104', // identifiant de transmission
+  G2_01: 'G2.01', // code pays
+  G2_19: 'G2.19', // type d'identifiant d'une entreprise
+  G2_31: 'G2.31', // catégorie de TVA
+  G2_33: 'G2.33', // numéro de TVA
+  G6_21: 'G6.21', // VATEX-FR-CNWVAT réservé aux avoirs
+  G6_22: 'G6.22', // émetteur : matricule de plateforme
+  G6_23: 'G6.23', // TVA de la facture en euros
+  G6_25: 'G6.25', // fin de période après le début
+  G6_26: 'G6.26', // déclarant : SIREN
+  G6_27: 'G6.27', // encaissement en euros
+  G6_28: 'G6.28', // identifiant de l'acheteur (B2B international)
+  G6_29: 'G6.29', // un seul rapport par transmission
+  G7_51: 'G7.51', // rôle de l'émetteur
+  G7_52: 'G7.52', // rôle du déclarant
+  G8_01: 'G8.01', // type de transmission
+  PERIODE: 'LOGIBTP-PERIODE', // transaction ou paiement daté hors de la période de la transmission
+});
+
 /** Code de motif d'exonération (VATEX, BT-121) attendu d'une ventilation autoliquidée (catégorie AE) : autoliquidation française. */
 export const CODE_EXONERATION = Object.freeze({
   AUTOLIQUIDATION: 'VATEX-FR-AE',
@@ -508,6 +596,9 @@ export const ERREUR_FE = Object.freeze({
   DONNEE_INVALIDE: 'DONNEE_INVALIDE',
   PDF_ILLISIBLE: 'PDF_ILLISIBLE',
   XML_ABSENT: 'XML_ABSENT',
+  // Écriture des factures (serveur, lot 16)
+  PROFIL_NON_ECRIT: 'PROFIL_NON_ECRIT',
+  DONNEE_HORS_PROFIL: 'DONNEE_HORS_PROFIL',
   // Connecteur de plateforme (serveur, lot 6) : demande refusée avant l'envoi, puis réponses de la plateforme (400 à 503)
   CONNECTEUR_INCONNU: 'CONNECTEUR_INCONNU',
   PARAMETRE_CONNECTEUR: 'PARAMETRE_CONNECTEUR',
@@ -571,4 +662,92 @@ export const ETAT_LIGNE_ANNUAIRE = Object.freeze({
   ACTIVE: 'Enabled',
   INACTIVE: 'Disabled',
   A_VENIR: 'Upcoming',
+});
+
+/** Type d'une pièce jointe (BT-123, liste BR-FR-17) ; LISIBLE une fois au plus (BR-FR-18). */
+export const TYPE_PIECE_JOINTE = Object.freeze({
+  RIB: 'RIB',
+  LISIBLE: 'LISIBLE',
+  FEUILLE_DE_STYLE: 'FEUILLE_DE_STYLE',
+  PJA: 'PJA',
+  BORDEREAU_SUIVI: 'BORDEREAU_SUIVI',
+  DOCUMENT_ANNEXE: 'DOCUMENT_ANNEXE',
+  BON_LIVRAISON: 'BON_LIVRAISON',
+  BON_COMMANDE: 'BON_COMMANDE',
+  BORDEREAU_SUIVI_VALIDATION: 'BORDEREAU_SUIVI_VALIDATION',
+  ETAT_ACOMPTE: 'ETAT_ACOMPTE',
+  FACTURE_PAIEMENT_DIRECT: 'FACTURE_PAIEMENT_DIRECT',
+  RECAPITULATIF_COTRAITANCE: 'RECAPITULATIF_COTRAITANCE',
+});
+
+/** Niveau d'un écart du contrôle de complétude (lot 16, Q5) : bloquant pour un tiers B2B / B2G, avertissement sinon. */
+export const NIVEAU_COMPLETUDE = Object.freeze({
+  BLOQUANT: 'BLOQUANT',
+  AVERTISSEMENT: 'AVERTISSEMENT',
+});
+
+/**
+ * Règle du contrôle de complétude d'une facture émise (lot 16 : completude.js ↔ ReglesCompletude.cs) : règles françaises
+ * du schematron BR-FR-Flux2 (FNFE 1.4.0.04), sommes EN16931 (BR-CO), et deux règles propres à LogiBTP (profil écrit,
+ * cadre émis).
+ */
+export const REGLE_COMPLETUDE = Object.freeze({
+  PROFIL: 'LOGIBTP-PROFIL',
+  CADRE: 'LOGIBTP-CADRE',
+  BR_FR_01: 'BR-FR-01',
+  BR_FR_02: 'BR-FR-02',
+  BR_FR_03: 'BR-FR-03',
+  BR_FR_04: 'BR-FR-04',
+  BR_FR_05: 'BR-FR-05',
+  BR_FR_06: 'BR-FR-06',
+  BR_FR_08: 'BR-FR-08',
+  BR_FR_09: 'BR-FR-09',
+  BR_FR_10: 'BR-FR-10',
+  BR_FR_11: 'BR-FR-11',
+  BR_FR_12: 'BR-FR-12',
+  BR_FR_13: 'BR-FR-13',
+  BR_FR_15: 'BR-FR-15',
+  BR_FR_16: 'BR-FR-16',
+  BR_FR_17: 'BR-FR-17',
+  BR_FR_18: 'BR-FR-18',
+  BR_FR_20: 'BR-FR-20',
+  BR_FR_21: 'BR-FR-21',
+  BR_FR_22: 'BR-FR-22',
+  BR_FR_23: 'BR-FR-23',
+  BR_FR_24: 'BR-FR-24',
+  BR_FR_25: 'BR-FR-25',
+  BR_FR_26: 'BR-FR-26',
+  BR_FR_31: 'BR-FR-31',
+  BR_FR_32: 'BR-FR-32',
+  BR_FR_CO_03: 'BR-FR-CO-03',
+  BR_FR_CO_04: 'BR-FR-CO-04',
+  BR_FR_CO_05: 'BR-FR-CO-05',
+  BR_FR_CO_07: 'BR-FR-CO-07',
+  BR_FR_CO_08: 'BR-FR-CO-08',
+  BR_FR_CO_09: 'BR-FR-CO-09',
+  BR_FR_CO_12: 'BR-FR-CO-12',
+  BR_FR_DEC_01: 'BR-FR-DEC-01',
+  BR_FR_DEC_02: 'BR-FR-DEC-02',
+  BR_FR_DEC_03: 'BR-FR-DEC-03',
+  BR_FR_DEC_04: 'BR-FR-DEC-04',
+  BR_CO_10: 'BR-CO-10',
+  BR_CO_11: 'BR-CO-11',
+  BR_CO_12: 'BR-CO-12',
+  BR_CO_13: 'BR-CO-13',
+  BR_CO_14: 'BR-CO-14',
+  BR_CO_15: 'BR-CO-15',
+  BR_CO_16: 'BR-CO-16',
+  BR_CO_17: 'BR-CO-17',
+});
+
+/** Moyen de paiement BT-81 (UNTDID 4461) écrit à l'émission (lot 22) ; virement : IBAN BT-84 exigé (BR-61). */
+export const MOYEN_PAIEMENT = Object.freeze({
+  NON_DEFINI: '1',
+  ESPECES: '10',
+  CHEQUE: '20',
+  VIREMENT: '30',
+  CARTE: '48',
+  PRELEVEMENT: '49',
+  VIREMENT_SEPA: '58',
+  PRELEVEMENT_SEPA: '59',
 });

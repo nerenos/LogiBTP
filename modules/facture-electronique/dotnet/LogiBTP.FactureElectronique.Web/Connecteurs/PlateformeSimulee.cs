@@ -5,8 +5,11 @@ using LogiBTP.FactureElectronique.Formats;
 
 namespace LogiBTP.FactureElectronique.Web.Connecteurs;
 
-/// <summary>Statut programmé par la plateforme simulée après un accusé Ok : code (<see cref="StatutCdv"/>) et émetteur (<see cref="EmetteurStatut"/>).</summary>
-public sealed record StatutProgramme(string Statut, string Emetteur);
+/// <summary>
+/// Statut programmé par la plateforme simulée après un accusé Ok : code (<see cref="StatutCdv"/>), émetteur
+/// (<see cref="EmetteurStatut"/>) et motif (<see cref="MotifStatut"/>, obligatoire pour Rejetée, Refusée, En litige…).
+/// </summary>
+public sealed record StatutProgramme(string Statut, string Emetteur, string? Motif = null);
 
 /// <summary>
 /// Règles de démonstration de la plateforme simulée : délai de l'accusé, intervalle entre deux statuts programmés,
@@ -216,8 +219,14 @@ public sealed class PlateformeSimulee(IMagasinFlux etat, TimeProvider horloge, O
             return (type, profil, regle, Erreur("sha256", MotifAccuse.Empreinte, "Checksum provided is different from computed one"));
         if (f.IdentifiantSuivi is not null && etat.Tous().Any(x => x.Flux.Sens == SensFlux.Sortant && x.Flux.IdentifiantSuivi == f.IdentifiantSuivi))
             return (type, profil, regle, Erreur("trackingId", MotifAccuse.FluxExistant, "The flow has already been sent and received"));
-        // E-reporting (flux 10, lot 19) : pas encore lu par la plateforme simulée.
-        if (f.Syntaxe == Syntaxe.Frr) return (TypeFlux.NonDefini, profil, regle, new AccuseFlux(EtatAccuse.Ok, []));
+        // E-reporting (flux 10, lots 19 et 28) : non lu par la plateforme simulée ; refusé si le marqueur figure dans le XML.
+        if (f.Syntaxe == Syntaxe.Frr)
+        {
+            return !string.IsNullOrEmpty(Options.MarqueurErreur)
+                   && System.Text.Encoding.UTF8.GetString(f.Contenu).Contains(Options.MarqueurErreur, StringComparison.OrdinalIgnoreCase)
+                ? (TypeFlux.NonDefini, profil, regle, Erreur("file", MotifAccuse.AutreErreurTechnique, "Rejected by the simulated platform (demonstration)"))
+                : (TypeFlux.NonDefini, profil, regle, new AccuseFlux(EtatAccuse.Ok, []));
+        }
         try
         {
             var detectee = Lecture.Detecter(f.Contenu);
@@ -303,7 +312,7 @@ public sealed class PlateformeSimulee(IMagasinFlux etat, TimeProvider horloge, O
         var date = quand.UtcDateTime;
         return Cdar.Ecrire(new StatutAEcrire(SensFacture.Emise, s.Statut, s.Emetteur, reference, auteur, [Partie(f.Vendeur, RoleCdar.Vendeur)], date, date)
         {
-            Historique = flux.Historique,
+            Historique = flux.Historique, Motif = s.Motif,
         });
     }
 

@@ -85,10 +85,20 @@ public sealed record StatutAPoser(string Code, string? Motif = null, string? Act
     public byte[]? Cdar { get; init; }
     public string? NomCdar { get; init; }
     public object? Origine { get; init; }
+    /// <summary>Montants encaissés par taux (Encaissée, plusieurs taux : MDT-215 / MDT-224 répétés) ; remplace Montant et Taux.</summary>
+    public IReadOnlyList<MontantEncaisse>? Encaissements { get; init; }
+
+    /// <summary>Montants encaissés écrits dans le CDAR : la liste, sinon Montant et Taux s'ils sont donnés.</summary>
+    internal IReadOnlyList<MontantEncaisse> EncaissementsDe(string? devise) =>
+        Encaissements is { Count: > 0 } l ? l.Select(e => e with { Devise = e.Devise ?? devise }).ToList()
+        : Montant is decimal m && Taux is decimal t ? [new MontantEncaisse(m, t, devise)] : [];
 }
 
 /// <summary>Statut demandé par un utilisateur (route POST /flux/{id}/statut) : code, motif de la liste autorisée, action, commentaire.</summary>
 public sealed record DemandeStatut(string Code, string? Motif = null, string? Action = null, string? Commentaire = null);
+
+/// <summary>Ligne d'annuaire retenue pour un tiers : trouvée ou non, adresse, type de plateforme (WK, DFH), code de routage, suffixe.</summary>
+public sealed record ResultatAnnuaireFe(bool Trouve, string? Adresse, string? TypePlateforme, string? CodeRoutage, string? Suffixe);
 
 /// <summary>
 /// Services du module Facturation électronique sur la base de la société courante : paramètres, mise en file d'un flux
@@ -170,6 +180,27 @@ public class ServiceFactureElectronique(
 
     /// <summary>Disponibilité de la plateforme (healthcheck).</summary>
     public async Task<EtatSante> Sante(CancellationToken ct) => await (await ConnecteurAsync(ct)).SanteAsync(ct);
+
+    /// <summary>
+    /// Interroge l'annuaire (Directory Service) de la plateforme pour un SIREN (et un SIRET facultatif) : ligne active la plus
+    /// précise (SIRET identique, puis ligne sans SIRET ni suffixe, puis première) ; aucune ligne active : <c>Trouve</c> faux.
+    /// </summary>
+    public async Task<ResultatAnnuaireFe> InterrogerAnnuaireAsync(string siren, string? siret, CancellationToken ct)
+    {
+        var connecteur = await ConnecteurAsync(ct);
+        var r = await connecteur.RechercherLignesAnnuaireAsync(new RechercheAnnuaire([new FiltreAnnuaire("siren", siren)]) { Limite = 50 }, ct);
+        return ChoisirLigneAnnuaire(r.Resultats, siret);
+    }
+
+    /// <summary>Choix de la ligne d'annuaire d'un tiers (règle de <see cref="InterrogerAnnuaireAsync"/>).</summary>
+    public static ResultatAnnuaireFe ChoisirLigneAnnuaire(IEnumerable<LigneAnnuaire> lignes, string? siret)
+    {
+        var l = lignes.Where(x => x.Etat == EtatLigneAnnuaire.Active)
+            .OrderBy(x => !string.IsNullOrEmpty(siret) && x.Siret == siret ? 0 : x.Siret is null && x.Suffixe is null ? 1 : 2)
+            .ThenBy(x => x.IdentifiantAdressage, StringComparer.Ordinal).FirstOrDefault();
+        return l is null ? new(false, null, null, null, null)
+            : new(true, l.IdentifiantAdressage, l.TypePlateforme, l.IdentifiantRoutage, l.Suffixe);
+    }
 
     // ---------------------------------------------------------------- émission : mise en file
 
@@ -676,20 +707,29 @@ public class ServiceFactureElectronique(
         var statut = new StatutFe
         {
             FstFflId = f.FflId, FstNumeroFacture = f.FflNumero, FstSensFacture = sensFacture, FstCode = a.Code, FstMotif = motif, FstAction = action,
-            FstMontant = a.Montant, FstTaux = a.Taux, FstEmetteur = emetteur, FstSens = SensStatut.Pose, FstFflCdarId = cdarId, FstDate = date,
+            FstMontant = a.Encaissements is { Count: > 0 } le ? le.Sum(x => x.Montant) : a.Montant,
+            FstTaux = a.Encaissements is { Count: > 0 } lt ? (lt.Count == 1 ? lt[0].TauxTva : null) : a.Taux, FstEmetteur = emetteur, FstSens = SensStatut.Pose, FstFflCdarId = cdarId, FstDate = date,
             FstCreeLe = date, FstCreePar = utilisateur ?? "",
-            FstDetail = commentaire is null && a.Origine is null ? null : JsonSerializer.Serialize(new { commentaire, origine = a.Origine }, JsonCalcul.Options),
+            FstDetail = commentaire is null && a.Origine is null && a.Encaissements is not { Count: > 0 } ? null
+                : a.Encaissements is { Count: > 0 } ld ? JsonSerializer.Serialize(new { commentaire, origine = a.Origine, encaissements = ld }, JsonCalcul.Options)
+                : JsonSerializer.Serialize(new { commentaire, origine = a.Origine }, JsonCalcul.Options),
         };
         db.Statuts.Add(statut);
         await db.SaveChangesAsync(ct);
         await JournalFe.AjouterAsync(db, EtapeFe.Du(f, EvenementFe.StatutPose, acteur, utilisateur) with
         {
             EtatAvant = avant, EtatApres = apres,
-            Detail = new
-            {
-                statut = a.Code, motif, action, a.Montant, a.Taux, commentaire, origine = a.Origine, envoye = cdarId is not null, flux_cdar = cdarId,
-                hors_plateforme = f.FflHorsPlateforme ? true : (bool?)null,
-            },
+            Detail = a.Encaissements is { Count: > 0 } lj
+                ? new
+                {
+                    statut = a.Code, motif, action, encaissements = lj, commentaire, origine = a.Origine, envoye = cdarId is not null, flux_cdar = cdarId,
+                    hors_plateforme = f.FflHorsPlateforme ? true : (bool?)null,
+                }
+                : new
+                {
+                    statut = a.Code, motif, action, a.Montant, a.Taux, commentaire, origine = a.Origine, envoye = cdarId is not null, flux_cdar = cdarId,
+                    hors_plateforme = f.FflHorsPlateforme ? true : (bool?)null,
+                } as object,
         }, ct);
         if (tx is not null) await tx.CommitAsync(ct);
         await specialisation.StatutPoseAsync(new StatutSignaleFe(statut, f, avant, apres), ct);
@@ -732,7 +772,7 @@ public class ServiceFactureElectronique(
         {
             Historique = historique, Motif = a.Motif, Action = a.Action,
             Notes = a.Commentaire is null ? [] : [new NoteCdar(a.Commentaire)],
-            Encaissements = a.Montant is decimal m && a.Taux is decimal t ? [new MontantEncaisse(m, t, facture.Devise)] : [],
+            Encaissements = a.EncaissementsDe(facture.Devise),
         });
     }
 
@@ -911,6 +951,12 @@ public class ServiceFactureElectronique(
             : JournalFe.ChronologieAsync(db, fluxId, typeElement, idElement, ct);
 
     public Task<VerificationJournal> VerifierJournal(CancellationToken ct) => JournalFe.VerifierAsync(db, ct);
+
+    /// <summary>
+    /// Étape décidée par l'application (avoir interne d'une facture rejetée ou refusée, action d'un utilisateur…) inscrite
+    /// au journal : le module n'en tire aucune conséquence sur ses flux.
+    /// </summary>
+    public Task JournaliserAsync(EtapeFe e, CancellationToken ct) => JournalFe.AjouterAsync(db, e, ct);
 
     // ---------------------------------------------------------------- DTO
 

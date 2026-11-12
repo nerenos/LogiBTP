@@ -1119,6 +1119,8 @@ public class DocumentService<TDoc, TLigne, TComplet>(
             d.EntNumero = numero;
             d.EntCopieDeId = id;
             d.EntDate = DateOnly.FromDateTime(DateTime.Today);
+            // Copie d'une pièce transférée en comptabilité : la copie, brouillon, n'est pas transférée.
+            d.EntEtatCompta = null;
         }, u, ct);
         db.DocumentsLien.Add(new DocumentLien { LieSourceEntId = id, LieCibleEntId = copie.Document.Document.EntId, LieType = "COPIE" });
         await db.SaveChangesAsync(ct);

@@ -917,7 +917,17 @@
         "mode_unite": "€ par unité"
       },
       "mois_revision": "Mois des travaux",
-      "mois_revision_aide": "Mois des travaux de la période pour la révision des prix (vide : mois de la date de la pièce)"
+      "mois_revision_aide": "Mois des travaux de la période pour la révision des prix (vide : mois de la date de la pièce)",
+      "nature_fe": "Nature (facture électronique)",
+      "nature_fe_aide": "Nature biens, services ou mixte de la pièce émise (cadre de facturation) : calculée sur les lignes vendues d'après leurs natures (ouvrages : services), ou imposée",
+      "nature_fe_calculee": "Calculée : {{nature}}",
+      "fe_differe": "Envoyer plus tard (facture électronique)",
+      "fe_differe_aide": "La pièce validée ne part pas sur la plateforme : bouton « Émettre » de la pièce pour l'envoyer ensuite",
+      "natures_fe": {
+        "B": "Biens",
+        "S": "Services",
+        "M": "Mixte"
+      }
     },
     "page": {
       "onglets": {
@@ -1037,6 +1047,83 @@
       "tout_afficher": "Tout afficher",
       "document": "Document",
       "creer_devis": "Créer le devis",
+      "completude_fe": {
+        "titre": "Facture électronique",
+        "aide": "Contrôle de la facture électronique produite depuis la pièce enregistrée (complétude EN 16931 et règles françaises) : bloquant pour un client professionnel ou public, avertissement sinon",
+        "complete": "complète, prête à l'émission",
+        "bloquants": "{{nombre}} écart(s) bloquant(s)",
+        "avertissements": "{{nombre}} avertissement(s)",
+        "type_cadre": "Type {{type}}, cadre {{cadre}}",
+        "donnee": "Donnée {{donnee}}",
+        "ligne": "ligne {{ligne}}",
+        "indisponible": "Contrôle de la facture électronique indisponible : {{erreur}}",
+        "ecarts": {
+          "NUMERO_PROVISOIRE": "Numéro provisoire : le numéro de la facture est attribué à la validation",
+          "SOCIETE_ABSENTE": "Fiche de la société de la base absente de l'annuaire",
+          "TIERS_ABSENT": "Client de la pièce absent",
+          "ADRESSE_ABSENTE": "Adresse postale absente (société ou client)",
+          "TVA_ABSENTE": "Ligne sans taux de TVA",
+          "IBAN_ABSENT": "Règlement par virement sans IBAN de la société",
+          "PAIEMENT_ABSENT": "Ni condition de paiement ni échéance",
+          "ACOMPTE_ABSENT": "Facture d'acompte déduite introuvable (non validée ou annulée)",
+          "ORIGINE_ABSENTE": "Facture d'origine de l'avoir introuvable",
+          "ENGAGEMENT_ABSENT": "Numéro d'engagement exigé par la structure publique : à saisir dans la référence externe de la pièce",
+          "CODE_SERVICE_ABSENT": "Code service de la structure publique absent de sa fiche (exigé par certaines structures)",
+          "SIRET_ABSENT": "SIRET de la structure publique absent de sa fiche",
+          "RECAPITULATIF_ABSENT": "Récapitulatif de cotraitance absent de la GED de la pièce et du marché"
+        }
+      },
+      "envoi_fe": {
+        "titre": "Facture électronique",
+        "aide": "Émission de la pièce validée vers la plateforme agréée : statut du cycle de vie reçu, sinon état de l'émission (détail dans l'onglet Chronologie)",
+        "non_emise": "non émise",
+        "syntaxe": "({{syntaxe}})",
+        "erreur": "Erreur : {{erreur}}",
+        "emettre": "Émettre",
+        "emettre_aide": "Envoyer la pièce validée à la plateforme (pièce validée avant l'activation du module, envoi différé, échec ou tiers vérifié depuis)",
+        "confirmer": "Émettre cette pièce en facture électronique ?",
+        "indisponible": "État de la facture électronique indisponible : {{erreur}}",
+        "pastilles": {
+          "A_EMETTRE": "À émettre",
+          "DIFFEREE": "Envoi différé",
+          "EN_FILE": "En cours d'envoi",
+          "ERREUR": "En erreur",
+          "HORS_FLUX": "Envoi habituel"
+        },
+        "motifs": {
+          "B2C": "client particulier",
+          "INTERNATIONAL": "client international (e-reporting)",
+          "HORS_ANNUAIRE": "client absent de l'annuaire",
+          "INCOMPLETE": "données à compléter",
+          "PRODUCTION": "production du fichier impossible",
+          "AVOIR_INTERNE": "avoir interne non déposé"
+        },
+        "annulation": {
+          "proposee": "Facture {{statut}} : à annuler par un avoir interne puis à refaire",
+          "bouton": "Annuler par avoir interne",
+          "bouton_aide": "Crée l'avoir d'annulation daté du jour (les deux pièces passent au statut Annulé) puis une nouvelle facture en brouillon, ou remet en cours la situation d'une pièce d'avancement",
+          "titre": "Annulation par avoir interne",
+          "confirmer": "La facture a été {{statut}}. Créer l'avoir interne d'annulation, daté du jour, puis une nouvelle facture en brouillon (situation remise en cours pour une pièce d'avancement) ? Le statut des deux pièces passe à Annulé.",
+          "archivage": "Déposer l'avoir sur la plateforme pour archivage seul (non transmis au client)",
+          "archivage_aide": "Note BAR ARCHIVEONLY : l'avoir est gardé par la plateforme sans être adressé au client ; décoché, il n'est pas déposé",
+          "ok": "Créer l'avoir",
+          "avoir": "Annulée par l'avoir interne {{numero}}",
+          "nouvelle_facture": "Nouvelle facture : {{numero}}",
+          "de_la_facture": "Avoir interne d'annulation de la facture {{statut}}",
+          "ouvrir_facture": "Ouvrir la facture annulée",
+          "brouillon": "brouillon",
+          "transmissions": {
+            "ARCHIVAGE_SEUL": "déposé pour archivage seul",
+            "AUCUNE": "non déposé"
+          },
+          "statuts": {
+            "210": "refusée par le client",
+            "213": "rejetée par la plateforme"
+          },
+          "cree": "Avoir interne {{numero}} créé : la facture et son avoir sont annulés",
+          "ouvrir_copie": "Ouvrir la nouvelle facture (brouillon) ou la situation remise en cours ?"
+        }
+      },
       "attente": {
         "conflit": "le document a été modifié sur le serveur pendant la saisie hors ligne. Vos modifications (enregistrées sur ce poste le {{le}}) sont conservées.",
         "comparer_aide": "Comparer ma saisie à la version du serveur et trancher",
@@ -5616,6 +5703,11 @@
       "racine": "Aucun (racine)",
       "choisir_parent": "Choisir le niveau supérieur",
       "parent": "Niveau supérieur",
+      "verifier_fe": "Vérifier dans l'annuaire",
+      "verifier_fe_aide": "Interroger l'annuaire des plateformes et reprendre l'adresse de facturation électronique, la plateforme et le code de routage du tiers",
+      "verifie_fe": "Annuaire des plateformes : {{adresse}} ({{plateforme}}) repris sur la fiche",
+      "hors_annuaire_fe": "Tiers absent de l'annuaire des plateformes : les factures électroniques ne pourront pas lui être remises",
+      "absent_fe": "Tiers absent de l'annuaire des plateformes",
       "entreprises_indisponible": "Recherche d'entreprises indisponible",
       "confirmer_doublon": "Cet établissement est déjà dans l'annuaire : {{nom}} ({{code}}). L'ouvrir plutôt que de créer un doublon ?",
       "siret_deux_fois": "SIRET déjà enregistré : il ne pourra pas l'être deux fois",
@@ -6505,7 +6597,39 @@
       "depot": "Dépôt manuel",
       "depot_titre": "Flux à déposer sur le portail de la plateforme, import d'un fichier reçu",
       "parametres": "Paramètres",
-      "parametres_titre": "Plateforme, connexion, adresses, syntaxe et relève"
+      "parametres_titre": "Plateforme, connexion, adresses, syntaxe et relève",
+      "encaissements": "Encaissements",
+      "encaissements_titre": "Statuts Encaissée à valider avant l'envoi (factures de services sans TVA sur les débits)",
+      "ereporting": "E-reporting",
+      "ereporting_titre": "Ventes B2C et internationales et leurs encaissements transmis à la plateforme (flux 10)"
+    },
+    "encaissements": {
+      "aide": "Règlements reçus pointés sur les factures émises de services ou mixtes sans option de TVA sur les débits : chaque versement (échéance, versement partiel, retenue libérée) donne un statut Encaissée avec le montant encaissé par taux de TVA, envoyé à la plateforme et au PPF après votre validation. Un règlement diminué ou supprimé après l'envoi donne une annulation d'encaissement (montants négatifs).",
+      "aucune": "Aucun statut Encaissée à envoyer.",
+      "aucune_cochee": "Cochez au moins une ligne.",
+      "tout": "Tout cocher ou tout décocher",
+      "colonnes": {
+        "piece": "Facture",
+        "tiers": "Client",
+        "reglement": "Règlement",
+        "montant": "Pointé",
+        "encaisse": "Encaissé par taux"
+      },
+      "taux": "{{taux}} % : {{montant}}",
+      "separateur": " · ",
+      "sans_montant": "aucun montant à déclarer",
+      "reglement_supprime": "Règlement supprimé",
+      "annulation": "Annulation",
+      "annulation_aide": "Annulation d'encaissement : règlement diminué ou supprimé après l'envoi du statut Encaissée",
+      "envoyer": "Envoyer les statuts Encaissée",
+      "envoyer_aide": "Pose le statut Encaissée (212) de chaque ligne cochée : message de cycle de vie mis en file pour la plateforme",
+      "ecarter": "Écarter",
+      "ecarter_aide": "Retire les lignes cochées de la liste sans rien envoyer",
+      "confirmer_envoyer": "Envoyer {{nombre}} statut(s) Encaissée à la plateforme ?",
+      "confirmer_ecarter": "Écarter {{nombre}} ligne(s) sans rien envoyer ?",
+      "resultat": "{{envoyes}} statut(s) Encaissée envoyé(s), {{ecartes}} ligne(s) écartée(s).",
+      "perimees": "{{nombre}} ligne(s) ont changé depuis la lecture : liste relue, à vérifier.",
+      "erreur": "Statut Encaissée non posé : {{message}}"
     },
     "element_document": "Pièce n° {{id}}",
     "document": {
@@ -6553,6 +6677,110 @@
         "CONTRAT_INTROUVABLE": "Contrat {{contrat}} du paiement direct non retrouvé parmi les marchés de sous-traitance du fournisseur.",
         "PAIEMENT_DIRECT_NON_PREVU": "Le marché de sous-traitance n'est ni en paiement direct ni en délégation de paiement.",
         "PAYEUR_DIFFERENT": "Payeur {{payeur}} différent du maître d'ouvrage du marché ({{maitre_ouvrage}})."
+      }
+    },
+    "options": {
+      "titre": "Options de l'application",
+      "emission_automatique": "Émettre les factures à la validation",
+      "emission_automatique_aide": "Une facture validée part aussitôt vers la plateforme (sauf « Envoyer plus tard ») ; sinon chaque pièce s'émet par son bouton « Émettre »",
+      "annuaire_nuit": "Vérifier les tiers dans l'annuaire chaque nuit",
+      "annuaire_nuit_aide": "Vérification de fond des tiers professionnels dans l'annuaire des plateformes, entre 1 h et 6 h",
+      "enregistre": "Option enregistrée"
+    },
+    "element_ereporting": "Période d'e-reporting n° {{id}}",
+    "ereporting": {
+      "aide": "Les ventes à des particuliers ou à des non-assujettis et les ventes internationales, ainsi que leurs encaissements (factures de services sans option de TVA sur les débits), sont collectées sur la période, extraites puis transmises à la plateforme agréée : un envoi par sous-flux et par période, ou plusieurs envois par jour, selon le découpage des paramètres. Une période envoyée se corrige par une transmission rectificative ; une période rejetée se relance.",
+      "aucune": "Aucune période préparée.",
+      "aucun_envoi": "Aucune transmission : rien à déclarer, ou écarts à corriger.",
+      "periode": "{{nature}} du {{debut}} au {{fin}}",
+      "natures": {
+        "TRANSACTIONS": "Transactions",
+        "PAIEMENTS": "Paiements"
+      },
+      "nature_aide": "Transactions (ventes, flux 10.1 et 10.3) ou paiements (encaissements, flux 10.2 et 10.4)",
+      "jour_aide": "Un jour de la période à préparer",
+      "jour_absent": "Indiquez un jour de la période.",
+      "etats": {
+        "PREPAREE": "Préparée",
+        "ENVOYEE": "Envoyée",
+        "ACCEPTEE": "Acceptée",
+        "REJETEE": "Rejetée"
+      },
+      "regimes": {
+        "REEL_NORMAL_MENSUEL": "Réel normal mensuel",
+        "REEL_NORMAL_TRIMESTRIEL": "Réel normal trimestriel",
+        "SIMPLIFIE": "Réel simplifié",
+        "FRANCHISE": "Franchise en base"
+      },
+      "sous_flux": {
+        "10_1": "10.1 Transactions unitaires",
+        "10_2": "10.2 Paiements unitaires",
+        "10_3": "10.3 Transactions agrégées",
+        "10_4": "10.4 Paiements agrégés"
+      },
+      "types": {
+        "IN": "Initiale",
+        "RE": "Rectificative"
+      },
+      "resume_transactions": "{{b2c}} vente(s) B2C, {{international}} facture(s) internationale(s) ; {{ht}} HT, {{tva}} de TVA",
+      "resume_paiements": "{{b2c}} encaissement(s) B2C, {{international}} encaissement(s) international(aux) ; {{encaisse}} encaissés",
+      "ecarts_nombre": "{{nombre}} écart(s)",
+      "ecarts": "Écarts du contrôle avant l'envoi",
+      "envois": "Transmissions",
+      "chronologie": "Chronologie",
+      "non_envoye": "Pas encore envoyée",
+      "ignorees": "Pièces écartées (illisibles) : {{pieces}}",
+      "colonnes": {
+        "periode": "Période",
+        "etat": "État",
+        "correction": "Correction",
+        "envois": "Envois",
+        "resume": "Contenu",
+        "actions": "Actions"
+      },
+      "colonnes_ecarts": {
+        "sous_flux": "Sous-flux",
+        "jour": "Jour",
+        "regle": "Règle",
+        "donnee": "Donnée",
+        "rang": "Rang"
+      },
+      "colonnes_envois": {
+        "sous_flux": "Sous-flux",
+        "jour": "Jour",
+        "identifiant": "Identifiant",
+        "type": "Type",
+        "elements": "Éléments",
+        "flux": "Flux"
+      },
+      "option": {
+        "titre": "Paramètres de l'e-reporting",
+        "regime": "Régime de TVA",
+        "regime_aide": "Fixe la périodicité des transmissions (décade, mois ou bimestre)",
+        "matricule": "Matricule de la plateforme",
+        "matricule_aide": "Matricule à 4 caractères de la plateforme agréée (schéma 0238), émetteur des transmissions",
+        "decoupage": "Découpage des envois : {{decoupage}} (paramètres de la plateforme)",
+        "enregistrer": "Enregistrer",
+        "enregistre": "Paramètres de l'e-reporting enregistrés."
+      },
+      "actions": {
+        "preparer": "Préparer la période",
+        "preparer_aide": "Collecte les données de la période contenant ce jour et prépare les transmissions (contrôlées avant l'envoi)",
+        "envoyer": "Envoyer",
+        "envoyer_aide": "Met les transmissions préparées en file pour la plateforme",
+        "corriger": "Corriger",
+        "corriger_aide": "Collecte de nouveau la période et prépare des transmissions rectificatives",
+        "relancer": "Relancer",
+        "relancer_aide": "Collecte de nouveau la période rejetée et prépare un nouvel essai",
+        "confirmer_envoyer": "Envoyer {{periode}} à la plateforme ?",
+        "confirmer_corriger": "Préparer une correction de {{periode}} (transmissions rectificatives) ?",
+        "confirmer_relancer": "Préparer un nouvel essai de {{periode}} ?"
+      },
+      "resultats": {
+        "preparee": "{{periode}} préparée.",
+        "envoyer": "{{periode}} envoyée à la plateforme.",
+        "corriger": "Correction de {{periode}} préparée.",
+        "relancer": "Nouvel essai de {{periode}} préparé."
       }
     }
   },

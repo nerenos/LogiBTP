@@ -1,5 +1,7 @@
 // Codes du cœur côté client, répliqués dans src/LogiBTP.Domaine/Codes.cs (parité vérifiée par CodesTests.cs).
 
+import { STATUT_CDV } from '@logibtp/facture-electronique';
+
 /** Types de fiches du cœur (clés de TYPES_FICHE, type d'élément de la GED, du CRM et du planning). */
 export const TYPE_FICHE = Object.freeze({
   SALARIE: 'salarie',
@@ -140,6 +142,180 @@ export const TYPE_ELEMENT_FE = Object.freeze({
   DOCUMENT: 'DOCUMENT',
   /** Ligne de la liste « Factures reçues à traiter » sans pièce (db/296) : flux reçu, ouvert dans la page du module. */
   FLUX: 'fe_flux',
+  /** Période d'e-reporting (ereporting_periode, db/304, lot 28) : chronologie des envois du flux 10. */
+  PERIODE_EREPORTING: 'EREPORTING',
+});
+
+/** Avertissement d'émission lié à l'annuaire des plateformes (lot 20). */
+export const AVERTISSEMENT_ANNUAIRE_FE = Object.freeze({
+  HORS_ANNUAIRE: 'HORS_ANNUAIRE',
+  NON_VERIFIE: 'NON_VERIFIE',
+});
+
+/** Plateforme de réception inscrite sur la fiche d'un tiers depuis l'annuaire (lot 20). */
+export const PLATEFORME_ANNUAIRE_FE = Object.freeze({
+  PA: 'PA',
+  PPF: 'PPF',
+});
+
+/** Nature d'une pièce émise en facture électronique (lot 21, Q8) : lettre du cadre BT-23 (biens, services, mixte). */
+export const NATURE_FE = Object.freeze({
+  BIENS: 'B',
+  SERVICES: 'S',
+  MIXTE: 'M',
+});
+
+/**
+ * Situation de la pièce émise qui fixe le chiffre du cadre BT-23 (lot 21) : dépôt simple (1), déjà payée (2), définitive
+ * après acompte (4), émise comme sous-traitant (5) ou cotraitant (6).
+ */
+export const SITUATION_CADRE_FE = Object.freeze({
+  DEPOT: 'DEPOT',
+  DEJA_PAYEE: 'DEJA_PAYEE',
+  DEFINITIVE_APRES_ACOMPTE: 'DEFINITIVE_APRES_ACOMPTE',
+  SOUS_TRAITANT: 'SOUS_TRAITANT',
+  COTRAITANT: 'COTRAITANT',
+});
+
+/**
+ * Écarts de l'émission d'une pièce de vente en facture électronique (lot 22, Btp/EmissionFactureBtp.cs), en plus de la
+ * complétude du module : données de LogiBTP manquantes ou provisoires (bandeau de la pièce dans l'éditeur).
+ */
+export const ECART_EMISSION_FE = Object.freeze({
+  NUMERO_PROVISOIRE: 'NUMERO_PROVISOIRE',
+  SOCIETE_ABSENTE: 'SOCIETE_ABSENTE',
+  TIERS_ABSENT: 'TIERS_ABSENT',
+  ADRESSE_ABSENTE: 'ADRESSE_ABSENTE',
+  TVA_ABSENTE: 'TVA_ABSENTE',
+  IBAN_ABSENT: 'IBAN_ABSENT',
+  PAIEMENT_ABSENT: 'PAIEMENT_ABSENT',
+  ACOMPTE_ABSENT: 'ACOMPTE_ABSENT',
+  ORIGINE_ABSENTE: 'ORIGINE_ABSENTE',
+  ENGAGEMENT_ABSENT: 'ENGAGEMENT_ABSENT',
+  CODE_SERVICE_ABSENT: 'CODE_SERVICE_ABSENT',
+  SIRET_ABSENT: 'SIRET_ABSENT',
+  RECAPITULATIF_ABSENT: 'RECAPITULATIF_ABSENT',
+});
+
+/**
+ * État de l'émission d'une pièce de vente en facture électronique (lot 24, document_fe_emission.dfe_etat, db/300) : à
+ * émettre (tâche de fond), envoyer plus tard ou émission manuelle (bouton « Émettre »), émise (flux en file), échec de
+ * la production, hors flux 2 (tiers particulier, international ou absent de l'annuaire : envoi habituel).
+ */
+export const ETAT_EMISSION_FE = Object.freeze({
+  A_EMETTRE: 'A_EMETTRE',
+  DIFFEREE: 'DIFFEREE',
+  EMISE: 'EMISE',
+  ECHEC: 'ECHEC',
+  HORS_FLUX: 'HORS_FLUX',
+});
+
+/** Motif d'une pièce hors flux 2 ou d'un échec de l'émission (document_fe_emission.dfe_motif, lot 24). */
+export const MOTIF_EMISSION_FE = Object.freeze({
+  B2C: 'B2C',
+  INTERNATIONAL: 'INTERNATIONAL',
+  HORS_ANNUAIRE: 'HORS_ANNUAIRE',
+  INCOMPLETE: 'INCOMPLETE',
+  PRODUCTION: 'PRODUCTION',
+  AVOIR_INTERNE: 'AVOIR_INTERNE',
+});
+
+/**
+ * Transmission de l'avoir interne d'annulation d'une facture émise rejetée (213) ou refusée (210), choisie par
+ * l'utilisateur (lot 25, Q14) : déposé pour archivage seul (note BAR ARCHIVEONLY), ou non déposé.
+ */
+export const TRANSMISSION_AVOIR_INTERNE_FE = Object.freeze({
+  ARCHIVAGE_SEUL: 'ARCHIVAGE_SEUL',
+  AUCUNE: 'AUCUNE',
+});
+
+/**
+ * Pastille « Facture électronique » d'une pièce (colonne statut_fe de v_liste_documents, page document) hors statuts du
+ * cycle de vie (STATUT_CDV du module) : flux en file ou déposé sans statut, flux en erreur ou échec de l'émission.
+ */
+export const PASTILLE_EMISSION_FE = Object.freeze({
+  A_EMETTRE: 'A_EMETTRE',
+  DIFFEREE: 'DIFFEREE',
+  EN_FILE: 'EN_FILE',
+  ERREUR: 'ERREUR',
+  HORS_FLUX: 'HORS_FLUX',
+});
+
+/**
+ * Pastilles de la colonne « Facture électronique » des listes de factures (vues-liste.js, db/121) : états de l'émission
+ * puis statuts du cycle de vie (codes STATUT_CDV du module) ; libellés gardés en base avec la vue.
+ */
+export const PASTILLES_EMISSION_FE_LISTE = Object.freeze([
+  { valeur: PASTILLE_EMISSION_FE.A_EMETTRE, libelle: 'À émettre', teinte: 'info' },
+  { valeur: PASTILLE_EMISSION_FE.DIFFEREE, libelle: 'Envoi différé', teinte: 'neutre' },
+  { valeur: PASTILLE_EMISSION_FE.EN_FILE, libelle: 'En cours d\'envoi', teinte: 'envoye' },
+  { valeur: PASTILLE_EMISSION_FE.ERREUR, libelle: 'En erreur', teinte: 'erreur' },
+  { valeur: PASTILLE_EMISSION_FE.HORS_FLUX, libelle: 'Envoi habituel', teinte: 'neutre' },
+  { valeur: STATUT_CDV.DEPOSEE, libelle: 'Déposée', teinte: 'envoye' },
+  { valeur: STATUT_CDV.EMISE, libelle: 'Émise', teinte: 'envoye' },
+  { valeur: STATUT_CDV.RECUE, libelle: 'Reçue', teinte: 'envoye' },
+  { valeur: STATUT_CDV.MISE_A_DISPOSITION, libelle: 'Mise à disposition', teinte: 'envoye' },
+  { valeur: STATUT_CDV.PRISE_EN_CHARGE, libelle: 'Prise en charge', teinte: 'info' },
+  { valeur: STATUT_CDV.APPROUVEE, libelle: 'Approuvée', teinte: 'succes' },
+  { valeur: STATUT_CDV.APPROUVEE_PARTIELLEMENT, libelle: 'Approuvée partiellement', teinte: 'attention' },
+  { valeur: STATUT_CDV.EN_LITIGE, libelle: 'En litige', teinte: 'attention' },
+  { valeur: STATUT_CDV.SUSPENDUE, libelle: 'Suspendue', teinte: 'attention' },
+  { valeur: STATUT_CDV.COMPLETEE, libelle: 'Complétée', teinte: 'info' },
+  { valeur: STATUT_CDV.REFUSEE, libelle: 'Refusée', teinte: 'erreur' },
+  { valeur: STATUT_CDV.PAIEMENT_TRANSMIS, libelle: 'Paiement transmis', teinte: 'succes' },
+  { valeur: STATUT_CDV.ENCAISSEE, libelle: 'Encaissée', teinte: 'termine' },
+  { valeur: STATUT_CDV.REJETEE, libelle: 'Rejetée', teinte: 'erreur' },
+  { valeur: STATUT_CDV.VISEE, libelle: 'Visée', teinte: 'info' },
+  { valeur: STATUT_CDV.ANNULEE, libelle: 'Annulée', teinte: 'barre' },
+  { valeur: STATUT_CDV.ERREUR_ROUTAGE, libelle: 'Erreur de routage', teinte: 'erreur' },
+  { valeur: STATUT_CDV.IRRECEVABLE, libelle: 'Irrecevable', teinte: 'erreur' },
+]);
+
+/** Erreurs de l'émission d'une pièce (validation refusée, bouton « Émettre »), lot 24. */
+/**
+ * Encaissement déclaré d'une facture émise (document_fe_encaissement, db/302, lot 26) : statut Encaissée (212) envoyé à
+ * la plateforme, ou écarté par l'utilisateur depuis la liste à valider (rien d'envoyé).
+ */
+export const ETAT_ENCAISSEMENT_FE = Object.freeze({
+  ENVOYE: 'ENVOYE',
+  ECARTE: 'ECARTE',
+});
+
+/** Nature d'une période d'e-reporting (db/304, lot 28) : transactions (10.1, 10.3) ou paiements (10.2, 10.4). */
+export const NATURE_PERIODE_EREPORTING = Object.freeze({
+  TRANSACTIONS: 'TRANSACTIONS',
+  PAIEMENTS: 'PAIEMENTS',
+});
+
+/** État affiché d'une période d'e-reporting (lot 28) : préparée, envoyée, acceptée (accusés Ok), rejetée (un envoi en erreur). */
+export const ETAT_PERIODE_EREPORTING = Object.freeze({
+  PREPAREE: 'PREPAREE',
+  ENVOYEE: 'ENVOYEE',
+  ACCEPTEE: 'ACCEPTEE',
+  REJETEE: 'REJETEE',
+});
+
+/** Ventes retenues par l'e-reporting (lot 28) : particulier ou non-assujetti, international. */
+export const CIBLE_EREPORTING = Object.freeze({
+  B2C: 'B2C',
+  INTERNATIONAL: 'INTERNATIONAL',
+});
+
+/** Erreurs de l'e-reporting (lot 28). */
+export const ERREUR_EREPORTING = Object.freeze({
+  PARAMETRES: 'EREPORTING_PARAMETRES',
+  PERIODE_EN_COURS: 'EREPORTING_PERIODE_EN_COURS',
+  DEJA_ENVOYEE: 'EREPORTING_DEJA_ENVOYEE',
+  ETAT: 'EREPORTING_ETAT',
+  ECARTS: 'EREPORTING_ECARTS',
+  VIDE: 'EREPORTING_VIDE',
+});
+
+export const ERREUR_EMISSION_FE = Object.freeze({
+  INCOMPLETE: 'FE_INCOMPLETE',
+  DEJA_EMISE: 'FE_DEJA_EMISE',
+  NON_EMETTABLE: 'FE_NON_EMETTABLE',
+  ANNULATION_IMPOSSIBLE: 'FE_ANNULATION_IMPOSSIBLE',
 });
 
 /** Signaux de notification de la facturation électronique (db/295, types du module « facture_electronique »). */

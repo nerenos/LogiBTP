@@ -2,6 +2,7 @@ using System.Text;
 using LogiBTP.FactureElectronique.Formats;
 using LogiBTP.FactureElectronique.Web;
 using LogiBTP.FactureElectronique.Web.Connecteurs;
+using LogiBTP.Socle.Testing;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,7 +17,9 @@ namespace LogiBTP.FactureElectronique.Tests;
 /// LOGIBTP_TEST_PG, sinon rien) : file (dépôt, doublon, reprises 1/5/15/60 puis erreur, nouvelle tentative), relève
 /// (accusés, statuts 200 → 205, curseur, idempotence, facture reçue rattachée, AlreadyExistingFlow), dépôt et import
 /// manuels, magasin en base, journal (ajout seul, chaîne vérifiée, altération détectée). Les tests d'une même base se
-/// partagent fe_parametre : ils sont dans cette seule classe (exécutée en série).
+/// partagent fe_parametre : ils sont dans cette seule classe (exécutée en série), chacun sous le verrou consultatif
+/// <see cref="VerrouBaseTests.FactureElectronique"/> que tient aussi la collection des tests du cœur sur la même base
+/// (autre processus de dotnet test LogiBTP.slnx : sans lui, leurs relèves et passages de la file se croisaient).
 /// </summary>
 public sealed class ServiceFactureElectroniqueTests : IAsyncLifetime
 {
@@ -29,6 +32,7 @@ public sealed class ServiceFactureElectroniqueTests : IAsyncLifetime
     private readonly ConnecteurPanne panne = new();
     private readonly string numero = "FE" + Random.Shared.NextInt64(100_000_000, 999_999_999);
     private ServiceProvider? services;
+    private VerrouBaseTests? verrou;
 
     private sealed class SpecialisationTest : SpecialisationFactureElectronique
     {
@@ -103,16 +107,17 @@ public sealed class ServiceFactureElectroniqueTests : IAsyncLifetime
     public async Task InitializeAsync()
     {
         if (Connexion is null) return;
+        verrou = await VerrouBaseTests.PrendreAsync(new NpgsqlConnection(Connexion), VerrouBaseTests.FactureElectronique);
         // Restes d'un passage précédent : hors de la file et curseurs remis à zéro (base jetable des tests).
         await using var db = Db();
         await db.Database.ExecuteSqlRawAsync("UPDATE fe_flux SET ffl_etat = 'ABANDONNE' WHERE ffl_etat IN ('A_ENVOYER', 'ENVOYE')");
         await db.Database.ExecuteSqlRawAsync("UPDATE fe_releve SET fre_curseur = NULL, fre_derniere_releve = NULL");
     }
 
-    public Task DisposeAsync()
+    public async Task DisposeAsync()
     {
         services?.Dispose();
-        return Task.CompletedTask;
+        if (verrou is not null) await verrou.DisposeAsync();
     }
 
     private static async Task<List<string>> Etapes(FactureElectroniqueDbContext db, long flux) =>

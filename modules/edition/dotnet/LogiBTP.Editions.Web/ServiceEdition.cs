@@ -301,12 +301,14 @@ public sealed class ServiceEdition(EditionDbContext db, SpecialisationEdition sp
 
     /// <summary>
     /// PDF d'une édition produit par le serveur (même moteur que l'aperçu, dans Jint) ; `imprimer` : impression
-    /// (dernier modèle retenu sur l'élément, Q13), sinon simple téléchargement.
+    /// (dernier modèle retenu sur l'élément, Q13), sinon simple téléchargement ; `pdfa` : option PDF/A-3 de l'hôte
+    /// (env.pdf.pdfa du moteur, pdfa.js : fichiers associés, schémas d'extension XMP), absente : PDF habituel.
     /// </summary>
-    public async Task<(PdfEdition Pdf, string Nom, PreparationEdition Preparation)> Pdf(IServiceProvider services, DemandeEdition d, bool imprimer, Utilisateur u, CancellationToken ct)
+    public async Task<(PdfEdition Pdf, string Nom, PreparationEdition Preparation)> Pdf(IServiceProvider services, DemandeEdition d, bool imprimer, Utilisateur u,
+        CancellationToken ct, JsonNode? pdfa = null)
     {
         var p = await Preparer(services, d, u, ct);
-        var env = Env(p, d, u);
+        var env = Env(p, d, u, pdfa);
         var modele = p.Modele["contenu"]!.ToJsonString();
         var donnees = p.Donnees.ToJsonString();
         var pdf = await pool.ExecuterAsync(m => m.Pdf(modele, donnees, env), ct);
@@ -316,7 +318,7 @@ public sealed class ServiceEdition(EditionDbContext db, SpecialisationEdition sp
     }
 
     /// <summary>Environnement du moteur : charte, blocs, sous-rapports, paramètres, format, ressources, propriétés du PDF.</summary>
-    public string Env(PreparationEdition p, DemandeEdition d, Utilisateur u)
+    public string Env(PreparationEdition p, DemandeEdition d, Utilisateur u, JsonNode? pdfa = null)
     {
         var parametres = new JsonObject();
         foreach (var (k, v) in d.Parametres ?? []) parametres[k] = JsonNode.Parse(v.GetRawText());
@@ -330,6 +332,7 @@ public sealed class ServiceEdition(EditionDbContext db, SpecialisationEdition sp
             ["ressources"] = ressources,
             ["pdf"] = new JsonObject { ["titre"] = p.Element, ["auteur"] = u.Code, ["date"] = DateTimeOffset.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ") },
         };
+        if (pdfa is not null) env["pdf"]!["pdfa"] = pdfa.DeepClone();
         return env.ToJsonString();
     }
 

@@ -55,6 +55,17 @@ public class CodesTests
     [InlineData("DECOUPAGE_EREPORTING", typeof(DecoupageEreporting))]
     [InlineData("CODE_EXONERATION", typeof(CodeExoneration))]
     [InlineData("ECART_RECEPTION", typeof(EcartReception))]
+    [InlineData("TYPE_PIECE_JOINTE", typeof(TypePieceJointe))]
+    [InlineData("NIVEAU_COMPLETUDE", typeof(NiveauCompletude))]
+    [InlineData("REGLE_COMPLETUDE", typeof(RegleCompletude))]
+    [InlineData("SOUS_FLUX_EREPORTING", typeof(SousFluxEreporting))]
+    [InlineData("TYPE_TRANSMISSION", typeof(TypeTransmission))]
+    [InlineData("CATEGORIE_TRANSACTIONS", typeof(CategorieTransactions))]
+    [InlineData("PROFIL_EREPORTING", typeof(ProfilEreporting))]
+    [InlineData("REGIME_EREPORTING", typeof(RegimeEreporting))]
+    [InlineData("PERIODICITE_EREPORTING", typeof(PeriodiciteEreporting))]
+    [InlineData("REGLE_EREPORTING", typeof(RegleEreporting))]
+    [InlineData("MOYEN_PAIEMENT", typeof(MoyenPaiementFe))]
     public void Parite_avec_le_js(string nom, Type type) => Assert.Empty(Constantes.Ecarts(Fichier, nom, type));
 
     [Fact]
@@ -71,5 +82,7 @@ public class CodesTests
         Assert.Equal(Constantes.Js(Fichier, "STATUT_CDV").Values, StatutCdv.Tous);
         Assert.Equal(Constantes.Js(Fichier, "MOTIF_STATUT").Values, MotifStatut.Tous);
         Assert.Equal(Constantes.Js(Fichier, "ACTION_CDV").Values, ActionCdv.Tous);
+        Assert.Equal(Constantes.Js(Fichier, "SOUS_FLUX_EREPORTING").Values, SousFluxEreporting.Tous);
+        Assert.Equal(Constantes.Js(Fichier, "CATEGORIE_TRANSACTIONS").Values, CategorieTransactions.Toutes);
     }
 }

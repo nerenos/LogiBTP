@@ -1,5 +1,9 @@
 # Facturation électronique (RFE) : plan par lots
 
+> **Plan terminé le 12/11/2026** : les 29 lots sont faits (parties A et B). Restes (SQL à appliquer par
+> l'utilisateur, écrans à vérifier en navigateur, règles à confirmer avec l'expert-comptable et la PA) : [TODO.md](../../../TODO.md) ;
+> référence du module : [FACTURE-ELECTRONIQUE.md](../../modules/FACTURE-ELECTRONIQUE.md).
+>
 > Analyse : [ANALYSE-FACTURATION-ELECTRONIQUE.md](../ANALYSE-FACTURATION-ELECTRONIQUE.md) (09/11/2026) ; questions et
 > décisions : [facturation-electronique-questions.md](facturation-electronique-questions.md) (toutes tranchées le
 > 09/11/2026). **Plan à valider** (point de contrôle 2) avant le lot 1.
@@ -39,22 +43,22 @@
 | 12 | Réception : flux reçu → pièce d'achat ou de sous-traitance en brouillon, rattachements, liste à traiter | cœur | 11, 2, 3, 10 | FAIT (10/11/2026) |
 | 13 | Réception : statuts posés (204, 205, 207, 210) et Paiement transmis (211) | cœur | 12, 5 | FAIT (10/11/2026) |
 | 14 | Réception hors plateforme : Factur-X ou XML glissé ou reçu par courriel, avoirs reçus | cœur | 12 | FAIT (10/11/2026) |
-| 15 | Réception de sous-traitance : cadre S5, bloc PAYEUR, demande de paiement direct (224) | cœur | 12, 13 | A FAIRE |
+| 15 | Réception de sous-traitance : cadre S5, bloc PAYEUR, demande de paiement direct (224) | cœur | 12, 13 | FAIT (10/11/2026) |
 | | **Partie B : émission et e-reporting** | | | |
-| 16 | Contrôle de complétude (JS ↔ C#) et écriture CII D22B (EN16931, EXTENDED-CTC-FR) | module | 1, 4 | A FAIRE |
-| 17 | Écriture UBL 2.1 (Invoice, CreditNote) | module | 16 | A FAIRE |
-| 18 | PDF/A-3 et fichier associé | `modules/edition` | — | A FAIRE |
-| 19 | E-reporting : modèle des transactions et paiements, écriture du flux 10 (10.1 à 10.4), découpage des envois | module | 1, 8 | A FAIRE |
-| 20 | Annuaire sur la fiche personne et vérification de nuit (option) | cœur | 11, 6 | A FAIRE |
-| 21 | Paramètres d'émission BTP : code BT-3 par type, nature biens / services / mixte, notes légales | cœur | 11, 10 | A FAIRE |
-| 22 | Document de vente → modèle : factures, acomptes, définitives, avoirs ; contrôle dans l'éditeur | cœur | 21, 16 | A FAIRE |
-| 23 | Document de vente → modèle : situations (période), pied BTP, retenue, références de chantier | cœur | 22 | A FAIRE |
-| 24 | Émission à la validation : CII ou Factur-X, GED et coffre, dépôt, pastille | cœur | 22, 23, 17, 18, 20 | A FAIRE |
-| 25 | Rejet et refus → avoir interne ; litige et suspension de relance | cœur | 24 | A FAIRE |
-| 26 | Statut Encaissée (212) depuis les règlements, liste à valider | cœur | 24 | A FAIRE |
-| 27 | Sous-traitance et cotraitance émises (S5, S6), B2G par la PA | cœur | 24 | A FAIRE |
-| 28 | E-reporting : collecte et extraction des ventes et encaissements, envoi unitaire ou groupé | cœur | 19, 24, 26 | A FAIRE |
-| 29 | Archivage (rétention), démonstration, documentation | cœur | 24, 28 | A FAIRE |
+| 16 | Contrôle de complétude (JS ↔ C#) et écriture CII D22B (EN16931, EXTENDED-CTC-FR) | module | 1, 4 | FAIT (11/11/2026) |
+| 17 | Écriture UBL 2.1 (Invoice, CreditNote) | module | 16 | FAIT (11/11/2026) |
+| 18 | PDF/A-3 et fichier associé | `modules/edition` | — | FAIT (11/11/2026) |
+| 19 | E-reporting : modèle des transactions et paiements, écriture du flux 10 (10.1 à 10.4), découpage des envois | module | 1, 8 | FAIT (11/11/2026) |
+| 20 | Annuaire sur la fiche personne et vérification de nuit (option) | cœur | 11, 6 | FAIT (11/11/2026) |
+| 21 | Paramètres d'émission BTP : code BT-3 par type, nature biens / services / mixte, notes légales | cœur | 11, 10 | FAIT (11/11/2026) |
+| 22 | Document de vente → modèle : factures, acomptes, définitives, avoirs ; contrôle dans l'éditeur | cœur | 21, 16 | FAIT (11/11/2026) |
+| 23 | Document de vente → modèle : situations (période), pied BTP, retenue, références de chantier | cœur | 22 | FAIT (11/11/2026) |
+| 24 | Émission à la validation : CII ou Factur-X, GED et coffre, dépôt, pastille | cœur | 22, 23, 17, 18, 20 | FAIT (11/11/2026) |
+| 25 | Rejet et refus → avoir interne ; litige et suspension de relance | cœur | 24 | FAIT (11/11/2026) |
+| 26 | Statut Encaissée (212) depuis les règlements, liste à valider | cœur | 24 | FAIT (11/11/2026) |
+| 27 | Sous-traitance et cotraitance émises (S5, S6), B2G par la PA | cœur | 24 | FAIT (12/11/2026) |
+| 28 | E-reporting : collecte et extraction des ventes et encaissements, envoi unitaire ou groupé | cœur | 19, 24, 26 | FAIT (12/11/2026) |
+| 29 | Archivage (rétention), démonstration, documentation | cœur | 24, 28 | FAIT (12/11/2026) |
 
 Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur avant la partie B.
 
@@ -619,7 +623,7 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
 
 ## Partie B : émission et e-reporting
 
-## Lot 16 : contrôle de complétude et écriture CII (A FAIRE)
+## Lot 16 : contrôle de complétude et écriture CII — FAIT (11/11/2026)
 
 - **Module** : `modules/facture-electronique`. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `js/src/completude.js` ↔ `dotnet/LogiBTP.FactureElectronique/ReglesCompletude.cs`, `tests/cas/02_completude.json`,
@@ -631,14 +635,44 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   liste { règle, niveau bloquant / avertissement, donnée }.
 - **Critère de fin** : jeu de complétude identique en JS et en C# ; factures écrites sans erreur fatale aux schematrons
   EN16931 et BR-FR-Flux2 ; tests verts.
+- **Réalisé** : codes JS ↔ C# `REGLE_COMPLETUDE` (46 règles : `LOGIBTP-PROFIL`, `LOGIBTP-CADRE`, BR-FR-01 à 32 utiles,
+  BR-FR-CO-03 à 12, BR-FR-DEC-01 à 04, BR-CO-10 à 17), `NIVEAU_COMPLETUDE` (BLOQUANT, AVERTISSEMENT), `TYPE_PIECE_JOINTE`
+  (BR-FR-17), `TRAITEMENT.B2C_INT` (B2CINT, admis par BR-FR-20), `CODE_NOTE.MENTION_TAXE` (TXD), `ERREUR_FE`
+  `PROFIL_NON_ECRIT` et `DONNEE_HORS_PROFIL` (`CodesTests`) ; `js/src/completude.js` (`controlerCompletude(facture,
+  { bloquant })`, `completudeBloquante`) ↔ `ReglesCompletude.cs` (`Controler(facture, bloquant)`, `Bloquante`,
+  `Decimales`, `Chiffres`, `Json` : modèle `ModeleFacture.cs` en camelCase, partagé avec le navigateur), résultat
+  `{ regle, niveau, donnee (terme BT ou groupe), ligne (BT-126) }` dans l'ordre des contrôles, arrondi unique du socle ;
+  jeu `tests/cas/05_completude.json` (59 cas : base conforme + modifications par chemin) ; `Formats/EcritureCii.cs`
+  (`Ecrire`, `Document`, `Specification`, `Extensions`, `Montant`, `Nombre` : ordre du XSD D22B, tout ce que lit
+  `LectureCii`, XSD vérifié) ; tests `ReglesCompletudeTests`, `EcritureCiiTests` (les 15 CII d’exemple écrits puis relus
+  au même modèle ; exemples complets sans écart bloquant sauf cadres 8 / 9 ; fichiers de référence
+  `tests/exemples/ecrits/` régénérés par `LOGIBTP_REGENERER_CII=1` : 12 exemples hors multi-vendeurs et 5 cas du jeu),
+  `js/test/completude.test.js` ; les 17 CII écrits passent XSD, schematron du profil et BR-FR-Flux2 sans erreur fatale
+  (`schematrons.test.js`, `npm run valider-facture`). Écarts : jeu numéroté 05 (02 déjà pris par les paramètres) ; règles
+  du schematron 1.4.0.04 (pas de CO-06 : CO-07 échéance, CO-08 définitive après acompte, CO-09 déjà payée, CO-12 devise)
+  et BR-FR-03, 17, 18, 20, 23 à 26, 31 ajoutées ; BR-CO-10 sur les lignes DETAIL ou sans sous-type (règle EXTENDED-CTC-FR) ;
+  niveau d'après Q5 (option `bloquant` fournie par l'appelant selon le tiers) ; cadres 8 / 9 non émis (`LOGIBTP-CADRE`) ;
+  données EXTENDED-CTC-FR refusées à l'écriture EN16931 (`DONNEE_HORS_PROFIL`) et signalées par `LOGIBTP-PROFIL` ;
+  BASIC non écrit ; nombres sans arrondi (montants « 0.00 », autres sans zéro de fin) ; BT-11 avec le nom
+  « Project reference » ; avertissement EXTENDED-CTC-FR `BR-FXEXT-*-08rev` sur les CII écrits à TVA exonérée ou
+  autoliquidée (motif d'exonération de ligne absent du modèle, TODO).
 
-## Lot 17 : écriture UBL (A FAIRE)
+## Lot 17 : écriture UBL (FAIT le 11/11/2026)
 
 - **Module** : `modules/facture-electronique`. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `Formats/EcritureUbl.cs` (Invoice, CreditNote pour les avoirs), tests aller-retour et schematrons.
 - **Critère de fin** : mêmes modèles écrits en UBL et en CII, relus égaux, valides ; tests verts.
+- **Réalisé** : `Formats/EcritureUbl.cs` (`Ecrire`, `Document`, `EstAvoir` : CreditNote pour `TypesAvoir`, Invoice sinon ; ordre des
+  XSD UBL 2.1, XSD vérifié, conversions inverses de `LectureUbl` : BT-8 2475 vers 2005, BT-21 en préfixe `#CODE#`, sous-type et
+  ligne parente en BillingReference de ligne, BT-11 d'un avoir en AdditionalDocumentReference 50) ; `EcritureUblTests` (les 15
+  CII d'exemple et les 5 cas du jeu écrits en UBL et en CII, relus au même modèle ; 17 UBL de référence
+  `tests/exemples/ecrits/*_UBL.xml`, régénérés par `LOGIBTP_REGENERER_CII=1`, jumeaux des CII écrits) ; les 17 UBL passent XSD,
+  schematron du profil et BR-FR-Flux2 sans erreur fatale (`schematrons.test.js`, `npm run valider-facture`). Écarts :
+  bénéficiaire et représentant fiscal écrits en PartyName seul (nom commercial perdu) ; payeur et échéance d'un avoir sans moyen
+  de paiement refusés (`DONNEE_INVALIDE`) ; ligne parente sans sous-type refusée ; BT-13 vide si seule la commande vendeur est
+  donnée ; cadres 8 / 9 non émis comme en CII ; mêmes avertissements `BR-FREXT-*-08rev` que le CII.
 
-## Lot 18 : PDF/A-3 et fichier associé (A FAIRE)
+## Lot 18 : PDF/A-3 et fichier associé (FAIT le 11/11/2026)
 
 - **Module** : `modules/edition`. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `js/src/rendu-pdf.js` (option PDF/A-3 : métadonnées XMP avec schéma d'extension fourni par
@@ -648,8 +682,23 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   PDF toujours déterministe.
 - **Critère de fin** : PDF produit valide PDF/A-3b au contrôle veraPDF (lancé à la main, hors CI, résultat noté dans le
   plan) ; tests Node et C# verts.
+- **Réalisé** : `js/src/pdfa.js` (`normaliserPdfa`, `paquetXmp`, `appliquerPdfa`, `RELATIONS_PDFA`, `profilSrgbLivre`) branché
+  sur `produirePdf` par l'option `pdf.pdfa` ({ conformite B par défaut, fichiers [{ nom, octets ou base64, type MIME,
+  relation, description }], schemas d'extension XMP [{ schema, espace, prefixe, proprietes [{ nom, type, categorie,
+  description, valeur }] }], icc ou icc_base64, condition }) : XMP UTF-8 non compressé (dc, xmp, pdf, pdfaid 3 / B,
+  pdfaExtension et valeurs de l'appelant), OutputIntent GTS_PDFA1 sRGB, flux EmbeddedFile (Subtype MIME, Params Size /
+  CreationDate / ModDate), Filespec F / UF / AFRelationship, arbre EmbeddedFiles trié, `/AF` du catalogue, `/ID` tiré
+  d'une empreinte des entrées (déterministe) ; sans option, PDF inchangé à l'octet. Profil ICC livré :
+  `js/src/profil-srgb.js` (base64) et `js/couleurs/sRGB-lcms-v2.icc`, profil sRGB intégré de Little CMS 2.14 (licence MIT,
+  mention « No copyright, use freely ») écrit sur la machine par la bibliothèque système en version 2.1, rien de
+  téléchargé. Tests : `test/pdfa.test.js` (7 cas), jeu de parité `tests/cas/05_pdfa.json` (devis 01 en PDF/A-3b avec un XML
+  associé et un schéma d'extension) identique à l'octet entre Node et Jint ; paquet serveur reconstruit. Aucune fonction de
+  formule ajoutée (`CATALOGUE_FONCTIONS` inchangé). **Contrôle veraPDF à lancer à la main** (non fait, veraPDF absent de
+  la machine) : après `npm run exporter-resultats --workspace modules/edition/js`,
+  `verapdf --flavour 3b modules/edition/tests/resultats-js/05_pdfa.js.pdf` (résultat à noter ici). Limites : annexes PDF
+  copiées non contrôlées (elles peuvent rompre la conformité), images JPEG CMJN incompatibles avec l'OutputIntent RGB.
 
-## Lot 19 : e-reporting, écriture du flux 10 (A FAIRE)
+## Lot 19 : e-reporting, écriture du flux 10 — FAIT (11/11/2026)
 
 - **Module** : `modules/facture-electronique`. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `ModeleEreporting.cs` (transactions unitaires et agrégées, paiements, période), `Formats/EcritureFlux10.cs`
@@ -659,8 +708,34 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
 - **Prérequis** : périodicité et règles de rectification lues dans les spécifications externes DGFiP / AIFE v3.x
   (lien noté dans le lot).
 - **Critère de fin** : flux 10.1 à 10.4 valides au XSD sur des jeux B2C et international ; tests verts.
+- **Réalisé** : artefacts `artefacts/xsd/flux10/` (ereporting, report, transaction, payment, parametre) et
+  `artefacts/schematrons/flux10/Flux10.xslt` (« PPF — Flux 10 e-reporting — v1.8 », annexe 7 v1.8) recopiés sans modification
+  du paquet FNFE 1.4.0.04 (`VERSION`) ; codes JS ↔ C# `SOUS_FLUX_EREPORTING` (10.1 à 10.4), `TYPE_TRANSMISSION` (IN, RE),
+  `CATEGORIE_TRANSACTIONS` (TLB1, TPS1, TNT1, TMA1), `PROFIL_EREPORTING`, `REGIME_EREPORTING`, `PERIODICITE_EREPORTING`,
+  `REGLE_EREPORTING` (31 règles de l'annexe 7 + `LOGIBTP-PERIODE`), `SCHEMA_IDENTIFIANT` 0223 / 0227 / 0228 / 0229 (`CodesTests`) ;
+  `ModeleEreporting.cs` (`TransmissionEreporting` TB-0 → `RapportTransactions` (`TransactionUnitaire` TG-8, `TransactionsAgregees`
+  TG-31) ou `RapportPaiements` (`PaiementUnitaire` TG-34, `PaiementsAgreges` TG-37) ; données brutes `VenteB2C`,
+  `EncaissementEreporting`, `DonneesEreporting`, `ContexteEnvoi`, `EnvoiEreporting`, `EcartEreporting`) ; `ReglesEreporting.cs`
+  (`Periodicite` / `Periode` selon le régime, `Agreger` par jour, catégorie, devise, option sur les débits puis taux, `AgregerPaiements`,
+  `PaiementsUnitaires`, `TransactionDe(Facture)` BT → TT, `Entreprise`, `Decouper` : un envoi par sous-flux et par période (UNIQUE)
+  ou par sous-flux et par jour (PLUSIEURS), type de flux XP Z12-013 du sous-flux, TT-1 « préfixe-AAAAMMJJ-sous-flux-rang[-REn] »,
+  correction n ≥ 1 → RE ; `Controler` : règles du schematron Flux10 avant l'envoi) ; `Formats/EcritureFlux10.cs` (ordre des XSD,
+  XSD vérifié, `JeuXsd.Flux10`) ; outil Node : `JEUX_XSD.FLUX10`, `SCHEMATRONS.FLUX10`, racine `Report` → `SYNTAXE.FRR`
+  (XSD puis Flux10). Tests : jeu `tests/cas/06_ereporting.json` (13 périodes, 4 agrégations, 2 paiements, 4 découpages) par
+  `ReglesEreportingTests`, `EcritureFlux10Tests` (5 références `tests/ereporting/` : B2C 10.3, 10.4, 10.3 rectificative,
+  international 10.1 (dont une facture extraite du modèle EN16931, autoliquidation, export, avoir) et 10.2, régénérées par
+  `LOGIBTP_REGENERER_FLUX10=1` ; 20 altérations signalées par `Controler`), `js/test/flux10.test.js` (références sans erreur
+  fatale au XSD et au schematron, 12 altérations refusées). Écarts : prérequis non rempli, spécifications externes DGFiP v3.x
+  absentes du dépôt et non téléchargées : périodicité tirée de leur calendrier connu (réel normal mensuel : transactions par
+  décade, paiements par mois ; réel normal trimestriel et simplifié : mois ; franchise : bimestre), **à confirmer** (TODO) ;
+  rectificative = transmission RE de la même période avec les données fournies (contenu exact à confirmer) ; CO / MO et
+  TG-2 References de l'annexe A non écrits (absents du XSD, refusés par G8.01) ; un envoi par sous-flux (les types de flux
+  XP Z12-013 distinguent unitaire et agrégé), le regroupement par type de déclaration restant à la PA ; Sender = la
+  plateforme (0238, WK, exigé par G6.22 / G7.51), fourni par l'appelant ; assertions du schematron sans @id : la règle se
+  lit en tête du message ; lignes sans adresse de livraison (TG-41, absente du modèle de facture) ; régime de TVA de la
+  société non paramétré (lot 28).
 
-## Lot 20 : annuaire sur la fiche personne (A FAIRE)
+## Lot 20 : annuaire sur la fiche personne (FAIT le 11/11/2026)
 
 - **Cœur**. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : bouton « Vérifier dans l'annuaire » de la fiche personne (`client/src/app/fiches/fiche-annuaire.js`) :
@@ -669,8 +744,19 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   avertissement à l'émission si le tiers n'est pas dans l'annuaire ; tests.
 - **Critère de fin** : vérification sur la plateforme simulée met la fiche à jour ; option de nuit désactivée par
   défaut ; tests verts.
+- **Réalisé** : `db/298_facture_electronique_annuaire.sql` (rejouable, manifeste : `per_fe_suffixe`, `per_fe_verifie_le`,
+  `per_fe_dans_annuaire` ; table `facture_electronique_annuaire_option`, nuit désactivée par défaut) ; module
+  `ServiceFactureElectronique.InterrogerAnnuaireAsync` / `ChoisirLigneAnnuaire` (ligne active : SIRET identique, puis sans SIRET
+  ni suffixe) ; cœur `Btp/AnnuaireFeBtp.cs` : vérification d'un tiers (adresse, plateforme PA / PPF, code de routage, suffixe),
+  routes `POST /api/facture-electronique/annuaire/personnes/{id}/verification` (Modifier du nœud) et `GET|PUT .../annuaire/option`
+  (paramétrage), `PassageAnnuaireFe` (30 min, entre 1 h et 6 h, un passage par jour et par base, 500 tiers actifs français au
+  plus, plateforme indisponible : arrêt), `Avertissement` à l'émission (`HORS_ANNUAIRE`, `NON_VERIFIE`, rien pour B2C ou
+  international ; à brancher au lot 24) ; client : bouton « Vérifier dans l'annuaire » de la fiche personne (module actif et
+  droit), champs suffixe et date de vérification, `db/131` régénéré ; codes `AVERTISSEMENT_ANNUAIRE_FE`, `PLATEFORME_ANNUAIRE_FE`
+  (`CodesTests`) ; `AnnuaireFeBtpTests`. Écart : le bouton est dans `fiche-annuaire.js` (fiches personne), pas de case à cocher
+  de l'option de nuit dans l'interface (API seule).
 
-## Lot 21 : paramètres d'émission BTP (A FAIRE)
+## Lot 21 : paramètres d'émission BTP — FAIT (11/11/2026)
 
 - **Cœur**. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `db/3xx` (`type_document.tyd_fe_type_facture` BT-3 : V_FACTURE 380, V_FACTURE_AVT 380, facture
@@ -679,8 +765,29 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   l'éditeur l'affiche (`client/src/calcul/` ↔ `src/LogiBTP.Calcul/`), notes PMT / PMD / AAB depuis les mentions de la
   société (`db/190`), paramètre TVA sur les débits, cas de test.
 - **Critère de fin** : chaque type de vente donne son BT-3 et son cadre ; jeu de cas JS ↔ C# vert.
+- **Réalisé** : `db/299_facture_electronique_emission.sql` (rejouable, au manifeste après 298 : `type_document.tyd_fe_type_facture`
+  avec contrainte BR-FR-04, posé à la création de la colonne : V_FACTURE et V_FACTURE_AVT 380, V_FACTURE_ACOMPTE 386, V_AVOIR 381 ;
+  `nature_element.nat_fe_nature` B / S proposé par le regroupement (MATERIAUX → B, autres → S) ; `document.ent_fe_nature` B / S / M,
+  surcharge de l'entête) ; codes `NATURE_FE` et `SITUATION_CADRE_FE` (`codes.js` ↔ `Codes.cs`, `CodesTests`) ; règle répliquée
+  `client/src/calcul/emission-fe.js` ↔ `src/LogiBTP.Calcul/EmissionFeBtp.cs` (le projet Calcul référence le module pour ses codes) :
+  lignes vendues (lignes de prix sans ancêtre ouvrage, hors pied, écart d'arrondi et type de prix hors total hérité), nature d'une
+  ligne (ouvrage : services ; élément : `nat_fe_nature`, services par défaut), nature de la pièce (surcharge, sinon B ou S
+  unanimes, M si mêlées, services sans ligne), BT-3 (celui du type ; avoir d'une facture d'acompte : 503), situation du cadre
+  (sous-traitant 5 et cotraitant 6 en services, puis facture 380 qui déduit une facture d'acompte 4, puis déjà payée 2, sinon 1),
+  BT-8 = 5 pour des services ou du mixte avec l'option TVA sur les débits (`mentions.tva_debits` de `db/190`), notes PMT
+  (indemnité), PMD (pénalités), AAB (escompte) des mentions non vides ; jeu `tests/emission-fe/01_emission.json` (26 cas, chaque
+  type de vente émis) par `client/test/emission-fe.test.js` et `EmissionFeTests.cs`. Serveur : `Btp/EmissionFeDonneesBtp.cs`
+  (entrée lue en base : BT-3 du type et de la source d'un avoir par lien TRANSFORMATION ou ANNULATION, lignes, natures, surcharge,
+  déduction `acompte_deduction` d'un acompte CA, mentions ; routes `GET /api/facture-electronique/emission/referentiel` et
+  `GET /api/facture-electronique/documents/{id}/emission`, nœud `facture_electronique` en Consulter). Entité `DocumentBtp.EntFeNature`
+  (`colonnes-btp.js`, `CopierEnteteSaisie` : valeur hors B / S / M vidée). Éditeur : onglet Options des types émis (module actif)
+  « Nature (facture électronique) » : « Calculée : … » par la règle JS ou imposée (`creerCombo` par `activerCombos`, textes
+  `document_btp.panneaux.nature_fe*`). Écarts : rôle sous-traitant / cotraitant et pièce déjà payée fournis par l'appelant
+  (lots 24, 27) ; cadre 4 lu dans les déductions écrites à la validation (brouillon : cadre 1) ; pas d'écran de paramétrage du BT-3
+  par type ni de la nature par nature d'article (valeurs du script) ; TVA sur les débits prise dans les mentions de la société
+  (déjà imprimée), pas dans `ctv_exigibilite`. Script à appliquer par l'utilisateur.
 
-## Lot 22 : document de vente → modèle, cas simples (A FAIRE)
+## Lot 22 : document de vente → modèle, cas simples — FAIT (11/11/2026)
 
 - **Cœur**. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `Btp/EmissionFactureBtp.cs` (facture, avoir avec facture antérieure BG-3, facture d'acompte 386,
@@ -689,8 +796,38 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   affichage des résultats de complétude dans l'éditeur (bandeau de la pièce), tests sur des pièces de démonstration
   (écriture CII → schematrons par l'outil).
 - **Critère de fin** : factures, avoirs, acomptes et définitives de la démonstration sans erreur fatale ; tests verts.
+- **Réalisé** : `src/LogiBTP.Api/Btp/EmissionFactureBtp.cs` (`Construire(EntreeFactureBtp)` sans base, `Controler`, `EntreeAsync`,
+  `ControleAsync`, `XmlAsync`) : profil EN16931 ; BT-3, cadre, BT-8 et notes PMT / PMD / AAB du lot 21, note BAR du type du tiers
+  (`per_fe_type` : B2B / B2G → B2B, INTERNATIONAL → B2BINT, B2C) ; lignes = lignes de prix vendues sans ancêtre ouvrage (option et
+  type de prix hors total exclus, écarts d'arrondi compris), quantité signée et prix net positif (BR-FR-DEC-03), unités UN/ECE
+  (inverse de `UnitesUnece`, défaut C62), identifiant = numérotation si unique ; TVA par `ctv_categorie_en16931` / `ctv_vatex`
+  (à défaut `ReglesTva.Proposer`), taux écrit 0 hors S et Z, ventilation regroupée par catégorie et taux depuis `document_tva`
+  (mention en motif d'exonération) ; postes de pied HT et écarts : remise ou charge du document par catégorie et taux (base −
+  lignes, motif = libellés des postes, codes 95 / ZZZ) ; reprise d'acompte (poste HT `A<mac_id>`) en lignes négatives
+  (quantité −1) par taux au prorata, facture d'acompte (pièce valable non annulée) en BG-3 ; acompte de trésorerie (poste TTC
+  `A…`) en BT-113 ; retenue et autres postes TTC hors facture (lot 23) ; avoir : facture d'origine valable en BG-3, sans
+  échéance, avoir saisi en négatif écrit en positif ; parties : SIREN, SIRET 0009, TVA, adresse électronique 0225 (à défaut le
+  SIREN), code de routage 0224, adresse de l'instantané, contact ; livraison = adresse des travaux (intracommunautaire : adresse
+  et date de l'acheteur) ; BT-13 = référence externe, BT-10 = code service ; paiement : condition (BT-20), première échéance
+  normale (BT-9), moyen UNTDID 4461 (`MOYEN_PAIEMENT` du module ↔ `MoyenPaiementFe`, `CodesTests`) et IBAN de la société.
+  Écarts propres `ECART_EMISSION_FE` (`codes.js` ↔ `EcartsEmissionFe`, `CodesTests` : numéro provisoire, société, tiers,
+  adresse, TVA de ligne, IBAN, paiement, acompte, origine), niveau bloquant pour un tiers B2B / B2G (Q5). Routes
+  `GET /api/facture-electronique/documents/{id}/controle` et `…/{id}/xml?syntaxe=CII|UBL` (nœud `facture_electronique`,
+  Consulter). Éditeur : bandeau `documents/completude-fe.js` (pièce enregistrée d'un type émis, module actif et droit ;
+  relu à chaque version), libellés des 46 règles `REGLE_COMPLETUDE` et des niveaux dans les textes du module
+  (`facture_electronique.completude.*`, reportés du lot 16), textes `document_btp.page.completude_fe.*`. Corrigé du lot 21 :
+  alias SQL en snake_case (le contexte est en convention snake_case, `EmissionFeDonneesBtp` échouait en base) et accolades
+  retirées du SQL des mentions. Tests : jeu `tests/emission-fe/02_pieces.json` (facture avec ouvrage, option, remise de pied et
+  retenue, avoir, acompte 386, définitive M4 avec reprise, avoir d'acompte 503, autoliquidation AE, pièce incomplète) par
+  `EmissionFactureTests.cs` (calcul par `MoteurDevisBtp`, totaux du moteur repris, complétude sans écart, CII et UBL relus au
+  même modèle, références `tests/emission-fe/ecrits/` régénérées par `LOGIBTP_REGENERER_EMISSION=1` ; pièce insérée dans une
+  transaction annulée sur la base jetable `LOGIBTP_TEST_PG_JETABLE`) ; `client/test/emission-facture.test.js` : les 12 XML sans
+  erreur fatale (XSD, schematron EN16931, BR-FR-Flux2) et les 6 CII en Factur-X EN16931, libellés, bandeau. Écarts : pas de
+  Factur-X PDF (lot 24) ; avertissement PEPPOL-EN16931-R008 en Factur-X (élément de livraison vide écrit par `EcritureCii` sans
+  adresse de livraison) ; pas de pièces de démonstration en base (jeu construit) ; références de chantier, période et retenue au
+  lot 23 ; contrôle sur la pièce enregistrée seulement (modifications en cours non contrôlées).
 
-## Lot 23 : situations et pied BTP (A FAIRE)
+## Lot 23 : situations et pied BTP — FAIT (11/11/2026)
 
 - **Cœur**. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `EmissionFactureBtp.cs` (situation en **montants de période** quelle que soit `ent_avt_presentation`,
@@ -699,8 +836,30 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   marché ; arrondis aux deux décimales cohérents avec `MoteurDevisBtp`), tests sur des situations cumulées et en période.
 - **Critère de fin** : situations de la démonstration valides (sommes BR-CO exactes) ; tests verts ; écarts d'arrondi
   documentés si la tolérance EXTENDED-CTC-FR est nécessaire.
+- **Réalisé** : `src/LogiBTP.Api/Btp/EmissionFactureBtp.cs` : pièce d'avancement (`ent_avt_presentation` P ou C) émise en
+  montants de la période (Q10) : en présentation C, ligne et poste de pied saisis en avancement = cumul − précédent (montant et
+  quantité), poste de pied HT sans avancement au prorata période / cumul des lignes vendues, reprise d'acompte = cumul − précédent,
+  base de chaque taux = lignes + postes de la période et TVA recalculée par l'arrondi unique (BR-CO-17 exact) ; lignes de période
+  nulle omises (sauf toutes) ; période BG-14 du lendemain de la pièce d'avancement précédente (même périmètre que le pied
+  d'avancement de l'édition : déductions figées, sinon factures valables du marché de rang inférieur ; à défaut premier du mois)
+  à la date de la pièce ; postes de pied HT (compte prorata, frais, remises, saisis ou en avancement) en remises / charges du
+  document par taux (base − lignes, motif = libellés) ; postes TTC autres que les acomptes (retenue, paiement direct, prorata ou
+  frais après TVA) hors facture : total porté, texte « libellé (taux %) : montant devise » de la période ajouté aux conditions
+  de paiement (BT-20), retenue (`lig_pied_retenue` ou poste « R ») en note ABU (`CODE_NOTE.RESERVE` ↔ `CodeNote.Reserve`,
+  `CodesTests`) ; références BT-11 et BT-18 = code du chantier (de la pièce, sinon du marché), BT-12 = code du marché, BT-17 =
+  code du projet d'origine (de la pièce, sinon du chantier). Tests : cas `SITUATION_PERIODE` (facture d'avancement en période :
+  %, quantité, montant, ligne nulle omise, compte prorata en avancement global, retenue et paiement direct) et `SITUATION_CUMUL`
+  (même marché en cumul, remise en % sans avancement répartie sur deux taux ; totaux de période attendus 1 244,16 / 216,84 /
+  1 461,00 calculés à la main) de `tests/emission-fe/02_pieces.json`, `EmissionFactureTests` (sommes BR-CO sans écart, TVA
+  exacte par taux, mêmes lignes de période dans les deux présentations, note ABU, BT-20, BG-14, références ; base jetable :
+  deux factures d'avancement d'un marché de démonstration, références et période lues en base) ; XML écrits (CII, UBL, Factur-X)
+  sans erreur fatale ni avertissement aux schematrons (`npm run valider-facture`, `emission-facture.test.js`). Écarts : aucun
+  besoin de la tolérance EXTENDED-CTC-FR (sommes exactes, profil EN16931 gardé ; le schematron EN16931 tolère d'ailleurs 1 sur
+  BR-CO-17) ; paiement direct et autres postes TTC non déduits du montant dû (BT-115 = TTC − acomptes de trésorerie, différent
+  du net à payer de LogiBTP), à valider (TODO) ; BG-14 plutôt que BG-26 (période de ligne) ou BT-72 ; aucune règle du moteur
+  modifiée (pas de réplique JS) ; aucun script SQL.
 
-## Lot 24 : émission à la validation (A FAIRE)
+## Lot 24 : émission à la validation — FAIT (11/11/2026)
 
 - **Cœur**. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : déclencheur à la validation (Q23 : automatique, option « envoyer plus tard », bouton « Émettre » pour les
@@ -710,8 +869,39 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   listes de factures, tiers B2C ou hors annuaire : envoi habituel (aucun flux 2), tests.
 - **Critère de fin** : une facture validée part vers la plateforme simulée, reçoit Déposée puis Mise à disposition,
   chronologie complète ; Factur-X validé par l'outil du lot 4 ; tests verts.
+- **Réalisé** : `db/300_facture_electronique_envoi.sql` (rejouable, au manifeste après 299 : `document.ent_fe_differe` « Envoyer
+  plus tard », `facture_electronique_emission_option` émission automatique à la validation (active par défaut, Q23),
+  `document_fe_emission` (état `ETAT_EMISSION_FE` A_EMETTRE / DIFFEREE / EMISE / ECHEC / HORS_FLUX, motif `MOTIF_EMISSION_FE`,
+  syntaxe, flux, statut affiché, essais, erreur), `v_liste_documents` reprise de 287 avec `statut_fe` en fin de liste) ; `db/121`
+  régénéré (colonne « Facture électronique » des vues de factures, pastilles `PASTILLES_EMISSION_FE_LISTE`). Codes `ETAT_EMISSION_FE`,
+  `MOTIF_EMISSION_FE`, `PASTILLE_EMISSION_FE`, `ERREUR_EMISSION_FE` (`codes.js` ↔ `Codes.cs`, `CodesTests`), `EtapesGed.Envoi`.
+  `src/LogiBTP.Api/Btp/EnvoiFactureBtp.cs` : contrôle Q5 à la validation (`SpecialisationBtp.ControlerValidationAsync` : type émis,
+  module actif, client B2B / B2G émis par la plateforme, écarts bloquants de la complétude et de l'émission → `FE_INCOMPLETE`, sauf
+  droit FORCER du type, alors avertissement), avertissement de l'annuaire du lot 20 et du forçage (`AvertissementsAsync`),
+  inscription dans la transaction de la validation (`ApresValidationAsync`), `EmettreAsync` (hors flux 2 : client particulier,
+  international ou absent de l'annuaire → HORS_FLUX, envoi habituel ; syntaxe `per_fe_format` du tiers, sinon des paramètres du
+  module ; CII, UBL, ou Factur-X = PDF/A-3b de l'édition de la pièce par l'option `pdf.pdfa` du lot 18 avec le CII en
+  `factur-x.xml` (Alternative) et le schéma d'extension XMP Factur-X fourni par le cœur (`OptionFacturX`) ; mise en file du module
+  → étape PRODUCTION, original rangé en GED de la pièce à l'étape ENVOI et au coffre), tâche de fond `PassageEnvoiFe` (base par
+  base, reprise d'un échec de production trois fois), statut affiché recopié à chaque statut reçu (`StatutRecuAsync`), routes
+  `GET|POST /api/facture-electronique/documents/{id}/envoi` (état ; bouton « Émettre » : pièce validée avant l'activation, différée,
+  en échec, hors flux ou flux en erreur ; déjà émise : 409 `FE_DEJA_EMISE`) et `GET|PUT …/emission/option` (paramétrage).
+  Module Édition : `ServiceEdition.Pdf` / `Env` acceptent l'option PDF/A de l'hôte. Client : pastille et bouton « Émettre » de la
+  page document (`documents/envoi-fe.js`, fenêtre `confirmer` du socle), case « Envoyer plus tard » de l'onglet Options, cases
+  « Émettre les factures à la validation » et « Vérifier les tiers dans l'annuaire chaque nuit » (option du lot 20) dans
+  Facturation électronique › Paramètres. Corrigé du lot 22 : instantané JSON `null` d'une pièce validée qui retirait l'adresse
+  du client ; outil `valider-facture` : `endstream` n'est plus pris pour un début de flux (Factur-X aux flux compressés à la
+  suite). Tests : `EnvoiFactureBtpTests` (règles sans base ; Factur-X du moteur d'édition dans Jint relu par le module,
+  référence `tests/emission-fe/ecrits/FACTURE_FX.pdf` ; base jetable : facture validée → A_EMETTRE → Factur-X en file, GED ENVOI
+  et coffre, dépôt sur la plateforme simulée, accusé, Déposée, Émise, Reçue, Mise à disposition, chronologie PRODUCTION → DEPOT →
+  ACCUSE → 4 STATUT_RECU, colonne `statut_fe` = 203, « Émettre » refusé ensuite ; client B2B sans SIREN : validation refusée,
+  passé B2C : HORS_FLUX ; Factur-X réel `VALIDEE_FX.pdf`), `client/test/emission-facture.test.js` (les deux Factur-X sans erreur
+  fatale à l'outil du lot 4, libellés des pastilles et motifs, zone et bouton, colonne des listes). Écarts : forçage par le droit
+  FORCER sans motif (un administrateur valide toujours, la pièce reste en échec INCOMPLETE jusqu'à « Émettre ») ; tiers jamais
+  vérifié émis ; Factur-X d'un modèle par défaut distinct du PDF de la validation ; avertissement PEPPOL-EN16931-R008 gardé
+  (livraison vide) ; écrans non vérifiés en navigateur (TODO). **Script à appliquer par l'utilisateur** : `db/300` puis `db/121`.
 
-## Lot 25 : rejet, refus, litige (A FAIRE)
+## Lot 25 : rejet, refus, litige — FAIT (11/11/2026)
 
 - **Cœur**. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : sur Rejetée (213) ou Refusée (210) : notification, proposition d'avoir interne d'annulation
@@ -720,23 +910,104 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   relance (module Relances, Q17) et levée à Approuvée ; tests.
 - **Critère de fin** : scénarios rejet, refus et litige sur la plateforme simulée ; aucun changement de statut du
   document sans action de l'utilisateur ; tests verts.
+- **Réalisé** : `db/301_facture_electronique_rejet.sql` (rejouable, au manifeste après 300 : `document_fe_annulation` — facture,
+  avoir, nouvelle facture, statut 210 / 213, transmission, auteur —, type d'avoir V_AVOIR donné à V_FACTURE qui n'en avait pas).
+  Codes `TRANSMISSION_AVOIR_INTERNE_FE` (ARCHIVAGE_SEUL, AUCUNE), `MOTIF_EMISSION_FE.AVOIR_INTERNE`,
+  `ERREUR_EMISSION_FE.ANNULATION_IMPOSSIBLE` (`codes.js` ↔ `Codes.cs`, `CodesTests`). `src/LogiBTP.Api/Btp/RejetFactureBtp.cs` :
+  proposition (`Proposee` : statut affiché Rejetée ou Refusée, pièce validée non annulée, pas encore d'avoir) rendue dans
+  `EtatEnvoiFe.Annulation` (aussi sur l'avoir : facture annulée) ; `AnnulerAsync` (route `POST /api/facture-electronique/documents/{id}/annulation`,
+  nœud `facture_electronique` Modifier, `DemandeAnnulationFe` : transmission) : `AnnulerParAvoirDans` dans une transaction
+  (lien ANNULATION, avoir daté du jour même pour une pièce transférée en comptabilité, qui reste T), inscription de l'avoir
+  (ARCHIVAGE_SEUL : A_EMETTRE sans délai, émis par la tâche de fond avec la note BAR ARCHIVEONLY et la règle ArchiveOnly, sa
+  facture d'origine annulée en BG-3 ; AUCUNE : HORS_FLUX motif AVOIR_INTERNE, jamais émettable), puis copie en nouvelle
+  facture en brouillon (lien COPIE) ou, pour une pièce d'avancement, situation remise en cours (`Structure.SituationServieAsync`,
+  extrait de l'annulation du marché) ; pièces d'avancement suivantes : refus `FE_ANNULATION_IMPOSSIBLE` ; étape AVOIR_INTERNE
+  de l'utilisateur au journal (`ServiceFactureElectronique.JournaliserAsync`, ajouté au module) ; `RelanceAsync` appelé à chaque
+  statut reçu d'une facture émise (`SpecialisationFactureElectroniqueBtp.StatutRecuAsync`) : En litige → `relance_suspension`
+  (motif LITIGE, jusqu'au 31/12/9999, auteur `facture_electronique`, une seule), Approuvée → suspensions de cet auteur levées.
+  Notifications de rejet, refus et litige : celles du lot 11. Module Document : `Copier` remet l'état comptable à vide (copie
+  d'une pièce transférée). Module : `StatutProgramme` de la plateforme simulée avec un motif (gardé par le magasin en base).
+  Client : `documents/envoi-fe.js` (`annulationFeHtml` : proposition et bouton « Annuler par avoir interne » selon le droit
+  Modifier, avoir et nouvelle facture ouvrables, facture d'un avoir ; `demanderAnnulationFe` : fenêtre `ouvrirDialogue` du
+  socle, case « Déposer pour archivage seul » cochée par défaut), page document (pièce relue, nouvelle facture proposée à
+  l'ouverture par `confirmer`), textes `document_btp.page.envoi_fe.annulation.*`, icône `facture_electronique_btp_avoir_interne`.
+  Tests : `RejetFactureBtpTests` (règles sans base ; base jetable et plateforme simulée à horloge avancée minute par minute :
+  Déposée → Rejetée : proposition sans changement de la pièce, avoir confirmé, deux pièces Annulé, avoir du jour, nouvelle
+  facture brouillon, avoir Factur-X déposé ArchiveOnly avec la note ARCHIVEONLY, étape AVOIR_INTERNE, seconde demande refusée ;
+  Refusée d'une pièce transférée datée du mois précédent : avoir du jour non déposé, pièce restée T, copie non transférée ;
+  En litige → une suspension, Approuvée → levée, suspension de l'utilisateur gardée), `client/test/emission-facture.test.js`.
+  Écarts : levée à Approuvée seulement (pas à 206) ; pièce d'avancement suivie d'autres : refusée, pas d'annulation en
+  cascade depuis la facture électronique ; écrans non vérifiés en navigateur (TODO). **Script à appliquer par
+  l'utilisateur** : `db/301`.
 
-## Lot 26 : statut Encaissée (A FAIRE)
+## Lot 26 : statut Encaissée — FAIT (11/11/2026)
 
 - **Cœur**. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : proposition d'un statut 212 par règlement pointé d'une facture de services sans option sur les débits
   (montant encaissé, taux de TVA ; par échéance et par versement partiel), liste à valider avant envoi (comme les
   relances, Q15), annulation d'encaissement (cas 34), tests.
 - **Critère de fin** : encaissements partiels et total d'une situation donnent les bons CDAR ; tests verts.
+- **Réalisé** : `db/302_facture_electronique_encaissee.sql` (rejouable, au manifeste après 301 : `document_fe_encaissement`,
+  journal des encaissements déclarés par règlement × échéance — montant pointé signé, montants par taux envoyés, état
+  `ETAT_ENCAISSEMENT_FE` ENVOYE / ECARTE, statut et flux du CDAR — ; colonnes `dfe_lu_flux_id`, `dfe_cadre`, `dfe_exigibilite`,
+  `dfe_devise`, `dfe_ventilation` de `document_fe_emission` : cadre BT-23, BT-8 et TTC par taux lus une fois dans l'original
+  déposé). Codes `ETAT_ENCAISSEMENT_FE` (`codes.js` ↔ `Codes.cs`, `CodesTests`). Règle répliquée `client/src/calcul/encaissement-fe.js`
+  ↔ `src/LogiBTP.Calcul/EncaissementFeBtp.cs` (jeu `tests/emission-fe/03_encaissement.json`, 9 cas, par
+  `client/test/encaissement-fe.test.js` et `EncaissementFeTests.cs`) : facture concernée (cadre S* ou M*, BT-8 ≠ 5), part des
+  services d'une facture mixte (HT des lignes vendues de services / HT des lignes vendues), montants au cumul des pointages
+  (total arrondi une fois, réparti au prorata du TTC de chaque taux, le dernier taux reçoit le reste), chaque proposition =
+  montant au nouveau cumul − déjà déclaré du taux (versements partiels compensés au centime, facture soldée = TTC exact de
+  chaque taux), annulation = écart de signe contraire. Module : `StatutAPoser.Encaissements` (Encaissée à plusieurs taux,
+  MDT-215 / MDT-224 répétés ; `fe_statut` : somme et taux unique). Serveur : `Btp/StatutEncaisseeBtp.cs` (propositions jamais
+  stockées : pointages des règlements reçus hors imputation − encaissements déclarés, factures `EMISE`, statut 212 posable
+  après Déposée et avant Rejetée / Refusée ; validation : propositions recalculées, montant changé = périmée, envoi par
+  `PoserStatutApplicationAsync` et ligne ENVOYE dans la même transaction, écart sans CDAR ; routes
+  `GET /api/facture-electronique/encaissements[?piece=]` et `POST …/encaissements/validation`, nœud `facture_electronique`
+  en Modifier). Client : onglet « Encaissements » de la page Facturation électronique (`facture-electronique/encaissements-fe.js` :
+  lignes cochées par défaut, montants par taux, annulation signalée, « Envoyer » et « Écarter » après `confirmer` du socle),
+  textes `facture_electronique_btp.encaissements.*`, icônes. Tests : `StatutEncaisseeBtpTests` sur la base jetable et la
+  plateforme simulée (situation de services à 20 % et 10 % : rien avant Déposée ; versement partiel de 100 → CDAR 62,07 /
+  37,93 ; solde de l'échéance nette et retenue libérée → CDAR 108,93 / 66,57 et 9,00 / 5,50, total = 180 / 110 ; proposition
+  périmée ; règlement supprimé → annulation −108,93 / −66,57 en CDAR ; écart sans envoi ; facture de biens B1 jamais
+  proposée). Écarts : part des services d'une facture mixte globale (pas par taux) et sur le cumul d'une situation ; montants
+  au prorata du TTC émis (paiement direct hors facture : seul l'encaissé est déclaré) ; pas de notification de la liste ni
+  d'envoi automatique (Q15 (b)) ; onglet non vérifié en navigateur (TODO). **Script à appliquer par l'utilisateur** :
+  `db/302`.
 
-## Lot 27 : sous-traitance, cotraitance et B2G émises (A FAIRE)
+## Lot 27 : sous-traitance, cotraitance et B2G émises — FAIT (12/11/2026)
 
 - **Cœur**. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : facture d'un titulaire au maître d'ouvrage intégrant les sous-traitants ; cotraitance (cadre S6,
   RECAPITULATIF_COTRAITANCE) ; B2G par la PA (code service, numéro d'engagement de la fiche, Q19) ; tests.
 - **Critère de fin** : cas B2G et cotraitance valides à l'outil ; tests verts.
+- **Réalisé** : `db/303_facture_electronique_cotraitance.sql` (rejouable, au manifeste après 302 : `marche.mar_fe_role` vide
+  = titulaire, SOUS_TRAITANT, COTRAITANT — valeurs de `SITUATION_CADRE_FE` —, catégorie GED `recapitulatif_cotraitance`) ;
+  `db/131` régénéré (fiche marché : groupe « Facturation électronique », champ « Notre place dans le marché »). Rôle du lot 21
+  fourni : `EmissionFeDonneesBtp.EntreeAsync` lit `mar_fe_role` du marché de vente de la pièce (rôle de l'appelant prioritaire).
+  Cadre 2 fourni : règle répliquée `estDejaPayee` (`client/src/calcul/emission-fe.js`) ↔ `EmissionFeBtp.DejaPayee` (TTC positif
+  égal au déjà payé BT-113 aux deux décimales ; jeu `01_emission.json`, section `deja_payee`, 6 cas), appliquée par
+  `EmissionFactureBtp.Construire` à une pièce en situation de dépôt (acomptes de trésorerie couvrant le TTC → B2 / S2 / M2,
+  BT-9 = échéance sinon date de la pièce, BR-FR-CO-09). `EmissionFactureBtp` : sous-traitant (S5) en paiement direct → payeur
+  EXT-FR-FE-BG-02 = intervenant PAYEUR de la pièce (`ent_intervenants`) sinon du marché, profil EXTENDED-CTC-FR ; cotraitant (S6)
+  → pièce jointe RECAPITULATIF_COTRAITANCE (BT-123) = dernier document GED de la catégorie de la pièce, sinon du marché,
+  référence `GED-<id>`, contenu embarqué à l'émission (`EntreeAsync(…, StockageGed)` appelé par `EnvoiFactureBtp.EmettreAsync`)
+  si son type MIME est permis (BR-CL-24), référence seule dans le bandeau ; B2G (Q19 (a)) : BT-10 = `per_fe_code_service`, BT-13 =
+  référence externe (numéro d'engagement), SIRET exigé, dépôt en règle de traitement B2G (`EnvoiFactureBtp.RegleDepot`). Écarts
+  `ECART_EMISSION_FE` (`codes.js` ↔ `EcartsEmissionFe`, `CodesTests`) : ENGAGEMENT_ABSENT (bloquant, `per_fe_engagement` sans
+  référence externe), SIRET_ABSENT (bloquant), CODE_SERVICE_ABSENT et RECAPITULATIF_ABSENT (avertissements), libellés
+  `document_btp.page.completude_fe.ecarts.*` ; `CategoriesGed.RecapitulatifCotraitance`. Facture du titulaire intégrant les
+  sous-traitants : traitement du lot 23 gardé (total porté, paiement direct des sous-traitants hors facture en BT-20). Tests :
+  pièces `B2G`, `B2G_SANS_ENGAGEMENT`, `COTRAITANCE`, `COTRAITANCE_SANS_RECAPITULATIF`, `SOUS_TRAITANCE` (autoliquidation AE et
+  payeur), `DEJA_PAYEE` du jeu `02_pieces.json` par `EmissionFactureTests` (cadres, références, niveaux, relecture CII / UBL,
+  écrits `tests/emission-fe/ecrits/`), base jetable (marché cotraitant avec récapitulatif en GED sur un stockage temporaire →
+  S6 et pièce jointe embarquée ; sous-traitant → S5, payeur, EXTENDED ; client B2G exigeant l'engagement → bloquant puis BT-10 /
+  BT-13) ; `npm run valider-facture` : les 8 XML (CII, UBL) et les 4 CII en Factur-X sans erreur fatale (avertissements connus
+  BR-FXEXT-AE-08rev du sous-traitant en autoliquidation et PEPPOL-EN16931-R008). Écarts : cadre S3 (sous-traitant B2G en
+  paiement direct par Chorus Pro) non émis (S5 gardé) ; pas de drapeau « code service obligatoire » sur la fiche (avertissement
+  seulement) ; récapitulatif produit hors LogiBTP (rangé à la main en GED), un seul joint ; payeur sans contrôle de la garantie du
+  marché ; champ du marché non vérifié en navigateur (TODO). **Script à appliquer par l'utilisateur** : `db/303` puis `db/131`.
 
-## Lot 28 : e-reporting, collecte et envoi (A FAIRE)
+## Lot 28 : e-reporting, collecte et envoi — FAIT (12/11/2026)
 
 - **Cœur**. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : collecte des ventes B2C (`per_fe_type` = B2C ou non assujetti) et internationales, et des
@@ -745,8 +1016,45 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   rejetée), relance et correction d'une période, journal, tests.
 - **Critère de fin** : une période de démonstration B2C et une internationale envoyées à la plateforme simulée,
   dans les deux modes d'envoi ; tests verts.
+- **Réalisé** : `db/304_facture_electronique_ereporting.sql` (rejouable, au manifeste après 303 :
+  `facture_electronique_ereporting_option` — régime de TVA `REGIME_EREPORTING`, défaut réel normal mensuel, et matricule de la
+  plateforme 0238 —, `ereporting_periode` — nature TRANSACTIONS / PAIEMENTS, début, fin, régime, rang de correction, essai,
+  résumé et écarts de la dernière préparation, envoi —, `ereporting_envoi` — transmissions préparées, XML gardé tel qu'il part,
+  flux du module). Le découpage Q20 reste le paramètre du module (`fpa_decoupage_ereporting`, écran Paramètres). Codes
+  `NATURE_PERIODE_EREPORTING`, `ETAT_PERIODE_EREPORTING`, `CIBLE_EREPORTING`, `ERREUR_EREPORTING`, `TYPE_ELEMENT_FE.PERIODE_EREPORTING`
+  (`codes.js` ↔ `Codes.cs`, `CodesTests`). `src/LogiBTP.Api/Btp/EreportingBtp.cs` : cible d'une vente (`Cible` : particulier ou
+  non-assujetti → B2C, sinon international ou pays étranger ; B2G écarté), pièces de vente valables (`v_document_valable`,
+  annulées comprises) d'un type émis datées dans la période, facture construite comme à l'émission puis extraite (B2C :
+  `VentesDe`, une vente par catégorie TT-81 `CategorieDe` et par taux, avoir en négatif, option sur les débits en TT-80 ;
+  international : `ReglesEreporting.TransactionDe` et `IdentifiantEtranger` 0223 / 0227 de l'acheteur sans SIREN) ; paiements :
+  pointages des règlements reçus hors imputation datés dans la période, factures de services ou mixtes sans débits, répartis par
+  taux au cumul des pointages de la pièce (`EncaissementFeBtp.Proposer`, part des services d'une mixte) → 10.4 ou 10.2 ;
+  période par `ReglesEreporting.Periode` selon le régime, `Decouper` selon le découpage, `Controler` et `EcritureFlux10` à la
+  préparation (écarts gardés, aucune transmission tant qu'il y en a) ; envoi (`EnvoyerAsync`, période terminée, sans écart) :
+  `MettreEnFileAsync` en FRR avec le type de flux du sous-flux, identifiant de suivi = TT-1 (suffixé « -E<n> » à partir du
+  2e essai), élément EREPORTING (chronologie du module) ; état lu des flux (`Etat` : PREPAREE, ENVOYEE, ACCEPTEE = tous
+  acquittés, REJETEE = un flux en erreur) ; correction d'une période envoyée ou acceptée (rang n + 1, transmissions RE
+  « -REn ») ; relance d'une période rejetée (essai suivant du même rang) ; routes `GET|PUT /api/facture-electronique/ereporting/option`
+  (paramétrage), `GET …/ereporting/periodes[?nature=]`, `GET …/periodes/{id}`, `POST …/periodes/preparation`, `…/{id}/envoi`,
+  `…/{id}/correction`, `…/{id}/relance` (nœud `facture_electronique`, Modifier). Module : la plateforme simulée refuse un FRR
+  dont le XML contient le marqueur `MarqueurErreur` (démonstration d'un rejet). Client : onglet « E-reporting » de la page
+  Facturation électronique (`facture-electronique/ereporting-fe.js` : régime en combo et matricule, découpage rappelé ;
+  préparation par nature en combo et jour par `activerDates` ; périodes avec pastille d'état, contenu, écarts et actions
+  Envoyer / Corriger / Relancer après `confirmer` du socle ; détail : écarts, transmissions et flux, chronologie de l'élément),
+  période ouvrable depuis la chronologie d'un flux, textes `facture_electronique_btp.ereporting.*`, icônes. Tests :
+  `EreportingBtpTests` (règles sans base ; base jetable et plateforme simulée : mois libre, particulier et client allemand,
+  factures de services et de biens, règlements → transactions 10.1 + 10.3 et paiements 10.2 + 10.4 en UNIQUE (un envoi par
+  sous-flux, TPS1 et TLB1, 62,07 au taux de 20 %), acceptées, préparation d'une période envoyée refusée, correction RE
+  acceptée ; client suisse en PLUSIEURS : 10.3 en un envoi par jour, rejet par le marqueur, correction refusée, relance
+  acceptée après correction du libellé, paiements 10.4 par jour, période en cours refusée), `client/test/ereporting-fe.test.js`
+  (libellés et icônes de chaque code, tableau, actions selon le droit, détail) ; 8 transmissions produites sans erreur au XSD
+  et au schematron Flux10 (`npm run valider-facture`). Écarts : périodicité, dates limites et contenu d'une rectificative
+  toujours à confirmer (R7, TODO ; aucun envoi automatique à l'échéance) ; acquisitions internationales (déclarant BY) non
+  collectées ; encaissements des avoirs non déclarés et encaissement négatif refusé par G1.16 ; catégorie E exonérée gardée en
+  TPS1 / TLB1 ; transmissions non rangées en GED (lot 29) ; onglet non vérifié en navigateur (TODO). **Script à appliquer par
+  l'utilisateur** : `db/304`.
 
-## Lot 29 : archivage, démonstration, documentation (A FAIRE)
+## Lot 29 : archivage, démonstration, documentation — FAIT (12/11/2026)
 
 - **Cœur**. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : règle de rétention GED des flux (10 ans, Q21) dans `db/3xx` ; données de démonstration (plateforme
@@ -754,3 +1062,25 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   `documentation/JOURNAL-LOTS.md`, `TODO.md` (restes) ; `npm run rapport-dependances`.
 - **Critère de fin** : `npm test`, `npm run exporter-resultats`, `dotnet test LogiBTP.slnx` verts ; documentation à
   jour.
+- **Réalisé** : `db/305_facture_electronique_archivage.sql` (rejouable, au manifeste après 304 : règle de rétention de la GED
+  « Flux de facturation électronique » — catégorie `facture_electronique`, archivage à 24 mois, conservation 120 mois, REVOIR,
+  priorité 10, posée une fois : une règle de la catégorie déjà présente n'est jamais remplacée —, `f_ged_element_existe` reprise de
+  272 avec l'élément `EREPORTING` = `ereporting_periode`). Transmissions d'e-reporting rangées en GED (laissé ouvert au lot 28) :
+  `SpecialisationFactureElectroniqueBtp.RangerAsync` → `RangerEreportingAsync` (flux d'élément EREPORTING : GED de la période,
+  catégorie `facture_electronique`, confidentialité interne, original sortant à l'étape ENVOI et au coffre ; GED indisponible :
+  journalisé, fichier gardé par le module). Démonstration : `client/scripts/generer-facture-electronique-demo.mjs [host]` (par
+  l'API : module activé, connecteur SIMULE, émission automatique, quatre factures reçues importées des exemples FNFE et LogiBTP,
+  jusqu'à trois factures, factures d'avancement et avoirs validés émis par « Émettre », relève, périodes d'e-reporting du mois
+  précédent préparées ; étapes tolérantes). Documentation : `documentation/modules/FACTURE-ELECTRONIQUE.md` (nouveau),
+  `MODULES.md` (lien, dépendances, spécialisation, lien transverse, règles répliquées), `documentation/conception/JOURNAL-LOTS.md`,
+  section du chantier de `TODO.md` ramenée aux restes (SQL dans l'ordre du manifeste, écrans, règles à confirmer, points ouverts),
+  une ligne au `CLAUDE.md` du module ; `npm run rapport-dependances` (aucun changement). Tests intermittents du lot 28 : cause
+  trouvée — `dotnet test LogiBTP.slnx` lance les projets de test en parallèle ; `ReceptionFactureBtpTests` hors de la collection
+  du chantier et `ServiceFactureElectroniqueTests` du module (autre processus : file remise à zéro, connecteur changé) relevaient
+  et passaient la file sur la même base que la collection (doublon `ux_fe_flux_id_flux`, flux ACQUITTE au lieu d'ENVOYE) ;
+  corrigé dans les tests seulement : `CollectionBaseFe` (`DisableParallelization`, fixture `VerrouBaseFe`), `ReceptionFactureBtpTests`
+  dans la collection, verrou consultatif `VerrouBaseTests.FactureElectronique` (`LogiBTP.Socle.Testing`, sans dépendance à Npgsql)
+  tenu par la collection du cœur et par chaque test de `ServiceFactureElectroniqueTests`. Tests : `EreportingBtpTests` (GED de
+  la période, étape ENVOI, coffre, règle de 120 mois) ; trois passages successifs sur la base jetable sans échec du chantier.
+  Écarts : script de démonstration non exécuté contre une API (contrôlé par `node --check`) ; élément GED `EREPORTING` absent
+  de l'arborescence de l'explorateur (TODO). **Script à appliquer par l'utilisateur** : `db/305`.

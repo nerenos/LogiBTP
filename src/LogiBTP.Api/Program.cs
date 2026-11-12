@@ -72,6 +72,9 @@ builder.Logging.AddProvider(new JournalTechnique(builder.Configuration.GetConnec
     Path.Combine(builder.Environment.ContentRootPath, "journaux"), JournalTechnique.Niveau(builder.Configuration[VariablesEnv.JournalNiveau])));
 builder.Services.AddHostedService<PurgeJournaux>();
 builder.Services.AddHostedService<CopiesCertificatsLots>();
+builder.Services.AddHostedService<PassageAnnuaireFe>();
+// Facturation électronique, lot 24 : pièces validées à émettre (Btp/EnvoiFactureBtp.cs).
+builder.Services.AddHostedService<PassageEnvoiFe>();
 
 // Une base par société, choisie par le sous-domaine (section Societes ; sans sous-domaine : ConnectionStrings:LogiBTP).
 builder.Services.AddSocietes(builder.Configuration);
@@ -226,7 +229,7 @@ api.MapModuleEntreprisesFr();
 // Modules facultatifs : sous-groupe propre, pour que le filtre d'activation ne touche que leurs routes.
 api.MapGroup("").ExigeModule(ModulesFacultatifs.Reglement, "Règlements").MapModuleReglement();
 api.MapGroup("").ExigeModule(ModulesFacultatifs.Relance, "Relances").DroitsRelances().MapModuleRelance().MapLibellesRelances();
-api.MapGroup("").ExigeModule(ModulesFacultatifs.FactureElectronique, "Facturation électronique").MapModuleFactureElectronique().MapReceptionHorsPlateforme();
+api.MapGroup("").ExigeModule(ModulesFacultatifs.FactureElectronique, "Facturation électronique").MapModuleFactureElectronique().MapReceptionHorsPlateforme().MapAnnuaireFe().MapEmissionFe().MapEnvoiFe().MapRejetFe().MapEncaisseeFe().MapEreportingFe();
 api.MapModuleCrm().ExigeModule(ModulesFacultatifs.Crm, "CRM");
 api.MapExecution().ExigeModule(ModulesFacultatifs.Execution, "Exécution");
 api.MapModuleExecution().ExigeModule(ModulesFacultatifs.Execution, "Exécution");
