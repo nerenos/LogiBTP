@@ -11,7 +11,6 @@ import {
  * précédente → validation par le client. Les étapes s'enchaînent (une seule page, ordre imposé).
  */
 test.describe.serial('Cycle commercial : demande, projet et devis', () => {
-  test.use({ viewport: { width: 1600, height: 1000 } });
   test.describe.configure({ timeout: 90000 });
 
   const s = suffixe();

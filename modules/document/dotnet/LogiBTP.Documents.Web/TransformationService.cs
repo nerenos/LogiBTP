@@ -456,7 +456,7 @@ public class TransformationService<TDoc, TLigne, TComplet>(
             d.EntGroupeId = null;
             d.EntNumero = null;
             d.EntDate = DateOnly.FromDateTime(DateTime.Today);
-            d.EntNatureAvoir = "ANNULATION";
+            d.EntNatureAvoir = NaturesAvoir.Annulation;
             d.EntEtatCompta = null;
         }, u, ct);
         var avoirId = avoir.Document.Document.EntId;

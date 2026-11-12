@@ -14,7 +14,6 @@ import {
  * Montants : une ligne de 10 m² à 40 € (400 € HT) ; situations à 40 %, 70 % puis 60 % après reprise.
  */
 test.describe.serial('Cycle commercial : commande, situations et factures d’avancement', () => {
-  test.use({ viewport: { width: 1600, height: 1000 } });
   test.describe.configure({ timeout: 90000 });
 
   const s = suffixe();
@@ -70,7 +69,8 @@ test.describe.serial('Cycle commercial : commande, situations et factures d’av
     await transformer(page, /Commande client/);
     await attendreMessage(page, /Commande client CC\d{4}-\d+ créé/);
     expect((await numeroDocument(page)).numero).toMatch(/^CC\d{4}-\d+$/);
-    // Commande modifiable (le libellé du statut n'est pas affiché sur un document tout juste transformé)
+    // Commande en brouillon (statut de son propre type), modifiable
+    await attendreStatut(page, 'Brouillon');
     await expect(page.getByRole('button', { name: 'Enregistrer', exact: true })).toBeEnabled();
     await attendreTotalHt(page, '400,00');
     // Le tiers d'un document transformé ne change plus
@@ -162,8 +162,12 @@ test.describe.serial('Cycle commercial : commande, situations et factures d’av
     const facture3 = await factureAvancement('80,00');
     expect(facture3.numero).not.toBe(facture2.numero);
 
-    // Factures du marché : la facture n° 2 est annulée, les deux autres valides
+    // Factures du marché : la facture n° 2 et son avoir (de même montant) sont annulés, les deux autres valides
     await page.goto(`/liste/factures?marche=${marche.code}`);
+    const avoir = page.locator('table tbody tr').filter({ hasText: /AV\d{4}-\d+/ });
+    await expect(avoir).toHaveCount(1);
+    await expect(avoir).toContainText('Annulé');
+    await expect(avoir).toContainText('120,00');
     await expect(page.locator('table tbody tr').filter({ hasText: facture2.numero }).filter({ hasText: 'Annulé' })).toHaveCount(1);
     await expect(page.locator('table tbody tr').filter({ hasText: facture3.numero }).filter({ hasText: 'Validé' })).toHaveCount(1);
   });

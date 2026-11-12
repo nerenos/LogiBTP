@@ -39,6 +39,16 @@ public static class TypesAvancement
     public static bool EstSituation(string? avancement) => avancement is Situation or Production;
 }
 
+/// <summary>
+/// Nature d'un avoir (ent_nature_avoir) : ANNULATION, annulation d'une pièce par un avoir qui la reprend entièrement
+/// (avancement compris : il garde les précédents de la pièce annulée) ; AVANCEMENT, facture d'avancement de période négative.
+/// </summary>
+public static class NaturesAvoir
+{
+    public const string Annulation = "ANNULATION";
+    public const string Avancement = "AVANCEMENT";
+}
+
 /// <summary>Statuts de documents connus du code (les autres statuts d'un type sont du paramétrage).</summary>
 public static class StatutsDocument
 {

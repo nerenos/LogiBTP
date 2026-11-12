@@ -10,7 +10,6 @@ import {
  * Facture sans commande, avec un tiers payeur distinct du client → règlement saisi et pointé sur la facture.
  */
 test.describe.serial('Cycle commercial : facture directe avec tiers payeur et règlement', () => {
-  test.use({ viewport: { width: 1600, height: 1000 } });
   test.describe.configure({ timeout: 90000 });
 
   const s = suffixe();
