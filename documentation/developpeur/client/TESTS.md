@@ -296,7 +296,9 @@ Scénarios réels dans `e2e/` (comptes dans `e2e/.env`, API et client lancés, b
 | `commercial-situations.spec.ts` | Devis accepté → commande → informations → validation dans un nouveau marché → situations 1 et 2 et leurs factures d'avancement → annulation de la facture 2 par avoir, reprise de la situation 2, nouvelle facture → prévisionnel de facturation du chantier |
 | `commercial-facture-reglement.spec.ts` | Facture directe avec tiers payeur → règlement pointé (facture payée) |
 
-Aides communes de la page document (entête, grille, menu ▾, transformation, annuaire, attente sur la limite de débit 429) : `e2e/outils/documents.ts`. Les étapes d'un fichier s'enchaînent (`test.describe.serial`, une page partagée) ; les fichiers sont indépendants. Lancement : `npx playwright test e2e/commercial-*.spec.ts --project=chromium`.
+Aides communes de la page document (entête, grille, menu ▾, transformation, annuaire, attente sur la limite de débit 429) : `e2e/outils/documents.ts`. Les étapes d'un fichier s'enchaînent (`test.describe.serial`, une page partagée) ; les fichiers sont indépendants. Lancement : `npx playwright test commercial --project=chromium` (les arguments sont des filtres sur le chemin : sous Windows, pas de `*`, que le terminal ne développe pas).
+
+Sur la version compilée (plus rapide que le serveur Vite, moins d'attentes dépassées) : API en Release (`dotnet run -c Release --project src\LogiBTP.Api --launch-profile http`, avec les mêmes variables, dont `Authentification__ComptesTest`), client construit et servi par l'aperçu (`npm run apercu --workspace client`, port 4173, même proxy `/api`), puis `BASE_URL=http://localhost:4173` (PowerShell : `$env:BASE_URL='http://localhost:4173'`) avant `npx playwright test`. Le service worker du client construit est bloqué par `playwright.config.ts` (`serviceWorkers: 'block'`) : sans cela, les requêtes passent par lui, échappent à `page.route` et les 429 ne sont plus rejoués.
 
 ---
 
