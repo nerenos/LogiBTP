@@ -83,6 +83,7 @@ public sealed class SpecialisationFactureElectroniqueBtp(IServiceProvider servic
     /// </summary>
     public override async Task<long?> RangerAsync(FluxFe flux, string document, FichierFlux fichier, CancellationToken ct)
     {
+        if (PeriodeDu(flux) is long periode) return await RangerEreportingAsync(flux, document, fichier, periode, ct);
         if (PieceDu(flux) is not long ent) return null;
         try
         {
@@ -137,6 +138,49 @@ public sealed class SpecialisationFactureElectroniqueBtp(IServiceProvider servic
         catch (Exception e) when (e is not OperationCanceledException)
         {
             journal.LogWarning("Facturation électronique : fichier {Document} du flux {Flux} non rangé en GED ({Erreur})", document, flux.FflId, Masquage.Texte(e.Message));
+            return null;
+        }
+    }
+
+    /// <summary>Période d'e-reporting d'un flux (type d'élément EREPORTING, lot 28), sinon null.</summary>
+    public static long? PeriodeDu(FluxFe flux) =>
+        flux.FflTypeElement == TypesElementFe.PeriodeEreporting && long.TryParse(flux.FflIdElement, NumberStyles.None, CultureInfo.InvariantCulture, out var id) ? id : null;
+
+    /// <summary>
+    /// Transmission d'e-reporting (lot 29, Q21) : rangée dans la GED de sa période (élément EREPORTING, db/305), catégorie
+    /// facture_electronique (rétention de 10 ans), confidentialité interne ; l'original envoyé à l'étape ENVOI et au coffre.
+    /// GED indisponible : journalisé, null (la transmission reste dans fe_fichier et ereporting_envoi).
+    /// </summary>
+    private async Task<long?> RangerEreportingAsync(FluxFe flux, string document, FichierFlux fichier, long periode, CancellationToken ct)
+    {
+        try
+        {
+            var nom = fichier.Nom ?? flux.FflNom;
+            var titre = $"E-reporting {flux.FflNumero ?? flux.FflNom} ({document})";
+            var resume = $"Flux {flux.FflId} ({flux.FflSens}, {flux.FflSyntaxe}, {flux.FflType}), période {periode}, document {document}";
+            await using var contenu = new MemoryStream(fichier.Contenu);
+            var formulaire = new FormFile(contenu, 0, fichier.Contenu.Length, "fichier", nom)
+            {
+                Headers = new HeaderDictionary(), ContentType = fichier.TypeMime ?? "application/xml",
+            };
+            var ged = services.GetRequiredService<ServiceGed>();
+            var depot = await ged.DeposerFichier(formulaire, new MetaDepot
+            {
+                Titre = titre.Length > 200 ? titre[..200] : titre, Categorie = CategoriesGed.FactureElectronique,
+                TypeElement = TypesElementFe.PeriodeEreporting, IdElement = periode.ToString(CultureInfo.InvariantCulture), Auteur = Service.Code,
+                Confidentialite = NiveauConfidentialite.Interne, Resume = resume,
+                MotsCles = ["facture_electronique", "ereporting", document.ToLowerInvariant()],
+            }, Service, ct);
+            if (flux.FflSens == SensFlux.Sortant && document == TypeDocumentFlux.Original)
+            {
+                await ged.Etape(depot.Id, new DemandeEtape { Etape = EtapesGed.Envoi, Etat = EtapesGed.Envoi, Commentaire = titre }, Service, ct);
+                await ged.MettreAuCoffre(depot.Id, new DemandeCoffre { Motif = $"E-reporting {titre}" }, Service, ct);
+            }
+            return depot.Id;
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            journal.LogWarning("Facturation électronique : transmission {Document} du flux {Flux} non rangée en GED ({Erreur})", document, flux.FflId, Masquage.Texte(e.Message));
             return null;
         }
     }

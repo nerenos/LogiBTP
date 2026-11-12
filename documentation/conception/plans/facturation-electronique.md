@@ -1,5 +1,9 @@
 # Facturation électronique (RFE) : plan par lots
 
+> **Plan terminé le 12/11/2026** : les 29 lots sont faits (parties A et B). Restes (SQL à appliquer par
+> l'utilisateur, écrans à vérifier en navigateur, règles à confirmer avec l'expert-comptable et la PA) : [TODO.md](../../../TODO.md) ;
+> référence du module : [FACTURE-ELECTRONIQUE.md](../../modules/FACTURE-ELECTRONIQUE.md).
+>
 > Analyse : [ANALYSE-FACTURATION-ELECTRONIQUE.md](../ANALYSE-FACTURATION-ELECTRONIQUE.md) (09/11/2026) ; questions et
 > décisions : [facturation-electronique-questions.md](facturation-electronique-questions.md) (toutes tranchées le
 > 09/11/2026). **Plan à valider** (point de contrôle 2) avant le lot 1.
@@ -39,22 +43,22 @@
 | 12 | Réception : flux reçu → pièce d'achat ou de sous-traitance en brouillon, rattachements, liste à traiter | cœur | 11, 2, 3, 10 | FAIT (10/11/2026) |
 | 13 | Réception : statuts posés (204, 205, 207, 210) et Paiement transmis (211) | cœur | 12, 5 | FAIT (10/11/2026) |
 | 14 | Réception hors plateforme : Factur-X ou XML glissé ou reçu par courriel, avoirs reçus | cœur | 12 | FAIT (10/11/2026) |
-| 15 | Réception de sous-traitance : cadre S5, bloc PAYEUR, demande de paiement direct (224) | cœur | 12, 13 | A FAIRE |
+| 15 | Réception de sous-traitance : cadre S5, bloc PAYEUR, demande de paiement direct (224) | cœur | 12, 13 | FAIT (10/11/2026) |
 | | **Partie B : émission et e-reporting** | | | |
 | 16 | Contrôle de complétude (JS ↔ C#) et écriture CII D22B (EN16931, EXTENDED-CTC-FR) | module | 1, 4 | FAIT (11/11/2026) |
-| 17 | Écriture UBL 2.1 (Invoice, CreditNote) | module | 16 | A FAIRE |
-| 18 | PDF/A-3 et fichier associé | `modules/edition` | — | A FAIRE |
+| 17 | Écriture UBL 2.1 (Invoice, CreditNote) | module | 16 | FAIT (11/11/2026) |
+| 18 | PDF/A-3 et fichier associé | `modules/edition` | — | FAIT (11/11/2026) |
 | 19 | E-reporting : modèle des transactions et paiements, écriture du flux 10 (10.1 à 10.4), découpage des envois | module | 1, 8 | FAIT (11/11/2026) |
-| 20 | Annuaire sur la fiche personne et vérification de nuit (option) | cœur | 11, 6 | A FAIRE |
+| 20 | Annuaire sur la fiche personne et vérification de nuit (option) | cœur | 11, 6 | FAIT (11/11/2026) |
 | 21 | Paramètres d'émission BTP : code BT-3 par type, nature biens / services / mixte, notes légales | cœur | 11, 10 | FAIT (11/11/2026) |
 | 22 | Document de vente → modèle : factures, acomptes, définitives, avoirs ; contrôle dans l'éditeur | cœur | 21, 16 | FAIT (11/11/2026) |
-| 23 | Document de vente → modèle : situations (période), pied BTP, retenue, références de chantier | cœur | 22 | A FAIRE |
+| 23 | Document de vente → modèle : situations (période), pied BTP, retenue, références de chantier | cœur | 22 | FAIT (11/11/2026) |
 | 24 | Émission à la validation : CII ou Factur-X, GED et coffre, dépôt, pastille | cœur | 22, 23, 17, 18, 20 | FAIT (11/11/2026) |
 | 25 | Rejet et refus → avoir interne ; litige et suspension de relance | cœur | 24 | FAIT (11/11/2026) |
 | 26 | Statut Encaissée (212) depuis les règlements, liste à valider | cœur | 24 | FAIT (11/11/2026) |
 | 27 | Sous-traitance et cotraitance émises (S5, S6), B2G par la PA | cœur | 24 | FAIT (12/11/2026) |
 | 28 | E-reporting : collecte et extraction des ventes et encaissements, envoi unitaire ou groupé | cœur | 19, 24, 26 | FAIT (12/11/2026) |
-| 29 | Archivage (rétention), démonstration, documentation | cœur | 24, 28 | A FAIRE |
+| 29 | Archivage (rétention), démonstration, documentation | cœur | 24, 28 | FAIT (12/11/2026) |
 
 Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur avant la partie B.
 
@@ -1050,7 +1054,7 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   TPS1 / TLB1 ; transmissions non rangées en GED (lot 29) ; onglet non vérifié en navigateur (TODO). **Script à appliquer par
   l'utilisateur** : `db/304`.
 
-## Lot 29 : archivage, démonstration, documentation (A FAIRE)
+## Lot 29 : archivage, démonstration, documentation — FAIT (12/11/2026)
 
 - **Cœur**. **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : règle de rétention GED des flux (10 ans, Q21) dans `db/3xx` ; données de démonstration (plateforme
@@ -1058,3 +1062,25 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   `documentation/JOURNAL-LOTS.md`, `TODO.md` (restes) ; `npm run rapport-dependances`.
 - **Critère de fin** : `npm test`, `npm run exporter-resultats`, `dotnet test LogiBTP.slnx` verts ; documentation à
   jour.
+- **Réalisé** : `db/305_facture_electronique_archivage.sql` (rejouable, au manifeste après 304 : règle de rétention de la GED
+  « Flux de facturation électronique » — catégorie `facture_electronique`, archivage à 24 mois, conservation 120 mois, REVOIR,
+  priorité 10, posée une fois : une règle de la catégorie déjà présente n'est jamais remplacée —, `f_ged_element_existe` reprise de
+  272 avec l'élément `EREPORTING` = `ereporting_periode`). Transmissions d'e-reporting rangées en GED (laissé ouvert au lot 28) :
+  `SpecialisationFactureElectroniqueBtp.RangerAsync` → `RangerEreportingAsync` (flux d'élément EREPORTING : GED de la période,
+  catégorie `facture_electronique`, confidentialité interne, original sortant à l'étape ENVOI et au coffre ; GED indisponible :
+  journalisé, fichier gardé par le module). Démonstration : `client/scripts/generer-facture-electronique-demo.mjs [host]` (par
+  l'API : module activé, connecteur SIMULE, émission automatique, quatre factures reçues importées des exemples FNFE et LogiBTP,
+  jusqu'à trois factures, factures d'avancement et avoirs validés émis par « Émettre », relève, périodes d'e-reporting du mois
+  précédent préparées ; étapes tolérantes). Documentation : `documentation/modules/FACTURE-ELECTRONIQUE.md` (nouveau),
+  `MODULES.md` (lien, dépendances, spécialisation, lien transverse, règles répliquées), `documentation/conception/JOURNAL-LOTS.md`,
+  section du chantier de `TODO.md` ramenée aux restes (SQL dans l'ordre du manifeste, écrans, règles à confirmer, points ouverts),
+  une ligne au `CLAUDE.md` du module ; `npm run rapport-dependances` (aucun changement). Tests intermittents du lot 28 : cause
+  trouvée — `dotnet test LogiBTP.slnx` lance les projets de test en parallèle ; `ReceptionFactureBtpTests` hors de la collection
+  du chantier et `ServiceFactureElectroniqueTests` du module (autre processus : file remise à zéro, connecteur changé) relevaient
+  et passaient la file sur la même base que la collection (doublon `ux_fe_flux_id_flux`, flux ACQUITTE au lieu d'ENVOYE) ;
+  corrigé dans les tests seulement : `CollectionBaseFe` (`DisableParallelization`, fixture `VerrouBaseFe`), `ReceptionFactureBtpTests`
+  dans la collection, verrou consultatif `VerrouBaseTests.FactureElectronique` (`LogiBTP.Socle.Testing`, sans dépendance à Npgsql)
+  tenu par la collection du cœur et par chaque test de `ServiceFactureElectroniqueTests`. Tests : `EreportingBtpTests` (GED de
+  la période, étape ENVOI, coffre, règle de 120 mois) ; trois passages successifs sur la base jetable sans échec du chantier.
+  Écarts : script de démonstration non exécuté contre une API (contrôlé par `node --check`) ; élément GED `EREPORTING` absent
+  de l'arborescence de l'explorateur (TODO). **Script à appliquer par l'utilisateur** : `db/305`.

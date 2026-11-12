@@ -84,177 +84,56 @@ Analyse du 23/10/2026 : [ANALYSE-MODULE-SOUS-TRAITANCE.md](documentation/concept
 - [ ] Faire relire le cadre réglementaire (§ 3 : vigilance, autoliquidation, autofacturation, paiement direct) par
   l'expert-comptable ; écritures du paiement direct, de la délégation et de l'autoliquidation à préciser avec le
   module Comptabilité (ST14, ST15).
-- [ ] Module Facturation électronique (réception obligatoire depuis le 01/09/2026) : analyse faite le 09/11/2026
-  ([ANALYSE-FACTURATION-ELECTRONIQUE.md](documentation/conception/ANALYSE-FACTURATION-ELECTRONIQUE.md)), questions
-  tranchées ([facturation-electronique-questions.md](documentation/conception/plans/facturation-electronique-questions.md)), plan en 29 lots
-  à valider ([facturation-electronique.md](documentation/conception/plans/facturation-electronique.md)) ; lot 1 fait
-  le 09/11/2026 (codes, modèle EN16931, règles du cycle de vie), lot 2 le 09/11/2026 (lecture CII D22B et Factur-X,
-  XSD), lot 3 le 09/11/2026 (lecture UBL 2.1 Invoice et CreditNote, détection de la syntaxe), lot 4 le 09/11/2026
-  (schematrons FNFE par SaxonJS, outil `npm run valider-facture`), lot 5 le 09/11/2026 (CDAR : écriture et lecture des
-  statuts), lot 6 le 09/11/2026 (connecteurs : AFNOR XP Z12-013, plateforme simulée, dépôt manuel), lot 7 le
-  10/11/2026 (OAuth GENERIQUE en flux CLIENT), lot 8 le 10/11/2026 (schéma, file avec reprises, statuts, journal des
-  étapes chaîné, relève par curseur, service et routes `/api/facture-electronique`), lot 9 le 10/11/2026 (écrans du
-  module, chronologie réutilisable, page de démonstration), lot 10 le 10/11/2026 (catégorie EN16931 et VATEX des catégories de TVA), lot 11 le 10/11/2026 (branchement du cœur : activation, droits, GED, signaux, page, onglet Chronologie), lot 12 le 10/11/2026 (réception : facture reçue → pièce d'achat ou de sous-traitance en brouillon, fournisseur, commande, chantier, GED au coffre, liste « Factures reçues à traiter », étapes du journal), lot 13 le 10/11/2026 (statuts posés à la réception : 204 à la création, 205 à la validation, 207 et 210 par boutons, 211 au règlement émis, CDAR par la file, statuts non envoyés par code, création de la pièce reprise sans doublon), lot 14 le 10/11/2026 (réception hors plateforme : Factur-X ou XML glissé sur la liste à traiter ou une facture d'achat, pièce jointe d'un courriel reçu, sans statut envoyé ; avoirs reçus → avoir d'achat rattaché à sa facture), lot 15 le 10/11/2026 (réception de sous-traitance : cadre S5 et payeur → T_FACTURE_AVT en paiement direct sur le marché, statut 224 → demande de paiement, autoliquidation contrôlée avec `per_st_autoliquidation`) ; fin de la partie A validée ; lot 16 le 11/11/2026 (émission : contrôle de complétude JS ↔ C# `completude.js` / `ReglesCompletude.cs`, jeu `05_completude.json`, écriture CII D22B EN16931 et EXTENDED-CTC-FR `Formats/EcritureCii.cs`, CII écrits valides aux schematrons dans `tests/exemples/ecrits/`), lot 17 le 11/11/2026 (écriture UBL 2.1 Invoice et CreditNote `Formats/EcritureUbl.cs`, mêmes modèles relus égaux en UBL et en CII, 17 UBL écrits valides aux schematrons), lot 18 le 11/11/2026 (option PDF/A-3 générique du module Édition `js/src/pdfa.js` : XMP avec schéma d'extension de l'appelant, OutputIntent sRGB, fichiers associés `/AF` et EmbeddedFiles, profil ICC sRGB Little CMS livré, jeu `05_pdfa.json` identique Node ↔ Jint), lot 19 le 11/11/2026 (e-reporting : modèle du flux 10, agrégation B2C, extraction d'une facture internationale, périodes, découpage en un ou plusieurs envois, correction rectificative, contrôle avant envoi, écriture valide au XSD et au schematron Flux10 sur des jeux B2C et international), lot 20 le 11/11/2026 (annuaire sur la fiche personne : bouton « Vérifier dans l'annuaire », colonnes `per_fe_*`, vérification de nuit en option désactivée par défaut, avertissement d'émission), lot 21 le 11/11/2026 (paramètres d'émission BTP : BT-3 par type `tyd_fe_type_facture`, nature biens / services `nat_fe_nature` et surcharge `ent_fe_nature`, nature B / S / M et cadre 1 / 2 / 4 / 5 / 6 répliqués `client/src/calcul/emission-fe.js` ↔ `src/LogiBTP.Calcul/EmissionFeBtp.cs`, jeu `tests/emission-fe/01_emission.json`, notes PMT / PMD / AAB et BT-8 depuis les mentions), lot 22 le 11/11/2026 (pièce de vente → facture électronique EN16931 `Btp/EmissionFactureBtp.cs` : facture, acompte 386, avoir 381 / 503 avec facture d'origine, définitive B4 / S4 / M4 avec reprise d'acompte en ligne négative ; bandeau de complétude dans l'éditeur, libellés des règles ; jeu `tests/emission-fe/02_pieces.json`, XML écrits sans erreur fatale en CII, UBL et Factur-X ; alias SQL du lot 21 corrigés), lot 23 le 11/11/2026 (situations et pied BTP : pièces d'avancement émises en montants de la période, présentation cumul comprise, période BG-14, compte prorata et frais HT en remises / charges, retenue en note ABU et BT-20, paiement direct en BT-20, références chantier / marché / projet BT-11 / 12 / 17 / 18 ; cas `SITUATION_PERIODE` et `SITUATION_CUMUL`), lot 24 le 11/11/2026 (émission à la validation : refus de validation pour un client B2B / B2G incomplet sauf droit FORCER, inscription `document_fe_emission` dans la transaction, option « Envoyer plus tard » et émission automatique de la société, CII / UBL / Factur-X selon `per_fe_format`, Factur-X = PDF/A-3 de l'édition avec `factur-x.xml`, GED à l'étape ENVOI et au coffre, file et plateforme simulée jusqu'à Mise à disposition, pastille et bouton « Émettre » sur la pièce, colonne « Facture électronique » des listes de factures, client particulier, international ou hors annuaire en envoi habituel), lot 25 le 11/11/2026 (Rejetée / Refusée : avoir interne proposé sur la pièce et confirmé par l'utilisateur, `AnnulerParAvoirDans` avec avoir daté du jour, dépôt pour archivage seul ARCHIVEONLY / ArchiveOnly ou non déposé, nouvelle facture en brouillon ou situation remise en cours ; En litige : relance suspendue, levée à Approuvée), lot 26 le 11/11/2026 (statut Encaissée 212 : liste à valider des pointages de règlements reçus sur les factures émises de services ou mixtes sans TVA sur les débits, montants par taux répliqués `client/src/calcul/encaissement-fe.js` ↔ `src/LogiBTP.Calcul/EncaissementFeBtp.cs`, jeu `tests/emission-fe/03_encaissement.json`, envoi ou écart, annulation d'encaissement en montants négatifs, onglet « Encaissements »), lot 27 le 12/11/2026 (sous-traitance, cotraitance et B2G émises : place de la société dans le marché de vente `mar_fe_role`, S5 avec payeur en EXTENDED-CTC-FR, S6 avec récapitulatif de cotraitance de la GED joint, cadre 2 quand les acomptes de trésorerie couvrent le TTC `estDejaPayee` ↔ `EmissionFeBtp.DejaPayee`, B2G : code service BT-10, numéro d'engagement BT-13 exigé, SIRET, dépôt en règle B2G), lot 28 le 12/11/2026 (e-reporting : collecte des ventes B2C et internationales valables et de leurs encaissements, flux 10.1 à 10.4 préparés, contrôlés et envoyés à la plateforme en un ou plusieurs envois selon le découpage du module, périodes préparée / envoyée / acceptée / rejetée, correction RE et relance, régime de TVA et matricule de la plateforme en option, onglet « E-reporting »).
-  - [ ] **E-reporting (lots 19 et 28) : règles à confirmer** (risque R7, spécifications externes DGFiP non lues dans le dépôt) : périodicité par régime (`ReglesEreporting.Periodicite` : réel normal mensuel en décades pour les transactions, autres régimes au mois, franchise au bimestre ; régime désormais choisi dans l'onglet E-reporting), dates limites de dépôt (non calculées, pas d'envoi automatique : envoi par l'utilisateur une fois la période terminée), contenu d'une rectificative RE (le lot 28 renvoie la période entière collectée de nouveau), relance d'un rejet en transmission initiale de même TT-1 (identifiant de suivi suffixé « -E2 »), types CO / MO et bloc References de l'annexe A (absents du XSD), encaissements négatifs refusés par G1.16 (écarts à l'envoi) ; catégorie TT-81 (`EreportingBtp.CategorieDe` : O, G, K, AE → TNT1, cadre B → TLB1, sinon TPS1 ; E exonérée gardée en TPS1 / TLB1), encaissements des avoirs non déclarés ; acquisitions internationales (déclarant BY, 10.1 fournisseur) non collectées ; validation par l'expert-comptable.
-  - [ ] **SQL à appliquer par l'utilisateur** (lot 28, jamais appliqué par Claude) : `db/304_facture_electronique_ereporting.sql` (rejouable, au manifeste) sur `logibtp` et `logibtp_demo` par `installation base mettre-a-jour` ; puis saisir le régime de TVA et le matricule de la plateforme (onglet Facturation électronique › E-reporting). Onglet non vérifié en navigateur.
-  - [ ] **SQL à appliquer par l'utilisateur** (lot 10) : `modules/comptabilite/db/094g_comptabilite_tva_en16931.sql` (rejouable, au
-    manifeste) sur `logibtp` et `logibtp_demo` par `installation base mettre-a-jour`.
-  - [ ] **Contrôle veraPDF du lot 18 à lancer à la main** (veraPDF absent de la machine) : `npm run exporter-resultats
-    --workspace modules/edition/js` puis `verapdf --flavour 3b modules/edition/tests/resultats-js/05_pdfa.js.pdf` ; noter
-    le résultat dans le lot 18 du plan ([facturation-electronique.md](documentation/conception/plans/facturation-electronique.md)).
-  - [ ] **SQL à appliquer par l'utilisateur** (lot 8, jamais appliqué par Claude) : `modules/facture-electronique/db/099f_facture_electronique.sql`
-    (rejouable, au manifeste) sur `logibtp` et `logibtp_demo` par `installation base mettre-a-jour`, avant `db/295`.
-  - [ ] **SQL à appliquer par l'utilisateur** (lot 21, jamais appliqué par Claude) : `db/299_facture_electronique_emission.sql`
-    (rejouable, au manifeste : `tyd_fe_type_facture`, `nat_fe_nature`, `ent_fe_nature`) sur `logibtp` et `logibtp_demo` par
-    `installation base mettre-a-jour` ; **à appliquer avant de relancer l'API** (`DocumentBtp.EntFeNature` est lu par EF).
-    Points ouverts : écran de paramétrage du BT-3 par type et de la nature biens / services par nature d'article (valeurs du
-    script, modifiables en SQL seulement) ; rôle sous-traitant / cotraitant (S5, S6) lu dans `mar_fe_role` et pièce déjà payée
-    (cadre 2) quand les acomptes de trésorerie couvrent le TTC (lot 27) ; définitive après acompte (cadre 4) lue dans `acompte_deduction`, donc seulement après la
-    validation (un brouillon donne le cadre 1) ; avoir d'acompte 503 tiré du lien TRANSFORMATION ou ANNULATION vers la
-    facture d'acompte ; option TVA sur les débits = `mentions.tva_debits` (pas `ctv_exigibilite` du module Comptabilité) ;
-    champ « Nature (facture électronique) » de l'onglet Options non vérifié en navigateur ; règles des cadres et de la nature
-    à valider par l'expert-comptable (Q8).
-  - [ ] **SQL à appliquer par l'utilisateur** (lot 20, jamais appliqué par Claude) : `db/298_facture_electronique_annuaire.sql`
-    (rejouable, au manifeste) puis `db/131_fiches_parametrage.sql` (régénéré, rejouable) sur `logibtp` et `logibtp_demo`.
-    Points ouverts : nom de la PA non connu de l'annuaire (la fiche reçoit « PA » ou « PPF ») ; case de l'option de nuit
-    (page Facturation électronique › Paramètres, lot 24) non vérifiée en navigateur.
-  - [ ] **SQL à appliquer par l'utilisateur** (lot 11, jamais appliqué par Claude) : `db/295_facture_electronique.sql`
-    (rejouable, au manifeste : activation `facture_electronique` désactivée à la création, droits copiés du nœud
-    `comptabilite`, catégorie GED, table des signaux `facture_electronique_signal`) sur `logibtp` et `logibtp_demo`
-    par `installation base mettre-a-jour` ; puis activer le module dans Paramètres › Modules et régler la plateforme.
-  - [ ] Lot 11 non vérifié en navigateur : page `/facture-electronique` (onglets Flux, Dépôt manuel, Paramètres avec
-    les connexions OAuth, `?flux=<id>`), menu Ventes, onglet Chronologie de la page document (Alt+9, masqué sans flux),
-    notifications des signaux ; vérifié seulement par les tests (rendu sur la plateforme simulée, décisions des droits).
-  - [ ] Signaux de notification : pas encore d'écran pour régler le niveau et l'activation de `facture_electronique_signal`
-    (valeurs du script).
-  - [ ] **SQL à appliquer par l'utilisateur** (lot 12, jamais appliqué par Claude), par `installation base mettre-a-jour`
-    sur `logibtp` et `logibtp_demo` : `modules/facture-electronique/db/099g_facture_electronique_reception.sql`
-    (rejouable : étapes LECTURE, PIECE_CREEE, DOUBLON du journal), `db/121_listes_parametrage.sql` (régénéré, rejouable :
-    source, thème et vue 1014 « Factures reçues à traiter »), `db/296_facture_electronique_reception.sql` (rejouable :
-    vue `v_liste_fe_recues`). Sur une base créée par le manifeste, `ctv_categorie_en16931` est vide (094g passe avant
-    les catégories de db/223) : la réception retombe sur le comportement du taux ; rejouer 094g pour la remplir.
-  - [ ] Lot 12 non vérifié en navigateur : liste « Factures reçues à traiter » (menu Ventes, `/liste/fe_recues?vue=1014`,
-    ouverture d'une ligne sans pièce vers `/facture-electronique?flux=<id>`), pièce en brouillon créée (lignes, TVA,
-    référence et date du fournisseur, rapport de `document_origine`), GED de la pièce (original, lisible et pièces
-    jointes à l'étape RECEPTION, au coffre), chronologie complète de la pièce ; vérifié par `ReceptionFactureBtpTests`
-    (exemples FNFE ; de bout en bout sur une base jetable par `LOGIBTP_TEST_PG_JETABLE`).
-  - [ ] Réception, décisions reportées : facture de sous-traitance
-    créée par transformation de la commande avec les montants reçus à ventiler (saisie RECUE), sans avancement repris
-    ligne à ligne (lot 15) ; écarts de prix avec la commande visibles à la validation (avertissement `PRIX_ACHAT_ECART`),
-    pas à la réception.
-  - [ ] **SQL à appliquer par l'utilisateur** (lot 13, jamais appliqué par Claude hors des bases jetables des tests),
-    par `installation base mettre-a-jour` sur `logibtp` et `logibtp_demo` :
-    `modules/facture-electronique/db/099h_facture_electronique_statuts.sql` (rejouable : `fpa_statuts_non_envoyes`).
-  - [ ] Lot 13 non vérifié en navigateur : bloc « Statut de la facture reçue » de l'onglet Chronologie (boutons En
-    litige et Refuser, Alt+Shift+L / Alt+Shift+X, fenêtre du motif et du commentaire), cases « Statuts posés envoyés »
-    des paramètres du module ; vérifié par les tests (`ReceptionFactureBtpTests` de bout en bout sur la base jetable,
-    `ServiceFactureElectroniqueTests`, `client/test/facture-electronique.test.js`).
-  - [ ] Statuts posés, décisions reportées : 205 et 211 posés par les points d'accroche (validation, pointage) dans leur
-    transaction mais sur la connexion du module (un échec de la validation ou du règlement après le point d'accroche
-    laisserait le statut posé) et seulement en requête HTTP (services de la requête) ; 211 posé au premier règlement
-    émis qui pointe la pièce, sans montant ; dévalidation ou suppression du règlement sans statut d'annulation.
-  - [ ] **SQL à appliquer par l'utilisateur** (lot 14, jamais appliqué par Claude hors des bases jetables des tests),
-    par `installation base mettre-a-jour` sur `logibtp` et `logibtp_demo` :
-    `modules/facture-electronique/db/099i_facture_electronique_hors_plateforme.sql` (rejouable : `ffl_hors_plateforme` ;
-    sans lui, le module ne lit plus `fe_flux`).
-  - [ ] Lot 14 non vérifié en navigateur : glisser-déposer d'un Factur-X ou d'un XML sur la liste « Factures reçues à
-    traiter » (et bouton « Importer une facture ») et sur la page d'une facture ou d'un avoir d'achat (cadre de la zone,
-    GED de l'onglet Pièces non perturbée), bouton « Créer la facture » des pièces jointes d'un courriel reçu, origine
-    « hors plateforme » au détail du flux ; vérifié par les tests (`ReceptionFactureBtpTests` de bout en bout,
-    `ServiceFactureElectroniqueTests`, `client/test/depot-facture.test.js`).
-  - [ ] Réception hors plateforme et avoirs, décisions reportées : un Factur-X glissé sur une facture d'achat crée sa
-    propre pièce (pas de rattachement à la pièce ouverte, un doublon désigne la pièce existante) ; « Créer la facture »
-    proposé sur tout courriel reçu, rattaché ou non ; avoir reçu toujours en A_AVOIR (pas de T_AVOIR pour un avoir de
-    sous-traitance), facture d'origine cherchée parmi les A_FACTURE / A_FACTURE_AVT seulement, rattachée par un lien de
-    transformation sans lien de lignes ; pas de Paiement transmis (211) pour un avoir ; nouvel exemple d'avoir négatif
-    seulement en mémoire dans les tests (pas de fichier jumeau CII / UBL).
-  - [ ] **SQL à appliquer par l'utilisateur** (lot 15, jamais appliqué par Claude hors des bases jetables des tests),
-    par `installation base mettre-a-jour` sur `logibtp` et `logibtp_demo` : `db/297_facture_electronique_sous_traitance.sql`
-    (rejouable : signal de notification PAIEMENT_DIRECT, contrainte des codes de `facture_electronique_signal` élargie).
-  - [ ] Lot 15 non vérifié en navigateur : bloc « paiement direct » et écarts de la réception (payeur, autoliquidation,
-    contrat) dans l'onglet Traçabilité d'une facture de sous-traitance reçue, notification « Demande de paiement direct
-    reçue » ; vérifié par les tests (`ReceptionFactureBtpTests` de bout en bout sur la base jetable, jeu
-    `tests/cas/04_sous_traitance.json`, `client/test/sous-traitance-recue.test.js`).
-  - [ ] Sous-traitance reçue, décisions reportées : 224 rattaché seulement par le numéro de la facture (flux reçu du
-    même numéro, sans contrôle du SIREN du vendeur) ; 224 d'une facture inconnue du module (saisie à la main, papier)
-    tracé sans rattachement à une pièce ; facture jointe au 224 non rangée en GED ni lue ; demande de paiement
-    enregistrée par le cœur en SQL (`PaiementDirectRecuBtp`, même règle de montant `ReglesPaiementDirect.Montant`) sans
-    la tâche du CRM que crée la saisie manuelle (`ApresDemandeAsync`) ; marché de sous-traitance retrouvé par son code
-    dans une référence (BT-12, BT-13, BT-18) sans commande : T_FACTURE_AVT libre sur le marché, même hors cadre S5 ;
-    contrôle de l'autoliquidation sur `per_st_autoliquidation` du sous-traitant seulement (défaut vrai, `mar_autoliquidation`
-    du marché non comparé) ; cadres S6 (cotraitance) et S3 (B2G par Chorus Pro) non traités à la réception (S5 et S6 émis au
-    lot 27) ; validation des choix
-    fiscaux par l'expert-comptable (cadre S5, autoliquidation) toujours à faire.
-  - [ ] Émission (lot 22), points ouverts : contrôle de la pièce **enregistrée** seulement (bandeau relu à chaque version, saisie
-    en cours non contrôlée) ; pas de pièces de vente en base de démonstration pour un essai réel (jeu construit
-    `tests/emission-fe/02_pieces.json`, plus une facture insérée dans une transaction annulée sur la base jetable) ; bandeau
-    non vérifié en navigateur ; avertissement PEPPOL-EN16931-R008 des CII lus en Factur-X sans adresse de livraison (élément
-    `ApplicableHeaderTradeDelivery` vide écrit par `EcritureCii`) ; adresse électronique par défaut = SIREN quand
-    `per_fe_adresse` est vide ; moyens LCR et autres modes : code 1 (non défini) ; corrigé au lot 24 : instantané JSON `null` d'une pièce
-    validée (`ent_contact_client`) qui retirait l'adresse du client (fiche relue).
-  - [ ] **SQL à appliquer par l'utilisateur** (lot 24, jamais appliqué par Claude) : `db/300_facture_electronique_envoi.sql`
-    (rejouable, au manifeste : `ent_fe_differe`, `facture_electronique_emission_option`, `document_fe_emission`, colonne
-    `statut_fe` de `v_liste_documents`) puis `db/121_listes_parametrage.sql` (régénéré, rejouable) sur `logibtp` et
-    `logibtp_demo` par `installation base mettre-a-jour` ; **à appliquer avant de relancer l'API** (`DocumentBtp.EntFeDiffere`
-    est lu par EF). Points ouverts : forçage = droit FORCER sur le type (comme le montant de validation : un administrateur
-    n'est jamais bloqué, il reçoit un avertissement et la pièce reste en échec INCOMPLETE jusqu'au bouton « Émettre ») ;
-    tiers jamais vérifié dans l'annuaire émis quand même (avertissement, adresse = SIREN) ; Factur-X produit avec le modèle
-    d'édition par défaut de la pièce, distinct du PDF de la validation rangé par le module Édition ; pièce à 0 € (sans
-    ventilation de TVA) écrite non conforme au XSD Factur-X (BG-23 absent) : à exclure ou traiter au lot 25 ; pastille, bouton
-    « Émettre », case « Envoyer plus tard » et options non vérifiés en navigateur ; outil `valider-facture` corrigé (flux
-    compressés à la suite : le mot-clé `stream` de `endstream` n'est plus pris pour un début de flux).
-  - [ ] **SQL à appliquer par l'utilisateur** (lot 25, jamais appliqué par Claude) : `db/301_facture_electronique_rejet.sql`
-    (rejouable, au manifeste : `document_fe_annulation`, type d'avoir V_AVOIR de V_FACTURE) sur `logibtp` et `logibtp_demo` par
-    `installation base mettre-a-jour`, après `db/300`. Points ouverts : pièce d'avancement suivie d'autres pièces d'avancement
-    refusée (`FE_ANNULATION_IMPOSSIBLE` : annuler d'abord les suivantes depuis le marché) ; suspension de relance levée à
-    Approuvée (205) seulement, pas à Approuvée partiellement (206), et jamais par un avoir ; pièce à 0 € du lot 24 toujours non
-    traitée ; bouton « Annuler par avoir interne » et fenêtre de confirmation non vérifiés en navigateur ; règle ARCHIVEONLY d'un
-    avoir à confirmer avec la PA choisie (certaines peuvent ne pas accepter ArchiveOnly : choisir « non déposé »).
-  - [ ] **SQL à appliquer par l'utilisateur** (lot 26, jamais appliqué par Claude) : `db/302_facture_electronique_encaissee.sql`
-    (rejouable, au manifeste : `document_fe_encaissement`, colonnes `dfe_lu_flux_id`, `dfe_cadre`, `dfe_exigibilite`, `dfe_devise`,
-    `dfe_ventilation` de `document_fe_emission`) sur `logibtp` et `logibtp_demo` par `installation base mettre-a-jour`, après
-    `db/301`. Points ouverts : facture mixte : part des services prise sur le HT cumulé des lignes vendues (même part pour tous
-    les taux, pas par taux ; situation en cumul : part du cumul, pas de la période) ; montants par taux au prorata du TTC de la
-    facture émise (paiement direct ou postes TTC hors facture du lot 23 : la facture entièrement payée n'atteint pas le TTC,
-    seul l'encaissé est déclaré) ; pas de notification « statuts Encaissée à valider » ni d'envoi automatique au pointage
-    (Q15 (b), paramètre à venir) ; règlement supprimé puis ressaisi : annulation puis nouvel encaissement proposés (à écarter
-    tous les deux si rien n'a changé) ; onglet « Encaissements » non vérifié en navigateur.
-  - [ ] **SQL à appliquer par l'utilisateur** (lot 27, jamais appliqué par Claude) : `db/303_facture_electronique_cotraitance.sql`
-    (rejouable, au manifeste : `marche.mar_fe_role`, catégorie GED `recapitulatif_cotraitance`) puis `db/131_fiches_parametrage.sql`
-    (régénéré, rejouable) sur `logibtp` et `logibtp_demo` par `installation base mettre-a-jour`, après `db/302` ; **à appliquer avant
-    de relancer l'API** (le contrôle et l'émission lisent `mar_fe_role`). Points ouverts : cadre S3 (sous-traitant B2G en paiement
-    direct par Chorus Pro) non émis, S5 gardé ; payeur d'un sous-traitant = intervenant PAYEUR sans contrôle de la garantie du
-    marché ; pas de drapeau « code service obligatoire » sur la fiche (avertissement seulement) ; numéro d'engagement = référence
-    externe de la pièce (pas de colonne propre) ; récapitulatif de cotraitance produit hors LogiBTP et rangé à la main en GED
-    (pièce ou marché), un seul joint, embarqué seulement en PDF, PNG, JPEG, CSV, XLSX ou ODS ; facture du titulaire : paiement
-    direct des sous-traitants toujours hors facture (lot 23) ; champ « Notre place dans le marché » de la fiche marché et
-    nouveaux écarts du bandeau non vérifiés en navigateur ; choix S5 / S6 / payeur à valider par l'expert-comptable et la PA.
-  - [ ] Émission des situations (lot 23), décisions à confirmer : postes TTC autres que les acomptes (retenue, paiement direct,
-    prorata ou frais après TVA, seuls permis au pied global des factures) **hors facture** : la facture porte le total TTC
-    (BT-115 = TTC − acomptes de trésorerie, différent du net à payer de LogiBTP), ils figurent dans BT-20 et la retenue en note
-    ABU ; paiement direct non déduit (ni BT-113, ni remise) faute de terme EN16931 : à valider avec l'expert-comptable et la PA ;
-    situation présentée en cumul (C, type émis seulement) : TVA recalculée sur la base de la période (BR-CO-17 exact, peut
-    différer d'un centime de « TVA cumul − TVA précédente » de l'édition), poste HT sans avancement et retenue au prorata
-    période / cumul, reprise d'acompte = cumul − précédent de la ligne ; référence BT-18 = code du chantier (même valeur que
-    BT-11, schéma « IT » en UBL) ; période BG-14 par la date de la pièce d'avancement précédente (pas de date de travaux).
-  - [ ] Émission (lot 16), décisions reportées : multi-vendeurs et bidirectionnelles (cadres 8 / 9) non émis
-    (`LOGIBTP-CADRE` bloquant ; les exemples FNFE UC10, UC11, UC13 bidirectionnel relus à l'identique mais non contrôlés
-    aux schematrons) ; le modèle n'a ni motif d'exonération à la ligne (avertissement `BR-FXEXT-AE-08rev` / `E-08rev` du
-    schematron EXTENDED-CTC-FR sur le S5 écrit), ni BT-33, ni rôle du payeur ou de l'agent, ni information du moyen de
-    paiement : non écrits ; nom du projet BT-11 écrit « Project reference » (correspondance CII) ; une même référence de
-    paiement BT-83 pour tous les moyens ; BR-CO-17 en avertissement à l'arrondi exact (le schematron tolère 1) ; règles
-    françaises non reprises dans la complétude : BR-FR-14 (adresse de livraison, 09/2027), 27 à 30 (attributs, objets
-    AFL / AVV), CO-10 (schémas des identifiants), CO-14 / 15 (assujetti unique), MV / BD ; libellés des règles
-    `REGLE_COMPLETUDE` ajoutés au lot 22 (`facture_electronique.completude.regles`). Écart de numérotation : le plan citait CO-06,
-    absente du schematron 1.4.0.04 (CO-07 : échéance, CO-08 : définitive, CO-09 : déjà payée).
-  - [ ] Base jetable complète (manifeste seul) désignée par `LOGIBTP_TEST_PG` : trois tests échouent déjà sans le lot 12
+- [ ] Module Facturation électronique (réception obligatoire depuis le 01/09/2026) : **plan terminé le 12/11/2026**
+  (29 lots, [facturation-electronique.md](documentation/conception/plans/facturation-electronique.md) : lignes « Réalisé »
+  de chaque lot ; référence [FACTURE-ELECTRONIQUE.md](documentation/modules/FACTURE-ELECTRONIQUE.md)). Reste à faire :
+  - [ ] **SQL à appliquer par l'utilisateur** (jamais appliqué par Claude hors des bases jetables des tests), par
+    `installation base mettre-a-jour` sur `logibtp` et `logibtp_demo`, dans l'ordre du manifeste : `modules/comptabilite/db/094g`,
+    `modules/facture-electronique/db/099f`, `099g`, `099h`, `099i`, `db/121` et `db/131` (régénérés), `db/295` à `db/305` ;
+    **avant de relancer l'API** (EF lit `ent_fe_nature`, `ent_fe_differe` ; le contrôle lit `mar_fe_role`). Puis activer le
+    module (Paramètres › Modules), régler la plateforme, le régime de TVA et le matricule (onglet E-reporting). Sur une base
+    créée par le manifeste, `ctv_categorie_en16931` est vide (094g passe avant les catégories de db/223) : rejouer 094g.
+  - [ ] **Non vérifié en navigateur** (vérifié par les tests seulement) : page `/facture-electronique` (Flux, Dépôt manuel,
+    Encaissements, E-reporting, Paramètres et cases des options), onglet Chronologie de la page document (statuts posés :
+    En litige, Refuser), liste « Factures reçues à traiter » (vue 1014) et glisser-déposer d'un Factur-X ou XML, « Créer la
+    facture » d'un courriel, Traçabilité d'une facture de sous-traitance reçue, bouton « Vérifier dans l'annuaire » de la
+    fiche personne, bandeau de complétude, pastille, « Émettre », « Envoyer plus tard », « Annuler par avoir interne »,
+    champ « Nature (facture électronique) » des Options, « Notre place dans le marché » de la fiche marché, notifications ;
+    page de démonstration du module (port 5181). Jeu de démonstration sur l'API réelle :
+    `node client/scripts/generer-facture-electronique-demo.mjs [host]` (lot 29, à lancer une fois les scripts appliqués ;
+    non exécuté contre une API en développement).
+  - [ ] **E-reporting : règles à confirmer** (risque R7, spécifications DGFiP non lues dans le dépôt) : périodicité par régime
+    (`ReglesEreporting.Periodicite`), dates limites (aucun envoi automatique), contenu d'une rectificative RE (période entière
+    renvoyée), relance d'un rejet en « -E2 », types CO / MO et bloc References (absents du XSD), encaissements négatifs
+    refusés par G1.16, catégorie TT-81 (E exonérée en TPS1 / TLB1), encaissements des avoirs non déclarés, acquisitions
+    internationales (déclarant BY) non collectées.
+  - [ ] **À valider par l'expert-comptable et la PA choisie** : cadres et nature biens / services / mixte (Q8), BT-8 par
+    `mentions.tva_debits` ; S5 / S6 / payeur (garantie du marché non contrôlée), S3 B2G non émis ; situations : postes TTC
+    hors facture (BT-115 ≠ net à payer, retenue en note ABU, paiement direct non déduit), TVA d'une situation en cumul ;
+    Encaissée : part des services d'une mixte prise sur le HT cumulé, montants au prorata du TTC émis ; règle ArchiveOnly des
+    avoirs internes ; autoliquidation de la sous-traitance reçue (`per_st_autoliquidation`).
+  - [ ] **Contrôle veraPDF du lot 18** à lancer à la main (absent de la machine) : `npm run exporter-resultats --workspace
+    modules/edition/js` puis `verapdf --flavour 3b modules/edition/tests/resultats-js/05_pdfa.js.pdf` ; noter le résultat au lot 18.
+  - [ ] Écrans de paramétrage manquants : niveau et activation des signaux (`facture_electronique_signal`), BT-3 par type et
+    nature par nature d'article (valeurs des scripts, modifiables en SQL seulement), drapeau « code service obligatoire ».
+  - [ ] Émission, points ouverts : pièce **enregistrée** contrôlée (pas la saisie en cours) ; pièce à 0 € (BG-23 absent du
+    Factur-X) ; Factur-X du modèle d'édition par défaut, distinct du PDF de la validation ; tiers jamais vérifié émis quand même
+    (adresse = SIREN) ; avertissement PEPPOL-EN16931-R008 (livraison vide) ; moyens LCR et autres : code 1 ; cadres 8 / 9 non
+    émis ; ni motif d'exonération à la ligne, ni BT-33, ni rôle du payeur ; BR-FR-14, 27 à 30, CO-10, CO-14 / 15, MV / BD non
+    repris dans la complétude ; pièce d'avancement suivie d'autres : annulation refusée ; suspension de relance levée à 205
+    seulement ; Encaissée sans notification ni envoi automatique (Q15 (b)) ; récapitulatif de cotraitance produit hors LogiBTP.
+  - [ ] Réception, points ouverts : statuts 205 / 211 posés sur la connexion du module pendant la transaction de la validation
+    ou du règlement (un échec ensuite laisserait le statut) et en requête HTTP seulement, 211 sans montant ni annulation ;
+    facture de sous-traitance sans avancement ligne à ligne ; écarts de prix vus à la validation seulement ; Factur-X glissé sur
+    une facture d'achat : nouvelle pièce ; avoir de sous-traitance en A_AVOIR ; 224 rattaché par le numéro seul, facture jointe
+    au 224 non lue, demande de paiement sans tâche du CRM ; cadres S6 et S3 non traités à la réception ; nom de la PA inconnu de
+    l'annuaire (« PA » ou « PPF »).
+  - [ ] GED : élément `EREPORTING` (transmissions d'e-reporting, `db/305`) absent de l'arborescence de l'explorateur (documents
+    trouvés par la recherche) ; ouvrir la GED depuis le détail d'une période.
+  - [ ] Base jetable complète désignée par `LOGIBTP_TEST_PG` : trois échecs connus hors chantier
     (`IntegrationPostgresTests.Agregats_identiques_au_js` et `Lots_par_cle_identiques_au_js` : colonnes de démonstration
-    absentes ; `RelancesBtpTests.Devis_en_mode_tache_cree_la_tache_sans_courriel` : date attendue fixe) ; sans variable,
-    `dotnet test LogiBTP.slnx` est vert.
-  - [ ] Écrans du lot 9 vérifiés par leurs tests et par un rendu sans affichage (Chrome headless) de la page de
-    démonstration (`npm run demo --workspace @logibtp/facture-electronique`, port 5181) : essayer en navigateur les
-    fenêtres (accusé du dépôt manuel, import d'un fichier, nouvelle tentative), les combos des filtres, les dates et
-    les raccourcis, puis sur l'API réelle (module branché au lot 11).
+    absentes ; `RelancesBtpTests.Devis_en_mode_tache_cree_la_tache_sans_courriel` : date attendue fixe) ; échecs intermittents
+    du chantier corrigés au lot 29 (collection `CollectionBaseFe` et verrou `VerrouBaseTests.FactureElectronique`).
 
 ### Import
 

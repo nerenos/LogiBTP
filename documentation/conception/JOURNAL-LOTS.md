@@ -92,6 +92,7 @@ Index de l'historique des lots et des dates cité par l'ancien CLAUDE.md racine 
 | Textes de l'édition | — | — | `documentation/modules/DOCUMENT.md` |
 | Module Édition | — | — | `modules/edition/CLAUDE.md` |
 | Entête des documents | — | — | `client/CLAUDE.md` |
+| Module Facturation électronique (réforme RFE : réception, émission, statuts, e-reporting, archivage) | lots 1 à 29 (partie A : 1 à 15, partie B : 16 à 29) | 09/11/2026 – 12/11/2026 | `modules/facture-electronique/CLAUDE.md`, [FACTURE-ELECTRONIQUE.md](../modules/FACTURE-ELECTRONIQUE.md), plan [facturation-electronique.md](plans/facturation-electronique.md) |
 
 ## Lots de migration de la personnalisation (P3)
 

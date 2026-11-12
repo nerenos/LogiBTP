@@ -275,6 +275,21 @@ public class EreportingBtpTests
         var chronologie = await Portee(services, sp => sp.GetRequiredService<ServiceFactureElectronique>()
             .Chronologie(null, TypesElementFe.PeriodeEreporting, t.Id.ToString(System.Globalization.CultureInfo.InvariantCulture), default));
         Assert.Contains(chronologie, e => e.Type == EvenementFe.Production);
+        // Archivage (lot 29, Q21) : chaque transmission envoyée rangée en GED de la période (élément EREPORTING, db/305),
+        // catégorie facture_electronique (rétention de 10 ans), étape ENVOI, au coffre.
+        var idPeriode = t.Id.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        foreach (var e in t.Envois)
+        {
+            var ged = (long)(await b.Scalaire("SELECT ffl_ged_original_id FROM fe_flux WHERE ffl_id = @f", ("f", e.FluxId!.Value)))!;
+            Assert.Equal((TypesElementFe.PeriodeEreporting, idPeriode, CategoriesGed.FactureElectronique, true),
+                ((string)(await b.Scalaire("SELECT dge_type_element FROM document_ged WHERE dge_id = @g", ("g", ged)))!,
+                 (string)(await b.Scalaire("SELECT dge_id_element FROM document_ged WHERE dge_id = @g", ("g", ged)))!,
+                 (string)(await b.Scalaire("SELECT dge_categorie FROM document_ged WHERE dge_id = @g", ("g", ged)))!,
+                 (bool)(await b.Scalaire("SELECT dge_coffre FROM document_ged WHERE dge_id = @g", ("g", ged)))!));
+            Assert.Equal(EtapesGed.Envoi, await b.Scalaire("SELECT vge_etape FROM version_ged WHERE vge_document = @g ORDER BY vge_numero DESC LIMIT 1", ("g", ged)));
+        }
+        Assert.Equal(120, await b.Scalaire("SELECT rrg_duree_conservation_mois FROM regle_retention_ged WHERE rrg_categorie = @c ORDER BY rrg_id LIMIT 1",
+            ("c", CategoriesGed.FactureElectronique)));
 
         // Paiements : 10.2 (encaissement de la facture internationale) et 10.4 (encaissement B2C), répartis par taux.
         var p = await PreparerAsync(services, b, NaturesPeriodeEreporting.Paiements, mois);
