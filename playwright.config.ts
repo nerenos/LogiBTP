@@ -25,6 +25,10 @@ export default defineConfig({
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
+
+    /* Service worker du client construit (aperçu : npm run apercu) bloqué : sinon les requêtes passent par lui et
+       échappent à page.route (patienterSurLimiteDebit ne rejoue plus les 429). Sans effet sur le serveur Vite. */
+    serviceWorkers: 'block',
   },
 
   /* Configure projects for major browsers */
