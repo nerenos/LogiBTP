@@ -48,8 +48,9 @@ export function definirConfidentielSession(actif) {
  * - Verrou : passer en modification prend le verrou (renouvelé toutes les 30 s) ; si un autre utilisateur modifie
  *   la fiche, un bandeau l'indique et propose « Reprendre la main » à qui a le droit DEBLOQUER.
  * - Onglets peu nombreux, composés de groupes de champs (cadres titrés) : section { code, titre, groupes: [{ titre,
- *   champs, largeur, disposition }] } (ou champs à plat : un seul groupe sans titre) ; largeur LARGEUR_GROUPE (plein :
- *   toute la largeur), disposition DISPOSITION_GROUPE (grille par défaut, flex : champs à la largeur de leur contenu).
+ *   champs, largeur, disposition, classe_conteneur }] } (ou champs à plat : un seul groupe sans titre) ; largeur
+ *   LARGEUR_GROUPE (plein : toute la largeur), disposition DISPOSITION_GROUPE (grille par défaut, flex : champs à la
+ *   largeur de leur contenu), classe_conteneur remplace la classe du conteneur des champs.
  * - Champs obligatoires du programme (*) et par paramétrage (◆), champs supplémentaires paramétrés (regroupés en
  *   cadres, dans un onglet de la définition ou dans Informations complémentaires), champs confidentiels masqués
  *   (affichage à la demande, ou pendant toute la session), mots de passe (jamais chargés, révélés à la demande :
@@ -469,7 +470,7 @@ export class FicheBase {
       return fs;
     }
     const grille = document.createElement('div');
-    grille.className = g.disposition === DISPOSITION_GROUPE.FLEX ? 'fiche-flex' : 'fiche-grille';
+    grille.className = g.classe_conteneur ?? (g.disposition === DISPOSITION_GROUPE.FLEX ? 'fiche-flex' : 'fiche-grille');
     for (const c of g.champs) grille.append(this.#bloc(c));
     fs.append(grille);
     return fs;
