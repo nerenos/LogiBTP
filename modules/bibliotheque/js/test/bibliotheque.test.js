@@ -7,6 +7,7 @@ import { FournisseurBibliothequeMemoire } from '../src/fournisseurs.js';
 import { suivreTarifs, signalerTarifs, actionsLigneTarif, tarifDepuisSaisie } from '../ui/onglets.js';
 import { entreeDepuisLigne } from '../src/fournisseurs.js';
 import { S } from '@logibtp/socle';
+import { elementVendu, TYPE_ELEMENT } from '../src/codes.js';
 
 const jeu = JSON.parse(fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../tests/cas/01_calcul.json'), 'utf8'));
 
@@ -177,5 +178,12 @@ describe('filtre des choix', () => {
     const f = new FournisseurBibliothequeMemoire({ bibliotheques, elements: elements(), filtreChoix: (e) => e.code !== 'B' });
     expect((await f.rechercher()).map((e) => e.code)).toEqual(['A', 'C']);
     expect((await f.element(2)).code).toBe('B');
+  });
+});
+
+describe('éléments vendus (réplique de TypeElement.EstVendu)', () => {
+  it('article et ouvrage seulement', () => {
+    expect(Object.values(TYPE_ELEMENT).filter(elementVendu)).toEqual(['ARTICLE', 'OUVRAGE']);
+    expect(elementVendu(null)).toBe(false);
   });
 });

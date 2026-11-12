@@ -789,10 +789,20 @@ export class PageDocument extends PageBase {
     await ecrireAttente({ ...this.#entreeAttente(), creation: { params, initial: document } });
     this.attente = await lireAttente(this.app.utilisateur(), id);
     this.app.routeur.remplacerUrl(urlDocument(id));
+    this.#trancheInitiale();
     this.disposition.onglet('entete');
     this.rafraichir();
     this.app.publier(SUJET_ATTENTE, {});
     this.app.message(texte('document_btp.page.cree_hors_ligne', { type: type.tyd_libelle }), 'avertissement');
+  }
+
+  /**
+   * Création : une tranche vide d'emblée pour commencer la saisie ; hors pile d'annulation, le document reste « non
+   * modifié » tant qu'on n'y saisit rien (la tranche n'est enregistrée qu'avec la première saisie).
+   */
+  #trancheInitiale() {
+    const id = this.editeur?.insererTrancheVide();
+    if (id) this.editeur.allerA(id, { focus: false });
   }
 
   async nouveau(code) {
@@ -803,6 +813,7 @@ export class PageDocument extends PageBase {
     const cree = await api.creer({ ent_tyd_id: type.tyd_id, ent_tiers_id: null, ent_objet: texte('document_btp.page.objet_nouveau', { type: type.tyd_libelle.toLowerCase() }) });
     this.app.routeur.remplacerUrl(urlDocument(cree.document.ent_id));
     await this.chargerDocument(cree.document.ent_id);
+    this.#trancheInitiale();
     this.disposition.onglet('entete');
     this.app.publier(SUJET_FENETRE.ENREGISTRE, { type: code, ids: [cree.document.ent_id], cree: true });
     this.app.message(texte('document_btp.page.cree', { type: type.tyd_libelle, numero: cree.document.ent_numero ?? '' }));

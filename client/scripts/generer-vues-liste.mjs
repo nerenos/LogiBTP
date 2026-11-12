@@ -89,19 +89,20 @@ const { calculerOuvrage } = await import('../src/app/bibliotheque/bibliotheque.j
 const j = (v) => (v === null || v === undefined ? 'NULL' : `${q(JSON.stringify(v))}::jsonb`);
 const n = (v) => (v === null || v === undefined || v === '' ? 'NULL' : String(v));
 const b = (v) => (v ? 'TRUE' : 'FALSE');
-const lignesElements = ELEMENTS.filter((e) => e.type !== 'POSTE_PIED').map((e0) => {
+const valeursElements = ELEMENTS.filter((e) => e.type !== 'POSTE_PIED').map((e0) => {
   // Coefficients effectifs (imposés, nature, global) à la génération, comme l'API.
   const c = coefficientsEffectifs(e0, PERIODES_COEFFICIENTS, new Date().toISOString().slice(0, 10), PARAMETRES_BIBLIOTHEQUE);
   const e = { ...e0, coef_fg: c.coef_fg, coef_benef: e0.pv_fixe ? e0.coef_benef : c.coef_benef };
   const p = e.type === 'OUVRAGE' || e.type === 'ENSEMBLE' ? calculerOuvrage(e.composition, e)
     : calculerElement(entreeDepuisLigne(e, TARIFS.filter((t) => t.ele_id === e.id)));
-  return ` (${[e.id, e.bib_id, q(e.code), q(e.type), q(e.libelle_html), q(texteBrut(e.libelle_html)), n(e.fam_id), n(e.nat_id), q(e.gestion),
+  return { e, valeurs: [e.id, e.bib_id, q(e.code), q(e.type), q(e.libelle_html), q(texteBrut(e.libelle_html)), n(e.fam_id), n(e.nat_id), q(e.gestion),
     q(e.unite_stock), q(e.unite_achat), q(e.unite_vente), j(e.unites), q(e.scenario_pa), j(e.scenarios), n(e.pa_fixe), n(e.dernier_pa), n(e.pmp),
     n(p.pa), n(e.coef_fg), n(p.pr), n(p.coef_benef ?? e.coef_benef), n(p.pv), b(e.pv_fixe), n(e.coef_remise), n(p.pv_net), j(e.composition), j(e.proprietes),
     b(e.actif), q('demo'), q('Données de démonstration'),
     ...['poids', 'surface', 'surface_peinture', 'volume', 'hauteur', 'largeur', 'epaisseur', 'longueur', 'isolant_r', 'isolant_lambda', 'isolant_u'].map((k) => n(e[k])),
-    b(e.coef_fg_impose), b(e.coef_benef_impose)].join(', ')})`;
-}).join(',\n');
+    b(e.coef_fg_impose), b(e.coef_benef_impose)] };
+});
+const lignesElements = valeursElements.map((x) => ` (${x.valeurs.join(', ')})`).join(',\n');
 const sqlBibliotheque = `-- =============================================================================
 -- Cœur LogiBTP – bibliothèque de démonstration (référentiels, articles, ouvrage, tarifs fournisseurs).
 -- FICHIER GÉNÉRÉ par client/scripts/generer-vues-liste.mjs depuis client/src/app/bibliotheque/donnees.js : ne pas modifier.
@@ -150,6 +151,74 @@ SELECT setval(pg_get_serial_sequence('coefficient_periode', 'cop_id'), (SELECT m
 `;
 fs.writeFileSync(path.join(racine, 'db', '116_bibliotheque_demo.sql'), sqlBibliotheque);
 console.log('db/116_bibliotheque_demo.sql généré');
+
+// Compléments de la bibliothèque de démonstration pour une base déjà créée (116 n'est appliqué qu'à la création) :
+// familles, éléments et tarifs absents ajoutés par leur code (identifiants attribués par la base), compositions des
+// éléments de démonstration jamais modifiés (ele_maj_par = 'demo') remises à jour, liens des composantes recalés sur
+// les identifiants de la base. Rejouable ; hors manifeste (base de démonstration seulement).
+const bibCode = Object.fromEntries(BIBLIOTHEQUES.map((x) => [x.id, x.code]));
+const bibSql = (id) => `(SELECT bib_id FROM bibliotheque WHERE bib_code = ${q(bibCode[id])})`;
+const famSql = (id) => {
+  const f = FAMILLES.find((x) => x.id === id);
+  return f ? `(SELECT fam_id FROM famille_element WHERE fam_bib_id = ${bibSql(f.bib_id)} AND fam_code = ${q(f.code)})` : 'NULL';
+};
+const natSql = (id) => {
+  const x = NATURES.find((y) => y.id === Number(id));
+  return x ? `(SELECT nat_id FROM nature_element WHERE nat_code = ${q(x.code)})` : 'NULL';
+};
+const eleSql = (id) => {
+  const x = ELEMENTS.find((y) => y.id === id);
+  return `(SELECT ele_id FROM element WHERE ele_bib_id = ${bibSql(x.bib_id)} AND ele_code = ${q(x.code)})`;
+};
+const COLONNES_ELEMENT = `ele_bib_id, ele_code, ele_type, ele_libelle_html, ele_libelle, ele_fam_id, ele_nat_id, ele_gestion, ele_unt_stock, ele_unt_achat,
+  ele_unt_vente, ele_unites, ele_scenario_pa, ele_scenarios, ele_pa_fixe, ele_dernier_pa, ele_pmp, ele_pa, ele_coef_fg, ele_pr, ele_coef_benef, ele_pv,
+  ele_pv_fixe, ele_coef_remise, ele_pv_net, ele_composition, ele_proprietes, ele_actif, ele_maj_par, ele_commentaire_prix,
+  ele_poids, ele_surface, ele_surface_peinture, ele_volume, ele_hauteur, ele_largeur, ele_epaisseur, ele_longueur, ele_isolant_r, ele_isolant_lambda, ele_isolant_u,
+  ele_coef_fg_impose, ele_coef_benef_impose`;
+const sqlComplements = `-- =============================================================================
+-- Bibliothèque de démonstration : compléments pour une base déjà créée (db/116 n'est appliqué qu'à la création).
+-- FICHIER GÉNÉRÉ par client/scripts/generer-vues-liste.mjs depuis client/src/app/bibliotheque/donnees.js : ne pas modifier.
+-- Rejouable, hors manifeste : à appliquer à la main aux bases de démonstration seulement (jamais à une base de production).
+-- =============================================================================
+
+BEGIN;
+
+${FAMILLES.map((f) => `INSERT INTO famille_element (fam_bib_id, fam_parent_id, fam_code, fam_libelle, fam_ordre)
+SELECT ${bibSql(f.bib_id)}, ${f.parent_id ? famSql(f.parent_id) : 'NULL'}, ${q(f.code)}, ${q(f.libelle)}, ${f.ordre}
+ON CONFLICT (fam_bib_id, fam_code) DO NOTHING;`).join('\n')}
+
+${valeursElements.map(({ e, valeurs }) => {
+    const v = [...valeurs];
+    v.splice(0, 2, bibSql(e.bib_id)); // ele_id retiré, bibliothèque par son code
+    v[5] = famSql(e.fam_id);
+    v[6] = natSql(e.nat_id);
+    return `INSERT INTO element (${COLONNES_ELEMENT})
+SELECT ${v.join(', ')}
+ON CONFLICT (ele_bib_id, ele_code) DO NOTHING;`;
+  }).join('\n')}
+
+-- Compositions des éléments de démonstration jamais modifiés : natures des composantes renseignées.
+${valeursElements.filter(({ e }) => e.composition).map(({ e }) => `UPDATE element SET ele_composition = ${j(e.composition)}
+WHERE ele_bib_id = ${bibSql(e.bib_id)} AND ele_code = ${q(e.code)} AND ele_maj_par = 'demo' AND ele_composition IS DISTINCT FROM ${j(e.composition)};`).join('\n')}
+
+-- Composantes liées à un élément : identifiant de la base retrouvé par la bibliothèque et le code de l'élément.
+UPDATE element e SET ele_composition = jsonb_set(e.ele_composition, '{lignes}', (
+    SELECT jsonb_agg(CASE WHEN l->'lig_proprietes'->'element' ? 'code'
+        THEN jsonb_set(l, '{lig_proprietes,element,id}', coalesce((SELECT to_jsonb(x.ele_id) FROM element x JOIN bibliotheque b ON b.bib_id = x.ele_bib_id
+            WHERE b.bib_code = l->'lig_proprietes'->'element'->>'bib' AND x.ele_code = l->'lig_proprietes'->'element'->>'code'), l->'lig_proprietes'->'element'->'id'))
+        ELSE l END ORDER BY o)
+    FROM jsonb_array_elements(e.ele_composition->'lignes') WITH ORDINALITY AS t(l, o)))
+WHERE e.ele_maj_par = 'demo' AND e.ele_type IN ('OUVRAGE', 'ENSEMBLE') AND jsonb_array_length(coalesce(e.ele_composition->'lignes', '[]'::jsonb)) > 0;
+
+${TARIFS.map((t) => `INSERT INTO tarif_fournisseur (tfo_ele_id, tfo_fournisseur, tfo_reference, tfo_libelle, tfo_unt_code, tfo_prix, tfo_debut, tfo_fin, tfo_principal, tfo_lien, tfo_maj_par)
+SELECT x.ele_id, ${q(t.fournisseur)}, ${q(t.reference)}, ${q(t.libelle)}, ${q(t.unite)}, ${t.prix}, ${q(t.debut)}, ${q(t.fin)}, ${b(t.principal)} AND NOT EXISTS (SELECT 1 FROM tarif_fournisseur p WHERE p.tfo_ele_id = x.ele_id AND p.tfo_principal), ${q(t.lien)}, 'demo'
+FROM (SELECT ${eleSql(t.ele_id)} AS ele_id) x
+WHERE x.ele_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM tarif_fournisseur f WHERE f.tfo_ele_id = x.ele_id AND f.tfo_reference = ${q(t.reference)});`).join('\n')}
+
+COMMIT;
+`;
+fs.writeFileSync(path.join(racine, 'scripts', 'demo', 'bibliotheque-demo-complements.sql'), sqlComplements);
+console.log('scripts/demo/bibliotheque-demo-complements.sql généré');
 
 // ------------------------------------------------------------------ annuaire : référentiels et démonstration
 const A = await import('../src/app/annuaire/donnees.js');
