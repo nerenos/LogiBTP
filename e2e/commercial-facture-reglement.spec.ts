@@ -64,22 +64,23 @@ test.describe.serial('Cycle commercial : facture directe avec tiers payeur et r�
     await onglet(page, 'Règlements');
     const reglements = page.locator('#vue-reglements');
     await expect(reglements).toContainText('Aucun règlement pointé.');
-    await expect(reglements).toContainText('Reste à payer : 300,00');
+    // TVA à 20 % (taux par défaut) : 360,00 TTC
+    await expect(reglements).toContainText('Reste à payer : 360,00');
 
     // Règlements du tiers : nouveau règlement pointé sur l'échéance de la facture
     await reglements.getByRole('link', { name: /Règlements du tiers/ }).click();
     await expect(page).toHaveURL(/\/reglements\?/);
     const echeance = page.getByRole('row').filter({ hasText: facture.numero });
     await expect(echeance).toHaveCount(1);
-    await page.getByRole('textbox', { name: 'Montant', exact: true }).first().fill('300');
+    await page.getByRole('textbox', { name: 'Montant', exact: true }).first().fill('360');
     await page.getByRole('textbox', { name: 'Référence', exact: true }).first().fill(reference);
-    await echeance.getByRole('textbox').fill('300');
+    await echeance.getByRole('textbox').fill('360');
     await page.getByRole('button', { name: 'Enregistrer le règlement', exact: true }).click();
     await attendreMessage(page, 'Règlement enregistré');
 
     // Le règlement apparaît, pointé sur la facture, et l'échéance soldée disparaît de la liste
     const reglement = page.getByRole('row').filter({ hasText: reference });
-    await expect(reglement).toContainText('300,00');
+    await expect(reglement).toContainText('360,00');
     await expect(reglement).toContainText(facture.numero);
     await expect(page.getByRole('row').filter({ hasText: facture.numero }).filter({ hasNotText: reference })).toHaveCount(0);
 

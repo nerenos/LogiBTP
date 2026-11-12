@@ -133,7 +133,9 @@ export class TableIntervenants {
     const ligne = (el) => this.liste[Number(el.closest('tr').dataset.i)];
     this.el.querySelector('[data-ajouter]').addEventListener('click', () => {
       const deja = new Set(this.liste.map((x) => x.fonction));
-      const f = this.fonctionsProposees(null).find((y) => !(y.unique && deja.has(y.code))) ?? this.fonctions[0];
+      // Ligne imposée (tiers du document : fournisseur d'un achat, client d'une vente) d'abord, tant qu'elle manque.
+      const f = (this.fixe && !deja.has(this.fixe) ? this.fonction(this.fixe) : null)
+        ?? this.fonctionsProposees(null).find((y) => !(y.unique && deja.has(y.code))) ?? this.fonctions[0];
       this.liste.push({ fonction: f?.code ?? 'AUTRE', per_id: null, tiers: null, ind_id: null, contact: null, principal: false, paiement_direct: false });
       this.#dessiner();
       this.el.querySelector(`tr[data-i="${this.liste.length - 1}"] [data-tiers]`)?.focus();

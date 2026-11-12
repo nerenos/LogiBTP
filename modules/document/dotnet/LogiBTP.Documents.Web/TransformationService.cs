@@ -689,6 +689,9 @@ public class TransformationService<TDoc, TLigne, TComplet>(
     private TComplet Filtrer(TComplet c, HashSet<long> garder, Dictionary<long, decimal> retenues, HashSet<long> enVendu)
     {
         c.Lignes = c.Lignes.Where(l => l.LigOrigineId is long o && garder.Contains(o)).ToList();
+        // La case Soldé de la source (cochée à sa validation quand elle a soldé sa propre ligne parente) ne passe pas à
+        // la cible : elle y solderait d'office la ligne de la source dès la première transformation partielle.
+        foreach (var l in c.Lignes) l.LigSolde = false;
         foreach (var l in c.Lignes.Where(l => enVendu.Contains(l.LigOrigineId!.Value)))
         {
             l.LigTypePrix = "V";

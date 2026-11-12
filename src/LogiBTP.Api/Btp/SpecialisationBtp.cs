@@ -339,7 +339,7 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
             if (plafond is decimal max && max >= 0)
             {
                 var encours = await db.Database.SqlQuery<decimal>($"""
-                    SELECT coalesce((SELECT sum(e.ech_montant - coalesce((SELECT sum(p.poi_montant) FROM pointage p WHERE p.poi_echeance_id = e.ech_id), 0))
+                    SELECT coalesce((SELECT sum(e.ech_montant * f_signe_reglement(x.ent_id) - coalesce((SELECT sum(p.poi_montant) FROM pointage p WHERE p.poi_echeance_id = e.ech_id), 0))
                                      FROM document_echeance e JOIN document x ON x.ent_id = e.ech_ent_id JOIN type_document t ON t.tyd_id = x.ent_tyd_id
                                      JOIN statut_document s ON s.std_id = x.ent_std_id
                                      WHERE x.ent_tiers_id = {tiers} AND t.tyd_famille = 'V' AND x.ent_verrouille AND s.std_code <> ALL({SqlBtp.StatutsHorsVigueur})), 0)
