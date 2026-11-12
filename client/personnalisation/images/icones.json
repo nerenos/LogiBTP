@@ -739,5 +739,16 @@
   "facture_electronique_btp_envoyer_encaissee": "📤",
   "facture_electronique_btp_ecarter_encaissee": "🚫",
   "facture_electronique_btp_annulation_encaissement": "↩️",
-  "document_btp_chronologie": "🕓"
+  "document_btp_chronologie": "🕓",
+  "facture_electronique_btp_ereporting": "🧾",
+  "facture_electronique_btp_ereporting_preparee": "📝",
+  "facture_electronique_btp_ereporting_envoyee": "📤",
+  "facture_electronique_btp_ereporting_acceptee": "✅",
+  "facture_electronique_btp_ereporting_rejetee": "⛔",
+  "facture_electronique_btp_ereporting_preparer": "🧮",
+  "facture_electronique_btp_ereporting_envoyer": "📤",
+  "facture_electronique_btp_ereporting_corriger": "✏️",
+  "facture_electronique_btp_ereporting_relancer": "🔁",
+  "facture_electronique_btp_ereporting_ecart": "⚠️",
+  "facture_electronique_btp_ereporting_enregistrer": "💾"
 }

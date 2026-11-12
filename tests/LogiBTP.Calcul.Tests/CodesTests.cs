@@ -37,6 +37,10 @@ public class CodesTests
     [InlineData("ERREUR_EMISSION_FE", typeof(ErreursEmissionFe))]
     [InlineData("TRANSMISSION_AVOIR_INTERNE_FE", typeof(TransmissionsAvoirInterneFe))]
     [InlineData("ETAT_ENCAISSEMENT_FE", typeof(EtatsEncaissementFe))]
+    [InlineData("NATURE_PERIODE_EREPORTING", typeof(NaturesPeriodeEreporting))]
+    [InlineData("ETAT_PERIODE_EREPORTING", typeof(EtatsPeriodeEreporting))]
+    [InlineData("CIBLE_EREPORTING", typeof(CiblesEreporting))]
+    [InlineData("ERREUR_EREPORTING", typeof(ErreursEreporting))]
     [InlineData("GARANTIE_MARCHE", typeof(GarantiesMarche))]
     public void Parite_avec_le_js(string nom, Type type) => Assert.Empty(Constantes.Ecarts(Fichier, nom, type));
 

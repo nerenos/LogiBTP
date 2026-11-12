@@ -7,6 +7,7 @@ import { TYPE_ELEMENT_FE, urlDocument } from '../codes.js';
 import { apiFe } from '../facture-electronique/api-fe.js';
 import { libelleElementFe, NOEUD_FE } from '../documents/chronologie-document.js';
 import { ListeEncaissementsFe } from '../facture-electronique/encaissements-fe.js';
+import { ListeEreportingFe } from '../facture-electronique/ereporting-fe.js';
 import { api } from '../api.js';
 
 // Module Facturation électronique, lot 11 du cœur (plans/facturation-electronique.md) : page /facture-electronique qui
@@ -14,10 +15,11 @@ import { api } from '../api.js';
 // plateforme). Les droits viennent du nœud « facture_electronique » (Modifier : actions sur un flux) et du nœud
 // « parametres » (paramètres de la plateforme) ; la page fournit le transport, les connexions OAuth, les libellés des
 // éléments et l'ouverture d'une pièce. /facture-electronique?flux=<id> ouvre le détail d'un flux. Onglet retenu dans le
-// navigateur. Lot 26 : onglet « Encaissements », liste à valider des statuts Encaissée (212).
+// navigateur. Lot 26 : onglet « Encaissements », liste à valider des statuts Encaissée (212). Lot 28 : onglet « E-reporting »
+// (périodes du flux 10, préparation, envoi, correction, relance).
 
 const CLE_ONGLET = 'factureElectroniqueOnglet';
-const ONGLETS = Object.freeze(['flux', 'encaissements', 'depot', 'parametres']);
+const ONGLETS = Object.freeze(['flux', 'encaissements', 'ereporting', 'depot', 'parametres']);
 
 export class PageFactureElectronique extends PageBase {
   icone = icone('facture_electronique_btp_page');
@@ -76,6 +78,7 @@ export class PageFactureElectronique extends PageBase {
       <p class="aide">${texteHtml('facture_electronique_btp.aide')}</p>
       <section data-zone="flux" hidden><div data-zone-tableau></div><div data-zone-detail hidden></div></section>
       <section data-zone="encaissements" hidden></section>
+      <section data-zone="ereporting" hidden></section>
       <section data-zone="depot" hidden></section>
       <section data-zone="parametres" hidden><div data-zone-parametres-fe></div><div data-zone-options-btp></div></section></div>`;
     const zone = (o) => this.conteneur.querySelector(`[data-zone="${o}"]`);
@@ -83,6 +86,7 @@ export class PageFactureElectronique extends PageBase {
     const erreur = (e) => this.app.erreur(e);
     const ouvrirElement = (type, id, nouvelleFenetre) => {
       if (type === TYPE_ELEMENT_FE.DOCUMENT) this.app.naviguer(urlDocument(id), { nouvelleFenetre });
+      else if (type === TYPE_ELEMENT_FE.PERIODE_EREPORTING) afficher('ereporting').then(() => this.ereporting.detail(Number(id)));
     };
     const ouvrirFlux = async (id, nouvelleFenetre = false) => {
       if (nouvelleFenetre) { this.app.naviguer(`/facture-electronique?flux=${id}`, { nouvelleFenetre: true }); return; }
@@ -101,6 +105,10 @@ export class PageFactureElectronique extends PageBase {
       peutModifier: modifier, confirmer, erreur, message: (m, niveau) => this.app.message(m, niveau),
       ouvrirPiece: (id, nouvelleFenetre) => this.app.naviguer(urlDocument(id), { nouvelleFenetre }),
     });
+    this.ereporting = new ListeEreportingFe(zone('ereporting'), {
+      api: api.ereportingFe, apiFe, peutModifier: modifier, parametrer, confirmer, erreur, message: (m, niveau) => this.app.message(m, niveau),
+      ouvrirFlux, libelleElement: libelleElementFe,
+    });
     this.parametres = new ParametresFe(this.conteneur.querySelector('[data-zone-parametres-fe]'), {
       peut: { modifier: parametrer }, api: apiFe, connexions: () => this.#connexions, erreur,
     });
@@ -116,7 +124,7 @@ export class PageFactureElectronique extends PageBase {
       if (charges.has(o)) return;
       charges.add(o);
       if (o === 'parametres') await Promise.all([this.#chargerConnexions(), this.#afficherOptions(parametrer)]);
-      await { flux: this.tableau, encaissements: this.encaissements, depot: this.depot, parametres: this.parametres }[o].charger();
+      await { flux: this.tableau, encaissements: this.encaissements, ereporting: this.ereporting, depot: this.depot, parametres: this.parametres }[o].charger();
     };
     this.conteneur.querySelectorAll('[data-onglet]').forEach((b) => b.addEventListener('click', () => afficher(b.dataset.onglet)));
     const flux = Number(this.requete?.flux);

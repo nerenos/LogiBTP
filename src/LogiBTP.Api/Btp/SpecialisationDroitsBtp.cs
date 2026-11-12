@@ -154,6 +154,7 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
         new("/api/facture-electronique/parametres", ModeRoute.Parametrage),
         new("/api/facture-electronique/annuaire/option", ModeRoute.Parametrage),
         new("/api/facture-electronique/emission/option", ModeRoute.Parametrage),
+        new("/api/facture-electronique/ereporting/option", ModeRoute.Parametrage),
         // Module Document : définitions et référentiels lus par la page document.
         new("/api/documents", ModeRoute.Module, "documents"),
         new("/api/calcul", ModeRoute.Module, "documents"),
@@ -207,6 +208,11 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
         new("/api/facture-electronique/flux/{id}/statut", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),
         new("/api/facture-electronique/documents/{id}/annulation", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),
         new("/api/facture-electronique/encaissements/validation", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),
+        // E-reporting (lot 28) : périodes en lecture ; préparation, envoi, correction et relance d'une période : Modifier.
+        new("/api/facture-electronique/ereporting/periodes/preparation", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),
+        new("/api/facture-electronique/ereporting/periodes/{id}/envoi", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),
+        new("/api/facture-electronique/ereporting/periodes/{id}/correction", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),
+        new("/api/facture-electronique/ereporting/periodes/{id}/relance", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),
         new("/api/facture-electronique/import", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),
         new("/api/facture-electronique/courriels/{id}/facture", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),
         new("/api/facture-electronique/releve", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),

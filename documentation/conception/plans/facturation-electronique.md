@@ -53,7 +53,7 @@
 | 25 | Rejet et refus → avoir interne ; litige et suspension de relance | cœur | 24 | FAIT (11/11/2026) |
 | 26 | Statut Encaissée (212) depuis les règlements, liste à valider | cœur | 24 | FAIT (11/11/2026) |
 | 27 | Sous-traitance et cotraitance émises (S5, S6), B2G par la PA | cœur | 24 | FAIT (12/11/2026) |
-| 28 | E-reporting : collecte et extraction des ventes et encaissements, envoi unitaire ou groupé | cœur | 19, 24, 26 | A FAIRE |
+| 28 | E-reporting : collecte et extraction des ventes et encaissements, envoi unitaire ou groupé | cœur | 19, 24, 26 | FAIT (12/11/2026) |
 | 29 | Archivage (rétention), démonstration, documentation | cœur | 24, 28 | A FAIRE |
 
 Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur avant la partie B.
@@ -1003,7 +1003,7 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   seulement) ; récapitulatif produit hors LogiBTP (rangé à la main en GED), un seul joint ; payeur sans contrôle de la garantie du
   marché ; champ du marché non vérifié en navigateur (TODO). **Script à appliquer par l'utilisateur** : `db/303` puis `db/131`.
 
-## Lot 28 : e-reporting, collecte et envoi (A FAIRE)
+## Lot 28 : e-reporting, collecte et envoi — FAIT (12/11/2026)
 
 - **Cœur**. **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : collecte des ventes B2C (`per_fe_type` = B2C ou non assujetti) et internationales, et des
@@ -1012,6 +1012,43 @@ Fin de la partie A : lot 15 ; point d'arrêt pour validation de l'utilisateur av
   rejetée), relance et correction d'une période, journal, tests.
 - **Critère de fin** : une période de démonstration B2C et une internationale envoyées à la plateforme simulée,
   dans les deux modes d'envoi ; tests verts.
+- **Réalisé** : `db/304_facture_electronique_ereporting.sql` (rejouable, au manifeste après 303 :
+  `facture_electronique_ereporting_option` — régime de TVA `REGIME_EREPORTING`, défaut réel normal mensuel, et matricule de la
+  plateforme 0238 —, `ereporting_periode` — nature TRANSACTIONS / PAIEMENTS, début, fin, régime, rang de correction, essai,
+  résumé et écarts de la dernière préparation, envoi —, `ereporting_envoi` — transmissions préparées, XML gardé tel qu'il part,
+  flux du module). Le découpage Q20 reste le paramètre du module (`fpa_decoupage_ereporting`, écran Paramètres). Codes
+  `NATURE_PERIODE_EREPORTING`, `ETAT_PERIODE_EREPORTING`, `CIBLE_EREPORTING`, `ERREUR_EREPORTING`, `TYPE_ELEMENT_FE.PERIODE_EREPORTING`
+  (`codes.js` ↔ `Codes.cs`, `CodesTests`). `src/LogiBTP.Api/Btp/EreportingBtp.cs` : cible d'une vente (`Cible` : particulier ou
+  non-assujetti → B2C, sinon international ou pays étranger ; B2G écarté), pièces de vente valables (`v_document_valable`,
+  annulées comprises) d'un type émis datées dans la période, facture construite comme à l'émission puis extraite (B2C :
+  `VentesDe`, une vente par catégorie TT-81 `CategorieDe` et par taux, avoir en négatif, option sur les débits en TT-80 ;
+  international : `ReglesEreporting.TransactionDe` et `IdentifiantEtranger` 0223 / 0227 de l'acheteur sans SIREN) ; paiements :
+  pointages des règlements reçus hors imputation datés dans la période, factures de services ou mixtes sans débits, répartis par
+  taux au cumul des pointages de la pièce (`EncaissementFeBtp.Proposer`, part des services d'une mixte) → 10.4 ou 10.2 ;
+  période par `ReglesEreporting.Periode` selon le régime, `Decouper` selon le découpage, `Controler` et `EcritureFlux10` à la
+  préparation (écarts gardés, aucune transmission tant qu'il y en a) ; envoi (`EnvoyerAsync`, période terminée, sans écart) :
+  `MettreEnFileAsync` en FRR avec le type de flux du sous-flux, identifiant de suivi = TT-1 (suffixé « -E<n> » à partir du
+  2e essai), élément EREPORTING (chronologie du module) ; état lu des flux (`Etat` : PREPAREE, ENVOYEE, ACCEPTEE = tous
+  acquittés, REJETEE = un flux en erreur) ; correction d'une période envoyée ou acceptée (rang n + 1, transmissions RE
+  « -REn ») ; relance d'une période rejetée (essai suivant du même rang) ; routes `GET|PUT /api/facture-electronique/ereporting/option`
+  (paramétrage), `GET …/ereporting/periodes[?nature=]`, `GET …/periodes/{id}`, `POST …/periodes/preparation`, `…/{id}/envoi`,
+  `…/{id}/correction`, `…/{id}/relance` (nœud `facture_electronique`, Modifier). Module : la plateforme simulée refuse un FRR
+  dont le XML contient le marqueur `MarqueurErreur` (démonstration d'un rejet). Client : onglet « E-reporting » de la page
+  Facturation électronique (`facture-electronique/ereporting-fe.js` : régime en combo et matricule, découpage rappelé ;
+  préparation par nature en combo et jour par `activerDates` ; périodes avec pastille d'état, contenu, écarts et actions
+  Envoyer / Corriger / Relancer après `confirmer` du socle ; détail : écarts, transmissions et flux, chronologie de l'élément),
+  période ouvrable depuis la chronologie d'un flux, textes `facture_electronique_btp.ereporting.*`, icônes. Tests :
+  `EreportingBtpTests` (règles sans base ; base jetable et plateforme simulée : mois libre, particulier et client allemand,
+  factures de services et de biens, règlements → transactions 10.1 + 10.3 et paiements 10.2 + 10.4 en UNIQUE (un envoi par
+  sous-flux, TPS1 et TLB1, 62,07 au taux de 20 %), acceptées, préparation d'une période envoyée refusée, correction RE
+  acceptée ; client suisse en PLUSIEURS : 10.3 en un envoi par jour, rejet par le marqueur, correction refusée, relance
+  acceptée après correction du libellé, paiements 10.4 par jour, période en cours refusée), `client/test/ereporting-fe.test.js`
+  (libellés et icônes de chaque code, tableau, actions selon le droit, détail) ; 8 transmissions produites sans erreur au XSD
+  et au schematron Flux10 (`npm run valider-facture`). Écarts : périodicité, dates limites et contenu d'une rectificative
+  toujours à confirmer (R7, TODO ; aucun envoi automatique à l'échéance) ; acquisitions internationales (déclarant BY) non
+  collectées ; encaissements des avoirs non déclarés et encaissement négatif refusé par G1.16 ; catégorie E exonérée gardée en
+  TPS1 / TLB1 ; transmissions non rangées en GED (lot 29) ; onglet non vérifié en navigateur (TODO). **Script à appliquer par
+  l'utilisateur** : `db/304`.
 
 ## Lot 29 : archivage, démonstration, documentation (A FAIRE)
 

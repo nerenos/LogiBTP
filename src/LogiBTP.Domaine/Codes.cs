@@ -182,6 +182,8 @@ public static class TypesElementFe
     public const string Document = "DOCUMENT";
     /// <summary>Ligne de la liste « Factures reçues à traiter » sans pièce (db/296) : flux reçu, ouvert dans la page du module.</summary>
     public const string Flux = "fe_flux";
+    /// <summary>Période d'e-reporting (ereporting_periode, db/304, lot 28) : chronologie des envois du flux 10.</summary>
+    public const string PeriodeEreporting = "EREPORTING";
 }
 
 /// <summary>Étapes des versions de la GED employées par le cœur (modules/ged : VALIDATION, ENVOI, RECEPTION…).</summary>
@@ -310,6 +312,49 @@ public static class EtatsEncaissementFe
 {
     public const string Envoye = "ENVOYE";
     public const string Ecarte = "ECARTE";
+}
+
+/// <summary>Nature d'une période d'e-reporting (ereporting_periode.erp_nature, db/304, lot 28) : transactions (10.1, 10.3) ou paiements (10.2, 10.4).</summary>
+public static class NaturesPeriodeEreporting
+{
+    public const string Transactions = "TRANSACTIONS";
+    public const string Paiements = "PAIEMENTS";
+}
+
+/// <summary>
+/// État affiché d'une période d'e-reporting (lot 28) : préparée (pas envoyée), envoyée (flux en file ou déposé), acceptée
+/// (accusés Ok de tous les envois), rejetée (un envoi en erreur).
+/// </summary>
+public static class EtatsPeriodeEreporting
+{
+    public const string Preparee = "PREPAREE";
+    public const string Envoyee = "ENVOYEE";
+    public const string Acceptee = "ACCEPTEE";
+    public const string Rejetee = "REJETEE";
+}
+
+/// <summary>Ventes retenues par l'e-reporting (lot 28) : particulier ou non-assujetti (10.3, 10.4), international (10.1, 10.2).</summary>
+public static class CiblesEreporting
+{
+    public const string B2C = "B2C";
+    public const string International = "INTERNATIONAL";
+}
+
+/// <summary>Erreurs de l'e-reporting (lot 28).</summary>
+public static class ErreursEreporting
+{
+    /// <summary>SIREN de la société ou matricule de la plateforme absent, régime inconnu.</summary>
+    public const string Parametres = "EREPORTING_PARAMETRES";
+    /// <summary>Envoi d'une période pas encore terminée.</summary>
+    public const string PeriodeEnCours = "EREPORTING_PERIODE_EN_COURS";
+    /// <summary>Préparation d'une période déjà envoyée (passer par la correction) ou envoi d'une période déjà envoyée.</summary>
+    public const string DejaEnvoyee = "EREPORTING_DEJA_ENVOYEE";
+    /// <summary>Correction ou relance d'une période jamais envoyée, relance d'une période non rejetée.</summary>
+    public const string Etat = "EREPORTING_ETAT";
+    /// <summary>Écarts du contrôle avant l'envoi (règles du schematron Flux10).</summary>
+    public const string Ecarts = "EREPORTING_ECARTS";
+    /// <summary>Aucune donnée à transmettre sur la période.</summary>
+    public const string Vide = "EREPORTING_VIDE";
 }
 
 public static class ErreursEmissionFe

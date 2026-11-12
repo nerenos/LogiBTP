@@ -142,6 +142,8 @@ export const TYPE_ELEMENT_FE = Object.freeze({
   DOCUMENT: 'DOCUMENT',
   /** Ligne de la liste « Factures reçues à traiter » sans pièce (db/296) : flux reçu, ouvert dans la page du module. */
   FLUX: 'fe_flux',
+  /** Période d'e-reporting (ereporting_periode, db/304, lot 28) : chronologie des envois du flux 10. */
+  PERIODE_EREPORTING: 'EREPORTING',
 });
 
 /** Avertissement d'émission lié à l'annuaire des plateformes (lot 20). */
@@ -277,6 +279,36 @@ export const PASTILLES_EMISSION_FE_LISTE = Object.freeze([
 export const ETAT_ENCAISSEMENT_FE = Object.freeze({
   ENVOYE: 'ENVOYE',
   ECARTE: 'ECARTE',
+});
+
+/** Nature d'une période d'e-reporting (db/304, lot 28) : transactions (10.1, 10.3) ou paiements (10.2, 10.4). */
+export const NATURE_PERIODE_EREPORTING = Object.freeze({
+  TRANSACTIONS: 'TRANSACTIONS',
+  PAIEMENTS: 'PAIEMENTS',
+});
+
+/** État affiché d'une période d'e-reporting (lot 28) : préparée, envoyée, acceptée (accusés Ok), rejetée (un envoi en erreur). */
+export const ETAT_PERIODE_EREPORTING = Object.freeze({
+  PREPAREE: 'PREPAREE',
+  ENVOYEE: 'ENVOYEE',
+  ACCEPTEE: 'ACCEPTEE',
+  REJETEE: 'REJETEE',
+});
+
+/** Ventes retenues par l'e-reporting (lot 28) : particulier ou non-assujetti, international. */
+export const CIBLE_EREPORTING = Object.freeze({
+  B2C: 'B2C',
+  INTERNATIONAL: 'INTERNATIONAL',
+});
+
+/** Erreurs de l'e-reporting (lot 28). */
+export const ERREUR_EREPORTING = Object.freeze({
+  PARAMETRES: 'EREPORTING_PARAMETRES',
+  PERIODE_EN_COURS: 'EREPORTING_PERIODE_EN_COURS',
+  DEJA_ENVOYEE: 'EREPORTING_DEJA_ENVOYEE',
+  ETAT: 'EREPORTING_ETAT',
+  ECARTS: 'EREPORTING_ECARTS',
+  VIDE: 'EREPORTING_VIDE',
 });
 
 export const ERREUR_EMISSION_FE = Object.freeze({

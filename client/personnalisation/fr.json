@@ -6599,7 +6599,9 @@
       "parametres": "Paramètres",
       "parametres_titre": "Plateforme, connexion, adresses, syntaxe et relève",
       "encaissements": "Encaissements",
-      "encaissements_titre": "Statuts Encaissée à valider avant l'envoi (factures de services sans TVA sur les débits)"
+      "encaissements_titre": "Statuts Encaissée à valider avant l'envoi (factures de services sans TVA sur les débits)",
+      "ereporting": "E-reporting",
+      "ereporting_titre": "Ventes B2C et internationales et leurs encaissements transmis à la plateforme (flux 10)"
     },
     "encaissements": {
       "aide": "Règlements reçus pointés sur les factures émises de services ou mixtes sans option de TVA sur les débits : chaque versement (échéance, versement partiel, retenue libérée) donne un statut Encaissée avec le montant encaissé par taux de TVA, envoyé à la plateforme et au PPF après votre validation. Un règlement diminué ou supprimé après l'envoi donne une annulation d'encaissement (montants négatifs).",
@@ -6684,6 +6686,102 @@
       "annuaire_nuit": "Vérifier les tiers dans l'annuaire chaque nuit",
       "annuaire_nuit_aide": "Vérification de fond des tiers professionnels dans l'annuaire des plateformes, entre 1 h et 6 h",
       "enregistre": "Option enregistrée"
+    },
+    "element_ereporting": "Période d'e-reporting n° {{id}}",
+    "ereporting": {
+      "aide": "Les ventes à des particuliers ou à des non-assujettis et les ventes internationales, ainsi que leurs encaissements (factures de services sans option de TVA sur les débits), sont collectées sur la période, extraites puis transmises à la plateforme agréée : un envoi par sous-flux et par période, ou plusieurs envois par jour, selon le découpage des paramètres. Une période envoyée se corrige par une transmission rectificative ; une période rejetée se relance.",
+      "aucune": "Aucune période préparée.",
+      "aucun_envoi": "Aucune transmission : rien à déclarer, ou écarts à corriger.",
+      "periode": "{{nature}} du {{debut}} au {{fin}}",
+      "natures": {
+        "TRANSACTIONS": "Transactions",
+        "PAIEMENTS": "Paiements"
+      },
+      "nature_aide": "Transactions (ventes, flux 10.1 et 10.3) ou paiements (encaissements, flux 10.2 et 10.4)",
+      "jour_aide": "Un jour de la période à préparer",
+      "jour_absent": "Indiquez un jour de la période.",
+      "etats": {
+        "PREPAREE": "Préparée",
+        "ENVOYEE": "Envoyée",
+        "ACCEPTEE": "Acceptée",
+        "REJETEE": "Rejetée"
+      },
+      "regimes": {
+        "REEL_NORMAL_MENSUEL": "Réel normal mensuel",
+        "REEL_NORMAL_TRIMESTRIEL": "Réel normal trimestriel",
+        "SIMPLIFIE": "Réel simplifié",
+        "FRANCHISE": "Franchise en base"
+      },
+      "sous_flux": {
+        "10_1": "10.1 Transactions unitaires",
+        "10_2": "10.2 Paiements unitaires",
+        "10_3": "10.3 Transactions agrégées",
+        "10_4": "10.4 Paiements agrégés"
+      },
+      "types": {
+        "IN": "Initiale",
+        "RE": "Rectificative"
+      },
+      "resume_transactions": "{{b2c}} vente(s) B2C, {{international}} facture(s) internationale(s) ; {{ht}} HT, {{tva}} de TVA",
+      "resume_paiements": "{{b2c}} encaissement(s) B2C, {{international}} encaissement(s) international(aux) ; {{encaisse}} encaissés",
+      "ecarts_nombre": "{{nombre}} écart(s)",
+      "ecarts": "Écarts du contrôle avant l'envoi",
+      "envois": "Transmissions",
+      "chronologie": "Chronologie",
+      "non_envoye": "Pas encore envoyée",
+      "ignorees": "Pièces écartées (illisibles) : {{pieces}}",
+      "colonnes": {
+        "periode": "Période",
+        "etat": "État",
+        "correction": "Correction",
+        "envois": "Envois",
+        "resume": "Contenu",
+        "actions": "Actions"
+      },
+      "colonnes_ecarts": {
+        "sous_flux": "Sous-flux",
+        "jour": "Jour",
+        "regle": "Règle",
+        "donnee": "Donnée",
+        "rang": "Rang"
+      },
+      "colonnes_envois": {
+        "sous_flux": "Sous-flux",
+        "jour": "Jour",
+        "identifiant": "Identifiant",
+        "type": "Type",
+        "elements": "Éléments",
+        "flux": "Flux"
+      },
+      "option": {
+        "titre": "Paramètres de l'e-reporting",
+        "regime": "Régime de TVA",
+        "regime_aide": "Fixe la périodicité des transmissions (décade, mois ou bimestre)",
+        "matricule": "Matricule de la plateforme",
+        "matricule_aide": "Matricule à 4 caractères de la plateforme agréée (schéma 0238), émetteur des transmissions",
+        "decoupage": "Découpage des envois : {{decoupage}} (paramètres de la plateforme)",
+        "enregistrer": "Enregistrer",
+        "enregistre": "Paramètres de l'e-reporting enregistrés."
+      },
+      "actions": {
+        "preparer": "Préparer la période",
+        "preparer_aide": "Collecte les données de la période contenant ce jour et prépare les transmissions (contrôlées avant l'envoi)",
+        "envoyer": "Envoyer",
+        "envoyer_aide": "Met les transmissions préparées en file pour la plateforme",
+        "corriger": "Corriger",
+        "corriger_aide": "Collecte de nouveau la période et prépare des transmissions rectificatives",
+        "relancer": "Relancer",
+        "relancer_aide": "Collecte de nouveau la période rejetée et prépare un nouvel essai",
+        "confirmer_envoyer": "Envoyer {{periode}} à la plateforme ?",
+        "confirmer_corriger": "Préparer une correction de {{periode}} (transmissions rectificatives) ?",
+        "confirmer_relancer": "Préparer un nouvel essai de {{periode}} ?"
+      },
+      "resultats": {
+        "preparee": "{{periode}} préparée.",
+        "envoyer": "{{periode}} envoyée à la plateforme.",
+        "corriger": "Correction de {{periode}} préparée.",
+        "relancer": "Nouvel essai de {{periode}} préparé."
+      }
     }
   },
   "hors_ligne_btp": {

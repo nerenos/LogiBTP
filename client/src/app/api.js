@@ -772,6 +772,17 @@ export const api = {
   // Lot 26 : statuts Encaissée (212) à valider (pointages des règlements reçus non déclarés), envoyés ou écartés.
   encaissementsFe: (piece) => appel('GET', `/facture-electronique/encaissements${piece ? `?piece=${piece}` : ''}`),
   validerEncaissementsFe: (propositions, ecarter = false) => appel('POST', '/facture-electronique/encaissements/validation', { propositions, ecarter }),
+  // Lot 28 : e-reporting (option de la société, périodes, préparation, envoi, correction, relance).
+  ereportingFe: {
+    option: () => appel('GET', '/facture-electronique/ereporting/option'),
+    definirOption: (option) => appel('PUT', '/facture-electronique/ereporting/option', option),
+    periodes: (nature) => appel('GET', `/facture-electronique/ereporting/periodes${nature ? `?nature=${encodeURIComponent(nature)}` : ''}`),
+    periode: (id) => appel('GET', `/facture-electronique/ereporting/periodes/${id}`),
+    preparer: (nature, jour) => appel('POST', '/facture-electronique/ereporting/periodes/preparation', { nature, jour }),
+    envoyer: (id) => appel('POST', `/facture-electronique/ereporting/periodes/${id}/envoi`),
+    corriger: (id) => appel('POST', `/facture-electronique/ereporting/periodes/${id}/correction`),
+    relancer: (id) => appel('POST', `/facture-electronique/ereporting/periodes/${id}/relance`),
+  },
   optionEmissionFe: () => appel('GET', '/facture-electronique/emission/option'),
   definirOptionEmissionFe: (automatique) => appel('PUT', '/facture-electronique/emission/option', { automatique }),
   // Annulation par avoir (pièce et, dans un marché, pièces d'avancement suivantes) : liste puis annulation.

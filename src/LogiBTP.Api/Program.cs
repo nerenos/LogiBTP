@@ -229,7 +229,7 @@ api.MapModuleEntreprisesFr();
 // Modules facultatifs : sous-groupe propre, pour que le filtre d'activation ne touche que leurs routes.
 api.MapGroup("").ExigeModule(ModulesFacultatifs.Reglement, "Règlements").MapModuleReglement();
 api.MapGroup("").ExigeModule(ModulesFacultatifs.Relance, "Relances").DroitsRelances().MapModuleRelance().MapLibellesRelances();
-api.MapGroup("").ExigeModule(ModulesFacultatifs.FactureElectronique, "Facturation électronique").MapModuleFactureElectronique().MapReceptionHorsPlateforme().MapAnnuaireFe().MapEmissionFe().MapEnvoiFe().MapRejetFe().MapEncaisseeFe();
+api.MapGroup("").ExigeModule(ModulesFacultatifs.FactureElectronique, "Facturation électronique").MapModuleFactureElectronique().MapReceptionHorsPlateforme().MapAnnuaireFe().MapEmissionFe().MapEnvoiFe().MapRejetFe().MapEncaisseeFe().MapEreportingFe();
 api.MapModuleCrm().ExigeModule(ModulesFacultatifs.Crm, "CRM");
 api.MapExecution().ExigeModule(ModulesFacultatifs.Execution, "Exécution");
 api.MapModuleExecution().ExigeModule(ModulesFacultatifs.Execution, "Exécution");
