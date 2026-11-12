@@ -554,6 +554,8 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         }
         // Révision des prix du marché (lot G1) : poste de la période et régularisation des périodes précédentes.
         await RevisionPrix.Appliquer(db, saisie, type, ct);
+        // Sous-traitance : marché en autoliquidation, TVA autoliquidée sur les lignes de prix (CGI 283-2 nonies).
+        await SpecialisationSousTraitanceBtp.AutoliquiderAsync(db, type, saisie, ct);
     }
 
     /// <summary>

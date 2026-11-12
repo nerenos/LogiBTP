@@ -17,9 +17,10 @@ export class TableIntervenants {
   /**
    * annuaire : fournisseur de l'annuaire (rechercherPersonnes, pageRattachements) ; fonctions : référentiel ;
    * portee : 'S' (structure) ou 'D' (document) ; lecture : consultation ; actions : boutons supplémentaires
-   * [{ libelle, titre, action }] ; fixe : fonction de la ligne imposée (tiers du document), non supprimable.
+   * [{ libelle, titre, action }] ; fixe : fonction de la ligne imposée (tiers du document), non supprimable ;
+   * relationsFixe : relations de l'annuaire proposées pour cette ligne (sinon celles de sa fonction).
    */
-  constructor({ annuaire, fonctions = [], portee = 'S', lecture = false, surChange = () => {}, actions = [], fixe = null, tiersFige = false }) {
+  constructor({ annuaire, fonctions = [], portee = 'S', lecture = false, surChange = () => {}, actions = [], fixe = null, relationsFixe = null, tiersFige = false }) {
     this.annuaire = annuaire;
     this.fonctions = fonctions.filter((f) => f.actif !== false);
     this.portee = portee;
@@ -27,6 +28,7 @@ export class TableIntervenants {
     this.surChange = surChange;
     this.actions = actions;
     this.fixe = fixe;
+    this.relationsFixe = relationsFixe;
     // Document issu d'une transformation : le tiers de la ligne imposée ne change plus (P12).
     this.tiersFige = tiersFige;
     this.contacts = new Map(); // per_id → Promise<rattachements>
@@ -199,7 +201,7 @@ export class TableIntervenants {
       const saisie = el.closest('td').querySelector('[data-tiers]');
       const libelle = this.fonction(x.fonction)?.libelle ?? texte('structure_btp.intervenants.intervenant');
       const choisi = await choisirTiers({
-        relations: relationsFonction(x.fonction), titre: texte('structure_btp.intervenants.choix_titre', { fonction: libelle }),
+        relations: x.fonction === this.fixe && this.relationsFixe ? [...this.relationsFixe] : relationsFonction(x.fonction), titre: texte('structure_btp.intervenants.choix_titre', { fonction: libelle }),
         recherche: x.per_id ? '' : saisie.value.trim(),
       });
       if (choisi) prendreTiers(x, choisi);
