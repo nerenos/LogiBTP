@@ -46,6 +46,7 @@ public static class Extensions
         services.AddScoped<ServicePropositions>();
         services.AddScoped<IPlafondAgent, PlafondMcp>();
         services.AddScoped<ServiceOAuth>();
+        services.AddScoped<ServiceRecettes>();
         services.AddHttpContextAccessor();
         services.TryAddSingleton<IAppelInterne, AppelInterneHttp>();
         services.TryAddSingleton<IDocumentsClients, DocumentsClientsHttp>();
@@ -56,7 +57,12 @@ public static class Extensions
         services.AddMcpServer(o =>
             {
                 o.ServerInfo = new Implementation { Name = "LogiBTP", Version = "1.0" };
-                o.Capabilities = new ServerCapabilities { Tools = new ToolsCapability { ListChanged = false } };
+                o.Capabilities = new ServerCapabilities
+                {
+                    Tools = new ToolsCapability { ListChanged = false },
+                    // Recettes (lot 13) exposées comme prompts MCP : celles dont tous les outils sont permis à la délégation.
+                    Prompts = new PromptsCapability { ListChanged = false },
+                };
             })
             // Sans état : chaque requête porte le jeton et ouvre son propre contexte (pas de session à garder en mémoire,
             // ni de requête du serveur vers le client : R13).
@@ -72,6 +78,18 @@ public static class Extensions
                 var p = requete.Params ?? throw new McpProtocolException("Paramètres absents", McpErrorCode.InvalidParams);
                 var r = await service.AppelerAsync(ctx, p.Name, p.Arguments?.ToDictionary(kv => kv.Key, kv => kv.Value), ct);
                 return new CallToolResult { Content = [new TextContentBlock { Text = r.Texte }], IsError = r.Erreur };
+            })
+            .WithListPromptsHandler(async (requete, ct) =>
+            {
+                var (ctx, _) = Agent(requete.Services);
+                return new ListPromptsResult { Prompts = await Recettes(requete.Services).PromptsAsync(ctx, ct) };
+            })
+            .WithGetPromptHandler(async (requete, ct) =>
+            {
+                var (ctx, _) = Agent(requete.Services);
+                var p = requete.Params ?? throw new McpProtocolException("Paramètres absents", McpErrorCode.InvalidParams);
+                return await Recettes(requete.Services).PromptAsync(ctx, p.Name,
+                    p.Arguments?.ToDictionary(kv => kv.Key, kv => kv.Value), ct);
             });
         return services;
     }
@@ -84,6 +102,10 @@ public static class Extensions
         if (http?.Items[ServiceMcp.CleContexte] is not ContexteAgent ctx) throw new McpProtocolException("Agent non authentifié", McpErrorCode.InvalidRequest);
         return (ctx, http.RequestServices.GetRequiredService<ServiceMcp>());
     }
+
+    /// <summary>Service des recettes de la requête HTTP en cours.</summary>
+    private static ServiceRecettes Recettes(IServiceProvider? services) =>
+        services!.GetRequiredService<IHttpContextAccessor>().HttpContext!.RequestServices.GetRequiredService<ServiceRecettes>();
 
     /// <summary>
     /// 401 du point /mcp : en-tête WWW-Authenticate avec l'adresse des métadonnées de la ressource protégée (RFC 9728 § 5.1),
@@ -203,6 +225,16 @@ public static class Extensions
             s.AccepterAsync(demande, d, Utilisateur.Depuis(http), ct));
         g.MapPost("/oauth/demandes/{demande}/refuser", (string demande, HttpContext http, ServiceOAuth s, CancellationToken ct) =>
             s.RefuserAsync(demande, Utilisateur.Depuis(http), ct));
+        // Recettes (lot 13) : lues par tout humain (actives ; toutes et catalogue des outils pour l'administrateur), gérées par
+        // l'administrateur seul (jamais par un agent).
+        g.MapGet("/recettes", (bool? toutes, HttpContext http, ServiceRecettes s, CancellationToken ct) => s.ListerAsync(Utilisateur.Depuis(http), toutes ?? false, ct));
+        g.MapPut("/recettes/{code}", (string code, RecetteSaisie r, HttpContext http, ServiceRecettes s, CancellationToken ct) =>
+            s.EnregistrerAsync(code, r, Utilisateur.Depuis(http), ct)).EnTransaction();
+        g.MapDelete("/recettes/{code}", async (string code, HttpContext http, ServiceRecettes s, CancellationToken ct) =>
+        {
+            await s.SupprimerAsync(code, Utilisateur.Depuis(http), ct);
+            return Results.NoContent();
+        }).EnTransaction();
         g.MapGet("/clients", (HttpContext http, ServiceOAuth s, CancellationToken ct) => s.ClientsAsync(Utilisateur.Depuis(http), ct));
         g.MapPut("/clients", (IReadOnlyList<ClientOAuthSaisi> liste, HttpContext http, ServiceOAuth s, CancellationToken ct) =>
             s.EnregistrerClientsAsync(liste, Utilisateur.Depuis(http), ct)).EnTransaction();

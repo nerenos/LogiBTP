@@ -93,6 +93,8 @@ public static class EcrituresBtp
         new("/api/mcp/propositions", Action),
         // Serveur d'autorisation OAuth (lot 12) : jeton émis (session d'un client distant), consentement (délégation créée), liste blanche.
         new("/api/mcp/oauth/token", Session), new("/api/mcp/oauth/demandes", Action), new("/api/mcp/clients", Parametrage),
+        // Recettes des agents (lot 13) : paramétrage de l'administrateur.
+        new("/api/mcp/recettes", Parametrage),
         new("/api/reglements", Action), new("/api/relances", Action), new("/api/relances/lots", Lot), new("/api/relances/lots/{id}/annuler", Action),
         new("/api/rentabilite", Action), new("/api/rentabilite/recalculer-tout", Lot), new("/api/rentabilite/chantiers/{id}/photos", Fichier),
         new("/api/ressources", Action), new("/api/ressources/materiels/pleins-carburant", Lot),

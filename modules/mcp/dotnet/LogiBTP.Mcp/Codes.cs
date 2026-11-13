@@ -45,6 +45,14 @@ public static class ErreurMcp
     public const string McpOauthClient = "MCP_OAUTH_CLIENT";
     public const string McpOauthRedirection = "MCP_OAUTH_REDIRECTION";
     public const string McpOauthRejeu = "MCP_OAUTH_REJEU";
+    // Recettes (lot 13).
+    public const string McpRecetteCode = "MCP_RECETTE_CODE";
+    public const string McpRecetteTexte = "MCP_RECETTE_TEXTE";
+    public const string McpRecetteParametre = "MCP_RECETTE_PARAMETRE";
+    public const string McpRecetteOutil = "MCP_RECETTE_OUTIL";
+    public const string McpRecetteSortie = "MCP_RECETTE_SORTIE";
+    public const string McpRecetteInconnue = "MCP_RECETTE_INCONNUE";
+    public const string McpRecetteFournie = "MCP_RECETTE_FOURNIE";
 }
 
 /// <summary>Statut d'un appel d'outil au journal des agents (agent_journal.ajo_statut).</summary>
@@ -72,4 +80,22 @@ public static class DecisionProposition
     public const string Accepter = "ACCEPTER";
     public const string Corriger = "CORRIGER";
     public const string Refuser = "REFUSER";
+}
+
+/// <summary>Type d'un paramètre de recette (lot 13) : marché, chantier, pièce, période, texte.</summary>
+public static class TypeParametreRecette
+{
+    public const string Marche = "MARCHE";
+    public const string Chantier = "CHANTIER";
+    public const string Document = "DOCUMENT";
+    public const string Periode = "PERIODE";
+    public const string Texte = "TEXTE";
+}
+
+/// <summary>Sortie attendue d'une recette : brouillon, proposition, rapport.</summary>
+public static class SortieRecette
+{
+    public const string Brouillon = "BROUILLON";
+    public const string Proposition = "PROPOSITION";
+    public const string Rapport = "RAPPORT";
 }

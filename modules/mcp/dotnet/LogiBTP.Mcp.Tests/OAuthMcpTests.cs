@@ -60,10 +60,32 @@ public class ReglesOAuthTests
         Assert.False(ReglesOAuth.RedirectionPermise("https://client.exemple/retour/", permises));
         Assert.False(ReglesOAuth.RedirectionPermise("https://client.exemple/Retour", permises));
         Assert.False(ReglesOAuth.RedirectionPermise("https://client.exemple/retour?x=1", permises));
-        Assert.False(ReglesOAuth.RedirectionPermise("http://127.0.0.1:3119/callback", permises));
         Assert.False(ReglesOAuth.RedirectionPermise(null, permises));
         Assert.Equal("https://c/r?code=a%20b&state=s", ReglesOAuth.Redirection("https://c/r", [new("code", "a b"), new("state", "s"), new("vide", null)]));
         Assert.Equal("https://c/r?x=1&code=c", ReglesOAuth.Redirection("https://c/r?x=1", [new("code", "c")]));
+    }
+
+    [Fact]
+    public void Boucle_locale_a_port_variable()
+    {
+        // RFC 8252 § 7.3 : l'application native choisit son port à chaque connexion ; schéma, hôte, chemin et requête identiques.
+        string[] permises = ["http://127.0.0.1:3118/callback", "http://[::1]/cb", "http://localhost:8080/retour?x=1", "https://client.exemple:8443/retour"];
+        Assert.True(ReglesOAuth.RedirectionPermise("http://127.0.0.1:3119/callback", permises));
+        Assert.True(ReglesOAuth.RedirectionPermise("http://127.0.0.1:54321/callback", permises));
+        Assert.True(ReglesOAuth.RedirectionPermise("http://127.0.0.1/callback", permises));
+        Assert.True(ReglesOAuth.RedirectionPermise("http://[::1]:61000/cb", permises));
+        Assert.True(ReglesOAuth.RedirectionPermise("http://localhost:9999/retour?x=1", permises));
+        Assert.False(ReglesOAuth.RedirectionPermise("http://127.0.0.1:3119/autre", permises));
+        Assert.False(ReglesOAuth.RedirectionPermise("http://127.0.0.1:3119/callback/", permises));
+        Assert.False(ReglesOAuth.RedirectionPermise("http://127.0.0.1:3119/callback?x=1", permises));
+        Assert.False(ReglesOAuth.RedirectionPermise("http://127.0.0.1:3119/callback#f", permises));
+        Assert.False(ReglesOAuth.RedirectionPermise("http://localhost:3119/callback", permises));
+        Assert.False(ReglesOAuth.RedirectionPermise("http://127.0.0.2:3119/callback", permises));
+        Assert.False(ReglesOAuth.RedirectionPermise("http://u@127.0.0.1:3119/callback", permises));
+        Assert.False(ReglesOAuth.RedirectionPermise("https://127.0.0.1:3119/callback", permises));
+        Assert.False(ReglesOAuth.RedirectionPermise("http://localhost:9999/retour?x=2", permises));
+        Assert.False(ReglesOAuth.RedirectionPermise("https://client.exemple:9443/retour", permises));
+        Assert.False(ReglesOAuth.RedirectionPermise("http://client.exemple:3118/callback", ["http://client.exemple:3000/callback"]));
     }
 
     [Fact]
@@ -424,6 +446,10 @@ public sealed class OAuthMcpTests : IAsyncLifetime
         // Adresse de retour absente du document du client (même à une barre près).
         Assert.Equal(("erreur", ErreurMcp.McpOauthRedirection), await PageAsync(Demande(retour: Retour + "/")));
         Assert.Equal(("erreur", ErreurMcp.McpOauthRedirection), await PageAsync(Demande(retour: "https://pirate.essai/retour")));
+        // Boucle locale déclarée (http://127.0.0.1:3118/callback) : tout port accepté (RFC 8252 § 7.3), jamais un autre chemin ni hôte.
+        Assert.Equal("demande", (await PageAsync(Demande(retour: "http://127.0.0.1:53682/callback"))).Cle);
+        Assert.Equal(("erreur", ErreurMcp.McpOauthRedirection), await PageAsync(Demande(retour: "http://127.0.0.1:53682/autre")));
+        Assert.Equal(("erreur", ErreurMcp.McpOauthRedirection), await PageAsync(Demande(retour: "http://localhost:53682/callback")));
 
         // Erreurs rendues au client vérifié : PKCE absent ou « plain », réponse autre que code, audience d'une autre société.
         async Task<string> ErreurClient(string chemin)

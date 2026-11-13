@@ -41,6 +41,15 @@ export const ERREUR_MCP = Object.freeze({
   MCP_OAUTH_CLIENT: 'MCP_OAUTH_CLIENT',
   MCP_OAUTH_REDIRECTION: 'MCP_OAUTH_REDIRECTION',
   MCP_OAUTH_REJEU: 'MCP_OAUTH_REJEU',
+  // Recettes (lot 13) : code, libellé ou prompt, paramètres (nom, type, marques du prompt), outils, sortie invalides ;
+  // recette inconnue, inactive ou non permise à la délégation ; recette fournie non supprimable.
+  MCP_RECETTE_CODE: 'MCP_RECETTE_CODE',
+  MCP_RECETTE_TEXTE: 'MCP_RECETTE_TEXTE',
+  MCP_RECETTE_PARAMETRE: 'MCP_RECETTE_PARAMETRE',
+  MCP_RECETTE_OUTIL: 'MCP_RECETTE_OUTIL',
+  MCP_RECETTE_SORTIE: 'MCP_RECETTE_SORTIE',
+  MCP_RECETTE_INCONNUE: 'MCP_RECETTE_INCONNUE',
+  MCP_RECETTE_FOURNIE: 'MCP_RECETTE_FOURNIE',
 });
 
 /** Statut d'un appel d'outil au journal des agents (agent_journal.ajo_statut). */
@@ -65,4 +74,20 @@ export const DECISION_PROPOSITION = Object.freeze({
   ACCEPTER: 'ACCEPTER',
   CORRIGER: 'CORRIGER',
   REFUSER: 'REFUSER',
+});
+
+/** Type d'un paramètre de recette (lot 13) : référence d'un marché, d'un chantier, d'une pièce, période, texte libre. */
+export const TYPE_PARAMETRE_RECETTE = Object.freeze({
+  MARCHE: 'MARCHE',
+  CHANTIER: 'CHANTIER',
+  DOCUMENT: 'DOCUMENT',
+  PERIODE: 'PERIODE',
+  TEXTE: 'TEXTE',
+});
+
+/** Sortie attendue d'une recette : brouillons écrits, propositions à valider, rapport (lecture seule). */
+export const SORTIE_RECETTE = Object.freeze({
+  BROUILLON: 'BROUILLON',
+  PROPOSITION: 'PROPOSITION',
+  RAPPORT: 'RAPPORT',
 });

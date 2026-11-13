@@ -19,5 +19,16 @@
       "proposer_envoi": "Propose à un humain d'envoyer une pièce par courriel : id (ent_id), destinataires (adresses ; sans elles, ceux proposés par défaut pour la pièce), objet et message facultatifs. Rien n'est envoyé par l'agent : la proposition est rendue sous « proposition » avec son adresse.",
       "proposer_tiers": "Propose à un humain de créer un tiers provisoire : raison_sociale, siret et casquette facultatifs ; les tiers de nom proche sont rendus (proches) et signalés à l'humain. Rien n'est créé par l'agent ; refusé tant que le garde-fou TIERS est actif."
     }
+  },
+  "mcp": {
+    "recettes": {
+      "types": {
+        "MARCHE": "identifiant d'un marché",
+        "CHANTIER": "identifiant d'un chantier",
+        "DOCUMENT": "identifiant d'une pièce (ent_id)",
+        "PERIODE": "période (dates ou mois)",
+        "TEXTE": "texte libre"
+      }
+    }
   }
 }

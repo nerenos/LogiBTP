@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { texte } from '@logibtp/socle/dictionnaire';
 import { originesAgent, creeeParAgent, mentionAgentHtml, pastillePieceHtml } from '../src/app/agents/origines.js';
 import { adresseCible } from '../src/app/pages/agents.js';
+import { peutDemanderAgent, etatDemandeAgent, TYPE_RECETTE_FICHE } from '../src/app/agents/demander.js';
 import { menus } from '../src/app/navigation/menus.js';
 import { ROUTES } from '../src/app/pages/index.js';
 import { urlProposition, URL_AUTORISATION_AGENT } from '../src/app/codes.js';
@@ -65,5 +66,35 @@ describe('consentement OAuth (lot 12)', () => {
     expect(source).toContain('new ConsentementOAuth(');
     expect(source).toContain('new ClientsOAuth(');
     expect(source).toContain('this.requete?.demande');
+  });
+});
+
+describe('« Demander à l\'agent » (lot 13)', () => {
+  const recettes = [
+    { code: 'oe', active: true, parametres: [{ nom: 'marche', type: 'MARCHE' }] },
+    { code: 'controle', active: true, parametres: [{ nom: 'devis', type: 'DOCUMENT' }] },
+  ];
+  it('bouton présent seulement si le module est actif et l\'utilisateur a une délégation ou le droit « agents »', () => {
+    const base = { moduleActif: true, droitAgents: false, delegation: true, recettes, type: 'MARCHE' };
+    expect(peutDemanderAgent(base)).toBe(true);
+    expect(peutDemanderAgent({ ...base, delegation: false, droitAgents: true })).toBe(true);
+    expect(peutDemanderAgent({ ...base, delegation: false })).toBe(false);
+    expect(peutDemanderAgent({ ...base, moduleActif: false })).toBe(false);
+    // Aucune recette pour le type de l'élément, ou recettes non lues (refus, module inactif côté serveur) : bouton masqué.
+    expect(peutDemanderAgent({ ...base, type: 'CHANTIER' })).toBe(false);
+    expect(peutDemanderAgent({ ...base, recettes: null })).toBe(false);
+  });
+  it('état lu une fois par minute, rien demandé au serveur si le module est inactif', async () => {
+    const app = (actif, droit) => ({ moduleActif: () => actif, peut: () => droit });
+    expect(await etatDemandeAgent(app(false, true), 'MARCHE')).toEqual({ visible: false, recettes: [] });
+    expect(TYPE_RECETTE_FICHE).toEqual({ marche: 'MARCHE', chantier: 'CHANTIER' });
+  });
+  it('bouton monté sur les fiches marché et chantier et sur les pièces, sans action directe', () => {
+    const lire = (f) => readFileSync(new URL(`../src/app/${f}`, import.meta.url), 'utf8');
+    expect(lire('pages/fiche.js')).toContain('actionDemanderAgent(app, agent');
+    expect(lire('pages/document.js')).toContain('data-action="agent"');
+    expect(lire('pages/document.js')).toContain('demanderPourElement(this.app');
+    expect(lire('pages/agents.js')).toContain('new GestionRecettes(');
+    expect(lire('agents/demander.js')).not.toMatch(/api\.mcp\.(enregistrerRecette|supprimerRecette)|appel\('(POST|PUT|DELETE)/);
   });
 });

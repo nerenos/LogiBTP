@@ -15,6 +15,8 @@ public class CodesTests
     [InlineData("STATUT_APPEL_AGENT", typeof(StatutAppelAgent))]
     [InlineData("ETAT_PROPOSITION", typeof(EtatProposition))]
     [InlineData("DECISION_PROPOSITION", typeof(DecisionProposition))]
+    [InlineData("TYPE_PARAMETRE_RECETTE", typeof(TypeParametreRecette))]
+    [InlineData("SORTIE_RECETTE", typeof(SortieRecette))]
     public void Parite_avec_le_js(string nom, Type type) => Assert.Empty(Constantes.Ecarts(Fichier, nom, type));
 
     [Theory]

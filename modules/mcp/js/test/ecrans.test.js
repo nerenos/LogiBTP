@@ -2,11 +2,12 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { texte, texteHtml, existe, icone } from '@logibtp/socle/dictionnaire';
 import { GARDE_FOU, MODELE_PLAFOND, PORTEE_DROIT } from '@logibtp/socle';
-import { CLASSE_OUTIL, STATUT_APPEL_AGENT, ETAT_PROPOSITION, ERREUR_MCP } from '../src/index.js';
+import { CLASSE_OUTIL, STATUT_APPEL_AGENT, ETAT_PROPOSITION, ERREUR_MCP, TYPE_PARAMETRE_RECETTE, SORTIE_RECETTE, controlerRecette } from '../src/index.js';
 import {
   delegationsHtml, secretHtml, journalHtml, propositionsHtml, propositionHtml, ecartsHtml, VUES_PROPOSITIONS,
   leveeDuProfil, controlerLevee, corpsLevee, modeles,
   formulaireDelegationHtml, consentementHtml, erreurConsentementHtml, ERREURS_CONSENTEMENT, clientsOAuthHtml,
+  recettesHtml, formulaireRecetteHtml, demandeHtml, valeursHtml,
 } from '../ui/index.js';
 
 const dossier = new URL('../ui/', import.meta.url);
@@ -209,5 +210,52 @@ describe('consentement OAuth et liste blanche des clients (lot 12)', () => {
     expect(clientsOAuthHtml([])).toContain(texteHtml('mcp.clients.aucun'));
     expect(modeles.corpsClients([{ client_id: ' https://a/x ', libelle: ' A ', actif: true }, { client_id: 'https://a/x', libelle: 'B', actif: false }, { client_id: ' ' }]))
       .toEqual([{ client_id: 'https://a/x', libelle: 'B', actif: false }]);
+  });
+});
+
+describe('recettes et « Demander à l\'agent » (lot 13)', () => {
+  const recette = {
+    code: 'oe_metallerie', libelle: 'OE métallerie', prompt: 'Prépare les OE du marché {marche} pour {service}.', sortie: 'BROUILLON', active: true, fournie: true,
+    parametres: [{ nom: 'marche', type: 'MARCHE', libelle: 'Marché', requis: true }, { nom: 'service', type: 'TEXTE', requis: false }],
+    outils: ['lire_marche', 'preparer_ordre_execution'],
+  };
+  it('textes des types, des sorties et des erreurs de contrôle', () => {
+    for (const t of Object.values(TYPE_PARAMETRE_RECETTE)) expect(existe(`mcp.recettes.types.${t}`), t).toBe(true);
+    for (const s of Object.values(SORTIE_RECETTE)) expect(existe(`mcp.recettes.sorties.${s}`), s).toBe(true);
+    for (const e of [ERREUR_MCP.MCP_RECETTE_CODE, ERREUR_MCP.MCP_RECETTE_TEXTE, ERREUR_MCP.MCP_RECETTE_PARAMETRE, ERREUR_MCP.MCP_RECETTE_OUTIL, ERREUR_MCP.MCP_RECETTE_SORTIE]) {
+      expect(existe(`mcp.recettes.erreurs.${e}`), e).toBe(true);
+    }
+    expect(controlerRecette(recette, recette.outils)).toEqual([]);
+  });
+  it('tableau : recette fournie sans bouton de suppression, paramètres typés', () => {
+    const html = recettesHtml([recette, { ...recette, code: 'maison', fournie: false, active: false }]);
+    expect(html).toContain('data-modifier="oe_metallerie"');
+    expect(html).not.toContain('data-supprimer="oe_metallerie"');
+    expect(html).toContain('data-supprimer="maison"');
+    expect(html).toContain(`marche : ${texte('mcp.recettes.types.MARCHE')} *`);
+    expect(html).toContain('mcp-inactive');
+  });
+  it('formulaire : code figé hors création, outils du catalogue cochés', () => {
+    const outils = [{ nom: 'lire_marche', description: 'Lire', classe: 'LECTURE' }, { nom: 'creer_devis', description: 'Créer', classe: 'BROUILLON' }];
+    const html = formulaireRecetteHtml(recette, { outils });
+    expect(html).toMatch(/data-code[^>]*readonly/);
+    expect(html).toMatch(/data-outil="lire_marche" checked/);
+    expect(html).not.toMatch(/data-outil="creer_devis" checked/);
+    expect(formulaireRecetteHtml(null, { outils, nouvelle: true })).not.toMatch(/data-code[^>]*readonly/);
+  });
+  it('fonctions pures : recettes d\'un type, valeurs initiales, paramètres suivant le prompt, corps', () => {
+    expect(modeles.recettesPourType([recette, { ...recette, code: 'x', active: false }], 'MARCHE').map((r) => r.code)).toEqual(['oe_metallerie']);
+    expect(modeles.recettesPourType([recette], 'CHANTIER')).toEqual([]);
+    expect(modeles.valeursInitiales(recette, 'MARCHE', 'M-2026-001')).toEqual({ marche: 'M-2026-001' });
+    expect(modeles.parametresDepuisPrompt(['service', 'nouveau'], recette.parametres))
+      .toEqual([recette.parametres[1], { nom: 'nouveau', type: 'TEXTE', libelle: '', requis: true }]);
+    expect(modeles.corpsRecette({ libelle: ' L ', description: ' ', prompt: ' P ', parametres: [{ nom: 'a', type: 'TEXTE', libelle: '', requis: 1 }], outils: ['x', 'x'], sortie: 'RAPPORT' }))
+      .toEqual({ libelle: 'L', description: null, prompt: 'P', parametres: [{ nom: 'a', type: 'TEXTE', libelle: null, requis: true }], outils: ['x'], sortie: 'RAPPORT', active: true });
+  });
+  it('fenêtre de la demande : élément, champs préremplis (texte en zone multiligne)', () => {
+    expect(demandeHtml('Marché M-1')).toContain('Marché M-1');
+    const champs = valeursHtml(recette, { marche: 'M-1' });
+    expect(champs).toContain('data-valeur="marche" value="M-1"');
+    expect(champs).toContain('<textarea data-valeur="service"');
   });
 });

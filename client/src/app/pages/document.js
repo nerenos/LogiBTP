@@ -35,6 +35,8 @@ const TYPES_CROISES = [TYPE_AVANCEMENT.SITUATION, TYPE_AVANCEMENT.PRODUCTION];
 const MARCHE_TYPES = [TYPE_DOCUMENT.V_RECEPTION, TYPE_DOCUMENT.V_SITUATION, TYPE_DOCUMENT.V_PRODUCTION, TYPE_DOCUMENT.V_FACTURE_AVT];
 import { afficherTracabilite } from '../documents/tracabilite.js';
 import { creeeParAgent, pastillePieceHtml } from '../agents/origines.js';
+import { etatDemandeAgent, demanderPourElement } from '../agents/demander.js';
+import { TYPE_PARAMETRE_RECETTE } from '@logibtp/mcp';
 import { saisieRestauree, TABLES_RESTAUREES } from '../documents/restauration.js';
 import { afficherReglements } from '../documents/reglements-document.js';
 import { ouvrirImport, creerDepuisImport, rendreBandeauImport, tracabiliteImport } from '../import/devis-a-verifier.js';
@@ -107,6 +109,7 @@ const gabarit = () => `
         <button role="menuitem" class="mo-ligne" data-action="sources" title="${texteHtml('document_btp.page.actions.sources_aide')}" hidden>${texteHtml('document_btp.page.actions.sources', { icone: icone('ajouter') })}</button>
         </div>
       </span>
+      <button data-action="agent" class="bouton-icone" hidden title="${texteHtml('mcp.demande.bouton_aide')}" aria-label="${texteHtml('mcp.demande.bouton')}">${iconeHtml('mcp_agent')}</button>
       <button data-action="apercu" class="bouton-icone" title="${texteHtml('document_btp.page.apercu_aide')}" aria-label="${texteHtml('document_btp.page.apercu')}">${iconeHtml('document_btp_apercu')}</button>
       <button data-action="courriel" class="bouton-icone" title="${texteHtml('document_btp.page.courriel_aide', { icone: icone('document_btp_envoyer') })}" aria-label="${texteHtml('document_btp.page.courriel')}">${iconeHtml('document_btp_envoyer')}</button>
       <button data-action="fermer-page" class="bouton-icone" title="${texteHtml('document_btp.page.fermer_aide')}" aria-label="${texteHtml('document_btp.page.fermer')}">${iconeHtml('retirer')}</button>
@@ -258,6 +261,8 @@ export class PageDocument extends PageBase {
       bibliotheque: () => app.naviguer('/liste/bibliotheque?vue=14', { nouvelleFenetre: true }),
       rechercher: () => { this.disposition.onglet('lignes'); this.recherche?.ouvrir(); },
       apercu: () => this.apercu(),
+      // « Demander à l'agent » (module MCP, lot 13) : recette choisie, prompt prérempli avec l'identifiant de la pièce, copié.
+      agent: () => this.#demanderAgent(),
       // Courriel : destinataires, modèle et pièces « à envoyer » proposés par l'application (module Mail).
       courriel: () => {
         const id = this.editeur?.saisie.document.ent_id;
@@ -736,6 +741,7 @@ export class PageDocument extends PageBase {
       apresAnnulation: (r) => this.#apresAvoirInterne(r),
     });
     this.#rendrePastilleAgent();
+    this.#rendreBoutonAgent();
     this.app.majPage();
   }
 
@@ -762,6 +768,24 @@ export class PageDocument extends PageBase {
     if (this.editeur?.saisie.document.ent_id !== entId) return;
     zone.innerHTML = pastillePieceHtml(creation);
     zone.hidden = !creation;
+  }
+
+  /** Bouton « Demander à l'agent » : pièce enregistrée, module MCP actif, délégation ou droit « agents », recette pour une pièce. */
+  async #rendreBoutonAgent() {
+    const bouton = this.$('[data-action="agent"]');
+    const entId = this.editeur?.saisie.document.ent_id;
+    if (!bouton) return;
+    if (!(entId > 0)) { bouton.hidden = true; return; }
+    this.etatAgent = await etatDemandeAgent(this.app, TYPE_PARAMETRE_RECETTE.DOCUMENT);
+    if (this.editeur?.saisie.document.ent_id !== entId) return;
+    bouton.hidden = !this.etatAgent.visible;
+  }
+
+  #demanderAgent() {
+    const d = this.editeur?.saisie.document;
+    if (!d || !(d.ent_id > 0) || !this.etatAgent?.visible) return null;
+    const libelle = `${this.editeur.definition.type?.tyd_libelle ?? texte('document_btp.page.document')} ${d.ent_numero ?? ''}`.trim();
+    return demanderPourElement(this.app, { recettes: this.etatAgent.recettes, type: TYPE_PARAMETRE_RECETTE.DOCUMENT, id: d.ent_id, libelle });
   }
 
   /** Après l'avoir interne d'une facture rejetée ou refusée : pièce relue, nouvelle facture proposée à l'ouverture. */

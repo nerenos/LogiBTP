@@ -18,5 +18,6 @@
   "mcp_corriger": "✎",
   "mcp_refuser": "✕",
   "mcp_client_oauth": "🔗",
-  "mcp_autoriser": "✔"
+  "mcp_autoriser": "✔",
+  "mcp_recette": "📋"
 }

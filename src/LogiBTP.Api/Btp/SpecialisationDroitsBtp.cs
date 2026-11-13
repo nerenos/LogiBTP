@@ -129,6 +129,9 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
         new("/api/mcp/oauth/token", ModeRoute.Publique),
         new("/api/mcp/oauth/demandes", ModeRoute.Module, SpecialisationMcpBtp.NoeudAgents),
         new("/api/mcp/clients", ModeRoute.Parametrage),
+        // Recettes (lot 13) : lues par toute session (bouton « Demander à l'agent » : recettes actives, délégation active),
+        // gérées par l'administrateur seul (service : ExigerAdmin) ; jamais par un agent (AGENT_INTERDIT).
+        new("/api/mcp/recettes", ModeRoute.Session),
         // Désignation d'un tiers (code, raison sociale d'une personne morale, ville ; particulier : code seul) : qui consulte
         // des pièces en voit les tiers ; lecture seule, ouverte à un agent sous le garde-fou TIERS (plans/mcp.md, lot 6).
         new("/api/designation", ModeRoute.Module, "documents"),

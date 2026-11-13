@@ -1,8 +1,8 @@
 // Module MCP, interface : fonctions pures des écrans (configuration du client, journal filtré et exporté, écarts d'un
-// contenu de proposition, propositions classées). Sans DOM, testées seules ; les écrans les affichent.
+// contenu de proposition, propositions classées, recettes). Sans DOM, testées seules ; les écrans les affichent.
 import { aujourdhui, MODELE_PLAFOND } from '@logibtp/socle';
 import { celluleCsv } from '@logibtp/socle/ui';
-import { ETAT_PROPOSITION } from '../src/codes.js';
+import { ETAT_PROPOSITION, TYPE_PARAMETRE_RECETTE } from '../src/codes.js';
 import { etatProposition } from '../src/propositions.js';
 
 /** Nom du serveur MCP déclaré dans le client de l'agent (identifiant technique de la configuration). */
@@ -159,4 +159,38 @@ export function corpsClients(lignes) {
     if (client) parAdresse.set(client, { client_id: client, libelle: String(l.libelle ?? '').trim(), actif: l.actif !== false });
   }
   return [...parAdresse.values()];
+}
+
+// Recettes (lot 13) : saisie de l'administrateur, choix et remplissage depuis une fiche ou une pièce.
+
+/** Recettes actives proposées pour un élément d'un type (MARCHE, CHANTIER, DOCUMENT) : celles qui ont un paramètre de ce type. */
+export function recettesPourType(recettes, type) {
+  return (recettes ?? []).filter((r) => r.active !== false && (r.parametres ?? []).some((p) => p.type === type));
+}
+
+/** Valeurs initiales d'une recette lancée depuis un élément : la référence va dans le premier paramètre de son type. */
+export function valeursInitiales(recette, type, reference) {
+  const p = (recette?.parametres ?? []).find((x) => x.type === type);
+  return p ? { [p.nom]: reference ?? '' } : {};
+}
+
+/**
+ * Paramètres suivant les marques du prompt (`parametresPrompt`) : ceux déjà saisis gardés (dans l'ordre des marques),
+ * marques nouvelles ajoutées en TEXTE requis, paramètres sans marque retirés.
+ */
+export function parametresDepuisPrompt(marques, existants) {
+  return (marques ?? []).map((nom) => (existants ?? []).find((p) => p.nom === nom) ?? { nom, type: TYPE_PARAMETRE_RECETTE.TEXTE, libelle: '', requis: true });
+}
+
+/** Corps d'enregistrement d'une recette : textes rognés (vides en null pour la description), outils uniques, requis booléen. */
+export function corpsRecette({ libelle, description, prompt, parametres, outils, sortie, active }) {
+  return {
+    libelle: String(libelle ?? '').trim(),
+    description: String(description ?? '').trim() || null,
+    prompt: String(prompt ?? '').trim(),
+    parametres: (parametres ?? []).map((p) => ({ nom: p.nom, type: p.type, libelle: String(p.libelle ?? '').trim() || null, requis: Boolean(p.requis) })),
+    outils: [...new Set(outils ?? [])],
+    sortie,
+    active: active !== false,
+  };
 }

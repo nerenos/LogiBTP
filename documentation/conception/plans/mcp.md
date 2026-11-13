@@ -29,7 +29,7 @@
 | 10 | File des propositions | `modules/mcp` + cœur | 5 | FAIT (13/11/2026) |
 | 11 | Écrans : délégations, paramétrage, journal, pastille 🤖 | `modules/mcp` (ui) + cœur | 10 | FAIT (13/11/2026) |
 | 12 | Serveur d'autorisation OAuth 2.1 | `modules/mcp` | 5 | FAIT (13/11/2026) |
-| 13 | Recettes (prompts MCP) et « Demander à l'agent » | `modules/mcp` + cœur | 11 | A FAIRE |
+| 13 | Recettes (prompts MCP) et « Demander à l'agent » | `modules/mcp` + cœur | 11 | FAIT (13/11/2026) |
 | 14 | Documentation | tous | 0–13 | A FAIRE |
 
 Hors plan (Q13) : agent hébergé (automatisations planifiées, panneau intégré).
@@ -428,6 +428,34 @@ Hors plan (Q13) : agent hébergé (automatisations planifiées, panneau intégr�
   depuis un modèle, OE métallerie et appro, contrôle d'un devis, synthèse de chantier ; bouton « 🤖 Demander à
   l'agent » sur les fiches marché et chantier et les pièces : prompt prérempli copié ou ouvert dans le client).
 - **Critère de fin** : tests : recette listée en prompt MCP, bouton présent selon le module et les droits.
+- **Réalisé** (13/11/2026) : module MCP : `db/099x_mcp_recettes.sql` (rejouable, manifeste) `mcp_recette` (code, libellé, description,
+  prompt à marques `{nom}`, paramètres JSONB `[{ nom, type, libelle, requis }]`, outils JSONB, sortie, active, fournie, ordre) ; règles
+  répliquées `js/src/recettes.js` ↔ `LogiBTP.Mcp/ReglesRecettes.cs` (jeu `tests/cas/03_recettes.json`) : `parametresPrompt`,
+  `controlerRecette` (codes `MCP_RECETTE_CODE`, `_TEXTE`, `_PARAMETRE` — marques et paramètres déclarés identiques —, `_OUTIL` —
+  outils du catalogue, au moins un —, `_SORTIE`), `recettePermise` (active, tous ses outils permis), `remplirPrompt` (valeurs rognées,
+  sur une ligne hors TEXTE, 500 caractères au plus ; requis manquants) ; codes `TYPE_PARAMETRE_RECETTE` (MARCHE, CHANTIER, DOCUMENT,
+  PERIODE, TEXTE), `SORTIE_RECETTE` (BROUILLON, PROPOSITION, RAPPORT), `MCP_RECETTE_INCONNUE`, `MCP_RECETTE_FOURNIE` (`CodesTests`).
+  `ServiceRecettes` : prompts MCP du SDK (`WithListPromptsHandler` / `WithGetPromptHandler`, capacité Prompts) = recettes actives dont
+  tous les outils sont exposés à la délégation (`ServiceMcp.OutilsAsync`), arguments typés (description = libellé + type du
+  dictionnaire `mcp.recettes.types.*`), obtention remplie (requis manquant, recette non permise : erreur InvalidParams) ; routes
+  `GET /api/mcp/recettes` (actives et `delegation` active de l'humain ; `?toutes=true` : toutes et catalogue des outils, administrateur),
+  `PUT|DELETE /api/mcp/recettes/{code}` (administrateur seul, `ExigerHumain` : jamais un agent ; recette fournie non supprimable).
+  Interface `js/ui/recettes.js` : `GestionRecettes` (tableau, saisie dans une fenêtre du socle : paramètres suivant les marques du
+  prompt, types et sortie par `creerCombo`, outils cochables, contrôle local identique au serveur, fenêtre gardée ouverte tant que la
+  saisie est invalide ; raccourci `mcp_recettes`), `demanderAgent` (recettes du type de l'élément, paramètres préremplis, prompt
+  rempli copié ; lien d'ouverture du client seulement si `adresseClient` rend une adresse : aucune documentée, copie seule).
+  Correction du lot 12 : `ReglesOAuth.RedirectionPermise` accepte tout port pour une adresse de retour déclarée en boucle locale
+  (`http` sur `127.0.0.1`, `[::1]` ou `localhost`, même hôte, chemin et requête : RFC 8252 § 7.3). Cœur : recettes fournies
+  `db/310_mcp_recettes.sql` (rejouable, manifeste, `ON CONFLICT DO NOTHING`) : `devis_depuis_modele`, `devis_depuis_devis`,
+  `oe_metallerie_appro`, `controle_devis`, `synthese_chantier` ; `/api/mcp/recettes` en `ModeRoute.Session` (droits) et Parametrage
+  (écritures) ; types d'arguments dans `McpTextes.json` ; client : `agents/demander.js` (`peutDemanderAgent` : module actif, délégation
+  active ou droit `agents`, une recette du type ; recettes lues une fois par minute), bouton 🤖 dans la barre des fiches marché et
+  chantier (`pages/fiche.js`) et des pièces (`pages/document.js`, `data-action="agent"`), gestion montée dans `/parametres/agents`,
+  `api.mcp.recettes|enregistrerRecette|supprimerRecette`. Tests : `recettes.test.js`, `ReglesRecettesTests`, `ecrans.test.js`,
+  `PointMcpTests.Recettes_exposees_en_prompts_…` (prompt listé avec ses arguments, absent quand un outil n'est pas permis, obtention
+  remplie, modification refusée à un agent et à un non-administrateur), `ReglesOAuthTests` / `OAuthMcpTests` (boucle locale à port
+  variable), `McpRecettesBtpTests` (recettes fournies valides pour le catalogue), `client/test/agents.test.js` (bouton selon le module
+  et les droits).
 
 ## Lot 14 : documentation
 
@@ -437,4 +465,4 @@ Hors plan (Q13) : agent hébergé (automatisations planifiées, panneau intégr�
   `/.well-known/oauth-protected-resource/mcp`), client claude.ai actif dans Paramètres › Agents IA › Clients OAuth autorisés,
   consentement = délégation (modèle, durée, garde-fous), révocation depuis Mon compte › Agents ; exposition HTTPS publique de
   `/mcp`, `/.well-known/oauth-*` et `/api/mcp/oauth/authorize|token` (la page `/agents/autoriser` reste derrière la session) ;
-  Claude Code : jeton d'agent (lot 11) ou OAuth avec retour en boucle locale (port à déclarer exactement, voir TODO).
+  Claude Code : jeton d'agent (lot 11) ou OAuth avec retour en boucle locale (port libre, lot 13) ; recettes (prompts MCP) et bouton « Demander à l'agent » (lot 13).

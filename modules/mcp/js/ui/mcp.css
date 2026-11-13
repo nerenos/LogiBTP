@@ -23,3 +23,8 @@
 .mcp-consentement { max-width: 48rem; }
 .mcp-consentement .mcp-client { font-weight: 600; }
 .mcp-consentement .mcp-formulaire { display: grid; gap: 0.5rem; margin: 0.75rem 0; }
+
+/* Recettes et « Demander à l'agent » (lot 13). */
+.mcp-recette, .mcp-demande { max-width: min(56em, 95vw); }
+.mcp-recette fieldset { margin-block: 0.5em; }
+.mcp-demande textarea[readonly] { background: var(--mcp-code-fond); }

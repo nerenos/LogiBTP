@@ -158,6 +158,26 @@ public class RafraichissementOAuthMcp
     public DateTimeOffset? MraRevoqueLe { get; set; }
 }
 
+/// <summary>
+/// Recette (mcp_recette, lot 13) : prompt paramétré (marques « {nom} »), paramètres typés (JSON [{ nom, type, libelle,
+/// requis }]), outils permis (JSON [noms]), sortie attendue, active ; fournie par l'application (jamais supprimée).
+/// </summary>
+public class RecetteMcp
+{
+    public string MreCode { get; set; } = "";
+    public string MreLibelle { get; set; } = "";
+    public string? MreDescription { get; set; }
+    public string MrePrompt { get; set; } = "";
+    public string MreParametres { get; set; } = "[]";
+    public string MreOutils { get; set; } = "[]";
+    public string MreSortie { get; set; } = "";
+    public bool MreActive { get; set; } = true;
+    public bool MreFournie { get; set; }
+    public int MreOrdre { get; set; } = 100;
+    public DateTimeOffset MreModifieLe { get; set; }
+    public string MreModifiePar { get; set; } = "";
+}
+
 /// <summary>Contexte EF Core du module (modules/mcp/db) ; snake_case par la convention de l'application.</summary>
 public class McpDbContext(DbContextOptions<McpDbContext> options) : DbContext(options)
 {
@@ -169,6 +189,7 @@ public class McpDbContext(DbContextOptions<McpDbContext> options) : DbContext(op
     public DbSet<ClientOAuthMcp> ClientsOAuth => Set<ClientOAuthMcp>();
     public DbSet<AutorisationOAuthMcp> AutorisationsOAuth => Set<AutorisationOAuthMcp>();
     public DbSet<RafraichissementOAuthMcp> RafraichissementsOAuth => Set<RafraichissementOAuthMcp>();
+    public DbSet<RecetteMcp> Recettes => Set<RecetteMcp>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -203,5 +224,11 @@ public class McpDbContext(DbContextOptions<McpDbContext> options) : DbContext(op
         b.Entity<ClientOAuthMcp>(e => e.ToTable("mcp_client_oauth").HasKey(x => x.MclClientId));
         b.Entity<AutorisationOAuthMcp>(e => e.ToTable("mcp_oauth_autorisation").HasKey(x => x.MauId));
         b.Entity<RafraichissementOAuthMcp>(e => e.ToTable("mcp_oauth_rafraichissement").HasKey(x => x.MraId));
+        b.Entity<RecetteMcp>(e =>
+        {
+            e.ToTable("mcp_recette").HasKey(x => x.MreCode);
+            e.Property(x => x.MreParametres).HasColumnType("jsonb");
+            e.Property(x => x.MreOutils).HasColumnType("jsonb");
+        });
     }
 }

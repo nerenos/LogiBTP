@@ -102,9 +102,38 @@ public static class ReglesOAuth
         return null;
     }
 
-    /// <summary>Adresse de retour demandée exactement égale (caractère pour caractère) à l'une de celles du document du client.</summary>
+    /// <summary>
+    /// Adresse de retour demandée exactement égale (caractère pour caractère) à l'une de celles du document du client ; pour
+    /// une adresse déclarée en boucle locale (http sur 127.0.0.1, [::1] ou localhost), n'importe quel port est accepté, le
+    /// reste (schéma, hôte, chemin, requête) restant identique : l'application native ouvre un port libre à chaque
+    /// connexion (RFC 8252 § 7.3).
+    /// </summary>
     public static bool RedirectionPermise(string? redirection, IReadOnlyList<string> permises) =>
-        !string.IsNullOrEmpty(redirection) && permises.Any(p => string.Equals(p, redirection, StringComparison.Ordinal));
+        !string.IsNullOrEmpty(redirection)
+        && permises.Any(p => string.Equals(p, redirection, StringComparison.Ordinal) || BoucleLocaleAutrePort(redirection, p));
+
+    /// <summary>Hôte de boucle locale (http seulement) : 127.0.0.1, [::1] ou localhost.</summary>
+    private static bool BoucleLocale(Uri u) =>
+        u.Scheme == Uri.UriSchemeHttp && string.IsNullOrEmpty(u.UserInfo)
+        && (u.Host is "127.0.0.1" or "[::1]" || u.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>Même adresse de boucle locale que celle déclarée, au port près (hôte, chemin et requête identiques, sans fragment).</summary>
+    private static bool BoucleLocaleAutrePort(string redirection, string permise)
+    {
+        if (redirection.Contains('#') || !Uri.TryCreate(redirection, UriKind.Absolute, out var r) || !Uri.TryCreate(permise, UriKind.Absolute, out var p)) return false;
+        if (!BoucleLocale(r) || !BoucleLocale(p)) return false;
+        return string.Equals(r.Host, p.Host, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(r.PathAndQuery, p.PathAndQuery, StringComparison.Ordinal)
+            && string.Equals(Chemin(redirection), Chemin(permise), StringComparison.Ordinal);
+    }
+
+    /// <summary>Partie de l'adresse après l'autorité (chemin et requête tels qu'écrits, sans normalisation).</summary>
+    private static string Chemin(string adresse)
+    {
+        var debut = adresse.IndexOf("//", StringComparison.Ordinal) + 2;
+        var i = adresse.IndexOfAny(['/', '?'], debut);
+        return i < 0 ? "" : adresse[i..];
+    }
 
     private static bool CaractereNonReserve(char c) => c is >= 'A' and <= 'Z' or >= 'a' and <= 'z' or >= '0' and <= '9' or '-' or '.' or '_' or '~';
 

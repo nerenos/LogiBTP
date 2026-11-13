@@ -2,8 +2,9 @@ import { texte, texteHtml, icone, iconeHtml } from '@logibtp/socle/dictionnaire'
 import { PageBase } from '@logibtp/navigation';
 import { ACTION_DROIT } from '@logibtp/socle';
 import {
-  PanneauDelegations, ParametresAgents, JournalAgents, FilePropositions, DetailProposition, ConsentementOAuth, ClientsOAuth,
+  PanneauDelegations, ParametresAgents, JournalAgents, FilePropositions, DetailProposition, ConsentementOAuth, ClientsOAuth, GestionRecettes,
 } from '@logibtp/mcp/ui';
+import { oublierRecettes } from '../agents/demander.js';
 import { MODULE_FACULTATIF, CIBLE_PROPOSITION, URL_AUTORISATION_AGENT, urlProposition, urlDocument, urlFiche } from '../codes.js';
 import { api } from '../api.js';
 
@@ -63,7 +64,7 @@ export class PageParametresAgents extends PageBase {
     const app = this.app;
     this.titre = texte('agents_btp.routes.parametres');
     this.conteneur.innerHTML = `<div class="page-parametres page-agents"><div class="entete-page"><h1 class="page-titre">${iconeHtml('agents_btp_parametres')} ${texteHtml('agents_btp.routes.parametres')}</h1></div>
-      <p class="aide">${texteHtml('agents_btp.parametres.aide')}</p><section data-levees></section><section data-clients></section><section data-delegations></section></div>`;
+      <p class="aide">${texteHtml('agents_btp.parametres.aide')}</p><section data-levees></section><section data-clients></section><section data-recettes></section><section data-delegations></section></div>`;
     if (!moduleActif(app)) { this.conteneur.querySelector('[data-levees]').innerHTML = inactif(); return; }
     if (!app.estAdmin()) { this.conteneur.querySelector('[data-levees]').innerHTML = `<p class="aide">${texteHtml('agents_btp.parametres.admin')}</p>`; return; }
     let profils = [];
@@ -82,6 +83,13 @@ export class PageParametresAgents extends PageBase {
       erreur: (e) => app.erreur(e),
     });
     await this.clients.charger();
+    // Recettes des agents (lot 13) : fournies par l'application et propres à l'entreprise, gérées par l'administrateur.
+    this.recettes = new GestionRecettes(this.conteneur.querySelector('[data-recettes]'), {
+      api: { liste: () => api.mcp.recettes(true), enregistrer: (code, r) => api.mcp.enregistrerRecette(code, r), supprimer: (code) => api.mcp.supprimerRecette(code) },
+      apresEcriture: () => { oublierRecettes(); app.message(texte('mcp.recettes.enregistree'), 'succes'); },
+      erreur: (e) => app.erreur(e),
+    });
+    await this.recettes.charger();
     this.delegations = monterDelegations(app, this.conteneur.querySelector('[data-delegations]'), { toutes: true });
   }
 }

@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using LogiBTP.Mcp.Web;
 using LogiBTP.Socle;
+using LogiBTP.Socle.Donnees;
 using LogiBTP.Socle.Web;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -320,6 +321,7 @@ public sealed class PointMcpTests : IAsyncLifetime
     private readonly ConcurrentQueue<(string? Hote, string? Authorization, Utilisateur Utilisateur)> _recues = new();
     private readonly JetonsEnMemoire _jetons = new();
     private const string EnteteHumain = "X-Essai-Humain";
+    private readonly string _recette = $"r{Guid.NewGuid():N}"[..12];
 
     public async Task InitializeAsync()
     {
@@ -333,7 +335,9 @@ public sealed class PointMcpTests : IAsyncLifetime
         b.Services.AddSingleton<IDroits, DroitsEssai>();
         b.Services.AddSingleton<IModulesActifs, ModulesEssai>();
         b.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower);
-        b.Services.AddModuleMcp<SpecialisationEssai>((_, o) => o.UseNpgsql(Connexion).UseSnakeCaseNamingConvention());
+        // Unité d'écriture des routes EnTransaction (recettes, levées, clients).
+        b.Services.AddUniteEcriture();
+        b.Services.AddModuleMcp<SpecialisationEssai>((sp, o) => o.ConfigurerBase(sp).UseSnakeCaseNamingConvention());
         var app = b.Build();
         app.UseErreursMetier();
         // Authentification simulée des routes /api : le jeton délégué donne l'utilisateur du compte avec l'agent.
@@ -383,6 +387,7 @@ public sealed class PointMcpTests : IAsyncLifetime
             await db.Compteurs.Where(c => codes.Contains(c.McoDelegation)).ExecuteDeleteAsync();
             await db.Delegations.Where(d => d.MdeCompte == _compte).ExecuteDeleteAsync();
             await db.Levees.Where(l => l.MlpProfil == _profil).ExecuteDeleteAsync();
+            await db.Recettes.Where(r => r.MreCode.StartsWith(_recette)).ExecuteDeleteAsync();
         }
         await _app.StopAsync();
         await _app.DisposeAsync();
@@ -742,5 +747,79 @@ public sealed class PointMcpTests : IAsyncLifetime
         var r = await client.CallToolAsync("proposer_element", new Dictionary<string, object?> { ["nom"] = "x" });
         Assert.Equal(ErreurMcp.McpOutilInterdit, Contenu(r)["code"]!.GetValue<string>());
         Assert.False(await Avec(sp => sp.GetRequiredService<McpDbContext>().Propositions.AnyAsync(p => p.MprDelegation == cree.Delegation.Code)));
+    }
+
+    [Fact]
+    public async Task Recettes_exposees_en_prompts_selon_les_outils_permis_et_gerees_par_l_administrateur()
+    {
+        if (Connexion is null) return;
+        var admin = new Utilisateur("admin", Profils.Admin);
+        var lecture = new RecetteSaisie(null, "Synthèse", "Synthèse de {element} sur {periode}.",
+            [new ParametreRecette("element", TypeParametreRecette.Chantier, "Chantier", true), new ParametreRecette("periode", TypeParametreRecette.Periode, "Période")],
+            ["lister_elements"], SortieRecette.Rapport, Description: "Synthèse d'essai");
+        var ecriture = new RecetteSaisie(null, "Écriture", "Écris {nom}.", [new ParametreRecette("nom", TypeParametreRecette.Texte, null, true)],
+            ["lister_elements", "ecrire_element"], SortieRecette.Brouillon);
+        await Avec(sp => sp.GetRequiredService<ServiceRecettes>().EnregistrerAsync(_recette + "_lecture", lecture, admin, default));
+        await Avec(sp => sp.GetRequiredService<ServiceRecettes>().EnregistrerAsync(_recette + "_ecriture", ecriture, admin, default));
+        await Avec(sp => sp.GetRequiredService<ServiceRecettes>().EnregistrerAsync(_recette + "_inactive", lecture with { Active = false }, admin, default));
+
+        // Délégation en lecture : la recette qui écrit (outil ecrire_element non permis) et la recette inactive sont absentes.
+        var cree = await Avec(sp => sp.GetRequiredService<ServiceDelegations>().CreerAsync(new DelegationDemandee("Recettes", ModelePlafond.Lecture), Delegant, default));
+        await using (var client = await Client(cree.Secret))
+        {
+            var prompts = (await client.ListPromptsAsync()).Where(p => p.Name.StartsWith(_recette)).ToList();
+            var prompt = Assert.Single(prompts);
+            Assert.Equal(_recette + "_lecture", prompt.Name);
+            Assert.Equal("Synthèse d'essai", prompt.Description);
+            var args = prompt.ProtocolPrompt.Arguments!;
+            Assert.Equal(["element", "periode"], args.Select(a => a.Name));
+            Assert.Equal([true, false], args.Select(a => a.Required == true));
+            var obtenu = await client.GetPromptAsync(_recette + "_lecture", new Dictionary<string, object?> { ["element"] = "CH-12", ["periode"] = "2026-11" });
+            Assert.Equal("Synthèse de CH-12 sur 2026-11.", ((TextContentBlock)Assert.Single(obtenu.Messages).Content).Text);
+            // Argument requis manquant, recette non permise : refusés par le protocole.
+            await Assert.ThrowsAnyAsync<Exception>(() => client.GetPromptAsync(_recette + "_lecture", new Dictionary<string, object?>()).AsTask());
+            await Assert.ThrowsAnyAsync<Exception>(() => client.GetPromptAsync(_recette + "_ecriture", new Dictionary<string, object?> { ["nom"] = "x" }).AsTask());
+        }
+        // Délégation en préparation : l'outil d'écriture est permis, la recette apparaît.
+        var preparation = await Avec(sp => sp.GetRequiredService<ServiceDelegations>().CreerAsync(new DelegationDemandee("Recettes 2", ModelePlafond.Preparation), Delegant, default));
+        await using (var client = await Client(preparation.Secret))
+        {
+            Assert.Equal([_recette + "_ecriture", _recette + "_lecture"],
+                (await client.ListPromptsAsync()).Select(p => p.Name).Where(n => n.StartsWith(_recette)).Order());
+        }
+
+        // Lecture par un humain : actives seulement, délégation active signalée ; catalogue réservé à l'administrateur.
+        var (statut, corps) = await HumainAsync("GET", "/api/mcp/recettes");
+        Assert.Equal(200, statut);
+        Assert.True(corps!["delegation"]!.GetValue<bool>());
+        Assert.DoesNotContain(corps["recettes"]!.AsArray(), r => r!["code"]!.GetValue<string>() == _recette + "_inactive");
+        (statut, _) = await HumainAsync("GET", "/api/mcp/recettes?toutes=true");
+        Assert.Equal(403, statut);
+        (statut, corps) = await HumainAsync("GET", "/api/mcp/recettes?toutes=true", compte: "admin", profil: Profils.Admin);
+        Assert.Equal(200, statut);
+        Assert.Contains(corps!["recettes"]!.AsArray(), r => r!["code"]!.GetValue<string>() == _recette + "_inactive");
+        Assert.Contains(corps["outils"]!.AsArray(), o => o!["nom"]!.GetValue<string>() == "ecrire_element");
+
+        // Modification : refusée à un non-administrateur et à un agent (jeton délégué), même administrateur délégant.
+        var json = """{"libelle":"X","prompt":"Écris {nom}.","parametres":[{"nom":"nom","type":"TEXTE"}],"outils":["lister_elements"],"sortie":"RAPPORT"}""";
+        (statut, _) = await HumainAsync("PUT", $"/api/mcp/recettes/{_recette}_ecriture", json);
+        Assert.Equal(403, statut);
+        (statut, corps) = await HumainAsync("PUT", $"/api/mcp/recettes/{_recette}_ecriture", json, bearer: cree.Secret);
+        Assert.Equal(403, statut);
+        Assert.Equal(ErreursAgent.AgentInterdit, corps!["code"]!.GetValue<string>());
+        (statut, _) = await HumainAsync("DELETE", $"/api/mcp/recettes/{_recette}_ecriture", bearer: cree.Secret);
+        Assert.Equal(403, statut);
+        var e = await Assert.ThrowsAsync<ExceptionMetier>(() => Avec(sp => sp.GetRequiredService<ServiceRecettes>().EnregistrerAsync(_recette + "_x", lecture,
+            admin with { Agent = new AgentRequete(cree.Delegation.Code, "c") }, default)));
+        Assert.Equal(ErreursAgent.AgentInterdit, e.Code);
+        // Administrateur : recette contrôlée (outil inconnu refusé), enregistrée, supprimée.
+        (statut, corps) = await HumainAsync("PUT", $"/api/mcp/recettes/{_recette}_ecriture", json.Replace("lister_elements", "inconnu"), compte: "admin", profil: Profils.Admin);
+        Assert.Equal(422, statut);
+        Assert.Equal(ErreurMcp.McpRecetteOutil, corps!["code"]!.GetValue<string>());
+        (statut, corps) = await HumainAsync("PUT", $"/api/mcp/recettes/{_recette}_ecriture", json, compte: "admin", profil: Profils.Admin);
+        Assert.Equal(200, statut);
+        Assert.Equal(SortieRecette.Rapport, corps!["sortie"]!.GetValue<string>());
+        (statut, _) = await HumainAsync("DELETE", $"/api/mcp/recettes/{_recette}_ecriture", compte: "admin", profil: Profils.Admin);
+        Assert.Equal(204, statut);
     }
 }

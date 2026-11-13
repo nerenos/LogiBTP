@@ -42,18 +42,18 @@ Analyses validées le 23/10/2026 : [ANALYSE-MODULE-MAIL.md](documentation/concep
   rafraîchissement rotatif, machines connues, double facteur par courriel, exclusion d'IP, identifiants API, deux clés
   (`.env`, données) ; profil par défaut = saisie mobile (A5 révisée) ; à reprendre par le Mail (comptes, boîtes,
   « À rapprocher ») et l'OAuth (reconnexion des connexions).
-- [ ] **Module MCP** (agents IA au nom d'un utilisateur, [plan](documentation/conception/plans/mcp.md), lots 0 à 12 faits
+- [ ] **Module MCP** (agents IA au nom d'un utilisateur, [plan](documentation/conception/plans/mcp.md), lots 0 à 13 faits
   le 13/11/2026 : audit des routes, contrats du socle, règles de délégation `modules/mcp`, plafond appliqué par les
   Droits, jetons délégués, point `/mcp`, délégations, journal, outils de lecture du cœur et garde-fous du BTP, activation
   par société, liste blanche exacte, contrôles par identité bornés au plafond, outils d'écriture des devis et origine
   AGENT de l'historique des pièces, règle de ventilation et réappro sous le mini du module Stock, ordres d'exécution filtrés,
   demandes d'appro en unité de stock et ventilation proposée, file des propositions acceptées sous l'identité de l'humain, écrans des délégations, du paramétrage, du journal et des
-  propositions, pastille 🤖 des pièces, serveur d'autorisation OAuth 2.1 du point `/mcp`) : lots 13 et 14 (recettes,
-  documentation avec le guide de connexion claude.ai). Restent :
+  propositions, pastille 🤖 des pièces, serveur d'autorisation OAuth 2.1 du point `/mcp`, recettes exposées en prompts MCP et
+  bouton « Demander à l'agent ») : lot 14 (documentation avec le guide de connexion claude.ai). Restent :
   - OAuth (lot 12) : adresses des documents de client claude.ai et Claude Code pré-renseignées (`099w`) à vérifier par un essai réel
     du connecteur claude.ai (installation exposée en HTTPS public : `/mcp`, `/.well-known/oauth-*`, `/api/mcp/oauth/authorize|token`) ;
-    retour en boucle locale à port variable (Claude Code, RFC 8252 § 7.3) refusé tant que le port n'est pas exactement dans le
-    document du client (égalité exacte demandée) : décider d'une tolérance du port pour `http://127.0.0.1` / `localhost` ; exclusion
+    retour en boucle locale : port libre accepté depuis le lot 13 (RFC 8252 § 7.3, `http` sur `127.0.0.1`, `[::1]` ou `localhost`
+    déclaré, même hôte, chemin et requête) ; exclusion
     d'adresse du module Authentification non appliquée aux échecs du point de jeton (pas de contrat du socle ; débit borné à 30 / min /
     adresse) ; jetons délégués d'accès de 15 min : une ligne `jeton_delegue` par rafraîchissement, purge des jetons échus à prévoir
     (module Authentification) ; enregistrement dynamique des clients (RFC 7591) non proposé (CIMD seul) ; délégations OAuth listées
@@ -114,6 +114,12 @@ Analyses validées le 23/10/2026 : [ANALYSE-MODULE-MAIL.md](documentation/concep
     fournisseur principal signalés (`sans_fournisseur`), non commandés ; besoins d'une demande déjà transformée en partie :
     la ventilation repart de la quantité totale de la ligne (pas du reste par étape) ; filtre `NOT lig_solde` des commandes en
     cours de la ventilation à revoir (la case dit que la ligne solde sa ligne parente) ;
+  - recettes (lot 13) : « Demander à l'agent » copie seulement le prompt (aucun client n'a d'adresse de nouvelle conversation
+    préremplie documentée : option `adresseClient` de `demanderAgent` prête, non branchée) ; référence passée = identifiant
+    de l'élément (les outils lisent par identifiant) ; recettes fournies par `db/310` (jamais réécrites au rejeu : une
+    évolution de leur texte passe par un nouveau script) ; obtention d'un prompt non journalisée (aucune donnée lue) ;
+    bouton masqué sur une fiche ou une pièce en création et tant que les recettes ne sont pas lues (cache d'une minute) ;
+    pas d'agent hébergé (lancement planifié des recettes : § 10.3, hors plan) ;
   - `proposer_tiers` : nœud `annuaire` retenu par le garde-fou TIERS (actif par défaut) → dépôt refusé tant qu'il n'est pas
     levé ; `envoyer_document` : droit CREER sur `mail` exigé de l'humain en plus du nœud du type ; non éprouvé en base (pas de
     compte d'envoi dans la base d'essai).

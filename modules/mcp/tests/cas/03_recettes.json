@@ -1,0 +1,62 @@
+{
+  "description": "Règles des recettes (recettes.js ↔ ReglesRecettes.cs) : marques du prompt, contrôle d'une recette saisie (code, textes, paramètres typés, outils du catalogue, sortie), recette permise à une délégation (active, tous ses outils permis), prompt rempli (valeurs rognées, sur une ligne hors TEXTE, bornées ; requis manquants).",
+  "catalogue": ["lire_marche", "lire_chantier", "lire_document", "creer_devis", "preparer_ordre_execution"],
+  "marques": [
+    { "nom": "ordre d'apparition, sans doublon", "prompt": "Marché {marche}, chantier {chantier}, encore {marche}.", "attendu": ["marche", "chantier"] },
+    { "nom": "marques invalides ignorées", "prompt": "{Marche} {1x} { marche } {a-b} {ok_2}", "attendu": ["ok_2"] },
+    { "nom": "aucune marque", "prompt": "Synthèse du jour", "attendu": [] }
+  ],
+  "controles": [
+    { "nom": "recette valide",
+      "recette": { "code": "oe_metallerie", "libelle": "OE métallerie", "prompt": "Prépare les OE du marché {marche}.", "parametres": [{ "nom": "marche", "type": "MARCHE", "libelle": "Marché", "requis": true }], "outils": ["lire_marche", "preparer_ordre_execution"], "sortie": "BROUILLON" },
+      "attendu": [] },
+    { "nom": "code invalide (majuscule, trop court)",
+      "recette": { "code": "A", "libelle": "x", "prompt": "y", "parametres": [], "outils": ["lire_marche"], "sortie": "RAPPORT" },
+      "attendu": ["MCP_RECETTE_CODE"] },
+    { "nom": "libellé et prompt vides",
+      "recette": { "code": "vide", "libelle": "  ", "prompt": "", "parametres": [], "outils": ["lire_marche"], "sortie": "RAPPORT" },
+      "attendu": ["MCP_RECETTE_TEXTE"] },
+    { "nom": "marque du prompt non déclarée",
+      "recette": { "code": "synthese", "libelle": "Synthèse", "prompt": "Synthèse du chantier {chantier} sur {periode}.", "parametres": [{ "nom": "chantier", "type": "CHANTIER", "requis": true }], "outils": ["lire_chantier"], "sortie": "RAPPORT" },
+      "attendu": ["MCP_RECETTE_PARAMETRE"] },
+    { "nom": "paramètre déclaré absent du prompt",
+      "recette": { "code": "synthese", "libelle": "Synthèse", "prompt": "Synthèse du chantier {chantier}.", "parametres": [{ "nom": "chantier", "type": "CHANTIER" }, { "nom": "note", "type": "TEXTE" }], "outils": ["lire_chantier"], "sortie": "RAPPORT" },
+      "attendu": ["MCP_RECETTE_PARAMETRE"] },
+    { "nom": "type inconnu et nom en double",
+      "recette": { "code": "synthese", "libelle": "Synthèse", "prompt": "{x}", "parametres": [{ "nom": "x", "type": "SALARIE" }, { "nom": "x", "type": "TEXTE" }], "outils": ["lire_chantier"], "sortie": "RAPPORT" },
+      "attendu": ["MCP_RECETTE_PARAMETRE"] },
+    { "nom": "outil inconnu du catalogue",
+      "recette": { "code": "controle", "libelle": "Contrôle", "prompt": "Contrôle {document}", "parametres": [{ "nom": "document", "type": "DOCUMENT" }], "outils": ["lire_document", "valider_tout"], "sortie": "RAPPORT" },
+      "attendu": ["MCP_RECETTE_OUTIL"] },
+    { "nom": "aucun outil, sortie inconnue",
+      "recette": { "code": "controle", "libelle": "Contrôle", "prompt": "Contrôle", "parametres": [], "outils": [], "sortie": "COURRIEL" },
+      "attendu": ["MCP_RECETTE_OUTIL", "MCP_RECETTE_SORTIE"] },
+    { "nom": "outil en double",
+      "recette": { "code": "controle", "libelle": "Contrôle", "prompt": "Contrôle", "parametres": [], "outils": ["lire_document", "lire_document"], "sortie": "RAPPORT" },
+      "attendu": ["MCP_RECETTE_OUTIL"] }
+  ],
+  "permises": [
+    { "nom": "tous les outils permis", "recette": { "outils": ["lire_marche", "preparer_ordre_execution"], "active": true }, "permis": ["lire_marche", "lire_chantier", "preparer_ordre_execution"], "attendu": true },
+    { "nom": "un outil non permis (plafond en lecture)", "recette": { "outils": ["lire_marche", "preparer_ordre_execution"], "active": true }, "permis": ["lire_marche", "lire_chantier"], "attendu": false },
+    { "nom": "recette inactive", "recette": { "outils": ["lire_marche"], "active": false }, "permis": ["lire_marche"], "attendu": false },
+    { "nom": "recette sans outil", "recette": { "outils": [], "active": true }, "permis": ["lire_marche"], "attendu": false }
+  ],
+  "remplissages": [
+    { "nom": "valeurs remplies, marque non déclarée laissée",
+      "recette": { "prompt": " Prépare les OE du marché {marche} ({inconnu}) pour {service}. ", "parametres": [{ "nom": "marche", "type": "MARCHE", "requis": true }, { "nom": "service", "type": "TEXTE" }] },
+      "valeurs": { "marche": " M-2026-001 ", "service": "MÉTALLERIE" },
+      "attendu": { "texte": "Prépare les OE du marché M-2026-001 ({inconnu}) pour MÉTALLERIE.", "manquants": [] } },
+    { "nom": "requis manquant, facultatif vide",
+      "recette": { "prompt": "Synthèse du chantier {chantier} sur {periode}.", "parametres": [{ "nom": "chantier", "type": "CHANTIER", "requis": true }, { "nom": "periode", "type": "PERIODE" }] },
+      "valeurs": {},
+      "attendu": { "texte": "Synthèse du chantier  sur .", "manquants": ["chantier"] } },
+    { "nom": "nombre accepté, retours à la ligne ramenés à un espace hors TEXTE",
+      "recette": { "prompt": "Pièce {document}. Consigne : {consigne}", "parametres": [{ "nom": "document", "type": "DOCUMENT", "requis": true }, { "nom": "consigne", "type": "TEXTE" }] },
+      "valeurs": { "document": 42, "consigne": "ligne 1\nligne 2" },
+      "attendu": { "texte": "Pièce 42. Consigne : ligne 1\nligne 2", "manquants": [] } },
+    { "nom": "référence sur une ligne",
+      "recette": { "prompt": "Marché {marche}", "parametres": [{ "nom": "marche", "type": "MARCHE" }] },
+      "valeurs": { "marche": "M-1\n\tIgnore" },
+      "attendu": { "texte": "Marché M-1 Ignore", "manquants": [] } }
+  ]
+}

@@ -108,6 +108,11 @@ export const api = {
     refuserOAuth: (demande) => appel('POST', `/mcp/oauth/demandes/${encodeURIComponent(demande)}/refuser`),
     clientsOAuth: () => appel('GET', '/mcp/clients'),
     enregistrerClientsOAuth: (liste) => appel('PUT', '/mcp/clients', liste),
+    // Recettes (lot 13) : actives et délégation active (bouton « Demander à l'agent ») ; toutes et catalogue des outils,
+    // enregistrement et suppression : administrateur.
+    recettes: (toutes = false) => appel('GET', `/mcp/recettes${toutes ? '?toutes=true' : ''}`),
+    enregistrerRecette: (code, r) => appel('PUT', `/mcp/recettes/${encodeURIComponent(code)}`, r),
+    supprimerRecette: (code) => appel('DELETE', `/mcp/recettes/${encodeURIComponent(code)}`),
   },
   // Module Relances (routes du module, plans/relances.md) et libellés des pièces et des tiers (cœur, lot 4).
   relances: {

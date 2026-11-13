@@ -70,7 +70,9 @@
       "actualiser": "Actualiser le journal",
       "groupe_propositions": "Agents IA (propositions)",
       "accepter": "Accepter la proposition",
-      "refuser": "Refuser la proposition"
+      "refuser": "Refuser la proposition",
+      "groupe_recettes": "Agents IA (recettes)",
+      "nouvelle_recette": "Nouvelle recette"
     },
     "delegations": {
       "titre": "Mes délégations",
@@ -250,6 +252,69 @@
       "enregistrer": "Enregistrer",
       "aucun": "Aucun client OAuth autorisé : seuls les jetons d'agent (Mon compte › Agents) permettent de se connecter.",
       "enregistre": "Liste des clients enregistrée"
+    },
+    "recettes": {
+      "titre": "Recettes des agents",
+      "aide": "Prompts paramétrés proposés aux agents (liste des prompts du client MCP) et au bouton « Demander à l'agent » des fiches et des pièces. Une recette n'est proposée qu'à une délégation qui permet tous ses outils ; un agent ne peut jamais les modifier.",
+      "nouvelle": "Nouvelle recette",
+      "titre_nouvelle": "Nouvelle recette",
+      "titre_modifier": "Modifier la recette",
+      "code": "Code (minuscules, chiffres, « _ »)",
+      "libelle": "Libellé",
+      "description": "Description",
+      "prompt": "Prompt",
+      "prompt_aide": "Chaque marque {nom} du prompt est un paramètre ; son type (marché, chantier, pièce, période, texte) permet de préremplir la référence de l'élément depuis sa fiche.",
+      "parametres": "Paramètres",
+      "sans_parametre": "Aucun paramètre : ajoutez des marques {nom} dans le prompt.",
+      "parametre_nom": "Marque",
+      "parametre_type": "Type",
+      "parametre_libelle": "Libellé",
+      "parametre_requis": "Requis",
+      "outils": "Outils permis",
+      "outils_aide": "La recette n'est proposée qu'aux délégations qui permettent tous les outils cochés.",
+      "sortie": "Sortie attendue",
+      "active": "Active",
+      "fournie": "Fournie par l'application.",
+      "modifie": "modifiée le {{date}} par {{par}}",
+      "modifier": "Modifier",
+      "supprimer": "Supprimer",
+      "confirmer_suppression": "Supprimer la recette « {{libelle}} » ?",
+      "enregistrer": "Enregistrer",
+      "enregistree": "Recette enregistrée",
+      "aucune": "Aucune recette.",
+      "types": {
+        "MARCHE": "marché",
+        "CHANTIER": "chantier",
+        "DOCUMENT": "pièce",
+        "PERIODE": "période",
+        "TEXTE": "texte"
+      },
+      "sorties": {
+        "BROUILLON": "Brouillons",
+        "PROPOSITION": "Propositions à valider",
+        "RAPPORT": "Rapport (lecture seule)"
+      },
+      "erreurs": {
+        "MCP_RECETTE_CODE": "Code invalide : de 2 à 60 caractères, une minuscule puis minuscules, chiffres ou « _ ».",
+        "MCP_RECETTE_TEXTE": "Libellé et prompt obligatoires (200 et 4 000 caractères au plus).",
+        "MCP_RECETTE_PARAMETRE": "Paramètres invalides : chaque marque {nom} du prompt doit être déclarée, avec un type connu.",
+        "MCP_RECETTE_OUTIL": "Cochez au moins un outil du catalogue.",
+        "MCP_RECETTE_SORTIE": "Sortie attendue inconnue."
+      }
+    },
+    "demande": {
+      "bouton": "Demander à l'agent",
+      "bouton_aide": "Choisir une recette et copier le prompt prérempli avec la référence de cet élément, à coller dans votre agent IA (aucune action directe).",
+      "titre": "Demander à l'agent",
+      "element": "Élément : {{element}}",
+      "recette": "Recette",
+      "prompt": "Prompt obtenu",
+      "aide": "Le prompt est copié dans le presse-papiers : collez-le dans votre client (Claude Code, claude.ai…) connecté à l'application. L'agent agit ensuite dans la limite de sa délégation.",
+      "manquants": "Paramètres requis à renseigner : {{noms}}",
+      "copier": "Copier le prompt",
+      "ouvrir": "Copier et ouvrir le client",
+      "copie": "Prompt copié dans le presse-papiers",
+      "aucune": "Aucune recette n'est proposée pour cet élément."
     }
   }
 }
