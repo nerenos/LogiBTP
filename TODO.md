@@ -42,23 +42,35 @@ Analyses validées le 23/10/2026 : [ANALYSE-MODULE-MAIL.md](documentation/concep
   rafraîchissement rotatif, machines connues, double facteur par courriel, exclusion d'IP, identifiants API, deux clés
   (`.env`, données) ; profil par défaut = saisie mobile (A5 révisée) ; à reprendre par le Mail (comptes, boîtes,
   « À rapprocher ») et l'OAuth (reconnexion des connexions).
-- [ ] **Module MCP** (agents IA au nom d'un utilisateur, [plan](documentation/conception/plans/mcp.md), lots 0 à 6 faits
+- [ ] **Module MCP** (agents IA au nom d'un utilisateur, [plan](documentation/conception/plans/mcp.md), lots 0 à 7 faits
   le 13/11/2026 : audit des routes, contrats du socle, règles de délégation `modules/mcp`, plafond appliqué par les
   Droits, jetons délégués, point `/mcp`, délégations, journal, outils de lecture du cœur et garde-fous du BTP, activation
-  par société, liste blanche exacte, contrôles par identité bornés au plafond) : lots 7 à 14 (outils d'écriture,
-  propositions, écrans, OAuth 2.1). Restent :
+  par société, liste blanche exacte, contrôles par identité bornés au plafond, outils d'écriture des devis et origine
+  AGENT de l'historique des pièces) : lots 8 à 14 (ventilation, ordres, propositions, écrans, OAuth 2.1). Restent :
   - appel interne : HTTP local préféré, bascule sur HTTPS local quand l'installation redirige (certificat actif) ; dans ce
     cas le certificat de l'installation doit être reconnu par le conteneur de l'API (autorité LogiBTP), sinon prévoir une
     exception de `UseHttpsInstallation` pour la boucle locale (comme `/api/sante`) ;
   - notification au délégant (premier usage, alerte de quota : `alerte_quota` déjà noté au journal) et écran d'activation
     du module (`MODULE_FACULTATIF.MCP`, désactivé à la création, `db/308`) au lot 11 ; purge du journal à un an (Q11) par
     le planificateur ; outils PROPOSITION refusés jusqu'au lot 10 ;
-  - garde-fou COUTS sur les pièces d'achat : le prix d'achat y est le prix de la ligne (`lig_pu`, `lig_pv`…), non retiré
-    (seuls `lig_pa`, `lig_pr`, montants et coefficients le sont) : décider au lot 7 s'il faut masquer les prix des pièces
-    A et T sous COUTS ;
-  - outils dont le nœud est un parent (`documents`, `listes`) : classés par la portée du profil sur ce nœud même ; un profil
-    qui n'a de droits que sur `documents/V/…` ne les voit pas dans son catalogue (la route, elle, l'accepterait) : classer
-    par le sous-arbre au lot 7 si besoin ;
+  - garde-fou COUTS sur les pièces d'achat (décidé au lot 7) : `lire_document` retire tous les prix et montants d'une pièce
+    A ou T (`couts_masques`) ; reste `rechercher` sur une liste de pièces d'achat (montants des colonnes de la vue) : à
+    masquer par la restriction de la liste ou par colonne quand COUTS est actif ;
+  - outils de lecture dont le nœud est un parent (`documents`, `listes`) : classés par la portée du profil sur ce nœud même ;
+    un profil qui n'a de droits que sur `documents/V/…` ne les voit pas dans son catalogue (la route, elle, l'accepterait) ;
+    les outils d'écriture du lot 7 sont classés sur le nœud exact du type (`documents/V/V_DEVIS`, `documents/V/V_COMMANDE`) ;
+  - liste blanche du lot 7 : `PUT /api/documents/{id}` et `POST …/transformer` restent appelables par un agent hors des
+    outils (avec son jeton) ; leurs gardes sont celles du module Document (statut jamais repris du corps, prouvé par
+    `McpDocumentsBtpBaseTests` ; intermédiaire validé refusé sans VALIDER). Décider s'il faut, pour un agent, borner
+    `transformer` aux règles sans intermédiaire côté serveur (aujourd'hui : dans l'outil seulement) ;
+  - copie d'un devis : ses lignes gardent leur origine, donc son tiers est figé (`TIERS_FIGE`, aussi pour un humain) ;
+    l'outil `creer_devis` passe par la création avec contenu vers un autre tiers (sans lien COPIE) : décider si une copie
+    doit libérer le tiers (règle du module Document, `DocumentService.EnregistrerDans`, et `tiersFige` du client) ;
+  - `creer_devis` / `modifier_lignes` : code d'appel d'un élément sans préfixe quand le devis n'a pas de bibliothèque
+    (`ent_bib_id` vide : bibliothèque par défaut supposée) ; postes de pied et textes de la bibliothèque non insérés ;
+  - origine AGENT : seulement dans `document_historique` (module Document) ; les écritures SQL directes de la structure
+    (`Structure.cs`, consultations, stock) et les autres historiques (fiches, CRM, stock) restent à marquer quand leurs
+    outils viendront ; affichage « 🤖 via <client> » de l'historique et pastille de la pièce au lot 11 ;
   - adresse des lignes de `rechercher` : documents (`^[VATSE]_`) et fiches seulement ; autres types d'élément
     (GED, pointage, mouvement de stock…) sans adresse ;
   - garde-fou GED_CONFIDENTIEL : aucun outil GED encore (nœuds et clés à poser avec le premier outil de la GED).

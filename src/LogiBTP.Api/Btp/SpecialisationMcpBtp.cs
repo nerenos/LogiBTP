@@ -60,6 +60,43 @@ public sealed partial class SpecialisationMcpBtp : SpecialisationMcp
           "limite":{"type":"integer","minimum":1,"maximum":{{DesignationTiersBtp.LimiteMax}} } } }
         """);
 
+    /// <summary>Opérations de lignes (OperationsLignesBtp) : schéma commun de creer_devis et modifier_lignes.</summary>
+    private static readonly string SchemaOperations = $$"""
+        {"type":"array","maxItems":{{OperationsLignesBtp.OperationsMax}},"items":{"type":"object","required":["op"],"properties":{
+          "op":{"type":"string","enum":[{{string.Join(",", OperationsLignesBtp.Operations.Select(o => $"\"{o}\""))}}]},
+          "element_id":{"type":"integer","description":"ajouter : élément de la bibliothèque (article, ouvrage, ensemble)"},
+          "quantite":{"type":"number","description":"ajouter : quantité (1 par défaut)"},
+          "lig_id":{"type":"integer","description":"quantite, designation, remise, supprimer, deplacer : ligne visée"},
+          "valeur":{"type":["number","string"],"description":"quantite : nouvelle quantité ; designation : nouveau libellé (texte)"},
+          "pourcentage":{"type":"number","minimum":0,"exclusiveMaximum":100,"description":"remise : remise en %"},
+          "parent_id":{"type":"integer","description":"ajouter, deplacer : titre ou section qui reçoit la ligne (à la fin)"},
+          "apres_id":{"type":"integer","description":"ajouter, deplacer : placer après cette ligne (même parent)"} } } }
+        """;
+
+    private static readonly JsonElement SchemaCreerDevis = Schema($$"""
+        {"type":"object","properties":{
+          "source_id":{"type":"integer","description":"Devis à copier (ent_id)"},
+          "modele":{"type":"string","description":"Code du modèle de saisie (lister_modeles), si pas de devis source"},
+          "tiers_id":{"type":"integer","description":"Client désigné par designer_tiers (per_id)"},
+          "objet":{"type":"string"},
+          "operations":{{SchemaOperations}} } }
+        """);
+
+    private static readonly JsonElement SchemaModifierLignes = Schema($$"""
+        {"type":"object","required":["id","operations"],"properties":{
+          "id":{"type":"integer","description":"Devis brouillon (ent_id)"},
+          "version":{"type":"integer","description":"ent_version lue : refus 409 si le devis a changé depuis"},
+          "operations":{{SchemaOperations}} } }
+        """);
+
+    /// <summary>Routes d'une modification de lignes : verrou (état, prise, libération), lecture, enregistrement, définition du type, élément, avertissements.</summary>
+    private static readonly RouteOutil[] RoutesModification =
+    [
+        new("GET", McpDocumentsBtp.RouteVerrou), new("POST", McpDocumentsBtp.RouteVerrou), new("DELETE", McpDocumentsBtp.RouteVerrou),
+        new("GET", McpDocumentsBtp.RouteDocument), new("PUT", McpDocumentsBtp.RouteDocument), new("GET", McpDocumentsBtp.RouteDefinition),
+        new("GET", McpDocumentsBtp.RouteElement), new("GET", McpDocumentsBtp.RouteAvertissements), new("POST", McpDocumentsBtp.RouteAvecContenu),
+    ];
+
     /// <summary>Clés de coûts d'un élément de bibliothèque rendu par la recherche (ElementRechercheDto).</summary>
     private static readonly string[] CoutsBibliotheque = ["pa", "pr", "coef_fg", "coef_benef"];
 
@@ -72,9 +109,10 @@ public sealed partial class SpecialisationMcpBtp : SpecialisationMcp
         {
             ParametreLimite = "taille", LimiteMax = TaillePageMax, CleListe = "lignes", TypeElement = "liste", CleIdentifiant = "_id",
         },
-        new("lire_document", "mcp_btp.outils.lire_document", SchemaId, "GET", "/api/documents/{id}", "documents", ActionsDroits.Consulter, ClasseOutil.Lecture)
+        // Lot 7 : pièce d'achat sous COUTS, prix et montants retirés (outil composé : type de la pièce lu).
+        new("lire_document", "mcp_btp.outils.lire_document", SchemaId, "GET", McpDocumentsBtp.RouteDocument, "documents", ActionsDroits.Consulter, ClasseOutil.Lecture)
         {
-            TypeElement = "document",
+            TypeElement = "document", Routes = [new("GET", McpDocumentsBtp.RouteTypes)], Execution = McpDocumentsBtp.LireDocumentAsync,
         },
         new("lire_marche", "mcp_btp.outils.lire_marche", SchemaId, "GET", $"/api/fiches/{TypesFiche.Marche}/{{id}}", $"fiches/{TypesFiche.Marche}",
             ActionsDroits.Consulter, ClasseOutil.Lecture) { TypeElement = $"fiche/{TypesFiche.Marche}", CleIdentifiant = "id" },
@@ -98,6 +136,24 @@ public sealed partial class SpecialisationMcpBtp : SpecialisationMcp
         new("designer_tiers", "mcp_btp.outils.designer_tiers", SchemaTiers, "GET", "/api/designation/tiers", "documents", ActionsDroits.Consulter, ClasseOutil.Lecture)
         {
             ParametreLimite = "limite", LimiteMax = DesignationTiersBtp.LimiteMax, TypeElement = $"fiche/{TypesFiche.Personne}", CleIdentifiant = "per_id",
+        },
+        // Lot 7 : écritures des devis, toujours en brouillon (outils composés, McpDocumentsBtp ; liste blanche = leurs routes d'écriture).
+        new("creer_devis", "mcp_btp.outils.creer_devis", SchemaCreerDevis, "POST", McpDocumentsBtp.RouteAvecContenu, McpDocumentsBtp.NoeudDevis,
+            ActionsDroits.Creer, ClasseOutil.Brouillon)
+        {
+            TypeElement = "document", CleIdentifiant = "ent_id", Execution = McpDocumentsBtp.CreerDevisAsync,
+            Routes = [new("POST", McpDocumentsBtp.RouteCopie), .. RoutesModification],
+        },
+        new("modifier_lignes", "mcp_btp.outils.modifier_lignes", SchemaModifierLignes, "PUT", McpDocumentsBtp.RouteDocument, McpDocumentsBtp.NoeudDevis,
+            ActionsDroits.Modifier, ClasseOutil.Brouillon)
+        {
+            TypeElement = "document", CleIdentifiant = "ent_id", Execution = McpDocumentsBtp.ModifierLignesAsync, Routes = RoutesModification,
+        },
+        new("transformer", "mcp_btp.outils.transformer", SchemaId, "POST", McpDocumentsBtp.RouteTransformer, McpDocumentsBtp.NoeudCommande,
+            ActionsDroits.Creer, ClasseOutil.Brouillon)
+        {
+            TypeElement = "document", CleIdentifiant = "ent_id", Execution = McpDocumentsBtp.TransformerAsync,
+            Routes = [new("GET", McpDocumentsBtp.RouteDocument), new("GET", McpDocumentsBtp.RouteDefinition), new("GET", McpDocumentsBtp.RouteAvertissements)],
         },
     ];
 
@@ -188,6 +244,7 @@ public sealed partial class SpecialisationMcpBtp : SpecialisationMcp
     {
         "rechercher" => AdresseElement(Texte(element["_type"]), Texte(element["_id"])),
         "lire_document" => element["document"]?["ent_id"] is { } ent && long.TryParse(Texte(ent), out var id) ? AdressesApp.UrlDocument(id) : null,
+        "creer_devis" or "modifier_lignes" or "transformer" => long.TryParse(Texte(element["ent_id"]), out var p) && p > 0 ? AdressesApp.UrlDocument(p) : null,
         "lire_marche" => Texte(element["id"]) is { Length: > 0 } m ? AdressesApp.UrlFiche(TypesFiche.Marche, m) : null,
         "lire_chantier" => Texte(element["id"]) is { Length: > 0 } c ? AdressesApp.UrlFiche(TypesFiche.Chantier, c) : null,
         "rechercher_bibliotheque" => Texte(element["id"]) is { Length: > 0 } e ? AdressesApp.UrlFiche(TypesFiche.Element, e) : null,

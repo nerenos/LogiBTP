@@ -302,6 +302,19 @@ export const CIBLE_EREPORTING = Object.freeze({
   INTERNATIONAL: 'INTERNATIONAL',
 });
 
+/** Erreurs des outils d'écriture des devis pour les agents IA (module MCP, lot 7 : Btp/McpDocumentsBtp.cs). */
+export const ERREUR_MCP_BTP = Object.freeze({
+  TYPE_NON_PERMIS: 'MCP_TYPE_NON_PERMIS',
+  OPERATION: 'MCP_OPERATION_INVALIDE',
+  LIGNE: 'MCP_LIGNE_INVALIDE',
+  ELEMENT: 'MCP_ELEMENT_NON_PERMIS',
+  VERROU: 'MCP_VERROU',
+  VERSION: 'MCP_VERSION',
+  ENTETE_MODIFIEE: 'MCP_ENTETE_MODIFIEE',
+  MODELE: 'MCP_MODELE_DOCUMENT',
+  SOURCE: 'MCP_SOURCE_OU_MODELE',
+});
+
 /** Erreurs de l'e-reporting (lot 28). */
 export const ERREUR_EREPORTING = Object.freeze({
   PARAMETRES: 'EREPORTING_PARAMETRES',

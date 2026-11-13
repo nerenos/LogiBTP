@@ -31,6 +31,8 @@ public static class ErreurMcp
     public const string McpParametreInvalide = "MCP_PARAMETRE_INVALIDE";
     // Module désactivé pour la société (lot 6) : point /mcp refusé, jetons délégués sans plafond.
     public const string McpModuleInactif = "MCP_MODULE_INACTIF";
+    // Outil composé (lot 7) : appel d'une route que l'outil n'a pas déclarée (liste blanche exacte de l'outil).
+    public const string McpRouteNonDeclaree = "MCP_ROUTE_NON_DECLAREE";
 }
 
 /// <summary>Statut d'un appel d'outil au journal des agents (agent_journal.ajo_statut).</summary>

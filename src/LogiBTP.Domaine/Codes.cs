@@ -342,6 +342,29 @@ public static class CiblesEreporting
     public const string International = "INTERNATIONAL";
 }
 
+/// <summary>Erreurs des outils d'écriture des devis pour les agents IA (module MCP, lot 7 : Btp/McpDocumentsBtp.cs).</summary>
+public static class ErreursMcpBtp
+{
+    /// <summary>Pièce d'un autre type que celui de l'outil (devis seulement ; transformation : devis → commande seulement).</summary>
+    public const string TypeNonPermis = "MCP_TYPE_NON_PERMIS";
+    /// <summary>Opération de lignes inconnue ou incomplète (valeur manquante, remise hors de 0 à 100 %…).</summary>
+    public const string Operation = "MCP_OPERATION_INVALIDE";
+    /// <summary>Ligne désignée absente du document, ou qui n'accepte pas l'opération (quantité d'un titre, parent qui n'est pas une tranche…).</summary>
+    public const string Ligne = "MCP_LIGNE_INVALIDE";
+    /// <summary>Élément de bibliothèque d'un type non inséré par l'agent (poste de pied, texte) ou sans composition.</summary>
+    public const string Element = "MCP_ELEMENT_NON_PERMIS";
+    /// <summary>Document en cours de modification par un autre utilisateur (verrou).</summary>
+    public const string Verrou = "MCP_VERROU";
+    /// <summary>Version lue par l'agent dépassée : le document a été modifié entre-temps (409).</summary>
+    public const string Version = "MCP_VERSION";
+    /// <summary>Statut, numéro, indice ou verrouillage changés par l'enregistrement (jamais par un agent).</summary>
+    public const string EnteteModifiee = "MCP_ENTETE_MODIFIEE";
+    /// <summary>Modèle de saisie inconnu ou inactif.</summary>
+    public const string Modele = "MCP_MODELE_DOCUMENT";
+    /// <summary>Création : un devis source ou un modèle, pas les deux.</summary>
+    public const string Source = "MCP_SOURCE_OU_MODELE";
+}
+
 /// <summary>Erreurs de l'e-reporting (lot 28).</summary>
 public static class ErreursEreporting
 {

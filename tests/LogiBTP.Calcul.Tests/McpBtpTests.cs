@@ -119,10 +119,11 @@ public class McpBtpTests
     [Fact]
     public void Outils_de_lecture_declares_dans_les_droits_avec_description_et_parametres()
     {
+        var lecture = Specialisation.Outils.Where(o => o.Classe == ClasseOutil.Lecture).ToList();
         Assert.Equal(["rechercher", "lire_document", "lire_marche", "lire_chantier", "rechercher_bibliotheque", "lire_stock", "lister_modeles", "designer_tiers"],
-            Specialisation.Outils.Select(o => o.Nom));
+            lecture.Select(o => o.Nom));
         var routes = new SpecialisationDroitsBtp().Routes;
-        foreach (var o in Specialisation.Outils)
+        foreach (var o in lecture)
         {
             Assert.Equal(ClasseOutil.Lecture, o.Classe);
             Assert.Equal(ActionsDroits.Consulter, o.Action);

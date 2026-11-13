@@ -42,6 +42,78 @@ public sealed record OutilMcp(string Nom, string Description, JsonElement Schema
 
     /// <summary>Clé de l'identifiant d'un élément de la réponse, pour le journal (« ent_id »…).</summary>
     public string? CleIdentifiant { get; init; }
+
+    /// <summary>
+    /// Outil composé : routes appelées en plus de <see cref="Route"/> par <see cref="Execution"/> (lecture ou écriture).
+    /// Les écritures entrent dans la liste blanche du plafond ; toute autre route est refusée à l'exécution
+    /// (<see cref="ErreurMcp.McpRouteNonDeclaree"/>).
+    /// </summary>
+    public IReadOnlyList<RouteOutil> Routes { get; init; } = [];
+
+    /// <summary>
+    /// Exécution composée (plusieurs appels internes : verrou, lecture, enregistrement…) à la place de l'appel unique de
+    /// <see cref="Route"/> ; la réponse rendue suit le même chemin (filtre des clés sensibles, adresse, journal). Null :
+    /// appel unique.
+    /// </summary>
+    public Func<ExecutionOutil, CancellationToken, Task<ReponseInterne>>? Execution { get; init; }
+
+    /// <summary>Routes que l'outil peut appeler : <see cref="Route"/> puis <see cref="Routes"/>.</summary>
+    public IEnumerable<RouteOutil> ToutesRoutes => Routes.Prepend(new RouteOutil(Methode, Route));
+}
+
+/// <summary>Route appelée par un outil composé : méthode HTTP et gabarit /api (« {nom} » : un segment quelconque).</summary>
+public sealed record RouteOutil(string Methode, string Route)
+{
+    /// <summary>Le chemin (sans sa requête) suit le gabarit, segment par segment (paramètre : segment non vide).</summary>
+    public bool Couvre(string methode, string chemin)
+    {
+        if (!string.Equals(Methode, methode, StringComparison.OrdinalIgnoreCase)) return false;
+        var c = chemin.Split('?', 2)[0].Trim('/').Split('/');
+        var g = Route.Trim('/').Split('/');
+        if (c.Length != g.Length) return false;
+        for (var i = 0; i < g.Length; i++)
+        {
+            if (g[i].StartsWith('{') ? c[i].Length == 0 : !string.Equals(g[i], c[i], StringComparison.OrdinalIgnoreCase)) return false;
+        }
+        return true;
+    }
+}
+
+/// <summary>Appel d'une route non déclarée par un outil composé (refus 403 <see cref="ErreurMcp.McpRouteNonDeclaree"/>).</summary>
+public sealed class RouteNonDeclareeException(string methode, string chemin) : Exception($"Route non déclarée par l'outil : {methode} {chemin}")
+{
+    public string Methode { get; } = methode;
+    public string Chemin { get; } = chemin;
+}
+
+/// <summary>
+/// Contexte d'exécution d'un outil composé : arguments déclarés par le schéma, garde-fous actifs de la délégation, appel
+/// interne borné aux routes déclarées par l'outil (même jeton délégué, même hôte), appels tracés pour le journal.
+/// </summary>
+public sealed class ExecutionOutil(OutilMcp outil, IReadOnlyDictionary<string, JsonNode?> arguments, IReadOnlyList<string> gardesFous,
+    Func<string, string, string?, CancellationToken, Task<ReponseInterne>> envoyer)
+{
+    private readonly List<JsonObject> appels = [];
+
+    public OutilMcp Outil { get; } = outil;
+
+    /// <summary>Arguments de l'appel, limités aux propriétés déclarées par le schéma de l'outil.</summary>
+    public IReadOnlyDictionary<string, JsonNode?> Arguments { get; } = arguments;
+
+    /// <summary>Garde-fous actifs de la délégation (COUTS, TIERS…).</summary>
+    public IReadOnlyList<string> GardesFous { get; } = gardesFous;
+
+    /// <summary>Appels faits (méthode, gabarit, statut), pour le journal.</summary>
+    public IReadOnlyList<JsonObject> Appels => appels;
+
+    /// <summary>Appel interne d'une route déclarée par l'outil ; toute autre route : <see cref="RouteNonDeclareeException"/>.</summary>
+    public async Task<ReponseInterne> EnvoyerAsync(string methode, string chemin, JsonNode? corps, CancellationToken ct)
+    {
+        var route = Outil.ToutesRoutes.FirstOrDefault(r => r.Couvre(methode, chemin)) ?? throw new RouteNonDeclareeException(methode, chemin);
+        var reponse = await envoyer(methode.ToUpperInvariant(), chemin, corps?.ToJsonString(), ct);
+        appels.Add(new JsonObject { ["methode"] = route.Methode.ToUpperInvariant(), ["route"] = route.Route, ["statut"] = reponse.Statut });
+        return reponse;
+    }
 }
 
 /// <summary>

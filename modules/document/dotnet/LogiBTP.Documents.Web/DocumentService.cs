@@ -201,7 +201,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
 
     private async Task Historiser(TComplet avant, string action, Utilisateur u, CancellationToken ct, string? motif = null)
     {
-        db.Historiques.Add(new DocumentHistorique
+        var historique = new DocumentHistorique
         {
             HisMotif = motif,
             HisEntId = avant.Document.EntId,
@@ -210,8 +210,11 @@ public class DocumentService<TDoc, TLigne, TComplet>(
             HisDate = DateTimeOffset.UtcNow,
             HisUtilisateur = u.Code,
             HisInstantane = PersistanceDocument<TDoc, TLigne, TComplet>.Instantane(avant),
-        });
+        };
+        db.Historiques.Add(historique);
         await db.SaveChangesAsync(ct);
+        // Origine de l'utilisateur de la requête (agent IA…) : colonnes du cœur, par la spécialisation.
+        await specialisation.ApresHistoriqueAsync(db, historique, u, ct);
     }
 
     // ------------------------------------------------------------------ calcul

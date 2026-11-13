@@ -86,16 +86,24 @@ public sealed class PlafondMcp(McpDbContext db, SpecialisationMcp specialisation
         return p;
     }
 
+    /// <summary>
+    /// Liste blanche du plafond : routes d'écriture des outils d'écriture (outil composé : toutes ses routes d'écriture
+    /// déclarées), jamais /api/mcp, /api/auth, /api/droits.
+    /// </summary>
+    public static IReadOnlyList<RouteAgent> RoutesEcriture(SpecialisationMcp specialisation) => specialisation.Outils
+        .Where(o => o.Classe is not (ClasseOutil.Interdit or ClasseOutil.Lecture))
+        .SelectMany(o => o.ToutesRoutes)
+        .Where(r => !HttpMethods.IsGet(r.Methode) && !HttpMethods.IsHead(r.Methode))
+        .Where(r => !Reservees.Any(x => r.Route == x || r.Route.StartsWith(x + "/", StringComparison.OrdinalIgnoreCase)))
+        .Select(r => new RouteAgent(r.Methode.ToUpperInvariant(), r.Route)).Distinct().ToList();
+
     private async Task<PlafondAgent?> LirePlafondAsync(string delegation, string profil, CancellationToken ct)
     {
         var d = await LecturesMcp.ActiveAsync(db, delegation, ct);
         if (d is null) return null;
         var levees = string.IsNullOrEmpty(profil) ? LeveesProfil.Defaut : await LecturesMcp.LeveesAsync(db, profil, ct);
         var actifs = ReglesDelegation.GardesFousActifs(levees.Levables, LecturesMcp.Liste(d.MdeLeves));
-        var routes = specialisation.Outils
-            .Where(o => !HttpMethods.IsGet(o.Methode) && !HttpMethods.IsHead(o.Methode) && o.Classe is not (ClasseOutil.Interdit or ClasseOutil.Lecture))
-            .Where(o => !Reservees.Any(r => o.Route == r || o.Route.StartsWith(r + "/", StringComparison.OrdinalIgnoreCase)))
-            .Select(o => new RouteAgent(o.Methode.ToUpperInvariant(), o.Route)).Distinct().ToList();
+        var routes = RoutesEcriture(specialisation);
         return new PlafondAgent(d.MdeCode, d.MdeModele, LecturesMcp.Plafond(d).Actions ?? new Dictionary<string, IReadOnlyList<string>>(),
             d.MdePortee ?? PorteesDroits.Tout, actifs, routes, LecturesMcp.Interdits(specialisation, actifs));
     }

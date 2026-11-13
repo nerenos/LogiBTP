@@ -27,6 +27,8 @@ export const ERREUR_MCP = Object.freeze({
   MCP_PARAMETRE_INVALIDE: 'MCP_PARAMETRE_INVALIDE',
   // Module désactivé pour la société (lot 6) : point /mcp refusé, jetons délégués sans plafond.
   MCP_MODULE_INACTIF: 'MCP_MODULE_INACTIF',
+  // Outil composé (lot 7) : appel d'une route que l'outil n'a pas déclarée (liste blanche exacte de l'outil).
+  MCP_ROUTE_NON_DECLAREE: 'MCP_ROUTE_NON_DECLAREE',
 });
 
 /** Statut d'un appel d'outil au journal des agents (agent_journal.ajo_statut). */

@@ -102,7 +102,8 @@ public sealed class ServiceMcp(McpDbContext db, SpecialisationMcp specialisation
 
     private static string Classer(OutilMcp o, Evaluation e)
     {
-        if (o.Classe == ClasseOutil.Interdit || Reservees.Any(r => o.Route == r || o.Route.StartsWith(r + "/", StringComparison.OrdinalIgnoreCase)))
+        if (o.Classe == ClasseOutil.Interdit
+            || o.ToutesRoutes.Any(x => Reservees.Any(r => x.Route == r || x.Route.StartsWith(r + "/", StringComparison.OrdinalIgnoreCase))))
             return ClasseOutil.Interdit;
         return ReglesDelegation.ClasserOutil(new OutilAgent(o.Noeud, o.Action, o.Envoi), e.Profil, e.Plafond, e.Actifs, e.Options);
     }
@@ -195,10 +196,30 @@ public sealed class ServiceMcp(McpDbContext db, SpecialisationMcp specialisation
         if (outil.ParametreLimite is { } pl && outil.LimiteMax is int max && args.TryGetValue(pl, out var lv) && lv is JsonValue lj && lj.TryGetValue<int>(out var ln) && ln > max)
             args[pl] = max;
 
-        if (!Requete(outil, args, out var chemin, out var corps, out var manquant))
-            return Refus(ErreurMcp.McpOutilParametre, StatutAppelAgent.Refus, 422, manquant);
-        var reponse = await appel.EnvoyerAsync(new RequeteInterne(outil.Methode.ToUpperInvariant(), chemin, corps, ctx.Hote, ctx.Authorization), ct);
-        journal.AjoRoutes = new JsonArray(new JsonObject { ["methode"] = outil.Methode.ToUpperInvariant(), ["route"] = outil.Route, ["statut"] = reponse.Statut }).ToJsonString();
+        ReponseInterne reponse;
+        if (outil.Execution is { } execution)
+        {
+            // Outil composé (verrou, lecture, enregistrement…) : routes bornées à celles que l'outil déclare.
+            var contexte = new ExecutionOutil(outil, Declares(outil, args), e.Actifs, (m, chemin, corps, jeton) =>
+                appel.EnvoyerAsync(new RequeteInterne(m, chemin, corps, ctx.Hote, ctx.Authorization), jeton));
+            try
+            {
+                reponse = await execution(contexte, ct);
+            }
+            catch (RouteNonDeclareeException ex)
+            {
+                journal.AjoRoutes = new JsonArray([.. contexte.Appels.Select(a => (JsonNode?)a.DeepClone())]).ToJsonString();
+                return Refus(ErreurMcp.McpRouteNonDeclaree, StatutAppelAgent.Refus, 403, new JsonObject { ["methode"] = ex.Methode, ["route"] = ex.Chemin.Split('?')[0] });
+            }
+            journal.AjoRoutes = new JsonArray([.. contexte.Appels.Select(a => (JsonNode?)a.DeepClone())]).ToJsonString();
+        }
+        else
+        {
+            if (!Requete(outil, args, out var chemin, out var corps, out var manquant))
+                return Refus(ErreurMcp.McpOutilParametre, StatutAppelAgent.Refus, 422, manquant);
+            reponse = await appel.EnvoyerAsync(new RequeteInterne(outil.Methode.ToUpperInvariant(), chemin, corps, ctx.Hote, ctx.Authorization), ct);
+            journal.AjoRoutes = new JsonArray(new JsonObject { ["methode"] = outil.Methode.ToUpperInvariant(), ["route"] = outil.Route, ["statut"] = reponse.Statut }).ToJsonString();
+        }
 
         JsonNode? donnees;
         try { donnees = string.IsNullOrWhiteSpace(reponse.Corps) ? null : JsonNode.Parse(reponse.Corps); }
@@ -266,9 +287,7 @@ public sealed class ServiceMcp(McpDbContext db, SpecialisationMcp specialisation
     /// </summary>
     public static bool Requete(OutilMcp outil, IReadOnlyDictionary<string, JsonNode?> args, out string chemin, out string? corps, out JsonNode? manquant)
     {
-        var declares = outil.Schema.ValueKind == JsonValueKind.Object && outil.Schema.TryGetProperty("properties", out var proprietes)
-            && proprietes.ValueKind == JsonValueKind.Object ? proprietes.EnumerateObject().Select(p => p.Name).ToHashSet(StringComparer.Ordinal) : null;
-        var restants = args.Where(kv => declares is null || declares.Contains(kv.Key)).ToDictionary(kv => kv.Key, kv => kv.Value);
+        var restants = Declares(outil, args);
         var sb = new StringBuilder();
         manquant = null;
         var route = outil.Route;
@@ -303,6 +322,14 @@ public sealed class ServiceMcp(McpDbContext db, SpecialisationMcp specialisation
         }
         chemin = sb.ToString();
         return true;
+    }
+
+    /// <summary>Arguments déclarés par le schéma de l'outil (schéma sans « properties » : tous).</summary>
+    public static Dictionary<string, JsonNode?> Declares(OutilMcp outil, IReadOnlyDictionary<string, JsonNode?> args)
+    {
+        var declares = outil.Schema.ValueKind == JsonValueKind.Object && outil.Schema.TryGetProperty("properties", out var proprietes)
+            && proprietes.ValueKind == JsonValueKind.Object ? proprietes.EnumerateObject().Select(p => p.Name).ToHashSet(StringComparer.Ordinal) : null;
+        return args.Where(kv => declares is null || declares.Contains(kv.Key)).ToDictionary(kv => kv.Key, kv => kv.Value);
     }
 
     private static string Texte(JsonNode n) => n is JsonValue v && v.TryGetValue<string>(out var s) ? s : n.ToJsonString();

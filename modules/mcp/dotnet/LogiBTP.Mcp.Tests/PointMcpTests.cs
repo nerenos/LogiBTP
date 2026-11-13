@@ -47,6 +47,42 @@ public class ReglesPointMcpTests
     }
 
     [Fact]
+    public async Task Outil_compose_routes_declarees_seules_et_liste_blanche()
+    {
+        var route = new RouteOutil("PUT", "/api/documents/{id}");
+        Assert.True(route.Couvre("put", "/api/documents/12?x=1"));
+        Assert.False(route.Couvre("PUT", "/api/documents/12/valider"));
+        Assert.False(route.Couvre("POST", "/api/documents/12"));
+        Assert.False(route.Couvre("PUT", "/api/documents/"));
+
+        var outil = new OutilMcp("modifier", "c", SchemaVide, "PUT", "/api/documents/{id}", "documents", ActionsDroits.Modifier, ClasseOutil.Brouillon)
+        {
+            Routes = [new("GET", "/api/documents/{id}"), new("POST", "/api/documents/{id}/verrou"), new("POST", "/api/mcp/delegations")],
+        };
+        var appels = new List<string>();
+        var x = new ExecutionOutil(outil, new Dictionary<string, JsonNode?>(), [GardeFou.Couts], (m, c, _, _) =>
+        {
+            appels.Add($"{m} {c}");
+            return Task.FromResult(new ReponseInterne(200, "{}"));
+        });
+        await x.EnvoyerAsync("get", "/api/documents/3", null, default);
+        await Assert.ThrowsAsync<RouteNonDeclareeException>(() => x.EnvoyerAsync("POST", "/api/documents/3/valider", null, default));
+        Assert.Equal(["GET /api/documents/3"], appels);
+        Assert.Equal("/api/documents/{id}", x.Appels.Single()["route"]!.GetValue<string>());
+        Assert.Equal([GardeFou.Couts], x.GardesFous);
+
+        // Liste blanche : routes d'écriture de l'outil composé, jamais /api/mcp ; outil de lecture : aucune.
+        var specialisation = new SpecialisationOutils([outil, new("lire", "c", SchemaVide, "POST", "/api/listes/lot", "listes", ActionsDroits.Consulter, ClasseOutil.Lecture)]);
+        Assert.Equal(["POST /api/documents/{id}/verrou", "PUT /api/documents/{id}"],
+            PlafondMcp.RoutesEcriture(specialisation).Select(r => $"{r.Methode} {r.Gabarit}").Order(StringComparer.Ordinal));
+    }
+
+    private sealed class SpecialisationOutils(IReadOnlyList<OutilMcp> outils) : SpecialisationMcp
+    {
+        public override IReadOnlyList<OutilMcp> Outils => outils;
+    }
+
+    [Fact]
     public void Requete_interne_route_requete_et_corps()
     {
         var get = new OutilMcp("lire", "c", SchemaVide, "GET", "/api/documents/{id:long}/lignes", "documents", ActionsDroits.Consulter, ClasseOutil.Lecture);

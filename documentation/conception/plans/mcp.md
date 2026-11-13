@@ -23,7 +23,7 @@
 | 4 | Jetons délégués | `modules/authentification` | 1 | FAIT (13/11/2026) |
 | 5 | Point `/mcp`, catalogue d'outils, appel interne, journal | `modules/mcp` | 2, 4 | FAIT (13/11/2026) |
 | 6 | Outils de lecture du cœur, garde-fous du BTP | cœur | 3, 5 | FAIT (13/11/2026) |
-| 7 | Outils d'écriture des devis, origine des écritures | cœur | 6 | A FAIRE |
+| 7 | Outils d'écriture des devis, origine des écritures | cœur | 6 | FAIT (13/11/2026) |
 | 8 | Règle de ventilation d'une demande et réappro sous le mini | `modules/stock` | — | A FAIRE |
 | 9 | Ordres d'exécution filtrés et demandes d'appro ventilées | cœur | 7, 8 | A FAIRE |
 | 10 | File des propositions | `modules/mcp` + cœur | 5 | A FAIRE |
@@ -215,6 +215,30 @@ Hors plan (Q13) : agent hébergé (automatisations planifiées, panneau intégr�
   commande, brouillon) ; changement de statut refusé ; origine AGENT et délégation recopiées dans
   `document_historique` (colonnes d'origine) ; réponse : numéro, totaux recalculés, avertissements, lien.
 - **Critère de fin** : test : devis brouillon créé depuis un modèle, recalculé par le serveur, jamais validé.
+- **Réalisé** (13/11/2026) : module MCP : **outils composés** (`OutilMcp.Routes` + `Execution` ; `ExecutionOutil` : arguments déclarés,
+  garde-fous actifs, `EnvoyerAsync` borné aux routes déclarées par l'outil, sinon 403 `MCP_ROUTE_NON_DECLAREE`, appels au journal ;
+  `RouteOutil.Couvre`) ; liste blanche = routes d'écriture de tous les outils d'écriture (`PlafondMcp.RoutesEcriture`). Cœur :
+  `Btp/McpDocumentsBtp.cs` et `Btp/OperationsLignesBtp.cs` ; outils BROUILLON `creer_devis` (nœud `documents/V/V_DEVIS`, CREER :
+  modèle de saisie → `POST /api/documents/avec-contenu` en une fois ; devis source → `POST …/copie` puis modification ; vers un autre
+  tiers que celui du source : création avec le contenu du devis, le tiers d'une copie étant figé par ses lignes d'origine ; les
+  opérations désignent alors les lignes du devis source, traduites), `modifier_lignes` (MODIFIER : refus si la pièce est ouverte en
+  modification, même par le délégant — `GET …/verrou` —, verrou pris et rendu, lecture, `version` facultative de l'agent → 409
+  `MCP_VERSION`, opérations ajouter (article : unité de vente, PA converti, coefficients, données techniques, lien ; ouvrage et ensemble :
+  composition renumérotée avec métrés et variables ; taux du titre, du document ou par défaut), quantite, designation, remise (%),
+  supprimer (sous-arbre et compléments), deplacer (ligne ou chapitre, jamais une composante, ni dans son propre contenu), `PUT` complet
+  avec la version lue, statut / verrouillage / numéro / indice contrôlés inchangés), `transformer` (nœud `documents/V/V_COMMANDE`, CREER :
+  devis → commande seulement, refus d'une règle à type intermédiaire) ; réponse : identifiant, numéro, type, statut, version, totaux du
+  serveur, avertissements (enregistrement + `GET …/avertissements?action=VALIDER`), lignes résumées, adresse absolue. Liste blanche
+  exacte : `POST /api/documents/avec-contenu`, `POST …/{id}/copie`, `POST|DELETE …/{id}/verrou`, `PUT /api/documents/{id}`,
+  `POST …/{id}/transformer`. `lire_document` composé : pièce d'achat ou de sous-traitance sous COUTS, prix et montants retirés
+  (`couts_masques`). Origine : `db/309_mcp_origine.sql` (rejouable, manifeste) `his_origine`, `his_delegation`, `his_client` ; module
+  Document : point d'accroche générique `SpecialisationDocument.ApresHistoriqueAsync` (après chaque ligne d'historique, utilisateur de la
+  requête) ; cœur : AGENT posé quand `Utilisateur.Agent` est présent. Codes `ERREUR_MCP_BTP` ↔ `ErreursMcpBtp`, `MCP_ROUTE_NON_DECLAREE`.
+  Tests `McpDocumentsBtpTests` (opérations, enchaînement des routes, liste blanche), `McpDocumentsBtpBaseTests` (`LOGIBTP_TEST_PG` :
+  modèle, copie, autre tiers, modification recalculée, PUT de statut sans effet, validation de l'agent 403, historique AGENT,
+  transformation en commande brouillon), `ReglesPointMcpTests`. Choix : le serveur garde le PUT et la transformation dans la liste
+  blanche (un agent peut les appeler hors outil) ; ses gardes restent celles du module Document (statut jamais repris du corps,
+  validation d'un intermédiaire refusée sans VALIDER).
 
 ## Lot 8 : règle de ventilation et réappro sous le mini
 
