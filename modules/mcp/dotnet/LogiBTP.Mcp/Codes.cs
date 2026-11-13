@@ -33,6 +33,12 @@ public static class ErreurMcp
     public const string McpModuleInactif = "MCP_MODULE_INACTIF";
     // Outil composé (lot 7) : appel d'une route que l'outil n'a pas déclarée (liste blanche exacte de l'outil).
     public const string McpRouteNonDeclaree = "MCP_ROUTE_NON_DECLAREE";
+    // File des propositions (lot 10) : proposition déjà traitée, échue, refus sans motif, action sans exécuteur, contenu corrigé invalide.
+    public const string McpPropositionClose = "MCP_PROPOSITION_CLOSE";
+    public const string McpPropositionEchue = "MCP_PROPOSITION_ECHUE";
+    public const string McpMotifRequis = "MCP_MOTIF_REQUIS";
+    public const string McpExecuteurInconnu = "MCP_EXECUTEUR_INCONNU";
+    public const string McpContenuInvalide = "MCP_CONTENU_INVALIDE";
 }
 
 /// <summary>Statut d'un appel d'outil au journal des agents (agent_journal.ajo_statut).</summary>
@@ -42,4 +48,22 @@ public static class StatutAppelAgent
     public const string Refus = "REFUS";
     public const string Quota = "QUOTA";
     public const string Erreur = "ERREUR";
+}
+
+/// <summary>État d'une proposition d'agent (mcp_proposition.mpr_etat) ; ECHUE : en attente au-delà de son échéance.</summary>
+public static class EtatProposition
+{
+    public const string EnAttente = "EN_ATTENTE";
+    public const string Acceptee = "ACCEPTEE";
+    public const string Refusee = "REFUSEE";
+    public const string Annulee = "ANNULEE";
+    public const string Echue = "ECHUE";
+}
+
+/// <summary>Décision d'un humain sur une proposition : accepter (exécution sous son identité), corriger le contenu, refuser avec motif.</summary>
+public static class DecisionProposition
+{
+    public const string Accepter = "ACCEPTER";
+    public const string Corriger = "CORRIGER";
+    public const string Refuser = "REFUSER";
 }

@@ -13,6 +13,8 @@ public class CodesTests
     [InlineData("CLASSE_OUTIL", typeof(ClasseOutil))]
     [InlineData("ERREUR_MCP", typeof(ErreurMcp))]
     [InlineData("STATUT_APPEL_AGENT", typeof(StatutAppelAgent))]
+    [InlineData("ETAT_PROPOSITION", typeof(EtatProposition))]
+    [InlineData("DECISION_PROPOSITION", typeof(DecisionProposition))]
     public void Parite_avec_le_js(string nom, Type type) => Assert.Empty(Constantes.Ecarts(Fichier, nom, type));
 
     [Theory]

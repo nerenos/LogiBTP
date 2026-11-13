@@ -105,16 +105,25 @@ public sealed class ServiceMcp(McpDbContext db, SpecialisationMcp specialisation
         if (o.Classe == ClasseOutil.Interdit
             || o.ToutesRoutes.Any(x => Reservees.Any(r => x.Route == r || x.Route.StartsWith(r + "/", StringComparison.OrdinalIgnoreCase))))
             return ClasseOutil.Interdit;
-        return ReglesDelegation.ClasserOutil(new OutilAgent(o.Noeud, o.Action, o.Envoi), e.Profil, e.Plafond, e.Actifs, e.Options);
+        var classe = ReglesDelegation.ClasserOutil(new OutilAgent(o.Noeud, o.Action, o.Envoi), e.Profil, e.Plafond, e.Actifs, e.Options);
+        // Outil de proposition (lot 10) : il ne fait que lire et déposer ; permis dès que son nœud n'est pas interdit à la
+        // délégation, jamais pour un plafond LECTURE (une proposition engage le délégant).
+        if (o.Classe == ClasseOutil.Proposition)
+            return classe == ClasseOutil.Interdit || e.Plafond.Modele == ModelePlafond.Lecture ? ClasseOutil.Interdit : ClasseOutil.Proposition;
+        return classe;
     }
 
-    /// <summary>Outils exposés à l'agent : ceux du catalogue que la délégation permet (lecture ou brouillon), descriptions du dictionnaire.</summary>
+    /// <summary>Classe permise à l'appel : lecture, brouillon, ou proposition d'un outil de proposition (jamais un outil d'écriture retenu).</summary>
+    private static bool Permise(OutilMcp o, string classe) =>
+        classe is ClasseOutil.Lecture or ClasseOutil.Brouillon || (classe == ClasseOutil.Proposition && o.Classe == ClasseOutil.Proposition);
+
+    /// <summary>Outils exposés à l'agent : ceux du catalogue que la délégation permet (lecture, brouillon, proposition), descriptions du dictionnaire.</summary>
     public async Task<IList<Tool>> OutilsAsync(ContexteAgent ctx, CancellationToken ct)
     {
         var e = await EvaluerAsync(ctx, ct);
         return specialisation.Outils
             .Select(o => (Outil: o, Classe: Classer(o, e)))
-            .Where(x => x.Classe is ClasseOutil.Lecture or ClasseOutil.Brouillon)
+            .Where(x => Permise(x.Outil, x.Classe))
             .Select(x => new Tool
             {
                 Name = x.Outil.Nom,
@@ -122,6 +131,56 @@ public sealed class ServiceMcp(McpDbContext db, SpecialisationMcp specialisation
                 InputSchema = x.Outil.Schema,
                 Annotations = new ToolAnnotations { ReadOnlyHint = x.Classe == ClasseOutil.Lecture, DestructiveHint = false, OpenWorldHint = false },
             }).ToList();
+    }
+
+    /// <summary>
+    /// Dépôt d'une proposition permis à la délégation (lot 10) : exécuteur déclaré, plafond autre que LECTURE, et action
+    /// proposée (nœud et droit exigés de l'humain, effet externe) classée autrement qu'INTERDIT par ClasserOutil avec les
+    /// droits du délégant sur ce nœud : l'agent ne propose que ce que son délégant pourrait faire, jamais sur un nœud retenu.
+    /// </summary>
+    private async Task<string?> RefusDepotAsync(ContexteAgent ctx, Evaluation e, PropositionPreparee p, CancellationToken ct)
+    {
+        if (specialisation.Executeur(p.Action) is null) return ErreurMcp.McpExecuteurInconnu;
+        if (e.Plafond.Modele == ModelePlafond.Lecture) return ErreurMcp.McpOutilInterdit;
+        var lignes = e.Profil.Lignes.ToDictionary(kv => kv.Key, kv => kv.Value);
+        if (services.GetService(typeof(IDroits)) is IDroits droits)
+        {
+            var ligne = lignes.TryGetValue(p.Noeud, out var l) ? l.ToDictionary(kv => kv.Key, kv => kv.Value) : new Dictionary<string, string>();
+            if (await droits.PorteeAsync(new Utilisateur(ctx.Compte, ctx.Profil), p.Noeud, p.Droit, ct) is { } portee) ligne[p.Droit] = portee;
+            lignes[p.Noeud] = ligne;
+        }
+        var catalogue = e.Options.Catalogue?.ToDictionary(kv => kv.Key, kv => kv.Value) ?? [];
+        catalogue[p.Noeud] = [.. (catalogue.GetValueOrDefault(p.Noeud) ?? []).Append(p.Droit).Distinct()];
+        var classe = ReglesDelegation.ClasserOutil(new OutilAgent(p.Noeud, p.Droit, p.Envoi), new DroitsProfil(e.Profil.Total, lignes), e.Plafond, e.Actifs,
+            e.Options with { Catalogue = catalogue });
+        return classe == ClasseOutil.Interdit ? ErreurMcp.McpOutilInterdit : null;
+    }
+
+    /// <summary>Enregistre la proposition déposée par l'outil (état EN_ATTENTE, échéance bornée) ; rend sa description pour l'agent.</summary>
+    private async Task<JsonObject> DeposerAsync(ContexteAgent ctx, OutilMcp outil, PropositionPreparee p, JournalAgent journal, CancellationToken ct)
+    {
+        static string Borne(string t, int n) => t.Length > n ? t[..n] : t;
+        var proposition = new PropositionMcp
+        {
+            MprDelegation = ctx.Delegation.MdeCode, MprCompte = ctx.Compte, MprClient = Borne(ctx.Client, 100), MprOutil = outil.Nom, MprAction = p.Action,
+            MprNoeud = p.Noeud, MprDroit = p.Droit, MprLibelle = Borne(p.Libelle ?? "", 300), MprCibleType = p.CibleType, MprCibleId = p.CibleId,
+            MprContenu = (p.Contenu ?? new JsonObject()).ToJsonString(), MprAvertissements = (p.Avertissements ?? []).ToJsonString(),
+            MprEcheance = ReglesPropositions.EcheanceProposition(LecturesMcp.Aujourdhui, p.Jours), MprEtat = EtatProposition.EnAttente, MprCreeLe = DateTimeOffset.UtcNow,
+        };
+        db.Propositions.Add(proposition);
+        await db.SaveChangesAsync(ct);
+        journal.AjoProposition = proposition.MprId;
+        journal.AjoEcrits = new JsonObject
+        {
+            ["type"] = "proposition", ["identifiants"] = new JsonArray(proposition.MprId), ["nombre"] = 1, ["action"] = p.Action,
+        }.ToJsonString();
+        var o = new JsonObject
+        {
+            ["id"] = proposition.MprId, ["action"] = p.Action, ["etat"] = proposition.MprEtat,
+            ["echeance"] = proposition.MprEcheance.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
+        };
+        if (specialisation.AdresseProposition(proposition.MprId) is { Length: > 0 } adresse) o[SpecialisationMcp.CleAdresse] = Absolue(ctx.Origine, adresse);
+        return o;
     }
 
     /// <summary>Appel d'un outil : classement, quota, appel interne, filtre, compteur, journal.</summary>
@@ -171,8 +230,8 @@ public sealed class ServiceMcp(McpDbContext db, SpecialisationMcp specialisation
         journal.AjoClasse = classe;
         var gardes = new JsonObject { ["actifs"] = new JsonArray([.. e.Actifs.Select(g => (JsonNode?)g)]) };
         journal.AjoGardesFous = gardes.ToJsonString();
-        // Propositions à un humain : file des propositions (lot 10) ; d'ici là, refusées comme un outil interdit.
-        if (classe is not (ClasseOutil.Lecture or ClasseOutil.Brouillon)) return Refus(ErreurMcp.McpOutilInterdit, StatutAppelAgent.Refus, 403);
+        // Proposition à un humain (lot 10) : seulement par un outil de proposition, qui lit et dépose sans agir.
+        if (!Permise(outil, classe)) return Refus(ErreurMcp.McpOutilInterdit, StatutAppelAgent.Refus, 403);
 
         // Garde-fou VOLUME : quota du jour épuisé → refus ; nombre demandé borné au quota accordé.
         var volume = e.Actifs.Contains(GardeFou.Volume);
@@ -197,11 +256,12 @@ public sealed class ServiceMcp(McpDbContext db, SpecialisationMcp specialisation
             args[pl] = max;
 
         ReponseInterne reponse;
+        PropositionPreparee? proposition = null;
         if (outil.Execution is { } execution)
         {
             // Outil composé (verrou, lecture, enregistrement…) : routes bornées à celles que l'outil déclare.
             var contexte = new ExecutionOutil(outil, Declares(outil, args), e.Actifs, (m, chemin, corps, jeton) =>
-                appel.EnvoyerAsync(new RequeteInterne(m, chemin, corps, ctx.Hote, ctx.Authorization), jeton));
+                appel.EnvoyerAsync(new RequeteInterne(m, chemin, corps, ctx.Hote, ctx.Authorization), jeton), lectureSeule: outil.Classe == ClasseOutil.Proposition);
             try
             {
                 reponse = await execution(contexte, ct);
@@ -212,6 +272,7 @@ public sealed class ServiceMcp(McpDbContext db, SpecialisationMcp specialisation
                 return Refus(ErreurMcp.McpRouteNonDeclaree, StatutAppelAgent.Refus, 403, new JsonObject { ["methode"] = ex.Methode, ["route"] = ex.Chemin.Split('?')[0] });
             }
             journal.AjoRoutes = new JsonArray([.. contexte.Appels.Select(a => (JsonNode?)a.DeepClone())]).ToJsonString();
+            proposition = reponse.Statut < 400 ? contexte.Proposition : null;
         }
         else
         {
@@ -268,6 +329,15 @@ public sealed class ServiceMcp(McpDbContext db, SpecialisationMcp specialisation
             trace["action"] = outil.Action;
             journal.AjoEcrits = trace.ToJsonString();
         }
+        // Proposition déposée par l'outil (lot 10) : contrôlée sur le plafond, puis enregistrée ; l'action n'est jamais exécutée ici.
+        JsonObject? deposee = null;
+        if (proposition is not null)
+        {
+            if (await RefusDepotAsync(ctx, e, proposition, ct) is { } refus)
+                return Refus(refus, StatutAppelAgent.Refus, refus == ErreurMcp.McpExecuteurInconnu ? 422 : 403,
+                    new JsonObject { ["action"] = proposition.Action, ["noeud"] = proposition.Noeud, ["droit"] = proposition.Droit });
+            deposee = await DeposerAsync(ctx, outil, proposition, journal, ct);
+        }
         await db.Database.ExecuteSqlAsync($"""
             INSERT INTO mcp_compteur (mco_delegation, mco_jour, mco_appels, mco_elements) VALUES ({ctx.Delegation.MdeCode}, {jour}, 1, {journal.AjoNbLus})
             ON CONFLICT (mco_delegation, mco_jour) DO UPDATE SET mco_appels = mcp_compteur.mco_appels + 1, mco_elements = mcp_compteur.mco_elements + EXCLUDED.mco_elements
@@ -275,6 +345,7 @@ public sealed class ServiceMcp(McpDbContext db, SpecialisationMcp specialisation
 
         var enveloppe = new JsonObject { ["donnees"] = resultat?.DeepClone() };
         if (tronque) enveloppe["tronque"] = true;
+        if (deposee is not null) enveloppe["proposition"] = deposee;
         if (filtre.ClesRetirees.Count > 0) enveloppe["cles_retirees"] = new JsonArray([.. filtre.ClesRetirees.Select(c => (JsonNode?)c)]);
         return new ResultatOutil(enveloppe.ToJsonString(), false, StatutAppelAgent.Succes);
     }

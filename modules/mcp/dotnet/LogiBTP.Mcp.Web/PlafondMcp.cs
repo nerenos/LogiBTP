@@ -88,10 +88,11 @@ public sealed class PlafondMcp(McpDbContext db, SpecialisationMcp specialisation
 
     /// <summary>
     /// Liste blanche du plafond : routes d'écriture des outils d'écriture (outil composé : toutes ses routes d'écriture
-    /// déclarées), jamais /api/mcp, /api/auth, /api/droits.
+    /// déclarées), jamais /api/mcp, /api/auth, /api/droits, ni celles d'un outil de proposition (l'action proposée n'est
+    /// exécutée que par l'humain qui l'accepte, lot 10).
     /// </summary>
     public static IReadOnlyList<RouteAgent> RoutesEcriture(SpecialisationMcp specialisation) => specialisation.Outils
-        .Where(o => o.Classe is not (ClasseOutil.Interdit or ClasseOutil.Lecture))
+        .Where(o => o.Classe is not (ClasseOutil.Interdit or ClasseOutil.Lecture or ClasseOutil.Proposition))
         .SelectMany(o => o.ToutesRoutes)
         .Where(r => !HttpMethods.IsGet(r.Methode) && !HttpMethods.IsHead(r.Methode))
         .Where(r => !Reservees.Any(x => r.Route == x || r.Route.StartsWith(x + "/", StringComparison.OrdinalIgnoreCase)))

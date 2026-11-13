@@ -378,7 +378,8 @@ public class McpDocumentsBtpTests
     [Fact]
     public void Outils_d_ecriture_brouillon_et_liste_blanche_exacte()
     {
-        var ecriture = Specialisation.Outils.Where(o => o.Classe != ClasseOutil.Lecture).ToList();
+        // Outils d'écriture directe (brouillons) ; les outils de proposition (lot 10) n'écrivent pas : McpPropositionsBtpTests.
+        var ecriture = Specialisation.Outils.Where(o => o.Classe is not (ClasseOutil.Lecture or ClasseOutil.Proposition)).ToList();
         Assert.Equal(["creer_devis", "modifier_lignes", "transformer", "preparer_ordre_execution", "preparer_demandes_appro"], ecriture.Select(o => o.Nom));
         Assert.All(ecriture, o => Assert.Equal(ClasseOutil.Brouillon, o.Classe));
         Assert.Equal([McpDocumentsBtp.NoeudDevis, McpDocumentsBtp.NoeudDevis, McpDocumentsBtp.NoeudCommande, McpExecutionBtp.NoeudOrdre, McpExecutionBtp.NoeudDemande],

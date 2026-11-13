@@ -1,6 +1,8 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using LogiBTP.Socle;
+using LogiBTP.Socle.Web;
+using Microsoft.AspNetCore.Http;
 
 namespace LogiBTP.Mcp.Web;
 
@@ -91,9 +93,25 @@ public sealed class RouteNonDeclareeException(string methode, string chemin) : E
 /// interne borné aux routes déclarées par l'outil (même jeton délégué, même hôte), appels tracés pour le journal.
 /// </summary>
 public sealed class ExecutionOutil(OutilMcp outil, IReadOnlyDictionary<string, JsonNode?> arguments, IReadOnlyList<string> gardesFous,
-    Func<string, string, string?, CancellationToken, Task<ReponseInterne>> envoyer)
+    Func<string, string, string?, CancellationToken, Task<ReponseInterne>> envoyer, bool lectureSeule = false)
 {
     private readonly List<JsonObject> appels = [];
+
+    /// <summary>
+    /// Outil de proposition (classe PROPOSITION) : seules les lectures (GET) sont permises, l'action elle-même n'étant
+    /// exécutée qu'à l'acceptation par un humain (<see cref="Proposer"/>).
+    /// </summary>
+    public bool LectureSeule { get; } = lectureSeule;
+
+    /// <summary>Proposition déposée par l'outil (null : aucune) ; enregistrée par le module après le contrôle du plafond.</summary>
+    public PropositionPreparee? Proposition { get; private set; }
+
+    /// <summary>Dépose une proposition (une par appel) : action d'un exécuteur déclaré, nœud et droit exigés de l'humain, contenu.</summary>
+    public void Proposer(PropositionPreparee proposition)
+    {
+        if (Proposition is not null) throw new InvalidOperationException("MCP : une seule proposition par appel d'outil");
+        Proposition = proposition;
+    }
 
     public OutilMcp Outil { get; } = outil;
 
@@ -110,10 +128,57 @@ public sealed class ExecutionOutil(OutilMcp outil, IReadOnlyDictionary<string, J
     public async Task<ReponseInterne> EnvoyerAsync(string methode, string chemin, JsonNode? corps, CancellationToken ct)
     {
         var route = Outil.ToutesRoutes.FirstOrDefault(r => r.Couvre(methode, chemin)) ?? throw new RouteNonDeclareeException(methode, chemin);
+        if (LectureSeule && !HttpMethods.IsGet(methode) && !HttpMethods.IsHead(methode)) throw new RouteNonDeclareeException(methode, chemin);
         var reponse = await envoyer(methode.ToUpperInvariant(), chemin, corps?.ToJsonString(), ct);
         appels.Add(new JsonObject { ["methode"] = route.Methode.ToUpperInvariant(), ["route"] = route.Route, ["statut"] = reponse.Statut });
         return reponse;
     }
+}
+
+/// <summary>
+/// Proposition préparée par un outil (lot 10, ANALYSE-MODULE-MCP.md § 10.1) : action = code d'un exécuteur déclaré par la
+/// spécialisation ; nœud et droit exigés de l'humain qui accepte (contrôlés aussi au dépôt : l'agent ne propose que ce que
+/// son délégant pourrait faire) ; effet externe (garde-fou ENVOI) ; libellé ; cible (type, identifiant) ; contenu (écarts,
+/// corrigeable par l'humain) ; avertissements ; échéance en jours (7 par défaut, 30 au plus).
+/// </summary>
+public sealed record PropositionPreparee(string Action, string Noeud, string Droit, string Libelle, JsonNode? Contenu,
+    string? CibleType = null, string? CibleId = null, JsonArray? Avertissements = null, bool Envoi = false, int? Jours = null);
+
+/// <summary>
+/// Exécuteur d'une proposition acceptée, déclaré par la spécialisation : appelle le service de la route existante sous
+/// l'identité de l'humain (sa session, ses droits, ses limites de montant ; jamais le jeton de l'agent), dans la
+/// transaction ouverte par le module ; rend un résumé (« identifiants » des éléments écrits, pour le journal).
+/// </summary>
+/// <param name="Action">Code de l'action proposée (« valider_piece »…).</param>
+/// <param name="Executer">Exécution sous l'identité de l'humain.</param>
+public sealed record ExecuteurProposition(string Action, Func<ExecutionProposition, CancellationToken, Task<JsonObject>> Executer)
+{
+    /// <summary>Contrôle d'un contenu corrigé par l'humain : codes d'erreur (vide : accepté) ; null : tout contenu objet.</summary>
+    public Func<JsonNode?, IReadOnlyList<string>>? Controler { get; init; }
+
+    /// <summary>Type des éléments écrits, pour le journal (« document »…).</summary>
+    public string? TypeElement { get; init; }
+}
+
+/// <summary>
+/// Contexte de l'exécution d'une proposition acceptée : proposition (cible, contenu éventuellement corrigé), humain qui
+/// accepte (utilisateur de la requête), services et requête HTTP de l'acceptation (portée de la société).
+/// </summary>
+public sealed class ExecutionProposition(PropositionMcp proposition, JsonObject contenu, Utilisateur humain, HttpContext http)
+{
+    public long Id => proposition.MprId;
+    public string Action => proposition.MprAction;
+    public string? CibleType => proposition.MprCibleType;
+    public string? CibleId => proposition.MprCibleId;
+
+    /// <summary>Contenu de la proposition (corrigé par l'humain s'il l'a fait).</summary>
+    public JsonObject Contenu { get; } = contenu;
+
+    /// <summary>Humain qui accepte : l'exécution se fait sous son identité, jamais sous celle de l'agent.</summary>
+    public Utilisateur Humain { get; } = humain;
+
+    public HttpContext Http { get; } = http;
+    public IServiceProvider Services => http.RequestServices;
 }
 
 /// <summary>
@@ -158,6 +223,15 @@ public abstract class SpecialisationMcp
 
     /// <summary>Texte d'une clé du dictionnaire (la clé elle-même si elle manque).</summary>
     public string Texte(string cle) => Textes?.Texte(cle, defaut: cle) ?? cle;
+
+    /// <summary>Exécuteurs des propositions acceptées (lot 10 ; vide par défaut : aucune proposition possible).</summary>
+    public virtual IReadOnlyList<ExecuteurProposition> Executeurs => [];
+
+    /// <summary>Exécuteur d'une action proposée (null : inconnu).</summary>
+    public ExecuteurProposition? Executeur(string action) => Executeurs.FirstOrDefault(x => x.Action == action);
+
+    /// <summary>Adresse relative de l'écran d'une proposition (« /agents/propositions/12 »), rendue absolue à l'agent ; null : aucune.</summary>
+    public virtual string? AdresseProposition(long id) => null;
 
     /// <summary>Outil du catalogue par son nom (null : inconnu).</summary>
     public OutilMcp? Outil(string nom) => Outils.FirstOrDefault(o => o.Nom == nom);

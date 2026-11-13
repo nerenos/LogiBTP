@@ -36,6 +36,8 @@ public sealed class McpExecutionBtpBaseTests : IAsyncLifetime
     private static readonly string? Connexion = Environment.GetEnvironmentVariable("LOGIBTP_TEST_PG");
     private const string Compte = "zzmcp_lot9";
     private const string EnteteHumain = "X-Essai-Humain";
+    /// <summary>Profil d'un humain sans le droit VALIDER (en-tête humain de cette valeur).</summary>
+    private const string ProfilSansValider = "SANS_VALIDER";
     private readonly string _suffixe = Guid.NewGuid().ToString("N")[..6].ToUpperInvariant();
     private WebApplication? _app;
     private string _adresse = "";
@@ -47,8 +49,9 @@ public sealed class McpExecutionBtpBaseTests : IAsyncLifetime
     {
         private static readonly string[] Retenues = [ActionsDroits.Valider, "APPROUVER", ActionsDroits.Deverrouiller, "DEVALIDER", ActionsDroits.Forcer];
 
+        /// <summary>Agent, ou humain du profil <see cref="ProfilSansValider"/> (lot 10) : pas de validation.</summary>
         public Task<string?> PorteeAsync(Utilisateur u, string noeud, string action, CancellationToken ct) =>
-            Task.FromResult(u.Agent is not null && Retenues.Contains(action) ? null : (string?)PorteesDroits.Tout);
+            Task.FromResult((u.Agent is not null || u.Profil == ProfilSansValider) && Retenues.Contains(action) ? null : (string?)PorteesDroits.Tout);
 
         public Task<IReadOnlyList<ProfilDroits>> ProfilsAsync(CancellationToken ct) => Task.FromResult<IReadOnlyList<ProfilDroits>>([]);
     }
@@ -72,13 +75,15 @@ public sealed class McpExecutionBtpBaseTests : IAsyncLifetime
         });
         b.Services.AddModuleDocument<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp, LogiBtpContext, SpecialisationBtp>();
         b.Services.AddModuleStock<SpecialisationStockBtp>(Base);
+        // Lot 10 : file des propositions (exécuteurs du cœur).
+        b.Services.AddModuleMcp<SpecialisationMcpBtp>(Base);
         var app = b.Build();
         SpecialisationBtp.Http ??= app.Services.GetRequiredService<IHttpContextAccessor>();
         app.UseErreursMetier();
         app.Use(async (http, suite) =>
         {
             Utilisateur.Poser(http, http.Request.Headers.ContainsKey(EnteteHumain)
-                ? new Utilisateur(Compte, Profils.Admin)
+                ? new Utilisateur(Compte, http.Request.Headers[EnteteHumain] == ProfilSansValider ? ProfilSansValider : Profils.Admin)
                 : new Utilisateur(Compte, "SAISIE") { Agent = new AgentRequete("DZZLOT9", "Essai MCP") });
             await suite(http);
         });
@@ -86,6 +91,7 @@ public sealed class McpExecutionBtpBaseTests : IAsyncLifetime
         api.MapModuleDocument<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp>();
         api.MapMcpExecution();
         api.MapVentilationDemandes();
+        api.MapModuleMcp();
         await app.StartAsync();
         _app = app;
         _adresse = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.First();
@@ -118,6 +124,7 @@ public sealed class McpExecutionBtpBaseTests : IAsyncLifetime
     {
         _http.Dispose();
         if (_app is null) return;
+        await EssayerAsync("DELETE FROM agent_journal WHERE ajo_compte = @c; DELETE FROM mcp_proposition WHERE mpr_compte = @c", ("c", Compte));
         foreach (var id in _documents.AsEnumerable().Reverse())
             await EssayerAsync("""
                 DELETE FROM document_ligne_lien WHERE lil_source_lig_id IN (SELECT lig_id FROM document_ligne WHERE lig_ent_id = @id)
@@ -158,11 +165,11 @@ public sealed class McpExecutionBtpBaseTests : IAsyncLifetime
         return (T)Convert.ChangeType((await k.ExecuteScalarAsync())!, typeof(T), System.Globalization.CultureInfo.InvariantCulture);
     }
 
-    private async Task<ReponseInterne> EnvoyerAsync(string methode, string chemin, string? corps, bool humain = false)
+    private async Task<ReponseInterne> EnvoyerAsync(string methode, string chemin, string? corps, bool humain = false, string? profil = null)
     {
         using var m = new HttpRequestMessage(new HttpMethod(methode), _adresse + chemin);
         if (corps is not null) m.Content = new StringContent(corps, Encoding.UTF8, "application/json");
-        if (humain) m.Headers.Add(EnteteHumain, "1");
+        if (humain) m.Headers.Add(EnteteHumain, profil ?? "1");
         using var r = await _http.SendAsync(m);
         return new ReponseInterne((int)r.StatusCode, await r.Content.ReadAsStringAsync());
     }
@@ -311,4 +318,104 @@ public sealed class McpExecutionBtpBaseTests : IAsyncLifetime
         var pasDemande = await OutilAsync("proposer_ventilation", $$"""{"id":{{oe}}}""", 422);
         Assert.Equal(ErreursMcpBtp.TypeNonPermis, pasDemande["code"]!.GetValue<string>());
     }
+
+    /// <summary>
+    /// Outil de proposition appelé avec le jeton de l'agent (lectures seules), puis proposition enregistrée comme le fait
+    /// ServiceMcp au dépôt (le point /mcp lui-même est éprouvé par PointMcpTests du module).
+    /// </summary>
+    private async Task<(JsonObject Reponse, long Proposition)> ProposerAsync(string nom, string arguments)
+    {
+        var outil = new SpecialisationMcpBtp().Outil(nom)!;
+        var args = ServiceMcp.Declares(outil, JsonNode.Parse(arguments)!.AsObject().ToDictionary(kv => kv.Key, kv => kv.Value?.DeepClone()));
+        var x = new ExecutionOutil(outil, args, [], (m, chemin, corps, _) => EnvoyerAsync(m, chemin, corps), lectureSeule: outil.Classe == LogiBTP.Mcp.ClasseOutil.Proposition);
+        var r = await outil.Execution!(x, default);
+        Assert.True(r.Statut == 200, $"{nom} : HTTP {r.Statut} {r.Corps}");
+        var p = x.Proposition ?? throw new InvalidOperationException("Aucune proposition déposée");
+        Assert.NotNull(new SpecialisationMcpBtp().Executeur(p.Action));
+        using var scope = _app!.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<McpDbContext>();
+        var proposition = new PropositionMcp
+        {
+            MprDelegation = "DZZLOT9", MprCompte = Compte, MprClient = "Essai MCP", MprOutil = nom, MprAction = p.Action, MprNoeud = p.Noeud, MprDroit = p.Droit,
+            MprLibelle = p.Libelle, MprCibleType = p.CibleType, MprCibleId = p.CibleId, MprContenu = p.Contenu!.ToJsonString(),
+            MprAvertissements = (p.Avertissements ?? []).ToJsonString(), MprEcheance = LogiBTP.Mcp.ReglesPropositions.EcheanceProposition(LecturesMcp.Aujourdhui, p.Jours),
+            MprCreeLe = DateTimeOffset.UtcNow,
+        };
+        db.Propositions.Add(proposition);
+        await db.SaveChangesAsync();
+        return (JsonNode.Parse(r.Corps)!.AsObject(), proposition.MprId);
+    }
+
+    private async Task<JsonObject> AccepterAsync(long proposition, int statut, string? profil = null)
+    {
+        var r = await EnvoyerAsync("POST", $"/api/mcp/propositions/{proposition}/accepter", null, humain: true, profil: profil);
+        Assert.True(r.Statut == statut, $"acceptation {proposition} : HTTP {r.Statut} {r.Corps}");
+        return JsonNode.Parse(r.Corps)!.AsObject();
+    }
+
+    [Fact]
+    public async Task Validation_et_ventilation_proposees_puis_acceptees_par_un_humain()
+    {
+        if (Connexion is null) return;
+        var commande = await CommandeAsync();
+        var oe = (await OutilAsync("preparer_ordre_execution", $$"""{"marche_id":{{_marche}},"service":"FAB_METAL"}"""))["ordres"]!.AsArray().Single()!["ent_id"]!.GetValue<long>();
+        _documents.Add(oe);
+        await ValiderAsync(oe);
+        var dap = (await OutilAsync("preparer_demandes_appro", $$"""{"id":{{oe}}}"""))["ent_id"]!.GetValue<long>();
+        _documents.Add(dap);
+
+        // 1. Validation proposée par l'agent : rien de validé ; l'agent ne peut ni valider ni accepter.
+        var (_, validation) = await ProposerAsync("proposer_validation", $$"""{"id":{{dap}},"commentaire":"Demande prête"}""");
+        Assert.False((await DocumentAsync(dap))["document"]!["ent_verrouille"]!.GetValue<bool>());
+        var agent = await EnvoyerAsync("POST", $"/api/mcp/propositions/{validation}/accepter", null);
+        Assert.Equal(403, agent.Statut);
+        Assert.Contains(ErreursAgent.AgentInterdit, agent.Corps);
+        // Humain sans le droit VALIDER du type : refusé, la pièce reste en brouillon, la proposition en attente.
+        var refus = await AccepterAsync(validation, 403, ProfilSansValider);
+        Assert.Equal("ACCES_REFUSE", refus["code"]!.GetValue<string>());
+        Assert.False((await DocumentAsync(dap))["document"]!["ent_verrouille"]!.GetValue<bool>());
+        // Humain avec le droit : validation existante sous son identité (historique humain, pas d'origine AGENT), au journal.
+        var acceptee = await AccepterAsync(validation, 200);
+        Assert.Equal(LogiBTP.Mcp.EtatProposition.Acceptee, acceptee["etat"]!.GetValue<string>());
+        Assert.True((await DocumentAsync(dap))["document"]!["ent_verrouille"]!.GetValue<bool>());
+        Assert.Equal(1L, await ScalaireAsync<long>("""
+            SELECT count(*) FROM document_historique WHERE his_ent_id = @d AND his_action = 'VALIDATION' AND his_utilisateur = @u AND his_origine IS DISTINCT FROM 'AGENT'
+            """, ("d", dap), ("u", Compte)));
+        Assert.Equal(1L, await ScalaireAsync<long>("""
+            SELECT count(*) FROM agent_journal WHERE ajo_proposition = @p AND ajo_humain = @u AND ajo_statut = 'SUCCES' AND ajo_classe = 'PROPOSITION'
+            """, ("p", validation), ("u", Compte)));
+        Assert.Equal(1L, await ScalaireAsync<long>("SELECT count(*) FROM agent_journal WHERE ajo_proposition = @p AND ajo_statut = 'REFUS'", ("p", validation)));
+
+        // 2. Ventilation déposée : rien de créé tant qu'un humain n'accepte pas.
+        var (ventilation, appliquer) = await ProposerAsync("proposer_ventilation", $$"""{"id":{{dap}},"deposer":true}""");
+        Assert.Equal(50m, ventilation["besoins"]!.AsArray().Single()!["stock"]!.GetValue<decimal>());
+        Assert.Equal(0L, await ScalaireAsync<long>("SELECT count(*) FROM document_lien WHERE lie_source_ent_id = @d", ("d", dap)));
+        var resultat = (await AccepterAsync(appliquer, 200))["resultat"]!.AsObject();
+        foreach (var id in resultat["identifiants"]!.AsArray()) _documents.Add(id!.GetValue<long>());
+        // Réservation au dépôt (transformation de la demande, 50 ml), brouillon ; réappro au fournisseur, livrée au dépôt, brouillon.
+        var reservation = resultat["reservations"]!.AsArray().Single()!["ent_id"]!.GetValue<long>();
+        Assert.Equal(TypesDocument.SReservation, await TypesDocumentBtpCodeAsync(reservation));
+        Assert.Equal((long)_depot, await ScalaireAsync<long>("SELECT ent_stk_origine_id FROM document WHERE ent_id = @r", ("r", reservation)));
+        Assert.False(await ScalaireAsync<bool>("SELECT ent_verrouille FROM document WHERE ent_id = @r", ("r", reservation)));
+        Assert.Equal(50m, await ScalaireAsync<decimal>("SELECT lig_qte FROM document_ligne WHERE lig_ent_id = @r AND lig_art_id = @e", ("r", reservation), ("e", _element)));
+        Assert.Equal(1L, await ScalaireAsync<long>("SELECT count(*) FROM document_lien WHERE lie_source_ent_id = @d AND lie_cible_ent_id = @r", ("d", dap), ("r", reservation)));
+        var reappro = resultat["reappros"]!.AsArray().Single()!["ent_id"]!.GetValue<long>();
+        Assert.Equal(TypesDocument.ACommande, await TypesDocumentBtpCodeAsync(reappro));
+        Assert.Equal(_fournisseur, await ScalaireAsync<long>("SELECT ent_tiers_id FROM document WHERE ent_id = @c", ("c", reappro)));
+        Assert.Equal((long)_depot, await ScalaireAsync<long>("SELECT ent_stk_destination_id FROM document WHERE ent_id = @c", ("c", reappro)));
+        Assert.False(await ScalaireAsync<bool>("SELECT ent_verrouille FROM document WHERE ent_id = @c", ("c", reappro)));
+        Assert.Empty(resultat["commandes"]!.AsArray());
+        Assert.Empty(resultat["demandes_stock"]!.AsArray());
+        // Créées par l'humain (historique de création à son nom), écrites au journal avec la proposition.
+        Assert.Equal(0L, await ScalaireAsync<long>("SELECT count(*) FROM document_historique WHERE his_ent_id = ANY(@d) AND his_origine = 'AGENT'",
+            ("d", new[] { reservation, reappro })));
+        Assert.Equal(1L, await ScalaireAsync<long>("SELECT count(*) FROM agent_journal WHERE ajo_proposition = @p AND ajo_humain = @u AND ajo_ecrits ->> 'nombre' = '2'",
+            ("p", appliquer), ("u", Compte)));
+        // Acceptée une seule fois.
+        Assert.Equal(LogiBTP.Mcp.ErreurMcp.McpPropositionClose, (await AccepterAsync(appliquer, 409))["code"]!.GetValue<string>());
+        _ = commande;
+    }
+
+    private static Task<string> TypesDocumentBtpCodeAsync(long id) =>
+        ScalaireAsync<string>("SELECT t.tyd_code FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id WHERE d.ent_id = @id", ("id", id));
 }

@@ -31,6 +31,7 @@ public static class Extensions
         services.AddSingleton<SpecialisationMcp, TSpecialisation>();
         services.AddScoped<ServiceDelegations>();
         services.AddScoped<ServiceMcp>();
+        services.AddScoped<ServicePropositions>();
         services.AddScoped<IPlafondAgent, PlafondMcp>();
         services.AddHttpContextAccessor();
         services.TryAddSingleton<IAppelInterne, AppelInterneHttp>();
@@ -123,7 +124,8 @@ public static class Extensions
     /// <summary>
     /// Routes de gestion, sous /mcp du groupe /api (droits rattachés par l'application : nœud de la spécialisation,
     /// « agents » ; jamais ouvertes à un agent) : mes délégations (lister, créer : secret rendu une fois, révoquer),
-    /// paramètres (administrateur : levées par profil, quotas), journal (le mien ; tout pour l'administrateur).
+    /// paramètres (administrateur : levées par profil, quotas), journal (le mien ; tout pour l'administrateur), file des
+    /// propositions (lister, lire, corriger, refuser, accepter : lot 10).
     /// </summary>
     public static RouteGroupBuilder MapModuleMcp(this RouteGroupBuilder api)
     {
@@ -142,6 +144,16 @@ public static class Extensions
             s.EnregistrerLeveeAsync(profil, l, Utilisateur.Depuis(http), ct)).EnTransaction();
         g.MapGet("/journal", (bool? tous, string? delegation, DateOnly? du, DateOnly? au, int? limite, HttpContext http, ServiceDelegations s, CancellationToken ct) =>
             s.JournalAsync(Utilisateur.Depuis(http), tous ?? false, delegation, du, au, limite, ct));
+        // File des propositions (lot 10) : décisions d'un humain seulement ; acceptation exécutée sous son identité, dans la
+        // transaction ouverte par le service (pas de EnTransaction : l'échec est journalisé hors de la transaction annulée).
+        g.MapGet("/propositions", (string? vue, string? etat, int? limite, HttpContext http, ServicePropositions s, CancellationToken ct) =>
+            s.ListerAsync(Utilisateur.Depuis(http), vue, etat, limite, ct));
+        g.MapGet("/propositions/{id:long}", (long id, HttpContext http, ServicePropositions s, CancellationToken ct) => s.LireAsync(id, Utilisateur.Depuis(http), ct));
+        g.MapPost("/propositions/{id:long}/accepter", (long id, HttpContext http, ServicePropositions s, CancellationToken ct) => s.AccepterAsync(id, http, ct));
+        g.MapPut("/propositions/{id:long}/contenu", (long id, CorrectionProposition c, HttpContext http, ServicePropositions s, CancellationToken ct) =>
+            s.CorrigerAsync(id, c, Utilisateur.Depuis(http), ct));
+        g.MapPost("/propositions/{id:long}/refuser", (long id, RefusProposition r, HttpContext http, ServicePropositions s, CancellationToken ct) =>
+            s.RefuserAsync(id, r, Utilisateur.Depuis(http), ct));
         return api;
     }
 }

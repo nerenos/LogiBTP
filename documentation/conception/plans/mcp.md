@@ -26,7 +26,7 @@
 | 7 | Outils d'écriture des devis, origine des écritures | cœur | 6 | FAIT (13/11/2026) |
 | 8 | Règle de ventilation d'une demande et réappro sous le mini | `modules/stock` | — | FAIT (13/11/2026) |
 | 9 | Ordres d'exécution filtrés et demandes d'appro ventilées | cœur | 7, 8 | FAIT (13/11/2026) |
-| 10 | File des propositions | `modules/mcp` + cœur | 5 | A FAIRE |
+| 10 | File des propositions | `modules/mcp` + cœur | 5 | FAIT (13/11/2026) |
 | 11 | Écrans : délégations, paramétrage, journal, pastille 🤖 | `modules/mcp` (ui) + cœur | 10 | A FAIRE |
 | 12 | Serveur d'autorisation OAuth 2.1 | `modules/mcp` | 5 | A FAIRE |
 | 13 | Recettes (prompts MCP) et « Demander à l'agent » | `modules/mcp` + cœur | 11 | A FAIRE |
@@ -315,6 +315,37 @@ Hors plan (Q13) : agent hébergé (automatisations planifiées, panneau intégr�
   **sous l'identité de l'humain**, en transaction ; refus motivé ; journal.
 - **Critère de fin** : test : proposition acceptée → route exécutée par l'humain, au journal ; refusée par un humain
   sans le droit.
+- **Réalisé** (13/11/2026) : module MCP : `db/099v_mcp_propositions.sql` (rejouable, manifeste) `mcp_proposition` (délégation, délégant,
+  client, outil, action, nœud et droit exigés, libellé, cible, contenu et avertissements JSONB, échéance exclue, état, correction,
+  décision, motif, résultat), `agent_journal.ajo_proposition` / `ajo_humain` ; règles répliquées `js/src/propositions.js` ↔
+  `LogiBTP.Mcp/ReglesPropositions.cs` (jeu `tests/cas/02_propositions.json` : `echeanceProposition` 7 j par défaut, 1 à 30,
+  `etatProposition` ECHUE, `controlerDecision` : agent → AGENT_INTERDIT seul, usurpation, décision inconnue, échue, close, refus sans
+  motif) ; codes `ETAT_PROPOSITION`, `DECISION_PROPOSITION`, `ERREUR_MCP` complété (`MCP_PROPOSITION_CLOSE`, `_ECHUE`, `MCP_MOTIF_REQUIS`,
+  `MCP_EXECUTEUR_INCONNU`, `MCP_CONTENU_INVALIDE`). `SpecialisationMcp.Executeurs` (`ExecuteurProposition(Action, Executer)` +
+  `Controler` du contenu corrigé, `TypeElement`), `AdresseProposition` ; outil de classe PROPOSITION : composé, `ExecutionOutil` en
+  lecture seule (toute route autre que GET : `MCP_ROUTE_NON_DECLAREE`), hors liste blanche, exposé dès que son nœud n'est pas interdit
+  et que le plafond n'est pas LECTURE ; tout outil composé dépose par `ExecutionOutil.Proposer(PropositionPreparee)` ; `ServiceMcp`
+  contrôle le dépôt (exécuteur connu, plafond non LECTURE, `ClasserOutil` de l'action proposée — nœud et droit exigés, ENVOI — avec
+  les droits du délégant sur ce nœud ≠ INTERDIT), enregistre, rend `proposition { id, action, etat, echeance, adresse }` absolue et
+  journalise (`ajo_proposition`). `ServicePropositions` et routes `/api/mcp/propositions` (`GET ?vue=miennes|a_valider|toutes`,
+  `GET /{id}`, `PUT /{id}/contenu`, `POST /{id}/refuser` { motif }, `POST /{id}/accepter`) : humain seulement, visible du délégant, de
+  l'administrateur ou de qui a le droit exigé ; acceptation : droit exigé (`IDroits`), exécuteur sous l'identité de l'humain de la
+  requête, passage à ACCEPTEE et exécution dans `db.Unite().ExecuterAsync` (tout ou rien), refus et échecs journalisés hors de la
+  transaction ; révocation d'une délégation : propositions en attente ANNULEE. Cœur (`Btp/McpPropositionsBtp.cs`) : outils
+  `proposer_validation`, `proposer_envoi` (Envoi), `proposer_tiers`, `proposer_ventilation` (composé, `deposer`) ; exécuteurs
+  `valider_piece` (`DocumentService.Valider` : droit VALIDER du type, montants, version lue), `appliquer_ventilation` (transformations
+  E_DAP → S_RESERVATION par dépôt avec `ent_stk_origine_id`, S_DEMANDE pour les parts COMMANDE, A_COMMANDE par fournisseur avec le
+  fournisseur pour tiers ; réappros par `ServiceApprovisionnement.CommanderAsync` ; tout en brouillon), `envoyer_document`
+  (`ServiceEnvoiMail.PreparerAsync` + `EnvoyerAsync`, droit CREER sur `mail`, message de l'agent encodé en texte),
+  `creer_tiers_provisoire` (`ServiceAnnuaire.CreerProvisoire`) ; `SourcePropositionsAgents` (notification « agents / PROPOSITION »
+  au délégant, clé par proposition) ; `/api/mcp/propositions` en `ModeRoute.Session` et écriture Action ; `AdressesApp.UrlProposition` ↔
+  `urlProposition`, `TypesDocument.SDemande` ↔ `S_DEMANDE`, `ERREUR_MCP_BTP` complété (`MCP_DEJA_VALIDE`, `MCP_DESTINATAIRE`,
+  `MCP_VENTILATION_VIDE`). Correction du lot 9 : la ventilation garde les lignes `lig_solde` d'une demande validée (la case dit que la
+  ligne solde sa ligne d'ordre). Tests `ReglesPropositionsTests`, `CodesTests`, `PointMcpTests` (dépôt par le client MCP, agent refusé,
+  humain sans le droit refusé et journalisé, correction contrôlée, acceptation sous l'identité de l'humain, une seule fois, refus motivé,
+  échec annulé, révocation, plafond LECTURE), `McpPropositionsBtpTests`, `McpExecutionBtpBaseTests` (validation proposée refusée sans
+  VALIDER puis acceptée, historique humain ; ventilation acceptée : S_RESERVATION de 50 ml au dépôt et commande de réappro au
+  fournisseur livrée au dépôt, brouillons, au journal).
 
 ## Lot 11 : écrans
 

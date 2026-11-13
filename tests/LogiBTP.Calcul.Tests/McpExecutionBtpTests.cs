@@ -87,7 +87,9 @@ public class McpExecutionBtpTests
         var ventilation = s.Outil("proposer_ventilation")!;
         Assert.Equal(ClasseOutil.Lecture, ventilation.Classe);
         Assert.Equal("GET", ventilation.Methode);
-        Assert.Null(ventilation.Execution);
+        // Lot 10 : outil composé (dépôt de la proposition sur demande), sans autre route que la sienne (lecture).
+        Assert.NotNull(ventilation.Execution);
+        Assert.Empty(ventilation.Routes);
         foreach (var nom in new[] { "preparer_ordre_execution", "preparer_demandes_appro", "proposer_ventilation" })
             Assert.NotEqual($"mcp_btp.outils.{nom}", s.Texte($"mcp_btp.outils.{nom}"));
         // Écritures : seulement les routes de la liste blanche du lot 7 (transformation, PUT, verrou).

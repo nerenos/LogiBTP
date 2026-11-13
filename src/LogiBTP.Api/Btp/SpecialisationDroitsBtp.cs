@@ -119,6 +119,9 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
         new("/api/mcp", ModeRoute.Module, SpecialisationMcpBtp.NoeudAgents),
         new("/api/mcp/delegations/{code}/revoquer", ModeRoute.Action, SpecialisationMcpBtp.NoeudAgents, ActionsDroits.Creer),
         new("/api/mcp/parametres", ModeRoute.Parametrage),
+        // File des propositions (lot 10) : ouverte à toute session ; le service filtre par le droit exigé par chaque proposition
+        // (nœud et action de l'exécuteur) et refuse tout agent (AGENT_INTERDIT) ; l'acceptation agit sous les droits de l'humain.
+        new("/api/mcp/propositions", ModeRoute.Session),
         // Désignation d'un tiers (code, raison sociale d'une personne morale, ville ; particulier : code seul) : qui consulte
         // des pièces en voit les tiers ; lecture seule, ouverte à un agent sous le garde-fou TIERS (plans/mcp.md, lot 6).
         new("/api/designation", ModeRoute.Module, "documents"),

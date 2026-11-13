@@ -32,10 +32,10 @@ public sealed record LeveeDecrite(string Profil, IReadOnlyList<string> Levables,
 public sealed record ParametresMcp(IReadOnlyList<string> GardesFous, IReadOnlyList<string> Modeles, int EcheanceDefaut, int EcheanceMax,
     int QuotaAppel, int QuotaJour, int AlerteQuota, IReadOnlyList<LeveeDecrite> Profils);
 
-/// <summary>Appel du journal des agents décrit.</summary>
+/// <summary>Appel du journal des agents décrit (proposition et humain qui en a décidé : lot 10).</summary>
 public sealed record AppelDecrit(long Id, DateTimeOffset Date, string Delegation, string Compte, string Client, string? Session, string Outil,
     string Classe, JsonElement? Parametres, JsonElement? Routes, JsonElement? Lus, int NbLus, JsonElement? Ecrits, JsonElement? GardesFous,
-    string Statut, int DureeMs, string? Erreur);
+    string Statut, int DureeMs, string? Erreur, long? Proposition = null, string? Humain = null);
 
 /// <summary>
 /// Gestion des délégations, des levées par profil et lecture du journal (routes /api/mcp). Jamais pour un agent (interdit
@@ -127,6 +127,11 @@ public sealed class ServiceDelegations(McpDbContext db, IJetonsDelegues jetons, 
                 await db.SaveChangesAsync(jeton);
             }
             await jetons.RevoquerDelegationAsync(d.MdeCode, jeton);
+            // Propositions encore en attente de l'agent révoqué : annulées (lot 10), jamais acceptées après coup.
+            var maintenant = DateTimeOffset.UtcNow;
+            await db.Propositions.Where(p => p.MprDelegation == d.MdeCode && p.MprEtat == EtatProposition.EnAttente)
+                .ExecuteUpdateAsync(x => x.SetProperty(p => p.MprEtat, EtatProposition.Annulee).SetProperty(p => p.MprTraiteeLe, maintenant)
+                    .SetProperty(p => p.MprTraiteePar, u.Code).SetProperty(p => p.MprMotif, "Délégation révoquée"), jeton);
         }, ct);
         PlafondMcp.Oublier(d.MdeCode);
     }
@@ -188,6 +193,7 @@ public sealed class ServiceDelegations(McpDbContext db, IJetonsDelegues jetons, 
         var lignes = await q.OrderByDescending(j => j.AjoId).Take(Math.Clamp(limite ?? 200, 1, 1000)).ToListAsync(ct);
         static JsonElement? J(string? s) => s is null ? null : JsonDocument.Parse(s).RootElement.Clone();
         return lignes.Select(j => new AppelDecrit(j.AjoId, j.AjoDate, j.AjoDelegation, j.AjoCompte, j.AjoClient, j.AjoSession, j.AjoOutil, j.AjoClasse,
-            J(j.AjoParametres), J(j.AjoRoutes), J(j.AjoLus), j.AjoNbLus, J(j.AjoEcrits), J(j.AjoGardesFous), j.AjoStatut, j.AjoDureeMs, j.AjoErreur)).ToList();
+            J(j.AjoParametres), J(j.AjoRoutes), J(j.AjoLus), j.AjoNbLus, J(j.AjoEcrits), J(j.AjoGardesFous), j.AjoStatut, j.AjoDureeMs, j.AjoErreur,
+            j.AjoProposition, j.AjoHumain)).ToList();
     }
 }

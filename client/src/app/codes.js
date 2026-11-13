@@ -48,6 +48,7 @@ export const TYPE_DOCUMENT = Object.freeze({
   S_SORTIE: 'S_SORTIE',
   S_TRANSFERT: 'S_TRANSFERT',
   S_RESERVATION: 'S_RESERVATION',
+  S_DEMANDE: 'S_DEMANDE',
   S_INVENTAIRE: 'S_INVENTAIRE',
 });
 
@@ -316,6 +317,9 @@ export const ERREUR_MCP_BTP = Object.freeze({
   FILTRE_VIDE: 'MCP_FILTRE_VIDE',
   CRITERE_INCONNU: 'MCP_CRITERE_INCONNU',
   AUCUNE_LIGNE: 'MCP_AUCUNE_LIGNE',
+  DEJA_VALIDE: 'MCP_DEJA_VALIDE',
+  DESTINATAIRE: 'MCP_DESTINATAIRE',
+  VENTILATION_VIDE: 'MCP_VENTILATION_VIDE',
 });
 
 /** Motif d'une ligne retenue ou écartée par le filtre d'un ordre d'exécution (outil MCP preparer_ordre_execution, lot 9). */
@@ -393,6 +397,9 @@ export const urlFiche = (type, id) => `/fiche/${type}/${id}`;
 
 /** Adresse d'un document. */
 export const urlDocument = (id) => `/document/${id}`;
+
+/** Adresse d'une proposition d'agent (module MCP, lot 10 ; AdressesApp.UrlProposition). */
+export const urlProposition = (id) => `/agents/propositions/${id}`;
 
 /** Préférences de l'application dans le localStorage (recopiée dans public/demarrage-theme.js). */
 export const CLE_PREFERENCES_NAVIGATION = 'logibtp.navigation';

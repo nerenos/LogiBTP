@@ -77,6 +77,19 @@ public class ReglesPointMcpTests
             PlafondMcp.RoutesEcriture(specialisation).Select(r => $"{r.Methode} {r.Gabarit}").Order(StringComparer.Ordinal));
     }
 
+    [Fact]
+    public async Task Outil_de_proposition_en_lecture_seule_et_hors_liste_blanche()
+    {
+        var outil = new SpecialisationEssai().Outil("proposer_element")!;
+        var x = new ExecutionOutil(outil, new Dictionary<string, JsonNode?>(), [], (_, _, _, _) => Task.FromResult(new ReponseInterne(200, "[]")), lectureSeule: true);
+        await x.EnvoyerAsync("GET", "/api/essai/elements", null, default);
+        await Assert.ThrowsAsync<RouteNonDeclareeException>(() => x.EnvoyerAsync("POST", "/api/essai/elements", null, default));
+        x.Proposer(new PropositionPreparee("creer_element", "essai", ActionsDroits.Creer, "l", null));
+        Assert.Throws<InvalidOperationException>(() => x.Proposer(new PropositionPreparee("creer_element", "essai", ActionsDroits.Creer, "l", null)));
+        // Routes d'un outil de proposition : jamais dans la liste blanche du plafond.
+        Assert.Empty(PlafondMcp.RoutesEcriture(new SpecialisationOutils([outil])));
+    }
+
     private sealed class SpecialisationOutils(IReadOnlyList<OutilMcp> outils) : SpecialisationMcp
     {
         public override IReadOnlyList<OutilMcp> Outils => outils;
@@ -182,7 +195,45 @@ public sealed class SpecialisationEssai : SpecialisationMcp
         },
         new("creer_delegation", "mcp.essai.creer_delegation", Schema, "POST", "/api/mcp/delegations", "essai", ActionsDroits.Creer, ClasseOutil.Brouillon),
         new("ecrire_element", "mcp.essai.ecrire_element", Schema, "POST", "/api/essai/elements", "essai", ActionsDroits.Creer, ClasseOutil.Brouillon),
+        // Lot 10 : outil de proposition (lit, puis dépose « creer_element » ; jamais d'écriture par l'agent).
+        new("proposer_element", "mcp.essai.proposer_element", SchemaProposition, "GET", "/api/essai/elements", "essai", ActionsDroits.Consulter,
+            ClasseOutil.Proposition)
+        {
+            Routes = [new("POST", "/api/essai/elements")], Execution = ProposerAsync,
+        },
     ];
+
+    private static readonly JsonElement SchemaProposition = JsonDocument.Parse(
+        """{"type":"object","properties":{"nom":{"type":"string"},"echec":{"type":"boolean"},"ecrire":{"type":"boolean"},"action":{"type":"string"}}}""").RootElement;
+
+    /// <summary>Lit les éléments, puis dépose la proposition (ou tente d'écrire : refusé à un outil de proposition).</summary>
+    private static async Task<ReponseInterne> ProposerAsync(ExecutionOutil x, CancellationToken ct)
+    {
+        if (x.Arguments.GetValueOrDefault("ecrire") is JsonValue e && e.GetValue<bool>()) return await x.EnvoyerAsync("POST", "/api/essai/elements", null, ct);
+        var lu = await x.EnvoyerAsync("GET", "/api/essai/elements?limite=1", null, ct);
+        x.Proposer(new PropositionPreparee(x.Arguments.GetValueOrDefault("action")?.GetValue<string>() ?? "creer_element", "essai", ActionsDroits.Creer,
+            "Créer l'élément d'essai", new JsonObject { ["nom"] = x.Arguments.GetValueOrDefault("nom")?.DeepClone(), ["echec"] = x.Arguments.GetValueOrDefault("echec")?.DeepClone() },
+            "essai", "1", [new JsonObject { ["code"] = "AVERTISSEMENT_ESSAI" }]));
+        return lu;
+    }
+
+    /// <summary>Humains pour qui l'exécuteur a agi (identité de la requête d'acceptation).</summary>
+    public static readonly ConcurrentQueue<Utilisateur> Executions = new();
+
+    public override IReadOnlyList<ExecuteurProposition> Executeurs { get; } =
+    [
+        new("creer_element", (x, _) =>
+        {
+            if (x.Contenu["echec"] is JsonValue v && v.GetValue<bool>()) throw ExceptionMetier.Invalide("ESSAI_ECHEC", "Échec de l'exécuteur d'essai");
+            Executions.Enqueue(x.Humain);
+            return Task.FromResult(new JsonObject { ["identifiants"] = new JsonArray(42), ["nom"] = x.Contenu["nom"]?.DeepClone() });
+        })
+        {
+            TypeElement = "essai", Controler = c => c?["nom"] is JsonValue ? [] : [ErreurMcp.McpContenuInvalide],
+        },
+    ];
+
+    public override string? AdresseProposition(long id) => $"/agents/propositions/{id}";
 
     public override IReadOnlyDictionary<string, IReadOnlyList<string>> ClesSensibles { get; } =
         new Dictionary<string, IReadOnlyList<string>> { [GardeFou.Tiers] = ["per_iban"] };
@@ -230,11 +281,17 @@ public sealed class JetonsEnMemoire : IJetonsDelegues
         Task.FromResult(Jetons.TryGetValue(secret, out var j) && !j.Revoque ? j.Jeton : null);
 }
 
-/// <summary>Droits d'essai : tout profil a CONSULTER et CREER sur « essai » (portée TOUT), rien ailleurs ; ADMIN total.</summary>
+/// <summary>
+/// Droits d'essai : tout profil a CONSULTER et CREER sur « essai » (portée TOUT), rien ailleurs ; ADMIN total. Comptes de
+/// <see cref="SansCreer"/> : CONSULTER seulement (humain sans le droit exigé par une proposition).
+/// </summary>
 public sealed class DroitsEssai : IDroits
 {
+    public static readonly ConcurrentDictionary<string, bool> SansCreer = new();
+
     public Task<string?> PorteeAsync(Utilisateur u, string noeud, string action, CancellationToken ct) =>
-        Task.FromResult<string?>(noeud == "essai" && action is ActionsDroits.Consulter or ActionsDroits.Creer ? PorteesDroits.Tout : null);
+        Task.FromResult<string?>(noeud == "essai" && (action == ActionsDroits.Consulter || (action == ActionsDroits.Creer && !SansCreer.ContainsKey(u.Code)))
+            ? PorteesDroits.Tout : null);
 
     public Task<IReadOnlyList<ProfilDroits>> ProfilsAsync(CancellationToken ct) =>
         Task.FromResult<IReadOnlyList<ProfilDroits>>([new(Profils.Admin, "Administrateur", true)]);
@@ -255,6 +312,7 @@ public sealed class PointMcpTests : IAsyncLifetime
     private string _adresse = "";
     private readonly ConcurrentQueue<(string? Hote, string? Authorization, Utilisateur Utilisateur)> _recues = new();
     private readonly JetonsEnMemoire _jetons = new();
+    private const string EnteteHumain = "X-Essai-Humain";
 
     public async Task InitializeAsync()
     {
@@ -274,7 +332,13 @@ public sealed class PointMcpTests : IAsyncLifetime
         // Authentification simulée des routes /api : le jeton délégué donne l'utilisateur du compte avec l'agent.
         app.Use(async (http, suite) =>
         {
-            if (http.Request.Path.StartsWithSegments("/api"))
+            if (http.Request.Path.StartsWithSegments("/api") && http.Request.Headers[EnteteHumain].ToString() is { Length: > 0 } humain)
+            {
+                // Humain connecté (session de l'application) : « compte|profil ».
+                var (code, profil) = (humain.Split('|')[0], humain.Split('|')[1]);
+                Utilisateur.Poser(http, new Utilisateur(code, profil));
+            }
+            else if (http.Request.Path.StartsWithSegments("/api"))
             {
                 var e = http.Request.Headers.Authorization.ToString();
                 var j = e.StartsWith("Bearer ") ? await _jetons.OuvrirAsync(e[7..], http.RequestAborted) : null;
@@ -308,6 +372,7 @@ public sealed class PointMcpTests : IAsyncLifetime
             var db = scope.ServiceProvider.GetRequiredService<McpDbContext>();
             var codes = await db.Delegations.Where(d => d.MdeCompte == _compte).Select(d => d.MdeCode).ToListAsync();
             await db.Journal.Where(j => j.AjoCompte == _compte).ExecuteDeleteAsync();
+            await db.Propositions.Where(p => p.MprCompte == _compte).ExecuteDeleteAsync();
             await db.Compteurs.Where(c => codes.Contains(c.McoDelegation)).ExecuteDeleteAsync();
             await db.Delegations.Where(d => d.MdeCompte == _compte).ExecuteDeleteAsync();
             await db.Levees.Where(l => l.MlpProfil == _profil).ExecuteDeleteAsync();
@@ -481,5 +546,169 @@ public sealed class PointMcpTests : IAsyncLifetime
         var liste = await Avec(sp => sp.GetRequiredService<ServiceDelegations>().ListerAsync(Delegant, false, default));
         Assert.False(Assert.Single(liste).Active);
         await Assert.ThrowsAnyAsync<Exception>(() => Client(cree.Secret));
+    }
+
+    private async Task<(int Statut, JsonNode? Corps)> HumainAsync(string methode, string chemin, string? corps = null, string? compte = null, string? profil = null,
+        string? bearer = null)
+    {
+        using var http = new HttpClient();
+        using var m = new HttpRequestMessage(new HttpMethod(methode), _adresse.TrimEnd('/') + chemin);
+        if (corps is not null) m.Content = new StringContent(corps, System.Text.Encoding.UTF8, "application/json");
+        if (bearer is not null) m.Headers.Authorization = new("Bearer", bearer);
+        else m.Headers.Add(EnteteHumain, $"{compte ?? _compte}|{profil ?? _profil}");
+        using var r = await http.SendAsync(m);
+        var texte = await r.Content.ReadAsStringAsync();
+        return ((int)r.StatusCode, string.IsNullOrWhiteSpace(texte) ? null : JsonNode.Parse(texte));
+    }
+
+    private async Task<long> DeposerAsync(McpClient client, Dictionary<string, object?> args)
+    {
+        var r = await client.CallToolAsync("proposer_element", args);
+        Assert.True(r.IsError != true, Contenu(r).ToJsonString());
+        return Contenu(r)["proposition"]!["id"]!.GetValue<long>();
+    }
+
+    [Fact]
+    public async Task Proposition_deposee_par_l_agent_acceptee_sous_l_identite_de_l_humain()
+    {
+        if (Connexion is null) return;
+        var cree = await Avec(sp => sp.GetRequiredService<ServiceDelegations>().CreerAsync(new DelegationDemandee("Propositions", ModelePlafond.Preparation, Client: "Claude"), Delegant, default));
+        await using var client = await Client(cree.Secret);
+        Assert.Contains(await client.ListToolsAsync(), t => t.Name == "proposer_element");
+
+        // 1. Dépôt par l'agent : proposition en attente, adresse absolue de l'écran, journal (classe PROPOSITION, proposition écrite).
+        var r = await client.CallToolAsync("proposer_element", new Dictionary<string, object?> { ["nom"] = "Poutre" });
+        Assert.NotEqual(true, r.IsError);
+        var proposition = Contenu(r)["proposition"]!;
+        var id = proposition["id"]!.GetValue<long>();
+        Assert.Equal(EtatProposition.EnAttente, proposition["etat"]!.GetValue<string>());
+        Assert.Equal(_adresse.TrimEnd('/') + $"/agents/propositions/{id}", proposition[SpecialisationMcp.CleAdresse]!.GetValue<string>());
+        Assert.Equal(LecturesMcp.Aujourdhui.AddDays(ReglesPropositions.EcheanceDefaut).ToString("yyyy-MM-dd"), proposition["echeance"]!.GetValue<string>());
+        Assert.DoesNotContain(SpecialisationEssai.Executions, u => u.Code == _compte);
+        var depot = (await Avec(sp => sp.GetRequiredService<ServiceDelegations>().JournalAsync(Delegant, false, cree.Delegation.Code, null, null, null, default))).First();
+        Assert.Equal(ClasseOutil.Proposition, depot.Classe);
+        Assert.Equal(id, depot.Proposition);
+        Assert.Null(depot.Humain);
+        // Un outil de proposition n'écrit jamais, même par une route qu'il déclare ; ses routes ne sont pas dans la liste blanche.
+        var ecrire = await client.CallToolAsync("proposer_element", new Dictionary<string, object?> { ["ecrire"] = true });
+        Assert.Equal(ErreurMcp.McpRouteNonDeclaree, Contenu(ecrire)["code"]!.GetValue<string>());
+        // Action sans exécuteur : refusée.
+        var inconnue = await client.CallToolAsync("proposer_element", new Dictionary<string, object?> { ["nom"] = "x", ["action"] = "supprimer_tout" });
+        Assert.Equal(ErreurMcp.McpExecuteurInconnu, Contenu(inconnue)["code"]!.GetValue<string>());
+
+        // 2. Un agent ne décide jamais d'une proposition (même avec le jeton de la délégation qui l'a déposée).
+        var (statut, corps) = await HumainAsync("POST", $"/api/mcp/propositions/{id}/accepter", bearer: cree.Secret);
+        Assert.Equal(403, statut);
+        Assert.Equal(ErreursAgent.AgentInterdit, corps!["code"]!.GetValue<string>());
+        (statut, _) = await HumainAsync("GET", "/api/mcp/propositions", bearer: cree.Secret);
+        Assert.Equal(403, statut);
+
+        // 3. Humain sans le droit exigé (CREER sur « essai ») : refus, proposition toujours en attente, refus au journal.
+        DroitsEssai.SansCreer[_compte] = true;
+        try
+        {
+            (statut, corps) = await HumainAsync("POST", $"/api/mcp/propositions/{id}/accepter");
+            Assert.Equal(403, statut);
+            Assert.Equal("ACCES_REFUSE", corps!["code"]!.GetValue<string>());
+            // Un autre humain sans le droit ne la voit pas.
+            DroitsEssai.SansCreer["autre_essai"] = true;
+            (statut, _) = await HumainAsync("GET", $"/api/mcp/propositions/{id}", compte: "autre_essai", profil: "SAISIE");
+            Assert.Equal(404, statut);
+        }
+        finally
+        {
+            DroitsEssai.SansCreer.TryRemove(_compte, out _);
+            DroitsEssai.SansCreer.TryRemove("autre_essai", out _);
+        }
+        (statut, corps) = await HumainAsync("GET", $"/api/mcp/propositions/{id}");
+        Assert.Equal(200, statut);
+        Assert.Equal(EtatProposition.EnAttente, corps!["etat"]!.GetValue<string>());
+        Assert.Equal("AVERTISSEMENT_ESSAI", corps["avertissements"]![0]!["code"]!.GetValue<string>());
+        // À valider : visible par un autre humain qui a le droit exigé.
+        (statut, corps) = await HumainAsync("GET", "/api/mcp/propositions?vue=a_valider", compte: "chef_essai", profil: "SAISIE");
+        Assert.Contains(corps!.AsArray(), p => p!["id"]!.GetValue<long>() == id);
+
+        // 4. Correction du contenu (contrôlée par l'exécuteur), puis acceptation : exécutée sous l'identité de l'humain.
+        (statut, corps) = await HumainAsync("PUT", $"/api/mcp/propositions/{id}/contenu", """{"contenu":{"autre":1}}""");
+        Assert.Equal(422, statut);
+        Assert.Equal(ErreurMcp.McpContenuInvalide, corps!["code"]!.GetValue<string>());
+        (statut, corps) = await HumainAsync("PUT", $"/api/mcp/propositions/{id}/contenu", """{"contenu":{"nom":"Poutre corrigée"}}""");
+        Assert.Equal(200, statut);
+        Assert.Equal(_compte, corps!["corrige_par"]!.GetValue<string>());
+        (statut, corps) = await HumainAsync("POST", $"/api/mcp/propositions/{id}/accepter");
+        Assert.True(statut == 200, corps?.ToJsonString());
+        Assert.Equal(EtatProposition.Acceptee, corps!["etat"]!.GetValue<string>());
+        Assert.Equal(_compte, corps["traitee_par"]!.GetValue<string>());
+        Assert.Equal("Poutre corrigée", corps["resultat"]!["nom"]!.GetValue<string>());
+        var humain = Assert.Single(SpecialisationEssai.Executions, u => u.Code == _compte);
+        Assert.Null(humain.Agent);
+        Assert.Equal(_profil, humain.Profil);
+        // Une seule acceptation.
+        (statut, corps) = await HumainAsync("POST", $"/api/mcp/propositions/{id}/accepter");
+        Assert.Equal(409, statut);
+        Assert.Equal(ErreurMcp.McpPropositionClose, corps!["code"]!.GetValue<string>());
+
+        // Journal : refus, correction, acceptation (humain, proposition, élément écrit).
+        var journal = (await Avec(sp => sp.GetRequiredService<ServiceDelegations>().JournalAsync(Delegant, false, cree.Delegation.Code, null, null, null, default)))
+            .Where(j => j.Proposition == id && j.Humain is not null).ToList();
+        Assert.Equal([StatutAppelAgent.Erreur, StatutAppelAgent.Succes, StatutAppelAgent.Succes, StatutAppelAgent.Refus],
+            journal.Select(j => j.Statut));
+        var acceptation = journal[1];
+        Assert.Equal(_compte, acceptation.Humain);
+        Assert.Equal("creer_element", acceptation.Outil);
+        Assert.Equal(42, acceptation.Ecrits!.Value.GetProperty("identifiants")[0].GetInt64());
+        Assert.Equal("ACCES_REFUSE", journal[3].Erreur);
+    }
+
+    [Fact]
+    public async Task Proposition_refusee_avec_motif_echec_annule_et_revocation()
+    {
+        if (Connexion is null) return;
+        var cree = await Avec(sp => sp.GetRequiredService<ServiceDelegations>().CreerAsync(new DelegationDemandee("Refus", ModelePlafond.Preparation), Delegant, default));
+        await using var client = await Client(cree.Secret);
+        var refusee = await DeposerAsync(client, new() { ["nom"] = "A" });
+        var echec = await DeposerAsync(client, new() { ["nom"] = "B", ["echec"] = true });
+        var annulee = await DeposerAsync(client, new() { ["nom"] = "C" });
+
+        // Refus : motif obligatoire, puis REFUSEE ; plus d'acceptation possible.
+        var (statut, corps) = await HumainAsync("POST", $"/api/mcp/propositions/{refusee}/refuser", """{"motif":"  "}""");
+        Assert.Equal(422, statut);
+        Assert.Equal(ErreurMcp.McpMotifRequis, corps!["code"]!.GetValue<string>());
+        (statut, corps) = await HumainAsync("POST", $"/api/mcp/propositions/{refusee}/refuser", """{"motif":"Pas maintenant"}""");
+        Assert.Equal(200, statut);
+        Assert.Equal(EtatProposition.Refusee, corps!["etat"]!.GetValue<string>());
+        Assert.Equal("Pas maintenant", corps["motif"]!.GetValue<string>());
+        (statut, _) = await HumainAsync("POST", $"/api/mcp/propositions/{refusee}/accepter");
+        Assert.Equal(409, statut);
+
+        // Échec de l'exécuteur : transaction annulée, proposition toujours en attente, erreur au journal.
+        (statut, corps) = await HumainAsync("POST", $"/api/mcp/propositions/{echec}/accepter");
+        Assert.Equal(422, statut);
+        Assert.Equal("ESSAI_ECHEC", corps!["code"]!.GetValue<string>());
+        (_, corps) = await HumainAsync("GET", $"/api/mcp/propositions/{echec}");
+        Assert.Equal(EtatProposition.EnAttente, corps!["etat"]!.GetValue<string>());
+        var journal = await Avec(sp => sp.GetRequiredService<ServiceDelegations>().JournalAsync(Delegant, false, cree.Delegation.Code, null, null, null, default));
+        Assert.Contains(journal, j => j.Proposition == echec && j.Statut == StatutAppelAgent.Erreur && j.Erreur == "ESSAI_ECHEC");
+
+        // Les miennes : les trois ; révocation de la délégation : propositions en attente annulées.
+        (_, corps) = await HumainAsync("GET", "/api/mcp/propositions");
+        Assert.Equal(3, corps!.AsArray().Count(p => p!["delegation"]!.GetValue<string>() == cree.Delegation.Code));
+        await Avec(async sp => { await sp.GetRequiredService<ServiceDelegations>().RevoquerAsync(cree.Delegation.Code, Delegant, default); return 0; });
+        (_, corps) = await HumainAsync("GET", $"/api/mcp/propositions/{annulee}");
+        Assert.Equal(EtatProposition.Annulee, corps!["etat"]!.GetValue<string>());
+        (_, corps) = await HumainAsync("GET", $"/api/mcp/propositions/{refusee}");
+        Assert.Equal(EtatProposition.Refusee, corps!["etat"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task Proposition_interdite_a_une_delegation_en_lecture()
+    {
+        if (Connexion is null) return;
+        var cree = await Avec(sp => sp.GetRequiredService<ServiceDelegations>().CreerAsync(new DelegationDemandee("Lecture", ModelePlafond.Lecture), Delegant, default));
+        await using var client = await Client(cree.Secret);
+        Assert.DoesNotContain(await client.ListToolsAsync(), t => t.Name == "proposer_element");
+        var r = await client.CallToolAsync("proposer_element", new Dictionary<string, object?> { ["nom"] = "x" });
+        Assert.Equal(ErreurMcp.McpOutilInterdit, Contenu(r)["code"]!.GetValue<string>());
+        Assert.False(await Avec(sp => sp.GetRequiredService<McpDbContext>().Propositions.AnyAsync(p => p.MprDelegation == cree.Delegation.Code)));
     }
 }

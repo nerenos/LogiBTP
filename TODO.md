@@ -42,16 +42,17 @@ Analyses validées le 23/10/2026 : [ANALYSE-MODULE-MAIL.md](documentation/concep
   rafraîchissement rotatif, machines connues, double facteur par courriel, exclusion d'IP, identifiants API, deux clés
   (`.env`, données) ; profil par défaut = saisie mobile (A5 révisée) ; à reprendre par le Mail (comptes, boîtes,
   « À rapprocher ») et l'OAuth (reconnexion des connexions).
-- [ ] **Module MCP** (agents IA au nom d'un utilisateur, [plan](documentation/conception/plans/mcp.md), lots 0 à 9 faits
+- [ ] **Module MCP** (agents IA au nom d'un utilisateur, [plan](documentation/conception/plans/mcp.md), lots 0 à 10 faits
   le 13/11/2026 : audit des routes, contrats du socle, règles de délégation `modules/mcp`, plafond appliqué par les
   Droits, jetons délégués, point `/mcp`, délégations, journal, outils de lecture du cœur et garde-fous du BTP, activation
   par société, liste blanche exacte, contrôles par identité bornés au plafond, outils d'écriture des devis et origine
   AGENT de l'historique des pièces, règle de ventilation et réappro sous le mini du module Stock, ordres d'exécution filtrés,
-  demandes d'appro en unité de stock et ventilation proposée) : lots 10 à 14 (propositions, écrans, OAuth 2.1). Restent :
+  demandes d'appro en unité de stock et ventilation proposée, file des propositions acceptées sous l'identité de l'humain) :
+  lots 11 à 14 (écrans, OAuth 2.1, recettes, documentation). Restent :
   - ventilation (lots 8 et 9) : achats non regroupés entre besoins d'une même demande (un ACHAT arrondi par besoin) ;
     commandes « non affectées » = A_COMMANDE sans lieu de livraison ni demande E_DAP d'origine (une commande livrée à un
     chantier non dépôt n'est jamais proposée) : à confirmer ; `proche_mini` passé en argument (20 par défaut), pas encore
-    paramètre du stock (colonne à ajouter avec l'écran du lot 11) ; pièces (S_RESERVATION, S_DEMANDE, A_COMMANDE) au lot 10 ;
+    paramètre du stock (colonne à ajouter avec l'écran du lot 11) ;
   - ordres filtrés (lot 9) : filtre C# seul (outil serveur) ; une commande avec options ou variantes non choisies est refusée
     par la transformation (`OPTION_NON_TRAITEE`, rendu à l'agent) ; une OE par commande du marché (pas de regroupement de
     plusieurs commandes : la transformation multiple ne prend pas de lignes choisies) ; service porteur d'un ouvrage sans
@@ -63,7 +64,7 @@ Analyses validées le 23/10/2026 : [ANALYSE-MODULE-MAIL.md](documentation/concep
     exception de `UseHttpsInstallation` pour la boucle locale (comme `/api/sante`) ;
   - notification au délégant (premier usage, alerte de quota : `alerte_quota` déjà noté au journal) et écran d'activation
     du module (`MODULE_FACULTATIF.MCP`, désactivé à la création, `db/308`) au lot 11 ; purge du journal à un an (Q11) par
-    le planificateur ; outils PROPOSITION refusés jusqu'au lot 10 ;
+    le planificateur ;
   - garde-fou COUTS sur les pièces d'achat (décidé au lot 7) : `lire_document` retire tous les prix et montants d'une pièce
     A ou T (`couts_masques`) ; reste `rechercher` sur une liste de pièces d'achat (montants des colonnes de la vue) : à
     masquer par la restriction de la liste ou par colonne quand COUTS est actif ;
@@ -84,7 +85,22 @@ Analyses validées le 23/10/2026 : [ANALYSE-MODULE-MAIL.md](documentation/concep
     outils viendront ; affichage « 🤖 via <client> » de l'historique et pastille de la pièce au lot 11 ;
   - adresse des lignes de `rechercher` : documents (`^[VATSE]_`) et fiches seulement ; autres types d'élément
     (GED, pointage, mouvement de stock…) sans adresse ;
-  - garde-fou GED_CONFIDENTIEL : aucun outil GED encore (nœuds et clés à poser avec le premier outil de la GED).
+  - garde-fou GED_CONFIDENTIEL : aucun outil GED encore (nœuds et clés à poser avec le premier outil de la GED) ;
+  - file des propositions (lot 10) : écran `/agents/propositions/<id>` (adresse déjà rendue à l'agent et à la notification) et
+    messages `erreurs.<CODE>` des nouveaux codes (`MCP_PROPOSITION_*`, `MCP_MOTIF_REQUIS`, `MCP_CONTENU_INVALIDE`,
+    `MCP_DEJA_VALIDE`, `MCP_DESTINATAIRE`, `MCP_VENTILATION_VIDE`) au lot 11 ; propositions échues : état calculé à la lecture
+    (jamais écrit), purge à prévoir avec celle du journal ; « à valider » ouvert à tout humain qui a le droit exigé, pas
+    seulement au délégant (à confirmer) ; dépassement du montant de validation à l'acceptation : la tâche du Suivi créée par
+    `MontantDepasseAsync` est annulée avec la transaction de l'acceptation (seul le refus 422 reste) ;
+  - `appliquer_ventilation` : quantités des parts ramenées à l'unité de la ligne au prorata du besoin ; parts COMMANDE en
+    S_DEMANDE sans affectation à la commande en cours ; tiers des S_RESERVATION / S_DEMANDE recopié de la demande (celui de
+    la transformation) ; A_COMMANDE : fournisseur posé en SQL sur le brouillon (comme une demande de prix copiée) ; réappros sans
+    fournisseur principal signalés (`sans_fournisseur`), non commandés ; besoins d'une demande déjà transformée en partie :
+    la ventilation repart de la quantité totale de la ligne (pas du reste par étape) ; filtre `NOT lig_solde` des commandes en
+    cours de la ventilation à revoir (la case dit que la ligne solde sa ligne parente) ;
+  - `proposer_tiers` : nœud `annuaire` retenu par le garde-fou TIERS (actif par défaut) → dépôt refusé tant qu'il n'est pas
+    levé ; `envoyer_document` : droit CREER sur `mail` exigé de l'humain en plus du nœud du type ; non éprouvé en base (pas de
+    compte d'envoi dans la base d'essai).
 - [ ] **Module de partage de fichiers** (auto-hébergé ou kDrive d'Infomaniak) : lien de téléchargement à la place des
   pièces jointes trop lourdes pour un courriel.
 

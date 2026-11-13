@@ -89,6 +89,8 @@ public static class EcrituresBtp
         new("/api/planning", Action), new("/api/pointage", Action), new("/api/pointage/export", Lot), new("/api/pointage/valoriser", Lot),
         new("/api/pointage/synthese/valider", Lot), new("/api/pointage/synthese/devalider", Lot),
         new("/api/mcp", Action), new("/api/mcp/parametres", Parametrage),
+        // File des propositions des agents (lot 10) : décisions d'un humain (acceptation : action exécutée sous son identité).
+        new("/api/mcp/propositions", Action),
         new("/api/reglements", Action), new("/api/relances", Action), new("/api/relances/lots", Lot), new("/api/relances/lots/{id}/annuler", Action),
         new("/api/rentabilite", Action), new("/api/rentabilite/recalculer-tout", Lot), new("/api/rentabilite/chantiers/{id}/photos", Fichier),
         new("/api/ressources", Action), new("/api/ressources/materiels/pleins-carburant", Lot),

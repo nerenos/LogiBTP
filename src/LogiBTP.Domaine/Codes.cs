@@ -50,6 +50,7 @@ public static class TypesDocument
     public const string SSortie = "S_SORTIE";
     public const string STransfert = "S_TRANSFERT";
     public const string SReservation = "S_RESERVATION";
+    public const string SDemande = "S_DEMANDE";
     public const string SInventaire = "S_INVENTAIRE";
 
     /// <summary>Commandes qui reçoivent un accusé de réception (ARC).</summary>
@@ -369,6 +370,12 @@ public static class ErreursMcpBtp
     public const string CritereInconnu = "MCP_CRITERE_INCONNU";
     /// <summary>Aucune ligne retenue par le filtre (ou aucun reste à transformer).</summary>
     public const string AucuneLigne = "MCP_AUCUNE_LIGNE";
+    /// <summary>Proposition de validation d'une pièce déjà validée (verrouillée).</summary>
+    public const string DejaValide = "MCP_DEJA_VALIDE";
+    /// <summary>Envoi proposé sans destinataire (aucun donné, aucun par défaut pour la pièce).</summary>
+    public const string Destinataire = "MCP_DESTINATAIRE";
+    /// <summary>Ventilation à appliquer sans aucune part ni réappro (rien à créer).</summary>
+    public const string VentilationVide = "MCP_VENTILATION_VIDE";
 }
 
 /// <summary>
@@ -470,4 +477,7 @@ public static class AdressesApp
     public static string UrlDocument(long id) => $"/document/{id}";
 
     public static string UrlFiche(string type, object id) => $"/fiche/{type}/{id}";
+
+    /// <summary>Écran d'une proposition d'agent (module MCP, lot 10) : ouvert avec la session de l'application, jamais un lien qui valide.</summary>
+    public static string UrlProposition(long id) => $"/agents/propositions/{id}";
 }

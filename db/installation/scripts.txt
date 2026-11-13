@@ -119,6 +119,7 @@ modules/facture-electronique/db/099i_facture_electronique_hors_plateforme.sql re
 modules/rentabilite/db/099r_rentabilite.sql rejouable
 modules/relance/db/099t_relance.sql rejouable
 modules/mcp/db/099u_mcp.sql rejouable
+modules/mcp/db/099v_mcp_propositions.sql rejouable
 db/100_btp.sql
 db/110_reference.sql
 db/115_bibliotheque.sql

@@ -284,7 +284,8 @@ public static class McpExecutionBtp
     /// <summary>
     /// Ventilation proposée d'une demande d'appro (E_DAP) : besoins = articles gérés en stock de la demande (quantité totale en unité
     /// de stock, date de livraison de la ligne, sinon date de besoin, sinon date de la pièce ; dépôt préféré = dépôt d'origine) ;
-    /// aucune écriture.
+    /// aucune écriture. lig_solde d'une ligne de la demande dit qu'elle solde sa ligne parente (ordre), pas qu'elle est servie :
+    /// une demande validée garde tous ses besoins (lot 10).
     /// </summary>
     public static async Task<IResult> VentilationAsync(long id, decimal? procheMini, HttpContext http, LogiBtpContext db, StockDbContext sdb,
         SpecialisationStock specialisation, ServiceStock stock, CancellationToken ct)
@@ -304,7 +305,7 @@ public static class McpExecutionBtp
                    e.ele_poids AS poids, e.ele_surface AS surface, e.ele_surface_peinture AS surface_peinture, e.ele_volume AS volume,
                    e.ele_hauteur AS hauteur, e.ele_largeur AS largeur, e.ele_epaisseur AS epaisseur, e.ele_longueur AS longueur
             FROM document_ligne l JOIN element e ON e.ele_id = l.lig_art_id LEFT JOIN unite u ON u.unt_code = e.ele_unt_stock
-            WHERE l.lig_ent_id = {id} AND e.ele_gestion = 'STOCK' AND e.ele_type = 'ARTICLE' AND coalesce(l.lig_type_prix, 'V') = 'V' AND NOT l.lig_solde
+            WHERE l.lig_ent_id = {id} AND e.ele_gestion = 'STOCK' AND e.ele_type = 'ARTICLE' AND coalesce(l.lig_type_prix, 'V') = 'V'
             ORDER BY l.lig_chemin, l.lig_ordre
             """).ToListAsync(ct);
 

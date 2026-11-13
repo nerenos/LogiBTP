@@ -102,7 +102,32 @@ public sealed partial class SpecialisationMcpBtp : SpecialisationMcp
     private static readonly JsonElement SchemaVentilation = Schema("""
         {"type":"object","required":["id"],"properties":{
           "id":{"type":"integer","description":"Demande d'approvisionnement E_DAP (ent_id)"},
-          "proche_mini":{"type":"number","minimum":0,"maximum":100,"description":"Réappro : autres articles du dépôt à au plus ce % au-dessus de leur mini (20 par défaut)"} } }
+          "proche_mini":{"type":"number","minimum":0,"maximum":100,"description":"Réappro : autres articles du dépôt à au plus ce % au-dessus de leur mini (20 par défaut)"},
+          "deposer":{"type":"boolean","description":"Vrai : dépose la ventilation dans la file des propositions (réservations, demande de stock, commandes) ; un humain l'accepte"},
+          "jours":{"type":"integer","minimum":1,"maximum":30,"description":"Échéance de la proposition en jours (7 par défaut)"} } }
+        """);
+
+    // Outils de proposition (lot 10) : lecture de la cible, puis proposition déposée ; rien n'est exécuté par l'agent.
+    private static readonly JsonElement SchemaValidation = Schema("""
+        {"type":"object","required":["id"],"properties":{
+          "id":{"type":"integer","description":"Pièce à faire valider (ent_id)"},
+          "commentaire":{"type":"string","description":"Remarque pour l'humain qui décide"},
+          "jours":{"type":"integer","minimum":1,"maximum":30,"description":"Échéance de la proposition en jours (7 par défaut)"} } }
+        """);
+
+    private static readonly JsonElement SchemaEnvoi = Schema("""
+        {"type":"object","required":["id"],"properties":{
+          "id":{"type":"integer","description":"Pièce à envoyer par courriel (ent_id)"},
+          "destinataires":{"type":"array","maxItems":20,"items":{"type":"string"},"description":"Adresses ; sans elles, les destinataires par défaut de la pièce"},
+          "objet":{"type":"string"},"message":{"type":"string","description":"Texte ajouté avant le modèle du courriel"},
+          "jours":{"type":"integer","minimum":1,"maximum":30} } }
+        """);
+
+    private static readonly JsonElement SchemaTiersProvisoire = Schema("""
+        {"type":"object","required":["raison_sociale"],"properties":{
+          "raison_sociale":{"type":"string"},"siret":{"type":"string","description":"14 chiffres"},
+          "casquette":{"type":"string","description":"CLIENT, FOURNISSEUR, SOUS_TRAITANT…"},
+          "jours":{"type":"integer","minimum":1,"maximum":30} } }
         """);
 
     /// <summary>Routes d'une modification de lignes : verrou (état, prise, libération), lecture, enregistrement, définition du type, élément, avertissements.</summary>
@@ -189,10 +214,31 @@ public sealed partial class SpecialisationMcpBtp : SpecialisationMcp
                 new("PUT", McpDocumentsBtp.RouteDocument), new("GET", McpDocumentsBtp.RouteAvertissements),
             ],
         },
-        // Proposition sans écriture (Q10) : les pièces (réservation, demande de stock, commande) viendront de la file des propositions (lot 10).
+        // Ventilation lue (Q10), et déposée dans la file des propositions sur demande (lot 10) : pièces créées par l'humain qui accepte.
         new("proposer_ventilation", "mcp_btp.outils.proposer_ventilation", SchemaVentilation, "GET", McpExecutionBtp.RouteVentilation, "stock",
-            ActionsDroits.Consulter, ClasseOutil.Lecture) { TypeElement = "document", CleIdentifiant = "ent_id" },
+            ActionsDroits.Consulter, ClasseOutil.Lecture) { TypeElement = "document", CleIdentifiant = "ent_id", Execution = McpPropositionsBtp.ProposerVentilationAsync },
+        // Lot 10 : outils de proposition (lectures seules ; l'action est exécutée par l'humain qui accepte, sous son identité).
+        new("proposer_validation", "mcp_btp.outils.proposer_validation", SchemaValidation, "GET", McpDocumentsBtp.RouteDocument, "documents",
+            ActionsDroits.Consulter, ClasseOutil.Proposition)
+        {
+            TypeElement = "document", CleIdentifiant = "ent_id", Execution = McpPropositionsBtp.ProposerValidationAsync,
+            Routes = [new("GET", McpDocumentsBtp.RouteTypes), new("GET", McpDocumentsBtp.RouteAvertissements)],
+        },
+        new("proposer_envoi", "mcp_btp.outils.proposer_envoi", SchemaEnvoi, "GET", McpDocumentsBtp.RouteDocument, "documents", ActionsDroits.Consulter,
+            ClasseOutil.Proposition)
+        {
+            Envoi = true, TypeElement = "document", CleIdentifiant = "ent_id", Execution = McpPropositionsBtp.ProposerEnvoiAsync,
+            Routes = [new("GET", McpDocumentsBtp.RouteTypes)],
+        },
+        new("proposer_tiers", "mcp_btp.outils.proposer_tiers", SchemaTiersProvisoire, "GET", McpPropositionsBtp.RouteDesignation, "documents",
+            ActionsDroits.Consulter, ClasseOutil.Proposition) { TypeElement = $"fiche/{TypesFiche.Personne}", Execution = McpPropositionsBtp.ProposerTiersAsync },
     ];
+
+    /// <summary>Exécuteurs des propositions acceptées (lot 10) : sous l'identité de l'humain, par les services des routes existantes.</summary>
+    public override IReadOnlyList<ExecuteurProposition> Executeurs => McpPropositionsBtp.Executeurs;
+
+    /// <summary>Écran de la proposition (lot 11), ouvert avec la session de l'application.</summary>
+    public override string? AdresseProposition(long id) => AdressesApp.UrlProposition(id);
 
     /// <summary>
     /// Nœuds retenus par garde-fou actif (ANALYSE-MODULE-MCP.md § 5.2) : l'agent n'y a aucune action (lecture comprise ;
@@ -281,7 +327,8 @@ public sealed partial class SpecialisationMcpBtp : SpecialisationMcp
     {
         "rechercher" => AdresseElement(Texte(element["_type"]), Texte(element["_id"])),
         "lire_document" => element["document"]?["ent_id"] is { } ent && long.TryParse(Texte(ent), out var id) ? AdressesApp.UrlDocument(id) : null,
-        "creer_devis" or "modifier_lignes" or "transformer" or "preparer_ordre_execution" or "preparer_demandes_appro" or "proposer_ventilation" => long.TryParse(Texte(element["ent_id"]), out var p) && p > 0 ? AdressesApp.UrlDocument(p) : null,
+        "creer_devis" or "modifier_lignes" or "transformer" or "preparer_ordre_execution" or "preparer_demandes_appro" or "proposer_ventilation"
+            or "proposer_validation" or "proposer_envoi" => long.TryParse(Texte(element["ent_id"]), out var p) && p > 0 ? AdressesApp.UrlDocument(p) : null,
         "lire_marche" => Texte(element["id"]) is { Length: > 0 } m ? AdressesApp.UrlFiche(TypesFiche.Marche, m) : null,
         "lire_chantier" => Texte(element["id"]) is { Length: > 0 } c ? AdressesApp.UrlFiche(TypesFiche.Chantier, c) : null,
         "rechercher_bibliotheque" => Texte(element["id"]) is { Length: > 0 } e ? AdressesApp.UrlFiche(TypesFiche.Element, e) : null,

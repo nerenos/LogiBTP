@@ -179,6 +179,8 @@ builder.Services.AddSourceNotifications<SourceStockBtp>();
 builder.Services.AddSourceNotifications<SourcePaiementsDirects>();
 builder.Services.AddSourceNotifications<SourceCertificat>();
 builder.Services.AddSourceNotifications<SourceRelancesAPreparer>();
+// Module MCP (lot 10) : propositions des agents à valider, au délégant.
+builder.Services.AddSourceNotifications<SourcePropositionsAgents>();
 builder.Services.AddCanalNotifications<CanalCourrielBtp>();
 // Module OAuth : connexions sortantes OAuth 2.0 (jetons chiffrés, renouvellement, rappels d'échéance ; modules/oauth/db/004) ;
 // fournisseur de jetons du socle (IFournisseurJeton) pour le module Mail ; retour des fournisseurs en route publique.
