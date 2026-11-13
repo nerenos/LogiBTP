@@ -61,7 +61,7 @@ public static class Intervenants
 
     public static List<IntervenantSaisi> Lus(JsonElement liste)
     {
-        if (liste.ValueKind != JsonValueKind.Array) throw ExceptionMetier.Invalide("VALIDATION", "Intervenants : liste attendue");
+        if (liste.ValueKind != JsonValueKind.Array) throw ExceptionMetier.Invalide(ErreursEnregistrement.Validation, "Intervenants : liste attendue");
         static long? Entier(JsonElement e, string k) => e.TryGetProperty(k, out var v)
             ? v.ValueKind == JsonValueKind.Number ? v.GetInt64() : v.ValueKind == JsonValueKind.String && long.TryParse(v.GetString(), out var n) ? n : null : null;
         static bool Vrai(JsonElement e, string k) => e.TryGetProperty(k, out var v) && v.ValueKind == JsonValueKind.True;
@@ -98,7 +98,7 @@ public static class Intervenants
         var erreurs = Controler(liste, await Fonctions(db, ct), portee);
         if (erreurs.Count > 0)
         {
-            throw ExceptionMetier.Invalide("VALIDATION", "Intervenants incorrects", erreurs.Select(m => new ErreurChamp("intervenants", "METIER", m)).ToList());
+            throw ExceptionMetier.Invalide(ErreursEnregistrement.Validation, "Intervenants incorrects", erreurs.Select(m => new ErreurChamp("intervenants", "METIER", m)).ToList());
         }
     }
 

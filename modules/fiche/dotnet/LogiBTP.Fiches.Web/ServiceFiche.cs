@@ -407,7 +407,7 @@ public partial class ServiceFiche(FicheDbContext db, SpecialisationFiche special
     {
         var erreurs = ValidationFiche.ValiderFiche(t, valeurs, proprietes);
         erreurs.AddRange(specialisation.ValiderMetier(t.Code, valeurs, proprietes));
-        if (erreurs.Count > 0) throw ExceptionMetier.Invalide("VALIDATION", "Fiche incomplète ou incorrecte", erreurs);
+        if (erreurs.Count > 0) throw ExceptionMetier.Invalide(ErreursEnregistrement.Validation, "Fiche incomplète ou incorrecte", erreurs);
     }
 
     public virtual async Task<FicheDto> Enregistrer(string code, string id, DemandeEnregistrement d, Utilisateur u, CancellationToken ct)

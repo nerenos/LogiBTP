@@ -62,4 +62,19 @@ export const ERREUR_ENREGISTREMENT = Object.freeze({
   VALEUR: 'VALEUR',
   OBLIGATOIRE: 'OBLIGATOIRE',
   ERREUR: 'ERREUR',
+  LONGUEUR: 'LONGUEUR',
+  FORMAT: 'FORMAT',
+  INCONNU: 'INCONNU',
+});
+
+/** Types d'écriture de l'API (format d'échange et de contrôle de chaque route d'écriture) ↔ `TypesEcriture` (C#). */
+export const TYPE_ECRITURE = Object.freeze({
+  FICHE: 'FICHE',
+  DOCUMENT: 'DOCUMENT',
+  PARAMETRAGE: 'PARAMETRAGE',
+  ACTION: 'ACTION',
+  LOT: 'LOT',
+  FICHIER: 'FICHIER',
+  SESSION: 'SESSION',
+  LECTURE: 'LECTURE',
 });

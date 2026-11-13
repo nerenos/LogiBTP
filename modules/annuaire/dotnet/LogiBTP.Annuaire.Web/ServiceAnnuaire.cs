@@ -58,7 +58,7 @@ public partial class ServiceAnnuaire(AnnuaireDbContext db, SpecialisationAnnuair
         Texte(s) is { } t && DateOnly.TryParseExact(t.Length >= 10 ? t[..10] : t, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var d) ? d : null;
 
     private static ExceptionMetier Validation(string message, string champ, string code, string detail) =>
-        ExceptionMetier.Invalide("VALIDATION", message, new[] { new { champ, code, message = detail } });
+        ExceptionMetier.Invalide(ErreursEnregistrement.Validation, message, new[] { new { champ, code, message = detail } });
 
     // ------------------------------------------------------------------ référentiels
 
@@ -409,7 +409,7 @@ public partial class ServiceAnnuaire(AnnuaireDbContext db, SpecialisationAnnuair
                 throw ExceptionMetier.Conflit("COORDONNEE_MODIFIEE", $"{Nom(s, i, contexte)} : modifiée par ailleurs entre-temps, rechargez la fiche");
         }
         if (plan.Erreurs.Count > 0)
-            throw ExceptionMetier.Invalide("VALIDATION", "Coordonnées incorrectes",
+            throw ExceptionMetier.Invalide(ErreursEnregistrement.Validation, "Coordonnées incorrectes",
                 plan.Erreurs.Select(e => new { champ = "coordonnees", code = e.Code, message = $"{Nom(saisies[e.Index], e.Index, contexte)} : {e.Message}" }).ToList());
         if (plan.ChoixRequis.Count > 0)
             throw ExceptionMetier.Invalide("CHOIX_REQUIS", PlanCoordonnees.Messages["CHOIX"],

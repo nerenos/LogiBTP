@@ -297,5 +297,7 @@ app.MapClientWeb();
 
 // Refus par défaut : toute route /api doit être rattachée à un nœud de droits (erreur au démarrage en développement).
 app.VerifierRoutesDroits();
+// Format d'échange et de contrôle : toute route d'écriture déclare son type (EcrituresBtp.Routes).
+app.VerifierRoutesEcriture(EcrituresBtp.Routes);
 
 app.Run();

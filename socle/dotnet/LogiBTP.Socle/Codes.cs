@@ -87,4 +87,35 @@ public static class ErreursEnregistrement
     public const string Obligatoire = "OBLIGATOIRE";
     /// <summary>Élément d'un traitement en lot en erreur technique (journalisée).</summary>
     public const string Erreur = "ERREUR";
+    /// <summary>Code d'une erreur par champ : texte trop long.</summary>
+    public const string Longueur = "LONGUEUR";
+    /// <summary>Code d'une erreur par champ : valeur hors des valeurs admises (liste, bornes, format).</summary>
+    public const string Format = "FORMAT";
+    /// <summary>Code d'une erreur par champ : élément lié introuvable.</summary>
+    public const string Inconnu = "INCONNU";
+}
+
+/// <summary>
+/// Types d'écriture de l'API : chaque route d'écriture en déclare un (registre de l'application, vérifié au démarrage),
+/// qui fixe son format d'échange et de contrôle (voir <c>documentation/conception/plans/enregistrement-donnees.md</c>).
+/// Refus de tout type : <c>{ status, code, title, details }</c> ; 422 VALIDATION : <c>details</c> = erreurs par champ.
+/// </summary>
+public static class TypesEcriture
+{
+    /// <summary>Fiche (module Fiche) : valeurs par colonne et champs gérés, une transaction ; erreurs par champ.</summary>
+    public const string Fiche = "FICHE";
+    /// <summary>Document (module Document) : entête, lignes et pied, une transaction ; messages du moteur par ligne.</summary>
+    public const string Document = "DOCUMENT";
+    /// <summary>Paramétrage : table ou liste de valeurs enregistrée entière, une transaction ; erreurs par champ (rang.champ).</summary>
+    public const string Parametrage = "PARAMETRAGE";
+    /// <summary>Action sur un élément (statut, rattachement, saisie ponctuelle) : une transaction ; erreurs par champ.</summary>
+    public const string Action = "ACTION";
+    /// <summary>Traitement en lot : une transaction par élément, rapport par élément (RapportLot).</summary>
+    public const string Lot = "LOT";
+    /// <summary>Fichier déposé (GED, import) : fichier et métadonnées, une transaction ; erreurs par champ.</summary>
+    public const string Fichier = "FICHIER";
+    /// <summary>Session, préférences et connexions (authentification, préférences du compte) : hors données métier.</summary>
+    public const string Session = "SESSION";
+    /// <summary>Lecture envoyée par POST (critères ou contenu dans le corps : aperçu, calcul, liste) : rien n'est écrit.</summary>
+    public const string Lecture = "LECTURE";
 }

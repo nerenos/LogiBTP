@@ -542,7 +542,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         // Un brouillon peut attendre son tiers ; un document validé l'a toujours (stock : notre société, posée par la spécialisation).
         if (saisie.Document.EntTiersId is null && await Regles.Booleen("TIERS_OBLIGATOIRE", type, ct)) controles.Add(new MessageCalcul(null, "TIERS_OBLIGATOIRE", "Tiers du document à choisir avant la validation"));
         await ControlerRegles(saisie.Document, type, controles, ct);
-        if (controles.Count > 0) throw ExceptionMetier.Invalide("VALIDATION", "Le document comporte des erreurs", controles);
+        if (controles.Count > 0) throw ExceptionMetier.Invalide(ErreursEnregistrement.Validation, "Le document comporte des erreurs", controles);
 
         await Historiser(avant, "VALIDATION", u, ct);
         // Facture d'avancement dont la période est négative (retour en arrière) : elle devient un avoir d'avancement (Q26).

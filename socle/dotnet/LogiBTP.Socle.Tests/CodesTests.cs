@@ -15,5 +15,6 @@ public class CodesTests
     [InlineData("PORTEE_DROIT", typeof(PorteesDroits))]
     [InlineData("NIVEAU_CONFIDENTIALITE", typeof(NiveauConfidentialite))]
     [InlineData("ERREUR_ENREGISTREMENT", typeof(ErreursEnregistrement))]
+    [InlineData("TYPE_ECRITURE", typeof(TypesEcriture))]
     public void Parite_avec_le_js(string nom, Type type) => Assert.Empty(Constantes.Ecarts(Fichier, nom, type));
 }
