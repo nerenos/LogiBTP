@@ -81,6 +81,8 @@ export async function afficherReglements(racine, { app, page, modes }) {
   const etatParId = new Map(etat.map((e) => [e.id, e]));
   const libelleMode = (v) => (v === MODE_REGLEMENT_SYSTEME.IMPUTATION ? texte('reglements_btp.document.imputation') : modes.find(([c]) => c === v)?.[1] ?? v ?? '');
   const netAPayer = doc.ent_net_a_payer ?? ed.resultat?.document?.ent_net_a_payer ?? 0;
+  // Avoir : ses échéances sont négatives pour le module Règlements (signe de la pièce, db/306), son net à payer reste positif.
+  const estAvoir = etat.some((e) => e.nature === NATURE.NORMALE && D(e.montant).isNegative()) || D(netAPayer).isNegative();
   const retenuePiece = montantRetenue(ed.resultat?.lignes ?? ed.saisie.lignes ?? []);
 
   // Saisie de l'échéancier (copie modifiable de l'échéancier enregistré).
@@ -117,7 +119,7 @@ export async function afficherReglements(racine, { app, page, modes }) {
       ${sousPointe.map((e) => `<p class="avertissement">${iconeHtml('avertissement')} ${texteHtml('reglements_btp.document.sous_pointe', { rang: e.rang, montant: f(e.montant), pointe: f(e.pointe) })}</p>`).join('')}`}
       </section>
       ${moduleReglement && echeancesDoc.length ? `<section><div class="entete-page"><h3>${texteHtml('reglements_btp.document.reglements')}</h3><span class="boutons">
-        ${doc.ent_verrouille && ouvertes.length ? `<button type="button" data-imputer title="${D(netAPayer).isNegative() ? texteHtml('reglements_btp.document.imputer_avoir_aide') : texteHtml('reglements_btp.document.imputer_aide')}">${iconeHtml('reglements_btp_imputer')} ${texteHtml('reglements_btp.document.imputer')}</button>` : ''}
+        ${doc.ent_verrouille && ouvertes.length ? `<button type="button" data-imputer title="${estAvoir ? texteHtml('reglements_btp.document.imputer_avoir_aide') : texteHtml('reglements_btp.document.imputer_aide')}">${iconeHtml('reglements_btp_imputer')} ${texteHtml('reglements_btp.document.imputer')}</button>` : ''}
         ${doc.ent_tiers_id ? `<a href="/reglements?sens=${sens}&tiers=${doc.ent_tiers_id}" data-lien>${iconeHtml('reglements_btp_tiers')} ${texteHtml('reglements_btp.document.reglements_tiers')}</a>` : ''}</span></div>
         ${pointages.length ? `<table class="tableau-compact"><thead><tr><th>${texteHtml('reglements_btp.colonnes.date')}</th><th>${texteHtml('reglements_btp.document.col.origine')}</th><th>${texteHtml('reglements_btp.colonnes.reference')}</th><th>${texteHtml('reglements_btp.colonnes.echeance')}</th><th class="nombre">${texteHtml('reglements_btp.colonnes.montant')}</th></tr></thead>
         <tbody>${pointages.map((p) => `<tr><td>${formatDate(p.date)}</td><td>${p.source === SOURCE_POINTAGE.CAUTION ? `${texteHtml('reglements_btp.document.origine_caution', { caution: p.commentaire ?? '' })} <small class="aide">${texteHtml('reglements_btp.document.origine_caution_aide')}</small>`
@@ -188,7 +190,7 @@ export async function afficherReglements(racine, { app, page, modes }) {
    * tiers. Montant proposé : le plus petit des deux restes (maximumImputation).
    */
   const imputer = async () => {
-    const avoir = D(netAPayer).isNegative();
+    const avoir = estAvoir;
     const ouvertes = etat.filter((e) => !e.reglee && e.nature === NATURE.NORMALE);
     const tiers = await api.echeancesReglement({ tiers: doc.ent_tiers_id, sens, ouvertes: true });
     const choix = [];

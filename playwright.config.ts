@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import { TAG_API } from './e2e/outils/connexion';
 
 // Comptes et adresse des tests : e2e/.env (hors dépôt, modèle e2e/.env.exemple), facultatif.
 try { process.loadEnvFile('e2e/.env'); } catch { /* fichier absent : variables du système seules */ }
@@ -12,6 +13,8 @@ export default defineConfig({
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
+  /* CI GitHub : ni API ni base ni comptes de test ; les scénarios étiquetés TAG_API se jouent sur un poste seulement. */
+  grepInvert: process.env.CI ? new RegExp(TAG_API) : undefined,
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
   /* Opt out of parallel tests on CI. */

@@ -10,14 +10,15 @@ namespace LogiBTP.Api.Btp;
 
 /// <summary>
 /// Module Règlements spécialisé par le cœur : échéances des pièces validées non annulées (document_echeance du module
-/// Document) ; sens E pour les ventes, D pour les achats ; objet = marché de la pièce ; tiers de l'annuaire.
+/// Document) ; sens E pour les ventes, D pour les achats ; objet = marché de la pièce ; tiers de l'annuaire. Montant signé :
+/// négatif pour un avoir (f_signe_reglement, db/306 ; l'échéancier de la pièce reste positif).
 /// </summary>
 public sealed class SpecialisationReglementBtp : SpecialisationReglement
 {
     private const string SqlEcheances = """
         SELECT coalesce(json_agg(json_build_object(
           'id', e.ech_id, 'piece_id', d.ent_id, 'piece', d.ent_numero, 'type', t.tyd_libelle, 'tiers_id', d.ent_tiers_id, 'tiers', p.per_raison_sociale,
-          'sens', CASE WHEN f_famille_achat(t.tyd_famille) THEN 'D' ELSE 'E' END, 'date', e.ech_date, 'montant', e.ech_montant, 'nature', e.ech_nature,
+          'sens', CASE WHEN f_famille_achat(t.tyd_famille) THEN 'D' ELSE 'E' END, 'date', e.ech_date, 'montant', e.ech_montant * f_signe_reglement(d.ent_id), 'nature', e.ech_nature,
           'objet_id', d.ent_marche_id, 'date_piece', d.ent_date) ORDER BY e.ech_date NULLS LAST, d.ent_id, e.ech_rang), '[]') AS "Value"
         FROM document_echeance e
         JOIN document d ON d.ent_id = e.ech_ent_id
@@ -61,7 +62,7 @@ public sealed class SpecialisationReglementBtp : SpecialisationReglement
             WITH pieces AS (SELECT DISTINCT ech_ent_id AS ent_id FROM document_echeance WHERE ech_id = ANY({ids})),
             etat AS (
                 SELECT e.ech_ent_id AS ent_id,
-                       bool_and(abs(e.ech_montant - coalesce(p.pointe, 0)) <= 0) AS regle,
+                       bool_and(abs(e.ech_montant * f_signe_reglement(e.ech_ent_id) - coalesce(p.pointe, 0)) <= 0) AS regle,
                        bool_or(coalesce(p.pointe, 0) <> 0) AS entame
                 FROM document_echeance e
                 LEFT JOIN (SELECT poi_echeance_id, sum(poi_montant) AS pointe FROM pointage GROUP BY 1) p ON p.poi_echeance_id = e.ech_id

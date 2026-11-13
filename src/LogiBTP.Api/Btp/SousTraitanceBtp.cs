@@ -154,6 +154,27 @@ public class SpecialisationSousTraitanceBtp : SpecialisationSousTraitance
     }
 
     /// <summary>
+    /// Validation d'une pièce de sous-traitance (commande, facture, avoir) d'un marché en autoliquidation (décision du
+    /// 12/11/2026, ANALYSE § 3 : TVA nulle sur la pièce et mention) : ses lignes de prix prennent le taux autoliquidé
+    /// (catégorie A, le premier par ordre), quel que soit le taux saisi ; rien sans marché ni taux de cette catégorie.
+    /// </summary>
+    public static async Task AutoliquiderAsync(DbContext db, TypeDocument type, DocumentCompletBtp saisie, CancellationToken ct)
+    {
+        if (type.TydFamille != FamillesDocument.SousTraitance || saisie.Document.EntMarcheId is not int marche) return;
+        var taux = (await db.Database.SqlQuery<int?>($"""
+            SELECT t.ttv_id AS "Value" FROM marche m JOIN taux_tva t ON t.ttv_categorie = 'A' AND t.ttv_actif
+            WHERE m.mar_id = {marche} AND m.mar_sens = 'ST' AND m.mar_autoliquidation
+            ORDER BY t.ttv_ordre, t.ttv_id LIMIT 1
+            """).ToListAsync(ct)).FirstOrDefault();
+        if (taux is not int id) return;
+        foreach (var l in saisie.Lignes.Where(l => TL.EstChiffree(l) && !TL.EstPied(l) && l.LigTvaId is not null && l.LigTvaId != id))
+        {
+            l.LigTvaId = id;
+            l.LigTauxTva = null;
+        }
+    }
+
+    /// <summary>
     /// Contrôle des pièces à la validation (ST13) : commande de sous-traitance (action COMMANDE) et facture de
     /// sous-traitance (FACTURE) refusées tant qu'une pièce bloquante manque ou a expiré ; module actif seulement.
     /// </summary>
