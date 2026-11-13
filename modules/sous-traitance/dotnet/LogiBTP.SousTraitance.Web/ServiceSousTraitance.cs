@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.SousTraitance.Web;
 
@@ -111,7 +112,7 @@ public sealed class ServiceSousTraitance(SousTraitanceDbContext db, Specialisati
         }
         var codes = l.Select(p => p.Code.Trim().ToLowerInvariant()).ToList();
         if (codes.Distinct().Count() != codes.Count) throw ExceptionMetier.Invalide("STT_DOUBLON", "Même pièce deux fois");
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         await db.PiecesTypes.Where(x => !codes.Contains(x.SptCode)).ExecuteDeleteAsync(ct);
         var existants = await db.PiecesTypes.ToListAsync(ct);
         foreach (var (p, i) in l.Select((p, i) => (p, i)))

@@ -1,3 +1,4 @@
+using LogiBTP.Socle.Donnees;
 using LogiBTP.Socle.Web;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -51,13 +52,13 @@ public static class Extensions
         g.MapGet("/comptes/{id:long}/adresse", (long id, HttpContext http, ServiceComptesMail s, CancellationToken ct) => s.AdresseAsync(Utilisateur.Depuis(http), id, ct));
         g.MapPut("/comptes/{id:long}/alias", (long id, DemandeAlias d, HttpContext http, ServiceComptesMail s, CancellationToken ct) =>
             s.EnregistrerAliasAsync(Utilisateur.Depuis(http), id, d.Alias, ct));
-        g.MapPost("/comptes/{id:long}/reprendre", (long id, HttpContext http, ServiceEnvoiMail s, CancellationToken ct) => s.ReprendreAsync(Utilisateur.Depuis(http), id, ct));
+        g.MapPost("/comptes/{id:long}/reprendre", (long id, HttpContext http, ServiceEnvoiMail s, CancellationToken ct) => s.ReprendreAsync(Utilisateur.Depuis(http), id, ct)).EnTransaction();
         g.MapGet("/alias", (ServiceComptesMail s, CancellationToken ct) => s.AliasAsync(ct));
         g.MapGet("/disponible", async (ServiceEnvoiMail s, CancellationToken ct) => Results.Ok(new { disponible = await s.DisponibleAsync(ct) }));
         g.MapGet("/usages", async (ServiceComptesMail s, CancellationToken ct) => Results.Ok(new { connus = s.UsagesConnus, usages = await s.UsagesAsync(ct) }));
         g.MapPut("/usages", (List<UsageDto> l, HttpContext http, ServiceComptesMail s, CancellationToken ct) => s.EnregistrerUsagesAsync(Utilisateur.Depuis(http), l, ct));
         g.MapGet("/modeles", (ServiceComptesMail s, CancellationToken ct) => s.ModelesAsync(ct));
-        g.MapPost("/modeles", (ModeleDto m, HttpContext http, ServiceComptesMail s, CancellationToken ct) => s.EnregistrerModeleAsync(Utilisateur.Depuis(http), m, ct));
+        g.MapPost("/modeles", (ModeleDto m, HttpContext http, ServiceComptesMail s, CancellationToken ct) => s.EnregistrerModeleAsync(Utilisateur.Depuis(http), m, ct)).EnTransaction();
         g.MapDelete("/modeles/{id:long}", (long id, HttpContext http, ServiceComptesMail s, CancellationToken ct) => s.SupprimerModeleAsync(Utilisateur.Depuis(http), id, ct));
         g.MapGet("/parametres", (ServiceComptesMail s, CancellationToken ct) => s.ParametresAsync(ct));
         g.MapPut("/parametres", (Dictionary<string, int> p, HttpContext http, ServiceComptesMail s, CancellationToken ct) => s.EnregistrerParametresAsync(Utilisateur.Depuis(http), p, ct));

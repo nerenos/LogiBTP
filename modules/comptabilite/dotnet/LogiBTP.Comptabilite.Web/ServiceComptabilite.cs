@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Comptabilite.Web;
 
@@ -315,7 +316,7 @@ public sealed class ServiceComptabilite(ComptabiliteDbContext db, Specialisation
         if (cles.FirstOrDefault(c => c.Nature is not null && !natures.ContainsKey(c.Nature)) is { } n) throw ExceptionMetier.Invalide("VCO_NATURE", $"Nature inconnue : {n.Nature}");
         if (cles.FirstOrDefault(c => c.Taux is not null && !taux.ContainsKey(c.Taux)) is { } x) throw ExceptionMetier.Invalide("VCO_TAUX", $"Taux de TVA inconnu : {x.Taux}");
         await ControlerComptesExistent(cles.Select(c => c.Compte), "Ventilation", ct);
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         await db.Ventilations.Where(v => v.VcoTcoCode == type).ExecuteDeleteAsync(ct);
         db.Ventilations.AddRange(cles.Select(c => new VentilationEntite
         {
@@ -487,7 +488,7 @@ public static class Extensions
         g.MapPut("/types-documents", (List<TypeDocumentSaisi> l, ServiceComptabilite s, CancellationToken ct) => s.EnregistrerTypesDocumentsAsync(l, ct));
         g.MapGet("/export/modeles", () => FormatExport.Modeles);
         g.MapGet("/export/modele", (ServiceExport s, CancellationToken ct) => s.ModeleAsync(ct));
-        g.MapPut("/export/modele", (ModeleExport m, HttpContext http, ServiceExport s, CancellationToken ct) => s.EnregistrerModeleAsync(m, Utilisateur.Depuis(http), ct));
+        g.MapPut("/export/modele", (ModeleExport m, HttpContext http, ServiceExport s, CancellationToken ct) => s.EnregistrerModeleAsync(m, Utilisateur.Depuis(http), ct)).EnTransaction();
         g.MapPost("/export/apercu", (DemandeExport d, ServiceExport s, CancellationToken ct) => s.ApercuAsync(d, ct));
         g.MapPost("/export", (DemandeExport d, HttpContext http, ServiceExport s, CancellationToken ct) => s.ExporterAsync(d, Utilisateur.Depuis(http), ct));
         g.MapGet("/export", (ServiceExport s, CancellationToken ct) => s.LotsAsync(ct));

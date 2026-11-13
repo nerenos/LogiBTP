@@ -9,6 +9,7 @@ using LogiBTP.Socle;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Api.Btp;
 
@@ -228,7 +229,7 @@ public static class StatutEncaisseeBtp
             {
                 traitees.Add(p.Cle);
                 var envoyer = !d.Ecarter && p.Encaissements.Count > 0;
-                await using var tx = await fe.Db.Database.BeginTransactionAsync(ct);
+                await using var tx = await fe.Db.Unite().CommencerAsync(ct);
                 try
                 {
                     long? statut = null, cdar = null;

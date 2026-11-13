@@ -620,6 +620,8 @@ export const api = {
   documents: () => appel('GET', '/documents'),
   document: (id) => appel('GET', `/documents/${id}`),
   creer: (creation) => appel('POST', '/documents', creation),
+  /** Création et contenu dans la même transaction (import) : rien n'est créé si l'enregistrement échoue. */
+  creerAvecContenu: (creation, contenu) => appel('POST', '/documents/avec-contenu', { creation, contenu }),
   enregistrer: (id, doc) => appel('PUT', `/documents/${id}`, doc),
   valider: (id, version) => appel('POST', `/documents/${id}/valider`, { ent_version: version }),
   // Cycle de vie : envoi d'un document approuvé, validation du tiers, rejet (motif).

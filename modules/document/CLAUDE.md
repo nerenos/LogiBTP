@@ -47,6 +47,7 @@
 - Ne jamais comparer `lig_tyl_id` numériquement : prédicats `estPied`, `estTranche`, `estTypeNumerote`, `accepteEnfants`. SECTION : racine seulement (`SECTION_RACINE`) ; pied à la racine ou dans une section à la racine (`PIED_RACINE`).
 - Familles d'achat (A, T) : `FamillesDocument.EstAchat` / `estFamilleAchat` / `f_famille_achat`, jamais la famille A en dur.
 - Lignes virtuelles du pied (`_virtuelle`, `ID_PIED`, identifiants ≤ −10¹²) : affichage seulement, jamais saisissables.
+- Transactions par l'unité d'écriture du socle (`db.Unite().CommencerAsync`, jamais `Database.BeginTransaction`) ; document créé avec son contenu : `CreerAvecContenu` (`POST /documents/avec-contenu`), tout ou rien ; type de ligne inconnu refusé (422 `VALIDATION`, `TYPE_LIGNE`).
 - Enregistrement : l'entête est recopié champ par champ (champs métier dans `CopierEnteteSaisie`) ; identifiants négatifs temporaires → `CorrespondanceLignes`.
 - `f_document_statut` : toute nouvelle modification part de `019m`.
 - Verrou sans expiration (seul `PeutDeverrouiller` force). `Disposition` cherche dans `racine` (deux pages coexistent pendant une ouverture).

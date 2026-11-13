@@ -6,6 +6,7 @@ using LogiBTP.Socle.Web;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.FactureElectronique.Web;
 
@@ -254,7 +255,7 @@ public class ServiceFactureElectronique(
             FflCreeLe = maintenant, FflModifieLe = maintenant, FflCreePar = utilisateur ?? "",
         };
         // Dans la transaction en cours s'il y en a une (statut posé à la réception), sinon dans la sienne.
-        await using var tx = db.Database.CurrentTransaction is null ? await db.Database.BeginTransactionAsync(ct) : null;
+        await using var tx = db.Database.CurrentTransaction is null ? await db.Unite().CommencerAsync(ct) : null;
         db.Flux.Add(flux);
         try
         {
@@ -379,7 +380,7 @@ public class ServiceFactureElectronique(
             FflCurseur = curseur, FflDeposeLe = meta.DeposeLe, FflModifiePaLe = meta.ModifieLe, FflCreeLe = maintenant, FflModifieLe = maintenant,
             FflCreePar = utilisateur ?? "", FflHorsPlateforme = horsPlateforme,
         };
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         db.Flux.Add(f);
         await db.SaveChangesAsync(ct);
         await GarderFichierAsync(f, TypeDocumentFlux.Original, original with { Nom = original.Nom ?? meta.Nom }, ct);
@@ -693,7 +694,7 @@ public class ServiceFactureElectronique(
         var avant = ReglesCycleVie.StatutAffiche(historique);
         var apres = ReglesCycleVie.StatutAffiche([.. historique, a.Code]);
         var externe = db.Database.CurrentTransaction is not null;
-        await using var tx = externe ? null : await db.Database.BeginTransactionAsync(ct);
+        await using var tx = externe ? null : await db.Unite().CommencerAsync(ct);
         long? cdarId = null;
         if (cdar is not null)
         {
@@ -790,7 +791,7 @@ public class ServiceFactureElectronique(
         if (f.FflSens != SensFlux.Sortant || f.FflEtat is not (EtatFlux.Erreur or EtatFlux.AEnvoyer))
             throw ExceptionMetier.Invalide(ErreurFe.EtatFluxInvalide, $"Flux {id} : nouvelle tentative impossible ({f.FflEtat})");
         var avant = f.FflEtat;
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         // Refusé par la plateforme : nouveau dépôt, sous un nouvel identifiant de suivi (l'ancien est connu de la PA).
         var redepot = f.FflIdFlux is not null;
         if (redepot)
@@ -825,7 +826,7 @@ public class ServiceFactureElectronique(
             ? new AccuseFlux(EtatAccuse.Ok, [])
             : new AccuseFlux(EtatAccuse.Erreur, [new DetailAccuse(NiveauAccuse.Erreur, "file", c.Motif ?? MotifAccuse.AutreErreurTechnique, c.Message ?? "")]);
         var meta = ConnecteurManuel().Confirmer(f.FflIdFlux, accuse);
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         await AppliquerAccuseAsync(f, meta, ActeurFe.Utilisateur, u.Code, ct);
         await tx.CommitAsync(ct);
         return await DtoAsync(f, ct);

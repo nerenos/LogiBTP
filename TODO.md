@@ -7,10 +7,12 @@
   rejouables, numéro de version lisible, retour arrière sans restauration.
   Aujourd'hui : scripts `modules/*/db` et `db/` appliqués à la création du volume Docker, puis à la main sur `logibtp`
   et `logibtp_demo` ; la plupart ne sont pas rejouables.
-- [ ] **Enregistrement des données : uniformiser et sécuriser** : un seul format d'échange et de contrôle par type
-  d'écriture, validations serveur systématiques, écritures SQL paramétrées partout (avertissements
-  `ExecuteSqlRawAsync` dans `Intervenants.cs`), transactions englobant les champs gérés des fiches
-  (`EcrireGeresAsync` est hors de la transaction de la ligne).
+- [ ] **Enregistrement des données, suite** (plan [enregistrement-donnees.md](documentation/conception/plans/enregistrement-donnees.md),
+  lots 1 à 9 faits le 13/11/2026) : passer les contrôles des autres tables de paramétrage au format commun
+  (`Controles`, 422 `VALIDATION` par champ ; fait : listes de valeurs) — annuaire (`CODE` / `LIBELLE`, avec son
+  fournisseur mémoire), bibliothèque, comptabilité, pointage, ressources ; brancher `erreursParChamp` dans les écrans de
+  paramétrage pour placer chaque message sous son champ ; étendre `.EnTransaction()` aux groupes restants sans effet
+  externe immédiat (ressources, rentabilité, structure, terrain, exécution) après revue de leurs appels sortants.
 
 ## Fonctionnel
 

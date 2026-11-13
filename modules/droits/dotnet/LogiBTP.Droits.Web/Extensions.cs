@@ -1,3 +1,4 @@
+using LogiBTP.Socle.Donnees;
 using System.Text.RegularExpressions;
 using LogiBTP.Socle;
 using LogiBTP.Socle.Web;
@@ -133,7 +134,8 @@ public static class Extensions
     /// <summary>Routes HTTP du module, sous /droits (gestion : nœud administration/profils, posé par la table des routes).</summary>
     public static RouteGroupBuilder MapModuleDroits(this RouteGroupBuilder api)
     {
-        var g = api.MapGroup("/droits");
+        // Chaque écriture du module en une seule transaction (tout ou rien).
+        var g = api.MapGroup("/droits").EnTransaction();
         g.MapGet("/moi", (HttpContext http, ServiceDroits s, CancellationToken ct) => s.MoiAsync(Utilisateur.Depuis(http), ct));
         g.MapGet("/catalogue", (ServiceDroits s, CancellationToken ct) => s.CatalogueAsync(ct));
         g.MapGet("/profils", (ServiceDroits s, CancellationToken ct) => s.ListeAsync(ct));

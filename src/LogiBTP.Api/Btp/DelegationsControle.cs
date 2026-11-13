@@ -2,6 +2,7 @@ using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using NpgsqlTypes;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Api.Btp;
 
@@ -85,7 +86,7 @@ public static class DelegationsControle
             """, new NpgsqlParameter("ids", ids), new NpgsqlParameter("s", srv)).ToListAsync(ct);
         if (ids.Except(membres).Any()) throw ExceptionMetier.Invalide("DELEGATION_MEMBRE", "Le délégué doit être un membre actif du service");
 
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         await db.Database.ExecuteSqlRawAsync("DELETE FROM delegation_controle WHERE dlc_srv_id = @s", [new NpgsqlParameter("s", srv)], ct);
         foreach (var d in l)
         {

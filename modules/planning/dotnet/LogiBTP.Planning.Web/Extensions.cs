@@ -1,3 +1,4 @@
+using LogiBTP.Socle.Donnees;
 using LogiBTP.Socle.Web;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -27,7 +28,8 @@ public static class Extensions
     /// <summary>Routes HTTP du module, sous /planning ; renvoie le groupe (filtre d'activation posé par l'application).</summary>
     public static RouteGroupBuilder MapModulePlanning(this RouteGroupBuilder api)
     {
-        var g = api.MapGroup("/planning");
+        // Chaque écriture du module en une seule transaction (tout ou rien).
+        var g = api.MapGroup("/planning").EnTransaction();
         g.MapGet("/vues", (HttpContext http, ServicePlanning s, CancellationToken ct) => s.VuesAsync(Utilisateur.Depuis(http), ct));
         g.MapPut("/vues", (VueSaisie v, HttpContext http, ServicePlanning s, CancellationToken ct) =>
             s.EnregistrerVueAsync(v.Code, v.Libelle, v.Definition, v.Globale, Utilisateur.Depuis(http), ct));

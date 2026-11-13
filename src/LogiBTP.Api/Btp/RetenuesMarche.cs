@@ -3,6 +3,7 @@ using LogiBTP.Socle.Web;
 using LogiBTP.SousTraitance;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Api.Btp;
 
@@ -96,7 +97,7 @@ public static class RetenuesMarche
         var r = ReglesRetenue.Calculer(m.Reception, m.Reserves, m.LeveesLe, le);
         if (r.Bloquee) throw ExceptionMetier.Invalide(r.Motif!, r.Motif == "RET_RESERVES" ? "Réserves non levées : la retenue reste bloquée" : "Travaux non réceptionnés : pas d'échéance de libération");
         if (!r.Liberable) throw ExceptionMetier.Invalide("RET_ECHEANCE", $"Retenue libérable à partir du {r.Date:dd/MM/yyyy}");
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         await db.Database.ExecuteSqlRawAsync($"""
             UPDATE document_echeance e SET ech_date = @le
             WHERE e.ech_date IS NULL AND e.ech_id IN (SELECT x.ech_id FROM ({SqlRetenues}) x)

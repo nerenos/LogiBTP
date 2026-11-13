@@ -6,6 +6,7 @@ using LogiBTP.Fiches;
 using LogiBTP.Socle;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
+using LogiBTP.Socle.Donnees;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -100,38 +101,27 @@ public partial class ServiceFiche(FicheDbContext db, SpecialisationFiche special
     public virtual async Task<List<OptionChamp>> OptionsRequete(string sql, CancellationToken ct)
     {
         if (ValidationFiche.ErreurRequete(sql) is { } erreur) throw ExceptionMetier.Invalide("REQUETE", erreur);
-        var cnx = (NpgsqlConnection)db.Database.GetDbConnection();
-        var ouverte = cnx.State == ConnectionState.Open;
-        if (!ouverte) await cnx.OpenAsync(ct);
         try
         {
-            await using var tx = await cnx.BeginTransactionAsync(ct);
-            await using (var cadre = new NpgsqlCommand($"SET TRANSACTION READ ONLY; SET LOCAL statement_timeout = {specialisation.DelaiRequeteMs}", cnx, tx))
+            // Lecture protégée de l'unité : transaction READ ONLY (ou point de sauvegarde) annulée à la fin.
+            return await db.Unite().LireAsync(async (cnx, tx, c) =>
             {
-                await cadre.ExecuteNonQueryAsync(ct);
-            }
-            var options = new List<OptionChamp>();
-            await using (var cmd = new NpgsqlCommand($"SELECT * FROM ({sql.Trim().TrimEnd(';')}) AS q LIMIT {MaxOptionsRequete}", cnx, tx))
-            await using (var rd = await cmd.ExecuteReaderAsync(ct))
-            {
-                while (await rd.ReadAsync(ct))
+                var options = new List<OptionChamp>();
+                await using var cmd = new NpgsqlCommand($"SELECT * FROM ({sql.Trim().TrimEnd(';')}) AS q LIMIT {MaxOptionsRequete}", cnx, tx);
+                await using var rd = await cmd.ExecuteReaderAsync(c);
+                while (await rd.ReadAsync(c))
                 {
                     if (rd.IsDBNull(0)) continue;
                     var valeur = Convert.ToString(rd.GetValue(0), CultureInfo.InvariantCulture) ?? "";
                     var libelle = rd.FieldCount > 1 && !rd.IsDBNull(1) ? Convert.ToString(rd.GetValue(1), CultureInfo.InvariantCulture) : valeur;
                     options.Add(new OptionChamp { Valeur = valeur, Libelle = libelle });
                 }
-            }
-            await tx.RollbackAsync(ct);
-            return options;
+                return options;
+            }, specialisation.DelaiRequeteMs, ct);
         }
         catch (PostgresException e)
         {
             throw ExceptionMetier.Invalide("REQUETE", $"Requête de la liste refusée : {e.MessageText}");
-        }
-        finally
-        {
-            if (!ouverte) await cnx.CloseAsync();
         }
     }
 
@@ -417,7 +407,7 @@ public partial class ServiceFiche(FicheDbContext db, SpecialisationFiche special
     {
         var erreurs = ValidationFiche.ValiderFiche(t, valeurs, proprietes);
         erreurs.AddRange(specialisation.ValiderMetier(t.Code, valeurs, proprietes));
-        if (erreurs.Count > 0) throw ExceptionMetier.Invalide("VALIDATION", "Fiche incomplète ou incorrecte", erreurs);
+        if (erreurs.Count > 0) throw ExceptionMetier.Invalide(ErreursEnregistrement.Validation, "Fiche incomplète ou incorrecte", erreurs);
     }
 
     public virtual async Task<FicheDto> Enregistrer(string code, string id, DemandeEnregistrement d, Utilisateur u, CancellationToken ct)
@@ -431,52 +421,57 @@ public partial class ServiceFiche(FicheDbContext db, SpecialisationFiche special
             var champ = t.Definition.Champs.FirstOrDefault(x => x.Code == k);
             if (champ is null || champ.LectureSeule || champ.Saisie == "creation") throw ExceptionMetier.Invalide("CHAMP", $"Champ {k} non modifiable");
         }
-        // Champs gérés par la spécialisation : contrôlés avant l'écriture, écrits après celle de la ligne.
+        // Champs gérés par la spécialisation : contrôlés avant l'écriture, écrits après celle de la ligne, dans la même
+        // transaction (unité d'écriture) : un géré refusé laisse la fiche comme avant.
         var geres = Geres(t, d.Valeurs);
         IReadOnlyDictionary<string, object?> valide = new Dictionary<string, object?>();
-        await Ecrire(async (cnx, tx) =>
+        await db.Unite().ExecuterAsync(async ctu =>
         {
-            var limite = DateTimeOffset.UtcNow - specialisation.ExpirationVerrou;
-            var verrou = (await LireDans(cnx, tx, new RequeteFiche(
-                "SELECT vef_utilisateur, vef_depuis, vef_jeton::text AS jeton, vef_renouvele FROM verrou_fiche WHERE vef_type = @p0 AND vef_id = @p1 FOR UPDATE",
-                [new("p0", code), new("p1", id)]), ct)).FirstOrDefault();
-            var actif = verrou is not null && (DateTime)verrou["vef_renouvele"]! > limite.UtcDateTime;
-            if (!actif || (string)verrou!["jeton"]! != d.Jeton.ToString())
+            await Ecrire(async (cnx, tx) =>
             {
-                var etat = actif ? new EtatVerrou((string)verrou!["vef_utilisateur"]!, new DateTimeOffset((DateTime)verrou["vef_depuis"]!), false) : null;
-                throw ExceptionMetier.Conflit(ErreursFiche.VerrouPerdu, etat is null ? "Verrou de modification expiré : reprenez la modification" : $"Fiche reprise en modification par {etat.Utilisateur}", etat);
-            }
-            var h = (await LireDans(cnx, tx, Requete(() => c.Verrou(id)), ct)).FirstOrDefault()?["h"] as string ?? throw ExceptionMetier.Introuvable($"Fiche {code} {id}");
-            if (d.H is not null && d.H != h) throw ExceptionMetier.Conflit("FICHE_MODIFIEE", "La fiche a été modifiée par ailleurs : rechargez-la");
+                var limite = DateTimeOffset.UtcNow - specialisation.ExpirationVerrou;
+                var verrou = (await LireDans(cnx, tx, new RequeteFiche(
+                    "SELECT vef_utilisateur, vef_depuis, vef_jeton::text AS jeton, vef_renouvele FROM verrou_fiche WHERE vef_type = @p0 AND vef_id = @p1 FOR UPDATE",
+                    [new("p0", code), new("p1", id)]), ctu)).FirstOrDefault();
+                var actif = verrou is not null && (DateTime)verrou["vef_renouvele"]! > limite.UtcDateTime;
+                if (!actif || (string)verrou!["jeton"]! != d.Jeton.ToString())
+                {
+                    var etat = actif ? new EtatVerrou((string)verrou!["vef_utilisateur"]!, new DateTimeOffset((DateTime)verrou["vef_depuis"]!), false) : null;
+                    throw ExceptionMetier.Conflit(ErreursFiche.VerrouPerdu, etat is null ? "Verrou de modification expiré : reprenez la modification" : $"Fiche reprise en modification par {etat.Utilisateur}", etat);
+                }
+                var h = (await LireDans(cnx, tx, Requete(() => c.Verrou(id)), ctu)).FirstOrDefault()?["h"] as string ?? throw ExceptionMetier.Introuvable($"Fiche {code} {id}");
+                if (d.H is not null && d.H != h) throw ExceptionMetier.Conflit("FICHE_MODIFIEE", "La fiche a été modifiée par ailleurs : rechargez-la");
 
-            // Ligne complète après modification (confidentiel compris) : c'est elle qui est validée.
-            var actuelle = await LigneComplete(t, id, cnx, tx, ct);
-            var valeurs = new Dictionary<string, object?>(actuelle.Valeurs);
-            foreach (var (k, v) in d.Valeurs) valeurs[k] = ValidationFiche.Normaliser(v);
-            var proprietes = actuelle.Proprietes.ToDictionary(kv => kv.Key, kv => ValidationFiche.Normaliser(kv.Value));
-            foreach (var (k, v) in d.Proprietes) proprietes[k] = ValidationFiche.Normaliser(v);
-            Valider(t, valeurs, proprietes);
-            await ControlerCodeModifie(t, id, actuelle.Valeurs, valeurs, droits, cnx, tx, ct);
-            await specialisation.ValiderGeresAsync(code, id, geres, valeurs, u, ct);
-            valide = valeurs;
+                // Ligne complète après modification (confidentiel compris) : c'est elle qui est validée.
+                var actuelle = await LigneComplete(t, id, cnx, tx, ctu);
+                var valeurs = new Dictionary<string, object?>(actuelle.Valeurs);
+                foreach (var (k, v) in d.Valeurs) valeurs[k] = ValidationFiche.Normaliser(v);
+                var proprietes = actuelle.Proprietes.ToDictionary(kv => kv.Key, kv => ValidationFiche.Normaliser(kv.Value));
+                foreach (var (k, v) in d.Proprietes) proprietes[k] = ValidationFiche.Normaliser(v);
+                Valider(t, valeurs, proprietes);
+                await ControlerCodeModifie(t, id, actuelle.Valeurs, valeurs, droits, cnx, tx, ctu);
+                await specialisation.ValiderGeresAsync(code, id, geres, valeurs, u, ctu);
+                valide = valeurs;
 
-            var aEcrire = d.Valeurs.Where(kv => !geres.ContainsKey(kv.Key)).ToDictionary(kv => kv.Key, kv => Texte(kv.Value));
-            await specialisation.AvantEcritureAsync(code, false, id, aEcrire, valeurs, proprietes, u, ct);
-            var calcules = aEcrire.Keys.Except(d.Valeurs.Keys).ToHashSet();
-            ChiffrerSecrets(t, aEcrire);
-            var json = Requete(() => ProprietesJson(t, d.Proprietes));
-            if (aEcrire.Count > 0 || json is not null)
-            {
-                await using var cmd = Commande(cnx, tx, Requete(() => c.MiseAJour(id, aEcrire, json, calcules)));
-                await cmd.ExecuteNonQueryAsync(ct);
-            }
-            await using (var renouveler = Commande(cnx, tx, new RequeteFiche("UPDATE verrou_fiche SET vef_renouvele = now() WHERE vef_type = @p0 AND vef_id = @p1", [new("p0", code), new("p1", id)])))
-            {
-                await renouveler.ExecuteNonQueryAsync(ct);
-            }
-            return true;
+                var aEcrire = d.Valeurs.Where(kv => !geres.ContainsKey(kv.Key)).ToDictionary(kv => kv.Key, kv => Texte(kv.Value));
+                await specialisation.AvantEcritureAsync(code, false, id, aEcrire, valeurs, proprietes, u, ctu);
+                var calcules = aEcrire.Keys.Except(d.Valeurs.Keys).ToHashSet();
+                ChiffrerSecrets(t, aEcrire);
+                var json = Requete(() => ProprietesJson(t, d.Proprietes));
+                if (aEcrire.Count > 0 || json is not null)
+                {
+                    await using var cmd = Commande(cnx, tx, Requete(() => c.MiseAJour(id, aEcrire, json, calcules)));
+                    await cmd.ExecuteNonQueryAsync(ctu);
+                }
+                await using (var renouveler = Commande(cnx, tx, new RequeteFiche("UPDATE verrou_fiche SET vef_renouvele = now() WHERE vef_type = @p0 AND vef_id = @p1", [new("p0", code), new("p1", id)])))
+                {
+                    await renouveler.ExecuteNonQueryAsync(ctu);
+                }
+                return true;
+            }, ctu);
+            if (geres.Count > 0) await specialisation.EcrireGeresAsync(code, id, false, geres, valide, u, ctu);
         }, ct);
-        if (geres.Count > 0) await specialisation.EcrireGeresAsync(code, id, false, geres, valide, u, ct);
+        // Après validation seulement (géocodage…) : un échec n'annule rien.
         await specialisation.ApresEcritureAsync(code, id, false, u, ct);
         return await VersFiche(t, await LigneComplete(t, id, null, null, ct), d.Confidentiel, droits, u, d.Jeton, ct);
     }
@@ -496,16 +491,22 @@ public partial class ServiceFiche(FicheDbContext db, SpecialisationFiche special
         await specialisation.ValiderGeresAsync(code, null, geres, valeurs, u, ct);
         var aEcrire = d.Valeurs.Where(kv => !geres.ContainsKey(kv.Key) && Texte(kv.Value) is not null).ToDictionary(kv => kv.Key, kv => Texte(kv.Value));
         if (chrono is not null) aEcrire[chrono.Definition.Champ] = valeurs[chrono.Definition.Champ] as string;
-        await specialisation.AvantEcritureAsync(code, true, null, aEcrire, valeurs, proprietes, u, ct);
-        var calcules = aEcrire.Keys.Except(d.Valeurs.Keys).ToHashSet();
-        ChiffrerSecrets(t, aEcrire);
-        var json = Requete(() => ProprietesJson(t, d.Proprietes));
-        var id = await Ecrire(async (cnx, tx) =>
+        // Une seule transaction (unité d'écriture) : écritures de la spécialisation avant la ligne (synchronisations),
+        // ligne, code du chrono et champs gérés ; une erreur n'importe où annule tout.
+        var id = await db.Unite().ExecuterAsync(async ctu =>
         {
-            if (chrono is not null) valeurs[chrono.Definition.Champ] = aEcrire[chrono.Definition.Champ] = await AttribuerCode(t, chrono, cnx, tx, ct);
-            return (string)(await LireDans(cnx, tx, Requete(() => specialisation.Constructeur(t).Insertion(aEcrire, json, calcules)), ct)).First()["id"]!;
+            await specialisation.AvantEcritureAsync(code, true, null, aEcrire, valeurs, proprietes, u, ctu);
+            var calcules = aEcrire.Keys.Except(d.Valeurs.Keys).ToHashSet();
+            ChiffrerSecrets(t, aEcrire);
+            var json = Requete(() => ProprietesJson(t, d.Proprietes));
+            var cree = await Ecrire(async (cnx, tx) =>
+            {
+                if (chrono is not null) valeurs[chrono.Definition.Champ] = aEcrire[chrono.Definition.Champ] = await AttribuerCode(t, chrono, cnx, tx, ctu);
+                return (string)(await LireDans(cnx, tx, Requete(() => specialisation.Constructeur(t).Insertion(aEcrire, json, calcules)), ctu)).First()["id"]!;
+            }, ctu);
+            if (geres.Count > 0) await specialisation.EcrireGeresAsync(code, cree, true, geres, valeurs, u, ctu);
+            return cree;
         }, ct);
-        if (geres.Count > 0) await specialisation.EcrireGeresAsync(code, id, true, geres, valeurs, u, ct);
         await specialisation.ApresEcritureAsync(code, id, true, u, ct);
         return await VersFiche(t, await LigneComplete(t, id, null, null, ct), d.Confidentiel, droits, u, null, ct);
     }
@@ -518,29 +519,34 @@ public partial class ServiceFiche(FicheDbContext db, SpecialisationFiche special
     {
         await Exiger(code, u, x => x.Supprimer, ActionsDroits.Supprimer, ct);
         var t = await Type(code, ct);
-        await specialisation.AvantSuppressionAsync(code, id, u, ct);
         try
         {
-            await Ecrire(async (cnx, tx) =>
+            // Nettoyage de la spécialisation et suppression dans la même transaction (unité d'écriture).
+            await db.Unite().ExecuterAsync(async ctu =>
             {
-                var limite = DateTimeOffset.UtcNow - specialisation.ExpirationVerrou;
-                var verrou = (await LireDans(cnx, tx, new RequeteFiche(
-                    "SELECT vef_utilisateur, vef_renouvele FROM verrou_fiche WHERE vef_type = @p0 AND vef_id = @p1 FOR UPDATE",
-                    [new("p0", code), new("p1", id)]), ct)).FirstOrDefault();
-                if (verrou is not null && (DateTime)verrou["vef_renouvele"]! > limite.UtcDateTime && (string)verrou["vef_utilisateur"]! != u.Code)
-                    throw ExceptionMetier.Conflit(ErreursFiche.FicheEnModification, $"Fiche en cours de modification par {verrou["vef_utilisateur"]} : suppression impossible");
-                await using (var cmd = Commande(cnx, tx, Requete(() => specialisation.Constructeur(t).Suppression(id))))
+                await specialisation.AvantSuppressionAsync(code, id, u, ctu);
+                await Ecrire(async (cnx, tx) =>
                 {
-                    if (await cmd.ExecuteNonQueryAsync(ct) == 0) throw ExceptionMetier.Introuvable($"Fiche {code} {id}");
-                }
-                await using (var lib = Commande(cnx, tx, new RequeteFiche("DELETE FROM verrou_fiche WHERE vef_type = @p0 AND vef_id = @p1", [new("p0", code), new("p1", id)])))
-                {
-                    await lib.ExecuteNonQueryAsync(ct);
-                }
-                return true;
+                    var limite = DateTimeOffset.UtcNow - specialisation.ExpirationVerrou;
+                    var verrou = (await LireDans(cnx, tx, new RequeteFiche(
+                        "SELECT vef_utilisateur, vef_renouvele FROM verrou_fiche WHERE vef_type = @p0 AND vef_id = @p1 FOR UPDATE",
+                        [new("p0", code), new("p1", id)]), ctu)).FirstOrDefault();
+                    if (verrou is not null && (DateTime)verrou["vef_renouvele"]! > limite.UtcDateTime && (string)verrou["vef_utilisateur"]! != u.Code)
+                        throw ExceptionMetier.Conflit(ErreursFiche.FicheEnModification, $"Fiche en cours de modification par {verrou["vef_utilisateur"]} : suppression impossible");
+                    await using (var cmd = Commande(cnx, tx, Requete(() => specialisation.Constructeur(t).Suppression(id))))
+                    {
+                        if (await cmd.ExecuteNonQueryAsync(ctu) == 0) throw ExceptionMetier.Introuvable($"Fiche {code} {id}");
+                    }
+                    await using (var lib = Commande(cnx, tx, new RequeteFiche("DELETE FROM verrou_fiche WHERE vef_type = @p0 AND vef_id = @p1", [new("p0", code), new("p1", id)])))
+                    {
+                        await lib.ExecuteNonQueryAsync(ctu);
+                    }
+                    return true;
+                }, ctu);
             }, ct);
         }
-        catch (PostgresException e) when (e.SqlState == PostgresErrorCodes.ForeignKeyViolation)
+        catch (Exception e) when (e is PostgresException { SqlState: PostgresErrorCodes.ForeignKeyViolation }
+            or DbUpdateException { InnerException: PostgresException { SqlState: PostgresErrorCodes.ForeignKeyViolation } })
         {
             throw ExceptionMetier.Conflit(ErreursFiche.FicheUtilisee, "Cet élément est utilisé ailleurs : suppression impossible");
         }
@@ -584,7 +590,7 @@ public partial class ServiceFiche(FicheDbContext db, SpecialisationFiche special
         // Confidentiel du programme : déjà confidentiel, sans effet ; champs gérés exclus (données liées hors de la fiche).
         var obligatoires = p.Obligatoires.Where(programme.ContainsKey).ToHashSet();
         var confidentiels = p.Confidentiels.Where(c => programme.TryGetValue(c, out var x) && !x.Gere && !(x.Confidentiel && !x.ConfidentielParametre)).ToHashSet();
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         await db.Parametres.Where(x => x.PcfType == code).ExecuteDeleteAsync(ct);
         db.Parametres.AddRange(obligatoires.Union(confidentiels).Select(c => new ParametreChampFiche
         {
@@ -658,30 +664,29 @@ public partial class ServiceFiche(FicheDbContext db, SpecialisationFiche special
         }
     }
 
+    /// <summary>
+    /// Écriture dans l'unité d'écriture de la requête (transaction englobante : ligne, verrou, champs gérés et écritures
+    /// de la spécialisation sur les autres contextes ; point de sauvegarde si une transaction est déjà ouverte).
+    /// </summary>
     protected async Task<T> Ecrire<T>(Func<NpgsqlConnection, NpgsqlTransaction, Task<T>> ecrire, CancellationToken ct)
     {
-        var cnx = (NpgsqlConnection)db.Database.GetDbConnection();
-        var ouverte = cnx.State == ConnectionState.Open;
-        if (!ouverte) await cnx.OpenAsync(ct);
+        var unite = db.Unite();
         try
         {
-            await using var tx = await cnx.BeginTransactionAsync(ct);
-            await using (var cadre = new NpgsqlCommand($"SET LOCAL statement_timeout = {specialisation.DelaiRequeteMs}", cnx, tx))
+            return await unite.ExecuterAsync(async c =>
             {
-                await cadre.ExecuteNonQueryAsync(ct);
-            }
-            var res = await ecrire(cnx, tx);
-            await tx.CommitAsync(ct);
-            return res;
+                await using (var cadre = new NpgsqlCommand($"SET LOCAL statement_timeout = {specialisation.DelaiRequeteMs}", unite.Connexion, unite.Transaction))
+                {
+                    await cadre.ExecuteNonQueryAsync(c);
+                }
+                return await ecrire(unite.Connexion, unite.Transaction!);
+            }, ct);
         }
-        catch (PostgresException e)
+        catch (PostgresException e) when (e.SqlState != PostgresErrorCodes.ForeignKeyViolation)
         {
-            // Valeur refusée par la base : conversion (22P02…), contrainte (23502 NOT NULL, 23505 unicité, 23514 CHECK…).
+            // Valeur refusée par la base : conversion (22P02…), contrainte (23502 NOT NULL, 23505 unicité, 23514 CHECK…) ;
+            // clé étrangère laissée à l'appelant (suppression : FICHE_UTILISEE) ou à la traduction commune (UTILISE).
             throw ExceptionMetier.Invalide("VALEUR", e.SqlState == "23505" ? "Cette valeur existe déjà (doublon)" : $"Valeur refusée par la base : {e.MessageText}");
-        }
-        finally
-        {
-            if (!ouverte) await cnx.CloseAsync();
         }
     }
 }

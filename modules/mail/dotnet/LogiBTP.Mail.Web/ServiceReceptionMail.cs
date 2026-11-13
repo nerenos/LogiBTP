@@ -3,6 +3,7 @@ using LogiBTP.Socle.Web;
 using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Mail.Web;
 
@@ -282,7 +283,7 @@ public sealed class ServiceReceptionMail(MailDbContext db, ServiceComptesMail co
             if (x.Mots.All(string.IsNullOrWhiteSpace) && string.IsNullOrWhiteSpace(x.Expediteur)) throw ExceptionMetier.Invalide("MAIL_REGLE", $"{x.Code} : mots ou expéditeur obligatoires");
         }
         if (l.GroupBy(x => x.Code.Trim().ToUpperInvariant()).Any(g => g.Count() > 1)) throw ExceptionMetier.Invalide("MAIL_REGLE", "Codes en double");
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         await db.Regles.ExecuteDeleteAsync(ct);
         db.Regles.AddRange(l.Select(x => new RegleEntite
         {

@@ -30,16 +30,20 @@ public static class LiaisonsBtp
     public static string DateHeure(DateOnly jour, int heure = 0) => LogiBTP.Planning.Temps.Ecrire(LogiBTP.Planning.Temps.VersMinutes(jour) + heure * 60);
 
     /// <summary>
-    /// Chantiers du jour d'un salarié (paramètre <c>@s</c>) : chantiers des tâches du planning où il est affecté ce jour-là
-    /// (expression SQL de date <paramref name="jour"/>), module Planning actif ; colonne <c>cha_id</c>.
+    /// Chantiers du jour d'un salarié (paramètre <c>@s</c>) : chantiers des tâches du planning où il est affecté ce jour-là,
+    /// module Planning actif ; colonne <c>cha_id</c>. Jour : <c>current_date</c> (<see cref="SqlChantiersDuJour"/>) ou
+    /// paramètre <c>@d</c> (<see cref="SqlChantiersDuJourDate"/>) ; constantes, jamais composées à l'exécution.
     /// </summary>
-    public static string SqlChantiersDuJour(string jour) => $"""
+    private const string SqlChantiersDuJourDebut = """
         SELECT DISTINCT t.tac_id_element::int AS cha_id
         FROM pla_tache t JOIN pla_affectation a ON a.aff_tac_id = t.tac_id
         WHERE f_module_actif('planning') AND t.tac_type_element = 'chantier' AND t.tac_id_element ~ '^[0-9]+$'
           AND a.aff_res_type IN ('SALARIE', 'INTERIM') AND a.aff_res_id = @s::text
-          AND t.tac_debut < ({jour} + 1) AND t.tac_fin > {jour}
         """;
+
+    public const string SqlChantiersDuJour = SqlChantiersDuJourDebut + "\n  AND t.tac_debut < (current_date + 1) AND t.tac_fin > current_date";
+
+    public const string SqlChantiersDuJourDate = SqlChantiersDuJourDebut + "\n  AND t.tac_debut < (@d::date + 1) AND t.tac_fin > @d::date";
 
     /// <summary>Minutes d'une étape de nature tâche : heures, jours ouvrés (7 h) ; jours calendaires : null (période).</summary>
     private static int? Minutes(EtapeOrdreEntite e) => e.OreUnite switch

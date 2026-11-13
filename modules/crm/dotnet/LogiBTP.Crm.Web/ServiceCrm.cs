@@ -1,6 +1,7 @@
 using LogiBTP.Socle.Web;
 using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Crm.Web;
 
@@ -143,7 +144,7 @@ public partial class ServiceCrm(CrmDbContext db, SpecialisationCrm specialisatio
         if (types.Any(t => string.IsNullOrWhiteSpace(t.Code) || string.IsNullOrWhiteSpace(t.Libelle))) throw ExceptionMetier.Invalide("TYPE_NOTE", "Code et libellé obligatoires");
         var codes = types.Select(t => t.Code.Trim().ToUpperInvariant()).ToList();
         if (codes.Distinct().Count() != codes.Count) throw ExceptionMetier.Invalide("TYPE_NOTE", "Codes en double");
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var existants = await db.TypesNote.ToListAsync(ct);
         var gardes = types.Where(t => t.Id is not null).Select(t => t.Id!.Value).ToHashSet();
         foreach (var x in existants.Where(x => !gardes.Contains(x.TnoId)))
@@ -330,7 +331,7 @@ public partial class ServiceCrm(CrmDbContext db, SpecialisationCrm specialisatio
         if (liens.Count(l => l.Principal) > 1) throw ExceptionMetier.Invalide("NOTE_LIEN", "Un seul élément principal");
 
         var c = await CourantAsync(u, ct);
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         CrmNote n;
         if (id is long x)
         {

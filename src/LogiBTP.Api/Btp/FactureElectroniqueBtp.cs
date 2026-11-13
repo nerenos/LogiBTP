@@ -9,6 +9,7 @@ using LogiBTP.Socle;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Api.Btp;
 
@@ -256,10 +257,11 @@ public sealed class SpecialisationFactureElectroniqueBtp(IServiceProvider servic
         // Facture émise (lot 24) : statut affiché recopié sur l'émission de la pièce (pastille, colonne des listes).
         if (s.Facture is { FflSens: SensFlux.Sortant } emise && PieceDu(emise) is long ent)
         {
-            try { await EnvoiFactureBtp.StatutRecuAsync(services.GetRequiredService<LogiBtpContext>(), ent, emise.FflId, s.AfficheApres, ct); }
+            // Point de sauvegarde : une table absente (script non appliqué) ou un refus n'interrompt pas la transaction du flux.
+            try { await services.GetRequiredService<UniteEcriture>().ExecuterAsync(c => EnvoiFactureBtp.StatutRecuAsync(services.GetRequiredService<LogiBtpContext>(), ent, emise.FflId, s.AfficheApres, c), ct); }
             catch (PostgresException e) when (e.SqlState == PostgresErrorCodes.UndefinedTable) { }
             // Lot 25 (Q17) : En litige → relance de la pièce suspendue, levée à Approuvée ; un échec ne bloque pas la relève.
-            try { await RejetFactureBtp.RelanceAsync(services.GetRequiredService<LogiBtpContext>(), ent, s.Statut.FstCode, s.Statut.FstMotif, ct); }
+            try { await services.GetRequiredService<UniteEcriture>().ExecuterAsync(c => RejetFactureBtp.RelanceAsync(services.GetRequiredService<LogiBtpContext>(), ent, s.Statut.FstCode, s.Statut.FstMotif, c), ct); }
             catch (Exception e) when (e is not OperationCanceledException)
             {
                 journal.LogWarning("Facturation électronique : relance de la pièce {Piece} non suspendue ni levée ({Erreur})", ent, Masquage.Texte(e.Message));
@@ -298,9 +300,10 @@ public sealed class SpecialisationFactureElectroniqueBtp(IServiceProvider servic
     {
         try
         {
-            return (await db.Database.SqlQueryRaw<ReglageSignal>(
+            // Point de sauvegarde : table absente (script non appliqué) sans interrompre la transaction en cours.
+            return await db.Unite().ExecuterAsync(async c => (await db.Database.SqlQueryRaw<ReglageSignal>(
                 "SELECT fsi_niveau AS \"Niveau\", fsi_actif AS \"Actif\" FROM facture_electronique_signal WHERE fsi_code = @c",
-                new NpgsqlParameter("c", signal)).ToListAsync(ct)).FirstOrDefault() ?? new(NiveauParDefaut(signal), true);
+                new NpgsqlParameter("c", signal)).ToListAsync(c)).FirstOrDefault() ?? new(NiveauParDefaut(signal), true), ct);
         }
         catch (PostgresException e) when (e.SqlState == PostgresErrorCodes.UndefinedTable)
         {

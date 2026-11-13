@@ -1,3 +1,4 @@
+using LogiBTP.Socle.Donnees;
 using LogiBTP.Socle.Web;
 using LogiBTP.Socle;
 using Microsoft.AspNetCore.Builder;
@@ -68,7 +69,7 @@ public static class Extensions
             s.EnregistrerModes(v, Utilisateur.Depuis(http), ct));
         api.MapGet("/types-document/numerotation", (ReferentielsDocument<TDoc, TLigne> s, CancellationToken ct) => s.Numerotations(ct));
         api.MapPut("/types-document/{code}/numerotation", (string code, NumerotationSaisie v, HttpContext http, ReferentielsDocument<TDoc, TLigne> s, CancellationToken ct) =>
-            s.EnregistrerNumerotation(code, v, Utilisateur.Depuis(http), ct));
+            s.EnregistrerNumerotation(code, v, Utilisateur.Depuis(http), ct)).EnTransaction();
 
         // Affichage de la saisie : étiquettes de lignes, couleurs des modes de vente, modèles, vues de colonnes.
         api.MapGet("/etiquettes-ligne", (AffichageDocumentService<TDoc, TLigne> s, CancellationToken ct) => s.Etiquettes(ct));
@@ -97,6 +98,9 @@ public static class Extensions
             var d = await s.Creer(c, Utilisateur.Depuis(http), ct);
             return Results.Created($"/api/documents/{d.Document.EntId}", d);
         });
+        // Création et contenu en une transaction (import) : le créateur n'a pas de verrou à prendre sur un document neuf.
+        api.MapPost("/documents/avec-contenu", (CreationAvecContenu<TComplet> c, HttpContext http, DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>
+            s.CreerAvecContenu(c, Utilisateur.Depuis(http), ct));
         api.MapPut("/documents/{id:long}", async (long id, TComplet d, HttpContext http, DocumentService<TDoc, TLigne, TComplet> s, VerrouDocumentService<TDoc, TLigne, TComplet> v, CancellationToken ct) =>
         {
             var u = Utilisateur.Depuis(http);

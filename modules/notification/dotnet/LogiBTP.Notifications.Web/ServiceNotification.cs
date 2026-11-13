@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using NpgsqlTypes;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Notifications.Web;
 
@@ -91,7 +92,8 @@ public sealed class ServiceNotification(NotificationDbContext db, IEnumerable<IS
             if (p is not { NprEcran: false }) publiees += nouvelle;
             if (nouvelle > 0 && p is { NprCourriel: true }) courriels.Add(n);
         }
-        await DiffuserAsync(courriels, ct);
+        // Courriels après la validation de la transaction en cours : une notification annulée n'est pas envoyée.
+        if (courriels.Count > 0) await db.Unite().ApresValidationAsync(c => DiffuserAsync(courriels, c), ct);
         return publiees;
     }
 
@@ -190,7 +192,7 @@ public sealed class ServiceNotification(NotificationDbContext db, IEnumerable<IS
 
     public async Task EnregistrerPreferencesAsync(Utilisateur u, List<PreferenceNotification> l, CancellationToken ct)
     {
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         await db.Preferences.Where(p => p.NprUtilisateur.ToLower() == u.Code.ToLower()).ExecuteDeleteAsync(ct);
         db.Preferences.AddRange(l.Where(p => !p.Ecran || p.Courriel).Select(p => new PreferenceEntite
         {

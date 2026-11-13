@@ -2,6 +2,7 @@ using LogiBTP.Crm;
 using LogiBTP.Socle.Web;
 using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Crm.Web;
 
@@ -121,7 +122,7 @@ public partial class ServiceCrm
     public async Task<DemandeDetail> EnregistrerDemande(long? id, DemandeSaisie s, Utilisateur u, CancellationToken ct)
     {
         var c = await CourantAsync(u, ct);
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         CrmDemande d;
         if (id is long x)
         {
@@ -198,7 +199,7 @@ public partial class ServiceCrm
     public async Task<DemandeDetail> CreerProjet(long id, Utilisateur u, CancellationToken ct)
     {
         var c = await CourantAsync(u, ct);
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var d = await db.Demandes.FirstOrDefaultAsync(x => x.DemId == id, ct) ?? throw ExceptionMetier.Introuvable($"Demande {id}");
         if (ReglesDemande.EtatsClos.Contains(d.DemEtat)) throw ExceptionMetier.Conflit("DEMANDE_CLOSE", "Demande déjà transformée ou sans suite");
         if (!DroitsDemande(d, c).Modifier) throw ExceptionMetier.AccesRefuse(ActionsDroits.Modifier);

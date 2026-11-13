@@ -1,3 +1,4 @@
+using LogiBTP.Socle.Donnees;
 using LogiBTP.Socle.Web;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -28,7 +29,8 @@ public static class Extensions
     /// <summary>Routes HTTP du module, sous /pointage ; renvoie le groupe (filtre d'activation posé par l'application).</summary>
     public static RouteGroupBuilder MapModulePointage(this RouteGroupBuilder api)
     {
-        var g = api.MapGroup("/pointage");
+        // Chaque écriture du module en une seule transaction (tout ou rien).
+        var g = api.MapGroup("/pointage").EnTransaction();
         g.MapGet("/parametres", (ServicePointage s, CancellationToken ct) => s.ParametresAsync(ct));
         g.MapPut("/parametres", (ParametresDto p, HttpContext http, ServicePointage s, CancellationToken ct) => s.EnregistrerParametresAsync(p, Utilisateur.Depuis(http), ct));
         g.MapGet("/sous-types", (ServicePointage s, CancellationToken ct) => s.SousTypesAsync(ct));

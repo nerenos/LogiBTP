@@ -5,6 +5,7 @@ using LogiBTP.Domaine.Ressources;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Api.Btp;
 
@@ -91,7 +92,7 @@ public static class EntretiensMateriel
         if (s.Nature is not null && !Natures.Contains(s.Nature)) throw ExceptionMetier.Invalide("ENT_NATURE", "Nature d'entretien inconnue");
         var releve = s.Releve is { Valeur: not null } r ? r with { Date = r.Date ?? DateOnly.FromDateTime(DateTime.Today) } : null;
         if (releve is not null) await CompteursMateriel.ControlerReleveAsync(db, materiel, releve, null, entId, ct);
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         await db.Database.ExecuteSqlRawAsync("UPDATE document SET ent_ent_nature = @n WHERE ent_id = @e",
             [SqlBtp.P("n", s.Nature), new NpgsqlParameter("e", entId)], ct);
         await db.Database.ExecuteSqlRawAsync("DELETE FROM materiel_releve WHERE mre_ent_id = @e AND mre_source = 'ORDRE'", [new NpgsqlParameter("e", entId)], ct);

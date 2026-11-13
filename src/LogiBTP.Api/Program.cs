@@ -20,6 +20,7 @@ using LogiBTP.Comptabilite.Web;
 using LogiBTP.Pointage.Web;
 using LogiBTP.Planning.Web;
 using LogiBTP.Domaine;
+using LogiBTP.Socle.Donnees;
 using LogiBTP.Droits.Web;
 using LogiBTP.Fiches.Web;
 using LogiBTP.Installation.Web;
@@ -79,7 +80,9 @@ builder.Services.AddHostedService<PassageEnvoiFe>();
 // Une base par société, choisie par le sous-domaine (section Societes ; sans sous-domaine : ConnectionStrings:LogiBTP).
 builder.Services.AddSocietes(builder.Configuration);
 // Les requêtes SQL brutes à une ligne (SqlQuery(...).FirstAsync()) sont voulues : l'avertissement EF « First sans OrderBy » n'y apporte rien.
-void Base(IServiceProvider sp, DbContextOptionsBuilder o) => o.UseNpgsql(sp.GetRequiredService<SocieteCourante>().Connexion).UseSnakeCaseNamingConvention()
+// Connexion unique et unité d'écriture par requête (socle Donnees) : tous les contextes écrivent dans la même transaction.
+builder.Services.AddUniteEcriture();
+void Base(IServiceProvider sp, DbContextOptionsBuilder o) => o.ConfigurerBase(sp).UseSnakeCaseNamingConvention()
     .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.CoreEventId.RowLimitingOperationWithoutOrderByWarning));
 builder.Services.AddDbContext<LogiBtpContext>(Base);
 
@@ -209,6 +212,9 @@ app.UseHttpsInstallation();
 app.UsePersonnalisation();
 app.UseClientWeb();
 app.UseErreursMetier();
+// Refus de la base traduits (DOUBLON, UTILISE, VALEUR), puis effets après validation lancés en fin de requête.
+app.UseErreursBase();
+app.UseUniteEcriture();
 app.UseSocietes();
 app.UseAuthentificationSession();
 app.UseDroits();
@@ -291,5 +297,7 @@ app.MapClientWeb();
 
 // Refus par défaut : toute route /api doit être rattachée à un nœud de droits (erreur au démarrage en développement).
 app.VerifierRoutesDroits();
+// Format d'échange et de contrôle : toute route d'écriture déclare son type (EcrituresBtp.Routes).
+app.VerifierRoutesEcriture(EcrituresBtp.Routes);
 
 app.Run();

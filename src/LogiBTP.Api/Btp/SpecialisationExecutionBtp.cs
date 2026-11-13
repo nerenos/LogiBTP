@@ -1,3 +1,4 @@
+using LogiBTP.Socle.Donnees;
 using LogiBTP.Calendrier.Web;
 using LogiBTP.Crm.Web;
 using LogiBTP.Crm;
@@ -262,23 +263,27 @@ public class SpecialisationExecutionBtp(IHttpContextAccessor http) : Specialisat
     private async Task ControlesAsync(ExecutionDbContext db, OrdreEtapes o, SuitesEtapes s, Utilisateur u, CancellationToken ct)
     {
         if (s.AControler.Count == 0 || o.SrvId is not int srv || !await Services.GetRequiredService<ModulesSociete>().EstActifAsync(ModulesFacultatifs.Crm, ct)) return;
+        // Point de sauvegarde : la tâche ne laisse rien à moitié et un refus n'interrompt pas la validation.
         try
         {
-            // Délégué en vigueur d'abord (le responsable lui a confié le contrôle), sinon le responsable du service ou du parent.
-            var responsable = await db.Database.SqlQueryRaw<long?>("""
-                SELECT coalesce((SELECT c.ind_id FROM f_controleurs_service(@s, current_date) c WHERE c.delegue ORDER BY c.ind_id LIMIT 1),
-                                s.srv_responsable_id, p.srv_responsable_id) AS "Value"
-                FROM service s LEFT JOIN service p ON p.srv_id = s.srv_parent_id WHERE s.srv_id = @s
-                """, new NpgsqlParameter("s", srv)).FirstOrDefaultAsync(ct);
-            var numero = await db.Database.SqlQueryRaw<string?>("SELECT coalesce(ent_numero, ent_id::text) AS \"Value\" FROM document WHERE ent_id = @id",
-                new NpgsqlParameter("id", o.Id)).FirstOrDefaultAsync(ct);
-            var groupe = await db.Database.SqlQueryRaw<long>("SELECT coalesce(ent_groupe_id, ent_id) AS \"Value\" FROM document WHERE ent_id = @id",
-                new NpgsqlParameter("id", o.Id)).FirstAsync(ct);
-            var liens = new List<LienSaisi> { new("document", groupe.ToString(), true) };
-            if (o.IdElement is string cha) liens.Add(new LienSaisi(TypesFiche.Chantier, cha));
-            await Services.GetRequiredService<ServiceCrm>().Enregistrer(null, new NoteSaisie(NatureNote.Tache, EtatNote.AFaire, null, srv,
-                $"Ordre {numero} : contrôle à faire ({string.Join(", ", s.AControler)})", null, responsable, DateTimeOffset.UtcNow.AddDays(2), null,
-                false, false, false, liens, null), u, ct);
+            await db.Unite().ExecuterAsync(async _ =>
+            {
+                // Délégué en vigueur d'abord (le responsable lui a confié le contrôle), sinon le responsable du service ou du parent.
+                var responsable = await db.Database.SqlQueryRaw<long?>("""
+                    SELECT coalesce((SELECT c.ind_id FROM f_controleurs_service(@s, current_date) c WHERE c.delegue ORDER BY c.ind_id LIMIT 1),
+                                    s.srv_responsable_id, p.srv_responsable_id) AS "Value"
+                    FROM service s LEFT JOIN service p ON p.srv_id = s.srv_parent_id WHERE s.srv_id = @s
+                    """, new NpgsqlParameter("s", srv)).FirstOrDefaultAsync(ct);
+                var numero = await db.Database.SqlQueryRaw<string?>("SELECT coalesce(ent_numero, ent_id::text) AS \"Value\" FROM document WHERE ent_id = @id",
+                    new NpgsqlParameter("id", o.Id)).FirstOrDefaultAsync(ct);
+                var groupe = await db.Database.SqlQueryRaw<long>("SELECT coalesce(ent_groupe_id, ent_id) AS \"Value\" FROM document WHERE ent_id = @id",
+                    new NpgsqlParameter("id", o.Id)).FirstAsync(ct);
+                var liens = new List<LienSaisi> { new("document", groupe.ToString(), true) };
+                if (o.IdElement is string cha) liens.Add(new LienSaisi(TypesFiche.Chantier, cha));
+                await Services.GetRequiredService<ServiceCrm>().Enregistrer(null, new NoteSaisie(NatureNote.Tache, EtatNote.AFaire, null, srv,
+                    $"Ordre {numero} : contrôle à faire ({string.Join(", ", s.AControler)})", null, responsable, DateTimeOffset.UtcNow.AddDays(2), null,
+                    false, false, false, liens, null), u, ct);
+            }, ct);
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {

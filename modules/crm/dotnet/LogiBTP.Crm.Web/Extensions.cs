@@ -1,3 +1,4 @@
+using LogiBTP.Socle.Donnees;
 using LogiBTP.Socle.Web;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -23,7 +24,8 @@ public static class Extensions
     /// <summary>Routes HTTP du module, sous /crm ; renvoie le groupe du module (filtre d'activation possible).</summary>
     public static RouteGroupBuilder MapModuleCrm(this RouteGroupBuilder api)
     {
-        var g = api.MapGroup("/crm");
+        // Chaque écriture du module en une seule transaction (tout ou rien).
+        var g = api.MapGroup("/crm").EnTransaction();
         g.MapGet("/contexte", (HttpContext http, ServiceCrm s, CancellationToken ct) => s.Contexte(Utilisateur.Depuis(http), ct));
         g.MapPost("/elements", (List<ElementCrm> e, ServiceCrm s, CancellationToken ct) => s.Decrire(e, ct));
         g.MapGet("/types-notes", (ServiceCrm s, CancellationToken ct) => s.TypesNotes(ct));

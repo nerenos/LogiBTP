@@ -1,3 +1,4 @@
+using LogiBTP.Socle.Donnees;
 using LogiBTP.Socle.Web;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -34,7 +35,8 @@ public static class Extensions
     /// <summary>Routes HTTP du module, sous /notifications (boîte de l'utilisateur de la session).</summary>
     public static RouteGroupBuilder MapModuleNotifications(this RouteGroupBuilder api)
     {
-        var g = api.MapGroup("/notifications");
+        // Chaque écriture du module en une seule transaction (tout ou rien).
+        var g = api.MapGroup("/notifications").EnTransaction();
         g.MapGet("", (string? etat, string? module, int? page, int? taille, HttpContext http, ServiceNotification s, CancellationToken ct) =>
             s.BoiteAsync(Utilisateur.Depuis(http), etat, module, page ?? 1, taille ?? 50, ct));
         g.MapGet("/compteur", (HttpContext http, ServiceNotification s, CancellationToken ct) => s.CompteurAsync(Utilisateur.Depuis(http), ct));

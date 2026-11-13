@@ -2,6 +2,7 @@ using LogiBTP.Socle;
 using LogiBTP.Reglements;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Reglements.Web;
 
@@ -139,7 +140,7 @@ public class ServiceReglement(ReglementDbContext db, SpecialisationReglement spe
         }
         await ControlerPointages(s.TiersId, s.Sens, s.Montant, s.Pointages, id, null, null, ct);
         var touchees = await EcheancesPointees(id, null, ct);
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var r = id is long x ? await db.Reglements.FirstOrDefaultAsync(r => r.RegId == x, ct) ?? throw ExceptionMetier.Introuvable($"Règlement {x}")
             : db.Reglements.Add(new Reglement { RegCreeLe = DateTimeOffset.UtcNow, RegCreePar = u.Code }).Entity;
         r.RegTiersId = s.TiersId;
@@ -180,7 +181,7 @@ public class ServiceReglement(ReglementDbContext db, SpecialisationReglement spe
         if (s.AvoirEcheanceId is long a) ids.Add(a);
         var echeances = (await Echeances(new FiltreEcheances(Ids: ids), false, ct)).ToDictionary(e => e.Id);
         if (!echeances.TryGetValue(s.EcheanceId, out var cible)) throw ExceptionMetier.Introuvable($"Échéance {s.EcheanceId}");
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         Reglement r;
         List<PointageSaisi> pointages;
         decimal disponible;
@@ -298,7 +299,7 @@ public class ServiceReglement(ReglementDbContext db, SpecialisationReglement spe
         if (s.Montant <= 0 || string.IsNullOrWhiteSpace(s.Organisme)) throw ExceptionMetier.Invalide("CAUTION", "Organisme et montant positif obligatoires");
         if (s.Mainlevee is DateOnly levee && levee < s.Date) throw ExceptionMetier.Invalide("CAUTION", "Mainlevée antérieure à la date de la caution");
         var touchees = await EcheancesPointees(null, id, ct);
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var c = id is long x ? await db.Cautions.FirstOrDefaultAsync(c => c.CauId == x, ct) ?? throw ExceptionMetier.Introuvable($"Caution {x}")
             : db.Cautions.Add(new Caution()).Entity;
         c.CauTiersId = s.TiersId;

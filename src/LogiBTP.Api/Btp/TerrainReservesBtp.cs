@@ -6,6 +6,7 @@ using LogiBTP.Mail.Web;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Api.Btp;
 
@@ -67,7 +68,7 @@ public static partial class TerrainBtp
     public static async Task<(long Signature, long Levee)> EnregistrerLeveeAsync(LogiBtpContext db, Utilisateur u, long ent, PvLeveeSaisie p, byte[]? image,
         CancellationToken ct)
     {
-        await using var tx = db.Database.CurrentTransaction is null ? await db.Database.BeginTransactionAsync(ct) : null;
+        await using var tx = db.Database.CurrentTransaction is null ? await db.Unite().CommencerAsync(ct) : null;
         var c = await ComptesReservesAsync(db, ent, ct);
         if (c.Ouvertes > 0) throw ExceptionMetier.Invalide("TERRAIN_RESERVES_OUVERTES", $"{c.Ouvertes} réserve(s) encore ouverte(s)");
         if (!PvLeveeAttendu(c.Ouvertes, c.ACouvrir)) throw ExceptionMetier.Invalide("TERRAIN_LEVEE_RIEN", "Aucune réserve levée à constater");
