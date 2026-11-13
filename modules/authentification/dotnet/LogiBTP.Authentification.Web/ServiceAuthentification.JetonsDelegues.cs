@@ -163,6 +163,8 @@ public sealed class ServiceJetonsDelegues(ServiceAuthentification auth) : IJeton
 
     public Task<int> RevoquerPourCompteAsync(string compte, CancellationToken ct) => auth.RevoquerJetonsDuCompteAsync(compte, ct);
 
+    public Task<int> RevoquerDelegationAsync(string delegation, CancellationToken ct) => auth.RevoquerDelegationAsync(delegation, ct);
+
     public async Task<JetonDelegue?> OuvrirAsync(string secret, CancellationToken ct) =>
-        (await auth.OuvrirJetonDelegueAsync(secret, null, ct)).Jeton is { } j ? new JetonDelegue(j.Session.Code, j.Delegation, j.Client) : null;
+        (await auth.OuvrirJetonDelegueAsync(secret, null, ct)).Jeton is { } j ? new JetonDelegue(j.Session.Code, j.Delegation, j.Client, j.Session.Profil) : null;
 }

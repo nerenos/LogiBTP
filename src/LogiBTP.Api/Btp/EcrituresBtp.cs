@@ -88,6 +88,7 @@ public static class EcrituresBtp
         new("/api/mail", Action), new("/api/mail/traiter", Lot),
         new("/api/planning", Action), new("/api/pointage", Action), new("/api/pointage/export", Lot), new("/api/pointage/valoriser", Lot),
         new("/api/pointage/synthese/valider", Lot), new("/api/pointage/synthese/devalider", Lot),
+        new("/api/mcp", Action), new("/api/mcp/parametres", Parametrage),
         new("/api/reglements", Action), new("/api/relances", Action), new("/api/relances/lots", Lot), new("/api/relances/lots/{id}/annuler", Action),
         new("/api/rentabilite", Action), new("/api/rentabilite/recalculer-tout", Lot), new("/api/rentabilite/chantiers/{id}/photos", Fichier),
         new("/api/ressources", Action), new("/api/ressources/materiels/pleins-carburant", Lot),

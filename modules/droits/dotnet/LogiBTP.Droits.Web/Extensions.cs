@@ -93,7 +93,7 @@ public static class Extensions
             if (utilisateur.Agent is { } agent)
             {
                 // Agent IA : droits du profil ∩ plafond de la délégation, écritures bornées à la liste blanche (lot 3 MCP).
-                var plafond = await service.PlafondAsync(agent, http.RequestAborted);
+                var plafond = await service.PlafondAsync(agent, utilisateur.Profil, http.RequestAborted);
                 var refus = AgentsDroits.ControlerRoute(r, noeud, http.Request.Method, gabarit, etat, plafond);
                 if (refus is not null)
                 {

@@ -58,7 +58,7 @@ public sealed class ServiceDroits(DroitsDbContext db, SpecialisationDroits speci
     /// <summary>Portée accordée ; pour un agent (<see cref="Utilisateur.Agent"/>) : profil ∩ plafond de la délégation (<see cref="AgentsDroits"/>).</summary>
     public async Task<string?> PorteeAsync(Utilisateur u, string noeud, string action, CancellationToken ct) =>
         u.Agent is { } agent
-            ? AgentsDroits.Portee(await DroitsAsync(u.Profil, ct), await PlafondAsync(agent, ct), noeud, action)
+            ? AgentsDroits.Portee(await DroitsAsync(u.Profil, ct), await PlafondAsync(agent, u.Profil, ct), noeud, action)
             : ReglesDroits.PorteeAccordee(await DroitsAsync(u.Profil, ct), noeud, action);
 
     private readonly Dictionary<string, PlafondAgent?> plafonds = [];
@@ -67,11 +67,12 @@ public sealed class ServiceDroits(DroitsDbContext db, SpecialisationDroits speci
     /// Plafond de la délégation de l'agent, lu une fois par requête par le contrat <see cref="IPlafondAgent"/> du socle
     /// (service facultatif : absent, délégation inconnue, révoquée ou expirée ⇒ null, tout refusé).
     /// </summary>
-    public async Task<PlafondAgent?> PlafondAsync(AgentRequete agent, CancellationToken ct)
+    public async Task<PlafondAgent?> PlafondAsync(AgentRequete agent, string profil, CancellationToken ct)
     {
-        if (plafonds.TryGetValue(agent.Delegation, out var p)) return p;
-        p = services.GetService(typeof(IPlafondAgent)) is IPlafondAgent contrat ? await contrat.PlafondAsync(agent.Delegation, ct) : null;
-        plafonds[agent.Delegation] = p;
+        var cle = agent.Delegation + "|" + profil;
+        if (plafonds.TryGetValue(cle, out var p)) return p;
+        p = services.GetService(typeof(IPlafondAgent)) is IPlafondAgent contrat ? await contrat.PlafondAsync(agent.Delegation, profil, ct) : null;
+        plafonds[cle] = p;
         return p;
     }
 

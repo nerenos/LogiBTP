@@ -27,10 +27,16 @@ public interface IPlafondAgent
 {
     /// <summary>Plafond de la délégation (null : délégation inconnue, révoquée ou expirée).</summary>
     Task<PlafondAgent?> PlafondAsync(string delegation, CancellationToken ct);
+
+    /// <summary>
+    /// Plafond de la délégation pour le profil actuel du délégant (garde-fous levables par profil) ; par défaut, celui
+    /// de <see cref="PlafondAsync(string, CancellationToken)"/>.
+    /// </summary>
+    Task<PlafondAgent?> PlafondAsync(string delegation, string profil, CancellationToken ct) => PlafondAsync(delegation, ct);
 }
 
-/// <summary>Jeton délégué ouvert : compte représenté, délégation et client.</summary>
-public sealed record JetonDelegue(string Compte, string Delegation, string Client);
+/// <summary>Jeton délégué ouvert : compte représenté, délégation, client et profil actuel du compte.</summary>
+public sealed record JetonDelegue(string Compte, string Delegation, string Client, string Profil = "");
 
 /// <summary>Jetons délégués aux agents (implémenté par le module Authentification).</summary>
 public interface IJetonsDelegues
@@ -43,6 +49,9 @@ public interface IJetonsDelegues
 
     /// <summary>Révoque tous les jetons du compte ; rend le nombre révoqué.</summary>
     Task<int> RevoquerPourCompteAsync(string compte, CancellationToken ct);
+
+    /// <summary>Révoque tous les jetons d'une délégation (délégation révoquée par le module MCP) ; rend le nombre révoqué.</summary>
+    Task<int> RevoquerDelegationAsync(string delegation, CancellationToken ct);
 
     /// <summary>Ouvre un secret : compte, délégation et client (null : inconnu, révoqué ou expiré).</summary>
     Task<JetonDelegue?> OuvrirAsync(string secret, CancellationToken ct);

@@ -21,4 +21,21 @@ public static class ErreurMcp
     public const string McpEcheance = "MCP_ECHEANCE";
     public const string McpGardeFouNonLevable = "MCP_GARDE_FOU_NON_LEVABLE";
     public const string McpQuotaJour = "MCP_QUOTA_JOUR";
+    // Point /mcp, outils et gestion (lot 5).
+    public const string McpJetonRequis = "MCP_JETON_REQUIS";
+    public const string McpDelegationInconnue = "MCP_DELEGATION_INCONNUE";
+    public const string McpOutilInconnu = "MCP_OUTIL_INCONNU";
+    public const string McpOutilInterdit = "MCP_OUTIL_INTERDIT";
+    public const string McpOutilParametre = "MCP_OUTIL_PARAMETRE";
+    public const string McpUsurpation = "MCP_USURPATION";
+    public const string McpParametreInvalide = "MCP_PARAMETRE_INVALIDE";
+}
+
+/// <summary>Statut d'un appel d'outil au journal des agents (agent_journal.ajo_statut).</summary>
+public static class StatutAppelAgent
+{
+    public const string Succes = "SUCCES";
+    public const string Refus = "REFUS";
+    public const string Quota = "QUOTA";
+    public const string Erreur = "ERREUR";
 }

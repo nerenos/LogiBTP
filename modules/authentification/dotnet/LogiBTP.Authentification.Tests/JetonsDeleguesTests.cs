@@ -165,7 +165,7 @@ public sealed class JetonsDeleguesTests : IAsyncLifetime
         Assert.InRange(ligne.JdeExpireLe, DateTimeOffset.UtcNow.AddDays(89), DateTimeOffset.UtcNow.AddDays(91));
 
         var ouvert = await Avec(sp => sp.GetRequiredService<IJetonsDelegues>().OuvrirAsync(secret, default));
-        Assert.Equal(new JetonDelegue(_code, "D-ESSAI", "Claude Code"), ouvert);
+        Assert.Equal(new JetonDelegue(_code, "D-ESSAI", "Claude Code", "SAISIE"), ouvert);
         Assert.Null(await Avec(sp => sp.GetRequiredService<IJetonsDelegues>().OuvrirAsync(secret + "x", default)));
         Assert.Null(await Avec(sp => sp.GetRequiredService<IJetonsDelegues>().OuvrirAsync(ligne.JdeEmpreinte, default)));
 

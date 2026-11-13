@@ -66,6 +66,7 @@
   </Folder>
   <Folder Name="/modules/mcp/">
     <Project Path="modules/mcp/dotnet/LogiBTP.Mcp/LogiBTP.Mcp.csproj" />
+    <Project Path="modules/mcp/dotnet/LogiBTP.Mcp.Web/LogiBTP.Mcp.Web.csproj" />
     <Project Path="modules/mcp/dotnet/LogiBTP.Mcp.Tests/LogiBTP.Mcp.Tests.csproj" />
   </Folder>
   <Folder Name="/modules/facture-electronique/">

@@ -4,4 +4,4 @@ export {
   normaliserAction, actionsModele, gardesFousActifs, estInterdit, droitsEffectifs, autoriseAgent,
   controlerDelegation, echeanceDelegation, appliquerQuota, classerOutil,
 } from './delegation.js';
-export { CLASSE_OUTIL, ERREUR_MCP } from './codes.js';
+export { CLASSE_OUTIL, ERREUR_MCP, STATUT_APPEL_AGENT } from './codes.js';

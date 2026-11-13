@@ -21,7 +21,7 @@
 | 2 | Règles de délégation (plafond, garde-fous, interdits) | `modules/mcp` (nouveau) | 1 | FAIT (13/11/2026) |
 | 3 | Plafond appliqué par le module Droits | `modules/droits` (+ Document : `ValiderDans`) | 1 | FAIT (13/11/2026) |
 | 4 | Jetons délégués | `modules/authentification` | 1 | FAIT (13/11/2026) |
-| 5 | Point `/mcp`, catalogue d'outils, appel interne, journal | `modules/mcp` | 2, 4 | A FAIRE |
+| 5 | Point `/mcp`, catalogue d'outils, appel interne, journal | `modules/mcp` | 2, 4 | FAIT (13/11/2026) |
 | 6 | Outils de lecture du cœur, garde-fous du BTP | cœur | 3, 5 | A FAIRE |
 | 7 | Outils d'écriture des devis, origine des écritures | cœur | 6 | A FAIRE |
 | 8 | Règle de ventilation d'une demande et réappro sous le mini | `modules/stock` | — | A FAIRE |
@@ -149,6 +149,24 @@ Hors plan (Q13) : agent hébergé (automatisations planifiées, panneau intégr�
   appel ; routes de gestion `/api/mcp/delegations` (mes délégations : créer → secret affiché une fois, révoquer),
   `/api/mcp/parametres` (administrateur), `/api/mcp/journal`.
 - **Critère de fin** : tests d'intégration : outil de lecture appelé, journalisé ; 401 sans jeton ; quota atteint.
+- **Réalisé** (13/11/2026) : `modules/mcp/db/099u_mcp.sql` (rejouable, manifeste ; 096m pris par le CRM) : `mcp_delegation`,
+  `mcp_levee_profil`, `agent_journal`, `mcp_compteur` ; `LogiBTP.Mcp.Web` (SDK `ModelContextProtocol.AspNetCore` 1.4.2, Streamable
+  HTTP sans état). **API de la spécialisation pour le lot 6** (`SpecialisationMcp`, surchargée par `SpecialisationMcpBtp`) :
+  `Outils` → `OutilMcp(Nom, Description = clé du dictionnaire, Schema JsonElement, Methode, Route « /api/…/{param} », Noeud, Action,
+  Classe CLASSE_OUTIL)` avec `Envoi`, `ClesSensibles` (garde-fou → clés), `ClesNonFiables`, `ParametreLimite` (quota VOLUME),
+  `CleListe`, `TypeElement`, `CleIdentifiant` (journal) ; `NoeudsRetenus` (garde-fou → nœuds), `Interdits`, `ClesSensibles`,
+  `ClesNonFiables` (toutes réponses), `Textes` (`Dictionnaire` des descriptions), `Noeud` (« agents »). `PlafondMcp` = `IPlafondAgent`
+  (liste blanche = routes d'écriture des outils, jamais `/api/mcp|auth|droits` ; interdits = spécialisation + nœud `agents` + nœuds
+  retenus ; cache 30 s par base vidé à la révocation) ; `ServiceMcp` (jeton → délégation active du compte, classement
+  `ClasserOutil` avec les droits du profil lus par `IDroits`, quota, `IAppelInterne` / `AppelInterneHttp` vers l'adresse locale de
+  Kestrel avec `Host` et `Authorization` de l'agent, `FiltreSensible`, journal de chaque appel) ; `ServiceDelegations`
+  (`ControlerDelegation`, secret rendu une fois, révocation des jetons, levées par profil, journal) ; `AddModuleMcp<T>`,
+  `MapPointMcp` (`/mcp`, 401 `MCP_JETON_REQUIS`, refus de démarrer en mode `EnTetes` ou sans `IJetonsDelegues`), `MapModuleMcp`
+  (`/api/mcp/delegations`, `/parametres`, `/journal`). Socle : `JetonDelegue.Profil`, `IJetonsDelegues.RevoquerDelegationAsync`,
+  `IPlafondAgent.PlafondAsync(délégation, profil)` (levables par profil ; `ServiceDroits` l'appelle). Codes `ERREUR_MCP` complétés,
+  `STATUT_APPEL_AGENT`. Cœur : `SpecialisationMcpBtp` (sans outil), nœud `agents`, routes déclarées (droits, écritures). Tests
+  `ReglesPointMcpTests`, `PointMcpTests` (Kestrel local, client MCP du SDK, `LOGIBTP_TEST_PG`). Choix : une proposition (classe
+  PROPOSITION) est refusée jusqu'à la file du lot 10 ; sans ligne de levées, un profil ne lève rien (quotas par défaut).
 
 ## Lot 6 : outils de lecture du cœur
 

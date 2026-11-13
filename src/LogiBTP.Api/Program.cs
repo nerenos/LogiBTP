@@ -29,6 +29,7 @@ using LogiBTP.Listes.Web;
 using LogiBTP.Notifications.Web;
 using LogiBTP.OAuth.Web;
 using LogiBTP.Mail.Web;
+using LogiBTP.Mcp.Web;
 using LogiBTP.Reglements.Web;
 using LogiBTP.Relances.Web;
 using LogiBTP.Socle.Web;
@@ -135,6 +136,9 @@ builder.Services.AddModuleAuthentification<SpecialisationAuthentificationBtp>(Ba
 // Module Droits : profils et arbre des droits (modules/droits/db/009, db/221) ; chaque route /api est rattachée à un nœud
 // (SpecialisationDroitsBtp.Routes), une route non déclarée est refusée.
 builder.Services.AddModuleDroits<SpecialisationDroitsBtp>(Base);
+// Module MCP (agents IA au nom d'un utilisateur, plans/mcp.md) : délégations, plafond lu par les Droits, point /mcp ;
+// outils métier au lot 6 (SpecialisationMcpBtp).
+builder.Services.AddModuleMcp<SpecialisationMcpBtp>(Base);
 // Module Exécution (facultatif) : parcours, états des services, synthèse par chantier (modules/execution/db/085, db/197-198).
 builder.Services.AddModuleExecution<SpecialisationExecutionBtp>(Base);
 // Module Rentabilité (facultatif) : faits versionnés par chantier, file de recalcul et recalcul de nuit avec comparaison
@@ -225,6 +229,7 @@ api.MapGet("/sante", (SpecialisationBtp s) => Results.Ok(new { statut = "ok", ve
 api.MapGet("/societe", (SocieteCourante s) => Results.Ok(new { code = s.Code, libelle = s.Libelle, principale = s.Principale }));
 api.MapModuleAuthentification();
 api.MapModuleDroits();
+api.MapModuleMcp();
 api.MapModuleDocument<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp>();
 api.MapModuleListe();
 api.MapModuleFiche();
@@ -290,6 +295,8 @@ api.MapCalendriersBtp();
 api.MapModuleEdition();
 api.MapEditionsBtp();
 
+// Point MCP des agents (Streamable HTTP, jeton délégué exigé ; refuse de démarrer en mode EnTetes).
+app.MapPointMcp();
 // Page d'amorçage du certificat (publique, HTTP et HTTPS) : autorité, script des postes, profil iPad.
 app.MapAmorcage();
 // Routes du client (toute adresse hors /api → index.html), en dernier recours.
