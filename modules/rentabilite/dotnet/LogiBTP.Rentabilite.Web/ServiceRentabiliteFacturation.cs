@@ -1,6 +1,7 @@
 using LogiBTP.Socle;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Rentabilite.Web;
 
@@ -77,7 +78,7 @@ public partial class ServiceRentabilite
         var lignes = s.Lignes ?? [];
         if (Facturation.Controler(lignes, budget) is [var premiere, ..] erreurs)
             throw ExceptionMetier.Invalide(premiere.Code, $"Prévision de facturation incorrecte ({erreurs.Count} mois)", new { erreurs });
-        await using (var tx = await db.Database.BeginTransactionAsync(ct))
+        await using (var tx = await db.Unite().CommencerAsync(ct))
         {
             await db.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock({VerrouModule + 1}, {chantier})", ct);
             var derniere = (await db.Database.SqlQuery<long?>($"""

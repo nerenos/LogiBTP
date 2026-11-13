@@ -14,6 +14,7 @@ using LogiBTP.Socle;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Api.Btp;
 
@@ -183,7 +184,7 @@ public static partial class TerrainBtp
 
             // Signature et réception, puis PV édité (il lit la réception par sa source annexe) et rangé dans la GED de l'ordre.
             long sigId, recId;
-            await using (var tx = await db.Database.BeginTransactionAsync(ct))
+            await using (var tx = await db.Unite().CommencerAsync(ct))
             {
                 sigId = (await db.Database.SqlQueryRaw<long>("""
                     INSERT INTO signature (sig_type_element, sig_id_element, sig_nom, sig_qualite, sig_image, sig_par)

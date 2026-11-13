@@ -2,6 +2,7 @@ using System.Text.Json;
 using LogiBTP.Socle;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Rentabilite.Web;
 
@@ -203,7 +204,7 @@ public partial class ServiceRentabilite
         if (v.Globale) u.ExigerAdmin();
         var proprietaire = v.Globale ? null : u.Code;
         var json = v.Parametres.ValueKind == JsonValueKind.Undefined ? "{}" : v.Parametres.GetRawText();
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         if (v.Id is { } id)
         {
             var existante = (await VuesAsync(u, ct)).FirstOrDefault(x => x.Id == id) ?? throw ExceptionMetier.Introuvable("Vue");

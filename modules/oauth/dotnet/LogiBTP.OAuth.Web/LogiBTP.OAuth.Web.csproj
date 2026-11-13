@@ -17,6 +17,7 @@
     <ProjectReference Include="..\LogiBTP.OAuth\LogiBTP.OAuth.csproj" />
     <ProjectReference Include="..\..\..\..\socle\dotnet\LogiBTP.Socle\LogiBTP.Socle.csproj" />
     <ProjectReference Include="..\..\..\..\socle\dotnet\LogiBTP.Socle.Web\LogiBTP.Socle.Web.csproj" />
+    <ProjectReference Include="..\..\..\..\socle\dotnet\LogiBTP.Socle.Donnees\LogiBTP.Socle.Donnees.csproj" />
   </ItemGroup>
 
 </Project>

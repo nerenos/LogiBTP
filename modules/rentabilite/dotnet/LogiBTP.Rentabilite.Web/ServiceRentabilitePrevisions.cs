@@ -2,6 +2,7 @@ using System.Text.Json;
 using LogiBTP.Socle;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Rentabilite.Web;
 
@@ -138,7 +139,7 @@ public partial class ServiceRentabilite
         var (pa, pr, pv) = Previsions.Montants(s);
         var composante = Previsions.ComposanteDe(s.Indicateur, s.Composante);
         long id;
-        await using (var tx = await db.Database.BeginTransactionAsync(ct))
+        await using (var tx = await db.Unite().CommencerAsync(ct))
         {
             id = (await db.Database.SqlQuery<long>($"""
                 INSERT INTO rentabilite_prevision (rpr_cha_id, rpr_ordre_id, rpr_indicateur, rpr_composante, rpr_nat_id, rpr_date, rpr_montant_pa, rpr_montant_pr,
@@ -164,7 +165,7 @@ public partial class ServiceRentabilite
         Controler(s);
         var (pa, pr, pv) = Previsions.Montants(s);
         var composante = Previsions.ComposanteDe(s.Indicateur, s.Composante);
-        await using (var tx = await db.Database.BeginTransactionAsync(ct))
+        await using (var tx = await db.Unite().CommencerAsync(ct))
         {
             var n = await db.Database.ExecuteSqlInterpolatedAsync($"""
                 UPDATE rentabilite_prevision SET rpr_ordre_id = {s.OrdreId}, rpr_indicateur = {s.Indicateur}, rpr_composante = {composante}, rpr_nat_id = {s.NatId},
@@ -189,7 +190,7 @@ public partial class ServiceRentabilite
         if (avant.SoldeeLe is not null) throw ExceptionMetier.Conflit(ErreurPrevision.Soldee, "Saisie déjà soldée");
         if (d.EntId is null && string.IsNullOrWhiteSpace(d.Motif))
             throw ExceptionMetier.Invalide(ErreurPrevision.Soldee, "Pièce qui remplace la saisie ou motif obligatoire");
-        await using (var tx = await db.Database.BeginTransactionAsync(ct))
+        await using (var tx = await db.Unite().CommencerAsync(ct))
         {
             await db.Database.ExecuteSqlInterpolatedAsync($"""
                 UPDATE rentabilite_prevision SET rpr_soldee_le = {d.Le ?? Aujourdhui}, rpr_solde_ent_id = {d.EntId}, rpr_solde_motif = {Vide(d.Motif)},
@@ -209,7 +210,7 @@ public partial class ServiceRentabilite
         var avant = await PrevisionAsync(services, u, id, ct);
         await spec.AutoriserPrevisionAsync(services, u, ActionsDroits.Modifier, ct);
         if (avant.SoldeeLe is null) return avant;
-        await using (var tx = await db.Database.BeginTransactionAsync(ct))
+        await using (var tx = await db.Unite().CommencerAsync(ct))
         {
             await db.Database.ExecuteSqlInterpolatedAsync($"""
                 UPDATE rentabilite_prevision SET rpr_soldee_le = NULL, rpr_solde_ent_id = NULL, rpr_solde_motif = NULL, rpr_solde_par = NULL,
@@ -228,7 +229,7 @@ public partial class ServiceRentabilite
     {
         var avant = await PrevisionAsync(services, u, id, ct);
         await spec.AutoriserPrevisionAsync(services, u, ActionsDroits.Supprimer, ct);
-        await using (var tx = await db.Database.BeginTransactionAsync(ct))
+        await using (var tx = await db.Unite().CommencerAsync(ct))
         {
             await db.Database.ExecuteSqlInterpolatedAsync($"""
                 UPDATE rentabilite_prevision SET rpr_supprimee_le = now(), rpr_maj_par = {u.Code}, rpr_maj_le = now(), rpr_version = rpr_version + 1

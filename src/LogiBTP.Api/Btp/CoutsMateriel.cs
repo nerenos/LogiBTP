@@ -1,6 +1,7 @@
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Api.Btp;
 
@@ -50,7 +51,7 @@ public static class CoutsMateriel
                 return x;
             }
         }
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var id = await ChantiersTechniques.CreerAsync(db, parNombre ? $"MAT-T-{m.Famille}" : $"MAT-{m.Code}", $"-{materiel}",
             parNombre ? $"Matériel par nombre : {m.Type}" : $"Matériel {m.Code} {m.Designation}", "MATERIEL", "OUVERT", false,
             "Chantier de suivi des coûts du matériel : main-d'œuvre, pièces du stock, achats, sous-traitance (lot 5c)", ct);

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using NpgsqlTypes;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Notifications.Web;
 
@@ -190,7 +191,7 @@ public sealed class ServiceNotification(NotificationDbContext db, IEnumerable<IS
 
     public async Task EnregistrerPreferencesAsync(Utilisateur u, List<PreferenceNotification> l, CancellationToken ct)
     {
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         await db.Preferences.Where(p => p.NprUtilisateur.ToLower() == u.Code.ToLower()).ExecuteDeleteAsync(ct);
         db.Preferences.AddRange(l.Where(p => !p.Ecran || p.Courriel).Select(p => new PreferenceEntite
         {

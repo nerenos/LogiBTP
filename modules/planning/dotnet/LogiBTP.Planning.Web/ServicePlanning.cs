@@ -3,6 +3,7 @@ using System.Text.Json;
 using LogiBTP.Socle.Web;
 using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Planning.Web;
 
@@ -514,7 +515,7 @@ public sealed class ServicePlanning(PlanningDbContext db, SpecialisationPlanning
     public async Task<long> CreerIdAsync(TacheSaisie s, Utilisateur u, CancellationToken ct, bool application = false)
     {
         if (!application && specialisation.TacheGeree(s.OrigineType)) throw ExceptionMetier.Conflit("PLA_TACHE_GEREE", "Tâche tenue par l'application : elle se crée à son origine");
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var t = new TacheEntite();
         await AppliquerAsync(t, s, u, ct);
         await db.SaveChangesAsync(ct);
@@ -540,7 +541,7 @@ public sealed class ServicePlanning(PlanningDbContext db, SpecialisationPlanning
     /// <param name="application">Écriture par l'application (tâche gérée : <see cref="SpecialisationPlanning.TacheGeree"/>).</param>
     public async Task<object> ModifierAsync(long id, TacheSaisie s, Utilisateur u, CancellationToken ct, bool application = false)
     {
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var t = await VerrouAsync(id, s.Version ?? -1, ct, application);
         await AppliquerAsync(t, s, u, ct);
         await db.SaveChangesAsync(ct);
@@ -583,7 +584,7 @@ public sealed class ServicePlanning(PlanningDbContext db, SpecialisationPlanning
     /// </summary>
     public async Task<object> DeplacerAsync(long id, DeplacementSaisi d, Utilisateur u, CancellationToken ct)
     {
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var t = d.Copie ? await db.Taches.FirstOrDefaultAsync(x => x.TacId == id, ct) ?? throw ExceptionMetier.Introuvable($"Tâche {id}") : await VerrouAsync(id, d.Version, ct);
         Geree(t);
         var s = await SaisieDeAsync(t, ct);
@@ -617,7 +618,7 @@ public sealed class ServicePlanning(PlanningDbContext db, SpecialisationPlanning
     /// <summary>Scinde une tâche à un instant : deux tâches indépendantes de même origine, heures recalculées (mode 2).</summary>
     public async Task<object> ScinderAsync(long id, ScissionSaisie sc, Utilisateur u, CancellationToken ct)
     {
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var t = await VerrouAsync(id, sc.Version, ct);
         var s = await SaisieDeAsync(t, ct);
         var instant = Temps.VersMinutes(sc.Instant);

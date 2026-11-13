@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using LogiBTP.Socle;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Documents.Web;
 
@@ -88,7 +89,7 @@ public sealed class ReglesDocuments<TDoc, TLigne, TComplet>(DocumentDbContext<TD
         if (saisie.GroupBy(r => (r.Code, r.Famille, r.Type)).Any(g => g.Count() > 1)) erreurs.Add("Une règle n'a qu'une valeur par niveau");
         if (erreurs.Count > 0) throw ExceptionMetier.Invalide("REGLES", string.Join(" ; ", erreurs.Distinct()));
 
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         await db.Set<RegleDocument>().ExecuteDeleteAsync(ct);
         db.Set<RegleDocument>().AddRange(saisie.Select(r => new RegleDocument
         {

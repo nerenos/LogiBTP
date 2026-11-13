@@ -6,6 +6,7 @@ using LogiBTP.Socle;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Pointage.Web;
 
@@ -410,7 +411,7 @@ public sealed class ServiceBorne(PointageDbContext db, SpecialisationPointage sp
                 Modifiee(l) ? null : avant[l.Id!.Value].PoiDebut, Modifiee(l) ? null : avant[l.Id!.Value].PoiFin, l.Motif, l.Commentaire))).ToList();
         var auteur = Auteur(a);
         var essai = EnTest(http);
-        await using (var tx = await db.Database.BeginTransactionAsync(ct))
+        await using (var tx = await db.Unite().CommencerAsync(ct))
         {
             await pointage.EnregistrerSemaineAsync(salarie, lundi, new SemaineSaisie(saisie), auteur, ct, controleAcces: false);
             var connus = avant.Keys.ToHashSet();
@@ -462,7 +463,7 @@ public sealed class ServiceBorne(PointageDbContext db, SpecialisationPointage sp
         if (!EnTest(http)) return await repas.EnregistrerAsync(s, r.Repas, Auteur(a), a.PapLibelle, ct);
         // Essai : un restaurant « non trouvé » serait créé par l'application hors de cette transaction : rien n'est fait.
         if (!string.IsNullOrWhiteSpace(r.Repas.Nouveau)) return await repas.LireAsync(s.Id, r.Repas.Date, r.Repas.Date, ct);
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var res = await repas.EnregistrerAsync(s, r.Repas, Auteur(a), a.PapLibelle, ct);
         await tx.RollbackAsync(ct);
         db.ChangeTracker.Clear();
@@ -486,7 +487,7 @@ public sealed class ServiceBorne(PointageDbContext db, SpecialisationPointage sp
         var auteur = Auteur(a);
         var enregistres = new List<int>();
         var refus = new List<RefusRepas>(rep.Refus);
-        var tx = EnTest(http) ? await db.Database.BeginTransactionAsync(ct) : null;
+        var tx = EnTest(http) ? await db.Unite().CommencerAsync(ct) : null;
         try
         {
             // Un restaurant « non trouvé » est créé une seule fois pour toute l'équipe (pas en essai : hors transaction).
@@ -536,7 +537,7 @@ public sealed class ServiceBorne(PointageDbContext db, SpecialisationPointage sp
         if (EnTest(http))
         {
             // Essai : mêmes contrôles et blocages, puis annulation (rien n'est enregistré, pas de tâche de non-conformité).
-            await using (var tx = await db.Database.BeginTransactionAsync(ct))
+            await using (var tx = await db.Unite().CommencerAsync(ct))
             {
                 foreach (var m in membres) await AjouterAsync(m, p.Date, new PointageSaisi(null, p.Date, p.ChaId, p.EntId, p.TypeMo, p.SousType, p.Minutes, null, null, p.Motif, p.Commentaire), groupe, a, auteur, ct);
                 await tx.RollbackAsync(ct);

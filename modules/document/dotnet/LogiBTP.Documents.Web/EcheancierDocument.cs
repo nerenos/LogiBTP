@@ -2,6 +2,7 @@ using System.Text.Json;
 using LogiBTP.Socle;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Documents.Web;
 
@@ -156,7 +157,7 @@ public sealed class EcheancierDocument<TDoc, TLigne, TComplet>(DocumentDbContext
         if (saisie.Any(x => x.Id is long id && actuelles.All(a => a.EchId != id))) erreurs.Add("Échéance d'une autre pièce");
         if (saisie.Where(x => x.Id is not null).GroupBy(x => x.Id).Any(g => g.Count() > 1)) erreurs.Add("Échéance en double");
         if (erreurs.Count > 0) throw ExceptionMetier.Invalide("ECHEANCIER", string.Join(" ; ", erreurs));
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         try
         {
             // Rangs libérés d'abord (unicité par pièce et rang), puis mise à jour en place, ajouts et retraits.

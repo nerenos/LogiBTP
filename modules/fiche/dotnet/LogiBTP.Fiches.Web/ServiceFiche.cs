@@ -6,6 +6,7 @@ using LogiBTP.Fiches;
 using LogiBTP.Socle;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
+using LogiBTP.Socle.Donnees;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -100,38 +101,27 @@ public partial class ServiceFiche(FicheDbContext db, SpecialisationFiche special
     public virtual async Task<List<OptionChamp>> OptionsRequete(string sql, CancellationToken ct)
     {
         if (ValidationFiche.ErreurRequete(sql) is { } erreur) throw ExceptionMetier.Invalide("REQUETE", erreur);
-        var cnx = (NpgsqlConnection)db.Database.GetDbConnection();
-        var ouverte = cnx.State == ConnectionState.Open;
-        if (!ouverte) await cnx.OpenAsync(ct);
         try
         {
-            await using var tx = await cnx.BeginTransactionAsync(ct);
-            await using (var cadre = new NpgsqlCommand($"SET TRANSACTION READ ONLY; SET LOCAL statement_timeout = {specialisation.DelaiRequeteMs}", cnx, tx))
+            // Lecture protégée de l'unité : transaction READ ONLY (ou point de sauvegarde) annulée à la fin.
+            return await db.Unite().LireAsync(async (cnx, tx, c) =>
             {
-                await cadre.ExecuteNonQueryAsync(ct);
-            }
-            var options = new List<OptionChamp>();
-            await using (var cmd = new NpgsqlCommand($"SELECT * FROM ({sql.Trim().TrimEnd(';')}) AS q LIMIT {MaxOptionsRequete}", cnx, tx))
-            await using (var rd = await cmd.ExecuteReaderAsync(ct))
-            {
-                while (await rd.ReadAsync(ct))
+                var options = new List<OptionChamp>();
+                await using var cmd = new NpgsqlCommand($"SELECT * FROM ({sql.Trim().TrimEnd(';')}) AS q LIMIT {MaxOptionsRequete}", cnx, tx);
+                await using var rd = await cmd.ExecuteReaderAsync(c);
+                while (await rd.ReadAsync(c))
                 {
                     if (rd.IsDBNull(0)) continue;
                     var valeur = Convert.ToString(rd.GetValue(0), CultureInfo.InvariantCulture) ?? "";
                     var libelle = rd.FieldCount > 1 && !rd.IsDBNull(1) ? Convert.ToString(rd.GetValue(1), CultureInfo.InvariantCulture) : valeur;
                     options.Add(new OptionChamp { Valeur = valeur, Libelle = libelle });
                 }
-            }
-            await tx.RollbackAsync(ct);
-            return options;
+                return options;
+            }, specialisation.DelaiRequeteMs, ct);
         }
         catch (PostgresException e)
         {
             throw ExceptionMetier.Invalide("REQUETE", $"Requête de la liste refusée : {e.MessageText}");
-        }
-        finally
-        {
-            if (!ouverte) await cnx.CloseAsync();
         }
     }
 
@@ -584,7 +574,7 @@ public partial class ServiceFiche(FicheDbContext db, SpecialisationFiche special
         // Confidentiel du programme : déjà confidentiel, sans effet ; champs gérés exclus (données liées hors de la fiche).
         var obligatoires = p.Obligatoires.Where(programme.ContainsKey).ToHashSet();
         var confidentiels = p.Confidentiels.Where(c => programme.TryGetValue(c, out var x) && !x.Gere && !(x.Confidentiel && !x.ConfidentielParametre)).ToHashSet();
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         await db.Parametres.Where(x => x.PcfType == code).ExecuteDeleteAsync(ct);
         db.Parametres.AddRange(obligatoires.Union(confidentiels).Select(c => new ParametreChampFiche
         {
@@ -658,30 +648,28 @@ public partial class ServiceFiche(FicheDbContext db, SpecialisationFiche special
         }
     }
 
+    /// <summary>
+    /// Écriture dans l'unité d'écriture de la requête (transaction englobante : ligne, verrou, champs gérés et écritures
+    /// de la spécialisation sur les autres contextes ; point de sauvegarde si une transaction est déjà ouverte).
+    /// </summary>
     protected async Task<T> Ecrire<T>(Func<NpgsqlConnection, NpgsqlTransaction, Task<T>> ecrire, CancellationToken ct)
     {
-        var cnx = (NpgsqlConnection)db.Database.GetDbConnection();
-        var ouverte = cnx.State == ConnectionState.Open;
-        if (!ouverte) await cnx.OpenAsync(ct);
+        var unite = db.Unite();
         try
         {
-            await using var tx = await cnx.BeginTransactionAsync(ct);
-            await using (var cadre = new NpgsqlCommand($"SET LOCAL statement_timeout = {specialisation.DelaiRequeteMs}", cnx, tx))
+            return await unite.ExecuterAsync(async c =>
             {
-                await cadre.ExecuteNonQueryAsync(ct);
-            }
-            var res = await ecrire(cnx, tx);
-            await tx.CommitAsync(ct);
-            return res;
+                await using (var cadre = new NpgsqlCommand($"SET LOCAL statement_timeout = {specialisation.DelaiRequeteMs}", unite.Connexion, unite.Transaction))
+                {
+                    await cadre.ExecuteNonQueryAsync(c);
+                }
+                return await ecrire(unite.Connexion, unite.Transaction!);
+            }, ct);
         }
         catch (PostgresException e)
         {
             // Valeur refusée par la base : conversion (22P02…), contrainte (23502 NOT NULL, 23505 unicité, 23514 CHECK…).
             throw ExceptionMetier.Invalide("VALEUR", e.SqlState == "23505" ? "Cette valeur existe déjà (doublon)" : $"Valeur refusée par la base : {e.MessageText}");
-        }
-        finally
-        {
-            if (!ouverte) await cnx.CloseAsync();
         }
     }
 }

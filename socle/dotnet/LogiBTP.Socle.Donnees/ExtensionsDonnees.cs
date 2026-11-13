@@ -39,7 +39,14 @@ public static class ExtensionsDonnees
     /// </summary>
     public static IApplicationBuilder UseUniteEcriture(this IApplicationBuilder app) => app.Use(async (http, next) =>
     {
-        await next(http);
-        if (http.RequestServices.GetService<UniteEcriture>() is { EnCours: false } u) await u.ExecuterValideesAsync(http.RequestAborted);
+        try
+        {
+            await next(http);
+        }
+        finally
+        {
+            // Effets des transactions validées, même si la requête échoue ensuite.
+            if (http.RequestServices.GetService<UniteEcriture>() is { EnCours: false } u) await u.ExecuterValideesAsync(CancellationToken.None);
+        }
     });
 }

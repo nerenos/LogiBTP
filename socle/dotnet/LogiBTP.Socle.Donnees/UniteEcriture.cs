@@ -62,7 +62,7 @@ public sealed class ConnexionRequete : IAsyncDisposable, IDisposable
 /// <item>traitement en lot : <see cref="ParElementAsync{T}"/>, une transaction par élément.</item>
 /// </list>
 /// </summary>
-public sealed class UniteEcriture(ConnexionRequete connexion, ILogger<UniteEcriture>? journal = null) : IAsyncDisposable
+public sealed class UniteEcriture(ConnexionRequete connexion, ILogger<UniteEcriture>? journal = null) : IAsyncDisposable, IDisposable
 {
     private readonly List<Func<CancellationToken, Task>> pendantes = [];
     private readonly List<Func<CancellationToken, Task>> validees = [];
@@ -282,6 +282,27 @@ public sealed class UniteEcriture(ConnexionRequete connexion, ILogger<UniteEcrit
     internal void AbandonnerDepuis(int rang)
     {
         if (rang < pendantes.Count) pendantes.RemoveRange(rang, pendantes.Count - rang);
+    }
+
+    /// <summary>Libération synchrone d'une portée (<c>using var scope = CreateScope()</c>) : transaction restée ouverte annulée.</summary>
+    public void Dispose()
+    {
+        if (Transaction is not null)
+        {
+            journal?.LogWarning("Transaction de l'unité d'écriture restée ouverte en fin de portée : annulée");
+            var tx = Transaction;
+            Fermer(false);
+            try
+            {
+                tx.Rollback();
+            }
+            catch (Exception e) when (e is NpgsqlException or InvalidOperationException)
+            {
+                journal?.LogWarning(e, "Annulation de la transaction de l'unité d'écriture impossible");
+            }
+            tx.Dispose();
+        }
+        if (validees.Count > 0) journal?.LogWarning("{Nombre} action(s) après validation non lancée(s) en fin de portée", validees.Count);
     }
 
     public async ValueTask DisposeAsync()

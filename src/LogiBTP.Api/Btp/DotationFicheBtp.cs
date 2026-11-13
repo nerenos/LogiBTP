@@ -10,6 +10,7 @@ using LogiBTP.Socle;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Api.Btp;
 
@@ -155,7 +156,7 @@ public static class DotationFicheBtp
         if (donnees["mouvements"] is not JsonArray { Count: > 0 }) throw ExceptionMetier.Invalide("STK_FICHE_VIDE", "Aucune dotation à signer depuis la dernière fiche");
         var nom = $"{donnees["salarie"]?["prenom"]} {donnees["salarie"]?["nom"]}".Trim();
         long fiche, sig;
-        await using (var tx = await db.Database.BeginTransactionAsync(ct))
+        await using (var tx = await db.Unite().CommencerAsync(ct))
         {
             sig = (await db.Database.SqlQuery<long>($"""
                 INSERT INTO signature (sig_type_element, sig_id_element, sig_nom, sig_qualite, sig_image, sig_par)

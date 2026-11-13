@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Stock.Web;
 
@@ -423,7 +424,7 @@ public class ServiceInventaire(StockDbContext db, SpecialisationStock specialisa
         var ids = c.Comptages.Select(x => x.Ele).ToList();
         var deja = await db.Comptages.AsNoTracking().Where(x => x.CptLieuId == lot.LinLieuId && ids.Contains(x.CptEleId) && x.CptDate == lot.LinDate).Select(x => x.CptEleId).ToListAsync(ct);
         if (deja.Count > 0) throw ExceptionMetier.Conflit("STK_COMPTAGE_EXISTANT", "Article déjà compté dans ce lieu à la même date-heure par un autre lot", deja);
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         foreach (var x in c.Comptages)
         {
             var comptage = db.Comptages.Add(new ComptageEntite

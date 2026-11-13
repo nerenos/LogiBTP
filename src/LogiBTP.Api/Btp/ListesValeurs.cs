@@ -1,6 +1,7 @@
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Api.Btp;
 
@@ -61,7 +62,7 @@ public static class ListesValeurs
         if (valeurs.GroupBy(v => v.Code).Any(g => g.Count() > 1)) erreurs.Add("Codes en double");
         if (erreurs.Count > 0) throw ExceptionMetier.Invalide("LISTE_VALEUR", string.Join(" ; ", erreurs.Distinct()));
 
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var avant = await LireAsync(db, liste, ct);
         foreach (var v in avant.Where(a => !codes.Contains(a.Code)))
         {

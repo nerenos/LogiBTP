@@ -4,6 +4,7 @@ using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using NpgsqlTypes;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Api.Btp;
 
@@ -153,7 +154,7 @@ public static class Equipes
         var saisies = s.Periodes.Select(p => new PeriodeEquipe(p.Du, p.Membres.Select(m => new MembreEquipe(m.Type, m.Id.Trim(), m.Chef)).ToList())).ToList();
         var erreurs = ReglesEquipes.Controler(id, s.Code, s.Libelle, saisies);
         if (erreurs.Count > 0) throw ExceptionMetier.Invalide(erreurs[0].Code, Message(erreurs[0].Code), erreurs);
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var gardees = new List<(PeriodeEquipe Periode, string? Commentaire)>();
         if (id is int e0)
         {   

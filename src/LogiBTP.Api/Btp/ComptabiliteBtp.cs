@@ -1,6 +1,7 @@
 using LogiBTP.Comptabilite.Web;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Api.Btp;
 
@@ -35,7 +36,7 @@ public sealed partial class SpecialisationComptabiliteBtp : SpecialisationCompta
     /// </summary>
     public override async Task EnregistrerTauxAsync(ComptabiliteDbContext db, List<TauxTvaDto> taux, CancellationToken ct)
     {
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE taux_tva SET ttv_defaut = FALSE WHERE ttv_defaut", ct);
         foreach (var t in taux)
         {
@@ -104,7 +105,7 @@ public sealed partial class SpecialisationComptabiliteBtp : SpecialisationCompta
     /// <summary>Un compte de sous-traitant égal à son compte fournisseur n'est pas gardé (il en hérite).</summary>
     public override async Task EnregistrerComptesTiersAsync(ComptabiliteDbContext db, List<CompteTiersSaisi> comptes, CancellationToken ct)
     {
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         foreach (var s in comptes)
         {
             var n = s.TypeCompte switch
@@ -162,7 +163,7 @@ public sealed partial class SpecialisationComptabiliteBtp : SpecialisationCompta
 
     public override async Task EnregistrerTypesDocumentsAsync(ComptabiliteDbContext db, List<TypeDocumentSaisi> types, CancellationToken ct)
     {
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         foreach (var t in types)
             if (await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE type_document SET tyd_tco_code = {t.TypeComptable} WHERE tyd_code = {t.Code}", ct) == 0)
                 throw ExceptionMetier.Introuvable($"Type de document {t.Code}");

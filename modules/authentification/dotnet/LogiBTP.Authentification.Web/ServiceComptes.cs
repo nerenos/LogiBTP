@@ -1,6 +1,7 @@
 using LogiBTP.Socle.Web;
 using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Authentification.Web;
 
@@ -135,7 +136,7 @@ public sealed class ServiceComptes(AuthDbContext db, SpecialisationAuthentificat
         var profil = s.Profil ?? specialisation.ProfilParDefaut;
         await ControlerCompteAsync(profil, s.ValideJusquAu, personne, ct);
         var mdp = HachageMotDePasse.Provisoire();
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var c = new Compte
         {
             CptCode = code, CptType = "PERSONNE", CptLibelle = personne.Libelle, CptTypeElement = s.TypeElement, CptIdElement = s.IdElement,
@@ -181,7 +182,7 @@ public sealed class ServiceComptes(AuthDbContext db, SpecialisationAuthentificat
         if (profil != c.CptProfil) changements.Add($"profil {c.CptProfil} → {profil}");
         if (actif != c.CptActif) changements.Add(actif ? "réactivé" : "désactivé");
         if (s.ValideJusquAu != c.CptValideJusquAu) changements.Add($"validité {(s.ValideJusquAu is { } v ? v.ToString("dd/MM/yyyy") : "sans fin")}");
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         c.CptCode = code;
         c.CptProfil = profil;
         c.CptActif = actif;

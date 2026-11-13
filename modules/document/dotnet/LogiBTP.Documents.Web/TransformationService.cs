@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using LogiBTP.Socle;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Documents.Web;
 
@@ -32,7 +33,7 @@ public class TransformationService<TDoc, TLigne, TComplet>(
     /// </summary>
     public async Task<TComplet> Transformer(long sourceId, DemandeTransformation dem, Utilisateur u, CancellationToken ct)
     {
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var typeSourceId = await db.Documents.Where(d => d.EntId == sourceId).Select(d => (int?)d.EntTydId).FirstOrDefaultAsync(ct)
             ?? throw ExceptionMetier.Introuvable($"Document {sourceId}");
         var intermediaire = await db.TransformationsAutorisees.AsNoTracking()
@@ -369,7 +370,7 @@ public class TransformationService<TDoc, TLigne, TComplet>(
     public async Task<TComplet> TransformerPlusieurs(DemandeTransformationMultiple dem, Utilisateur u, CancellationToken ct)
     {
         if (dem.Sources.Count == 0) throw ExceptionMetier.Invalide("SOURCES", "Aucun document source");
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var typeCible = await documents.Type(dem.CibleTydId, ct);
         var preparations = await PreparerSources(dem.Sources, typeCible, u, ct);
         if (preparations.Count == 0) throw ExceptionMetier.Invalide("RIEN_A_TRANSFORMER", "Aucune quantité à transformer dans ces documents");
@@ -393,7 +394,7 @@ public class TransformationService<TDoc, TLigne, TComplet>(
     public async Task<TComplet> AjouterSources(long cibleId, List<long> sources, Utilisateur u, CancellationToken ct)
     {
         if (sources.Count == 0) throw ExceptionMetier.Invalide("SOURCES", "Aucun document source");
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var cible = await documents.Charger(cibleId, ct);
         var typeCible = await documents.Type(cible.Document.EntTydId, ct);
         var deja = await db.DocumentsLien.AsNoTracking().Where(l => l.LieCibleEntId == cibleId && l.LieType == "TRANSFORMATION").Select(l => l.LieSourceEntId).ToListAsync(ct);

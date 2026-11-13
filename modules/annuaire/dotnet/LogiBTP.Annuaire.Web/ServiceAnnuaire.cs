@@ -8,6 +8,7 @@ using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Npgsql;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Annuaire.Web;
 
@@ -696,7 +697,7 @@ public partial class ServiceAnnuaire(AnnuaireDbContext db, SpecialisationAnnuair
 
     public virtual async Task EcrireGeres(string type, long id, IReadOnlyDictionary<string, JsonElement> geres, Utilisateur u, CancellationToken ct)
     {
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         if (geres.ContainsKey("coordonnees")) await Appliquer(type, id, await Planifier(type, id, Lire<List<SaisieCoordonnee>>(geres, "coordonnees"), null, ct), u, ct);
         if (geres.ContainsKey("rattachements")) await EcrireRattachements(type, id, Lire<List<SaisieRattachement>>(geres, "rattachements"), u, ct);
         if (geres.ContainsKey("liens")) await EcrireLiens(id, Lire<List<SaisieLien>>(geres, "liens"), ct);
@@ -758,7 +759,7 @@ public partial class ServiceAnnuaire(AnnuaireDbContext db, SpecialisationAnnuair
                               where r.RatIndId == indId && r.RatTitulaire && p.PerNivCode == niveau
                               select p.PerId).FirstOrDefaultAsync(ct);
         if (existant != 0) return new(existant, true);
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var personne = new Personne
         {
             PerNivCode = niveau, PerRaisonSociale = string.Join(" ", new[] { i.IndCivilite, i.IndNom.ToUpperInvariant(), i.IndPrenom }.Where(x => !string.IsNullOrWhiteSpace(x))),
