@@ -42,6 +42,12 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Descriptions des outils des agents IA (module MCP, SpecialisationMcpBtp). -->
+    <Content Remove="Btp\McpTextes.json" />
+    <EmbeddedResource Include="Btp\McpTextes.json" LogicalName="LogiBTP.Api.Btp.McpTextes.json" />
+  </ItemGroup>
+
   <Import Project="CleConstruction.targets" />
 
 </Project>

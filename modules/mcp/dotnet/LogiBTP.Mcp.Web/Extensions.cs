@@ -73,8 +73,15 @@ public static class Extensions
         return http.Response.WriteAsJsonAsync(new { status = 401, code = ErreurMcp.McpJetonRequis, title = "Jeton délégué requis" }, JsonCalcul.Options);
     }
 
+    private static Task RefuserModule(HttpContext http)
+    {
+        http.Response.StatusCode = StatusCodes.Status403Forbidden;
+        return http.Response.WriteAsJsonAsync(new { status = 403, code = ErreurMcp.McpModuleInactif, title = "Module MCP désactivé pour cette société" }, JsonCalcul.Options);
+    }
+
     /// <summary>
-    /// Point /mcp : exige un jeton délégué valide (401 MCP_JETON_REQUIS sinon), délégation active du même compte ; pose
+    /// Point /mcp : refusé (403 MCP_MODULE_INACTIF) quand le module de l'application qui l'active
+    /// (<see cref="SpecialisationMcp.Module"/>) est désactivé pour la société ; exige un jeton délégué valide (401 MCP_JETON_REQUIS sinon), délégation active du même compte ; pose
     /// l'agent sur la requête. Refuse de démarrer en mode d'authentification par en-têtes (R2) et sans contrat
     /// <see cref="IJetonsDelegues"/> (module Authentification absent).
     /// </summary>
@@ -92,6 +99,12 @@ public static class Extensions
             if (suite is null) return;
             b.RequestDelegate = async http =>
             {
+                if (http.RequestServices.GetRequiredService<SpecialisationMcp>().Module is { } module
+                    && http.RequestServices.GetService<IModulesActifs>() is { } modules && !await modules.EstActifAsync(module, http.RequestAborted))
+                {
+                    await RefuserModule(http);
+                    return;
+                }
                 var service = http.RequestServices.GetRequiredService<ServiceMcp>();
                 var ctx = await service.OuvrirAsync(http, http.RequestAborted);
                 if (ctx is null)

@@ -57,6 +57,8 @@ public static class CompteursBorneBtp
 
     private static async Task<bool> PeutTraiterAsync(LogiBtpContext db, Utilisateur u, int? salarie, CancellationToken ct)
     {
+        // Agent : seulement si son plafond couvre la validation des relevés des bornes.
+        if (!await AgentsBtp.CouvertAsync(u, "pointage/bornes", ActionsDroits.Valider, AgentsBtp.ServicesRequete, ct)) return false;
         if (u.EstAdmin) return true;
         if (salarie is null) return false;
         return await db.Database.SqlQueryRaw<bool>($"""

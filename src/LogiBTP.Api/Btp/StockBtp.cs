@@ -160,8 +160,13 @@ public sealed partial class SpecialisationStockBtp(IHttpContextAccessor http) : 
             """, ct);
     }
 
+    /// <summary>Gestion du stock : administrateur ou magasinier ; un agent seulement si son plafond couvre Modifier sur « stock » (lot 6 MCP).</summary>
     public override async Task<bool> PeutGererAsync(StockDbContext db, Utilisateur u, CancellationToken ct) =>
-        u.EstAdmin || await MagasinierAsync(db.Database, u.Code, ct);
+        await AgentsBtp.CouvertAsync(u, NoeudStock, ActionsDroits.Modifier, http.HttpContext?.RequestServices, ct)
+        && (u.EstAdmin || await MagasinierAsync(db.Database, u.Code, ct));
+
+    /// <summary>Nœud de droits du stock.</summary>
+    public const string NoeudStock = "stock";
 
     /// <summary>Magasinier : membre d'un service de nature LOGISTIQUE (ou son responsable).</summary>
     public static async Task<bool> MagasinierAsync(Microsoft.EntityFrameworkCore.Infrastructure.DatabaseFacade db, string utilisateur, CancellationToken ct) =>

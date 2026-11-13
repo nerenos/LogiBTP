@@ -116,6 +116,21 @@ public class AgentsDroitsTests
     }
 
     [Fact]
+    public void Liste_blanche_comparee_exactement_methode_et_gabarit()
+    {
+        var p = Plafond(routes: [new("POST", "/api/fiches/{type}/{id}"), new("PUT", "/api/documents/{id}")]);
+        Assert.True(AgentsDroits.RoutePermise(p, "POST", "/api/fiches/{type}/{id:long}"));
+        Assert.True(AgentsDroits.RoutePermise(p, "put", "/api/documents/{ent:long}/"));
+        // Jamais un préfixe : levée du masquage, mots de passe, cas de test ; ni une autre méthode.
+        Assert.False(AgentsDroits.RoutePermise(p, "POST", "/api/fiches/{type}/{id}/confidentiel"));
+        Assert.False(AgentsDroits.RoutePermise(p, "POST", "/api/fiches/{type}/{id}/secret"));
+        Assert.False(AgentsDroits.RoutePermise(Plafond(routes: [new("POST", "/api/documents")]), "POST", "/api/documents/{id}/valider"));
+        Assert.False(AgentsDroits.RoutePermise(Plafond(routes: [new("POST", "/api/cas")]), "POST", "/api/cas-test"));
+        Assert.False(AgentsDroits.RoutePermise(p, "DELETE", "/api/documents/{id}"));
+        Assert.False(AgentsDroits.RoutePermise(null, "PUT", "/api/documents/{id}"));
+    }
+
+    [Fact]
     public void Session_lectures_et_liste_blanche_parametrage_en_lecture()
     {
         var session = new RouteDroits("/api/preferences", ModeRoute.Session);

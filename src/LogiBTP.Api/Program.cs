@@ -137,7 +137,7 @@ builder.Services.AddModuleAuthentification<SpecialisationAuthentificationBtp>(Ba
 // (SpecialisationDroitsBtp.Routes), une route non déclarée est refusée.
 builder.Services.AddModuleDroits<SpecialisationDroitsBtp>(Base);
 // Module MCP (agents IA au nom d'un utilisateur, plans/mcp.md) : délégations, plafond lu par les Droits, point /mcp ;
-// outils métier au lot 6 (SpecialisationMcpBtp).
+// outils de lecture du cœur, garde-fous du BTP (SpecialisationMcpBtp, lot 6).
 builder.Services.AddModuleMcp<SpecialisationMcpBtp>(Base);
 // Module Exécution (facultatif) : parcours, états des services, synthèse par chantier (modules/execution/db/085, db/197-198).
 builder.Services.AddModuleExecution<SpecialisationExecutionBtp>(Base);
@@ -229,7 +229,10 @@ api.MapGet("/sante", (SpecialisationBtp s) => Results.Ok(new { statut = "ok", ve
 api.MapGet("/societe", (SocieteCourante s) => Results.Ok(new { code = s.Code, libelle = s.Libelle, principale = s.Principale }));
 api.MapModuleAuthentification();
 api.MapModuleDroits();
-api.MapModuleMcp();
+// Gestion des délégations : refusée (409 MODULE_INACTIF) quand le module MCP est désactivé pour la société (db/308).
+api.MapGroup("").ExigeModule(ModulesFacultatifs.Mcp, "Agents IA").MapModuleMcp();
+// Désignation d'un tiers sans sa fiche (garde-fou TIERS des agents, plans/mcp.md lot 6).
+api.MapDesignationTiers();
 api.MapModuleDocument<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp>();
 api.MapModuleListe();
 api.MapModuleFiche();

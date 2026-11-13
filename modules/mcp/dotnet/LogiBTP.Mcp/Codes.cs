@@ -29,6 +29,8 @@ public static class ErreurMcp
     public const string McpOutilParametre = "MCP_OUTIL_PARAMETRE";
     public const string McpUsurpation = "MCP_USURPATION";
     public const string McpParametreInvalide = "MCP_PARAMETRE_INVALIDE";
+    // Module désactivé pour la société (lot 6) : point /mcp refusé, jetons délégués sans plafond.
+    public const string McpModuleInactif = "MCP_MODULE_INACTIF";
 }
 
 /// <summary>Statut d'un appel d'outil au journal des agents (agent_journal.ajo_statut).</summary>

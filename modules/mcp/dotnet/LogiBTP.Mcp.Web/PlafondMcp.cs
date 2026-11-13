@@ -53,9 +53,11 @@ public static class LecturesMcp
 /// mesure de la délégation, portée maximale, garde-fous actifs (double accord : levable pour le profil et levé par la
 /// délégation), liste blanche = routes d'écriture des outils du catalogue (jamais /api/mcp, /api/auth, /api/droits),
 /// interdits (spécialisation, nœud de gestion du module, nœuds retenus). Cache court par base, vidé à toute révocation
-/// et à toute modification des levées.
+/// et à toute modification des levées. Module désactivé pour la société (<see cref="SpecialisationMcp.Module"/>) : aucun
+/// plafond (tout refusé à l'agent, même hors du point /mcp).
 /// </summary>
-public sealed class PlafondMcp(McpDbContext db, SpecialisationMcp specialisation, SocieteCourante societe, IHttpContextAccessor? acces = null) : IPlafondAgent
+public sealed class PlafondMcp(McpDbContext db, SpecialisationMcp specialisation, SocieteCourante societe, IHttpContextAccessor? acces = null,
+    IModulesActifs? modules = null) : IPlafondAgent
 {
     private static readonly TimeSpan Duree = TimeSpan.FromSeconds(30);
     private static readonly ConcurrentDictionary<string, (DateTime Lu, PlafondAgent? Plafond)> Cache = new();
@@ -76,6 +78,7 @@ public sealed class PlafondMcp(McpDbContext db, SpecialisationMcp specialisation
 
     public async Task<PlafondAgent?> PlafondAsync(string delegation, string profil, CancellationToken ct)
     {
+        if (specialisation.Module is { } module && modules is not null && !await modules.EstActifAsync(module, ct)) return null;
         var cle = $"{societe.Base}|{delegation}|{profil}";
         if (Cache.TryGetValue(cle, out var c) && DateTime.UtcNow - c.Lu < Duree) return c.Plafond;
         var p = await LirePlafondAsync(delegation, profil, ct);
@@ -90,7 +93,7 @@ public sealed class PlafondMcp(McpDbContext db, SpecialisationMcp specialisation
         var levees = string.IsNullOrEmpty(profil) ? LeveesProfil.Defaut : await LecturesMcp.LeveesAsync(db, profil, ct);
         var actifs = ReglesDelegation.GardesFousActifs(levees.Levables, LecturesMcp.Liste(d.MdeLeves));
         var routes = specialisation.Outils
-            .Where(o => !HttpMethods.IsGet(o.Methode) && !HttpMethods.IsHead(o.Methode) && o.Classe != ClasseOutil.Interdit)
+            .Where(o => !HttpMethods.IsGet(o.Methode) && !HttpMethods.IsHead(o.Methode) && o.Classe is not (ClasseOutil.Interdit or ClasseOutil.Lecture))
             .Where(o => !Reservees.Any(r => o.Route == r || o.Route.StartsWith(r + "/", StringComparison.OrdinalIgnoreCase)))
             .Select(o => new RouteAgent(o.Methode.ToUpperInvariant(), o.Route)).Distinct().ToList();
         return new PlafondAgent(d.MdeCode, d.MdeModele, LecturesMcp.Plafond(d).Actions ?? new Dictionary<string, IReadOnlyList<string>>(),

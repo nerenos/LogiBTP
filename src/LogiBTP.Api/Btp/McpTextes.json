@@ -1,0 +1,14 @@
+{
+  "mcp_btp": {
+    "outils": {
+      "rechercher": "Recherche dans une liste enregistrée de LogiBTP (module Liste) : vue_id (identifiant de la vue, obligatoire), recherche (texte), filtres et tri de la vue, pagination par curseur (apres = suite de la réponse précédente), taille de page (au plus 200). Rend { lignes, suite } ; chaque ligne porte son adresse dans l'application.",
+      "lire_document": "Lit une pièce (devis, commande, situation, facture, ordre d'exécution, pièce d'achat ou de stock) par son identifiant ent_id : entête, lignes, totaux et TVA. Prix d'achat et de revient retirés sauf levée du garde-fou COUTS. Rend l'adresse de la pièce dans l'application.",
+      "lire_marche": "Lit la fiche d'un marché par son identifiant (montants, dates, rattachements). Rend l'adresse de la fiche dans l'application.",
+      "lire_chantier": "Lit la fiche d'un chantier par son identifiant (adresse du chantier, dates, rattachements). Rend l'adresse de la fiche dans l'application.",
+      "rechercher_bibliotheque": "Recherche des articles et ouvrages de la bibliothèque par mots (code, libellé, mots-clés), au plus 50 ; type facultatif (ARTICLE, OUVRAGE, ENSEMBLE), bib (identifiant de bibliothèque). Prix de vente seuls sauf levée du garde-fou COUTS.",
+      "lire_stock": "État du stock d'un lieu (dépôt ou chantier qui tient un stock) par son identifiant lieu, à une date facultative (date, ISO 8601) ; zeros = vrai pour garder les articles à zéro. Valorisation retirée sauf levée du garde-fou COUTS.",
+      "lister_modeles": "Liste les modèles de document actifs (code et libellé), à utiliser pour préparer une pièce.",
+      "designer_tiers": "Désigne un tiers pour l'utiliser dans une pièce, sans lire sa fiche : recherche (mots sur le code, la raison sociale, le nom commercial, la ville) ou id, casquette facultative (CLIENT, FOURNISSEUR…), limite (au plus 50). Personne morale : code, raison sociale et ville ; particulier : trouvé seulement par son code exact et rendu sous son code seul."
+    }
+  }
+}

@@ -91,6 +91,7 @@ export const MODULE_FACULTATIF = Object.freeze({
   CRM: 'crm',
   EXECUTION: 'execution',
   FACTURE_ELECTRONIQUE: 'facture_electronique',
+  MCP: 'mcp',
   PLANNING: 'planning',
   POINTAGE: 'pointage',
   REGLEMENT: 'reglement',

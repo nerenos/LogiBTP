@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using LogiBTP.Socle;
 
 namespace LogiBTP.Mcp.Web;
@@ -30,6 +31,9 @@ public sealed record OutilMcp(string Nom, string Description, JsonElement Schema
     /// <summary>Argument du nombre d'éléments demandés (garde-fou VOLUME : borné au quota accordé) ; null : un élément.</summary>
     public string? ParametreLimite { get; init; }
 
+    /// <summary>Plafond du nombre d'éléments par appel (pagination), appliqué à <see cref="ParametreLimite"/> même sans garde-fou VOLUME.</summary>
+    public int? LimiteMax { get; init; }
+
     /// <summary>Clé du tableau des éléments dans la réponse (null : la réponse elle-même si c'est un tableau, sinon un élément).</summary>
     public string? CleListe { get; init; }
 
@@ -49,6 +53,18 @@ public abstract class SpecialisationMcp
 {
     /// <summary>Nœud de droits des routes de gestion /api/mcp (interdit à tout agent, quel que soit le plafond).</summary>
     public virtual string Noeud => "agents";
+
+    /// <summary>Code du module facultatif de l'application qui active le point /mcp par société (null : toujours actif).</summary>
+    public virtual string? Module => null;
+
+    /// <summary>Clé de l'adresse absolue ajoutée à chaque élément d'une réponse (<see cref="Adresse"/>).</summary>
+    public const string CleAdresse = "adresse";
+
+    /// <summary>
+    /// Adresse relative (« /document/12 ») d'un élément de la réponse d'un outil, rendue absolue par le module (origine de la
+    /// requête MCP : société du sous-domaine) ; null : pas d'adresse.
+    /// </summary>
+    public virtual string? Adresse(OutilMcp outil, JsonObject element) => null;
 
     /// <summary>Catalogue des outils (constant ; vide par défaut).</summary>
     public virtual IReadOnlyList<OutilMcp> Outils => [];

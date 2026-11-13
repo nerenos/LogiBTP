@@ -90,6 +90,8 @@ public static class ModulesFacultatifs
     public const string Crm = "crm";
     public const string Execution = "execution";
     public const string FactureElectronique = "facture_electronique";
+    /// <summary>Agents IA (module MCP, db/308) : désactivé à la création.</summary>
+    public const string Mcp = "mcp";
     public const string Planning = "planning";
     public const string Pointage = "pointage";
     public const string Reglement = "reglement";
@@ -401,4 +403,15 @@ public static class EtatsReserve
 {
     public const string Ouverte = "OUVERTE";
     public const string Levee = "LEVEE";
+}
+
+/// <summary>
+/// Adresses des pages de l'application (mêmes que <c>urlDocument</c> / <c>urlFiche</c> de client/src/app/codes.js) :
+/// relatives, rendues absolues par l'origine de la société (module MCP : adresse de chaque résultat).
+/// </summary>
+public static class AdressesApp
+{
+    public static string UrlDocument(long id) => $"/document/{id}";
+
+    public static string UrlFiche(string type, object id) => $"/fiche/{type}/{id}";
 }

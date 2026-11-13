@@ -22,7 +22,7 @@
 | 3 | Plafond appliqué par le module Droits | `modules/droits` (+ Document : `ValiderDans`) | 1 | FAIT (13/11/2026) |
 | 4 | Jetons délégués | `modules/authentification` | 1 | FAIT (13/11/2026) |
 | 5 | Point `/mcp`, catalogue d'outils, appel interne, journal | `modules/mcp` | 2, 4 | FAIT (13/11/2026) |
-| 6 | Outils de lecture du cœur, garde-fous du BTP | cœur | 3, 5 | A FAIRE |
+| 6 | Outils de lecture du cœur, garde-fous du BTP | cœur | 3, 5 | FAIT (13/11/2026) |
 | 7 | Outils d'écriture des devis, origine des écritures | cœur | 6 | A FAIRE |
 | 8 | Règle de ventilation d'une demande et réappro sous le mini | `modules/stock` | — | A FAIRE |
 | 9 | Ordres d'exécution filtrés et demandes d'appro ventilées | cœur | 7, 8 | A FAIRE |
@@ -181,6 +181,29 @@ Hors plan (Q13) : agent hébergé (automatisations planifiées, panneau intégr�
   `per_bic`, coordonnées, `ind_*` personnels, `sal_*`, prix d'achat et de revient sous COUTS) ; adresses absolues
   (`urlDocument`, `urlFiche`) rendues avec chaque résultat.
 - **Critère de fin** : tests : chaque garde-fou retire bien ses champs et nœuds.
+- **Réalisé** (13/11/2026) : `SpecialisationMcpBtp` : outils LECTURE `rechercher` (`POST /api/listes/lot`, vue enregistrée, filtres,
+  tri, curseur, `taille` ≤ 200 par `OutilMcp.LimiteMax`), `lire_document` (`/api/documents/{id}`), `lire_marche` / `lire_chantier`
+  (`/api/fiches/marche|chantier/{id}`), `rechercher_bibliotheque` (`/api/bibliotheque/elements`), `lire_stock`
+  (`/api/stock/lieux/{lieu}/etat`), `lister_modeles` (`/api/modeles-document`), `designer_tiers` (nouvelle route de lecture
+  `GET /api/designation/tiers`, `Btp/DesignationTiersBtp.cs`, mode Module « documents » : code, raison sociale et ville d'une
+  personne morale ; particulier trouvé par son code exact seul et rendu sous son code) ; descriptions `Btp/McpTextes.json`
+  (ressource incorporée) ; nœuds retenus TIERS (`annuaire`, `fiches/personne`, `fiches/individu`), SALARIES (`fiches/salarie`,
+  `ressources`), PAIE (`pointage`, `pointage/repas`), CRM_NOTES (`crm`), COUTS (`rentabilite/couts`) — choix du lot 2 confirmé :
+  un nœud retenu perd aussi ses écritures ; clés sensibles (colonnes du DDL, test) : `per_iban`, `per_bic`, coordonnées `coo_*`,
+  contacts et adresses figés des pièces, `ind_*` personnels, `sal_*` hors désignation, PAIE (salaire, coût horaire…), COUTS
+  (`lig_pa`, `lig_pr`, montants et coefficients, `ele_pa*`, `ele_pr`, `ele_pmp`, `tfo_prix` ; par outil : `pa`, `pr` de la
+  bibliothèque, valorisation du stock) ; adresse absolue de chaque résultat (`AdressesApp.UrlDocument` / `UrlFiche` ↔ `urlDocument`
+  / `urlFiche`, origine de la requête MCP). Module MCP : `SpecialisationMcp.Module` (activation), `Adresse`, `OutilMcp.LimiteMax`,
+  arguments non déclarés par le schéma ignorés (ni `definition` de liste, ni `confidentiel` de fiche), outil LECTURE en POST
+  journalisé en lecture et hors liste blanche, `/mcp` 403 `MCP_MODULE_INACTIF` et plafond absent quand le module est inactif
+  (`ERREUR_MCP` complété) ; `AppelInterneHttp` : HTTP local d'abord, bascule sur HTTPS local si l'installation redirige.
+  Activation : `MODULE_FACULTATIF.MCP` ↔ `ModulesFacultatifs.Mcp`, `db/308_mcp.sql` (désactivé à la création, manifeste),
+  `/api/mcp` sous `ExigeModule`. Module Droits : `AgentsDroits.RoutePermise` exacte (méthode + gabarit segment par segment,
+  paramètres anonymes, jamais un préfixe). Contrôles par identité : `AgentsBtp.CouvertAsync` (agent : droits de l'agent sur le
+  nœud et l'action) dans `PeutGererAsync` (stock, Modifier), `MagasinBtp.Exiger`, `PeutTraiterAsync` (stock / bornes, Valider),
+  `PeutValiderAsync` / `PeutControlerAsync` (exécution, Valider) ; `DelegationsControle` refusé à tout agent ; `PeutDeverrouiller`
+  déjà faux (`EstAdmin`). Tests `McpBtpTests` (cœur, désignation en base), `AgentsDroitsTests`, `ReglesPointMcpTests`,
+  `PointMcpTests` (module inactif, adresse absolue).
 
 ## Lot 7 : outils d'écriture des devis
 

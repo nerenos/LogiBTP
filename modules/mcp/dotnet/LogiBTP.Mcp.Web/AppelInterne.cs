@@ -23,33 +23,44 @@ public interface IAppelInterne
 }
 
 /// <summary>
-/// Appel interne par HTTP vers l'adresse locale du serveur (Kestrel, <see cref="IServerAddressesFeature"/>, HTTPS
-/// préféré) : l'adresse de l'URL est l'hôte de la requête MCP (même société, même nom pour TLS), la connexion est
-/// ouverte sur le port local de la machine. Aucune redirection suivie.
+/// Appel interne par HTTP vers l'adresse locale du serveur (Kestrel, <see cref="IServerAddressesFeature"/>) : l'adresse de
+/// l'URL est l'hôte de la requête MCP (même société, même nom pour TLS), la connexion est ouverte sur le port local de la
+/// machine. HTTP local préféré quand Kestrel en écoute un (pas de certificat à faire reconnaître par le conteneur) ;
+/// redirigé vers HTTPS (certificat de l'installation actif : UseHttpsInstallation), l'appel bascule une fois pour toutes
+/// sur l'adresse HTTPS locale. Aucune redirection suivie.
 /// </summary>
 public sealed class AppelInterneHttp(IServer serveur) : IAppelInterne, IDisposable
 {
-    private HttpClient? client;
-    private Uri? locale;
+    private readonly Dictionary<string, HttpClient> clients = [];
+    private IReadOnlyList<Uri>? locales;
+    private bool basculeHttps;
     private readonly Lock verrou = new();
 
-    /// <summary>Adresse locale retenue parmi celles du serveur : HTTPS d'abord, hôte joker ramené à la boucle locale.</summary>
-    public static Uri? AdresseLocale(IEnumerable<string> adresses)
+    /// <summary>Adresses locales du serveur, hôte joker ramené à la boucle locale : HTTP d'abord, puis HTTPS.</summary>
+    public static IReadOnlyList<Uri> AdressesLocales(IEnumerable<string> adresses)
     {
         var liste = adresses.Select(a => a.Replace("://+", "://127.0.0.1").Replace("://*", "://127.0.0.1").Replace("://0.0.0.0", "://127.0.0.1")
                 .Replace("://[::]", "://[::1]"))
             .Select(a => Uri.TryCreate(a, UriKind.Absolute, out var u) ? u : null).OfType<Uri>().ToList();
-        return liste.FirstOrDefault(u => u.Scheme == Uri.UriSchemeHttps) ?? liste.FirstOrDefault(u => u.Scheme == Uri.UriSchemeHttp);
+        return [.. liste.Where(u => u.Scheme == Uri.UriSchemeHttp), .. liste.Where(u => u.Scheme == Uri.UriSchemeHttps)];
     }
+
+    /// <summary>Adresse locale retenue : HTTP si Kestrel en écoute une, sinon HTTPS.</summary>
+    public static Uri? AdresseLocale(IEnumerable<string> adresses) => AdressesLocales(adresses).FirstOrDefault();
+
+    /// <summary>Réponse de redirection vers HTTPS (HTTP refusé par l'installation) : l'appel doit passer en HTTPS.</summary>
+    public static bool RedirigeVersHttps(int statut, Uri? location) =>
+        statut is 301 or 302 or 307 or 308 && location is { IsAbsoluteUri: true } l && l.Scheme == Uri.UriSchemeHttps;
 
     private (HttpClient, Uri) Client()
     {
         lock (verrou)
         {
-            if (client is not null && locale is not null) return (client, locale);
-            var adresses = serveur.Features.Get<IServerAddressesFeature>()?.Addresses ?? [];
-            locale = AdresseLocale(adresses) ?? throw new InvalidOperationException("MCP : adresse locale du serveur inconnue (Kestrel non démarré)");
-            var cible = locale;
+            locales ??= AdressesLocales(serveur.Features.Get<IServerAddressesFeature>()?.Addresses ?? []);
+            var cible = (basculeHttps ? locales.FirstOrDefault(u => u.Scheme == Uri.UriSchemeHttps) : null) ?? locales.FirstOrDefault()
+                ?? throw new InvalidOperationException("MCP : adresse locale du serveur inconnue (Kestrel non démarré)");
+            var cle = cible.ToString();
+            if (clients.TryGetValue(cle, out var existant)) return (existant, cible);
             var handler = new SocketsHttpHandler
             {
                 AllowAutoRedirect = false,
@@ -71,25 +82,43 @@ public sealed class AppelInterneHttp(IServer serveur) : IAppelInterne, IDisposab
                     }
                 },
             };
-            client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(100) };
-            return (client, locale);
+            var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(100) };
+            clients[cle] = client;
+            return (client, cible);
         }
     }
 
     public async Task<ReponseInterne> EnvoyerAsync(RequeteInterne requete, CancellationToken ct)
     {
-        var (http, adresse) = Client();
-        var hote = new HostString(requete.Hote).Host;
-        if (string.IsNullOrEmpty(hote)) hote = adresse.Host;
-        var url = new UriBuilder(adresse.Scheme, hote, adresse.Port).Uri;
-        using var message = new HttpRequestMessage(new HttpMethod(requete.Methode), new Uri(url, requete.Chemin));
-        message.Headers.Host = string.IsNullOrEmpty(requete.Hote) ? null : requete.Hote;
-        message.Headers.TryAddWithoutValidation("Authorization", requete.Authorization);
-        message.Headers.Accept.ParseAdd("application/json");
-        if (requete.Corps is not null) message.Content = new StringContent(requete.Corps, Encoding.UTF8, "application/json");
-        using var reponse = await http.SendAsync(message, ct);
-        return new ReponseInterne((int)reponse.StatusCode, await reponse.Content.ReadAsStringAsync(ct));
+        for (var essai = 0; ; essai++)
+        {
+            var (http, adresse) = Client();
+            var hote = new HostString(requete.Hote).Host;
+            if (string.IsNullOrEmpty(hote)) hote = adresse.Host;
+            var url = new UriBuilder(adresse.Scheme, hote, adresse.Port).Uri;
+            using var message = new HttpRequestMessage(new HttpMethod(requete.Methode), new Uri(url, requete.Chemin));
+            message.Headers.Host = string.IsNullOrEmpty(requete.Hote) ? null : requete.Hote;
+            message.Headers.TryAddWithoutValidation("Authorization", requete.Authorization);
+            message.Headers.Accept.ParseAdd("application/json");
+            if (requete.Corps is not null) message.Content = new StringContent(requete.Corps, Encoding.UTF8, "application/json");
+            using var reponse = await http.SendAsync(message, ct);
+            if (essai == 0 && adresse.Scheme == Uri.UriSchemeHttp && RedirigeVersHttps((int)reponse.StatusCode, reponse.Headers.Location))
+            {
+                lock (verrou)
+                {
+                    if (locales?.Any(u => u.Scheme == Uri.UriSchemeHttps) == true)
+                    {
+                        basculeHttps = true;
+                        continue;
+                    }
+                }
+            }
+            return new ReponseInterne((int)reponse.StatusCode, await reponse.Content.ReadAsStringAsync(ct));
+        }
     }
 
-    public void Dispose() => client?.Dispose();
+    public void Dispose()
+    {
+        foreach (var c in clients.Values) c.Dispose();
+    }
 }

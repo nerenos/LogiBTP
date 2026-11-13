@@ -109,18 +109,22 @@ public static class AgentsDroits
         return false;
     }
 
-    /// <summary>Route d'écriture de la liste blanche du plafond : même méthode et gabarit égal ou sous le gabarit déclaré.</summary>
+    /// <summary>
+    /// Route d'écriture de la liste blanche du plafond : même méthode et même gabarit, segment par segment (paramètres
+    /// comparés sans leur nom ni leur contrainte : « {id:long} » = « {ent} »). Jamais un préfixe : un outil
+    /// <c>POST /api/fiches/{type}/{id}</c> ne couvre ni <c>…/confidentiel</c> ni <c>…/secret</c>.
+    /// </summary>
     public static bool RoutePermise(PlafondAgent? plafond, string methode, string gabarit)
     {
         if (plafond is null) return false;
-        var g = RoutesDroits.Normaliser(gabarit);
+        var g = Forme(gabarit);
         return (plafond.RoutesEcriture ?? []).Any(r =>
-        {
-            var p = RoutesDroits.Normaliser(r.Gabarit);
-            return string.Equals(r.Methode, methode, StringComparison.OrdinalIgnoreCase)
-                && (g == p || g.StartsWith(p + "/", StringComparison.Ordinal));
-        });
+            string.Equals(r.Methode, methode, StringComparison.OrdinalIgnoreCase) && Forme(r.Gabarit) == g);
     }
+
+    /// <summary>Gabarit normalisé, paramètres anonymes (« /api/documents/{} »), casse des segments fixes ignorée.</summary>
+    private static string Forme(string gabarit) =>
+        string.Join('/', RoutesDroits.Normaliser(gabarit).Split('/').Select(x => x.StartsWith('{') ? "{}" : x.ToLowerInvariant()));
 
     /// <summary>
     /// Contrôle d'une route pour un agent (après rattachement à la table des routes) : code de refus, ou null si permise.

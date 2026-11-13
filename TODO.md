@@ -42,24 +42,26 @@ Analyses validées le 23/10/2026 : [ANALYSE-MODULE-MAIL.md](documentation/concep
   rafraîchissement rotatif, machines connues, double facteur par courriel, exclusion d'IP, identifiants API, deux clés
   (`.env`, données) ; profil par défaut = saisie mobile (A5 révisée) ; à reprendre par le Mail (comptes, boîtes,
   « À rapprocher ») et l'OAuth (reconnexion des connexions).
-- [ ] **Module MCP** (agents IA au nom d'un utilisateur, [plan](documentation/conception/plans/mcp.md), lots 0 à 5 faits
+- [ ] **Module MCP** (agents IA au nom d'un utilisateur, [plan](documentation/conception/plans/mcp.md), lots 0 à 6 faits
   le 13/11/2026 : audit des routes, contrats du socle, règles de délégation `modules/mcp`, plafond appliqué par les
-  Droits, jetons délégués du module Authentification, point `/mcp`, délégations, journal) : lots 6 à 14 (outils du cœur,
-  propositions, écrans, OAuth 2.1). Reportés du lot 5 : appel interne en HTTPS vers l'adresse locale — le certificat de
-  l'installation doit être reconnu par le conteneur de l'API (autorité LogiBTP), sinon prévoir une exception de
-  `UseHttpsInstallation` pour la boucle locale ; activation du module par société (`MODULE_FACULTATIF`) et notification au
-  délégant (premier usage, alerte de quota : `alerte_quota` déjà notée au journal) au lot 11 ; purge du journal à un an
-  (Q11) par le planificateur ; outils PROPOSITION refusés jusqu'au lot 10. À trancher
-  au lot 6 : un nœud retenu par un garde-fou (TIERS, SALARIES, PAIE…) perd aussi ses écritures (choix du lot 2).
-  Reportés du lot 3 (audit § 7, points 3 et 6) : contrôles par identité hors `IDroits` encore aveugles à
-  `Utilisateur.Agent` (`PeutGererAsync` `StockBtp.cs`, `MagasinBtp.Exiger`, `PeutTraiterAsync` `StockBorneBtp.cs`,
-  `PeutValiderAsync` / `PeutControlerAsync` `SpecialisationExecutionBtp.cs`, `DelegationsControle.cs`,
-  `PeutDeverrouiller` `VerrouDocument.cs`) : à refuser pour un agent au lot 6 (ceux qui passent par `EstAdmin`,
-  `ExigerAdmin`, `ExigerParametres` le sont déjà) ; la liste blanche du plafond (lot 5) ne doit jamais couvrir
-  `POST /api/fiches/{type}/{id}/confidentiel`, `…/secret` ni `POST /api/cas-test` (gabarits exacts plutôt que préfixe
-  `/api/fiches/{type}` ou `/api/documents`) : la liste blanche est désormais faite des routes d'écriture des outils, mais
-  `AgentsDroits.RoutePermise` la compare encore en préfixe (un outil `POST /api/fiches/{type}/{id}` couvrirait
-  `…/confidentiel`) : comparaison exacte à poser au lot 6 avant le premier outil d'écriture.
+  Droits, jetons délégués, point `/mcp`, délégations, journal, outils de lecture du cœur et garde-fous du BTP, activation
+  par société, liste blanche exacte, contrôles par identité bornés au plafond) : lots 7 à 14 (outils d'écriture,
+  propositions, écrans, OAuth 2.1). Restent :
+  - appel interne : HTTP local préféré, bascule sur HTTPS local quand l'installation redirige (certificat actif) ; dans ce
+    cas le certificat de l'installation doit être reconnu par le conteneur de l'API (autorité LogiBTP), sinon prévoir une
+    exception de `UseHttpsInstallation` pour la boucle locale (comme `/api/sante`) ;
+  - notification au délégant (premier usage, alerte de quota : `alerte_quota` déjà noté au journal) et écran d'activation
+    du module (`MODULE_FACULTATIF.MCP`, désactivé à la création, `db/308`) au lot 11 ; purge du journal à un an (Q11) par
+    le planificateur ; outils PROPOSITION refusés jusqu'au lot 10 ;
+  - garde-fou COUTS sur les pièces d'achat : le prix d'achat y est le prix de la ligne (`lig_pu`, `lig_pv`…), non retiré
+    (seuls `lig_pa`, `lig_pr`, montants et coefficients le sont) : décider au lot 7 s'il faut masquer les prix des pièces
+    A et T sous COUTS ;
+  - outils dont le nœud est un parent (`documents`, `listes`) : classés par la portée du profil sur ce nœud même ; un profil
+    qui n'a de droits que sur `documents/V/…` ne les voit pas dans son catalogue (la route, elle, l'accepterait) : classer
+    par le sous-arbre au lot 7 si besoin ;
+  - adresse des lignes de `rechercher` : documents (`^[VATSE]_`) et fiches seulement ; autres types d'élément
+    (GED, pointage, mouvement de stock…) sans adresse ;
+  - garde-fou GED_CONFIDENTIEL : aucun outil GED encore (nœuds et clés à poser avec le premier outil de la GED).
 - [ ] **Module de partage de fichiers** (auto-hébergé ou kDrive d'Infomaniak) : lien de téléchargement à la place des
   pièces jointes trop lourdes pour un courriel.
 

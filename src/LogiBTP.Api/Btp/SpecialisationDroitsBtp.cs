@@ -119,6 +119,9 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
         new("/api/mcp", ModeRoute.Module, SpecialisationMcpBtp.NoeudAgents),
         new("/api/mcp/delegations/{code}/revoquer", ModeRoute.Action, SpecialisationMcpBtp.NoeudAgents, ActionsDroits.Creer),
         new("/api/mcp/parametres", ModeRoute.Parametrage),
+        // Désignation d'un tiers (code, raison sociale d'une personne morale, ville ; particulier : code seul) : qui consulte
+        // des pièces en voit les tiers ; lecture seule, ouverte à un agent sous le garde-fou TIERS (plans/mcp.md, lot 6).
+        new("/api/designation", ModeRoute.Module, "documents"),
         new("/api/droits/catalogue", ModeRoute.Module, "administration/profils"),
         new("/api/droits/profils", ModeRoute.Module, "administration/profils"),
         new("/api/droits/journal", ModeRoute.Module, "administration/profils"),

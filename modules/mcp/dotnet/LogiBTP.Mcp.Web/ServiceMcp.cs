@@ -12,9 +12,11 @@ namespace LogiBTP.Mcp.Web;
 
 /// <summary>
 /// Agent de la requête /mcp, établi par le jeton délégué : compte et profil du délégant, délégation active, client,
-/// en-têtes repris par l'appel interne (Host de la requête, Authorization du jeton : jamais d'autre identité).
+/// en-têtes repris par l'appel interne (Host de la requête, Authorization du jeton : jamais d'autre identité), origine de la
+/// requête (« https://societe.exemple.fr » : adresses absolues rendues avec les résultats).
 /// </summary>
-public sealed record ContexteAgent(string Compte, string Profil, DelegationMcp Delegation, string Client, string Authorization, string Hote, string? Session)
+public sealed record ContexteAgent(string Compte, string Profil, DelegationMcp Delegation, string Client, string Authorization, string Hote, string? Session,
+    string Origine = "")
 {
     public Utilisateur Utilisateur => new(Compte, Profil) { Agent = new AgentRequete(Delegation.MdeCode, Client) };
 }
@@ -57,8 +59,16 @@ public sealed class ServiceMcp(McpDbContext db, SpecialisationMcp specialisation
                 .ExecuteUpdateAsync(x => x.SetProperty(y => y.MdePremierUsage, maintenant), ct);
         }
         return new ContexteAgent(j.Compte, j.Profil, d, string.IsNullOrEmpty(j.Client) ? d.MdeClient : j.Client, "Bearer " + secret,
-            http.Request.Host.Value ?? "", http.Request.Headers["Mcp-Session-Id"].FirstOrDefault());
+            http.Request.Host.Value ?? "", http.Request.Headers["Mcp-Session-Id"].FirstOrDefault(), Origine(http));
     }
+
+    /// <summary>Origine de la requête MCP (schéma et hôte de la société), sans barre finale.</summary>
+    public static string Origine(HttpContext http) => http.Request.Host.HasValue ? $"{http.Request.Scheme}://{http.Request.Host.Value}" : "";
+
+    /// <summary>Adresse absolue : origine + chemin relatif (« /document/12 ») ; chemin déjà absolu ou origine inconnue : inchangé.</summary>
+    public static string Absolue(string origine, string chemin) =>
+        string.IsNullOrEmpty(origine) || Uri.TryCreate(chemin, UriKind.Absolute, out var u) && u.Scheme is "http" or "https"
+            ? chemin : origine.TrimEnd('/') + (chemin.StartsWith('/') ? chemin : "/" + chemin);
 
     private sealed record Evaluation(IReadOnlyList<string> Actifs, LeveesProfil Levees, DroitsProfil Profil, PlafondDelegation Plafond, OptionsDelegation Options);
 
@@ -181,6 +191,9 @@ public sealed class ServiceMcp(McpDbContext db, SpecialisationMcp specialisation
             }
             if (outil.ParametreLimite is { } limite) args[limite] = q.Accordes;
         }
+        // Pagination bornée par l'outil (même garde-fou VOLUME levé).
+        if (outil.ParametreLimite is { } pl && outil.LimiteMax is int max && args.TryGetValue(pl, out var lv) && lv is JsonValue lj && lj.TryGetValue<int>(out var ln) && ln > max)
+            args[pl] = max;
 
         if (!Requete(outil, args, out var chemin, out var corps, out var manquant))
             return Refus(ErreurMcp.McpOutilParametre, StatutAppelAgent.Refus, 422, manquant);
@@ -217,10 +230,14 @@ public sealed class ServiceMcp(McpDbContext db, SpecialisationMcp specialisation
             journal.AjoGardesFous = gardes.ToJsonString();
         }
         var elements = liste is not null ? liste.OfType<JsonNode>().ToList() : resultat is null ? [] : [resultat];
+        // Adresse absolue de chaque élément (origine de la société) : l'humain relit et valide dans l'application.
+        foreach (var o in elements.OfType<JsonObject>())
+            if (specialisation.Adresse(outil, o) is { Length: > 0 } relative) o[SpecialisationMcp.CleAdresse] = Absolue(ctx.Origine, relative);
         var ids = new JsonArray([.. elements.Take(IdentifiantsMax)
             .Select(x => outil.CleIdentifiant is { } ci && x is JsonObject o && o[ci] is { } id ? id.DeepClone() : null).Where(x => x is not null)]);
         var trace = new JsonObject { ["type"] = outil.TypeElement, ["identifiants"] = ids, ["nombre"] = elements.Count };
-        if (HttpMethods.IsGet(outil.Methode))
+        // Lecture (outil classé LECTURE, même par POST : listes) ou écriture.
+        if (outil.Classe == ClasseOutil.Lecture || HttpMethods.IsGet(outil.Methode))
         {
             journal.AjoLus = trace.ToJsonString();
             journal.AjoNbLus = elements.Count;
@@ -243,11 +260,15 @@ public sealed class ServiceMcp(McpDbContext db, SpecialisationMcp specialisation
 
     /// <summary>
     /// Chemin et corps de la route : « {nom} » remplacé par l'argument (échappé) ; autres arguments en paramètres de
-    /// requête (GET, HEAD, DELETE) ou dans le corps JSON. Argument de route manquant : faux.
+    /// requête (GET, HEAD, DELETE) ou dans le corps JSON. Argument de route manquant : faux. Schéma qui déclare ses
+    /// propriétés : les arguments non déclarés sont ignorés (un agent n'ajoute ni « definition » à une liste, ni
+    /// « confidentiel » à une fiche).
     /// </summary>
     public static bool Requete(OutilMcp outil, IReadOnlyDictionary<string, JsonNode?> args, out string chemin, out string? corps, out JsonNode? manquant)
     {
-        var restants = args.ToDictionary(kv => kv.Key, kv => kv.Value);
+        var declares = outil.Schema.ValueKind == JsonValueKind.Object && outil.Schema.TryGetProperty("properties", out var proprietes)
+            && proprietes.ValueKind == JsonValueKind.Object ? proprietes.EnumerateObject().Select(p => p.Name).ToHashSet(StringComparer.Ordinal) : null;
+        var restants = args.Where(kv => declares is null || declares.Contains(kv.Key)).ToDictionary(kv => kv.Key, kv => kv.Value);
         var sb = new StringBuilder();
         manquant = null;
         var route = outil.Route;
