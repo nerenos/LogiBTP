@@ -344,6 +344,16 @@ public static class CiblesEreporting
 }
 
 /// <summary>Erreurs des outils d'écriture des devis pour les agents IA (module MCP, lot 7 : Btp/McpDocumentsBtp.cs).</summary>
+/// <summary>
+/// Types de cible d'une proposition d'agent (module MCP, lots 10 et 11) ↔ <c>CIBLE_PROPOSITION</c> : pièce, ou fiche par le
+/// préfixe suivi de son type (lien de l'écran de la proposition vers sa cible).
+/// </summary>
+public static class CiblesProposition
+{
+    public const string Document = "document";
+    public const string PrefixeFiche = "fiche/";
+}
+
 public static class ErreursMcpBtp
 {
     /// <summary>Pièce d'un autre type que celui de l'outil (devis seulement ; transformation : devis → commande seulement).</summary>

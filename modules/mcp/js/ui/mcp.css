@@ -1,0 +1,20 @@
+/* Module MCP : délégations, paramétrage, journal, propositions. Couleurs : variables de personnalisation/theme.css. */
+.mcp-table { border-collapse: collapse; margin-block: 0.5em; }
+.mcp-table td.nombre { text-align: right; font-variant-numeric: tabular-nums; }
+.mcp-inactive { color: var(--mcp-inactif); }
+.mcp-pastille { background: var(--mcp-pastille-fond); border-radius: 3px; padding: 0 0.4em; font-size: 0.9em; white-space: nowrap; }
+.mcp-avertissement, .mcp-avertissements h3 { color: var(--mcp-avertissement); }
+.mcp-erreur, .mcp-statut-refus, .mcp-statut-erreur, .mcp-statut-quota { color: var(--mcp-erreur); }
+.mcp-ecart, .mcp-apres { background: var(--mcp-ecart-fond); }
+.mcp-avant { text-decoration: line-through; color: var(--mcp-inactif); }
+.mcp-etat-acceptee { color: var(--mcp-succes); }
+.mcp-etat-refusee, .mcp-etat-echue, .mcp-etat-annulee { color: var(--mcp-inactif); }
+.mcp-filtres, .mcp-decisions { flex-wrap: wrap; }
+.mcp-copie { margin-block: 0.5em; }
+.mcp-code { display: block; background: var(--mcp-code-fond); padding: 0.4em 0.6em; border-radius: 3px; white-space: pre-wrap; word-break: break-all; user-select: all; }
+.mcp-dialogue label { display: block; margin-block: 0.4em; }
+.mcp-dialogue label.ligne { display: flex; gap: 0.4em; align-items: center; }
+.mcp-gardes-fous { margin-block: 0.5em; }
+.mcp-json { width: 100%; font-family: monospace; }
+.mcp-secret { max-width: min(60em, 95vw); }
+.agent-pastille { display: inline-flex; gap: 0.3em; align-items: center; background: var(--mcp-pastille-fond); border-radius: 3px; padding: 0 0.4em; }

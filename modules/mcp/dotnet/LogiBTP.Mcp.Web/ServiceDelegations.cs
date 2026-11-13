@@ -20,6 +20,14 @@ public sealed record DelegationDecrite(string Code, string Compte, string Libell
 /// <summary>Délégation créée : sa description et le secret du jeton délégué, rendu une seule fois.</summary>
 public sealed record DelegationCreee(DelegationDecrite Delegation, string Secret);
 
+/// <summary>
+/// Choix offerts à l'utilisateur pour créer une délégation (écran Mon compte › Agents, lot 11) : modèles permis à son profil
+/// (jamais « comme moi » pour un profil total), garde-fous (tous) et ceux qu'il peut lever, échéance par défaut et maximale,
+/// portées.
+/// </summary>
+public sealed record ChoixDelegation(IReadOnlyList<string> Modeles, IReadOnlyList<string> GardesFous, IReadOnlyList<string> Levables,
+    int EcheanceDefaut, int EcheanceMax, IReadOnlyList<string> Portees);
+
 /// <summary>Levées d'un profil saisies par l'administrateur.</summary>
 public sealed record LeveeSaisie(IReadOnlyList<string>? Levables = null, IReadOnlyList<string>? Modeles = null, int? JoursMax = null,
     int? QuotaAppel = null, int? QuotaJour = null, int? Alerte = null);
@@ -70,6 +78,18 @@ public sealed class ServiceDelegations(McpDbContext db, IJetonsDelegues jetons, 
         var q = db.Delegations.AsNoTracking();
         if (!(toutes && u.EstAdmin)) q = q.Where(d => d.MdeCompte == u.Code);
         return (await q.OrderByDescending(d => d.MdeId).ToListAsync(ct)).Select(Decrire).ToList();
+    }
+
+    /// <summary>Choix de création d'une délégation pour l'utilisateur (son profil : levées, modèles, échéance maximale).</summary>
+    public async Task<ChoixDelegation> ChoixAsync(Utilisateur u, CancellationToken ct)
+    {
+        ExigerHumain(u);
+        var levees = await LecturesMcp.LeveesAsync(db, u.Profil, ct);
+        var total = await TotalAsync(u, ct);
+        var modeles = Modeles.Where(m => (levees.Modeles is null || levees.Modeles.Contains(m)) && !(total && m == ModelePlafond.CommeMoi)).ToList();
+        var max = Math.Min(levees.JoursMax ?? ReglesDelegation.EcheanceMax, ReglesDelegation.EcheanceMax);
+        return new ChoixDelegation(modeles, ReglesDelegation.GardesFous, ReglesDelegation.GardesFous.Where(g => levees.Levables.Contains(g)).ToList(),
+            Math.Min(ReglesDelegation.EcheanceDefaut, max), max, Portees);
     }
 
     /// <summary>

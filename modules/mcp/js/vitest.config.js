@@ -1,3 +1,4 @@
 import { defineConfig } from 'vitest/config';
 
-export default defineConfig({ test: {} });
+// Dictionnaire du socle et du module posé avant chaque fichier de test (module Personnalisation).
+export default defineConfig({ test: { setupFiles: ['./test/preparation.js'] } });

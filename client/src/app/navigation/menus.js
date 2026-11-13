@@ -238,6 +238,17 @@ export const MENUS_METIER = [
     ],
   },
   {
+    // Module MCP (agents IA, plans/mcp.md lot 11) : propositions à valider (toute session : le serveur filtre par le droit
+    // exigé), journal et délégations (nœud « agents »), levées par profil (administrateur).
+    code: 'agents', libelle: texte('navigation_btp.menus.agents.libelle'), court: texte('navigation_btp.menus.agents.court'), module: MODULE_FACULTATIF.MCP, elements: [
+      { code: 'agents-propositions', libelle: texte('navigation_btp.menus.agents.propositions.libelle'), iconeHtml: iconeHtml('agents_btp_propositions'), url: '/agents/propositions', info: texte('navigation_btp.menus.agents.propositions.info') },
+      { code: 'agents-journal', libelle: texte('navigation_btp.menus.agents.journal.libelle'), iconeHtml: iconeHtml('agents_btp_journal'), url: '/agents/journal', droit: 'agents' },
+      { code: 'agents-delegations', libelle: texte('navigation_btp.menus.agents.delegations.libelle'), iconeHtml: iconeHtml('agents_btp_delegations'), url: '/compte#agents', droit: 'agents', info: texte('navigation_btp.menus.agents.delegations.info') },
+      { separateur: true },
+      { code: 'parametrage-agents', libelle: texte('navigation_btp.menus.agents.parametrage_agents.libelle'), iconeHtml: iconeHtml('agents_btp_parametres'), url: '/parametres/agents', droit: 'administration/profils' },
+    ],
+  },
+  {
     code: 'documents-ged', libelle: texte('navigation_btp.menus.documents_ged.libelle'), droit: 'ged', elements: [
       { code: 'ged', libelle: texte('navigation_btp.menus.documents_ged.ged.libelle'), iconeHtml: iconeHtml('navigation_btp_ged'), url: '/ged' },
       { code: 'coffre', libelle: texte('navigation_btp.menus.documents_ged.coffre.libelle'), iconeHtml: iconeHtml('navigation_btp_coffre'), url: '/ged?coffre=1', info: texte('navigation_btp.menus.documents_ged.coffre.info') },

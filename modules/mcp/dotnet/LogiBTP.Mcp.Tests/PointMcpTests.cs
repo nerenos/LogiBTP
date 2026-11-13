@@ -516,6 +516,29 @@ public sealed class PointMcpTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Choix_de_creation_suivent_les_levees_du_profil()
+    {
+        if (Connexion is null) return;
+        // Sans ligne de levées : rien de levable, tous les modèles, échéances par défaut.
+        var choix = await Avec(sp => sp.GetRequiredService<ServiceDelegations>().ChoixAsync(Delegant, default));
+        Assert.Empty(choix.Levables);
+        Assert.Equal(ReglesDelegation.GardesFous, choix.GardesFous);
+        Assert.Contains(ModelePlafond.CommeMoi, choix.Modeles);
+        Assert.Equal((ReglesDelegation.EcheanceDefaut, ReglesDelegation.EcheanceMax), (choix.EcheanceDefaut, choix.EcheanceMax));
+        // Levées de l'administrateur : modèles permis, levables, échéance maximale (défaut ramené au maximum).
+        await Avec(sp => sp.GetRequiredService<ServiceDelegations>().EnregistrerLeveeAsync(_profil,
+            new LeveeSaisie([GardeFou.Tiers, GardeFou.Volume], [ModelePlafond.Lecture, ModelePlafond.Preparation], 20), new Utilisateur("admin", Profils.Admin), default));
+        choix = await Avec(sp => sp.GetRequiredService<ServiceDelegations>().ChoixAsync(Delegant, default));
+        Assert.Equal([GardeFou.Tiers, GardeFou.Volume], choix.Levables);
+        Assert.Equal([ModelePlafond.Lecture, ModelePlafond.Preparation], choix.Modeles);
+        Assert.Equal((20, 20), (choix.EcheanceDefaut, choix.EcheanceMax));
+        // Un agent ne lit pas les choix.
+        var e = await Assert.ThrowsAsync<ExceptionMetier>(() => Avec(sp => sp.GetRequiredService<ServiceDelegations>().ChoixAsync(
+            Delegant with { Agent = new AgentRequete("D0", "c") }, default)));
+        Assert.Equal(ErreursAgent.AgentInterdit, e.Code);
+    }
+
+    [Fact]
     public async Task Plafond_revocation_et_gestion_interdite_a_un_agent()
     {
         if (Connexion is null) return;

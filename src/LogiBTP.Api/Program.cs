@@ -235,6 +235,8 @@ api.MapModuleDroits();
 api.MapGroup("").ExigeModule(ModulesFacultatifs.Mcp, "Agents IA").MapModuleMcp();
 // Désignation d'un tiers sans sa fiche (garde-fou TIERS des agents, plans/mcp.md lot 6).
 api.MapDesignationTiers();
+// Origine des écritures de l'historique d'une pièce (agents IA, plans/mcp.md lot 11) : pastille 🤖 du client.
+api.MapOriginesHistorique();
 api.MapModuleDocument<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp>();
 api.MapModuleListe();
 api.MapModuleFiche();

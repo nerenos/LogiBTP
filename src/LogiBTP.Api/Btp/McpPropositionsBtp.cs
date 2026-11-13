@@ -43,7 +43,7 @@ public static class McpPropositionsBtp
     /// <summary>Nœud et droit exigés pour appliquer une ventilation : gestion du stock (réservations, réappros), comme PeutGererAsync.</summary>
     public const string NoeudStock = "stock";
 
-    private const string TypeDocumentElement = "document";
+    private const string TypeDocumentElement = CiblesProposition.Document;
     private const string TypePersonne = "personne";
 
     // ------------------------------------------------------------------ lectures communes des outils
@@ -443,6 +443,6 @@ public static class McpPropositionsBtp
         new(ValiderPiece, ValiderAsync) { TypeElement = TypeDocumentElement },
         new(AppliquerVentilation, AppliquerVentilationAsync) { TypeElement = TypeDocumentElement, Controler = ControlerVentilation },
         new(EnvoyerDocument, EnvoyerAsync) { TypeElement = TypeDocumentElement },
-        new(CreerTiersProvisoire, CreerTiersAsync) { TypeElement = $"fiche/{TypesFiche.Personne}" },
+        new(CreerTiersProvisoire, CreerTiersAsync) { TypeElement = CiblesProposition.PrefixeFiche + TypesFiche.Personne },
     ];
 }

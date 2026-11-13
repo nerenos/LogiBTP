@@ -1,0 +1,20 @@
+{
+  "mcp_agent": "🤖",
+  "mcp_delegation": "🔑",
+  "mcp_ajouter": "＋",
+  "mcp_revoquer": "⊘",
+  "mcp_revoquee": "⊘",
+  "mcp_active": "●",
+  "mcp_echue": "○",
+  "mcp_copier": "⧉",
+  "mcp_avertissement": "⚠",
+  "mcp_parametres": "⚙",
+  "mcp_enregistrer": "💾",
+  "mcp_journal": "📜",
+  "mcp_actualiser": "↻",
+  "mcp_csv": "⤓",
+  "mcp_proposition": "📨",
+  "mcp_accepter": "✔",
+  "mcp_corriger": "✎",
+  "mcp_refuser": "✕"
+}

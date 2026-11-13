@@ -5,6 +5,7 @@ import { api } from '../api.js';
 import { tableNonRepris } from '../import/rapport-import.js';
 import { afficherJournalRelances } from '../relances/journal-relances.js';
 import { ECART_RECEPTION } from '@logibtp/facture-electronique';
+import { originesAgent, mentionAgentHtml } from '../agents/origines.js';
 
 // Onglet Traçabilité d'un document : origine (import : format, fichier source conservé dans la GED, réutilisable),
 // documents dont il est issu et documents qui en sont issus (transformations, copies), historique des versions (total HT
@@ -43,9 +44,12 @@ export async function derniereVersionGed(ged, id) {
  * reimporter(origine) (relance l'import du fichier source), restaurer(version) (facultatif : document modifiable),
  * relances ({ piece, groupe } : relances du module Relances faites sur le document et ses indices, facultatif).
  */
-export async function afficherTracabilite(zone, { entId, ged, debogage, naviguer, reimporter, restaurer = null, relances = null }) {
+export async function afficherTracabilite(zone, { entId, ged, debogage, naviguer, reimporter, restaurer = null, relances = null, origines = null }) {
   zone.innerHTML = `<p class="aide">${texteHtml('documents_btp.tracabilite.chargement')}</p>`;
   const t = await api.tracabilite(entId);
+  // Lignes écrites par un agent IA (module MCP actif) : mention « 🤖 via <client> » après l'utilisateur.
+  let agents = new Map();
+  if (origines) { try { agents = originesAgent(await origines()); } catch { /* historique sans mention */ } }
   const o = t.origine;
   const lies = (liste, titre, vide) => `<section class="trac-bloc"><h3>${titre}</h3>${liste.length ? `<ul class="trac-liens">${liste.map((d) => `
       <li><a href="${urlDocument(d.ent_id)}" data-document="${d.ent_id}">${echapper(d.type_libelle)} ${echapper(d.numero ?? `#${d.ent_id}`)}${d.indice && d.indice !== 'A' ? ` (${echapper(d.indice)})` : ''}</a>
@@ -68,7 +72,7 @@ export async function afficherTracabilite(zone, { entId, ged, debogage, naviguer
       <p class="aide">${texteHtml(restaurer ? 'documents_btp.tracabilite.versions_aide' : 'documents_btp.tracabilite.versions_lecture')}</p>
       <table class="table-analyse"><thead><tr><th>${texteHtml('documents_btp.tracabilite.colonnes.version')}</th><th>${texteHtml('documents_btp.tracabilite.colonnes.action')}</th><th>${texteHtml('documents_btp.tracabilite.colonnes.date')}</th><th>${texteHtml('documents_btp.tracabilite.colonnes.utilisateur')}</th>
         <th>${texteHtml('documents_btp.tracabilite.colonnes.total_ht')}</th><th>${texteHtml('documents_btp.tracabilite.colonnes.lignes')}</th><th>${texteHtml('documents_btp.tracabilite.colonnes.motif')}</th>${restaurer ? '<th></th>' : ''}</tr></thead><tbody>
-      ${t.historique.map((h) => `<tr><td class="nombre">${h.his_version}</td><td>${echapper(ACTIONS[h.his_action] ?? h.his_action)}</td><td>${date(h.his_date, true)}</td><td>${echapper(h.his_utilisateur)}</td>
+      ${t.historique.map((h) => `<tr><td class="nombre">${h.his_version}</td><td>${echapper(ACTIONS[h.his_action] ?? h.his_action)}</td><td>${date(h.his_date, true)}</td><td>${echapper(h.his_utilisateur)}${mentionAgentHtml(agents.get(Number(h.his_id)))}</td>
         <td class="nombre">${h.total_ht === null || h.total_ht === undefined ? '' : formatNombre(h.total_ht, 2)}</td><td class="nombre">${h.nombre_lignes ?? ''}</td><td>${echapper(h.his_motif ?? '')}</td>
         ${restaurer ? `<td><button type="button" data-restaurer="${h.his_id}" title="${texteHtml('documents_btp.tracabilite.restaurer_aide', { version: h.his_version })}">${iconeHtml('documents_btp_restaurer')} ${texteHtml('documents_btp.tracabilite.restaurer')}</button></td>` : ''}</tr>`).join('')}</tbody></table>`
     : `<p class="aide">${texteHtml('documents_btp.tracabilite.aucune_version')}</p>`}</section>

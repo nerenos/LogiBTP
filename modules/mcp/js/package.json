@@ -3,9 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Module MCP LogiBTP : règles de délégation des droits à un agent IA (plafond, garde-fous, interdits, échéance, quotas, classement des outils)",
+  "description": "Module MCP LogiBTP : règles de délégation des droits à un agent IA (plafond, garde-fous, interdits, échéance, quotas, classement des outils), file des propositions et écrans (délégations, paramétrage, journal, propositions)",
   "exports": {
-    ".": "./src/index.js"
+    ".": "./src/index.js",
+    "./ui": "./ui/index.js",
+    "./ui/mcp.css": "./ui/mcp.css"
   },
   "scripts": {
     "test": "vitest run"

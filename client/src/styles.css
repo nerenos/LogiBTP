@@ -105,6 +105,9 @@
 .document-completude-fe li.bloquant b { color: var(--erreur); }
 /* Facturation électronique, lot 24 : émission de la pièce validée (pastille, bouton « Émettre »). */
 .document-envoi-fe[hidden] { display: none; }
+/* Pièce créée par un agent IA (module MCP, lot 11) : pastille 🤖 sous la barre de la pièce. */
+.document-agent[hidden] { display: none; }
+.document-agent { margin: 0.4rem 1rem 0; flex: none; display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
 .document-envoi-fe { margin: 0.4rem 1rem 0; flex: none; }
 .document-envoi-fe .envoi-fe { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; padding: 0.35rem 0.7rem; border: 1px solid var(--bord); border-radius: 6px; }
 .options-fe-btp { margin-top: 1rem; }

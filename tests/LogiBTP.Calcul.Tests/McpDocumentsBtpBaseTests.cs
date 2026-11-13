@@ -83,6 +83,7 @@ public sealed class McpDocumentsBtpBaseTests : IAsyncLifetime
         var api = app.MapGroup("/api");
         api.MapModuleDocument<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp>();
         api.MapModuleBibliotheque();
+        api.MapOriginesHistorique();
         await app.StartAsync();
         _app = app;
         _adresse = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.First();
@@ -243,6 +244,15 @@ public sealed class McpDocumentsBtpBaseTests : IAsyncLifetime
         Assert.Null(await ScalaireAsync<string>("""
             SELECT his_origine FROM document_historique WHERE his_ent_id = @id AND his_action = 'VALIDATION' ORDER BY his_id DESC LIMIT 1
             """, ("id", id)));
+        // Origines de l'historique lues par l'écran (lot 11) : création de l'agent avec son client, validation humaine en dernier.
+        var origines = await EnvoyerAsync("GET", $"/api/documents/{id}/origines", null, humain: true);
+        Assert.True(origines.Statut == 200, origines.Corps);
+        var lignesOrigine = JsonNode.Parse(origines.Corps)!.AsArray();
+        Assert.Equal("CREATION", lignesOrigine[0]!["his_action"]!.GetValue<string>());
+        Assert.Equal(OrigineEcriture.Agent, lignesOrigine[0]!["his_origine"]!.GetValue<string>());
+        Assert.Equal(Client, lignesOrigine[0]!["his_client"]!.GetValue<string>());
+        Assert.Equal("VALIDATION", lignesOrigine[^1]!["his_action"]!.GetValue<string>());
+        Assert.Null(lignesOrigine[^1]!["his_origine"]);
         var commande = await OutilAsync("transformer", $$"""{"id":{{id}}}""");
         Assert.Equal(TypesDocument.VCommande, commande["type"]!.GetValue<string>());
         Assert.Equal(StatutsDocument.Brouillon, commande["statut"]!.GetValue<string>());

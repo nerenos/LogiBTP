@@ -303,6 +303,12 @@ export const CIBLE_EREPORTING = Object.freeze({
   INTERNATIONAL: 'INTERNATIONAL',
 });
 
+/** Types de cible d'une proposition d'agent (module MCP) ↔ CiblesProposition (C#) : pièce, ou fiche par le préfixe suivi de son type. */
+export const CIBLE_PROPOSITION = Object.freeze({
+  DOCUMENT: 'document',
+  PREFIXE_FICHE: 'fiche/',
+});
+
 /** Erreurs des outils d'écriture des devis pour les agents IA (module MCP, lot 7 : Btp/McpDocumentsBtp.cs). */
 export const ERREUR_MCP_BTP = Object.freeze({
   TYPE_NON_PERMIS: 'MCP_TYPE_NON_PERMIS',

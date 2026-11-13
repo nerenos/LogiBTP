@@ -34,6 +34,7 @@ const TYPES_SOURCES = /_(RECEPTION|FACTURE|FACTURE_AVT|SITUATION|PRODUCTION|AVOI
 const TYPES_CROISES = [TYPE_AVANCEMENT.SITUATION, TYPE_AVANCEMENT.PRODUCTION];
 const MARCHE_TYPES = [TYPE_DOCUMENT.V_RECEPTION, TYPE_DOCUMENT.V_SITUATION, TYPE_DOCUMENT.V_PRODUCTION, TYPE_DOCUMENT.V_FACTURE_AVT];
 import { afficherTracabilite } from '../documents/tracabilite.js';
+import { creeeParAgent, pastillePieceHtml } from '../agents/origines.js';
 import { saisieRestauree, TABLES_RESTAUREES } from '../documents/restauration.js';
 import { afficherReglements } from '../documents/reglements-document.js';
 import { ouvrirImport, creerDepuisImport, rendreBandeauImport, tracabiliteImport } from '../import/devis-a-verifier.js';
@@ -116,6 +117,7 @@ const gabarit = () => `
   <div class="document-import" hidden></div>
   <div class="document-completude-fe" hidden></div>
   <div class="document-envoi-fe" hidden></div>
+  <div class="document-agent" hidden></div>
   <main class="document-zone">
     <section id="vue-entete" class="vue vue-entete" role="tabpanel">
       <div id="entete" class="panneau entete"></div>
@@ -733,7 +735,33 @@ export class PageDocument extends PageBase {
       ouvrir: (id) => this.app.naviguer(urlDocument(id), { nouvelleFenetre: true }),
       apresAnnulation: (r) => this.#apresAvoirInterne(r),
     });
+    this.#rendrePastilleAgent();
     this.app.majPage();
+  }
+
+  /**
+   * Origines des lignes de l'historique de la pièce (module MCP, lot 11), lues une fois par version enregistrée et
+   * partagées par la pastille de l'entête et l'onglet Traçabilité.
+   */
+  #originesAgent(entId) {
+    const cle = `${entId}-${this.editeur?.saisie.document.ent_version ?? ''}`;
+    if (this.originesCle !== cle) {
+      this.originesCle = cle;
+      this.originesLues = api.originesHistorique(entId).catch(() => []);
+    }
+    return this.originesLues;
+  }
+
+  /** Pastille 🤖 de l'entête : pièce créée par un agent IA et pas encore reprise par un humain (module MCP actif). */
+  async #rendrePastilleAgent() {
+    const zone = this.$('.document-agent');
+    const entId = this.editeur?.saisie.document.ent_id;
+    if (!zone) return;
+    if (!(entId > 0) || !this.app.moduleActif(MODULE_FACULTATIF.MCP)) { zone.hidden = true; return; }
+    const creation = creeeParAgent(await this.#originesAgent(entId));
+    if (this.editeur?.saisie.document.ent_id !== entId) return;
+    zone.innerHTML = pastillePieceHtml(creation);
+    zone.hidden = !creation;
   }
 
   /** Après l'avoir interne d'une facture rejetée ou refusée : pièce relue, nouvelle facture proposée à l'ouverture. */
@@ -1031,6 +1059,8 @@ export class PageDocument extends PageBase {
       reimporter: (o) => this.app.naviguer(`${formatImport(o.dor_format).page}?ged=${o.dor_fichier_id}`, { nouvelleFenetre: true }),
       // Restauration d'une version : document modifiable par cet utilisateur et non bloqué par un autre (verrou).
       restaurer: this.#modifiable() && !this.editeur.magasin.lectureSeule ? (h) => this.restaurerVersion(h).catch((x) => this.app.erreur(x)) : null,
+      // Lignes écrites par un agent IA (module MCP actif) : « 🤖 via <client> ».
+      origines: this.app.moduleActif(MODULE_FACULTATIF.MCP) ? () => this.#originesAgent(d.ent_id) : null,
     }).catch((x) => { zone.innerHTML = `<p class="erreur">${echapper(x.message)}</p>`; });
   }
 

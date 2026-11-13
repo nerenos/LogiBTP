@@ -27,7 +27,7 @@
 | 8 | Règle de ventilation d'une demande et réappro sous le mini | `modules/stock` | — | FAIT (13/11/2026) |
 | 9 | Ordres d'exécution filtrés et demandes d'appro ventilées | cœur | 7, 8 | FAIT (13/11/2026) |
 | 10 | File des propositions | `modules/mcp` + cœur | 5 | FAIT (13/11/2026) |
-| 11 | Écrans : délégations, paramétrage, journal, pastille 🤖 | `modules/mcp` (ui) + cœur | 10 | A FAIRE |
+| 11 | Écrans : délégations, paramétrage, journal, pastille 🤖 | `modules/mcp` (ui) + cœur | 10 | FAIT (13/11/2026) |
 | 12 | Serveur d'autorisation OAuth 2.1 | `modules/mcp` | 5 | A FAIRE |
 | 13 | Recettes (prompts MCP) et « Demander à l'agent » | `modules/mcp` + cœur | 11 | A FAIRE |
 | 14 | Documentation | tous | 0–13 | A FAIRE |
@@ -353,6 +353,30 @@ Hors plan (Q13) : agent hébergé (automatisations planifiées, panneau intégr�
   cœur (pages `/mon-compte#agents`, `/parametres/agents`, `/agents/propositions`, `/agents/journal`, menus, pastille
   🤖 dans l'historique et l'entête des pièces). Textes, icônes et couleurs par le module Personnalisation.
 - **Critère de fin** : tests d'écrans (jsdom) verts ; `npm test`.
+- **Réalisé** (13/11/2026) : module MCP `js/ui` (sans métier, comme le module Relances) : `PanneauDelegations` (liste, les miennes ou
+  toutes pour l'administrateur ; création dans une fenêtre du socle : libellé, modèle par `creerCombo` parmi ceux permis — sur-mesure
+  hors écran —, durée en jours avec l'échéance calculée par `echeanceDelegation`, client, portée, garde-fous levables cochables, les
+  autres grisés ; secret affiché une seule fois avec l'adresse `https://<société>/mcp`, la commande `claude mcp add --transport http …
+  --header "Authorization: Bearer …"` et le `.mcp.json`, chacun copiable ; révocation confirmée), `ParametresAgents` (par profil :
+  levables, modèles permis, échéance maximale, quotas, alerte ; contrôle local identique à `ControlerLevee`), `JournalAgents` (filtres
+  compte, agent, élément, période — dates par `champDate`, filtres retenus dans le `localStorage` —, export CSV par `telechargerCsv`),
+  `FilePropositions` / `DetailProposition` (vues à valider / miennes / toutes, état échu calculé par `etatProposition`, avertissements,
+  contenu aplati, accepter confirmé, corriger le JSON avec les écarts avant / après, refuser avec motif par `saisir`) ; fonctions pures
+  `ui/modeles.js` ; raccourcis par `declarerRaccourcis` (groupes `mcp_*`) ; couche `personnalisation/` (`fr.json` sous `mcp.*`,
+  `icones.json`, `theme.css`) ajoutée à `client/personnalisation/couches.js`. Serveur du module : `GET /api/mcp/delegations/choix`
+  (`ServiceDelegations.ChoixAsync` → `ChoixDelegation` : modèles permis au profil, jamais COMME_MOI pour un profil total, garde-fous,
+  levables, échéance par défaut et maximale, portées), test `PointMcpTests.Choix_de_creation_suivent_les_levees_du_profil`. Cœur :
+  pages `/agents/propositions`, `/agents/propositions/:id`, `/agents/journal`, `/parametres/agents` (`pages/agents.js`), section
+  « Agents » de Mon compte (`/compte#agents` : la page de compte existante est `/compte`), menu « Agents IA » (`module:
+  MODULE_FACULTATIF.MCP`, propositions sans droit, journal et délégations sous `agents`, paramétrage sous `administration/profils`),
+  appels `api.mcp`, route `GET /api/documents/{id}/origines` (`Btp/OriginesHistoriqueBtp.cs` : origine, délégation et client de chaque
+  ligne de l'historique, droit Consulter du type), mention « 🤖 via <client> » dans l'historique de l'onglet Traçabilité et pastille 🤖
+  dans l'entête d'une pièce créée par un agent tant qu'aucun humain n'y a écrit (`agents/origines.js`), codes `CIBLE_PROPOSITION` ↔
+  `CiblesProposition` (`CodesTests`). Tests : `modules/mcp/js/test/ecrans.test.js` (clés, icônes, conventions, gabarits HTML et fonctions
+  pures : jsdom n'est pas installé dans le dépôt, les écrans rendent par des gabarits testés sans DOM), `client/test/agents.test.js`,
+  clés du module dans `personnalisation.test.js`, `McpDocumentsBtpBaseTests` (origines lues par la route). Activation du module : page
+  générique `/parametres/modules` (ligne `mcp` de `db/308`). Messages `erreurs.MCP_*` : aucun code « sûr » au sens de
+  `npm run extraire-erreurs` (messages composés ou multiples), le message du serveur reste affiché.
 
 ## Lot 12 : serveur d'autorisation OAuth 2.1
 

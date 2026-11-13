@@ -132,6 +132,7 @@ public static class Extensions
         var g = api.MapGroup("/mcp");
         g.MapGet("/delegations", (bool? toutes, HttpContext http, ServiceDelegations s, CancellationToken ct) =>
             s.ListerAsync(Utilisateur.Depuis(http), toutes ?? false, ct));
+        g.MapGet("/delegations/choix", (HttpContext http, ServiceDelegations s, CancellationToken ct) => s.ChoixAsync(Utilisateur.Depuis(http), ct));
         g.MapPost("/delegations", (DelegationDemandee d, HttpContext http, ServiceDelegations s, CancellationToken ct) =>
             s.CreerAsync(d, Utilisateur.Depuis(http), ct));
         g.MapPost("/delegations/{code}/revoquer", async (string code, HttpContext http, ServiceDelegations s, CancellationToken ct) =>
