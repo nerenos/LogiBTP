@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="64" height="64">
+  <!-- Fond Fiche Document Fournisseur (Vert Pastel) -->
+  <path d="M20 12C20 7.5 23.5 4 28 4H62L80 22V88C80 92.5 76.5 96 72 96H28C23.5 96 20 92.5 20 88V12Z" fill="#D1FAE5" />
+  <path d="M62 4L80 22H68C64.7 22 62 19.3 62 16V4Z" fill="#A7F3D0" />
+  
+  <!-- Icône Facture (Pièce avec symbole Euro) -->
+  <circle cx="50" cy="54" r="18" fill="#10B981" />
+  <path d="M54 46 A7 7 0 1 0 54 62" fill="none" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round" />
+  <path d="M44 51 H53 M44 57 H53" fill="none" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round" />
+</svg>

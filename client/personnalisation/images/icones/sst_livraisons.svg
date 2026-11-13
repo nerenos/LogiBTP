@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="64" height="64">
+  <!-- Fond Fiche Document Sous-traitant (Saumon Pastel) -->
+  <path d="M20 12C20 7.5 23.5 4 28 4H62L80 22V88C80 92.5 76.5 96 72 96H28C23.5 96 20 92.5 20 88V12Z" fill="#FFE4D6" />
+  <path d="M62 4L80 22H68C64.7 22 62 19.3 62 16V4Z" fill="#FFCBA4" />
+  
+  <!-- Icône Bon de Livraison (Camionnette) -->
+  <path d="M28 46C28 43.8 29.8 42 32 42H52C54.2 42 56 43.8 56 46V62H28V46Z" fill="#FF7F50" />
+  <path d="M56 48H66C68.2 48 70 49.8 70 52V62H56V48Z" fill="#FF7F50" />
+  <rect x="58" y="50" width="8" height="6" rx="1.5" fill="#FFFFFF" />
+  
+  <!-- Roues -->
+  <circle cx="38" cy="64" r="5" fill="#FF7F50" />
+  <circle cx="38" cy="64" r="2" fill="#FFFFFF" />
+  <circle cx="60" cy="64" r="5" fill="#FF7F50" />
+  <circle cx="60" cy="64" r="2" fill="#FFFFFF" />
+</svg>

@@ -4794,31 +4794,36 @@
           "creation": "Nouvelle facture"
         },
         "documents": {
-          "libelle": "Tous les documents"
+          "libelle": "Tous les documents de vente"
         },
         "reglements_clients": {
           "libelle": "Règlements clients",
           "info": "Échéances, règlements, pointage et cautions (module Règlements)"
         },
         "relances": {
-          "libelle": "Relances",
-          "info": "Devis envoyés et factures à reste échu : préparer, valider, suspendre (module Relances)"
+          "libelle": "Relances Devis et Factures"
         },
         "import_optim": {
           "libelle": "Importer un devis OptimBTP",
           "info": "Fichier .optim : lignes, prix et coefficients repris, champs non repris listés"
         },
         "marches_a_facturer": {
-          "libelle": "Marchés à facturer du mois",
-          "info": "Marchés en cours sans situation du mois : créer les situations d'un clic ou noter « pas d'avancement »"
+          "libelle": "Marchés à facturer du mois"
         },
         "facture_electronique": {
           "libelle": "Facturation électronique",
-          "info": "Flux émis et reçus de la plateforme agréée, statuts, dépôt et import manuels, paramètres (module Facturation électronique)"
+          "info": "Flux émis et reçus de la plateforme agréée, statuts, dépôt et import manuels, paramètres"
         },
         "fe_recues": {
           "libelle": "Factures reçues à traiter",
-          "info": "Factures électroniques reçues sans pièce (à rattacher ou à saisir) ou dont la pièce créée en brouillon reste à vérifier et à valider"
+          "info": "Factures électroniques reçues sans pièce (à rattacher ou à saisir)"
+        },
+        "titre_demandes_execution": {
+          "libelle": "Ordres (Exécution)"
+        },
+        "ordres_oe": {
+          "libelle": "Ordres d'exécution",
+          "info": "Lancés depuis la fiche du marché (▶ Ordre d'exécution)"
         }
       },
       "achats": {
@@ -4873,6 +4878,9 @@
           "libelle": "Marchés de sous-traitance",
           "info": "Un marché par sous-traitant et axe de facturation sur un chantier",
           "creation": "Nouveau marché de sous-traitance"
+        },
+        "titre_demandes_execution": {
+          "libelle": "Ordres (Exécution)"
         },
         "st_ordres": {
           "libelle": "Ordres de sous-traitance (Exécution)",
