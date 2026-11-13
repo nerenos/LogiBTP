@@ -363,6 +363,39 @@ public static class ErreursMcpBtp
     public const string Modele = "MCP_MODELE_DOCUMENT";
     /// <summary>Création : un devis source ou un modèle, pas les deux.</summary>
     public const string Source = "MCP_SOURCE_OU_MODELE";
+    /// <summary>Ordre d'exécution : aucun critère de filtre (service, famille, chapitre, étiquette).</summary>
+    public const string FiltreVide = "MCP_FILTRE_VIDE";
+    /// <summary>Critère inconnu : code de service ou de famille de bibliothèque absent.</summary>
+    public const string CritereInconnu = "MCP_CRITERE_INCONNU";
+    /// <summary>Aucune ligne retenue par le filtre (ou aucun reste à transformer).</summary>
+    public const string AucuneLigne = "MCP_AUCUNE_LIGNE";
+}
+
+/// <summary>
+/// Motif d'une ligne de commande retenue ou écartée par le filtre d'un ordre d'exécution (outil preparer_ordre_execution,
+/// plans/mcp.md lot 9 ; Q8 : service porteur de la nature, repli famille de bibliothèque, chapitre, étiquette).
+/// </summary>
+public static class MotifsLigneOrdre
+{
+    /// <summary>Retenue : service porteur de la nature (de la ligne, de l'élément ou des composantes) dans le service demandé.</summary>
+    public const string Service = "SERVICE";
+    /// <summary>Retenue : sans service porteur, famille de l'élément dans la famille demandée (repli), ou famille seule demandée.</summary>
+    public const string Famille = "FAMILLE";
+    /// <summary>Retenue : seuls le chapitre et / ou l'étiquette sont demandés, et la ligne y répond.</summary>
+    public const string Chapitre = "CHAPITRE";
+    public const string Etiquette = "ETIQUETTE";
+    /// <summary>Écartée : plus de reste à transformer en ordre d'exécution.</summary>
+    public const string SansReste = "SANS_RESTE";
+    /// <summary>Écartée : hors du chapitre demandé (aucun titre ancêtre ne répond).</summary>
+    public const string HorsChapitre = "HORS_CHAPITRE";
+    /// <summary>Écartée : étiquette de la ligne (ou de ses titres) différente.</summary>
+    public const string AutreEtiquette = "AUTRE_ETIQUETTE";
+    /// <summary>Écartée : service porteur hors du service demandé.</summary>
+    public const string AutreService = "AUTRE_SERVICE";
+    /// <summary>Écartée : aucun service porteur et pas de famille demandée pour le repli.</summary>
+    public const string SansService = "SANS_SERVICE";
+    /// <summary>Écartée : famille de l'élément hors de la famille demandée (ou sans famille).</summary>
+    public const string AutreFamille = "AUTRE_FAMILLE";
 }
 
 /// <summary>Erreurs de l'e-reporting (lot 28).</summary>

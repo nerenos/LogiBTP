@@ -25,7 +25,7 @@
 | 6 | Outils de lecture du cœur, garde-fous du BTP | cœur | 3, 5 | FAIT (13/11/2026) |
 | 7 | Outils d'écriture des devis, origine des écritures | cœur | 6 | FAIT (13/11/2026) |
 | 8 | Règle de ventilation d'une demande et réappro sous le mini | `modules/stock` | — | FAIT (13/11/2026) |
-| 9 | Ordres d'exécution filtrés et demandes d'appro ventilées | cœur | 7, 8 | A FAIRE |
+| 9 | Ordres d'exécution filtrés et demandes d'appro ventilées | cœur | 7, 8 | FAIT (13/11/2026) |
 | 10 | File des propositions | `modules/mcp` + cœur | 5 | A FAIRE |
 | 11 | Écrans : délégations, paramétrage, journal, pastille 🤖 | `modules/mcp` (ui) + cœur | 10 | A FAIRE |
 | 12 | Serveur d'autorisation OAuth 2.1 | `modules/mcp` | 5 | A FAIRE |
@@ -283,6 +283,28 @@ Hors plan (Q13) : agent hébergé (automatisations planifiées, panneau intégr�
   (règle du lot 8 sur les données du stock : `PrevisionsAsync`, `ServiceApprovisionnement`) → proposition (lot 10) ou,
   avant le lot 10, rendue seulement.
 - **Critère de fin** : test : OE limité au service MÉTALLERIE, DAP ventilée, réappro proposé sous le mini.
+- **Réalisé** (13/11/2026) : `src/LogiBTP.Api/Btp/McpExecutionBtp.cs`. Filtre (règle du cœur, C# seul : aucune réplique JS, l'outil
+  n'existe qu'au serveur) `FiltreLignesOrdre.Classer` : par ligne de prix, reste de l'étape V_COMMANDE → E_OE, chapitre (libellé d'un
+  titre englobant contenant le texte, ou numérotation exacte), étiquette (ligne ou titre englobant), puis service porteur de la nature
+  (ligne, sinon élément ; ouvrage sans service propre : services de ses composantes ; sous-services compris), repli sur la famille de
+  bibliothèque (sous-familles comprises) sans service porteur, ou famille seule ; critères combinés (ET) ; motifs `MOTIF_LIGNE_ORDRE` ↔
+  `MotifsLigneOrdre` (SERVICE, FAMILLE, CHAPITRE, ETIQUETTE ; SANS_RESTE, HORS_CHAPITRE, AUTRE_ETIQUETTE, AUTRE_SERVICE, SANS_SERVICE,
+  AUTRE_FAMILLE), erreurs `MCP_FILTRE_VIDE`, `MCP_CRITERE_INCONNU`, `MCP_AUCUNE_LIGNE` (`CodesTests`). Routes de lecture (droits du type
+  de pièce vérifiés en plus, déclarées dans `SpecialisationDroitsBtp.Routes`, aucune écriture donc rien dans `EcrituresBtp`) :
+  `GET /api/execution/marches/{id}/selection-ordre` (commandes valables du marché, `f_document_valable`), `GET /api/execution/ordres/{id}/
+  unites-stock` (facteur de l'article vers l'unité de stock, `MouvementsStockBtp.RatioOuNull` comme STK_UNITE), `GET /api/stock/demandes/
+  {id}/ventilation` (`ReglesVentilation.Ventiler` : stock à date et seuils des dépôts, `PrevisionsAsync`, commandes A_COMMANDE en cours
+  **non affectées** = sans lieu de livraison ni demande E_DAP d'origine, donc jamais comptées avec les ENTREE des dépôts,
+  `ApprovisionnementsAsync` ; rend le tableau STOCK / COMMANDE / ACHAT par besoin, les réappros par dépôt et fournisseur,
+  `sans_conversion`, `ecriture: false`). Outils : `preparer_ordre_execution` (BROUILLON, nœud `documents/E/E_OE`, CREER : aperçu
+  `apercu`, sinon un E_OE brouillon par commande par `POST …/transformer` avec `lignes` = lignes retenues — filtre déjà permis par la
+  transformation, droits TRANSFORMER / CREER et reliquats du module Document inchangés), `preparer_demandes_appro` (BROUILLON,
+  `documents/E/E_DAP` : E_OE validé → E_DAP brouillon, puis articles gérés en stock passés en unité de stock — quantité, PA — par
+  `ModifierAsync` du lot 7 sous verrou et version, liens convertis par le serveur ; sans conversion : `STK_UNITE`, quantité de métré :
+  `METRE`, laissées et signalées), `proposer_ventilation` (LECTURE, nœud `stock`, route simple). Liste blanche inchangée (transformation,
+  PUT, verrou). Tests `McpExecutionBtpTests` (filtre, catalogue, liste blanche exacte), `McpExecutionBtpBaseTests` (`LOGIBTP_TEST_PG` :
+  nature portée par FAB_METAL — service de démonstration de la métallerie —, aperçu, OE brouillon sans la ligne de pose, reste épuisé,
+  DAP brouillon 100 kg → 50 ml, ventilation 50 ml du dépôt et réappro MINI_FRANCHI de 100 ml au maxi, aucune pièce créée).
 
 ## Lot 10 : file des propositions
 

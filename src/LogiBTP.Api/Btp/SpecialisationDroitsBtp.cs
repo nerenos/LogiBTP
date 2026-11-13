@@ -227,6 +227,11 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
         new("/api/facture-electronique/releve", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),
         new("/api/facture-electronique/annuaire/personnes/{id}/verification", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),
         new("/api/execution", ModeRoute.Module, "execution"),
+        // Agents IA, lot 9 (McpExecutionBtp, lecture seule) : lignes d'un marché pour un ordre filtré, unités de stock d'une pièce,
+        // ventilation proposée d'une demande d'appro ; droits du type de pièce vérifiés en plus par la route.
+        new("/api/execution/marches", ModeRoute.Module, "execution"),
+        new("/api/execution/ordres/{id}/unites-stock", ModeRoute.Module, "execution"),
+        new("/api/stock/demandes", ModeRoute.Module, "stock"),
         new("/api/liaisons", ModeRoute.Module, "planning"),
         new("/api/sous-traitance", ModeRoute.Module, "sous_traitance"),
         new("/api/stock", ModeRoute.Module, "stock"),

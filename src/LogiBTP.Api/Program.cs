@@ -247,6 +247,9 @@ api.MapGroup("").ExigeModule(ModulesFacultatifs.FactureElectronique, "Facturatio
 api.MapModuleCrm().ExigeModule(ModulesFacultatifs.Crm, "CRM");
 api.MapExecution().ExigeModule(ModulesFacultatifs.Execution, "Exécution");
 api.MapModuleExecution().ExigeModule(ModulesFacultatifs.Execution, "Exécution");
+// Agents IA (plans/mcp.md, lot 9) : lignes d'un marché filtrées pour un ordre, unités de stock d'une pièce, ventilation d'une demande d'appro.
+api.MapGroup("").ExigeModule(ModulesFacultatifs.Execution, "Exécution").MapMcpExecution();
+api.MapGroup("").ExigeModule(ModulesFacultatifs.Stock, "Stock").MapVentilationDemandes();
 api.MapModuleSousTraitance().ExigeModule(ModulesFacultatifs.SousTraitance, "Sous-traitance");
 api.MapModuleStock().ExigeModule(ModulesFacultatifs.Stock, "Stock");
 api.MapModuleSav().ExigeModule(ModulesFacultatifs.Sav, "SAV");

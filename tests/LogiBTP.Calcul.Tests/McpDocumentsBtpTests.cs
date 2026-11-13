@@ -379,10 +379,11 @@ public class McpDocumentsBtpTests
     public void Outils_d_ecriture_brouillon_et_liste_blanche_exacte()
     {
         var ecriture = Specialisation.Outils.Where(o => o.Classe != ClasseOutil.Lecture).ToList();
-        Assert.Equal(["creer_devis", "modifier_lignes", "transformer"], ecriture.Select(o => o.Nom));
+        Assert.Equal(["creer_devis", "modifier_lignes", "transformer", "preparer_ordre_execution", "preparer_demandes_appro"], ecriture.Select(o => o.Nom));
         Assert.All(ecriture, o => Assert.Equal(ClasseOutil.Brouillon, o.Classe));
-        Assert.Equal([McpDocumentsBtp.NoeudDevis, McpDocumentsBtp.NoeudDevis, McpDocumentsBtp.NoeudCommande], ecriture.Select(o => o.Noeud));
-        Assert.Equal([ActionsDroits.Creer, ActionsDroits.Modifier, ActionsDroits.Creer], ecriture.Select(o => o.Action));
+        Assert.Equal([McpDocumentsBtp.NoeudDevis, McpDocumentsBtp.NoeudDevis, McpDocumentsBtp.NoeudCommande, McpExecutionBtp.NoeudOrdre, McpExecutionBtp.NoeudDemande],
+            ecriture.Select(o => o.Noeud));
+        Assert.Equal([ActionsDroits.Creer, ActionsDroits.Modifier, ActionsDroits.Creer, ActionsDroits.Creer, ActionsDroits.Creer], ecriture.Select(o => o.Action));
         // Liste blanche du plafond : exactement ces routes d'écriture (ni valider, ni envoyer, ni numéro, ni verrou forcé…).
         Assert.Equal(
             ["DELETE /api/documents/{id}/verrou", "POST /api/documents/avec-contenu", "POST /api/documents/{id}/copie", "POST /api/documents/{id}/transformer",

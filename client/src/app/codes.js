@@ -313,6 +313,23 @@ export const ERREUR_MCP_BTP = Object.freeze({
   ENTETE_MODIFIEE: 'MCP_ENTETE_MODIFIEE',
   MODELE: 'MCP_MODELE_DOCUMENT',
   SOURCE: 'MCP_SOURCE_OU_MODELE',
+  FILTRE_VIDE: 'MCP_FILTRE_VIDE',
+  CRITERE_INCONNU: 'MCP_CRITERE_INCONNU',
+  AUCUNE_LIGNE: 'MCP_AUCUNE_LIGNE',
+});
+
+/** Motif d'une ligne retenue ou écartée par le filtre d'un ordre d'exécution (outil MCP preparer_ordre_execution, lot 9). */
+export const MOTIF_LIGNE_ORDRE = Object.freeze({
+  SERVICE: 'SERVICE',
+  FAMILLE: 'FAMILLE',
+  CHAPITRE: 'CHAPITRE',
+  ETIQUETTE: 'ETIQUETTE',
+  SANS_RESTE: 'SANS_RESTE',
+  HORS_CHAPITRE: 'HORS_CHAPITRE',
+  AUTRE_ETIQUETTE: 'AUTRE_ETIQUETTE',
+  AUTRE_SERVICE: 'AUTRE_SERVICE',
+  SANS_SERVICE: 'SANS_SERVICE',
+  AUTRE_FAMILLE: 'AUTRE_FAMILLE',
 });
 
 /** Erreurs de l'e-reporting (lot 28). */

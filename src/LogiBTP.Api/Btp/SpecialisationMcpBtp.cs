@@ -89,6 +89,22 @@ public sealed partial class SpecialisationMcpBtp : SpecialisationMcp
           "operations":{{SchemaOperations}} } }
         """);
 
+    private static readonly JsonElement SchemaOrdre = Schema("""
+        {"type":"object","required":["marche_id"],"properties":{
+          "marche_id":{"type":"integer","description":"Marché (mar_id, lire_marche) dont les commandes valables sont filtrées"},
+          "service":{"type":"string","description":"Code du service porteur (ex. FAB_METAL, ATELIER : sous-services compris), d'après la nature des éléments"},
+          "famille":{"type":"string","description":"Code de famille de bibliothèque (sous-familles comprises) : repli des lignes sans service porteur, ou critère seul"},
+          "chapitre":{"type":"string","description":"Texte du libellé (ou numérotation exacte) d'un titre englobant"},
+          "etiquette":{"type":"string","description":"Étiquette de la ligne ou d'un titre englobant"},
+          "apercu":{"type":"boolean","description":"Vrai : aperçu seul (lignes retenues et écartées avec leur motif), rien n'est créé"} } }
+        """);
+
+    private static readonly JsonElement SchemaVentilation = Schema("""
+        {"type":"object","required":["id"],"properties":{
+          "id":{"type":"integer","description":"Demande d'approvisionnement E_DAP (ent_id)"},
+          "proche_mini":{"type":"number","minimum":0,"maximum":100,"description":"Réappro : autres articles du dépôt à au plus ce % au-dessus de leur mini (20 par défaut)"} } }
+        """);
+
     /// <summary>Routes d'une modification de lignes : verrou (état, prise, libération), lecture, enregistrement, définition du type, élément, avertissements.</summary>
     private static readonly RouteOutil[] RoutesModification =
     [
@@ -155,6 +171,27 @@ public sealed partial class SpecialisationMcpBtp : SpecialisationMcp
             TypeElement = "document", CleIdentifiant = "ent_id", Execution = McpDocumentsBtp.TransformerAsync,
             Routes = [new("GET", McpDocumentsBtp.RouteDocument), new("GET", McpDocumentsBtp.RouteDefinition), new("GET", McpDocumentsBtp.RouteAvertissements)],
         },
+        // Lot 9 : ordres d'exécution filtrés et demandes d'appro (McpExecutionBtp) ; écritures par les seules routes de la liste blanche du lot 7.
+        new("preparer_ordre_execution", "mcp_btp.outils.preparer_ordre_execution", SchemaOrdre, "POST", McpDocumentsBtp.RouteTransformer, McpExecutionBtp.NoeudOrdre,
+            ActionsDroits.Creer, ClasseOutil.Brouillon)
+        {
+            CleListe = "ordres", TypeElement = "document", CleIdentifiant = "ent_id", Execution = McpExecutionBtp.PreparerOrdreAsync,
+            Routes = [new("GET", McpExecutionBtp.RouteSelection), new("GET", McpDocumentsBtp.RouteDefinition), new("GET", McpDocumentsBtp.RouteAvertissements)],
+        },
+        new("preparer_demandes_appro", "mcp_btp.outils.preparer_demandes_appro", SchemaId, "POST", McpDocumentsBtp.RouteTransformer, McpExecutionBtp.NoeudDemande,
+            ActionsDroits.Creer, ClasseOutil.Brouillon)
+        {
+            TypeElement = "document", CleIdentifiant = "ent_id", Execution = McpExecutionBtp.PreparerDemandesAsync,
+            Routes =
+            [
+                new("GET", McpDocumentsBtp.RouteDocument), new("GET", McpDocumentsBtp.RouteDefinition), new("GET", McpExecutionBtp.RouteUnitesStock),
+                new("GET", McpDocumentsBtp.RouteVerrou), new("POST", McpDocumentsBtp.RouteVerrou), new("DELETE", McpDocumentsBtp.RouteVerrou),
+                new("PUT", McpDocumentsBtp.RouteDocument), new("GET", McpDocumentsBtp.RouteAvertissements),
+            ],
+        },
+        // Proposition sans écriture (Q10) : les pièces (réservation, demande de stock, commande) viendront de la file des propositions (lot 10).
+        new("proposer_ventilation", "mcp_btp.outils.proposer_ventilation", SchemaVentilation, "GET", McpExecutionBtp.RouteVentilation, "stock",
+            ActionsDroits.Consulter, ClasseOutil.Lecture) { TypeElement = "document", CleIdentifiant = "ent_id" },
     ];
 
     /// <summary>
@@ -244,7 +281,7 @@ public sealed partial class SpecialisationMcpBtp : SpecialisationMcp
     {
         "rechercher" => AdresseElement(Texte(element["_type"]), Texte(element["_id"])),
         "lire_document" => element["document"]?["ent_id"] is { } ent && long.TryParse(Texte(ent), out var id) ? AdressesApp.UrlDocument(id) : null,
-        "creer_devis" or "modifier_lignes" or "transformer" => long.TryParse(Texte(element["ent_id"]), out var p) && p > 0 ? AdressesApp.UrlDocument(p) : null,
+        "creer_devis" or "modifier_lignes" or "transformer" or "preparer_ordre_execution" or "preparer_demandes_appro" or "proposer_ventilation" => long.TryParse(Texte(element["ent_id"]), out var p) && p > 0 ? AdressesApp.UrlDocument(p) : null,
         "lire_marche" => Texte(element["id"]) is { Length: > 0 } m ? AdressesApp.UrlFiche(TypesFiche.Marche, m) : null,
         "lire_chantier" => Texte(element["id"]) is { Length: > 0 } c ? AdressesApp.UrlFiche(TypesFiche.Chantier, c) : null,
         "rechercher_bibliotheque" => Texte(element["id"]) is { Length: > 0 } e ? AdressesApp.UrlFiche(TypesFiche.Element, e) : null,

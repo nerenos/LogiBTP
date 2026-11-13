@@ -48,23 +48,23 @@ public static class McpDocumentsBtp
     private static readonly JsonSerializerOptions Json = OperationsLignesBtp.Json;
 
     /// <summary>Réponse d'erreur d'une route intermédiaire : rendue telle quelle à l'agent.</summary>
-    private sealed class EchecAppel(ReponseInterne reponse) : Exception($"HTTP {reponse.Statut}")
+    internal sealed class EchecAppel(ReponseInterne reponse) : Exception($"HTTP {reponse.Statut}")
     {
         public ReponseInterne Reponse { get; } = reponse;
     }
 
-    private static string Chemin(string gabarit, object valeur, string? requete = null) =>
+    internal static string Chemin(string gabarit, object valeur, string? requete = null) =>
         gabarit.Replace("{id}", Uri.EscapeDataString(Convert.ToString(valeur, System.Globalization.CultureInfo.InvariantCulture)!))
             .Replace("{code}", Uri.EscapeDataString(Convert.ToString(valeur, System.Globalization.CultureInfo.InvariantCulture)!)) + (requete is null ? "" : "?" + requete);
 
-    private static async Task<JsonNode?> AppelAsync(ExecutionOutil x, string methode, string chemin, JsonNode? corps, CancellationToken ct)
+    internal static async Task<JsonNode?> AppelAsync(ExecutionOutil x, string methode, string chemin, JsonNode? corps, CancellationToken ct)
     {
         var r = await x.EnvoyerAsync(methode, chemin, corps, ct);
         if (r.Statut >= 400) throw new EchecAppel(r);
         return string.IsNullOrWhiteSpace(r.Corps) ? null : JsonNode.Parse(r.Corps);
     }
 
-    private static async Task<T> LireAsync<T>(ExecutionOutil x, string chemin, CancellationToken ct) =>
+    internal static async Task<T> LireAsync<T>(ExecutionOutil x, string chemin, CancellationToken ct) =>
         (await AppelAsync(x, "GET", chemin, null, ct)).Deserialize<T>(Json) ?? throw new EchecAppel(new ReponseInterne(404, ""));
 
     private static ReponseInterne Erreur(ErreurOutilMcp e)
@@ -75,7 +75,7 @@ public static class McpDocumentsBtp
     }
 
     /// <summary>Exécution commune : refus de l'outil (422, 409) et échecs des routes rendus à l'agent.</summary>
-    private static async Task<ReponseInterne> Executer(Func<Task<JsonObject>> f)
+    internal static async Task<ReponseInterne> Executer(Func<Task<JsonObject>> f)
     {
         try
         {
@@ -230,7 +230,7 @@ public static class McpDocumentsBtp
     /// Verrou (refus si la pièce est ouverte en modification, même par le délégant), lecture, opérations, PUT complet avec la
     /// version lue, contrôle de l'entête, verrou rendu.
     /// </summary>
-    private static async Task<JsonObject> ModifierAsync(ExecutionOutil x, long id, int? version, JsonArray? operations, DefinitionType definition,
+    internal static async Task<JsonObject> ModifierAsync(ExecutionOutil x, long id, int? version, JsonArray? operations, DefinitionType definition,
         CancellationToken ct, Action<DocumentCompletBtp>? entete = null, long? copieDe = null,
         Func<DocumentCompletBtp, IReadOnlyDictionary<long, long>>? correspondance = null)
     {
@@ -243,7 +243,7 @@ public static class McpDocumentsBtp
         try
         {
             var lu = await LireAsync<DocumentCompletBtp>(x, Chemin(RouteDocument, id), ct);
-            if (lu.Document.EntTydId != definition.Type.TydId) throw TypeNonPermis($"Le document {id} n'est pas un devis");
+            if (lu.Document.EntTydId != definition.Type.TydId) throw TypeNonPermis($"Le document {id} n'est pas du type {definition.Type.TydCode}");
             if (version is int v && v != lu.Document.EntVersion)
             {
                 throw new ErreurOutilMcp(409, ErreursMcpBtp.Version, "Le document a été modifié depuis votre lecture : relisez-le",
@@ -337,7 +337,7 @@ public static class McpDocumentsBtp
     /// Résumé rendu à l'agent : pièce (identifiant, numéro, type, statut, version, tiers, objet), totaux recalculés par le
     /// serveur, avertissements (enregistrement et contrôles avant validation), lignes résumées (pour les opérations suivantes).
     /// </summary>
-    private static async Task<JsonObject> ResumeAsync(ExecutionOutil x, DocumentCompletBtp d, JsonObject? enregistrement, DefinitionType definition,
+    internal static async Task<JsonObject> ResumeAsync(ExecutionOutil x, DocumentCompletBtp d, JsonObject? enregistrement, DefinitionType definition,
         CancellationToken ct, long? copieDe = null)
     {
         var e = d.Document;

@@ -42,14 +42,22 @@ Analyses validées le 23/10/2026 : [ANALYSE-MODULE-MAIL.md](documentation/concep
   rafraîchissement rotatif, machines connues, double facteur par courriel, exclusion d'IP, identifiants API, deux clés
   (`.env`, données) ; profil par défaut = saisie mobile (A5 révisée) ; à reprendre par le Mail (comptes, boîtes,
   « À rapprocher ») et l'OAuth (reconnexion des connexions).
-- [ ] **Module MCP** (agents IA au nom d'un utilisateur, [plan](documentation/conception/plans/mcp.md), lots 0 à 8 faits
+- [ ] **Module MCP** (agents IA au nom d'un utilisateur, [plan](documentation/conception/plans/mcp.md), lots 0 à 9 faits
   le 13/11/2026 : audit des routes, contrats du socle, règles de délégation `modules/mcp`, plafond appliqué par les
   Droits, jetons délégués, point `/mcp`, délégations, journal, outils de lecture du cœur et garde-fous du BTP, activation
   par société, liste blanche exacte, contrôles par identité bornés au plafond, outils d'écriture des devis et origine
-  AGENT de l'historique des pièces, règle de ventilation et réappro sous le mini du module Stock) : lots 9 à 14 (ordres,
-  propositions, écrans, OAuth 2.1). Restent :
-  - ventilation (lot 8) : au lot 9, ne passer en commandes que le reste non affecté et absent des événements ENTREE des
-    dépôts (sinon compté deux fois) ; achats non regroupés entre besoins d'une même demande (un ACHAT arrondi par besoin) ;
+  AGENT de l'historique des pièces, règle de ventilation et réappro sous le mini du module Stock, ordres d'exécution filtrés,
+  demandes d'appro en unité de stock et ventilation proposée) : lots 10 à 14 (propositions, écrans, OAuth 2.1). Restent :
+  - ventilation (lots 8 et 9) : achats non regroupés entre besoins d'une même demande (un ACHAT arrondi par besoin) ;
+    commandes « non affectées » = A_COMMANDE sans lieu de livraison ni demande E_DAP d'origine (une commande livrée à un
+    chantier non dépôt n'est jamais proposée) : à confirmer ; `proche_mini` passé en argument (20 par défaut), pas encore
+    paramètre du stock (colonne à ajouter avec l'écran du lot 11) ; pièces (S_RESERVATION, S_DEMANDE, A_COMMANDE) au lot 10 ;
+  - ordres filtrés (lot 9) : filtre C# seul (outil serveur) ; une commande avec options ou variantes non choisies est refusée
+    par la transformation (`OPTION_NON_TRAITEE`, rendu à l'agent) ; une OE par commande du marché (pas de regroupement de
+    plusieurs commandes : la transformation multiple ne prend pas de lignes choisies) ; service porteur d'un ouvrage sans
+    nature servie = services de ses composantes (un ouvrage mixte atelier / pose est retenu par l'un comme par l'autre) ;
+  - demandes d'appro (lot 9) : conversion en unité de stock des seuls articles gérés en stock à quantité saisie ; lignes
+    de métré ou sans conversion laissées (`METRE`, `STK_UNITE`) ; prix de vente fixé non converti ;
   - appel interne : HTTP local préféré, bascule sur HTTPS local quand l'installation redirige (certificat actif) ; dans ce
     cas le certificat de l'installation doit être reconnu par le conteneur de l'API (autorité LogiBTP), sinon prévoir une
     exception de `UseHttpsInstallation` pour la boucle locale (comme `/api/sante`) ;
