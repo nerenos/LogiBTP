@@ -19,7 +19,7 @@
 | 0 | Audit des routes d'écriture des documents pour les agents | cœur + module Document (lecture, tests) | — | FAIT (13/11/2026) |
 | 1 | Contrats du socle : agent de la requête, plafond, codes | socle | — | FAIT (13/11/2026) |
 | 2 | Règles de délégation (plafond, garde-fous, interdits) | `modules/mcp` (nouveau) | 1 | FAIT (13/11/2026) |
-| 3 | Plafond appliqué par le module Droits | `modules/droits` (+ Document : `ValiderDans`) | 1 | A FAIRE |
+| 3 | Plafond appliqué par le module Droits | `modules/droits` (+ Document : `ValiderDans`) | 1 | FAIT (13/11/2026) |
 | 4 | Jetons délégués | `modules/authentification` | 1 | A FAIRE |
 | 5 | Point `/mcp`, catalogue d'outils, appel interne, journal | `modules/mcp` | 2, 4 | A FAIRE |
 | 6 | Outils de lecture du cœur, garde-fous du BTP | cœur | 3, 5 | A FAIRE |
@@ -89,6 +89,22 @@ Hors plan (Q13) : agent hébergé (automatisations planifiées, panneau intégr�
   règle) ignoré pour un agent sans VALIDER effectif ; contrat absent ⇒ tout refusé à un agent.
 - **Critère de fin** : tests : agent « Préparation » refusé sur une route VALIDER et sur une écriture en mode Module ;
   `ValiderDans` non déclenché.
+- **Réalisé** (13/11/2026) : `modules/droits/dotnet/LogiBTP.Droits.Web/AgentsDroits.cs` (`Portee`, `Autorise`,
+  `AccesSousArbre`, `RoutePermise`, `ControlerRoute`, `EstInterdit` : profil ∩ plafond, portée la plus étroite, modèle
+  LECTURE / PREPARATION / COMME_MOI (jamais pour un profil total) / SUR_MESURE (liste du plafond, profil total borné à la
+  préparation), FORCER, USURPER, PARAMETRER, DEVERROUILLER jamais, nœuds `administration`, `connexions`, `mail`
+  interdits, `parametres` en lecture seule, interdits du plafond, garde-fous RGPD (RGPD, CONFIDENTIEL) et VALIDATION
+  (VALIDER, SUPPRIMER) ; plafond absent ⇒ tout refusé) ; `ServiceDroits.PorteeAsync` et `PlafondAsync` (contrat
+  `IPlafondAgent` facultatif, lu une fois par requête), `LimiteAsync` inchangé (limites du délégant) ; `UseDroits` :
+  routes Module et Session / Publique en écriture refusées hors liste blanche, Parametrage en lecture seule, Action sur
+  les droits de l'agent (403 `AGENT_INTERDIT`, `ACCES_REFUSE` quand le profil lui-même refuse). Socle :
+  `Utilisateur.EstAdmin`, `PeutConsulterParametres`, `PeutModifierParametres` faux pour un agent (donc `ExigerAdmin`,
+  `ExigerParametres` refusent), `ExceptionMetier.AgentInterdit`. Document : `DocumentService.ExigerValidationAgent`
+  appelé par `ValiderDans` (transformation avec intermédiaire, annulation par avoir : refus et transaction annulée).
+  Cœur : `EcrituresBtp` corrigé (`/api/cas-test` Action, `/api/structure/documents` Lecture). Au passage : `UseDroits`
+  contrôlait le mode Parametrage avec l'utilisateur d'avant le calcul des droits sur `parametres` (réservé de fait à
+  l'administrateur) : corrigé. Tests `AgentsDroitsTests`, `ValidationAgentTests`. Reportés au TODO : contrôles par
+  identité du cœur (audit § 7.3), routes à exclure de la liste blanche (§ 7.6).
 
 ## Lot 4 : jetons délégués
 

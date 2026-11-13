@@ -23,7 +23,7 @@ public static class EcrituresBtp
         new("/api/listes/vues", Session), new("/api/rentabilite/vues", Session), new("/api/planning/vues", Session),
 
         // Lectures par POST (critères ou contenu dans le corps).
-        new("/api/calcul", Lecture), new("/api/cas-test", Lecture), new("/api/planning/calcul", Lecture),
+        new("/api/calcul", Lecture), new("/api/structure/documents", Lecture), new("/api/planning/calcul", Lecture),
         new("/api/listes/agregats", Lecture), new("/api/listes/controle", Lecture), new("/api/listes/lignes", Lecture),
         new("/api/listes/segments", Lecture), new("/api/listes/sources/requete", Lecture),
         new("/api/editions/apercu", Lecture), new("/api/editions/pdf", Lecture), new("/api/editions/verifier", Lecture),
@@ -38,7 +38,7 @@ public static class EcrituresBtp
         new("/api/documents", Document), new("/api/documents/{id}", Document), new("/api/documents/{id}/copie", Document),
         new("/api/documents/{id}/indices", Document), new("/api/documents/{id}/transformer", Document),
         new("/api/documents/{id}/*", Action),
-        new("/api/documents/plusieurs", Lot), new("/api/structure/documents", Document), new("/api/structure/documents/{id}", Action),
+        new("/api/documents/plusieurs", Lot), new("/api/cas-test", Action), new("/api/structure/documents/{id}", Action),
         new("/api/structure/marches/{id}/documents", Document), new("/api/lignes", Action),
 
         // Paramétrage : tables et listes de valeurs enregistrées entières.

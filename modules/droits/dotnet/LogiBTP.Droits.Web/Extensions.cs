@@ -78,15 +78,31 @@ public static class Extensions
                 await Refuser(http, "DROIT_NON_DECLARE", "Route sans droit déclaré : accès refusé");
                 return;
             }
-            // Droits du profil sur le paramétrage (nœud « parametres ») : lus par le paramétrage des modules (ExigerParametres).
+            // Droits du profil sur le paramétrage (nœud « parametres ») : lus par le paramétrage des modules (ExigerParametres) ;
+            // toujours faux pour un agent (Utilisateur).
             var utilisateur = Utilisateur.Depuis(http);
-            var etat = await http.RequestServices.GetRequiredService<ServiceDroits>().DroitsAsync(utilisateur.Profil, http.RequestAborted);
-            Utilisateur.Poser(http, utilisateur with
+            var service = http.RequestServices.GetRequiredService<ServiceDroits>();
+            var etat = await service.DroitsAsync(utilisateur.Profil, http.RequestAborted);
+            utilisateur = utilisateur with
             {
                 PeutConsulterParametres = ReglesDroits.Autorise(etat, "parametres", ActionsDroits.Consulter),
                 PeutModifierParametres = ReglesDroits.Autorise(etat, "parametres", ActionsDroits.Modifier),
-            });
-            if (r.Mode == ModeRoute.Parametrage)
+            };
+            Utilisateur.Poser(http, utilisateur);
+            var noeud = r.Noeud is null ? "" : RoutesDroits.Noeud(r.Noeud, n => http.Request.RouteValues.TryGetValue(n, out var v) ? v?.ToString() : null);
+            if (utilisateur.Agent is { } agent)
+            {
+                // Agent IA : droits du profil ∩ plafond de la délégation, écritures bornées à la liste blanche (lot 3 MCP).
+                var plafond = await service.PlafondAsync(agent, http.RequestAborted);
+                var refus = AgentsDroits.ControlerRoute(r, noeud, http.Request.Method, gabarit, etat, plafond);
+                if (refus is not null)
+                {
+                    await Refuser(http, refus, refus == ErreursAgent.AgentInterdit
+                        ? $"Interdit à l'agent : {http.Request.Method} {RoutesDroits.Normaliser(gabarit)}" : $"Droit refusé : {noeud}");
+                    return;
+                }
+            }
+            else if (r.Mode == ModeRoute.Parametrage)
             {
                 var ecrit = !HttpMethods.IsGet(http.Request.Method) && !HttpMethods.IsHead(http.Request.Method);
                 if (!(ecrit ? utilisateur.PeutModifierParametres : utilisateur.PeutConsulterParametres) && !utilisateur.EstAdmin)
@@ -97,11 +113,8 @@ public static class Extensions
             }
             else if (r.Mode is ModeRoute.Module or ModeRoute.Action)
             {
-                var u = Utilisateur.Depuis(http);
-                var droits = etat;
-                var noeud = RoutesDroits.Noeud(r.Noeud!, n => http.Request.RouteValues.TryGetValue(n, out var v) ? v?.ToString() : null);
                 var ecriture = !HttpMethods.IsGet(http.Request.Method) && !HttpMethods.IsHead(http.Request.Method);
-                var permis = r.Mode == ModeRoute.Module ? ReglesDroits.AccesSousArbre(droits, noeud, ecriture) : ReglesDroits.Autorise(droits, noeud, r.Action!);
+                var permis = r.Mode == ModeRoute.Module ? ReglesDroits.AccesSousArbre(etat, noeud, ecriture) : ReglesDroits.Autorise(etat, noeud, r.Action!);
                 if (!permis)
                 {
                     await Refuser(http, "ACCES_REFUSE", $"Droit refusé : {noeud}");

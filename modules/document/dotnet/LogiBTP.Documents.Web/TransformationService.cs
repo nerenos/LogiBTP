@@ -42,6 +42,7 @@ public class TransformationService<TDoc, TLigne, TComplet>(
         if (intermediaire is int inter)
         {
             var milieu = await TransformerDans(sourceId, new DemandeTransformation { CibleTydId = inter, Choix = dem.Choix }, u, ct, intermediaire: true);
+            // Agent IA sans VALIDER : refus (AGENT_INTERDIT), transformation annulée avec sa transaction.
             await documents.ValiderDans(milieu, u, ct);
             cibleId = await TransformerDans(milieu, new DemandeTransformation { CibleTydId = dem.CibleTydId }, u, ct);
         }
@@ -463,6 +464,7 @@ public class TransformationService<TDoc, TLigne, TComplet>(
         var avoirId = avoir.Document.Document.EntId;
         db.DocumentsLien.Add(new DocumentLien { LieSourceEntId = entId, LieCibleEntId = avoirId, LieType = "ANNULATION" });
         await db.SaveChangesAsync(ct);
+        // Agent IA sans VALIDER : refus (AGENT_INTERDIT), aucun avoir ne reste.
         await documents.ValiderDans(avoirId, u, ct);
         foreach (var (id, tyd) in new[] { (entId, type.TydId), (avoirId, typeAvoir.TydId) })
         {

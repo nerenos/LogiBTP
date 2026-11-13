@@ -42,10 +42,17 @@ Analyses validées le 23/10/2026 : [ANALYSE-MODULE-MAIL.md](documentation/concep
   rafraîchissement rotatif, machines connues, double facteur par courriel, exclusion d'IP, identifiants API, deux clés
   (`.env`, données) ; profil par défaut = saisie mobile (A5 révisée) ; à reprendre par le Mail (comptes, boîtes,
   « À rapprocher ») et l'OAuth (reconnexion des connexions).
-- [ ] **Module MCP** (agents IA au nom d'un utilisateur, [plan](documentation/conception/plans/mcp.md), lots 0 à 2 faits
-  le 13/11/2026 : audit des routes, contrats du socle, règles de délégation `modules/mcp`) : lots 3 à 14 (plafond
-  appliqué par les Droits, jetons délégués, point `/mcp`, outils du cœur, propositions, écrans, OAuth 2.1). À trancher
+- [ ] **Module MCP** (agents IA au nom d'un utilisateur, [plan](documentation/conception/plans/mcp.md), lots 0 à 3 faits
+  le 13/11/2026 : audit des routes, contrats du socle, règles de délégation `modules/mcp`, plafond appliqué par les
+  Droits) : lots 4 à 14 (jetons délégués, point `/mcp`, outils du cœur, propositions, écrans, OAuth 2.1). À trancher
   au lot 6 : un nœud retenu par un garde-fou (TIERS, SALARIES, PAIE…) perd aussi ses écritures (choix du lot 2).
+  Reportés du lot 3 (audit § 7, points 3 et 6) : contrôles par identité hors `IDroits` encore aveugles à
+  `Utilisateur.Agent` (`PeutGererAsync` `StockBtp.cs`, `MagasinBtp.Exiger`, `PeutTraiterAsync` `StockBorneBtp.cs`,
+  `PeutValiderAsync` / `PeutControlerAsync` `SpecialisationExecutionBtp.cs`, `DelegationsControle.cs`,
+  `PeutDeverrouiller` `VerrouDocument.cs`) : à refuser pour un agent au lot 6 (ceux qui passent par `EstAdmin`,
+  `ExigerAdmin`, `ExigerParametres` le sont déjà) ; la liste blanche du plafond (lot 5) ne doit jamais couvrir
+  `POST /api/fiches/{type}/{id}/confidentiel`, `…/secret` ni `POST /api/cas-test` (gabarits exacts plutôt que préfixe
+  `/api/fiches/{type}` ou `/api/documents`).
 - [ ] **Module de partage de fichiers** (auto-hébergé ou kDrive d'Infomaniak) : lien de téléchargement à la place des
   pièces jointes trop lourdes pour un courriel.
 
