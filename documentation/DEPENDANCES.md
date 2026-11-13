@@ -12,6 +12,7 @@
 | npm | immer | 10.2.0 | MIT | exécution (socle/js) |
 | npm | vitest | 5.1.0 | MIT | développement (socle/js) |
 | NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Socle.Tests |
+| NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Socle.Donnees |
 | NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Socle.Tests |
 | NuGet | xunit.runner.visualstudio | 3.1.4 | Apache-2.0 | LogiBTP.Socle.Tests |
 
@@ -385,9 +386,3 @@
 | Type | Dépendance | Version | Licence | Usage |
 |---|---|---|---|---|
 | npm | vitepress | 1.6.4 | MIT | développement (docs) |
-
-## playwright-report
-
-| Type | Dépendance | Version | Licence | Usage |
-|---|---|---|---|---|
-| police | playwright-report/trace/codicon.DCmgc-ay.ttf | — | ? | licence absente |

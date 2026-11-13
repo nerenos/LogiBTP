@@ -2,6 +2,10 @@
 
 > Plan autonome (demande du 12/11/2026, point « Enregistrement des données » du TODO). Aucun script SQL prévu :
 > le chantier ne touche que le code C# (et le module Import côté JS).
+>
+> **État (13/11/2026) : lots 1 à 9 réalisés** (branche `claude/project-thread-mgrotf`) ; décisions 1 à 6 confirmées
+> (« ok lance tout est confirmer »). Suite au [TODO](../../../TODO.md) : contrôles des autres tables de paramétrage au
+> format commun, `erreursParChamp` dans les écrans, `.EnTransaction()` sur les groupes restants.
 
 ## 1. État des lieux (main au 12/11/2026)
 
@@ -72,3 +76,17 @@ quelque 450 routes d'écriture prennent chacune leur propre DTO, sans contrôle 
 
 Ordre : 1 (indépendant), puis 2 → 3 → 4 → 5 → 6, puis 7 → 8, puis 9. Les lots 4 à 8 se découpent en sous-lots si
 l'inventaire du lot 3 le demande.
+
+## 4. Réalisation (13/11/2026)
+
+| Lot | Fait |
+|---|---|
+| 1 | SQL brut constant (constantes composées, valeurs en paramètres) ; EF1002 / EF1003 en erreur de compilation. |
+| 2 | `LogiBTP.Socle.Donnees` : `ConnexionRequete`, `UniteEcriture` (points de sauvegarde, `ApresValidation`, `LireAsync`, `ParElementAsync` → `RapportLot`), `InterceptionUnite`, `ErreursBase` (409 DOUBLON / UTILISE, 422 VALEUR), `UniteEcritureTests`. |
+| 3 | Tous les contextes sur la connexion et l'unité de la requête (`ConfigurerBase`) ; `BeginTransaction` remplacé par `db.Unite().CommencerAsync` partout ; `UseErreursBase`, `UseUniteEcriture`. |
+| 4 | Fiche : `AvantEcritureAsync`, ligne et `EcrireGeresAsync` en une transaction (suppression de même) ; `FICHE_UTILISEE` rétabli (le refus de clé étrangère était avalé). |
+| 5 | Document créé avec son contenu en une transaction (`POST /documents/avec-contenu`, import d'un devis). |
+| 6 | Filtre `EnTransaction()` (groupes annuaire, bibliothèque, calendriers, droits, notifications, pointage, planning, stock, CRM et routes isolées) ; relances : un groupe = une transaction ; courriels des notifications et diffusion du planning après validation ; écritures « best effort » sous point de sauvegarde (statuts FE reçus, paiement direct, PV de réception, note de relance, contrôle de l'exécution). |
+| 7 | `TypesEcriture` ↔ `TYPE_ECRITURE` ; registre `EcrituresBtp.Routes` des 461 routes d'écriture, vérifié au démarrage ; `Controles` / `ChampEnErreur` (422 VALIDATION par champ) ; `erreursParChamp` côté client. |
+| 8 | Listes de valeurs au format commun ; intervenants : tiers et contacts vérifiés ; type de ligne d'un document vérifié. Le registre ne garde pas de liste d'exceptions : les routes restantes sont suivies au TODO. |
+| 9 | `socle/CLAUDE.md`, `SOCLE.md`, `modules/fiche/CLAUDE.md`, `FICHE.md`, `modules/document/CLAUDE.md`, `DOCUMENT.md`, `JOURNAL-LOTS.md`, `TODO.md`, `DEPENDANCES.md`. |
