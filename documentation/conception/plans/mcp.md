@@ -16,7 +16,7 @@
 
 | Lot | Titre | Partie | Dépend de | Statut |
 |---|---|---|---|---|
-| 0 | Audit des routes d'écriture des documents pour les agents | cœur + module Document (lecture, tests) | — | A FAIRE |
+| 0 | Audit des routes d'écriture des documents pour les agents | cœur + module Document (lecture, tests) | — | FAIT (13/11/2026) |
 | 1 | Contrats du socle : agent de la requête, plafond, codes | socle | — | A FAIRE |
 | 2 | Règles de délégation (plafond, garde-fous, interdits) | `modules/mcp` (nouveau) | 1 | A FAIRE |
 | 3 | Plafond appliqué par le module Droits | `modules/droits` (+ Document : `ValiderDans`) | 1 | A FAIRE |
