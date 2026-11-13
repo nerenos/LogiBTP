@@ -5588,7 +5588,8 @@
       "naissance_entree": "Naissance postérieure à l'entrée",
       "heures_negatives": "Nombre d'heures négatif",
       "achat_futur": "Date d'achat dans le futur",
-      "chantier": "Chantier à préciser pour un matériel en chantier"
+      "chantier": "Chantier à préciser pour un matériel en chantier",
+      "nature_vendu": "Nature obligatoire pour un article ou un ouvrage"
     },
     "materiel": {
       "controles": "Contrôles réglementaires",

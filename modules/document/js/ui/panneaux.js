@@ -110,10 +110,6 @@ export class PanneauxDocument {
         <label>${texteHtml('document.panneaux.reference_externe')} <input data-champ="ent_reference_externe" maxlength="100" title="${texteHtml('document.panneaux.reference_externe_aide')}" value="${echapper(d.ent_reference_externe ?? '')}"></label>
         ${def.type?.tyd_consultation ? `<label title="${texteHtml('document.panneaux.consultation_aide')}">${texteHtml('document.panneaux.consultation')} <input data-champ="ent_consultation" maxlength="30" size="12" value="${echapper(d.ent_consultation ?? '')}"></label>` : ''}
         ${estFamilleAchat(def.type?.tyd_famille) ? `<label title="${texteHtml('document.panneaux.date_externe_aide')}">${texteHtml('document.panneaux.date_externe')} <input type="date" data-champ="ent_date_externe" value="${echapper(d.ent_date_externe ?? '')}"></label>` : ''}
-        <label title="${texteHtml('document.panneaux.validite_aide')}">${texteHtml('document.panneaux.validite')}
-          <input data-champ="ent_validite_jours" data-entier type="number" min="1" max="3650" value="${d.ent_validite_jours ?? ''}"></label>
-        ${d.ent_date_validite ? `<label>${texteHtml('document.panneaux.valable_jusqu')} <input type="date" value="${echapper(d.ent_date_validite)}" disabled></label>` : ''}
-        ${this.champTauxDocument(d)}
         ${this.champsEntete(d).join('')}
         ${props.map((p) => {
           const v = valeurs[p.prd_code] ?? '';
@@ -127,20 +123,12 @@ export class PanneauxDocument {
           return `<label>${libelle}<input type="${type}" data-prop="${p.prd_code}" data-type="${p.prd_type_donnee}" value="${echapper(v)}"></label>`;
         }).join('')}
       </div>
-      ${this.sectionTextes()}
-      ${this.sectionsEntete()}`;
+      ${this.sectionsEntete()}
+      ${this.sectionTextes()}`;
 
     const m = editeur.magasin;
     this.lierTextes(zone);
     lier(zone.querySelector('.formulaire'), '[data-champ]', (champ, v, el) => m.modifier((b) => { b.document[champ] = valeurChamp(el, v); }, texte('document.etapes.entete')));
-    zone.querySelector('[data-action="appliquer-tva-document"]')?.addEventListener('click', async (e) => {
-      e.currentTarget.blur();
-      const id = this.tauxDocument(editeur.saisie.document);
-      if (!id) return;
-      const ok = await confirmer(texte('document.panneaux.tva_confirmer', { taux: editeur.libelleTaux(id) }),
-        { titre: texte('document.etapes.tva_document'), ok: texte('document.panneaux.appliquer') });
-      if (ok) m.modifier((b) => this.regles.appliquerTauxDocument(b, id), texte('document.etapes.tva_document'));
-    });
     zone.querySelectorAll('[data-prop]').forEach((el) => el.addEventListener('change', () => {
       let v = el.type === 'checkbox' ? el.checked : el.value;
       if (el.dataset.type === 'entier') v = v === '' ? null : Number(v);
@@ -161,8 +149,9 @@ export class PanneauxDocument {
   lierOptions(_zone) {}
 
   /**
-   * Onglet Options : réglages du document consultés rarement (modèle de saisie, décimales, numérotation, options de la
-   * spécialisation, étiquettes du document) ; l'entête garde l'identité, les rattachements et les textes de l'édition.
+   * Onglet Options : réglages du document consultés rarement (modèle de saisie, validité, TVA par défaut, décimales,
+   * numérotation, options de la spécialisation, étiquettes du document) ; l'entête garde l'identité, les rattachements
+   * et, en bas juste avant les totaux, les textes de l'édition.
    */
   rendreOptions(zone) {
     if (!zone || zone.contains(document.activeElement)) return;
@@ -175,6 +164,10 @@ export class PanneauxDocument {
       <fieldset class="options-document"><legend>${texteHtml('document.panneaux.options')}</legend>
       <div class="formulaire">
         ${def.modeles?.length ? `<label title="${texteHtml('document.panneaux.modele_aide')}">${texteHtml('document.panneaux.modele')} <select data-champ="ent_modele">${opt('', '—', d.ent_modele)}${def.modeles.map((x) => opt(x.code, x.libelle, d.ent_modele)).join('')}</select></label>` : ''}
+        <label title="${texteHtml('document.panneaux.validite_aide')}">${texteHtml('document.panneaux.validite')}
+          <input data-champ="ent_validite_jours" data-entier type="number" min="1" max="3650" value="${d.ent_validite_jours ?? ''}"></label>
+        ${d.ent_date_validite ? `<label>${texteHtml('document.panneaux.valable_jusqu')} <input type="date" value="${echapper(d.ent_date_validite)}" disabled></label>` : ''}
+        ${this.champTauxDocument(d)}
         <label>${texteHtml('document.panneaux.decimales_montants')} <input data-champ="ent_precision_montant" data-entier type="number" min="0" max="6" value="${d.ent_precision_montant ?? 2}"></label>
         <fieldset class="numerotation"><legend>${texteHtml('document.panneaux.numerotation')}</legend>
           ${niveaux.map((s, i) => `<select data-niveau="${i}">${i > 0 ? opt('', '—', s) : ''}${STYLES_NUM.map(([v, l]) => opt(v, l, s)).join('')}</select>`).join('')}
@@ -193,6 +186,14 @@ export class PanneauxDocument {
       m.modifier((b) => { b.document.ent_num_format = { separateur, niveaux: styles.map((style) => ({ style })) }; }, texte('document.etapes.numerotation'));
     };
     zone.querySelectorAll('[data-niveau], [data-separateur]').forEach((el) => el.addEventListener('change', majFormat));
+    zone.querySelector('[data-action="appliquer-tva-document"]')?.addEventListener('click', async (e) => {
+      e.currentTarget.blur();
+      const id = this.tauxDocument(editeur.saisie.document);
+      if (!id) return;
+      const ok = await confirmer(texte('document.panneaux.tva_confirmer', { taux: editeur.libelleTaux(id) }),
+        { titre: texte('document.etapes.tva_document'), ok: texte('document.panneaux.appliquer') });
+      if (ok) m.modifier((b) => this.regles.appliquerTauxDocument(b, id), texte('document.etapes.tva_document'));
+    });
     this.lierOptions(zone);
   }
 

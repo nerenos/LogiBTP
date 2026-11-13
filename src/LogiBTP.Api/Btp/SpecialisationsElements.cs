@@ -216,6 +216,11 @@ public sealed class SpecialisationFicheBtp(IServiceScopeFactory scopes) : Specia
                 if (v.GetValueOrDefault("etat") as string == "CHANTIER" && string.IsNullOrWhiteSpace(v.GetValueOrDefault("chantier") as string))
                     yield return new("chantier", "METIER", "Chantier à préciser pour un matériel en chantier");
                 break;
+            case TypesFiche.Element:
+                // Élément vendu (article, ouvrage) : nature obligatoire (ventilation comptable, analyses). Réplique de FicheElement.validerMetier.
+                if (LogiBTP.Bibliotheque.TypeElement.EstVendu(v.GetValueOrDefault("type")?.ToString()) && ValidationFiche.Nombre(v.GetValueOrDefault("nat_id")) is null)
+                    yield return new("nat_id", "METIER", "Nature obligatoire pour un article ou un ouvrage");
+                break;
         }
     }
 }

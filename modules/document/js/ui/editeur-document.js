@@ -300,6 +300,23 @@ export class EditeurDocument {
     };
   }
 
+  /**
+   * Tranche (titre) vide à la racine d'un document sans ligne saisie (création : la saisie commence dans la tranche) ;
+   * rien si le document a déjà des lignes, est figé, en lecture seule ou si la règle des lignes ne permet pas de titre.
+   * Hors pile d'annulation (comme un chargement) : le document reste non modifié tant que rien n'y est saisi. Renvoie son ID.
+   */
+  insererTrancheVide() {
+    const m = this.magasin;
+    if (m.lectureSeule || this.fige || this.lignesLimitees || this.saisie.lignes.some((l) => !estPied(l))) return null;
+    const id = m.prochainId();
+    m.appliquerServeur((d) => {
+      d.lignes.push(this.nouvelleLigne(id, TL.TITRE, d.document.ent_id));
+      placer(C, d.lignes, [d.lignes.at(-1)], null, 'racine');
+      this.regles.appliquerContexte(d, id, this.definition.taux_tva);
+    });
+    return id;
+  }
+
   /** Nouvelle ligne avec les valeurs par défaut du DDL. */
   nouvelleLigne(id, type, entId) {
     const pied = type === TL.PIED_HT || type === TL.PIED_TTC;
