@@ -48,6 +48,9 @@ public sealed record Utilisateur(string Code, string Profil, string? Groupe = nu
     /// <summary>Usurpation (module Authentification) : code de l'administrateur qui agit pour cet utilisateur (null sinon).</summary>
     public string? Usurpateur { get; init; }
 
+    /// <summary>Agent IA (module MCP) : délégation et client sous lesquels la requête agit pour cet utilisateur (null : action humaine).</summary>
+    public AgentRequete? Agent { get; init; }
+
     public static Utilisateur Depuis(HttpContext http) => http.Items[Cle] as Utilisateur ?? new(
         http.Request.Headers["X-Utilisateur"].FirstOrDefault() ?? "demo",
         http.Request.Headers["X-Profil"].FirstOrDefault() ?? Profils.Admin,
@@ -56,6 +59,9 @@ public sealed record Utilisateur(string Code, string Profil, string? Groupe = nu
     /// <summary>Utilisateur de la requête établi par l'authentification (prime sur les en-têtes).</summary>
     public static void Poser(HttpContext http, Utilisateur u) => http.Items[Cle] = u;
 }
+
+/// <summary>Requête émise par un agent IA : code de la délégation (plafond) et client connecté.</summary>
+public sealed record AgentRequete(string Delegation, string Client);
 
 public static class ExtensionsWeb
 {

@@ -119,3 +119,45 @@ public static class TypesEcriture
     /// <summary>Lecture envoyée par POST (critères ou contenu dans le corps : aperçu, calcul, liste) : rien n'est écrit.</summary>
     public const string Lecture = "LECTURE";
 }
+
+/// <summary>Origine d'une écriture (module MCP : agents IA connectés) : qui a réellement agi.</summary>
+public static class OrigineEcriture
+{
+    public const string Humain = "HUMAIN";
+    public const string Agent = "AGENT";
+    public const string Usurpation = "USURPATION";
+    public const string Service = "SERVICE";
+}
+
+/// <summary>Garde-fous activables sur la délégation d'un agent (données sensibles, actions à effet externe, volume).</summary>
+public static class GardeFou
+{
+    public const string Rgpd = "RGPD";
+    public const string Tiers = "TIERS";
+    public const string Salaries = "SALARIES";
+    public const string Paie = "PAIE";
+    public const string Couts = "COUTS";
+    public const string GedConfidentiel = "GED_CONFIDENTIEL";
+    public const string CrmNotes = "CRM_NOTES";
+    public const string Envoi = "ENVOI";
+    public const string Validation = "VALIDATION";
+    public const string Volume = "VOLUME";
+}
+
+/// <summary>Modèles de plafond d'une délégation d'agent.</summary>
+public static class ModelePlafond
+{
+    public const string Lecture = "LECTURE";
+    public const string Preparation = "PREPARATION";
+    public const string CommeMoi = "COMME_MOI";
+    public const string SurMesure = "SUR_MESURE";
+}
+
+/// <summary>Erreurs communes de la délégation à un agent (403).</summary>
+public static class ErreursAgent
+{
+    /// <summary>Action ou route hors du plafond de la délégation.</summary>
+    public const string AgentInterdit = "AGENT_INTERDIT";
+    /// <summary>Action arrêtée par un garde-fou actif de la délégation.</summary>
+    public const string AgentGardeFou = "AGENT_GARDE_FOU";
+}

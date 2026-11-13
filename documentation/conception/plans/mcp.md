@@ -17,7 +17,7 @@
 | Lot | Titre | Partie | Dépend de | Statut |
 |---|---|---|---|---|
 | 0 | Audit des routes d'écriture des documents pour les agents | cœur + module Document (lecture, tests) | — | FAIT (13/11/2026) |
-| 1 | Contrats du socle : agent de la requête, plafond, codes | socle | — | A FAIRE |
+| 1 | Contrats du socle : agent de la requête, plafond, codes | socle | — | FAIT (13/11/2026) |
 | 2 | Règles de délégation (plafond, garde-fous, interdits) | `modules/mcp` (nouveau) | 1 | A FAIRE |
 | 3 | Plafond appliqué par le module Droits | `modules/droits` (+ Document : `ValiderDans`) | 1 | A FAIRE |
 | 4 | Jetons délégués | `modules/authentification` | 1 | A FAIRE |
@@ -58,6 +58,7 @@ Hors plan (Q13) : agent hébergé (automatisations planifiées, panneau intégr�
   ENVOI, VALIDATION, VOLUME), `MODELE_PLAFOND` (LECTURE, PREPARATION, COMME_MOI, SUR_MESURE), erreurs `AGENT_INTERDIT`,
   `AGENT_GARDE_FOU` ; tests de parité des codes du socle.
 - **Critère de fin** : tests du socle verts (JS et C#).
+- **Réalisé** (13/11/2026) : `Utilisateur.Agent` et `AgentRequete` (`Web.cs`), contrats `IPlafondAgent` / `IJetonsDelegues` (+ `PlafondAgent`, `RouteAgent`, `JetonDelegue`) dans `Socle.Web/Agents.cs`, codes `OrigineEcriture`, `GardeFou`, `ModelePlafond`, `ErreursAgent` ↔ `ORIGINE_ECRITURE`, `GARDE_FOU`, `MODELE_PLAFOND`, `ERREUR_AGENT`, parité dans `CodesTests`.
 
 ## Lot 2 : règles de délégation
 
