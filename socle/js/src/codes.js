@@ -50,3 +50,16 @@ export const NIVEAU_CONFIDENTIALITE = Object.freeze({
   CONFIDENTIEL: 'CONFIDENTIEL',
   SECRET: 'SECRET',
 });
+
+/**
+ * Erreurs communes de l'enregistrement des données (`ErreursEnregistrement` du socle C#) : saisie refusée
+ * (422 VALIDATION, `details` = erreurs par champ `{ champ, code, message }`), refus de la base traduits.
+ */
+export const ERREUR_ENREGISTREMENT = Object.freeze({
+  VALIDATION: 'VALIDATION',
+  DOUBLON: 'DOUBLON',
+  UTILISE: 'UTILISE',
+  VALEUR: 'VALEUR',
+  OBLIGATOIRE: 'OBLIGATOIRE',
+  ERREUR: 'ERREUR',
+});

@@ -68,3 +68,23 @@ public static class NiveauConfidentialite
 
     public static readonly string[] Tous = [Public, Interne, Confidentiel, Secret];
 }
+
+/// <summary>
+/// Erreurs communes de l'enregistrement des données (socle <c>LogiBTP.Socle.Donnees</c>) : refus de la base traduits
+/// (<c>ErreursBase</c>) et refus de saisie (422 VALIDATION, détails = erreurs par champ).
+/// </summary>
+public static class ErreursEnregistrement
+{
+    /// <summary>Saisie refusée par les contrôles du serveur : détails = liste d'erreurs par champ (champ, code, message).</summary>
+    public const string Validation = "VALIDATION";
+    /// <summary>Unicité (23505), 409.</summary>
+    public const string Doublon = "DOUBLON";
+    /// <summary>Clé étrangère (23503) : élément utilisé ailleurs, ou lié introuvable, 409.</summary>
+    public const string Utilise = "UTILISE";
+    /// <summary>Valeur refusée par la base (NOT NULL, CHECK, conversion, trigger), 422.</summary>
+    public const string Valeur = "VALEUR";
+    /// <summary>Code d'une erreur par champ : valeur obligatoire.</summary>
+    public const string Obligatoire = "OBLIGATOIRE";
+    /// <summary>Élément d'un traitement en lot en erreur technique (journalisée).</summary>
+    public const string Erreur = "ERREUR";
+}

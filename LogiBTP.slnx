@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/socle/">
     <Project Path="socle/dotnet/LogiBTP.Socle/LogiBTP.Socle.csproj" />
+    <Project Path="socle/dotnet/LogiBTP.Socle.Donnees/LogiBTP.Socle.Donnees.csproj" />
     <Project Path="socle/dotnet/LogiBTP.Socle.Testing/LogiBTP.Socle.Testing.csproj" />
     <Project Path="socle/dotnet/LogiBTP.Socle.Tests/LogiBTP.Socle.Tests.csproj" />
     <Project Path="socle/dotnet/LogiBTP.Socle.Web/LogiBTP.Socle.Web.csproj" />
@@ -39,6 +40,7 @@
     <Project Path="modules/bibliotheque/dotnet/LogiBTP.Bibliotheque.Web/LogiBTP.Bibliotheque.Web.csproj" />
     <Project Path="modules/bibliotheque/dotnet/LogiBTP.Bibliotheque.Tests/LogiBTP.Bibliotheque.Tests.csproj" />
   </Folder>
+  <Folder Name="/modules/" />
   <Folder Name="/modules/annuaire/">
     <Project Path="modules/annuaire/dotnet/LogiBTP.Annuaire/LogiBTP.Annuaire.csproj" />
     <Project Path="modules/annuaire/dotnet/LogiBTP.Annuaire.Web/LogiBTP.Annuaire.Web.csproj" />
