@@ -18,7 +18,7 @@
 |---|---|---|---|---|
 | 0 | Audit des routes d'écriture des documents pour les agents | cœur + module Document (lecture, tests) | — | FAIT (13/11/2026) |
 | 1 | Contrats du socle : agent de la requête, plafond, codes | socle | — | FAIT (13/11/2026) |
-| 2 | Règles de délégation (plafond, garde-fous, interdits) | `modules/mcp` (nouveau) | 1 | A FAIRE |
+| 2 | Règles de délégation (plafond, garde-fous, interdits) | `modules/mcp` (nouveau) | 1 | FAIT (13/11/2026) |
 | 3 | Plafond appliqué par le module Droits | `modules/droits` (+ Document : `ValiderDans`) | 1 | A FAIRE |
 | 4 | Jetons délégués | `modules/authentification` | 1 | A FAIRE |
 | 5 | Point `/mcp`, catalogue d'outils, appel interne, journal | `modules/mcp` | 2, 4 | A FAIRE |
@@ -74,6 +74,7 @@ Hors plan (Q13) : agent hébergé (automatisations planifiées, panneau intégr�
   levée par la délégation ; échéance (30 j par défaut, 90 au plus) ; quotas (200 par appel, 5 000 par jour, alerte
   80 %) ; classement d'un outil (lecture / brouillon / proposition / interdit).
 - **Critère de fin** : jeu `01_delegation.json` vert en JS et en C#, `CodesTests`.
+- **Réalisé** (13/11/2026) : `delegation.js` ↔ `ReglesDelegation.cs` — `actionsModele` / `ActionsModele`, `gardesFousActifs` / `GardesFousActifs`, `estInterdit` / `EstInterdit`, `droitsEffectifs` / `DroitsEffectifs(profil, plafond, gardesFous actifs, options { catalogue, noeuds, interdits })`, `autoriseAgent` / `AutoriseAgent`, `controlerDelegation` / `ControlerDelegation`, `echeanceDelegation` / `EcheanceDelegation`, `appliquerQuota` / `AppliquerQuota`, `classerOutil` / `ClasserOutil`, `normaliserAction` / `NormaliserAction` ; constantes `ECHEANCE_DEFAUT`, `ECHEANCE_MAX`, `QUOTA_APPEL`, `QUOTA_JOUR`, `ALERTE_QUOTA`, `NOEUDS_INTERDITS`, `NOEUDS_LECTURE_SEULE`, `ACTIONS_INTERDITES` ; codes `CLASSE_OUTIL`, `ERREUR_MCP` ↔ `ClasseOutil`, `ErreurMcp` ; records C# `DroitsProfil`, `PlafondDelegation`, `OptionsDelegation`, `DelegationSaisie`, `Delegant`, `QuotasDelegation`, `ResultatQuota`, `OutilAgent`. Socle : `PORTEE_DROIT`, `GARDE_FOU`, `MODELE_PLAFOND`, `ORIGINE_ECRITURE`, `ERREUR_AGENT` exportés par `@logibtp/socle`. Choix : un nœud retenu par un garde-fou perd toutes ses actions (pas seulement la lecture).
 
 ## Lot 3 : plafond appliqué par le module Droits
 

@@ -1,0 +1,19 @@
+{
+  "name": "@logibtp/mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Module MCP LogiBTP : règles de délégation des droits à un agent IA (plafond, garde-fous, interdits, échéance, quotas, classement des outils)",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@logibtp/socle": "0.2.0"
+  },
+  "devDependencies": {
+    "vitest": "^5.1.0"
+  }
+}

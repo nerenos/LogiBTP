@@ -224,6 +224,15 @@
 | NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Mail.Tests |
 | NuGet | xunit.runner.visualstudio | 3.1.4 | Apache-2.0 | LogiBTP.Mail.Tests |
 
+## modules/mcp
+
+| Type | Dépendance | Version | Licence | Usage |
+|---|---|---|---|---|
+| npm | vitest | 5.1.0 | MIT | développement (modules/mcp/js) |
+| NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Mcp.Tests |
+| NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Mcp.Tests |
+| NuGet | xunit.runner.visualstudio | 3.1.4 | Apache-2.0 | LogiBTP.Mcp.Tests |
+
 ## modules/metre
 
 | Type | Dépendance | Version | Licence | Usage |
