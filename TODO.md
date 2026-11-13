@@ -42,11 +42,14 @@ Analyses validées le 23/10/2026 : [ANALYSE-MODULE-MAIL.md](documentation/concep
   rafraîchissement rotatif, machines connues, double facteur par courriel, exclusion d'IP, identifiants API, deux clés
   (`.env`, données) ; profil par défaut = saisie mobile (A5 révisée) ; à reprendre par le Mail (comptes, boîtes,
   « À rapprocher ») et l'OAuth (reconnexion des connexions).
-- [ ] **Module MCP** (agents IA au nom d'un utilisateur, [plan](documentation/conception/plans/mcp.md), lots 0 à 7 faits
+- [ ] **Module MCP** (agents IA au nom d'un utilisateur, [plan](documentation/conception/plans/mcp.md), lots 0 à 8 faits
   le 13/11/2026 : audit des routes, contrats du socle, règles de délégation `modules/mcp`, plafond appliqué par les
   Droits, jetons délégués, point `/mcp`, délégations, journal, outils de lecture du cœur et garde-fous du BTP, activation
   par société, liste blanche exacte, contrôles par identité bornés au plafond, outils d'écriture des devis et origine
-  AGENT de l'historique des pièces) : lots 8 à 14 (ventilation, ordres, propositions, écrans, OAuth 2.1). Restent :
+  AGENT de l'historique des pièces, règle de ventilation et réappro sous le mini du module Stock) : lots 9 à 14 (ordres,
+  propositions, écrans, OAuth 2.1). Restent :
+  - ventilation (lot 8) : au lot 9, ne passer en commandes que le reste non affecté et absent des événements ENTREE des
+    dépôts (sinon compté deux fois) ; achats non regroupés entre besoins d'une même demande (un ACHAT arrondi par besoin) ;
   - appel interne : HTTP local préféré, bascule sur HTTPS local quand l'installation redirige (certificat actif) ; dans ce
     cas le certificat de l'installation doit être reconnu par le conteneur de l'API (autorité LogiBTP), sinon prévoir une
     exception de `UseHttpsInstallation` pour la boucle locale (comme `/api/sante`) ;

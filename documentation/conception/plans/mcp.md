@@ -24,7 +24,7 @@
 | 5 | Point `/mcp`, catalogue d'outils, appel interne, journal | `modules/mcp` | 2, 4 | FAIT (13/11/2026) |
 | 6 | Outils de lecture du cœur, garde-fous du BTP | cœur | 3, 5 | FAIT (13/11/2026) |
 | 7 | Outils d'écriture des devis, origine des écritures | cœur | 6 | FAIT (13/11/2026) |
-| 8 | Règle de ventilation d'une demande et réappro sous le mini | `modules/stock` | — | A FAIRE |
+| 8 | Règle de ventilation d'une demande et réappro sous le mini | `modules/stock` | — | FAIT (13/11/2026) |
 | 9 | Ordres d'exécution filtrés et demandes d'appro ventilées | cœur | 7, 8 | A FAIRE |
 | 10 | File des propositions | `modules/mcp` + cœur | 5 | A FAIRE |
 | 11 | Écrans : délégations, paramétrage, journal, pastille 🤖 | `modules/mcp` (ui) + cœur | 10 | A FAIRE |
@@ -251,6 +251,28 @@ Hors plan (Q13) : agent hébergé (automatisations planifiées, panneau intégr�
   (quantité pour revenir au maxi, sinon au mini) **avec les autres articles du dépôt à moins de `proche_mini` %
   au-dessus de leur mini** (20 % par défaut), regroupés par fournisseur principal.
 - **Critère de fin** : jeu vert en JS et en C#.
+- **Réalisé** (13/11/2026) : `modules/stock/js/src/ventilation.js` ↔ `modules/stock/dotnet/LogiBTP.Stock/ReglesVentilation.cs`, jeu
+  `tests/cas/07_ventilation.json` (stock suffisant, mini franchi → réappro avec références proches par fournisseur, `proche_mini`
+  paramétré, commande trop tardive écartée et commande en retard comptée aujourd'hui, achat au conditionnement, plusieurs dépôts),
+  tests `stock.test.js` et `ReglesVentilationTests` ; codes `NATURE_PART_APPRO` (STOCK, COMMANDE, ACHAT) ↔ `NaturePartAppro`,
+  `MOTIF_REAPPRO` (MINI_FRANCHI, PROCHE_MINI) ↔ `MotifReappro` (`CodesTests`). Signatures pour le lot 9 :
+  JS `ventiler({ aujourdhui, besoins: [{ id, article, quantite, date_besoin, depot_prefere }], depots: [{ id, articles: [{ article,
+  stock, mini, maxi, evenements }] }], commandes: [{ id, article, reste, date_livraison, fournisseur }], articles: [{ article,
+  fournisseur, conditionnement }], proche_mini = 20 })` → `{ besoins: [{ id, article, quantite, parts }], reappros: [{ depot,
+  fournisseurs: [{ fournisseur, lignes: [{ article, motif, disponible, mini, maxi, quantite, unites_achat }] }] }] }` ; C#
+  `ReglesVentilation.Ventiler(string aujourdhui, IReadOnlyList<BesoinStock>, IReadOnlyList<DepotDisponible>,
+  IReadOnlyList<CommandeARecevoir>, IReadOnlyList<ArticleFournisseur>, decimal procheMini = 20)` → `VentilationStock(Besoins:
+  List<BesoinVentile(Id, Article, Quantite, Parts: List<PartBesoin(Nature, Depot, Commande, Fournisseur, Quantite, UnitesAchat)>)>,
+  Reappros: List<DemandeReappro(Depot, Fournisseurs: List<FournisseurReappro(Fournisseur, Lignes: List<LigneReappro(Article, Motif,
+  Disponible, Mini, Maxi, Quantite, UnitesAchat)>)>)>)` ; `ArticleDuDepot(Article, Stock, Mini, Maxi, Evenements:
+  IReadOnlyList<EvenementPrevu>)` (identifiants en chaînes, quantités en unité de stock), `AuConditionnement(quantite, conditionnement)`.
+  Choix : besoins servis par date de besoin (date passée = aujourd'hui) puis ordre reçu ; prenable = disponible projeté le plus bas
+  de la date de besoin à la fin de la projection (réservations et entrées prévues, prélèvements déjà ventilés compris) ; réappro
+  déclenché par tout article **prélevé** qui finit sous son mini (même s'il y était déjà), pas par un article non prélevé déjà
+  sous le mini (il figure alors en PROCHE_MINI d'une demande déclenchée) ; ligne sans besoin positif (pas de maxi et disponible
+  ≥ mini) non proposée ; achats non regroupés entre besoins (un ACHAT arrondi par besoin). Au lot 9 : passer en commandes le
+  seul reste **non affecté** et **hors des événements ENTREE des dépôts** (sinon compté deux fois), conditionnement et
+  fournisseur de `ApprovisionnementsAsync`.
 
 ## Lot 9 : ordres d'exécution filtrés et demandes d'appro ventilées
 
