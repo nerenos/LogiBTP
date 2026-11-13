@@ -13,6 +13,7 @@ using LogiBTP.Listes.Web;
 using LogiBTP.Socle.Web;
 using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Api.Btp;
 
@@ -21,7 +22,7 @@ namespace LogiBTP.Api.Btp;
 /// répliques de validerMetier (client/src/app/fiches/fiches.js, fiche-annuaire.js) ; prix des éléments recalculés avant
 /// écriture ; champs gérés de l'annuaire (coordonnées, rattachements, liens) délégués à ServiceAnnuaire.
 /// </summary>
-public sealed class SpecialisationFicheBtp(IServiceScopeFactory scopes) : SpecialisationFiche
+public sealed class SpecialisationFicheBtp(AccesPortee scopes) : SpecialisationFiche
 {
     private static readonly LogiBTP.Documents.Web.NettoyageHtml Html = new();
 
@@ -40,7 +41,7 @@ public sealed class SpecialisationFicheBtp(IServiceScopeFactory scopes) : Specia
     public override async Task AvantEcritureAsync(string type, bool creation, string? id, Dictionary<string, string?> aEcrire,
         IReadOnlyDictionary<string, object?> valeurs, IReadOnlyDictionary<string, object?> proprietes, Utilisateur u, CancellationToken ct)
     {
-        using var scope = scopes.CreateScope();
+        using var scope = scopes.Ouvrir();
         // État d'utilisation (db/228) : « actif » suit l'usage saisi (en sommeil = inactif ; le trigger fait de même en base).
         if (aEcrire.ContainsKey("usage") && valeurs.ContainsKey("actif"))
         {
@@ -95,7 +96,7 @@ public sealed class SpecialisationFicheBtp(IServiceScopeFactory scopes) : Specia
     public override async Task ApresEcritureAsync(string type, string id, bool creation, Utilisateur u, CancellationToken ct)
     {
         if (type is not (TypesFiche.Chantier or TypesFiche.Personne) || !long.TryParse(id, NumberStyles.None, CultureInfo.InvariantCulture, out var cle)) return;
-        using var scope = scopes.CreateScope();
+        using var scope = scopes.Ouvrir();
         var geo = scope.ServiceProvider.GetService<Geocodage>();
         if (geo is null) return;
         try
@@ -117,7 +118,7 @@ public sealed class SpecialisationFicheBtp(IServiceScopeFactory scopes) : Specia
     public override async Task<string?> CodeParentChronoAsync(string type, string champ, string valeur, CancellationToken ct)
     {
         if (type != TypesFiche.Marche || champ != "cha_id" || !long.TryParse(valeur, NumberStyles.None, CultureInfo.InvariantCulture, out var cha)) return null;
-        using var scope = scopes.CreateScope();
+        using var scope = scopes.Ouvrir();
         var db = scope.ServiceProvider.GetRequiredService<LogiBtpContext>();
         var l = await db.Database.SqlQuery<ParentChrono>($"""
             SELECT c.cha_code AS code, coalesce(p.chf_prefixe, t.tyf_definition -> 'chrono' ->> 'prefixe') AS prefixe
@@ -133,14 +134,14 @@ public sealed class SpecialisationFicheBtp(IServiceScopeFactory scopes) : Specia
 
     public override async Task AvantSuppressionAsync(string type, string id, Utilisateur u, CancellationToken ct)
     {
-        using var scope = scopes.CreateScope();
+        using var scope = scopes.Ouvrir();
         await SuppressionFiches.Controler(scope.ServiceProvider.GetRequiredService<LogiBtpContext>(), type, id, ct);
     }
 
     /// <summary>Bandeau de synthèse et compteurs des onglets des fiches du cœur (<see cref="SynthesesFiches"/>).</summary>
     public override async Task<SyntheseFiche?> SyntheseAsync(string type, string id, Utilisateur u, CancellationToken ct)
     {
-        using var scope = scopes.CreateScope();
+        using var scope = scopes.Ouvrir();
         return await SynthesesFiches.CalculerAsync(scope.ServiceProvider.GetRequiredService<LogiBtpContext>(), type, id, ct);
     }
 
@@ -150,11 +151,11 @@ public sealed class SpecialisationFicheBtp(IServiceScopeFactory scopes) : Specia
     {
         if (Intervenants.Gere(type))
         {
-            using var s = scopes.CreateScope();
+            using var s = scopes.Ouvrir();
             return new Dictionary<string, object?> { ["intervenants"] = await Intervenants.Lire(s.ServiceProvider.GetRequiredService<LogiBtpContext>(), type, long.Parse(id), ct) };
         }
         if (!Annuaire(type)) return await base.LireGeresAsync(type, id, u, ct);
-        using var scope = scopes.CreateScope();
+        using var scope = scopes.Ouvrir();
         var geres = new Dictionary<string, object?>(await scope.ServiceProvider.GetRequiredService<ServiceAnnuaire>().LireGeres(type, long.Parse(id), ct));
         // Fiche individu : salarié lié (module salariés du cœur).
         if (type == TypesFiche.Individu) geres["salarie"] = await SalariesAnnuaire.Salarie(scope.ServiceProvider, long.Parse(id), ct);
@@ -165,12 +166,12 @@ public sealed class SpecialisationFicheBtp(IServiceScopeFactory scopes) : Specia
     {
         if (Intervenants.Gere(type) && geres.TryGetValue("intervenants", out var itv))
         {
-            using var s = scopes.CreateScope();
+            using var s = scopes.Ouvrir();
             await Intervenants.Valider(s.ServiceProvider.GetRequiredService<LogiBtpContext>(), Intervenants.Lus(itv), 'S', ct);
             return;
         }
         if (!Annuaire(type) || geres.Count == 0) return;
-        using var scope = scopes.CreateScope();
+        using var scope = scopes.Ouvrir();
         await scope.ServiceProvider.GetRequiredService<ServiceAnnuaire>().ValiderGeres(type, id is null ? null : long.Parse(id), geres, ct);
     }
 
@@ -179,12 +180,12 @@ public sealed class SpecialisationFicheBtp(IServiceScopeFactory scopes) : Specia
         if (Intervenants.Gere(type))
         {
             if (!geres.TryGetValue("intervenants", out var itv)) return;
-            using var s = scopes.CreateScope();
+            using var s = scopes.Ouvrir();
             await Intervenants.Ecrire(s.ServiceProvider.GetRequiredService<LogiBtpContext>(), type, long.Parse(id), Intervenants.Lus(itv), ct);
             return;
         }
         if (!Annuaire(type)) { await base.EcrireGeresAsync(type, id, creation, geres, valeurs, u, ct); return; }
-        using var scope = scopes.CreateScope();
+        using var scope = scopes.Ouvrir();
         await scope.ServiceProvider.GetRequiredService<ServiceAnnuaire>().EcrireGeres(type, long.Parse(id), geres, u, ct);
     }
 
@@ -224,7 +225,7 @@ public sealed class SpecialisationFicheBtp(IServiceScopeFactory scopes) : Specia
 /// Listes du cœur : une saisie dans une liste est refusée si la fiche de la ligne est en cours de modification par
 /// quelqu'un (le verrou de la fiche protège aussi les saisies rapides).
 /// </summary>
-public sealed class SpecialisationListeBtp(IServiceScopeFactory scopes) : SpecialisationListe
+public sealed class SpecialisationListeBtp(AccesPortee scopes) : SpecialisationListe
 {
     private static readonly Dictionary<string, string> FicheParSource = new() { ["salaries"] = TypesFiche.Salarie, ["materiels"] = TypesFiche.Materiel };
 
@@ -286,7 +287,7 @@ public sealed class SpecialisationListeBtp(IServiceScopeFactory scopes) : Specia
     public override async Task ValiderModification(SourceResolue source, string id, IReadOnlyDictionary<string, string?> valeurs, Utilisateur u, CancellationToken ct)
     {
         if (source.Code is null || !FicheParSource.TryGetValue(source.Code, out var type)) return;
-        using var scope = scopes.CreateScope();
+        using var scope = scopes.Ouvrir();
         var verrou = await scope.ServiceProvider.GetRequiredService<ServiceFiche>().Verrou(type, id, null, ct);
         if (verrou is not null)
         {

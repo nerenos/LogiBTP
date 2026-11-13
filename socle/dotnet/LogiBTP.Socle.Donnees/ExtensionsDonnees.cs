@@ -16,6 +16,8 @@ public static class ExtensionsDonnees
     {
         services.AddScoped(sp => new ConnexionRequete(sp.GetRequiredService<SocieteCourante>().Connexion));
         services.AddScoped<UniteEcriture>();
+        services.AddHttpContextAccessor();
+        services.AddSingleton<AccesPortee>();
         return services;
     }
 
