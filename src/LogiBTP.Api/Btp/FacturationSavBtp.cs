@@ -78,20 +78,28 @@ public static class FacturationSavBtp
         return lignes;
     }
 
-    private static async Task<ArticleSql?> ArticleAsync(LogiBtpContext db, string condition, NpgsqlParameter[] p, CancellationToken ct) =>
-        await db.Database.SqlQueryRaw<ArticleSql>($"""
-            SELECT e.ele_id AS id, e.ele_code AS code, e.ele_libelle_html AS libelle_html, e.ele_bib_id AS bib_id, b.bib_code, e.ele_unt_stock AS unt_stock,
-                   e.ele_pa AS pa, e.ele_coef_fg AS coef_fg, e.ele_coef_benef AS coef_benef, e.ele_pv AS pv, e.ele_coef_remise AS coef_remise,
-                   e.ele_nat_id AS nat_id, e.ele_cpt_code AS cpt_code, e.ele_tva_code AS tva_code
-            FROM element e JOIN bibliotheque b ON b.bib_id = e.ele_bib_id
-            WHERE e.ele_actif AND e.ele_type = 'ARTICLE' AND {condition}
-            ORDER BY b.bib_defaut DESC, e.ele_id LIMIT 1
-            """, p).FirstOrDefaultAsync(ct);
+    private const string SqlArticleDebut = """
+        SELECT e.ele_id AS id, e.ele_code AS code, e.ele_libelle_html AS libelle_html, e.ele_bib_id AS bib_id, b.bib_code, e.ele_unt_stock AS unt_stock,
+               e.ele_pa AS pa, e.ele_coef_fg AS coef_fg, e.ele_coef_benef AS coef_benef, e.ele_pv AS pv, e.ele_coef_remise AS coef_remise,
+               e.ele_nat_id AS nat_id, e.ele_cpt_code AS cpt_code, e.ele_tva_code AS tva_code
+        FROM element e JOIN bibliotheque b ON b.bib_id = e.ele_bib_id
+        WHERE e.ele_actif AND e.ele_type = 'ARTICLE' AND 
+        """;
+
+    private const string SqlArticleFin = "\nORDER BY b.bib_defaut DESC, e.ele_id LIMIT 1";
+
+    // Requêtes constantes (aucun fragment composé à l'exécution) : article du paramètre SAV, par bibliothèque et code, par code.
+    private const string SqlArticleParametre = SqlArticleDebut + "e.ele_id = (SELECT psa_ele_mo_id FROM parametre_sav WHERE psa_id = 1)" + SqlArticleFin;
+    private const string SqlArticleBibliothequeCode = SqlArticleDebut + "b.bib_code = @b AND e.ele_code = @c" + SqlArticleFin;
+    private const string SqlArticleCode = SqlArticleDebut + "e.ele_code = @c" + SqlArticleFin;
+
+    private static async Task<ArticleSql?> ArticleAsync(LogiBtpContext db, string sql, NpgsqlParameter[] p, CancellationToken ct) =>
+        await db.Database.SqlQueryRaw<ArticleSql>(sql, p).FirstOrDefaultAsync(ct);
 
     /// <summary>Article désigné en paramètre (null : aucun, ou plus actif).</summary>
     private static async Task<ArticleMainOeuvreSav?> ArticleParametreAsync(LogiBtpContext db, CancellationToken ct)
     {
-        var a = await ArticleAsync(db, "e.ele_id = (SELECT psa_ele_mo_id FROM parametre_sav WHERE psa_id = 1)", [], ct);
+        var a = await ArticleAsync(db, SqlArticleParametre, [], ct);
         return a is null ? null : new ArticleMainOeuvreSav(a.Id, a.Code, string.IsNullOrWhiteSpace(a.LibelleHtml) ? WebUtility.HtmlEncode(a.Code) : a.LibelleHtml,
             a.BibId, a.BibCode, a.UntStock, a.Pa, a.CoefFg, a.CoefBenef, a.Pv, a.CoefRemise, a.NatId, a.CptCode, a.TvaCode);
     }
@@ -150,8 +158,8 @@ public static class FacturationSavBtp
             {
                 var deux = saisi.Split(':', 2);
                 var a = deux.Length == 2
-                    ? await ArticleAsync(db, "b.bib_code = @b AND e.ele_code = @c", [new NpgsqlParameter("b", deux[0].Trim()), new NpgsqlParameter("c", deux[1].Trim())], ct)
-                    : await ArticleAsync(db, "e.ele_code = @c", [new NpgsqlParameter("c", saisi)], ct);
+                    ? await ArticleAsync(db, SqlArticleBibliothequeCode, [new NpgsqlParameter("b", deux[0].Trim()), new NpgsqlParameter("c", deux[1].Trim())], ct)
+                    : await ArticleAsync(db, SqlArticleCode, [new NpgsqlParameter("c", saisi)], ct);
                 id = (a ?? throw ExceptionMetier.Invalide("SAV_ARTICLE", $"Article {saisi} introuvable (article actif de la bibliothèque)")).Id;
             }
             await db.Database.ExecuteSqlRawAsync("""

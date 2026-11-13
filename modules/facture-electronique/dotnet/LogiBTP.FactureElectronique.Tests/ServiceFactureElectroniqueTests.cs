@@ -449,7 +449,7 @@ public sealed class ServiceFactureElectroniqueTests : IAsyncLifetime
         await using (var tx = await db.Database.BeginTransactionAsync())
         {
             await db.Database.ExecuteSqlRawAsync("ALTER TABLE fe_evenement DISABLE TRIGGER tr_fe_evenement_immuable");
-            await db.Database.ExecuteSqlRawAsync($"UPDATE fe_evenement SET fev_etat_apres = 'TRAITE' WHERE fev_id = {dernier.Id}");
+            await db.Database.ExecuteSqlRawAsync("UPDATE fe_evenement SET fev_etat_apres = 'TRAITE' WHERE fev_id = {0}", dernier.Id);
             var altere = await s.VerifierJournal(default);
             Assert.Equal((false, dernier.Rang, "Entrée modifiée"), (altere.Ok, altere.RangRompu, altere.Raison));
             await tx.RollbackAsync();

@@ -56,7 +56,7 @@ public static class AtelierBtp
                                  AND m.type IN ('SALARIE', 'INTERIM') AND m.ressource = @s::text)
                     OR (EXISTS (SELECT 1 FROM salarie sa JOIN service_membre sm ON sm.sme_ind_id = sa.sal_ind_id JOIN service sv ON sv.srv_id = d.ent_srv_id
                                 WHERE sa.sal_id = @s AND sm.sme_srv_id IN (sv.srv_id, sv.srv_parent_id))
-                        AND d.ent_chantier_id IN ({LiaisonsBtp.SqlChantiersDuJour("current_date")})))
+                        AND d.ent_chantier_id IN ({LiaisonsBtp.SqlChantiersDuJour})))
                 ORDER BY d.ent_fin_prevue NULLS LAST, d.ent_id
                 LIMIT 50
                 """
