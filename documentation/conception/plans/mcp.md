@@ -30,7 +30,7 @@
 | 11 | Écrans : délégations, paramétrage, journal, pastille 🤖 | `modules/mcp` (ui) + cœur | 10 | FAIT (13/11/2026) |
 | 12 | Serveur d'autorisation OAuth 2.1 | `modules/mcp` | 5 | FAIT (13/11/2026) |
 | 13 | Recettes (prompts MCP) et « Demander à l'agent » | `modules/mcp` + cœur | 11 | FAIT (13/11/2026) |
-| 14 | Documentation | tous | 0–13 | A FAIRE |
+| 14 | Documentation | tous | 0–13 | FAIT (13/11/2026) |
 
 Hors plan (Q13) : agent hébergé (automatisations planifiées, panneau intégré).
 
@@ -466,3 +466,5 @@ Hors plan (Q13) : agent hébergé (automatisations planifiées, panneau intégr�
   consentement = délégation (modèle, durée, garde-fous), révocation depuis Mon compte › Agents ; exposition HTTPS publique de
   `/mcp`, `/.well-known/oauth-*` et `/api/mcp/oauth/authorize|token` (la page `/agents/autoriser` reste derrière la session) ;
   Claude Code : jeton d'agent (lot 11) ou OAuth avec retour en boucle locale (port libre, lot 13) ; recettes (prompts MCP) et bouton « Demander à l'agent » (lot 13).
+
+**Réalisé** : `documentation/modules/MCP.md` (référence, scripts SQL, RGPD : aucun registre dans le dépôt), `documentation/developpeur/GUIDE-AGENTS-MCP.md` (connexion Claude Code, claude.ai, révocation, journal), `modules/mcp/CLAUDE.md` resserré, `MODULES.md`, `JOURNAL-LOTS.md`, en-tête de l'analyse, `TODO.md`, `npm run rapport-dependances`.

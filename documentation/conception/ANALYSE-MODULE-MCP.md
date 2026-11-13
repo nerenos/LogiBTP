@@ -1,5 +1,7 @@
 # LogiBTP – analyse du module MCP (agents IA connectés à l'application)
 
+> **État (13/11/2026)** : réalisé en 15 lots (0 à 14), voir le [plan](plans/mcp.md) ; Q10 décidée autrement que proposé (ventilation sous le mini permise, réapprovisionnement déclenché). Documentation : [MCP.md](../modules/MCP.md).
+>
 > Analyse préalable (13/11/2026), à valider avant tout développement. Aucune ligne de code n'est écrite tant que les
 > questions du § 12 n'ont pas de réponse et que le plan (§ 13) n'est pas validé lot par lot.
 > Points de départ : module Droits ([ANALYSE-MODULE-DROITS.md](ANALYSE-MODULE-DROITS.md) : profils, nœuds, portées,

@@ -42,14 +42,14 @@ Analyses validées le 23/10/2026 : [ANALYSE-MODULE-MAIL.md](documentation/concep
   rafraîchissement rotatif, machines connues, double facteur par courriel, exclusion d'IP, identifiants API, deux clés
   (`.env`, données) ; profil par défaut = saisie mobile (A5 révisée) ; à reprendre par le Mail (comptes, boîtes,
   « À rapprocher ») et l'OAuth (reconnexion des connexions).
-- [ ] **Module MCP** (agents IA au nom d'un utilisateur, [plan](documentation/conception/plans/mcp.md), lots 0 à 13 faits
+- [ ] **Module MCP** (agents IA au nom d'un utilisateur, [plan](documentation/conception/plans/mcp.md), lots 0 à 14 faits
   le 13/11/2026 : audit des routes, contrats du socle, règles de délégation `modules/mcp`, plafond appliqué par les
   Droits, jetons délégués, point `/mcp`, délégations, journal, outils de lecture du cœur et garde-fous du BTP, activation
   par société, liste blanche exacte, contrôles par identité bornés au plafond, outils d'écriture des devis et origine
   AGENT de l'historique des pièces, règle de ventilation et réappro sous le mini du module Stock, ordres d'exécution filtrés,
   demandes d'appro en unité de stock et ventilation proposée, file des propositions acceptées sous l'identité de l'humain, écrans des délégations, du paramétrage, du journal et des
   propositions, pastille 🤖 des pièces, serveur d'autorisation OAuth 2.1 du point `/mcp`, recettes exposées en prompts MCP et
-  bouton « Demander à l'agent ») : lot 14 (documentation avec le guide de connexion claude.ai). Restent :
+  bouton « Demander à l'agent » ; documentation : [MCP.md](documentation/modules/MCP.md), [guide](documentation/developpeur/GUIDE-AGENTS-MCP.md)). **Reports MCP regroupés ici** ; restent :
   - OAuth (lot 12) : adresses des documents de client claude.ai et Claude Code pré-renseignées (`099w`) à vérifier par un essai réel
     du connecteur claude.ai (installation exposée en HTTPS public : `/mcp`, `/.well-known/oauth-*`, `/api/mcp/oauth/authorize|token`) ;
     retour en boucle locale : port libre accepté depuis le lot 13 (RFC 8252 § 7.3, `http` sur `127.0.0.1`, `[::1]` ou `localhost`

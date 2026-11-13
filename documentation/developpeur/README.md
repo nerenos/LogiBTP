@@ -6,6 +6,8 @@
 
 ---
 
+Guide de connexion des agents IA : [GUIDE-AGENTS-MCP.md](GUIDE-AGENTS-MCP.md).
+
 ## 🎯 Objectif de cette documentation
 
 Fournir une référence complète, structurée et maintenable pour tout développeur rejoignant le projet ou devant intervenir sur une partie spécifique (Client, API, BDD). La documentation suit l'architecture du projet : **Socle → Modules → Cœur**.
