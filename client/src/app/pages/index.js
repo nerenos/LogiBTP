@@ -30,7 +30,7 @@ import { PageImportOptim } from './import-optim.js';
 import { PageImportCarburant } from './import-carburant.js';
 import { PageReglements } from './reglements.js';
 import { PageRelances } from './relances.js';
-import { PageParametresAgents, PageJournalAgents, PagePropositionsAgents, PagePropositionAgent } from './agents.js';
+import { PageParametresAgents, PageJournalAgents, PagePropositionsAgents, PagePropositionAgent, PageAutorisationAgent } from './agents.js';
 import { PageFactureElectronique } from './facture-electronique.js';
 import { PageMarchesAFacturer } from './marches-a-facturer.js';
 import { PageEdition } from './edition.js';
@@ -174,6 +174,8 @@ export const ROUTES = [
   { nom: 'agents-proposition', chemin: '/agents/propositions/:id', page: PagePropositionAgent, titre: texte('agents_btp.routes.propositions') },
   { nom: 'agents-journal', chemin: '/agents/journal', page: PageJournalAgents, titre: texte('agents_btp.routes.journal') },
   { nom: 'parametres-agents', chemin: '/parametres/agents', page: PageParametresAgents, titre: texte('agents_btp.routes.parametres') },
+  // Consentement OAuth d'un client distant (lot 12) : ?demande=… (création de la délégation) ou ?erreur=CODE.
+  { nom: 'agents-autoriser', chemin: '/agents/autoriser', page: PageAutorisationAgent, titre: texte('agents_btp.routes.autoriser') },
   { nom: 'facture-electronique', chemin: '/facture-electronique', page: PageFactureElectronique, titre: texte('facture_electronique_btp.routes.page') },
   { nom: 'marches-a-facturer', chemin: '/marches/a-facturer', page: PageMarchesAFacturer, titre: texte('structure_btp.routes.marches_a_facturer') },
   { nom: 'crm-note', chemin: '/crm/note/:id', page: PageNoteCrm, titre: texte('crm_btp.routes.note') },

@@ -22,6 +22,8 @@ public class DelegationMcp
     public DateTimeOffset? MdePremierUsage { get; set; }
     public DateTimeOffset? MdeRevoqueeLe { get; set; }
     public string? MdeRevoqueePar { get; set; }
+    /// <summary>Identifiant (adresse du document) du client OAuth dont le consentement a créé la délégation (lot 12).</summary>
+    public string? MdeClientOauth { get; set; }
 
     /// <summary>Active à la date : ni révoquée, ni échue (l'échéance est le premier jour sans délégation).</summary>
     public bool Active(DateOnly jour) => MdeRevoqueeLe is null && jour < MdeEcheance;
@@ -106,6 +108,56 @@ public class CompteurMcp
     public int McoElements { get; set; }
 }
 
+/// <summary>Client OAuth de la liste blanche de la société (mcp_client_oauth, lot 12) : adresse du document CIMD, libellé, actif.</summary>
+public class ClientOAuthMcp
+{
+    public string MclClientId { get; set; } = "";
+    public string MclLibelle { get; set; } = "";
+    public bool MclActif { get; set; } = true;
+    public DateTimeOffset MclModifieLe { get; set; }
+    public string MclModifiePar { get; set; } = "";
+}
+
+/// <summary>
+/// Demande d'autorisation OAuth (mcp_oauth_autorisation, lot 12) : client, adresse de retour exacte, état du client, défi
+/// PKCE, ressource ; après consentement : délégation créée et empreinte du code (usage unique).
+/// </summary>
+public class AutorisationOAuthMcp
+{
+    public long MauId { get; set; }
+    public string MauDemande { get; set; } = "";
+    public string MauClientId { get; set; } = "";
+    public string MauClientNom { get; set; } = "";
+    public string MauRedirection { get; set; } = "";
+    public string? MauEtatClient { get; set; }
+    public string MauDefi { get; set; } = "";
+    public string MauRessource { get; set; } = "";
+    public string? MauPortee { get; set; }
+    public DateTimeOffset MauCreeLe { get; set; }
+    public DateTimeOffset MauExpireLe { get; set; }
+    public DateTimeOffset? MauDecideeLe { get; set; }
+    public string? MauDecideePar { get; set; }
+    public bool MauRefusee { get; set; }
+    public string? MauDelegation { get; set; }
+    public string? MauCodeEmpreinte { get; set; }
+    public DateTimeOffset? MauCodeExpireLe { get; set; }
+    public DateTimeOffset? MauCodeUtiliseLe { get; set; }
+}
+
+/// <summary>Jeton de rafraîchissement OAuth (mcp_oauth_rafraichissement, lot 12) : empreinte seule, rotatif, usage unique.</summary>
+public class RafraichissementOAuthMcp
+{
+    public long MraId { get; set; }
+    public string MraEmpreinte { get; set; } = "";
+    public string MraDelegation { get; set; } = "";
+    public string MraClientId { get; set; } = "";
+    public string MraRessource { get; set; } = "";
+    public DateTimeOffset MraCreeLe { get; set; }
+    public DateTimeOffset MraExpireLe { get; set; }
+    public DateTimeOffset? MraUtiliseLe { get; set; }
+    public DateTimeOffset? MraRevoqueLe { get; set; }
+}
+
 /// <summary>Contexte EF Core du module (modules/mcp/db) ; snake_case par la convention de l'application.</summary>
 public class McpDbContext(DbContextOptions<McpDbContext> options) : DbContext(options)
 {
@@ -114,6 +166,9 @@ public class McpDbContext(DbContextOptions<McpDbContext> options) : DbContext(op
     public DbSet<JournalAgent> Journal => Set<JournalAgent>();
     public DbSet<CompteurMcp> Compteurs => Set<CompteurMcp>();
     public DbSet<PropositionMcp> Propositions => Set<PropositionMcp>();
+    public DbSet<ClientOAuthMcp> ClientsOAuth => Set<ClientOAuthMcp>();
+    public DbSet<AutorisationOAuthMcp> AutorisationsOAuth => Set<AutorisationOAuthMcp>();
+    public DbSet<RafraichissementOAuthMcp> RafraichissementsOAuth => Set<RafraichissementOAuthMcp>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -145,5 +200,8 @@ public class McpDbContext(DbContextOptions<McpDbContext> options) : DbContext(op
                 e.Property(p).HasColumnType("jsonb");
             e.Property(x => x.MprCreeLe).HasDefaultValueSql("now()");
         });
+        b.Entity<ClientOAuthMcp>(e => e.ToTable("mcp_client_oauth").HasKey(x => x.MclClientId));
+        b.Entity<AutorisationOAuthMcp>(e => e.ToTable("mcp_oauth_autorisation").HasKey(x => x.MauId));
+        b.Entity<RafraichissementOAuthMcp>(e => e.ToTable("mcp_oauth_rafraichissement").HasKey(x => x.MraId));
     }
 }

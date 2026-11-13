@@ -217,6 +217,39 @@
       "json_invalide": "Contenu JSON invalide (un objet est attendu).",
       "enregistrer_correction": "Enregistrer la correction",
       "corrigee_ok": "Correction enregistrée"
+    },
+    "oauth": {
+      "titre": "Autoriser un agent IA",
+      "demande": "« {{client}} » demande à agir dans LogiBTP en votre nom.",
+      "client_id": "Client : {{client_id}}",
+      "retour": "Après votre réponse, vous serez renvoyé vers {{retour}}.",
+      "expire": "Demande valable jusqu'au {{date}}.",
+      "explication": "Autoriser crée une délégation : l'agent n'aura jamais plus que ce plafond, ni plus que vos propres droits, jusqu'à l'échéance ; vous pourrez la révoquer à tout moment depuis Mon compte › Agents.",
+      "autoriser": "Autoriser",
+      "refuser": "Refuser",
+      "retour_client": "Retour vers le client de l'agent…",
+      "erreurs": {
+        "MCP_OAUTH_CLIENT": "Ce client n'est pas autorisé pour la société (liste blanche des clients OAuth) ou sa description est invalide.",
+        "MCP_OAUTH_REDIRECTION": "L'adresse de retour demandée ne figure pas dans la description du client : la demande est refusée.",
+        "MCP_OAUTH_DEMANDE": "Cette demande d'autorisation est inconnue, échue ou déjà traitée : relancez la connexion depuis le client.",
+        "autre": "La demande d'autorisation n'a pas pu être traitée.",
+        "aide": "Aucune délégation n'a été créée. Si le client doit être admis, demandez à l'administrateur de l'ajouter dans Paramètres › Agents IA."
+      }
+    },
+    "clients": {
+      "titre": "Clients OAuth autorisés",
+      "aide": "Clients distants (connecteur claude.ai…) admis à demander une autorisation : adresse de leur document de métadonnées (https). Un client désactivé ou retiré ne peut plus rien demander ; ses délégations existantes restent à révoquer.",
+      "actif": "Actif",
+      "libelle": "Libellé",
+      "client_id": "Adresse du document du client",
+      "exemple": "https://client.exemple/oauth/metadata",
+      "modifie": "modifié le {{date}} par {{par}}",
+      "ajouter": "Ajouter le client",
+      "retirer": "Retirer",
+      "confirmer_retrait": "Retirer « {{client}} » de la liste des clients autorisés ?",
+      "enregistrer": "Enregistrer",
+      "aucun": "Aucun client OAuth autorisé : seuls les jetons d'agent (Mon compte › Agents) permettent de se connecter.",
+      "enregistre": "Liste des clients enregistrée"
     }
   }
 }

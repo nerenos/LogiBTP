@@ -28,7 +28,7 @@
 | 9 | Ordres d'exécution filtrés et demandes d'appro ventilées | cœur | 7, 8 | FAIT (13/11/2026) |
 | 10 | File des propositions | `modules/mcp` + cœur | 5 | FAIT (13/11/2026) |
 | 11 | Écrans : délégations, paramétrage, journal, pastille 🤖 | `modules/mcp` (ui) + cœur | 10 | FAIT (13/11/2026) |
-| 12 | Serveur d'autorisation OAuth 2.1 | `modules/mcp` | 5 | A FAIRE |
+| 12 | Serveur d'autorisation OAuth 2.1 | `modules/mcp` | 5 | FAIT (13/11/2026) |
 | 13 | Recettes (prompts MCP) et « Demander à l'agent » | `modules/mcp` + cœur | 11 | A FAIRE |
 | 14 | Documentation | tous | 0–13 | A FAIRE |
 
@@ -385,6 +385,42 @@ Hors plan (Q13) : agent hébergé (automatisations planifiées, panneau intégr�
   + PKCE S256, rafraîchissement rotatif), clients par document de métadonnées (CIMD) et liste blanche par société,
   audience `/mcp` (RFC 8707) ; jetons émis par `IJetonsDelegues`.
 - **Critère de fin** : tests du flux (PKCE, client non autorisé refusé, audience).
+- **Réalisé** (13/11/2026) : `modules/mcp/db/099w_mcp_oauth.sql` (rejouable, manifeste) : `mcp_client_oauth` (liste blanche par
+  société, `https://claude.ai/oauth/mcp-oauth-client-metadata` et `https://claude.ai/oauth/claude-code-client-metadata`
+  pré-renseignés, désactivables), `mcp_oauth_autorisation` (demande puis code : empreinte seule, 5 min, usage unique),
+  `mcp_oauth_rafraichissement` (empreinte seule, rotatif), `mcp_delegation.mde_client_oauth`. Règles sans base
+  `LogiBTP.Mcp/ReglesOAuth.cs` (C# seul, comme `ReglesJetonsDelegues` : le navigateur ne voit ni code ni jeton) : `ClientIdValide`
+  (CIMD : https, chemin, sans fragment ni identifiants ni `..`), `ControlerDocument` (`client_id` identique, retours https ou boucle
+  locale, client public `none`, octroi `authorization_code`), `RedirectionPermise` (égalité exacte), `DefiValide` /
+  `VerificateurValide` / `PkceValide` (S256 seul, temps constant), `Ressource` / `RessourceEgale` (audience = `/mcp` de la société,
+  RFC 8707), `EcheanceAcces` (15 min bornées à la fin de la délégation), codes `ErreurOAuth` de la norme. `LogiBTP.Mcp.Web` :
+  `IDocumentsClients` / `DocumentsClientsHttp` (document lu seulement pour un client de la liste blanche, 5 s, 16 Kio, sans
+  redirection, cache 10 min ; substituable), `ServiceOAuth` : métadonnées RFC 9728 (`/.well-known/oauth-protected-resource` et
+  `…/mcp`) et RFC 8414 (`/.well-known/oauth-authorization-server`, `client_id_metadata_document_supported`, `iss` de la RFC 9207),
+  404 module inactif ; `GET /api/mcp/oauth/authorize` (publique : le cookie SameSite=Strict n'est pas envoyé depuis le site du client)
+  → page de consentement `SpecialisationMcp.AdresseConsentement` avec `?erreur=MCP_OAUTH_CLIENT|MCP_OAUTH_REDIRECTION` (jamais de
+  redirection vers une adresse non vérifiée) ou `?demande=…` (10 min) ; erreurs rendues au client vérifié (`unsupported_response_type`,
+  PKCE absent ou `plain`, `invalid_target`) ; consentement `GET /api/mcp/oauth/demandes/{d}`, `POST …/accepter` (délégation par
+  `ServiceDelegations.PreparerAsync`, mêmes contrôles que l'écran, client = nom du document) et `…/refuser` (`access_denied`) ;
+  `POST /api/mcp/oauth/token` (publique, formulaire, client public seul) : `authorization_code` (même client, même `redirect_uri`,
+  PKCE, ressource) et `refresh_token` (rotatif, usage unique) ; code ou jeton rejoué → délégation révoquée (`ServiceDelegations.
+  RevoquerAsync` interne : jetons délégués, jetons de rafraîchissement, propositions en attente), `MCP_OAUTH_REJEU` au journal ;
+  jeton d'accès = **jeton délégué** émis par `IJetonsDelegues.EmettreAsync` (15 min) : `/mcp` l'ouvre comme un jeton d'agent (même
+  `Utilisateur.Agent`, plafond, journal) ; aucune extension du socle ni de l'Authentification nécessaire. Débit : politique
+  `mcp_oauth` (30 / min / adresse) sur les deux routes publiques. 401 de `/mcp` : `WWW-Authenticate: Bearer resource_metadata="…",
+  scope="mcp"`. Liste blanche : `GET|PUT /api/mcp/clients` (administrateur). Codes `MCP_OAUTH_DEMANDE`, `MCP_OAUTH_CLIENT`,
+  `MCP_OAUTH_REDIRECTION`, `MCP_OAUTH_REJEU` (parité `CodesTests`). Interface du module : `ConsentementOAuth` (formulaire de délégation
+  partagé avec Mon compte : `formulaireDelegationHtml` / `monterFormulaireDelegation`), `ClientsOAuth`. Cœur : `AdressesApp.
+  UrlAutorisationAgent` ↔ `URL_AUTORISATION_AGENT` (`/agents/autoriser`, `PageAutorisationAgent`), liste blanche montée dans
+  `/parametres/agents`, `Extensions.RoutesPubliques` ajoutées à `OptionsAuthentification.RoutesPubliques`, droits (`authorize`,
+  `token` Publique ; `oauth/demandes` Module `agents` ; `/api/mcp/clients` Parametrage) et écritures (`token` Session, `demandes`
+  Action, `clients` Parametrage). Tests : `ReglesOAuthTests`, `OAuthMcpTests` (Kestrel, `LOGIBTP_TEST_PG` : métadonnées, 401 avec
+  `resource_metadata`, code + PKCE → jeton accepté par `/mcp` sous la délégation consentie, PKCE faux, retour différent, client hors
+  liste ou désactivé, audience d'une autre société, code rejoué et rafraîchissement rejoué → révocation), écrans
+  (`ecrans.test.js`, `client/test/agents.test.js`). Choix : exclusion d'adresse du module Authentification non appliquée (aucun
+  contrat du socle ; codes et jetons de 32 octets, débit borné) ; `resource` facultatif (absent : `/mcp` de la société) ; client
+  sans enregistrement dynamique (CIMD seul). Guide de connexion claude.ai (connecteur personnalisé, adresse `https://<société>/mcp`,
+  exposition HTTPS publique de `/mcp`, `/.well-known/*` et `/api/mcp/oauth/*`) : lot 14.
 
 ## Lot 13 : recettes et « Demander à l'agent »
 
@@ -397,3 +433,8 @@ Hors plan (Q13) : agent hébergé (automatisations planifiées, panneau intégr�
 
 - `modules/mcp/CLAUDE.md`, `documentation/modules/MCP.md`, guide de connexion (Claude Code, claude.ai),
   `MODULES.md`, `JOURNAL-LOTS.md`, `TODO.md`, `npm run rapport-dependances`, registre RGPD (traitement « agents »).
+- Guide claude.ai (noté au lot 12) : connecteur personnalisé à l'adresse `https://<société>/mcp` (OAuth découvert par le 401 et
+  `/.well-known/oauth-protected-resource/mcp`), client claude.ai actif dans Paramètres › Agents IA › Clients OAuth autorisés,
+  consentement = délégation (modèle, durée, garde-fous), révocation depuis Mon compte › Agents ; exposition HTTPS publique de
+  `/mcp`, `/.well-known/oauth-*` et `/api/mcp/oauth/authorize|token` (la page `/agents/autoriser` reste derrière la session) ;
+  Claude Code : jeton d'agent (lot 11) ou OAuth avec retour en boucle locale (port à déclarer exactement, voir TODO).

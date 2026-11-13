@@ -755,5 +755,6 @@
   "agents_btp_propositions": "📨",
   "agents_btp_journal": "📜",
   "agents_btp_delegations": "🔑",
-  "agents_btp_parametres": "🤖"
+  "agents_btp_parametres": "🤖",
+  "agents_btp_autoriser": "🔗"
 }

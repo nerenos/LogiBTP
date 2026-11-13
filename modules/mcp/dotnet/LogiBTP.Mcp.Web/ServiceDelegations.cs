@@ -15,7 +15,7 @@ public sealed record DelegationDemandee(string? Libelle, string? Modele, int? Jo
 /// <summary>Délégation décrite (jamais le secret) ; <c>Active</c> : ni révoquée, ni échue.</summary>
 public sealed record DelegationDecrite(string Code, string Compte, string Libelle, string Modele, IReadOnlyDictionary<string, IReadOnlyList<string>>? Noeuds,
     string? Portee, IReadOnlyList<string> Leves, string Client, DateOnly Echeance, DateTimeOffset CreeLe, DateTimeOffset? PremierUsage,
-    DateTimeOffset? RevoqueeLe, string? RevoqueePar, bool Active);
+    DateTimeOffset? RevoqueeLe, string? RevoqueePar, bool Active, string? ClientOauth = null);
 
 /// <summary>Délégation créée : sa description et le secret du jeton délégué, rendu une seule fois.</summary>
 public sealed record DelegationCreee(DelegationDecrite Delegation, string Secret);
@@ -63,7 +63,7 @@ public sealed class ServiceDelegations(McpDbContext db, IJetonsDelegues jetons, 
 
     private static DelegationDecrite Decrire(DelegationMcp d) => new(d.MdeCode, d.MdeCompte, d.MdeLibelle, d.MdeModele,
         d.MdeNoeuds is null ? null : LecturesMcp.Noeuds(d.MdeNoeuds), d.MdePortee, LecturesMcp.Liste(d.MdeLeves), d.MdeClient, d.MdeEcheance,
-        d.MdeCreeLe, d.MdePremierUsage, d.MdeRevoqueeLe, d.MdeRevoqueePar, d.Active(LecturesMcp.Aujourdhui));
+        d.MdeCreeLe, d.MdePremierUsage, d.MdeRevoqueeLe, d.MdeRevoqueePar, d.Active(LecturesMcp.Aujourdhui), d.MdeClientOauth);
 
     /// <summary>Profil total du délégant (module Droits s'il est branché, sinon profil ADMIN).</summary>
     private async Task<bool> TotalAsync(Utilisateur u, CancellationToken ct) =>
@@ -98,6 +98,23 @@ public sealed class ServiceDelegations(McpDbContext db, IJetonsDelegues jetons, 
     /// </summary>
     public async Task<DelegationCreee> CreerAsync(DelegationDemandee saisie, Utilisateur u, CancellationToken ct)
     {
+        var d = await PreparerAsync(saisie, u, ct);
+        var secret = await db.Unite().ExecuterAsync(async jeton =>
+        {
+            db.Delegations.Add(d);
+            await db.SaveChangesAsync(jeton);
+            return await jetons.EmettreAsync(u.Code, d.MdeCode, d.MdeClient, d.MdeEcheance.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc), jeton);
+        }, ct);
+        return new DelegationCreee(Decrire(d), secret);
+    }
+
+    /// <summary>
+    /// Délégation contrôlée (ReglesDelegation : modèle permis, profil total jamais « comme moi », échéance, garde-fous
+    /// levables, portée, nœuds sur mesure), non enregistrée ; 422 avec le premier code d'ERREUR_MCP. Partagée par la
+    /// création depuis l'écran et le consentement OAuth (lot 12).
+    /// </summary>
+    internal async Task<DelegationMcp> PreparerAsync(DelegationDemandee saisie, Utilisateur u, CancellationToken ct)
+    {
         ExigerHumain(u);
         var levees = await LecturesMcp.LeveesAsync(db, u.Profil, ct);
         var leves = (saisie.Leves ?? []).Distinct().ToList();
@@ -108,7 +125,7 @@ public sealed class ServiceDelegations(McpDbContext db, IJetonsDelegues jetons, 
         if (erreurs.Count > 0) throw ExceptionMetier.Invalide(erreurs[0], "Délégation refusée", erreurs);
 
         var aujourdhui = LecturesMcp.Aujourdhui;
-        var d = new DelegationMcp
+        return new DelegationMcp
         {
             MdeCode = "D" + Convert.ToHexString(RandomNumberGenerator.GetBytes(10)),
             MdeCompte = u.Code,
@@ -123,14 +140,10 @@ public sealed class ServiceDelegations(McpDbContext db, IJetonsDelegues jetons, 
             MdeEcheance = ReglesDelegation.EcheanceDelegation(aujourdhui, saisie.Jours, levees.JoursMax),
             MdeCreeLe = DateTimeOffset.UtcNow,
         };
-        var secret = await db.Unite().ExecuterAsync(async jeton =>
-        {
-            db.Delegations.Add(d);
-            await db.SaveChangesAsync(jeton);
-            return await jetons.EmettreAsync(u.Code, d.MdeCode, d.MdeClient, d.MdeEcheance.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc), jeton);
-        }, ct);
-        return new DelegationCreee(Decrire(d), secret);
     }
+
+    /// <summary>Description d'une délégation (jamais de secret).</summary>
+    internal static DelegationDecrite Decrite(DelegationMcp d) => Decrire(d);
 
     /// <summary>Révoque une délégation (la sienne, ou toute délégation pour l'administrateur) et tous ses jetons ; cache du plafond vidé.</summary>
     public async Task RevoquerAsync(string code, Utilisateur u, CancellationToken ct)
@@ -138,20 +151,33 @@ public sealed class ServiceDelegations(McpDbContext db, IJetonsDelegues jetons, 
         ExigerHumain(u);
         var d = await db.Delegations.FirstOrDefaultAsync(x => x.MdeCode == code, ct);
         if (d is null || (d.MdeCompte != u.Code && !u.EstAdmin)) throw ExceptionMetier.Introuvable("Délégation");
+        await RevoquerAsync(d, u.Code, "Délégation révoquée", ct);
+    }
+
+    /// <summary>
+    /// Révocation d'une délégation par <paramref name="par"/> (un humain, ou le serveur d'autorisation sur rejeu d'un jeton) :
+    /// datée une fois, jetons délégués et jetons de rafraîchissement OAuth révoqués, propositions en attente annulées, cache
+    /// du plafond vidé.
+    /// </summary>
+    internal async Task RevoquerAsync(DelegationMcp d, string par, string motif, CancellationToken ct)
+    {
         await db.Unite().ExecuterAsync(async jeton =>
         {
+            var maintenant = DateTimeOffset.UtcNow;
             if (d.MdeRevoqueeLe is null)
             {
-                d.MdeRevoqueeLe = DateTimeOffset.UtcNow;
-                d.MdeRevoqueePar = u.Code;
-                await db.SaveChangesAsync(jeton);
+                await db.Delegations.Where(x => x.MdeId == d.MdeId && x.MdeRevoqueeLe == null)
+                    .ExecuteUpdateAsync(x => x.SetProperty(y => y.MdeRevoqueeLe, maintenant).SetProperty(y => y.MdeRevoqueePar, par), jeton);
+                d.MdeRevoqueeLe = maintenant;
+                d.MdeRevoqueePar = par;
             }
             await jetons.RevoquerDelegationAsync(d.MdeCode, jeton);
+            await db.RafraichissementsOAuth.Where(r => r.MraDelegation == d.MdeCode && r.MraRevoqueLe == null)
+                .ExecuteUpdateAsync(x => x.SetProperty(r => r.MraRevoqueLe, maintenant), jeton);
             // Propositions encore en attente de l'agent révoqué : annulées (lot 10), jamais acceptées après coup.
-            var maintenant = DateTimeOffset.UtcNow;
             await db.Propositions.Where(p => p.MprDelegation == d.MdeCode && p.MprEtat == EtatProposition.EnAttente)
                 .ExecuteUpdateAsync(x => x.SetProperty(p => p.MprEtat, EtatProposition.Annulee).SetProperty(p => p.MprTraiteeLe, maintenant)
-                    .SetProperty(p => p.MprTraiteePar, u.Code).SetProperty(p => p.MprMotif, "Délégation révoquée"), jeton);
+                    .SetProperty(p => p.MprTraiteePar, par).SetProperty(p => p.MprMotif, motif), jeton);
         }, ct);
         PlafondMcp.Oublier(d.MdeCode);
     }

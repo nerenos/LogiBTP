@@ -240,6 +240,9 @@ public sealed partial class SpecialisationMcpBtp : SpecialisationMcp
     /// <summary>Écran de la proposition (lot 11), ouvert avec la session de l'application.</summary>
     public override string? AdresseProposition(long id) => AdressesApp.UrlProposition(id);
 
+    /// <summary>Consentement OAuth des clients distants (lot 12) : page /agents/autoriser du client web.</summary>
+    public override string? AdresseConsentement => AdressesApp.UrlAutorisationAgent;
+
     /// <summary>
     /// Nœuds retenus par garde-fou actif (ANALYSE-MODULE-MCP.md § 5.2) : l'agent n'y a aucune action (lecture comprise ;
     /// choix du lot 2 confirmé au lot 6 : les écritures aussi). Un tiers se désigne par <c>designer_tiers</c>.

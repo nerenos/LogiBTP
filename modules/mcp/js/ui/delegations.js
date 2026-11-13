@@ -41,6 +41,58 @@ export function secretHtml(config, secret) {
 }
 
 /**
+ * Champs de saisie d'une délégation (HTML) : libellé, modèle, durée et échéance, client (absent si `client` vaut null :
+ * client imposé, consentement OAuth), portée, garde-fous levables cochables (les autres grisés). Partagé par la création
+ * depuis Mon compte et l'écran de consentement d'un client OAuth.
+ */
+export function formulaireDelegationHtml(choix, { client = '', libelle = '' } = {}) {
+  return `<label>${texteHtml('mcp.creation.libelle')} <input type="text" data-libelle maxlength="200" value="${echapper(libelle)}"></label>
+    <label>${texteHtml('mcp.creation.modele')} <span data-modele></span></label>
+    <p class="aide" data-aide-modele></p>
+    <label>${texteHtml('mcp.creation.jours')} <input type="number" data-jours min="1" max="${choix.echeance_max}" step="1" value="${choix.echeance_defaut}">
+      <span class="aide" data-echeance></span></label>
+    ${client === null ? '' : `<label>${texteHtml('mcp.creation.client')} <input type="text" data-client maxlength="100" value="${echapper(client)}"></label>`}
+    ${choix.portees.length ? `<label>${texteHtml('mcp.creation.portee')} <span data-portee></span></label>` : ''}
+    <fieldset class="mcp-gardes-fous"><legend>${texteHtml('mcp.creation.gardes_fous')}</legend>
+      <p class="aide">${texteHtml(choix.levables.length ? 'mcp.creation.gardes_fous_aide' : 'mcp.creation.aucun_levable')}</p>
+      ${choix.gardes_fous.map((g) => `<label class="ligne" title="${echapper(texte(`mcp.gardes_fous_aide.${g}`))}"><input type="checkbox" data-leve="${g}" ${choix.levables.includes(g) ? '' : 'disabled'}>
+        ${texteHtml('mcp.creation.lever', { garde_fou: texte(`mcp.gardes_fous.${g}`) })}</label>`).join('')}</fieldset>`;
+}
+
+/**
+ * Monte les combos (modèle, portée) et l'échéance calculée dans les champs de `formulaireDelegationHtml` ; rend
+ * `{ lire() }` : corps de création (`corpsDelegation`).
+ */
+export function monterFormulaireDelegation(racine, choix) {
+  const jour = aujourdhui();
+  const defaut = choix.modeles.includes(MODELE_PLAFOND.PREPARATION) ? MODELE_PLAFOND.PREPARATION : choix.modeles[0];
+  const modele = creerCombo({ options: choix.modeles.map((m) => ({ valeur: m, libelle: texte(`mcp.modeles.${m}`) })), valeur: defaut, vide: false });
+  racine.querySelector('[data-modele]').append(modele);
+  const aide = () => { racine.querySelector('[data-aide-modele]').textContent = texte(`mcp.modeles_aide.${modele.valeurCombo}`); };
+  modele.addEventListener('change', aide);
+  aide();
+  let portee;
+  if (choix.portees.length) {
+    portee = creerCombo({ options: choix.portees.map((p) => ({ valeur: p, libelle: texte(`mcp.portees.${p}`) })), valeur: '', vide: true });
+    racine.querySelector('[data-portee]').append(portee);
+  }
+  const jours = racine.querySelector('[data-jours]');
+  const echeance = () => {
+    const n = Number.parseInt(jours.value, 10);
+    racine.querySelector('[data-echeance]').textContent = texte('mcp.creation.echeance', { date: formatDate(echeanceDelegation(jour, Number.isFinite(n) ? n : null, choix.echeance_max)) });
+  };
+  jours.addEventListener('input', echeance);
+  echeance();
+  return {
+    lire: () => corpsDelegation({
+      libelle: racine.querySelector('[data-libelle]').value, modele: modele.valeurCombo, jours: jours.value,
+      client: racine.querySelector('[data-client]')?.value, portee: portee?.valeurCombo,
+      leves: [...racine.querySelectorAll('[data-leve]:checked')].map((c) => c.dataset.leve),
+    }),
+  };
+}
+
+/**
  * Délégations. options : { api: { liste(), choix(), creer(corps), revoquer(code) } (promesses), origine (adresse de la
  * société, « https://… »), toutes (vue administrateur : toutes les délégations, sans création), peut: { creer, revoquer },
  * copier(texte) (presse-papiers), apresEcriture(), message(texte), erreur(e) }.
@@ -99,47 +151,13 @@ export class PanneauDelegations {
       return;
     }
     if (!choix.modeles.length) { this.#o.message(texte('mcp.creation.aucun_modele')); return; }
-    let modele;
-    let portee;
-    const jour = aujourdhui();
+    let formulaire;
     const corps = await ouvrirDialogue({
       titre: texte('mcp.creation.titre'), classe: 'mcp-dialogue', valeurAnnulation: null,
-      html: `<label>${texteHtml('mcp.creation.libelle')} <input type="text" data-libelle maxlength="200"></label>
-        <label>${texteHtml('mcp.creation.modele')} <span data-modele></span></label>
-        <p class="aide" data-aide-modele></p>
-        <label>${texteHtml('mcp.creation.jours')} <input type="number" data-jours min="1" max="${choix.echeance_max}" step="1" value="${choix.echeance_defaut}">
-          <span class="aide" data-echeance></span></label>
-        <label>${texteHtml('mcp.creation.client')} <input type="text" data-client maxlength="100" value="${echapper(texte('mcp.creation.client_defaut'))}"></label>
-        ${choix.portees.length ? `<label>${texteHtml('mcp.creation.portee')} <span data-portee></span></label>` : ''}
-        <fieldset class="mcp-gardes-fous"><legend>${texteHtml('mcp.creation.gardes_fous')}</legend>
-          <p class="aide">${texteHtml(choix.levables.length ? 'mcp.creation.gardes_fous_aide' : 'mcp.creation.aucun_levable')}</p>
-          ${choix.gardes_fous.map((g) => `<label class="ligne" title="${echapper(texte(`mcp.gardes_fous_aide.${g}`))}"><input type="checkbox" data-leve="${g}" ${choix.levables.includes(g) ? '' : 'disabled'}>
-            ${texteHtml('mcp.creation.lever', { garde_fou: texte(`mcp.gardes_fous.${g}`) })}</label>`).join('')}</fieldset>`,
+      html: formulaireDelegationHtml(choix, { client: texte('mcp.creation.client_defaut') }),
       boutons: [{ libelle: texte('commun.annuler'), valeur: null },
-        { libelle: texte('mcp.creation.creer'), principal: true, valeur: (d) => corpsDelegation({
-          libelle: d.querySelector('[data-libelle]').value, modele: modele.valeurCombo, jours: d.querySelector('[data-jours]').value,
-          client: d.querySelector('[data-client]').value, portee: portee?.valeurCombo,
-          leves: [...d.querySelectorAll('[data-leve]:checked')].map((c) => c.dataset.leve),
-        }) }],
-      construire: (d) => {
-        const defaut = choix.modeles.includes(MODELE_PLAFOND.PREPARATION) ? MODELE_PLAFOND.PREPARATION : choix.modeles[0];
-        modele = creerCombo({ options: choix.modeles.map((m) => ({ valeur: m, libelle: texte(`mcp.modeles.${m}`) })), valeur: defaut, vide: false });
-        d.querySelector('[data-modele]').append(modele);
-        const aide = () => { d.querySelector('[data-aide-modele]').textContent = texte(`mcp.modeles_aide.${modele.valeurCombo}`); };
-        modele.addEventListener('change', aide);
-        aide();
-        if (choix.portees.length) {
-          portee = creerCombo({ options: choix.portees.map((p) => ({ valeur: p, libelle: texte(`mcp.portees.${p}`) })), valeur: '', vide: true });
-          d.querySelector('[data-portee]').append(portee);
-        }
-        const jours = d.querySelector('[data-jours]');
-        const echeance = () => {
-          const n = Number.parseInt(jours.value, 10);
-          d.querySelector('[data-echeance]').textContent = texte('mcp.creation.echeance', { date: formatDate(echeanceDelegation(jour, Number.isFinite(n) ? n : null, choix.echeance_max)) });
-        };
-        jours.addEventListener('input', echeance);
-        echeance();
-      },
+        { libelle: texte('mcp.creation.creer'), principal: true, valeur: () => formulaire.lire() }],
+      construire: (d) => { formulaire = monterFormulaireDelegation(d, choix); },
     });
     if (!corps) return;
     try {

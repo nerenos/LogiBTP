@@ -101,6 +101,13 @@ export const api = {
     corriger: (id, contenu) => appel('PUT', `/mcp/propositions/${id}/contenu`, { contenu }),
     refuser: (id, motif) => appel('POST', `/mcp/propositions/${id}/refuser`, { motif }),
     accepter: (id) => appel('POST', `/mcp/propositions/${id}/accepter`),
+    // Serveur d'autorisation OAuth (lot 12) : demande présentée au consentement, décision (adresse de retour du client),
+    // liste blanche des clients (administrateur).
+    demandeOAuth: (demande) => appel('GET', `/mcp/oauth/demandes/${encodeURIComponent(demande)}`),
+    accepterOAuth: (demande, d) => appel('POST', `/mcp/oauth/demandes/${encodeURIComponent(demande)}/accepter`, d),
+    refuserOAuth: (demande) => appel('POST', `/mcp/oauth/demandes/${encodeURIComponent(demande)}/refuser`),
+    clientsOAuth: () => appel('GET', '/mcp/clients'),
+    enregistrerClientsOAuth: (liste) => appel('PUT', '/mcp/clients', liste),
   },
   // Module Relances (routes du module, plans/relances.md) et libellés des pièces et des tiers (cœur, lot 4).
   relances: {

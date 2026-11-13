@@ -42,13 +42,22 @@ Analyses validées le 23/10/2026 : [ANALYSE-MODULE-MAIL.md](documentation/concep
   rafraîchissement rotatif, machines connues, double facteur par courriel, exclusion d'IP, identifiants API, deux clés
   (`.env`, données) ; profil par défaut = saisie mobile (A5 révisée) ; à reprendre par le Mail (comptes, boîtes,
   « À rapprocher ») et l'OAuth (reconnexion des connexions).
-- [ ] **Module MCP** (agents IA au nom d'un utilisateur, [plan](documentation/conception/plans/mcp.md), lots 0 à 11 faits
+- [ ] **Module MCP** (agents IA au nom d'un utilisateur, [plan](documentation/conception/plans/mcp.md), lots 0 à 12 faits
   le 13/11/2026 : audit des routes, contrats du socle, règles de délégation `modules/mcp`, plafond appliqué par les
   Droits, jetons délégués, point `/mcp`, délégations, journal, outils de lecture du cœur et garde-fous du BTP, activation
   par société, liste blanche exacte, contrôles par identité bornés au plafond, outils d'écriture des devis et origine
   AGENT de l'historique des pièces, règle de ventilation et réappro sous le mini du module Stock, ordres d'exécution filtrés,
   demandes d'appro en unité de stock et ventilation proposée, file des propositions acceptées sous l'identité de l'humain, écrans des délégations, du paramétrage, du journal et des
-  propositions, pastille 🤖 des pièces) : lots 12 à 14 (OAuth 2.1, recettes, documentation). Restent :
+  propositions, pastille 🤖 des pièces, serveur d'autorisation OAuth 2.1 du point `/mcp`) : lots 13 et 14 (recettes,
+  documentation avec le guide de connexion claude.ai). Restent :
+  - OAuth (lot 12) : adresses des documents de client claude.ai et Claude Code pré-renseignées (`099w`) à vérifier par un essai réel
+    du connecteur claude.ai (installation exposée en HTTPS public : `/mcp`, `/.well-known/oauth-*`, `/api/mcp/oauth/authorize|token`) ;
+    retour en boucle locale à port variable (Claude Code, RFC 8252 § 7.3) refusé tant que le port n'est pas exactement dans le
+    document du client (égalité exacte demandée) : décider d'une tolérance du port pour `http://127.0.0.1` / `localhost` ; exclusion
+    d'adresse du module Authentification non appliquée aux échecs du point de jeton (pas de contrat du socle ; débit borné à 30 / min /
+    adresse) ; jetons délégués d'accès de 15 min : une ligne `jeton_delegue` par rafraîchissement, purge des jetons échus à prévoir
+    (module Authentification) ; enregistrement dynamique des clients (RFC 7591) non proposé (CIMD seul) ; délégations OAuth listées
+    comme les autres (client = nom du document ; `client_oauth` rendu mais pas encore affiché dans Mon compte) ;
   - ventilation (lots 8 et 9) : achats non regroupés entre besoins d'une même demande (un ACHAT arrondi par besoin) ;
     commandes « non affectées » = A_COMMANDE sans lieu de livraison ni demande E_DAP d'origine (une commande livrée à un
     chantier non dépôt n'est jamais proposée) : à confirmer ; `proche_mini` passé en argument (20 par défaut), pas encore

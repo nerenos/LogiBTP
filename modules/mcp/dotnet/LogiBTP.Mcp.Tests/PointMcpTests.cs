@@ -235,6 +235,9 @@ public sealed class SpecialisationEssai : SpecialisationMcp
 
     public override string? AdresseProposition(long id) => $"/agents/propositions/{id}";
 
+    /// <summary>Page de consentement OAuth de l'essai (lot 12).</summary>
+    public override string? AdresseConsentement => "/agents/autoriser";
+
     public override IReadOnlyDictionary<string, IReadOnlyList<string>> ClesSensibles { get; } =
         new Dictionary<string, IReadOnlyList<string>> { [GardeFou.Tiers] = ["per_iban"] };
 
@@ -303,8 +306,12 @@ public sealed class DroitsEssai : IDroits
 /// quota du jour, révocation, 401 sans jeton. Base PostgreSQL où modules/mcp/db/099u_mcp.sql est chargé : variable
 /// LOGIBTP_TEST_PG, sinon les tests ne font rien.
 /// </summary>
+[Collection(Collection)]
 public sealed class PointMcpTests : IAsyncLifetime
 {
+    /// <summary>Collection commune aux essais sur Kestrel (état partagé : <see cref="ModulesEssai.Actif"/>) : jamais en parallèle.</summary>
+    public const string Collection = "Kestrel MCP";
+
     private static readonly string? Connexion = Environment.GetEnvironmentVariable("LOGIBTP_TEST_PG");
     private readonly string _compte = $"c{Guid.NewGuid():N}"[..20];
     private readonly string _profil = $"P{Guid.NewGuid():N}"[..20].ToUpperInvariant();
@@ -413,7 +420,9 @@ public sealed class PointMcpTests : IAsyncLifetime
             using var r = await http.SendAsync(m);
             Assert.Equal(HttpStatusCode.Unauthorized, r.StatusCode);
             Assert.Contains(ErreurMcp.McpJetonRequis, await r.Content.ReadAsStringAsync());
-            Assert.Equal("Bearer", r.Headers.WwwAuthenticate.ToString());
+            // Découverte OAuth (RFC 9728 § 5.1) : adresse des métadonnées de la ressource /mcp.
+            Assert.Equal($"Bearer resource_metadata=\"{_adresse.TrimEnd('/')}/.well-known/oauth-protected-resource/mcp\", scope=\"mcp\"",
+                r.Headers.WwwAuthenticate.ToString());
         }
     }
 

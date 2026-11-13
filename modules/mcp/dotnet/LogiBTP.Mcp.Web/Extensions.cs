@@ -3,6 +3,7 @@ using LogiBTP.Socle.Donnees;
 using LogiBTP.Socle.Web;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -10,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
+using System.Threading.RateLimiting;
 
 namespace LogiBTP.Mcp.Web;
 
@@ -18,6 +20,16 @@ public static class Extensions
 {
     /// <summary>Chemin du point MCP (Streamable HTTP), servi par sous-domaine comme l'application.</summary>
     public const string Chemin = "/mcp";
+
+    /// <summary>
+    /// Routes /api du serveur d'autorisation OAuth (lot 12) ouvertes sans session : demande d'autorisation (navigation
+    /// depuis le site du client, sans cookie) et point de jeton (client distant). L'application les déclare publiques
+    /// (Authentification : RoutesPubliques ; Droits : mode Publique).
+    /// </summary>
+    public static readonly string[] RoutesPubliques = [ServiceOAuth.CheminAutorisation, ServiceOAuth.CheminJeton];
+
+    /// <summary>Politique de débit des routes publiques OAuth : 30 requêtes par minute et par adresse.</summary>
+    public const string PolitiqueDebitOAuth = "mcp_oauth";
 
     /// <summary>
     /// Services du module : contexte EF (base de la société), spécialisation, plafond des agents (contrat
@@ -33,8 +45,14 @@ public static class Extensions
         services.AddScoped<ServiceMcp>();
         services.AddScoped<ServicePropositions>();
         services.AddScoped<IPlafondAgent, PlafondMcp>();
+        services.AddScoped<ServiceOAuth>();
         services.AddHttpContextAccessor();
         services.TryAddSingleton<IAppelInterne, AppelInterneHttp>();
+        services.TryAddSingleton<IDocumentsClients, DocumentsClientsHttp>();
+        // Routes publiques du serveur d'autorisation : débit borné par adresse (en plus des limites de l'application).
+        services.AddRateLimiter(o => o.AddPolicy(PolitiqueDebitOAuth, http => RateLimitPartition.GetFixedWindowLimiter(
+            "mcp_oauth:" + (http.Connection.RemoteIpAddress?.ToString() ?? "?"),
+            _ => new FixedWindowRateLimiterOptions { PermitLimit = 30, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 })));
         services.AddMcpServer(o =>
             {
                 o.ServerInfo = new Implementation { Name = "LogiBTP", Version = "1.0" };
@@ -67,10 +85,15 @@ public static class Extensions
         return (ctx, http.RequestServices.GetRequiredService<ServiceMcp>());
     }
 
+    /// <summary>
+    /// 401 du point /mcp : en-tête WWW-Authenticate avec l'adresse des métadonnées de la ressource protégée (RFC 9728 § 5.1),
+    /// point de départ de la découverte du serveur d'autorisation par un client OAuth (sans consentement déclaré : « Bearer » seul).
+    /// </summary>
     private static Task Refuser(HttpContext http)
     {
         http.Response.StatusCode = StatusCodes.Status401Unauthorized;
-        http.Response.Headers.WWWAuthenticate = "Bearer";
+        http.Response.Headers.WWWAuthenticate = http.RequestServices.GetRequiredService<SpecialisationMcp>().AdresseConsentement is null ? "Bearer"
+            : $"Bearer resource_metadata=\"{ServiceOAuth.AdresseMetadonnees(ServiceMcp.Origine(http))}\", scope=\"{ReglesOAuth.Portee}\"";
         return http.Response.WriteAsJsonAsync(new { status = 401, code = ErreurMcp.McpJetonRequis, title = "Jeton délégué requis" }, JsonCalcul.Options);
     }
 
@@ -93,6 +116,19 @@ public static class Extensions
             throw new InvalidOperationException("MCP : le point /mcp ne démarre pas en mode d'authentification par en-têtes (Authentification:Mode=EnTetes)");
         if (app.ServiceProvider.GetService<IServiceProviderIsService>() is { } est && !est.IsService(typeof(IJetonsDelegues)))
             throw new InvalidOperationException("MCP : le point /mcp exige le module Authentification (contrat IJetonsDelegues)");
+        // Métadonnées OAuth (lot 12) à la racine du sous-domaine : ressource protégée (RFC 9728, forme simple et suffixée
+        // du chemin /mcp) et serveur d'autorisation (RFC 8414) ; 404 quand le module est désactivé ou le consentement absent.
+        async Task<IResult> Metadonnees(HttpContext http, SpecialisationMcp s, Func<string, System.Text.Json.Nodes.JsonObject> document)
+        {
+            if (s.AdresseConsentement is null) return Results.NotFound();
+            if (s.Module is { } module && http.RequestServices.GetService<IModulesActifs>() is { } modules && !await modules.EstActifAsync(module, http.RequestAborted))
+                return Results.NotFound();
+            http.Response.Headers.CacheControl = "max-age=300";
+            return Results.Json(document(ServiceMcp.Origine(http)));
+        }
+        app.MapGet(ServiceOAuth.CheminMetadonneesRessource, (HttpContext http, SpecialisationMcp s) => Metadonnees(http, s, ServiceOAuth.MetadonneesRessource));
+        app.MapGet(ServiceOAuth.CheminMetadonneesRessource + Chemin, (HttpContext http, SpecialisationMcp s) => Metadonnees(http, s, ServiceOAuth.MetadonneesRessource));
+        app.MapGet(ServiceOAuth.CheminMetadonneesServeur, (HttpContext http, SpecialisationMcp s) => Metadonnees(http, s, ServiceOAuth.MetadonneesServeur));
         var point = app.MapMcp(Chemin);
         point.Add(b =>
         {
@@ -155,6 +191,21 @@ public static class Extensions
             s.CorrigerAsync(id, c, Utilisateur.Depuis(http), ct));
         g.MapPost("/propositions/{id:long}/refuser", (long id, RefusProposition r, HttpContext http, ServicePropositions s, CancellationToken ct) =>
             s.RefuserAsync(id, r, Utilisateur.Depuis(http), ct));
+        // Serveur d'autorisation OAuth 2.1 (lot 12) : demande et jeton publics (débit borné) ; consentement par l'utilisateur
+        // connecté (création de la délégation) ; liste blanche des clients (administrateur).
+        g.MapGet("/oauth/authorize", (HttpContext http, ServiceOAuth s, CancellationToken ct) => s.AutoriserAsync(http, ct))
+            .RequireRateLimiting(PolitiqueDebitOAuth);
+        g.MapPost("/oauth/token", (HttpContext http, ServiceOAuth s, CancellationToken ct) => s.JetonAsync(http, ct))
+            .RequireRateLimiting(PolitiqueDebitOAuth).DisableAntiforgery();
+        g.MapGet("/oauth/demandes/{demande}", (string demande, HttpContext http, ServiceOAuth s, CancellationToken ct) =>
+            s.DemandeAsync(demande, Utilisateur.Depuis(http), ct));
+        g.MapPost("/oauth/demandes/{demande}/accepter", (string demande, DelegationDemandee d, HttpContext http, ServiceOAuth s, CancellationToken ct) =>
+            s.AccepterAsync(demande, d, Utilisateur.Depuis(http), ct));
+        g.MapPost("/oauth/demandes/{demande}/refuser", (string demande, HttpContext http, ServiceOAuth s, CancellationToken ct) =>
+            s.RefuserAsync(demande, Utilisateur.Depuis(http), ct));
+        g.MapGet("/clients", (HttpContext http, ServiceOAuth s, CancellationToken ct) => s.ClientsAsync(Utilisateur.Depuis(http), ct));
+        g.MapPut("/clients", (IReadOnlyList<ClientOAuthSaisi> liste, HttpContext http, ServiceOAuth s, CancellationToken ct) =>
+            s.EnregistrerClientsAsync(liste, Utilisateur.Depuis(http), ct)).EnTransaction();
         return api;
     }
 }

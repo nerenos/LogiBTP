@@ -35,6 +35,12 @@ export const ERREUR_MCP = Object.freeze({
   MCP_MOTIF_REQUIS: 'MCP_MOTIF_REQUIS',
   MCP_EXECUTEUR_INCONNU: 'MCP_EXECUTEUR_INCONNU',
   MCP_CONTENU_INVALIDE: 'MCP_CONTENU_INVALIDE',
+  // Serveur d'autorisation OAuth 2.1 (lot 12) : demande inconnue, échue ou déjà décidée ; client hors liste blanche ou document
+  // invalide ; adresse de retour absente du document du client ; code ou jeton de rafraîchissement rejoué (délégation révoquée).
+  MCP_OAUTH_DEMANDE: 'MCP_OAUTH_DEMANDE',
+  MCP_OAUTH_CLIENT: 'MCP_OAUTH_CLIENT',
+  MCP_OAUTH_REDIRECTION: 'MCP_OAUTH_REDIRECTION',
+  MCP_OAUTH_REJEU: 'MCP_OAUTH_REJEU',
 });
 
 /** Statut d'un appel d'outil au journal des agents (agent_journal.ajo_statut). */

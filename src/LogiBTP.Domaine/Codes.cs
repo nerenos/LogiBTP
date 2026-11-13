@@ -490,4 +490,7 @@ public static class AdressesApp
 
     /// <summary>Écran d'une proposition d'agent (module MCP, lot 10) : ouvert avec la session de l'application, jamais un lien qui valide.</summary>
     public static string UrlProposition(long id) => $"/agents/propositions/{id}";
+
+    /// <summary>Page de consentement OAuth d'un client distant (module MCP, lot 12) : ?demande=… ou ?erreur=CODE.</summary>
+    public const string UrlAutorisationAgent = "/agents/autoriser";
 }

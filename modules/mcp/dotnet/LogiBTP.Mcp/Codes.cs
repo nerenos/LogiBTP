@@ -39,6 +39,12 @@ public static class ErreurMcp
     public const string McpMotifRequis = "MCP_MOTIF_REQUIS";
     public const string McpExecuteurInconnu = "MCP_EXECUTEUR_INCONNU";
     public const string McpContenuInvalide = "MCP_CONTENU_INVALIDE";
+    // Serveur d'autorisation OAuth 2.1 (lot 12) : demande inconnue, échue ou déjà décidée ; client hors liste blanche ou document
+    // invalide ; adresse de retour absente du document du client ; code ou jeton de rafraîchissement rejoué (délégation révoquée).
+    public const string McpOauthDemande = "MCP_OAUTH_DEMANDE";
+    public const string McpOauthClient = "MCP_OAUTH_CLIENT";
+    public const string McpOauthRedirection = "MCP_OAUTH_REDIRECTION";
+    public const string McpOauthRejeu = "MCP_OAUTH_REJEU";
 }
 
 /// <summary>Statut d'un appel d'outil au journal des agents (agent_journal.ajo_statut).</summary>

@@ -196,6 +196,8 @@ ServiceNotification.TypesDirects.Add(new("ressources", "MATERIEL_RETOUR", "Maté
 builder.Services.PostConfigure<OptionsAuthentification>(o =>
 {
     o.RoutesPubliques.AddRange(["/api/sante", "/api/societe", "/api/pointage/borne", LogiBTP.OAuth.Web.Extensions.RouteRetour]);
+    // Serveur d'autorisation OAuth du point /mcp (plans/mcp.md, lot 12) : demande d'autorisation et point de jeton.
+    o.RoutesPubliques.AddRange(LogiBTP.Mcp.Web.Extensions.RoutesPubliques);
     o.AdressesConfiance.AddRange(securite.AdressesConfiance);
 });
 

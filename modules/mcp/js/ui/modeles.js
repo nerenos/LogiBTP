@@ -147,3 +147,16 @@ export function trierDelegations(liste) {
   return [...(liste ?? [])].sort((x, y) => (Number(Boolean(y.active)) - Number(Boolean(x.active)))
     || (x.active ? String(x.echeance).localeCompare(String(y.echeance)) : String(y.cree_le).localeCompare(String(x.cree_le))));
 }
+
+/**
+ * Corps de la liste blanche des clients OAuth (lot 12) : adresses rognées, libellés rognés, actif booléen, une ligne par
+ * adresse (la dernière saisie l'emporte), lignes sans adresse retirées. Le serveur contrôle les adresses (https, chemin).
+ */
+export function corpsClients(lignes) {
+  const parAdresse = new Map();
+  for (const l of lignes ?? []) {
+    const client = String(l?.client_id ?? '').trim();
+    if (client) parAdresse.set(client, { client_id: client, libelle: String(l.libelle ?? '').trim(), actif: l.actif !== false });
+  }
+  return [...parAdresse.values()];
+}

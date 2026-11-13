@@ -5,7 +5,7 @@ import { originesAgent, creeeParAgent, mentionAgentHtml, pastillePieceHtml } fro
 import { adresseCible } from '../src/app/pages/agents.js';
 import { menus } from '../src/app/navigation/menus.js';
 import { ROUTES } from '../src/app/pages/index.js';
-import { urlProposition } from '../src/app/codes.js';
+import { urlProposition, URL_AUTORISATION_AGENT } from '../src/app/codes.js';
 
 // Module MCP, lot 11 du cœur : pastille 🤖 des pièces écrites par un agent, pages et menu des agents.
 describe('origine des écritures d\'une pièce', () => {
@@ -41,7 +41,7 @@ describe('pages et menu des agents', () => {
   });
   it('routes des pages, adresse d\'une proposition rendue par le serveur', () => {
     const chemins = ROUTES.map((r) => r.chemin);
-    for (const c of ['/agents/propositions', '/agents/propositions/:id', '/agents/journal', '/parametres/agents']) expect(chemins).toContain(c);
+    for (const c of ['/agents/propositions', '/agents/propositions/:id', '/agents/journal', '/parametres/agents', URL_AUTORISATION_AGENT]) expect(chemins).toContain(c);
     expect(urlProposition(5)).toBe('/agents/propositions/5');
   });
   const app = (actif, acces = () => true) => ({ moduleActif: (m) => (m === 'mcp' ? actif : true), typeActif: () => true, acces, preferences: { get: () => null }, fenetres: { liste: () => [], sessionPrecedente: () => null }, estAdmin: () => true, peutGererThemes: () => true, routeur: {} });
@@ -51,5 +51,19 @@ describe('pages et menu des agents', () => {
     expect(m.elements().filter((e) => e.url).map((e) => e.url)).toEqual(['/agents/propositions', '/agents/journal', '/compte#agents', '/parametres/agents']);
     const sans = menus(app(true, (n) => n !== 'agents' && !n.startsWith('administration'))).find((x) => x.code === 'agents');
     expect(sans.elements().filter((e) => e.url).map((e) => e.url)).toEqual(['/agents/propositions']);
+  });
+});
+
+describe('consentement OAuth (lot 12)', () => {
+  it('page /agents/autoriser alignée sur AdressesApp.UrlAutorisationAgent du serveur', () => {
+    expect(URL_AUTORISATION_AGENT).toBe('/agents/autoriser');
+    const cs = readFileSync(new URL('../../src/LogiBTP.Domaine/Codes.cs', import.meta.url), 'utf8');
+    expect(cs).toContain(`UrlAutorisationAgent = "${URL_AUTORISATION_AGENT}"`);
+  });
+  it('page de consentement : demande ou erreur lues dans l\'adresse, liste blanche montée au paramétrage', () => {
+    const source = readFileSync(new URL('../src/app/pages/agents.js', import.meta.url), 'utf8');
+    expect(source).toContain('new ConsentementOAuth(');
+    expect(source).toContain('new ClientsOAuth(');
+    expect(source).toContain('this.requete?.demande');
   });
 });

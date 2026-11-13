@@ -9132,7 +9132,8 @@
       "propositions": "Propositions des agents",
       "proposition": "Proposition n° {{id}}",
       "journal": "Journal des agents",
-      "parametres": "Paramétrage des agents IA"
+      "parametres": "Paramétrage des agents IA",
+      "autoriser": "Autoriser un agent IA"
     },
     "module_inactif": "Le module Agents IA (MCP) n'est pas activé pour la société (Paramètres › Modules).",
     "parametres": {

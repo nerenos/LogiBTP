@@ -233,6 +233,13 @@ public abstract class SpecialisationMcp
     /// <summary>Adresse relative de l'écran d'une proposition (« /agents/propositions/12 »), rendue absolue à l'agent ; null : aucune.</summary>
     public virtual string? AdresseProposition(long id) => null;
 
+    /// <summary>
+    /// Adresse relative de la page de consentement OAuth de l'application (lot 12 : « /agents/autoriser »), ouverte avec
+    /// <c>?demande=…</c> (création de la délégation par l'utilisateur connecté) ou <c>?erreur=CODE</c> (demande refusée avant
+    /// toute redirection vers le client) ; null : serveur d'autorisation inactif (clients par jeton seulement).
+    /// </summary>
+    public virtual string? AdresseConsentement => null;
+
     /// <summary>Outil du catalogue par son nom (null : inconnu).</summary>
     public OutilMcp? Outil(string nom) => Outils.FirstOrDefault(o => o.Nom == nom);
 }

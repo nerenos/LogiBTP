@@ -18,3 +18,8 @@
 .mcp-json { width: 100%; font-family: monospace; }
 .mcp-secret { max-width: min(60em, 95vw); }
 .agent-pastille { display: inline-flex; gap: 0.3em; align-items: center; background: var(--mcp-pastille-fond); border-radius: 3px; padding: 0 0.4em; }
+
+/* Consentement OAuth d'un client distant (lot 12). */
+.mcp-consentement { max-width: 48rem; }
+.mcp-consentement .mcp-client { font-weight: 600; }
+.mcp-consentement .mcp-formulaire { display: grid; gap: 0.5rem; margin: 0.75rem 0; }

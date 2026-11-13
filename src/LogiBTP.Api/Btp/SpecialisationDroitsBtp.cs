@@ -122,6 +122,13 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
         // File des propositions (lot 10) : ouverte à toute session ; le service filtre par le droit exigé par chaque proposition
         // (nœud et action de l'exécuteur) et refuse tout agent (AGENT_INTERDIT) ; l'acceptation agit sous les droits de l'humain.
         new("/api/mcp/propositions", ModeRoute.Session),
+        // Serveur d'autorisation OAuth 2.1 (lot 12) : demande (navigation depuis le client, sans cookie) et jeton (client
+        // distant) publics, débit borné par le module ; consentement sous le nœud agents (création d'une délégation) ;
+        // liste blanche des clients réservée à l'administrateur (service).
+        new("/api/mcp/oauth/authorize", ModeRoute.Publique),
+        new("/api/mcp/oauth/token", ModeRoute.Publique),
+        new("/api/mcp/oauth/demandes", ModeRoute.Module, SpecialisationMcpBtp.NoeudAgents),
+        new("/api/mcp/clients", ModeRoute.Parametrage),
         // Désignation d'un tiers (code, raison sociale d'une personne morale, ville ; particulier : code seul) : qui consulte
         // des pièces en voit les tiers ; lecture seule, ouverte à un agent sous le garde-fou TIERS (plans/mcp.md, lot 6).
         new("/api/designation", ModeRoute.Module, "documents"),

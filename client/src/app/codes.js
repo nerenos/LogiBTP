@@ -407,6 +407,9 @@ export const urlDocument = (id) => `/document/${id}`;
 /** Adresse d'une proposition d'agent (module MCP, lot 10 ; AdressesApp.UrlProposition). */
 export const urlProposition = (id) => `/agents/propositions/${id}`;
 
+/** Page de consentement OAuth d'un client distant (module MCP, lot 12 ; AdressesApp.UrlAutorisationAgent). */
+export const URL_AUTORISATION_AGENT = '/agents/autoriser';
+
 /** Préférences de l'application dans le localStorage (recopiée dans public/demarrage-theme.js). */
 export const CLE_PREFERENCES_NAVIGATION = 'logibtp.navigation';
 

@@ -1,8 +1,10 @@
 import { texte, texteHtml, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { PageBase } from '@logibtp/navigation';
 import { ACTION_DROIT } from '@logibtp/socle';
-import { PanneauDelegations, ParametresAgents, JournalAgents, FilePropositions, DetailProposition } from '@logibtp/mcp/ui';
-import { MODULE_FACULTATIF, CIBLE_PROPOSITION, urlProposition, urlDocument, urlFiche } from '../codes.js';
+import {
+  PanneauDelegations, ParametresAgents, JournalAgents, FilePropositions, DetailProposition, ConsentementOAuth, ClientsOAuth,
+} from '@logibtp/mcp/ui';
+import { MODULE_FACULTATIF, CIBLE_PROPOSITION, URL_AUTORISATION_AGENT, urlProposition, urlDocument, urlFiche } from '../codes.js';
 import { api } from '../api.js';
 
 // Module MCP, lot 11 du cœur (plans/mcp.md) : pages qui montent les écrans du module (délégations, levées par profil,
@@ -61,7 +63,7 @@ export class PageParametresAgents extends PageBase {
     const app = this.app;
     this.titre = texte('agents_btp.routes.parametres');
     this.conteneur.innerHTML = `<div class="page-parametres page-agents"><div class="entete-page"><h1 class="page-titre">${iconeHtml('agents_btp_parametres')} ${texteHtml('agents_btp.routes.parametres')}</h1></div>
-      <p class="aide">${texteHtml('agents_btp.parametres.aide')}</p><section data-levees></section><section data-delegations></section></div>`;
+      <p class="aide">${texteHtml('agents_btp.parametres.aide')}</p><section data-levees></section><section data-clients></section><section data-delegations></section></div>`;
     if (!moduleActif(app)) { this.conteneur.querySelector('[data-levees]').innerHTML = inactif(); return; }
     if (!app.estAdmin()) { this.conteneur.querySelector('[data-levees]').innerHTML = `<p class="aide">${texteHtml('agents_btp.parametres.admin')}</p>`; return; }
     let profils = [];
@@ -73,6 +75,13 @@ export class PageParametresAgents extends PageBase {
       erreur: (e) => app.erreur(e),
     });
     await this.levees.charger();
+    // Clients OAuth autorisés (lot 12) : liste blanche de la société, claude.ai et Claude Code pré-renseignés.
+    this.clients = new ClientsOAuth(this.conteneur.querySelector('[data-clients]'), {
+      api: { liste: () => api.mcp.clientsOAuth(), enregistrer: (l) => api.mcp.enregistrerClientsOAuth(l) },
+      apresEcriture: () => app.message(texte('mcp.clients.enregistre'), 'succes'),
+      erreur: (e) => app.erreur(e),
+    });
+    await this.clients.charger();
     this.delegations = monterDelegations(app, this.conteneur.querySelector('[data-delegations]'), { toutes: true });
   }
 }
@@ -152,5 +161,39 @@ export class PagePropositionAgent extends PageBase {
       erreur: (e) => app.erreur(e),
     });
     await this.detail.charger();
+  }
+}
+
+/**
+ * Consentement OAuth d'un client distant (`/agents/autoriser?demande=…`, ou `?erreur=CODE`), lot 12 : page ouverte par la
+ * demande d'autorisation du serveur ; la session de l'application est exigée (connexion puis retour ici). Autoriser crée
+ * la délégation et renvoie le navigateur vers le client avec le code.
+ */
+export class PageAutorisationAgent extends PageBase {
+  icone = icone('agents_btp_autoriser');
+
+  urlCourante() {
+    const p = new URLSearchParams(Object.entries({ demande: this.requete?.demande, erreur: this.requete?.erreur }).filter(([, v]) => v));
+    return p.size ? `${URL_AUTORISATION_AGENT}?${p}` : URL_AUTORISATION_AGENT;
+  }
+
+  async ouvrir() {
+    const app = this.app;
+    this.titre = texte('agents_btp.routes.autoriser');
+    this.conteneur.innerHTML = gabarit('agents_btp_autoriser', 'agents_btp.routes.autoriser');
+    const zone = this.conteneur.querySelector('[data-zone]');
+    if (!moduleActif(app)) { zone.innerHTML = inactif(); return; }
+    this.consentement = new ConsentementOAuth(zone, {
+      demande: this.requete?.demande ?? null,
+      erreurDemande: this.requete?.erreur ?? null,
+      api: {
+        lire: (d) => api.mcp.demandeOAuth(d),
+        accepter: (d, corps) => api.mcp.accepterOAuth(d, corps),
+        refuser: (d) => api.mcp.refuserOAuth(d),
+      },
+      rediriger: (url) => globalThis.location.assign(url),
+      erreur: (e) => app.erreur(e),
+    });
+    await this.consentement.charger();
   }
 }

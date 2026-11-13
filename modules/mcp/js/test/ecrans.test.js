@@ -1,11 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
-import { texte, existe, icone } from '@logibtp/socle/dictionnaire';
+import { texte, texteHtml, existe, icone } from '@logibtp/socle/dictionnaire';
 import { GARDE_FOU, MODELE_PLAFOND, PORTEE_DROIT } from '@logibtp/socle';
-import { CLASSE_OUTIL, STATUT_APPEL_AGENT, ETAT_PROPOSITION } from '../src/index.js';
+import { CLASSE_OUTIL, STATUT_APPEL_AGENT, ETAT_PROPOSITION, ERREUR_MCP } from '../src/index.js';
 import {
   delegationsHtml, secretHtml, journalHtml, propositionsHtml, propositionHtml, ecartsHtml, VUES_PROPOSITIONS,
   leveeDuProfil, controlerLevee, corpsLevee, modeles,
+  formulaireDelegationHtml, consentementHtml, erreurConsentementHtml, ERREURS_CONSENTEMENT, clientsOAuthHtml,
 } from '../ui/index.js';
 
 const dossier = new URL('../ui/', import.meta.url);
@@ -173,5 +174,40 @@ describe('file des propositions', () => {
     expect(html).toContain(texte('mcp.etats.EN_ATTENTE'));
     expect(html).toContain(texte('mcp.propositions.avertissements_n', { n: 2 }));
     expect(propositionsHtml([])).toContain(texte('mcp.propositions.aucune'));
+  });
+});
+
+describe('consentement OAuth et liste blanche des clients (lot 12)', () => {
+  const choix = modeles.choixEcran({ modeles: ['LECTURE', 'PREPARATION'], gardes_fous: ['TIERS', 'VOLUME'], levables: ['TIERS'], echeance_defaut: 30, echeance_max: 60, portees: [] });
+  const demande = { demande: 'abc', client_id: 'https://claude.ai/oauth/mcp-oauth-client-metadata', client_nom: 'Claude <ai>', retour: 'https://claude.ai', expire_le: '2026-11-13T10:10:00Z' };
+  it('écran : client, retour, champs de la délégation sans client saisi, garde-fous non levables grisés', () => {
+    const html = consentementHtml(demande, choix);
+    expect(html).toContain('Claude &lt;ai&gt;');
+    expect(html).not.toContain('Claude <ai>');
+    expect(html).toContain('https://claude.ai');
+    expect(html).not.toContain('data-client');
+    expect(html).toContain('data-autoriser');
+    expect(html).toContain('data-refuser');
+    expect(html).toMatch(/data-leve="TIERS" >/);
+    expect(html).toMatch(/data-leve="VOLUME" disabled/);
+    expect(html).toContain('max="60"');
+    // Création depuis Mon compte : client saisissable.
+    expect(formulaireDelegationHtml(choix, { client: 'Claude Code' })).toContain('data-client');
+  });
+  it('erreurs de la demande : message propre à chaque code, sinon générique', () => {
+    for (const c of ERREURS_CONSENTEMENT) {
+      expect(Object.values(ERREUR_MCP)).toContain(c);
+      expect(erreurConsentementHtml(c)).toContain(texteHtml(`mcp.oauth.erreurs.${c}`));
+    }
+    expect(erreurConsentementHtml('AUTRE')).toContain(texteHtml('mcp.oauth.erreurs.autre'));
+  });
+  it('liste blanche : lignes, ligne d\'ajout, corps dédoublonné et rogné', () => {
+    const html = clientsOAuthHtml([{ client_id: 'https://claude.ai/oauth/x', libelle: 'claude.ai', actif: false, modifie_le: '2026-11-13T10:00:00Z', modifie_par: 'admin' }]);
+    expect(html).toContain('https://claude.ai/oauth/x');
+    expect(html).not.toMatch(/data-actif checked/);
+    expect(html).toContain('data-nouveau-client');
+    expect(clientsOAuthHtml([])).toContain(texteHtml('mcp.clients.aucun'));
+    expect(modeles.corpsClients([{ client_id: ' https://a/x ', libelle: ' A ', actif: true }, { client_id: 'https://a/x', libelle: 'B', actif: false }, { client_id: ' ' }]))
+      .toEqual([{ client_id: 'https://a/x', libelle: 'B', actif: false }]);
   });
 });

@@ -16,5 +16,7 @@
   "mcp_proposition": "📨",
   "mcp_accepter": "✔",
   "mcp_corriger": "✎",
-  "mcp_refuser": "✕"
+  "mcp_refuser": "✕",
+  "mcp_client_oauth": "🔗",
+  "mcp_autoriser": "✔"
 }
