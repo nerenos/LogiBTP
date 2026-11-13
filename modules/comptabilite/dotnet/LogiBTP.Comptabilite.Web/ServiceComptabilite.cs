@@ -488,7 +488,7 @@ public static class Extensions
         g.MapPut("/types-documents", (List<TypeDocumentSaisi> l, ServiceComptabilite s, CancellationToken ct) => s.EnregistrerTypesDocumentsAsync(l, ct));
         g.MapGet("/export/modeles", () => FormatExport.Modeles);
         g.MapGet("/export/modele", (ServiceExport s, CancellationToken ct) => s.ModeleAsync(ct));
-        g.MapPut("/export/modele", (ModeleExport m, HttpContext http, ServiceExport s, CancellationToken ct) => s.EnregistrerModeleAsync(m, Utilisateur.Depuis(http), ct));
+        g.MapPut("/export/modele", (ModeleExport m, HttpContext http, ServiceExport s, CancellationToken ct) => s.EnregistrerModeleAsync(m, Utilisateur.Depuis(http), ct)).EnTransaction();
         g.MapPost("/export/apercu", (DemandeExport d, ServiceExport s, CancellationToken ct) => s.ApercuAsync(d, ct));
         g.MapPost("/export", (DemandeExport d, HttpContext http, ServiceExport s, CancellationToken ct) => s.ExporterAsync(d, Utilisateur.Depuis(http), ct));
         g.MapGet("/export", (ServiceExport s, CancellationToken ct) => s.LotsAsync(ct));

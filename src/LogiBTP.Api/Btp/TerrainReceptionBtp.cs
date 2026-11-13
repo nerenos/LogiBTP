@@ -205,11 +205,16 @@ public static partial class TerrainBtp
             long? dge = null;
             try
             {
-                dge = await EditerPvAsync(services, db, o, ModelePv, $"PV-reception-{(o.Numero ?? ent.ToString(CultureInfo.InvariantCulture))}-{DateTime.Today:yyyyMMdd}.pdf",
-                    $"PV de réception {o.Numero} du {DateTime.Today:dd/MM/yyyy}",
-                    $"Réception {r.Etat switch { "SANS_RESERVE" => "sans réserve", "AVEC_RESERVES" => "avec réserves", _ => "refusée" }}, signée par {r.Nom.Trim()}", sigId, u, ct);
-                await db.Database.ExecuteSqlRawAsync("UPDATE reception_pose SET rec_dge_id = @d WHERE rec_id = @r",
-                    [new NpgsqlParameter("d", dge), new NpgsqlParameter("r", recId)], ct);
+                // Point de sauvegarde : PV et son rattachement ensemble, la réception enregistrée reste acquise.
+                dge = await db.Unite().ExecuterAsync(async c =>
+                {
+                    var d = await EditerPvAsync(services, db, o, ModelePv, $"PV-reception-{(o.Numero ?? ent.ToString(CultureInfo.InvariantCulture))}-{DateTime.Today:yyyyMMdd}.pdf",
+                        $"PV de réception {o.Numero} du {DateTime.Today:dd/MM/yyyy}",
+                        $"Réception {r.Etat switch { "SANS_RESERVE" => "sans réserve", "AVEC_RESERVES" => "avec réserves", _ => "refusée" }}, signée par {r.Nom.Trim()}", sigId, u, ct);
+                    await db.Database.ExecuteSqlRawAsync("UPDATE reception_pose SET rec_dge_id = @d WHERE rec_id = @r",
+                        [new NpgsqlParameter("d", d), new NpgsqlParameter("r", recId)], c);
+                    return d;
+                }, ct);
             }
             catch (Exception e) when (e is not OperationCanceledException)
             {

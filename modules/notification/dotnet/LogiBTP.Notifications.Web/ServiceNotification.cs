@@ -92,7 +92,8 @@ public sealed class ServiceNotification(NotificationDbContext db, IEnumerable<IS
             if (p is not { NprEcran: false }) publiees += nouvelle;
             if (nouvelle > 0 && p is { NprCourriel: true }) courriels.Add(n);
         }
-        await DiffuserAsync(courriels, ct);
+        // Courriels après la validation de la transaction en cours : une notification annulée n'est pas envoyée.
+        if (courriels.Count > 0) await db.Unite().ApresValidationAsync(c => DiffuserAsync(courriels, c), ct);
         return publiees;
     }
 

@@ -1,3 +1,4 @@
+using LogiBTP.Socle.Donnees;
 using System.Globalization;
 using LogiBTP.Documents;
 using LogiBTP.Domaine;
@@ -41,7 +42,9 @@ public sealed class PaiementDirectRecuBtp(IServiceProvider services, ILogger jou
             if (!await services.GetRequiredService<ModulesSociete>().EstActifAsync(ModulesFacultatifs.SousTraitance, ct))
                 return new(null, false, "Module Sous-traitance inactif : demande à suivre hors LogiBTP");
             var recueLe = DateOnly.FromDateTime(s.Statut.FstDate.UtcDateTime);
-            return await DeclarerAsync(services.GetRequiredService<LogiBtpContext>(), ent, recueLe, Auteur, ct);
+            // Point de sauvegarde : un refus n'interrompt pas la transaction du flux.
+            var db = services.GetRequiredService<LogiBtpContext>();
+            return await db.Unite().ExecuterAsync(c => DeclarerAsync(db, ent, recueLe, Auteur, c), ct);
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {

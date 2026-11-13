@@ -1,3 +1,4 @@
+using LogiBTP.Socle.Donnees;
 using LogiBTP.Socle.Web;
 using LogiBTP.Socle;
 using Microsoft.AspNetCore.Builder;
@@ -68,7 +69,7 @@ public static class Extensions
             s.EnregistrerModes(v, Utilisateur.Depuis(http), ct));
         api.MapGet("/types-document/numerotation", (ReferentielsDocument<TDoc, TLigne> s, CancellationToken ct) => s.Numerotations(ct));
         api.MapPut("/types-document/{code}/numerotation", (string code, NumerotationSaisie v, HttpContext http, ReferentielsDocument<TDoc, TLigne> s, CancellationToken ct) =>
-            s.EnregistrerNumerotation(code, v, Utilisateur.Depuis(http), ct));
+            s.EnregistrerNumerotation(code, v, Utilisateur.Depuis(http), ct)).EnTransaction();
 
         // Affichage de la saisie : étiquettes de lignes, couleurs des modes de vente, modèles, vues de colonnes.
         api.MapGet("/etiquettes-ligne", (AffichageDocumentService<TDoc, TLigne> s, CancellationToken ct) => s.Etiquettes(ct));

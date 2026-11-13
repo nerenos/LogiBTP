@@ -186,6 +186,15 @@ public sealed class UniteEcritureTests
             }
         }, default);
         Assert.Equal(["valide", "englobante"], lances);
+
+        // Transaction ouverte à la main : effets lancés à sa validation ; sans transaction : tout de suite.
+        await using (var tx = await unite.CommencerAsync(default))
+        {
+            unite.ApresValidation(_ => { lances.Add("manuelle"); return Task.CompletedTask; });
+            await tx.CommitAsync();
+        }
+        await unite.ApresValidationAsync(_ => { lances.Add("immediat"); return Task.CompletedTask; }, default);
+        Assert.Equal(["valide", "englobante", "manuelle", "immediat"], lances);
     }
 
     [Fact]

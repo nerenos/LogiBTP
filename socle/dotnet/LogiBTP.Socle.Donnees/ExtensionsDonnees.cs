@@ -36,6 +36,25 @@ public static class ExtensionsDonnees
     public static UniteEcriture Unite(this DbContext db) => UniteEcriture.De(db);
 
     /// <summary>
+    /// Écriture en une seule transaction : toute requête autre que GET / HEAD des routes (ou du groupe) passe dans
+    /// l'unité d'écriture de la requête (point de sauvegarde si une transaction est déjà ouverte). Exception ou réponse
+    /// d'erreur (statut ≥ 400) : tout est annulé ; effets externes lancés après la validation (<see cref="UniteEcriture.ApresValidation"/>).
+    /// À réserver aux routes sans effet externe immédiat (envoi de courriel, appel d'une plateforme) : ceux-ci ne s'annulent pas.
+    /// </summary>
+    public static TBuilder EnTransaction<TBuilder>(this TBuilder b) where TBuilder : IEndpointConventionBuilder =>
+        b.AddEndpointFilter(async (ctx, next) =>
+        {
+            var http = ctx.HttpContext;
+            if (HttpMethods.IsGet(http.Request.Method) || HttpMethods.IsHead(http.Request.Method)) return await next(ctx);
+            var unite = http.RequestServices.GetRequiredService<UniteEcriture>();
+            await using var tx = await unite.CommencerAsync(http.RequestAborted);
+            var r = await next(ctx);
+            if (r is IStatusCodeHttpResult { StatusCode: >= 400 }) await tx.RollbackAsync(http.RequestAborted);
+            else await tx.CommitAsync(http.RequestAborted);
+            return r;
+        });
+
+    /// <summary>
     /// Fin de requête : lance les effets externes des transactions validées ; une transaction restée ouverte est
     /// annulée à la libération de la portée. À placer après <c>UseErreursMetier</c>.
     /// </summary>

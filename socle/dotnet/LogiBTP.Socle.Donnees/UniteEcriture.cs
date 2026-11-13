@@ -76,14 +76,40 @@ public sealed class UniteEcriture(ConnexionRequete connexion, ILogger<UniteEcrit
     public NpgsqlConnection Connexion => connexion.Connexion;
 
     /// <summary>Transaction en cours (null : aucune).</summary>
-    public NpgsqlTransaction? Transaction { get; private set; }
+    public NpgsqlTransaction? Transaction
+    {
+        get
+        {
+            // Transaction adoptée (ouverte hors de l'unité) terminée par son propriétaire : l'unité n'en a plus.
+            if (externe && transaction?.Connection is null)
+            {
+                transaction = null;
+                externe = false;
+            }
+            return transaction;
+        }
+        private set => transaction = value;
+    }
+
+    private NpgsqlTransaction? transaction;
+    private bool externe;
+
+    /// <summary>
+    /// Contexte construit à la main déjà engagé dans une transaction Npgsql ouverte hors de l'unité (tests) : l'unité
+    /// travaille dedans par points de sauvegarde, sans jamais la valider ni l'annuler.
+    /// </summary>
+    internal void Adopter(NpgsqlTransaction t)
+    {
+        if (Transaction is not null) return;
+        transaction = t;
+        externe = true;
+    }
 
     public bool EnCours => Transaction is not null;
 
     /// <summary>Exécute <paramref name="ecrire"/> dans la transaction de l'unité (ouverte ici, ou point de sauvegarde si elle l'est déjà).</summary>
     public async Task<T> ExecuterAsync<T>(Func<CancellationToken, Task<T>> ecrire, CancellationToken ct)
     {
-        var proprietaire = !EnCours;
         await using var tx = await CommencerAsync(ct);
         T resultat;
         try
@@ -96,7 +122,6 @@ public sealed class UniteEcriture(ConnexionRequete connexion, ILogger<UniteEcrit
             throw;
         }
         await tx.CommitAsync(ct);
-        if (proprietaire) await ExecuterValideesAsync(ct);
         return resultat;
     }
 
@@ -148,6 +173,16 @@ public sealed class UniteEcriture(ConnexionRequete connexion, ILogger<UniteEcrit
     {
         if (EnCours) pendantes.Add(action);
         else validees.Add(action);
+    }
+
+    /// <summary>
+    /// Effet externe lancé tout de suite sans transaction en cours, sinon après sa validation (abandonné si elle est
+    /// annulée) ; un échec est journalisé sans rien annuler.
+    /// </summary>
+    public async Task ApresValidationAsync(Func<CancellationToken, Task> action, CancellationToken ct)
+    {
+        ApresValidation(action);
+        if (!EnCours) await ExecuterValideesAsync(ct);
     }
 
     /// <summary>
@@ -317,18 +352,19 @@ public sealed class UniteEcriture(ConnexionRequete connexion, ILogger<UniteEcrit
 
     // ------------------------------------------------------------------ unité d'un contexte
 
-    private static readonly ConditionalWeakTable<DbContext, UniteEcriture> Seules = new();
+    private static readonly ConditionalWeakTable<System.Data.Common.DbConnection, UniteEcriture> Seules = new();
 
     /// <summary>
     /// Unité du contexte : celle de la portée s'il est branché par <see cref="ExtensionsDonnees.ConfigurerBase"/>, sinon
-    /// (contexte construit à la main : tests, outils) une unité propre à ce contexte, sur sa connexion.
+    /// (contexte construit à la main : tests, outils) l'unité de sa connexion, partagée par les contextes qui l'utilisent.
     /// </summary>
     public static UniteEcriture De(DbContext db)
     {
         var options = db.GetService<IDbContextOptions>();
         var interception = options.FindExtension<Microsoft.EntityFrameworkCore.Infrastructure.CoreOptionsExtension>()?.Interceptors?
             .OfType<InterceptionUnite>().FirstOrDefault();
-        var unite = interception?.Unite ?? Seules.GetValue(db, c => new UniteEcriture(new ConnexionRequete((NpgsqlConnection)c.Database.GetDbConnection())));
+        var unite = interception?.Unite ?? Seules.GetValue(db.Database.GetDbConnection(), c => new UniteEcriture(new ConnexionRequete((NpgsqlConnection)c)));
+        if (interception is null && db.Database.CurrentTransaction?.GetDbTransaction() is NpgsqlTransaction externe) unite.Adopter(externe);
         unite.Enroler(db);
         return unite;
     }
@@ -363,7 +399,12 @@ public sealed class TransactionUnite : IAsyncDisposable
     {
         if (terminee) return;
         terminee = true;
-        if (Proprietaire) await unite.TerminerAsync(true, ct);
+        if (Proprietaire)
+        {
+            await unite.TerminerAsync(true, ct);
+            // Effets externes des écritures validées, dès la validation (requête comme tâche de fond).
+            await unite.ExecuterValideesAsync(ct);
+        }
         else await Reelle.ReleaseAsync(pointSauvegarde!, ct);
     }
 

@@ -192,8 +192,15 @@ public abstract class SpecialisationPlanning
 public sealed class ServicePlanning(PlanningDbContext db, SpecialisationPlanning specialisation, Diffuseur diffuseur, SocieteCourante societe)
 {
     /// <summary>Événement « planning » diffusé aux navigateurs de la société (lot 3, temps réel).</summary>
-    private void Publier(string action, IEnumerable<long> taches, Utilisateur u) =>
-        diffuseur.Publier(societe, DiffusionPlanning.Sujet, new { action, taches = taches.ToList(), par = u.Code });
+    private void Publier(string action, IEnumerable<long> taches, Utilisateur u)
+    {
+        // Après la validation : les navigateurs ne relisent que des tâches enregistrées.
+        var l = taches.ToList();
+        void Diffuser() => diffuseur.Publier(societe, DiffusionPlanning.Sujet, new { action, taches = l, par = u.Code });
+        var unite = db.Unite();
+        if (unite.EnCours) unite.ApresValidation(_ => { Diffuser(); return Task.CompletedTask; });
+        else Diffuser();
+    }
 
     internal static readonly JsonSerializerOptions Json = JsonCalcul.Web;
     private const int HorizonJours = 120;
