@@ -329,6 +329,20 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         return complet;
     }
 
+    /// <summary>
+    /// Création et premier enregistrement du contenu (import d'un devis…) en une seule transaction : une erreur de
+    /// l'enregistrement annule aussi la création (plus de document vide à supprimer après coup).
+    /// </summary>
+    public async Task<ReponseEnregistrement<TComplet>> CreerAvecContenu(CreationAvecContenu<TComplet> c, Utilisateur u, CancellationToken ct)
+    {
+        await using var tx = await db.Unite().CommencerAsync(ct);
+        var cree = await Creer(c.Creation, u, ct);
+        c.Contenu.Document.EntVersion = cree.Document.EntVersion;
+        var reponse = await EnregistrerDans(cree.Document.EntId, c.Contenu, u, ct);
+        await tx.CommitAsync(ct);
+        return reponse;
+    }
+
     // ------------------------------------------------------------------ enregistrement
 
     /// <summary>

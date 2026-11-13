@@ -65,6 +65,13 @@ public sealed class CreationDocument
     public JsonDocument? EntNumFormat { get; set; }
 }
 
+/// <summary>Création d'un document avec son contenu, enregistrés dans la même transaction (POST /documents/avec-contenu).</summary>
+public sealed class CreationAvecContenu<TComplet>
+{
+    public CreationDocument Creation { get; set; } = new();
+    public TComplet Contenu { get; set; } = default!;
+}
+
 public sealed class DemandeVersion
 {
     /// <summary>Version d'enregistrement connue du client (verrouillage optimiste).</summary>
