@@ -271,6 +271,12 @@ db/302_facture_electronique_encaissee.sql rejouable
 db/303_facture_electronique_cotraitance.sql rejouable
 db/304_facture_electronique_ereporting.sql rejouable
 db/305_facture_electronique_archivage.sql rejouable
+db/306_reglements_signe_avoir.sql rejouable
+db/307_stock_sans_validation_tiers.sql rejouable
+
+# Ordre des taux de TVA et taux par défaut (module Document 019n) : les taux sont créés par db/110, après le module ;
+# sans cette reprise, une base neuve n'a ni ordre ni défaut (premier code actif : AL20, autoliquidation).
+modules/document/db/019n_document_taux_tva_ordre.sql rejouable
 
 # Vues de colonnes des types de documents créés après 176 : rejouée en dernier.
 db/176_documents_vues_types.sql rejouable

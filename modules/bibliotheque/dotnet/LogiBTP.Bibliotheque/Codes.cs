@@ -32,3 +32,16 @@ public static class GenrePoste
     public const string Retenue = "RETENUE";
     public const string Autre = "AUTRE";
 }
+
+/// <summary>Type d'un élément (ele_type).</summary>
+public static class TypeElement
+{
+    public const string Article = "ARTICLE";
+    public const string Ouvrage = "OUVRAGE";
+    public const string Ensemble = "ENSEMBLE";
+    public const string PostePied = "POSTE_PIED";
+    public const string Texte = "TEXTE";
+
+    /// <summary>Élément vendu (article, ouvrage) : sa nature est obligatoire. Réplique de elementVendu (codes.js).</summary>
+    public static bool EstVendu(string? type) => type is Article or Ouvrage;
+}

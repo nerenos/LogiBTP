@@ -533,9 +533,17 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         // Facture d'avancement dont la période est négative (retour en arrière) : elle devient un avoir d'avancement (Q26).
         if (type.TydAvancement == "F" && r.Document.EntTotalHt < 0 && type.TydAvoirTydId is int avoir)
         {
+            var facture = type;
             type = await Type(avoir, ct);
             r.Document.EntTydId = type.TydId;
             r.Document.EntNatureAvoir = NaturesAvoir.Avancement;
+            // Compteur interne (achats, sous-traitance) : numéro pris à la création dans celui de la facture ; l'avoir
+            // prend le sien (AVS… plutôt que FST…), sauf un indice suivant (numéro conservé). Numérotation continue :
+            // attribuée plus bas, au type de l'avoir.
+            if (!facture.TydNumerotationContinue && !type.TydNumerotationContinue && type.TydId != facture.TydId && r.Document.EntIndice == "A")
+            {
+                r.Document.EntNumero = await AttribuerNumero(type, r.Document.EntDate, ct);
+            }
         }
         // Pièce comptable (factures, avoirs) : à transférer à la comptabilité, sans écriture si le total est nul (13.9).
         // Une pièce déjà transférée (nouvelle version après dévalidation) reste transférée : le comptable corrige (P22).

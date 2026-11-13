@@ -24,9 +24,10 @@
 ## Conventions et pièges
 - Historique des prix : uniquement par les triggers ; renseigner `ele_maj_par` et `ele_commentaire_prix` dans la même écriture, ne jamais insérer dans `historique_prix_element` à la main.
 - Période de coefficients commencée : ni modifiable ni supprimable (`PERIODE_COMMENCEE`) ; en créer une nouvelle. Enregistrer / supprimer une période recalcule les éléments.
+- Élément vendu (ARTICLE, OUVRAGE) : nature obligatoire (`elementVendu` ↔ `TypeElement.EstVendu`, `TYPE_ELEMENT` ↔ `TypeElement` ; contrôle `METIER` du champ `nat_id` dans `FicheElement.validerMetier` ↔ `ValiderMetier` du cœur).
 - Code de bibliothèque `^[A-Z0-9_]{1,10}$` (jamais « : ») ; bibliothèque avec éléments : désactiver, pas supprimer.
 - Prix copiés dans le document à l'appel (ne suivent plus la bibliothèque) ; envoi document → bibliothèque : coefficients de la ligne imposés à l'élément.
-- Démo : modifier `client/src/app/bibliotheque/donnees.js` puis `npm run generer-vues-liste --workspace client` (régénère `db/116`).
+- Démo : modifier `client/src/app/bibliotheque/donnees.js` puis `npm run generer-vues-liste --workspace client` (régénère `db/116` et `scripts/demo/bibliotheque-demo-complements.sql` : compléments rejouables, par code, pour une base de démonstration déjà créée, hors manifeste) ; toute composante d'ouvrage de démonstration porte sa nature.
 
 ## Textes et icônes (module Personnalisation, lot P3h)
 - Textes, icônes et couleurs par `js/personnalisation/` (règles et exceptions gardées en littéraux : voir le détail).

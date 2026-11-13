@@ -789,10 +789,20 @@ export class PageDocument extends PageBase {
     await ecrireAttente({ ...this.#entreeAttente(), creation: { params, initial: document } });
     this.attente = await lireAttente(this.app.utilisateur(), id);
     this.app.routeur.remplacerUrl(urlDocument(id));
+    this.#trancheInitiale();
     this.disposition.onglet('entete');
     this.rafraichir();
     this.app.publier(SUJET_ATTENTE, {});
     this.app.message(texte('document_btp.page.cree_hors_ligne', { type: type.tyd_libelle }), 'avertissement');
+  }
+
+  /**
+   * Création : une tranche vide d'emblée pour commencer la saisie ; hors pile d'annulation, le document reste « non
+   * modifié » tant qu'on n'y saisit rien (la tranche n'est enregistrée qu'avec la première saisie).
+   */
+  #trancheInitiale() {
+    const id = this.editeur?.insererTrancheVide();
+    if (id) this.editeur.allerA(id, { focus: false });
   }
 
   async nouveau(code) {
@@ -803,6 +813,7 @@ export class PageDocument extends PageBase {
     const cree = await api.creer({ ent_tyd_id: type.tyd_id, ent_tiers_id: null, ent_objet: texte('document_btp.page.objet_nouveau', { type: type.tyd_libelle.toLowerCase() }) });
     this.app.routeur.remplacerUrl(urlDocument(cree.document.ent_id));
     await this.chargerDocument(cree.document.ent_id);
+    this.#trancheInitiale();
     this.disposition.onglet('entete');
     this.app.publier(SUJET_FENETRE.ENREGISTRE, { type: code, ids: [cree.document.ent_id], cree: true });
     this.app.message(texte('document_btp.page.cree', { type: type.tyd_libelle, numero: cree.document.ent_numero ?? '' }));
@@ -1238,8 +1249,9 @@ export class PageDocument extends PageBase {
     // Commande client : marché obligatoire (sauf commande intermédiaire d'un devis facturé directement).
     const d = ed.saisie.document;
     if (ed.definition.type?.tyd_code === TYPE_DOCUMENT.V_COMMANDE && !d.ent_marche_id && !d.ent_intermediaire && !(await this.choisirMarche())) return;
-    // Commande de sous-traitance : marché de sous-traitance obligatoire (ST2, ST4).
-    if (ed.definition.type?.tyd_code === TYPE_DOCUMENT.T_COMMANDE && !d.ent_marche_id && !(await this.choisirMarcheSousTraitance())) return;
+    // Commande de sous-traitance : marché de sous-traitance du sous-traitant obligatoire (ST2, ST4) ; une commande issue
+    // d'une commande client garde son marché de vente, proposé comme marché lié.
+    if (ed.definition.type?.tyd_code === TYPE_DOCUMENT.T_COMMANDE && !(await this.marcheSousTraitanceValable(d)) && !(await this.choisirMarcheSousTraitance())) return;
     // Frais annexes : à la validation, la ventilation est figée en clés de ligne ; les clés orphelines sont supprimées.
     const orphelines = messagesFrais(ed.resultat).filter((m) => m.code === 'FA_CLE_ORPHELINE' || m.code === 'FA_CLE_BLOQUEE');
     if (orphelines.length && !await confirmer(texte('document_btp.page.valider_cles', { nombre: orphelines.length, liste: orphelines.map((m) => `${icone('document_puce')} ${m.message}`).join('\n') }))) return;
@@ -1394,6 +1406,15 @@ export class PageDocument extends PageBase {
    * Commande client à valider sans marché : chantier (existant ou nouveau, pré-rempli) puis création du marché, ou
    * rattachement comme avenant d'un marché en cours. Renvoie vrai si la commande est rattachée (validation à suivre).
    */
+  /** Marché du document : marché de sous-traitance de son sous-traitant (sinon à choisir avant la validation). */
+  async marcheSousTraitanceValable(doc) {
+    if (!doc.ent_marche_id) return false;
+    if (!this.servicesStructure) return true;
+    this.structure = await this.servicesStructure.referentiels();
+    const m = (this.structure.marches ?? []).find((x) => x.id === doc.ent_marche_id);
+    return !m || (m.sens === 'ST' && m.tiers_id === doc.ent_tiers_id);
+  }
+
   async choisirMarcheSousTraitance() {
     if (!this.servicesStructure || !this.servicesFiche) { this.app.message(texte('document_btp.page.marche.indisponible'), 'avertissement'); return false; }
     this.structure = await this.servicesStructure.referentiels();

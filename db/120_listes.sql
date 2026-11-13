@@ -58,7 +58,8 @@ CREATE TABLE materiel (
     mat_observations    TEXT
 );
 
--- 5 000 salariés et 3 000 matériels, valeurs pseudo-aléatoires reproductibles (setseed).
+-- 80 salariés et 50 matériels (démonstration ; les listes longues sont éprouvées par les tests), valeurs
+-- pseudo-aléatoires reproductibles (setseed).
 SELECT setseed(0.42);
 INSERT INTO salarie (sal_matricule, sal_nom, sal_prenom, sal_service, sal_poste, sal_statut, sal_date_entree, sal_salaire, sal_actif, sal_commentaire)
 SELECT 'S' || lpad(i::text, 5, '0'),
@@ -79,7 +80,7 @@ SELECT 'S' || lpad(i::text, 5, '0'),
        random() > 0.08,
        CASE WHEN random() > 0.85 THEN 'Habilitation électrique' || chr(10) || 'CACES R482 cat. A'
             WHEN random() > 0.9 THEN 'Temps partiel 80 %' ELSE '' END
-FROM generate_series(1, 5000) AS i
+FROM generate_series(1, 80) AS i
 CROSS JOIN LATERAL (SELECT (ARRAY['Chantier','Bureau','Atelier','Direction'])[1 + floor(random() * 4)::int] AS service, i AS j) x;
 
 INSERT INTO materiel (mat_code, mat_designation, mat_famille, mat_etat, mat_chantier, mat_valeur_achat, mat_date_achat,
@@ -95,7 +96,7 @@ SELECT 'M' || lpad(i::text, 5, '0'),
        x.revision,
        random() > 0.2,
        (ARRAY['','','Pneus à changer','Fuite hydraulique signalée' || chr(10) || 'Devis réparation demandé','Contrôle VGP à planifier','Rayures carrosserie'])[1 + floor(random() * 6)::int]
-FROM generate_series(1, 3000) AS i
+FROM generate_series(1, 50) AS i
 CROSS JOIN LATERAL (
     SELECT f.famille,
            (f.engins)[1 + floor(random() * array_length(f.engins, 1))::int] AS designation,
@@ -140,7 +141,7 @@ INSERT INTO equipe (equ_code, equ_libelle, equ_categorie, equ_chef, equ_effectif
 SELECT 'E' || lpad(i::text, 3, '0'),
        'Équipe ' || (ARRAY['gros œuvre','second œuvre','VRD','finitions'])[1 + (i - 1) % 4] || ' ' || (1 + (i - 1) / 4),
        (ARRAY['Gros œuvre','Second œuvre','VRD','Finitions'])[1 + (i - 1) % 4],
-       (SELECT sal_prenom || ' ' || sal_nom FROM salarie WHERE sal_id = i * 37),
+       (SELECT sal_prenom || ' ' || sal_nom FROM salarie WHERE sal_id = i * 6),
        3 + floor(random() * 6)::int,
        CASE WHEN random() > 0.3 THEN (ARRAY['Maison Martin – Lyon','Résidence Les Érables','École Jean-Moulin','Pont de la Saône'])[1 + floor(random() * 4)::int] END,
        random() > 0.3

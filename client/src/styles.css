@@ -79,7 +79,6 @@
 /* Vues de paramétrage : un tableau prend la largeur de son contenu, calé à gauche, au lieu d'étirer ses colonnes sur
    toute la largeur (lisibilité) ; un tableau qui doit occuper la largeur porte la classe pleine-largeur. */
 .page-parametres table:not(.pleine-largeur):not(.tableau-compact), .themes-table, .concepteur-table { width: auto; max-width: 100%; }
-.page-parametres table:not(.pleine-largeur):not(.tableau-compact) td input:not([type="checkbox"]):not([type="radio"]):not([type="color"]) { width: auto; min-width: 4rem; }
 .carte { background: var(--surface); border: 1px solid var(--bord); border-radius: 8px; padding: 0.6rem 1rem; }
 .carte h2 { font-size: 1rem; margin: 0 0 0.4rem; }
 .carte .ligne { display: flex; align-items: center; gap: 0.4rem; }
@@ -803,27 +802,46 @@ body.mode-borne #bandeau { display: none; }
 
 /* Zones saisissables des tableaux compacts : le champ remplit sa cellule (largeur de la colonne, hauteur de ligne
    régulière) ; largeur minimale selon l'attribut size du champ (ou celle de la colonne) ; boutons dans leur colonne. */
-.tableau-compact td > input:not([type="checkbox"]):not([type="radio"]):not([type="color"]),
-.tableau-compact td > div > input:not([type="checkbox"]):not([type="radio"]),
-.tableau-compact td .combo, .tableau-compact td > textarea {
-  width: 100%; box-sizing: border-box; margin: 0; padding: 1px 4px; min-height: 1.65em; border-radius: 3px;
+/* Tableaux de paramétrage et tableaux compacts : la cellule entière est le champ, comme dans la grille des documents
+   et les listes (champ sans cadre ni fond qui remplit sa cellule, seul ou dans un span / div qui l'enveloppe seul ;
+   fond léger au survol, cadre d'accent à la saisie). */
+:is(.page-parametres, .tableau-compact) td:not(.grille td) > :is(input:not([type="checkbox"], [type="radio"], [type="color"], [type="file"], [type="range"], [type="hidden"]), textarea),
+:is(.page-parametres, .tableau-compact) td:not(.grille td) > :is(span, div):only-child > :is(input:not([type="checkbox"], [type="radio"], [type="color"], [type="file"], [type="range"], [type="hidden"]), textarea):only-child,
+.tableau-compact td > div > input:not([type="checkbox"], [type="radio"]) {
+  width: 100%; box-sizing: border-box; margin: 0; padding: var(--cellule-marge, 2px 4px); min-height: 1.65em;
+  border: 1px solid transparent; border-radius: 0; background-color: transparent; box-shadow: none;
 }
+:is(.page-parametres, .tableau-compact) td:not(.grille td) > :is(span, div):only-child:has(> :is(input:not([type="checkbox"], [type="radio"], [type="color"], [type="file"], [type="range"], [type="hidden"]), textarea):only-child) { display: block; }
+/* Largeurs minimales de faible poids : l'attribut size et les classes propres (durées…) les remplacent. */
+:where(.page-parametres, .tableau-compact) td :where(input:not([type="checkbox"], [type="radio"], [type="color"], [type="hidden"])) { min-width: 6rem; }
+:where(.page-parametres, .tableau-compact) td :where(input.combo) { min-width: 8rem; }
+:where(.page-parametres, .tableau-compact) td :where(input.champ-date) { min-width: 8.6em; }
+:is(.page-parametres, .tableau-compact) td:not(.grille td) :is(input, textarea):not([type="checkbox"], [type="radio"], [type="color"]):not(:disabled, [readonly]):hover {
+  background-color: color-mix(in srgb, var(--accent-clair) 45%, transparent);
+}
+:is(.page-parametres, .tableau-compact) td:not(.grille td) :is(input, textarea):not([type="checkbox"], [type="radio"], [type="color"]):focus {
+  outline: none; border-color: var(--accent); background-color: var(--surface);
+}
+:is(.page-parametres, .tableau-compact) td:not(.grille td) input.champ-date.invalide { border-color: var(--erreur); background-color: var(--erreur-fond); }
+/* La cellule qui porte le champ n'a plus de marge propre : le champ en tient lieu. */
+:is(.page-parametres, .tableau-compact) td:not(.grille td):has(> :is(input:not([type="checkbox"], [type="radio"], [type="color"], [type="file"], [type="range"], [type="hidden"]), textarea), > :is(span, div):only-child > :is(input:not([type="checkbox"], [type="radio"], [type="color"], [type="file"], [type="range"], [type="hidden"]), textarea):only-child) { padding: 0; }
+.page-parametres table:not(.tableau-compact, .grille table) td:not(.grille td) { border-bottom: 1px solid color-mix(in srgb, var(--bord) 45%, transparent); }
 .tableau-compact td:has(> input[type="checkbox"]), .tableau-compact th:has(> input[type="checkbox"]) { text-align: center; }
 .tableau-compact td.cellule-boutons { white-space: nowrap; width: 1%; }
 /* Boutons dans les cellules (✕, ＋…) : à la hauteur d'une ligne de saisie. */
 .tableau-compact td > button { padding: 0 .4rem; min-height: 1.65em; line-height: 1.2; }
 .tableau-compact td[data-j], .variables-paie td:has(> input.duree) { min-width: 3.4rem; }
 .tableau-compact input.duree { text-align: right; }
-.tableau-compact input[size="2"] { min-width: 3rem; }
-.tableau-compact input[size="3"], .tableau-compact input[size="4"] { min-width: 4rem; }
-.tableau-compact input[size="5"], .tableau-compact input[size="6"] { min-width: 4.5rem; }
-.tableau-compact input[size="8"] { min-width: 6rem; }
-.tableau-compact input[size="10"] { min-width: 7rem; }
-.tableau-compact input[size="14"] { min-width: 9rem; }
-.tableau-compact input[size="28"] { min-width: 15rem; }
-.tableau-compact input[size="36"] { min-width: 18rem; }
-.tableau-compact input[size="48"] { min-width: 24rem; }
-.tableau-compact input[size="60"] { min-width: 28rem; }
+:is(.page-parametres, .tableau-compact) td > input[size="2"] { min-width: 3rem; }
+:is(.page-parametres, .tableau-compact) td > input[size="3"], :is(.page-parametres, .tableau-compact) td > input[size="4"] { min-width: 4rem; }
+:is(.page-parametres, .tableau-compact) td > input[size="5"], :is(.page-parametres, .tableau-compact) td > input[size="6"] { min-width: 4.5rem; }
+:is(.page-parametres, .tableau-compact) td > input[size="8"] { min-width: 6rem; }
+:is(.page-parametres, .tableau-compact) td > input[size="10"] { min-width: 7rem; }
+:is(.page-parametres, .tableau-compact) td > input[size="14"] { min-width: 9rem; }
+:is(.page-parametres, .tableau-compact) td > input[size="28"] { min-width: 15rem; }
+:is(.page-parametres, .tableau-compact) td > input[size="36"] { min-width: 18rem; }
+:is(.page-parametres, .tableau-compact) td > input[size="48"] { min-width: 24rem; }
+:is(.page-parametres, .tableau-compact) td > input[size="60"] { min-width: 28rem; }
 /* Durées : la colonne du jour fixe la largeur (pas l'attribut size). */
 .tableau-compact input.duree { min-width: 0; }
 

@@ -30,7 +30,9 @@ export async function proposerMarcheSousTraitance({ refs, doc, totalHt, nomTiers
   const axes = ouverts(marches).filter((m) => m.sens === 'ST' && m.cha_id === chantier.id && m.tiers_id === doc.ent_tiers_id);
   const ventes = ouverts(marches).filter((m) => (m.sens ?? 'V') === 'V' && m.cha_id === chantier.id);
   const comboAxe = axes.length ? creerCombo({ vide: false, valeur: axes[0].id, options: axes.map((m) => ({ valeur: m.id, libelle: `${m.code} – ${m.libelle}`, detail: formatNombre(Number(m.montant_ht ?? 0), 2) })) }) : null;
-  const comboVente = creerCombo({ valeur: ventes.length === 1 ? ventes[0].id : '', options: ventes.map((m) => ({ valeur: m.id, libelle: `${m.code} – ${m.libelle}` })) });
+  // Marché de vente repris de la commande client sous-traitée, sinon le seul du chantier.
+  const venteDoc = ventes.find((m) => m.id === doc.ent_marche_id);
+  const comboVente = creerCombo({ valeur: venteDoc?.id ?? (ventes.length === 1 ? ventes[0].id : ''), options: ventes.map((m) => ({ valeur: m.id, libelle: `${m.code} – ${m.libelle}` })) });
   const nature = () => ventes.find((m) => m.id === Number(comboVente.valeurCombo))?.nature ?? 'P';
   let comboGarantie;
 

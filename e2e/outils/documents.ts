@@ -204,7 +204,9 @@ export const ligneGrille = (page: Page, texte: string) => grille(page).locator('
 /** Cellule d'une ligne par le titre de sa colonne (la vue de colonnes décide de l'ordre). */
 async function cellule(page: Page, ligne: Locator, colonne: string) {
   const titres = (await grille(page).locator('thead th').allInnerTexts()).map((t) => t.split('\n')[0].trim());
-  const i = titres.findIndex((t) => t === colonne || t.startsWith(`${colonne} `));
+  // Titre exact d'abord (« Qté » avant « Qté parent »), sinon titre suivi d'un bouton (« Libellé ⇔ »).
+  const exact = titres.indexOf(colonne);
+  const i = exact >= 0 ? exact : titres.findIndex((t) => t.startsWith(`${colonne} `));
   if (i < 0) throw new Error(`Colonne « ${colonne} » absente de la vue : ${titres.join(' | ')}`);
   // Première colonne : poignée sans data-col.
   return ligne.locator(`td[data-col="${i - 1}"]`);
@@ -220,7 +222,8 @@ export async function saisirCellule(page: Page, ligne: Locator, colonne: string,
 }
 
 export async function texteCellule(page: Page, ligne: Locator, colonne: string) {
-  return (await (await cellule(page, ligne, colonne)).innerText()).trim();
+  // Espaces insécables des milliers (« 3 600,00 ») ramenées à des espaces simples.
+  return (await (await cellule(page, ligne, colonne)).innerText()).replace(/\s+/g, ' ').trim();
 }
 
 export type LignePrix = { libelle: string; qte: string; unite: string; pv: string; nature?: string };
@@ -236,8 +239,13 @@ export async function ajouterLigne(page: Page, l: LignePrix) {
   await page.keyboard.press('Control+Shift+Enter');
   await page.keyboard.press('Escape');
   const nouvelle = grille(page).locator('tbody tr.courante');
-  await saisirCellule(page, nouvelle, 'Libellé', l.libelle);
   const ligne = ligneGrille(page, l.libelle);
+  // Saisie du libellé reprise si elle est perdue (grille redessinée juste après l'insertion de la ligne).
+  await expect(async () => {
+    if (await ligne.count()) return;
+    await saisirCellule(page, nouvelle, 'Libellé', l.libelle);
+    await expect(ligne).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 15000 });
   await saisirCellule(page, ligne, 'Nature', l.nature ?? NATURE);
   await saisirCellule(page, ligne, 'U', l.unite);
   await saisirCellule(page, ligne, 'Qté', l.qte);
