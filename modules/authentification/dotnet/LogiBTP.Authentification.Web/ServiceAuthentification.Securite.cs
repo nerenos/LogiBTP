@@ -171,6 +171,8 @@ public sealed partial class ServiceAuthentification
         var maintenant = DateTimeOffset.UtcNow;
         var n = await db.Sessions.Where(s => s.SesCptId == cptId && s.SesFermeeLe == null && (id == null ? s.SesId != courante : s.SesUuid == id))
             .ExecuteUpdateAsync(s => s.SetProperty(x => x.SesFermeeLe, maintenant), ct);
+        // Toutes les sessions fermées (les autres, ou par un administrateur) : les jetons délégués aux agents aussi.
+        if (id is null) await RevoquerJetonsAsync(db, cptId, ct);
         var code = await db.Comptes.Where(c => c.CptId == cptId).Select(c => c.CptCode).FirstAsync(ct);
         await JournaliserAsync(code, "SESSION_FERMEE", id is null ? $"{n} session(s) fermée(s) à distance" : "session fermée à distance", o, par, ct);
         OublierSessions();

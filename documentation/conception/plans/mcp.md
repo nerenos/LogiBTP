@@ -20,7 +20,7 @@
 | 1 | Contrats du socle : agent de la requête, plafond, codes | socle | — | FAIT (13/11/2026) |
 | 2 | Règles de délégation (plafond, garde-fous, interdits) | `modules/mcp` (nouveau) | 1 | FAIT (13/11/2026) |
 | 3 | Plafond appliqué par le module Droits | `modules/droits` (+ Document : `ValiderDans`) | 1 | FAIT (13/11/2026) |
-| 4 | Jetons délégués | `modules/authentification` | 1 | A FAIRE |
+| 4 | Jetons délégués | `modules/authentification` | 1 | FAIT (13/11/2026) |
 | 5 | Point `/mcp`, catalogue d'outils, appel interne, journal | `modules/mcp` | 2, 4 | A FAIRE |
 | 6 | Outils de lecture du cœur, garde-fous du BTP | cœur | 3, 5 | A FAIRE |
 | 7 | Outils d'écriture des devis, origine des écritures | cœur | 6 | A FAIRE |
@@ -118,6 +118,20 @@ Hors plan (Q13) : agent hébergé (automatisations planifiées, panneau intégr�
   autorisée ⇒ refus), jamais pour une session usurpée ; exclusion d'adresse et journal comme un identifiant d'API ;
   le jeton délégué n'ouvre pas `/api/auth/*` (sauf `GET /session`).
 - **Critère de fin** : tests du module (secret haché, échéance, révocation, compte désactivé).
+- **Réalisé** (13/11/2026) : `db/005c_jetons_delegues.sql` (rejouable, manifeste) : `jeton_delegue`, événement
+  `JETON_DELEGUE` ; `ReglesJetonsDelegues` (`Prefixe` = `lbtp_agent_`, `EstJetonDelegue`, `Nouveau`, `Echeance` : 90 jours
+  par défaut et au plus, passée refusée, `Refus` : REVOQUE, ECHU, état du compte ; verrouillé accepté, `RouteAuthPermise`) ;
+  `ServiceAuthentification.JetonsDelegues.cs` : `EmettreJetonDelegueAsync` (compte de personne utilisable, 422
+  `COMPTE_INACTIF` sinon), `OuvrirJetonDelegueAsync` (→ `JetonDelegueOuvert` : session de l'agent, délégation, client ;
+  cache 30 s par base), `SessionDelegueeAsync` (intergiciel : exclusion d'adresse, ECHEC compté si inconnu, REFUS
+  journalisé), `RevoquerJetonDelegueAsync`, `RevoquerDelegationAsync` (hors contrat, pour le module MCP),
+  `RevoquerJetonsDuCompteAsync`, `OublierJetonsDelegues` ; `ServiceJetonsDelegues` = `IJetonsDelegues` (scoped, enregistré
+  par `AddModuleAuthentification`). `SessionLue.Agent` → `Utilisateur.Agent` (jamais d'usurpation ; `UsurperAsync` refuse un
+  agent). Intergiciel : Bearer `lbtp_agent_…` → 401 `JETON_INVALIDE` (code ajouté à `ERREUR_AUTHENTIFICATION` ↔
+  `ErreursAuthentification`) ou 403 `AGENT_INTERDIT` sur `/api/auth/*` sauf `GET /session`. Révocation de tous les jetons du
+  compte : désactivation, réinitialisation (administrateur, lien, commande), changement de mot de passe, fermeture de toutes
+  les sessions. Tests `ReglesJetonsDeleguesTests`, `JetonsDeleguesTests` (base `LOGIBTP_TEST_PG`, intergiciel compris).
+  Choix : pas de JWT pour l'agent (secret relu en base, cache court) ; le jeton ne dit rien du plafond (module MCP, lot 5).
 
 ## Lot 5 : point `/mcp`, catalogue d'outils, appel interne, journal
 

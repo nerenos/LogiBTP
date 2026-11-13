@@ -50,10 +50,14 @@ public sealed record Reinitialisation(string? Jeton, string? Nouveau);
 
 /// <summary>Session valide lue depuis le cookie (en cache court par base).</summary>
 public sealed record SessionLue(long SesId, long CptId, string Code, string? Libelle, string Profil, bool MdpAChanger,
-    string? TypeElement, string? IdElement, DateTimeOffset ExpireLe, bool Persistante, DateTimeOffset VuLe, UsurpationLue? Usurpation = null)
+    string? TypeElement, string? IdElement, DateTimeOffset ExpireLe, bool Persistante, DateTimeOffset VuLe, UsurpationLue? Usurpation = null, AgentRequete? Agent = null)
 {
-    /// <summary>Utilisateur de la requête : le compte usurpé pendant une usurpation (administrateur en Usurpateur), sinon le compte.</summary>
-    public Utilisateur Utilisateur => Usurpation is { } us ? new Utilisateur(us.Code, us.Profil) { Usurpateur = Code } : new Utilisateur(Code, Profil);
+    /// <summary>
+    /// Utilisateur de la requête : le compte usurpé pendant une usurpation (administrateur en Usurpateur), sinon le compte
+    /// (avec l'agent pour un jeton délégué : jamais d'usurpation dans ce cas).
+    /// </summary>
+    public Utilisateur Utilisateur => Agent is { } agent ? new Utilisateur(Code, Profil) { Agent = agent }
+        : Usurpation is { } us ? new Utilisateur(us.Code, us.Profil) { Usurpateur = Code } : new Utilisateur(Code, Profil);
 }
 
 /// <summary>Usurpation en cours dans une session : compte usurpé, fin, motif.</summary>
@@ -314,6 +318,7 @@ public sealed partial class ServiceAuthentification(AuthDbContext db, Specialisa
     /// </summary>
     public async Task<SessionLue> UsurperAsync(SessionLue s, DemandeUsurpation d, IServiceProvider services, Origine origine, CancellationToken ct)
     {
+        if (s.Agent is not null) throw ExceptionMetier.AgentInterdit("usurpation");
         if (s.Usurpation is not null) throw ExceptionMetier.Conflit("USURPATION_EN_COURS", "Une usurpation est déjà en cours : terminez-la d'abord");
         if (!await specialisation.PeutUsurperAsync(services, new Utilisateur(s.Code, s.Profil), ct)) throw ExceptionMetier.AccesRefuse(ActionsDroits.Usurper);
         var motif = d.Motif?.Trim() ?? "";
@@ -393,6 +398,7 @@ public sealed partial class ServiceAuthentification(AuthDbContext db, Specialisa
         await db.SaveChangesAsync(ct);
         await db.Sessions.Where(x => x.SesCptId == compte.CptId && x.SesId != s.SesId && x.SesFermeeLe == null)
             .ExecuteUpdateAsync(x => x.SetProperty(y => y.SesFermeeLe, DateTimeOffset.UtcNow), ct);
+        await RevoquerJetonsAsync(db, compte.CptId, ct);
         OublierSessions();
     }
 
@@ -463,6 +469,7 @@ public sealed partial class ServiceAuthentification(AuthDbContext db, Specialisa
         db.Journal.Add(Entree(compte.CptCode, "MDP_REINITIALISE", "par le lien envoyé par courriel", origine, compte.CptCode));
         await db.SaveChangesAsync(ct);
         await db.Sessions.Where(x => x.SesCptId == compte.CptId && x.SesFermeeLe == null).ExecuteUpdateAsync(x => x.SetProperty(y => y.SesFermeeLe, maintenant), ct);
+        await RevoquerJetonsAsync(db, compte.CptId, ct);
         OublierSessions();
     }
 
@@ -471,10 +478,11 @@ public sealed partial class ServiceAuthentification(AuthDbContext db, Specialisa
         string.Join(" · ", codes.Select(c => ReglesCompte.Messages.GetValueOrDefault(c, c == "MDP_IDENTIQUE" ? "Le nouveau mot de passe doit différer de l'actuel" : c))),
         codes.Select(c => new { code = c, message = ReglesCompte.Messages.GetValueOrDefault(c, c == "MDP_IDENTIQUE" ? "Le nouveau mot de passe doit différer de l'actuel" : c) }).ToList());
 
-    /// <summary>Cache des sessions vidé (désactivation, changement de profil ou de mot de passe, déconnexion) : relu au prochain appel.</summary>
+    /// <summary>Cache des sessions et des jetons délégués vidé (désactivation, changement de profil ou de mot de passe, déconnexion) : relu au prochain appel.</summary>
     public static void OublierSessions()
     {
         Cache.Clear();
+        CacheJetons.Clear();
         JetonsAcces.Invalider();
     }
 

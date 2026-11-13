@@ -42,9 +42,10 @@ Analyses validées le 23/10/2026 : [ANALYSE-MODULE-MAIL.md](documentation/concep
   rafraîchissement rotatif, machines connues, double facteur par courriel, exclusion d'IP, identifiants API, deux clés
   (`.env`, données) ; profil par défaut = saisie mobile (A5 révisée) ; à reprendre par le Mail (comptes, boîtes,
   « À rapprocher ») et l'OAuth (reconnexion des connexions).
-- [ ] **Module MCP** (agents IA au nom d'un utilisateur, [plan](documentation/conception/plans/mcp.md), lots 0 à 3 faits
+- [ ] **Module MCP** (agents IA au nom d'un utilisateur, [plan](documentation/conception/plans/mcp.md), lots 0 à 4 faits
   le 13/11/2026 : audit des routes, contrats du socle, règles de délégation `modules/mcp`, plafond appliqué par les
-  Droits) : lots 4 à 14 (jetons délégués, point `/mcp`, outils du cœur, propositions, écrans, OAuth 2.1). À trancher
+  Droits, jetons délégués du module Authentification) : lots 5 à 14 (point `/mcp` — à lui de révoquer les jetons d'une
+  délégation révoquée par `ServiceAuthentification.RevoquerDelegationAsync` —, outils du cœur, propositions, écrans, OAuth 2.1). À trancher
   au lot 6 : un nœud retenu par un garde-fou (TIERS, SALARIES, PAIE…) perd aussi ses écritures (choix du lot 2).
   Reportés du lot 3 (audit § 7, points 3 et 6) : contrôles par identité hors `IDroits` encore aveugles à
   `Utilisateur.Agent` (`PeutGererAsync` `StockBtp.cs`, `MagasinBtp.Exiger`, `PeutTraiterAsync` `StockBorneBtp.cs`,

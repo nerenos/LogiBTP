@@ -10,6 +10,7 @@
 modules/oauth/db/004_oauth.sql
 modules/authentification/db/005_authentification.sql
 modules/authentification/db/005b_authentification_securite.sql
+modules/authentification/db/005c_jetons_delegues.sql
 modules/calendrier/db/006_calendrier.sql
 modules/mail/db/007_mail.sql
 modules/mail/db/007b_mail_reception.sql

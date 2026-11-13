@@ -35,6 +35,8 @@ public static class Extensions
         services.AddScoped<ServiceAuthentification>();
         services.AddScoped<ServiceComptes>();
         services.AddSingleton<JetonsAcces>();
+        // Jetons délégués aux agents IA (contrat du socle, utilisé par le module MCP).
+        services.AddScoped<IJetonsDelegues, ServiceJetonsDelegues>();
         return services;
     }
 
@@ -46,7 +48,8 @@ public static class Extensions
     /// d'API) vérifié sans lecture de la base ; expiré ou révoqué : le jeton de rafraîchissement du cookie est relu en base
     /// et remplacé (rotation), un nouveau jeton d'accès est posé. L'utilisateur est posé sur la requête
     /// (Utilisateur.Depuis). Sans session : 401 SESSION_REQUISE, sauf routes publiques et mode EnTetes (développement).
-    /// Mot de passe provisoire : 403 MDP_A_CHANGER hors des routes de la session.
+    /// Mot de passe provisoire : 403 MDP_A_CHANGER hors des routes de la session. Jeton délégué (Bearer « lbtp_agent_… ») :
+    /// utilisateur du compte avec l'agent, 401 JETON_INVALIDE s'il est refusé, 403 AGENT_INTERDIT sur /api/auth/* (sauf GET /session).
     /// </summary>
     public static IApplicationBuilder UseAuthentificationSession(this IApplicationBuilder app)
     {
@@ -72,13 +75,33 @@ public static class Extensions
             var baseSociete = http.RequestServices.GetRequiredService<SocieteCourante>().Base;
             SessionLue? session;
             var entete = http.Request.Headers.Authorization.ToString();
+            if (entete.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) && ReglesJetonsDelegues.EstJetonDelegue(entete[7..].Trim()))
+            {
+                // Jeton délégué à un agent IA : l'utilisateur du compte avec l'agent (délégation, client), jamais d'usurpation ;
+                // du module, seul GET /api/auth/session lui est ouvert.
+                var agent = await service.SessionDelegueeAsync(entete[7..].Trim(), ServiceAuthentification.Origine.Depuis(http), http.RequestAborted);
+                if (agent is null)
+                {
+                    await Refuser(http, StatusCodes.Status401Unauthorized, ErreursAuthentification.JetonInvalide, "Jeton d'accès invalide ou expiré");
+                    return;
+                }
+                if (!ReglesJetonsDelegues.RouteAuthPermise(http.Request.Method, chemin.Value ?? ""))
+                {
+                    await Refuser(http, StatusCodes.Status403Forbidden, ErreursAgent.AgentInterdit, "Interdit à l'agent : authentification et comptes");
+                    return;
+                }
+                http.Items[CleSession] = agent;
+                Utilisateur.Poser(http, agent.Utilisateur);
+                await next(http);
+                return;
+            }
             if (entete.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
             {
                 // Identifiant d'API : jeton d'accès seul, renouvelé par /auth/jeton/rafraichir.
                 session = jetons.Lire(entete[7..].Trim(), baseSociete, out var api);
                 if ((session is null || !api) && !publique)
                 {
-                    await Refuser(http, StatusCodes.Status401Unauthorized, "JETON_INVALIDE", "Jeton d'accès invalide ou expiré");
+                    await Refuser(http, StatusCodes.Status401Unauthorized, ErreursAuthentification.JetonInvalide, "Jeton d'accès invalide ou expiré");
                     return;
                 }
                 if (!api) session = null;
@@ -243,7 +266,7 @@ public static class Extensions
         {
             var (session, nouveau) = string.IsNullOrEmpty(d.Rafraichissement) ? (null, null)
                 : await s.RafraichirAsync(d.Rafraichissement, ServiceAuthentification.Origine.Depuis(http), ct);
-            if (session is null) throw new ExceptionMetier(StatusCodes.Status401Unauthorized, "JETON_INVALIDE", "Jeton de rafraîchissement invalide ou expiré");
+            if (session is null) throw new ExceptionMetier(StatusCodes.Status401Unauthorized, ErreursAuthentification.JetonInvalide, "Jeton de rafraîchissement invalide ou expiré");
             return new JetonsApi(jetons.Emettre(session, societe.Base, api: true), nouveau ?? d.Rafraichissement!, (int)JetonsAcces.DureeApi.TotalSeconds);
         });
 

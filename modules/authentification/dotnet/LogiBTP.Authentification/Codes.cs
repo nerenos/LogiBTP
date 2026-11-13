@@ -7,4 +7,6 @@ public static class ErreursAuthentification
 {
     public const string SessionRequise = "SESSION_REQUISE";
     public const string MdpAChanger = "MDP_A_CHANGER";
+    /// <summary>Jeton Bearer (identifiant d'API ou jeton délégué) inconnu, révoqué, échu, ou compte inutilisable.</summary>
+    public const string JetonInvalide = "JETON_INVALIDE";
 }
