@@ -1,3 +1,4 @@
+using LogiBTP.Socle;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -47,20 +48,8 @@ public static class ListesValeurs
     {
         u.ExigerParametres();
         if (!Listes.TryGetValue(liste, out var def)) throw ExceptionMetier.Introuvable($"Liste {liste}");
-        var erreurs = new List<string>();
-        var codes = valeurs.Select(v => v.Code).ToHashSet();
-        foreach (var v in valeurs)
-        {
-            if (string.IsNullOrWhiteSpace(v.Code) || v.Code.Length > 30) erreurs.Add($"{v.Code} : code obligatoire (30 caractères au plus)");
-            if (string.IsNullOrWhiteSpace(v.Libelle)) erreurs.Add($"{v.Code} : libellé obligatoire");
-            if (v.Parent is not null && (!def.Hierarchie || !codes.Contains(v.Parent) || v.Parent == v.Code
-                || valeurs.First(p => p.Code == v.Parent).Parent is not null))
-            {
-                erreurs.Add($"{v.Code} : regroupement {v.Parent} inconnu ou lui-même rangé (deux niveaux au plus)");
-            }
-        }
-        if (valeurs.GroupBy(v => v.Code).Any(g => g.Count() > 1)) erreurs.Add("Codes en double");
-        if (erreurs.Count > 0) throw ExceptionMetier.Invalide("LISTE_VALEUR", string.Join(" ; ", erreurs.Distinct()));
+        Controler(def.Hierarchie, valeurs).Lever();
+        var codes = valeurs.Select(v => v.Code.Trim()).ToHashSet();
 
         await using var tx = await db.Unite().CommencerAsync(ct);
         var avant = await LireAsync(db, liste, ct);
@@ -87,6 +76,23 @@ public static class ListesValeurs
         }
         await tx.CommitAsync(ct);
         return await LireAsync(db, liste, ct);
+    }
+
+    /// <summary>
+    /// Contrôles d'une liste saisie (format commun : 422 VALIDATION, champ « rang.champ ») : code (30) et libellé (100)
+    /// obligatoires, couleur (9), codes uniques, regroupement connu de la liste, deux niveaux au plus.
+    /// </summary>
+    public static Controles Controler(bool hierarchie, IReadOnlyList<ValeurListe> valeurs)
+    {
+        var parCode = valeurs.Where(v => !string.IsNullOrWhiteSpace(v.Code)).GroupBy(v => v.Code.Trim()).ToDictionary(g => g.Key, g => g.First());
+        return new Controles()
+            .Uniques(valeurs, v => v.Code, "code", "Code")
+            .Lignes(valeurs, (c, v) => c
+                .Obligatoire("code", v.Code, "Code").Longueur("code", v.Code?.Trim(), 30, "Code")
+                .Obligatoire("libelle", v.Libelle, "Libellé").Longueur("libelle", v.Libelle?.Trim(), 100, "Libellé")
+                .Longueur("couleur", v.Couleur, 9, "Couleur")
+                .Si(v.Parent is not null && (!hierarchie || !parCode.TryGetValue(v.Parent, out var p) || v.Parent == v.Code?.Trim() || p.Parent is not null),
+                    "parent", ErreursEnregistrement.Inconnu, $"Regroupement {v.Parent} inconnu ou lui-même rangé (deux niveaux au plus)"));
     }
 
     public static IEndpointRouteBuilder MapListesValeurs(this IEndpointRouteBuilder api)

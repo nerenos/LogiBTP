@@ -412,6 +412,11 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         var entree = await Entree(saisie, ct);
         var handler = handlers.Pour(type);
         var controles = new List<MessageCalcul>();
+        // Type de ligne connu (serveur seul : sinon refus de la clé étrangère, sans la ligne en cause).
+        var typesLigne = (await db.TypesLigne.AsNoTracking().Select(t => t.TylId).ToListAsync(ct)).ToHashSet();
+        controles.AddRange(saisie.Lignes.Where(l => !typesLigne.Contains(l.LigTylId))
+            .Select(l => new MessageCalcul(l.LigId, "TYPE_LIGNE", $"Type de ligne {l.LigTylId} inconnu")));
+        if (controles.Count > 0) throw ExceptionMetier.Invalide(ErreursEnregistrement.Validation, "Lignes incorrectes", controles);
         handler.Controler(new ContexteDocument<TDoc, TLigne> { Type = type, Proprietes = await Proprietes(type.TydId, ct), Entree = entree }, controles);
         if (controles.Count > 0) throw ExceptionMetier.Invalide("CONTROLES", "Le document ne respecte pas le paramétrage", controles);
 
