@@ -1,7 +1,7 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 import {
   attendreDocument, attendreStatut, attendreMessage, actionDocument, dialogue, idDocument, numeroDocument, onglet, enregistrer,
-  ajouterIntervenant, ajouterLigne, rattacher, saisirObjet, valider, choisirDansListe, saisirCellule, ligneGrille, statutDocument, TIERS, type LignePrix,
+  ajouterIntervenant, ajouterLigne, rattacher, saisirObjet, valider, choisirDansListe, saisirCellule, saisirCelluleVerifiee, cellule, ligneGrille, statutDocument, TIERS, type LignePrix,
 } from './documents';
 import { ajouterArticle, type LigneArticle } from './stock';
 import { choisirOption } from './sous-traitance';
@@ -230,19 +230,31 @@ export type Besoin = { libelle: string; qte: string; unite: string; nature: stri
  * nature, unité, quantité.
  */
 export async function ajouterBesoin(page: Page, b: Besoin) {
-  await onglet(page, 'Lignes');
   const ligne = ligneGrille(page, b.libelle);
+  // Ligne d'élément sans libellé laissée par un essai manqué : reprise plutôt qu'une nouvelle
+  const vide = lignesElements(page).filter({ has: page.locator('td.col-libelle', { hasText: /^\s*$/ }) }).first();
   await expect(async () => {
+    // Document créé par la première ligne : la page redessinée peut revenir sur l'entête
+    await onglet(page, 'Lignes');
     if (await ligne.count()) return;
-    await ligneGrille(page, 'Pied du document').locator('td.col-libelle').click();
-    await page.keyboard.press('Control+Shift+Enter');
-    await page.keyboard.press('Escape');
-    await saisirCellule(page, corpsGrille(page).locator('tr.courante'), 'Libellé', b.libelle);
-    await expect(ligne).toBeVisible({ timeout: 2000 });
-  }).toPass({ timeout: 15000 });
-  await saisirCellule(page, ligne, 'Nature', b.nature);
-  await saisirCellule(page, ligne, 'U', b.unite);
-  await saisirCellule(page, ligne, 'Qté', b.qte);
+    let cible = vide;
+    if (!(await vide.count())) {
+      await ligneGrille(page, 'Pied du document').locator('td.col-libelle').click({ timeout: 5000 });
+      await page.keyboard.press('Control+Shift+Enter');
+      await page.keyboard.press('Escape');
+      cible = corpsGrille(page).locator('tr.courante');
+    }
+    // Délais bornés : un essai bloqué (grille redessinée sous le clic) échoue et se rejoue
+    await (await cellule(page, cible, 'Libellé')).click({ timeout: 5000 });
+    await page.keyboard.press('Enter');
+    await page.locator('#vue-lignes input.editeur').fill(b.libelle, { timeout: 5000 });
+    await page.keyboard.press('Enter');
+    await expect(ligne).toBeVisible({ timeout: 3000 });
+  }).toPass({ timeout: 45000 });
+  // Saisies vérifiées et reprises : la grille est redessinée quand la première ligne crée le document
+  await saisirCelluleVerifiee(page, ligne, 'Nature', b.nature);
+  await saisirCelluleVerifiee(page, ligne, 'U', b.unite);
+  await saisirCelluleVerifiee(page, ligne, 'Qté', b.qte);
 }
 
 /**
@@ -264,7 +276,8 @@ export async function creerOrdre(page: Page, type: string, { objet, chantier, be
 /** Prix d'une ligne de la pièce ouverte (colonne PV de la vue affichée), puis enregistrée. */
 export async function saisirPrix(page: Page, prix: Record<string, string>) {
   await onglet(page, 'Lignes');
-  for (const [libelle, pv] of Object.entries(prix)) await saisirCellule(page, ligneGrille(page, libelle), 'PV', pv);
+  // Prix vérifié et repris : la grille est redessinée quand le contact du tiers choisi est relu
+  for (const [libelle, pv] of Object.entries(prix)) await saisirCelluleVerifiee(page, ligneGrille(page, libelle), 'PV', pv);
   await enregistrer(page);
 }
 
