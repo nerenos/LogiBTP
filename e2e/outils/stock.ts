@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 import {
-  attendreDocument, attendreStatut, saisirObjet, enregistrer, valider, onglet, ligneGrille, saisirCellule, cellule, attendreMessage, choisirDansListe,
+  attendreDocument, attendreStatut, saisirObjet, enregistrer, valider, onglet, ligneGrille, saisirCellule, cellule, attendreMessage, choisirDansListe, ouvrirEditeur, LIBELLE_VIDE,
 } from './documents';
 
 /**
@@ -43,7 +43,7 @@ export async function ajouterArticle(page: Page, a: LigneArticle) {
   // Lignes d'élément sans libellé : celle d'un essai manqué, reprise plutôt qu'une nouvelle (elle bloquerait la
   // validation : nature obligatoire)
   const vides = page.locator('#vue-lignes div.grille:not(.metre-variables) > table tbody tr')
-    .filter({ has: page.locator('td', { hasText: /^Élément$/ }) }).filter({ has: page.locator('td.col-libelle', { hasText: /^\s*$/ }) });
+    .filter({ has: page.locator('td', { hasText: /^Élément$/ }) }).filter({ has: page.locator('td.col-libelle', { hasText: LIBELLE_VIDE }) });
   await expect(async () => {
     // Document créé par la première ligne (adresse /document/<id>) : la page redessinée peut revenir sur l'entête
     await onglet(page, 'Lignes');
@@ -61,9 +61,7 @@ export async function ajouterArticle(page: Page, a: LigneArticle) {
     // Code saisi d'un bloc : frappe par frappe, la recherche de la bibliothèque peut s'ouvrir sur les premières lettres
     // et prendre la suite de la saisie.
     // Délais bornés : un essai bloqué (grille redessinée sous le clic) échoue et se rejoue au lieu d'attendre sans fin
-    await (await cellule(page, cible, 'Code')).click({ timeout: 5000 });
-    await page.keyboard.press('Enter');
-    await page.locator('#vue-lignes input.editeur').fill(a.code, { timeout: 5000 });
+    await (await ouvrirEditeur(page, await cellule(page, cible, 'Code'))).fill(a.code, { timeout: 5000 });
     await page.keyboard.press('Enter');
     await expect(ligne).toBeVisible({ timeout: 3000 });
   }).toPass({ timeout: 45000 });

@@ -1,7 +1,7 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 import {
   attendreDocument, attendreStatut, attendreMessage, actionDocument, dialogue, idDocument, numeroDocument, onglet, enregistrer,
-  ajouterIntervenant, ajouterLigne, rattacher, saisirObjet, valider, choisirDansListe, saisirCellule, saisirCelluleVerifiee, cellule, ligneGrille, statutDocument, TIERS, type LignePrix,
+  ajouterIntervenant, ajouterLigne, rattacher, saisirObjet, valider, choisirDansListe, saisirCellule, saisirCelluleVerifiee, cellule, ligneGrille, statutDocument, TIERS, ouvrirEditeur, LIBELLE_VIDE, type LignePrix,
 } from './documents';
 import { ajouterArticle, type LigneArticle } from './stock';
 import { choisirOption } from './sous-traitance';
@@ -232,7 +232,7 @@ export type Besoin = { libelle: string; qte: string; unite: string; nature: stri
 export async function ajouterBesoin(page: Page, b: Besoin) {
   const ligne = ligneGrille(page, b.libelle);
   // Ligne d'élément sans libellé laissée par un essai manqué : reprise plutôt qu'une nouvelle
-  const vide = lignesElements(page).filter({ has: page.locator('td.col-libelle', { hasText: /^\s*$/ }) }).first();
+  const vide = lignesElements(page).filter({ has: page.locator('td.col-libelle', { hasText: LIBELLE_VIDE }) }).first();
   await expect(async () => {
     // Document créé par la première ligne : la page redessinée peut revenir sur l'entête
     await onglet(page, 'Lignes');
@@ -245,9 +245,7 @@ export async function ajouterBesoin(page: Page, b: Besoin) {
       cible = corpsGrille(page).locator('tr.courante');
     }
     // Délais bornés : un essai bloqué (grille redessinée sous le clic) échoue et se rejoue
-    await (await cellule(page, cible, 'Libellé')).click({ timeout: 5000 });
-    await page.keyboard.press('Enter');
-    await page.locator('#vue-lignes input.editeur').fill(b.libelle, { timeout: 5000 });
+    await (await ouvrirEditeur(page, await cellule(page, cible, 'Libellé'))).fill(b.libelle, { timeout: 5000 });
     await page.keyboard.press('Enter');
     await expect(ligne).toBeVisible({ timeout: 3000 });
   }).toPass({ timeout: 45000 });

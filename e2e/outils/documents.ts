@@ -229,10 +229,25 @@ export async function cellule(page: Page, ligne: Locator, colonne: string) {
   return ligne.locator(`td[data-col="${i - 1}"]`);
 }
 
-/** Saisie d'une cellule : clic, Entrée (édition), remplacement du texte, Entrée (validation). */
+/**
+ * Éditeur ouvert dans une cellule. Le clic sur la cellule déjà active de la ligne courante ouvre l'éditeur dès le
+ * `mousedown` (grille du socle) : l'Entrée le validerait alors vide et passerait à la ligne du dessous, d'où une Entrée
+ * seulement si le clic ne l'a pas ouvert. L'éditeur attendu est celui de la cellule, pas un autre de la grille.
+ */
+export async function ouvrirEditeur(page: Page, td: Locator, { timeout = 5000 }: { timeout?: number } = {}) {
+  await td.click({ timeout });
+  const editeur = td.locator('.editeur');
+  if (!(await editeur.count())) await page.keyboard.press('Enter');
+  await expect(editeur).toBeVisible({ timeout });
+  return editeur;
+}
+
+/** Libellé d'une ligne encore vide : cellule sans texte, hors bouton « ¶ » de mise en forme de la ligne courante. */
+export const LIBELLE_VIDE = /^[\s¶]*$/;
+
+/** Saisie d'une cellule : éditeur ouvert (clic, Entrée si besoin), remplacement du texte, Entrée (validation). */
 export async function saisirCellule(page: Page, ligne: Locator, colonne: string, valeur: string) {
-  await (await cellule(page, ligne, colonne)).click();
-  await page.keyboard.press('Enter');
+  await ouvrirEditeur(page, await cellule(page, ligne, colonne));
   await page.keyboard.press('ControlOrMeta+a');
   await page.keyboard.type(valeur);
   await page.keyboard.press('Enter');
@@ -264,9 +279,7 @@ export async function ajouterLigne(page: Page, l: LignePrix) {
   await expect(async () => {
     await onglet(page, 'Lignes');
     if (await ligne.count()) return;
-    await (await cellule(page, nouvelle, 'Libellé')).click({ timeout: 5000 });
-    await page.keyboard.press('Enter');
-    await page.locator('#vue-lignes input.editeur').fill(l.libelle, { timeout: 5000 });
+    await (await ouvrirEditeur(page, await cellule(page, nouvelle, 'Libellé'))).fill(l.libelle, { timeout: 5000 });
     await page.keyboard.press('Enter');
     await expect(ligne).toBeVisible({ timeout: 3000 });
   }).toPass({ timeout: 45000 });
