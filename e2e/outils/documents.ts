@@ -127,8 +127,9 @@ export async function enregistrer(page: Page) {
 
 /** Action du menu ▾ du bouton Enregistrer (Valider, Transformer…, Dévalider…, Annuler par avoir…). */
 export async function actionDocument(page: Page, nom: string) {
-  const menu = page.locator('[data-menu-actions]');
-  if (await menu.isHidden()) await page.locator('[data-ouvrir-actions]').click();
+  // Une page masquée (fenêtre précédente gardée par l'application) peut rester dans le DOM : menu de la page affichée.
+  const menu = page.locator('[data-menu-actions]:not([hidden])');
+  if (!(await menu.count())) await page.locator('[data-ouvrir-actions]').filter({ visible: true }).last().click();
   await menu.getByRole('menuitem', { name: nom, exact: true }).click();
 }
 

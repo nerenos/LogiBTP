@@ -865,6 +865,46 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
     }
 
     /// <summary>
+    /// Rôle du tiers d'une famille de documents : le client pour les ventes et les ordres d'exécution (ordres d'un marché
+    /// de vente), le fournisseur ou le sous-traitant pour les achats et la sous-traitance, notre société pour le stock.
+    /// </summary>
+    private static string RoleTiers(string famille) => famille switch
+    {
+        FamillesDocument.Vente or FamillesDocument.Execution => "CLIENT",
+        FamillesDocument.Achat or FamillesDocument.SousTraitance => "FOURNISSEUR",
+        _ => famille,
+    };
+
+    /// <summary>
+    /// Transformation vers une famille dont le tiers n'a pas le même rôle (demande d'achat ou ordre de sous-traitance d'un
+    /// chantier vers une commande fournisseur, demande d'approvisionnement vers une réservation de stock…) : ni le tiers
+    /// (le client de l'ordre n'est pas le fournisseur, et le tiers d'une transformation est ensuite figé), ni son annuaire,
+    /// ni ses coordonnées figées, ni le marché de la source ne sont repris ; le chantier, l'affaire et le projet restent.
+    /// </summary>
+    public override void PreparerEnteteTransformee(DocumentBtp cible, TypeDocument typeSource, TypeDocument typeCible)
+    {
+        // Ordre transmis à un ordre d'un autre type (fabrication → livraison…) : l'exécution de la source (service porteur,
+        // responsable, état, motif, dates prévues) n'est pas reprise ; le service par défaut du type s'applique à la
+        // création (db/208), les dates et l'état suivent ensuite les étapes du nouvel ordre.
+        if (typeCible.TydFamille == FamillesDocument.Execution && typeCible.TydCode != typeSource.TydCode)
+        {
+            cible.EntSrvId = null;
+            cible.EntResponsableId = null;
+            cible.EntExeEtat = null;
+            cible.EntExeMotifId = null;
+            cible.EntExeCommentaire = null;
+            cible.EntDebutPrevu = null;
+            cible.EntFinPrevue = null;
+        }
+        if (RoleTiers(typeSource.TydFamille) == RoleTiers(typeCible.TydFamille)) return;
+        cible.EntTiersId = null;
+        cible.EntMarcheId = null;
+        cible.EntContactClient = null;
+        cible.EntContactPayeur = null;
+        cible.EntIntervenants = null;
+    }
+
+    /// <summary>
     /// Document créé depuis plusieurs sources : un rattachement (projet, affaire, chantier, marché) n'est gardé que s'il
     /// est commun à toutes (une facture fournisseur peut couvrir plusieurs chantiers).
     /// </summary>
