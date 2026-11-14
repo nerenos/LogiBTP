@@ -7,12 +7,6 @@
   rejouables, numéro de version lisible, retour arrière sans restauration.
   Aujourd'hui : scripts `modules/*/db` et `db/` appliqués à la création du volume Docker, puis à la main sur `logibtp`
   et `logibtp_demo` ; la plupart ne sont pas rejouables.
-- [ ] **Enregistrement des données, suite** (plan [enregistrement-donnees.md](documentation/conception/plans/enregistrement-donnees.md),
-  lots 1 à 9 faits le 13/11/2026) : passer les contrôles des autres tables de paramétrage au format commun
-  (`Controles`, 422 `VALIDATION` par champ ; fait : listes de valeurs) — annuaire (`CODE` / `LIBELLE`, avec son
-  fournisseur mémoire), bibliothèque, comptabilité, pointage, ressources ; brancher `erreursParChamp` dans les écrans de
-  paramétrage pour placer chaque message sous son champ ; étendre `.EnTransaction()` aux groupes restants sans effet
-  externe immédiat (ressources, rentabilité, structure, terrain, exécution) après revue de leurs appels sortants.
 
 ## Fonctionnel
 
@@ -86,6 +80,8 @@ Analyse du 23/10/2026 : [ANALYSE-MODULE-SOUS-TRAITANCE.md](documentation/concept
 - [ ] Faire relire le cadre réglementaire (§ 3 : vigilance, autoliquidation, autofacturation, paiement direct) par
   l'expert-comptable ; écritures du paiement direct, de la délégation et de l'autoliquidation à préciser avec le
   module Comptabilité (ST14, ST15).
+
+### RFE
 - [ ] Module Facturation électronique (réception obligatoire depuis le 01/09/2026) : **plan terminé le 12/11/2026**
   (29 lots, [facturation-electronique.md](documentation/conception/plans/facturation-electronique.md) : lignes « Réalisé »
   de chaque lot ; référence [FACTURE-ELECTRONIQUE.md](documentation/modules/FACTURE-ELECTRONIQUE.md)). Reste à faire :
