@@ -22,7 +22,7 @@ const D = (code, titre) => ({ url: `/document/nouveau?type=${code}`, titre });
 export const MENUS_METIER = [
   {
     code: 'ressources', libelle: texte('navigation_btp.menus.ressources.libelle'), court: texte('navigation_btp.menus.ressources.court'), droit: 'ressources', elements: [
-      { code: 'ressources', libelle: texte('navigation_btp.menus.ressources.ressources.libelle'), iconeHtml: iconeHtml('navigation_btp_ressources'), iconeHtml: iconeHtml('navigation_btp_ressources'), url: L('ressources'), info: texte('navigation_btp.menus.ressources.ressources.info') },
+      { code: 'ressources', libelle: texte('navigation_btp.menus.ressources.ressources.libelle'), iconeHtml: iconeHtml('navigation_btp_ressources'), url: L('ressources'), info: texte('navigation_btp.menus.ressources.ressources.info') },
       { separateur: true },
       { code: 'salaries', libelle: texte('navigation_btp.menus.ressources.salaries.libelle'), iconeHtml: iconeHtml('navigation_btp_salaries'), url: L('salaries'), creation: F(TYPE_FICHE.SALARIE, texte('navigation_btp.menus.ressources.salaries.creation')) },
       { code: 'materiels', libelle: texte('navigation_btp.menus.ressources.materiels.libelle'), iconeHtml: iconeHtml('navigation_btp_materiels'), url: L('materiels'), creation: F(TYPE_FICHE.MATERIEL, texte('navigation_btp.menus.ressources.materiels.creation')) },
@@ -97,7 +97,7 @@ export const MENUS_METIER = [
       { code: 'facture-electronique', libelle: texte('navigation_btp.menus.ventes.facture_electronique.libelle'), iconeHtml: iconeHtml('navigation_btp_facture_electronique'), url: '/facture-electronique', info: texte('navigation_btp.menus.ventes.facture_electronique.info'), module: MODULE_FACULTATIF.FACTURE_ELECTRONIQUE, droit: 'facture_electronique' },
       { code: 'fe-recues', libelle: texte('navigation_btp.menus.ventes.fe_recues.libelle'), iconeHtml: iconeHtml('navigation_btp_fe_recues'), url: '/liste/fe_recues?vue=1014', info: texte('navigation_btp.menus.ventes.fe_recues.info'), module: MODULE_FACULTATIF.FACTURE_ELECTRONIQUE, droit: 'facture_electronique' },
       { separateur: true, libelle: texte('navigation_btp.menus.ventes.titre_demandes_execution.libelle') },
-      { code: 'ordres-oe', libelle: texte('navigation_btp.menus.ventes.ordres_oe.libelle'), iconeHtml: iconeHtml('navigation_btp_ordres_oe'), url: '/liste/ordres?vue=1001', module: MODULE_FACULTATIF.EXECUTION, droit: 'execution', type: 'E_OE', info: texte('navigation_btp.menus.ventes.ordres_oe.info') },
+      { code: 'ventes-ordres-oe', libelle: texte('navigation_btp.menus.ventes.ordres_oe.libelle'), iconeHtml: iconeHtml('navigation_btp_ordres_oe'), url: '/liste/ordres?vue=1001', module: MODULE_FACULTATIF.EXECUTION, droit: 'execution', type: 'E_OE', info: texte('navigation_btp.menus.ventes.ordres_oe.info') },
       { separateur: true },
       { code: 'import-optim', libelle: texte('navigation_btp.menus.ventes.import_optim.libelle'), iconeHtml: iconeHtml('navigation_btp_import_optim'), url: '/import/optimbtp', info: texte('navigation_btp.menus.ventes.import_optim.info') },
     ],
