@@ -144,6 +144,12 @@ public class SpecialisationDocument<TDoc, TLigne, TComplet>
     /// </summary>
     public virtual void ControlerTransformation(TComplet source, TypeDocument typeSource, TypeDocument typeCible, bool depuisPlusieurs) { }
 
+    /// <summary>
+    /// Entête du document créé par une transformation (copie de l'entête de la source, types source et cible) : tiers ou
+    /// rattachements qui n'ont pas de sens pour la cible (ordre client transformé en commande fournisseur…).
+    /// </summary>
+    public virtual void PreparerEnteteTransformee(TDoc cible, TypeDocument typeSource, TypeDocument typeCible) { }
+
     /// <summary>Entête d'un document créé depuis plusieurs sources (il part de la première) : rattachements communs…</summary>
     public virtual void PreparerEntetePlusieurs(TDoc cible, IReadOnlyList<TDoc> sources) { }
 

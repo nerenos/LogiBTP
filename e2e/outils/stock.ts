@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 import {
-  attendreDocument, attendreStatut, saisirObjet, enregistrer, valider, onglet, ligneGrille, saisirCellule, attendreMessage, choisirDansListe,
+  attendreDocument, attendreStatut, saisirObjet, enregistrer, valider, onglet, ligneGrille, saisirCellule, cellule, attendreMessage, choisirDansListe,
 } from './documents';
 
 /**
@@ -40,15 +40,41 @@ export type LigneArticle = { code: string; libelle: string; qte: string };
 export async function ajouterArticle(page: Page, a: LigneArticle) {
   await onglet(page, 'Lignes');
   const ligne = ligneGrille(page, a.libelle);
+  // Lignes d'élément sans libellé : celle d'un essai manqué, reprise plutôt qu'une nouvelle (elle bloquerait la
+  // validation : nature obligatoire)
+  const vides = page.locator('#vue-lignes div.grille:not(.metre-variables) > table tbody tr')
+    .filter({ has: page.locator('td', { hasText: /^Élément$/ }) }).filter({ has: page.locator('td.col-libelle', { hasText: /^\s*$/ }) });
   await expect(async () => {
+    // Document créé par la première ligne (adresse /document/<id>) : la page redessinée peut revenir sur l'entête
+    await onglet(page, 'Lignes');
     if (await ligne.count()) return;
-    await ligneGrille(page, 'Pied du document').locator('td.col-libelle').click();
-    await page.keyboard.press('Control+Shift+Enter');
-    await page.keyboard.press('Escape');
-    const nouvelle = page.locator('#vue-lignes div.grille:not(.metre-variables) > table tbody tr.courante');
-    await saisirCellule(page, nouvelle, 'Code', a.code);
+    // Fenêtre Bibliothèque restée d'un essai précédent : fermée
+    const bib = page.getByRole('dialog', { name: 'Bibliothèque' });
+    if (await bib.count()) { await page.keyboard.press('Escape'); await expect(bib).toHaveCount(0); }
+    let cible = vides.first();
+    if (!(await vides.count())) {
+      await ligneGrille(page, 'Pied du document').locator('td.col-libelle').click({ timeout: 5000 });
+      await page.keyboard.press('Control+Shift+Enter');
+      await page.keyboard.press('Escape');
+      cible = page.locator('#vue-lignes div.grille:not(.metre-variables) > table tbody tr.courante');
+    }
+    // Code saisi d'un bloc : frappe par frappe, la recherche de la bibliothèque peut s'ouvrir sur les premières lettres
+    // et prendre la suite de la saisie.
+    // Délais bornés : un essai bloqué (grille redessinée sous le clic) échoue et se rejoue au lieu d'attendre sans fin
+    await (await cellule(page, cible, 'Code')).click({ timeout: 5000 });
+    await page.keyboard.press('Enter');
+    await page.locator('#vue-lignes input.editeur').fill(a.code, { timeout: 5000 });
+    await page.keyboard.press('Enter');
     await expect(ligne).toBeVisible({ timeout: 3000 });
-  }).toPass({ timeout: 20000 });
+  }).toPass({ timeout: 45000 });
+  await onglet(page, 'Lignes');
+  while (await vides.count()) {
+    const n = await vides.count();
+    await vides.first().locator('td.col-libelle').click();
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Delete');
+    await expect(vides).toHaveCount(n - 1);
+  }
   await saisirCellule(page, ligne, 'Qté', a.qte);
 }
 

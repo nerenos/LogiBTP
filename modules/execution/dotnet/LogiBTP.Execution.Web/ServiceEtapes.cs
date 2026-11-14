@@ -289,7 +289,18 @@ public sealed class ServiceEtapes(ExecutionDbContext db, SpecialisationExecution
         etapes = await DefinitionAsync(o, ct);
         if (etapes.Count == 0) return etapes;
         db.EtapesOrdres.AddRange(etapes);
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            // Point de sauvegarde : une copie concurrente (deux lectures de la première ouverture de l'ordre, validation
+            // de l'ordre pendant l'affichage de ses étapes) n'annule pas la transaction englobante.
+            await db.Unite().ExecuterAsync(c => db.SaveChangesAsync(c), ct);
+        }
+        catch (DbUpdateException e) when (e.InnerException is Npgsql.PostgresException { SqlState: Npgsql.PostgresErrorCodes.UniqueViolation })
+        {
+            // Étapes copiées entre-temps par l'autre requête : ce sont elles qui comptent.
+            foreach (var x in etapes) db.Entry(x).State = EntityState.Detached;
+            return await db.EtapesOrdres.Where(x => x.OreOrdreId == o.Id).OrderBy(x => x.OreOrdre).ToListAsync(ct);
+        }
         await RecalculerAsync(o, ct);
         return etapes;
     }

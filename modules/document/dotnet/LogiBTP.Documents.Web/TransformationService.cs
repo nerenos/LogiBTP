@@ -68,7 +68,11 @@ public class TransformationService<TDoc, TLigne, TComplet>(
         var p = await Preparer(sourceId, typeCible, dem, u, depuisPlusieurs: false, ct)
             ?? throw ExceptionMetier.Invalide("RIEN_A_TRANSFORMER", "Aucune quantité à transformer");
         var numero = typeCible.TydNumerotationContinue ? null : await documents.AttribuerNumero(typeCible, DateOnly.FromDateTime(DateTime.Today), ct);
-        var cible = await documents.Dupliquer(p.Source, d => PreparerEntete(d, typeCible, numero, intermediaire), u, ct,
+        var cible = await documents.Dupliquer(p.Source, d =>
+        {
+            PreparerEntete(d, typeCible, numero, intermediaire);
+            specialisation.PreparerEnteteTransformee(d, p.TypeSource, typeCible);
+        }, u, ct,
             contenu => PreparerAvancement(Filtrer(contenu, p.Garder, p.Retenues, p.EnVendu), p));
         await EcrireLiens(p, cible.Document.Document.EntId, cible.Document.Lignes, ct);
         return cible.Document.Document.EntId;
@@ -381,6 +385,7 @@ public class TransformationService<TDoc, TLigne, TComplet>(
         var cible = await documents.Dupliquer(preparations[0].Source, d =>
         {
             PreparerEntete(d, typeCible, numero, intermediaire: false);
+            specialisation.PreparerEnteteTransformee(d, preparations[0].TypeSource, typeCible);
             specialisation.PreparerEntetePlusieurs(d, preparations.Select(p => p.Source.Document).ToList());
         }, u, ct, _ => Fusionner(contenus));
         foreach (var p in preparations) await EcrireLiens(p, cible.Document.Document.EntId, cible.Document.Lignes, ct);
