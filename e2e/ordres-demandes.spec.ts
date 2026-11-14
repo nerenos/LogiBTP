@@ -5,7 +5,7 @@ import { ACHATS } from './outils/achats';
 import { validerCommandeDansMarche, SOUS_TRAITANCE } from './outils/sous-traitance';
 import { creerDepot, pieceStockValidee, quantiteEnStock, choisirLieu, STOCK, type Lieu } from './outils/stock';
 import {
-  creerOrdre, transformerVers, garderLignes, ouvrir, validerEtape, controlerEtape, attendreEtatExecution, choisirTiers, saisirPrix, transmettreEtPrendreEnCharge, validerEtAccepterPiece,
+  creerOrdre, transformerVers, garderLignes, ouvrir, validerEtape, controlerEtape, attendreEtatExecution, choisirTiers, saisirPrix, transmettreEtPrendreEnCharge, validerEtAccepterPiece, accepterSiEnvoyee,
   type Piece,
 } from './outils/execution';
 
@@ -74,8 +74,7 @@ test.describe.serial('Ordres : demandes sans devis', { tag: TAG_API }, () => {
 
     const cf = await transformerVers(page, /Commande fournisseur/);
     await attendreTotalHt(page, '70,00');
-    await valider(page);
-    await attendreStatut(page, 'Validé');
+    await validerEtAccepterPiece(page);
     pieces.push(cf);
 
     await ouvrir(page, dac.id);
@@ -91,8 +90,7 @@ test.describe.serial('Ordres : demandes sans devis', { tag: TAG_API }, () => {
     await choisirTiers(page, ACHATS.FOURNISSEUR);
     await saisirPrix(page, { [nacelle.libelle]: '180' });
     await attendreTotalHt(page, '900,00');
-    await valider(page);
-    await attendreStatut(page, 'Validé');
+    await validerEtAccepterPiece(page);
     pieces.push(cf);
   });
 
@@ -102,15 +100,13 @@ test.describe.serial('Ordres : demandes sans devis', { tag: TAG_API }, () => {
     await garderLignes(page, [STOCK.PARPAING.libelle]);
     await choisirLieu(page, 'Dépôt réservé', depot.code);
     await enregistrer(page);
-    await valider(page);
-    await attendreStatut(page, 'Validé');
+    await validerEtAccepterPiece(page);
     pieces.push(rs);
 
     pieces.push(await transformerVers(page, /Transfert/));
     await choisirLieu(page, 'Origine (vide : entrée)', depot.code);
     await enregistrer(page);
-    await valider(page);
-    await attendreStatut(page, 'Validé');
+    await validerEtAccepterPiece(page);
     // 30 m² de parpaings = 300 unités sorties du dépôt
     await expect(await quantiteEnStock(page, depot, STOCK.PARPAING.libelle)).toContainText(/700\s*u/);
 
@@ -135,7 +131,7 @@ test.describe.serial('Ordres : demandes sans devis', { tag: TAG_API }, () => {
     const cst = await transformerVers(page, /Commande de sous-traitance/);
     expect(cst.numero).toMatch(/^CST\d{4}-\d+$/);
     await validerCommandeDansMarche(page, { venteLiee: SOUS_TRAITANCE.MARCHE_VENTE });
-    await attendreStatut(page, 'Validé');
+    await accepterSiEnvoyee(page);
     pieces.push(cst);
 
     await ouvrir(page, ost.id);

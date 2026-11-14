@@ -283,7 +283,14 @@ export async function transmettreEtPrendreEnCharge(page: Page) {
 /** Pièce validée puis acceptée par le tiers (demande de prix, appel d'offres : statut Validé). */
 export async function validerEtAccepterPiece(page: Page) {
   await valider(page);
-  // Pièce issue d'un ordre : validée d'office ou envoyée au tiers selon son type
+  await accepterSiEnvoyee(page);
+}
+
+/**
+ * Pièce validée : validée d'office ou envoyée au tiers selon le paramétrage de son type (scripts de la base appliqués ou
+ * non) ; envoyée, elle est acceptée (« Validé par le tiers »).
+ */
+export async function accepterSiEnvoyee(page: Page) {
   await onglet(page, 'Entête');
   const statut = statutDocument(page);
   await expect(statut).toContainText(/^(Envoyé|Validé) · v\d+/);
