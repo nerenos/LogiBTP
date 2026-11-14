@@ -48,6 +48,7 @@ export const TYPE_DOCUMENT = Object.freeze({
   S_SORTIE: 'S_SORTIE',
   S_TRANSFERT: 'S_TRANSFERT',
   S_RESERVATION: 'S_RESERVATION',
+  S_DEMANDE: 'S_DEMANDE',
   S_INVENTAIRE: 'S_INVENTAIRE',
 });
 
@@ -91,6 +92,7 @@ export const MODULE_FACULTATIF = Object.freeze({
   CRM: 'crm',
   EXECUTION: 'execution',
   FACTURE_ELECTRONIQUE: 'facture_electronique',
+  MCP: 'mcp',
   PLANNING: 'planning',
   POINTAGE: 'pointage',
   REGLEMENT: 'reglement',
@@ -301,6 +303,45 @@ export const CIBLE_EREPORTING = Object.freeze({
   INTERNATIONAL: 'INTERNATIONAL',
 });
 
+/** Types de cible d'une proposition d'agent (module MCP) ↔ CiblesProposition (C#) : pièce, ou fiche par le préfixe suivi de son type. */
+export const CIBLE_PROPOSITION = Object.freeze({
+  DOCUMENT: 'document',
+  PREFIXE_FICHE: 'fiche/',
+});
+
+/** Erreurs des outils d'écriture des devis pour les agents IA (module MCP, lot 7 : Btp/McpDocumentsBtp.cs). */
+export const ERREUR_MCP_BTP = Object.freeze({
+  TYPE_NON_PERMIS: 'MCP_TYPE_NON_PERMIS',
+  OPERATION: 'MCP_OPERATION_INVALIDE',
+  LIGNE: 'MCP_LIGNE_INVALIDE',
+  ELEMENT: 'MCP_ELEMENT_NON_PERMIS',
+  VERROU: 'MCP_VERROU',
+  VERSION: 'MCP_VERSION',
+  ENTETE_MODIFIEE: 'MCP_ENTETE_MODIFIEE',
+  MODELE: 'MCP_MODELE_DOCUMENT',
+  SOURCE: 'MCP_SOURCE_OU_MODELE',
+  FILTRE_VIDE: 'MCP_FILTRE_VIDE',
+  CRITERE_INCONNU: 'MCP_CRITERE_INCONNU',
+  AUCUNE_LIGNE: 'MCP_AUCUNE_LIGNE',
+  DEJA_VALIDE: 'MCP_DEJA_VALIDE',
+  DESTINATAIRE: 'MCP_DESTINATAIRE',
+  VENTILATION_VIDE: 'MCP_VENTILATION_VIDE',
+});
+
+/** Motif d'une ligne retenue ou écartée par le filtre d'un ordre d'exécution (outil MCP preparer_ordre_execution, lot 9). */
+export const MOTIF_LIGNE_ORDRE = Object.freeze({
+  SERVICE: 'SERVICE',
+  FAMILLE: 'FAMILLE',
+  CHAPITRE: 'CHAPITRE',
+  ETIQUETTE: 'ETIQUETTE',
+  SANS_RESTE: 'SANS_RESTE',
+  HORS_CHAPITRE: 'HORS_CHAPITRE',
+  AUTRE_ETIQUETTE: 'AUTRE_ETIQUETTE',
+  AUTRE_SERVICE: 'AUTRE_SERVICE',
+  SANS_SERVICE: 'SANS_SERVICE',
+  AUTRE_FAMILLE: 'AUTRE_FAMILLE',
+});
+
 /** Erreurs de l'e-reporting (lot 28). */
 export const ERREUR_EREPORTING = Object.freeze({
   PARAMETRES: 'EREPORTING_PARAMETRES',
@@ -362,6 +403,12 @@ export const urlFiche = (type, id) => `/fiche/${type}/${id}`;
 
 /** Adresse d'un document. */
 export const urlDocument = (id) => `/document/${id}`;
+
+/** Adresse d'une proposition d'agent (module MCP, lot 10 ; AdressesApp.UrlProposition). */
+export const urlProposition = (id) => `/agents/propositions/${id}`;
+
+/** Page de consentement OAuth d'un client distant (module MCP, lot 12 ; AdressesApp.UrlAutorisationAgent). */
+export const URL_AUTORISATION_AGENT = '/agents/autoriser';
 
 /** Préférences de l'application dans le localStorage (recopiée dans public/demarrage-theme.js). */
 export const CLE_PREFERENCES_NAVIGATION = 'logibtp.navigation';

@@ -12,6 +12,7 @@
 - Pages dans `src/app/pages`, déclarées dans `pages/index.js` (`ROUTES`) ; sans session en ligne, seule `/connexion` s'ouvre (la borne `/borne` n'a pas de session).
 - `src/main.js` attend `chargerPersonnalisation()` avant d'importer l'application ; aucun script en ligne dans `index.html` (CSP de `vite.config.js`, alignée avec `ClientWeb.Csp` du socle).
 - Menus du bandeau et raccourcis : `src/app/navigation/menus.js` ; widgets : `navigation/widgets.js`.
+- Agents IA (module MCP) : `pages/agents.js` (monte `@logibtp/mcp/ui`), `agents/origines.js` (mention « 🤖 via <client> » de l'historique, pastille de l'entête d'une pièce créée par un agent), `agents/demander.js` (bouton « Demander à l'agent » des fiches marché et chantier et des pièces : recette, prompt copié).
 - Parité avec le serveur : `calcul/moteur-btp.js` ↔ `MoteurDevisBtp.cs` (colonnes de `calcul/colonnes-btp.js` alignées sur les entités), `calcul/controles-btp.js` ↔ `SpecialisationBtp.ControlerValidation`, `frais-annexes.js` (`figerVentilation`) ↔ `SpecialisationBtp.FigerVentilation`, `ressources/*.js` ↔ `Regles*.cs` du cœur (jeux `tests/ressources`), `structure/adresses.js` ↔ `AdressesDocument`, `controlerIntervenants` ↔ `Intervenants.Controler`, `synchroniserSalarie` ↔ `SalariesAnnuaire.Synchroniser`, `completerRattachement` ↔ `PUT /api/structure/documents/{id}/rattachement`, règles de `fiches.js` / `fiche-annuaire.js` ↔ `SpecialisationFicheBtp`.
 
 ## Règles d'interface (valent pour tout le projet)

@@ -31,6 +31,7 @@
 | Type | Dépendance | Version | Licence | Usage |
 |---|---|---|---|---|
 | npm | vitest | 5.1.0 | MIT | développement (modules/authentification/js) |
+| NuGet | EFCore.NamingConventions | 10.0.1 | Apache-2.0 | LogiBTP.Authentification.Tests |
 | NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Authentification.Tests |
 | NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Authentification.Web |
 | NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Authentification.Tests |
@@ -223,6 +224,18 @@
 | NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Mail.Web |
 | NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Mail.Tests |
 | NuGet | xunit.runner.visualstudio | 3.1.4 | Apache-2.0 | LogiBTP.Mail.Tests |
+
+## modules/mcp
+
+| Type | Dépendance | Version | Licence | Usage |
+|---|---|---|---|---|
+| npm | vitest | 5.1.0 | MIT | développement (modules/mcp/js) |
+| NuGet | EFCore.NamingConventions | 10.0.1 | Apache-2.0 | LogiBTP.Mcp.Tests |
+| NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Mcp.Tests |
+| NuGet | ModelContextProtocol.AspNetCore | 1.4.2 | Apache-2.0 | LogiBTP.Mcp.Web |
+| NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Mcp.Web |
+| NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Mcp.Tests |
+| NuGet | xunit.runner.visualstudio | 3.1.4 | Apache-2.0 | LogiBTP.Mcp.Tests |
 
 ## modules/metre
 

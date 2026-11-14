@@ -1,0 +1,27 @@
+{
+  "description": "Règles de la file des propositions (propositions.js ↔ ReglesPropositions.cs) : échéance d'une proposition (7 jours par défaut, 1 à 30), état affiché (en attente échue), contrôle d'une décision (agent jamais, usurpation, décision inconnue, échue, déjà traitée, refus sans motif).",
+  "echeances": [
+    { "nom": "défaut 7 jours", "aujourdhui": "2026-11-13", "jours": null, "attendu": "2026-11-20" },
+    { "nom": "3 jours", "aujourdhui": "2026-11-13", "jours": 3, "attendu": "2026-11-16" },
+    { "nom": "borné à 30 jours", "aujourdhui": "2026-11-13", "jours": 90, "attendu": "2026-12-13" },
+    { "nom": "au moins un jour", "aujourdhui": "2026-11-13", "jours": 0, "attendu": "2026-11-14" }
+  ],
+  "etats": [
+    { "nom": "en attente avant l'échéance", "etat": "EN_ATTENTE", "echeance": "2026-11-20", "aujourdhui": "2026-11-19", "attendu": "EN_ATTENTE" },
+    { "nom": "en attente le jour de l'échéance : échue", "etat": "EN_ATTENTE", "echeance": "2026-11-20", "aujourdhui": "2026-11-20", "attendu": "ECHUE" },
+    { "nom": "acceptée reste acceptée après l'échéance", "etat": "ACCEPTEE", "echeance": "2026-11-20", "aujourdhui": "2026-12-01", "attendu": "ACCEPTEE" },
+    { "nom": "refusée", "etat": "REFUSEE", "echeance": "2026-11-20", "aujourdhui": "2026-11-14", "attendu": "REFUSEE" }
+  ],
+  "decisions": [
+    { "nom": "acceptation permise", "proposition": { "etat": "EN_ATTENTE", "echeance": "2026-11-20" }, "decision": { "decision": "ACCEPTER" }, "aujourdhui": "2026-11-14", "attendu": [] },
+    { "nom": "un agent n'accepte jamais", "proposition": { "etat": "EN_ATTENTE", "echeance": "2026-11-20" }, "decision": { "decision": "ACCEPTER", "agent": true }, "aujourdhui": "2026-11-14", "attendu": ["AGENT_INTERDIT"] },
+    { "nom": "un agent ne refuse pas non plus", "proposition": { "etat": "EN_ATTENTE", "echeance": "2026-11-20" }, "decision": { "decision": "REFUSER", "motif": "non", "agent": true }, "aujourdhui": "2026-11-14", "attendu": ["AGENT_INTERDIT"] },
+    { "nom": "usurpation refusée", "proposition": { "etat": "EN_ATTENTE", "echeance": "2026-11-20" }, "decision": { "decision": "ACCEPTER", "usurpation": true }, "aujourdhui": "2026-11-14", "attendu": ["MCP_USURPATION"] },
+    { "nom": "décision inconnue", "proposition": { "etat": "EN_ATTENTE", "echeance": "2026-11-20" }, "decision": { "decision": "VALIDER" }, "aujourdhui": "2026-11-14", "attendu": ["MCP_PARAMETRE_INVALIDE"] },
+    { "nom": "proposition échue", "proposition": { "etat": "EN_ATTENTE", "echeance": "2026-11-20" }, "decision": { "decision": "ACCEPTER" }, "aujourdhui": "2026-11-20", "attendu": ["MCP_PROPOSITION_ECHUE"] },
+    { "nom": "proposition déjà acceptée", "proposition": { "etat": "ACCEPTEE", "echeance": "2026-11-20" }, "decision": { "decision": "CORRIGER" }, "aujourdhui": "2026-11-14", "attendu": ["MCP_PROPOSITION_CLOSE"] },
+    { "nom": "refus sans motif", "proposition": { "etat": "EN_ATTENTE", "echeance": "2026-11-20" }, "decision": { "decision": "REFUSER", "motif": "  " }, "aujourdhui": "2026-11-14", "attendu": ["MCP_MOTIF_REQUIS"] },
+    { "nom": "refus motivé", "proposition": { "etat": "EN_ATTENTE", "echeance": "2026-11-20" }, "decision": { "decision": "REFUSER", "motif": "Prix à revoir" }, "aujourdhui": "2026-11-14", "attendu": [] },
+    { "nom": "refus d'une proposition annulée, sans motif", "proposition": { "etat": "ANNULEE", "echeance": "2026-11-20" }, "decision": { "decision": "REFUSER" }, "aujourdhui": "2026-11-14", "attendu": ["MCP_PROPOSITION_CLOSE", "MCP_MOTIF_REQUIS"] }
+  ]
+}

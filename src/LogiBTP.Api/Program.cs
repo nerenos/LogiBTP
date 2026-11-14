@@ -29,6 +29,7 @@ using LogiBTP.Listes.Web;
 using LogiBTP.Notifications.Web;
 using LogiBTP.OAuth.Web;
 using LogiBTP.Mail.Web;
+using LogiBTP.Mcp.Web;
 using LogiBTP.Reglements.Web;
 using LogiBTP.Relances.Web;
 using LogiBTP.Socle.Web;
@@ -135,6 +136,9 @@ builder.Services.AddModuleAuthentification<SpecialisationAuthentificationBtp>(Ba
 // Module Droits : profils et arbre des droits (modules/droits/db/009, db/221) ; chaque route /api est rattachée à un nœud
 // (SpecialisationDroitsBtp.Routes), une route non déclarée est refusée.
 builder.Services.AddModuleDroits<SpecialisationDroitsBtp>(Base);
+// Module MCP (agents IA au nom d'un utilisateur, plans/mcp.md) : délégations, plafond lu par les Droits, point /mcp ;
+// outils de lecture du cœur, garde-fous du BTP (SpecialisationMcpBtp, lot 6).
+builder.Services.AddModuleMcp<SpecialisationMcpBtp>(Base);
 // Module Exécution (facultatif) : parcours, états des services, synthèse par chantier (modules/execution/db/085, db/197-198).
 builder.Services.AddModuleExecution<SpecialisationExecutionBtp>(Base);
 // Module Rentabilité (facultatif) : faits versionnés par chantier, file de recalcul et recalcul de nuit avec comparaison
@@ -175,6 +179,8 @@ builder.Services.AddSourceNotifications<SourceStockBtp>();
 builder.Services.AddSourceNotifications<SourcePaiementsDirects>();
 builder.Services.AddSourceNotifications<SourceCertificat>();
 builder.Services.AddSourceNotifications<SourceRelancesAPreparer>();
+// Module MCP (lot 10) : propositions des agents à valider, au délégant.
+builder.Services.AddSourceNotifications<SourcePropositionsAgents>();
 builder.Services.AddCanalNotifications<CanalCourrielBtp>();
 // Module OAuth : connexions sortantes OAuth 2.0 (jetons chiffrés, renouvellement, rappels d'échéance ; modules/oauth/db/004) ;
 // fournisseur de jetons du socle (IFournisseurJeton) pour le module Mail ; retour des fournisseurs en route publique.
@@ -190,6 +196,8 @@ ServiceNotification.TypesDirects.Add(new("ressources", "MATERIEL_RETOUR", "Maté
 builder.Services.PostConfigure<OptionsAuthentification>(o =>
 {
     o.RoutesPubliques.AddRange(["/api/sante", "/api/societe", "/api/pointage/borne", LogiBTP.OAuth.Web.Extensions.RouteRetour]);
+    // Serveur d'autorisation OAuth du point /mcp (plans/mcp.md, lot 12) : demande d'autorisation et point de jeton.
+    o.RoutesPubliques.AddRange(LogiBTP.Mcp.Web.Extensions.RoutesPubliques);
     o.AdressesConfiance.AddRange(securite.AdressesConfiance);
 });
 
@@ -225,6 +233,12 @@ api.MapGet("/sante", (SpecialisationBtp s) => Results.Ok(new { statut = "ok", ve
 api.MapGet("/societe", (SocieteCourante s) => Results.Ok(new { code = s.Code, libelle = s.Libelle, principale = s.Principale }));
 api.MapModuleAuthentification();
 api.MapModuleDroits();
+// Gestion des délégations : refusée (409 MODULE_INACTIF) quand le module MCP est désactivé pour la société (db/308).
+api.MapGroup("").ExigeModule(ModulesFacultatifs.Mcp, "Agents IA").MapModuleMcp();
+// Désignation d'un tiers sans sa fiche (garde-fou TIERS des agents, plans/mcp.md lot 6).
+api.MapDesignationTiers();
+// Origine des écritures de l'historique d'une pièce (agents IA, plans/mcp.md lot 11) : pastille 🤖 du client.
+api.MapOriginesHistorique();
 api.MapModuleDocument<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp>();
 api.MapModuleListe();
 api.MapModuleFiche();
@@ -239,6 +253,9 @@ api.MapGroup("").ExigeModule(ModulesFacultatifs.FactureElectronique, "Facturatio
 api.MapModuleCrm().ExigeModule(ModulesFacultatifs.Crm, "CRM");
 api.MapExecution().ExigeModule(ModulesFacultatifs.Execution, "Exécution");
 api.MapModuleExecution().ExigeModule(ModulesFacultatifs.Execution, "Exécution");
+// Agents IA (plans/mcp.md, lot 9) : lignes d'un marché filtrées pour un ordre, unités de stock d'une pièce, ventilation d'une demande d'appro.
+api.MapGroup("").ExigeModule(ModulesFacultatifs.Execution, "Exécution").MapMcpExecution();
+api.MapGroup("").ExigeModule(ModulesFacultatifs.Stock, "Stock").MapVentilationDemandes();
 api.MapModuleSousTraitance().ExigeModule(ModulesFacultatifs.SousTraitance, "Sous-traitance");
 api.MapModuleStock().ExigeModule(ModulesFacultatifs.Stock, "Stock");
 api.MapModuleSav().ExigeModule(ModulesFacultatifs.Sav, "SAV");
@@ -290,6 +307,8 @@ api.MapCalendriersBtp();
 api.MapModuleEdition();
 api.MapEditionsBtp();
 
+// Point MCP des agents (Streamable HTTP, jeton délégué exigé ; refuse de démarrer en mode EnTetes).
+app.MapPointMcp();
 // Page d'amorçage du certificat (publique, HTTP et HTTPS) : autorité, script des postes, profil iPad.
 app.MapAmorcage();
 // Routes du client (toute adresse hors /api → index.html), en dernier recours.

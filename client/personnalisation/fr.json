@@ -5355,6 +5355,24 @@
           "libelle": "Fermer la session…",
           "titre": "Ferme toutes les fenêtres ; la session pourra être restaurée depuis l'accueil"
         }
+      },
+      "agents": {
+        "libelle": "Agents IA",
+        "court": "Agents",
+        "propositions": {
+          "libelle": "Propositions des agents",
+          "info": "Actions préparées par un agent, à accepter, corriger ou refuser"
+        },
+        "journal": {
+          "libelle": "Journal des agents"
+        },
+        "delegations": {
+          "libelle": "Mes délégations",
+          "info": "Autoriser un agent IA (Claude Code, claude.ai…) à agir en mon nom"
+        },
+        "parametrage_agents": {
+          "libelle": "Paramétrage des agents"
+        }
       }
     },
     "positions": {
@@ -6658,9 +6676,9 @@
         },
         "pose": "Statut {{statut}} posé : message de cycle de vie mis en file.",
         "raccourcis": {
-          "groupe": "Chronologie : statut de la facture reçue",
           "207": "Mettre la facture reçue en litige",
-          "210": "Refuser la facture reçue"
+          "210": "Refuser la facture reçue",
+          "groupe": "Chronologie : statut de la facture reçue"
         }
       }
     },
@@ -9109,6 +9127,35 @@
       "periode_titre": "Mois affichés (par défaut : deux mois avant le mois en cours jusqu'à neuf mois après)"
     }
   },
+  "agents_btp": {
+    "routes": {
+      "propositions": "Propositions des agents",
+      "proposition": "Proposition n° {{id}}",
+      "journal": "Journal des agents",
+      "parametres": "Paramétrage des agents IA",
+      "autoriser": "Autoriser un agent IA"
+    },
+    "module_inactif": "Le module Agents IA (MCP) n'est pas activé pour la société (Paramètres › Modules).",
+    "parametres": {
+      "aide": "Levées des garde-fous, modèles de plafond permis, échéance maximale et quotas par profil ; toutes les délégations de la société, révocables.",
+      "admin": "Réservé à l'administrateur.",
+      "enregistre": "Levées du profil enregistrées"
+    },
+    "journal": {
+      "aide": "Chaque appel d'outil d'un agent (lecture comprise) : éléments lus et écrits, garde-fous appliqués, statut."
+    },
+    "propositions": {
+      "aide": "Actions préparées par un agent et non exécutées : l'acceptation les exécute sous votre identité, avec vos droits.",
+      "file": "File des propositions"
+    },
+    "origine": {
+      "agent": "un agent",
+      "via": "via {{client}}",
+      "aide": "Écrit par un agent IA ({{client}}) au nom de cet utilisateur",
+      "piece": "Pièce créée par {{utilisateur}} via un agent IA ({{client}})",
+      "piece_aide": "À relire : la pastille disparaît dès qu'un humain enregistre la pièce."
+    }
+  },
   "erreurs": {
     "ACOMPTE_EMIS": "La facture ou le reçu de cet acompte existe déjà",
     "AFF_BOUCLE": "Matériels porteurs en boucle : le porteur choisi est lui-même porté par ce matériel",
@@ -9145,6 +9192,8 @@
     "FA_HORS_TRANCHE": "Ligne de frais annexes hors d'une tranche de frais annexes : non ventilée",
     "FA_PIED": "Frais annexe de pied non ventilé : à remplacer par une tranche de frais annexes",
     "FA_SANS_RECEPTRICE": "Aucune ligne pour recevoir les frais annexes de la tranche",
+    "FE_ANNUAIRE_SIREN": "SIREN (9 chiffres) obligatoire pour interroger l'annuaire",
+    "FE_DEJA_EMISE": "Facture électronique déjà émise : suivez-la dans l'onglet Chronologie",
     "FORMULE": "Libellé du modèle obligatoire",
     "LIVRAISON_NON_VALIDEE": "Commande non validée : la date de livraison se saisit dans le document",
     "LIVRAISON_TYPE": "La date de livraison d'une ligne validée ne concerne que les commandes fournisseur et de sous-traitance",
@@ -9172,6 +9221,7 @@
     "REV_RIEN": "Aucune régularisation de révision à facturer",
     "REV_SOUS_TRAITANCE": "Marché de sous-traitance : la régularisation passe sur la facture d'avancement suivante",
     "REV_TIERS": "Client du marché à renseigner",
+    "SAV_CLIENT": "Client de l'intervention inconnu (chantier sans client)",
     "SERVICE_MEMBRE": "Membre en double",
     "SERVICE_NIVEAUX": "Deux niveaux de services au plus (service, sous-service)",
     "STK_ARTICLE": "Article non géré en stock",
@@ -9184,7 +9234,10 @@
     "ST_SOURCE": "Seuls une commande ou un devis client, un ordre de sous-traitance se sous-traitent",
     "ST_UN_SEUL": "Une commande de sous-traitance est passée à un seul sous-traitant",
     "TERRAIN_DEMANDE": "Au moins un article ou besoin",
+    "TERRAIN_DEMANDE_QUANTITE": "Quantité positive",
+    "TERRAIN_LEVEE_RIEN": "Aucune réserve levée à constater",
     "TERRAIN_LIVRAISON": "Au moins une quantité reçue",
+    "TERRAIN_LIVRAISON_OPTIONS": "Commande à options ou variantes pas encore choisies : réception à faire au bureau",
     "TERRAIN_MATERIEL": "Rien à enregistrer",
     "TERRAIN_PERSONNE": "Compte sans salarié lié",
     "TERRAIN_PHOTO": "Images seulement",

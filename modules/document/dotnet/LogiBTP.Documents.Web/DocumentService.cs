@@ -201,7 +201,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
 
     private async Task Historiser(TComplet avant, string action, Utilisateur u, CancellationToken ct, string? motif = null)
     {
-        db.Historiques.Add(new DocumentHistorique
+        var historique = new DocumentHistorique
         {
             HisMotif = motif,
             HisEntId = avant.Document.EntId,
@@ -210,8 +210,11 @@ public class DocumentService<TDoc, TLigne, TComplet>(
             HisDate = DateTimeOffset.UtcNow,
             HisUtilisateur = u.Code,
             HisInstantane = PersistanceDocument<TDoc, TLigne, TComplet>.Instantane(avant),
-        });
+        };
+        db.Historiques.Add(historique);
         await db.SaveChangesAsync(ct);
+        // Origine de l'utilisateur de la requête (agent IA…) : colonnes du cœur, par la spécialisation.
+        await specialisation.ApresHistoriqueAsync(db, historique, u, ct);
     }
 
     // ------------------------------------------------------------------ calcul
@@ -521,13 +524,26 @@ public class DocumentService<TDoc, TLigne, TComplet>(
     }
 
     /// <summary>
+    /// Validation automatique (<see cref="ValiderDans"/>) par un agent IA : permise seulement avec le droit VALIDER effectif
+    /// de l'agent sur le nœud (module Droits : profil ∩ plafond) ; sans module Droits, jamais. Humain : rien n'est contrôlé.
+    /// </summary>
+    public static async Task ExigerValidationAgent(IDroits? droits, Utilisateur u, string noeud, CancellationToken ct)
+    {
+        if (u.Agent is null) return;
+        if (droits is null || !await droits.AutoriseAsync(u, noeud, ActionsDroits.Valider, ct))
+            throw ExceptionMetier.AgentInterdit($"{ActionsDroits.Valider} {noeud}");
+    }
+
+    /// <summary>
     /// Validation dans la transaction de l'appelant, sans contrôle du droit VALIDER : document intermédiaire validé
-    /// automatiquement par une transformation (le droit TRANSFORMER de la source suffit).
+    /// automatiquement par une transformation (le droit TRANSFORMER de la source suffit). Agent IA sans VALIDER effectif
+    /// sur le type : refus 403 AGENT_INTERDIT (rien n'est validé, l'appelant annule sa transaction).
     /// </summary>
     protected internal async Task<ReponseEnregistrement<TComplet>> ValiderDans(long id, Utilisateur u, CancellationToken ct)
     {
         var avant = await persistance.Charger(id, ct);
         var type = await Type(avant.Document.EntTydId, ct);
+        await ExigerValidationAgent(droits, u, NoeudDroits(type), ct);
         await VerifierModifiable(avant.Document, ct);
 
         var saisie = JsonCalcul.Cloner(avant);

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { stockA, ecartComptage, valoriser, valeurUnitaire, valoriserEtat, controlerLot, MESSAGES_INVENTAIRE, projeter, minimumJusqua, proposer, repartirLots, dateLimiteLot, stockParLot, proposerLots, MESSAGES_TRACABILITE } from '../src/index.js';
+import { stockA, ecartComptage, valoriser, valeurUnitaire, valoriserEtat, controlerLot, MESSAGES_INVENTAIRE, projeter, minimumJusqua, proposer, repartirLots, dateLimiteLot, stockParLot, proposerLots, MESSAGES_TRACABILITE, ventiler, NATURE_PART_APPRO, MOTIF_REAPPRO } from '../src/index.js';
 
 // Jeux partagés avec ReglesStock.cs et ReglesValorisation.cs (LogiBTP.Stock.Tests).
 const lire = (f) => JSON.parse(fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../tests/cas', f), 'utf8'));
@@ -58,6 +58,17 @@ describe('projection et propositions (jeu partagé)', () => {
   }
   for (const c of jeu.propositions) {
     it(c.nom, () => expect(proposer(c)).toEqual(c.attendu));
+  }
+});
+
+describe('ventilation des besoins et réappro sous le mini (jeu partagé)', () => {
+  for (const c of lire('07_ventilation.json').cas) {
+    it(c.nom, () => {
+      const r = ventiler(c);
+      expect(r).toEqual(c.attendu);
+      for (const b of r.besoins) for (const p of b.parts) expect(Object.values(NATURE_PART_APPRO)).toContain(p.nature);
+      for (const d of r.reappros) for (const f of d.fournisseurs) for (const l of f.lignes) expect(Object.values(MOTIF_REAPPRO)).toContain(l.motif);
+    });
   }
 });
 

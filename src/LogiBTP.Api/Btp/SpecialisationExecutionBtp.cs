@@ -121,6 +121,8 @@ public class SpecialisationExecutionBtp(IHttpContextAccessor http) : Specialisat
     /// </summary>
     public override async Task<bool> PeutValiderAsync(ExecutionDbContext db, OrdreEtapes o, EtapeOrdreEntite? e, Utilisateur u, CancellationToken ct)
     {
+        // Agent : responsable, membre du service ou ressource de l'étape seulement si son plafond couvre Valider (lot 6 MCP).
+        if (!await AgentsBtp.CouvertAsync(u, NoeudExecution, ActionsDroits.Valider, http.HttpContext?.RequestServices, ct)) return false;
         if (u.EstAdmin) return true;
         if (await IndividuAsync(db, u, ct) is not long ind) return false;
         long? salarie = null;
@@ -139,6 +141,9 @@ public class SpecialisationExecutionBtp(IHttpContextAccessor http) : Specialisat
             new NpgsqlParameter("id", o.Id)).FirstOrDefaultAsync(ct);
     }
 
+    /// <summary>Nœud de droits de l'exécution.</summary>
+    public const string NoeudExecution = "execution";
+
     /// <summary>Nœud du module Droits qui accorde le contrôle du N+1 par profil (action VALIDER, portée SERVICE ou TOUT).</summary>
     public const string NoeudControle = "execution/controle";
 
@@ -149,6 +154,7 @@ public class SpecialisationExecutionBtp(IHttpContextAccessor http) : Specialisat
     /// </summary>
     public override async Task<bool> PeutControlerAsync(ExecutionDbContext db, OrdreEtapes o, Utilisateur u, CancellationToken ct)
     {
+        if (!await AgentsBtp.CouvertAsync(u, NoeudControle, ActionsDroits.Valider, http.HttpContext?.RequestServices, ct)) return false;
         if (u.EstAdmin) return true;
         var droits = Services.GetService<IDroits>();
         var portee = droits is null ? null : await droits.PorteeAsync(u, NoeudControle, ActionsDroits.Valider, ct);

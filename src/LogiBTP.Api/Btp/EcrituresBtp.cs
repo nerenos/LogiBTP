@@ -23,7 +23,7 @@ public static class EcrituresBtp
         new("/api/listes/vues", Session), new("/api/rentabilite/vues", Session), new("/api/planning/vues", Session),
 
         // Lectures par POST (critères ou contenu dans le corps).
-        new("/api/calcul", Lecture), new("/api/cas-test", Lecture), new("/api/planning/calcul", Lecture),
+        new("/api/calcul", Lecture), new("/api/structure/documents", Lecture), new("/api/planning/calcul", Lecture),
         new("/api/listes/agregats", Lecture), new("/api/listes/controle", Lecture), new("/api/listes/lignes", Lecture),
         new("/api/listes/segments", Lecture), new("/api/listes/sources/requete", Lecture),
         new("/api/editions/apercu", Lecture), new("/api/editions/pdf", Lecture), new("/api/editions/verifier", Lecture),
@@ -38,7 +38,7 @@ public static class EcrituresBtp
         new("/api/documents", Document), new("/api/documents/{id}", Document), new("/api/documents/{id}/copie", Document),
         new("/api/documents/{id}/indices", Document), new("/api/documents/{id}/transformer", Document),
         new("/api/documents/{id}/*", Action),
-        new("/api/documents/plusieurs", Lot), new("/api/structure/documents", Document), new("/api/structure/documents/{id}", Action),
+        new("/api/documents/plusieurs", Lot), new("/api/cas-test", Action), new("/api/structure/documents/{id}", Action),
         new("/api/structure/marches/{id}/documents", Document), new("/api/lignes", Action),
 
         // Paramétrage : tables et listes de valeurs enregistrées entières.
@@ -88,6 +88,13 @@ public static class EcrituresBtp
         new("/api/mail", Action), new("/api/mail/traiter", Lot),
         new("/api/planning", Action), new("/api/pointage", Action), new("/api/pointage/export", Lot), new("/api/pointage/valoriser", Lot),
         new("/api/pointage/synthese/valider", Lot), new("/api/pointage/synthese/devalider", Lot),
+        new("/api/mcp", Action), new("/api/mcp/parametres", Parametrage),
+        // File des propositions des agents (lot 10) : décisions d'un humain (acceptation : action exécutée sous son identité).
+        new("/api/mcp/propositions", Action),
+        // Serveur d'autorisation OAuth (lot 12) : jeton émis (session d'un client distant), consentement (délégation créée), liste blanche.
+        new("/api/mcp/oauth/token", Session), new("/api/mcp/oauth/demandes", Action), new("/api/mcp/clients", Parametrage),
+        // Recettes des agents (lot 13) : paramétrage de l'administrateur.
+        new("/api/mcp/recettes", Parametrage),
         new("/api/reglements", Action), new("/api/relances", Action), new("/api/relances/lots", Lot), new("/api/relances/lots/{id}/annuler", Action),
         new("/api/rentabilite", Action), new("/api/rentabilite/recalculer-tout", Lot), new("/api/rentabilite/chantiers/{id}/photos", Fichier),
         new("/api/ressources", Action), new("/api/ressources/materiels/pleins-carburant", Lot),

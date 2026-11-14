@@ -50,6 +50,7 @@ public static class TypesDocument
     public const string SSortie = "S_SORTIE";
     public const string STransfert = "S_TRANSFERT";
     public const string SReservation = "S_RESERVATION";
+    public const string SDemande = "S_DEMANDE";
     public const string SInventaire = "S_INVENTAIRE";
 
     /// <summary>Commandes qui reçoivent un accusé de réception (ARC).</summary>
@@ -90,6 +91,8 @@ public static class ModulesFacultatifs
     public const string Crm = "crm";
     public const string Execution = "execution";
     public const string FactureElectronique = "facture_electronique";
+    /// <summary>Agents IA (module MCP, db/308) : désactivé à la création.</summary>
+    public const string Mcp = "mcp";
     public const string Planning = "planning";
     public const string Pointage = "pointage";
     public const string Reglement = "reglement";
@@ -340,6 +343,78 @@ public static class CiblesEreporting
     public const string International = "INTERNATIONAL";
 }
 
+/// <summary>Erreurs des outils d'écriture des devis pour les agents IA (module MCP, lot 7 : Btp/McpDocumentsBtp.cs).</summary>
+/// <summary>
+/// Types de cible d'une proposition d'agent (module MCP, lots 10 et 11) ↔ <c>CIBLE_PROPOSITION</c> : pièce, ou fiche par le
+/// préfixe suivi de son type (lien de l'écran de la proposition vers sa cible).
+/// </summary>
+public static class CiblesProposition
+{
+    public const string Document = "document";
+    public const string PrefixeFiche = "fiche/";
+}
+
+public static class ErreursMcpBtp
+{
+    /// <summary>Pièce d'un autre type que celui de l'outil (devis seulement ; transformation : devis → commande seulement).</summary>
+    public const string TypeNonPermis = "MCP_TYPE_NON_PERMIS";
+    /// <summary>Opération de lignes inconnue ou incomplète (valeur manquante, remise hors de 0 à 100 %…).</summary>
+    public const string Operation = "MCP_OPERATION_INVALIDE";
+    /// <summary>Ligne désignée absente du document, ou qui n'accepte pas l'opération (quantité d'un titre, parent qui n'est pas une tranche…).</summary>
+    public const string Ligne = "MCP_LIGNE_INVALIDE";
+    /// <summary>Élément de bibliothèque d'un type non inséré par l'agent (poste de pied, texte) ou sans composition.</summary>
+    public const string Element = "MCP_ELEMENT_NON_PERMIS";
+    /// <summary>Document en cours de modification par un autre utilisateur (verrou).</summary>
+    public const string Verrou = "MCP_VERROU";
+    /// <summary>Version lue par l'agent dépassée : le document a été modifié entre-temps (409).</summary>
+    public const string Version = "MCP_VERSION";
+    /// <summary>Statut, numéro, indice ou verrouillage changés par l'enregistrement (jamais par un agent).</summary>
+    public const string EnteteModifiee = "MCP_ENTETE_MODIFIEE";
+    /// <summary>Modèle de saisie inconnu ou inactif.</summary>
+    public const string Modele = "MCP_MODELE_DOCUMENT";
+    /// <summary>Création : un devis source ou un modèle, pas les deux.</summary>
+    public const string Source = "MCP_SOURCE_OU_MODELE";
+    /// <summary>Ordre d'exécution : aucun critère de filtre (service, famille, chapitre, étiquette).</summary>
+    public const string FiltreVide = "MCP_FILTRE_VIDE";
+    /// <summary>Critère inconnu : code de service ou de famille de bibliothèque absent.</summary>
+    public const string CritereInconnu = "MCP_CRITERE_INCONNU";
+    /// <summary>Aucune ligne retenue par le filtre (ou aucun reste à transformer).</summary>
+    public const string AucuneLigne = "MCP_AUCUNE_LIGNE";
+    /// <summary>Proposition de validation d'une pièce déjà validée (verrouillée).</summary>
+    public const string DejaValide = "MCP_DEJA_VALIDE";
+    /// <summary>Envoi proposé sans destinataire (aucun donné, aucun par défaut pour la pièce).</summary>
+    public const string Destinataire = "MCP_DESTINATAIRE";
+    /// <summary>Ventilation à appliquer sans aucune part ni réappro (rien à créer).</summary>
+    public const string VentilationVide = "MCP_VENTILATION_VIDE";
+}
+
+/// <summary>
+/// Motif d'une ligne de commande retenue ou écartée par le filtre d'un ordre d'exécution (outil preparer_ordre_execution,
+/// plans/mcp.md lot 9 ; Q8 : service porteur de la nature, repli famille de bibliothèque, chapitre, étiquette).
+/// </summary>
+public static class MotifsLigneOrdre
+{
+    /// <summary>Retenue : service porteur de la nature (de la ligne, de l'élément ou des composantes) dans le service demandé.</summary>
+    public const string Service = "SERVICE";
+    /// <summary>Retenue : sans service porteur, famille de l'élément dans la famille demandée (repli), ou famille seule demandée.</summary>
+    public const string Famille = "FAMILLE";
+    /// <summary>Retenue : seuls le chapitre et / ou l'étiquette sont demandés, et la ligne y répond.</summary>
+    public const string Chapitre = "CHAPITRE";
+    public const string Etiquette = "ETIQUETTE";
+    /// <summary>Écartée : plus de reste à transformer en ordre d'exécution.</summary>
+    public const string SansReste = "SANS_RESTE";
+    /// <summary>Écartée : hors du chapitre demandé (aucun titre ancêtre ne répond).</summary>
+    public const string HorsChapitre = "HORS_CHAPITRE";
+    /// <summary>Écartée : étiquette de la ligne (ou de ses titres) différente.</summary>
+    public const string AutreEtiquette = "AUTRE_ETIQUETTE";
+    /// <summary>Écartée : service porteur hors du service demandé.</summary>
+    public const string AutreService = "AUTRE_SERVICE";
+    /// <summary>Écartée : aucun service porteur et pas de famille demandée pour le repli.</summary>
+    public const string SansService = "SANS_SERVICE";
+    /// <summary>Écartée : famille de l'élément hors de la famille demandée (ou sans famille).</summary>
+    public const string AutreFamille = "AUTRE_FAMILLE";
+}
+
 /// <summary>Erreurs de l'e-reporting (lot 28).</summary>
 public static class ErreursEreporting
 {
@@ -401,4 +476,21 @@ public static class EtatsReserve
 {
     public const string Ouverte = "OUVERTE";
     public const string Levee = "LEVEE";
+}
+
+/// <summary>
+/// Adresses des pages de l'application (mêmes que <c>urlDocument</c> / <c>urlFiche</c> de client/src/app/codes.js) :
+/// relatives, rendues absolues par l'origine de la société (module MCP : adresse de chaque résultat).
+/// </summary>
+public static class AdressesApp
+{
+    public static string UrlDocument(long id) => $"/document/{id}";
+
+    public static string UrlFiche(string type, object id) => $"/fiche/{type}/{id}";
+
+    /// <summary>Écran d'une proposition d'agent (module MCP, lot 10) : ouvert avec la session de l'application, jamais un lien qui valide.</summary>
+    public static string UrlProposition(long id) => $"/agents/propositions/{id}";
+
+    /// <summary>Page de consentement OAuth d'un client distant (module MCP, lot 12) : ?demande=… ou ?erreur=CODE.</summary>
+    public const string UrlAutorisationAgent = "/agents/autoriser";
 }

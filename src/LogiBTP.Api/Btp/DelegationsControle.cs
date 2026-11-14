@@ -59,6 +59,8 @@ public static class DelegationsControle
     /// </summary>
     public static async Task EnregistrerAsync(LogiBtpContext db, int srv, List<DelegationSaisie> l, Utilisateur u, CancellationToken ct)
     {
+        // Déléguer le contrôle, c'est accorder un droit : jamais à un agent IA (lot 6 MCP), même au compte d'un responsable.
+        if (u.Agent is not null) throw ExceptionMetier.AccesRefuse("DELEGUER");
         var ind = await ComptesBtp.IndividuAsync(db, u.Code, ct);
         var responsables = await db.Database.SqlQueryRaw<long?>("""
             SELECT unnest(ARRAY[s.srv_responsable_id, p.srv_responsable_id]) AS "Value" FROM service s LEFT JOIN service p ON p.srv_id = s.srv_parent_id WHERE s.srv_id = @s

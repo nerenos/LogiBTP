@@ -90,6 +90,8 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
             new("terrain/materiel", "Pointage des matériels sur le terrain", [ActionsDroits.Creer], Aide: "Heures d'engin, compteurs et pleins des matériels d'une tâche"),
             new("mail", "Messagerie", Simple, Icone: "📧"),
             new("connexions", "Connexions externes (OAuth)", Simple, Icone: "🔐"),
+            new(SpecialisationMcpBtp.NoeudAgents, "Agents IA (délégations)", [ActionsDroits.Consulter, ActionsDroits.Creer], Icone: "🤖",
+                Aide: "Consulter : ses délégations et leur journal ; Créer : déléguer ses droits à un agent IA (dans la limite de son profil) et révoquer ; jamais ouvert à un agent"),
             new("parametres", "Paramètres", Lecture, Icone: "🛠",
                 Aide: "Pages de paramétrage (/parametres) : Consulter pour les voir, Modifier pour les enregistrer ; comptes, profils et installation restent à l'administrateur"),
             new("administration", "Administration", Lecture, Icone: "⚙"),
@@ -113,6 +115,26 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
         new("/api/auth/comptes-api", ModeRoute.Module, "administration/comptes"),
         new("/api/auth/exclusions", ModeRoute.Module, "administration/comptes"),
         new("/api/droits", ModeRoute.Session),
+        // Module MCP : délégations et journal de l'utilisateur ; levées par profil réservées à l'administrateur (service).
+        new("/api/mcp", ModeRoute.Module, SpecialisationMcpBtp.NoeudAgents),
+        new("/api/mcp/delegations/{code}/revoquer", ModeRoute.Action, SpecialisationMcpBtp.NoeudAgents, ActionsDroits.Creer),
+        new("/api/mcp/parametres", ModeRoute.Parametrage),
+        // File des propositions (lot 10) : ouverte à toute session ; le service filtre par le droit exigé par chaque proposition
+        // (nœud et action de l'exécuteur) et refuse tout agent (AGENT_INTERDIT) ; l'acceptation agit sous les droits de l'humain.
+        new("/api/mcp/propositions", ModeRoute.Session),
+        // Serveur d'autorisation OAuth 2.1 (lot 12) : demande (navigation depuis le client, sans cookie) et jeton (client
+        // distant) publics, débit borné par le module ; consentement sous le nœud agents (création d'une délégation) ;
+        // liste blanche des clients réservée à l'administrateur (service).
+        new("/api/mcp/oauth/authorize", ModeRoute.Publique),
+        new("/api/mcp/oauth/token", ModeRoute.Publique),
+        new("/api/mcp/oauth/demandes", ModeRoute.Module, SpecialisationMcpBtp.NoeudAgents),
+        new("/api/mcp/clients", ModeRoute.Parametrage),
+        // Recettes (lot 13) : lues par toute session (bouton « Demander à l'agent » : recettes actives, délégation active),
+        // gérées par l'administrateur seul (service : ExigerAdmin) ; jamais par un agent (AGENT_INTERDIT).
+        new("/api/mcp/recettes", ModeRoute.Session),
+        // Désignation d'un tiers (code, raison sociale d'une personne morale, ville ; particulier : code seul) : qui consulte
+        // des pièces en voit les tiers ; lecture seule, ouverte à un agent sous le garde-fou TIERS (plans/mcp.md, lot 6).
+        new("/api/designation", ModeRoute.Module, "documents"),
         new("/api/droits/catalogue", ModeRoute.Module, "administration/profils"),
         new("/api/droits/profils", ModeRoute.Module, "administration/profils"),
         new("/api/droits/journal", ModeRoute.Module, "administration/profils"),
@@ -218,6 +240,11 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
         new("/api/facture-electronique/releve", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),
         new("/api/facture-electronique/annuaire/personnes/{id}/verification", ModeRoute.Action, SpecialisationFactureElectroniqueBtp.Noeud, ActionsDroits.Modifier),
         new("/api/execution", ModeRoute.Module, "execution"),
+        // Agents IA, lot 9 (McpExecutionBtp, lecture seule) : lignes d'un marché pour un ordre filtré, unités de stock d'une pièce,
+        // ventilation proposée d'une demande d'appro ; droits du type de pièce vérifiés en plus par la route.
+        new("/api/execution/marches", ModeRoute.Module, "execution"),
+        new("/api/execution/ordres/{id}/unites-stock", ModeRoute.Module, "execution"),
+        new("/api/stock/demandes", ModeRoute.Module, "stock"),
         new("/api/liaisons", ModeRoute.Module, "planning"),
         new("/api/sous-traitance", ModeRoute.Module, "sous_traitance"),
         new("/api/stock", ModeRoute.Module, "stock"),

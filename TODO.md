@@ -36,6 +36,87 @@ Analyses validées le 23/10/2026 : [ANALYSE-MODULE-MAIL.md](documentation/concep
   rafraîchissement rotatif, machines connues, double facteur par courriel, exclusion d'IP, identifiants API, deux clés
   (`.env`, données) ; profil par défaut = saisie mobile (A5 révisée) ; à reprendre par le Mail (comptes, boîtes,
   « À rapprocher ») et l'OAuth (reconnexion des connexions).
+- [ ] **Module MCP** (agents IA au nom d'un utilisateur, [plan](documentation/conception/plans/mcp.md), lots 0 à 14 faits
+  le 13/11/2026 : audit des routes, contrats du socle, règles de délégation `modules/mcp`, plafond appliqué par les
+  Droits, jetons délégués, point `/mcp`, délégations, journal, outils de lecture du cœur et garde-fous du BTP, activation
+  par société, liste blanche exacte, contrôles par identité bornés au plafond, outils d'écriture des devis et origine
+  AGENT de l'historique des pièces, règle de ventilation et réappro sous le mini du module Stock, ordres d'exécution filtrés,
+  demandes d'appro en unité de stock et ventilation proposée, file des propositions acceptées sous l'identité de l'humain, écrans des délégations, du paramétrage, du journal et des
+  propositions, pastille 🤖 des pièces, serveur d'autorisation OAuth 2.1 du point `/mcp`, recettes exposées en prompts MCP et
+  bouton « Demander à l'agent » ; documentation : [MCP.md](documentation/modules/MCP.md), [guide](documentation/developpeur/GUIDE-AGENTS-MCP.md)). **Reports MCP regroupés ici** ; restent :
+  - OAuth (lot 12) : adresses des documents de client claude.ai et Claude Code pré-renseignées (`099w`) à vérifier par un essai réel
+    du connecteur claude.ai (installation exposée en HTTPS public : `/mcp`, `/.well-known/oauth-*`, `/api/mcp/oauth/authorize|token`) ;
+    retour en boucle locale : port libre accepté depuis le lot 13 (RFC 8252 § 7.3, `http` sur `127.0.0.1`, `[::1]` ou `localhost`
+    déclaré, même hôte, chemin et requête) ; exclusion
+    d'adresse du module Authentification non appliquée aux échecs du point de jeton (pas de contrat du socle ; débit borné à 30 / min /
+    adresse) ; jetons délégués d'accès de 15 min : une ligne `jeton_delegue` par rafraîchissement, purge des jetons échus à prévoir
+    (module Authentification) ; enregistrement dynamique des clients (RFC 7591) non proposé (CIMD seul) ; délégations OAuth listées
+    comme les autres (client = nom du document ; `client_oauth` rendu mais pas encore affiché dans Mon compte) ;
+  - ventilation (lots 8 et 9) : achats non regroupés entre besoins d'une même demande (un ACHAT arrondi par besoin) ;
+    commandes « non affectées » = A_COMMANDE sans lieu de livraison ni demande E_DAP d'origine (une commande livrée à un
+    chantier non dépôt n'est jamais proposée) : à confirmer ; `proche_mini` passé en argument (20 par défaut), pas encore
+    paramètre du stock (colonne et écran du stock encore à faire : non traité au lot 11) ;
+  - ordres filtrés (lot 9) : filtre C# seul (outil serveur) ; une commande avec options ou variantes non choisies est refusée
+    par la transformation (`OPTION_NON_TRAITEE`, rendu à l'agent) ; une OE par commande du marché (pas de regroupement de
+    plusieurs commandes : la transformation multiple ne prend pas de lignes choisies) ; service porteur d'un ouvrage sans
+    nature servie = services de ses composantes (un ouvrage mixte atelier / pose est retenu par l'un comme par l'autre) ;
+  - demandes d'appro (lot 9) : conversion en unité de stock des seuls articles gérés en stock à quantité saisie ; lignes
+    de métré ou sans conversion laissées (`METRE`, `STK_UNITE`) ; prix de vente fixé non converti ;
+  - appel interne : HTTP local préféré, bascule sur HTTPS local quand l'installation redirige (certificat actif) ; dans ce
+    cas le certificat de l'installation doit être reconnu par le conteneur de l'API (autorité LogiBTP), sinon prévoir une
+    exception de `UseHttpsInstallation` pour la boucle locale (comme `/api/sante`) ;
+  - notification au délégant (premier usage, alerte de quota : `alerte_quota` déjà noté au journal) à faire ; activation du
+    module par la page générique `/parametres/modules` (ligne `mcp` de `db/308`) ; purge du journal à un an (Q11) par le
+    planificateur ;
+  - garde-fou COUTS sur les pièces d'achat (décidé au lot 7) : `lire_document` retire tous les prix et montants d'une pièce
+    A ou T (`couts_masques`) ; reste `rechercher` sur une liste de pièces d'achat (montants des colonnes de la vue) : à
+    masquer par la restriction de la liste ou par colonne quand COUTS est actif ;
+  - outils de lecture dont le nœud est un parent (`documents`, `listes`) : classés par la portée du profil sur ce nœud même ;
+    un profil qui n'a de droits que sur `documents/V/…` ne les voit pas dans son catalogue (la route, elle, l'accepterait) ;
+    les outils d'écriture du lot 7 sont classés sur le nœud exact du type (`documents/V/V_DEVIS`, `documents/V/V_COMMANDE`) ;
+  - liste blanche du lot 7 : `PUT /api/documents/{id}` et `POST …/transformer` restent appelables par un agent hors des
+    outils (avec son jeton) ; leurs gardes sont celles du module Document (statut jamais repris du corps, prouvé par
+    `McpDocumentsBtpBaseTests` ; intermédiaire validé refusé sans VALIDER). Décider s'il faut, pour un agent, borner
+    `transformer` aux règles sans intermédiaire côté serveur (aujourd'hui : dans l'outil seulement) ;
+  - copie d'un devis : ses lignes gardent leur origine, donc son tiers est figé (`TIERS_FIGE`, aussi pour un humain) ;
+    l'outil `creer_devis` passe par la création avec contenu vers un autre tiers (sans lien COPIE) : décider si une copie
+    doit libérer le tiers (règle du module Document, `DocumentService.EnregistrerDans`, et `tiersFige` du client) ;
+  - `creer_devis` / `modifier_lignes` : code d'appel d'un élément sans préfixe quand le devis n'a pas de bibliothèque
+    (`ent_bib_id` vide : bibliothèque par défaut supposée) ; postes de pied et textes de la bibliothèque non insérés ;
+  - origine AGENT : seulement dans `document_historique` (module Document) ; les écritures SQL directes de la structure
+    (`Structure.cs`, consultations, stock) et les autres historiques (fiches, CRM, stock) restent à marquer quand leurs
+    outils viendront ; « 🤖 via <client> » de l'historique et pastille de la pièce faits au lot 11 pour les pièces seulement
+    (`GET /api/documents/{id}/origines`) ; pastille = création par un agent sans écriture humaine depuis (« relue » = réécrite) ;
+  - adresse des lignes de `rechercher` : documents (`^[VATSE]_`) et fiches seulement ; autres types d'élément
+    (GED, pointage, mouvement de stock…) sans adresse ;
+  - garde-fou GED_CONFIDENTIEL : aucun outil GED encore (nœuds et clés à poser avec le premier outil de la GED) ;
+  - écrans (lot 11) : modèle SUR_MESURE non proposé à la création (arbre des droits du délégant à monter : `/api/droits/catalogue`
+    est réservé à l'administration des profils) ; filtres compte, agent et élément du journal appliqués dans le navigateur sur
+    1 000 lignes au plus (période par le serveur) : filtres serveur à ajouter si le journal grossit ; correction d'une proposition
+    en JSON brut (écran par exécuteur à prévoir) ; jsdom absent du dépôt : écrans testés par leurs gabarits HTML et fonctions
+    pures ; « Mon compte › Agents » sur la page existante `/compte` (ancre `#agents`), pas de route `/mon-compte` ;
+  - file des propositions (lot 10) : écran `/agents/propositions/<id>` fait au lot 11 ; messages `erreurs.<CODE>` des
+    nouveaux codes (`MCP_PROPOSITION_*`, `MCP_MOTIF_REQUIS`, `MCP_CONTENU_INVALIDE`, `MCP_DEJA_VALIDE`, `MCP_DESTINATAIRE`,
+    `MCP_VENTILATION_VIDE`) : non « sûrs » pour `npm run extraire-erreurs` (messages composés ou multiples), le message du
+    serveur reste affiché ; propositions échues : état calculé à la lecture
+    (jamais écrit), purge à prévoir avec celle du journal ; « à valider » ouvert à tout humain qui a le droit exigé, pas
+    seulement au délégant (à confirmer) ; dépassement du montant de validation à l'acceptation : la tâche du Suivi créée par
+    `MontantDepasseAsync` est annulée avec la transaction de l'acceptation (seul le refus 422 reste) ;
+  - `appliquer_ventilation` : quantités des parts ramenées à l'unité de la ligne au prorata du besoin ; parts COMMANDE en
+    S_DEMANDE sans affectation à la commande en cours ; tiers des S_RESERVATION / S_DEMANDE recopié de la demande (celui de
+    la transformation) ; A_COMMANDE : fournisseur posé en SQL sur le brouillon (comme une demande de prix copiée) ; réappros sans
+    fournisseur principal signalés (`sans_fournisseur`), non commandés ; besoins d'une demande déjà transformée en partie :
+    la ventilation repart de la quantité totale de la ligne (pas du reste par étape) ; filtre `NOT lig_solde` des commandes en
+    cours de la ventilation à revoir (la case dit que la ligne solde sa ligne parente) ;
+  - recettes (lot 13) : « Demander à l'agent » copie seulement le prompt (aucun client n'a d'adresse de nouvelle conversation
+    préremplie documentée : option `adresseClient` de `demanderAgent` prête, non branchée) ; référence passée = identifiant
+    de l'élément (les outils lisent par identifiant) ; recettes fournies par `db/310` (jamais réécrites au rejeu : une
+    évolution de leur texte passe par un nouveau script) ; obtention d'un prompt non journalisée (aucune donnée lue) ;
+    bouton masqué sur une fiche ou une pièce en création et tant que les recettes ne sont pas lues (cache d'une minute) ;
+    pas d'agent hébergé (lancement planifié des recettes : § 10.3, hors plan) ;
+  - `proposer_tiers` : nœud `annuaire` retenu par le garde-fou TIERS (actif par défaut) → dépôt refusé tant qu'il n'est pas
+    levé ; `envoyer_document` : droit CREER sur `mail` exigé de l'humain en plus du nœud du type ; non éprouvé en base (pas de
+    compte d'envoi dans la base d'essai).
 - [ ] **Module de partage de fichiers** (auto-hébergé ou kDrive d'Infomaniak) : lien de téléchargement à la place des
   pièces jointes trop lourdes pour un courriel.
 

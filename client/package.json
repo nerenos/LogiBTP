@@ -45,6 +45,7 @@
     "@logibtp/planning": "0.2.0",
     "@logibtp/pointage": "0.2.0",
     "@logibtp/reglement": "0.2.0",
+    "@logibtp/mcp": "0.1.0",
     "@logibtp/relance": "0.1.0",
     "@logibtp/facture-electronique": "0.1.0",
     "@logibtp/rentabilite": "0.1.0",

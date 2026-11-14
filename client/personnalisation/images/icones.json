@@ -750,5 +750,11 @@
   "facture_electronique_btp_ereporting_corriger": "✏️",
   "facture_electronique_btp_ereporting_relancer": "🔁",
   "facture_electronique_btp_ereporting_ecart": "⚠️",
-  "facture_electronique_btp_ereporting_enregistrer": "💾"
+  "facture_electronique_btp_ereporting_enregistrer": "💾",
+  "agents_btp_agent": "🤖",
+  "agents_btp_propositions": "📨",
+  "agents_btp_journal": "📜",
+  "agents_btp_delegations": "🔑",
+  "agents_btp_parametres": "🤖",
+  "agents_btp_autoriser": "🔗"
 }

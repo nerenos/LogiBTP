@@ -34,6 +34,9 @@ const TYPES_SOURCES = /_(RECEPTION|FACTURE|FACTURE_AVT|SITUATION|PRODUCTION|AVOI
 const TYPES_CROISES = [TYPE_AVANCEMENT.SITUATION, TYPE_AVANCEMENT.PRODUCTION];
 const MARCHE_TYPES = [TYPE_DOCUMENT.V_RECEPTION, TYPE_DOCUMENT.V_SITUATION, TYPE_DOCUMENT.V_PRODUCTION, TYPE_DOCUMENT.V_FACTURE_AVT];
 import { afficherTracabilite } from '../documents/tracabilite.js';
+import { creeeParAgent, pastillePieceHtml } from '../agents/origines.js';
+import { etatDemandeAgent, demanderPourElement } from '../agents/demander.js';
+import { TYPE_PARAMETRE_RECETTE } from '@logibtp/mcp';
 import { saisieRestauree, TABLES_RESTAUREES } from '../documents/restauration.js';
 import { afficherReglements } from '../documents/reglements-document.js';
 import { ouvrirImport, creerDepuisImport, rendreBandeauImport, tracabiliteImport } from '../import/devis-a-verifier.js';
@@ -106,6 +109,7 @@ const gabarit = () => `
         <button role="menuitem" class="mo-ligne" data-action="sources" title="${texteHtml('document_btp.page.actions.sources_aide')}" hidden>${texteHtml('document_btp.page.actions.sources', { icone: icone('ajouter') })}</button>
         </div>
       </span>
+      <button data-action="agent" class="bouton-icone" hidden title="${texteHtml('mcp.demande.bouton_aide')}" aria-label="${texteHtml('mcp.demande.bouton')}">${iconeHtml('mcp_agent')}</button>
       <button data-action="apercu" class="bouton-icone" title="${texteHtml('document_btp.page.apercu_aide')}" aria-label="${texteHtml('document_btp.page.apercu')}">${iconeHtml('document_btp_apercu')}</button>
       <button data-action="courriel" class="bouton-icone" title="${texteHtml('document_btp.page.courriel_aide', { icone: icone('document_btp_envoyer') })}" aria-label="${texteHtml('document_btp.page.courriel')}">${iconeHtml('document_btp_envoyer')}</button>
       <button data-action="fermer-page" class="bouton-icone" title="${texteHtml('document_btp.page.fermer_aide')}" aria-label="${texteHtml('document_btp.page.fermer')}">${iconeHtml('retirer')}</button>
@@ -116,6 +120,7 @@ const gabarit = () => `
   <div class="document-import" hidden></div>
   <div class="document-completude-fe" hidden></div>
   <div class="document-envoi-fe" hidden></div>
+  <div class="document-agent" hidden></div>
   <main class="document-zone">
     <section id="vue-entete" class="vue vue-entete" role="tabpanel">
       <div id="entete" class="panneau entete"></div>
@@ -256,6 +261,8 @@ export class PageDocument extends PageBase {
       bibliotheque: () => app.naviguer('/liste/bibliotheque?vue=14', { nouvelleFenetre: true }),
       rechercher: () => { this.disposition.onglet('lignes'); this.recherche?.ouvrir(); },
       apercu: () => this.apercu(),
+      // « Demander à l'agent » (module MCP, lot 13) : recette choisie, prompt prérempli avec l'identifiant de la pièce, copié.
+      agent: () => this.#demanderAgent(),
       // Courriel : destinataires, modèle et pièces « à envoyer » proposés par l'application (module Mail).
       courriel: () => {
         const id = this.editeur?.saisie.document.ent_id;
@@ -733,7 +740,52 @@ export class PageDocument extends PageBase {
       ouvrir: (id) => this.app.naviguer(urlDocument(id), { nouvelleFenetre: true }),
       apresAnnulation: (r) => this.#apresAvoirInterne(r),
     });
+    this.#rendrePastilleAgent();
+    this.#rendreBoutonAgent();
     this.app.majPage();
+  }
+
+  /**
+   * Origines des lignes de l'historique de la pièce (module MCP, lot 11), lues une fois par version enregistrée et
+   * partagées par la pastille de l'entête et l'onglet Traçabilité.
+   */
+  #originesAgent(entId) {
+    const cle = `${entId}-${this.editeur?.saisie.document.ent_version ?? ''}`;
+    if (this.originesCle !== cle) {
+      this.originesCle = cle;
+      this.originesLues = api.originesHistorique(entId).catch(() => []);
+    }
+    return this.originesLues;
+  }
+
+  /** Pastille 🤖 de l'entête : pièce créée par un agent IA et pas encore reprise par un humain (module MCP actif). */
+  async #rendrePastilleAgent() {
+    const zone = this.$('.document-agent');
+    const entId = this.editeur?.saisie.document.ent_id;
+    if (!zone) return;
+    if (!(entId > 0) || !this.app.moduleActif(MODULE_FACULTATIF.MCP)) { zone.hidden = true; return; }
+    const creation = creeeParAgent(await this.#originesAgent(entId));
+    if (this.editeur?.saisie.document.ent_id !== entId) return;
+    zone.innerHTML = pastillePieceHtml(creation);
+    zone.hidden = !creation;
+  }
+
+  /** Bouton « Demander à l'agent » : pièce enregistrée, module MCP actif, délégation ou droit « agents », recette pour une pièce. */
+  async #rendreBoutonAgent() {
+    const bouton = this.$('[data-action="agent"]');
+    const entId = this.editeur?.saisie.document.ent_id;
+    if (!bouton) return;
+    if (!(entId > 0)) { bouton.hidden = true; return; }
+    this.etatAgent = await etatDemandeAgent(this.app, TYPE_PARAMETRE_RECETTE.DOCUMENT);
+    if (this.editeur?.saisie.document.ent_id !== entId) return;
+    bouton.hidden = !this.etatAgent.visible;
+  }
+
+  #demanderAgent() {
+    const d = this.editeur?.saisie.document;
+    if (!d || !(d.ent_id > 0) || !this.etatAgent?.visible) return null;
+    const libelle = `${this.editeur.definition.type?.tyd_libelle ?? texte('document_btp.page.document')} ${d.ent_numero ?? ''}`.trim();
+    return demanderPourElement(this.app, { recettes: this.etatAgent.recettes, type: TYPE_PARAMETRE_RECETTE.DOCUMENT, id: d.ent_id, libelle });
   }
 
   /** Après l'avoir interne d'une facture rejetée ou refusée : pièce relue, nouvelle facture proposée à l'ouverture. */
@@ -1031,6 +1083,8 @@ export class PageDocument extends PageBase {
       reimporter: (o) => this.app.naviguer(`${formatImport(o.dor_format).page}?ged=${o.dor_fichier_id}`, { nouvelleFenetre: true }),
       // Restauration d'une version : document modifiable par cet utilisateur et non bloqué par un autre (verrou).
       restaurer: this.#modifiable() && !this.editeur.magasin.lectureSeule ? (h) => this.restaurerVersion(h).catch((x) => this.app.erreur(x)) : null,
+      // Lignes écrites par un agent IA (module MCP actif) : « 🤖 via <client> ».
+      origines: this.app.moduleActif(MODULE_FACULTATIF.MCP) ? () => this.#originesAgent(d.ent_id) : null,
     }).catch((x) => { zone.innerHTML = `<p class="erreur">${echapper(x.message)}</p>`; });
   }
 

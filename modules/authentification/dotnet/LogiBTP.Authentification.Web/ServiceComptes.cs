@@ -191,7 +191,7 @@ public sealed class ServiceComptes(AuthDbContext db, SpecialisationAuthentificat
         c.CptMajPar = u.Code;
         c.CptMajLe = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(ct);
-        if (!actif) await FermerSessionsAsync(c.CptId, ct);
+        if (!actif) await FermerSessionsAsync(c.CptId, ct); // jetons délégués aux agents révoqués aussi
         await specialisation.ApresEcritureAsync(db, c, ancien, ct);
         if (changements.Count > 0) await auth.JournaliserAsync(c.CptCode, "COMPTE", string.Join(", ", changements), origine, u.Code, ct);
         await tx.CommitAsync(ct);
@@ -230,6 +230,10 @@ public sealed class ServiceComptes(AuthDbContext db, SpecialisationAuthentificat
         return await DtoAsync(c, ct);
     }
 
-    private Task FermerSessionsAsync(long compte, CancellationToken ct) =>
-        db.Sessions.Where(x => x.SesCptId == compte && x.SesFermeeLe == null).ExecuteUpdateAsync(x => x.SetProperty(y => y.SesFermeeLe, DateTimeOffset.UtcNow), ct);
+    /// <summary>Sessions du compte fermées et jetons délégués aux agents révoqués.</summary>
+    private async Task FermerSessionsAsync(long compte, CancellationToken ct)
+    {
+        await db.Sessions.Where(x => x.SesCptId == compte && x.SesFermeeLe == null).ExecuteUpdateAsync(x => x.SetProperty(y => y.SesFermeeLe, DateTimeOffset.UtcNow), ct);
+        await ServiceAuthentification.RevoquerJetonsAsync(db, compte, ct);
+    }
 }

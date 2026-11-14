@@ -1,0 +1,1221 @@
+{
+  "description": "Règles de délégation (delegation.js ↔ ReglesDelegation.cs) : actions d'un modèle, garde-fous actifs (double accord), interdits absolus, droits effectifs (intersection par nœud et action, portée la plus étroite, héritage, profil total, garde-fous VALIDATION, RGPD et nœuds retenus), contrôle d'une délégation, échéance, quotas, classement d'un outil.",
+  "catalogue": {
+    "documents": [
+      "CONSULTER",
+      "MODIFIER",
+      "VALIDER",
+      "CREER",
+      "SUPPRIMER",
+      "DEVERROUILLER",
+      "FORCER"
+    ],
+    "fiches": [
+      "CONSULTER",
+      "MODIFIER",
+      "CREER",
+      "SUPPRIMER",
+      "RGPD"
+    ],
+    "parametres": [
+      "CONSULTER",
+      "MODIFIER",
+      "PARAMETRER"
+    ],
+    "administration": [
+      "CONSULTER",
+      "MODIFIER",
+      "USURPER"
+    ],
+    "mail": [
+      "CONSULTER",
+      "MODIFIER"
+    ]
+  },
+  "noeuds": {
+    "TIERS": [
+      "fiches/personne"
+    ],
+    "SALARIES": [
+      "fiches/salarie"
+    ],
+    "PAIE": [
+      "pointage/paie"
+    ],
+    "CRM_NOTES": [
+      "crm/notes"
+    ],
+    "COUTS": [
+      "rentabilite/couts"
+    ]
+  },
+  "profils": {
+    "chef": {
+      "total": false,
+      "lignes": {
+        "documents": {
+          "CONSULTER": "TOUT",
+          "MODIFIER": "SERVICE",
+          "CREER": "SERVICE",
+          "VALIDER": "SOI",
+          "SUPPRIMER": "SOI",
+          "DEVERROUILLER": "SOI",
+          "FORCER": "SOI"
+        },
+        "documents/V_FACTURE": {
+          "CONSULTER": "TOUT"
+        },
+        "fiches": {
+          "CONSULTER": "TOUT",
+          "MODIFIER": "TOUT",
+          "RGPD": "TOUT"
+        },
+        "fiches/salarie": {
+          "CONSULTER": "EQUIPE"
+        },
+        "parametres": {
+          "CONSULTER": "TOUT",
+          "MODIFIER": "TOUT"
+        },
+        "administration/comptes": {
+          "CONSULTER": "TOUT",
+          "USURPER": "TOUT"
+        },
+        "mail": {
+          "CONSULTER": "SOI"
+        }
+      }
+    },
+    "lecteur": {
+      "total": false,
+      "lignes": {
+        "documents": {
+          "CONSULTER": "SERVICE"
+        }
+      }
+    },
+    "admin": {
+      "total": true
+    }
+  },
+  "modeles": [
+    {
+      "modele": "LECTURE",
+      "attendu": [
+        "CONSULTER"
+      ]
+    },
+    {
+      "modele": "PREPARATION",
+      "attendu": [
+        "CONSULTER",
+        "CREER",
+        "MODIFIER"
+      ]
+    },
+    {
+      "modele": "COMME_MOI",
+      "attendu": null
+    },
+    {
+      "modele": "SUR_MESURE",
+      "attendu": null
+    },
+    {
+      "modele": "INCONNU",
+      "attendu": []
+    }
+  ],
+  "actifs": [
+    {
+      "nom": "aucune levée",
+      "levables": [],
+      "leves": [],
+      "attendu": [
+        "RGPD",
+        "TIERS",
+        "SALARIES",
+        "PAIE",
+        "COUTS",
+        "GED_CONFIDENTIEL",
+        "CRM_NOTES",
+        "ENVOI",
+        "VALIDATION",
+        "VOLUME"
+      ]
+    },
+    {
+      "nom": "levé sans être levable",
+      "levables": [],
+      "leves": [
+        "COUTS"
+      ],
+      "attendu": [
+        "RGPD",
+        "TIERS",
+        "SALARIES",
+        "PAIE",
+        "COUTS",
+        "GED_CONFIDENTIEL",
+        "CRM_NOTES",
+        "ENVOI",
+        "VALIDATION",
+        "VOLUME"
+      ]
+    },
+    {
+      "nom": "levable sans être levé",
+      "levables": [
+        "COUTS",
+        "VALIDATION"
+      ],
+      "leves": [],
+      "attendu": [
+        "RGPD",
+        "TIERS",
+        "SALARIES",
+        "PAIE",
+        "COUTS",
+        "GED_CONFIDENTIEL",
+        "CRM_NOTES",
+        "ENVOI",
+        "VALIDATION",
+        "VOLUME"
+      ]
+    },
+    {
+      "nom": "double accord",
+      "levables": [
+        "COUTS",
+        "VALIDATION",
+        "TIERS"
+      ],
+      "leves": [
+        "VALIDATION",
+        "TIERS",
+        "ENVOI"
+      ],
+      "attendu": [
+        "RGPD",
+        "SALARIES",
+        "PAIE",
+        "COUTS",
+        "GED_CONFIDENTIEL",
+        "CRM_NOTES",
+        "ENVOI",
+        "VOLUME"
+      ]
+    }
+  ],
+  "interdits": [
+    {
+      "nom": "consultation d'un devis",
+      "noeud": "documents/V_DEVIS",
+      "action": "CONSULTER",
+      "attendu": false
+    },
+    {
+      "nom": "FORCER",
+      "noeud": "documents/V_DEVIS",
+      "action": "FORCER",
+      "attendu": true
+    },
+    {
+      "nom": "DEBLOQUER (alias de DEVERROUILLER)",
+      "noeud": "documents/V_DEVIS",
+      "action": "DEBLOQUER",
+      "attendu": true
+    },
+    {
+      "nom": "USURPER",
+      "noeud": "fiches",
+      "action": "USURPER",
+      "attendu": true
+    },
+    {
+      "nom": "PARAMETRER",
+      "noeud": "documents",
+      "action": "PARAMETRER",
+      "attendu": true
+    },
+    {
+      "nom": "administration en lecture",
+      "noeud": "administration/profils",
+      "action": "CONSULTER",
+      "attendu": true
+    },
+    {
+      "nom": "racine administration",
+      "noeud": "administration",
+      "action": "VOIR",
+      "attendu": true
+    },
+    {
+      "nom": "préfixe sans séparateur",
+      "noeud": "administrationx",
+      "action": "CONSULTER",
+      "attendu": false
+    },
+    {
+      "nom": "connexions",
+      "noeud": "connexions/oauth",
+      "action": "CONSULTER",
+      "attendu": true
+    },
+    {
+      "nom": "mail",
+      "noeud": "mail",
+      "action": "CONSULTER",
+      "attendu": true
+    },
+    {
+      "nom": "paramètres en lecture",
+      "noeud": "parametres/numerotation",
+      "action": "VOIR",
+      "attendu": false
+    },
+    {
+      "nom": "paramètres en écriture",
+      "noeud": "parametres/numerotation",
+      "action": "MODIFIER",
+      "attendu": true
+    },
+    {
+      "nom": "interdit de la spécialisation (nœud)",
+      "noeud": "parametres2/mcp/recettes",
+      "action": "CONSULTER",
+      "interdits": [
+        "parametres2/mcp"
+      ],
+      "attendu": true
+    },
+    {
+      "nom": "interdit de la spécialisation (action)",
+      "noeud": "documents",
+      "action": "MODIFIER_CODE",
+      "interdits": [
+        "MODIFIER_CODE"
+      ],
+      "attendu": true
+    }
+  ],
+  "effectifs": [
+    {
+      "nom": "lecture : consultation seule, mail et administration retirés",
+      "profil": "chef",
+      "plafond": {
+        "modele": "LECTURE"
+      },
+      "gardes_fous": [],
+      "attendu": {
+        "total": false,
+        "lignes": {
+          "documents": {
+            "CONSULTER": "TOUT"
+          },
+          "fiches": {
+            "CONSULTER": "TOUT"
+          },
+          "fiches/salarie": {
+            "CONSULTER": "EQUIPE"
+          },
+          "parametres": {
+            "CONSULTER": "TOUT"
+          }
+        }
+      }
+    },
+    {
+      "nom": "préparation, garde-fous par défaut",
+      "profil": "chef",
+      "plafond": {
+        "modele": "PREPARATION"
+      },
+      "gardes_fous": [
+        "RGPD",
+        "TIERS",
+        "SALARIES",
+        "PAIE",
+        "COUTS",
+        "GED_CONFIDENTIEL",
+        "CRM_NOTES",
+        "ENVOI",
+        "VALIDATION",
+        "VOLUME"
+      ],
+      "attendu": {
+        "total": false,
+        "lignes": {
+          "documents": {
+            "CONSULTER": "TOUT",
+            "CREER": "SERVICE",
+            "MODIFIER": "SERVICE"
+          },
+          "documents/V_FACTURE": {
+            "CONSULTER": "TOUT"
+          },
+          "fiches": {
+            "CONSULTER": "TOUT",
+            "MODIFIER": "TOUT"
+          },
+          "fiches/personne": {},
+          "fiches/salarie": {},
+          "parametres": {
+            "CONSULTER": "TOUT"
+          }
+        }
+      }
+    },
+    {
+      "nom": "préparation, portée maximale SERVICE",
+      "profil": "chef",
+      "plafond": {
+        "modele": "PREPARATION",
+        "portee": "SERVICE"
+      },
+      "gardes_fous": [],
+      "attendu": {
+        "total": false,
+        "lignes": {
+          "documents": {
+            "CONSULTER": "SERVICE",
+            "CREER": "SERVICE",
+            "MODIFIER": "SERVICE"
+          },
+          "documents/V_FACTURE": {
+            "CONSULTER": "SERVICE"
+          },
+          "fiches": {
+            "CONSULTER": "SERVICE",
+            "MODIFIER": "SERVICE"
+          },
+          "fiches/salarie": {
+            "CONSULTER": "EQUIPE"
+          },
+          "parametres": {
+            "CONSULTER": "SERVICE"
+          }
+        }
+      }
+    },
+    {
+      "nom": "comme moi, garde-fous par défaut",
+      "profil": "chef",
+      "plafond": {
+        "modele": "COMME_MOI"
+      },
+      "gardes_fous": [
+        "RGPD",
+        "TIERS",
+        "SALARIES",
+        "PAIE",
+        "COUTS",
+        "GED_CONFIDENTIEL",
+        "CRM_NOTES",
+        "ENVOI",
+        "VALIDATION",
+        "VOLUME"
+      ],
+      "attendu": {
+        "total": false,
+        "lignes": {
+          "documents": {
+            "CONSULTER": "TOUT",
+            "CREER": "SERVICE",
+            "MODIFIER": "SERVICE"
+          },
+          "documents/V_FACTURE": {
+            "CONSULTER": "TOUT"
+          },
+          "fiches": {
+            "CONSULTER": "TOUT",
+            "MODIFIER": "TOUT"
+          },
+          "fiches/personne": {},
+          "fiches/salarie": {},
+          "parametres": {
+            "CONSULTER": "TOUT"
+          }
+        }
+      }
+    },
+    {
+      "nom": "comme moi, VALIDATION et RGPD levés",
+      "profil": "chef",
+      "plafond": {
+        "modele": "COMME_MOI"
+      },
+      "gardes_fous": [
+        "TIERS",
+        "SALARIES",
+        "PAIE",
+        "COUTS",
+        "GED_CONFIDENTIEL",
+        "CRM_NOTES",
+        "ENVOI",
+        "VOLUME"
+      ],
+      "attendu": {
+        "total": false,
+        "lignes": {
+          "documents": {
+            "CONSULTER": "TOUT",
+            "CREER": "SERVICE",
+            "MODIFIER": "SERVICE",
+            "SUPPRIMER": "SOI",
+            "VALIDER": "SOI"
+          },
+          "documents/V_FACTURE": {
+            "CONSULTER": "TOUT"
+          },
+          "fiches": {
+            "CONSULTER": "TOUT",
+            "MODIFIER": "TOUT",
+            "RGPD": "TOUT"
+          },
+          "fiches/personne": {},
+          "fiches/salarie": {},
+          "parametres": {
+            "CONSULTER": "TOUT"
+          }
+        }
+      }
+    },
+    {
+      "nom": "sur mesure : devis seulement, héritage du plafond",
+      "profil": "chef",
+      "plafond": {
+        "modele": "SUR_MESURE",
+        "actions": {
+          "documents/V_DEVIS": [
+            "VOIR",
+            "CREER",
+            "MODIFIER",
+            "VALIDER"
+          ]
+        }
+      },
+      "gardes_fous": [
+        "VALIDATION"
+      ],
+      "attendu": {
+        "total": false,
+        "lignes": {
+          "documents/V_DEVIS": {
+            "CONSULTER": "TOUT",
+            "CREER": "SERVICE",
+            "MODIFIER": "SERVICE"
+          }
+        }
+      }
+    },
+    {
+      "nom": "sur mesure : plafond plus large que le profil",
+      "profil": "lecteur",
+      "plafond": {
+        "modele": "SUR_MESURE",
+        "actions": {
+          "documents": [
+            "CONSULTER",
+            "MODIFIER"
+          ]
+        },
+        "portee": "TOUT"
+      },
+      "gardes_fous": [],
+      "attendu": {
+        "total": false,
+        "lignes": {
+          "documents": {
+            "CONSULTER": "SERVICE"
+          }
+        }
+      }
+    },
+    {
+      "nom": "portée inconnue : SOI",
+      "profil": "lecteur",
+      "plafond": {
+        "modele": "LECTURE",
+        "portee": "PARTOUT"
+      },
+      "gardes_fous": [],
+      "attendu": {
+        "total": false,
+        "lignes": {
+          "documents": {
+            "CONSULTER": "SOI"
+          }
+        }
+      }
+    },
+    {
+      "nom": "profil total, préparation (catalogue, sans administration)",
+      "profil": "admin",
+      "plafond": {
+        "modele": "PREPARATION"
+      },
+      "gardes_fous": [
+        "VALIDATION"
+      ],
+      "attendu": {
+        "total": false,
+        "lignes": {
+          "documents": {
+            "CONSULTER": "TOUT",
+            "CREER": "TOUT",
+            "MODIFIER": "TOUT"
+          },
+          "fiches": {
+            "CONSULTER": "TOUT",
+            "CREER": "TOUT",
+            "MODIFIER": "TOUT"
+          },
+          "parametres": {
+            "CONSULTER": "TOUT"
+          }
+        }
+      }
+    },
+    {
+      "nom": "profil total, comme moi : rien",
+      "profil": "admin",
+      "plafond": {
+        "modele": "COMME_MOI"
+      },
+      "gardes_fous": [],
+      "attendu": {
+        "total": false,
+        "lignes": {}
+      }
+    },
+    {
+      "nom": "profil total, sur mesure bornée à la préparation",
+      "profil": "admin",
+      "plafond": {
+        "modele": "SUR_MESURE",
+        "actions": {
+          "documents": [
+            "CONSULTER",
+            "VALIDER",
+            "SUPPRIMER"
+          ]
+        }
+      },
+      "gardes_fous": [],
+      "attendu": {
+        "total": false,
+        "lignes": {
+          "documents": {
+            "CONSULTER": "TOUT"
+          }
+        }
+      }
+    },
+    {
+      "nom": "modèle inconnu : rien",
+      "profil": "chef",
+      "plafond": {
+        "modele": "TOUT"
+      },
+      "gardes_fous": [],
+      "attendu": {
+        "total": false,
+        "lignes": {}
+      }
+    },
+    {
+      "nom": "interdit de la spécialisation",
+      "profil": "chef",
+      "plafond": {
+        "modele": "COMME_MOI"
+      },
+      "gardes_fous": [],
+      "interdits": [
+        "documents/V_FACTURE",
+        "MODIFIER"
+      ],
+      "attendu": {
+        "total": false,
+        "lignes": {
+          "documents": {
+            "CONSULTER": "TOUT",
+            "CREER": "SERVICE",
+            "SUPPRIMER": "SOI",
+            "VALIDER": "SOI"
+          },
+          "documents/V_FACTURE": {},
+          "fiches": {
+            "CONSULTER": "TOUT",
+            "RGPD": "TOUT"
+          },
+          "fiches/salarie": {
+            "CONSULTER": "EQUIPE"
+          },
+          "parametres": {
+            "CONSULTER": "TOUT"
+          }
+        }
+      }
+    }
+  ],
+  "controles": [
+    {
+      "nom": "préparation par défaut",
+      "delegation": {
+        "modele": "PREPARATION",
+        "jours": null,
+        "leves": []
+      },
+      "delegant": {
+        "total": false,
+        "levables": []
+      },
+      "attendu": []
+    },
+    {
+      "nom": "modèle inconnu",
+      "delegation": {
+        "modele": "ADMIN",
+        "jours": 30,
+        "leves": []
+      },
+      "delegant": {
+        "total": false,
+        "levables": []
+      },
+      "attendu": [
+        "MCP_MODELE_INCONNU"
+      ]
+    },
+    {
+      "nom": "modèle non permis au profil",
+      "delegation": {
+        "modele": "COMME_MOI",
+        "jours": 30,
+        "leves": []
+      },
+      "delegant": {
+        "total": false,
+        "levables": [],
+        "modeles": [
+          "LECTURE",
+          "PREPARATION"
+        ]
+      },
+      "attendu": [
+        "MCP_MODELE_NON_PERMIS"
+      ]
+    },
+    {
+      "nom": "profil total : comme moi refusé",
+      "delegation": {
+        "modele": "COMME_MOI",
+        "jours": 30,
+        "leves": []
+      },
+      "delegant": {
+        "total": true,
+        "levables": []
+      },
+      "attendu": [
+        "MCP_ADMIN_COMME_MOI"
+      ]
+    },
+    {
+      "nom": "échéance au-delà de 90 jours",
+      "delegation": {
+        "modele": "LECTURE",
+        "jours": 91,
+        "leves": []
+      },
+      "delegant": {
+        "total": false,
+        "levables": []
+      },
+      "attendu": [
+        "MCP_ECHEANCE"
+      ]
+    },
+    {
+      "nom": "échéance au-delà du maximum du profil",
+      "delegation": {
+        "modele": "LECTURE",
+        "jours": 45,
+        "leves": []
+      },
+      "delegant": {
+        "total": false,
+        "levables": [],
+        "jours_max": 40
+      },
+      "attendu": [
+        "MCP_ECHEANCE"
+      ]
+    },
+    {
+      "nom": "échéance nulle",
+      "delegation": {
+        "modele": "LECTURE",
+        "jours": 0,
+        "leves": []
+      },
+      "delegant": {
+        "total": false,
+        "levables": []
+      },
+      "attendu": [
+        "MCP_ECHEANCE"
+      ]
+    },
+    {
+      "nom": "garde-fou levé non levable",
+      "delegation": {
+        "modele": "PREPARATION",
+        "jours": 90,
+        "leves": [
+          "COUTS",
+          "VALIDATION"
+        ]
+      },
+      "delegant": {
+        "total": false,
+        "levables": [
+          "COUTS"
+        ]
+      },
+      "attendu": [
+        "MCP_GARDE_FOU_NON_LEVABLE"
+      ]
+    },
+    {
+      "nom": "garde-fou levable et levé",
+      "delegation": {
+        "modele": "PREPARATION",
+        "jours": 90,
+        "leves": [
+          "COUTS"
+        ]
+      },
+      "delegant": {
+        "total": false,
+        "levables": [
+          "COUTS"
+        ]
+      },
+      "attendu": []
+    },
+    {
+      "nom": "erreurs cumulées",
+      "delegation": {
+        "modele": "COMME_MOI",
+        "jours": 120,
+        "leves": [
+          "RGPD"
+        ]
+      },
+      "delegant": {
+        "total": true,
+        "levables": [],
+        "jours_max": 200
+      },
+      "attendu": [
+        "MCP_ADMIN_COMME_MOI",
+        "MCP_ECHEANCE",
+        "MCP_GARDE_FOU_NON_LEVABLE"
+      ]
+    }
+  ],
+  "echeances": [
+    {
+      "nom": "défaut 30 jours",
+      "debut": "2026-11-13",
+      "jours": null,
+      "attendu": "2026-12-13"
+    },
+    {
+      "nom": "90 jours",
+      "debut": "2026-11-13",
+      "jours": 90,
+      "attendu": "2027-02-11"
+    },
+    {
+      "nom": "borné à 90",
+      "debut": "2026-11-13",
+      "jours": 365,
+      "attendu": "2027-02-11"
+    },
+    {
+      "nom": "défaut borné au maximum du profil",
+      "debut": "2026-11-13",
+      "jours": null,
+      "jours_max": 7,
+      "attendu": "2026-11-20"
+    },
+    {
+      "nom": "fin février d'une année bissextile",
+      "debut": "2028-02-15",
+      "jours": 15,
+      "attendu": "2028-03-01"
+    },
+    {
+      "nom": "au moins un jour",
+      "debut": "2026-12-31",
+      "jours": 0,
+      "attendu": "2027-01-01"
+    }
+  ],
+  "quotas": [
+    {
+      "nom": "sous les quotas",
+      "demandes": 50,
+      "deja": 0,
+      "attendu": {
+        "accordes": 50,
+        "tronque": false,
+        "erreur": null,
+        "alerte": false
+      }
+    },
+    {
+      "nom": "tronqué à 200 par appel",
+      "demandes": 500,
+      "deja": 0,
+      "attendu": {
+        "accordes": 200,
+        "tronque": true,
+        "erreur": null,
+        "alerte": false
+      }
+    },
+    {
+      "nom": "alerte à 80 %",
+      "demandes": 100,
+      "deja": 3900,
+      "attendu": {
+        "accordes": 100,
+        "tronque": false,
+        "erreur": null,
+        "alerte": true
+      }
+    },
+    {
+      "nom": "juste sous l'alerte",
+      "demandes": 99,
+      "deja": 3900,
+      "attendu": {
+        "accordes": 99,
+        "tronque": false,
+        "erreur": null,
+        "alerte": false
+      }
+    },
+    {
+      "nom": "reste du jour",
+      "demandes": 200,
+      "deja": 4950,
+      "attendu": {
+        "accordes": 50,
+        "tronque": true,
+        "erreur": null,
+        "alerte": true
+      }
+    },
+    {
+      "nom": "quota du jour épuisé",
+      "demandes": 10,
+      "deja": 5000,
+      "attendu": {
+        "accordes": 0,
+        "tronque": true,
+        "erreur": "MCP_QUOTA_JOUR",
+        "alerte": true
+      }
+    },
+    {
+      "nom": "dépassement déjà constaté",
+      "demandes": 10,
+      "deja": 6000,
+      "attendu": {
+        "accordes": 0,
+        "tronque": true,
+        "erreur": "MCP_QUOTA_JOUR",
+        "alerte": true
+      }
+    },
+    {
+      "nom": "quotas du profil",
+      "demandes": 30,
+      "deja": 70,
+      "quotas": {
+        "appel": 20,
+        "jour": 100,
+        "alerte": 50
+      },
+      "attendu": {
+        "accordes": 20,
+        "tronque": true,
+        "erreur": null,
+        "alerte": true
+      }
+    },
+    {
+      "nom": "aucune demande",
+      "demandes": 0,
+      "deja": 5000,
+      "attendu": {
+        "accordes": 0,
+        "tronque": false,
+        "erreur": null,
+        "alerte": true
+      }
+    }
+  ],
+  "classements": [
+    {
+      "nom": "lecture d'un devis",
+      "outil": {
+        "noeud": "documents/V_DEVIS",
+        "action": "CONSULTER"
+      },
+      "profil": "chef",
+      "plafond": {
+        "modele": "PREPARATION"
+      },
+      "gardes_fous": [
+        "VALIDATION",
+        "ENVOI"
+      ],
+      "attendu": "LECTURE"
+    },
+    {
+      "nom": "création d'un devis",
+      "outil": {
+        "noeud": "documents/V_DEVIS",
+        "action": "CREER"
+      },
+      "profil": "chef",
+      "plafond": {
+        "modele": "PREPARATION"
+      },
+      "gardes_fous": [
+        "VALIDATION",
+        "ENVOI"
+      ],
+      "attendu": "BROUILLON"
+    },
+    {
+      "nom": "validation retenue : proposition",
+      "outil": {
+        "noeud": "documents/V_DEVIS",
+        "action": "VALIDER"
+      },
+      "profil": "chef",
+      "plafond": {
+        "modele": "PREPARATION"
+      },
+      "gardes_fous": [
+        "VALIDATION"
+      ],
+      "attendu": "PROPOSITION"
+    },
+    {
+      "nom": "APPROUVER retenu : proposition",
+      "outil": {
+        "noeud": "documents/V_DEVIS",
+        "action": "APPROUVER"
+      },
+      "profil": "chef",
+      "plafond": {
+        "modele": "COMME_MOI"
+      },
+      "gardes_fous": [
+        "VALIDATION"
+      ],
+      "attendu": "PROPOSITION"
+    },
+    {
+      "nom": "validation levée, comme moi : écriture",
+      "outil": {
+        "noeud": "documents/V_DEVIS",
+        "action": "VALIDER"
+      },
+      "profil": "chef",
+      "plafond": {
+        "modele": "COMME_MOI"
+      },
+      "gardes_fous": [],
+      "attendu": "BROUILLON"
+    },
+    {
+      "nom": "validation levée, préparation : interdit",
+      "outil": {
+        "noeud": "documents/V_DEVIS",
+        "action": "VALIDER"
+      },
+      "profil": "chef",
+      "plafond": {
+        "modele": "PREPARATION"
+      },
+      "gardes_fous": [],
+      "attendu": "INTERDIT"
+    },
+    {
+      "nom": "validation sans le droit du délégant",
+      "outil": {
+        "noeud": "documents/V_FACTURE",
+        "action": "VALIDER"
+      },
+      "profil": "chef",
+      "plafond": {
+        "modele": "COMME_MOI"
+      },
+      "gardes_fous": [
+        "VALIDATION"
+      ],
+      "attendu": "INTERDIT"
+    },
+    {
+      "nom": "plafond lecture : pas de proposition",
+      "outil": {
+        "noeud": "documents/V_DEVIS",
+        "action": "VALIDER"
+      },
+      "profil": "chef",
+      "plafond": {
+        "modele": "LECTURE"
+      },
+      "gardes_fous": [
+        "VALIDATION"
+      ],
+      "attendu": "INTERDIT"
+    },
+    {
+      "nom": "envoi retenu : proposition",
+      "outil": {
+        "noeud": "documents/V_DEVIS",
+        "action": "MODIFIER",
+        "envoi": true
+      },
+      "profil": "chef",
+      "plafond": {
+        "modele": "PREPARATION"
+      },
+      "gardes_fous": [
+        "ENVOI"
+      ],
+      "attendu": "PROPOSITION"
+    },
+    {
+      "nom": "envoi levé : écriture",
+      "outil": {
+        "noeud": "documents/V_DEVIS",
+        "action": "MODIFIER",
+        "envoi": true
+      },
+      "profil": "chef",
+      "plafond": {
+        "modele": "PREPARATION"
+      },
+      "gardes_fous": [],
+      "attendu": "BROUILLON"
+    },
+    {
+      "nom": "déverrouillage : interdit",
+      "outil": {
+        "noeud": "documents/V_DEVIS",
+        "action": "DEVALIDER"
+      },
+      "profil": "chef",
+      "plafond": {
+        "modele": "COMME_MOI"
+      },
+      "gardes_fous": [],
+      "attendu": "INTERDIT"
+    },
+    {
+      "nom": "fiche salarié retenue",
+      "outil": {
+        "noeud": "fiches/salarie/habilitations",
+        "action": "CONSULTER"
+      },
+      "profil": "chef",
+      "plafond": {
+        "modele": "COMME_MOI"
+      },
+      "gardes_fous": [
+        "SALARIES"
+      ],
+      "attendu": "INTERDIT"
+    },
+    {
+      "nom": "fiche salarié levée",
+      "outil": {
+        "noeud": "fiches/salarie/habilitations",
+        "action": "CONSULTER"
+      },
+      "profil": "chef",
+      "plafond": {
+        "modele": "COMME_MOI"
+      },
+      "gardes_fous": [],
+      "attendu": "LECTURE"
+    },
+    {
+      "nom": "paramètres en écriture",
+      "outil": {
+        "noeud": "parametres/numerotation",
+        "action": "MODIFIER"
+      },
+      "profil": "chef",
+      "plafond": {
+        "modele": "COMME_MOI"
+      },
+      "gardes_fous": [],
+      "attendu": "INTERDIT"
+    },
+    {
+      "nom": "profil total, préparation : création",
+      "outil": {
+        "noeud": "documents/V_DEVIS",
+        "action": "CREER"
+      },
+      "profil": "admin",
+      "plafond": {
+        "modele": "PREPARATION"
+      },
+      "gardes_fous": [
+        "VALIDATION"
+      ],
+      "attendu": "BROUILLON"
+    },
+    {
+      "nom": "profil total, préparation : validation proposée",
+      "outil": {
+        "noeud": "documents/V_DEVIS",
+        "action": "VALIDER"
+      },
+      "profil": "admin",
+      "plafond": {
+        "modele": "PREPARATION"
+      },
+      "gardes_fous": [
+        "VALIDATION"
+      ],
+      "attendu": "PROPOSITION"
+    },
+    {
+      "nom": "profil total, comme moi : interdit",
+      "outil": {
+        "noeud": "documents/V_DEVIS",
+        "action": "CONSULTER"
+      },
+      "profil": "admin",
+      "plafond": {
+        "modele": "COMME_MOI"
+      },
+      "gardes_fous": [],
+      "attendu": "INTERDIT"
+    }
+  ]
+}

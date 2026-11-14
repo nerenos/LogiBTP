@@ -435,6 +435,26 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         }
     }
 
+    /// <summary>Longueur des colonnes d'origine de l'historique (db/309).</summary>
+    private const int LongueurOrigine = 100;
+
+    /// <summary>
+    /// Origine des écritures (module MCP, lot 7, db/309) : action d'un agent IA (<see cref="Utilisateur.Agent"/>) marquée
+    /// AGENT dans l'historique de la pièce, avec la délégation et le client de l'agent ; action humaine : colonnes vides.
+    /// </summary>
+    public override async Task ApresHistoriqueAsync(DocumentDbContext<DocumentBtp, DocumentLigneBtp> db, DocumentHistorique historique, Utilisateur u, CancellationToken ct)
+    {
+        if (u.Agent is not { } agent) return;
+        var origine = OrigineEcriture.Agent;
+        var delegation = Tronquer(agent.Delegation);
+        var client = Tronquer(agent.Client);
+        await db.Database.ExecuteSqlAsync($"""
+            UPDATE document_historique SET his_origine = {origine}, his_delegation = {delegation}, his_client = {client} WHERE his_id = {historique.HisId}
+            """, ct);
+    }
+
+    private static string? Tronquer(string? v) => v is { Length: > LongueurOrigine } ? v[..LongueurOrigine] : v;
+
     /// <summary>
     /// Validation : commande client inscrite à son marché (base ou avenant, montant recalculé, db/170) ; document
     /// d'avancement d'un marché : numéro de situation (Q29 : le suivant, sauf numéro saisi) et, pour une facture ou un
