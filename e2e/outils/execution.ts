@@ -1,7 +1,7 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 import {
   attendreDocument, attendreStatut, attendreMessage, actionDocument, dialogue, idDocument, numeroDocument, onglet, enregistrer,
-  ajouterIntervenant, ajouterLigne, rattacher, saisirObjet, valider, choisirDansListe, TIERS, type LignePrix,
+  ajouterIntervenant, ajouterLigne, rattacher, saisirObjet, valider, choisirDansListe, saisirCellule, ligneGrille, statutDocument, TIERS, type LignePrix,
 } from './documents';
 import { ajouterArticle, type LigneArticle } from './stock';
 import { choisirOption } from './sous-traitance';
@@ -86,9 +86,13 @@ export async function transformerVers(page: Page, cible: RegExp) {
   // Page tout juste ouverte : le menu peut répondre avant que l'action soit prête (fenêtre de choix reprise sinon).
   await expect(async () => {
     if (!(await page.locator('dialog[open]').count())) await actionDocument(page, 'Transformer…');
-    await expect(dialogue(page).getByRole('button', { name: cible })).toBeVisible({ timeout: 5000 });
-  }).toPass({ timeout: 30000 });
+    // Fenêtre lente à venir (types, définition, avertissements, document) : un second « Transformer… » trop tôt en
+    // ouvrirait une deuxième, dont le choix resterait sans suite.
+    await expect(dialogue(page).getByRole('button', { name: cible })).toBeVisible({ timeout: 10000 });
+  }).toPass({ timeout: 40000 });
+  const transformation = page.waitForResponse((r) => /\/api\/documents\/\d+\/transformer$/.test(r.url()) && r.request().method() === 'POST', { timeout: 20000 });
   await dialogue(page).getByRole('button', { name: cible }).click();
+  expect((await transformation).ok()).toBe(true);
   await expect(page).not.toHaveURL(avant, { timeout: 15000 });
   await attendreDocument(page);
   return pieceOuverte(page);
@@ -103,6 +107,8 @@ const lignesElements = (page: Page) => corpsGrille(page).locator('tr').filter({ 
  */
 export async function garderLignes(page: Page, garde: string[]) {
   await onglet(page, 'Lignes');
+  // Grille chargée : au moins une ligne gardée affichée
+  await expect(lignesElements(page).filter({ hasText: garde[0] }).first()).toBeVisible({ timeout: 15000 });
   for (;;) {
     const textes = await lignesElements(page).allInnerTexts();
     const i = textes.findIndex((t) => !garde.some((g) => t.includes(g)));
@@ -134,10 +140,18 @@ export async function tableauEtapes(page: Page) {
 
 /** Cellule d'une étape (colonne désignée par son libellé) dans une ligne du tableau : Validation, Contrôle N+1… */
 export async function celluleEtape(page: Page, ligne: 'Prévisionnelle' | 'Validation' | 'Contrôle N+1' | 'Ressource', etape: string): Promise<Locator> {
-  const t = await tableauEtapes(page);
-  const titres = (await t.locator('thead th').allInnerTexts()).map((x) => x.trim());
-  const i = titres.findIndex((x) => x.includes(etape));
-  if (i < 1) throw new Error(`Étape « ${etape} » absente du tableau : ${titres.join(' | ')}`);
+  let t = await tableauEtapes(page);
+  const titres = async () => (await t.locator('thead th').allInnerTexts()).map((x) => x.trim());
+  let i = (await titres()).findIndex((x) => x.includes(etape));
+  if (i < 1) {
+    // Étape masquée (sans date obligatoire) : « Toutes les étapes » affichées
+    const avant = await t.locator('thead th').count();
+    await page.locator('.etapes-ordre [data-tout]').click();
+    t = await tableauEtapes(page);
+    await expect(t.locator('thead th')).not.toHaveCount(avant);
+    i = (await titres()).findIndex((x) => x.includes(etape));
+  }
+  if (i < 1) throw new Error(`Étape « ${etape} » absente du tableau : ${(await titres()).join(' | ')}`);
   return t.locator('tbody tr').filter({ has: page.locator('th', { hasText: ligne }) }).locator('td').nth(i - 1);
 }
 
@@ -146,16 +160,19 @@ export async function celluleEtape(page: Page, ligne: 'Prévisionnelle' | 'Valid
  * Sans `refus` : l'étape porte ensuite sa date de validation et son auteur ; avec `refus` : message d'erreur attendu.
  */
 export async function validerEtape(page: Page, etape: string, { auteur, refus }: { auteur?: string; refus?: RegExp } = {}) {
-  await (await celluleEtape(page, 'Validation', etape)).getByRole('button', { name: /Valider/ }).click();
   if (refus) {
+    await (await celluleEtape(page, 'Validation', etape)).getByRole('button', { name: /Valider/ }).click();
     await expect(page.getByText(refus).first()).toBeVisible({ timeout: 10000 });
     return;
   }
   await expect(async () => {
     const cellule = await celluleEtape(page, 'Validation', etape);
-    await expect(cellule).toContainText(/\d{2}\/\d{2}\/\d{2}/, { timeout: 1000 });
+    // Clic perdu (tableau redessiné à son chargement) : bouton encore là après l'attente, rejoué
+    const bouton = cellule.getByRole('button', { name: /Valider/ });
+    if (await bouton.count()) await bouton.click({ timeout: 3000 });
+    await expect(cellule).toContainText(/\d{2}\/\d{2}\/\d{2}/, { timeout: 6000 });
     if (auteur) await expect(cellule).toContainText(auteur, { timeout: 1000 });
-  }).toPass({ timeout: 15000 });
+  }).toPass({ timeout: 25000 });
 }
 
 /** Contrôle du N+1 d'une étape validée (case de la ligne « Contrôle N+1 ») ; la case porte ensuite la date et l'auteur. */
@@ -205,3 +222,74 @@ export async function choisirTiers(page: Page, tiers: string) {
 
 /** Rattachement par code (réexport pour les scénarios). */
 export { rattacher };
+
+export type Besoin = { libelle: string; qte: string; unite: string; nature: string };
+
+/**
+ * Ligne de besoin d'un ordre saisi sans source (vue « Quantités » : sans prix) : nouvelle ligne avant le pied, libellé,
+ * nature, unité, quantité.
+ */
+export async function ajouterBesoin(page: Page, b: Besoin) {
+  await onglet(page, 'Lignes');
+  const ligne = ligneGrille(page, b.libelle);
+  await expect(async () => {
+    if (await ligne.count()) return;
+    await ligneGrille(page, 'Pied du document').locator('td.col-libelle').click();
+    await page.keyboard.press('Control+Shift+Enter');
+    await page.keyboard.press('Escape');
+    await saisirCellule(page, corpsGrille(page).locator('tr.courante'), 'Libellé', b.libelle);
+    await expect(ligne).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 15000 });
+  await saisirCellule(page, ligne, 'Nature', b.nature);
+  await saisirCellule(page, ligne, 'U', b.unite);
+  await saisirCellule(page, ligne, 'Qté', b.qte);
+}
+
+/**
+ * Nouvel ordre saisi sans source (`/document/nouveau?type=…`) : objet, chantier (obligatoire : un ordre porte sur un
+ * seul chantier), besoins et articles ; enregistré.
+ */
+export async function creerOrdre(page: Page, type: string, { objet, chantier, besoins = [], articles = [] }: { objet: string; chantier: string; besoins?: Besoin[]; articles?: LigneArticle[] }) {
+  await page.goto(`/document/nouveau?type=${type}`);
+  await attendreDocument(page);
+  await attendreStatut(page, 'Brouillon');
+  await saisirObjet(page, objet);
+  await rattacher(page, 'Chantier', chantier);
+  for (const b of besoins) await ajouterBesoin(page, b);
+  for (const a of articles) await ajouterArticle(page, a);
+  await enregistrer(page);
+  return pieceOuverte(page);
+}
+
+/** Prix d'une ligne de la pièce ouverte (colonne PV de la vue affichée), puis enregistrée. */
+export async function saisirPrix(page: Page, prix: Record<string, string>) {
+  await onglet(page, 'Lignes');
+  for (const [libelle, pv] of Object.entries(prix)) await saisirCellule(page, ligneGrille(page, libelle), 'PV', pv);
+  await enregistrer(page);
+}
+
+/**
+ * Ordre saisi sans source, validé : « Transmis » au service, puis « Validé par le tiers » = pris en charge par le service
+ * (un ordre issu d'un autre est pris en charge dès sa validation).
+ */
+export async function transmettreEtPrendreEnCharge(page: Page) {
+  await valider(page);
+  await attendreStatut(page, 'Transmis');
+  await actionDocument(page, 'Validé par le tiers');
+  await attendreMessage(page, /validé par le tiers/i);
+  await attendreStatut(page, 'Pris en charge');
+}
+
+/** Pièce validée puis acceptée par le tiers (demande de prix, appel d'offres : statut Validé). */
+export async function validerEtAccepterPiece(page: Page) {
+  await valider(page);
+  // Pièce issue d'un ordre : validée d'office ou envoyée au tiers selon son type
+  await onglet(page, 'Entête');
+  const statut = statutDocument(page);
+  await expect(statut).toContainText(/^(Envoyé|Validé) · v\d+/);
+  if (/^Envoyé/.test(await statut.innerText())) {
+    await actionDocument(page, 'Validé par le tiers');
+    await attendreMessage(page, /validé par le tiers/i);
+  }
+  await attendreStatut(page, 'Validé');
+}

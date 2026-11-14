@@ -43,7 +43,8 @@ export class FiltreRattachement {
 
   /**
    * Filtres externes de la vue (option filtresVue de la liste), selon sa source : documents → identifiant du type
-   * choisi (projet_id…) ; autre source ayant une colonne du type (affaire, projet, chantier) → cette colonne (code),
+   * choisi (projet_id…) ; autre source ayant la colonne d'identifiant (ordres : chantiers, projet_id…) → cet identifiant ;
+   * sinon source ayant une colonne du type (affaire, projet, chantier) → cette colonne (code),
    * jamais le niveau de la liste elle-même. Toutes les colonnes gérées ici sont citées (null : filtre retiré).
    * codes : type et code voulus (adresse : le premier type présent), sinon le choix en cours.
    */
@@ -59,8 +60,13 @@ export class FiltreRattachement {
     this.colonneSimple = null;
     const x = this.#element();
     if (!x) return f;
+    // Vues dérivées de v_liste_documents (ordres…) : colonne d'identifiant, la colonne de même nom portant « code – libellé ».
+    const colonneId = [this.niveau.colonneDocuments, this.niveau.colonne].find((c) => c && colonnes.includes(c));
     if (source === 'documents') f[this.niveau.colonneDocuments ?? this.niveau.colonne] = [String(x.id)];
-    else if (colonnes.includes(this.niveau.type) && `${this.niveau.type}s` !== source) {
+    else if (colonneId && `${this.niveau.type}s` !== source) {
+      f[colonneId] = [String(x.id)];
+      this.colonneSimple = colonneId;
+    } else if (colonnes.includes(this.niveau.type) && `${this.niveau.type}s` !== source) {
       f[this.niveau.type] = [x.code];
       this.colonneSimple = this.niveau.type;
     }
