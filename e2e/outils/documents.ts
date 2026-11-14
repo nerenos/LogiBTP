@@ -255,14 +255,21 @@ export async function ajouterLigne(page: Page, l: LignePrix) {
   await pied.locator('td.col-libelle').click();
   await page.keyboard.press('Control+Shift+Enter');
   await page.keyboard.press('Escape');
-  const nouvelle = grille(page).locator('tbody tr.courante');
+  // Ligne insérée repérée par sa position : un libellé tronqué par un essai manqué est remplacé, pas doublé
+  const rang = await grille(page).locator('tbody tr.courante').evaluate((tr) => [...tr.parentElement!.children].indexOf(tr));
+  const nouvelle = grille(page).locator('tbody tr').nth(rang);
   const ligne = ligneGrille(page, l.libelle);
-  // Saisie du libellé reprise si elle est perdue (grille redessinée juste après l'insertion de la ligne).
+  // Libellé remplacé d'un bloc dans l'éditeur (frappe au clavier : premières lettres perdues si la grille est
+  // redessinée avant l'ouverture de l'éditeur) ; délais bornés pour qu'un essai bloqué se rejoue
   await expect(async () => {
+    await onglet(page, 'Lignes');
     if (await ligne.count()) return;
-    await saisirCellule(page, nouvelle, 'Libellé', l.libelle);
-    await expect(ligne).toBeVisible({ timeout: 2000 });
-  }).toPass({ timeout: 15000 });
+    await (await cellule(page, nouvelle, 'Libellé')).click({ timeout: 5000 });
+    await page.keyboard.press('Enter');
+    await page.locator('#vue-lignes input.editeur').fill(l.libelle, { timeout: 5000 });
+    await page.keyboard.press('Enter');
+    await expect(ligne).toBeVisible({ timeout: 3000 });
+  }).toPass({ timeout: 45000 });
   await saisirCelluleVerifiee(page, ligne, 'Nature', l.nature ?? NATURE);
   await saisirCelluleVerifiee(page, ligne, 'U', l.unite);
   await saisirCelluleVerifiee(page, ligne, 'Qté', l.qte);

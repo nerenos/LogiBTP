@@ -27,6 +27,9 @@ function compte(role: Role) {
   return { identifiant, mdp: process.env[variables.mdp], variableMdp: variables.mdp };
 }
 
+/** Identifiant du compte d'un rôle (`e2e/.env`), tel que l'affichent les auteurs (validations, contrôles…). */
+export const identifiantCompte = (role: Role) => compte(role).identifiant;
+
 async function corps(r: APIResponse) {
   return r.json().catch(() => ({}));
 }

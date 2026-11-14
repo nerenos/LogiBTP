@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { seConnecter, TAG_API } from './outils/connexion';
+import { seConnecter, TAG_API, identifiantCompte } from './outils/connexion';
 import { suffixe, patienterSurLimiteDebit, attendreStatut, attendreTotalHt, enregistrer, valider, onglet, saisirCellule, ligneGrille } from './outils/documents';
 import { validerCommandeDansMarche, SOUS_TRAITANCE } from './outils/sous-traitance';
 import { creerDepot, pieceStockValidee, quantiteEnStock, choisirLieu, STOCK, type Lieu } from './outils/stock';
@@ -68,8 +68,8 @@ test.describe.serial('Ordres : devis, ordre d’exécution et ses branches', { t
     await valider(page);
     await attendreStatut(page, 'Pris en charge');
     // Lancement : contrôle du N+1 bloquant ; l'administrateur valide et contrôle
-    await validerEtape(page, 'Lancement', { auteur: 'e2eadmin' });
-    await controlerEtape(page, 'Lancement', 'e2eadmin');
+    await validerEtape(page, 'Lancement', { auteur: identifiantCompte('admin') });
+    await controlerEtape(page, 'Lancement', identifiantCompte('admin'));
   });
 
   test('Fabrication : ordre de fabrication terminé puis ordre de livraison', async () => {
@@ -161,7 +161,7 @@ test.describe.serial('Ordres : devis, ordre d’exécution et ses branches', { t
     // Attribution : contrôle du N+1 bloquant, fait par l'administrateur
     await ouvrir(page, ost.id);
     await validerEtape(page, 'Attribution');
-    await controlerEtape(page, 'Attribution', 'e2eadmin');
+    await controlerEtape(page, 'Attribution', identifiantCompte('admin'));
     await attendreEtatExecution(page, /Terminé/);
   });
 
@@ -173,9 +173,9 @@ test.describe.serial('Ordres : devis, ordre d’exécution et ses branches', { t
     await valider(page);
     await validerEtape(page, 'Pose');
     await validerEtape(page, 'Réception');
-    await controlerEtape(page, 'Réception', 'e2eadmin');
+    await controlerEtape(page, 'Réception', identifiantCompte('admin'));
     await attendreEtatExecution(page, /Terminé/);
-    expect(await celluleEtape(page, 'Validation', 'Pose').then((c) => c.innerText())).toContain('e2eadmin');
+    expect(await celluleEtape(page, 'Validation', 'Pose').then((c) => c.innerText())).toContain(identifiantCompte('admin'));
   });
 
   test('Vue d’exécution du chantier : ordres et états des services', async () => {
