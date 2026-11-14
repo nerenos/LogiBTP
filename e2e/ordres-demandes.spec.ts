@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { seConnecter, TAG_API } from './outils/connexion';
+import { seConnecter, TAG_API, identifiantCompte } from './outils/connexion';
 import { suffixe, patienterSurLimiteDebit, attendreStatut, attendreTotalHt, enregistrer, valider } from './outils/documents';
 import { ACHATS } from './outils/achats';
 import { validerCommandeDansMarche, SOUS_TRAITANCE } from './outils/sous-traitance';
@@ -136,7 +136,7 @@ test.describe.serial('Ordres : demandes sans devis', { tag: TAG_API }, () => {
 
     await ouvrir(page, ost.id);
     await validerEtape(page, 'Attribution');
-    await controlerEtape(page, 'Attribution', 'e2eadmin');
+    await controlerEtape(page, 'Attribution', identifiantCompte('admin'));
     await attendreEtatExecution(page, /Terminé/);
   });
 
