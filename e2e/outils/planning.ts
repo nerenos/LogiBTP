@@ -37,6 +37,9 @@ const iso = (d: Date) => d.toISOString().slice(0, 10);
 // Fériés à date fixe (les fériés mobiles tombent rarement un mardi, mercredi ou jeudi de la fenêtre choisie).
 const FERIES_FIXES = ['01-01', '05-01', '05-08', '07-14', '08-15', '11-01', '11-11', '12-25'];
 
+/** Férié à date fixe (date ISO). */
+export const estFerieFixe = (date: string) => FERIES_FIXES.includes(date.slice(5));
+
 /**
  * Date ISO du `rang`-ième mardi, mercredi ou jeudi non férié à partir de demain (rang 0 : le premier) : jour ouvré de
  * toutes les vues fournies, la plus courte (Livraisons) montrant six jours après aujourd'hui.
