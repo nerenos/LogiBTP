@@ -5,7 +5,7 @@ import { validerCommandeDansMarche, SOUS_TRAITANCE } from './outils/sous-traitan
 import { creerDepot, pieceStockValidee, quantiteEnStock, choisirLieu, STOCK, type Lieu } from './outils/stock';
 import {
   vendre, lancerOrdreExecution, transformerVers, garderLignes, libellesLignes, ouvrir, validerEtape, controlerEtape, celluleEtape,
-  attendreEtatExecution, choisirTiers, type Vente, type Piece,
+  attendreEtatExecution, choisirTiers, validerEtAccepterPiece, accepterSiEnvoyee, type Vente, type Piece,
 } from './outils/execution';
 import { ACHATS } from './outils/achats';
 
@@ -113,8 +113,7 @@ test.describe.serial('Ordres : devis, ordre d’exécution et ses branches', { t
     await enregistrer(page);
     await attendreTotalHt(page, '720,00');
     // Commande fournisseur sans validation du tiers attendue : validée d'office
-    await valider(page);
-    await attendreStatut(page, 'Validé');
+    await validerEtAccepterPiece(page);
 
     await ouvrir(page, dac.id);
     await validerEtape(page, 'Commande passée');
@@ -132,14 +131,12 @@ test.describe.serial('Ordres : devis, ordre d’exécution et ses branches', { t
     expect(rs.numero).toMatch(/^RS\d{4}-\d+$/);
     await choisirLieu(page, 'Dépôt réservé', depot.code);
     await enregistrer(page);
-    await valider(page);
-    await attendreStatut(page, 'Validé');
+    await validerEtAccepterPiece(page);
 
     await transformerVers(page, /Transfert/);
     await choisirLieu(page, 'Origine (vide : entrée)', depot.code);
     await enregistrer(page);
-    await valider(page);
-    await attendreStatut(page, 'Validé');
+    await validerEtAccepterPiece(page);
     // 20 m² de parpaings = 200 unités sorties du dépôt
     await expect(await quantiteEnStock(page, depot, STOCK.PARPAING.libelle)).toContainText(/800\s*u/);
 
@@ -159,7 +156,7 @@ test.describe.serial('Ordres : devis, ordre d’exécution et ses branches', { t
     expect(cst.numero).toMatch(/^CST\d{4}-\d+$/);
     await choisirTiers(page, SOUS_TRAITANCE.SOUS_TRAITANT);
     await validerCommandeDansMarche(page, { venteLiee: vente.marche.code });
-    await attendreStatut(page, 'Validé');
+    await accepterSiEnvoyee(page);
 
     // Attribution : contrôle du N+1 bloquant, fait par l'administrateur
     await ouvrir(page, ost.id);
