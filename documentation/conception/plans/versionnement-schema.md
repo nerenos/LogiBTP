@@ -6,7 +6,8 @@
 >
 > Base d'essai dans le conteneur cloud : PostgreSQL 16 local (`localhost:5433`, rôle `logibtp` / `logibtp`,
 > superutilisateur) ; la production est en PostgreSQL 17. Les tests qui demandent une base se lancent seulement si la
-> variable `LOGIBTP_TEST_PG` (chaîne de connexion Npgsql d'un superutilisateur) est définie ; sinon ils sont ignorés
+> variable `LOGIBTP_TEST_PG_ADMIN` (chaîne de connexion Npgsql d'un superutilisateur, base `postgres` ; distincte de
+> `LOGIBTP_TEST_PG`, qui désigne une base de développement complète pour les tests des autres modules) est définie ; sinon ils sont ignorés
 > (jamais en échec), pour ne pas casser `dotnet test LogiBTP.slnx` sur un poste sans base.
 
 ## Rappel des décisions
@@ -40,7 +41,7 @@ vue). Détecter précisément les objets touchés par chaque script demanderait 
 | 2 | FAIT | Données de démonstration séparées (indicateur `demo`) |
 | 3 | FAIT | Versions par module : socle 1.0, journal enrichi, `v_version_module`, `installation etat` |
 | 4 | FAIT | Mineures, plan calculé, `scripts.txt` généré, verrou, empreinte bloquante, rejouables sur changement |
-| 5 | À FAIRE | Fin du DDL au démarrage ; conversion des métrés archivée ; migrations C# figées |
+| 5 | FAIT | Fin du DDL au démarrage ; conversion des métrés archivée ; migrations C# figées |
 | 6 | À FAIRE | Version attendue par l'API, base en retard refusée proprement, page Installation |
 | 7 | À FAIRE | Champs supplémentaires des fiches (`x_`) : base et serveur |
 | 8 | À FAIRE | Champs supplémentaires : écran d'administration et affichage dans les fiches |
@@ -63,10 +64,10 @@ vue). Détecter précisément les objets touchés par chaque script demanderait 
      que la société peut modifier (revue de chaque cas). Les scripts générés `db/121`, `db/131`, `db/191` deviennent
      `rejouable` (leur réécriture est voulue). Les en-têtes « Rejouable » des scripts qui ne le sont pas sont
      corrigés.
-  3. Test d'intégration (`LOGIBTP_TEST_PG`) : base neuve par `AppliquerAsync` = base neuve par l'ordre du manifeste
+  3. Test d'intégration (`LOGIBTP_TEST_PG_ADMIN`) : base neuve par `AppliquerAsync` = base neuve par l'ordre du manifeste
      (même schéma) ; une seconde application ne change rien ; tout rejouable joué deux fois ne change rien.
 - **Critère de fin** : `dotnet test modules/installation/dotnet/LogiBTP.Installation.Tests` vert, tests d'intégration
-  verts avec `LOGIBTP_TEST_PG`.
+  verts avec `LOGIBTP_TEST_PG_ADMIN`.
 - **Réalisé** : 61 scripts nouvellement `rejouable` (58 de pur DDL + 121, 131, 191) ; les en-têtes des scripts déjà
   appliqués ne sont **pas** retouchés (leur empreinte au journal changerait) : le manifeste fait foi. 267 et 287,
   anciens rejouables dont le rejeu à leur place échoue, prennent l'indicateur `ex-rejouable` (inscrits sans exécution
@@ -175,6 +176,8 @@ vue). Détecter précisément les objets touchés par chaque script demanderait 
   joué par le moteur à sa place dans le plan ; règle « figée » documentée. Les conversions d'empreintes restent dans la
   mise à jour.
 - **Critère de fin** : API qui démarre sans DDL ; `dotnet test LogiBTP.slnx` vert.
+
+- **Réalisé** : `ConversionMetresBases` retiré de `Program.cs` et de `installation` (commande `conversions` supprimée, `mettre-a-jour` sans conversion) ; archivés avec un README dans `documentation/archive/conversion-metres/` : `ConversionMetresBases`, `ConversionMetre` (C#), `conversion.js` (JS), leurs tests et les jeux `tests/conversion` (tous morts : aucun autre usage). Recherche de DDL au démarrage (`src/`, `modules/*/dotnet` hors Installation et tests) : aucun. Migrations de code : `IMigrationCode`, plan, moteur, journal, `MigrationsCoeur` (liste vide), règle « figée » dans MIGRATIONS.md. Les conversions d'empreintes (`ConvertirAsync`) n'existaient que pour les métrés : rien d'autre à conserver ; la reprise des empreintes reste dans `cle-donnees rechiffrer`.
 
 ### Lot 6 – Version attendue par l'API, base en retard refusée, page Installation
 

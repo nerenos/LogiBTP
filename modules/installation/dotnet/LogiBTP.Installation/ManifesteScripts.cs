@@ -72,6 +72,13 @@ public sealed class ManifesteScripts
         return File.Exists(f) && File.ReadAllText(f).Replace("\r\n", "\n") == PlanScripts.Calculer(racine).Contenu();
     }
 
+    /// <summary>
+    /// Manifeste avec les migrations de code du cœur placées dans le plan (comme des mineures de leur module) ; sans migration,
+    /// le manifeste du dépôt tel quel.
+    /// </summary>
+    public ManifesteScripts AvecMigrations(string racine, IReadOnlyList<IMigrationCode>? migrations) =>
+        migrations is { Count: > 0 } ? new ManifesteScripts(PlanScripts.Calculer(racine, migrations).Scripts) : this;
+
     public const string PrefixeExtraitDe = "extrait-de=";
 
     /// <summary>Scripts à appliquer à une base : tous, ou seulement ceux qui ne sont pas de démonstration.</summary>
@@ -84,7 +91,7 @@ public sealed class ManifesteScripts
     public IReadOnlyList<string> Ecarts(string racine)
     {
         var listes = Scripts.Select(s => s.Chemin).ToHashSet(StringComparer.Ordinal);
-        var ecarts = Scripts.Where(s => !File.Exists(Path.Combine(racine, s.Chemin))).Select(s => $"introuvable : {s.Chemin}").Distinct().ToList();
+        var ecarts = Scripts.Where(s => !MigrationsCode.EstCode(s.Chemin) && !File.Exists(Path.Combine(racine, s.Chemin))).Select(s => $"introuvable : {s.Chemin}").Distinct().ToList();
         var dossiers = Directory.GetDirectories(Path.Combine(racine, "modules")).Select(d => Path.Combine(d, "db")).Append(Path.Combine(racine, "db"));
         foreach (var d in dossiers.Where(Directory.Exists))
         {

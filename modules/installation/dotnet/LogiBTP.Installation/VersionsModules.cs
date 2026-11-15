@@ -26,11 +26,12 @@ public static partial class VersionsModules
     private static partial Regex FormeMineure();
 
     /// <summary>Vrai si le nom du fichier est celui d'une mineure (« majeur.mineur_nom.sql »).</summary>
-    public static bool EstMineure(string chemin) => FormeMineure().IsMatch(Path.GetFileName(chemin));
+    public static bool EstMineure(string chemin) => MigrationsCode.EstCode(chemin) || FormeMineure().IsMatch(Path.GetFileName(chemin));
 
     /// <summary>Module d'un script : modules/&lt;m&gt;/db/… → m ; db/… → coeur.</summary>
     public static string ModuleDe(string chemin)
     {
+        if (MigrationsCode.EstCode(chemin)) return CodeDe(chemin).Module;
         var p = chemin.Split('/');
         if (p.Length >= 4 && p[0] == "modules" && p[2] == "db" && p[1].Length > 0) return p[1];
         if (p.Length >= 2 && p[0] == "db") return Coeur;
@@ -39,10 +40,20 @@ public static partial class VersionsModules
 
     /// <summary>Version d'un script : 1.0 (socle) ; une mineure « &lt;majeur&gt;.&lt;mineur&gt;_&lt;nom&gt;.sql » porte sa version (lot 4).</summary>
     public static VersionModule VersionDe(string chemin) =>
-        FormeMineure().Match(Path.GetFileName(chemin)) is { Success: true } m ? VersionModule.Analyser(m.Groups[1].Value) : VersionModule.Socle;
+        MigrationsCode.EstCode(chemin) ? CodeDe(chemin).Version : FormeMineure().Match(Path.GetFileName(chemin)) is { Success: true } m ? VersionModule.Analyser(m.Groups[1].Value) : VersionModule.Socle;
+
+    /// <summary>Module et version d'un chemin « code:&lt;module&gt;/&lt;version&gt;_&lt;nom&gt; ».</summary>
+    private static (string Module, VersionModule Version) CodeDe(string chemin)
+    {
+        var reste = chemin[MigrationsCode.Prefixe.Length..];
+        var barre = reste.IndexOf('/');
+        var souligne = reste.IndexOf('_');
+        if (barre <= 0 || souligne < barre) throw new ArgumentException($"Chemin de migration de code invalide : « {chemin} »");
+        return (reste[..barre], VersionModule.Analyser(reste[(barre + 1)..souligne]));
+    }
 
     /// <summary>Type au journal d'un script non rejouable : socle (1.0) ou mineure.</summary>
-    public static string TypeDe(string chemin) => VersionDe(chemin) == VersionModule.Socle && !FormeMineure().IsMatch(Path.GetFileName(chemin)) ? TypeSocle : TypeMineure;
+    public static string TypeDe(string chemin) => MigrationsCode.EstCode(chemin) ? TypeMineure : VersionDe(chemin) == VersionModule.Socle && !FormeMineure().IsMatch(Path.GetFileName(chemin)) ? TypeSocle : TypeMineure;
 
     /// <summary>Version produit (db/installation/version.txt, première ligne non vide), ou null.</summary>
     public static string? VersionProduit(string racine)

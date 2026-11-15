@@ -81,7 +81,7 @@ public sealed class PlanScripts
     }
 
     /// <summary>Calcule le plan du dépôt ; lève <see cref="PlanInvalideException"/> si le graphe est invalide.</summary>
-    public static PlanScripts Calculer(string racine)
+    public static PlanScripts Calculer(string racine, IReadOnlyList<IMigrationCode>? migrations = null)
     {
         var lignes = File.ReadAllLines(Path.Combine(racine, CheminSocle)).ToList();
         var repere = lignes.FindIndex(l => l.StartsWith(RepereFinSocle, StringComparison.Ordinal));
@@ -91,6 +91,18 @@ public sealed class PlanScripts
         var socleFin = ManifesteScripts.Analyser(fin).Scripts;
         var erreurs = new List<string>();
         var mineures = Decouvrir(racine, erreurs);
+        if (migrations is { Count: > 0 })
+        {
+            MigrationsCode.Verifier(migrations, erreurs);
+            foreach (var m in migrations)
+            {
+                var chemin = MigrationsCode.Chemin(m);
+                // Une mineure est un fichier SQL OU une migration de code, jamais les deux pour la même version.
+                if (mineures.Any(x => x.Module == m.Module && x.Version == m.Version))
+                    erreurs.Add($"{chemin} : le module {m.Module} a déjà un script SQL en version {m.Version}");
+                else mineures.Add(new MineureScript(chemin, m.Module, m.Version, EnteteMineure.Vide));
+            }
+        }
         var modulesSocle = socleTete.Concat(socleFin).Select(s => VersionsModules.ModuleDe(s.Chemin)).ToHashSet(StringComparer.Ordinal);
         var ordonnees = Ordonner(mineures, modulesSocle, erreurs);
         if (erreurs.Count > 0) throw new PlanInvalideException(erreurs);
@@ -175,10 +187,10 @@ public sealed class PlanScripts
         sb.Append($"# Plan = socle 1.0 ({CheminSocle}, figé), mineures des modules (tri topologique), rejouables de fin du socle.\n");
         sb.Append("# Toute mineure ajoutée ou retirée se traduit par une régénération, contrôlée par le test du module Installation.\n\n");
         foreach (var l in _tete) sb.Append(l).Append('\n');
-        if (Mineures.Count > 0)
+        if (Mineures.Any(x => !MigrationsCode.EstCode(x.Chemin)))
         {
             sb.Append("\n# Mineures : ordre calculé (versions d'un module en ordre numérique, « -- requiert: » entre modules).\n");
-            foreach (var m in Mineures) sb.Append(m.Chemin).Append('\n');
+            foreach (var m in Mineures.Where(x => !MigrationsCode.EstCode(x.Chemin))) sb.Append(m.Chemin).Append('\n');
         }
         if (_fin.Count > 0)
         {

@@ -7,12 +7,12 @@ namespace LogiBTP.Installation.Tests;
 
 /// <summary>
 /// Mineures, plan calculé et scripts.txt généré (plan versionnement-schema, lot 4) : unitaires sur dépôts factices, puis
-/// intégration (LOGIBTP_TEST_PG) : ordre, base montée = base neuve, rejouables sur changement, empreinte bloquante, verrou.
+/// intégration (LOGIBTP_TEST_PG_ADMIN) : ordre, base montée = base neuve, rejouables sur changement, empreinte bloquante, verrou.
 /// </summary>
 [Collection("PostgreSQL")]
 public class MineuresTests
 {
-    private static readonly string? Admin = Environment.GetEnvironmentVariable("LOGIBTP_TEST_PG");
+    private static readonly string? Admin = Environment.GetEnvironmentVariable("LOGIBTP_TEST_PG_ADMIN");
 
     // ---------------------------------------------------------------- dépôt factice
 
@@ -209,6 +209,68 @@ public class MineuresTests
         await cnx.OpenAsync();
         await using var cmd = new NpgsqlCommand("SELECT coalesce(string_agg(ess_nom || ':' || n, ' ' ORDER BY ess_nom COLLATE \"C\"), '') FROM (SELECT ess_nom, count(*) n FROM installation_essai GROUP BY ess_nom) t", cnx);
         return (string)(await cmd.ExecuteScalarAsync())!;
+    }
+
+    // ---------------------------------------------------------------- migrations de code (lot 5)
+
+    private sealed class MigrationFictive(string module, VersionModule version, string nom, string sql, List<string>? trace = null, bool echec = false) : IMigrationCode
+    {
+        public string Module => module;
+        public VersionModule Version => version;
+        public string Nom => nom;
+        public async Task ExecuterAsync(NpgsqlConnection cnx, NpgsqlTransaction tx, CancellationToken ct)
+        {
+            trace?.Add(nom);
+            await using var cmd = new NpgsqlCommand(sql, cnx, tx);
+            await cmd.ExecuteNonQueryAsync(ct);
+            if (echec) throw new InvalidOperationException("échec voulu");
+        }
+    }
+
+    [Fact]
+    public void Migration_de_code_placee_comme_mineure_et_jamais_avec_un_sql_de_meme_version()
+    {
+        using var d = DepotAB();
+        d.Ecrire("modules/a/db/1.1_a.sql", "SELECT 1;");
+        var code = new MigrationFictive("b", new VersionModule(1, 1), "reprise", "SELECT 1");
+        var plan = PlanScripts.Calculer(d.Racine, [code]);
+        Assert.Equal(["modules/a/db/1.1_a.sql", "code:b/1.1_reprise"], plan.Mineures.Select(m => m.Chemin));
+        Assert.Equal("code:b/1.1_reprise", plan.Scripts[^1].Chemin);
+        Assert.DoesNotContain("code:", plan.Contenu()); // scripts.txt ne porte que des fichiers SQL
+        Assert.Equal("b", VersionsModules.ModuleDe("code:b/1.1_reprise"));
+        Assert.Equal(new VersionModule(1, 1), VersionsModules.VersionDe("code:b/1.1_reprise"));
+        d.Ecrire("modules/b/db/1.1_b.sql", "SELECT 1;");
+        var e = Assert.Throws<PlanInvalideException>(() => PlanScripts.Calculer(d.Racine, [code]));
+        Assert.Contains("déjà un script SQL en version 1.1", e.Message);
+        Assert.Throws<PlanInvalideException>(() => PlanScripts.Calculer(d.Racine, [new MigrationFictive("a", new VersionModule(1, 0), "x", "SELECT 1")]));
+    }
+
+    [Fact]
+    public async Task Migration_de_code_jouee_dans_l_ordre_et_dans_la_transaction_de_la_mineure()
+    {
+        if (Admin is null) return;
+        using var d = DepotAB();
+        d.Ecrire("modules/a/db/1.1_a_col.sql", "ALTER TABLE a_t ADD COLUMN a_x int;");
+        var trace = new List<string>();
+        var code = new MigrationFictive("a", new VersionModule(1, 2), "reprise", "INSERT INTO a_t (a_id, a_x) SELECT 1, count(*) FROM information_schema.columns WHERE table_name = 'a_t' AND column_name = 'a_x'", trace);
+        var moteur = new BaseDonnees(TextWriter.Null);
+        await using var b = await ScriptsBaseTests.BaseEssai.CreerAsync(Admin);
+        var plan = PlanScripts.Calculer(d.Racine, [code]);
+        var bilan = await moteur.AppliquerAsync(b.Connexion, d.Racine, plan.Scripts, migrations: [code]);
+        Assert.Equal(4, bilan.Appliques);
+        Assert.Equal(["reprise"], trace);
+        Assert.Equal(1, await Compter(b.Connexion, "SELECT a_x FROM a_t")); // jouée après le SQL 1.1 (colonne présente)
+        Assert.Equal("mineure", await ChaineAsync(b.Connexion, "SELECT isc_type FROM installation_script WHERE isc_chemin = 'code:a/1.2_reprise'"));
+        Assert.Equal("1.2", (await VersionsModules.VersionsModulesAsync(b.Connexion)).Single(v => v.Module == "a").Version.ToString());
+        Assert.Contains("MigrationFictive", await ChaineAsync(b.Connexion, "SELECT isc_empreinte FROM installation_script WHERE isc_chemin = 'code:a/1.2_reprise'"));
+        // Rejeu : rien. Une migration qui échoue est annulée avec sa mineure et rien n'est inscrit.
+        Assert.Equal(0, (await moteur.AppliquerAsync(b.Connexion, d.Racine, plan.Scripts, migrations: [code])).Appliques);
+        Assert.Single(trace);
+        var echec = new MigrationFictive("b", new VersionModule(1, 1), "casse", "CREATE TABLE b_casse (x int)", null, true);
+        var plan2 = PlanScripts.Calculer(d.Racine, [code, echec]);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => moteur.AppliquerAsync(b.Connexion, d.Racine, plan2.Scripts, migrations: [code, echec]));
+        Assert.Equal(0, await Compter(b.Connexion, "SELECT count(*) FROM information_schema.tables WHERE table_name = 'b_casse'"));
+        Assert.Equal(0, await Compter(b.Connexion, "SELECT count(*) FROM installation_script WHERE isc_chemin = 'code:b/1.1_casse'"));
     }
 
     [Fact]

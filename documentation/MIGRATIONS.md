@@ -22,3 +22,9 @@ Détail du moteur : [INSTALLATION.md](modules/INSTALLATION.md) ; décisions : [a
 
 ## Verrou
 Une seule mise à jour à la fois par base : verrou consultatif PostgreSQL (`pg_advisory_lock`, clé constante) pris pendant l'application ; une seconde application attend la première.
+
+## Migration de code figée (exceptionnelle)
+- Seulement pour une reprise de données **impossible en SQL**. Interface `IMigrationCode` (module Installation : `Module`, `Version`, `Nom`, `ExecuterAsync(NpgsqlConnection, NpgsqlTransaction, CancellationToken)`), déclarée dans `MigrationsCoeur.Liste` (`src/LogiBTP.Api/Btp`), passée à l'installeur avec le manifeste.
+- Elle occupe la place d'une mineure : une version d'un module est un fichier SQL **ou** une migration de code, jamais les deux (plan invalide). Le moteur la joue à sa place dans le plan, dans la transaction de la mineure (ne jamais valider ni annuler soi-même ; une exception annule tout), et l'inscrit au journal (`isc_type = mineure`, chemin `code:<module>/<version>_<nom>`, empreinte = empreinte déclarée, sinon nom complet du type + version de l'assembly ; trace seulement, elle ne sert pas à détecter une modification).
+- **Figée** : le code ne dépend ni des entités, ni des services, ni des règles ou constantes courantes de l'application (elles changent, pas la migration) : SQL et connexion reçue seulement, valeurs recopiées en dur. Une fois publiée, elle ne change plus ; correction = nouvelle migration ou mineure SQL.
+- `scripts.txt` (fichiers SQL) ne la mentionne pas ; elle n'existe qu'au plan calculé avec la liste déclarée. Aucune migration de code réelle à ce jour ; tests : `MineuresTests` (migration fictive).

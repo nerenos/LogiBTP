@@ -42,7 +42,7 @@ public static class ControleSchema
         var contenus = new List<string>();
         if (ecarts.Any(e => e.EnConflit))
             foreach (var s in scripts.Where(s => s.Rejouable || !deja.Contains(s.Chemin)).DistinctBy(s => s.Chemin))
-                contenus.Add(await File.ReadAllTextAsync(Path.Combine(racine, s.Chemin), ct));
+                contenus.Add(MigrationsCode.EstCode(s.Chemin) ? s.Chemin : await File.ReadAllTextAsync(Path.Combine(racine, s.Chemin), ct));
         return new RapportDerive(cnx.Database!, true, ecarts, contenus);
     }
 
@@ -62,14 +62,14 @@ public static class ControleSchema
     /// donnée, la supprime. <paramref name="connexionDe"/> : chaîne de connexion (propriétaire du schéma) d'une base du serveur.
     /// </summary>
     public static async Task<IReadOnlyList<EcartSchema>> ComparerAReferenceAsync(string connexionAdmin, string proprietaire, Func<string, string> connexionDe,
-        string base_, string racine, IEnumerable<ScriptManifeste> scripts, TextWriter journal, CancellationToken ct = default)
+        string base_, string racine, IEnumerable<ScriptManifeste> scripts, TextWriter journal, IReadOnlyList<IMigrationCode>? migrations = null, CancellationToken ct = default)
     {
         var nom = (base_.Length > 40 ? base_[..40] : base_) + "_ref_" + DateTime.Now.ToString("yyyyMMddHHmmss");
         var bd = new BaseDonnees(journal);
         await bd.CreerBaseAsync(connexionAdmin, nom, proprietaire, ct);
         try
         {
-            await bd.AppliquerAsync(connexionDe(nom), racine, scripts, ct: ct);
+            await bd.AppliquerAsync(connexionDe(nom), racine, scripts, migrations: migrations, ct: ct);
             return await ComparerAsync(connexionDe(base_), connexionDe(nom), ct);
         }
         finally

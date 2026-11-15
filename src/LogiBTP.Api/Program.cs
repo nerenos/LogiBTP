@@ -45,7 +45,7 @@ if (args.Length > 0 && args[0] == "env")
     Environment.ExitCode = CommandeEnv.Executer(args[1..], dossierConfig ?? Directory.GetCurrentDirectory(), Console.Out);
     return;
 }
-// Commandes de l'installeur (installation preparer | base creer | societe ajouter | scripts verifier | conversions…) :
+// Commandes de l'installeur (installation preparer | base creer | societe ajouter | scripts verifier…) :
 // ANALYSE-MODULE-INSTALLATION.md § 6.
 if (args.Length > 0 && args[0] == "installation")
 {
@@ -208,10 +208,6 @@ if (commande is not null)
     Environment.ExitCode = await CommandeComptes.ExecuterAsync(commande, app.Services, Console.Out);
     return;
 }
-
-// Métrés saisis en lignes : convertis en scripts au démarrage en développement (compte propriétaire des bases) ; une
-// installation les convertit sous le rôle de schéma (« installation conversions », mise à jour).
-if (app.Environment.IsDevelopment()) await ConversionMetresBases.ConvertirAsync(app.Services, app.Logger);
 
 app.UseSecurite();
 app.UseHttpsInstallation();

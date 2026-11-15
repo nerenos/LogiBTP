@@ -130,7 +130,7 @@ public sealed class BaseDonnees(TextWriter journal)
     {
         var rejouables = liste.Where(x => x.Rejouable).Select(x => x.Chemin).ToHashSet(StringComparer.Ordinal);
         var res = new List<string>();
-        foreach (var s in liste.Where(x => !x.Rejouable && !rejouables.Contains(x.Chemin)).DistinctBy(x => x.Chemin))
+        foreach (var s in liste.Where(x => !x.Rejouable && !MigrationsCode.EstCode(x.Chemin) && !rejouables.Contains(x.Chemin)).DistinctBy(x => x.Chemin))
         {
             if (!deja.TryGetValue(s.Chemin, out var ancienne)) continue;
             if (Empreinte(File.ReadAllText(Path.Combine(racine, s.Chemin))) == ancienne) continue;
@@ -157,7 +157,8 @@ public sealed class BaseDonnees(TextWriter journal)
     /// empreinte, avec les scripts qui en ont été extraits (inscrits sans exécution), dans une même transaction.
     /// </summary>
     public async Task<BilanScripts> AppliquerAsync(string connexion, string racine, IEnumerable<ScriptManifeste> scripts, bool adopter = false,
-        EmpreintesAcceptees? acceptees = null, bool forcer = false, string? motif = null, CancellationToken ct = default)
+        EmpreintesAcceptees? acceptees = null, bool forcer = false, string? motif = null, IReadOnlyList<IMigrationCode>? migrations = null,
+        CancellationToken ct = default)
     {
         await using var cnx = new NpgsqlConnection(connexion);
         await cnx.OpenAsync(ct);
@@ -166,7 +167,7 @@ public sealed class BaseDonnees(TextWriter journal)
             verrou.Parameters.AddWithValue("k", CleVerrou);
             await verrou.ExecuteNonQueryAsync(ct);
         }
-        try { return await AppliquerSousVerrouAsync(cnx, racine, scripts.ToList(), adopter, acceptees, forcer, motif, ct); }
+        try { return await AppliquerSousVerrouAsync(cnx, racine, scripts.ToList(), adopter, acceptees, forcer, motif, migrations ?? [], ct); }
         finally
         {
             try
@@ -180,8 +181,9 @@ public sealed class BaseDonnees(TextWriter journal)
     }
 
     private async Task<BilanScripts> AppliquerSousVerrouAsync(NpgsqlConnection cnx, string racine, List<ScriptManifeste> liste, bool adopter,
-        EmpreintesAcceptees? acceptees, bool forcer, string? motif, CancellationToken ct)
+        EmpreintesAcceptees? acceptees, bool forcer, string? motif, IReadOnlyList<IMigrationCode> migrations, CancellationToken ct)
     {
+        var codes = migrations.ToDictionary(MigrationsCode.Chemin, StringComparer.Ordinal);
         await ExecuterAsync(cnx, $"""
             CREATE TABLE IF NOT EXISTS {TableJournal} (
                 isc_chemin      TEXT PRIMARY KEY,
@@ -235,6 +237,22 @@ public sealed class BaseDonnees(TextWriter journal)
         for (var i = 0; i < liste.Count; i++)
         {
             var s = liste[i];
+            if (MigrationsCode.EstCode(s.Chemin))
+            {
+                // Migration de code : une mineure de son module, exécutée dans sa transaction et inscrite au journal.
+                if (!vus.Add(s.Chemin) || deja.ContainsKey(s.Chemin)) continue;
+                var migration = codes.GetValueOrDefault(s.Chemin) ?? throw new InvalidOperationException($"Migration de code {s.Chemin} absente de la liste déclarée");
+                await ExecuterScriptAsync(cnx, s.Chemin, null, MigrationsCode.Empreinte(migration), ct, produit, null, false, adopter ? null : migration);
+                deja[s.Chemin] = MigrationsCode.Empreinte(migration);
+                types[s.Chemin] = VersionsModules.TypeMineure;
+                appliques++;
+                if (!adopter)
+                {
+                    touches.Add(migration.Module);
+                    minApp.Add((i, migration.Module));
+                }
+                continue;
+            }
             var contenu = await File.ReadAllTextAsync(Path.Combine(racine, s.Chemin), ct);
             var empreinte = Empreinte(contenu);
             if (s.Rejouable)
@@ -315,7 +333,7 @@ public sealed class BaseDonnees(TextWriter journal)
     {
         var directes = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
         var modules = liste.Select(s => VersionsModules.ModuleDe(s.Chemin)).ToHashSet(StringComparer.Ordinal);
-        foreach (var s in liste.Where(x => VersionsModules.EstMineure(x.Chemin)).DistinctBy(x => x.Chemin))
+        foreach (var s in liste.Where(x => VersionsModules.EstMineure(x.Chemin) && !MigrationsCode.EstCode(x.Chemin)).DistinctBy(x => x.Chemin))
         {
             var m = VersionsModules.ModuleDe(s.Chemin);
             var entete = EnteteMineure.Lire(s.Chemin, await File.ReadAllTextAsync(Path.Combine(racine, s.Chemin), ct));
@@ -351,7 +369,7 @@ public sealed class BaseDonnees(TextWriter journal)
     private async Task AccepterAnciennesEmpreintesAsync(NpgsqlConnection cnx, string racine, List<ScriptManifeste> liste, Dictionary<string, string> deja,
         List<string> acceptes, EmpreintesAcceptees acceptees, string? produit, CancellationToken ct)
     {
-        foreach (var s in liste.Where(x => !x.Rejouable).DistinctBy(x => x.Chemin))
+        foreach (var s in liste.Where(x => !x.Rejouable && !MigrationsCode.EstCode(x.Chemin)).DistinctBy(x => x.Chemin))
         {
             if (!deja.TryGetValue(s.Chemin, out var ancienne)) continue;
             var empreinte = Empreinte(await File.ReadAllTextAsync(Path.Combine(racine, s.Chemin), ct));
@@ -394,7 +412,7 @@ public sealed class BaseDonnees(TextWriter journal)
     }
 
     private async Task ExecuterScriptAsync(NpgsqlConnection cnx, string chemin, string? contenu, string? empreinte, CancellationToken ct, string? produit = null,
-        string? type = null, bool horsTransaction = false)
+        string? type = null, bool horsTransaction = false, IMigrationCode? migration = null)
     {
         var chrono = System.Diagnostics.Stopwatch.StartNew();
         if (horsTransaction)
@@ -428,8 +446,14 @@ public sealed class BaseDonnees(TextWriter journal)
                 await using var cmd = new NpgsqlCommand(contenu, cnx, tx) { CommandTimeout = 0 };
                 await cmd.ExecuteNonQueryAsync(ct);
             }
-            if (empreinte is not null) await InscrireAsync(cnx, tx, chemin, empreinte, contenu is null ? 0 : (int)chrono.ElapsedMilliseconds, produit, type, ct);
+            if (migration is not null) await migration.ExecuterAsync(cnx, tx, ct);
+            if (empreinte is not null) await InscrireAsync(cnx, tx, chemin, empreinte, contenu is null && migration is null ? 0 : (int)chrono.ElapsedMilliseconds, produit, type, ct);
             await tx.CommitAsync(ct);
+        }
+        catch (Exception e) when (migration is not null && e is not PostgresException and not OperationCanceledException)
+        {
+            await tx.RollbackAsync(ct);
+            throw new InvalidOperationException($"{cnx.Database} : échec de la migration de code {chemin} : {e.Message}", e);
         }
         catch (PostgresException e)
         {

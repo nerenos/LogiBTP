@@ -9,7 +9,7 @@ namespace LogiBTP.Installation.Tests;
 
 /// <summary>
 /// Application du manifeste à une vraie base (plan versionnement-schema, lot 0). Conditionné à la variable
-/// LOGIBTP_TEST_PG (connexion Npgsql d'un superutilisateur) : sinon les tests se terminent aussitôt, jamais en échec.
+/// LOGIBTP_TEST_PG_ADMIN (connexion Npgsql d'un superutilisateur) : sinon les tests se terminent aussitôt, jamais en échec.
 /// Les bases d'essai (préfixe test_inst_) sont créées puis supprimées par le test.
 /// </summary>
 // Collection commune : les essais sur une vraie base ne se jouent pas en parallèle (la charge fait varier des données tirées au hasard
@@ -17,7 +17,7 @@ namespace LogiBTP.Installation.Tests;
 [Collection("PostgreSQL")]
 public class ScriptsBaseTests
 {
-    private static readonly string? Admin = Environment.GetEnvironmentVariable("LOGIBTP_TEST_PG");
+    private static readonly string? Admin = Environment.GetEnvironmentVariable("LOGIBTP_TEST_PG_ADMIN");
 
     [Fact]
     public async Task Base_neuve_par_AppliquerAsync_egale_base_neuve_par_l_ordre_du_manifeste()

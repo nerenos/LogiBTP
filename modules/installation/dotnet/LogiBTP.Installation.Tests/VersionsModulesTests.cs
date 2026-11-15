@@ -5,11 +5,11 @@ using Xunit;
 
 namespace LogiBTP.Installation.Tests;
 
-/// <summary>Versions par module (plan versionnement-schema, lot 3) : unitaires (module, VersionModule) puis intégration (LOGIBTP_TEST_PG).</summary>
+/// <summary>Versions par module (plan versionnement-schema, lot 3) : unitaires (module, VersionModule) puis intégration (LOGIBTP_TEST_PG_ADMIN).</summary>
 [Collection("PostgreSQL")]
 public class VersionsModulesTests
 {
-    private static readonly string? Admin = Environment.GetEnvironmentVariable("LOGIBTP_TEST_PG");
+    private static readonly string? Admin = Environment.GetEnvironmentVariable("LOGIBTP_TEST_PG_ADMIN");
 
     [Theory]
     [InlineData("db/010_x.sql", "coeur")]

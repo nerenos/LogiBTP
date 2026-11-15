@@ -7,14 +7,14 @@ namespace LogiBTP.Installation.Tests;
 
 /// <summary>
 /// Données de démonstration séparées (plan versionnement-schema, lot 2) : indicateur « demo » du manifeste, scripts extraits,
-/// empreintes acceptées ; intégration (LOGIBTP_TEST_PG) : base sans démonstration, mise à jour, ancien journal accepté.
+/// empreintes acceptées ; intégration (LOGIBTP_TEST_PG_ADMIN) : base sans démonstration, mise à jour, ancien journal accepté.
 /// </summary>
 // Collection commune : les essais sur une vraie base ne se jouent pas en parallèle (la charge fait varier des données tirées au hasard
 // par des scripts de démonstration d'avant le lot, ce que compare ScriptsBaseTests).
 [Collection("PostgreSQL")]
 public class DemonstrationTests
 {
-    private static readonly string? Admin = Environment.GetEnvironmentVariable("LOGIBTP_TEST_PG");
+    private static readonly string? Admin = Environment.GetEnvironmentVariable("LOGIBTP_TEST_PG_ADMIN");
 
     // ---------------------------------------------------------------- manifeste
 
