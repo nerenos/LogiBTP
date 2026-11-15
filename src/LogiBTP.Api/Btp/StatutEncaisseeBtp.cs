@@ -257,7 +257,7 @@ public static class StatutEncaisseeBtp
                 catch (Exception e) when (e is ExceptionMetier or DbUpdateException or PostgresException)
                 {
                     await tx.RollbackAsync(ct);
-                    erreurs.Add(new ErreurEncaisseeFe(p.Cle, e is ExceptionMetier m ? m.Code : ErreurFe.DemandeInvalide, Masquage.Texte(e.Message)));
+                    erreurs.Add(new ErreurEncaisseeFe(p.Cle, e is ExceptionMetier m ? m.Code : ErreurFe.DemandeInvalide, Masquage.Texte(e.Message) ?? e.GetType().Name));
                 }
             }
         }
