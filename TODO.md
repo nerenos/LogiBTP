@@ -1,12 +1,17 @@
 ## Base de données
 
-- [ ] **Module de gestion des versions de la base** (après stabilisation du schéma) : numéro de version du schéma
-  par base de société, scripts de migration ordonnés et rejouables, application automatique aux bases existantes.
-  Fait par le module Installation : journal `installation_script` (manifeste `db/installation/scripts.txt`, empreinte de
-  chaque script appliqué, `installation base mettre-a-jour`, `base adopter` pour les bases existantes) ; reste : scripts
-  numéro de version lisible, retour arrière sans restauration (plan versionnement-schema : lots 0 à 8 faits (lot 8 : page `/parametres/champs-supplementaires` et onglet « Champs supplémentaires » des fiches ; reste : colonnes `x_` dans les listes (les vues de liste générées par `npm run generer-vues-liste` listent des colonnes fixes : une vue ne suit pas des colonnes ajoutées sans reprise ; à faire : exposer les `x_` par la source du module Liste, ou recréer la vue après création d'un champ) et essai e2e `e2e/champs-supplementaires.spec.ts` écrit, non lancé (demande l'API complète) ; lot 7 : première mineure réelle, Fiche 1.1, champs supplémentaires `x_` des fiches : registre, fonctions `SECURITY DEFINER`, routes `/api/champs-supplementaires`, définition de fiche enrichie ; reste lot 9 majeure ; lot 6 : versions attendues embarquées dans l'API, base en retard refusée en 503 `BASE_A_METTRE_A_JOUR` par société, caches du schéma purgés, page Installation avec versions et forçages ; lot 5 : fin du DDL au démarrage, conversion des métrés archivée, migrations de code figées ; lot 3 : versions par module, `v_version_module`, version produit ; lot 4 : mineures, plan calculé, `scripts.txt` généré, verrou, empreinte bloquante, rejouables inscrits ; reste : règles d'écriture à reporter dans les CLAUDE.md du module Installation et de `db/`) : ordre de l'installeur, scripts rejouables, instantané et dérive du schéma, forçage tracé, préfixes d'intégrateur, données de démonstration séparées par l'indicateur `demo` du manifeste : `installation base creer|societe ajouter --demo`, empreintes acceptées des scripts réduits).
-  Aujourd'hui : scripts `modules/*/db` et `db/` appliqués à la création du volume Docker, puis à la main sur `logibtp`
-  et `logibtp_demo` ; seuls les scripts de pur DDL sont rejouables.
+- [x] **Module de gestion des versions de la base** : fait (plan [versionnement-schema](documentation/conception/plans/versionnement-schema.md),
+  lots 0 à 9 : instantané et dérive, versions par module, mineures, majeure et archivage, contrôle de publication ; procédure dans
+  [MIGRATIONS.md](documentation/MIGRATIONS.md)). Restes réels, à traiter à part :
+  - [ ] Colonnes `x_` dans les listes : les vues de liste générées par `npm run generer-vues-liste` listent des colonnes fixes (une vue ne suit pas
+    des colonnes ajoutées sans reprise) ; exposer les `x_` par la source du module Liste, ou recréer la vue après création d'un champ.
+  - [ ] Essai e2e `e2e/champs-supplementaires.spec.ts` écrit, non lancé (demande l'API complète).
+  - [ ] Règles d'écriture des mineures, majeures et contrôle de publication à reporter dans les `CLAUDE.md` du module Installation et de `db/`
+    (aujourd'hui dans `documentation/MIGRATIONS.md` seulement).
+  - [ ] Aucun module réel n'est passé en majeure : première utilisation de `installation module majeure` à relire (squelette), contrôle de
+    publication à lancer avec `--depuis` sur le dépôt de la dernière version publiée (pas d'historique des versions publiées dans le dépôt).
+  - [ ] Passage en majeure : scripts de démonstration d'un module non fusionnés ; création placée dans le socle (ne peut pas dépendre d'une mineure
+    d'un autre module) ; migration de code dans le module refusée.
 
 ## Fonctionnel
 

@@ -44,8 +44,8 @@ vue). Détecter précisément les objets touchés par chaque script demanderait 
 | 5 | FAIT | Fin du DDL au démarrage ; conversion des métrés archivée ; migrations C# figées |
 | 6 | FAIT | Version attendue par l'API, base en retard refusée proprement, page Installation |
 | 7 | FAIT | Champs supplémentaires des fiches (`x_`) : base et serveur |
-| 8 | À FAIRE | Champs supplémentaires : écran d'administration et affichage dans les fiches |
-| 9 | À FAIRE | Passage d'un module en majeure, archivage, contrôle de publication |
+| 8 | FAIT | Champs supplémentaires : écran d'administration et affichage dans les fiches |
+| 9 | FAIT | Passage d'un module en majeure, archivage, contrôle de publication |
 
 (États tenus à jour à la fin de chaque lot.)
 
@@ -246,7 +246,7 @@ vue). Détecter précisément les objets touchés par chaque script demanderait 
   date à saisie abrégée par `activerDates` global, case à cocher, liste par `creerCombo`) ; aucun serveur touché. Listes : non fait (vues de liste à colonnes fixes), au TODO. Tests : `modules/fiche/js/test/champs-supplementaires.test.js` ;
   e2e `e2e/champs-supplementaires.spec.ts` (création, refus du doublon, saisie dans la fiche matériel, suppression) écrit, non lancé : demande l'API complète.
 
-### Lot 9 – Majeure, archivage, contrôle de publication
+### Lot 9 – Majeure, archivage, contrôle de publication (FAIT)
 
 - **Module** : Installation.
 - **Contenu** : commande `installation module majeure <module>` (développement) : fusion des mineures `N.x` dans un
@@ -256,3 +256,21 @@ vue). Détecter précisément les objets touchés par chaque script demanderait 
   comparées entre elles et à la base de développement (P37) ; documentation `documentation/modules/INSTALLATION.md`.
 - **Critère de fin** : test d'intégration sur un module témoin : montée 1.x → 2.0 et installation neuve 2.0 donnent le
   même instantané ; base en 0.x refusée avec message.
+- **Réalisé** : décisions : déclenchement manuel, par module ; mineures de la majeure précédente gardées ; plancher = début de la majeure
+  précédente ; scripts devenus inutiles archivés. Un script `<N>.0_<nom>.sql` (N au moins 2) est une **création de majeure** (`VersionsModules.EstMajeure`,
+  `isc_type = majeure`) ; `PlanScripts.Calculer` (base neuve = `scripts.txt`) la place à la position du premier script non rejouable (hors
+  démonstration) du module dans le socle, qu'elle remplace, et ignore les mineures de version inférieure ; `PlanScripts.CalculerPour(racine, versionsBase)`
+  adapte le plan à une base : version du module au moins N = plan neuf ; entre le plancher (N-1.0) et N : mineures manquantes de la majeure précédente
+  (socle gardé quand le plancher est 1.0), puis la création inscrite **sans exécution** (`ScriptManifeste.SansExecution`), puis les mineures N.x ; avant
+  le plancher : `BaseTropAncienneException` (message : passer par une version publiée intermédiaire), levée avant toute application. `AppliquerAsync` recalcule le plan
+  d'après `v_version_module` dès que la liste porte une création de majeure (tous les appelants en profitent, sans changement). `ManifesteScripts.Ecarts` couvre
+  le socle figé et les mineures / créations gardées hors `scripts.txt` ; `db/archive/` n'est jamais parcouru.
+  `installation module majeure <module> [--nom N]` (`PassageMajeure`) : **squelette** `N+1.0` = concaténation ordonnée des scripts du module qu'une base neuve exécute
+  (en-têtes `requiert` neutralisés, source `hors-transaction` refusée), archivage dans `<db>/archive/` des scripts de la majeure N-1 et antérieures (socle 1.0 compris dès N = 2),
+  `scripts.txt` régénéré. Pas de fusion automatique par `pg_dump` : les objets du socle 1.0 ne sont pas étiquetés par module, le cœur modifie les tables des modules par ALTER,
+  des rejouables reprennent les vues plus tard dans le plan ; le squelette est à relire et le contrôle de publication en est la garantie. `installation publier --verifier --base DEV
+  [--depuis DOSSIER] [--demo]` (`ControlePublication`, `npm run publier:verifier -- --base DEV`) : base neuve ↔ base montée depuis la version précédente publiée (dépôt `--depuis`, sinon le socle
+  1.0 de `socle-1.0.txt`) ↔ base de développement ; tout écart ou refus = code 1. Tests : `MajeureTests` (module témoin `t` : 1.0 + 1.1 + 1.2 → 2.0 → 2.1 → 3.0 ; instantanés montée = neuve,
+  base en 0.x ou 1.x refusée, scripts archivés jamais joués ni listés, publication conforme / écart manuel / création incomplète / base trop ancienne). Aucun module réel n'est passé en 2.0.
+  Reste : le squelette placé dans le socle ne peut pas dépendre d'une mineure d'un autre module (avertissement émis) ; les scripts de démonstration d'un module ne sont pas fusionnés ;
+  une migration de code dans un module à passer en majeure refuse la commande.

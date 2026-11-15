@@ -19,6 +19,7 @@ public static partial class VersionsModules
 
     public const string TypeSocle = "socle";
     public const string TypeMineure = "mineure";
+    public const string TypeMajeure = "majeure";
     public const string TypeRejouable = "rejouable";
     public const string TypeZone = "zone";
 
@@ -27,6 +28,13 @@ public static partial class VersionsModules
 
     /// <summary>Vrai si le nom du fichier est celui d'une mineure (« majeur.mineur_nom.sql »).</summary>
     public static bool EstMineure(string chemin) => MigrationsCode.EstCode(chemin) || FormeMineure().IsMatch(Path.GetFileName(chemin));
+
+    /// <summary>
+    /// Vrai si le nom du fichier est celui d'un script de création d'une majeure (« N.0_nom.sql », N au moins 2) : schéma complet du
+    /// module pour les bases neuves, jamais exécuté sur une base qui monte par les mineures (lot 9).
+    /// </summary>
+    public static bool EstMajeure(string chemin) =>
+        !MigrationsCode.EstCode(chemin) && FormeMineure().Match(Path.GetFileName(chemin)) is { Success: true } m && VersionModule.Analyser(m.Groups[1].Value) is { Mineur: 0, Majeur: >= 2 };
 
     /// <summary>Module d'un script : modules/&lt;m&gt;/db/… → m ; db/… → coeur.</summary>
     public static string ModuleDe(string chemin)
@@ -53,7 +61,7 @@ public static partial class VersionsModules
     }
 
     /// <summary>Type au journal d'un script non rejouable : socle (1.0) ou mineure.</summary>
-    public static string TypeDe(string chemin) => MigrationsCode.EstCode(chemin) ? TypeMineure : VersionDe(chemin) == VersionModule.Socle && !FormeMineure().IsMatch(Path.GetFileName(chemin)) ? TypeSocle : TypeMineure;
+    public static string TypeDe(string chemin) => MigrationsCode.EstCode(chemin) ? TypeMineure : EstMajeure(chemin) ? TypeMajeure : VersionDe(chemin) == VersionModule.Socle && !FormeMineure().IsMatch(Path.GetFileName(chemin)) ? TypeSocle : TypeMineure;
 
     /// <summary>Version produit (db/installation/version.txt, première ligne non vide), ou null.</summary>
     public static string? VersionProduit(string racine)

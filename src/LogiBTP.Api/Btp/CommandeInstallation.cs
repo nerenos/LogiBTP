@@ -28,6 +28,10 @@ namespace LogiBTP.Api.Btp;
 ///   sur toutes les bases (scripts « demo » seulement pour les bases qui en ont déjà reçu un) ;
 ///   base adopter (--base N | --toutes) [--confirmer-sans-controle] [--demo] : base existante
 ///   inscrite au journal, après comparaison à une base de référence temporaire construite par le manifeste ;
+///   module majeure MODULE [--nom N] : passage du module en majeure (développement) : script de création N+1.0 pour les bases neuves
+///   (squelette à relire), scripts de la majeure N-1 archivés dans db/archive/, scripts.txt régénéré ;
+///   publier --verifier --base DEV [--depuis DOSSIER] [--demo] : contrôle de publication (base neuve ↔ base montée depuis la version
+///   précédente publiée ou le socle 1.0 ↔ base de développement), code de sortie non nul au moindre écart ;
 ///   base comparer --base A --reference B : écarts de A par rapport à B ; prefixe ajouter P --integrateur N : préfixe
 ///   d'objets d'un intégrateur (ignorés par la dérive) ; cle-donnees changer | rechiffrer : rotation de la clé des données.
 /// Aucun secret n'est jamais affiché.
@@ -51,6 +55,8 @@ public static class CommandeInstallation
                 installation base mettre-a-jour [--forcer --motif "…"] | cle-donnees changer | rechiffrer
                 installation base adopter (--base NOM | --toutes) [--confirmer-sans-controle] [--demo]
                 installation base comparer --base A --reference B
+                installation module majeure MODULE [--nom NOM]   (développement : création N+1.0, archivage de la majeure N-1)
+                installation publier --verifier --base DEV [--depuis DOSSIER] [--demo]   (contrôle de publication, code non nul si écart)
                 installation prefixe ajouter PREFIXE --integrateur NOM
         """;
 
@@ -68,6 +74,8 @@ public static class CommandeInstallation
                 ("societes", _) => ListerSocietes(dossier, sortie),
                 ("scripts", "verifier") => VerifierScripts(sortie),
                 ("manifeste", "generer") => GenererManifeste(sortie),
+                ("module", "majeure") when args.Length > 2 && !args[2].StartsWith("--") => PasserEnMajeure(args, sortie),
+                ("publier", _) when args.Contains("--verifier") => await VerifierPublicationAsync(args, dossier, sortie),
                 ("etat", _) => await EtatAsync(dossier, sortie),
                 ("certificat", "creer") => CreerCertificat(args, dossier, sortie),
                 ("certificat", "renouveler") => RenouvelerCertificat(args, dossier, sortie),
@@ -222,6 +230,32 @@ public static class CommandeInstallation
         var plan = PlanScripts.Calculer(racine);
         sortie.WriteLine($"{ManifesteScripts.Generer(racine)} : {plan.Scripts.Count} entrée(s), dont {plan.Mineures.Count} mineure(s)");
         return 0;
+    }
+
+    /// <summary>Passage d'un module en majeure (développement) : <see cref="PassageMajeure"/>.</summary>
+    private static int PasserEnMajeure(string[] args, TextWriter sortie)
+    {
+        var r = PassageMajeure.Executer(RacineSql(), args[2], Option(args, "--nom") ?? "creation");
+        sortie.WriteLine($"Module {r.Module} : création de la version {r.Nouvelle} écrite dans {r.Creation} ({r.Sources.Count} script(s) concaténé(s)) : SQUELETTE À RELIRE");
+        foreach (var a in r.Archives) sortie.WriteLine($"  archivé : {a}");
+        foreach (var a in r.Avertissements) sortie.WriteLine($"  attention : {a}");
+        sortie.WriteLine("  scripts.txt régénéré ; contrôler ensuite : installation publier --verifier --base <développement>");
+        return 0;
+    }
+
+    /// <summary>Contrôle de publication : <see cref="ControlePublication"/> ; code 1 au moindre écart ou refus.</summary>
+    private static async Task<int> VerifierPublicationAsync(string[] args, string dossier, TextWriter sortie)
+    {
+        var dev = BaseDonnees.VerifierNom(Option(args, "--base") ?? throw new ArgumentException("--base NOM (base de développement) obligatoire"));
+        var config = Configuration(dossier);
+        var modele = Modele(config);
+        var mdp = Exiger(config, VariablesEnv.BaseMotDePasseSchema);
+        var admin = modele.Chaine("postgres", "postgres", Exiger(config, VariablesEnv.BaseMotDePasseAdmin));
+        var depuis = Option(args, "--depuis");
+        if (depuis is not null && !File.Exists(Path.Combine(depuis, PlanScripts.CheminSocle))) throw new ArgumentException($"--depuis : {depuis} n'est pas un dépôt LogiBTP ({PlanScripts.CheminSocle} introuvable)");
+        var rapport = await ControlePublication.VerifierAsync(admin, RoleSchema, n => modele.Chaine(n, RoleSchema, mdp), dev, RacineSql(), depuis, args.Contains("--demo"), sortie, MigrationsCoeur.Liste);
+        sortie.WriteLine(rapport.Formater());
+        return rapport.Conforme ? 0 : 1;
     }
 
     private static int VerifierScripts(TextWriter sortie)

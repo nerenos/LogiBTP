@@ -101,6 +101,11 @@ Référence lue à la demande (hors contexte par défaut). Les règles que le co
 - Les colonnes `x_` ne sont jamais des écarts de dérive (lot 1), ne sont pas reprises ni supprimées par les mineures (règle d'écriture : ne jamais toucher les colonnes `x_`) et suivent la sauvegarde de la base avec leur registre. Une mineure qui recrée une table ou une vue qui les expose doit les reporter explicitement (jamais de `SELECT *` dans une vue reprise). Test `MineuresTests.Colonne_x_conservee_…` ; tests du module : `ChampsSupplementairesBaseTests`.
 - Les tests qui comparaient le manifeste au socle figé 1.0 ignorent désormais les mineures publiées ; après une mineure, les rejouables sont rejoués une seconde fois dans la même exécution (règle du lot 4), donc `BilanScripts.Rejoues` dépasse le nombre de rejouables d'une base neuve.
 
+## Majeures, archivage, contrôle de publication (plan versionnement-schema, lot 9)
+- Procédure : [MIGRATIONS.md](../MIGRATIONS.md). Création de majeure : fichier `<N>.0_<nom>.sql` (N au moins 2), `VersionsModules.EstMajeure`, `isc_type = majeure` ; non comptée comme mineure par le plan neuf (elle remplace le socle du module et ses mineures de version inférieure).
+- `PlanScripts.CalculerPour(racine, versionsBase, migrations)` : plan d'une base d'après ses versions par module ; `Calculer` = plan neuf (`scripts.txt`) ; `BaseTropAncienneException` sous le plancher ; `ScriptManifeste.SansExecution` pour la création inscrite en équivalence. `BaseDonnees.AppliquerAsync` recalcule le plan d'après `v_version_module` si la liste porte une création de majeure. `PlanScripts.CheminsConnus` : socle figé, mineures et créations du dépôt (jamais `db/archive/`), pour `ManifesteScripts.Ecarts`.
+- `PassageMajeure.Executer` : squelette, archivage, régénération (commande `module majeure`). `ControlePublication.VerifierAsync` : commande `publier --verifier` (`npm run publier:verifier`). Tests : `MajeureTests` (module témoin fictif en racine temporaire).
+
 ## Commandes (image de l'API)
 `docker compose -f docker/api/compose.yml run --rm logibtp-installation installation …` :
 `preparer --domaine D [--deploiement] [--confiance] [--reseau] [--memoire] [--libelle] [--base-hote]`,
@@ -108,7 +113,8 @@ Référence lue à la demande (hors contexte par défaut). Les règles que le co
 `certificat creer [--organisation] [--jours] [--nouvelle-racine] | renouveler [--avant 60] | importer --certificat F [--cle K]
 [--origine IMPORTE|LETSENCRYPT] | etat | base --nom N --adresses-api A` (mot de passe d'un PKCS#12 :
 `LOGIBTP_CERTIFICAT_MOT_DE_PASSE`), `base droits`, `sauvegarde chiffrer|dechiffrer DOSSIER`, `base mettre-a-jour`,
-`base adopter (--base N | --toutes) [--confirmer-sans-controle] [--demo]`, `base comparer`, `prefixe ajouter`, `cle-donnees changer | rechiffrer`.
+`base adopter (--base N | --toutes) [--confirmer-sans-controle] [--demo]`, `base comparer`, `prefixe ajouter`, `cle-donnees changer | rechiffrer`,
+`manifeste generer`, `module majeure MODULE [--nom N]` (développement), `publier --verifier --base DEV [--depuis DOSSIER] [--demo]` (développement, code 1 au moindre écart).
 Windows (suite) : `MettreAJour-LogiBTP.ps1 (-Image I | -FichierImage tar [-Empreinte sha256])`,
 `Changer-CleDonnees-LogiBTP.ps1 [-Confirmer]`, `Certificat-LetsEncrypt.ps1 -Fournisseur ovh -FichierIdentifiants f
 -Courriel c -AccepterConditions [-Essai] | -Renouveler`.

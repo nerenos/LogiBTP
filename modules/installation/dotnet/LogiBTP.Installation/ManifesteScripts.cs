@@ -9,8 +9,10 @@ namespace LogiBTP.Installation;
 /// <paramref name="ExtraitDe"/> : script extrait d'un script déjà publié (chemin de celui-ci) : sur une base dont le journal
 /// porte l'ancienne empreinte acceptée de ce script (<see cref="EmpreintesAcceptees"/>), son contenu est déjà appliqué, il
 /// est inscrit sans être exécuté ; sur une base neuve, il est appliqué.
+/// <paramref name="SansExecution"/> : script de création d'une majeure placé dans le plan d'une base qui monte par les mineures de la
+/// majeure précédente : inscrit au journal sans être exécuté (équivalence ; calculé par <see cref="PlanScripts"/>, jamais lu du manifeste).
 /// </summary>
-public sealed record ScriptManifeste(string Chemin, bool Rejouable, bool ExRejouable = false, bool Demo = false, string? ExtraitDe = null);
+public sealed record ScriptManifeste(string Chemin, bool Rejouable, bool ExRejouable = false, bool Demo = false, string? ExtraitDe = null, bool SansExecution = false);
 
 /// <summary>
 /// Manifeste des scripts SQL d'une base (db/installation/scripts.txt, ANALYSE-MODULE-INSTALLATION.md § 6.3) : un chemin
@@ -90,7 +92,9 @@ public sealed class ManifesteScripts
     /// </summary>
     public IReadOnlyList<string> Ecarts(string racine)
     {
-        var listes = Scripts.Select(s => s.Chemin).ToHashSet(StringComparer.Ordinal);
+        // Couverts : le manifeste, le socle 1.0 figé et les mineures / créations de majeure du dépôt (gardées pour les bases existantes) ;
+        // le dossier db/archive/ d'un module n'est jamais parcouru (scripts archivés, hors manifeste).
+        var listes = Scripts.Select(s => s.Chemin).Concat(PlanScripts.CheminsConnus(racine)).ToHashSet(StringComparer.Ordinal);
         var ecarts = Scripts.Where(s => !MigrationsCode.EstCode(s.Chemin) && !File.Exists(Path.Combine(racine, s.Chemin))).Select(s => $"introuvable : {s.Chemin}").Distinct().ToList();
         var dossiers = Directory.GetDirectories(Path.Combine(racine, "modules")).Select(d => Path.Combine(d, "db")).Append(Path.Combine(racine, "db"));
         foreach (var d in dossiers.Where(Directory.Exists))

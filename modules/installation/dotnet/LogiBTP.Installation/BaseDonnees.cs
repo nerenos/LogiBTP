@@ -195,6 +195,14 @@ public sealed class BaseDonnees(TextWriter journal)
         await JournalSchema.AssurerTablesAsync(cnx, ct);
         await VersionsModules.AssurerAsync(cnx, ct);
         var produit = VersionsModules.VersionProduit(racine);
+        // Un module passé en majeure : le plan dépend de la version du module dans cette base (mineures de la majeure précédente, puis
+        // création inscrite sans exécution ; base trop ancienne refusée avant toute application).
+        if (!adopter && PlanScripts.ContientMajeure(liste))
+        {
+            var versions = (await VersionsModules.VersionsModulesAsync(cnx, ct)).ToDictionary(v => v.Module, v => v.Version, StringComparer.Ordinal);
+            var avecDemo = liste.Any(x => x.Demo);
+            liste = PlanScripts.CalculerPour(racine, versions, migrations.Count > 0 ? migrations : null).Scripts.Where(x => avecDemo || !x.Demo).ToList();
+        }
         var deja = new Dictionary<string, string>(StringComparer.Ordinal);
         var types = new Dictionary<string, string?>(StringComparer.Ordinal);
         await using (var lecture = new NpgsqlCommand($"SELECT isc_chemin, isc_empreinte, isc_type FROM {TableJournal}", cnx))
@@ -209,6 +217,7 @@ public sealed class BaseDonnees(TextWriter journal)
         var modifies = new List<string>();
         var horsTransaction = new List<string>();
         var acceptes = new List<string>();
+        var equivalents = new List<string>();
         if (!adopter && acceptees is { Lignes.Count: > 0 })
             await AccepterAnciennesEmpreintesAsync(cnx, racine, liste, deja, acceptes, acceptees, produit, ct);
         // Empreinte d'un script inscrit modifiée : refus avant toute application.
@@ -289,12 +298,13 @@ public sealed class BaseDonnees(TextWriter journal)
             var mineure = VersionsModules.EstMineure(s.Chemin);
             var hors = mineure && !adopter && EnteteMineure.Lire(s.Chemin, contenu).HorsTransaction;
             // Ancien rejouable : déjà exécuté sur une base installée (jamais inscrit), seulement inscrit.
-            await ExecuterScriptAsync(cnx, s.Chemin, adopter || (s.ExRejouable && installee) ? null : contenu, empreinte, ct, produit, null, hors);
+            await ExecuterScriptAsync(cnx, s.Chemin, adopter || s.SansExecution || (s.ExRejouable && installee) ? null : contenu, empreinte, ct, produit, null, hors);
             deja[s.Chemin] = empreinte;
             types[s.Chemin] = VersionsModules.TypeDe(s.Chemin);
             appliques++;
+            if (s.SansExecution) equivalents.Add(s.Chemin);
             if (hors) horsTransaction.Add(s.Chemin);
-            if (mineure && !adopter)
+            if (mineure && !adopter && !s.SansExecution)
             {
                 var module = VersionsModules.ModuleDe(s.Chemin);
                 touches.Add(module);
@@ -318,6 +328,7 @@ public sealed class BaseDonnees(TextWriter journal)
         }
         journal.WriteLine($"{cnx.Database} : {appliques} script(s) {(adopter ? "inscrit(s) sans exécution" : "appliqué(s)")}, {rejoues} rejoué(s)"
             + (acceptes.Count > 0 ? $", {acceptes.Count} empreinte(s) acceptée(s) (script réduit depuis son application) : {string.Join(", ", acceptes)}" : "")
+            + (equivalents.Count > 0 ? $", dont {equivalents.Count} création(s) de majeure inscrite(s) sans exécution (la base montait par les mineures) : {string.Join(", ", equivalents)}" : "")
             + (horsTransaction.Count > 0 ? $", ATTENTION {horsTransaction.Count} script(s) exécuté(s) hors transaction (exception à relire) : {string.Join(", ", horsTransaction)}" : "")
             + (modifies.Count > 0 ? $", {modifies.Count} modifié(s) depuis leur application, forcé(s) (motif : {motif}) : {string.Join(", ", modifies)}" : ""));
         // Instantané du schéma après une application réussie (référence du prochain contrôle de dérive).
