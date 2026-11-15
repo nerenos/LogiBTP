@@ -22,6 +22,7 @@ public static class Extensions
         services.AddDbContext<ListeDbContext>(options);
         services.AddSingleton<SpecialisationListe, TSpecialisation>();
         services.AddSingleton<CacheSchemas>();
+        services.AddSingleton<LogiBTP.Socle.IPurgeCacheBase>(sp => sp.GetRequiredService<CacheSchemas>());
         services.AddScoped<ServiceListe>();
         return services;
     }

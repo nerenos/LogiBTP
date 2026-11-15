@@ -1,12 +1,17 @@
 ## Base de données
 
-- [ ] **Module de gestion des versions de la base** (après stabilisation du schéma) : numéro de version du schéma
-  par base de société, scripts de migration ordonnés et rejouables, application automatique aux bases existantes.
-  Fait par le module Installation : journal `installation_script` (manifeste `db/installation/scripts.txt`, empreinte de
-  chaque script appliqué, `installation base mettre-a-jour`, `base adopter` pour les bases existantes) ; reste : scripts
-  rejouables, numéro de version lisible, retour arrière sans restauration.
-  Aujourd'hui : scripts `modules/*/db` et `db/` appliqués à la création du volume Docker, puis à la main sur `logibtp`
-  et `logibtp_demo` ; la plupart ne sont pas rejouables.
+- [x] **Module de gestion des versions de la base** : fait (plan [versionnement-schema](documentation/conception/plans/versionnement-schema.md),
+  lots 0 à 9 : instantané et dérive, versions par module, mineures, majeure et archivage, contrôle de publication ; procédure dans
+  [MIGRATIONS.md](documentation/MIGRATIONS.md)). Restes réels, à traiter à part :
+  - [ ] Colonnes `x_` dans les listes : les vues de liste générées par `npm run generer-vues-liste` listent des colonnes fixes (une vue ne suit pas
+    des colonnes ajoutées sans reprise) ; exposer les `x_` par la source du module Liste, ou recréer la vue après création d'un champ.
+  - [ ] Essai e2e `e2e/champs-supplementaires.spec.ts` écrit, non lancé (demande l'API complète).
+  - [ ] Règles d'écriture des mineures, majeures et contrôle de publication à reporter dans les `CLAUDE.md` du module Installation et de `db/`
+    (aujourd'hui dans `documentation/MIGRATIONS.md` seulement).
+  - [ ] Aucun module réel n'est passé en majeure : première utilisation de `installation module majeure` à relire (squelette), contrôle de
+    publication à lancer avec `--depuis` sur le dépôt de la dernière version publiée (pas d'historique des versions publiées dans le dépôt).
+  - [ ] Passage en majeure : scripts de démonstration d'un module non fusionnés ; création placée dans le socle (ne peut pas dépendre d'une mineure
+    d'un autre module) ; migration de code dans le module refusée.
 
 ## Fonctionnel
 

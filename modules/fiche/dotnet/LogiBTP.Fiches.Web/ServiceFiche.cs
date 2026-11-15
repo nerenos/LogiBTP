@@ -13,9 +13,12 @@ using NpgsqlTypes;
 namespace LogiBTP.Fiches.Web;
 
 /// <summary>Types des colonnes des tables de fiches (information_schema), gardés jusqu'au redémarrage.</summary>
-public sealed class CacheTypesColonnes
+public sealed class CacheTypesColonnes : IPurgeCacheBase
 {
     public ConcurrentDictionary<string, IReadOnlyDictionary<string, string>> Tables { get; } = new(StringComparer.Ordinal);
+
+    /// <summary>Vidé pour une base dont le schéma vient de changer (mise à jour de l'installeur).</summary>
+    public void Purger(string connexion) => PurgeCache.Purger(Tables, connexion);
 }
 
 /// <summary>
@@ -80,9 +83,21 @@ public partial class ServiceFiche(FicheDbContext db, SpecialisationFiche special
             c.ConfidentielParametre = !c.Confidentiel && !c.Gere && confidentiels.Contains(c.Code);
             c.Confidentiel |= c.ConfidentielParametre;
         }
+        // Champs supplémentaires en colonnes x_ (registre du module 1.1) : champs du programme à part entière, lus et écrits
+        // par la ligne ; seules les colonnes présentes dans la table comptent (colonne retirée à la main : ignorée).
+        var typesColonnes = await TypesColonnes(t.TyfTable, ct);
+        foreach (var x in await db.ChampsColonnes.AsNoTracking().Where(x => x.FcsTable == t.TyfTable && x.FcsActif).OrderBy(x => x.FcsOrdre).ThenBy(x => x.FcsColonne).ToListAsync(ct))
+            if (typesColonnes.ContainsKey(x.FcsColonne) && !def.Champs.Any(c => c.Code == x.FcsColonne))
+            {
+                var champ = ChampsSupplementaires.VersChamp(x.FcsColonne, x.FcsType, x.FcsLibelle, x.FcsOrdre, ChampsSupplementaires.LireValeurs(x.FcsValeurs));
+                champ.ObligatoireParametre = obligatoires.Contains(champ.Code);
+                champ.ConfidentielParametre = confidentiels.Contains(champ.Code);
+                champ.Confidentiel = champ.ConfidentielParametre;
+                def.Champs.Add(champ);
+            }
         var supplementaires = (await db.Supplementaires.AsNoTracking().Where(s => s.ChsType == code && s.ChsActif).OrderBy(s => s.ChsOrdre).ThenBy(s => s.ChsCode).ToListAsync(ct))
             .Select(VersChamp).ToList();
-        return new TypeFicheResolu(code, t.TyfTable, t.TyfCle, t.TyfColonneProprietes, def, supplementaires, await TypesColonnes(t.TyfTable, ct));
+        return new TypeFicheResolu(code, t.TyfTable, t.TyfCle, t.TyfColonneProprietes, def, supplementaires, typesColonnes);
     }
 
     protected static ChampFiche VersChamp(ChampSupplementaire s) => new()

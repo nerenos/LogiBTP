@@ -5,6 +5,8 @@ import { api } from '../api.js';
 
 const ORIGINES = textesParCode('parametres_btp.installation.origines', ['LOGIBTP', 'IMPORTE', 'LETSENCRYPT']);
 
+const STATUTS_BASE = textesParCode('parametres_btp.installation.versions.statut', ['AJOUR', 'ENRETARD', 'SANSJOURNAL']);
+
 const go = (mo) => (mo >= 1024 ? texte('parametres_btp.installation.taille_go', { taille: (mo / 1024).toLocaleString(langue(), { maximumFractionDigits: 1 }) }) : texte('terrain_btp.page.taille_mo', { taille: mo }));
 
 /**
@@ -50,6 +52,7 @@ export class PageParametresInstallation extends PageBase {
         <td>${!b.joignable ? '' : b.chiffree ? `${iconeHtml('verrou')} ${texteHtml('parametres_btp.installation.bases.chiffree')}` : `<span class="erreur">${iconeHtml('avertissement')} ${texteHtml('parametres_btp.installation.bases.non_chiffree')}</span>`}</td>
         <td>${b.scripts || ''}</td><td>${b.en_attente ? `<span class="erreur">${texteHtml('parametres_btp.installation.bases.a_faire', { nombre: b.en_attente })}</span>` : ''}</td></tr>`).join('')}
       </tbody></table>`;
+    const versions = e.bases.filter((b) => b.joignable).map((b) => this.renduVersions(b, alerte)).join('');
     const s = e.sauvegarde;
     const anciennete = s ? (Date.now() - new Date(s.le).getTime()) / 86400000 : null;
     const sauvegarde = !s ? alerte(texte('parametres_btp.installation.sauvegarde.aucune'))
@@ -61,7 +64,34 @@ export class PageParametresInstallation extends PageBase {
     return `<p>${texteHtml(e.domaine ? 'parametres_btp.installation.version_domaine_html' : 'parametres_btp.installation.version_html', { version: e.version, deploiement: e.deploiement, domaine: e.domaine, protocole: texte(e.https ? 'parametres_btp.installation.https' : 'parametres_btp.installation.http') })}</p>
       <h2>${texteHtml('parametres_btp.installation.certificat.titre')}</h2>${certificat}
       <h2>${texteHtml('parametres_btp.installation.bases.titre')}</h2>${bases}
+      <h2>${texteHtml('parametres_btp.installation.versions.titre')}</h2>${versions}
       <h2>${texteHtml('parametres_btp.installation.sauvegarde.titre')}</h2>${sauvegarde}
       ${disques ? `<h2>${texteHtml('parametres_btp.installation.disques.titre')}</h2>${disques}` : ''}`;
+  }
+
+  /** Versions par module d'une base, dernière mise à jour, démonstration et forçages ; base en retard signalée. */
+  renduVersions(b, alerte) {
+    const statut = String(b.statut ?? '').toUpperCase();
+    const message = STATUTS_BASE[statut];
+    const enRetard = statut === 'ENRETARD';
+    const versions = b.versions ?? [];
+    const tableau = versions.length === 0 ? `<p class="aide">${texteHtml('parametres_btp.installation.versions.aucune')}</p>`
+      : `<table class="tableau-compact largeur-contenu"><thead><tr><th>${texteHtml('parametres_btp.installation.versions.module')}</th><th>${texteHtml('parametres_btp.installation.versions.version')}</th><th>${texteHtml('parametres_btp.installation.versions.attendue')}</th><th>${texteHtml('parametres_btp.installation.versions.appliquee_le')}</th></tr></thead><tbody>
+        ${versions.map((v) => `<tr><td>${echapper(v.module)}</td><td>${v.version ? echapper(v.version) : `<span class="erreur">${texteHtml('parametres_btp.installation.versions.absent')}</span>`}</td>
+          <td>${v.attendue ? echapper(v.attendue) : ''} ${v.en_retard ? `<span class="erreur">${iconeHtml('avertissement')} ${texteHtml('parametres_btp.installation.versions.en_retard')}</span>` : ''}</td>
+          <td>${v.version ? formatDateHeure(v.applique_le) : ''}</td></tr>`).join('')}
+        </tbody></table>`;
+    const forcages = b.forcages ?? [];
+    const tableauForcages = forcages.length === 0 ? `<p class="aide">${texteHtml('parametres_btp.installation.forcages.aucun')}</p>`
+      : `<table class="tableau-compact largeur-contenu"><thead><tr><th>${texteHtml('parametres_btp.installation.forcages.date')}</th><th>${texteHtml('parametres_btp.installation.forcages.auteur')}</th><th>${texteHtml('parametres_btp.installation.forcages.motif')}</th><th>${texteHtml('parametres_btp.installation.forcages.objets')}</th></tr></thead><tbody>
+        ${forcages.map((f) => `<tr><td>${formatDateHeure(f.le)}</td><td>${echapper(f.utilisateur)}</td><td>${echapper(f.motif)}</td><td>${f.objets.map(echapper).join(', ')}</td></tr>`).join('')}
+        </tbody></table>`;
+    return `<section data-base-versions="${echapper(b.code ?? '')}"><h3>${texteHtml('parametres_btp.installation.versions.base_de', { societe: b.libelle })}</h3>
+      ${message ? (enRetard ? alerte(message) : `<p class="aide">${echapper(message)}</p>`) : ''}
+      <p>${b.version_produit_base ? texteHtml('parametres_btp.installation.versions.produit', { version: b.version_produit_base }) : ''}
+        ${b.derniere_mise_a_jour ? texteHtml('parametres_btp.installation.versions.derniere', { date: formatDateHeure(b.derniere_mise_a_jour) }) : ''}
+        ${b.avec_demo === null || b.avec_demo === undefined ? '' : texteHtml(b.avec_demo ? 'parametres_btp.installation.versions.demo_avec' : 'parametres_btp.installation.versions.demo_sans')}</p>
+      ${tableau}
+      <h4>${texteHtml('parametres_btp.installation.forcages.titre')}</h4><p class="aide">${texteHtml('parametres_btp.installation.forcages.aide')}</p>${tableauForcages}</section>`;
   }
 }

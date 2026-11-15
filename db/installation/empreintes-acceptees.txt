@@ -1,0 +1,13 @@
+# Empreintes acceptées (module Installation, plan versionnement-schema, lot 2). Un script déjà appliqué ne se modifie plus :
+# quand un script publié doit être réduit (une partie extraite dans un nouveau script du manifeste, indicateur
+# « extrait-de= »), l'ancienne empreinte SHA-256 de son contenu (git show <commit>:<chemin>, fins de ligne normalisées en
+# LF) s'inscrit ici, avec sa raison. Une base dont le journal porte cette empreinte pour ce chemin n'est pas signalée
+# « modifiée » : son journal reçoit la nouvelle empreinte et les scripts extraits y sont inscrits sans exécution (leur
+# contenu est déjà dans la base). Une ligne : chemin empreinte-sha256  # raison.
+
+db/116_bibliotheque_demo.sql 458de9317d33d1f4a0d4d5a5db15f634217493fb02844c62522304bdfcfe9604  # natures et coefficients extraits dans 115b_natures_reference.sql (hors démonstration)
+db/120_listes.sql c8332892df51df0e1f4b04247db3a6bc26a4bf0a64aa0eb12241ba94fd3a051f  # données de démonstration extraites dans 120b_listes_demo.sql
+db/141_annuaire_demo.sql 051bc00f23bacb7afc406b64dc72023816f6d94bb1e60a943c20c2e22c5d0d5a  # référentiels extraits dans 140b_annuaire_reference.sql (hors démonstration)
+db/196_calendriers.sql cdaf3c77d5d28363e32e65bb1ec67fb61838c4167f1d0b425e2e8632306335bf  # fermeture de démonstration extraite dans 196b_calendriers_demo.sql
+db/211_sous_traitance_marches.sql a90b8479e67054b77b66da52d160e9619c8e4a2c5aaa784a040b1d29d4b87caa  # sous-traitants de démonstration extraits dans 210b_sous_traitants_demo.sql
+db/235_materiel_plans.sql 07bb34c53d2f9e94c90a39614212560ac721fadcb19f912cb9b258bbb69af75f  # plans de démonstration extraits dans 235b_materiel_plans_demo.sql

@@ -27,3 +27,29 @@ public static class DispositionsGroupe
     /// <summary>Champs à la suite, à la largeur de leur contenu, retour à la ligne si besoin.</summary>
     public const string Flex = "flex";
 }
+
+/// <summary>Types d'un champ supplémentaire en colonne x_ (registre fiche_champ_supplementaire, fonction fiche_champ_creer).</summary>
+public static class TypesChampSupplementaire
+{
+    public const string Texte = "texte";
+    public const string Nombre = "nombre";
+    /// <summary>Montant : numeric(18,2).</summary>
+    public const string Montant = "montant";
+    public const string Date = "date";
+    /// <summary>Case à cocher : boolean.</summary>
+    public const string CaseACocher = "booleen";
+    /// <summary>Liste de valeurs : text, valeurs du registre.</summary>
+    public const string Liste = "liste";
+}
+
+/// <summary>Erreurs de l'administration des champs supplémentaires (code des ErreurChamp d'une réponse 422 VALIDATION).</summary>
+public static class ErreursChampSupplementaire
+{
+    public const string NomInvalide = "CHAMP_NOM_INVALIDE";
+    public const string TypeInvalide = "CHAMP_TYPE_INVALIDE";
+    public const string LibelleObligatoire = "CHAMP_LIBELLE_OBLIGATOIRE";
+    public const string TableFermee = "CHAMP_TABLE_FERMEE";
+    public const string Existe = "CHAMP_EXISTE";
+    public const string Inconnu = "CHAMP_INCONNU";
+    public const string Valeurs = "CHAMP_VALEURS";
+}

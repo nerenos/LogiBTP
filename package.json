@@ -43,6 +43,8 @@
     "dev": "npm run dev --workspace client",
     "build": "npm run build --workspace client",
     "exporter-resultats": "npm run exporter-resultats --workspaces --if-present",
+    "manifeste": "dotnet run --project src/LogiBTP.Api -- installation manifeste generer",
+    "publier:verifier": "dotnet run --project src/LogiBTP.Api -- installation publier --verifier",
     "rapport-dependances": "node scripts/rapport-dependances.mjs",
     "compiler-schematrons": "npm run compiler-schematrons --workspace @logibtp/facture-electronique --",
     "valider-facture": "npm run valider-facture --workspace @logibtp/facture-electronique --",

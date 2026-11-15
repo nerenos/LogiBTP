@@ -65,3 +65,13 @@ ALTER DEFAULT PRIVILEGES FOR ROLE logibtp_schema IN SCHEMA public GRANT SELECT O
 
 -- Journaux protégés : ni modification ni suppression par l'application (les triggers du coffre de la GED restent actifs).
 REVOKE UPDATE, DELETE, TRUNCATE ON coffre_ged FROM logibtp_app;
+
+-- Champs supplémentaires des fiches (module Fiche 1.1) : fonctions SECURITY DEFINER qui exécutent du DDL. Réservées à
+-- l'application (création, retrait) ; le rôle de lecture n'y a pas accès, la journalisation n'est appelée que par elles.
+DO $$
+BEGIN
+  IF to_regprocedure('fiche_champ_creer(text, text, text, text, integer, jsonb)') IS NOT NULL THEN
+    REVOKE EXECUTE ON FUNCTION fiche_champ_creer(text, text, text, text, integer, jsonb), fiche_champ_retirer(text, text) FROM logibtp_lecture;
+    REVOKE EXECUTE ON FUNCTION fiche_champ_journaliser(text, text) FROM logibtp_app, logibtp_lecture;
+  END IF;
+END $$;

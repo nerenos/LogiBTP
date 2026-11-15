@@ -398,6 +398,11 @@ export const SUJET_FENETRE = Object.freeze({
   PLANNING_SELECTION: 'planning-selection',
 });
 
+/** Erreurs de l'installation testées par l'interface (Codes.cs : ErreursInstallation). */
+export const ERREUR_INSTALLATION = Object.freeze({
+  BASE_A_METTRE_A_JOUR: 'BASE_A_METTRE_A_JOUR',
+});
+
 /** Adresse de la fiche d'un élément. */
 export const urlFiche = (type, id) => `/fiche/${type}/${id}`;
 

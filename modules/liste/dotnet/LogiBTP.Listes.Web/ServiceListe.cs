@@ -13,9 +13,12 @@ using NpgsqlTypes;
 namespace LogiBTP.Listes.Web;
 
 /// <summary>Colonnes des sources déjà interrogées (le schéma d'une vue change rarement ; vidé au redémarrage).</summary>
-public sealed class CacheSchemas
+public sealed class CacheSchemas : IPurgeCacheBase
 {
     public ConcurrentDictionary<string, IReadOnlyList<ColonneSource>> Colonnes { get; } = new(StringComparer.Ordinal);
+
+    /// <summary>Vidé pour une base dont le schéma vient de changer (mise à jour de l'installeur).</summary>
+    public void Purger(string connexion) => PurgeCache.Purger(Colonnes, connexion);
 }
 
 /// <summary>

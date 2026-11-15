@@ -1,4 +1,5 @@
 import { ERREUR_FICHE, LARGEUR_GROUPE, DISPOSITION_GROUPE } from '../src/codes.js';
+import { codesSectionGenerale, sectionChampsColonnes } from '../src/champs-supplementaires.js';
 import { echapper, formatLibre, htmlSur, editerLibelle, creerCombo, creerJetons, confirmer, formatHeure, notifier, declarerRaccourcis, actionDe, libelleRaccourci, ouvrirMenuContextuel } from '@logibtp/socle/ui';
 import { MODES, LIBELLES_MODES, enSaisie, titreFiche } from '../src/modes.js';
 import { validerFiche, MESSAGES } from '../src/validation.js';
@@ -254,7 +255,7 @@ export class FicheBase {
    * (champs : programme, supplementairesSection : codes supplémentaires) pour les erreurs et la navigation.
    */
   sections() {
-    const base = this.definition.sections ?? [{ code: 'general', titre: texte('fiche.fiche.general'), champs: this.definition.champs.map((c) => c.code) }];
+    const base = this.definition.sections ?? [{ code: 'general', titre: texte('fiche.fiche.general'), champs: codesSectionGenerale(this.definition) }];
     const supplementaires = (this.definition.supplementaires ?? []).map((c) => ({ ...c, supplementaire: true }));
     const codes = new Set(base.map((x) => x.code));
     const parGroupe = (champs, titre) => {
@@ -272,6 +273,9 @@ export class FicheBase {
       return { ...x, groupes: [...groupes, ...ajout], champs: groupes.flatMap((g) => g.champs), supplementairesSection: ajout.flatMap((g) => g.champs.map((c) => c.code)) };
     });
     for (const o of this.ongletsSpecifiques().filter((x) => !x.dans)) s.push({ code: `+${o.code}`, titre: o.titre, specifique: o, champs: o.champs ?? [] });
+    // Champs supplémentaires en colonnes « x_ » (administration : lot 8 du versionnement du schéma) : un onglet dédié.
+    const colonnes = sectionChampsColonnes(this.definition, texte('fiche.fiche.champs_supplementaires'), LARGEUR_GROUPE.PLEIN);
+    if (colonnes) s.push(colonnes);
     const reste = supplementaires.filter((c) => !c.section || !codes.has(c.section));
     if (reste.length) {
       s.push({ code: '+supplementaires', titre: texte('fiche.fiche.complementaires'), groupes: parGroupe(reste, null), champs: [], supplementairesSection: reste.map((c) => c.code) });

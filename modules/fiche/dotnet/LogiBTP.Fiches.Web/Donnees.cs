@@ -49,6 +49,20 @@ public class ChampSupplementaire
     public string? ChsGroupe { get; set; }
 }
 
+/// <summary>Registre des champs supplémentaires en colonnes « x_ » (module Fiche 1.1) : écrit par fiche_champ_creer / fiche_champ_retirer.</summary>
+public class ChampColonne
+{
+    public string FcsTable { get; set; } = "";
+    public string FcsColonne { get; set; } = "";
+    public string FcsType { get; set; } = "";
+    public string FcsLibelle { get; set; } = "";
+    public int FcsOrdre { get; set; }
+    public JsonDocument? FcsValeurs { get; set; }
+    public bool FcsActif { get; set; } = true;
+    public DateTimeOffset FcsCreeLe { get; set; }
+    public DateTimeOffset FcsModifieLe { get; set; }
+}
+
 /// <summary>Format paramétré du chrono d'un type de fiche (et d'une variante) ; sans ligne : celui de la définition.</summary>
 public class ChronoParametre
 {
@@ -86,6 +100,7 @@ public class FicheDbContext(DbContextOptions<FicheDbContext> options) : DbContex
     public DbSet<DroitFiche> Droits => Set<DroitFiche>();
     public DbSet<ParametreChampFiche> Parametres => Set<ParametreChampFiche>();
     public DbSet<ChampSupplementaire> Supplementaires => Set<ChampSupplementaire>();
+    public DbSet<ChampColonne> ChampsColonnes => Set<ChampColonne>();
     public DbSet<VerrouFiche> Verrous => Set<VerrouFiche>();
     public DbSet<ChronoParametre> Chronos => Set<ChronoParametre>();
     public DbSet<JournalConfidentiel> Journal => Set<JournalConfidentiel>();
@@ -96,6 +111,7 @@ public class FicheDbContext(DbContextOptions<FicheDbContext> options) : DbContex
         b.Entity<DroitFiche>().ToTable("droit_fiche").HasKey(x => new { x.DrfProfil, x.DrfType, x.DrfAction });
         b.Entity<ParametreChampFiche>().ToTable("parametre_champ_fiche").HasKey(x => new { x.PcfType, x.PcfChamp });
         b.Entity<ChampSupplementaire>(e => { e.ToTable("champ_supplementaire").HasKey(x => new { x.ChsType, x.ChsCode }); e.Property(x => x.ChsOptions).HasColumnType("jsonb"); });
+        b.Entity<ChampColonne>(e => { e.ToTable("fiche_champ_supplementaire").HasKey(x => new { x.FcsTable, x.FcsColonne }); e.Property(x => x.FcsValeurs).HasColumnType("jsonb"); });
         b.Entity<VerrouFiche>().ToTable("verrou_fiche").HasKey(x => new { x.VefType, x.VefId });
         b.Entity<ChronoParametre>().ToTable("chrono_fiche").HasKey(x => new { x.ChfType, x.ChfVariante });
         b.Entity<JournalConfidentiel>().ToTable("journal_confidentiel").HasKey(x => x.JcfId);
@@ -209,4 +225,31 @@ public sealed class ParametrageFicheDto
     /// <summary>Champs du logiciel rendus confidentiels (RGPD) par le paramétrage.</summary>
     public List<string> Confidentiels { get; set; } = [];
     public List<ChampFiche> Supplementaires { get; set; } = [];
+}
+
+// ------------------------------------------------------------------ champs supplémentaires en colonnes x_ (administration)
+
+/// <summary>Champ supplémentaire en colonne : table de la fiche, colonne « x_… », type, libellé, ordre, valeurs (liste), actif.</summary>
+public sealed record ChampColonneDto(string Table, string Colonne, string Type, string Libelle, int Ordre, List<OptionChamp>? Valeurs, bool Actif);
+
+/// <summary>Table ouverte aux champs supplémentaires : table, types de fiche qui l'utilisent.</summary>
+public sealed record TableOuverteDto(string Table, List<string> Types);
+
+public sealed class DemandeChampColonne
+{
+    public string Table { get; set; } = "";
+    public string Colonne { get; set; } = "";
+    public string Type { get; set; } = "";
+    public string Libelle { get; set; } = "";
+    public int Ordre { get; set; }
+    public List<OptionChamp>? Valeurs { get; set; }
+}
+
+/// <summary>Modification : libellé, ordre, valeurs d'une liste, actif (le type et la colonne ne changent jamais).</summary>
+public sealed class ModificationChampColonne
+{
+    public string Libelle { get; set; } = "";
+    public int Ordre { get; set; }
+    public List<OptionChamp>? Valeurs { get; set; }
+    public bool Actif { get; set; } = true;
 }

@@ -5318,6 +5318,10 @@
           "libelle": "Profils et droits…",
           "titre": "Profils, droits par module, document, fiche et fonction ; journal des modifications"
         },
+        "parametres_champs_supplementaires": {
+          "libelle": "Champs supplémentaires des fiches…",
+          "titre": "Champs ajoutés aux fiches (texte, nombre, montant, date, case à cocher, liste de valeurs) : création, ordre, suppression"
+        },
         "parametres_installation": {
           "libelle": "Installation : certificat, bases, sauvegardes…",
           "titre": "État du serveur : certificat HTTPS, bases des sociétés, dernière sauvegarde, espace disque"
@@ -8441,6 +8445,32 @@
       },
       "actif": "Actif"
     },
+    "champs_supplementaires": {
+      "titre": "Champs supplémentaires des fiches",
+      "aide": "Colonnes ajoutées à la table d'une fiche, sans reprise du schéma : elles apparaissent dans l'onglet « Champs supplémentaires » de la fiche. Le nom technique (« x_… ») et le type ne se modifient plus après la création ; un champ désactivé disparaît de la fiche mais garde ses valeurs.",
+      "fiche": "Fiche :",
+      "aucune_table": "Aucune fiche n'accepte de champ supplémentaire.",
+      "colonne": "Nom technique",
+      "type": "Type",
+      "valeurs": "Valeurs de la liste",
+      "valeurs_aide": "Une valeur par ligne, « valeur | libellé » pour un libellé différent",
+      "ordre": "Ordre",
+      "actif": "Actif",
+      "nouveau": "Nouveau champ : libellé",
+      "creer": "Créer le champ",
+      "cree": "Champ « {{libelle}} » créé",
+      "enregistre": "Champ « {{libelle}} » enregistré",
+      "supprime": "Champ « {{libelle}} » supprimé",
+      "confirmer_suppression": "Supprimer le champ « {{libelle}} » ({{colonne}}) ? La colonne est retirée de la base et toutes les valeurs saisies dans ce champ sont définitivement perdues.",
+      "types": {
+        "texte": "Texte",
+        "nombre": "Nombre",
+        "montant": "Montant",
+        "date": "Date",
+        "booleen": "Case à cocher",
+        "liste": "Liste de valeurs"
+      }
+    },
     "installation": {
       "origines": {
         "LOGIBTP": "Autorité LogiBTP de l'installation",
@@ -8475,6 +8505,36 @@
         "non_chiffree": "non chiffrée : relancer « installation preparer »",
         "a_faire": "{{nombre}} (mise à jour à faire)",
         "titre": "Bases"
+      },
+      "versions": {
+        "titre": "Versions du schéma, par société",
+        "base_de": "Base de {{societe}}",
+        "produit": "Version du produit à la dernière mise à jour : {{version}}",
+        "derniere": "Dernière mise à jour : {{date}}",
+        "demo_avec": "Avec les données de démonstration",
+        "demo_sans": "Sans données de démonstration",
+        "module": "Module",
+        "version": "Version appliquée",
+        "attendue": "Version attendue",
+        "appliquee_le": "Appliquée le",
+        "a_jour": "à jour",
+        "en_retard": "en retard",
+        "absent": "absent de la base",
+        "aucune": "Aucune version enregistrée",
+        "statut": {
+          "AJOUR": "Base à jour avec l'application.",
+          "ENRETARD": "Base en retard sur l'application : les requêtes de cette société sont refusées (503) tant que la mise à jour n'est pas faite. Commande à lancer sur le serveur : « installation base mettre-a-jour » (sauvegarde préalable recommandée).",
+          "SANSJOURNAL": "Base sans journal des scripts (développement, essai ou démonstration) : version non contrôlée."
+        }
+      },
+      "forcages": {
+        "titre": "Forçages de mise à jour",
+        "aide": "Mises à jour passées outre un écart du schéma (modification manuelle de la base), avec leur motif.",
+        "aucun": "Aucun forçage enregistré",
+        "date": "Date",
+        "auteur": "Auteur",
+        "motif": "Motif",
+        "objets": "Objets écrasés"
       },
       "sauvegarde": {
         "aucune": "Aucune sauvegarde connue",

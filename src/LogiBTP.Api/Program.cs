@@ -45,7 +45,7 @@ if (args.Length > 0 && args[0] == "env")
     Environment.ExitCode = CommandeEnv.Executer(args[1..], dossierConfig ?? Directory.GetCurrentDirectory(), Console.Out);
     return;
 }
-// Commandes de l'installeur (installation preparer | base creer | societe ajouter | scripts verifier | conversions…) :
+// Commandes de l'installeur (installation preparer | base creer | societe ajouter | scripts verifier…) :
 // ANALYSE-MODULE-INSTALLATION.md § 6.
 if (args.Length > 0 && args[0] == "installation")
 {
@@ -80,6 +80,9 @@ builder.Services.AddHostedService<PassageEnvoiFe>();
 
 // Une base par société, choisie par le sous-domaine (section Societes ; sans sous-domaine : ConnectionStrings:LogiBTP).
 builder.Services.AddSocietes(builder.Configuration);
+// Version du schéma par société : une base en retard est refusée en 503 BASE_A_METTRE_A_JOUR (sauf en développement), caches
+// du schéma vidés après une mise à jour (Btp/VersionsAttenduesBtp.cs, plan versionnement-schema lot 6).
+builder.Services.AddVersionsAttendues();
 // Les requêtes SQL brutes à une ligne (SqlQuery(...).FirstAsync()) sont voulues : l'avertissement EF « First sans OrderBy » n'y apporte rien.
 // Connexion unique et unité d'écriture par requête (socle Donnees) : tous les contextes écrivent dans la même transaction.
 builder.Services.AddUniteEcriture();
@@ -209,10 +212,6 @@ if (commande is not null)
     return;
 }
 
-// Métrés saisis en lignes : convertis en scripts au démarrage en développement (compte propriétaire des bases) ; une
-// installation les convertit sous le rôle de schéma (« installation conversions », mise à jour).
-if (app.Environment.IsDevelopment()) await ConversionMetresBases.ConvertirAsync(app.Services, app.Logger);
-
 app.UseSecurite();
 app.UseHttpsInstallation();
 // Textes, thème et images du client (module Personnalisation) avec la surcharge de l'installation, puis client web
@@ -224,6 +223,7 @@ app.UseErreursMetier();
 app.UseErreursBase();
 app.UseUniteEcriture();
 app.UseSocietes();
+app.UseControleVersionBase();
 app.UseAuthentificationSession();
 app.UseDroits();
 

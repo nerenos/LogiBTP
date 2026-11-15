@@ -12,9 +12,10 @@ namespace LogiBTP.Api.Btp;
 ///            [--libelle L] [--base-hote H] : .env complété (secrets générés, un .env fourni est conservé), societes.json,
 ///            pg_hba.conf et postgresql.conf du conteneur de la base ;
 ///   base creer : rôles, base principale, scripts du manifeste sous logibtp_schema, script des rôles ;
-///   societe ajouter CODE [--libelle L] : base de la société et déclaration dans societes.json ;
-///   societes : sociétés déclarées ; scripts verifier : manifeste ↔ dépôt ; conversions : conversions de données
-///   (métrés) sous le rôle de schéma ; etat : bases et scripts appliqués ;
+///   base creer [--demo], societe ajouter CODE [--libelle L] [--demo] : base de la société et déclaration dans societes.json ;
+///   --demo : avec les scripts de données de démonstration (indicateur « demo » du manifeste), sinon sans ;
+///   societes : sociétés déclarées ; scripts verifier : manifeste ↔ dépôt ;
+///   etat : bases et scripts appliqués ;
 ///   certificat creer [--organisation O] [--jours N] [--nouvelle-racine] : autorité LogiBTP (créée une fois, clé chiffrée
 ///   par la clé des données) et certificat du domaine et de son joker ; certificat renouveler [--avant N] : nouveau
 ///   certificat N jours (60) avant l'échéance ; certificat importer --certificat F [--cle K] [--origine IMPORTE|LETSENCRYPT] :
@@ -22,8 +23,17 @@ namespace LogiBTP.Api.Btp;
 ///   certificat base-renouveler : certificat de la base N jours (60) avant l'échéance, code de sortie 10 si changé ;
 ///   certificat base --nom N --adresses-api A : base sur une autre machine (TLS) ; base droits : roles.sql sur toutes les bases ;
 ///   sauvegarde chiffrer|dechiffrer DOSSIER : fichiers d'un jeu de sauvegarde chiffrés par la clé des données ;
-///   base mettre-a-jour : scripts du manifeste non appliqués, droits, conversions, sur toutes les bases ; base adopter :
-///   base existante inscrite au journal ; cle-donnees changer | rechiffrer : rotation de la clé des données.
+///   base mettre-a-jour [--forcer --motif M] : empreinte d'un script inscrit modifiée = refus (forçable) ; contrôle de dérive (instantané stocké ↔ catalogue ; écarts en conflit :
+///   arrêt avec rapport, ou forçage tracé dans installation_forcage), puis scripts du manifeste non appliqués, droits,
+///   sur toutes les bases (scripts « demo » seulement pour les bases qui en ont déjà reçu un) ;
+///   base adopter (--base N | --toutes) [--confirmer-sans-controle] [--demo] : base existante
+///   inscrite au journal, après comparaison à une base de référence temporaire construite par le manifeste ;
+///   module majeure MODULE [--nom N] : passage du module en majeure (développement) : script de création N+1.0 pour les bases neuves
+///   (squelette à relire), scripts de la majeure N-1 archivés dans db/archive/, scripts.txt régénéré ;
+///   publier --verifier --base DEV [--depuis DOSSIER] [--demo] : contrôle de publication (base neuve ↔ base montée depuis la version
+///   précédente publiée ou le socle 1.0 ↔ base de développement), code de sortie non nul au moindre écart ;
+///   base comparer --base A --reference B : écarts de A par rapport à B ; prefixe ajouter P --integrateur N : préfixe
+///   d'objets d'un intégrateur (ignorés par la dérive) ; cle-donnees changer | rechiffrer : rotation de la clé des données.
 /// Aucun secret n'est jamais affiché.
 /// </summary>
 public static class CommandeInstallation
@@ -33,15 +43,21 @@ public static class CommandeInstallation
 
     private static readonly string Usage = """
         Usage : installation preparer --domaine D [--deploiement LOCAL|INTERNET] [--confiance CIDR,…] [--reseau CIDR] [--memoire Mo] [--libelle L] [--base-hote H] [--code-certificat]
-                installation base creer
-                installation societe ajouter CODE [--libelle L]
-                installation societes | scripts verifier | conversions | etat
+                installation base creer [--demo]
+                installation societe ajouter CODE [--libelle L] [--demo]
+                installation societes | scripts verifier | etat
+                installation manifeste generer (écrit db/installation/scripts.txt : socle 1.0 + mineures ; npm run manifeste)
                 installation certificat base-renouveler (code 10 : certificat de la base créé ou renouvelé, à redémarrer)
                 installation certificat creer [--organisation O] [--jours N] [--nouvelle-racine] | renouveler [--avant N]
                 installation certificat importer --certificat F [--cle K] [--origine IMPORTE|LETSENCRYPT] | etat
                 installation certificat base --nom N --adresses-api A [--certificat F --cle K] | installation base droits
                 installation sauvegarde chiffrer|dechiffrer DOSSIER
-                installation base mettre-a-jour | base adopter (--base NOM | --toutes) --confirmer | cle-donnees changer | rechiffrer
+                installation base mettre-a-jour [--forcer --motif "…"] | cle-donnees changer | rechiffrer
+                installation base adopter (--base NOM | --toutes) [--confirmer-sans-controle] [--demo]
+                installation base comparer --base A --reference B
+                installation module majeure MODULE [--nom NOM]   (développement : création N+1.0, archivage de la majeure N-1)
+                installation publier --verifier --base DEV [--depuis DOSSIER] [--demo]   (contrôle de publication, code non nul si écart)
+                installation prefixe ajouter PREFIXE --integrateur NOM
         """;
 
     public static async Task<int> ExecuterAsync(string[] args, string dossier, TextWriter sortie)
@@ -52,12 +68,14 @@ public static class CommandeInstallation
             return (args.ElementAtOrDefault(0), args.ElementAtOrDefault(1)) switch
             {
                 ("preparer", _) => Preparer(args, dossier, sortie),
-                ("base", "creer") => await CreerBaseAsync(null, null, dossier, sortie),
+                ("base", "creer") => await CreerBaseAsync(null, null, args.Contains("--demo"), dossier, sortie),
                 ("societe", "ajouter") when args.Length > 2 && !args[2].StartsWith("--") =>
-                    await CreerBaseAsync(SocietesInstallation.VerifierCode(args[2]), Option(args, "--libelle"), dossier, sortie),
+                    await CreerBaseAsync(SocietesInstallation.VerifierCode(args[2]), Option(args, "--libelle"), args.Contains("--demo"), dossier, sortie),
                 ("societes", _) => ListerSocietes(dossier, sortie),
                 ("scripts", "verifier") => VerifierScripts(sortie),
-                ("conversions", _) => await ConvertirAsync(dossier, sortie),
+                ("manifeste", "generer") => GenererManifeste(sortie),
+                ("module", "majeure") when args.Length > 2 && !args[2].StartsWith("--") => PasserEnMajeure(args, sortie),
+                ("publier", _) when args.Contains("--verifier") => await VerifierPublicationAsync(args, dossier, sortie),
                 ("etat", _) => await EtatAsync(dossier, sortie),
                 ("certificat", "creer") => CreerCertificat(args, dossier, sortie),
                 ("certificat", "renouveler") => RenouvelerCertificat(args, dossier, sortie),
@@ -66,7 +84,9 @@ public static class CommandeInstallation
                 ("certificat", "base-renouveler") => RenouvelerBase(dossier, sortie),
                 ("certificat", "base") => CertificatBase(args, dossier, sortie),
                 ("base", "droits") => await DroitsBasesAsync(dossier, sortie),
-                ("base", "mettre-a-jour") => await MettreAJourAsync(dossier, sortie),
+                ("base", "mettre-a-jour") => await MettreAJourAsync(args, dossier, sortie),
+                ("base", "comparer") => await ComparerAsync(args, dossier, sortie),
+                ("prefixe", "ajouter") when args.Length > 2 && !args[2].StartsWith("--") => await AjouterPrefixeAsync(args, dossier, sortie),
                 ("base", "adopter") => await AdopterAsync(args, dossier, sortie),
                 ("cle-donnees", "changer") => await ChangerCleAsync(dossier, sortie),
                 ("cle-donnees", "rechiffrer") => await RechiffrerAsync(dossier, sortie),
@@ -147,7 +167,12 @@ public static class CommandeInstallation
 
     // ---------------------------------------------------------------- bases
 
-    private static async Task<int> CreerBaseAsync(string? societe, string? libelle, string dossier, TextWriter sortie)
+    /// <summary>
+    /// Crée la base (société principale ou société ajoutée) et lui applique le manifeste. <paramref name="demo"/> : avec les
+    /// scripts de données de démonstration (sinon sans : ni tiers, ni chantier, ni salarié fictif) ; une base déjà dotée de
+    /// la démonstration (reprise d'une création interrompue) la garde.
+    /// </summary>
+    private static async Task<int> CreerBaseAsync(string? societe, string? libelle, bool demo, string dossier, TextWriter sortie)
     {
         var config = Configuration(dossier);
         var modele = Modele(config);
@@ -162,11 +187,14 @@ public static class CommandeInstallation
         });
         var neuve = await bd.CreerBaseAsync(admin, base_, RoleSchema);
         var racine = RacineSql();
-        var manifeste = ManifesteScripts.Lire(racine);
+        var manifeste = ManifesteScripts.Lire(racine).AvecMigrations(racine, MigrationsCoeur.Liste);
         var applique = await BaseDonnees.ScriptsAppliquesAsync(modele.Chaine(base_, RoleSchema, config[VariablesEnv.BaseMotDePasseSchema]));
         if (!neuve && applique.Count == 0) throw new InvalidOperationException($"La base {base_} existe sans journal des scripts : elle n'a pas été créée par l'installeur");
         // Base neuve, ou reprise d'une création interrompue : scripts absents du journal, dans l'ordre.
-        await bd.AppliquerAsync(modele.Chaine(base_, RoleSchema, config[VariablesEnv.BaseMotDePasseSchema]), racine, manifeste.Scripts);
+        var schema = modele.Chaine(base_, RoleSchema, config[VariablesEnv.BaseMotDePasseSchema]);
+        demo |= await BaseDonnees.ADeLaDemoAsync(schema, manifeste.Scripts);
+        sortie.WriteLine($"Base {base_} : {(demo ? "avec" : "sans")} les données de démonstration");
+        await bd.AppliquerAsync(schema, racine, manifeste.Retenus(demo), acceptees: EmpreintesAcceptees.Lire(racine), migrations: MigrationsCoeur.Liste);
         await bd.ExecuterFichierAsync(modele.Chaine(base_, "postgres", config[VariablesEnv.BaseMotDePasseAdmin]), Path.Combine(racine, "db/installation/roles.sql"));
         if (societe is not null)
         {
@@ -195,10 +223,45 @@ public static class CommandeInstallation
         return 0;
     }
 
+    /// <summary>Écrit db/installation/scripts.txt depuis le plan calculé (socle 1.0 figé, mineures des modules, rejouables de fin).</summary>
+    private static int GenererManifeste(TextWriter sortie)
+    {
+        var racine = RacineSql();
+        var plan = PlanScripts.Calculer(racine);
+        sortie.WriteLine($"{ManifesteScripts.Generer(racine)} : {plan.Scripts.Count} entrée(s), dont {plan.Mineures.Count} mineure(s)");
+        return 0;
+    }
+
+    /// <summary>Passage d'un module en majeure (développement) : <see cref="PassageMajeure"/>.</summary>
+    private static int PasserEnMajeure(string[] args, TextWriter sortie)
+    {
+        var r = PassageMajeure.Executer(RacineSql(), args[2], Option(args, "--nom") ?? "creation");
+        sortie.WriteLine($"Module {r.Module} : création de la version {r.Nouvelle} écrite dans {r.Creation} ({r.Sources.Count} script(s) concaténé(s)) : SQUELETTE À RELIRE");
+        foreach (var a in r.Archives) sortie.WriteLine($"  archivé : {a}");
+        foreach (var a in r.Avertissements) sortie.WriteLine($"  attention : {a}");
+        sortie.WriteLine("  scripts.txt régénéré ; contrôler ensuite : installation publier --verifier --base <développement>");
+        return 0;
+    }
+
+    /// <summary>Contrôle de publication : <see cref="ControlePublication"/> ; code 1 au moindre écart ou refus.</summary>
+    private static async Task<int> VerifierPublicationAsync(string[] args, string dossier, TextWriter sortie)
+    {
+        var dev = BaseDonnees.VerifierNom(Option(args, "--base") ?? throw new ArgumentException("--base NOM (base de développement) obligatoire"));
+        var config = Configuration(dossier);
+        var modele = Modele(config);
+        var mdp = Exiger(config, VariablesEnv.BaseMotDePasseSchema);
+        var admin = modele.Chaine("postgres", "postgres", Exiger(config, VariablesEnv.BaseMotDePasseAdmin));
+        var depuis = Option(args, "--depuis");
+        if (depuis is not null && !File.Exists(Path.Combine(depuis, PlanScripts.CheminSocle))) throw new ArgumentException($"--depuis : {depuis} n'est pas un dépôt LogiBTP ({PlanScripts.CheminSocle} introuvable)");
+        var rapport = await ControlePublication.VerifierAsync(admin, RoleSchema, n => modele.Chaine(n, RoleSchema, mdp), dev, RacineSql(), depuis, args.Contains("--demo"), sortie, MigrationsCoeur.Liste);
+        sortie.WriteLine(rapport.Formater());
+        return rapport.Conforme ? 0 : 1;
+    }
+
     private static int VerifierScripts(TextWriter sortie)
     {
         var racine = RacineSql();
-        var manifeste = ManifesteScripts.Lire(racine);
+        var manifeste = ManifesteScripts.Lire(racine).AvecMigrations(racine, MigrationsCoeur.Liste);
         var ecarts = manifeste.Ecarts(racine);
         foreach (var e in ecarts) sortie.WriteLine(e);
         sortie.WriteLine($"{manifeste.Scripts.Count} script(s) au manifeste, {ecarts.Count} écart(s)");
@@ -209,31 +272,22 @@ public static class CommandeInstallation
     private static List<(string? Code, string Base)> Bases(string dossier, ModeleConnexion modele) =>
         [(null, modele.NomBase(null)), .. SocietesInstallation.Societes(SocietesInstallation.Lire(Path.Combine(dossier, FichierSocietes))).Select(s => ((string?)s.Code, modele.NomBase(s.Code)))];
 
-    private static async Task<int> ConvertirAsync(string dossier, TextWriter sortie)
-    {
-        var config = Configuration(dossier);
-        var modele = Modele(config);
-        foreach (var (_, base_) in Bases(dossier, modele))
-        {
-            var (metres, elements) = await ConversionMetresBases.ConvertirBaseAsync(modele.Chaine(base_, RoleSchema, Exiger(config, VariablesEnv.BaseMotDePasseSchema)));
-            sortie.WriteLine(metres < 0 ? $"{base_} : rien à convertir" : $"{base_} : {metres} métré(s), {elements} composition(s) convertis");
-        }
-        return 0;
-    }
-
     private static async Task<int> EtatAsync(string dossier, TextWriter sortie)
     {
         var config = Configuration(dossier);
         var modele = Modele(config);
-        var manifeste = ManifesteScripts.Lire(RacineSql());
-        sortie.WriteLine($"Installation {config[VariablesEnv.Domaine]} ({config[VariablesEnv.Deploiement] ?? "LOCAL"}), serveur {modele.Hote}:{modele.Port}");
+        var manifeste = ManifesteScripts.Lire(RacineSql()).AvecMigrations(RacineSql(), MigrationsCoeur.Liste);
+        sortie.WriteLine($"Installation {config[VariablesEnv.Domaine]} ({config[VariablesEnv.Deploiement] ?? "LOCAL"}), serveur {modele.Hote}:{modele.Port}, version produit {VersionsModules.VersionProduit(RacineSql()) ?? "?"}");
         foreach (var (code, base_) in Bases(dossier, modele))
         {
             try
             {
                 var s = await BaseDonnees.ScriptsAppliquesAsync(modele.Chaine(base_, RoleSchema, config[VariablesEnv.BaseMotDePasseSchema]));
-                var attendus = manifeste.Scripts.Where(x => !x.Rejouable).Select(x => x.Chemin).Except(s.Select(x => x.Chemin)).Count();
-                sortie.WriteLine($"{code ?? "(principale)"} → {base_} : {s.Count} script(s) appliqué(s)" + (attendus > 0 ? $", {attendus} en attente (mise à jour)" : ", à jour"));
+                var demo = s.Any(a => manifeste.Scripts.Any(x => x.Demo && x.Chemin == a.Chemin));
+                var attendus = manifeste.Retenus(demo).Where(x => !x.Rejouable).Select(x => x.Chemin).Except(s.Select(x => x.Chemin)).Count();
+                sortie.WriteLine($"{code ?? "(principale)"} → {base_} : {s.Count} script(s) appliqué(s), {(demo ? "avec" : "sans")} démonstration" + (attendus > 0 ? $", {attendus} en attente (mise à jour)" : ", à jour"));
+                var versions = await VersionsModules.VersionsModulesAsync(modele.Chaine(base_, RoleSchema, config[VariablesEnv.BaseMotDePasseSchema]));
+                sortie.WriteLine(versions.Count == 0 ? "    versions : non renseignées (première mise à jour à faire)" : "    versions : " + string.Join(", ", versions.Select(v => $"{v.Module} {v.Version}")));
             }
             catch (Npgsql.NpgsqlException e)
             {
@@ -469,28 +523,98 @@ public static class CommandeInstallation
 
     /// <summary>
     /// Mise à jour de toutes les bases (§ 7.2) : scripts du manifeste absents du journal installation_script, dans l'ordre,
-    /// sous logibtp_schema, scripts rejouables, droits des rôles, conversions de données. Une base sans journal (créée
+    /// sous logibtp_schema, scripts rejouables, droits des rôles. Une base sans journal (créée
     /// hors de l'installeur) est refusée : « installation base adopter ».
     /// </summary>
-    private static async Task<int> MettreAJourAsync(string dossier, TextWriter sortie)
+    private static async Task<int> MettreAJourAsync(string[] args, string dossier, TextWriter sortie)
     {
+        var forcer = args.Contains("--forcer");
+        var motif = Option(args, "--motif");
+        if (forcer && string.IsNullOrWhiteSpace(motif)) throw new ArgumentException("--forcer exige --motif \"…\" (inscrit au journal)");
         var config = Configuration(dossier);
         var modele = Modele(config);
         var racine = RacineSql();
-        var manifeste = ManifesteScripts.Lire(racine);
+        var manifeste = ManifesteScripts.Lire(racine).AvecMigrations(racine, MigrationsCoeur.Liste);
         var bd = new BaseDonnees(sortie);
+        var acceptees = EmpreintesAcceptees.Lire(racine);
         var modifies = 0;
-        foreach (var (code, base_) in Bases(dossier, modele))
+        // Contrôle de dérive de toutes les bases avant de toucher à l'une d'elles.
+        var controles = new List<(string Schema, RapportDerive Rapport)>();
+        foreach (var (_, base_) in Bases(dossier, modele))
         {
             var schema = modele.Chaine(base_, RoleSchema, Exiger(config, VariablesEnv.BaseMotDePasseSchema));
             if ((await BaseDonnees.ScriptsAppliquesAsync(schema)).Count == 0)
-                throw new InvalidOperationException($"La base {base_} n'a pas de journal des scripts : « installation base adopter --base {base_} --confirmer » si elle est à jour du manifeste précédent");
-            modifies += (await bd.AppliquerAsync(schema, racine, manifeste.Scripts)).Modifies.Count;
+                throw new InvalidOperationException($"La base {base_} n'a pas de journal des scripts : « installation base adopter --base {base_} » si elle est à jour du manifeste précédent");
+            var rapport = await ControleSchema.ControlerAsync(schema, racine, manifeste.Retenus(await BaseDonnees.ADeLaDemoAsync(schema, manifeste.Scripts)));
+            sortie.WriteLine(rapport.Formater());
+            controles.Add((schema, rapport));
+        }
+        if (controles.Any(c => c.Rapport.Conflits.Count > 0))
+        {
+            if (!forcer)
+            {
+                sortie.WriteLine("Mise à jour arrêtée : écarts en conflit avec le schéma attendu (rien n'a été modifié). Relire le rapport, puis relancer avec --forcer --motif \"…\" pour passer outre (décision tracée au journal).");
+                return 2;
+            }
+            foreach (var (schema, rapport) in controles.Where(c => c.Rapport.Conflits.Count > 0))
+            {
+                await using var cnx = new Npgsql.NpgsqlConnection(schema);
+                await cnx.OpenAsync();
+                await JournalSchema.EnregistrerForcageAsync(cnx, rapport.Conflits, motif!);
+                sortie.WriteLine($"{rapport.Base} : forçage inscrit au journal ({rapport.Conflits.Count} écart(s), motif : {motif})");
+            }
+        }
+        // Empreinte d'un script inscrit modifiée : refus de toutes les bases avant la première application (sauf --forcer --motif).
+        var refus = new List<string>();
+        foreach (var (schema, _) in controles)
+        {
+            var demo = await BaseDonnees.ADeLaDemoAsync(schema, manifeste.Scripts);
+            var changes = await BaseDonnees.EmpreintesModifieesAsync(schema, racine, manifeste.Retenus(demo), acceptees);
+            if (changes.Count > 0) refus.Add($"{new Npgsql.NpgsqlConnectionStringBuilder(schema).Database} : {string.Join(", ", changes)}");
+        }
+        if (refus.Count > 0 && !forcer)
+        {
+            sortie.WriteLine("Mise à jour refusée : script(s) modifié(s) après leur application (une version publiée est immuable : corriger par une nouvelle mineure ; sinon --forcer --motif \"…\", décision tracée au journal). Rien n'a été modifié :");
+            foreach (var r in refus) sortie.WriteLine("  " + r);
+            return 2;
+        }
+        foreach (var (schema, _) in controles)
+        {
+            var demo = await BaseDonnees.ADeLaDemoAsync(schema, manifeste.Scripts);
+            var bilan = await bd.AppliquerAsync(schema, racine, manifeste.Retenus(demo), acceptees: acceptees, forcer: forcer, motif: motif, migrations: MigrationsCoeur.Liste);
+            modifies += bilan.Modifies.Count;
         }
         await DroitsBasesAsync(dossier, sortie);
-        await ConvertirAsync(dossier, sortie);
-        if (modifies > 0) sortie.WriteLine($"Attention : {modifies} script(s) modifié(s) après leur application, non rejoués (une correction doit être un nouveau script)");
+        if (modifies > 0) sortie.WriteLine($"Attention : {modifies} script(s) modifié(s) après leur application, forcé(s) (non rejoués ; une correction doit être une nouvelle mineure)");
         sortie.WriteLine("Bases à jour");
+        return 0;
+    }
+
+    /// <summary>Écarts de la base A par rapport à la base B (développement, contrôle de publication) ; code 1 si un écart est en conflit.</summary>
+    private static async Task<int> ComparerAsync(string[] args, string dossier, TextWriter sortie)
+    {
+        var a = Option(args, "--base") ?? throw new ArgumentException("--base A --reference B");
+        var b = Option(args, "--reference") ?? throw new ArgumentException("--base A --reference B");
+        var config = Configuration(dossier);
+        var modele = Modele(config);
+        var mdp = Exiger(config, VariablesEnv.BaseMotDePasseSchema);
+        var ecarts = await ControleSchema.ComparerAsync(modele.Chaine(BaseDonnees.VerifierNom(a), RoleSchema, mdp), modele.Chaine(BaseDonnees.VerifierNom(b), RoleSchema, mdp));
+        sortie.WriteLine(new RapportDerive(a, true, ecarts, []).Formater().Replace("l'instantané stocké", $"la référence {b}"));
+        return ecarts.Any(e => e.EnConflit) ? 1 : 0;
+    }
+
+    private static async Task<int> AjouterPrefixeAsync(string[] args, string dossier, TextWriter sortie)
+    {
+        var integrateur = Option(args, "--integrateur") ?? throw new ArgumentException("--integrateur NOM obligatoire");
+        var config = Configuration(dossier);
+        var modele = Modele(config);
+        foreach (var (_, base_) in Bases(dossier, modele))
+        {
+            await using var cnx = new Npgsql.NpgsqlConnection(modele.Chaine(base_, RoleSchema, Exiger(config, VariablesEnv.BaseMotDePasseSchema)));
+            await cnx.OpenAsync();
+            await JournalSchema.AjouterPrefixeAsync(cnx, args[2], integrateur);
+            sortie.WriteLine($"{base_} : préfixe {args[2]} déclaré pour {integrateur} (objets ignorés par la dérive, jamais touchés)");
+        }
         return 0;
     }
 
@@ -500,15 +624,33 @@ public static class CommandeInstallation
     /// </summary>
     private static async Task<int> AdopterAsync(string[] args, string dossier, TextWriter sortie)
     {
-        if (!args.Contains("--confirmer")) throw new ArgumentException("--confirmer obligatoire : la base doit déjà contenir tous les scripts du manifeste");
+        var sansControle = args.Contains("--confirmer-sans-controle");
+        var avecDemo = args.Contains("--demo");
         var config = Configuration(dossier);
         var modele = Modele(config);
         var cible = Option(args, "--base");
         var bases = Bases(dossier, modele).Select(b => b.Base).Where(b => args.Contains("--toutes") || b == cible).ToList();
         if (bases.Count == 0) throw new ArgumentException("--base NOM ou --toutes");
         var racine = RacineSql();
+        var manifeste = ManifesteScripts.Lire(racine).AvecMigrations(racine, MigrationsCoeur.Liste);
+        var mdp = Exiger(config, VariablesEnv.BaseMotDePasseSchema);
+        var admin = modele.Chaine("postgres", "postgres", Exiger(config, VariablesEnv.BaseMotDePasseAdmin));
         foreach (var b in bases)
-            await new BaseDonnees(sortie).AppliquerAsync(modele.Chaine(b, RoleSchema, Exiger(config, VariablesEnv.BaseMotDePasseSchema)), racine, ManifesteScripts.Lire(racine).Scripts, adopter: true);
+        {
+            // Avec ou sans démonstration : repérée au journal si la base en a un, sinon demandée par --demo.
+            var demo = avecDemo || await BaseDonnees.ADeLaDemoAsync(modele.Chaine(b, RoleSchema, mdp), manifeste.Scripts);
+            var scripts = manifeste.Retenus(demo);
+            if (!sansControle)
+            {
+                // Vérifié : base de référence temporaire construite par le manifeste, comparée à la base à adopter.
+                var ecarts = await ControleSchema.ComparerAReferenceAsync(admin, RoleSchema, n => modele.Chaine(n, RoleSchema, mdp), b, racine, scripts, sortie, MigrationsCoeur.Liste);
+                var conflits = ecarts.Where(e => e.EnConflit).ToList();
+                sortie.WriteLine(new RapportDerive(b, true, ecarts, []).Formater().Replace("l'instantané stocké", "la base de référence"));
+                if (conflits.Count > 0)
+                    throw new InvalidOperationException($"Adoption de {b} refusée : {conflits.Count} écart(s) en conflit avec le manifeste (--confirmer-sans-controle pour adopter sans contrôle)");
+            }
+            await new BaseDonnees(sortie).AppliquerAsync(modele.Chaine(b, RoleSchema, mdp), racine, scripts, adopter: true, migrations: MigrationsCoeur.Liste);
+        }
         return 0;
     }
 

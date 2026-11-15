@@ -5,7 +5,8 @@
 -- appel d'offres ; appel d'offres → commande → facture d'avancement) ; marché à deux sens (`mar_sens` V vente, ST
 -- sous-traitance : sous-traitant, marché de vente lié, montant agréé, garantie, autoliquidation, délais contractuels),
 -- commande de sous-traitance inscrite à son marché comme une commande client ; liste des marchés de sous-traitance ;
--- sous-traitants de démonstration repris dans l'annuaire (casquette SOUS_TRAITANT), table de démonstration supprimée.
+-- table des sous-traitants de démonstration supprimée (leurs données, reprises dans l'annuaire, sont dans
+-- 210b_sous_traitants_demo.sql : script de démonstration).
 -- Rejouable.
 -- =============================================================================
 
@@ -152,23 +153,11 @@ CROSS JOIN LATERAL (
       AND s.std_code NOT IN ('ANNULE', 'REMPLACE')) f
 WHERE m.mar_sens = 'ST' AND f_module_actif('sous_traitance');
 
--- Sous-traitants de démonstration (ST19) : personnes de l'annuaire à la casquette SOUS_TRAITANT (corps d'état, taux
--- horaire et agrément dans les propriétés), puis la table de démonstration disparaît (ressources : vue reprise de 120).
+-- Table des sous-traitants de démonstration : disparaît (ressources : vue reprise ci-dessous). Les sous-traitants de
+-- démonstration éventuels ont été repris dans l'annuaire par 210b_sous_traitants_demo.sql (script de démonstration).
 DO $$
 BEGIN
     IF to_regclass('demo_sous_traitant') IS NOT NULL THEN
-        INSERT INTO personne (per_niv_code, per_raison_sociale, per_casquettes, per_st_corps_etat, per_proprietes)
-        SELECT 'SOCIETE', s.sst_raison, '["SOUS_TRAITANT"]'::jsonb, s.sst_metier,
-               jsonb_build_object('taux_horaire', s.sst_taux_horaire, 'agree', s.sst_agree, 'observations', s.sst_observations, 'code_demo', s.sst_code)
-        FROM demo_sous_traitant s
-        WHERE NOT EXISTS (SELECT 1 FROM personne p WHERE p.per_proprietes ->> 'code_demo' = s.sst_code);
-        -- Affectations et équipes : identifiant du sous-traitant de démonstration → personne.
-        UPDATE pla_affectation a SET aff_res_id = p.per_id::text
-        FROM demo_sous_traitant s JOIN personne p ON p.per_proprietes ->> 'code_demo' = s.sst_code
-        WHERE a.aff_res_type = 'SOUS_TRAITANT' AND a.aff_res_id = s.sst_id::text;
-        UPDATE equipe_composition e SET eqc_ressource = p.per_id::text
-        FROM demo_sous_traitant s JOIN personne p ON p.per_proprietes ->> 'code_demo' = s.sst_code
-        WHERE e.eqc_type = 'SOUS_TRAITANT' AND e.eqc_ressource = s.sst_id::text;
         DROP VIEW IF EXISTS v_liste_ressources;
         DROP TABLE demo_sous_traitant;
     END IF;

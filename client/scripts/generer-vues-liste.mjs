@@ -103,17 +103,11 @@ const valeursElements = ELEMENTS.filter((e) => e.type !== 'POSTE_PIED').map((e0)
     b(e.coef_fg_impose), b(e.coef_benef_impose)] };
 });
 const lignesElements = valeursElements.map((x) => ` (${x.valeurs.join(', ')})`).join(',\n');
-const sqlBibliotheque = `-- =============================================================================
--- Cœur LogiBTP – bibliothèque de démonstration (référentiels, articles, ouvrage, tarifs fournisseurs).
+const sqlNatures = `-- =============================================================================
+-- Cœur LogiBTP – natures d'éléments de la bibliothèque (regroupements, comptes, coefficients par période) : référence,
+-- hors données de démonstration (extrait de 116_bibliotheque_demo.sql).
 -- FICHIER GÉNÉRÉ par client/scripts/generer-vues-liste.mjs depuis client/src/app/bibliotheque/donnees.js : ne pas modifier.
--- Prix calculés à la génération (même calcul que l'API) ; l'historique des prix part de ces valeurs.
 -- =============================================================================
-
-INSERT INTO bibliotheque (bib_id, bib_code, bib_libelle, bib_defaut, bib_actif, bib_ordre) VALUES
-${BIBLIOTHEQUES.map((x) => ` (${x.id}, ${q(x.code)}, ${q(x.libelle)}, ${b(x.defaut)}, ${b(x.actif)}, ${x.ordre})`).join(',\n')};
-
-INSERT INTO famille_element (fam_id, fam_bib_id, fam_parent_id, fam_code, fam_libelle, fam_ordre) VALUES
-${FAMILLES.map((x) => ` (${x.id}, ${x.bib_id}, ${n(x.parent_id)}, ${q(x.code)}, ${q(x.libelle)}, ${x.ordre})`).join(',\n')};
 
 INSERT INTO regroupement_nature (rgn_code, rgn_libelle, rgn_ordre) VALUES
 ${REGROUPEMENTS.map((r) => ` (${q(r.code)}, ${q(r.libelle)}, ${r.ordre})`).join(',\n')}
@@ -124,6 +118,26 @@ ${NATURES.map((x) => ` (${x.id}, ${q(x.code)}, ${q(x.libelle)}, ${q(x.regroupeme
 
 INSERT INTO coefficient_periode (cop_id, cop_nat_id, cop_debut, cop_coef_fg, cop_coef_benef, cop_commentaire, cop_cree_le, cop_cree_par) VALUES
 ${PERIODES_COEFFICIENTS.map((x) => ` (${x.id}, ${n(x.nat_id)}, ${q(x.debut)}, ${n(x.coef_fg)}, ${n(x.coef_benef)}, ${q(x.commentaire)}, ${q(x.cree_le)}, ${q(x.cree_par)})`).join(',\n')};
+
+SELECT setval(pg_get_serial_sequence('nature_element', 'nat_id'), (SELECT max(nat_id) FROM nature_element));
+SELECT setval(pg_get_serial_sequence('coefficient_periode', 'cop_id'), (SELECT max(cop_id) FROM coefficient_periode));
+`;
+fs.writeFileSync(path.join(racine, 'db', '115b_natures_reference.sql'), sqlNatures);
+console.log('db/115b_natures_reference.sql généré');
+
+const sqlBibliotheque = `-- =============================================================================
+-- Cœur LogiBTP – bibliothèque de démonstration (bibliothèques, familles, articles, ouvrage, tarifs fournisseurs).
+-- Script de démonstration (indicateur « demo » du manifeste) ; les natures et leurs coefficients sont dans
+-- 115b_natures_reference.sql (hors démonstration).
+-- FICHIER GÉNÉRÉ par client/scripts/generer-vues-liste.mjs depuis client/src/app/bibliotheque/donnees.js : ne pas modifier.
+-- Prix calculés à la génération (même calcul que l'API) ; l'historique des prix part de ces valeurs.
+-- =============================================================================
+
+INSERT INTO bibliotheque (bib_id, bib_code, bib_libelle, bib_defaut, bib_actif, bib_ordre) VALUES
+${BIBLIOTHEQUES.map((x) => ` (${x.id}, ${q(x.code)}, ${q(x.libelle)}, ${b(x.defaut)}, ${b(x.actif)}, ${x.ordre})`).join(',\n')};
+
+INSERT INTO famille_element (fam_id, fam_bib_id, fam_parent_id, fam_code, fam_libelle, fam_ordre) VALUES
+${FAMILLES.map((x) => ` (${x.id}, ${x.bib_id}, ${n(x.parent_id)}, ${q(x.code)}, ${q(x.libelle)}, ${x.ordre})`).join(',\n')};
 
 INSERT INTO element (ele_id, ele_bib_id, ele_code, ele_type, ele_libelle_html, ele_libelle, ele_fam_id, ele_nat_id, ele_gestion, ele_unt_stock, ele_unt_achat,
   ele_unt_vente, ele_unites, ele_scenario_pa, ele_scenarios, ele_pa_fixe, ele_dernier_pa, ele_pmp, ele_pa, ele_coef_fg, ele_pr, ele_coef_benef, ele_pv,
@@ -144,10 +158,8 @@ ${TARIFS.map((t) => ` (${t.id}, ${t.ele_id}, ${q(t.fournisseur)}, ${q(t.referenc
 
 SELECT setval(pg_get_serial_sequence('bibliotheque', 'bib_id'), (SELECT max(bib_id) FROM bibliotheque));
 SELECT setval(pg_get_serial_sequence('famille_element', 'fam_id'), (SELECT max(fam_id) FROM famille_element));
-SELECT setval(pg_get_serial_sequence('nature_element', 'nat_id'), (SELECT max(nat_id) FROM nature_element));
 SELECT setval(pg_get_serial_sequence('element', 'ele_id'), (SELECT max(ele_id) FROM element));
 SELECT setval(pg_get_serial_sequence('tarif_fournisseur', 'tfo_id'), (SELECT max(tfo_id) FROM tarif_fournisseur));
-SELECT setval(pg_get_serial_sequence('coefficient_periode', 'cop_id'), (SELECT max(cop_id) FROM coefficient_periode));
 `;
 fs.writeFileSync(path.join(racine, 'db', '116_bibliotheque_demo.sql'), sqlBibliotheque);
 console.log('db/116_bibliotheque_demo.sql généré');
@@ -241,9 +253,9 @@ const lignesTable = (type, lignes, cle) => {
 const profondeur = (p) => { let n = 0; for (let x = p; x?.parent_id; x = A.PERSONNES.find((y) => y.id === x.parent_id)) n++; return n; };
 const per = lignesTable('personne', [...A.PERSONNES].sort((a, b2) => profondeur(a) - profondeur(b2) || a.id - b2.id), 'per_id');
 const ind = lignesTable('individu', A.INDIVIDUS, 'ind_id');
-const sqlAnnuaire = `-- =============================================================================
--- Cœur LogiBTP – annuaire : référentiels (niveaux, casquettes, types de lien, rôles) et données de démonstration
--- (personnes, individus, rattachements, liens, coordonnées partagées, tarifs reliés aux fournisseurs).
+const sqlAnnuaireReference = `-- =============================================================================
+-- Cœur LogiBTP – annuaire : référentiels (niveaux, casquettes, types de lien, rôles), hors données de démonstration
+-- (extrait de 141_annuaire_demo.sql).
 -- FICHIER GÉNÉRÉ par client/scripts/generer-vues-liste.mjs depuis client/src/app/annuaire/donnees.js : ne pas modifier.
 -- =============================================================================
 
@@ -258,6 +270,15 @@ ${A.TYPES_LIEN.map((x) => ` (${q(x.code)}, ${q(x.libelle)}, ${q(x.libelle_invers
 
 INSERT INTO role_individu (rol_code, rol_libelle, rol_icone, rol_ordre, rol_actif) VALUES
 ${A.ROLES.map((x) => ` (${q(x.code)}, ${q(x.libelle)}, ${q(x.icone)}, ${x.ordre}, ${b(x.actif)})`).join(',\n')};
+`;
+fs.writeFileSync(path.join(racine, 'db', '140b_annuaire_reference.sql'), sqlAnnuaireReference);
+console.log('db/140b_annuaire_reference.sql généré');
+const sqlAnnuaire = `-- =============================================================================
+-- Cœur LogiBTP – annuaire : données de démonstration (personnes, individus, rattachements, liens, coordonnées
+-- partagées, tarifs reliés aux fournisseurs). Script de démonstration (indicateur « demo » du manifeste) ; les
+-- référentiels (niveaux, casquettes, types de lien, rôles) sont dans 140b_annuaire_reference.sql (hors démonstration).
+-- FICHIER GÉNÉRÉ par client/scripts/generer-vues-liste.mjs depuis client/src/app/annuaire/donnees.js : ne pas modifier.
+-- =============================================================================
 
 -- Personnes : parents insérés avant leurs niveaux inférieurs.
 INSERT INTO personne (${per.colonnes}) VALUES
