@@ -30,7 +30,8 @@ public class ScriptsBaseTests
 
         var bilan = await new BaseDonnees(TextWriter.Null).AppliquerAsync(a.Connexion, racine, manifeste.Scripts);
         Assert.Equal(manifeste.Scripts.Where(s => !s.Rejouable).Select(s => s.Chemin).Distinct().Count(), bilan.Appliques);
-        Assert.Equal(manifeste.Scripts.Count(s => s.Rejouable), bilan.Rejoues);
+        // Les rejouables sont joués à leur place, puis rejoués après chaque mineure publiée (de leur module, d'un module requis ou, pour le cœur, de tout module).
+        Assert.True(bilan.Rejoues >= manifeste.Scripts.Count(s => s.Rejouable));
         Assert.Empty(bilan.Modifies);
 
         // Référence : chaque script du manifeste exécuté tel quel, dans l'ordre (comme initialiser-developpement.sh).

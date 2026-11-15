@@ -96,6 +96,11 @@ Référence lue à la demande (hors contexte par défaut). Les règles que le co
   extraits (`extrait-de=`) y sont inscrits **sans exécution**, dans une même transaction (`BilanScripts.Acceptes`). Tout nouveau script réduit
   de la même façon ajoute sa ligne ; le test `DemonstrationTests` vérifie que chaque extraction a la sienne.
 
+## Zones : champs supplémentaires des fiches (plan versionnement-schema, lot 7)
+- Première mineure réelle : `modules/fiche/db/1.1_champs_supplementaires.sql` (`scripts.txt` régénéré). Le journal reçoit, à chaque champ créé depuis l'interface, une ligne `isc_type = zone`, `isc_origine = societe`, chemin `zone:fiche/<table>.<colonne>`, module `fiche`, **sans version** (jamais comptée dans `v_version_module`) : écrite par la fonction SQL `fiche_champ_journaliser` du module Fiche (le module Fiche ne dépend pas du module Installation), seulement si `installation_script` existe. Non touchée par le moteur (ni plan, ni empreinte, ni complétion des lignes sans module de `VersionsModules.AssurerAsync`).
+- Les colonnes `x_` ne sont jamais des écarts de dérive (lot 1), ne sont pas reprises ni supprimées par les mineures (règle d'écriture : ne jamais toucher les colonnes `x_`) et suivent la sauvegarde de la base avec leur registre. Une mineure qui recrée une table ou une vue qui les expose doit les reporter explicitement (jamais de `SELECT *` dans une vue reprise). Test `MineuresTests.Colonne_x_conservee_…` ; tests du module : `ChampsSupplementairesBaseTests`.
+- Les tests qui comparaient le manifeste au socle figé 1.0 ignorent désormais les mineures publiées ; après une mineure, les rejouables sont rejoués une seconde fois dans la même exécution (règle du lot 4), donc `BilanScripts.Rejoues` dépasse le nombre de rejouables d'une base neuve.
+
 ## Commandes (image de l'API)
 `docker compose -f docker/api/compose.yml run --rm logibtp-installation installation …` :
 `preparer --domaine D [--deploiement] [--confiance] [--reseau] [--memoire] [--libelle] [--base-hote]`,

@@ -85,7 +85,7 @@ public class VersionsModulesTests
         if (Admin is null) return;
         var racine = CasPartages.RacineDepot();
         var m = ManifesteScripts.Lire(racine);
-        var scripts = m.Retenus(false);
+        var scripts = m.Retenus(false).Where(x => !VersionsModules.EstMineure(x.Chemin)).ToList(); // base d'avant le lot : socle 1.0 seul, sans mineure publiée depuis
         await using var a = await ScriptsBaseTests.BaseEssai.CreerAsync(Admin);
         var bd = new BaseDonnees(TextWriter.Null);
         await bd.AppliquerAsync(a.Connexion, racine, scripts, acceptees: EmpreintesAcceptees.Lire(racine));

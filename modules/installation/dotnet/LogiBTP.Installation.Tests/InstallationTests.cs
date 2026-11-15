@@ -21,7 +21,7 @@ public class ManifesteTests
     public void Manifeste_dans_l_ordre_modules_puis_coeur()
     {
         var m = ManifesteScripts.Lire(CasPartages.RacineDepot());
-        var uniques = m.Scripts.Where(s => !s.Rejouable).Select(s => Path.GetFileName(s.Chemin)).ToList();
+        var uniques = m.Scripts.Where(s => !s.Rejouable && !VersionsModules.EstMineure(s.Chemin)).Select(s => Path.GetFileName(s.Chemin)).ToList();
         // Ordre binaire des noms de fichiers (007 avant 007b, 019 avant 019b), jamais celui de la locale.
         Assert.Equal(uniques.OrderBy(n => n, StringComparer.Ordinal), uniques);
         Assert.Equal("db/176_documents_vues_types.sql", m.Scripts[^1].Chemin);

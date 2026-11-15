@@ -43,7 +43,7 @@ vue). Détecter précisément les objets touchés par chaque script demanderait 
 | 4 | FAIT | Mineures, plan calculé, `scripts.txt` généré, verrou, empreinte bloquante, rejouables sur changement |
 | 5 | FAIT | Fin du DDL au démarrage ; conversion des métrés archivée ; migrations C# figées |
 | 6 | FAIT | Version attendue par l'API, base en retard refusée proprement, page Installation |
-| 7 | À FAIRE | Champs supplémentaires des fiches (`x_`) : base et serveur |
+| 7 | FAIT | Champs supplémentaires des fiches (`x_`) : base et serveur |
 | 8 | À FAIRE | Champs supplémentaires : écran d'administration et affichage dans les fiches |
 | 9 | À FAIRE | Passage d'un module en majeure, archivage, contrôle de publication |
 
@@ -218,6 +218,18 @@ vue). Détecter précisément les objets touchés par chaque script demanderait 
   `ServiceFiche` / `ServiceListe` invalidé ; les colonnes `x_` sont ignorées par la dérive et conservées par les
   mises à jour (test : table témoin reprise par une mineure fictive).
 - **Critère de fin** : champ créé par la route, visible dans la définition de la fiche, conservé après une mise à jour.
+- **Réalisé** : première mineure réelle `modules/fiche/db/1.1_champs_supplementaires.sql` (registre `fiche_champ_supplementaire`, préfixe `fcs_` ; fonctions
+  `SECURITY DEFINER` à `search_path` fixé `fiche_champ_creer`, `fiche_champ_retirer`, `fiche_champ_journaliser`, `GRANT EXECUTE` à `logibtp_app` seulement,
+  `roles.sql` retire le rôle de lecture ; montant = `numeric(18,2)` comme les montants du projet). Liste des tables ouvertes : **aucune déclaration à ajouter**,
+  les `type_fiche` actifs (générés par le cœur, `db/131`) font foi (`tyf_table` : tables principales des fiches) ; la fonction refuse toute autre table.
+  Routes `/api/champs-supplementaires` (module Fiche ; `GET /tables`, `GET`, `POST`, `PUT /{table}/{colonne}`, `DELETE`), `u.ExigerAdmin()`, nœud `parametres`
+  (`SpecialisationDroitsBtp`) et type `Parametrage` (`EcrituresBtp`), unité d'écriture, 422 `VALIDATION` avec `ErreurChamp` (codes `ERREUR_CHAMP_SUPPLEMENTAIRE`),
+  purge de tous les `IPurgeCacheBase` de la base après création ou suppression. Journal : ligne `zone` / `societe` écrite par la fonction SQL (pas de dépendance
+  Fiche → Installation). Les champs supplémentaires sont des **champs du programme** de la définition (colonne `x_…`, `colonne_supplementaire`), lus, validés et écrits par
+  l'enregistrement de fiche existant ; sans section ni groupe (affichage au lot 8). Tests : `ChampsSupplementairesTests` (noms, types, validation), `ChampsSupplementairesBaseTests`
+  (`LOGIBTP_TEST_PG_ADMIN` : création, types SQL, journal, refus table / nom / type / doublon / non-administrateur, fonction refusant elle-même, valeur enregistrée et validée,
+  désactivation, suppression, `pg_dump` / `pg_restore`), `MineuresTests` (colonne `x_` conservée par une mineure qui reprend une vue et modifie la table témoin, jamais en dérive),
+  `CodesTests`. Tests existants adaptés à la présence d'une mineure réelle (socle figé comparé hors mineures, rejouables rejoués après une mineure, base « d'avant le lot » = socle 1.0 seul).
 
 ### Lot 8 – Champs supplémentaires : écran et affichage
 

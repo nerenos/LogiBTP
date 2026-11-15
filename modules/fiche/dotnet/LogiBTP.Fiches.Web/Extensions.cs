@@ -26,6 +26,7 @@ public static class Extensions
         // Chiffrement des mots de passe : celui de l'application (AddChiffrement) s'il est enregistré, sinon non configuré.
         services.TryAddSingleton(new LogiBTP.Socle.Chiffrement(null));
         services.AddScoped<ServiceFiche>();
+        services.AddScoped<ServiceChampsSupplementaires>();
         // Chrono des codes pour les créations hors fiche (tiers provisoire…).
         services.AddScoped<LogiBTP.Socle.Web.IChronosFiches>(sp => sp.GetRequiredService<ServiceFiche>());
         return services;
@@ -34,9 +35,19 @@ public static class Extensions
     public static IServiceCollection AddModuleFiche(this IServiceCollection services, Action<DbContextOptionsBuilder> options) =>
         services.AddModuleFiche<SpecialisationFiche>(options);
 
-    /// <summary>Routes HTTP du module, sous /fiches/{type}.</summary>
+    /// <summary>Routes HTTP du module : /fiches/{type} et /champs-supplementaires (administration des colonnes x_).</summary>
     public static RouteGroupBuilder MapModuleFiche(this RouteGroupBuilder api)
     {
+        var x = api.MapGroup("/champs-supplementaires");
+        x.MapGet("/tables", (HttpContext http, ServiceChampsSupplementaires s, CancellationToken ct) => s.Tables(Utilisateur.Depuis(http), ct));
+        x.MapGet("", (string? table, HttpContext http, ServiceChampsSupplementaires s, CancellationToken ct) => s.Lister(table, Utilisateur.Depuis(http), ct));
+        x.MapPost("", (DemandeChampColonne d, HttpContext http, ServiceChampsSupplementaires s, CancellationToken ct) => s.Creer(d, Utilisateur.Depuis(http), ct));
+        x.MapPut("/{table}/{colonne}", (string table, string colonne, ModificationChampColonne m, HttpContext http, ServiceChampsSupplementaires s, CancellationToken ct) => s.Modifier(table, colonne, m, Utilisateur.Depuis(http), ct));
+        x.MapDelete("/{table}/{colonne}", async (string table, string colonne, HttpContext http, ServiceChampsSupplementaires s, CancellationToken ct) =>
+        {
+            await s.Supprimer(table, colonne, Utilisateur.Depuis(http), ct);
+            return Results.NoContent();
+        });
         var g = api.MapGroup("/fiches/{type}");
         g.MapGet("/definition", (string type, HttpContext http, ServiceFiche s, CancellationToken ct) => s.Definition(type, Utilisateur.Depuis(http), ct));
         g.MapGet("/parametrage", (string type, HttpContext http, ServiceFiche s, CancellationToken ct) => s.Parametrage(type, Utilisateur.Depuis(http), ct));

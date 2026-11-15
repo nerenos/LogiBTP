@@ -163,6 +163,7 @@
 | Type | Dépendance | Version | Licence | Usage |
 |---|---|---|---|---|
 | npm | vitest | 5.1.0 | MIT | développement (modules/fiche/js) |
+| NuGet | EFCore.NamingConventions | 10.0.1 | Apache-2.0 | LogiBTP.Fiches.Tests |
 | NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Fiches.Tests |
 | NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Fiches.Web |
 | NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Fiches.Tests |

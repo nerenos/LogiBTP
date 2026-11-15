@@ -67,11 +67,12 @@ public class MineuresTests
     public void Socle_fige_reproduit_le_manifeste_sans_mineure()
     {
         var racine = CasPartages.RacineDepot();
-        var socle = ManifesteScripts.Lire(racine); // scripts.txt généré
+        // scripts.txt généré, sans les mineures publiées depuis (module Fiche 1.1…) : le reste est le socle 1.0 figé.
+        var socle = ManifesteScripts.Lire(racine).Scripts.Where(s => !VersionsModules.EstMineure(s.Chemin)).ToList();
         var fige = ManifesteScripts.Analyser(File.ReadAllLines(Path.Combine(racine, PlanScripts.CheminSocle)));
-        Assert.Equal(fige.Scripts, socle.Scripts);
-        Assert.Equal("db/176_documents_vues_types.sql", socle.Scripts[^1].Chemin);
-        Assert.True(socle.Scripts[^1].Rejouable);
+        Assert.Equal(fige.Scripts, socle);
+        Assert.Equal("db/176_documents_vues_types.sql", socle[^1].Chemin);
+        Assert.True(socle[^1].Rejouable);
     }
 
     [Fact]
@@ -320,6 +321,34 @@ public class MineuresTests
         var b5 = await moteur.AppliquerAsync(montee.Connexion, d.Racine, d.Plan().Scripts);
         Assert.Equal((1, 3), (b5.Appliques, b5.Rejoues)); // a, b (requiert a), coeur ; pas c
         Assert.Equal("a:3 b:3 c:2 coeur:3", await Executions(montee.Connexion));
+    }
+
+    /// <summary>
+    /// Champs supplémentaires (lot 7) : une colonne x_ ajoutée à une table de fiche (par fiche_champ_creer) survit à une mineure
+    /// qui reprend une vue et modifie la table, avec sa valeur, et n'est jamais comptée comme dérive.
+    /// </summary>
+    [Fact]
+    public async Task Colonne_x_conservee_par_une_mineure_qui_reprend_une_vue_et_modifie_la_table_temoin()
+    {
+        if (Admin is null) return;
+        using var d = DepotRejouables();
+        var moteur = new BaseDonnees(TextWriter.Null);
+        await using var b = await ScriptsBaseTests.BaseEssai.CreerAsync(Admin);
+        await moteur.AppliquerAsync(b.Connexion, d.Racine, d.Plan().Scripts);
+        await using (var cnx = new NpgsqlConnection(b.Connexion))
+        {
+            await cnx.OpenAsync();
+            await using var cmd = new NpgsqlCommand("ALTER TABLE a_t ADD COLUMN x_badge text; INSERT INTO a_t (a_id, x_badge) VALUES (1, 'B-12')", cnx);
+            await cmd.ExecuteNonQueryAsync();
+        }
+        Assert.Empty((await ControleSchema.ControlerAsync(b.Connexion, d.Racine, d.Plan().Scripts)).Ecarts);
+
+        d.Ecrire("modules/a/db/1.1_a_reprise.sql", "ALTER TABLE a_t ADD COLUMN a_x text;\nDROP VIEW v_a;\nCREATE VIEW v_a AS SELECT a_id FROM a_t;\nCREATE INDEX a_t_x ON a_t (a_x);");
+        var plan = d.Plan();
+        Assert.Equal(1, (await moteur.AppliquerAsync(b.Connexion, d.Racine, plan.Scripts)).Appliques);
+        Assert.Equal("B-12", await ChaineAsync(b.Connexion, "SELECT x_badge FROM a_t WHERE a_id = 1"));
+        Assert.Equal("1", await ChaineAsync(b.Connexion, "SELECT count(*)::text FROM information_schema.columns WHERE table_name = 'a_t' AND column_name = 'x_badge'"));
+        Assert.Empty((await ControleSchema.ControlerAsync(b.Connexion, d.Racine, plan.Scripts)).Ecarts);
     }
 
     [Fact]

@@ -302,6 +302,9 @@ db/308_mcp.sql rejouable
 db/309_mcp_origine.sql rejouable
 db/310_mcp_recettes.sql rejouable
 
+# Mineures : ordre calculé (versions d'un module en ordre numérique, « -- requiert: » entre modules).
+modules/fiche/db/1.1_champs_supplementaires.sql
+
 # ---- rejouables de fin du socle : joués après les mineures (voir MIGRATIONS.md) ----
 # Ordre des taux de TVA et taux par défaut (module Document 019n) : les taux sont créés par db/110, après le module ;
 # sans cette reprise, une base neuve n'a ni ordre ni défaut (premier code actif : AL20, autoliquidation).
