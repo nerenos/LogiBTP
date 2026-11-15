@@ -280,7 +280,7 @@ et l'[analyse](documentation/conception/ANALYSE-MODULE-INSTALLATION.md).
 docker build --secret id=cle_construction,src=cle-construction.secret -t logibtp/api:latest .
 ```
 
-Versions publiées : image `ghcr.io/nerenos/logibtp-api:<version>` (et Docker Hub `<compte>/logibtp-api`) construite par le workflow `publier-image` à chaque
+Versions publiées : image `ghcr.io/nerenos/logibtp-api:<version>` (et Docker Hub `nerenos/logibtp`) construite par le workflow `publier-image` à chaque
 tag `v<majeur>.<mineur>.<correctif>` ; procédure dans [PUBLICATION.md](documentation/PUBLICATION.md), notes dans
 [VERSIONS.md](documentation/VERSIONS.md).
 

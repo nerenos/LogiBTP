@@ -1,8 +1,8 @@
 # Publier une version de LogiBTP
 
 Une version publiée = un tag git `v<majeur>.<mineur>.<correctif>` et l'image de l'API (client web compris), poussée
-sur deux registres : `ghcr.io/nerenos/logibtp-api:<version>` (GitHub) et `docker.io/<compte>/logibtp-api:<version>`
-(Docker Hub). PostgreSQL reste l'image officielle `postgres:17`
+sur deux registres : `ghcr.io/nerenos/logibtp-api:<version>` (GitHub) et `docker.io/nerenos/logibtp:<version>`
+(Docker Hub, dépôt existant). PostgreSQL reste l'image officielle `postgres:17`
 (projet Compose `modules/installation/docker/base`), jamais dans l'image de l'API.
 
 ## Numéros
@@ -23,9 +23,11 @@ sur deux registres : `ghcr.io/nerenos/logibtp-api:<version>` (GitHub) et `docker
   clé propre à la distribution publique, jamais celle de ses propres installations.
 - Secrets **`DOCKERHUB_UTILISATEUR`** (compte Docker Hub) et **`DOCKERHUB_JETON`** (Docker Hub → Account settings →
   Personal access tokens, droits Read & Write) ; variable facultative `DOCKERHUB_IMAGE` (onglet Variables, défaut
-  `<compte>/logibtp-api`).
-- Docker Hub crée un dépôt **public** au premier envoi si le compte n'a pas la visibilité privée par défaut : créer
-  le dépôt `logibtp-api` en **privé** sur Docker Hub avant le premier tag (un dépôt privé gratuit par compte).
+  `<compte>/logibtp` : le dépôt Docker Hub `nerenos/logibtp` existant, public).
+- Dépôt Docker Hub public : la clé de construction de l'image y est lisible par tous ; `LOGIBTP_CLE_CONSTRUCTION` doit
+  donc être une clé propre à la distribution publique, jamais celle de ses propres installations (ou rendre le dépôt
+  privé : un dépôt privé gratuit par compte). L'ancienne étiquette `1.1` (05/11/2026, avant la numérotation produit)
+  est antérieure à la 1.0.0 : à supprimer sur Docker Hub pour éviter la confusion.
 - Après la première publication sur GHCR : page du paquet `logibtp-api` (onglet Packages du compte) → Package settings →
   visibilité (privée par défaut) et accès (comptes autorisés à tirer l'image).
 

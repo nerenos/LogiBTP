@@ -2,7 +2,7 @@
 # tag de version « v<majeur>.<mineur>.<correctif> » (ex. v1.0.0). Procédure : documentation/PUBLICATION.md.
 # Secrets du dépôt requis : LOGIBTP_CLE_CONSTRUCTION (clé de construction de la distribution, chiffrement du .env ;
 # passée en secret BuildKit, jamais dans une couche de l'image), DOCKERHUB_UTILISATEUR et DOCKERHUB_JETON (jeton
-# d'accès Docker Hub en lecture-écriture). Variable facultative DOCKERHUB_IMAGE (défaut <utilisateur>/logibtp-api).
+# d'accès Docker Hub en lecture-écriture). Variable facultative DOCKERHUB_IMAGE (défaut <utilisateur>/logibtp, dépôt Docker Hub existant).
 name: Publier l'image
 
 on:
@@ -47,7 +47,7 @@ jobs:
           [[ "$paquet" == "$version" ]] || { echo "::error::package.json = $paquet, tag = $version"; exit 1; }
           [[ -n "$CLE" ]] || { echo "::error::Secret LOGIBTP_CLE_CONSTRUCTION absent du dépôt"; exit 1; }
           [[ -n "$HUB_UTILISATEUR" && -n "$HUB_JETON" ]] || { echo "::error::Secrets DOCKERHUB_UTILISATEUR et DOCKERHUB_JETON absents du dépôt"; exit 1; }
-          hub="${HUB_IMAGE:-$HUB_UTILISATEUR/logibtp-api}"
+          hub="${HUB_IMAGE:-$HUB_UTILISATEUR/logibtp}"
           echo "hub=docker.io/${hub,,}" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "mineure=${version%.*}" >> "$GITHUB_OUTPUT"

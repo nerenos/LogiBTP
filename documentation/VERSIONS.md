@@ -1,6 +1,6 @@
 # Versions publiées
 
-Procédure : [PUBLICATION.md](PUBLICATION.md). Images : `ghcr.io/nerenos/logibtp-api:<version>` et Docker Hub `<compte>/logibtp-api:<version>`.
+Procédure : [PUBLICATION.md](PUBLICATION.md). Images : `ghcr.io/nerenos/logibtp-api:<version>` et Docker Hub `nerenos/logibtp:<version>`.
 
 ## 1.0.0 (novembre 2026)
 Première version publiée.
