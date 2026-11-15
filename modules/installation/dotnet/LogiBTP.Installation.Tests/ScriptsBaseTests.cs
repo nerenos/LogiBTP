@@ -98,7 +98,7 @@ public class ScriptsBaseTests
             RedirectStandardError = true,
             StandardOutputEncoding = Encoding.UTF8,
         };
-        foreach (var arg in new[] { "-h", csb.Host!, "-p", csb.Port.ToString(), "-U", csb.Username!, "-d", csb.Database!, "--no-owner", "--no-privileges", "-T", "installation_*" })
+        foreach (var arg in new[] { "-h", csb.Host!, "-p", csb.Port.ToString(), "-U", csb.Username!, "-d", csb.Database!, "--no-owner", "--no-privileges", "-T", "installation_*", "-T", "v_version_module" })
             psi.ArgumentList.Add(arg);
         psi.Environment["PGPASSWORD"] = csb.Password ?? "";
         using var p = Process.Start(psi)!;

@@ -245,7 +245,7 @@ public static class CommandeInstallation
         var config = Configuration(dossier);
         var modele = Modele(config);
         var manifeste = ManifesteScripts.Lire(RacineSql());
-        sortie.WriteLine($"Installation {config[VariablesEnv.Domaine]} ({config[VariablesEnv.Deploiement] ?? "LOCAL"}), serveur {modele.Hote}:{modele.Port}");
+        sortie.WriteLine($"Installation {config[VariablesEnv.Domaine]} ({config[VariablesEnv.Deploiement] ?? "LOCAL"}), serveur {modele.Hote}:{modele.Port}, version produit {VersionsModules.VersionProduit(RacineSql()) ?? "?"}");
         foreach (var (code, base_) in Bases(dossier, modele))
         {
             try
@@ -254,6 +254,8 @@ public static class CommandeInstallation
                 var demo = s.Any(a => manifeste.Scripts.Any(x => x.Demo && x.Chemin == a.Chemin));
                 var attendus = manifeste.Retenus(demo).Where(x => !x.Rejouable).Select(x => x.Chemin).Except(s.Select(x => x.Chemin)).Count();
                 sortie.WriteLine($"{code ?? "(principale)"} → {base_} : {s.Count} script(s) appliqué(s), {(demo ? "avec" : "sans")} démonstration" + (attendus > 0 ? $", {attendus} en attente (mise à jour)" : ", à jour"));
+                var versions = await VersionsModules.VersionsModulesAsync(modele.Chaine(base_, RoleSchema, config[VariablesEnv.BaseMotDePasseSchema]));
+                sortie.WriteLine(versions.Count == 0 ? "    versions : non renseignées (première mise à jour à faire)" : "    versions : " + string.Join(", ", versions.Select(v => $"{v.Module} {v.Version}")));
             }
             catch (Npgsql.NpgsqlException e)
             {

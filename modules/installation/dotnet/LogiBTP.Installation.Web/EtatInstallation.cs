@@ -12,7 +12,9 @@ using Npgsql;
 namespace LogiBTP.Installation.Web;
 
 /// <summary>Base d'une société ; Chiffree : connexion de l'API en TLS (lot 11, A35).</summary>
-public sealed record EtatBase(string? Code, string Libelle, string? Base, bool Joignable, int Scripts, int EnAttente, string? Erreur, bool Chiffree = false);
+public sealed record EtatBase(string? Code, string Libelle, string? Base, bool Joignable, int Scripts, int EnAttente, string? Erreur, bool Chiffree = false,
+    IReadOnlyList<EtatVersionModule>? Versions = null, string? VersionProduitBase = null);
+public sealed record EtatVersionModule(string Module, string Version, DateTimeOffset AppliqueLe);
 public sealed record EtatDisque(string Usage, long LibreMo, long TotalMo);
 public sealed record DerniereSauvegarde(DateTimeOffset Le, IReadOnlyList<string> Bases, long TailleMo, bool Chiffree, string? Erreur);
 public sealed record EtatCertificat(string Origine, IReadOnlyList<string> Noms, string Emetteur, DateTimeOffset Fin, int JoursRestants, string? EmpreinteRacine);
@@ -72,7 +74,8 @@ public static class EtatInstallation
             await cnx.OpenAsync(ct);
             await using var cmd = new NpgsqlCommand("SELECT coalesce((SELECT ssl FROM pg_stat_ssl WHERE pid = pg_backend_pid()), false)", cnx);
             var chiffree = await cmd.ExecuteScalarAsync(ct) is true;
-            return new EtatBase(s.Code, s.Libelle, s.Base, true, appliques.Count, enAttente, null, chiffree);
+            var versions = (await VersionsModules.VersionsModulesAsync(cnx, ct)).Select(v => new EtatVersionModule(v.Module, v.Version.ToString(), v.AppliqueLe)).ToList();
+            return new EtatBase(s.Code, s.Libelle, s.Base, true, appliques.Count, enAttente, null, chiffree, versions, await VersionsModules.VersionProduitBaseAsync(cnx, ct));
         }
         catch (Exception e) when (e is NpgsqlException or InvalidOperationException)
         {

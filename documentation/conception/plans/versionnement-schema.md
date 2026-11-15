@@ -38,7 +38,7 @@ vue). Détecter précisément les objets touchés par chaque script demanderait 
 | 0 | FAIT | Ordre de l'installeur, marquages `rejouable`, rejeu vérifié |
 | 1 | FAIT | Instantané du schéma, dérive, forçage tracé, préfixes d'intégrateur |
 | 2 | FAIT | Données de démonstration séparées (indicateur `demo`) |
-| 3 | À FAIRE | Versions par module : socle 1.0, journal enrichi, `v_version_module`, `installation etat` |
+| 3 | FAIT | Versions par module : socle 1.0, journal enrichi, `v_version_module`, `installation etat` |
 | 4 | À FAIRE | Mineures, plan calculé, `scripts.txt` généré, verrou, empreinte bloquante, rejouables sur changement |
 | 5 | À FAIRE | Fin du DDL au démarrage ; conversion des métrés archivée ; migrations C# figées |
 | 6 | À FAIRE | Version attendue par l'API, base en retard refusée proprement, page Installation |
@@ -138,6 +138,10 @@ vue). Détecter précisément les objets touchés par chaque script demanderait 
      `db/installation/version.txt`).
 - **Critère de fin** : bases existantes reconnues en 1.0 sans réapplication (test d'intégration) ; `installation etat`
   liste les versions.
+- **Réalisé** : `VersionModule`, `VersionsModules` (module / version / type déduits du chemin, colonnes du journal et vue
+  `v_version_module` créées par le code, `VersionsModulesAsync`), `db/installation/version.txt` (2026.11) inscrit dans
+  `isc_version_produit`, durée d'exécution au journal ; `installation etat` et DTO `GET /api/installation/etat` (versions
+  par base). Vue `v_version_module` exclue de l'instantané. Rejouables toujours non inscrits (lot 4).
 
 ### Lot 4 – Mineures, plan calculé, `scripts.txt` généré
 

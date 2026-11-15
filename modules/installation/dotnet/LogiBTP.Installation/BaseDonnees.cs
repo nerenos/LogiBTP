@@ -123,6 +123,8 @@ public sealed class BaseDonnees(TextWriter journal)
             COMMENT ON TABLE {TableJournal} IS 'Scripts SQL du manifeste appliqués à la base (module Installation)';
             """, ct);
         await JournalSchema.AssurerTablesAsync(cnx, ct);
+        await VersionsModules.AssurerAsync(cnx, ct);
+        var produit = VersionsModules.VersionProduit(racine);
         var deja = (await ScriptsAppliquesAsync(connexion, ct)).ToDictionary(s => s.Chemin, s => s.Empreinte, StringComparer.Ordinal);
         var installee = deja.Count > 0;
         int appliques = 0, rejoues = 0;
@@ -130,7 +132,7 @@ public sealed class BaseDonnees(TextWriter journal)
         var liste = scripts.ToList();
         var acceptes = new List<string>();
         if (!adopter && acceptees is { Lignes.Count: > 0 })
-            await AccepterAnciennesEmpreintesAsync(cnx, racine, liste, deja, acceptees, acceptes, ct);
+            await AccepterAnciennesEmpreintesAsync(cnx, racine, liste, deja, acceptees, acceptes, produit, ct);
         var vus = new HashSet<string>(StringComparer.Ordinal);
         foreach (var s in liste)
         {
@@ -151,7 +153,7 @@ public sealed class BaseDonnees(TextWriter journal)
                 continue;
             }
             // Ancien rejouable : déjà exécuté sur une base installée (jamais inscrit), seulement inscrit.
-            await ExecuterScriptAsync(cnx, s.Chemin, adopter || (s.ExRejouable && installee) ? null : contenu, empreinte, ct);
+            await ExecuterScriptAsync(cnx, s.Chemin, adopter || (s.ExRejouable && installee) ? null : contenu, empreinte, ct, produit);
             appliques++;
         }
         journal.WriteLine($"{cnx.Database} : {appliques} script(s) {(adopter ? "inscrit(s) sans exécution" : "appliqué(s)")}, {rejoues} rejoué(s)"
@@ -168,7 +170,7 @@ public sealed class BaseDonnees(TextWriter journal)
     /// l'autre : une reprise après interruption n'appliquerait pas deux fois les données extraites).
     /// </summary>
     private async Task AccepterAnciennesEmpreintesAsync(NpgsqlConnection cnx, string racine, List<ScriptManifeste> liste, Dictionary<string, string> deja,
-        EmpreintesAcceptees acceptees, List<string> acceptes, CancellationToken ct)
+        EmpreintesAcceptees acceptees, List<string> acceptes, string? produit, CancellationToken ct)
     {
         foreach (var s in liste.Where(x => !x.Rejouable).DistinctBy(x => x.Chemin))
         {
@@ -176,12 +178,12 @@ public sealed class BaseDonnees(TextWriter journal)
             var empreinte = Empreinte(await File.ReadAllTextAsync(Path.Combine(racine, s.Chemin), ct));
             if (ancienne == empreinte || !acceptees.Accepte(s.Chemin, ancienne)) continue;
             await using var tx = await cnx.BeginTransactionAsync(ct);
-            await InscrireAsync(cnx, tx, s.Chemin, empreinte, ct);
+            await InscrireAsync(cnx, tx, s.Chemin, empreinte, null, produit, ct);
             var extraits = new List<(string, string)>();
             foreach (var x in liste.Where(x => x.ExtraitDe == s.Chemin && !x.Rejouable && !deja.ContainsKey(x.Chemin)).DistinctBy(x => x.Chemin))
             {
                 var e = Empreinte(await File.ReadAllTextAsync(Path.Combine(racine, x.Chemin), ct));
-                await InscrireAsync(cnx, tx, x.Chemin, e, ct);
+                await InscrireAsync(cnx, tx, x.Chemin, e, null, produit, ct);
                 extraits.Add((x.Chemin, e));
             }
             await tx.CommitAsync(ct);
@@ -191,19 +193,30 @@ public sealed class BaseDonnees(TextWriter journal)
         }
     }
 
-    private static async Task InscrireAsync(NpgsqlConnection cnx, NpgsqlTransaction tx, string chemin, string empreinte, CancellationToken ct)
+    private const string SqlInscription = $"""
+        INSERT INTO {TableJournal} (isc_chemin, isc_empreinte, isc_module, isc_version, isc_type, isc_origine, isc_duree_ms, isc_version_produit)
+        VALUES (@c, @e, @m, @v, @t, '{VersionsModules.OrigineLogiBtp}', @d, @p)
+        ON CONFLICT (isc_chemin) DO UPDATE SET isc_empreinte = EXCLUDED.isc_empreinte, isc_applique_le = now(),
+            isc_module = EXCLUDED.isc_module, isc_version = EXCLUDED.isc_version, isc_type = EXCLUDED.isc_type,
+            isc_duree_ms = EXCLUDED.isc_duree_ms, isc_version_produit = EXCLUDED.isc_version_produit
+        """;
+
+    private static async Task InscrireAsync(NpgsqlConnection cnx, NpgsqlTransaction tx, string chemin, string empreinte, int? dureeMs, string? produit, CancellationToken ct)
     {
-        await using var ins = new NpgsqlCommand($"""
-            INSERT INTO {TableJournal} (isc_chemin, isc_empreinte) VALUES (@c, @e)
-            ON CONFLICT (isc_chemin) DO UPDATE SET isc_empreinte = EXCLUDED.isc_empreinte, isc_applique_le = now()
-            """, cnx, tx);
+        await using var ins = new NpgsqlCommand(SqlInscription, cnx, tx);
         ins.Parameters.AddWithValue("c", chemin);
         ins.Parameters.AddWithValue("e", empreinte);
+        ins.Parameters.AddWithValue("m", VersionsModules.ModuleDe(chemin));
+        ins.Parameters.AddWithValue("v", VersionsModules.VersionDe(chemin).ToString());
+        ins.Parameters.AddWithValue("t", VersionsModules.TypeDe(chemin));
+        ins.Parameters.AddWithValue("d", (object?)dureeMs ?? DBNull.Value);
+        ins.Parameters.AddWithValue("p", (object?)produit ?? DBNull.Value);
         await ins.ExecuteNonQueryAsync(ct);
     }
 
-    private async Task ExecuterScriptAsync(NpgsqlConnection cnx, string chemin, string? contenu, string? empreinte, CancellationToken ct)
+    private async Task ExecuterScriptAsync(NpgsqlConnection cnx, string chemin, string? contenu, string? empreinte, CancellationToken ct, string? produit = null)
     {
+        var chrono = System.Diagnostics.Stopwatch.StartNew();
         await using var tx = await cnx.BeginTransactionAsync(ct);
         try
         {
@@ -212,16 +225,7 @@ public sealed class BaseDonnees(TextWriter journal)
                 await using var cmd = new NpgsqlCommand(contenu, cnx, tx) { CommandTimeout = 0 };
                 await cmd.ExecuteNonQueryAsync(ct);
             }
-            if (empreinte is not null)
-            {
-                await using var ins = new NpgsqlCommand($"""
-                    INSERT INTO {TableJournal} (isc_chemin, isc_empreinte) VALUES (@c, @e)
-                    ON CONFLICT (isc_chemin) DO UPDATE SET isc_empreinte = EXCLUDED.isc_empreinte, isc_applique_le = now()
-                    """, cnx, tx);
-                ins.Parameters.AddWithValue("c", chemin);
-                ins.Parameters.AddWithValue("e", empreinte);
-                await ins.ExecuteNonQueryAsync(ct);
-            }
+            if (empreinte is not null) await InscrireAsync(cnx, tx, chemin, empreinte, contenu is null ? 0 : (int)chrono.ElapsedMilliseconds, produit, ct);
             await tx.CommitAsync(ct);
         }
         catch (PostgresException e)

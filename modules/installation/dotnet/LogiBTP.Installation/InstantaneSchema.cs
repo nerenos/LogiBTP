@@ -68,7 +68,7 @@ public sealed class InstantaneSchema
             r => { if (tables.Contains(r.GetString(0))) o[$"index:{r.GetString(0)}.{r.GetString(1)}"] = r.GetString(2); }, ct);
         await Lire(cnx, """
             SELECT c.relname, pg_get_viewdef(c.oid, true) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-            WHERE n.nspname = 'public' AND c.relkind IN ('v', 'm') AND c.relname NOT LIKE 'installation\_%'
+            WHERE n.nspname = 'public' AND c.relkind IN ('v', 'm') AND c.relname NOT LIKE 'installation\_%' AND c.relname <> 'v_version_module'
               AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.objid = c.oid AND d.deptype = 'e')
             """, r => o["vue:" + r.GetString(0)] = r.GetString(1), ct);
         await Lire(cnx, """
