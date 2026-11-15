@@ -68,7 +68,8 @@ public class VersionsModulesTests
     public void Version_produit_du_depot_lue()
     {
         var v = VersionsModules.VersionProduit(CasPartages.RacineDepot());
-        Assert.Matches(@"^\d{4}\.\d+$", v);
+        // Version produit sémantique (majeur.mineur.correctif) depuis la 1.0.0 ; la même que package.json.
+        Assert.Matches(@"^\d+\.\d+\.\d+$", v);
     }
 
     private static async Task ExecuterAsync(string connexion, string sql)
