@@ -54,14 +54,13 @@ public class ScriptsBaseTests
         var manifeste = ManifesteScripts.Lire(racine);
         await using var a = await BaseEssai.CreerAsync(Admin);
         var moteur = new BaseDonnees(TextWriter.Null);
-        var rejouables = manifeste.Scripts.Count(s => s.Rejouable);
 
         await moteur.AppliquerAsync(a.Connexion, racine, manifeste.Scripts);
         var apres1 = Instantane(a);
 
         var bilan2 = await moteur.AppliquerAsync(a.Connexion, racine, manifeste.Scripts);
         Assert.Equal(0, bilan2.Appliques);
-        Assert.Equal(rejouables, bilan2.Rejoues);
+        Assert.Equal(0, bilan2.Rejoues); // rejouables inscrits avec leur empreinte : rien n'a changé, rien n'est rejoué
         Assert.Empty(bilan2.Modifies);
         var apres2 = Instantane(a);
         Assert.Equal(apres1, apres2);
@@ -81,7 +80,7 @@ public class ScriptsBaseTests
         await using var a = await BaseEssai.CreerAsync(Admin);
         var bilan = await new BaseDonnees(TextWriter.Null).AppliquerAsync(a.Connexion, racine, manifeste.Scripts, adopter: true);
         Assert.Equal(manifeste.Scripts.Where(s => !s.Rejouable).Select(s => s.Chemin).Distinct().Count(), bilan.Appliques);
-        Assert.Equal(manifeste.Scripts.Where(s => !s.Rejouable).Select(s => s.Chemin).Distinct().Count(), (await BaseDonnees.ScriptsAppliquesAsync(a.Connexion)).Count);
+        Assert.Equal(manifeste.Scripts.Select(s => s.Chemin).Distinct().Count(), (await BaseDonnees.ScriptsAppliquesAsync(a.Connexion)).Count); // rejouables inscrits aussi
         await using var cnx = new NpgsqlConnection(a.Connexion);
         await cnx.OpenAsync();
         await using var cmd = new NpgsqlCommand("SELECT count(*) FROM pg_tables WHERE schemaname = 'public' AND tablename NOT LIKE 'installation\\_%'", cnx);
@@ -89,7 +88,7 @@ public class ScriptsBaseTests
     }
 
     /// <summary>pg_dump (schéma et données) normalisé : sans journal, valeurs de séquences, commentaires de version.</summary>
-    private static string Instantane(BaseEssai b)
+    internal static string Instantane(BaseEssai b)
     {
         var csb = new NpgsqlConnectionStringBuilder(b.Connexion);
         var psi = new ProcessStartInfo(TrouverPgDump())

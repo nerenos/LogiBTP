@@ -25,6 +25,9 @@ public static partial class VersionsModules
     [GeneratedRegex(@"^(\d+\.\d+)_[^/]+\.sql$")]
     private static partial Regex FormeMineure();
 
+    /// <summary>Vrai si le nom du fichier est celui d'une mineure (« majeur.mineur_nom.sql »).</summary>
+    public static bool EstMineure(string chemin) => FormeMineure().IsMatch(Path.GetFileName(chemin));
+
     /// <summary>Module d'un script : modules/&lt;m&gt;/db/… → m ; db/… → coeur.</summary>
     public static string ModuleDe(string chemin)
     {

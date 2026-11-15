@@ -23,7 +23,7 @@ namespace LogiBTP.Api.Btp;
 ///   certificat base-renouveler : certificat de la base N jours (60) avant l'échéance, code de sortie 10 si changé ;
 ///   certificat base --nom N --adresses-api A : base sur une autre machine (TLS) ; base droits : roles.sql sur toutes les bases ;
 ///   sauvegarde chiffrer|dechiffrer DOSSIER : fichiers d'un jeu de sauvegarde chiffrés par la clé des données ;
-///   base mettre-a-jour [--forcer --motif M] : contrôle de dérive (instantané stocké ↔ catalogue ; écarts en conflit :
+///   base mettre-a-jour [--forcer --motif M] : empreinte d'un script inscrit modifiée = refus (forçable) ; contrôle de dérive (instantané stocké ↔ catalogue ; écarts en conflit :
 ///   arrêt avec rapport, ou forçage tracé dans installation_forcage), puis scripts du manifeste non appliqués, droits,
 ///   conversions, sur toutes les bases (scripts « demo » seulement pour les bases qui en ont déjà reçu un) ;
 ///   base adopter (--base N | --toutes) [--confirmer-sans-controle] [--demo] : base existante
@@ -42,6 +42,7 @@ public static class CommandeInstallation
                 installation base creer [--demo]
                 installation societe ajouter CODE [--libelle L] [--demo]
                 installation societes | scripts verifier | conversions | etat
+                installation manifeste generer (écrit db/installation/scripts.txt : socle 1.0 + mineures ; npm run manifeste)
                 installation certificat base-renouveler (code 10 : certificat de la base créé ou renouvelé, à redémarrer)
                 installation certificat creer [--organisation O] [--jours N] [--nouvelle-racine] | renouveler [--avant N]
                 installation certificat importer --certificat F [--cle K] [--origine IMPORTE|LETSENCRYPT] | etat
@@ -66,6 +67,7 @@ public static class CommandeInstallation
                     await CreerBaseAsync(SocietesInstallation.VerifierCode(args[2]), Option(args, "--libelle"), args.Contains("--demo"), dossier, sortie),
                 ("societes", _) => ListerSocietes(dossier, sortie),
                 ("scripts", "verifier") => VerifierScripts(sortie),
+                ("manifeste", "generer") => GenererManifeste(sortie),
                 ("conversions", _) => await ConvertirAsync(dossier, sortie),
                 ("etat", _) => await EtatAsync(dossier, sortie),
                 ("certificat", "creer") => CreerCertificat(args, dossier, sortie),
@@ -211,6 +213,15 @@ public static class CommandeInstallation
         sortie.WriteLine($"(principale) {config["Societes:LibellePrincipale"] ?? "Société principale"} : {config[VariablesEnv.Domaine]} → {modele?.NomBase(null)}");
         foreach (var (code, libelle) in SocietesInstallation.Societes(SocietesInstallation.Lire(Path.Combine(dossier, FichierSocietes))))
             sortie.WriteLine($"{code} {libelle} : {code}.{config[VariablesEnv.Domaine]} → {modele?.NomBase(code)}");
+        return 0;
+    }
+
+    /// <summary>Écrit db/installation/scripts.txt depuis le plan calculé (socle 1.0 figé, mineures des modules, rejouables de fin).</summary>
+    private static int GenererManifeste(TextWriter sortie)
+    {
+        var racine = RacineSql();
+        var plan = PlanScripts.Calculer(racine);
+        sortie.WriteLine($"{ManifesteScripts.Generer(racine)} : {plan.Scripts.Count} entrée(s), dont {plan.Mineures.Count} mineure(s)");
         return 0;
     }
 
@@ -532,15 +543,29 @@ public static class CommandeInstallation
                 sortie.WriteLine($"{rapport.Base} : forçage inscrit au journal ({rapport.Conflits.Count} écart(s), motif : {motif})");
             }
         }
+        // Empreinte d'un script inscrit modifiée : refus de toutes les bases avant la première application (sauf --forcer --motif).
+        var refus = new List<string>();
         foreach (var (schema, _) in controles)
         {
             var demo = await BaseDonnees.ADeLaDemoAsync(schema, manifeste.Scripts);
-            var bilan = await bd.AppliquerAsync(schema, racine, manifeste.Retenus(demo), acceptees: acceptees);
+            var changes = await BaseDonnees.EmpreintesModifieesAsync(schema, racine, manifeste.Retenus(demo), acceptees);
+            if (changes.Count > 0) refus.Add($"{new Npgsql.NpgsqlConnectionStringBuilder(schema).Database} : {string.Join(", ", changes)}");
+        }
+        if (refus.Count > 0 && !forcer)
+        {
+            sortie.WriteLine("Mise à jour refusée : script(s) modifié(s) après leur application (une version publiée est immuable : corriger par une nouvelle mineure ; sinon --forcer --motif \"…\", décision tracée au journal). Rien n'a été modifié :");
+            foreach (var r in refus) sortie.WriteLine("  " + r);
+            return 2;
+        }
+        foreach (var (schema, _) in controles)
+        {
+            var demo = await BaseDonnees.ADeLaDemoAsync(schema, manifeste.Scripts);
+            var bilan = await bd.AppliquerAsync(schema, racine, manifeste.Retenus(demo), acceptees: acceptees, forcer: forcer, motif: motif);
             modifies += bilan.Modifies.Count;
         }
         await DroitsBasesAsync(dossier, sortie);
         await ConvertirAsync(dossier, sortie);
-        if (modifies > 0) sortie.WriteLine($"Attention : {modifies} script(s) modifié(s) après leur application, non rejoués (une correction doit être un nouveau script)");
+        if (modifies > 0) sortie.WriteLine($"Attention : {modifies} script(s) modifié(s) après leur application, forcé(s) (non rejoués ; une correction doit être une nouvelle mineure)");
         sortie.WriteLine("Bases à jour");
         return 0;
     }

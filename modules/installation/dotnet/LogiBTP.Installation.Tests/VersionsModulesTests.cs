@@ -89,12 +89,21 @@ public class VersionsModulesTests
         await using var a = await ScriptsBaseTests.BaseEssai.CreerAsync(Admin);
         var bd = new BaseDonnees(TextWriter.Null);
         await bd.AppliquerAsync(a.Connexion, racine, scripts, acceptees: EmpreintesAcceptees.Lire(racine));
-        // Simule l'ancien journal à trois colonnes.
+        // Simule l'ancien journal à trois colonnes, où aucun rejouable n'était inscrit (hors première occurrence des doubles).
+        var rejouables = scripts.Where(x => x.Rejouable).Select(x => x.Chemin).ToHashSet();
+        var seuls = scripts.Where(x => x.Rejouable).Select(x => x.Chemin).Except(scripts.Where(x => !x.Rejouable).Select(x => x.Chemin)).ToArray();
+        await using (var cnx0 = new NpgsqlConnection(a.Connexion))
+        {
+            await cnx0.OpenAsync();
+            await using var del = new NpgsqlCommand("DELETE FROM installation_script WHERE isc_chemin = ANY(@c)", cnx0);
+            del.Parameters.AddWithValue("c", seuls);
+            await del.ExecuteNonQueryAsync();
+        }
         await ExecuterAsync(a.Connexion, """
             DROP VIEW v_version_module;
             ALTER TABLE installation_script DROP COLUMN isc_module, DROP COLUMN isc_version, DROP COLUMN isc_type, DROP COLUMN isc_origine, DROP COLUMN isc_duree_ms, DROP COLUMN isc_version_produit;
             """);
-        var avant = (await BaseDonnees.ScriptsAppliquesAsync(a.Connexion)).ToDictionary(s => s.Chemin, s => (s.Empreinte, s.AppliqueLe));
+        var avant = (await BaseDonnees.ScriptsAppliquesAsync(a.Connexion)).Where(s => !rejouables.Contains(s.Chemin)).ToDictionary(s => s.Chemin, s => (s.Empreinte, s.AppliqueLe));
         await using (var cnx = new NpgsqlConnection(a.Connexion))
         {
             await cnx.OpenAsync();
@@ -105,17 +114,18 @@ public class VersionsModulesTests
         var bilan = await bd.AppliquerAsync(a.Connexion, racine, scripts, acceptees: EmpreintesAcceptees.Lire(racine));
         Assert.Equal(0, bilan.Appliques);
         Assert.Empty(bilan.Modifies);
-        var apres = (await BaseDonnees.ScriptsAppliquesAsync(a.Connexion)).ToDictionary(s => s.Chemin, s => (s.Empreinte, s.AppliqueLe));
-        Assert.Equal(avant, apres); // aucune ligne réécrite : empreintes et dates inchangées
+        Assert.Equal(scripts.Count(x => x.Rejouable), bilan.Rejoues); // tous les rejouables sont rejoués une fois (non inscrits)
+        var apres = (await BaseDonnees.ScriptsAppliquesAsync(a.Connexion)).Where(s => !rejouables.Contains(s.Chemin)).ToDictionary(s => s.Chemin, s => (s.Empreinte, s.AppliqueLe));
+        Assert.Equal(avant, apres); // aucune ligne de script non rejouable réécrite : empreintes et dates inchangées
         Assert.Equal(instantaneAvant, await Instantane(a.Connexion));
 
         await using var c2 = new NpgsqlConnection(a.Connexion);
         await c2.OpenAsync();
         var versions = await VersionsModules.VersionsModulesAsync(c2);
-        var attendus = scripts.Where(s => !s.Rejouable).Select(s => VersionsModules.ModuleDe(s.Chemin)).Distinct().Order(StringComparer.Ordinal).ToList();
+        var attendus = scripts.Select(s => VersionsModules.ModuleDe(s.Chemin)).Distinct().Order(StringComparer.Ordinal).ToList();
         Assert.Equal(attendus, versions.Select(v => v.Module));
         Assert.All(versions, v => Assert.Equal(VersionModule.Socle, v.Version));
-        await using var cmd = new NpgsqlCommand("SELECT count(*) FROM installation_script WHERE isc_module IS NULL OR isc_version <> '1.0' OR isc_type <> 'socle' OR isc_origine <> 'logibtp'", c2);
+        await using var cmd = new NpgsqlCommand("SELECT count(*) FROM installation_script WHERE isc_module IS NULL OR isc_version <> '1.0' OR isc_type NOT IN ('socle', 'rejouable') OR isc_origine <> 'logibtp'", c2);
         Assert.Equal(0L, Convert.ToInt64(await cmd.ExecuteScalarAsync()));
     }
 

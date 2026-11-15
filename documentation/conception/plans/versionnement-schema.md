@@ -39,7 +39,7 @@ vue). Détecter précisément les objets touchés par chaque script demanderait 
 | 1 | FAIT | Instantané du schéma, dérive, forçage tracé, préfixes d'intégrateur |
 | 2 | FAIT | Données de démonstration séparées (indicateur `demo`) |
 | 3 | FAIT | Versions par module : socle 1.0, journal enrichi, `v_version_module`, `installation etat` |
-| 4 | À FAIRE | Mineures, plan calculé, `scripts.txt` généré, verrou, empreinte bloquante, rejouables sur changement |
+| 4 | FAIT | Mineures, plan calculé, `scripts.txt` généré, verrou, empreinte bloquante, rejouables sur changement |
 | 5 | À FAIRE | Fin du DDL au démarrage ; conversion des métrés archivée ; migrations C# figées |
 | 6 | À FAIRE | Version attendue par l'API, base en retard refusée proprement, page Installation |
 | 7 | À FAIRE | Champs supplémentaires des fiches (`x_`) : base et serveur |
@@ -160,6 +160,11 @@ vue). Détecter précisément les objets touchés par chaque script demanderait 
   5. Règles d'écriture ajoutées au `CLAUDE.md` du module Installation et à `db/CLAUDE.md`.
 - **Critère de fin** : test d'intégration avec deux mineures fictives de deux modules (dont un `requiert`) : ordre
   respecté, base montée = base neuve ; rejouable non rejoué sans changement.
+- **Réalisé** : `PlanScripts` (plan, en-têtes `requiert` / `hors-transaction`, validation), `socle-1.0.txt`, `scripts.txt` généré
+  (`ManifesteScripts.Generer`, `installation manifeste generer`, `npm run manifeste`), verrou consultatif, empreinte modifiée
+  bloquante (forçable avec motif), rejouables inscrits et rejoués sur changement ou mineure du module / d'un module requis (le
+  cœur dépend de tous). Rejouables de fin du socle (019n, 176) placés après les mineures. Aucune mineure réelle dans le dépôt.
+  Les règles d'écriture sont dans `documentation/MIGRATIONS.md` et `INSTALLATION.md` (les CLAUDE.md ne sont pas modifiés).
 
 ### Lot 5 – Fin du DDL au démarrage ; conversion des métrés archivée ; migrations C# figées
 

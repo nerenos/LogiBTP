@@ -189,9 +189,9 @@ public class DemonstrationTests
             Assert.Equal(extraits.Count, await del.ExecuteNonQueryAsync());
         }
 
-        // Sans les empreintes acceptées : les six scripts sont signalés modifiés (comportement d'origine).
-        var sans = await moteur.AppliquerAsync(a.Connexion, racine, m.Retenus(true).Where(s => !extraits.Contains(s.Chemin)));
-        Assert.Equal(acceptees.Lignes.Count, sans.Modifies.Count);
+        // Sans les empreintes acceptées : les six scripts sont des erreurs (empreinte modifiée), avant toute application.
+        var sans = await Assert.ThrowsAsync<EmpreinteModifieeException>(() => moteur.AppliquerAsync(a.Connexion, racine, m.Retenus(true).Where(s => !extraits.Contains(s.Chemin))));
+        Assert.Equal(acceptees.Lignes.Count, sans.Scripts.Count);
 
         var bilan = await moteur.AppliquerAsync(a.Connexion, racine, m.Retenus(true), acceptees: acceptees);
         Assert.Equal(acceptees.Lignes.Select(l => l.Chemin).Order(), bilan.AcceptesOuVide.Order());

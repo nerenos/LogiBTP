@@ -54,6 +54,24 @@ public sealed class ManifesteScripts
         return new ManifesteScripts(scripts);
     }
 
+    /// <summary>
+    /// Génère db/installation/scripts.txt depuis le plan calculé (<see cref="PlanScripts"/>) : socle 1.0 figé, mineures,
+    /// rejouables de fin. Renvoie le chemin écrit.
+    /// </summary>
+    public static string Generer(string racine)
+    {
+        var f = Path.Combine(racine, CheminRelatif);
+        File.WriteAllText(f, PlanScripts.Calculer(racine).Contenu(), new System.Text.UTF8Encoding(false));
+        return f;
+    }
+
+    /// <summary>Vrai si le fichier scripts.txt du dépôt est identique à celui que le plan génère.</summary>
+    public static bool EstAJour(string racine)
+    {
+        var f = Path.Combine(racine, CheminRelatif);
+        return File.Exists(f) && File.ReadAllText(f).Replace("\r\n", "\n") == PlanScripts.Calculer(racine).Contenu();
+    }
+
     public const string PrefixeExtraitDe = "extrait-de=";
 
     /// <summary>Scripts à appliquer à une base : tous, ou seulement ceux qui ne sont pas de démonstration.</summary>
