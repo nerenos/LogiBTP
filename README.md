@@ -12,6 +12,9 @@ commencer à l'utiliser. Les fonctions de gestion sont en place et testées. Le 
 - Captures : [thème clair](https://github.com/nerenos/LogiBTP/issues/9#issue-6232817397) /
   [thème sombre](https://github.com/nerenos/LogiBTP/issues/10#issue-6232840500)
 
+> La rédaction n’étant pas mon point fort, je m’appuie sur l’intelligence artificielle pour écrire les textes et la 
+> documentation du projet, afin qu’ils restent clairs et accessibles à tous.
+
 ## Présentation
 
 LogiBTP est un logiciel de gestion d'entreprise (ERP) web et modulaire pour les entreprises du Bâtiment et des Travaux
