@@ -3,6 +3,7 @@ using LogiBTP.Socle;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Api.Btp;
 
@@ -56,6 +57,8 @@ public static class CompteursBorneBtp
 
     private static async Task<bool> PeutTraiterAsync(LogiBtpContext db, Utilisateur u, int? salarie, CancellationToken ct)
     {
+        // Agent : seulement si son plafond couvre la validation des relevés des bornes.
+        if (!await AgentsBtp.CouvertAsync(u, "pointage/bornes", ActionsDroits.Valider, AgentsBtp.ServicesRequete, ct)) return false;
         if (u.EstAdmin) return true;
         if (salarie is null) return false;
         return await db.Database.SqlQueryRaw<bool>($"""
@@ -126,7 +129,7 @@ public static class CompteursBorneBtp
                 if (RefusHeure(affectes, chantiers, l) is { } refus) throw ExceptionMetier.Invalide(refus.Code, refus.Message);
             if (test) return Results.Ok(new { essai = true });
             var auteur = await ComptesBtp.AuteurBorneAsync(db, s, appareil, ct);
-            await using var tr = await db.Database.BeginTransactionAsync(ct);
+            await using var tr = await db.Unite().CommencerAsync(ct);
             await db.Database.ExecuteSqlRawAsync("DELETE FROM pointage_materiel WHERE pma_source = 'BORNE' AND pma_sal_id = @s AND pma_date = @d",
                 [new NpgsqlParameter("s", s), new NpgsqlParameter("d", x.Date)], ct);
             foreach (var l in lignes)

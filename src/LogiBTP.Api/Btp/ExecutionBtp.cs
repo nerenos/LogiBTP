@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using static LogiBTP.Api.Btp.SqlBtp;
 using NpgsqlTypes;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Api.Btp;
 
@@ -102,7 +103,7 @@ public static class ExecutionBtp
         if (s.DebutPrevu is { } d && s.FinPrevue is { } f && f < d) throw ExceptionMetier.Invalide("EXE_DATES", "Fin prévue avant le début");
         var motif = etat == EtatOrdre.Bloque ? s.MotifId : null;
         var bloque = etat == EtatOrdre.Bloque && (o.EntExeEtat != EtatOrdre.Bloque || o.EntExeMotifId != motif);
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         await db.Database.ExecuteSqlRawAsync("""
             UPDATE document SET ent_exe_etat = @e, ent_exe_motif_id = @m, ent_exe_commentaire = @c, ent_srv_id = @s, ent_responsable_id = @r,
               ent_debut_prevu = @d, ent_fin_prevue = @f, ent_ressource = @res::jsonb WHERE ent_id = @id

@@ -16,6 +16,7 @@
   <ItemGroup>
     <ProjectReference Include="..\LogiBTP.SousTraitance\LogiBTP.SousTraitance.csproj" />
     <ProjectReference Include="..\..\..\..\socle\dotnet\LogiBTP.Socle.Web\LogiBTP.Socle.Web.csproj" />
+    <ProjectReference Include="..\..\..\..\socle\dotnet\LogiBTP.Socle.Donnees\LogiBTP.Socle.Donnees.csproj" />
   </ItemGroup>
 
 </Project>

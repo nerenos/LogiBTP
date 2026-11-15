@@ -85,6 +85,7 @@ public static class CommandeComptes
                     c.CptHash = HachageMotDePasse.Hacher(mdp);
                     c.CptMdpProvisoire = true;
                     await db.Sessions.Where(x => x.SesCptId == c.CptId && x.SesFermeeLe == null).ExecuteUpdateAsync(x => x.SetProperty(y => y.SesFermeeLe, DateTimeOffset.UtcNow));
+                    await ServiceAuthentification.RevoquerJetonsAsync(db, c.CptId, default);
                 }
                 await service.JournaliserAsync(c.CptCode, action == "reinitialiser" ? "MDP_REINITIALISE" : "DEVERROUILLAGE", "commande serveur", console, "console", default);
                 await sortie.WriteLineAsync(mdp is null ? $"Compte {c.CptCode} déverrouillé." : $"Compte {c.CptCode} réinitialisé. Mot de passe provisoire, à changer à la première connexion : {mdp}");

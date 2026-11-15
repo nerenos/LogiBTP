@@ -5,6 +5,7 @@ using LogiBTP.Socle.Web;
 using LogiBTP.Socle;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Pointage.Web;
 
@@ -123,7 +124,7 @@ public sealed class ServicePaie(PointageDbContext db, SpecialisationPointage spe
                     r.Parametres is JsonElement j && j.ValueKind == JsonValueKind.Object ? j.Deserialize<ParametresRegle>(Json) : null)).ToList());
             if (e.Count > 0) throw ExceptionMetier.Invalide(e[0], $"Profil {p.Code} : {ReglesPaie.Messages[e[0]]}", e);
         }
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var existants = await db.Profils.ToListAsync(ct);
         foreach (var p in l)
         {

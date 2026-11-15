@@ -20,6 +20,7 @@ using LogiBTP.Comptabilite.Web;
 using LogiBTP.Pointage.Web;
 using LogiBTP.Planning.Web;
 using LogiBTP.Domaine;
+using LogiBTP.Socle.Donnees;
 using LogiBTP.Droits.Web;
 using LogiBTP.Fiches.Web;
 using LogiBTP.Installation.Web;
@@ -28,6 +29,7 @@ using LogiBTP.Listes.Web;
 using LogiBTP.Notifications.Web;
 using LogiBTP.OAuth.Web;
 using LogiBTP.Mail.Web;
+using LogiBTP.Mcp.Web;
 using LogiBTP.Reglements.Web;
 using LogiBTP.Relances.Web;
 using LogiBTP.Socle.Web;
@@ -43,7 +45,7 @@ if (args.Length > 0 && args[0] == "env")
     Environment.ExitCode = CommandeEnv.Executer(args[1..], dossierConfig ?? Directory.GetCurrentDirectory(), Console.Out);
     return;
 }
-// Commandes de l'installeur (installation preparer | base creer | societe ajouter | scripts verifier | conversions…) :
+// Commandes de l'installeur (installation preparer | base creer | societe ajouter | scripts verifier…) :
 // ANALYSE-MODULE-INSTALLATION.md § 6.
 if (args.Length > 0 && args[0] == "installation")
 {
@@ -78,8 +80,13 @@ builder.Services.AddHostedService<PassageEnvoiFe>();
 
 // Une base par société, choisie par le sous-domaine (section Societes ; sans sous-domaine : ConnectionStrings:LogiBTP).
 builder.Services.AddSocietes(builder.Configuration);
+// Version du schéma par société : une base en retard est refusée en 503 BASE_A_METTRE_A_JOUR (sauf en développement), caches
+// du schéma vidés après une mise à jour (Btp/VersionsAttenduesBtp.cs, plan versionnement-schema lot 6).
+builder.Services.AddVersionsAttendues();
 // Les requêtes SQL brutes à une ligne (SqlQuery(...).FirstAsync()) sont voulues : l'avertissement EF « First sans OrderBy » n'y apporte rien.
-void Base(IServiceProvider sp, DbContextOptionsBuilder o) => o.UseNpgsql(sp.GetRequiredService<SocieteCourante>().Connexion).UseSnakeCaseNamingConvention()
+// Connexion unique et unité d'écriture par requête (socle Donnees) : tous les contextes écrivent dans la même transaction.
+builder.Services.AddUniteEcriture();
+void Base(IServiceProvider sp, DbContextOptionsBuilder o) => o.ConfigurerBase(sp).UseSnakeCaseNamingConvention()
     .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.CoreEventId.RowLimitingOperationWithoutOrderByWarning));
 builder.Services.AddDbContext<LogiBtpContext>(Base);
 
@@ -132,6 +139,9 @@ builder.Services.AddModuleAuthentification<SpecialisationAuthentificationBtp>(Ba
 // Module Droits : profils et arbre des droits (modules/droits/db/009, db/221) ; chaque route /api est rattachée à un nœud
 // (SpecialisationDroitsBtp.Routes), une route non déclarée est refusée.
 builder.Services.AddModuleDroits<SpecialisationDroitsBtp>(Base);
+// Module MCP (agents IA au nom d'un utilisateur, plans/mcp.md) : délégations, plafond lu par les Droits, point /mcp ;
+// outils de lecture du cœur, garde-fous du BTP (SpecialisationMcpBtp, lot 6).
+builder.Services.AddModuleMcp<SpecialisationMcpBtp>(Base);
 // Module Exécution (facultatif) : parcours, états des services, synthèse par chantier (modules/execution/db/085, db/197-198).
 builder.Services.AddModuleExecution<SpecialisationExecutionBtp>(Base);
 // Module Rentabilité (facultatif) : faits versionnés par chantier, file de recalcul et recalcul de nuit avec comparaison
@@ -172,6 +182,8 @@ builder.Services.AddSourceNotifications<SourceStockBtp>();
 builder.Services.AddSourceNotifications<SourcePaiementsDirects>();
 builder.Services.AddSourceNotifications<SourceCertificat>();
 builder.Services.AddSourceNotifications<SourceRelancesAPreparer>();
+// Module MCP (lot 10) : propositions des agents à valider, au délégant.
+builder.Services.AddSourceNotifications<SourcePropositionsAgents>();
 builder.Services.AddCanalNotifications<CanalCourrielBtp>();
 // Module OAuth : connexions sortantes OAuth 2.0 (jetons chiffrés, renouvellement, rappels d'échéance ; modules/oauth/db/004) ;
 // fournisseur de jetons du socle (IFournisseurJeton) pour le module Mail ; retour des fournisseurs en route publique.
@@ -187,6 +199,8 @@ ServiceNotification.TypesDirects.Add(new("ressources", "MATERIEL_RETOUR", "Maté
 builder.Services.PostConfigure<OptionsAuthentification>(o =>
 {
     o.RoutesPubliques.AddRange(["/api/sante", "/api/societe", "/api/pointage/borne", LogiBTP.OAuth.Web.Extensions.RouteRetour]);
+    // Serveur d'autorisation OAuth du point /mcp (plans/mcp.md, lot 12) : demande d'autorisation et point de jeton.
+    o.RoutesPubliques.AddRange(LogiBTP.Mcp.Web.Extensions.RoutesPubliques);
     o.AdressesConfiance.AddRange(securite.AdressesConfiance);
 });
 
@@ -198,10 +212,6 @@ if (commande is not null)
     return;
 }
 
-// Métrés saisis en lignes : convertis en scripts au démarrage en développement (compte propriétaire des bases) ; une
-// installation les convertit sous le rôle de schéma (« installation conversions », mise à jour).
-if (app.Environment.IsDevelopment()) await ConversionMetresBases.ConvertirAsync(app.Services, app.Logger);
-
 app.UseSecurite();
 app.UseHttpsInstallation();
 // Textes, thème et images du client (module Personnalisation) avec la surcharge de l'installation, puis client web
@@ -209,7 +219,11 @@ app.UseHttpsInstallation();
 app.UsePersonnalisation();
 app.UseClientWeb();
 app.UseErreursMetier();
+// Refus de la base traduits (DOUBLON, UTILISE, VALEUR), puis effets après validation lancés en fin de requête.
+app.UseErreursBase();
+app.UseUniteEcriture();
 app.UseSocietes();
+app.UseControleVersionBase();
 app.UseAuthentificationSession();
 app.UseDroits();
 
@@ -219,6 +233,12 @@ api.MapGet("/sante", (SpecialisationBtp s) => Results.Ok(new { statut = "ok", ve
 api.MapGet("/societe", (SocieteCourante s) => Results.Ok(new { code = s.Code, libelle = s.Libelle, principale = s.Principale }));
 api.MapModuleAuthentification();
 api.MapModuleDroits();
+// Gestion des délégations : refusée (409 MODULE_INACTIF) quand le module MCP est désactivé pour la société (db/308).
+api.MapGroup("").ExigeModule(ModulesFacultatifs.Mcp, "Agents IA").MapModuleMcp();
+// Désignation d'un tiers sans sa fiche (garde-fou TIERS des agents, plans/mcp.md lot 6).
+api.MapDesignationTiers();
+// Origine des écritures de l'historique d'une pièce (agents IA, plans/mcp.md lot 11) : pastille 🤖 du client.
+api.MapOriginesHistorique();
 api.MapModuleDocument<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp>();
 api.MapModuleListe();
 api.MapModuleFiche();
@@ -233,6 +253,9 @@ api.MapGroup("").ExigeModule(ModulesFacultatifs.FactureElectronique, "Facturatio
 api.MapModuleCrm().ExigeModule(ModulesFacultatifs.Crm, "CRM");
 api.MapExecution().ExigeModule(ModulesFacultatifs.Execution, "Exécution");
 api.MapModuleExecution().ExigeModule(ModulesFacultatifs.Execution, "Exécution");
+// Agents IA (plans/mcp.md, lot 9) : lignes d'un marché filtrées pour un ordre, unités de stock d'une pièce, ventilation d'une demande d'appro.
+api.MapGroup("").ExigeModule(ModulesFacultatifs.Execution, "Exécution").MapMcpExecution();
+api.MapGroup("").ExigeModule(ModulesFacultatifs.Stock, "Stock").MapVentilationDemandes();
 api.MapModuleSousTraitance().ExigeModule(ModulesFacultatifs.SousTraitance, "Sous-traitance");
 api.MapModuleStock().ExigeModule(ModulesFacultatifs.Stock, "Stock");
 api.MapModuleSav().ExigeModule(ModulesFacultatifs.Sav, "SAV");
@@ -284,6 +307,8 @@ api.MapCalendriersBtp();
 api.MapModuleEdition();
 api.MapEditionsBtp();
 
+// Point MCP des agents (Streamable HTTP, jeton délégué exigé ; refuse de démarrer en mode EnTetes).
+app.MapPointMcp();
 // Page d'amorçage du certificat (publique, HTTP et HTTPS) : autorité, script des postes, profil iPad.
 app.MapAmorcage();
 // Routes du client (toute adresse hors /api → index.html), en dernier recours.
@@ -291,5 +316,7 @@ app.MapClientWeb();
 
 // Refus par défaut : toute route /api doit être rattachée à un nœud de droits (erreur au démarrage en développement).
 app.VerifierRoutesDroits();
+// Format d'échange et de contrôle : toute route d'écriture déclare son type (EcrituresBtp.Routes).
+app.VerifierRoutesEcriture(EcrituresBtp.Routes);
 
 app.Run();

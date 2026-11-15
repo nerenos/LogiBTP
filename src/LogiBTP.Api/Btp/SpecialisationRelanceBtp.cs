@@ -1,3 +1,4 @@
+using LogiBTP.Socle.Donnees;
 using System.Globalization;
 using System.Net;
 using System.Text;
@@ -662,27 +663,32 @@ public class SpecialisationRelanceBtp(IHttpContextAccessor http, ILogger<Special
             var r0 = l[0];
             try
             {
-                string Titre(long id) => pieces.TryGetValue(id, out var p) ? p.Titre : $"#{id}";
-                var objet = $"Relance {Par(r0.Mode)} de niveau {l.Max(r => r.Niveau)} : {string.Join(", ", l.Select(r => Titre(r.PieceId)))}";
-                if (objet.Length > ReglesNote.LongueurObjet) objet = objet[..(ReglesNote.LongueurObjet - 1)] + "…";
-                var html = new StringBuilder($"<p>Relance {WebUtility.HtmlEncode(Par(r0.Mode))} du {Date(r0.Date)}")
-                    .Append(r0.CourrielId is long m ? $", courriel n° {m}" : "").Append("</p><ul>");
-                foreach (var r in l)
-                    html.Append(CultureInfo.InvariantCulture, $"<li>{WebUtility.HtmlEncode(Titre(r.PieceId))} : niveau {r.Niveau}, {WebUtility.HtmlEncode(Montant(r.Montant))}, {r.Jours} jours</li>");
-                html.Append("</ul>");
-                if (!string.IsNullOrWhiteSpace(r0.Commentaire)) html.Append("<p>").Append(WebUtility.HtmlEncode(r0.Commentaire)).Append("</p>");
-                if (tiers.GetValueOrDefault(r0.TiersId)?.Commentaire is { Length: > 0 } ct2) html.Append("<p>Commentaire du tiers : ").Append(WebUtility.HtmlEncode(ct2)).Append("</p>");
-                var liens = l.Select(r => new LienSaisi("document", (pieces.GetValueOrDefault(r.PieceId)?.GroupeId ?? r.GroupeId ?? r.PieceId).ToString(CultureInfo.InvariantCulture)))
-                    .Append(new LienSaisi(TypesFiche.Personne, r0.TiersId.ToString(CultureInfo.InvariantCulture))).ToList();
-                liens[0] = liens[0] with { Principal = true };
-                var note = await noter(new NoteSaisie(NatureNote.Action, EtatNote.Memo, tno, null, objet, html.ToString(), null, null, null, false, false, false, liens, null),
-                    new Utilisateur(r0.Auteur, Profils.Admin), ct);
-                notes.Add(note);
-                if (r0.CourrielId is long courriel)
-                    await db.Database.ExecuteSqlRawAsync("""
-                        INSERT INTO mail_lien (mli_mme_id, mli_type_element, mli_id_element, mli_origine, mli_par) VALUES (@m, 'crm_note', @n, 'ENVOI', @u)
-                        ON CONFLICT (mli_mme_id, mli_type_element, mli_id_element) DO NOTHING
-                        """, [new NpgsqlParameter("m", courriel), new NpgsqlParameter("n", note.ToString(CultureInfo.InvariantCulture)), new NpgsqlParameter("u", r0.Auteur)], ct);
+                // Point de sauvegarde : note et lien du courriel ensemble, un refus n'interrompt pas la transaction englobante.
+                var noteCreee = await db.Unite().ExecuterAsync(async c =>
+                {
+                    string Titre(long id) => pieces.TryGetValue(id, out var p) ? p.Titre : $"#{id}";
+                    var objet = $"Relance {Par(r0.Mode)} de niveau {l.Max(r => r.Niveau)} : {string.Join(", ", l.Select(r => Titre(r.PieceId)))}";
+                    if (objet.Length > ReglesNote.LongueurObjet) objet = objet[..(ReglesNote.LongueurObjet - 1)] + "…";
+                    var html = new StringBuilder($"<p>Relance {WebUtility.HtmlEncode(Par(r0.Mode))} du {Date(r0.Date)}")
+                        .Append(r0.CourrielId is long m ? $", courriel n° {m}" : "").Append("</p><ul>");
+                    foreach (var r in l)
+                        html.Append(CultureInfo.InvariantCulture, $"<li>{WebUtility.HtmlEncode(Titre(r.PieceId))} : niveau {r.Niveau}, {WebUtility.HtmlEncode(Montant(r.Montant))}, {r.Jours} jours</li>");
+                    html.Append("</ul>");
+                    if (!string.IsNullOrWhiteSpace(r0.Commentaire)) html.Append("<p>").Append(WebUtility.HtmlEncode(r0.Commentaire)).Append("</p>");
+                    if (tiers.GetValueOrDefault(r0.TiersId)?.Commentaire is { Length: > 0 } ct2) html.Append("<p>Commentaire du tiers : ").Append(WebUtility.HtmlEncode(ct2)).Append("</p>");
+                    var liens = l.Select(r => new LienSaisi("document", (pieces.GetValueOrDefault(r.PieceId)?.GroupeId ?? r.GroupeId ?? r.PieceId).ToString(CultureInfo.InvariantCulture)))
+                        .Append(new LienSaisi(TypesFiche.Personne, r0.TiersId.ToString(CultureInfo.InvariantCulture))).ToList();
+                    liens[0] = liens[0] with { Principal = true };
+                    var note = await noter(new NoteSaisie(NatureNote.Action, EtatNote.Memo, tno, null, objet, html.ToString(), null, null, null, false, false, false, liens, null),
+                        new Utilisateur(r0.Auteur, Profils.Admin), c);
+                    if (r0.CourrielId is long courriel)
+                        await db.Database.ExecuteSqlRawAsync("""
+                            INSERT INTO mail_lien (mli_mme_id, mli_type_element, mli_id_element, mli_origine, mli_par) VALUES (@m, 'crm_note', @n, 'ENVOI', @u)
+                            ON CONFLICT (mli_mme_id, mli_type_element, mli_id_element) DO NOTHING
+                            """, [new NpgsqlParameter("m", courriel), new NpgsqlParameter("n", note.ToString(CultureInfo.InvariantCulture)), new NpgsqlParameter("u", r0.Auteur)], c);
+                    return note;
+                }, ct);
+                notes.Add(noteCreee);
             }
             catch (Exception e) when (e is not OperationCanceledException && journal is not null)
             {

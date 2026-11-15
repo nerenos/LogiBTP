@@ -1,0 +1,10 @@
+/* Module MCP : couleurs des écrans (délégations, journal, propositions), surchargeables par le cœur et l'installation. */
+:root {
+  --mcp-pastille-fond: color-mix(in srgb, var(--accent) 15%, transparent);
+  --mcp-ecart-fond: color-mix(in srgb, var(--accent) 12%, transparent);
+  --mcp-code-fond: color-mix(in srgb, currentColor 8%, transparent);
+  --mcp-avertissement: #b45309;
+  --mcp-erreur: #b91c1c;
+  --mcp-succes: #15803d;
+  --mcp-inactif: #6b7280;
+}

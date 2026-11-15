@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { seConnecter } from './outils/connexion';
+import { seConnecter, TAG_API } from './outils/connexion';
 import {
   TIERS, suffixe, patienterSurLimiteDebit, attendreMessage, confirmer, saisirDansDialogue, choisirDansListe, attendreDocument, idDocument, numeroDocument,
   attendreStatut, attendreTotalHt, onglet, enregistrer, actionDocument, valider, ligneGrille, saisirCellule, texteCellule, creerDevis,
@@ -10,7 +10,7 @@ import {
  * Demande → projet → devis rattaché au projet → envoi → révision (indice B) → copie → retour à une version
  * précédente → validation par le client. Les étapes s'enchaînent (une seule page, ordre imposé).
  */
-test.describe.serial('Cycle commercial : demande, projet et devis', () => {
+test.describe.serial('Cycle commercial : demande, projet et devis', { tag: TAG_API }, () => {
   test.describe.configure({ timeout: 90000 });
 
   const s = suffixe();

@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>LogiBTP.Mcp.Web</RootNamespace>
+    <Description>Module MCP LogiBTP : point /mcp (SDK MCP officiel, Streamable HTTP), délégations, plafond des agents, catalogue d'outils fourni par la spécialisation, appel interne des routes /api avec le jeton délégué, filtre des clés sensibles, quotas, journal des agents (EF Core).</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ModelContextProtocol.AspNetCore" Version="1.4.2" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LogiBTP.Mcp\LogiBTP.Mcp.csproj" />
+    <ProjectReference Include="..\..\..\..\socle\dotnet\LogiBTP.Socle.Web\LogiBTP.Socle.Web.csproj" />
+    <ProjectReference Include="..\..\..\..\socle\dotnet\LogiBTP.Socle.Donnees\LogiBTP.Socle.Donnees.csproj" />
+  </ItemGroup>
+
+</Project>

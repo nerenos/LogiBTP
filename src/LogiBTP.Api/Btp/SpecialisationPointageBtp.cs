@@ -338,7 +338,7 @@ public class SpecialisationPointageBtp(IHttpContextAccessor http) : Specialisati
     /// <summary>Chantiers des tâches du planning du jour où le salarié est affecté (module Planning actif) : journée pré-remplie.</summary>
     public override async Task<List<int>> ChantiersDuJourAsync(PointageDbContext db, int salarie, DateOnly date, CancellationToken ct) =>
         await db.Database.SqlQueryRaw<int>($"""
-            SELECT j.cha_id AS "Value" FROM ({LiaisonsBtp.SqlChantiersDuJour("@d::date")}) j
+            SELECT j.cha_id AS "Value" FROM ({LiaisonsBtp.SqlChantiersDuJourDate}) j
             """, new NpgsqlParameter("s", salarie.ToString()), new NpgsqlParameter("d", date)).ToListAsync(ct);
 
     private sealed record MotifService(int? SrvId, string Libelle);

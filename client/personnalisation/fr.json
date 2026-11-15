@@ -4794,31 +4794,36 @@
           "creation": "Nouvelle facture"
         },
         "documents": {
-          "libelle": "Tous les documents"
+          "libelle": "Tous les documents de vente"
         },
         "reglements_clients": {
           "libelle": "Règlements clients",
           "info": "Échéances, règlements, pointage et cautions (module Règlements)"
         },
         "relances": {
-          "libelle": "Relances",
-          "info": "Devis envoyés et factures à reste échu : préparer, valider, suspendre (module Relances)"
+          "libelle": "Relances Devis et Factures"
         },
         "import_optim": {
           "libelle": "Importer un devis OptimBTP",
           "info": "Fichier .optim : lignes, prix et coefficients repris, champs non repris listés"
         },
         "marches_a_facturer": {
-          "libelle": "Marchés à facturer du mois",
-          "info": "Marchés en cours sans situation du mois : créer les situations d'un clic ou noter « pas d'avancement »"
+          "libelle": "Marchés à facturer du mois"
         },
         "facture_electronique": {
           "libelle": "Facturation électronique",
-          "info": "Flux émis et reçus de la plateforme agréée, statuts, dépôt et import manuels, paramètres (module Facturation électronique)"
+          "info": "Flux émis et reçus de la plateforme agréée, statuts, dépôt et import manuels, paramètres"
         },
         "fe_recues": {
           "libelle": "Factures reçues à traiter",
-          "info": "Factures électroniques reçues sans pièce (à rattacher ou à saisir) ou dont la pièce créée en brouillon reste à vérifier et à valider"
+          "info": "Factures électroniques reçues sans pièce (à rattacher ou à saisir)"
+        },
+        "titre_demandes_execution": {
+          "libelle": "Ordres (Exécution)"
+        },
+        "ordres_oe": {
+          "libelle": "Ordres d'exécution",
+          "info": "Lancés depuis la fiche du marché (▶ Ordre d'exécution)"
         }
       },
       "achats": {
@@ -4873,6 +4878,9 @@
           "libelle": "Marchés de sous-traitance",
           "info": "Un marché par sous-traitant et axe de facturation sur un chantier",
           "creation": "Nouveau marché de sous-traitance"
+        },
+        "titre_demandes_execution": {
+          "libelle": "Ordres (Exécution)"
         },
         "st_ordres": {
           "libelle": "Ordres de sous-traitance (Exécution)",
@@ -5310,6 +5318,10 @@
           "libelle": "Profils et droits…",
           "titre": "Profils, droits par module, document, fiche et fonction ; journal des modifications"
         },
+        "parametres_champs_supplementaires": {
+          "libelle": "Champs supplémentaires des fiches…",
+          "titre": "Champs ajoutés aux fiches (texte, nombre, montant, date, case à cocher, liste de valeurs) : création, ordre, suppression"
+        },
         "parametres_installation": {
           "libelle": "Installation : certificat, bases, sauvegardes…",
           "titre": "État du serveur : certificat HTTPS, bases des sociétés, dernière sauvegarde, espace disque"
@@ -5346,6 +5358,24 @@
         "fermer_la_session": {
           "libelle": "Fermer la session…",
           "titre": "Ferme toutes les fenêtres ; la session pourra être restaurée depuis l'accueil"
+        }
+      },
+      "agents": {
+        "libelle": "Agents IA",
+        "court": "Agents",
+        "propositions": {
+          "libelle": "Propositions des agents",
+          "info": "Actions préparées par un agent, à accepter, corriger ou refuser"
+        },
+        "journal": {
+          "libelle": "Journal des agents"
+        },
+        "delegations": {
+          "libelle": "Mes délégations",
+          "info": "Autoriser un agent IA (Claude Code, claude.ai…) à agir en mon nom"
+        },
+        "parametrage_agents": {
+          "libelle": "Paramétrage des agents"
         }
       }
     },
@@ -5588,7 +5618,8 @@
       "naissance_entree": "Naissance postérieure à l'entrée",
       "heures_negatives": "Nombre d'heures négatif",
       "achat_futur": "Date d'achat dans le futur",
-      "chantier": "Chantier à préciser pour un matériel en chantier"
+      "chantier": "Chantier à préciser pour un matériel en chantier",
+      "nature_vendu": "Nature obligatoire pour un article ou un ouvrage"
     },
     "materiel": {
       "controles": "Contrôles réglementaires",
@@ -6649,9 +6680,9 @@
         },
         "pose": "Statut {{statut}} posé : message de cycle de vie mis en file.",
         "raccourcis": {
-          "groupe": "Chronologie : statut de la facture reçue",
           "207": "Mettre la facture reçue en litige",
-          "210": "Refuser la facture reçue"
+          "210": "Refuser la facture reçue",
+          "groupe": "Chronologie : statut de la facture reçue"
         }
       }
     },
@@ -8414,6 +8445,32 @@
       },
       "actif": "Actif"
     },
+    "champs_supplementaires": {
+      "titre": "Champs supplémentaires des fiches",
+      "aide": "Colonnes ajoutées à la table d'une fiche, sans reprise du schéma : elles apparaissent dans l'onglet « Champs supplémentaires » de la fiche. Le nom technique (« x_… ») et le type ne se modifient plus après la création ; un champ désactivé disparaît de la fiche mais garde ses valeurs.",
+      "fiche": "Fiche :",
+      "aucune_table": "Aucune fiche n'accepte de champ supplémentaire.",
+      "colonne": "Nom technique",
+      "type": "Type",
+      "valeurs": "Valeurs de la liste",
+      "valeurs_aide": "Une valeur par ligne, « valeur | libellé » pour un libellé différent",
+      "ordre": "Ordre",
+      "actif": "Actif",
+      "nouveau": "Nouveau champ : libellé",
+      "creer": "Créer le champ",
+      "cree": "Champ « {{libelle}} » créé",
+      "enregistre": "Champ « {{libelle}} » enregistré",
+      "supprime": "Champ « {{libelle}} » supprimé",
+      "confirmer_suppression": "Supprimer le champ « {{libelle}} » ({{colonne}}) ? La colonne est retirée de la base et toutes les valeurs saisies dans ce champ sont définitivement perdues.",
+      "types": {
+        "texte": "Texte",
+        "nombre": "Nombre",
+        "montant": "Montant",
+        "date": "Date",
+        "booleen": "Case à cocher",
+        "liste": "Liste de valeurs"
+      }
+    },
     "installation": {
       "origines": {
         "LOGIBTP": "Autorité LogiBTP de l'installation",
@@ -8448,6 +8505,36 @@
         "non_chiffree": "non chiffrée : relancer « installation preparer »",
         "a_faire": "{{nombre}} (mise à jour à faire)",
         "titre": "Bases"
+      },
+      "versions": {
+        "titre": "Versions du schéma, par société",
+        "base_de": "Base de {{societe}}",
+        "produit": "Version du produit à la dernière mise à jour : {{version}}",
+        "derniere": "Dernière mise à jour : {{date}}",
+        "demo_avec": "Avec les données de démonstration",
+        "demo_sans": "Sans données de démonstration",
+        "module": "Module",
+        "version": "Version appliquée",
+        "attendue": "Version attendue",
+        "appliquee_le": "Appliquée le",
+        "a_jour": "à jour",
+        "en_retard": "en retard",
+        "absent": "absent de la base",
+        "aucune": "Aucune version enregistrée",
+        "statut": {
+          "AJOUR": "Base à jour avec l'application.",
+          "ENRETARD": "Base en retard sur l'application : les requêtes de cette société sont refusées (503) tant que la mise à jour n'est pas faite. Commande à lancer sur le serveur : « installation base mettre-a-jour » (sauvegarde préalable recommandée).",
+          "SANSJOURNAL": "Base sans journal des scripts (développement, essai ou démonstration) : version non contrôlée."
+        }
+      },
+      "forcages": {
+        "titre": "Forçages de mise à jour",
+        "aide": "Mises à jour passées outre un écart du schéma (modification manuelle de la base), avec leur motif.",
+        "aucun": "Aucun forçage enregistré",
+        "date": "Date",
+        "auteur": "Auteur",
+        "motif": "Motif",
+        "objets": "Objets écrasés"
       },
       "sauvegarde": {
         "aucune": "Aucune sauvegarde connue",
@@ -9100,6 +9187,35 @@
       "periode_titre": "Mois affichés (par défaut : deux mois avant le mois en cours jusqu'à neuf mois après)"
     }
   },
+  "agents_btp": {
+    "routes": {
+      "propositions": "Propositions des agents",
+      "proposition": "Proposition n° {{id}}",
+      "journal": "Journal des agents",
+      "parametres": "Paramétrage des agents IA",
+      "autoriser": "Autoriser un agent IA"
+    },
+    "module_inactif": "Le module Agents IA (MCP) n'est pas activé pour la société (Paramètres › Modules).",
+    "parametres": {
+      "aide": "Levées des garde-fous, modèles de plafond permis, échéance maximale et quotas par profil ; toutes les délégations de la société, révocables.",
+      "admin": "Réservé à l'administrateur.",
+      "enregistre": "Levées du profil enregistrées"
+    },
+    "journal": {
+      "aide": "Chaque appel d'outil d'un agent (lecture comprise) : éléments lus et écrits, garde-fous appliqués, statut."
+    },
+    "propositions": {
+      "aide": "Actions préparées par un agent et non exécutées : l'acceptation les exécute sous votre identité, avec vos droits.",
+      "file": "File des propositions"
+    },
+    "origine": {
+      "agent": "un agent",
+      "via": "via {{client}}",
+      "aide": "Écrit par un agent IA ({{client}}) au nom de cet utilisateur",
+      "piece": "Pièce créée par {{utilisateur}} via un agent IA ({{client}})",
+      "piece_aide": "À relire : la pastille disparaît dès qu'un humain enregistre la pièce."
+    }
+  },
   "erreurs": {
     "ACOMPTE_EMIS": "La facture ou le reçu de cet acompte existe déjà",
     "AFF_BOUCLE": "Matériels porteurs en boucle : le porteur choisi est lui-même porté par ce matériel",
@@ -9136,6 +9252,8 @@
     "FA_HORS_TRANCHE": "Ligne de frais annexes hors d'une tranche de frais annexes : non ventilée",
     "FA_PIED": "Frais annexe de pied non ventilé : à remplacer par une tranche de frais annexes",
     "FA_SANS_RECEPTRICE": "Aucune ligne pour recevoir les frais annexes de la tranche",
+    "FE_ANNUAIRE_SIREN": "SIREN (9 chiffres) obligatoire pour interroger l'annuaire",
+    "FE_DEJA_EMISE": "Facture électronique déjà émise : suivez-la dans l'onglet Chronologie",
     "FORMULE": "Libellé du modèle obligatoire",
     "LIVRAISON_NON_VALIDEE": "Commande non validée : la date de livraison se saisit dans le document",
     "LIVRAISON_TYPE": "La date de livraison d'une ligne validée ne concerne que les commandes fournisseur et de sous-traitance",
@@ -9163,6 +9281,7 @@
     "REV_RIEN": "Aucune régularisation de révision à facturer",
     "REV_SOUS_TRAITANCE": "Marché de sous-traitance : la régularisation passe sur la facture d'avancement suivante",
     "REV_TIERS": "Client du marché à renseigner",
+    "SAV_CLIENT": "Client de l'intervention inconnu (chantier sans client)",
     "SERVICE_MEMBRE": "Membre en double",
     "SERVICE_NIVEAUX": "Deux niveaux de services au plus (service, sous-service)",
     "STK_ARTICLE": "Article non géré en stock",
@@ -9175,7 +9294,10 @@
     "ST_SOURCE": "Seuls une commande ou un devis client, un ordre de sous-traitance se sous-traitent",
     "ST_UN_SEUL": "Une commande de sous-traitance est passée à un seul sous-traitant",
     "TERRAIN_DEMANDE": "Au moins un article ou besoin",
+    "TERRAIN_DEMANDE_QUANTITE": "Quantité positive",
+    "TERRAIN_LEVEE_RIEN": "Aucune réserve levée à constater",
     "TERRAIN_LIVRAISON": "Au moins une quantité reçue",
+    "TERRAIN_LIVRAISON_OPTIONS": "Commande à options ou variantes pas encore choisies : réception à faire au bureau",
     "TERRAIN_MATERIEL": "Rien à enregistrer",
     "TERRAIN_PERSONNE": "Compte sans salarié lié",
     "TERRAIN_PHOTO": "Images seulement",

@@ -14,6 +14,7 @@ using LogiBTP.Socle;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Api.Btp;
 
@@ -248,7 +249,7 @@ public static partial class TerrainBtp
 
             long? sigId = null;
             long isvId;
-            await using (var tx = await db.Database.BeginTransactionAsync(ct))
+            await using (var tx = await db.Unite().CommencerAsync(ct))
             {
                 if (image is not null)
                     sigId = (await db.Database.SqlQueryRaw<long>("""

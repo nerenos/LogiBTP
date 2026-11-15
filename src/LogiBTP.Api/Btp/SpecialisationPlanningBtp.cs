@@ -7,6 +7,7 @@ using LogiBTP.Planning.Web;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Api.Btp;
 
@@ -170,7 +171,7 @@ public class SpecialisationPlanningBtp(IHttpContextAccessor http) : Specialisati
             await db.Database.ExecuteSqlRawAsync("UPDATE materiel SET mat_srv_id = @s WHERE mat_id = @id", [new NpgsqlParameter("s", service), new NpgsqlParameter("id", rid)], ct);
             return;
         }
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var ind = await db.Database.SqlQueryRaw<long?>("SELECT sal_ind_id AS \"Value\" FROM salarie WHERE sal_id = @id", new NpgsqlParameter("id", rid)).FirstOrDefaultAsync(ct)
             ?? throw ExceptionMetier.Invalide("PLA_RESSOURCE", "Salarié sans individu de l'annuaire");
         await db.Database.ExecuteSqlRawAsync("UPDATE service_membre SET sme_principal = FALSE WHERE sme_ind_id = @i", [new NpgsqlParameter("i", ind)], ct);

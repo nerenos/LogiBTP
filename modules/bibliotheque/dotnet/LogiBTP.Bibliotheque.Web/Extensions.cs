@@ -1,3 +1,4 @@
+using LogiBTP.Socle.Donnees;
 using LogiBTP.Socle.Web;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -25,7 +26,8 @@ public static class Extensions
     /// <summary>Routes HTTP du module, sous /bibliotheque.</summary>
     public static RouteGroupBuilder MapModuleBibliotheque(this RouteGroupBuilder api)
     {
-        var g = api.MapGroup("/bibliotheque");
+        // Chaque écriture du module en une seule transaction (tout ou rien).
+        var g = api.MapGroup("/bibliotheque").EnTransaction();
         g.MapGet("/parametres", (ServiceBibliotheque s, CancellationToken ct) => s.Parametres(ct));
         g.MapPut("/parametres", (ParametresBibliothequeDto p, HttpContext http, ServiceBibliotheque s, CancellationToken ct) => s.EnregistrerParametres(p, Utilisateur.Depuis(http), ct));
 

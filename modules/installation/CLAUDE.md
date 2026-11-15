@@ -10,9 +10,10 @@ décisions I1 à I14).
 ## Contraintes absolues
 - `LogiBTP.Installation` sans métier : dépend du socle et de Npgsql seulement ; le cœur fournit les commandes
   (`src/LogiBTP.Api/Btp/CommandeInstallation.cs`), les rôles (`db/installation/roles.sql`) et le manifeste.
-- Ordre des scripts SQL : **une seule source**, `db/installation/scripts.txt` (indicateur `rejouable`), lue
-  par la base de développement (`db/installation/initialiser-developpement.sh`) et l'installeur ; ordre binaire des
-  noms (007 avant 007b), jamais celui de la locale. Tout nouveau script s'y ajoute (test `Manifeste_couvre_tous_les_scripts_du_depot`).
+- Ordre des scripts SQL : **une seule source**, `db/installation/scripts.txt` **généré** (`npm run manifeste` :
+  `socle-1.0.txt` figé + mineures triées ; indicateurs `rejouable`, `ex-rejouable`, `demo`, `extrait-de`), lu par la base
+  de développement (`db/installation/initialiser-developpement.sh`) et l'installeur ; ordre binaire des noms dans le
+  socle, numérique des versions dans un module. Tout nouveau script est une mineure (test `Manifeste_couvre_tous_les_scripts_du_depot`).
 - Installation : scripts appliqués sous `logibtp_schema` (propriétaire), une transaction par script, inscrits dans
   `installation_script` (chemin, empreinte SHA-256) ; l'API tourne sous `logibtp_app` (jamais propriétaire).
 - Secrets : générés (`Secrets`), rangés chiffrés dans le `.env` du volume `logibtp-config` (`env:v1:`), jamais
@@ -25,7 +26,7 @@ décisions I1 à I14).
 - Redirection HTTPS seulement vers le domaine `LOGIBTP_DOMAINE` et ses sous-domaines, jamais vers un autre hôte.
 - Base : `pg_hba.conf` en `hostssl` + SCRAM seulement ; API en `VerifyCA` (`VerifyFull` pour une base distante).
 - Commandes `installation …` de l'image de l'API et scripts Windows / Linux : liste dans le détail.
-- Écart connu : les données de démonstration sont mêlées aux données de référence (211 dépend de 141).
+- Versionnement du schéma ([plan](../../documentation/conception/plans/versionnement-schema.md), guide `documentation/MIGRATIONS.md`) : version `majeur.mineur` par module, `scripts.txt` **généré** (`npm run manifeste`) depuis `socle-1.0.txt` + mineures ; empreinte modifiée = erreur (sauf `empreintes-acceptees.txt`) ; dérive contrôlée avant mise à jour, forçage `--forcer --motif` tracé ; démonstration par l'indicateur `demo` (`--demo`) ; tests base : `LOGIBTP_TEST_PG_ADMIN` (superutilisateur), distinct de `LOGIBTP_TEST_PG`.
 
 ## Tests
 `dotnet test modules/installation/dotnet/LogiBTP.Installation.Tests` (manifeste ↔ dépôt, ordre, pg_hba, postgresql.conf,

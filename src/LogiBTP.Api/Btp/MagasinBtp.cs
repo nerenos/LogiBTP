@@ -1,6 +1,7 @@
 using LogiBTP.Documents;
 using LogiBTP.Documents.Web;
 using LogiBTP.Domaine;
+using LogiBTP.Socle;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 
@@ -42,6 +43,8 @@ public static class MagasinBtp
 
     private static async Task Exiger(LogiBtpContext db, Utilisateur u, CancellationToken ct)
     {
+        if (!await AgentsBtp.CouvertAsync(u, SpecialisationStockBtp.NoeudStock, ActionsDroits.Modifier, AgentsBtp.ServicesRequete, ct))
+            throw ExceptionMetier.AccesRefuse("GERER_STOCK");
         if (!u.EstAdmin && !await SpecialisationStockBtp.MagasinierAsync(db.Database, u.Code, ct)) throw ExceptionMetier.AccesRefuse("GERER_STOCK");
     }
 

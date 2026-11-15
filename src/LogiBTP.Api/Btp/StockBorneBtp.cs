@@ -35,6 +35,8 @@ public static class StockBorneBtp
     /// <summary>Peut traiter une saisie du salarié : administrateur, magasinier, responsable de son service principal ou du parent.</summary>
     private static async Task<bool> PeutTraiterAsync(LogiBtpContext db, Utilisateur u, int? salarie, CancellationToken ct)
     {
+        // Agent : seulement si son plafond couvre la validation sur le stock (jamais sous le garde-fou VALIDATION).
+        if (!await AgentsBtp.CouvertAsync(u, SpecialisationStockBtp.NoeudStock, ActionsDroits.Valider, AgentsBtp.ServicesRequete, ct)) return false;
         if (u.EstAdmin || await SpecialisationStockBtp.MagasinierAsync(db.Database, u.Code, ct)) return true;
         if (salarie is null) return false;
         return await db.Database.SqlQueryRaw<bool>($"""

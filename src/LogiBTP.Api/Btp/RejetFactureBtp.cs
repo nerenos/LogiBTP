@@ -8,6 +8,7 @@ using LogiBTP.Socle;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Api.Btp;
 
@@ -131,7 +132,7 @@ public static class RejetFactureBtp
 
         long avoir;
         long? situation = null;
-        await using (var tx = await db.Database.BeginTransactionAsync(ct))
+        await using (var tx = await db.Unite().CommencerAsync(ct))
         {
             avoir = await transformations.AnnulerParAvoirDans(id, u, ct);
             await db.Database.ExecuteSqlRawAsync("""

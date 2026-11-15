@@ -32,3 +32,16 @@ export async function appelApi(url, { methode = 'GET', corps, entetes = {}, keep
   if (!r.ok) throw new Erreur(r.status, data?.code ?? 'HTTP', data?.title ?? r.statusText, data?.details ?? null);
   return data;
 }
+
+/**
+ * Erreurs par champ d'un refus 422 VALIDATION (format commun à tous les types d'écriture, `Controles` côté serveur) :
+ * `[{ champ, rang, code, message }]`, champ d'une ligne de table « rang.champ » séparé (rang numérique, sinon null),
+ * message traduit par `erreurs.<code>` s'il existe. Toute autre erreur : liste vide.
+ */
+export function erreursParChamp(e) {
+  if (!Array.isArray(e?.details)) return [];
+  return e.details.filter((d) => d && typeof d === 'object' && typeof d.champ === 'string').map((d) => {
+    const m = /^(\d+)\.(.+)$/.exec(d.champ);
+    return { champ: m ? m[2] : d.champ, rang: m ? Number(m[1]) : null, code: d.code ?? null, message: messageErreur(d.code, d.message ?? '', d) };
+  });
+}

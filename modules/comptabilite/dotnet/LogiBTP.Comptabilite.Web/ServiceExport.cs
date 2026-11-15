@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Comptabilite.Web;
 
@@ -138,7 +139,7 @@ public sealed class ServiceExport(ComptabiliteDbContext db, SpecialisationCompta
         if (bonnes.Count == 0) return new(null, exclues);
         var lignes = bonnes.SelectMany(x => x.e.Lignes).ToList();
         var maintenant = DateTimeOffset.Now;
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var lot = new ExportEntite
         {
             CexPar = u.Code, CexDu = d.Du, CexAu = d.Au, CexTypes = types.ToArray(), CexModele = JsonSerializer.Serialize(modele, Json),
@@ -179,7 +180,7 @@ public sealed class ServiceExport(ComptabiliteDbContext db, SpecialisationCompta
         var pieces = await db.Set<ExportPieceEntite>().Where(p => p.CepCexId == id).Select(p => p.CepPieceId).ToListAsync(ct);
         var ailleurs = await db.Set<ExportPieceEntite>().Where(p => pieces.Contains(p.CepPieceId) && p.CepCexId > id)
             .Join(db.Set<ExportEntite>().Where(e => e.CexAnnuleLe == null), p => p.CepCexId, e => e.CexId, (p, e) => p.CepPieceId).ToListAsync(ct);
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         x.CexAnnuleLe = DateTimeOffset.UtcNow;
         x.CexAnnulePar = u.Code;
         await db.SaveChangesAsync(ct);

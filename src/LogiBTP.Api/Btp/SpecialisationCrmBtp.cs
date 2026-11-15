@@ -2,6 +2,7 @@ using LogiBTP.Crm.Web;
 using LogiBTP.Domaine;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Api.Btp;
 
@@ -10,7 +11,7 @@ namespace LogiBTP.Api.Btp;
 /// documents : groupe d'indices, page de l'indice de référence) avec leur libellé et leur page, individu de l'utilisateur (`ind_utilisateur`), services de l'entreprise et
 /// leurs membres (db/193).
 /// </summary>
-public class SpecialisationCrmBtp(IServiceScopeFactory scopes) : SpecialisationCrm
+public class SpecialisationCrmBtp(AccesPortee scopes) : SpecialisationCrm
 {
     /// <summary>Type de note des relances (crm_type_note, module CRM 095) : remet à zéro l'indicateur « Devis à relancer » (db/267).</summary>
     public const string TypeNoteRelance = "RELANCE";
@@ -72,7 +73,7 @@ public class SpecialisationCrmBtp(IServiceScopeFactory scopes) : SpecialisationC
     /// <summary>Projet de la structure (code du chrono des fiches projet, statut En cours) repris de la demande.</summary>
     public override async Task<ElementCrm?> CreerProjetAsync(CrmDbContext db, CrmDemande d, string? responsable, CancellationToken ct)
     {
-        using var scope = scopes.CreateScope();
+        using var scope = scopes.Ouvrir();
         var code = await scope.ServiceProvider.GetRequiredService<LogiBTP.Socle.Web.IChronosFiches>().AttribuerAsync(TypesFiche.Projet, new Dictionary<string, object?>(), ct)
             ?? throw LogiBTP.Socle.Web.ExceptionMetier.Conflit("PROJET_IMPOSSIBLE", "Chrono des projets indisponible");
         var commentaire = d.DemDescriptionHtml is null ? null : System.Text.RegularExpressions.Regex.Replace(d.DemDescriptionHtml, "<[^>]+>", " ").Trim();

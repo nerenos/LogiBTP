@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Npgsql;
 using NpgsqlTypes;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Annuaire.Web;
 
@@ -157,9 +158,9 @@ public partial class ServiceAnnuaire
         var cible = demande.CibleId;
         if (id == cible) throw Validation("Fusion", "cible_id", "MEME_FICHE", "Choisissez une autre fiche que le tiers provisoire");
         var choix = (demande.Choix ?? []).Where(kv => kv.Value is "source" or "cible").ToDictionary(kv => kv.Key, kv => kv.Value);
-        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+        await using var transaction = await db.Unite().CommencerAsync(ct);
         var cnx = (NpgsqlConnection)db.Database.GetDbConnection();
-        var tx = (NpgsqlTransaction)transaction.GetDbTransaction();
+        var tx = transaction.Reelle;
         async Task<int> Executer(string sql, params object?[] parametres)
         {
             await using var cmd = new NpgsqlCommand(sql, cnx, tx);

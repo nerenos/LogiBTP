@@ -16,10 +16,6 @@ import { tableNonRepris, rapportImport, messagesCorrespondances } from './rappor
 // dans la GED du devis et enregistre l'origine (traçabilité). Le rapport des champs non repris n'est affiché qu'en
 // mode débogage (vue de colonnes).
 
-/** Champs d'entête attribués par le serveur à la création (le reste vient de la saisie vérifiée). */
-const CHAMPS_SERVEUR = ['ent_id', 'ent_tyd_id', 'ent_numero', 'ent_version', 'ent_groupe_id', 'ent_std_id', 'ent_indice', 'ent_is_reference',
-  'ent_verrouille', 'ent_cree_le', 'ent_cree_par', 'ent_modifie_le', 'ent_modifie_par', 'ent_version_calcul', 'ent_date_validite'];
-
 /** Chargement du devis importé dans la page document (page : PageDocument). */
 export async function ouvrirImport(page, jeton) {
   const entree = jeton ? await lireImport(jeton) : null;
@@ -86,29 +82,28 @@ export function tracabiliteImport(page, zone) {
 
 /**
  * Création du devis vérifié : entête et lignes (recalculées par le moteur), fichier source dans la GED du devis,
- * origine (format, fichier, référence, rapport). Un échec d'enregistrement supprime le devis vide créé.
+ * origine (format, fichier, référence, rapport). Création et contenu en une transaction : un refus ne crée rien.
  */
 export async function creerDepuisImport(page) {
   const imp = page.importEnCours;
   const ed = page.editeur;
   const saisieDoc = ed.saisie.document;
-  const cree = await api.creer({
-    ent_tyd_id: saisieDoc.ent_tyd_id, ent_tiers_id: saisieDoc.ent_tiers_id ?? null, ent_objet: saisieDoc.ent_objet, ent_date: saisieDoc.ent_date,
-    ent_num_format: saisieDoc.ent_num_format, ent_notre_reference: saisieDoc.ent_notre_reference ?? null,
-    ent_reference_externe: saisieDoc.ent_reference_externe ?? null, ent_validite_jours: saisieDoc.ent_validite_jours ?? null,
-  });
-  const id = cree.document.ent_id;
-  const document = { ...saisieDoc, ...Object.fromEntries(CHAMPS_SERVEUR.map((k) => [k, cree.document[k]])) };
-  const r = ed.calculer(ed.entree({ ...ed.saisie, document }));
+  const r = ed.calculer(ed.entree(ed.saisie));
+  // Création et contenu en un seul appel, dans une transaction : un refus n'a rien créé.
+  let cree;
   try {
-    await api.enregistrer(id, {
+    cree = (await api.creerAvecContenu({
+      ent_tyd_id: saisieDoc.ent_tyd_id, ent_tiers_id: saisieDoc.ent_tiers_id ?? null, ent_objet: saisieDoc.ent_objet, ent_date: saisieDoc.ent_date,
+      ent_num_format: saisieDoc.ent_num_format, ent_notre_reference: saisieDoc.ent_notre_reference ?? null,
+      ent_reference_externe: saisieDoc.ent_reference_externe ?? null, ent_validite_jours: saisieDoc.ent_validite_jours ?? null,
+    }, {
       document: r.document, lignes: r.lignes, metres: r.metres ?? ed.saisie.metres,
       variables: r.variables ?? ed.saisie.variables, version_moteur_client: VERSION_MOTEUR,
-    });
+    })).document;
   } catch (e) {
-    await api.supprimerDocument(id).catch(() => {});
     throw new Error(texte('import_btp.verification.creation_refusee', { message: [e.message, ...(e.details ?? []).map((x) => x.message)].filter(Boolean).join(' — ') }));
   }
+  const id = cree.document.ent_id;
   // Fichier source conservé dans la GED du devis (pièces), puis origine : la traçabilité pointe sur ce fichier.
   let fichierId = null;
   if (page.servicesGed) {

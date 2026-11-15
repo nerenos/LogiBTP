@@ -8,6 +8,7 @@ using LogiBTP.Socle;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Api.Btp;
 
@@ -304,7 +305,7 @@ public static partial class TerrainBtp
 
         try
         {
-            await using var tx = await pdb.Database.BeginTransactionAsync(ct);
+            await using var tx = await pdb.Unite().CommencerAsync(ct);
             // Journée de la personne : lignes nouvelles ou modifiées ; heures de début et de fin d'une ligne inchangée conservées.
             var groupes = new Dictionary<int, Guid>();
             bool Modifiee(LigneTerrain l) => l.Id is not long id || avant[id] is var e && (e.PoiChaId != l.ChaId || e.PoiEntId != l.EntId || e.PoiTypeMo != l.TypeMo

@@ -2,6 +2,7 @@ using LogiBTP.Domaine;
 using LogiBTP.Rentabilite.Web;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Api.Btp;
 
@@ -63,7 +64,7 @@ public static class ParametresRentabiliteBtp
             var relances = typeof(RolesRelance).GetFields().Select(f => (string)f.GetValue(null)!).ToHashSet();
             if (roles.FirstOrDefault(r => !string.IsNullOrEmpty(r.RoleRelance) && !relances.Contains(r.RoleRelance)) is { } mauvais)
                 throw ExceptionMetier.Invalide("RELANCE_ROLE", $"Rôle de relance inconnu : {mauvais.RoleRelance}");
-            await using var tx = await db.Database.BeginTransactionAsync(ct);
+            await using var tx = await db.Unite().CommencerAsync(ct);
             foreach (var r in roles)
             {
                 // Rôle dans le module Relances (db/283) : DEVIS, FACTURE ou aucun.
@@ -90,7 +91,7 @@ public static class ParametresRentabiliteBtp
             var u = Utilisateur.Depuis(http);
             u.ExigerParametres();
             if (taux.Any(t => t.Taux < 0)) throw ExceptionMetier.Invalide("RENTABILITE_TAUX", "Un taux horaire est positif ou nul");
-            await using var tx = await db.Database.BeginTransactionAsync(ct);
+            await using var tx = await db.Unite().CommencerAsync(ct);
             await db.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM rentabilite_taux_service", ct);
             foreach (var t in taux.Where(t => t.Taux is not null))
                 await db.Database.ExecuteSqlInterpolatedAsync($"""
@@ -106,7 +107,7 @@ public static class ParametresRentabiliteBtp
             var u = Utilisateur.Depuis(http);
             u.ExigerParametres();
             if (m.Couts.Any(c => c.Cout < 0)) throw ExceptionMetier.Invalide("RENTABILITE_COUT_MATERIEL", "Un coût horaire de matériel est positif ou nul");
-            await using var tx = await db.Database.BeginTransactionAsync(ct);
+            await using var tx = await db.Unite().CommencerAsync(ct);
             await db.Database.ExecuteSqlInterpolatedAsync($"""
                 INSERT INTO rentabilite_parametre (rpa_id, rpa_nat_materiel, rpa_maj_par) VALUES (1, {m.Nature}, {u.Code})
                 ON CONFLICT (rpa_id) DO UPDATE SET rpa_nat_materiel = EXCLUDED.rpa_nat_materiel, rpa_maj_par = EXCLUDED.rpa_maj_par, rpa_maj_le = now()
@@ -128,7 +129,7 @@ public static class ParametresRentabiliteBtp
             if (coefs.Any(c => c.Coef <= 0)) throw ExceptionMetier.Invalide("RENTABILITE_COEF", "Un coefficient de frais généraux est strictement positif");
             if (coefs.GroupBy(c => (c.NatId, c.Depuis)).Any(g => g.Count() > 1))
                 throw ExceptionMetier.Invalide("RENTABILITE_COEF_DOUBLON", "Deux coefficients pour la même nature à la même date");
-            await using var tx = await db.Database.BeginTransactionAsync(ct);
+            await using var tx = await db.Unite().CommencerAsync(ct);
             await db.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM rentabilite_coef_fg", ct);
             foreach (var c in coefs)
                 await db.Database.ExecuteSqlInterpolatedAsync($"""

@@ -61,7 +61,7 @@ public static class Intervenants
 
     public static List<IntervenantSaisi> Lus(JsonElement liste)
     {
-        if (liste.ValueKind != JsonValueKind.Array) throw ExceptionMetier.Invalide("VALIDATION", "Intervenants : liste attendue");
+        if (liste.ValueKind != JsonValueKind.Array) throw ExceptionMetier.Invalide(ErreursEnregistrement.Validation, "Intervenants : liste attendue");
         static long? Entier(JsonElement e, string k) => e.TryGetProperty(k, out var v)
             ? v.ValueKind == JsonValueKind.Number ? v.GetInt64() : v.ValueKind == JsonValueKind.String && long.TryParse(v.GetString(), out var n) ? n : null : null;
         static bool Vrai(JsonElement e, string k) => e.TryGetProperty(k, out var v) && v.ValueKind == JsonValueKind.True;
@@ -96,9 +96,21 @@ public static class Intervenants
     public static async Task Valider(LogiBtpContext db, IReadOnlyList<IntervenantSaisi> liste, char portee, CancellationToken ct)
     {
         var erreurs = Controler(liste, await Fonctions(db, ct), portee);
+        // Serveur seul : tiers et contacts choisis toujours présents dans l'annuaire (sinon refus de la clé étrangère, moins clair).
+        var personnes = liste.Where(x => x.PerId is not null).Select(x => x.PerId!.Value).Distinct().ToArray();
+        var individus = liste.Where(x => x.IndId is not null).Select(x => x.IndId!.Value).Distinct().ToArray();
+        var connusP = personnes.Length == 0 ? [] : (await db.Database.SqlQueryRaw<long>("SELECT per_id AS \"Value\" FROM personne WHERE per_id = ANY(@ids)",
+            SqlBtp.P("ids", personnes, NpgsqlDbType.Array | NpgsqlDbType.Bigint)).ToListAsync(ct)).ToHashSet();
+        var connusI = individus.Length == 0 ? [] : (await db.Database.SqlQueryRaw<long>("SELECT ind_id AS \"Value\" FROM individu WHERE ind_id = ANY(@ids)",
+            SqlBtp.P("ids", individus, NpgsqlDbType.Array | NpgsqlDbType.Bigint)).ToListAsync(ct)).ToHashSet();
+        for (var i = 0; i < liste.Count; i++)
+        {
+            if (liste[i].PerId is long p && !connusP.Contains(p)) erreurs.Add($"Intervenant {i + 1} : tiers introuvable");
+            if (liste[i].IndId is long d && !connusI.Contains(d)) erreurs.Add($"Intervenant {i + 1} : contact introuvable");
+        }
         if (erreurs.Count > 0)
         {
-            throw ExceptionMetier.Invalide("VALIDATION", "Intervenants incorrects", erreurs.Select(m => new ErreurChamp("intervenants", "METIER", m)).ToList());
+            throw ExceptionMetier.Invalide(ErreursEnregistrement.Validation, "Intervenants incorrects", erreurs.Select(m => new ErreurChamp("intervenants", "METIER", m)).ToList());
         }
     }
 

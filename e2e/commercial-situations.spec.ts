@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { seConnecter } from './outils/connexion';
+import { seConnecter, TAG_API } from './outils/connexion';
 import {
   TIERS, suffixe, patienterSurLimiteDebit, attendreMessage, confirmer, dialogue, attendreDocument, idDocument, numeroDocument,
   attendreStatut, attendreTotalHt, onglet, enregistrer, actionDocument, valider, transformer, ligneGrille, saisirCellule,
@@ -13,7 +13,7 @@ import {
  * nouvelle facture → prévisionnel de facturation du chantier.
  * Montants : une ligne de 10 m² à 40 € (400 € HT) ; situations à 40 %, 70 % puis 60 % après reprise.
  */
-test.describe.serial('Cycle commercial : commande, situations et factures d’avancement', () => {
+test.describe.serial('Cycle commercial : commande, situations et factures d’avancement', { tag: TAG_API }, () => {
   test.describe.configure({ timeout: 90000 });
 
   const s = suffixe();

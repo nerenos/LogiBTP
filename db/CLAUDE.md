@@ -19,9 +19,9 @@
 - `FONCTIONS_INTERVENANT` (`structure/donnees.js`) doit refléter les `INSERT` de 162 (test `client/test/structure.test.js`).
 - Scripts majoritairement **non idempotents** (`CREATE TABLE`, `ADD COLUMN` sans `IF NOT EXISTS`) : n'appliquer un script qu'une fois par base.
 - `docker-compose.yml` monte le dépôt et applique le manifeste `installation/scripts.txt` aux deux bases, seulement à la création du volume (`docker compose down -v` pour repartir de zéro). Sur les bases existantes, un nouveau script s'applique à la main (développement) ou par `installation base mettre-a-jour` (installation).
-- Nouveau script du cœur : numéro après le dernier, en-tête de commentaire (rôle, source si généré), **ajouté au manifeste** `installation/scripts.txt` (test du module Installation), à appliquer aux deux bases de développement ; un script appliqué ne se modifie plus (empreinte suivie par `installation_script`) : une correction est un nouveau script.
+- Nouveau script du cœur : **mineure** `db/<majeur>.<mineur>_<nom>.sql` (socle actuel = 1.0 figé dans `installation/socle-1.0.txt` ; en-tête `-- requiert: <module> <version>` si besoin ; guide `documentation/MIGRATIONS.md`), puis `npm run manifeste` (régénère `installation/scripts.txt`, contrôlé par test) ; à appliquer aux deux bases de développement (modifications manuelles admises en développement, contrôle par `npm run publier:verifier` avant une version) ; un script appliqué ne se modifie plus (empreinte bloquante) : une correction est une nouvelle mineure. Démonstration : indicateur `demo` du manifeste.
 - Vues de liste : une nouvelle colonne de liste se déclare dans `client/src/app/vues-liste.js` (source `SOURCES_LISTE`) et dans la vue SQL ; `v_liste_documents` est redéfinie par 160, 182 puis 185 (`CREATE OR REPLACE`, nouvelles colonnes à la fin).
-- 161 / 163 référencent les tiers et individus de démonstration (141) et le devis de démo ; jamais contourner les triggers du coffre GED (`modules/ged/db/050`).
+- 161 / 163 référencent les tiers et individus de démonstration (141) et le devis de démo (scripts marqués `demo`) ; jamais contourner les triggers du coffre GED (`modules/ged/db/050`).
 
 ## Commandes
 - Appliquer un script à une base existante (**les deux** bases, depuis la racine du dépôt) :

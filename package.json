@@ -1,6 +1,6 @@
 {
   "name": "logibtp",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "private": true,
   "description": "LogiBTP – socle, modules complémentaires et application",
   "workspaces": [
@@ -16,6 +16,7 @@
     "modules/entreprises-fr/js",
     "modules/reglement/js",
     "modules/relance/js",
+    "modules/mcp/js",
     "modules/facture-electronique/js",
     "modules/crm/js",
     "modules/authentification/js",
@@ -42,6 +43,8 @@
     "dev": "npm run dev --workspace client",
     "build": "npm run build --workspace client",
     "exporter-resultats": "npm run exporter-resultats --workspaces --if-present",
+    "manifeste": "dotnet run --project src/LogiBTP.Api -- installation manifeste generer",
+    "publier:verifier": "dotnet run --project src/LogiBTP.Api -- installation publier --verifier",
     "rapport-dependances": "node scripts/rapport-dependances.mjs",
     "compiler-schematrons": "npm run compiler-schematrons --workspace @logibtp/facture-electronique --",
     "valider-facture": "npm run valider-facture --workspace @logibtp/facture-electronique --",

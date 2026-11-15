@@ -6,15 +6,19 @@ using LogiBTP.Listes;
 using LogiBTP.Socle;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
+using LogiBTP.Socle.Donnees;
 using Npgsql;
 using NpgsqlTypes;
 
 namespace LogiBTP.Listes.Web;
 
 /// <summary>Colonnes des sources déjà interrogées (le schéma d'une vue change rarement ; vidé au redémarrage).</summary>
-public sealed class CacheSchemas
+public sealed class CacheSchemas : IPurgeCacheBase
 {
     public ConcurrentDictionary<string, IReadOnlyList<ColonneSource>> Colonnes { get; } = new(StringComparer.Ordinal);
+
+    /// <summary>Vidé pour une base dont le schéma vient de changer (mise à jour de l'installeur).</summary>
+    public void Purger(string connexion) => PurgeCache.Purger(Colonnes, connexion);
 }
 
 /// <summary>
@@ -499,61 +503,48 @@ public partial class ServiceListe(ListeDbContext db, SpecialisationListe special
         return res;
     }
 
-    /// <summary>Transaction d'écriture (saisie dans les listes), avec le même délai maximal que les lectures.</summary>
+    /// <summary>
+    /// Écriture (saisie dans les listes) dans l'unité d'écriture de la requête, avec le même délai maximal que les
+    /// lectures ; point de sauvegarde si une transaction est déjà ouverte.
+    /// </summary>
     protected async Task<T> Ecrire<T>(Func<NpgsqlConnection, NpgsqlTransaction, Task<T>> ecrire, CancellationToken ct)
     {
-        var cnx = (NpgsqlConnection)db.Database.GetDbConnection();
-        var ouverte = cnx.State == ConnectionState.Open;
-        if (!ouverte) await cnx.OpenAsync(ct);
+        var unite = db.Unite();
         try
         {
-            await using var tx = await cnx.BeginTransactionAsync(ct);
-            await using (var cadre = new NpgsqlCommand($"SET LOCAL statement_timeout = {specialisation.DelaiRequeteMs}", cnx, tx))
+            return await unite.ExecuterAsync(async c =>
             {
-                await cadre.ExecuteNonQueryAsync(ct);
-            }
-            var res = await ecrire(cnx, tx);
-            await tx.CommitAsync(ct);
-            return res;
+                await using (var cadre = new NpgsqlCommand($"SET LOCAL statement_timeout = {specialisation.DelaiRequeteMs}", unite.Connexion, unite.Transaction))
+                {
+                    await cadre.ExecuteNonQueryAsync(c);
+                }
+                return await ecrire(unite.Connexion, unite.Transaction!);
+            }, ct);
         }
         catch (PostgresException e)
         {
             // Valeur refusée par la base : conversion (22P02…), contrainte (23502 NOT NULL, 23514 CHECK…).
             throw ExceptionMetier.Invalide("VALEUR", $"Valeur refusée par la base : {e.MessageText}");
         }
-        finally
-        {
-            if (!ouverte) await cnx.CloseAsync();
-        }
     }
 
+    /// <summary>Lecture protégée de l'unité : transaction READ ONLY (ou point de sauvegarde) annulée à la fin, délai de la spécialisation.</summary>
     protected async Task<T> Executer<T>(RequeteSql r, Func<NpgsqlCommand, Task<T>> lire, CancellationToken ct)
     {
-        var cnx = (NpgsqlConnection)db.Database.GetDbConnection();
-        var ouverte = cnx.State == ConnectionState.Open;
-        if (!ouverte) await cnx.OpenAsync(ct);
         try
         {
-            await using var tx = await cnx.BeginTransactionAsync(ct);
-            await using (var cadre = new NpgsqlCommand($"SET TRANSACTION READ ONLY; SET LOCAL statement_timeout = {specialisation.DelaiRequeteMs}", cnx, tx))
+            return await db.Unite().LireAsync(async (cnx, tx, c) =>
             {
-                await cadre.ExecuteNonQueryAsync(ct);
-            }
-            await using var cmd = new NpgsqlCommand(r.Texte, cnx, tx);
-            foreach (var p in r.Parametres) cmd.Parameters.Add(Parametre(p));
-            var res = await lire(cmd);
-            await tx.RollbackAsync(ct);
-            return res;
+                await using var cmd = new NpgsqlCommand(r.Texte, cnx, tx);
+                foreach (var p in r.Parametres) cmd.Parameters.Add(Parametre(p));
+                return await lire(cmd);
+            }, specialisation.DelaiRequeteMs, ct);
         }
         catch (PostgresException e)
         {
             throw ExceptionMetier.Invalide(e.SqlState == "57014" ? "REQUETE_DELAI" : "REQUETE", e.SqlState == "57014"
                 ? $"Requête interrompue après {specialisation.DelaiRequeteMs / 1000} s"
                 : $"Erreur de requête : {e.MessageText}");
-        }
-        finally
-        {
-            if (!ouverte) await cnx.CloseAsync();
         }
     }
 

@@ -6,6 +6,7 @@ using LogiBTP.Socle;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Api.Btp;
 
@@ -57,7 +58,7 @@ public static class PostesMarche
         }
         if (erreurs.Count > 0) throw ExceptionMetier.Invalide("POSTES_MARCHE", string.Join(" ; ", erreurs.Distinct()));
 
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var gardes = postes.Where(p => p.Id is not null).Select(p => p.Id!.Value).ToArray();
         await db.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM marche_poste WHERE mpo_mar_id = {marche} AND NOT (mpo_id = ANY({gardes}))", ct);
         short ordre = 0;

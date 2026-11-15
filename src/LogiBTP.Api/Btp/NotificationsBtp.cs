@@ -438,3 +438,27 @@ public sealed class SourceRelancesAPreparer(LogiBtpContext db, RelanceDbContext 
         return res;
     }
 }
+
+/// <summary>
+/// Module MCP, lot 10 : propositions des agents en attente (non échues), une notification par proposition au délégant
+/// (compte de la délégation qui l'a déposée), adresse de l'écran de la proposition ; module MCP actif seulement. Clé par
+/// proposition : notifiée une fois.
+/// </summary>
+public sealed class SourcePropositionsAgents(LogiBTP.Mcp.Web.McpDbContext db, ModulesSociete modules) : ISourceNotifications
+{
+    public string Code => "mcp-propositions";
+    public TimeSpan Periode => TimeSpan.FromMinutes(5);
+    public IReadOnlyList<TypeNotification> Types { get; } = [new("agents", "PROPOSITION", "Propositions des agents à valider")];
+
+    public async Task<IEnumerable<NouvelleNotification>> ProduireAsync(IServiceProvider portee, DateTimeOffset maintenant, CancellationToken ct)
+    {
+        if (!await modules.EstActifAsync(ModulesFacultatifs.Mcp, ct)) return [];
+        var jour = DateOnly.FromDateTime(maintenant.UtcDateTime);
+        var attente = await db.Propositions.AsNoTracking()
+            .Where(p => p.MprEtat == LogiBTP.Mcp.EtatProposition.EnAttente && p.MprEcheance > jour)
+            .OrderBy(p => p.MprId).Take(500).ToListAsync(ct);
+        return attente.Select(p => new NouvelleNotification(p.MprCompte, "agents", "PROPOSITION", $"Proposition à valider : {p.MprLibelle}",
+            $"Agent {p.MprClient}, échéance le {p.MprEcheance:dd/MM/yyyy}", NiveauNotification.Info, AdressesApp.UrlProposition(p.MprId), "proposition",
+            p.MprId.ToString(System.Globalization.CultureInfo.InvariantCulture), $"mcp-proposition:{p.MprId}")).ToList();
+    }
+}

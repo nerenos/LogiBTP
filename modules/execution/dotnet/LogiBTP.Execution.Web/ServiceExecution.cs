@@ -1,5 +1,6 @@
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Execution.Web;
 
@@ -182,7 +183,7 @@ public sealed class ServiceExecution(ExecutionDbContext db, SpecialisationExecut
             if (string.IsNullOrWhiteSpace(m.Code) || string.IsNullOrWhiteSpace(m.Libelle)) throw ExceptionMetier.Invalide("PAR_MODELE", "Code et libellé du modèle obligatoires");
             Controler(m.Etapes);
         }
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var gardes = l.Where(m => m.Id is not null).Select(m => m.Id!.Value).ToList();
         await db.Modeles.Where(m => !gardes.Contains(m.PamId)).ExecuteDeleteAsync(ct);
         foreach (var m in l)
@@ -229,7 +230,7 @@ public sealed class ServiceExecution(ExecutionDbContext db, SpecialisationExecut
         }
         etapes ??= [];
         Controler(etapes);
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var p = await db.Parcours.FirstOrDefaultAsync(x => x.ParTypeElement == type && x.ParIdElement == id, ct);
         if (etapes.Count == 0)
         {

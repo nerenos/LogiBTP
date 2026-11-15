@@ -27,3 +27,15 @@ export const GENRE_POSTE = Object.freeze({
   RETENUE: 'RETENUE',
   AUTRE: 'AUTRE',
 });
+
+/** Type d'un élément (ele_type). */
+export const TYPE_ELEMENT = Object.freeze({
+  ARTICLE: 'ARTICLE',
+  OUVRAGE: 'OUVRAGE',
+  ENSEMBLE: 'ENSEMBLE',
+  POSTE_PIED: 'POSTE_PIED',
+  TEXTE: 'TEXTE',
+});
+
+/** Élément vendu (article, ouvrage) : sa nature est obligatoire (ventilation, analyses). Réplique de TypeElement.EstVendu. */
+export const elementVendu = (type) => type === TYPE_ELEMENT.ARTICLE || type === TYPE_ELEMENT.OUVRAGE;

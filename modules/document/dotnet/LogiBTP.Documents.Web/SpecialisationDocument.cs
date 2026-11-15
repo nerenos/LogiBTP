@@ -92,6 +92,14 @@ public class SpecialisationDocument<TDoc, TLigne, TComplet>
     /// </summary>
     public virtual Task ApresRecalculLiensAsync(DocumentDbContext<TDoc, TLigne> db, long entId, CancellationToken ct) => Task.CompletedTask;
 
+    /// <summary>
+    /// Après l'écriture d'une ligne de l'historique (document_historique), dans la transaction de l'appelant : origine de
+    /// l'utilisateur de la requête (agent IA <see cref="Utilisateur.Agent"/>…) recopiée par le cœur dans ses colonnes
+    /// d'origine. Par défaut : rien.
+    /// </summary>
+    public virtual Task ApresHistoriqueAsync(DocumentDbContext<TDoc, TLigne> db, DocumentHistorique historique, Utilisateur u, CancellationToken ct) =>
+        Task.CompletedTask;
+
     /// <summary>Après l'enregistrement de la validation, dans sa transaction (suivi d'un marché…).</summary>
     public virtual Task ApresValidationAsync(DocumentDbContext<TDoc, TLigne> db, long entId, TypeDocument type, CancellationToken ct) =>
         Task.CompletedTask;
@@ -135,6 +143,12 @@ public class SpecialisationDocument<TDoc, TLigne, TComplet>
     /// depuisPlusieurs : création depuis plusieurs documents (marché, facture de plusieurs BL…).
     /// </summary>
     public virtual void ControlerTransformation(TComplet source, TypeDocument typeSource, TypeDocument typeCible, bool depuisPlusieurs) { }
+
+    /// <summary>
+    /// Entête du document créé par une transformation (copie de l'entête de la source, types source et cible) : tiers ou
+    /// rattachements qui n'ont pas de sens pour la cible (ordre client transformé en commande fournisseur…).
+    /// </summary>
+    public virtual void PreparerEnteteTransformee(TDoc cible, TypeDocument typeSource, TypeDocument typeCible) { }
 
     /// <summary>Entête d'un document créé depuis plusieurs sources (il part de la première) : rattachements communs…</summary>
     public virtual void PreparerEntetePlusieurs(TDoc cible, IReadOnlyList<TDoc> sources) { }

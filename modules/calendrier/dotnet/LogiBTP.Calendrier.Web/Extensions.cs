@@ -1,3 +1,4 @@
+using LogiBTP.Socle.Donnees;
 using LogiBTP.Socle.Web;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -22,7 +23,8 @@ public static class Extensions
     /// <summary>Routes HTTP du module, sous /calendriers.</summary>
     public static RouteGroupBuilder MapModuleCalendrier(this RouteGroupBuilder api)
     {
-        var g = api.MapGroup("/calendriers");
+        // Chaque écriture du module en une seule transaction (tout ou rien).
+        var g = api.MapGroup("/calendriers").EnTransaction();
         g.MapGet("", (ServiceCalendrier s, CancellationToken ct) => s.ListeAsync(ct));
         g.MapPost("", (CalendrierDto c, HttpContext http, ServiceCalendrier s, CancellationToken ct) => s.EnregistrerAsync(null, c, Utilisateur.Depuis(http), ct));
         g.MapPut("/{id:int}", (int id, CalendrierDto c, HttpContext http, ServiceCalendrier s, CancellationToken ct) => s.EnregistrerAsync(id, c, Utilisateur.Depuis(http), ct));

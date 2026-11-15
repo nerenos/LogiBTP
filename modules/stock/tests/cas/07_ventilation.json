@@ -1,0 +1,97 @@
+{
+  "description": "Ventilation des besoins d'une demande d'appro et réappro sous le mini (ventilation.js ↔ ReglesVentilation.cs, ANALYSE-MODULE-MCP.md § 7.2, plan mcp.md lot 8, décision Q10) : besoins servis par date ; 1) stock des dépôts, préféré d'abord, prenable = disponible projeté le plus bas de la date de besoin à la fin (aucune rupture créée, le mini peut être franchi) ; 2) commandes livrées au plus tard à la date de besoin (date passée = aujourd'hui) ; 3) achat au fournisseur principal, au conditionnement supérieur. Dépôt dont un article prélevé finit sous son mini : réappro au maxi (sinon mini) avec les articles au plus à proche_mini % au-dessus de leur mini, regroupés par fournisseur.",
+  "cas": [
+    { "nom": "stock suffisant : servi par le dépôt, pas de réappro",
+      "aujourdhui": "2026-11-13",
+      "besoins": [{ "id": "B1", "article": "A", "quantite": 30, "date_besoin": "2026-11-20", "depot_prefere": "D1" }],
+      "depots": [{ "id": "D1", "articles": [{ "article": "A", "stock": 100, "mini": 10, "maxi": 200, "evenements": [] }] }],
+      "commandes": [], "articles": [{ "article": "A", "fournisseur": "F1", "conditionnement": 10 }],
+      "attendu": {
+        "besoins": [{ "id": "B1", "article": "A", "quantite": "30", "parts": [{ "nature": "STOCK", "depot": "D1", "quantite": "30" }] }],
+        "reappros": [] } },
+    { "nom": "mini franchi : réappro au maxi avec les références proches du mini, par fournisseur",
+      "aujourdhui": "2026-11-13",
+      "besoins": [{ "id": "B1", "article": "A", "quantite": 30, "date_besoin": "2026-11-20", "depot_prefere": "D1" }],
+      "depots": [{ "id": "D1", "articles": [
+        { "article": "A", "stock": 50, "mini": 40, "maxi": 100, "evenements": [{ "id": "R1", "type": "SORTIE", "date": "2026-11-25", "quantite": 10 }] },
+        { "article": "B", "stock": 22, "mini": 20, "maxi": 60, "evenements": [] },
+        { "article": "C", "stock": 30, "mini": 20, "maxi": 50, "evenements": [] },
+        { "article": "E", "stock": 5, "mini": null, "maxi": null, "evenements": [] },
+        { "article": "G", "stock": 11, "mini": 10, "maxi": 30, "evenements": [] },
+        { "article": "H", "stock": 10, "mini": 10, "maxi": null, "evenements": [] }] }],
+      "commandes": [],
+      "articles": [{ "article": "A", "fournisseur": "F1", "conditionnement": 10 }, { "article": "B", "fournisseur": "F1", "conditionnement": 25 },
+        { "article": "C", "fournisseur": "F1", "conditionnement": 1 }, { "article": "G", "fournisseur": "F2", "conditionnement": 1 },
+        { "article": "H", "fournisseur": "F2", "conditionnement": 1 }],
+      "attendu": {
+        "besoins": [{ "id": "B1", "article": "A", "quantite": "30", "parts": [{ "nature": "STOCK", "depot": "D1", "quantite": "30" }] }],
+        "reappros": [{ "depot": "D1", "fournisseurs": [
+          { "fournisseur": "F1", "lignes": [
+            { "article": "A", "motif": "MINI_FRANCHI", "disponible": "10", "mini": "40", "maxi": "100", "quantite": "90", "unites_achat": "9" },
+            { "article": "B", "motif": "PROCHE_MINI", "disponible": "22", "mini": "20", "maxi": "60", "quantite": "50", "unites_achat": "2" }] },
+          { "fournisseur": "F2", "lignes": [
+            { "article": "G", "motif": "PROCHE_MINI", "disponible": "11", "mini": "10", "maxi": "30", "quantite": "19", "unites_achat": "19" }] }] }] } },
+    { "nom": "proche_mini paramétré à 50 % : référence à 50 % au-dessus de son mini proposée",
+      "aujourdhui": "2026-11-13", "proche_mini": 50,
+      "besoins": [{ "id": "B1", "article": "A", "quantite": 10, "date_besoin": "2026-11-14", "depot_prefere": null }],
+      "depots": [{ "id": "D1", "articles": [
+        { "article": "A", "stock": 15, "mini": 10, "maxi": 20, "evenements": [] },
+        { "article": "C", "stock": 30, "mini": 20, "maxi": 50, "evenements": [] }] }],
+      "commandes": [], "articles": [{ "article": "A", "fournisseur": "F1", "conditionnement": 1 }, { "article": "C", "fournisseur": "F1", "conditionnement": 1 }],
+      "attendu": {
+        "besoins": [{ "id": "B1", "article": "A", "quantite": "10", "parts": [{ "nature": "STOCK", "depot": "D1", "quantite": "10" }] }],
+        "reappros": [{ "depot": "D1", "fournisseurs": [{ "fournisseur": "F1", "lignes": [
+          { "article": "A", "motif": "MINI_FRANCHI", "disponible": "5", "mini": "10", "maxi": "20", "quantite": "15", "unites_achat": "15" },
+          { "article": "C", "motif": "PROCHE_MINI", "disponible": "30", "mini": "20", "maxi": "50", "quantite": "20", "unites_achat": "20" }] }] }] } },
+    { "nom": "commande livrée trop tard écartée, commande en retard comptée aujourd'hui, achat du reste",
+      "aujourdhui": "2026-11-13",
+      "besoins": [{ "id": "B1", "article": "A", "quantite": 30, "date_besoin": "2026-11-20", "depot_prefere": "D1" }],
+      "depots": [{ "id": "D1", "articles": [{ "article": "A", "stock": 5, "mini": null, "maxi": null, "evenements": [] }] }],
+      "commandes": [
+        { "id": "C1", "article": "A", "reste": 20, "date_livraison": "2026-11-30", "fournisseur": "F1" },
+        { "id": "C2", "article": "A", "reste": 10, "date_livraison": "2026-11-18", "fournisseur": "F1" },
+        { "id": "C0", "article": "A", "reste": 4, "date_livraison": "2026-11-10", "fournisseur": "F2" },
+        { "id": "C3", "article": "Z", "reste": 50, "date_livraison": "2026-11-14", "fournisseur": "F1" }],
+      "articles": [{ "article": "A", "fournisseur": "F1", "conditionnement": 1 }],
+      "attendu": {
+        "besoins": [{ "id": "B1", "article": "A", "quantite": "30", "parts": [
+          { "nature": "STOCK", "depot": "D1", "quantite": "5" },
+          { "nature": "COMMANDE", "commande": "C0", "quantite": "4" },
+          { "nature": "COMMANDE", "commande": "C2", "quantite": "10" },
+          { "nature": "ACHAT", "fournisseur": "F1", "quantite": "11", "unites_achat": "11" }] }],
+        "reappros": [] } },
+    { "nom": "achat au conditionnement supérieur ; article sans fournisseur ni conditionnement à l'unité entière",
+      "aujourdhui": "2026-11-13",
+      "besoins": [
+        { "id": "B1", "article": "A", "quantite": 60, "date_besoin": "2026-11-20", "depot_prefere": null },
+        { "id": "B2", "article": "X", "quantite": 2.5, "date_besoin": "2026-11-20", "depot_prefere": null }],
+      "depots": [], "commandes": [], "articles": [{ "article": "A", "fournisseur": "F1", "conditionnement": 25 }],
+      "attendu": {
+        "besoins": [
+          { "id": "B1", "article": "A", "quantite": "60", "parts": [{ "nature": "ACHAT", "fournisseur": "F1", "quantite": "75", "unites_achat": "3" }] },
+          { "id": "B2", "article": "X", "quantite": "2.5", "parts": [{ "nature": "ACHAT", "fournisseur": null, "quantite": "3", "unites_achat": "3" }] }],
+        "reappros": [] } },
+    { "nom": "plusieurs dépôts : besoin le plus tôt servi d'abord, dépôt préféré d'abord, aucune rupture créée",
+      "aujourdhui": "2026-11-13",
+      "besoins": [
+        { "id": "B1", "article": "A", "quantite": 30, "date_besoin": "2026-11-20", "depot_prefere": "D2" },
+        { "id": "B2", "article": "A", "quantite": 40, "date_besoin": "2026-11-15", "depot_prefere": "D1" }],
+      "depots": [
+        { "id": "D1", "articles": [{ "article": "A", "stock": 40, "mini": null, "maxi": null, "evenements": [{ "id": "R1", "type": "SORTIE", "date": "2026-11-25", "quantite": 30 }] }] },
+        { "id": "D2", "articles": [
+          { "article": "A", "stock": 50, "mini": 10, "maxi": 60, "evenements": [] },
+          { "article": "B", "stock": 11, "mini": 10, "maxi": 20, "evenements": [] }] }],
+      "commandes": [], "articles": [{ "article": "A", "fournisseur": "F1", "conditionnement": 1 }],
+      "attendu": {
+        "besoins": [
+          { "id": "B1", "article": "A", "quantite": "30", "parts": [
+            { "nature": "STOCK", "depot": "D2", "quantite": "20" },
+            { "nature": "ACHAT", "fournisseur": "F1", "quantite": "10", "unites_achat": "10" }] },
+          { "id": "B2", "article": "A", "quantite": "40", "parts": [
+            { "nature": "STOCK", "depot": "D1", "quantite": "10" },
+            { "nature": "STOCK", "depot": "D2", "quantite": "30" }] }],
+        "reappros": [{ "depot": "D2", "fournisseurs": [
+          { "fournisseur": "F1", "lignes": [{ "article": "A", "motif": "MINI_FRANCHI", "disponible": "0", "mini": "10", "maxi": "60", "quantite": "60", "unites_achat": "60" }] },
+          { "fournisseur": null, "lignes": [{ "article": "B", "motif": "PROCHE_MINI", "disponible": "11", "mini": "10", "maxi": "20", "quantite": "9", "unites_achat": "9" }] }] }] } }
+  ]
+}

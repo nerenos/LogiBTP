@@ -1,5 +1,5 @@
 import { test, expect, Locator } from '@playwright/test';
-import { ouvrirConnecte } from './outils/connexion';
+import { ouvrirConnecte, TAG_API } from './outils/connexion';
 
 /**
  * Helper pour sélectionner une option dans un champ combo LogiBTP (`creerCombo`).
@@ -18,7 +18,7 @@ async function selectionnerCombo(champLocator: Locator, texteOption: string) {
   }
 }
 
-test.describe('Gestion des salariés', () => {
+test.describe('Gestion des salariés', { tag: TAG_API }, () => {
 
   test('Création d’une fiche salarié avec champs obligatoires et facultatifs', async ({ page }) => {
     // Données uniques pour le test

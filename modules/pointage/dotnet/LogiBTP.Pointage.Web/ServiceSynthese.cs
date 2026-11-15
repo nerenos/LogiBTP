@@ -2,6 +2,7 @@ using System.Text.Json;
 using LogiBTP.Socle.Web;
 using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Pointage.Web;
 
@@ -183,7 +184,7 @@ public sealed class ServiceSynthese(PointageDbContext db, SpecialisationPointage
         lundi = ReglesPointage.LundiDe(lundi);
         var (_, roles) = await AccesAsync(salarie, u, ct);
         await ControlerModifiableAsync(salarie, lundi, roles, ct);
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         await EcrireCoucheValideeAsync(salarie, lundi, s.Pointages, u, ct);
         Journaliser(salarie, lundi, "MODIFIER", new { pointages = s.Pointages.Count, minutes = s.Pointages.Sum(p => p.Minutes) }, u);
         await db.SaveChangesAsync(ct);
@@ -292,7 +293,7 @@ public sealed class ServiceSynthese(PointageDbContext db, SpecialisationPointage
         var c = await CorrectionAsync(id, u, ct);
         await ControlerModifiableAsync(c.PcoSalId, c.PcoLundi, new Roles(true, []), ct);
         var pointages = JsonSerializer.Deserialize<List<PointageSaisi>>(c.PcoPointages, Json) ?? [];
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         await EcrireCoucheValideeAsync(c.PcoSalId, c.PcoLundi, pointages.Select(p => p with { OrigineId = p.Id }).ToList(), u, ct);
         c.PcoEtat = "APPLIQUEE";
         c.PcoTraitePar = u.Code;

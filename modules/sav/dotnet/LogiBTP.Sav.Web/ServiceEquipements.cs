@@ -1,5 +1,6 @@
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Sav.Web;
 
@@ -154,7 +155,7 @@ public class ServiceEquipements(SavDbContext db, SpecialisationSav specialisatio
     {
         var ancien = await InstalleAsync(id, ct);
         var s = nouveau with { Lieu = nouveau.Lieu ?? ancien.EqiLieuId, Tiers = nouveau.Tiers ?? ancien.EqiTiersId, Pose = nouveau.Pose ?? Aujourdhui };
-        await using var tx = db.Database.CurrentTransaction is null ? await db.Database.BeginTransactionAsync(ct) : null;
+        await using var tx = db.Database.CurrentTransaction is null ? await db.Unite().CommencerAsync(ct) : null;
         Retirer(ancien, EtatEquipement.Remplace, s.Pose!.Value, null, u);
         await db.SaveChangesAsync(ct);
         var r = await CreerAsync(s, u, ct, remplace: id);

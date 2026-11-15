@@ -80,6 +80,40 @@ export const api = {
     journal: (profil = '') => appel('GET', `/droits/journal?${new URLSearchParams({ profil })}`),
   },
   // Module Exécution : exécution d'un ordre (état, motif, affectation, dates), répartition, heures budget d'un chantier.
+  // Module MCP (agents IA, plans/mcp.md lot 11) : mes délégations (toutes pour l'administrateur), choix de création, levées par
+  // profil (administrateur), journal, file des propositions.
+  mcp: {
+    delegations: (toutes = false) => appel('GET', `/mcp/delegations${toutes ? '?toutes=true' : ''}`),
+    choix: () => appel('GET', '/mcp/delegations/choix'),
+    creerDelegation: (d) => appel('POST', '/mcp/delegations', d),
+    revoquer: (code) => appel('POST', `/mcp/delegations/${encodeURIComponent(code)}/revoquer`),
+    parametres: () => appel('GET', '/mcp/parametres'),
+    enregistrerLevee: (profil, l) => appel('PUT', `/mcp/parametres/${encodeURIComponent(profil)}`, l),
+    journal: ({ tous = false, delegation, du, au, limite } = {}) => {
+      const p = new URLSearchParams(Object.entries({ tous: tous ? 'true' : '', delegation, du, au, limite }).filter(([, v]) => v !== undefined && v !== null && v !== '').map(([k, v]) => [k, String(v)]));
+      return appel('GET', `/mcp/journal${p.size ? `?${p}` : ''}`);
+    },
+    propositions: ({ vue, etat, limite } = {}) => {
+      const p = new URLSearchParams(Object.entries({ vue, etat, limite }).filter(([, v]) => v !== undefined && v !== null && v !== '').map(([k, v]) => [k, String(v)]));
+      return appel('GET', `/mcp/propositions${p.size ? `?${p}` : ''}`);
+    },
+    proposition: (id) => appel('GET', `/mcp/propositions/${id}`),
+    corriger: (id, contenu) => appel('PUT', `/mcp/propositions/${id}/contenu`, { contenu }),
+    refuser: (id, motif) => appel('POST', `/mcp/propositions/${id}/refuser`, { motif }),
+    accepter: (id) => appel('POST', `/mcp/propositions/${id}/accepter`),
+    // Serveur d'autorisation OAuth (lot 12) : demande présentée au consentement, décision (adresse de retour du client),
+    // liste blanche des clients (administrateur).
+    demandeOAuth: (demande) => appel('GET', `/mcp/oauth/demandes/${encodeURIComponent(demande)}`),
+    accepterOAuth: (demande, d) => appel('POST', `/mcp/oauth/demandes/${encodeURIComponent(demande)}/accepter`, d),
+    refuserOAuth: (demande) => appel('POST', `/mcp/oauth/demandes/${encodeURIComponent(demande)}/refuser`),
+    clientsOAuth: () => appel('GET', '/mcp/clients'),
+    enregistrerClientsOAuth: (liste) => appel('PUT', '/mcp/clients', liste),
+    // Recettes (lot 13) : actives et délégation active (bouton « Demander à l'agent ») ; toutes et catalogue des outils,
+    // enregistrement et suppression : administrateur.
+    recettes: (toutes = false) => appel('GET', `/mcp/recettes${toutes ? '?toutes=true' : ''}`),
+    enregistrerRecette: (code, r) => appel('PUT', `/mcp/recettes/${encodeURIComponent(code)}`, r),
+    supprimerRecette: (code) => appel('DELETE', `/mcp/recettes/${encodeURIComponent(code)}`),
+  },
   // Module Relances (routes du module, plans/relances.md) et libellés des pièces et des tiers (cœur, lot 4).
   relances: {
     dues: (date) => appel('GET', `/relances${date ? `?${new URLSearchParams({ date })}` : ''}`),
@@ -620,6 +654,8 @@ export const api = {
   documents: () => appel('GET', '/documents'),
   document: (id) => appel('GET', `/documents/${id}`),
   creer: (creation) => appel('POST', '/documents', creation),
+  /** Création et contenu dans la même transaction (import) : rien n'est créé si l'enregistrement échoue. */
+  creerAvecContenu: (creation, contenu) => appel('POST', '/documents/avec-contenu', { creation, contenu }),
   enregistrer: (id, doc) => appel('PUT', `/documents/${id}`, doc),
   valider: (id, version) => appel('POST', `/documents/${id}/valider`, { ent_version: version }),
   // Cycle de vie : envoi d'un document approuvé, validation du tiers, rejet (motif).
@@ -670,6 +706,14 @@ export const api = {
   // Modules activés par société (db/193) et référentiel des services (membres : individus de notre société).
   modules: () => appel('GET', '/modules'),
   etatInstallation: () => appel('GET', '/installation/etat'),
+  // Champs supplémentaires en colonnes x_ des fiches (module Fiche, administrateur) : tables ouvertes, registre, création, modification, suppression.
+  champsSupplementaires: {
+    tables: () => appel('GET', '/champs-supplementaires/tables'),
+    lister: (table) => appel('GET', `/champs-supplementaires?${new URLSearchParams({ table })}`),
+    creer: (demande) => appel('POST', '/champs-supplementaires', demande),
+    modifier: (table, colonne, modification) => appel('PUT', `/champs-supplementaires/${encodeURIComponent(table)}/${encodeURIComponent(colonne)}`, modification),
+    supprimer: (table, colonne) => appel('DELETE', `/champs-supplementaires/${encodeURIComponent(table)}/${encodeURIComponent(colonne)}`),
+  },
   activerModule: (code, actif) => appel('PUT', `/modules/${encodeURIComponent(code)}`, { actif }),
   services: () => appel('GET', '/services'),
   enregistrerServices: (liste) => appel('PUT', '/services', liste),
@@ -814,6 +858,8 @@ export const api = {
   recalculerEcheances: (id) => appel('POST', `/documents/${id}/echeances/recalculer`),
   enregistrerSeuilsSolde: (seuils) => appel('PUT', '/parametres-documents/seuils-solde', seuils),
   historique: (id) => appel('GET', `/documents/${id}/historique`),
+  // Origine des lignes de l'historique (agents IA, plans/mcp.md lot 11 ; Btp/OriginesHistoriqueBtp.cs).
+  originesHistorique: (id) => appel('GET', `/documents/${id}/origines`),
   // Version enregistrée d'un document (instantané de l'état avant une action) : écran de restauration.
   versionDocument: (hisId) => appel('GET', `/historique/${hisId}`),
   tracabilite: (id) => appel('GET', `/documents/${id}/tracabilite`),

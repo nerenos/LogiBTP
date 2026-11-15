@@ -1,0 +1,470 @@
+# Module MCP (agents IA connectés à l'application) : plan par lots
+
+> Analyse : [ANALYSE-MODULE-MCP.md](../ANALYSE-MODULE-MCP.md) (13/11/2026). Décisions du 13/11/2026 : **toutes les
+> propositions du § 12 retenues**, sauf **Q10** (ci-dessous). Consigne : développement enchaîné sans attendre de
+> validation, un commit par lot (branche `claude/project-thread-nwakur`).
+>
+> **Q10 (décision de l'utilisateur)** : la ventilation d'une demande d'appro **peut** prendre dans le stock d'un dépôt
+> même si elle le fait passer sous son **mini** ; franchir le mini **déclenche une demande de réapprovisionnement du
+> dépôt** (commande de stock proposée), qui **propose aussi les autres références du dépôt proches de leur mini**
+> (au plus `proche_mini` % au-dessus du mini, 20 % par défaut, paramètre du stock), regroupées par fournisseur
+> principal, pour commander en une fois.
+>
+> Ordre : socle → modules (MCP, Droits, Authentification, Stock) → cœur. Chaque lot : tests du module, puis
+> `npm test` et `dotnet test LogiBTP.slnx` en fin de lot ; tout nouveau script SQL au manifeste
+> `db/installation/scripts.txt` ; toute route `/api` dans `SpecialisationDroitsBtp.Routes` et `EcrituresBtp.Routes`.
+
+| Lot | Titre | Partie | Dépend de | Statut |
+|---|---|---|---|---|
+| 0 | Audit des routes d'écriture des documents pour les agents | cœur + module Document (lecture, tests) | — | FAIT (13/11/2026) |
+| 1 | Contrats du socle : agent de la requête, plafond, codes | socle | — | FAIT (13/11/2026) |
+| 2 | Règles de délégation (plafond, garde-fous, interdits) | `modules/mcp` (nouveau) | 1 | FAIT (13/11/2026) |
+| 3 | Plafond appliqué par le module Droits | `modules/droits` (+ Document : `ValiderDans`) | 1 | FAIT (13/11/2026) |
+| 4 | Jetons délégués | `modules/authentification` | 1 | FAIT (13/11/2026) |
+| 5 | Point `/mcp`, catalogue d'outils, appel interne, journal | `modules/mcp` | 2, 4 | FAIT (13/11/2026) |
+| 6 | Outils de lecture du cœur, garde-fous du BTP | cœur | 3, 5 | FAIT (13/11/2026) |
+| 7 | Outils d'écriture des devis, origine des écritures | cœur | 6 | FAIT (13/11/2026) |
+| 8 | Règle de ventilation d'une demande et réappro sous le mini | `modules/stock` | — | FAIT (13/11/2026) |
+| 9 | Ordres d'exécution filtrés et demandes d'appro ventilées | cœur | 7, 8 | FAIT (13/11/2026) |
+| 10 | File des propositions | `modules/mcp` + cœur | 5 | FAIT (13/11/2026) |
+| 11 | Écrans : délégations, paramétrage, journal, pastille 🤖 | `modules/mcp` (ui) + cœur | 10 | FAIT (13/11/2026) |
+| 12 | Serveur d'autorisation OAuth 2.1 | `modules/mcp` | 5 | FAIT (13/11/2026) |
+| 13 | Recettes (prompts MCP) et « Demander à l'agent » | `modules/mcp` + cœur | 11 | FAIT (13/11/2026) |
+| 14 | Documentation | tous | 0–13 | FAIT (13/11/2026) |
+
+Hors plan (Q13) : agent hébergé (automatisations planifiées, panneau intégré).
+
+---
+
+## Lot 0 : audit des routes d'écriture des documents
+
+- **Partie** : cœur, module Document (lecture ; corrections seulement si un test les exige). **Agent** : `lot-dev`.
+- **Fichiers** : `src/LogiBTP.Api/Btp/SpecialisationDroitsBtp.cs`, `src/LogiBTP.Api/Btp/EcrituresBtp.cs`,
+  `modules/document/dotnet/LogiBTP.Documents.Web/{Extensions,DocumentService,TransformationService}.cs`.
+- **Contenu** : document `documentation/conception/plans/mcp-audit-routes.md` : pour chaque route d'écriture des
+  documents, de la structure, de la bibliothèque, du stock et de l'exécution : mode (Module / Action), action réelle
+  portée (dont : changement de statut par `PUT`, validation implicite par `ValiderDans`, envoi, transformation qui
+  valide), effet externe, verdict « outil d'agent possible / proposition / interdit ».
+- **Critère de fin** : document écrit ; liste des points à traiter reprise aux lots 3 et 7.
+
+## Lot 1 : contrats du socle
+
+- **Partie** : socle. **Fichiers** : `socle/dotnet/LogiBTP.Socle.Web/Web.cs` (`Utilisateur.Agent` : record
+  `AgentRequete(string Delegation, string Client)` à côté de `Usurpateur`), contrat `IPlafondAgent`
+  (`Task<PlafondAgent?> PlafondAsync(string delegation, CancellationToken)` : actions permises par nœud ou modèle,
+  portée maximale, garde-fous actifs, interdits) et `IJetonsDelegues` (émettre, révoquer, ouvrir — implémenté par
+  l'Authentification au lot 4) ; `socle/dotnet/LogiBTP.Socle/Codes.cs` ↔ `socle/js/src/codes.js` : `ORIGINE_ECRITURE`
+  (HUMAIN, AGENT, USURPATION, SERVICE), `GARDE_FOU` (RGPD, TIERS, SALARIES, PAIE, COUTS, GED_CONFIDENTIEL, CRM_NOTES,
+  ENVOI, VALIDATION, VOLUME), `MODELE_PLAFOND` (LECTURE, PREPARATION, COMME_MOI, SUR_MESURE), erreurs `AGENT_INTERDIT`,
+  `AGENT_GARDE_FOU` ; tests de parité des codes du socle.
+- **Critère de fin** : tests du socle verts (JS et C#).
+- **Réalisé** (13/11/2026) : `Utilisateur.Agent` et `AgentRequete` (`Web.cs`), contrats `IPlafondAgent` / `IJetonsDelegues` (+ `PlafondAgent`, `RouteAgent`, `JetonDelegue`) dans `Socle.Web/Agents.cs`, codes `OrigineEcriture`, `GardeFou`, `ModelePlafond`, `ErreursAgent` ↔ `ORIGINE_ECRITURE`, `GARDE_FOU`, `MODELE_PLAFOND`, `ERREUR_AGENT`, parité dans `CodesTests`.
+
+## Lot 2 : règles de délégation
+
+- **Partie** : `modules/mcp` (nouveau : `js/package.json` `@logibtp/mcp`, `js/src/{index,codes,delegation}.js`,
+  `dotnet/LogiBTP.Mcp/{Codes,ReglesDelegation}.cs`, `dotnet/LogiBTP.Mcp.Tests`, `tests/cas/01_delegation.json`,
+  `CLAUDE.md`, `LogiBTP.slnx`, `package.json` racine).
+- **Règles répliquées** : actions d'un modèle de plafond ; `droitsEffectifs(droitsProfil, plafond, garde-fous levés,
+  interdits)` = intersection par nœud et action (portée = la plus étroite), interdits absolus (§ 5.1 : préfixes de
+  nœuds `administration`, `parametres` en écriture, `connexions`, `mail`, actions FORCER, USURPER, PARAMETRER,
+  DEVERROUILLER), garde-fous non levés retirés (VALIDATION retire VALIDER, SUPPRIMER, DEVALIDER ; RGPD retire RGPD et
+  CONFIDENTIEL ; TIERS, SALARIES, PAIE, CRM_NOTES retirent la lecture des nœuds associés, fournis par la
+  spécialisation) ; profil total : COMME_MOI refusé (`MCP_ADMIN_COMME_MOI`) ; levée = levable par le profil **et**
+  levée par la délégation ; échéance (30 j par défaut, 90 au plus) ; quotas (200 par appel, 5 000 par jour, alerte
+  80 %) ; classement d'un outil (lecture / brouillon / proposition / interdit).
+- **Critère de fin** : jeu `01_delegation.json` vert en JS et en C#, `CodesTests`.
+- **Réalisé** (13/11/2026) : `delegation.js` ↔ `ReglesDelegation.cs` — `actionsModele` / `ActionsModele`, `gardesFousActifs` / `GardesFousActifs`, `estInterdit` / `EstInterdit`, `droitsEffectifs` / `DroitsEffectifs(profil, plafond, gardesFous actifs, options { catalogue, noeuds, interdits })`, `autoriseAgent` / `AutoriseAgent`, `controlerDelegation` / `ControlerDelegation`, `echeanceDelegation` / `EcheanceDelegation`, `appliquerQuota` / `AppliquerQuota`, `classerOutil` / `ClasserOutil`, `normaliserAction` / `NormaliserAction` ; constantes `ECHEANCE_DEFAUT`, `ECHEANCE_MAX`, `QUOTA_APPEL`, `QUOTA_JOUR`, `ALERTE_QUOTA`, `NOEUDS_INTERDITS`, `NOEUDS_LECTURE_SEULE`, `ACTIONS_INTERDITES` ; codes `CLASSE_OUTIL`, `ERREUR_MCP` ↔ `ClasseOutil`, `ErreurMcp` ; records C# `DroitsProfil`, `PlafondDelegation`, `OptionsDelegation`, `DelegationSaisie`, `Delegant`, `QuotasDelegation`, `ResultatQuota`, `OutilAgent`. Socle : `PORTEE_DROIT`, `GARDE_FOU`, `MODELE_PLAFOND`, `ORIGINE_ECRITURE`, `ERREUR_AGENT` exportés par `@logibtp/socle`. Choix : un nœud retenu par un garde-fou perd toutes ses actions (pas seulement la lecture).
+
+## Lot 3 : plafond appliqué par le module Droits
+
+- **Partie** : `modules/droits` (+ `modules/document` pour `ValiderDans`). **Fichiers** :
+  `modules/droits/dotnet/LogiBTP.Droits.Web/{Extensions,ServiceDroits}.cs`, tests du module,
+  `modules/document/dotnet/LogiBTP.Documents.Web/DocumentService.cs`.
+- **Contenu** : quand `Utilisateur.Agent` est posé, `UseDroits` et `IDroits` (`AutoriseAsync`, `PorteeAsync`,
+  `ExigerAsync`, `LimiteAsync`) lisent `IPlafondAgent` et appliquent l'intersection (règles du lot 2 reprises par
+  contrat, sans dépendre du module MCP : le calcul d'intersection simple est fait sur les actions permises renvoyées
+  par le contrat) ; routes en mode Module refusées en écriture pour un agent (403 `AGENT_INTERDIT`) sauf liste
+  blanche fournie par le contrat ; masquage RGPD forcé (`Rgpd` absent) ; `ValiderDans` (validation automatique par
+  règle) ignoré pour un agent sans VALIDER effectif ; contrat absent ⇒ tout refusé à un agent.
+- **Critère de fin** : tests : agent « Préparation » refusé sur une route VALIDER et sur une écriture en mode Module ;
+  `ValiderDans` non déclenché.
+- **Réalisé** (13/11/2026) : `modules/droits/dotnet/LogiBTP.Droits.Web/AgentsDroits.cs` (`Portee`, `Autorise`,
+  `AccesSousArbre`, `RoutePermise`, `ControlerRoute`, `EstInterdit` : profil ∩ plafond, portée la plus étroite, modèle
+  LECTURE / PREPARATION / COMME_MOI (jamais pour un profil total) / SUR_MESURE (liste du plafond, profil total borné à la
+  préparation), FORCER, USURPER, PARAMETRER, DEVERROUILLER jamais, nœuds `administration`, `connexions`, `mail`
+  interdits, `parametres` en lecture seule, interdits du plafond, garde-fous RGPD (RGPD, CONFIDENTIEL) et VALIDATION
+  (VALIDER, SUPPRIMER) ; plafond absent ⇒ tout refusé) ; `ServiceDroits.PorteeAsync` et `PlafondAsync` (contrat
+  `IPlafondAgent` facultatif, lu une fois par requête), `LimiteAsync` inchangé (limites du délégant) ; `UseDroits` :
+  routes Module et Session / Publique en écriture refusées hors liste blanche, Parametrage en lecture seule, Action sur
+  les droits de l'agent (403 `AGENT_INTERDIT`, `ACCES_REFUSE` quand le profil lui-même refuse). Socle :
+  `Utilisateur.EstAdmin`, `PeutConsulterParametres`, `PeutModifierParametres` faux pour un agent (donc `ExigerAdmin`,
+  `ExigerParametres` refusent), `ExceptionMetier.AgentInterdit`. Document : `DocumentService.ExigerValidationAgent`
+  appelé par `ValiderDans` (transformation avec intermédiaire, annulation par avoir : refus et transaction annulée).
+  Cœur : `EcrituresBtp` corrigé (`/api/cas-test` Action, `/api/structure/documents` Lecture). Au passage : `UseDroits`
+  contrôlait le mode Parametrage avec l'utilisateur d'avant le calcul des droits sur `parametres` (réservé de fait à
+  l'administrateur) : corrigé. Tests `AgentsDroitsTests`, `ValidationAgentTests`. Reportés au TODO : contrôles par
+  identité du cœur (audit § 7.3), routes à exclure de la liste blanche (§ 7.6).
+
+## Lot 4 : jetons délégués
+
+- **Partie** : `modules/authentification`. **Fichiers** : `Donnees.cs`, `Extensions.cs` (lecture du Bearer),
+  `ServiceAuthentification.Securite.cs` (ou nouveau `JetonsDelegues.cs`), `db/005c_jetons_delegues.sql` (rejouable,
+  manifeste), tests.
+- **Contenu** : table `jeton_delegue` (compte, identifiant de délégation opaque, empreinte SHA-256 du secret, client,
+  échéance, révoqué le, dernier usage) ; `IJetonsDelegues` : émettre (secret `lbtp_agent_…` de 32 octets affiché une
+  fois), révoquer, révoquer tout pour un compte ; Bearer d'un jeton délégué → utilisateur du compte avec
+  `Agent = (délégation, client)`, contrôle du compte (désactivé, expiré, mot de passe provisoire, personne non
+  autorisée ⇒ refus), jamais pour une session usurpée ; exclusion d'adresse et journal comme un identifiant d'API ;
+  le jeton délégué n'ouvre pas `/api/auth/*` (sauf `GET /session`).
+- **Critère de fin** : tests du module (secret haché, échéance, révocation, compte désactivé).
+- **Réalisé** (13/11/2026) : `db/005c_jetons_delegues.sql` (rejouable, manifeste) : `jeton_delegue`, événement
+  `JETON_DELEGUE` ; `ReglesJetonsDelegues` (`Prefixe` = `lbtp_agent_`, `EstJetonDelegue`, `Nouveau`, `Echeance` : 90 jours
+  par défaut et au plus, passée refusée, `Refus` : REVOQUE, ECHU, état du compte ; verrouillé accepté, `RouteAuthPermise`) ;
+  `ServiceAuthentification.JetonsDelegues.cs` : `EmettreJetonDelegueAsync` (compte de personne utilisable, 422
+  `COMPTE_INACTIF` sinon), `OuvrirJetonDelegueAsync` (→ `JetonDelegueOuvert` : session de l'agent, délégation, client ;
+  cache 30 s par base), `SessionDelegueeAsync` (intergiciel : exclusion d'adresse, ECHEC compté si inconnu, REFUS
+  journalisé), `RevoquerJetonDelegueAsync`, `RevoquerDelegationAsync` (hors contrat, pour le module MCP),
+  `RevoquerJetonsDuCompteAsync`, `OublierJetonsDelegues` ; `ServiceJetonsDelegues` = `IJetonsDelegues` (scoped, enregistré
+  par `AddModuleAuthentification`). `SessionLue.Agent` → `Utilisateur.Agent` (jamais d'usurpation ; `UsurperAsync` refuse un
+  agent). Intergiciel : Bearer `lbtp_agent_…` → 401 `JETON_INVALIDE` (code ajouté à `ERREUR_AUTHENTIFICATION` ↔
+  `ErreursAuthentification`) ou 403 `AGENT_INTERDIT` sur `/api/auth/*` sauf `GET /session`. Révocation de tous les jetons du
+  compte : désactivation, réinitialisation (administrateur, lien, commande), changement de mot de passe, fermeture de toutes
+  les sessions. Tests `ReglesJetonsDeleguesTests`, `JetonsDeleguesTests` (base `LOGIBTP_TEST_PG`, intergiciel compris).
+  Choix : pas de JWT pour l'agent (secret relu en base, cache court) ; le jeton ne dit rien du plafond (module MCP, lot 5).
+
+## Lot 5 : point `/mcp`, catalogue d'outils, appel interne, journal
+
+- **Partie** : `modules/mcp` (`dotnet/LogiBTP.Mcp.Web` : `Extensions.cs` `AddModuleMcp<T>` / `MapModuleMcp`,
+  `SpecialisationMcp.cs`, `ServiceMcp.cs`, `Donnees.cs`, `AppelInterne.cs`, `FiltreSensible.cs`),
+  `modules/mcp/db/096m_mcp.sql` (numéro libre à vérifier ; manifeste), tests.
+- **Contenu** : paquet `ModelContextProtocol.AspNetCore` (SDK C# officiel 1.x, transport Streamable HTTP) ; tables
+  `mcp_delegation` (compte, libellé, modèle, nœuds sur mesure JSONB, garde-fous levés, client, échéance, révoquée),
+  `mcp_levee_profil` (garde-fous levables et modèles permis par profil, quotas), `agent_journal` (§ 9 de l'analyse) ;
+  implémentation de `IPlafondAgent` ; catalogue d'outils déclaré par la spécialisation (`OutilMcp` : nom, description
+  du dictionnaire, schéma JSON, méthode et gabarit de route, action exigée, classement) ; exécution par
+  `AppelInterne` (HttpClient vers l'adresse locale de Kestrel, en-têtes `Host` de la requête et `Authorization` du
+  jeton délégué ; en test : client du serveur de test) ; filtre des clés sensibles déclarées par la spécialisation ;
+  contenus libres balisés `contenu_non_fiable` ; quotas ; refus de démarrer en mode `EnTetes` ; journal de chaque
+  appel ; routes de gestion `/api/mcp/delegations` (mes délégations : créer → secret affiché une fois, révoquer),
+  `/api/mcp/parametres` (administrateur), `/api/mcp/journal`.
+- **Critère de fin** : tests d'intégration : outil de lecture appelé, journalisé ; 401 sans jeton ; quota atteint.
+- **Réalisé** (13/11/2026) : `modules/mcp/db/099u_mcp.sql` (rejouable, manifeste ; 096m pris par le CRM) : `mcp_delegation`,
+  `mcp_levee_profil`, `agent_journal`, `mcp_compteur` ; `LogiBTP.Mcp.Web` (SDK `ModelContextProtocol.AspNetCore` 1.4.2, Streamable
+  HTTP sans état). **API de la spécialisation pour le lot 6** (`SpecialisationMcp`, surchargée par `SpecialisationMcpBtp`) :
+  `Outils` → `OutilMcp(Nom, Description = clé du dictionnaire, Schema JsonElement, Methode, Route « /api/…/{param} », Noeud, Action,
+  Classe CLASSE_OUTIL)` avec `Envoi`, `ClesSensibles` (garde-fou → clés), `ClesNonFiables`, `ParametreLimite` (quota VOLUME),
+  `CleListe`, `TypeElement`, `CleIdentifiant` (journal) ; `NoeudsRetenus` (garde-fou → nœuds), `Interdits`, `ClesSensibles`,
+  `ClesNonFiables` (toutes réponses), `Textes` (`Dictionnaire` des descriptions), `Noeud` (« agents »). `PlafondMcp` = `IPlafondAgent`
+  (liste blanche = routes d'écriture des outils, jamais `/api/mcp|auth|droits` ; interdits = spécialisation + nœud `agents` + nœuds
+  retenus ; cache 30 s par base vidé à la révocation) ; `ServiceMcp` (jeton → délégation active du compte, classement
+  `ClasserOutil` avec les droits du profil lus par `IDroits`, quota, `IAppelInterne` / `AppelInterneHttp` vers l'adresse locale de
+  Kestrel avec `Host` et `Authorization` de l'agent, `FiltreSensible`, journal de chaque appel) ; `ServiceDelegations`
+  (`ControlerDelegation`, secret rendu une fois, révocation des jetons, levées par profil, journal) ; `AddModuleMcp<T>`,
+  `MapPointMcp` (`/mcp`, 401 `MCP_JETON_REQUIS`, refus de démarrer en mode `EnTetes` ou sans `IJetonsDelegues`), `MapModuleMcp`
+  (`/api/mcp/delegations`, `/parametres`, `/journal`). Socle : `JetonDelegue.Profil`, `IJetonsDelegues.RevoquerDelegationAsync`,
+  `IPlafondAgent.PlafondAsync(délégation, profil)` (levables par profil ; `ServiceDroits` l'appelle). Codes `ERREUR_MCP` complétés,
+  `STATUT_APPEL_AGENT`. Cœur : `SpecialisationMcpBtp` (sans outil), nœud `agents`, routes déclarées (droits, écritures). Tests
+  `ReglesPointMcpTests`, `PointMcpTests` (Kestrel local, client MCP du SDK, `LOGIBTP_TEST_PG`). Choix : une proposition (classe
+  PROPOSITION) est refusée jusqu'à la file du lot 10 ; sans ligne de levées, un profil ne lève rien (quotas par défaut).
+
+## Lot 6 : outils de lecture du cœur
+
+- **Partie** : cœur. **Fichiers** : `src/LogiBTP.Api/Btp/SpecialisationMcpBtp.cs` (nouveau), `Program.cs`,
+  `SpecialisationDroitsBtp.cs`, `EcrituresBtp.cs`, `client/src/app/codes.js` (`MODULE_FACULTATIF.MCP`),
+  `db/3xx_mcp.sql` (activation du module, nœud `agents`), tests.
+- **Contenu** : outils `rechercher` (liste du module Liste avec filtres et pagination), `lire_document`,
+  `lire_marche`, `lire_chantier`, `rechercher_bibliotheque`, `lire_stock`, `lister_modeles`, `designer_tiers`
+  (code, raison sociale d'une personne morale, ville ; particulier : code seul) ; nœuds associés aux garde-fous
+  (TIERS : `annuaire`, `fiches/personne`, `fiches/individu` ; SALARIES : `fiches/salarie`, `ressources` ; PAIE :
+  `pointage`, liste des repas ; CRM_NOTES : `crm` ; COUTS : `rentabilite/couts`) ; clés sensibles (`per_iban`,
+  `per_bic`, coordonnées, `ind_*` personnels, `sal_*`, prix d'achat et de revient sous COUTS) ; adresses absolues
+  (`urlDocument`, `urlFiche`) rendues avec chaque résultat.
+- **Critère de fin** : tests : chaque garde-fou retire bien ses champs et nœuds.
+- **Réalisé** (13/11/2026) : `SpecialisationMcpBtp` : outils LECTURE `rechercher` (`POST /api/listes/lot`, vue enregistrée, filtres,
+  tri, curseur, `taille` ≤ 200 par `OutilMcp.LimiteMax`), `lire_document` (`/api/documents/{id}`), `lire_marche` / `lire_chantier`
+  (`/api/fiches/marche|chantier/{id}`), `rechercher_bibliotheque` (`/api/bibliotheque/elements`), `lire_stock`
+  (`/api/stock/lieux/{lieu}/etat`), `lister_modeles` (`/api/modeles-document`), `designer_tiers` (nouvelle route de lecture
+  `GET /api/designation/tiers`, `Btp/DesignationTiersBtp.cs`, mode Module « documents » : code, raison sociale et ville d'une
+  personne morale ; particulier trouvé par son code exact seul et rendu sous son code) ; descriptions `Btp/McpTextes.json`
+  (ressource incorporée) ; nœuds retenus TIERS (`annuaire`, `fiches/personne`, `fiches/individu`), SALARIES (`fiches/salarie`,
+  `ressources`), PAIE (`pointage`, `pointage/repas`), CRM_NOTES (`crm`), COUTS (`rentabilite/couts`) — choix du lot 2 confirmé :
+  un nœud retenu perd aussi ses écritures ; clés sensibles (colonnes du DDL, test) : `per_iban`, `per_bic`, coordonnées `coo_*`,
+  contacts et adresses figés des pièces, `ind_*` personnels, `sal_*` hors désignation, PAIE (salaire, coût horaire…), COUTS
+  (`lig_pa`, `lig_pr`, montants et coefficients, `ele_pa*`, `ele_pr`, `ele_pmp`, `tfo_prix` ; par outil : `pa`, `pr` de la
+  bibliothèque, valorisation du stock) ; adresse absolue de chaque résultat (`AdressesApp.UrlDocument` / `UrlFiche` ↔ `urlDocument`
+  / `urlFiche`, origine de la requête MCP). Module MCP : `SpecialisationMcp.Module` (activation), `Adresse`, `OutilMcp.LimiteMax`,
+  arguments non déclarés par le schéma ignorés (ni `definition` de liste, ni `confidentiel` de fiche), outil LECTURE en POST
+  journalisé en lecture et hors liste blanche, `/mcp` 403 `MCP_MODULE_INACTIF` et plafond absent quand le module est inactif
+  (`ERREUR_MCP` complété) ; `AppelInterneHttp` : HTTP local d'abord, bascule sur HTTPS local si l'installation redirige.
+  Activation : `MODULE_FACULTATIF.MCP` ↔ `ModulesFacultatifs.Mcp`, `db/308_mcp.sql` (désactivé à la création, manifeste),
+  `/api/mcp` sous `ExigeModule`. Module Droits : `AgentsDroits.RoutePermise` exacte (méthode + gabarit segment par segment,
+  paramètres anonymes, jamais un préfixe). Contrôles par identité : `AgentsBtp.CouvertAsync` (agent : droits de l'agent sur le
+  nœud et l'action) dans `PeutGererAsync` (stock, Modifier), `MagasinBtp.Exiger`, `PeutTraiterAsync` (stock / bornes, Valider),
+  `PeutValiderAsync` / `PeutControlerAsync` (exécution, Valider) ; `DelegationsControle` refusé à tout agent ; `PeutDeverrouiller`
+  déjà faux (`EstAdmin`). Tests `McpBtpTests` (cœur, désignation en base), `AgentsDroitsTests`, `ReglesPointMcpTests`,
+  `PointMcpTests` (module inactif, adresse absolue).
+
+## Lot 7 : outils d'écriture des devis
+
+- **Partie** : cœur (+ SQL `ALTER TABLE` du cœur). **Fichiers** : `Btp/SpecialisationMcpBtp.cs` (ou
+  `Btp/McpDocumentsBtp.cs`), `db/3xx_mcp_origine.sql`, tests.
+- **Contenu** : `creer_devis` (copie d'un devis, création avec contenu depuis un modèle, tiers désigné),
+  `modifier_lignes` (opérations : ajouter un élément de bibliothèque, quantité, désignation, remise, supprimer,
+  déplacer ; appliquées au document lu puis `PUT` complet avec l'empreinte de version), `transformer` (devis →
+  commande, brouillon) ; changement de statut refusé ; origine AGENT et délégation recopiées dans
+  `document_historique` (colonnes d'origine) ; réponse : numéro, totaux recalculés, avertissements, lien.
+- **Critère de fin** : test : devis brouillon créé depuis un modèle, recalculé par le serveur, jamais validé.
+- **Réalisé** (13/11/2026) : module MCP : **outils composés** (`OutilMcp.Routes` + `Execution` ; `ExecutionOutil` : arguments déclarés,
+  garde-fous actifs, `EnvoyerAsync` borné aux routes déclarées par l'outil, sinon 403 `MCP_ROUTE_NON_DECLAREE`, appels au journal ;
+  `RouteOutil.Couvre`) ; liste blanche = routes d'écriture de tous les outils d'écriture (`PlafondMcp.RoutesEcriture`). Cœur :
+  `Btp/McpDocumentsBtp.cs` et `Btp/OperationsLignesBtp.cs` ; outils BROUILLON `creer_devis` (nœud `documents/V/V_DEVIS`, CREER :
+  modèle de saisie → `POST /api/documents/avec-contenu` en une fois ; devis source → `POST …/copie` puis modification ; vers un autre
+  tiers que celui du source : création avec le contenu du devis, le tiers d'une copie étant figé par ses lignes d'origine ; les
+  opérations désignent alors les lignes du devis source, traduites), `modifier_lignes` (MODIFIER : refus si la pièce est ouverte en
+  modification, même par le délégant — `GET …/verrou` —, verrou pris et rendu, lecture, `version` facultative de l'agent → 409
+  `MCP_VERSION`, opérations ajouter (article : unité de vente, PA converti, coefficients, données techniques, lien ; ouvrage et ensemble :
+  composition renumérotée avec métrés et variables ; taux du titre, du document ou par défaut), quantite, designation, remise (%),
+  supprimer (sous-arbre et compléments), deplacer (ligne ou chapitre, jamais une composante, ni dans son propre contenu), `PUT` complet
+  avec la version lue, statut / verrouillage / numéro / indice contrôlés inchangés), `transformer` (nœud `documents/V/V_COMMANDE`, CREER :
+  devis → commande seulement, refus d'une règle à type intermédiaire) ; réponse : identifiant, numéro, type, statut, version, totaux du
+  serveur, avertissements (enregistrement + `GET …/avertissements?action=VALIDER`), lignes résumées, adresse absolue. Liste blanche
+  exacte : `POST /api/documents/avec-contenu`, `POST …/{id}/copie`, `POST|DELETE …/{id}/verrou`, `PUT /api/documents/{id}`,
+  `POST …/{id}/transformer`. `lire_document` composé : pièce d'achat ou de sous-traitance sous COUTS, prix et montants retirés
+  (`couts_masques`). Origine : `db/309_mcp_origine.sql` (rejouable, manifeste) `his_origine`, `his_delegation`, `his_client` ; module
+  Document : point d'accroche générique `SpecialisationDocument.ApresHistoriqueAsync` (après chaque ligne d'historique, utilisateur de la
+  requête) ; cœur : AGENT posé quand `Utilisateur.Agent` est présent. Codes `ERREUR_MCP_BTP` ↔ `ErreursMcpBtp`, `MCP_ROUTE_NON_DECLAREE`.
+  Tests `McpDocumentsBtpTests` (opérations, enchaînement des routes, liste blanche), `McpDocumentsBtpBaseTests` (`LOGIBTP_TEST_PG` :
+  modèle, copie, autre tiers, modification recalculée, PUT de statut sans effet, validation de l'agent 403, historique AGENT,
+  transformation en commande brouillon), `ReglesPointMcpTests`. Choix : le serveur garde le PUT et la transformation dans la liste
+  blanche (un agent peut les appeler hors outil) ; ses gardes restent celles du module Document (statut jamais repris du corps,
+  validation d'un intermédiaire refusée sans VALIDER).
+
+## Lot 8 : règle de ventilation et réappro sous le mini
+
+- **Partie** : `modules/stock`. **Fichiers** : `js/src/ventilation.js` ↔ `dotnet/LogiBTP.Stock/ReglesVentilation.cs`,
+  `tests/cas/07_ventilation.json` (numéro libre à vérifier), tests JS et C#.
+- **Règle** : pour chaque ligne (article, quantité en unité de stock, date de besoin) : 1) stock disponible des
+  dépôts à la date (projection : stock − réservations, sans rupture avant la date), dépôt préféré d'abord ; **le mini
+  peut être franchi** ; 2) reste à recevoir non affecté des commandes fournisseur livrées à temps ; 3) achat du reste
+  au fournisseur principal, au conditionnement. Pour chaque dépôt passé sous son mini : **demande de réappro**
+  (quantité pour revenir au maxi, sinon au mini) **avec les autres articles du dépôt à moins de `proche_mini` %
+  au-dessus de leur mini** (20 % par défaut), regroupés par fournisseur principal.
+- **Critère de fin** : jeu vert en JS et en C#.
+- **Réalisé** (13/11/2026) : `modules/stock/js/src/ventilation.js` ↔ `modules/stock/dotnet/LogiBTP.Stock/ReglesVentilation.cs`, jeu
+  `tests/cas/07_ventilation.json` (stock suffisant, mini franchi → réappro avec références proches par fournisseur, `proche_mini`
+  paramétré, commande trop tardive écartée et commande en retard comptée aujourd'hui, achat au conditionnement, plusieurs dépôts),
+  tests `stock.test.js` et `ReglesVentilationTests` ; codes `NATURE_PART_APPRO` (STOCK, COMMANDE, ACHAT) ↔ `NaturePartAppro`,
+  `MOTIF_REAPPRO` (MINI_FRANCHI, PROCHE_MINI) ↔ `MotifReappro` (`CodesTests`). Signatures pour le lot 9 :
+  JS `ventiler({ aujourdhui, besoins: [{ id, article, quantite, date_besoin, depot_prefere }], depots: [{ id, articles: [{ article,
+  stock, mini, maxi, evenements }] }], commandes: [{ id, article, reste, date_livraison, fournisseur }], articles: [{ article,
+  fournisseur, conditionnement }], proche_mini = 20 })` → `{ besoins: [{ id, article, quantite, parts }], reappros: [{ depot,
+  fournisseurs: [{ fournisseur, lignes: [{ article, motif, disponible, mini, maxi, quantite, unites_achat }] }] }] }` ; C#
+  `ReglesVentilation.Ventiler(string aujourdhui, IReadOnlyList<BesoinStock>, IReadOnlyList<DepotDisponible>,
+  IReadOnlyList<CommandeARecevoir>, IReadOnlyList<ArticleFournisseur>, decimal procheMini = 20)` → `VentilationStock(Besoins:
+  List<BesoinVentile(Id, Article, Quantite, Parts: List<PartBesoin(Nature, Depot, Commande, Fournisseur, Quantite, UnitesAchat)>)>,
+  Reappros: List<DemandeReappro(Depot, Fournisseurs: List<FournisseurReappro(Fournisseur, Lignes: List<LigneReappro(Article, Motif,
+  Disponible, Mini, Maxi, Quantite, UnitesAchat)>)>)>)` ; `ArticleDuDepot(Article, Stock, Mini, Maxi, Evenements:
+  IReadOnlyList<EvenementPrevu>)` (identifiants en chaînes, quantités en unité de stock), `AuConditionnement(quantite, conditionnement)`.
+  Choix : besoins servis par date de besoin (date passée = aujourd'hui) puis ordre reçu ; prenable = disponible projeté le plus bas
+  de la date de besoin à la fin de la projection (réservations et entrées prévues, prélèvements déjà ventilés compris) ; réappro
+  déclenché par tout article **prélevé** qui finit sous son mini (même s'il y était déjà), pas par un article non prélevé déjà
+  sous le mini (il figure alors en PROCHE_MINI d'une demande déclenchée) ; ligne sans besoin positif (pas de maxi et disponible
+  ≥ mini) non proposée ; achats non regroupés entre besoins (un ACHAT arrondi par besoin). Au lot 9 : passer en commandes le
+  seul reste **non affecté** et **hors des événements ENTREE des dépôts** (sinon compté deux fois), conditionnement et
+  fournisseur de `ApprovisionnementsAsync`.
+
+## Lot 9 : ordres d'exécution filtrés et demandes d'appro ventilées
+
+- **Partie** : cœur. **Fichiers** : `Btp/McpExecutionBtp.cs` (nouveau), transformation filtrée (critère : service
+  porteur de la nature de l'élément, repli famille de bibliothèque, chapitre, étiquette ; combinables), tests.
+- **Contenu** : `preparer_ordre_execution` (aperçu des lignes retenues / écartées, puis E_OE brouillon par la
+  transformation existante), `preparer_demandes_appro` (E_OE → E_DAP, unités converties), `proposer_ventilation`
+  (règle du lot 8 sur les données du stock : `PrevisionsAsync`, `ServiceApprovisionnement`) → proposition (lot 10) ou,
+  avant le lot 10, rendue seulement.
+- **Critère de fin** : test : OE limité au service MÉTALLERIE, DAP ventilée, réappro proposé sous le mini.
+- **Réalisé** (13/11/2026) : `src/LogiBTP.Api/Btp/McpExecutionBtp.cs`. Filtre (règle du cœur, C# seul : aucune réplique JS, l'outil
+  n'existe qu'au serveur) `FiltreLignesOrdre.Classer` : par ligne de prix, reste de l'étape V_COMMANDE → E_OE, chapitre (libellé d'un
+  titre englobant contenant le texte, ou numérotation exacte), étiquette (ligne ou titre englobant), puis service porteur de la nature
+  (ligne, sinon élément ; ouvrage sans service propre : services de ses composantes ; sous-services compris), repli sur la famille de
+  bibliothèque (sous-familles comprises) sans service porteur, ou famille seule ; critères combinés (ET) ; motifs `MOTIF_LIGNE_ORDRE` ↔
+  `MotifsLigneOrdre` (SERVICE, FAMILLE, CHAPITRE, ETIQUETTE ; SANS_RESTE, HORS_CHAPITRE, AUTRE_ETIQUETTE, AUTRE_SERVICE, SANS_SERVICE,
+  AUTRE_FAMILLE), erreurs `MCP_FILTRE_VIDE`, `MCP_CRITERE_INCONNU`, `MCP_AUCUNE_LIGNE` (`CodesTests`). Routes de lecture (droits du type
+  de pièce vérifiés en plus, déclarées dans `SpecialisationDroitsBtp.Routes`, aucune écriture donc rien dans `EcrituresBtp`) :
+  `GET /api/execution/marches/{id}/selection-ordre` (commandes valables du marché, `f_document_valable`), `GET /api/execution/ordres/{id}/
+  unites-stock` (facteur de l'article vers l'unité de stock, `MouvementsStockBtp.RatioOuNull` comme STK_UNITE), `GET /api/stock/demandes/
+  {id}/ventilation` (`ReglesVentilation.Ventiler` : stock à date et seuils des dépôts, `PrevisionsAsync`, commandes A_COMMANDE en cours
+  **non affectées** = sans lieu de livraison ni demande E_DAP d'origine, donc jamais comptées avec les ENTREE des dépôts,
+  `ApprovisionnementsAsync` ; rend le tableau STOCK / COMMANDE / ACHAT par besoin, les réappros par dépôt et fournisseur,
+  `sans_conversion`, `ecriture: false`). Outils : `preparer_ordre_execution` (BROUILLON, nœud `documents/E/E_OE`, CREER : aperçu
+  `apercu`, sinon un E_OE brouillon par commande par `POST …/transformer` avec `lignes` = lignes retenues — filtre déjà permis par la
+  transformation, droits TRANSFORMER / CREER et reliquats du module Document inchangés), `preparer_demandes_appro` (BROUILLON,
+  `documents/E/E_DAP` : E_OE validé → E_DAP brouillon, puis articles gérés en stock passés en unité de stock — quantité, PA — par
+  `ModifierAsync` du lot 7 sous verrou et version, liens convertis par le serveur ; sans conversion : `STK_UNITE`, quantité de métré :
+  `METRE`, laissées et signalées), `proposer_ventilation` (LECTURE, nœud `stock`, route simple). Liste blanche inchangée (transformation,
+  PUT, verrou). Tests `McpExecutionBtpTests` (filtre, catalogue, liste blanche exacte), `McpExecutionBtpBaseTests` (`LOGIBTP_TEST_PG` :
+  nature portée par FAB_METAL — service de démonstration de la métallerie —, aperçu, OE brouillon sans la ligne de pose, reste épuisé,
+  DAP brouillon 100 kg → 50 ml, ventilation 50 ml du dépôt et réappro MINI_FRANCHI de 100 ml au maxi, aucune pièce créée).
+
+## Lot 10 : file des propositions
+
+- **Partie** : `modules/mcp` (table `mcp_proposition`, service, routes `/api/mcp/propositions`) + cœur (exécuteurs :
+  valider une pièce, appliquer une ventilation → transformations E_DAP → S_RESERVATION / S_DEMANDE / A_COMMANDE,
+  envoyer un courriel, créer un tiers provisoire ; source de notification « propositions à valider »).
+- **Contenu** : proposition = action, cible, contenu (écarts), avertissements, échéance, état ; acceptation exécutée
+  **sous l'identité de l'humain**, en transaction ; refus motivé ; journal.
+- **Critère de fin** : test : proposition acceptée → route exécutée par l'humain, au journal ; refusée par un humain
+  sans le droit.
+- **Réalisé** (13/11/2026) : module MCP : `db/099v_mcp_propositions.sql` (rejouable, manifeste) `mcp_proposition` (délégation, délégant,
+  client, outil, action, nœud et droit exigés, libellé, cible, contenu et avertissements JSONB, échéance exclue, état, correction,
+  décision, motif, résultat), `agent_journal.ajo_proposition` / `ajo_humain` ; règles répliquées `js/src/propositions.js` ↔
+  `LogiBTP.Mcp/ReglesPropositions.cs` (jeu `tests/cas/02_propositions.json` : `echeanceProposition` 7 j par défaut, 1 à 30,
+  `etatProposition` ECHUE, `controlerDecision` : agent → AGENT_INTERDIT seul, usurpation, décision inconnue, échue, close, refus sans
+  motif) ; codes `ETAT_PROPOSITION`, `DECISION_PROPOSITION`, `ERREUR_MCP` complété (`MCP_PROPOSITION_CLOSE`, `_ECHUE`, `MCP_MOTIF_REQUIS`,
+  `MCP_EXECUTEUR_INCONNU`, `MCP_CONTENU_INVALIDE`). `SpecialisationMcp.Executeurs` (`ExecuteurProposition(Action, Executer)` +
+  `Controler` du contenu corrigé, `TypeElement`), `AdresseProposition` ; outil de classe PROPOSITION : composé, `ExecutionOutil` en
+  lecture seule (toute route autre que GET : `MCP_ROUTE_NON_DECLAREE`), hors liste blanche, exposé dès que son nœud n'est pas interdit
+  et que le plafond n'est pas LECTURE ; tout outil composé dépose par `ExecutionOutil.Proposer(PropositionPreparee)` ; `ServiceMcp`
+  contrôle le dépôt (exécuteur connu, plafond non LECTURE, `ClasserOutil` de l'action proposée — nœud et droit exigés, ENVOI — avec
+  les droits du délégant sur ce nœud ≠ INTERDIT), enregistre, rend `proposition { id, action, etat, echeance, adresse }` absolue et
+  journalise (`ajo_proposition`). `ServicePropositions` et routes `/api/mcp/propositions` (`GET ?vue=miennes|a_valider|toutes`,
+  `GET /{id}`, `PUT /{id}/contenu`, `POST /{id}/refuser` { motif }, `POST /{id}/accepter`) : humain seulement, visible du délégant, de
+  l'administrateur ou de qui a le droit exigé ; acceptation : droit exigé (`IDroits`), exécuteur sous l'identité de l'humain de la
+  requête, passage à ACCEPTEE et exécution dans `db.Unite().ExecuterAsync` (tout ou rien), refus et échecs journalisés hors de la
+  transaction ; révocation d'une délégation : propositions en attente ANNULEE. Cœur (`Btp/McpPropositionsBtp.cs`) : outils
+  `proposer_validation`, `proposer_envoi` (Envoi), `proposer_tiers`, `proposer_ventilation` (composé, `deposer`) ; exécuteurs
+  `valider_piece` (`DocumentService.Valider` : droit VALIDER du type, montants, version lue), `appliquer_ventilation` (transformations
+  E_DAP → S_RESERVATION par dépôt avec `ent_stk_origine_id`, S_DEMANDE pour les parts COMMANDE, A_COMMANDE par fournisseur avec le
+  fournisseur pour tiers ; réappros par `ServiceApprovisionnement.CommanderAsync` ; tout en brouillon), `envoyer_document`
+  (`ServiceEnvoiMail.PreparerAsync` + `EnvoyerAsync`, droit CREER sur `mail`, message de l'agent encodé en texte),
+  `creer_tiers_provisoire` (`ServiceAnnuaire.CreerProvisoire`) ; `SourcePropositionsAgents` (notification « agents / PROPOSITION »
+  au délégant, clé par proposition) ; `/api/mcp/propositions` en `ModeRoute.Session` et écriture Action ; `AdressesApp.UrlProposition` ↔
+  `urlProposition`, `TypesDocument.SDemande` ↔ `S_DEMANDE`, `ERREUR_MCP_BTP` complété (`MCP_DEJA_VALIDE`, `MCP_DESTINATAIRE`,
+  `MCP_VENTILATION_VIDE`). Correction du lot 9 : la ventilation garde les lignes `lig_solde` d'une demande validée (la case dit que la
+  ligne solde sa ligne d'ordre). Tests `ReglesPropositionsTests`, `CodesTests`, `PointMcpTests` (dépôt par le client MCP, agent refusé,
+  humain sans le droit refusé et journalisé, correction contrôlée, acceptation sous l'identité de l'humain, une seule fois, refus motivé,
+  échec annulé, révocation, plafond LECTURE), `McpPropositionsBtpTests`, `McpExecutionBtpBaseTests` (validation proposée refusée sans
+  VALIDER puis acceptée, historique humain ; ventilation acceptée : S_RESERVATION de 50 ml au dépôt et commande de réappro au
+  fournisseur livrée au dépôt, brouillons, au journal).
+
+## Lot 11 : écrans
+
+- **Partie** : `modules/mcp/js/ui` (écrans sans métier : délégations, levées par profil, journal, propositions) +
+  cœur (pages `/mon-compte#agents`, `/parametres/agents`, `/agents/propositions`, `/agents/journal`, menus, pastille
+  🤖 dans l'historique et l'entête des pièces). Textes, icônes et couleurs par le module Personnalisation.
+- **Critère de fin** : tests d'écrans (jsdom) verts ; `npm test`.
+- **Réalisé** (13/11/2026) : module MCP `js/ui` (sans métier, comme le module Relances) : `PanneauDelegations` (liste, les miennes ou
+  toutes pour l'administrateur ; création dans une fenêtre du socle : libellé, modèle par `creerCombo` parmi ceux permis — sur-mesure
+  hors écran —, durée en jours avec l'échéance calculée par `echeanceDelegation`, client, portée, garde-fous levables cochables, les
+  autres grisés ; secret affiché une seule fois avec l'adresse `https://<société>/mcp`, la commande `claude mcp add --transport http …
+  --header "Authorization: Bearer …"` et le `.mcp.json`, chacun copiable ; révocation confirmée), `ParametresAgents` (par profil :
+  levables, modèles permis, échéance maximale, quotas, alerte ; contrôle local identique à `ControlerLevee`), `JournalAgents` (filtres
+  compte, agent, élément, période — dates par `champDate`, filtres retenus dans le `localStorage` —, export CSV par `telechargerCsv`),
+  `FilePropositions` / `DetailProposition` (vues à valider / miennes / toutes, état échu calculé par `etatProposition`, avertissements,
+  contenu aplati, accepter confirmé, corriger le JSON avec les écarts avant / après, refuser avec motif par `saisir`) ; fonctions pures
+  `ui/modeles.js` ; raccourcis par `declarerRaccourcis` (groupes `mcp_*`) ; couche `personnalisation/` (`fr.json` sous `mcp.*`,
+  `icones.json`, `theme.css`) ajoutée à `client/personnalisation/couches.js`. Serveur du module : `GET /api/mcp/delegations/choix`
+  (`ServiceDelegations.ChoixAsync` → `ChoixDelegation` : modèles permis au profil, jamais COMME_MOI pour un profil total, garde-fous,
+  levables, échéance par défaut et maximale, portées), test `PointMcpTests.Choix_de_creation_suivent_les_levees_du_profil`. Cœur :
+  pages `/agents/propositions`, `/agents/propositions/:id`, `/agents/journal`, `/parametres/agents` (`pages/agents.js`), section
+  « Agents » de Mon compte (`/compte#agents` : la page de compte existante est `/compte`), menu « Agents IA » (`module:
+  MODULE_FACULTATIF.MCP`, propositions sans droit, journal et délégations sous `agents`, paramétrage sous `administration/profils`),
+  appels `api.mcp`, route `GET /api/documents/{id}/origines` (`Btp/OriginesHistoriqueBtp.cs` : origine, délégation et client de chaque
+  ligne de l'historique, droit Consulter du type), mention « 🤖 via <client> » dans l'historique de l'onglet Traçabilité et pastille 🤖
+  dans l'entête d'une pièce créée par un agent tant qu'aucun humain n'y a écrit (`agents/origines.js`), codes `CIBLE_PROPOSITION` ↔
+  `CiblesProposition` (`CodesTests`). Tests : `modules/mcp/js/test/ecrans.test.js` (clés, icônes, conventions, gabarits HTML et fonctions
+  pures : jsdom n'est pas installé dans le dépôt, les écrans rendent par des gabarits testés sans DOM), `client/test/agents.test.js`,
+  clés du module dans `personnalisation.test.js`, `McpDocumentsBtpBaseTests` (origines lues par la route). Activation du module : page
+  générique `/parametres/modules` (ligne `mcp` de `db/308`). Messages `erreurs.MCP_*` : aucun code « sûr » au sens de
+  `npm run extraire-erreurs` (messages composés ou multiples), le message du serveur reste affiché.
+
+## Lot 12 : serveur d'autorisation OAuth 2.1
+
+- **Partie** : `modules/mcp`. **Contenu** : métadonnées RFC 9728 (`/.well-known/oauth-protected-resource`) et RFC 8414,
+  `/oauth/authorize` (session de l'application, écran de consentement = création de délégation), `/oauth/token` (code
+  + PKCE S256, rafraîchissement rotatif), clients par document de métadonnées (CIMD) et liste blanche par société,
+  audience `/mcp` (RFC 8707) ; jetons émis par `IJetonsDelegues`.
+- **Critère de fin** : tests du flux (PKCE, client non autorisé refusé, audience).
+- **Réalisé** (13/11/2026) : `modules/mcp/db/099w_mcp_oauth.sql` (rejouable, manifeste) : `mcp_client_oauth` (liste blanche par
+  société, `https://claude.ai/oauth/mcp-oauth-client-metadata` et `https://claude.ai/oauth/claude-code-client-metadata`
+  pré-renseignés, désactivables), `mcp_oauth_autorisation` (demande puis code : empreinte seule, 5 min, usage unique),
+  `mcp_oauth_rafraichissement` (empreinte seule, rotatif), `mcp_delegation.mde_client_oauth`. Règles sans base
+  `LogiBTP.Mcp/ReglesOAuth.cs` (C# seul, comme `ReglesJetonsDelegues` : le navigateur ne voit ni code ni jeton) : `ClientIdValide`
+  (CIMD : https, chemin, sans fragment ni identifiants ni `..`), `ControlerDocument` (`client_id` identique, retours https ou boucle
+  locale, client public `none`, octroi `authorization_code`), `RedirectionPermise` (égalité exacte), `DefiValide` /
+  `VerificateurValide` / `PkceValide` (S256 seul, temps constant), `Ressource` / `RessourceEgale` (audience = `/mcp` de la société,
+  RFC 8707), `EcheanceAcces` (15 min bornées à la fin de la délégation), codes `ErreurOAuth` de la norme. `LogiBTP.Mcp.Web` :
+  `IDocumentsClients` / `DocumentsClientsHttp` (document lu seulement pour un client de la liste blanche, 5 s, 16 Kio, sans
+  redirection, cache 10 min ; substituable), `ServiceOAuth` : métadonnées RFC 9728 (`/.well-known/oauth-protected-resource` et
+  `…/mcp`) et RFC 8414 (`/.well-known/oauth-authorization-server`, `client_id_metadata_document_supported`, `iss` de la RFC 9207),
+  404 module inactif ; `GET /api/mcp/oauth/authorize` (publique : le cookie SameSite=Strict n'est pas envoyé depuis le site du client)
+  → page de consentement `SpecialisationMcp.AdresseConsentement` avec `?erreur=MCP_OAUTH_CLIENT|MCP_OAUTH_REDIRECTION` (jamais de
+  redirection vers une adresse non vérifiée) ou `?demande=…` (10 min) ; erreurs rendues au client vérifié (`unsupported_response_type`,
+  PKCE absent ou `plain`, `invalid_target`) ; consentement `GET /api/mcp/oauth/demandes/{d}`, `POST …/accepter` (délégation par
+  `ServiceDelegations.PreparerAsync`, mêmes contrôles que l'écran, client = nom du document) et `…/refuser` (`access_denied`) ;
+  `POST /api/mcp/oauth/token` (publique, formulaire, client public seul) : `authorization_code` (même client, même `redirect_uri`,
+  PKCE, ressource) et `refresh_token` (rotatif, usage unique) ; code ou jeton rejoué → délégation révoquée (`ServiceDelegations.
+  RevoquerAsync` interne : jetons délégués, jetons de rafraîchissement, propositions en attente), `MCP_OAUTH_REJEU` au journal ;
+  jeton d'accès = **jeton délégué** émis par `IJetonsDelegues.EmettreAsync` (15 min) : `/mcp` l'ouvre comme un jeton d'agent (même
+  `Utilisateur.Agent`, plafond, journal) ; aucune extension du socle ni de l'Authentification nécessaire. Débit : politique
+  `mcp_oauth` (30 / min / adresse) sur les deux routes publiques. 401 de `/mcp` : `WWW-Authenticate: Bearer resource_metadata="…",
+  scope="mcp"`. Liste blanche : `GET|PUT /api/mcp/clients` (administrateur). Codes `MCP_OAUTH_DEMANDE`, `MCP_OAUTH_CLIENT`,
+  `MCP_OAUTH_REDIRECTION`, `MCP_OAUTH_REJEU` (parité `CodesTests`). Interface du module : `ConsentementOAuth` (formulaire de délégation
+  partagé avec Mon compte : `formulaireDelegationHtml` / `monterFormulaireDelegation`), `ClientsOAuth`. Cœur : `AdressesApp.
+  UrlAutorisationAgent` ↔ `URL_AUTORISATION_AGENT` (`/agents/autoriser`, `PageAutorisationAgent`), liste blanche montée dans
+  `/parametres/agents`, `Extensions.RoutesPubliques` ajoutées à `OptionsAuthentification.RoutesPubliques`, droits (`authorize`,
+  `token` Publique ; `oauth/demandes` Module `agents` ; `/api/mcp/clients` Parametrage) et écritures (`token` Session, `demandes`
+  Action, `clients` Parametrage). Tests : `ReglesOAuthTests`, `OAuthMcpTests` (Kestrel, `LOGIBTP_TEST_PG` : métadonnées, 401 avec
+  `resource_metadata`, code + PKCE → jeton accepté par `/mcp` sous la délégation consentie, PKCE faux, retour différent, client hors
+  liste ou désactivé, audience d'une autre société, code rejoué et rafraîchissement rejoué → révocation), écrans
+  (`ecrans.test.js`, `client/test/agents.test.js`). Choix : exclusion d'adresse du module Authentification non appliquée (aucun
+  contrat du socle ; codes et jetons de 32 octets, débit borné) ; `resource` facultatif (absent : `/mcp` de la société) ; client
+  sans enregistrement dynamique (CIMD seul). Guide de connexion claude.ai (connecteur personnalisé, adresse `https://<société>/mcp`,
+  exposition HTTPS publique de `/mcp`, `/.well-known/*` et `/api/mcp/oauth/*`) : lot 14.
+
+## Lot 13 : recettes et « Demander à l'agent »
+
+- **Partie** : `modules/mcp` (table `mcp_recette`, prompts MCP, paramètres typés) + cœur (recettes fournies : devis
+  depuis un modèle, OE métallerie et appro, contrôle d'un devis, synthèse de chantier ; bouton « 🤖 Demander à
+  l'agent » sur les fiches marché et chantier et les pièces : prompt prérempli copié ou ouvert dans le client).
+- **Critère de fin** : tests : recette listée en prompt MCP, bouton présent selon le module et les droits.
+- **Réalisé** (13/11/2026) : module MCP : `db/099x_mcp_recettes.sql` (rejouable, manifeste) `mcp_recette` (code, libellé, description,
+  prompt à marques `{nom}`, paramètres JSONB `[{ nom, type, libelle, requis }]`, outils JSONB, sortie, active, fournie, ordre) ; règles
+  répliquées `js/src/recettes.js` ↔ `LogiBTP.Mcp/ReglesRecettes.cs` (jeu `tests/cas/03_recettes.json`) : `parametresPrompt`,
+  `controlerRecette` (codes `MCP_RECETTE_CODE`, `_TEXTE`, `_PARAMETRE` — marques et paramètres déclarés identiques —, `_OUTIL` —
+  outils du catalogue, au moins un —, `_SORTIE`), `recettePermise` (active, tous ses outils permis), `remplirPrompt` (valeurs rognées,
+  sur une ligne hors TEXTE, 500 caractères au plus ; requis manquants) ; codes `TYPE_PARAMETRE_RECETTE` (MARCHE, CHANTIER, DOCUMENT,
+  PERIODE, TEXTE), `SORTIE_RECETTE` (BROUILLON, PROPOSITION, RAPPORT), `MCP_RECETTE_INCONNUE`, `MCP_RECETTE_FOURNIE` (`CodesTests`).
+  `ServiceRecettes` : prompts MCP du SDK (`WithListPromptsHandler` / `WithGetPromptHandler`, capacité Prompts) = recettes actives dont
+  tous les outils sont exposés à la délégation (`ServiceMcp.OutilsAsync`), arguments typés (description = libellé + type du
+  dictionnaire `mcp.recettes.types.*`), obtention remplie (requis manquant, recette non permise : erreur InvalidParams) ; routes
+  `GET /api/mcp/recettes` (actives et `delegation` active de l'humain ; `?toutes=true` : toutes et catalogue des outils, administrateur),
+  `PUT|DELETE /api/mcp/recettes/{code}` (administrateur seul, `ExigerHumain` : jamais un agent ; recette fournie non supprimable).
+  Interface `js/ui/recettes.js` : `GestionRecettes` (tableau, saisie dans une fenêtre du socle : paramètres suivant les marques du
+  prompt, types et sortie par `creerCombo`, outils cochables, contrôle local identique au serveur, fenêtre gardée ouverte tant que la
+  saisie est invalide ; raccourci `mcp_recettes`), `demanderAgent` (recettes du type de l'élément, paramètres préremplis, prompt
+  rempli copié ; lien d'ouverture du client seulement si `adresseClient` rend une adresse : aucune documentée, copie seule).
+  Correction du lot 12 : `ReglesOAuth.RedirectionPermise` accepte tout port pour une adresse de retour déclarée en boucle locale
+  (`http` sur `127.0.0.1`, `[::1]` ou `localhost`, même hôte, chemin et requête : RFC 8252 § 7.3). Cœur : recettes fournies
+  `db/310_mcp_recettes.sql` (rejouable, manifeste, `ON CONFLICT DO NOTHING`) : `devis_depuis_modele`, `devis_depuis_devis`,
+  `oe_metallerie_appro`, `controle_devis`, `synthese_chantier` ; `/api/mcp/recettes` en `ModeRoute.Session` (droits) et Parametrage
+  (écritures) ; types d'arguments dans `McpTextes.json` ; client : `agents/demander.js` (`peutDemanderAgent` : module actif, délégation
+  active ou droit `agents`, une recette du type ; recettes lues une fois par minute), bouton 🤖 dans la barre des fiches marché et
+  chantier (`pages/fiche.js`) et des pièces (`pages/document.js`, `data-action="agent"`), gestion montée dans `/parametres/agents`,
+  `api.mcp.recettes|enregistrerRecette|supprimerRecette`. Tests : `recettes.test.js`, `ReglesRecettesTests`, `ecrans.test.js`,
+  `PointMcpTests.Recettes_exposees_en_prompts_…` (prompt listé avec ses arguments, absent quand un outil n'est pas permis, obtention
+  remplie, modification refusée à un agent et à un non-administrateur), `ReglesOAuthTests` / `OAuthMcpTests` (boucle locale à port
+  variable), `McpRecettesBtpTests` (recettes fournies valides pour le catalogue), `client/test/agents.test.js` (bouton selon le module
+  et les droits).
+
+## Lot 14 : documentation
+
+- `modules/mcp/CLAUDE.md`, `documentation/modules/MCP.md`, guide de connexion (Claude Code, claude.ai),
+  `MODULES.md`, `JOURNAL-LOTS.md`, `TODO.md`, `npm run rapport-dependances`, registre RGPD (traitement « agents »).
+- Guide claude.ai (noté au lot 12) : connecteur personnalisé à l'adresse `https://<société>/mcp` (OAuth découvert par le 401 et
+  `/.well-known/oauth-protected-resource/mcp`), client claude.ai actif dans Paramètres › Agents IA › Clients OAuth autorisés,
+  consentement = délégation (modèle, durée, garde-fous), révocation depuis Mon compte › Agents ; exposition HTTPS publique de
+  `/mcp`, `/.well-known/oauth-*` et `/api/mcp/oauth/authorize|token` (la page `/agents/autoriser` reste derrière la session) ;
+  Claude Code : jeton d'agent (lot 11) ou OAuth avec retour en boucle locale (port libre, lot 13) ; recettes (prompts MCP) et bouton « Demander à l'agent » (lot 13).
+
+**Réalisé** : `documentation/modules/MCP.md` (référence, scripts SQL, RGPD : aucun registre dans le dépôt), `documentation/developpeur/GUIDE-AGENTS-MCP.md` (connexion Claude Code, claude.ai, révocation, journal), `modules/mcp/CLAUDE.md` resserré, `MODULES.md`, `JOURNAL-LOTS.md`, en-tête de l'analyse, `TODO.md`, `npm run rapport-dependances`.

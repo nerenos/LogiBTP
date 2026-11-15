@@ -26,7 +26,7 @@
 
 ## Conventions et pièges
 - Enregistrement : verrou détenu par ce jeton (sinon 409 `VERROU_PERDU`), empreinte `h` inchangée, validation de la ligne complète après modification (confidentiel compris), JSONB fusionné (saisie vide = clé à null). Champ `lecture_seule` ou `saisie: 'creation'` refusé en modification.
-- `EcrireGeresAsync` s'exécute après la transaction de la ligne (pas atomique avec elle) : valider dans `ValiderGeresAsync`.
+- Création, modification et suppression en une seule transaction (unité d'écriture du socle) : `AvantEcritureAsync`, la ligne et `EcrireGeresAsync` (ou `AvantSuppressionAsync` et la suppression) tout ou rien ; `ApresEcritureAsync` après la validation. Clé étrangère à la suppression → 409 `FICHE_UTILISEE`.
 - Verrou : battement JS toutes les 30 s ; `PurgerVerrous` supprime les verrous expirés ; `forcer` exige DEBLOQUER ; une saisie dans une liste salaries/materiels est refusée si la fiche est verrouillée.
 - Identifiants SQL tirés de la définition du type (contrôlés, entre guillemets), valeurs en paramètres converties au type `information_schema` (`CacheTypesColonnes`, indexé par base).
 - Types, droits et paramétrage du cœur : modifier `client/src/app/fiches/definitions.js` puis `npm run generer-vues-liste --workspace client` (régénère `db/131_fiches_parametrage.sql` avec `db/121`, 116, 141, 150, 161, 163) ; ne jamais éditer `db/131` à la main.

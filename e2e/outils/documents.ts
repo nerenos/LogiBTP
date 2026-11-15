@@ -115,7 +115,7 @@ export async function attendreTotalHt(page: Page, montant: string) {
 
 export async function onglet(page: Page, nom: 'Entête' | 'Règlements' | 'Lignes' | 'Suivi') {
   const tab = nom === 'Suivi' ? page.getByRole('tab', { name: /notes, tâches et courriels/ }) : page.getByRole('tab', { name: nom, exact: true });
-  await tab.click();
+  await tab.click({ timeout: 10000 });
   await expect(tab).toHaveAttribute('aria-selected', 'true');
   if (nom === 'Entête') await expect(page.locator('#vue-entete .entete-titre .numero')).not.toBeEmpty();
 }
@@ -127,15 +127,32 @@ export async function enregistrer(page: Page) {
 
 /** Action du menu ▾ du bouton Enregistrer (Valider, Transformer…, Dévalider…, Annuler par avoir…). */
 export async function actionDocument(page: Page, nom: string) {
-  const menu = page.locator('[data-menu-actions]');
-  if (await menu.isHidden()) await page.locator('[data-ouvrir-actions]').click();
+  // Une page masquée (fenêtre précédente gardée par l'application) peut rester dans le DOM : menu de la page affichée.
+  const menu = page.locator('[data-menu-actions]:not([hidden])');
+  if (!(await menu.count())) await page.locator('[data-ouvrir-actions]').filter({ visible: true }).last().click();
   await menu.getByRole('menuitem', { name: nom, exact: true }).click();
 }
 
 /** Valide le document (enregistré au préalable) ; les avertissements de gestion éventuels sont acceptés. */
 export async function valider(page: Page) {
   await actionDocument(page, 'Valider');
-  await attendreMessage(page, /Document validé/);
+  // Document modifié depuis l'enregistrement (contact repris du tiers choisi…) : « Enregistrer puis valider ? » accepté
+  const confirmation = dialogue(page).getByText(/doit d'abord être enregistré/);
+  const valide = page.getByRole('status').filter({ hasText: /Document validé/ }).first();
+  // Message du bandeau remplacé par un suivant (avertissement, exécution…) : statut de l'entête sorti du brouillon
+  const sortiDuBrouillon = async () => {
+    await onglet(page, 'Entête');
+    await expect(statutDocument(page)).not.toContainText(/^Brouillon/);
+  };
+  try {
+    await expect(confirmation.or(valide)).toBeVisible({ timeout: 10000 });
+  } catch {
+    await sortiDuBrouillon();
+    return;
+  }
+  if (!(await confirmation.isVisible())) return;
+  await dialogue(page).getByRole('button', { name: 'OK', exact: true }).click();
+  await attendreMessage(page, /Document validé/).catch(sortiDuBrouillon);
 }
 
 /** Transformation par la fenêtre de choix (cible désignée par le début de son libellé) ; ouvre le document créé. */
@@ -202,25 +219,43 @@ const grille = (page: Page) => page.locator('#vue-lignes div.grille:not(.metre-v
 export const ligneGrille = (page: Page, texte: string) => grille(page).locator('tbody tr').filter({ hasText: texte }).first();
 
 /** Cellule d'une ligne par le titre de sa colonne (la vue de colonnes décide de l'ordre). */
-async function cellule(page: Page, ligne: Locator, colonne: string) {
+export async function cellule(page: Page, ligne: Locator, colonne: string) {
   const titres = (await grille(page).locator('thead th').allInnerTexts()).map((t) => t.split('\n')[0].trim());
-  const i = titres.findIndex((t) => t === colonne || t.startsWith(`${colonne} `));
+  // Titre exact d'abord (« Qté » avant « Qté parent »), sinon titre suivi d'un bouton (« Libellé ⇔ »).
+  const exact = titres.indexOf(colonne);
+  const i = exact >= 0 ? exact : titres.findIndex((t) => t.startsWith(`${colonne} `));
   if (i < 0) throw new Error(`Colonne « ${colonne} » absente de la vue : ${titres.join(' | ')}`);
   // Première colonne : poignée sans data-col.
   return ligne.locator(`td[data-col="${i - 1}"]`);
 }
 
-/** Saisie d'une cellule : clic, Entrée (édition), remplacement du texte, Entrée (validation). */
+/**
+ * Éditeur ouvert dans une cellule. Le clic sur la cellule déjà active de la ligne courante ouvre l'éditeur dès le
+ * `mousedown` (grille du socle) : l'Entrée le validerait alors vide et passerait à la ligne du dessous, d'où une Entrée
+ * seulement si le clic ne l'a pas ouvert. L'éditeur attendu est celui de la cellule, pas un autre de la grille.
+ */
+export async function ouvrirEditeur(page: Page, td: Locator, { timeout = 5000 }: { timeout?: number } = {}) {
+  await td.click({ timeout });
+  const editeur = td.locator('.editeur');
+  if (!(await editeur.count())) await page.keyboard.press('Enter');
+  await expect(editeur).toBeVisible({ timeout });
+  return editeur;
+}
+
+/** Libellé d'une ligne encore vide : cellule sans texte, hors bouton « ¶ » de mise en forme de la ligne courante. */
+export const LIBELLE_VIDE = /^[\s¶]*$/;
+
+/** Saisie d'une cellule : éditeur ouvert (clic, Entrée si besoin), remplacement du texte, Entrée (validation). */
 export async function saisirCellule(page: Page, ligne: Locator, colonne: string, valeur: string) {
-  await (await cellule(page, ligne, colonne)).click();
-  await page.keyboard.press('Enter');
+  await ouvrirEditeur(page, await cellule(page, ligne, colonne));
   await page.keyboard.press('ControlOrMeta+a');
   await page.keyboard.type(valeur);
   await page.keyboard.press('Enter');
 }
 
 export async function texteCellule(page: Page, ligne: Locator, colonne: string) {
-  return (await (await cellule(page, ligne, colonne)).innerText()).trim();
+  // Espaces insécables des milliers (« 3 600,00 ») ramenées à des espaces simples.
+  return (await (await cellule(page, ligne, colonne)).innerText()).replace(/\s+/g, ' ').trim();
 }
 
 export type LignePrix = { libelle: string; qte: string; unite: string; pv: string; nature?: string };
@@ -235,14 +270,41 @@ export async function ajouterLigne(page: Page, l: LignePrix) {
   await pied.locator('td.col-libelle').click();
   await page.keyboard.press('Control+Shift+Enter');
   await page.keyboard.press('Escape');
-  const nouvelle = grille(page).locator('tbody tr.courante');
-  await saisirCellule(page, nouvelle, 'Libellé', l.libelle);
+  // Ligne insérée repérée par sa position : un libellé tronqué par un essai manqué est remplacé, pas doublé
+  const rang = await grille(page).locator('tbody tr.courante').evaluate((tr) => [...tr.parentElement!.children].indexOf(tr));
+  const nouvelle = grille(page).locator('tbody tr').nth(rang);
   const ligne = ligneGrille(page, l.libelle);
-  await saisirCellule(page, ligne, 'Nature', l.nature ?? NATURE);
-  await saisirCellule(page, ligne, 'U', l.unite);
-  await saisirCellule(page, ligne, 'Qté', l.qte);
-  await saisirCellule(page, ligne, 'PV', l.pv);
+  // Libellé remplacé d'un bloc dans l'éditeur (frappe au clavier : premières lettres perdues si la grille est
+  // redessinée avant l'ouverture de l'éditeur) ; délais bornés pour qu'un essai bloqué se rejoue
+  await expect(async () => {
+    await onglet(page, 'Lignes');
+    if (await ligne.count()) return;
+    await (await ouvrirEditeur(page, await cellule(page, nouvelle, 'Libellé'))).fill(l.libelle, { timeout: 5000 });
+    await page.keyboard.press('Enter');
+    await expect(ligne).toBeVisible({ timeout: 3000 });
+  }).toPass({ timeout: 45000 });
+  await saisirCelluleVerifiee(page, ligne, 'Nature', l.nature ?? NATURE);
+  await saisirCelluleVerifiee(page, ligne, 'U', l.unite);
+  await saisirCelluleVerifiee(page, ligne, 'Qté', l.qte);
+  await saisirCelluleVerifiee(page, ligne, 'PV', l.pv);
   return ligne;
+}
+
+/**
+ * Saisie d'une cellule reprise tant que la cellule n'affiche pas la valeur (saisie perdue quand la grille est redessinée,
+ * par exemple à la création du document par sa première ligne). Nombre : comparé une fois mis en forme (« 1 200,00 »).
+ */
+export async function saisirCelluleVerifiee(page: Page, ligne: Locator, colonne: string, valeur: string) {
+  // Premier nombre affiché (la cellule peut porter une marque : métré, avertissement…)
+  const nombre = (t: string) => Number((t.match(/-?\d[\d\s]*(,\d+)?/)?.[0] ?? '').replace(/\s/g, '').replace(',', '.'));
+  const numerique = /^-?[\d\s]+([,.]\d+)?$/.test(valeur);
+  await expect(async () => {
+    const affiche = await texteCellule(page, ligne, colonne);
+    if (numerique ? nombre(affiche) === nombre(valeur) : affiche.includes(valeur)) return;
+    await saisirCellule(page, ligne, colonne, valeur);
+    const apres = await texteCellule(page, ligne, colonne);
+    expect(numerique ? nombre(apres) : apres).toEqual(numerique ? nombre(valeur) : expect.stringContaining(valeur));
+  }).toPass({ timeout: 20000 });
 }
 
 // ------------------------------------------------------------------ parcours réutilisés

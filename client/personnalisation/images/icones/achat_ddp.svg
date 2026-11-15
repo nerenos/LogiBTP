@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="64" height="64">
+  <!-- Fond Fiche Document Fournisseur (Vert Pastel) -->
+  <path d="M20 12C20 7.5 23.5 4 28 4H62L80 22V88C80 92.5 76.5 96 72 96H28C23.5 96 20 92.5 20 88V12Z" fill="#D1FAE5" />
+  <path d="M62 4L80 22H68C64.7 22 62 19.3 62 16V4Z" fill="#A7F3D0" />
+  
+  <!-- Icône Devis (Calculatrice) -->
+  <rect x="32" y="36" width="36" height="44" rx="6" fill="#10B981" />
+  <rect x="38" y="42" width="24" height="8" rx="2" fill="#FFFFFF" />
+  <circle cx="42" cy="58" r="3" fill="#FFFFFF" />
+  <circle cx="50" cy="58" r="3" fill="#FFFFFF" />
+  <circle cx="58" cy="58" r="3" fill="#FFFFFF" />
+  <circle cx="42" cy="68" r="3" fill="#FFFFFF" />
+  <rect x="47" y="65" width="14" height="6" rx="3" fill="#FFFFFF" />
+</svg>

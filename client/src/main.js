@@ -13,6 +13,7 @@ import '@logibtp/planning/ui/planning.css';
 import '@logibtp/execution/ui/atelier.css';
 import '@logibtp/rentabilite/ui/rentabilite.css';
 import '@logibtp/relance/ui/relance.css';
+import '@logibtp/mcp/ui/mcp.css';
 import '@logibtp/facture-electronique/ui/facture-electronique.css';
 import '@logibtp/annuaire/ui/annuaire.css';
 import '@logibtp/entreprises-fr/ui/entreprises.css';

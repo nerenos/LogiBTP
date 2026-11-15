@@ -339,7 +339,7 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
             if (plafond is decimal max && max >= 0)
             {
                 var encours = await db.Database.SqlQuery<decimal>($"""
-                    SELECT coalesce((SELECT sum(e.ech_montant - coalesce((SELECT sum(p.poi_montant) FROM pointage p WHERE p.poi_echeance_id = e.ech_id), 0))
+                    SELECT coalesce((SELECT sum(e.ech_montant * f_signe_reglement(x.ent_id) - coalesce((SELECT sum(p.poi_montant) FROM pointage p WHERE p.poi_echeance_id = e.ech_id), 0))
                                      FROM document_echeance e JOIN document x ON x.ent_id = e.ech_ent_id JOIN type_document t ON t.tyd_id = x.ent_tyd_id
                                      JOIN statut_document s ON s.std_id = x.ent_std_id
                                      WHERE x.ent_tiers_id = {tiers} AND t.tyd_famille = 'V' AND x.ent_verrouille AND s.std_code <> ALL({SqlBtp.StatutsHorsVigueur})), 0)
@@ -434,6 +434,26 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
             services.GetRequiredService<ILoggerFactory>().CreateLogger("Droits").LogWarning(e, "Demande de validation non créée pour le document {Document}", d.EntId);
         }
     }
+
+    /// <summary>Longueur des colonnes d'origine de l'historique (db/309).</summary>
+    private const int LongueurOrigine = 100;
+
+    /// <summary>
+    /// Origine des écritures (module MCP, lot 7, db/309) : action d'un agent IA (<see cref="Utilisateur.Agent"/>) marquée
+    /// AGENT dans l'historique de la pièce, avec la délégation et le client de l'agent ; action humaine : colonnes vides.
+    /// </summary>
+    public override async Task ApresHistoriqueAsync(DocumentDbContext<DocumentBtp, DocumentLigneBtp> db, DocumentHistorique historique, Utilisateur u, CancellationToken ct)
+    {
+        if (u.Agent is not { } agent) return;
+        var origine = OrigineEcriture.Agent;
+        var delegation = Tronquer(agent.Delegation);
+        var client = Tronquer(agent.Client);
+        await db.Database.ExecuteSqlAsync($"""
+            UPDATE document_historique SET his_origine = {origine}, his_delegation = {delegation}, his_client = {client} WHERE his_id = {historique.HisId}
+            """, ct);
+    }
+
+    private static string? Tronquer(string? v) => v is { Length: > LongueurOrigine } ? v[..LongueurOrigine] : v;
 
     /// <summary>
     /// Validation : commande client inscrite à son marché (base ou avenant, montant recalculé, db/170) ; document
@@ -554,6 +574,8 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         }
         // Révision des prix du marché (lot G1) : poste de la période et régularisation des périodes précédentes.
         await RevisionPrix.Appliquer(db, saisie, type, ct);
+        // Sous-traitance : marché en autoliquidation, TVA autoliquidée sur les lignes de prix (CGI 283-2 nonies).
+        await SpecialisationSousTraitanceBtp.AutoliquiderAsync(db, type, saisie, ct);
     }
 
     /// <summary>
@@ -840,6 +862,46 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
     {
         if (source.EntChantierId is not int chantier || !FamillesDocument.EstAchat(typeCible.TydFamille)) return;
         foreach (var l in contenu.Lignes.Where(l => TL.EstChiffree(l) && l.LigChaId is null)) l.LigChaId = chantier;
+    }
+
+    /// <summary>
+    /// Rôle du tiers d'une famille de documents : le client pour les ventes et les ordres d'exécution (ordres d'un marché
+    /// de vente), le fournisseur ou le sous-traitant pour les achats et la sous-traitance, notre société pour le stock.
+    /// </summary>
+    private static string RoleTiers(string famille) => famille switch
+    {
+        FamillesDocument.Vente or FamillesDocument.Execution => "CLIENT",
+        FamillesDocument.Achat or FamillesDocument.SousTraitance => "FOURNISSEUR",
+        _ => famille,
+    };
+
+    /// <summary>
+    /// Transformation vers une famille dont le tiers n'a pas le même rôle (demande d'achat ou ordre de sous-traitance d'un
+    /// chantier vers une commande fournisseur, demande d'approvisionnement vers une réservation de stock…) : ni le tiers
+    /// (le client de l'ordre n'est pas le fournisseur, et le tiers d'une transformation est ensuite figé), ni son annuaire,
+    /// ni ses coordonnées figées, ni le marché de la source ne sont repris ; le chantier, l'affaire et le projet restent.
+    /// </summary>
+    public override void PreparerEnteteTransformee(DocumentBtp cible, TypeDocument typeSource, TypeDocument typeCible)
+    {
+        // Ordre transmis à un ordre d'un autre type (fabrication → livraison…) : l'exécution de la source (service porteur,
+        // responsable, état, motif, dates prévues) n'est pas reprise ; le service par défaut du type s'applique à la
+        // création (db/208), les dates et l'état suivent ensuite les étapes du nouvel ordre.
+        if (typeCible.TydFamille == FamillesDocument.Execution && typeCible.TydCode != typeSource.TydCode)
+        {
+            cible.EntSrvId = null;
+            cible.EntResponsableId = null;
+            cible.EntExeEtat = null;
+            cible.EntExeMotifId = null;
+            cible.EntExeCommentaire = null;
+            cible.EntDebutPrevu = null;
+            cible.EntFinPrevue = null;
+        }
+        if (RoleTiers(typeSource.TydFamille) == RoleTiers(typeCible.TydFamille)) return;
+        cible.EntTiersId = null;
+        cible.EntMarcheId = null;
+        cible.EntContactClient = null;
+        cible.EntContactPayeur = null;
+        cible.EntIntervenants = null;
     }
 
     /// <summary>

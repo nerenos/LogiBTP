@@ -350,9 +350,10 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
         };
     }
 
-    /// <summary>Reste à payer d'une pièce d (alias) : net à payer moins les pointages de ses échéances (module Règlements).</summary>
+    /// <summary>Reste à payer d'une pièce d (alias) : net à payer moins les pointages de ses échéances (module Règlements), au signe de
+/// la pièce (pointages négatifs d'un avoir : f_signe_reglement, db/306).</summary>
     private const string ResteAPayer =
-        "d.ent_net_a_payer - coalesce((SELECT sum(p.poi_montant) FROM document_echeance e JOIN pointage p ON p.poi_echeance_id = e.ech_id WHERE e.ech_ent_id = d.ent_id), 0)";
+        "d.ent_net_a_payer - f_signe_reglement(d.ent_id) * coalesce((SELECT sum(p.poi_montant) FROM document_echeance e JOIN pointage p ON p.poi_echeance_id = e.ech_id WHERE e.ech_ent_id = d.ent_id), 0)";
 
     /// <summary>Module Règlements installé dans la base courante (table pointage) : il est facultatif.</summary>
     private static async Task<bool> ReglementsInstalles(LogiBtpContext db, CancellationToken ct) =>
@@ -546,12 +547,13 @@ public static class SourceDocumentEdition
             ["textes"] = new JsonObject { ["intro"] = document["ent_texte_intro"]?.DeepClone(), ["fin"] = document["ent_texte_fin"]?.DeepClone() },
         };
         // Imputations d'avoirs (module Règlements, facultatif ; décision du 31/10/2026) : sur une facture, les avoirs imputés ;
-        // sur un avoir, les factures sur lesquelles il est imputé ; montant pointé sur l'échéance de ce document.
+        // sur un avoir, les factures sur lesquelles il est imputé ; montant pointé sur l'échéance de ce document, au signe de la
+        // pièce (positif sur un avoir : f_signe_reglement, db/306).
         resultat["imputations"] = new JsonArray();
         if (await db.Database.SqlQueryRaw<bool>("SELECT to_regclass('pointage') IS NOT NULL AS \"Value\"").FirstAsync(ct))
         {
             var imputations = JsonNode.Parse(await db.Database.SqlQueryRaw<string>("""
-                SELECT coalesce(json_agg(json_build_object('piece', o.ent_numero, 'type', t.tyd_libelle, 'date', r.reg_date, 'montant', p.poi_montant)
+                SELECT coalesce(json_agg(json_build_object('piece', o.ent_numero, 'type', t.tyd_libelle, 'date', r.reg_date, 'montant', p.poi_montant * f_signe_reglement(e.ech_ent_id))
                          ORDER BY r.reg_date, p.poi_id), '[]')::text AS "Value"
                 FROM document_echeance e
                 JOIN pointage p ON p.poi_echeance_id = e.ech_id

@@ -1,5 +1,6 @@
 -- =============================================================================
--- Cœur LogiBTP – sources de listes (vues SQL) et données de démonstration volumineuses.
+-- Cœur LogiBTP – sources de listes (vues SQL), tables des salariés, matériels, équipes et sous-traitants de
+-- démonstration (vides : leurs données sont dans 120b_listes_demo.sql, script de démonstration).
 -- Les sources sont déclarées dans source_liste et les vues par défaut dans vue_liste par
 -- 121_listes_parametrage.sql (généré depuis client/src/app/vues-liste.js).
 -- =============================================================================
@@ -27,7 +28,7 @@ FROM document d
 JOIN type_document t ON t.tyd_id = d.ent_tyd_id
 JOIN statut_document s ON s.std_id = d.ent_std_id;
 
--- Démonstration : salariés et matériels (tables du cœur en attendant les modules RH et Matériel).
+-- Salariés et matériels (tables du cœur en attendant les modules RH et Matériel ; données de démonstration : 120b).
 CREATE TABLE salarie (
     sal_id          SERIAL        PRIMARY KEY,
     sal_matricule   VARCHAR(10)   NOT NULL UNIQUE,
@@ -58,59 +59,6 @@ CREATE TABLE materiel (
     mat_observations    TEXT
 );
 
--- 5 000 salariés et 3 000 matériels, valeurs pseudo-aléatoires reproductibles (setseed).
-SELECT setseed(0.42);
-INSERT INTO salarie (sal_matricule, sal_nom, sal_prenom, sal_service, sal_poste, sal_statut, sal_date_entree, sal_salaire, sal_actif, sal_commentaire)
-SELECT 'S' || lpad(i::text, 5, '0'),
-       (ARRAY['Martin','Bernard','Dubois','Lefèvre','Moreau','Laurent','Garçon','Roux','Fournier','Girard','Bonnet','Dupré',
-              'Lambert','Fontaine','Rousseau','Vincent','Müller','Faure','André','Mercier','Blanc','Guérin','Boyer','Chevalier'])[1 + floor(random() * 24)::int],
-       (ARRAY['Hélène','Gaëlle','Jérôme','Lœtitia','François','Zoé','Noël','Agnès','Benoît','Céline','Loïc','Maëlys',
-              'Thomas','Inès','Raphaël','Chloé','Jean-Marc','Anaïs','Mathéo','Léa','Ophélie','Grégoire','Nadège','Frédéric'])[1 + floor(random() * 24)::int],
-       x.service,
-       CASE x.service
-           WHEN 'Chantier' THEN (ARRAY['Maçon','Chef d''équipe','Coffreur','Manœuvre','Grutier'])[1 + floor(random() * 5)::int]
-           WHEN 'Bureau' THEN (ARRAY['Conducteur de travaux','Métreur','Assistante','Comptable'])[1 + floor(random() * 4)::int]
-           WHEN 'Atelier' THEN (ARRAY['Mécanicien','Magasinier'])[1 + floor(random() * 2)::int]
-           ELSE (ARRAY['Directeur','Responsable QSE'])[1 + floor(random() * 2)::int]
-       END,
-       (ARRAY['CDI','CDI','CDI','CDD','INTERIM'])[1 + floor(random() * 5)::int],
-       DATE '2005-01-01' + floor(random() * 7600)::int,
-       round((1900 + random() * 3600)::numeric, 2),
-       random() > 0.08,
-       CASE WHEN random() > 0.85 THEN 'Habilitation électrique' || chr(10) || 'CACES R482 cat. A'
-            WHEN random() > 0.9 THEN 'Temps partiel 80 %' ELSE '' END
-FROM generate_series(1, 5000) AS i
-CROSS JOIN LATERAL (SELECT (ARRAY['Chantier','Bureau','Atelier','Direction'])[1 + floor(random() * 4)::int] AS service, i AS j) x;
-
-INSERT INTO materiel (mat_code, mat_designation, mat_famille, mat_etat, mat_chantier, mat_valeur_achat, mat_date_achat,
-                           mat_heures, mat_heures_revision, mat_controle_ok, mat_observations)
-SELECT 'M' || lpad(i::text, 5, '0'),
-       x.designation || ' n° ' || (100 + i % 900),
-       x.famille,
-       x.etat,
-       CASE WHEN x.etat = 'CHANTIER' THEN (ARRAY['Maison Martin – Lyon','Résidence Les Érables','École Jean-Moulin','Pont de la Saône','Entrepôt Sud – Vénissieux'])[1 + floor(random() * 5)::int] END,
-       round((800 + random() * 180000)::numeric, 0),
-       DATE '2012-01-01' + floor(random() * 5000)::int,
-       floor(x.revision * (0.4 + random() * 0.8))::int,
-       x.revision,
-       random() > 0.2,
-       (ARRAY['','','Pneus à changer','Fuite hydraulique signalée' || chr(10) || 'Devis réparation demandé','Contrôle VGP à planifier','Rayures carrosserie'])[1 + floor(random() * 6)::int]
-FROM generate_series(1, 3000) AS i
-CROSS JOIN LATERAL (
-    SELECT f.famille,
-           (f.engins)[1 + floor(random() * array_length(f.engins, 1))::int] AS designation,
-           (ARRAY['DISPO','DISPO','CHANTIER','CHANTIER','CHANTIER','PANNE','REBUT'])[1 + floor(random() * 7)::int] AS etat,
-           250 * (1 + floor(random() * 8)::int) AS revision
-    FROM (VALUES
-        ('Engins', ARRAY['Mini-pelle 2,5 t','Chargeuse compacte','Tractopelle','Pelle sur chenilles 14 t']),
-        ('Levage', ARRAY['Grue à tour','Nacelle ciseaux','Chariot télescopique']),
-        ('Outillage', ARRAY['Bétonnière 350 l','Marteau-piqueur','Scie à sol','Groupe électrogène']),
-        ('Véhicules', ARRAY['Fourgon 3,5 t','Camion benne','Utilitaire léger']),
-        ('Coffrage', ARRAY['Banches métalliques','Étais tirants'])
-    ) AS f(famille, engins)
-    ORDER BY random() + i * 0 LIMIT 1
-) x;
-
 CREATE VIEW v_liste_salaries AS
 SELECT sal_id AS id, CASE WHEN sal_statut = 'INTERIM' THEN 'interim' ELSE 'salarie' END AS type_element, sal_matricule AS matricule, sal_nom AS nom, sal_prenom AS prenom, sal_service AS service, sal_poste AS poste,
        sal_statut AS statut, sal_date_entree AS date_entree, sal_salaire AS salaire_brut, sal_heures_mois AS heures_mois,
@@ -136,16 +84,6 @@ CREATE TABLE equipe (
     equ_active    BOOLEAN       NOT NULL DEFAULT TRUE
 );
 
-INSERT INTO equipe (equ_code, equ_libelle, equ_categorie, equ_chef, equ_effectif, equ_chantier, equ_active)
-SELECT 'E' || lpad(i::text, 3, '0'),
-       'Équipe ' || (ARRAY['gros œuvre','second œuvre','VRD','finitions'])[1 + (i - 1) % 4] || ' ' || (1 + (i - 1) / 4),
-       (ARRAY['Gros œuvre','Second œuvre','VRD','Finitions'])[1 + (i - 1) % 4],
-       (SELECT sal_prenom || ' ' || sal_nom FROM salarie WHERE sal_id = i * 37),
-       3 + floor(random() * 6)::int,
-       CASE WHEN random() > 0.3 THEN (ARRAY['Maison Martin – Lyon','Résidence Les Érables','École Jean-Moulin','Pont de la Saône'])[1 + floor(random() * 4)::int] END,
-       random() > 0.3
-FROM generate_series(1, 12) AS i;
-
 CREATE TABLE demo_sous_traitant (
     sst_id           SERIAL        PRIMARY KEY,
     sst_code         VARCHAR(10)   NOT NULL,
@@ -155,18 +93,6 @@ CREATE TABLE demo_sous_traitant (
     sst_agree        BOOLEAN       NOT NULL,
     sst_observations TEXT
 );
-
-INSERT INTO demo_sous_traitant (sst_code, sst_raison, sst_metier, sst_taux_horaire, sst_agree, sst_observations)
-SELECT 'ST' || lpad(i::text, 3, '0'), x.nom || ' ' || x.metier, x.metier, round((38 + random() * 30)::numeric, 2), x.agree,
-       (ARRAY['Lyon','Villeurbanne','Vénissieux','Saint-Étienne','Grenoble','Bourg-en-Bresse'])[1 + floor(random() * 6)::int]
-         || CASE WHEN x.agree THEN '' ELSE chr(10) || 'Attestation URSSAF à fournir' END
-FROM generate_series(1, 40) AS i
-CROSS JOIN LATERAL (
-    SELECT (ARRAY['Martin','Bernard','Dubois','Lefèvre','Moreau','Garçon','Roux','Müller'])[1 + floor(random() * 8)::int] AS nom,
-           (ARRAY['Électricité','Plomberie','Charpente','Étanchéité','Plâtrerie','Peinture','Menuiserie','Terrassement'])[1 + floor(random() * 8)::int] AS metier,
-           random() > 0.25 AS agree,
-           i AS j
-) x;
 
 -- Ressources : union de types d'élément ; l'identifiant est préfixé par le type pour rester unique.
 CREATE VIEW v_liste_ressources AS

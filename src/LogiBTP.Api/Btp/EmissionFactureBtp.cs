@@ -616,12 +616,16 @@ public static partial class EmissionFactureBtp
     private static JsonElement? Champ(JsonDocument? j, string nom) =>
         j is not null && j.RootElement.ValueKind == JsonValueKind.Object && j.RootElement.TryGetProperty(nom, out var v) ? v : null;
 
-    private static async Task<(PartieEmissionFe Partie, LignePersonneSql Ligne)?> PersonneAsync(LogiBtpContext db, string filtre, object? valeur,
+    // Requêtes constantes : notre société, personne par identifiant (paramètre {0}).
+    private const string SqlPersonneSociete = SqlPersonne + " WHERE per_societe_base";
+    private const string SqlPersonneId = SqlPersonne + " WHERE per_id = {0}";
+
+    private static async Task<(PartieEmissionFe Partie, LignePersonneSql Ligne)?> PersonneAsync(LogiBtpContext db, long? perId,
         JsonDocument? instantane, CancellationToken ct)
     {
-        var l = valeur is null
-            ? await db.Database.SqlQueryRaw<LignePersonneSql>(SqlPersonne + " WHERE " + filtre).FirstOrDefaultAsync(ct)
-            : await db.Database.SqlQueryRaw<LignePersonneSql>(SqlPersonne + " WHERE " + filtre, valeur).FirstOrDefaultAsync(ct);
+        var l = perId is null
+            ? await db.Database.SqlQueryRaw<LignePersonneSql>(SqlPersonneSociete).FirstOrDefaultAsync(ct)
+            : await db.Database.SqlQueryRaw<LignePersonneSql>(SqlPersonneId, perId.Value).FirstOrDefaultAsync(ct);
         if (l is null) return null;
         // Instantané figé de la pièce ; JSON null (pièce validée sans contact figé) : fiche du tiers relue.
         var snap = instantane is { RootElement.ValueKind: JsonValueKind.Object } ? instantane : await ContactsDocument.Instantane(db, l.Id, null, ct);
@@ -701,9 +705,9 @@ public static partial class EmissionFactureBtp
             FROM taux_tva t LEFT JOIN categorie_tva c ON c.ctv_code = t.ttv_ctv_code
             """).ToListAsync(ct)).ToDictionary(t => t.Id, t => new TauxEmissionFe(t.Id, t.Taux, t.Comportement, t.Categorie, t.Vatex, t.Mention));
 
-        var societe = await PersonneAsync(db, "per_societe_base", null, null, ct);
+        var societe = await PersonneAsync(db, null, null, ct);
         var client = ContactsDocument.Source(d, "CLIENT", FamillesDocument.Vente) is var (perId, _)
-            ? await PersonneAsync(db, "per_id = {0}", perId, d.EntContactClient, ct) : null;
+            ? await PersonneAsync(db, perId, d.EntContactClient, ct) : null;
 
         var livraison = Champ(d.EntAdresseLivraison, "adresse");
         var nomLivraison = Champ(d.EntAdresseLivraison, "libelle") is { ValueKind: JsonValueKind.String } nl ? nl.GetString() : null;
@@ -735,7 +739,7 @@ public static partial class EmissionFactureBtp
         if (parametres.Situation == SituationsCadreFe.SousTraitant
             && await db.Database.SqlQueryRaw<long?>(SqlPayeur, id).FirstOrDefaultAsync(ct) is long payeurId)
         {
-            payeur = (await PersonneAsync(db, "per_id = {0}", payeurId, null, ct))?.Partie;
+            payeur = (await PersonneAsync(db, payeurId, null, ct))?.Partie;
         }
         var jointes = parametres.Situation == SituationsCadreFe.Cotraitant && await RecapitulatifAsync(db, id, stockage, ct) is { } recap
             ? new List<PieceJointe> { recap } : [];

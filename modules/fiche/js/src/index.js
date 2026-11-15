@@ -4,3 +4,7 @@ export { MODES, LIBELLES_MODES, enSaisie, titreFiche } from './modes.js';
 export { FournisseurFicheApi, FournisseurFicheMemoire, ErreurFiche, convertir } from './fournisseurs.js';
 export { FORMAT_CHRONO_DEFAUT, exerciceChrono, controlerChrono, formaterCode, lireCode, debutCode, codeSuivant } from './chrono.js';
 export * from './codes.js';
+export {
+  PREFIXE_COLONNE, LONGUEUR_COLONNE, ONGLET_COLONNES, proposerColonne, lireValeursListe, ecrireValeursListe, controleDeErreur, demandeCreation,
+  champsColonnes, champsColonnesLibres, codesSectionGenerale, sectionChampsColonnes,
+} from './champs-supplementaires.js';

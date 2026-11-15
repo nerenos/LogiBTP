@@ -1,3 +1,4 @@
+using LogiBTP.Socle.Donnees;
 using LogiBTP.Documents.Web;
 using LogiBTP.Domaine;
 using LogiBTP.Socle.Web;
@@ -153,7 +154,7 @@ public static class SousTraitanceAssistant
         var st = api.MapGroup("").ExigeModule(ModulesFacultatifs.SousTraitance, "Sous-traitance");
         st.MapPost("/structure/documents/{id:long}/sous-traiter", (long id, DemandeSousTraiter d, HttpContext http, LogiBtpContext db,
             TransformationService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp> transformations, DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp> documents,
-            CancellationToken ct) => SousTraiterAsync(db, transformations, documents, id, d, Utilisateur.Depuis(http), ct));
+            CancellationToken ct) => SousTraiterAsync(db, transformations, documents, id, d, Utilisateur.Depuis(http), ct)).EnTransaction(); // transformation, copies et tiers : tout ou rien
         // Sous-traitants de l'annuaire (relation SOUS_TRAITANT), pour l'assistant.
         st.MapGet("/structure/sous-traitants", async (LogiBtpContext db, CancellationToken ct) => await db.Database.SqlQueryRaw<SousTraitantChoix>("""
             SELECT per_id AS id, per_raison_sociale AS libelle FROM personne WHERE per_casquettes ? 'SOUS_TRAITANT' AND per_actif AND per_raison_sociale IS NOT NULL ORDER BY per_raison_sociale

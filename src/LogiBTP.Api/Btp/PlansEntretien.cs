@@ -3,6 +3,7 @@ using LogiBTP.Domaine.Ressources;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Api.Btp;
 
@@ -61,7 +62,7 @@ public static partial class PlansEntretien
         var parType = type is not null;
         object cle = (object?)type ?? materiel!.Value;
         var codes = plans.Select(p => p.Code!.Trim().ToUpperInvariant()).ToArray();
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var sql = parType
             ? "SELECT mpl_code FROM materiel_plan WHERE mpl_type = @p AND NOT (mpl_code = ANY(@codes))"
             : "SELECT mpl_code FROM materiel_plan WHERE mpl_mat_id = @p AND NOT (mpl_code = ANY(@codes))";

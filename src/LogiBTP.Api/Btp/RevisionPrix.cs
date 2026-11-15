@@ -7,6 +7,7 @@ using LogiBTP.Socle;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Api.Btp;
 
@@ -508,7 +509,7 @@ public static class RevisionPrix
         }
         var moisZero = r.MoisZero is DateOnly mz ? ReglesRevision.Mois(mz) : (DateOnly?)null;
         var json = JsonSerializer.Serialize(termes, JsonCalcul.Options);
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         await db.Database.ExecuteSqlInterpolatedAsync($"""
             INSERT INTO marche_revision (mre_mar_id, mre_type_prix, mre_mois_zero, mre_partie_fixe, mre_termes, mre_decalage, mre_precision, mre_arrondi,
                                          mre_debut_travaux, mre_baisse, mre_maj_par, mre_maj_le)
@@ -615,7 +616,7 @@ public static class RevisionPrix
         if (index.Any(i => string.IsNullOrWhiteSpace(i.Code) || string.IsNullOrWhiteSpace(i.Libelle))) throw ExceptionMetier.Invalide("INDEX", "Code et libellé obligatoires");
         if (index.GroupBy(i => i.Code.Trim(), StringComparer.OrdinalIgnoreCase).Any(g => g.Count() > 1)) throw ExceptionMetier.Invalide("INDEX", "Code d'index en double");
         if (index.Any(i => i.Raccordements?.Values.Any(v => v <= 0) == true)) throw ExceptionMetier.Invalide("INDEX", "Coefficient de raccordement positif");
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var gardes = index.Where(i => i.Id is not null).Select(i => i.Id!.Value).ToArray();
         var retires = await db.Database.SqlQuery<string>($"""
             SELECT p.ipx_code AS "Value" FROM index_prix p WHERE NOT (p.ipx_id = ANY({gardes}))
@@ -707,7 +708,7 @@ public static class RevisionPrix
         };
         if (v.Simulation || erreurs.Count > 0) return bilan;
         var source = v.Import ? "IMPORT" : "SAISIE";
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         foreach (var (id, mois, x, etat) in operations.Where(o => o.Etat != "INCHANGEE"))
         {
             if (etat == "SUPPRIMEE")
@@ -764,7 +765,7 @@ public static class RevisionPrix
             if (erreurs.Count > 0) throw ExceptionMetier.Invalide(erreurs[0], $"{f.Libelle} : {string.Join(" ; ", erreurs)}");
             normalisees.Add((f, JsonSerializer.Serialize(await NormaliserIndexAsync(db, f.Termes, ct), JsonCalcul.Options)));
         }
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var gardes = formules.Where(f => f.Id is not null).Select(f => f.Id!.Value).ToArray();
         await db.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM formule_revision WHERE NOT (frv_id = ANY({gardes}))", ct);
         foreach (var (f, termes) in normalisees)

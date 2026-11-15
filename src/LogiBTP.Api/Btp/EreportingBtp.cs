@@ -9,6 +9,7 @@ using LogiBTP.Socle;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Api.Btp;
 
@@ -389,7 +390,7 @@ public static class EreportingBtp
     {
         var db = services.GetRequiredService<LogiBtpContext>();
         var fe = services.GetRequiredService<ServiceFactureElectronique>();
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var p = (await db.Database.SqlQueryRaw<LignePeriodeSql>(SqlPeriode + " WHERE erp_id = @p FOR UPDATE", new NpgsqlParameter("p", id)).ToListAsync(ct)).FirstOrDefault()
             ?? throw ExceptionMetier.Introuvable("Période d'e-reporting");
         var etat = Etat(p.EnvoyeLe is not null, await EtatsFluxAsync(db, p, ct));
@@ -471,7 +472,7 @@ public static class EreportingBtp
         var fe = services.GetRequiredService<ServiceFactureElectronique>();
         if (!(await fe.ParametreAsync(ct)).FpaActif)
             throw ExceptionMetier.Invalide(ErreursEreporting.Parametres, "Plateforme de facturation électronique non activée (paramètres du module)");
-        await using var tx = await fe.Db.Database.BeginTransactionAsync(ct);
+        await using var tx = await fe.Db.Unite().CommencerAsync(ct);
         var p = (await fe.Db.Database.SqlQueryRaw<LignePeriodeSql>(SqlPeriode + " WHERE erp_id = @p FOR UPDATE", new NpgsqlParameter("p", id)).ToListAsync(ct)).FirstOrDefault()
             ?? throw ExceptionMetier.Introuvable("Période d'e-reporting");
         if (p.EnvoyeLe is not null) throw ExceptionMetier.Conflit(ErreursEreporting.DejaEnvoyee, "Période déjà envoyée : corriger ou relancer pour envoyer de nouveau");

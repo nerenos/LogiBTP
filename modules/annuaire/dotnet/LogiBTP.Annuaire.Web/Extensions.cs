@@ -1,3 +1,4 @@
+using LogiBTP.Socle.Donnees;
 using LogiBTP.Annuaire;
 using LogiBTP.Socle.Web;
 using Microsoft.AspNetCore.Builder;
@@ -26,7 +27,8 @@ public static class Extensions
     /// <summary>Routes HTTP du module, sous /annuaire (les fiches passent par le module Fiche).</summary>
     public static RouteGroupBuilder MapModuleAnnuaire(this RouteGroupBuilder api)
     {
-        var g = api.MapGroup("/annuaire");
+        // Chaque écriture du module en une seule transaction (tout ou rien).
+        var g = api.MapGroup("/annuaire").EnTransaction();
         g.MapGet("/referentiels", (ServiceAnnuaire s, CancellationToken ct) => s.Referentiels(ct));
         foreach (var genre in new[] { "niveaux", "casquettes", "types-lien", "roles" })
         {

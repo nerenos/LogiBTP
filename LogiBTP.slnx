@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/socle/">
     <Project Path="socle/dotnet/LogiBTP.Socle/LogiBTP.Socle.csproj" />
+    <Project Path="socle/dotnet/LogiBTP.Socle.Donnees/LogiBTP.Socle.Donnees.csproj" />
     <Project Path="socle/dotnet/LogiBTP.Socle.Testing/LogiBTP.Socle.Testing.csproj" />
     <Project Path="socle/dotnet/LogiBTP.Socle.Tests/LogiBTP.Socle.Tests.csproj" />
     <Project Path="socle/dotnet/LogiBTP.Socle.Web/LogiBTP.Socle.Web.csproj" />
@@ -39,6 +40,7 @@
     <Project Path="modules/bibliotheque/dotnet/LogiBTP.Bibliotheque.Web/LogiBTP.Bibliotheque.Web.csproj" />
     <Project Path="modules/bibliotheque/dotnet/LogiBTP.Bibliotheque.Tests/LogiBTP.Bibliotheque.Tests.csproj" />
   </Folder>
+  <Folder Name="/modules/" />
   <Folder Name="/modules/annuaire/">
     <Project Path="modules/annuaire/dotnet/LogiBTP.Annuaire/LogiBTP.Annuaire.csproj" />
     <Project Path="modules/annuaire/dotnet/LogiBTP.Annuaire.Web/LogiBTP.Annuaire.Web.csproj" />
@@ -61,6 +63,11 @@
     <Project Path="modules/relance/dotnet/LogiBTP.Relances/LogiBTP.Relances.csproj" />
     <Project Path="modules/relance/dotnet/LogiBTP.Relances.Web/LogiBTP.Relances.Web.csproj" />
     <Project Path="modules/relance/dotnet/LogiBTP.Relances.Tests/LogiBTP.Relances.Tests.csproj" />
+  </Folder>
+  <Folder Name="/modules/mcp/">
+    <Project Path="modules/mcp/dotnet/LogiBTP.Mcp/LogiBTP.Mcp.csproj" />
+    <Project Path="modules/mcp/dotnet/LogiBTP.Mcp.Web/LogiBTP.Mcp.Web.csproj" />
+    <Project Path="modules/mcp/dotnet/LogiBTP.Mcp.Tests/LogiBTP.Mcp.Tests.csproj" />
   </Folder>
   <Folder Name="/modules/facture-electronique/">
     <Project Path="modules/facture-electronique/dotnet/LogiBTP.FactureElectronique/LogiBTP.FactureElectronique.csproj" />

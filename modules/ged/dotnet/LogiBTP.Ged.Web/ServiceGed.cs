@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Net.Http.Headers;
 using Npgsql;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Ged.Web;
 
@@ -86,7 +87,7 @@ public class ServiceGed(GedDbContext db, SpecialisationGed specialisation, Stock
                 throw ExceptionMetier.Invalide("DUREE", $"La conservation ne peut pas être plus courte que la durée active ({r.Libelle})");
             if (r.ActionFin is not ("REVOIR" or "DETRUIRE")) throw ExceptionMetier.Invalide("ACTION", "Action de fin REVOIR ou DETRUIRE attendue");
         }
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         await db.ReglesRetention.ExecuteDeleteAsync(ct);
         db.ReglesRetention.AddRange(regles.Select(r => new RetentionGed
         {
@@ -112,7 +113,7 @@ public class ServiceGed(GedDbContext db, SpecialisationGed specialisation, Stock
                 throw ExceptionMetier.Invalide("RESULTAT", $"Catégorie, confidentialité ou mots-clés attendus ({r.Libelle})");
             if (Texte(r.Confidentialite) is { } n && !NiveauConfidentialite.Tous.Contains(n)) throw ExceptionMetier.Invalide("CONFIDENTIALITE", $"Confidentialité inconnue : {n}");
         }
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         await db.ReglesClassification.ExecuteDeleteAsync(ct);
         static string[] Propre(string[] l) => l.Select(x => x.Trim()).Where(x => x.Length > 0).Distinct().ToArray();
         db.ReglesClassification.AddRange(regles.Select(r => new ClassementGed
@@ -390,7 +391,7 @@ public class ServiceGed(GedDbContext db, SpecialisationGed specialisation, Stock
         var classe = ClassificationGed.Classer(new DocumentAClasser(fichier.FileName, mime, meta.Titre, texte ?? Champ(meta.Mail, "message"),
             Champ(meta.Mail, "de"), Texte(meta.TypeElement)), await ReglesClassification(ct));
         var maintenant = DateTimeOffset.UtcNow;
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var d = new DocumentGed
         {
             DgeTitre = meta.Titre.Trim(), DgeCategorie = Texte(meta.Categorie) ?? classe.Categorie, DgeNature = meta.Nature ?? "fichier",
@@ -454,7 +455,7 @@ public class ServiceGed(GedDbContext db, SpecialisationGed specialisation, Stock
         aEffacer.AddRange(orphelins.Select(o => o.CgeChemin));
     }
 
-    protected async Task Valider(Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction tx, CancellationToken ct)
+    protected async Task Valider(TransactionUnite tx, CancellationToken ct)
     {
         await tx.CommitAsync(ct);
         foreach (var chemin in aEffacer) stockage.Supprimer(chemin);
@@ -475,7 +476,7 @@ public class ServiceGed(GedDbContext db, SpecialisationGed specialisation, Stock
         // Le texte indexé suit le contenu courant.
         (d.DgeTexteContenu, d.DgeIndexEtat) = ExtraireTexte(c.Chemin, fichier.FileName, TypeMime(fichier));
         d.DgeIndexeLe = DateTimeOffset.UtcNow;
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         await AjouterVersion(d, c.Empreinte, c.Taille, fichier.FileName, TypeMime(fichier), genre, Texte(meta.Etape), Texte(meta.Etat), Texte(meta.Commentaire), u, ct);
         await Valider(tx, ct);
         return await Document(id, u, ct);
@@ -490,7 +491,7 @@ public class ServiceGed(GedDbContext db, SpecialisationGed specialisation, Stock
         if (string.IsNullOrWhiteSpace(e.Etape)) throw ExceptionMetier.Invalide("ETAPE", "Étape obligatoire");
         var derniere = await db.Versions.Where(v => v.VgeDocument == id).OrderByDescending(v => v.VgeNumero).FirstOrDefaultAsync(ct)
             ?? throw ExceptionMetier.Invalide("FICHIER", "Fichier attendu");
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         await AjouterVersion(d, derniere.VgeEmpreinte, derniere.VgeTaille, derniere.VgeNomFichier, derniere.VgeTypeMime, RegleVersions.Etape,
             e.Etape.Trim(), Texte(e.Etat) ?? e.Etape.Trim(), Texte(e.Commentaire), u, ct);
         await Valider(tx, ct);
@@ -876,7 +877,7 @@ public class ServiceGed(GedDbContext db, SpecialisationGed specialisation, Stock
         if (d.DgeCoffre) return await Document(id, u, ct);
         Modifiable(d, u);
         if (d.DgeSupprime) throw ExceptionMetier.Invalide("SUPPRIME", "Document supprimé : restaurez-le d'abord");
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         await Coffrer(d, demande.Motif, u, ct);
         await Valider(tx, ct);
         return await Document(id, u, ct);
@@ -935,7 +936,7 @@ public class ServiceGed(GedDbContext db, SpecialisationGed specialisation, Stock
         var d = await Charger(id, u, ct);
         if (d.DgeCoffre) throw ExceptionMetier.Invalide("COFFRE", "Un document du coffre-fort ne peut pas être supprimé définitivement");
         if (!d.DgeSupprime) throw ExceptionMetier.Invalide("NON_SUPPRIME", "Seul un document marqué comme supprimé peut être purgé");
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         await db.Documents.Where(x => x.DgeParentId == id).ExecuteUpdateAsync(s => s.SetProperty(x => x.DgeParentId, (long?)null), ct);
         await db.Derivations.Where(x => x.DrgSourceId == id || x.DrgCibleId == id).ExecuteDeleteAsync(ct);
         var versions = await db.Versions.AsNoTracking().Where(v => v.VgeDocument == id).ToListAsync(ct);

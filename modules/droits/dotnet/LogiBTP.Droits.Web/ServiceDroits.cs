@@ -51,12 +51,30 @@ public sealed class ServiceDroits(DroitsDbContext db, SpecialisationDroits speci
         return etat;
     }
 
-    /// <summary>Limites de validation du nœud ou de son plus proche ancêtre (profil total : aucune).</summary>
+    /// <summary>Limites de validation du nœud ou de son plus proche ancêtre (profil total : aucune) ; agent : celles du délégant.</summary>
     public async Task<LimiteValidation?> LimiteAsync(Utilisateur u, string noeud, CancellationToken ct) =>
         ReglesDroits.LimiteEffective((await EtatAsync(u.Profil, ct)).Limites, noeud) is { } l ? new LimiteValidation(l.Piece, l.Cumul, l.Jours) : null;
 
+    /// <summary>Portée accordée ; pour un agent (<see cref="Utilisateur.Agent"/>) : profil ∩ plafond de la délégation (<see cref="AgentsDroits"/>).</summary>
     public async Task<string?> PorteeAsync(Utilisateur u, string noeud, string action, CancellationToken ct) =>
-        ReglesDroits.PorteeAccordee(await DroitsAsync(u.Profil, ct), noeud, action);
+        u.Agent is { } agent
+            ? AgentsDroits.Portee(await DroitsAsync(u.Profil, ct), await PlafondAsync(agent, u.Profil, ct), noeud, action)
+            : ReglesDroits.PorteeAccordee(await DroitsAsync(u.Profil, ct), noeud, action);
+
+    private readonly Dictionary<string, PlafondAgent?> plafonds = [];
+
+    /// <summary>
+    /// Plafond de la délégation de l'agent, lu une fois par requête par le contrat <see cref="IPlafondAgent"/> du socle
+    /// (service facultatif : absent, délégation inconnue, révoquée ou expirée ⇒ null, tout refusé).
+    /// </summary>
+    public async Task<PlafondAgent?> PlafondAsync(AgentRequete agent, string profil, CancellationToken ct)
+    {
+        var cle = agent.Delegation + "|" + profil;
+        if (plafonds.TryGetValue(cle, out var p)) return p;
+        p = services.GetService(typeof(IPlafondAgent)) is IPlafondAgent contrat ? await contrat.PlafondAsync(agent.Delegation, profil, ct) : null;
+        plafonds[cle] = p;
+        return p;
+    }
 
     public async Task<IReadOnlyList<ProfilDroits>> ProfilsAsync(CancellationToken ct) =>
         (await db.Profils.AsNoTracking().OrderBy(p => p.ProLibelle).ToListAsync(ct)).Select(p => new ProfilDroits(p.ProCode, p.ProLibelle, p.ProTotal)).ToList();

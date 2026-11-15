@@ -18,3 +18,18 @@ public static class UniteDuree
     public const string Jours = "J";
     public const string Mois = "M";
 }
+
+/// <summary>Nature d'une part de la ventilation d'un besoin (ReglesVentilation) : stock d'un dépôt, commande en cours, achat.</summary>
+public static class NaturePartAppro
+{
+    public const string Stock = "STOCK";
+    public const string Commande = "COMMANDE";
+    public const string Achat = "ACHAT";
+}
+
+/// <summary>Motif d'une ligne de demande de réappro d'un dépôt (ReglesVentilation) : mini franchi, article proche de son mini.</summary>
+public static class MotifReappro
+{
+    public const string MiniFranchi = "MINI_FRANCHI";
+    public const string ProcheMini = "PROCHE_MINI";
+}

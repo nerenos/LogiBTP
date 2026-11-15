@@ -419,7 +419,7 @@ export class Bandeau {
           aria-disabled="${Boolean(x.desactive)}"${x.sousMenu ? ' aria-haspopup="true"' : ''} title="${echapper(x.titre ?? x.info ?? '')}">
         <span class="bandeau-coche">${x.coche ? iconeHtml('coche') : ''}</span>
         <span class="bandeau-icone">${x.iconeHtml ?? echapper(x.icone ?? '')}</span>
-        <span class="bandeau-libelle">${echapper(x.libelle)}${x.info ? `<small>${echapper(x.info)}</small>` : ''}</span>
+        <span class="bandeau-libelle">${echapper(x.libelle)}</span>
         <span class="bandeau-raccourci">${echapper(x.raccourci ?? '')}</span>
         ${x.creation && !x.desactive ? `<button type="button" class="bandeau-fenetre bandeau-creation" data-creation title="${texteHtml('navigation.bandeau.creation', { titre: x.creation.titre ?? texte('commun.creer') })}">${iconeHtml('navigation_ajouter')}</button>` : '<span></span>'}
         ${fenetre ? `<button type="button" class="bandeau-fenetre" data-fenetre title="${texteHtml('navigation.bandeau.nouvelle_fenetre')}">${iconeHtml('navigation_nouvelle_fenetre')}</button>` : x.sousMenu ? `<span class="bandeau-fleche">${iconeHtml('deplier')}</span>` : '<span></span>'}

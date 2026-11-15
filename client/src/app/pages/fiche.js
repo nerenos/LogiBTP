@@ -15,6 +15,7 @@ import { voisins } from '../suite-liste.js';
 import { afficherJournalRelances } from '../relances/journal-relances.js';
 import { ACTION_DROIT } from '@logibtp/socle';
 import { api } from '../api.js';
+import { TYPE_RECETTE_FICHE, etatDemandeAgent, actionDemanderAgent } from '../agents/demander.js';
 
 // Fiches dont les pièces peuvent être diffusées sur le terrain (case 📱 de la GED, application de terrain).
 const TYPES_TERRAIN = new Set([TYPE_FICHE.CHANTIER, TYPE_FICHE.MARCHE]);
@@ -44,6 +45,9 @@ export class PageFiche extends PageBase {
     // Onglet Suivi : notes du CRM (module actif) et, sur la fiche d'un tiers, relances faites (module Relances, droit de lecture).
     const crm = app.moduleActif(MODULE_FACULTATIF.CRM);
     const relances = type === TYPE_FICHE.PERSONNE && app.moduleActif(MODULE_FACULTATIF.RELANCE) && app.peut('relances', ACTION_DROIT.CONSULTER);
+    // « Demander à l'agent » (module MCP, lot 13) : fiches marché et chantier, recettes du type et droits lus avant la fiche.
+    const typeRecette = TYPE_RECETTE_FICHE[type];
+    const agent = typeRecette && !nouveau ? await etatDemandeAgent(app, typeRecette) : { visible: false, recettes: [] };
     this.fiche = new Classe({
       conteneur: this.conteneur.querySelector('.page-fiche-corps'), fournisseur: s.fiche, type,
       id: nouveau ? null : this.params.id, mode: nouveau ? 'creation' : 'consultation',
@@ -54,6 +58,7 @@ export class PageFiche extends PageBase {
         icone: icone('pages_btp_imprimer'), libelle: texte('pages_btp.fiche.imprimer'), titre: texte('pages_btp.fiche.imprimer_aide'), raccourci: 'imprimer',
         action: () => app.naviguer(`/edition?source=fiche&id=${encodeURIComponent(`${type}/${this.fiche?.id ?? this.params.id}`)}`, { nouvelleFenetre: true }),
       },
+      ...(typeRecette ? [actionDemanderAgent(app, agent, { type: typeRecette, fiche: () => this.fiche })] : []),
       // Fiche ouverte depuis une liste : fiches précédente et suivante de la liste (ses lignes affichées).
       ...(voisinage ? [
         { icone: icone('precedent'), libelle: texte('pages_btp.fiche.precedente'), titre: texte('pages_btp.fiche.precedente_aide', { rang: voisinage.rang, total: voisinage.total }), visible: Boolean(voisinage.precedent), action: () => this.precedent() },

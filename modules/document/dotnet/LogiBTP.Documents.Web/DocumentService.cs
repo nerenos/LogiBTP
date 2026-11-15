@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using LogiBTP.Socle;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Documents.Web;
 
@@ -161,7 +162,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
     /// </summary>
     public async Task<ReponseNumero<TComplet>> ChangerNumero(long id, DemandeNumero demande, Utilisateur u, CancellationToken ct)
     {
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var avant = await persistance.Charger(id, ct);
         var doc = avant.Document;
         var type = await Type(doc.EntTydId, ct);
@@ -200,7 +201,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
 
     private async Task Historiser(TComplet avant, string action, Utilisateur u, CancellationToken ct, string? motif = null)
     {
-        db.Historiques.Add(new DocumentHistorique
+        var historique = new DocumentHistorique
         {
             HisMotif = motif,
             HisEntId = avant.Document.EntId,
@@ -209,8 +210,11 @@ public class DocumentService<TDoc, TLigne, TComplet>(
             HisDate = DateTimeOffset.UtcNow,
             HisUtilisateur = u.Code,
             HisInstantane = PersistanceDocument<TDoc, TLigne, TComplet>.Instantane(avant),
-        });
+        };
+        db.Historiques.Add(historique);
         await db.SaveChangesAsync(ct);
+        // Origine de l'utilisateur de la requête (agent IA…) : colonnes du cœur, par la spécialisation.
+        await specialisation.ApresHistoriqueAsync(db, historique, u, ct);
     }
 
     // ------------------------------------------------------------------ calcul
@@ -294,7 +298,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
     {
         var type = await Type(c.EntTydId, ct);
         await VerifierDroit(u, type.TydId, ActionsDroits.Creer, ct);
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var doc = new TDoc
         {
             EntTydId = type.TydId,
@@ -328,6 +332,20 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         return complet;
     }
 
+    /// <summary>
+    /// Création et premier enregistrement du contenu (import d'un devis…) en une seule transaction : une erreur de
+    /// l'enregistrement annule aussi la création (plus de document vide à supprimer après coup).
+    /// </summary>
+    public async Task<ReponseEnregistrement<TComplet>> CreerAvecContenu(CreationAvecContenu<TComplet> c, Utilisateur u, CancellationToken ct)
+    {
+        await using var tx = await db.Unite().CommencerAsync(ct);
+        var cree = await Creer(c.Creation, u, ct);
+        c.Contenu.Document.EntVersion = cree.Document.EntVersion;
+        var reponse = await EnregistrerDans(cree.Document.EntId, c.Contenu, u, ct);
+        await tx.CommitAsync(ct);
+        return reponse;
+    }
+
     // ------------------------------------------------------------------ enregistrement
 
     /// <summary>
@@ -336,7 +354,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
     /// </summary>
     public async Task<ReponseEnregistrement<TComplet>> Enregistrer(long id, TComplet d, Utilisateur u, CancellationToken ct)
     {
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var reponse = await EnregistrerDans(id, d, u, ct);
         await tx.CommitAsync(ct);
         return reponse;
@@ -397,6 +415,11 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         var entree = await Entree(saisie, ct);
         var handler = handlers.Pour(type);
         var controles = new List<MessageCalcul>();
+        // Type de ligne connu (serveur seul : sinon refus de la clé étrangère, sans la ligne en cause).
+        var typesLigne = (await db.TypesLigne.AsNoTracking().Select(t => t.TylId).ToListAsync(ct)).ToHashSet();
+        controles.AddRange(saisie.Lignes.Where(l => !typesLigne.Contains(l.LigTylId))
+            .Select(l => new MessageCalcul(l.LigId, "TYPE_LIGNE", $"Type de ligne {l.LigTylId} inconnu")));
+        if (controles.Count > 0) throw ExceptionMetier.Invalide(ErreursEnregistrement.Validation, "Lignes incorrectes", controles);
         handler.Controler(new ContexteDocument<TDoc, TLigne> { Type = type, Proprietes = await Proprietes(type.TydId, ct), Entree = entree }, controles);
         if (controles.Count > 0) throw ExceptionMetier.Invalide("CONTROLES", "Le document ne respecte pas le paramétrage", controles);
 
@@ -461,7 +484,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
     public async Task<ReponseEnregistrement<TComplet>> Valider(long id, DemandeVersion v, Utilisateur u, CancellationToken ct)
     {
         await ControlerMontantAsync(id, u, ct);
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var avant = await persistance.Charger(id, ct);
         await VerifierDroit(u, avant.Document.EntTydId, ActionsDroits.Valider, ct);
         if (v.EntVersion != avant.Document.EntVersion) throw ExceptionMetier.Conflit("VERSION", "Le document a été modifié par un autre utilisateur");
@@ -501,13 +524,26 @@ public class DocumentService<TDoc, TLigne, TComplet>(
     }
 
     /// <summary>
+    /// Validation automatique (<see cref="ValiderDans"/>) par un agent IA : permise seulement avec le droit VALIDER effectif
+    /// de l'agent sur le nœud (module Droits : profil ∩ plafond) ; sans module Droits, jamais. Humain : rien n'est contrôlé.
+    /// </summary>
+    public static async Task ExigerValidationAgent(IDroits? droits, Utilisateur u, string noeud, CancellationToken ct)
+    {
+        if (u.Agent is null) return;
+        if (droits is null || !await droits.AutoriseAsync(u, noeud, ActionsDroits.Valider, ct))
+            throw ExceptionMetier.AgentInterdit($"{ActionsDroits.Valider} {noeud}");
+    }
+
+    /// <summary>
     /// Validation dans la transaction de l'appelant, sans contrôle du droit VALIDER : document intermédiaire validé
-    /// automatiquement par une transformation (le droit TRANSFORMER de la source suffit).
+    /// automatiquement par une transformation (le droit TRANSFORMER de la source suffit). Agent IA sans VALIDER effectif
+    /// sur le type : refus 403 AGENT_INTERDIT (rien n'est validé, l'appelant annule sa transaction).
     /// </summary>
     protected internal async Task<ReponseEnregistrement<TComplet>> ValiderDans(long id, Utilisateur u, CancellationToken ct)
     {
         var avant = await persistance.Charger(id, ct);
         var type = await Type(avant.Document.EntTydId, ct);
+        await ExigerValidationAgent(droits, u, NoeudDroits(type), ct);
         await VerifierModifiable(avant.Document, ct);
 
         var saisie = JsonCalcul.Cloner(avant);
@@ -527,15 +563,23 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         // Un brouillon peut attendre son tiers ; un document validé l'a toujours (stock : notre société, posée par la spécialisation).
         if (saisie.Document.EntTiersId is null && await Regles.Booleen("TIERS_OBLIGATOIRE", type, ct)) controles.Add(new MessageCalcul(null, "TIERS_OBLIGATOIRE", "Tiers du document à choisir avant la validation"));
         await ControlerRegles(saisie.Document, type, controles, ct);
-        if (controles.Count > 0) throw ExceptionMetier.Invalide("VALIDATION", "Le document comporte des erreurs", controles);
+        if (controles.Count > 0) throw ExceptionMetier.Invalide(ErreursEnregistrement.Validation, "Le document comporte des erreurs", controles);
 
         await Historiser(avant, "VALIDATION", u, ct);
         // Facture d'avancement dont la période est négative (retour en arrière) : elle devient un avoir d'avancement (Q26).
         if (type.TydAvancement == "F" && r.Document.EntTotalHt < 0 && type.TydAvoirTydId is int avoir)
         {
+            var facture = type;
             type = await Type(avoir, ct);
             r.Document.EntTydId = type.TydId;
             r.Document.EntNatureAvoir = NaturesAvoir.Avancement;
+            // Compteur interne (achats, sous-traitance) : numéro pris à la création dans celui de la facture ; l'avoir
+            // prend le sien (AVS… plutôt que FST…), sauf un indice suivant (numéro conservé). Numérotation continue :
+            // attribuée plus bas, au type de l'avoir.
+            if (!facture.TydNumerotationContinue && !type.TydNumerotationContinue && type.TydId != facture.TydId && r.Document.EntIndice == "A")
+            {
+                r.Document.EntNumero = await AttribuerNumero(type, r.Document.EntDate, ct);
+            }
         }
         // Pièce comptable (factures, avoirs) : à transférer à la comptabilité, sans écriture si le total est nul (13.9).
         // Une pièce déjà transférée (nouvelle version après dévalidation) reste transférée : le comptable corrige (P22).
@@ -712,7 +756,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
     /// <summary>Étape datée du cycle de vie (envoi après approbation, validation du tiers), historisée, puis statut recalculé.</summary>
     private async Task<ReponseEnregistrement<TComplet>> Etape(long id, Utilisateur u, string action, Func<TDoc, TypeDocument, Task> appliquer, CancellationToken ct)
     {
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var avant = await persistance.Charger(id, ct);
         await VerifierDroit(u, avant.Document.EntTydId, ActionsDroits.Valider, ct);
         var type = await Type(avant.Document.EntTydId, ct);
@@ -735,7 +779,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
     public async Task<TComplet> Devalider(long id, string motif, Utilisateur u, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(motif)) throw ExceptionMetier.Invalide("DEVALIDATION", "Motif de la dévalidation obligatoire");
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var avant = await persistance.Charger(id, ct);
         var type = await Type(avant.Document.EntTydId, ct);
         var statut = await db.StatutsDocument.AsNoTracking().FirstAsync(s => s.StdId == avant.Document.EntStdId, ct);
@@ -1040,7 +1084,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
             throw ExceptionMetier.Conflit("DOCUMENT_LIE", "Le document a été transformé en d'autres documents");
         }
         // Liens de copie retirés avant le document (pas de navigation EF entre eux : ordre explicite).
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         db.DocumentsLien.RemoveRange(await db.DocumentsLien.Where(l => l.LieSourceEntId == id || l.LieCibleEntId == id).ToListAsync(ct));
         await db.SaveChangesAsync(ct);
         db.Documents.Remove(doc);
@@ -1053,7 +1097,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
     /// <summary>Nouvel indice (A, B, C…) : même groupe et même numéro, contenu recopié, ses propres versions.</summary>
     public async Task<TComplet> CreerIndice(long id, Utilisateur u, CancellationToken ct)
     {
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var source = await persistance.Charger(id, ct);
         await VerifierDroit(u, source.Document.EntTydId, ActionsDroits.Creer, ct);
         var typeSource = await Type(source.Document.EntTydId, ct);
@@ -1099,7 +1143,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
     /// <summary>Désigne l'indice de référence du groupe (transformations, statistiques).</summary>
     public async Task<TComplet> DesignerReference(long id, Utilisateur u, CancellationToken ct)
     {
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var doc = await db.Documents.FirstOrDefaultAsync(d => d.EntId == id, ct) ?? throw ExceptionMetier.Introuvable($"Document {id}");
         await VerifierDroit(u, doc.EntTydId, ActionsDroits.Modifier, ct);
         await db.Documents.Where(d => d.EntGroupeId == doc.EntGroupeId && d.EntId != id)
@@ -1112,7 +1156,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
     /// <summary>Copie : nouveau document, nouveau numéro, lien COPIE vers l'origine.</summary>
     public async Task<TComplet> Copier(long id, Utilisateur u, CancellationToken ct)
     {
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var source = await persistance.Charger(id, ct);
         var type = await Type(source.Document.EntTydId, ct);
         await VerifierDroit(u, type.TydId, ActionsDroits.Creer, ct);

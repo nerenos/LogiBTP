@@ -1,3 +1,4 @@
+using LogiBTP.Socle.Donnees;
 using System.Text.Json;
 using LogiBTP.Socle;
 using LogiBTP.Socle.Web;
@@ -255,27 +256,32 @@ public class ServiceRelance(RelanceDbContext db, SpecialisationRelance specialis
             var envoi = new EnvoiRelance(lotId, v.Groupe, premiere.RelTiersId, premiere.RelChargeId, premiere.RelNature, mode, niveau,
                 modele?.ModeleCourriel, modele?.ModeleEdition,
                 retenues.Select(r => new PieceEnvoi(r.RelId, r.RelEntId, r.RelNiveau, r.RelJours, r.RelMontant)).ToList(), v.Commentaire, u, date);
-            ResultatEnvoi resultat;
+            // Un groupe = une transaction : envoi préparé (file, GED, journal) et relances notées ensemble, ou rien.
             try
             {
-                resultat = await specialisation.EnvoyerAsync(db, envoi, ct);
+                await db.Unite().ExecuterAsync(async c =>
+                {
+                    var resultat = await specialisation.EnvoyerAsync(db, envoi, c);
+                    foreach (var r in retenues)
+                    {
+                        r.RelEtat = resultat.Etat;
+                        r.RelMode = resultat.Mode ?? mode;
+                        r.RelDate = date;
+                        r.RelAuteur = u.Code;
+                        r.RelCommentaire = v.Commentaire;
+                        r.RelCourrielId = resultat.CourrielId;
+                        r.RelGedId = resultat.GedId;
+                    }
+                    await db.SaveChangesAsync(c);
+                }, ct);
             }
             catch (Exception e) when (e is not OperationCanceledException)
             {
-                echecs.Add(new EchecEnvoi(v.Groupe, e is ExceptionMetier m ? m.Code : "ERREUR", e.Message));
+                // Groupe annulé : ses relances reprennent leur état enregistré (toujours proposées).
+                foreach (var r in retenues) await db.Entry(r).ReloadAsync(ct);
+                echecs.Add(new EchecEnvoi(v.Groupe, e is ExceptionMetier m ? m.Code : ErreursBase.Traduire(e)?.Code ?? ErreursEnregistrement.Erreur, e.Message));
                 continue;
             }
-            foreach (var r in retenues)
-            {
-                r.RelEtat = resultat.Etat;
-                r.RelMode = resultat.Mode ?? mode;
-                r.RelDate = date;
-                r.RelAuteur = u.Code;
-                r.RelCommentaire = v.Commentaire;
-                r.RelCourrielId = resultat.CourrielId;
-                r.RelGedId = resultat.GedId;
-            }
-            await db.SaveChangesAsync(ct);
             faites.AddRange(retenues);
         }
         lot.RloEtat = EtatLot(relances);

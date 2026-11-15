@@ -8,6 +8,7 @@ using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Npgsql;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Annuaire.Web;
 
@@ -57,7 +58,7 @@ public partial class ServiceAnnuaire(AnnuaireDbContext db, SpecialisationAnnuair
         Texte(s) is { } t && DateOnly.TryParseExact(t.Length >= 10 ? t[..10] : t, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var d) ? d : null;
 
     private static ExceptionMetier Validation(string message, string champ, string code, string detail) =>
-        ExceptionMetier.Invalide("VALIDATION", message, new[] { new { champ, code, message = detail } });
+        ExceptionMetier.Invalide(ErreursEnregistrement.Validation, message, new[] { new { champ, code, message = detail } });
 
     // ------------------------------------------------------------------ référentiels
 
@@ -408,7 +409,7 @@ public partial class ServiceAnnuaire(AnnuaireDbContext db, SpecialisationAnnuair
                 throw ExceptionMetier.Conflit("COORDONNEE_MODIFIEE", $"{Nom(s, i, contexte)} : modifiée par ailleurs entre-temps, rechargez la fiche");
         }
         if (plan.Erreurs.Count > 0)
-            throw ExceptionMetier.Invalide("VALIDATION", "Coordonnées incorrectes",
+            throw ExceptionMetier.Invalide(ErreursEnregistrement.Validation, "Coordonnées incorrectes",
                 plan.Erreurs.Select(e => new { champ = "coordonnees", code = e.Code, message = $"{Nom(saisies[e.Index], e.Index, contexte)} : {e.Message}" }).ToList());
         if (plan.ChoixRequis.Count > 0)
             throw ExceptionMetier.Invalide("CHOIX_REQUIS", PlanCoordonnees.Messages["CHOIX"],
@@ -696,7 +697,7 @@ public partial class ServiceAnnuaire(AnnuaireDbContext db, SpecialisationAnnuair
 
     public virtual async Task EcrireGeres(string type, long id, IReadOnlyDictionary<string, JsonElement> geres, Utilisateur u, CancellationToken ct)
     {
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         if (geres.ContainsKey("coordonnees")) await Appliquer(type, id, await Planifier(type, id, Lire<List<SaisieCoordonnee>>(geres, "coordonnees"), null, ct), u, ct);
         if (geres.ContainsKey("rattachements")) await EcrireRattachements(type, id, Lire<List<SaisieRattachement>>(geres, "rattachements"), u, ct);
         if (geres.ContainsKey("liens")) await EcrireLiens(id, Lire<List<SaisieLien>>(geres, "liens"), ct);
@@ -758,7 +759,7 @@ public partial class ServiceAnnuaire(AnnuaireDbContext db, SpecialisationAnnuair
                               where r.RatIndId == indId && r.RatTitulaire && p.PerNivCode == niveau
                               select p.PerId).FirstOrDefaultAsync(ct);
         if (existant != 0) return new(existant, true);
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var personne = new Personne
         {
             PerNivCode = niveau, PerRaisonSociale = string.Join(" ", new[] { i.IndCivilite, i.IndNom.ToUpperInvariant(), i.IndPrenom }.Where(x => !string.IsNullOrWhiteSpace(x))),

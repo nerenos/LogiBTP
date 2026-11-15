@@ -3,6 +3,7 @@ using System.Text.Json;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Api.Btp;
 
@@ -145,7 +146,7 @@ public static class ModulesServices
             if (parent.ParentCode is not null || parent == s) throw ExceptionMetier.Invalide("SERVICE_NIVEAUX", "Deux niveaux de services au plus (service, sous-service)");
         }
 
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var gardes = services.Where(s => s.Id is not null).Select(s => s.Id!.Value).ToArray();
         // Retirés de la liste : supprimés s'ils sont libres, sinon en sommeil.
         await db.Database.ExecuteSqlRawAsync("""
@@ -195,7 +196,7 @@ public static class ModulesServices
     {
         u.ExigerParametres();
         if (membres.Select(m => m.IndId).Distinct().Count() != membres.Count) throw ExceptionMetier.Invalide("SERVICE_MEMBRE", "Membre en double");
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         if (await db.Database.SqlQueryRaw<int>("SELECT count(*)::int AS \"Value\" FROM service WHERE srv_id = @s", new NpgsqlParameter("s", service)).FirstAsync(ct) == 0)
         {
             throw ExceptionMetier.Introuvable($"Service {service}");

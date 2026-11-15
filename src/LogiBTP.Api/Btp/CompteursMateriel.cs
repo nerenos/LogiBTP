@@ -2,6 +2,7 @@ using LogiBTP.Domaine.Ressources;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Api.Btp;
 
@@ -100,7 +101,7 @@ public static class CompteursMateriel
         if (releve is not null) await ControlerReleveAsync(db, materiel, releve, id, null, ct);
         if (e.Type == "CARBURANT") await CoutsMateriel.ChantierMaterielAsync(db, materiel, ct);
         var libelle = string.IsNullOrWhiteSpace(e.Libelle) ? null : e.Libelle.Trim();
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         NpgsqlParameter[] p =
         [
             new("m", materiel), new("t", e.Type!), new("d", e.Date!.Value), SqlBtp.P("f", e.Fin), SqlBtp.P("l", libelle),

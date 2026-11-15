@@ -501,7 +501,7 @@ export class FicheIndividu extends FicheAnnuaire {
   }
 
   sections() {
-    return super.sections().sort(ordre(['identite', '+coordonnees', '+rattachements', '+graphe', '+supplementaires', '+pieces']));
+    return super.sections().sort(ordre(['identite', '+coordonnees', '+rattachements', '+graphe', '+champs-colonnes', '+supplementaires', '+pieces']));
   }
 
   rendreChamp(champ, valeur) {

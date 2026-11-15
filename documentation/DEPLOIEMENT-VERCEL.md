@@ -101,6 +101,15 @@ Les visiteurs modifient les données. Pour revenir à l'état initial : Neon →
 parent, sans toucher au projet Vercel (l'hôte de la branche ne change pas). Tout ce qui a été fait sur la démonstration
 est perdu, comptes compris : un compte à garder se crée sur la branche principale.
 
+### 5. Registre des images (limite de 50)
+
+Chaque déploiement pousse une image dans le Container Registry du projet (Sandboxes → Container Registry → dépôt
+`application`), limité à 50 images par dépôt sur l'offre Hobby. Au-delà, le build réussit mais le push est refusé
+(« Pushing vcr.vercel.com/…/application:… was denied »). Pour l'éviter, `vercel.json` ne déploie que `main`
+(`git.deploymentEnabled` : `"**": false, "main": true` ; une branche qui satisfait une règle à `true` est déployée) ;
+les branches de PR n'ont plus de prévisualisation. Si le registre est plein : y supprimer les anciennes images en
+gardant celle de la production (et une de secours), puis Redeploy.
+
 ## Essai local de l'image
 
 ```powershell

@@ -1,3 +1,4 @@
+using LogiBTP.Socle.Donnees;
 using LogiBTP.Socle.Web;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -530,7 +531,8 @@ public static class Extensions
     /// <summary>Routes HTTP du module, sous /stock ; renvoie le groupe (filtre d'activation posé par l'application).</summary>
     public static RouteGroupBuilder MapModuleStock(this RouteGroupBuilder api)
     {
-        var g = api.MapGroup("/stock");
+        // Chaque écriture du module en une seule transaction (tout ou rien).
+        var g = api.MapGroup("/stock").EnTransaction();
         g.MapGet("/parametres", (ServiceStock s, CancellationToken ct) => s.ParametresAsync(ct));
         g.MapPut("/parametres", (ParametresStockDto p, HttpContext http, ServiceStock s, CancellationToken ct) => s.EnregistrerParametresAsync(p, Utilisateur.Depuis(http), ct));
         g.MapGet("/lieux", (ServiceStock s, CancellationToken ct) => s.LieuxAsync(ct));

@@ -1,6 +1,7 @@
 using LogiBTP.Crm;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Crm.Web;
 
@@ -367,7 +368,7 @@ public partial class ServiceCrm
         if (s.Destinataires.Any(d => !ModesDiffusion.Contains(d.Mode) || d.Exemplaires < 0)) throw ExceptionMetier.Invalide("DIFFUSION", "Mode de diffusion ou nombre d'exemplaires invalide");
         if (s.Destinataires.Select(d => d.TiersId).Distinct().Count() != s.Destinataires.Count) throw ExceptionMetier.Invalide("DIFFUSION", "Destinataire en double");
         var c = await CourantAsync(u, ct);
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var prefixe = $"BD-{s.Date.Year}-";
         var numeros = await db.Diffusions.Where(d => d.DifNumero.StartsWith(prefixe)).Select(d => d.DifNumero).ToListAsync(ct);
         var rang = numeros.Select(n => int.TryParse(n[prefixe.Length..], out var r) ? r : 0).DefaultIfEmpty(0).Max() + 1;

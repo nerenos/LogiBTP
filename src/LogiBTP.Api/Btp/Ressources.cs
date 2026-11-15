@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using static LogiBTP.Api.Btp.SqlBtp;
 using NpgsqlTypes;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Api.Btp;
 
@@ -86,7 +87,7 @@ public static class Ressources
             throw ExceptionMetier.Invalide(erreurs[0].codes[0], string.Join(" · ", erreurs.Select(x => $"ligne {x.i + 1} : {string.Join(", ", x.codes.Select(c => ReglesRessources.Messages[c]))}")),
                 erreurs.Select(x => new { index = x.i, codes = x.codes }).ToList());
         }
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var gardes = liste.Where(h => h.Id is not null).Select(h => h.Id!.Value).ToArray();
         await db.Database.ExecuteSqlRawAsync("DELETE FROM habilitation WHERE hab_type_element = @e AND hab_id_element = @i AND NOT (hab_id = ANY(@g))",
             [P("e", element), P("i", id), P("g", gardes)], ct);
@@ -174,7 +175,7 @@ public static class Ressources
             throw ExceptionMetier.Invalide(erreurs[0].Codes[0], string.Join(" · ", erreurs.Select(x => $"mission {x.Index + 1} : {string.Join(", ", x.Codes.Select(c => ReglesRessources.Messages[c]))}")),
                 erreurs.Select(x => new { index = x.Index, codes = x.Codes }).ToList());
         }
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var gardes = liste.Where(m => m.Id is not null).Select(m => m.Id!.Value).ToArray();
         await db.Database.ExecuteSqlRawAsync("DELETE FROM mission_interim WHERE mis_sal_id = @s AND NOT (mis_id = ANY(@g))", [P("s", salarie), P("g", gardes)], ct);
         foreach (var m in liste)
@@ -318,7 +319,7 @@ public static class Ressources
         }
         var codes = l.Select(t => t.Code.Trim().ToUpperInvariant()).ToArray();
         if (codes.Distinct().Count() != codes.Length) throw ExceptionMetier.Invalide("TYPE_HABILITATION", "Codes en double");
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         await db.Database.ExecuteSqlRawAsync("UPDATE type_habilitation t SET tha_actif = FALSE WHERE NOT (tha_code = ANY(@c)) AND EXISTS (SELECT 1 FROM habilitation h WHERE h.hab_tha_code = t.tha_code)", [P("c", codes)], ct);
         await db.Database.ExecuteSqlRawAsync("DELETE FROM type_habilitation t WHERE NOT (tha_code = ANY(@c)) AND NOT EXISTS (SELECT 1 FROM habilitation h WHERE h.hab_tha_code = t.tha_code)", [P("c", codes)], ct);
         foreach (var t in l)
@@ -346,7 +347,7 @@ public static class Ressources
             }
         }
         if (l.Select(m => (m.Domaine, m.Code.Trim().ToUpperInvariant())).Distinct().Count() != l.Count) throw ExceptionMetier.Invalide("MOTIF", "Codes en double dans un domaine");
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var gardes = l.Where(m => m.Id is not null).Select(m => m.Id!.Value).ToArray();
         await db.Database.ExecuteSqlRawAsync("UPDATE motif SET mot_actif = FALSE WHERE NOT (mot_id = ANY(@g))", [P("g", gardes)], ct);
         foreach (var m in l)

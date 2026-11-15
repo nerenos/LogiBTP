@@ -34,6 +34,9 @@ const TYPES_SOURCES = /_(RECEPTION|FACTURE|FACTURE_AVT|SITUATION|PRODUCTION|AVOI
 const TYPES_CROISES = [TYPE_AVANCEMENT.SITUATION, TYPE_AVANCEMENT.PRODUCTION];
 const MARCHE_TYPES = [TYPE_DOCUMENT.V_RECEPTION, TYPE_DOCUMENT.V_SITUATION, TYPE_DOCUMENT.V_PRODUCTION, TYPE_DOCUMENT.V_FACTURE_AVT];
 import { afficherTracabilite } from '../documents/tracabilite.js';
+import { creeeParAgent, pastillePieceHtml } from '../agents/origines.js';
+import { etatDemandeAgent, demanderPourElement } from '../agents/demander.js';
+import { TYPE_PARAMETRE_RECETTE } from '@logibtp/mcp';
 import { saisieRestauree, TABLES_RESTAUREES } from '../documents/restauration.js';
 import { afficherReglements } from '../documents/reglements-document.js';
 import { ouvrirImport, creerDepuisImport, rendreBandeauImport, tracabiliteImport } from '../import/devis-a-verifier.js';
@@ -106,6 +109,7 @@ const gabarit = () => `
         <button role="menuitem" class="mo-ligne" data-action="sources" title="${texteHtml('document_btp.page.actions.sources_aide')}" hidden>${texteHtml('document_btp.page.actions.sources', { icone: icone('ajouter') })}</button>
         </div>
       </span>
+      <button data-action="agent" class="bouton-icone" hidden title="${texteHtml('mcp.demande.bouton_aide')}" aria-label="${texteHtml('mcp.demande.bouton')}">${iconeHtml('mcp_agent')}</button>
       <button data-action="apercu" class="bouton-icone" title="${texteHtml('document_btp.page.apercu_aide')}" aria-label="${texteHtml('document_btp.page.apercu')}">${iconeHtml('document_btp_apercu')}</button>
       <button data-action="courriel" class="bouton-icone" title="${texteHtml('document_btp.page.courriel_aide', { icone: icone('document_btp_envoyer') })}" aria-label="${texteHtml('document_btp.page.courriel')}">${iconeHtml('document_btp_envoyer')}</button>
       <button data-action="fermer-page" class="bouton-icone" title="${texteHtml('document_btp.page.fermer_aide')}" aria-label="${texteHtml('document_btp.page.fermer')}">${iconeHtml('retirer')}</button>
@@ -116,6 +120,7 @@ const gabarit = () => `
   <div class="document-import" hidden></div>
   <div class="document-completude-fe" hidden></div>
   <div class="document-envoi-fe" hidden></div>
+  <div class="document-agent" hidden></div>
   <main class="document-zone">
     <section id="vue-entete" class="vue vue-entete" role="tabpanel">
       <div id="entete" class="panneau entete"></div>
@@ -256,6 +261,8 @@ export class PageDocument extends PageBase {
       bibliotheque: () => app.naviguer('/liste/bibliotheque?vue=14', { nouvelleFenetre: true }),
       rechercher: () => { this.disposition.onglet('lignes'); this.recherche?.ouvrir(); },
       apercu: () => this.apercu(),
+      // « Demander à l'agent » (module MCP, lot 13) : recette choisie, prompt prérempli avec l'identifiant de la pièce, copié.
+      agent: () => this.#demanderAgent(),
       // Courriel : destinataires, modèle et pièces « à envoyer » proposés par l'application (module Mail).
       courriel: () => {
         const id = this.editeur?.saisie.document.ent_id;
@@ -733,7 +740,52 @@ export class PageDocument extends PageBase {
       ouvrir: (id) => this.app.naviguer(urlDocument(id), { nouvelleFenetre: true }),
       apresAnnulation: (r) => this.#apresAvoirInterne(r),
     });
+    this.#rendrePastilleAgent();
+    this.#rendreBoutonAgent();
     this.app.majPage();
+  }
+
+  /**
+   * Origines des lignes de l'historique de la pièce (module MCP, lot 11), lues une fois par version enregistrée et
+   * partagées par la pastille de l'entête et l'onglet Traçabilité.
+   */
+  #originesAgent(entId) {
+    const cle = `${entId}-${this.editeur?.saisie.document.ent_version ?? ''}`;
+    if (this.originesCle !== cle) {
+      this.originesCle = cle;
+      this.originesLues = api.originesHistorique(entId).catch(() => []);
+    }
+    return this.originesLues;
+  }
+
+  /** Pastille 🤖 de l'entête : pièce créée par un agent IA et pas encore reprise par un humain (module MCP actif). */
+  async #rendrePastilleAgent() {
+    const zone = this.$('.document-agent');
+    const entId = this.editeur?.saisie.document.ent_id;
+    if (!zone) return;
+    if (!(entId > 0) || !this.app.moduleActif(MODULE_FACULTATIF.MCP)) { zone.hidden = true; return; }
+    const creation = creeeParAgent(await this.#originesAgent(entId));
+    if (this.editeur?.saisie.document.ent_id !== entId) return;
+    zone.innerHTML = pastillePieceHtml(creation);
+    zone.hidden = !creation;
+  }
+
+  /** Bouton « Demander à l'agent » : pièce enregistrée, module MCP actif, délégation ou droit « agents », recette pour une pièce. */
+  async #rendreBoutonAgent() {
+    const bouton = this.$('[data-action="agent"]');
+    const entId = this.editeur?.saisie.document.ent_id;
+    if (!bouton) return;
+    if (!(entId > 0)) { bouton.hidden = true; return; }
+    this.etatAgent = await etatDemandeAgent(this.app, TYPE_PARAMETRE_RECETTE.DOCUMENT);
+    if (this.editeur?.saisie.document.ent_id !== entId) return;
+    bouton.hidden = !this.etatAgent.visible;
+  }
+
+  #demanderAgent() {
+    const d = this.editeur?.saisie.document;
+    if (!d || !(d.ent_id > 0) || !this.etatAgent?.visible) return null;
+    const libelle = `${this.editeur.definition.type?.tyd_libelle ?? texte('document_btp.page.document')} ${d.ent_numero ?? ''}`.trim();
+    return demanderPourElement(this.app, { recettes: this.etatAgent.recettes, type: TYPE_PARAMETRE_RECETTE.DOCUMENT, id: d.ent_id, libelle });
   }
 
   /** Après l'avoir interne d'une facture rejetée ou refusée : pièce relue, nouvelle facture proposée à l'ouverture. */
@@ -789,10 +841,20 @@ export class PageDocument extends PageBase {
     await ecrireAttente({ ...this.#entreeAttente(), creation: { params, initial: document } });
     this.attente = await lireAttente(this.app.utilisateur(), id);
     this.app.routeur.remplacerUrl(urlDocument(id));
+    this.#trancheInitiale();
     this.disposition.onglet('entete');
     this.rafraichir();
     this.app.publier(SUJET_ATTENTE, {});
     this.app.message(texte('document_btp.page.cree_hors_ligne', { type: type.tyd_libelle }), 'avertissement');
+  }
+
+  /**
+   * Création : une tranche vide d'emblée pour commencer la saisie ; hors pile d'annulation, le document reste « non
+   * modifié » tant qu'on n'y saisit rien (la tranche n'est enregistrée qu'avec la première saisie).
+   */
+  #trancheInitiale() {
+    const id = this.editeur?.insererTrancheVide();
+    if (id) this.editeur.allerA(id, { focus: false });
   }
 
   async nouveau(code) {
@@ -803,6 +865,7 @@ export class PageDocument extends PageBase {
     const cree = await api.creer({ ent_tyd_id: type.tyd_id, ent_tiers_id: null, ent_objet: texte('document_btp.page.objet_nouveau', { type: type.tyd_libelle.toLowerCase() }) });
     this.app.routeur.remplacerUrl(urlDocument(cree.document.ent_id));
     await this.chargerDocument(cree.document.ent_id);
+    this.#trancheInitiale();
     this.disposition.onglet('entete');
     this.app.publier(SUJET_FENETRE.ENREGISTRE, { type: code, ids: [cree.document.ent_id], cree: true });
     this.app.message(texte('document_btp.page.cree', { type: type.tyd_libelle, numero: cree.document.ent_numero ?? '' }));
@@ -1020,6 +1083,8 @@ export class PageDocument extends PageBase {
       reimporter: (o) => this.app.naviguer(`${formatImport(o.dor_format).page}?ged=${o.dor_fichier_id}`, { nouvelleFenetre: true }),
       // Restauration d'une version : document modifiable par cet utilisateur et non bloqué par un autre (verrou).
       restaurer: this.#modifiable() && !this.editeur.magasin.lectureSeule ? (h) => this.restaurerVersion(h).catch((x) => this.app.erreur(x)) : null,
+      // Lignes écrites par un agent IA (module MCP actif) : « 🤖 via <client> ».
+      origines: this.app.moduleActif(MODULE_FACULTATIF.MCP) ? () => this.#originesAgent(d.ent_id) : null,
     }).catch((x) => { zone.innerHTML = `<p class="erreur">${echapper(x.message)}</p>`; });
   }
 
@@ -1238,8 +1303,9 @@ export class PageDocument extends PageBase {
     // Commande client : marché obligatoire (sauf commande intermédiaire d'un devis facturé directement).
     const d = ed.saisie.document;
     if (ed.definition.type?.tyd_code === TYPE_DOCUMENT.V_COMMANDE && !d.ent_marche_id && !d.ent_intermediaire && !(await this.choisirMarche())) return;
-    // Commande de sous-traitance : marché de sous-traitance obligatoire (ST2, ST4).
-    if (ed.definition.type?.tyd_code === TYPE_DOCUMENT.T_COMMANDE && !d.ent_marche_id && !(await this.choisirMarcheSousTraitance())) return;
+    // Commande de sous-traitance : marché de sous-traitance du sous-traitant obligatoire (ST2, ST4) ; une commande issue
+    // d'une commande client garde son marché de vente, proposé comme marché lié.
+    if (ed.definition.type?.tyd_code === TYPE_DOCUMENT.T_COMMANDE && !(await this.marcheSousTraitanceValable(d)) && !(await this.choisirMarcheSousTraitance())) return;
     // Frais annexes : à la validation, la ventilation est figée en clés de ligne ; les clés orphelines sont supprimées.
     const orphelines = messagesFrais(ed.resultat).filter((m) => m.code === 'FA_CLE_ORPHELINE' || m.code === 'FA_CLE_BLOQUEE');
     if (orphelines.length && !await confirmer(texte('document_btp.page.valider_cles', { nombre: orphelines.length, liste: orphelines.map((m) => `${icone('document_puce')} ${m.message}`).join('\n') }))) return;
@@ -1394,6 +1460,15 @@ export class PageDocument extends PageBase {
    * Commande client à valider sans marché : chantier (existant ou nouveau, pré-rempli) puis création du marché, ou
    * rattachement comme avenant d'un marché en cours. Renvoie vrai si la commande est rattachée (validation à suivre).
    */
+  /** Marché du document : marché de sous-traitance de son sous-traitant (sinon à choisir avant la validation). */
+  async marcheSousTraitanceValable(doc) {
+    if (!doc.ent_marche_id) return false;
+    if (!this.servicesStructure) return true;
+    this.structure = await this.servicesStructure.referentiels();
+    const m = (this.structure.marches ?? []).find((x) => x.id === doc.ent_marche_id);
+    return !m || (m.sens === 'ST' && m.tiers_id === doc.ent_tiers_id);
+  }
+
   async choisirMarcheSousTraitance() {
     if (!this.servicesStructure || !this.servicesFiche) { this.app.message(texte('document_btp.page.marche.indisponible'), 'avertissement'); return false; }
     this.structure = await this.servicesStructure.referentiels();

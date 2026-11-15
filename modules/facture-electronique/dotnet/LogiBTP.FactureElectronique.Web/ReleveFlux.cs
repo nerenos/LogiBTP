@@ -2,6 +2,7 @@ using LogiBTP.FactureElectronique.Web.Connecteurs;
 using LogiBTP.Socle;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.FactureElectronique.Web;
 
@@ -83,7 +84,7 @@ public sealed class ReleveFlux(ServiceFactureElectronique service)
     {
         var local = await service.Db.Flux.FirstOrDefaultAsync(x => x.FflConnecteur == connecteur && x.FflIdFlux == f.IdFlux, ct);
         if (local is null) return false;
-        await using var tx = await service.Db.Database.BeginTransactionAsync(ct);
+        await using var tx = await service.Db.Unite().CommencerAsync(ct);
         var change = await service.AppliquerAccuseAsync(local, f, ActeurFe.Plateforme, null, ct);
         await tx.CommitAsync(ct);
         service.Db.ChangeTracker.Clear();

@@ -35,7 +35,7 @@ public class SpecialisationAuthentificationBtp : SpecialisationAuthentification
         SELECT i.ind_id::text AS id, concat_ws(' ', i.ind_prenom, i.ind_nom) AS libelle, i.ind_actif AS individu_actif,
                s.sal_statut AS statut, s.sal_actif AS salarie_actif, s.sal_code AS matricule, s.sal_id AS sal_id
         FROM individu i
-        LEFT JOIN LATERAL (SELECT sal_id, sal_statut, sal_actif, sal_code FROM salarie WHERE sal_ind_id = i.ind_id
+        LEFT JOIN LATERAL (SELECT sal_id, sal_statut, sal_actif, sal_code, sal_matricule_paie FROM salarie WHERE sal_ind_id = i.ind_id
                            ORDER BY sal_actif DESC, sal_id DESC LIMIT 1) s ON TRUE
         """;
 

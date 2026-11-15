@@ -30,12 +30,14 @@ import { PageImportOptim } from './import-optim.js';
 import { PageImportCarburant } from './import-carburant.js';
 import { PageReglements } from './reglements.js';
 import { PageRelances } from './relances.js';
+import { PageParametresAgents, PageJournalAgents, PagePropositionsAgents, PagePropositionAgent, PageAutorisationAgent } from './agents.js';
 import { PageFactureElectronique } from './facture-electronique.js';
 import { PageMarchesAFacturer } from './marches-a-facturer.js';
 import { PageEdition } from './edition.js';
 import { PageParametresEditions } from './parametres-editions.js';
 import { PageParametresModules } from './parametres-modules.js';
 import { PageParametresInstallation } from './parametres-installation.js';
+import { PageParametresChampsSupplementaires } from './parametres-champs-supplementaires.js';
 import { PageParametresServices } from './parametres-services.js';
 import { PageParametresReferentiels } from './parametres-referentiels.js';
 import { PageCrm } from './crm.js';
@@ -156,6 +158,7 @@ export const ROUTES = [
   { nom: 'releves-a-valider', chemin: '/ressources/releves-a-valider', page: PageRelevesAValider, titre: texte('ressources_btp.releves_a_valider.titre') },
   { nom: 'habilitations', chemin: '/ressources/habilitations', page: PageHabilitations, titre: texte('ressources_btp.surveiller.titre') },
   { nom: 'parametres-comptes', chemin: '/parametres/comptes', page: PageParametresComptes, titre: texte('authentification_btp.comptes.titre') },
+  { nom: 'parametres-champs-supplementaires', chemin: '/parametres/champs-supplementaires', page: PageParametresChampsSupplementaires, titre: texte('parametres_btp.champs_supplementaires.titre') },
   { nom: 'parametres-installation', chemin: '/parametres/installation', page: PageParametresInstallation, titre: texte('parametres_btp.installation.titre') },
   { nom: 'parametres-droits', chemin: '/parametres/droits', page: PageParametresDroits, titre: texte('droits_btp.profils.titre') },
   { nom: 'parametres-services', chemin: '/parametres/services', page: PageParametresServices, titre: texte('parametres_btp.services.titre') },
@@ -168,6 +171,13 @@ export const ROUTES = [
   { nom: 'import-carburant', chemin: '/import/carburant', page: PageImportCarburant, titre: texte('import_btp.routes.carburant') },
   { nom: 'reglements', chemin: '/reglements', page: PageReglements, titre: texte('reglements_btp.routes.reglements') },
   { nom: 'relances', chemin: '/relances', page: PageRelances, titre: texte('relances_btp.routes.relances') },
+  // Module MCP (agents IA, plans/mcp.md lot 11) : propositions, journal, levées par profil ; délégations dans Mon compte (#agents).
+  { nom: 'agents-propositions', chemin: '/agents/propositions', page: PagePropositionsAgents, titre: texte('agents_btp.routes.propositions') },
+  { nom: 'agents-proposition', chemin: '/agents/propositions/:id', page: PagePropositionAgent, titre: texte('agents_btp.routes.propositions') },
+  { nom: 'agents-journal', chemin: '/agents/journal', page: PageJournalAgents, titre: texte('agents_btp.routes.journal') },
+  { nom: 'parametres-agents', chemin: '/parametres/agents', page: PageParametresAgents, titre: texte('agents_btp.routes.parametres') },
+  // Consentement OAuth d'un client distant (lot 12) : ?demande=… (création de la délégation) ou ?erreur=CODE.
+  { nom: 'agents-autoriser', chemin: '/agents/autoriser', page: PageAutorisationAgent, titre: texte('agents_btp.routes.autoriser') },
   { nom: 'facture-electronique', chemin: '/facture-electronique', page: PageFactureElectronique, titre: texte('facture_electronique_btp.routes.page') },
   { nom: 'marches-a-facturer', chemin: '/marches/a-facturer', page: PageMarchesAFacturer, titre: texte('structure_btp.routes.marches_a_facturer') },
   { nom: 'crm-note', chemin: '/crm/note/:id', page: PageNoteCrm, titre: texte('crm_btp.routes.note') },

@@ -43,6 +43,15 @@ export const FAMILLES = [
   { id: 6, bib_id: 1, parent_id: null, code: 'ENG', libelle: 'Engins et matériel', ordre: 3 },
   { id: 7, bib_id: 2, parent_id: null, code: 'PLAT', libelle: 'Plâtrerie', ordre: 1 },
   { id: 8, bib_id: 2, parent_id: 7, code: 'ISOL', libelle: 'Isolation', ordre: 2 },
+  { id: 9, bib_id: 1, parent_id: null, code: 'TER', libelle: 'Terrassement et VRD', ordre: 4 },
+  { id: 10, bib_id: 1, parent_id: null, code: 'SO', libelle: 'Second œuvre', ordre: 5 },
+  { id: 11, bib_id: 1, parent_id: 10, code: 'PEI', libelle: 'Peinture', ordre: 1 },
+  { id: 12, bib_id: 1, parent_id: 10, code: 'CAR', libelle: 'Carrelage', ordre: 2 },
+  { id: 13, bib_id: 1, parent_id: 10, code: 'PLB', libelle: 'Plomberie', ordre: 3 },
+  { id: 14, bib_id: 1, parent_id: 10, code: 'ELEC', libelle: 'Électricité', ordre: 4 },
+  { id: 15, bib_id: 1, parent_id: 10, code: 'MEN', libelle: 'Menuiserie intérieure', ordre: 5 },
+  { id: 16, bib_id: 1, parent_id: null, code: 'COUV', libelle: 'Charpente et couverture', ordre: 6 },
+  { id: 17, bib_id: 1, parent_id: null, code: 'STT', libelle: 'Sous-traitance', ordre: 7 },
 ];
 
 /** Unités ajoutées au référentiel pour la démo (palette, plaque). */
@@ -69,7 +78,7 @@ const poste = (o) => article({
 // Ligne d'ouvrage (format des lignes de document) et ses composantes.
 const L = (o) => ({ lig_ent_id: 0, lig_proprietes: {}, lig_coef_remise: 1, lig_precision_qte: 2, lig_precision_pv: 2, lig_type_prix: 'V', lig_qte_source: 'S', lig_coef_perte: 1, ...o });
 
-export const ELEMENTS = [
+const ELEMENTS_BASE = [
   acier(1, 'HA10', 10, 0.617),
   acier(2, 'HA12', 12, 0.888),
   article({
@@ -96,10 +105,10 @@ export const ELEMENTS = [
     composition: {
       mode: 'D',
       lignes: [
-        L({ lig_id: 1, lig_parent_id: null, lig_ordre: 1, lig_tyl_id: 2, lig_libelle_html: '<b>Dalle béton armé ép. 15 cm</b>', lig_qte: 1, lig_unt_code: 'm2', lig_coef_fg: 1.1, lig_coef_benef: 1.2 }),
-        L({ lig_id: 2, lig_parent_id: 1, lig_ordre: 1, lig_tyl_id: 3, lig_libelle_html: "Béton prêt à l'emploi C25/30", lig_qte_source: 'M', lig_mtr_id: 10, lig_qte_type: 'R', lig_coef_perte: 1.05, lig_precision_qte: 4, lig_unt_code: 'm3', lig_pa: 112.5, lig_coef_fg: 1.1, lig_coef_benef: 1.2, lig_proprietes: { element: { id: 3, bib: 'GEN', code: 'BPE25' } } }),
-        L({ lig_id: 3, lig_parent_id: 1, lig_ordre: 2, lig_tyl_id: 3, lig_libelle_html: 'Acier HA10 (treillis 20 × 20)', lig_qte: 10, lig_qte_type: 'R', lig_coef_perte: 1.1, lig_unt_code: 'ml', lig_pa: 0.71, lig_coef_fg: 1.08, lig_coef_benef: 1.25, lig_proprietes: { element: { id: 1, bib: 'GEN', code: 'HA10' } } }),
-        L({ lig_id: 4, lig_parent_id: 1, lig_ordre: 3, lig_tyl_id: 3, lig_libelle_html: 'Heure de maçon (coulage, talochage)', lig_qte: 0.45, lig_qte_type: 'R', lig_unt_code: 'h', lig_pa: 38, lig_coef_fg: 1.35, lig_coef_benef: 1.15, lig_proprietes: { element: { id: 5, bib: 'GEN', code: 'MOMAC' } } }),
+        L({ lig_id: 1, lig_parent_id: null, lig_ordre: 1, lig_tyl_id: 2, lig_libelle_html: '<b>Dalle béton armé ép. 15 cm</b>', lig_qte: 1, lig_unt_code: 'm2', lig_coef_fg: 1.1, lig_coef_benef: 1.2, lig_nat_id: 5 }),
+        L({ lig_id: 2, lig_parent_id: 1, lig_ordre: 1, lig_tyl_id: 3, lig_libelle_html: "Béton prêt à l'emploi C25/30", lig_qte_source: 'M', lig_mtr_id: 10, lig_qte_type: 'R', lig_coef_perte: 1.05, lig_precision_qte: 4, lig_unt_code: 'm3', lig_pa: 112.5, lig_coef_fg: 1.1, lig_coef_benef: 1.2, lig_nat_id: 2, lig_proprietes: { element: { id: 3, bib: 'GEN', code: 'BPE25' } } }),
+        L({ lig_id: 3, lig_parent_id: 1, lig_ordre: 2, lig_tyl_id: 3, lig_libelle_html: 'Acier HA10 (treillis 20 × 20)', lig_qte: 10, lig_qte_type: 'R', lig_coef_perte: 1.1, lig_unt_code: 'ml', lig_pa: 0.71, lig_coef_fg: 1.08, lig_coef_benef: 1.25, lig_nat_id: 2, lig_proprietes: { element: { id: 1, bib: 'GEN', code: 'HA10' } } }),
+        L({ lig_id: 4, lig_parent_id: 1, lig_ordre: 3, lig_tyl_id: 3, lig_libelle_html: 'Heure de maçon (coulage, talochage)', lig_qte: 0.45, lig_qte_type: 'R', lig_unt_code: 'h', lig_pa: 38, lig_coef_fg: 1.35, lig_coef_benef: 1.15, lig_nat_id: 1, lig_proprietes: { element: { id: 5, bib: 'GEN', code: 'MOMAC' } } }),
       ],
       metres: [{
         mtr_id: 10, mtr_lig_id: 2, mtr_libelle: 'Volume de béton par m²', mtr_unt_code: 'm3', mtr_variable: null,
@@ -158,6 +167,94 @@ export const ELEMENTS = [
   poste({ id: 14, code: 'FRAISDOS', libelle_html: '<p>Frais de dossier</p>', pied_niveau: 'HT', pied_mode: 'M', pied_sens: 'AJOUT', pied_valeur: '150', tva_code: 'T20', pied_genre: 'AUTRE' }),
 ];
 
+// Compléments de la démonstration (12/11/2026) : articles courants du gros et du second œuvre, main-d'œuvre par
+// métier, locations, sous-traitance, et ouvrages composés de ces articles (composantes toutes avec leur nature).
+const ARTICLES_COMPLEMENTS = [
+  article({ id: 15, bib_id: 1, code: 'CIM35', libelle_html: '<p><b>Ciment CEM II/B 32,5 R</b> – sac de 35 kg</p>', fam_id: 4, nat_id: 2, gestion: 'STOCK', unite_stock: 'sac', pa_fixe: '7.9', poids: 35 }),
+  article({ id: 16, bib_id: 1, code: 'SABLE04', libelle_html: '<p><b>Sable 0/4 lavé</b></p>', fam_id: 4, nat_id: 2, gestion: 'ACHAT', unite_stock: 't', pa_fixe: '28.5' }),
+  article({ id: 17, bib_id: 1, code: 'GRAV420', libelle_html: '<p><b>Gravier concassé 4/20</b></p>', fam_id: 9, nat_id: 2, gestion: 'ACHAT', unite_stock: 't', pa_fixe: '30' }),
+  article({ id: 18, bib_id: 1, code: 'TSST25', libelle_html: '<p><b>Treillis soudé ST25C</b> – panneau 2,40 × 6 m</p>', fam_id: 3, nat_id: 2, gestion: 'STOCK', unite_stock: 'u', unite_vente: 'm2',
+    unites: [{ unite: 'm2', formule: '1 / 14.4' }], pa_fixe: '32.5', poids: 40.7 }),
+  article({ id: 19, bib_id: 1, code: 'BRIQ20', libelle_html: '<p><b>Brique monomur terre cuite 20 cm</b></p><p>500 × 200 × 314 mm</p>', fam_id: 4, nat_id: 2, gestion: 'STOCK', unite_stock: 'u', pa_fixe: '2.65' }),
+  article({ id: 20, bib_id: 1, code: 'MOCHEF', libelle_html: "<p><b>Heure de chef d'équipe</b> N4</p>", fam_id: 5, nat_id: 1, unite_stock: 'h', pa_fixe: '46', coef_fg: '1.35', coef_benef: '1.15' }),
+  article({ id: 21, bib_id: 1, code: 'MOMAN', libelle_html: '<p><b>Heure de manœuvre</b> N1P2</p>', fam_id: 5, nat_id: 1, unite_stock: 'h', pa_fixe: '30', coef_fg: '1.35', coef_benef: '1.15' }),
+  article({ id: 22, bib_id: 1, code: 'MOPEI', libelle_html: '<p><b>Heure de peintre</b> N3P1</p>', fam_id: 5, nat_id: 1, unite_stock: 'h', pa_fixe: '36', coef_fg: '1.35', coef_benef: '1.15' }),
+  article({ id: 23, bib_id: 1, code: 'MOELEC', libelle_html: "<p><b>Heure d'électricien</b> N3P2</p>", fam_id: 5, nat_id: 1, unite_stock: 'h', pa_fixe: '41', coef_fg: '1.35', coef_benef: '1.15' }),
+  article({ id: 24, bib_id: 1, code: 'MOPLB', libelle_html: '<p><b>Heure de plombier</b> N3P2</p>', fam_id: 5, nat_id: 1, unite_stock: 'h', pa_fixe: '42', coef_fg: '1.35', coef_benef: '1.15' }),
+  article({ id: 25, bib_id: 1, code: 'MOCAR', libelle_html: '<p><b>Heure de carreleur</b> N3P1</p>', fam_id: 5, nat_id: 1, unite_stock: 'h', pa_fixe: '38', coef_fg: '1.35', coef_benef: '1.15' }),
+  article({ id: 26, bib_id: 1, code: 'LPEL14', libelle_html: '<p><b>Location pelle sur chenilles 14 t</b> (journée, avec chauffeur)</p>', fam_id: 6, nat_id: 3, gestion: 'ACHAT', unite_stock: 'j', pa_fixe: '780', coef_fg: '1.05' }),
+  article({ id: 27, bib_id: 1, code: 'LBEN19', libelle_html: '<p><b>Location camion benne 19 t</b> (journée, avec chauffeur)</p>', fam_id: 6, nat_id: 3, gestion: 'ACHAT', unite_stock: 'j', pa_fixe: '540', coef_fg: '1.05' }),
+  article({ id: 28, bib_id: 1, code: 'PEIACR', libelle_html: '<p><b>Peinture acrylique blanche mate</b> – intérieur, murs et plafonds</p>', fam_id: 11, nat_id: 2, gestion: 'STOCK', unite_stock: 'l', pa_fixe: '4.6' }),
+  article({ id: 29, bib_id: 1, code: 'ENDLIS', libelle_html: '<p><b>Enduit de lissage</b> en poudre</p>', fam_id: 11, nat_id: 2, gestion: 'STOCK', unite_stock: 'kg', pa_fixe: '1.15' }),
+  article({ id: 30, bib_id: 1, code: 'GRES60', libelle_html: '<p><b>Carrelage grès cérame 60 × 60</b> rectifié, R10</p>', fam_id: 12, nat_id: 2, gestion: 'ACHAT', unite_stock: 'm2', pa_fixe: '24.9' }),
+  article({ id: 31, bib_id: 1, code: 'COLC2', libelle_html: '<p><b>Mortier-colle C2 S1</b> – sac de 25 kg</p>', fam_id: 12, nat_id: 2, gestion: 'STOCK', unite_stock: 'sac', pa_fixe: '14.8' }),
+  article({ id: 32, bib_id: 1, code: 'PER16', libelle_html: '<p><b>Tube PER gainé Ø 16</b> – couronne de 50 m</p>', fam_id: 13, nat_id: 2, gestion: 'STOCK', unite_stock: 'ml', pa_fixe: '0.98' }),
+  article({ id: 33, bib_id: 1, code: 'WCSUSP', libelle_html: '<p><b>Pack WC suspendu</b> bâti-support, cuvette et plaque de commande</p>', fam_id: 13, nat_id: 2, gestion: 'ACHAT', unite_stock: 'u', pa_fixe: '295' }),
+  article({ id: 34, bib_id: 1, code: 'R2V325', libelle_html: '<p><b>Câble R2V 3G2,5 mm²</b></p>', fam_id: 14, nat_id: 2, gestion: 'STOCK', unite_stock: 'ml', pa_fixe: '1.18' }),
+  article({ id: 35, bib_id: 1, code: 'PC16', libelle_html: '<p><b>Prise de courant 2P+T 16 A</b> encastrée, avec boîte</p>', fam_id: 14, nat_id: 2, gestion: 'STOCK', unite_stock: 'u', pa_fixe: '6.4' }),
+  article({ id: 36, bib_id: 1, code: 'BP83', libelle_html: '<p><b>Bloc-porte intérieur 83 × 204</b> âme alvéolaire, huisserie bois</p>', fam_id: 15, nat_id: 2, gestion: 'ACHAT', unite_stock: 'u', pa_fixe: '148' }),
+  article({ id: 37, bib_id: 1, code: 'TUILTC', libelle_html: '<p><b>Tuile terre cuite à emboîtement</b> grand moule (10 au m²)</p>', fam_id: 16, nat_id: 2, gestion: 'ACHAT', unite_stock: 'u', unite_vente: 'm2',
+    unites: [{ unite: 'm2', formule: '10' }], pa_fixe: '1.38' }),
+  article({ id: 38, bib_id: 1, code: 'STELEC', libelle_html: '<p><b>Sous-traitance électricité</b> (heure)</p>', fam_id: 17, nat_id: 4, gestion: 'SOUS_TRAITANCE', unite_stock: 'h', pa_fixe: '52', coef_fg: '1.05' }),
+  article({ id: 39, bib_id: 1, code: 'STETAN', libelle_html: '<p><b>Sous-traitance étanchéité</b> toiture-terrasse (m²)</p>', fam_id: 17, nat_id: 4, gestion: 'SOUS_TRAITANCE', unite_stock: 'm2', pa_fixe: '48', coef_fg: '1.05' }),
+  article({ id: 40, bib_id: 2, code: 'BA13H', libelle_html: '<p><b>Plaque de plâtre BA13 hydrofuge</b></p><p>1,20 × 2,50 m</p>', fam_id: 7, nat_id: 2, gestion: 'STOCK', unite_stock: 'm2', pa_fixe: '3.65', coef_fg: '1.12', coef_benef: '1.3' }),
+  article({ id: 41, bib_id: 2, code: 'R48', libelle_html: '<p><b>Rail R48</b> – longueur 3 m</p>', fam_id: 7, nat_id: 2, gestion: 'STOCK', unite_stock: 'ml', pa_fixe: '1.05', coef_fg: '1.12', coef_benef: '1.3' }),
+  article({ id: 42, bib_id: 2, code: 'M48', libelle_html: '<p><b>Montant M48</b> – longueur 2,50 m</p>', fam_id: 7, nat_id: 2, gestion: 'STOCK', unite_stock: 'ml', pa_fixe: '1.25', coef_fg: '1.12', coef_benef: '1.3' }),
+];
+
+// Ouvrage de démonstration : racine à quantité 1 et ses composantes [code (BIB:CODE hors GEN), quantité, options], avec
+// le prix, les coefficients et la nature de l'article composant (aucune composante sans nature).
+const ouvrage = (id, code, libelle, fam_id, unite, composantes, o = {}) => {
+  const articles = [...ELEMENTS_BASE, ...ARTICLES_COMPLEMENTS];
+  const bibs = Object.fromEntries(BIBLIOTHEQUES.map((b) => [b.id, b.code]));
+  return article({
+    id, bib_id: 1, code, type: 'OUVRAGE', libelle_html: libelle, fam_id, nat_id: 5, unite_stock: unite, coef_fg: '1.1', coef_benef: '1.2', ...o,
+    composition: {
+      mode: 'D',
+      lignes: [
+        L({ lig_id: 1, lig_parent_id: null, lig_ordre: 1, lig_tyl_id: 2, lig_libelle_html: texteGras(libelle), lig_qte: 1, lig_unt_code: unite, lig_coef_fg: 1.1, lig_coef_benef: 1.2, lig_nat_id: 5 }),
+        ...composantes.map(([ref, qte, opt = {}], i) => {
+          const [bib, c] = ref.includes(':') ? ref.split(':') : ['GEN', ref];
+          const a = articles.find((x) => x.code === c && bibs[x.bib_id] === bib);
+          if (!a) throw new Error(`Composante inconnue ${ref} de ${code}`);
+          return L({
+            lig_id: i + 2, lig_parent_id: 1, lig_ordre: i + 1, lig_tyl_id: 3, lig_libelle_html: a.libelle_html.replace(/<\/?p>/g, ' ').replace(/\s+/g, ' ').trim(),
+            lig_qte: qte, lig_qte_type: 'R', lig_unt_code: a.unite_stock, lig_pa: Number(a.pa_fixe ?? a.dernier_pa ?? a.pmp ?? 0),
+            lig_coef_fg: Number(a.coef_fg), lig_coef_benef: Number(a.coef_benef), lig_nat_id: a.nat_id,
+            lig_proprietes: { element: { id: a.id, bib, code: a.code } }, ...opt,
+          });
+        }),
+      ],
+      metres: [], variables: [],
+    },
+  });
+};
+const texteGras = (html) => `<b>${html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()}</b>`;
+
+const OUVRAGES_COMPLEMENTS = [
+  ouvrage(43, 'MUR20', '<p><b>Mur en parpaings creux de 20</b></p><p>Hourdés au mortier de ciment, joints de 1 cm</p>', 4, 'm2',
+    [['PARP20', 10, { lig_coef_perte: 1.05 }], ['CIM35', 0.2], ['SABLE04', 0.04], ['MOMAC', 1.1], ['MOMAN', 0.4]]),
+  ouvrage(44, 'SEMF50', '<p><b>Semelle filante béton armé 50 × 25</b></p><p>Béton C25/30, 4 HA12 filants</p>', 2, 'ml',
+    [['BPE25', 0.125, { lig_coef_perte: 1.05, lig_precision_qte: 4 }], ['HA12', 4, { lig_coef_perte: 1.1 }], ['MOMAC', 0.6], ['MOMAN', 0.3]]),
+  ouvrage(45, 'TERPM', '<p><b>Terrassement en pleine masse</b></p><p>Déblais chargés et évacués (rayon 10 km)</p>', 9, 'm3',
+    [['LPEL14', 0.012, { lig_precision_qte: 4 }], ['LBEN19', 0.015, { lig_precision_qte: 4 }], ['MOMAN', 0.08]]),
+  ouvrage(46, 'PEIMUR', '<p><b>Peinture acrylique murs</b> – deux couches</p><p>Rebouchage, ponçage, impression et finition</p>', 11, 'm2',
+    [['ENDLIS', 0.4], ['PEIACR', 0.3], ['MOPEI', 0.28]]),
+  ouvrage(47, 'CARSOL', '<p><b>Carrelage sol grès cérame 60 × 60</b> collé</p><p>Joints et plinthes non compris</p>', 12, 'm2',
+    [['GRES60', 1, { lig_coef_perte: 1.08 }], ['COLC2', 0.22], ['MOCAR', 0.75]]),
+  ouvrage(48, 'PCPOSE', '<p><b>Prise 2P+T 16 A</b> fournie et posée</p><p>Câblage depuis le tableau (8 m en moyenne)</p>', 14, 'u',
+    [['PC16', 1], ['R2V325', 8], ['MOELEC', 0.6]]),
+  ouvrage(49, 'WCPOSE', '<p><b>WC suspendu</b> fourni et posé</p><p>Raccordements eau froide et évacuation</p>', 13, 'u',
+    [['WCSUSP', 1], ['PER16', 3], ['MOPLB', 3.5]]),
+  ouvrage(50, 'CLO72', '<p><b>Cloison distributive 72/48</b></p><p>Une plaque BA13 par face, laine de verre 45 mm</p>', 10, 'm2',
+    [['FAB:BA13', 2, { lig_coef_perte: 1.05 }], ['FAB:R48', 0.8], ['FAB:M48', 2], ['FAB:LV100', 1], ['MOMAC', 0.55]]),
+  ouvrage(51, 'PORTEP', '<p><b>Bloc-porte intérieur</b> fourni et posé</p>', 15, 'u', [['BP83', 1], ['MOCHEF', 0.5], ['MOMAN', 1]]),
+  ouvrage(52, 'COUVTC', '<p><b>Couverture en tuiles terre cuite</b></p><p>Sur liteaunage existant, faîtage non compris</p>', 16, 'm2',
+    [['TUILTC', 10.5], ['MOMAC', 0.45], ['MOMAN', 0.3]]),
+];
+
+export const ELEMENTS = [...ELEMENTS_BASE, ...ARTICLES_COMPLEMENTS, ...OUVRAGES_COMPLEMENTS];
+
 export const TARIFS = [
   { id: 1, ele_id: 1, fournisseur: 'Aciers du Rhône', reference: 'HA10-12', libelle: 'HA10 L 12 m', unite: 't', prix: '1150', debut: '2026-01-01', fin: null, principal: true, lien: 'https://example.com/tarifs/aciers-du-rhone' },
   { id: 2, ele_id: 1, fournisseur: 'Métal Distribution', reference: 'B10', libelle: 'Barre HA10', unite: 'kg', prix: '1.12', debut: null, fin: '2026-12-31', principal: false, lien: null },
@@ -167,6 +264,9 @@ export const TARIFS = [
   { id: 6, ele_id: 3, fournisseur: 'Unibéton', reference: 'U-C25', libelle: 'C25/30 toupie 8 m³', unite: 'm3', prix: '112.5', debut: '2026-03-01', fin: null, principal: false, lien: null },
   { id: 7, ele_id: 3, fournisseur: 'Béton Express', reference: 'BE-25', libelle: 'C25/30 petite quantité', unite: 'm3', prix: '125', debut: null, fin: null, principal: false, lien: null },
   { id: 8, ele_id: 4, fournisseur: 'Matériaux Rhône-Alpes', reference: 'PAR20', libelle: 'Parpaing 20 (palette de 60)', unite: 'pal', prix: '79.2', debut: null, fin: null, principal: true, lien: null },
+  { id: 9, ele_id: 15, fournisseur: 'Matériaux Rhône-Alpes', reference: 'CEM325-35', libelle: 'Ciment 32,5 R sac 35 kg', unite: 'sac', prix: '7.9', debut: null, fin: null, principal: true, lien: null },
+  { id: 10, ele_id: 30, fournisseur: 'Carrelages du Sud-Est', reference: 'GR6060-R10', libelle: 'Grès cérame 60 × 60 R10', unite: 'm2', prix: '24.9', debut: null, fin: null, principal: true, lien: null },
+  { id: 11, ele_id: 34, fournisseur: 'Électro Distribution', reference: 'R2V3G25', libelle: 'R2V 3G2,5 (couronne 100 m)', unite: 'ml', prix: '1.18', debut: null, fin: null, principal: true, lien: null },
 ];
 
 export const PARAMETRES_BIBLIOTHEQUE = {

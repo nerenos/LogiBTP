@@ -6,6 +6,7 @@ using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using NpgsqlTypes;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Api.Btp;
 
@@ -315,7 +316,7 @@ public static class Structure
             var u = Utilisateur.Depuis(http);
             var avoirs = new List<long>();
             long? situation;
-            await using (var tx = await db.Database.BeginTransactionAsync(ct))
+            await using (var tx = await db.Unite().CommencerAsync(ct))
             {
                 var pieces = await db.Database.SqlQueryRaw<long>("SELECT x.ent_id AS \"Value\" FROM " + SqlCascade + " ORDER BY x.ent_rang_avancement DESC NULLS LAST, x.ent_id DESC",
                     new NpgsqlParameter("id", id)).ToListAsync(ct);

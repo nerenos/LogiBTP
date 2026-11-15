@@ -18,3 +18,24 @@ export const DISPOSITION_GROUPE = Object.freeze({
   GRILLE: 'grille',
   FLEX: 'flex',
 });
+
+/** Types d'un champ supplémentaire en colonne x_ (registre fiche_champ_supplementaire). */
+export const TYPE_CHAMP_SUPPLEMENTAIRE = Object.freeze({
+  TEXTE: 'texte',
+  NOMBRE: 'nombre',
+  MONTANT: 'montant',
+  DATE: 'date',
+  CASE_A_COCHER: 'booleen',
+  LISTE: 'liste',
+});
+
+/** Erreurs de l'administration des champs supplémentaires (code des erreurs de champ d'une réponse 422 VALIDATION). */
+export const ERREUR_CHAMP_SUPPLEMENTAIRE = Object.freeze({
+  NOM_INVALIDE: 'CHAMP_NOM_INVALIDE',
+  TYPE_INVALIDE: 'CHAMP_TYPE_INVALIDE',
+  LIBELLE_OBLIGATOIRE: 'CHAMP_LIBELLE_OBLIGATOIRE',
+  TABLE_FERMEE: 'CHAMP_TABLE_FERMEE',
+  EXISTE: 'CHAMP_EXISTE',
+  INCONNU: 'CHAMP_INCONNU',
+  VALEURS: 'CHAMP_VALEURS',
+});

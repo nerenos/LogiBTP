@@ -4,6 +4,7 @@ using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using NpgsqlTypes;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Rentabilite.Web;
 
@@ -108,7 +109,7 @@ public partial class ServiceRentabilite(RentabiliteDbContext db, SpecialisationR
 
     private async Task<ResumeCalcul> CalculerDansTransactionAsync(int chantier, string declencheur, string? raison, string? par, bool retirerDeLaFile, CancellationToken ct)
     {
-        await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
+        await using var tx = await db.Unite().CommencerAsync(IsolationLevel.ReadCommitted, ct);
         await db.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock({VerrouModule}, {chantier})", ct);
         // Retiré de la file avant le calcul : un signalement arrivé pendant le calcul le remet dans la file.
         if (retirerDeLaFile) await db.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM rentabilite_a_recalculer WHERE arq_cha_id = {chantier}", ct);

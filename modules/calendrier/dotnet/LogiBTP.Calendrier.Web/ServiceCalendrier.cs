@@ -1,5 +1,6 @@
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Calendrier.Web;
 
@@ -146,7 +147,7 @@ public sealed class ServiceCalendrier(CalendrierDbContext db, SpecialisationCale
         if (erreurs.Count > 0) throw ExceptionMetier.Invalide(erreurs[0], string.Join(" · ", erreurs.Select(e => ReglesCalendrier.Messages[e])), erreurs);
         var code = s.Code.Trim().ToUpperInvariant();
         if (await db.Calendriers.AnyAsync(c => c.CalCode == code && c.CalId != (id ?? 0), ct)) throw ExceptionMetier.Conflit("CALENDRIER_CODE", $"Code {code} déjà utilisé");
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var c = id is int i ? await db.Calendriers.FirstOrDefaultAsync(x => x.CalId == i, ct) ?? throw ExceptionMetier.Introuvable($"Calendrier {i}") : new CalendrierEntite();
         if (s.Defaut && !c.CalDefaut) await db.Calendriers.Where(x => x.CalDefaut).ExecuteUpdateAsync(x => x.SetProperty(y => y.CalDefaut, false), ct);
         c.CalCode = code;
@@ -199,7 +200,7 @@ public sealed class ServiceCalendrier(CalendrierDbContext db, SpecialisationCale
             var e = ReglesCalendrier.ControlerRegle(new RegleFerme(r.Regle, r.Libelle, r.Date, r.Mois, r.Jour, r.Rang, r.Decalage, r.Du, r.Au));
             if (e.Count > 0) throw ExceptionMetier.Invalide(e[0], $"{r.Libelle} : {string.Join(", ", e.Select(x => ReglesCalendrier.Messages[x]))}", e);
         }
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var existants = await (portee is null ? db.JoursFermes.Where(j => j.JfeTypeElement == null)
             : db.JoursFermes.Where(j => j.JfeTypeElement == portee.Type && j.JfeIdElement == portee.Id)).ToListAsync(ct);
         var gardes = s.Regles.Where(r => r.Id is not null).Select(r => r.Id!.Value).ToHashSet();

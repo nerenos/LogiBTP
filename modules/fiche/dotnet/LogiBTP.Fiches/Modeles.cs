@@ -104,6 +104,8 @@ public sealed class ChampFiche
     public bool Gere { get; set; }
     public int Ordre { get; set; }
     public bool Actif { get; set; } = true;
+    /// <summary>Champ supplémentaire en colonne « x_ » de la table (registre fiche_champ_supplementaire), lu et écrit comme un champ du programme.</summary>
+    public bool ColonneSupplementaire { get; set; }
     /// <summary>Champ supplémentaire : onglet de la définition où il s'affiche (sinon Informations complémentaires).</summary>
     public string? Section { get; set; }
     /// <summary>Champ supplémentaire : cadre titré qui le regroupe avec d'autres.</summary>

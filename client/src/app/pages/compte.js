@@ -1,5 +1,6 @@
 import { texte, texteHtml, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
-import { TYPE_FICHE } from '../codes.js';
+import { TYPE_FICHE, MODULE_FACULTATIF } from '../codes.js';
+import { monterDelegations, NOEUD_AGENTS } from './agents.js';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, confirmer, formatDateHeure } from '@logibtp/socle/ui';
 import { controlerMotDePasse, MESSAGES_AUTH } from '@logibtp/authentification';
@@ -52,6 +53,14 @@ export class PageCompte extends PageBase {
     if (!impose) this.conteneur.querySelector('.page-parametres').insertAdjacentHTML('beforeend', '<section class="carte" data-sessions></section>');
     this.conteneur.querySelectorAll('[data-action="deconnecter"]').forEach((b) => b.addEventListener('click', () => app.deconnecter()));
     if (!impose) this.#rendreSessions(this.conteneur.querySelector('[data-sessions]')).catch((e) => app.erreur(e));
+    // Agents IA (module MCP actif, droit sur le nœud « agents ») : mes délégations, ancre #agents.
+    if (!impose && app.moduleActif(MODULE_FACULTATIF.MCP) && app.acces?.(NOEUD_AGENTS) !== false) {
+      this.conteneur.querySelector('.page-parametres').insertAdjacentHTML('beforeend', `<section class="carte" id="agents" data-agents></section>
+        <p><a href="/agents/journal" data-journal-agents>${iconeHtml('agents_btp_journal')} ${texteHtml('agents_btp.routes.journal')}</a></p>`);
+      this.delegations = monterDelegations(app, this.conteneur.querySelector('[data-agents]'));
+      this.conteneur.querySelector('[data-journal-agents]').addEventListener('click', (e) => { e.preventDefault(); app.naviguer('/agents/journal', { nouvelleFenetre: e.ctrlKey || e.shiftKey }); });
+      if (globalThis.location?.hash === '#agents') this.conteneur.querySelector('#agents').scrollIntoView?.();
+    }
     const form = this.conteneur.querySelector('[data-form]');
     form.addEventListener('submit', (e) => { e.preventDefault(); this.#changer(form); });
   }

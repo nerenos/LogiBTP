@@ -135,6 +135,25 @@ public class ReinitialisationMdp
     public string? RmpAdresse { get; set; }
 }
 
+/// <summary>
+/// Jeton délégué à un agent IA (plan MCP, lot 4) : agit pour le compte sous une délégation (identifiant opaque du module
+/// MCP) et un client ; empreinte SHA-256 du secret seule conservée ; échéance, révocation, dernier usage.
+/// </summary>
+public class JetonDelegueEntite
+{
+    public long JdeId { get; set; }
+    public Guid JdeUuid { get; set; } = Guid.CreateVersion7();
+    public long JdeCptId { get; set; }
+    public string JdeDelegation { get; set; } = "";
+    public string JdeEmpreinte { get; set; } = "";
+    public string JdeClient { get; set; } = "";
+    public DateTimeOffset JdeCreeLe { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset JdeExpireLe { get; set; }
+    public DateTimeOffset? JdeRevoqueLe { get; set; }
+    public DateTimeOffset? JdeUtiliseLe { get; set; }
+    public string? JdeAdresse { get; set; }
+}
+
 public class ParametreAuthentification
 {
     public string PauCle { get; set; } = "";
@@ -154,6 +173,7 @@ public class AuthDbContext(DbContextOptions<AuthDbContext> options) : DbContext(
     public DbSet<MachineConnue> Machines => Set<MachineConnue>();
     public DbSet<CodeConnexion> Codes => Set<CodeConnexion>();
     public DbSet<IpExclue> Exclusions => Set<IpExclue>();
+    public DbSet<JetonDelegueEntite> JetonsDelegues => Set<JetonDelegueEntite>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -166,5 +186,6 @@ public class AuthDbContext(DbContextOptions<AuthDbContext> options) : DbContext(
         b.Entity<MachineConnue>().ToTable("machine_connue").HasKey(x => x.MacId);
         b.Entity<CodeConnexion>().ToTable("code_connexion").HasKey(x => x.CcoId);
         b.Entity<IpExclue>().ToTable("ip_exclue").HasKey(x => x.IpeId);
+        b.Entity<JetonDelegueEntite>().ToTable("jeton_delegue").HasKey(x => x.JdeId);
     }
 }

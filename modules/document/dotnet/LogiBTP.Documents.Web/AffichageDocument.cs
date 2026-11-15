@@ -2,6 +2,7 @@ using System.Text.Json;
 using LogiBTP.Socle;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Documents.Web;
 
@@ -102,7 +103,7 @@ public class AffichageDocumentService<TDoc, TLigne>(DocumentDbContext<TDoc, TLig
             if (string.IsNullOrWhiteSpace(e.Libelle)) throw ExceptionMetier.Invalide("LIBELLE", $"Libellé obligatoire ({code})");
             if (!Couleur(e.Couleur)) throw ExceptionMetier.Invalide("COULEUR", $"Couleur #rrggbb attendue ({code})");
         }
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         await db.Set<EtiquetteLigne>().ExecuteDeleteAsync(ct);
         db.Set<EtiquetteLigne>().AddRange(liste.Select(e => new EtiquetteLigne
         {
@@ -163,7 +164,7 @@ public class AffichageDocumentService<TDoc, TLigne>(DocumentDbContext<TDoc, TLig
         v.VdoDefinition = JsonDocument.Parse(d.Definition.GetRawText());
         v.VdoModifieLe = DateTimeOffset.UtcNow;
         v.VdoModifiePar = u.Code;
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         // Une seule vue par défaut par type et modèle.
         if (d.ParDefaut)
             await db.Set<VueDocument>().Where(x => x.VdoParDefaut && x.VdoTydId == v.VdoTydId && x.VdoModCode == v.VdoModCode && x.VdoId != v.VdoId)

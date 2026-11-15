@@ -1,6 +1,6 @@
 import { texte, texteHtml, textesParCode, pairesParCode, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { urlFiche, TYPE_FICHE, urlDocument, MODULE_FACULTATIF } from '../codes.js';
-import { GESTION_ELEMENT } from '@logibtp/bibliotheque';
+import { GESTION_ELEMENT, elementVendu } from '@logibtp/bibliotheque';
 import { ajouterJours, aujourdhui } from '@logibtp/socle';
 import { MODES } from '@logibtp/fiche';
 import { echapper, formatNombre, creerCombo, formatDate } from '@logibtp/socle/ui';
@@ -77,6 +77,11 @@ export class FicheElement extends FicheLogiBTP {
 
   /** Poste de pied (POSTE_PIED) : ni prix, ni unités, ni composition ; ses valeurs vont dans le pied des documents. */
   get poste() { return this.valeur('type') === 'POSTE_PIED'; }
+
+  /** Élément vendu (article, ouvrage) : nature obligatoire. Réplique de SpecialisationFicheBtp.ValiderMetier (élément). */
+  validerMetier(v) {
+    return elementVendu(v.type) && (v.nat_id ?? '') === '' ? [{ champ: 'nat_id', message: texte('fiches_btp.controles.nature_vendu') }] : [];
+  }
 
   sousTitre(v) {
     const bib = this.referentiels.bibliotheques.find((b) => b.id === Number(v.bib_id));

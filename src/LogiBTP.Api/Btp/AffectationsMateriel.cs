@@ -3,6 +3,7 @@ using LogiBTP.Domaine;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Api.Btp;
 
@@ -137,7 +138,7 @@ public static class AffectationsMateriel
         }
         // Nouveau retour (condition saisie qui n'était pas enregistrée) : le plus récent devient la condition du matériel.
         var retour = liste.Where(a => a.Retour is not null && a.Au is not null && Avant(a)?.Retour != a.Retour).MaxBy(a => a.Au);
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         await db.Database.ExecuteSqlRawAsync("DELETE FROM materiel_affectation WHERE maf_mat_id = @m", [new NpgsqlParameter("m", materiel)], ct);
         foreach (var a in liste)
         {

@@ -1,5 +1,5 @@
 import { test, expect, type APIRequestContext } from '@playwright/test';
-import { ouvrirConnecte, seConnecter, seDeconnecter } from './outils/connexion';
+import { ouvrirConnecte, seConnecter, seDeconnecter, TAG_API } from './outils/connexion';
 
 /**
  * Sécurité : les droits sont appliqués par le serveur, pas seulement masqués par l'interface.
@@ -36,7 +36,7 @@ async function attendreRefus(requete: APIRequestContext, a: Appel, statut: numbe
   expect((await r.json().catch(() => ({}))).code, `${a.methode} ${a.url} (${a.nom})`).toBe(code);
 }
 
-test.describe('Droits : fiches salarié', () => {
+test.describe('Droits : fiches salarié', { tag: TAG_API }, () => {
 
   test('sans session : toute route refusée (401)', async ({ page }) => {
     await seDeconnecter(page);

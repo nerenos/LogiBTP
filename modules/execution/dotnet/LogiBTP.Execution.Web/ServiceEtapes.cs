@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Execution.Web;
 
@@ -138,7 +139,7 @@ public sealed class ServiceEtapes(ExecutionDbContext db, SpecialisationExecution
         var erreurs = ReglesEtapes.Controler(l.Select(e => new EtapeOrdre(e.Code?.Trim().ToUpperInvariant() ?? "", e.Nature, e.Duree, e.Unite)).ToList());
         if (l.Any(e => string.IsNullOrWhiteSpace(e.Libelle))) erreurs.Add("ETP_CODE");
         if (erreurs.Count > 0) throw Erreur(erreurs);
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var existants = await db.EtatsCatalogue.ToListAsync(ct);
         var codes = l.Select(e => e.Code.Trim().ToUpperInvariant()).ToList();
         var utilises = await db.EtatsTypes.Select(t => t.EttEtcCode).Distinct().ToListAsync(ct);
@@ -186,7 +187,7 @@ public sealed class ServiceEtapes(ExecutionDbContext db, SpecialisationExecution
         if (l.Any(e => !cat.ContainsKey(e.Code))) erreurs.Add("ETP_INCONNUE");
         if (l.Any(e => e.StatutDocument is not (null or "ENVOYE" or "VALIDE"))) erreurs.Add("ETP_NATURE");
         if (erreurs.Count > 0) throw Erreur(erreurs);
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         await db.EtatsTypes.Where(t => t.EttTypeOrdre == type).ExecuteDeleteAsync(ct);
         db.EtatsTypes.AddRange(l.Select((e, i) => new EtatTypeEntite
         {
@@ -288,7 +289,18 @@ public sealed class ServiceEtapes(ExecutionDbContext db, SpecialisationExecution
         etapes = await DefinitionAsync(o, ct);
         if (etapes.Count == 0) return etapes;
         db.EtapesOrdres.AddRange(etapes);
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            // Point de sauvegarde : une copie concurrente (deux lectures de la première ouverture de l'ordre, validation
+            // de l'ordre pendant l'affichage de ses étapes) n'annule pas la transaction englobante.
+            await db.Unite().ExecuterAsync(c => db.SaveChangesAsync(c), ct);
+        }
+        catch (DbUpdateException e) when (e.InnerException is Npgsql.PostgresException { SqlState: Npgsql.PostgresErrorCodes.UniqueViolation })
+        {
+            // Étapes copiées entre-temps par l'autre requête : ce sont elles qui comptent.
+            foreach (var x in etapes) db.Entry(x).State = EntityState.Detached;
+            return await db.EtapesOrdres.Where(x => x.OreOrdreId == o.Id).OrderBy(x => x.OreOrdre).ToListAsync(ct);
+        }
         await RecalculerAsync(o, ct);
         return etapes;
     }

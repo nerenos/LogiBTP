@@ -107,7 +107,12 @@ public class CodesTests
         Assert.Empty(Constantes.Ecarts(CasPartages.Chemin("modules", "bibliotheque", "js", "src", "codes.js"), "GESTION_ELEMENT", typeof(GestionElement)));
         Assert.Empty(Constantes.Ecarts(CasPartages.Chemin("modules", "bibliotheque", "js", "src", "codes.js"), "GENRE_POSTE", typeof(GenrePoste)));
         Assert.Empty(Constantes.Ecarts(CasPartages.Chemin("modules", "bibliotheque", "js", "src", "codes.js"), "SCENARIO_PA", typeof(ScenarioPa)));
+        Assert.Empty(Constantes.Ecarts(CasPartages.Chemin("modules", "bibliotheque", "js", "src", "codes.js"), "TYPE_ELEMENT", typeof(TypeElement)));
     }
+
+    [Theory]
+    [InlineData("ARTICLE", true), InlineData("OUVRAGE", true), InlineData("ENSEMBLE", false), InlineData("POSTE_PIED", false), InlineData("TEXTE", false), InlineData(null, false)]
+    public void Element_vendu(string? type, bool vendu) => Assert.Equal(vendu, TypeElement.EstVendu(type));
 }
 
 public class PremierTarifTests

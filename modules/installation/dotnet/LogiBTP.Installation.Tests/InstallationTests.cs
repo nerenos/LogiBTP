@@ -21,7 +21,7 @@ public class ManifesteTests
     public void Manifeste_dans_l_ordre_modules_puis_coeur()
     {
         var m = ManifesteScripts.Lire(CasPartages.RacineDepot());
-        var uniques = m.Scripts.Where(s => !s.Rejouable).Select(s => Path.GetFileName(s.Chemin)).ToList();
+        var uniques = m.Scripts.Where(s => !s.Rejouable && !VersionsModules.EstMineure(s.Chemin)).Select(s => Path.GetFileName(s.Chemin)).ToList();
         // Ordre binaire des noms de fichiers (007 avant 007b, 019 avant 019b), jamais celui de la locale.
         Assert.Equal(uniques.OrderBy(n => n, StringComparer.Ordinal), uniques);
         Assert.Equal("db/176_documents_vues_types.sql", m.Scripts[^1].Chemin);
@@ -29,10 +29,11 @@ public class ManifesteTests
     }
 
     [Theory]
-    [InlineData("db/x.sql demo")]
+    [InlineData("db/x.sql inconnu")]
     [InlineData("db/x.txt")]
     [InlineData("../x.sql")]
     [InlineData("db\\x.sql")]
+    [InlineData("db/x.sql rejouable ex-rejouable")]
     public void Manifeste_invalide_refuse(string ligne) =>
         Assert.Throws<FormatException>(() => ManifesteScripts.Analyser([ligne]));
 
@@ -41,6 +42,13 @@ public class ManifesteTests
     {
         var m = ManifesteScripts.Analyser(["# commentaire", "", "db/a.sql", "db/b.sql rejouable"]);
         Assert.Equal([new ScriptManifeste("db/a.sql", false), new ScriptManifeste("db/b.sql", true)], m.Scripts);
+    }
+
+    [Fact]
+    public void Ancien_rejouable_lu()
+    {
+        var m = ManifesteScripts.Analyser(["db/c.sql ex-rejouable"]);
+        Assert.Equal([new ScriptManifeste("db/c.sql", false, true)], m.Scripts);
     }
 
     [Fact]

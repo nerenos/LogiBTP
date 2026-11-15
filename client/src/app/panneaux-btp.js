@@ -261,6 +261,9 @@ export class PanneauxBtp extends PanneauxDocument {
   /** Fonction du tiers du document : fournisseur pour un achat, client sinon. */
   fonctionTiers() { return estFamilleAchat(this.editeur.definition.type?.tyd_famille) ? 'FOURNISSEUR' : 'CLIENT'; }
 
+  /** Relations de l'annuaire proposées pour le tiers du document : sous-traitants pour la sous-traitance (famille T). */
+  relationsTiers() { return this.editeur.definition.type?.tyd_famille === FAMILLE_DOCUMENT.SOUS_TRAITANCE ? ['SOUS_TRAITANT'] : null; }
+
   /** Intervenants du document, le tiers du document (ent_tiers_id) en première ligne. */
   intervenantsDocument(d = this.editeur.saisie.document) {
     const liste = [...(d.ent_intervenants ?? [])];
@@ -595,7 +598,7 @@ export class PanneauxBtp extends PanneauxDocument {
       const d = this.editeur.saisie.document;
       const lecture = !!m.lectureSeule;
       conteneur.append(new TableIntervenants({
-        annuaire: this.annuaire, fonctions: this.structure?.fonctions ?? [], portee: 'D', lecture, fixe: this.fonctionTiers(),
+        annuaire: this.annuaire, fonctions: this.structure?.fonctions ?? [], portee: 'D', lecture, fixe: this.fonctionTiers(), relationsFixe: this.relationsTiers(),
         tiersFige: this.editeur.saisie.lignes.some((l) => l.lig_origine_id),
         surChange: (liste) => this.modifierIntervenants(liste),
         actions: !lecture && (d.ent_marche_id || d.ent_chantier_id || d.ent_projet_id) ? [{

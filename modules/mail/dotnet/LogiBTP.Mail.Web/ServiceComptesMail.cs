@@ -3,6 +3,7 @@ using LogiBTP.Socle;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Mail.Web;
 
@@ -251,7 +252,7 @@ public sealed class ServiceComptesMail(MailDbContext db, Chiffrement chiffrement
         if (liste.Count(a => a.Principal) != 1) throw ExceptionMetier.Invalide("MAIL_ALIAS_PRINCIPAL", "Un alias principal par compte");
         var autres = await db.Alias.AsNoTracking().Where(a => a.MalMcoId != compte && noms.Contains(a.MalNom)).Select(a => a.MalNom).ToListAsync(ct);
         if (autres.Count > 0) throw ExceptionMetier.Conflit("MAIL_ALIAS_PRIS", $"Nom déjà utilisé par un autre compte : {string.Join(", ", autres)}");
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var existants = await db.Alias.Where(a => a.MalMcoId == compte).ToListAsync(ct);
         foreach (var a in existants) a.MalPrincipal = false;
         await db.SaveChangesAsync(ct);
@@ -285,7 +286,7 @@ public sealed class ServiceComptesMail(MailDbContext db, Chiffrement chiffrement
         if (liste.GroupBy(x => (x.Usage, x.Portee ?? "")).Any(g => g.Count() > 1)) throw ExceptionMetier.Invalide("MAIL_USAGE", "Un seul alias par usage et portée");
         var alias = await db.Alias.AsNoTracking().Select(a => a.MalId).ToListAsync(ct);
         if (liste.Any(x => !alias.Contains(x.AliasId))) throw ExceptionMetier.Invalide("MAIL_USAGE", "Alias inconnu");
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         await db.Usages.ExecuteDeleteAsync(ct);
         db.Usages.AddRange(liste.Select(x => new UsageEntite { MusUsage = x.Usage, MusPortee = (x.Portee ?? "").Trim(), MusMalId = x.AliasId }));
         await db.SaveChangesAsync(ct);

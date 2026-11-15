@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using LogiBTP.Socle;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Documents.Web;
 
@@ -32,7 +33,7 @@ public class TransformationService<TDoc, TLigne, TComplet>(
     /// </summary>
     public async Task<TComplet> Transformer(long sourceId, DemandeTransformation dem, Utilisateur u, CancellationToken ct)
     {
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var typeSourceId = await db.Documents.Where(d => d.EntId == sourceId).Select(d => (int?)d.EntTydId).FirstOrDefaultAsync(ct)
             ?? throw ExceptionMetier.Introuvable($"Document {sourceId}");
         var intermediaire = await db.TransformationsAutorisees.AsNoTracking()
@@ -41,6 +42,7 @@ public class TransformationService<TDoc, TLigne, TComplet>(
         if (intermediaire is int inter)
         {
             var milieu = await TransformerDans(sourceId, new DemandeTransformation { CibleTydId = inter, Choix = dem.Choix }, u, ct, intermediaire: true);
+            // Agent IA sans VALIDER : refus (AGENT_INTERDIT), transformation annulée avec sa transaction.
             await documents.ValiderDans(milieu, u, ct);
             cibleId = await TransformerDans(milieu, new DemandeTransformation { CibleTydId = dem.CibleTydId }, u, ct);
         }
@@ -66,7 +68,11 @@ public class TransformationService<TDoc, TLigne, TComplet>(
         var p = await Preparer(sourceId, typeCible, dem, u, depuisPlusieurs: false, ct)
             ?? throw ExceptionMetier.Invalide("RIEN_A_TRANSFORMER", "Aucune quantité à transformer");
         var numero = typeCible.TydNumerotationContinue ? null : await documents.AttribuerNumero(typeCible, DateOnly.FromDateTime(DateTime.Today), ct);
-        var cible = await documents.Dupliquer(p.Source, d => PreparerEntete(d, typeCible, numero, intermediaire), u, ct,
+        var cible = await documents.Dupliquer(p.Source, d =>
+        {
+            PreparerEntete(d, typeCible, numero, intermediaire);
+            specialisation.PreparerEnteteTransformee(d, p.TypeSource, typeCible);
+        }, u, ct,
             contenu => PreparerAvancement(Filtrer(contenu, p.Garder, p.Retenues, p.EnVendu), p));
         await EcrireLiens(p, cible.Document.Document.EntId, cible.Document.Lignes, ct);
         return cible.Document.Document.EntId;
@@ -369,7 +375,7 @@ public class TransformationService<TDoc, TLigne, TComplet>(
     public async Task<TComplet> TransformerPlusieurs(DemandeTransformationMultiple dem, Utilisateur u, CancellationToken ct)
     {
         if (dem.Sources.Count == 0) throw ExceptionMetier.Invalide("SOURCES", "Aucun document source");
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var typeCible = await documents.Type(dem.CibleTydId, ct);
         var preparations = await PreparerSources(dem.Sources, typeCible, u, ct);
         if (preparations.Count == 0) throw ExceptionMetier.Invalide("RIEN_A_TRANSFORMER", "Aucune quantité à transformer dans ces documents");
@@ -379,6 +385,7 @@ public class TransformationService<TDoc, TLigne, TComplet>(
         var cible = await documents.Dupliquer(preparations[0].Source, d =>
         {
             PreparerEntete(d, typeCible, numero, intermediaire: false);
+            specialisation.PreparerEnteteTransformee(d, preparations[0].TypeSource, typeCible);
             specialisation.PreparerEntetePlusieurs(d, preparations.Select(p => p.Source.Document).ToList());
         }, u, ct, _ => Fusionner(contenus));
         foreach (var p in preparations) await EcrireLiens(p, cible.Document.Document.EntId, cible.Document.Lignes, ct);
@@ -393,7 +400,7 @@ public class TransformationService<TDoc, TLigne, TComplet>(
     public async Task<TComplet> AjouterSources(long cibleId, List<long> sources, Utilisateur u, CancellationToken ct)
     {
         if (sources.Count == 0) throw ExceptionMetier.Invalide("SOURCES", "Aucun document source");
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var cible = await documents.Charger(cibleId, ct);
         var typeCible = await documents.Type(cible.Document.EntTydId, ct);
         var deja = await db.DocumentsLien.AsNoTracking().Where(l => l.LieCibleEntId == cibleId && l.LieType == "TRANSFORMATION").Select(l => l.LieSourceEntId).ToListAsync(ct);
@@ -462,6 +469,7 @@ public class TransformationService<TDoc, TLigne, TComplet>(
         var avoirId = avoir.Document.Document.EntId;
         db.DocumentsLien.Add(new DocumentLien { LieSourceEntId = entId, LieCibleEntId = avoirId, LieType = "ANNULATION" });
         await db.SaveChangesAsync(ct);
+        // Agent IA sans VALIDER : refus (AGENT_INTERDIT), aucun avoir ne reste.
         await documents.ValiderDans(avoirId, u, ct);
         foreach (var (id, tyd) in new[] { (entId, type.TydId), (avoirId, typeAvoir.TydId) })
         {
@@ -689,6 +697,9 @@ public class TransformationService<TDoc, TLigne, TComplet>(
     private TComplet Filtrer(TComplet c, HashSet<long> garder, Dictionary<long, decimal> retenues, HashSet<long> enVendu)
     {
         c.Lignes = c.Lignes.Where(l => l.LigOrigineId is long o && garder.Contains(o)).ToList();
+        // La case Soldé de la source (cochée à sa validation quand elle a soldé sa propre ligne parente) ne passe pas à
+        // la cible : elle y solderait d'office la ligne de la source dès la première transformation partielle.
+        foreach (var l in c.Lignes) l.LigSolde = false;
         foreach (var l in c.Lignes.Where(l => enVendu.Contains(l.LigOrigineId!.Value)))
         {
             l.LigTypePrix = "V";

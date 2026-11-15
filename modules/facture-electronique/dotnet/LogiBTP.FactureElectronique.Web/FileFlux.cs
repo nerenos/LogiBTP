@@ -6,6 +6,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Npgsql;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.FactureElectronique.Web;
 
@@ -36,7 +37,7 @@ public sealed class FileFlux(ServiceFactureElectronique service)
         for (var i = 0; i < maximum; i++)
         {
             var maintenant = service.Maintenant;
-            await using var tx = await db.Database.BeginTransactionAsync(ct);
+            await using var tx = await db.Unite().CommencerAsync(ct);
             var f = (await db.Flux.FromSqlInterpolated($"""
                 SELECT * FROM fe_flux
                  WHERE ffl_etat = 'A_ENVOYER' AND ffl_sens = 'Out' AND (ffl_prochain_essai IS NULL OR ffl_prochain_essai <= {maintenant})

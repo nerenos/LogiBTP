@@ -3,6 +3,7 @@ using System.Text.Json;
 using LogiBTP.Socle;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
+using LogiBTP.Socle.Donnees;
 
 namespace LogiBTP.Bibliotheque.Web;
 
@@ -406,7 +407,7 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
         var debut = Lire(d.Debut);
         var fin = Lire(d.Fin);
         if (debut is { } a && fin is { } b && b < a) throw ExceptionMetier.Invalide("DATES", "Fin de validité avant le début");
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var t = d.Id > 0 ? await db.Tarifs.FirstOrDefaultAsync(x => x.TfoId == d.Id && x.TfoEleId == eleId, ct) ?? throw ExceptionMetier.Introuvable($"Tarif {d.Id}") : new TarifFournisseur { TfoEleId = eleId };
         // Premier tarif de l'élément : principal ; élément sans PA saisi : scénario FOURNISSEUR_PRINCIPAL.
         var element = await db.Elements.FirstAsync(e => e.EleId == eleId, ct);
@@ -499,7 +500,7 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
             foreach (var entree in db.ChangeTracker.Entries<TarifFournisseur>().ToList()) entree.State = EntityState.Detached;
             return new(crees, maj, erreurs, resultats);
         }
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         // Premier tarif d'un élément (aucun tarif en base) : principal, et scénario FOURNISSEUR_PRINCIPAL si l'élément n'a pas de PA saisi.
         foreach (var groupe in aEcrire.GroupBy(x => x.Tarif.TfoEleId))
         {
@@ -533,7 +534,7 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
     public virtual async Task<TarifsElementDto> SupprimerTarif(long eleId, long tarifId, Utilisateur u, CancellationToken ct)
     {
         if (!specialisation.PeutModifierTarifs(u)) throw ExceptionMetier.AccesRefuse("TARIFS");
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Unite().CommencerAsync(ct);
         var t = await db.Tarifs.AsNoTracking().FirstOrDefaultAsync(x => x.TfoId == tarifId && x.TfoEleId == eleId, ct) ?? throw ExceptionMetier.Introuvable($"Tarif {tarifId}");
         await db.Tarifs.Where(x => x.TfoId == tarifId).ExecuteDeleteAsync(ct);
         var r = await ApresTarif(eleId, $"Tarif fournisseur {t.TfoFournisseur} supprimé", u, ct);
