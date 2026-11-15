@@ -4,9 +4,9 @@
   par base de société, scripts de migration ordonnés et rejouables, application automatique aux bases existantes.
   Fait par le module Installation : journal `installation_script` (manifeste `db/installation/scripts.txt`, empreinte de
   chaque script appliqué, `installation base mettre-a-jour`, `base adopter` pour les bases existantes) ; reste : scripts
-  rejouables, numéro de version lisible, retour arrière sans restauration.
+  numéro de version lisible, retour arrière sans restauration (plan versionnement-schema : lot 0 fait, ordre de l'installeur et scripts rejouables).
   Aujourd'hui : scripts `modules/*/db` et `db/` appliqués à la création du volume Docker, puis à la main sur `logibtp`
-  et `logibtp_demo` ; la plupart ne sont pas rejouables.
+  et `logibtp_demo` ; seuls les scripts de pur DDL sont rejouables.
 
 ## Fonctionnel
 

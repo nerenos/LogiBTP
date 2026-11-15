@@ -33,6 +33,7 @@ public class ManifesteTests
     [InlineData("db/x.txt")]
     [InlineData("../x.sql")]
     [InlineData("db\\x.sql")]
+    [InlineData("db/x.sql rejouable ex-rejouable")]
     public void Manifeste_invalide_refuse(string ligne) =>
         Assert.Throws<FormatException>(() => ManifesteScripts.Analyser([ligne]));
 
@@ -41,6 +42,13 @@ public class ManifesteTests
     {
         var m = ManifesteScripts.Analyser(["# commentaire", "", "db/a.sql", "db/b.sql rejouable"]);
         Assert.Equal([new ScriptManifeste("db/a.sql", false), new ScriptManifeste("db/b.sql", true)], m.Scripts);
+    }
+
+    [Fact]
+    public void Ancien_rejouable_lu()
+    {
+        var m = ManifesteScripts.Analyser(["db/c.sql ex-rejouable"]);
+        Assert.Equal([new ScriptManifeste("db/c.sql", false, true)], m.Scripts);
     }
 
     [Fact]

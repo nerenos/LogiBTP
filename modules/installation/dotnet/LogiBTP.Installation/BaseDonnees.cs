@@ -85,7 +85,7 @@ public sealed class BaseDonnees(TextWriter journal)
     public static string Empreinte(string contenu) => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(contenu.Replace("\r\n", "\n"))));
 
     /// <summary>
-    /// Applique les scripts du manifeste absents du journal (dans l'ordre), puis rejoue les scripts « rejouable ».
+    /// Parcourt le manifeste dans son ordre : un script absent du journal est appliqué à sa place, un script « rejouable » est rejoué à sa place.
     /// Un script déjà appliqué dont le contenu a changé n'est pas rejoué : il est signalé (Modifies).
     /// <paramref name="adopter"/> : base existante créée hors de l'installeur, scripts inscrits sans être exécutés.
     /// </summary>
@@ -102,26 +102,32 @@ public sealed class BaseDonnees(TextWriter journal)
             COMMENT ON TABLE {TableJournal} IS 'Scripts SQL du manifeste appliqués à la base (module Installation)';
             """, ct);
         var deja = (await ScriptsAppliquesAsync(connexion, ct)).ToDictionary(s => s.Chemin, s => s.Empreinte, StringComparer.Ordinal);
+        var installee = deja.Count > 0;
         int appliques = 0, rejoues = 0;
         var modifies = new List<string>();
         var liste = scripts.ToList();
-        foreach (var s in liste.Where(s => !s.Rejouable).DistinctBy(s => s.Chemin))
+        var vus = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var s in liste)
         {
             var contenu = await File.ReadAllTextAsync(Path.Combine(racine, s.Chemin), ct);
+            if (s.Rejouable)
+            {
+                // Joué à sa place dans l'ordre du manifeste (même ordre que la base de développement).
+                if (!adopter) await ExecuterScriptAsync(cnx, s.Chemin, contenu, null, ct);
+                rejoues++;
+                continue;
+            }
+            // Un chemin peut figurer deux fois (non rejouable puis rejouable) : la première occurrence seule compte ici.
+            if (!vus.Add(s.Chemin)) continue;
             var empreinte = Empreinte(contenu);
             if (deja.TryGetValue(s.Chemin, out var e))
             {
                 if (e != empreinte) modifies.Add(s.Chemin);
                 continue;
             }
-            await ExecuterScriptAsync(cnx, s.Chemin, adopter ? null : contenu, empreinte, ct);
+            // Ancien rejouable : déjà exécuté sur une base installée (jamais inscrit), seulement inscrit.
+            await ExecuterScriptAsync(cnx, s.Chemin, adopter || (s.ExRejouable && installee) ? null : contenu, empreinte, ct);
             appliques++;
-        }
-        foreach (var s in liste.Where(s => s.Rejouable))
-        {
-            var contenu = await File.ReadAllTextAsync(Path.Combine(racine, s.Chemin), ct);
-            if (!adopter) await ExecuterScriptAsync(cnx, s.Chemin, contenu, null, ct);
-            rejoues++;
         }
         journal.WriteLine($"{cnx.Database} : {appliques} script(s) {(adopter ? "inscrit(s) sans exécution" : "appliqué(s)")}, {rejoues} rejoué(s)"
             + (modifies.Count > 0 ? $", {modifies.Count} modifié(s) depuis leur application (non rejoués) : {string.Join(", ", modifies)}" : ""));

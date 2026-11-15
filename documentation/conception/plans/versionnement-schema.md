@@ -35,7 +35,7 @@ vue). Détecter précisément les objets touchés par chaque script demanderait 
 
 | Lot | État | Titre |
 |---|---|---|
-| 0 | À FAIRE | Ordre de l'installeur, marquages `rejouable`, rejeu vérifié |
+| 0 | FAIT | Ordre de l'installeur, marquages `rejouable`, rejeu vérifié |
 | 1 | À FAIRE | Instantané du schéma, dérive, forçage tracé, préfixes d'intégrateur |
 | 2 | À FAIRE | Données de démonstration séparées (indicateur `demo`) |
 | 3 | À FAIRE | Versions par module : socle 1.0, journal enrichi, `v_version_module`, `installation etat` |
@@ -67,6 +67,10 @@ vue). Détecter précisément les objets touchés par chaque script demanderait 
      (même schéma) ; une seconde application ne change rien ; tout rejouable joué deux fois ne change rien.
 - **Critère de fin** : `dotnet test modules/installation/dotnet/LogiBTP.Installation.Tests` vert, tests d'intégration
   verts avec `LOGIBTP_TEST_PG`.
+- **Réalisé** : 61 scripts nouvellement `rejouable` (58 de pur DDL + 121, 131, 191) ; les en-têtes des scripts déjà
+  appliqués ne sont **pas** retouchés (leur empreinte au journal changerait) : le manifeste fait foi. 267 et 287,
+  anciens rejouables dont le rejeu à leur place échoue, prennent l'indicateur `ex-rejouable` (inscrits sans exécution
+  sur une base déjà installée, appliqués sur une base neuve).
 
 ### Lot 1 – Instantané du schéma, dérive, forçage tracé, préfixes d'intégrateur
 

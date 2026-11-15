@@ -1,7 +1,11 @@
 namespace LogiBTP.Installation;
 
-/// <summary>Script du manifeste : chemin relatif à la racine du dépôt (séparateur /), rejoué à chaque mise à jour ou non.</summary>
-public sealed record ScriptManifeste(string Chemin, bool Rejouable);
+/// <summary>
+/// Script du manifeste : chemin relatif à la racine du dépôt (séparateur /), rejoué à chaque mise à jour ou non.
+/// <paramref name="ExRejouable"/> : ancien rejouable devenu non rejouable (jamais inscrit au journal) : sur une base déjà
+/// installée (journal non vide), il est inscrit sans être exécuté ; sur une base neuve, il est appliqué.
+/// </summary>
+public sealed record ScriptManifeste(string Chemin, bool Rejouable, bool ExRejouable = false);
 
 /// <summary>
 /// Manifeste des scripts SQL d'une base (db/installation/scripts.txt, ANALYSE-MODULE-INSTALLATION.md § 6.3) : un chemin
@@ -28,11 +32,12 @@ public sealed class ManifesteScripts
             var l = brute.Trim();
             if (l.Length == 0 || l.StartsWith('#')) continue;
             var mots = l.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries);
-            var inconnus = mots.Skip(1).Where(m => m is not "rejouable").ToList();
+            var inconnus = mots.Skip(1).Where(m => m is not ("rejouable" or "ex-rejouable")).ToList();
             if (inconnus.Count > 0) throw new FormatException($"Manifeste, ligne {n} : indicateur inconnu « {inconnus[0]} »");
             if (!mots[0].EndsWith(".sql", StringComparison.Ordinal) || mots[0].Contains('\\') || mots[0].Contains(".."))
                 throw new FormatException($"Manifeste, ligne {n} : chemin de script invalide « {mots[0]} »");
-            scripts.Add(new ScriptManifeste(mots[0], mots.Contains("rejouable")));
+            if (mots.Contains("rejouable") && mots.Contains("ex-rejouable")) throw new FormatException($"Manifeste, ligne {n} : « rejouable » et « ex-rejouable » s'excluent");
+            scripts.Add(new ScriptManifeste(mots[0], mots.Contains("rejouable"), mots.Contains("ex-rejouable")));
         }
         return new ManifesteScripts(scripts);
     }
