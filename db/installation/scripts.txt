@@ -9,8 +9,12 @@
 #   Le manifeste se parcourt dans l'ordre ; un chemin peut y figurer deux fois (non rejouable, puis rejoué plus bas).
 #   ex-rejouable : ancien rejouable devenu non rejouable (jamais inscrit au journal) : inscrit sans exécution sur une
 #     base déjà installée, appliqué sur une base neuve (267, 287 : vue étendue par un script suivant).
-# Les données de démonstration (116, 141, 161, 163, et une partie de 120, 211…) sont mêlées aux données de référence
-# dont dépendent les scripts suivants : toute base neuve les reçoit (TODO : les séparer).
+#   demo : script de données de démonstration (tiers, chantiers, salariés… fictifs) : appliqué seulement si l'application est
+#     demandée avec la démonstration (installation base creer|societe ajouter --demo ; mise à jour : seulement les bases qui
+#     en ont déjà reçu un) ; initialiser-developpement.sh et scripts/demo/initialiser-base-demo.sh appliquent tout. Combinable
+#     avec rejouable. Les données de référence dont dépendent les scripts suivants restent hors démonstration.
+#   extrait-de=CHEMIN : script extrait d'un script déjà publié (réduit depuis). Sur une base dont le journal porte l'ancienne
+#     empreinte de CHEMIN (empreintes-acceptees.txt), il est inscrit sans exécution (son contenu est déjà dans la base).
 # Tout script de modules/*/db et db/ doit y figurer (test LogiBTP.Installation.Tests).
 
 modules/oauth/db/004_oauth.sql
@@ -131,19 +135,22 @@ modules/mcp/db/099x_mcp_recettes.sql rejouable
 db/100_btp.sql
 db/110_reference.sql
 db/115_bibliotheque.sql
-db/116_bibliotheque_demo.sql
+db/115b_natures_reference.sql extrait-de=db/116_bibliotheque_demo.sql
+db/116_bibliotheque_demo.sql demo
 db/120_listes.sql
+db/120b_listes_demo.sql demo extrait-de=db/120_listes.sql
 db/121_listes_parametrage.sql rejouable
 db/130_fiches.sql
 db/131_fiches_parametrage.sql rejouable
 db/140_annuaire.sql
-db/141_annuaire_demo.sql
-db/142_annuaire_salaries.sql
+db/140b_annuaire_reference.sql extrait-de=db/141_annuaire_demo.sql
+db/141_annuaire_demo.sql demo
+db/142_annuaire_salaries.sql demo
 db/150_documents_vues.sql
 db/160_structure.sql
-db/161_structure_demo.sql
+db/161_structure_demo.sql demo
 db/162_intervenants.sql
-db/163_intervenants_demo.sql
+db/163_intervenants_demo.sql demo
 db/164_ged_elements.sql
 db/165_lignes_techniques.sql rejouable
 db/166_lignes_comptes.sql
@@ -173,6 +180,7 @@ db/193_modules_services.sql
 db/194_crm.sql
 db/195_ressources.sql
 db/196_calendriers.sql
+db/196b_calendriers_demo.sql demo extrait-de=db/196_calendriers.sql
 db/197_execution.sql
 db/198_execution_parcours.sql
 db/199_pointage.sql
@@ -187,6 +195,7 @@ db/207_mail_reception.sql
 db/208_execution_types.sql
 db/209_execution_etapes.sql
 db/210_sous_traitance.sql
+db/210b_sous_traitants_demo.sql demo extrait-de=db/211_sous_traitance_marches.sql
 db/211_sous_traitance_marches.sql
 db/212_sous_traitance_pieces.sql
 db/213_sous_traitance_factures.sql
@@ -212,6 +221,7 @@ db/232_materiel_couts.sql
 db/233_materiel_compteurs.sql
 db/234_materiel_entretien.sql
 db/235_materiel_plans.sql
+db/235b_materiel_plans_demo.sql demo extrait-de=db/235_materiel_plans.sql
 db/236_structure_complements.sql
 db/237_bibliotheque_complements.sql
 db/238_documents_arc.sql rejouable

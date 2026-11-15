@@ -22,7 +22,7 @@ done < "$racine/db/installation/scripts.txt"
 instantane() {
   pg_dump -d "$1" --no-owner --no-privileges 2>/dev/null | grep -v -e 'pg_catalog.setval' -e '^-- Dumped' -e '^\\restrict' -e '^\\unrestrict' 
 }
-grep -v '^#' "$racine/db/installation/scripts.txt" | awk 'NF && $2 != "rejouable" {print $1}' | awk '!vu[$0]++' | while read -r chemin; do
+grep -v '^#' "$racine/db/installation/scripts.txt" | awk 'NF && !/ rejouable(\s|$)/ {print $1}' | awk '!vu[$0]++' | while read -r chemin; do
   vider $travail; $P -d postgres -c "CREATE DATABASE $travail TEMPLATE $modele" >/dev/null
   avant=$(instantane $travail | md5sum)
   if $P -d $travail -1 -f "$racine/$chemin" >/dev/null 2>&1 && $P -d $travail -1 -f "$racine/$chemin" >/dev/null 2>&1; then

@@ -9,8 +9,8 @@ Référence lue à la demande (hors contexte par défaut). Les règles que le co
   service d'outils `logibtp-installation` au profil `outils`) ; client servi par l'API (`ClientWeb` du socle : CSP
   bloquante, alignée sur `client/vite.config.js` par test) ; sociétés dans `societes.json` (dossier `LOGIBTP_CONFIG`),
   connexions déduites du modèle (`ModeleConnexion` du socle : `LOGIBTP_BASE_HOTE`…, base `logibtp` ou
-  `logibtp_<code>`, rôle `logibtp_app`) ; conversions de données hors du démarrage (développement excepté). Écart :
-  les données de démonstration sont mêlées aux données de référence (211 dépend de 141) : toute base neuve les reçoit.
+  `logibtp_<code>`, rôle `logibtp_app`) ; conversions de données hors du démarrage (développement excepté). Données de démonstration séparées
+  (plan versionnement-schema, lot 2) : voir « Démonstration et empreintes acceptées » ci-dessous.
 
 - Lot 2 : HTTPS par Kestrel (`LogiBTP.Installation.Web` : `AddHttpsInstallation` — certificat du dossier
   `LOGIBTP_CERTIFICATS` (/app/certificats), écoute 8443 en HTTPS et 8080 en HTTP ; `CertificatServeur` relu à chaud au
@@ -60,7 +60,7 @@ Référence lue à la demande (hors contexte par défaut). Les règles que le co
 
 ## Bibliothèque (`dotnet/LogiBTP.Installation`)
 - `ManifesteScripts` (`Lire`, `Analyser`, `Ecarts`), `BaseDonnees` (`DefinirRolesAsync`,
-  `CreerBaseAsync`, `AppliquerAsync(connexion, racine, scripts, adopter)` → `BilanScripts`, `ScriptsAppliquesAsync`,
+  `CreerBaseAsync`, `AppliquerAsync(connexion, racine, scripts, adopter, acceptees)` → `BilanScripts`, `ADeLaDemoAsync`, `ScriptsAppliquesAsync`,
   `ExecuterFichierAsync`, `Empreinte`), `ConfigurationPostgres` (`PgHba`, `PostgresqlConf` depuis `ReglagesPostgres` :
   réseau Docker, adresses de l'API distante en `hostssl`, mémoire, fuseau), `SocietesInstallation` (`Preparer`,
   `Ajouter`, `VerifierCode`, `Societes`), `Secrets`, `AutoriteCertificats` (`CreerRacine`, `Emettre`, `ContrainteNoms`,
@@ -71,14 +71,35 @@ Référence lue à la demande (hors contexte par défaut). Les règles que le co
   (`RechiffrerBaseAsync(connexion, lecture, ecriture, empreintes)`, `RechiffrerJson`, `EmpreinteDeclaree`). `LogiBTP.Installation.Web` :
   `AddHttpsInstallation`, `UseHttpsInstallation`, `MapAmorcage`, `MapModuleInstallation` (`EtatInstallation`).
 
+## Démonstration et empreintes acceptées (plan versionnement-schema, lot 2)
+- Manifeste `db/installation/scripts.txt` : indicateur `demo` (script de données de démonstration, combinable avec `rejouable`) ;
+  indicateur `extrait-de=CHEMIN` (script extrait d'un script déjà publié, voir plus bas). `ManifesteScripts.Retenus(demo)` : scripts à
+  appliquer à une base (sans `demo` : aucun script de démonstration). `initialiser-developpement.sh` et `scripts/demo/initialiser-base-demo.sh`
+  appliquent tout, démonstration comprise (les indicateurs sont ignorés) : `logibtp`, `logibtp_demo`, e2e.
+- Installeur : `base creer [--demo]` et `societe ajouter CODE [--demo]` ; sans `--demo`, ni tiers, ni individu, ni chantier, ni salarié, ni
+  matériel, ni article de bibliothèque fictif (restent : référentiels — niveaux, casquettes, natures et leurs comptes —, chantiers internes
+  `INT-*`, affaires de gestion `G`, services, modèles de parcours, calendriers). `base mettre-a-jour` applique les scripts `demo` seulement aux bases
+  qui en ont déjà reçu un (`BaseDonnees.ADeLaDemoAsync` : un chemin `demo` au journal) ; `base adopter` construit sa base de
+  référence avec ou sans démonstration selon le même repérage, ou `--demo` pour une base sans journal ; `etat` indique « avec / sans démonstration ».
+- Scripts de démonstration : `116` (bibliothèques, familles, articles, tarifs), `120b` (80 salariés, 50 matériels, 12 équipes, 40 sous-traitants de la
+  table `demo_sous_traitant`), `141` (personnes, individus, coordonnées), `142` (individus des salariés), `161` (affaires, projets, chantiers, marchés),
+  `163` (intervenants), `196b` (fermeture estivale de l'atelier), `210b` (reprise des sous-traitants de démonstration dans l'annuaire, avant 211),
+  `235b` (plans d'entretien d'exemple). Référentiels extraits, hors démonstration : `115b` (natures, regroupements, coefficients de période), `140b`
+  (niveaux, casquettes, types de lien, rôles). Les fichiers générés (115b, 116, 140b, 141) le sont par `client/scripts/generer-vues-liste.mjs`.
+- Empreintes acceptées : `db/installation/empreintes-acceptees.txt` (`EmpreintesAcceptees`, lignes `chemin empreinte-sha256  # raison`, ancienne
+  empreinte = `git show <commit>:<chemin>` aux fins de ligne normalisées). Un script publié (116, 120, 141, 196, 211, 235) réduit par une extraction
+  n'est pas signalé « modifié » sur une base dont le journal porte son ancienne empreinte : le journal reçoit la nouvelle empreinte et les scripts
+  extraits (`extrait-de=`) y sont inscrits **sans exécution**, dans une même transaction (`BilanScripts.Acceptes`). Tout nouveau script réduit
+  de la même façon ajoute sa ligne ; le test `DemonstrationTests` vérifie que chaque extraction a la sienne.
+
 ## Commandes (image de l'API)
 `docker compose -f docker/api/compose.yml run --rm logibtp-installation installation …` :
 `preparer --domaine D [--deploiement] [--confiance] [--reseau] [--memoire] [--libelle] [--base-hote]`,
-`base creer`, `societe ajouter CODE [--libelle]`, `societes`, `scripts verifier`, `conversions`, `etat`,
+`base creer [--demo]`, `societe ajouter CODE [--libelle] [--demo]`, `societes`, `scripts verifier`, `conversions`, `etat`,
 `certificat creer [--organisation] [--jours] [--nouvelle-racine] | renouveler [--avant 60] | importer --certificat F [--cle K]
 [--origine IMPORTE|LETSENCRYPT] | etat | base --nom N --adresses-api A` (mot de passe d'un PKCS#12 :
 `LOGIBTP_CERTIFICAT_MOT_DE_PASSE`), `base droits`, `sauvegarde chiffrer|dechiffrer DOSSIER`, `base mettre-a-jour`,
-`base adopter (--base N | --toutes) [--confirmer-sans-controle]`, `base comparer`, `prefixe ajouter`, `cle-donnees changer | rechiffrer`.
+`base adopter (--base N | --toutes) [--confirmer-sans-controle] [--demo]`, `base comparer`, `prefixe ajouter`, `cle-donnees changer | rechiffrer`.
 Windows (suite) : `MettreAJour-LogiBTP.ps1 (-Image I | -FichierImage tar [-Empreinte sha256])`,
 `Changer-CleDonnees-LogiBTP.ps1 [-Confirmer]`, `Certificat-LetsEncrypt.ps1 -Fournisseur ovh -FichierIdentifiants f
 -Courriel c -AccepterConditions [-Essai] | -Renouveler`.

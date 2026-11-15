@@ -5,6 +5,9 @@ using Xunit;
 namespace LogiBTP.Installation.Tests;
 
 /// <summary>Dérive du schéma (plan versionnement-schema, lot 1) : unitaires sur instantanés construits à la main, puis intégration (LOGIBTP_TEST_PG).</summary>
+// Collection commune : les essais sur une vraie base ne se jouent pas en parallèle (la charge fait varier des données tirées au hasard
+// par des scripts de démonstration d'avant le lot, ce que compare ScriptsBaseTests).
+[Collection("PostgreSQL")]
 public class DeriveSchemaTests
 {
     private static readonly string? Admin = Environment.GetEnvironmentVariable("LOGIBTP_TEST_PG");

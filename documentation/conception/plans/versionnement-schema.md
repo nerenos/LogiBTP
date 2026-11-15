@@ -37,7 +37,7 @@ vue). Détecter précisément les objets touchés par chaque script demanderait 
 |---|---|---|
 | 0 | FAIT | Ordre de l'installeur, marquages `rejouable`, rejeu vérifié |
 | 1 | FAIT | Instantané du schéma, dérive, forçage tracé, préfixes d'intégrateur |
-| 2 | À FAIRE | Données de démonstration séparées (indicateur `demo`) |
+| 2 | FAIT | Données de démonstration séparées (indicateur `demo`) |
 | 3 | À FAIRE | Versions par module : socle 1.0, journal enrichi, `v_version_module`, `installation etat` |
 | 4 | À FAIRE | Mineures, plan calculé, `scripts.txt` généré, verrou, empreinte bloquante, rejouables sur changement |
 | 5 | À FAIRE | Fin du DDL au démarrage ; conversion des métrés archivée ; migrations C# figées |
@@ -113,6 +113,16 @@ vue). Détecter précisément les objets touchés par chaque script demanderait 
   scripts suivants restent hors démonstration (211 ne dépend plus de 141). TODO « séparer la démonstration » soldé.
 - **Critère de fin** : base neuve sans `--demo` construite sans erreur et sans tiers, chantier ni salarié fictif ;
   base avec `--demo` identique à l'actuelle (instantané du lot 1).
+- **Réalisé** : indicateurs de manifeste `demo` (combinable avec `rejouable`) et `extrait-de=CHEMIN` ; `base creer|societe ajouter
+  --demo`, `mettre-a-jour` (démo seulement si la base en a déjà reçu un, repérage au journal), `adopter` (même repérage ou `--demo`),
+  `etat` ; scripts de démonstration 116, 120b, 141, 142, 161, 163, 196b, 210b, 235b ; référentiels extraits hors démonstration : 115b
+  (natures), 140b (annuaire) ; 211 ne dépend plus de 141 (reprise des sous-traitants dans 210b, avant 211). Mécanisme d'empreintes
+  acceptées (`db/installation/empreintes-acceptees.txt`, six scripts réduits : 116, 120, 141, 196, 211, 235) : journal mis à jour et
+  scripts extraits inscrits sans exécution, dans une même transaction. Vérifié : schéma identique et données identiques (identifiants
+  séquentiels et valeurs de séquences compris) à la base construite par le manifeste d'avant le lot, hors `statut_document` dont
+  l'attribution des identifiants varie d'une construction à l'autre même avant le lot ; base sans démonstration : aucun tiers, individu,
+  salarié, matériel, projet, marché, intervenant ni article (restent les chantiers internes `INT-*`, les affaires de gestion, les
+  services, les modèles de parcours et les calendriers).
 
 ### Lot 3 – Versions par module
 

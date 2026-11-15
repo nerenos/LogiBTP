@@ -7,8 +7,14 @@ namespace LogiBTP.Installation;
 /// <summary>Script appliqué à une base (table installation_script) : chemin du manifeste, empreinte SHA-256 du contenu, date.</summary>
 public sealed record ScriptApplique(string Chemin, string Empreinte, DateTimeOffset AppliqueLe);
 
-/// <summary>Résultat de l'application du manifeste à une base.</summary>
-public sealed record BilanScripts(int Appliques, int Rejoues, IReadOnlyList<string> Modifies);
+/// <summary>
+/// Résultat de l'application du manifeste à une base. <paramref name="Acceptes"/> : scripts dont le journal portait une
+/// ancienne empreinte acceptée (<see cref="EmpreintesAcceptees"/>), journal mis à jour.
+/// </summary>
+public sealed record BilanScripts(int Appliques, int Rejoues, IReadOnlyList<string> Modifies, IReadOnlyList<string>? Acceptes = null)
+{
+    public IReadOnlyList<string> AcceptesOuVide => Acceptes ?? [];
+}
 
 /// <summary>
 /// Opérations de l'installeur sur PostgreSQL (ANALYSE-MODULE-INSTALLATION.md § 6.2) : bases, mots de passe des rôles,
@@ -85,11 +91,26 @@ public sealed class BaseDonnees(TextWriter journal)
     public static string Empreinte(string contenu) => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(contenu.Replace("\r\n", "\n"))));
 
     /// <summary>
+    /// Vrai si la base a déjà reçu un script de démonstration du manifeste (repérage au journal) : une mise à jour lui
+    /// applique alors les scripts « demo » nouveaux ; sinon elle ne les reçoit jamais.
+    /// </summary>
+    public static async Task<bool> ADeLaDemoAsync(string connexion, IEnumerable<ScriptManifeste> scripts, CancellationToken ct = default)
+    {
+        var demo = scripts.Where(s => s.Demo).Select(s => s.Chemin).ToHashSet(StringComparer.Ordinal);
+        return (await ScriptsAppliquesAsync(connexion, ct)).Any(a => demo.Contains(a.Chemin));
+    }
+
+    /// <summary>
     /// Parcourt le manifeste dans son ordre : un script absent du journal est appliqué à sa place, un script « rejouable » est rejoué à sa place.
     /// Un script déjà appliqué dont le contenu a changé n'est pas rejoué : il est signalé (Modifies).
     /// <paramref name="adopter"/> : base existante créée hors de l'installeur, scripts inscrits sans être exécutés.
+    /// <paramref name="scripts"/> : scripts à appliquer (l'appelant a retiré ceux de démonstration pour une base sans
+    /// démonstration : <see cref="ManifesteScripts.Retenus"/>). <paramref name="acceptees"/> : anciennes empreintes
+    /// acceptées ; un script déjà appliqué sous l'une d'elles n'est pas « modifié » : son journal reçoit la nouvelle
+    /// empreinte, avec les scripts qui en ont été extraits (inscrits sans exécution), dans une même transaction.
     /// </summary>
-    public async Task<BilanScripts> AppliquerAsync(string connexion, string racine, IEnumerable<ScriptManifeste> scripts, bool adopter = false, CancellationToken ct = default)
+    public async Task<BilanScripts> AppliquerAsync(string connexion, string racine, IEnumerable<ScriptManifeste> scripts, bool adopter = false,
+        EmpreintesAcceptees? acceptees = null, CancellationToken ct = default)
     {
         await using var cnx = new NpgsqlConnection(connexion);
         await cnx.OpenAsync(ct);
@@ -107,6 +128,9 @@ public sealed class BaseDonnees(TextWriter journal)
         int appliques = 0, rejoues = 0;
         var modifies = new List<string>();
         var liste = scripts.ToList();
+        var acceptes = new List<string>();
+        if (!adopter && acceptees is { Lignes.Count: > 0 })
+            await AccepterAnciennesEmpreintesAsync(cnx, racine, liste, deja, acceptees, acceptes, ct);
         var vus = new HashSet<string>(StringComparer.Ordinal);
         foreach (var s in liste)
         {
@@ -131,10 +155,51 @@ public sealed class BaseDonnees(TextWriter journal)
             appliques++;
         }
         journal.WriteLine($"{cnx.Database} : {appliques} script(s) {(adopter ? "inscrit(s) sans exécution" : "appliqué(s)")}, {rejoues} rejoué(s)"
+            + (acceptes.Count > 0 ? $", {acceptes.Count} empreinte(s) acceptée(s) (script réduit depuis son application) : {string.Join(", ", acceptes)}" : "")
             + (modifies.Count > 0 ? $", {modifies.Count} modifié(s) depuis leur application (non rejoués) : {string.Join(", ", modifies)}" : ""));
         // Instantané du schéma après une application réussie (référence du prochain contrôle de dérive).
         await JournalSchema.EnregistrerInstantaneAsync(cnx, ct);
-        return new BilanScripts(appliques, rejoues, modifies);
+        return new BilanScripts(appliques, rejoues, modifies, acceptes);
+    }
+
+    /// <summary>
+    /// Script déjà appliqué dont l'empreinte au journal est une ancienne empreinte acceptée : journal mis à jour, et scripts
+    /// extraits de lui (« extrait-de= ») absents du journal inscrits sans exécution, en une transaction (jamais l'un sans
+    /// l'autre : une reprise après interruption n'appliquerait pas deux fois les données extraites).
+    /// </summary>
+    private async Task AccepterAnciennesEmpreintesAsync(NpgsqlConnection cnx, string racine, List<ScriptManifeste> liste, Dictionary<string, string> deja,
+        EmpreintesAcceptees acceptees, List<string> acceptes, CancellationToken ct)
+    {
+        foreach (var s in liste.Where(x => !x.Rejouable).DistinctBy(x => x.Chemin))
+        {
+            if (!deja.TryGetValue(s.Chemin, out var ancienne)) continue;
+            var empreinte = Empreinte(await File.ReadAllTextAsync(Path.Combine(racine, s.Chemin), ct));
+            if (ancienne == empreinte || !acceptees.Accepte(s.Chemin, ancienne)) continue;
+            await using var tx = await cnx.BeginTransactionAsync(ct);
+            await InscrireAsync(cnx, tx, s.Chemin, empreinte, ct);
+            var extraits = new List<(string, string)>();
+            foreach (var x in liste.Where(x => x.ExtraitDe == s.Chemin && !x.Rejouable && !deja.ContainsKey(x.Chemin)).DistinctBy(x => x.Chemin))
+            {
+                var e = Empreinte(await File.ReadAllTextAsync(Path.Combine(racine, x.Chemin), ct));
+                await InscrireAsync(cnx, tx, x.Chemin, e, ct);
+                extraits.Add((x.Chemin, e));
+            }
+            await tx.CommitAsync(ct);
+            deja[s.Chemin] = empreinte;
+            foreach (var (c, e) in extraits) deja[c] = e;
+            acceptes.Add(s.Chemin);
+        }
+    }
+
+    private static async Task InscrireAsync(NpgsqlConnection cnx, NpgsqlTransaction tx, string chemin, string empreinte, CancellationToken ct)
+    {
+        await using var ins = new NpgsqlCommand($"""
+            INSERT INTO {TableJournal} (isc_chemin, isc_empreinte) VALUES (@c, @e)
+            ON CONFLICT (isc_chemin) DO UPDATE SET isc_empreinte = EXCLUDED.isc_empreinte, isc_applique_le = now()
+            """, cnx, tx);
+        ins.Parameters.AddWithValue("c", chemin);
+        ins.Parameters.AddWithValue("e", empreinte);
+        await ins.ExecuteNonQueryAsync(ct);
     }
 
     private async Task ExecuterScriptAsync(NpgsqlConnection cnx, string chemin, string? contenu, string? empreinte, CancellationToken ct)

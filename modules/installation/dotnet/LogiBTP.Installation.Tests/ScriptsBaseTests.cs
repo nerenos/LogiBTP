@@ -12,6 +12,9 @@ namespace LogiBTP.Installation.Tests;
 /// LOGIBTP_TEST_PG (connexion Npgsql d'un superutilisateur) : sinon les tests se terminent aussitôt, jamais en échec.
 /// Les bases d'essai (préfixe test_inst_) sont créées puis supprimées par le test.
 /// </summary>
+// Collection commune : les essais sur une vraie base ne se jouent pas en parallèle (la charge fait varier des données tirées au hasard
+// par des scripts de démonstration d'avant le lot, ce que compare ScriptsBaseTests).
+[Collection("PostgreSQL")]
 public class ScriptsBaseTests
 {
     private static readonly string? Admin = Environment.GetEnvironmentVariable("LOGIBTP_TEST_PG");

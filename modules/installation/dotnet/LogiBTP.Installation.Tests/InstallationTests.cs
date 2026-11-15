@@ -29,7 +29,7 @@ public class ManifesteTests
     }
 
     [Theory]
-    [InlineData("db/x.sql demo")]
+    [InlineData("db/x.sql inconnu")]
     [InlineData("db/x.txt")]
     [InlineData("../x.sql")]
     [InlineData("db\\x.sql")]
