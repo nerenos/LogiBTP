@@ -63,6 +63,7 @@ public class ScriptsBaseTests
         var apres2 = Instantane(a);
         Assert.Equal(apres1, apres2);
 
+        Assert.Empty((await ControleSchema.ControlerAsync(a.Connexion, racine, manifeste.Scripts)).Ecarts); // instantané stable sur le vrai schéma
         var bilan3 = await moteur.AppliquerAsync(a.Connexion, racine, manifeste.Scripts);
         Assert.Equal(0, bilan3.Appliques);
         Assert.Equal(apres2, Instantane(a));
@@ -80,8 +81,8 @@ public class ScriptsBaseTests
         Assert.Equal(manifeste.Scripts.Where(s => !s.Rejouable).Select(s => s.Chemin).Distinct().Count(), (await BaseDonnees.ScriptsAppliquesAsync(a.Connexion)).Count);
         await using var cnx = new NpgsqlConnection(a.Connexion);
         await cnx.OpenAsync();
-        await using var cmd = new NpgsqlCommand("SELECT count(*) FROM pg_tables WHERE schemaname = 'public'", cnx);
-        Assert.Equal(1L, (long)(await cmd.ExecuteScalarAsync())!); // seulement le journal
+        await using var cmd = new NpgsqlCommand("SELECT count(*) FROM pg_tables WHERE schemaname = 'public' AND tablename NOT LIKE 'installation\\_%'", cnx);
+        Assert.Equal(0L, (long)(await cmd.ExecuteScalarAsync())!); // seulement les tables du moteur
     }
 
     /// <summary>pg_dump (schéma et données) normalisé : sans journal, valeurs de séquences, commentaires de version.</summary>
@@ -94,7 +95,7 @@ public class ScriptsBaseTests
             RedirectStandardError = true,
             StandardOutputEncoding = Encoding.UTF8,
         };
-        foreach (var arg in new[] { "-h", csb.Host!, "-p", csb.Port.ToString(), "-U", csb.Username!, "-d", csb.Database!, "--no-owner", "--no-privileges", "-T", BaseDonnees.TableJournal })
+        foreach (var arg in new[] { "-h", csb.Host!, "-p", csb.Port.ToString(), "-U", csb.Username!, "-d", csb.Database!, "--no-owner", "--no-privileges", "-T", "installation_*" })
             psi.ArgumentList.Add(arg);
         psi.Environment["PGPASSWORD"] = csb.Password ?? "";
         using var p = Process.Start(psi)!;
@@ -139,7 +140,7 @@ public class ScriptsBaseTests
     }
 
     /// <summary>Base d'essai créée à la demande, supprimée à la fin.</summary>
-    private sealed class BaseEssai : IAsyncDisposable
+    internal sealed class BaseEssai : IAsyncDisposable
     {
         private readonly string _admin;
         private readonly string _nom;

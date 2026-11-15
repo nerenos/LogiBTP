@@ -36,7 +36,7 @@ vue). Détecter précisément les objets touchés par chaque script demanderait 
 | Lot | État | Titre |
 |---|---|---|
 | 0 | FAIT | Ordre de l'installeur, marquages `rejouable`, rejeu vérifié |
-| 1 | À FAIRE | Instantané du schéma, dérive, forçage tracé, préfixes d'intégrateur |
+| 1 | FAIT | Instantané du schéma, dérive, forçage tracé, préfixes d'intégrateur |
 | 2 | À FAIRE | Données de démonstration séparées (indicateur `demo`) |
 | 3 | À FAIRE | Versions par module : socle 1.0, journal enrichi, `v_version_module`, `installation etat` |
 | 4 | À FAIRE | Mineures, plan calculé, `scripts.txt` généré, verrou, empreinte bloquante, rejouables sur changement |
@@ -96,6 +96,13 @@ vue). Détecter précisément les objets touchés par chaque script demanderait 
      compare et refuse en cas d'écart.
 - **Critère de fin** : tests unitaires de `Derive` (ajout, modification, suppression, préfixes ignorés) ; test
   d'intégration : colonne ajoutée à la main → sans conflit ; vue modifiée → refus, puis forçage inscrit au journal.
+- **Réalisé** : `InstantaneSchema`, `DeriveSchema`, `JournalSchema` (tables `installation_schema`, `installation_prefixe`,
+  `installation_forcage` créées par le code), `ControleSchema` (contrôle, comparaison, base de référence temporaire) ;
+  l'instantané est inscrit à la fin de chaque `AppliquerAsync` (adoption comprise). Commandes `base mettre-a-jour
+  [--forcer --motif]` (code 2 si arrêt), `base comparer`, `base adopter [--confirmer-sans-controle]` (l'ancien
+  `--confirmer` disparaît), `prefixe ajouter`. Préfixe : minuscules, chiffres, `_`, 3 caractères au moins, finit par `_`.
+  Effet d'un écart en conflit : « script à appliquer » si un script en attente ou rejouable cite le nom de l'objet,
+  sinon « inchangé » (repérage par texte, sans analyse SQL).
 
 ### Lot 2 – Données de démonstration séparées
 

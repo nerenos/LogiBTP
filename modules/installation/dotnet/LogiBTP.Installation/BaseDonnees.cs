@@ -101,6 +101,7 @@ public sealed class BaseDonnees(TextWriter journal)
             );
             COMMENT ON TABLE {TableJournal} IS 'Scripts SQL du manifeste appliqués à la base (module Installation)';
             """, ct);
+        await JournalSchema.AssurerTablesAsync(cnx, ct);
         var deja = (await ScriptsAppliquesAsync(connexion, ct)).ToDictionary(s => s.Chemin, s => s.Empreinte, StringComparer.Ordinal);
         var installee = deja.Count > 0;
         int appliques = 0, rejoues = 0;
@@ -131,6 +132,8 @@ public sealed class BaseDonnees(TextWriter journal)
         }
         journal.WriteLine($"{cnx.Database} : {appliques} script(s) {(adopter ? "inscrit(s) sans exécution" : "appliqué(s)")}, {rejoues} rejoué(s)"
             + (modifies.Count > 0 ? $", {modifies.Count} modifié(s) depuis leur application (non rejoués) : {string.Join(", ", modifies)}" : ""));
+        // Instantané du schéma après une application réussie (référence du prochain contrôle de dérive).
+        await JournalSchema.EnregistrerInstantaneAsync(cnx, ct);
         return new BilanScripts(appliques, rejoues, modifies);
     }
 
