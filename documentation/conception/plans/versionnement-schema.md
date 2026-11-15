@@ -231,13 +231,20 @@ vue). Détecter précisément les objets touchés par chaque script demanderait 
   désactivation, suppression, `pg_dump` / `pg_restore`), `MineuresTests` (colonne `x_` conservée par une mineure qui reprend une vue et modifie la table témoin, jamais en dérive),
   `CodesTests`. Tests existants adaptés à la présence d'une mineure réelle (socle figé comparé hors mineures, rejouables rejoués après une mineure, base « d'avant le lot » = socle 1.0 seul).
 
-### Lot 8 – Champs supplémentaires : écran et affichage
+### Lot 8 – Champs supplémentaires : écran et affichage (FAIT)
 
 - **Module** : cœur (`client/`).
 - **Contenu** : écran d'administration des champs supplémentaires par fiche (création, libellé, type, ordre,
   suppression avec `confirmer`) ; affichage et saisie dans les fiches ; colonnes disponibles dans les listes. Règles
   d'interface du projet (`texte()`, `icone()`, `creerCombo`, `activerDates`).
 - **Critère de fin** : `npm test` vert ; essai e2e ou manuel décrit.
+- **Réalisé** : page `/parametres/champs-supplementaires` (`client/src/app/pages/parametres-champs-supplementaires.js`, menu Paramètres, désactivée hors administrateur ; `api.champsSupplementaires`) :
+  combo de la fiche (tables ouvertes), tableau des champs (libellé, nom technique, type, valeurs d'une liste une par ligne « valeur | libellé », ordre, actif ; enregistrer par ligne), ligne de création (nom `x_…` proposé d'après
+  le libellé tant qu'il n'est pas modifié, type par `creerCombo`), suppression par `confirmer` (la colonne et ses valeurs sont perdues) ; refus 422 affichés sous le contrôle concerné. Logique pure dans le module Fiche
+  (`modules/fiche/js/src/champs-supplementaires.js` : `proposerColonne`, `lireValeursListe`, `controleDeErreur`, `demandeCreation`, `sectionChampsColonnes`…). Fiches : les champs `x_` de la définition vont dans un onglet dédié
+  « Champs supplémentaires » (`FicheBase.sections`, code `+champs-colonnes`, avant Informations complémentaires), sans doublon dans l'onglet Général ; contrôles du rendu générique par type (texte, nombre / montant en chaîne,
+  date à saisie abrégée par `activerDates` global, case à cocher, liste par `creerCombo`) ; aucun serveur touché. Listes : non fait (vues de liste à colonnes fixes), au TODO. Tests : `modules/fiche/js/test/champs-supplementaires.test.js` ;
+  e2e `e2e/champs-supplementaires.spec.ts` (création, refus du doublon, saisie dans la fiche matériel, suppression) écrit, non lancé : demande l'API complète.
 
 ### Lot 9 – Majeure, archivage, contrôle de publication
 

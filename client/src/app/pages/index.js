@@ -37,6 +37,7 @@ import { PageEdition } from './edition.js';
 import { PageParametresEditions } from './parametres-editions.js';
 import { PageParametresModules } from './parametres-modules.js';
 import { PageParametresInstallation } from './parametres-installation.js';
+import { PageParametresChampsSupplementaires } from './parametres-champs-supplementaires.js';
 import { PageParametresServices } from './parametres-services.js';
 import { PageParametresReferentiels } from './parametres-referentiels.js';
 import { PageCrm } from './crm.js';
@@ -157,6 +158,7 @@ export const ROUTES = [
   { nom: 'releves-a-valider', chemin: '/ressources/releves-a-valider', page: PageRelevesAValider, titre: texte('ressources_btp.releves_a_valider.titre') },
   { nom: 'habilitations', chemin: '/ressources/habilitations', page: PageHabilitations, titre: texte('ressources_btp.surveiller.titre') },
   { nom: 'parametres-comptes', chemin: '/parametres/comptes', page: PageParametresComptes, titre: texte('authentification_btp.comptes.titre') },
+  { nom: 'parametres-champs-supplementaires', chemin: '/parametres/champs-supplementaires', page: PageParametresChampsSupplementaires, titre: texte('parametres_btp.champs_supplementaires.titre') },
   { nom: 'parametres-installation', chemin: '/parametres/installation', page: PageParametresInstallation, titre: texte('parametres_btp.installation.titre') },
   { nom: 'parametres-droits', chemin: '/parametres/droits', page: PageParametresDroits, titre: texte('droits_btp.profils.titre') },
   { nom: 'parametres-services', chemin: '/parametres/services', page: PageParametresServices, titre: texte('parametres_btp.services.titre') },

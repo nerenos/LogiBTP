@@ -706,6 +706,14 @@ export const api = {
   // Modules activés par société (db/193) et référentiel des services (membres : individus de notre société).
   modules: () => appel('GET', '/modules'),
   etatInstallation: () => appel('GET', '/installation/etat'),
+  // Champs supplémentaires en colonnes x_ des fiches (module Fiche, administrateur) : tables ouvertes, registre, création, modification, suppression.
+  champsSupplementaires: {
+    tables: () => appel('GET', '/champs-supplementaires/tables'),
+    lister: (table) => appel('GET', `/champs-supplementaires?${new URLSearchParams({ table })}`),
+    creer: (demande) => appel('POST', '/champs-supplementaires', demande),
+    modifier: (table, colonne, modification) => appel('PUT', `/champs-supplementaires/${encodeURIComponent(table)}/${encodeURIComponent(colonne)}`, modification),
+    supprimer: (table, colonne) => appel('DELETE', `/champs-supplementaires/${encodeURIComponent(table)}/${encodeURIComponent(colonne)}`),
+  },
   activerModule: (code, actif) => appel('PUT', `/modules/${encodeURIComponent(code)}`, { actif }),
   services: () => appel('GET', '/services'),
   enregistrerServices: (liste) => appel('PUT', '/services', liste),

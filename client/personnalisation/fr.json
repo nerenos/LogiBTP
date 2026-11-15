@@ -5318,6 +5318,10 @@
           "libelle": "Profils et droits…",
           "titre": "Profils, droits par module, document, fiche et fonction ; journal des modifications"
         },
+        "parametres_champs_supplementaires": {
+          "libelle": "Champs supplémentaires des fiches…",
+          "titre": "Champs ajoutés aux fiches (texte, nombre, montant, date, case à cocher, liste de valeurs) : création, ordre, suppression"
+        },
         "parametres_installation": {
           "libelle": "Installation : certificat, bases, sauvegardes…",
           "titre": "État du serveur : certificat HTTPS, bases des sociétés, dernière sauvegarde, espace disque"
@@ -8440,6 +8444,32 @@
         "enregistre": "{{type}} : enregistré"
       },
       "actif": "Actif"
+    },
+    "champs_supplementaires": {
+      "titre": "Champs supplémentaires des fiches",
+      "aide": "Colonnes ajoutées à la table d'une fiche, sans reprise du schéma : elles apparaissent dans l'onglet « Champs supplémentaires » de la fiche. Le nom technique (« x_… ») et le type ne se modifient plus après la création ; un champ désactivé disparaît de la fiche mais garde ses valeurs.",
+      "fiche": "Fiche :",
+      "aucune_table": "Aucune fiche n'accepte de champ supplémentaire.",
+      "colonne": "Nom technique",
+      "type": "Type",
+      "valeurs": "Valeurs de la liste",
+      "valeurs_aide": "Une valeur par ligne, « valeur | libellé » pour un libellé différent",
+      "ordre": "Ordre",
+      "actif": "Actif",
+      "nouveau": "Nouveau champ : libellé",
+      "creer": "Créer le champ",
+      "cree": "Champ « {{libelle}} » créé",
+      "enregistre": "Champ « {{libelle}} » enregistré",
+      "supprime": "Champ « {{libelle}} » supprimé",
+      "confirmer_suppression": "Supprimer le champ « {{libelle}} » ({{colonne}}) ? La colonne est retirée de la base et toutes les valeurs saisies dans ce champ sont définitivement perdues.",
+      "types": {
+        "texte": "Texte",
+        "nombre": "Nombre",
+        "montant": "Montant",
+        "date": "Date",
+        "booleen": "Case à cocher",
+        "liste": "Liste de valeurs"
+      }
     },
     "installation": {
       "origines": {

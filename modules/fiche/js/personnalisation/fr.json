@@ -57,6 +57,7 @@
       "acces_refuse": "Accès refusé aux fiches {{libelle}}",
       "general": "Général",
       "complementaires": "Informations complémentaires",
+      "champs_supplementaires": "Champs supplémentaires",
       "pieces": "Pièces jointes",
       "nouveau": "Nouveau {{libelle}}",
       "titre_defaut": "{{libelle}} {{id}}",
