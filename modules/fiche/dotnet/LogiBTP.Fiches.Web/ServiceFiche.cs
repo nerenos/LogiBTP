@@ -13,9 +13,12 @@ using NpgsqlTypes;
 namespace LogiBTP.Fiches.Web;
 
 /// <summary>Types des colonnes des tables de fiches (information_schema), gardés jusqu'au redémarrage.</summary>
-public sealed class CacheTypesColonnes
+public sealed class CacheTypesColonnes : IPurgeCacheBase
 {
     public ConcurrentDictionary<string, IReadOnlyDictionary<string, string>> Tables { get; } = new(StringComparer.Ordinal);
+
+    /// <summary>Vidé pour une base dont le schéma vient de changer (mise à jour de l'installeur).</summary>
+    public void Purger(string connexion) => PurgeCache.Purger(Tables, connexion);
 }
 
 /// <summary>

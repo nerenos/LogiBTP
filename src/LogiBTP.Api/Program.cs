@@ -80,6 +80,9 @@ builder.Services.AddHostedService<PassageEnvoiFe>();
 
 // Une base par société, choisie par le sous-domaine (section Societes ; sans sous-domaine : ConnectionStrings:LogiBTP).
 builder.Services.AddSocietes(builder.Configuration);
+// Version du schéma par société : une base en retard est refusée en 503 BASE_A_METTRE_A_JOUR (sauf en développement), caches
+// du schéma vidés après une mise à jour (Btp/VersionsAttenduesBtp.cs, plan versionnement-schema lot 6).
+builder.Services.AddVersionsAttendues();
 // Les requêtes SQL brutes à une ligne (SqlQuery(...).FirstAsync()) sont voulues : l'avertissement EF « First sans OrderBy » n'y apporte rien.
 // Connexion unique et unité d'écriture par requête (socle Donnees) : tous les contextes écrivent dans la même transaction.
 builder.Services.AddUniteEcriture();
@@ -220,6 +223,7 @@ app.UseErreursMetier();
 app.UseErreursBase();
 app.UseUniteEcriture();
 app.UseSocietes();
+app.UseControleVersionBase();
 app.UseAuthentificationSession();
 app.UseDroits();
 

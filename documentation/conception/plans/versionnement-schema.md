@@ -42,7 +42,7 @@ vue). Détecter précisément les objets touchés par chaque script demanderait 
 | 3 | FAIT | Versions par module : socle 1.0, journal enrichi, `v_version_module`, `installation etat` |
 | 4 | FAIT | Mineures, plan calculé, `scripts.txt` généré, verrou, empreinte bloquante, rejouables sur changement |
 | 5 | FAIT | Fin du DDL au démarrage ; conversion des métrés archivée ; migrations C# figées |
-| 6 | À FAIRE | Version attendue par l'API, base en retard refusée proprement, page Installation |
+| 6 | FAIT | Version attendue par l'API, base en retard refusée proprement, page Installation |
 | 7 | À FAIRE | Champs supplémentaires des fiches (`x_`) : base et serveur |
 | 8 | À FAIRE | Champs supplémentaires : écran d'administration et affichage dans les fiches |
 | 9 | À FAIRE | Passage d'un module en majeure, archivage, contrôle de publication |
@@ -188,6 +188,25 @@ vue). Détecter précisément les objets touchés par chaque script demanderait 
   après mise à jour ; page `/parametres/installation` : versions par module, dernière mise à jour, forçages.
 - **Critère de fin** : test serveur : base en retard → 503 explicite, autre société servie ; page affichée (textes par
   `texte()`).
+- **Réalisé** : versions attendues = plus haute version de chaque module du plan (`VersionsAttendues.Depuis`, hors scripts
+  `demo` et rejouables, plus migrations de code), lues dans `db/installation/scripts.txt` **embarqué dans l'assemblage de
+  l'API** (`EmbeddedResource` de `LogiBTP.Api.csproj`, `Btp/VersionsAttenduesBtp.cs`) : choix retenu plutôt que le dossier
+  `LOGIBTP_SQL`, absent de l'image Vercel et pouvant différer du binaire. `ControleVersionBase` (module Installation.Web,
+  intergiciel après `UseSocietes`) : état par base en cache (clé = connexion), relu au plus tous les 15 s (`Intervalle`) et
+  au démarrage pour la société principale (tâche de fond) ; base en retard → 503 `BASE_A_METTRE_A_JOUR`
+  (`ErreursInstallation` de `Codes.cs` ↔ `ERREUR_INSTALLATION` de `codes.js`, message et `details.commande`) pour cette
+  société seulement ; `/api/sante`, `/api/societe` et hors `/api` jamais contrôlés ; base **sans journal** (table absente ou
+  vide : bases de développement, e2e, Vercel) servie, avertissement une fois ; en **Development** une base en retard est
+  servie avec l'en-tête `X-LogiBTP-Base-En-Retard` et un avertissement (P37) ; base injoignable : rien en cache, requête
+  non bloquée. Empreinte du journal (`count|max(isc_applique_le)`) changée → purge des caches par base via `IPurgeCacheBase`
+  (socle ; `CacheTypesColonnes` de Fiche et `CacheSchemas` de Liste l'implémentent, `PurgeCache.Purger` compare serveur / port /
+  base). Page `/parametres/installation` : section « Versions du schéma, par société » (versions appliquée / attendue, retard,
+  dernière mise à jour, version produit, avec / sans démonstration) et forçages (`installation_forcage` : date, auteur,
+  motif, objets écrasés) ; DTO `EtatBase` enrichi (`Statut`, `AvecDemo`, `DerniereMiseAJour`, `Forcages`, `Attendue` /
+  `EnRetard` par module). Autres caches singleton indexés par base : seuls ces deux-là ont été branchés (les autres ne
+  dépendent pas du schéma des tables des fiches / sources) ; ils pourront s'enregistrer sous `IPurgeCacheBase`.
+  Tests : `ControleVersionBaseTests` (503 et autre société servie, sans journal, Development, injoignable, purge après
+  mise à jour), `VersionsAttenduesBtpTests`, parité des codes.
 
 ### Lot 7 – Champs supplémentaires des fiches : base et serveur
 

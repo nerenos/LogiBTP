@@ -22,6 +22,7 @@ public static class Extensions
         services.AddDbContext<FicheDbContext>(options);
         services.AddSingleton<SpecialisationFiche, TSpecialisation>();
         services.AddSingleton<CacheTypesColonnes>();
+        services.AddSingleton<LogiBTP.Socle.IPurgeCacheBase>(sp => sp.GetRequiredService<CacheTypesColonnes>());
         // Chiffrement des mots de passe : celui de l'application (AddChiffrement) s'il est enregistré, sinon non configuré.
         services.TryAddSingleton(new LogiBTP.Socle.Chiffrement(null));
         services.AddScoped<ServiceFiche>();

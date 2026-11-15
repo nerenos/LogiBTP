@@ -478,6 +478,13 @@ public static class EtatsReserve
     public const string Levee = "LEVEE";
 }
 
+/// <summary>Erreurs de l'installation testées par l'interface (client/src/app/codes.js : ERREUR_INSTALLATION ; plan versionnement-schema, lot 6).</summary>
+public static class ErreursInstallation
+{
+    /// <summary>503 : la base de la société n'est pas à la version attendue par l'application (commande « installation base mettre-a-jour »).</summary>
+    public const string BaseAMettreAJour = "BASE_A_METTRE_A_JOUR";
+}
+
 /// <summary>
 /// Adresses des pages de l'application (mêmes que <c>urlDocument</c> / <c>urlFiche</c> de client/src/app/codes.js) :
 /// relatives, rendues absolues par l'origine de la société (module MCP : adresse de chaque résultat).

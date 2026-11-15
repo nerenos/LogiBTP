@@ -45,6 +45,7 @@ public class CodesTests
     [InlineData("CIBLE_PROPOSITION", typeof(CiblesProposition))]
     [InlineData("MOTIF_LIGNE_ORDRE", typeof(MotifsLigneOrdre))]
     [InlineData("GARANTIE_MARCHE", typeof(GarantiesMarche))]
+    [InlineData("ERREUR_INSTALLATION", typeof(ErreursInstallation))]
     public void Parite_avec_le_js(string nom, Type type) => Assert.Empty(Constantes.Ecarts(Fichier, nom, type));
 
     [Fact]

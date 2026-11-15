@@ -8,6 +8,9 @@ namespace LogiBTP.Installation;
 /// Tables du moteur de versionnement du schéma (créées par le code, jamais par un script du manifeste) : instantanés
 /// (installation_schema), préfixes d'intégrateur (installation_prefixe), forçages tracés (installation_forcage).
 /// </summary>
+/// <summary>Forçage de mise à jour tracé (installation_forcage) : quand, par qui, pourquoi, objets dont la définition a été écrasée.</summary>
+public sealed record ForcageInscrit(DateTimeOffset Le, string Utilisateur, string Motif, IReadOnlyList<string> Objets);
+
 public static class JournalSchema
 {
     public const string TableSchema = "installation_schema";
@@ -147,6 +150,25 @@ public static class JournalSchema
         cmd.Parameters.AddWithValue("e", JsonSerializer.Serialize(ecarts.Select(e => new { objet = e.Objet, type = e.Type, attendu = e.Attendu, reel = e.Reel }), OptionsJson));
         cmd.Parameters.AddWithValue("m", motif);
         await cmd.ExecuteNonQueryAsync(ct);
+    }
+
+    /// <summary>Forçages inscrits (plus récent d'abord) : date, utilisateur, motif et objets écrasés ; vide si la table n'existe pas encore.</summary>
+    public static async Task<List<ForcageInscrit>> ForcagesAsync(NpgsqlConnection cnx, CancellationToken ct = default)
+    {
+        var res = new List<ForcageInscrit>();
+        await using (var existe = new NpgsqlCommand("SELECT to_regclass(@t) IS NOT NULL", cnx))
+        {
+            existe.Parameters.AddWithValue("t", TableForcage);
+            if (!(bool)(await existe.ExecuteScalarAsync(ct))!) return res;
+        }
+        await using var cmd = new NpgsqlCommand($$"""
+            SELECT ifo_date, ifo_utilisateur, ifo_motif,
+                   coalesce(ARRAY(SELECT e ->> 'objet' FROM jsonb_array_elements(ifo_ecarts::jsonb) e ORDER BY 1 LIMIT 20), '{}')
+              FROM {{TableForcage}} ORDER BY ifo_date DESC, ifo_id DESC LIMIT 50
+            """, cnx);
+        await using var r = await cmd.ExecuteReaderAsync(ct);
+        while (await r.ReadAsync(ct)) res.Add(new ForcageInscrit(r.GetFieldValue<DateTimeOffset>(0), r.GetString(1), r.GetString(2), r.GetFieldValue<string[]>(3)));
+        return res;
     }
 
     private static async Task Executer(NpgsqlConnection cnx, string sql, CancellationToken ct)

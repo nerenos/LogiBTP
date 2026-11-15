@@ -46,6 +46,8 @@
     <!-- Descriptions des outils des agents IA (module MCP, SpecialisationMcpBtp). -->
     <Content Remove="Btp\McpTextes.json" />
     <EmbeddedResource Include="Btp\McpTextes.json" LogicalName="LogiBTP.Api.Btp.McpTextes.json" />
+    <!-- Plan des scripts SQL (généré, versionné) : versions attendues par module, indépendantes du dossier SQL de l'image (absent de l'image Vercel). -->
+    <EmbeddedResource Include="..\..\db\installation\scripts.txt" LogicalName="LogiBTP.Api.scripts.txt" Link="Btp\scripts.txt" />
   </ItemGroup>
 
   <Import Project="CleConstruction.targets" />
