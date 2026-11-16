@@ -272,3 +272,18 @@ INSERT INTO vte_doc_ligne (VDL_ID, VDL_VDE_ID, VDL_VDL_ID, VDL_Ordre, VDL_TypeLi
  (15, 2, 0, 2, 1, 0, 0, 1, '', 'Frais de chantier', 6, 1, 0, 50, 50, 0, 0, 0, 0, 0, 51, 0, 0),
  (16, 2, 0, 3, 0, 1, 0, 0, '', 'Délai : 3 mois', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
  (30, 3, 0, 1, 1, 0, 0, 0, 'SOLDE', 'Solde des travaux', 6, 1, 0, 1000, 1000, 0, 0, 1000, 1000, 0, 52, 0, 0);
+
+-- Avancement (lot 11) : situation 1 (dalle à 50 %, main-d'œuvre à 100 %) facturée par la facture de situation FS-0001
+-- (comptabilisée), situation 2 en cours (dalle à 80 %), situation désactivée écartée.
+INSERT INTO vte_situation (VSI_ID, VSI_VSI_ID_Prec, VSI_VDE_ID_Marche, VSI_Numero, VSI_Date, VSI_Libelle, VSI_Reference, VSI_Etat,
+  VSI_Pct_Avct, VSI_MtHT, VSI_MtTTC, VSI_IsDesactive, VSI_IsBkp) VALUES
+ (1, 0, 2, 1, '2024-06-30', 'Situation n° 1', 'SIT-0001', 970, 59.65, 612, 734.40, 0, 0),
+ (2, 1, 2, 2, '2024-07-31', 'Situation n° 2', 'SIT-0002', 971, 83.86, 860.40, 1032.48, 0, 0),
+ (3, 0, 2, 9, '2024-07-31', 'Situation abandonnée', 'SIT-0009', 971, 10, 100, 120, 1, 0);
+INSERT INTO vte_situation_ligne (VSL_ID, VSL_VSI_ID, VSL_VDL_ID, VSL_Pct_Avct, VSL_Qte_Avct, VSL_MtHT, VSL_PRM_TVA, VSL_IsDesactive) VALUES
+ (1, 1, 11, 50, 10, 414, 51, 0), (2, 1, 14, 100, 5, 198, 51, 0), (3, 1, 12, 50, 0.05, 0, 0, 0),
+ (4, 2, 11, 80, 16, 662.40, 51, 0), (5, 2, 14, 100, 5, 198, 51, 0);
+INSERT INTO vte_doc_entete (VDE_ID, VDE_Type_ID, VDE_SCT_ID, VDE_AFF_ID, VDE_CHT_ID, VDE_TRS_ID_Client, VDE_Reference, VDE_Chrono, VDE_Indice,
+  VDE_Etat, VDE_DateDoc, VDE_Libelle, VDE_NosRef, VDE_PRM_ModeRegl, VDE_MtHT, VDE_MtTTC, VDE_IsComptabilise, VDE_IsMarche, VDE_IsModele,
+  VDE_IsVirtuel, VDE_IsSauvegarde, VDE_IsProjetBudget, VDE_IsDesactive, VDE_VSI_ID) VALUES
+ (7, 702, 1, 1, 1, 11, 'FS-0001', 1, 1, 0, '2024-06-30', 'Situation n° 1', '', 62, 612, 734.40, 1, 0, 0, 0, 0, 0, 0, 1);

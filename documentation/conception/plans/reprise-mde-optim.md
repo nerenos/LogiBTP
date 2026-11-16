@@ -322,7 +322,25 @@ l'analyse, modifié par le § 10.
     (`document_lien`) et adresses de vte_doc_tiers reportés ; factures d'avancement MDE (type T) et situations OPTIM
     au lot 11 ; remises et choix du PV MDE (PVU / PVIMPOSE) à confirmer sur une base réelle.
 - **Lot 11, situations** : avancement (`eTypeAvancement`), factures d'avancement, avoirs, acomptes, retenues ; chaîne
-  de liens contrôlée par `eTypeEtatCalcule`. *Critère* : cumul d'avancement égal à la source.
+  de liens contrôlée par `eTypeEtatCalcule`. *Critère* : cumul d'avancement égal à la source. **FAIT (16/11/2026).**
+  - **Réalisé** : `PiecesReprise` étendu (`AvancementSource`, `LigneAvancement`) : document d'avancement = copie des
+    lignes du marché (devis repris au lot 10, lignes retrouvées par leur clé source `LignePiece.Reference`), chaque ligne
+    de prix suivant sa ligne du marché (`lig_avt_source_lig_id`) en montant cumulé (mode M), en % (avancement global,
+    mode P) ou au cumul précédent si la source ne la cite pas ; précédent = cumul de la dernière facture d'avancement
+    reprise (pièces traitées par date, situation avant facture le même jour) ; présentation C (situation) ou P (facture
+    d'avancement) ; dépassement du marché permis s'il existe dans la source ; ligne de la source sans ligne du marché en
+    ligne libre (`REPRISE_AVANCEMENT_SANS_MARCHE`) ; liens TRANSFORMATION marché → document et situation → facture ;
+    situation facturée au statut FACTURE. `DomainesAvancement.cs` : MDE (PMEDOCSITTX / PMEDOCSITTXLIG : CLEDEVBASE,
+    MTSITUATION cumulé, TYPEAVT D par ligne, C et S global par PCAVTCUMUL sur le devis initial du chantier ; factures
+    PMEDOCFACCLI de type T par CODESITTX, sinon leurs lignes en période), OPTIM (vte_situation / vte_situation_ligne :
+    VSL_VDL_ID, VSL_MtHT cumulé, sinon VSI_Pct_Avct ; pièces « SIT » de vte_doc_entete en factures d'avancement par
+    VDE_VSI_ID ; situations désactivées, de sauvegarde ou d'un marché non repris écartées). Table « type_document_vente » :
+    SIT → V_FACTURE_AVT, code propre VSI → V_SITUATION. Tests : `VerifierAvancementAsync` (deux sources).
+  - **Écarts** : sens des colonnes à confirmer sur une base réelle (MDE : MTSITUATION et PCAVT cumulés, MONTANTHT montant
+    du marché ; OPTIM : VSL_MtHT et VSI_MtHT cumulés, pièce « SIT » = facture de la période) ; `document_ligne_lien`
+    non écrit (le suivi passe par `lig_avt_source_lig_id`) ; retenues de garantie, acomptes déduits
+    (`document_deduction`) et cautions reportés au lot 13 (règlements) ; avoirs d'avancement et reprise d'avancement
+    (V_REPRISE_AVT) non traités ; avancement des postes de pied non repris (postes non repris au lot 10).
 - **Lot 12, achats et sous-traitance** : `A_DEVIS` (demande de prix), commandes, réceptions, retours, factures,
   avoirs, AO, contrats et situations de sous-traitance (R2) ; ventilation par chantier ; types exclus (Q16).
   *Critère* : coûts d'achat par chantier égaux à la source.

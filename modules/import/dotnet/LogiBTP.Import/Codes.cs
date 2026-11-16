@@ -109,4 +109,6 @@ public static class CodeAnomalie
     public const string EcartTtc = "REPRISE_ECART_TTC";
     /// <summary>Ligne de pièce sans équivalent (récapitulatif, ligne de frais) : non reprise en ligne.</summary>
     public const string LigneNonReprise = "REPRISE_LIGNE_NON_REPRISE";
+    /// <summary>Situation ou facture d'avancement sans marché ou ligne sans ligne du marché : reprise en ligne libre.</summary>
+    public const string AvancementSansMarche = "REPRISE_AVANCEMENT_SANS_MARCHE";
 }

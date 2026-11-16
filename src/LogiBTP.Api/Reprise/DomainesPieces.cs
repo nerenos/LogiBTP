@@ -49,33 +49,39 @@ public static class SourcesPieces
 
 /// <summary>
 /// Pièces de vente MDE (plan reprise-mde-optim, lot 10) : devis (versions par CODEDEVINIT), commandes, BL, factures,
-/// avoirs et factures d'acompte (PMEDOCFACCLI.TYPE, table « type_facture » ; les factures d'avancement sont au lot 11),
+/// avoirs et factures d'acompte (PMEDOCFACCLI.TYPE, table « type_facture » ; les factures d'avancement suivent, avec les situations : DomainesAvancement.cs),
 /// statut par l'état (PMEETATDOCUMENT : accepté → VALIDE, envoyé → ENVOYE, non modifiable → verrouillé), lignes par la
 /// table « type_ligne_vente » (élément composé → ouvrage, NIVCOMPO > 0 → composante), marché du chantier rattaché à son
 /// devis initial (PMECHANTIER.CLEDOCINIT).
 /// </summary>
-public sealed class PiecesVenteMde : IDomaineReprise
+public sealed partial class PiecesVenteMde : IDomaineReprise
 {
     public string Code => DomainesReprise.Codes.PiecesVente;
     public IReadOnlyList<string> Dependances => [DomainesReprise.Codes.Structure, DomainesReprise.Codes.Bibliotheque];
 
+    public const string Devis = "PMEDOCDEVCLI";
+    public const string Facture = "PMEDOCFACCLI";
+
     /// <summary>Tables d'entête et code <c>eTypeDocument</c> de la source (rapproché par la table « type_document »).</summary>
     private static readonly (string Table, string TypeSource, string Requete, string RequeteLignes)[] Tables =
     [
-        ("PMEDOCDEVCLI", "DC", "SELECT * FROM PMEDOCDEVCLI ORDER BY DATEDOC, CLEDOC", "SELECT * FROM PMEDOCDEVCLILIG ORDER BY CLEDOC, NUMORDRE"),
+        (Devis, "DC", "SELECT * FROM PMEDOCDEVCLI ORDER BY DATEDOC, CLEDOC", "SELECT * FROM PMEDOCDEVCLILIG ORDER BY CLEDOC, NUMORDRE"),
         ("PMEDOCCDECLI", "CC", "SELECT * FROM PMEDOCCDECLI ORDER BY DATEDOC, CLEDOC", "SELECT * FROM PMEDOCCDECLILIG ORDER BY CLEDOC, NUMORDRE"),
         ("PMEDOCBLCLI", "LC", "SELECT * FROM PMEDOCBLCLI ORDER BY DATEDOC, CLEDOC", "SELECT * FROM PMEDOCBLCLILIG ORDER BY CLEDOC, NUMORDRE"),
-        ("PMEDOCFACCLI", "FC", "SELECT * FROM PMEDOCFACCLI ORDER BY DATEDOC, CLEDOC", "SELECT * FROM PMEDOCFACCLILIG ORDER BY CLEDOC, NUMORDRE"),
+        (Facture, "FC", "SELECT * FROM PMEDOCFACCLI ORDER BY DATEDOC, CLEDOC", "SELECT * FROM PMEDOCFACCLILIG ORDER BY CLEDOC, NUMORDRE"),
     ];
+
+    /// <summary>État d'une pièce MDE (PMEETATDOCUMENT).</summary>
+    private readonly record struct Etat(bool Envoye, bool Accepte, bool Fige);
 
     public async Task ExecuterAsync(ContexteReprise ctx, CancellationToken ct)
     {
         await using var pieces = await PiecesReprise.OuvrirAsync(ctx, ct);
         var typesLigne = await SourcesPieces.TypesLigneAsync(ctx, ct);
         var etats = (await SqlReprise.SourceAsync(ctx, "SELECT CLE, ENVOYE, ACCEPTE, NONMODIFIABLE FROM PMEETATDOCUMENT", ct))
-            .ToDictionary(l => l.Texte("CLE")!, l => (Envoye: l.Booleen("ENVOYE") == true, Accepte: l.Booleen("ACCEPTE") == true, Fige: l.Booleen("NONMODIFIABLE") == true),
+            .ToDictionary(l => l.Texte("CLE")!, l => new Etat(l.Booleen("ENVOYE") == true, l.Booleen("ACCEPTE") == true, l.Booleen("NONMODIFIABLE") == true),
                 StringComparer.Ordinal);
-        var avancement = ctx.Correspondances.Tables[TablesCorrespondance.TypeFacture].Trouver("T")?.Cible;
+        var facturesAvancement = new List<(LigneSource Entete, string TypeDocument, List<LigneSource> Lignes)>();
 
         foreach (var (table, typeSource, requete, requeteLignes) in Tables)
         {
@@ -85,56 +91,72 @@ public sealed class PiecesVenteMde : IDomaineReprise
             {
                 var cle = e.Texte("CLEDOC")!;
                 var emplacement = $"{table} {cle}";
-                var type = table == "PMEDOCFACCLI"
+                var type = table == Facture
                     ? ctx.Correspondre(TablesCorrespondance.TypeFacture, e.Texte("TYPE") ?? "F", emplacement)
                     : ctx.Correspondre(TablesCorrespondance.TypeDocument, typeSource, emplacement);
-                if (type is not { Ignorer: false, Cible: { } typeDocument } || typeDocument == avancement)
+                if (type is not { Ignorer: false, Cible: { } typeDocument })
                 {
-                    // Factures d'avancement : reprises avec les situations (lot 11).
                     var v = ctx.Rapport.Volume(table);
                     v.Lues++;
                     v.Ecartees++;
                     continue;
                 }
-                var etat = e.Texte("CLEETATDOC") is { } ce ? etats.GetValueOrDefault(ce) : default;
-                var definitive = e.Contient("EDITIONDEFINITIVE") && e.Booleen("EDITIONDEFINITIVE") == true
-                    || e.Contient("TRANSCPT") && e.Booleen("TRANSCPT") == true;
-                var statut = etat.Accepte ? PiecesReprise.Statut.Valide
-                    : etat.Envoye || etat.Fige || definitive ? PiecesReprise.Statut.Envoye : PiecesReprise.Statut.Brouillon;
-                if (e.Decimal("MTPOSTESHT") is { } ph and not 0 || e.Decimal("MTPOSTESTTC") is { } pt and not 0)
-                    ctx.Rapport.Perdre(table, "MTPOSTESHT/MTPOSTESTTC", e.Texte("CODE"), "Postes de pied non repris : total HT et TTC hors postes");
-                var categorie = e.Texte("CODECATEGORIE");
-                var code = e.Texte("CODE");
-                var p = new PieceSource
+                // Factures d'avancement : reprises après les pièces, avec les situations et leur marché (lot 11).
+                if (pieces.EstAvancement(typeDocument))
                 {
-                    Origine = (table, cle), TypeDocument = typeDocument, Numero = code,
-                    Date = SourcesRessources.Jour(e, "DATEDOC") ?? DateOnly.FromDateTime(DateTime.Today),
-                    Objet = AnnuaireReprise.Couper(e.Texte("LIBELLE") ?? Rtf.TexteDe(Rtf.HtmlDe(e.Texte("DESCRIPTIF"))), 250),
-                    TiersPerId = ctx.Registre.Trouver("PMECLIENT", e.Texte("CODECLIENT")),
-                    Adresse = e.Texte("NOM") is null && e.Texte("ADR") is null ? null
-                        : new AdressePiece(e.Texte("NOM"), e.Texte("ADR"), e.Texte("CP"), e.Texte("VILLE"), ctx.Registre.TrouverCode(RegistreMde.Pays, e.Texte("PAYS"))),
-                    AffaireId = (int?)ctx.Registre.Trouver(StructureMde.Affaire, e.Texte("CODEAFFAIRE")),
-                    ChantierId = (int?)ctx.Registre.Trouver(StructureMde.Chantier, e.Texte("CODECHT")),
-                    Statut = statut, Verrouille = etat.Fige || definitive,
-                    GroupeCle = table == "PMEDOCDEVCLI" ? $"{table}|{e.Texte("CODEDEVINIT") ?? code}" : null,
-                    ValiditeJours = e.Contient("VALIDITENB") ? SourcesPieces.ValiditeJours(e.Entier("VALIDITENB"), e.Texte("VALIDITEPER")) : null,
-                    TexteIntroHtml = e.Texte("LETTREENTETE") is { } intro ? Rtf.HtmlDe(intro) : null,
-                    TexteFinHtml = e.Texte("LETTREPIED") is { } pied ? Rtf.HtmlDe(pied) : null,
-                    CpaCode = ctx.Registre.TrouverCode(RegistreMde.Condition, e.Texte("MODREG")),
-                    ModeReglement = ctx.Registre.TrouverCode(RegistreMde.ModeCondition, e.Texte("MODREG")),
-                    TotalHt = e.Decimal("MTHT"),
-                    TotalTtc = e.Decimal("MTPOSTESHT") is null or 0 && e.Decimal("MTPOSTESTTC") is null or 0 ? e.Decimal("MTTTC") : null,
-                    Lignes = Lignes(ctx, lignes.GetValueOrDefault(cle) ?? [], categorie, typesLigne, emplacement),
+                    facturesAvancement.Add((e, typeDocument, lignes.GetValueOrDefault(cle) ?? []));
+                    continue;
+                }
+                var p = Entete(ctx, e, table, typeDocument, etats) with
+                {
+                    GroupeCle = table == Devis ? $"{table}|{e.Texte("CODEDEVINIT") ?? e.Texte("CODE")}" : null,
+                    Lignes = Lignes(ctx, lignes.GetValueOrDefault(cle) ?? [], e.Texte("CODECATEGORIE"), typesLigne, emplacement),
                 };
                 await pieces.EcrireAsync(p, ct);
             }
         }
 
         // Marché de vente d'un chantier : rattaché à son devis initial.
+        var devisInitiaux = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var c in await SqlReprise.SourceAsync(ctx, "SELECT CODE, CLEDOCINIT FROM PMECHANTIER WHERE CLEDOCINIT IS NOT NULL", ct))
-            if (ctx.Registre.Trouver(StructureMde.Chantier, c.Texte("CODE")) is { } cha && ctx.Registre.Trouver("PMEDOCDEVCLI", c.Texte("CLEDOCINIT")) is { } ent)
+        {
+            devisInitiaux[c.Texte("CODE")!] = c.Texte("CLEDOCINIT")!;
+            if (ctx.Registre.Trouver(StructureMde.Chantier, c.Texte("CODE")) is { } cha && ctx.Registre.Trouver(Devis, c.Texte("CLEDOCINIT")) is { } ent)
                 await pieces.LierMarcheAsync((int)cha, ent, ct);
+        }
+        await AvancementAsync(ctx, pieces, etats, facturesAvancement, devisInitiaux, ct);
         await pieces.TerminerAsync(ct);
+    }
+
+    /// <summary>Entête commun des pièces MDE (statut par l'état, verrouillage, tiers, adresse, structure, conditions, totaux).</summary>
+    private static PieceSource Entete(ContexteReprise ctx, LigneSource e, string table, string typeDocument, Dictionary<string, Etat> etats)
+    {
+        var etat = e.Texte("CLEETATDOC") is { } ce ? etats.GetValueOrDefault(ce) : default;
+        var definitive = e.Contient("EDITIONDEFINITIVE") && e.Booleen("EDITIONDEFINITIVE") == true
+            || e.Contient("TRANSCPT") && e.Booleen("TRANSCPT") == true;
+        var statut = etat.Accepte ? PiecesReprise.Statut.Valide
+            : etat.Envoye || etat.Fige || definitive ? PiecesReprise.Statut.Envoye : PiecesReprise.Statut.Brouillon;
+        var postes = e.Contient("MTPOSTESHT") && (e.Decimal("MTPOSTESHT") is not (null or 0) || e.Decimal("MTPOSTESTTC") is not (null or 0));
+        if (postes) ctx.Rapport.Perdre(table, "MTPOSTESHT/MTPOSTESTTC", e.Texte("CODE"), "Postes de pied non repris : total HT et TTC hors postes");
+        return new PieceSource
+        {
+            Origine = (table, e.Texte("CLEDOC")!), TypeDocument = typeDocument, Numero = e.Texte("CODE"),
+            Date = SourcesRessources.Jour(e, "DATEDOC") ?? DateOnly.FromDateTime(DateTime.Today),
+            Objet = AnnuaireReprise.Couper(e.Texte("LIBELLE") ?? Rtf.TexteDe(Rtf.HtmlDe(e.Texte("DESCRIPTIF"))), 250),
+            TiersPerId = ctx.Registre.Trouver("PMECLIENT", e.Texte("CODECLIENT")),
+            Adresse = e.Texte("NOM") is null && e.Texte("ADR") is null ? null
+                : new AdressePiece(e.Texte("NOM"), e.Texte("ADR"), e.Texte("CP"), e.Texte("VILLE"), ctx.Registre.TrouverCode(RegistreMde.Pays, e.Texte("PAYS"))),
+            AffaireId = (int?)ctx.Registre.Trouver(StructureMde.Affaire, e.Texte("CODEAFFAIRE")),
+            ChantierId = (int?)ctx.Registre.Trouver(StructureMde.Chantier, e.Texte("CODECHT")),
+            Statut = statut, Verrouille = etat.Fige || definitive,
+            ValiditeJours = e.Contient("VALIDITENB") ? SourcesPieces.ValiditeJours(e.Entier("VALIDITENB"), e.Texte("VALIDITEPER")) : null,
+            TexteIntroHtml = e.Texte("LETTREENTETE") is { } intro ? Rtf.HtmlDe(intro) : null,
+            TexteFinHtml = e.Texte("LETTREPIED") is { } pied ? Rtf.HtmlDe(pied) : null,
+            CpaCode = ctx.Registre.TrouverCode(RegistreMde.Condition, e.Texte("MODREG")),
+            ModeReglement = ctx.Registre.TrouverCode(RegistreMde.ModeCondition, e.Texte("MODREG")),
+            TotalHt = e.Decimal("MTHT"),
+            TotalTtc = postes ? null : e.Decimal("MTTTC"),
+        };
     }
 
     private static List<LignePiece> Lignes(ContexteReprise ctx, List<LigneSource> source, string? categorie, Dictionary<string, short> typesLigne, string emplacement)
@@ -161,7 +183,7 @@ public sealed class PiecesVenteMde : IDomaineReprise
             var pv = l.Decimal("PV") is { } x and not 0 ? x : (decimal?)null;
             res.Add(new LignePiece
             {
-                Cle = cle, ParentCle = parent, Type = type, Composante = composante && parent is not null, Code = l.Texte("CODEELEM"),
+                Cle = cle, Reference = l.Texte("CLE"), ParentCle = parent, Type = type, Composante = composante && parent is not null, Code = l.Texte("CODEELEM"),
                 LibelleHtml = Rtf.HtmlDe(l.Texte("LIBELLECOM") ?? l.Texte("LIBELLE")), NonEditee = l.Contient("EDITEE") && l.Entier("EDITEE") == 0,
                 Qte = qte, PrecisionQte = l.Entier("DECUNITE") is { } dec and >= 0 ? (short)Math.Clamp((int)dec, 2, 6) : SourcesPieces.Precision(qte),
                 Unite = l.Texte("UNITE") is { } u ? ctx.Registre.TrouverCode(RegistreMde.Unite, u.Trim()) : null,
@@ -179,12 +201,12 @@ public sealed class PiecesVenteMde : IDomaineReprise
 
 /// <summary>
 /// Pièces de vente OPTIM (lot 10) : vte_doc_entete des sociétés retenues hors modèles, pièces virtuelles, sauvegardes
-/// et budgets (Q16), type par la table « type_document_vente » (situations au lot 11), statut par le libellé de l'état,
+/// et budgets (Q16), type par la table « type_document_vente » (factures de situation avec les situations : DomainesAvancement.cs), statut par le libellé de l'état,
 /// facture comptabilisée ou numérotée verrouillée, versions par chrono et indice, lignes vte_doc_ligne selon les règles
 /// de <c>convertirOptim</c> (frais indirects écartés, sous-détail en composantes, quantité fixe absolue, coefficient de
 /// vente de la ligne de prix), marché rattaché (VDE_IsMarche), établissement d'origine en propriété.
 /// </summary>
-public sealed class PiecesVenteOptim : IDomaineReprise
+public sealed partial class PiecesVenteOptim : IDomaineReprise
 {
     public string Code => DomainesReprise.Codes.PiecesVente;
     public IReadOnlyList<string> Dependances => [DomainesReprise.Codes.Structure, DomainesReprise.Codes.Bibliotheque];
@@ -200,8 +222,7 @@ public sealed class PiecesVenteOptim : IDomaineReprise
         var (retenue, etablissement) = await StructureOptim.EtablissementsAsync(ctx, ct);
         var parametres = (await SqlReprise.SourceAsync(ctx, "SELECT PRM_ID, PRM_Code, PRM_Libelle, PRM_TypeParam FROM z_parametre", ct))
             .ToDictionary(l => l.Texte("PRM_ID")!, l => (Code: l.Texte("PRM_Code"), Libelle: l.Texte("PRM_Libelle"), Type: l.Texte("PRM_TypeParam")), StringComparer.Ordinal);
-        var table = ctx.Correspondances.Tables[TablesCorrespondance.TypeDocumentVente];
-        var situation = table.Entrees.Where(x => x.Source == "SIT").Select(x => x.Cible).FirstOrDefault();
+        var facturesAvancement = new List<(LigneSource Entete, PieceSource Piece)>();
         var lignes = (await SqlReprise.SourceAsync(ctx, "SELECT * FROM vte_doc_ligne WHERE VDL_IsDesactive = 0 ORDER BY VDL_VDE_ID, VDL_Ordre, VDL_ID", ct))
             .GroupBy(l => l.Texte("VDL_VDE_ID") ?? "").ToDictionary(g => g.Key, g => g.ToList(), StringComparer.Ordinal);
         var volume = ctx.Rapport.Volume(Entete);
@@ -216,7 +237,7 @@ public sealed class PiecesVenteOptim : IDomaineReprise
             var emplacement = $"{Entete} {cle}";
             var codeType = e.Texte("VDE_Type_ID") is { } t ? parametres.GetValueOrDefault(t).Code : null;
             var type = ctx.Correspondre(TablesCorrespondance.TypeDocumentVente, codeType, emplacement);
-            if (!retenue(e, "VDE_SCT_ID") || type is not { Ignorer: false, Cible: { } typeDocument } || typeDocument == situation)
+            if (!retenue(e, "VDE_SCT_ID") || type is not { Ignorer: false, Cible: { } typeDocument })
             {
                 volume.Lues++;
                 volume.Ecartees++;
@@ -244,9 +265,12 @@ public sealed class PiecesVenteOptim : IDomaineReprise
                 TotalHt = e.Decimal("VDE_MtHT"), TotalTtc = e.Decimal("VDE_MtTTC"), Proprietes = proprietes,
                 Lignes = Lignes(ctx, lignes.GetValueOrDefault(cle) ?? [], typesLigne, emplacement),
             };
-            if (await pieces.EcrireAsync(p, ct) is { } ent && e.Booleen("VDE_IsMarche") == true && p.ChantierId is { } cha)
+            // Factures de situation : reprises après les pièces, avec les situations et leur marché (lot 11).
+            if (pieces.EstAvancement(typeDocument)) facturesAvancement.Add((e, p));
+            else if (await pieces.EcrireAsync(p, ct) is { } ent && e.Booleen("VDE_IsMarche") == true && p.ChantierId is { } cha)
                 await pieces.LierMarcheAsync(cha, ent, ct);
         }
+        await AvancementAsync(ctx, pieces, facturesAvancement, parametres, ct);
         await pieces.TerminerAsync(ct);
     }
 
@@ -296,7 +320,7 @@ public sealed class PiecesVenteOptim : IDomaineReprise
             }
             var x = new LignePiece
             {
-                Cle = cle, ParentCle = parent.Ligne?.Cle, Type = type, Composante = composante, QteAbsolue = absolue, Code = l.Texte("VDL_Code"),
+                Cle = cle, Reference = cle, ParentCle = parent.Ligne?.Cle, Type = type, Composante = composante, QteAbsolue = absolue, Code = l.Texte("VDL_Code"),
                 LibelleHtml = Rtf.HtmlDe(l.Texte("VDL_LibelleRTF") ?? l.Texte("VDL_Libelle")), NonEditee = l.Booleen("VDL_IsNonEdite") == true,
                 Qte = chiffree ? qte : null, PrecisionQte = SourcesPieces.Precision(qte),
                 Unite = l.Texte("VDL_UNT_ID") is { } u and not "0" ? ctx.Registre.TrouverCode(RegistreOptim.Unite, u) : null,

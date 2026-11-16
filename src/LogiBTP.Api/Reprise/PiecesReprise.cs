@@ -8,6 +8,7 @@ using LogiBTP.Documents.Web;
 using LogiBTP.Domaine;
 using LogiBTP.Import;
 using LogiBTP.Import.Reprise;
+using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
 
 namespace LogiBTP.Api.Reprise;
@@ -16,6 +17,8 @@ namespace LogiBTP.Api.Reprise;
 public sealed record LignePiece
 {
     public required string Cle { get; init; }
+    /// <summary>Clé de la ligne dans toute la source (ligne du marché citée par les situations), null si sans objet.</summary>
+    public string? Reference { get; init; }
     public string? ParentCle { get; init; }
     /// <summary>Type de ligne (<see cref="TL"/>).</summary>
     public required short Type { get; init; }
@@ -74,6 +77,36 @@ public sealed record PieceSource
     public List<LignePiece> Lignes { get; init; } = [];
     /// <summary>Propriétés de l'entête (établissement d'origine…).</summary>
     public Dictionary<string, string> Proprietes { get; init; } = [];
+    /// <summary>Avancement (situation, facture d'avancement) : lignes copiées du marché, <see cref="Lignes"/> ignorées.</summary>
+    public AvancementSource? Avancement { get; init; }
+}
+
+/// <summary>
+/// Avancement d'une pièce source (lot 11) : marché (pièce reprise au lot 10), avancement par ligne du marché ou global,
+/// situation facturée (lien de transformation vers la facture d'avancement).
+/// </summary>
+public sealed record AvancementSource
+{
+    /// <summary>Pièce du marché (table et clé de son entête), sinon déduite des lignes citées.</summary>
+    public (string Table, string Cle)? Marche { get; init; }
+    /// <summary>Table d'entête des pièces dont les lignes sont citées (<see cref="LignePiece.Reference"/>).</summary>
+    public required string TableLignes { get; init; }
+    /// <summary>Avancement global cumulé en % (eTypeAvancement C / S, ou situation sans ligne) : toutes les lignes du marché.</summary>
+    public decimal? PctGlobal { get; init; }
+    public List<LigneAvancement> Lignes { get; init; } = [];
+    /// <summary>Situation source facturée par cette pièce (table et clé).</summary>
+    public (string Table, string Cle)? Situation { get; init; }
+}
+
+/// <summary>Avancement d'une ligne : cumulé (montant ou %) ou de la période ; ligne sans marché reprise en ligne libre.</summary>
+public sealed record LigneAvancement
+{
+    public string? LigneMarche { get; init; }
+    public decimal? MontantCumul { get; init; }
+    public decimal? MontantPeriode { get; init; }
+    public decimal? PctCumul { get; init; }
+    public string LibelleHtml { get; init; } = "";
+    public int? TvaId { get; init; }
 }
 
 public sealed record AdressePiece(string? Nom, string? Lignes, string? CodePostal, string? Ville, string? Pays);
@@ -94,7 +127,19 @@ public sealed class PiecesReprise : IAsyncDisposable
         public const string Envoye = "ENVOYE";
         public const string Valide = "VALIDE";
         public const string Remplace = "REMPLACE";
+        /// <summary>Situation facturée (lot 11).</summary>
+        public const string Facture = "FACTURE";
     }
+
+    /// <summary>Présentation d'un document d'avancement : C cumul (situation), P période (facture d'avancement).</summary>
+    public static class Presentation
+    {
+        public const string Cumul = "C";
+        public const string Periode = "P";
+    }
+
+    public const string TypeFactureAvancement = "F";
+    public const string LienTransformation = "TRANSFORMATION";
 
     public const string TableDocument = "document";
     public const string LibelleEcart = "Écart de reprise";
@@ -110,6 +155,10 @@ public sealed class PiecesReprise : IAsyncDisposable
     private readonly int? natureEcart;
     private readonly Dictionary<(int Tyd, int Exercice), int> rangs = [];
     private readonly Dictionary<string, (long Id, int Versions)> groupes = new(StringComparer.Ordinal);
+    /// <summary>Lignes reprises citées par les situations : (table d'entête, référence) → (document, ligne).</summary>
+    private readonly Dictionary<(string Table, string Reference), (long Ent, long Lig)> lignesMarche = [];
+    /// <summary>Cumul du dernier document d'avancement facturé, par ligne du marché (précédent des suivants).</summary>
+    private readonly Dictionary<long, DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp>.Precedent> precedents = [];
 
     private PiecesReprise(ContexteReprise ctx, LogiBtpContext db, Dictionary<string, TypeDocument> types, Dictionary<(int, string), int> statuts,
         List<TauxTva> taux, int? natureOuvrage, int? natureEcart)
@@ -141,6 +190,9 @@ public sealed class PiecesReprise : IAsyncDisposable
     }
 
     public ValueTask DisposeAsync() => db.DisposeAsync();
+
+    /// <summary>Type de pièce d'avancement (situation, facture d'avancement…) : repris au lot 11, avec son marché.</summary>
+    public bool EstAvancement(string typeDocument) => types.TryGetValue(typeDocument, out var t) && t.TydAvancement is not null;
 
     /// <summary>Enregistrement EF : l'erreur de la base (contrainte…) remonte avec la pièce en cause.</summary>
     private async Task EnregistrerAsync(string emplacement, CancellationToken ct)
@@ -285,13 +337,18 @@ public sealed class PiecesReprise : IAsyncDisposable
             doc.EntIndice = Indice(groupe.Versions + 1);
         }
 
+        // Avancement : lignes du marché, avancement cumulé ou de la période (lot 11).
+        if (p.Avancement is not null)
+        {
+            doc.EntAvtPresentation = type.TydAvancement == TypeFactureAvancement ? Presentation.Periode : Presentation.Cumul;
+        }
         // Calcul : lignes au mode bordereau, PV source imposé aux lignes de prix qui s'en écartent (toutes si la pièce est verrouillée).
-        var lignes = Lignes(p, natureOuvrage);
+        var (lignes, marche) = p.Avancement is { } av ? await LignesAvancementAsync(doc, av, emplacement, ct) : (Lignes(p, natureOuvrage), null);
         var sources = p.Lignes.ToDictionary(l => l.Cle, StringComparer.Ordinal);
         var cles = p.Lignes.Zip(lignes, (s, l) => (l.LigId, s.Cle)).ToDictionary(x => x.LigId, x => x.Cle);
         var r = Calculer(doc, lignes);
         var imposees = 0;
-        foreach (var l in lignes.Where(l => TL.EstChiffree(l) && l.LigQteType is null && !l.LigPvFixe))
+        foreach (var l in lignes.Where(l => p.Avancement is null && TL.EstChiffree(l) && l.LigQteType is null && !l.LigPvFixe))
         {
             var s = sources[cles[l.LigId]];
             if (s.PvUnitaire is not { } pv) continue;
@@ -343,7 +400,9 @@ public sealed class PiecesReprise : IAsyncDisposable
         var complet = new DocumentCompletBtp { Document = r.Document, Lignes = r.Lignes, Tva = r.Tva };
         try
         {
-            await new PersistanceDocument<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp>(db, new SpecialisationBtp()).Ecrire(doc.EntId, complet, ct);
+            var corr = await new PersistanceDocument<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp>(db, new SpecialisationBtp()).Ecrire(doc.EntId, complet, ct);
+            foreach (var (l, x) in p.Lignes.Zip(lignes))
+                if (l.Reference is { } reference && corr.Lignes.TryGetValue(x.LigId, out var reel)) lignesMarche[(p.Origine.Table, reference)] = (doc.EntId, reel);
         }
         catch (DbUpdateException e) when (e.InnerException is { } cause)
         {
@@ -356,6 +415,11 @@ public sealed class PiecesReprise : IAsyncDisposable
         });
         await EnregistrerAsync(emplacement, ct);
         db.ChangeTracker.Clear();
+        if (doc.EntAvtPresentation == Presentation.Periode)
+            foreach (var l in r.Lignes.Where(l => l.LigAvtSourceLigId is not null))
+                precedents[l.LigAvtSourceLigId!.Value] = new(l.LigAvtMontantCumul ?? 0, l.LigAvtQteCumul ?? 0, l.LigAvtPct ?? 0);
+        if (marche is { } mid) await LierAsync(mid, doc.EntId, ct);
+        if (p.Avancement?.Situation is { } sit && ctx.Registre.Trouver(sit.Table, sit.Cle) is { } sid) await LierAsync(sid, doc.EntId, ct);
 
         if (doc.EntNumero is { } numero)
         {
@@ -367,6 +431,93 @@ public sealed class PiecesReprise : IAsyncDisposable
         volume.Ecrites++;
         return doc.EntId;
     }
+
+    /// <summary>
+    /// Lignes d'un document d'avancement : copie des lignes du marché (structure, prix, TVA), chaque ligne de prix suivant sa
+    /// ligne du marché (<c>lig_avt_source_lig_id</c>) en montant cumulé (ou en % : avancement global, ligne sans prix) ;
+    /// précédent du dernier document facturé repris ; ligne de la source sans ligne du marché : ligne libre au montant de la
+    /// source (signalée). Le marché est renvoyé pour le lien de transformation.
+    /// </summary>
+    private async Task<(List<DocumentLigneBtp> Lignes, long? Marche)> LignesAvancementAsync(DocumentBtp doc, AvancementSource av, string emplacement, CancellationToken ct)
+    {
+        long? marche = av.Marche is { } m ? ctx.Registre.Trouver(m.Table, m.Cle) : null;
+        marche ??= av.Lignes.Select(l => l.LigneMarche is { } r && lignesMarche.TryGetValue((av.TableLignes, r), out var x) ? x.Ent : (long?)null)
+            .FirstOrDefault(x => x is not null);
+        var parLigne = new Dictionary<long, List<LigneAvancement>>();
+        var libres = new List<LigneAvancement>();
+        foreach (var l in av.Lignes)
+        {
+            if (l.LigneMarche is { } r && lignesMarche.TryGetValue((av.TableLignes, r), out var x) && x.Ent == marche)
+                (parLigne.TryGetValue(x.Lig, out var liste) ? liste : parLigne[x.Lig] = []).Add(l);
+            else if ((l.MontantCumul ?? l.MontantPeriode ?? 0) != 0) libres.Add(l);
+        }
+        var periode = doc.EntAvtPresentation == Presentation.Periode;
+        var res = new List<DocumentLigneBtp>();
+        if (marche is { } me)
+        {
+            var source = await db.Lignes.AsNoTracking().Where(l => l.LigEntId == me).OrderBy(l => l.LigId).ToListAsync(ct);
+            var ids = source.Select((l, i) => (l.LigId, Temp: -(i + 1L))).ToDictionary(x => x.LigId, x => x.Temp);
+            foreach (var s in source)
+            {
+                var l = JsonCalcul.Cloner(s);
+                l.LigId = ids[s.LigId];
+                l.LigEntId = 0;
+                l.LigParentId = s.LigParentId is { } pp && ids.TryGetValue(pp, out var tp) ? tp : null;
+                l.LigOrigineId = s.LigId;
+                if (TL.EstChiffree(l) && l.LigQteType is null)
+                {
+                    var precedent = precedents.GetValueOrDefault(s.LigId);
+                    var marcheHt = s.LigMontantHt ?? 0;
+                    l.LigAvtMontantMarche = marcheHt;
+                    l.LigAvtQteMarche = s.LigQteVendue ?? s.LigQte;
+                    l.LigAvtSourceLigId = s.LigId;
+                    DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp>.EcrirePrecedent(l, precedent);
+                    var saisies = parLigne.GetValueOrDefault(s.LigId);
+                    if (saisies?.Any(x => x.MontantCumul is not null || x.MontantPeriode is not null) == true)
+                    {
+                        l.LigAvtMode = "M";
+                        l.LigAvtValeur = saisies.Sum(x => x.MontantCumul ?? (precedent?.Montant ?? 0) + (x.MontantPeriode ?? 0));
+                    }
+                    else if ((saisies?.FirstOrDefault(x => x.PctCumul is not null)?.PctCumul ?? av.PctGlobal) is { } pct)
+                    {
+                        l.LigAvtMode = "P";
+                        l.LigAvtValeur = pct;
+                    }
+                    else
+                    {
+                        // Ligne sans avancement dans la source : avancement du précédent (période nulle).
+                        l.LigAvtMode = marcheHt == 0 ? "P" : "M";
+                        l.LigAvtValeur = marcheHt == 0 ? precedent?.Pct ?? 0 : precedent?.Montant ?? 0;
+                    }
+                    var cumul = l.LigAvtMode == "M" ? l.LigAvtValeur ?? 0 : marcheHt * (l.LigAvtValeur ?? 0) / 100;
+                    if (Math.Abs(cumul) > Math.Abs(marcheHt) || l.LigAvtMode == "P" && l.LigAvtValeur > 100) doc.EntAvtDepassement = true;
+                }
+                res.Add(l);
+            }
+        }
+        if (libres.Count > 0 || marche is null)
+            ctx.Rapport.Signaler(NiveauAnomalie.Avertissement, CodeAnomalie.AvancementSansMarche, emplacement, marche is null
+                ? "Marché de la situation introuvable : lignes reprises en lignes libres, sans suivi d'avancement"
+                : $"{libres.Count} ligne(s) sans ligne du marché : reprises en lignes libres");
+        var ordre = res.Where(l => l.LigParentId is null).Select(l => l.LigOrdre).DefaultIfEmpty().Max();
+        var prochain = res.Select(l => l.LigId).DefaultIfEmpty().Min() - 1;
+        foreach (var l in marche is null ? av.Lignes.Where(x => (x.MontantCumul ?? x.MontantPeriode ?? 0) != 0) : libres)
+        {
+            var montant = periode ? l.MontantPeriode ?? l.MontantCumul ?? 0 : l.MontantCumul ?? l.MontantPeriode ?? 0;
+            res.Add(new DocumentLigneBtp
+            {
+                LigId = prochain--, LigOrdre = ++ordre, LigTylId = TL.Element, LigLibelleHtml = l.LibelleHtml, LigQte = 1, LigPa = montant, LigPv = montant,
+                LigPvFixe = true, LigPrecisionPv = 6, LigNatId = natureEcart, LigTvaId = l.TvaId, LigProprietes = JsonDocument.Parse("""{"reprise_libre":true}"""),
+            });
+        }
+        return (res, marche);
+    }
+
+    /// <summary>Lien de transformation (marché → document d'avancement, situation → facture), une fois.</summary>
+    private async Task LierAsync(long source, long cible, CancellationToken ct) =>
+        await SqlReprise.ExecuterAsync(ctx.Unite, """
+            INSERT INTO document_lien (lie_source_ent_id, lie_cible_ent_id, lie_type) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING
+            """, ct, source, cible, LienTransformation);
 
     /// <summary>
     /// Fin des pièces : référence de chaque groupe = sa dernière version, les précédentes non acceptées passent REMPLACE ;

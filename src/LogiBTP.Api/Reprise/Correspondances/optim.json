@@ -13,7 +13,8 @@
       "entrees": [
         { "source": "DEV", "cible": "V_DEVIS" },
         { "source": "BPU", "cible": "V_DEVIS", "note": "Bordereau de prix (VDE_VDE_ID_BPU)" },
-        { "source": "SIT", "cible": "V_SITUATION" },
+        { "source": "SIT", "cible": "V_FACTURE_AVT", "note": "Facture de situation (période), liée à sa situation vte_situation (VDE_VSI_ID)" },
+        { "source": "VSI", "cible": "V_SITUATION", "note": "Situation de travaux vte_situation (cumul) : code propre à la reprise" },
         { "source": "FAC", "cible": "V_FACTURE" },
         { "source": "AVR", "cible": "V_AVOIR" },
         { "source": "ATT", "ignorer": true, "motif": "Attachement : non repris (Q16)" },
