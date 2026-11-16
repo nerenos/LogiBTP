@@ -119,4 +119,6 @@ public static class CodeAnomalie
     public const string PointageNonRepris = "REPRISE_POINTAGE_NON_REPRIS";
     /// <summary>Consommation hors pièce sans article, chantier, matériel ou durée en heures repris : non reprise.</summary>
     public const string ConsommationNonReprise = "REPRISE_CONSOMMATION_NON_REPRISE";
+    /// <summary>GED et notes : fichier sans contenu, sans stockage ou sans fiche reprise ; aussi le décompte des contenus distincts.</summary>
+    public const string GedNonReprise = "REPRISE_GED_NON_REPRISE";
 }

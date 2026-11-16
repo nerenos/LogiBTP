@@ -340,3 +340,17 @@ INSERT INTO dbo.PMECHTSUIVMAT (CLE, CODECHT, CODEMAT, DATEDEB, DUREE, UNITE, INF
  (1, 'CH001', 'MP-001', '2024-03-05', 6.5, 'H', 'Terrassement'),
  (2, 'CH001', 'MP-001', '2024-03-06', 2, 'J', NULL);
 GO
+
+-- Lot 16, GED et notes : une image partagée par un élément et la photo d'un salarié (un seul contenu), une image
+-- inutilisée ; actions d'affaire (terminée, ouverte avec fin prévue, affaire inconnue).
+INSERT INTO dbo.SYS_MDEIMAGES (CODE, FILENAME, CLASS, DATA) VALUES
+ (1, 'C:\Images\ciment.png', 'TPNGImage', 0x89504E470D0A1A0A0000000D49484452),
+ (2, 'inutile.png', 'TPNGImage', 0x0102);
+UPDATE dbo.PMEELEMENT SET IDIMAGE = 1 WHERE CODE = 'CIM35';
+UPDATE dbo.PMESALARIE SET IDPHOTO = 1 WHERE CODE = 'SAL01';
+INSERT INTO dbo.PMEACTION (CODE, LIBELLE) VALUES ('TEL', 'Appel téléphonique');
+INSERT INTO dbo.PMEAFFACTION (CLE, CODEAFFAIRE, CODEACTION, OBJET, DATEACTION, AUTEUR, DESTINATAIRE, DESCRIPTIF, DATEFINPREVUE, DATETERMINEE, NOTE) VALUES
+ (1, 'AF001', 'TEL', 'Relance architecte', '2024-02-01', 'JM', 'Cabinet Arche', 'Plans d''exécution attendus', NULL, NULL, NULL),
+ (2, 'AF001', NULL, NULL, '2024-03-01', NULL, NULL, 'Visite de chantier', '2026-12-01', NULL, 'À organiser'),
+ (3, 'AFXXX', 'TEL', 'Affaire perdue', '2024-03-02', NULL, NULL, NULL, NULL, NULL, NULL);
+GO

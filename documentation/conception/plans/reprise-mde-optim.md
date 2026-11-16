@@ -435,6 +435,24 @@ l'utilisateur sur son poste. *Critère* : `npm test` et `dotnet test LogiBTP.sln
 ## Lots 16 et 17 : phase 2
 
 - **Lot 16, GED et notes** : contenus base64 et binaires dédupliqués par empreinte, rangés sous le nom de la base ;
-  répertoires ; rattachements polymorphes ; messages et actions vers `crm_note`.
+  répertoires ; rattachements polymorphes ; messages et actions vers `crm_note`. **FAIT (16/11/2026).**
+  - **Réalisé** : `DomainesGed.cs` (domaine `GED`, après le stock). `GedReprise` : contenu rangé par empreinte SHA-256
+    sous le répertoire de la société (`StockageGed` du module GED ; un seul fichier et un seul `contenu_ged` par
+    contenu), un `document_ged` et sa version 1 par fichier et par fiche liée (indexation laissée à la nuit) ; sans fiche :
+    répertoires « Reprise › conteneur › sous-dossier » de la GED globale ; notes `crm_note` + `crm_note_lien` principal ;
+    simulation : empreintes calculées en mémoire, rien sur le disque. Stockage : `DemandeReprise.StockageGed` (écran :
+    stockage de la société ; commande : `--ged RACINE`, documents sous le nom de la base) ; sans stockage en reprise
+    réelle : fichiers non repris et signalés, notes reprises. `GedMde` : SYS_MDEIMAGES des éléments (IDIMAGE →
+    `ele_image_ged`) et des salariés (IDPHOTO → `ind_image_ged`), PMEAFFACTION en notes ACTION (libellé PMEACTION,
+    destinataire, descriptif et note dans le message ; terminées sauf fin prévue sans date de fin). `GedOptim` :
+    ged_document (base64 lu en flux) sur chaque fiche de ged_document_entite (table « entite » et registre), sans
+    contenu signalé, désactivé écarté ; msg_message_observation en notes (table « nature_message » sur le code
+    MSG_Type ; message en mémo, tâche faite terminée). Anomalie `REPRISE_GED_NON_REPRISE`. Tests : `VerifierGedAsync`
+    (fichiers présents par empreinte, rattachements, répertoires, notes).
+  - **Écarts** : fichiers écrits avant la validation de la transaction (rangés par empreinte : un échec laisse des
+    fichiers orphelins sans conséquence) ; autres images MDE (états, natures, lignes de pièces), mises en forme
+    (MISEENFORME) et lettres types non reprises ; chemins PLANS / DOSSIERS des affaires MDE non suivis (texte gardé en
+    commentaire) ; suivi commercial OPTIM (afc_chantier_suivico) non repris ; tâches reprises sans responsable ni service ;
+    messages sans destinataire (mémos).
 - **Lot 17, tables `PP_*`** : analyse courte, puis alimentation des ordres et de la synthèse par chantier (module
   Exécution).

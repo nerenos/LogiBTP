@@ -14,7 +14,7 @@ Référence lue à la demande (hors contexte par défaut). Les règles que le co
 ## Reprise : chaîne d'exécution
 1. Entrées : écran `/parametres/reprise` (administrateur, routes `/api/reprise` de `RoutesReprise.cs`) ou commande
    `installation societe importer CODE --source MDE|OPTIM [--connexion C | LOGIBTP_REPRISE_SOURCE] [--societes 1,2]
-   [--reel] [--correspondances F] [--rapport F.md]` (simulation par défaut, code de sortie 2 en cas d'échec).
+   [--reel] [--correspondances F] [--rapport F.md] [--ged RACINE]` (simulation par défaut, code de sortie 2 en cas d'échec).
 2. `RepriseBase.ExecuterAsync(DemandeReprise)` : fichier de correspondances (fourni, sinon `Correspondances/mde.json` ou
    `optim.json`) validé contre les listes de la base cible (`CiblesReprise`), fusions de doublons retenues
    (`import_fusion`), lecteur en lecture seule (`LecteurSqlServer` / `LecteurMariaDb`).
@@ -42,6 +42,7 @@ Classes du cœur dans `src/LogiBTP.Api/Reprise/` ; un domaine par source, même 
 | `REGLEMENTS` | `COMM_ECHEANCE`, `FIN_DOCUMENT`, `PMEDOCRETENUE` | `vac_doc_echeance_reglement`, `vac_reglement_*`, `vac_doc_retenue_caution` | échéanciers, règlements, pointages plafonnés, retenues, cautions, état de paiement |
 | `EXPLOITATION` | `PMECHTSUIVMOCHT` | `svh_rapport_journalier`, `svhz_*`, `pln_planification`, `pln_affectation` | pointages (couche SAISIE), variables de paie et zones, congés validés, tâches et affectations du planning |
 | `STOCK` | `PMEDEPOT`, `PMESTOCKREEL`, `PMECHTSUIVFO`, `PMECHTSUIVMAT` | `bib_article_stock`, `svc_rapport_conso` | inventaire d'ouverture (`stk_comptage`), consommations hors pièce (sorties S_SORTIE + mouvements), heures de matériel (`pointage_materiel` IMPORT) |
+| `GED` | `SYS_MDEIMAGES` (images des éléments, photos des salariés), `PMEAFFACTION`, `PMEACTION` | `ged_conteneur`, `ged_document` (base64), `ged_document_entite`, `msg_message_observation` | contenus par empreinte dans le stockage de la société, documents de la GED sur leurs fiches (sinon répertoires « Reprise »), notes du CRM |
 | `VALEURS_CHAMPS` | tables des fiches | `z_dataspec_data` | valeurs des champs supplémentaires (toujours en dernier) |
 
 ## Règles transverses
@@ -65,7 +66,7 @@ Classes du cœur dans `src/LogiBTP.Api/Reprise/` ; un domaine par source, même 
 Référentiels : `REPRISE_DECIMALES`, `REPRISE_SANS_EQUIVALENT`, `REPRISE_VALEUR_INCONNUE` ; annuaire : `SiretPris`,
 `PayeurInconnu` ; bibliothèque : `PrixImpose`, `ConversionManquante`, `ComposanteHorsBibliotheque` ; pièces :
 `EcartTtc`, `LigneNonReprise`, `AvancementSansMarche` ; règlements : `EcheancierEcart`, `PointageExcedent` ;
-exploitation : `PointageNonRepris` ; stock : `ConsommationNonReprise`. Valeurs exactes : `modules/import/js/src/codes.js`.
+exploitation : `PointageNonRepris` ; stock : `ConsommationNonReprise` ; GED : `GedNonReprise` (aussi le décompte des contenus distincts). Valeurs exactes : `modules/import/js/src/codes.js`.
 
 ## Tests
 - Module : `npm test --workspace modules/import/js` (correspondances, associations, RTF, fusions) ;
@@ -78,5 +79,4 @@ exploitation : `PointageNonRepris` ; stock : `ConsommationNonReprise`. Valeurs e
 
 ## Restes (voir `TODO.md`)
 Points à confirmer sur une copie des bases réelles (sens de colonnes, unités, codes non documentés) ; reprise exécutée
-dans la requête HTTP (une tâche de fond reste à décider pour les grosses bases) ; phase 2 : GED et notes (lot 16),
-tables `PP_*` (lot 17).
+dans la requête HTTP (une tâche de fond reste à décider pour les grosses bases) ; tables `PP_*` (lot 17).

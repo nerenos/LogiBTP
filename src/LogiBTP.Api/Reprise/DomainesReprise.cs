@@ -27,6 +27,8 @@ public static class DomainesReprise
         public const string Reglements = "REGLEMENTS";
         public const string Exploitation = "EXPLOITATION";
         public const string Stock = "STOCK";
+        /// <summary>GED et notes (lot 16) : contenus rangés sous le répertoire de stockage de la société.</summary>
+        public const string Ged = "GED";
         /// <summary>Valeurs des champs supplémentaires : déclaré en dernier (après toutes les fiches reprises).</summary>
         public const string ValeursChamps = "VALEURS_CHAMPS";
     }
@@ -34,10 +36,11 @@ public static class DomainesReprise
     /// <summary>Paramètre du module Comptabilité où l'analytique source est gardé (Q11), sans table cible.</summary>
     public const string ParametreAnalytique = "reprise_analytique";
 
-    public static IReadOnlyList<IDomaineReprise> Pour(string source) => source switch
+    /// <param name="stockageGed">Répertoire de la GED de la société (sous le nom de sa base) ; null : documents non repris.</param>
+    public static IReadOnlyList<IDomaineReprise> Pour(string source, string? stockageGed = null) => source switch
     {
-        SourceReprise.Mde => [new SocieteMde(), new ReferentielsMde(), new ChampsMde(), new AnnuaireMde(), new RessourcesMde(), new BibliothequeMde(), new StructureMde(), new PiecesVenteMde(), new AchatsMde(), new ReglementsMde(), new ExploitationMde(), new StockMde(), new ValeursChampsMde()],
-        SourceReprise.Optim => [new SocieteOptim(), new ReferentielsOptim(), new ChampsOptim(), new AnnuaireOptim(), new RessourcesOptim(), new BibliothequeOptim(), new StructureOptim(), new PiecesVenteOptim(), new AchatsOptim(), new ReglementsOptim(), new ExploitationOptim(), new StockOptim(), new ValeursChampsOptim()],
+        SourceReprise.Mde => [new SocieteMde(), new ReferentielsMde(), new ChampsMde(), new AnnuaireMde(), new RessourcesMde(), new BibliothequeMde(), new StructureMde(), new PiecesVenteMde(), new AchatsMde(), new ReglementsMde(), new ExploitationMde(), new StockMde(), new GedMde(stockageGed), new ValeursChampsMde()],
+        SourceReprise.Optim => [new SocieteOptim(), new ReferentielsOptim(), new ChampsOptim(), new AnnuaireOptim(), new RessourcesOptim(), new BibliothequeOptim(), new StructureOptim(), new PiecesVenteOptim(), new AchatsOptim(), new ReglementsOptim(), new ExploitationOptim(), new StockOptim(), new GedOptim(stockageGed), new ValeursChampsOptim()],
         _ => throw new ArgumentException($"Source de reprise inconnue : {source}"),
     };
 }

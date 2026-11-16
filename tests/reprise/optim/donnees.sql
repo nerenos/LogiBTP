@@ -387,3 +387,20 @@ INSERT INTO svc_rapport_conso (RCS_ID, RCS_ART_ID, RCS_CHT_ID, RCS_DOE_ID, RCS_M
  (1, 1, 1, NULL, 'Béton de propreté', '2024-06-12', 3, 95, 285),
  (2, 1, 1, 5, NULL, '2024-06-13', 8, 95, 760),
  (3, NULL, 1, NULL, 'Location benne', '2024-06-14', 1, 150, 150);
+
+-- Lot 16, GED et notes : un document lié à un chantier et à un tiers, sa copie sur une affaire (même contenu), un
+-- document sans fiche (site ignoré → répertoires Reprise › Plans › Archives › 2024), un sans contenu, un désactivé ;
+-- messages (information, tâche faite, entité inconnue).
+INSERT INTO ged_conteneur (GCN_ID, GCN_SCT_ID, GCN_Code, GCN_Libelle) VALUES (1, 1, 'PLANS', 'Plans');
+INSERT INTO ged_document (GDC_ID, GDC_GCN_ID, GDC_NomDoc, GDC_NomFichier, GDC_SousDossier, GDC_TypeFichier, GDC_Date, GDC_Objet, GDC_Base64, GDC_IsDesactive) VALUES
+ (1, 1, 'Plan masse', 'plan-masse.pdf', NULL, 'pdf', '2024-06-03', 'Indice A', 'JVBERi0xLjQK', 0),
+ (2, 1, 'Copie plan', NULL, NULL, 'pdf', NULL, NULL, 'JVBERi0xLjQK', 0),
+ (3, 1, 'Note', 'note.txt', 'Archives\\2024', 'txt', NULL, NULL, 'SGVsbG8=', 0),
+ (4, 1, 'Vide', 'vide.pdf', NULL, 'pdf', NULL, NULL, NULL, 0),
+ (5, 1, 'Ancien', 'ancien.pdf', NULL, 'pdf', NULL, NULL, 'SGVsbG8=', 1);
+INSERT INTO ged_document_entite (GDE_ID, GDE_GDC_ID, GDE_TypeEntite, GDE_Entite_ID, GDE_Ordre) VALUES
+ (1, 1, 'CHT', 1, 1), (2, 1, 'TRS', 10, 2), (3, 2, 'AFF', 1, 1), (4, 4, 'CHT', 1, 1), (5, 3, 'SIT', 1, 1);
+INSERT INTO msg_message_observation (MSG_ID, MSG_Type, MSG_Entite_Type, MSG_Entite_ID, MSG_Objet, MSG_Libelle, MSG_DateDebut, MSG_DateEcheance, MSG_IsFait, MSG_IsDesactive) VALUES
+ (1, 1046, 'CHT', 1, 'Accès chantier', 'Badge à retirer au poste de garde', '2024-06-01', NULL, 0, 0),
+ (2, 1048, 'AFF', 1, '', 'Envoyer le DOE', '2024-06-02', '2024-07-01', 1, 0),
+ (3, 1047, 'XYZ', 1, 'Inconnu', NULL, NULL, NULL, 0, 0);

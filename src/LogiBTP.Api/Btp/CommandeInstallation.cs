@@ -60,7 +60,7 @@ public static class CommandeInstallation
                 installation module majeure MODULE [--nom NOM]   (développement : création N+1.0, archivage de la majeure N-1)
                 installation publier --verifier --base DEV [--depuis DOSSIER] [--demo]   (contrôle de publication, code non nul si écart)
                 installation prefixe ajouter PREFIXE --integrateur NOM
-                installation societe importer CODE --source MDE|OPTIM [--connexion CHAINE] [--societes 1,2] [--reel] [--correspondances F.json] [--rapport F.md]
+                installation societe importer CODE --source MDE|OPTIM [--connexion CHAINE] [--societes 1,2] [--reel] [--correspondances F.json] [--rapport F.md] [--ged RACINE_GED]
                     (reprise d'une base MDE ou OptimBTP dans la base neuve de la société ; simulation sauf --reel ;
                      chaîne de la base source dans LOGIBTP_REPRISE_SOURCE à défaut de --connexion)
         """;
@@ -333,6 +333,8 @@ public static class CommandeInstallation
             Simulation = !args.Contains("--reel"),
             Correspondances = fichier is null ? null : File.ReadAllText(fichier),
             Auteur = "installation",
+            // GED (lot 16) : racine du stockage (section Ged:Repertoire de l'API), documents rangés sous le nom de la base.
+            StockageGed = Option(args, "--ged") is { } ged ? Path.Combine(Path.GetFullPath(ged), modele.NomBase(code)) : null,
         };
         var resultat = await Reprise.RepriseBase.ExecuterAsync(demande, CancellationToken.None);
         var markdown = resultat.Rapport.EnMarkdown();

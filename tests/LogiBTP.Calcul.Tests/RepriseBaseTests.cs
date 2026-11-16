@@ -110,8 +110,11 @@ public class RepriseBaseTests
         {
             Source = source, ConnexionSource = connexion, ConnexionCible = b.Connexion,
             Societes = source == SourceReprise.Optim ? ["1", "2"] : [], Auteur = "test",
+            StockageGed = Path.Combine(Path.GetTempPath(), "reprise-ged-" + Guid.NewGuid().ToString("N")),
         };
         var simulation = await RepriseBase.ExecuterAsync(demande, default);
+        // Simulation : rien sur le disque.
+        Assert.False(Directory.Exists(demande.StockageGed));
         Assert.True(simulation.Rapport.Etat == EtatReprise.Terminee, string.Join("\n", simulation.Rapport.Anomalies.Select(x => $"{x.Niveau} {x.Code} {x.Emplacement} {x.Message}")));
         Assert.True(simulation.Rapport.Simulation);
         Assert.True(simulation.Rapport.TablesSource.Count > 150);
@@ -136,11 +139,68 @@ public class RepriseBaseTests
         await VerifierReglementsAsync(b, source, reelle.Rapport);
         await VerifierExploitationAsync(b, source, reelle.Rapport);
         await VerifierStockAsync(b, source, reelle.Rapport);
+        await VerifierGedAsync(b, source, reelle.Rapport, demande.StockageGed!);
 
         // Correspondances fournies invalides : refus avant toute lecture.
         var refus = await Assert.ThrowsAsync<RepriseRefuseeException>(() => RepriseBase.ExecuterAsync(
             demande with { Correspondances = $$"""{ "source": "{{source}}", "version": 1, "tables": {} }""" }, default));
         Assert.Equal(ErreurReprise.CorrespondancesInvalides, refus.Code);
+    }
+
+    /// <summary>Lot 16 : fichiers déposés une fois par empreinte, documents rattachés à leurs fiches, répertoires, notes du CRM.</summary>
+    private static async Task VerifierGedAsync(BaseNeuve b, string source, RapportReprise r, string stockage)
+    {
+        async Task<long> Compter(string sql) => await b.CompterAsync(sql);
+        // Toute version pointe un contenu présent sur le disque, rangé par son empreinte.
+        var chemins = new List<string>();
+        await using (var c = new NpgsqlConnection(b.Connexion))
+        {
+            await c.OpenAsync();
+            await using var cmd = new NpgsqlCommand("SELECT DISTINCT g.cge_chemin FROM version_ged v JOIN contenu_ged g ON g.cge_empreinte = v.vge_empreinte", c);
+            await using var lr = await cmd.ExecuteReaderAsync();
+            while (await lr.ReadAsync()) chemins.Add(lr.GetString(0));
+        }
+        Assert.All(chemins, ch => Assert.True(File.Exists(Path.Combine(stockage, ch)), ch));
+        Assert.Equal(0L, await Compter("SELECT count(*) FROM document_ged WHERE dge_nb_versions <> 1"));
+        async Task<long> Lies(string type, string table, string colonne, string code) => await Compter($"""
+            SELECT count(*) FROM document_ged d JOIN {table} x ON d.dge_id_element = x.{colonne}::text WHERE d.dge_type_element = '{type}' AND x.{code}
+            """);
+        async Task<long> Notes(string nature, string etat) => await Compter($"SELECT count(*) FROM crm_note n JOIN crm_note_lien l ON l.nli_not_id = n.not_id WHERE n.not_nature = '{nature}' AND n.not_etat = '{etat}'");
+        if (source == SourceReprise.Mde)
+        {
+            Assert.Single(chemins);
+            Assert.Equal(2L, await Compter("SELECT count(*) FROM document_ged"));
+            Assert.Equal(1L, await Lies("element", "element", "ele_id", "ele_code = 'CIM35' AND x.ele_image_ged = d.dge_id"));
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM individu i JOIN salarie s ON s.sal_ind_id = i.ind_id WHERE s.sal_code = 'SAL01' AND i.ind_image_ged IS NOT NULL"));
+            Assert.Equal((2, 2, 1), Volume(r, GedMde.Images));
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM crm_note n JOIN crm_note_lien l ON l.nli_not_id = n.not_id JOIN affaire a ON l.nli_id_element = a.aff_id::text WHERE l.nli_type_element = 'affaire' AND a.aff_code = 'AF001' AND n.not_objet = 'Relance architecte' AND n.not_nature = 'ACTION' AND n.not_etat = 'TERMINE'"));
+            Assert.Equal(1L, await Notes("ACTION", "A_FAIRE"));
+            Assert.Contains(r.Anomalies, a => a.Code == CodeAnomalie.GedNonReprise && a.Emplacement == "PMEAFFACTION 3");
+            Assert.Equal((3, 2, 1), Volume(r, GedMde.Actions));
+        }
+        else
+        {
+            Assert.Equal(2, chemins.Count);
+            Assert.Equal(4L, await Compter("SELECT count(*) FROM document_ged"));
+            Assert.Equal(1L, await Lies("chantier", "chantier", "cha_id", "cha_code = 'C24-001'"));
+            Assert.Equal(1L, await Lies("affaire", "affaire", "aff_id", "aff_code = '24-001'"));
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM document_ged WHERE dge_type_element = 'personne'"));
+            Assert.Equal(1L, await Compter("""
+                SELECT count(*) FROM document_ged d JOIN repertoire_ged r4 ON r4.rge_id = d.dge_repertoire_id AND r4.rge_nom = '2024'
+                JOIN repertoire_ged r3 ON r3.rge_id = r4.rge_parent_id AND r3.rge_nom = 'Archives'
+                JOIN repertoire_ged r2 ON r2.rge_id = r3.rge_parent_id AND r2.rge_nom = 'Plans'
+                JOIN repertoire_ged r1 ON r1.rge_id = r2.rge_parent_id AND r1.rge_nom = 'Reprise' AND r1.rge_parent_id IS NULL
+                WHERE d.dge_type_element IS NULL
+                """));
+            Assert.Equal(3L, await Compter("SELECT count(*) FROM version_ged WHERE vge_type_mime = 'application/pdf' AND vge_nom_fichier LIKE '%.pdf'"));
+            Assert.Contains(r.Anomalies, a => a.Code == CodeAnomalie.GedNonReprise && a.Emplacement == "ged_document 4");
+            Assert.Equal((5, 3, 2), Volume(r, GedOptim.Documents));
+            Assert.Equal(1L, await Notes("MESSAGE", "MEMO"));
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM crm_note WHERE not_nature = 'TACHE' AND not_etat = 'TERMINE' AND not_objet = 'Envoyer le DOE' AND not_echeance IS NOT NULL"));
+            Assert.Contains(r.Anomalies, a => a.Code == CodeAnomalie.GedNonReprise && a.Emplacement == "msg_message_observation 3");
+            Assert.Equal((3, 2, 1), Volume(r, GedOptim.Messages));
+        }
+        Directory.Delete(stockage, recursive: true);
     }
 
     /// <summary>Lot 14 : inventaire d'ouverture par article et lieu, consommations hors pièce en coût du chantier, heures de matériel.</summary>

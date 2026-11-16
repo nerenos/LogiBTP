@@ -24,6 +24,9 @@ public sealed record DemandeReprise
     public string? Correspondances { get; init; }
 
     public string? Auteur { get; init; }
+
+    /// <summary>Répertoire de stockage de la GED de la société (déjà sous le nom de sa base) ; null : fichiers non repris.</summary>
+    public string? StockageGed { get; init; }
 }
 
 /// <summary>
@@ -69,7 +72,7 @@ public static class RepriseBase
                 "Correspondances invalides : " + string.Join(" ; ", erreurs.Select(e => $"{e.Code} {e.Emplacement} {e.Valeur}".TrimEnd())));
 
         await using var lecteur = Lecteur(source, demande.ConnexionSource);
-        var moteur = new MoteurReprise(DomainesReprise.Pour(source), BaseCibleReprise.EstVideAsync);
+        var moteur = new MoteurReprise(DomainesReprise.Pour(source, demande.StockageGed), BaseCibleReprise.EstVideAsync);
         return await moteur.ExecuterAsync(new OptionsReprise
         {
             Source = source, Societes = demande.Societes, Simulation = demande.Simulation, Auteur = demande.Auteur,

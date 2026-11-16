@@ -1,3 +1,4 @@
+using LogiBTP.Ged;
 using LogiBTP.Import;
 using LogiBTP.Import.Reprise;
 using LogiBTP.Socle.Donnees;
@@ -43,7 +44,7 @@ public static class RoutesReprise
             var s = Source(source);
             return Results.Ok(new { nom = $"correspondances-{s.ToLowerInvariant()}.json", contenu = CorrespondancesReprise.TexteParDefaut(s) });
         });
-        g.MapPost("/executer", async (DemandeRepriseEcran d, HttpContext http, UniteEcriture unite, CancellationToken ct) =>
+        g.MapPost("/executer", async (DemandeRepriseEcran d, HttpContext http, UniteEcriture unite, StockageGed stockage, CancellationToken ct) =>
         {
             var u = Utilisateur.Depuis(http);
             u.ExigerAdmin();
@@ -57,6 +58,7 @@ public static class RoutesReprise
                     Source = Source(d.Source), ConnexionSource = d.Connexion, Simulation = d.Simulation, Auteur = u.Code,
                     Societes = (d.Societes ?? []).Select(s => s.Trim()).Where(s => s.Length > 0).ToList(),
                     Correspondances = string.IsNullOrWhiteSpace(d.Correspondances) ? null : d.Correspondances,
+                    StockageGed = stockage.Racine,
                 }, unite, ct);
                 return Results.Ok(new { reprise_id = r.RepriseId, rapport = r.Rapport });
             }
