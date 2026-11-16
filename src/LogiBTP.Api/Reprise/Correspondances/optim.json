@@ -1,0 +1,104 @@
+{
+  // Correspondances par défaut de la reprise d'une base OptimBTP (analyse ANALYSE-IMPORT-MDE-OPTIM.md, § 4 et § 10).
+  // Les types portés par z_parametre sont rapprochés par PRM_TypeParam (type_parametre) et PRM_Code, jamais par PRM_ID.
+  "source": "OPTIM",
+  "version": 1,
+  "description": "Paramètres et indicateurs OptimBTP vers les codes LogiBTP",
+  "tables": {
+    "type_document_vente": {
+      "description": "Type d'une pièce de vente",
+      "colonne": "vte_doc_entete.VDE_Type_ID, vte_lien_doc.VLD_Type_Id_*",
+      "type_parametre": "TypeDocVte",
+      "cibles": ["TYPE_DOCUMENT"],
+      "entrees": [
+        { "source": "DEV", "cible": "V_DEVIS" },
+        { "source": "BPU", "cible": "V_DEVIS", "note": "Bordereau de prix (VDE_VDE_ID_BPU)" },
+        { "source": "SIT", "cible": "V_SITUATION" },
+        { "source": "FAC", "cible": "V_FACTURE" },
+        { "source": "AVR", "cible": "V_AVOIR" },
+        { "source": "ATT", "ignorer": true, "motif": "Attachement : non repris (Q16)" },
+        { "source": "INT", "ignorer": true, "motif": "Bon d'intervention : non repris (Q16)" },
+        { "source": "TRA", "ignorer": true, "motif": "Bon de travail : non repris (Q16)" }
+      ]
+    },
+    "type_document_achat": {
+      "description": "Type d'une pièce d'achat",
+      "colonne": "ach_doc_entete.DOE_Type",
+      "type_parametre": "TypeDocAchat",
+      "cibles": ["TYPE_DOCUMENT"],
+      "entrees": [
+        { "source": "DPRX", "cible": "A_DEVIS", "note": "Demande de prix (Q16)" },
+        { "source": "CDE", "cible": "A_COMMANDE" },
+        { "source": "BL", "cible": "A_RECEPTION" },
+        { "source": "BLCH", "cible": "A_RECEPTION", "note": "Document reçu sur chantier" },
+        { "source": "FAC", "cible": "A_FACTURE" },
+        { "source": "REGUL", "cible": "A_FACTURE", "note": "Régule : avoir si le montant est négatif (lot 12)" },
+        { "source": "RESA", "cible": "S_RESERVATION" },
+        { "source": "CI", "ignorer": true, "motif": "Cession interne : non reprise (Q16)" },
+        { "source": "APPRO", "ignorer": true, "motif": "Demande d'approvisionnement : non reprise (Q16)" }
+      ]
+    },
+    "nature_message": {
+      "description": "Nature d'un message ou d'une observation",
+      "colonne": "msg_message_observation.MSG_Type",
+      "type_parametre": "Message_Type",
+      "cibles": ["NATURE_NOTE"],
+      "entrees": [
+        { "source": "INFO", "cible": "MESSAGE" },
+        { "source": "MSG", "cible": "MESSAGE" },
+        { "source": "TACHE", "cible": "TACHE" }
+      ]
+    },
+    "entite": {
+      "description": "Entité visée par un lien polymorphe (z_adresse, z_dataspec_data, ged_document_entite, msg_message_observation…)",
+      "colonne": "*_TypeEntite",
+      "cibles": ["TYPE_FICHE"],
+      "entrees": [
+        { "source": "TRS", "cible": "personne" },
+        { "source": "PRS", "cible": "individu" },
+        { "source": "SLR", "cible": "salarie" },
+        { "source": "MTR", "cible": "materiel" },
+        { "source": "ART", "cible": "element" },
+        { "source": "AFF", "cible": "affaire" },
+        { "source": "CHT", "cible": "chantier" },
+        { "source": "SIT", "ignorer": true, "motif": "Site (bib_site) : sans fiche équivalente" },
+        { "source": "LIVRAISON", "ignorer": true, "motif": "Adresse sans entité (identifiant toujours nul)" },
+        { "source": "PARCMATERIEL", "ignorer": true, "motif": "Adresse du parc : sans entité" }
+      ]
+    },
+    "categorie_tiers": {
+      "description": "Indicateurs de catégorie d'un tiers (ref_categ, par bib_tiers_categ) vers les casquettes",
+      "colonne": "ref_categ.CAT_Is*",
+      "cibles": ["CASQUETTE"],
+      "entrees": [
+        { "source": "CAT_IsClient", "cible": "CLIENT" },
+        { "source": "CAT_IsProspect", "cible": "PROSPECT" },
+        { "source": "CAT_IsFournisseur", "cible": "FOURNISSEUR" },
+        { "source": "CAT_IsSsTraitant", "cible": "SOUS_TRAITANT" },
+        { "source": "CAT_IsInterim", "cible": "INTERIM" },
+        { "source": "CAT_IsLoueur", "cible": "LOUEUR" },
+        { "source": "CAT_IsFabricant", "ignorer": true, "motif": "Fabricant : étiquette, pas de casquette" },
+        { "source": "CAT_IsTransitaire", "ignorer": true, "motif": "Transitaire : étiquette, pas de casquette" },
+        { "source": "CAT_IsConcurrent", "ignorer": true, "motif": "Concurrent : étiquette, pas de casquette" },
+        { "source": "CAT_IsCollectDechet", "ignorer": true, "motif": "Collecte de déchets : étiquette, pas de casquette" },
+        { "source": "CAT_IsStructure", "ignorer": true, "motif": "Fiche de structure (société) : reprise comme société" }
+      ]
+    },
+    "regroupement_nature": {
+      "description": "Indicateurs d'un type de famille (ref_famille_type) vers les regroupements de natures ; le premier vrai l'emporte, dans l'ordre",
+      "colonne": "ref_famille_type.FTY_Is*",
+      "cibles": ["REGROUPEMENT_NATURE"],
+      "entrees": [
+        { "source": "FTY_IsInterim", "cible": "MO", "note": "Intérim : main-d'œuvre" },
+        { "source": "FTY_IsMO", "cible": "MO" },
+        { "source": "FTY_IsSsTraitance", "cible": "SOUS_TRAITANCE" },
+        { "source": "FTY_IsEngin", "cible": "ENGIN" },
+        { "source": "FTY_IsAmortissement", "cible": "ENGIN", "note": "Amortissement de matériel" },
+        { "source": "FTY_IsMateriaux", "cible": "MATERIAUX" },
+        { "source": "FTY_IsFraisChantier", "cible": "PRESTATION" },
+        { "source": "FTY_IsDechet", "cible": "PRESTATION" },
+        { "source": "FTY_IsVente", "cible": "VENTE" }
+      ]
+    }
+  }
+}

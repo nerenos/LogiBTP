@@ -41,6 +41,12 @@
 - Le module reste sans métier BTP ni dépendance : les codes du cœur (`TL`, colonnes `lig_*`, natures) n'apparaissent que dans `client/src/app/import/`.
 - Montants du devis neutre en `Number` (arrondis `arr` à 6 décimales) : le calcul reste celui du moteur du cœur après traduction.
 
+## Reprise d'une base (serveur, plan `documentation/conception/plans/reprise-mde-optim.md`)
+- `dotnet/LogiBTP.Import` (sans dépendance) : `Codes.cs` ↔ `js/src/codes.js` (`SOURCE_REPRISE`, `ERREUR_CORRESPONDANCE`, listes neutres `ETAT_SUITE`, `PART_SOUS_TRAITANCE`, `MODE_AVANCEMENT` ; parité par `CodesTests`).
+- `Reprise/Correspondances.cs` : `FichierCorrespondances` (JSON à commentaires : `source`, `version`, `tables` nommées ; table = `colonne`, `type_parametre` (OPTIM : `PRM_TypeParam`, rapprochement par `PRM_Code`, jamais `PRM_ID`), `cibles` (noms de listes), `entrees` `{ source, cible | ignorer + motif, note }`), `Lire`, `Valider(tablesAttendues, cibles, source)` → erreurs `ERREUR_CORRESPONDANCE` avec emplacement ; `TableCorrespondance.Trouver` (espaces de fin ignorés).
+- Le module ne connaît aucun code du cœur : fichiers par défaut, tables attendues et listes de cibles dans `src/LogiBTP.Api/Reprise/` (`CorrespondancesReprise`, ressources `Correspondances/mde.json`, `optim.json`), validés par `tests/LogiBTP.Calcul.Tests/RepriseCorrespondancesTests.cs` contre les codes du dépôt.
+- Bases sources de test (fictives) : `tests/reprise/` (`generer-ddl.py` depuis les catalogues des analyses, `mde/` et `optim/` : `schema.sql` généré, `donnees.sql` à la main, complété par chaque lot de domaine ; `monter.sh` : conteneurs SQL Server 2022 port 14330 et MariaDB 11.2 port 33060, affiche `LOGIBTP_TEST_MSSQL` / `LOGIBTP_TEST_MARIADB`). Colonnes NOT NULL des sources : chaîne vide ou 0 au lieu de NULL (l'import doit traiter `''` et `0` comme absents). Jamais de base de l'utilisateur.
+
 ## Textes et icônes (module Personnalisation, lot P3s)
 - Textes `import.*` du `fr.json` du module (couche `modules/import/js/personnalisation`, ajoutée à `client/personnalisation/couches.js`) : `xml`, `zip`, `optim` (erreurs et avertissements), `sorts` (`SORTS` par `textesParCode`), `champs.<entete|ligne|intervenant>.<Champ>` (motifs des champs), `zones` du rapport ; tests avec le dictionnaire (`test/preparation.js`). Écrans du cœur : `import_btp.*`.
 

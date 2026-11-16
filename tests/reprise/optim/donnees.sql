@@ -1,0 +1,105 @@
+-- Jeu de données réduit de la base source OPTIM de test (fictif). Chargé après schema.sql par tests/reprise/monter.sh.
+-- Jeu de base du lot 0 : sociétés, paramètres, référentiels, annuaire ; chaque lot de domaine complète ce fichier.
+-- Cas couverts : deux établissements d'un même SIRET (regroupés dans une base, R1) et une autre société ; types portés
+-- par z_parametre (rapprochés par PRM_TypeParam + PRM_Code, jamais par PRM_ID) ; tiers à plusieurs catégories ;
+-- plusieurs adresses (z_adresse polymorphe, TRS) et contacts ; doublon de tiers (même SIRET) ; zones supplémentaires
+-- (z_dataspec_*).
+SET NAMES utf8mb4;
+
+-- Sociétés : 1 et 2 partagent le SIRET (établissements), 3 est une autre société
+INSERT INTO ref_societe (SCT_ID, SCT_SCT_ID, SCT_Niveau, SCT_TRS_ID, SCT_RaisonSociale, SCT_LibelleCourt, SCT_CodeChrono,
+  SCT_CodeCompta, SCT_CodeAna, SCT_IsDesactive) VALUES
+ (1, 0, 1, 900, 'CONSTRUCTIONS DU RHONE', 'CDR', 'CDR', 'CDR', 'AN-LYON', 0),
+ (2, 1, 2, 901, 'CONSTRUCTIONS DU RHONE - AGENCE ALPES', 'CDR-ALP', 'CDR', 'CDR', 'AN-ALPES', 0),
+ (3, 0, 1, 902, 'RHONE ENERGIE', 'RHE', 'RHE', 'RHE', '', 0);
+
+-- Paramètres (les PRM_ID n'ont aucun sens hors de cette base)
+INSERT INTO z_parametre (PRM_ID, PRM_Code, PRM_Libelle, PRM_TypeParam, PRM_Ordre, PRM_IsDesactive) VALUES
+ (700, 'DEV', 'Devis', 'TypeDocVte', 1, 0),
+ (701, 'ATT', 'Attachement', 'TypeDocVte', 2, 0),
+ (702, 'SIT', 'Etat situation', 'TypeDocVte', 3, 0),
+ (703, 'FAC', 'Facture', 'TypeDocVte', 4, 0),
+ (704, 'AVR', 'Avoir', 'TypeDocVte', 5, 0),
+ (707, 'BPU', 'Bordereau', 'TypeDocVte', 6, 0),
+ (982, 'INT', 'Bon d''intervention', 'TypeDocVte', 7, 0),
+ (983, 'TRA', 'Bon de travail', 'TypeDocVte', 8, 0),
+ (141, 'CDE', 'Commande', 'TypeDocAchat', 1, 0),
+ (142, 'BL', 'Bon de livraison', 'TypeDocAchat', 2, 0),
+ (143, 'DPRX', 'Demande de prix', 'TypeDocAchat', 3, 0),
+ (145, 'RESA', 'Ordre de réservation', 'TypeDocAchat', 4, 0),
+ (303, 'CI', 'Cession Interne', 'TypeDocAchat', 5, 0),
+ (316, 'APPRO', 'Demande d''appro', 'TypeDocAchat', 6, 0),
+ (382, 'FAC', 'Facture', 'TypeDocAchat', 7, 0),
+ (454, 'REGUL', 'Regule', 'TypeDocAchat', 8, 0),
+ (1144, 'BLCH', 'Document reçu sur chantier', 'TypeDocAchat', 9, 0),
+ (1046, 'INFO', 'Information', 'Message_Type', 1, 0),
+ (1047, 'MSG', 'Message', 'Message_Type', 2, 0),
+ (1048, 'TACHE', 'Tâche', 'Message_Type', 3, 0),
+ (1201, 'M', 'M.', 'Civilite', 1, 0),
+ (1202, 'MME', 'Mme', 'Civilite', 2, 0);
+
+-- Référentiels
+INSERT INTO z_unite (UNT_ID, UNT_Code, UNT_Libelle, UNT_IsDefaut, UNT_IsDesactive) VALUES
+ (1, 'U', 'Unité', 1, 0), (2, 'm²', 'Mètre carré', 0, 0), (3, 'ml', 'Mètre linéaire', 0, 0), (4, 'h', 'Heure', 0, 0),
+ (5, 'Ens', 'Ensemble', 0, 0), (6, 'Forf', 'Forfait', 0, 0);
+INSERT INTO ref_categ (CAT_ID, CAT_Code, CAT_Libelle, CAT_IsAchat, CAT_IsVente, CAT_IsFournisseur, CAT_IsSsTraitant,
+  CAT_IsInterim, CAT_IsLoueur, CAT_IsClient, CAT_IsFabricant, CAT_IsProspect, CAT_IsDesactive) VALUES
+ (1, 'CLI', 'Client', 0, 1, 0, 0, 0, 0, 1, 0, 0, 0),
+ (2, 'FOU', 'Fournisseur', 1, 0, 1, 0, 0, 0, 0, 0, 0, 0),
+ (3, 'ST', 'Sous-traitant', 1, 0, 0, 1, 0, 0, 0, 0, 0, 0),
+ (4, 'INT', 'Intérim', 1, 0, 0, 0, 1, 0, 0, 0, 0, 0),
+ (5, 'LOC', 'Loueur', 1, 0, 0, 0, 0, 1, 0, 0, 0, 0),
+ (6, 'PRO', 'Prospect', 0, 1, 0, 0, 0, 0, 0, 0, 1, 0),
+ (7, 'FAB', 'Fabricant', 0, 0, 0, 0, 0, 0, 0, 1, 0, 0);
+INSERT INTO ref_famille_type (FTY_ID, FTY_Code, FTY_Libelle, FTY_IsDesactive, FTY_Ordre, FTY_IsMateriaux, FTY_IsMO,
+  FTY_IsEngin, FTY_IsSsTraitance, FTY_IsFraisChantier, FTY_IsInterim, FTY_IsVente) VALUES
+ (1, 'MAT', 'Matériaux', 0, 1, 1, 0, 0, 0, 0, 0, 0),
+ (2, 'MO', 'Main-d''œuvre', 0, 2, 0, 1, 0, 0, 0, 0, 0),
+ (3, 'ENG', 'Engins', 0, 3, 0, 0, 1, 0, 0, 0, 0),
+ (4, 'ST', 'Sous-traitance', 0, 4, 0, 0, 0, 1, 0, 0, 0),
+ (5, 'FC', 'Frais de chantier', 0, 5, 0, 0, 0, 0, 1, 0, 0),
+ (6, 'INTERIM', 'Intérim', 0, 6, 0, 1, 0, 0, 0, 1, 0),
+ (7, 'VTE', 'Vente', 0, 7, 0, 0, 0, 0, 0, 0, 1);
+
+-- Annuaire (bib_tiers n'a pas de SCT_ID : les tiers sont communs aux sociétés)
+INSERT INTO bib_tiers (TRS_ID, TRS_IsTiers, TRS_NomReduit, TRS_RaisonSociale, TRS_Code, TRS_IsParticulier, TRS_Siret,
+  TRS_CompteTiers, TRS_IsDesactive, TRS_EncoursMax, TRS_EmailAchat, TRS_EmailVente, TRS_Observation) VALUES
+ (900, 0, 'CDR', 'CONSTRUCTIONS DU RHONE', 'SOC-CDR', 0, '98765432100011', NULL, 0, 0, '', '', NULL),
+ (901, 0, 'CDR ALPES', 'CONSTRUCTIONS DU RHONE - AGENCE ALPES', 'SOC-CDRALP', 0, '98765432100029', NULL, 0, 0, '', '', NULL),
+ (902, 0, 'RHE', 'RHONE ENERGIE', 'SOC-RHE', 0, '11122233300044', NULL, 0, 0, '', '', NULL),
+ (10, 1, 'DUPONT', 'DUPONT Marie', 'CLI-DUPONT', 1, NULL, '411DUPONT', 0, 0, '', 'marie.dupont@exemple.fr', 'Cliente particulière'),
+ (11, 1, 'IMMO GRAND LYON', 'SAS IMMO GRAND LYON', 'CLI-IGL', 0, '33344455500016', '411IGL', 0, 150000.5, '', 'factures@igl.fr', NULL),
+ (12, 1, 'NEGOBAT', 'NEGOBAT SA', 'FOU-NEGO', 0, '66677788800013', '401NEGO', 0, 0, 'cde@negobat.fr', 'ventes@negobat.fr', NULL),
+ (13, 1, 'NEGOBAT (doublon)', 'NEGOBAT', 'CLI-NEGO', 0, '66677788800013', '411NEGO', 0, 0, '', '', 'Créé en double côté vente'),
+ (14, 1, 'TERRASS 69', 'TERRASSEMENTS 69', 'ST-T69', 0, '12312312300012', '401T69', 0, 0, '', '', NULL),
+ (15, 1, 'ANCIEN', 'ANCIEN FOURNISSEUR', 'FOU-OLD', 0, NULL, '401OLD', 1, 0, '', '', NULL);
+INSERT INTO bib_tiers_categ (TRC_ID, TRC_TRS_ID, TRC_CAT_ID, TRC_IsValDefaut) VALUES
+ (1, 10, 1, 1), (2, 11, 1, 1), (3, 11, 6, 0), (4, 12, 2, 1), (5, 12, 7, 0), (6, 13, 1, 1), (7, 14, 3, 1), (8, 14, 5, 0),
+ (9, 15, 2, 1);
+INSERT INTO z_adresse (ADR_Id, ADR_Libelle, ADR_TypeEntite, ADR_Entite_Id, ADR_Ligne1, ADR_Ligne2, ADR_CP, ADR_Ville,
+  ADR_Pays, ADR_NumTel1, ADR_NumPort, ADR_Email, ADR_IsDesactive) VALUES
+ (1, 'Siège', 'TRS', 900, '5 rue de la République', NULL, '69002', 'Lyon', 'France', '0472000000', NULL, NULL, 0),
+ (2, 'Agence', 'TRS', 901, '3 avenue des Alpes', NULL, '38000', 'Grenoble', 'France', NULL, NULL, NULL, 0),
+ (3, 'Domicile', 'TRS', 10, '7 impasse des Lilas', NULL, '69500', 'Bron', 'France', NULL, '0644444444', 'marie.dupont@exemple.fr', 0),
+ (4, 'Siège', 'TRS', 11, '100 cours Lafayette', 'Tour Part-Dieu', '69003', 'Lyon', 'France', '0472111111', NULL, NULL, 0),
+ (5, 'Facturation', 'TRS', 11, 'Service comptable', 'BP 1234', '69421', 'Lyon Cedex 03', 'France', NULL, NULL, 'factures@igl.fr', 0),
+ (6, 'Siège', 'TRS', 12, 'ZA des Platières', NULL, '69440', 'Mornant', 'France', '0478999999', NULL, NULL, 0),
+ (7, 'Siège', 'TRS', 13, 'ZA des Platières', NULL, '69440', 'Mornant', 'France', NULL, NULL, NULL, 0),
+ (8, 'Siège', 'TRS', 14, 'Route de Vienne', NULL, '69200', 'Vénissieux', 'France', NULL, NULL, NULL, 0);
+INSERT INTO bib_personne (PRS_ID, PRS_TRS_ID, PRS_Nom, PRS_Prenom, PRS_Civilite, PRS_LibFct, PRS_IsPrincipal,
+  PRS_IsComptable, PRS_IsDesactive, PRS_NumTel, PRS_NumPort, PRS_Email) VALUES
+ (1, 11, 'LEROY', 'Antoine', 1201, 'Directeur de programmes', 1, 0, 0, '0472111112', '0655555555', 'a.leroy@igl.fr'),
+ (2, 11, 'MOREL', 'Sophie', 1202, 'Comptable', 0, 1, 0, '0472111113', NULL, 's.morel@igl.fr'),
+ (3, 12, 'GIRARD', 'Paul', 1201, 'Commercial', 1, 0, 0, NULL, '0666666666', 'p.girard@negobat.fr'),
+ (4, 14, 'FAURE', 'Nicolas', 1201, 'Gérant', 1, 0, 0, NULL, '0677777777', NULL);
+
+-- Zones supplémentaires (DTB : définition, DTD : valeur, entité polymorphe). Le sens des codes DTB_DataType et
+-- DTB_SaisieType n'est pas documenté : l'import déduit le type de la colonne de valeur renseignée (DTD_TXT, DTD_Num, DTD_Date).
+INSERT INTO z_dataspec_bdd (DTB_ID, DTB_Code, DTB_Libelle, DTB_Ordre, DTB_DataType, DTB_SaisieType, DTB_IsDesactive) VALUES
+ (1, 'NUM_PARC', 'Numéro de parc', 1, 0, 0, 0),
+ (2, 'DATE_CT', 'Date du contrôle technique', 2, 2, 0, 0),
+ (3, 'POIDS', 'Poids (kg)', 3, 1, 0, 0);
+INSERT INTO z_dataspec_data (DTD_ID, DTD_DTB_ID, DTD_TypeEntite, DTD_Entite_Id, DTD_TXT, DTD_Num, DTD_Date) VALUES
+ (1, 1, 'MTR', 1, 'P-0012', 0, NULL),
+ (2, 2, 'MTR', 1, '', 0, '2026-03-15'),
+ (3, 3, 'ART', 1, '', 25.5, NULL);

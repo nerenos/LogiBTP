@@ -224,6 +224,8 @@ Analyse du 23/10/2026 : [ANALYSE-MODULE-SOUS-TRAITANCE.md](documentation/concept
 - [ ] OptimBTP : décider du sort des champs non repris (heures, poste de travaux, compléments de pied, première page
   et texte de fin…).
 - [ ] Rattachement automatique du client à l'annuaire.
+- [ ] Reprise d'une base MDE ou OptimBTP dans une nouvelle base : plan
+  [reprise-mde-optim.md](documentation/conception/plans/reprise-mde-optim.md), lots 1 à 17 (lot 0 fait le 16/11/2026).
 
 ### Demandes du 25/10/2026
 

@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>LogiBTP.Import</RootNamespace>
+    <Description>Module Import LogiBTP, partie serveur : reprise d'une base d'un autre logiciel (correspondances, sans métier BTP).</Description>
+  </PropertyGroup>
+
+</Project>
