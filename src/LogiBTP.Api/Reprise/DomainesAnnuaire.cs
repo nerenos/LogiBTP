@@ -90,7 +90,7 @@ public sealed class AnnuaireMde : IDomaineReprise
                             Civilite = principale?.Texte("CIVILITE") is { } civ ? ctx.Registre.TrouverCode(RegistreMde.Civilite, civ) : null,
                             Coordonnees = contacts.SelectMany(c => c.Coordonnees).ToList(),
                         }, ct);
-                    ctx.Rapport.Volume(table).Lues++;
+                    else { var v = ctx.Rapport.Volume(table); v.Lues++; v.Ecartees++; }
                     continue;
                 }
                 if (role is not { Ignorer: false, Cible: { } casquette }) { ctx.Rapport.Volume(table).Ecartees++; continue; }

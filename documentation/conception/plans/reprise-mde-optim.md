@@ -227,6 +227,28 @@ l'analyse, modifié par le § 10.
     facturation électronique et RIB MDE (`IDRIB`) non repris ; chargé d'affaires relié au salarié au lot 7.
 - **Lot 7, ressources** : salariés, intérim, équipes, matériels, habilitations, calendriers ; valeurs forcées listées
   (Q13) ; lien des utilisateurs OPTIM aux fiches (Q20). *Critère* : fiches reprises, liste des valeurs forcées.
+  **FAIT (16/11/2026).**
+  - **Réalisé** : `RessourcesReprise` (cœur) : salarié = individu (rôle SALARIE ou INTERIMAIRE), rattachement à
+    l'agence (société de la base ou établissement), fiche `salarie` (code libre, statut CDI / CDD / INTERIM par
+    mots-clés, type de MO par la catégorie MDE), mission d'intérim (fin = sortie, sinon 31/12, listée) ; types
+    d'habilitations rapprochés par code ou libellé normalisés, sinon créés (catégorie par mots-clés) ; équipes et
+    compositions (début = date de reprise) ; matériels (type et énergie des listes `TYPE_MATERIEL` / `ENERGIE`
+    rapprochés ou créés sous leur famille, compteur initial, loueur, générique → par nombre, visites → habilitations
+    du matériel) ; calendriers rapprochés ou créés avec leurs plages. `RessourcesMde` : `PMESALARIE` ⋈
+    `COMM_EMPLOYE`, adresse par la fiche `COMM_TIERS` de type E, **chargé d'affaires relié au salarié de même nom**
+    (l'individu du lot 6 devient celui du salarié), `PMEEQUIPE` / `PMESALARIEEQUIPE`, `PMEMATERIEL` /
+    `PMETYPEMATERIEL` (véhicule → famille Véhicules, suivi km). `RessourcesOptim` : `svhz_profil_horaire`
+    (première période hors absence), `ref_salarie` des sociétés retenues (fonction = poste, `SLR_PRH_ID` →
+    calendrier, agence d'intérim `SLR_TRS_ID`), `bib_habilitation` / `ref_salarie_habilitation`, `svh_equipe`,
+    `bib_materiel` (famille, type, énergie lus dans `z_parametre` par identifiant), `bib_materiel_visite` ; liste
+    des utilisateurs `z_utilisateur` (actifs) et `z_utilisateur_externe` avec la fiche salarié ou individu (Q20).
+  - **Écarts** : `sal_salaire`, `mat_valeur_achat` et `mat_date_achat` sont devenus facultatifs dans le schéma : rien
+    n'est forcé (Q13 ne vaut plus que pour le service du salarié, la famille du matériel et les dates de mission) ;
+    service des salariés absent des deux sources : service CHANTIER (sinon le premier de production), listé ; coût
+    horaire OPTIM (article de MO) au lot 8 ; affectation d'un matériel à un salarié (`MTR_SLR_ID`) et chantier du
+    matériel (lot 9) non repris ; entretien MDE (`SUIVIENT`…) non repris ; périodes saisonnières d'un profil horaire :
+    la première seule (champ perdu au rapport) ; MDE : pas de table d'utilisateurs dans le catalogue, liste vide ;
+    photos (GED) au lot 16.
 - **Lot 8, bibliothèque** : éléments hors sommeil (Q2), ouvrages avec la perte dans les quantités (Q9), modèles de
   texte (`TEXTE`, Q7), conversions d'unités, tarifs fournisseurs. *Critère* : PV d'un ouvrage retrouvé à 0,01 € près.
 - **Lot 9, structure** : projets, affaires, chantiers (internes si `CHT_IsChantier = 0`, Q14), marchés, intervenants,

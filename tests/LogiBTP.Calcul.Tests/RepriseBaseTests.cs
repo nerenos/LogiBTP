@@ -1,3 +1,4 @@
+using LogiBTP.Domaine;
 using LogiBTP.Api.Reprise;
 using LogiBTP.Import;
 using LogiBTP.Import.Reprise;
@@ -126,6 +127,7 @@ public class RepriseBaseTests
         await VerifierReferentielsAsync(b, source, reelle.Rapport);
         await VerifierChampsAsync(b, source, reelle.Rapport);
         await VerifierAnnuaireAsync(b, source, reelle.Rapport);
+        await VerifierRessourcesAsync(b, source, reelle.Rapport);
 
         // Correspondances fournies invalides : refus avant toute lecture.
         var refus = await Assert.ThrowsAsync<RepriseRefuseeException>(() => RepriseBase.ExecuterAsync(
@@ -251,9 +253,9 @@ public class RepriseBaseTests
                 """));
             Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM personne WHERE per_code = 'S001' AND per_casquettes = '[\"SOUS_TRAITANT\"]'"));
             Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM personne WHERE per_code = 'A001' AND per_casquettes = '[\"ARCHITECTE\"]'"));
-            // Interlocuteurs (9) et gérant de la société de la base (individu rattaché).
-            Assert.Equal(10L, await b.CompterAsync("SELECT count(*) FROM individu"));
-            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM rattachement r JOIN personne p ON p.per_id = r.rat_per_id WHERE p.per_societe_base"));
+            // Interlocuteurs (9) et chargé d'affaires de la société de la base (individu rattaché, relié à son salarié au lot 7).
+            Assert.Equal(9L, await b.CompterAsync("SELECT count(*) FROM rattachement r JOIN personne p ON p.per_id = r.rat_per_id WHERE NOT p.per_societe_base"));
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM individu i JOIN salarie s ON s.sal_ind_id = i.ind_id WHERE i.ind_nom = 'BERNARD' AND i.ind_prenom = 'Luc'"));
             Assert.Equal(9, r.Volumes.Single(v => v.Table == "COMM_TIERSINTERLOC").Ecrites);
             Assert.Equal(1L, await b.CompterAsync("""
                 SELECT count(*) FROM lien_personne l JOIN personne c ON c.per_id = l.lpe_per_id JOIN personne p ON p.per_id = l.lpe_cible_id
@@ -268,7 +270,7 @@ public class RepriseBaseTests
             Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM personne WHERE per_code = 'CLI-DUPONT' AND per_niv_code = 'PARTICULIER'"));
             Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM personne WHERE per_code = 'FOU-OLD' AND NOT per_actif"));
             Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM personne WHERE per_code = 'ST-T69' AND per_iban = 'FR7630006000011234567890189' AND per_bic = 'AGRIFRPP'"));
-            Assert.Equal(4L, await b.CompterAsync("SELECT count(*) FROM rattachement"));
+            Assert.Equal(4L, await b.CompterAsync("SELECT count(*) FROM rattachement r JOIN personne p ON p.per_id = r.rat_per_id WHERE NOT p.per_societe_base AND p.per_parent_id IS NULL"));
             Assert.Equal(1L, await b.CompterAsync("""
                 SELECT count(*) FROM usage_coordonnee u JOIN coordonnee c ON c.coo_id = u.uco_coo_id JOIN personne p ON p.per_id = u.uco_per_id
                 WHERE p.per_code = 'FOU-NEGO' AND c.coo_nature = 'EMAIL' AND u.uco_usage = 'COMMANDE' AND c.coo_valeur = 'cde@negobat.fr'
@@ -279,6 +281,73 @@ public class RepriseBaseTests
                 """));
             // Collectifs : comptes 40 / 41 du plan, jamais les comptes auxiliaires des tiers.
             Assert.Equal(0L, await b.CompterAsync("SELECT count(*) FROM compte_comptable WHERE cpt_code = '411IGL' AND cpt_type = 'COLLECTIF'"));
+        }
+    }
+
+    /// <summary>Lot 7 : salariés, habilitations, équipes, matériels, calendriers, valeurs forcées, utilisateurs.</summary>
+    private static async Task VerifierRessourcesAsync(BaseNeuve b, string source, RapportReprise r)
+    {
+        // Service obligatoire absent des sources : posé par défaut et listé (Q13) ; individu et rattachement à l'agence.
+        Assert.Equal(4L, await b.CompterAsync("SELECT count(*) FROM salarie"));
+        Assert.Equal(4, r.ValeursForcees.Count(v => v.Fiche == TypesFiche.Salarie && v.Champ == "service"));
+        Assert.Equal(4L, await b.CompterAsync("""
+            SELECT count(*) FROM salarie s JOIN individu i ON i.ind_id = s.sal_ind_id
+            JOIN rattachement r ON r.rat_ind_id = i.ind_id AND r.rat_per_id = s.sal_agence_per_id
+            """));
+        Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM salarie WHERE NOT sal_actif AND sal_usage = 'S'"));
+        Assert.Equal(1L, await b.CompterAsync("""
+            SELECT count(*) FROM mission_interim m JOIN salarie s ON s.sal_id = m.mis_sal_id JOIN individu i ON i.ind_id = s.sal_ind_id
+            WHERE s.sal_statut = 'INTERIM' AND i.ind_roles = '["INTERIMAIRE"]' AND m.mis_fin = DATE '2026-12-31'
+            """));
+        if (source == SourceReprise.Mde)
+        {
+            // Le chargé d'affaires G001 (individu du lot 6) devient le salarié SAL01 : pas de second individu.
+            Assert.Equal(1L, await b.CompterAsync("""
+                SELECT count(*) FROM salarie s JOIN individu i ON i.ind_id = s.sal_ind_id
+                WHERE s.sal_code = 'SAL01' AND i.ind_nom = 'BERNARD' AND s.sal_type_mo = 'CADRE' AND s.sal_cout_horaire = 48.5 AND s.sal_salaire = 4200
+                """));
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM individu WHERE ind_nom = 'BERNARD'"));
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM salarie WHERE sal_code = 'SAL02' AND sal_statut = 'CDD' AND sal_ville = 'VENISSIEUX' AND sal_email = 'a.kaci@exemple.fr'"));
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM equipe e JOIN equipe_composition c ON c.eqc_equ_id = e.equ_id WHERE e.equ_code = 'EQ1' AND c.eqc_type = 'INTERIM'"));
+            Assert.Equal(2L, await b.CompterAsync("SELECT count(*) FROM equipe_composition"));
+            // Matériels : type rapproché (Mini-pelle), type créé sous sa famille (véhicule), hors service en sommeil, code coupé.
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM materiel WHERE mat_code = 'MP-001' AND mat_famille = 'MINI_PELLE' AND x_numero_de_parc = 'P-07'"));
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM liste_valeur WHERE lva_liste = 'TYPE_MATERIEL' AND lva_libelle = 'Camion benne' AND lva_parent = 'VEHICULES'"));
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM materiel WHERE mat_code = 'VIEUX' AND mat_usage = 'S' AND mat_compteurs = 'KM' AND mat_kilometres = 480000"));
+            Assert.Contains(r.Anomalies, a => a.Code == CodeAnomalie.CodeRenomme && a.Emplacement == "PMEMATERIEL CAMION-BENNE-02");
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM materiel_releve WHERE mre_unite = 'KM' AND mre_valeur = 125000"));
+        }
+        else
+        {
+            // Salarié d'une société non retenue écarté ; établissement, calendrier, poste par la fonction.
+            Assert.Equal(1, r.Volumes.Single(v => v.Table == "ref_salarie").Ecartees);
+            Assert.Equal(1L, await b.CompterAsync("""
+                SELECT count(*) FROM salarie s JOIN personne p ON p.per_id = s.sal_agence_per_id JOIN calendrier c ON c.cal_id = s.sal_cal_id
+                WHERE s.sal_code = 'M002' AND p.per_niv_code = 'ETABLISSEMENT' AND c.cal_libelle = 'Horaire chantier 39 h' AND s.sal_poste = 'Maçon'
+                """));
+            Assert.Equal(10L, await b.CompterAsync("SELECT count(*) FROM calendrier_plage p JOIN calendrier c ON c.cal_id = p.plg_cal_id WHERE c.cal_libelle = 'Horaire chantier 39 h'"));
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM calendrier_plage p JOIN calendrier c ON c.cal_id = p.plg_cal_id WHERE c.cal_libelle = 'Horaire chantier 39 h' AND p.plg_jour = 5 AND p.plg_debut = 780 AND p.plg_fin = 930"));
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM mission_interim m JOIN personne p ON p.per_id = m.mis_agence_id WHERE p.per_code = 'ST-T69' AND m.mis_debut = DATE '2026-10-01'"));
+            // Habilitations : CACES rapproché, échafaudage créé (sans limite), salarié non repris écarté ; visite → contrôle technique.
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM habilitation h JOIN salarie s ON s.sal_id = h.hab_id_element WHERE h.hab_type_element = 'salarie' AND h.hab_tha_code = 'CACES_R482_A' AND s.sal_code = 'M001' AND h.hab_organisme = 'AFPA'"));
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM type_habilitation WHERE tha_code = 'ECHAF' AND tha_duree_mois IS NULL"));
+            Assert.Equal(1, r.Volumes.Single(v => v.Table == "ref_salarie_habilitation").Ecartees);
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM habilitation h JOIN materiel m ON m.mat_id = h.hab_id_element WHERE h.hab_type_element = 'materiel' AND h.hab_tha_code = 'CONTROLE_TECHNIQUE' AND m.mat_code = 'VU02' AND h.hab_valide_jusqu_au = DATE '2027-03-15'"));
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM equipe e WHERE e.equ_code = 'EQ-GO' AND e.equ_effectif = 3"));
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM equipe"));
+            // Matériels : type créé sous sa famille, énergie créée, loueur, générique par nombre (type forcé), valeur x_ écrite.
+            Assert.Equal(1L, await b.CompterAsync("""
+                SELECT count(*) FROM materiel m JOIN personne p ON p.per_id = m.mat_loueur_id
+                WHERE m.mat_code = 'VU02' AND m.mat_famille = 'UTILITAIRE_DE_CHANTIER' AND m.mat_energie = 'GAZOLE' AND m.mat_kilometres = 45000 AND p.per_code = 'ST-T69'
+                """));
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM materiel WHERE mat_designation = 'Étais tirant-poussant' AND mat_mode = 'NOMBRE' AND mat_quantite = 12 AND mat_famille = 'DIVERS'"));
+            Assert.Contains(r.ValeursForcees, v => v.Fiche == TypesFiche.Materiel && v.Champ == "famille");
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM materiel WHERE mat_code = 'MP01' AND mat_heures = 1250 AND x_numero_de_parc = 'P-0012' AND x_date_du_controle_technique = DATE '2026-03-15'"));
+            // Utilisateurs (Q20) : compte lié au salarié, à l'interlocuteur, accès mobile ; compte désactivé absent.
+            Assert.Contains(r.Utilisateurs, u => u.Identifiant == "jmartin" && u.FicheType == TypesFiche.Salarie && u.Profil == "Conducteur de travaux");
+            Assert.Contains(r.Utilisateurs, u => u.Identifiant == "aleroy" && u.FicheType == TypesFiche.Individu);
+            Assert.Contains(r.Utilisateurs, u => u.Identifiant == "SLR-2" && u.FicheType == TypesFiche.Salarie);
+            Assert.DoesNotContain(r.Utilisateurs, u => u.Identifiant == "ancien");
         }
     }
 }

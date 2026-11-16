@@ -127,3 +127,56 @@ INSERT INTO z_dataspec_data (DTD_ID, DTD_DTB_ID, DTD_TypeEntite, DTD_Entite_Id, 
  (1, 1, 'MTR', 1, 'P-0012', 0, NULL),
  (2, 2, 'MTR', 1, '', 0, '2026-03-15'),
  (3, 3, 'ART', 1, '', 25.5, NULL);
+
+-- Ressources (lot 7) : profil horaire (calendrier), salariés de deux établissements retenus et d'une société non
+-- retenue, intérimaire chez une agence (tiers 14), sorti ; habilitations (une rapprochée, une créée) ; équipe ;
+-- matériels (famille / type / énergie dans z_parametre, location, générique par nombre) et visite réglementaire ;
+-- utilisateurs liés à un salarié (SLR) ou à un interlocuteur (PRS), accès mobile d'un salarié.
+INSERT INTO z_parametre (PRM_ID, PRM_Code, PRM_Libelle, PRM_TypeParam, PRM_Ordre, PRM_IsDesactive) VALUES
+ (801, 'ENG', 'Engins', 'FamilleMateriel', 1, 0), (802, 'MPEL', 'Mini-pelle', 'TypeMateriel', 1, 0),
+ (803, 'VEH', 'Véhicules', 'FamilleMateriel', 2, 0), (804, 'UTIL', 'Utilitaire de chantier', 'TypeMateriel', 2, 0),
+ (810, 'GO', 'Gazole', 'Energie', 1, 0);
+INSERT INTO svhz_profil_horaire (PRH_ID, PRH_Libelle) VALUES (1, 'Horaire chantier 39 h');
+INSERT INTO svhz_profil_horaire_periode (PHP_ID, PHP_PRH_ID, PHP_IsAbsence, PHP_DateDebut, PHP_DateFin,
+  PHP_HoraireLundiDeb1, PHP_HoraireLundiFin1, PHP_HoraireLundiDeb2, PHP_HoraireLundiFin2,
+  PHP_HoraireMardiDeb1, PHP_HoraireMardiFin1, PHP_HoraireMardiDeb2, PHP_HoraireMardiFin2,
+  PHP_HoraireMercrediDeb1, PHP_HoraireMercrediFin1, PHP_HoraireMercrediDeb2, PHP_HoraireMercrediFin2,
+  PHP_HoraireJeudiDeb1, PHP_HoraireJeudiFin1, PHP_HoraireJeudiDeb2, PHP_HoraireJeudiFin2,
+  PHP_HoraireVendrediDeb1, PHP_HoraireVendrediFin1, PHP_HoraireVendrediDeb2, PHP_HoraireVendrediFin2) VALUES
+ (1, 1, 0, '0101', '1231', '07:30', '12:00', '13:00', '16:30', '07:30', '12:00', '13:00', '16:30', '07:30', '12:00', '13:00', '16:30',
+  '07:30', '12:00', '13:00', '16:30', '07:30', '12:00', '13:00', '15:30');
+INSERT INTO ref_salarie_fonction (SFN_ID, SFN_Code, SFN_Libelle, SFN_IsSal, SFN_IsDesactive) VALUES
+ (1, 'MAC', 'Maçon', 1, 0), (2, 'CE', 'Chef d''équipe', 1, 0);
+INSERT INTO ref_salarie (SLR_ID, SLR_SCT_ID, SLR_Matricule, SLR_MatriculePaye, SLR_Nom, SLR_Prenom, SLR_SFN_ID, SLR_PRH_ID, SLR_TRS_ID,
+  SLR_NumSecu, SLR_Observation, SLR_IsDesactive, SLR_DateEntree, SLR_DateSortie, SLR_IsInterim, SLR_Adresse, SLR_CodePostal, SLR_Ville,
+  SLR_Telephone, SLR_Portable, SLR_Email) VALUES
+ (1, 1, 'M001', 'P001', 'MARTIN', 'Jean', 2, 1, 0, '180016912345612', NULL, 0, '2015-03-01', NULL, 0, '12 rue Pasteur', '69007', 'Lyon',
+  NULL, '0601010101', 'j.martin@cdr.fr'),
+ (2, 2, 'M002', NULL, 'DUBOIS', 'Pierre', 1, 1, 0, NULL, NULL, 0, '2020-09-01', NULL, 0, NULL, NULL, NULL, NULL, NULL, ''),
+ (3, 1, '', NULL, 'LAMBERT', 'Kevin', 1, 0, 14, NULL, 'Intérimaire', 0, '2026-10-01', '2026-12-31', 1, NULL, NULL, NULL, NULL, NULL, ''),
+ (4, 1, 'M004', NULL, 'ROUX', 'Alain', 1, 1, 0, NULL, NULL, 1, '2001-01-15', '2024-06-30', 0, NULL, NULL, NULL, NULL, NULL, ''),
+ (5, 3, 'X01', NULL, 'AUTRE', 'Société', 1, 0, 0, NULL, NULL, 0, '2022-01-01', NULL, 0, NULL, NULL, NULL, NULL, NULL, '');
+INSERT INTO bib_habilitation (HAB_ID, HAB_Code, HAB_Libelle, HAB_DureeAn, HAB_IsSansLimite, HAB_IsDesactive) VALUES
+ (1, 'CACES R482 A', 'CACES engins compacts', 10, 0, 0), (2, 'ECHAF', 'Montage d''échafaudage', 0, 1, 0);
+INSERT INTO ref_salarie_habilitation (SHA_ID, SHA_SLR_ID, SHA_HAB_ID, SHA_DateObtention, SHA_OrgaObtention, SHA_DateValidite, SHA_IsDesactive) VALUES
+ (1, 1, 1, '2020-01-15', 'AFPA', '2030-01-15', 0), (2, 2, 2, '2025-05-01', NULL, NULL, 0), (3, 5, 1, '2022-02-01', NULL, NULL, 0);
+INSERT INTO svh_equipe (EQP_ID, EQP_Code, EQP_Libelle, EQP_Observation, EQP_SCT_ID, EQP_IsDesactive) VALUES
+ (1, 'EQ-GO', 'Équipe gros œuvre', NULL, 1, 0), (2, 'EQ-RHE', 'Équipe autre société', NULL, 3, 0);
+INSERT INTO svh_equipe_salarie (EQS_ID, EQS_EQP_ID, EQS_SLR_ID) VALUES (1, 1, 1), (2, 1, 2), (3, 1, 3), (4, 2, 5);
+INSERT INTO bib_materiel (MTR_ID, MTR_FamilleMateriel_ID, MTR_TypeMateriel_ID, MTR_IsGenerique, MTR_Qte, MTR_IsLocation, MTR_TRS_ID,
+  MTR_Numero, MTR_Marque, MTR_Modele, MTR_Designation, MTR_NumSerie, MTR_Immatriculation, MTR_Energie_ID, MTR_Poid, MTR_Hauteur,
+  MTR_UniteCompteur, MTR_Compteur, MTR_DateEntree, MTR_DateGarantie, MTR_IsDesactive) VALUES
+ (1, 801, 802, 0, 1, 0, '', 'MP01', 'Kubota', 'KX019', 'Mini-pelle 1,9 t', 'KB123', '', 810, 1900, 2.4, 'H', 1250, '2021-04-01',
+  '2023-04-01', 0),
+ (2, 803, 804, 0, 1, 1, '14', 'VU02', 'Renault', 'Master', 'Fourgon de chantier', '', 'AB-123-CD', 810, 0, 0, 'KM', 45000, '2024-01-10',
+  NULL, 0),
+ (3, 0, 0, 1, 12, 0, '', '', '', '', 'Étais tirant-poussant', '', '', 0, 0, 0, '', 0, NULL, NULL, 0);
+INSERT INTO bib_materiel_visite (MTV_ID, MTV_MTR_ID, MTV_Ordre, MTV_Type, MTV_Libelle, MTV_Frequence, MTV_DateDernier, MTV_DateProchain,
+  MTV_IsDesactive) VALUES (1, 2, 1, 0, 'Contrôle technique', 24, '2025-03-15', '2027-03-15', 0);
+INSERT INTO z_profil (PRF_ID, PRF_Libelle) VALUES (1, 'Administrateur'), (2, 'Conducteur de travaux');
+INSERT INTO z_utilisateur (UTL_ID, UTL_PRF_ID, UTL_Nom, UTL_Prenom, UTL_NomReduit, UTL_PRS_ID, UTL_SLR_ID, UTL_SCT_ID, UTL_Login,
+  UTL_Email, UTL_IsDesactive) VALUES
+ (1, 2, 'MARTIN', 'Jean', 'JM', 0, 1, 1, 'jmartin', 'j.martin@cdr.fr', 0),
+ (2, 1, 'LEROY', 'Antoine', 'AL', 1, 0, 1, 'aleroy', 'a.leroy@igl.fr', 0),
+ (3, 1, 'ANCIEN', 'Compte', 'AC', 0, 0, 1, 'ancien', NULL, 1);
+INSERT INTO z_utilisateur_externe (UTX_ID, UTX_TypeEntite, UTX_Entite_Id, UTX_IsUserAppMob, UTX_IsDesactive) VALUES (1, 'SLR', 2, 1, 0);
