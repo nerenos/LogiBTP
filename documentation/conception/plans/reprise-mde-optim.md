@@ -456,3 +456,5 @@ l'utilisateur sur son poste. *Critère* : `npm test` et `dotnet test LogiBTP.sln
     messages sans destinataire (mémos).
 - **Lot 17, tables `PP_*`** : analyse courte, puis alimentation des ordres et de la synthèse par chantier (module
   Exécution).
+  **Analyse courte rédigée (16/11/2026)** : [ANALYSE-REPRISE-PP-MDE.md](../ANALYSE-REPRISE-PP-MDE.md), questions Q-PP1 à
+  Q-PP6 en attente de réponse avant le développement.
