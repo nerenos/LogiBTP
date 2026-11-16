@@ -193,7 +193,9 @@
 | Type | Dépendance | Version | Licence | Usage |
 |---|---|---|---|---|
 | npm | vitest | 5.1.0 | MIT | développement (modules/import/js) |
+| NuGet | Microsoft.Data.SqlClient | 7.1.2 | MIT | LogiBTP.Import |
 | NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Import.Tests |
+| NuGet | MySqlConnector | 3.0.0 | MIT | LogiBTP.Import |
 | NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Import.Tests |
 | NuGet | xunit.runner.visualstudio | 3.1.4 | Apache-2.0 | LogiBTP.Import.Tests |
 

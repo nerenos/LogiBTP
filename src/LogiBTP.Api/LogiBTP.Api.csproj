@@ -2,6 +2,9 @@
 
   <PropertyGroup>
     <Description>Cœur LogiBTP : API des devis BTP, spécialisation des services des modules Document, Métré, Liste, Fiche, GED, Bibliothèque, Annuaire et Entreprises françaises.</Description>
+    <!-- Le pilote SQL Server de la reprise MDE (module Import) refuse la globalisation invariante de Directory.Build.props :
+         ICU actif pour l'hôte, cultures fixées à l'invariante dans Program.cs. -->
+    <InvariantGlobalization>false</InvariantGlobalization>
   </PropertyGroup>
 
   <ItemGroup>

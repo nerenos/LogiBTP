@@ -22,7 +22,7 @@ if [[ "$CIBLE" == tout || "$CIBLE" == mde ]]; then
     mcr.microsoft.com/mssql/server:2022-latest >/dev/null
   SQLCMD="/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P $MSSQL_MDP -C -b -f 65001"
   attendre "docker exec reprise-mde $SQLCMD -Q 'SELECT 1'" "SQL Server"
-  docker exec reprise-mde $SQLCMD -Q "CREATE DATABASE MDE_DOS_DEV"
+  docker exec reprise-mde $SQLCMD -Q "CREATE DATABASE MDE_DOS_DEV COLLATE French_CI_AS"
   docker cp mde/schema.sql reprise-mde:/tmp/schema.sql
   docker cp mde/donnees.sql reprise-mde:/tmp/donnees.sql
   docker exec reprise-mde $SQLCMD -d MDE_DOS_DEV -i /tmp/schema.sql >/dev/null

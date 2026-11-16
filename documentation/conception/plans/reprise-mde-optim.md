@@ -21,7 +21,7 @@
 |---|---|---|---|---|
 | 0 | Correspondances par défaut, bases sources de test | `modules/import` + cœur | — | FAIT |
 | 1 | Moteur de reprise : table de correspondance, rapport, simulation | `modules/import` | 0 | FAIT |
-| 2 | Lecteurs de source SQL Server et MariaDB (lecture seule, en flux), commande de l'installeur | `modules/import` + cœur | 1 | À FAIRE |
+| 2 | Lecteurs de source SQL Server et MariaDB (lecture seule, en flux), commande de l'installeur | `modules/import` + cœur | 1 | FAIT |
 | 3 | Écran « Reprise de données » : simulation, rapport, fusions, lancement | `modules/import` + cœur | 2 | À FAIRE |
 | 4 | Société et référentiels | cœur | 2 | À FAIRE |
 | 5 | Champs supplémentaires des fiches | cœur | 4 | À FAIRE |
@@ -123,6 +123,22 @@
   [--simulation] [--correspondances <fichier>] [--rapport <fichier.md>]` (reportée du lot 1).
 - **Critère de fin** : lecture des deux bases de test ; un test prouve qu'une écriture est refusée avant l'envoi ;
   simulation sans domaine par la commande sur une base neuve, avec rapport.
+- **Réalisé (16/11/2026)** : `Reprise/Lecteurs/` : `LecteurAdo` (commun : une connexion du pool par lecture, les
+  domaines peuvent donc imbriquer leurs lectures ; transaction toujours annulée ; `VerifierLecture` refuse tout ce qui
+  n'est pas un seul `SELECT` / `WITH` : point-virgule, `INTO`, `INSERT`, `UPDATE` (dont `FOR UPDATE`), `EXEC`,
+  `OPENROWSET`, `OUTFILE`… ; `CompterAsync` n'admet qu'une table présente dans la base), `LecteurSqlServer`
+  (`ApplicationIntent=ReadOnly`, schéma `dbo`), `LecteurMariaDb` (`START TRANSACTION READ ONLY`, dates zéro → null).
+  Cœur (`src/LogiBTP.Api/Reprise/`) : `CiblesReprise` (listes de cibles lues dans la base cible), `RepriseBase`
+  (correspondances validées puis moteur ; commun à la commande et au futur écran), `DomainesReprise` (vide, rempli par
+  les lots 4 et suivants) ; commande `installation societe importer CODE --source MDE|OPTIM [--connexion C]
+  [--societes 1,2] [--reel] [--correspondances F] [--rapport F.md]`. Écarts au plan : **simulation par défaut**,
+  `--reel` pour écrire (au lieu de `--simulation`) ; chaîne source aussi par `LOGIBTP_REPRISE_SOURCE` (hors historique
+  du shell) ; le filtre par `SCT_ID` reste aux domaines OPTIM (`Options.Societes`). **Globalisation** : le pilote SQL
+  Server refuse le mode invariant de `Directory.Build.props` ; `LogiBTP.Api` et les deux projets de tests qui
+  l'utilisent passent `InvariantGlobalization` à false (ICU présent dans l'image `aspnet:10.0`), cultures fixées à
+  l'invariante au démarrage (`Program.cs`, `CultureTests` des tests). Base MDE de test en `French_CI_AS`. Tests :
+  `LecteursTests` (19, dont lecture des deux bases et refus d'écriture) et `RepriseBaseTests` (base neuve par le
+  manifeste : cibles, refus d'une base non vide, simulation puis reprise réelle sans domaine pour les deux sources).
 
 ## Lot 3 : écran « Reprise de données »
 
