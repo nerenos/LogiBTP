@@ -67,3 +67,10 @@ export const NIVEAU_ANOMALIE = Object.freeze({
   AVERTISSEMENT: 'AVERTISSEMENT',
   BLOQUANT: 'BLOQUANT',
 });
+
+/** Refus d'un enregistrement des fusions de doublons (import_fusion). */
+export const ERREUR_FUSION = Object.freeze({
+  GROUPE_VIDE: 'REPRISE_FUSION_VIDE',
+  CLE_EN_DOUBLE: 'REPRISE_FUSION_CLE_EN_DOUBLE',
+  CONSERVEE_FUSIONNEE: 'REPRISE_FUSION_CONSERVEE_FUSIONNEE',
+});

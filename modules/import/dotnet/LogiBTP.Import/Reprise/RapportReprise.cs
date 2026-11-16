@@ -55,6 +55,21 @@ public sealed record UtilisateurSource(
     [property: JsonPropertyName("fiche_type")] string? FicheType,
     [property: JsonPropertyName("fiche_id")] long? FicheId);
 
+/// <summary>Ligne source d'un groupe de doublons proposé : clé d'origine et libellé lisible (code, raison sociale, ville).</summary>
+public sealed record FicheDoublon(
+    [property: JsonPropertyName("cle")] string Cle,
+    [property: JsonPropertyName("libelle")] string Libelle);
+
+/// <summary>
+/// Doublons proposés à la fusion (même SIRET, même nom et code postal…) : l'écran de reprise les présente à cocher, les
+/// choix sont enregistrés dans <c>import_fusion</c> et appliqués à la reprise suivante.
+/// </summary>
+public sealed record DoublonPropose(
+    [property: JsonPropertyName("table")] string Table,
+    [property: JsonPropertyName("critere")] string Critere,
+    [property: JsonPropertyName("valeur")] string Valeur,
+    [property: JsonPropertyName("fiches")] IReadOnlyList<FicheDoublon> Fiches);
+
 /// <summary>Durée et état d'un domaine exécuté.</summary>
 public sealed record DomaineExecute(
     [property: JsonPropertyName("code")] string Code,
@@ -85,6 +100,7 @@ public sealed class RapportReprise
     [JsonPropertyName("champs_perdus")] public List<ChampPerdu> ChampsPerdus { get; } = [];
     [JsonPropertyName("anomalies")] public List<AnomalieReprise> Anomalies { get; } = [];
     [JsonPropertyName("utilisateurs")] public List<UtilisateurSource> Utilisateurs { get; } = [];
+    [JsonPropertyName("doublons")] public List<DoublonPropose> Doublons { get; } = [];
 
     /// <summary>Volumes d'une table source (créés au premier appel).</summary>
     public VolumeTable Volume(string table)
@@ -115,6 +131,12 @@ public sealed class RapportReprise
 
     public void Signaler(string niveau, string code, string? emplacement, string message) =>
         Anomalies.Add(new(niveau, code, emplacement, message));
+
+    /// <summary>Groupe de doublons proposé (au moins deux fiches).</summary>
+    public void Proposer(string table, string critere, string valeur, IReadOnlyList<FicheDoublon> fiches)
+    {
+        if (fiches.Count > 1) Doublons.Add(new(table, critere, valeur, fiches));
+    }
 
     public bool Bloque => Anomalies.Any(a => a.Niveau == NiveauAnomalie.Bloquant);
 
@@ -149,6 +171,8 @@ public sealed class RapportReprise
             e => [e.Piece, e.TotalSource.ToString("N2", c), e.TotalCalcule.ToString("N2", c), e.Ecart.ToString("N2", c)]);
         Section(sb, "Champs sans équivalent", ChampsPerdus, ["Table", "Champ", "Valeurs perdues", "Exemples", "Motif"],
             p => [p.Table, p.Champ, p.Nombre.ToString(c), string.Join(" ; ", p.Exemples), p.Motif ?? ""]);
+        Section(sb, "Doublons proposés à la fusion", Doublons, ["Table", "Critère", "Valeur", "Fiches"],
+            d => [d.Table, d.Critere, d.Valeur, string.Join(" ; ", d.Fiches.Select(f => $"{f.Cle} {f.Libelle}"))]);
         Section(sb, "Correspondances appliquées", Correspondances.SelectMany(t => t.Value.Select(v => (t.Key, v.Key, v.Value))).ToList(),
             ["Table", "Valeur source", "Résultat"], x => [x.Item1, x.Item2, x.Item3]);
         Section(sb, "Utilisateurs de l'ancien logiciel", Utilisateurs, ["Identifiant", "Nom", "Courriel", "Profil", "Fiche"],

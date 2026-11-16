@@ -37,6 +37,7 @@ import { PageEdition } from './edition.js';
 import { PageParametresEditions } from './parametres-editions.js';
 import { PageParametresModules } from './parametres-modules.js';
 import { PageParametresInstallation } from './parametres-installation.js';
+import { PageParametresReprise } from './parametres-reprise.js';
 import { PageParametresChampsSupplementaires } from './parametres-champs-supplementaires.js';
 import { PageParametresServices } from './parametres-services.js';
 import { PageParametresReferentiels } from './parametres-referentiels.js';
@@ -160,6 +161,7 @@ export const ROUTES = [
   { nom: 'parametres-comptes', chemin: '/parametres/comptes', page: PageParametresComptes, titre: texte('authentification_btp.comptes.titre') },
   { nom: 'parametres-champs-supplementaires', chemin: '/parametres/champs-supplementaires', page: PageParametresChampsSupplementaires, titre: texte('parametres_btp.champs_supplementaires.titre') },
   { nom: 'parametres-installation', chemin: '/parametres/installation', page: PageParametresInstallation, titre: texte('parametres_btp.installation.titre') },
+  { nom: 'parametres-reprise', chemin: '/parametres/reprise', page: PageParametresReprise, titre: texte('parametres_btp.reprise.titre') },
   { nom: 'parametres-droits', chemin: '/parametres/droits', page: PageParametresDroits, titre: texte('droits_btp.profils.titre') },
   { nom: 'parametres-services', chemin: '/parametres/services', page: PageParametresServices, titre: texte('parametres_btp.services.titre') },
   { nom: 'parametres-referentiels', chemin: '/parametres/referentiels', page: PageParametresReferentiels, titre: texte('parametres_btp.referentiels.titre') },

@@ -36,6 +36,7 @@ public static class EcrituresBtp
         new("/api/fiches/{type}/{id}/verrou", Action), new("/api/fiches/{type}/code", Lecture),
         new("/api/fiches/{type}/chrono", Parametrage), new("/api/fiches/{type}/parametrage", Parametrage),
         new("/api/champs-supplementaires", Parametrage),
+        new("/api/reprise/executer", Lot), new("/api/reprise/fusions/{source}", Parametrage),
         new("/api/documents", Document), new("/api/documents/{id}", Document), new("/api/documents/{id}/copie", Document),
         new("/api/documents/{id}/indices", Document), new("/api/documents/{id}/transformer", Document),
         new("/api/documents/{id}/*", Action),

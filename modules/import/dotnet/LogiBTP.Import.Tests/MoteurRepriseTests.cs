@@ -269,4 +269,31 @@ public class MoteurRepriseTests
             .ExecuterAsync(new OptionsReprise { Source = SourceReprise.Mde }, new LecteurFictif(SourceReprise.Mde), Correspondances(), unite, default);
         Assert.Equal("C001", conservee);
     }
+
+    [Fact]
+    public async Task Fusions_remplacees_appliquees_par_le_moteur_et_historique_lu()
+    {
+        if (Admin is null) return;
+        await using var b = await BaseEssai.CreerAsync(Admin);
+        await using var unite = new UniteEcriture(new ConnexionRequete(b.Connexion));
+        await FusionsReprise.RemplacerAsync(unite, SourceReprise.Mde, [new("CLIENT", "C001", ["C009 "])], default);
+        await FusionsReprise.RemplacerAsync(unite, SourceReprise.Mde, [new("CLIENT", "C001", ["C002"])], default); // remplace
+        await FusionsReprise.RemplacerAsync(unite, SourceReprise.Optim, [new("bib_tiers", "12", ["13"])], default);
+        await using var c = new NpgsqlConnection(b.Connexion);
+        await c.OpenAsync();
+        var mde = Assert.Single(await FusionsReprise.LireAsync(c, null, SourceReprise.Mde, default));
+        Assert.Equal(["C002"], mde.ClesFusionnees);
+
+        string? conservee = null;
+        var domaine = new Domaine("fusion", [], (ctx, _) => { conservee = ctx.CleConservee("CLIENT", "C002  "); return Task.CompletedTask; });
+        var r = await new MoteurReprise([domaine], EssaiVide).ExecuterAsync(new OptionsReprise { Source = SourceReprise.Mde },
+            new LecteurFictif(SourceReprise.Mde), Correspondances(), unite, default);
+        Assert.Equal("C001", conservee);
+
+        var historique = await ExecutionsReprise.ListerAsync(c, null, 10, default);
+        var e = Assert.Single(historique);
+        Assert.Equal((r.RepriseId, true, EtatReprise.Terminee, 0), (e.Id, e.Simulation, e.Etat, e.Bloquantes));
+        Assert.Equal(2, (await ExecutionsReprise.RapportAsync(c, null, r.RepriseId, default))!.TablesSource["CLIENT"]);
+        Assert.Null(await ExecutionsReprise.RapportAsync(c, null, r.RepriseId + 1, default));
+    }
 }

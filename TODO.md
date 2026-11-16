@@ -225,7 +225,7 @@ Analyse du 23/10/2026 : [ANALYSE-MODULE-SOUS-TRAITANCE.md](documentation/concept
   et texte de fin…).
 - [ ] Rattachement automatique du client à l'annuaire.
 - [ ] Reprise d'une base MDE ou OptimBTP dans une nouvelle base : plan
-  [reprise-mde-optim.md](documentation/conception/plans/reprise-mde-optim.md), lots 3 à 17 (lots 0 à 2 faits le 16/11/2026).
+  [reprise-mde-optim.md](documentation/conception/plans/reprise-mde-optim.md), lots 4 à 17 (lots 0 à 3 faits le 16/11/2026). Scénario e2e `e2e/reprise.spec.ts` à jouer sur le poste ; reprise exécutée dans la requête HTTP (tâche de fond à décider au lot 15).
 
 ### Demandes du 25/10/2026
 

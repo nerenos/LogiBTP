@@ -316,5 +316,9 @@
       "copie": "Prompt copié dans le presse-papiers",
       "aucune": "Aucune recette n'est proposée pour cet élément."
     }
+  },
+  "erreurs": {
+    "MCP_OAUTH_DEMANDE": "Demande d'autorisation inconnue, échue ou déjà traitée",
+    "MCP_RECETTE_FOURNIE": "Une recette fournie se désactive, elle ne se supprime pas"
   }
 }

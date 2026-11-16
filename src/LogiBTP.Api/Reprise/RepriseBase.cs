@@ -14,8 +14,8 @@ public sealed record DemandeReprise
     /// <summary>Chaîne de connexion de la base source (jamais enregistrée ni affichée).</summary>
     public required string ConnexionSource { get; init; }
 
-    /// <summary>Chaîne de connexion de la base cible (rôle du schéma).</summary>
-    public required string ConnexionCible { get; init; }
+    /// <summary>Chaîne de connexion de la base cible (rôle du schéma) ; vide quand l'unité d'écriture est fournie.</summary>
+    public string ConnexionCible { get; init; } = "";
 
     public IReadOnlyList<string> Societes { get; init; } = [];
     public bool Simulation { get; init; } = true;
@@ -42,6 +42,13 @@ public static class RepriseBase
 
     public static async Task<ResultatReprise> ExecuterAsync(DemandeReprise demande, CancellationToken ct)
     {
+        await using var unite = new UniteEcriture(new ConnexionRequete(demande.ConnexionCible));
+        return await ExecuterAsync(demande, unite, ct);
+    }
+
+    /// <summary>Reprise dans la base de l'unité d'écriture (écran : celle de la société courante ; <c>ConnexionCible</c> ignorée).</summary>
+    public static async Task<ResultatReprise> ExecuterAsync(DemandeReprise demande, UniteEcriture unite, CancellationToken ct)
+    {
         var source = demande.Source.ToUpperInvariant();
         var (fichier, erreurLecture) = demande.Correspondances is null
             ? (CorrespondancesReprise.ParDefaut(source), null)
@@ -50,7 +57,6 @@ public static class RepriseBase
             throw new RepriseRefuseeException(ErreurReprise.CorrespondancesInvalides,
                 $"Correspondances illisibles : {erreurLecture?.Emplacement} {erreurLecture?.Valeur}");
 
-        await using var unite = new UniteEcriture(new ConnexionRequete(demande.ConnexionCible));
         IReadOnlyDictionary<string, IReadOnlyCollection<string>> cibles;
         await using (var lecture = await unite.CommencerAsync(ct))
         {

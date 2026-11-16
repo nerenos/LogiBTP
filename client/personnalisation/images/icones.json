@@ -758,5 +758,13 @@
   "agents_btp_journal": "📜",
   "agents_btp_delegations": "🔑",
   "agents_btp_parametres": "🤖",
-  "agents_btp_autoriser": "🔗"
+  "agents_btp_autoriser": "🔗",
+  "parametres_btp_reprise": "📥",
+  "navigation_btp_parametres_reprise": "📥",
+  "parametres_btp_reprise_simuler": "🧪",
+  "parametres_btp_reprise_lancer": "▶",
+  "parametres_btp_reprise_telecharger": "⬇",
+  "parametres_btp_reprise_charger": "📂",
+  "parametres_btp_reprise_rapport": "📄",
+  "parametres_btp_reprise_fusionner": "🔗"
 }

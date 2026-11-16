@@ -313,6 +313,8 @@ api.MapModuleMail();
 api.MapCalendriersBtp();
 api.MapModuleEdition();
 api.MapEditionsBtp();
+// Reprise d'une base MDE ou OptimBTP (module Import, plan reprise-mde-optim) : page /parametres/reprise.
+LogiBTP.Api.Reprise.RoutesReprise.MapReprise(api);
 
 // Point MCP des agents (Streamable HTTP, jeton délégué exigé ; refuse de démarrer en mode EnTetes).
 app.MapPointMcp();

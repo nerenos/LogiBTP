@@ -22,7 +22,7 @@
 | 0 | Correspondances par défaut, bases sources de test | `modules/import` + cœur | — | FAIT |
 | 1 | Moteur de reprise : table de correspondance, rapport, simulation | `modules/import` | 0 | FAIT |
 | 2 | Lecteurs de source SQL Server et MariaDB (lecture seule, en flux), commande de l'installeur | `modules/import` + cœur | 1 | FAIT |
-| 3 | Écran « Reprise de données » : simulation, rapport, fusions, lancement | `modules/import` + cœur | 2 | À FAIRE |
+| 3 | Écran « Reprise de données » : simulation, rapport, fusions, lancement | `modules/import` + cœur | 2 | FAIT |
 | 4 | Société et référentiels | cœur | 2 | À FAIRE |
 | 5 | Champs supplémentaires des fiches | cœur | 4 | À FAIRE |
 | 6 | Annuaire, toutes adresses et contacts, fusion des doublons | cœur | 4 | À FAIRE |
@@ -150,6 +150,18 @@
   (`u.ExigerAdmin()`), et refusé si la base contient des données métier.
 - **Critère de fin** : parcours e2e simulation → rapport → reprise sur les bases de test ; aucun texte, icône ni
   couleur en dur ; fenêtres par `<dialog>` du socle.
+- **Réalisé (16/11/2026)** : module : `FusionsReprise` (`Controler`, `LireAsync`, `RemplacerAsync` ; règles répliquées
+  dans `js/src/fusions.js`, jeu commun `js/test/fusions-cas.json`), `ExecutionsReprise` (historique, rapport d'une
+  exécution), section `doublons` du rapport (`Proposer`, remplie par l'annuaire au lot 6), codes `ERREUR_FUSION`.
+  Cœur : `RoutesReprise` (`GET /api/reprise`, `GET /api/reprise/correspondances/{source}`, `POST /api/reprise/executer`,
+  `GET /api/reprise/executions/{id}[/markdown]`, `PUT /api/reprise/fusions/{source}` ; `ExigerAdmin`, nœud
+  paramétrage, écritures LOT et PARAMETRAGE), `RepriseBase` sur l'unité d'écriture de la requête. Client : page
+  `/parametres/reprise` (menu Paramètres), textes `parametres_btp.reprise.*`, icônes `parametres_btp_reprise_*`.
+  Écarts au plan : routes et page dans le cœur (comme l'écran Installation : les domaines et la base cible sont du
+  cœur), le module fournit les règles et les accès ; exécution **synchrone** dans la requête (une grosse base peut
+  prendre plusieurs minutes : passage en tâche de fond à voir au lot 15). Scénario e2e `e2e/reprise.spec.ts` :
+  écran refusé sur une base non vide, parcours complet sur une société neuve (`E2E_REPRISE_URL`,
+  `E2E_REPRISE_CONNEXION`) ; écrit mais **non joué** dans le conteneur (pas d'API complète), à jouer sur le poste.
 
 ## Lots 4 à 14 : domaines du cœur
 

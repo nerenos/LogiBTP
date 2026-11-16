@@ -77,3 +77,11 @@ public static class NiveauAnomalie
     public const string Avertissement = "AVERTISSEMENT";
     public const string Bloquant = "BLOQUANT";
 }
+
+/// <summary>Refus d'un enregistrement des fusions de doublons (import_fusion).</summary>
+public static class ErreurFusion
+{
+    public const string GroupeVide = "REPRISE_FUSION_VIDE";
+    public const string CleEnDouble = "REPRISE_FUSION_CLE_EN_DOUBLE";
+    public const string ConserveeFusionnee = "REPRISE_FUSION_CONSERVEE_FUSIONNEE";
+}
