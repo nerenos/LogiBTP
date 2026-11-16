@@ -132,11 +132,71 @@ public class RepriseBaseTests
         await VerifierStructureAsync(b, source, reelle.Rapport);
         await VerifierPiecesVenteAsync(b, source, reelle.Rapport);
         await VerifierAvancementAsync(b, source, reelle.Rapport);
+        await VerifierAchatsAsync(b, source, reelle.Rapport);
 
         // Correspondances fournies invalides : refus avant toute lecture.
         var refus = await Assert.ThrowsAsync<RepriseRefuseeException>(() => RepriseBase.ExecuterAsync(
             demande with { Correspondances = $$"""{ "source": "{{source}}", "version": 1, "tables": {} }""" }, default));
         Assert.Equal(ErreurReprise.CorrespondancesInvalides, refus.Code);
+    }
+
+    /// <summary>Lot 12 : achats et sous-traitance (types, tiers, chantier des lignes, avoirs, liens, avancement de sous-traitance).</summary>
+    private static async Task VerifierAchatsAsync(BaseNeuve b, string source, RapportReprise r)
+    {
+        async Task<long> Compter(string sql) => await b.CompterAsync(sql);
+        const string Pieces = "document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id JOIN statut_document s ON s.std_id = d.ent_std_id";
+        // Coût d'achat valable d'un chantier en centimes (avoirs en déduction), ventilé par les lignes (v_document_chantiers_part).
+        async Task<long> Cout(string chantier) => await Compter($"""
+            SELECT round(100 * sum(CASE WHEN t.tyd_code = 'A_AVOIR' THEN -1 ELSE 1 END * d.ent_total_ht * p.part))::bigint
+            FROM v_document_chantiers_part p JOIN document d ON d.ent_id = p.ent_id JOIN v_document_valable v ON v.ent_id = d.ent_id
+            JOIN type_document t ON t.tyd_id = d.ent_tyd_id JOIN chantier c ON c.cha_id = p.chantier_id
+            WHERE t.tyd_code IN ('A_FACTURE', 'A_AVOIR', 'T_FACTURE_AVT') AND c.cha_code = '{chantier}'
+            """);
+        Assert.DoesNotContain(r.EcartsArrondi, e => e.Piece.StartsWith("A_") || e.Piece.StartsWith("T_"));
+        if (source == SourceReprise.Mde)
+        {
+            // Commande sur deux chantiers (ligne de texte gardée), facture transférée avec remise, avoir rendu positif.
+            Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Pieces} JOIN personne f ON f.per_id = d.ent_tiers_id WHERE ent_numero = 'CF000001' AND t.tyd_code = 'A_COMMANDE' AND s.std_code = 'VALIDE' AND f.per_code = 'F001' AND ent_total_ht = 350 AND ent_total_ttc = 420 AND ent_reference_externe = 'ARC-77'"));
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM document_ligne l JOIN document d ON d.ent_id = l.lig_ent_id JOIN chantier c ON c.cha_id = l.lig_cha_id WHERE d.ent_numero = 'CF000001' AND l.lig_libelle_html = 'Sable' AND c.cha_code = 'CH003'"));
+            Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Pieces} WHERE ent_numero = 'FF000001' AND t.tyd_code = 'A_FACTURE' AND s.std_code = 'ENVOYE' AND ent_verrouille AND ent_total_ht = 340 AND ent_total_ttc = 408"));
+            Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Pieces} WHERE ent_numero = 'AVF00001' AND t.tyd_code = 'A_AVOIR' AND s.std_code = 'BROUILLON' AND ent_total_ht = 50 AND ent_total_ttc = 60"));
+            // Sous-traitance : commande et facture (sans lien de lignes : sans suivi d'avancement, signalée).
+            Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Pieces} JOIN personne f ON f.per_id = d.ent_tiers_id WHERE ent_numero = 'CS000001' AND t.tyd_code = 'T_COMMANDE' AND f.per_code = 'S001' AND ent_total_ht = 1000"));
+            Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Pieces} WHERE ent_numero = 'FS000001' AND t.tyd_code = 'T_FACTURE_AVT' AND ent_verrouille AND ent_total_ht = 400"));
+            Assert.Contains(r.Anomalies, a => a.Code == CodeAnomalie.AvancementSansMarche && a.Emplacement == "ENTETEFACTURESSTRAIT 602");
+            // Coûts par chantier : remise de la facture sur le chantier de l'entête.
+            Assert.Equal(53000L, await Cout("CH001"));
+            Assert.Equal(21000L, await Cout("CH003"));
+        }
+        else
+        {
+            // Commande, réception à la quantité livrée, facture ventilée (chantier des lignes), régule négative en avoir.
+            Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Pieces} JOIN personne f ON f.per_id = d.ent_tiers_id WHERE ent_numero = 'CDE-0001' AND t.tyd_code = 'A_COMMANDE' AND f.per_code = 'FOU-NEGO' AND ent_total_ht = 300"));
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM document_ligne l JOIN document d ON d.ent_id = l.lig_ent_id WHERE d.ent_numero = 'BL-0001' AND l.lig_libelle_html = 'Acier HA' AND l.lig_qte = 5"));
+            Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Pieces} WHERE ent_numero = 'FN-2024-001' AND t.tyd_code = 'A_FACTURE' AND ent_verrouille AND ent_total_ht = 250 AND ent_total_ttc = 300"));
+            Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Pieces} WHERE ent_numero = 'FN-2024-RG1' AND t.tyd_code = 'A_AVOIR' AND ent_verrouille AND ent_total_ht = 20 AND ent_total_ttc = 24"));
+            Assert.Equal(3L, await Compter("""
+                SELECT count(*) FROM document_lien k JOIN document s ON s.ent_id = k.lie_source_ent_id JOIN document c ON c.ent_id = k.lie_cible_ent_id
+                WHERE s.ent_numero IN ('CDE-0001', 'BL-0001') AND c.ent_numero IN ('BL-0001', 'FN-2024-001')
+                """));
+            // Appro, société écartée et facture d'une situation de sous-traitance écartées.
+            Assert.Equal((7, 4, 3), Volume(r, AchatsOptim.Entete));
+            Assert.Contains(r.ChampsPerdus, c => c.Table == AchatsOptim.Entete && c.Champ == "FAC_PSS_ID");
+            // Sous-traitance : commande (modèle écarté), situations en factures d'avancement de la période, consultation.
+            Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Pieces} JOIN personne f ON f.per_id = d.ent_tiers_id WHERE ent_numero = 'ST-24-001' AND t.tyd_code = 'T_COMMANDE' AND f.per_code = 'ST-T69' AND ent_total_ht = 5000"));
+            Assert.Equal(0L, await Compter("SELECT count(*) FROM document WHERE ent_numero = 'ST-MODELE'"));
+            Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Pieces} WHERE ent_numero = 'ST-SIT-1' AND t.tyd_code = 'T_FACTURE_AVT' AND s.std_code = 'ENVOYE' AND ent_avt_presentation = 'P' AND ent_total_ht = 2500"));
+            Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Pieces} WHERE ent_numero = 'ST-SIT-2' AND s.std_code = 'BROUILLON' AND ent_total_ht = 1500"));
+            Assert.Equal(1L, await Compter("""
+                SELECT count(*) FROM document_ligne l JOIN document d ON d.ent_id = l.lig_ent_id
+                WHERE d.ent_numero = 'ST-SIT-2' AND l.lig_libelle_html = 'Fouilles' AND l.lig_avt_montant_cumul = 2000 AND l.lig_avt_montant_precedent = 1500
+                """));
+            Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Pieces} WHERE ent_numero = 'ST-24-001-C1' AND t.tyd_code = 'T_AO' AND ent_reference_externe = 'OFF-77' AND ent_total_ht = 5200"));
+            Assert.Contains(r.ChampsPerdus, c => c.Table == AchatsOptim.Prestation && c.Champ == "PST_IsPaieDirect");
+            // Coûts par chantier égaux à la source : facture ventilée, avoir déduit, situation validée (la seconde est en brouillon).
+            Assert.Equal(268000L, await Cout("C24-001"));
+            Assert.Equal(5000L, await Cout("ATELIER"));
+        }
     }
 
     /// <summary>Lot 11 : situations (cumul) et factures d'avancement (période), lignes suivant le marché, précédents, liens.</summary>
@@ -159,7 +219,7 @@ public class RepriseBaseTests
         Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Pieces} WHERE ent_numero = '{sit2}' AND s.std_code = 'BROUILLON' AND NOT ent_verrouille AND ent_total_ht = {ht2} AND ent_total_ttc = {ttc2}"));
         // Cumul d'avancement égal à la source, sans écart de reprise sur les pièces d'avancement.
         Assert.DoesNotContain(r.EcartsArrondi, e => e.Piece.StartsWith("V_SITUATION") || e.Piece.StartsWith("V_FACTURE_AVT"));
-        Assert.DoesNotContain(r.Anomalies, a => a.Code == CodeAnomalie.AvancementSansMarche);
+        Assert.DoesNotContain(r.Anomalies, a => a.Code == CodeAnomalie.AvancementSansMarche && (a.Emplacement.StartsWith("PMEDOC") || a.Emplacement.StartsWith("vte_")));
         // Liens : marché → situations et facture, situation → facture.
         Assert.Equal(4L, await Compter($"""
             SELECT count(*) FROM document_lien k JOIN document s ON s.ent_id = k.lie_source_ent_id JOIN document c ON c.ent_id = k.lie_cible_ent_id
@@ -213,7 +273,7 @@ public class RepriseBaseTests
             Assert.Equal((3, 3, 0), Volume(r, "PMEDOCFACCLI"));
             Assert.Equal(1L, await Compter("SELECT count(*) FROM marche m JOIN document d ON d.ent_id = m.mar_ent_id WHERE m.mar_code = 'M-CH001' AND d.ent_numero = 'DC000002'"));
             Assert.Equal(2L, await Compter("SELECT cnu_dernier_numero FROM compteur_numero c JOIN type_document t ON t.tyd_id = c.cnu_tyd_id WHERE t.tyd_code = 'V_DEVIS' AND cnu_exercice = 2024"));
-            Assert.Equal(8L, await Compter("SELECT count(*) FROM document_origine WHERE dor_type = 'IMPORT' AND dor_format = 'MDE'"));
+            Assert.Equal(8L, await Compter("SELECT count(*) FROM document_origine WHERE dor_type = 'IMPORT' AND dor_format = 'MDE' AND dor_reference LIKE 'PMEDOC%'"));
         }
         else
         {
@@ -229,7 +289,7 @@ public class RepriseBaseTests
             Assert.Equal((6, 4, 2), Volume(r, "vte_doc_entete"));
             Assert.Equal(5L, await Compter("SELECT cnu_dernier_numero FROM compteur_numero c JOIN type_document t ON t.tyd_id = c.cnu_tyd_id WHERE t.tyd_code = 'V_DEVIS' AND cnu_exercice = 2024"));
             Assert.Equal(12L, await Compter("SELECT max(cnu_dernier_numero) FROM compteur_numero c JOIN type_document t ON t.tyd_id = c.cnu_tyd_id WHERE cnu_exercice = 2023"));
-            Assert.Equal(6L, await Compter("SELECT count(*) FROM document_origine WHERE dor_format = 'OPTIM'"));
+            Assert.Equal(6L, await Compter("SELECT count(*) FROM document_origine WHERE dor_format = 'OPTIM' AND dor_reference LIKE 'vte%'"));
         }
         // Totaux de TVA cohérents avec l'en-tête.
         Assert.Equal(0L, await Compter("SELECT count(*) FROM document d WHERE ent_total_tva <> (SELECT coalesce(sum(tva_montant_net), 0) FROM document_tva WHERE tva_ent_id = d.ent_id)"));

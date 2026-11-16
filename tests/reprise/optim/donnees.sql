@@ -287,3 +287,51 @@ INSERT INTO vte_doc_entete (VDE_ID, VDE_Type_ID, VDE_SCT_ID, VDE_AFF_ID, VDE_CHT
   VDE_Etat, VDE_DateDoc, VDE_Libelle, VDE_NosRef, VDE_PRM_ModeRegl, VDE_MtHT, VDE_MtTTC, VDE_IsComptabilise, VDE_IsMarche, VDE_IsModele,
   VDE_IsVirtuel, VDE_IsSauvegarde, VDE_IsProjetBudget, VDE_IsDesactive, VDE_VSI_ID) VALUES
  (7, 702, 1, 1, 1, 11, 'FS-0001', 1, 1, 0, '2024-06-30', 'Situation n° 1', '', 62, 612, 734.40, 1, 0, 0, 0, 0, 0, 0, 1);
+
+-- Achats et sous-traitance (lot 12) : commande, réception partielle, facture ventilée sur deux chantiers, régule négative
+-- (avoir), demande d'appro et société écartées, facture d'une situation de sous-traitance (reprise par la situation) ;
+-- prestation de sous-traitance (modèle écarté), deux situations, consultation.
+INSERT INTO ach_doc_entete (DOE_ID, DOE_DOE_ID_Cde, DOE_DOE_ID_BL, DOE_Type, DOE_CHT_ID, DOE_SCT_ID, DOE_Code, DOE_Date, DOE_PRM_ID_TVA,
+  DOE_PAT, DOE_MtTTC, DOE_IsTransfereCompta, DOE_IsBkp, DOE_TPP_Libelle, DOE_NumeroAR) VALUES
+ (1, 0, 0, 141, 1, 1, 'CDE-0001', '2024-06-05', 51, 300, 360, 0, 0, 'Aciers et ciment', 'AR-55'),
+ (2, 1, 0, 142, 1, 1, 'BL-0001', '2024-06-10', 51, 250, 300, 0, 0, 'Livraison partielle', NULL),
+ (3, 1, 2, 382, 1, 1, 'FAC-ACH-1', '2024-06-30', 51, 250, 300, 1, 0, 'Facture Négobat', NULL),
+ (4, 0, 0, 454, 1, 1, 'RG-0001', '2024-07-05', 51, -20, -24, 1, 0, 'Régularisation', NULL),
+ (5, 0, 0, 316, 1, 1, 'APP-0001', '2024-06-01', 51, 0, 0, 0, 0, 'Appro', NULL),
+ (6, 0, 0, 141, 4, 3, 'CDE-0900', '2024-06-01', 51, 10, 12, 0, 0, 'Société écartée', NULL),
+ (7, 0, 0, 382, 1, 1, 'FAC-ST-1', '2024-06-30', 53, 2500, 2500, 1, 0, 'Situation terrassement', NULL);
+INSERT INTO ach_doc_tiers (DOT_ID, DOT_DOE_ID, DOT_TRS_ID) VALUES (1, 1, 12), (2, 2, 12), (3, 3, 12), (4, 4, 12), (5, 7, 14);
+INSERT INTO ach_ligne_achat (LGA_ID, LGA_DOE_ID, LGA_Ordre, LGA_IsTitre, LGA_CodeExt, LGA_LibelleExt, LGA_UNT_ID, LGA_Qte, LGA_PAU, LGA_TxRemise,
+  LGA_QteLivre, LGA_IsDesactive) VALUES
+ (1, 1, 1, 0, 'CIM', 'Ciment', 1, 20, 10, 0, 20, 0),
+ (2, 1, 2, 0, 'ACIER', 'Acier HA', 1, 10, 10, 0, 5, 0),
+ (3, 1, 3, 0, 'OLD', 'Ligne supprimée', 1, 1, 99, 0, 0, 1);
+INSERT INTO ach_doc_lien_ligne_achat (DOL_ID, DOL_DOE_ID, DOL_LGA_ID, DOL_IsDesactive) VALUES (1, 2, 1, 0), (2, 2, 2, 0);
+INSERT INTO ach_export_facture_entete (FAC_ID, FAC_DOE_ID, FAC_PSS_ID, FAC_Code, FAC_Date, FAC_Libelle, FAC_IsTransfere, FAC_TRS_ID_Payeur,
+  FAC_ModeRegl, FAC_MontantHT, FAC_MontantTTC, FAC_IsDesactive) VALUES
+ (1, 3, 0, 'FN-2024-001', '2024-06-30', 'Facture Négobat juin', 1, 12, 0, 250, 300, 0),
+ (2, 4, 0, 'FN-2024-RG1', '2024-07-05', 'Régule prix acier', 1, 12, 0, -20, -24, 0),
+ (3, 7, 1, 'T69-2024-01', '2024-06-30', 'Situation 1 terrassement', 1, 14, 0, 2500, 2500, 0);
+INSERT INTO ach_export_facture_ligne (FAL_ID, FAL_FAC_ID, FAL_Ordre, FAL_CHT_ID, FAL_IsTitre, FAL_Code, FAL_Libelle, FAL_UNT_ID, FAL_Qte, FAL_PAU,
+  FAL_PAT, FAL_TVA, FAL_IsDesactive) VALUES
+ (1, 1, 1, 1, 0, 'CIM', 'Ciment', 1, 20, 10, 200, 51, 0),
+ (2, 1, 2, 3, 0, 'ACIER', 'Acier HA', 1, 5, 10, 50, 51, 0),
+ (3, 2, 1, 1, 0, '', 'Régularisation prix acier', 1, 1, -20, -20, 51, 0),
+ (4, 3, 1, 1, 0, '', 'Situation 1', 1, 1, 2500, 2500, 53, 0);
+INSERT INTO afc_prestation_st (PST_ID, PST_AFF_ID, PST_SCT_ID, PST_CHT_ID, PST_TRS_ID, PST_IsModele, PST_Code, PST_Libelle, PST_DateCreat,
+  PST_DateMarcheST, PST_TotPAT, PST_PRM_ID_TVA, PST_IsPaieDirect, PST_RefDevisST, PST_IsDesactive) VALUES
+ (1, 1, 1, 1, 14, 0, 'ST-24-001', 'Terrassement', '2024-05-02', '2024-05-20', 5000, 53, 1, 'DV-T69-12', 0),
+ (2, 1, 1, 1, 14, 1, 'ST-MODELE', 'Modèle', '2024-01-01', '1900-01-01', 0, 53, 0, NULL, 0);
+INSERT INTO afc_prestation_st_ligne (PSL_ID, PSL_PST_ID, PSL_PSL_ID, PSL_Ordre, PSL_TypeLigne, PSL_IsSousDetail, PSL_Code, PSL_Libelle, PSL_UNT_ID,
+  PSL_Qte, PSL_PAU, PSL_PAT, PSL_IsDesactive) VALUES
+ (1, 1, 0, 1, 4, 0, '', 'Lot terrassement', 0, 0, 0, 0, 0),
+ (2, 1, 1, 1, 1, 0, 'DECAP', 'Décapage', 2, 100, 20, 2000, 0),
+ (3, 1, 1, 2, 1, 0, 'FOUIL', 'Fouilles', 2, 50, 60, 3000, 0);
+INSERT INTO afc_prestation_st_situation (PSS_ID, PSS_PST_ID, PSS_PSS_ID_Prec, PSS_Numero, PSS_Date, PSS_Libelle, PSS_Reference, PSS_IsValid,
+  PSS_Pct_Avct, PSS_MtHT, PSS_IsDesactive) VALUES
+ (1, 1, 0, 1, '2024-06-30', 'Situation 1', 'ST-SIT-1', 1, 50, 2500, 0),
+ (2, 1, 1, 2, '2024-07-31', 'Situation 2', 'ST-SIT-2', 0, 80, 4000, 0);
+INSERT INTO afc_prestation_st_situation_ligne (PSI_ID, PSI_PSS_ID, PSI_PSL_ID, PSI_Pct_Avct, PSI_Qte_Avct, PSI_MtHT_Avct, PSI_IsDesactive) VALUES
+ (1, 1, 2, 50, 50, 1000, 0), (2, 1, 3, 50, 25, 1500, 0), (3, 2, 2, 100, 100, 2000, 0), (4, 2, 3, 66.67, 33.33, 2000, 0);
+INSERT INTO afc_prestation_st_consultation (PSC_ID, PSC_PST_ID, PSC_TRS_ID, PSC_DateConsultation, PSC_Ordre, PSC_RefOffre, PSC_MtHTOffre, PSC_IsDesactive) VALUES
+ (1, 1, 14, '2024-05-01', 1, 'OFF-77', 5200, 0);

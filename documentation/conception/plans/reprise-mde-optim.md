@@ -343,7 +343,25 @@ l'analyse, modifié par le § 10.
     (V_REPRISE_AVT) non traités ; avancement des postes de pied non repris (postes non repris au lot 10).
 - **Lot 12, achats et sous-traitance** : `A_DEVIS` (demande de prix), commandes, réceptions, retours, factures,
   avoirs, AO, contrats et situations de sous-traitance (R2) ; ventilation par chantier ; types exclus (Q16).
-  *Critère* : coûts d'achat par chantier égaux à la source.
+  *Critère* : coûts d'achat par chantier égaux à la source. **FAIT (16/11/2026).**
+  - **Réalisé** : `DomainesAchats.cs`. `SourcesAchats` : lignes au prix d'achat (coefficients à 1, remise en
+    coefficient), chantier de chaque ligne (`lig_cha_id`, `LignePiece.ChantierId`), avoir aux montants négatifs rendu
+    positif (le type porte le sens, rôle AVOIR_ACHAT), statut (facture → ENVOYE, autre pièce émise → VALIDE, verrouillée).
+    `AchatsMde` : tables ENTETE* / LIGNE* communes (DF, CF, LF, FF, OS, CS, FS de « type_document », avoir AF si
+    TYPE = A ou total négatif), lignes par « type_ligne_achat » (remise 2 : ligne au montant), CODECHT de la ligne sinon de
+    l'entête, facture transférée verrouillée. `AchatsOptim` : ach_doc_entete par « type_document_achat » (sociétés
+    retenues, hors sauvegardes), fournisseur ach_doc_tiers, lignes ach_ligne_achat propres ou liées
+    (ach_doc_lien_ligne_achat ; réception à la quantité livrée), factures par ach_export_facture_entete / _ligne (chantier
+    par ligne, régule négative en avoir), liens commande → réception → facture ; sous-traitance afc_prestation_st en
+    T_COMMANDE, situations afc_prestation_st_situation en T_FACTURE_AVT (avancement du lot 11 sur les lignes de la
+    commande, période = écart des cumuls PSS_MtHT), consultations en T_AO ; facture d'achat d'une situation de
+    sous-traitance (FAC_PSS_ID) écartée (pas de double coût). Codes propres PST / PSS / PSC dans « type_document_achat ».
+    Tests : `VerifierAchatsAsync` (coûts par chantier par `v_document_chantiers_part`), `AchatsRepriseTests`.
+  - **Écarts** : `document_ligne_lien` non écrit (liens de pièces seulement) ; factures de sous-traitance MDE sans lien
+    de lignes vers la commande : reprises sans suivi d'avancement (`REPRISE_AVANCEMENT_SANS_MARCHE`) ; paiement direct
+    (PST_IsPaieDirect) et retenues de garantie de sous-traitance au lot 13 ; frais de port et divers des factures OPTIM
+    (FAC_MntFraisPort / Divers) non repris en lignes ; partie sous-traitée des lignes de vente (`part_sous_traitance`)
+    non reprise ; sens de LGA_QteLivre (réception) et de PSS_MtHT (cumul) à confirmer sur une base réelle.
 - **Lot 13, règlements** : échéanciers, règlements, lettrage, cautions. *Critère* : soldes égaux à la source.
 - **Lot 14, exploitation** : pointage en minutes avec les indemnités (Q17), planning, inventaire d'ouverture (Q18),
   consommations non liées à un document (Q15). *Critère* : heures par salarié, chantier et mois égales à la source.

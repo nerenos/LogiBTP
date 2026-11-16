@@ -213,7 +213,7 @@ public sealed partial class PiecesVenteOptim : IDomaineReprise
 
     public const string Entete = "vte_doc_entete";
     /// <summary>Types de ligne OPTIM (TypeLigne) : 4 et 3 titres, 2 ouvrage, 1 élément (règle de convertirOptim).</summary>
-    private static string? TypeOptim(long? typeLigne) => typeLigne switch { 4 or 3 => "TITRE", 2 => "OUVRAGE", 1 => "ELEMENT", _ => null };
+    public static string? TypeOptim(long? typeLigne) => typeLigne switch { 4 or 3 => "TITRE", 2 => "OUVRAGE", 1 => "ELEMENT", _ => null };
 
     public async Task ExecuterAsync(ContexteReprise ctx, CancellationToken ct)
     {

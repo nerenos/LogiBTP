@@ -43,6 +43,8 @@ public sealed record LignePiece
     public bool PvFixe { get; init; }
     /// <summary>Montant HT de la source (contrôle des lignes de prix hors composantes).</summary>
     public decimal? MontantHt { get; init; }
+    /// <summary>Chantier de la ligne (achats : ventilation des coûts par les lignes, lot 12).</summary>
+    public int? ChantierId { get; init; }
 }
 
 /// <summary>Pièce de vente source traduite.</summary>
@@ -268,6 +270,7 @@ public sealed class PiecesReprise : IAsyncDisposable
                 x.LigCoefBenef = l.CoefBenef <= 0 ? 1 : l.CoefBenef;
                 x.LigCoefRemise = l.CoefRemise <= 0 ? 1 : l.CoefRemise;
                 x.LigPrecisionPv = 6;
+                x.LigChaId = l.Composante ? null : l.ChantierId;
                 if (type == TL.Element)
                 {
                     x.LigPa = l.Pa ?? 0;
@@ -371,7 +374,7 @@ public sealed class PiecesReprise : IAsyncDisposable
             lignes = r.Lignes.Where(l => !l.LigIsEcartArrondi || l.LigParentId is not null).ToList();
             lignes.Add(new DocumentLigneBtp
             {
-                LigId = lignes.Min(l => l.LigId) - 1, LigOrdre = lignes.Where(l => l.LigParentId is null).Select(l => l.LigOrdre).DefaultIfEmpty().Max() + 1,
+                LigId = lignes.Select(l => l.LigId).DefaultIfEmpty().Min() - 1, LigOrdre = lignes.Where(l => l.LigParentId is null).Select(l => l.LigOrdre).DefaultIfEmpty().Max() + 1,
                 LigTylId = TL.Element, LigLibelleHtml = LibelleEcart, LigQte = 1, LigPa = ecart, LigPv = ecart, LigPvFixe = true, LigPrecisionPv = 6,
                 LigNatId = natureEcart, LigTvaId = lignes.Where(l => TL.EstChiffree(l) && l.LigTvaId is not null).Select(l => l.LigTvaId).FirstOrDefault(),
                 LigIsNonEditee = true, LigProprietes = JsonDocument.Parse("""{"reprise_ecart":true}"""),
@@ -513,8 +516,14 @@ public sealed class PiecesReprise : IAsyncDisposable
         return (res, marche);
     }
 
+    /// <summary>Lien de transformation entre pièces reprises (table et clé source), si les deux le sont.</summary>
+    public async Task LierAsync((string Table, string? Cle) source, (string Table, string? Cle) cible, CancellationToken ct)
+    {
+        if (ctx.Registre.Trouver(source.Table, source.Cle) is { } s && ctx.Registre.Trouver(cible.Table, cible.Cle) is { } c && s != c) await LierAsync(s, c, ct);
+    }
+
     /// <summary>Lien de transformation (marché → document d'avancement, situation → facture), une fois.</summary>
-    private async Task LierAsync(long source, long cible, CancellationToken ct) =>
+    public async Task LierAsync(long source, long cible, CancellationToken ct) =>
         await SqlReprise.ExecuterAsync(ctx.Unite, """
             INSERT INTO document_lien (lie_source_ent_id, lie_cible_ent_id, lie_type) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING
             """, ct, source, cible, LienTransformation);

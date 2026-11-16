@@ -297,4 +297,6 @@ public static class TablesCorrespondance
     public const string TypeFacture = "type_facture";
     public const string TypeLigneVente = "type_ligne_vente";
     public const string TypeDocumentVente = "type_document_vente";
+    public const string TypeDocumentAchat = "type_document_achat";
+    public const string TypeLigneAchat = "type_ligne_achat";
 }

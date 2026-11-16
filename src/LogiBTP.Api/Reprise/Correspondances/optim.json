@@ -36,7 +36,10 @@
         { "source": "REGUL", "cible": "A_FACTURE", "note": "Régule : avoir si le montant est négatif (lot 12)" },
         { "source": "RESA", "cible": "S_RESERVATION" },
         { "source": "CI", "ignorer": true, "motif": "Cession interne : non reprise (Q16)" },
-        { "source": "APPRO", "ignorer": true, "motif": "Demande d'approvisionnement : non reprise (Q16)" }
+        { "source": "APPRO", "ignorer": true, "motif": "Demande d'approvisionnement : non reprise (Q16)" },
+        { "source": "PST", "cible": "T_COMMANDE", "note": "Prestation de sous-traitance afc_prestation_st : code propre à la reprise" },
+        { "source": "PSS", "cible": "T_FACTURE_AVT", "note": "Situation de sous-traitance afc_prestation_st_situation : code propre à la reprise" },
+        { "source": "PSC", "cible": "T_AO", "note": "Consultation de sous-traitance afc_prestation_st_consultation : code propre à la reprise" }
       ]
     },
     "nature_message": {
