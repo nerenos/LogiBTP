@@ -133,11 +133,71 @@ public class RepriseBaseTests
         await VerifierPiecesVenteAsync(b, source, reelle.Rapport);
         await VerifierAvancementAsync(b, source, reelle.Rapport);
         await VerifierAchatsAsync(b, source, reelle.Rapport);
+        await VerifierReglementsAsync(b, source, reelle.Rapport);
 
         // Correspondances fournies invalides : refus avant toute lecture.
         var refus = await Assert.ThrowsAsync<RepriseRefuseeException>(() => RepriseBase.ExecuterAsync(
             demande with { Correspondances = $$"""{ "source": "{{source}}", "version": 1, "tables": {} }""" }, default));
         Assert.Equal(ErreurReprise.CorrespondancesInvalides, refus.Code);
+    }
+
+    /// <summary>Lot 13 : échéanciers, règlements, lettrage, retenues et cautions (soldes égaux à la source).</summary>
+    private static async Task VerifierReglementsAsync(BaseNeuve b, string source, RapportReprise r)
+    {
+        async Task<long> Compter(string sql) => await b.CompterAsync(sql);
+        // Reste à payer signé d'une pièce en centimes (avoir négatif) ; retenue de garantie ; état de paiement.
+        async Task<long> Reste(string numero, string nature = "NORMALE', 'RETENUE") => await Compter($"""
+            SELECT round(100 * coalesce(sum(e.ech_montant * f_signe_reglement(d.ent_id) - coalesce((SELECT sum(poi_montant) FROM pointage WHERE poi_echeance_id = e.ech_id), 0)), 0))::bigint
+            FROM document_echeance e JOIN document d ON d.ent_id = e.ech_ent_id WHERE d.ent_numero = '{numero}' AND e.ech_nature IN ('{nature}')
+            """);
+        async Task<string?> Etat(string numero) => await b.TexteAsync($"SELECT d.ent_etat_paiement || '/' || s.std_code FROM document d JOIN statut_document s ON s.std_id = d.ent_std_id WHERE d.ent_numero = '{numero}'");
+        if (source == SourceReprise.Mde)
+        {
+            // Facture en deux échéances de la source partiellement réglées : un règlement par pièce (cumul MDE), mode MODEREG.
+            Assert.Equal(35000L, await Reste("FA000001"));
+            Assert.Equal("P/PAYE_PARTIEL", await Etat("FA000001"));
+            Assert.Equal(2L, await Compter("SELECT count(*) FROM document_echeance e JOIN document d ON d.ent_id = e.ech_ent_id WHERE d.ent_numero = 'FA000001' AND e.ech_manuel AND e.ech_mode = 'CHEQUE'"));
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM reglement WHERE reg_sens = 'E' AND reg_mode = 'CHEQUE' AND reg_montant = 750 AND reg_date = '2024-05-15' AND reg_reference = 'FA000001'"));
+            // Facture sans échéance source : échéancier calculé avec la retenue PMEDOCRETENUE, cumul réglé réparti.
+            Assert.Equal(25550L, await Reste("FA000002"));
+            Assert.Equal(1778L, await Reste("FA000002", "RETENUE"));
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM document_echeance e JOIN document d ON d.ent_id = e.ech_ent_id WHERE d.ent_numero = 'FA000002' AND e.ech_nature = 'RETENUE' AND e.ech_date IS NULL AND NOT e.ech_manuel"));
+            // Fournisseur soldé (décaissement), sous-traitant ouvert, avoir brouillon sans échéancier.
+            Assert.Equal(0L, await Reste("FF000001"));
+            Assert.Equal("T/PAYE", await Etat("FF000001"));
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM reglement WHERE reg_sens = 'D' AND reg_montant = 408"));
+            Assert.Equal(48000L, await Reste("FS000001"));
+            Assert.Equal(0L, await Compter("SELECT count(*) FROM document_echeance e JOIN document d ON d.ent_id = e.ech_ent_id WHERE d.ent_notre_reference = 'AV000001'"));
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM caution c JOIN personne p ON p.per_id = c.cau_tiers_id WHERE p.per_code = 'C001' AND cau_organisme = 'Banque Populaire' AND cau_montant = 55 AND cau_date_fin = '2025-03-31'"));
+            Assert.Equal((4, 3, 1), Volume(r, ReglementsMde.Echeance));
+            Assert.Equal((4, 3, 1), Volume(r, ReglementsMde.Document));
+            Assert.Equal(3L, await Compter("SELECT count(*) FROM reglement"));
+        }
+        else
+        {
+            // Remise de deux règlements de tiers différents (un règlement par tiers) et règlement sans échéance réparti.
+            Assert.Equal(0L, await Reste("FAC-0012"));
+            Assert.Equal("T/PAYE", await Etat("FAC-0012"));
+            Assert.Equal(2L, await Compter("SELECT count(*) FROM reglement WHERE reg_date = '2024-02-15' AND reg_reference = 'Remise 15/02'"));
+            // Situation : échéance de la facture de la situation (VSI) et échéance de retenue (VER_VRG_ID), 500 réglés.
+            Assert.Equal(23440L, await Reste("FS-0001"));
+            Assert.Equal(3672L, await Reste("FS-0001", "RETENUE"));
+            Assert.Equal("P/PAYE_PARTIEL", await Etat("FS-0001"));
+            // Échéance fournisseur soldée réglée à son montant ; régule (avoir) sans échéance source, ouverte et négative.
+            Assert.Equal(0L, await Reste("FN-2024-001"));
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM reglement WHERE reg_sens = 'D' AND reg_montant = 300 AND reg_date = '2024-07-25'"));
+            Assert.Equal(-2400L, await Reste("FN-2024-RG1"));
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM caution WHERE cau_organisme = 'BNP Paribas' AND cau_montant = 36.72 AND cau_reference = 'CA-2024-1'"));
+            Assert.Equal((4, 4, 0), Volume(r, ReglementsOptim.Echeance));
+            Assert.Equal((3, 3, 0), Volume(r, ReglementsOptim.Reglement));
+            Assert.Equal(4L, await Compter("SELECT count(*) FROM reglement"));
+        }
+        // Tout pointage reste dans son échéance, du signe de l'échéance.
+        Assert.Equal(0L, await Compter("""
+            SELECT count(*) FROM document_echeance e JOIN (SELECT poi_echeance_id, sum(poi_montant) AS p FROM pointage GROUP BY 1) x ON x.poi_echeance_id = e.ech_id
+            WHERE abs(x.p) > e.ech_montant OR sign(x.p) <> f_signe_reglement(e.ech_ent_id)
+            """));
+        Assert.DoesNotContain(r.Anomalies, a => a.Code == CodeAnomalie.PointageExcedent);
     }
 
     /// <summary>Lot 12 : achats et sous-traitance (types, tiers, chantier des lignes, avoirs, liens, avancement de sous-traitance).</summary>
@@ -158,7 +218,7 @@ public class RepriseBaseTests
             // Commande sur deux chantiers (ligne de texte gardée), facture transférée avec remise, avoir rendu positif.
             Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Pieces} JOIN personne f ON f.per_id = d.ent_tiers_id WHERE ent_numero = 'CF000001' AND t.tyd_code = 'A_COMMANDE' AND s.std_code = 'VALIDE' AND f.per_code = 'F001' AND ent_total_ht = 350 AND ent_total_ttc = 420 AND ent_reference_externe = 'ARC-77'"));
             Assert.Equal(1L, await Compter("SELECT count(*) FROM document_ligne l JOIN document d ON d.ent_id = l.lig_ent_id JOIN chantier c ON c.cha_id = l.lig_cha_id WHERE d.ent_numero = 'CF000001' AND l.lig_libelle_html = 'Sable' AND c.cha_code = 'CH003'"));
-            Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Pieces} WHERE ent_numero = 'FF000001' AND t.tyd_code = 'A_FACTURE' AND s.std_code = 'ENVOYE' AND ent_verrouille AND ent_total_ht = 340 AND ent_total_ttc = 408"));
+            Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Pieces} WHERE ent_numero = 'FF000001' AND t.tyd_code = 'A_FACTURE' AND s.std_code = 'PAYE' AND ent_verrouille AND ent_total_ht = 340 AND ent_total_ttc = 408"));
             Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Pieces} WHERE ent_numero = 'AVF00001' AND t.tyd_code = 'A_AVOIR' AND s.std_code = 'BROUILLON' AND ent_total_ht = 50 AND ent_total_ttc = 60"));
             // Sous-traitance : commande et facture (sans lien de lignes : sans suivi d'avancement, signalée).
             Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Pieces} JOIN personne f ON f.per_id = d.ent_tiers_id WHERE ent_numero = 'CS000001' AND t.tyd_code = 'T_COMMANDE' AND f.per_code = 'S001' AND ent_total_ht = 1000"));
@@ -215,7 +275,7 @@ public class RepriseBaseTests
         var (ht1, ttc1, ht2, ttc2) = source == SourceReprise.Mde ? ("296.25", "355.50", "479.04", "574.85") : ("612", "734.40", "860.40", "1032.48");
         // Situation facturée (cumul), facture d'avancement de la période (verrouillée), situation suivante en brouillon.
         Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Pieces} WHERE ent_numero = '{sit1}' AND t.tyd_code = 'V_SITUATION' AND s.std_code = 'FACTURE' AND ent_avt_presentation = 'C' AND ent_total_ht = {ht1} AND ent_total_ttc = {ttc1}"));
-        Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Pieces} WHERE ent_numero = '{fac}' AND t.tyd_code = 'V_FACTURE_AVT' AND s.std_code = 'ENVOYE' AND ent_verrouille AND ent_avt_presentation = 'P' AND ent_total_ht = {ht1} AND ent_total_ttc = {ttc1}"));
+        Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Pieces} WHERE ent_numero = '{fac}' AND t.tyd_code = 'V_FACTURE_AVT' AND s.std_code IN ('ENVOYE', 'PAYE_PARTIEL') AND ent_verrouille AND ent_avt_presentation = 'P' AND ent_total_ht = {ht1} AND ent_total_ttc = {ttc1}"));
         Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Pieces} WHERE ent_numero = '{sit2}' AND s.std_code = 'BROUILLON' AND NOT ent_verrouille AND ent_total_ht = {ht2} AND ent_total_ttc = {ttc2}"));
         // Cumul d'avancement égal à la source, sans écart de reprise sur les pièces d'avancement.
         Assert.DoesNotContain(r.EcartsArrondi, e => e.Piece.StartsWith("V_SITUATION") || e.Piece.StartsWith("V_FACTURE_AVT"));
@@ -268,7 +328,7 @@ public class RepriseBaseTests
             // Commande hors postes de pied ; facture définitive verrouillée à 10 % ; avoir brouillon sans numéro ; avancement écartée.
             Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Pieces} WHERE t.tyd_code = 'V_COMMANDE' AND s.std_code = 'BROUILLON' AND ent_total_ht = 200"));
             Assert.Contains(r.ChampsPerdus, c => c.Table == "PMEDOCCDECLI" && c.Champ == "MTPOSTESHT/MTPOSTESTTC");
-            Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Pieces} WHERE ent_numero = 'FA000001' AND s.std_code = 'ENVOYE' AND ent_verrouille AND ent_total_ht = 1000 AND ent_total_ttc = 1100"));
+            Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Pieces} WHERE ent_numero = 'FA000001' AND s.std_code = 'PAYE_PARTIEL' AND ent_verrouille AND ent_total_ht = 1000 AND ent_total_ttc = 1100"));
             Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Pieces} WHERE t.tyd_code = 'V_AVOIR' AND ent_numero IS NULL AND ent_notre_reference = 'AV000001' AND NOT ent_verrouille"));
             Assert.Equal((3, 3, 0), Volume(r, "PMEDOCFACCLI"));
             Assert.Equal(1L, await Compter("SELECT count(*) FROM marche m JOIN document d ON d.ent_id = m.mar_ent_id WHERE m.mar_code = 'M-CH001' AND d.ent_numero = 'DC000002'"));

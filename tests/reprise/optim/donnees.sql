@@ -335,3 +335,24 @@ INSERT INTO afc_prestation_st_situation_ligne (PSI_ID, PSI_PSS_ID, PSI_PSL_ID, P
  (1, 1, 2, 50, 50, 1000, 0), (2, 1, 3, 50, 25, 1500, 0), (3, 2, 2, 100, 100, 2000, 0), (4, 2, 3, 66.67, 33.33, 2000, 0);
 INSERT INTO afc_prestation_st_consultation (PSC_ID, PSC_PST_ID, PSC_TRS_ID, PSC_DateConsultation, PSC_Ordre, PSC_RefOffre, PSC_MtHTOffre, PSC_IsDesactive) VALUES
  (1, 1, 14, '2024-05-01', 1, 'OFF-77', 5200, 0);
+
+-- Règlements (lot 13) : échéances polymorphes (VDE facture 3, VSI situation 1 → facture 7 avec son échéance de retenue,
+-- FAC facture d'achat 1 soldée, ligne de groupement écartée) ; retenue et caution ; remise de deux règlements de
+-- tiers différents (un règlement par tiers) et règlement sans échéance (réparti) ; régule d'achat sans échéance (ouverte).
+INSERT INTO vac_doc_echeance_reglement (VER_ID, VER_TypeEntite, VER_Entite_ID, VER_IsGroupement, VER_VRG_ID, VER_ModeRegl, VER_DateEch, VER_Montant,
+  VER_IsSolde, VER_RefPiece, VER_MQuand, VER_IsDesactive) VALUES
+ (1, 'VDE', 3, 0, 0, 62, '2024-01-20', 1100, 1, NULL, NULL, 0),
+ (2, 'VSI', 1, 0, 0, 62, '2024-07-31', 697.68, 0, NULL, NULL, 0),
+ (3, 'VSI', 1, 0, 1, 62, '2025-06-30', 36.72, 0, NULL, NULL, 0),
+ (4, 'FAC', 1, 0, 0, 62, '2024-07-31', 300, 1, 'FN-2024-001', '2024-07-25', 0),
+ (5, 'VDE', 3, 1, 0, 62, '2024-01-20', 1100, 0, NULL, NULL, 0);
+INSERT INTO vac_doc_retenue_caution (VRG_ID, VRG_TypeEntite, VRG_Entite_ID, VRG_Libelle, VRG_Pct, VRG_MontantTotalRG, VRG_MontantCaution, VRG_NbMois,
+  VRG_DateRG, VRG_IsCaution, VRG_Banque, VRG_NumActe, VRG_IsDesactive) VALUES
+ (1, 'VSI', 1, 'Retenue 5 %', 5, 36.72, 0, 0, '2024-06-30', 0, NULL, NULL, 0),
+ (2, 'VDE', 7, 'Caution bancaire', 5, 0, 36.72, 12, '2024-06-30', 1, 'BNP Paribas', 'CA-2024-1', 0);
+INSERT INTO vac_reglement_lot (VEL_ID, VEL_Date, VEL_Montant, VEL_ModeRegl, VEL_Commentaire, VEL_TropPercu, VEL_IsDesactive) VALUES
+ (1, '2024-02-15', 1300, 62, 'Remise 15/02', 0, 0);
+INSERT INTO vac_reglement_facture_vte (VRV_ID, VRV_VDE_ID, VRV_VER_ID, VRV_VEL_ID, VRV_ModeRegl, VRV_Date, VRV_Montant, VRV_Libelle, VRV_IsDesactive) VALUES
+ (1, 3, 1, 1, 62, '2024-02-15', 800, 'Chèque 1', 0),
+ (2, 7, 2, 1, 62, '2024-08-15', 500, 'Chèque 2', 0),
+ (3, 3, 0, 0, 62, '2024-03-01', 300, 'Virement solde', 0);

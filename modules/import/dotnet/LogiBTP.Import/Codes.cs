@@ -111,4 +111,8 @@ public static class CodeAnomalie
     public const string LigneNonReprise = "REPRISE_LIGNE_NON_REPRISE";
     /// <summary>Situation ou facture d'avancement sans marché ou ligne sans ligne du marché : reprise en ligne libre.</summary>
     public const string AvancementSansMarche = "REPRISE_AVANCEMENT_SANS_MARCHE";
+    /// <summary>Échéancier de la source d'un autre total que le net à payer repris (acompte déduit, paiement direct) : gardé.</summary>
+    public const string EcheancierEcart = "REPRISE_ECHEANCIER_ECART";
+    /// <summary>Règlement ou lettrage de la source au-delà du reste de l'échéance : excédent gardé en trop-perçu non pointé.</summary>
+    public const string PointageExcedent = "REPRISE_POINTAGE_EXCEDENT";
 }

@@ -363,6 +363,27 @@ l'analyse, modifié par le § 10.
     (FAC_MntFraisPort / Divers) non repris en lignes ; partie sous-traitée des lignes de vente (`part_sous_traitance`)
     non reprise ; sens de LGA_QteLivre (réception) et de PSS_MtHT (cumul) à confirmer sur une base réelle.
 - **Lot 13, règlements** : échéanciers, règlements, lettrage, cautions. *Critère* : soldes égaux à la source.
+  **FAIT (16/11/2026).**
+  - **Réalisé** : `DomainesReglements.cs`. `ReglementsReprise` : pièces comptables reprises (règle PIECE_COMPTABLE,
+    ventes et achats, valables, avec tiers) ; échéancier de la source (montants positifs, retenue sans date, `ech_manuel`),
+    sinon calculé comme à la validation (`Echeances.Calculer` : condition figée, net à payer moins la retenue de la source,
+    retenue en échéance RETENUE) ; règlements E (ventes) / D (achats), pointages signés par `f_signe_reglement` et
+    plafonnés au reste de l'échéance (excédent gardé non pointé, `REPRISE_POINTAGE_EXCEDENT`) ; cautions rattachées au
+    marché de la pièce ; état de paiement et statut recalculés (`ApresPointageAsync`) ; sans le module Règlements :
+    échéanciers seuls. `ReglementsMde` : COMM_ECHEANCE par CODELOGICIEL (pièce de FIN_DOCUMENT, TYPETIERS C / F / S),
+    FLRETENUEGARANTIE → RETENUE ; un règlement par pièce du cumul DEJAREGLE (MDE ne garde pas le détail), daté
+    FIN_DOCUMENT.DATEMODIF, mode MODEREG ; PMEDOCRETENUE : retenue (TYPECAUTION vide) ou caution. `ReglementsOptim` :
+    vac_doc_echeance_reglement polymorphe (VDE, VSI → facture de la situation, FAC → facture d'achat ou situation de
+    sous-traitance ; VER_VRG_ID → RETENUE ; groupements écartés), vac_reglement_facture_vte (un règlement par remise
+    vac_reglement_lot et par tiers, sinon par ligne ; sans échéance : réparti), échéances d'achat soldées réglées à leur
+    montant (OPTIM ne garde pas les paiements fournisseurs), vac_doc_retenue_caution (retenue, payée sans échéance :
+    VRG_MontantPaye ; caution). Tests : `VerifierReglementsAsync` (reste signé par pièce, retenues, états, cautions).
+  - **Écarts** : échéancier source d'un autre total que le net repris gardé tel quel (`REPRISE_ECHEANCIER_ECART`,
+    information : acompte déduit, paiement direct) ; acomptes déduits non repris en `document_deduction` ni postes de
+    pied de retenue (la retenue est une échéance RETENUE, la pièce garde son TTC en net à payer) ; compensations
+    facture / avoir OPTIM (VRV_VRV_Id_Avoir) reprises en règlements ordinaires ; durée de la caution OPTIM (VRG_NbMois,
+    tinyint lu en booléen) perdue ; mode d'échéance MDE (MODEPAIEMENT) remplacé par le mode de la pièce ; sens de
+    CODELOGICIEL et TYPECAUTION à confirmer sur une base réelle.
 - **Lot 14, exploitation** : pointage en minutes avec les indemnités (Q17), planning, inventaire d'ouverture (Q18),
   consommations non liées à un document (Q15). *Critère* : heures par salarié, chantier et mois égales à la source.
 

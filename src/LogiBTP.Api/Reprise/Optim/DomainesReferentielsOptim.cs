@@ -155,7 +155,8 @@ public sealed class ReferentielsOptim : IDomaineReprise
         SELECT PRM_ID, PRM_Code, PRM_Libelle FROM z_parametre WHERE PRM_ID IN (
             SELECT TRS_ModeReglement FROM bib_tiers UNION SELECT TRS_ModeReglementVte FROM bib_tiers
             UNION SELECT VDE_PRM_ModeRegl FROM vte_doc_entete UNION SELECT DOE_ModeReglement FROM ach_doc_entete
-            UNION SELECT VER_ModeRegl FROM vac_doc_echeance_reglement UNION SELECT VRV_ModeRegl FROM vac_reglement_facture_vte)
+            UNION SELECT VER_ModeRegl FROM vac_doc_echeance_reglement UNION SELECT VRV_ModeRegl FROM vac_reglement_facture_vte
+            UNION SELECT VEL_ModeRegl FROM vac_reglement_lot)
         ORDER BY PRM_Ordre, PRM_ID
         """;
 
