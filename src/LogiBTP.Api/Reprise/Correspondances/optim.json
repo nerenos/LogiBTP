@@ -66,6 +66,17 @@
         { "source": "PARCMATERIEL", "ignorer": true, "motif": "Adresse du parc : sans entité" }
       ]
     },
+    "fonction_intervenant": {
+      "description": "Indicateurs d'un tiers d'affaire (afc_affaire_tiers.AFT_Is*) vers la fonction d'intervenant de l'affaire ou du chantier (lot 9) ; le premier vrai l'emporte, dans l'ordre",
+      "colonne": "afc_affaire_tiers.AFT_Is*",
+      "cibles": ["FONCTION_INTERVENANT"],
+      "entrees": [
+        { "source": "AFT_IsArchi", "cible": "ARCHITECTE" },
+        { "source": "AFT_IsSTraitant", "cible": "SOUS_TRAITANT" },
+        { "source": "AFT_IsClient", "cible": "CLIENT" },
+        { "source": "AFT_IsFournisseur", "cible": "AUTRE", "note": "Fournisseur : fonction réservée aux pièces, intervenant « autre » sur la structure" }
+      ]
+    },
     "categorie_tiers": {
       "description": "Indicateurs de catégorie d'un tiers (ref_categ, par bib_tiers_categ) vers les casquettes",
       "colonne": "ref_categ.CAT_Is*",

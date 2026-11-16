@@ -208,3 +208,40 @@ INSERT INTO bib_article_lien_tarif (ARL_ID, ARL_ART_ID, ARL_TypeTarif, ARL_IsRef
  (4, 4, 'VENTE', 1, NULL, NULL, 0, 0, 41.4, 0, 0, 0, 0),
  (5, 6, 'VENTE', 1, NULL, NULL, 0, 0, 150, 1, 0, 0, 0),
  (6, 1, 'ACHAT', 0, 12, 'ANC', 80, 0, 0, 0, 0, 0, 1);
+
+-- Structure (lot 9) : états (libellés libres), projets, affaires et chantiers des sociétés 1, 2 et 3 (écartée),
+-- chantier interne, adresse de chantier, tiers et contacts d'affaire, indices, valeurs, formule de révision.
+INSERT INTO z_parametre (PRM_ID, PRM_Code, PRM_Libelle, PRM_TypeParam, PRM_Ordre, PRM_IsDesactive) VALUES
+ (960, 'ENC', 'En cours', 'EtatAffaire', 1, 0), (961, 'SOL', 'Soldée', 'EtatAffaire', 2, 0),
+ (962, 'ENC', 'En cours', 'EtatChantier', 1, 0), (963, 'TER', 'Terminé', 'EtatChantier', 2, 0),
+ (964, 'OBT', 'Obtenu', 'EtatDossier', 1, 0), (965, 'PER', 'Perdu', 'EtatDossier', 2, 0);
+INSERT INTO afc_dossier (DOS_ID, DOS_DateAO, DOS_TRS_ID_MOU, DOS_LibelleMOU, DOS_Adr1MOU, DOS_CPMOU, DOS_VilleMOU, DOS_Designation,
+  DOS_Observation, DOS_TRS_ID_MOE, DOS_Commune, DOS_Cout, DOS_Etat, DOS_IsDesactive) VALUES
+ (1, '2024-03-15', 11, 'IMMO GRAND LYON', '100 cours Lafayette', '69003', 'Lyon', 'Groupe scolaire Jean Moulin', 'Appel d''offres', 14,
+  'Villeurbanne', 2500000, 964, 0),
+ (2, '2024-04-01', 0, 'Mairie de Bron', NULL, NULL, NULL, 'Gymnase', NULL, 0, NULL, 0, 965, 0),
+ (3, '1900-01-01', 0, NULL, NULL, NULL, NULL, 'Dossier désactivé', NULL, 0, NULL, 0, 0, 1);
+INSERT INTO afc_affaire (AFF_ID, AFF_SCT_ID, AFF_Code, AFF_Reference, AFF_Libelle, AFF_Etat, AFF_ChargeAff, AFF_IsPublic, AFF_Commentaire,
+  AFF_DateSignature, AFF_DateDebutPrev, AFF_DateFinReel, AFF_TRS_ID, AFF_IsDesactive) VALUES
+ (1, 1, '24-001', 'Réf. IGL 2024/12', 'Groupe scolaire Jean Moulin', 960, 1, 1, 'Marché à bons de commande', '2024-05-02', '2024-06-01', NULL, 11, 0),
+ (2, 2, '23-045', NULL, 'Maison individuelle Dupont', 961, 0, 0, NULL, NULL, '2023-03-01', '2023-12-15', 10, 0),
+ (3, 3, '24-900', NULL, 'Affaire de RHONE ENERGIE', 960, 0, 0, NULL, NULL, NULL, NULL, 11, 0);
+INSERT INTO afc_chantier (CHT_ID, CHT_SCT_ID, CHT_AFF_ID, CHT_Code, CHT_Libelle, CHT_LibelleEdition, CHT_ETAT, CHT_IsChantier, CHT_Observation,
+  CHT_ConducTvx, CHT_TotPVT_Marche, CHT_DateDebPrev, CHT_DateFinPrev, CHT_DateDebutReel, CHT_DateFinReel, CHT_CodeAna, CHT_TRS_ID, CHT_IsDesactive) VALUES
+ (1, 1, 1, 'C24-001', 'Groupe scolaire - gros œuvre', 'GS Jean Moulin GO', 962, 1, 'Accès par la rue Racine', 1, 1250000.25,
+  '2024-06-01', '2025-08-31', '2024-06-10', NULL, 'AN-LYON', 11, 0),
+ (2, 2, 2, 'C23-045', 'Maison Dupont', '', 963, 1, NULL, 2, 185000, '2023-03-01', '2023-12-01', '2023-03-06', '2023-12-15', NULL, 10, 0),
+ (3, 1, 0, 'ATELIER', 'Atelier et dépôt', '', 962, 0, NULL, 0, 0, '1900-01-01', NULL, '1900-01-01', NULL, 'AN-LYON', 0, 0),
+ (4, 3, 3, 'C24-900', 'Chantier RHONE ENERGIE', '', 962, 1, NULL, 0, 50000, '1900-01-01', NULL, '1900-01-01', NULL, NULL, 11, 0);
+INSERT INTO z_adresse (ADR_Id, ADR_Libelle, ADR_TypeEntite, ADR_Entite_Id, ADR_Ligne1, ADR_Ligne2, ADR_CP, ADR_Ville, ADR_Pays, ADR_IsDesactive) VALUES
+ (40, 'Chantier', 'CHT', 1, '8 rue Racine', 'Bâtiment B', '69100', 'Villeurbanne', 'France', 0);
+INSERT INTO afc_affaire_tiers (AFT_ID, AFT_AFF_ID, AFT_CHT_ID, AFT_TRS_ID, AFT_IsClient, AFT_IsArchi, AFT_IsFournisseur, AFT_IsSTraitant) VALUES
+ (1, 1, 0, 11, 1, 0, 0, 0), (2, 1, 1, 14, 0, 0, 0, 1), (3, 1, 0, 12, 0, 0, 1, 0), (4, 3, 0, 11, 1, 0, 0, 0);
+INSERT INTO afc_affaire_tiers_personne (AFP_ID, AFP_AFT_ID, AFP_AFF_ID, AFP_PRS_ID, AFP_CHT_ID, AFP_IsPrincipal) VALUES
+ (1, 1, 1, 1, 0, 1), (2, 2, 1, 4, 1, 0);
+INSERT INTO vte_indice (VID_ID, VID_Reference, VID_Description, VID_IsDesactive) VALUES
+ (1, 'BT 01', 'Tous corps d''état', 0), (2, 'ICC', 'Indice du coût de la construction', 0);
+INSERT INTO vte_indice_valeur (VIV_ID, VIV_VID_ID, VIV_DateValeur, VIV_Valeur, VIV_IsDesactive) VALUES
+ (1, 1, '2024-01-01', 129.7, 0), (2, 1, '2024-02-15', 130.1, 0), (3, 2, '2024-01-01', 2077, 0), (4, 2, '2024-04-01', 0, 1);
+INSERT INTO vte_revision_formule (VRF_ID, VRF_Observation, VRF_NbDecimale, VRF_PctFixe, VRF_Pct01, VRF_VID_ID_01, VRF_Pct02, VRF_VID_ID_02,
+  VRF_IsDesactive) VALUES (1, 'Révision gros œuvre', 4, 12.5, 62.5, 1, 25, 2, 0);

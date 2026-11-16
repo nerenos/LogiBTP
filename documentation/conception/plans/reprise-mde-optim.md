@@ -280,7 +280,24 @@ l'analyse, modifié par le § 10.
     tarifs fournisseurs ; stock au lot 13), coût horaire OPTIM des salariés par l'article de MO, métrés types
     (`CLEMETRE`), images (lot 16).
 - **Lot 9, structure** : projets, affaires, chantiers (internes si `CHT_IsChantier = 0`, Q14), marchés, intervenants,
-  révision ; établissement d'origine en étiquette (R1). *Critère* : arborescence complète.
+  révision ; établissement d'origine en étiquette (R1). *Critère* : arborescence complète. **FAIT (16/11/2026).**
+  - **Réalisé** : `StructureReprise` (projets, affaires avec le client en intervenant principal, chantiers, marchés de
+    vente `M-<chantier>`, intervenants dédoublonnés, indices rapprochés par code normalisé sinon créés, valeurs
+    mensuelles `IMPORT`, formules en fractions ; règles `EtatDe`, `StatutProjetDe`, `StatutChantierDe`, `Fraction`) et
+    `DomainesStructure.cs` : `StructureMde` (PMEAFFAIRE close si état non modifiable ou date de clôture, PMECHANTIER
+    clos / terminé par l'état ou la date de fin, marché si montant ou signature, public d'après le libellé de
+    PMETYPEMARCHE, intervenants cités par colonne), `StructureOptim` (afc_dossier → projets avec maître d'œuvre,
+    affaires et chantiers des sociétés retenues, états par le libellé de z_parametre, adresse z_adresse CHT, chantier
+    interne si `CHT_IsChantier = 0`, marché si `CHT_TotPVT_Marche`, tiers d'affaire par le premier indicateur vrai et
+    leurs contacts, vte_indice / vte_indice_valeur / vte_revision_formule). Table de correspondance
+    `fonction_intervenant` (mde.json, optim.json). Tests : `VerifierStructureAsync` (deux sources),
+    `StructureRepriseTests`.
+  - **Écarts** : pas de table d'étiquettes pour les affaires et chantiers : établissement d'origine (société retenue
+    autre que celle de la base) en propriété `etablissement` de `aff_proprietes` / `cha_proprietes` ; lien du marché à
+    sa pièce (`mar_ent_id`) et formule de révision des marchés reportés au lot 10 (pièces) ; phases et lots de projet
+    non repris ; affaire close sans date et marché sans signature datés du jour de la reprise ; fonctions
+    `fonction_intervenant` (FOURNISSEUR → AUTRE, chargé d'affaires MDE ignoré car repris en responsable) à confirmer
+    sur une base réelle.
 - **Lot 10, pièces de vente** : convertisseur commun (réutilisation de `convertirOptim` côté règles, traducteur MDE de
   `eTypeLigneVente`, R3) ; pieds, TVA, versions, métrés, statuts ; ligne d'écart d'arrondi (`lig_is_ecart_arrondi`)
   pour retrouver le montant source ; PV fixe sur les pièces validées ; champs supplémentaires d'en-tête MDE en note

@@ -290,6 +290,15 @@
         { "source": "OU", "cible": "OUVRAGE", "note": "Ouvrage sans composante : à confirmer" }
       ]
     },
+    "fonction_intervenant": {
+      "description": "Tiers cité par une affaire ou un chantier MDE (colonne de PMEAFFAIRE / PMECHANTIER) vers la fonction d'intervenant (lot 9) ; le client est l'intervenant CLIENT de l'affaire, le chargé d'affaires son responsable",
+      "colonne": "PMEAFFAIRE.CODE*, PMECHANTIER.CODE*",
+      "cibles": ["FONCTION_INTERVENANT"],
+      "entrees": [
+        { "source": "CODEARCHI", "cible": "ARCHITECTE" },
+        { "source": "CODECHARGEAFF", "ignorer": true, "motif": "Chargé d'affaires : responsable de l'affaire, chargé du chantier" }
+      ]
+    },
     "type_champ": {
       "description": "Type de donnée d'une zone supplémentaire (SYS_RTCINFOS.DATATYPE) vers le type du champ x_ ; S seul vu sur une base réelle, les autres lettres à confirmer",
       "colonne": "SYS_RTCINFOS.DATATYPE",

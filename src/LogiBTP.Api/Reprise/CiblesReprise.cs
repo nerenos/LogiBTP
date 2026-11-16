@@ -20,6 +20,7 @@ public static class CiblesReprise
         (CorrespondancesReprise.Listes.TypeLien, "SELECT tli_code FROM type_lien"),
         (CorrespondancesReprise.Listes.RegroupementNature, "SELECT rgn_code FROM regroupement_nature"),
         (CorrespondancesReprise.Listes.ModeReglement, "SELECT mre_code FROM mode_reglement"),
+        (CorrespondancesReprise.Listes.FonctionIntervenant, "SELECT fin_code FROM fonction_intervenant"),
         // Civilités proposées par la fiche individu (liste du paramétrage des fiches).
         (CorrespondancesReprise.Listes.Civilite, """
             SELECT o->>'valeur' FROM type_fiche t, jsonb_array_elements(t.tyf_definition->'champs') c,

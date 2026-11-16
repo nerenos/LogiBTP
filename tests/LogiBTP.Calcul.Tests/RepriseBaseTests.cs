@@ -129,12 +129,114 @@ public class RepriseBaseTests
         await VerifierAnnuaireAsync(b, source, reelle.Rapport);
         await VerifierRessourcesAsync(b, source, reelle.Rapport);
         await VerifierBibliothequeAsync(b, source, reelle.Rapport);
+        await VerifierStructureAsync(b, source, reelle.Rapport);
 
         // Correspondances fournies invalides : refus avant toute lecture.
         var refus = await Assert.ThrowsAsync<RepriseRefuseeException>(() => RepriseBase.ExecuterAsync(
             demande with { Correspondances = $$"""{ "source": "{{source}}", "version": 1, "tables": {} }""" }, default));
         Assert.Equal(ErreurReprise.CorrespondancesInvalides, refus.Code);
     }
+
+    /// <summary>Lot 9 : projets, affaires, chantiers, marchés, intervenants, établissement d'origine, révision.</summary>
+    private static async Task VerifierStructureAsync(BaseNeuve b, string source, RapportReprise r)
+    {
+        async Task<long> Compter(string sql) => await b.CompterAsync(sql);
+        if (source == SourceReprise.Mde)
+        {
+            Assert.Equal(3L, await Compter("SELECT count(*) FROM affaire WHERE aff_code LIKE 'AF%'"));
+            // Affaire ouverte : client, chargé d'affaires (individu), commentaire joint ; intervenants client (principal) et architecte.
+            Assert.Equal(1L, await Compter("""
+                SELECT count(*) FROM affaire a JOIN personne p ON p.per_id = a.aff_tiers_id
+                WHERE a.aff_code = 'AF001' AND p.per_code = 'C001' AND a.aff_statut = 'OUVERTE' AND a.aff_date_ouverture = DATE '2024-01-15'
+                  AND a.aff_responsable_ind_id IS NOT NULL AND a.aff_commentaire = E'Construction de 12 logements\nNote affaire'
+                """));
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM intervenant i JOIN affaire a ON a.aff_id = i.itv_aff_id WHERE a.aff_code = 'AF001' AND i.itv_fin_code = 'CLIENT' AND i.itv_principal"));
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM intervenant i JOIN affaire a ON a.aff_id = i.itv_aff_id JOIN personne p ON p.per_id = i.itv_per_id WHERE a.aff_code = 'AF001' AND i.itv_fin_code = 'ARCHITECTE' AND p.per_code = 'A001'"));
+            // Close par l'état non modifiable, ou par la date de clôture.
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM affaire WHERE aff_code = 'AF002' AND aff_statut = 'CLOSE'"));
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM affaire WHERE aff_code = 'AF003' AND aff_statut = 'CLOSE' AND aff_date_cloture = DATE '2024-02-28'"));
+            // Chantiers : ouvert (adresse, conducteur, chargé), clos par l'état, terminé par l'état.
+            Assert.Equal(1L, await Compter("""
+                SELECT count(*) FROM chantier c JOIN affaire a ON a.aff_id = c.cha_aff_id
+                WHERE c.cha_code = 'CH001' AND a.aff_code = 'AF001' AND c.cha_statut = 'OUVERT' AND c.cha_adresse = '12 rue des Tilleuls'
+                  AND c.cha_code_postal = '69003' AND c.cha_ville = 'Lyon' AND c.cha_debut_prevu = DATE '2024-02-01'
+                  AND c.cha_date_fin_prevue = DATE '2024-12-20' AND c.cha_conducteur_ind_id IS NOT NULL AND c.cha_charge_ind_id IS NOT NULL
+                  AND NOT c.cha_interne
+                """));
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM chantier WHERE cha_code = 'CH002' AND cha_statut = 'CLOS' AND cha_fin_reelle = DATE '2023-09-30'"));
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM chantier WHERE cha_code = 'CH003' AND cha_statut = 'TERMINE' AND cha_conducteur_ind_id IS NULL"));
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM intervenant i JOIN chantier c ON c.cha_id = i.itv_cha_id WHERE c.cha_code = 'CH001' AND i.itv_fin_code = 'ARCHITECTE'"));
+            // Marchés : public (type), marché + avenant, signature ; soldé avec le chantier clos ; aucun sans montant ni signature.
+            Assert.Equal(1L, await Compter("""
+                SELECT count(*) FROM marche m JOIN chantier c ON c.cha_id = m.mar_cha_id
+                WHERE m.mar_code = 'M-CH001' AND c.cha_code = 'CH001' AND m.mar_nature = 'U' AND m.mar_sens = 'V' AND m.mar_montant_ht = 162500.50
+                  AND m.mar_date = DATE '2024-01-20' AND m.mar_statut = 'EN_COURS' AND m.mar_commentaire = 'Appel d''offres'
+                """));
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM marche WHERE mar_code = 'M-CH002' AND mar_nature = 'P' AND mar_montant_ht = 48000 AND mar_statut = 'SOLDE'"));
+            Assert.Equal(2L, await Compter("SELECT count(*) FROM marche"));
+            Assert.Equal(0L, await Compter("SELECT count(*) FROM projet"));
+        }
+        else
+        {
+            // Projets : statut par le libellé de l'état, maître d'ouvrage repris ou libre, maître d'œuvre ; désactivé écarté.
+            Assert.Equal(2L, await Compter("SELECT count(*) FROM projet"));
+            Assert.Equal(1L, await Compter("""
+                SELECT count(*) FROM projet p JOIN personne t ON t.per_id = p.prj_tiers_id
+                WHERE p.prj_libelle = 'Groupe scolaire Jean Moulin' AND t.per_code = 'CLI-IGL' AND p.prj_statut = 'OBTENU'
+                  AND p.prj_date_remise = DATE '2024-03-15' AND p.prj_montant_estime = 2500000 AND p.prj_ville = 'Villeurbanne'
+                  AND p.prj_adresse = '100 cours Lafayette' AND p.prj_code_postal = '69003'
+                """));
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM projet WHERE prj_libelle = 'Gymnase' AND prj_statut = 'PERDU' AND prj_tiers_id IS NULL AND prj_client_libre = 'Mairie de Bron'"));
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM intervenant i JOIN projet p ON p.prj_id = i.itv_prj_id JOIN personne t ON t.per_id = i.itv_per_id WHERE i.itv_fin_code = 'MOE' AND t.per_code = 'ST-T69'"));
+            // Affaires des sociétés retenues ; société de la base sans établissement, agence en propriété (R1).
+            Assert.Equal(0L, await Compter("SELECT count(*) FROM affaire WHERE aff_code = '24-900'"));
+            Assert.Equal((3, 2, 1), Volume(r, "afc_affaire"));
+            Assert.Equal(1L, await Compter("""
+                SELECT count(*) FROM affaire WHERE aff_code = '24-001' AND aff_statut = 'OUVERTE' AND aff_date_ouverture = DATE '2024-05-02'
+                  AND aff_responsable_ind_id IS NOT NULL AND aff_proprietes = '{}' AND aff_commentaire = E'Réf. IGL 2024/12\nMarché à bons de commande'
+                """));
+            Assert.Equal(1L, await Compter("""
+                SELECT count(*) FROM affaire WHERE aff_code = '23-045' AND aff_statut = 'CLOSE' AND aff_date_cloture = DATE '2023-12-15'
+                  AND aff_proprietes->>'etablissement' = 'CONSTRUCTIONS DU RHONE - AGENCE ALPES'
+                """));
+            // Chantiers : adresse z_adresse, dates prévues et réelles, conducteur, analytique ; terminé ; interne (Q14).
+            Assert.Equal(1L, await Compter("""
+                SELECT count(*) FROM chantier c JOIN affaire a ON a.aff_id = c.cha_aff_id
+                WHERE c.cha_code = 'C24-001' AND a.aff_code = '24-001' AND c.cha_statut = 'OUVERT' AND c.cha_adresse = E'8 rue Racine\nBâtiment B'
+                  AND c.cha_code_postal = '69100' AND c.cha_ville = 'Villeurbanne' AND c.cha_debut_prevu = DATE '2024-06-01'
+                  AND c.cha_debut_reel = DATE '2024-06-10' AND c.cha_date_fin_prevue = DATE '2025-08-31' AND c.cha_conducteur_ind_id IS NOT NULL
+                  AND c.cha_code_analytique = 'AN-LYON' AND c.cha_commentaire = 'Accès par la rue Racine' AND NOT c.cha_interne
+                """));
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM chantier WHERE cha_code = 'C23-045' AND cha_statut = 'TERMINE' AND cha_fin_reelle = DATE '2023-12-15' AND cha_proprietes ? 'etablissement'"));
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM chantier WHERE cha_code = 'ATELIER' AND cha_interne AND cha_aff_id IS NULL"));
+            Assert.Equal(0L, await Compter("SELECT count(*) FROM chantier WHERE cha_code = 'C24-900'"));
+            // Marchés : public et date de signature de l'affaire, libellé d'édition ; pas de marché pour le chantier interne.
+            Assert.Equal(1L, await Compter("""
+                SELECT count(*) FROM marche WHERE mar_code = 'M-C24-001' AND mar_nature = 'U' AND mar_montant_ht = 1250000.25
+                  AND mar_date = DATE '2024-05-02' AND mar_libelle = 'GS Jean Moulin GO' AND mar_statut = 'EN_COURS'
+                """));
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM marche WHERE mar_code = 'M-C23-045' AND mar_nature = 'P'"));
+            Assert.Equal(2L, await Compter("SELECT count(*) FROM marche"));
+            // Intervenants : fonction par le premier indicateur vrai, sur le chantier cité ; contacts ; affaire écartée.
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM intervenant i JOIN chantier c ON c.cha_id = i.itv_cha_id JOIN personne t ON t.per_id = i.itv_per_id WHERE c.cha_code = 'C24-001' AND i.itv_fin_code = 'SOUS_TRAITANT' AND t.per_code = 'ST-T69'"));
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM intervenant i JOIN affaire a ON a.aff_id = i.itv_aff_id JOIN personne t ON t.per_id = i.itv_per_id WHERE a.aff_code = '24-001' AND i.itv_fin_code = 'AUTRE' AND t.per_code = 'FOU-NEGO'"));
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM intervenant i JOIN affaire a ON a.aff_id = i.itv_aff_id WHERE a.aff_code = '24-001' AND i.itv_fin_code = 'CLIENT' AND i.itv_ind_id IS NOT NULL AND i.itv_principal"));
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM intervenant i JOIN chantier c ON c.cha_id = i.itv_cha_id WHERE c.cha_code = 'C24-001' AND i.itv_ind_id IS NOT NULL"));
+            Assert.Equal((4, 3, 1), Volume(r, "afc_affaire_tiers"));
+            // Révision : BT 01 rapproché de BT01, ICC créé, valeurs au mois (désactivée écartée), formule en fractions.
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM index_prix WHERE ipx_code = 'BT01'"));
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM index_prix WHERE ipx_code = 'ICC' AND ipx_libelle = 'Indice du coût de la construction' AND ipx_actif"));
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM index_valeur v JOIN index_prix i ON i.ipx_id = v.ixv_ipx_id WHERE i.ipx_code = 'BT01' AND v.ixv_mois = DATE '2024-02-01' AND v.ixv_valeur = 130.1 AND v.ixv_source = 'IMPORT'"));
+            Assert.Equal(3L, await Compter("SELECT count(*) FROM index_valeur"));
+            Assert.Equal(1L, await Compter("""
+                SELECT count(*) FROM formule_revision WHERE frv_libelle = 'Révision gros œuvre' AND frv_partie_fixe = 0.125 AND frv_precision = 4
+                  AND frv_termes = '[{"index": "BT01", "poids": 0.625}, {"index": "ICC", "poids": 0.25}]'
+                """));
+        }
+    }
+
+    private static (int, int, int) Volume(RapportReprise r, string table) =>
+        r.Volumes.Single(x => x.Table == table) is var v ? ((int)v.Lues, (int)v.Ecrites, (int)v.Ecartees) : default;
 
     /// <summary>Lot 8 : bibliothèques, familles, éléments hors sommeil, PV retrouvés ou imposés, perte, unités, tarifs.</summary>
     private static async Task VerifierBibliothequeAsync(BaseNeuve b, string source, RapportReprise r)

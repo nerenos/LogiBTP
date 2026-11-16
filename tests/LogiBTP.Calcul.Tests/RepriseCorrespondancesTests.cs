@@ -45,6 +45,7 @@ public class RepriseCorrespondancesTests
         [CorrespondancesReprise.Listes.TypeChamp] = LogiBTP.Fiches.ChampsSupplementaires.Types.ToList(),
         [CorrespondancesReprise.Listes.TypeElement] = Constantes.Js(CasPartages.Chemin("modules", "bibliotheque", "js", "src", "codes.js"), "TYPE_ELEMENT").Values.ToList(),
         [CorrespondancesReprise.Listes.ModeReglement] = CodesInseres("mode_reglement"),
+        [CorrespondancesReprise.Listes.FonctionIntervenant] = CodesInseres("fonction_intervenant"),
         // Civilités de la fiche individu (options du champ « civilite » du paramétrage des fiches, db/131).
         [CorrespondancesReprise.Listes.Civilite] = Regex.Matches(Regex.Match(Lire("db", "131_fiches_parametrage.sql"),
                 @"""code"":""civilite"",[^\]]*""options"":\[(.*?)\]").Groups[1].Value, @"""valeur"":""([^""]+)""")

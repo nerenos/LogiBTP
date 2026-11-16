@@ -292,4 +292,5 @@ public static class TablesCorrespondance
     public const string TiersPayeur = "tiers_payeur";
     public const string CategorieTiers = "categorie_tiers";
     public const string TypeElement = "type_element";
+    public const string FonctionIntervenant = "fonction_intervenant";
 }
