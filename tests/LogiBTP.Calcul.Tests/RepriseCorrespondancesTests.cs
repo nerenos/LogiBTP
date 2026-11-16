@@ -42,6 +42,7 @@ public class RepriseCorrespondancesTests
         [CorrespondancesReprise.Listes.Casquette] = CodesInseres("casquette"),
         [CorrespondancesReprise.Listes.TypeLien] = CodesInseres("type_lien"),
         [CorrespondancesReprise.Listes.RegroupementNature] = CodesInseres("regroupement_nature"),
+        [CorrespondancesReprise.Listes.TypeChamp] = LogiBTP.Fiches.ChampsSupplementaires.Types.ToList(),
         [CorrespondancesReprise.Listes.ModeReglement] = CodesInseres("mode_reglement"),
         // Civilités de la fiche individu (options du champ « civilite » du paramétrage des fiches, db/131).
         [CorrespondancesReprise.Listes.Civilite] = Regex.Matches(Regex.Match(Lire("db", "131_fiches_parametrage.sql"),

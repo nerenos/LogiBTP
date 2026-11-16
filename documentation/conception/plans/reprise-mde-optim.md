@@ -196,7 +196,17 @@ l'analyse, modifié par le § 10.
     grilles ; codes analytiques des établissements OPTIM), à exploiter par l'export ; natures MDE au lot 8 (types
     d'articles).
 - **Lot 5, champs supplémentaires** : `z_dataspec_*` et `SYS_RTCINFOS` / `RTCFIELD*` deviennent des champs `x_` des
-  fiches (module Fiche) (Q12). *Critère* : champs créés et valeurs reprises.
+  fiches (module Fiche) (Q12). *Critère* : champs créés et valeurs reprises. **FAIT (16/11/2026).**
+  - **Réalisé** : `ChampsReprise` (nom `x_` tiré du libellé, sans accents, 41 caractères, suffixe sur collision ;
+    création par `fiche_champ_creer` dans la transaction du moteur ; conversion au type ; écriture sur la fiche par
+    identifiants contrôlés de `ConstructeurFiche`), domaines `CHAMPS` (MDE : `SYS_RTCINFOS`, tables de fiches par la
+    table de correspondance `table_fiche`, type par `type_champ` ; OPTIM : une définition `z_dataspec_bdd` par entité
+    citée dans `z_dataspec_data`, table `entite`, type déduit des valeurs) et `VALEURS_CHAMPS`, **déclaré en dernier** :
+    il écrit les valeurs sur les fiches que les lots 6 à 9 inscrivent au registre (clé : table source + clé primaire,
+    MDE `PMECLIENT`… + CODE, OPTIM `bib_tiers`, `bib_personne`, `ref_salarie`, `bib_materiel`, `bib_article`,
+    `afc_affaire`, `afc_chantier` + identifiant). Liste de cibles `TYPE_CHAMP` (types du module Fiche).
+  - Les valeurs ne sont écrites qu'à partir du lot 6 (fiches absentes avant) : critère vérifié par les tests des lots
+    suivants. Zones des pièces MDE ignorées ici (note CRM aux lots 10 et 12).
 - **Lot 6, annuaire** : jointure MDE du § 10.2 (Q5), avec toutes les adresses et tous les contacts ; OPTIM
   `bib_tiers`, `bib_tiers_categ`, `bib_personne`, `z_adresse` ; casquettes ; payeurs ; RIB ; facturation
   électronique ; fusion des doublons retenus. *Critère* : fiches, adresses et contacts égaux à la source, moins les

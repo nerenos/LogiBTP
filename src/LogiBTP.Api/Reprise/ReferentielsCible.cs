@@ -285,4 +285,7 @@ public static class TablesCorrespondance
     public const string ModePaiement = "mode_paiement";
     public const string RegroupementNature = "regroupement_nature";
     public const string Compteur = "compteur";
+    public const string TableFiche = "table_fiche";
+    public const string TypeChamp = "type_champ";
+    public const string Entite = "entite";
 }

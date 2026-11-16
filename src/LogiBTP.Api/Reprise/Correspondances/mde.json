@@ -236,6 +236,47 @@
         { "source": "Portugal", "cible": "PT" }, { "source": "PORTUGAL", "cible": "PT" },
         { "source": "Pays-Bas", "cible": "NL" }, { "source": "Royaume-Uni", "cible": "GB" }
       ]
+    },
+    "table_fiche": {
+      "description": "Table MDE à zones supplémentaires (SYS_RTCINFOS.TABLENAME) vers le type de fiche qui reçoit le champ x_ (Q12) ; les tables de pièces sont ignorées",
+      "colonne": "SYS_RTCINFOS.TABLENAME",
+      "cibles": ["TYPE_FICHE"],
+      "entrees": [
+        { "source": "PMECLIENT", "cible": "personne" },
+        { "source": "PMEFOURNISSEUR", "cible": "personne" },
+        { "source": "PMESOUSTRAITANT", "cible": "personne" },
+        { "source": "PMEARCHITECTE", "cible": "personne" },
+        { "source": "PMECHARGEAFFAIRE", "cible": "individu" },
+        { "source": "PMESALARIE", "cible": "salarie" },
+        { "source": "PMEELEMENT", "cible": "element" },
+        { "source": "PMECHANTIER", "cible": "chantier" },
+        { "source": "PMEMATERIEL", "cible": "materiel" },
+        { "source": "PMEDOCDEVCLI", "ignorer": true, "motif": "En-tête de pièce : valeurs en note CRM (Q12, lot 10)" },
+        { "source": "PMEAFFBASEDOC", "ignorer": true, "motif": "En-tête de pièce : valeurs en note CRM (Q12, lot 10)" },
+        { "source": "ENTETEDEVISFOURNISSEUR", "ignorer": true, "motif": "En-tête de pièce : valeurs en note CRM (Q12, lot 12)" },
+        { "source": "ENTETECDEFOURNISSEUR", "ignorer": true, "motif": "En-tête de pièce : valeurs en note CRM (Q12, lot 12)" },
+        { "source": "ENTETERECEPTIONFOURNISSEUR", "ignorer": true, "motif": "En-tête de pièce : valeurs en note CRM (Q12, lot 12)" },
+        { "source": "PMEDOCDEVCLILIG", "ignorer": true, "motif": "Ligne de pièce : aide au calcul non reprise (Q12)" },
+        { "source": "PMEDOCFACCLILIG", "ignorer": true, "motif": "Ligne de pièce : aide au calcul non reprise (Q12)" },
+        { "source": "PMEAFFBASEDOCLIG", "ignorer": true, "motif": "Ligne de pièce : aide au calcul non reprise (Q12)" },
+        { "source": "LIGNEDEVISFOURNISSEUR", "ignorer": true, "motif": "Ligne de pièce : aide au calcul non reprise (Q12)" },
+        { "source": "LIGNECDEFOURNISSEUR", "ignorer": true, "motif": "Ligne de pièce : aide au calcul non reprise (Q12)" },
+        { "source": "LIGNERECEPTIONFOURNISSEUR", "ignorer": true, "motif": "Ligne de pièce : aide au calcul non reprise (Q12)" }
+      ]
+    },
+    "type_champ": {
+      "description": "Type de donnée d'une zone supplémentaire (SYS_RTCINFOS.DATATYPE) vers le type du champ x_ ; S seul vu sur une base réelle, les autres lettres à confirmer",
+      "colonne": "SYS_RTCINFOS.DATATYPE",
+      "cibles": ["TYPE_CHAMP"],
+      "entrees": [
+        { "source": "S", "cible": "texte" },
+        { "source": "I", "cible": "nombre" },
+        { "source": "N", "cible": "nombre" },
+        { "source": "F", "cible": "nombre" },
+        { "source": "C", "cible": "montant" },
+        { "source": "D", "cible": "date" },
+        { "source": "B", "cible": "booleen" }
+      ]
     }
   }
 }

@@ -103,7 +103,7 @@ public class RepriseBaseTests
             Societes = source == SourceReprise.Optim ? ["1", "2"] : [], Auteur = "test",
         };
         var simulation = await RepriseBase.ExecuterAsync(demande, default);
-        Assert.Equal(EtatReprise.Terminee, simulation.Rapport.Etat);
+        Assert.True(simulation.Rapport.Etat == EtatReprise.Terminee, string.Join("\n", simulation.Rapport.Anomalies.Select(x => $"{x.Niveau} {x.Code} {x.Emplacement} {x.Message}")));
         Assert.True(simulation.Rapport.Simulation);
         Assert.True(simulation.Rapport.TablesSource.Count > 150);
         Assert.Equal(3, simulation.Rapport.TablesSource[source == SourceReprise.Mde ? "PMECLIENT" : "ref_societe"]);
@@ -116,6 +116,7 @@ public class RepriseBaseTests
         Assert.Equal(2L, await b.CompterAsync("SELECT count(*) FROM import_reprise"));
         Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM import_reprise WHERE irp_simulation AND irp_etat = 'TERMINEE'"));
         await VerifierReferentielsAsync(b, source, reelle.Rapport);
+        await VerifierChampsAsync(b, source, reelle.Rapport);
 
         // Correspondances fournies invalides : refus avant toute lecture.
         var refus = await Assert.ThrowsAsync<RepriseRefuseeException>(() => RepriseBase.ExecuterAsync(
@@ -176,6 +177,25 @@ public class RepriseBaseTests
             Assert.Equal(7, r.Volumes.Single(v => v.Table == "ref_famille_type").Ecrites);
             Assert.Equal("FR", r.Correspondances["pays"]["France"]);
             Assert.Equal(2L, await b.CompterAsync("SELECT jsonb_array_length(pcp_valeur->'etablissements') FROM parametre_comptabilite WHERE pcp_cle = 'reprise_analytique'"));
+        }
+    }
+
+    /// <summary>Lot 5 : champs supplémentaires créés (colonnes x_ et registre) ; valeurs en attente des fiches (lots 6 à 9).</summary>
+    private static async Task VerifierChampsAsync(BaseNeuve b, string source, RapportReprise r)
+    {
+        if (source == SourceReprise.Mde)
+        {
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM fiche_champ_supplementaire WHERE fcs_table = 'personne' AND fcs_colonne = 'x_zone_sup_01' AND fcs_type = 'texte'"));
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM fiche_champ_supplementaire WHERE fcs_table = 'personne' AND fcs_colonne = 'x_code_fournisseur_groupe'"));
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM information_schema.columns WHERE table_name = 'personne' AND column_name = 'x_zone_sup_01'"));
+            Assert.Equal(1, r.Volumes.Single(v => v.Table == "PMECLIENT.RTCFIELD").Lues);
+        }
+        else
+        {
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM fiche_champ_supplementaire WHERE fcs_table = 'materiel' AND fcs_colonne = 'x_numero_de_parc' AND fcs_type = 'texte'"));
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM fiche_champ_supplementaire WHERE fcs_table = 'materiel' AND fcs_colonne = 'x_date_du_controle_technique' AND fcs_type = 'date'"));
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM fiche_champ_supplementaire WHERE fcs_table = 'element' AND fcs_colonne = 'x_poids_kg' AND fcs_type = 'nombre'"));
+            Assert.Equal(3, r.Volumes.Single(v => v.Table == "z_dataspec_data").Lues);
         }
     }
 }
