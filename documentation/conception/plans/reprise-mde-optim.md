@@ -172,7 +172,29 @@ l'analyse, modifié par le § 10.
 - **Lot 4, société et référentiels** : identité ; compteurs repartant après le plus grand numéro (une seule
   numérotation pour les établissements regroupés, R1) ; décimales ; unités ; TVA ; modes et conditions de règlement ;
   pays ; civilités ; plan comptable ; grilles analytiques (Q11) ; natures et familles. *Critère* : référentiels des
-  deux bases de test repris.
+  deux bases de test repris. **FAIT (16/11/2026).**
+  - **Réalisé** : module : `Associations` (réplique de `associerUnite`, `associerTaux`, `associerOption`, jeu commun
+    `js/test/associations-cas.json`, plus `CodeLibre` : suffixe `_2`, `_3`… sur collision, signalée), `PaysIso` (liste
+    de cibles « PAYS »), `RegistreCorrespondances.InscrireCode` / `TrouverCode` (référentiels à code texte, en
+    mémoire), `CodeAnomalie` ↔ `CODE_ANOMALIE`. Cœur : `SqlReprise`, `AnnuaireReprise` (personne, coordonnées, servira
+    au lot 6), `ReferentielsCible` (rapprocher sinon créer : unité, taux, mode, condition, compte, nature ; pays),
+    domaines `SOCIETE` et `REFERENTIELS` par source (`Reprise/Mde/`, `Reprise/Optim/`, clés du registre dans
+    `RegistreMde` / `RegistreOptim`). Correspondances : tables `mode_paiement`, `civilite`, `pays` (MDE), `civilite`,
+    `pays` (OPTIM) ; listes de cibles `MODE_REGLEMENT` et `CIVILITE` lues en base.
+  - Règles : société MDE = `SYS_DEFSTE` (devise ≠ EUR bloquante, décimales signalées) ; OPTIM : SIREN différents
+    bloquants, tête = société sans mère retenue, les autres en établissements (`ETABLISSEMENT`, parent = tête), fiches
+    `bib_tiers` des sociétés inscrites (le lot 6 ne les reprend pas). TVA : rapprochée par taux et catégorie
+    (autoliquidation à 0 % de la source → taux autoliquidé existant), comptes posés s'ils manquent ; OPTIM : taux de
+    `z_parametre` retrouvés par les colonnes qui les citent (`PRM_TypeParam` propre à chaque base), catégorie lue dans
+    le libellé. Conditions MDE : lignes `APIMODEREGLEMENTL` (NJ, `JOUR` → base JOUR, `MOISENTIER` → FIN_MOIS), égales à
+    une condition existante sinon créées ; mode de la première ligne par `mode_paiement`. Plan comptable : type par
+    classe et collectifs (comptes des tiers, `CMP_PARAMGEN`), collectifs par type de tiers, journaux et exigibilité ;
+    OPTIM : plan commun et des sociétés retenues. Natures OPTIM depuis `ref_famille_type` (regroupement par
+    `regroupement_nature`).
+  - Écarts : **compteurs reportés au lot 10** (ils repartent après le plus grand numéro repris : il faut les pièces) ;
+    **grilles analytiques** sans table cible : gardées dans le paramètre comptable `reprise_analytique` (axes, postes,
+    grilles ; codes analytiques des établissements OPTIM), à exploiter par l'export ; natures MDE au lot 8 (types
+    d'articles).
 - **Lot 5, champs supplémentaires** : `z_dataspec_*` et `SYS_RTCINFOS` / `RTCFIELD*` deviennent des champs `x_` des
   fiches (module Fiche) (Q12). *Critère* : champs créés et valeurs reprises.
 - **Lot 6, annuaire** : jointure MDE du § 10.2 (Q5), avec toutes les adresses et tous les contacts ; OPTIM

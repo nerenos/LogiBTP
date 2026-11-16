@@ -18,5 +18,6 @@ public class CodesTests
     [InlineData("ERREUR_REPRISE", typeof(ErreurReprise))]
     [InlineData("NIVEAU_ANOMALIE", typeof(NiveauAnomalie))]
     [InlineData("ERREUR_FUSION", typeof(ErreurFusion))]
+    [InlineData("CODE_ANOMALIE", typeof(CodeAnomalie))]
     public void Parite_avec_le_js(string nom, Type type) => Assert.Empty(Constantes.Ecarts(Fichier, nom, type));
 }

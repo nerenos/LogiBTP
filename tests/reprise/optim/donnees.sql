@@ -36,7 +36,24 @@ INSERT INTO z_parametre (PRM_ID, PRM_Code, PRM_Libelle, PRM_TypeParam, PRM_Ordre
  (1047, 'MSG', 'Message', 'Message_Type', 2, 0),
  (1048, 'TACHE', 'Tâche', 'Message_Type', 3, 0),
  (1201, 'M', 'M.', 'Civilite', 1, 0),
+ (1203, 'DR', 'Docteur', 'Civilite', 3, 0),
  (1202, 'MME', 'Mme', 'Civilite', 2, 0);
+
+-- Taux de TVA et modes de règlement (PRM_TypeParam propre à la base : retrouvés par les colonnes qui les citent ;
+-- taux en PRM_Param_Num1). Le taux 8,5 % n'existe pas dans LogiBTP : il est créé.
+INSERT INTO z_parametre (PRM_ID, PRM_Code, PRM_Libelle, PRM_TypeParam, PRM_Ordre, PRM_IsDesactive, PRM_Param_Num1) VALUES
+ (51, 'T20', 'TVA 20 %', 'TVA', 1, 0, 20),
+ (52, 'T10', 'TVA 10 %', 'TVA', 2, 0, 10),
+ (53, 'AUTO', 'Autoliquidation', 'TVA', 3, 0, 0),
+ (54, 'T85', 'TVA DOM 8,5 %', 'TVA', 4, 0, 8.5),
+ (61, 'CHQ', 'Chèque', 'ModeRegl', 1, 0, 0),
+ (62, 'VIR', 'Virement', 'ModeRegl', 2, 0, 0),
+ (63, 'TRAITE', 'Traite acceptée', 'ModeRegl', 3, 0, 0);
+
+-- Plan comptable : commun (SCT_ID 0), propre à CDR (1), propre à l'autre société (3, non repris)
+INSERT INTO svcz_compte (CPT_ID, CPT_NumCompte, CPT_Libelle, CPT_SCT_ID) VALUES
+ (1, '411000', 'Clients', 0), (2, '401000', 'Fournisseurs', 0), (3, '704100', 'Travaux CDR', 1), (4, '704900', 'Travaux RHE', 3),
+ (5, '512100', 'Banque CDR', 1);
 
 -- Référentiels
 INSERT INTO z_unite (UNT_ID, UNT_Code, UNT_Libelle, UNT_IsDefaut, UNT_IsDesactive) VALUES
@@ -73,6 +90,10 @@ INSERT INTO bib_tiers (TRS_ID, TRS_IsTiers, TRS_NomReduit, TRS_RaisonSociale, TR
  (13, 1, 'NEGOBAT (doublon)', 'NEGOBAT', 'CLI-NEGO', 0, '66677788800013', '411NEGO', 0, 0, '', '', 'Créé en double côté vente'),
  (14, 1, 'TERRASS 69', 'TERRASSEMENTS 69', 'ST-T69', 0, '12312312300012', '401T69', 0, 0, '', '', NULL),
  (15, 1, 'ANCIEN', 'ANCIEN FOURNISSEUR', 'FOU-OLD', 0, NULL, '401OLD', 1, 0, '', '', NULL);
+UPDATE bib_tiers SET TRS_TVA = 51, TRS_ModeReglementVte = 62 WHERE TRS_ID = 11;
+UPDATE bib_tiers SET TRS_TVA = 53, TRS_ModeReglement = 63 WHERE TRS_ID = 14;
+UPDATE bib_tiers SET TRS_TVAVte = 54, TRS_ModeReglementVte = 61 WHERE TRS_ID = 10;
+UPDATE bib_tiers SET TRS_TvaIntra = 'FR33987654321' WHERE TRS_ID IN (900, 901);
 INSERT INTO bib_tiers_categ (TRC_ID, TRC_TRS_ID, TRC_CAT_ID, TRC_IsValDefaut) VALUES
  (1, 10, 1, 1), (2, 11, 1, 1), (3, 11, 6, 0), (4, 12, 2, 1), (5, 12, 7, 0), (6, 13, 1, 1), (7, 14, 3, 1), (8, 14, 5, 0),
  (9, 15, 2, 1);

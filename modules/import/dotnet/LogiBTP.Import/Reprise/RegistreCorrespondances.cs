@@ -14,6 +14,7 @@ public sealed class RegistreCorrespondances
 {
     private readonly Dictionary<(string Table, string Cle), Correspondance> parCle = new();
     private readonly List<Correspondance> nouvelles = [];
+    private readonly Dictionary<(string Table, string Cle), string> codes = new();
 
     public int Nombre => parCle.Count;
 
@@ -31,6 +32,18 @@ public sealed class RegistreCorrespondances
         cleSource is not null && parCle.TryGetValue((tableSource, cleSource.TrimEnd()), out var c) ? c.IdCible : null;
 
     public IEnumerable<Correspondance> Toutes => parCle.Values;
+
+    /// <summary>
+    /// Référentiel à code texte (unité, mode de règlement, pays, civilité…) : code cible d'une valeur source, gardé en
+    /// mémoire pour les domaines suivants (non enregistré : le rapport donne les correspondances appliquées).
+    /// Réinscrire la même valeur remplace le code.
+    /// </summary>
+    public void InscrireCode(string tableSource, string cleSource, string codeCible) =>
+        codes[(tableSource, cleSource.TrimEnd())] = codeCible;
+
+    /// <summary>Code cible d'une valeur source d'un référentiel à code texte, sinon null.</summary>
+    public string? TrouverCode(string tableSource, string? cleSource) =>
+        cleSource is not null && codes.TryGetValue((tableSource, cleSource.TrimEnd()), out var c) ? c : null;
 
     /// <summary>Écrit les correspondances inscrites depuis le dernier appel dans <c>import_correspondance</c>.</summary>
     public async Task EnregistrerAsync(NpgsqlConnection connexion, NpgsqlTransaction transaction, long repriseId, CancellationToken ct)

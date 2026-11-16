@@ -71,6 +71,7 @@ public sealed class FichierCorrespondances
             ["ETAT_SUITE"] = Valeurs(typeof(EtatSuite)),
             ["PART_SOUS_TRAITANCE"] = Valeurs(typeof(PartSousTraitance)),
             ["MODE_AVANCEMENT"] = Valeurs(typeof(ModeAvancement)),
+            ["PAYS"] = PaysIso.Codes,
         };
 
     /// <summary>Lecture d'un fichier JSON ; un JSON illisible donne une erreur <see cref="ErreurCorrespondance.FormatInvalide"/>.</summary>

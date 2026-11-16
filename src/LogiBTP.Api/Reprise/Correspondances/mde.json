@@ -196,6 +196,46 @@
         { "source": "ECH", "ignorer": true, "motif": "Échéances : numérotation propre à LogiBTP" },
         { "source": "TacheSaisieMO", "ignorer": true, "motif": "Tâches de saisie de main-d'œuvre : sans équivalent" }
       ]
+    },
+    "mode_paiement": {
+      "description": "Type de paiement d'une ligne de condition (APIMODEREGLEMENTL.TYPEP) vers le mode de règlement ; le mode du tiers est celui de la première ligne. Lettres autres que C et V à confirmer sur une base réelle",
+      "colonne": "APIMODEREGLEMENTL.TYPEP",
+      "cibles": ["MODE_REGLEMENT"],
+      "entrees": [
+        { "source": "C", "cible": "CHEQUE" },
+        { "source": "V", "cible": "VIREMENT" },
+        { "source": "L", "cible": "LCR" },
+        { "source": "P", "cible": "PRELEVEMENT" },
+        { "source": "E", "cible": "ESPECES" },
+        { "source": "B", "cible": "CB" }
+      ]
+    },
+    "civilite": {
+      "description": "Civilité d'une personne physique (APICIVILITE, FORMEJURIDIQUE = 0) vers la civilité d'un individu ; les formes juridiques (FORMEJURIDIQUE = 1) vont sur per_forme_libelle sans table",
+      "colonne": "APICIVILITE.LIBELLE, COMM_TIERSADR.CIVILITE",
+      "cibles": ["CIVILITE"],
+      "entrees": [
+        { "source": "Monsieur", "cible": "M." }, { "source": "M.", "cible": "M." }, { "source": "M", "cible": "M." },
+        { "source": "Madame", "cible": "Mme" }, { "source": "Mme", "cible": "Mme" },
+        { "source": "Mademoiselle", "cible": "Mme" }, { "source": "Mlle", "cible": "Mme" }
+      ]
+    },
+    "pays": {
+      "description": "Nom d'un pays (adresses, table des pays) vers son code ISO à deux lettres ; un code ISO déjà au format est gardé sans entrée",
+      "colonne": "APIPAYS.NOM, COMM_TIERSADR.PAYS",
+      "cibles": ["PAYS"],
+      "entrees": [
+        { "source": "France", "cible": "FR" }, { "source": "FRANCE", "cible": "FR" },
+        { "source": "Belgique", "cible": "BE" }, { "source": "BELGIQUE", "cible": "BE" },
+        { "source": "Suisse", "cible": "CH" }, { "source": "SUISSE", "cible": "CH" },
+        { "source": "Luxembourg", "cible": "LU" }, { "source": "LUXEMBOURG", "cible": "LU" },
+        { "source": "Monaco", "cible": "MC" }, { "source": "MONACO", "cible": "MC" },
+        { "source": "Allemagne", "cible": "DE" }, { "source": "ALLEMAGNE", "cible": "DE" },
+        { "source": "Espagne", "cible": "ES" }, { "source": "ESPAGNE", "cible": "ES" },
+        { "source": "Italie", "cible": "IT" }, { "source": "ITALIE", "cible": "IT" },
+        { "source": "Portugal", "cible": "PT" }, { "source": "PORTUGAL", "cible": "PT" },
+        { "source": "Pays-Bas", "cible": "NL" }, { "source": "Royaume-Uni", "cible": "GB" }
+      ]
     }
   }
 }

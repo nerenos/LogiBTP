@@ -85,3 +85,16 @@ public static class ErreurFusion
     public const string CleEnDouble = "REPRISE_FUSION_CLE_EN_DOUBLE";
     public const string ConserveeFusionnee = "REPRISE_FUSION_CONSERVEE_FUSIONNEE";
 }
+
+/// <summary>Codes des anomalies signalées par les domaines de la reprise (rapport) ↔ CODE_ANOMALIE.</summary>
+public static class CodeAnomalie
+{
+    public const string DeviseEtrangere = "REPRISE_DEVISE_ETRANGERE";
+    public const string Decimales = "REPRISE_DECIMALES";
+    public const string CodeRenomme = "REPRISE_CODE_RENOMME";
+    public const string SocieteManquante = "REPRISE_SOCIETE_MANQUANTE";
+    public const string SocieteInconnue = "REPRISE_SOCIETE_INCONNUE";
+    public const string SirenDifferents = "REPRISE_SIREN_DIFFERENTS";
+    public const string SansEquivalent = "REPRISE_SANS_EQUIVALENT";
+    public const string ValeurInconnue = "REPRISE_VALEUR_INCONNUE";
+}

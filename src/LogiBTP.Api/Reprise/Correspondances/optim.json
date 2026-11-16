@@ -99,6 +99,33 @@
         { "source": "FTY_IsDechet", "cible": "PRESTATION" },
         { "source": "FTY_IsVente", "cible": "VENTE" }
       ]
+    },
+    "civilite": {
+      "description": "Civilité d'une personne (bib_personne.PRS_Civilite, z_parametre) vers la civilité d'un individu",
+      "colonne": "bib_personne.PRS_Civilite",
+      "type_parametre": "Civilite",
+      "cibles": ["CIVILITE"],
+      "entrees": [
+        { "source": "M", "cible": "M." }, { "source": "MR", "cible": "M." },
+        { "source": "MME", "cible": "Mme" }, { "source": "MLLE", "cible": "Mme" }
+      ]
+    },
+    "pays": {
+      "description": "Nom d'un pays (adresses, table des pays) vers son code ISO à deux lettres ; un code ISO déjà au format est gardé sans entrée",
+      "colonne": "z_adresse.ADR_Pays",
+      "cibles": ["PAYS"],
+      "entrees": [
+        { "source": "France", "cible": "FR" }, { "source": "FRANCE", "cible": "FR" },
+        { "source": "Belgique", "cible": "BE" }, { "source": "BELGIQUE", "cible": "BE" },
+        { "source": "Suisse", "cible": "CH" }, { "source": "SUISSE", "cible": "CH" },
+        { "source": "Luxembourg", "cible": "LU" }, { "source": "LUXEMBOURG", "cible": "LU" },
+        { "source": "Monaco", "cible": "MC" }, { "source": "MONACO", "cible": "MC" },
+        { "source": "Allemagne", "cible": "DE" }, { "source": "ALLEMAGNE", "cible": "DE" },
+        { "source": "Espagne", "cible": "ES" }, { "source": "ESPAGNE", "cible": "ES" },
+        { "source": "Italie", "cible": "IT" }, { "source": "ITALIE", "cible": "IT" },
+        { "source": "Portugal", "cible": "PT" }, { "source": "PORTUGAL", "cible": "PT" },
+        { "source": "Pays-Bas", "cible": "NL" }, { "source": "Royaume-Uni", "cible": "GB" }
+      ]
     }
   }
 }

@@ -7,7 +7,7 @@ namespace LogiBTP.Api.Reprise;
 
 /// <summary>
 /// Listes de cibles des correspondances (plan reprise-mde-optim, lot 2), lues dans la base cible : types de documents,
-/// types de lignes, casquettes, liens et regroupements de natures du paramétrage, types de fiches et natures de notes
+/// types de lignes, casquettes, liens, regroupements de natures, modes de règlement et civilités du paramétrage, types de fiches et natures de notes
 /// des codes. Le fichier de correspondances est validé contre ces listes avant toute reprise.
 /// </summary>
 public static class CiblesReprise
@@ -19,6 +19,13 @@ public static class CiblesReprise
         (CorrespondancesReprise.Listes.Casquette, "SELECT cas_code FROM casquette"),
         (CorrespondancesReprise.Listes.TypeLien, "SELECT tli_code FROM type_lien"),
         (CorrespondancesReprise.Listes.RegroupementNature, "SELECT rgn_code FROM regroupement_nature"),
+        (CorrespondancesReprise.Listes.ModeReglement, "SELECT mre_code FROM mode_reglement"),
+        // Civilités proposées par la fiche individu (liste du paramétrage des fiches).
+        (CorrespondancesReprise.Listes.Civilite, """
+            SELECT o->>'valeur' FROM type_fiche t, jsonb_array_elements(t.tyf_definition->'champs') c,
+                   jsonb_array_elements(c->'options') o
+            WHERE t.tyf_code = 'individu' AND c->>'code' = 'civilite'
+            """),
     ];
 
     public static async Task<IReadOnlyDictionary<string, IReadOnlyCollection<string>>> LireAsync(

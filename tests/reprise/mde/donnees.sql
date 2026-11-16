@@ -25,7 +25,8 @@ INSERT INTO dbo.TVA (CODECATEGORIE, CODE, TAUX, COMPTEV, COMPTEA, LIBELLE, DEFAU
 INSERT INTO dbo.PMETVA (CODECATEGORIE, CODE, TAUX, COMPTEV, COMPTEA, LIBELLE, DEFAUT) VALUES
  ('F', '1', 20.00, '44571200', '44566200', 'TVA 20 %', 1),
  ('F', '2', 10.00, '44571100', '44566100', 'TVA 10 %', 0);
-INSERT INTO dbo.APIMODEREGLEMENT (CODE, NOM) VALUES ('CHQ', 'Chèque'), ('VIR', 'Virement'), ('V30', 'Virement 30 jours fin de mois'), ('3X', 'Trois fois');
+INSERT INTO dbo.APIMODEREGLEMENT (CODE, NOM) VALUES ('CHQ', 'Chèque'), ('VIR', 'Virement'), ('V30', 'Virement 30 jours fin de mois'), ('3X', 'Trois fois'),
+ ('L10', 'LCR 30 jours le 10');
 -- POUR : pourcentage ; NJ : nombre de jours ; JOUR : jour du mois imposé (0 : aucun) ; MOISENTIER : fin de mois.
 INSERT INTO dbo.APIMODEREGLEMENTL (CODE, LIG, POUR, JOUR, NJ, MODEP, TYPEP, MOISENTIER) VALUES
  ('CHQ', 1, 100, 0, 0, 1, 'C', 0),
@@ -33,12 +34,19 @@ INSERT INTO dbo.APIMODEREGLEMENTL (CODE, LIG, POUR, JOUR, NJ, MODEP, TYPEP, MOIS
  ('V30', 1, 100, 0, 30, 2, 'V', 1),
  ('3X', 1, 40, 0, 0, 1, 'C', 0),
  ('3X', 2, 30, 0, 30, 1, 'C', 0),
- ('3X', 3, 30, 0, 60, 1, 'C', 0);
+ ('3X', 3, 30, 0, 60, 1, 'C', 0),
+ ('L10', 1, 100, 10, 30, 3, 'L', 0);
 INSERT INTO dbo.APIPAYS (CODE, NOM, CODEDEVISE) VALUES ('FR', 'France', 'EUR'), ('BE', 'Belgique', 'EUR');
 INSERT INTO dbo.APICIVILITE (LIBELLE, FORMEJURIDIQUE) VALUES ('Monsieur', 0), ('Madame', 0), ('SARL', 1), ('SCI', 1);
 INSERT INTO dbo.CMP_PLANCP (COMPTE, NOM, FAMILLE) VALUES
  ('411000', 'Clients', 4), ('401000', 'Fournisseurs', 4), ('401100', 'Sous-traitants', 4),
  ('704000', 'Travaux', 7), ('604000', 'Achats de prestations', 6), ('601000', 'Achats de matériaux', 6);
+-- Paramètres comptables (lot 4) : journaux, collectifs, exigibilité ; analytique (Q11, gardé dans le paramétrage).
+INSERT INTO dbo.CMP_PARAMGEN (JOURNVENCODE, JOURNACHCODE, CPTCOLCLI, CPTCOLFRS, CPTCOLSST, EXIGIBILITETVA)
+VALUES ('VE', 'AC', '411000', '401000', '401100', 'E');
+INSERT INTO dbo.CMP_AXEANALYTIQUE (CODE, LIBELLE, ACTIF, AXEDEFAUT) VALUES (1, 'Chantiers', 1, 1);
+INSERT INTO dbo.CMP_POSTEANA (AXE, CODE, LIBELLE) VALUES (1, 'CH01', 'Chantier Martin'), (1, 'FG', 'Frais généraux');
+INSERT INTO dbo.CMP_GRILLEANA (CODE, AXE, POSTE, PCT, NUMGRILLEANA) VALUES (1, 1, 'CH01', 70, 1), (1, 1, 'FG', 30, 2);
 INSERT INTO dbo.PMEACTIVITE (CLE, TYPETIERS, NUMORDRE, LIBELLE, DEFAUT, ACTIF) VALUES (1, 'C', 1, 'Particulier', 1, 1), (2, 'C', 2, 'Promoteur', 0, 1);
 GO
 

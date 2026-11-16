@@ -20,6 +20,8 @@ public static class CorrespondancesReprise
         public const string TypeLien = "TYPE_LIEN";
         public const string RegroupementNature = "REGROUPEMENT_NATURE";
         public const string NatureNote = "NATURE_NOTE";
+        public const string ModeReglement = "MODE_REGLEMENT";
+        public const string Civilite = "CIVILITE";
     }
 
     /// <summary>Tables attendues dans le fichier de correspondances d'une source.</summary>
@@ -29,10 +31,12 @@ public static class CorrespondancesReprise
         [
             "type_document", "type_fiche", "type_facture", "etat_suite", "type_tiers", "tiers_payeur",
             "type_ligne_vente", "type_ligne_achat", "part_sous_traitance", "mode_avancement", "type_arrondi", "compteur",
+            "mode_paiement", "civilite", "pays",
         ],
         SourceReprise.Optim =>
         [
             "type_document_vente", "type_document_achat", "nature_message", "entite", "categorie_tiers", "regroupement_nature",
+            "civilite", "pays",
         ],
         _ => [],
     };

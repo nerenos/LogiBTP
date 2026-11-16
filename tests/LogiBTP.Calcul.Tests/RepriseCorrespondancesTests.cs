@@ -42,6 +42,11 @@ public class RepriseCorrespondancesTests
         [CorrespondancesReprise.Listes.Casquette] = CodesInseres("casquette"),
         [CorrespondancesReprise.Listes.TypeLien] = CodesInseres("type_lien"),
         [CorrespondancesReprise.Listes.RegroupementNature] = CodesInseres("regroupement_nature"),
+        [CorrespondancesReprise.Listes.ModeReglement] = CodesInseres("mode_reglement"),
+        // Civilités de la fiche individu (options du champ « civilite » du paramétrage des fiches, db/131).
+        [CorrespondancesReprise.Listes.Civilite] = Regex.Matches(Regex.Match(Lire("db", "131_fiches_parametrage.sql"),
+                @"""code"":""civilite"",[^\]]*""options"":\[(.*?)\]").Groups[1].Value, @"""valeur"":""([^""]+)""")
+            .Select(m => m.Groups[1].Value).ToList(),
         [CorrespondancesReprise.Listes.NatureNote] = Constantes.Js(CasPartages.Chemin("modules", "crm", "js", "src", "codes.js"), "NATURE_NOTE").Values.ToList(),
     };
 
@@ -54,6 +59,8 @@ public class RepriseCorrespondancesTests
         Assert.Contains("SOUS_TRAITANT", cibles[CorrespondancesReprise.Listes.Casquette]);
         Assert.Contains("FACTURER_A", cibles[CorrespondancesReprise.Listes.TypeLien]);
         Assert.Contains("VENTE", cibles[CorrespondancesReprise.Listes.RegroupementNature]);
+        Assert.Contains("CHEQUE", cibles[CorrespondancesReprise.Listes.ModeReglement]);
+        Assert.Equal(["M.", "Mme"], cibles[CorrespondancesReprise.Listes.Civilite]);
     }
 
     [Theory]
