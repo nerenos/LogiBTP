@@ -105,4 +105,8 @@ public static class CodeAnomalie
     public const string ConversionManquante = "REPRISE_CONVERSION_MANQUANTE";
     /// <summary>Composante d'ouvrage absente ou en sommeil : reprise en ligne libre, sans lien vers la bibliothèque.</summary>
     public const string ComposanteHorsBibliotheque = "REPRISE_COMPOSANTE_HORS_BIBLIOTHEQUE";
+    /// <summary>Pièce reprise dont le TTC recalculé diffère du TTC source (taux de TVA des lignes).</summary>
+    public const string EcartTtc = "REPRISE_ECART_TTC";
+    /// <summary>Ligne de pièce sans équivalent (récapitulatif, ligne de frais) : non reprise en ligne.</summary>
+    public const string LigneNonReprise = "REPRISE_LIGNE_NON_REPRISE";
 }

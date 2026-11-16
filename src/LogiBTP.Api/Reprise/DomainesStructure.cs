@@ -126,6 +126,24 @@ public sealed class StructureOptim : IDomaineReprise
     public const string Indice = "vte_indice";
     public const string Formule = "vte_revision_formule";
 
+    /// <summary>
+    /// Sociétés retenues : filtre d'une ligne par sa colonne de société, et établissement d'origine (raison sociale)
+    /// quand ce n'est pas la société de la base (R1).
+    /// </summary>
+    internal static async Task<(Func<LigneSource, string, bool> Retenue, Func<LigneSource, string, string?> Etablissement)> EtablissementsAsync(
+        ContexteReprise ctx, CancellationToken ct)
+    {
+        var societes = SocietesOptim.Ids(ctx).ToHashSet();
+        var etablissements = new Dictionary<long, string?>();
+        foreach (var sct in societes)
+            etablissements[sct] = ctx.Registre.Trouver(RegistreOptim.Societe, sct.ToString(System.Globalization.CultureInfo.InvariantCulture)) is { } per
+                ? (await SqlReprise.LireAsync(ctx.Unite, "SELECT per_raison_sociale FROM personne WHERE per_id = $1 AND NOT per_societe_base",
+                    r => r.GetString(0), ct, per)).FirstOrDefault()
+                : null;
+        return ((l, colonne) => societes.Count == 0 || l.Entier(colonne) is { } v && societes.Contains(v),
+            (l, colonne) => l.Entier(colonne) is { } v ? etablissements.GetValueOrDefault(v) : null);
+    }
+
     public async Task ExecuterAsync(ContexteReprise ctx, CancellationToken ct)
     {
         var s = await StructureReprise.LireAsync(ctx, ct);
@@ -135,16 +153,7 @@ public sealed class StructureOptim : IDomaineReprise
         long? Tiers(string? trs) => trs is null or "0" ? null : ctx.Registre.Trouver(RegistreOptim.Tiers, ctx.CleConservee(RegistreOptim.Tiers, trs));
         async Task<long?> IndividuAsync(string? slr) => slr is null or "0" ? null : await s.IndividuSalarieAsync(ctx.Registre.Trouver("ref_salarie", slr), ct);
 
-        // Sociétés retenues : établissement d'origine (raison sociale) quand ce n'est pas la société de la base.
-        var societes = SocietesOptim.Ids(ctx).ToHashSet();
-        var etablissements = new Dictionary<long, string?>();
-        foreach (var sct in societes)
-            etablissements[sct] = ctx.Registre.Trouver(RegistreOptim.Societe, sct.ToString(System.Globalization.CultureInfo.InvariantCulture)) is { } per
-                ? (await SqlReprise.LireAsync(ctx.Unite, "SELECT per_raison_sociale FROM personne WHERE per_id = $1 AND NOT per_societe_base",
-                    r => r.GetString(0), ct, per)).FirstOrDefault()
-                : null;
-        bool Retenue(LigneSource l, string colonne) => societes.Count == 0 || l.Entier(colonne) is { } v && societes.Contains(v);
-        string? Etablissement(LigneSource l, string colonne) => l.Entier(colonne) is { } v ? etablissements.GetValueOrDefault(v) : null;
+        var (Retenue, Etablissement) = await EtablissementsAsync(ctx, ct);
 
         foreach (var l in await SqlReprise.SourceAsync(ctx, "SELECT * FROM afc_dossier WHERE DOS_IsDesactive = 0 ORDER BY DOS_ID", ct))
         {

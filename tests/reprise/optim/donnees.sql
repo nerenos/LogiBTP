@@ -245,3 +245,30 @@ INSERT INTO vte_indice_valeur (VIV_ID, VIV_VID_ID, VIV_DateValeur, VIV_Valeur, V
  (1, 1, '2024-01-01', 129.7, 0), (2, 1, '2024-02-15', 130.1, 0), (3, 2, '2024-01-01', 2077, 0), (4, 2, '2024-04-01', 0, 1);
 INSERT INTO vte_revision_formule (VRF_ID, VRF_Observation, VRF_NbDecimale, VRF_PctFixe, VRF_Pct01, VRF_VID_ID_01, VRF_Pct02, VRF_VID_ID_02,
   VRF_IsDesactive) VALUES (1, 'Révision gros œuvre', 4, 12.5, 62.5, 1, 25, 2, 0);
+
+-- Pièces de vente (lot 10) : devis en deux versions (chrono 5, la seconde acceptée et marché du chantier), facture
+-- comptabilisée de l'agence, modèle, société écartée et attachement non repris ; ouvrage au sous-détail (quantité fixe),
+-- élément, frais indirects écartés, texte.
+INSERT INTO z_parametre (PRM_ID, PRM_Code, PRM_Libelle, PRM_TypeParam, PRM_Ordre, PRM_IsDesactive) VALUES
+ (970, 'ACC', 'Accepté', 'EtatDocVte', 1, 0), (971, 'ENC', 'En cours', 'EtatDocVte', 2, 0);
+INSERT INTO vte_doc_entete (VDE_ID, VDE_Type_ID, VDE_SCT_ID, VDE_AFF_ID, VDE_CHT_ID, VDE_TRS_ID_Client, VDE_Reference, VDE_Chrono, VDE_Indice,
+  VDE_Etat, VDE_DateDoc, VDE_Libelle, VDE_NosRef, VDE_RefExt, VDE_PRM_ModeRegl, VDE_MtHT, VDE_MtTTC, VDE_IsComptabilise, VDE_IsMarche, VDE_IsModele,
+  VDE_IsVirtuel, VDE_IsSauvegarde, VDE_IsProjetBudget, VDE_IsDesactive) VALUES
+ (1, 700, 1, 1, 1, 11, 'DEV-0005', 5, 1, 971, '2024-04-10', 'Groupe scolaire - estimation', '', NULL, 62, 990, 1188, 0, 0, 0, 0, 0, 0, 0),
+ (2, 700, 1, 1, 1, 11, 'DEV-0005-B', 5, 2, 970, '2024-04-20', 'Groupe scolaire - gros œuvre', 'NR-12', 'AO-2024-7', 62, 1026, 1231.2, 0, 1, 0, 0, 0, 0, 0),
+ (3, 703, 2, 2, 2, 10, 'FAC-0012', 12, 1, 0, '2023-12-20', 'Maison Dupont - solde', '', NULL, 0, 1000, 1100, 1, 0, 0, 0, 0, 0, 0),
+ (4, 700, 1, 0, 0, 11, 'MOD-1', 0, 1, 0, '2024-01-01', 'Modèle', '', NULL, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0),
+ (5, 700, 3, 3, 4, 11, 'DEV-0900', 900, 1, 0, '2024-01-01', 'Société écartée', '', NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+ (6, 701, 1, 1, 1, 11, 'ATT-0001', 1, 1, 0, '2024-05-01', 'Attachement', '', NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+INSERT INTO vte_doc_ligne (VDL_ID, VDL_VDE_ID, VDL_VDL_ID, VDL_Ordre, VDL_TypeLigne, VDL_IsVideTexte, VDL_IsSousDetail, VDL_IsFraisIndirect,
+  VDL_Code, VDL_Libelle, VDL_UNT_ID, VDL_Qte, VDL_QteFixe, VDL_PAU, VDL_PRU, VDL_PGU, VDL_PctVte, VDL_PVU, VDL_MtHT, VDL_IsMtFixe, VDL_PRM_TVA,
+  VDL_FTY_ID, VDL_IsDesactive) VALUES
+ (1, 1, 0, 1, 1, 0, 0, 0, 'EST', 'Estimation globale', 6, 1, 0, 900, 900, 0, 0.1, 990, 990, 0, 51, 0, 0),
+ (10, 2, 0, 1, 4, 0, 0, 0, '', 'Lot 1 - Gros œuvre', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+ (11, 2, 10, 1, 2, 0, 0, 0, 'DALLE', 'Dalle béton', 2, 20, 0, 0, 0, 0, 0.2, 41.4, 828, 0, 51, 0, 0),
+ (12, 2, 11, 1, 1, 0, 1, 0, 'BETON-C25', 'Béton C25', 0, 0.1, 0, 85, 85, 5, 0, 108, 0, 0, 0, 0, 0),
+ (13, 2, 11, 2, 1, 0, 1, 0, 'TREILLIS', 'Treillis soudé', 1, 2, 1, 1, 1, 0, 0, 1.2, 0, 0, 0, 0, 0),
+ (14, 2, 10, 2, 1, 0, 0, 0, 'MO-MACON', 'Main-d''œuvre maçon', 4, 5, 0, 30, 30, 3, 0.2, 39.6, 198, 0, 51, 0, 0),
+ (15, 2, 0, 2, 1, 0, 0, 1, '', 'Frais de chantier', 6, 1, 0, 50, 50, 0, 0, 0, 0, 0, 51, 0, 0),
+ (16, 2, 0, 3, 0, 1, 0, 0, '', 'Délai : 3 mois', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+ (30, 3, 0, 1, 1, 0, 0, 0, 'SOLDE', 'Solde des travaux', 6, 1, 0, 1000, 1000, 0, 0, 1000, 1000, 0, 52, 0, 0);

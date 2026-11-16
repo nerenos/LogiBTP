@@ -301,7 +301,26 @@ l'analyse, modifié par le § 10.
 - **Lot 10, pièces de vente** : convertisseur commun (réutilisation de `convertirOptim` côté règles, traducteur MDE de
   `eTypeLigneVente`, R3) ; pieds, TVA, versions, métrés, statuts ; ligne d'écart d'arrondi (`lig_is_ecart_arrondi`)
   pour retrouver le montant source ; PV fixe sur les pièces validées ; champs supplémentaires d'en-tête MDE en note
-  CRM. *Critère* : total HT et TTC de chaque pièce égal à la source.
+  CRM. *Critère* : total HT et TTC de chaque pièce égal à la source. **FAIT (16/11/2026).**
+  - **Réalisé** : `PiecesReprise` (écriture d'une pièce par `PersistanceDocument` et `MoteurDevisBtp` dans la transaction
+    de la reprise : statut, verrouillage, versions groupées avec indice et référence en fin de reprise, numéro source
+    gardé, brouillon de facture à numérotation continue sans numéro avec le code source en `ent_notre_reference`,
+    adresse de facturation libre, `document_origine` IMPORT, compteurs de numérotation au plus grand rang repris,
+    lien du marché à sa pièce ; mode de calcul B : ouvrages et composantes au PVU source en PV fixe, PV fixe sur les
+    lignes au montant différent et sur toutes les lignes chiffrées des pièces verrouillées ; ligne racine « Écart de
+    reprise » si le total HT diffère encore, rapport `EcartsArrondi` ; écart TTC signalé `REPRISE_ECART_TTC`) et
+    `DomainesPieces.cs` : `PiecesVenteMde` (DEVCLI, CDECLI, BLCLI, FACCLI par `type_facture`, état PMEETATDOCUMENT,
+    versions par CODEDEVINIT, lignes par `type_ligne_vente`, marché par PMECHANTIER.CLEDOCINIT), `PiecesVenteOptim`
+    (vte_doc_entete hors modèles, virtuels, sauvegardes, budgets et sociétés écartées, type par `type_document_vente`,
+    statut par le libellé d'état, comptabilisé → verrouillé, versions par type et chrono, règles de `convertirOptim` :
+    frais indirects exclus `REPRISE_LIGNE_NON_REPRISE`, quantité fixe absolue, coefficient de vente). Tables de
+    correspondance `type_document`, `type_facture`, `type_ligne_vente`, `type_document_vente`. Tests :
+    `VerifierPiecesVenteAsync` (deux sources), `PiecesRepriseTests`.
+  - **Écarts** : la ligne d'écart est une ligne racine ordinaire (PV fixe, non éditée, propriété `reprise_ecart`) et
+    non `lig_is_ecart_arrondi`, que le moteur ignore à la racine ; postes de pied MDE non repris (champ perdu, TTC
+    source non contrôlé), métrés, note CRM des champs supplémentaires d'en-tête, liens de transformation
+    (`document_lien`) et adresses de vte_doc_tiers reportés ; factures d'avancement MDE (type T) et situations OPTIM
+    au lot 11 ; remises et choix du PV MDE (PVU / PVIMPOSE) à confirmer sur une base réelle.
 - **Lot 11, situations** : avancement (`eTypeAvancement`), factures d'avancement, avoirs, acomptes, retenues ; chaîne
   de liens contrôlée par `eTypeEtatCalcule`. *Critère* : cumul d'avancement égal à la source.
 - **Lot 12, achats et sous-traitance** : `A_DEVIS` (demande de prix), commandes, réceptions, retours, factures,

@@ -293,4 +293,8 @@ public static class TablesCorrespondance
     public const string CategorieTiers = "categorie_tiers";
     public const string TypeElement = "type_element";
     public const string FonctionIntervenant = "fonction_intervenant";
+    public const string TypeDocument = "type_document";
+    public const string TypeFacture = "type_facture";
+    public const string TypeLigneVente = "type_ligne_vente";
+    public const string TypeDocumentVente = "type_document_vente";
 }

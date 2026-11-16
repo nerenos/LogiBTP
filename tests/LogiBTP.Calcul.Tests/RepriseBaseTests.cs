@@ -130,11 +130,64 @@ public class RepriseBaseTests
         await VerifierRessourcesAsync(b, source, reelle.Rapport);
         await VerifierBibliothequeAsync(b, source, reelle.Rapport);
         await VerifierStructureAsync(b, source, reelle.Rapport);
+        await VerifierPiecesVenteAsync(b, source, reelle.Rapport);
 
         // Correspondances fournies invalides : refus avant toute lecture.
         var refus = await Assert.ThrowsAsync<RepriseRefuseeException>(() => RepriseBase.ExecuterAsync(
             demande with { Correspondances = $$"""{ "source": "{{source}}", "version": 1, "tables": {} }""" }, default));
         Assert.Equal(ErreurReprise.CorrespondancesInvalides, refus.Code);
+    }
+
+    /// <summary>Lot 10 : pièces de vente (versions, statuts, verrouillage, lignes, écart de reprise, numérotation, marché).</summary>
+    private static async Task VerifierPiecesVenteAsync(BaseNeuve b, string source, RapportReprise r)
+    {
+        async Task<long> Compter(string sql) => await b.CompterAsync(sql);
+        const string Pieces = """
+            document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id JOIN statut_document s ON s.std_id = d.ent_std_id
+            """;
+        if (source == SourceReprise.Mde)
+        {
+            // Devis : v1 remplacée, v2 acceptée (référence, verrouillée, indice B), total source gardé par une ligne d'écart.
+            Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Pieces} WHERE ent_numero = 'DC000001' AND s.std_code = 'REMPLACE' AND ent_indice = 'A' AND NOT ent_is_reference"));
+            Assert.Equal(1L, await Compter($"""
+                SELECT count(*) FROM {Pieces} WHERE ent_numero = 'DC000002' AND t.tyd_code = 'V_DEVIS' AND s.std_code = 'VALIDE' AND ent_verrouille
+                  AND ent_indice = 'B' AND ent_is_reference AND ent_total_ht = 598.80 AND ent_total_ttc = 718.56
+                  AND ent_groupe_id = (SELECT ent_groupe_id FROM document WHERE ent_numero = 'DC000001')
+                """));
+            Assert.Equal(1L, await Compter($"SELECT count(*) FROM document_ligne l JOIN document d ON d.ent_id = l.lig_ent_id WHERE d.ent_numero = 'DC000002' AND l.lig_parent_id IS NULL AND l.lig_libelle_html = '{PiecesReprise.LibelleEcart}' AND l.lig_pv_fixe AND l.lig_montant_ht = 0.05"));
+            Assert.Contains(r.EcartsArrondi, x => x.Piece == "V_DEVIS DC000002" && x.Ecart == 0.05m);
+            // Ouvrage et ses composantes (quantité relative), récapitulatif non repris.
+            Assert.Equal(2L, await Compter("SELECT count(*) FROM document_ligne c JOIN document_ligne o ON o.lig_id = c.lig_parent_id JOIN document d ON d.ent_id = o.lig_ent_id WHERE d.ent_numero = 'DC000002' AND o.lig_code = 'MUR20' AND c.lig_qte_type = 'R'"));
+            Assert.Contains(r.ChampsPerdus, c => c.Table == "type_ligne_vente" && c.Champ == "TYPELIG");
+            // Commande hors postes de pied ; facture définitive verrouillée à 10 % ; avoir brouillon sans numéro ; avancement écartée.
+            Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Pieces} WHERE t.tyd_code = 'V_COMMANDE' AND s.std_code = 'BROUILLON' AND ent_total_ht = 200"));
+            Assert.Contains(r.ChampsPerdus, c => c.Table == "PMEDOCCDECLI" && c.Champ == "MTPOSTESHT/MTPOSTESTTC");
+            Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Pieces} WHERE ent_numero = 'FA000001' AND s.std_code = 'ENVOYE' AND ent_verrouille AND ent_total_ht = 1000 AND ent_total_ttc = 1100"));
+            Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Pieces} WHERE t.tyd_code = 'V_AVOIR' AND ent_numero IS NULL AND ent_notre_reference = 'AV000001' AND NOT ent_verrouille"));
+            Assert.Equal(0L, await Compter("SELECT count(*) FROM document WHERE ent_numero = 'FA000002' OR ent_notre_reference = 'FA000002'"));
+            Assert.Equal((3, 2, 1), Volume(r, "PMEDOCFACCLI"));
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM marche m JOIN document d ON d.ent_id = m.mar_ent_id WHERE m.mar_code = 'M-CH001' AND d.ent_numero = 'DC000002'"));
+            Assert.Equal(2L, await Compter("SELECT cnu_dernier_numero FROM compteur_numero c JOIN type_document t ON t.tyd_id = c.cnu_tyd_id WHERE t.tyd_code = 'V_DEVIS' AND cnu_exercice = 2024"));
+            Assert.Equal(5L, await Compter("SELECT count(*) FROM document_origine WHERE dor_type = 'IMPORT' AND dor_format = 'MDE'"));
+        }
+        else
+        {
+            // Versions par chrono : indice 1 remplacé, indice 2 accepté (référence, marché).
+            Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Pieces} WHERE ent_numero = 'DEV-0005' AND s.std_code = 'REMPLACE' AND NOT ent_is_reference"));
+            Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Pieces} WHERE ent_numero = 'DEV-0005-B' AND s.std_code = 'VALIDE' AND ent_is_reference AND ent_total_ht = 1026 AND ent_total_ttc = 1231.20"));
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM document_ligne l JOIN document d ON d.ent_id = l.lig_ent_id WHERE d.ent_numero = 'DEV-0005-B' AND l.lig_code = 'TREILLIS' AND l.lig_qte = 40 AND l.lig_qte_type = 'A'"));
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM document_ligne l JOIN document d ON d.ent_id = l.lig_ent_id WHERE d.ent_numero = 'DEV-0005-B' AND l.lig_code = 'BETON-C25' AND l.lig_qte_type = 'R'"));
+            Assert.Contains(r.Anomalies, a => a.Code == CodeAnomalie.LigneNonReprise);
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM marche m JOIN document d ON d.ent_id = m.mar_ent_id WHERE m.mar_code = 'M-C24-001' AND d.ent_numero = 'DEV-0005-B'"));
+            // Facture comptabilisée verrouillée, établissement en propriété ; société écartée et attachement écartés (modèle filtré à la lecture).
+            Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Pieces} WHERE ent_numero = 'FAC-0012' AND ent_verrouille AND ent_proprietes->>'etablissement' = 'CONSTRUCTIONS DU RHONE - AGENCE ALPES'"));
+            Assert.Equal((5, 3, 2), Volume(r, "vte_doc_entete"));
+            Assert.Equal(5L, await Compter("SELECT cnu_dernier_numero FROM compteur_numero c JOIN type_document t ON t.tyd_id = c.cnu_tyd_id WHERE t.tyd_code = 'V_DEVIS' AND cnu_exercice = 2024"));
+            Assert.Equal(12L, await Compter("SELECT max(cnu_dernier_numero) FROM compteur_numero c JOIN type_document t ON t.tyd_id = c.cnu_tyd_id WHERE cnu_exercice = 2023"));
+            Assert.Equal(3L, await Compter("SELECT count(*) FROM document_origine WHERE dor_format = 'OPTIM'"));
+        }
+        // Totaux de TVA cohérents avec l'en-tête.
+        Assert.Equal(0L, await Compter("SELECT count(*) FROM document d WHERE ent_total_tva <> (SELECT coalesce(sum(tva_montant_net), 0) FROM document_tva WHERE tva_ent_id = d.ent_id)"));
     }
 
     /// <summary>Lot 9 : projets, affaires, chantiers, marchés, intervenants, établissement d'origine, révision.</summary>
@@ -281,7 +334,7 @@ public class RepriseBaseTests
                 e.ele_pv_fixe AND e.ele_pv = 70 AND e.ele_composition->'lignes' @> '[{"lig_proprietes": {"element": {"code": "MUR20"}}}]'
                 """));
             Assert.Equal(["PMEELEMENT AMUR", "PMEELEMENT CIM35"],
-                r.Anomalies.Where(a => a.Code == CodeAnomalie.PrixImpose).Select(a => a.Emplacement).Order(StringComparer.Ordinal));
+                r.Anomalies.Where(a => a.Code == CodeAnomalie.PrixImpose && a.Emplacement!.StartsWith("PMEELEMENT", StringComparison.Ordinal)).Select(a => a.Emplacement).Order(StringComparer.Ordinal));
             // Tarifs fournisseurs : principal (fournisseur principal), prix public remisé, fournisseur repris.
             Assert.Equal(2L, await b.CompterAsync("SELECT count(*) FROM tarif_fournisseur t JOIN element e ON e.ele_id = t.tfo_ele_id WHERE e.ele_code = 'CIM35'"));
             Assert.Equal(1L, await b.CompterAsync("""
@@ -317,7 +370,7 @@ public class RepriseBaseTests
             Assert.Equal(1L, await Element("FORFAIT-POSE", """
                 e.ele_pv_fixe AND e.ele_pv = 150 AND e.ele_composition->'lignes' @> '[{"lig_qte_type": "A", "lig_coef_perte": 1.1, "lig_qte": 2}]'
                 """));
-            Assert.DoesNotContain(r.Anomalies, a => a.Code == CodeAnomalie.PrixImpose);
+            Assert.DoesNotContain(r.Anomalies, a => a.Code == CodeAnomalie.PrixImpose && a.Emplacement!.StartsWith("bib_", StringComparison.Ordinal));
             Assert.Equal(1L, await b.CompterAsync("""
                 SELECT count(*) FROM tarif_fournisseur t JOIN personne p ON p.per_id = t.tfo_tiers_id
                 WHERE t.tfo_principal AND p.per_code = 'FOU-NEGO' AND t.tfo_prix = 90 AND t.tfo_prix_public = 100 AND t.tfo_remise1 = 10 AND t.tfo_unt_code = 'u'
