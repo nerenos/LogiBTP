@@ -322,3 +322,21 @@ INSERT INTO dbo.PMECHTSUIVMOCHT (CLE, DATETX, CODECHT, CODESAL, CODEEQUIPE, CLEN
  (7, '2024-03-06', 'CH001', NULL, 'EQ1', 1, 'HN', NULL, 16, 0, 0),
  (8, '2024-03-07', 'CH001', 'SAL01', NULL, NULL, NULL, 'XYZ', 1, 0, 0);
 GO
+
+-- Lot 14, stock : dépôts (sans chantier → dépôt par défaut ; dépôt de chantier → stock tenu), stock réel par lot,
+-- fournitures hors pièce (BLORIG : issue d'un bon de livraison, écartée), heures de matériel (unité J écartée).
+INSERT INTO dbo.PMEDEPOT (CODE, TYPE, CODECHT, LIBELLE, PRINCIPAL) VALUES
+ ('DEP1', 'D', NULL, 'Dépôt central', 1),
+ ('DCH3', 'C', 'CH003', 'Stock du chantier VRD', 0);
+INSERT INTO dbo.PMESTOCKREEL (CODEARTICLE, CODEDEPOT, CODELOT, QUANTITE) VALUES
+ ('CIM35', 'DEP1', 'L1', 100), ('CIM35', 'DEP1', 'L2', 20.5), ('CIM35', 'DCH3', NULL, 5), ('INCONNU', 'DEP1', NULL, 3),
+ ('CIM35', NULL, 'L3', 0);
+INSERT INTO dbo.PMECHTSUIVFO (CLE, CODECHT, CODEDEPOT, BLORIG, CLEREGIEORIG, DATESUIVI, CLENATURE, CODEELEM, LIBELLE, QTE, DEBUNIT, DEBTOT) VALUES
+ (1, 'CH001', 'DEP1', NULL, NULL, '2024-03-04', 2, 'CIM35', 'Ciment pour reprise', 50, 0.21, 10.5),
+ (2, 'CH001', 'DEP1', 'BL0001', NULL, '2024-03-05', 2, 'CIM35', NULL, 80, 0.21, 16.8),
+ (3, 'CH001', NULL, NULL, 12, '2024-03-18', 2, 'CIM35', NULL, 10, 0.25, 2.5),
+ (4, 'CH001', NULL, NULL, NULL, '2024-03-19', NULL, NULL, 'Divers sans article', 1, 30, 30);
+INSERT INTO dbo.PMECHTSUIVMAT (CLE, CODECHT, CODEMAT, DATEDEB, DUREE, UNITE, INFO) VALUES
+ (1, 'CH001', 'MP-001', '2024-03-05', 6.5, 'H', 'Terrassement'),
+ (2, 'CH001', 'MP-001', '2024-03-06', 2, 'J', NULL);
+GO

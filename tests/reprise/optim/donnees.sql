@@ -378,3 +378,12 @@ INSERT INTO pln_planification (PLA_ID, PLA_CHT_ID, PLA_ABS_ID, PLA_SLR_ID, PLA_D
  (3, 2, 0, 2, '2026-12-01', '2026-12-03', 'Reprise d''enduit', 0);
 INSERT INTO pln_affectation (PLF_ID, PLF_PLA_ID, PLF_TypeEntite, PLF_EntiteId, PLF_DureePrev, PLF_IsDesactive) VALUES
  (1, 1, 'SAL', 1, 32, 0), (2, 1, 'MAT', 1, 16, 0), (3, 1, 'ART', 5, 4, 0);
+
+-- Lot 14, stock : stock de l'atelier (chantier 3) et sans lieu (dépôt par défaut), ligne désactivée ; consommations
+-- hors pièce (RCS_DOE_ID : liée à une pièce, écartée ; sans article : signalée).
+INSERT INTO bib_article_stock (ARS_ID, ARS_ART_ID, ARS_AchatStockAtelier, ARS_QteStock, ARS_IsDesactive) VALUES
+ (1, 1, 3, 12.5, 0), (2, 1, 0, 4, 0), (3, 1, 1, 9, 1);
+INSERT INTO svc_rapport_conso (RCS_ID, RCS_ART_ID, RCS_CHT_ID, RCS_DOE_ID, RCS_MateriauLib, RCS_Date, RCS_QUANTITE, RCS_PrixUnitaire, RCS_Montant) VALUES
+ (1, 1, 1, NULL, 'Béton de propreté', '2024-06-12', 3, 95, 285),
+ (2, 1, 1, 5, NULL, '2024-06-13', 8, 95, 760),
+ (3, NULL, 1, NULL, 'Location benne', '2024-06-14', 1, 150, 150);

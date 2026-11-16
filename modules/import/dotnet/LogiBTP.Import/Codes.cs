@@ -117,4 +117,6 @@ public static class CodeAnomalie
     public const string PointageExcedent = "REPRISE_POINTAGE_EXCEDENT";
     /// <summary>Ligne de pointage sans salarié, chantier ou nature repris (heures d'équipe, absence sans nature) : non reprise.</summary>
     public const string PointageNonRepris = "REPRISE_POINTAGE_NON_REPRIS";
+    /// <summary>Consommation hors pièce sans article, chantier, matériel ou durée en heures repris : non reprise.</summary>
+    public const string ConsommationNonReprise = "REPRISE_CONSOMMATION_NON_REPRISE";
 }

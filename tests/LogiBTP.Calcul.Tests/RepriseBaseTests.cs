@@ -135,11 +135,55 @@ public class RepriseBaseTests
         await VerifierAchatsAsync(b, source, reelle.Rapport);
         await VerifierReglementsAsync(b, source, reelle.Rapport);
         await VerifierExploitationAsync(b, source, reelle.Rapport);
+        await VerifierStockAsync(b, source, reelle.Rapport);
 
         // Correspondances fournies invalides : refus avant toute lecture.
         var refus = await Assert.ThrowsAsync<RepriseRefuseeException>(() => RepriseBase.ExecuterAsync(
             demande with { Correspondances = $$"""{ "source": "{{source}}", "version": 1, "tables": {} }""" }, default));
         Assert.Equal(ErreurReprise.CorrespondancesInvalides, refus.Code);
+    }
+
+    /// <summary>Lot 14 : inventaire d'ouverture par article et lieu, consommations hors pièce en coût du chantier, heures de matériel.</summary>
+    private static async Task VerifierStockAsync(BaseNeuve b, string source, RapportReprise r)
+    {
+        async Task<decimal> Somme(string sql) => decimal.Parse(await b.TexteAsync(sql) ?? "0", System.Globalization.CultureInfo.InvariantCulture);
+        async Task<decimal> Stock(string article, string lieu) => await Somme($"""
+            SELECT coalesce(sum(k.cpt_quantite), 0) FROM stk_comptage k JOIN element e ON e.ele_id = k.cpt_ele_id JOIN chantier c ON c.cha_id = k.cpt_lieu_id
+            WHERE e.ele_code = '{article}' AND c.cha_code = '{lieu}'
+            """);
+        async Task<decimal> CoutStock(string chantier, string mois) => await Somme($"""
+            SELECT coalesce(sum(v.montant), 0) FROM v_cout_chantier v JOIN chantier c ON c.cha_id = v.chantier_id
+            WHERE c.cha_code = '{chantier}' AND v.nature = 'STOCK' AND to_char(v.mois, 'YYYY-MM') = '{mois}'
+            """);
+        // Comptages valorisés (prix de la source sinon PA de l'article) ; sorties validées, verrouillées, au lieu d'origine posé.
+        Assert.Equal(0L, await b.CompterAsync("SELECT count(*) FROM stk_comptage WHERE cpt_prix IS NULL"));
+        Assert.Equal(0L, await b.CompterAsync("""
+            SELECT count(*) FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id
+            WHERE t.tyd_code = 'S_SORTIE' AND (NOT d.ent_verrouille OR d.ent_stk_origine_id IS NULL)
+            """));
+        if (source == SourceReprise.Mde)
+        {
+            Assert.Equal(120.5m, await Stock("CIM35", "INT-DEPOT"));
+            Assert.Equal(5m, await Stock("CIM35", "CH003"));
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM chantier WHERE cha_code = 'CH003' AND cha_stock_tenu"));
+            Assert.Equal((5, 3, 2), Volume(r, StockMde.StockReel));
+            // Fournitures hors pièce : 50 × 0,21 + 10 × 0,25 (bon de régie) ; le bon de livraison n'est pas repris.
+            Assert.Equal(13.00m, await CoutStock("CH001", "2024-03"));
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id WHERE t.tyd_code = 'S_SORTIE'"));
+            Assert.Contains(r.Anomalies, a => a.Code == CodeAnomalie.ConsommationNonReprise && a.Emplacement == "PMECHTSUIVFO 4");
+            Assert.Equal((4, 2, 2), Volume(r, StockMde.SuiviFournitures));
+            Assert.Equal(390L, await b.CompterAsync("SELECT coalesce(sum(pma_minutes), 0) FROM pointage_materiel WHERE pma_source = 'IMPORT'"));
+            Assert.Contains(r.Anomalies, a => a.Code == CodeAnomalie.ConsommationNonReprise && a.Emplacement == "PMECHTSUIVMAT 2");
+        }
+        else
+        {
+            Assert.Equal(12.5m, await Stock("BETON-C25", "ATELIER"));
+            Assert.Equal(4m, await Stock("BETON-C25", "INT-DEPOT"));
+            Assert.Equal((3, 2, 1), Volume(r, StockOptim.ArticleStock));
+            Assert.Equal(285m, await CoutStock("C24-001", "2024-06"));
+            Assert.Contains(r.Anomalies, a => a.Code == CodeAnomalie.ConsommationNonReprise && a.Emplacement == "svc_rapport_conso 3");
+            Assert.Equal((3, 1, 2), Volume(r, StockOptim.Consommation));
+        }
     }
 
     /// <summary>Lot 14 : pointages (heures par salarié, chantier et mois égales à la source), variables de paie, absences, planning.</summary>

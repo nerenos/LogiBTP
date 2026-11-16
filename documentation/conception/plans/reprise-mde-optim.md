@@ -386,7 +386,7 @@ l'analyse, modifié par le § 10.
     CODELOGICIEL et TYPECAUTION à confirmer sur une base réelle.
 - **Lot 14, exploitation** : pointage en minutes avec les indemnités (Q17), planning, inventaire d'ouverture (Q18),
   consommations non liées à un document (Q15). *Critère* : heures par salarié, chantier et mois égales à la source.
-  **Partie 1 FAITE (16/11/2026)** : pointage, absences, indemnités, planning.
+  **FAIT (16/11/2026)**, en deux parties : pointage, absences, indemnités, planning ; stock et consommations.
   - **Réalisé** : `DomainesExploitation.cs`. `ExploitationReprise` : pointages en minutes dans la couche SAISIE
     (`poi_pointage`, valorisation IMPORT avec taux et coût de la source ; type de MO = nature MO de la ligne, sinon la
     première nature MO) ; variables de paie selon l'unité de la rubrique (ZONE → `poi_zone_chantier` du chantier pour
@@ -403,6 +403,22 @@ l'analyse, modifié par le § 10.
     pointages non validés (la couche VALIDE se refait dans LogiBTP) ; heures MDE d'équipe sans salarié et
     PMECHTSUIVMO hors chantier non reprises (`REPRISE_POINTAGE_NON_REPRIS`) ; affectations OPTIM d'articles (ART)
     non reprises (information).
+  - **Réalisé, partie 2** : `DomainesStock.cs` (domaine `STOCK`). `StockReprise` : inventaire d'ouverture = un
+    `stk_comptage` par article et par lieu à la date de reprise (23 h 59), sans historique des mouvements (Q18), prix
+    de la source sinon PA de l'article ; lieux = chantiers (dépôt sans chantier → premier dépôt géré, INT-DEPOT ;
+    chantier interne → `cha_depot` ; autre chantier → `cha_stock_tenu`) ; consommations de fournitures hors pièce (Q15)
+    en sorties de stock S_SORTIE validées et verrouillées (une par chantier, lieu et mois, lieu d'origine posé),
+    mouvements datés du jour de la source, donc antérieurs à l'inventaire : seul le coût STOCK du chantier en
+    Rentabilité les voit ; heures de matériel en `pointage_materiel` source IMPORT (`db/292` rejouable étendu).
+    `StockMde` : PMESTOCKREEL (lots cumulés) par PMEDEPOT, PMECHTSUIVFO sans pièce d'origine (TYPEORIG, BLORIG,
+    BRORIG, BSORIG, FACORIG, MVTORIG, CLELIGORIG ; les bons de régie en sont), PMECHTSUIVMAT (DUREE en heures).
+    `StockOptim` : bib_article_stock (lieu ARS_AchatStockAtelier), svc_rapport_conso sans pièce (RCS_DOE_ID,
+    RCS_TRS_ID, RCS_CPH_ID, RCS_VSI_ID, RCS_VDE_ID, RCS_VRV_ID, RCS_Document ; ni projet ni désactivée). Tests :
+    `VerifierStockAsync` (stock par article et lieu, coût STOCK du chantier par mois, heures de matériel).
+  - **Écarts, partie 2** : PMECHTSUIVREGIE non lu (ses lignes sont recopiées dans les tables de suivi) ; durées de
+    matériel MDE dans une autre unité que l'heure non reprises (`REPRISE_CONSOMMATION_NON_REPRISE`) ; consommations
+    OPTIM sans article non reprises (aucun mouvement possible) ; sens de RCS_Mouvement non exploité ; lots, tailles et
+    couleurs du stock MDE cumulés ; emplacements, mini / maxi non repris ; à confirmer sur une base réelle.
 
 ## Lot 15 : recette de la phase 1
 
