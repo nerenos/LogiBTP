@@ -43,3 +43,27 @@ export const MODE_AVANCEMENT = Object.freeze({
   GLOBAL_CUMUL: 'GLOBAL_CUMUL',
   GLOBAL_SITUATION: 'GLOBAL_SITUATION',
 });
+
+/** État d'une exécution de reprise (import_reprise.irp_etat). */
+export const ETAT_REPRISE = Object.freeze({
+  EN_COURS: 'EN_COURS',
+  TERMINEE: 'TERMINEE',
+  ECHEC: 'ECHEC',
+});
+
+/** Refus du moteur de reprise. */
+export const ERREUR_REPRISE = Object.freeze({
+  BASE_NON_VIDE: 'REPRISE_BASE_NON_VIDE',
+  DOMAINE_EN_DOUBLE: 'REPRISE_DOMAINE_EN_DOUBLE',
+  DEPENDANCE_INCONNUE: 'REPRISE_DEPENDANCE_INCONNUE',
+  CYCLE: 'REPRISE_CYCLE',
+  CORRESPONDANCES_INVALIDES: 'REPRISE_CORRESPONDANCES_INVALIDES',
+  SOURCE_INCOMPATIBLE: 'REPRISE_SOURCE_INCOMPATIBLE',
+});
+
+/** Niveau d'une anomalie du rapport de reprise. */
+export const NIVEAU_ANOMALIE = Object.freeze({
+  INFORMATION: 'INFORMATION',
+  AVERTISSEMENT: 'AVERTISSEMENT',
+  BLOQUANT: 'BLOQUANT',
+});

@@ -20,8 +20,8 @@
 | Lot | Titre | Module | Dépend de | Statut |
 |---|---|---|---|---|
 | 0 | Correspondances par défaut, bases sources de test | `modules/import` + cœur | — | FAIT |
-| 1 | Moteur de reprise : pivot, table de correspondance, rapport, simulation, commande | `modules/import` + `modules/installation` | 0 | À FAIRE |
-| 2 | Lecteurs de source SQL Server et MariaDB (lecture seule, en flux) | `modules/import` | 1 | À FAIRE |
+| 1 | Moteur de reprise : table de correspondance, rapport, simulation | `modules/import` | 0 | FAIT |
+| 2 | Lecteurs de source SQL Server et MariaDB (lecture seule, en flux), commande de l'installeur | `modules/import` + cœur | 1 | À FAIRE |
 | 3 | Écran « Reprise de données » : simulation, rapport, fusions, lancement | `modules/import` + cœur | 2 | À FAIRE |
 | 4 | Société et référentiels | cœur | 2 | À FAIRE |
 | 5 | Champs supplémentaires des fiches | cœur | 4 | À FAIRE |
@@ -101,6 +101,14 @@
      [--correspondances <fichier>]`, avec le rapport écrit en Markdown.
 - **Critère de fin** : reprise à vide (aucun domaine) sur une base neuve, avec rapport produit ; tests du registre, de
   l'ordre et du refus sur une base non vide.
+- **Réalisé (16/11/2026)** : mineure `modules/import/db/1.1_reprise.sql` (manifeste régénéré) ; `ILecteurSource` et
+  `LigneSource` (vide, 0 et 01/01/1900 = absent, double → décimal par l'arrondi unique à 6 décimales),
+  `RegistreCorrespondances`, `RapportReprise` (jsonb et Markdown), `IDomaineReprise`, `ContexteReprise`
+  (`Correspondre`, `CleConservee` pour les fusions), `MoteurReprise` ; cœur : `BaseCibleReprise.EstVideAsync`.
+  Écarts au plan : **une seule transaction** pour toute la reprise (tout ou rien : un échec laisse la base vide, le
+  rapport est enregistré à part) au lieu d'une par domaine ; pas de « modèle pivot » séparé : les domaines lisent les
+  `LigneSource` et écrivent directement ; la **commande de l'installeur passe au lot 2** (elle a besoin des
+  lecteurs). 15 nouveaux tests, dont 4 sur une base PostgreSQL temporaire (`LOGIBTP_TEST_PG_ADMIN`).
 
 ## Lot 2 : lecteurs de source
 
@@ -111,7 +119,10 @@
   seule ou `ApplicationIntent=ReadOnly`, et refus de toute requête qui ne commence pas par `SELECT`) ; filtre par
   `SCT_ID` (OPTIM, liste de sociétés regroupées, R1) ; conversion `double` → `decimal` unique ; inventaire des tables et
   volumes dans le rapport.
-- **Critère de fin** : lecture des deux bases de test ; un test prouve qu'une écriture est refusée avant l'envoi.
+  Commande `installation societe importer CODE --source mde|optim --connexion <chaîne> [--societes 1,2]
+  [--simulation] [--correspondances <fichier>] [--rapport <fichier.md>]` (reportée du lot 1).
+- **Critère de fin** : lecture des deux bases de test ; un test prouve qu'une écriture est refusée avant l'envoi ;
+  simulation sans domaine par la commande sur une base neuve, avec rapport.
 
 ## Lot 3 : écran « Reprise de données »
 

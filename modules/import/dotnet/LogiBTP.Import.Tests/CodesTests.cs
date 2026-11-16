@@ -14,5 +14,8 @@ public class CodesTests
     [InlineData("ETAT_SUITE", typeof(EtatSuite))]
     [InlineData("PART_SOUS_TRAITANCE", typeof(PartSousTraitance))]
     [InlineData("MODE_AVANCEMENT", typeof(ModeAvancement))]
+    [InlineData("ETAT_REPRISE", typeof(EtatReprise))]
+    [InlineData("ERREUR_REPRISE", typeof(ErreurReprise))]
+    [InlineData("NIVEAU_ANOMALIE", typeof(NiveauAnomalie))]
     public void Parite_avec_le_js(string nom, Type type) => Assert.Empty(Constantes.Ecarts(Fichier, nom, type));
 }

@@ -50,3 +50,30 @@ public static class ModeAvancement
     public const string GlobalCumul = "GLOBAL_CUMUL";
     public const string GlobalSituation = "GLOBAL_SITUATION";
 }
+
+/// <summary>État d'une exécution de reprise (import_reprise.irp_etat).</summary>
+public static class EtatReprise
+{
+    public const string EnCours = "EN_COURS";
+    public const string Terminee = "TERMINEE";
+    public const string Echec = "ECHEC";
+}
+
+/// <summary>Refus du moteur de reprise.</summary>
+public static class ErreurReprise
+{
+    public const string BaseNonVide = "REPRISE_BASE_NON_VIDE";
+    public const string DomaineEnDouble = "REPRISE_DOMAINE_EN_DOUBLE";
+    public const string DependanceInconnue = "REPRISE_DEPENDANCE_INCONNUE";
+    public const string Cycle = "REPRISE_CYCLE";
+    public const string CorrespondancesInvalides = "REPRISE_CORRESPONDANCES_INVALIDES";
+    public const string SourceIncompatible = "REPRISE_SOURCE_INCOMPATIBLE";
+}
+
+/// <summary>Niveau d'une anomalie du rapport de reprise.</summary>
+public static class NiveauAnomalie
+{
+    public const string Information = "INFORMATION";
+    public const string Avertissement = "AVERTISSEMENT";
+    public const string Bloquant = "BLOQUANT";
+}
