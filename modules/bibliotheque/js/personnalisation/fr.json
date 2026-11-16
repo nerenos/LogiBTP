@@ -278,7 +278,6 @@
   },
   "erreurs": {
     "DELAI": "Délai négatif",
-    "REMISE": "Remise de 0 à 100 %",
     "SOUS_FAMILLES": "Famille contenant des sous-familles",
     "UTILISEE": "Bibliothèque contenant des éléments : désactivez-la plutôt"
   }

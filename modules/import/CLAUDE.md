@@ -43,6 +43,7 @@
 - Montants du devis neutre en `Number` (arrondis `arr` à 6 décimales) : le calcul reste celui du moteur du cœur après traduction.
 
 ## Reprise d'une base (serveur, plan `documentation/conception/plans/reprise-mde-optim.md`)
+- Référence détaillée (chaîne d'exécution, domaines et tables lues par source, règles transverses, anomalies, tests) : [IMPORT.md](../../documentation/modules/IMPORT.md).
 - `dotnet/LogiBTP.Import` (socle données, pilotes SQL Server et MariaDB) : `Codes.cs` ↔ `js/src/codes.js` (`SOURCE_REPRISE`, `ERREUR_CORRESPONDANCE`, listes neutres `ETAT_SUITE`, `PART_SOUS_TRAITANCE`, `MODE_AVANCEMENT` ; parité par `CodesTests`).
 - `Reprise/Correspondances.cs` : `FichierCorrespondances` (JSON à commentaires : `source`, `version`, `tables` nommées ; table = `colonne`, `type_parametre` (OPTIM : `PRM_TypeParam`, rapprochement par `PRM_Code`, jamais `PRM_ID`), `cibles` (noms de listes), `entrees` `{ source, cible | ignorer + motif, note }`), `Lire`, `Valider(tablesAttendues, cibles, source)` → erreurs `ERREUR_CORRESPONDANCE` avec emplacement ; `TableCorrespondance.Trouver` (espaces de fin ignorés).
 - Le module ne connaît aucun code du cœur : fichiers par défaut, tables attendues et listes de cibles dans `src/LogiBTP.Api/Reprise/` (`CorrespondancesReprise`, ressources `Correspondances/mde.json`, `optim.json`), validés par `tests/LogiBTP.Calcul.Tests/RepriseCorrespondancesTests.cs` contre les codes du dépôt.

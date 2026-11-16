@@ -425,6 +425,12 @@ l'analyse, modifié par le § 10.
 Simulation complète des deux bases de test ; documentation (`documentation/modules/IMPORT.md`, `MODULES.md`,
 `JOURNAL-LOTS.md`, `TODO.md`, `modules/import/CLAUDE.md`). L'essai sur une copie des bases réelles est fait par
 l'utilisateur sur son poste. *Critère* : `npm test` et `dotnet test LogiBTP.slnx` verts.
+**FAIT (16/11/2026).**
+- **Réalisé** : simulation puis reprise réelle des deux bases de test (`RepriseBaseTests`, une vérification par
+  domaine) ; référence `documentation/modules/IMPORT.md` (chaîne, domaines et tables lues, règles, anomalies, tests) ;
+  `modules/import/CLAUDE.md`, `SRC.md`, `JOURNAL-LOTS.md`, `TODO.md` tenus à chaque lot.
+- **Écarts** : reprise toujours exécutée dans la requête HTTP (tâche de fond à décider sur une grosse base réelle) ;
+  essai sur une copie des bases réelles et scénario `e2e/reprise.spec.ts` à faire sur le poste.
 
 ## Lots 16 et 17 : phase 2
 
