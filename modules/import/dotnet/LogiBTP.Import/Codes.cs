@@ -97,4 +97,6 @@ public static class CodeAnomalie
     public const string SirenDifferents = "REPRISE_SIREN_DIFFERENTS";
     public const string SansEquivalent = "REPRISE_SANS_EQUIVALENT";
     public const string ValeurInconnue = "REPRISE_VALEUR_INCONNUE";
+    public const string SiretPris = "REPRISE_SIRET_PRIS";
+    public const string PayeurInconnu = "REPRISE_PAYEUR_INCONNU";
 }

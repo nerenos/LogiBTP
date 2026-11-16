@@ -18,6 +18,7 @@ public static class DomainesReprise
         public const string Societe = "SOCIETE";
         public const string Referentiels = "REFERENTIELS";
         public const string Champs = "CHAMPS";
+        public const string Annuaire = "ANNUAIRE";
         /// <summary>Valeurs des champs supplémentaires : déclaré en dernier (après toutes les fiches reprises).</summary>
         public const string ValeursChamps = "VALEURS_CHAMPS";
     }
@@ -27,8 +28,8 @@ public static class DomainesReprise
 
     public static IReadOnlyList<IDomaineReprise> Pour(string source) => source switch
     {
-        SourceReprise.Mde => [new SocieteMde(), new ReferentielsMde(), new ChampsMde(), new ValeursChampsMde()],
-        SourceReprise.Optim => [new SocieteOptim(), new ReferentielsOptim(), new ChampsOptim(), new ValeursChampsOptim()],
+        SourceReprise.Mde => [new SocieteMde(), new ReferentielsMde(), new ChampsMde(), new AnnuaireMde(), new ValeursChampsMde()],
+        SourceReprise.Optim => [new SocieteOptim(), new ReferentielsOptim(), new ChampsOptim(), new AnnuaireOptim(), new ValeursChampsOptim()],
         _ => throw new ArgumentException($"Source de reprise inconnue : {source}"),
     };
 }

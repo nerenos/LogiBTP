@@ -197,7 +197,9 @@ public sealed class ReferentielsOptim : IDomaineReprise
     private static async Task ComptesAsync(ContexteReprise ctx, ReferentielsCible cibles, CancellationToken ct)
     {
         var societes = SocietesOptim.Ids(ctx).ToHashSet();
-        var collectifs = (await SqlReprise.SourceAsync(ctx, "SELECT DISTINCT TRS_CompteTiers FROM bib_tiers WHERE TRS_CompteTiers IS NOT NULL", ct))
+        // TRS_CompteTiers porte le compte auxiliaire du tiers, jamais un collectif : les collectifs sont les comptes 40 / 41
+        // du plan (fournisseurs, clients) qui ne sont pas un compte auxiliaire de tiers.
+        var auxiliaires = (await SqlReprise.SourceAsync(ctx, "SELECT DISTINCT TRS_CompteTiers FROM bib_tiers WHERE TRS_CompteTiers IS NOT NULL", ct))
             .Select(l => l.Texte("TRS_CompteTiers")).OfType<string>().ToHashSet(StringComparer.Ordinal);
         var volume = ctx.Rapport.Volume("svcz_compte");
         foreach (var l in await SqlReprise.SourceAsync(ctx, "SELECT CPT_NumCompte, CPT_Libelle, CPT_SCT_ID FROM svcz_compte ORDER BY CPT_NumCompte, CPT_ID", ct))
@@ -205,7 +207,9 @@ public sealed class ReferentielsOptim : IDomaineReprise
             volume.Lues++;
             // Plan commun (SCT_ID = 0) ou d'une société retenue.
             if (l.Texte("CPT_NumCompte") is not { } compte || l.Id("CPT_SCT_ID") is { } sct && !societes.Contains(sct)) { volume.Ecartees++; continue; }
-            var (type, sens) = ReferentielsCible.Classer(compte, collectifs);
+            var collectif = (compte.StartsWith("40", StringComparison.Ordinal) || compte.StartsWith("41", StringComparison.Ordinal))
+                            && !auxiliaires.Contains(compte);
+            var (type, sens) = ReferentielsCible.Classer(compte, collectif ? new HashSet<string> { compte } : []);
             await cibles.CompteAsync(compte, l.Texte("CPT_Libelle"), type, sens, ct);
             volume.Ecrites++;
         }

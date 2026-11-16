@@ -93,6 +93,9 @@ INSERT INTO bib_tiers (TRS_ID, TRS_IsTiers, TRS_NomReduit, TRS_RaisonSociale, TR
 UPDATE bib_tiers SET TRS_TVA = 51, TRS_ModeReglementVte = 62 WHERE TRS_ID = 11;
 UPDATE bib_tiers SET TRS_TVA = 53, TRS_ModeReglement = 63 WHERE TRS_ID = 14;
 UPDATE bib_tiers SET TRS_TVAVte = 54, TRS_ModeReglementVte = 61 WHERE TRS_ID = 10;
+-- Payeur (facturé au bailleur) et RIB d'un sous-traitant.
+UPDATE bib_tiers SET TRS_TRS_ID_CompteFact = 11 WHERE TRS_ID = 10;
+UPDATE bib_tiers SET TRS_NumCpteBq = 'FR76 3000 6000 0112 3456 7890 189', TRS_NumCpteBic = 'AGRIFRPP' WHERE TRS_ID = 14;
 UPDATE bib_tiers SET TRS_TvaIntra = 'FR33987654321' WHERE TRS_ID IN (900, 901);
 INSERT INTO bib_tiers_categ (TRC_ID, TRC_TRS_ID, TRC_CAT_ID, TRC_IsValDefaut) VALUES
  (1, 10, 1, 1), (2, 11, 1, 1), (3, 11, 6, 0), (4, 12, 2, 1), (5, 12, 7, 0), (6, 13, 1, 1), (7, 14, 3, 1), (8, 14, 5, 0),

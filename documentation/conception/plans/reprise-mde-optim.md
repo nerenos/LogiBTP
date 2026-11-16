@@ -210,7 +210,21 @@ l'analyse, modifié par le § 10.
 - **Lot 6, annuaire** : jointure MDE du § 10.2 (Q5), avec toutes les adresses et tous les contacts ; OPTIM
   `bib_tiers`, `bib_tiers_categ`, `bib_personne`, `z_adresse` ; casquettes ; payeurs ; RIB ; facturation
   électronique ; fusion des doublons retenus. *Critère* : fiches, adresses et contacts égaux à la source, moins les
-  fusions.
+  fusions. **FAIT (16/11/2026).**
+  - **Réalisé** : `TiersReprise` (cœur) écrit un tiers neutre : groupes de fusion par `CleConservee` (table de fusion
+    MDE `COMM_TIERS` + CODE, OPTIM `bib_tiers` + TRS_ID ; casquettes, comptes et coordonnées cumulés), doublons
+    proposés (SIRET, puis nom + code postal), SIRET unique (le second est retiré, avertissement `REPRISE_SIRET_PRIS`),
+    code libre (`CodeLibre`), comptes collectifs créés s'ils manquent, coordonnées dédoublonnées, contacts (individu,
+    rattachement, coordonnées du rattachement), payeurs en lien `FACTURER_A` (`REPRISE_PAYEUR_INCONNU` sinon), clés
+    d'origine inscrites au registre (valeurs des champs supplémentaires). `AnnuaireMde` : une requête par table de
+    rôle jointe à `COMM_TIERS` (tables `type_tiers`, `tiers_payeur`), adresses `COMM_TIERSADR` (facturation,
+    livraison, autres), interlocuteurs, activité en catégorie client, rôle G → individu de la société de la base.
+    `AnnuaireOptim` : `bib_tiers` (`TRS_IsTiers`), casquettes par `bib_tiers_categ` ⋈ `ref_categ` (table
+    `categorie_tiers`), `z_adresse`, courriels de commande et de facturation, `bib_personne`, payeurs `CompteFact` /
+    `ComptePaie`, RIB `TRS_NumCpteBq` / `TRS_NumCpteBic`. Collectifs OPTIM corrigés : comptes 40 / 41 du plan hors
+    comptes auxiliaires des tiers.
+  - **Écarts** : notes du tiers dans `per_commentaire` (pas de note CRM) ; fabricant sans étiquette ; champs de
+    facturation électronique et RIB MDE (`IDRIB`) non repris ; chargé d'affaires relié au salarié au lot 7.
 - **Lot 7, ressources** : salariés, intérim, équipes, matériels, habilitations, calendriers ; valeurs forcées listées
   (Q13) ; lien des utilisateurs OPTIM aux fiches (Q20). *Critère* : fiches reprises, liste des valeurs forcées.
 - **Lot 8, bibliothèque** : éléments hors sommeil (Q2), ouvrages avec la perte dans les quantités (Q9), modèles de

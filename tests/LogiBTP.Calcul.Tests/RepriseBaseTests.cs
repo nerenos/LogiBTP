@@ -50,6 +50,14 @@ public class RepriseBaseTests
             return Convert.ToInt64(await cmd.ExecuteScalarAsync());
         }
 
+        public async Task<string?> TexteAsync(string sql)
+        {
+            await using var c = new NpgsqlConnection(Connexion);
+            await c.OpenAsync();
+            await using var cmd = new NpgsqlCommand(sql, c);
+            return Convert.ToString(await cmd.ExecuteScalarAsync());
+        }
+
         public async ValueTask DisposeAsync()
         {
             NpgsqlConnection.ClearAllPools();
@@ -117,11 +125,39 @@ public class RepriseBaseTests
         Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM import_reprise WHERE irp_simulation AND irp_etat = 'TERMINEE'"));
         await VerifierReferentielsAsync(b, source, reelle.Rapport);
         await VerifierChampsAsync(b, source, reelle.Rapport);
+        await VerifierAnnuaireAsync(b, source, reelle.Rapport);
 
         // Correspondances fournies invalides : refus avant toute lecture.
         var refus = await Assert.ThrowsAsync<RepriseRefuseeException>(() => RepriseBase.ExecuterAsync(
             demande with { Correspondances = $$"""{ "source": "{{source}}", "version": 1, "tables": {} }""" }, default));
         Assert.Equal(ErreurReprise.CorrespondancesInvalides, refus.Code);
+    }
+
+    /// <summary>Lot 6 : doublon fusionné avant la reprise (import_fusion) : une seule fiche, casquettes et comptes cumulés.</summary>
+    [Theory]
+    [InlineData(SourceReprise.Mde, "COMM_TIERS", "3", "4", "C003")]
+    [InlineData(SourceReprise.Optim, "bib_tiers", "12", "13", "FOU-NEGO")]
+    public async Task Doublon_fusionne_avant_la_reprise(string source, string table, string conservee, string fusionnee, string code)
+    {
+        if (Admin is null || Source(source) is not { } connexion) return;
+        await using var b = await BaseNeuve.CreerAsync(Admin);
+        await b.CompterAsync($$"""
+            INSERT INTO import_fusion (ifu_source, ifu_table_source, ifu_cle_conservee, ifu_cles_fusionnees)
+            VALUES ('{{source}}', '{{table}}', '{{conservee}}', '["{{fusionnee}}"]') RETURNING 1
+            """);
+        var reelle = await RepriseBase.ExecuterAsync(new DemandeReprise
+        {
+            Source = source, ConnexionSource = connexion, ConnexionCible = b.Connexion, Simulation = false,
+            Societes = source == SourceReprise.Optim ? ["1", "2"] : [], Auteur = "test",
+        }, default);
+        Assert.True(reelle.Rapport.Etat == EtatReprise.Terminee, string.Join("\n", reelle.Rapport.Anomalies.Select(x => $"{x.Niveau} {x.Code} {x.Emplacement} {x.Message}")));
+        Assert.DoesNotContain(reelle.Rapport.Anomalies, a => a.Code == CodeAnomalie.SiretPris);
+        Assert.DoesNotContain(reelle.Rapport.Doublons, d => d.Critere == "SIRET");
+        Assert.Equal(1L, await b.CompterAsync($"""
+            SELECT count(*) FROM personne WHERE per_code = '{code}' AND per_casquettes @> '["CLIENT", "FOURNISSEUR"]'
+              AND per_cli_compte IS NOT NULL AND per_fou_compte IS NOT NULL
+            """));
+        Assert.Equal(source == SourceReprise.Mde ? 6L : 5L, await b.CompterAsync("SELECT count(*) FROM personne WHERE NOT per_societe_base AND per_parent_id IS NULL"));
     }
 
     /// <summary>Lot 4 : société de la base, référentiels rapprochés ou créés, paramétrage comptable.</summary>
@@ -136,7 +172,7 @@ public class RepriseBaseTests
         Assert.Contains(r.Anomalies, a => a.Code == CodeAnomalie.Decimales || source == SourceReprise.Optim);
         if (source == SourceReprise.Mde)
         {
-            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM personne"));
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM personne WHERE per_societe_base"));
             Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM personne WHERE per_siren = '123456789' AND per_capital = 10000 AND per_naf = '4120A'"));
             // Unités et taux tous rapprochés de l'existant (autoliquidation à 0 % → taux autoliquidé de LogiBTP).
             Assert.Equal("kg", r.Correspondances["unite"]["KG"]);
@@ -159,7 +195,7 @@ public class RepriseBaseTests
         else
         {
             // Deux établissements d'un même SIREN : la société de tête et son établissement.
-            Assert.Equal(2L, await b.CompterAsync("SELECT count(*) FROM personne"));
+            Assert.Equal(2L, await b.CompterAsync("SELECT count(*) FROM personne WHERE per_societe_base OR per_parent_id IN (SELECT per_id FROM personne WHERE per_societe_base)"));
             Assert.Equal(1L, await b.CompterAsync("""
                 SELECT count(*) FROM personne e JOIN personne s ON s.per_id = e.per_parent_id
                 WHERE e.per_niv_code = 'ETABLISSEMENT' AND s.per_societe_base AND e.per_siret = '98765432100029' AND s.per_code = 'SOC-CDR'
@@ -196,6 +232,53 @@ public class RepriseBaseTests
             Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM fiche_champ_supplementaire WHERE fcs_table = 'materiel' AND fcs_colonne = 'x_date_du_controle_technique' AND fcs_type = 'date'"));
             Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM fiche_champ_supplementaire WHERE fcs_table = 'element' AND fcs_colonne = 'x_poids_kg' AND fcs_type = 'nombre'"));
             Assert.Equal(3, r.Volumes.Single(v => v.Table == "z_dataspec_data").Lues);
+        }
+    }
+
+    /// <summary>Lot 6 : tiers, coordonnées, contacts, casquettes, payeurs, doublons proposés.</summary>
+    private static async Task VerifierAnnuaireAsync(BaseNeuve b, string source, RapportReprise r)
+    {
+        // Même SIRET sur deux fiches : le second est retiré (avertissement) et le doublon proposé à la fusion.
+        Assert.Contains(r.Anomalies, a => a.Code == CodeAnomalie.SiretPris);
+        if (source == SourceReprise.Mde)
+        {
+            Assert.Equal(7L, await b.CompterAsync("SELECT count(*) FROM personne WHERE NOT per_societe_base"));
+            Assert.Contains(r.Doublons, d => d.Critere == "SIRET" && d.Valeur == "77788899900015" && d.Fiches.Count == 2);
+            Assert.Equal(1L, await b.CompterAsync("""
+                SELECT count(*) FROM personne WHERE per_code = 'C001' AND per_niv_code = 'PARTICULIER' AND per_casquettes = '["CLIENT"]'
+                  AND per_cli_compte = 'CMARTIN' AND per_cli_collectif = '411000' AND per_cli_mode_reglement = 'CHEQUE'
+                  AND per_cli_delai_paiement = 'COMPTANT' AND x_zone_sup_01 = 'VIP'
+                """));
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM personne WHERE per_code = 'S001' AND per_casquettes = '[\"SOUS_TRAITANT\"]'"));
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM personne WHERE per_code = 'A001' AND per_casquettes = '[\"ARCHITECTE\"]'"));
+            // Interlocuteurs (9) et gérant de la société de la base (individu rattaché).
+            Assert.Equal(10L, await b.CompterAsync("SELECT count(*) FROM individu"));
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM rattachement r JOIN personne p ON p.per_id = r.rat_per_id WHERE p.per_societe_base"));
+            Assert.Equal(9, r.Volumes.Single(v => v.Table == "COMM_TIERSINTERLOC").Ecrites);
+            Assert.Equal(1L, await b.CompterAsync("""
+                SELECT count(*) FROM lien_personne l JOIN personne c ON c.per_id = l.lpe_per_id JOIN personne p ON p.per_id = l.lpe_cible_id
+                WHERE l.lpe_tli_code = 'FACTURER_A' AND c.per_code = 'C002' AND p.per_code = 'C003'
+                """));
+        }
+        else
+        {
+            Assert.Equal(6L, await b.CompterAsync("SELECT count(*) FROM personne WHERE NOT per_societe_base AND per_parent_id IS NULL"));
+            Assert.Contains(r.Doublons, d => d.Critere == "SIRET" && d.Valeur == "66677788800013");
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM personne WHERE per_code = 'CLI-IGL' AND per_casquettes = '[\"CLIENT\", \"PROSPECT\"]' AND per_cli_encours_max = 150000.5"));
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM personne WHERE per_code = 'CLI-DUPONT' AND per_niv_code = 'PARTICULIER'"));
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM personne WHERE per_code = 'FOU-OLD' AND NOT per_actif"));
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM personne WHERE per_code = 'ST-T69' AND per_iban = 'FR7630006000011234567890189' AND per_bic = 'AGRIFRPP'"));
+            Assert.Equal(4L, await b.CompterAsync("SELECT count(*) FROM rattachement"));
+            Assert.Equal(1L, await b.CompterAsync("""
+                SELECT count(*) FROM usage_coordonnee u JOIN coordonnee c ON c.coo_id = u.uco_coo_id JOIN personne p ON p.per_id = u.uco_per_id
+                WHERE p.per_code = 'FOU-NEGO' AND c.coo_nature = 'EMAIL' AND u.uco_usage = 'COMMANDE' AND c.coo_valeur = 'cde@negobat.fr'
+                """));
+            Assert.Equal(1L, await b.CompterAsync("""
+                SELECT count(*) FROM lien_personne l JOIN personne c ON c.per_id = l.lpe_per_id JOIN personne p ON p.per_id = l.lpe_cible_id
+                WHERE l.lpe_tli_code = 'FACTURER_A' AND c.per_code = 'CLI-DUPONT' AND p.per_code = 'CLI-IGL'
+                """));
+            // Collectifs : comptes 40 / 41 du plan, jamais les comptes auxiliaires des tiers.
+            Assert.Equal(0L, await b.CompterAsync("SELECT count(*) FROM compte_comptable WHERE cpt_code = '411IGL' AND cpt_type = 'COLLECTIF'"));
         }
     }
 }

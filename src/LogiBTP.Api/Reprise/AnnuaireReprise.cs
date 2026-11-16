@@ -68,6 +68,7 @@ public static class AnnuaireReprise
         public const string Standard = "STANDARD";
         public const string Fax = "FAX";
         public const string Pro = "PRO";
+        public const string Commande = "COMMANDE";
         public const string Site = "SITE";
         public const string Autre = "AUTRE";
     }
@@ -76,6 +77,7 @@ public static class AnnuaireReprise
     {
         public const string Societe = "SOCIETE";
         public const string Etablissement = "ETABLISSEMENT";
+        public const string Particulier = "PARTICULIER";
     }
 
     /// <summary>Texte coupé à une longueur de colonne (null si vide).</summary>
@@ -105,7 +107,11 @@ public static class AnnuaireReprise
             Couper(p.FormeLibelle, 100), p.Capital, Couper(p.Rcs, 60), p.Actif, p.Commentaire))!;
 
     /// <summary>Coordonnée et son usage par une personne (vide : rien n'est écrit).</summary>
-    public static async Task AjouterCoordonneeAsync(UniteEcriture u, long perId, CoordonneeReprise c, int ordre, string? auteur, CancellationToken ct)
+    public static Task AjouterCoordonneeAsync(UniteEcriture u, long perId, CoordonneeReprise c, int ordre, string? auteur, CancellationToken ct) =>
+        AjouterCoordonneeAsync(u, perId, null, c, ordre, auteur, ct);
+
+    /// <summary>Coordonnée et son usage par une personne ou par un rattachement (contact).</summary>
+    public static async Task AjouterCoordonneeAsync(UniteEcriture u, long? perId, long? ratId, CoordonneeReprise c, int ordre, string? auteur, CancellationToken ct)
     {
         if (c.Vide) return;
         var cooId = (long)(await SqlReprise.ScalaireAsync(u, """
@@ -115,8 +121,8 @@ public static class AnnuaireReprise
             """, ct, c.Nature, Couper(c.Valeur, 300), Couper(c.Ligne1, 150), Couper(c.Ligne2, 150), Couper(c.Ligne3, 150),
             Couper(c.CodePostal, 20), Couper(c.Ville, 100), c.Pays, Couper(auteur, 50)))!;
         await SqlReprise.ExecuterAsync(u, """
-            INSERT INTO usage_coordonnee (uco_coo_id, uco_per_id, uco_usage, uco_libelle, uco_principal, uco_ordre)
-            VALUES ($1, $2, $3, $4, $5, $6)
-            """, ct, cooId, perId, c.Usage, Couper(c.Libelle, 100), c.Principal, ordre);
+            INSERT INTO usage_coordonnee (uco_coo_id, uco_per_id, uco_rat_id, uco_usage, uco_libelle, uco_principal, uco_ordre)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            """, ct, cooId, perId, ratId, c.Usage, Couper(c.Libelle, 100), c.Principal, ordre);
     }
 }

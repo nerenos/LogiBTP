@@ -288,4 +288,7 @@ public static class TablesCorrespondance
     public const string TableFiche = "table_fiche";
     public const string TypeChamp = "type_champ";
     public const string Entite = "entite";
+    public const string TypeTiers = "type_tiers";
+    public const string TiersPayeur = "tiers_payeur";
+    public const string CategorieTiers = "categorie_tiers";
 }
