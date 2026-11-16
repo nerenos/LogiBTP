@@ -115,4 +115,6 @@ public static class CodeAnomalie
     public const string EcheancierEcart = "REPRISE_ECHEANCIER_ECART";
     /// <summary>Règlement ou lettrage de la source au-delà du reste de l'échéance : excédent gardé en trop-perçu non pointé.</summary>
     public const string PointageExcedent = "REPRISE_POINTAGE_EXCEDENT";
+    /// <summary>Ligne de pointage sans salarié, chantier ou nature repris (heures d'équipe, absence sans nature) : non reprise.</summary>
+    public const string PointageNonRepris = "REPRISE_POINTAGE_NON_REPRIS";
 }

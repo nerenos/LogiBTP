@@ -115,6 +115,14 @@
         { "source": "FTY_IsVente", "cible": "VENTE" }
       ]
     },
+    "rubrique_pointage": {
+      "description": "Déplacement (svhz_deplacement.DPL_CODE) ou repas (svhz_repas.RPS_Code) d'un rapport journalier vers la rubrique de paie du pointage (lot 14, Q17) ; sans entrée : zone si le code est Z suivi d'un chiffre, sinon grand déplacement (déplacements) ou panier (repas) ; rubrique de zone : zone du chantier pour l'agence du salarié",
+      "colonne": "svhz_deplacement.DPL_CODE, svhz_repas.RPS_Code",
+      "cibles": ["RUBRIQUE_POINTAGE"],
+      "entrees": [
+        { "source": "GD", "cible": "GD" }
+      ]
+    },
     "civilite": {
       "description": "Civilité d'une personne (bib_personne.PRS_Civilite, z_parametre) vers la civilité d'un individu",
       "colonne": "bib_personne.PRS_Civilite",

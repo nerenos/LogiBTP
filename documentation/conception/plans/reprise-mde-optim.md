@@ -386,6 +386,23 @@ l'analyse, modifié par le § 10.
     CODELOGICIEL et TYPECAUTION à confirmer sur une base réelle.
 - **Lot 14, exploitation** : pointage en minutes avec les indemnités (Q17), planning, inventaire d'ouverture (Q18),
   consommations non liées à un document (Q15). *Critère* : heures par salarié, chantier et mois égales à la source.
+  **Partie 1 FAITE (16/11/2026)** : pointage, absences, indemnités, planning.
+  - **Réalisé** : `DomainesExploitation.cs`. `ExploitationReprise` : pointages en minutes dans la couche SAISIE
+    (`poi_pointage`, valorisation IMPORT avec taux et coût de la source ; type de MO = nature MO de la ligne, sinon la
+    première nature MO) ; variables de paie selon l'unité de la rubrique (ZONE → `poi_zone_chantier` du chantier pour
+    l'agence du salarié, numéro tiré du code ; autres → saisies du jour additionnées dans `poi_valeur`) ; rubriques par la
+    table de correspondance `rubrique_pointage` (liste `RUBRIQUE_POINTAGE`), sinon code Z + chiffre → zone, sinon défaut
+    ou signalé ; absences en congés VALIDE (jours consécutifs regroupés, nature rapprochée par son code sinon créée) ;
+    tâches du planning sur un chantier (`pla_tache`, PREVUE / TERMINEE selon la date de reprise) et affectations
+    (SALARIE / INTERIM / MATERIEL). `ExploitationMde` : PMECHTSUIVMOCHT (CODEHEURE → pointage, CODERUB → variable).
+    `ExploitationOptim` : svh_rapport_journalier (heures normales + HS1–3 en un pointage, horaires gardés s'ils
+    correspondent, options en commentaire ; absences, déplacements → zone ou GD, repas → PANIER), pln_planification
+    (hors absences et tâches sans chantier) et pln_affectation (SAL / MAT ; sans affectation : PLA_SLR_ID).
+    Tests : `VerifierExploitationAsync` (minutes par salarié, chantier et mois, variables, zones, congés, tâches).
+  - **Écarts** : heures supplémentaires fondues dans un seul pointage (recalculées par les règles de paie) ;
+    pointages non validés (la couche VALIDE se refait dans LogiBTP) ; heures MDE d'équipe sans salarié et
+    PMECHTSUIVMO hors chantier non reprises (`REPRISE_POINTAGE_NON_REPRIS`) ; affectations OPTIM d'articles (ART)
+    non reprises (information).
 
 ## Lot 15 : recette de la phase 1
 

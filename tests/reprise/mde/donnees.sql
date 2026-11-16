@@ -309,3 +309,16 @@ INSERT INTO dbo.PMEDOCRETENUE (CLEDOC, NUMORDRE, CODERETENUE, PC, TYPEBASE, MTBA
  (203, 1, 'RG5', 5, 'T', 355.50, 17.78, '', '', 'Retenue de garantie 5 %', NULL),
  (201, 1, 'RG5', 5, 'T', 1100, 55, 'C', '', 'Banque Populaire', '2025-03-31');
 GO
+
+-- Exploitation (lot 14) : suivi de main-d'œuvre par chantier (heures, rubriques panier et zone, heures d'équipe sans
+-- salarié non reprises, rubrique inconnue signalée).
+INSERT INTO dbo.PMECHTSUIVMOCHT (CLE, DATETX, CODECHT, CODESAL, CODEEQUIPE, CLENATURE, CODEHEURE, CODERUB, NOMBRE, PRIX, MONTANT) VALUES
+ (1, '2024-03-04', 'CH001', 'SAL01', NULL, 1, 'HN', NULL, 8, 48.5, 388),
+ (2, '2024-03-05', 'CH001', 'SAL01', NULL, 1, 'HN', NULL, 7.5, 48.5, 363.75),
+ (3, '2024-03-05', 'CH003', 'SAL03', NULL, 1, 'HS25', NULL, 2, 22, 44),
+ (4, '2024-04-02', 'CH001', 'SAL02', NULL, NULL, 'HN', NULL, 8, 0, 0),
+ (5, '2024-03-04', 'CH001', 'SAL01', NULL, NULL, NULL, 'PAN', 1, 10.5, 10.5),
+ (6, '2024-03-04', 'CH001', 'SAL01', NULL, NULL, NULL, 'Z3', 1, 0, 0),
+ (7, '2024-03-06', 'CH001', NULL, 'EQ1', 1, 'HN', NULL, 16, 0, 0),
+ (8, '2024-03-07', 'CH001', 'SAL01', NULL, NULL, NULL, 'XYZ', 1, 0, 0);
+GO

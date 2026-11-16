@@ -50,6 +50,10 @@ public class RepriseCorrespondancesTests
         [CorrespondancesReprise.Listes.Civilite] = Regex.Matches(Regex.Match(Lire("db", "131_fiches_parametrage.sql"),
                 @"""code"":""civilite"",[^\]]*""options"":\[(.*?)\]").Groups[1].Value, @"""valeur"":""([^""]+)""")
             .Select(m => m.Groups[1].Value).ToList(),
+        // Rubriques de pointage : deuxième valeur des tuples (profil, code, …) de l'INSERT INTO poi_rubrique du module Pointage.
+        [CorrespondancesReprise.Listes.RubriquePointage] = Regex.Matches(Regex.Match(Lire("modules", "pointage", "db", "088_pointage_paie.sql"),
+                @"INSERT INTO poi_rubrique .*?;", RegexOptions.Singleline).Value, @"\(\s*'[A-Z_]+',\s*'([A-Z0-9_]+)'")
+            .Select(m => m.Groups[1].Value).Distinct().ToList(),
         [CorrespondancesReprise.Listes.NatureNote] = Constantes.Js(CasPartages.Chemin("modules", "crm", "js", "src", "codes.js"), "NATURE_NOTE").Values.ToList(),
     };
 
@@ -64,6 +68,8 @@ public class RepriseCorrespondancesTests
         Assert.Contains("VENTE", cibles[CorrespondancesReprise.Listes.RegroupementNature]);
         Assert.Contains("CHEQUE", cibles[CorrespondancesReprise.Listes.ModeReglement]);
         Assert.Equal(["M.", "Mme"], cibles[CorrespondancesReprise.Listes.Civilite]);
+        Assert.Contains("PANIER", cibles[CorrespondancesReprise.Listes.RubriquePointage]);
+        Assert.Contains("GD", cibles[CorrespondancesReprise.Listes.RubriquePointage]);
     }
 
     [Theory]

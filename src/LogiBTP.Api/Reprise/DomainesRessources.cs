@@ -38,6 +38,8 @@ public sealed class RessourcesMde : IDomaineReprise
     public IReadOnlyList<string> Dependances => [DomainesReprise.Codes.Annuaire];
 
     public const string ChargeAffaires = "PMECHARGEAFFAIRE";
+    public const string Salarie = "PMESALARIE";
+    public const string Materiel = "PMEMATERIEL";
 
     private const string RequeteSalaries = """
         SELECT S.CODE, S.COUTH, S.INACTIF, S.INTERIMAIRE, S.CLEEQUIPE, E.CIVILITE, E.PRENOM, E.NOM, E.MATRICULE, E.DATENAISSANCE, E.INSEE,
@@ -148,6 +150,9 @@ public sealed class RessourcesOptim : IDomaineReprise
 {
     public string Code => DomainesReprise.Codes.Ressources;
     public IReadOnlyList<string> Dependances => [DomainesReprise.Codes.Annuaire];
+
+    public const string Salarie = "ref_salarie";
+    public const string Materiel = "bib_materiel";
 
     private static readonly string[] Jours = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
 

@@ -356,3 +356,25 @@ INSERT INTO vac_reglement_facture_vte (VRV_ID, VRV_VDE_ID, VRV_VER_ID, VRV_VEL_I
  (1, 3, 1, 1, 62, '2024-02-15', 800, 'Chèque 1', 0),
  (2, 7, 2, 1, 62, '2024-08-15', 500, 'Chèque 2', 0),
  (3, 3, 0, 0, 62, '2024-03-01', 300, 'Virement solde', 0);
+
+-- Exploitation (lot 14) : rapports journaliers (heures et heures supplémentaires, horaires, déplacements en zone et
+-- grand déplacement, panier, option), absences consécutives regroupées, ligne désactivée ; planning (tâche du chantier
+-- avec salarié, matériel et article non repris, absence écartée, tâche à venir sans affectation détaillée).
+INSERT INTO svhz_absence (ABS_ID, ABS_Code, ABS_Libelle) VALUES (1, 'CP', 'Congés payés'), (2, 'ENFMAL', 'Enfant malade');
+INSERT INTO svhz_deplacement (DPL_ID, DPL_CODE) VALUES (1, 'Z2'), (2, 'GDEP');
+INSERT INTO svhz_repas (RPS_ID, RPS_Code, RPS_Libelle) VALUES (1, 'PAN', 'Panier');
+INSERT INTO svh_rapport_journalier (RJR_ID, RJR_SLR_ID, RJR_FTY_ID, RJR_CHT_ID, RJR_ABS_ID, RJR_Date, RJR_BoolAbsent, RJR_Heure, RJR_HeureSup1,
+  RJR_HoraireDeb1, RJR_HoraireFin1, RJR_Taux, RJR_NbDepl, RJR_DPL_ID, RJR_NbRepas, RJR_RPS_ID, RJR_Opt1Texte, RJR_Commentaire, RJR_IsDesactive) VALUES
+ (1, 1, 2, 1, 0, '2024-06-10', 0, 7, 1, '08:00:00', '16:00:00', 30, 1, 1, 1, 1, 'Outillage perso', NULL, 0),
+ (2, 1, 2, 1, 0, '2024-06-11', 0, 8, 0, NULL, NULL, 30, 1, 2, 0, 0, NULL, 'Coulage dalle', 0),
+ (3, 2, 0, 3, 0, '2024-06-10', 0, 7.5, 0, NULL, NULL, 0, 0, 0, 0, 0, NULL, NULL, 0),
+ (4, 2, 0, 0, 1, '2024-06-11', 1, 7, 0, NULL, NULL, 0, 0, 0, 0, 0, NULL, NULL, 0),
+ (5, 2, 0, 0, 1, '2024-06-12', 1, 7, 0, NULL, NULL, 0, 0, 0, 0, 0, NULL, NULL, 0),
+ (6, 2, 0, 0, 2, '2024-06-14', 1, 7, 0, NULL, NULL, 0, 0, 0, 0, 0, NULL, NULL, 0),
+ (7, 1, 2, 1, 0, '2024-07-01', 0, 8, 0, NULL, NULL, 30, 0, 0, 0, 0, NULL, NULL, 1);
+INSERT INTO pln_planification (PLA_ID, PLA_CHT_ID, PLA_ABS_ID, PLA_SLR_ID, PLA_DateDebut, PLA_DateFin, PLA_Libelle, PLA_IsDesactive) VALUES
+ (1, 1, 0, 0, '2024-06-10', '2024-06-14', 'Coffrage voiles', 0),
+ (2, 0, 1, 2, '2024-06-11', '2024-06-12', 'Congés', 0),
+ (3, 2, 0, 2, '2026-12-01', '2026-12-03', 'Reprise d''enduit', 0);
+INSERT INTO pln_affectation (PLF_ID, PLF_PLA_ID, PLF_TypeEntite, PLF_EntiteId, PLF_DureePrev, PLF_IsDesactive) VALUES
+ (1, 1, 'SAL', 1, 32, 0), (2, 1, 'MAT', 1, 16, 0), (3, 1, 'ART', 5, 4, 0);

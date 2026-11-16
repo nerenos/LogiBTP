@@ -299,6 +299,16 @@
         { "source": "CODECHARGEAFF", "ignorer": true, "motif": "Chargé d'affaires : responsable de l'affaire, chargé du chantier" }
       ]
     },
+    "rubrique_pointage": {
+      "description": "Rubrique du suivi de main-d'œuvre MDE (PMECHTSUIVMOCHT.CODERUB) vers la rubrique de paie du pointage (lot 14, Q17) ; sans entrée : zone si le code est Z suivi d'un chiffre, sinon signalé ; rubrique de zone : zone du chantier pour l'agence du salarié ; codes à confirmer sur une base réelle",
+      "colonne": "PMECHTSUIVMOCHT.CODERUB",
+      "cibles": ["RUBRIQUE_POINTAGE"],
+      "entrees": [
+        { "source": "PAN", "cible": "PANIER", "note": "Panier : à confirmer" },
+        { "source": "PANIER", "cible": "PANIER" },
+        { "source": "GD", "cible": "GD", "note": "Grand déplacement : à confirmer" }
+      ]
+    },
     "type_champ": {
       "description": "Type de donnée d'une zone supplémentaire (SYS_RTCINFOS.DATATYPE) vers le type du champ x_ ; S seul vu sur une base réelle, les autres lettres à confirmer",
       "colonne": "SYS_RTCINFOS.DATATYPE",

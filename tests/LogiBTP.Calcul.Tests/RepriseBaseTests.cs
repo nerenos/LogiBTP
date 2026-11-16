@@ -134,11 +134,63 @@ public class RepriseBaseTests
         await VerifierAvancementAsync(b, source, reelle.Rapport);
         await VerifierAchatsAsync(b, source, reelle.Rapport);
         await VerifierReglementsAsync(b, source, reelle.Rapport);
+        await VerifierExploitationAsync(b, source, reelle.Rapport);
 
         // Correspondances fournies invalides : refus avant toute lecture.
         var refus = await Assert.ThrowsAsync<RepriseRefuseeException>(() => RepriseBase.ExecuterAsync(
             demande with { Correspondances = $$"""{ "source": "{{source}}", "version": 1, "tables": {} }""" }, default));
         Assert.Equal(ErreurReprise.CorrespondancesInvalides, refus.Code);
+    }
+
+    /// <summary>Lot 14 : pointages (heures par salarié, chantier et mois égales à la source), variables de paie, absences, planning.</summary>
+    private static async Task VerifierExploitationAsync(BaseNeuve b, string source, RapportReprise r)
+    {
+        async Task<long> Compter(string sql) => await b.CompterAsync(sql);
+        async Task<long> Minutes(string salarie, string chantier, string mois) => await Compter($"""
+            SELECT coalesce(sum(p.poi_minutes), 0) FROM poi_pointage p JOIN salarie s ON s.sal_id = p.poi_sal_id JOIN chantier c ON c.cha_id = p.poi_cha_id
+            WHERE s.sal_code = '{salarie}' AND c.cha_code = '{chantier}' AND to_char(p.poi_date, 'YYYY-MM') = '{mois}'
+            """);
+        async Task<long> Valeur(string salarie, string date, string rubrique) => await Compter($"""
+            SELECT coalesce(sum(v.pva_valeur), 0) FROM poi_valeur v JOIN salarie s ON s.sal_id = v.pva_sal_id
+            WHERE s.sal_code = '{salarie}' AND v.pva_date = '{date}' AND v.pva_rubrique = '{rubrique}'
+            """);
+        async Task<long> Zone(string chantier) => await Compter($"SELECT coalesce(max(z.pzc_zone), 0) FROM poi_zone_chantier z JOIN chantier c ON c.cha_id = z.pzc_cha_id WHERE c.cha_code = '{chantier}'");
+        // Tout pointage porte une nature de main-d'œuvre.
+        Assert.Equal(0L, await Compter("SELECT count(*) FROM poi_pointage p JOIN nature_element n ON n.nat_id = p.poi_type_mo WHERE n.nat_rgn_code <> 'MO'"));
+        if (source == SourceReprise.Mde)
+        {
+            Assert.Equal(930L, await Minutes("SAL01", "CH001", "2024-03"));
+            Assert.Equal(120L, await Minutes("SAL03", "CH003", "2024-03"));
+            Assert.Equal(480L, await Minutes("SAL02", "CH001", "2024-04"));
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM poi_pointage WHERE poi_minutes = 480 AND poi_taux = 48.5 AND poi_cout = 388 AND poi_valorisation = 'IMPORT'"));
+            Assert.Equal(1L, await Valeur("SAL01", "2024-03-04", "PANIER"));
+            Assert.Equal(3L, await Zone("CH001"));
+            // Heures d'équipe sans salarié non reprises ; rubrique inconnue signalée.
+            Assert.Contains(r.Anomalies, a => a.Code == CodeAnomalie.PointageNonRepris && a.Emplacement == "PMECHTSUIVMOCHT 7");
+            Assert.Contains(r.Anomalies, a => a.Code == ErreurCorrespondance.SansCible && a.Message.Contains("XYZ"));
+            Assert.Equal((8, 6, 2), Volume(r, ExploitationMde.SuiviMo));
+            Assert.Equal(0L, await Compter("SELECT count(*) FROM pla_tache"));
+        }
+        else
+        {
+            // Heures normales et supplémentaires en un pointage ; horaires gardés quand ils couvrent la durée ; option en commentaire.
+            Assert.Equal(960L, await Minutes("M001", "C24-001", "2024-06"));
+            Assert.Equal(450L, await Minutes("M002", "ATELIER", "2024-06"));
+            Assert.Equal(0L, await Minutes("M001", "C24-001", "2024-07"));
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM poi_pointage WHERE poi_debut = 480 AND poi_fin = 960 AND poi_minutes = 480 AND poi_taux = 30 AND poi_commentaire = 'Outillage perso'"));
+            Assert.Equal(1L, await Valeur("M001", "2024-06-10", "PANIER"));
+            Assert.Equal(1L, await Valeur("M001", "2024-06-11", "GD"));
+            Assert.Equal(2L, await Zone("C24-001"));
+            // Absences : jours consécutifs regroupés en un congé validé ; nature rapprochée par son code ou créée.
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM poi_conge c JOIN salarie s ON s.sal_id = c.pco_sal_id WHERE s.sal_code = 'M002' AND c.pco_nature = 'CP' AND c.pco_du = '2024-06-11' AND c.pco_au = '2024-06-12' AND c.pco_etat = 'VALIDE'"));
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM poi_conge c JOIN poi_nature_absence n ON n.pna_code = c.pco_nature WHERE n.pna_code = 'ENFMAL' AND n.pna_libelle = 'Enfant malade'"));
+            // Planning : tâche du chantier (salarié et matériel affectés, article non repris), absence écartée, tâche à venir.
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM pla_tache t JOIN chantier c ON c.cha_id = t.tac_id_element::int WHERE t.tac_type_element = 'chantier' AND c.cha_code = 'C24-001' AND t.tac_libelle = 'Coffrage voiles' AND t.tac_etat = 'TERMINEE' AND t.tac_heures = 2880 AND t.tac_fin = '2024-06-15'"));
+            Assert.Equal(2L, await Compter("SELECT count(*) FROM pla_affectation a JOIN pla_tache t ON t.tac_id = a.aff_tac_id WHERE t.tac_libelle = 'Coffrage voiles' AND a.aff_res_type IN ('SALARIE', 'MATERIEL')"));
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM pla_tache t JOIN pla_affectation a ON a.aff_tac_id = t.tac_id WHERE t.tac_libelle = 'Reprise d''enduit' AND t.tac_etat = 'PREVUE' AND a.aff_res_type = 'SALARIE'"));
+            Assert.Equal((3, 2, 1), Volume(r, ExploitationOptim.Planification));
+            Assert.Equal((6, 6, 0), Volume(r, ExploitationOptim.Rapport));
+        }
     }
 
     /// <summary>Lot 13 : échéanciers, règlements, lettrage, retenues et cautions (soldes égaux à la source).</summary>
