@@ -36,6 +36,7 @@ public static class CiblesReprise
             [CorrespondancesReprise.Listes.TypeFiche] = Constantes(typeof(TypesFiche)),
             [CorrespondancesReprise.Listes.NatureNote] = Constantes(typeof(NatureNote)),
             [CorrespondancesReprise.Listes.TypeChamp] = LogiBTP.Fiches.ChampsSupplementaires.Types.ToList(),
+            [CorrespondancesReprise.Listes.TypeElement] = Constantes(typeof(LogiBTP.Bibliotheque.TypeElement)),
         };
         foreach (var (liste, requete) in Requetes)
         {

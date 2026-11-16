@@ -251,6 +251,34 @@ l'analyse, modifié par le § 10.
     photos (GED) au lot 16.
 - **Lot 8, bibliothèque** : éléments hors sommeil (Q2), ouvrages avec la perte dans les quantités (Q9), modèles de
   texte (`TEXTE`, Q7), conversions d'unités, tarifs fournisseurs. *Critère* : PV d'un ouvrage retrouvé à 0,01 € près.
+  **FAIT (16/11/2026).**
+  - **Réalisé** : `Rtf.cs` (module Import) réplique de `rtfEnHtml`, jeu partagé `js/test/rtf-cas.json` (accents
+    cp1252 de 0x80 à 0x9F, unicode, groupes ignorés). `BibliothequeReprise` (cœur) : bibliothèques (code au format
+    `^[A-Z0-9_]{1,10}$`, renommage signalé), familles en arbre, éléments ARTICLE / OUVRAGE / TEXTE (Q7) ; prix d'un
+    article par `CalculElement` (scénario FIXE), d'un ouvrage par `ElementsBibliotheque.CalculerOuvrage` sur une
+    composition au format des documents ; **PV source retrouvé à 0,01 € près** dans le premier mode qui y parvient
+    (MDE : déboursé D puis vente V ; OPTIM : V), sinon **PV imposé** (PV fixe, coefficient de bénéfice déduit,
+    anomalie `REPRISE_PRIX_IMPOSE`) ; **perte (Q9) en `lig_coef_perte` des composantes** (multiplie la quantité ;
+    précision de quantité ajustée à la quantité × perte), gardée sur l'article en donnée technique `coef_perte` ;
+    unités d'achat et de vente converties (`ele_unites`), unité sans rapport non reprise (`REPRISE_CONVERSION_MANQUANTE`) ;
+    nature par défaut d'un élément vendu sans nature (listée) ; tarifs fournisseurs (un seul principal, prix net,
+    prix public et remises). `BibliothequeMde` : natures `PMENATUREELEMENT` (regroupement par la nouvelle table
+    `regroupement_nature` de `mde.json`), `PMEBIBLIO` (par défaut : celle qui a le plus d'éléments), `PMEFAMILLE`,
+    `PMEELEMENT` hors sommeil (type par la composition, sinon la nouvelle table `type_element`), `PMEELEMENTOUVCOMP`,
+    `PMEELEMENTUNITEVTE`, `PMEELEMENTARTFOUR` ⋈ `PMEFOURNISSEURTARIF` ; perte d'un élément = DEBOURSE / PA.
+    `BibliothequeOptim` : `bib_bibliotheque`, `bib_type_prod_prest`, `bib_article` hors désactivés,
+    `bib_article_lien_ouvrage` (quantité fixe → absolue « A »), `bib_article_lien_tarif` (tarif de référence = PA net et
+    PV, montant fixe → PV imposé ; tarifs d'un tiers → tarifs fournisseurs ; tarifs d'affaire non repris). Ouvrages
+    repris après leurs composantes ; composante absente ou en sommeil : ligne sans lien (`REPRISE_COMPOSANTE_HORS_BIBLIOTHEQUE`).
+  - **Écarts et hypothèses à confirmer sur les bases réelles** : codes `TYPEELEM` (tables `regroupement_nature` et
+    `type_element` de `mde.json`, notées « à confirmer ») ; MDE : quantité d'une composante = `QUANTITEUNIT`, sinon
+    `QUANTITEBASE` ; `RATIOSTOCK`, `RATIOVENTE`, `EQUIVSTOCK` et `RATIO` des tarifs lus comme « quantité en unité de stock
+    pour 1 unité » ; OPTIM : prix des tarifs par unité de l'article, `ARL_Conv` / `ARL_UNT_IDConv` = unité d'achat
+    déclarée ; coefficient de perte lu en fraction (< 1), coefficient (≤ 3) ou pourcentage, remises en fraction (≤ 1)
+    ou pourcentage. Non repris : coefficients par défaut des natures MDE (`COEFFG`, `COEFBEN`), temps de pose et MO de
+    pose MDE (`TEMPS`, `CLEMOPOSE`) hors composantes, cadence OPTIM, `ART_TypeGestion` (gestion par la présence de
+    tarifs fournisseurs ; stock au lot 13), coût horaire OPTIM des salariés par l'article de MO, métrés types
+    (`CLEMETRE`), images (lot 16).
 - **Lot 9, structure** : projets, affaires, chantiers (internes si `CHT_IsChantier = 0`, Q14), marchés, intervenants,
   révision ; établissement d'origine en étiquette (R1). *Critère* : arborescence complète.
 - **Lot 10, pièces de vente** : convertisseur commun (réutilisation de `convertirOptim` côté règles, traducteur MDE de

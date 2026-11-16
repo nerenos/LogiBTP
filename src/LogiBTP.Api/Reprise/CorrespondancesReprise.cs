@@ -23,6 +23,7 @@ public static class CorrespondancesReprise
         public const string ModeReglement = "MODE_REGLEMENT";
         public const string Civilite = "CIVILITE";
         public const string TypeChamp = "TYPE_CHAMP";
+        public const string TypeElement = "TYPE_ELEMENT";
     }
 
     /// <summary>Tables attendues dans le fichier de correspondances d'une source.</summary>
@@ -32,7 +33,7 @@ public static class CorrespondancesReprise
         [
             "type_document", "type_fiche", "type_facture", "etat_suite", "type_tiers", "tiers_payeur",
             "type_ligne_vente", "type_ligne_achat", "part_sous_traitance", "mode_avancement", "type_arrondi", "compteur",
-            "mode_paiement", "civilite", "pays", "table_fiche", "type_champ",
+            "mode_paiement", "civilite", "pays", "table_fiche", "type_champ", "regroupement_nature", "type_element",
         ],
         SourceReprise.Optim =>
         [

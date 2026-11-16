@@ -264,6 +264,32 @@
         { "source": "LIGNERECEPTIONFOURNISSEUR", "ignorer": true, "motif": "Ligne de pièce : aide au calcul non reprise (Q12)" }
       ]
     },
+    "regroupement_nature": {
+      "description": "Type d'élément d'une nature MDE (PMENATUREELEMENT.TYPEELEM) vers le regroupement de la nature créée (lot 8) ; codes à confirmer sur une base réelle (SELECT DISTINCT TYPEELEM), une valeur inconnue crée la nature sans regroupement",
+      "colonne": "PMENATUREELEMENT.TYPEELEM",
+      "cibles": ["REGROUPEMENT_NATURE"],
+      "entrees": [
+        { "source": "MO", "cible": "MO" },
+        { "source": "MA", "cible": "MATERIAUX", "note": "Matériaux, fournitures : à confirmer" },
+        { "source": "FO", "cible": "MATERIAUX", "note": "Fournitures : à confirmer" },
+        { "source": "MT", "cible": "ENGIN", "note": "Matériel : à confirmer" },
+        { "source": "LO", "cible": "ENGIN", "note": "Location : à confirmer" },
+        { "source": "ST", "cible": "SOUS_TRAITANCE" },
+        { "source": "PR", "cible": "PRESTATION", "note": "Prestations : à confirmer" },
+        { "source": "DI", "cible": "PRESTATION", "note": "Divers : à confirmer" },
+        { "source": "OU", "cible": "VENTE", "note": "Ouvrages : à confirmer" }
+      ]
+    },
+    "type_element": {
+      "description": "Type d'un élément MDE sans composition (PMEELEMENT.TYPEELEM) vers le type d'élément (lot 8) ; un élément qui a des composantes (PMEELEMENTOUVCOMP) est toujours un ouvrage ; valeur absente de la table : article ; codes à confirmer sur une base réelle",
+      "colonne": "PMEELEMENT.TYPEELEM",
+      "cibles": ["TYPE_ELEMENT"],
+      "entrees": [
+        { "source": "TX", "cible": "TEXTE", "note": "Texte de bibliothèque (modèle de texte, Q7) : à confirmer" },
+        { "source": "LI", "cible": "TEXTE", "note": "Libellé : à confirmer" },
+        { "source": "OU", "cible": "OUVRAGE", "note": "Ouvrage sans composante : à confirmer" }
+      ]
+    },
     "type_champ": {
       "description": "Type de donnée d'une zone supplémentaire (SYS_RTCINFOS.DATATYPE) vers le type du champ x_ ; S seul vu sur une base réelle, les autres lettres à confirmer",
       "colonne": "SYS_RTCINFOS.DATATYPE",

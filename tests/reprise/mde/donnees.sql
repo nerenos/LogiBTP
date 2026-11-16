@@ -136,3 +136,53 @@ INSERT INTO dbo.SYS_RTCINFOS (TABLENAME, FIELDNAME, DISPLAYNAME, FIELDTYPE, FIEL
  ('PMEMATERIEL', 'RTCFIELD1', 'Numéro de parc', 'E', 20, 'S', 0);
 UPDATE dbo.PMEMATERIEL SET RTCFIELD1 = 'P-07' WHERE CODE = 'MP-001';
 GO
+
+-- Bibliothèque (lot 8) : natures (une sans regroupement connu), deux bibliothèques (code « E-1 » renommé), familles,
+-- articles (MO, ciment géré en stock avec perte, unités d'achat et de vente, deux tarifs fournisseurs), texte, article
+-- en sommeil, ouvrage dont le PV est retrouvé en mode déboursé (composante en sommeil sans lien), ouvrage qui contient
+-- un ouvrage et dont le PV source est imposé.
+INSERT INTO dbo.PMENATUREELEMENT (CLE, TYPEELEM, NUMORDRE, ABREVIATION, LIBELLE, COEFFG, COEFBEN, COEFVTE, DEFAUT, ACTIF) VALUES
+ (1, 'MO', 1, 'MO', 'Main-d''œuvre', 1.2, 1.1, 0, 1, 1),
+ (2, 'MA', 2, 'MAT', 'Matériaux', 1.1, 1.2, 0, 0, 1),
+ (3, 'ST', 3, 'STR', 'Sous-traitance', 1, 1.1, 0, 0, 1),
+ (4, 'OU', 4, 'OUV', 'Ouvrages', 1, 1, 0, 0, 1),
+ (5, 'ZZ', 5, 'DSP', 'Divers spéciaux', 1, 1, 0, 0, 1);
+INSERT INTO dbo.PMEBIBLIO (CODE, LIBELLE) VALUES ('GEN', 'Bibliothèque générale'), ('E-1', 'Éditeur');
+INSERT INTO dbo.PMEFAMILLE (CODE, CODEBIBLIO, LIBELLE, NIVEAU, CODEPARENT) VALUES
+ ('MACO', 'GEN', 'Maçonnerie', 0, NULL), ('LIANT', 'GEN', 'Liants', 1, 'MACO');
+INSERT INTO dbo.PMEELEMENT (CODE, CODEBIBLIO, REFERENCE, TYPEELEM, CLENATURE, LIBELLE, LIBELLECOM, LIBELLETEC, CODEFAMILLE,
+  CODEFOURPRINC, PA, COEFPERTE, DEBOURSE, COEFFG, PR, COEFBEN, PV, OPTIONPVIMPOSE, UNITEACHAT, UNITEVENTE, UNITESTOCK,
+  RATIOSTOCK, RATIOVENTE, CATEGORIE, TVA, COMPTEVENTE, GESTSTOCK, CODEBARRE, SOMMEIL) VALUES
+ ('MOMAC', 'GEN', '', 'MO', 1, 'Heure de maçon', '', NULL, 'MACO', NULL, 30, 0, 30, 1.2, 36, 1.1, 39.6, 0, NULL, NULL, 'H',
+  NULL, NULL, 'F', '1', '704000', 0, NULL, 0),
+ ('CIM35', 'GEN', 'CIM-REF', 'MA', 2, 'Ciment CEM II', '{\rtf1\ansi\ansicpg1252\deff0{\fonttbl{\f0\fnil Arial;}}\pard\b Ciment\b0  CEM II \''e0 la palette\par}',
+  'Sac de 35 kg', 'LIANT', 'F001', 0.2, 1.05, 0.21, 1.1, 0.231, 1.2, 0.2772, 0, 'U', 'KG', 'KG', 35, 1, 'F', '1', '704000', 1, '3700000000017', 0),
+ ('TXT1', 'GEN', '', 'TX', 0, 'Garantie', '{\rtf1\ansi Garantie d\''e9cennale\par Assurance \u339?uvre\par}', NULL, NULL, NULL,
+  0, 0, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, NULL, NULL, '', NULL, NULL, 0, NULL, 0),
+ ('VIEUX', 'GEN', '', 'MA', 2, 'Ancien article', '', NULL, NULL, NULL, 2, 0, 2, 1, 2, 1, 2, 0, NULL, NULL, 'U', NULL, NULL, 'F', '1', NULL,
+  0, NULL, 1),
+ ('ART1', 'E-1', '', 'MA', 2, 'Article éditeur', '', NULL, NULL, NULL, 5, 0, 5, 1, 5, 1, 5, 0, NULL, NULL, 'U', NULL, NULL, 'F', '2', NULL,
+  0, NULL, 0),
+ ('MUR20', 'GEN', '', 'OU', 4, 'Mur parpaing 20', '', NULL, 'MACO', NULL, 0, 0, 21.2, 1.15, 24.38, 1.25, 30.475, 0, NULL, NULL, 'M2',
+  NULL, NULL, 'F', '1', NULL, 0, NULL, 0),
+ ('AMUR', 'GEN', '', 'OU', 4, 'Mur enduit', '', NULL, NULL, NULL, 0, 0, 51.2, 1.2, 61.44, 1.1, 70, 0, NULL, NULL, 'M2',
+  NULL, NULL, 'F', '1', NULL, 0, NULL, 0);
+INSERT INTO dbo.PMEELEMENTOUVCOMP (CODEOUV, CODECOMPO, NUMORDRE, CLENATURE, LIBELLECOM, DEBOURSE, COEFFG, PR, COEFBEN, PV,
+  QUANTITEBASE, QUANTITECAD, QUANTITEUNIT, UNITE, TEMPS, SOMMEIL) VALUES
+ ('MUR20', 'CIM35', 1, 2, '', 0.21, 1.1, 0.231, 1.2, 0.2772, 20, 0, 20, 'KG', 0, 0),
+ ('MUR20', 'MOMAC', 2, 1, '', 30, 1.2, 36, 1.1, 39.6, 0.5, 0, 0.5, 'H', 0.5, 0),
+ ('MUR20', 'VIEUX', 3, 2, 'Ancien article', 2, 1, 2, 1, 2, 1, 0, 1, 'U', 0, 0),
+ ('MUR20', 'MOMAC', 4, 1, 'Composante en sommeil', 30, 1, 30, 1, 30, 9, 0, 9, 'H', 0, 1),
+ ('AMUR', 'MUR20', 1, 4, '', 21.2, 1.15, 24.38, 1.25, 30.475, 1, 0, 1, 'M2', 0, 0),
+ ('AMUR', 'MOMAC', 2, 1, '', 30, 1.2, 36, 1.1, 39.6, 1, 0, 1, 'H', 1, 0);
+INSERT INTO dbo.PMEELEMENTUNITEVTE (CODEART, UNITE, NUMORDRE, QTEVTE, EQUIVSTOCK, RATIO, DEFAUT) VALUES ('CIM35', 'ENS', 1, 1, 350, 0, 0);
+INSERT INTO dbo.PMEFOURNISSEURTARIF (CLE, CODEFOUR, REFERENCE, LIBELLE, PAPUBLIC, REMISE1, REMISE2, PANET, UNITEACHAT) VALUES
+ (1, 'F001', 'CIM-35', 'Ciment CEM II 35 kg', 10, 30, 0, 7, 'U');
+INSERT INTO dbo.PMEELEMENTARTFOUR (CLE, CODEART, NUMORDRE, PRINCIPAL, CODEFOUR, CLETARIFFOUR, PAPUBLIC, REMISEFOUR1, REMISEFOUR2,
+  PANET, UNITEACHAT, RATIO, DATETARIF) VALUES
+ (1, 'CIM35', 1, 1, 'F001', 1, 10, 30, 0, 7, 'U', 35, '2026-01-01'),
+ (2, 'CIM35', 2, 0, 'F002', NULL, 0, 0, 0, 7.35, 'U', 35, NULL);
+INSERT INTO dbo.SYS_RTCINFOS (TABLENAME, FIELDNAME, DISPLAYNAME, FIELDTYPE, FIELDSIZE, DATATYPE, REQUIRED) VALUES
+ ('PMEELEMENT', 'RTCFIELD1', 'Marque', 'E', 30, 'S', 0);
+UPDATE dbo.PMEELEMENT SET RTCFIELD1 = 'Vicat' WHERE CODE = 'CIM35';
+GO

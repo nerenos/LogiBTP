@@ -128,11 +128,103 @@ public class RepriseBaseTests
         await VerifierChampsAsync(b, source, reelle.Rapport);
         await VerifierAnnuaireAsync(b, source, reelle.Rapport);
         await VerifierRessourcesAsync(b, source, reelle.Rapport);
+        await VerifierBibliothequeAsync(b, source, reelle.Rapport);
 
         // Correspondances fournies invalides : refus avant toute lecture.
         var refus = await Assert.ThrowsAsync<RepriseRefuseeException>(() => RepriseBase.ExecuterAsync(
             demande with { Correspondances = $$"""{ "source": "{{source}}", "version": 1, "tables": {} }""" }, default));
         Assert.Equal(ErreurReprise.CorrespondancesInvalides, refus.Code);
+    }
+
+    /// <summary>Lot 8 : bibliothèques, familles, éléments hors sommeil, PV retrouvés ou imposés, perte, unités, tarifs.</summary>
+    private static async Task VerifierBibliothequeAsync(BaseNeuve b, string source, RapportReprise r)
+    {
+        async Task<long> Element(string code, string condition) =>
+            await b.CompterAsync($"SELECT count(*) FROM element e WHERE e.ele_code = '{code}' AND {condition}");
+        if (source == SourceReprise.Mde)
+        {
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM bibliotheque WHERE bib_code = 'GEN' AND bib_defaut"));
+            Assert.Contains(r.Anomalies, a => a.Code == CodeAnomalie.CodeRenomme && a.Emplacement == "PMEBIBLIO E-1");
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM famille_element f JOIN famille_element p ON p.fam_id = f.fam_parent_id WHERE f.fam_code = 'LIANT' AND p.fam_code = 'MACO'"));
+            // Nature sans regroupement connu : créée sans regroupement, signalée ; les autres rapprochées.
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM nature_element WHERE nat_code = 'DSP' AND nat_rgn_code IS NULL"));
+            Assert.Contains(r.Anomalies, a => a.Code == ErreurCorrespondance.SansCible && a.Emplacement == "PMENATUREELEMENT 5");
+            // Élément en sommeil écarté (Q2).
+            Assert.Equal(6L, await b.CompterAsync("SELECT count(*) FROM element"));
+            Assert.Equal(0L, await b.CompterAsync("SELECT count(*) FROM element WHERE ele_code = 'VIEUX'"));
+            var v = r.Volumes.Single(x => x.Table == "PMEELEMENT");
+            Assert.Equal((7, 6, 1), (v.Lues, v.Ecrites, v.Ecartees));
+            // Article géré en stock : RTF en HTML, unités d'achat et de vente converties, perte gardée, PV source imposé.
+            Assert.Equal(1L, await Element("CIM35", """
+                e.ele_gestion = 'STOCK' AND e.ele_unt_stock = 'kg' AND e.ele_unt_achat = 'u' AND e.ele_unt_vente = 'kg'
+                AND e.ele_unites @> '[{"unite": "u", "formule": "35"}, {"unite": "ens", "formule": "350"}]'
+                AND e.ele_pa = 0.2 AND e.ele_pv = 0.2772 AND e.ele_pv_fixe AND e.ele_tva_code = 'T20' AND e.ele_cpt_code = '704000'
+                AND e.ele_proprietes = '{"coef_perte": 1.05}' AND e.ele_libelle_html = '<b>Ciment</b> CEM II à la palette'
+                AND e.ele_description_html = 'Sac de 35 kg' AND e.x_marque = 'Vicat' AND e.ele_code_barre = '3700000000017'
+                AND e.ele_nat_id = (SELECT nat_id FROM nature_element WHERE nat_code = 'MAT')
+                AND e.ele_fam_id = (SELECT fam_id FROM famille_element WHERE fam_code = 'LIANT')
+                """));
+            Assert.Equal(1L, await Element("MOMAC", "NOT e.ele_pv_fixe AND e.ele_pv = 39.6 AND e.ele_unt_stock = 'h'"));
+            Assert.Equal(1L, await Element("TXT1", "e.ele_type = 'TEXTE' AND e.ele_libelle_html = '<p>Garantie décennale</p><p>Assurance œuvre</p>'"));
+            // Ouvrage : PV retrouvé en mode déboursé, perte dans la quantité (Q9), composante en sommeil sans lien.
+            Assert.Equal(1L, await Element("MUR20", """
+                e.ele_type = 'OUVRAGE' AND NOT e.ele_pv_fixe AND e.ele_pv = 30.475 AND e.ele_pa = 21.2 AND e.ele_composition->>'mode' = 'D'
+                AND jsonb_array_length(e.ele_composition->'lignes') = 4
+                AND e.ele_composition->'lignes' @> '[{"lig_pa": 0.2, "lig_qte": 20, "lig_coef_perte": 1.05, "lig_proprietes": {"element": {"code": "CIM35", "bib": "GEN"}}}]'
+                AND e.ele_composition->'lignes' @> '[{"lig_pa": 2, "lig_proprietes": {}, "lig_libelle_html": "Ancien article"}]'
+                """));
+            Assert.Contains(r.Anomalies, a => a.Code == CodeAnomalie.ComposanteHorsBibliotheque && a.Emplacement == "PMEELEMENT MUR20");
+            // Ouvrage d'ouvrage repris après sa composante ; PV source non retrouvé : imposé et signalé.
+            Assert.Equal(1L, await Element("AMUR", """
+                e.ele_pv_fixe AND e.ele_pv = 70 AND e.ele_composition->'lignes' @> '[{"lig_proprietes": {"element": {"code": "MUR20"}}}]'
+                """));
+            Assert.Equal(["PMEELEMENT AMUR", "PMEELEMENT CIM35"],
+                r.Anomalies.Where(a => a.Code == CodeAnomalie.PrixImpose).Select(a => a.Emplacement).Order(StringComparer.Ordinal));
+            // Tarifs fournisseurs : principal (fournisseur principal), prix public remisé, fournisseur repris.
+            Assert.Equal(2L, await b.CompterAsync("SELECT count(*) FROM tarif_fournisseur t JOIN element e ON e.ele_id = t.tfo_ele_id WHERE e.ele_code = 'CIM35'"));
+            Assert.Equal(1L, await b.CompterAsync("""
+                SELECT count(*) FROM tarif_fournisseur t JOIN personne p ON p.per_id = t.tfo_tiers_id
+                WHERE t.tfo_principal AND p.per_code = 'F001' AND t.tfo_prix = 7 AND t.tfo_prix_public = 10 AND t.tfo_remise1 = 30
+                  AND t.tfo_reference = 'CIM-35' AND t.tfo_unt_code = 'u' AND t.tfo_debut = DATE '2026-01-01'
+                """));
+        }
+        else
+        {
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM bibliotheque WHERE bib_code = 'GENERALE' AND bib_defaut AND bib_actif"));
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM bibliotheque WHERE bib_code = 'ANCIENNEBI' AND NOT bib_actif"));
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM famille_element f JOIN famille_element p ON p.fam_id = f.fam_parent_id WHERE f.fam_code = 'BETON' AND p.fam_code = 'GO'"));
+            Assert.Equal(5L, await b.CompterAsync("SELECT count(*) FROM element"));
+            var v = r.Volumes.Single(x => x.Table == "bib_article");
+            Assert.Equal((6, 5, 1), (v.Lues, v.Ecrites, v.Ecartees));
+            // Article : PA = tarif de référence remisé, PV de référence retrouvé par le coefficient, zone supplémentaire.
+            Assert.Equal(1L, await Element("BETON-C25", """
+                e.ele_gestion = 'ACHAT' AND e.ele_pa = 90 AND abs(e.ele_pv - 120) <= 0.01 AND NOT e.ele_pv_fixe AND e.ele_unt_stock = 'u'
+                AND e.ele_unt_achat = 'ens' AND e.ele_unites = '[{"unite": "ens", "formule": "6"}]' AND e.ele_proprietes = '{"coef_perte": 1.05}'
+                AND e.x_poids_kg = 25.5 AND e.ele_tva_code = 'T20' AND e.ele_delai_livraison = 3 AND e.ele_description_html = 'Classe XC1'
+                AND e.ele_fam_id = (SELECT fam_id FROM famille_element WHERE fam_code = 'BETON')
+                """));
+            Assert.Equal(1L, await Element("TXT-GARANTIE", "e.ele_type = 'TEXTE'"));
+            // Ouvrage : PV retrouvé en mode prix de vente (perte de l'article dans la quantité), composante désactivée sans lien.
+            Assert.Equal(1L, await Element("DALLE", """
+                e.ele_type = 'OUVRAGE' AND NOT e.ele_pv_fixe AND abs(e.ele_pv - 41.4) <= 0.01 AND e.ele_composition->>'mode' = 'V'
+                AND jsonb_array_length(e.ele_composition->'lignes') = 4
+                AND e.ele_composition->'lignes' @> '[{"lig_qte": 0.15, "lig_coef_perte": 1.05, "lig_proprietes": {"element": {"code": "BETON-C25"}}}]'
+                """));
+            Assert.Contains(r.Anomalies, a => a.Code == CodeAnomalie.ComposanteHorsBibliotheque && a.Emplacement == "bib_article 4");
+            // Montant fixe : PV imposé sans anomalie ; quantité fixe (absolue) et perte de la composante.
+            Assert.Equal(1L, await Element("FORFAIT-POSE", """
+                e.ele_pv_fixe AND e.ele_pv = 150 AND e.ele_composition->'lignes' @> '[{"lig_qte_type": "A", "lig_coef_perte": 1.1, "lig_qte": 2}]'
+                """));
+            Assert.DoesNotContain(r.Anomalies, a => a.Code == CodeAnomalie.PrixImpose);
+            Assert.Equal(1L, await b.CompterAsync("""
+                SELECT count(*) FROM tarif_fournisseur t JOIN personne p ON p.per_id = t.tfo_tiers_id
+                WHERE t.tfo_principal AND p.per_code = 'FOU-NEGO' AND t.tfo_prix = 90 AND t.tfo_prix_public = 100 AND t.tfo_remise1 = 10 AND t.tfo_unt_code = 'u'
+                """));
+            Assert.Equal(1L, await b.CompterAsync("""
+                SELECT count(*) FROM tarif_fournisseur t JOIN personne p ON p.per_id = t.tfo_tiers_id
+                WHERE NOT t.tfo_principal AND p.per_code = 'ST-T69' AND t.tfo_prix = 90.25 AND t.tfo_remise1 = 5
+                """));
+        }
     }
 
     /// <summary>Lot 6 : doublon fusionné avant la reprise (import_fusion) : une seule fiche, casquettes et comptes cumulés.</summary>

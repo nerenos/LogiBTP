@@ -99,4 +99,10 @@ public static class CodeAnomalie
     public const string ValeurInconnue = "REPRISE_VALEUR_INCONNUE";
     public const string SiretPris = "REPRISE_SIRET_PRIS";
     public const string PayeurInconnu = "REPRISE_PAYEUR_INCONNU";
+    /// <summary>Prix de vente source non retrouvé par le calcul : imposé (PV fixe) à l'élément.</summary>
+    public const string PrixImpose = "REPRISE_PRIX_IMPOSE";
+    /// <summary>Unité d'achat ou de vente sans rapport connu avec l'unité de stock : non reprise.</summary>
+    public const string ConversionManquante = "REPRISE_CONVERSION_MANQUANTE";
+    /// <summary>Composante d'ouvrage absente ou en sommeil : reprise en ligne libre, sans lien vers la bibliothèque.</summary>
+    public const string ComposanteHorsBibliotheque = "REPRISE_COMPOSANTE_HORS_BIBLIOTHEQUE";
 }

@@ -180,3 +180,31 @@ INSERT INTO z_utilisateur (UTL_ID, UTL_PRF_ID, UTL_Nom, UTL_Prenom, UTL_NomRedui
  (2, 1, 'LEROY', 'Antoine', 'AL', 1, 0, 1, 'aleroy', 'a.leroy@igl.fr', 0),
  (3, 1, 'ANCIEN', 'Compte', 'AC', 0, 0, 1, 'ancien', NULL, 1);
 INSERT INTO z_utilisateur_externe (UTX_ID, UTX_TypeEntite, UTX_Entite_Id, UTX_IsUserAppMob, UTX_IsDesactive) VALUES (1, 'SLR', 2, 1, 0);
+
+-- Bibliothèque (lot 8) : bibliothèque par défaut et bibliothèque désactivée, familles sur deux niveaux, articles (béton
+-- avec perte, tarif de référence remisé et tarif d'un second fournisseur avec conversion d'unité ; heure de MO à tarif
+-- sans fournisseur), texte (Q7), article désactivé (composante sans lien), ouvrage dont le PV est retrouvé en mode
+-- prix de vente, ouvrage à montant fixe. L'article 1 porte la zone supplémentaire POIDS (z_dataspec_data 3).
+INSERT INTO bib_bibliotheque (BIB_ID, BIB_Code, BIB_Libelle, BIB_IsDesactive, BIB_IsDefaut) VALUES
+ (1, 'GENERALE', 'Bibliothèque générale', 0, 1), (2, 'ANCIENNE BIB', 'Ancienne bibliothèque', 1, 0);
+INSERT INTO bib_type_prod_prest (TPP_ID, TPP_BIB_ID, TPP_TPP_ID, TPP_Niveau, TPP_Code, TPP_Libelle, TPP_IsDesactive) VALUES
+ (1, 1, 0, 1, 'GO', 'Gros œuvre', 0), (2, 1, 1, 2, 'BETON', 'Bétons', 0), (3, 2, 0, 1, 'VIEILLE', 'Famille désactivée', 1);
+INSERT INTO bib_article (ART_ID, ART_BIB_ID, ART_IsTexte, ART_IsOuvrage, ART_Code, ART_Libelle, ART_LibelleHTML, ART_LibTech, ART_UNT_ID,
+  ART_FTY_ID, ART_IsMO, ART_CoefPerte, ART_IsDesactive, ART_TPP_ID, ART_TPP_ID_SsFam, ART_DelaiLivr, ART_CodeBarre, ART_PRM_TVA) VALUES
+ (1, 1, 0, 0, 'BETON-C25', 'Béton C25/30', '<b>Béton</b> C25/30', 'Classe XC1', 1, 1, 0, 0.05, 0, 1, 2, 3, '3760000000011', 51),
+ (2, 1, 0, 0, 'MO-MACON', 'Heure de maçon', NULL, NULL, 4, 2, 1, 0, 0, 1, 0, NULL, NULL, 51),
+ (3, 1, 1, 0, 'TXT-GARANTIE', 'Garantie décennale', '<p>Garantie décennale</p><p>Assurance dommages-ouvrage</p>', NULL, 1, 0, 0, 0, 0, 0, 0, NULL, NULL, 0),
+ (4, 1, 0, 1, 'DALLE', 'Dalle béton', NULL, NULL, 2, 7, 0, 0, 0, 1, 0, NULL, NULL, 51),
+ (5, 1, 0, 0, 'ANCIEN', 'Article désactivé', NULL, NULL, 1, 1, 0, 0, 1, 0, 0, NULL, NULL, 51),
+ (6, 1, 0, 1, 'FORFAIT-POSE', 'Forfait de pose', NULL, NULL, 6, 7, 0, 0, 0, 0, 0, NULL, NULL, 51);
+INSERT INTO bib_article_lien_ouvrage (ARO_ID, ARO_ART_ID_Ouvrage, ARO_ART_ID_Composant, ARO_Ordre, ARO_CoefPerte, ARO_Qte, ARO_QteFixe, ARO_IsDesactive) VALUES
+ (1, 4, 1, 1, 0, 0.15, 0, 0), (2, 4, 2, 2, 0, 0.5, 0, 0), (3, 4, 5, 3, 0, 1, 0, 0), (4, 4, 2, 4, 0, 9, 0, 1),
+ (5, 6, 2, 1, 1.1, 2, 1, 0);
+INSERT INTO bib_article_lien_tarif (ARL_ID, ARL_ART_ID, ARL_TypeTarif, ARL_IsRef, ARL_TRS_ID, ARL_REFERENCE, ARL_PrixAchat, ARL_TxRemise,
+  ARL_PrixVente, ARL_IsMtFixe, ARL_Conv, ARL_UNT_IDConv, ARL_IsDesactive) VALUES
+ (1, 1, 'ACHAT', 1, 12, 'BC25', 100, 10, 120, 0, 0, 0, 0),
+ (2, 1, 'ACHAT', 0, 14, 'T-B25', 95, 0.05, 0, 0, 6, 5, 0),
+ (3, 2, 'ACHAT', 1, NULL, NULL, 35, 0, 45, 0, 0, 0, 0),
+ (4, 4, 'VENTE', 1, NULL, NULL, 0, 0, 41.4, 0, 0, 0, 0),
+ (5, 6, 'VENTE', 1, NULL, NULL, 0, 0, 150, 1, 0, 0, 0),
+ (6, 1, 'ACHAT', 0, 12, 'ANC', 80, 0, 0, 0, 0, 0, 1);

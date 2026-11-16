@@ -1,0 +1,17 @@
+{
+  "description": "Libellés RTF (RichEdit) convertis en HTML : rtf.js ↔ Rtf.cs (plan reprise-mde-optim, lot 8). « entete » est ajouté devant chaque « rtf » sauf si « brut » est vrai.",
+  "entete": "{\\rtf1\\ansi\\ansicpg1252\\deff0{\\fonttbl{\\f0\\fnil\\fcharset0 Arial;}}{\\*\\generator Riched20 10.0;}\\viewkind4\\uc1 \n\\pard\\fs18 ",
+  "cas": [
+    { "nom": "gras, accent cp1252, unicode", "rtf": "\\b Enrob\\'e9s\\b0  et mise en \\u339?uvre\\par\n}", "html": "<b>Enrobés</b> et mise en œuvre" },
+    { "nom": "souligné et gras", "rtf": "\\ul\\b TITRE\\par\n}", "html": "<b><u>TITRE</u></b>" },
+    { "nom": "paragraphes et retour à la ligne", "rtf": "Ligne 1\\par Ligne 2\\line suite\\par\n}", "html": "<p>Ligne 1</p><p>Ligne 2<br>suite</p>" },
+    { "nom": "échappement HTML", "rtf": "a < b & \"c\"\\par\n}", "html": "a &lt; b &amp; &quot;c&quot;" },
+    { "nom": "caractères cp1252 de 0x80 à 0x9f", "rtf": "\\'80 \\'9c\\'85 \\'96\\par\n}", "html": "€ œ… –" },
+    { "nom": "italique, accolades et barre échappées", "rtf": "\\i x\\i0  \\{y\\} \\\\z\\par\n}", "html": "<i>x</i> {y} \\z" },
+    { "nom": "paragraphes vides de fin retirés", "rtf": "Seul\\par\\par\\par\n}", "html": "Seul" },
+    { "nom": "groupe ignoré par \\*", "rtf": "{\\*\\cache rien}Texte\\par\n}", "html": "Texte" },
+    { "nom": "tabulation et espace insécable", "rtf": "a\\tab b\\~c\\par\n}", "html": "a b\u00a0c" },
+    { "nom": "guillemets typographiques", "rtf": "\\ldblquote x\\rdblquote  \\lquote y\\rquote\\par\n}", "html": "“x” ‘y’" },
+    { "nom": "minimal", "brut": true, "rtf": "{\\rtf1 Bonjour}", "html": "Bonjour" }
+  ]
+}
