@@ -65,6 +65,7 @@ public sealed class AnnuaireMde : IDomaineReprise
             .Where(a => a.Texte("CLE") is not null).ToDictionary(a => a.Texte("CLE")!, a => a.Texte("LIBELLE"), StringComparer.Ordinal);
         var societe = (await SqlReprise.LireAsync(ctx.Unite, "SELECT per_id FROM personne WHERE per_societe_base", r => r.GetInt64(0), ct)).FirstOrDefault();
 
+        var euro = await DevisesMde.EuroAsync(ctx, ct);
         var tiers = new List<TiersSource>();
         foreach (var (table, requete) in Roles)
             foreach (var l in await SqlReprise.SourceAsync(ctx, requete, ct))
@@ -72,7 +73,7 @@ public sealed class AnnuaireMde : IDomaineReprise
                 if (l.Texte("CODE") is not { } code) continue;
                 var ou = $"{table} {code}";
                 var role = ctx.Correspondre(TablesCorrespondance.TypeTiers, l.Texte("TYPETIERS") ?? "", ou);
-                if (l.Texte("T_DEVISE") is { } devise && !devise.Equals("EUR", StringComparison.OrdinalIgnoreCase))
+                if (l.Texte("T_DEVISE") is { } devise && !DevisesMde.EstEuro(euro, devise))
                     ctx.Rapport.Signaler(NiveauAnomalie.Bloquant, CodeAnomalie.DeviseEtrangere, ou, $"Tiers en devise {devise} : la reprise se fait en euros (Q10)");
                 if (l.Texte("T_CODE") is null)
                     ctx.Rapport.Signaler(NiveauAnomalie.Avertissement, CodeAnomalie.ValeurInconnue, ou, "Tiers sans fiche COMM_TIERS : repris sous son seul code");

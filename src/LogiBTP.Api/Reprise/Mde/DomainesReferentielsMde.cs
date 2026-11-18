@@ -49,7 +49,7 @@ public sealed class SocieteMde : IDomaineReprise
             return;
         }
         volume.Lues++;
-        if (s.Texte("DEVISEPIVOT") is { } devise && !devise.Equals("EUR", StringComparison.OrdinalIgnoreCase))
+        if (s.Texte("DEVISEPIVOT") is { } devise && !DevisesMde.EstEuro(await DevisesMde.EuroAsync(ctx, ct), devise))
             ctx.Rapport.Signaler(NiveauAnomalie.Bloquant, CodeAnomalie.DeviseEtrangere, "SYS_DEFSTE.DEVISEPIVOT",
                 $"Devise de la société {devise} : la reprise se fait en euros (Q10)");
         ctx.Rapport.Signaler(NiveauAnomalie.Information, CodeAnomalie.Decimales, "SYS_DEFSTE",
@@ -259,4 +259,28 @@ public sealed class ReferentielsMde : IDomaineReprise
         ctx.Rapport.Signaler(NiveauAnomalie.Information, CodeAnomalie.SansEquivalent, "CMP_AXEANALYTIQUE",
             $"Analytique ({axes.Count} axes, {postes.Count} postes, {grilles.Count} lignes de grilles) gardé dans le paramètre comptable « {DomainesReprise.ParametreAnalytique} » pour l'export");
     }
+}
+
+/// <summary>
+/// Devises MDE (Q10 : la reprise se fait en euros). MDE code souvent l'euro « E » : une devise est l'euro si son code est
+/// EUR, E ou €, ou si APIDEVISEE la déclare en euro (CODEISO EUR ou symbole €). Toute autre devise est bloquante.
+/// </summary>
+public static class DevisesMde
+{
+    private static readonly string[] CodesEuro = ["EUR", "E", "€", "EURO"];
+
+    /// <summary>Codes de devise de la source qui désignent l'euro (comparaison sans casse ni espaces).</summary>
+    public static async Task<HashSet<string>> EuroAsync(ContexteReprise ctx, CancellationToken ct)
+    {
+        var euro = new HashSet<string>(CodesEuro, StringComparer.OrdinalIgnoreCase);
+        foreach (var d in await SqlReprise.SourceAsync(ctx, "SELECT CODE, SYMBOLE, CODEISO FROM APIDEVISEE", ct))
+            if (d.Texte("CODE") is { } code
+                && (euro.Contains(d.Texte("CODEISO") ?? "") || (d.Texte("SYMBOLE") ?? "").Trim() == "€"))
+                euro.Add(code.Trim());
+        return euro;
+    }
+
+    /// <summary>Vrai si la devise est absente ou désigne l'euro.</summary>
+    public static bool EstEuro(HashSet<string> euro, string? devise) =>
+        string.IsNullOrWhiteSpace(devise) || euro.Contains(devise.Trim());
 }
