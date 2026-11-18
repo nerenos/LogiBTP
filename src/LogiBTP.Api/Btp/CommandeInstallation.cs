@@ -33,7 +33,9 @@ namespace LogiBTP.Api.Btp;
 ///   publier --verifier --base DEV [--depuis DOSSIER] [--demo] : contrôle de publication (base neuve ↔ base montée depuis la version
 ///   précédente publiée ou le socle 1.0 ↔ base de développement), code de sortie non nul au moindre écart ;
 ///   base comparer --base A --reference B : écarts de A par rapport à B ; prefixe ajouter P --integrateur N : préfixe
-///   d'objets d'un intégrateur (ignorés par la dérive) ; cle-donnees changer | rechiffrer : rotation de la clé des données.
+///   d'objets d'un intégrateur (ignorés par la dérive) ; cle-donnees changer | rechiffrer : rotation de la clé des données ;
+///   societe importer CODE --source MDE|OPTIM : reprise d'une base MDE ou OptimBTP dans la base neuve de la société
+///   (simulation sauf --reel, rapport Markdown ; plan reprise-mde-optim).
 /// Aucun secret n'est jamais affiché.
 /// </summary>
 public static class CommandeInstallation
@@ -58,6 +60,9 @@ public static class CommandeInstallation
                 installation module majeure MODULE [--nom NOM]   (développement : création N+1.0, archivage de la majeure N-1)
                 installation publier --verifier --base DEV [--depuis DOSSIER] [--demo]   (contrôle de publication, code non nul si écart)
                 installation prefixe ajouter PREFIXE --integrateur NOM
+                installation societe importer CODE --source MDE|OPTIM [--connexion CHAINE] [--societes 1,2] [--reel] [--correspondances F.json] [--rapport F.md] [--ged RACINE_GED]
+                    (reprise d'une base MDE ou OptimBTP dans la base neuve de la société ; simulation sauf --reel ;
+                     chaîne de la base source dans LOGIBTP_REPRISE_SOURCE à défaut de --connexion)
         """;
 
     public static async Task<int> ExecuterAsync(string[] args, string dossier, TextWriter sortie)
@@ -71,6 +76,7 @@ public static class CommandeInstallation
                 ("base", "creer") => await CreerBaseAsync(null, null, args.Contains("--demo"), dossier, sortie),
                 ("societe", "ajouter") when args.Length > 2 && !args[2].StartsWith("--") =>
                     await CreerBaseAsync(SocietesInstallation.VerifierCode(args[2]), Option(args, "--libelle"), args.Contains("--demo"), dossier, sortie),
+                ("societe", "importer") when args.Length > 2 && !args[2].StartsWith("--") => await ImporterAsync(args, dossier, sortie),
                 ("societes", _) => ListerSocietes(dossier, sortie),
                 ("scripts", "verifier") => VerifierScripts(sortie),
                 ("manifeste", "generer") => GenererManifeste(sortie),
@@ -94,7 +100,11 @@ public static class CommandeInstallation
                 _ => Erreur(sortie, Usage),
             };
         }
-        catch (Exception e) when (e is ArgumentException or InvalidOperationException or FormatException or IOException or Npgsql.NpgsqlException)
+        catch (Import.Reprise.RepriseRefuseeException e)
+        {
+            return Erreur(sortie, $"{e.Code} : {Masquage.Texte(e.Message)}");
+        }
+        catch (Exception e) when (e is ArgumentException or InvalidOperationException or FormatException or IOException or System.Data.Common.DbException or Import.Reprise.Lecteurs.LectureRefuseeException)
         {
             return Erreur(sortie, Masquage.Texte(e.Message) ?? e.GetType().Name);
         }
@@ -296,6 +306,50 @@ public static class CommandeInstallation
         }
         return 0;
     }
+
+    // ---------------------------------------------------------------- reprise MDE / OptimBTP
+
+    /// <summary>
+    /// Reprise d'une base MDE ou OptimBTP dans la base neuve d'une société (plan reprise-mde-optim, lot 2) : simulation par
+    /// défaut (rien n'est écrit sauf le rapport dans import_reprise), --reel pour la reprise. Code de sortie 0 si la
+    /// reprise (ou la simulation) se termine sans anomalie bloquante, 2 sinon. La base source n'est jamais modifiée.
+    /// </summary>
+    private static async Task<int> ImporterAsync(string[] args, string dossier, TextWriter sortie)
+    {
+        var code = SocietesInstallation.VerifierCode(args[2]);
+        var source = (Option(args, "--source") ?? throw new ArgumentException("--source MDE|OPTIM attendu")).ToUpperInvariant();
+        var connexionSource = Option(args, "--connexion") ?? Environment.GetEnvironmentVariable(VariableConnexionSource);
+        if (string.IsNullOrWhiteSpace(connexionSource))
+            throw new ArgumentException($"Chaîne de la base source attendue : --connexion ou {VariableConnexionSource}");
+        var config = Configuration(dossier);
+        var modele = Modele(config);
+        var fichier = Option(args, "--correspondances");
+        var demande = new Reprise.DemandeReprise
+        {
+            Source = source,
+            ConnexionSource = connexionSource,
+            ConnexionCible = modele.Chaine(modele.NomBase(code), RoleSchema, Exiger(config, VariablesEnv.BaseMotDePasseSchema)),
+            Societes = (Option(args, "--societes") ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
+            Simulation = !args.Contains("--reel"),
+            Correspondances = fichier is null ? null : File.ReadAllText(fichier),
+            Auteur = "installation",
+            // GED (lot 16) : racine du stockage (section Ged:Repertoire de l'API), documents rangés sous le nom de la base.
+            StockageGed = Option(args, "--ged") is { } ged ? Path.Combine(Path.GetFullPath(ged), modele.NomBase(code)) : null,
+        };
+        var resultat = await Reprise.RepriseBase.ExecuterAsync(demande, CancellationToken.None);
+        var markdown = resultat.Rapport.EnMarkdown();
+        if (Option(args, "--rapport") is { } chemin)
+        {
+            File.WriteAllText(chemin, markdown);
+            sortie.WriteLine($"Rapport écrit : {chemin}");
+        }
+        else sortie.WriteLine(markdown);
+        sortie.WriteLine($"Reprise n° {resultat.RepriseId} ({(demande.Simulation ? "simulation" : "réelle")}) : {resultat.Rapport.Etat}");
+        return resultat.Rapport.Etat == Import.EtatReprise.Terminee ? 0 : 2;
+    }
+
+    /// <summary>Variable d'environnement de la chaîne de la base source (évite de la laisser dans l'historique du shell).</summary>
+    public const string VariableConnexionSource = "LOGIBTP_REPRISE_SOURCE";
 
     // ---------------------------------------------------------------- certificats (§ 5)
 

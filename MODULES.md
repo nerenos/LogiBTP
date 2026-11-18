@@ -36,7 +36,7 @@ graph TD
 | graphe | socle | — (JS seul) | — | annuaire, cœur |
 | navigation | socle | — (JS seul) | — | cœur (client) |
 | personnalisation | socle (Node : composition, greffon Vite, vérification des clés) | `LogiBTP.Personnalisation.Web` → Socle.Web | — | cœur (`client/vite.config.js`, `Program.cs` : `UsePersonnalisation`) ; la résolution des textes (`@logibtp/socle/dictionnaire`, `Dictionnaire.cs`) est dans le socle, utilisée par tous |
-| import | — | — (JS seul) | — | cœur (client) |
+| import | — | `LogiBTP.Import` (reprise de base : correspondances, lecteurs SQL Server / MariaDB, moteur, rapport ; NuGet Microsoft.Data.SqlClient, MySqlConnector) | — | cœur (client ; `src/LogiBTP.Api/Reprise`) |
 | edition | socle, pdf-lib, @pdf-lib/fontkit, qrcode-generator ; polices Inter et Libre Barcode 39 (`js/polices`) | `LogiBTP.Editions` (Jint : même moteur JS que le navigateur), `LogiBTP.Editions.Web` | 090 | cœur (aperçu, paramétrage, source « document ») |
 | reglement (facultatif) | socle | `LogiBTP.Reglements(.Web)` → Socle(.Web) | 080 | cœur (échéances des pièces, page Règlements) |
 | relance (facultatif) | socle | `LogiBTP.Relances` → Socle (`.Web` au lot 2) | — (lot 2) | cœur à venir (lot 4 : pièces en attente, contacts, envoi ; plan `plans/relances.md`) |

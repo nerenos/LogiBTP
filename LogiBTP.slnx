@@ -152,6 +152,10 @@
     <Project Path="modules/installation/dotnet/LogiBTP.Installation.Web/LogiBTP.Installation.Web.csproj" />
     <Project Path="modules/installation/dotnet/LogiBTP.Installation.Tests/LogiBTP.Installation.Tests.csproj" />
   </Folder>
+  <Folder Name="/modules/import/">
+    <Project Path="modules/import/dotnet/LogiBTP.Import/LogiBTP.Import.csproj" />
+    <Project Path="modules/import/dotnet/LogiBTP.Import.Tests/LogiBTP.Import.Tests.csproj" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/LogiBTP.Domaine/LogiBTP.Domaine.csproj" />
     <Project Path="src/LogiBTP.Calcul/LogiBTP.Calcul.csproj" />

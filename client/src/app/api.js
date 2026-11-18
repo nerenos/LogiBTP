@@ -706,6 +706,15 @@ export const api = {
   // Modules activés par société (db/193) et référentiel des services (membres : individus de notre société).
   modules: () => appel('GET', '/modules'),
   etatInstallation: () => appel('GET', '/installation/etat'),
+  /** Reprise d'une base MDE ou OptimBTP (module Import, plan reprise-mde-optim, lot 3) : administrateur. */
+  reprise: {
+    etat: () => appel('GET', '/reprise'),
+    correspondances: (source) => appel('GET', `/reprise/correspondances/${encodeURIComponent(source)}`),
+    executer: (demande) => appel('POST', '/reprise/executer', demande),
+    rapport: (id) => appel('GET', `/reprise/executions/${encodeURIComponent(id)}`),
+    markdown: (id) => appel('GET', `/reprise/executions/${encodeURIComponent(id)}/markdown`),
+    fusions: (source, groupes) => appel('PUT', `/reprise/fusions/${encodeURIComponent(source)}`, groupes),
+  },
   // Champs supplémentaires en colonnes x_ des fiches (module Fiche, administrateur) : tables ouvertes, registre, création, modification, suppression.
   champsSupplementaires: {
     tables: () => appel('GET', '/champs-supplementaires/tables'),

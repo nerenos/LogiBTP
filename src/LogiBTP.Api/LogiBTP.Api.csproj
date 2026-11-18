@@ -2,6 +2,9 @@
 
   <PropertyGroup>
     <Description>Cœur LogiBTP : API des devis BTP, spécialisation des services des modules Document, Métré, Liste, Fiche, GED, Bibliothèque, Annuaire et Entreprises françaises.</Description>
+    <!-- Le pilote SQL Server de la reprise MDE (module Import) refuse la globalisation invariante de Directory.Build.props :
+         ICU actif pour l'hôte, cultures fixées à l'invariante dans Program.cs. -->
+    <InvariantGlobalization>false</InvariantGlobalization>
   </PropertyGroup>
 
   <ItemGroup>
@@ -35,6 +38,7 @@
     <ProjectReference Include="..\..\modules\personnalisation\dotnet\LogiBTP.Personnalisation.Web\LogiBTP.Personnalisation.Web.csproj" />
     <ProjectReference Include="..\..\modules\edition\dotnet\LogiBTP.Editions.Web\LogiBTP.Editions.Web.csproj" />
     <ProjectReference Include="..\..\modules\installation\dotnet\LogiBTP.Installation.Web\LogiBTP.Installation.Web.csproj" />
+    <ProjectReference Include="..\..\modules\import\dotnet\LogiBTP.Import\LogiBTP.Import.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -47,6 +51,9 @@
     <Content Remove="Btp\McpTextes.json" />
     <EmbeddedResource Include="Btp\McpTextes.json" LogicalName="LogiBTP.Api.Btp.McpTextes.json" />
     <!-- Plan des scripts SQL (généré, versionné) : versions attendues par module, indépendantes du dossier SQL de l'image (absent de l'image Vercel). -->
+    <!-- Correspondances par défaut de la reprise d'une base MDE ou OptimBTP (Reprise/CorrespondancesReprise). -->
+    <Content Remove="Reprise\Correspondances\*.json" />
+    <EmbeddedResource Include="Reprise\Correspondances\*.json" LogicalName="LogiBTP.Api.Reprise.Correspondances.%(Filename).json" />
     <EmbeddedResource Include="..\..\db\installation\scripts.txt" LogicalName="LogiBTP.Api.scripts.txt" Link="Btp\scripts.txt" />
   </ItemGroup>
 

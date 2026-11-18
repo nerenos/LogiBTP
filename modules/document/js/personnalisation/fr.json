@@ -532,7 +532,6 @@
     "PIED_GLOBAL": "Avec des pieds de section, le pied du document ne reçoit que des postes après TVA",
     "PIED_RACINE": "Les lignes de pied sont au niveau racine ou dans une section",
     "PIED_SECTION_INTERDIT": "Un pied de section n'existe que dans un document à plusieurs sections (plusieurs documents sources)",
-    "QTE": "La quantité soldée doit être positive",
     "SECTION_RACINE": "Une section est au niveau racine",
     "SITUATION_FACTUREE": "Situation déjà facturée : la correction passe par la situation suivante",
     "SOURCES": "Aucun document source",

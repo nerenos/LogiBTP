@@ -1,0 +1,327 @@
+{
+  // Correspondances par défaut de la reprise d'une base MDE (analyse ANALYSE-IMPORT-MDE-OPTIM.md, § 10.3).
+  // Ajustables : l'écran de reprise propose ce fichier, l'utilisateur peut le modifier puis le recharger.
+  "source": "MDE",
+  "version": 1,
+  "description": "Énumérations MDE (eType*) vers les codes LogiBTP",
+  "tables": {
+    "type_document": {
+      "description": "Type d'une pièce (eTypeDocument)",
+      "colonne": "PMEETATDOCUMENT.TYPEDOC, TRACABILITE",
+      "cibles": ["TYPE_DOCUMENT"],
+      "entrees": [
+        { "source": "DC", "cible": "V_DEVIS" },
+        { "source": "CC", "cible": "V_COMMANDE" },
+        { "source": "LC", "cible": "V_RECEPTION" },
+        { "source": "RC", "cible": "V_RETOUR" },
+        { "source": "FC", "cible": "V_FACTURE", "note": "Sous-type par la table type_facture" },
+        { "source": "VC", "cible": "V_FACTURE_AVT" },
+        { "source": "ST", "cible": "V_SITUATION" },
+        { "source": "AC", "cible": "V_AVOIR" },
+        { "source": "DF", "cible": "A_DEVIS" },
+        { "source": "CF", "cible": "A_COMMANDE" },
+        { "source": "LF", "cible": "A_RECEPTION" },
+        { "source": "RF", "cible": "A_RETOUR" },
+        { "source": "FF", "cible": "A_FACTURE" },
+        { "source": "AF", "cible": "A_AVOIR" },
+        { "source": "OS", "cible": "T_AO" },
+        { "source": "DS", "cible": "T_AO", "note": "Demande de prix sous-traitant : appel d'offres" },
+        { "source": "CS", "cible": "T_COMMANDE" },
+        { "source": "FS", "cible": "T_FACTURE_AVT" },
+        { "source": "AS", "cible": "A_AVOIR", "note": "Avoir de sous-traitance : type vérifié au lot 12 (R2)" },
+        { "source": "", "ignorer": true, "motif": "Type vide" }
+      ]
+    },
+    "type_fiche": {
+      "description": "Fiche visée par un rattachement (eTypeDocument, valeurs de fiches : GED, notes, traçabilité)",
+      "colonne": "TYPEDOC des rattachements",
+      "cibles": ["TYPE_FICHE"],
+      "entrees": [
+        { "source": "A", "cible": "affaire" },
+        { "source": "C", "cible": "chantier" },
+        { "source": "E", "cible": "element" },
+        { "source": "M", "cible": "materiel" },
+        { "source": "TA", "cible": "personne" },
+        { "source": "TC", "cible": "personne" },
+        { "source": "TF", "cible": "personne" },
+        { "source": "TS", "cible": "personne" },
+        { "source": "TG", "cible": "individu" },
+        { "source": "TE", "cible": "salarie" },
+        { "source": "TQ", "ignorer": true, "motif": "Équipe : pas de fiche équipe pour les rattachements" },
+        { "source": "DB", "ignorer": true, "motif": "Base : sans objet" }
+      ]
+    },
+    "type_facture": {
+      "description": "Sous-type d'une facture client (eTypeFacture)",
+      "colonne": "PMEDOCFACCLI.TYPE",
+      "cibles": ["TYPE_DOCUMENT"],
+      "entrees": [
+        { "source": "F", "cible": "V_FACTURE" },
+        { "source": "C", "cible": "V_DEMANDE_ACOMPTE", "note": "Facture d'acompte" },
+        { "source": "T", "cible": "V_FACTURE_AVT" },
+        { "source": "A", "cible": "V_AVOIR" }
+      ]
+    },
+    "etat_suite": {
+      "description": "État de transformation d'une pièce (eTypeEtatCalcule) : contrôle des liens recréés, non stocké",
+      "colonne": "État calculé des pièces",
+      "cibles": ["ETAT_SUITE"],
+      "entrees": [
+        { "source": "C", "cible": "EN_COURS" },
+        { "source": "P", "cible": "PARTIELLE" },
+        { "source": "T", "cible": "TOTALE" },
+        { "source": "S", "cible": "SOLDEE" }
+      ]
+    },
+    "type_tiers": {
+      "description": "Rôle d'un tiers (eTypeTiers) : casquette, ou fiche individu / salarié",
+      "colonne": "COMM_TIERS.TYPETIERS",
+      "cibles": ["CASQUETTE", "TYPE_FICHE"],
+      "entrees": [
+        { "source": "C", "cible": "CLIENT" },
+        { "source": "F", "cible": "FOURNISSEUR" },
+        { "source": "S", "cible": "SOUS_TRAITANT" },
+        { "source": "A", "cible": "ARCHITECTE" },
+        { "source": "G", "cible": "individu", "note": "Chargé d'affaires : rattaché au salarié s'il en est un" },
+        { "source": "E", "cible": "salarie" }
+      ]
+    },
+    "tiers_payeur": {
+      "description": "Tiers payeur d'un client (eTypeTiersPayeur)",
+      "colonne": "PMECLIENT.TPAYEURTYPE",
+      "cibles": ["TYPE_LIEN"],
+      "entrees": [
+        { "source": "F", "cible": "FACTURER_A" },
+        { "source": "T", "cible": "FACTURER_A", "note": "Tiers payeur simple" },
+        { "source": "S", "cible": "FACTURER_A", "note": "Subrogation : précisée dans une note du lien" },
+        { "source": "", "ignorer": true, "motif": "Aucun tiers payeur" }
+      ]
+    },
+    "type_ligne_vente": {
+      "description": "Type d'une ligne de vente (eTypeLigneVente)",
+      "colonne": "PMEDOC*LIG.TYPELIG",
+      "cibles": ["TYPE_LIGNE"],
+      "entrees": [
+        { "source": "T", "cible": "TITRE", "note": "Tranche, niveau NIVTR" },
+        { "source": "E", "cible": "ELEMENT", "note": "OUVRAGE si la ligne a des composantes (NIVCOMPO + 1) ; composante si NIVCOMPO > 0" },
+        { "source": "L", "cible": "TEXTE" },
+        { "source": "S", "cible": "SOUS_TOTAL" },
+        { "source": "A", "cible": "TEXTE", "note": "Ligne d'affaire : sens vérifié au lot 10 (R3)" },
+        { "source": "D", "cible": "TEXTE", "note": "Rappel d'une pièce : lien de traçabilité si elle est reprise (R3)" },
+        { "source": "R", "ignorer": true, "motif": "Récapitulatif recalculé par l'édition" },
+        { "source": "", "ignorer": true, "motif": "Ligne nulle" }
+      ]
+    },
+    "type_ligne_achat": {
+      "description": "Type d'une ligne d'achat (eTypeLigneAchat)",
+      "colonne": "LIGNE*.TYPELIG",
+      "cibles": ["TYPE_LIGNE"],
+      "entrees": [
+        { "source": "U", "cible": "ELEMENT", "note": "Référencée : liée à l'élément" },
+        { "source": "R", "cible": "ELEMENT", "note": "Non référencée : sans élément" },
+        { "source": "E", "cible": "ELEMENT", "note": "Prestation : nature de prestation" },
+        { "source": "T", "cible": "TEXTE" },
+        { "source": "1", "cible": "SOUS_TOTAL" },
+        { "source": "2", "cible": "PIED_HT", "note": "Remise : poste de pied HT" },
+        { "source": "", "ignorer": true, "motif": "Ligne nulle" }
+      ]
+    },
+    "part_sous_traitance": {
+      "description": "Part sous-traitée d'une ligne de vente (eTypeLigneSousTraitance)",
+      "colonne": "PMEDOC*LIG.TYPESSTRAIT",
+      "cibles": ["PART_SOUS_TRAITANCE"],
+      "entrees": [
+        { "source": "A", "cible": "AUCUNE" },
+        { "source": "H", "cible": "HORS_FOURNITURE" },
+        { "source": "T", "cible": "TOTALE" }
+      ]
+    },
+    "mode_avancement": {
+      "description": "Mode d'avancement d'une situation (eTypeAvancement)",
+      "colonne": "PMEDOCFACCLI.TYPEAVT, PMEDOCSITTX",
+      "cibles": ["MODE_AVANCEMENT"],
+      "entrees": [
+        { "source": "D", "cible": "DETAILLE" },
+        { "source": "C", "cible": "GLOBAL_CUMUL" },
+        { "source": "S", "cible": "GLOBAL_SITUATION" },
+        { "source": "", "ignorer": true, "motif": "Sans avancement" }
+      ]
+    },
+    "type_arrondi": {
+      "description": "Arrondi d'une pièce (eTypeArrondie) : non rejoué, l'écart est porté par la ligne d'écart d'arrondi",
+      "colonne": "TYPEARRONDI",
+      "cibles": [],
+      "entrees": [
+        { "source": "A", "ignorer": true, "motif": "Arrondi unique de LogiBTP ; écart en ligne d'écart d'arrondi" },
+        { "source": "D", "ignorer": true, "motif": "Arrondi unique de LogiBTP ; écart en ligne d'écart d'arrondi" },
+        { "source": "E", "ignorer": true, "motif": "Arrondi unique de LogiBTP ; écart en ligne d'écart d'arrondi" },
+        { "source": "P", "ignorer": true, "motif": "Arrondi unique de LogiBTP ; écart en ligne d'écart d'arrondi" },
+        { "source": "F", "ignorer": true, "motif": "Arrondi unique de LogiBTP ; écart en ligne d'écart d'arrondi" },
+        { "source": "X", "ignorer": true, "motif": "Arrondi unique de LogiBTP ; écart en ligne d'écart d'arrondi" },
+        { "source": "H", "ignorer": true, "motif": "Arrondi unique de LogiBTP ; écart en ligne d'écart d'arrondi" }
+      ]
+    },
+    "compteur": {
+      "description": "Compteurs de numérotation (eTypeCompteur) : le compteur LogiBTP repart après le plus grand numéro repris",
+      "colonne": "SYS_DEFSTE.NUM*, SYS_NUMEROTATION",
+      "cibles": ["TYPE_DOCUMENT"],
+      "entrees": [
+        { "source": "NUMDEVCLI", "cible": "V_DEVIS" },
+        { "source": "NUMCDECLI", "cible": "V_COMMANDE" },
+        { "source": "NUMBLCLI", "cible": "V_RECEPTION" },
+        { "source": "NUMBRCLI", "cible": "V_RETOUR" },
+        { "source": "NUMFACCLI", "cible": "V_FACTURE" },
+        { "source": "NUMACPTCLI", "cible": "V_DEMANDE_ACOMPTE" },
+        { "source": "NUMSITTX", "cible": "V_SITUATION" },
+        { "source": "NUMDDPFOU", "cible": "A_DEVIS" },
+        { "source": "NUMCDEFOU", "cible": "A_COMMANDE" },
+        { "source": "NUMBLFOU", "cible": "A_RECEPTION" },
+        { "source": "NUMBRFOU", "cible": "A_RETOUR" },
+        { "source": "NUMFACFOU", "cible": "A_FACTURE" },
+        { "source": "NUMAOSST", "cible": "T_AO" },
+        { "source": "NUMCDESST", "cible": "T_COMMANDE" },
+        { "source": "NUMFACSST", "cible": "T_FACTURE_AVT" },
+        { "source": "NUMSTOCKENTREE", "cible": "S_ENTREE" },
+        { "source": "NUMSTOCKSORTIE", "cible": "S_SORTIE" },
+        { "source": "NUMSTOCKTRANS", "cible": "S_TRANSFERT" },
+        { "source": "NUMSTOCKINV", "cible": "S_INVENTAIRE" },
+        { "source": "NUMCTCLI", "ignorer": true, "motif": "Contrat client : sans équivalent" },
+        { "source": "NUMFACLOC", "ignorer": true, "motif": "Facture de location : sans objet" },
+        { "source": "NUMFACINT", "ignorer": true, "motif": "Facture interne : sans objet" },
+        { "source": "NUMSTOCKBXINV", "ignorer": true, "motif": "Bordereau d'inventaire : inventaire d'ouverture (Q18)" },
+        { "source": "NUMRELEVE", "ignorer": true, "motif": "Relevé : sans équivalent" },
+        { "source": "RGMNUMOF", "ignorer": true, "motif": "Ordre de fabrication : hors périmètre" },
+        { "source": "RGMNUMBL", "ignorer": true, "motif": "Bon de livraison de fabrication : hors périmètre" },
+        { "source": "CODEANA", "ignorer": true, "motif": "Code analytique : repris sur le chantier" },
+        { "source": "ECH", "ignorer": true, "motif": "Échéances : numérotation propre à LogiBTP" },
+        { "source": "TacheSaisieMO", "ignorer": true, "motif": "Tâches de saisie de main-d'œuvre : sans équivalent" }
+      ]
+    },
+    "mode_paiement": {
+      "description": "Type de paiement d'une ligne de condition (APIMODEREGLEMENTL.TYPEP) vers le mode de règlement ; le mode du tiers est celui de la première ligne. Lettres autres que C et V à confirmer sur une base réelle",
+      "colonne": "APIMODEREGLEMENTL.TYPEP",
+      "cibles": ["MODE_REGLEMENT"],
+      "entrees": [
+        { "source": "C", "cible": "CHEQUE" },
+        { "source": "V", "cible": "VIREMENT" },
+        { "source": "L", "cible": "LCR" },
+        { "source": "P", "cible": "PRELEVEMENT" },
+        { "source": "E", "cible": "ESPECES" },
+        { "source": "B", "cible": "CB" }
+      ]
+    },
+    "civilite": {
+      "description": "Civilité d'une personne physique (APICIVILITE, FORMEJURIDIQUE = 0) vers la civilité d'un individu ; les formes juridiques (FORMEJURIDIQUE = 1) vont sur per_forme_libelle sans table",
+      "colonne": "APICIVILITE.LIBELLE, COMM_TIERSADR.CIVILITE",
+      "cibles": ["CIVILITE"],
+      "entrees": [
+        { "source": "Monsieur", "cible": "M." }, { "source": "M.", "cible": "M." }, { "source": "M", "cible": "M." },
+        { "source": "Madame", "cible": "Mme" }, { "source": "Mme", "cible": "Mme" },
+        { "source": "Mademoiselle", "cible": "Mme" }, { "source": "Mlle", "cible": "Mme" }
+      ]
+    },
+    "pays": {
+      "description": "Nom d'un pays (adresses, table des pays) vers son code ISO à deux lettres ; un code ISO déjà au format est gardé sans entrée",
+      "colonne": "APIPAYS.NOM, COMM_TIERSADR.PAYS",
+      "cibles": ["PAYS"],
+      "entrees": [
+        { "source": "France", "cible": "FR" }, { "source": "FRANCE", "cible": "FR" },
+        { "source": "Belgique", "cible": "BE" }, { "source": "BELGIQUE", "cible": "BE" },
+        { "source": "Suisse", "cible": "CH" }, { "source": "SUISSE", "cible": "CH" },
+        { "source": "Luxembourg", "cible": "LU" }, { "source": "LUXEMBOURG", "cible": "LU" },
+        { "source": "Monaco", "cible": "MC" }, { "source": "MONACO", "cible": "MC" },
+        { "source": "Allemagne", "cible": "DE" }, { "source": "ALLEMAGNE", "cible": "DE" },
+        { "source": "Espagne", "cible": "ES" }, { "source": "ESPAGNE", "cible": "ES" },
+        { "source": "Italie", "cible": "IT" }, { "source": "ITALIE", "cible": "IT" },
+        { "source": "Portugal", "cible": "PT" }, { "source": "PORTUGAL", "cible": "PT" },
+        { "source": "Pays-Bas", "cible": "NL" }, { "source": "Royaume-Uni", "cible": "GB" }
+      ]
+    },
+    "table_fiche": {
+      "description": "Table MDE à zones supplémentaires (SYS_RTCINFOS.TABLENAME) vers le type de fiche qui reçoit le champ x_ (Q12) ; les tables de pièces sont ignorées",
+      "colonne": "SYS_RTCINFOS.TABLENAME",
+      "cibles": ["TYPE_FICHE"],
+      "entrees": [
+        { "source": "PMECLIENT", "cible": "personne" },
+        { "source": "PMEFOURNISSEUR", "cible": "personne" },
+        { "source": "PMESOUSTRAITANT", "cible": "personne" },
+        { "source": "PMEARCHITECTE", "cible": "personne" },
+        { "source": "PMECHARGEAFFAIRE", "cible": "individu" },
+        { "source": "PMESALARIE", "cible": "salarie" },
+        { "source": "PMEELEMENT", "cible": "element" },
+        { "source": "PMECHANTIER", "cible": "chantier" },
+        { "source": "PMEMATERIEL", "cible": "materiel" },
+        { "source": "PMEDOCDEVCLI", "ignorer": true, "motif": "En-tête de pièce : valeurs en note CRM (Q12, lot 10)" },
+        { "source": "PMEAFFBASEDOC", "ignorer": true, "motif": "En-tête de pièce : valeurs en note CRM (Q12, lot 10)" },
+        { "source": "ENTETEDEVISFOURNISSEUR", "ignorer": true, "motif": "En-tête de pièce : valeurs en note CRM (Q12, lot 12)" },
+        { "source": "ENTETECDEFOURNISSEUR", "ignorer": true, "motif": "En-tête de pièce : valeurs en note CRM (Q12, lot 12)" },
+        { "source": "ENTETERECEPTIONFOURNISSEUR", "ignorer": true, "motif": "En-tête de pièce : valeurs en note CRM (Q12, lot 12)" },
+        { "source": "PMEDOCDEVCLILIG", "ignorer": true, "motif": "Ligne de pièce : aide au calcul non reprise (Q12)" },
+        { "source": "PMEDOCFACCLILIG", "ignorer": true, "motif": "Ligne de pièce : aide au calcul non reprise (Q12)" },
+        { "source": "PMEAFFBASEDOCLIG", "ignorer": true, "motif": "Ligne de pièce : aide au calcul non reprise (Q12)" },
+        { "source": "LIGNEDEVISFOURNISSEUR", "ignorer": true, "motif": "Ligne de pièce : aide au calcul non reprise (Q12)" },
+        { "source": "LIGNECDEFOURNISSEUR", "ignorer": true, "motif": "Ligne de pièce : aide au calcul non reprise (Q12)" },
+        { "source": "LIGNERECEPTIONFOURNISSEUR", "ignorer": true, "motif": "Ligne de pièce : aide au calcul non reprise (Q12)" }
+      ]
+    },
+    "regroupement_nature": {
+      "description": "Type d'élément d'une nature MDE (PMENATUREELEMENT.TYPEELEM) vers le regroupement de la nature créée (lot 8) ; codes à confirmer sur une base réelle (SELECT DISTINCT TYPEELEM), une valeur inconnue crée la nature sans regroupement",
+      "colonne": "PMENATUREELEMENT.TYPEELEM",
+      "cibles": ["REGROUPEMENT_NATURE"],
+      "entrees": [
+        { "source": "MO", "cible": "MO" },
+        { "source": "MA", "cible": "MATERIAUX", "note": "Matériaux, fournitures : à confirmer" },
+        { "source": "FO", "cible": "MATERIAUX", "note": "Fournitures : à confirmer" },
+        { "source": "MT", "cible": "ENGIN", "note": "Matériel : à confirmer" },
+        { "source": "LO", "cible": "ENGIN", "note": "Location : à confirmer" },
+        { "source": "ST", "cible": "SOUS_TRAITANCE" },
+        { "source": "PR", "cible": "PRESTATION", "note": "Prestations : à confirmer" },
+        { "source": "DI", "cible": "PRESTATION", "note": "Divers : à confirmer" },
+        { "source": "OU", "cible": "VENTE", "note": "Ouvrages : à confirmer" }
+      ]
+    },
+    "type_element": {
+      "description": "Type d'un élément MDE sans composition (PMEELEMENT.TYPEELEM) vers le type d'élément (lot 8) ; un élément qui a des composantes (PMEELEMENTOUVCOMP) est toujours un ouvrage ; valeur absente de la table : article ; codes à confirmer sur une base réelle",
+      "colonne": "PMEELEMENT.TYPEELEM",
+      "cibles": ["TYPE_ELEMENT"],
+      "entrees": [
+        { "source": "TX", "cible": "TEXTE", "note": "Texte de bibliothèque (modèle de texte, Q7) : à confirmer" },
+        { "source": "LI", "cible": "TEXTE", "note": "Libellé : à confirmer" },
+        { "source": "OU", "cible": "OUVRAGE", "note": "Ouvrage sans composante : à confirmer" }
+      ]
+    },
+    "fonction_intervenant": {
+      "description": "Tiers cité par une affaire ou un chantier MDE (colonne de PMEAFFAIRE / PMECHANTIER) vers la fonction d'intervenant (lot 9) ; le client est l'intervenant CLIENT de l'affaire, le chargé d'affaires son responsable",
+      "colonne": "PMEAFFAIRE.CODE*, PMECHANTIER.CODE*",
+      "cibles": ["FONCTION_INTERVENANT"],
+      "entrees": [
+        { "source": "CODEARCHI", "cible": "ARCHITECTE" },
+        { "source": "CODECHARGEAFF", "ignorer": true, "motif": "Chargé d'affaires : responsable de l'affaire, chargé du chantier" }
+      ]
+    },
+    "rubrique_pointage": {
+      "description": "Rubrique du suivi de main-d'œuvre MDE (PMECHTSUIVMOCHT.CODERUB) vers la rubrique de paie du pointage (lot 14, Q17) ; sans entrée : zone si le code est Z suivi d'un chiffre, sinon signalé ; rubrique de zone : zone du chantier pour l'agence du salarié ; codes à confirmer sur une base réelle",
+      "colonne": "PMECHTSUIVMOCHT.CODERUB",
+      "cibles": ["RUBRIQUE_POINTAGE"],
+      "entrees": [
+        { "source": "PAN", "cible": "PANIER", "note": "Panier : à confirmer" },
+        { "source": "PANIER", "cible": "PANIER" },
+        { "source": "GD", "cible": "GD", "note": "Grand déplacement : à confirmer" }
+      ]
+    },
+    "type_champ": {
+      "description": "Type de donnée d'une zone supplémentaire (SYS_RTCINFOS.DATATYPE) vers le type du champ x_ ; S seul vu sur une base réelle, les autres lettres à confirmer",
+      "colonne": "SYS_RTCINFOS.DATATYPE",
+      "cibles": ["TYPE_CHAMP"],
+      "entrees": [
+        { "source": "S", "cible": "texte" },
+        { "source": "I", "cible": "nombre" },
+        { "source": "N", "cible": "nombre" },
+        { "source": "F", "cible": "nombre" },
+        { "source": "C", "cible": "montant" },
+        { "source": "D", "cible": "date" },
+        { "source": "B", "cible": "booleen" }
+      ]
+    }
+  }
+}

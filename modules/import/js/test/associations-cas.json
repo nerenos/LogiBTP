@@ -1,0 +1,46 @@
+{
+  "description": "Rapprochement des valeurs importées avec les référentiels (correspondances.js ↔ Associations.cs, plan reprise-mde-optim lot 4)",
+  "unites": [
+    { "code": "u", "libelle": "Unité", "synonymes": ["unite", "un", "p", "piece"] },
+    { "code": "m2", "libelle": "Mètre carré", "synonymes": ["m²", "M2"] },
+    { "code": "ml", "libelle": "Mètre linéaire", "synonymes": [] },
+    { "code": "ft", "libelle": "Forfait", "synonymes": [] },
+    { "code": "h", "libelle": "Heure", "synonymes": [] }
+  ],
+  "cas_unites": [
+    { "valeur": "U", "attendu": "u" },
+    { "valeur": "m²", "attendu": "m2" },
+    { "valeur": "M2", "attendu": "m2" },
+    { "valeur": "ML", "attendu": "ml" },
+    { "valeur": "Mètre linéaire", "attendu": "ml" },
+    { "valeur": "Forf", "attendu": "ft" },
+    { "valeur": "HEURE", "attendu": "h" },
+    { "valeur": "Pièce", "attendu": "u" },
+    { "valeur": "KG", "attendu": null },
+    { "valeur": "", "attendu": null }
+  ],
+  "taux": [
+    { "id": 1, "taux": "20", "categorie": "N" },
+    { "id": 2, "taux": "10", "categorie": "N" },
+    { "id": 4, "taux": "20", "categorie": "A" },
+    { "id": 6, "taux": "0", "categorie": "E" }
+  ],
+  "cas_taux": [
+    { "pourcentage": "20", "attendu": 1 },
+    { "pourcentage": "10.00", "attendu": 2 },
+    { "pourcentage": "0", "attendu": 6 },
+    { "pourcentage": "5.5", "attendu": null },
+    { "pourcentage": null, "attendu": null }
+  ],
+  "options": [
+    { "code": "VIREMENT", "libelle": "Virement" },
+    { "code": "CHEQUE", "libelle": "Chèque" },
+    { "code": "LCR", "libelle": "LCR" }
+  ],
+  "cas_options": [
+    { "code": "CHQ", "libelle": "Chèque", "attendu": "CHEQUE" },
+    { "code": "VIR30", "libelle": "Virement 30 jours fin de mois", "attendu": "VIREMENT" },
+    { "code": "lcr", "libelle": null, "attendu": "LCR" },
+    { "code": "ESP", "libelle": "Espèces", "attendu": null }
+  ]
+}

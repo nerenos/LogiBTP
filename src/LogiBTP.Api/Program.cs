@@ -36,6 +36,13 @@ using LogiBTP.Socle.Web;
 using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
 
+// Globalisation active pour le seul pilote SQL Server de la reprise MDE (il refuse le mode invariant, LogiBTP.Api.csproj) ;
+// cultures fixées à l'invariante pour garder les formats et les comparaisons du serveur quel que soit le poste.
+System.Globalization.CultureInfo.DefaultThreadCurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
+System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = System.Globalization.CultureInfo.InvariantCulture;
+System.Globalization.CultureInfo.CurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
+System.Globalization.CultureInfo.CurrentUICulture = System.Globalization.CultureInfo.InvariantCulture;
+
 // Dossier de la configuration de l'installation (.env, societes.json) : LOGIBTP_CONFIG (/app/config dans l'image Docker),
 // sinon le dossier courant ou celui de l'application et ses parents (développement).
 var dossierConfig = Environment.GetEnvironmentVariable(VariablesEnv.Config);
@@ -306,6 +313,8 @@ api.MapModuleMail();
 api.MapCalendriersBtp();
 api.MapModuleEdition();
 api.MapEditionsBtp();
+// Reprise d'une base MDE ou OptimBTP (module Import, plan reprise-mde-optim) : page /parametres/reprise.
+LogiBTP.Api.Reprise.RoutesReprise.MapReprise(api);
 
 // Point MCP des agents (Streamable HTTP, jeton délégué exigé ; refuse de démarrer en mode EnTetes).
 app.MapPointMcp();

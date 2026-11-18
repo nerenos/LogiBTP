@@ -1,0 +1,17 @@
+{
+  "description": "Contrôle des fusions de doublons de la reprise : rejoué par fusions.test.js et FusionsRepriseTests.cs (parité).",
+  "cas": [
+    { "nom": "groupe valide", "groupes": [{ "table_source": "bib_tiers", "cle_conservee": "12", "cles_fusionnees": ["13"] }], "erreurs": [] },
+    { "nom": "groupe vide", "groupes": [{ "table_source": "bib_tiers", "cle_conservee": "12", "cles_fusionnees": [] }],
+      "erreurs": [{ "code": "REPRISE_FUSION_VIDE", "rang": 0, "cle": "12" }] },
+    { "nom": "conservée parmi les fusionnées (espaces de fin ignorés)", "groupes": [{ "table_source": "COMM_TIERS", "cle_conservee": "C003 ", "cles_fusionnees": ["C003", "F001"] }],
+      "erreurs": [{ "code": "REPRISE_FUSION_CONSERVEE_FUSIONNEE", "rang": 0, "cle": "C003" }] },
+    { "nom": "clé dans deux groupes de la même table", "groupes": [
+        { "table_source": "bib_tiers", "cle_conservee": "12", "cles_fusionnees": ["13"] },
+        { "table_source": "bib_tiers", "cle_conservee": "14", "cles_fusionnees": ["13"] }],
+      "erreurs": [{ "code": "REPRISE_FUSION_CLE_EN_DOUBLE", "rang": 1, "cle": "13" }] },
+    { "nom": "même clé dans deux tables", "groupes": [
+        { "table_source": "bib_tiers", "cle_conservee": "12", "cles_fusionnees": ["13"] },
+        { "table_source": "bib_personne", "cle_conservee": "12", "cles_fusionnees": ["13"] }], "erreurs": [] }
+  ]
+}
