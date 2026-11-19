@@ -30,6 +30,12 @@ Référence lue à la demande (hors contexte par défaut). Les règles que le co
 ## Textes et icônes
 - Module : textes `facture_electronique.*` (`js/personnalisation/fr.json`), icônes `fe_*`, couleurs `--fe-*` (`theme.css`). Cœur : `facture_electronique_btp.*` (page, encaissements, e-reporting), `document_btp.page.envoi_fe.*` et `document_btp.page.completude_fe.*` (page document), icônes `facture_electronique_btp_*`.
 
+## Suivi des flux et menu (19/11/2026)
+- Menu Comptabilité (et non plus Ventes) : « Facturation électronique » (page `/facture-electronique` : encaissements, e-reporting, dépôt manuel, paramètres), « Suivi des flux », « Factures reçues à traiter ».
+- Suivi des flux : liste `fe_flux` (`db/1.1_facture_electronique_liste_flux.sql`, vue `v_liste_fe_flux`), vues 1015 Total, 1016 Émis (`sens = Out`), 1017 Reçus (`sens = In`), définies dans `client/src/app/vues-liste.js` ; colonnes N° du flux (`ffl_id`) et N° de la plateforme (flowId). Une ligne ouvre la fiche du flux `/facture-electronique?flux=<id>` (détail et chronologie seuls, sans onglets).
+- Lecture CDAR : une date de facture MDT-100 illisible (hors format 102) est ignorée et gardée en avertissement (`MessageCdar.Avertissements`, détail de l'étape CONTROLE) au lieu de refuser le message (Super PDP, bac à sable).
+- Super PDP : connecteur AFNOR générique, Flow `https://api.superpdp.tech/afnor-flow`, Directory `https://api.superpdp.tech/afnor-directory`, jeton `https://api.superpdp.tech/oauth2/token` (connexion OAuth générique, flux CLIENT) ; règles de dépôt acceptées : B2B, B2C, B2BInt (B2G et ArchiveOnly refusés à ce jour).
+
 ## Tests et démonstration
 - JS : `npm test --workspace @logibtp/facture-electronique` (cycle de vie, complétude, réception, écrans, schematrons, CDAR, flux 10), `client/test/{facture-electronique,emission-facture,encaissement-fe,ereporting-fe,depot-facture,sous-traitance-recue}.test.js`.
 - .NET : `LogiBTP.FactureElectronique.Tests` (`ServiceFactureElectroniqueTests` sur `LOGIBTP_TEST_PG`) ; cœur `tests/LogiBTP.Calcul.Tests` : `ReceptionFactureBtpTests`, `EmissionFactureTests`, `EnvoiFactureBtpTests`, `RejetFactureBtpTests`, `StatutEncaisseeBtpTests`, `EreportingBtpTests` (base jetable `LOGIBTP_TEST_PG_JETABLE`, collection `CollectionBaseFe` non parallèle). Les deux suites sur base prennent le verrou consultatif `VerrouBaseTests.FactureElectronique` (`LogiBTP.Socle.Testing`) : `dotnet test LogiBTP.slnx` lance les projets en parallèle et leurs relèves se croisaient.

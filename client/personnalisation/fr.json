@@ -4810,14 +4810,6 @@
         "marches_a_facturer": {
           "libelle": "Marchés à facturer du mois"
         },
-        "facture_electronique": {
-          "libelle": "Facturation électronique",
-          "info": "Flux émis et reçus de la plateforme agréée, statuts, dépôt et import manuels, paramètres"
-        },
-        "fe_recues": {
-          "libelle": "Factures reçues à traiter",
-          "info": "Factures électroniques reçues sans pièce (à rattacher ou à saisir)"
-        },
         "titre_demandes_execution": {
           "libelle": "Ordres (Exécution)"
         },
@@ -5138,6 +5130,18 @@
         "parametrage_comptabilite": {
           "libelle": "Paramètres : longueur, collectifs, types comptables, TVA…",
           "info": "Longueur des comptes, préfixes, collectifs, catégories et taux de TVA"
+        },
+        "facture_electronique": {
+          "libelle": "Facturation électronique",
+          "info": "Encaissements, e-reporting, dépôt et import manuels, paramètres de la plateforme agréée"
+        },
+        "fe_flux": {
+          "libelle": "Suivi des flux",
+          "info": "Flux de facturation électronique émis et reçus : vues Total, Émis, Reçus ; une ligne ouvre la fiche du flux"
+        },
+        "fe_recues": {
+          "libelle": "Factures reçues à traiter",
+          "info": "Factures électroniques reçues sans pièce (à rattacher ou à saisir)"
         }
       },
       "suivi": {
