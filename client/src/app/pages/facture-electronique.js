@@ -2,7 +2,7 @@ import { texte, texteHtml, icone, iconeHtml } from '@logibtp/socle/dictionnaire'
 import { PageBase } from '@logibtp/navigation';
 import { echapper, lireStockage, ecrireStockage, confirmer } from '@logibtp/socle/ui';
 import { ACTION_DROIT } from '@logibtp/socle';
-import { ParametresFe, TableauFlux, DetailFlux, PanneauDepotManuel } from '@logibtp/facture-electronique/ui';
+import { ParametresFe, DetailFlux, PanneauDepotManuel } from '@logibtp/facture-electronique/ui';
 import { TYPE_ELEMENT_FE, urlDocument } from '../codes.js';
 import { apiFe } from '../facture-electronique/api-fe.js';
 import { libelleElementFe, NOEUD_FE } from '../documents/chronologie-document.js';
@@ -16,16 +16,19 @@ import { api } from '../api.js';
 // « parametres » (paramètres de la plateforme) ; la page fournit le transport, les connexions OAuth, les libellés des
 // éléments et l'ouverture d'une pièce. /facture-electronique?flux=<id> ouvre le détail d'un flux. Onglet retenu dans le
 // navigateur. Lot 26 : onglet « Encaissements », liste à valider des statuts Encaissée (212). Lot 28 : onglet « E-reporting »
-// (périodes du flux 10, préparation, envoi, correction, relance).
+// (périodes du flux 10, préparation, envoi, correction, relance). 19/11/2026 : le suivi des flux passe par la liste
+// « fe_flux » (vues Total, Émis, Reçus) ; /facture-electronique?flux=<id> est la fiche du flux (détail seul, sans onglets).
 
 const CLE_ONGLET = 'factureElectroniqueOnglet';
-const ONGLETS = Object.freeze(['flux', 'encaissements', 'ereporting', 'depot', 'parametres']);
+const ONGLETS = Object.freeze(['encaissements', 'ereporting', 'depot', 'parametres']);
 
 export class PageFactureElectronique extends PageBase {
   icone = icone('facture_electronique_btp_page');
   #connexions = [];
 
-  urlCourante() { return '/facture-electronique'; }
+  #flux = null;
+
+  urlCourante() { return this.#flux ? `/facture-electronique?flux=${this.#flux}` : '/facture-electronique'; }
 
   /** Connexions OAuth proposées dans les paramètres ; liste vide si la lecture est refusée. */
   async #chargerConnexions() {
@@ -71,12 +74,12 @@ export class PageFactureElectronique extends PageBase {
     this.titre = texte('facture_electronique_btp.routes.page');
     const modifier = this.app.peut(NOEUD_FE, ACTION_DROIT.MODIFIER);
     const parametrer = this.app.estAdmin() || this.app.peut('parametres', ACTION_DROIT.MODIFIER);
-    let onglet = lireStockage(CLE_ONGLET, 'flux');
-    if (!ONGLETS.includes(onglet)) onglet = 'flux';
+    let onglet = lireStockage(CLE_ONGLET, ONGLETS[0]);
+    if (!ONGLETS.includes(onglet)) onglet = ONGLETS[0];
     this.conteneur.innerHTML = `<div class="page-parametres page-facture-electronique"><div class="entete-page"><h1 class="page-titre">${iconeHtml('facture_electronique_btp_page')} ${texteHtml('facture_electronique_btp.routes.page')}</h1>
         <div class="barre-outils"><div class="groupe-outils" role="tablist">${ONGLETS.map((o) => `<button type="button" role="tab" data-onglet="${o}" title="${echapper(texte(`facture_electronique_btp.onglets.${o}_titre`))}">${iconeHtml(`facture_electronique_btp_${o}`)} ${texteHtml(`facture_electronique_btp.onglets.${o}`)}</button>`).join('')}</div></div></div>
       <p class="aide">${texteHtml('facture_electronique_btp.aide')}</p>
-      <section data-zone="flux" hidden><div data-zone-tableau></div><div data-zone-detail hidden></div></section>
+      <section data-zone="flux" hidden><div data-zone-detail></div></section>
       <section data-zone="encaissements" hidden></section>
       <section data-zone="ereporting" hidden></section>
       <section data-zone="depot" hidden></section>
@@ -88,18 +91,12 @@ export class PageFactureElectronique extends PageBase {
       if (type === TYPE_ELEMENT_FE.DOCUMENT) this.app.naviguer(urlDocument(id), { nouvelleFenetre });
       else if (type === TYPE_ELEMENT_FE.PERIODE_EREPORTING) afficher('ereporting').then(() => this.ereporting.detail(Number(id)));
     };
-    const ouvrirFlux = async (id, nouvelleFenetre = false) => {
-      if (nouvelleFenetre) { this.app.naviguer(`/facture-electronique?flux=${id}`, { nouvelleFenetre: true }); return; }
-      await afficher('flux');
-      zoneDetail.hidden = false;
-      await this.detail.ouvrir(id);
-      zoneDetail.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    };
+    // Fiche d'un flux : page à part (/facture-electronique?flux=<id>), comme une fiche ouverte depuis la liste.
+    const ouvrirFlux = (id, nouvelleFenetre = false) => this.app.naviguer(`/facture-electronique?flux=${id}`, { nouvelleFenetre });
     const commun = { peut: { modifier }, api: apiFe, libelleElement: libelleElementFe, ouvrirElement, ouvrirFlux, erreur };
 
-    this.tableau = new TableauFlux(this.conteneur.querySelector('[data-zone-tableau]'), { ...commun, apresEcriture: () => this.depot.charger() });
-    this.detail = new DetailFlux(zoneDetail, { ...commun, apresEcriture: () => Promise.all([this.tableau.charger(), this.depot.charger()]) });
-    this.depot = new PanneauDepotManuel(zone('depot'), { ...commun, apresEcriture: () => this.tableau.charger() });
+    this.detail = new DetailFlux(zoneDetail, { ...commun, apresEcriture: () => this.depot.charger() });
+    this.depot = new PanneauDepotManuel(zone('depot'), { ...commun, apresEcriture: async () => {} });
     this.encaissements = new ListeEncaissementsFe(zone('encaissements'), {
       api: { lire: () => api.encaissementsFe(), valider: (propositions, ecarter) => api.validerEncaissementsFe(propositions, ecarter) },
       peutModifier: modifier, confirmer, erreur, message: (m, niveau) => this.app.message(m, niveau),
@@ -124,11 +121,18 @@ export class PageFactureElectronique extends PageBase {
       if (charges.has(o)) return;
       charges.add(o);
       if (o === 'parametres') await Promise.all([this.#chargerConnexions(), this.#afficherOptions(parametrer)]);
-      await { flux: this.tableau, encaissements: this.encaissements, ereporting: this.ereporting, depot: this.depot, parametres: this.parametres }[o].charger();
+      await { encaissements: this.encaissements, ereporting: this.ereporting, depot: this.depot, parametres: this.parametres }[o].charger();
     };
     this.conteneur.querySelectorAll('[data-onglet]').forEach((b) => b.addEventListener('click', () => afficher(b.dataset.onglet)));
     const flux = Number(this.requete?.flux);
-    if (Number.isInteger(flux) && flux > 0) { await ouvrirFlux(flux); return; }
+    if (Number.isInteger(flux) && flux > 0) {
+      this.#flux = flux;
+      this.conteneur.querySelector('.entete-page .barre-outils').hidden = true;
+      this.conteneur.querySelector('.page-facture-electronique > .aide').hidden = true;
+      zone('flux').hidden = false;
+      await this.detail.ouvrir(flux);
+      return;
+    }
     await afficher(onglet);
   }
 }

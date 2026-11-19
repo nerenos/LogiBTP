@@ -213,6 +213,17 @@ export const SOURCES_LISTE = {
       ['piece_validee', 'boolean'], ['fournisseur_provisoire', 'boolean'], ['erreur', 'text'], ['a_traiter', 'boolean'],
     ],
   },
+  // Suivi des flux de facturation électronique (db/1.1_facture_electronique_liste_flux.sql : v_liste_fe_flux) : tous les flux, émis et reçus.
+  fe_flux: {
+    libelle: 'Flux de facturation électronique', vue: 'v_liste_fe_flux', colonne_id: 'id', colonne_type: 'type_element',
+    colonnes: [
+      ['id', 'bigint'], ['type_element', 'text'], ['numero_flux', 'bigint'], ['id_plateforme', 'text'], ['sens', 'text'], ['type_flux', 'text'],
+      ['numero', 'text'], ['nom', 'text'], ['cree_le', 'timestamp with time zone'], ['depose_le', 'timestamp with time zone'],
+      ['modifie_le', 'timestamp with time zone'], ['etat', 'text'], ['accuse', 'text'], ['syntaxe', 'text'], ['profil', 'text'], ['regle', 'text'],
+      ['connecteur', 'text'], ['essais', 'integer'], ['tiers', 'text'], ['element', 'text'], ['piece_id', 'bigint'], ['type_piece', 'text'],
+      ['numero_piece', 'text'], ['erreur', 'text'], ['en_erreur', 'boolean'],
+    ],
+  },
   ged: {
     libelle: 'Documents (GED)', vue: 'v_liste_ged', colonne_id: 'id', colonne_type: 'type_element',
     colonnes: [
@@ -297,6 +308,7 @@ export const THEMES_LISTE = [
   { thl_code: 'tiers', thl_libelle: 'Tiers', thl_icone: '🏢', thl_ordre: 15, thl_types: [{ code: 'personne', libelle: 'Personne' }] },
   { thl_code: 'contacts', thl_libelle: 'Contacts', thl_icone: '👤', thl_ordre: 16, thl_types: [{ code: 'individu', libelle: 'Individu' }] },
   { thl_code: 'fe_recues', thl_libelle: 'Factures électroniques reçues', thl_icone: '📥', thl_ordre: 37, thl_types: [] },
+  { thl_code: 'fe_flux', thl_libelle: 'Flux de facturation électronique', thl_icone: '🔁', thl_ordre: 38, thl_types: [] },
   { thl_code: 'ged', thl_libelle: 'Documents (GED)', thl_icone: '📎', thl_ordre: 70, thl_types: [{ code: 'document_ged', libelle: 'Document' }] },
   {
     thl_code: 'ressources', thl_libelle: 'Ressources', thl_icone: '🧰', thl_ordre: 60,
@@ -910,3 +922,51 @@ VUES_LISTE.push({
     taille_lot: 100,
   },
 });
+
+// Suivi des flux de facturation électronique (vues 1015 à 1017, db/1.1_facture_electronique_liste_flux.sql) : tous les
+// flux, émis, reçus ; numéro interne du flux et identifiant de la plateforme affichés ; une ligne ouvre la fiche du flux.
+const ETATS_FLUX = [
+  { valeur: 'A_ENVOYER', libelle: 'À envoyer', teinte: 'neutre' }, { valeur: 'ENVOYE', libelle: 'Envoyé', teinte: 'info' },
+  { valeur: 'ACQUITTE', libelle: 'Acquitté', teinte: 'succes' }, { valeur: 'RECU', libelle: 'Reçu', teinte: 'info' },
+  { valeur: 'TRAITE', libelle: 'Traité', teinte: 'succes' }, { valeur: 'ERREUR', libelle: 'En erreur', teinte: 'erreur' },
+  { valeur: 'ABANDONNE', libelle: 'Abandonné', teinte: 'neutre' },
+];
+const SENS_FLUX_LISTE = [{ valeur: 'Out', libelle: 'Émis', teinte: 'envoye' }, { valeur: 'In', libelle: 'Reçu', teinte: 'info' }];
+const vueFlux = (vli_id, vli_nom, filtres) => ({
+  vli_id, vli_nom, vli_contexte: null, vli_partage: 'T', vli_proprietaire: 'admin', vli_groupe: null,
+  definition: {
+    theme: 'fe_flux',
+    source: { mode: 'vue', vue: 'fe_flux', colonne_id: 'id', colonne_type: 'type_element' },
+    filtres,
+    colonnes: [
+      col('numero_flux', 'N° du\nflux', { ...fixe(80), style: { gras: true } }),
+      col('id_plateforme', 'N° de la\nplateforme', { ...fixe(150) }),
+      col('cree_le', 'Créé le', { format: 'date', ...fixe(92), recherche: false }),
+      col('sens', 'Sens', { format: 'pastille', ...fixe(70), options: SENS_FLUX_LISTE }),
+      col('type_flux', 'Type', { ...fixe(150) }),
+      col('numero', 'N° de\nla facture', { ...fixe(120) }),
+      col('tiers', 'Tiers', { ...prop(2, 140) }),
+      col('etat', 'État', { format: 'pastille', ...fixe(100), options: ETATS_FLUX }),
+      col('accuse', 'Accusé', { ...fixe(80) }),
+      col('type_piece', 'Pièce', { ...fixe(110) }),
+      col('numero_piece', 'N° de\nla pièce', { ...fixe(110) }),
+      col('erreur', 'Erreur', { ...prop(2, 120) }),
+      col('syntaxe', 'Format', { ...fixe(80), masquee: true }),
+      col('profil', 'Profil', { ...fixe(90), masquee: true }),
+      col('regle', 'Règle', { ...fixe(80), masquee: true }),
+      col('connecteur', 'Plateforme', { ...fixe(90), masquee: true }),
+      col('essais', 'Essais', { ...fixe(60), recherche: false, masquee: true }),
+      col('depose_le', 'Déposé le', { format: 'date', ...fixe(92), recherche: false, masquee: true }),
+      col('nom', 'Fichier', { ...prop(1.5, 120), masquee: true }),
+    ],
+    segments: [{ colonne: 'etat', titre: 'État' }, { colonne: 'type_flux', titre: 'Type' }],
+    tri: [{ colonne: 'numero_flux', sens: 'desc' }],
+    lignes: 'multi',
+    taille_lot: 100,
+  },
+});
+VUES_LISTE.push(
+  vueFlux(1015, 'Flux : total', []),
+  vueFlux(1016, 'Flux émis', [{ colonne: 'sens', op: '=', valeur: 'Out' }]),
+  vueFlux(1017, 'Flux reçus', [{ colonne: 'sens', op: '=', valeur: 'In' }]),
+);

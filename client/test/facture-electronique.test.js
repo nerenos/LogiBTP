@@ -89,11 +89,11 @@ describe('statuts posés sur une facture reçue (lot 13)', () => {
 
 describe('page et menu de la facturation électronique', () => {
   const app = (inactifs = [], acces = () => true) => ({ moduleActif: (c) => !inactifs.includes(c), acces, peutGererThemes: () => false, estAdmin: () => false, preferences: { get: () => 'auto' }, fenetres: { liste: () => [] } });
-  const ventes = (a) => menus(a).find((m) => m.code === 'ventes').elements().map((e) => e.code);
+  const compta = (a) => menus(a).find((m) => m.code === 'comptabilite').elements().map((e) => e.code);
   it('menu selon le module et le droit', () => {
-    expect(ventes(app())).toContain('facture-electronique');
-    expect(ventes(app([MODULE_FACULTATIF.FACTURE_ELECTRONIQUE]))).not.toContain('facture-electronique');
-    expect(ventes(app([], (n) => n !== 'facture_electronique'))).not.toContain('facture-electronique');
+    expect(compta(app())).toContain('facture-electronique');
+    expect(compta(app([MODULE_FACULTATIF.FACTURE_ELECTRONIQUE]))).not.toContain('facture-electronique');
+    expect(compta(app([], (n) => n !== 'facture_electronique'))).not.toContain('facture-electronique');
   });
   it('nom du fichier téléchargé', () => {
     expect(nomFichier('attachment; filename=FA-1.xml; filename*=UTF-8\'\'FA%201.xml')).toBe('FA 1.xml');
