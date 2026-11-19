@@ -292,6 +292,21 @@ public partial class CdarTests
     }
 
     [Fact]
+    public void Date_de_facture_illisible_ignoree_avec_avertissement()
+    {
+        // Super PDP (bac à sable, 19/11/2026) : MDT-100 à 9 chiffres ; le statut reste lu, la date est écartée.
+        var exemple = File.ReadAllText(Dossier("fnfe", "UC1_F202500003_04-CDV-204_Prise_en_charge.xml"));
+        var altere = Encoding.UTF8.GetBytes(exemple.Replace("<qdt:DateTimeString format=\"102\">20250701</qdt:DateTimeString>",
+            "<qdt:DateTimeString format=\"102\">202610191</qdt:DateTimeString>"));
+        var m = Cdar.Lire(altere);
+        var statut = Assert.Single(m.Accuses.SelectMany(a => a.Statuts));
+        Assert.Null(statut.DateFacture);
+        Assert.Equal("204", statut.Statut);
+        Assert.Contains("MDT-100", Assert.Single(m.Avertissements));
+        Assert.Empty(Cdar.Lire(Encoding.UTF8.GetBytes(exemple)).Avertissements);
+    }
+
+    [Fact]
     public void Lecture_generale_reconnait_un_CDAR_sans_le_lire_comme_facture()
     {
         var cdar = File.ReadAllBytes(Dossier("fnfe", "UC1_F202500003_01-CDV-200_Deposee.xml"));
