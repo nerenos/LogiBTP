@@ -292,7 +292,19 @@ public sealed class BibliothequeReprise
                 Pv = e.PvSource, PvFixe = e.PvImpose && e.PvSource is not null, CoefRemise = 1,
             };
             var r = CalculElement.Calculer(entree, Date);
-            if (!entree.PvFixe && e.PvSource is { } attendu && r.Pv is { } calcule && Math.Abs(calcule - attendu) > Tolerance)
+            var convertie = achat is not null && achat != stock || vente is not null && vente != stock;
+            if (!entree.PvFixe && convertie && e.PvSource is { } brut && r.Pv is { } calculeBrut && Math.Abs(calculeBrut - brut) > Tolerance)
+            {
+                // Unités différentes : la source n'a que des rapports (pas de formule) et ses prix ne sont pas forcément exprimés
+                // dans l'unité de stock ; PA, PV et rapports repris tels quels (coefficient déduit, PV non imposé), à corriger à la main.
+                entree.PvFixe = true;
+                r = CalculElement.Calculer(entree, Date);
+                entree.PvFixe = false;
+                ctx.Rapport.Signaler(NiveauAnomalie.Information, CodeAnomalie.ConversionBrute, $"{e.Origine.Table} {e.Origine.Cle}",
+                    $"{code} : unités {string.Join(", ", new[] { achat, stock, vente }.OfType<string>().Distinct())}, rapports repris bruts "
+                    + $"({string.Join(", ", unites.Select(u => $"{u.Unite} = {u.Formule} {stock}"))}), PA et PV de la source gardés, à vérifier");
+            }
+            else if (!entree.PvFixe && e.PvSource is { } attendu && r.Pv is { } calcule && Math.Abs(calcule - attendu) > Tolerance)
             {
                 entree.PvFixe = true;
                 r = CalculElement.Calculer(entree, Date);

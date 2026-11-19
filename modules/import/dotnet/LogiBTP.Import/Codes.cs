@@ -121,4 +121,8 @@ public static class CodeAnomalie
     public const string ConsommationNonReprise = "REPRISE_CONSOMMATION_NON_REPRISE";
     /// <summary>GED et notes : fichier sans contenu, sans stockage ou sans fiche reprise ; aussi le décompte des contenus distincts.</summary>
     public const string GedNonReprise = "REPRISE_GED_NON_REPRISE";
+    /// <summary>Pièce copie d'une pièce déjà reprise (MDE : commande source d'un marché PMEAFFBASEDOC) : non reprise, rattachée à la copie.</summary>
+    public const string PieceDejaReprise = "REPRISE_PIECE_DEJA_REPRISE";
+    /// <summary>Article à unités différentes (achat, stock, vente) : rapports repris bruts, PA et PV de la source gardés, à vérifier.</summary>
+    public const string ConversionBrute = "REPRISE_CONVERSION_BRUTE";
 }

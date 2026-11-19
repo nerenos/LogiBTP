@@ -5,7 +5,8 @@ import { pairesParCode } from '@logibtp/socle/dictionnaire';
 // (jeu modules/document/tests/echeances/01_echeances.json).
 //
 // Condition de paiement : lignes { pct, delai (jours), base, jour, mode } ; base NET (date + délai), FIN_MOIS (date +
-// délai, puis fin de ce mois), JOUR (date + délai, puis le prochain jour « jour » du mois, le dernier jour si le mois est
+// délai, puis fin de ce mois), FIN_MOIS_JOUR (fin de ce mois, puis le jour « jour » du mois suivant), JOUR (date + délai,
+// puis le prochain jour « jour » du mois, le dernier jour si le mois est
 // plus court). Montants : pourcentage du net à payer arrondi, la dernière échéance prend le reste. Sans ligne : une
 // échéance au comptant. Retenue de garantie : échéance de nature RETENUE sans date (libération à la réception + 1 an).
 
@@ -26,6 +27,14 @@ const finDeMois = (d) => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() +
 export function dateEcheance(dateIso, ligne) {
   const d = new Date(versDate(dateIso).getTime() + (Number(ligne.delai) || 0) * jourMs);
   if (ligne.base === 'FIN_MOIS') return versIso(finDeMois(d));
+  if (ligne.base === 'FIN_MOIS_JOUR') {
+    // Fin de mois le N : fin du mois de (date + délai), puis le jour N du mois suivant (le dernier s'il est plus court).
+    const fin = finDeMois(d);
+    const annee = fin.getUTCFullYear();
+    const mois = fin.getUTCMonth() + 1;
+    const dernier = finDeMois(new Date(Date.UTC(annee, mois, 1))).getUTCDate();
+    return versIso(new Date(Date.UTC(annee, mois, Math.min(Number(ligne.jour) || 1, dernier))));
+  }
   if (ligne.base === 'JOUR') {
     const jour = Number(ligne.jour) || 1;
     const dans = (annee, mois) => new Date(Date.UTC(annee, mois, Math.min(jour, finDeMois(new Date(Date.UTC(annee, mois, 1))).getUTCDate())));

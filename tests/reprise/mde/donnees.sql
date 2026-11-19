@@ -29,16 +29,19 @@ INSERT INTO dbo.PMETVA (CODECATEGORIE, CODE, TAUX, COMPTEV, COMPTEA, LIBELLE, DE
  ('F', '1', 20.00, '44571200', '44566200', 'TVA 20 %', 1),
  ('F', '2', 10.00, '44571100', '44566100', 'TVA 10 %', 0);
 INSERT INTO dbo.APIMODEREGLEMENT (CODE, NOM) VALUES ('CHQ', 'Chèque'), ('VIR', 'Virement'), ('V30', 'Virement 30 jours fin de mois'), ('3X', 'Trois fois'),
- ('L10', 'LCR 30 jours le 10');
--- POUR : pourcentage ; NJ : nombre de jours ; JOUR : jour du mois imposé (0 : aucun) ; MOISENTIER : fin de mois.
+ ('L10', 'LCR 30 jours le 10'), ('FM15', 'Virement 30 j FM le 15');
+-- POUR : pourcentage ; NJ : nombre de jours ; JOUR : jour du mois (0 : aucun) ; TYPEP : C comptant, N net (le JOUR s'il est
+-- donné), F fin de mois, M fin de mois le JOUR ; MODEP : mode de paiement (PMEMODEPAIEMENT.CLE).
+INSERT INTO dbo.PMEMODEPAIEMENT (CLE, NUMORDRE, LIBELLE, ACTIF) VALUES (1, 1, 'Chèque', 1), (2, 2, 'Virement', 1), (3, 3, 'Lettre de change', 1);
 INSERT INTO dbo.APIMODEREGLEMENTL (CODE, LIG, POUR, JOUR, NJ, MODEP, TYPEP, MOISENTIER) VALUES
  ('CHQ', 1, 100, 0, 0, 1, 'C', 0),
- ('VIR', 1, 100, 0, 0, 2, 'V', 0),
- ('V30', 1, 100, 0, 30, 2, 'V', 1),
+ ('VIR', 1, 100, 0, 0, 2, 'N', 0),
+ ('V30', 1, 100, 0, 30, 2, 'F', 1),
  ('3X', 1, 40, 0, 0, 1, 'C', 0),
- ('3X', 2, 30, 0, 30, 1, 'C', 0),
- ('3X', 3, 30, 0, 60, 1, 'C', 0),
- ('L10', 1, 100, 10, 30, 3, 'L', 0);
+ ('3X', 2, 30, 0, 30, 1, 'N', 0),
+ ('3X', 3, 30, 0, 60, 1, 'N', 0),
+ ('L10', 1, 100, 10, 30, 3, 'N', 0),
+ ('FM15', 1, 100, 15, 30, 2, 'M', 0);
 INSERT INTO dbo.APIPAYS (CODE, NOM, CODEDEVISE) VALUES ('FR', 'France', 'EUR'), ('BE', 'Belgique', 'EUR');
 INSERT INTO dbo.APICIVILITE (LIBELLE, FORMEJURIDIQUE) VALUES ('Monsieur', 0), ('Madame', 0), ('SARL', 1), ('SCI', 1);
 INSERT INTO dbo.CMP_PLANCP (COMPTE, NOM, FAMILLE) VALUES
@@ -248,7 +251,9 @@ INSERT INTO dbo.PMEAFFBASEDOCLIG (CLE, CLEDOC, CLELIGINIT, IDLIG, IDPARENT, NUMO
  (6106, 601, 1106, 6, 1, 3, 'E', 0, 0, NULL, 4, 'Échafaudage', 100, 1.1, 1.3, 150, 0, '1', 1, 'U', 0, 150, 1, 1),
  (6201, 602, NULL, 1, 0, 1, 'E', 0, 0, NULL, 4, 'Plus-value fenêtre', 80, 1, 1.25, 100, 0, '1', 1, 'U', 0, 100, 0, 1);
 INSERT INTO dbo.PMEDOCCDECLI (CLEDOC, CODE, CLEETATDOC, DATEDOC, LIBELLE, CODEAFFAIRE, CODECLIENT, CODECATEGORIE, MTHT, MTPOSTESHT, MTPOSTESTTC, MTTTC) VALUES
- (301, 'CC000001', NULL, '2024-02-01', 'Commande Tilleuls', 'AF001', 'C001', 'F', 200, 50, 0, 300);
+ (301, 'CC000001', NULL, '2024-02-01', 'Commande Tilleuls', 'AF001', 'C001', 'F', 200, 50, 0, 300),
+ -- Copie exacte de l'avenant MB000002 du marché (même numéro) : reprise une seule fois, par le marché.
+ (302, 'MB000002', NULL, '2024-03-15', 'Avenant fenêtre', 'AF001', 'C001', 'F', 100, 0, 0, 120);
 INSERT INTO dbo.PMEDOCCDECLILIG (CLE, CLEDOC, IDLIG, IDPARENT, NUMORDRE, TYPELIG, NIVCOMPO, CLENATURE, LIBELLE, DEBOURSE, COEFFG, COEFBEN, PV,
   REMISE, CODETVA, QUANTITE, UNITE, MONTANTHT, PVIMPOSE) VALUES
  (3001, 301, 1, 0, 1, 'E', 0, 4, 'Prestation', 100, 1, 2, 200, 0, '1', 1, 'U', 200, 0);

@@ -198,17 +198,10 @@
       ]
     },
     "mode_paiement": {
-      "description": "Type de paiement d'une ligne de condition (APIMODEREGLEMENTL.TYPEP) vers le mode de règlement ; le mode du tiers est celui de la première ligne. Lettres autres que C et V à confirmer sur une base réelle",
-      "colonne": "APIMODEREGLEMENTL.TYPEP",
+      "description": "Mode de paiement MDE (PMEMODEPAIEMENT.CLE, cité par APIMODEREGLEMENTL.MODEP) vers le mode de règlement ; le mode d'une condition est celui de sa première ligne ; sans entrée pour la clé : mode rapproché par le libellé de PMEMODEPAIEMENT (créé s'il est inconnu). TYPEP n'est pas le mode mais le type d'échéance (N net, F fin de mois, M fin de mois le, C comptant), traité sans table",
+      "colonne": "PMEMODEPAIEMENT.CLE",
       "cibles": ["MODE_REGLEMENT"],
-      "entrees": [
-        { "source": "C", "cible": "CHEQUE" },
-        { "source": "V", "cible": "VIREMENT" },
-        { "source": "L", "cible": "LCR" },
-        { "source": "P", "cible": "PRELEVEMENT" },
-        { "source": "E", "cible": "ESPECES" },
-        { "source": "B", "cible": "CB" }
-      ]
+      "entrees": []
     },
     "civilite": {
       "description": "Civilité d'une personne physique (APICIVILITE, FORMEJURIDIQUE = 0) vers la civilité d'un individu ; les formes juridiques (FORMEJURIDIQUE = 1) vont sur per_forme_libelle sans table",

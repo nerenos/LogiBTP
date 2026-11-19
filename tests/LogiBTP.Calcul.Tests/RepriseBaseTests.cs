@@ -503,6 +503,10 @@ public class RepriseBaseTests
             // Marché : commande de base de PMEAFFBASEDOC (validée, verrouillée), plus le devis initial du chantier.
             Assert.Equal(1L, await Compter($"SELECT count(*) FROM marche m JOIN {Pieces} ON d.ent_id = m.mar_ent_id WHERE m.mar_code = 'M-CH001' AND d.ent_numero = 'MB000001' AND t.tyd_code = 'V_COMMANDE' AND s.std_code = 'VALIDE' AND ent_verrouille AND ent_total_ht = 598.75"));
             Assert.Equal((2, 2, 0), Volume(r, PiecesVenteMde.MarcheBase));
+            // Commande copie exacte d'une pièce du marché (même numéro) : reprise une seule fois, par le marché.
+            Assert.Contains(r.Anomalies, a => a.Code == CodeAnomalie.PieceDejaReprise && a.Emplacement == "PMEDOCCDECLI 302");
+            Assert.Equal((2, 1, 1), Volume(r, "PMEDOCCDECLI"));
+            Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Pieces} WHERE t.tyd_code = 'V_COMMANDE' AND ent_numero = 'MB000002'"));
             Assert.Equal(2L, await Compter("SELECT cnu_dernier_numero FROM compteur_numero c JOIN type_document t ON t.tyd_id = c.cnu_tyd_id WHERE t.tyd_code = 'V_DEVIS' AND cnu_exercice = 2024"));
             Assert.Equal(8L, await Compter("SELECT count(*) FROM document_origine WHERE dor_type = 'IMPORT' AND dor_format = 'MDE' AND dor_reference LIKE 'PMEDOC%'"));
         }
@@ -646,11 +650,11 @@ public class RepriseBaseTests
             Assert.Equal(0L, await b.CompterAsync("SELECT count(*) FROM element WHERE ele_code = 'VIEUX'"));
             var v = r.Volumes.Single(x => x.Table == "PMEELEMENT");
             Assert.Equal((7, 6, 1), (v.Lues, v.Ecrites, v.Ecartees));
-            // Article géré en stock : RTF en HTML, unités d'achat et de vente converties, perte gardée, PV source imposé.
+            // Article géré en stock : RTF en HTML, unités d'achat et de vente converties : rapports bruts, PA et PV source gardés sans imposer le PV, signalé.
             Assert.Equal(1L, await Element("CIM35", """
                 e.ele_gestion = 'STOCK' AND e.ele_unt_stock = 'kg' AND e.ele_unt_achat = 'u' AND e.ele_unt_vente = 'kg'
                 AND e.ele_unites @> '[{"unite": "u", "formule": "35"}, {"unite": "ens", "formule": "350"}]'
-                AND e.ele_pa = 0.2 AND e.ele_pv = 0.2772 AND e.ele_pv_fixe AND e.ele_tva_code = 'T20' AND e.ele_cpt_code = '704000'
+                AND e.ele_pa = 0.2 AND e.ele_pv = 0.2772 AND NOT e.ele_pv_fixe AND e.ele_tva_code = 'T20' AND e.ele_cpt_code = '704000'
                 AND e.ele_proprietes = '{"coef_perte": 1.05}' AND e.ele_libelle_html = '<b>Ciment</b> CEM II à la palette'
                 AND e.ele_description_html = 'Sac de 35 kg' AND e.x_marque = 'Vicat' AND e.ele_code_barre = '3700000000017'
                 AND e.ele_nat_id = (SELECT nat_id FROM nature_element WHERE nat_code = 'MAT')
@@ -670,7 +674,8 @@ public class RepriseBaseTests
             Assert.Equal(1L, await Element("AMUR", """
                 e.ele_pv_fixe AND e.ele_pv = 70 AND e.ele_composition->'lignes' @> '[{"lig_proprietes": {"element": {"code": "MUR20"}}}]'
                 """));
-            Assert.Equal(["PMEELEMENT AMUR", "PMEELEMENT CIM35"],
+            Assert.Contains(r.Anomalies, a => a.Code == CodeAnomalie.ConversionBrute && a.Emplacement == "PMEELEMENT CIM35");
+            Assert.Equal(["PMEELEMENT AMUR"],
                 r.Anomalies.Where(a => a.Code == CodeAnomalie.PrixImpose && a.Emplacement!.StartsWith("PMEELEMENT", StringComparison.Ordinal)).Select(a => a.Emplacement).Order(StringComparer.Ordinal));
             // Tarifs fournisseurs : principal (fournisseur principal), prix public remisé, fournisseur repris.
             Assert.Equal(2L, await b.CompterAsync("SELECT count(*) FROM tarif_fournisseur t JOIN element e ON e.ele_id = t.tfo_ele_id WHERE e.ele_code = 'CIM35'"));
@@ -765,12 +770,17 @@ public class RepriseBaseTests
             Assert.Equal(6L, await b.CompterAsync("SELECT count(*) FROM taux_tva"));
             Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM taux_tva WHERE ttv_code = 'T20' AND ttv_cpt_collectee IS NOT NULL"));
             Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM compte_comptable WHERE cpt_code = '44571200' AND cpt_type = 'TVA'"));
-            // Conditions : comptant et 30 jours fin de mois rapprochées, trois fois et LCR le 10 créées.
+            // Conditions : comptant et 30 jours fin de mois rapprochées, trois fois, LCR le 10 (net le) et fin de mois le 15 créées.
             Assert.Equal("COMPTANT", r.Correspondances["condition_paiement"]["CHQ"]);
             Assert.Equal("30JFM", r.Correspondances["condition_paiement"]["V30"]);
             Assert.Equal(1L, await b.CompterAsync("""SELECT count(*) FROM condition_paiement WHERE cpa_code = '3X' AND jsonb_array_length(cpa_lignes) = 3"""));
             Assert.Equal(1L, await b.CompterAsync("""SELECT count(*) FROM condition_paiement WHERE cpa_code = 'L10' AND cpa_lignes @> '[{"base":"JOUR","jour":10,"delai":30}]'"""));
-            Assert.Equal("LCR", r.Correspondances["mode_paiement"]["L"]);
+            // TYPEP M : fin de mois le 15 (date + 30 jours, fin du mois, puis le 15 suivant).
+            Assert.Equal(1L, await b.CompterAsync("""SELECT count(*) FROM condition_paiement WHERE cpa_code = 'FM15' AND cpa_lignes @> '[{"base":"FIN_MOIS_JOUR","jour":15,"delai":30}]'"""));
+            // Modes de paiement (PMEMODEPAIEMENT, cités par MODEP) : rapprochés par le libellé, sinon créés.
+            Assert.Equal("CHEQUE", r.Correspondances["mode_reglement"]["Chèque"]);
+            Assert.Equal("VIREMENT", r.Correspondances["mode_reglement"]["Virement"]);
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM mode_reglement WHERE mre_libelle = 'Lettre de change'"));
             Assert.Equal("M.", r.Correspondances["civilite"]["Monsieur"]);
             // Paramétrage comptable : journaux, collectifs, exigibilité, analytique.
             Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM type_comptable WHERE tco_code = 'VENTE' AND tco_journal = 'VE'"));

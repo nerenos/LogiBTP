@@ -11,7 +11,7 @@ public sealed record EcheanceCalculee(int Rang, DateOnly? Date, decimal Montant,
 /// <summary>
 /// Échéancier d'une pièce (echeances.js côté client, jeu modules/document/tests/echeances/01_echeances.json) : base NET
 /// (date + délai), FIN_MOIS (puis fin du mois), JOUR (puis le prochain jour donné, le dernier du mois s'il est plus
-/// court) ; pourcentages arrondis, la dernière échéance prend le reste ; sans ligne, comptant ; retenue : échéance
+/// court), FIN_MOIS_JOUR (puis fin du mois, puis le jour donné du mois suivant : « fin de mois le 15 ») ; pourcentages arrondis, la dernière échéance prend le reste ; sans ligne, comptant ; retenue : échéance
 /// RETENUE sans date.
 /// </summary>
 public static class Echeances
@@ -21,6 +21,11 @@ public static class Echeances
         var d = date.AddDays(l.Delai);
         static DateOnly FinDeMois(DateOnly x) => new(x.Year, x.Month, DateTime.DaysInMonth(x.Year, x.Month));
         if (l.Base == "FIN_MOIS") return FinDeMois(d);
+        if (l.Base == "FIN_MOIS_JOUR")
+        {
+            var suivant = FinDeMois(d).AddDays(1);
+            return new DateOnly(suivant.Year, suivant.Month, Math.Min(l.Jour ?? 1, DateTime.DaysInMonth(suivant.Year, suivant.Month)));
+        }
         if (l.Base == "JOUR")
         {
             var jour = l.Jour ?? 1;

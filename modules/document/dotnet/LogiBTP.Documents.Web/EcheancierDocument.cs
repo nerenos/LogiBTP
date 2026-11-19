@@ -18,7 +18,7 @@ public sealed class EcheancierDocument<TDoc, TLigne, TComplet>(DocumentDbContext
     where TComplet : DocumentComplet<TDoc, TLigne>, new()
 {
     private const string CleDefauts = "conditions_paiement";
-    private static readonly HashSet<string> Bases = ["NET", "FIN_MOIS", "JOUR"];
+    private static readonly HashSet<string> Bases = ["NET", "FIN_MOIS", "JOUR", "FIN_MOIS_JOUR"];
 
     private static List<LigneCondition> Lignes(ConditionPaiement c) =>
         c.CpaLignes.Deserialize<List<LigneCondition>>(JsonCalcul.Options) ?? [];
@@ -46,8 +46,8 @@ public sealed class EcheancierDocument<TDoc, TLigne, TComplet>(DocumentDbContext
             foreach (var l in c.Lignes)
             {
                 if (l.Pct <= 0 || l.Delai < 0) erreurs.Add($"{c.Code} : pourcentage positif et délai positif ou nul");
-                if (!Bases.Contains(l.Base)) erreurs.Add($"{c.Code} : base {l.Base} inconnue (NET, FIN_MOIS, JOUR)");
-                if (l.Base == "JOUR" && l.Jour is not (>= 1 and <= 31)) erreurs.Add($"{c.Code} : jour du mois entre 1 et 31");
+                if (!Bases.Contains(l.Base)) erreurs.Add($"{c.Code} : base {l.Base} inconnue (NET, FIN_MOIS, JOUR, FIN_MOIS_JOUR)");
+                if (l.Base is "JOUR" or "FIN_MOIS_JOUR" && l.Jour is not (>= 1 and <= 31)) erreurs.Add($"{c.Code} : jour du mois entre 1 et 31");
             }
         }
         if (conditions.GroupBy(c => c.Code).Any(g => g.Count() > 1)) erreurs.Add("Codes de condition en double");
