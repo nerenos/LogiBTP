@@ -133,6 +133,6 @@ public static class CodeAnomalie
     public const string PieceDejaReprise = "REPRISE_PIECE_DEJA_REPRISE";
     /// <summary>Article à unités différentes (achat, stock, vente) : rapports repris bruts, PA et PV de la source gardés, à vérifier.</summary>
     public const string ConversionBrute = "REPRISE_CONVERSION_BRUTE";
-    /// <summary>Unité d'une donnée technique MDE renseignée : valeur lue dans l'unité par défaut (m, m², kg), à vérifier.</summary>
+    /// <summary>Unité d'une donnée technique MDE autre que M ou K : valeur lue dans l'unité par défaut (m, m², kg), à vérifier.</summary>
     public const string UniteTechnique = "REPRISE_UNITE_TECHNIQUE";
 }

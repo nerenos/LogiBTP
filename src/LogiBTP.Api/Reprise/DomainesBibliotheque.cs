@@ -188,7 +188,7 @@ public sealed class BibliothequeMde : IDomaineReprise
     /// <summary>
     /// Données techniques (PMEELEMENTARTTEC) par unité de stock : longueur, largeur, hauteur en m (en mm dans LogiBTP), poids
     /// en kg, VOLUME en m² (surface, défaut : MDE s'en sert comme d'une surface) ou en m³ selon l'option de la reprise.
-    /// Unités UNITE* renseignées : non converties (valeurs lues dans l'unité par défaut), signalées.
+    /// Unités UNITE* : M (mètre) et K (kilo) sont les unités par défaut ; tout autre code, non converti, est signalé.
     /// </summary>
     private static async Task TechniquesAsync(ContexteReprise ctx, long eleId, LigneSource t, CancellationToken ct)
     {
@@ -196,8 +196,8 @@ public sealed class BibliothequeMde : IDomaineReprise
         volume.Lues++;
         decimal? Valeur(string c) => t.Decimal(c) is { } v && v != 0 ? v : null;
         decimal? Mm(string c) => Valeur(c) is { } v ? ArrondiCalcul.Arr6(v * 1000) : null;
-        foreach (var u in new[] { "UNITELONG", "UNITELARG", "UNITEHAUT", "UNITEPOIDS", "UNITEVOL" })
-            if (t.Texte(u) is { } code)
+        foreach (var (u, defaut) in new[] { ("UNITELONG", "M"), ("UNITELARG", "M"), ("UNITEHAUT", "M"), ("UNITEPOIDS", "K"), ("UNITEVOL", "M") })
+            if (t.Texte(u) is { } code && !code.Equals(defaut, StringComparison.OrdinalIgnoreCase))
                 ctx.Rapport.Signaler(NiveauAnomalie.Information, CodeAnomalie.UniteTechnique, $"{Technique} {t.Texte("CODEART")}",
                     $"{u} = « {code} » : valeur reprise dans l'unité par défaut (m, m², kg), à vérifier");
         var (longueur, largeur, hauteur, poids, vol) = (Mm("LONGUEUR"), Mm("LARGEUR"), Mm("HAUTEUR"), Valeur("POIDS"), Valeur("VOLUME"));

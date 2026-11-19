@@ -63,7 +63,7 @@ Classes du cœur dans `src/LogiBTP.Api/Reprise/` ; un domaine par source, même 
   un devis d'origine est gardé et lié à la pièce du marché.
 - MDE, données techniques (`PMEELEMENTARTTEC`, par unité de stock) : longueur, largeur, hauteur en m (mm dans LogiBTP),
   poids en kg, `VOLUME` en surface (m², défaut) ou en volume (m³) selon l'option de la reprise (écran, `--volume-mde`) ;
-  unité `UNITE*` renseignée non convertie, signalée `UniteTechnique`.
+  unités `UNITE*` : M (mètre) et K (kilo) par défaut, tout autre code non converti et signalé `UniteTechnique`.
 - Articles à unités différentes (achat, stock, vente) : rapports de la source repris bruts (RATIOSTOCK direct, RATIOVENTE
   inversé : unités de vente par unité de stock), PA et PV gardés (coefficient
   déduit, PV non imposé), signalés `ConversionBrute` pour correction manuelle.

@@ -667,7 +667,7 @@ public class RepriseBaseTests
                 e.ele_longueur = 12100 AND e.ele_largeur = 100 AND e.ele_hauteur = 100 AND e.ele_poids = 141.57 AND e.ele_surface = 4.84 AND e.ele_volume IS NULL
                 """));
             Assert.Equal(1L, await Element("CIM35", "e.ele_poids = 1"));
-            Assert.Contains(r.Anomalies, a => a.Code == CodeAnomalie.UniteTechnique && a.Emplacement == "PMEELEMENTARTTEC CIM35");
+            Assert.Equal(["PMEELEMENTARTTEC CIM35"], r.Anomalies.Where(a => a.Code == CodeAnomalie.UniteTechnique).Select(a => a.Emplacement));
             Assert.Equal((2, 2, 0), Volume(r, BibliothequeMde.Technique));
             // Article géré en stock : RTF en HTML, unités d'achat et de vente converties : rapports bruts, PA et PV source gardés sans imposer le PV, signalé.
             Assert.Equal(1L, await Element("CIM35", """
