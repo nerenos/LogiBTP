@@ -17,7 +17,7 @@ GO
 -- Devises : MDE code souvent l'euro « E » (reconnu d'office) ; « EU » est l'euro par son code ISO (Q10).
 INSERT INTO dbo.APIDEVISEE (CODE, NOM, SYMBOLE, VALEURO, CODEISO) VALUES ('EU', 'Euro', NULL, 1, 'EUR');
 GO
-INSERT INTO dbo.PMEUNITEMESURE (UNITE, NBDEC) VALUES ('U', 0), ('M2', 2), ('ML', 2), ('H', 2), ('ENS', 0), ('KG', 3);
+INSERT INTO dbo.PMEUNITEMESURE (UNITE, NBDEC) VALUES ('U', 0), ('M2', 2), ('ML', 2), ('H', 2), ('ENS', 0), ('KG', 3), ('BAR', 0);
 INSERT INTO dbo.CATEGORIEACHATVENTE (CODE, LIBELLE, TYPE, JOURNALVENTE, JOURNALACHAT)
 VALUES ('F', 'France', 'N', 'VT', 'HA'), ('A', 'Autoliquidation', 'A', 'VT', 'HA');
 INSERT INTO dbo.TVA (CODECATEGORIE, CODE, TAUX, COMPTEV, COMPTEA, LIBELLE, DEFAUT) VALUES
@@ -168,6 +168,8 @@ INSERT INTO dbo.PMEELEMENT (CODE, CODEBIBLIO, REFERENCE, TYPEELEM, CLENATURE, LI
   0, 0, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, NULL, NULL, '', NULL, NULL, 0, NULL, 0),
  ('VIEUX', 'GEN', '', 'F', 2, 'Ancien article', '', NULL, NULL, NULL, 2, 0, 2, 1, 2, 1, 2, 0, NULL, NULL, 'U', NULL, NULL, 'F', '1', NULL,
   0, NULL, 1),
+ ('CHA-C100X4', 'GEN', '', 'F', 2, 'Cornière 100x4', '', NULL, NULL, NULL, 8.10, 0, 8.10, 1, 8.10, 1, 1.00, 0, 'ML', 'KG', 'BAR',
+  0.082645, 141.57, 'F', '1', NULL, 0, NULL, 0),
  ('ART1', 'E-1', '', 'F', 2, 'Article éditeur', '', NULL, NULL, NULL, 5, 0, 5, 1, 5, 1, 5, 0, NULL, NULL, 'U', NULL, NULL, 'F', '2', NULL,
   0, NULL, 0),
  ('MUR20', 'GEN', '', 'OT', 4, 'Mur parpaing 20', '', NULL, 'MACO', NULL, 0, 0, 21.2, 1.15, 24.38, 1.25, 30.475, 0, NULL, NULL, 'M2',

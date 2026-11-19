@@ -124,7 +124,9 @@ public sealed class BibliothequeMde : IDomaineReprise
             var vente = Unite(l.Texte("UNITEVENTE"));
             var conversions = new List<(string, decimal)>();
             if (achat is not null && l.Decimal("RATIOSTOCK") is > 0 and var rs) conversions.Add((achat, rs));
-            if (vente is not null && l.Decimal("RATIOVENTE") is > 0 and var rv) conversions.Add((vente, rv));
+            // RATIOSTOCK : unités de stock pour 1 unité d'achat (sens de LogiBTP) ; RATIOVENTE : unités de vente pour 1 unité
+            // de stock (1 barre = 141,57 kg), donc inversé (1 kg = 0,007064 barre).
+            if (vente is not null && l.Decimal("RATIOVENTE") is > 0 and var rv) conversions.Add((vente, ArrondiCalcul.Arr6(1 / rv)));
             foreach (var u in unitesVente.GetValueOrDefault(cle) ?? [])
                 if (Unite(u.Texte("UNITE")) is { } uv && u.Decimal("EQUIVSTOCK") is > 0 and var eq) conversions.Add((uv, eq));
 

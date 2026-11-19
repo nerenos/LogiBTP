@@ -60,7 +60,8 @@ Classes du cœur dans `src/LogiBTP.Api/Reprise/` ; un domaine par source, même 
 - MDE, marché : `PMEAFFBASEDOC` repris avant les pièces ; une commande copie exacte d'une pièce du marché (même numéro,
   ou pièce d'origine `CLEDOCINIT`) n'est pas reprise une seconde fois (`PieceDejaReprise`, renvoie à la pièce du marché) ;
   un devis d'origine est gardé et lié à la pièce du marché.
-- Articles à unités différentes (achat, stock, vente) : rapports de la source repris bruts, PA et PV gardés (coefficient
+- Articles à unités différentes (achat, stock, vente) : rapports de la source repris bruts (RATIOSTOCK direct, RATIOVENTE
+  inversé : unités de vente par unité de stock), PA et PV gardés (coefficient
   déduit, PV non imposé), signalés `ConversionBrute` pour correction manuelle.
 - Tout repris sauf les éléments en sommeil ; valeurs obligatoires absentes posées par défaut et listées (valeurs
   forcées) ; dates ≤ 1900 et chaînes vides lues comme absentes.

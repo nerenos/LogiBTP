@@ -646,10 +646,16 @@ public class RepriseBaseTests
             Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM nature_element WHERE nat_code = 'DSP' AND nat_rgn_code IS NULL"));
             Assert.Contains(r.Anomalies, a => a.Code == ErreurCorrespondance.SansCible && a.Emplacement == "PMENATUREELEMENT 5");
             // Élément en sommeil écarté (Q2).
-            Assert.Equal(6L, await b.CompterAsync("SELECT count(*) FROM element"));
+            Assert.Equal(7L, await b.CompterAsync("SELECT count(*) FROM element"));
             Assert.Equal(0L, await b.CompterAsync("SELECT count(*) FROM element WHERE ele_code = 'VIEUX'"));
             var v = r.Volumes.Single(x => x.Table == "PMEELEMENT");
-            Assert.Equal((7, 6, 1), (v.Lues, v.Ecrites, v.Ecartees));
+            Assert.Equal((8, 7, 1), (v.Lues, v.Ecrites, v.Ecartees));
+            // Achat au mètre, stock à la barre, vente au kilo : RATIOSTOCK direct (1 ml = 0,082645 barre), RATIOVENTE inversé
+            // (1 barre = 141,57 kg, donc 1 kg = 0,007064 barre) ; PV source gardé.
+            Assert.Equal(1L, await Element("CHA-C100X4", """
+                e.ele_unites @> '[{"formule": "0.082645"}, {"formule": "0.007064"}]' AND e.ele_unt_vente IS NOT NULL AND e.ele_pv = 1 AND NOT e.ele_pv_fixe
+                """));
+            Assert.Contains(r.Anomalies, a => a.Code == CodeAnomalie.ConversionBrute && a.Emplacement == "PMEELEMENT CHA-C100X4");
             // Article géré en stock : RTF en HTML, unités d'achat et de vente converties : rapports bruts, PA et PV source gardés sans imposer le PV, signalé.
             Assert.Equal(1L, await Element("CIM35", """
                 e.ele_gestion = 'STOCK' AND e.ele_unt_stock = 'kg' AND e.ele_unt_achat = 'u' AND e.ele_unt_vente = 'kg'
