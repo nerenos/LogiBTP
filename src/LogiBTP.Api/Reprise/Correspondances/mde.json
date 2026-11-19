@@ -265,19 +265,17 @@
       ]
     },
     "regroupement_nature": {
-      "description": "Type d'élément d'une nature MDE (PMENATUREELEMENT.TYPEELEM) vers le regroupement de la nature créée (lot 8) ; codes à confirmer sur une base réelle (SELECT DISTINCT TYPEELEM), une valeur inconnue crée la nature sans regroupement",
+      "description": "Type d'élément d'une nature MDE (PMENATUREELEMENT.TYPEELEM) vers le regroupement de la nature créée (lot 8) : regroupements fixes de MDE (confirmés le 19/11/2026) ; une valeur inconnue crée la nature sans regroupement",
       "colonne": "PMENATUREELEMENT.TYPEELEM",
       "cibles": ["REGROUPEMENT_NATURE"],
       "entrees": [
-        { "source": "MO", "cible": "MO" },
-        { "source": "MA", "cible": "MATERIAUX", "note": "Matériaux, fournitures : à confirmer" },
-        { "source": "FO", "cible": "MATERIAUX", "note": "Fournitures : à confirmer" },
-        { "source": "MT", "cible": "ENGIN", "note": "Matériel : à confirmer" },
-        { "source": "LO", "cible": "ENGIN", "note": "Location : à confirmer" },
-        { "source": "ST", "cible": "SOUS_TRAITANCE" },
-        { "source": "PR", "cible": "PRESTATION", "note": "Prestations : à confirmer" },
-        { "source": "DI", "cible": "PRESTATION", "note": "Divers : à confirmer" },
-        { "source": "OU", "cible": "VENTE", "note": "Ouvrages : à confirmer" }
+        { "source": "F", "cible": "MATERIAUX", "note": "Fournitures et matériaux" },
+        { "source": "M", "cible": "MO", "note": "Main-d'œuvre" },
+        { "source": "A", "cible": "ENGIN", "note": "Matériel" },
+        { "source": "P", "cible": "PRESTATION", "note": "Prestations" },
+        { "source": "S", "cible": "SOUS_TRAITANCE", "note": "Sous-traitance" },
+        { "source": "OT", "cible": "VENTE", "note": "Ouvrages" },
+        { "source": "OD", "cible": "VENTE", "note": "Ouvrages" }
       ]
     },
     "type_element": {
@@ -287,7 +285,8 @@
       "entrees": [
         { "source": "TX", "cible": "TEXTE", "note": "Texte de bibliothèque (modèle de texte, Q7) : à confirmer" },
         { "source": "LI", "cible": "TEXTE", "note": "Libellé : à confirmer" },
-        { "source": "OU", "cible": "OUVRAGE", "note": "Ouvrage sans composante : à confirmer" }
+        { "source": "OT", "cible": "OUVRAGE", "note": "Ouvrage (regroupement fixe de MDE) sans composante" },
+        { "source": "OD", "cible": "OUVRAGE", "note": "Ouvrage (regroupement fixe de MDE) sans composante" }
       ]
     },
     "fonction_intervenant": {

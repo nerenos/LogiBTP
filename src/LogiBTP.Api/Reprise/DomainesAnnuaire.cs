@@ -19,37 +19,46 @@ public sealed class AnnuaireMde : IDomaineReprise
 
     public const string TableFusion = "COMM_TIERS";
 
+    /// <summary>
+    /// Rôle fixe de chaque table (eTypeTiers : A architecte, G chargé d'affaires, C client, F fournisseur, S sous-traitant),
+    /// pris quand la colonne TYPETIERS de la table est vide ; la fiche COMM_TIERS est jointe sur ce rôle.
+    /// </summary>
+    private static readonly Dictionary<string, string> RoleTable = new(StringComparer.Ordinal)
+    {
+        ["PMECLIENT"] = "C", ["PMEFOURNISSEUR"] = "F", ["PMESOUSTRAITANT"] = "S", ["PMEARCHITECTE"] = "A", ["PMECHARGEAFFAIRE"] = "G",
+    };
+
     private static readonly (string Table, string Requete)[] Roles =
     [
         ("PMECLIENT", """
             SELECT C.*, T.CODE AS T_CODE, T.COMPTE AS T_COMPTE, T.COMPTETIERS AS T_COMPTETIERS, T.NII AS T_NII, T.DEVISE AS T_DEVISE,
                    T.MODEREG AS T_MODEREG, T.EXCLURERELANCE AS T_EXCLURERELANCE, T.ENCOURSAUTORISE AS T_ENCOURS,
                    T.SITEINTERNET AS T_SITE, T.IDADRFACTURATION AS T_ADRFAC, T.IDADRLIVRAISON AS T_ADRLIV
-            FROM PMECLIENT C LEFT JOIN COMM_TIERS T ON T.CODEGESTION = C.CODE AND T.TYPETIERS = C.TYPETIERS ORDER BY C.CODE
+            FROM PMECLIENT C LEFT JOIN COMM_TIERS T ON T.CODEGESTION = C.CODE AND T.TYPETIERS = 'C' ORDER BY C.CODE
             """),
         ("PMEFOURNISSEUR", """
             SELECT C.*, T.CODE AS T_CODE, T.COMPTE AS T_COMPTE, T.COMPTETIERS AS T_COMPTETIERS, T.NII AS T_NII, T.DEVISE AS T_DEVISE,
                    T.MODEREG AS T_MODEREG, T.EXCLURERELANCE AS T_EXCLURERELANCE, T.ENCOURSAUTORISE AS T_ENCOURS,
                    T.SITEINTERNET AS T_SITE, T.IDADRFACTURATION AS T_ADRFAC, T.IDADRLIVRAISON AS T_ADRLIV
-            FROM PMEFOURNISSEUR C LEFT JOIN COMM_TIERS T ON T.CODEGESTION = C.CODE AND T.TYPETIERS = C.TYPETIERS ORDER BY C.CODE
+            FROM PMEFOURNISSEUR C LEFT JOIN COMM_TIERS T ON T.CODEGESTION = C.CODE AND T.TYPETIERS = 'F' ORDER BY C.CODE
             """),
         ("PMESOUSTRAITANT", """
             SELECT C.*, T.CODE AS T_CODE, T.COMPTE AS T_COMPTE, T.COMPTETIERS AS T_COMPTETIERS, T.NII AS T_NII, T.DEVISE AS T_DEVISE,
                    T.MODEREG AS T_MODEREG, T.EXCLURERELANCE AS T_EXCLURERELANCE, T.ENCOURSAUTORISE AS T_ENCOURS,
                    T.SITEINTERNET AS T_SITE, T.IDADRFACTURATION AS T_ADRFAC, T.IDADRLIVRAISON AS T_ADRLIV
-            FROM PMESOUSTRAITANT C LEFT JOIN COMM_TIERS T ON T.CODEGESTION = C.CODE AND T.TYPETIERS = C.TYPETIERS ORDER BY C.CODE
+            FROM PMESOUSTRAITANT C LEFT JOIN COMM_TIERS T ON T.CODEGESTION = C.CODE AND T.TYPETIERS = 'S' ORDER BY C.CODE
             """),
         ("PMEARCHITECTE", """
             SELECT C.*, T.CODE AS T_CODE, T.COMPTE AS T_COMPTE, T.COMPTETIERS AS T_COMPTETIERS, T.NII AS T_NII, T.DEVISE AS T_DEVISE,
                    T.MODEREG AS T_MODEREG, T.EXCLURERELANCE AS T_EXCLURERELANCE, T.ENCOURSAUTORISE AS T_ENCOURS,
                    T.SITEINTERNET AS T_SITE, T.IDADRFACTURATION AS T_ADRFAC, T.IDADRLIVRAISON AS T_ADRLIV
-            FROM PMEARCHITECTE C LEFT JOIN COMM_TIERS T ON T.CODEGESTION = C.CODE AND T.TYPETIERS = C.TYPETIERS ORDER BY C.CODE
+            FROM PMEARCHITECTE C LEFT JOIN COMM_TIERS T ON T.CODEGESTION = C.CODE AND T.TYPETIERS = 'A' ORDER BY C.CODE
             """),
         ("PMECHARGEAFFAIRE", """
             SELECT C.*, T.CODE AS T_CODE, T.COMPTE AS T_COMPTE, T.COMPTETIERS AS T_COMPTETIERS, T.NII AS T_NII, T.DEVISE AS T_DEVISE,
                    T.MODEREG AS T_MODEREG, T.EXCLURERELANCE AS T_EXCLURERELANCE, T.ENCOURSAUTORISE AS T_ENCOURS,
                    T.SITEINTERNET AS T_SITE, T.IDADRFACTURATION AS T_ADRFAC, T.IDADRLIVRAISON AS T_ADRLIV
-            FROM PMECHARGEAFFAIRE C LEFT JOIN COMM_TIERS T ON T.CODEGESTION = C.CODE AND T.TYPETIERS = C.TYPETIERS ORDER BY C.CODE
+            FROM PMECHARGEAFFAIRE C LEFT JOIN COMM_TIERS T ON T.CODEGESTION = C.CODE AND T.TYPETIERS = 'G' ORDER BY C.CODE
             """),
     ];
 
@@ -72,10 +81,11 @@ public sealed class AnnuaireMde : IDomaineReprise
             {
                 if (l.Texte("CODE") is not { } code) continue;
                 var ou = $"{table} {code}";
-                var role = ctx.Correspondre(TablesCorrespondance.TypeTiers, l.Texte("TYPETIERS") ?? "", ou);
+                var role = ctx.Correspondre(TablesCorrespondance.TypeTiers, l.Texte("TYPETIERS")?.Trim() is { Length: > 0 } tt ? tt : RoleTable[table], ou);
                 if (l.Texte("T_DEVISE") is { } devise && !DevisesMde.EstEuro(euro, devise))
                     ctx.Rapport.Signaler(NiveauAnomalie.Bloquant, CodeAnomalie.DeviseEtrangere, ou, $"Tiers en devise {devise} : la reprise se fait en euros (Q10)");
-                if (l.Texte("T_CODE") is null)
+                // Un architecte peut n'avoir que sa fiche PMEARCHITECTE (code, activité, note) : reprise sans avertissement.
+                if (l.Texte("T_CODE") is null && table != "PMEARCHITECTE")
                     ctx.Rapport.Signaler(NiveauAnomalie.Avertissement, CodeAnomalie.ValeurInconnue, ou, "Tiers sans fiche COMM_TIERS : repris sous son seul code");
                 var adrs = l.Texte("T_CODE") is { } tc ? adresses.GetValueOrDefault(tc) ?? [] : [];
                 var principale = adrs.FirstOrDefault(a => a.Texte("IDENTIFIANT") == l.Texte("T_ADRFAC")) ?? adrs.FirstOrDefault();

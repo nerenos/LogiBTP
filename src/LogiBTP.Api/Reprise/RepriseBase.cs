@@ -27,6 +27,19 @@ public sealed record DemandeReprise
 
     /// <summary>Répertoire de stockage de la GED de la société (déjà sous le nom de sa base) ; null : fichiers non repris.</summary>
     public string? StockageGed { get; init; }
+
+    /// <summary>Décimales des quantités des lignes reprises (null : défaut de la source, <see cref="DecimalesParDefaut"/>).</summary>
+    public short? DecimalesQte { get; init; }
+
+    /// <summary>Décimales des prix unitaires des lignes reprises (null : défaut de la source).</summary>
+    public short? DecimalesPrix { get; init; }
+
+    /// <summary>
+    /// Décimales par défaut d'une source : MDE affiche les quantités à 3 et les prix à 2 (demande du 19/11/2026) ;
+    /// OPTIM : null (décimales de la quantité source, prix à 6).
+    /// </summary>
+    public static (short? Qte, short? Prix) DecimalesParDefaut(string source) =>
+        source.Equals(SourceReprise.Mde, StringComparison.OrdinalIgnoreCase) ? ((short)3, (short)2) : (null, null);
 }
 
 /// <summary>
@@ -76,6 +89,11 @@ public static class RepriseBase
         return await moteur.ExecuterAsync(new OptionsReprise
         {
             Source = source, Societes = demande.Societes, Simulation = demande.Simulation, Auteur = demande.Auteur,
+            DecimalesQte = Decimales(demande.DecimalesQte ?? DemandeReprise.DecimalesParDefaut(source).Qte),
+            DecimalesPrix = Decimales(demande.DecimalesPrix ?? DemandeReprise.DecimalesParDefaut(source).Prix),
         }, lecteur, fichier, unite, ct);
     }
+
+    /// <summary>Décimales bornées à celles d'une ligne de pièce (0 à 6).</summary>
+    private static short? Decimales(short? n) => n is { } d ? (short)Math.Clamp((int)d, 0, 6) : null;
 }

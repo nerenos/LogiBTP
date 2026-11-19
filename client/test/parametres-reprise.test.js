@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sectionsRapport, lireSocietes } from '../src/app/pages/parametres-reprise.js';
+import { sectionsRapport, lireSocietes, lireDecimales } from '../src/app/pages/parametres-reprise.js';
 
 // Écran « Reprise de données » (plan reprise-mde-optim, lot 3) : sections du rapport et saisie des sociétés OPTIM.
 const rapport = {
@@ -23,5 +23,10 @@ describe('reprise : écran (lot 3)', () => {
   it('sociétés saisies séparées par des virgules, des points-virgules ou des espaces', () => {
     expect(lireSocietes(' 1, 2 ;3  4,')).toEqual(['1', '2', '3', '4']);
     expect(lireSocietes('')).toEqual([]);
+    // Décimales : 0 à 6, sinon celles de la source (null).
+    expect(lireDecimales('3')).toBe(3);
+    expect(lireDecimales(' 0 ')).toBe(0);
+    expect(lireDecimales('')).toBeNull();
+    expect(lireDecimales('7')).toBeNull();
   });
 });

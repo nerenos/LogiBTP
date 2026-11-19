@@ -54,7 +54,7 @@ public sealed class SocieteMde : IDomaineReprise
                 $"Devise de la société {devise} : la reprise se fait en euros (Q10)");
         ctx.Rapport.Signaler(NiveauAnomalie.Information, CodeAnomalie.Decimales, "SYS_DEFSTE",
             string.Create(CultureInfo.InvariantCulture,
-                $"Décimales de la source : quantités {s.Entier("DECIMALEQTE")}, prix unitaires {s.Entier("DECIMALEPU")}, totaux {s.Entier("DECIMALETOT")}, temps {s.Entier("DECIMALETPS")} ; LogiBTP calcule en 6 décimales et arrondit les montants à 2"));
+                $"Décimales de la source : quantités {s.Entier("DECIMALEQTE")}, prix unitaires {s.Entier("DECIMALEPU")}, totaux {s.Entier("DECIMALETOT")}, temps {s.Entier("DECIMALETPS")} ; LogiBTP calcule en 6 décimales et arrondit les montants à 2 ; lignes reprises affichées avec {ctx.Options.DecimalesQte?.ToString(CultureInfo.InvariantCulture) ?? "les décimales de la source"} pour les quantités et {ctx.Options.DecimalesPrix?.ToString(CultureInfo.InvariantCulture) ?? "6"} pour les prix"));
 
         var rcs = string.Join(" ", new[] { s.Texte("RCS"), s.Texte("VILLERCS") }.Where(x => x is not null));
         var perId = await AnnuaireReprise.InsererPersonneAsync(ctx.Unite, new PersonneReprise

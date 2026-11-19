@@ -68,7 +68,8 @@ INSERT INTO dbo.PMEFOURNISSEUR (CODE, TYPETIERS, CODECATEGORIE, SIRET, RTCFIELD1
  ('F001', 'F', 'F', '77788899900015', 'GRP-12'),
  ('F002', 'F', 'F', '22233344400019', NULL);
 INSERT INTO dbo.PMESOUSTRAITANT (CODE, TYPETIERS, CODECATEGORIE, SIRET) VALUES ('S001', 'S', 'A', '55566677700011');
-INSERT INTO dbo.PMEARCHITECTE (CODE, TYPETIERS) VALUES ('A001', 'A');
+-- A002 : architecte sans fiche COMM_TIERS ni TYPETIERS (seulement sa fiche PMEARCHITECTE).
+INSERT INTO dbo.PMEARCHITECTE (CODE, TYPETIERS, NOTE) VALUES ('A001', 'A', NULL), ('A002', '', 'Cabinet sans fiche tiers');
 INSERT INTO dbo.PMECHARGEAFFAIRE (CODE, TYPETIERS) VALUES ('G001', 'G');
 GO
 
@@ -145,10 +146,10 @@ GO
 -- en sommeil, ouvrage dont le PV est retrouvé en mode déboursé (composante en sommeil sans lien), ouvrage qui contient
 -- un ouvrage et dont le PV source est imposé.
 INSERT INTO dbo.PMENATUREELEMENT (CLE, TYPEELEM, NUMORDRE, ABREVIATION, LIBELLE, COEFFG, COEFBEN, COEFVTE, DEFAUT, ACTIF) VALUES
- (1, 'MO', 1, 'MO', 'Main-d''œuvre', 1.2, 1.1, 0, 1, 1),
- (2, 'MA', 2, 'MAT', 'Matériaux', 1.1, 1.2, 0, 0, 1),
- (3, 'ST', 3, 'STR', 'Sous-traitance', 1, 1.1, 0, 0, 1),
- (4, 'OU', 4, 'OUV', 'Ouvrages', 1, 1, 0, 0, 1),
+ (1, 'M', 1, 'MO', 'Main-d''œuvre', 1.2, 1.1, 0, 1, 1),
+ (2, 'F', 2, 'MAT', 'Matériaux', 1.1, 1.2, 0, 0, 1),
+ (3, 'S', 3, 'STR', 'Sous-traitance', 1, 1.1, 0, 0, 1),
+ (4, 'OT', 4, 'OUV', 'Ouvrages', 1, 1, 0, 0, 1),
  (5, 'ZZ', 5, 'DSP', 'Divers spéciaux', 1, 1, 0, 0, 1);
 INSERT INTO dbo.PMEBIBLIO (CODE, LIBELLE) VALUES ('GEN', 'Bibliothèque générale'), ('E-1', 'Éditeur');
 INSERT INTO dbo.PMEFAMILLE (CODE, CODEBIBLIO, LIBELLE, NIVEAU, CODEPARENT) VALUES
@@ -156,17 +157,17 @@ INSERT INTO dbo.PMEFAMILLE (CODE, CODEBIBLIO, LIBELLE, NIVEAU, CODEPARENT) VALUE
 INSERT INTO dbo.PMEELEMENT (CODE, CODEBIBLIO, REFERENCE, TYPEELEM, CLENATURE, LIBELLE, LIBELLECOM, LIBELLETEC, CODEFAMILLE,
   CODEFOURPRINC, PA, COEFPERTE, DEBOURSE, COEFFG, PR, COEFBEN, PV, OPTIONPVIMPOSE, UNITEACHAT, UNITEVENTE, UNITESTOCK,
   RATIOSTOCK, RATIOVENTE, CATEGORIE, TVA, COMPTEVENTE, GESTSTOCK, CODEBARRE, SOMMEIL) VALUES
- ('MOMAC', 'GEN', '', 'MO', 1, 'Heure de maçon', '', NULL, 'MACO', NULL, 30, 0, 30, 1.2, 36, 1.1, 39.6, 0, NULL, NULL, 'H',
+ ('MOMAC', 'GEN', '', 'M', 1, 'Heure de maçon', '', NULL, 'MACO', NULL, 30, 0, 30, 1.2, 36, 1.1, 39.6, 0, NULL, NULL, 'H',
   NULL, NULL, 'F', '1', '704000', 0, NULL, 0),
- ('CIM35', 'GEN', 'CIM-REF', 'MA', 2, 'Ciment CEM II', '{\rtf1\ansi\ansicpg1252\deff0{\fonttbl{\f0\fnil Arial;}}\pard\b Ciment\b0  CEM II \''e0 la palette\par}',
+ ('CIM35', 'GEN', 'CIM-REF', 'F', 2, 'Ciment CEM II', '{\rtf1\ansi\ansicpg1252\deff0{\fonttbl{\f0\fnil Arial;}}\pard\b Ciment\b0  CEM II \''e0 la palette\par}',
   'Sac de 35 kg', 'LIANT', 'F001', 0.2, 1.05, 0.21, 1.1, 0.231, 1.2, 0.2772, 0, 'U', 'KG', 'KG', 35, 1, 'F', '1', '704000', 1, '3700000000017', 0),
  ('TXT1', 'GEN', '', 'TX', 0, 'Garantie', '{\rtf1\ansi Garantie d\''e9cennale\par Assurance \u339?uvre\par}', NULL, NULL, NULL,
   0, 0, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, NULL, NULL, '', NULL, NULL, 0, NULL, 0),
- ('VIEUX', 'GEN', '', 'MA', 2, 'Ancien article', '', NULL, NULL, NULL, 2, 0, 2, 1, 2, 1, 2, 0, NULL, NULL, 'U', NULL, NULL, 'F', '1', NULL,
+ ('VIEUX', 'GEN', '', 'F', 2, 'Ancien article', '', NULL, NULL, NULL, 2, 0, 2, 1, 2, 1, 2, 0, NULL, NULL, 'U', NULL, NULL, 'F', '1', NULL,
   0, NULL, 1),
- ('ART1', 'E-1', '', 'MA', 2, 'Article éditeur', '', NULL, NULL, NULL, 5, 0, 5, 1, 5, 1, 5, 0, NULL, NULL, 'U', NULL, NULL, 'F', '2', NULL,
+ ('ART1', 'E-1', '', 'F', 2, 'Article éditeur', '', NULL, NULL, NULL, 5, 0, 5, 1, 5, 1, 5, 0, NULL, NULL, 'U', NULL, NULL, 'F', '2', NULL,
   0, NULL, 0),
- ('MUR20', 'GEN', '', 'OU', 4, 'Mur parpaing 20', '', NULL, 'MACO', NULL, 0, 0, 21.2, 1.15, 24.38, 1.25, 30.475, 0, NULL, NULL, 'M2',
+ ('MUR20', 'GEN', '', 'OT', 4, 'Mur parpaing 20', '', NULL, 'MACO', NULL, 0, 0, 21.2, 1.15, 24.38, 1.25, 30.475, 0, NULL, NULL, 'M2',
   NULL, NULL, 'F', '1', NULL, 0, NULL, 0),
  ('AMUR', 'GEN', '', 'OU', 4, 'Mur enduit', '', NULL, NULL, NULL, 0, 0, 51.2, 1.2, 61.44, 1.1, 70, 0, NULL, NULL, 'M2',
   NULL, NULL, 'F', '1', NULL, 0, NULL, 0);
@@ -219,6 +220,7 @@ INSERT INTO dbo.PMEDOCDEVCLI (CLEDOC, CODE, TYPE, CODEDEVINIT, CLEETATDOC, DATED
   'F', 'CH001', 'CHQ', 3, 'M', NULL, 500, 0, 0, 600),
  (102, 'DC000002', 'D', 'DC000001', 2, '2024-01-18', 'Tilleuls - gros œuvre', 'AF001', 'C001', 'Client un', '1 rue A', '69001', 'Lyon', 'FR',
   'F', 'CH001', 'V30', 30, 'J', '{\rtf1 Suite à votre demande}', 598.80, 0, 0, 718.56);
+-- Comme sur une base réelle : la ligne récapitulative R a IDLIG = 0, et les lignes de premier niveau IDPARENT = 0.
 INSERT INTO dbo.PMEDOCDEVCLILIG (CLE, CLEDOC, IDLIG, IDPARENT, NUMORDRE, TYPELIG, NIVTR, NIVCOMPO, CODEELEM, CLENATURE, LIBELLE, LIBELLECOM,
   DEBOURSE, COEFFG, COEFBEN, PV, REMISE, CODETVA, QUANTITE, UNITE, DECUNITE, MONTANTHT, PVIMPOSE, EDITEE) VALUES
  (1001, 101, 1, 0, 1, 'E', 0, 0, NULL, 4, 'Ancienne estimation', NULL, 400, 1, 1.25, 500, 0, '1', 1, 'ENS', 0, 500, 0, 1),
@@ -229,8 +231,22 @@ INSERT INTO dbo.PMEDOCDEVCLILIG (CLE, CLEDOC, IDLIG, IDPARENT, NUMORDRE, TYPELIG
  (1105, 102, 5, 1, 2, 'E', 0, 0, NULL, 2, 'Enduit', '{\rtf1 \b Enduit\b0  monocouche}', 8, 1.15, 1.25, 11.5, 0, '1', 12.5, 'M2', 2, 143.75, 0, 1),
  (1106, 102, 6, 1, 3, 'E', 0, 0, NULL, 4, 'Échafaudage', NULL, 100, 1.1, 1.3, 150, 0, '1', 1, 'U', 0, 150, 1, 1),
  (1107, 102, 7, 0, 2, 'L', 0, 0, NULL, NULL, 'Garantie décennale', NULL, 0, 1, 1, 0, 0, NULL, 0, NULL, 0, 0, 0, 1),
- (1108, 102, 8, 0, 3, 'R', 0, 0, NULL, NULL, 'Récapitulatif', NULL, 0, 1, 1, 0, 0, NULL, 0, NULL, 0, 0, 0, 1);
+ (1108, 102, 0, 0, 0, 'R', 0, 0, NULL, NULL, 'Récapitulatif', NULL, 0, 1, 1, 0, 0, NULL, 0, NULL, 0, 0, 0, 1);
 UPDATE dbo.PMECHANTIER SET CLEDOCINIT = 102 WHERE CODE = 'CH001';
+-- Marché MDE (19/11/2026) : devis et avenants servant à la facturation, reliés au chantier, dans l'ordre de NUMORDRE.
+INSERT INTO dbo.PMEAFFBASEDOC (CLEDOC, NUMORDRE, CLEDOCINIT, DATEDOC, CODE, LIBELLE, CODECLIENT, CODECATEGORIE, CODECHT, MODREG, MTHT, MTTTC) VALUES
+ (602, 2, NULL, '2024-03-15', 'MB000002', 'Avenant fenêtre', 'C001', 'F', 'CH001', 'V30', 100, 120),
+ (601, 1, 102, '2024-01-25', 'MB000001', 'Tilleuls - marché', 'C001', 'F', 'CH001', 'V30', 598.75, 718.50);
+INSERT INTO dbo.PMEAFFBASEDOCLIG (CLE, CLEDOC, CLELIGINIT, IDLIG, IDPARENT, NUMORDRE, TYPELIG, NIVTR, NIVCOMPO, CODEELEM, CLENATURE, LIBELLE,
+  DEBOURSE, COEFFG, COEFBEN, PV, REMISE, CODETVA, QUANTITE, UNITE, DECUNITE, MONTANTHT, PVIMPOSE, EDITEE) VALUES
+ (6108, 601, 1108, 0, 0, 0, 'R', 0, 0, NULL, NULL, 'Récapitulatif', 0, 1, 1, 0, 0, NULL, 0, NULL, 0, 0, 0, 1),
+ (6101, 601, 1101, 1, 0, 1, 'T', 1, 0, NULL, NULL, 'Gros œuvre', 0, 1, 1, 0, 0, NULL, 0, NULL, 0, 0, 0, 1),
+ (6102, 601, 1102, 2, 1, 1, 'E', 0, 0, 'MUR20', NULL, 'Mur de 20', 21.2, 1, 1.4375, 30.5, 0, '1', 10, 'M2', 2, 305, 0, 1),
+ (6103, 601, 1103, 3, 2, 1, 'E', 0, 1, 'CIM35', 2, 'Parpaing', 1.2, 1.1, 1.2, 1.584, 0, NULL, 10, 'U', 0, 0, 0, 1),
+ (6104, 601, 1104, 4, 2, 2, 'E', 0, 1, 'MOMAC', 1, 'Main d''œuvre', 18, 1.1, 1.2, 25, 0, NULL, 0.5, 'H', 2, 0, 0, 1),
+ (6105, 601, 1105, 5, 1, 2, 'E', 0, 0, NULL, 2, 'Enduit', 8, 1.15, 1.25, 11.5, 0, '1', 12.5, 'M2', 2, 143.75, 0, 1),
+ (6106, 601, 1106, 6, 1, 3, 'E', 0, 0, NULL, 4, 'Échafaudage', 100, 1.1, 1.3, 150, 0, '1', 1, 'U', 0, 150, 1, 1),
+ (6201, 602, NULL, 1, 0, 1, 'E', 0, 0, NULL, 4, 'Plus-value fenêtre', 80, 1, 1.25, 100, 0, '1', 1, 'U', 0, 100, 0, 1);
 INSERT INTO dbo.PMEDOCCDECLI (CLEDOC, CODE, CLEETATDOC, DATEDOC, LIBELLE, CODEAFFAIRE, CODECLIENT, CODECATEGORIE, MTHT, MTPOSTESHT, MTPOSTESTTC, MTTTC) VALUES
  (301, 'CC000001', NULL, '2024-02-01', 'Commande Tilleuls', 'AF001', 'C001', 'F', 200, 50, 0, 300);
 INSERT INTO dbo.PMEDOCCDECLILIG (CLE, CLEDOC, IDLIG, IDPARENT, NUMORDRE, TYPELIG, NIVCOMPO, CLENATURE, LIBELLE, DEBOURSE, COEFFG, COEFBEN, PV,
@@ -248,19 +264,19 @@ INSERT INTO dbo.PMEDOCFACCLILIG (CLE, CLEDOC, IDLIG, IDPARENT, NUMORDRE, TYPELIG
 GO
 
 -- Avancement (lot 11) : situation détaillée (mur à 50 %, enduit à 100 %, composante ignorée) facturée par FA000002,
--- puis situation globale en cumul à 80 % (brouillon, non facturée).
+-- puis situation globale en cumul à 80 % du marché et de son avenant (brouillon, non facturée) ; lignes citées : PMEAFFBASEDOCLIG.
 UPDATE dbo.PMEDOCFACCLI SET CODESITTX = 'ST000001' WHERE CLEDOC = 203;
 INSERT INTO dbo.PMEDOCSITTX (CLEDOC, CODE, CODEFACAVT, CLEETATDOC, DATEDOC, LIBELLE, LIBELLESIT, CODEAFFAIRE, CODECHT, CODECLIENT, NUMERO,
   CODESITPREC, CODECATEGORIE, TYPEAVT, TYPEARRONDI, PCAVTCUMUL, MTHTCUMUL, MTTTCCUMUL, MTHT, MTTTC) VALUES
  (401, 'ST000001', 'FA000002', 2, '2024-04-30', 'Tilleuls', 'Situation n° 1', 'AF001', 'CH001', 'C001', 1, NULL, 'F', 'D', '', 49.47, 296.25, 355.50, 296.25, 355.50),
- (402, 'ST000002', NULL, NULL, '2024-05-31', 'Tilleuls', 'Situation n° 2', 'AF001', 'CH001', 'C001', 2, 'ST000001', 'F', 'C', '', 80, 479.04, 574.85, 182.79, 219.35);
+ (402, 'ST000002', NULL, NULL, '2024-05-31', 'Tilleuls', 'Situation n° 2', 'AF001', 'CH001', 'C001', 2, 'ST000001', 'F', 'C', '', 80, 559.00, 670.80, 262.75, 315.30);
 INSERT INTO dbo.PMEDOCSITTXLIG (CLE, CLEDOC, CLEDEVBASE, IDLIG, IDPARENT, NUMORDRE, TYPELIG, NIVCOMPO, LIBELLE, CODETVA, QUANTITE, PVHT,
   MONTANTHT, PCAVT, QTESITUATION, MTSITUATION) VALUES
- (4001, 401, 1101, 1, 0, 1, 'T', 0, 'Gros œuvre', NULL, 0, 0, 0, 0, 0, 0),
- (4002, 401, 1102, 2, 1, 1, 'E', 0, 'Mur de 20', '1', 10, 30.5, 305, 50, 5, 152.50),
- (4003, 401, 1103, 3, 2, 1, 'E', 1, 'Parpaing', NULL, 10, 1.584, 15.84, 50, 5, 7.92),
- (4004, 401, 1105, 4, 1, 2, 'E', 0, 'Enduit', '1', 12.5, 11.5, 143.75, 100, 12.5, 143.75),
- (4005, 401, 1106, 5, 1, 3, 'E', 0, 'Échafaudage', '1', 1, 150, 150, 0, 0, 0);
+ (4001, 401, 6101, 1, 0, 1, 'T', 0, 'Gros œuvre', NULL, 0, 0, 0, 0, 0, 0),
+ (4002, 401, 6102, 2, 1, 1, 'E', 0, 'Mur de 20', '1', 10, 30.5, 305, 50, 5, 152.50),
+ (4003, 401, 6103, 3, 2, 1, 'E', 1, 'Parpaing', NULL, 10, 1.584, 15.84, 50, 5, 7.92),
+ (4004, 401, 6105, 4, 1, 2, 'E', 0, 'Enduit', '1', 12.5, 11.5, 143.75, 100, 12.5, 143.75),
+ (4005, 401, 6106, 5, 1, 3, 'E', 0, 'Échafaudage', '1', 1, 150, 150, 0, 0, 0);
 GO
 
 -- Achats et sous-traitance (lot 12) : commande fournisseur sur deux chantiers, facture transférée avec remise, avoir,

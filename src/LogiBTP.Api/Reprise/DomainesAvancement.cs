@@ -18,9 +18,66 @@ public sealed partial class PiecesVenteMde
     /// <summary>eTypeAvancement : D détaillé par ligne, C global en cumul, S global par situation.</summary>
     private const string AvancementDetaille = "D";
 
-    private static async Task AvancementAsync(ContexteReprise ctx, PiecesReprise pieces, Dictionary<string, Etat> etats,
-        List<(LigneSource Entete, string TypeDocument, List<LigneSource> Lignes)> factures, Dictionary<string, string> devisInitiaux, CancellationToken ct)
+    /// <summary>Pièces de facturation d'un chantier MDE : devis et avenants retenus pour le marché (base = NUMORDRE le plus petit).</summary>
+    public const string MarcheBase = "PMEAFFBASEDOC";
+
+    /// <summary>
+    /// Marchés MDE (19/11/2026) : MDE n'a pas de marché mais garde les devis et avenants servant à la facturation dans
+    /// PMEAFFBASEDOC / PMEAFFBASEDOCLIG, reliés au chantier par CODECHT ; NUMORDRE donne l'ordre, le premier est le marché.
+    /// Chacun est repris en commande validée (verrouillée) inscrite au marché de vente du chantier : base puis avenants.
+    /// Rend, par code de chantier, les clés (CLEDOC) des pièces reprises dans l'ordre.
+    /// </summary>
+    private static async Task<Dictionary<string, List<string>>> MarchesAsync(ContexteReprise ctx, PiecesReprise pieces, Dictionary<string, Etat> etats,
+        Dictionary<string, short> typesLigne, CancellationToken ct)
     {
+        var res = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        var volume = ctx.Rapport.Volume(MarcheBase);
+        if (ctx.Correspondre(TablesCorrespondance.TypeDocument, "CC", MarcheBase) is not { Ignorer: false, Cible: { } typeCommande }) return res;
+        var lignes = (await SqlReprise.SourceAsync(ctx, "SELECT * FROM PMEAFFBASEDOCLIG ORDER BY CLEDOC, NUMORDRE", ct))
+            .GroupBy(l => l.Texte("CLEDOC") ?? "").ToDictionary(g => g.Key, g => g.ToList(), StringComparer.Ordinal);
+        // PMEAFFBASEDOC n'a ni affaire ni lettres : affaire du chantier, textes vides (colonnes attendues par Entete).
+        var bases = await SqlReprise.SourceAsync(ctx, """
+            SELECT B.*, C.CODEAFFAIRE AS CODEAFFAIRE, CAST(NULL AS varchar(1)) AS LETTREENTETE, CAST(NULL AS varchar(1)) AS LETTREPIED
+            FROM PMEAFFBASEDOC B LEFT JOIN PMECHANTIER C ON C.CODE = B.CODECHT
+            ORDER BY B.CODECHT, B.NUMORDRE, B.CLEDOC
+            """, ct);
+        foreach (var e in bases)
+        {
+            var cle = e.Texte("CLEDOC")!;
+            var emplacement = $"{MarcheBase} {cle}";
+            if (e.Texte("CODECHT") is not { } cht || ctx.Registre.Trouver(StructureMde.Chantier, cht) is not { } chaId)
+            {
+                volume.Lues++;
+                volume.Ecartees++;
+                ctx.Rapport.Signaler(NiveauAnomalie.Avertissement, CodeAnomalie.AvancementSansMarche, emplacement, "Pièce de marché sans chantier repris : écartée");
+                continue;
+            }
+            var p = Entete(ctx, e, MarcheBase, typeCommande, etats) with
+            {
+                Statut = PiecesReprise.Statut.Valide, Verrouille = true,
+                Lignes = Lignes(ctx, lignes.GetValueOrDefault(cle) ?? [], e.Texte("CODECATEGORIE"), typesLigne, emplacement),
+            };
+            await pieces.EcrireAsync(p, ct);
+            if (ctx.Registre.Trouver(MarcheBase, cle) is not { } ent) continue;
+            if (!await pieces.InscrireMarcheAsync((int)chaId, ent, ct))
+                ctx.Rapport.Signaler(NiveauAnomalie.Avertissement, CodeAnomalie.AvancementSansMarche, emplacement, $"Chantier {cht} sans marché de vente : commande reprise hors marché");
+            (res.TryGetValue(cht, out var liste) ? liste : res[cht] = []).Add(cle);
+        }
+        return res;
+    }
+
+    private static async Task AvancementAsync(ContexteReprise ctx, PiecesReprise pieces, Dictionary<string, Etat> etats,
+        List<(LigneSource Entete, string TypeDocument, List<LigneSource> Lignes)> factures, Dictionary<string, string> devisInitiaux,
+        Dictionary<string, List<string>> marches, CancellationToken ct)
+    {
+        // Marché d'un chantier : base de PMEAFFBASEDOC et ses avenants, sinon devis initial (avancement global seulement).
+        (string Table, string Cle)? Marche(string? cht, bool global) =>
+            cht is not null && marches.TryGetValue(cht, out var m) ? (MarcheBase, m[0])
+            : global && cht is not null && devisInitiaux.TryGetValue(cht, out var di) ? (Devis, di) : null;
+        List<(string, string)> Avenants(string? cht) =>
+            cht is not null && marches.TryGetValue(cht, out var m) ? m.Skip(1).Select(c => (MarcheBase, c)).ToList() : [];
+        string TableLignes(string? cht) => cht is not null && marches.ContainsKey(cht) ? MarcheBase : Devis;
+
         var lignes = (await SqlReprise.SourceAsync(ctx, "SELECT * FROM PMEDOCSITTXLIG ORDER BY CLEDOC, NUMORDRE", ct))
             .GroupBy(l => l.Texte("CLEDOC") ?? "").ToDictionary(g => g.Key, g => g.ToList(), StringComparer.Ordinal);
         var situations = await SqlReprise.SourceAsync(ctx, "SELECT * FROM PMEDOCSITTX ORDER BY DATEDOC, NUMERO, CLEDOC", ct);
@@ -34,8 +91,8 @@ public sealed partial class PiecesVenteMde
             var categorie = sit.Texte("CODECATEGORIE");
             return new AvancementSource
             {
-                TableLignes = Devis, Situation = situationFacturee,
-                Marche = global && sit.Texte("CODECHT") is { } cht && devisInitiaux.TryGetValue(cht, out var di) ? (Devis, di) : null,
+                TableLignes = TableLignes(sit.Texte("CODECHT")), TableLignesRepli = Devis, Situation = situationFacturee,
+                Marche = Marche(sit.Texte("CODECHT"), global), Avenants = Avenants(sit.Texte("CODECHT")),
                 PctGlobal = global ? sit.Decimal("PCAVTCUMUL") ?? 0 : null,
                 Lignes = global ? [] : (lignes.GetValueOrDefault(sit.Texte("CLEDOC")!) ?? [])
                     .Where(l => (l.Entier("NIVCOMPO") ?? 0) == 0)
@@ -81,7 +138,8 @@ public sealed partial class PiecesVenteMde
                     ? Avancement(sit, (Situation, sit.Texte("CLEDOC")!))
                     : new AvancementSource
                     {
-                        TableLignes = Devis,
+                        TableLignes = TableLignes(e.Texte("CODECHT")), TableLignesRepli = Devis,
+                        Marche = Marche(e.Texte("CODECHT"), false), Avenants = Avenants(e.Texte("CODECHT")),
                         Lignes = lignesFacture.Where(l => (l.Entier("NIVCOMPO") ?? 0) == 0).Select(l => new LigneAvancement
                         {
                             LigneMarche = l.Texte("CLEDEVBASE"), MontantPeriode = l.Decimal("MONTANTHT") ?? 0,
