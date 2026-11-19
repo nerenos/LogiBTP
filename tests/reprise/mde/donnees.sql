@@ -194,6 +194,11 @@ INSERT INTO dbo.PMEELEMENTARTFOUR (CLE, CODEART, NUMORDRE, PRINCIPAL, CODEFOUR, 
 INSERT INTO dbo.SYS_RTCINFOS (TABLENAME, FIELDNAME, DISPLAYNAME, FIELDTYPE, FIELDSIZE, DATATYPE, REQUIRED) VALUES
  ('PMEELEMENT', 'RTCFIELD1', 'Marque', 'E', 30, 'S', 0);
 UPDATE dbo.PMEELEMENT SET RTCFIELD1 = 'Vicat' WHERE CODE = 'CIM35';
+-- Données techniques (m, m², kg par défaut ; VOLUME utilisé comme une surface) : barre de 12,10 m, 141,57 kg, 4,84 m² ;
+-- unité de poids renseignée sur le ciment (signalée, non convertie).
+INSERT INTO dbo.PMEELEMENTARTTEC (CODEART, LONGUEUR, UNITELONG, LARGEUR, UNITELARG, HAUTEUR, UNITEHAUT, POIDS, UNITEPOIDS, VOLUME, UNITEVOL) VALUES
+ ('CHA-C100X4', 12.1, NULL, 0.1, NULL, 0.1, NULL, 141.57, NULL, 4.84, NULL),
+ ('CIM35', 0, NULL, 0, NULL, 0, NULL, 1, 'K', 0, NULL);
 GO
 
 -- Structure (lot 9) : états, types de marché, affaires (ouverte, close par l'état, close par la date), chantiers

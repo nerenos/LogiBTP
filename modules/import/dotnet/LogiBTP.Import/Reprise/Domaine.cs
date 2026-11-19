@@ -41,6 +41,9 @@ public sealed record OptionsReprise
 
     /// <summary>Décimales des prix unitaires des lignes de pièces reprises (null : 6, prix de la source exact).</summary>
     public short? DecimalesPrix { get; init; }
+
+    /// <summary>MDE : donnée technique qui reçoit la colonne VOLUME (<see cref="VolumeMde"/>, surface par défaut).</summary>
+    public string VolumeMde { get; init; } = LogiBTP.Import.VolumeMde.Surface;
 }
 
 /// <summary>Ce qu'un domaine reçoit : source, correspondances, registre, rapport et unité d'écriture de la base cible.</summary>

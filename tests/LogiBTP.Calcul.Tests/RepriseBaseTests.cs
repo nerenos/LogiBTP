@@ -97,6 +97,12 @@ public class RepriseBaseTests
             Source = SourceReprise.Optim, ConnexionSource = "Server=invalide", ConnexionCible = b.Connexion,
         }, default));
         Assert.Equal(ErreurReprise.BaseNonVide, refus.Code);
+        // Option VOLUME de MDE : surface ou volume seulement.
+        var option = await Assert.ThrowsAsync<RepriseRefuseeException>(() => RepriseBase.ExecuterAsync(new DemandeReprise
+        {
+            Source = SourceReprise.Mde, ConnexionSource = "Server=invalide", ConnexionCible = b.Connexion, VolumeMde = "CUBE",
+        }, default));
+        Assert.Equal(ErreurReprise.OptionInvalide, option.Code);
     }
 
     [Theory]
@@ -656,6 +662,13 @@ public class RepriseBaseTests
                 e.ele_unites @> '[{"formule": "0.082645"}, {"formule": "0.007064"}]' AND e.ele_unt_vente IS NOT NULL AND e.ele_pv = 1 AND NOT e.ele_pv_fixe
                 """));
             Assert.Contains(r.Anomalies, a => a.Code == CodeAnomalie.ConversionBrute && a.Emplacement == "PMEELEMENT CHA-C100X4");
+            // Données techniques : m en mm, kg, VOLUME en surface (option par défaut) ; unité renseignée signalée.
+            Assert.Equal(1L, await Element("CHA-C100X4", """
+                e.ele_longueur = 12100 AND e.ele_largeur = 100 AND e.ele_hauteur = 100 AND e.ele_poids = 141.57 AND e.ele_surface = 4.84 AND e.ele_volume IS NULL
+                """));
+            Assert.Equal(1L, await Element("CIM35", "e.ele_poids = 1"));
+            Assert.Contains(r.Anomalies, a => a.Code == CodeAnomalie.UniteTechnique && a.Emplacement == "PMEELEMENTARTTEC CIM35");
+            Assert.Equal((2, 2, 0), Volume(r, BibliothequeMde.Technique));
             // Article géré en stock : RTF en HTML, unités d'achat et de vente converties : rapports bruts, PA et PV source gardés sans imposer le PV, signalé.
             Assert.Equal(1L, await Element("CIM35", """
                 e.ele_gestion = 'STOCK' AND e.ele_unt_stock = 'kg' AND e.ele_unt_achat = 'u' AND e.ele_unt_vente = 'kg'

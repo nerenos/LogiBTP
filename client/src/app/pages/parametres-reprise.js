@@ -2,12 +2,13 @@ import { texte, texteHtml, icone, iconeHtml, textesParCode, langue } from '@logi
 import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, confirmer, formatDateHeure, telechargerFichier } from '@logibtp/socle/ui';
 import { erreursParChamp } from '@logibtp/socle';
-import { SOURCE_REPRISE, ETAT_REPRISE, NIVEAU_ANOMALIE, groupesFusion, controlerFusions, choixDepuisFusions } from '@logibtp/import';
+import { SOURCE_REPRISE, ETAT_REPRISE, NIVEAU_ANOMALIE, VOLUME_MDE, groupesFusion, controlerFusions, choixDepuisFusions } from '@logibtp/import';
 import { api } from '../api.js';
 
 const SOURCES = textesParCode('parametres_btp.reprise.sources', Object.values(SOURCE_REPRISE));
 const ETATS = textesParCode('parametres_btp.reprise.etats', Object.values(ETAT_REPRISE));
 const NIVEAUX = textesParCode('parametres_btp.reprise.niveaux', Object.values(NIVEAU_ANOMALIE));
+const VOLUMES = textesParCode('parametres_btp.reprise.volumes', Object.values(VOLUME_MDE));
 
 const t = (cle, valeurs) => texte(`parametres_btp.reprise.${cle}`, valeurs);
 const th = (cle, valeurs) => texteHtml(`parametres_btp.reprise.${cle}`, valeurs);
@@ -68,6 +69,7 @@ export class PageParametresReprise extends PageBase {
         <tr><th>${th('decimales')}</th><td><label class="ligne">${th('decimales_qte')} <input type="number" data-c="decimales_qte" min="0" max="6" step="1" size="3" placeholder="${th('decimales_source')}"></label>
           <label class="ligne">${th('decimales_prix')} <input type="number" data-c="decimales_prix" min="0" max="6" step="1" size="3" placeholder="${th('decimales_source')}"></label>
           <span class="aide">${th('decimales_aide')}</span></td></tr>
+        <tr data-ligne-volume><th>${th('volume')}</th><td><span data-volume></span><span class="aide">${th('volume_aide')}</span></td></tr>
         <tr><th>${th('correspondances')}</th><td><span data-fichier>${th('correspondances_defaut')}</span>
           <button type="button" data-action="telecharger" title="${th('telecharger')}">${iconeHtml('parametres_btp_reprise_telecharger')}</button>
           <button type="button" data-action="charger" title="${th('charger')}">${iconeHtml('parametres_btp_reprise_charger')}</button><input type="file" accept=".json,application/json" data-c="fichier" hidden>
@@ -82,6 +84,8 @@ export class PageParametresReprise extends PageBase {
     this.combo = creerCombo({ options: Object.entries(SOURCES).map(([valeur, libelle]) => ({ valeur, libelle })), valeur: SOURCE_REPRISE.MDE, vide: false });
     this.combo.addEventListener('change', () => { this.proposerDecimales(); this.synchroniser(); });
     this.conteneur.querySelector('[data-source]').append(this.combo);
+    this.comboVolume = creerCombo({ options: Object.entries(VOLUMES).map(([valeur, libelle]) => ({ valeur, libelle })), valeur: VOLUME_MDE.SURFACE, vide: false });
+    this.conteneur.querySelector('[data-volume]').append(this.comboVolume);
     this.conteneur.querySelector('[data-c="fichier"]').addEventListener('change', (e) => this.chargerFichier(e.target).catch((x) => this.app.erreur(x)));
     this.conteneur.querySelector('.page-reprise').addEventListener('click', (e) => {
       const b = e.target.closest('button[data-action]');
@@ -123,6 +127,7 @@ export class PageParametresReprise extends PageBase {
   /** Sociétés pour OPTIM seulement ; nom du fichier de correspondances chargé ; doublons recochés selon la source. */
   synchroniser() {
     this.conteneur.querySelector('[data-ligne-societes]').hidden = this.source !== SOURCE_REPRISE.OPTIM;
+    this.conteneur.querySelector('[data-ligne-volume]').hidden = this.source !== SOURCE_REPRISE.MDE;
     this.conteneur.querySelector('[data-fichier]').textContent = this.correspondances ? t('correspondances_fichier', { nom: this.correspondances.nom }) : t('correspondances_defaut');
     this.conteneur.querySelector('[data-action="retirer"]').hidden = !this.correspondances;
     this.conteneur.querySelector('[data-c="fichier"]').value = '';
@@ -156,6 +161,7 @@ export class PageParametresReprise extends PageBase {
         correspondances: this.correspondances?.contenu ?? null,
         decimales_qte: lireDecimales(champ('decimales_qte').value),
         decimales_prix: lireDecimales(champ('decimales_prix').value),
+        volume_mde: source === SOURCE_REPRISE.MDE ? this.comboVolume.valeurCombo || VOLUME_MDE.SURFACE : null,
       });
       this.rapportId = r.reprise_id;
       const message = r.rapport.etat === ETAT_REPRISE.TERMINEE ? t(simulation ? 'simulation_terminee' : 'reprise_terminee') : t('reprise_echec');

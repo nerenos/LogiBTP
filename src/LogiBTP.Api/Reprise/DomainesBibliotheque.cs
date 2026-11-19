@@ -48,6 +48,7 @@ public sealed class BibliothequeMde : IDomaineReprise
     public const string Bibliotheque = "PMEBIBLIO";
     public const string Famille = "PMEFAMILLE";
     public const string Element = "PMEELEMENT";
+    public const string Technique = "PMEELEMENTARTTEC";
     public const string Fournisseur = "PMEFOURNISSEUR";
 
     private const string RequeteTarifs = """
@@ -91,6 +92,8 @@ public sealed class BibliothequeMde : IDomaineReprise
             .GroupBy(c => c.Texte("CODEOUV")!).ToDictionary(g => g.Key, g => g.ToList(), StringComparer.Ordinal);
         var unitesVente = (await SqlReprise.SourceAsync(ctx, "SELECT CODEART, UNITE, EQUIVSTOCK FROM PMEELEMENTUNITEVTE ORDER BY CODEART, NUMORDRE", ct))
             .GroupBy(c => c.Texte("CODEART")!).ToDictionary(g => g.Key, g => g.ToList(), StringComparer.Ordinal);
+        var techniques = (await SqlReprise.SourceAsync(ctx, "SELECT * FROM PMEELEMENTARTTEC ORDER BY CODEART", ct))
+            .Where(t => t.Texte("CODEART") is not null).ToDictionary(t => t.Texte("CODEART")!, StringComparer.Ordinal);
         var tarifs = (await SqlReprise.SourceAsync(ctx, RequeteTarifs, ct))
             .GroupBy(c => c.Texte("CODEART")!).ToDictionary(g => g.Key, g => g.ToList(), StringComparer.Ordinal);
 
@@ -149,7 +152,7 @@ public sealed class BibliothequeMde : IDomaineReprise
             var gestion = l.Booleen("GESTSTOCK") == true ? GestionElement.Stock
                 : l.Texte("CODESSTPRINC") is not null ? GestionElement.SousTraitance
                 : l.Texte("CODEFOURPRINC") is not null || lesTarifs.Count > 0 ? GestionElement.Achat : GestionElement.NonGere;
-            await b.ElementAsync(new ElementSource
+            var eleId = await b.ElementAsync(new ElementSource
             {
                 Origine = (Element, cle), BibId = bib, Code = cle, Type = type,
                 LibelleHtml = SourcesBibliotheque.Html(l.Texte("LIBELLECOM")) ?? SourcesBibliotheque.Html(l.Texte("LIBELLE")),
@@ -178,7 +181,36 @@ public sealed class BibliothequeMde : IDomaineReprise
                     };
                 }).ToList(),
             }, ct);
+            if (eleId is { } id && techniques.GetValueOrDefault(cle) is { } tec) await TechniquesAsync(ctx, id, tec, ct);
         }
+    }
+
+    /// <summary>
+    /// Données techniques (PMEELEMENTARTTEC) par unité de stock : longueur, largeur, hauteur en m (en mm dans LogiBTP), poids
+    /// en kg, VOLUME en m² (surface, défaut : MDE s'en sert comme d'une surface) ou en m³ selon l'option de la reprise.
+    /// Unités UNITE* renseignées : non converties (valeurs lues dans l'unité par défaut), signalées.
+    /// </summary>
+    private static async Task TechniquesAsync(ContexteReprise ctx, long eleId, LigneSource t, CancellationToken ct)
+    {
+        var volume = ctx.Rapport.Volume(Technique);
+        volume.Lues++;
+        decimal? Valeur(string c) => t.Decimal(c) is { } v && v != 0 ? v : null;
+        decimal? Mm(string c) => Valeur(c) is { } v ? ArrondiCalcul.Arr6(v * 1000) : null;
+        foreach (var u in new[] { "UNITELONG", "UNITELARG", "UNITEHAUT", "UNITEPOIDS", "UNITEVOL" })
+            if (t.Texte(u) is { } code)
+                ctx.Rapport.Signaler(NiveauAnomalie.Information, CodeAnomalie.UniteTechnique, $"{Technique} {t.Texte("CODEART")}",
+                    $"{u} = « {code} » : valeur reprise dans l'unité par défaut (m, m², kg), à vérifier");
+        var (longueur, largeur, hauteur, poids, vol) = (Mm("LONGUEUR"), Mm("LARGEUR"), Mm("HAUTEUR"), Valeur("POIDS"), Valeur("VOLUME"));
+        if (longueur is null && largeur is null && hauteur is null && poids is null && vol is null) { volume.Ecartees++; return; }
+        if (ctx.Options.VolumeMde == VolumeMde.Volume)
+            await SqlReprise.ExecuterAsync(ctx.Unite, """
+                UPDATE element SET ele_longueur = $2, ele_largeur = $3, ele_hauteur = $4, ele_poids = $5, ele_volume = $6 WHERE ele_id = $1
+                """, ct, (int)eleId, longueur, largeur, hauteur, poids, vol);
+        else
+            await SqlReprise.ExecuterAsync(ctx.Unite, """
+                UPDATE element SET ele_longueur = $2, ele_largeur = $3, ele_hauteur = $4, ele_poids = $5, ele_surface = $6 WHERE ele_id = $1
+                """, ct, (int)eleId, longueur, largeur, hauteur, poids, vol);
+        volume.Ecrites++;
     }
 }
 

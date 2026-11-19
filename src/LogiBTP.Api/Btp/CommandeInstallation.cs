@@ -62,6 +62,7 @@ public static class CommandeInstallation
                 installation prefixe ajouter PREFIXE --integrateur NOM
                 installation societe importer CODE --source MDE|OPTIM [--connexion CHAINE] [--societes 1,2] [--reel] [--correspondances F.json] [--rapport F.md] [--ged RACINE_GED]
                     [--decimales-qte N] [--decimales-prix N]   (MDE : 3 et 2 par défaut)
+                    [--volume-mde SURFACE|VOLUME]   (MDE : colonne VOLUME des données techniques, surface par défaut)
                     (reprise d'une base MDE ou OptimBTP dans la base neuve de la société ; simulation sauf --reel ;
                      chaîne de la base source dans LOGIBTP_REPRISE_SOURCE à défaut de --connexion)
         """;
@@ -338,6 +339,7 @@ public static class CommandeInstallation
             StockageGed = Option(args, "--ged") is { } ged ? Path.Combine(Path.GetFullPath(ged), modele.NomBase(code)) : null,
             DecimalesQte = Decimales(Option(args, "--decimales-qte"), "--decimales-qte"),
             DecimalesPrix = Decimales(Option(args, "--decimales-prix"), "--decimales-prix"),
+            VolumeMde = Option(args, "--volume-mde"),
         };
         var resultat = await Reprise.RepriseBase.ExecuterAsync(demande, CancellationToken.None);
         var markdown = resultat.Rapport.EnMarkdown();

@@ -14,7 +14,8 @@ Référence lue à la demande (hors contexte par défaut). Les règles que le co
 ## Reprise : chaîne d'exécution
 1. Entrées : écran `/parametres/reprise` (administrateur, routes `/api/reprise` de `RoutesReprise.cs`) ou commande
    `installation societe importer CODE --source MDE|OPTIM [--connexion C | LOGIBTP_REPRISE_SOURCE] [--societes 1,2]
-   [--reel] [--correspondances F] [--rapport F.md] [--ged RACINE] [--decimales-qte N] [--decimales-prix N]` (simulation par
+   [--reel] [--correspondances F] [--rapport F.md] [--ged RACINE] [--decimales-qte N] [--decimales-prix N]
+   [--volume-mde SURFACE|VOLUME]` (simulation par
    défaut, code de sortie 2 en cas d'échec). Décimales des lignes de pièces reprises : MDE 3 (quantités) et 2 (prix) par
    défaut, modifiables à l'écran avant l'import ; OPTIM : celles de la quantité source, prix à 6.
 2. `RepriseBase.ExecuterAsync(DemandeReprise)` : fichier de correspondances (fourni, sinon `Correspondances/mde.json` ou
@@ -60,6 +61,9 @@ Classes du cœur dans `src/LogiBTP.Api/Reprise/` ; un domaine par source, même 
 - MDE, marché : `PMEAFFBASEDOC` repris avant les pièces ; une commande copie exacte d'une pièce du marché (même numéro,
   ou pièce d'origine `CLEDOCINIT`) n'est pas reprise une seconde fois (`PieceDejaReprise`, renvoie à la pièce du marché) ;
   un devis d'origine est gardé et lié à la pièce du marché.
+- MDE, données techniques (`PMEELEMENTARTTEC`, par unité de stock) : longueur, largeur, hauteur en m (mm dans LogiBTP),
+  poids en kg, `VOLUME` en surface (m², défaut) ou en volume (m³) selon l'option de la reprise (écran, `--volume-mde`) ;
+  unité `UNITE*` renseignée non convertie, signalée `UniteTechnique`.
 - Articles à unités différentes (achat, stock, vente) : rapports de la source repris bruts (RATIOSTOCK direct, RATIOVENTE
   inversé : unités de vente par unité de stock), PA et PV gardés (coefficient
   déduit, PV non imposé), signalés `ConversionBrute` pour correction manuelle.
@@ -79,7 +83,7 @@ Classes du cœur dans `src/LogiBTP.Api/Reprise/` ; un domaine par source, même 
 
 ## Anomalies (`CODE_ANOMALIE` ↔ `CodeAnomalie`)
 Référentiels : `REPRISE_DECIMALES`, `REPRISE_SANS_EQUIVALENT`, `REPRISE_VALEUR_INCONNUE` ; annuaire : `SiretPris`,
-`PayeurInconnu` ; bibliothèque : `PrixImpose`, `ConversionManquante`, `ConversionBrute`, `ComposanteHorsBibliotheque` ; pièces :
+`PayeurInconnu` ; bibliothèque : `PrixImpose`, `ConversionManquante`, `ConversionBrute`, `UniteTechnique`, `ComposanteHorsBibliotheque` ; pièces :
 `EcartTtc`, `PieceDejaReprise`, `LigneNonReprise`, `AvancementSansMarche` ; règlements : `EcheancierEcart`, `PointageExcedent` ;
 exploitation : `PointageNonRepris` ; stock : `ConsommationNonReprise` ; GED : `GedNonReprise` (aussi le décompte des contenus distincts). Valeurs exactes : `modules/import/js/src/codes.js`.
 

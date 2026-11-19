@@ -9,6 +9,13 @@ public static class SourceReprise
     public const string Optim = "OPTIM";
 }
 
+/// <summary>Donnée technique qui reçoit la colonne VOLUME de MDE (PMEELEMENTARTTEC), souvent utilisée comme une surface.</summary>
+public static class VolumeMde
+{
+    public const string Surface = "SURFACE";
+    public const string Volume = "VOLUME";
+}
+
 /// <summary>Erreurs de validation d'un fichier de correspondances.</summary>
 public static class ErreurCorrespondance
 {
@@ -68,6 +75,7 @@ public static class ErreurReprise
     public const string Cycle = "REPRISE_CYCLE";
     public const string CorrespondancesInvalides = "REPRISE_CORRESPONDANCES_INVALIDES";
     public const string SourceIncompatible = "REPRISE_SOURCE_INCOMPATIBLE";
+    public const string OptionInvalide = "REPRISE_OPTION_INVALIDE";
 }
 
 /// <summary>Niveau d'une anomalie du rapport de reprise.</summary>
@@ -125,4 +133,6 @@ public static class CodeAnomalie
     public const string PieceDejaReprise = "REPRISE_PIECE_DEJA_REPRISE";
     /// <summary>Article à unités différentes (achat, stock, vente) : rapports repris bruts, PA et PV de la source gardés, à vérifier.</summary>
     public const string ConversionBrute = "REPRISE_CONVERSION_BRUTE";
+    /// <summary>Unité d'une donnée technique MDE renseignée : valeur lue dans l'unité par défaut (m, m², kg), à vérifier.</summary>
+    public const string UniteTechnique = "REPRISE_UNITE_TECHNIQUE";
 }

@@ -6,6 +6,12 @@ export const SOURCE_REPRISE = Object.freeze({
   OPTIM: 'OPTIM',
 });
 
+/** Donnée technique qui reçoit la colonne VOLUME de MDE (PMEELEMENTARTTEC), souvent utilisée comme une surface. */
+export const VOLUME_MDE = Object.freeze({
+  SURFACE: 'SURFACE',
+  VOLUME: 'VOLUME',
+});
+
 /** Erreurs de validation d'un fichier de correspondances. */
 export const ERREUR_CORRESPONDANCE = Object.freeze({
   FORMAT_INVALIDE: 'REPRISE_FORMAT_INVALIDE',
@@ -59,6 +65,7 @@ export const ERREUR_REPRISE = Object.freeze({
   CYCLE: 'REPRISE_CYCLE',
   CORRESPONDANCES_INVALIDES: 'REPRISE_CORRESPONDANCES_INVALIDES',
   SOURCE_INCOMPATIBLE: 'REPRISE_SOURCE_INCOMPATIBLE',
+  OPTION_INVALIDE: 'REPRISE_OPTION_INVALIDE',
 });
 
 /** Niveau d'une anomalie du rapport de reprise. */
@@ -100,4 +107,5 @@ export const CODE_ANOMALIE = Object.freeze({
   GED_NON_REPRISE: 'REPRISE_GED_NON_REPRISE',
   PIECE_DEJA_REPRISE: 'REPRISE_PIECE_DEJA_REPRISE',
   CONVERSION_BRUTE: 'REPRISE_CONVERSION_BRUTE',
+  UNITE_TECHNIQUE: 'REPRISE_UNITE_TECHNIQUE',
 });
