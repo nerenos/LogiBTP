@@ -8,7 +8,8 @@ using LogiBTP.Socle.Web;
 namespace LogiBTP.Api.Reprise;
 
 /// <summary>Demande de l'écran : la chaîne de la base source n'est ni conservée ni renvoyée.</summary>
-public sealed record DemandeRepriseEcran(string Source, string Connexion, IReadOnlyList<string>? Societes, bool Simulation, string? Correspondances);
+public sealed record DemandeRepriseEcran(string Source, string Connexion, IReadOnlyList<string>? Societes, bool Simulation, string? Correspondances,
+    short? DecimalesQte = null, short? DecimalesPrix = null);
 
 /// <summary>
 /// Routes de l'écran « Reprise de données » (plan reprise-mde-optim, lot 3), page /parametres/reprise, réservées à
@@ -29,6 +30,12 @@ public static class RoutesReprise
             {
                 base_vide = await BaseCibleReprise.EstVideAsync(c, tx, t),
                 sources = new[] { SourceReprise.Mde, SourceReprise.Optim },
+                // Décimales proposées avant l'import (quantités, prix des lignes de pièces) ; null : celles de la source.
+                decimales = new[] { SourceReprise.Mde, SourceReprise.Optim }.ToDictionary(s => s, s =>
+                {
+                    var (qte, prix) = DemandeReprise.DecimalesParDefaut(s);
+                    return new { qte, prix };
+                }),
                 executions = await ExecutionsReprise.ListerAsync(c, tx, Historique, t),
                 fusions = new Dictionary<string, IReadOnlyList<GroupeFusion>>
                 {
@@ -58,7 +65,7 @@ public static class RoutesReprise
                     Source = Source(d.Source), ConnexionSource = d.Connexion, Simulation = d.Simulation, Auteur = u.Code,
                     Societes = (d.Societes ?? []).Select(s => s.Trim()).Where(s => s.Length > 0).ToList(),
                     Correspondances = string.IsNullOrWhiteSpace(d.Correspondances) ? null : d.Correspondances,
-                    StockageGed = stockage.Racine,
+                    StockageGed = stockage.Racine, DecimalesQte = d.DecimalesQte, DecimalesPrix = d.DecimalesPrix,
                 }, unite, ct);
                 return Results.Ok(new { reprise_id = r.RepriseId, rapport = r.Rapport });
             }

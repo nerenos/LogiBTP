@@ -427,8 +427,8 @@ public class RepriseBaseTests
             WHERE d.ent_numero = '{numero}' AND l.lig_libelle_html = '{libelle}' AND m.lig_ent_id <> d.ent_id AND {condition}
             """);
         var (sit1, fac, sit2, marche) = source == SourceReprise.Mde
-            ? ("ST000001", "FA000002", "ST000002", "DC000002") : ("SIT-0001", "FS-0001", "SIT-0002", "DEV-0005-B");
-        var (ht1, ttc1, ht2, ttc2) = source == SourceReprise.Mde ? ("296.25", "355.50", "479.04", "574.85") : ("612", "734.40", "860.40", "1032.48");
+            ? ("ST000001", "FA000002", "ST000002", "MB000001") : ("SIT-0001", "FS-0001", "SIT-0002", "DEV-0005-B");
+        var (ht1, ttc1, ht2, ttc2) = source == SourceReprise.Mde ? ("296.25", "355.50", "559.00", "670.80") : ("612", "734.40", "860.40", "1032.48");
         // Situation facturée (cumul), facture d'avancement de la période (verrouillée), situation suivante en brouillon.
         Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Pieces} WHERE ent_numero = '{sit1}' AND t.tyd_code = 'V_SITUATION' AND s.std_code = 'FACTURE' AND ent_avt_presentation = 'C' AND ent_total_ht = {ht1} AND ent_total_ttc = {ttc1}"));
         Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Pieces} WHERE ent_numero = '{fac}' AND t.tyd_code = 'V_FACTURE_AVT' AND s.std_code IN ('ENVOYE', 'PAYE_PARTIEL') AND ent_verrouille AND ent_avt_presentation = 'P' AND ent_total_ht = {ht1} AND ent_total_ttc = {ttc1}"));
@@ -448,6 +448,16 @@ public class RepriseBaseTests
             // Avancement global à 80 % : toutes les lignes du marché, précédent de la facture.
             Assert.Equal(1L, await Ligne(sit2, "Mur de 20", "l.lig_avt_mode = 'P' AND l.lig_avt_valeur = 80 AND l.lig_avt_montant_cumul = 244 AND l.lig_avt_montant_precedent = 152.50"));
             Assert.Equal(1L, await Ligne(sit2, "Échafaudage", "l.lig_avt_montant_cumul = 120"));
+            // Marché MDE : commande de base puis avenant (PMEAFFBASEDOC par NUMORDRE), l'avenant suivi à 80 % lui aussi.
+            Assert.Equal(1L, await Ligne(sit2, "Plus-value fenêtre", "l.lig_avt_montant_cumul = 80"));
+            Assert.Equal(1L, await Compter("""
+                SELECT count(*) FROM marche m JOIN chantier c ON c.cha_id = m.mar_cha_id
+                JOIN marche_document b ON b.mdo_mar_id = m.mar_id AND b.mdo_role = 'BASE' AND b.mdo_rang = 0
+                JOIN document db ON db.ent_id = b.mdo_ent_id AND db.ent_numero = 'MB000001' AND m.mar_ent_id = db.ent_id
+                JOIN marche_document a ON a.mdo_mar_id = m.mar_id AND a.mdo_role = 'AVENANT' AND a.mdo_rang = 1
+                JOIN document da ON da.ent_id = a.mdo_ent_id AND da.ent_numero = 'MB000002'
+                WHERE c.cha_code = 'CH001' AND m.mar_sens = 'V' AND m.mar_montant_ht = 698.75
+                """));
             Assert.Equal((2, 2, 0), Volume(r, PiecesVenteMde.Situation));
         }
         else
@@ -481,13 +491,18 @@ public class RepriseBaseTests
             // Ouvrage et ses composantes (quantité relative), récapitulatif non repris.
             Assert.Equal(2L, await Compter("SELECT count(*) FROM document_ligne c JOIN document_ligne o ON o.lig_id = c.lig_parent_id JOIN document d ON d.ent_id = o.lig_ent_id WHERE d.ent_numero = 'DC000002' AND o.lig_code = 'MUR20' AND c.lig_qte_type = 'R'"));
             Assert.Contains(r.ChampsPerdus, c => c.Table == "type_ligne_vente" && c.Champ == "TYPELIG");
+            // Décimales par défaut de MDE : quantités à 3, prix unitaires à 2 (option de la reprise).
+            Assert.Equal(0L, await Compter("SELECT count(*) FROM document_ligne l JOIN document d ON d.ent_id = l.lig_ent_id WHERE d.ent_numero = 'DC000002' AND l.lig_tyl_id IN (2, 3) AND l.lig_libelle_html <> 'Écart de reprise' AND (l.lig_precision_qte <> 3 OR l.lig_precision_pv <> 2)"));
+            Assert.True(await Compter("SELECT count(*) FROM document_ligne l JOIN document d ON d.ent_id = l.lig_ent_id WHERE d.ent_numero = 'DC000002' AND l.lig_precision_qte = 3 AND l.lig_precision_pv = 2") >= 4);
             // Commande hors postes de pied ; facture définitive verrouillée à 10 % ; avoir brouillon sans numéro ; avancement écartée.
             Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Pieces} WHERE t.tyd_code = 'V_COMMANDE' AND s.std_code = 'BROUILLON' AND ent_total_ht = 200"));
             Assert.Contains(r.ChampsPerdus, c => c.Table == "PMEDOCCDECLI" && c.Champ == "MTPOSTESHT/MTPOSTESTTC");
             Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Pieces} WHERE ent_numero = 'FA000001' AND s.std_code = 'PAYE_PARTIEL' AND ent_verrouille AND ent_total_ht = 1000 AND ent_total_ttc = 1100"));
             Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Pieces} WHERE t.tyd_code = 'V_AVOIR' AND ent_numero IS NULL AND ent_notre_reference = 'AV000001' AND NOT ent_verrouille"));
             Assert.Equal((3, 3, 0), Volume(r, "PMEDOCFACCLI"));
-            Assert.Equal(1L, await Compter("SELECT count(*) FROM marche m JOIN document d ON d.ent_id = m.mar_ent_id WHERE m.mar_code = 'M-CH001' AND d.ent_numero = 'DC000002'"));
+            // Marché : commande de base de PMEAFFBASEDOC (validée, verrouillée), plus le devis initial du chantier.
+            Assert.Equal(1L, await Compter($"SELECT count(*) FROM marche m JOIN {Pieces} ON d.ent_id = m.mar_ent_id WHERE m.mar_code = 'M-CH001' AND d.ent_numero = 'MB000001' AND t.tyd_code = 'V_COMMANDE' AND s.std_code = 'VALIDE' AND ent_verrouille AND ent_total_ht = 598.75"));
+            Assert.Equal((2, 2, 0), Volume(r, PiecesVenteMde.MarcheBase));
             Assert.Equal(2L, await Compter("SELECT cnu_dernier_numero FROM compteur_numero c JOIN type_document t ON t.tyd_id = c.cnu_tyd_id WHERE t.tyd_code = 'V_DEVIS' AND cnu_exercice = 2024"));
             Assert.Equal(8L, await Compter("SELECT count(*) FROM document_origine WHERE dor_type = 'IMPORT' AND dor_format = 'MDE' AND dor_reference LIKE 'PMEDOC%'"));
         }
@@ -540,10 +555,11 @@ public class RepriseBaseTests
             Assert.Equal(1L, await Compter("SELECT count(*) FROM chantier WHERE cha_code = 'CH002' AND cha_statut = 'CLOS' AND cha_fin_reelle = DATE '2023-09-30'"));
             Assert.Equal(1L, await Compter("SELECT count(*) FROM chantier WHERE cha_code = 'CH003' AND cha_statut = 'TERMINE' AND cha_conducteur_ind_id IS NULL"));
             Assert.Equal(1L, await Compter("SELECT count(*) FROM intervenant i JOIN chantier c ON c.cha_id = i.itv_cha_id WHERE c.cha_code = 'CH001' AND i.itv_fin_code = 'ARCHITECTE'"));
-            // Marchés : public (type), marché + avenant, signature ; soldé avec le chantier clos ; aucun sans montant ni signature.
+            // Marchés : public (type), signature ; montant = commandes de PMEAFFBASEDOC (base 598.75 + avenant 100) ; soldé avec le
+            // chantier clos ; aucun sans montant ni signature.
             Assert.Equal(1L, await Compter("""
                 SELECT count(*) FROM marche m JOIN chantier c ON c.cha_id = m.mar_cha_id
-                WHERE m.mar_code = 'M-CH001' AND c.cha_code = 'CH001' AND m.mar_nature = 'U' AND m.mar_sens = 'V' AND m.mar_montant_ht = 162500.50
+                WHERE m.mar_code = 'M-CH001' AND c.cha_code = 'CH001' AND m.mar_nature = 'U' AND m.mar_sens = 'V' AND m.mar_montant_ht = 698.75
                   AND m.mar_date = DATE '2024-01-20' AND m.mar_statut = 'EN_COURS' AND m.mar_commentaire = 'Appel d''offres'
                 """));
             Assert.Equal(1L, await Compter("SELECT count(*) FROM marche WHERE mar_code = 'M-CH002' AND mar_nature = 'P' AND mar_montant_ht = 48000 AND mar_statut = 'SOLDE'"));
@@ -727,7 +743,7 @@ public class RepriseBaseTests
             SELECT count(*) FROM personne WHERE per_code = '{code}' AND per_casquettes @> '["CLIENT", "FOURNISSEUR"]'
               AND per_cli_compte IS NOT NULL AND per_fou_compte IS NOT NULL
             """));
-        Assert.Equal(source == SourceReprise.Mde ? 6L : 5L, await b.CompterAsync("SELECT count(*) FROM personne WHERE NOT per_societe_base AND per_parent_id IS NULL"));
+        Assert.Equal(source == SourceReprise.Mde ? 7L : 5L, await b.CompterAsync("SELECT count(*) FROM personne WHERE NOT per_societe_base AND per_parent_id IS NULL"));
     }
 
     /// <summary>Lot 4 : société de la base, référentiels rapprochés ou créés, paramétrage comptable.</summary>
@@ -812,7 +828,7 @@ public class RepriseBaseTests
         Assert.Contains(r.Anomalies, a => a.Code == CodeAnomalie.SiretPris);
         if (source == SourceReprise.Mde)
         {
-            Assert.Equal(7L, await b.CompterAsync("SELECT count(*) FROM personne WHERE NOT per_societe_base"));
+            Assert.Equal(8L, await b.CompterAsync("SELECT count(*) FROM personne WHERE NOT per_societe_base")); // dont l'architecte A002 sans COMM_TIERS
             Assert.Contains(r.Doublons, d => d.Critere == "SIRET" && d.Valeur == "77788899900015" && d.Fiches.Count == 2);
             Assert.Equal(1L, await b.CompterAsync("""
                 SELECT count(*) FROM personne WHERE per_code = 'C001' AND per_niv_code = 'PARTICULIER' AND per_casquettes = '["CLIENT"]'
@@ -821,6 +837,9 @@ public class RepriseBaseTests
                 """));
             Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM personne WHERE per_code = 'S001' AND per_casquettes = '[\"SOUS_TRAITANT\"]'"));
             Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM personne WHERE per_code = 'A001' AND per_casquettes = '[\"ARCHITECTE\"]'"));
+            // Architecte sans fiche COMM_TIERS ni TYPETIERS : rôle de la table, note gardée, pas d'avertissement.
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM personne WHERE per_code = 'A002' AND per_casquettes = '[\"ARCHITECTE\"]' AND per_commentaire = 'Cabinet sans fiche tiers'"));
+            Assert.DoesNotContain(r.Anomalies, a => a.Emplacement == "PMEARCHITECTE A002");
             // Interlocuteurs (9) et chargé d'affaires de la société de la base (individu rattaché, relié à son salarié au lot 7).
             Assert.Equal(9L, await b.CompterAsync("SELECT count(*) FROM rattachement r JOIN personne p ON p.per_id = r.rat_per_id WHERE NOT p.per_societe_base"));
             Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM individu i JOIN salarie s ON s.sal_ind_id = i.ind_id WHERE i.ind_nom = 'BERNARD' AND i.ind_prenom = 'Luc'"));

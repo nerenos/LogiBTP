@@ -14,7 +14,9 @@ Référence lue à la demande (hors contexte par défaut). Les règles que le co
 ## Reprise : chaîne d'exécution
 1. Entrées : écran `/parametres/reprise` (administrateur, routes `/api/reprise` de `RoutesReprise.cs`) ou commande
    `installation societe importer CODE --source MDE|OPTIM [--connexion C | LOGIBTP_REPRISE_SOURCE] [--societes 1,2]
-   [--reel] [--correspondances F] [--rapport F.md] [--ged RACINE]` (simulation par défaut, code de sortie 2 en cas d'échec).
+   [--reel] [--correspondances F] [--rapport F.md] [--ged RACINE] [--decimales-qte N] [--decimales-prix N]` (simulation par
+   défaut, code de sortie 2 en cas d'échec). Décimales des lignes de pièces reprises : MDE 3 (quantités) et 2 (prix) par
+   défaut, modifiables à l'écran avant l'import ; OPTIM : celles de la quantité source, prix à 6.
 2. `RepriseBase.ExecuterAsync(DemandeReprise)` : fichier de correspondances (fourni, sinon `Correspondances/mde.json` ou
    `optim.json`) validé contre les listes de la base cible (`CiblesReprise`), fusions de doublons retenues
    (`import_fusion`), lecteur en lecture seule (`LecteurSqlServer` / `LecteurMariaDb`).
@@ -37,7 +39,7 @@ Classes du cœur dans `src/LogiBTP.Api/Reprise/` ; un domaine par source, même 
 | `RESSOURCES` | `PMESALARIE`, `PMEEQUIPE`, `PMEMATERIEL` | `ref_salarie`, `svh_equipe`, `bib_materiel`, `bib_habilitation`, `z_utilisateur` | salariés (individu), intérim, habilitations, équipes, matériels et visites, calendriers |
 | `BIBLIOTHEQUE` | `PMEBIBLIO`, `PMEFAMILLE`, `PMENATUREELEMENT`, `PMEELEMENT*` | `bib_bibliotheque`, `bib_type_prod_prest`, `bib_article*` | bibliothèques, familles, éléments, ouvrages, conversions, tarifs |
 | `STRUCTURE` | `PMEAFFAIRE`, `PMECHANTIER`, `PMETYPEMARCHE`, états | `afc_dossier`, `afc_affaire*`, `afc_chantier`, `vte_indice*`, `vte_revision_formule` | projets, affaires, chantiers, marchés, intervenants, révision |
-| `PIECES_VENTE` | `PMEDOCDEVCLI`, `PMEDOCCDECLI`, `PMEDOCBLCLI`, `PMEDOCFACCLI` (+ lignes) ; `PMEDOCSITTX` | `vte_doc_entete`, `vte_doc_ligne` ; `vte_situation*` | pièces de vente (`PiecesReprise`, moteur BTP, ligne « Écart de reprise »), situations et factures d'avancement |
+| `PIECES_VENTE` | `PMEDOCDEVCLI`, `PMEDOCCDECLI`, `PMEDOCBLCLI`, `PMEDOCFACCLI` (+ lignes ; IDLIG / IDPARENT = 0 : sans clé, sans parent) ; marché `PMEAFFBASEDOC(LIG)` par chantier (NUMORDRE : base puis avenants, commandes validées) ; `PMEDOCSITTX` | `vte_doc_entete`, `vte_doc_ligne` ; `vte_situation*` | pièces de vente (`PiecesReprise`, moteur BTP, ligne « Écart de reprise »), situations et factures d'avancement |
 | `ACHATS` | pièces d'achat et de sous-traitance MDE | `ach_doc_*`, `ach_export_facture_*`, `afc_prestation_st*` | pièces d'achat et de sous-traitance (avoirs en positif) |
 | `REGLEMENTS` | `COMM_ECHEANCE`, `FIN_DOCUMENT`, `PMEDOCRETENUE` | `vac_doc_echeance_reglement`, `vac_reglement_*`, `vac_doc_retenue_caution` | échéanciers, règlements, pointages plafonnés, retenues, cautions, état de paiement |
 | `EXPLOITATION` | `PMECHTSUIVMOCHT` | `svh_rapport_journalier`, `svhz_*`, `pln_planification`, `pln_affectation` | pointages (couche SAISIE), variables de paie et zones, congés validés, tâches et affectations du planning |
@@ -48,6 +50,9 @@ Classes du cœur dans `src/LogiBTP.Api/Reprise/` ; un domaine par source, même 
 ## Règles transverses
 - Montants vendus identiques à la source : écart recalculé porté par une ligne « Écart de reprise » au PV fixe ; pièces
   validées en PV fixe ; écart de TTC signalé.
+- MDE : regroupements de natures fixes (F fournitures et matériaux, M main-d'œuvre, A matériel, P prestations, S sous-traitance,
+  OT / OD ouvrages) ; rôle d'un tiers par sa table quand TYPETIERS est vide ; architecte sans COMM_TIERS repris de sa seule fiche ;
+  euro codé EUR, E, € ou déclaré EUR dans APIDEVISEE.
 - Tout repris sauf les éléments en sommeil ; valeurs obligatoires absentes posées par défaut et listées (valeurs
   forcées) ; dates ≤ 1900 et chaînes vides lues comme absentes.
 - Consommations (Q15) reprises seulement si elles ne viennent pas d'une pièce ; stock (Q18) = inventaire à la date de

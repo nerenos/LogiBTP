@@ -35,6 +35,12 @@ public sealed record OptionsReprise
 
     /// <summary>Date de la reprise (valeurs forcées, inventaire d'ouverture) : aujourd'hui par défaut.</summary>
     public DateOnly DateReprise { get; init; } = DateOnly.FromDateTime(DateTime.Today);
+
+    /// <summary>Décimales des quantités des lignes de pièces reprises (null : celles de la quantité source, 2 à 6).</summary>
+    public short? DecimalesQte { get; init; }
+
+    /// <summary>Décimales des prix unitaires des lignes de pièces reprises (null : 6, prix de la source exact).</summary>
+    public short? DecimalesPrix { get; init; }
 }
 
 /// <summary>Ce qu'un domaine reçoit : source, correspondances, registre, rapport et unité d'écriture de la base cible.</summary>

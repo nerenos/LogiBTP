@@ -20,7 +20,7 @@ public static class SourcesPieces
         Func<LigneSource, decimal> ordre)
     {
         var cles = lignes.Select(cle).ToHashSet(StringComparer.Ordinal);
-        var enfants = lignes.GroupBy(l => parent(l) is { } p && cles.Contains(p) ? p : "")
+        var enfants = lignes.GroupBy(l => parent(l) is { } p && p != cle(l) && cles.Contains(p) ? p : "")
             .ToDictionary(g => g.Key, g => g.OrderBy(ordre).ThenBy(cle, StringComparer.Ordinal).ToList(), StringComparer.Ordinal);
         IEnumerable<LigneSource> Parcourir(string p)
         {
@@ -116,15 +116,17 @@ public sealed partial class PiecesVenteMde : IDomaineReprise
             }
         }
 
-        // Marché de vente d'un chantier : rattaché à son devis initial.
+        // Marché de vente d'un chantier : pièces de PMEAFFBASEDOC (base puis avenants), sinon son devis initial.
+        var marches = await MarchesAsync(ctx, pieces, etats, typesLigne, ct);
         var devisInitiaux = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var c in await SqlReprise.SourceAsync(ctx, "SELECT CODE, CLEDOCINIT FROM PMECHANTIER WHERE CLEDOCINIT IS NOT NULL", ct))
         {
             devisInitiaux[c.Texte("CODE")!] = c.Texte("CLEDOCINIT")!;
-            if (ctx.Registre.Trouver(StructureMde.Chantier, c.Texte("CODE")) is { } cha && ctx.Registre.Trouver(Devis, c.Texte("CLEDOCINIT")) is { } ent)
+            if (!marches.ContainsKey(c.Texte("CODE")!)
+                && ctx.Registre.Trouver(StructureMde.Chantier, c.Texte("CODE")) is { } cha && ctx.Registre.Trouver(Devis, c.Texte("CLEDOCINIT")) is { } ent)
                 await pieces.LierMarcheAsync((int)cha, ent, ct);
         }
-        await AvancementAsync(ctx, pieces, etats, facturesAvancement, devisInitiaux, ct);
+        await AvancementAsync(ctx, pieces, etats, facturesAvancement, devisInitiaux, marches, ct);
         await pieces.TerminerAsync(ct);
     }
 
@@ -161,15 +163,18 @@ public sealed partial class PiecesVenteMde : IDomaineReprise
 
     private static List<LignePiece> Lignes(ContexteReprise ctx, List<LigneSource> source, string? categorie, Dictionary<string, short> typesLigne, string emplacement)
     {
-        string Cle(LigneSource l) => l.Texte("IDLIG") ?? l.Texte("CLE")!;
-        var composees = source.Where(l => (l.Entier("NIVCOMPO") ?? 0) > 0).Select(l => l.Texte("IDPARENT")).OfType<string>().ToHashSet(StringComparer.Ordinal);
+        // IDLIG et IDPARENT valent 0 hors de l'arbre (ligne récapitulative R, lignes de premier niveau) : 0 = sans clé,
+        // sans parent (constaté sur une base réelle le 19/11/2026 : sinon tout le devis pendait sous la ligne R écartée).
+        string Cle(LigneSource l) => l.Texte("IDLIG") is { } id and not "0" ? id : "CLE:" + l.Texte("CLE");
+        string? Parent(LigneSource l) => l.Texte("IDPARENT") is { } p and not "0" ? p : null;
+        var composees = source.Where(l => (l.Entier("NIVCOMPO") ?? 0) > 0).Select(Parent).OfType<string>().ToHashSet(StringComparer.Ordinal);
         var res = new List<LignePiece>();
         var retenues = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var l in SourcesPieces.Arbre(source, Cle, l => l.Texte("IDPARENT"), l => l.Decimal("NUMORDRE") ?? 0))
+        foreach (var l in SourcesPieces.Arbre(source, Cle, Parent, l => l.Decimal("NUMORDRE") ?? 0))
         {
             var cle = Cle(l);
-            var parent = l.Texte("IDPARENT") is { } p && retenues.Contains(p) ? p : null;
-            if (l.Texte("IDPARENT") is { } absent && !retenues.Contains(absent) && source.Any(x => Cle(x) == absent)) continue; // parent écarté
+            var parent = Parent(l) is { } p && retenues.Contains(p) ? p : null;
+            if (Parent(l) is { } absent && !retenues.Contains(absent) && source.Any(x => Cle(x) == absent)) continue; // parent écarté
             var correspondance = ctx.Correspondre(TablesCorrespondance.TypeLigneVente, l.Texte("TYPELIG") ?? "", emplacement);
             if (correspondance is not { Ignorer: false, Cible: { } codeType } || !typesLigne.TryGetValue(codeType, out var type))
             {

@@ -61,6 +61,7 @@ public static class CommandeInstallation
                 installation publier --verifier --base DEV [--depuis DOSSIER] [--demo]   (contrôle de publication, code non nul si écart)
                 installation prefixe ajouter PREFIXE --integrateur NOM
                 installation societe importer CODE --source MDE|OPTIM [--connexion CHAINE] [--societes 1,2] [--reel] [--correspondances F.json] [--rapport F.md] [--ged RACINE_GED]
+                    [--decimales-qte N] [--decimales-prix N]   (MDE : 3 et 2 par défaut)
                     (reprise d'une base MDE ou OptimBTP dans la base neuve de la société ; simulation sauf --reel ;
                      chaîne de la base source dans LOGIBTP_REPRISE_SOURCE à défaut de --connexion)
         """;
@@ -335,6 +336,8 @@ public static class CommandeInstallation
             Auteur = "installation",
             // GED (lot 16) : racine du stockage (section Ged:Repertoire de l'API), documents rangés sous le nom de la base.
             StockageGed = Option(args, "--ged") is { } ged ? Path.Combine(Path.GetFullPath(ged), modele.NomBase(code)) : null,
+            DecimalesQte = Decimales(Option(args, "--decimales-qte"), "--decimales-qte"),
+            DecimalesPrix = Decimales(Option(args, "--decimales-prix"), "--decimales-prix"),
         };
         var resultat = await Reprise.RepriseBase.ExecuterAsync(demande, CancellationToken.None);
         var markdown = resultat.Rapport.EnMarkdown();
@@ -347,6 +350,11 @@ public static class CommandeInstallation
         sortie.WriteLine($"Reprise n° {resultat.RepriseId} ({(demande.Simulation ? "simulation" : "réelle")}) : {resultat.Rapport.Etat}");
         return resultat.Rapport.Etat == Import.EtatReprise.Terminee ? 0 : 2;
     }
+
+    /// <summary>Nombre de décimales d'une option (0 à 6), null si absente.</summary>
+    private static short? Decimales(string? valeur, string option) => valeur is null ? null
+        : short.TryParse(valeur, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var n) && n <= 6 ? n
+        : throw new ArgumentException($"{option} : nombre de décimales de 0 à 6 attendu");
 
     /// <summary>Variable d'environnement de la chaîne de la base source (évite de la laisser dans l'historique du shell).</summary>
     public const string VariableConnexionSource = "LOGIBTP_REPRISE_SOURCE";

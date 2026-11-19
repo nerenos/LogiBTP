@@ -41,6 +41,11 @@ export function sectionsRapport(r) {
 
 /** Sociétés saisies « 1, 2 » → ['1', '2'] (vides ignorés). */
 export const lireSocietes = (saisie) => String(saisie ?? '').split(/[,;\s]+/).map((s) => s.trim()).filter(Boolean);
+/** Décimales saisies (0 à 6) ; vide ou invalide : null (décimales de la source). */
+export const lireDecimales = (saisie) => {
+  const n = Number.parseInt(String(saisie ?? '').trim(), 10);
+  return Number.isInteger(n) && n >= 0 && n <= 6 ? n : null;
+};
 
 /**
  * Reprise de données (module Import, plan reprise-mde-optim, lot 3) : connexion à la base MDE ou OptimBTP (saisie à
@@ -60,6 +65,9 @@ export class PageParametresReprise extends PageBase {
         <tr><th>${th('source')}</th><td data-source></td></tr>
         <tr><th>${th('connexion')}</th><td><input type="password" data-c="connexion" size="60" autocomplete="off" spellcheck="false" placeholder="${th('connexion_aide')}"><span class="erreur" data-erreur="connexion"></span></td></tr>
         <tr data-ligne-societes><th>${th('societes')}</th><td><input data-c="societes" size="20" placeholder="${th('societes_aide')}"></td></tr>
+        <tr><th>${th('decimales')}</th><td><label class="ligne">${th('decimales_qte')} <input type="number" data-c="decimales_qte" min="0" max="6" step="1" size="3" placeholder="${th('decimales_source')}"></label>
+          <label class="ligne">${th('decimales_prix')} <input type="number" data-c="decimales_prix" min="0" max="6" step="1" size="3" placeholder="${th('decimales_source')}"></label>
+          <span class="aide">${th('decimales_aide')}</span></td></tr>
         <tr><th>${th('correspondances')}</th><td><span data-fichier>${th('correspondances_defaut')}</span>
           <button type="button" data-action="telecharger" title="${th('telecharger')}">${iconeHtml('parametres_btp_reprise_telecharger')}</button>
           <button type="button" data-action="charger" title="${th('charger')}">${iconeHtml('parametres_btp_reprise_charger')}</button><input type="file" accept=".json,application/json" data-c="fichier" hidden>
@@ -72,7 +80,7 @@ export class PageParametresReprise extends PageBase {
       <div data-rapport></div>
       <h2>${th('historique.titre')}</h2><div data-historique></div></div>`;
     this.combo = creerCombo({ options: Object.entries(SOURCES).map(([valeur, libelle]) => ({ valeur, libelle })), valeur: SOURCE_REPRISE.MDE, vide: false });
-    this.combo.addEventListener('change', () => this.synchroniser());
+    this.combo.addEventListener('change', () => { this.proposerDecimales(); this.synchroniser(); });
     this.conteneur.querySelector('[data-source]').append(this.combo);
     this.conteneur.querySelector('[data-c="fichier"]').addEventListener('change', (e) => this.chargerFichier(e.target).catch((x) => this.app.erreur(x)));
     this.conteneur.querySelector('.page-reprise').addEventListener('click', (e) => {
@@ -101,7 +109,15 @@ export class PageParametresReprise extends PageBase {
     zone.innerHTML = this.etat.base_vide ? '' : `<p class="erreur">${iconeHtml('avertissement')} ${th('base_non_vide')}</p>`;
     this.conteneur.querySelectorAll('[data-action="simuler"], [data-action="lancer"]').forEach((b) => { b.disabled = !this.etat.base_vide; });
     this.rendreHistorique();
+    if (!this.decimalesProposees) { this.proposerDecimales(); this.decimalesProposees = true; }
     this.synchroniser();
+  }
+
+  /** Décimales proposées pour la source choisie (MDE : quantités 3, prix 2) ; vide : celles de la source. */
+  proposerDecimales() {
+    const d = this.etat?.decimales?.[this.source] ?? {};
+    this.conteneur.querySelector('[data-c="decimales_qte"]').value = d.qte ?? '';
+    this.conteneur.querySelector('[data-c="decimales_prix"]').value = d.prix ?? '';
   }
 
   /** Sociétés pour OPTIM seulement ; nom du fichier de correspondances chargé ; doublons recochés selon la source. */
@@ -138,6 +154,8 @@ export class PageParametresReprise extends PageBase {
         source, connexion: champ('connexion').value, simulation,
         societes: source === SOURCE_REPRISE.OPTIM ? lireSocietes(champ('societes').value) : [],
         correspondances: this.correspondances?.contenu ?? null,
+        decimales_qte: lireDecimales(champ('decimales_qte').value),
+        decimales_prix: lireDecimales(champ('decimales_prix').value),
       });
       this.rapportId = r.reprise_id;
       const message = r.rapport.etat === ETAT_REPRISE.TERMINEE ? t(simulation ? 'simulation_terminee' : 'reprise_terminee') : t('reprise_echec');

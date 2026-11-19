@@ -93,6 +93,10 @@ public sealed record AvancementSource
     public (string Table, string Cle)? Marche { get; init; }
     /// <summary>Table d'entête des pièces dont les lignes sont citées (<see cref="LignePiece.Reference"/>).</summary>
     public required string TableLignes { get; init; }
+    /// <summary>Seconde table où chercher une ligne citée absente de <see cref="TableLignes"/> (MDE : lignes du devis).</summary>
+    public string? TableLignesRepli { get; init; }
+    /// <summary>Avenants du marché après sa pièce de base (table et clé), dans l'ordre : leurs lignes suivent celles de la base.</summary>
+    public List<(string Table, string Cle)> Avenants { get; init; } = [];
     /// <summary>Avancement global cumulé en % (eTypeAvancement C / S, ou situation sans ligne) : toutes les lignes du marché.</summary>
     public decimal? PctGlobal { get; init; }
     public List<LigneAvancement> Lignes { get; init; } = [];
@@ -239,7 +243,7 @@ public sealed class PiecesReprise : IAsyncDisposable
     }
 
     /// <summary>Lignes de document de la pièce : identifiants négatifs, prix selon le mode bordereau.</summary>
-    public static List<DocumentLigneBtp> Lignes(PieceSource p, int? natureOuvrage)
+    public static List<DocumentLigneBtp> Lignes(PieceSource p, int? natureOuvrage, short? decimalesQte = null, short? decimalesPrix = null)
     {
         var ids = new Dictionary<string, long>(StringComparer.Ordinal);
         long prochain = -1;
@@ -263,13 +267,13 @@ public sealed class PiecesReprise : IAsyncDisposable
             {
                 x.LigQte = l.Qte ?? 0;
                 x.LigQteType = l.Composante ? (l.QteAbsolue ? "A" : "R") : null;
-                x.LigPrecisionQte = l.PrecisionQte;
+                x.LigPrecisionQte = decimalesQte ?? l.PrecisionQte;
                 x.LigUntCode = l.Unite;
                 x.LigNatId = l.NatId ?? (type == TL.Ouvrage || l.Type == TL.Ouvrage ? natureOuvrage : null);
                 x.LigTvaId = l.Composante ? null : l.TvaId;
                 x.LigCoefBenef = l.CoefBenef <= 0 ? 1 : l.CoefBenef;
                 x.LigCoefRemise = l.CoefRemise <= 0 ? 1 : l.CoefRemise;
-                x.LigPrecisionPv = 6;
+                x.LigPrecisionPv = decimalesPrix ?? 6;
                 x.LigChaId = l.Composante ? null : l.ChantierId;
                 if (type == TL.Element)
                 {
@@ -346,7 +350,7 @@ public sealed class PiecesReprise : IAsyncDisposable
             doc.EntAvtPresentation = type.TydAvancement == TypeFactureAvancement ? Presentation.Periode : Presentation.Cumul;
         }
         // Calcul : lignes au mode bordereau, PV source imposé aux lignes de prix qui s'en écartent (toutes si la pièce est verrouillée).
-        var (lignes, marche) = p.Avancement is { } av ? await LignesAvancementAsync(doc, av, emplacement, ct) : (Lignes(p, natureOuvrage), null);
+        var (lignes, marche) = p.Avancement is { } av ? await LignesAvancementAsync(doc, av, emplacement, ct) : (Lignes(p, natureOuvrage, ctx.Options.DecimalesQte, ctx.Options.DecimalesPrix), null);
         var sources = p.Lignes.ToDictionary(l => l.Cle, StringComparer.Ordinal);
         var cles = p.Lignes.Zip(lignes, (s, l) => (l.LigId, s.Cle)).ToDictionary(x => x.LigId, x => x.Cle);
         var r = Calculer(doc, lignes);
@@ -443,22 +447,39 @@ public sealed class PiecesReprise : IAsyncDisposable
     /// </summary>
     private async Task<(List<DocumentLigneBtp> Lignes, long? Marche)> LignesAvancementAsync(DocumentBtp doc, AvancementSource av, string emplacement, CancellationToken ct)
     {
+        (long Ent, long Lig)? LigneCitee(LigneAvancement l) =>
+            l.LigneMarche is not { } r ? null
+            : lignesMarche.TryGetValue((av.TableLignes, r), out var x) ? x
+            : av.TableLignesRepli is { } repli && lignesMarche.TryGetValue((repli, r), out var y) ? y : null;
         long? marche = av.Marche is { } m ? ctx.Registre.Trouver(m.Table, m.Cle) : null;
-        marche ??= av.Lignes.Select(l => l.LigneMarche is { } r && lignesMarche.TryGetValue((av.TableLignes, r), out var x) ? x.Ent : (long?)null)
-            .FirstOrDefault(x => x is not null);
+        marche ??= av.Lignes.Select(l => LigneCitee(l)?.Ent).FirstOrDefault(x => x is not null);
+        // Pièces du marché : la base puis ses avenants (MDE : PMEAFFBASEDOC par NUMORDRE).
+        var documentsMarche = marche is { } mb
+            ? new List<long> { mb }.Concat(av.Avenants.Select(a => ctx.Registre.Trouver(a.Table, a.Cle)).OfType<long>().Where(a => a != mb)).ToList()
+            : [];
         var parLigne = new Dictionary<long, List<LigneAvancement>>();
         var libres = new List<LigneAvancement>();
         foreach (var l in av.Lignes)
         {
-            if (l.LigneMarche is { } r && lignesMarche.TryGetValue((av.TableLignes, r), out var x) && x.Ent == marche)
+            if (LigneCitee(l) is { } x && documentsMarche.Contains(x.Ent))
                 (parLigne.TryGetValue(x.Lig, out var liste) ? liste : parLigne[x.Lig] = []).Add(l);
             else if ((l.MontantCumul ?? l.MontantPeriode ?? 0) != 0) libres.Add(l);
         }
         var periode = doc.EntAvtPresentation == Presentation.Periode;
         var res = new List<DocumentLigneBtp>();
-        if (marche is { } me)
+        if (marche is not null)
         {
-            var source = await db.Lignes.AsNoTracking().Where(l => l.LigEntId == me).OrderBy(l => l.LigId).ToListAsync(ct);
+            // Lignes de la base puis de chaque avenant, les racines d'un avenant après celles de la pièce précédente.
+            var source = new List<DocumentLigneBtp>();
+            var decalage = 0;
+            foreach (var de in documentsMarche)
+            {
+                var ls = await db.Lignes.AsNoTracking().Where(l => l.LigEntId == de).OrderBy(l => l.LigId).ToListAsync(ct);
+                var racines = ls.Where(l => l.LigParentId is null).ToList();
+                foreach (var r in racines) r.LigOrdre += decalage;
+                decalage = racines.Select(r => r.LigOrdre).DefaultIfEmpty(decalage).Max();
+                source.AddRange(ls);
+            }
             var ids = source.Select((l, i) => (l.LigId, Temp: -(i + 1L))).ToDictionary(x => x.LigId, x => x.Temp);
             foreach (var s in source)
             {
@@ -510,7 +531,7 @@ public sealed class PiecesReprise : IAsyncDisposable
             res.Add(new DocumentLigneBtp
             {
                 LigId = prochain--, LigOrdre = ++ordre, LigTylId = TL.Element, LigLibelleHtml = l.LibelleHtml, LigQte = 1, LigPa = montant, LigPv = montant,
-                LigPvFixe = true, LigPrecisionPv = 6, LigNatId = natureEcart, LigTvaId = l.TvaId, LigProprietes = JsonDocument.Parse("""{"reprise_libre":true}"""),
+                LigPvFixe = true, LigPrecisionPv = ctx.Options.DecimalesPrix ?? 6, LigNatId = natureEcart, LigTvaId = l.TvaId, LigProprietes = JsonDocument.Parse("""{"reprise_libre":true}"""),
             });
         }
         return (res, marche);
@@ -551,6 +572,11 @@ public sealed class PiecesReprise : IAsyncDisposable
                 INSERT INTO compteur_numero (cnu_tyd_id, cnu_exercice, cnu_dernier_numero) VALUES ($1, $2, $3)
                 ON CONFLICT (cnu_tyd_id, cnu_exercice) DO UPDATE SET cnu_dernier_numero = greatest(compteur_numero.cnu_dernier_numero, excluded.cnu_dernier_numero)
                 """, ct, tyd, exercice, rang);
+        // Montant des marchés aux commandes reprises : valables seulement une fois leur référence posée ci-dessus.
+        await SqlReprise.ExecuterAsync(ctx.Unite, """
+            SELECT f_marche_recalculer(m.mar_id) FROM marche m
+            WHERE m.mar_id IN (SELECT d.ent_marche_id FROM document d JOIN document_origine o ON o.dor_ent_id = d.ent_id AND o.dor_format = $1)
+            """, ct, ctx.Options.Source);
     }
 
     /// <summary>Marché d'un chantier rattaché à sa pièce d'origine (devis initial, lot 9).</summary>
@@ -558,6 +584,21 @@ public sealed class PiecesReprise : IAsyncDisposable
         await SqlReprise.ExecuterAsync(ctx.Unite, """
             UPDATE marche SET mar_ent_id = $2 WHERE mar_cha_id = $1 AND mar_sens = 'V' AND mar_ent_id IS NULL
             """, ct, chaId, entId);
+
+    /// <summary>
+    /// Commande reprise inscrite au marché de vente du chantier (dans l'ordre d'appel : la première en base, les suivantes
+    /// en avenants, <c>f_marche_commande</c>) ; faux si le chantier n'a pas de marché de vente.
+    /// </summary>
+    public async Task<bool> InscrireMarcheAsync(int chaId, long entId, CancellationToken ct)
+    {
+        var inscrite = await SqlReprise.ExecuterAsync(ctx.Unite, """
+            UPDATE document SET ent_marche_id = m.mar_id
+            FROM (SELECT mar_id FROM marche WHERE mar_cha_id = $1 AND mar_sens = 'V' ORDER BY mar_id LIMIT 1) m
+            WHERE ent_id = $2
+            """, ct, chaId, entId) > 0;
+        if (inscrite) await SqlReprise.ExecuterAsync(ctx.Unite, "SELECT f_marche_commande($1)", ct, entId);
+        return inscrite;
+    }
 
     public static string? Couper(string? texte, int longueur) => AnnuaireReprise.Couper(texte, longueur);
 }
