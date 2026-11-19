@@ -15,6 +15,8 @@ public static class RegistreMde
     public const string Condition = "APIMODEREGLEMENT";
     /// <summary>Mode de règlement de la condition (première ligne, APIMODEREGLEMENT.CODE → mre_code).</summary>
     public const string ModeCondition = "APIMODEREGLEMENT.MODE";
+    /// <summary>Mode de paiement MDE (PMEMODEPAIEMENT.CLE, cité par APIMODEREGLEMENTL.MODEP → mre_code).</summary>
+    public const string ModePaiement = "PMEMODEPAIEMENT";
     public const string Pays = "APIPAYS";
     public const string Civilite = "APICIVILITE";
     /// <summary>Forme juridique (APICIVILITE.FORMEJURIDIQUE = 1) : libellé gardé pour per_forme_libelle.</summary>
@@ -188,6 +190,23 @@ public sealed class ReferentielsMde : IDomaineReprise
 
     private static async Task ReglementsAsync(ContexteReprise ctx, ReferentielsCible cibles, CancellationToken ct)
     {
+        // Modes de paiement (PMEMODEPAIEMENT) : entrée de la table mode_paiement pour la clé, sinon rapprochés par le libellé.
+        var volume = ctx.Rapport.Volume(RegistreMde.ModePaiement);
+        ctx.Correspondances.Tables.TryGetValue(TablesCorrespondance.ModePaiement, out var table);
+        foreach (var l in await SqlReprise.SourceAsync(ctx, "SELECT CLE, LIBELLE FROM PMEMODEPAIEMENT ORDER BY NUMORDRE, CLE", ct))
+        {
+            volume.Lues++;
+            if (l.Texte("CLE") is not { } cle) { volume.Ecartees++; continue; }
+            if (table?.Trouver(cle) is not null)
+            {
+                if (ctx.Correspondre(TablesCorrespondance.ModePaiement, cle, $"{RegistreMde.ModePaiement} {cle}") is { Ignorer: false, Cible: { } cible })
+                    ctx.Registre.InscrireCode(RegistreMde.ModePaiement, cle, cible);
+                else { volume.Ecartees++; continue; }
+            }
+            else if (await cibles.ModeAsync(RegistreMde.ModePaiement, cle, null, l.Texte("LIBELLE"), ct) is null) { volume.Ecartees++; continue; }
+            volume.Ecrites++;
+        }
+
         var lignes = (await SqlReprise.SourceAsync(ctx, "SELECT CODE, LIG, POUR, JOUR, NJ, MODEP, TYPEP, MOISENTIER FROM APIMODEREGLEMENTL ORDER BY CODE, LIG", ct))
             .GroupBy(l => l.Texte("CODE") ?? "").ToDictionary(g => g.Key, g => g.ToList(), StringComparer.Ordinal);
         foreach (var m in await SqlReprise.SourceAsync(ctx, "SELECT CODE, NOM FROM APIMODEREGLEMENT ORDER BY CODE", ct))
@@ -197,13 +216,11 @@ public sealed class ReferentielsMde : IDomaineReprise
             var conditions = detail.Select(Echeance).ToList();
             await cibles.ConditionAsync(RegistreMde.Condition, code, m.Texte("NOM") ?? code, conditions, ct);
 
-            // Mode de règlement : MODEP de la première ligne par la table mode_paiement si elle le connaît, sinon
-            // rapproché par le nom de la condition (TYPEP est le type d'échéance, pas le mode).
-            var modep = detail.FirstOrDefault()?.Texte("MODEP");
-            var connu = modep is not null && ctx.Correspondances.Tables.TryGetValue(TablesCorrespondance.ModePaiement, out var table) && table.Trouver(modep) is not null;
-            var e = connu ? ctx.Correspondre(TablesCorrespondance.ModePaiement, modep, $"APIMODEREGLEMENTL {code}") : null;
-            if (e is { Ignorer: false, Cible: { } mode }) ctx.Registre.InscrireCode(RegistreMde.ModeCondition, code, mode);
-            else if (e is null) await cibles.ModeAsync(RegistreMde.ModeCondition, code, null, m.Texte("NOM"), ct);
+            // Mode de règlement : celui de PMEMODEPAIEMENT cité par MODEP de la première ligne, sinon rapproché par le nom de
+            // la condition (TYPEP est le type d'échéance, pas le mode).
+            if (ctx.Registre.TrouverCode(RegistreMde.ModePaiement, detail.FirstOrDefault()?.Texte("MODEP")) is { } mode)
+                ctx.Registre.InscrireCode(RegistreMde.ModeCondition, code, mode);
+            else await cibles.ModeAsync(RegistreMde.ModeCondition, code, null, m.Texte("NOM"), ct);
         }
     }
 

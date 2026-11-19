@@ -55,7 +55,8 @@ Classes du cœur dans `src/LogiBTP.Api/Reprise/` ; un domaine par source, même 
   euro codé EUR, E, € ou déclaré EUR dans APIDEVISEE.
 - MDE, conditions de paiement (`APIMODEREGLEMENTL.TYPEP`, type d'échéance) : C comptant, N net (NJ jours, ou le JOUR
   suivant si JOUR > 0), F fin de mois, M fin de mois le JOUR (base `FIN_MOIS_JOUR` : date + NJ, fin de mois, puis le JOUR
-  du mois suivant) ; mode de paiement par `MODEP` de la première ligne (table `mode_paiement`), sinon par le nom.
+  du mois suivant) ; mode de paiement : `PMEMODEPAIEMENT` cité par `MODEP` de la première ligne (table `mode_paiement`
+  par clé, sinon rapproché par le libellé), sinon par le nom de la condition.
 - MDE, marché : `PMEAFFBASEDOC` repris avant les pièces ; une commande copie exacte d'une pièce du marché (même numéro,
   ou pièce d'origine `CLEDOCINIT`) n'est pas reprise une seconde fois (`PieceDejaReprise`, renvoie à la pièce du marché) ;
   un devis d'origine est gardé et lié à la pièce du marché.

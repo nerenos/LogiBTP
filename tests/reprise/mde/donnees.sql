@@ -31,7 +31,8 @@ INSERT INTO dbo.PMETVA (CODECATEGORIE, CODE, TAUX, COMPTEV, COMPTEA, LIBELLE, DE
 INSERT INTO dbo.APIMODEREGLEMENT (CODE, NOM) VALUES ('CHQ', 'Chèque'), ('VIR', 'Virement'), ('V30', 'Virement 30 jours fin de mois'), ('3X', 'Trois fois'),
  ('L10', 'LCR 30 jours le 10'), ('FM15', 'Virement 30 j FM le 15');
 -- POUR : pourcentage ; NJ : nombre de jours ; JOUR : jour du mois (0 : aucun) ; TYPEP : C comptant, N net (le JOUR s'il est
--- donné), F fin de mois, M fin de mois le JOUR ; MODEP : mode de paiement (entier).
+-- donné), F fin de mois, M fin de mois le JOUR ; MODEP : mode de paiement (PMEMODEPAIEMENT.CLE).
+INSERT INTO dbo.PMEMODEPAIEMENT (CLE, NUMORDRE, LIBELLE, ACTIF) VALUES (1, 1, 'Chèque', 1), (2, 2, 'Virement', 1), (3, 3, 'Lettre de change', 1);
 INSERT INTO dbo.APIMODEREGLEMENTL (CODE, LIG, POUR, JOUR, NJ, MODEP, TYPEP, MOISENTIER) VALUES
  ('CHQ', 1, 100, 0, 0, 1, 'C', 0),
  ('VIR', 1, 100, 0, 0, 2, 'N', 0),

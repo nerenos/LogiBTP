@@ -777,6 +777,10 @@ public class RepriseBaseTests
             Assert.Equal(1L, await b.CompterAsync("""SELECT count(*) FROM condition_paiement WHERE cpa_code = 'L10' AND cpa_lignes @> '[{"base":"JOUR","jour":10,"delai":30}]'"""));
             // TYPEP M : fin de mois le 15 (date + 30 jours, fin du mois, puis le 15 suivant).
             Assert.Equal(1L, await b.CompterAsync("""SELECT count(*) FROM condition_paiement WHERE cpa_code = 'FM15' AND cpa_lignes @> '[{"base":"FIN_MOIS_JOUR","jour":15,"delai":30}]'"""));
+            // Modes de paiement (PMEMODEPAIEMENT, cités par MODEP) : rapprochés par le libellé, sinon créés.
+            Assert.Equal("CHEQUE", r.Correspondances["mode_reglement"]["Chèque"]);
+            Assert.Equal("VIREMENT", r.Correspondances["mode_reglement"]["Virement"]);
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM mode_reglement WHERE mre_libelle = 'Lettre de change'"));
             Assert.Equal("M.", r.Correspondances["civilite"]["Monsieur"]);
             // Paramétrage comptable : journaux, collectifs, exigibilité, analytique.
             Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM type_comptable WHERE tco_code = 'VENTE' AND tco_journal = 'VE'"));
