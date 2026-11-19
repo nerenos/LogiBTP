@@ -8,21 +8,23 @@ import { api } from '../api.js';
 
 /**
  * Échéances d'une condition de paiement en texte : « 30% 0j; 70% 30j FM » (FM : fin de mois, « le 10 » : jour fixe,
+ * « FM le 15 » : fin de mois puis le 15 du mois suivant,
  * code de mode de règlement facultatif en fin d'échéance, ex. « 100% 45j FM LCR »).
  */
 export function formaterEcheances(lignes) {
-  return (lignes ?? []).map((l) => `${formatLibre(l.pct)}% ${l.delai}j${l.base === 'FIN_MOIS' ? ' FM' : l.base === 'JOUR' ? ` le ${l.jour}` : ''}${l.mode ? ` ${l.mode}` : ''}`).join('; ');
+  return (lignes ?? []).map((l) => `${formatLibre(l.pct)}% ${l.delai}j${l.base === 'FIN_MOIS' ? ' FM' : l.base === 'JOUR' ? ` le ${l.jour}` : l.base === 'FIN_MOIS_JOUR' ? ` FM le ${l.jour}` : ''}${l.mode ? ` ${l.mode}` : ''}`).join('; ');
 }
 
 /** Lecture du texte des échéances ; null si une échéance est mal écrite. */
 export function lireEcheances(saisie) {
   const res = [];
   for (const partie of String(saisie ?? '').split(';').map((x) => x.trim()).filter(Boolean)) {
-    const m = /^([\d.,]+)\s*%\s*(\d+)\s*j(?:\s+(FM|le\s+(\d+)))?(?:\s+([A-Za-z]+))?$/i.exec(partie);
+    const m = /^([\d.,]+)\s*%\s*(\d+)\s*j(?:\s+(FM(?:\s+le\s+(\d+))?|le\s+(\d+)))?(?:\s+([A-Za-z]+))?$/i.exec(partie);
     if (!m) return null;
-    const ligne = { pct: lireNombre(m[1]), delai: Number(m[2]), base: m[3] ? (m[4] ? 'JOUR' : 'FIN_MOIS') : 'NET' };
-    if (m[4]) ligne.jour = Number(m[4]);
-    if (m[5]) ligne.mode = m[5].toUpperCase();
+    const base = !m[3] ? 'NET' : m[4] ? 'FIN_MOIS_JOUR' : m[5] ? 'JOUR' : 'FIN_MOIS';
+    const ligne = { pct: lireNombre(m[1]), delai: Number(m[2]), base };
+    if (m[4] || m[5]) ligne.jour = Number(m[4] ?? m[5]);
+    if (m[6]) ligne.mode = m[6].toUpperCase();
     res.push(ligne);
   }
   return res;

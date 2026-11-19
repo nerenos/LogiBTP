@@ -82,6 +82,9 @@ public sealed partial class PiecesVenteMde : IDomaineReprise
             .ToDictionary(l => l.Texte("CLE")!, l => new Etat(l.Booleen("ENVOYE") == true, l.Booleen("ACCEPTE") == true, l.Booleen("NONMODIFIABLE") == true),
                 StringComparer.Ordinal);
         var facturesAvancement = new List<(LigneSource Entete, string TypeDocument, List<LigneSource> Lignes)>();
+        // Marchés d'abord (PMEAFFBASEDOC) : une commande qui a servi de source au marché en est une copie exacte (même
+        // numéro) ; elle n'est pas reprise une seconde fois, ses références pointent sur la commande du marché.
+        var marches = await MarchesAsync(ctx, pieces, etats, typesLigne, ct);
 
         foreach (var (table, typeSource, requete, requeteLignes) in Tables)
         {
@@ -101,6 +104,16 @@ public sealed partial class PiecesVenteMde : IDomaineReprise
                     v.Ecartees++;
                     continue;
                 }
+                if (marches.Copie(cle, e.Texte("CODE"), typeDocument) is { } copie && ctx.Registre.Trouver(MarcheBase, copie) is { } entMarche)
+                {
+                    var v = ctx.Rapport.Volume(table);
+                    v.Lues++;
+                    v.Ecartees++;
+                    ctx.Registre.Inscrire(table, cle, PiecesReprise.TableDocument, entMarche);
+                    ctx.Rapport.Signaler(NiveauAnomalie.Information, CodeAnomalie.PieceDejaReprise, emplacement,
+                        $"{e.Texte("CODE")} : copie de la pièce du marché {MarcheBase} {copie}, reprise une seule fois");
+                    continue;
+                }
                 // Factures d'avancement : reprises après les pièces, avec les situations et leur marché (lot 11).
                 if (pieces.EstAvancement(typeDocument))
                 {
@@ -113,20 +126,21 @@ public sealed partial class PiecesVenteMde : IDomaineReprise
                     Lignes = Lignes(ctx, lignes.GetValueOrDefault(cle) ?? [], e.Texte("CODECATEGORIE"), typesLigne, emplacement),
                 };
                 await pieces.EcrireAsync(p, ct);
+                // Pièce d'origine d'une pièce du marché (devis accepté) : lien de transformation vers la commande du marché.
+                if (marches.ParOrigine.TryGetValue(cle, out var derivee)) await pieces.LierAsync((table, cle), (MarcheBase, derivee), ct);
             }
         }
 
         // Marché de vente d'un chantier : pièces de PMEAFFBASEDOC (base puis avenants), sinon son devis initial.
-        var marches = await MarchesAsync(ctx, pieces, etats, typesLigne, ct);
         var devisInitiaux = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var c in await SqlReprise.SourceAsync(ctx, "SELECT CODE, CLEDOCINIT FROM PMECHANTIER WHERE CLEDOCINIT IS NOT NULL", ct))
         {
             devisInitiaux[c.Texte("CODE")!] = c.Texte("CLEDOCINIT")!;
-            if (!marches.ContainsKey(c.Texte("CODE")!)
+            if (!marches.ParChantier.ContainsKey(c.Texte("CODE")!)
                 && ctx.Registre.Trouver(StructureMde.Chantier, c.Texte("CODE")) is { } cha && ctx.Registre.Trouver(Devis, c.Texte("CLEDOCINIT")) is { } ent)
                 await pieces.LierMarcheAsync((int)cha, ent, ct);
         }
-        await AvancementAsync(ctx, pieces, etats, facturesAvancement, devisInitiaux, marches, ct);
+        await AvancementAsync(ctx, pieces, etats, facturesAvancement, devisInitiaux, marches.ParChantier, ct);
         await pieces.TerminerAsync(ct);
     }
 

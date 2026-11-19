@@ -21,6 +21,8 @@ public sealed class ReferentielsCible
         public const string Net = "NET";
         public const string FinMois = "FIN_MOIS";
         public const string Jour = "JOUR";
+        /// <summary>Fin de mois le N : fin du mois de (date + délai), puis le jour N du mois suivant.</summary>
+        public const string FinMoisJour = "FIN_MOIS_JOUR";
     }
 
     /// <summary>Types de comptes du module Comptabilité.</summary>

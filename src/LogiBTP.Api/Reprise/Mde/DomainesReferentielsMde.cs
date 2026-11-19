@@ -188,25 +188,45 @@ public sealed class ReferentielsMde : IDomaineReprise
 
     private static async Task ReglementsAsync(ContexteReprise ctx, ReferentielsCible cibles, CancellationToken ct)
     {
-        var lignes = (await SqlReprise.SourceAsync(ctx, "SELECT CODE, LIG, POUR, JOUR, NJ, TYPEP, MOISENTIER FROM APIMODEREGLEMENTL ORDER BY CODE, LIG", ct))
+        var lignes = (await SqlReprise.SourceAsync(ctx, "SELECT CODE, LIG, POUR, JOUR, NJ, MODEP, TYPEP, MOISENTIER FROM APIMODEREGLEMENTL ORDER BY CODE, LIG", ct))
             .GroupBy(l => l.Texte("CODE") ?? "").ToDictionary(g => g.Key, g => g.ToList(), StringComparer.Ordinal);
         foreach (var m in await SqlReprise.SourceAsync(ctx, "SELECT CODE, NOM FROM APIMODEREGLEMENT ORDER BY CODE", ct))
         {
             if (m.Texte("CODE") is not { } code) continue;
             var detail = lignes.GetValueOrDefault(code) ?? [];
-            var conditions = detail.Select(l => new LigneConditionReprise(
-                l.Decimal("POUR") ?? 100, (int)(l.Entier("NJ") ?? 0),
-                l.Entier("JOUR") is > 0 ? ReferentielsCible.BaseEcheance.Jour
-                    : l.Booleen("MOISENTIER") == true ? ReferentielsCible.BaseEcheance.FinMois : ReferentielsCible.BaseEcheance.Net,
-                l.Entier("JOUR") is > 0 and var j ? (int)j : null)).ToList();
+            var conditions = detail.Select(Echeance).ToList();
             await cibles.ConditionAsync(RegistreMde.Condition, code, m.Texte("NOM") ?? code, conditions, ct);
 
-            // Mode de règlement : type de paiement de la première ligne (table mode_paiement), sinon rapproché par le nom.
-            var typep = detail.FirstOrDefault()?.Texte("TYPEP");
-            var e = typep is null ? null : ctx.Correspondre(TablesCorrespondance.ModePaiement, typep, $"APIMODEREGLEMENTL {code}");
+            // Mode de règlement : MODEP de la première ligne par la table mode_paiement si elle le connaît, sinon
+            // rapproché par le nom de la condition (TYPEP est le type d'échéance, pas le mode).
+            var modep = detail.FirstOrDefault()?.Texte("MODEP");
+            var connu = modep is not null && ctx.Correspondances.Tables.TryGetValue(TablesCorrespondance.ModePaiement, out var table) && table.Trouver(modep) is not null;
+            var e = connu ? ctx.Correspondre(TablesCorrespondance.ModePaiement, modep, $"APIMODEREGLEMENTL {code}") : null;
             if (e is { Ignorer: false, Cible: { } mode }) ctx.Registre.InscrireCode(RegistreMde.ModeCondition, code, mode);
             else if (e is null) await cibles.ModeAsync(RegistreMde.ModeCondition, code, null, m.Texte("NOM"), ct);
         }
+    }
+
+    /// <summary>
+    /// Échéance d'une ligne de condition MDE par son type TYPEP (valeurs en dur de MDE, 19/11/2026) : C comptant ; N net
+    /// (date + NJ jours ; « net le » JOUR s'il est donné) ; F fin de mois (date + NJ, fin du mois) ; M fin de mois le JOUR
+    /// (date + NJ, fin du mois, puis le JOUR du mois suivant). Autre valeur : JOUR, sinon MOISENTIER, sinon net.
+    /// </summary>
+    internal static LigneConditionReprise Echeance(LigneSource l)
+    {
+        var pct = l.Decimal("POUR") is > 0 and var p ? p : 100;
+        var nj = (int)(l.Entier("NJ") ?? 0);
+        int? jour = l.Entier("JOUR") is > 0 and <= 31 and var j ? (int)j : null;
+        return l.Texte("TYPEP")?.Trim().ToUpperInvariant() switch
+        {
+            "C" => new(pct, 0, ReferentielsCible.BaseEcheance.Net, null),
+            "N" => jour is null ? new(pct, nj, ReferentielsCible.BaseEcheance.Net, null) : new(pct, nj, ReferentielsCible.BaseEcheance.Jour, jour),
+            "F" => new(pct, nj, ReferentielsCible.BaseEcheance.FinMois, null),
+            "M" => new(pct, nj, ReferentielsCible.BaseEcheance.FinMoisJour, jour ?? 1),
+            _ => jour is not null ? new(pct, nj, ReferentielsCible.BaseEcheance.Jour, jour)
+                : l.Booleen("MOISENTIER") == true ? new(pct, nj, ReferentielsCible.BaseEcheance.FinMois, null)
+                : new(pct, nj, ReferentielsCible.BaseEcheance.Net, null),
+        };
     }
 
     private static async Task PaysAsync(ContexteReprise ctx, CancellationToken ct)

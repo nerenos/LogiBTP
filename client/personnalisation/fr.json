@@ -8401,7 +8401,7 @@
       },
       "conditions": {
         "titre": "Conditions de paiement",
-        "aide": "Échéances : « 30% 0j; 70% 30j FM » — pourcentage du net à payer, délai en jours, puis FM (fin de mois) ou « le 10 » (jour fixe du mois), mode de règlement facultatif (VIREMENT, LCR…). Vide : comptant. Le tiers choisit sa condition par son délai de paiement (même code).",
+        "aide": "Échéances : « 30% 0j; 70% 30j FM » — pourcentage du net à payer, délai en jours, puis FM (fin de mois), « le 10 » (jour fixe du mois) ou « FM le 15 » (fin de mois puis le 15 du mois suivant), mode de règlement facultatif (VIREMENT, LCR…). Vide : comptant. Le tiers choisit sa condition par son délai de paiement (même code).",
         "echeances": "Échéances",
         "retirer": "Retirer (désactivée si un document l'utilise)",
         "ajouter": "Condition",

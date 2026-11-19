@@ -27,12 +27,32 @@ public sealed partial class PiecesVenteMde
     /// Chacun est repris en commande validée (verrouillée) inscrite au marché de vente du chantier : base puis avenants.
     /// Rend, par code de chantier, les clés (CLEDOC) des pièces reprises dans l'ordre.
     /// </summary>
-    private static async Task<Dictionary<string, List<string>>> MarchesAsync(ContexteReprise ctx, PiecesReprise pieces, Dictionary<string, Etat> etats,
+    /// <summary>
+    /// Pièces de marché reprises : par chantier (clés dans l'ordre), par pièce d'origine (CLEDOCINIT → clé) et par numéro
+    /// (CODE → clé) pour reconnaître les copies.
+    /// </summary>
+    private sealed class MarchesMde
+    {
+        public Dictionary<string, List<string>> ParChantier { get; } = new(StringComparer.Ordinal);
+        public Dictionary<string, string> ParOrigine { get; } = new(StringComparer.Ordinal);
+        public Dictionary<string, string> ParNumero { get; } = new(StringComparer.Ordinal);
+        public string? TypeDocument { get; set; }
+
+        /// <summary>Pièce du marché dont la pièce source est la copie (même type, même clé d'origine ou même numéro).</summary>
+        public string? Copie(string cle, string? numero, string typeDocument) =>
+            typeDocument != TypeDocument ? null
+            : ParOrigine.TryGetValue(cle, out var a) ? a
+            : numero is not null && ParNumero.TryGetValue(numero, out var b) ? b : null;
+    }
+
+    private static async Task<MarchesMde> MarchesAsync(ContexteReprise ctx, PiecesReprise pieces, Dictionary<string, Etat> etats,
         Dictionary<string, short> typesLigne, CancellationToken ct)
     {
-        var res = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        var marches = new MarchesMde();
+        var res = marches.ParChantier;
         var volume = ctx.Rapport.Volume(MarcheBase);
-        if (ctx.Correspondre(TablesCorrespondance.TypeDocument, "CC", MarcheBase) is not { Ignorer: false, Cible: { } typeCommande }) return res;
+        if (ctx.Correspondre(TablesCorrespondance.TypeDocument, "CC", MarcheBase) is not { Ignorer: false, Cible: { } typeCommande }) return marches;
+        marches.TypeDocument = typeCommande;
         var lignes = (await SqlReprise.SourceAsync(ctx, "SELECT * FROM PMEAFFBASEDOCLIG ORDER BY CLEDOC, NUMORDRE", ct))
             .GroupBy(l => l.Texte("CLEDOC") ?? "").ToDictionary(g => g.Key, g => g.ToList(), StringComparer.Ordinal);
         // PMEAFFBASEDOC n'a ni affaire ni lettres : affaire du chantier, textes vides (colonnes attendues par Entete).
@@ -62,8 +82,10 @@ public sealed partial class PiecesVenteMde
             if (!await pieces.InscrireMarcheAsync((int)chaId, ent, ct))
                 ctx.Rapport.Signaler(NiveauAnomalie.Avertissement, CodeAnomalie.AvancementSansMarche, emplacement, $"Chantier {cht} sans marché de vente : commande reprise hors marché");
             (res.TryGetValue(cht, out var liste) ? liste : res[cht] = []).Add(cle);
+            if (e.Texte("CLEDOCINIT") is { } origine) marches.ParOrigine.TryAdd(origine, cle);
+            if (e.Texte("CODE") is { } numero) marches.ParNumero.TryAdd(numero, cle);
         }
-        return res;
+        return marches;
     }
 
     private static async Task AvancementAsync(ContexteReprise ctx, PiecesReprise pieces, Dictionary<string, Etat> etats,

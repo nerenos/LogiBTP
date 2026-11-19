@@ -53,6 +53,14 @@ Classes du cœur dans `src/LogiBTP.Api/Reprise/` ; un domaine par source, même 
 - MDE : regroupements de natures fixes (F fournitures et matériaux, M main-d'œuvre, A matériel, P prestations, S sous-traitance,
   OT / OD ouvrages) ; rôle d'un tiers par sa table quand TYPETIERS est vide ; architecte sans COMM_TIERS repris de sa seule fiche ;
   euro codé EUR, E, € ou déclaré EUR dans APIDEVISEE.
+- MDE, conditions de paiement (`APIMODEREGLEMENTL.TYPEP`, type d'échéance) : C comptant, N net (NJ jours, ou le JOUR
+  suivant si JOUR > 0), F fin de mois, M fin de mois le JOUR (base `FIN_MOIS_JOUR` : date + NJ, fin de mois, puis le JOUR
+  du mois suivant) ; mode de paiement par `MODEP` de la première ligne (table `mode_paiement`), sinon par le nom.
+- MDE, marché : `PMEAFFBASEDOC` repris avant les pièces ; une commande copie exacte d'une pièce du marché (même numéro,
+  ou pièce d'origine `CLEDOCINIT`) n'est pas reprise une seconde fois (`PieceDejaReprise`, renvoie à la pièce du marché) ;
+  un devis d'origine est gardé et lié à la pièce du marché.
+- Articles à unités différentes (achat, stock, vente) : rapports de la source repris bruts, PA et PV gardés (coefficient
+  déduit, PV non imposé), signalés `ConversionBrute` pour correction manuelle.
 - Tout repris sauf les éléments en sommeil ; valeurs obligatoires absentes posées par défaut et listées (valeurs
   forcées) ; dates ≤ 1900 et chaînes vides lues comme absentes.
 - Consommations (Q15) reprises seulement si elles ne viennent pas d'une pièce ; stock (Q18) = inventaire à la date de
@@ -69,8 +77,8 @@ Classes du cœur dans `src/LogiBTP.Api/Reprise/` ; un domaine par source, même 
 
 ## Anomalies (`CODE_ANOMALIE` ↔ `CodeAnomalie`)
 Référentiels : `REPRISE_DECIMALES`, `REPRISE_SANS_EQUIVALENT`, `REPRISE_VALEUR_INCONNUE` ; annuaire : `SiretPris`,
-`PayeurInconnu` ; bibliothèque : `PrixImpose`, `ConversionManquante`, `ComposanteHorsBibliotheque` ; pièces :
-`EcartTtc`, `LigneNonReprise`, `AvancementSansMarche` ; règlements : `EcheancierEcart`, `PointageExcedent` ;
+`PayeurInconnu` ; bibliothèque : `PrixImpose`, `ConversionManquante`, `ConversionBrute`, `ComposanteHorsBibliotheque` ; pièces :
+`EcartTtc`, `PieceDejaReprise`, `LigneNonReprise`, `AvancementSansMarche` ; règlements : `EcheancierEcart`, `PointageExcedent` ;
 exploitation : `PointageNonRepris` ; stock : `ConsommationNonReprise` ; GED : `GedNonReprise` (aussi le décompte des contenus distincts). Valeurs exactes : `modules/import/js/src/codes.js`.
 
 ## Tests
