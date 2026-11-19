@@ -268,6 +268,7 @@ public static class Cdar
         }
         var contexte = racine.Element(Rsm + "ExchangedDocumentContext");
         var echange = racine.Element(Rsm + "ExchangedDocument")!;
+        var avertissements = new List<string>();
         return new MessageCdar(
             Valeur(contexte?.Element(Ram + "BusinessProcessSpecifiedDocumentContextParameter")?.Element(Ram + "ID")),
             Valeur(contexte?.Element(Ram + "GuidelineSpecifiedDocumentContextParameter")?.Element(Ram + "ID")),
@@ -277,16 +278,17 @@ public static class Cdar
             LirePartie(echange.Element(Ram + "SenderTradeParty")),
             LirePartie(echange.Element(Ram + "IssuerTradeParty")),
             echange.Elements(Ram + "RecipientTradeParty").Select(p => LirePartie(p)!).ToList(),
-            racine.Elements(Rsm + "AcknowledgementDocument").Select(LireAccuse).ToList());
+            racine.Elements(Rsm + "AcknowledgementDocument").Select(a => LireAccuse(a, avertissements)).ToList())
+        { Avertissements = avertissements };
     }
 
-    private static AccuseCdar LireAccuse(XElement a) => new(
+    private static AccuseCdar LireAccuse(XElement a, List<string> avertissements) => new(
         Valeur(a.Element(Ram + "MultipleReferencesIndicator")?.Element(Udt + "Indicator")) == "true",
         Valeur(a.Element(Ram + "TypeCode")),
         LireDateHeure(a.Element(Ram + "IssueDateTime"), "MDT-78"),
-        a.Elements(Ram + "ReferenceReferencedDocument").Select(LireReference).ToList());
+        a.Elements(Ram + "ReferenceReferencedDocument").Select(r => LireReference(r, avertissements)).ToList());
 
-    private static StatutFactureCdar LireReference(XElement r)
+    private static StatutFactureCdar LireReference(XElement r, List<string> avertissements)
     {
         var vendeur = r.Element(Ram + "IssuerTradeParty")?.Elements(Ram + "GlobalID").ToList() ?? [];
         // MDT-129 peut être répété : le SIREN (0002) d'abord (BR-FR-CDV-13), sinon le premier.
@@ -298,7 +300,7 @@ public static class Cdar
             LireDateHeure(r.Element(Ram + "ReceiptDateTime"), "MDT-95"),
             r.Elements(Ram + "AttachmentBinaryObject").Select(LirePieceJointe).ToList(),
             Valeur(r.Element(Ram + "ReferenceTypeCode")),
-            LireDate(r.Element(Ram + "FormattedIssueDateTime"), "MDT-100"),
+            LireDateInformative(r.Element(Ram + "FormattedIssueDateTime"), "MDT-100", avertissements),
             ExigerTexte(Valeur(r.Element(Ram + "ProcessConditionCode")), "MDT-105"),
             Valeur(r.Element(Ram + "ProcessCondition")),
             Valeur(idVendeur),
@@ -380,6 +382,23 @@ public static class Cdar
         var format = (string?)e.Attribute("format") ?? FormatDate;
         if (format == FormatDate && DateOnly.TryParseExact(e.Value.Trim(), MotifDate, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d)) return d;
         throw new ExceptionCdar(ErreurFe.DonneeInvalide, $"Date illisible ({terme}) : {e.Value} (format {format})", [terme]);
+    }
+
+    /// <summary>
+    /// Date de référence sans effet sur le statut (MDT-100, date BT-2 de la facture visée) : illisible (plateforme qui
+    /// s'écarte du format 102), elle est ignorée et notée en avertissement au lieu de refuser tout le message.
+    /// </summary>
+    private static DateOnly? LireDateInformative(XElement? conteneur, string terme, List<string> avertissements)
+    {
+        try
+        {
+            return LireDate(conteneur, terme);
+        }
+        catch (ExceptionCdar e)
+        {
+            avertissements.Add(e.Message);
+            return null;
+        }
     }
 
     // ---------------------------------------------------------------- statuts lus

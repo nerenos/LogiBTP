@@ -68,7 +68,11 @@ public sealed record AccuseCdar(bool Multiple, string? TypeAccuse, DateTime? Dat
 /// </summary>
 public sealed record MessageCdar(
     string? Processus, string? Profil, string Identifiant, string? Nom, DateTime DateCreation, PartieCdar? Expediteur,
-    PartieCdar? Emetteur, IReadOnlyList<PartieCdar> Destinataires, IReadOnlyList<AccuseCdar> Accuses);
+    PartieCdar? Emetteur, IReadOnlyList<PartieCdar> Destinataires, IReadOnlyList<AccuseCdar> Accuses)
+{
+    /// <summary>Termes informatifs illisibles ignorés à la lecture (message de l'erreur évitée), gardés au journal.</summary>
+    public IReadOnlyList<string> Avertissements { get; init; } = [];
+}
 
 /// <summary>Facture visée par un statut à écrire : numéro BT-1, type BT-3, date BT-2, SIREN du vendeur, date de réception (Déposée ou Reçue).</summary>
 public sealed record FactureReferencee(string Numero, string? TypeFacture, DateOnly? Date, string? SirenVendeur, DateTime? DateReception = null);

@@ -631,7 +631,7 @@ public class ServiceFactureElectronique(
         await JournalFe.AjouterAsync(db, EtapeFe.Du(cdar, EvenementFe.Controle, ActeurFe.Systeme) with
         {
             EtatAvant = EtatFlux.Recu, EtatApres = EtatFlux.Traite,
-            Detail = new { statuts = lus.Count, erreurs = lus.Sum(x => x.Erreurs.Count) },
+            Detail = new { statuts = lus.Count, erreurs = lus.Sum(x => x.Erreurs.Count), avertissements = m.Avertissements },
         }, ct);
     }
 
