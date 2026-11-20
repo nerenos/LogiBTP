@@ -25,7 +25,9 @@ export function afficherTitres(nav, court) {
       const fin = /\s*$/.exec(noeud.textContent)[0];
       noeud.textContent = marge + (court ? abrege : complet) + fin;
     }
+    // Infobulle d'aide facultative (`data-aide`) rendue au retour aux titres complets.
     if (court) b.setAttribute('title', complet);
+    else if (b.dataset.aide) b.setAttribute('title', b.dataset.aide);
     else b.removeAttribute('title');
   }
   nav.classList.toggle('titres-courts', court);

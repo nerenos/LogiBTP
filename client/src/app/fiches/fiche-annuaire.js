@@ -156,7 +156,7 @@ class FicheAnnuaire extends FicheLogiBTP {
 
   ongletCoordonnees(type) {
     return {
-      code: 'coordonnees', titre: texte('fiches_btp.annuaire.onglets.coordonnees'), champs: ['coordonnees'],
+      code: 'coordonnees', titre: texte('fiches_btp.annuaire.onglets.coordonnees'), court: texte('fiches_btp.annuaire.onglets.coordonnees_court'), champs: ['coordonnees'],
       rendre: (corps, { modifiable }) => new EditeurCoordonnees(corps, {
         valeur: () => this.valeur('coordonnees') ?? [], definir: (u) => this.definirValeur('coordonnees', u), modifiable, nom: 'fiche',
         proposer: this.id === null ? null : () => this.annuaire.coordonneesProposees(type, this.id),

@@ -11,7 +11,7 @@
 |---|---|---|---|---|
 | 1 | Titres courts des onglets et retrait de mise en forme | socle | — | FAIT (20/11/2026) |
 | 2 | Titres courts des onglets de fiche | `modules/fiche` | 1 | FAIT (20/11/2026) |
-| 3 | Titres courts : fiches du cœur et page document | cœur | 2 | A FAIRE |
+| 3 | Titres courts : fiches du cœur et page document | cœur | 2 | FAIT (20/11/2026) |
 | 4 | Derniers pointages des salariés et du matériel | cœur | — | A FAIRE |
 | 5 | Styles des lignes : schéma, résolution répliquée, routes | `modules/document` | — | A FAIRE |
 | 6 | Styles des lignes : grille, plan, détail, réimposition, paramétrage | `modules/document` | 1, 5 | A FAIRE |
@@ -50,7 +50,7 @@
   court, le titre complet reste.
 - **Critère de fin** : `npm test --workspace modules/fiche/js` ; une fiche de test étroite affiche les titres courts.
 
-## Lot 3 : titres courts des fiches du cœur et de la page document (cœur)
+## Lot 3 : titres courts des fiches du cœur et de la page document (cœur) : FAIT (20/11/2026)
 
 - **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `client/src/app/fiches/definitions.js` (titres courts des onglets des fiches du cœur) puis

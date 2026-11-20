@@ -4,7 +4,7 @@ import { FAMILLE_DOCUMENT, STATUT_DOCUMENT, STATUTS_HORS_VIGUEUR, TYPE_AVANCEMEN
 import { PageBase } from '@logibtp/navigation';
 import { ExplorateurGed } from '@logibtp/ged/ui';
 import { ArborescenceBtp } from '../ged/arborescence.js';
-import { echapper, formatNombre, formatDateHeure, actionDe, libelleRaccourci, ouvrirMenuContextuel, basculerAideMemoire, fermerAideMemoire, confirmer, ouvrirDialogue, ouvrirModale, saisir, separateur as separateurZones, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
+import { activerTitresCourts, echapper, formatNombre, formatDateHeure, actionDe, libelleRaccourci, ouvrirMenuContextuel, basculerAideMemoire, fermerAideMemoire, confirmer, ouvrirDialogue, ouvrirModale, saisir, separateur as separateurZones, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
 import { D, aujourdhui, texteDate, ACTION_DROIT } from '@logibtp/socle';
 import { ONGLETS_DOCUMENT } from '../raccourcis.js';
 import { Disposition, GestionVuesDocument, PlanDocument, RechercheLignes, NotificationsDocument } from '@logibtp/document/ui';
@@ -72,7 +72,7 @@ const gabarit = () => `
   <div class="document-barre barre-outils" role="toolbar">
     <nav class="onglets" role="tablist">
       <button role="tab" data-onglet-vue="entete" title="${texteHtml('document_btp.page.onglets.entete_aide', { raccourci: libelleRaccourci('ongletEntete', 'document') })}">${texteHtml('document_btp.page.onglets.entete')}</button>
-      <button role="tab" data-onglet-vue="reglements" title="${texteHtml('document_btp.page.onglets.reglements_aide', { raccourci: libelleRaccourci('ongletReglements', 'document') })}">${texteHtml('document_btp.page.onglets.reglements')}</button>
+      <button role="tab" data-onglet-vue="reglements" data-titre="${texteHtml('document_btp.page.onglets.reglements')}" data-court="${texteHtml('document_btp.page.onglets.reglements_court')}" data-aide="${texteHtml('document_btp.page.onglets.reglements_aide', { raccourci: libelleRaccourci('ongletReglements', 'document') })}" title="${texteHtml('document_btp.page.onglets.reglements_aide', { raccourci: libelleRaccourci('ongletReglements', 'document') })}">${texteHtml('document_btp.page.onglets.reglements')}</button>
       <button role="tab" data-onglet-vue="lignes" title="${texteHtml('document_btp.page.onglets.lignes_aide', { raccourci: libelleRaccourci('ongletLignes', 'document') })}">${texteHtml('document_btp.page.onglets.lignes')}</button>
       <button role="tab" data-onglet-vue="analyse" title="${texteHtml('document_btp.page.onglets.analyse_aide', { raccourci: libelleRaccourci('ongletAnalyse', 'document') })}">${iconeHtml('document_btp_analyse')}</button>
       <button role="tab" data-onglet-vue="pieces" title="${texteHtml('document_btp.page.onglets.pieces_aide', { raccourci: libelleRaccourci('ongletPieces', 'document') })}">${iconeHtml('navigation_btp_ged')}</button>
@@ -211,6 +211,9 @@ export class PageDocument extends PageBase {
     const app = this.app;
     this.conteneur.innerHTML = gabarit();
     this.conteneur.classList.add('page-document');
+    // Titres courts des onglets quand la ligne déborde (socle).
+    this.arretTitresCourts?.();
+    this.arretTitresCourts = activerTitresCourts(this.$('nav.onglets'));
     // Factur-X ou XML glissé sur une facture d'achat (lot 14 de la facturation électronique) : facture reçue hors
     // plateforme, pièce créée en brouillon comme pour un flux reçu (ouverte ensuite) ; la GED garde ses propres dépôts.
     this.retirerDepotFacture = activerDepotFactures(this.conteneur, {

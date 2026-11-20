@@ -207,15 +207,15 @@ export class FicheElement extends FicheLogiBTP {
           new OngletUnites(unites, this.#contexte(modifiable));
         } },
       ...(ouvrage
-        ? [{ code: 'composition', titre: texte('fiches_btp.element.onglets.composition'), champs: ['composition'], rendre: (corps, { modifiable }) => this.#composition(corps, modifiable).catch((e) => this.message(e.message, 'erreur')) }]
-        : [{ code: 'tarifs', titre: texte('fiches_btp.element.onglets.tarifs'), rendre: (corps, { modifiable }) => new OngletTarifs(corps, this.#contexte(modifiable)) }]),
+        ? [{ code: 'composition', titre: texte('fiches_btp.element.onglets.composition'), court: texte('fiches_btp.element.onglets.composition_court'), champs: ['composition'], rendre: (corps, { modifiable }) => this.#composition(corps, modifiable).catch((e) => this.message(e.message, 'erreur')) }]
+        : [{ code: 'tarifs', titre: texte('fiches_btp.element.onglets.tarifs'), court: texte('fiches_btp.element.onglets.tarifs_court'), rendre: (corps, { modifiable }) => new OngletTarifs(corps, this.#contexte(modifiable)) }]),
       // Module Stock : quantités par lieu, valorisation, PMP, emplacements, mouvements (article géré en stock).
       ...(this.id !== null && this.valeur('gestion') === GESTION_ELEMENT.STOCK && this.valeur('type') === 'ARTICLE' && this.moduleActif(MODULE_FACULTATIF.STOCK)
         ? [{ code: 'stock', titre: texte('fiches_btp.element.onglets.stock'), rendre: (corps) => rendreStockArticle(corps, { id: Number(this.id), message: this.message, naviguer: (url, e) => this.ouvrirUrl(url, e) })
           .catch((e) => { corps.innerHTML = `<p class="aide">${echapper(e.message)}</p>`; }) }]
         : []),
       // Image et notices : sous les groupes de l'onglet Article.
-      { code: 'image', dans: 'article', titre: texte('fiches_btp.element.onglets.image'), champs: ['image_ged'], rendre: (corps, { modifiable }) => this.#imageNotices(corps, modifiable).catch((e) => this.message(e.message, 'erreur')) },
+      { code: 'image', dans: 'article', titre: texte('fiches_btp.element.onglets.image'), court: texte('fiches_btp.element.onglets.image_court'), champs: ['image_ged'], rendre: (corps, { modifiable }) => this.#imageNotices(corps, modifiable).catch((e) => this.message(e.message, 'erreur')) },
       ...this.ongletUtilisations(),
     ];
   }
@@ -225,7 +225,7 @@ export class FicheElement extends FicheLogiBTP {
   /** Onglet Utilisations (élément enregistré) : ouvrages et ensembles qui le composent, lignes des pièces d'achat. */
   ongletUtilisations() {
     if (this.id === null) return [];
-    return [{ code: 'utilisations', titre: texte('fiches_btp.element.onglets.utilisations'), rendre: (corps) => this.#utilisations(corps).catch((e) => this.message(e.message, 'erreur')) }];
+    return [{ code: 'utilisations', titre: texte('fiches_btp.element.onglets.utilisations'), court: texte('fiches_btp.element.onglets.utilisations_court'), rendre: (corps) => this.#utilisations(corps).catch((e) => this.message(e.message, 'erreur')) }];
   }
 
   async #utilisations(corps) {

@@ -66,7 +66,7 @@ export class FicheSalarie extends FicheLogiBTP {
     if (this.id === null) return super.ongletsSpecifiques();
     const r = this.ressources;
     return [...super.ongletsSpecifiques(),
-      ...(r ? [{ code: 'habilitations', titre: texte('fiches_btp.onglets.habilitations'), rendre: (corps) => r.habilitations(corps, { element: 'salarie', id: this.id }) }] : []),
+      ...(r ? [{ code: 'habilitations', titre: texte('fiches_btp.onglets.habilitations'), court: texte('fiches_btp.onglets.habilitations_court'), rendre: (corps) => r.habilitations(corps, { element: 'salarie', id: this.id }) }] : []),
       ...(r && this.valeur('statut') === 'INTERIM' ? [{ code: 'missions', titre: texte('fiches_btp.onglets.missions'), rendre: (corps) => r.missions(corps, { salarie: this.id }) }] : []),
       ...(r?.materielAffecte ? [{ code: 'materiel-affecte', titre: texte('fiches_btp.onglets.materiel'), rendre: (corps) => r.materielAffecte(corps, { type: this.valeur('statut') === 'INTERIM' ? 'INTERIM' : 'SALARIE', id: this.id }) }] : []),
       ...(this.dotations ? [{ code: 'dotations', titre: texte('fiches_btp.onglets.dotations'), rendre: (corps) => this.dotations(corps, { salarie: Number(this.id) }) }] : []),
@@ -241,7 +241,7 @@ export class FicheMateriel extends FicheLogiBTP {
     const r = this.ressources;
     if (!r || this.id === null) return super.ongletsSpecifiques();
     return [...super.ongletsSpecifiques(), {
-      code: 'habilitations', titre: texte('fiches_btp.onglets.controles'),
+      code: 'habilitations', titre: texte('fiches_btp.onglets.controles'), court: texte('fiches_btp.onglets.controles_court'),
       rendre: (corps) => {
         corps.innerHTML = '<div data-controles></div><div data-exigees></div>';
         r.habilitations(corps.querySelector('[data-controles]'), { element: 'materiel', id: this.id, titre: texte('fiches_btp.materiel.controles') });
