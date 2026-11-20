@@ -2,10 +2,17 @@ import { texte, texteHtml, iconeHtml, couleurTheme } from '@logibtp/socle/dictio
 import { CFG_LIGNES as C, ordreAffichage, echapper, formatNombre, formatLibre, lireNombre, creerCombo, editerLibelle, htmlSur, confirmer } from '@logibtp/socle/ui';
 import { TL, estChiffree, estPied, estTranche, calculerEcheances, montantRetenue, MODES_REGLEMENT, regle, estFamilleAchat } from '../src/index.js';
 import { LIBELLES_BASE_PIED, LIBELLES_TYPE_PRIX } from './editeur-document.js';
+import { creerEditeurStyle } from './style-ligne.js';
+import { CLASSE_STYLE_LIGNE } from '../src/index.js';
 
 const lireEtiquettes = (v) => {
   const x = typeof v === 'string' ? (() => { try { return JSON.parse(v); } catch { return []; } })() : v;
   return Array.isArray(x) ? x : [];
+};
+
+const lireStyle = (v) => {
+  const x = typeof v === 'string' ? (() => { try { return JSON.parse(v); } catch { return null; } })() : v;
+  return x && typeof x === 'object' && !Array.isArray(x) ? x : {};
 };
 
 // Panneaux autour de la grille : entête, détail de la ligne, totaux, messages, écarts.
@@ -176,8 +183,11 @@ export class PanneauxDocument {
         ${this.champsOptions(d).join('')}
       </div></fieldset>
       ${this.sectionEtiquettes(d)}
+      <fieldset class="styles-document"><legend>${texteHtml('document.styles.document_titre')}</legend>
+        <p class="aide">${texteHtml('document.styles.document_aide')}</p><div data-styles-document></div></fieldset>
       ${this.sectionsOptions()}`;
     const m = editeur.magasin;
+    this.lierStylesDocument(zone.querySelector('[data-styles-document]'));
     this.lierEtiquettes(zone);
     lier(zone.querySelector('.formulaire'), '[data-champ]', (champ, v, el) => m.modifier((b) => { b.document[champ] = valeurChamp(el, v); }, texte('document.etapes.entete')));
     const majFormat = () => {
@@ -377,6 +387,28 @@ export class PanneauxDocument {
     </fieldset>`;
   }
 
+  /** Styles des classes de ligne propres au document (ent_styles_lignes) : un éditeur par classe. */
+  lierStylesDocument(zone) {
+    const editeur = this.editeur;
+    const m = editeur.magasin;
+    const propres = lireStyle(editeur.saisie.document.ent_styles_lignes);
+    const ro = Boolean(editeur.fige || m.lectureSeule);
+    for (const classe of Object.values(CLASSE_STYLE_LIGNE)) {
+      const bloc = document.createElement('div');
+      bloc.className = 'styles-lignes-classe';
+      bloc.innerHTML = `<h3>${texteHtml(`document.styles.classe.${classe}`)}</h3>`;
+      bloc.append(creerEditeurStyle({
+        style: propres[classe] ?? {}, lectureSeule: ro,
+        surChangement: (style) => m.modifier((b) => {
+          const tous = { ...lireStyle(b.document.ent_styles_lignes) };
+          if (Object.keys(style).length) tous[classe] = style; else delete tous[classe];
+          b.document.ent_styles_lignes = Object.keys(tous).length ? tous : null;
+        }, texte('document.etapes.styles_document')),
+      }));
+      zone.append(bloc);
+    }
+  }
+
   lierEtiquettes(zone) {
     const m = this.editeur.magasin;
     const ecrire = (modif, libelle) => m.modifier((b) => {
@@ -511,6 +543,8 @@ export class PanneauxDocument {
       <div class="formulaire">${champs.join('')}
         ${props.map((p) => `<label>${echapper(p.prd_libelle)}<input data-prop="${p.prd_code}" value="${echapper(valeurs[p.prd_code] ?? '')}"></label>`).join('')}
       </div>
+      <fieldset class="style-ligne" ${l._virtuelle ? 'hidden' : ''}><legend>${texteHtml('document.styles.ligne_titre')}</legend>
+        <p class="aide">${texteHtml('document.styles.ligne_aide')}</p><div data-style-ligne></div></fieldset>
       ${calcul.length ? `<dl class="calcul">${calcul.map(([t, v]) => `<dt>${echapper(t)}</dt><dd>${v}</dd>`).join('')}</dl>` : ''}`;
 
     const m = editeur.magasin;
@@ -526,6 +560,10 @@ export class PanneauxDocument {
         const x = b.lignes.find((y) => y.lig_id === ligId);
         x.lig_proprietes = { ...(x.lig_proprietes ?? {}), [el.dataset.prop]: el.value || null };
       }, texte('document.etapes.propriete'));
+    }));
+    zone.querySelector('[data-style-ligne]')?.append(creerEditeurStyle({
+      style: lireStyle(l.lig_style), lectureSeule: Boolean(editeur.fige || m.lectureSeule),
+      surChangement: (style) => m.modifier((b) => { b.lignes.find((y) => y.lig_id === ligId).lig_style = Object.keys(style).length ? style : null; }, texte('document.etapes.style_ligne')),
     }));
     zone.querySelector('[data-action="appliquer-tva"]')?.addEventListener('click', () => {
       m.modifier((b) => this.regles.appliquerTauxTitre(b, ligId), texte('document.etapes.tva_titre'));

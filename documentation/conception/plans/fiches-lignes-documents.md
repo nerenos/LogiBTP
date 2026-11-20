@@ -13,8 +13,8 @@
 | 2 | Titres courts des onglets de fiche | `modules/fiche` | 1 | FAIT (20/11/2026) |
 | 3 | Titres courts : fiches du cœur et page document | cœur | 2 | FAIT (20/11/2026) |
 | 4 | Derniers pointages des salariés et du matériel | cœur | — | FAIT (20/11/2026) |
-| 5 | Styles des lignes : schéma, résolution répliquée, routes | `modules/document` | — | A FAIRE |
-| 6 | Styles des lignes : grille, plan, détail, réimposition, paramétrage | `modules/document` | 1, 5 | A FAIRE |
+| 5 | Styles des lignes : schéma, résolution répliquée, routes | `modules/document` | — | FAIT (20/11/2026) |
+| 6 | Styles des lignes : grille, plan, détail, réimposition, paramétrage | `modules/document` | 1, 5 | FAIT (20/11/2026) |
 | 7 | Styles des lignes dans les éditions | cœur | 5 | A FAIRE |
 | 8 | PA de référence et plan de mise à jour de la bibliothèque | `modules/bibliotheque` | — | A FAIRE |
 | 9 | Indicateur d'écart de PA et mise à jour depuis le document | cœur | 8 | A FAIRE |
@@ -95,7 +95,7 @@
 - **Critère de fin** : `npm test`, `npm run exporter-resultats`, `dotnet test LogiBTP.slnx` ; jeu de cas vert des deux
   côtés.
 
-## Lot 6 : styles des lignes à l'écran (module Document)
+## Lot 6 : styles des lignes à l'écran (module Document) : FAIT (20/11/2026)
 
 - **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `modules/document/js/ui/editeur-document.js` (`classeLigne` + style résolu en variables CSS sur toute la

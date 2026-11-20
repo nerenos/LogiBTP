@@ -86,6 +86,13 @@ code { font-size: 0.92em; background: var(--titre-fond); padding: 0 0.25em; bord
 .grille .signal.avertissement { color: var(--alerte); }
 .grille .repli { display: inline-block; width: 1rem; cursor: pointer; color: var(--discret); }
 .grille tr.selectionnee td { background: var(--selection); }
+/* Style d'une ligne entière (action styleLigne : classes ls-* et variables --ligne-*, posées sur le tr). */
+.grille tr.ls-couleur td { color: var(--ligne-couleur); }
+.grille tr.ls-fond:not(.selectionnee) td { background: var(--ligne-fond); }
+.grille tr.ls-gras td { font-weight: var(--ligne-poids); }
+.grille tr.ls-italique td { font-style: var(--ligne-fonte); }
+.grille tr.ls-deco td { text-decoration: var(--ligne-deco); }
+.grille tr.ls-taille td { font-size: var(--ligne-taille); }
 .grille tr.courante td.cellule { box-shadow: inset 0 0 0 2px var(--accent); }
 /* Cellule courante à mise en forme (libellé) : bouton ¶ à gauche du texte. */
 .grille td.avec-bouton-riche { position: relative; padding-left: 1.7rem; }

@@ -190,6 +190,8 @@ public sealed class DefinitionType
     /// <summary>Étiquettes de lignes globales (le document peut en ajouter : ent_etiquettes).</summary>
     public List<EtiquetteDto> Etiquettes { get; set; } = [];
     public List<CouleurTypePrixDto> CouleursTypePrix { get; set; } = [];
+    /// <summary>Styles paramétrés des classes de ligne (global, famille, type) : le client les résout avec styles-lignes.js.</summary>
+    public List<StyleParametre> StylesLignes { get; set; } = [];
     public List<ModeleDto> Modeles { get; set; } = [];
     /// <summary>Conditions de paiement actives et condition par défaut de la famille du type (ventes ou achats).</summary>
     public List<ConditionPaiementDto> ConditionsPaiement { get; set; } = [];

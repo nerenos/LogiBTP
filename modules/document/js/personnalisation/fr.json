@@ -313,7 +313,10 @@
       "suppression": "Suppression",
       "dupliquer": "Dupliquer",
       "coller": "Coller",
-      "modification": "Modification {{champ}}"
+      "modification": "Modification {{champ}}",
+      "style_ligne": "Style de la ligne",
+      "styles_document": "Styles du document",
+      "reimposer": "Mise en forme réimposée"
     },
     "editeur": {
       "ligne_parent_impossible": "{{action}} impossible : ligne reprise du document parent",
@@ -513,6 +516,68 @@
       "tva": "Taux",
       "tranche": "Pied",
       "consolide": "Consolidé"
+    },
+    "styles": {
+      "titre": "Styles des lignes",
+      "aide": "Mise en forme de chaque classe de ligne (tranches, section, ouvrage, élément, texte…). Le plus précis l'emporte : global, famille, type de document, document, puis style propre de la ligne ; la mise en forme saisie dans un libellé reste au-dessus. Un changement s'applique à tous les documents à leur prochaine ouverture.",
+      "niveau": "Niveau",
+      "global": "Global",
+      "famille": "Famille {{famille}}",
+      "enregistrer": "Enregistrer les styles",
+      "enregistres": "Styles des lignes enregistrés",
+      "apercu": "Aperçu",
+      "couleur": "Couleur du texte",
+      "fond": "Fond",
+      "gras": "Gras",
+      "italique": "Italique",
+      "souligne": "Souligné",
+      "barre": "Barré",
+      "taille_titre": "Taille",
+      "libre": "Couleur libre",
+      "effacer": "Effacer",
+      "effacer_aide": "Retirer le style (retour au style hérité)",
+      "taille": {
+        "PETITE": "Petite",
+        "NORMALE": "Normale",
+        "GRANDE": "Grande"
+      },
+      "palette": {
+        "bleu": "Bleu",
+        "vert": "Vert",
+        "orange": "Orange",
+        "rouge": "Rouge",
+        "gris": "Gris",
+        "fond-bleu": "Fond bleu",
+        "fond-vert": "Fond vert",
+        "fond-orange": "Fond orange",
+        "fond-rouge": "Fond rouge",
+        "fond-gris": "Fond gris"
+      },
+      "classe": {
+        "TRANCHE_1": "Tranche de niveau 1",
+        "TRANCHE_2": "Tranche de niveau 2",
+        "TRANCHE_3": "Tranche de niveau 3",
+        "TRANCHE_4": "Tranche de niveau 4",
+        "TRANCHE_5": "Tranche de niveau 5 et suivants",
+        "SECTION": "Section",
+        "OUVRAGE": "Ouvrage",
+        "SOUS_OUVRAGE": "Sous-ouvrage",
+        "ELEMENT": "Élément",
+        "COMPOSANTE": "Composante",
+        "TEXTE": "Texte",
+        "SOUS_TOTAL": "Sous-total"
+      },
+      "ligne_titre": "Style propre de la ligne",
+      "ligne_aide": "Appliqué à toute la ligne, au-dessus du style de sa classe.",
+      "document_titre": "Styles du document",
+      "document_aide": "Style d'une classe de ligne propre à ce document, au-dessus du paramétrage global, de famille et de type.",
+      "reimposer": "Réimposer la mise en forme",
+      "reimposer_selection": "Réimposer la mise en forme de la sélection",
+      "reimposer_document": "Réimposer la mise en forme du document",
+      "reimposer_confirmer_selection": "Retirer la mise en forme saisie (couleur, fond, gras, italique, souligné, barré, taille) des {{nombre}} ligne(s) sélectionnée(s) et leur style propre ?",
+      "reimposer_confirmer_document": "Retirer la mise en forme saisie et le style propre de toutes les lignes du document ? Les styles paramétrés s'appliqueront seuls.",
+      "reimposer_rien": "Aucune ligne à réimposer",
+      "reimposer_fait": "Mise en forme réimposée sur {{nombre}} ligne(s)"
     }
   },
   "erreurs": {

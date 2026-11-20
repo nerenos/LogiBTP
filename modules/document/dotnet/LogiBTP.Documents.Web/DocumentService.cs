@@ -49,6 +49,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
             Etiquettes = (await db.Set<EtiquetteLigne>().AsNoTracking().Where(e => e.EtlActif).OrderBy(e => e.EtlOrdre).ToListAsync(ct))
                 .Select(e => new EtiquetteDto(e.EtlCode, e.EtlLibelle, e.EtlCouleur, e.EtlOrdre, e.EtlActif)).ToList(),
             CouleursTypePrix = (await db.Set<CouleurTypePrix>().AsNoTracking().ToListAsync(ct)).Select(c => new CouleurTypePrixDto(c.CtpType, c.CtpLibelle, c.CtpCouleur)).ToList(),
+            StylesLignes = await new AffichageDocumentService<TDoc, TLigne>(db).StylesLignes(ct),
             Modeles = (await db.Set<ModeleDocument>().AsNoTracking().Where(m => m.ModActif).OrderBy(m => m.ModOrdre).ToListAsync(ct)).Select(m => new ModeleDto(m.ModCode, m.ModLibelle)).ToList(),
             ConditionsPaiement = await Echeancier.Conditions(false, ct),
             ModesReglement = await new ReferentielsDocument<TDoc, TLigne>(db).Modes(false, ct),
