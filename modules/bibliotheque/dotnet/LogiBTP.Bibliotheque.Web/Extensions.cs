@@ -61,6 +61,9 @@ public static class Extensions
         g.MapDelete("/elements/{id:long}/tarifs/{tarif:long}", (long id, long tarif, HttpContext http, ServiceBibliotheque s, CancellationToken ct) => s.SupprimerTarif(id, tarif, Utilisateur.Depuis(http), ct));
         g.MapGet("/tarifs", (long tiers, ServiceBibliotheque s, CancellationToken ct) => s.TarifsTiers(tiers, ct));
         g.MapPost("/tarifs/import", (DemandeImportTarifs d, HttpContext http, ServiceBibliotheque s, CancellationToken ct) => s.ImporterTarifs(d, Utilisateur.Depuis(http), ct));
+        // PA de référence d'éléments pour le fournisseur d'une pièce (lecture) et mise à jour de la bibliothèque (unitaire ou liste).
+        g.MapPost("/elements/pa-reference", (DemandePaReference d, ServiceBibliotheque s, CancellationToken ct) => s.PaReferences(d, ct));
+        g.MapPost("/elements/pa-maj", (DemandeMajPaListe d, HttpContext http, ServiceBibliotheque s, CancellationToken ct) => s.MettreAJourPa(d, Utilisateur.Depuis(http), ct));
         g.MapGet("/elements/{id:long}/historique", (long id, ServiceBibliotheque s, CancellationToken ct) => s.Historique(id, ct));
         return api;
     }

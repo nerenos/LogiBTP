@@ -2,12 +2,12 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { reglePremierTarif, calculerElement, convertir, codeAppel, analyserCodeAppel, coefficientsEffectifs } from '../src/calcul.js';
+import { reglePremierTarif, paReference, planMiseAJourPa, calculerElement, convertir, codeAppel, analyserCodeAppel, coefficientsEffectifs } from '../src/calcul.js';
 import { FournisseurBibliothequeMemoire } from '../src/fournisseurs.js';
 import { suivreTarifs, signalerTarifs, actionsLigneTarif, tarifDepuisSaisie } from '../ui/onglets.js';
 import { entreeDepuisLigne } from '../src/fournisseurs.js';
 import { S } from '@logibtp/socle';
-import { elementVendu, TYPE_ELEMENT } from '../src/codes.js';
+import { elementVendu, TYPE_ELEMENT, ACTION_MAJ_PA } from '../src/codes.js';
 
 const jeu = JSON.parse(fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../tests/cas/01_calcul.json'), 'utf8'));
 
@@ -185,5 +185,18 @@ describe('éléments vendus (réplique de TypeElement.EstVendu)', () => {
   it('article et ouvrage seulement', () => {
     expect(Object.values(TYPE_ELEMENT).filter(elementVendu)).toEqual(['ARTICLE', 'OUVRAGE']);
     expect(elementVendu(null)).toBe(false);
+  });
+});
+
+describe('PA de référence et plan de mise à jour (jeu partagé avec PaReference.cs)', () => {
+  const jeuPa = JSON.parse(fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../tests/cas/04_mise_a_jour_pa.json'), 'utf8'));
+  for (const c of jeuPa.cas) {
+    it(c.nom, () => {
+      expect(paReference(c.entree, jeuPa.date, c.tiers_id)).toEqual(c.attendu.reference);
+      expect(planMiseAJourPa(c.entree, c.nouveau_pa, jeuPa.date, c.tiers_id)).toEqual(c.attendu.plan);
+    });
+  }
+  it('actions du plan', () => {
+    expect(Object.keys(ACTION_MAJ_PA)).toEqual(['PA_FIXE', 'TARIF', 'NOUVEAU_TARIF', 'AUCUNE']);
   });
 });

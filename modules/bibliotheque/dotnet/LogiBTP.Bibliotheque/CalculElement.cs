@@ -12,6 +12,9 @@ public sealed class UniteElement
 
 public sealed class TarifCalcul
 {
+    /// <summary>Identifiant du tarif et fournisseur de l'annuaire (PA de référence, plan de mise à jour).</summary>
+    public long? Id { get; set; }
+    public long? TiersId { get; set; }
     public decimal Prix { get; set; }
     /// <summary>Prix public et remises en % (lot 8) : le prix net du tarif est le prix public remisé.</summary>
     public decimal? PrixPublic { get; set; }
@@ -73,7 +76,7 @@ public static class CalculElement
     public static decimal PrixNetTarif(TarifCalcul t) =>
         t.PrixPublic is { } p ? Arr6(p * (1 - (t.Remise1 ?? 0) / 100) * (1 - (t.Remise2 ?? 0) / 100)) : t.Prix;
 
-    private static bool EnVigueur(TarifCalcul t, string date) =>
+    internal static bool EnVigueur(TarifCalcul t, string date) =>
         (string.IsNullOrEmpty(t.Debut) || string.CompareOrdinal(t.Debut[..10], date) <= 0)
         && (string.IsNullOrEmpty(t.Fin) || string.CompareOrdinal(t.Fin[..10], date) >= 0);
 

@@ -117,7 +117,7 @@
 - **Critère de fin** : `dotnet test LogiBTP.slnx` ; PDF d'un devis de démo : tranches et textes à la mise en forme
   paramétrée.
 
-## Lot 8 : PA de référence et plan de mise à jour (module Bibliothèque)
+## Lot 8 : PA de référence et plan de mise à jour (module Bibliothèque) : FAIT (20/11/2026)
 
 - **Agent** : `lot-dev`. **Modèle** : opus. Puis `revue-parite`.
 - **Fichiers** : `modules/bibliotheque/js/src/calcul.js` ↔ `dotnet/LogiBTP.Bibliotheque/CalculElement.cs`,
