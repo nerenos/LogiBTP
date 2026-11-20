@@ -73,6 +73,19 @@ Classes du cœur dans `src/LogiBTP.Api/Reprise/` ; un domaine par source, même 
 - MDE, données techniques (`PMEELEMENTARTTEC`, par unité de stock) : longueur, largeur, hauteur en m (mm dans LogiBTP),
   poids en kg, `VOLUME` en surface (m², défaut) ou en volume (m³) selon l'option de la reprise (écran, `--volume-mde`) ;
   unités `UNITE*` : M (mètre) et K (kilo) par défaut, tout autre code non converti et signalé `UniteTechnique`.
+- MDE, achats : adresse de livraison de l'entête (`NOMLIV`, `ADRLIV`, `CPLIV`, `VILLELIV`, `PAYSLIV`, contact
+  `NOMINTERLOCLIV` / `TELINTERLOCLIV`) en saisie libre (`ent_adresse_livraison`, origine LIBRE), même vers notre société
+  ou le chantier.
+- MDE, traçabilité (`TracabiliteMde.cs`, fin du domaine `ACHATS`) : `TRACABILITEDOC` → `document_lien` entre entêtes
+  repris (type eTypeDocument → table d'entête, `CODEDOC*INT`), `TRACABILITE` → `document_ligne_lien` (étape de la
+  transformation autorisée entre les deux types, quantité de la source) et `lig_origine_id` de la ligne cible ; lignes
+  retrouvées par le registre (`PieceSource.TableLignes` : clé de chaque ligne reprise) ; type inconnu : perte notée.
+- Pièces d'avancement (situations, factures d'avancement) : `ent_marche_id` = marché de vente du chantier (un seul par
+  chantier dans MDE) ; factures simples et avoirs restent au chantier, sans marché.
+- Intérimaires : salarié seul, sans mission d'intérim (souvent d'anciens intérimaires) ; agence notée perdue.
+- MDE, compositions des ouvrages : ligne de texte (composant de type texte, ou sans composant ni quantité ni prix)
+  reprise en ligne de texte de la composition ; textes standard (`PMETEXTESTANDARD`) : éléments de type texte de la
+  bibliothèque par défaut (code, libellé, texte RTF, note en description).
 - MDE, métrés des pièces de vente et des marchés (`MetresMde.cs` : `PMEMETRE`, `PMEMETRELIGNE`, `PMEMETREVAR`, lignes par
   `CLEMETRE`) : script LogiBTP par ligne (une formule seule : `Renvoyer expr` ; sinon `local Total`, `Total += expr` des
   lignes de niveau de total non nul, `NOM=expr` ou `VARRESULT` en variable locale totalisée, autres types en commentaire

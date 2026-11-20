@@ -193,8 +193,12 @@ INSERT INTO dbo.PMEELEMENTOUVCOMP (CODEOUV, CODECOMPO, NUMORDRE, CLENATURE, LIBE
  ('MUR20', 'MOMAC', 2, 1, '', 30, 1.2, 36, 1.1, 39.6, 0.5, 0, 0.5, 'H', 0.5, 0),
  ('MUR20', 'VIEUX', 3, 2, 'Ancien article', 2, 1, 2, 1, 2, 1, 0, 1, 'U', 0, 0),
  ('MUR20', 'MOMAC', 4, 1, 'Composante en sommeil', 30, 1, 30, 1, 30, 9, 0, 9, 'H', 0, 1),
+ ('MUR20', NULL, 5, NULL, 'Mise en œuvre selon DTU 20.1', 0, 0, 0, 0, 0, 0, 0, 0, NULL, 0, 0),
+ ('MUR20', 'TXT1', 6, NULL, '', 0, 0, 0, 0, 0, 1, 0, 1, NULL, 0, 0),
  ('AMUR', 'MUR20', 1, 4, '', 21.2, 1.15, 24.38, 1.25, 30.475, 1, 0, 1, 'M2', 0, 0),
  ('AMUR', 'MOMAC', 2, 1, '', 30, 1.2, 36, 1.1, 39.6, 1, 0, 1, 'H', 1, 0);
+-- Textes standard (20/11/2026) : éléments de type texte de la bibliothèque par défaut.
+INSERT INTO dbo.PMETEXTESTANDARD (CODE, LIBELLE, TEXTE) VALUES ('GARDEC', 'Garantie décennale', '{\rtf1 Travaux couverts par notre \b garantie décennale\b0 .}');
 INSERT INTO dbo.PMEELEMENTUNITEVTE (CODEART, UNITE, NUMORDRE, QTEVTE, EQUIVSTOCK, RATIO, DEFAUT) VALUES ('CIM35', 'ENS', 1, 1, 350, 0, 0);
 INSERT INTO dbo.PMEFOURNISSEURTARIF (CLE, CODEFOUR, REFERENCE, LIBELLE, PAPUBLIC, REMISE1, REMISE2, PANET, UNITEACHAT) VALUES
  (1, 'F001', 'CIM-35', 'Ciment CEM II 35 kg', 10, 30, 0, 7, 'U');

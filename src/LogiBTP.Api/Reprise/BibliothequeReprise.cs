@@ -44,6 +44,8 @@ public sealed record ComposanteSource
     public decimal? CoefFg { get; init; }
     public decimal? CoefBenef { get; init; }
     public long? NatId { get; init; }
+    /// <summary>Ligne de texte de la composition (libellé seul, ni quantité ni prix).</summary>
+    public bool Texte { get; init; }
 }
 
 /// <summary>Élément de bibliothèque lu d'une source, forme commune MDE / OPTIM (lot 8).</summary>
@@ -107,6 +109,7 @@ public sealed class BibliothequeReprise
     public const string ProprieteCoefPerte = "coef_perte";
     private const int TypeLigneOuvrage = 2;
     private const int TypeLigneElement = 3;
+    private const int TypeLigneTexte = 4;
 
     /// <summary>Élément repris, tel qu'une composante l'utilise : CoefVente = PV / PA (coefficient de vente effectif).</summary>
     private sealed record ElementRepris(long Id, string BibCode, string Code, string Unite, long? NatId, decimal? Pa, decimal CoefVente, decimal CoefPerte);
@@ -369,6 +372,16 @@ public sealed class BibliothequeReprise
                 ctx.Rapport.Signaler(NiveauAnomalie.Information, CodeAnomalie.ComposanteHorsBibliotheque, $"{e.Origine.Table} {e.Origine.Cle}",
                     $"{code} : composante {absent.Cle} absente ou en sommeil, reprise sans lien vers la bibliothèque");
             ordre++;
+            if (c.Texte)
+            {
+                lignes.Add(new Dictionary<string, object?>
+                {
+                    ["lig_id"] = ordre + 1, ["lig_ordre"] = ordre, ["lig_ent_id"] = 0, ["lig_tyl_id"] = TypeLigneTexte, ["lig_parent_id"] = 1,
+                    ["lig_type_prix"] = "V", ["lig_coef_perte"] = 1, ["lig_proprietes"] = new Dictionary<string, object>(), ["lig_qte_source"] = "S",
+                    ["lig_coef_remise"] = 1, ["lig_libelle_html"] = c.LibelleHtml ?? "", ["lig_precision_pv"] = 2, ["lig_precision_qte"] = 2,
+                });
+                continue;
+            }
             var qte = ArrondiCalcul.Arr6(c.Quantite);
             var perte = c.CoefPerte ?? composant?.CoefPerte ?? 1m;
             lignes.Add(new Dictionary<string, object?>

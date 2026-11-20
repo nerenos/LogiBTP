@@ -270,18 +270,9 @@ public sealed class RessourcesReprise
         salaries[salId] = (s.Statut, string.Join(' ', new[] { prenom, s.Nom }.Where(x => !string.IsNullOrWhiteSpace(x))));
         volume.Ecrites++;
 
-        if (s.Statut == Statut.Interim)
-        {
-            // Une mission ouverte par intérimaire : dates de la fiche, sinon date de reprise et fin d'année (listées).
-            var debut = s.Entree ?? ctx.Options.DateReprise;
-            var fin = s.Sortie is { } so && so >= debut ? so : new DateOnly(Math.Max(debut.Year, ctx.Options.DateReprise.Year), 12, 31);
-            if (s.Entree is null) ctx.Rapport.Forcer(Fiche.Mission, code, "debut", debut.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
-            if (s.Sortie is null) ctx.Rapport.Forcer(Fiche.Mission, code, "fin", fin.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
-            await SqlReprise.ExecuterAsync(ctx.Unite, """
-                INSERT INTO mission_interim (mis_sal_id, mis_agence_id, mis_debut, mis_fin, mis_taux_horaire, mis_maj_par) VALUES ($1, $2, $3, $4, $5, $6)
-                """, ct, salId, s.AgenceInterimPerId, debut, fin, s.CoutHoraire is > 0 ? s.CoutHoraire : null, AnnuaireReprise.Couper(ctx.Options.Auteur, 50));
-            var vm = ctx.Rapport.Volume("mission_interim"); vm.Lues++; vm.Ecrites++;
-        }
+        // Intérimaires : salarié seul, sans mission (souvent d'anciens intérimaires ; 20/11/2026), agence notée perdue.
+        if (s.Statut == Statut.Interim && s.AgenceInterimPerId is not null)
+            ctx.Rapport.Perdre(Fiche.Mission, "agence", code, "Intérimaire repris sans mission d'intérim");
         return salId;
     }
 

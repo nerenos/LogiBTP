@@ -421,9 +421,13 @@ public sealed class PiecesReprise : IAsyncDisposable
             doc.EntIndice = Indice(groupe.Versions + 1);
         }
 
-        // Avancement : lignes du marché, avancement cumulé ou de la période (lot 11).
+        // Avancement : lignes du marché, avancement cumulé ou de la période (lot 11), rattaché au marché de vente du
+        // chantier (un seul par chantier dans MDE) ; les autres factures et avoirs restent au chantier seul.
         if (p.Avancement is not null)
         {
+            if (p.ChantierId is { } cha && await SqlReprise.ScalaireAsync(ctx.Unite,
+                    "SELECT mar_id FROM marche WHERE mar_cha_id = $1 AND mar_sens = 'V' ORDER BY mar_id LIMIT 1", ct, cha) is int mar)
+                doc.EntMarcheId = mar;
             doc.EntAvtPresentation = type.TydAvancement == TypeFactureAvancement ? Presentation.Periode : Presentation.Cumul;
         }
         // Calcul : lignes au mode bordereau, PV source imposé aux lignes de prix qui s'en écartent (toutes si la pièce est verrouillée).
@@ -677,7 +681,7 @@ public sealed class PiecesReprise : IAsyncDisposable
         // Montant des marchés aux commandes reprises : valables seulement une fois leur référence posée ci-dessus.
         await SqlReprise.ExecuterAsync(ctx.Unite, """
             SELECT f_marche_recalculer(m.mar_id) FROM marche m
-            WHERE m.mar_id IN (SELECT d.ent_marche_id FROM document d JOIN document_origine o ON o.dor_ent_id = d.ent_id AND o.dor_format = $1)
+            WHERE m.mar_id IN (SELECT x.mdo_mar_id FROM marche_document x JOIN document_origine o ON o.dor_ent_id = x.mdo_ent_id AND o.dor_format = $1)
             """, ct, ctx.Options.Source);
     }
 

@@ -49,6 +49,7 @@ public sealed class BibliothequeMde : IDomaineReprise
     public const string Famille = "PMEFAMILLE";
     public const string Element = "PMEELEMENT";
     public const string Technique = "PMEELEMENTARTTEC";
+    public const string TexteStandard = "PMETEXTESTANDARD";
     public const string Fournisseur = "PMEFOURNISSEUR";
 
     private const string RequeteTarifs = """
@@ -70,14 +71,26 @@ public sealed class BibliothequeMde : IDomaineReprise
         }
 
         // MDE n'a pas de bibliothèque par défaut : celle qui a le plus d'éléments hors sommeil.
-        var premiere = true;
+        long? defaut = null;
         foreach (var l in await SqlReprise.SourceAsync(ctx, """
                      SELECT B.CODE, B.LIBELLE, (SELECT COUNT(*) FROM PMEELEMENT E WHERE E.CODEBIBLIO = B.CODE AND E.SOMMEIL = 0) AS NB
                      FROM PMEBIBLIO B ORDER BY NB DESC, B.CODE
                      """, ct))
         {
-            await b.BibliothequeAsync(Bibliotheque, l.Texte("CODE")!, l.Texte("CODE"), l.Texte("LIBELLE"), premiere, true, ct);
-            premiere = false;
+            var id = await b.BibliothequeAsync(Bibliotheque, l.Texte("CODE")!, l.Texte("CODE"), l.Texte("LIBELLE"), defaut is null, true, ct);
+            defaut ??= id;
+        }
+
+        // Textes standard (PMETEXTESTANDARD) : éléments de type texte de la bibliothèque par défaut.
+        foreach (var t in await SqlReprise.SourceAsync(ctx, "SELECT CODE, LIBELLE, TEXTE, NOTE FROM PMETEXTESTANDARD ORDER BY CODE", ct))
+        {
+            if (defaut is not { } bibDefaut) { var v = ctx.Rapport.Volume(TexteStandard); v.Lues++; v.Ecartees++; continue; }
+            await b.ElementAsync(new ElementSource
+            {
+                Origine = (TexteStandard, t.Texte("CODE")!), BibId = bibDefaut, Code = t.Texte("CODE"), Type = TypeElement.Texte,
+                LibelleHtml = SourcesBibliotheque.Html(t.Texte("TEXTE")) ?? SourcesBibliotheque.Html(t.Texte("LIBELLE")),
+                Libelle = t.Texte("LIBELLE") ?? t.Texte("CODE"), DescriptionHtml = SourcesBibliotheque.Html(t.Texte("NOTE")),
+            }, ct);
         }
 
         foreach (var l in await SqlReprise.SourceAsync(ctx, "SELECT CODE, CODEBIBLIO, LIBELLE, NIVEAU, CODEPARENT FROM PMEFAMILLE ORDER BY NIVEAU, CODE", ct))
@@ -108,6 +121,8 @@ public sealed class BibliothequeMde : IDomaineReprise
         var composants = composantes.ToDictionary(kv => kv.Key, kv => kv.Value.Select(c => c.Texte("CODECOMPO")).OfType<string>().Where(retenus.Contains).ToList(),
             StringComparer.Ordinal);
         var typesElement = ctx.Correspondances.Tables[TablesCorrespondance.TypeElement];
+        bool EstTexte(LigneSource e) => !composantes.ContainsKey(e.Texte("CODE") ?? "")
+            && typesElement.Trouver(e.Texte("TYPEELEM")) is { Ignorer: false, Cible: TypeElement.Texte };
 
         foreach (var cle in SourcesBibliotheque.Ordre(actifs, composants))
         {
@@ -170,6 +185,15 @@ public sealed class BibliothequeMde : IDomaineReprise
                     var source = composant is not null ? lignes.GetValueOrDefault(composant) : null;
                     var perte = source is null ? 1m : Perte(source);
                     var qte = c.Decimal("QUANTITEUNIT") is { } qu && qu != 0 ? qu : c.Decimal("QUANTITEBASE") ?? 0;
+                    // Ligne de texte : composant de type texte, ou sans composant ni quantité ni prix (libellé seul).
+                    var texte = source is not null ? EstTexte(source)
+                        : composant is null && qte == 0 && (c.Decimal("DEBOURSE") ?? 0) == 0 && (c.Decimal("PV") ?? 0) == 0;
+                    if (texte) return new ComposanteSource
+                    {
+                        Texte = true,
+                        LibelleHtml = SourcesBibliotheque.Html(c.Texte("LIBELLECOM")) ?? SourcesBibliotheque.Html(c.Texte("LIBELLE"))
+                                      ?? SourcesBibliotheque.Html(source?.Texte("LIBELLECOM")) ?? SourcesBibliotheque.Html(source?.Texte("LIBELLE")),
+                    };
                     return new ComposanteSource
                     {
                         Composant = composant is null ? null : (Element, composant),
