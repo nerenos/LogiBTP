@@ -289,6 +289,7 @@ public static class TablesCorrespondance
     public const string Compteur = "compteur";
     public const string TableFiche = "table_fiche";
     public const string TypeChamp = "type_champ";
+    public const string ChampFiche = "champ_fiche";
     public const string Entite = "entite";
     public const string NatureMessage = "nature_message";
     public const string TypeTiers = "type_tiers";

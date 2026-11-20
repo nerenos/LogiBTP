@@ -26,8 +26,25 @@ public sealed class ChampsMde : IDomaineReprise
             var fiche = ctx.Correspondre(TablesCorrespondance.TableFiche, l.Texte("TABLENAME"), $"SYS_RTCINFOS {cle}");
             var type = ctx.Correspondre(TablesCorrespondance.TypeChamp, l.Texte("DATATYPE") ?? "", $"SYS_RTCINFOS {cle}");
             if (fiche is not { Ignorer: false, Cible: { } typeFiche } || l.Texte("FIELDNAME") is null) { volume.Ecartees++; continue; }
-            var champ = await createur.CreerAsync(typeFiche, cle, l.Texte("DISPLAYNAME") ?? l.Texte("FIELDNAME")!,
-                type is { Ignorer: false, Cible: { } t } ? t : TypesChampSupplementaire.Texte, ct);
+            var libelle = l.Texte("DISPLAYNAME") ?? l.Texte("FIELDNAME")!;
+
+            // Champ existant de la fiche : par la table champ_fiche (« type_fiche.code » ou ignorer), sinon par le libellé.
+            ChampStandard? standard = null;
+            if (ctx.Correspondances.Tables.TryGetValue(TablesCorrespondance.ChampFiche, out var table) && table.Trouver(cle) is not null)
+            {
+                var e = ctx.Correspondre(TablesCorrespondance.ChampFiche, cle, $"SYS_RTCINFOS {cle}");
+                if (e is not { Ignorer: false, Cible: { } cible }) { volume.Ecartees++; continue; }
+                standard = cible.Split('.', 2) is [var tf, var code] && tf == typeFiche ? createur.Standard(typeFiche, code) : null;
+                if (standard is null)
+                {
+                    ctx.Rapport.Signaler(NiveauAnomalie.Avertissement, CodeAnomalie.ValeurInconnue, $"SYS_RTCINFOS {cle}",
+                        $"Champ « {cible} » inconnu de la fiche {typeFiche} : champ supplémentaire créé");
+                }
+            }
+            else standard = createur.StandardDuLibelle(typeFiche, libelle);
+
+            var champ = standard is not null ? createur.Utiliser(typeFiche, cle, standard)
+                : await createur.CreerAsync(typeFiche, cle, libelle, type is { Ignorer: false, Cible: { } t } ? t : TypesChampSupplementaire.Texte, ct);
             if (champ is null) volume.Ecartees++; else volume.Ecrites++;
         }
     }

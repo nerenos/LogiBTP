@@ -680,6 +680,11 @@ public class RepriseBaseTests
                 AND e.ele_fam_id = (SELECT fam_id FROM famille_element WHERE fam_code = 'LIANT')
                 """));
             Assert.Equal(1L, await Element("MOMAC", "NOT e.ele_pv_fixe AND e.ele_pv = 39.6 AND e.ele_unt_stock = 'h'"));
+            // Zone supplémentaire « Code barre » : versée dans le champ existant Code-barres (pas de colonne x_), sans
+            // écraser le code-barres repris de PMEELEMENT.CODEBARRE (perte notée).
+            Assert.Equal(1L, await Element("MOMAC", "e.ele_code_barre = '3700000000024'"));
+            Assert.Equal(0L, await b.CompterAsync("SELECT count(*) FROM information_schema.columns WHERE table_name = 'element' AND column_name LIKE 'x_code%'"));
+            Assert.Contains(r.ChampsPerdus, c => c.Table == "element" && c.Champ == "ele_code_barre");
             Assert.Equal(1L, await Element("TXT1", "e.ele_type = 'TEXTE' AND e.ele_libelle_html = '<p>Garantie décennale</p><p>Assurance œuvre</p>'"));
             // Ouvrage : PV retrouvé en mode déboursé, perte dans la quantité (Q9), composante en sommeil sans lien.
             Assert.Equal(1L, await Element("MUR20", """

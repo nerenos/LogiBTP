@@ -192,8 +192,11 @@ INSERT INTO dbo.PMEELEMENTARTFOUR (CLE, CODEART, NUMORDRE, PRINCIPAL, CODEFOUR, 
  (1, 'CIM35', 1, 1, 'F001', 1, 10, 30, 0, 7, 'U', 35, '2026-01-01'),
  (2, 'CIM35', 2, 0, 'F002', NULL, 0, 0, 0, 7.35, 'U', 35, NULL);
 INSERT INTO dbo.SYS_RTCINFOS (TABLENAME, FIELDNAME, DISPLAYNAME, FIELDTYPE, FIELDSIZE, DATATYPE, REQUIRED) VALUES
- ('PMEELEMENT', 'RTCFIELD1', 'Marque', 'E', 30, 'S', 0);
-UPDATE dbo.PMEELEMENT SET RTCFIELD1 = 'Vicat' WHERE CODE = 'CIM35';
+ ('PMEELEMENT', 'RTCFIELD1', 'Marque', 'E', 30, 'S', 0),
+ -- Zone qui double un champ existant de l'élément (Code-barres) : versée dans ce champ, sans écraser le code repris.
+ ('PMEELEMENT', 'RTCFIELD2', 'Code barre', 'E', 30, 'S', 0);
+UPDATE dbo.PMEELEMENT SET RTCFIELD1 = 'Vicat', RTCFIELD2 = '3700000000099' WHERE CODE = 'CIM35';
+UPDATE dbo.PMEELEMENT SET RTCFIELD2 = '3700000000024' WHERE CODE = 'MOMAC';
 -- Données techniques (m, m², kg par défaut ; VOLUME utilisé comme une surface) : barre de 12,10 m, 141,57 kg, 4,84 m² ;
 -- unités M (mètre) et K (kilo) = unités par défaut ; code inconnu sur le ciment (signalé, non converti).
 INSERT INTO dbo.PMEELEMENTARTTEC (CODEART, LONGUEUR, UNITELONG, LARGEUR, UNITELARG, HAUTEUR, UNITEHAUT, POIDS, UNITEPOIDS, VOLUME, UNITEVOL) VALUES

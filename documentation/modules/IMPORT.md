@@ -61,6 +61,10 @@ Classes du cœur dans `src/LogiBTP.Api/Reprise/` ; un domaine par source, même 
 - MDE, marché : `PMEAFFBASEDOC` repris avant les pièces ; une commande copie exacte d'une pièce du marché (même numéro,
   ou pièce d'origine `CLEDOCINIT`) n'est pas reprise une seconde fois (`PieceDejaReprise`, renvoie à la pièce du marché) ;
   un devis d'origine est gardé et lié à la pièce du marché.
+- MDE, zones supplémentaires (`SYS_RTCINFOS`) : versées dans le champ existant de la fiche de même libellé ou de même
+  code (unités entre parenthèses ignorées, paramétrage `type_fiche`), ou celui de la table `champ_fiche`
+  (« type_fiche.code », ou ignorer) ; sinon champ supplémentaire `x_` créé. Un champ existant déjà renseigné par la
+  reprise n'est pas écrasé (perte notée).
 - MDE, données techniques (`PMEELEMENTARTTEC`, par unité de stock) : longueur, largeur, hauteur en m (mm dans LogiBTP),
   poids en kg, `VOLUME` en surface (m², défaut) ou en volume (m³) selon l'option de la reprise (écran, `--volume-mde`) ;
   unités `UNITE*` : M (mètre) et K (kilo) par défaut, tout autre code non converti et signalé `UniteTechnique`.
