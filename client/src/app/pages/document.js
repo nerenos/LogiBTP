@@ -107,6 +107,7 @@ const gabarit = () => `
         <button role="menuitem" class="mo-ligne" data-action="consultation" title="${texteHtml('document_btp.page.actions.consultation_aide')}" hidden>${texteHtml('document_btp.page.actions.consultation', { icone: icone('document_btp_consultation') })}</button>
         <button role="menuitem" class="mo-ligne" data-action="sous-traiter" title="${texteHtml('document_btp.page.actions.sous_traiter_aide')}" hidden>${texteHtml('document_btp.page.actions.sous_traiter', { icone: icone('document_btp_sous_traiter') })}</button>
         <button role="menuitem" class="mo-ligne" data-action="precharger" title="${texteHtml('document_btp.page.actions.precharger_aide')}" hidden>${texteHtml('document_btp.page.actions.precharger', { icone: icone('document_btp_precharger') })}</button>
+        <button role="menuitem" class="mo-ligne" data-action="maj-bibliotheque" title="${texteHtml('document_btp.page.actions.maj_bibliotheque_aide')}" hidden>${texteHtml('document_btp.page.actions.maj_bibliotheque', { icone: icone('document_btp_maj_bibliotheque') })}</button>
         <button role="menuitem" class="mo-ligne" data-action="sources" title="${texteHtml('document_btp.page.actions.sources_aide')}" hidden>${texteHtml('document_btp.page.actions.sources', { icone: icone('ajouter') })}</button>
         </div>
       </span>
@@ -259,6 +260,7 @@ export class PageDocument extends PageBase {
       precharger: () => this.prechargerSituation(),
       consultation: () => this.lotConsultation(),
       'sous-traiter': () => this.sousTraiter(),
+      'maj-bibliotheque': () => this.editeur?.mettreAJourBibliothequeSelection().catch((e) => this.app.erreur(e)),
       'annuler-avoir': () => this.annulerParAvoir(),
       annuler: () => this.editeur?.magasin.annuler(), retablir: () => this.editeur?.magasin.retablir(),
       // Bibliothèque dans une autre fenêtre (liste de tous les éléments) ; l'insertion reste par F3 ou par code.
@@ -522,6 +524,11 @@ export class PageDocument extends PageBase {
     this.editeur.surDepotExterne = (donnees, cibleId, position) => this.appel.deposer(donnees, cibleId, position);
     // Éléments liés aux lignes (unités de l'article, conversion du prix : D2, D3), lus à la demande.
     this.editeur.chargerElement = (id) => this.appel.fournisseur.element(id);
+    // Écart de PA avec la bibliothèque (lot 9) : droit de modifier la bibliothèque exigé (le serveur le contrôle aussi).
+    if (this.app.peut('bibliotheque', ACTION_DROIT.MODIFIER)) {
+      this.editeur.chargerPaReferences = (ids, tiers) => api.paReferences(ids, tiers);
+      this.editeur.mettreAJourPa = (demandes, simulation) => api.majPa(demandes, simulation);
+    }
     this.analyse = new AnalyseCoefficients(this.$('#vue-analyse'), {
       editeur: this.editeur, natures: this.natures, message: (t, n) => this.app.message(t, n), appel: this.appel,
       imprimerFrais: () => this.apercu(MODELE_EDITION.FRAIS_ANNEXES),
@@ -710,6 +717,7 @@ export class PageDocument extends PageBase {
     this.$('[data-action="consultation"]').hidden = !doc.ent_id || !ed.definition.type?.tyd_consultation;
     this.$('[data-action="sous-traiter"]').hidden = !doc.ent_id || !doc.ent_verrouille || !this.app.moduleActif(MODULE_FACULTATIF.SOUS_TRAITANCE)
       || !TYPES_SOUS_TRAITABLES.includes(ed.definition.type?.tyd_code);
+    this.$('[data-action="maj-bibliotheque"]').hidden = !ed.chargerPaReferences;
     this.$('[data-action="sources"]').hidden = !modifiable || !TYPES_SOURCES.test(ed.definition.type?.tyd_code ?? '');
     // Situation de travaux ou de production d'un marché en brouillon : reprise de l'avancement de l'autre situation (R8).
     this.$('[data-action="precharger"]').hidden = !modifiable || !doc.ent_marche_id || !TYPES_CROISES.includes(ed.definition.type?.tyd_avancement);

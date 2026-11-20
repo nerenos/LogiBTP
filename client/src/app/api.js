@@ -780,6 +780,9 @@ export const api = {
   },
   tiersReglements: () => appel('GET', '/reglements/tiers'),
   // Utilisations d'un élément de bibliothèque (lot 7) : composés, lignes d'achat.
+  // PA de référence des éléments (fournisseur éventuel de la pièce) et mise à jour de la bibliothèque depuis un document (lot 9).
+  paReferences: (elements, tiersId = null) => appel('POST', '/bibliotheque/elements/pa-reference', { elements, tiers_id: tiersId }),
+  majPa: (demandes, simulation = false) => appel('POST', '/bibliotheque/elements/pa-maj', { demandes, simulation }),
   composesElement: (id) => appel('GET', `/bibliotheque/elements/${id}/composes`),
   achatsElement: (id, { du = null, au = null, encours = false } = {}) => appel('GET', `/bibliotheque/elements/${id}/achats?${new URLSearchParams({ ...(du ? { du } : {}), ...(au ? { au } : {}), encours })}`),
   // Échéances des pièces validées d'un chantier ou d'un marché, tous tiers (lot 6 : A27).

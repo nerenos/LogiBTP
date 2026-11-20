@@ -134,7 +134,7 @@
     AUCUNE (motif affiché).
 - **Critère de fin** : `npm test`, `npm run exporter-resultats`, `dotnet test LogiBTP.slnx`.
 
-## Lot 9 : indicateur d'écart de PA dans le document (cœur)
+## Lot 9 : indicateur d'écart de PA dans le document (cœur) : FAIT (20/11/2026)
 
 - **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `src/LogiBTP.Api/Btp/` (route de lecture des PA de référence des éléments d'un document, route de mise

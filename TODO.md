@@ -256,6 +256,11 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
   repérage des clés à l'écran en mode débogage.
 - [ ] Images de l'application à ajouter au répertoire : icônes PNG 192 / 512 de la PWA, logo de la page de connexion et de la borne.
 
+- [ ] Écart de PA avec la bibliothèque (plan fiches-lignes-documents, lot 9, fait le 20/11/2026 côté client) : la conversion du PA
+  de la ligne vers l'unité de stock est faite par le client (`bibliotheque/ecart-pa.js`, conversions de l'élément) ; une route
+  du cœur qui la rejouerait côté C# (`UnitesLignesBtp`) reste à décider si un agent ou une édition doit l'utiliser. Hors ligne :
+  pas d'indicateur.
+
 - [ ] Mode hors ligne : appel de la bibliothèque (F3) limité aux recherches déjà faites en ligne (réponses gardées par le
   service worker) ; à étudier : copie locale des éléments consultés ou d'une bibliothèque choisie pour la recherche hors
   ligne. Écrans hors document (fiches, pointage…) : consultation seulement.
