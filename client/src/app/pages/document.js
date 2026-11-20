@@ -27,6 +27,7 @@ import { transformerDocument } from '../documents/transformation.js';
 import { confirmerAvertissements } from '../documents/avertissements.js';
 import { proposerMarcheSousTraitance } from '../structure/marche-sous-traitance.js';
 import { choisirSources } from '../documents/sources.js';
+import { choisirTiersMultiples, relationsFonction } from '../annuaire/choix.js';
 
 /** Types alimentés par d'autres documents (ajout de sources en brouillon) ; types créés depuis un marché. */
 const TYPES_SOURCES = /_(RECEPTION|FACTURE|FACTURE_AVT|SITUATION|PRODUCTION|AVOIR)$/;
@@ -1523,7 +1524,8 @@ export class PageDocument extends PageBase {
         ${lot.documents.map((x) => `<tr><td><a href="${urlDocument(x.id)}">${echapper(x.numero ?? `#${x.id}`)}</a></td><td>${echapper(x.tiers ?? '—')}</td>
           <td class="nombre">${formatNombre(Number(x.total_ht), 2)}</td><td>${echapper(x.statut)}</td></tr>`).join('')}</tbody></table>`
         : `<p class="aide">${texteHtml('document_btp.page.lot.vide')}</p>`}
-      <p class="ligne"><button type="button" class="principal" data-copier>${iconeHtml('ajouter')} ${texteHtml('document_btp.page.lot.autre')}</button>
+      <p class="ligne"><button type="button" class="principal" data-fournisseurs title="${texteHtml('document_btp.page.lot.fournisseurs_aide')}">${iconeHtml('ajouter')} ${texteHtml('document_btp.page.lot.fournisseurs')}</button>
+        <button type="button" data-copier title="${texteHtml('document_btp.page.lot.autre_aide')}">${texteHtml('document_btp.page.lot.autre')}</button>
         ${lot.documents.length > 1 ? `<button type="button" data-comparer title="${texteHtml('document_btp.page.lot.comparer_aide')}">${iconeHtml('document_btp_ventiler')} ${texteHtml('document_btp.page.lot.comparer')}</button>` : ''}
         ${lot.documents.length ? `<button type="button" data-envoyer title="${texteHtml('document_btp.page.lot.envoyer_aide', { icone: icone('document_btp_envoyer') })}">${iconeHtml('document_btp_envoyer')} ${texteHtml('document_btp.page.lot.envoyer')}</button>` : ''}
         <button value="fermer">${texteHtml('document_btp.page.fermer_bouton')}</button></p></form>`;
@@ -1537,6 +1539,10 @@ export class PageDocument extends PageBase {
       dlg.close();
       await this.envoyerLot(d.ent_id, lot);
     });
+    dlg.querySelector('[data-fournisseurs]').addEventListener('click', async () => {
+      dlg.close();
+      await this.ajouterFournisseursLot(d, lot);
+    });
     dlg.querySelector('[data-copier]').addEventListener('click', async () => {
       try {
         const r = await api.copierConsultation(d.ent_id);
@@ -1546,6 +1552,28 @@ export class PageDocument extends PageBase {
       } catch (e) { this.app.erreur(e); }
     });
     ouvrirModale(dlg, () => dlg.close());
+  }
+
+  /**
+   * Plusieurs fournisseurs ajoutés au lot en une fois (20/11/2026) : choix multiple dans la liste des tiers (fournisseurs,
+   * sous-traitants pour un appel d'offres), une demande par fournisseur, copie de celle-ci avec son tiers posé ; une
+   * demande en brouillon sans fournisseur reçoit le premier. Enregistrée avant la copie, rechargée, puis le lot rouvert.
+   */
+  async ajouterFournisseursLot(d, lot) {
+    const ed = this.editeur;
+    const sousTraitance = ed.definition.type?.tyd_famille === FAMILLE_DOCUMENT.SOUS_TRAITANCE;
+    const exclure = [d.ent_tiers_id, ...lot.documents.map((x) => x.tiers_id)].filter(Boolean);
+    const choisis = await choisirTiersMultiples({
+      relations: relationsFonction(sousTraitance ? 'SOUS_TRAITANT' : 'FOURNISSEUR'), exclure,
+      titre: texte(sousTraitance ? 'document_btp.page.lot.choix_sous_traitants' : 'document_btp.page.lot.choix_fournisseurs'),
+    });
+    if (!choisis.length) return;
+    if (this.modifiee) await this.enregistrer();
+    let r;
+    try { r = await api.copierConsultation(d.ent_id, choisis.map((c) => c.id)); } catch (e) { this.app.erreur(e); return; }
+    this.app.message(pluriel('document_btp.page.lot.copiees', r.ids?.length ?? 0), 'succes');
+    await this.chargerDocument(d.ent_id);
+    await this.lotConsultation();
   }
 
   /**

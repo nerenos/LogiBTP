@@ -666,7 +666,7 @@ export const api = {
   changerNumero: (id, numero, motif) => appel('PUT', `/documents/${id}/numero`, { numero, motif }),
   copier: (id) => appel('POST', `/documents/${id}/copie`),
   consultation: (id) => appel('GET', `/structure/documents/${id}/consultation`),
-  copierConsultation: (id) => appel('POST', `/structure/documents/${id}/consultation`),
+  copierConsultation: (id, fournisseurs = []) => appel('POST', `/structure/documents/${id}/consultation`, { fournisseurs }),
   envoyerConsultation: (id, renvoyer = false) => appel('POST', `/structure/documents/${id}/consultation/envoyer`, { renvoyer }),
   retenirConsultation: (id) => appel('POST', `/structure/documents/${id}/consultation/retenir`, {}),
   // Sous-traitance, lot 5 : comparatif des offres, assistant « Sous-traiter », engagé d'un marché de vente.

@@ -13,7 +13,12 @@ namespace LogiBTP.Api.Btp;
 /// un appel d'offres de sous-traitance se copie pour un autre fournisseur ; les copies partagent le code du lot
 /// (`ent_consultation`, posé d'office sur la source : son numéro). Routes : <c>/api/structure/documents/{id}/consultation</c>.
 /// </summary>
-public sealed record CopieConsultation(long Id);
+public sealed record CopieConsultation(long Id, List<long>? Ids = null);
+/// <summary>
+/// Copies demandées (20/11/2026) : sans fournisseur, une copie sans tiers ; avec des fournisseurs, une copie par
+/// fournisseur, le premier posé sur la source si elle est en brouillon sans tiers.
+/// </summary>
+public sealed record DemandeCopieConsultation(List<long>? Fournisseurs = null);
 /// <summary>Envoi groupé du lot (lot 9, A24d) : les offres déjà envoyées ne repartent que si <c>Renvoyer</c>.</summary>
 public sealed record EnvoiConsultation(bool Renvoyer = false);
 public sealed record EnvoiOffre(long Id, string? Numero, string? Tiers, string Resultat, string? Message);
@@ -22,7 +27,7 @@ public sealed record OffreRetenue(long Retenue, int NonRetenues);
 
 public static class Consultations
 {
-    private sealed record DocumentLot(long Id, string? Numero, string? Indice, string? Tiers, decimal TotalHt, string Statut, string Type, bool Reference);
+    private sealed record DocumentLot(long Id, string? Numero, string? Indice, string? Tiers, long? TiersId, decimal TotalHt, string Statut, string Type, bool Reference);
 
     /// <summary>Documents du lot de consultation d'un document (références et indices non remplacés).</summary>
     public static async Task<object> LireAsync(LogiBtpContext db, long id, CancellationToken ct)
@@ -30,7 +35,7 @@ public static class Consultations
         var code = await db.Database.SqlQueryRaw<string?>("SELECT ent_consultation AS \"Value\" FROM document WHERE ent_id = @id", new NpgsqlParameter("id", id)).FirstOrDefaultAsync(ct);
         if (code is null) return new { code = (string?)null, documents = Array.Empty<object>() };
         var docs = await db.Database.SqlQueryRaw<DocumentLot>($"""
-            SELECT d.ent_id AS id, d.ent_numero AS numero, d.ent_indice AS indice, p.per_raison_sociale AS tiers, d.ent_total_ht AS total_ht,
+            SELECT d.ent_id AS id, d.ent_numero AS numero, d.ent_indice AS indice, p.per_raison_sociale AS tiers, d.ent_tiers_id AS tiers_id, d.ent_total_ht AS total_ht,
                    s.std_libelle AS statut, t.tyd_code AS type, d.ent_is_reference AS reference
             FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id JOIN statut_document s ON s.std_id = d.ent_std_id
             LEFT JOIN personne p ON p.per_id = d.ent_tiers_id
@@ -64,6 +69,56 @@ public static class Consultations
             """, [new NpgsqlParameter("source", id), new NpgsqlParameter("id", nouveau)], ct);
         return new CopieConsultation(nouveau);
     }
+
+    /// <summary>
+    /// Nouvelles demandes du lot pour plusieurs fournisseurs en une fois (20/11/2026) : une copie par fournisseur, tiers
+    /// posé ; si la source est un brouillon sans fournisseur, elle reçoit le premier. Fournisseurs déjà consultés écartés.
+    /// </summary>
+    public static async Task<CopieConsultation> CopierPourAsync(LogiBtpContext db, DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp> documents, long id,
+        DemandeCopieConsultation? d, Utilisateur u, CancellationToken ct)
+    {
+        var fournisseurs = (d?.Fournisseurs ?? []).Distinct().ToList();
+        if (fournisseurs.Count == 0) return await CopierAsync(db, documents, id, u, ct);
+        var source = await db.Database.SqlQueryRaw<SourceLot>("""
+            SELECT d.ent_tiers_id AS tiers_id, d.ent_verrouille AS verrouille, d.ent_consultation AS code FROM document d WHERE d.ent_id = @id
+            """, new NpgsqlParameter("id", id)).FirstOrDefaultAsync(ct) ?? throw ExceptionMetier.Introuvable("Document");
+        var dejaLa = source.Code is null ? [] : await db.Database.SqlQueryRaw<long>("""
+            SELECT d.ent_tiers_id AS "Value" FROM document d JOIN statut_document s ON s.std_id = d.ent_std_id
+            WHERE d.ent_consultation = @c AND d.ent_is_reference AND d.ent_tiers_id IS NOT NULL AND NOT s.std_terminal
+            """, new NpgsqlParameter("c", source.Code)).ToListAsync(ct);
+        if (source.TiersId is long t) dejaLa.Add(t);
+        var nouveaux = fournisseurs.Where(f => !dejaLa.Contains(f)).ToList();
+        if (nouveaux.Count == 0) throw ExceptionMetier.Invalide("CONSULTATION_FOURNISSEURS", "Ces fournisseurs sont déjà consultés dans ce lot");
+        var ids = new List<long>();
+        if (source.TiersId is null && !source.Verrouille)
+        {
+            await PoserFournisseurAsync(db, id, nouveaux[0], ct);
+            nouveaux.RemoveAt(0);
+        }
+        foreach (var f in nouveaux)
+        {
+            var copie = await CopierAsync(db, documents, id, u, ct);
+            await PoserFournisseurAsync(db, copie.Id, f, ct);
+            ids.Add(copie.Id);
+        }
+        // Source seule complétée : elle reçoit le code du lot comme à une première copie.
+        if (ids.Count == 0)
+            await db.Database.ExecuteSqlRawAsync(
+                "UPDATE document SET ent_consultation = coalesce(ent_consultation, coalesce(ent_numero, 'C' || ent_id)) WHERE ent_id = @id",
+                [new NpgsqlParameter("id", id)], ct);
+        return new CopieConsultation(ids.Count > 0 ? ids[0] : id, ids);
+    }
+
+    private sealed record SourceLot(long? TiersId, bool Verrouille, string? Code);
+
+    /// <summary>Fournisseur posé sur une demande du lot en brouillon (comme l'assistant de sous-traitance).</summary>
+    private static Task<int> PoserFournisseurAsync(LogiBtpContext db, long id, long fournisseur, CancellationToken ct) =>
+        db.Database.ExecuteSqlRawAsync("""
+            UPDATE document SET ent_tiers_id = @p, ent_contact_client = NULL, ent_contact_payeur = NULL,
+                   ent_intervenants = (SELECT coalesce(jsonb_agg(x), '[]'::jsonb) FROM jsonb_array_elements(CASE WHEN jsonb_typeof(ent_intervenants) = 'array' THEN ent_intervenants ELSE '[]'::jsonb END) x
+                                       WHERE coalesce(x ->> 'fonction', '') NOT IN ('FOURNISSEUR', 'SOUS_TRAITANT'))
+            WHERE ent_id = @id AND NOT ent_verrouille
+            """, [new NpgsqlParameter("p", fournisseur), new NpgsqlParameter("id", id)], ct);
 
     private sealed record OffreLot(long Id, string? Numero, string? Tiers, long? TiersId, bool Verrouille, bool Envoye, bool Terminal);
 
@@ -136,8 +191,8 @@ public static class Consultations
     {
         var g = api.MapGroup("/structure/documents/{id:long}/consultation");
         g.MapGet("", (long id, LogiBtpContext db, CancellationToken ct) => LireAsync(db, id, ct));
-        g.MapPost("", (long id, HttpContext http, LogiBtpContext db, DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp> documents, CancellationToken ct) =>
-            CopierAsync(db, documents, id, Utilisateur.Depuis(http), ct));
+        g.MapPost("", (long id, DemandeCopieConsultation? d, HttpContext http, LogiBtpContext db, DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp> documents, CancellationToken ct) =>
+            CopierPourAsync(db, documents, id, d, Utilisateur.Depuis(http), ct));
         g.MapPost("/envoyer", (long id, EnvoiConsultation e, HttpContext http, LogiBtpContext db, ServiceEnvoiMail mail, CancellationToken ct) =>
             EnvoyerAsync(db, mail, id, e, Utilisateur.Depuis(http), ct));
         g.MapPost("/retenir", (long id, LogiBtpContext db, CancellationToken ct) => RetenirAsync(db, id, ct));
