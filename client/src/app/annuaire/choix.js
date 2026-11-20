@@ -46,6 +46,22 @@ export async function choisirTiers({ relations = [], titre = texte('annuaire_btp
   return { ...r, id: Number(r._id) };
 }
 
+/**
+ * Plusieurs tiers choisis en une fois (sélection multiple, Ctrl / Maj + clic ; lot de consultation) : tableau de
+ * résumés { id, raison_sociale… } ; Échap ou rien de choisi : tableau vide. Options : relations, titre, exclure (ids).
+ */
+export async function choisirTiersMultiples({ relations = [], titre = texte('annuaire_btp.choix.tiers_multiples'), exclure = [] } = {}) {
+  const exclus = new Set(exclure.map(Number));
+  const r = await choisirDansListe({
+    fournisseur: creerFournisseurListe(), theme: THEME_TIERS, vue: VUES_CHOIX.tiers, cleVue: 'logibtp.choix.tiers_multiples', titre, multiple: true,
+    filtres: relations.length ? { casquettes: relations } : {},
+    libellesFiltres: { casquettes: texte('annuaire_btp.choix.relation', { relations: libelleRelations(relations) }) },
+    accepter: (l) => (exclus.has(Number(l._id)) ? texte('annuaire_btp.choix.tiers_deja') : null),
+  });
+  if (!Array.isArray(r)) return [];
+  return r.map((l) => ({ ...l, id: Number(l._id) }));
+}
+
 /** Contact (individu) choisi dans la liste : résumé { id, nom_complet, personnes… }, { creer: recherche } ou null. */
 export async function choisirContact({ titre = texte('annuaire_btp.choix.contact'), exclure = [], recherche = '', creer = null } = {}) {
   const exclus = new Set(exclure.map(Number));

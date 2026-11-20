@@ -12,7 +12,8 @@
 --   dfe_statut = statut du cycle de vie affiché du flux (mis à jour à chaque statut reçu) ;
 -- - v_liste_documents (reprise de 287, colonnes inchangées) reçoit en fin de liste statut_fe : statut affiché du flux,
 --   sinon EN_FILE (flux en file ou déposé sans statut), ERREUR (flux en erreur ou échec), ou l'état de l'émission ;
---   NULL hors facturation électronique. Toute nouvelle reprise de v_liste_documents part de ce script.
+--   NULL hors facturation électronique ; puis lot (20/11/2026) : code du lot de consultation (ent_consultation).
+--   Toute nouvelle reprise de v_liste_documents part de ce script.
 -- =============================================================================
 
 ALTER TABLE document ADD COLUMN IF NOT EXISTS ent_fe_differe BOOLEAN NOT NULL DEFAULT FALSE;
@@ -122,7 +123,9 @@ SELECT d.ent_id                                   AS id,
                     WHEN e.dfe_etat = 'EMISE' THEN 'EN_FILE'
                     ELSE e.dfe_etat END
           FROM document_fe_emission e LEFT JOIN fe_flux f ON f.ffl_id = e.dfe_flux_id
-         WHERE e.dfe_ent_id = d.ent_id)::text      AS statut_fe
+         WHERE e.dfe_ent_id = d.ent_id)::text      AS statut_fe,
+       -- Colonne « Lot » des demandes de prix et appels d'offres (20/11/2026) : code du lot de consultation.
+       d.ent_consultation::text                   AS lot
 FROM document d
 JOIN type_document t ON t.tyd_id = d.ent_tyd_id
 JOIN statut_document s ON s.std_id = d.ent_std_id

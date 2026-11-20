@@ -21,6 +21,8 @@ export const SOURCES_LISTE = {
       ['derniere_relance', 'date'],
       // db/300 : facture électronique de la pièce (statut du cycle de vie affiché, sinon état de l'émission).
       ['statut_fe', 'text'],
+      // db/300 : code du lot de consultation (demandes de prix, appels d'offres).
+      ['lot', 'text'],
     ],
   },
   // Ordres du module Exécution (db/197 : v_liste_ordres = documents de la famille E + exécution).
@@ -430,6 +432,8 @@ const COLONNES_AVANCEMENT = [
 // Factures : facture électronique de la pièce (lot 24, db/300), après la dernière relance.
 const COLONNE_STATUT_FE = col('statut_fe', 'Facture\nélectronique', { format: 'pastille', ...fixe(120), options: PASTILLES_EMISSION_FE_LISTE, recherche: false,
   bulle: 'Statut du cycle de vie de la facture électronique émise (plateforme), sinon état de l\'émission' });
+// Demandes de prix et appels d'offres : code du lot de consultation (db/300), après le numéro, pour filtrer les offres d'un lot.
+const COLONNE_LOT = col('lot', 'Lot', { ...fixe(110), bulle: 'Code du lot de consultation : les demandes de la même consultation (menu du document, Lot de consultation)' });
 const COLONNE_DERNIERE_RELANCE = col('derniere_relance', 'Dernière\nrelance', { format: 'date', ...fixe(96), recherche: false, bulle: 'Date de la dernière relance faite (module Relances)' });
 const vueDocuments = (vli_id, vli_nom, theme, indicateurs = []) => {
   const definition = { ...structuredClone(documents.definition), theme, segments: [{ colonne: 'etat', titre: 'Statut' }], indicateurs };
@@ -438,6 +442,10 @@ const vueDocuments = (vli_id, vli_nom, theme, indicateurs = []) => {
   if (['situations', 'factures'].includes(theme)) {
     const i = definition.colonnes.findIndex((c) => c.code === 'numero');
     definition.colonnes.splice(i + 1, 0, ...structuredClone(COLONNES_AVANCEMENT));
+  }
+  if (['achats_ddp', 'st_ao'].includes(theme)) {
+    const i = definition.colonnes.findIndex((c) => c.code === 'indice');
+    definition.colonnes.splice(i + 1, 0, structuredClone(COLONNE_LOT));
   }
   if (['devis', 'factures'].includes(theme)) {
     const i = definition.colonnes.findIndex((c) => c.code === 'etat');
