@@ -12,7 +12,7 @@
 | 1 | Titres courts des onglets et retrait de mise en forme | socle | — | FAIT (20/11/2026) |
 | 2 | Titres courts des onglets de fiche | `modules/fiche` | 1 | FAIT (20/11/2026) |
 | 3 | Titres courts : fiches du cœur et page document | cœur | 2 | FAIT (20/11/2026) |
-| 4 | Derniers pointages des salariés et du matériel | cœur | — | A FAIRE |
+| 4 | Derniers pointages des salariés et du matériel | cœur | — | FAIT (20/11/2026) |
 | 5 | Styles des lignes : schéma, résolution répliquée, routes | `modules/document` | — | A FAIRE |
 | 6 | Styles des lignes : grille, plan, détail, réimposition, paramétrage | `modules/document` | 1, 5 | A FAIRE |
 | 7 | Styles des lignes dans les éditions | cœur | 5 | A FAIRE |
@@ -60,7 +60,7 @@
 - **Critère de fin** : `npm test --workspace client` ; fiches chantier et salarié, page document : titres courts à
   1 024 px de large.
 
-## Lot 4 : derniers pointages des salariés et du matériel (cœur)
+## Lot 4 : derniers pointages des salariés et du matériel (cœur) : FAIT (20/11/2026)
 
 - **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `db/<majeur>.<mineur>_pointages_ressource.sql` (vue des pointages du matériel, ou colonnes

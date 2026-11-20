@@ -305,6 +305,7 @@ db/310_mcp_recettes.sql rejouable
 # Mineures : ordre calculé (versions d'un module en ordre numérique, « -- requiert: » entre modules).
 db/1.1_facture_electronique_liste_flux.sql
 db/1.2_consultation_demandes_prix.sql
+db/1.3_pointages_ressource.sql
 modules/fiche/db/1.1_champs_supplementaires.sql
 modules/import/db/1.1_reprise.sql
 

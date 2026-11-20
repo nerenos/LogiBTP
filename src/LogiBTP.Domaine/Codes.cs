@@ -79,6 +79,12 @@ public static class TypesRessource
     public const string Materiel = "MATERIEL";
 }
 
+/// <summary>Indicateurs de la synthèse d'une fiche lus par l'interface (<c>SynthesesFiches</c>).</summary>
+public static class IndicateursFiche
+{
+    public const string Pointages30J = "pointages_30j";
+}
+
 /// <summary>Codes des avertissements de gestion du cœur à la validation d'une pièce (non bloquants).</summary>
 public static class AvertissementsGestion
 {

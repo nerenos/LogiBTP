@@ -5640,6 +5640,11 @@
       "chantier": "Chantier à préciser pour un matériel en chantier",
       "nature_vendu": "Nature obligatoire pour un article ou un ouvrage"
     },
+    "pointages": {
+      "derniers": "Derniers pointages",
+      "derniers_nombre": "Derniers pointages ({{nombre}})",
+      "derniers_aide": "Ouvrir la liste des pointages de la ressource sur les 30 derniers jours (couches saisie et validée, période modifiable)"
+    },
     "materiel": {
       "controles": "Contrôles réglementaires",
       "quantite_identifie": "Matériel identifié : toujours un seul",
@@ -8886,6 +8891,11 @@
       "relations": "Relations de {{libelle}}"
     },
     "liste": {
+      "ressource": {
+        "titre": "Ressource",
+        "retirer": "Retirer le filtre sur la ressource",
+        "effacer": "Effacer"
+      },
       "creer": {
         "projet": "Projet",
         "affaire": "Affaire",

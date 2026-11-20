@@ -103,6 +103,11 @@ export const MODULE_FACULTATIF = Object.freeze({
   STOCK: 'stock',
 });
 
+/** Indicateurs de la synthèse d'une fiche lus par l'interface (SynthesesFiches.cs). */
+export const INDICATEUR_FICHE = Object.freeze({
+  POINTAGES_30J: 'pointages_30j',
+});
+
 /** Avertissements de gestion du cœur à la validation d'une pièce (non bloquants). */
 export const AVERTISSEMENT_GESTION = Object.freeze({
   TVA_NON_AUTOLIQUEE: 'TVA_NON_AUTOLIQUEE',

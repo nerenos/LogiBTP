@@ -1,5 +1,5 @@
 import { texte, texteHtml, pluriel, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
-import { urlFiche, TYPE_FICHE } from '../codes.js';
+import { urlFiche, TYPE_FICHE, MODULE_FACULTATIF, INDICATEUR_FICHE } from '../codes.js';
 import { aujourdhui } from '@logibtp/socle';
 import { FicheBase } from '@logibtp/fiche/ui';
 import { FournisseurFicheApi, MODES } from '@logibtp/fiche';
@@ -26,6 +26,22 @@ export class FicheLogiBTP extends FicheBase {
     this.moduleActif = options.moduleActif ?? (() => true);
     // Accès aux nœuds de droits (liens vers les écrans d'un module).
     this.acces = options.acces ?? (() => true);
+    this.ouvrirLien = options.ouvrirLien ?? (() => {});
+  }
+
+  /**
+   * Lien « Derniers pointages » d'une ressource (salarié, intérimaire, matériel) : liste des pointages filtrée sur la
+   * ressource, 30 derniers jours (période modifiable dans la liste), nombre des 30 derniers jours lu dans la synthèse.
+   * colonne : identifiant filtré (salarie_id, materiel_id) ; vue : vue de liste (db/121) ; theme : thème de cette vue.
+   */
+  actionDerniersPointages({ colonne, vue, theme, libelle, visible = true }) {
+    const nombre = this.synthese?.indicateurs?.find((i) => i.code === INDICATEUR_FICHE.POINTAGES_30J)?.valeur;
+    const url = `/liste/${theme}?${new URLSearchParams({ vue, [colonne]: this.id, ressource: libelle })}`;
+    return {
+      libelle: `${icone('fiches_btp_pointages')} ${nombre === undefined ? texte('fiches_btp.pointages.derniers') : texte('fiches_btp.pointages.derniers_nombre', { nombre })}`,
+      titre: texte('fiches_btp.pointages.derniers_aide'), visible: visible && !this.estEnSaisie() && this.id !== null && this.id !== undefined,
+      action: (e) => this.ouvrirLien(url, e),
+    };
   }
 
   /** Onglet Suivi : notes, tâches et courriels de la fiche (module CRM), une fois la fiche enregistrée. */
@@ -202,6 +218,10 @@ export class FicheSalarie extends FicheLogiBTP {
     const ind = this.valeur('ind_id');
     return [
       { libelle: `${icone('fiches_btp_individu')} ${texte('fiches_btp.salarie.fiche_annuaire')}`, titre: texte('fiches_btp.salarie.fiche_annuaire_aide'), visible: !this.estEnSaisie() && !!ind, action: () => this.ouvrirFiche({ type: TYPE_FICHE.INDIVIDU, id: ind }) },
+      this.actionDerniersPointages({
+        colonne: 'salarie_id', vue: 1018, theme: 'pointages', libelle: [this.valeur('nom'), this.valeur('prenom')].filter(Boolean).join(' '),
+        visible: this.moduleActif(MODULE_FACULTATIF.POINTAGE) && this.acces('pointage'),
+      }),
       ...super.actionsSupplementaires(),
     ];
   }
@@ -234,6 +254,13 @@ export class FicheMateriel extends FicheLogiBTP {
   constructor(options) {
     super(options);
     this.ressources = options.ressources ?? null;
+  }
+
+  actionsSupplementaires() {
+    return [
+      this.actionDerniersPointages({ colonne: 'materiel_id', vue: 1019, theme: 'pointages_materiel', libelle: [this.valeur('code'), this.valeur('designation')].filter(Boolean).join(' ') }),
+      ...super.actionsSupplementaires(),
+    ];
   }
 
   /** Onglet Habilitations : contrôles réglementaires du matériel et habilitations exigées de son conducteur. */
