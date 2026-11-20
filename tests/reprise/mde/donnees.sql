@@ -56,10 +56,16 @@ INSERT INTO dbo.CMP_GRILLEANA (CODE, AXE, POSTE, PCT, NUMGRILLEANA) VALUES (1, 1
 INSERT INTO dbo.PMEACTIVITE (CLE, TYPETIERS, NUMORDRE, LIBELLE, DEFAUT, ACTIF) VALUES (1, 'C', 1, 'Particulier', 1, 1), (2, 'C', 2, 'Promoteur', 0, 1);
 GO
 
--- Zones supplémentaires des fiches (Q12)
-INSERT INTO dbo.SYS_RTCINFOS (TABLENAME, FIELDNAME, DISPLAYNAME, FIELDTYPE, FIELDSIZE, DATATYPE, REQUIRED) VALUES
- ('PMECLIENT', 'RTCFIELD1', 'Zone Sup 01', 'E', 50, 'S', 0),
- ('PMEFOURNISSEUR', 'RTCFIELD1', 'Code fournisseur groupe', 'E', 20, 'S', 0);
+-- Zones supplémentaires des fiches (Q12) ; listes de choix (DATATYPE « Choix multiple », PARAMS « S: M » puis la liste,
+-- MDE enregistre la lettre qui suit &) ; « Achat bloqué » des fournisseurs : fiche en « Ne plus utiliser ».
+ALTER TABLE dbo.PMECLIENT ADD RTCFIELD2 varchar(1000) NULL;
+ALTER TABLE dbo.PMEFOURNISSEUR ADD RTCFIELD2 varchar(100) NULL;
+GO
+INSERT INTO dbo.SYS_RTCINFOS (TABLENAME, FIELDNAME, DISPLAYNAME, FIELDTYPE, FIELDSIZE, DATATYPE, PARAMS, REQUIRED) VALUES
+ ('PMECLIENT', 'RTCFIELD1', 'Zone Sup 01', 'E', 50, 'S', NULL, 0),
+ ('PMECLIENT', 'RTCFIELD2', 'Type de client', 'E', 1, 'Choix multiple', 'S: M "&Public;P&rivé"', 0),
+ ('PMEFOURNISSEUR', 'RTCFIELD1', 'Code fournisseur groupe', 'E', 20, 'S', NULL, 0),
+ ('PMEFOURNISSEUR', 'RTCFIELD2', 'Achat bloqué', 'E', 1, 'Choix multiple', 'S: M "&Oui;&Non"', 0);
 GO
 
 -- Annuaire : rôles (le code de gestion relie le rôle à COMM_TIERS ; TYPETIERS donne le rôle, eTypeTiers)
@@ -71,6 +77,9 @@ INSERT INTO dbo.PMEFOURNISSEUR (CODE, TYPETIERS, CODECATEGORIE, SIRET, RTCFIELD1
  ('F001', 'F', 'F', '77788899900015', 'GRP-12'),
  ('F002', 'F', 'F', '22233344400019', NULL);
 INSERT INTO dbo.PMESOUSTRAITANT (CODE, TYPETIERS, CODECATEGORIE, SIRET) VALUES ('S001', 'S', 'A', '55566677700011');
+UPDATE dbo.PMECLIENT SET RTCFIELD2 = 'r' WHERE CODE = 'C001';
+UPDATE dbo.PMEFOURNISSEUR SET RTCFIELD2 = 'O' WHERE CODE = 'F002';
+UPDATE dbo.PMEFOURNISSEUR SET RTCFIELD2 = 'N' WHERE CODE = 'F001';
 -- A002 : architecte sans fiche COMM_TIERS ni TYPETIERS (seulement sa fiche PMEARCHITECTE).
 INSERT INTO dbo.PMEARCHITECTE (CODE, TYPETIERS, NOTE) VALUES ('A001', 'A', NULL), ('A002', '', 'Cabinet sans fiche tiers');
 INSERT INTO dbo.PMECHARGEAFFAIRE (CODE, TYPETIERS) VALUES ('G001', 'G');
@@ -87,6 +96,8 @@ INSERT INTO dbo.COMM_TIERS (CODE, COMPTE, COMPTETIERS, CODEGESTION, TYPETIERS, N
  (6, '401100', 'SELEC', 'S001', 'S', NULL, 'EUR', 'VIR', 0, 0, NULL, 61, 0, '2022-02-02', '2022-02-02'),
  (7, NULL, NULL, 'A001', 'A', NULL, 'EUR', NULL, 0, 0, NULL, 71, 0, '2017-01-01', '2017-01-01'),
  (8, NULL, NULL, 'G001', 'G', NULL, 'EUR', NULL, 0, 0, NULL, 81, 0, '2017-01-01', '2017-01-01');
+-- Compte bloqué : client repris en « Ne plus utiliser ».
+UPDATE dbo.COMM_TIERS SET COMPTEBLOQUE = 1 WHERE CODEGESTION = 'C002';
 INSERT INTO dbo.COMM_TIERSADR (IDENTIFIANT, CODE, NOM, CIVILITE, IDINTERLOC, ADR, CP, VILLE, PAYS) VALUES
  (11, 1, 'MARTIN Paul', 'Monsieur', 101, '3 chemin des Vignes', '69110', 'SAINTE-FOY-LES-LYON', 'FR'),
  (12, 1, 'MARTIN Paul (résidence secondaire)', 'Monsieur', 0, '1 route du Lac', '74000', 'ANNECY', 'FR'),

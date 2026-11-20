@@ -318,7 +318,8 @@
         { "source": "F", "cible": "nombre" },
         { "source": "C", "cible": "montant" },
         { "source": "D", "cible": "date" },
-        { "source": "B", "cible": "booleen" }
+        { "source": "B", "cible": "booleen" },
+        { "source": "Choix multiple", "cible": "liste", "note": "Valeurs lues dans PARAMS (S: M \"&Oui;&Non\") : lettre qui suit &, enregistrée par MDE" }
       ]
     }
   }

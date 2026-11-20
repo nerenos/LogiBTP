@@ -65,6 +65,11 @@ Classes du cœur dans `src/LogiBTP.Api/Reprise/` ; un domaine par source, même 
   code (unités entre parenthèses ignorées, paramétrage `type_fiche`), ou celui de la table `champ_fiche`
   (« type_fiche.code », ou ignorer) ; sinon champ supplémentaire `x_` créé. Un champ existant déjà renseigné par la
   reprise n'est pas écrasé (perte notée).
+  Liste de choix (`DATATYPE` « Choix multiple », `PARAMS` « S: M "&Oui;&Non" ») : champ liste, valeurs = lettre qui suit
+  « & » (ce que MDE enregistre), libellés sans « & ». Zone de blocage (« Bloqué », « Achat bloqué »…) : usage de la fiche,
+  « Ne plus utiliser » si elle vaut Oui (ou cible `personne.usage` de `champ_fiche`).
+- MDE, tiers en compte bloqué (`COMM_TIERS.COMPTEBLOQUE`) : fiche en « Ne plus utiliser » (usage N) ; fusion de doublons :
+  seulement si tous les rôles fusionnés sont bloqués.
 - MDE, données techniques (`PMEELEMENTARTTEC`, par unité de stock) : longueur, largeur, hauteur en m (mm dans LogiBTP),
   poids en kg, `VOLUME` en surface (m², défaut) ou en volume (m³) selon l'option de la reprise (écran, `--volume-mde`) ;
   unités `UNITE*` : M (mètre) et K (kilo) par défaut, tout autre code non converti et signalé `UniteTechnique`.

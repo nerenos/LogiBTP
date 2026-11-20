@@ -19,7 +19,7 @@ public sealed class ChampsMde : IDomaineReprise
         var createur = await ChampsReprise.Createur.LireAsync(ctx, ct);
         var volume = ctx.Rapport.Volume("SYS_RTCINFOS");
         foreach (var l in await SqlReprise.SourceAsync(ctx,
-                     "SELECT TABLENAME, FIELDNAME, DISPLAYNAME, DATATYPE FROM SYS_RTCINFOS ORDER BY TABLENAME, FIELDNAME", ct))
+                     "SELECT TABLENAME, FIELDNAME, DISPLAYNAME, DATATYPE, PARAMS FROM SYS_RTCINFOS ORDER BY TABLENAME, FIELDNAME", ct))
         {
             volume.Lues++;
             var cle = $"{l.Texte("TABLENAME")}.{l.Texte("FIELDNAME")}";
@@ -41,10 +41,21 @@ public sealed class ChampsMde : IDomaineReprise
                         $"Champ « {cible} » inconnu de la fiche {typeFiche} : champ supplémentaire créé");
                 }
             }
-            else standard = createur.StandardDuLibelle(typeFiche, libelle);
+            // Zone de blocage (« Achat bloqué »…) : usage de la fiche (« Ne plus utiliser ») ; sinon champ de même libellé.
+            else standard = ChampsReprise.EstBlocage(libelle) && createur.Standard(typeFiche, "usage") is { } usage ? usage
+                : createur.StandardDuLibelle(typeFiche, libelle);
 
+            var typeChamp = type is { Ignorer: false, Cible: { } t } ? t : TypesChampSupplementaire.Texte;
+            // Liste de choix (PARAMS « S: M "&Oui;&Non" ») : valeurs = lettres enregistrées par MDE ; sans valeurs : texte.
+            var valeurs = typeChamp == TypesChampSupplementaire.Liste ? ChampsReprise.OptionsMde(l.Texte("PARAMS")) : null;
+            if (standard is null && typeChamp == TypesChampSupplementaire.Liste && valeurs is null)
+            {
+                ctx.Rapport.Signaler(NiveauAnomalie.Avertissement, CodeAnomalie.ValeurInconnue, $"SYS_RTCINFOS {cle}",
+                    $"Liste de choix sans valeurs lisibles (PARAMS « {l.Texte("PARAMS")} ») : champ texte créé");
+                typeChamp = TypesChampSupplementaire.Texte;
+            }
             var champ = standard is not null ? createur.Utiliser(typeFiche, cle, standard)
-                : await createur.CreerAsync(typeFiche, cle, libelle, type is { Ignorer: false, Cible: { } t } ? t : TypesChampSupplementaire.Texte, ct);
+                : await createur.CreerAsync(typeFiche, cle, libelle, typeChamp, ct, valeurs);
             if (champ is null) volume.Ecartees++; else volume.Ecrites++;
         }
     }

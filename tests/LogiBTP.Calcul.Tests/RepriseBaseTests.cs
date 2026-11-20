@@ -844,7 +844,14 @@ public class RepriseBaseTests
             Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM fiche_champ_supplementaire WHERE fcs_table = 'personne' AND fcs_colonne = 'x_zone_sup_01' AND fcs_type = 'texte'"));
             Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM fiche_champ_supplementaire WHERE fcs_table = 'personne' AND fcs_colonne = 'x_code_fournisseur_groupe'"));
             Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM information_schema.columns WHERE table_name = 'personne' AND column_name = 'x_zone_sup_01'"));
-            Assert.Equal(1, r.Volumes.Single(v => v.Table == "PMECLIENT.RTCFIELD").Lues);
+            Assert.Equal(2, r.Volumes.Single(v => v.Table == "PMECLIENT.RTCFIELD").Lues);
+            // Liste de choix MDE : valeurs = lettres qui suivent « & », libellés sans « & ».
+            Assert.Equal(1L, await b.CompterAsync("""
+                SELECT count(*) FROM fiche_champ_supplementaire WHERE fcs_table = 'personne' AND fcs_colonne = 'x_type_de_client' AND fcs_type = 'liste'
+                  AND fcs_valeurs @> '[{"Valeur": "P", "Libelle": "Public"}, {"Valeur": "R", "Libelle": "Privé"}]'
+                """));
+            // « Achat bloqué » : usage de la fiche, pas de champ supplémentaire.
+            Assert.Equal(0L, await b.CompterAsync("SELECT count(*) FROM fiche_champ_supplementaire WHERE fcs_colonne LIKE 'x_achat%'"));
         }
         else
         {
@@ -867,8 +874,12 @@ public class RepriseBaseTests
             Assert.Equal(1L, await b.CompterAsync("""
                 SELECT count(*) FROM personne WHERE per_code = 'C001' AND per_niv_code = 'PARTICULIER' AND per_casquettes = '["CLIENT"]'
                   AND per_cli_compte = 'CMARTIN' AND per_cli_collectif = '411000' AND per_cli_mode_reglement = 'CHEQUE'
-                  AND per_cli_delai_paiement = 'COMPTANT' AND x_zone_sup_01 = 'VIP'
+                  AND per_cli_delai_paiement = 'COMPTANT' AND x_zone_sup_01 = 'VIP' AND x_type_de_client = 'R' AND per_usage = 'A'
                 """));
+            // Compte bloqué (COMM_TIERS.COMPTEBLOQUE) et « Achat bloqué » à Oui : « Ne plus utiliser » ; à Non : en service.
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM personne WHERE per_code = 'C002' AND per_usage = 'N' AND per_actif"));
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM personne WHERE per_code = 'F002' AND per_usage = 'N'"));
+            Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM personne WHERE per_code = 'F001' AND per_usage = 'A'"));
             Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM personne WHERE per_code = 'S001' AND per_casquettes = '[\"SOUS_TRAITANT\"]'"));
             Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM personne WHERE per_code = 'A001' AND per_casquettes = '[\"ARCHITECTE\"]'"));
             // Architecte sans fiche COMM_TIERS ni TYPETIERS : rôle de la table, note gardée, pas d'avertissement.

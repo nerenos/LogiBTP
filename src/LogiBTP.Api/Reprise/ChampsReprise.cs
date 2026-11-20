@@ -26,6 +26,37 @@ public static class ChampsReprise
     /// <summary>Clé du registre (codes texte) des champs créés : « source.champ » → table|clé|colonne|type.</summary>
     public const string Registre = "champ_supplementaire";
 
+    /// <summary>
+    /// Type propre à la reprise du champ standard « usage » des fiches : une zone vraie (Oui, O, 1…) met la fiche en
+    /// « Ne plus utiliser » (N), une zone fausse ne change rien.
+    /// </summary>
+    public const string TypeUsage = "usage";
+
+    /// <summary>
+    /// Valeurs d'une liste de choix MDE (SYS_RTCINFOS.PARAMS, ex. <c>S: M "&amp;Oui;&amp;Non"</c>) : préfixe « S: M »
+    /// retiré, éléments séparés par « ; », valeur = lettre qui suit « &amp; » (ce que MDE enregistre), libellé sans
+    /// « &amp; » ; sans « &amp; » : l'élément entier. Null si aucune valeur.
+    /// </summary>
+    public static List<OptionChamp>? OptionsMde(string? parametres)
+    {
+        if (string.IsNullOrWhiteSpace(parametres)) return null;
+        var liste = System.Text.RegularExpressions.Regex.Replace(parametres.Trim(), @"^S\s*:\s*M\s*", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase)
+            .Trim().Trim('"').Trim();
+        var options = new List<OptionChamp>();
+        foreach (var brut in liste.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+        {
+            var i = brut.IndexOf('&');
+            var libelle = brut.Replace("&", "", StringComparison.Ordinal).Trim();
+            var valeur = i >= 0 && i + 1 < brut.Length ? brut[i + 1].ToString().ToUpperInvariant() : libelle;
+            if (libelle.Length == 0 || valeur.Length == 0 || options.Any(o => o.Valeur == valeur)) continue;
+            options.Add(new OptionChamp { Valeur = valeur, Libelle = libelle });
+        }
+        return options.Count > 0 ? options : null;
+    }
+
+    /// <summary>Zone de MDE qui bloque la fiche (« Bloqué », « Achat bloqué », « Compte bloqué »…) : versée dans l'usage.</summary>
+    public static bool EstBlocage(string libelle) => Comparable(libelle) is var c && (c == "bloque" || c.EndsWith("_bloque", StringComparison.Ordinal));
+
     /// <summary>Nom de colonne « x_ » tiré d'un libellé : minuscules sans accents, mots séparés par « _ », 41 caractères.</summary>
     public static string Nom(string libelle)
     {
@@ -60,10 +91,12 @@ public static class ChampsReprise
     /// </summary>
     private static async Task<Dictionary<string, List<ChampStandard>>> LireStandardsAsync(ContexteReprise ctx, CancellationToken ct) =>
         (await SqlReprise.LireAsync(ctx.Unite, """
-            SELECT t.tyf_code, c->>'code', coalesce(c->>'libelle', c->>'code'), c->>'colonne', c->>'type', (c->>'longueur')::int
+            SELECT t.tyf_code, c->>'code', coalesce(c->>'libelle', c->>'code'), c->>'colonne',
+                   CASE WHEN c->>'code' = 'usage' THEN 'usage' ELSE c->>'type' END, (c->>'longueur')::int
             FROM type_fiche t, jsonb_array_elements(t.tyf_definition->'champs') c
-            WHERE t.tyf_actif AND c->>'colonne' IS NOT NULL AND c->>'type' IN ('texte', 'nombre', 'date', 'booleen')
-              AND coalesce((c->>'lecture_seule')::boolean, false) = false AND c->>'reference' IS NULL
+            WHERE t.tyf_actif AND c->>'colonne' IS NOT NULL
+              AND (c->>'code' = 'usage' OR c->>'type' IN ('texte', 'nombre', 'date', 'booleen')
+                   AND coalesce((c->>'lecture_seule')::boolean, false) = false AND c->>'reference' IS NULL)
             """, r => (r.GetString(0), new ChampStandard(r.GetString(1), r.GetString(2), r.GetString(3), r.GetString(4), r.IsDBNull(5) ? null : r.GetInt32(5))), ct))
         .GroupBy(x => x.Item1).ToDictionary(g => g.Key, g => g.Select(x => x.Item2).ToList(), StringComparer.Ordinal);
 
@@ -101,7 +134,8 @@ public static class ChampsReprise
         {
             var cle = Comparable(libelle);
             if (cle.Length == 0) return null;
-            var trouves = (standards.GetValueOrDefault(typeFiche) ?? []).Where(c => Comparable(c.Libelle) == cle || Comparable(c.Code) == cle).ToList();
+            var trouves = (standards.GetValueOrDefault(typeFiche) ?? []).Where(c => c.Type != TypeUsage)
+                .Where(c => Comparable(c.Libelle) == cle || Comparable(c.Code) == cle).ToList();
             return trouves.Count == 1 ? trouves[0] : null;
         }
 
@@ -116,7 +150,8 @@ public static class ChampsReprise
         }
 
         /// <summary>Crée le champ d'une fiche et l'inscrit au registre sous <paramref name="cleSource"/> ; null si la fiche est inconnue.</summary>
-        public async Task<ChampRepris?> CreerAsync(string typeFiche, string cleSource, string libelle, string type, CancellationToken ct)
+        public async Task<ChampRepris?> CreerAsync(string typeFiche, string cleSource, string libelle, string type, CancellationToken ct,
+            IReadOnlyList<OptionChamp>? valeurs = null)
         {
             if (!types.TryGetValue(typeFiche, out var t))
             {
@@ -126,8 +161,9 @@ public static class ChampsReprise
             if (!colonnes.TryGetValue(t.Table, out var prises)) colonnes[t.Table] = prises = new(StringComparer.Ordinal);
             var colonne = Associations.CodeLibre(Nom(libelle), 43, prises.Contains);
             prises.Add(colonne);
-            await SqlReprise.ExecuterAsync(ctx.Unite, "SELECT fiche_champ_creer($1, $2, $3, $4, $5, NULL)", ct,
-                t.Table, colonne, type, AnnuaireReprise.Couper(libelle, ChampsSupplementaires.LongueurLibelle) ?? colonne, ++ordre);
+            await SqlReprise.ExecuterAsync(ctx.Unite, "SELECT fiche_champ_creer($1, $2, $3, $4, $5, $6::text::jsonb)", ct,
+                t.Table, colonne, type, AnnuaireReprise.Couper(libelle, ChampsSupplementaires.LongueurLibelle) ?? colonne, ++ordre,
+                type == TypesChampSupplementaire.Liste && valeurs is { Count: > 0 } ? System.Text.Json.JsonSerializer.Serialize(valeurs) : null);
             var champ = new ChampRepris(t.Table, t.Cle, colonne, type);
             ctx.Registre.InscrireCode(Registre, cleSource, string.Join('|', champ.Table, champ.Cle, champ.Colonne, champ.Type));
             ctx.Rapport.Appliquer(Registre, cleSource, $"{t.Table}.{colonne} ({type})");
@@ -156,6 +192,15 @@ public static class ChampsReprise
         {
             return champ.Type switch
             {
+                TypeUsage => valeur switch
+                {
+                    bool b => b,
+                    string t => t.Trim().ToUpperInvariant() is "O" or "OUI" or "1" or "TRUE" or "Y" or "YES" or "X",
+                    _ => Convert.ToInt64(valeur, CultureInfo.InvariantCulture) != 0,
+                } ? "N" : null,
+                // Liste de choix MDE : la lettre enregistrée, en majuscule comme les valeurs créées (OptionsMde).
+                TypesChampSupplementaire.Liste => Convert.ToString(valeur, CultureInfo.InvariantCulture)?.Trim() is { Length: 1 } lettre
+                    ? lettre.ToUpperInvariant() : Convert.ToString(valeur, CultureInfo.InvariantCulture)?.Trim(),
                 TypesChampSupplementaire.Nombre or TypesChampSupplementaire.Montant => valeur switch
                 {
                     string t => decimal.Parse(t.Trim().Replace(',', '.'), NumberStyles.Number, CultureInfo.InvariantCulture),
@@ -197,10 +242,12 @@ public static class ChampsReprise
             throw new InvalidOperationException($"Colonne de champ supplémentaire invalide : {champ.Colonne}");
         if (champ.Standard && valeur is string s && champ.Longueur is { } max) valeur = AnnuaireReprise.Couper(s, max) ?? s;
         var colonne = ConstructeurFiche.Identifiant(champ.Colonne);
+        // Usage : seulement une fiche encore en service (une fiche en sommeil le reste).
+        var condition = !champ.Standard ? "" : champ.Type == TypeUsage ? " AND " + colonne + " = 'A'" : " AND " + colonne + " IS NULL";
         var sql = "UPDATE " + ConstructeurFiche.Identifiant(champ.Table) + " SET " + colonne + " = $1 WHERE "
-                  + ConstructeurFiche.Identifiant(champ.Cle) + " = $2" + (champ.Standard ? " AND " + colonne + " IS NULL" : "");
+                  + ConstructeurFiche.Identifiant(champ.Cle) + " = $2" + condition;
         var n = await SqlReprise.ExecuterAsync(ctx.Unite, sql, ct, valeur, id);
-        if (n == 0 && champ.Standard)
+        if (n == 0 && champ.Standard && champ.Type != TypeUsage)
             ctx.Rapport.Perdre(champ.Table, champ.Colonne, Convert.ToString(valeur, CultureInfo.InvariantCulture), "champ existant déjà renseigné par la reprise");
         return n;
     }
