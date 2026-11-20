@@ -48,7 +48,7 @@ public static class StylesLignes
     public static readonly string[] Proprietes = ["couleur", "fond", "gras", "italique", "souligne", "barre", "taille"];
     private static readonly HashSet<string> Couleurs = ["couleur", "fond"];
     private static readonly HashSet<string> Booleens = ["gras", "italique", "souligne", "barre"];
-    private static readonly Regex FormeCouleur = new("^(#[0-9a-fA-F]{6}|--[a-z0-9-]+)$", RegexOptions.Compiled);
+    private static readonly Regex FormeCouleur = new("^(#[0-9a-fA-F]{6}|--[a-z0-9-]+)\\z", RegexOptions.Compiled);
 
     private static bool ValeurValide(string propriete, JsonElement v) =>
         Couleurs.Contains(propriete) ? v.ValueKind == JsonValueKind.String && FormeCouleur.IsMatch(v.GetString()!)
@@ -125,9 +125,9 @@ public static class StylesLignes
     {
         var lignes = c.Styles.Where(s => s.Classe == classe).ToList();
         StyleLigne Niveau(Func<StyleParametre, bool> f) => Normaliser(lignes.FirstOrDefault(f)?.Valeur);
-        var r = Niveau(s => s.Famille is null && s.Type is null);
-        if (c.Famille is not null) r = r.Surcharger(Niveau(s => s.Type is null && s.Famille == c.Famille));
-        if (c.Type is not null) r = r.Surcharger(Niveau(s => s.Famille is null && s.Type == c.Type));
+        var r = Niveau(s => string.IsNullOrEmpty(s.Famille) && string.IsNullOrEmpty(s.Type));
+        if (!string.IsNullOrEmpty(c.Famille)) r = r.Surcharger(Niveau(s => string.IsNullOrEmpty(s.Type) && s.Famille == c.Famille));
+        if (!string.IsNullOrEmpty(c.Type)) r = r.Surcharger(Niveau(s => string.IsNullOrEmpty(s.Famille) && s.Type == c.Type));
         if (c.Document is { ValueKind: JsonValueKind.Object } d && d.TryGetProperty(classe, out var propre)) r = r.Surcharger(Normaliser(propre));
         return r;
     }
