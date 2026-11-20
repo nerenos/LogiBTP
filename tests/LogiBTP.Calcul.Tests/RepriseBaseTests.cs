@@ -951,9 +951,12 @@ public class RepriseBaseTests
             JOIN rattachement r ON r.rat_ind_id = i.ind_id AND r.rat_per_id = s.sal_agence_per_id
             """));
         Assert.Equal(1L, await b.CompterAsync("SELECT count(*) FROM salarie WHERE NOT sal_actif AND sal_usage = 'S'"));
-        // Intérimaire repris sans mission.
+        // Intérimaire : sans mission depuis MDE ; mission aux dates de la fiche depuis OPTIM (fin de l'année à défaut).
         Assert.Equal(1L, await b.CompterAsync("""SELECT count(*) FROM salarie s JOIN individu i ON i.ind_id = s.sal_ind_id WHERE s.sal_statut = 'INTERIM' AND i.ind_roles = '["INTERIMAIRE"]'"""));
-        Assert.Equal(0L, await b.CompterAsync("SELECT count(*) FROM mission_interim"));
+        Assert.Equal(source == SourceReprise.Mde ? 0L : 1L, await b.CompterAsync("""
+            SELECT count(*) FROM mission_interim m JOIN salarie s ON s.sal_id = m.mis_sal_id
+            WHERE s.sal_statut = 'INTERIM' AND m.mis_fin = DATE '2026-12-31'
+            """));
         if (source == SourceReprise.Mde)
         {
             // Le chargé d'affaires G001 (individu du lot 6) devient le salarié SAL01 : pas de second individu.
