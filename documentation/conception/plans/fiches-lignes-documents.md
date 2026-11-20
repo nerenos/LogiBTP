@@ -10,7 +10,7 @@
 | Lot | Titre | Module | Dépend de | Statut |
 |---|---|---|---|---|
 | 1 | Titres courts des onglets et retrait de mise en forme | socle | — | FAIT (20/11/2026) |
-| 2 | Titres courts des onglets de fiche | `modules/fiche` | 1 | A FAIRE |
+| 2 | Titres courts des onglets de fiche | `modules/fiche` | 1 | FAIT (20/11/2026) |
 | 3 | Titres courts : fiches du cœur et page document | cœur | 2 | A FAIRE |
 | 4 | Derniers pointages des salariés et du matériel | cœur | — | A FAIRE |
 | 5 | Styles des lignes : schéma, résolution répliquée, routes | `modules/document` | — | A FAIRE |
@@ -39,7 +39,7 @@
 - **Critère de fin** : `npm test --workspace socle/js` (cas : débordement simulé, aucun débordement ; balises `b`,
   `strong`, `i`, `u`, `s`, `span style` retirées, listes gardées).
 
-## Lot 2 : titres courts des onglets de fiche (module Fiche)
+## Lot 2 : titres courts des onglets de fiche (module Fiche) : FAIT (20/11/2026)
 
 - **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `modules/fiche/js/ui/fiche.js` (`sections` : `court` des onglets du programme, des onglets spécifiques,
