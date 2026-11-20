@@ -6,7 +6,7 @@ export { ListeDeroulante, AssistantFormule } from './liste-deroulante.js';
 export { creerCombo, comboDepuisSelect, activerCombos } from './combo.js';
 export { creerJetons, decouperJetons, ajouterJetons, retirerJeton } from './jetons.js';
 export { champDate, activerDates } from './champ-date.js';
-export { lireNombre, nombreSaisi, formatNombre, formatLibre, formatDate, formatDateHeure, formatHeure, htmlSur, echapper, estHtml, decoderEntites } from './format.js';
+export { lireNombre, nombreSaisi, formatNombre, formatLibre, formatDate, formatDateHeure, formatHeure, htmlSur, echapper, estHtml, decoderEntites, retirerMiseEnForme } from './format.js';
 export { lirePreferences, ecrirePreferences, lireStockage, ecrireStockage } from './preferences.js';
 export { magasinIdb } from './idb.js';
 export { separateur } from './separateur.js';
@@ -23,3 +23,4 @@ export { ouvrirDialogue, confirmer, alerter, saisir, ouvrirModale } from './dial
 export { PadSignature, epaisseurTrait } from './signature.js';
 export { notifier, titreNotification, corpsNotificationHtml, EVENEMENT_NOTIFICATION, DELAI_NOTIFICATION } from './notification.js';
 export { activerInfobulles, bulleHtml, positionBulle } from './infobulle.js';
+export { activerTitresCourts, afficherTitres, ongletsDebordent } from './onglets.js';

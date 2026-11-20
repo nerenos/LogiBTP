@@ -109,3 +109,27 @@ export function htmlSur(html) {
 
 /** Texte échappé pour le HTML (échappeur unique du socle : echapperHtml, apostrophe comprise). */
 export const echapper = (s) => echapperHtml(String(s ?? ''));
+
+const BALISES_MISE_EN_FORME = /<\/?(?:b|strong|i|em|u|s|strike|del|font)(?:\s[^>]*)?>/gi;
+const STYLE_CONSERVE = ['text-align'];
+
+/**
+ * Libellé riche sans mise en forme : retire couleur, fond, gras, italique, souligné, barré et taille ;
+ * garde le texte, les listes, l'alignement et les retours à la ligne.
+ */
+export function retirerMiseEnForme(html) {
+  if (!html) return '';
+  return String(html)
+    .replace(BALISES_MISE_EN_FORME, '')
+    .replace(/<(span|p|div|li|ul|ol|h[1-4]|td|th|tr|table|thead|tbody|sub|sup)((?:\s[^>]*)?)>/gi, (tout, nom, attributs) => {
+      const m = /\sstyle\s*=\s*(?:"([^"]*)"|'([^']*)')/i.exec(attributs);
+      const reste = attributs.replace(/\sstyle\s*=\s*(?:"[^"]*"|'[^']*')/i, '');
+      const gardes = (m ? (m[1] ?? m[2]) : '').split(';')
+        .map((d) => d.trim()).filter((d) => STYLE_CONSERVE.includes(d.split(':')[0].trim().toLowerCase()));
+      if (nom.toLowerCase() === 'span' && gardes.length === 0) return '<span>';
+      return `<${nom}${reste}${gardes.length ? ` style="${gardes.join('; ')}"` : ''}>`;
+    })
+    .replace(/<span>/gi, '\u0000').replace(/<\/span>/gi, '\u0001')
+    .replace(/\u0000([^\u0000\u0001]*)\u0001/g, '$1')
+    .replace(/[\u0000\u0001]/g, (c) => (c === '\u0000' ? '<span>' : '</span>'));
+}

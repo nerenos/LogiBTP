@@ -9,7 +9,7 @@
 
 | Lot | Titre | Module | Dépend de | Statut |
 |---|---|---|---|---|
-| 1 | Titres courts des onglets et retrait de mise en forme | socle | — | A FAIRE |
+| 1 | Titres courts des onglets et retrait de mise en forme | socle | — | FAIT (20/11/2026) |
 | 2 | Titres courts des onglets de fiche | `modules/fiche` | 1 | A FAIRE |
 | 3 | Titres courts : fiches du cœur et page document | cœur | 2 | A FAIRE |
 | 4 | Derniers pointages des salariés et du matériel | cœur | — | A FAIRE |
@@ -25,7 +25,7 @@
 
 ---
 
-## Lot 1 : titres courts des onglets et retrait de mise en forme (socle)
+## Lot 1 : titres courts des onglets et retrait de mise en forme (socle) : FAIT (20/11/2026)
 
 - **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `socle/js/src/ui/onglets.js` (nouveau), `socle/js/src/ui/index.js`, `socle/js/src/ui/socle.css`,

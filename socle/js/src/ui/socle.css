@@ -291,3 +291,6 @@ button.lien { background: none; border: none; padding: 0; color: var(--accent); 
 .jetons .jeton-retirer { min-width: 0; padding: 0 0.25em; border: 0; background: transparent; color: var(--discret); cursor: pointer; }
 .jetons .jeton-retirer:hover { color: var(--erreur); }
 .jetons .jetons-saisie { flex: 1 1 8em; min-width: 6em; border: 0; outline: none; background: transparent; color: var(--texte); }
+
+/* Titres courts des onglets (activerTitresCourts) : la ligne garde sa hauteur, pastilles de compteur conservées. */
+.onglets.titres-courts > button { white-space: nowrap; }
