@@ -74,7 +74,7 @@
 - **Critère de fin** : `npm test --workspace client`, `dotnet test LogiBTP.slnx` ; le lien d'un salarié de la démo
   ouvre ses pointages.
 
-## Lot 5 : styles des lignes, schéma et résolution répliquée (module Document)
+## Lot 5 : styles des lignes, schéma et résolution répliquée (module Document) : FAIT (20/11/2026)
 
 - **Agent** : `lot-dev`. **Modèle** : opus. Puis `revue-parite`.
 - **Fichiers** : `modules/document/db/<majeur>.<mineur>_styles_lignes.sql`, `js/src/codes.js` ↔

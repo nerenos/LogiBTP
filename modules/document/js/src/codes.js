@@ -46,3 +46,30 @@ export const STATUTS_HORS_VIGUEUR = Object.freeze([STATUT_DOCUMENT.ANNULE, STATU
 
 /** Nœud des droits d'un type de document (module Droits) : documents/{famille}/{code}. */
 export const noeudDroitsDocument = (famille, code) => `documents/${famille}/${code}`;
+
+/**
+ * Classe de style d'une ligne (styles des lignes : table style_ligne, ent_styles_lignes) : tranche de niveau 1 à 5
+ * (au-delà, TRANCHE_5), section, ouvrage, sous-ouvrage (ouvrage sous un ouvrage), élément, composante (élément sous un
+ * ouvrage), texte, sous-total.
+ */
+export const CLASSE_STYLE_LIGNE = Object.freeze({
+  TRANCHE_1: 'TRANCHE_1',
+  TRANCHE_2: 'TRANCHE_2',
+  TRANCHE_3: 'TRANCHE_3',
+  TRANCHE_4: 'TRANCHE_4',
+  TRANCHE_5: 'TRANCHE_5',
+  SECTION: 'SECTION',
+  OUVRAGE: 'OUVRAGE',
+  SOUS_OUVRAGE: 'SOUS_OUVRAGE',
+  ELEMENT: 'ELEMENT',
+  COMPOSANTE: 'COMPOSANTE',
+  TEXTE: 'TEXTE',
+  SOUS_TOTAL: 'SOUS_TOTAL',
+});
+
+/** Taille du texte d'un style de ligne. */
+export const TAILLE_STYLE_LIGNE = Object.freeze({
+  PETITE: 'PETITE',
+  NORMALE: 'NORMALE',
+  GRANDE: 'GRANDE',
+});

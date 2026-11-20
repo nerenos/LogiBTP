@@ -402,6 +402,12 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         e.EntCpaCode = string.IsNullOrEmpty(d.Document.EntCpaCode) ? null : d.Document.EntCpaCode;
         e.EntModeReglement = string.IsNullOrEmpty(d.Document.EntModeReglement) ? null : d.Document.EntModeReglement;
         specialisation.CopierEnteteSaisie(e, d.Document, type);
+        // Styles (1.1) : styles de classe du document et style propre des lignes, valeurs connues et valides seulement.
+        var fautesStyle = StylesLignes.ErreursDocument(d.Document.EntStylesLignes?.RootElement)
+            .Select(f => new MessageCalcul(null, "STYLE", f)).ToList();
+        fautesStyle.AddRange(d.Lignes.SelectMany(l => StylesLignes.Erreurs(l.LigStyle?.RootElement).Select(f => new MessageCalcul(l.LigId, "STYLE", f))));
+        if (fautesStyle.Count > 0) throw ExceptionMetier.Invalide(ErreursEnregistrement.Validation, "Styles incorrects", fautesStyle);
+        e.EntStylesLignes = d.Document.EntStylesLignes;
         foreach (var l in d.Lignes)
         {
             l.LigEntId = id;

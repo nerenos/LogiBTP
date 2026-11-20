@@ -87,6 +87,8 @@ public class Document
     public string? EntModele { get; set; }
     /// <summary>Étiquettes de lignes propres au document (ajoutées ou personnalisées) : [{ code, libelle, couleur }].</summary>
     public JsonDocument? EntEtiquettes { get; set; }
+    /// <summary>Styles des classes de ligne propres au document : { CLASSE: { couleur, fond, gras… } } (1.1) ; null = aucun.</summary>
+    public JsonDocument? EntStylesLignes { get; set; }
 }
 
 /// <summary>Ventilation de TVA du document (table document_tva).</summary>

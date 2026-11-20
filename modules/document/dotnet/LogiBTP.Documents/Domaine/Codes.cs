@@ -61,3 +61,36 @@ public static class StatutsDocument
     public const string Annule = "ANNULE";
     public const string Remplace = "REMPLACE";
 }
+
+/// <summary>
+/// Classe de style d'une ligne (table style_ligne, ent_styles_lignes) : tranche de niveau 1 à 5 (au-delà, TRANCHE_5),
+/// section, ouvrage, sous-ouvrage (ouvrage sous un ouvrage), élément, composante (élément sous un ouvrage), texte, sous-total.
+/// </summary>
+public static class ClassesStyleLigne
+{
+    public const string Tranche1 = "TRANCHE_1";
+    public const string Tranche2 = "TRANCHE_2";
+    public const string Tranche3 = "TRANCHE_3";
+    public const string Tranche4 = "TRANCHE_4";
+    public const string Tranche5 = "TRANCHE_5";
+    public const string Section = "SECTION";
+    public const string Ouvrage = "OUVRAGE";
+    public const string SousOuvrage = "SOUS_OUVRAGE";
+    public const string Element = "ELEMENT";
+    public const string Composante = "COMPOSANTE";
+    public const string Texte = "TEXTE";
+    public const string SousTotal = "SOUS_TOTAL";
+
+    public static readonly string[] Toutes = [Tranche1, Tranche2, Tranche3, Tranche4, Tranche5, Section, Ouvrage, SousOuvrage, Element, Composante, Texte, SousTotal];
+    public static readonly string[] Tranches = [Tranche1, Tranche2, Tranche3, Tranche4, Tranche5];
+}
+
+/// <summary>Taille du texte d'un style de ligne.</summary>
+public static class TaillesStyleLigne
+{
+    public const string Petite = "PETITE";
+    public const string Normale = "NORMALE";
+    public const string Grande = "GRANDE";
+
+    public static readonly string[] Toutes = [Petite, Normale, Grande];
+}

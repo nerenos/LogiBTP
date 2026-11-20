@@ -96,4 +96,6 @@ public class DocumentLigne
     public JsonDocument? LigProprietes { get; set; }
     /// <summary>Étiquette de couleur de la ligne (à vérifier, prix confirmé…).</summary>
     public string? LigEtiquette { get; set; }
+    /// <summary>Style propre de la ligne entière : { couleur, fond, gras… } (1.1) ; null = aucun.</summary>
+    public JsonDocument? LigStyle { get; set; }
 }

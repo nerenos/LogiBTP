@@ -191,6 +191,7 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
         new("/api/vues-document", ModeRoute.Module, "documents"),
         new("/api/etiquettes-ligne", ModeRoute.Module, "documents"),
         new("/api/couleurs-type-prix", ModeRoute.Module, "documents"),
+        new("/api/styles-lignes", ModeRoute.Module, "documents"),
         new("/api/modeles-document", ModeRoute.Module, "documents"),
         new("/api/conditions-paiement", ModeRoute.Module, "documents"),
         new("/api/modes-reglement", ModeRoute.Module, "documents"),

@@ -892,6 +892,8 @@ export const api = {
   // Affichage de la saisie : étiquettes de lignes, couleurs des modes de vente, vues de colonnes.
   etiquettesLigne: () => appel('GET', '/etiquettes-ligne'),
   enregistrerEtiquettesLigne: (liste) => appel('PUT', '/etiquettes-ligne', liste),
+  stylesLignes: () => appel('GET', '/styles-lignes'),
+  enregistrerStylesLignes: (liste) => appel('PUT', '/styles-lignes', liste),
   couleursTypePrix: () => appel('GET', '/couleurs-type-prix'),
   enregistrerCouleursTypePrix: (liste) => appel('PUT', '/couleurs-type-prix', liste),
   vuesDocument: (type) => appel('GET', `/vues-document${type?.tyd_code ? `?type=${encodeURIComponent(type.tyd_code)}` : ''}`),

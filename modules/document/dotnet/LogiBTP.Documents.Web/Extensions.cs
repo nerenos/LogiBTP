@@ -76,6 +76,8 @@ public static class Extensions
         api.MapPut("/etiquettes-ligne", (List<EtiquetteDto> l, HttpContext http, AffichageDocumentService<TDoc, TLigne> s, CancellationToken ct) => s.EnregistrerEtiquettes(l, Utilisateur.Depuis(http), ct));
         api.MapGet("/couleurs-type-prix", (AffichageDocumentService<TDoc, TLigne> s, CancellationToken ct) => s.CouleursTypePrix(ct));
         api.MapPut("/couleurs-type-prix", (List<CouleurTypePrixDto> l, HttpContext http, AffichageDocumentService<TDoc, TLigne> s, CancellationToken ct) => s.EnregistrerCouleurs(l, Utilisateur.Depuis(http), ct));
+        api.MapGet("/styles-lignes", (AffichageDocumentService<TDoc, TLigne> s, CancellationToken ct) => s.StylesLignes(ct));
+        api.MapPut("/styles-lignes", (List<StyleParametre> l, HttpContext http, AffichageDocumentService<TDoc, TLigne> s, CancellationToken ct) => s.EnregistrerStylesLignes(l, Utilisateur.Depuis(http), ct));
         api.MapGet("/modeles-document", (AffichageDocumentService<TDoc, TLigne> s, CancellationToken ct) => s.Modeles(ct));
         api.MapGet("/vues-document", (string? type, HttpContext http, AffichageDocumentService<TDoc, TLigne> s, CancellationToken ct) => s.Vues(type, Utilisateur.Depuis(http), ct));
         api.MapPut("/vues-document", (VueDocumentDto v, HttpContext http, AffichageDocumentService<TDoc, TLigne> s, CancellationToken ct) => s.EnregistrerVue(v, Utilisateur.Depuis(http), ct));
