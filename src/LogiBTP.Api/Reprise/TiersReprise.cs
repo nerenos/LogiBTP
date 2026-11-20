@@ -49,6 +49,8 @@ public sealed class TiersSource
     public decimal? EncoursMax { get; set; }
     public string? CliCategorie { get; set; }
     public bool NePasRelancer { get; set; }
+    /// <summary>Fiche en « Ne plus utiliser » (usage N) : compte bloqué de la source ; fusion : seulement si tous le sont.</summary>
+    public bool NePlusUtiliser { get; set; }
     public string? Iban { get; set; }
     public string? Bic { get; set; }
     public bool Actif { get; set; } = true;
@@ -109,6 +111,8 @@ public static class TiersReprise
                 RaisonSociale = t.RaisonSociale, Siret = t.Siret, TvaIntra = t.TvaIntra, FormeLibelle = t.FormeLibelle,
                 Pays = t.Pays, Actif = t.Actif, Commentaire = t.Commentaire,
             }, ct);
+            if (t.NePlusUtiliser && t.Actif)
+                await SqlReprise.ExecuterAsync(ctx.Unite, "UPDATE personne SET per_usage = 'N' WHERE per_id = $1", ct, perId);
             foreach (var col in new[] { t.CliCollectif, t.FouCollectif, t.StCollectif })
                 await comptes.CompteAsync(col, col, ReferentielsCible.TypeCompte.Collectif, ReferentielsCible.SensCompte.Aucun, ct);
             await SqlReprise.ExecuterAsync(ctx.Unite, """
@@ -187,7 +191,7 @@ public static class TiersReprise
             t.CliCollectif ??= x.CliCollectif; t.FouCollectif ??= x.FouCollectif; t.StCollectif ??= x.StCollectif;
             t.CliMode ??= x.CliMode; t.CliDelai ??= x.CliDelai; t.FouMode ??= x.FouMode; t.FouDelai ??= x.FouDelai;
             t.EncoursMax ??= x.EncoursMax; t.CliCategorie ??= x.CliCategorie; t.Iban ??= x.Iban; t.Bic ??= x.Bic;
-            t.NePasRelancer |= x.NePasRelancer; t.Actif |= x.Actif;
+            t.NePasRelancer |= x.NePasRelancer; t.Actif |= x.Actif; t.NePlusUtiliser &= x.NePlusUtiliser;
             t.Commentaire = string.Join("\n", new[] { t.Commentaire, x.Commentaire }.Where(s => !string.IsNullOrWhiteSpace(s))) is { Length: > 0 } n ? n : null;
             t.Coordonnees.AddRange(x.Coordonnees.Select(c => c with { Principal = false }));
             t.Contacts.AddRange(x.Contacts.Select(c => c with { Principal = false }));

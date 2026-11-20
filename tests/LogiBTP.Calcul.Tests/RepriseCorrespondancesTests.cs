@@ -43,6 +43,8 @@ public class RepriseCorrespondancesTests
         [CorrespondancesReprise.Listes.TypeLien] = CodesInseres("type_lien"),
         [CorrespondancesReprise.Listes.RegroupementNature] = CodesInseres("regroupement_nature"),
         [CorrespondancesReprise.Listes.TypeChamp] = LogiBTP.Fiches.ChampsSupplementaires.Types.ToList(),
+        // Champs standard des fiches : lus dans le paramétrage de la base ; le fichier par défaut n'en cite aucun.
+        [CorrespondancesReprise.Listes.ChampFiche] = [],
         [CorrespondancesReprise.Listes.TypeElement] = Constantes.Js(CasPartages.Chemin("modules", "bibliotheque", "js", "src", "codes.js"), "TYPE_ELEMENT").Values.ToList(),
         [CorrespondancesReprise.Listes.ModeReglement] = CodesInseres("mode_reglement"),
         [CorrespondancesReprise.Listes.FonctionIntervenant] = CodesInseres("fonction_intervenant"),

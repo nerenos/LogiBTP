@@ -17,7 +17,7 @@ GO
 -- Devises : MDE code souvent l'euro « E » (reconnu d'office) ; « EU » est l'euro par son code ISO (Q10).
 INSERT INTO dbo.APIDEVISEE (CODE, NOM, SYMBOLE, VALEURO, CODEISO) VALUES ('EU', 'Euro', NULL, 1, 'EUR');
 GO
-INSERT INTO dbo.PMEUNITEMESURE (UNITE, NBDEC) VALUES ('U', 0), ('M2', 2), ('ML', 2), ('H', 2), ('ENS', 0), ('KG', 3);
+INSERT INTO dbo.PMEUNITEMESURE (UNITE, NBDEC) VALUES ('U', 0), ('M2', 2), ('ML', 2), ('H', 2), ('ENS', 0), ('KG', 3), ('BAR', 0);
 INSERT INTO dbo.CATEGORIEACHATVENTE (CODE, LIBELLE, TYPE, JOURNALVENTE, JOURNALACHAT)
 VALUES ('F', 'France', 'N', 'VT', 'HA'), ('A', 'Autoliquidation', 'A', 'VT', 'HA');
 INSERT INTO dbo.TVA (CODECATEGORIE, CODE, TAUX, COMPTEV, COMPTEA, LIBELLE, DEFAUT) VALUES
@@ -56,10 +56,16 @@ INSERT INTO dbo.CMP_GRILLEANA (CODE, AXE, POSTE, PCT, NUMGRILLEANA) VALUES (1, 1
 INSERT INTO dbo.PMEACTIVITE (CLE, TYPETIERS, NUMORDRE, LIBELLE, DEFAUT, ACTIF) VALUES (1, 'C', 1, 'Particulier', 1, 1), (2, 'C', 2, 'Promoteur', 0, 1);
 GO
 
--- Zones supplémentaires des fiches (Q12)
-INSERT INTO dbo.SYS_RTCINFOS (TABLENAME, FIELDNAME, DISPLAYNAME, FIELDTYPE, FIELDSIZE, DATATYPE, REQUIRED) VALUES
- ('PMECLIENT', 'RTCFIELD1', 'Zone Sup 01', 'E', 50, 'S', 0),
- ('PMEFOURNISSEUR', 'RTCFIELD1', 'Code fournisseur groupe', 'E', 20, 'S', 0);
+-- Zones supplémentaires des fiches (Q12) ; listes de choix (DATATYPE « Choix multiple », PARAMS « S: M » puis la liste,
+-- MDE enregistre la lettre qui suit &) ; « Achat bloqué » des fournisseurs : fiche en « Ne plus utiliser ».
+ALTER TABLE dbo.PMECLIENT ADD RTCFIELD2 varchar(1000) NULL;
+ALTER TABLE dbo.PMEFOURNISSEUR ADD RTCFIELD2 varchar(100) NULL;
+GO
+INSERT INTO dbo.SYS_RTCINFOS (TABLENAME, FIELDNAME, DISPLAYNAME, FIELDTYPE, FIELDSIZE, DATATYPE, PARAMS, REQUIRED) VALUES
+ ('PMECLIENT', 'RTCFIELD1', 'Zone Sup 01', 'E', 50, 'S', NULL, 0),
+ ('PMECLIENT', 'RTCFIELD2', 'Type de client', 'E', 1, 'Choix multiple', 'S: M "&Public;P&rivé"', 0),
+ ('PMEFOURNISSEUR', 'RTCFIELD1', 'Code fournisseur groupe', 'E', 20, 'S', NULL, 0),
+ ('PMEFOURNISSEUR', 'RTCFIELD2', 'Achat bloqué', 'E', 1, 'Choix multiple', 'S: M "&Oui;&Non"', 0);
 GO
 
 -- Annuaire : rôles (le code de gestion relie le rôle à COMM_TIERS ; TYPETIERS donne le rôle, eTypeTiers)
@@ -71,6 +77,9 @@ INSERT INTO dbo.PMEFOURNISSEUR (CODE, TYPETIERS, CODECATEGORIE, SIRET, RTCFIELD1
  ('F001', 'F', 'F', '77788899900015', 'GRP-12'),
  ('F002', 'F', 'F', '22233344400019', NULL);
 INSERT INTO dbo.PMESOUSTRAITANT (CODE, TYPETIERS, CODECATEGORIE, SIRET) VALUES ('S001', 'S', 'A', '55566677700011');
+UPDATE dbo.PMECLIENT SET RTCFIELD2 = 'r' WHERE CODE = 'C001';
+UPDATE dbo.PMEFOURNISSEUR SET RTCFIELD2 = 'O' WHERE CODE = 'F002';
+UPDATE dbo.PMEFOURNISSEUR SET RTCFIELD2 = 'N' WHERE CODE = 'F001';
 -- A002 : architecte sans fiche COMM_TIERS ni TYPETIERS (seulement sa fiche PMEARCHITECTE).
 INSERT INTO dbo.PMEARCHITECTE (CODE, TYPETIERS, NOTE) VALUES ('A001', 'A', NULL), ('A002', '', 'Cabinet sans fiche tiers');
 INSERT INTO dbo.PMECHARGEAFFAIRE (CODE, TYPETIERS) VALUES ('G001', 'G');
@@ -87,6 +96,8 @@ INSERT INTO dbo.COMM_TIERS (CODE, COMPTE, COMPTETIERS, CODEGESTION, TYPETIERS, N
  (6, '401100', 'SELEC', 'S001', 'S', NULL, 'EUR', 'VIR', 0, 0, NULL, 61, 0, '2022-02-02', '2022-02-02'),
  (7, NULL, NULL, 'A001', 'A', NULL, 'EUR', NULL, 0, 0, NULL, 71, 0, '2017-01-01', '2017-01-01'),
  (8, NULL, NULL, 'G001', 'G', NULL, 'EUR', NULL, 0, 0, NULL, 81, 0, '2017-01-01', '2017-01-01');
+-- Compte bloqué : client repris en « Ne plus utiliser ».
+UPDATE dbo.COMM_TIERS SET COMPTEBLOQUE = 1 WHERE CODEGESTION = 'C002';
 INSERT INTO dbo.COMM_TIERSADR (IDENTIFIANT, CODE, NOM, CIVILITE, IDINTERLOC, ADR, CP, VILLE, PAYS) VALUES
  (11, 1, 'MARTIN Paul', 'Monsieur', 101, '3 chemin des Vignes', '69110', 'SAINTE-FOY-LES-LYON', 'FR'),
  (12, 1, 'MARTIN Paul (résidence secondaire)', 'Monsieur', 0, '1 route du Lac', '74000', 'ANNECY', 'FR'),
@@ -168,6 +179,8 @@ INSERT INTO dbo.PMEELEMENT (CODE, CODEBIBLIO, REFERENCE, TYPEELEM, CLENATURE, LI
   0, 0, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, NULL, NULL, '', NULL, NULL, 0, NULL, 0),
  ('VIEUX', 'GEN', '', 'F', 2, 'Ancien article', '', NULL, NULL, NULL, 2, 0, 2, 1, 2, 1, 2, 0, NULL, NULL, 'U', NULL, NULL, 'F', '1', NULL,
   0, NULL, 1),
+ ('CHA-C100X4', 'GEN', '', 'F', 2, 'Cornière 100x4', '', NULL, NULL, NULL, 8.10, 0, 8.10, 1, 8.10, 1, 1.00, 0, 'ML', 'KG', 'BAR',
+  0.082645, 141.57, 'F', '1', NULL, 0, NULL, 0),
  ('ART1', 'E-1', '', 'F', 2, 'Article éditeur', '', NULL, NULL, NULL, 5, 0, 5, 1, 5, 1, 5, 0, NULL, NULL, 'U', NULL, NULL, 'F', '2', NULL,
   0, NULL, 0),
  ('MUR20', 'GEN', '', 'OT', 4, 'Mur parpaing 20', '', NULL, 'MACO', NULL, 0, 0, 21.2, 1.15, 24.38, 1.25, 30.475, 0, NULL, NULL, 'M2',
@@ -180,8 +193,12 @@ INSERT INTO dbo.PMEELEMENTOUVCOMP (CODEOUV, CODECOMPO, NUMORDRE, CLENATURE, LIBE
  ('MUR20', 'MOMAC', 2, 1, '', 30, 1.2, 36, 1.1, 39.6, 0.5, 0, 0.5, 'H', 0.5, 0),
  ('MUR20', 'VIEUX', 3, 2, 'Ancien article', 2, 1, 2, 1, 2, 1, 0, 1, 'U', 0, 0),
  ('MUR20', 'MOMAC', 4, 1, 'Composante en sommeil', 30, 1, 30, 1, 30, 9, 0, 9, 'H', 0, 1),
+ ('MUR20', NULL, 5, NULL, 'Mise en œuvre selon DTU 20.1', 0, 0, 0, 0, 0, 0, 0, 0, NULL, 0, 0),
+ ('MUR20', 'TXT1', 6, NULL, '', 0, 0, 0, 0, 0, 1, 0, 1, NULL, 0, 0),
  ('AMUR', 'MUR20', 1, 4, '', 21.2, 1.15, 24.38, 1.25, 30.475, 1, 0, 1, 'M2', 0, 0),
  ('AMUR', 'MOMAC', 2, 1, '', 30, 1.2, 36, 1.1, 39.6, 1, 0, 1, 'H', 1, 0);
+-- Textes standard (20/11/2026) : éléments de type texte de la bibliothèque par défaut.
+INSERT INTO dbo.PMETEXTESTANDARD (CODE, LIBELLE, TEXTE) VALUES ('GARDEC', 'Garantie décennale', '{\rtf1 Travaux couverts par notre \b garantie décennale\b0 .}');
 INSERT INTO dbo.PMEELEMENTUNITEVTE (CODEART, UNITE, NUMORDRE, QTEVTE, EQUIVSTOCK, RATIO, DEFAUT) VALUES ('CIM35', 'ENS', 1, 1, 350, 0, 0);
 INSERT INTO dbo.PMEFOURNISSEURTARIF (CLE, CODEFOUR, REFERENCE, LIBELLE, PAPUBLIC, REMISE1, REMISE2, PANET, UNITEACHAT) VALUES
  (1, 'F001', 'CIM-35', 'Ciment CEM II 35 kg', 10, 30, 0, 7, 'U');
@@ -190,8 +207,16 @@ INSERT INTO dbo.PMEELEMENTARTFOUR (CLE, CODEART, NUMORDRE, PRINCIPAL, CODEFOUR, 
  (1, 'CIM35', 1, 1, 'F001', 1, 10, 30, 0, 7, 'U', 35, '2026-01-01'),
  (2, 'CIM35', 2, 0, 'F002', NULL, 0, 0, 0, 7.35, 'U', 35, NULL);
 INSERT INTO dbo.SYS_RTCINFOS (TABLENAME, FIELDNAME, DISPLAYNAME, FIELDTYPE, FIELDSIZE, DATATYPE, REQUIRED) VALUES
- ('PMEELEMENT', 'RTCFIELD1', 'Marque', 'E', 30, 'S', 0);
-UPDATE dbo.PMEELEMENT SET RTCFIELD1 = 'Vicat' WHERE CODE = 'CIM35';
+ ('PMEELEMENT', 'RTCFIELD1', 'Marque', 'E', 30, 'S', 0),
+ -- Zone qui double un champ existant de l'élément (Code-barres) : versée dans ce champ, sans écraser le code repris.
+ ('PMEELEMENT', 'RTCFIELD2', 'Code barre', 'E', 30, 'S', 0);
+UPDATE dbo.PMEELEMENT SET RTCFIELD1 = 'Vicat', RTCFIELD2 = '3700000000099' WHERE CODE = 'CIM35';
+UPDATE dbo.PMEELEMENT SET RTCFIELD2 = '3700000000024' WHERE CODE = 'MOMAC';
+-- Données techniques (m, m², kg par défaut ; VOLUME utilisé comme une surface) : barre de 12,10 m, 141,57 kg, 4,84 m² ;
+-- unités M (mètre) et K (kilo) = unités par défaut ; code inconnu sur le ciment (signalé, non converti).
+INSERT INTO dbo.PMEELEMENTARTTEC (CODEART, LONGUEUR, UNITELONG, LARGEUR, UNITELARG, HAUTEUR, UNITEHAUT, POIDS, UNITEPOIDS, VOLUME, UNITEVOL) VALUES
+ ('CHA-C100X4', 12.1, 'M', 0.1, 'M', 0.1, NULL, 141.57, 'K', 4.84, 'M'),
+ ('CIM35', 0, NULL, 0, NULL, 0, NULL, 1, 'G', 0, NULL);
 GO
 
 -- Structure (lot 9) : états, types de marché, affaires (ouverte, close par l'état, close par la date), chantiers
@@ -231,11 +256,30 @@ INSERT INTO dbo.PMEDOCDEVCLILIG (CLE, CLEDOC, IDLIG, IDPARENT, NUMORDRE, TYPELIG
  (1102, 102, 2, 1, 1, 'E', 0, 0, 'MUR20', NULL, 'Mur de 20', NULL, 21.2, 1, 1.4375, 30.5, 0, '1', 10, 'M2', 2, 305, 0, 1),
  (1103, 102, 3, 2, 1, 'E', 0, 1, 'CIM35', 2, 'Parpaing', NULL, 1.2, 1.1, 1.2, 1.584, 0, NULL, 10, 'U', 0, 0, 0, 1),
  (1104, 102, 4, 2, 2, 'E', 0, 1, 'MOMAC', 1, 'Main d''œuvre', NULL, 18, 1.1, 1.2, 25, 0, NULL, 0.5, 'H', 2, 0, 0, 1),
- (1105, 102, 5, 1, 2, 'E', 0, 0, NULL, 2, 'Enduit', '{\rtf1 \b Enduit\b0  monocouche}', 8, 1.15, 1.25, 11.5, 0, '1', 12.5, 'M2', 2, 143.75, 0, 1),
+ (1105, 102, 5, 1, 2, 'E', 0, 0, NULL, 2, 'Enduit', '{\rtf1 \b Enduit\b0  monocouche}', 8, 1.15, 1.25, 11.5, 0, '1', 12.5, 'm2', 2, 143.75, 0, 1),
  (1106, 102, 6, 1, 3, 'E', 0, 0, NULL, 4, 'Échafaudage', NULL, 100, 1.1, 1.3, 150, 0, '1', 1, 'U', 0, 150, 1, 1),
  (1107, 102, 7, 0, 2, 'L', 0, 0, NULL, NULL, 'Garantie décennale', NULL, 0, 1, 1, 0, 0, NULL, 0, NULL, 0, 0, 0, 1),
  (1108, 102, 0, 0, 0, 'R', 0, 0, NULL, NULL, 'Récapitulatif', NULL, 0, 1, 1, 0, 0, NULL, 0, NULL, 0, 0, 0, 1);
 UPDATE dbo.PMECHANTIER SET CLEDOCINIT = 102 WHERE CODE = 'CH001';
+-- Métrés (20/11/2026, comme DC25001A) : P = 1.1 sur le métré de la ligne récapitulative (variable du document),
+-- formules des lignes en minuscules à virgule, affectation locale totalisée, commentaire, métré qui ne retrouve pas la quantité.
+INSERT INTO dbo.PMEMETRE (CLE, LIBELLE, LIBRESULT, NIVRESULT, VARRESULT, RESULTAT, FLAGACTIF, FLAGEDIT) VALUES
+ (9001, 'Récapitulatif', 'Total du métré', 1, 'METRE', 1.1, 0, -1),
+ (9002, 'Surface du mur', 'Total du métré', 1, 'METRE', 10, -1, -1),
+ (9003, 'Enduit', 'Total du métré', 1, 'METRE', 12.5, -1, -1),
+ (9004, 'Échafaudage', 'Total du métré', 1, 'METRE', 2.2, -1, -1);
+INSERT INTO dbo.PMEMETRELIGNE (CLE, CLEMETRE, NUMORDRE, TYPE, LIBELLE, NIVTOT, RESULTAT, VARRESULT, FLAGEDIT) VALUES
+ (90011, 9001, 0, 'F', 'P=1.1', 1, 1.1, '', -1),
+ (90021, 9002, 0, 'F', '4*(p+1,4)', 1, 10, '', -1),
+ (90031, 9003, 0, 'T', 'Mur nord', 0, 0, '', -1),
+ (90032, 9003, 1, 'F', 'L=5', 1, 5, '', -1),
+ (90033, 9003, 2, 'F', '6*(1.000+0.250)', 1, 7.5, '', -1),
+ (90041, 9004, 0, 'F', 'P*2', 1, 2.2, '', -1);
+INSERT INTO dbo.PMEMETREVAR (CLEMETRE, LIBELLE, VALEUR, GLOBALE) VALUES (9002, 'H', 2.5, 1);
+UPDATE dbo.PMEDOCDEVCLILIG SET CLEMETRE = 9001 WHERE CLE = 1108;
+UPDATE dbo.PMEDOCDEVCLILIG SET CLEMETRE = 9002 WHERE CLE = 1102;
+UPDATE dbo.PMEDOCDEVCLILIG SET CLEMETRE = 9003 WHERE CLE = 1105;
+UPDATE dbo.PMEDOCDEVCLILIG SET CLEMETRE = 9004 WHERE CLE = 1106;
 -- Marché MDE (19/11/2026) : devis et avenants servant à la facturation, reliés au chantier, dans l'ordre de NUMORDRE.
 INSERT INTO dbo.PMEAFFBASEDOC (CLEDOC, NUMORDRE, CLEDOCINIT, DATEDOC, CODE, LIBELLE, CODECLIENT, CODECATEGORIE, CODECHT, MODREG, MTHT, MTTTC) VALUES
  (602, 2, NULL, '2024-03-15', 'MB000002', 'Avenant fenêtre', 'C001', 'F', 'CH001', 'V30', 100, 120),
@@ -289,6 +333,9 @@ GO
 INSERT INTO dbo.ENTETECDEFOURNISSEUR (CODE, CODEDOCUTIL, TYPE, DATEDOC, CODETIERS, LIBELLE, CLEETATDOC, CATEGORIEAV, CODEAFFAIRE, CODECHT,
   CODEREGLEMENT, REFFOURNISSEUR, TOTHTNET, TOTALTTC) VALUES
  (501, 'CF000001', 'C', '2024-02-10', 'F001', 'Matériaux gros œuvre', 2, 'F', 'AF001', 'CH001', 'V30', 'ARC-77', 350, 420);
+-- Livraison sur le chantier (20/11/2026) : adresse de la source reprise en saisie libre, avec le contact sur place.
+UPDATE dbo.ENTETECDEFOURNISSEUR SET NOMLIV = 'Chantier Tilleuls', ADRLIV = '12 allée des Tilleuls', CPLIV = '69003', VILLELIV = 'Lyon',
+  NOMINTERLOCLIV = 'M. Chef', TELINTERLOCLIV = '0600000000' WHERE CODE = 501;
 INSERT INTO dbo.LIGNECDEFOURNISSEUR (IDENTIFIANT, CODEDOCUMENT, NUMEROLIGNE, TYPELIGNE, CODEARTICLE, DESIGNATION, QUANTITE, PRIXUNITAIRE, REMISE,
   TOTALLIGNEHT, CODETVA, UNITEMESURE, CODECHT) VALUES
  (5001, 501, 1, 'U', 'CIM35', 'Ciment', 20, 7, 0, 140, 1, 'U', 'CH001'),
@@ -304,6 +351,12 @@ INSERT INTO dbo.LIGNEFACTUREFOURNISSEUR (IDENTIFIANT, CODEDOCUMENT, NUMEROLIGNE,
  (5012, 502, 2, 'R', NULL, 'Sable', 10, 21, 0, 210, 1, 'U', 'CH003'),
  (5013, 502, 3, '2', NULL, 'Remise commerciale', 0, 0, 0, -10, 1, NULL, NULL),
  (5021, 503, 1, 'R', NULL, 'Retour sable', 1, -50, 0, -50, 1, 'U', 'CH003');
+-- Traçabilité (20/11/2026) : commande 501 → facture 502 (entêtes), ligne ciment 5001 → 5011 ; type inconnu signalé.
+INSERT INTO dbo.TRACABILITEDOC (COMPTEUR, TYPEDOCORIGINE, CODEDOCORIGINEINT, CODEDOCORIGINE, TYPEDOCDESTINATION, CODEDOCDESTINATIONINT, CODEDOCDESTINATION) VALUES
+ (1, 'CF', 501, 'CF000001', 'FF', 502, 'FF000001'),
+ (2, 'ZZ', 1, 'X', 'FF', 502, 'FF000001');
+INSERT INTO dbo.TRACABILITE (COMPTEUR, TYPEDOCORIGINE, COMPTEURLIGNEDOCORIGINE, TYPEDOCDESTINATION, COMPTEURLIGNEDOCDESTINATION, QUANTITE) VALUES
+ (1, 'CF', 5001, 'FF', 5011, 20);
 INSERT INTO dbo.ENTETECDESSTRAIT (CODE, CODEDOCUTIL, TYPE, DATEDOC, CODETIERS, LIBELLE, CLEETATDOC, CATEGORIEAV, CODEAFFAIRE, CODECHT, TOTHTNET, TOTALTTC) VALUES
  (601, 'CS000001', 'C', '2024-02-15', 'S001', 'Plâtrerie', 2, 'F', 'AF001', 'CH001', 1000, 1200);
 INSERT INTO dbo.LIGNECDESSTRAIT (IDENTIFIANT, CODEDOCUMENT, NUMEROLIGNE, TYPELIGNE, DESIGNATION, QUANTITE, PRIXUNITAIRE, REMISE, TOTALLIGNEHT, CODETVA, UNITEMESURE) VALUES

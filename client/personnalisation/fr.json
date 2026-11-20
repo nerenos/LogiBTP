@@ -8728,6 +8728,12 @@
       "decimales_prix": "Prix unitaires",
       "decimales_source": "source",
       "decimales_aide": "Affichage des lignes des pièces reprises (0 à 6) ; vide : décimales de la source.",
+      "volume": "Colonne VOLUME des données techniques",
+      "volume_aide": "MDE : la colonne VOLUME des articles (PMEELEMENTARTTEC) est souvent utilisée comme une surface.",
+      "volumes": {
+        "SURFACE": "Surface (m²)",
+        "VOLUME": "Volume (m³)"
+      },
       "societes": "Sociétés OptimBTP",
       "societes_aide": "SCT_ID séparés par des virgules",
       "correspondances": "Correspondances",

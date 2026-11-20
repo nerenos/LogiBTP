@@ -257,6 +257,12 @@
         { "source": "LIGNERECEPTIONFOURNISSEUR", "ignorer": true, "motif": "Ligne de pièce : aide au calcul non reprise (Q12)" }
       ]
     },
+    "champ_fiche": {
+      "description": "Zone supplémentaire MDE (« TABLENAME.FIELDNAME » de SYS_RTCINFOS) versée dans un champ existant de la fiche (« type_fiche.code », ex. element.poids) ou ignorée ; sans entrée : champ existant de même libellé ou de même code (unités entre parenthèses ignorées), sinon champ supplémentaire créé. Une valeur déjà renseignée par la reprise n'est jamais écrasée",
+      "colonne": "SYS_RTCINFOS.TABLENAME.FIELDNAME",
+      "cibles": ["CHAMP_FICHE"],
+      "entrees": []
+    },
     "regroupement_nature": {
       "description": "Type d'élément d'une nature MDE (PMENATUREELEMENT.TYPEELEM) vers le regroupement de la nature créée (lot 8) : regroupements fixes de MDE (confirmés le 19/11/2026) ; une valeur inconnue crée la nature sans regroupement",
       "colonne": "PMENATUREELEMENT.TYPEELEM",
@@ -312,7 +318,8 @@
         { "source": "F", "cible": "nombre" },
         { "source": "C", "cible": "montant" },
         { "source": "D", "cible": "date" },
-        { "source": "B", "cible": "booleen" }
+        { "source": "B", "cible": "booleen" },
+        { "source": "Choix multiple", "cible": "liste", "note": "Valeurs lues dans PARAMS (S: M \"&Oui;&Non\") : lettre qui suit &, enregistrée par MDE" }
       ]
     }
   }

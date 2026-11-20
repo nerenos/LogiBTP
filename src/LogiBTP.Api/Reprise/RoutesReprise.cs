@@ -9,7 +9,7 @@ namespace LogiBTP.Api.Reprise;
 
 /// <summary>Demande de l'écran : la chaîne de la base source n'est ni conservée ni renvoyée.</summary>
 public sealed record DemandeRepriseEcran(string Source, string Connexion, IReadOnlyList<string>? Societes, bool Simulation, string? Correspondances,
-    short? DecimalesQte = null, short? DecimalesPrix = null);
+    short? DecimalesQte = null, short? DecimalesPrix = null, string? VolumeMde = null);
 
 /// <summary>
 /// Routes de l'écran « Reprise de données » (plan reprise-mde-optim, lot 3), page /parametres/reprise, réservées à
@@ -65,7 +65,7 @@ public static class RoutesReprise
                     Source = Source(d.Source), ConnexionSource = d.Connexion, Simulation = d.Simulation, Auteur = u.Code,
                     Societes = (d.Societes ?? []).Select(s => s.Trim()).Where(s => s.Length > 0).ToList(),
                     Correspondances = string.IsNullOrWhiteSpace(d.Correspondances) ? null : d.Correspondances,
-                    StockageGed = stockage.Racine, DecimalesQte = d.DecimalesQte, DecimalesPrix = d.DecimalesPrix,
+                    StockageGed = stockage.Racine, DecimalesQte = d.DecimalesQte, DecimalesPrix = d.DecimalesPrix, VolumeMde = d.VolumeMde,
                 }, unite, ct);
                 return Results.Ok(new { reprise_id = r.RepriseId, rapport = r.Rapport });
             }

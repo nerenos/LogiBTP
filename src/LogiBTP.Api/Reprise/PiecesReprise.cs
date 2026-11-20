@@ -8,6 +8,7 @@ using LogiBTP.Documents.Web;
 using LogiBTP.Domaine;
 using LogiBTP.Import;
 using LogiBTP.Import.Reprise;
+using LogiBTP.Metres;
 using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
 
@@ -45,7 +46,15 @@ public sealed record LignePiece
     public decimal? MontantHt { get; init; }
     /// <summary>Chantier de la ligne (achats : ventilation des coûts par les lignes, lot 12).</summary>
     public int? ChantierId { get; init; }
+    /// <summary>Métré de la ligne, traduit en script (quantité issue du métré si son résultat retrouve <see cref="Qte"/>).</summary>
+    public MetrePiece? Metre { get; init; }
 }
+
+/// <summary>Métré d'une ligne source traduit en script LogiBTP.</summary>
+public sealed record MetrePiece(string? Libelle, string Script);
+
+/// <summary>Variable du document ($$) reprise de la source (formule au format des définitions de variables).</summary>
+public sealed record VariablePiece(string Nom, string Formule);
 
 /// <summary>Pièce de vente source traduite.</summary>
 public sealed record PieceSource
@@ -59,6 +68,10 @@ public sealed record PieceSource
     public long? TiersPerId { get; init; }
     /// <summary>Adresse recopiée sur la pièce (nom, lignes, code postal, ville, pays ISO).</summary>
     public AdressePiece? Adresse { get; init; }
+    /// <summary>Adresse de livraison (achats) ou des travaux, reprise en saisie libre (origine LIBRE), avec son contact sur place.</summary>
+    public AdressePiece? AdresseLivraison { get; init; }
+    public string? ContactLivraison { get; init; }
+    public string? TelephoneLivraison { get; init; }
     public int? AffaireId { get; init; }
     public int? ChantierId { get; init; }
     /// <summary>Statut cible : BROUILLON, ENVOYE ou VALIDE (<see cref="PiecesReprise.Statut"/>).</summary>
@@ -77,6 +90,10 @@ public sealed record PieceSource
     public decimal? TotalHt { get; init; }
     public decimal? TotalTtc { get; init; }
     public List<LignePiece> Lignes { get; init; } = [];
+    /// <summary>Table source des lignes : chaque ligne reprise y est inscrite au registre par sa <see cref="LignePiece.Reference"/> (traçabilité des lignes).</summary>
+    public string? TableLignes { get; init; }
+    /// <summary>Variables du document ($$) lues par les métrés des lignes.</summary>
+    public List<VariablePiece> Variables { get; init; } = [];
     /// <summary>Propriétés de l'entête (établissement d'origine…).</summary>
     public Dictionary<string, string> Proprietes { get; init; } = [];
     /// <summary>Avancement (situation, facture d'avancement) : lignes copiées du marché, <see cref="Lignes"/> ignorées.</summary>
@@ -149,6 +166,9 @@ public sealed class PiecesReprise : IAsyncDisposable
 
     public const string TableDocument = "document";
     public const string LibelleEcart = "Écart de reprise";
+    /// <summary>Origine d'une adresse saisie librement sur la pièce (AdressesDocument, structure/adresses.js).</summary>
+    public const string OrigineLibre = "LIBRE";
+    public const string TableLigne = "document_ligne";
     private const string FormatNumeros = """{"separateur":".","niveaux":[{"style":"1"}]}""";
     private const decimal Centime = 0.01m;
 
@@ -251,6 +271,7 @@ public sealed class PiecesReprise : IAsyncDisposable
         var parents = p.Lignes.Where(l => l.ParentCle is not null).Select(l => l.ParentCle!).ToHashSet(StringComparer.Ordinal);
         var ordres = new Dictionary<long, int>();
         var res = new List<DocumentLigneBtp>();
+        long prochainMetre = -1;
         foreach (var l in p.Lignes)
         {
             long? parent = l.ParentCle is { } pc && ids.TryGetValue(pc, out var pid) ? pid : null;
@@ -275,6 +296,12 @@ public sealed class PiecesReprise : IAsyncDisposable
                 x.LigCoefRemise = l.CoefRemise <= 0 ? 1 : l.CoefRemise;
                 x.LigPrecisionPv = decimalesPrix ?? 6;
                 x.LigChaId = l.Composante ? null : l.ChantierId;
+                if (l.Metre is not null)
+                {
+                    // Quantité issue du métré (repasse à la saisie si son résultat ne retrouve pas la quantité source).
+                    x.LigQteSource = "M";
+                    x.LigMtrId = prochainMetre--;
+                }
                 if (type == TL.Element)
                 {
                     x.LigPa = l.Pa ?? 0;
@@ -299,8 +326,51 @@ public sealed class PiecesReprise : IAsyncDisposable
         return res;
     }
 
+    /// <summary>Métrés des lignes (identifiants négatifs posés par <see cref="Lignes"/>), sans résultat : le script le calcule.</summary>
+    public static List<Metre> Metres(PieceSource p, List<DocumentLigneBtp> lignes) =>
+        p.Lignes.Zip(lignes).Where(x => x.First.Metre is not null && x.Second.LigMtrId is not null)
+            .Select(x => new Metre
+            {
+                MtrId = x.Second.LigMtrId!.Value, MtrLigId = x.Second.LigId, MtrLibelle = Couper(x.First.Metre!.Libelle, 200),
+                MtrUntCode = x.Second.LigUntCode, MtrScript = x.First.Metre.Script,
+            }).ToList();
+
+    /// <summary>Variables du document ($$) de la pièce.</summary>
+    public static List<VariableDefinition> Variables(PieceSource p) =>
+        p.Variables.Select((v, i) => new VariableDefinition
+        {
+            VarId = -(i + 1), VarPortee = "$$", VarNom = v.Nom, VarOperation = "=", VarFormule = v.Formule, VarOrdre = i + 1, VarType = "N",
+        }).ToList();
+
+    /// <summary>
+    /// Métrés repris : un résultat (arrondi à la précision de la ligne) qui ne retrouve pas la quantité source, ou un
+    /// script en erreur, rend la ligne à la quantité saisie (la source) ; le métré reste attaché et l'écart est signalé.
+    /// Vrai si une ligne a changé (nouveau calcul).
+    /// </summary>
+    private bool ControlerMetres(ResultatCalcul calcul, List<DocumentLigneBtp> lignes, Dictionary<long, string> cles, Dictionary<string, LignePiece> sources, string emplacement)
+    {
+        var change = false;
+        foreach (var l in lignes.Where(l => l.LigQteSource == "M" && l.LigMtrId is not null))
+        {
+            var metre = calcul.Metres.First(m => m.MtrId == l.LigMtrId);
+            var source = sources[cles[l.LigId]].Qte ?? 0;
+            if (metre.MtrResultat is { } res
+                && ArrondiCalcul.Arrondir(res, l.LigPrecisionQte) == ArrondiCalcul.Arrondir(source, l.LigPrecisionQte)) continue;
+            l.LigQteSource = "S";
+            change = true;
+            ctx.Rapport.Signaler(NiveauAnomalie.Avertissement, CodeAnomalie.MetreEcart, emplacement,
+                metre.MtrResultat is { } r
+                    ? $"Métré « {metre.MtrLibelle} » : résultat {r:0.######} ≠ quantité source {source:0.######}, quantité source gardée (script à vérifier)"
+                    : $"Métré « {metre.MtrLibelle} » : script sans résultat ou en erreur, quantité source {source:0.######} gardée (script à vérifier)");
+        }
+        return change;
+    }
+
+    private List<Metre> metres = [];
+    private List<VariableDefinition> variables = [];
+
     private ResultatCalcul Calculer(DocumentBtp doc, List<DocumentLigneBtp> lignes) =>
-        MoteurDevisBtp.Calculer(new EntreeCalcul { Document = doc, Lignes = lignes, TauxTva = taux });
+        MoteurDevisBtp.Calculer(new EntreeCalcul { Document = doc, Lignes = lignes, TauxTva = taux, Metres = metres, Variables = variables });
 
     /// <summary>Écrit la pièce ; null si son type est inconnu de la base (signalé).</summary>
     public async Task<long?> EcrireAsync(PieceSource p, CancellationToken ct)
@@ -327,8 +397,15 @@ public sealed class PiecesReprise : IAsyncDisposable
             EntProprietes = JsonSerializer.SerializeToDocument(p.Proprietes), EntEtiquettes = JsonDocument.Parse("[]"),
             EntAdresseFacturation = p.Adresse is { } a ? JsonSerializer.SerializeToDocument(new
             {
-                origine = "LIBRE", libelle = a.Nom,
+                origine = OrigineLibre, libelle = a.Nom,
                 adresse = new { ligne1 = a.Lignes, ligne2 = (string?)null, ligne3 = (string?)null, code_postal = a.CodePostal, ville = a.Ville, pays = a.Pays ?? "FR" },
+            }) : null,
+            EntAdresseLivraison = p.AdresseLivraison is { } al ? JsonSerializer.SerializeToDocument(new Dictionary<string, object?>
+            {
+                ["origine"] = OrigineLibre, ["source_id"] = null, ["libelle"] = al.Nom,
+                ["adresse"] = new { ligne1 = al.Lignes, ligne2 = (string?)null, ligne3 = (string?)null, code_postal = al.CodePostal, ville = al.Ville, pays = al.Pays ?? "FR" },
+                ["contact"] = p.ContactLivraison is { } nom ? new { ind_id = (long?)null, nom } : null,
+                ["telephone"] = p.TelephoneLivraison, ["instructions"] = null, ["mention"] = null, ["releve_le"] = p.Date,
             }) : null,
             EntVerrouille = verrouille, EntEnvoyeLe = verrouille ? new DateTimeOffset(p.Date.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero) : null,
             EntCreeLe = DateTimeOffset.UtcNow, EntCreePar = ctx.Options.Auteur ?? "reprise",
@@ -344,16 +421,23 @@ public sealed class PiecesReprise : IAsyncDisposable
             doc.EntIndice = Indice(groupe.Versions + 1);
         }
 
-        // Avancement : lignes du marché, avancement cumulé ou de la période (lot 11).
+        // Avancement : lignes du marché, avancement cumulé ou de la période (lot 11), rattaché au marché de vente du
+        // chantier (un seul par chantier dans MDE) ; les autres factures et avoirs restent au chantier seul.
         if (p.Avancement is not null)
         {
+            if (p.ChantierId is { } cha && await SqlReprise.ScalaireAsync(ctx.Unite,
+                    "SELECT mar_id FROM marche WHERE mar_cha_id = $1 AND mar_sens = 'V' ORDER BY mar_id LIMIT 1", ct, cha) is int mar)
+                doc.EntMarcheId = mar;
             doc.EntAvtPresentation = type.TydAvancement == TypeFactureAvancement ? Presentation.Periode : Presentation.Cumul;
         }
         // Calcul : lignes au mode bordereau, PV source imposé aux lignes de prix qui s'en écartent (toutes si la pièce est verrouillée).
         var (lignes, marche) = p.Avancement is { } av ? await LignesAvancementAsync(doc, av, emplacement, ct) : (Lignes(p, natureOuvrage, ctx.Options.DecimalesQte, ctx.Options.DecimalesPrix), null);
         var sources = p.Lignes.ToDictionary(l => l.Cle, StringComparer.Ordinal);
         var cles = p.Lignes.Zip(lignes, (s, l) => (l.LigId, s.Cle)).ToDictionary(x => x.LigId, x => x.Cle);
+        metres = p.Avancement is null ? Metres(p, lignes) : [];
+        variables = p.Avancement is null ? Variables(p) : [];
         var r = Calculer(doc, lignes);
+        if (metres.Count > 0 && ControlerMetres(r, lignes, cles, sources, emplacement)) r = Calculer(doc, lignes);
         var imposees = 0;
         foreach (var l in lignes.Where(l => p.Avancement is null && TL.EstChiffree(l) && l.LigQteType is null && !l.LigPvFixe))
         {
@@ -404,12 +488,16 @@ public sealed class PiecesReprise : IAsyncDisposable
         }
         else if (p.GroupeCle is { } gc) groupes[gc] = (groupes[gc].Id, groupes[gc].Versions + 1);
         await EnregistrerAsync(emplacement, ct);
-        var complet = new DocumentCompletBtp { Document = r.Document, Lignes = r.Lignes, Tva = r.Tva };
+        var complet = new DocumentCompletBtp { Document = r.Document, Lignes = r.Lignes, Tva = r.Tva, Metres = r.Metres, Variables = r.Variables };
         try
         {
             var corr = await new PersistanceDocument<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp>(db, new SpecialisationBtp()).Ecrire(doc.EntId, complet, ct);
             foreach (var (l, x) in p.Lignes.Zip(lignes))
-                if (l.Reference is { } reference && corr.Lignes.TryGetValue(x.LigId, out var reel)) lignesMarche[(p.Origine.Table, reference)] = (doc.EntId, reel);
+                if (l.Reference is { } reference && corr.Lignes.TryGetValue(x.LigId, out var reel))
+                {
+                    lignesMarche[(p.Origine.Table, reference)] = (doc.EntId, reel);
+                    if (p.Avancement is null && p.TableLignes is { } tl && ctx.Registre.Trouver(tl, reference) is null) ctx.Registre.Inscrire(tl, reference, TableLigne, reel);
+                }
         }
         catch (DbUpdateException e) when (e.InnerException is { } cause)
         {
@@ -550,6 +638,24 @@ public sealed class PiecesReprise : IAsyncDisposable
             """, ct, source, cible, LienTransformation);
 
     /// <summary>
+    /// Lien entre deux lignes reprises (traçabilité de la source) : ligne d'origine de la cible, et lien de ligne à
+    /// l'étape de la transformation autorisée entre les deux types de pièce ; faux si aucune n'est autorisée.
+    /// </summary>
+    public async Task<bool> LierLignesAsync(long source, long cible, decimal qte, CancellationToken ct)
+    {
+        await SqlReprise.ExecuterAsync(ctx.Unite, "UPDATE document_ligne SET lig_origine_id = $1 WHERE lig_id = $2 AND lig_origine_id IS NULL", ct, source, cible);
+        return await SqlReprise.ExecuterAsync(ctx.Unite, """
+            INSERT INTO document_ligne_lien (lil_source_lig_id, lil_cible_lig_id, lil_etape, lil_qte, lil_montant_ht)
+            SELECT ls.lig_id, lc.lig_id, t.tra_etape, $3, lc.lig_montant_ht
+            FROM document_ligne ls JOIN document ds ON ds.ent_id = ls.lig_ent_id,
+                 document_ligne lc JOIN document dc ON dc.ent_id = lc.lig_ent_id
+                 JOIN transformation_autorisee t ON t.tra_cible_tyd_id = dc.ent_tyd_id
+            WHERE ls.lig_id = $1 AND lc.lig_id = $2 AND t.tra_source_tyd_id = ds.ent_tyd_id
+            ORDER BY t.tra_etape LIMIT 1
+            """, ct, source, cible, qte) > 0;
+    }
+
+    /// <summary>
     /// Fin des pièces : référence de chaque groupe = sa dernière version, les précédentes non acceptées passent REMPLACE ;
     /// compteurs repartant après le plus grand rang repris.
     /// </summary>
@@ -575,7 +681,7 @@ public sealed class PiecesReprise : IAsyncDisposable
         // Montant des marchés aux commandes reprises : valables seulement une fois leur référence posée ci-dessus.
         await SqlReprise.ExecuterAsync(ctx.Unite, """
             SELECT f_marche_recalculer(m.mar_id) FROM marche m
-            WHERE m.mar_id IN (SELECT d.ent_marche_id FROM document d JOIN document_origine o ON o.dor_ent_id = d.ent_id AND o.dor_format = $1)
+            WHERE m.mar_id IN (SELECT x.mdo_mar_id FROM marche_document x JOIN document_origine o ON o.dor_ent_id = x.mdo_ent_id AND o.dor_format = $1)
             """, ct, ctx.Options.Source);
     }
 

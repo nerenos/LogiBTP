@@ -98,7 +98,7 @@ public sealed class AchatsMde : IDomaineReprise
                         "Facture de sous-traitance sans lien vers les lignes de la commande : reprise avec ses lignes, sans suivi d'avancement");
                 await pieces.EcrireAsync(SourcesAchats.Signe(new PieceSource
                 {
-                    Origine = (entete, cle), TypeDocument = typeDocument, Numero = e.Texte("CODEDOCUTIL") ?? cle,
+                    Origine = (entete, cle), TableLignes = tableLignes, TypeDocument = typeDocument, Numero = e.Texte("CODEDOCUTIL") ?? cle,
                     Date = SourcesRessources.Jour(e, "DATEDOC") ?? DateOnly.FromDateTime(DateTime.Today),
                     Objet = AnnuaireReprise.Couper(e.Texte("LIBELLE"), 250),
                     TiersPerId = ctx.Registre.Trouver(tableTiers, e.Texte("CODETIERS")),
@@ -110,10 +110,17 @@ public sealed class AchatsMde : IDomaineReprise
                     CpaCode = ctx.Registre.TrouverCode(RegistreMde.Condition, e.Texte("CODEREGLEMENT")),
                     ModeReglement = ctx.Registre.TrouverCode(RegistreMde.ModeCondition, e.Texte("CODEREGLEMENT")),
                     TotalHt = totalHt, TotalTtc = e.Decimal("TOTALTTC"),
+                    // Adresse de livraison de la source en saisie libre, même vers notre société ou le chantier.
+                    AdresseLivraison = e.Texte("NOMLIV") is null && e.Texte("ADRLIV") is null && e.Texte("CPLIV") is null && e.Texte("VILLELIV") is null ? null
+                        : new AdressePiece(e.Texte("NOMLIV"), e.Texte("ADRLIV"), e.Texte("CPLIV"), e.Texte("VILLELIV"), ctx.Registre.TrouverCode(RegistreMde.Pays, e.Texte("PAYSLIV"))),
+                    ContactLivraison = e.Texte("NOMINTERLOCLIV"),
+                    TelephoneLivraison = e.Texte("TELINTERLOCLIV") ?? e.Texte("PORTABLEINTERLOCLIV"),
                     Lignes = Lignes(ctx, lignes.GetValueOrDefault(cle) ?? [], e.Texte("CATEGORIEAV"), chantier, typesLigne, emplacement),
                 }), ct);
             }
         }
+        // Liens entre pièces et entre lignes (ventes et achats repris).
+        await TracabiliteMde.LierAsync(ctx, pieces, ct);
         await pieces.TerminerAsync(ct);
     }
 
@@ -135,7 +142,7 @@ public sealed class AchatsMde : IDomaineReprise
                 var montant = l.Decimal("TOTALLIGNEHT");
                 res.Add(SourcesAchats.Element(cle, typesLigne["ELEMENT"], l.Texte("CODEARTICLE"), libelle,
                     remise ? 1 : l.Decimal("QUANTITE"), remise ? montant : l.Decimal("PRIXUNITAIRE"), remise ? null : l.Decimal("REMISE"), montant,
-                    l.Texte("UNITEMESURE") is { } u ? ctx.Registre.TrouverCode(RegistreMde.Unite, u.Trim()) : null,
+                    RegistreMde.UniteDe(ctx, l.Texte("UNITEMESURE")),
                     (int?)ctx.Registre.Trouver(BibliothequeMde.Nature, l.Texte("CLENATURE")), tva,
                     (int?)ctx.Registre.Trouver(StructureMde.Chantier, l.Texte("CODECHT")) ?? chantier));
             }

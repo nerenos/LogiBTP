@@ -34,6 +34,9 @@ public sealed record DemandeReprise
     /// <summary>Décimales des prix unitaires des lignes reprises (null : défaut de la source).</summary>
     public short? DecimalesPrix { get; init; }
 
+    /// <summary>MDE : la colonne VOLUME des données techniques en surface (défaut) ou en volume (<see cref="VolumeMde"/>).</summary>
+    public string? VolumeMde { get; init; }
+
     /// <summary>
     /// Décimales par défaut d'une source : MDE affiche les quantités à 3 et les prix à 2 (demande du 19/11/2026) ;
     /// OPTIM : null (décimales de la quantité source, prix à 6).
@@ -91,6 +94,12 @@ public static class RepriseBase
             Source = source, Societes = demande.Societes, Simulation = demande.Simulation, Auteur = demande.Auteur,
             DecimalesQte = Decimales(demande.DecimalesQte ?? DemandeReprise.DecimalesParDefaut(source).Qte),
             DecimalesPrix = Decimales(demande.DecimalesPrix ?? DemandeReprise.DecimalesParDefaut(source).Prix),
+            VolumeMde = demande.VolumeMde?.Trim().ToUpperInvariant() switch
+            {
+                null or "" or VolumeMde.Surface => VolumeMde.Surface,
+                VolumeMde.Volume => VolumeMde.Volume,
+                var v => throw new RepriseRefuseeException(ErreurReprise.OptionInvalide, $"Option VOLUME de MDE inconnue : {v} ({VolumeMde.Surface} ou {VolumeMde.Volume})"),
+            },
         }, lecteur, fichier, unite, ct);
     }
 
