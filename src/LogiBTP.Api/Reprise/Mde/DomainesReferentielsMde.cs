@@ -9,6 +9,13 @@ public static class RegistreMde
 {
     public const string Societe = "SYS_DEFSTE";
     public const string Unite = "PMEUNITEMESURE";
+
+    /// <summary>Clé d'une unité MDE au registre : sans espaces, en majuscules (« Kg » des lignes = « KG » de PMEUNITEMESURE).</summary>
+    public static string CleUnite(string code) => code.Trim().ToUpperInvariant();
+
+    /// <summary>Unité LogiBTP d'un code d'unité MDE, quelle que soit sa casse ; null si inconnue.</summary>
+    public static string? UniteDe(ContexteReprise ctx, string? code) =>
+        string.IsNullOrWhiteSpace(code) ? null : ctx.Registre.TrouverCode(Unite, CleUnite(code));
     /// <summary>Taux de TVA : clé « catégorie|code » (TVA.CODECATEGORIE, TVA.CODE).</summary>
     public const string Tva = "TVA";
     /// <summary>Condition de paiement (APIMODEREGLEMENT.CODE → cpa_code).</summary>
@@ -155,7 +162,7 @@ public sealed class ReferentielsMde : IDomaineReprise
     private static async Task UnitesAsync(ContexteReprise ctx, ReferentielsCible cibles, CancellationToken ct)
     {
         foreach (var l in await SqlReprise.SourceAsync(ctx, "SELECT UNITE, NBDEC FROM PMEUNITEMESURE ORDER BY UNITE", ct))
-            await cibles.UniteAsync(RegistreMde.Unite, l.Texte("UNITE") ?? "", l.Texte("UNITE"), l.Texte("UNITE"), (int?)l.Entier("NBDEC"), true, ct);
+            await cibles.UniteAsync(RegistreMde.Unite, RegistreMde.CleUnite(l.Texte("UNITE") ?? ""), l.Texte("UNITE"), l.Texte("UNITE"), (int?)l.Entier("NBDEC"), true, ct);
     }
 
     private static async Task TvaAsync(ContexteReprise ctx, ReferentielsCible cibles, CancellationToken ct)

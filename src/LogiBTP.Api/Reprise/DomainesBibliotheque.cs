@@ -97,7 +97,7 @@ public sealed class BibliothequeMde : IDomaineReprise
         var tarifs = (await SqlReprise.SourceAsync(ctx, RequeteTarifs, ct))
             .GroupBy(c => c.Texte("CODEART")!).ToDictionary(g => g.Key, g => g.ToList(), StringComparer.Ordinal);
 
-        string? Unite(string? code) => code is null ? null : ctx.Registre.TrouverCode(RegistreMde.Unite, code.Trim());
+        string? Unite(string? code) => RegistreMde.UniteDe(ctx, code);
         decimal Perte(LigneSource e) => e.Decimal("PA") is > 0 and var pa && e.Decimal("DEBOURSE") is > 0 and var deb
             ? ArrondiCalcul.Arr6(deb / pa) : BibliothequeReprise.CoefPerte(e.Decimal("COEFPERTE"));
 

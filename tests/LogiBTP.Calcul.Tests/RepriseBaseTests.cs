@@ -497,6 +497,9 @@ public class RepriseBaseTests
             // Ouvrage et ses composantes (quantité relative), récapitulatif non repris.
             Assert.Equal(2L, await Compter("SELECT count(*) FROM document_ligne c JOIN document_ligne o ON o.lig_id = c.lig_parent_id JOIN document d ON d.ent_id = o.lig_ent_id WHERE d.ent_numero = 'DC000002' AND o.lig_code = 'MUR20' AND c.lig_qte_type = 'R'"));
             Assert.Contains(r.ChampsPerdus, c => c.Table == "type_ligne_vente" && c.Champ == "TYPELIG");
+            // Unité de ligne en casse différente de PMEUNITEMESURE (« m2 » / « M2 ») : retrouvée.
+            Assert.Equal(0L, await Compter("SELECT count(*) FROM document_ligne l JOIN document d ON d.ent_id = l.lig_ent_id WHERE d.ent_numero = 'DC000002' AND l.lig_libelle_html LIKE '%Enduit%' AND l.lig_unt_code IS NULL"));
+            Assert.True(await Compter("SELECT count(*) FROM document_ligne l JOIN document d ON d.ent_id = l.lig_ent_id WHERE d.ent_numero = 'DC000002' AND l.lig_libelle_html LIKE '%Enduit%' AND l.lig_unt_code IS NOT NULL") >= 1);
             // Décimales par défaut de MDE : quantités à 3, prix unitaires à 2 (option de la reprise).
             Assert.Equal(0L, await Compter("SELECT count(*) FROM document_ligne l JOIN document d ON d.ent_id = l.lig_ent_id WHERE d.ent_numero = 'DC000002' AND l.lig_tyl_id IN (2, 3) AND l.lig_libelle_html <> 'Écart de reprise' AND (l.lig_precision_qte <> 3 OR l.lig_precision_pv <> 2)"));
             Assert.True(await Compter("SELECT count(*) FROM document_ligne l JOIN document d ON d.ent_id = l.lig_ent_id WHERE d.ent_numero = 'DC000002' AND l.lig_precision_qte = 3 AND l.lig_precision_pv = 2") >= 4);

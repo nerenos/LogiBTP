@@ -252,7 +252,7 @@ INSERT INTO dbo.PMEDOCDEVCLILIG (CLE, CLEDOC, IDLIG, IDPARENT, NUMORDRE, TYPELIG
  (1102, 102, 2, 1, 1, 'E', 0, 0, 'MUR20', NULL, 'Mur de 20', NULL, 21.2, 1, 1.4375, 30.5, 0, '1', 10, 'M2', 2, 305, 0, 1),
  (1103, 102, 3, 2, 1, 'E', 0, 1, 'CIM35', 2, 'Parpaing', NULL, 1.2, 1.1, 1.2, 1.584, 0, NULL, 10, 'U', 0, 0, 0, 1),
  (1104, 102, 4, 2, 2, 'E', 0, 1, 'MOMAC', 1, 'Main d''œuvre', NULL, 18, 1.1, 1.2, 25, 0, NULL, 0.5, 'H', 2, 0, 0, 1),
- (1105, 102, 5, 1, 2, 'E', 0, 0, NULL, 2, 'Enduit', '{\rtf1 \b Enduit\b0  monocouche}', 8, 1.15, 1.25, 11.5, 0, '1', 12.5, 'M2', 2, 143.75, 0, 1),
+ (1105, 102, 5, 1, 2, 'E', 0, 0, NULL, 2, 'Enduit', '{\rtf1 \b Enduit\b0  monocouche}', 8, 1.15, 1.25, 11.5, 0, '1', 12.5, 'm2', 2, 143.75, 0, 1),
  (1106, 102, 6, 1, 3, 'E', 0, 0, NULL, 4, 'Échafaudage', NULL, 100, 1.1, 1.3, 150, 0, '1', 1, 'U', 0, 150, 1, 1),
  (1107, 102, 7, 0, 2, 'L', 0, 0, NULL, NULL, 'Garantie décennale', NULL, 0, 1, 1, 0, 0, NULL, 0, NULL, 0, 0, 0, 1),
  (1108, 102, 0, 0, 0, 'R', 0, 0, NULL, NULL, 'Récapitulatif', NULL, 0, 1, 1, 0, 0, NULL, 0, NULL, 0, 0, 0, 1);

@@ -205,7 +205,7 @@ public sealed partial class PiecesVenteMde : IDomaineReprise
                 Cle = cle, Reference = l.Texte("CLE"), ParentCle = parent, Type = type, Composante = composante && parent is not null, Code = l.Texte("CODEELEM"),
                 LibelleHtml = Rtf.HtmlDe(l.Texte("LIBELLECOM") ?? l.Texte("LIBELLE")), NonEditee = l.Contient("EDITEE") && l.Entier("EDITEE") == 0,
                 Qte = qte, PrecisionQte = l.Entier("DECUNITE") is { } dec and >= 0 ? (short)Math.Clamp((int)dec, 2, 6) : SourcesPieces.Precision(qte),
-                Unite = l.Texte("UNITE") is { } u ? ctx.Registre.TrouverCode(RegistreMde.Unite, u.Trim()) : null,
+                Unite = RegistreMde.UniteDe(ctx, l.Texte("UNITE")),
                 NatId = (int?)ctx.Registre.Trouver(BibliothequeMde.Nature, l.Texte("CLENATURE")),
                 TvaId = (int?)ctx.Registre.Trouver(RegistreMde.Tva, RegistreMde.CleTva(categorie, l.Texte("CODETVA"))),
                 Pa = l.Decimal("DEBOURSE"), CoefFg = l.Decimal("COEFFG") ?? 1, CoefBenef = l.Decimal("COEFBEN") ?? 1,

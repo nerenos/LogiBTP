@@ -135,7 +135,7 @@ public sealed class AchatsMde : IDomaineReprise
                 var montant = l.Decimal("TOTALLIGNEHT");
                 res.Add(SourcesAchats.Element(cle, typesLigne["ELEMENT"], l.Texte("CODEARTICLE"), libelle,
                     remise ? 1 : l.Decimal("QUANTITE"), remise ? montant : l.Decimal("PRIXUNITAIRE"), remise ? null : l.Decimal("REMISE"), montant,
-                    l.Texte("UNITEMESURE") is { } u ? ctx.Registre.TrouverCode(RegistreMde.Unite, u.Trim()) : null,
+                    RegistreMde.UniteDe(ctx, l.Texte("UNITEMESURE")),
                     (int?)ctx.Registre.Trouver(BibliothequeMde.Nature, l.Texte("CLENATURE")), tva,
                     (int?)ctx.Registre.Trouver(StructureMde.Chantier, l.Texte("CODECHT")) ?? chantier));
             }
