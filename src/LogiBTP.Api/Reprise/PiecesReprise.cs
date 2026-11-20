@@ -68,6 +68,10 @@ public sealed record PieceSource
     public long? TiersPerId { get; init; }
     /// <summary>Adresse recopiée sur la pièce (nom, lignes, code postal, ville, pays ISO).</summary>
     public AdressePiece? Adresse { get; init; }
+    /// <summary>Adresse de livraison (achats) ou des travaux, reprise en saisie libre (origine LIBRE), avec son contact sur place.</summary>
+    public AdressePiece? AdresseLivraison { get; init; }
+    public string? ContactLivraison { get; init; }
+    public string? TelephoneLivraison { get; init; }
     public int? AffaireId { get; init; }
     public int? ChantierId { get; init; }
     /// <summary>Statut cible : BROUILLON, ENVOYE ou VALIDE (<see cref="PiecesReprise.Statut"/>).</summary>
@@ -86,6 +90,8 @@ public sealed record PieceSource
     public decimal? TotalHt { get; init; }
     public decimal? TotalTtc { get; init; }
     public List<LignePiece> Lignes { get; init; } = [];
+    /// <summary>Table source des lignes : chaque ligne reprise y est inscrite au registre par sa <see cref="LignePiece.Reference"/> (traçabilité des lignes).</summary>
+    public string? TableLignes { get; init; }
     /// <summary>Variables du document ($$) lues par les métrés des lignes.</summary>
     public List<VariablePiece> Variables { get; init; } = [];
     /// <summary>Propriétés de l'entête (établissement d'origine…).</summary>
@@ -160,6 +166,9 @@ public sealed class PiecesReprise : IAsyncDisposable
 
     public const string TableDocument = "document";
     public const string LibelleEcart = "Écart de reprise";
+    /// <summary>Origine d'une adresse saisie librement sur la pièce (AdressesDocument, structure/adresses.js).</summary>
+    public const string OrigineLibre = "LIBRE";
+    public const string TableLigne = "document_ligne";
     private const string FormatNumeros = """{"separateur":".","niveaux":[{"style":"1"}]}""";
     private const decimal Centime = 0.01m;
 
@@ -388,8 +397,15 @@ public sealed class PiecesReprise : IAsyncDisposable
             EntProprietes = JsonSerializer.SerializeToDocument(p.Proprietes), EntEtiquettes = JsonDocument.Parse("[]"),
             EntAdresseFacturation = p.Adresse is { } a ? JsonSerializer.SerializeToDocument(new
             {
-                origine = "LIBRE", libelle = a.Nom,
+                origine = OrigineLibre, libelle = a.Nom,
                 adresse = new { ligne1 = a.Lignes, ligne2 = (string?)null, ligne3 = (string?)null, code_postal = a.CodePostal, ville = a.Ville, pays = a.Pays ?? "FR" },
+            }) : null,
+            EntAdresseLivraison = p.AdresseLivraison is { } al ? JsonSerializer.SerializeToDocument(new Dictionary<string, object?>
+            {
+                ["origine"] = OrigineLibre, ["source_id"] = null, ["libelle"] = al.Nom,
+                ["adresse"] = new { ligne1 = al.Lignes, ligne2 = (string?)null, ligne3 = (string?)null, code_postal = al.CodePostal, ville = al.Ville, pays = al.Pays ?? "FR" },
+                ["contact"] = p.ContactLivraison is { } nom ? new { ind_id = (long?)null, nom } : null,
+                ["telephone"] = p.TelephoneLivraison, ["instructions"] = null, ["mention"] = null, ["releve_le"] = p.Date,
             }) : null,
             EntVerrouille = verrouille, EntEnvoyeLe = verrouille ? new DateTimeOffset(p.Date.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero) : null,
             EntCreeLe = DateTimeOffset.UtcNow, EntCreePar = ctx.Options.Auteur ?? "reprise",
@@ -473,7 +489,11 @@ public sealed class PiecesReprise : IAsyncDisposable
         {
             var corr = await new PersistanceDocument<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp>(db, new SpecialisationBtp()).Ecrire(doc.EntId, complet, ct);
             foreach (var (l, x) in p.Lignes.Zip(lignes))
-                if (l.Reference is { } reference && corr.Lignes.TryGetValue(x.LigId, out var reel)) lignesMarche[(p.Origine.Table, reference)] = (doc.EntId, reel);
+                if (l.Reference is { } reference && corr.Lignes.TryGetValue(x.LigId, out var reel))
+                {
+                    lignesMarche[(p.Origine.Table, reference)] = (doc.EntId, reel);
+                    if (p.Avancement is null && p.TableLignes is { } tl && ctx.Registre.Trouver(tl, reference) is null) ctx.Registre.Inscrire(tl, reference, TableLigne, reel);
+                }
         }
         catch (DbUpdateException e) when (e.InnerException is { } cause)
         {
@@ -612,6 +632,24 @@ public sealed class PiecesReprise : IAsyncDisposable
         await SqlReprise.ExecuterAsync(ctx.Unite, """
             INSERT INTO document_lien (lie_source_ent_id, lie_cible_ent_id, lie_type) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING
             """, ct, source, cible, LienTransformation);
+
+    /// <summary>
+    /// Lien entre deux lignes reprises (traçabilité de la source) : ligne d'origine de la cible, et lien de ligne à
+    /// l'étape de la transformation autorisée entre les deux types de pièce ; faux si aucune n'est autorisée.
+    /// </summary>
+    public async Task<bool> LierLignesAsync(long source, long cible, decimal qte, CancellationToken ct)
+    {
+        await SqlReprise.ExecuterAsync(ctx.Unite, "UPDATE document_ligne SET lig_origine_id = $1 WHERE lig_id = $2 AND lig_origine_id IS NULL", ct, source, cible);
+        return await SqlReprise.ExecuterAsync(ctx.Unite, """
+            INSERT INTO document_ligne_lien (lil_source_lig_id, lil_cible_lig_id, lil_etape, lil_qte, lil_montant_ht)
+            SELECT ls.lig_id, lc.lig_id, t.tra_etape, $3, lc.lig_montant_ht
+            FROM document_ligne ls JOIN document ds ON ds.ent_id = ls.lig_ent_id,
+                 document_ligne lc JOIN document dc ON dc.ent_id = lc.lig_ent_id
+                 JOIN transformation_autorisee t ON t.tra_cible_tyd_id = dc.ent_tyd_id
+            WHERE ls.lig_id = $1 AND lc.lig_id = $2 AND t.tra_source_tyd_id = ds.ent_tyd_id
+            ORDER BY t.tra_etape LIMIT 1
+            """, ct, source, cible, qte) > 0;
+    }
 
     /// <summary>
     /// Fin des pièces : référence de chaque groupe = sa dernière version, les précédentes non acceptées passent REMPLACE ;

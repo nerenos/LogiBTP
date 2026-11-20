@@ -159,7 +159,7 @@ public sealed partial class PiecesVenteMde : IDomaineReprise
         if (postes) ctx.Rapport.Perdre(table, "MTPOSTESHT/MTPOSTESTTC", e.Texte("CODE"), "Postes de pied non repris : total HT et TTC hors postes");
         return new PieceSource
         {
-            Origine = (table, e.Texte("CLEDOC")!), TypeDocument = typeDocument, Numero = e.Texte("CODE"),
+            Origine = (table, e.Texte("CLEDOC")!), TableLignes = table + "LIG", TypeDocument = typeDocument, Numero = e.Texte("CODE"),
             Date = SourcesRessources.Jour(e, "DATEDOC") ?? DateOnly.FromDateTime(DateTime.Today),
             Objet = AnnuaireReprise.Couper(e.Texte("LIBELLE") ?? Rtf.TexteDe(Rtf.HtmlDe(e.Texte("DESCRIPTIF"))), 250),
             TiersPerId = ctx.Registre.Trouver("PMECLIENT", e.Texte("CODECLIENT")),
