@@ -1,5 +1,5 @@
 import { pairesParCode } from '@logibtp/socle/dictionnaire';
-import { GESTION_ELEMENT, SCENARIO_PA, ACTION_MAJ_PA, MOTIF_MAJ_PA, SOURCE_PA_REFERENCE } from './codes.js';
+import { GESTION_ELEMENT, SCENARIO_PA, ERREUR_CALCUL, TYPE_ELEMENT, ACTION_MAJ_PA, MOTIF_MAJ_PA, SOURCE_PA_REFERENCE } from './codes.js';
 import { D, S, arr6, evaluerExpression, ErreurCalcul, aujourdhui } from '@logibtp/socle';
 
 // Prix et unités d'un élément de bibliothèque. Même calcul que CalculElement.cs (jeu partagé
@@ -23,13 +23,13 @@ export const GESTIONS = pairesParCode('bibliotheque.gestions', [GESTION_ELEMENT.
 export function ratio(unite, { unite_stock, unites = [], donnees = {} }) {
   if (!unite || unite === unite_stock) return D(1);
   const u = unites.find((x) => x.unite === unite);
-  if (!u) throw new ErreurCalcul('UNITE', `Unité ${unite} sans correspondance avec l'unité de stock ${unite_stock}`);
+  if (!u) throw new ErreurCalcul(ERREUR_CALCUL.UNITE, `Unité ${unite} sans correspondance avec l'unité de stock ${unite_stock}`);
   const r = evaluerExpression(String(u.formule ?? ''), (ref) => {
     const v = D(donnees[ref]);
-    if (v === null) throw new ErreurCalcul('DONNEE', `Donnée technique ${ref} non renseignée`);
+    if (v === null) throw new ErreurCalcul(ERREUR_CALCUL.DONNEE, `Donnée technique ${ref} non renseignée`);
     return v;
   });
-  if (r.lte(0)) throw new ErreurCalcul('RATIO', `Correspondance ${unite} nulle ou négative`);
+  if (r.lte(0)) throw new ErreurCalcul(ERREUR_CALCUL.RATIO, `Correspondance ${unite} nulle ou négative`);
   return r;
 }
 
@@ -47,7 +47,7 @@ const enVigueur = (t, date) => (!t.debut || String(t.debut).slice(0, 10) <= date
 export function prixAchat(e, date) {
   const alertes = [];
   const parStock = (t) => {
-    try { return prixNetTarif(t).div(ratio(t.unite, e)); } catch (x) { alertes.push(x.code ?? 'UNITE'); return null; }
+    try { return prixNetTarif(t).div(ratio(t.unite, e)); } catch (x) { alertes.push(x.code ?? ERREUR_CALCUL.UNITE); return null; }
   };
   const tarifs = (e.tarifs ?? []).filter((t) => enVigueur(t, date));
   let pa = null;
@@ -66,7 +66,7 @@ export function prixAchat(e, date) {
       if (prix.length) pa = prix.reduce((a, b) => ((e.scenario === 'MEILLEUR_MIN' ? b.lt(a) : b.gt(a)) ? b : a));
       break;
     }
-    default: throw new ErreurCalcul('SCENARIO', `Scénario de prix d'achat inconnu : ${e.scenario}`);
+    default: throw new ErreurCalcul(ERREUR_CALCUL.SCENARIO, `Scénario de prix d'achat inconnu : ${e.scenario}`);
   }
   if (pa === null) alertes.push('PA_INDISPONIBLE');
   return { pa: pa === null ? null : arr6(pa), alertes };
@@ -96,8 +96,8 @@ export function calculerElement(e, date = aujourdhui()) {
       const fois = (v) => (v === null ? null : S(arr6(v.times(r))));
       prixUnites.push({ unite, ratio: S(arr6(r)), pa: fois(pa), pr: fois(pr), pv_net: fois(pvNet) });
     } catch (x) {
-      prixUnites.push({ unite, ratio: null, pa: null, pr: null, pv_net: null, erreur: x.code ?? 'UNITE' });
-      if (!alertes.includes(x.code)) alertes.push(x.code ?? 'UNITE');
+      prixUnites.push({ unite, ratio: null, pa: null, pr: null, pv_net: null, erreur: x.code ?? ERREUR_CALCUL.UNITE });
+      if (!alertes.includes(x.code)) alertes.push(x.code ?? ERREUR_CALCUL.UNITE);
     }
   }
   return { pa: S(pa), pr: S(pr), pv: S(pv), coef_benef: S(coefBenef), pv_net: S(pvNet), prix_unites: prixUnites, alertes };
@@ -187,7 +187,7 @@ export function paReference(e, date = aujourdhui(), tiersId = null) {
       return { pa: S(arr6(prixNetTarif(t).div(ratio(t.unite, e)))), source: SOURCE_PA_REFERENCE.TARIF_FOURNISSEUR, tarif_id: t.id ?? null, alertes: [] };
     } catch (x) {
       const r = prixAchat(e, date);
-      return { pa: S(r.pa), source: SOURCE_PA_REFERENCE.PA_EFFECTIF, tarif_id: null, alertes: [x.code ?? 'UNITE', ...r.alertes] };
+      return { pa: S(r.pa), source: SOURCE_PA_REFERENCE.PA_EFFECTIF, tarif_id: null, alertes: [x.code ?? ERREUR_CALCUL.UNITE, ...r.alertes] };
     }
   }
   const r = prixAchat(e, date);
@@ -221,6 +221,8 @@ function tarifRecalcule(t, pa, e) {
  * créer pour le fournisseur, début à la date), AUCUNE (motif).
  */
 export function planMiseAJourPa(e, nouveauPa, date = aujourdhui(), tiersId = null) {
+  // Élément composé (type connu et autre que ARTICLE) : son prix vient de sa composition, rien à écrire.
+  if (e.type && e.type !== TYPE_ELEMENT.ARTICLE) return sansEcriture(MOTIF_MAJ_PA.ELEMENT_COMPOSE);
   const pa = D(nouveauPa);
   if (pa === null || pa.lt(0)) return sansEcriture(MOTIF_MAJ_PA.PA_INVALIDE);
   const scenario = e.scenario ?? SCENARIO_PA.FIXE;

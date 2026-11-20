@@ -705,6 +705,75 @@
           "tarif": null
         }
       }
+    },
+    {
+      "nom": "élément composé (ouvrage) : aucune écriture, motif ELEMENT_COMPOSE",
+      "entree": {
+        "type": "OUVRAGE",
+        "unite_stock": "u",
+        "scenario": "FIXE",
+        "pa_fixe": "10"
+      },
+      "tiers_id": null,
+      "nouveau_pa": "12",
+      "attendu": {
+        "reference": {
+          "pa": "10",
+          "source": "PA_EFFECTIF",
+          "tarif_id": null,
+          "alertes": []
+        },
+        "plan": {
+          "action": "AUCUNE",
+          "motif": "ELEMENT_COMPOSE",
+          "pa_fixe": null,
+          "tarif": null
+        }
+      }
+    },
+    {
+      "nom": "tarif du fournisseur dont le facteur de remises est nul : prix net seul, public et remises effacés",
+      "entree": {
+        "unite_stock": "u",
+        "scenario": "FIXE",
+        "pa_fixe": "10",
+        "tarifs": [
+          {
+            "id": 3,
+            "tiers_id": 7,
+            "prix": "5",
+            "prix_public": "10",
+            "remise1": "100",
+            "unite": "u",
+            "principal": false
+          }
+        ]
+      },
+      "tiers_id": 7,
+      "nouveau_pa": "9",
+      "attendu": {
+        "reference": {
+          "pa": "0",
+          "source": "TARIF_FOURNISSEUR",
+          "tarif_id": 3,
+          "alertes": []
+        },
+        "plan": {
+          "action": "TARIF",
+          "motif": null,
+          "pa_fixe": null,
+          "tarif": {
+            "id": 3,
+            "tiers_id": 7,
+            "unite": "u",
+            "prix": "9",
+            "prix_public": null,
+            "remise1": null,
+            "remise2": null,
+            "debut": null
+          }
+        }
+      }
     }
   ]
 }

@@ -39,6 +39,14 @@ export const MOTIF_MAJ_PA = Object.freeze({
   FOURNISSEUR_OBLIGATOIRE: 'FOURNISSEUR_OBLIGATOIRE',
 });
 
+/** Code d'une erreur du calcul d'un élément (ErreurCalcul.code) ; UNITE sert aussi de repli quand le code manque. */
+export const ERREUR_CALCUL = Object.freeze({
+  UNITE: 'UNITE',
+  DONNEE: 'DONNEE',
+  RATIO: 'RATIO',
+  SCENARIO: 'SCENARIO',
+});
+
 /** Origine du PA de référence d'un élément (paReference). */
 export const SOURCE_PA_REFERENCE = Object.freeze({
   TARIF_FOURNISSEUR: 'TARIF_FOURNISSEUR',

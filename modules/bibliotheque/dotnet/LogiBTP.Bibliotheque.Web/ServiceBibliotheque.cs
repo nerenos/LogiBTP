@@ -380,7 +380,7 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
     /// <summary>Entrée du calcul depuis l'élément enregistré et ses tarifs.</summary>
     public static EntreeElement Entree(Element e, List<TarifCalcul> tarifs) => new()
     {
-        UniteStock = e.EleUntStock, Unites = Unites(e.EleUnites.RootElement), Donnees = Donnees(e.EleProprietes.RootElement, Techniques(e)),
+        Type = e.EleType, UniteStock = e.EleUntStock, Unites = Unites(e.EleUnites.RootElement), Donnees = Donnees(e.EleProprietes.RootElement, Techniques(e)),
         Scenario = e.EleScenarioPa, PaFixe = e.ElePaFixe, DernierPa = e.EleDernierPa, Pmp = e.ElePmp, Tarifs = tarifs,
         CoefFg = e.EleCoefFg, CoefBenef = e.EleCoefBenef, Pv = e.ElePv, PvFixe = e.ElePvFixe, CoefRemise = e.EleCoefRemise,
     };
@@ -631,9 +631,9 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
         if (await FicheVerrouilleParUnAutre(m.EleId, u, ct)) return Refus(m.EleId, MotifMajPa.FicheEnModification);
         if (m.Empreinte is not null && m.Empreinte != h) return Refus(m.EleId, MotifMajPa.EmpreinteChangee);
         var e = await db.Elements.FirstAsync(x => x.EleId == m.EleId, ct);
-        if (e.EleType != TypeElement.Article) return Refus(m.EleId, MotifMajPa.ElementCompose);
 
         var tarifs = await db.Tarifs.Where(t => t.TfoEleId == e.EleId).ToListAsync(ct);
+        // Élément composé : refusé par le plan lui-même (motif ELEMENT_COMPOSE).
         var plan = PaReference.Planifier(Entree(e, tarifs.Select(VersCalcul).ToList()), m.Pa, date, m.TiersId);
         var fournisseur = Texte(m.Fournisseur);
         if (plan.Action == ActionMajPa.NouveauTarif && fournisseur is null) return Refus(m.EleId, MotifMajPa.FournisseurObligatoire);

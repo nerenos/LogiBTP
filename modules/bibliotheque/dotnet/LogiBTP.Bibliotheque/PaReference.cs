@@ -43,7 +43,7 @@ public static class PaReference
             catch (ErreurCalcul x)
             {
                 var (paSecours, alertesSecours) = CalculElement.PrixAchat(e, date);
-                return new ReferencePa(paSecours, SourcePaReference.PaEffectif, null, [x.Code, .. alertesSecours]);
+                return new ReferencePa(paSecours, SourcePaReference.PaEffectif, null, [string.IsNullOrEmpty(x.Code) ? ErreurCalculElement.Unite : x.Code, .. alertesSecours]);
             }
         }
         var (pa, alertes) = CalculElement.PrixAchat(e, date);
@@ -75,6 +75,8 @@ public static class PaReference
     public static PlanMajPa Planifier(EntreeElement e, decimal? nouveauPa, string? date = null, long? tiersId = null)
     {
         date ??= DateTime.Today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        // Élément composé (type connu et autre que ARTICLE) : son prix vient de sa composition, rien à écrire.
+        if (!string.IsNullOrEmpty(e.Type) && e.Type != TypeElement.Article) return Sans(MotifMajPa.ElementCompose);
         if (nouveauPa is not { } pa || pa < 0) return Sans(MotifMajPa.PaInvalide);
         var scenario = e.Scenario ?? ScenarioPa.Fixe;
         var parTarif = scenario is ScenarioPa.FournisseurPrincipal or ScenarioPa.MeilleurMin or ScenarioPa.MeilleurMax;

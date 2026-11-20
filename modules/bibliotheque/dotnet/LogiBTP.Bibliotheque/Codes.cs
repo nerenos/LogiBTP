@@ -45,6 +45,15 @@ public static class MotifMajPa
     public const string FournisseurObligatoire = "FOURNISSEUR_OBLIGATOIRE";
 }
 
+/// <summary>Code d'une erreur du calcul d'un élément (<see cref="ErreurCalcul.Code"/>) ; Unite sert aussi de repli quand le code manque.</summary>
+public static class ErreurCalculElement
+{
+    public const string Unite = "UNITE";
+    public const string Donnee = "DONNEE";
+    public const string Ratio = "RATIO";
+    public const string Scenario = "SCENARIO";
+}
+
 /// <summary>Origine du PA de référence d'un élément (<see cref="PaReference.Calculer"/>).</summary>
 public static class SourcePaReference
 {

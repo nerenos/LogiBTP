@@ -111,6 +111,7 @@ public class CodesTests
         Assert.Empty(Constantes.Ecarts(CasPartages.Chemin("modules", "bibliotheque", "js", "src", "codes.js"), "MOTIF_MAJ_PA", typeof(MotifMajPa)));
         Assert.Empty(Constantes.Ecarts(CasPartages.Chemin("modules", "bibliotheque", "js", "src", "codes.js"), "SOURCE_PA_REFERENCE", typeof(SourcePaReference)));
         Assert.Empty(Constantes.Ecarts(CasPartages.Chemin("modules", "bibliotheque", "js", "src", "codes.js"), "TYPE_ELEMENT", typeof(TypeElement)));
+        Assert.Empty(Constantes.Ecarts(CasPartages.Chemin("modules", "bibliotheque", "js", "src", "codes.js"), "ERREUR_CALCUL", typeof(ErreurCalculElement)));
     }
 
     [Theory]
