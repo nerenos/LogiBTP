@@ -257,6 +257,25 @@ INSERT INTO dbo.PMEDOCDEVCLILIG (CLE, CLEDOC, IDLIG, IDPARENT, NUMORDRE, TYPELIG
  (1107, 102, 7, 0, 2, 'L', 0, 0, NULL, NULL, 'Garantie décennale', NULL, 0, 1, 1, 0, 0, NULL, 0, NULL, 0, 0, 0, 1),
  (1108, 102, 0, 0, 0, 'R', 0, 0, NULL, NULL, 'Récapitulatif', NULL, 0, 1, 1, 0, 0, NULL, 0, NULL, 0, 0, 0, 1);
 UPDATE dbo.PMECHANTIER SET CLEDOCINIT = 102 WHERE CODE = 'CH001';
+-- Métrés (20/11/2026, comme DC25001A) : P = 1.1 sur le métré de la ligne récapitulative (variable du document),
+-- formules des lignes en minuscules à virgule, affectation locale totalisée, commentaire, métré qui ne retrouve pas la quantité.
+INSERT INTO dbo.PMEMETRE (CLE, LIBELLE, LIBRESULT, NIVRESULT, VARRESULT, RESULTAT, FLAGACTIF, FLAGEDIT) VALUES
+ (9001, 'Récapitulatif', 'Total du métré', 1, 'METRE', 1.1, 0, -1),
+ (9002, 'Surface du mur', 'Total du métré', 1, 'METRE', 10, -1, -1),
+ (9003, 'Enduit', 'Total du métré', 1, 'METRE', 12.5, -1, -1),
+ (9004, 'Échafaudage', 'Total du métré', 1, 'METRE', 2.2, -1, -1);
+INSERT INTO dbo.PMEMETRELIGNE (CLE, CLEMETRE, NUMORDRE, TYPE, LIBELLE, NIVTOT, RESULTAT, VARRESULT, FLAGEDIT) VALUES
+ (90011, 9001, 0, 'F', 'P=1.1', 1, 1.1, '', -1),
+ (90021, 9002, 0, 'F', '4*(p+1,4)', 1, 10, '', -1),
+ (90031, 9003, 0, 'T', 'Mur nord', 0, 0, '', -1),
+ (90032, 9003, 1, 'F', 'L=5', 1, 5, '', -1),
+ (90033, 9003, 2, 'F', '6*(1.000+0.250)', 1, 7.5, '', -1),
+ (90041, 9004, 0, 'F', 'P*2', 1, 2.2, '', -1);
+INSERT INTO dbo.PMEMETREVAR (CLEMETRE, LIBELLE, VALEUR, GLOBALE) VALUES (9002, 'H', 2.5, 1);
+UPDATE dbo.PMEDOCDEVCLILIG SET CLEMETRE = 9001 WHERE CLE = 1108;
+UPDATE dbo.PMEDOCDEVCLILIG SET CLEMETRE = 9002 WHERE CLE = 1102;
+UPDATE dbo.PMEDOCDEVCLILIG SET CLEMETRE = 9003 WHERE CLE = 1105;
+UPDATE dbo.PMEDOCDEVCLILIG SET CLEMETRE = 9004 WHERE CLE = 1106;
 -- Marché MDE (19/11/2026) : devis et avenants servant à la facturation, reliés au chantier, dans l'ordre de NUMORDRE.
 INSERT INTO dbo.PMEAFFBASEDOC (CLEDOC, NUMORDRE, CLEDOCINIT, DATEDOC, CODE, LIBELLE, CODECLIENT, CODECATEGORIE, CODECHT, MODREG, MTHT, MTTTC) VALUES
  (602, 2, NULL, '2024-03-15', 'MB000002', 'Avenant fenêtre', 'C001', 'F', 'CH001', 'V30', 100, 120),

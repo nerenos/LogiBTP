@@ -73,6 +73,13 @@ Classes du cœur dans `src/LogiBTP.Api/Reprise/` ; un domaine par source, même 
 - MDE, données techniques (`PMEELEMENTARTTEC`, par unité de stock) : longueur, largeur, hauteur en m (mm dans LogiBTP),
   poids en kg, `VOLUME` en surface (m², défaut) ou en volume (m³) selon l'option de la reprise (écran, `--volume-mde`) ;
   unités `UNITE*` : M (mètre) et K (kilo) par défaut, tout autre code non converti et signalé `UniteTechnique`.
+- MDE, métrés des pièces de vente et des marchés (`MetresMde.cs` : `PMEMETRE`, `PMEMETRELIGNE`, `PMEMETREVAR`, lignes par
+  `CLEMETRE`) : script LogiBTP par ligne (une formule seule : `Renvoyer expr` ; sinon `local Total`, `Total += expr` des
+  lignes de niveau de total non nul, `NOM=expr` ou `VARRESULT` en variable locale totalisée, autres types en commentaire
+  signalés) ; affectations du métré de la ligne récapitulative (R, non reprise) et variables `GLOBALE` : variables du
+  document `$$NOM`, lues par les formules quelle que soit leur casse (`p*0,150` → `$$P*0.150`, virgule décimale → point) ;
+  quantité issue du métré (`lig_qte_source` M) si son résultat, arrondi à la précision de la ligne, retrouve la quantité
+  source, sinon quantité saisie gardée, métré attaché et `MetreEcart` signalé.
 - Articles à unités différentes (achat, stock, vente) : rapports de la source repris bruts (RATIOSTOCK direct, RATIOVENTE
   inversé : unités de vente par unité de stock), PA et PV gardés (coefficient
   déduit, PV non imposé), signalés `ConversionBrute` pour correction manuelle.

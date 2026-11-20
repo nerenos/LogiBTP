@@ -84,7 +84,9 @@ public sealed partial class PiecesVenteMde : IDomaineReprise
         var facturesAvancement = new List<(LigneSource Entete, string TypeDocument, List<LigneSource> Lignes)>();
         // Marchés d'abord (PMEAFFBASEDOC) : une commande qui a servi de source au marché en est une copie exacte (même
         // numéro) ; elle n'est pas reprise une seconde fois, ses références pointent sur la commande du marché.
-        var marches = await MarchesAsync(ctx, pieces, etats, typesLigne, ct);
+        // Métrés des lignes (scripts) et variables du document (métré de la ligne récapitulative).
+        var metres = await MetresMde.ChargerAsync(ctx, ct);
+        var marches = await MarchesAsync(ctx, pieces, etats, typesLigne, metres, ct);
 
         foreach (var (table, typeSource, requete, requeteLignes) in Tables)
         {
@@ -125,6 +127,7 @@ public sealed partial class PiecesVenteMde : IDomaineReprise
                     GroupeCle = table == Devis ? $"{table}|{e.Texte("CODEDEVINIT") ?? e.Texte("CODE")}" : null,
                     Lignes = Lignes(ctx, lignes.GetValueOrDefault(cle) ?? [], e.Texte("CODECATEGORIE"), typesLigne, emplacement),
                 };
+                p = metres.Appliquer(ctx, p, lignes.GetValueOrDefault(cle) ?? [], emplacement);
                 await pieces.EcrireAsync(p, ct);
                 // Pièce d'origine d'une pièce du marché (devis accepté) : lien de transformation vers la commande du marché.
                 if (marches.ParOrigine.TryGetValue(cle, out var derivee)) await pieces.LierAsync((table, cle), (MarcheBase, derivee), ct);

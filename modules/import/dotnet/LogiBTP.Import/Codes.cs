@@ -135,4 +135,6 @@ public static class CodeAnomalie
     public const string ConversionBrute = "REPRISE_CONVERSION_BRUTE";
     /// <summary>Unité d'une donnée technique MDE autre que M ou K : valeur lue dans l'unité par défaut (m, m², kg), à vérifier.</summary>
     public const string UniteTechnique = "REPRISE_UNITE_TECHNIQUE";
+    /// <summary>Métré MDE repris en script : résultat recalculé différent de la quantité source (quantité source gardée) ou ligne de métré non convertie.</summary>
+    public const string MetreEcart = "REPRISE_METRE_ECART";
 }

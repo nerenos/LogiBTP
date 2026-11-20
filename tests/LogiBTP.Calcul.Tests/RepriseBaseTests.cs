@@ -503,6 +503,15 @@ public class RepriseBaseTests
             // Décimales par défaut de MDE : quantités à 3, prix unitaires à 2 (option de la reprise).
             Assert.Equal(0L, await Compter("SELECT count(*) FROM document_ligne l JOIN document d ON d.ent_id = l.lig_ent_id WHERE d.ent_numero = 'DC000002' AND l.lig_tyl_id IN (2, 3) AND l.lig_libelle_html <> 'Écart de reprise' AND (l.lig_precision_qte <> 3 OR l.lig_precision_pv <> 2)"));
             Assert.True(await Compter("SELECT count(*) FROM document_ligne l JOIN document d ON d.ent_id = l.lig_ent_id WHERE d.ent_numero = 'DC000002' AND l.lig_precision_qte = 3 AND l.lig_precision_pv = 2") >= 4);
+            // Métrés en script : P du récapitulatif en variable du document, formules traduites ($$P, point décimal),
+            // affectation locale totalisée ; métré qui ne retrouve pas la quantité : quantité saisie gardée, signalé.
+            const string Devis2 = "document_ligne l JOIN document d ON d.ent_id = l.lig_ent_id JOIN metre m ON m.mtr_id = l.lig_mtr_id WHERE d.ent_numero = 'DC000002'";
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM variable_definition v JOIN document d ON d.ent_id = v.var_ent_id WHERE d.ent_numero = 'DC000002' AND v.var_lig_id IS NULL AND v.var_portee = '$$' AND v.var_nom = 'P' AND v.var_formule = '1.1'"));
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM variable_definition v JOIN document d ON d.ent_id = v.var_ent_id WHERE d.ent_numero = 'DC000002' AND v.var_portee = '$$' AND v.var_nom = 'H' AND v.var_formule = '2.5'"));
+            Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Devis2} AND l.lig_code = 'MUR20' AND l.lig_qte_source = 'M' AND l.lig_qte = 10 AND m.mtr_script LIKE '%Renvoyer 4*($$P+1.4)' AND m.mtr_libelle = 'Surface du mur'"));
+            Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Devis2} AND l.lig_libelle_html LIKE '%Enduit%' AND l.lig_qte_source = 'M' AND l.lig_qte = 12.5 AND m.mtr_script LIKE '%// Mur nord%local L est un numérique = 5%Total += L%Total += 6*(1.000+0.250)%Renvoyer Total'"));
+            Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Devis2} AND l.lig_libelle_html LIKE '%Échafaudage%' AND l.lig_qte_source = 'S' AND l.lig_qte = 1 AND m.mtr_script LIKE '%Renvoyer $$P*2'"));
+            Assert.Contains(r.Anomalies, a => a.Code == CodeAnomalie.MetreEcart && a.Message.Contains("Échafaudage"));
             // Commande hors postes de pied ; facture définitive verrouillée à 10 % ; avoir brouillon sans numéro ; avancement écartée.
             Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Pieces} WHERE t.tyd_code = 'V_COMMANDE' AND s.std_code = 'BROUILLON' AND ent_total_ht = 200"));
             Assert.Contains(r.ChampsPerdus, c => c.Table == "PMEDOCCDECLI" && c.Champ == "MTPOSTESHT/MTPOSTESTTC");

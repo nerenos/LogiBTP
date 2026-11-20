@@ -8,6 +8,7 @@ using LogiBTP.Documents.Web;
 using LogiBTP.Domaine;
 using LogiBTP.Import;
 using LogiBTP.Import.Reprise;
+using LogiBTP.Metres;
 using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
 
@@ -45,7 +46,15 @@ public sealed record LignePiece
     public decimal? MontantHt { get; init; }
     /// <summary>Chantier de la ligne (achats : ventilation des coûts par les lignes, lot 12).</summary>
     public int? ChantierId { get; init; }
+    /// <summary>Métré de la ligne, traduit en script (quantité issue du métré si son résultat retrouve <see cref="Qte"/>).</summary>
+    public MetrePiece? Metre { get; init; }
 }
+
+/// <summary>Métré d'une ligne source traduit en script LogiBTP.</summary>
+public sealed record MetrePiece(string? Libelle, string Script);
+
+/// <summary>Variable du document ($$) reprise de la source (formule au format des définitions de variables).</summary>
+public sealed record VariablePiece(string Nom, string Formule);
 
 /// <summary>Pièce de vente source traduite.</summary>
 public sealed record PieceSource
@@ -77,6 +86,8 @@ public sealed record PieceSource
     public decimal? TotalHt { get; init; }
     public decimal? TotalTtc { get; init; }
     public List<LignePiece> Lignes { get; init; } = [];
+    /// <summary>Variables du document ($$) lues par les métrés des lignes.</summary>
+    public List<VariablePiece> Variables { get; init; } = [];
     /// <summary>Propriétés de l'entête (établissement d'origine…).</summary>
     public Dictionary<string, string> Proprietes { get; init; } = [];
     /// <summary>Avancement (situation, facture d'avancement) : lignes copiées du marché, <see cref="Lignes"/> ignorées.</summary>
@@ -251,6 +262,7 @@ public sealed class PiecesReprise : IAsyncDisposable
         var parents = p.Lignes.Where(l => l.ParentCle is not null).Select(l => l.ParentCle!).ToHashSet(StringComparer.Ordinal);
         var ordres = new Dictionary<long, int>();
         var res = new List<DocumentLigneBtp>();
+        long prochainMetre = -1;
         foreach (var l in p.Lignes)
         {
             long? parent = l.ParentCle is { } pc && ids.TryGetValue(pc, out var pid) ? pid : null;
@@ -275,6 +287,12 @@ public sealed class PiecesReprise : IAsyncDisposable
                 x.LigCoefRemise = l.CoefRemise <= 0 ? 1 : l.CoefRemise;
                 x.LigPrecisionPv = decimalesPrix ?? 6;
                 x.LigChaId = l.Composante ? null : l.ChantierId;
+                if (l.Metre is not null)
+                {
+                    // Quantité issue du métré (repasse à la saisie si son résultat ne retrouve pas la quantité source).
+                    x.LigQteSource = "M";
+                    x.LigMtrId = prochainMetre--;
+                }
                 if (type == TL.Element)
                 {
                     x.LigPa = l.Pa ?? 0;
@@ -299,8 +317,51 @@ public sealed class PiecesReprise : IAsyncDisposable
         return res;
     }
 
+    /// <summary>Métrés des lignes (identifiants négatifs posés par <see cref="Lignes"/>), sans résultat : le script le calcule.</summary>
+    public static List<Metre> Metres(PieceSource p, List<DocumentLigneBtp> lignes) =>
+        p.Lignes.Zip(lignes).Where(x => x.First.Metre is not null && x.Second.LigMtrId is not null)
+            .Select(x => new Metre
+            {
+                MtrId = x.Second.LigMtrId!.Value, MtrLigId = x.Second.LigId, MtrLibelle = Couper(x.First.Metre!.Libelle, 200),
+                MtrUntCode = x.Second.LigUntCode, MtrScript = x.First.Metre.Script,
+            }).ToList();
+
+    /// <summary>Variables du document ($$) de la pièce.</summary>
+    public static List<VariableDefinition> Variables(PieceSource p) =>
+        p.Variables.Select((v, i) => new VariableDefinition
+        {
+            VarId = -(i + 1), VarPortee = "$$", VarNom = v.Nom, VarOperation = "=", VarFormule = v.Formule, VarOrdre = i + 1, VarType = "N",
+        }).ToList();
+
+    /// <summary>
+    /// Métrés repris : un résultat (arrondi à la précision de la ligne) qui ne retrouve pas la quantité source, ou un
+    /// script en erreur, rend la ligne à la quantité saisie (la source) ; le métré reste attaché et l'écart est signalé.
+    /// Vrai si une ligne a changé (nouveau calcul).
+    /// </summary>
+    private bool ControlerMetres(ResultatCalcul calcul, List<DocumentLigneBtp> lignes, Dictionary<long, string> cles, Dictionary<string, LignePiece> sources, string emplacement)
+    {
+        var change = false;
+        foreach (var l in lignes.Where(l => l.LigQteSource == "M" && l.LigMtrId is not null))
+        {
+            var metre = calcul.Metres.First(m => m.MtrId == l.LigMtrId);
+            var source = sources[cles[l.LigId]].Qte ?? 0;
+            if (metre.MtrResultat is { } res
+                && ArrondiCalcul.Arrondir(res, l.LigPrecisionQte) == ArrondiCalcul.Arrondir(source, l.LigPrecisionQte)) continue;
+            l.LigQteSource = "S";
+            change = true;
+            ctx.Rapport.Signaler(NiveauAnomalie.Avertissement, CodeAnomalie.MetreEcart, emplacement,
+                metre.MtrResultat is { } r
+                    ? $"Métré « {metre.MtrLibelle} » : résultat {r:0.######} ≠ quantité source {source:0.######}, quantité source gardée (script à vérifier)"
+                    : $"Métré « {metre.MtrLibelle} » : script sans résultat ou en erreur, quantité source {source:0.######} gardée (script à vérifier)");
+        }
+        return change;
+    }
+
+    private List<Metre> metres = [];
+    private List<VariableDefinition> variables = [];
+
     private ResultatCalcul Calculer(DocumentBtp doc, List<DocumentLigneBtp> lignes) =>
-        MoteurDevisBtp.Calculer(new EntreeCalcul { Document = doc, Lignes = lignes, TauxTva = taux });
+        MoteurDevisBtp.Calculer(new EntreeCalcul { Document = doc, Lignes = lignes, TauxTva = taux, Metres = metres, Variables = variables });
 
     /// <summary>Écrit la pièce ; null si son type est inconnu de la base (signalé).</summary>
     public async Task<long?> EcrireAsync(PieceSource p, CancellationToken ct)
@@ -353,7 +414,10 @@ public sealed class PiecesReprise : IAsyncDisposable
         var (lignes, marche) = p.Avancement is { } av ? await LignesAvancementAsync(doc, av, emplacement, ct) : (Lignes(p, natureOuvrage, ctx.Options.DecimalesQte, ctx.Options.DecimalesPrix), null);
         var sources = p.Lignes.ToDictionary(l => l.Cle, StringComparer.Ordinal);
         var cles = p.Lignes.Zip(lignes, (s, l) => (l.LigId, s.Cle)).ToDictionary(x => x.LigId, x => x.Cle);
+        metres = p.Avancement is null ? Metres(p, lignes) : [];
+        variables = p.Avancement is null ? Variables(p) : [];
         var r = Calculer(doc, lignes);
+        if (metres.Count > 0 && ControlerMetres(r, lignes, cles, sources, emplacement)) r = Calculer(doc, lignes);
         var imposees = 0;
         foreach (var l in lignes.Where(l => p.Avancement is null && TL.EstChiffree(l) && l.LigQteType is null && !l.LigPvFixe))
         {
@@ -404,7 +468,7 @@ public sealed class PiecesReprise : IAsyncDisposable
         }
         else if (p.GroupeCle is { } gc) groupes[gc] = (groupes[gc].Id, groupes[gc].Versions + 1);
         await EnregistrerAsync(emplacement, ct);
-        var complet = new DocumentCompletBtp { Document = r.Document, Lignes = r.Lignes, Tva = r.Tva };
+        var complet = new DocumentCompletBtp { Document = r.Document, Lignes = r.Lignes, Tva = r.Tva, Metres = r.Metres, Variables = r.Variables };
         try
         {
             var corr = await new PersistanceDocument<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp>(db, new SpecialisationBtp()).Ecrire(doc.EntId, complet, ct);
