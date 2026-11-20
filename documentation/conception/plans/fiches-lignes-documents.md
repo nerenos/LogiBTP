@@ -15,7 +15,7 @@
 | 4 | Derniers pointages des salariés et du matériel | cœur | — | FAIT (20/11/2026) |
 | 5 | Styles des lignes : schéma, résolution répliquée, routes | `modules/document` | — | FAIT (20/11/2026) |
 | 6 | Styles des lignes : grille, plan, détail, réimposition, paramétrage | `modules/document` | 1, 5 | FAIT (20/11/2026) |
-| 7 | Styles des lignes dans les éditions | cœur | 5 | A FAIRE |
+| 7 | Styles des lignes dans les éditions | cœur | 5 | FAIT (20/11/2026) |
 | 8 | PA de référence et plan de mise à jour de la bibliothèque | `modules/bibliotheque` | — | A FAIRE |
 | 9 | Indicateur d'écart de PA et mise à jour depuis le document | cœur | 8 | A FAIRE |
 | 10 | Zones d'entête : registre, colonnes x_ et paramétrage | `modules/document` | — | A FAIRE |
@@ -108,7 +108,7 @@
 - **Critère de fin** : `npm test --workspace modules/document/js` ; tranche 1 en gras bleu paramétrée : visible dans la
   grille et le plan ; libellé en rouge saisi : garde son rouge ; Réimposer : retire le rouge.
 
-## Lot 7 : styles des lignes dans les éditions (cœur)
+## Lot 7 : styles des lignes dans les éditions (cœur) : FAIT (20/11/2026)
 
 - **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `src/LogiBTP.Api/Btp/EditionsBtp.cs` (`SourceDocumentEdition` : style résolu de chaque ligne,

@@ -505,6 +505,10 @@ public static class SourceDocumentEdition
 
         var document = Objet(d);
         var lignes = r.Lignes.ToDictionary(l => l.LigId);
+        // Styles des lignes (plan fiches-lignes-documents, lot 7) : style résolu de chaque ligne, comme à l'écran.
+        var typeDoc = await db.TypesDocument.AsNoTracking().FirstAsync(t => t.TydId == d.EntTydId, ct);
+        var contexteStyles = await new AffichageDocumentService<DocumentBtp, DocumentLigneBtp>(db).ContexteStyles(typeDoc, d.EntStylesLignes, ct);
+        var styles = StylesLignes.Resolus(r.Lignes, contexteStyles);
         // Description technique des éléments de bibliothèque appelés par les lignes (lot 7, A18f).
         var elements = r.Lignes.Where(l => l.LigArtId is not null).Select(l => l.LigArtId!.Value).Distinct().ToArray();
         var descriptions = elements.Length == 0 ? new Dictionary<long, string>()
@@ -536,7 +540,7 @@ public static class SourceDocumentEdition
             ["rattachement"] = new JsonObject { ["projet"] = c["projet"]?.DeepClone(), ["affaire"] = c["affaire"]?.DeepClone(), ["chantier"] = c["chantier"]?.DeepClone(), ["marche"] = c["marche"]?.DeepClone() },
             ["intervenants"] = d.EntIntervenants is null ? new JsonArray() : JsonNode.Parse(d.EntIntervenants.RootElement.GetRawText()),
             ["lignes"] = LignesImprimees(r, lignes, descriptions,
-                await LotsStockBtp.LotsLignesAsync(db, d.EntId, r.Lignes.Select(l => (l.LigId, l.LigProprietes)), ct)),
+                await LotsStockBtp.LotsLignesAsync(db, d.EntId, r.Lignes.Select(l => (l.LigId, l.LigProprietes)), ct), styles),
             ["pied"] = Pied(r.Pied, r, lignes),
             ["tva"] = new JsonArray(r.Tva.Select(t => (JsonNode?)new JsonObject
             {
@@ -730,7 +734,8 @@ public static class SourceDocumentEdition
     private sealed record DescriptionSql(long Id, string Html);
 
     private static JsonArray LignesImprimees(ResultatDocument<DocumentBtp, DocumentLigneBtp> r, Dictionary<long, DocumentLigneBtp> parId,
-        IReadOnlyDictionary<long, string>? descriptions = null, IReadOnlyDictionary<long, JsonArray>? lots = null)
+        IReadOnlyDictionary<long, string>? descriptions = null, IReadOnlyDictionary<long, JsonArray>? lots = null,
+        IReadOnlyDictionary<long, StyleLigne>? styles = null)
     {
         var enfants = r.Lignes.GroupBy(l => l.LigParentId ?? 0).ToDictionary(g => g.Key, g => g.OrderBy(l => l.LigOrdre).ToList());
         var piedsSections = r.PiedsSections.ToDictionary(p => p.LigId, p => p.Pied);
@@ -749,6 +754,7 @@ public static class SourceDocumentEdition
                     {
                         ["lig_id"] = l.LigId, ["type"] = type, ["niveau"] = niveau, ["numero"] = l.LigNumerotation, ["code"] = l.LigCode,
                         ["libelle_html"] = l.LigLibelleAffiche ?? l.LigLibelleHtml, ["libelle"] = l.LigLibelleBrut,
+                        ["libelle_style_html"] = l.LigLibelleAffiche ?? l.LigLibelleHtml,
                         ["qte"] = l.LigQte, ["unite"] = l.LigUntCode, ["pu"] = l.LigPvRemise ?? l.LigPv, ["pu_brut"] = l.LigPv,
                         ["remise_pct"] = l.LigCoefRemise is decimal cr && cr != 1 ? (1 - cr) * 100 : null,
                         ["montant"] = l.LigMontantHt, ["taux_tva"] = l.LigTauxTva, ["type_prix"] = typePrix,
@@ -762,6 +768,7 @@ public static class SourceDocumentEdition
                         ["lots"] = lots?.GetValueOrDefault(l.LigId)?.DeepClone(),
                         ["lots_texte"] = LotsStockBtp.TexteLots(lots?.GetValueOrDefault(l.LigId)),
                     };
+                    if (styles?.GetValueOrDefault(l.LigId) is { } style) AppliquerStyle(o, style);
                     res.Add(o);
                 }
                 Visiter(l.LigId, niveau + 1, typePrix, composante || l.LigTylId == TL.Ouvrage);
@@ -778,6 +785,36 @@ public static class SourceDocumentEdition
         }
         Visiter(0, 0, "V", false);
         return res;
+    }
+
+    private static readonly System.Text.RegularExpressions.Regex CouleurHexa = new("^#[0-9a-f]{6}\\z", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    /// <summary>
+    /// Style résolu d'une ligne pour les modèles : « style » (couleur, fond, gras, italique, souligne, barre, taille ; les couleurs
+    /// du thème --nom, sans valeur dans une édition, sont omises) et « libelle_style_html » (libellé enveloppé de la couleur et de
+    /// la mise en forme : celle saisie dans le libellé reste au-dessus). Sans style : « style » vide, libellé inchangé.
+    /// </summary>
+    private static void AppliquerStyle(JsonObject o, StyleLigne s)
+    {
+        var couleur = s.Couleur is { } c && CouleurHexa.IsMatch(c) ? c : null;
+        var fond = s.Fond is { } f && CouleurHexa.IsMatch(f) ? f : null;
+        var st = new JsonObject();
+        if (couleur is not null) st["couleur"] = couleur;
+        if (fond is not null) st["fond"] = fond;
+        if (s.Gras is not null) st["gras"] = s.Gras;
+        if (s.Italique is not null) st["italique"] = s.Italique;
+        if (s.Souligne is not null) st["souligne"] = s.Souligne;
+        if (s.Barre is not null) st["barre"] = s.Barre;
+        if (s.Taille is not null) st["taille"] = s.Taille;
+        if (st.Count == 0) return;
+        o["style"] = st;
+        var css = new List<string>();
+        if (couleur is not null) css.Add($"color:{couleur}");
+        if (s.Gras is not null) css.Add($"font-weight:{(s.Gras == true ? "bold" : "normal")}");
+        if (s.Italique is not null) css.Add($"font-style:{(s.Italique == true ? "italic" : "normal")}");
+        var deco = string.Join(' ', new[] { s.Souligne == true ? "underline" : null, s.Barre == true ? "line-through" : null }.Where(x => x is not null));
+        if (deco.Length > 0) css.Add($"text-decoration:{deco}");
+        if (css.Count > 0 && o["libelle_html"]?.GetValue<string>() is { Length: > 0 } html) o["libelle_style_html"] = $"<span style=\"{string.Join(';', css)}\">{html}</span>";
     }
 
     private static string Html(string? texte) => System.Net.WebUtility.HtmlEncode(texte ?? "");
@@ -982,6 +1019,8 @@ public static class SourceDocumentEdition
             ("lignes[].avt_montant_cumul", "Montant HT cumulé", "montant"), ("lignes[].avt_montant_precedent", "Montant HT précédent", "montant"),
             ("lignes[].avt_pct_precedent", "Avancement précédent (%)", "nombre"), ("lignes[].avt_qte_marche", "Quantité du marché", "nombre"),
             ("lignes[].avt_montant_marche", "Montant HT du marché", "montant"),
+            ("lignes[].style", "Style résolu de la ligne (vide sans style) : couleur et fond en #rrggbb, gras, italique, souligne, barre, taille (PETITE, NORMALE, GRANDE)", "objet"),
+            ("lignes[].libelle_style_html", "Libellé affiché enveloppé du style de la ligne (couleur, gras, italique, souligné, barré ; la mise en forme du libellé reste au-dessus), HTML : html: true", "html"),
             ("lignes[].description_html", "Description technique de l'élément de bibliothèque appelé (HTML : html: true)", "html"),
             ("lignes[].lots", "Lots et numéros de série de la ligne (pièces de stock : mouvements de la pièce validée, sinon répartition saisie)", "collection"),
             ("lignes[].lots[].numero", "Numéro du lot ou de série", "texte"), ("lignes[].lots[].quantite", "Quantité du lot", "nombre"),
