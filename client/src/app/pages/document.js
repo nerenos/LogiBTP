@@ -200,6 +200,8 @@ const versSaisie = (d) => ({
   document: d.document, lignes: d.lignes, metres: d.metres ?? [], variables: d.variables ?? [], ventilations: d.ventilations ?? [],
   // Échéancier enregistré et règlement du tiers (lecture seule, section Règlement de l'entête).
   echeances: d.echeances ?? [], reglement_tiers: d.reglement_tiers ?? null,
+  // Zones supplémentaires d'entête (colonnes x_), enregistrées avec le document.
+  zones: d.zones ?? {},
 });
 
 export class PageDocument extends PageBase {

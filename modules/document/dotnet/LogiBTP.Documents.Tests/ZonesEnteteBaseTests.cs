@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using LogiBTP.Documents.Web;
 using LogiBTP.Socle;
 using LogiBTP.Socle.Testing;
@@ -229,5 +230,48 @@ public sealed class ZonesEnteteBaseTests
         await zones.Creer(Demande("x_dev", "texte", typeDocument: "DEV"), Chef, default);
         await Assert.ThrowsAsync<PostgresException>(() => Executer(b.Connexion, "DELETE FROM type_document WHERE tyd_code = 'DEV'"));
         await Executer(b.Connexion, "DELETE FROM type_document WHERE tyd_code = 'FAC'");
+    }
+
+    [Fact]
+    public async Task Valeurs_ecrites_et_lues_avec_le_document_selon_la_portee_du_type()
+    {
+        if (Admin is null) return;
+        await using var b = await BaseZones.CreerAsync();
+        var (zones, db, _) = Service(b.Connexion);
+        await using var _ = db;
+        await zones.Creer(Demande("x_badge", "texte", "Badge"), Chef, default);
+        await zones.Creer(Demande("x_cout", "montant", "Coût", famille: "V"), Chef, default);
+        await zones.Creer(Demande("x_poids", "nombre", "Poids"), Chef, default);
+        await zones.Creer(Demande("x_jour", "date", "Jour", typeDocument: "DEV"), Chef, default);
+        await zones.Creer(Demande("x_ok", "booleen", "Ok"), Chef, default);
+        await zones.Creer(Demande("x_niveau", "liste", "Niveau", valeurs: [new() { Valeur = "a" }]), Chef, default);
+        await Executer(b.Connexion, "INSERT INTO document (ent_id) VALUES (1)");
+
+        var saisie = new Dictionary<string, JsonNode?>
+        {
+            ["x_badge"] = "  B-12 ", ["x_cout"] = 1234.5m, ["x_poids"] = 2.25m, ["x_jour"] = "2026-03-04", ["x_ok"] = true, ["x_niveau"] = "a",
+            ["x_inconnue"] = "ignorée",
+        };
+        await ValeursZonesEntete<Document, DocumentLigne>.Ecrire(db, 1, "V", "DEV", saisie, default);
+        var lu = await ValeursZonesEntete<Document, DocumentLigne>.Lire(db, 1, default);
+        Assert.Equal("B-12", lu["x_badge"]!.GetValue<string>());
+        Assert.Equal(1234.5m, lu["x_cout"]!.GetValue<decimal>());
+        Assert.Equal(2.25m, lu["x_poids"]!.GetValue<decimal>());
+        Assert.Equal("2026-03-04", lu["x_jour"]!.GetValue<string>());
+        Assert.True(lu["x_ok"]!.GetValue<bool>());
+        Assert.Equal("a", lu["x_niveau"]!.GetValue<string>());
+        Assert.False(lu.ContainsKey("x_inconnue"));
+
+        // Une facture de vente : x_jour (type DEV) n'existe pas, sa valeur reste ; une zone absente de la saisie est vidée.
+        await ValeursZonesEntete<Document, DocumentLigne>.Ecrire(db, 1, "V", "FAC", new Dictionary<string, JsonNode?> { ["x_badge"] = "Z", ["x_jour"] = "2030-01-01" }, default);
+        lu = await ValeursZonesEntete<Document, DocumentLigne>.Lire(db, 1, default);
+        Assert.Equal("Z", lu["x_badge"]!.GetValue<string>());
+        Assert.Equal("2026-03-04", lu["x_jour"]!.GetValue<string>());
+        Assert.False(lu.ContainsKey("x_cout"));
+        Assert.False(lu.ContainsKey("x_ok"));
+
+        // Achat : la zone de portée famille V n'existe pas non plus.
+        await ValeursZonesEntete<Document, DocumentLigne>.Ecrire(db, 1, "A", "CMD", new Dictionary<string, JsonNode?> { ["x_cout"] = 9m }, default);
+        Assert.False((await ValeursZonesEntete<Document, DocumentLigne>.Lire(db, 1, default)).ContainsKey("x_cout"));
     }
 }

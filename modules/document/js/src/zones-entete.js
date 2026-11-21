@@ -136,3 +136,51 @@ export function demandeCreationZone({ colonne, type, libelle, groupe, ordre, obl
     famille: famille || null, type_document: typeDocument || null,
   };
 }
+
+// ------------------------------------------------------------------ valeurs saisies d'un document (lot 11)
+
+const estVide = (v) => v === null || v === undefined || (typeof v === 'string' && v.trim() === '');
+
+function dateValide(v) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
+  if (!m) return false;
+  const [a, mo, j] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const d = new Date(Date.UTC(a, mo - 1, j));
+  return d.getUTCFullYear() === a && d.getUTCMonth() === mo - 1 && d.getUTCDate() === j;
+}
+
+/** Une valeur non vide convient-elle au type de la zone ? (texte, liste d'une valeur connue, nombre, montant de 16 chiffres au plus, date AAAA-MM-JJ, booléen). */
+export function valeurZoneValide(zone, valeur) {
+  switch (zone.type) {
+    case TYPE_ZONE_ENTETE.TEXTE: return typeof valeur === 'string';
+    case TYPE_ZONE_ENTETE.LISTE: return typeof valeur === 'string' && (zone.valeurs ?? []).some((o) => o.valeur === valeur);
+    case TYPE_ZONE_ENTETE.NOMBRE: return typeof valeur === 'number' && Number.isFinite(valeur);
+    case TYPE_ZONE_ENTETE.MONTANT: return typeof valeur === 'number' && Number.isFinite(valeur) && Math.abs(valeur) < 1e16;
+    case TYPE_ZONE_ENTETE.DATE: return typeof valeur === 'string' && dateValide(valeur);
+    case TYPE_ZONE_ENTETE.CASE_A_COCHER: return typeof valeur === 'boolean';
+    default: return false;
+  }
+}
+
+/**
+ * Erreurs des valeurs d'un document de cette famille et de ce type : `{ champ: colonne, code }` dans l'ordre des zones.
+ * Une valeur non vide du mauvais type ou hors liste : ZONE_VALEUR_INVALIDE (toujours) ; une zone obligatoire vide :
+ * ZONE_OBLIGATOIRE (à la validation seulement, `validation` vrai ; jamais pour une case à cocher).
+ */
+export function erreursSaisieZones(zones, famille, typeDocument, valeurs, validation = false) {
+  const erreurs = [];
+  for (const z of zonesDuType(zones, famille, typeDocument)) {
+    const v = valeurs?.[z.colonne];
+    if (estVide(v)) {
+      if (validation && z.obligatoire && z.type !== TYPE_ZONE_ENTETE.CASE_A_COCHER) erreurs.push({ champ: z.colonne, code: ERREUR_ZONE_ENTETE.OBLIGATOIRE });
+    } else if (!valeurZoneValide(z, v)) erreurs.push({ champ: z.colonne, code: ERREUR_ZONE_ENTETE.VALEUR_INVALIDE });
+  }
+  return erreurs;
+}
+
+/** Valeurs à reprendre d'un document dans un autre (copie, indice, transformation) : celles des zones qui existent dans le type cible. */
+export function zonesReprises(zones, valeurs, famille, typeDocument) {
+  const reprises = {};
+  for (const z of zonesDuType(zones, famille, typeDocument)) if (!estVide(valeurs?.[z.colonne])) reprises[z.colonne] = valeurs[z.colonne];
+  return reprises;
+}

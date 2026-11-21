@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   nomZoneValide, erreursCreationZone, porteeZone, zonesDuType, proposerColonneZone, lireValeursZone, ecrireValeursZone,
-  controleDeErreurZone, demandeCreationZone, ERREUR_ZONE_ENTETE, TYPE_ZONE_ENTETE,
+  controleDeErreurZone, demandeCreationZone, erreursSaisieZones, zonesReprises, ERREUR_ZONE_ENTETE, TYPE_ZONE_ENTETE,
 } from '../src/index.js';
 
 // Jeu partagé avec ZonesEntete.cs (LogiBTP.Documents.Tests).
@@ -17,6 +17,15 @@ describe('zones d\'entête (jeu partagé avec le C#)', () => {
   for (const p of jeu.portees) it(`portée de ${p.zone}`, () => expect(porteeZone(jeu.zones.find((z) => z.colonne === p.zone))).toBe(p.attendu));
   for (const d of jeu.documents) {
     it(`zones d'un document : ${d.nom}`, () => expect(zonesDuType(jeu.zones, d.famille, d.type).map((z) => z.colonne)).toEqual(d.attendu));
+  }
+});
+
+describe('zones d\'entête : valeurs saisies (jeu partagé avec le C#)', () => {
+  for (const v of jeu.saisies) {
+    it(`saisie : ${v.nom}`, () => expect(erreursSaisieZones(jeu.zones_saisie, v.famille, v.type, v.valeurs, v.validation)).toEqual(v.attendu));
+  }
+  for (const r of jeu.reprises) {
+    it(`reprise : ${r.nom}`, () => expect(zonesReprises(jeu.zones_saisie, r.valeurs, r.famille, r.type)).toEqual(r.attendu));
   }
 });
 

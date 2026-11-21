@@ -19,7 +19,7 @@
 | 8 | PA de référence et plan de mise à jour de la bibliothèque | `modules/bibliotheque` | — | A FAIRE |
 | 9 | Indicateur d'écart de PA et mise à jour depuis le document | cœur | 8 | A FAIRE |
 | 10 | Zones d'entête : registre, colonnes x_ et paramétrage | `modules/document` | — | FAIT (20/11/2026) |
-| 11 | Zones d'entête : saisie, validation, copie, transformation | `modules/document` | 10 | A FAIRE |
+| 11 | Zones d'entête : saisie, validation, copie, transformation | `modules/document` | 10 | FAIT (21/11/2026) |
 | 12 | Zones d'entête : listes, éditions, droits du cœur | cœur | 11 | A FAIRE |
 | 13 | Tests e2e et documentation | cœur | 3, 4, 6, 7, 9, 12 | A FAIRE |
 
@@ -161,7 +161,7 @@
   `DeriveSchema.cs`) ; `propriete_definition` inchangée.
 - **Critère de fin** : `dotnet test LogiBTP.slnx` (création, refus d'un nom, d'un type, retrait), `npm run manifeste`.
 
-## Lot 11 : zones d'entête, saisie et cycle (module Document)
+## Lot 11 : zones d'entête, saisie et cycle (module Document) : FAIT (21/11/2026)
 
 - **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `Web/DocumentService.cs` (lecture et écriture des colonnes `x_` de la portée du type, `CopierEnteteSaisie`),

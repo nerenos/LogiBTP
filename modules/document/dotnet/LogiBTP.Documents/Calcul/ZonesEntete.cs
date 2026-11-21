@@ -1,3 +1,6 @@
+using System.Globalization;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 
 namespace LogiBTP.Documents;
@@ -108,4 +111,58 @@ public static partial class ZonesEntete
     public static List<ZoneEntete> DuType(IEnumerable<ZoneEntete> zones, string? famille, string? typeDocument) =>
         zones.Where(z => Applicable(z, famille, typeDocument))
             .OrderBy(z => z.Groupe ?? "", StringComparer.Ordinal).ThenBy(z => z.Ordre).ThenBy(z => z.Colonne, StringComparer.Ordinal).ToList();
+
+    private static bool Vide(JsonNode? v) => v is null || v.GetValueKind() == JsonValueKind.Null
+        || (v.GetValueKind() == JsonValueKind.String && string.IsNullOrWhiteSpace(v.GetValue<string>()));
+
+    private static bool Nombre(JsonNode v, out decimal d)
+    {
+        d = 0;
+        if (v.GetValueKind() != JsonValueKind.Number) return false;
+        try { d = v.GetValue<decimal>(); return true; }
+        catch (Exception e) when (e is FormatException or OverflowException or InvalidOperationException) { return false; }
+    }
+
+    /// <summary>Une valeur non vide convient-elle au type de la zone ? (même règle que valeurZoneValide, zones-entete.js)</summary>
+    public static bool ValeurValide(ZoneEntete z, JsonNode valeur) => z.Type switch
+    {
+        TypesZoneEntete.Texte => valeur.GetValueKind() == JsonValueKind.String,
+        TypesZoneEntete.Liste => valeur.GetValueKind() == JsonValueKind.String && (z.Valeurs ?? []).Any(o => o.Valeur == valeur.GetValue<string>()),
+        TypesZoneEntete.Nombre => Nombre(valeur, out _),
+        TypesZoneEntete.Montant => Nombre(valeur, out var m) && Math.Abs(m) < 1e16m,
+        TypesZoneEntete.Date => valeur.GetValueKind() == JsonValueKind.String
+            && DateOnly.TryParseExact(valeur.GetValue<string>(), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out _),
+        TypesZoneEntete.CaseACocher => valeur.GetValueKind() is JsonValueKind.True or JsonValueKind.False,
+        _ => false,
+    };
+
+    /// <summary>
+    /// Erreurs des valeurs d'un document de cette famille et de ce type (champ = colonne), dans l'ordre des zones : valeur non vide
+    /// du mauvais type ou hors liste (ZONE_VALEUR_INVALIDE, toujours) ; zone obligatoire vide (ZONE_OBLIGATOIRE, à la validation
+    /// seulement ; jamais une case à cocher). Même règle que erreursSaisieZones (zones-entete.js).
+    /// </summary>
+    public static List<ErreurZone> ErreursSaisie(IEnumerable<ZoneEntete> zones, string? famille, string? typeDocument, IReadOnlyDictionary<string, JsonNode?>? valeurs, bool validation)
+    {
+        var erreurs = new List<ErreurZone>();
+        foreach (var z in DuType(zones, famille, typeDocument))
+        {
+            JsonNode? v = null;
+            valeurs?.TryGetValue(z.Colonne, out v);
+            if (Vide(v))
+            {
+                if (validation && z.Obligatoire && z.Type != TypesZoneEntete.CaseACocher) erreurs.Add(new(z.Colonne, ErreursZoneEntete.Obligatoire));
+            }
+            else if (!ValeurValide(z, v!)) erreurs.Add(new(z.Colonne, ErreursZoneEntete.ValeurInvalide));
+        }
+        return erreurs;
+    }
+
+    /// <summary>Valeurs non vides des zones qui existent dans le type cible (copie, nouvel indice, transformation).</summary>
+    public static Dictionary<string, JsonNode?> Reprises(IEnumerable<ZoneEntete> zones, IReadOnlyDictionary<string, JsonNode?>? valeurs, string? famille, string? typeDocument)
+    {
+        var reprises = new Dictionary<string, JsonNode?>();
+        foreach (var z in DuType(zones, famille, typeDocument))
+            if (valeurs is not null && valeurs.TryGetValue(z.Colonne, out var v) && !Vide(v)) reprises[z.Colonne] = v;
+        return reprises;
+    }
 }

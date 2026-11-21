@@ -16,6 +16,8 @@ public class DocumentComplet<TDoc, TLigne>
     public List<DocumentTva> Tva { get; set; } = [];
     /// <summary>Échéancier enregistré à la validation (modifié par PUT /documents/{id}/echeances).</summary>
     public List<DocumentEcheance> Echeances { get; set; } = [];
+    /// <summary>Valeurs des zones supplémentaires d'entête (colonnes x_ de document) : colonne → valeur (texte, nombre, date AAAA-MM-JJ, booléen) ; absente = vide ; null (document non chargé avec ses zones) : valeurs inchangées à l'enregistrement.</summary>
+    public Dictionary<string, System.Text.Json.Nodes.JsonNode?>? Zones { get; set; }
     /// <summary>Condition et mode de règlement du tiers (spécialisation), proposés quand le document n'en a pas.</summary>
     public ReglementTiers? ReglementTiers { get; set; }
     /// <summary>Version du moteur client, transmise à l'enregistrement.</summary>
@@ -200,6 +202,8 @@ public sealed class DefinitionType
     public string? ConditionDefaut { get; set; }
     /// <summary>Règles résolues pour le type (type, famille, global, défaut) : code → valeur.</summary>
     public Dictionary<string, System.Text.Json.Nodes.JsonNode?> Regles { get; set; } = [];
+    /// <summary>Zones supplémentaires d'entête actives de ce type (portée globale, famille ou type), dans l'ordre de l'onglet Entête.</summary>
+    public List<ZoneEntete> Zones { get; set; } = [];
 }
 
 /// <summary>Rejet d'un document envoyé : motif.</summary>

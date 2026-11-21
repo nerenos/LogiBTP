@@ -130,4 +130,6 @@ public static class ErreursZoneEntete
     public const string Existe = "ZONE_EXISTE";
     public const string Inconnue = "ZONE_INCONNUE";
     public const string TableAbsente = "ZONE_TABLE_ABSENTE";
+    public const string Obligatoire = "ZONE_OBLIGATOIRE";
+    public const string ValeurInvalide = "ZONE_VALEUR_INVALIDE";
 }

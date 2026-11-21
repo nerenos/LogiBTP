@@ -293,6 +293,7 @@
     },
     "etapes": {
       "entete": "Entête",
+      "zone_entete": "Zone d'entête",
       "tva_document": "TVA du document",
       "numerotation": "Numérotation",
       "propriete": "Propriété",
@@ -518,6 +519,7 @@
       "consolide": "Consolidé"
     },
     "zones": {
+      "groupe_defaut": "Zones supplémentaires",
       "titre": "Zones d'entête supplémentaires",
       "aide": "Zones ajoutées à l'entête des documents (colonnes « x_ » de la table document, sans reprise du schéma). La portée dit où la zone s'applique : tous les documents, une famille ou un type de document. Le nom technique et le type ne se modifient plus après la création ; une zone désactivée disparaît des documents mais garde ses valeurs. Une zone obligatoire est contrôlée à la validation du document.",
       "libelle": "Libellé",

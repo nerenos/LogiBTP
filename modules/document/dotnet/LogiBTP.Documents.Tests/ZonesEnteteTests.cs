@@ -77,4 +77,45 @@ public class ZonesEnteteTests
         var obtenu = ZonesEntete.DuType(zones, d["famille"]!.GetValue<string>(), d["type"]!.GetValue<string>()).Select(z => z.Colonne).ToList();
         Assert.Equal(d["attendu"]!.AsArray().Select(x => x!.GetValue<string>()).ToList(), obtenu);
     }
+
+    public static TheoryData<int> Saisies()
+    {
+        var data = new TheoryData<int>();
+        for (var k = 0; k < Jeu()["saisies"]!.AsArray().Count; k++) data.Add(k);
+        return data;
+    }
+
+    public static TheoryData<int> Reprises()
+    {
+        var data = new TheoryData<int>();
+        for (var k = 0; k < Jeu()["reprises"]!.AsArray().Count; k++) data.Add(k);
+        return data;
+    }
+
+    private static Dictionary<string, JsonNode?> Valeurs(JsonObject o) => o.ToDictionary(kv => kv.Key, kv => kv.Value?.DeepClone());
+
+    [Theory]
+    [MemberData(nameof(Saisies))]
+    public void Saisie_identique_au_js(int i)
+    {
+        var jeu = Jeu();
+        var s = jeu["saisies"]![i]!;
+        var zones = jeu["zones_saisie"]!.AsArray().Select(z => Zone(z!)).ToList();
+        var obtenu = ZonesEntete.ErreursSaisie(zones, s["famille"]!.GetValue<string>(), s["type"]!.GetValue<string>(), Valeurs(s["valeurs"]!.AsObject()), s["validation"]!.GetValue<bool>());
+        var attendu = s["attendu"]!.AsArray().Select(e => new ErreurZone(e!["champ"]!.GetValue<string>(), e["code"]!.GetValue<string>())).ToList();
+        Assert.Equal(attendu, obtenu);
+    }
+
+    [Theory]
+    [MemberData(nameof(Reprises))]
+    public void Reprise_identique_au_js(int i)
+    {
+        var jeu = Jeu();
+        var r = jeu["reprises"]![i]!;
+        var zones = jeu["zones_saisie"]!.AsArray().Select(z => Zone(z!)).ToList();
+        var obtenu = ZonesEntete.Reprises(zones, Valeurs(r["valeurs"]!.AsObject()), r["famille"]!.GetValue<string>(), r["type"]!.GetValue<string>());
+        var attendu = r["attendu"]!.AsObject();
+        Assert.Equal(attendu.Select(kv => kv.Key).Order().ToList(), obtenu.Keys.Order().ToList());
+        foreach (var kv in attendu) Assert.Equal(kv.Value!.ToJsonString(), obtenu[kv.Key]!.ToJsonString());
+    }
 }

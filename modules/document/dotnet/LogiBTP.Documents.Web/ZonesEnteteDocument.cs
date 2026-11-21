@@ -93,7 +93,9 @@ public class ZonesEnteteDocument<TDoc, TLigne>(DocumentDbContext<TDoc, TLigne> d
         : JsonSerializer.Serialize((valeurs ?? []).Select(v => new OptionZone { Valeur = v.Valeur, Libelle = string.IsNullOrWhiteSpace(v.Libelle) ? v.Valeur : v.Libelle }), JsonValeurs);
 
     /// <summary>Zones du registre (actives ou non) dans l'ordre famille, type, groupe, ordre, colonne ; le type de document par son code.</summary>
-    public virtual async Task<List<ZoneEntete>> Zones(CancellationToken ct)
+    public virtual Task<List<ZoneEntete>> Zones(CancellationToken ct) => LireRegistre(db, ct);
+
+    internal static async Task<List<ZoneEntete>> LireRegistre(DocumentDbContext<TDoc, TLigne> db, CancellationToken ct)
     {
         var types = (await db.TypesDocument.AsNoTracking().Select(t => new { t.TydId, t.TydCode }).ToListAsync(ct)).ToDictionary(t => t.TydId, t => t.TydCode);
         return (await db.Set<ZoneEnteteParametre>().AsNoTracking().OrderBy(z => z.ZedGroupe).ThenBy(z => z.ZedOrdre).ThenBy(z => z.ZedColonne).ToListAsync(ct))
