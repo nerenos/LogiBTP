@@ -73,3 +73,32 @@ export const TAILLE_STYLE_LIGNE = Object.freeze({
   NORMALE: 'NORMALE',
   GRANDE: 'GRANDE',
 });
+
+/** Types d'une zone supplémentaire d'entête, en colonne x_ de `document` (registre document_zone_entete). */
+export const TYPE_ZONE_ENTETE = Object.freeze({
+  TEXTE: 'texte',
+  NOMBRE: 'nombre',
+  MONTANT: 'montant',
+  DATE: 'date',
+  CASE_A_COCHER: 'booleen',
+  LISTE: 'liste',
+});
+
+/** Portée d'une zone d'entête : tous les documents, une famille, un type de document. */
+export const PORTEE_ZONE_ENTETE = Object.freeze({
+  GLOBAL: 'GLOBAL',
+  FAMILLE: 'FAMILLE',
+  TYPE: 'TYPE',
+});
+
+/** Erreurs de l'administration des zones d'entête (code des erreurs de champ d'une réponse 422 VALIDATION). */
+export const ERREUR_ZONE_ENTETE = Object.freeze({
+  NOM_INVALIDE: 'ZONE_NOM_INVALIDE',
+  TYPE_INVALIDE: 'ZONE_TYPE_INVALIDE',
+  LIBELLE_OBLIGATOIRE: 'ZONE_LIBELLE_OBLIGATOIRE',
+  VALEURS: 'ZONE_VALEURS',
+  PORTEE_INVALIDE: 'ZONE_PORTEE_INVALIDE',
+  EXISTE: 'ZONE_EXISTE',
+  INCONNUE: 'ZONE_INCONNUE',
+  TABLE_ABSENTE: 'ZONE_TABLE_ABSENTE',
+});

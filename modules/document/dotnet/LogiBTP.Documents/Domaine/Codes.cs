@@ -94,3 +94,40 @@ public static class TaillesStyleLigne
 
     public static readonly string[] Toutes = [Petite, Normale, Grande];
 }
+
+/// <summary>Types d'une zone supplémentaire d'entête, en colonne x_ de document (registre document_zone_entete).</summary>
+public static class TypesZoneEntete
+{
+    public const string Texte = "texte";
+    public const string Nombre = "nombre";
+    /// <summary>Montant : numeric(18,2).</summary>
+    public const string Montant = "montant";
+    public const string Date = "date";
+    /// <summary>Case à cocher : boolean.</summary>
+    public const string CaseACocher = "booleen";
+    /// <summary>Liste de valeurs : text, valeurs du registre.</summary>
+    public const string Liste = "liste";
+
+    public static readonly string[] Tous = [Texte, Nombre, Montant, Date, CaseACocher, Liste];
+}
+
+/// <summary>Portée d'une zone d'entête : tous les documents, une famille, un type de document.</summary>
+public static class PorteesZoneEntete
+{
+    public const string Global = "GLOBAL";
+    public const string Famille = "FAMILLE";
+    public const string Type = "TYPE";
+}
+
+/// <summary>Erreurs de l'administration des zones d'entête (code des erreurs de champ d'une réponse 422 VALIDATION).</summary>
+public static class ErreursZoneEntete
+{
+    public const string NomInvalide = "ZONE_NOM_INVALIDE";
+    public const string TypeInvalide = "ZONE_TYPE_INVALIDE";
+    public const string LibelleObligatoire = "ZONE_LIBELLE_OBLIGATOIRE";
+    public const string Valeurs = "ZONE_VALEURS";
+    public const string PorteeInvalide = "ZONE_PORTEE_INVALIDE";
+    public const string Existe = "ZONE_EXISTE";
+    public const string Inconnue = "ZONE_INCONNUE";
+    public const string TableAbsente = "ZONE_TABLE_ABSENTE";
+}

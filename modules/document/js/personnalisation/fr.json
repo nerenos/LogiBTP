@@ -517,6 +517,34 @@
       "tranche": "Pied",
       "consolide": "Consolidé"
     },
+    "zones": {
+      "titre": "Zones d'entête supplémentaires",
+      "aide": "Zones ajoutées à l'entête des documents (colonnes « x_ » de la table document, sans reprise du schéma). La portée dit où la zone s'applique : tous les documents, une famille ou un type de document. Le nom technique et le type ne se modifient plus après la création ; une zone désactivée disparaît des documents mais garde ses valeurs. Une zone obligatoire est contrôlée à la validation du document.",
+      "libelle": "Libellé",
+      "colonne": "Nom technique",
+      "type": "Type",
+      "groupe": "Groupe",
+      "portee": "Portée",
+      "valeurs": "Valeurs de la liste",
+      "valeurs_aide": "Une valeur par ligne, « valeur | libellé » pour un libellé différent",
+      "ordre": "Ordre",
+      "obligatoire": "Obligatoire",
+      "actif": "Actif",
+      "nouvelle": "Nouvelle zone : libellé",
+      "creer": "Créer la zone",
+      "creee": "Zone « {{libelle}} » créée",
+      "enregistree": "Zone « {{libelle}} » enregistrée",
+      "supprimee": "Zone « {{libelle}} » supprimée",
+      "confirmer_suppression": "Supprimer la zone « {{libelle}} » ({{colonne}}) ? La colonne est retirée de la base et toutes les valeurs saisies dans cette zone sont définitivement perdues.",
+      "types": {
+        "texte": "Texte",
+        "nombre": "Nombre",
+        "montant": "Montant",
+        "date": "Date",
+        "booleen": "Case à cocher",
+        "liste": "Liste de valeurs"
+      }
+    },
     "styles": {
       "titre": "Styles des lignes",
       "aide": "Mise en forme de chaque classe de ligne (tranches, section, ouvrage, élément, texte…). Le plus précis l'emporte : global, famille, type de document, document, puis style propre de la ligne ; la mise en forme saisie dans un libellé reste au-dessus. Un changement s'applique à tous les documents à leur prochaine ouverture.",

@@ -155,6 +155,8 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
         new("/api/fiches/{type}/chrono", ModeRoute.Parametrage),
         // Champs supplémentaires en colonnes x_ des fiches : administrateur (u.ExigerAdmin) et droit sur « parametres ».
         new("/api/champs-supplementaires", ModeRoute.Parametrage),
+        // Zones supplémentaires d'entête des documents (colonnes x_ de document) : administrateur (u.ExigerAdmin) et droit sur « parametres ».
+        new("/api/zones-entete", ModeRoute.Parametrage),
         // Reprise d'une base MDE ou OptimBTP (module Import) : administrateur seul (service : ExigerAdmin).
         new("/api/reprise", ModeRoute.Parametrage),
         new("/api/crm/parametres", ModeRoute.Parametrage),

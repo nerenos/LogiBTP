@@ -261,6 +261,11 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
   du cœur qui la rejouerait côté C# (`UnitesLignesBtp`) reste à décider si un agent ou une édition doit l'utiliser. Hors ligne :
   pas d'indicateur.
 
+- [ ] Zones d'entête des documents (plan fiches-lignes-documents, lot 10, fait le 20/11/2026) : registre, colonnes `x_` de `document`,
+  routes `/api/zones-entete` et écran de paramétrage faits ; le document ne les lit ni ne les écrit encore (lot 11 : `ZonesEnteteDocument.Zones`,
+  `zonesDuType` / `ZonesEntete.DuType`, contrôle des obligatoires à la validation, copie, nouvel indice, transformation). Le menu
+  Paramètres et le droit propre restent au lot 12 (l'écran est dans la page Paramètres des documents).
+
 - [ ] Mode hors ligne : appel de la bibliothèque (F3) limité aux recherches déjà faites en ligne (réponses gardées par le
   service worker) ; à étudier : copie locale des éléments consultés ou d'une bibliothèque choisie pour la recherche hors
   ligne. Écrans hors document (fiches, pointage…) : consultation seulement.

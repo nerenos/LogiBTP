@@ -1,0 +1,46 @@
+{
+  "description": "Zones d'entête (zones-entete.js ↔ ZonesEntete.cs) : nom de colonne, validation d'une création, portée et zones applicables à un document.",
+  "noms": [
+    { "colonne": "x_ref_marche", "attendu": true },
+    { "colonne": "x_a", "attendu": true },
+    { "colonne": "ent_numero", "attendu": false },
+    { "colonne": "x_", "attendu": false },
+    { "colonne": "x_Majuscule", "attendu": false },
+    { "colonne": "x_1chiffre", "attendu": false },
+    { "colonne": "x_a\"; DROP TABLE document; --", "attendu": false },
+    { "colonne": "x_abcdefghijklmnopqrstuvwxyzabcdefghijklmno", "attendu": true },
+    { "colonne": "x_abcdefghijklmnopqrstuvwxyzabcdefghijklmnop", "attendu": false }
+  ],
+  "validations": [
+    { "nom": "texte valide", "zone": { "colonne": "x_ref", "type": "texte", "libelle": "Référence" }, "attendu": [] },
+    { "nom": "liste valide, portée famille", "zone": { "colonne": "x_niveau", "type": "liste", "libelle": "Niveau", "famille": "V", "valeurs": [{ "valeur": "a" }, { "valeur": "b", "libelle": "B" }] }, "attendu": [] },
+    { "nom": "nom, type et libellé invalides", "zone": { "colonne": "ent_x", "type": "json", "libelle": "  " },
+      "attendu": [{ "champ": "ent_x", "code": "ZONE_NOM_INVALIDE" }, { "champ": "ent_x", "code": "ZONE_TYPE_INVALIDE" }, { "champ": "ent_x", "code": "ZONE_LIBELLE_OBLIGATOIRE" }] },
+    { "nom": "liste sans valeur", "zone": { "colonne": "x_l", "type": "liste", "libelle": "L", "valeurs": [] }, "attendu": [{ "champ": "x_l", "code": "ZONE_VALEURS" }] },
+    { "nom": "liste avec doublon et valeur vide", "zone": { "colonne": "x_l", "type": "liste", "libelle": "L", "valeurs": [{ "valeur": "a" }, { "valeur": "a" }, { "valeur": " " }] },
+      "attendu": [{ "champ": "x_l", "code": "ZONE_VALEURS" }, { "champ": "x_l", "code": "ZONE_VALEURS" }] },
+    { "nom": "famille et type ensemble", "zone": { "colonne": "x_p", "type": "date", "libelle": "P", "famille": "V", "type_document": "DEV" }, "attendu": [{ "champ": "x_p", "code": "ZONE_PORTEE_INVALIDE" }] },
+    { "nom": "famille inconnue", "zone": { "colonne": "x_p", "type": "date", "libelle": "P", "famille": "Z" }, "attendu": [{ "champ": "x_p", "code": "ZONE_PORTEE_INVALIDE" }] },
+    { "nom": "libellé de plus de 100 caractères", "zone": { "colonne": "x_p", "type": "texte", "libelle": "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012" }, "attendu": [{ "champ": "x_p", "code": "ZONE_LIBELLE_OBLIGATOIRE" }] }
+  ],
+  "zones": [
+    { "colonne": "x_global", "type": "texte", "libelle": "Global", "groupe": "Chantier", "ordre": 2 },
+    { "colonne": "x_vente", "type": "texte", "libelle": "Famille V", "groupe": "Chantier", "ordre": 1, "famille": "V" },
+    { "colonne": "x_achat", "type": "texte", "libelle": "Famille A", "famille": "A" },
+    { "colonne": "x_devis", "type": "date", "libelle": "Devis", "type_document": "DEV", "ordre": 5 },
+    { "colonne": "x_facture", "type": "date", "libelle": "Facture", "type_document": "FAC" },
+    { "colonne": "x_inactive", "type": "texte", "libelle": "Inactive", "actif": false },
+    { "colonne": "x_sans_groupe_b", "type": "texte", "libelle": "B", "ordre": 1 },
+    { "colonne": "x_sans_groupe_a", "type": "texte", "libelle": "A", "ordre": 1 }
+  ],
+  "portees": [
+    { "zone": "x_global", "attendu": "GLOBAL" },
+    { "zone": "x_vente", "attendu": "FAMILLE" },
+    { "zone": "x_devis", "attendu": "TYPE" }
+  ],
+  "documents": [
+    { "nom": "devis de vente", "famille": "V", "type": "DEV", "attendu": ["x_sans_groupe_a", "x_sans_groupe_b", "x_devis", "x_vente", "x_global"] },
+    { "nom": "facture de vente", "famille": "V", "type": "FAC", "attendu": ["x_facture", "x_sans_groupe_a", "x_sans_groupe_b", "x_vente", "x_global"] },
+    { "nom": "commande d'achat", "famille": "A", "type": "CMD", "attendu": ["x_achat", "x_sans_groupe_a", "x_sans_groupe_b", "x_global"] }
+  ]
+}

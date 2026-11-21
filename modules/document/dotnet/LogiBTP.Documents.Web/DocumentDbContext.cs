@@ -81,6 +81,7 @@ public abstract class DocumentDbContext<TDoc, TLigne>(DbContextOptions options) 
         b.Entity<EtiquetteLigne>().ToTable("etiquette_ligne").HasKey(x => x.EtlCode);
         b.Entity<CouleurTypePrix>().ToTable("couleur_type_prix").HasKey(x => x.CtpType);
         b.Entity<StyleLigneParametre>(e => { e.ToTable("style_ligne").HasKey(x => x.SliId); e.Property(x => x.SliValeur).HasColumnType("jsonb"); });
+        b.Entity<ZoneEnteteParametre>(e => { e.ToTable("document_zone_entete").HasKey(x => x.ZedColonne); e.Property(x => x.ZedValeurs).HasColumnType("jsonb"); });
         b.Entity<ModeleDocument>().ToTable("modele_document").HasKey(x => x.ModCode);
         b.Entity<VueDocument>(e => { e.ToTable("vue_document").HasKey(x => x.VdoId); e.Property(x => x.VdoDefinition).HasColumnType("jsonb"); });
         ConfigurerComplements(b);

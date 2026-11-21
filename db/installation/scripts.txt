@@ -307,6 +307,7 @@ db/1.1_facture_electronique_liste_flux.sql
 db/1.2_consultation_demandes_prix.sql
 db/1.3_pointages_ressource.sql
 modules/document/db/1.1_styles_lignes.sql
+modules/document/db/1.2_zones_entete.sql
 modules/fiche/db/1.1_champs_supplementaires.sql
 modules/import/db/1.1_reprise.sql
 

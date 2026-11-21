@@ -897,6 +897,11 @@ export const api = {
   enregistrerEtiquettesLigne: (liste) => appel('PUT', '/etiquettes-ligne', liste),
   stylesLignes: () => appel('GET', '/styles-lignes'),
   enregistrerStylesLignes: (liste) => appel('PUT', '/styles-lignes', liste),
+  // Zones supplémentaires d'entête des documents (colonnes x_ de document, administrateur) : registre, création, modification, suppression.
+  zonesEntete: () => appel('GET', '/zones-entete'),
+  creerZoneEntete: (demande) => appel('POST', '/zones-entete', demande),
+  modifierZoneEntete: (colonne, modification) => appel('PUT', `/zones-entete/${encodeURIComponent(colonne)}`, modification),
+  supprimerZoneEntete: (colonne) => appel('DELETE', `/zones-entete/${encodeURIComponent(colonne)}`),
   couleursTypePrix: () => appel('GET', '/couleurs-type-prix'),
   enregistrerCouleursTypePrix: (liste) => appel('PUT', '/couleurs-type-prix', liste),
   vuesDocument: (type) => appel('GET', `/vues-document${type?.tyd_code ? `?type=${encodeURIComponent(type.tyd_code)}` : ''}`),

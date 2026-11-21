@@ -18,7 +18,7 @@
 | 7 | Styles des lignes dans les éditions | cœur | 5 | FAIT (20/11/2026) |
 | 8 | PA de référence et plan de mise à jour de la bibliothèque | `modules/bibliotheque` | — | A FAIRE |
 | 9 | Indicateur d'écart de PA et mise à jour depuis le document | cœur | 8 | A FAIRE |
-| 10 | Zones d'entête : registre, colonnes x_ et paramétrage | `modules/document` | — | A FAIRE |
+| 10 | Zones d'entête : registre, colonnes x_ et paramétrage | `modules/document` | — | FAIT (20/11/2026) |
 | 11 | Zones d'entête : saisie, validation, copie, transformation | `modules/document` | 10 | A FAIRE |
 | 12 | Zones d'entête : listes, éditions, droits du cœur | cœur | 11 | A FAIRE |
 | 13 | Tests e2e et documentation | cœur | 3, 4, 6, 7, 9, 12 | A FAIRE |
@@ -149,7 +149,7 @@
 - **Critère de fin** : `npm test --workspace client`, `dotnet test LogiBTP.slnx` ; ligne de devis à PA modifié :
   icône, infobulle, mise à jour, icône disparue.
 
-## Lot 10 : zones d'entête, registre et colonnes x_ (module Document)
+## Lot 10 : zones d'entête, registre et colonnes x_ (module Document) : FAIT (20/11/2026)
 
 - **Agent** : `lot-dev`. **Modèle** : opus.
 - **Fichiers** : `modules/document/db/<majeur>.<mineur>_zones_entete.sql` (registre `document_zone_entete` : colonne,

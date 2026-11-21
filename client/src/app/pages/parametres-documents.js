@@ -1,7 +1,7 @@
 import { texte, texteHtml, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { MODULE_FACULTATIF } from '../codes.js';
 import { PageBase } from '@logibtp/navigation';
-import { ParametrageAffichageDocument, ParametrageStylesLignes, variablesTexteDocument } from '@logibtp/document/ui';
+import { ParametrageAffichageDocument, ParametrageStylesLignes, ParametrageZonesEntete, variablesTexteDocument } from '@logibtp/document/ui';
 import { echapper, lireNombre, formatLibre, creerCombo, editerLibelle, htmlSur } from '@logibtp/socle/ui';
 import { FAMILLES_REGLE } from '@logibtp/document';
 import { api } from '../api.js';
@@ -39,6 +39,7 @@ export class PageParametresDocuments extends PageBase {
     this.titre = texte('parametres_btp.documents.titre');
     this.conteneur.innerHTML = `<div class="page-parametres"><h1 class="page-titre">${iconeHtml('parametres_btp_documents')} ${texteHtml('parametres_btp.documents.etiquettes')}</h1><div class="corps"></div>
       <h2>${texteHtml('document.styles.titre')}</h2><div class="styles-lignes"></div>
+      <h2>${texteHtml('document.zones.titre')}</h2><div class="zones-entete"></div>
       <h2>${texteHtml('parametres_btp.documents.solde.titre')}</h2><div class="seuils-solde"></div>
       <h2>${texteHtml('parametres_btp.documents.conditions.titre')}</h2><div class="conditions-paiement"></div>
       <h2>${texteHtml('parametres_btp.documents.acomptes.titre')}</h2><div class="mode-acomptes"></div>
@@ -53,6 +54,13 @@ export class PageParametresDocuments extends PageBase {
     await p.ouvrir();
     await new ParametrageStylesLignes(this.conteneur.querySelector('.styles-lignes'), {
       fournisseur: { styles: () => api.stylesLignes(), enregistrer: (l) => api.enregistrerStylesLignes(l), types: async () => (await api.typesDocument()).filter((t) => t.tyd_actif !== false) },
+      admin: app.estAdmin(), message: (t, n) => app.message(t, n),
+    }).ouvrir();
+    await new ParametrageZonesEntete(this.conteneur.querySelector('.zones-entete'), {
+      fournisseur: {
+        zones: () => api.zonesEntete(), creer: (d) => api.creerZoneEntete(d), modifier: (c, m) => api.modifierZoneEntete(c, m), supprimer: (c) => api.supprimerZoneEntete(c),
+        types: async () => (await api.typesDocument()).filter((t) => t.tyd_actif !== false),
+      },
       admin: app.estAdmin(), message: (t, n) => app.message(t, n),
     }).ouvrir();
     await this.ouvrirSeuils(this.conteneur.querySelector('.seuils-solde'));

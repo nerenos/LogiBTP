@@ -7,5 +7,6 @@ export { unitesOptionnelles } from './options.js';
 export { calculerEcheances, dateEcheance, montantRetenue, MODES_REGLEMENT } from './echeances.js';
 export { regle, FAMILLES_REGLE, estFamilleAchat } from './regles-type.js';
 export { classesLignes, styleDeClasse, styleLigne, stylesLignes, normaliserStyle, erreursStyle, erreursStylesDocument, PROPRIETES_STYLE_LIGNE, STYLES_DEFAUT_LIGNE } from './styles-lignes.js';
+export * from './zones-entete.js';
 export * from './types.js';
 export * from './codes.js';
