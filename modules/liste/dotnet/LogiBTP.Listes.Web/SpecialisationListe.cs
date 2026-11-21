@@ -48,6 +48,10 @@ public class SpecialisationListe
     /// </summary>
     public virtual Task<RestrictionListe> RestrictionAsync(SourceResolue source, Utilisateur u, CancellationToken ct) => Task.FromResult(RestrictionListe.Aucune);
 
+    /// <summary>Libellés des colonnes d'une source ajoutées par l'utilisateur (code de colonne → libellé proposé comme titre) ; par défaut aucun.</summary>
+    public virtual Task<IReadOnlyDictionary<string, string>> LibellesColonnesAsync(string source, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyDictionary<string, string>>(new Dictionary<string, string>());
+
     /// <summary>
     /// Début de l'exercice comptable (seuls son mois et son jour comptent) pour la période « exercice en cours » des filtres
     /// de date ; absent : année civile. Par défaut : aucun (le cœur le lit dans le module Comptabilité).
