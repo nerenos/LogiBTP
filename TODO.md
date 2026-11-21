@@ -3,8 +3,9 @@
 - [x] **Module de gestion des versions de la base** : fait (plan [versionnement-schema](documentation/conception/plans/versionnement-schema.md),
   lots 0 à 9 : instantané et dérive, versions par module, mineures, majeure et archivage, contrôle de publication ; procédure dans
   [MIGRATIONS.md](documentation/MIGRATIONS.md)). Restes réels, à traiter à part :
-  - [ ] Colonnes `x_` dans les listes : les vues de liste générées par `npm run generer-vues-liste` listent des colonnes fixes (une vue ne suit pas
-    des colonnes ajoutées sans reprise) ; exposer les `x_` par la source du module Liste, ou recréer la vue après création d'un champ.
+  - [ ] Colonnes `x_` dans les listes des fiches : les vues de liste générées par `npm run generer-vues-liste` listent des colonnes fixes ;
+    faire pour les fiches comme pour les documents (db/1.4 : vue `v_liste_documents_zones` reconstruite par `document_zone_vue_liste`, crochet de
+    la mineure document 1.3). Documents : fait (lot 12).
   - [ ] Essai e2e `e2e/champs-supplementaires.spec.ts` écrit, non lancé (demande l'API complète).
   - [ ] Règles d'écriture des mineures, majeures et contrôle de publication à reporter dans les `CLAUDE.md` du module Installation et de `db/`
     (aujourd'hui dans `documentation/MIGRATIONS.md` seulement).
@@ -263,8 +264,10 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
 
 - [ ] Zones d'entête des documents (plan fiches-lignes-documents, lots 10 et 11, faits le 20 et le 21/11/2026) : registre, colonnes `x_`,
   paramétrage, lecture et écriture avec le document (`DocumentComplet.Zones`, `DefinitionType.Zones`), saisie dans l'onglet Entête, contrôle
-  des obligatoires à la validation, reprise à la copie / au nouvel indice / à la transformation faits. Reste (lot 12) : colonnes `x_` des listes
-  de documents, `{{document.x_…}}` des éditions, menu Paramètres et droit propre (l'écran est dans la page Paramètres des documents).
+  des obligatoires à la validation, reprise à la copie / au nouvel indice / à la transformation faits. Lot 12 (21/11/2026) : colonnes `x_` de la liste des documents (source
+  `documents` sur `v_liste_documents_zones`, db/1.4, libellé de la zone proposé comme titre) et `{{document.x_…}}` des éditions (dictionnaire
+  complété). Reste : menu Paramètres et droit propre (l'écran est dans la page Paramètres des documents) ; colonnes `x_` de `v_liste_ordres` (source
+  « ordres ») ; toute reprise de `v_liste_documents` qui ajoute des colonnes doit rappeler `SELECT document_zone_vue_liste(NULL)`.
 
 - [ ] Mode hors ligne : appel de la bibliothèque (F3) limité aux recherches déjà faites en ligne (réponses gardées par le
   service worker) ; à étudier : copie locale des éléments consultés ou d'une bibliothèque choisie pour la recherche hors

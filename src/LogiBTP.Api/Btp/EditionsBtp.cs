@@ -25,6 +25,8 @@ namespace LogiBTP.Api.Btp;
 /// (lot 6) ; données agrégées côté serveur en un appel (§ 3.10) ; dernier modèle imprimé gardé sur le document (Q13).
 /// Source « relance » (plans/relances.md, lot 7) : lettre d'une relance groupée (identifiant : relances du journal).
 /// </summary>
+internal sealed record ZoneEdition(string Colonne, string Type, string Libelle);
+
 public sealed class SpecialisationEditionBtp : SpecialisationEdition
 {
     public override IReadOnlyList<SourceEdition> Sources { get; } =
@@ -63,6 +65,18 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
         if (donnees is not null && demande.Source == "fiche" && demande.Parametres is { Count: > 0 } p)
             donnees["_parametres"] = new JsonObject(p.Select(x => KeyValuePair.Create(x.Key, JsonNode.Parse(x.Value.GetRawText()))));
         return donnees;
+    }
+
+    /// <summary>Source « document » : zones d'entête du registre ajoutées au groupe « Zones d'entête » (chemin document.x_…, libellé de la zone).</summary>
+    public override async Task<JsonArray> DictionnaireAsync(IServiceProvider services, string source, CancellationToken ct)
+    {
+        var dico = Dictionnaire(source);
+        if (source != "document") return dico;
+        var db = services.GetRequiredService<LogiBtpContext>();
+        var zones = await db.Database.SqlQueryRaw<ZoneEdition>("SELECT zed_colonne AS \"Colonne\", zed_type AS \"Type\", zed_libelle AS \"Libelle\" FROM document_zone_entete ORDER BY zed_groupe NULLS FIRST, zed_ordre, zed_colonne").ToListAsync(ct);
+        foreach (var z in zones)
+            dico.Add(new JsonObject { ["groupe"] = "Zones d'entête", ["chemin"] = "document." + z.Colonne, ["libelle"] = z.Libelle, ["type"] = SourceDocumentEdition.TypeDictionnaire(z.Type) });
+        return dico;
     }
 
     public override JsonArray Dictionnaire(string source) => source switch
@@ -550,6 +564,8 @@ public static class SourceDocumentEdition
             ["echeances"] = c["echeances"]?.DeepClone() ?? new JsonArray(),
             ["textes"] = new JsonObject { ["intro"] = document["ent_texte_intro"]?.DeepClone(), ["fin"] = document["ent_texte_fin"]?.DeepClone() },
         };
+        // Zones supplémentaires d'entête (plan fiches-lignes-documents, lot 12) : document.x_…
+        await AjouterZonesAsync(db, services.GetRequiredService<ZonesEnteteDocument<DocumentBtp, DocumentLigneBtp>>(), (JsonObject)resultat["document"]!, d.EntId, typeDoc.TydFamille, typeDoc.TydCode, ct);
         // Imputations d'avoirs (module Règlements, facultatif ; décision du 31/10/2026) : sur une facture, les avoirs imputés ;
         // sur un avoir, les factures sur lesquelles il est imputé ; montant pointé sur l'échéance de ce document, au signe de la
         // pièce (positif sur un avoir : f_signe_reglement, db/306).
@@ -944,6 +960,31 @@ public static class SourceDocumentEdition
     /// libellé, type. Champs d'une collection : chemin « collection[].champ », lus par « ligne.champ » (ou « element.champ »)
     /// dans un tableau, une bande ou un composant répété sur la collection.
     /// </summary>
+    /// <summary>Type du dictionnaire d'une zone d'entête (une zone « liste » s'imprime comme un texte : son libellé).</summary>
+    public static string TypeDictionnaire(string typeZone) => typeZone == TypesZoneEntete.Liste ? "texte" : typeZone;
+
+    /// <summary>
+    /// Zones d'entête du registre dans <c>document.x_…</c> : valeur saisie (null si vide) ; une zone « liste » donne le libellé
+    /// de l'option choisie, une zone qui ne s'applique pas au type du document reste vide.
+    /// </summary>
+    internal static async Task AjouterZonesAsync(LogiBtpContext db, ZonesEnteteDocument<DocumentBtp, DocumentLigneBtp> zonesService, JsonObject document, long entId, string? famille, string? typeDocument, CancellationToken ct)
+    {
+        var registre = await zonesService.Zones(ct);
+        if (registre.Count == 0) return;
+        var valeurs = await ValeursZonesEntete<DocumentBtp, DocumentLigneBtp>.Lire(db, entId, ct);
+        var duType = ZonesEntete.DuType(registre.Where(z => ZonesEntete.NomValide(z.Colonne)), famille, typeDocument).Select(z => z.Colonne).ToHashSet(StringComparer.Ordinal);
+        foreach (var z in registre.Where(z => ZonesEntete.NomValide(z.Colonne)))
+        {
+            JsonNode? v = duType.Contains(z.Colonne) && valeurs.TryGetValue(z.Colonne, out var brute) ? brute?.DeepClone() : null;
+            if (v is not null && z.Type == TypesZoneEntete.Liste && v.GetValueKind() == JsonValueKind.String)
+            {
+                var brut = v.GetValue<string>();
+                v = z.Valeurs?.FirstOrDefault(o => o.Valeur == brut)?.Libelle ?? brut;
+            }
+            document[z.Colonne] = v;
+        }
+    }
+
     public static JsonArray Dictionnaire()
     {
         var d = new List<(string Groupe, string Chemin, string Libelle, string Type)>();

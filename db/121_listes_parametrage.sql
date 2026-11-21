@@ -5,7 +5,7 @@
 -- =============================================================================
 
 INSERT INTO source_liste (sli_code, sli_libelle, sli_vue, sli_colonne_id, sli_colonne_type, sli_type_element, sli_modifiable) VALUES
- ('documents', 'Documents (devis, commandes, factures…)', 'v_liste_documents', 'id', 'type_element', NULL, FALSE),
+ ('documents', 'Documents (devis, commandes, factures…)', 'v_liste_documents_zones', 'id', 'type_element', NULL, FALSE),
  ('ordres', 'Ordres (exécution)', 'v_liste_ordres', 'id', 'type_element', NULL, FALSE),
  ('pointages', 'Pointages (main-d''œuvre)', 'v_liste_pointages', 'id', 'type_element', NULL, FALSE),
  ('pointages_materiel', 'Pointages du matériel', 'v_liste_pointages_materiel', 'id', 'type_element', NULL, FALSE),

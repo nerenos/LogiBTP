@@ -6,7 +6,8 @@ import { ETAT_LISTE_DOCUMENT, PASTILLES_EMISSION_FE_LISTE, PASTILLES_ETAT_DOCUME
 
 export const SOURCES_LISTE = {
   documents: {
-    libelle: 'Documents (devis, commandes, factures…)', vue: 'v_liste_documents', colonne_id: 'id', colonne_type: 'type_element',
+    // Vue db/1.4 : v_liste_documents + une colonne x_ par zone d'entête du registre (module Document 1.2, plan fiches-lignes-documents lot 12).
+    libelle: 'Documents (devis, commandes, factures…)', vue: 'v_liste_documents_zones', colonne_id: 'id', colonne_type: 'type_element',
     colonnes: [
       ['id', 'bigint'], ['type_element', 'text'], ['type_document', 'text'], ['famille', 'text'], ['numero', 'text'], ['indice', 'text'],
       ['date_document', 'date'], ['objet', 'text'], ['chantier', 'text'], ['statut', 'text'], ['tiers', 'bigint'],

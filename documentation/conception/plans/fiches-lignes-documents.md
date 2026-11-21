@@ -172,7 +172,7 @@
 - **Critère de fin** : `npm test --workspace modules/document/js`, `dotnet test LogiBTP.slnx` ; zone « famille V »
   saisie dans un devis, reprise dans la commande et la facture.
 
-## Lot 12 : zones d'entête dans les listes et les éditions (cœur)
+## Lot 12 : zones d'entête dans les listes et les éditions (cœur) : FAIT (21/11/2026)
 
 - **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : listes de documents (colonnes `x_` proposées : vue ou source par la table selon le module Liste),

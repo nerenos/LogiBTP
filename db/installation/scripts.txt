@@ -308,6 +308,8 @@ db/1.2_consultation_demandes_prix.sql
 db/1.3_pointages_ressource.sql
 modules/document/db/1.1_styles_lignes.sql
 modules/document/db/1.2_zones_entete.sql
+modules/document/db/1.3_zones_entete_crochet.sql
+db/1.4_documents_liste_zones.sql
 modules/fiche/db/1.1_champs_supplementaires.sql
 modules/import/db/1.1_reprise.sql
 
