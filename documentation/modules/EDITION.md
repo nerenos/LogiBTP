@@ -30,3 +30,5 @@ Référence lue à la demande (hors contexte par défaut). Les règles que le co
 
 ## Textes et icônes (module Personnalisation, lot P3r)
 - Textes `edition.*` du `fr.json` du module (`alertes`, `lieux`, `formules`, `charte`, `images`, `modele`, `codes`, `imprime` : Report, À reporter, Total par défaut, `catalogue` : catégories, fonctions, opérateurs, contextes et formats de l'aide) ; dans Jint, `serveur/entree.js` pose ce dictionnaire du programme intégré au paquet (les surcharges de l'installation ne valent que pour l'aperçu) ; `exporter-resultats` et les tests le posent aussi (`test/preparation.js`). Restent dans le code : couleurs de la charte par défaut (contenu des éditions, réglées par les chartes), noms des mois et nombres en lettres, métadonnées du PDF.
+
+- Plan fiches-lignes-documents : `SpecialisationEdition` complète le dictionnaire par la base (zones d'entête `{{document.x_…}}`, libellé de la zone) ; variables de ligne `ligne.style` et `ligne.libelle_style_html` (`EditionsBtp`, lot 7). La taille du style n'est pas appliquée dans les éditions.

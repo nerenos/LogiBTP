@@ -84,6 +84,7 @@
 | Type | Dépendance | Version | Licence | Usage |
 |---|---|---|---|---|
 | npm | vitest | 5.1.0 | MIT | développement (modules/document/js) |
+| NuGet | EFCore.NamingConventions | 10.0.1 | Apache-2.0 | LogiBTP.Documents.Tests |
 | NuGet | HtmlSanitizer | 9.2.1039 | MIT | LogiBTP.Documents.Web |
 | NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Documents.Tests |
 | NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Documents.Web |

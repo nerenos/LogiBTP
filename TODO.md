@@ -269,6 +269,14 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
   complété). Reste : menu Paramètres et droit propre (l'écran est dans la page Paramètres des documents) ; colonnes `x_` de `v_liste_ordres` (source
   « ordres ») ; toute reprise de `v_liste_documents` qui ajoute des colonnes doit rappeler `SELECT document_zone_vue_liste(NULL)`.
 
+- [ ] Fiches et lignes de documents (plan fiches-lignes-documents, lots 1 à 13 faits le 21/11/2026) : restes.
+  - [ ] Exécuter `e2e/fiches-lignes-documents.spec.ts` sur un poste avec compte administrateur (écrit sans exécution, sélecteurs à ajuster : création d'une
+    tranche par la colonne Type, choix des colonnes de la liste des devis, code d'élément de la démo pour l'écart de PA).
+  - [ ] Taille des styles de lignes non appliquée dans les éditions ; couleurs du thème (`--nom`) non résolues côté serveur dans les PDF (omises).
+  - [ ] Colonnes `x_` absentes de `v_liste_ordres` et des listes des fiches.
+  - [ ] Titre court d'un onglet saisi au paramétrage des champs supplémentaires (décision Q1 c) : sans support aujourd'hui.
+  - [ ] `db/CLAUDE.md` cite `267_devis_relance.sql` comme dernière définition de `v_liste_documents` : c'est `287_liste_derniere_relance.sql` (puis `v_liste_documents_zones`, db/1.4) ; à corriger par un humain.
+
 - [ ] Mode hors ligne : appel de la bibliothèque (F3) limité aux recherches déjà faites en ligne (réponses gardées par le
   service worker) ; à étudier : copie locale des éléments consultés ou d'une bibliothèque choisie pour la recherche hors
   ligne. Écrans hors document (fiches, pointage…) : consultation seulement.

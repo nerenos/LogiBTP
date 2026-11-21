@@ -16,12 +16,12 @@
 | 5 | Styles des lignes : schéma, résolution répliquée, routes | `modules/document` | — | FAIT (20/11/2026) |
 | 6 | Styles des lignes : grille, plan, détail, réimposition, paramétrage | `modules/document` | 1, 5 | FAIT (20/11/2026) |
 | 7 | Styles des lignes dans les éditions | cœur | 5 | FAIT (20/11/2026) |
-| 8 | PA de référence et plan de mise à jour de la bibliothèque | `modules/bibliotheque` | — | A FAIRE |
-| 9 | Indicateur d'écart de PA et mise à jour depuis le document | cœur | 8 | A FAIRE |
+| 8 | PA de référence et plan de mise à jour de la bibliothèque | `modules/bibliotheque` | — | FAIT (20/11/2026) |
+| 9 | Indicateur d'écart de PA et mise à jour depuis le document | cœur | 8 | FAIT (20/11/2026) |
 | 10 | Zones d'entête : registre, colonnes x_ et paramétrage | `modules/document` | — | FAIT (20/11/2026) |
 | 11 | Zones d'entête : saisie, validation, copie, transformation | `modules/document` | 10 | FAIT (21/11/2026) |
-| 12 | Zones d'entête : listes, éditions, droits du cœur | cœur | 11 | A FAIRE |
-| 13 | Tests e2e et documentation | cœur | 3, 4, 6, 7, 9, 12 | A FAIRE |
+| 12 | Zones d'entête : listes, éditions, droits du cœur | cœur | 11 | FAIT (21/11/2026) |
+| 13 | Tests e2e et documentation | cœur | 3, 4, 6, 7, 9, 12 | FAIT (21/11/2026) |
 
 ---
 
@@ -181,7 +181,7 @@
 - **Critère de fin** : `npm test --workspace client`, `dotnet test LogiBTP.slnx` ; colonne `x_` affichée et filtrée dans
   la liste des devis, imprimée dans un modèle.
 
-## Lot 13 : tests e2e et documentation (cœur)
+## Lot 13 : tests e2e et documentation (cœur) : FAIT (21/11/2026)
 
 - **Agent** : `lot-dev`. **Modèle** : sonnet.
 - **Fichiers** : `e2e/fiches-lignes-documents.spec.ts` (titres courts, pointages, style de tranche, écart de PA et mise à
