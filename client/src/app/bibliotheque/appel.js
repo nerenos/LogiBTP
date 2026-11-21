@@ -66,7 +66,7 @@ export function prixUnite(e, unite) {
 const TYPES_SANS_UNITES = ['OUVRAGE', 'ENSEMBLE', 'POSTE_PIED', 'TEXTE'];
 
 /** Ratio d'une unité pour l'élément (quantité en unité de stock pour 1 unité, Dec), null sans correspondance. */
-function ratioOuNul(e, unite) {
+export function ratioOuNul(e, unite) {
   try {
     return ratio(unite, { unite_stock: e.unite_stock, unites: e.unites ?? [], donnees: e.donnees ?? {} });
   } catch {

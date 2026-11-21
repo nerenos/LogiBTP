@@ -1,12 +1,13 @@
 import {
   CFG_LIGNES as C, ordreAffichage, parId, placer, indenter, desindenter, decaler, supprimer, racinesSelection,
   Magasin, GrilleArbre, formatNombre, formatLibre, htmlSur, lireNombre, estHtml, decoderEntites, echapper,
-  editerLibelle, lirePreferences, ecrirePreferences, enfants, libelleRaccourci,
+  editerLibelle, lirePreferences, ecrirePreferences, enfants, libelleRaccourci, retirerMiseEnForme, confirmer,
 } from '@logibtp/socle/ui';
 import { D, Dz, S, UN, completerDate, dateLocale } from '@logibtp/socle';
 import { texte, texteHtml, icone, iconeHtml, textesParCode, couleurTheme, pluriel } from '@logibtp/socle/dictionnaire';
-import { calculerDocument, TL, CODES_TL, estChiffree, estPied, accepteEnfants, estTranche, estTypeNumerote, etatSolde, regle, TYPE_AVANCEMENT } from '../src/index.js';
+import { calculerDocument, stylesLignes, TL, CODES_TL, estChiffree, estPied, accepteEnfants, estTranche, estTypeNumerote, etatSolde, regle, TYPE_AVANCEMENT } from '../src/index.js';
 import { ReglesDocument } from './regles.js';
+import { presentationStyle } from './style-ligne.js';
 import { PressePapiers } from './presse-papiers.js';
 
 /**
@@ -482,6 +483,75 @@ export class EditeurDocument {
     }
     return [...m.values()];
   }
+
+  // ---------------------------------------------------------------- styles des lignes
+
+  /**
+   * Styles résolus des lignes (styles-lignes.js) : paramétrage de la définition (global, famille, type), styles du
+   * document (ent_styles_lignes) et style propre de chaque ligne. Recalculés à chaque nouveau résultat de calcul.
+   */
+  stylesLignes() {
+    const cle = this.resultat;
+    if (this.#stylesCache?.cle !== cle) {
+      const d = this.saisie.document;
+      const lu = (v) => (typeof v === 'string' ? (() => { try { return JSON.parse(v); } catch { return null; } })() : v);
+      const lignes = this.saisie.lignes.map((l) => ({ ...l, lig_style: lu(l.lig_style) }));
+      this.#stylesCache = {
+        cle,
+        styles: stylesLignes(lignes, {
+          famille: this.definition.type?.tyd_famille, type: this.definition.type?.tyd_code,
+          styles: this.definition.styles_lignes ?? [], document: lu(d.ent_styles_lignes),
+        }),
+      };
+    }
+    return this.#stylesCache.styles;
+  }
+
+  #stylesCache = null;
+
+  /** Classes et variables CSS du style d'une ligne (grille, plan), ou null sans style. */
+  presentationLigne(ligId) { return presentationStyle(this.stylesLignes().get(ligId)); }
+
+  /**
+   * Réimposer la mise en forme : retire des libellés la mise en forme saisie (couleur, fond, gras, italique, souligné,
+   * barré, taille) et le style propre des lignes (ids : sélection ; sans ids : tout le document). Une seule étape
+   * d'annulation. Renvoie le nombre de lignes modifiées.
+   */
+  reimposerMiseEnForme(ids = null) {
+    if (this.magasin.lectureSeule || this.fige) { this.magasin.surRefus?.(); return 0; }
+    const cibles = new Set(ids ?? this.saisie.lignes.map((l) => l.lig_id));
+    const change = (l) => cibles.has(l.lig_id) && !l._virtuelle && !this.estLigneCalculee(l)
+      && ((l.lig_libelle_html && retirerMiseEnForme(l.lig_libelle_html) !== l.lig_libelle_html) || (l.lig_style && Object.keys(l.lig_style).length > 0));
+    const concernees = this.saisie.lignes.filter(change).map((l) => l.lig_id);
+    if (!concernees.length) return 0;
+    this.magasin.modifier((d) => {
+      for (const l of d.lignes) {
+        if (!concernees.includes(l.lig_id)) continue;
+        if (l.lig_libelle_html) l.lig_libelle_html = retirerMiseEnForme(l.lig_libelle_html);
+        l.lig_style = null;
+      }
+    }, texte('document.etapes.reimposer'));
+    return concernees.length;
+  }
+
+  /** Entrées du menu contextuel : réimposer la mise en forme de la sélection ou du document entier (avec confirmation). */
+  entreesReimposer() {
+    if (this.magasin.lectureSeule || this.fige) return [];
+    const surSelection = async () => {
+      const ids = this.grille.selection;
+      if (!await confirmer(texte('document.styles.reimposer_confirmer_selection', { nombre: ids.length }), { titre: texte('document.styles.reimposer') })) return;
+      this.#annoncerReimpose(this.reimposerMiseEnForme(ids));
+    };
+    const surDocument = async () => {
+      if (!await confirmer(texte('document.styles.reimposer_confirmer_document'), { titre: texte('document.styles.reimposer') })) return;
+      this.#annoncerReimpose(this.reimposerMiseEnForme(null));
+    };
+    return [{ separateur: true },
+      { libelle: texte('document.styles.reimposer_selection'), action: surSelection },
+      { libelle: texte('document.styles.reimposer_document'), action: surDocument }];
+  }
+
+  #annoncerReimpose(n) { this.surMessage?.(texte(n ? 'document.styles.reimposer_fait' : 'document.styles.reimposer_rien', { nombre: n })); }
 
   couleurTypePrix(type) { return (this.definition.couleurs_type_prix ?? []).find((c) => c.type === type) ?? null; }
 
@@ -1688,8 +1758,12 @@ export class EditeurDocument {
       signal: (r) => this.signal(r),
       signalCellule: (r, c) => this.signalCellule(r, c),
       choisirSignal: (id) => this.surSignal?.(id),
-      menuContextuel: (elements, id) => this.surMenuContextuel?.(elements, id) ?? elements,
+      menuContextuel: (elements, id) => {
+        const base = [...elements, ...this.entreesReimposer()];
+        return this.surMenuContextuel?.(base, id) ?? base;
+      },
 
+      styleLigne: (r) => (r.virtuelle ? null : this.presentationLigne(r.item.lig_id)),
       classeLigne: (r) => [
         r.virtuelle ? `pied-calcule pied-${r.virtuelle.type}` : '',
         `type-${(CODES_TL[r.calcule.lig_tyl_id] ?? '').toLowerCase()}`,

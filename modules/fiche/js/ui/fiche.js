@@ -1,6 +1,6 @@
 import { ERREUR_FICHE, LARGEUR_GROUPE, DISPOSITION_GROUPE } from '../src/codes.js';
 import { codesSectionGenerale, sectionChampsColonnes } from '../src/champs-supplementaires.js';
-import { echapper, formatLibre, htmlSur, editerLibelle, creerCombo, creerJetons, confirmer, formatHeure, notifier, declarerRaccourcis, actionDe, libelleRaccourci, ouvrirMenuContextuel } from '@logibtp/socle/ui';
+import { echapper, formatLibre, htmlSur, editerLibelle, creerCombo, creerJetons, activerTitresCourts, confirmer, formatHeure, notifier, declarerRaccourcis, actionDe, libelleRaccourci, ouvrirMenuContextuel } from '@logibtp/socle/ui';
 import { MODES, LIBELLES_MODES, enSaisie, titreFiche } from '../src/modes.js';
 import { validerFiche, MESSAGES } from '../src/validation.js';
 import { ParametrageFiche } from './parametrage.js';
@@ -255,7 +255,7 @@ export class FicheBase {
    * (champs : programme, supplementairesSection : codes supplémentaires) pour les erreurs et la navigation.
    */
   sections() {
-    const base = this.definition.sections ?? [{ code: 'general', titre: texte('fiche.fiche.general'), champs: codesSectionGenerale(this.definition) }];
+    const base = this.definition.sections ?? [{ code: 'general', titre: texte('fiche.fiche.general'), court: texte('fiche.fiche.general_court'), champs: codesSectionGenerale(this.definition) }];
     const supplementaires = (this.definition.supplementaires ?? []).map((c) => ({ ...c, supplementaire: true }));
     const codes = new Set(base.map((x) => x.code));
     const parGroupe = (champs, titre) => {
@@ -272,15 +272,15 @@ export class FicheBase {
       const ajout = parGroupe(supplementaires.filter((c) => c.section === x.code), texte('fiche.fiche.complementaires'));
       return { ...x, groupes: [...groupes, ...ajout], champs: groupes.flatMap((g) => g.champs), supplementairesSection: ajout.flatMap((g) => g.champs.map((c) => c.code)) };
     });
-    for (const o of this.ongletsSpecifiques().filter((x) => !x.dans)) s.push({ code: `+${o.code}`, titre: o.titre, specifique: o, champs: o.champs ?? [] });
+    for (const o of this.ongletsSpecifiques().filter((x) => !x.dans)) s.push({ code: `+${o.code}`, titre: o.titre, court: o.court, specifique: o, champs: o.champs ?? [] });
     // Champs supplémentaires en colonnes « x_ » (administration : lot 8 du versionnement du schéma) : un onglet dédié.
     const colonnes = sectionChampsColonnes(this.definition, texte('fiche.fiche.champs_supplementaires'), LARGEUR_GROUPE.PLEIN);
-    if (colonnes) s.push(colonnes);
+    if (colonnes) s.push({ ...colonnes, court: texte('fiche.fiche.champs_supplementaires_court') });
     const reste = supplementaires.filter((c) => !c.section || !codes.has(c.section));
     if (reste.length) {
-      s.push({ code: '+supplementaires', titre: texte('fiche.fiche.complementaires'), groupes: parGroupe(reste, null), champs: [], supplementairesSection: reste.map((c) => c.code) });
+      s.push({ code: '+supplementaires', titre: texte('fiche.fiche.complementaires'), court: texte('fiche.fiche.complementaires_court'), groupes: parGroupe(reste, null), champs: [], supplementairesSection: reste.map((c) => c.code) });
     }
-    s.push({ code: '+pieces', titre: texte('fiche.fiche.pieces'), pieces: true });
+    s.push({ code: '+pieces', titre: texte('fiche.fiche.pieces'), court: texte('fiche.fiche.pieces_court'), pieces: true });
     return s;
   }
 
@@ -321,11 +321,17 @@ export class FicheBase {
     const pastille = (n) => (n ? `<span class="fiche-onglet-compte${n.alerte ? ' alerte' : ''}" title="${n.alerte ? texteHtml('fiche.fiche.onglet_alerte') : ''}">${n.alerte ? `${iconeHtml('fiche_onglet_alerte')} ` : ''}${n.nombre}</span>` : '');
     c.querySelector('.fiche-onglets').innerHTML = sections.map((s) => {
       const n = compte(s);
-      return `<button type="button" data-section="${echapper(s.code)}" class="${s.code === this.section ? 'actif' : ''} ${enErreur.has(s.code) ? 'erreur' : ''} ${n && !n.nombre && !n.alerte ? 'vide' : ''}">${echapper(s.titre)}${n && (n.nombre || n.alerte) ? ` ${pastille(n)}` : ''}</button>`;
+      const court = s.court && s.court !== s.titre ? ` data-titre="${echapper(s.titre)}" data-court="${echapper(s.court)}"` : '';
+      return `<button type="button" data-section="${echapper(s.code)}"${court} class="${s.code === this.section ? 'actif' : ''} ${enErreur.has(s.code) ? 'erreur' : ''} ${n && !n.nombre && !n.alerte ? 'vide' : ''}">${echapper(s.titre)}${n && (n.nombre || n.alerte) ? ` ${pastille(n)}` : ''}</button>`;
     }).join('');
+    // Titres courts : dès que la ligne d'onglets déborde, tous passent au titre court (socle).
+    this.#arretTitresCourts?.();
+    this.#arretTitresCourts = activerTitresCourts(c.querySelector('.fiche-onglets'));
     c.querySelectorAll('[data-section]').forEach((b) => b.addEventListener('click', () => { this.section = b.dataset.section; this.rendre(); }));
     this.#rendreSection(sections.find((s) => s.code === this.section));
   }
+
+  #arretTitresCourts = null;
 
   #rendreActions() {
     const d = this.definition.droits;

@@ -1094,3 +1094,11 @@ button.lien { background: none; border: none; padding: 0; color: var(--lien, #1d
 [data-reception] .terrain-champs input { min-height: 40px; font-size: 1rem; }
 .terrain-historique { margin: 0.5rem 0; }
 .terrain-historique ul { margin: 0.25rem 0; padding-left: 1.2rem; }
+
+/* Écart de PA avec la bibliothèque (icône cliquable de la cellule PA ; couleurs du thème du cœur). */
+.grille .ecart-pa { border: 0; background: none; padding: 0 2px; margin-right: 2px; cursor: pointer; font: inherit; }
+.grille .ecart-pa.plus-cher { color: var(--ecart-pa-plus-cher); }
+.grille .ecart-pa.moins-cher { color: var(--ecart-pa-moins-cher); }
+.grille .ecart-pa-ouvrage { color: var(--ecart-pa-ouvrage); margin-right: 2px; cursor: help; }
+.ecart-pa-liste { width: 100%; }
+.ecart-pa-liste .refus { color: var(--ecart-pa-plus-cher); }

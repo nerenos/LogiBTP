@@ -45,7 +45,7 @@ public static class Extensions
     {
         var g = api.MapGroup("/editions");
         g.MapGet("/sources", (SpecialisationEdition s) => s.Sources);
-        g.MapGet("/sources/{source}/dictionnaire", (string source, SpecialisationEdition s) => s.Dictionnaire(source));
+        g.MapGet("/sources/{source}/dictionnaire", (string source, SpecialisationEdition s, HttpContext http, CancellationToken ct) => s.DictionnaireAsync(http.RequestServices, source, ct));
 
         g.MapGet("/modeles", (string? cible, string? source, string? type, string? genre, HttpContext http, ServiceEdition s, CancellationToken ct) =>
             s.Modeles(cible, source, type, genre, Utilisateur.Depuis(http), ct));

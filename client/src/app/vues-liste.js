@@ -6,7 +6,8 @@ import { ETAT_LISTE_DOCUMENT, PASTILLES_EMISSION_FE_LISTE, PASTILLES_ETAT_DOCUME
 
 export const SOURCES_LISTE = {
   documents: {
-    libelle: 'Documents (devis, commandes, factures…)', vue: 'v_liste_documents', colonne_id: 'id', colonne_type: 'type_element',
+    // Vue db/1.4 : v_liste_documents + une colonne x_ par zone d'entête du registre (module Document 1.2, plan fiches-lignes-documents lot 12).
+    libelle: 'Documents (devis, commandes, factures…)', vue: 'v_liste_documents_zones', colonne_id: 'id', colonne_type: 'type_element',
     colonnes: [
       ['id', 'bigint'], ['type_element', 'text'], ['type_document', 'text'], ['famille', 'text'], ['numero', 'text'], ['indice', 'text'],
       ['date_document', 'date'], ['objet', 'text'], ['chantier', 'text'], ['statut', 'text'], ['tiers', 'bigint'],
@@ -52,6 +53,15 @@ export const SOURCES_LISTE = {
       ['chantier_id', 'integer'], ['interne', 'boolean'], ['ordre', 'text'], ['type_mo', 'text'], ['sous_type', 'text'], ['productif', 'boolean'],
       ['heures', 'numeric'], ['couche', 'text'], ['motif', 'text'], ['commentaire', 'text'], ['saisi_par', 'text'],
       ['saisi_le', 'timestamp with time zone'], ['semaine', 'date'], ['taux', 'numeric'], ['cout', 'numeric'], ['valorisation', 'text'],
+    ],
+  },
+  // Pointages du matériel (db/1.3 : v_liste_pointages_materiel, table pointage_materiel : terrain, borne d'atelier, reprise).
+  pointages_materiel: {
+    libelle: 'Pointages du matériel', vue: 'v_liste_pointages_materiel', colonne_id: 'id', colonne_type: 'type_element',
+    colonnes: [
+      ['id', 'bigint'], ['type_element', 'text'], ['date_pointage', 'date'], ['materiel_code', 'text'], ['materiel', 'text'], ['materiel_id', 'integer'],
+      ['salarie', 'text'], ['salarie_id', 'integer'], ['chantier', 'text'], ['chantier_libelle', 'text'], ['chantier_id', 'integer'],
+      ['heures', 'numeric'], ['source', 'text'], ['commentaire', 'text'], ['saisi_par', 'text'], ['saisi_le', 'timestamp with time zone'], ['semaine', 'date'],
     ],
   },
   // Repas des salariés du module Pointage (db/282 : v_liste_repas, un repas par salarié et par jour).
@@ -280,6 +290,7 @@ export const THEMES_LISTE = [
       { code: 'E_BE', libelle: "Ordre du bureau d'études" }, { code: 'E_BM', libelle: 'Ordre du bureau des méthodes' }, { code: 'E_OF', libelle: 'Ordre de fabrication' }, { code: 'E_CO', libelle: 'Ordre de colisage' }, { code: 'E_LI', libelle: 'Ordre de livraison' }, { code: 'E_SAV', libelle: 'Intervention SAV' }, { code: 'E_OST', libelle: 'Ordre de sous-traitance' }, { code: 'E_DAC', libelle: "Demande d'achat" }, { code: 'E_ENT', libelle: "Ordre d'entretien du matériel" }],
   },
   { thl_code: 'pointages', thl_libelle: 'Pointages', thl_icone: '⏱', thl_ordre: 39, thl_types: [{ code: 'pointage', libelle: 'Pointage' }] },
+  { thl_code: 'pointages_materiel', thl_libelle: 'Pointages du matériel', thl_icone: '⏱', thl_ordre: 395, thl_types: [{ code: 'pointage_materiel', libelle: 'Pointage du matériel' }] },
   { thl_code: 'repas', thl_libelle: 'Repas des salariés', thl_icone: '🍽', thl_ordre: 40, thl_types: [{ code: 'repas', libelle: 'Repas' }] },
   { thl_code: 'affaires', thl_libelle: 'Affaires', thl_icone: '🗂', thl_ordre: 12, thl_types: [{ code: 'affaire', libelle: 'Affaire' }] },
   { thl_code: 'chantiers', thl_libelle: 'Chantiers', thl_icone: '🏗', thl_ordre: 13, thl_types: [{ code: 'chantier', libelle: 'Chantier' }] },
@@ -978,3 +989,34 @@ VUES_LISTE.push(
   vueFlux(1016, 'Flux émis', [{ colonne: 'sens', op: '=', valeur: 'Out' }]),
   vueFlux(1017, 'Flux reçus', [{ colonne: 'sens', op: '=', valeur: 'In' }]),
 );
+
+// Derniers pointages d'une ressource (lot 4 de fiches-lignes-documents) : lien des fiches salarié, intérimaire et matériel ;
+// la ressource est filtrée par l'adresse (salarie_id, materiel_id), les 30 derniers jours (période modifiable dans la liste),
+// couches saisie et validée affichées, date décroissante.
+const derniers30Jours = { colonne: 'date_pointage', op: 'periode', valeur: 'derniers_jours', nombre: 30 };
+const vueDerniers = vuePointages(1018, 'Derniers pointages', [derniers30Jours]);
+for (const c of vueDerniers.definition.colonnes) if (c.code === 'couche') delete c.masquee;
+VUES_LISTE.push(vueDerniers, {
+  vli_id: 1019, vli_nom: 'Derniers pointages du matériel', vli_contexte: null, vli_partage: 'T', vli_proprietaire: 'admin', vli_groupe: null,
+  definition: {
+    theme: 'pointages_materiel',
+    source: { mode: 'vue', vue: 'pointages_materiel', colonne_id: 'id', colonne_type: 'type_element' },
+    filtres: [derniers30Jours],
+    colonnes: [
+      col('date_pointage', 'Date', { format: 'date', ...fixe(92), recherche: false }),
+      col('materiel_code', 'Code', { ...fixe(90), style: { gras: true } }),
+      col('materiel', 'Matériel', { ...prop(2, 130) }),
+      col('salarie', 'Conducteur', { ...prop(1.5, 110) }),
+      col('chantier', 'Chantier', { ...fixe(110) }),
+      col('chantier_libelle', 'Libellé du chantier', { ...prop(2, 120) }),
+      col('heures', 'Heures', { ...nombre(2), ...fixe(70), recherche: false, total: 'somme' }),
+      col('source', 'Source', { ...fixe(80) }),
+      col('commentaire', 'Commentaire', { ...prop(2, 100), masquee: true }),
+      col('saisi_par', 'Saisi par', { ...fixe(90), masquee: true }),
+    ],
+    segments: [{ colonne: 'chantier', titre: 'Chantier' }, { colonne: 'source', titre: 'Source' }],
+    tri: [{ colonne: 'date_pointage', sens: 'desc' }, { colonne: 'materiel_code', sens: 'asc' }],
+    lignes: 'multi',
+    taille_lot: 100,
+  },
+});

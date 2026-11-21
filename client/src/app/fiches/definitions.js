@@ -51,7 +51,7 @@ export const TYPES_FICHE = {
           ],
         },
         {
-          code: 'prive', titre: 'Privé (RGPD)',
+          code: 'prive', titre: 'Privé (RGPD)', court: 'Privé',
           groupes: [
             { titre: 'État civil', champs: ['date_naissance', 'num_secu'] },
             { titre: 'Coordonnées personnelles', champs: ['adresse', 'code_postal', 'ville', 'telephone_perso', 'email_perso'] },
@@ -490,7 +490,7 @@ export const TYPES_FICHE = {
           { titre: 'Commentaire', champs: ['commentaire'], largeur: 'plein' },
         ],
       }, {
-        code: 'intervenants', titre: 'Intervenants',
+        code: 'intervenants', titre: 'Intervenants', court: 'Interv.',
         groupes: [{ titre: 'Petit annuaire', champs: ['intervenants'], largeur: 'plein' }],
       }],
       champs: [
@@ -535,7 +535,7 @@ export const TYPES_FICHE = {
           { titre: 'Commentaire', champs: ['commentaire', 'responsable'], largeur: 'plein' },
         ],
       }, {
-        code: 'intervenants', titre: 'Intervenants',
+        code: 'intervenants', titre: 'Intervenants', court: 'Interv.',
         groupes: [{ titre: 'Petit annuaire', champs: ['intervenants'], largeur: 'plein' }],
       }],
       champs: [
@@ -571,7 +571,7 @@ export const TYPES_FICHE = {
           { titre: 'Commentaire', champs: ['commentaire'], largeur: 'plein' },
         ],
       }, {
-        code: 'intervenants', titre: 'Intervenants',
+        code: 'intervenants', titre: 'Intervenants', court: 'Interv.',
         groupes: [{ titre: 'Petit annuaire', champs: ['intervenants'], largeur: 'plein' }],
       }],
       champs: [
@@ -623,7 +623,7 @@ export const TYPES_FICHE = {
           { titre: 'Commentaire', champs: ['commentaire'], largeur: 'plein' },
         ],
       }, {
-        code: 'intervenants', titre: 'Intervenants',
+        code: 'intervenants', titre: 'Intervenants', court: 'Interv.',
         groupes: [{ titre: 'Petit annuaire', champs: ['intervenants'], largeur: 'plein' }],
       }],
       champs: [

@@ -4,7 +4,7 @@ import { FAMILLE_DOCUMENT, STATUT_DOCUMENT, STATUTS_HORS_VIGUEUR, TYPE_AVANCEMEN
 import { PageBase } from '@logibtp/navigation';
 import { ExplorateurGed } from '@logibtp/ged/ui';
 import { ArborescenceBtp } from '../ged/arborescence.js';
-import { echapper, formatNombre, formatDateHeure, actionDe, libelleRaccourci, ouvrirMenuContextuel, basculerAideMemoire, fermerAideMemoire, confirmer, ouvrirDialogue, ouvrirModale, saisir, separateur as separateurZones, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
+import { activerTitresCourts, echapper, formatNombre, formatDateHeure, actionDe, libelleRaccourci, ouvrirMenuContextuel, basculerAideMemoire, fermerAideMemoire, confirmer, ouvrirDialogue, ouvrirModale, saisir, separateur as separateurZones, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
 import { D, aujourdhui, texteDate, ACTION_DROIT } from '@logibtp/socle';
 import { ONGLETS_DOCUMENT } from '../raccourcis.js';
 import { Disposition, GestionVuesDocument, PlanDocument, RechercheLignes, NotificationsDocument } from '@logibtp/document/ui';
@@ -72,7 +72,7 @@ const gabarit = () => `
   <div class="document-barre barre-outils" role="toolbar">
     <nav class="onglets" role="tablist">
       <button role="tab" data-onglet-vue="entete" title="${texteHtml('document_btp.page.onglets.entete_aide', { raccourci: libelleRaccourci('ongletEntete', 'document') })}">${texteHtml('document_btp.page.onglets.entete')}</button>
-      <button role="tab" data-onglet-vue="reglements" title="${texteHtml('document_btp.page.onglets.reglements_aide', { raccourci: libelleRaccourci('ongletReglements', 'document') })}">${texteHtml('document_btp.page.onglets.reglements')}</button>
+      <button role="tab" data-onglet-vue="reglements" data-titre="${texteHtml('document_btp.page.onglets.reglements')}" data-court="${texteHtml('document_btp.page.onglets.reglements_court')}" data-aide="${texteHtml('document_btp.page.onglets.reglements_aide', { raccourci: libelleRaccourci('ongletReglements', 'document') })}" title="${texteHtml('document_btp.page.onglets.reglements_aide', { raccourci: libelleRaccourci('ongletReglements', 'document') })}">${texteHtml('document_btp.page.onglets.reglements')}</button>
       <button role="tab" data-onglet-vue="lignes" title="${texteHtml('document_btp.page.onglets.lignes_aide', { raccourci: libelleRaccourci('ongletLignes', 'document') })}">${texteHtml('document_btp.page.onglets.lignes')}</button>
       <button role="tab" data-onglet-vue="analyse" title="${texteHtml('document_btp.page.onglets.analyse_aide', { raccourci: libelleRaccourci('ongletAnalyse', 'document') })}">${iconeHtml('document_btp_analyse')}</button>
       <button role="tab" data-onglet-vue="pieces" title="${texteHtml('document_btp.page.onglets.pieces_aide', { raccourci: libelleRaccourci('ongletPieces', 'document') })}">${iconeHtml('navigation_btp_ged')}</button>
@@ -107,6 +107,7 @@ const gabarit = () => `
         <button role="menuitem" class="mo-ligne" data-action="consultation" title="${texteHtml('document_btp.page.actions.consultation_aide')}" hidden>${texteHtml('document_btp.page.actions.consultation', { icone: icone('document_btp_consultation') })}</button>
         <button role="menuitem" class="mo-ligne" data-action="sous-traiter" title="${texteHtml('document_btp.page.actions.sous_traiter_aide')}" hidden>${texteHtml('document_btp.page.actions.sous_traiter', { icone: icone('document_btp_sous_traiter') })}</button>
         <button role="menuitem" class="mo-ligne" data-action="precharger" title="${texteHtml('document_btp.page.actions.precharger_aide')}" hidden>${texteHtml('document_btp.page.actions.precharger', { icone: icone('document_btp_precharger') })}</button>
+        <button role="menuitem" class="mo-ligne" data-action="maj-bibliotheque" title="${texteHtml('document_btp.page.actions.maj_bibliotheque_aide')}" hidden>${texteHtml('document_btp.page.actions.maj_bibliotheque', { icone: icone('document_btp_maj_bibliotheque') })}</button>
         <button role="menuitem" class="mo-ligne" data-action="sources" title="${texteHtml('document_btp.page.actions.sources_aide')}" hidden>${texteHtml('document_btp.page.actions.sources', { icone: icone('ajouter') })}</button>
         </div>
       </span>
@@ -199,6 +200,8 @@ const versSaisie = (d) => ({
   document: d.document, lignes: d.lignes, metres: d.metres ?? [], variables: d.variables ?? [], ventilations: d.ventilations ?? [],
   // Échéancier enregistré et règlement du tiers (lecture seule, section Règlement de l'entête).
   echeances: d.echeances ?? [], reglement_tiers: d.reglement_tiers ?? null,
+  // Zones supplémentaires d'entête (colonnes x_), enregistrées avec le document.
+  zones: d.zones ?? {},
 });
 
 export class PageDocument extends PageBase {
@@ -211,6 +214,9 @@ export class PageDocument extends PageBase {
     const app = this.app;
     this.conteneur.innerHTML = gabarit();
     this.conteneur.classList.add('page-document');
+    // Titres courts des onglets quand la ligne déborde (socle).
+    this.arretTitresCourts?.();
+    this.arretTitresCourts = activerTitresCourts(this.$('nav.onglets'));
     // Factur-X ou XML glissé sur une facture d'achat (lot 14 de la facturation électronique) : facture reçue hors
     // plateforme, pièce créée en brouillon comme pour un flux reçu (ouverte ensuite) ; la GED garde ses propres dépôts.
     this.retirerDepotFacture = activerDepotFactures(this.conteneur, {
@@ -256,6 +262,7 @@ export class PageDocument extends PageBase {
       precharger: () => this.prechargerSituation(),
       consultation: () => this.lotConsultation(),
       'sous-traiter': () => this.sousTraiter(),
+      'maj-bibliotheque': () => this.editeur?.mettreAJourBibliothequeSelection().catch((e) => this.app.erreur(e)),
       'annuler-avoir': () => this.annulerParAvoir(),
       annuler: () => this.editeur?.magasin.annuler(), retablir: () => this.editeur?.magasin.retablir(),
       // Bibliothèque dans une autre fenêtre (liste de tous les éléments) ; l'insertion reste par F3 ou par code.
@@ -519,6 +526,11 @@ export class PageDocument extends PageBase {
     this.editeur.surDepotExterne = (donnees, cibleId, position) => this.appel.deposer(donnees, cibleId, position);
     // Éléments liés aux lignes (unités de l'article, conversion du prix : D2, D3), lus à la demande.
     this.editeur.chargerElement = (id) => this.appel.fournisseur.element(id);
+    // Écart de PA avec la bibliothèque (lot 9) : droit de modifier la bibliothèque exigé (le serveur le contrôle aussi).
+    if (this.app.peut('bibliotheque', ACTION_DROIT.MODIFIER)) {
+      this.editeur.chargerPaReferences = (ids, tiers) => api.paReferences(ids, tiers);
+      this.editeur.mettreAJourPa = (demandes, simulation) => api.majPa(demandes, simulation);
+    }
     this.analyse = new AnalyseCoefficients(this.$('#vue-analyse'), {
       editeur: this.editeur, natures: this.natures, message: (t, n) => this.app.message(t, n), appel: this.appel,
       imprimerFrais: () => this.apercu(MODELE_EDITION.FRAIS_ANNEXES),
@@ -707,6 +719,7 @@ export class PageDocument extends PageBase {
     this.$('[data-action="consultation"]').hidden = !doc.ent_id || !ed.definition.type?.tyd_consultation;
     this.$('[data-action="sous-traiter"]').hidden = !doc.ent_id || !doc.ent_verrouille || !this.app.moduleActif(MODULE_FACULTATIF.SOUS_TRAITANCE)
       || !TYPES_SOUS_TRAITABLES.includes(ed.definition.type?.tyd_code);
+    this.$('[data-action="maj-bibliotheque"]').hidden = !ed.chargerPaReferences;
     this.$('[data-action="sources"]').hidden = !modifiable || !TYPES_SOURCES.test(ed.definition.type?.tyd_code ?? '');
     // Situation de travaux ou de production d'un marché en brouillon : reprise de l'avancement de l'autre situation (R8).
     this.$('[data-action="precharger"]').hidden = !modifiable || !doc.ent_marche_id || !TYPES_CROISES.includes(ed.definition.type?.tyd_avancement);

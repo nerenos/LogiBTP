@@ -157,7 +157,7 @@ sous-domaine via `AddSocietes`). `LogiBTP.Calcul` (moteur BTP) → `LogiBTP.Doma
 | liste | `requete.js`, `normaliser.js` | `ConstructeurRequete.cs`, `f_sans_accent` | `modules/liste/tests/cas` |
 | fiche | `validation.js` | `ValidationFiche.cs` | `modules/fiche/tests/cas` |
 | ged | `coffre.js`, `versions.js`, `recherche.js`, `retention.js`, `classification.js`, `acces.js` | `ChaineCoffre.cs`, `RegleVersions.cs`, `NormalisationGed.cs`, `RegleRetention.cs`, `ClassificationGed.cs`, `AccesGed.cs` | `01`–`06` |
-| bibliotheque | `calcul.js` | `CalculElement.cs`, `CoefficientsElement.cs` | `01_calcul`, `02_coefficients` |
+| bibliotheque | `calcul.js` | `CalculElement.cs`, `CoefficientsElement.cs`, `PremierTarif.cs`, `PaReference.cs` | `01_calcul`, `02_coefficients`, `03_premier_tarif`, `04_mise_a_jour_pa` |
 | annuaire | `identifiants.js`, `coordonnees.js`, `graphe.js` | `Identifiants.cs`, `PlanCoordonnees.cs`, `GrapheAnnuaire.cs` | `01`–`03` |
 | entreprises-fr | `correspondance.js` | `Correspondance.cs` | `01_correspondance` |
 | crm | `notes.js`, `rappels.js`, `demandes.js`, `validations.js` | `ReglesNote.cs`, `ReglesRappel.cs`, `ReglesDemande.cs`, `ReglesValidation.cs` | `01_note` à `04_validations` |

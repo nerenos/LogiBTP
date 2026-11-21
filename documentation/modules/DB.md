@@ -121,3 +121,6 @@ Référence lue à la demande (hors contexte par défaut). Les règles sont dans
 - `287_liste_derniere_relance.sql` : reprise de `v_liste_documents` (depuis 267) : colonne `derniere_relance` (journal `relance`, pièce ou groupe d'indices) ; rejouable
 - `270_dotation_fiche.sql` : fiches de dotation signées (`dotation_fiche` : salarié, dates, instants `dfi_debut` exclu / `dfi_fin` inclus sur `mvt_cree_le`, signature, PDF de la GED, lieu), catégorie GED `dotation` ; rejouable.
 - `271_stock_tracabilite.sql` : lots et numéros de série (S24-a, module Stock `093f`) : clés étrangères du suivi des articles et des lots (article, fournisseur) ; répartition d'une ligne dans `lig_proprietes.lots` ; rejouable.
+
+- `1.3_pointages_ressource.sql` : vue `v_liste_pointages_materiel` (pointages du matériel, identifiants `materiel_id` / `salarie_id` / `chantier_id`), source de liste `pointages_materiel` (lot 4 fiches-lignes-documents).
+- `1.4_documents_liste_zones.sql` : fonction `document_zone_vue_liste(text)` et vue `v_liste_documents_zones` (= `v_liste_documents` + une colonne `x_` par zone d'entête du registre) ; appelée par les fonctions de création et de retrait de zone du module Document (1.3). Toute reprise de `v_liste_documents` doit rappeler `SELECT document_zone_vue_liste(NULL)`.

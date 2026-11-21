@@ -40,6 +40,7 @@ public static class Extensions
         services.AddScoped<TracabiliteService<TDoc, TLigne, TComplet>>();
         services.AddScoped<AffichageDocumentService<TDoc, TLigne>>();
         services.AddScoped<ReferentielsDocument<TDoc, TLigne>>();
+        services.AddScoped<ZonesEnteteDocument<TDoc, TLigne>>();
         return services;
     }
 
@@ -76,6 +77,18 @@ public static class Extensions
         api.MapPut("/etiquettes-ligne", (List<EtiquetteDto> l, HttpContext http, AffichageDocumentService<TDoc, TLigne> s, CancellationToken ct) => s.EnregistrerEtiquettes(l, Utilisateur.Depuis(http), ct));
         api.MapGet("/couleurs-type-prix", (AffichageDocumentService<TDoc, TLigne> s, CancellationToken ct) => s.CouleursTypePrix(ct));
         api.MapPut("/couleurs-type-prix", (List<CouleurTypePrixDto> l, HttpContext http, AffichageDocumentService<TDoc, TLigne> s, CancellationToken ct) => s.EnregistrerCouleurs(l, Utilisateur.Depuis(http), ct));
+        api.MapGet("/styles-lignes", (AffichageDocumentService<TDoc, TLigne> s, CancellationToken ct) => s.StylesLignes(ct));
+        api.MapPut("/styles-lignes", (List<StyleParametre> l, HttpContext http, AffichageDocumentService<TDoc, TLigne> s, CancellationToken ct) => s.EnregistrerStylesLignes(l, Utilisateur.Depuis(http), ct));
+        // Zones supplémentaires d'entête (colonnes x_ de document ; administrateur) : registre, création, modification, retrait.
+        api.MapGet("/zones-entete", (HttpContext http, ZonesEnteteDocument<TDoc, TLigne> s, CancellationToken ct) => s.Lister(Utilisateur.Depuis(http), ct));
+        api.MapPost("/zones-entete", (DemandeZoneEntete d, HttpContext http, ZonesEnteteDocument<TDoc, TLigne> s, CancellationToken ct) => s.Creer(d, Utilisateur.Depuis(http), ct));
+        api.MapPut("/zones-entete/{colonne}", (string colonne, ModificationZoneEntete m, HttpContext http, ZonesEnteteDocument<TDoc, TLigne> s, CancellationToken ct) =>
+            s.Modifier(colonne, m, Utilisateur.Depuis(http), ct));
+        api.MapDelete("/zones-entete/{colonne}", async (string colonne, HttpContext http, ZonesEnteteDocument<TDoc, TLigne> s, CancellationToken ct) =>
+        {
+            await s.Supprimer(colonne, Utilisateur.Depuis(http), ct);
+            return Results.NoContent();
+        });
         api.MapGet("/modeles-document", (AffichageDocumentService<TDoc, TLigne> s, CancellationToken ct) => s.Modeles(ct));
         api.MapGet("/vues-document", (string? type, HttpContext http, AffichageDocumentService<TDoc, TLigne> s, CancellationToken ct) => s.Vues(type, Utilisateur.Depuis(http), ct));
         api.MapPut("/vues-document", (VueDocumentDto v, HttpContext http, AffichageDocumentService<TDoc, TLigne> s, CancellationToken ct) => s.EnregistrerVue(v, Utilisateur.Depuis(http), ct));

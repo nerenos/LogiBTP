@@ -46,6 +46,7 @@ public sealed class SectionFiche
 {
     public string Code { get; set; } = "";
     public string Titre { get; set; } = "";
+    public string? Court { get; set; }
     public List<string>? Champs { get; set; }
     public List<GroupeChamps>? Groupes { get; set; }
 }

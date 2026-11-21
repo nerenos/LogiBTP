@@ -411,3 +411,24 @@ body.redimensionnement-vertical { user-select: none; cursor: row-resize; }
 .grille td.col-commentaire { max-width: 16rem; overflow: hidden; text-overflow: ellipsis; color: var(--discret); }
 .pied-lignes .aide-raccourcis { cursor: pointer; text-decoration: underline dotted; }
 .pied-lignes .aide-raccourcis:hover { color: var(--texte); }
+
+/* Style paramétré des tranches dans le plan (variables --ligne-* posées sur le li) et éditeur de style. */
+.plan-arbre li.ls-couleur .lib, .plan-arbre li.ls-couleur .num { color: var(--ligne-couleur); }
+.plan-arbre li.ls-fond:not(.courant) { background: var(--ligne-fond); }
+.plan-arbre li.ls-gras .lib { font-weight: var(--ligne-poids); }
+.plan-arbre li.ls-italique .lib { font-style: var(--ligne-fonte); }
+.plan-arbre li.ls-deco .lib { text-decoration: var(--ligne-deco); }
+.plan-arbre li.ls-taille .lib { font-size: var(--ligne-taille); }
+.editeur-style { display: flex; flex-wrap: wrap; gap: 0.4rem 0.8rem; align-items: end; }
+.editeur-style label { display: flex; flex-direction: column; gap: 0.1rem; font-size: 0.85em; }
+.editeur-style-couleur { display: flex; gap: 0.2rem; align-items: center; }
+.editeur-style-couleur input[type=color] { width: 2rem; padding: 0; }
+.styles-lignes-classe { border-top: 1px solid var(--bord); padding: 0.4rem 0; }
+.styles-lignes-classe h3 { margin: 0 0 0.3rem; font-size: 0.95em; }
+.styles-lignes-apercu { display: inline-block; padding: 0.1rem 0.5rem; margin-left: 0.5rem; border-radius: 3px; }
+.styles-lignes-apercu.ls-couleur { color: var(--ligne-couleur); }
+.styles-lignes-apercu.ls-fond { background: var(--ligne-fond); }
+.styles-lignes-apercu.ls-gras { font-weight: var(--ligne-poids); }
+.styles-lignes-apercu.ls-italique { font-style: var(--ligne-fonte); }
+.styles-lignes-apercu.ls-deco { text-decoration: var(--ligne-deco); }
+.styles-lignes-apercu.ls-taille { font-size: var(--ligne-taille); }

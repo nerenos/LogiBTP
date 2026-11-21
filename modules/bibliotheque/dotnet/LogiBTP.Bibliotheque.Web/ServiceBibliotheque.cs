@@ -17,6 +17,15 @@ public class SpecialisationBibliotheque
 
     public virtual bool PeutModifierTarifs(Utilisateur u) => true;
 
+    /// <summary>Mise à jour de la bibliothèque depuis un PA de document : modifier la fiche élément ; par défaut, comme les tarifs.</summary>
+    public virtual bool PeutMettreAJourPa(Utilisateur u) => PeutModifierTarifs(u);
+
+    /// <summary>Type de la fiche d'un élément dans le module Fiche (verrou de modification, table verrou_fiche).</summary>
+    public virtual string TypeFicheElement => "element";
+
+    /// <summary>Durée sans battement après laquelle le verrou d'une fiche est libre (même valeur que la spécialisation du module Fiche).</summary>
+    public virtual TimeSpan ExpirationVerrouFiche => TimeSpan.FromMinutes(2);
+
     /// <summary>
     /// Prix d'un ouvrage recalculé avec de nouveaux coefficients (période modifiée) : l'application qui sait calculer la
     /// composition le fait ; par défaut les prix de l'ouvrage restent inchangés.
@@ -305,7 +314,7 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
 
     private static TarifCalcul VersCalcul(TarifFournisseur t) => new()
     {
-        Prix = t.TfoPrix, PrixPublic = t.TfoPrixPublic, Remise1 = t.TfoRemise1, Remise2 = t.TfoRemise2,
+        Id = t.TfoId, TiersId = t.TfoTiersId, Prix = t.TfoPrix, PrixPublic = t.TfoPrixPublic, Remise1 = t.TfoRemise1, Remise2 = t.TfoRemise2,
         Unite = t.TfoUntCode, Principal = t.TfoPrincipal, Debut = Date(t.TfoDebut), Fin = Date(t.TfoFin),
     };
 
@@ -371,7 +380,7 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
     /// <summary>Entrée du calcul depuis l'élément enregistré et ses tarifs.</summary>
     public static EntreeElement Entree(Element e, List<TarifCalcul> tarifs) => new()
     {
-        UniteStock = e.EleUntStock, Unites = Unites(e.EleUnites.RootElement), Donnees = Donnees(e.EleProprietes.RootElement, Techniques(e)),
+        Type = e.EleType, UniteStock = e.EleUntStock, Unites = Unites(e.EleUnites.RootElement), Donnees = Donnees(e.EleProprietes.RootElement, Techniques(e)),
         Scenario = e.EleScenarioPa, PaFixe = e.ElePaFixe, DernierPa = e.EleDernierPa, Pmp = e.ElePmp, Tarifs = tarifs,
         CoefFg = e.EleCoefFg, CoefBenef = e.EleCoefBenef, Pv = e.ElePv, PvFixe = e.ElePvFixe, CoefRemise = e.EleCoefRemise,
     };
@@ -540,6 +549,125 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
         var r = await ApresTarif(eleId, $"Tarif fournisseur {t.TfoFournisseur} supprimé", u, ct);
         await tx.CommitAsync(ct);
         return r;
+    }
+
+    // ------------------------------------------------------------------ PA de référence et mise à jour depuis un document
+
+    private sealed record EmpreinteLue(long Id, string H);
+
+    private static string Aujourdhui() => DateTime.Today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+
+    /// <summary>Empreinte des fiches (même calcul que le module Fiche : md5 de la ligne), pour détecter une modification entre lecture et écriture.</summary>
+    private async Task<Dictionary<long, string>> Empreintes(List<long> ids, CancellationToken ct) =>
+        (await db.Database.SqlQueryRaw<EmpreinteLue>("""SELECT ele_id AS "Id", md5(row_to_json(t)::text) AS "H" FROM element t WHERE ele_id = ANY(@ids)""",
+            new Npgsql.NpgsqlParameter("ids", ids.ToArray())).ToListAsync(ct)).ToDictionary(x => x.Id, x => x.H);
+
+    /// <summary>PA de référence des éléments (par unité de stock) pour le fournisseur éventuel d'une pièce : voir <see cref="PaReference"/>.</summary>
+    public virtual async Task<List<PaReferenceDto>> PaReferences(DemandePaReference d, CancellationToken ct)
+    {
+        var ids = d.Elements.Distinct().ToList();
+        var elements = (await db.Elements.AsNoTracking().Where(e => ids.Contains(e.EleId)).ToListAsync(ct)).ToDictionary(e => e.EleId);
+        var tarifs = (await db.Tarifs.AsNoTracking().Where(t => ids.Contains(t.TfoEleId)).ToListAsync(ct)).GroupBy(t => t.TfoEleId)
+            .ToDictionary(g => g.Key, g => g.Select(VersCalcul).ToList());
+        var empreintes = await Empreintes(ids, ct);
+        var date = Aujourdhui();
+        var r = new List<PaReferenceDto>();
+        foreach (var id in ids)
+        {
+            if (!elements.TryGetValue(id, out var e)) continue;
+            var h = empreintes.GetValueOrDefault(id);
+            if (e.EleType != TypeElement.Article)
+                r.Add(new PaReferenceDto(id, e.EleUntStock, e.EleScenarioPa, e.ElePa, SourcePaReference.PaEffectif, null, true, h, []));
+            else
+            {
+                var p = PaReference.Calculer(Entree(e, tarifs.GetValueOrDefault(id) ?? []), date, d.TiersId);
+                r.Add(new PaReferenceDto(id, e.EleUntStock, e.EleScenarioPa, p.Pa, p.Source, p.TarifId, false, h, p.Alertes));
+            }
+        }
+        return r;
+    }
+
+    private static ResultatMajPa Refus(long eleId, string motif) => new(eleId, false, ActionMajPa.Aucune, motif, null, null, null);
+
+    /// <summary>Verrou de modification actif de la fiche détenu par un autre utilisateur (table du module Fiche, absente : aucun).</summary>
+    private async Task<bool> FicheVerrouilleParUnAutre(long eleId, Utilisateur u, CancellationToken ct)
+    {
+        var table = await db.Database.SqlQueryRaw<bool>("""SELECT to_regclass('verrou_fiche') IS NOT NULL AS "Value" """).FirstAsync(ct);
+        if (!table) return false;
+        var limite = DateTimeOffset.UtcNow - specialisation.ExpirationVerrouFiche;
+        return await db.Database.SqlQueryRaw<bool>("""
+            SELECT EXISTS (SELECT 1 FROM verrou_fiche WHERE vef_type = @t AND vef_id = @id AND vef_utilisateur <> @u AND vef_renouvele > @limite) AS "Value"
+            """, new Npgsql.NpgsqlParameter("t", specialisation.TypeFicheElement), new Npgsql.NpgsqlParameter("id", eleId.ToString(CultureInfo.InvariantCulture)),
+            new Npgsql.NpgsqlParameter("u", u.Code), new Npgsql.NpgsqlParameter("limite", limite)).FirstAsync(ct);
+    }
+
+    /// <summary>
+    /// Mise à jour de la bibliothèque depuis un nouveau PA de document, unitaire ou groupée (une transaction pour la liste) :
+    /// le plan (<see cref="PaReference.Planifier"/>) dit si le PA fixe, un tarif ou un nouveau tarif est écrit. Une fiche
+    /// ouverte en modification par un autre utilisateur, ou dont l'empreinte a changé depuis la lecture, est refusée (motif)
+    /// sans bloquer les autres. Simulation : plan et refus sans écriture. Prix recalculés, historique par le trigger.
+    /// </summary>
+    public virtual async Task<List<ResultatMajPa>> MettreAJourPa(DemandeMajPaListe d, Utilisateur u, CancellationToken ct)
+    {
+        if (!specialisation.PeutMettreAJourPa(u)) throw ExceptionMetier.AccesRefuse("TARIFS");
+        var date = Aujourdhui();
+        var r = new List<ResultatMajPa>();
+        await using var tx = await db.Unite().CommencerAsync(ct);
+        foreach (var m in d.Demandes.DistinctBy(x => x.EleId)) r.Add(await MettreAJourUnPa(m, date, d.Simulation, u, ct));
+        await tx.CommitAsync(ct);
+        return r;
+    }
+
+    public virtual async Task<ResultatMajPa> MettreAJourPa(DemandeMajPa m, Utilisateur u, CancellationToken ct) =>
+        (await MettreAJourPa(new DemandeMajPaListe([m]), u, ct))[0];
+
+    private async Task<ResultatMajPa> MettreAJourUnPa(DemandeMajPa m, string date, bool simulation, Utilisateur u, CancellationToken ct)
+    {
+        // Empreinte (la ligne est verrouillée jusqu'à la fin de la transaction) et verrou de la fiche.
+        var h = simulation
+            ? (await Empreintes([m.EleId], ct)).GetValueOrDefault(m.EleId)
+            : (await db.Database.SqlQueryRaw<string>("""SELECT md5(row_to_json(t)::text) AS "Value" FROM element t WHERE ele_id = @id FOR UPDATE""", new Npgsql.NpgsqlParameter("id", m.EleId)).ToListAsync(ct)).FirstOrDefault();
+        if (h is null) return Refus(m.EleId, MotifMajPa.ElementIntrouvable);
+        if (await FicheVerrouilleParUnAutre(m.EleId, u, ct)) return Refus(m.EleId, MotifMajPa.FicheEnModification);
+        if (m.Empreinte is not null && m.Empreinte != h) return Refus(m.EleId, MotifMajPa.EmpreinteChangee);
+        var e = await db.Elements.FirstAsync(x => x.EleId == m.EleId, ct);
+
+        var tarifs = await db.Tarifs.Where(t => t.TfoEleId == e.EleId).ToListAsync(ct);
+        // Élément composé : refusé par le plan lui-même (motif ELEMENT_COMPOSE).
+        var plan = PaReference.Planifier(Entree(e, tarifs.Select(VersCalcul).ToList()), m.Pa, date, m.TiersId);
+        var fournisseur = Texte(m.Fournisseur);
+        if (plan.Action == ActionMajPa.NouveauTarif && fournisseur is null) return Refus(m.EleId, MotifMajPa.FournisseurObligatoire);
+        if (plan.Action == ActionMajPa.Aucune || simulation) return new ResultatMajPa(e.EleId, false, plan.Action, plan.Motif, plan.PaFixe, plan.Tarif, null);
+
+        string commentaire;
+        switch (plan.Action)
+        {
+            case ActionMajPa.PaFixe:
+                e.ElePaFixe = plan.PaFixe;
+                commentaire = $"PA mis à jour depuis un document : {plan.PaFixe!.Value.ToString("0.######", CultureInfo.InvariantCulture)}";
+                break;
+            case ActionMajPa.Tarif:
+                var t = tarifs.First(x => x.TfoId == plan.Tarif!.Id);
+                t.TfoPrix = plan.Tarif!.Prix; t.TfoPrixPublic = plan.Tarif.PrixPublic; t.TfoRemise1 = plan.Tarif.Remise1; t.TfoRemise2 = plan.Tarif.Remise2;
+                t.TfoMajLe = DateTimeOffset.UtcNow; t.TfoMajPar = u.Code;
+                commentaire = $"Tarif fournisseur {t.TfoFournisseur} mis à jour depuis un document : {t.TfoPrix.ToString("0.######", CultureInfo.InvariantCulture)} / {t.TfoUntCode}";
+                await db.SaveChangesAsync(ct);
+                break;
+            default:
+                var (principal, scenario) = PremierTarif.Appliquer(tarifs.Count, false, e.EleScenarioPa, e.ElePaFixe);
+                e.EleScenarioPa = scenario;
+                var nouveau = new TarifFournisseur
+                {
+                    TfoEleId = e.EleId, TfoFournisseur = fournisseur!, TfoTiersId = plan.Tarif!.TiersId, TfoUntCode = plan.Tarif.Unite, TfoPrix = plan.Tarif.Prix,
+                    TfoDebut = DateOnly.ParseExact(date, "yyyy-MM-dd", CultureInfo.InvariantCulture), TfoPrincipal = principal, TfoMajLe = DateTimeOffset.UtcNow, TfoMajPar = u.Code,
+                };
+                db.Tarifs.Add(nouveau);
+                commentaire = $"Tarif fournisseur {fournisseur} créé depuis un document : {nouveau.TfoPrix.ToString("0.######", CultureInfo.InvariantCulture)} / {nouveau.TfoUntCode}";
+                await db.SaveChangesAsync(ct);
+                break;
+        }
+        var prix = await Recalculer(e.EleId, commentaire, u, ct);
+        return new ResultatMajPa(e.EleId, true, plan.Action, null, plan.PaFixe, plan.Tarif, prix);
     }
 
     // ------------------------------------------------------------------ appel dans les documents

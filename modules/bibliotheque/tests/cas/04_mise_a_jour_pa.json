@@ -1,0 +1,779 @@
+{
+  "description": "PA de référence et plan de mise à jour de la bibliothèque (paReference / planMiseAJourPa ↔ PaReference.Calculer / Planifier). Les tarifs portent id et tiers_id (fournisseur de l'annuaire). Date : 2026-11-20.",
+  "date": "2026-11-20",
+  "cas": [
+    {
+      "nom": "sans fournisseur, scénario FIXE : PA de l'élément",
+      "entree": {
+        "unite_stock": "u",
+        "scenario": "FIXE",
+        "pa_fixe": "10"
+      },
+      "tiers_id": null,
+      "nouveau_pa": "12",
+      "attendu": {
+        "reference": {
+          "pa": "10",
+          "source": "PA_EFFECTIF",
+          "tarif_id": null,
+          "alertes": []
+        },
+        "plan": {
+          "action": "PA_FIXE",
+          "motif": null,
+          "pa_fixe": "12",
+          "tarif": null
+        }
+      }
+    },
+    {
+      "nom": "fournisseur avec tarif : référence et mise à jour portent sur ce seul tarif (scénario FIXE)",
+      "entree": {
+        "unite_stock": "u",
+        "scenario": "FIXE",
+        "pa_fixe": "10",
+        "tarifs": [
+          {
+            "id": 1,
+            "tiers_id": 7,
+            "prix": "8",
+            "unite": "u",
+            "principal": false
+          }
+        ]
+      },
+      "tiers_id": 7,
+      "nouveau_pa": "9",
+      "attendu": {
+        "reference": {
+          "pa": "8",
+          "source": "TARIF_FOURNISSEUR",
+          "tarif_id": 1,
+          "alertes": []
+        },
+        "plan": {
+          "action": "TARIF",
+          "motif": null,
+          "pa_fixe": null,
+          "tarif": {
+            "id": 1,
+            "tiers_id": 7,
+            "unite": "u",
+            "prix": "9",
+            "prix_public": null,
+            "remise1": null,
+            "remise2": null,
+            "debut": null
+          }
+        }
+      }
+    },
+    {
+      "nom": "fournisseur sans tarif, PA venu du tarif principal d'un autre : nouveau tarif au début d'aujourd'hui",
+      "entree": {
+        "unite_stock": "u",
+        "scenario": "FOURNISSEUR_PRINCIPAL",
+        "tarifs": [
+          {
+            "id": 1,
+            "tiers_id": 8,
+            "prix": "8",
+            "unite": "u",
+            "principal": true
+          }
+        ]
+      },
+      "tiers_id": 7,
+      "nouveau_pa": "9.5",
+      "attendu": {
+        "reference": {
+          "pa": "8",
+          "source": "PA_EFFECTIF",
+          "tarif_id": null,
+          "alertes": []
+        },
+        "plan": {
+          "action": "NOUVEAU_TARIF",
+          "motif": null,
+          "pa_fixe": null,
+          "tarif": {
+            "id": null,
+            "tiers_id": 7,
+            "unite": "u",
+            "prix": "9.5",
+            "prix_public": null,
+            "remise1": null,
+            "remise2": null,
+            "debut": "2026-11-20"
+          }
+        }
+      }
+    },
+    {
+      "nom": "fournisseur sans tarif, scénario MEILLEUR_MIN : nouveau tarif",
+      "entree": {
+        "unite_stock": "u",
+        "scenario": "MEILLEUR_MIN",
+        "tarifs": [
+          {
+            "id": 1,
+            "tiers_id": 8,
+            "prix": "8",
+            "unite": "u"
+          },
+          {
+            "id": 2,
+            "tiers_id": 9,
+            "prix": "7",
+            "unite": "u"
+          }
+        ]
+      },
+      "tiers_id": 7,
+      "nouveau_pa": "6.5",
+      "attendu": {
+        "reference": {
+          "pa": "7",
+          "source": "PA_EFFECTIF",
+          "tarif_id": null,
+          "alertes": []
+        },
+        "plan": {
+          "action": "NOUVEAU_TARIF",
+          "motif": null,
+          "pa_fixe": null,
+          "tarif": {
+            "id": null,
+            "tiers_id": 7,
+            "unite": "u",
+            "prix": "6.5",
+            "prix_public": null,
+            "remise1": null,
+            "remise2": null,
+            "debut": "2026-11-20"
+          }
+        }
+      }
+    },
+    {
+      "nom": "fournisseur sans tarif, scénario FIXE : PA de l'élément",
+      "entree": {
+        "unite_stock": "u",
+        "scenario": "FIXE",
+        "pa_fixe": "10",
+        "tarifs": [
+          {
+            "id": 1,
+            "tiers_id": 8,
+            "prix": "8",
+            "unite": "u",
+            "principal": true
+          }
+        ]
+      },
+      "tiers_id": 7,
+      "nouveau_pa": "11",
+      "attendu": {
+        "reference": {
+          "pa": "10",
+          "source": "PA_EFFECTIF",
+          "tarif_id": null,
+          "alertes": []
+        },
+        "plan": {
+          "action": "PA_FIXE",
+          "motif": null,
+          "pa_fixe": "11",
+          "tarif": null
+        }
+      }
+    },
+    {
+      "nom": "fournisseur sans tarif, scénario PMP : aucune écriture",
+      "entree": {
+        "unite_stock": "u",
+        "scenario": "PMP",
+        "pmp": "10"
+      },
+      "tiers_id": 7,
+      "nouveau_pa": "11",
+      "attendu": {
+        "reference": {
+          "pa": "10",
+          "source": "PA_EFFECTIF",
+          "tarif_id": null,
+          "alertes": []
+        },
+        "plan": {
+          "action": "AUCUNE",
+          "motif": "SCENARIO_CALCULE",
+          "pa_fixe": null,
+          "tarif": null
+        }
+      }
+    },
+    {
+      "nom": "sans fournisseur, FOURNISSEUR_PRINCIPAL : tarif principal",
+      "entree": {
+        "unite_stock": "u",
+        "scenario": "FOURNISSEUR_PRINCIPAL",
+        "tarifs": [
+          {
+            "id": 1,
+            "tiers_id": 8,
+            "prix": "8",
+            "unite": "u",
+            "principal": false
+          },
+          {
+            "id": 2,
+            "tiers_id": 9,
+            "prix": "9",
+            "unite": "u",
+            "principal": true
+          }
+        ]
+      },
+      "tiers_id": null,
+      "nouveau_pa": "9.25",
+      "attendu": {
+        "reference": {
+          "pa": "9",
+          "source": "PA_EFFECTIF",
+          "tarif_id": null,
+          "alertes": []
+        },
+        "plan": {
+          "action": "TARIF",
+          "motif": null,
+          "pa_fixe": null,
+          "tarif": {
+            "id": 2,
+            "tiers_id": 9,
+            "unite": "u",
+            "prix": "9.25",
+            "prix_public": null,
+            "remise1": null,
+            "remise2": null,
+            "debut": null
+          }
+        }
+      }
+    },
+    {
+      "nom": "sans fournisseur, FOURNISSEUR_PRINCIPAL sans tarif principal en vigueur : aucune écriture",
+      "entree": {
+        "unite_stock": "u",
+        "scenario": "FOURNISSEUR_PRINCIPAL",
+        "tarifs": [
+          {
+            "id": 1,
+            "tiers_id": 8,
+            "prix": "8",
+            "unite": "u",
+            "principal": true,
+            "fin": "2026-06-30"
+          }
+        ]
+      },
+      "tiers_id": null,
+      "nouveau_pa": "9",
+      "attendu": {
+        "reference": {
+          "pa": null,
+          "source": "PA_EFFECTIF",
+          "tarif_id": null,
+          "alertes": [
+            "PA_INDISPONIBLE"
+          ]
+        },
+        "plan": {
+          "action": "AUCUNE",
+          "motif": "TARIF_PRINCIPAL_ABSENT",
+          "pa_fixe": null,
+          "tarif": null
+        }
+      }
+    },
+    {
+      "nom": "sans fournisseur, DERNIER_PA : aucune écriture",
+      "entree": {
+        "unite_stock": "u",
+        "scenario": "DERNIER_PA",
+        "dernier_pa": "10"
+      },
+      "tiers_id": null,
+      "nouveau_pa": "11",
+      "attendu": {
+        "reference": {
+          "pa": "10",
+          "source": "PA_EFFECTIF",
+          "tarif_id": null,
+          "alertes": []
+        },
+        "plan": {
+          "action": "AUCUNE",
+          "motif": "SCENARIO_CALCULE",
+          "pa_fixe": null,
+          "tarif": null
+        }
+      }
+    },
+    {
+      "nom": "sans fournisseur, MEILLEUR_MAX : aucune écriture",
+      "entree": {
+        "unite_stock": "u",
+        "scenario": "MEILLEUR_MAX",
+        "tarifs": [
+          {
+            "id": 1,
+            "tiers_id": 8,
+            "prix": "8",
+            "unite": "u"
+          }
+        ]
+      },
+      "tiers_id": null,
+      "nouveau_pa": "11",
+      "attendu": {
+        "reference": {
+          "pa": "8",
+          "source": "PA_EFFECTIF",
+          "tarif_id": null,
+          "alertes": []
+        },
+        "plan": {
+          "action": "AUCUNE",
+          "motif": "SCENARIO_CALCULE",
+          "pa_fixe": null,
+          "tarif": null
+        }
+      }
+    },
+    {
+      "nom": "sans fournisseur, PMP : aucune écriture",
+      "entree": {
+        "unite_stock": "u",
+        "scenario": "PMP",
+        "pmp": "10"
+      },
+      "tiers_id": null,
+      "nouveau_pa": "11",
+      "attendu": {
+        "reference": {
+          "pa": "10",
+          "source": "PA_EFFECTIF",
+          "tarif_id": null,
+          "alertes": []
+        },
+        "plan": {
+          "action": "AUCUNE",
+          "motif": "SCENARIO_CALCULE",
+          "pa_fixe": null,
+          "tarif": null
+        }
+      }
+    },
+    {
+      "nom": "tarif du fournisseur en prix public remisé : public recalculé, remises conservées",
+      "entree": {
+        "unite_stock": "u",
+        "scenario": "FIXE",
+        "pa_fixe": "10",
+        "tarifs": [
+          {
+            "id": 1,
+            "tiers_id": 7,
+            "prix": "75",
+            "prix_public": "100",
+            "remise1": "20",
+            "remise2": "6.25",
+            "unite": "u"
+          }
+        ]
+      },
+      "tiers_id": 7,
+      "nouveau_pa": "90",
+      "attendu": {
+        "reference": {
+          "pa": "75",
+          "source": "TARIF_FOURNISSEUR",
+          "tarif_id": 1,
+          "alertes": []
+        },
+        "plan": {
+          "action": "TARIF",
+          "motif": null,
+          "pa_fixe": null,
+          "tarif": {
+            "id": 1,
+            "tiers_id": 7,
+            "unite": "u",
+            "prix": "90",
+            "prix_public": "120",
+            "remise1": "20",
+            "remise2": "6.25",
+            "debut": null
+          }
+        }
+      }
+    },
+    {
+      "nom": "tarif du fournisseur à la tonne : prix net converti dans l'unité du tarif",
+      "entree": {
+        "unite_stock": "ml",
+        "unites": [
+          {
+            "unite": "t",
+            "formule": "1000 / {{poids_ml}}"
+          }
+        ],
+        "donnees": {
+          "poids_ml": "7.85"
+        },
+        "scenario": "FOURNISSEUR_PRINCIPAL",
+        "tarifs": [
+          {
+            "id": 1,
+            "tiers_id": 7,
+            "prix": "1150",
+            "unite": "t",
+            "principal": true
+          }
+        ]
+      },
+      "tiers_id": 7,
+      "nouveau_pa": "9.2",
+      "attendu": {
+        "reference": {
+          "pa": "9.0275",
+          "source": "TARIF_FOURNISSEUR",
+          "tarif_id": 1,
+          "alertes": []
+        },
+        "plan": {
+          "action": "TARIF",
+          "motif": null,
+          "pa_fixe": null,
+          "tarif": {
+            "id": 1,
+            "tiers_id": 7,
+            "unite": "t",
+            "prix": "1171.974522",
+            "prix_public": null,
+            "remise1": null,
+            "remise2": null,
+            "debut": null
+          }
+        }
+      }
+    },
+    {
+      "nom": "tarif du fournisseur hors validité : ignoré (PA effectif ; scénario FIXE)",
+      "entree": {
+        "unite_stock": "u",
+        "scenario": "FIXE",
+        "pa_fixe": "10",
+        "tarifs": [
+          {
+            "id": 1,
+            "tiers_id": 7,
+            "prix": "8",
+            "unite": "u",
+            "fin": "2026-10-31"
+          }
+        ]
+      },
+      "tiers_id": 7,
+      "nouveau_pa": "9",
+      "attendu": {
+        "reference": {
+          "pa": "10",
+          "source": "PA_EFFECTIF",
+          "tarif_id": null,
+          "alertes": []
+        },
+        "plan": {
+          "action": "PA_FIXE",
+          "motif": null,
+          "pa_fixe": "9",
+          "tarif": null
+        }
+      }
+    },
+    {
+      "nom": "plusieurs tarifs du fournisseur : le principal l'emporte",
+      "entree": {
+        "unite_stock": "u",
+        "scenario": "FIXE",
+        "pa_fixe": "10",
+        "tarifs": [
+          {
+            "id": 1,
+            "tiers_id": 7,
+            "prix": "8",
+            "unite": "u",
+            "debut": "2026-09-01"
+          },
+          {
+            "id": 2,
+            "tiers_id": 7,
+            "prix": "7",
+            "unite": "u",
+            "principal": true,
+            "debut": "2026-01-01"
+          }
+        ]
+      },
+      "tiers_id": 7,
+      "nouveau_pa": "6",
+      "attendu": {
+        "reference": {
+          "pa": "7",
+          "source": "TARIF_FOURNISSEUR",
+          "tarif_id": 2,
+          "alertes": []
+        },
+        "plan": {
+          "action": "TARIF",
+          "motif": null,
+          "pa_fixe": null,
+          "tarif": {
+            "id": 2,
+            "tiers_id": 7,
+            "unite": "u",
+            "prix": "6",
+            "prix_public": null,
+            "remise1": null,
+            "remise2": null,
+            "debut": null
+          }
+        }
+      }
+    },
+    {
+      "nom": "plusieurs tarifs du fournisseur sans principal : début le plus récent",
+      "entree": {
+        "unite_stock": "u",
+        "scenario": "FIXE",
+        "pa_fixe": "10",
+        "tarifs": [
+          {
+            "id": 1,
+            "tiers_id": 7,
+            "prix": "8",
+            "unite": "u",
+            "debut": "2026-01-01"
+          },
+          {
+            "id": 2,
+            "tiers_id": 7,
+            "prix": "7",
+            "unite": "u",
+            "debut": "2026-09-01"
+          }
+        ]
+      },
+      "tiers_id": 7,
+      "nouveau_pa": "6",
+      "attendu": {
+        "reference": {
+          "pa": "7",
+          "source": "TARIF_FOURNISSEUR",
+          "tarif_id": 2,
+          "alertes": []
+        },
+        "plan": {
+          "action": "TARIF",
+          "motif": null,
+          "pa_fixe": null,
+          "tarif": {
+            "id": 2,
+            "tiers_id": 7,
+            "unite": "u",
+            "prix": "6",
+            "prix_public": null,
+            "remise1": null,
+            "remise2": null,
+            "debut": null
+          }
+        }
+      }
+    },
+    {
+      "nom": "tarif du fournisseur dans une unité inconnue : aucune écriture, référence au PA effectif",
+      "entree": {
+        "unite_stock": "u",
+        "scenario": "FIXE",
+        "pa_fixe": "10",
+        "tarifs": [
+          {
+            "id": 1,
+            "tiers_id": 7,
+            "prix": "8",
+            "unite": "zz"
+          }
+        ]
+      },
+      "tiers_id": 7,
+      "nouveau_pa": "9",
+      "attendu": {
+        "reference": {
+          "pa": "10",
+          "source": "PA_EFFECTIF",
+          "tarif_id": null,
+          "alertes": [
+            "UNITE"
+          ]
+        },
+        "plan": {
+          "action": "AUCUNE",
+          "motif": "UNITE_TARIF",
+          "pa_fixe": null,
+          "tarif": null
+        }
+      }
+    },
+    {
+      "nom": "nouveau PA absent : aucune écriture",
+      "entree": {
+        "unite_stock": "u",
+        "scenario": "FIXE",
+        "pa_fixe": "10"
+      },
+      "tiers_id": null,
+      "nouveau_pa": null,
+      "attendu": {
+        "reference": {
+          "pa": "10",
+          "source": "PA_EFFECTIF",
+          "tarif_id": null,
+          "alertes": []
+        },
+        "plan": {
+          "action": "AUCUNE",
+          "motif": "PA_INVALIDE",
+          "pa_fixe": null,
+          "tarif": null
+        }
+      }
+    },
+    {
+      "nom": "nouveau PA négatif : aucune écriture",
+      "entree": {
+        "unite_stock": "u",
+        "scenario": "FIXE",
+        "pa_fixe": "10"
+      },
+      "tiers_id": null,
+      "nouveau_pa": "-1",
+      "attendu": {
+        "reference": {
+          "pa": "10",
+          "source": "PA_EFFECTIF",
+          "tarif_id": null,
+          "alertes": []
+        },
+        "plan": {
+          "action": "AUCUNE",
+          "motif": "PA_INVALIDE",
+          "pa_fixe": null,
+          "tarif": null
+        }
+      }
+    },
+    {
+      "nom": "PA arrondi à 6 décimales",
+      "entree": {
+        "unite_stock": "u",
+        "scenario": "FIXE",
+        "pa_fixe": "10"
+      },
+      "tiers_id": null,
+      "nouveau_pa": "12.3456785",
+      "attendu": {
+        "reference": {
+          "pa": "10",
+          "source": "PA_EFFECTIF",
+          "tarif_id": null,
+          "alertes": []
+        },
+        "plan": {
+          "action": "PA_FIXE",
+          "motif": null,
+          "pa_fixe": "12.345679",
+          "tarif": null
+        }
+      }
+    },
+    {
+      "nom": "élément composé (ouvrage) : aucune écriture, motif ELEMENT_COMPOSE",
+      "entree": {
+        "type": "OUVRAGE",
+        "unite_stock": "u",
+        "scenario": "FIXE",
+        "pa_fixe": "10"
+      },
+      "tiers_id": null,
+      "nouveau_pa": "12",
+      "attendu": {
+        "reference": {
+          "pa": "10",
+          "source": "PA_EFFECTIF",
+          "tarif_id": null,
+          "alertes": []
+        },
+        "plan": {
+          "action": "AUCUNE",
+          "motif": "ELEMENT_COMPOSE",
+          "pa_fixe": null,
+          "tarif": null
+        }
+      }
+    },
+    {
+      "nom": "tarif du fournisseur dont le facteur de remises est nul : prix net seul, public et remises effacés",
+      "entree": {
+        "unite_stock": "u",
+        "scenario": "FIXE",
+        "pa_fixe": "10",
+        "tarifs": [
+          {
+            "id": 3,
+            "tiers_id": 7,
+            "prix": "5",
+            "prix_public": "10",
+            "remise1": "100",
+            "unite": "u",
+            "principal": false
+          }
+        ]
+      },
+      "tiers_id": 7,
+      "nouveau_pa": "9",
+      "attendu": {
+        "reference": {
+          "pa": "0",
+          "source": "TARIF_FOURNISSEUR",
+          "tarif_id": 3,
+          "alertes": []
+        },
+        "plan": {
+          "action": "TARIF",
+          "motif": null,
+          "pa_fixe": null,
+          "tarif": {
+            "id": 3,
+            "tiers_id": 7,
+            "unite": "u",
+            "prix": "9",
+            "prix_public": null,
+            "remise1": null,
+            "remise2": null,
+            "debut": null
+          }
+        }
+      }
+    }
+  ]
+}

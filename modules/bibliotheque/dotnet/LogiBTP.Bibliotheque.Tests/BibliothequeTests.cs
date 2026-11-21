@@ -107,7 +107,11 @@ public class CodesTests
         Assert.Empty(Constantes.Ecarts(CasPartages.Chemin("modules", "bibliotheque", "js", "src", "codes.js"), "GESTION_ELEMENT", typeof(GestionElement)));
         Assert.Empty(Constantes.Ecarts(CasPartages.Chemin("modules", "bibliotheque", "js", "src", "codes.js"), "GENRE_POSTE", typeof(GenrePoste)));
         Assert.Empty(Constantes.Ecarts(CasPartages.Chemin("modules", "bibliotheque", "js", "src", "codes.js"), "SCENARIO_PA", typeof(ScenarioPa)));
+        Assert.Empty(Constantes.Ecarts(CasPartages.Chemin("modules", "bibliotheque", "js", "src", "codes.js"), "ACTION_MAJ_PA", typeof(ActionMajPa)));
+        Assert.Empty(Constantes.Ecarts(CasPartages.Chemin("modules", "bibliotheque", "js", "src", "codes.js"), "MOTIF_MAJ_PA", typeof(MotifMajPa)));
+        Assert.Empty(Constantes.Ecarts(CasPartages.Chemin("modules", "bibliotheque", "js", "src", "codes.js"), "SOURCE_PA_REFERENCE", typeof(SourcePaReference)));
         Assert.Empty(Constantes.Ecarts(CasPartages.Chemin("modules", "bibliotheque", "js", "src", "codes.js"), "TYPE_ELEMENT", typeof(TypeElement)));
+        Assert.Empty(Constantes.Ecarts(CasPartages.Chemin("modules", "bibliotheque", "js", "src", "codes.js"), "ERREUR_CALCUL", typeof(ErreurCalculElement)));
     }
 
     [Theory]
@@ -162,4 +166,54 @@ public class FiltreChoixTests
 
     [Fact]
     public void Specialise_l_element_ecarte_disparait_des_choix() => Assert.Equal(["A", "C"], new ServiceFiltre(true).Codes(Elements()));
+}
+
+public class PaReferenceTests
+{
+    private static JsonObject Jeu() => CasPartages.Lire(CasPartages.Chemin("modules", "bibliotheque", "tests", "cas", "04_mise_a_jour_pa.json"));
+
+    public static TheoryData<string> Cas()
+    {
+        var data = new TheoryData<string>();
+        foreach (var c in Jeu()["cas"]!.AsArray()) data.Add(c!["nom"]!.GetValue<string>());
+        return data;
+    }
+
+    private static JsonNode? V(decimal? v) => v is null ? null : JsonValue.Create(v.Value);
+
+    /// <summary>Jeu partagé avec paReference et planMiseAJourPa (calcul.js) : PA de référence et plan identiques.</summary>
+    [Theory]
+    [MemberData(nameof(Cas))]
+    public void Reference_et_plan_identiques_au_js(string nom)
+    {
+        var jeu = Jeu();
+        var date = jeu["date"]!.GetValue<string>();
+        var cas = jeu["cas"]!.AsArray().First(c => c!["nom"]!.GetValue<string>() == nom)!;
+        var entree = cas["entree"].Deserialize<EntreeElement>(JsonCalcul.Options)!;
+        long? tiers = cas["tiers_id"] is null ? null : cas["tiers_id"]!.GetValue<long>();
+        decimal? nouveau = cas["nouveau_pa"] is null ? null : decimal.Parse(cas["nouveau_pa"]!.GetValue<string>(), System.Globalization.CultureInfo.InvariantCulture);
+
+        var attendu = cas["attendu"]!;
+        var r = PaReference.Calculer(entree, date, tiers);
+        var ar = attendu["reference"]!;
+        Assert.True(CasPartages.Egal(V(r.Pa), ar["pa"]), $"référence : attendu {ar["pa"]?.ToJsonString()}, obtenu {r.Pa}");
+        Assert.Equal(ar["source"]!.GetValue<string>(), r.Source);
+        Assert.Equal(ar["tarif_id"]?.GetValue<long>(), r.TarifId);
+        Assert.Equal(ar["alertes"]!.AsArray().Select(a => a!.GetValue<string>()), r.Alertes);
+
+        var p = PaReference.Planifier(entree, nouveau, date, tiers);
+        var ap = attendu["plan"]!;
+        Assert.Equal(ap["action"]!.GetValue<string>(), p.Action);
+        Assert.Equal(ap["motif"]?.GetValue<string>(), p.Motif);
+        Assert.True(CasPartages.Egal(V(p.PaFixe), ap["pa_fixe"]), $"pa_fixe : attendu {ap["pa_fixe"]?.ToJsonString()}, obtenu {p.PaFixe}");
+        var at = ap["tarif"];
+        if (at is null) { Assert.Null(p.Tarif); return; }
+        var t = p.Tarif!;
+        Assert.Equal(at["id"]?.GetValue<long>(), t.Id);
+        Assert.Equal(at["tiers_id"]?.GetValue<long>(), t.TiersId);
+        Assert.Equal(at["unite"]!.GetValue<string>(), t.Unite);
+        Assert.Equal(at["debut"]?.GetValue<string>(), t.Debut);
+        foreach (var (champ, v) in new[] { ("prix", (decimal?)t.Prix), ("prix_public", t.PrixPublic), ("remise1", t.Remise1), ("remise2", t.Remise2) })
+            Assert.True(CasPartages.Egal(V(v), at[champ]), $"{champ} : attendu {at[champ]?.ToJsonString()}, obtenu {v}");
+    }
 }

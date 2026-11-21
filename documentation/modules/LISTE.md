@@ -46,3 +46,5 @@ Référence lue à la demande (hors contexte par défaut). Les règles que le co
 - Jamais en dur dans `js/src` ni `js/ui` : `js/personnalisation/fr.json` (préfixe `liste.*` : `operateurs`, `operateurs_vue`, `formule` (erreurs de compilation des formules), `fournisseur`, `modele`, `formats`, `themes`, `menu`, `concepteur`, `liste` ; section `erreurs` générée), icônes `liste_*` de `js/personnalisation/images/icones.json`, couleurs `--liste-*` de `js/personnalisation/theme.css` (couleurs proposées des champs couleur du concepteur par `couleurTheme` du socle).
 - `OPERATEURS_NOMBRE`, `OPERATEURS_TEXTE`, `OPERATEURS_VUE` : `pairesParCode` avec `[symbole, clé]` (`'='` → `egal`…), même forme qu'avant ; formats du concepteur : `textesParCode`.
 - Tests : `js/test/preparation.js` compose socle + module (clé manquante = échec) ; clés du code vérifiées par `client/test/personnalisation.test.js`.
+
+- Plan fiches-lignes-documents (lot 12) : `SpecialisationListe` peut fournir le libellé des colonnes ajoutées par l'utilisateur (colonnes `x_` des zones d'entête : `Colonne.Libelle`, proposé comme titre à l'ajout dans une vue).

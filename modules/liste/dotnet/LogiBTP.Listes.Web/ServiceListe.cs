@@ -239,7 +239,10 @@ public partial class ServiceListe(ListeDbContext db, SpecialisationListe special
         {
             try
             {
-                res.Add(new SourceDto(s.SliCode, s.SliLibelle, await ColonnesSource(s, ct), s.SliColonneId, s.SliColonneType, s.SliTypeElement, s.SliModifiable));
+                var colonnes = await ColonnesSource(s, ct);
+                var libelles = await specialisation.LibellesColonnesAsync(s.SliCode, ct);
+                if (libelles.Count > 0) colonnes = colonnes.Select(c => libelles.TryGetValue(c.Code, out var l) ? c with { Libelle = l } : c).ToList();
+                res.Add(new SourceDto(s.SliCode, s.SliLibelle, colonnes, s.SliColonneId, s.SliColonneType, s.SliTypeElement, s.SliModifiable));
             }
             catch (ExceptionMetier)
             {
