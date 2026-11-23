@@ -83,4 +83,26 @@ public class MetresTranchesRepriseTests
         Assert.Equal(120m, r.Document.EntTotalHt);
         Assert.Contains(r.Variables, v => v.VarPortee == "$" && v.VarNom == "Niveaux" && v.VarLigId == tranche.LigId);
     }
+
+    [Fact]
+    public void Metre_qui_lit_le_poids_de_la_ligne()
+    {
+        // MDE : [POIDS] × 2 sur une ligne de 12,5 kg → {{lig_poids}} × 2 = 25.
+        var p = new PieceSource
+        {
+            Origine = ("PMEDOCDEVCLI", "1"), TypeDocument = "V_DEVIS", Date = new DateOnly(2024, 1, 1), Statut = PiecesReprise.Statut.Brouillon,
+            Lignes =
+            [
+                new LignePiece
+                {
+                    Cle = "1", Reference = "11", Type = TL.Element, LibelleHtml = "Acier", Qte = 25, Pa = 2, TvaId = 1, Poids = 12.5m,
+                    Metre = new MetrePiece("Acier", "Renvoyer " + MetresMde.Expression("[POIDS]*2", [], [])),
+                },
+            ],
+        };
+        var r = Calculer(p, out var lignes);
+        Assert.Equal(12.5m, lignes[0].LigPoids);
+        Assert.Equal(25m, r.Lignes.Single().LigQteVendue);
+        Assert.Equal(50m, r.Document.EntTotalHt);
+    }
 }
