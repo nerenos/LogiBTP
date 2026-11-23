@@ -26,6 +26,7 @@ namespace LogiBTP.Api.Btp;
 /// Source « relance » (plans/relances.md, lot 7) : lettre d'une relance groupée (identifiant : relances du journal).
 /// </summary>
 internal sealed record ZoneEdition(string Colonne, string Type, string Libelle);
+internal sealed record VariableEdition(string Nom, string Type);
 
 public sealed class SpecialisationEditionBtp : SpecialisationEdition
 {
@@ -76,6 +77,11 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
         var zones = await db.Database.SqlQueryRaw<ZoneEdition>("SELECT zed_colonne AS \"Colonne\", zed_type AS \"Type\", zed_libelle AS \"Libelle\" FROM document_zone_entete ORDER BY zed_groupe NULLS FIRST, zed_ordre, zed_colonne").ToListAsync(ct);
         foreach (var z in zones)
             dico.Add(new JsonObject { ["groupe"] = "Zones d'entête", ["chemin"] = "document." + z.Colonne, ["libelle"] = z.Libelle, ["type"] = SourceDocumentEdition.TypeDictionnaire(z.Type) });
+        // Variables du document ($$) connues de la base (plan metres-tranches-document, lot 6) : variables.Nom.
+        var variables = await db.Database.SqlQueryRaw<VariableEdition>(
+            "SELECT DISTINCT var_nom AS \"Nom\", var_type AS \"Type\" FROM variable_definition WHERE var_portee = '$$' ORDER BY var_nom LIMIT 200").ToListAsync(ct);
+        foreach (var v in variables.DistinctBy(v => v.Nom))
+            dico.Add(new JsonObject { ["groupe"] = "Variables du document ($$)", ["chemin"] = "variables." + v.Nom, ["libelle"] = "$$" + v.Nom, ["type"] = v.Type == "N" ? "nombre" : "texte" });
         return dico;
     }
 
@@ -556,6 +562,7 @@ public static class SourceDocumentEdition
             ["lignes"] = LignesImprimees(r, lignes, descriptions,
                 await LotsStockBtp.LotsLignesAsync(db, d.EntId, r.Lignes.Select(l => (l.LigId, l.LigProprietes)), ct), styles),
             ["pied"] = Pied(r.Pied, r, lignes),
+            ["variables"] = VariablesDocument(r),
             ["tva"] = new JsonArray(r.Tva.Select(t => (JsonNode?)new JsonObject
             {
                 ["code"] = t.TvaCode, ["taux"] = t.TvaTaux, ["base"] = t.TvaBaseHt, ["montant"] = t.TvaMontantNet, ["mention"] = t.TvaMention, ["categorie"] = t.TvaCategorie,
@@ -749,7 +756,7 @@ public static class SourceDocumentEdition
     /// </summary>
     private sealed record DescriptionSql(long Id, string Html);
 
-    private static JsonArray LignesImprimees(ResultatDocument<DocumentBtp, DocumentLigneBtp> r, Dictionary<long, DocumentLigneBtp> parId,
+    internal static JsonArray LignesImprimees(ResultatDocument<DocumentBtp, DocumentLigneBtp> r, Dictionary<long, DocumentLigneBtp> parId,
         IReadOnlyDictionary<long, string>? descriptions = null, IReadOnlyDictionary<long, JsonArray>? lots = null,
         IReadOnlyDictionary<long, StyleLigne>? styles = null)
     {
@@ -764,6 +771,9 @@ public static class SourceDocumentEdition
                 var typePrix = l.LigTypePrix is { Length: > 0 } tp && tp != "V" ? tp : typePrixHerite;
                 if (typePrix == "F") continue; // tranche de frais annexes : jamais imprimée, ni sa descendance
                 var type = TypeLigne(l.LigTylId);
+                // Tranche à quantité (plan metres-tranches-document, lot 6) : quantité et PU pour une unité imprimés quand
+                // la quantité n'est pas 1.
+                var qteTranche = l.LigTylId == TL.Titre && l.LigQteVendue is decimal qt && qt != 1 ? qt : (decimal?)null;
                 if (!l.LigIsNonEditee)
                 {
                     var o = new JsonObject
@@ -771,7 +781,10 @@ public static class SourceDocumentEdition
                         ["lig_id"] = l.LigId, ["type"] = type, ["niveau"] = niveau, ["numero"] = l.LigNumerotation, ["code"] = l.LigCode,
                         ["libelle_html"] = l.LigLibelleAffiche ?? l.LigLibelleHtml, ["libelle"] = l.LigLibelleBrut,
                         ["libelle_style_html"] = l.LigLibelleAffiche ?? l.LigLibelleHtml,
-                        ["qte"] = l.LigQte, ["unite"] = l.LigUntCode, ["pu"] = l.LigPvRemise ?? l.LigPv, ["pu_brut"] = l.LigPv,
+                        ["qte"] = l.LigTylId == TL.Titre ? qteTranche : l.LigQte, ["unite"] = l.LigUntCode,
+                        ["pu"] = l.LigTylId == TL.Titre ? (qteTranche is null ? null : l.LigPv) : l.LigPvRemise ?? l.LigPv,
+                        ["pu_brut"] = l.LigTylId == TL.Titre ? (qteTranche is null ? null : l.LigPv) : l.LigPv,
+                        ["qte_tranche"] = qteTranche,
                         ["remise_pct"] = l.LigCoefRemise is decimal cr && cr != 1 ? (1 - cr) * 100 : null,
                         ["montant"] = l.LigMontantHt, ["taux_tva"] = l.LigTauxTva, ["type_prix"] = typePrix,
                         ["option"] = typePrix == "O", ["pour_memoire"] = typePrix == "M", ["variante"] = l.LigVarianteDeId is not null,
@@ -834,6 +847,23 @@ public static class SourceDocumentEdition
     }
 
     private static string Html(string? texte) => System.Net.WebUtility.HtmlEncode(texte ?? "");
+
+    /// <summary>
+    /// Variables du document ($$ : définitions de la grille et métré du document) à leur dernière valeur calculée :
+    /// variables.Nom (nombre, ou texte pour une variable chaîne ou booléenne d'un script). Une définition « += » ne crée pas
+    /// de nom : la dernière valeur calculée d'un nom l'emporte.
+    /// </summary>
+    internal static JsonObject VariablesDocument(ResultatDocument<DocumentBtp, DocumentLigneBtp> r)
+    {
+        var o = new JsonObject();
+        if (r is not ResultatCalcul rc) return o;
+        foreach (var v in rc.Variables.Where(v => v.VarPortee == "$$").OrderBy(v => v.VarMtrId is null ? 1 : 0).ThenBy(v => v.VarOrdre).ThenBy(v => v.VarId))
+        {
+            JsonNode? valeur = v.VarType == "N" ? (v.VarValeur is decimal d ? JsonValue.Create(d) : null) : v.VarValeurTexte is { } t ? JsonValue.Create(t) : null;
+            if (valeur is not null) o[v.VarNom] = valeur;
+        }
+        return o;
+    }
 
     private sealed record NatureSql(int Id, string Code, string Libelle);
 
@@ -1055,7 +1085,8 @@ public static class SourceDocumentEdition
             ("lignes[].montant", "Montant HT (pièce d'avancement : période)", "montant"), ("lignes[].taux_tva", "Taux de TVA", "nombre"),
             ("lignes[].type_prix", "V vendu, O option, M pour mémoire, F frais annexes", "texte"), ("lignes[].option", "Option", "booleen"),
             ("lignes[].pour_memoire", "Pour mémoire", "booleen"), ("lignes[].variante", "Variante", "booleen"), ("lignes[].composante", "Composante d'un ouvrage", "booleen"),
-            ("lignes[].tranche", "Tranche (section, titre)", "booleen"), ("lignes[].compte_total", "Comptée dans le total (pour les cumuls)", "booleen"),
+            ("lignes[].tranche", "Tranche (section, titre)", "booleen"),
+            ("lignes[].qte_tranche", "Quantité de la tranche quand elle n'est pas 1 (qte et pu : quantité et prix pour une unité de la tranche)", "nombre"), ("lignes[].compte_total", "Comptée dans le total (pour les cumuls)", "booleen"),
             ("lignes[].avt_pct", "Avancement cumulé (%)", "nombre"), ("lignes[].avt_qte_cumul", "Quantité cumulée", "nombre"),
             ("lignes[].avt_montant_cumul", "Montant HT cumulé", "montant"), ("lignes[].avt_montant_precedent", "Montant HT précédent", "montant"),
             ("lignes[].avt_pct_precedent", "Avancement précédent (%)", "nombre"), ("lignes[].avt_qte_marche", "Quantité du marché", "nombre"),
