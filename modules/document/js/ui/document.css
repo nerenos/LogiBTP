@@ -150,14 +150,19 @@ table.totaux tr.net th, table.totaux tr.net td { font-weight: 700; color: var(--
 .entete-bouton { padding: 0 0.3rem; line-height: 1.2; font-size: 0.9em; margin-left: 0.3rem; }
 
 /* Lignes du document dans la grille : types, ligne calculée, hors total, contrôles */
-.grille tr.type-titre td { background: var(--titre-fond); font-weight: 600; }
+.grille tr.type-titre td { background: var(--titre-fond); }
+.grille tr.type-titre:not(.ls-gras) td { font-weight: 600; }
 .grille tr.type-titre.selectionnee td { background: var(--selection); }
-.grille tr.type-section td { background: var(--accent-clair); font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; border-top: 2px solid var(--accent); }
+.grille tr.type-section td { background: var(--accent-clair); text-transform: uppercase; letter-spacing: 0.03em; border-top: 2px solid var(--accent); }
+.grille tr.type-section:not(.ls-gras) td { font-weight: 700; }
 .grille tr.type-section.selectionnee td { background: var(--selection); }
-.grille tr.type-ouvrage td { background: var(--ouvrage-fond); font-weight: 500; }
+.grille tr.type-ouvrage td { background: var(--ouvrage-fond); }
+.grille tr.type-ouvrage:not(.ls-gras) td { font-weight: 500; }
 .grille tr.type-ouvrage.selectionnee td { background: var(--selection); }
-.grille tr.type-sous_total td { font-style: italic; border-top: 1px solid var(--discret); }
-.grille tr.type-texte td { color: var(--discret); }
+.grille tr.type-sous_total td { border-top: 1px solid var(--discret); }
+.grille tr.type-sous_total:not(.ls-italique) td { font-style: italic; }
+/* Apparence par défaut des types : cède au style paramétré de la ligne (classes ls-* de socle.css, même spécificité). */
+.grille tr.type-texte:not(.ls-couleur) td { color: var(--discret); }
 .grille tr.type-pied_ht td, .grille tr.type-pied_ttc td, .grille tr.type-tva td { background: var(--pied-fond); }
 .grille tr.type-tva td { font-weight: 600; }
 .grille tr.calculee td { color: var(--discret); font-style: italic; font-size: 0.9em; }

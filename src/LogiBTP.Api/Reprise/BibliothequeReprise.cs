@@ -31,6 +31,8 @@ public sealed record ComposanteSource
 {
     /// <summary>Élément composant (table source, clé) ; null ou absent du registre : ligne sans lien vers la bibliothèque.</summary>
     public (string Table, string Cle)? Composant { get; init; }
+    /// <summary>Code de la composante dans la source : repris en lig_code quand l'élément composant n'est pas retrouvé.</summary>
+    public string? Code { get; init; }
     public string? LibelleHtml { get; init; }
     public string? Unite { get; init; }
     /// <summary>Quantité pour une unité d'ouvrage, avant perte.</summary>
@@ -112,7 +114,7 @@ public sealed class BibliothequeReprise
     private const int TypeLigneTexte = 4;
 
     /// <summary>Élément repris, tel qu'une composante l'utilise : CoefVente = PV / PA (coefficient de vente effectif).</summary>
-    private sealed record ElementRepris(long Id, string BibCode, string Code, string Unite, long? NatId, decimal? Pa, decimal CoefVente, decimal CoefPerte);
+    private sealed record ElementRepris(long Id, string BibCode, string Code, string Type, string Unite, long? NatId, decimal? Pa, decimal CoefVente, decimal CoefPerte);
 
     private readonly ContexteReprise ctx;
     private readonly ReferentielsCible cibles;
@@ -286,7 +288,7 @@ public sealed class BibliothequeReprise
         var pvFixe = false;
         string? composition = null;
         if (e.Type == TypeElement.Ouvrage && e.Composantes.Count > 0)
-            (pa, pr, pv, pvNet, coefFg, coefBenef, pvFixe, composition) = Ouvrage(e, code, stock, natId, coefFg, coefBenef);
+            (pa, pr, pv, pvNet, coefFg, coefBenef, pvFixe, composition) = Ouvrage(e, bibCode, code, stock, natId, coefFg, coefBenef);
         else if (e.Type != TypeElement.Texte)
         {
             var entree = new EntreeElement
@@ -334,7 +336,7 @@ public sealed class BibliothequeReprise
             AnnuaireReprise.Couper(ctx.Options.Auteur, 50), compte, e.TvaCode, AnnuaireReprise.Couper(e.CodeBarre, 50), e.DescriptionHtml,
             e.DelaiLivraison is >= 0 ? e.DelaiLivraison : null), CultureInfo.InvariantCulture);
         ctx.Registre.Inscrire(e.Origine.Table, e.Origine.Cle, TypesFicheReprise.Element, id);
-        elements[id] = new ElementRepris(id, bibCode, code, stock, natId, pa, pa is > 0 && pv is { } prixVente ? ArrondiCalcul.Arr6(prixVente / pa.Value) : coefFg * coefBenef, e.CoefPerte);
+        elements[id] = new ElementRepris(id, bibCode, code, e.Type, stock, natId, pa, pa is > 0 && pv is { } prixVente ? ArrondiCalcul.Arr6(prixVente / pa.Value) : coefFg * coefBenef, e.CoefPerte);
         volume.Ecrites++;
         await TarifsAsync(id, e, stock, ct);
         return id;
@@ -351,8 +353,14 @@ public sealed class BibliothequeReprise
     /// de quantité), prix par le moteur dans le premier mode qui retrouve le PV source, sinon PV imposé.
     /// </summary>
     private (decimal? Pa, decimal? Pr, decimal? Pv, decimal? PvNet, decimal CoefFg, decimal CoefBenef, bool PvFixe, string Composition) Ouvrage(
-        ElementSource e, string code, string stock, long? natId, decimal coefFg, decimal coefBenef)
+        ElementSource e, string bibCode, string code, string stock, long? natId, decimal coefFg, decimal coefBenef)
     {
+        // Code d'appel et lien vers l'élément composant, comme un appel de la bibliothèque (appel.js : codeAppel, lien) :
+        // « CODE » dans la bibliothèque de l'ouvrage, « BIB:CODE » dans une autre ; sans élément, code de la source.
+        string? CodeAppel(ElementRepris? x, ComposanteSource c) => x is null ? AnnuaireReprise.Couper(c.Code, 50)
+            : x.BibCode == bibCode ? x.Code : $"{x.BibCode}:{x.Code}";
+        static Dictionary<string, object> Lien(ElementRepris? x) => x is null ? new Dictionary<string, object>()
+            : new Dictionary<string, object> { ["element"] = new Dictionary<string, object> { ["id"] = x.Id, ["bib"] = x.BibCode, ["code"] = x.Code, ["type"] = x.Type } };
         var lignes = new List<Dictionary<string, object?>>();
         var racine = new Dictionary<string, object?>
         {
@@ -377,7 +385,8 @@ public sealed class BibliothequeReprise
                 lignes.Add(new Dictionary<string, object?>
                 {
                     ["lig_id"] = ordre + 1, ["lig_ordre"] = ordre, ["lig_ent_id"] = 0, ["lig_tyl_id"] = TypeLigneTexte, ["lig_parent_id"] = 1,
-                    ["lig_type_prix"] = "V", ["lig_coef_perte"] = 1, ["lig_proprietes"] = new Dictionary<string, object>(), ["lig_qte_source"] = "S",
+                    ["lig_code"] = CodeAppel(composant, c),
+                    ["lig_type_prix"] = "V", ["lig_coef_perte"] = 1, ["lig_proprietes"] = Lien(composant), ["lig_qte_source"] = "S",
                     ["lig_coef_remise"] = 1, ["lig_libelle_html"] = c.LibelleHtml ?? "", ["lig_precision_pv"] = 2, ["lig_precision_qte"] = 2,
                 });
                 continue;
@@ -390,9 +399,8 @@ public sealed class BibliothequeReprise
                 ["lig_ent_id"] = 0, ["lig_nat_id"] = c.NatId ?? composant?.NatId, ["lig_tyl_id"] = TypeLigneElement,
                 ["lig_coef_fg"] = Coef(c.CoefFg), ["lig_qte_type"] = c.Absolue ? "A" : "R", ["lig_unt_code"] = c.Unite ?? composant?.Unite ?? uniteDefaut,
                 ["lig_parent_id"] = 1, ["lig_type_prix"] = "V", ["lig_coef_benef"] = c.CoefBenef is > 0 ? c.CoefBenef : composant?.CoefVente ?? 1m,
-                ["lig_coef_perte"] = perte,
-                ["lig_proprietes"] = composant is null ? new Dictionary<string, object>()
-                    : new Dictionary<string, object> { ["element"] = new Dictionary<string, object> { ["id"] = composant.Id, ["bib"] = composant.BibCode, ["code"] = composant.Code } },
+                ["lig_coef_perte"] = perte, ["lig_code"] = CodeAppel(composant, c), ["lig_art_id"] = composant?.Id,
+                ["lig_proprietes"] = Lien(composant),
                 ["lig_qte_source"] = "S", ["lig_coef_remise"] = 1, ["lig_libelle_html"] = c.LibelleHtml ?? composant?.Code ?? "",
                 ["lig_precision_pv"] = 2, // Précision de la quantité vendue (quantité × perte), arrondie par le moteur.
                 ["lig_precision_qte"] = Math.Clamp(Decimales(ArrondiCalcul.Arr6(qte * perte)), 2, 6),

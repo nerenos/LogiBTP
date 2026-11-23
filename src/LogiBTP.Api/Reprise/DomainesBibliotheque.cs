@@ -190,13 +190,13 @@ public sealed class BibliothequeMde : IDomaineReprise
                         : composant is null && qte == 0 && (c.Decimal("DEBOURSE") ?? 0) == 0 && (c.Decimal("PV") ?? 0) == 0;
                     if (texte) return new ComposanteSource
                     {
-                        Texte = true,
+                        Texte = true, Composant = source is null ? null : (Element, composant!), Code = composant,
                         LibelleHtml = SourcesBibliotheque.Html(c.Texte("LIBELLECOM")) ?? SourcesBibliotheque.Html(c.Texte("LIBELLE"))
                                       ?? SourcesBibliotheque.Html(source?.Texte("LIBELLECOM")) ?? SourcesBibliotheque.Html(source?.Texte("LIBELLE")),
                     };
                     return new ComposanteSource
                     {
-                        Composant = composant is null ? null : (Element, composant),
+                        Composant = composant is null ? null : (Element, composant), Code = composant,
                         LibelleHtml = SourcesBibliotheque.Html(c.Texte("LIBELLECOM")) ?? SourcesBibliotheque.Html(c.Texte("LIBELLE"))
                                       ?? SourcesBibliotheque.Html(source?.Texte("LIBELLE")),
                         Unite = Unite(c.Texte("UNITE")), Quantite = qte, CoefPerte = perte,
@@ -354,6 +354,7 @@ public sealed class BibliothequeOptim : IDomaineReprise
                 Composantes = compos.Select(c => new ComposanteSource
                 {
                     Composant = (Article, c.Texte("ARO_ART_ID_Composant") ?? ""),
+                    Code = lignes.GetValueOrDefault(c.Texte("ARO_ART_ID_Composant") ?? "")?.Texte("ART_Code"),
                     LibelleHtml = lignes.GetValueOrDefault(c.Texte("ARO_ART_ID_Composant") ?? "") is { } s
                         ? s.Texte("ART_LibelleHTML") ?? SourcesBibliotheque.Html(s.Texte("ART_Libelle")) : null,
                     Quantite = c.Decimal("ARO_Qte") ?? 0, Absolue = c.Booleen("ARO_QteFixe") == true,

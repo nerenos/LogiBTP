@@ -708,19 +708,21 @@ public class RepriseBaseTests
             Assert.Contains(r.ChampsPerdus, c => c.Table == "element" && c.Champ == "ele_code_barre");
             Assert.Equal(1L, await Element("GARDEC", "e.ele_type = 'TEXTE' AND e.ele_libelle_html LIKE '%<b>garantie décennale</b>%' AND e.ele_libelle = 'Garantie décennale'"));
             Assert.Equal(1L, await Element("TXT1", "e.ele_type = 'TEXTE' AND e.ele_libelle_html = '<p>Garantie décennale</p><p>Assurance œuvre</p>'"));
-            // Ouvrage : PV retrouvé en mode déboursé, perte dans la quantité (Q9), composante en sommeil sans lien.
+            // Ouvrage : PV retrouvé en mode déboursé, perte dans la quantité (Q9), composante en sommeil sans lien (code de la
+            // source gardé) ; composantes liées aux éléments repris : code d'appel, lig_art_id et lien (comme un appel de la bibliothèque).
             Assert.Equal(1L, await Element("MUR20", """
                 e.ele_type = 'OUVRAGE' AND NOT e.ele_pv_fixe AND e.ele_pv = 30.475 AND e.ele_pa = 21.2 AND e.ele_composition->>'mode' = 'D'
                 AND jsonb_array_length(e.ele_composition->'lignes') = 6
                 AND e.ele_composition->'lignes' @> '[{"lig_tyl_id": 4, "lig_libelle_html": "Mise en œuvre selon DTU 20.1"}]'
-                AND e.ele_composition->'lignes' @> '[{"lig_tyl_id": 4, "lig_libelle_html": "<p>Garantie décennale</p><p>Assurance œuvre</p>"}]'
-                AND e.ele_composition->'lignes' @> '[{"lig_pa": 0.2, "lig_qte": 20, "lig_coef_perte": 1.05, "lig_proprietes": {"element": {"code": "CIM35", "bib": "GEN"}}}]'
-                AND e.ele_composition->'lignes' @> '[{"lig_pa": 2, "lig_proprietes": {}, "lig_libelle_html": "Ancien article"}]'
+                AND e.ele_composition->'lignes' @> '[{"lig_tyl_id": 4, "lig_code": "TXT1", "lig_libelle_html": "<p>Garantie décennale</p><p>Assurance œuvre</p>", "lig_proprietes": {"element": {"code": "TXT1", "type": "TEXTE"}}}]'
+                AND e.ele_composition->'lignes' @> '[{"lig_pa": 0.2, "lig_qte": 20, "lig_coef_perte": 1.05, "lig_code": "CIM35", "lig_proprietes": {"element": {"code": "CIM35", "bib": "GEN", "type": "ARTICLE"}}}]'
+                AND e.ele_composition->'lignes' @> jsonb_build_array(jsonb_build_object('lig_code', 'CIM35', 'lig_art_id', (SELECT x.ele_id FROM element x WHERE x.ele_code = 'CIM35')))
+                AND e.ele_composition->'lignes' @> '[{"lig_pa": 2, "lig_code": "VIEUX", "lig_art_id": null, "lig_proprietes": {}, "lig_libelle_html": "Ancien article"}]'
                 """));
             Assert.Contains(r.Anomalies, a => a.Code == CodeAnomalie.ComposanteHorsBibliotheque && a.Emplacement == "PMEELEMENT MUR20");
             // Ouvrage d'ouvrage repris après sa composante ; PV source non retrouvé : imposé et signalé.
             Assert.Equal(1L, await Element("AMUR", """
-                e.ele_pv_fixe AND e.ele_pv = 70 AND e.ele_composition->'lignes' @> '[{"lig_proprietes": {"element": {"code": "MUR20"}}}]'
+                e.ele_pv_fixe AND e.ele_pv = 70 AND e.ele_composition->'lignes' @> '[{"lig_code": "MUR20", "lig_proprietes": {"element": {"code": "MUR20", "type": "OUVRAGE"}}}]'
                 """));
             Assert.Contains(r.Anomalies, a => a.Code == CodeAnomalie.ConversionBrute && a.Emplacement == "PMEELEMENT CIM35");
             Assert.Equal(["PMEELEMENT AMUR"],
