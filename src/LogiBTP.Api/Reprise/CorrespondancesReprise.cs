@@ -26,6 +26,8 @@ public static class CorrespondancesReprise
         public const string TypeElement = "TYPE_ELEMENT";
         public const string FonctionIntervenant = "FONCTION_INTERVENANT";
         public const string RubriquePointage = "RUBRIQUE_POINTAGE";
+        /// <summary>Champs standard des fiches (« type_fiche.code » du paramétrage des fiches), cibles des zones MDE.</summary>
+        public const string ChampFiche = "CHAMP_FICHE";
     }
 
     /// <summary>Tables attendues dans le fichier de correspondances d'une source.</summary>
@@ -35,7 +37,7 @@ public static class CorrespondancesReprise
         [
             "type_document", "type_fiche", "type_facture", "etat_suite", "type_tiers", "tiers_payeur",
             "type_ligne_vente", "type_ligne_achat", "part_sous_traitance", "mode_avancement", "type_arrondi", "compteur",
-            "mode_paiement", "civilite", "pays", "table_fiche", "type_champ", "regroupement_nature", "type_element", "fonction_intervenant",
+            "mode_paiement", "civilite", "pays", "table_fiche", "type_champ", "champ_fiche", "regroupement_nature", "type_element", "fonction_intervenant",
             "rubrique_pointage",
         ],
         SourceReprise.Optim =>

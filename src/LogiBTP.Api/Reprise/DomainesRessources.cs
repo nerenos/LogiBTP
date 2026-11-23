@@ -226,6 +226,7 @@ public sealed class RessourcesOptim : IDomaineReprise
                 Telephone = l.Texte("SLR_Portable") ?? l.Texte("SLR_Telephone"), Email = l.Texte("SLR_Email"), Commentaire = l.Texte("SLR_Observation"),
                 AgencePerId = agence, CalId = ctx.Registre.Trouver("svhz_profil_horaire", l.Texte("SLR_PRH_ID")),
                 AgenceInterimPerId = interim && l.Texte("SLR_TRS_ID") is { } trs ? ctx.Registre.Trouver(RegistreOptim.Tiers, ctx.CleConservee(RegistreOptim.Tiers, trs)) : null,
+                Mission = interim,
             }, ct);
         }
 

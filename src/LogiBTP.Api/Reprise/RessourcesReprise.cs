@@ -41,6 +41,8 @@ public sealed record SalarieSource
     public long? CalId { get; init; }
     /// <summary>Agence d'intérim (tiers repris) de la mission d'un intérimaire.</summary>
     public long? AgenceInterimPerId { get; init; }
+    /// <summary>Mission d'intérim à créer (OPTIM : dates d'entrée et de sortie de la fiche) ; MDE : intérimaire sans mission.</summary>
+    public bool Mission { get; init; }
     /// <summary>Individu déjà repris pour la même personne (chargé d'affaires MDE) : réutilisé au lieu d'en créer un.</summary>
     public long? IndividuExistant { get; init; }
 }
@@ -270,9 +272,10 @@ public sealed class RessourcesReprise
         salaries[salId] = (s.Statut, string.Join(' ', new[] { prenom, s.Nom }.Where(x => !string.IsNullOrWhiteSpace(x))));
         volume.Ecrites++;
 
-        if (s.Statut == Statut.Interim)
+        // Intérimaires MDE : salarié seul, sans mission (souvent d'anciens intérimaires ; 20/11/2026). OPTIM gère le début et
+        // la fin des intérimaires : une mission ouverte par intérimaire, dates de la fiche, sinon date de reprise et fin d'année (listées).
+        if (s.Statut == Statut.Interim && s.Mission)
         {
-            // Une mission ouverte par intérimaire : dates de la fiche, sinon date de reprise et fin d'année (listées).
             var debut = s.Entree ?? ctx.Options.DateReprise;
             var fin = s.Sortie is { } so && so >= debut ? so : new DateOnly(Math.Max(debut.Year, ctx.Options.DateReprise.Year), 12, 31);
             if (s.Entree is null) ctx.Rapport.Forcer(Fiche.Mission, code, "debut", debut.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
@@ -282,6 +285,8 @@ public sealed class RessourcesReprise
                 """, ct, salId, s.AgenceInterimPerId, debut, fin, s.CoutHoraire is > 0 ? s.CoutHoraire : null, AnnuaireReprise.Couper(ctx.Options.Auteur, 50));
             var vm = ctx.Rapport.Volume("mission_interim"); vm.Lues++; vm.Ecrites++;
         }
+        else if (s.Statut == Statut.Interim && s.AgenceInterimPerId is not null)
+            ctx.Rapport.Perdre(Fiche.Mission, "agence", code, "Intérimaire repris sans mission d'intérim");
         return salId;
     }
 

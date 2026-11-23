@@ -84,7 +84,9 @@ public sealed partial class PiecesVenteMde : IDomaineReprise
         var facturesAvancement = new List<(LigneSource Entete, string TypeDocument, List<LigneSource> Lignes)>();
         // Marchés d'abord (PMEAFFBASEDOC) : une commande qui a servi de source au marché en est une copie exacte (même
         // numéro) ; elle n'est pas reprise une seconde fois, ses références pointent sur la commande du marché.
-        var marches = await MarchesAsync(ctx, pieces, etats, typesLigne, ct);
+        // Métrés des lignes (scripts) et variables du document (métré de la ligne récapitulative).
+        var metres = await MetresMde.ChargerAsync(ctx, ct);
+        var marches = await MarchesAsync(ctx, pieces, etats, typesLigne, metres, ct);
 
         foreach (var (table, typeSource, requete, requeteLignes) in Tables)
         {
@@ -125,6 +127,7 @@ public sealed partial class PiecesVenteMde : IDomaineReprise
                     GroupeCle = table == Devis ? $"{table}|{e.Texte("CODEDEVINIT") ?? e.Texte("CODE")}" : null,
                     Lignes = Lignes(ctx, lignes.GetValueOrDefault(cle) ?? [], e.Texte("CODECATEGORIE"), typesLigne, emplacement),
                 };
+                p = metres.Appliquer(ctx, p, lignes.GetValueOrDefault(cle) ?? [], emplacement);
                 await pieces.EcrireAsync(p, ct);
                 // Pièce d'origine d'une pièce du marché (devis accepté) : lien de transformation vers la commande du marché.
                 if (marches.ParOrigine.TryGetValue(cle, out var derivee)) await pieces.LierAsync((table, cle), (MarcheBase, derivee), ct);
@@ -156,7 +159,7 @@ public sealed partial class PiecesVenteMde : IDomaineReprise
         if (postes) ctx.Rapport.Perdre(table, "MTPOSTESHT/MTPOSTESTTC", e.Texte("CODE"), "Postes de pied non repris : total HT et TTC hors postes");
         return new PieceSource
         {
-            Origine = (table, e.Texte("CLEDOC")!), TypeDocument = typeDocument, Numero = e.Texte("CODE"),
+            Origine = (table, e.Texte("CLEDOC")!), TableLignes = table + "LIG", TypeDocument = typeDocument, Numero = e.Texte("CODE"),
             Date = SourcesRessources.Jour(e, "DATEDOC") ?? DateOnly.FromDateTime(DateTime.Today),
             Objet = AnnuaireReprise.Couper(e.Texte("LIBELLE") ?? Rtf.TexteDe(Rtf.HtmlDe(e.Texte("DESCRIPTIF"))), 250),
             TiersPerId = ctx.Registre.Trouver("PMECLIENT", e.Texte("CODECLIENT")),
@@ -205,7 +208,7 @@ public sealed partial class PiecesVenteMde : IDomaineReprise
                 Cle = cle, Reference = l.Texte("CLE"), ParentCle = parent, Type = type, Composante = composante && parent is not null, Code = l.Texte("CODEELEM"),
                 LibelleHtml = Rtf.HtmlDe(l.Texte("LIBELLECOM") ?? l.Texte("LIBELLE")), NonEditee = l.Contient("EDITEE") && l.Entier("EDITEE") == 0,
                 Qte = qte, PrecisionQte = l.Entier("DECUNITE") is { } dec and >= 0 ? (short)Math.Clamp((int)dec, 2, 6) : SourcesPieces.Precision(qte),
-                Unite = l.Texte("UNITE") is { } u ? ctx.Registre.TrouverCode(RegistreMde.Unite, u.Trim()) : null,
+                Unite = RegistreMde.UniteDe(ctx, l.Texte("UNITE")),
                 NatId = (int?)ctx.Registre.Trouver(BibliothequeMde.Nature, l.Texte("CLENATURE")),
                 TvaId = (int?)ctx.Registre.Trouver(RegistreMde.Tva, RegistreMde.CleTva(categorie, l.Texte("CODETVA"))),
                 Pa = l.Decimal("DEBOURSE"), CoefFg = l.Decimal("COEFFG") ?? 1, CoefBenef = l.Decimal("COEFBEN") ?? 1,

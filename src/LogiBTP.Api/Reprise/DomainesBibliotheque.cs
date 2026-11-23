@@ -48,6 +48,8 @@ public sealed class BibliothequeMde : IDomaineReprise
     public const string Bibliotheque = "PMEBIBLIO";
     public const string Famille = "PMEFAMILLE";
     public const string Element = "PMEELEMENT";
+    public const string Technique = "PMEELEMENTARTTEC";
+    public const string TexteStandard = "PMETEXTESTANDARD";
     public const string Fournisseur = "PMEFOURNISSEUR";
 
     private const string RequeteTarifs = """
@@ -69,14 +71,26 @@ public sealed class BibliothequeMde : IDomaineReprise
         }
 
         // MDE n'a pas de bibliothèque par défaut : celle qui a le plus d'éléments hors sommeil.
-        var premiere = true;
+        long? defaut = null;
         foreach (var l in await SqlReprise.SourceAsync(ctx, """
                      SELECT B.CODE, B.LIBELLE, (SELECT COUNT(*) FROM PMEELEMENT E WHERE E.CODEBIBLIO = B.CODE AND E.SOMMEIL = 0) AS NB
                      FROM PMEBIBLIO B ORDER BY NB DESC, B.CODE
                      """, ct))
         {
-            await b.BibliothequeAsync(Bibliotheque, l.Texte("CODE")!, l.Texte("CODE"), l.Texte("LIBELLE"), premiere, true, ct);
-            premiere = false;
+            var id = await b.BibliothequeAsync(Bibliotheque, l.Texte("CODE")!, l.Texte("CODE"), l.Texte("LIBELLE"), defaut is null, true, ct);
+            defaut ??= id;
+        }
+
+        // Textes standard (PMETEXTESTANDARD) : éléments de type texte de la bibliothèque par défaut.
+        foreach (var t in await SqlReprise.SourceAsync(ctx, "SELECT CODE, LIBELLE, TEXTE, NOTE FROM PMETEXTESTANDARD ORDER BY CODE", ct))
+        {
+            if (defaut is not { } bibDefaut) { var v = ctx.Rapport.Volume(TexteStandard); v.Lues++; v.Ecartees++; continue; }
+            await b.ElementAsync(new ElementSource
+            {
+                Origine = (TexteStandard, t.Texte("CODE")!), BibId = bibDefaut, Code = t.Texte("CODE"), Type = TypeElement.Texte,
+                LibelleHtml = SourcesBibliotheque.Html(t.Texte("TEXTE")) ?? SourcesBibliotheque.Html(t.Texte("LIBELLE")),
+                Libelle = t.Texte("LIBELLE") ?? t.Texte("CODE"), DescriptionHtml = SourcesBibliotheque.Html(t.Texte("NOTE")),
+            }, ct);
         }
 
         foreach (var l in await SqlReprise.SourceAsync(ctx, "SELECT CODE, CODEBIBLIO, LIBELLE, NIVEAU, CODEPARENT FROM PMEFAMILLE ORDER BY NIVEAU, CODE", ct))
@@ -91,10 +105,12 @@ public sealed class BibliothequeMde : IDomaineReprise
             .GroupBy(c => c.Texte("CODEOUV")!).ToDictionary(g => g.Key, g => g.ToList(), StringComparer.Ordinal);
         var unitesVente = (await SqlReprise.SourceAsync(ctx, "SELECT CODEART, UNITE, EQUIVSTOCK FROM PMEELEMENTUNITEVTE ORDER BY CODEART, NUMORDRE", ct))
             .GroupBy(c => c.Texte("CODEART")!).ToDictionary(g => g.Key, g => g.ToList(), StringComparer.Ordinal);
+        var techniques = (await SqlReprise.SourceAsync(ctx, "SELECT * FROM PMEELEMENTARTTEC ORDER BY CODEART", ct))
+            .Where(t => t.Texte("CODEART") is not null).ToDictionary(t => t.Texte("CODEART")!, StringComparer.Ordinal);
         var tarifs = (await SqlReprise.SourceAsync(ctx, RequeteTarifs, ct))
             .GroupBy(c => c.Texte("CODEART")!).ToDictionary(g => g.Key, g => g.ToList(), StringComparer.Ordinal);
 
-        string? Unite(string? code) => code is null ? null : ctx.Registre.TrouverCode(RegistreMde.Unite, code.Trim());
+        string? Unite(string? code) => RegistreMde.UniteDe(ctx, code);
         decimal Perte(LigneSource e) => e.Decimal("PA") is > 0 and var pa && e.Decimal("DEBOURSE") is > 0 and var deb
             ? ArrondiCalcul.Arr6(deb / pa) : BibliothequeReprise.CoefPerte(e.Decimal("COEFPERTE"));
 
@@ -105,6 +121,8 @@ public sealed class BibliothequeMde : IDomaineReprise
         var composants = composantes.ToDictionary(kv => kv.Key, kv => kv.Value.Select(c => c.Texte("CODECOMPO")).OfType<string>().Where(retenus.Contains).ToList(),
             StringComparer.Ordinal);
         var typesElement = ctx.Correspondances.Tables[TablesCorrespondance.TypeElement];
+        bool EstTexte(LigneSource e) => !composantes.ContainsKey(e.Texte("CODE") ?? "")
+            && typesElement.Trouver(e.Texte("TYPEELEM")) is { Ignorer: false, Cible: TypeElement.Texte };
 
         foreach (var cle in SourcesBibliotheque.Ordre(actifs, composants))
         {
@@ -124,7 +142,9 @@ public sealed class BibliothequeMde : IDomaineReprise
             var vente = Unite(l.Texte("UNITEVENTE"));
             var conversions = new List<(string, decimal)>();
             if (achat is not null && l.Decimal("RATIOSTOCK") is > 0 and var rs) conversions.Add((achat, rs));
-            if (vente is not null && l.Decimal("RATIOVENTE") is > 0 and var rv) conversions.Add((vente, rv));
+            // RATIOSTOCK : unités de stock pour 1 unité d'achat (sens de LogiBTP) ; RATIOVENTE : unités de vente pour 1 unité
+            // de stock (1 barre = 141,57 kg), donc inversé (1 kg = 0,007064 barre).
+            if (vente is not null && l.Decimal("RATIOVENTE") is > 0 and var rv) conversions.Add((vente, ArrondiCalcul.Arr6(1 / rv)));
             foreach (var u in unitesVente.GetValueOrDefault(cle) ?? [])
                 if (Unite(u.Texte("UNITE")) is { } uv && u.Decimal("EQUIVSTOCK") is > 0 and var eq) conversions.Add((uv, eq));
 
@@ -147,7 +167,7 @@ public sealed class BibliothequeMde : IDomaineReprise
             var gestion = l.Booleen("GESTSTOCK") == true ? GestionElement.Stock
                 : l.Texte("CODESSTPRINC") is not null ? GestionElement.SousTraitance
                 : l.Texte("CODEFOURPRINC") is not null || lesTarifs.Count > 0 ? GestionElement.Achat : GestionElement.NonGere;
-            await b.ElementAsync(new ElementSource
+            var eleId = await b.ElementAsync(new ElementSource
             {
                 Origine = (Element, cle), BibId = bib, Code = cle, Type = type,
                 LibelleHtml = SourcesBibliotheque.Html(l.Texte("LIBELLECOM")) ?? SourcesBibliotheque.Html(l.Texte("LIBELLE")),
@@ -165,6 +185,15 @@ public sealed class BibliothequeMde : IDomaineReprise
                     var source = composant is not null ? lignes.GetValueOrDefault(composant) : null;
                     var perte = source is null ? 1m : Perte(source);
                     var qte = c.Decimal("QUANTITEUNIT") is { } qu && qu != 0 ? qu : c.Decimal("QUANTITEBASE") ?? 0;
+                    // Ligne de texte : composant de type texte, ou sans composant ni quantité ni prix (libellé seul).
+                    var texte = source is not null ? EstTexte(source)
+                        : composant is null && qte == 0 && (c.Decimal("DEBOURSE") ?? 0) == 0 && (c.Decimal("PV") ?? 0) == 0;
+                    if (texte) return new ComposanteSource
+                    {
+                        Texte = true,
+                        LibelleHtml = SourcesBibliotheque.Html(c.Texte("LIBELLECOM")) ?? SourcesBibliotheque.Html(c.Texte("LIBELLE"))
+                                      ?? SourcesBibliotheque.Html(source?.Texte("LIBELLECOM")) ?? SourcesBibliotheque.Html(source?.Texte("LIBELLE")),
+                    };
                     return new ComposanteSource
                     {
                         Composant = composant is null ? null : (Element, composant),
@@ -176,7 +205,36 @@ public sealed class BibliothequeMde : IDomaineReprise
                     };
                 }).ToList(),
             }, ct);
+            if (eleId is { } id && techniques.GetValueOrDefault(cle) is { } tec) await TechniquesAsync(ctx, id, tec, ct);
         }
+    }
+
+    /// <summary>
+    /// Données techniques (PMEELEMENTARTTEC) par unité de stock : longueur, largeur, hauteur en m (en mm dans LogiBTP), poids
+    /// en kg, VOLUME en m² (surface, défaut : MDE s'en sert comme d'une surface) ou en m³ selon l'option de la reprise.
+    /// Unités UNITE* : M (mètre) et K (kilo) sont les unités par défaut ; tout autre code, non converti, est signalé.
+    /// </summary>
+    private static async Task TechniquesAsync(ContexteReprise ctx, long eleId, LigneSource t, CancellationToken ct)
+    {
+        var volume = ctx.Rapport.Volume(Technique);
+        volume.Lues++;
+        decimal? Valeur(string c) => t.Decimal(c) is { } v && v != 0 ? v : null;
+        decimal? Mm(string c) => Valeur(c) is { } v ? ArrondiCalcul.Arr6(v * 1000) : null;
+        foreach (var (u, defaut) in new[] { ("UNITELONG", "M"), ("UNITELARG", "M"), ("UNITEHAUT", "M"), ("UNITEPOIDS", "K"), ("UNITEVOL", "M") })
+            if (t.Texte(u) is { } code && !code.Equals(defaut, StringComparison.OrdinalIgnoreCase))
+                ctx.Rapport.Signaler(NiveauAnomalie.Information, CodeAnomalie.UniteTechnique, $"{Technique} {t.Texte("CODEART")}",
+                    $"{u} = « {code} » : valeur reprise dans l'unité par défaut (m, m², kg), à vérifier");
+        var (longueur, largeur, hauteur, poids, vol) = (Mm("LONGUEUR"), Mm("LARGEUR"), Mm("HAUTEUR"), Valeur("POIDS"), Valeur("VOLUME"));
+        if (longueur is null && largeur is null && hauteur is null && poids is null && vol is null) { volume.Ecartees++; return; }
+        if (ctx.Options.VolumeMde == VolumeMde.Volume)
+            await SqlReprise.ExecuterAsync(ctx.Unite, """
+                UPDATE element SET ele_longueur = $2, ele_largeur = $3, ele_hauteur = $4, ele_poids = $5, ele_volume = $6 WHERE ele_id = $1
+                """, ct, (int)eleId, longueur, largeur, hauteur, poids, vol);
+        else
+            await SqlReprise.ExecuterAsync(ctx.Unite, """
+                UPDATE element SET ele_longueur = $2, ele_largeur = $3, ele_hauteur = $4, ele_poids = $5, ele_surface = $6 WHERE ele_id = $1
+                """, ct, (int)eleId, longueur, largeur, hauteur, poids, vol);
+        volume.Ecrites++;
     }
 }
 

@@ -46,7 +46,7 @@ public sealed partial class PiecesVenteMde
     }
 
     private static async Task<MarchesMde> MarchesAsync(ContexteReprise ctx, PiecesReprise pieces, Dictionary<string, Etat> etats,
-        Dictionary<string, short> typesLigne, CancellationToken ct)
+        Dictionary<string, short> typesLigne, MetresMde metres, CancellationToken ct)
     {
         var marches = new MarchesMde();
         var res = marches.ParChantier;
@@ -77,6 +77,7 @@ public sealed partial class PiecesVenteMde
                 Statut = PiecesReprise.Statut.Valide, Verrouille = true,
                 Lignes = Lignes(ctx, lignes.GetValueOrDefault(cle) ?? [], e.Texte("CODECATEGORIE"), typesLigne, emplacement),
             };
+            p = metres.Appliquer(ctx, p, lignes.GetValueOrDefault(cle) ?? [], emplacement);
             await pieces.EcrireAsync(p, ct);
             if (ctx.Registre.Trouver(MarcheBase, cle) is not { } ent) continue;
             if (!await pieces.InscrireMarcheAsync((int)chaId, ent, ct))

@@ -19,15 +19,43 @@ public sealed class ChampsMde : IDomaineReprise
         var createur = await ChampsReprise.Createur.LireAsync(ctx, ct);
         var volume = ctx.Rapport.Volume("SYS_RTCINFOS");
         foreach (var l in await SqlReprise.SourceAsync(ctx,
-                     "SELECT TABLENAME, FIELDNAME, DISPLAYNAME, DATATYPE FROM SYS_RTCINFOS ORDER BY TABLENAME, FIELDNAME", ct))
+                     "SELECT TABLENAME, FIELDNAME, DISPLAYNAME, DATATYPE, PARAMS FROM SYS_RTCINFOS ORDER BY TABLENAME, FIELDNAME", ct))
         {
             volume.Lues++;
             var cle = $"{l.Texte("TABLENAME")}.{l.Texte("FIELDNAME")}";
             var fiche = ctx.Correspondre(TablesCorrespondance.TableFiche, l.Texte("TABLENAME"), $"SYS_RTCINFOS {cle}");
             var type = ctx.Correspondre(TablesCorrespondance.TypeChamp, l.Texte("DATATYPE") ?? "", $"SYS_RTCINFOS {cle}");
             if (fiche is not { Ignorer: false, Cible: { } typeFiche } || l.Texte("FIELDNAME") is null) { volume.Ecartees++; continue; }
-            var champ = await createur.CreerAsync(typeFiche, cle, l.Texte("DISPLAYNAME") ?? l.Texte("FIELDNAME")!,
-                type is { Ignorer: false, Cible: { } t } ? t : TypesChampSupplementaire.Texte, ct);
+            var libelle = l.Texte("DISPLAYNAME") ?? l.Texte("FIELDNAME")!;
+
+            // Champ existant de la fiche : par la table champ_fiche (« type_fiche.code » ou ignorer), sinon par le libellé.
+            ChampStandard? standard = null;
+            if (ctx.Correspondances.Tables.TryGetValue(TablesCorrespondance.ChampFiche, out var table) && table.Trouver(cle) is not null)
+            {
+                var e = ctx.Correspondre(TablesCorrespondance.ChampFiche, cle, $"SYS_RTCINFOS {cle}");
+                if (e is not { Ignorer: false, Cible: { } cible }) { volume.Ecartees++; continue; }
+                standard = cible.Split('.', 2) is [var tf, var code] && tf == typeFiche ? createur.Standard(typeFiche, code) : null;
+                if (standard is null)
+                {
+                    ctx.Rapport.Signaler(NiveauAnomalie.Avertissement, CodeAnomalie.ValeurInconnue, $"SYS_RTCINFOS {cle}",
+                        $"Champ « {cible} » inconnu de la fiche {typeFiche} : champ supplémentaire créé");
+                }
+            }
+            // Zone de blocage (« Achat bloqué »…) : usage de la fiche (« Ne plus utiliser ») ; sinon champ de même libellé.
+            else standard = ChampsReprise.EstBlocage(libelle) && createur.Standard(typeFiche, "usage") is { } usage ? usage
+                : createur.StandardDuLibelle(typeFiche, libelle);
+
+            var typeChamp = type is { Ignorer: false, Cible: { } t } ? t : TypesChampSupplementaire.Texte;
+            // Liste de choix (PARAMS « S: M "&Oui;&Non" ») : valeurs = lettres enregistrées par MDE ; sans valeurs : texte.
+            var valeurs = typeChamp == TypesChampSupplementaire.Liste ? ChampsReprise.OptionsMde(l.Texte("PARAMS")) : null;
+            if (standard is null && typeChamp == TypesChampSupplementaire.Liste && valeurs is null)
+            {
+                ctx.Rapport.Signaler(NiveauAnomalie.Avertissement, CodeAnomalie.ValeurInconnue, $"SYS_RTCINFOS {cle}",
+                    $"Liste de choix sans valeurs lisibles (PARAMS « {l.Texte("PARAMS")} ») : champ texte créé");
+                typeChamp = TypesChampSupplementaire.Texte;
+            }
+            var champ = standard is not null ? createur.Utiliser(typeFiche, cle, standard)
+                : await createur.CreerAsync(typeFiche, cle, libelle, typeChamp, ct, valeurs);
             if (champ is null) volume.Ecartees++; else volume.Ecrites++;
         }
     }

@@ -10,6 +10,7 @@ public class CodesTests
 
     [Theory]
     [InlineData("SOURCE_REPRISE", typeof(SourceReprise))]
+    [InlineData("VOLUME_MDE", typeof(VolumeMde))]
     [InlineData("ERREUR_CORRESPONDANCE", typeof(ErreurCorrespondance))]
     [InlineData("ETAT_SUITE", typeof(EtatSuite))]
     [InlineData("PART_SOUS_TRAITANCE", typeof(PartSousTraitance))]

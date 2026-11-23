@@ -22,6 +22,11 @@ public static class CiblesReprise
         (CorrespondancesReprise.Listes.ModeReglement, "SELECT mre_code FROM mode_reglement"),
         (CorrespondancesReprise.Listes.FonctionIntervenant, "SELECT fin_code FROM fonction_intervenant"),
         (CorrespondancesReprise.Listes.RubriquePointage, "SELECT DISTINCT rub_code FROM poi_rubrique"),
+        // Champs standard des fiches (zones supplémentaires MDE versées dans un champ existant).
+        (CorrespondancesReprise.Listes.ChampFiche, """
+            SELECT t.tyf_code || '.' || (c->>'code') FROM type_fiche t, jsonb_array_elements(t.tyf_definition->'champs') c
+            WHERE c->>'colonne' IS NOT NULL
+            """),
         // Civilités proposées par la fiche individu (liste du paramétrage des fiches).
         (CorrespondancesReprise.Listes.Civilite, """
             SELECT o->>'valeur' FROM type_fiche t, jsonb_array_elements(t.tyf_definition->'champs') c,
