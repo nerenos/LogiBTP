@@ -3,7 +3,10 @@ namespace LogiBTP.Metres;
 public class Metre
 {
     public long MtrId { get; set; }
-    public long MtrLigId { get; set; }
+    /// <summary>Ligne de l'hôte ; null = métré du document (MtrEntId).</summary>
+    public long? MtrLigId { get; set; }
+    /// <summary>Document de l'hôte d'un métré sans ligne (métré du document, un seul par document).</summary>
+    public long? MtrEntId { get; set; }
     public string? MtrLibelle { get; set; }
     public string? MtrUntCode { get; set; }
     /// <summary>Affectation du résultat à une variable, par exemple @surface.</summary>
