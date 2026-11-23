@@ -7,7 +7,7 @@ import { TAILLE_STYLE_LIGNE } from '../src/codes.js';
 // (grille et plan), et éditeur d'un style (détail de la ligne, options du document, écran de paramétrage).
 
 /** Couleurs du thème proposées pour un style (variables --document-style-*, définies dans theme.css). */
-export const PALETTE_STYLE = Object.freeze(['bleu', 'vert', 'orange', 'rouge', 'gris', 'fond-bleu', 'fond-vert', 'fond-orange', 'fond-rouge', 'fond-gris'].map((n) => `--document-style-${n}`));
+export const PALETTE_STYLE = Object.freeze(['bleu', 'vert', 'orange', 'rouge', 'violet', 'gris', 'fond-bleu', 'fond-vert', 'fond-orange', 'fond-rouge', 'fond-gris'].map((n) => `--document-style-${n}`));
 
 /** Valeur CSS d'une couleur de style : #rrggbb tel quel, variable du thème (--nom) en var(). */
 export const couleurCss = (c) => (typeof c === 'string' && c.startsWith('--') ? `var(${c})` : c);
