@@ -56,6 +56,7 @@
       "tout_afficher": "Tout afficher",
       "section": "Section",
       "titre": "Titre",
+      "quantite": "× {{qte}}",
       "pied": "Pied du document",
       "aucun_titre": "Aucun titre : ajoutez des lignes de type Titre pour structurer le document en tranches.",
       "plis": {
