@@ -18,19 +18,114 @@
   /* Net à payer du pied de la grille (D5) : pastille d'accent. */
   --document-total-fond: var(--accent-clair);
   --document-total-texte: var(--accent);
-  /* Styles des lignes : couleur proposée par le sélecteur libre, palette du thème (texte puis fonds) et tailles. */
+  /* Styles des lignes : couleur proposée par le sélecteur libre, palette du thème en 16 teintes (texte puis fond),
+     redéfinie en sombre plus bas (contraste suffisant sur le fond de la grille dans les deux thèmes), et tailles. */
   --document-style-defaut: #808080;
-  --document-style-bleu: #1d4ed8;
-  --document-style-vert: #15803d;
-  --document-style-orange: #c2410c;
   --document-style-rouge: #b91c1c;
+  --document-style-orange: #c2410c;
+  --document-style-ambre: #b45309;
+  --document-style-jaune: #a16207;
+  --document-style-citron: #4d7c0f;
+  --document-style-vert: #15803d;
+  --document-style-emeraude: #047857;
+  --document-style-sarcelle: #0f766e;
+  --document-style-cyan: #0e7490;
+  --document-style-ciel: #0369a1;
+  --document-style-bleu: #1d4ed8;
+  --document-style-indigo: #4338ca;
+  --document-style-violet: #6d28d9;
+  --document-style-pourpre: #a21caf;
+  --document-style-rose: #be185d;
   --document-style-gris: #4b5563;
-  --document-style-fond-bleu: #dbeafe;
-  --document-style-fond-vert: #dcfce7;
-  --document-style-fond-orange: #ffedd5;
   --document-style-fond-rouge: #fee2e2;
+  --document-style-fond-orange: #ffedd5;
+  --document-style-fond-ambre: #fef3c7;
+  --document-style-fond-jaune: #fef9c3;
+  --document-style-fond-citron: #ecfccb;
+  --document-style-fond-vert: #dcfce7;
+  --document-style-fond-emeraude: #d1fae5;
+  --document-style-fond-sarcelle: #ccfbf1;
+  --document-style-fond-cyan: #cffafe;
+  --document-style-fond-ciel: #e0f2fe;
+  --document-style-fond-bleu: #dbeafe;
+  --document-style-fond-indigo: #e0e7ff;
+  --document-style-fond-violet: #ede9fe;
+  --document-style-fond-pourpre: #fae8ff;
+  --document-style-fond-rose: #fce7f3;
   --document-style-fond-gris: #e5e7eb;
   --document-style-taille-petite: 0.85em;
   --document-style-taille-normale: 1em;
   --document-style-taille-grande: 1.2em;
+}
+
+/* Styles des lignes en thème sombre : texte clair et fonds foncés de la même teinte. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+      --document-style-rouge: #fca5a5;
+      --document-style-orange: #fdba74;
+      --document-style-ambre: #fcd34d;
+      --document-style-jaune: #fde047;
+      --document-style-citron: #bef264;
+      --document-style-vert: #86efac;
+      --document-style-emeraude: #6ee7b7;
+      --document-style-sarcelle: #5eead4;
+      --document-style-cyan: #67e8f9;
+      --document-style-ciel: #7dd3fc;
+      --document-style-bleu: #93c5fd;
+      --document-style-indigo: #a5b4fc;
+      --document-style-violet: #c4b5fd;
+      --document-style-pourpre: #f0abfc;
+      --document-style-rose: #f9a8d4;
+      --document-style-gris: #d1d5db;
+      --document-style-fond-rouge: #5c1a1a;
+      --document-style-fond-orange: #5a2810;
+      --document-style-fond-ambre: #553110;
+      --document-style-fond-jaune: #4f3a0c;
+      --document-style-fond-citron: #2f4410;
+      --document-style-fond-vert: #14472a;
+      --document-style-fond-emeraude: #0b4535;
+      --document-style-fond-sarcelle: #114440;
+      --document-style-fond-cyan: #123f50;
+      --document-style-fond-ciel: #103d5a;
+      --document-style-fond-bleu: #1c2f66;
+      --document-style-fond-indigo: #2a2a63;
+      --document-style-fond-violet: #3a2366;
+      --document-style-fond-pourpre: #4f1957;
+      --document-style-fond-rose: #561a39;
+      --document-style-fond-gris: #3a404b;
+  }
+}
+:root[data-theme="dark"] {
+  --document-style-rouge: #fca5a5;
+  --document-style-orange: #fdba74;
+  --document-style-ambre: #fcd34d;
+  --document-style-jaune: #fde047;
+  --document-style-citron: #bef264;
+  --document-style-vert: #86efac;
+  --document-style-emeraude: #6ee7b7;
+  --document-style-sarcelle: #5eead4;
+  --document-style-cyan: #67e8f9;
+  --document-style-ciel: #7dd3fc;
+  --document-style-bleu: #93c5fd;
+  --document-style-indigo: #a5b4fc;
+  --document-style-violet: #c4b5fd;
+  --document-style-pourpre: #f0abfc;
+  --document-style-rose: #f9a8d4;
+  --document-style-gris: #d1d5db;
+  --document-style-fond-rouge: #5c1a1a;
+  --document-style-fond-orange: #5a2810;
+  --document-style-fond-ambre: #553110;
+  --document-style-fond-jaune: #4f3a0c;
+  --document-style-fond-citron: #2f4410;
+  --document-style-fond-vert: #14472a;
+  --document-style-fond-emeraude: #0b4535;
+  --document-style-fond-sarcelle: #114440;
+  --document-style-fond-cyan: #123f50;
+  --document-style-fond-ciel: #103d5a;
+  --document-style-fond-bleu: #1c2f66;
+  --document-style-fond-indigo: #2a2a63;
+  --document-style-fond-violet: #3a2366;
+  --document-style-fond-pourpre: #4f1957;
+  --document-style-fond-rose: #561a39;
+  --document-style-fond-gris: #3a404b;
 }

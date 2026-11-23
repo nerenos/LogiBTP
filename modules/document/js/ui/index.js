@@ -10,5 +10,5 @@ export { PlanDocument } from './plan.js';
 export { RechercheLignes } from './recherche.js';
 export { NotificationsDocument, GRAVITES } from './notifications.js';
 export { ParametrageStylesLignes } from './parametrage-styles.js';
-export { creerEditeurStyle, presentationStyle, PALETTE_STYLE } from './style-ligne.js';
+export { creerEditeurStyle, presentationStyle, PALETTE_STYLE, PALETTE_TEXTE, PALETTE_FOND, TEINTES_STYLE } from './style-ligne.js';
 export { ParametrageZonesEntete } from './parametrage-zones.js';

@@ -72,9 +72,9 @@ test.describe.serial('Fiches et lignes de documents', { tag: TAG_API }, () => {
       await page.goto('/parametres/documents');
       const bloc = page.locator('.styles-lignes-classe').filter({ has: page.getByRole('heading', { name: /Tranche de niveau 1/ }) });
       await expect(bloc).toBeVisible({ timeout: 15000 });
-      const gras = bloc.locator('label', { hasText: 'Gras' }).locator('input');
+      const gras = bloc.locator('label', { hasText: 'Gras' }).getByRole('switch');
       await gras.click();
-      await page.getByRole('option', { name: 'Oui', exact: true }).click();
+      await expect(gras).toBeChecked();
       const couleur = bloc.locator('label', { hasText: 'Couleur du texte' }).locator('input').first();
       await couleur.click();
       await page.getByRole('option', { name: 'Bleu', exact: true }).click();
