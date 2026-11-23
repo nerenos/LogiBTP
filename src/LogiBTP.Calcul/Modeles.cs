@@ -33,7 +33,7 @@ public sealed class ResultatCalcul : ResultatDocument<DocumentBtp, DocumentLigne
 public sealed record BilanFraisAnnexes(long LigId, long? PorteeId, bool Cles, decimal Prevu, decimal Ventile, decimal VentileReel, decimal Ecart);
 
 /// <summary>Exécution du script d'un métré (scripts du résultat, comme côté JS).</summary>
-public sealed record DiagnosticScript(long MtrId, long LigId, decimal? Resultat, IReadOnlyList<ErreurScript> Erreurs,
+public sealed record DiagnosticScript(long MtrId, long? LigId, decimal? Resultat, IReadOnlyList<ErreurScript> Erreurs,
     IReadOnlyList<AvertissementScript> Avertissements);
 
 /// <summary>Comparaison client / serveur : champs génériques + BTP ; la ligne d'écart est appariée par son ouvrage.</summary>

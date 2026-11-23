@@ -94,7 +94,8 @@ public static class ElementsBibliotheque
 
     /// <summary>
     /// Prix d'un ensemble : totaux de sa tranche racine (titre) calculés par le moteur (lignes vendues seulement :
-    /// options, variantes et lignes pour mémoire hors total) ; chaque ligne garde ses coefficients. Réplique de
+    /// options, variantes et lignes pour mémoire hors total), pour une unité si la tranche a une quantité ; chaque ligne
+    /// garde ses coefficients. Réplique de
     /// calculerEnsemble (bibliotheque.js).
     /// </summary>
     private static (decimal? Pa, decimal? Pr, decimal? Pv, decimal? PvNet) CalculerEnsemble(CompositionOuvrage c)
@@ -107,8 +108,10 @@ public static class ElementsBibliotheque
             Lignes = c.Lignes, Metres = c.Metres, Variables = c.Variables,
         });
         var x = r.Lignes.First(l => l.LigId == racine.LigId);
-        var pv = ArrondiCalcul.Arr6(x.LigMontantHt ?? 0);
-        return (ArrondiCalcul.Arr6(x.LigMontantPa ?? 0), ArrondiCalcul.Arr6(x.LigMontantPr ?? 0), pv, pv);
+        // Tranche à quantité (saisie ou métré) : prix pour une unité de l'ensemble.
+        decimal Unite(decimal? v) => ArrondiCalcul.Arr6(x.LigQteTotale is decimal q && q != 0 ? (v ?? 0) / q : v ?? 0);
+        var pv = Unite(x.LigMontantHt);
+        return (Unite(x.LigMontantPa), Unite(x.LigMontantPr), pv, pv);
     }
 
     private static string? S(decimal? d) => d?.ToString(CultureInfo.InvariantCulture);

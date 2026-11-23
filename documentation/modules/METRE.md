@@ -16,7 +16,7 @@ Référence lue à la demande (hors contexte par défaut). Les règles que le co
 - `dotnet/LogiBTP.Metres` : `Domaine.cs` (`Metre`, `VariableDefinition`), `ScriptMetre.cs`, `Portees.cs`, `Variables.cs` (`Evaluer`, `Repartir`, `RepartitionVariables`). Pas de projet Web ni de routes. La conversion des anciens métrés en lignes (`conversion.js`, `ConversionMetre.cs`, jeux `tests/conversion`) est archivée (`documentation/archive/conversion-metres/`, lot 5 du versionnement du schéma) : aucune base ne garde l'ancien format.
 
 ## Modèle de données
-- `metre` (`mtr_id`, `mtr_lig_id` ligne de l'hôte, `mtr_libelle`, `mtr_unt_code`, `mtr_variable` ex. `@surface`, `mtr_resultat`, `mtr_script`).
+- `metre` (`mtr_id`, `mtr_lig_id` ligne de l'hôte — null pour le **métré du document**, `mtr_ent_id` document du métré du document (`modules/metre/db/1.1`, un seul par document, contrainte `ck_mtr_rattachement`, FK du cœur `db/1.5`), `mtr_libelle`, `mtr_unt_code`, `mtr_variable` ex. `@surface`, `mtr_resultat`, `mtr_script`).
 - `variable_definition` (`var_ent_id` document, `var_lig_id` null = document, `var_mtr_id` = variable d'un script, `var_portee`, `var_nom`, `var_operation` `=` / `+=`, `var_formule`, `var_ordre`, `var_valeur`, `var_type` N/C/B, `var_valeur_texte`). Les lignes `var_mtr_id` sont produites par le moteur à chaque calcul (`var_formule` = valeur par défaut déclarée) et jamais évaluées comme définitions.
 - Cœur (`db/100_btp.sql`) : FK `fk_mtr_ligne`, `fk_var_document`, `fk_var_ligne` ; colonnes `document_ligne.lig_mtr_id`, `lig_qte_source` (`S` saisie, `M` métré).
 
@@ -30,3 +30,9 @@ Référence lue à la demande (hors contexte par défaut). Les règles que le co
 
 ## Textes et icônes (module Personnalisation, lot P3q)
 - Textes `metre.*` du `fr.json` du module (`script` : messages du langage et types, `fonctions` : descriptions et arguments, `portees`, `dictionnaire`, `editeur` : structures, `notifications`, `panneau`) ; couleurs du langage et ombre du panneau dans `personnalisation/theme.css` (`--code-*`, `--metre-ombre`) ; icônes `metre_*`. Les jeux comparent les codes, jamais les messages ; le texte des scripts (mots-clés, conversion des métrés en lignes) n'est pas traduit. Tests avec le dictionnaire (`test/preparation.js`).
+
+## Métré de tranche et métré du document (plan metres-tranches-document, 23/11/2026)
+- **Métré du document** (sans ligne, `estMetreDocument` / `ScriptMetre.EstMetreDocument`) : évalué par les moteurs avant les définitions `$$` de la grille ; ses variables non locales sont publiées en `$$` (`porteePublication`), son « Renvoyer » est ignoré et averti (`METRE_DOCUMENT_RESULTAT`). Saisie : bouton « Métré » de la barre d'outils de la page document, ou grille `$$` d'une section (`PanneauMetre.ouvrirDocument`, hôte : `metreDocument()`, `creerMetreDocument()`). Il suit toute copie ou transformation.
+- **Métré de tranche** (ligne TITRE) : évalué avant les lignes de la tranche, variables publiées en `$` de la tranche, « Renvoyer » = quantité de la tranche. À sa création, les définitions `$` de la tranche sont converties en script (`scriptDepuisDefinitions(definitions, { portee, commentaire, renvoyer })` de `script/edition.js` : première affectation déclarée, suivantes en affectations, `+=` initial et noms réservés gardés en `$Nom`).
+- Jeux : `tests/scripts/09_metre_document_tranche.json` (module), `tests/cas/25_metre_tranche.json`, `26_metre_document.json` (cœur) ; conversion : `js/test/conversion-definitions.test.js`.
+

@@ -4,22 +4,26 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { D, Dec, analyserReference, ErreurCalcul } from '@logibtp/socle';
 import { egal } from '@logibtp/socle/testing';
-import { Portees, executerScript, modifierDeclaration, litteral } from '../src/index.js';
+import { Portees, executerScript, evaluerScriptMetre, modifierDeclaration, litteral } from '../src/index.js';
 
 // Jeux du langage de script partagés avec LogiBTP.Metres.Tests (CasScriptTests.cs) : un fichier par thème,
 // plusieurs cas par fichier. Hôte minimal : une ligne (id 1) et un seul contexte pour les portées $ et @@.
+// Entrée `metre_document` : métré du document (sans ligne ni contexte $ / @@) ; `publication` : portée de publication
+// imposée par l'hôte (métré d'une tranche) ; dans les deux cas, exécution par evaluerScriptMetre.
 const dossier = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../tests/scripts');
 
 function executer(entree) {
   const donnees = structuredClone(entree.donnees ?? {});
-  const portees = new Portees({ chaine: () => ['contexte'] });
+  const document = !!entree.metre_document;
+  const ligneId = document ? null : 1;
+  const portees = new Portees({ chaine: () => (document ? [] : ['contexte']) });
   for (const [cible, v] of Object.entries(entree.variables_existantes ?? {})) {
     const r = analyserReference(cible);
-    portees.affecter(r.portee, r.nom, '=', D(v), 1);
+    portees.affecter(r.portee, r.nom, '=', D(v), ligneId);
   }
   const resoudre = (texte) => {
     const r = analyserReference(texte);
-    if (r.genre === 'variable') return portees.lireValeur(r.portee, r.nom, 1);
+    if (r.genre === 'variable') return portees.lireValeur(r.portee, r.nom, ligneId);
     if (!(r.colonne in donnees)) throw new ErreurCalcul('COLONNE_INCONNUE', `Colonne inconnue ${r.colonne}`);
     const v = donnees[r.colonne];
     return typeof v === 'number' ? D(v) : v;
@@ -30,10 +34,15 @@ function executer(entree) {
     donnees[ref] = valeur;
   };
   const script = Array.isArray(entree.script) ? entree.script.join('\n') : entree.script;
-  return { r: executerScript(script, { resoudre, ecrire, portees, ligneId: 1 }), portees, donnees };
+  const contexte = { resoudre, ecrire, portees, ligneId };
+  if (document || entree.publication) {
+    const metre = { mtr_id: 1, mtr_ent_id: 1, mtr_lig_id: ligneId, mtr_script: script };
+    return { r: evaluerScriptMetre(metre, { ...contexte, publication: entree.publication }), portees, donnees, ligneId };
+  }
+  return { r: executerScript(script, contexte), portees, donnees, ligneId };
 }
 
-function comparer(attendu, { r, portees, donnees }) {
+function comparer(attendu, { r, portees, donnees, ligneId }) {
   const fautes = [];
   if (!egal(attendu.resultat ?? null, r.resultat)) fautes.push(`resultat : attendu ${attendu.resultat}, obtenu ${r.resultat}`);
   for (const [nom, att] of Object.entries(attendu.variables ?? {})) {
@@ -49,7 +58,7 @@ function comparer(attendu, { r, portees, donnees }) {
   }
   for (const [cible, v] of Object.entries(attendu.portees ?? {})) {
     const ref = analyserReference(cible);
-    const valeur = portees.lireValeur(ref.portee, ref.nom, 1);
+    const valeur = portees.lireValeur(ref.portee, ref.nom, ligneId);
     const obtenu = valeur instanceof Dec ? valeur.toString() : valeur;
     if (!egal(v, obtenu)) fautes.push(`portée ${cible} : attendu ${v}, obtenu ${obtenu}`);
   }

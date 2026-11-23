@@ -1,0 +1,206 @@
+{
+  "nom": "Métré de tranche : variables $ et quantité de tranche",
+  "description": "Tranche « Étage » à métré (quantité issue du métré) : le script est évalué avant ses lignes, publie Hauteur et Etages en $ de la tranche (lignes de variables en portée $, identifiants gardés) et renvoie 3 ; la cloison lit $Hauteur (2,5 × 4 = 10) et, comme la porte, est multipliée par 3 (300 chacune) ; tranche 600, soit 200 pour une unité. Tranche « Combles » sans métré : sa définition $ de la grille reste évaluée (1,8 × 10 = 18), sans quantité. Tranche dont le métré est en erreur : erreur non bloquante, quantité saisie (vide = 1).",
+  "entree": {
+    "document": {
+      "ent_id": 1,
+      "ent_mode_calcul_ouvrage": "V",
+      "ent_precision_montant": 2
+    },
+    "taux_tva": [
+      {
+        "ttv_id": 1,
+        "ttv_code": "T20",
+        "ttv_libelle": "TVA 20 %",
+        "ttv_taux": 20,
+        "ttv_categorie": "N"
+      }
+    ],
+    "lignes": [
+      {
+        "lig_id": 1,
+        "lig_parent_id": null,
+        "lig_ordre": 1,
+        "lig_tyl_id": 1,
+        "lig_libelle_html": "Étage – hauteur {{$Hauteur}}",
+        "lig_qte_source": "M",
+        "lig_mtr_id": 40
+      },
+      {
+        "lig_id": 2,
+        "lig_parent_id": 1,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Cloison",
+        "lig_tva_id": 1,
+        "lig_qte_source": "M",
+        "lig_mtr_id": 41,
+        "lig_pa": 10
+      },
+      {
+        "lig_id": 3,
+        "lig_parent_id": 1,
+        "lig_ordre": 2,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Porte",
+        "lig_tva_id": 1,
+        "lig_qte": 2,
+        "lig_pa": 50
+      },
+      {
+        "lig_id": 4,
+        "lig_parent_id": null,
+        "lig_ordre": 2,
+        "lig_tyl_id": 1,
+        "lig_libelle_html": "Combles"
+      },
+      {
+        "lig_id": 5,
+        "lig_parent_id": 4,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Isolant",
+        "lig_tva_id": 1,
+        "lig_qte_source": "M",
+        "lig_mtr_id": 42,
+        "lig_pa": 1
+      },
+      {
+        "lig_id": 6,
+        "lig_parent_id": null,
+        "lig_ordre": 3,
+        "lig_tyl_id": 1,
+        "lig_libelle_html": "Divers",
+        "lig_qte_source": "M",
+        "lig_mtr_id": 43
+      },
+      {
+        "lig_id": 7,
+        "lig_parent_id": 6,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Nettoyage",
+        "lig_tva_id": 1,
+        "lig_qte": 1,
+        "lig_pa": 5
+      }
+    ],
+    "metres": [
+      {
+        "mtr_id": 40,
+        "mtr_lig_id": 1,
+        "mtr_libelle": "Étages",
+        "mtr_script": "Hauteur est un numérique = 2.5\nEtages est un numérique = 3\nRenvoyer Etages"
+      },
+      {
+        "mtr_id": 41,
+        "mtr_lig_id": 2,
+        "mtr_libelle": "Cloison",
+        "mtr_script": "Renvoyer $Hauteur * 4"
+      },
+      {
+        "mtr_id": 42,
+        "mtr_lig_id": 5,
+        "mtr_libelle": "Isolant",
+        "mtr_script": "Renvoyer $Hauteur * 10"
+      },
+      {
+        "mtr_id": 43,
+        "mtr_lig_id": 6,
+        "mtr_libelle": "Erreur",
+        "mtr_script": "local z est un numérique\nRenvoyer 1 / z"
+      }
+    ],
+    "variables": [
+      {
+        "var_id": 20,
+        "var_lig_id": 4,
+        "var_mtr_id": null,
+        "var_portee": "$",
+        "var_nom": "Hauteur",
+        "var_operation": "=",
+        "var_formule": "1,8",
+        "var_ordre": 1
+      },
+      {
+        "var_id": 60,
+        "var_lig_id": 1,
+        "var_mtr_id": 40,
+        "var_portee": "$",
+        "var_nom": "Hauteur",
+        "var_operation": "=",
+        "var_formule": "2.5",
+        "var_ordre": 1,
+        "var_type": "N"
+      }
+    ]
+  },
+  "attendu": {
+    "erreurs": [
+      "DIVISION_ZERO"
+    ],
+    "document": {
+      "ent_total_ht": 623
+    },
+    "metres": {
+      "40": {
+        "mtr_resultat": 3
+      },
+      "41": {
+        "mtr_resultat": 10
+      },
+      "42": {
+        "mtr_resultat": 18
+      },
+      "43": {
+        "mtr_resultat": null
+      }
+    },
+    "variables": {
+      "20": {
+        "var_valeur": 1.8
+      },
+      "60": {
+        "var_portee": "$",
+        "var_lig_id": 1,
+        "var_mtr_id": 40,
+        "var_valeur": 2.5
+      }
+    },
+    "lignes": {
+      "1": {
+        "lig_qte_vendue": 3,
+        "lig_qte_totale": 3,
+        "lig_montant_ht": 600,
+        "lig_pv": 200,
+        "lig_libelle_affiche": "Étage – hauteur 2,5"
+      },
+      "2": {
+        "lig_qte_vendue": 10,
+        "lig_qte_totale": 30,
+        "lig_montant_ht": 300
+      },
+      "3": {
+        "lig_qte_totale": 6,
+        "lig_montant_ht": 300
+      },
+      "4": {
+        "lig_qte_vendue": null,
+        "lig_pv": null,
+        "lig_montant_ht": 18
+      },
+      "5": {
+        "lig_qte_vendue": 18,
+        "lig_montant_ht": 18
+      },
+      "6": {
+        "lig_qte_vendue": 1,
+        "lig_montant_ht": 5,
+        "lig_pv": 5
+      },
+      "7": {
+        "lig_montant_ht": 5
+      }
+    }
+  }
+}

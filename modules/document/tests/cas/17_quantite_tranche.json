@@ -1,0 +1,196 @@
+{
+  "nom": "Quantité de tranche : tranche × 3, option, ouvrage, tranche sans quantité, frais annexes",
+  "description": "Tranche « Étage » × 3 : les montants de ses lignes sont multipliés (10 × 12,50 × 3 = 375 ; 2 × 100 × 3 = 600 ; ouvrage 2 × 30 × 3 = 180, composante en quantité totale 18), son montant est la somme (1 155) et son PU le montant pour une unité (385) ; l'option de la tranche est multipliée (150) et reste hors total ; le sous-total somme les montants multipliés. Une tranche sans quantité ne change rien (quantités et PU vides). Une tranche de frais annexes n'a pas de quantité : quantité 1 (QTE_TRANCHE_FA).",
+  "entree": {
+    "document": {
+      "ent_id": 1,
+      "ent_precision_montant": 2
+    },
+    "taux_tva": [
+      {
+        "ttv_id": 1,
+        "ttv_code": "T20",
+        "ttv_libelle": "TVA 20 %",
+        "ttv_taux": 20,
+        "ttv_categorie": "N"
+      }
+    ],
+    "lignes": [
+      {
+        "lig_id": 1,
+        "lig_parent_id": null,
+        "lig_ordre": 1,
+        "lig_tyl_id": 1,
+        "lig_libelle_html": "Étage",
+        "lig_qte": 3
+      },
+      {
+        "lig_id": 2,
+        "lig_parent_id": 1,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Cloison",
+        "lig_qte": 10,
+        "lig_pv": 12.5,
+        "lig_tva_id": 1
+      },
+      {
+        "lig_id": 3,
+        "lig_parent_id": 1,
+        "lig_ordre": 2,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Porte",
+        "lig_qte": 2,
+        "lig_pv": 100,
+        "lig_tva_id": 1
+      },
+      {
+        "lig_id": 4,
+        "lig_parent_id": 1,
+        "lig_ordre": 3,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Option placard",
+        "lig_qte": 1,
+        "lig_pv": 50,
+        "lig_tva_id": 1,
+        "lig_type_prix": "O"
+      },
+      {
+        "lig_id": 10,
+        "lig_parent_id": 1,
+        "lig_ordre": 4,
+        "lig_tyl_id": 2,
+        "lig_libelle_html": "Fenêtre",
+        "lig_qte": 2,
+        "lig_tva_id": 1
+      },
+      {
+        "lig_id": 11,
+        "lig_parent_id": 10,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Vitrage",
+        "lig_qte": 3,
+        "lig_pv": 10
+      },
+      {
+        "lig_id": 5,
+        "lig_parent_id": null,
+        "lig_ordre": 2,
+        "lig_tyl_id": 5,
+        "lig_libelle_html": "Sous-total"
+      },
+      {
+        "lig_id": 6,
+        "lig_parent_id": null,
+        "lig_ordre": 3,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Nettoyage",
+        "lig_qte": 1,
+        "lig_pv": 25,
+        "lig_tva_id": 1
+      },
+      {
+        "lig_id": 7,
+        "lig_parent_id": null,
+        "lig_ordre": 4,
+        "lig_tyl_id": 1,
+        "lig_libelle_html": "Divers"
+      },
+      {
+        "lig_id": 8,
+        "lig_parent_id": 7,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Évacuation",
+        "lig_qte": 1,
+        "lig_pv": 10,
+        "lig_tva_id": 1
+      },
+      {
+        "lig_id": 9,
+        "lig_parent_id": null,
+        "lig_ordre": 5,
+        "lig_tyl_id": 1,
+        "lig_libelle_html": "Frais",
+        "lig_qte": 2,
+        "lig_type_prix": "F"
+      },
+      {
+        "lig_id": 12,
+        "lig_parent_id": 9,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Compte prorata",
+        "lig_qte": 1,
+        "lig_pv": 40,
+        "lig_tva_id": 1
+      }
+    ]
+  },
+  "attendu": {
+    "erreurs": [],
+    "document": {
+      "ent_total_ht": 1190,
+      "ent_total_tva": 238,
+      "ent_total_ttc": 1428
+    },
+    "lignes": {
+      "1": {
+        "lig_qte_vendue": 3,
+        "lig_qte_totale": 3,
+        "lig_montant_ht": 1155,
+        "lig_pv": 385
+      },
+      "2": {
+        "lig_qte_vendue": 10,
+        "lig_qte_totale": 30,
+        "lig_montant_ht": 375
+      },
+      "3": {
+        "lig_qte_totale": 6,
+        "lig_montant_ht": 600
+      },
+      "4": {
+        "lig_qte_totale": 3,
+        "lig_montant_ht": 150
+      },
+      "10": {
+        "lig_qte_vendue": 2,
+        "lig_qte_totale": 6,
+        "lig_pv": 30,
+        "lig_montant_ht": 180
+      },
+      "11": {
+        "lig_qte_totale": 18,
+        "lig_montant_ht": 30
+      },
+      "5": {
+        "lig_montant_ht": 1155
+      },
+      "6": {
+        "lig_qte_totale": 1,
+        "lig_montant_ht": 25
+      },
+      "7": {
+        "lig_qte_vendue": null,
+        "lig_qte_totale": null,
+        "lig_pv": null,
+        "lig_montant_ht": 10
+      },
+      "8": {
+        "lig_qte_totale": 1,
+        "lig_montant_ht": 10
+      },
+      "9": {
+        "lig_qte_vendue": 1,
+        "lig_qte_totale": 1,
+        "lig_montant_ht": 40,
+        "lig_pv": 40
+      },
+      "12": {
+        "lig_montant_ht": 40
+      }
+    }
+  }
+}

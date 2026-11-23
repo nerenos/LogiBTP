@@ -244,6 +244,7 @@ dialog.dialogue-vue::backdrop { background: var(--document-fond-modale); }
 /* Demi-pastille du mode de vente de la tranche (option, frais annexes…), coin bas droit comme dans la grille. */
 .plan-arbre li.tranche-frais .mt { font-style: italic; }
 .plan-arbre .complement { color: var(--discret); font-size: 0.8em; white-space: nowrap; }
+.plan-arbre .qte-tranche { color: var(--discret); font-size: 0.8em; white-space: nowrap; margin-left: 0.3em; }
 .plan-arbre .type-prix { width: 0.6rem; height: 0.9rem; flex: none; align-self: center; border-radius: 2px; }
 .plan-arbre li.pied { border-top: 1px solid var(--bord); margin-top: 0.3rem; padding-top: 0.3rem; }
 /* Légende du plan (D6), en bas, repliable : seulement ce qui est présent dans le document. */

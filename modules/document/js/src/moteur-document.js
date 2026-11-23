@@ -1,5 +1,5 @@
 import {
-  Dec, D, Dz, S, ZERO, coef, arrondir, arr6,
+  Dec, D, Dz, S, ZERO, UN, coef, arrondir, arr6,
   ErreurCalcul, analyserReference, remplacerVariables, texteBrut, sansAccent,
 } from '@logibtp/socle';
 import { messageErreur } from '@logibtp/socle/dictionnaire';
@@ -381,11 +381,13 @@ export class MoteurDocument {
   passeQuantites() {
     this.avancements = new Map();
     this.infosSituation = new Map();
+    this.qtesTranches = new Map();
     this.avantQuantites();
     for (const l of this.ordre) {
       if (!estPied(l) && !this.enErreur.has(l.lig_id)) {
         try {
           if (estChiffree(l)) this.calculerQuantite(l);
+          else if (l.lig_tyl_id === TL.TITRE) this.calculerQuantiteTranche(l);
           this.apresLigne(l);
         } catch (e) {
           this.capturer(e, l.lig_id);
@@ -414,13 +416,62 @@ export class MoteurDocument {
       const pqt = Dz(p.lig_qte_totale);
       if ((l.lig_qte_type ?? 'R') === 'A') totale = pqv.isZero() ? ZERO : qv.times(pqt).div(pqv);
       else totale = qv.times(pqt);
-    }
+    } else if (p && p.lig_tyl_id === TL.TITRE) totale = qv.times(this.qteTranche(p));
     this.ecrireQuantites(l, base, qv, totale);
+  }
+
+  /**
+   * Quantité d'une tranche (TITRE ; jamais une SECTION) : multiplicateur de ses lignes, quantité totale = quantité ×
+   * quantité totale de la tranche parente (tranches imbriquées). Sans quantité saisie (ni métré en spécialisation) :
+   * 1, colonnes de quantité vides, rien ne change. Tranche de frais annexes : quantité 1 (QTE_TRANCHE_FA).
+   */
+  calculerQuantiteTranche(l) {
+    l.lig_qte_vendue = null;
+    l.lig_qte_totale = null;
+    const p = this.parent(l);
+    const mult = p && p.lig_tyl_id === TL.TITRE ? this.qteTranche(p) : UN;
+    this.qtesTranches.set(l.lig_id, mult);
+    if (!this.aQuantiteTranche(l)) return;
+    const base = this.quantiteBase(l);
+    let qv = arrondir(base, l.lig_precision_qte ?? 2);
+    if (this.estFraisAnnexes(l) && !qv.eq(UN)) {
+      this.avertir(l.lig_id, 'QTE_TRANCHE_FA', 'Une tranche de frais annexes n\'a pas de quantité : quantité 1 retenue');
+      qv = UN;
+    }
+    const totale = arr6(qv.times(mult));
+    this.qtesTranches.set(l.lig_id, totale);
+    this.ecrireQuantites(l, base, qv, totale);
+  }
+
+  /** La tranche a-t-elle une quantité (saisie ; un métré en spécialisation) ? */
+  aQuantiteTranche(l) {
+    return D(l.lig_qte) !== null;
+  }
+
+  /** Quantité totale d'une tranche (produit des quantités des tranches englobantes) ; 1 par défaut. */
+  qteTranche(t) {
+    return this.qtesTranches?.get(t.lig_id) ?? UN;
+  }
+
+  /** Multiplicateur des montants d'une ligne de prix : quantité totale de la tranche qui la contient (1 sinon). */
+  multiplicateurTranche(l) {
+    const p = this.parent(l);
+    return p && p.lig_tyl_id === TL.TITRE && this.estLigneDePrix(l) ? this.qteTranche(p) : UN;
+  }
+
+  /** Quantité qui fait le montant d'une ligne : quantité vendue × multiplicateur de tranche. */
+  qteMontant(l) {
+    return Dz(l.lig_qte_vendue).times(this.multiplicateurTranche(l));
+  }
+
+  /** Quantité saisie : vide = 0 pour une ligne chiffrée, 1 pour une tranche. */
+  qteSaisie(l) {
+    return estTranche(l) ? D(l.lig_qte) ?? UN : Dz(l.lig_qte);
   }
 
   /** Quantité de départ : la saisie (un métré, une formule… en spécialisation). */
   quantiteBase(l) {
-    return Dz(l.lig_qte);
+    return this.qteSaisie(l);
   }
 
   /** Quantité vendue arrondie à la précision de la ligne (coefficient de perte… en spécialisation). */
@@ -478,7 +529,8 @@ export class MoteurDocument {
       const prec = l.lig_precision_pv ?? 2;
       const pvAff = this.pvAffiche(l, y, prec);
       const pvRem = arrondir(pvAff.times(coef(l.lig_coef_remise)), prec);
-      this.ecrireMontants(l, y, { pvAff, pvRem, qv: Dz(l.lig_qte_vendue) });
+      // Ligne d'une tranche à quantité : montants multipliés par la quantité de la tranche.
+      this.ecrireMontants(l, y, { pvAff, pvRem, qv: this.qteMontant(l) });
       // Avancement : le montant est le cumul (situation) ou la période (facture), pas quantité × prix.
       const a = this.avancement(l);
       if (a) l.lig_montant_ht = S(a.montant);
@@ -542,6 +594,7 @@ export class MoteurDocument {
         const fa = this.estFraisAnnexes(l);
         ecrire(l, somme(desc.filter((x) => this.estLigneDePrix(x) && (fa ? this.estFraisAnnexes(x) : !this.horsTotal(x, l))
           && !this.enErreur.has(x.lig_id) && x.lig_montant_ht !== null)));
+        if (l.lig_tyl_id === TL.TITRE) this.ecrirePuTranche(l);
       } else if (l.lig_tyl_id === TL.SOUS_TOTAL) {
         let debut = 0;
         if (l.lig_st_depuis_id !== null && l.lig_st_depuis_id !== undefined) {
@@ -557,6 +610,15 @@ export class MoteurDocument {
       }
     });
     this.totalCorps = somme(corps.filter(enTotal)).lig_montant_ht;
+  }
+
+  /**
+   * Prix d'une tranche à quantité : montant pour une unité = montant de la tranche ÷ sa quantité totale, à la précision
+   * PV de la tranche ; vide sans quantité (ou quantité nulle).
+   */
+  ecrirePuTranche(l) {
+    const q = D(l.lig_qte_totale);
+    l.lig_pv = q === null || q.isZero() ? null : S(arrondir(D(l.lig_montant_ht).div(q), l.lig_precision_pv ?? 2));
   }
 
   descendDe(l, ancetre) {

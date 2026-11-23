@@ -42,6 +42,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Lignes et variables imprimées (EditionsBtp) vérifiées sans base par les tests du cœur. -->
+    <InternalsVisibleTo Include="LogiBTP.Calcul.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="EFCore.NamingConventions" Version="10.0.1" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
   </ItemGroup>

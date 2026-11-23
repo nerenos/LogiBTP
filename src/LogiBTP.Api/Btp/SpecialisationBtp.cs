@@ -657,7 +657,10 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
     {
         var db = (LogiBtpContext)contexte;
         var entId = complet.Document.EntId;
-        complet.Metres = await db.Metres.AsNoTracking().Where(m => lignes.Contains(m.MtrLigId)).OrderBy(m => m.MtrId).ToListAsync(ct);
+        // Métrés des lignes et métré du document (sans ligne, mtr_ent_id).
+        complet.Metres = await db.Metres.AsNoTracking()
+            .Where(m => (m.MtrLigId != null && lignes.Contains(m.MtrLigId.Value)) || (m.MtrLigId == null && m.MtrEntId == entId))
+            .OrderBy(m => m.MtrId).ToListAsync(ct);
         complet.Variables = await db.Variables.AsNoTracking().Where(v => v.VarEntId == entId)
             .OrderBy(v => v.VarOrdre).ThenBy(v => v.VarId).ToListAsync(ct);
         complet.Ventilations = await db.VentilationsFrais.AsNoTracking().Where(v => v.VfrEntId == entId).OrderBy(v => v.VfrId).ToListAsync(ct);
@@ -673,7 +676,7 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         Correspondances corr, CancellationToken ct)
     {
         var db = (LogiBtpContext)contexte;
-        await EcrireMetres(db, r, corr, ct);
+        await EcrireMetres(db, entId, r, corr, ct);
         await EcrireVariables(db, entId, r, corr, ct);
         await EcrireVentilations(db, entId, r, corr, ct);
     }
@@ -723,18 +726,33 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         await db.SaveChangesAsync(ct);
     }
 
-    private static async Task EcrireMetres(LogiBtpContext db, DocumentCompletBtp r, Correspondances corr, CancellationToken ct)
+    /// <summary>
+    /// Métrés des lignes (mtr_lig_id) et métré du document (sans ligne, mtr_ent_id = le document, un seul : le premier
+    /// gardé). Un métré dont la ligne n'est pas écrite est retiré.
+    /// </summary>
+    private static async Task EcrireMetres(LogiBtpContext db, long entId, DocumentCompletBtp r, Correspondances corr, CancellationToken ct)
     {
         var ids = corr.Lignes;
         var cMetres = corr.Complement(ComplementMetres);
         var lignesDoc = ids.Values.ToList();
-        var existants = await db.Metres.Where(m => lignesDoc.Contains(m.MtrLigId)).ToDictionaryAsync(m => m.MtrId, ct);
+        var existants = await db.Metres
+            .Where(m => (m.MtrLigId != null && lignesDoc.Contains(m.MtrLigId.Value)) || (m.MtrLigId == null && m.MtrEntId == entId))
+            .ToDictionaryAsync(m => m.MtrId, ct);
         var nouveaux = new List<(long Temp, Metre Entite)>();
+        var document = false;
         foreach (var m in r.Metres)
         {
-            if (!ids.TryGetValue(m.MtrLigId, out var ligId)) continue;
+            long? ligId = null;
+            if (m.MtrLigId is long ml)
+            {
+                if (!ids.TryGetValue(ml, out var li)) continue;
+                ligId = li;
+            }
+            else if (document) continue;
+            else document = true;
             var copie = JsonCalcul.Cloner(m);
             copie.MtrLigId = ligId;
+            copie.MtrEntId = ligId is null ? entId : null;
             if (existants.Remove(m.MtrId, out var entite))
             {
                 db.Entry(entite).CurrentValues.SetValues(copie);
@@ -803,7 +821,8 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         foreach (var m in d.Metres)
         {
             m.MtrId = mtr[m.MtrId];
-            m.MtrLigId = lig[m.MtrLigId];
+            m.MtrLigId = m.MtrLigId is long ml ? lig[ml] : null;
+            m.MtrEntId = m.MtrLigId is null ? d.Document.EntId : null;
         }
         foreach (var v in d.Variables)
         {
@@ -835,7 +854,8 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
 
     public override void FiltrerComplements(DocumentCompletBtp c, ISet<long> lignes)
     {
-        c.Metres = c.Metres.Where(m => lignes.Contains(m.MtrLigId)).ToList();
+        // Le métré du document (sans ligne) suit toujours.
+        c.Metres = c.Metres.Where(m => m.MtrLigId is not long ml || lignes.Contains(ml)).ToList();
         var mids = c.Metres.Select(m => m.MtrId).ToHashSet();
         c.Variables = c.Variables.Where(v => (v.VarLigId is null || lignes.Contains(v.VarLigId.Value))
             && (v.VarMtrId is null || mids.Contains(v.VarMtrId.Value))).ToList();

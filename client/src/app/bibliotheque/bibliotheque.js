@@ -53,7 +53,8 @@ export function calculerOuvrage(composition, { coef_fg = 1, coef_benef = 1, coef
 
 /**
  * Prix d'un ensemble : totaux de sa tranche racine calculés par le moteur de devis (lignes vendues seulement : options,
- * variantes et lignes pour mémoire hors total) ; chaque ligne garde ses coefficients. Même calcul côté serveur
+ * variantes et lignes pour mémoire hors total), pour une unité si la tranche a une quantité ; chaque ligne garde ses
+ * coefficients. Même calcul côté serveur
  * (ElementsBibliotheque.CalculerOuvrage).
  */
 export function calculerEnsemble(composition) {
@@ -64,8 +65,11 @@ export function calculerEnsemble(composition) {
     metres: composition.metres ?? [], variables: composition.variables ?? [],
   });
   const r = racineEnsemble(resultat.lignes);
-  const pv = S(arr6(D(r.lig_montant_ht) ?? D(0)));
-  return { pa: S(arr6(D(r.lig_montant_pa) ?? D(0))), pr: S(arr6(D(r.lig_montant_pr) ?? D(0))), pv, pv_net: pv, resultat };
+  // Tranche à quantité (saisie ou métré) : prix pour une unité de l'ensemble.
+  const q = D(r.lig_qte_totale);
+  const unite = (v) => S(arr6(q === null || q.isZero() ? D(v) ?? D(0) : (D(v) ?? D(0)).div(q)));
+  const pv = unite(r.lig_montant_ht);
+  return { pa: unite(r.lig_montant_pa), pr: unite(r.lig_montant_pr), pv, pv_net: pv, resultat };
 }
 
 export const creerFournisseurBibliotheque = () => new FournisseurBibliothequeApi({ base: '/api/bibliotheque', entetes: ENTETES });

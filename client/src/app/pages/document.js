@@ -84,6 +84,7 @@ const gabarit = () => `
       <button data-action="annuler" title="${texteHtml('document_btp.page.annuler')}">${iconeHtml('document_btp_annuler')}</button>
       <button data-action="retablir" title="${texteHtml('document_btp.page.retablir')}">${iconeHtml('document_btp_retablir')}</button>
       <button data-action="bibliotheque" title="${texteHtml('document_btp.page.bibliotheque_aide')}">${iconeHtml('document_textes')} ${texteHtml('document_btp.page.bibliotheque')}</button>
+      <button data-action="metre-document" title="${texteHtml('document_btp.page.metre_document_aide')}">${iconeHtml('document_btp_metre')} ${texteHtml('document_btp.page.metre_document')}</button>
       <button data-action="precedent" hidden>${iconeHtml('precedent')}</button>
       <button data-action="suivant" hidden>${iconeHtml('suivant')}</button>
     </div>
@@ -267,6 +268,7 @@ export class PageDocument extends PageBase {
       annuler: () => this.editeur?.magasin.annuler(), retablir: () => this.editeur?.magasin.retablir(),
       // Bibliothèque dans une autre fenêtre (liste de tous les éléments) ; l'insertion reste par F3 ou par code.
       bibliotheque: () => app.naviguer('/liste/bibliotheque?vue=14', { nouvelleFenetre: true }),
+      'metre-document': () => this.metre?.ouvrirDocument(),
       rechercher: () => { this.disposition.onglet('lignes'); this.recherche?.ouvrir(); },
       apercu: () => this.apercu(),
       // « Demander à l'agent » (module MCP, lot 13) : recette choisie, prompt prérempli avec l'identifiant de la pièce, copié.
@@ -601,8 +603,9 @@ export class PageDocument extends PageBase {
       aller: (m) => {
         this.disposition.onglet('lignes');
         if (m.source === 'metres') {
-          ed.allerA(m.lig_id, { focus: false });
-          this.metre.ouvrir(m.lig_id, m.mtrId, m.ligne ? { ligne: m.ligne, colonne: m.colonne } : null);
+          // Métré du document : sans ligne.
+          if (m.lig_id !== null && m.lig_id !== undefined) ed.allerA(m.lig_id, { focus: false });
+          this.metre.ouvrir(m.lig_id ?? null, m.mtrId, m.ligne ? { ligne: m.ligne, colonne: m.colonne } : null);
         } else ed.allerA(m.lig_id);
       },
       surCompte: ({ erreurs, avertissements }) => {

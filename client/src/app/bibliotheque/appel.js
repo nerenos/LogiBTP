@@ -148,9 +148,11 @@ export function contenuOuvrage(e, bibDocument, { quantite = 1 } = {}) {
 
 /**
  * Contenu à insérer pour un ensemble (structure réutilisable) : la tranche racine (titre) reçoit l'appel et le lien vers
- * l'élément ; ses lignes (vendues, options, variantes), métrés et variables de tranche suivent.
+ * l'élément ; ses lignes (vendues, options, variantes), métrés (celui de la tranche compris) et variables de tranche
+ * suivent. `quantite` (quantité saisie sur la ligne d'appel) : posée sur la tranche, qui multiplie ses lignes (une
+ * tranche dont la quantité vient de son métré la garde).
  */
-export function contenuEnsemble(e, bibDocument) {
+export function contenuEnsemble(e, bibDocument, { quantite = null } = {}) {
   const c = e.composition ?? { lignes: [] };
   const lignes = structuredClone(c.lignes ?? []).map((l) => ({ ...l, lig_origine_id: null }));
   const racine = lignes.find((l) => l.lig_parent_id === null && l.lig_tyl_id === TL.TITRE);
@@ -160,6 +162,7 @@ export function contenuEnsemble(e, bibDocument) {
     lig_code: codeAppel(e, bibDocument), lig_art_id: e.id, lig_nat_id: e.nat_id ?? null, lig_libelle_html: racine.lig_libelle_html || e.libelle_html,
     lig_proprietes: { ...(racine.lig_proprietes ?? {}), element: lien(e) },
   });
+  if (quantite !== null && quantite !== undefined && quantite !== '' && (racine.lig_qte_source ?? 'S') !== 'M') racine.lig_qte = quantite;
   return { racines: [racine.lig_id], lignes, metres: structuredClone(c.metres ?? []), variables: structuredClone(c.variables ?? []) };
 }
 
@@ -253,7 +256,7 @@ export class AppelBibliotheque {
       ed.insererContenu(contenuTexte(ed, e, bib), ligId, texte('bibliotheque_btp.appel.etapes.TEXTE', { code: e.code }), { remplacer: Boolean(l) && !aEnfants && ligneVide(l) });
     } else if (e.type === 'ENSEMBLE') {
       // Ensemble : sa tranche et ses lignes, après la ligne (ou à sa place si elle est vide).
-      const contenu = contenuEnsemble(e, bib);
+      const contenu = contenuEnsemble(e, bib, { quantite: surPlace && l.lig_qte ? l.lig_qte : null });
       if (!contenu) { this.message(texte('bibliotheque_btp.appel.sans_tranche', { code: e.code }), 'avertissement'); return; }
       ed.insererContenu(contenu, ligId, texte('bibliotheque_btp.appel.etapes.ENSEMBLE', { code: e.code }), { remplacer: surPlace && ligneVide(l) });
     } else if (e.type === 'OUVRAGE') {

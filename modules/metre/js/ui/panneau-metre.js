@@ -38,6 +38,10 @@ const afficher = (v) => (v === null || v === undefined || v === '' ? '—'
  *   creerMetre(ligId)           crée le métré de la ligne (une étape d'annulation) et l'ouvre
  *   variablesDocumentSur(ligId) facultatif : la ligne (section du document) présente les variables du document ($$,
  *                               sans ligne ni métré) au lieu d'un métré
+ *   metreDocument()             facultatif : ID du métré du document (sans ligne), ou null
+ *   creerMetreDocument()        facultatif : crée le métré du document (une étape d'annulation), renvoie son ID
+ * Mode document (ouvrirDocument, ou section sélectionnée, ou erreur d'un métré sans ligne) : éditeur du métré du
+ * document (variables $$ du script) au-dessus de la grille des définitions $$.
  * Options : fermer(ligId), message(texte), dictionnaire (instance de DictionnaireMetre ou dérivée), fonctions (fonctions
  * propres à l'hôte, les mêmes que celles passées au moteur : complétion, dictionnaire et contrôle de l'éditeur ; par
  * défaut `dictionnaire.fonctions()`).
@@ -95,7 +99,7 @@ export class PanneauMetre {
     this.editeur = new EditeurScript(zoneEditeur, {
       surChangement: () => this.planifierEnregistrement(),
       surEchap: () => this.fermer(),
-      dictionnaire: () => (this.ligId === null ? [] : this.entreesDictionnaire()),
+      dictionnaire: () => (this.ligId === null && !this.modeDocument ? [] : this.entreesDictionnaire()),
       fonctions: () => this.fonctionsHote,
       // Erreurs d'exécution : seulement pour le texte que le moteur a calculé.
       diagnostics: (texte) => (texte === (this.metre()?.mtr_script ?? '') ? this.diagnostic() : null),
@@ -111,22 +115,32 @@ export class PanneauMetre {
 
   get saisie() { return this.hote.saisie; }
 
-  /** Variables du document présentées sur la ligne (section) au lieu d'un métré. */
-  get modeDocument() { return this.ligId !== null && !!this.hote.variablesDocumentSur?.(this.ligId); }
+  /** Mode document : métré du document et variables $$ (ouvert pour le document, ou sur une section). */
+  get modeDocument() { return this.pourDocument || (this.ligId !== null && !!this.hote.variablesDocumentSur?.(this.ligId)); }
+
+  /** ID du métré du document (mode document). */
+  metreDocument() { return this.hote.metreDocument?.() ?? null; }
+
+  /** Ouvre le panneau sur le métré du document (barre d'outils de l'hôte). */
+  ouvrirDocument(position = null) { this.ouvrir(null, this.metreDocument(), position); }
 
   metre() { return this.saisie.metres.find((m) => m.mtr_id === this.mtrId) ?? null; }
 
   /** Ouvre le métré ; `position` { ligne, colonne } : curseur placé dans le script (erreur choisie…). */
   ouvrir(ligId, mtrId, position = null) {
     this.enregistrerScript();
+    // Ligne null : métré du document (barre d'outils, notification d'un métré sans ligne).
+    this.pourDocument = ligId === null;
     this.ligId = ligId;
-    this.mtrId = mtrId;
+    this.mtrId = this.modeDocument ? this.metreDocument() : mtrId;
     this.racine.hidden = false;
     this.rendre();
     // Focus après l'événement qui ouvre le panneau (F4 dans la grille : la grille reprendrait le focus).
     setTimeout(() => {
       if (this.racine.hidden) return;
-      if (this.modeDocument) this.grilleVariables.focus();
+      if (this.modeDocument && position && this.metre()) this.editeur.allerA(position.ligne, position.colonne);
+      else if (this.modeDocument && (!this.metre() || !this.pourDocument)) this.grilleVariables.focus();
+      else if (this.modeDocument) this.editeur.focus();
       else if (position && this.metre()) this.editeur.allerA(position.ligne, position.colonne);
       else if (this.metre()) this.editeur.focus();
     });
@@ -134,10 +148,11 @@ export class PanneauMetre {
 
   /** Le panneau suit la ligne sélectionnée dans le devis ; une ligne sans métré (hors section) le ferme. */
   suivre(ligId) {
-    if (this.racine.hidden || ligId === this.ligId) return;
+    // Ouvert pour le document : le panneau reste sur le métré du document.
+    if (this.racine.hidden || ligId === this.ligId || this.pourDocument) return;
     this.enregistrerScript();
     this.ligId = ligId;
-    this.mtrId = ligId === null ? null : this.hote.metreDeLigne(ligId);
+    this.mtrId = ligId === null ? null : this.modeDocument ? this.metreDocument() : this.hote.metreDeLigne(ligId);
     this.grilleVariables.courant = null;
     if (this.mtrId === null && !this.modeDocument) {
       this.racine.hidden = true;
@@ -181,15 +196,35 @@ export class PanneauMetre {
     this.rendreScript(m, diagnostic);
   }
 
-  /** Section du document : variables du document ($$) au lieu d'un métré. */
+  /**
+   * Mode document : métré du document (script, variables $$ publiées ; création proposée s'il n'existe pas) puis
+   * définitions $$ de la grille, évaluées après lui.
+   */
   rendreVariablesDocument() {
     this.racine.classList.add('metre-mode-document');
-    this.racine.querySelector('.metre-titre').textContent = texte('metre.panneau.titre_document', { ligne: this.hote.titreLigne(this.ligId) });
-    this.racine.querySelector('.metre-vide').hidden = true;
-    this.racine.querySelector('.metre-script').hidden = true;
+    this.mtrId = this.metreDocument();
+    const m = this.metre();
+    this.racine.querySelector('.metre-titre').textContent = this.ligId === null
+      ? texte('metre.panneau.titre_metre_document')
+      : texte('metre.panneau.titre_document', { ligne: this.hote.titreLigne(this.ligId) });
+    const vide = this.racine.querySelector('.metre-vide');
+    const creer = !m && !!this.hote.creerMetreDocument;
+    vide.hidden = !creer;
+    if (creer) {
+      vide.innerHTML = `<p>${texteHtml('metre.panneau.sans_metre_document')}</p><button class="principal" data-action="creer-document">${texteHtml('metre.panneau.creer_document')}</button>`;
+      vide.querySelector('[data-action="creer-document"]').addEventListener('click', () => {
+        this.mtrId = this.hote.creerMetreDocument();
+        this.rendre();
+        setTimeout(() => this.editeur.focus());
+      });
+    }
+    this.racine.querySelector('.metre-script').hidden = !m;
     this.racine.querySelector('.metre-variables-document').hidden = false;
-    this.racine.querySelector('.metre-resultat').textContent = '';
+    const diagnostic = this.diagnostic();
+    this.racine.querySelector('.metre-resultat').innerHTML = m && diagnostic.erreurs.length
+      ? `<span class="erreur">${pluriel('metre.panneau.erreurs', diagnostic.erreurs.length)}</span>` : '';
     this.rendreDictionnaire();
+    if (m) this.rendreScript(m, diagnostic);
     this.grilleVariables.rendre();
   }
 
@@ -264,7 +299,7 @@ export class PanneauMetre {
     this.minuterie = null;
     const m = this.metre();
     const script = this.editeur.valeur;
-    if (!m || this.modeDocument || script === (m.mtr_script ?? '')) return;
+    if (!m || script === (m.mtr_script ?? '')) return;
     this.hote.magasin.modifier((d) => { d.metres.find((x) => x.mtr_id === m.mtr_id).mtr_script = script; }, texte('metre.panneau.script'));
   }
 
@@ -285,7 +320,7 @@ export class PanneauMetre {
     const zone = this.racine.querySelector('.dictionnaire-liste');
     const filtre = this.racine.querySelector('[data-filtre]').value.trim().toLowerCase();
     const garde = (...textes) => !filtre || textes.some((x) => (x ?? '').toLowerCase().includes(filtre));
-    const entrees = this.ligId === null ? [] : this.entreesDictionnaire().filter((e) => garde(e.valeur, e.libelle));
+    const entrees = this.ligId === null && !this.modeDocument ? [] : this.entreesDictionnaire().filter((e) => garde(e.valeur, e.libelle));
     const section = (cle, titre, contenu) => `<details data-groupe="${cle}"${this.ouverts.has(cle) || filtre ? ' open' : ''}>
       <summary>${echapper(titre)}</summary>${contenu}</details>`;
     // Variables et données : une branche repliable par groupe (Variables, Ligne, Entête…), dans l'ordre des entrées.
@@ -294,7 +329,7 @@ export class PanneauMetre {
       <button type="button" data-ref="${echapper(e.valeur)}" title="${echapper(e.libelle)}">
         <code>${echapper(e.valeur)}</code><span>${echapper(afficher(e.detail))}</span></button>`).join(''))).join('')
       || `<p class="aide">${texteHtml('metre.panneau.aucune_avant')}</p>`;
-    const script = !this.modeDocument && this.metre();
+    const script = !!this.metre();
     const fonctions = Object.values(this.fonctions()).filter((f) => garde(f.signature, f.description));
     const structures = STRUCTURES.filter((s) => garde(s.libelle, s.modele));
     zone.innerHTML = section('variables', texte('metre.panneau.groupes.variables'), `<div class="branches">${variables}</div>`) + (script ? section('fonctions', texte('metre.panneau.groupes.fonctions'),
@@ -314,7 +349,8 @@ export class PanneauMetre {
 
   /** Insère la référence dans le script à la position du curseur (variables du document : formule en saisie). */
   insererReference(ref) {
-    if (!this.modeDocument && this.metre()) {
+    // Mode document : la grille des $$ en saisie reçoit la référence, sinon le script du métré du document.
+    if (this.metre() && !(this.modeDocument && this.grilleVariables.edition)) {
       this.editeur.inserer(ref);
       return;
     }

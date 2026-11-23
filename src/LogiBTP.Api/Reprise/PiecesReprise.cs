@@ -94,6 +94,8 @@ public sealed record PieceSource
     public string? TableLignes { get; init; }
     /// <summary>Variables du document ($$) lues par les métrés des lignes.</summary>
     public List<VariablePiece> Variables { get; init; } = [];
+    /// <summary>Métré du document (sans ligne) : ses variables non locales sont publiées en $$ (récapitulatif MDE).</summary>
+    public MetrePiece? MetreDocument { get; init; }
     /// <summary>Propriétés de l'entête (établissement d'origine…).</summary>
     public Dictionary<string, string> Proprietes { get; init; } = [];
     /// <summary>Avancement (situation, facture d'avancement) : lignes copiées du marché, <see cref="Lignes"/> ignorées.</summary>
@@ -284,6 +286,22 @@ public sealed class PiecesReprise : IAsyncDisposable
                 LigId = ids[l.Cle], LigParentId = parent, LigOrdre = ordre, LigTylId = type, LigCode = l.Code, LigLibelleHtml = l.LibelleHtml,
                 LigIsNonEditee = l.NonEditee, LigProprietes = JsonDocument.Parse("{}"),
             };
+            if (type == TL.Titre)
+            {
+                // Tranche à quantité (plan metres-tranches-document, lot 7) : quantité ≠ 1 (0 ou vide = 1) multiplie ses
+                // lignes ; métré de la tranche (quantité issue du métré si son résultat retrouve la quantité source).
+                if (l.Qte is decimal qt && qt != 0 && qt != 1)
+                {
+                    x.LigQte = qt;
+                    x.LigPrecisionQte = decimalesQte ?? l.PrecisionQte;
+                }
+                if (l.Metre is not null)
+                {
+                    x.LigQteSource = "M";
+                    x.LigMtrId = prochainMetre--;
+                    x.LigPrecisionQte = decimalesQte ?? l.PrecisionQte;
+                }
+            }
             if (type is TL.Element or TL.Ouvrage)
             {
                 x.LigQte = l.Qte ?? 0;
@@ -326,14 +344,22 @@ public sealed class PiecesReprise : IAsyncDisposable
         return res;
     }
 
-    /// <summary>Métrés des lignes (identifiants négatifs posés par <see cref="Lignes"/>), sans résultat : le script le calcule.</summary>
-    public static List<Metre> Metres(PieceSource p, List<DocumentLigneBtp> lignes) =>
-        p.Lignes.Zip(lignes).Where(x => x.First.Metre is not null && x.Second.LigMtrId is not null)
+    /// <summary>
+    /// Métrés des lignes (identifiants négatifs posés par <see cref="Lignes"/>), sans résultat : le script le calcule ;
+    /// puis le métré du document (sans ligne), à l'identifiant suivant.
+    /// </summary>
+    public static List<Metre> Metres(PieceSource p, List<DocumentLigneBtp> lignes)
+    {
+        var res = p.Lignes.Zip(lignes).Where(x => x.First.Metre is not null && x.Second.LigMtrId is not null)
             .Select(x => new Metre
             {
                 MtrId = x.Second.LigMtrId!.Value, MtrLigId = x.Second.LigId, MtrLibelle = Couper(x.First.Metre!.Libelle, 200),
                 MtrUntCode = x.Second.LigUntCode, MtrScript = x.First.Metre.Script,
             }).ToList();
+        if (p.MetreDocument is { } d)
+            res.Add(new Metre { MtrId = res.Select(m => m.MtrId).DefaultIfEmpty().Min() - 1, MtrLibelle = Couper(d.Libelle, 200), MtrScript = d.Script });
+        return res;
+    }
 
     /// <summary>Variables du document ($$) de la pièce.</summary>
     public static List<VariableDefinition> Variables(PieceSource p) =>
@@ -354,6 +380,7 @@ public sealed class PiecesReprise : IAsyncDisposable
         {
             var metre = calcul.Metres.First(m => m.MtrId == l.LigMtrId);
             var source = sources[cles[l.LigId]].Qte ?? 0;
+            if (l.LigTylId == TL.Titre && source == 0) source = 1; // tranche MDE sans quantité : 1
             if (metre.MtrResultat is { } res
                 && ArrondiCalcul.Arrondir(res, l.LigPrecisionQte) == ArrondiCalcul.Arrondir(source, l.LigPrecisionQte)) continue;
             l.LigQteSource = "S";
