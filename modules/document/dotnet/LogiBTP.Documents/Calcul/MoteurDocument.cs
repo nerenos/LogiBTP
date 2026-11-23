@@ -426,6 +426,7 @@ public class MoteurDocument<TDoc, TLigne>
     {
         avancements.Clear();
         infosSituation.Clear();
+        qtesTranches.Clear();
         AvantQuantites();
         foreach (var l in Ordre)
         {
@@ -434,6 +435,7 @@ public class MoteurDocument<TDoc, TLigne>
                 try
                 {
                     if (TL.EstChiffree(l)) CalculerQuantite(l);
+                    else if (l.LigTylId == TL.Titre) CalculerQuantiteTranche(l);
                     ApresLigne(l);
                 }
                 catch (ErreurCalcul e)
@@ -467,11 +469,58 @@ public class MoteurDocument<TDoc, TLigne>
             if ((l.LigQteType ?? "R") == "A") totale = pqv == 0 ? 0 : qv * pqt / pqv;
             else totale = qv * pqt;
         }
+        else if (p is not null && p.LigTylId == TL.Titre) totale = qv * QteTranche(p);
         EcrireQuantites(l, qteBase, qv, totale);
     }
 
+    private readonly Dictionary<long, decimal> qtesTranches = [];
+
+    /// <summary>
+    /// Quantité d'une tranche (TITRE ; jamais une SECTION) : multiplicateur de ses lignes, quantité totale = quantité ×
+    /// quantité totale de la tranche parente (tranches imbriquées). Sans quantité saisie (ni métré en spécialisation) :
+    /// 1, colonnes de quantité vides, rien ne change. Tranche de frais annexes : quantité 1 (QTE_TRANCHE_FA).
+    /// </summary>
+    protected void CalculerQuantiteTranche(TLigne l)
+    {
+        l.LigQteVendue = null;
+        l.LigQteTotale = null;
+        var p = Parent(l);
+        var mult = p is not null && p.LigTylId == TL.Titre ? QteTranche(p) : 1m;
+        qtesTranches[l.LigId] = mult;
+        if (!AQuantiteTranche(l)) return;
+        var qteBase = QuantiteBase(l);
+        var qv = Arrondir(qteBase, l.LigPrecisionQte);
+        if (EstFraisAnnexes(l) && qv != 1m)
+        {
+            Avertir(l.LigId, "QTE_TRANCHE_FA", "Une tranche de frais annexes n'a pas de quantité : quantité 1 retenue");
+            qv = 1m;
+        }
+        var totale = Arr6(qv * mult);
+        qtesTranches[l.LigId] = totale;
+        EcrireQuantites(l, qteBase, qv, totale);
+    }
+
+    /// <summary>La tranche a-t-elle une quantité (saisie ; un métré en spécialisation) ?</summary>
+    protected virtual bool AQuantiteTranche(TLigne l) => l.LigQte is not null;
+
+    /// <summary>Quantité totale d'une tranche (produit des quantités des tranches englobantes) ; 1 par défaut.</summary>
+    protected decimal QteTranche(TLigne t) => qtesTranches.TryGetValue(t.LigId, out var q) ? q : 1m;
+
+    /// <summary>Multiplicateur des montants d'une ligne de prix : quantité totale de la tranche qui la contient (1 sinon).</summary>
+    protected decimal MultiplicateurTranche(TLigne l)
+    {
+        var p = Parent(l);
+        return p is not null && p.LigTylId == TL.Titre && EstLigneDePrix(l) ? QteTranche(p) : 1m;
+    }
+
+    /// <summary>Quantité qui fait le montant d'une ligne : quantité vendue × multiplicateur de tranche.</summary>
+    protected decimal QteMontant(TLigne l) => (l.LigQteVendue ?? 0) * MultiplicateurTranche(l);
+
+    /// <summary>Quantité saisie : vide = 0 pour une ligne chiffrée, 1 pour une tranche.</summary>
+    protected decimal QteSaisie(TLigne l) => TL.EstTranche(l) ? l.LigQte ?? 1m : l.LigQte ?? 0;
+
     /// <summary>Quantité de départ : la saisie (un métré, une formule… en spécialisation).</summary>
-    protected virtual decimal QuantiteBase(TLigne l) => l.LigQte ?? 0;
+    protected virtual decimal QuantiteBase(TLigne l) => QteSaisie(l);
 
     /// <summary>Quantité vendue arrondie à la précision de la ligne (coefficient de perte… en spécialisation).</summary>
     protected virtual decimal QuantiteVendue(TLigne l, decimal qteBase) => Arrondir(qteBase, l.LigPrecisionQte);
@@ -528,7 +577,8 @@ public class MoteurDocument<TDoc, TLigne>
             }
             var pvAff = PvAffiche(l, y);
             var pvRem = Arrondir(pvAff * l.LigCoefRemise, l.LigPrecisionPv);
-            EcrireMontants(l, y, pvAff, pvRem, l.LigQteVendue ?? 0);
+            // Ligne d'une tranche à quantité : montants multipliés par la quantité de la tranche.
+            EcrireMontants(l, y, pvAff, pvRem, QteMontant(l));
             // Avancement : le montant est le cumul (situation) ou la période (facture), pas quantité × prix.
             if (AvancementLigne(l) is { } a) l.LigMontantHt = a.Montant;
         }
@@ -595,6 +645,7 @@ public class MoteurDocument<TDoc, TLigne>
                 var fa = EstFraisAnnexes(l);
                 EcrireSomme(l, desc.Where(x => EstLigneDePrix(x) && (fa ? EstFraisAnnexes(x) : !HorsTotal(x, l))
                     && !EnErreur.Contains(x.LigId) && x.LigMontantHt is not null).ToList());
+                if (l.LigTylId == TL.Titre) EcrirePuTranche(l);
             }
             else if (l.LigTylId == TL.SousTotal)
             {
@@ -615,6 +666,13 @@ public class MoteurDocument<TDoc, TLigne>
         }
         TotalCorps = corps.Where(EnTotal).Sum(l => l.LigMontantHt!.Value);
     }
+
+    /// <summary>
+    /// Prix d'une tranche à quantité : montant pour une unité = montant de la tranche ÷ sa quantité totale, à la précision
+    /// PV de la tranche ; vide sans quantité (ou quantité nulle).
+    /// </summary>
+    protected void EcrirePuTranche(TLigne l) =>
+        l.LigPv = l.LigQteTotale is decimal q && q != 0 ? Arrondir((l.LigMontantHt ?? 0) / q, l.LigPrecisionPv) : null;
 
     protected bool DescendDe(TLigne l, TLigne ancetre)
     {
