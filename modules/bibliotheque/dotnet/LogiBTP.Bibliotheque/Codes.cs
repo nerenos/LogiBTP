@@ -22,6 +22,45 @@ public static class ScenarioPa
     public const string Pmp = "PMP";
 }
 
+/// <summary>Action d'une mise à jour de la bibliothèque depuis un nouveau PA (<see cref="PaReference.Planifier"/>).</summary>
+public static class ActionMajPa
+{
+    public const string PaFixe = "PA_FIXE";
+    public const string Tarif = "TARIF";
+    public const string NouveauTarif = "NOUVEAU_TARIF";
+    public const string Aucune = "AUCUNE";
+}
+
+/// <summary>Motif d'une mise à jour impossible (action AUCUNE) ou refusée.</summary>
+public static class MotifMajPa
+{
+    public const string ScenarioCalcule = "SCENARIO_CALCULE";
+    public const string TarifPrincipalAbsent = "TARIF_PRINCIPAL_ABSENT";
+    public const string UniteTarif = "UNITE_TARIF";
+    public const string PaInvalide = "PA_INVALIDE";
+    public const string ElementCompose = "ELEMENT_COMPOSE";
+    public const string ElementIntrouvable = "ELEMENT_INTROUVABLE";
+    public const string FicheEnModification = "FICHE_EN_MODIFICATION";
+    public const string EmpreinteChangee = "EMPREINTE_CHANGEE";
+    public const string FournisseurObligatoire = "FOURNISSEUR_OBLIGATOIRE";
+}
+
+/// <summary>Code d'une erreur du calcul d'un élément (<see cref="ErreurCalcul.Code"/>) ; Unite sert aussi de repli quand le code manque.</summary>
+public static class ErreurCalculElement
+{
+    public const string Unite = "UNITE";
+    public const string Donnee = "DONNEE";
+    public const string Ratio = "RATIO";
+    public const string Scenario = "SCENARIO";
+}
+
+/// <summary>Origine du PA de référence d'un élément (<see cref="PaReference.Calculer"/>).</summary>
+public static class SourcePaReference
+{
+    public const string TarifFournisseur = "TARIF_FOURNISSEUR";
+    public const string PaEffectif = "PA_EFFECTIF";
+}
+
 /// <summary>Genre d'un poste de pied (ele_pied_genre, recopié dans lig_proprietes.genre_poste).</summary>
 public static class GenrePoste
 {

@@ -281,6 +281,19 @@ public sealed class SpecialisationListeBtp(AccesPortee scopes) : SpecialisationL
         return new RestrictionListe(refuses, masquees);
     }
 
+    private sealed record LibelleZone(string Colonne, string Libelle);
+
+    /// <summary>Source de liste des documents (db/1.4 : colonnes « x_ » des zones d'entête, plan fiches-lignes-documents, lot 12).</summary>
+    public const string SourceDocuments = "documents";
+
+    /// <summary>Colonnes « x_ » de la source des documents : libellé de la zone d'entête proposé comme titre de colonne.</summary>
+    public override async Task<IReadOnlyDictionary<string, string>> LibellesColonnesAsync(string source, CancellationToken ct)
+    {
+        if (source != SourceDocuments || SpecialisationBtp.Http?.HttpContext?.RequestServices.GetService<LogiBtpContext>() is not { } db) return await base.LibellesColonnesAsync(source, ct);
+        return (await db.Database.SqlQueryRaw<LibelleZone>("SELECT zed_colonne AS \"Colonne\", zed_libelle AS \"Libelle\" FROM document_zone_entete").ToListAsync(ct))
+            .ToDictionary(z => z.Colonne, z => z.Libelle, StringComparer.Ordinal);
+    }
+
     /// <summary>Début de l'exercice lu dans le paramétrage du module Comptabilité ; sans paramètre, année civile.</summary>
     public override async Task<DateOnly?> DebutExerciceAsync(CancellationToken ct)
     {

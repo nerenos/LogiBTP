@@ -18,4 +18,19 @@
   /* Net à payer du pied de la grille (D5) : pastille d'accent. */
   --document-total-fond: var(--accent-clair);
   --document-total-texte: var(--accent);
+  /* Styles des lignes : couleur proposée par le sélecteur libre, palette du thème (texte puis fonds) et tailles. */
+  --document-style-defaut: #808080;
+  --document-style-bleu: #1d4ed8;
+  --document-style-vert: #15803d;
+  --document-style-orange: #c2410c;
+  --document-style-rouge: #b91c1c;
+  --document-style-gris: #4b5563;
+  --document-style-fond-bleu: #dbeafe;
+  --document-style-fond-vert: #dcfce7;
+  --document-style-fond-orange: #ffedd5;
+  --document-style-fond-rouge: #fee2e2;
+  --document-style-fond-gris: #e5e7eb;
+  --document-style-taille-petite: 0.85em;
+  --document-style-taille-normale: 1em;
+  --document-style-taille-grande: 1.2em;
 }

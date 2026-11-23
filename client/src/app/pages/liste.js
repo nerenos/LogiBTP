@@ -1,4 +1,5 @@
-import { texte, icone } from '@logibtp/socle/dictionnaire';
+import { texte, texteHtml, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
+import { echapper } from '@logibtp/socle/ui';
 import { urlDocument, urlFiche, TYPE_FICHE, TYPE_DOCUMENT, MODULE_FACULTATIF, SUJET_FENETRE } from '../codes.js';
 import { PageBase } from '@logibtp/navigation';
 import { ListeDonnees } from '@logibtp/liste/ui';
@@ -145,18 +146,24 @@ function actionsDepuisVue(vue, app, services, themes = []) {
  * rattachement : barre des listes de documents, colonnes de même nom des autres listes). Le thème et la vue choisis sont reportés dans l'URL. La page est
  * conservée quand on ouvre une fiche : au retour, elle retrouve ses lignes et sa position, puis se contrôle.
  */
+/** Colonnes d'identifiant de ressource acceptées dans l'adresse d'une liste (filtre posé par les fiches). */
+const COLONNES_RESSOURCE = ['salarie_id', 'materiel_id'];
+
 export class PageListe extends PageBase {
   static conserver = true;
   icone = icone('pages_btp_liste');
 
   async ouvrir() {
     const app = this.app;
-    this.conteneur.innerHTML = `<div class="page-liste"><div class="page-liste-filtre" hidden></div><div class="page-liste-zone"></div></div>`;
+    this.conteneur.innerHTML = `<div class="page-liste"><div class="page-liste-ressource filtre-rattachement" hidden></div><div class="page-liste-filtre" hidden></div><div class="page-liste-zone"></div></div>`;
     const s = await app.services();
     // Rattachement demandé par l'adresse (raccourcis des fiches projet, affaire, chantier, marché).
     const codes = Object.fromEntries(NIVEAUX.filter((n) => this.requete[n.type]).map((n) => [n.type, this.requete[n.type]]));
     const refs = await s.structure?.referentiels().catch(() => null) ?? null;
     let premier = true;
+    // Ressource demandée par l'adresse (fiches salarié, intérimaire, matériel : derniers pointages) : colonne d'identifiant + libellé.
+    const colonneRessource = COLONNES_RESSOURCE.find((c) => this.requete[c]);
+    this.ressource = colonneRessource ? { colonne: colonneRessource, valeur: this.requete[colonneRessource], libelle: this.requete.ressource ?? this.requete[colonneRessource], retiree: false } : null;
     this.liste = new ListeDonnees(this.conteneur.querySelector('.page-liste-zone'), {
       fournisseur: s.liste,
       // Suite des lignes affichées confiée à la fenêtre : précédent / suivant dans la fiche ouverte (suite-liste.js).
@@ -184,12 +191,13 @@ export class PageListe extends PageBase {
           app.naviguer(`/edition?source=liste&id=${vue.vli_id}${recherche}`, { nouvelleFenetre: true });
         },
       }] : [])],
-      surVue: ({ theme, vue }) => { this.filtre?.rendre(); this.#vueChoisie(theme, vue); },
+      surVue: ({ theme, vue }) => { this.filtre?.rendre(); this.#rendreRessource(); this.#vueChoisie(theme, vue); },
       filtresVue: (vue) => {
-        if (!this.filtre) return {};
         const source = vue?.definition?.source?.vue ?? null;
         const colonnes = (SOURCES_LISTE[source]?.colonnes ?? []).map((c) => c[0]);
-        const f = this.filtre.filtresPour(source, colonnes, premier ? codes : null);
+        const ressource = this.ressource ? { [this.ressource.colonne]: !this.ressource.retiree && colonnes.includes(this.ressource.colonne) ? [String(this.ressource.valeur)] : null } : {};
+        if (!this.filtre) return ressource;
+        const f = { ...ressource, ...this.filtre.filtresPour(source, colonnes, premier ? codes : null) };
         premier = false;
         return f;
       },
@@ -229,9 +237,28 @@ export class PageListe extends PageBase {
     const t = this.liste.themes.find((x) => x.thl_code === theme);
     this.icone = t?.thl_icone || icone('pages_btp_liste');
     this.titre = [t?.thl_libelle, this.liste.vue?.vli_nom].filter(Boolean).filter((x, i, a) => a.indexOf(x) === i).join(' – ') || texte('pages_btp.liste.titre');
-    const url = this.app.routeur.url('liste', { theme }, { vue, ...(this.filtre?.codes() ?? {}) });
+    const ressource = this.ressource && !this.ressource.retiree ? { [this.ressource.colonne]: this.ressource.valeur, ressource: this.ressource.libelle } : {};
+    const url = this.app.routeur.url('liste', { theme }, { vue, ...(this.filtre?.codes() ?? {}), ...ressource });
     if (this.app.routeur.page === this) this.app.routeur.remplacerUrl(url);
     this.app.majPage();
+  }
+
+  /** Pastille de la ressource filtrée (adresse) avec le bouton qui la retire ; masquée si la source n'a pas la colonne. */
+  #rendreRessource() {
+    const zone = this.conteneur.querySelector('.page-liste-ressource');
+    const r = this.ressource;
+    const source = this.liste.vue?.definition?.source?.vue ?? null;
+    const actif = r && !r.retiree && (SOURCES_LISTE[source]?.colonnes ?? []).some((c) => c[0] === r.colonne);
+    zone.hidden = !actif;
+    if (!actif) { zone.replaceChildren(); return; }
+    zone.innerHTML = `<span class="filtre-rattachement-titre">${texteHtml('pages_btp.liste.ressource.titre')}</span><span class="pastille cochee">${echapper(r.libelle)}</span>
+      <button type="button" data-effacer title="${texteHtml('pages_btp.liste.ressource.retirer')}">${iconeHtml('retirer')} ${texteHtml('pages_btp.liste.ressource.effacer')}</button>`;
+    zone.querySelector('[data-effacer]').addEventListener('click', () => {
+      r.retiree = true;
+      this.liste.definirFiltreExterne(r.colonne, null);
+      this.#rendreRessource();
+      this.#vueChoisie(this.liste.theme, this.liste.vue?.vli_id ?? null);
+    });
   }
 
   async reprendre() { this.liste.verifier().catch(() => {}); }

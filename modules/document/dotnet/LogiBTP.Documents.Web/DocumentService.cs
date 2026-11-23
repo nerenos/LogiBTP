@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using LogiBTP.Socle;
 using LogiBTP.Socle.Web;
@@ -49,11 +50,13 @@ public class DocumentService<TDoc, TLigne, TComplet>(
             Etiquettes = (await db.Set<EtiquetteLigne>().AsNoTracking().Where(e => e.EtlActif).OrderBy(e => e.EtlOrdre).ToListAsync(ct))
                 .Select(e => new EtiquetteDto(e.EtlCode, e.EtlLibelle, e.EtlCouleur, e.EtlOrdre, e.EtlActif)).ToList(),
             CouleursTypePrix = (await db.Set<CouleurTypePrix>().AsNoTracking().ToListAsync(ct)).Select(c => new CouleurTypePrixDto(c.CtpType, c.CtpLibelle, c.CtpCouleur)).ToList(),
+            StylesLignes = await new AffichageDocumentService<TDoc, TLigne>(db).StylesLignes(ct),
             Modeles = (await db.Set<ModeleDocument>().AsNoTracking().Where(m => m.ModActif).OrderBy(m => m.ModOrdre).ToListAsync(ct)).Select(m => new ModeleDto(m.ModCode, m.ModLibelle)).ToList(),
             ConditionsPaiement = await Echeancier.Conditions(false, ct),
             ModesReglement = await new ReferentielsDocument<TDoc, TLigne>(db).Modes(false, ct),
             ConditionDefaut = await Echeancier.Defaut(type.TydFamille, ct),
             Regles = await Regles.Resolues(type, ct),
+            Zones = ZonesEntete.DuType(await ZonesEnteteDocument<TDoc, TLigne>.LireRegistre(db, ct), type.TydFamille, type.TydCode),
         };
     }
 
@@ -402,10 +405,23 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         e.EntCpaCode = string.IsNullOrEmpty(d.Document.EntCpaCode) ? null : d.Document.EntCpaCode;
         e.EntModeReglement = string.IsNullOrEmpty(d.Document.EntModeReglement) ? null : d.Document.EntModeReglement;
         specialisation.CopierEnteteSaisie(e, d.Document, type);
+        // Styles (1.1) : styles de classe du document et style propre des lignes, valeurs connues et valides seulement.
+        var fautesStyle = StylesLignes.ErreursDocument(d.Document.EntStylesLignes?.RootElement)
+            .Select(f => new MessageCalcul(null, "STYLE", f)).ToList();
+        fautesStyle.AddRange(d.Lignes.SelectMany(l => StylesLignes.Erreurs(l.LigStyle?.RootElement).Select(f => new MessageCalcul(l.LigId, "STYLE", f))));
+        if (fautesStyle.Count > 0) throw ExceptionMetier.Invalide(ErreursEnregistrement.Validation, "Styles incorrects", fautesStyle);
+        e.EntStylesLignes = d.Document.EntStylesLignes;
         foreach (var l in d.Lignes)
         {
             l.LigEntId = id;
             l.LigLibelleHtml = html.Nettoyer(l.LigLibelleHtml);
+        }
+
+        // Zones d'entête : valeurs du type seulement, du bon type (ZONE_VALEUR_INVALIDE) ; l'obligatoire se contrôle à la validation.
+        if (d.Zones is not null)
+        {
+            var fautesZones = await ControlerZones(type, d.Zones, false, ct);
+            if (fautesZones.Count > 0) throw ExceptionMetier.Invalide(ErreursEnregistrement.Validation, "Zones d'entête incorrectes", fautesZones);
         }
 
         var saisie = JsonCalcul.Cloner(d);
@@ -427,9 +443,20 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         var ecarts = specialisation.Comparateur.Comparer(d.Document, d.Lignes, r.Document, r.Lignes);
 
         await Historiser(avant, "MODIFICATION", u, ct);
-        var reponse = await Persister(id, r, u, ct);
+        var reponse = await Persister(id, r, u, ct, d.Zones);
         reponse.Ecarts = ecarts.Select(x => x with { LigId = x.LigId is long l ? reponse.CorrespondanceLignes.GetValueOrDefault(l, l) : null }).ToList();
         return reponse;
+    }
+
+    /// <summary>Contrôle des zones d'entête d'un document (règle commune ZonesEntete.ErreursSaisie ↔ erreursSaisieZones) : un message par erreur, code ZONE_*.</summary>
+    private async Task<List<MessageCalcul>> ControlerZones(TypeDocument type, IReadOnlyDictionary<string, JsonNode?>? valeurs, bool validation, CancellationToken ct)
+    {
+        var registre = await ZonesEnteteDocument<TDoc, TLigne>.LireRegistre(db, ct);
+        var libelles = registre.ToDictionary(z => z.Colonne, z => z.Libelle);
+        return ZonesEntete.ErreursSaisie(registre, type.TydFamille, type.TydCode, valeurs, validation)
+            .Select(e => new MessageCalcul(null, e.Code, e.Code == ErreursZoneEntete.Obligatoire
+                ? $"Zone « {libelles[e.Champ]} » à renseigner avant la validation"
+                : $"Zone « {libelles[e.Champ]} » : valeur incorrecte")).ToList();
     }
 
     private async Task<List<ProprieteDefinition>> Proprietes(int tydId, CancellationToken ct) =>
@@ -443,7 +470,8 @@ public class DocumentService<TDoc, TLigne, TComplet>(
     }
 
     /// <summary>Écrit l'entête et le contenu calculés, incrémente la version d'enregistrement.</summary>
-    private async Task<ReponseEnregistrement<TComplet>> Persister(long id, ResultatDocument<TDoc, TLigne> r, Utilisateur u, CancellationToken ct)
+    private async Task<ReponseEnregistrement<TComplet>> Persister(long id, ResultatDocument<TDoc, TLigne> r, Utilisateur u, CancellationToken ct,
+        IReadOnlyDictionary<string, JsonNode?>? zones = null)
     {
         var entite = await db.Documents.FirstAsync(x => x.EntId == id, ct);
         var versionAvant = entite.EntVersion;
@@ -465,6 +493,12 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         }
 
         var corr = await persistance.Ecrire(id, specialisation.VersComplet(r), ct);
+        // Zones d'entête : celles du type du document, reprises de la saisie (ou de la source d'une copie) ; null : inchangées.
+        if (zones is not null)
+        {
+            var typeZones = await Type(r.Document.EntTydId, ct);
+            await ValeursZonesEntete<TDoc, TLigne>.Ecrire(db, id, typeZones.TydFamille, typeZones.TydCode, zones, ct);
+        }
         await RecalculerLiens(id, ct);
         await specialisation.ApresRecalculLiensAsync(db, id, ct);
         static Dictionary<long, long> Nouveaux(Dictionary<long, long> d) => d.Where(kv => kv.Key != kv.Value).ToDictionary();
@@ -563,6 +597,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         // Un brouillon peut attendre son tiers ; un document validé l'a toujours (stock : notre société, posée par la spécialisation).
         if (saisie.Document.EntTiersId is null && await Regles.Booleen("TIERS_OBLIGATOIRE", type, ct)) controles.Add(new MessageCalcul(null, "TIERS_OBLIGATOIRE", "Tiers du document à choisir avant la validation"));
         await ControlerRegles(saisie.Document, type, controles, ct);
+        controles.AddRange(await ControlerZones(type, avant.Zones, true, ct));
         if (controles.Count > 0) throw ExceptionMetier.Invalide(ErreursEnregistrement.Validation, "Le document comporte des erreurs", controles);
 
         await Historiser(avant, "VALIDATION", u, ct);
@@ -1213,7 +1248,9 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         contenu.Document = doc;
         var type = await Type(doc.EntTydId, ct);
         var r = handlers.Pour(type).Calculer(await Entree(contenu, ct));
-        var reponse = await Persister(doc.EntId, r, u, ct);
+        // Zones d'entête reprises si elles existent dans le type de la copie (copie, indice, transformation, avoir).
+        var reprises = ZonesEntete.Reprises(await ZonesEnteteDocument<TDoc, TLigne>.LireRegistre(db, ct), source.Zones, type.TydFamille, type.TydCode);
+        var reponse = await Persister(doc.EntId, r, u, ct, reprises);
         await Historiser(reponse.Document!, "CREATION", u, ct);
         return new Duplication(reponse.Document!, reponse.CorrespondanceLignes);
     }

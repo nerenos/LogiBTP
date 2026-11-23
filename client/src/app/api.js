@@ -780,6 +780,9 @@ export const api = {
   },
   tiersReglements: () => appel('GET', '/reglements/tiers'),
   // Utilisations d'un élément de bibliothèque (lot 7) : composés, lignes d'achat.
+  // PA de référence des éléments (fournisseur éventuel de la pièce) et mise à jour de la bibliothèque depuis un document (lot 9).
+  paReferences: (elements, tiersId = null) => appel('POST', '/bibliotheque/elements/pa-reference', { elements, tiers_id: tiersId }),
+  majPa: (demandes, simulation = false) => appel('POST', '/bibliotheque/elements/pa-maj', { demandes, simulation }),
   composesElement: (id) => appel('GET', `/bibliotheque/elements/${id}/composes`),
   achatsElement: (id, { du = null, au = null, encours = false } = {}) => appel('GET', `/bibliotheque/elements/${id}/achats?${new URLSearchParams({ ...(du ? { du } : {}), ...(au ? { au } : {}), encours })}`),
   // Échéances des pièces validées d'un chantier ou d'un marché, tous tiers (lot 6 : A27).
@@ -892,6 +895,13 @@ export const api = {
   // Affichage de la saisie : étiquettes de lignes, couleurs des modes de vente, vues de colonnes.
   etiquettesLigne: () => appel('GET', '/etiquettes-ligne'),
   enregistrerEtiquettesLigne: (liste) => appel('PUT', '/etiquettes-ligne', liste),
+  stylesLignes: () => appel('GET', '/styles-lignes'),
+  enregistrerStylesLignes: (liste) => appel('PUT', '/styles-lignes', liste),
+  // Zones supplémentaires d'entête des documents (colonnes x_ de document, administrateur) : registre, création, modification, suppression.
+  zonesEntete: () => appel('GET', '/zones-entete'),
+  creerZoneEntete: (demande) => appel('POST', '/zones-entete', demande),
+  modifierZoneEntete: (colonne, modification) => appel('PUT', `/zones-entete/${encodeURIComponent(colonne)}`, modification),
+  supprimerZoneEntete: (colonne) => appel('DELETE', `/zones-entete/${encodeURIComponent(colonne)}`),
   couleursTypePrix: () => appel('GET', '/couleurs-type-prix'),
   enregistrerCouleursTypePrix: (liste) => appel('PUT', '/couleurs-type-prix', liste),
   vuesDocument: (type) => appel('GET', `/vues-document${type?.tyd_code ? `?type=${encodeURIComponent(type.tyd_code)}` : ''}`),

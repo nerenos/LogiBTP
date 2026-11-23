@@ -24,6 +24,16 @@ public class CouleurTypePrix
     public string CtpCouleur { get; set; } = "#999999";
 }
 
+/// <summary>Style d'une classe de ligne à un niveau (table style_ligne) : global, famille ou type de document.</summary>
+public class StyleLigneParametre
+{
+    public int SliId { get; set; }
+    public string SliClasse { get; set; } = "";
+    public string? SliFamille { get; set; }
+    public int? SliTydId { get; set; }
+    public JsonDocument SliValeur { get; set; } = JsonDocument.Parse("{}");
+}
+
 /// <summary>Modèle de saisie d'un document (complet, chiffrage, à la volée…).</summary>
 public class ModeleDocument
 {
@@ -125,6 +135,50 @@ public class AffichageDocumentService<TDoc, TLigne>(DocumentDbContext<TDoc, TLig
         }
         await db.SaveChangesAsync(ct);
         return await CouleursTypePrix(ct);
+    }
+
+    /// <summary>Styles paramétrés des classes de ligne (global, famille, type) : le client les résout avec styles-lignes.js.</summary>
+    public virtual async Task<List<StyleParametre>> StylesLignes(CancellationToken ct)
+    {
+        var types = await db.TypesDocument.AsNoTracking().ToDictionaryAsync(t => t.TydId, t => t.TydCode, ct);
+        return (await db.Set<StyleLigneParametre>().AsNoTracking().OrderBy(x => x.SliClasse).ThenBy(x => x.SliFamille).ThenBy(x => x.SliTydId).ToListAsync(ct))
+            .Select(x => new StyleParametre(x.SliClasse, x.SliFamille, x.SliTydId is int t ? types.GetValueOrDefault(t) : null, x.SliValeur.RootElement.Clone())).ToList();
+    }
+
+    /// <summary>Contexte de résolution des styles d'un document : famille et type du document, styles paramétrés, styles propres du document.</summary>
+    public async Task<ContexteStyles> ContexteStyles(TypeDocument type, JsonDocument? stylesDocument, CancellationToken ct) =>
+        new(type.TydFamille, type.TydCode, await StylesLignes(ct), stylesDocument?.RootElement.Clone());
+
+    /// <summary>Styles paramétrés remplacés (administrateur) : classes connues, un niveau (famille ou type), valeurs valides ; un style vide est retiré.</summary>
+    public virtual async Task<List<StyleParametre>> EnregistrerStylesLignes(List<StyleParametre> saisie, Utilisateur u, CancellationToken ct)
+    {
+        u.ExigerAdmin();
+        var types = await db.TypesDocument.AsNoTracking().ToDictionaryAsync(t => t.TydCode, t => t.TydId, ct);
+        var erreurs = new List<string>();
+        foreach (var s in saisie)
+        {
+            if (!ClassesStyleLigne.Toutes.Contains(s.Classe)) erreurs.Add($"Classe de style {s.Classe} inconnue");
+            if (s.Famille is not null && !FamillesDocument.Toutes.Contains(s.Famille)) erreurs.Add($"{s.Classe} : famille {s.Famille} inconnue");
+            if (s.Type is not null && !types.ContainsKey(s.Type)) erreurs.Add($"{s.Classe} : type {s.Type} inconnu");
+            if (s.Type is not null && s.Famille is not null) erreurs.Add($"{s.Classe} : une famille ou un type, pas les deux");
+            erreurs.AddRange(LogiBTP.Documents.StylesLignes.Erreurs(s.Valeur).Select(e => $"{s.Classe} : {e}"));
+        }
+        if (saisie.GroupBy(s => (s.Classe, s.Famille, s.Type)).Any(g => g.Count() > 1)) erreurs.Add("Un style n'a qu'une valeur par niveau");
+        if (erreurs.Count > 0) throw ExceptionMetier.Invalide("STYLES", string.Join(" ; ", erreurs.Distinct()));
+
+        await using var tx = await db.Unite().CommencerAsync(ct);
+        await db.Set<StyleLigneParametre>().ExecuteDeleteAsync(ct);
+        db.Set<StyleLigneParametre>().AddRange(saisie
+            .Select(s => (S: s, Style: LogiBTP.Documents.StylesLignes.Normaliser(s.Valeur)))
+            .Where(x => !x.Style.EstVide)
+            .Select(x => new StyleLigneParametre
+            {
+                SliClasse = x.S.Classe, SliFamille = x.S.Famille, SliTydId = x.S.Type is string t ? types[t] : null,
+                SliValeur = JsonDocument.Parse(x.Style.VersJson().ToJsonString()),
+            }));
+        await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+        return await StylesLignes(ct);
     }
 
     private static VueDocumentDto VersDto(VueDocument v) => new()

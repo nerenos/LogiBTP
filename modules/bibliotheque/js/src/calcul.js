@@ -1,5 +1,5 @@
 import { pairesParCode } from '@logibtp/socle/dictionnaire';
-import { GESTION_ELEMENT, SCENARIO_PA } from './codes.js';
+import { GESTION_ELEMENT, SCENARIO_PA, ERREUR_CALCUL, TYPE_ELEMENT, ACTION_MAJ_PA, MOTIF_MAJ_PA, SOURCE_PA_REFERENCE } from './codes.js';
 import { D, S, arr6, evaluerExpression, ErreurCalcul, aujourdhui } from '@logibtp/socle';
 
 // Prix et unités d'un élément de bibliothèque. Même calcul que CalculElement.cs (jeu partagé
@@ -23,13 +23,13 @@ export const GESTIONS = pairesParCode('bibliotheque.gestions', [GESTION_ELEMENT.
 export function ratio(unite, { unite_stock, unites = [], donnees = {} }) {
   if (!unite || unite === unite_stock) return D(1);
   const u = unites.find((x) => x.unite === unite);
-  if (!u) throw new ErreurCalcul('UNITE', `Unité ${unite} sans correspondance avec l'unité de stock ${unite_stock}`);
+  if (!u) throw new ErreurCalcul(ERREUR_CALCUL.UNITE, `Unité ${unite} sans correspondance avec l'unité de stock ${unite_stock}`);
   const r = evaluerExpression(String(u.formule ?? ''), (ref) => {
     const v = D(donnees[ref]);
-    if (v === null) throw new ErreurCalcul('DONNEE', `Donnée technique ${ref} non renseignée`);
+    if (v === null) throw new ErreurCalcul(ERREUR_CALCUL.DONNEE, `Donnée technique ${ref} non renseignée`);
     return v;
   });
-  if (r.lte(0)) throw new ErreurCalcul('RATIO', `Correspondance ${unite} nulle ou négative`);
+  if (r.lte(0)) throw new ErreurCalcul(ERREUR_CALCUL.RATIO, `Correspondance ${unite} nulle ou négative`);
   return r;
 }
 
@@ -47,7 +47,7 @@ const enVigueur = (t, date) => (!t.debut || String(t.debut).slice(0, 10) <= date
 export function prixAchat(e, date) {
   const alertes = [];
   const parStock = (t) => {
-    try { return prixNetTarif(t).div(ratio(t.unite, e)); } catch (x) { alertes.push(x.code ?? 'UNITE'); return null; }
+    try { return prixNetTarif(t).div(ratio(t.unite, e)); } catch (x) { alertes.push(x.code ?? ERREUR_CALCUL.UNITE); return null; }
   };
   const tarifs = (e.tarifs ?? []).filter((t) => enVigueur(t, date));
   let pa = null;
@@ -66,7 +66,7 @@ export function prixAchat(e, date) {
       if (prix.length) pa = prix.reduce((a, b) => ((e.scenario === 'MEILLEUR_MIN' ? b.lt(a) : b.gt(a)) ? b : a));
       break;
     }
-    default: throw new ErreurCalcul('SCENARIO', `Scénario de prix d'achat inconnu : ${e.scenario}`);
+    default: throw new ErreurCalcul(ERREUR_CALCUL.SCENARIO, `Scénario de prix d'achat inconnu : ${e.scenario}`);
   }
   if (pa === null) alertes.push('PA_INDISPONIBLE');
   return { pa: pa === null ? null : arr6(pa), alertes };
@@ -96,8 +96,8 @@ export function calculerElement(e, date = aujourdhui()) {
       const fois = (v) => (v === null ? null : S(arr6(v.times(r))));
       prixUnites.push({ unite, ratio: S(arr6(r)), pa: fois(pa), pr: fois(pr), pv_net: fois(pvNet) });
     } catch (x) {
-      prixUnites.push({ unite, ratio: null, pa: null, pr: null, pv_net: null, erreur: x.code ?? 'UNITE' });
-      if (!alertes.includes(x.code)) alertes.push(x.code ?? 'UNITE');
+      prixUnites.push({ unite, ratio: null, pa: null, pr: null, pv_net: null, erreur: x.code ?? ERREUR_CALCUL.UNITE });
+      if (!alertes.includes(x.code)) alertes.push(x.code ?? ERREUR_CALCUL.UNITE);
     }
   }
   return { pa: S(pa), pr: S(pr), pv: S(pv), coef_benef: S(coefBenef), pv_net: S(pvNet), prix_unites: prixUnites, alertes };
@@ -160,4 +160,91 @@ export function reglePremierTarif(autresTarifs, principalDemande, scenario, paFi
   if (autresTarifs > 0) return { principal: principalDemande, scenario: scenario ?? SCENARIO_PA.FIXE };
   const sansPa = (scenario ?? SCENARIO_PA.FIXE) === SCENARIO_PA.FIXE && (D(paFixe ?? null) === null || D(paFixe).isZero());
   return { principal: true, scenario: sansPa ? SCENARIO_PA.FOURNISSEUR_PRINCIPAL : (scenario ?? SCENARIO_PA.FIXE) };
+}
+
+// ---------------------------------------------------------------- PA de référence et plan de mise à jour
+// Même règle que PaReference.cs (jeu partagé modules/bibliotheque/tests/cas/04_mise_a_jour_pa.json). Les tarifs de l'entrée
+// portent en plus `id` et `tiers_id` (fournisseur de l'annuaire).
+
+/** Tarif de l'élément pour un fournisseur de l'annuaire, en vigueur à la date : principal d'abord, puis début le plus récent. */
+function tarifDuFournisseur(e, tiersId, date) {
+  if (tiersId === null || tiersId === undefined || tiersId === '') return null;
+  const candidats = (e.tarifs ?? []).filter((t) => String(t.tiers_id ?? '') === String(tiersId) && enVigueur(t, date));
+  const debut = (t) => (t.debut ? String(t.debut).slice(0, 10) : '');
+  return candidats
+    .map((t, i) => ({ t, i }))
+    .sort((a, b) => (Number(!!b.t.principal) - Number(!!a.t.principal)) || debut(b.t).localeCompare(debut(a.t)) || a.i - b.i)[0]?.t ?? null;
+}
+
+/**
+ * PA de référence d'un élément (par unité de stock) : avec un fournisseur, le tarif de l'article pour ce fournisseur s'il
+ * existe, sinon le PA effectif du scénario. Retour { pa, source, tarif_id, alertes }.
+ */
+export function paReference(e, date = aujourdhui(), tiersId = null) {
+  const t = tarifDuFournisseur(e, tiersId, date);
+  if (t) {
+    try {
+      return { pa: S(arr6(prixNetTarif(t).div(ratio(t.unite, e)))), source: SOURCE_PA_REFERENCE.TARIF_FOURNISSEUR, tarif_id: t.id ?? null, alertes: [] };
+    } catch (x) {
+      const r = prixAchat(e, date);
+      return { pa: S(r.pa), source: SOURCE_PA_REFERENCE.PA_EFFECTIF, tarif_id: null, alertes: [x.code ?? ERREUR_CALCUL.UNITE, ...r.alertes] };
+    }
+  }
+  const r = prixAchat(e, date);
+  return { pa: S(r.pa), source: SOURCE_PA_REFERENCE.PA_EFFECTIF, tarif_id: null, alertes: r.alertes };
+}
+
+const sansEcriture = (motif) => ({ action: ACTION_MAJ_PA.AUCUNE, motif, pa_fixe: null, tarif: null });
+
+/** Tarif existant ramené à un nouveau prix net (par unité du tarif) : prix public recalculé, remises conservées. */
+function tarifRecalcule(t, pa, e) {
+  const net = arr6(pa.times(ratio(t.unite, e)));
+  let prixPublic = null;
+  let remise1 = null;
+  let remise2 = null;
+  let prix = net;
+  if (D(t.prix_public) !== null) {
+    const facteur = D(1).minus((D(t.remise1) ?? D(0)).div(100)).times(D(1).minus((D(t.remise2) ?? D(0)).div(100)));
+    if (facteur.gt(0)) {
+      prixPublic = arr6(net.div(facteur));
+      remise1 = D(t.remise1);
+      remise2 = D(t.remise2);
+      prix = prixNetTarif({ prix: net, prix_public: prixPublic, remise1, remise2 });
+    }
+  }
+  return { id: t.id ?? null, tiers_id: t.tiers_id ?? null, unite: t.unite, prix: S(prix), prix_public: S(prixPublic), remise1: S(remise1), remise2: S(remise2), debut: null };
+}
+
+/**
+ * Plan de mise à jour de la bibliothèque pour un nouveau PA (par unité de stock) et un fournisseur éventuel de la pièce.
+ * Retour { action, motif, pa_fixe, tarif } : PA_FIXE (pa_fixe), TARIF (tarif existant mis à jour), NOUVEAU_TARIF (tarif à
+ * créer pour le fournisseur, début à la date), AUCUNE (motif).
+ */
+export function planMiseAJourPa(e, nouveauPa, date = aujourdhui(), tiersId = null) {
+  // Élément composé (type connu et autre que ARTICLE) : son prix vient de sa composition, rien à écrire.
+  if (e.type && e.type !== TYPE_ELEMENT.ARTICLE) return sansEcriture(MOTIF_MAJ_PA.ELEMENT_COMPOSE);
+  const pa = D(nouveauPa);
+  if (pa === null || pa.lt(0)) return sansEcriture(MOTIF_MAJ_PA.PA_INVALIDE);
+  const scenario = e.scenario ?? SCENARIO_PA.FIXE;
+  const parTarif = [SCENARIO_PA.FOURNISSEUR_PRINCIPAL, SCENARIO_PA.MEILLEUR_MIN, SCENARIO_PA.MEILLEUR_MAX].includes(scenario);
+  const aFournisseur = tiersId !== null && tiersId !== undefined && tiersId !== '';
+  try {
+    const duFournisseur = tarifDuFournisseur(e, tiersId, date);
+    if (duFournisseur) return { action: ACTION_MAJ_PA.TARIF, motif: null, pa_fixe: null, tarif: tarifRecalcule(duFournisseur, pa, e) };
+    if (aFournisseur && parTarif) {
+      return { action: ACTION_MAJ_PA.NOUVEAU_TARIF, motif: null, pa_fixe: null,
+        tarif: { id: null, tiers_id: tiersId, unite: e.unite_stock, prix: S(arr6(pa)), prix_public: null, remise1: null, remise2: null, debut: date } };
+    }
+    switch (scenario) {
+      case SCENARIO_PA.FIXE: return { action: ACTION_MAJ_PA.PA_FIXE, motif: null, pa_fixe: S(arr6(pa)), tarif: null };
+      case SCENARIO_PA.FOURNISSEUR_PRINCIPAL: {
+        const principal = (e.tarifs ?? []).filter((t) => enVigueur(t, date)).find((t) => t.principal);
+        return principal ? { action: ACTION_MAJ_PA.TARIF, motif: null, pa_fixe: null, tarif: tarifRecalcule(principal, pa, e) } : sansEcriture(MOTIF_MAJ_PA.TARIF_PRINCIPAL_ABSENT);
+      }
+      default: return sansEcriture(MOTIF_MAJ_PA.SCENARIO_CALCULE);
+    }
+  } catch (x) {
+    if (x instanceof ErreurCalcul) return sansEcriture(MOTIF_MAJ_PA.UNITE_TARIF);
+    throw x;
+  }
 }

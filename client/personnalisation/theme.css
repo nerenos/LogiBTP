@@ -123,3 +123,11 @@
   /* Référentiels : couleur proposée pour une nouvelle valeur de liste. */
   --valeur-liste-defaut: #64748b;
 }
+
+/* Écart de PA d'une ligne de document avec la bibliothèque (lot 9 de fiches-lignes-documents) : icône plus cher / moins cher,
+   signe discret d'un ouvrage dont une composante est en écart. */
+:root {
+  --ecart-pa-plus-cher: #b42318;
+  --ecart-pa-moins-cher: #067647;
+  --ecart-pa-ouvrage: #98a2b3;
+}

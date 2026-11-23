@@ -1,5 +1,5 @@
 import { texte, texteHtml, icone } from '@logibtp/socle/dictionnaire';
-import { CFG_LIGNES as C, parId, ancetres, descendants, formatNombre, formatLibre, lireNombre, echapper, ouvrirDialogue } from '@logibtp/socle/ui';
+import { CFG_LIGNES as C, parId, ancetres, descendants, formatNombre, formatLibre, lireNombre, echapper, ouvrirDialogue, confirmer, alerter } from '@logibtp/socle/ui';
 import {
   EditeurDocument, ReglesDocument, PressePapiers, correspondance, modifierColonne, insererColonnes,
 } from '@logibtp/document/ui';
@@ -10,6 +10,7 @@ import { FONCTIONS_BTP } from '../calcul/fonctions-btp.js';
 import { compteLigne, libelleCompte, relationTiers, tvaAutoliqueeParDefaut } from './comptes.js';
 import { fraisRecus, bilanTranche } from './frais-annexes.js';
 import { unitesArticle, conversionUnite } from './bibliotheque/appel.js';
+import { ecartPa, SENS_ECART_PA } from './bibliotheque/ecart-pa.js';
 
 // Spécialisation BTP de l'éditeur du module Document : moteur de devis BTP, colonnes de déboursé, PV fixe,
 // lignes d'écart d'arrondi calculées, métrés et variables (module Métré). L'éditeur sert aussi d'hôte au
@@ -186,6 +187,13 @@ export class EditeurDevisBtp extends EditeurDocument {
     // options.appelerCode / options.rechercher : appel de la bibliothèque (colonne Code, F3), fournis par l'hôte.
     super(conteneur, options);
     this.ouvrirMetreExterne = ouvrirMetre;
+    // Icône d'écart de PA de la cellule PA : clic = mise à jour de la bibliothèque de la ligne.
+    this.grille.tbody.addEventListener('click', (e) => {
+      const b = e.target.closest?.('[data-ecart-pa]');
+      if (!b) return;
+      e.stopPropagation();
+      this.mettreAJourBibliotheque([Number(b.dataset.ecartPa)]).catch((x) => this.surMessage?.(x.message));
+    });
   }
 
   creerRegles() {
@@ -324,7 +332,8 @@ export class EditeurDevisBtp extends EditeurDocument {
     insererColonnes(colonnes, 'pv', [
       {
         cle: 'pa', titre: texte('document_btp.colonnes.pa'), classe: 'col-nombre', ...this.colonneNombre('lig_pa', (l) => chiffree(l) && !this.estCompose(l)),
-        valeur: (r) => (estChiffree(r.calcule) ? formatNombre(r.calcule.lig_pa, 2) : ''),
+        valeur: (r) => this.valeurPa(r),
+        titreCellule: (r) => this.titrePa(r),
       },
       {
         cle: 'fg', titre: texte('document_btp.colonnes.fg'), classe: 'col-coef', ...this.colonneNombre('lig_coef_fg', chiffree),
@@ -374,6 +383,143 @@ export class EditeurDevisBtp extends EditeurDocument {
       return colonnes.filter((c) => !['prorata', 'coef_fa', 'fa_recus'].includes(c.cle));
     }
     return colonnes;
+  }
+
+  // ---------------------------------------------------------------- écart de PA avec la bibliothèque (lot 9)
+
+  /** Fournisseur de la pièce pour le tarif de référence : le tiers des documents d'achat (familles A et T), aucun en vente. */
+  tiersPa() {
+    return estFamilleAchat(this.definition.type?.tyd_famille) ? Number(this.saisie?.document?.ent_tiers_id) || null : null;
+  }
+
+  /** PA de référence lus (par élément), propres au fournisseur de la pièce : un autre fournisseur les relit. */
+  #referencesPa() {
+    const tiers = this.tiersPa();
+    if (!this.refsPa || this.refsPa.tiers !== tiers) this.refsPa = { tiers, refs: new Map(), demandes: new Set(), minuterie: null };
+    return this.refsPa;
+  }
+
+  /** Relecture des PA de référence des éléments donnés (après une mise à jour de la bibliothèque) ; la grille est redessinée. */
+  oublierPaReferences(ids) {
+    for (const id of ids) this.refsPa?.refs.delete(id);
+    this.grille?.rendre();
+  }
+
+  /**
+   * Écart de la ligne avec la bibliothèque, ou null (aucun écart, élément composé, unité sans conversion, lecture en
+   * cours : la grille est alors redessinée à l'arrivée des PA de référence).
+   */
+  ecartLigne(l) {
+    if (!this.chargerPaReferences || !l || l.virtuelle || !estChiffree(l)) return null;
+    const id = this.idElement(l);
+    if (id === null) return null;
+    const refs = this.#referencesPa();
+    if (!refs.refs.has(id)) {
+      refs.refs.set(id, null);
+      refs.demandes.add(id);
+      refs.minuterie ??= setTimeout(() => this.#lirePaReferences(refs), 0);
+      return null;
+    }
+    return ecartPa(l, this.elements?.get(id) ?? null, refs.refs.get(id));
+  }
+
+  async #lirePaReferences(refs) {
+    const ids = [...refs.demandes];
+    refs.demandes.clear();
+    refs.minuterie = null;
+    try {
+      this.elements ??= new Map();
+      await Promise.all(ids.map(async (id) => {
+        if (!this.elements.get(id)) this.elements.set(id, (await Promise.resolve(this.chargerElement?.(id)).catch(() => null)) ?? null);
+      }));
+      for (const x of await this.chargerPaReferences(ids, refs.tiers)) refs.refs.set(x.ele_id, x);
+    } catch { /* PA de référence indisponibles : pas d'indicateur */ }
+    if (refs === this.refsPa) this.grille?.rendre();
+  }
+
+  /** Cellule PA : le PA calculé, avec l'icône d'écart (plus cher / moins cher) ou le signe discret d'un ouvrage dont une composante est en écart. */
+  valeurPa(r) {
+    if (!estChiffree(r.calcule)) return '';
+    const nombre = formatNombre(r.calcule.lig_pa, 2);
+    const ecart = this.ecartLigne(r.item);
+    if (ecart) {
+      const plus = ecart.sens === SENS_ECART_PA.PLUS_CHER;
+      return { html: `<button type="button" class="ecart-pa ${plus ? 'plus-cher' : 'moins-cher'}" data-ecart-pa="${r.item.lig_id}" tabindex="-1">${echapper(icone(plus ? 'document_btp_ecart_pa_plus' : 'document_btp_ecart_pa_moins'))}</button>${echapper(nombre)}` };
+    }
+    if (this.composanteEnEcart(r.item)) return { html: `<span class="ecart-pa-ouvrage">${echapper(icone('document_btp_ecart_pa_ouvrage'))}</span>${echapper(nombre)}` };
+    return nombre;
+  }
+
+  /** Infobulle de la cellule PA : prix de la bibliothèque et écart. */
+  titrePa(r) {
+    if (r.virtuelle) return '';
+    const ecart = this.ecartLigne(r.item);
+    if (ecart) {
+      return texte(ecart.sens === SENS_ECART_PA.PLUS_CHER ? 'document_btp.editeur.ecart_pa.plus_cher' : 'document_btp.editeur.ecart_pa.moins_cher', {
+        pa: formatNombre(ecart.pa_bibliotheque, 4), unite: r.item.lig_unt_code, ecart: formatNombre(ecart.ecart, 4),
+        source: texte(`document_btp.editeur.ecart_pa.source_${ecart.reference.source}`),
+      });
+    }
+    return this.composanteEnEcart(r.item) ? texte('document_btp.editeur.ecart_pa.ouvrage') : '';
+  }
+
+  /** Ouvrage (ligne composée) dont une composante liée à la bibliothèque est en écart. */
+  composanteEnEcart(l) {
+    if (!this.chargerPaReferences || !this.estCompose(l)) return false;
+    return [...descendants(C, this.saisie.lignes, l.lig_id)].some((id) => this.ecartLigne(this.saisie.lignes.find((x) => x.lig_id === id)));
+  }
+
+  /** Nom du fournisseur de la pièce (tarif créé pour lui). */
+  nomTiersPa() {
+    const d = this.saisie?.document;
+    return (d?.ent_intervenants ?? []).find((i) => Number(i.per_id) === Number(d?.ent_tiers_id))?.tiers ?? null;
+  }
+
+  /**
+   * Mise à jour de la bibliothèque depuis les lignes données (clic sur l'icône : une ligne ; sélection : plusieurs) : plan
+   * du serveur par simulation, fenêtre listant les éléments (PA fixe, tarif du fournisseur, nouveau tarif ou motif
+   * d'absence), puis écriture et relecture des PA de référence. Retourne le nombre d'éléments mis à jour.
+   */
+  async mettreAJourBibliotheque(ligIds) {
+    const dans = new Set(ligIds);
+    const vus = new Set();
+    const items = [];
+    for (const l of this.saisie.lignes.filter((x) => dans.has(x.lig_id))) {
+      const ecart = this.ecartLigne(l);
+      const id = this.idElement(l);
+      if (!ecart || vus.has(id)) continue;
+      vus.add(id);
+      items.push({ l, id, ecart });
+    }
+    if (!items.length) { await alerter(texte('document_btp.editeur.ecart_pa.aucun')); return 0; }
+    const tiers = this.tiersPa();
+    const fournisseur = tiers ? this.nomTiersPa() : null;
+    const demandes = items.map((x) => ({ ele_id: x.id, pa: Number(x.ecart.pa_stock), tiers_id: tiers, fournisseur, empreinte: x.ecart.reference.empreinte ?? null }));
+    const plan = new Map((await this.mettreAJourPa(demandes, true)).map((x) => [x.ele_id, x]));
+    const aMettre = items.filter((x) => plan.get(x.id) && plan.get(x.id).action !== 'AUCUNE' && !plan.get(x.id).motif);
+    const motif = (x) => texte(`document_btp.editeur.ecart_pa.motif_${plan.get(x.id)?.motif}`);
+    const action = (x) => texte(`document_btp.editeur.ecart_pa.action_${plan.get(x.id).action}`, { fournisseur: fournisseur ?? '' });
+    const lignes = items.map((x) => {
+      const ok = aMettre.includes(x);
+      return `<tr${ok ? '' : ' class="refus"'}><td>${echapper(`${x.l.lig_code ?? ''} ${x.l.lig_libelle_brut ?? ''}`.trim())}</td>
+        <td class="nombre">${echapper(formatNombre(x.ecart.pa_stock, 4))}</td><td>${echapper(ok ? action(x) : motif(x))}</td></tr>`;
+    }).join('');
+    const tableau = `<table class="tableau-compact ecart-pa-liste"><thead><tr><th>${texteHtml('document_btp.editeur.ecart_pa.col_element')}</th>
+      <th>${texteHtml('document_btp.editeur.ecart_pa.col_pa')}</th><th>${texteHtml('document_btp.editeur.ecart_pa.col_maj')}</th></tr></thead><tbody>${lignes}</tbody></table>`;
+    if (!aMettre.length) { await alerter('', { titre: texte('document_btp.editeur.ecart_pa.titre'), html: tableau }); return 0; }
+    if (!await confirmer('', { titre: texte('document_btp.editeur.ecart_pa.titre'), html: tableau, ok: texte('document_btp.editeur.ecart_pa.ok') })) return 0;
+    const faits = await this.mettreAJourPa(demandes.filter((d) => aMettre.some((x) => x.id === d.ele_id)), false);
+    this.oublierPaReferences(items.map((x) => x.id));
+    const ecrits = faits.filter((x) => x.ecrit).length;
+    const refus = faits.filter((x) => !x.ecrit);
+    if (ecrits) this.surMessage?.(texte('document_btp.editeur.ecart_pa.message', { n: ecrits }));
+    if (refus.length) this.surMessage?.(`${texte('document_btp.editeur.ecart_pa.refus')} : ${refus.map((x) => `${items.find((i) => i.id === x.ele_id)?.l.lig_code ?? x.ele_id} (${texte(`document_btp.editeur.ecart_pa.motif_${x.motif}`)})`).join(', ')}`);
+    return ecrits;
+  }
+
+  /** Action « Mettre à jour la bibliothèque » sur la sélection de la grille. */
+  mettreAJourBibliothequeSelection() {
+    return this.mettreAJourBibliotheque((this.grille?.selection ?? []).filter((id) => Number(id) > 0));
   }
 
   // ------------------------------------------------------------ unités de l'article (D2, D3)

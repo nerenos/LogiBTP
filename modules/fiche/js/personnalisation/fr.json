@@ -56,9 +56,13 @@
     "fiche": {
       "acces_refuse": "Accès refusé aux fiches {{libelle}}",
       "general": "Général",
+      "general_court": "Général",
       "complementaires": "Informations complémentaires",
+      "complementaires_court": "Compl.",
       "champs_supplementaires": "Champs supplémentaires",
+      "champs_supplementaires_court": "Champs x_",
       "pieces": "Pièces jointes",
+      "pieces_court": "Pièces",
       "nouveau": "Nouveau {{libelle}}",
       "titre_defaut": "{{libelle}} {{id}}",
       "mode_copie": "{{mode}} de {{code}}",

@@ -499,7 +499,7 @@ export class ConcepteurVue {
       const src = this.colonnesSource.find((c) => c.code === code);
       tr.querySelector('[data-afficher]').addEventListener('change', (e) => {
         if (e.target.checked) {
-          d.colonnes.push(normaliserDefinition({ colonnes: [{ code, titre: titreDepuisCode(code), recherche: !/bool|int|numeric|date|time/.test(src?.type ?? ''), ...formatPourType(src?.type) }] }).colonnes[0]);
+          d.colonnes.push(normaliserDefinition({ colonnes: [{ code, titre: src?.libelle || titreDepuisCode(code), recherche: !/bool|int|numeric|date|time/.test(src?.type ?? ''), ...formatPourType(src?.type) }] }).colonnes[0]);
         } else d.colonnes = d.colonnes.filter((c) => c.calcul || c.code !== code);
         this.#rendreColonnes();
       });

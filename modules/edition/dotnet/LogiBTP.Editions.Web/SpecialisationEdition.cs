@@ -51,6 +51,12 @@ public class SpecialisationEdition
     /// <summary>Dictionnaire des champs d'une source (concepteur, contrôle des modèles) : [{ chemin, libelle, type }].</summary>
     public virtual JsonArray Dictionnaire(string source) => [];
 
+    /// <summary>
+    /// Dictionnaire complété par les données de la base (champs ajoutés par l'utilisateur : zones d'entête des documents) ;
+    /// par défaut le dictionnaire statique.
+    /// </summary>
+    public virtual Task<JsonArray> DictionnaireAsync(IServiceProvider services, string source, CancellationToken ct) => Task.FromResult(Dictionnaire(source));
+
     /// <summary>Ressources images demandées par les modèles (codes) pour cet élément (logo de l'agence…).</summary>
     public virtual Task<Dictionary<string, RessourceEdition>> RessourcesAsync(IServiceProvider services, IReadOnlyCollection<string> codes,
         JsonObject donnees, Utilisateur u, CancellationToken ct) => Task.FromResult(new Dictionary<string, RessourceEdition>());

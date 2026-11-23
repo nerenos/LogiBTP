@@ -46,3 +46,61 @@ export const STATUTS_HORS_VIGUEUR = Object.freeze([STATUT_DOCUMENT.ANNULE, STATU
 
 /** Nœud des droits d'un type de document (module Droits) : documents/{famille}/{code}. */
 export const noeudDroitsDocument = (famille, code) => `documents/${famille}/${code}`;
+
+/**
+ * Classe de style d'une ligne (styles des lignes : table style_ligne, ent_styles_lignes) : tranche de niveau 1 à 5
+ * (au-delà, TRANCHE_5), section, ouvrage, sous-ouvrage (ouvrage sous un ouvrage), élément, composante (élément sous un
+ * ouvrage), texte, sous-total.
+ */
+export const CLASSE_STYLE_LIGNE = Object.freeze({
+  TRANCHE_1: 'TRANCHE_1',
+  TRANCHE_2: 'TRANCHE_2',
+  TRANCHE_3: 'TRANCHE_3',
+  TRANCHE_4: 'TRANCHE_4',
+  TRANCHE_5: 'TRANCHE_5',
+  SECTION: 'SECTION',
+  OUVRAGE: 'OUVRAGE',
+  SOUS_OUVRAGE: 'SOUS_OUVRAGE',
+  ELEMENT: 'ELEMENT',
+  COMPOSANTE: 'COMPOSANTE',
+  TEXTE: 'TEXTE',
+  SOUS_TOTAL: 'SOUS_TOTAL',
+});
+
+/** Taille du texte d'un style de ligne. */
+export const TAILLE_STYLE_LIGNE = Object.freeze({
+  PETITE: 'PETITE',
+  NORMALE: 'NORMALE',
+  GRANDE: 'GRANDE',
+});
+
+/** Types d'une zone supplémentaire d'entête, en colonne x_ de `document` (registre document_zone_entete). */
+export const TYPE_ZONE_ENTETE = Object.freeze({
+  TEXTE: 'texte',
+  NOMBRE: 'nombre',
+  MONTANT: 'montant',
+  DATE: 'date',
+  CASE_A_COCHER: 'booleen',
+  LISTE: 'liste',
+});
+
+/** Portée d'une zone d'entête : tous les documents, une famille, un type de document. */
+export const PORTEE_ZONE_ENTETE = Object.freeze({
+  GLOBAL: 'GLOBAL',
+  FAMILLE: 'FAMILLE',
+  TYPE: 'TYPE',
+});
+
+/** Erreurs de l'administration des zones d'entête (code des erreurs de champ d'une réponse 422 VALIDATION). */
+export const ERREUR_ZONE_ENTETE = Object.freeze({
+  NOM_INVALIDE: 'ZONE_NOM_INVALIDE',
+  TYPE_INVALIDE: 'ZONE_TYPE_INVALIDE',
+  LIBELLE_OBLIGATOIRE: 'ZONE_LIBELLE_OBLIGATOIRE',
+  VALEURS: 'ZONE_VALEURS',
+  PORTEE_INVALIDE: 'ZONE_PORTEE_INVALIDE',
+  EXISTE: 'ZONE_EXISTE',
+  INCONNUE: 'ZONE_INCONNUE',
+  TABLE_ABSENTE: 'ZONE_TABLE_ABSENTE',
+  OBLIGATOIRE: 'ZONE_OBLIGATOIRE',
+  VALEUR_INVALIDE: 'ZONE_VALEUR_INVALIDE',
+});

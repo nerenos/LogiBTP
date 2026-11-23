@@ -1,11 +1,18 @@
 import { texte, texteHtml, iconeHtml, couleurTheme } from '@logibtp/socle/dictionnaire';
 import { CFG_LIGNES as C, ordreAffichage, echapper, formatNombre, formatLibre, lireNombre, creerCombo, editerLibelle, htmlSur, confirmer } from '@logibtp/socle/ui';
-import { TL, estChiffree, estPied, estTranche, calculerEcheances, montantRetenue, MODES_REGLEMENT, regle, estFamilleAchat } from '../src/index.js';
+import { TL, TYPE_ZONE_ENTETE, erreursSaisieZones, estChiffree, estPied, estTranche, calculerEcheances, montantRetenue, MODES_REGLEMENT, regle, estFamilleAchat } from '../src/index.js';
 import { LIBELLES_BASE_PIED, LIBELLES_TYPE_PRIX } from './editeur-document.js';
+import { creerEditeurStyle } from './style-ligne.js';
+import { CLASSE_STYLE_LIGNE } from '../src/index.js';
 
 const lireEtiquettes = (v) => {
   const x = typeof v === 'string' ? (() => { try { return JSON.parse(v); } catch { return []; } })() : v;
   return Array.isArray(x) ? x : [];
+};
+
+const lireStyle = (v) => {
+  const x = typeof v === 'string' ? (() => { try { return JSON.parse(v); } catch { return null; } })() : v;
+  return x && typeof x === 'object' && !Array.isArray(x) ? x : {};
 };
 
 // Panneaux autour de la grille : entête, détail de la ligne, totaux, messages, écarts.
@@ -123,6 +130,7 @@ export class PanneauxDocument {
           return `<label>${libelle}<input type="${type}" data-prop="${p.prd_code}" data-type="${p.prd_type_donnee}" value="${echapper(v)}"></label>`;
         }).join('')}
       </div>
+      ${this.sectionZones()}
       ${this.sectionsEntete()}
       ${this.sectionTextes()}`;
 
@@ -135,7 +143,70 @@ export class PanneauxDocument {
       if (el.dataset.type === 'decimal') v = v === '' ? null : Number(lireNombre(v));
       m.modifier((b) => { b.document.ent_proprietes = { ...(b.document.ent_proprietes ?? {}), [el.dataset.prop]: v === '' ? null : v }; }, texte('document.etapes.propriete'));
     }));
+    this.lierZones(zone);
     this.lierEntete(zone);
+  }
+
+  // ------------------------------------------------------------------ zones supplémentaires d'entête
+
+  /**
+   * Zones supplémentaires d'entête du type (définition : `zones`, colonnes x_ du document), un groupe de l'onglet Entête
+   * par groupe paramétré (sans groupe : titre par défaut). Valeurs dans `saisie.zones` ; consultation seule si le document
+   * est figé. Les zones obligatoires vides sont signalées (le serveur les refuse à la validation).
+   */
+  sectionZones() {
+    const ed = this.editeur;
+    const zones = ed.definition.zones ?? [];
+    if (zones.length === 0) return '';
+    const valeurs = ed.saisie.zones ?? {};
+    const manquantes = new Set(erreursSaisieZones(zones, ed.definition.type?.tyd_famille, ed.definition.type?.tyd_code, valeurs, true).map((e) => e.champ));
+    const lecture = ed.fige || !!ed.magasin?.lectureSeule;
+    const groupes = new Map();
+    for (const z of zones) {
+      const g = z.groupe ?? '';
+      if (!groupes.has(g)) groupes.set(g, []);
+      groupes.get(g).push(z);
+    }
+    const champ = (z) => {
+      const v = valeurs[z.colonne];
+      const libelle = `${echapper(z.libelle)}${z.obligatoire && z.type !== TYPE_ZONE_ENTETE.CASE_A_COCHER ? ' *' : ''}`;
+      const classe = manquantes.has(z.colonne) ? ' class="invalide"' : '';
+      const base = `data-zone="${echapper(z.colonne)}" data-type="${z.type}" ${lecture ? 'disabled' : ''}`;
+      switch (z.type) {
+        case TYPE_ZONE_ENTETE.CASE_A_COCHER: return `<label class="coche">${libelle} <input type="checkbox" ${base} ${v ? 'checked' : ''}></label>`;
+        case TYPE_ZONE_ENTETE.DATE: return `<label>${libelle} <input type="date" ${base}${classe} value="${echapper(v ?? '')}"></label>`;
+        case TYPE_ZONE_ENTETE.LISTE: return `<label>${libelle} <span data-zone-liste="${echapper(z.colonne)}"></span></label>`;
+        case TYPE_ZONE_ENTETE.NOMBRE:
+        case TYPE_ZONE_ENTETE.MONTANT: return `<label>${libelle} <input ${base}${classe} value="${echapper(v === null || v === undefined ? '' : formatLibre(v))}"></label>`;
+        default: return `<label>${libelle} <input ${base}${classe} value="${echapper(v ?? '')}"></label>`;
+      }
+    };
+    return [...groupes].map(([groupe, liste]) => `<fieldset class="zones-entete"><legend>${groupe ? echapper(groupe) : texteHtml('document.zones.groupe_defaut')}</legend>
+      <div class="formulaire">${liste.map(champ).join('')}</div></fieldset>`).join('');
+  }
+
+  /** Branche les champs des zones : chaque valeur modifiée forme une étape d'annulation. */
+  lierZones(zone) {
+    const ed = this.editeur;
+    const m = ed.magasin;
+    const changer = (colonne, valeur) => m.modifier((b) => { b.zones = { ...(b.zones ?? {}), [colonne]: valeur }; }, texte('document.etapes.zone_entete'));
+    const lecture = ed.fige || !!m?.lectureSeule;
+    zone.querySelectorAll('[data-zone]').forEach((el) => el.addEventListener('change', () => {
+      const colonne = el.dataset.zone;
+      let v;
+      if (el.type === 'checkbox') v = el.checked;
+      else if (el.dataset.type === TYPE_ZONE_ENTETE.NOMBRE || el.dataset.type === TYPE_ZONE_ENTETE.MONTANT) { const n = lireNombre(el.value); v = n === null ? null : n === undefined ? el.value : Number(n); }
+      else v = el.value.trim() === '' ? null : el.value;
+      changer(colonne, v);
+    }));
+    for (const place of zone.querySelectorAll('[data-zone-liste]')) {
+      const z = (ed.definition.zones ?? []).find((x) => x.colonne === place.dataset.zoneListe);
+      if (!z) continue;
+      const combo = creerCombo({ options: (z.valeurs ?? []).map((o) => ({ valeur: o.valeur, libelle: o.libelle ?? o.valeur })), valeur: ed.saisie.zones?.[z.colonne] ?? '', vide: true });
+      combo.readOnly = lecture;
+      combo.addEventListener('change', () => changer(z.colonne, combo.valeurCombo || null));
+      place.replaceWith(combo);
+    }
   }
 
   // ------------------------------------------------------------------ options (D8)
@@ -176,8 +247,11 @@ export class PanneauxDocument {
         ${this.champsOptions(d).join('')}
       </div></fieldset>
       ${this.sectionEtiquettes(d)}
+      <fieldset class="styles-document"><legend>${texteHtml('document.styles.document_titre')}</legend>
+        <p class="aide">${texteHtml('document.styles.document_aide')}</p><div data-styles-document></div></fieldset>
       ${this.sectionsOptions()}`;
     const m = editeur.magasin;
+    this.lierStylesDocument(zone.querySelector('[data-styles-document]'));
     this.lierEtiquettes(zone);
     lier(zone.querySelector('.formulaire'), '[data-champ]', (champ, v, el) => m.modifier((b) => { b.document[champ] = valeurChamp(el, v); }, texte('document.etapes.entete')));
     const majFormat = () => {
@@ -377,6 +451,28 @@ export class PanneauxDocument {
     </fieldset>`;
   }
 
+  /** Styles des classes de ligne propres au document (ent_styles_lignes) : un éditeur par classe. */
+  lierStylesDocument(zone) {
+    const editeur = this.editeur;
+    const m = editeur.magasin;
+    const propres = lireStyle(editeur.saisie.document.ent_styles_lignes);
+    const ro = Boolean(editeur.fige || m.lectureSeule);
+    for (const classe of Object.values(CLASSE_STYLE_LIGNE)) {
+      const bloc = document.createElement('div');
+      bloc.className = 'styles-lignes-classe';
+      bloc.innerHTML = `<h3>${texteHtml(`document.styles.classe.${classe}`)}</h3>`;
+      bloc.append(creerEditeurStyle({
+        style: propres[classe] ?? {}, lectureSeule: ro,
+        surChangement: (style) => m.modifier((b) => {
+          const tous = { ...lireStyle(b.document.ent_styles_lignes) };
+          if (Object.keys(style).length) tous[classe] = style; else delete tous[classe];
+          b.document.ent_styles_lignes = Object.keys(tous).length ? tous : null;
+        }, texte('document.etapes.styles_document')),
+      }));
+      zone.append(bloc);
+    }
+  }
+
   lierEtiquettes(zone) {
     const m = this.editeur.magasin;
     const ecrire = (modif, libelle) => m.modifier((b) => {
@@ -511,6 +607,8 @@ export class PanneauxDocument {
       <div class="formulaire">${champs.join('')}
         ${props.map((p) => `<label>${echapper(p.prd_libelle)}<input data-prop="${p.prd_code}" value="${echapper(valeurs[p.prd_code] ?? '')}"></label>`).join('')}
       </div>
+      <fieldset class="style-ligne" ${l._virtuelle ? 'hidden' : ''}><legend>${texteHtml('document.styles.ligne_titre')}</legend>
+        <p class="aide">${texteHtml('document.styles.ligne_aide')}</p><div data-style-ligne></div></fieldset>
       ${calcul.length ? `<dl class="calcul">${calcul.map(([t, v]) => `<dt>${echapper(t)}</dt><dd>${v}</dd>`).join('')}</dl>` : ''}`;
 
     const m = editeur.magasin;
@@ -526,6 +624,10 @@ export class PanneauxDocument {
         const x = b.lignes.find((y) => y.lig_id === ligId);
         x.lig_proprietes = { ...(x.lig_proprietes ?? {}), [el.dataset.prop]: el.value || null };
       }, texte('document.etapes.propriete'));
+    }));
+    zone.querySelector('[data-style-ligne]')?.append(creerEditeurStyle({
+      style: lireStyle(l.lig_style), lectureSeule: Boolean(editeur.fige || m.lectureSeule),
+      surChangement: (style) => m.modifier((b) => { b.lignes.find((y) => y.lig_id === ligId).lig_style = Object.keys(style).length ? style : null; }, texte('document.etapes.style_ligne')),
     }));
     zone.querySelector('[data-action="appliquer-tva"]')?.addEventListener('click', () => {
       m.modifier((b) => this.regles.appliquerTauxTitre(b, ligId), texte('document.etapes.tva_titre'));

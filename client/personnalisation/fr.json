@@ -668,6 +668,35 @@
         "sans": "Sans chantier : choisir le chantier de la ligne",
         "herite": "— chantier de l'entête : choisir un chantier pour l'imposer à la ligne"
       },
+      "ecart_pa": {
+        "plus_cher": "PA plus cher que la bibliothèque : {{pa}} / {{unite}} dans la bibliothèque ({{source}}), écart {{ecart}}. Cliquer pour mettre à jour la bibliothèque.",
+        "moins_cher": "PA moins cher que la bibliothèque : {{pa}} / {{unite}} dans la bibliothèque ({{source}}), écart {{ecart}}. Cliquer pour mettre à jour la bibliothèque.",
+        "ouvrage": "Une composante de cet ouvrage a un PA différent de la bibliothèque",
+        "source_TARIF_FOURNISSEUR": "tarif du fournisseur de la pièce",
+        "source_PA_EFFECTIF": "PA de l'élément",
+        "titre": "Mettre à jour la bibliothèque",
+        "ok": "Mettre à jour",
+        "aucun": "Aucune ligne sélectionnée n'a un PA différent de la bibliothèque.",
+        "ligne": "{{code}} {{libelle}} : {{avant}} → {{apres}} / {{unite}}",
+        "action_PA_FIXE": "PA fixe de l'élément",
+        "action_TARIF": "tarif du fournisseur de la pièce",
+        "action_NOUVEAU_TARIF": "nouveau tarif pour {{fournisseur}}",
+        "action_AUCUNE": "non mis à jour",
+        "col_element": "Élément",
+        "col_pa": "PA (unité de stock)",
+        "col_maj": "Mise à jour",
+        "message": "{{n}} élément(s) de la bibliothèque mis à jour.",
+        "refus": "Éléments non mis à jour",
+        "motif_SCENARIO_CALCULE": "le PA de l'élément est calculé par son scénario : saisir un tarif fournisseur dans la fiche",
+        "motif_TARIF_PRINCIPAL_ABSENT": "aucun tarif principal en vigueur",
+        "motif_UNITE_TARIF": "unité du tarif sans conversion",
+        "motif_PA_INVALIDE": "PA invalide",
+        "motif_ELEMENT_COMPOSE": "élément composé : son prix vient de sa composition",
+        "motif_ELEMENT_INTROUVABLE": "élément introuvable",
+        "motif_FICHE_EN_MODIFICATION": "fiche ouverte en modification par un autre utilisateur",
+        "motif_EMPREINTE_CHANGEE": "fiche modifiée depuis la lecture : recharger",
+        "motif_FOURNISSEUR_OBLIGATOIRE": "fournisseur de la pièce à renseigner pour créer son tarif"
+      },
       "unites": {
         "article": "Unités de l’article",
         "autres": "Autres unités",
@@ -942,6 +971,7 @@
         "suivi_aide": "{{raccourci}} : notes, tâches et courriels (module CRM), origine, documents liés et historique",
         "suivi": "Suivi",
         "reglements": "Règlements",
+        "reglements_court": "Règl.",
         "reglements_aide": "{{raccourci}} : condition et mode de règlement, échéancier, règlements, imputations et déductions d’acompte",
         "options": "Options",
         "options_aide": "{{raccourci}} : modèle de saisie, décimales, numérotation, calcul des ouvrages, bibliothèque, étiquettes",
@@ -968,6 +998,8 @@
         "consultation": "{{icone}} Lot de consultation",
         "sous_traiter_aide": "Sous-traiter les lignes sélectionnées (ou tout) : appel d'offres à un ou plusieurs sous-traitants, ou commande de sous-traitance",
         "sous_traiter": "{{icone}} Sous-traiter",
+        "maj_bibliotheque_aide": "Mettre à jour le PA des éléments de bibliothèque des lignes sélectionnées dont le PA diffère de celui de la bibliothèque",
+        "maj_bibliotheque": "{{icone}} Mettre à jour la bibliothèque",
         "sources_aide": "Ajouter des documents sources : BL et commandes en attente, avenants du marché (une section par document)",
         "sources": "{{icone}} Documents",
         "approuver": "Approuver",
@@ -5587,11 +5619,13 @@
     "onglets": {
       "suivi": "Suivi",
       "habilitations": "Habilitations",
+      "habilitations_court": "Habilit.",
       "missions": "Missions",
       "materiel": "Matériel",
       "dotations": "Dotations",
       "compte": "Compte",
       "controles": "Contrôles et habilitations",
+      "controles_court": "Contrôles",
       "affectations": "Affectations",
       "compteurs": "Compteurs",
       "couts": "Coûts",
@@ -5637,6 +5671,11 @@
       "chantier": "Chantier à préciser pour un matériel en chantier",
       "nature_vendu": "Nature obligatoire pour un article ou un ouvrage"
     },
+    "pointages": {
+      "derniers": "Derniers pointages",
+      "derniers_nombre": "Derniers pointages ({{nombre}})",
+      "derniers_aide": "Ouvrir la liste des pointages de la ressource sur les 30 derniers jours (couches saisie et validée, période modifiable)"
+    },
     "materiel": {
       "controles": "Contrôles réglementaires",
       "quantite_identifie": "Matériel identifié : toujours un seul",
@@ -5658,10 +5697,14 @@
         "unites": "Unités",
         "techniques": "Données techniques (par unité de stock)",
         "composition": "Composition",
+        "composition_court": "Compos.",
         "tarifs": "Tarifs fournisseurs",
+        "tarifs_court": "Tarifs",
         "stock": "Stock",
         "image": "Image et notices",
-        "utilisations": "Utilisations"
+        "image_court": "Image",
+        "utilisations": "Utilisations",
+        "utilisations_court": "Usages"
       },
       "utilisations_titre": "Ouvrages et ensembles qui l'utilisent",
       "quantite": "Quantité",
@@ -5715,6 +5758,7 @@
       "onglets": {
         "graphe": "Graphe",
         "coordonnees": "Coordonnées",
+        "coordonnees_court": "Coord.",
         "contacts": "Contacts",
         "titulaire": "Titulaire",
         "liens": "Liens",
@@ -8884,6 +8928,11 @@
       "relations": "Relations de {{libelle}}"
     },
     "liste": {
+      "ressource": {
+        "titre": "Ressource",
+        "retirer": "Retirer le filtre sur la ressource",
+        "effacer": "Effacer"
+      },
       "creer": {
         "projet": "Projet",
         "affaire": "Affaire",

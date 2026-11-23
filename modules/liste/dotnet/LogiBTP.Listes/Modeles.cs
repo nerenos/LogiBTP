@@ -112,8 +112,11 @@ public sealed class TypeElementTheme
     public string? Libelle { get; set; }
 }
 
-/// <summary>Colonne d'une source : nom, type PostgreSQL (data_type), modifiable dans la base (is_updatable).</summary>
-public sealed record ColonneSource(string Code, string Type, bool Modifiable = false);
+/// <summary>
+/// Colonne d'une source : nom, type PostgreSQL (data_type), modifiable dans la base (is_updatable) ; libellé proposé comme
+/// titre à l'ajout de la colonne dans une vue (fourni par l'hôte pour les colonnes ajoutées par l'utilisateur, null sinon).
+/// </summary>
+public sealed record ColonneSource(string Code, string Type, bool Modifiable = false, string? Libelle = null);
 
 /// <summary>
 /// Source prête à interroger : SELECT encadré, colonnes connues, identifiant et type d'élément. Table : relation

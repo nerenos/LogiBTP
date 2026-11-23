@@ -25,7 +25,7 @@ const largeursDe = (colonnes) => new Map(colonnes.filter((c) => Number(c.largeur
  *                            classeCellule(ligne) et titreCellule(ligne) facultatifs : classe et bulle propres à la cellule }]
  *  lignes()                [{ item, calcule, profondeur, aEnfants }] dans l'ordre d'affichage
  *  actions                 { modifier, inserer, deplacer, indenter, desindenter, decaler, supprimer, dupliquer,
- *                            copier, coller, ouvrirMetre, rechercher (F3), annuler, retablir, depotAutorise, classeLigne, titreLigne, selection,
+ *                            copier, coller, ouvrirMetre, rechercher (F3), annuler, retablir, depotAutorise, classeLigne, styleLigne, titreLigne, selection,
  *                            marqueur(ligne) → { fond, titre } | null (pastille colorée de la poignée), choisirMarqueur(id, element),
  *                            signal(ligne) → { icone, classe, titre } | null (icône d'erreur ou d'avertissement de la poignée),
  *                            choisirSignal(id) (clic sur l'icône),
@@ -155,6 +155,12 @@ export class GrilleArbre {
         this.selection.includes(id) ? 'selectionnee' : '',
         id === this.courant ? 'courante' : '',
       ].join(' ');
+      // Style de la ligne entière : { classes, variables } de l'hôte (variables CSS sur le tr, règles du thème).
+      const style = this.o.actions.styleLigne?.(r);
+      if (style) {
+        tr.classList.add(...style.classes);
+        for (const [k, v] of Object.entries(style.variables ?? {})) tr.style.setProperty(k, v);
+      }
       const titre = this.o.actions.titreLigne?.(r);
       if (titre) tr.title = titre;
       const poignee = document.createElement('td');

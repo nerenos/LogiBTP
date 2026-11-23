@@ -1,0 +1,524 @@
+{
+  "cas": [
+    {
+      "nom": "Classes : tranches jusqu'à 5, au-delà TRANCHE_5, section, ouvrage, sous-ouvrage, composante, élément, texte, sous-total, pied sans classe",
+      "lignes": [
+        {
+          "lig_id": 1,
+          "lig_parent_id": null,
+          "lig_tyl_id": 11
+        },
+        {
+          "lig_id": 2,
+          "lig_parent_id": 1,
+          "lig_tyl_id": 1
+        },
+        {
+          "lig_id": 3,
+          "lig_parent_id": 2,
+          "lig_tyl_id": 1
+        },
+        {
+          "lig_id": 4,
+          "lig_parent_id": 3,
+          "lig_tyl_id": 1
+        },
+        {
+          "lig_id": 5,
+          "lig_parent_id": 4,
+          "lig_tyl_id": 1
+        },
+        {
+          "lig_id": 6,
+          "lig_parent_id": 5,
+          "lig_tyl_id": 1
+        },
+        {
+          "lig_id": 7,
+          "lig_parent_id": 6,
+          "lig_tyl_id": 1
+        },
+        {
+          "lig_id": 8,
+          "lig_parent_id": 7,
+          "lig_tyl_id": 2
+        },
+        {
+          "lig_id": 9,
+          "lig_parent_id": 8,
+          "lig_tyl_id": 2
+        },
+        {
+          "lig_id": 10,
+          "lig_parent_id": 8,
+          "lig_tyl_id": 3
+        },
+        {
+          "lig_id": 11,
+          "lig_parent_id": 7,
+          "lig_tyl_id": 3
+        },
+        {
+          "lig_id": 12,
+          "lig_parent_id": 7,
+          "lig_tyl_id": 4
+        },
+        {
+          "lig_id": 13,
+          "lig_parent_id": 7,
+          "lig_tyl_id": 5
+        },
+        {
+          "lig_id": 14,
+          "lig_parent_id": null,
+          "lig_tyl_id": 8
+        },
+        {
+          "lig_id": 15,
+          "lig_parent_id": null,
+          "lig_tyl_id": 1
+        }
+      ],
+      "contexte": {
+        "famille": "V",
+        "type": "DEVIS",
+        "styles": [],
+        "document": null
+      },
+      "attendu": {
+        "classes": {
+          "1": "SECTION",
+          "2": "TRANCHE_1",
+          "3": "TRANCHE_2",
+          "4": "TRANCHE_3",
+          "5": "TRANCHE_4",
+          "6": "TRANCHE_5",
+          "7": "TRANCHE_5",
+          "8": "OUVRAGE",
+          "9": "SOUS_OUVRAGE",
+          "10": "COMPOSANTE",
+          "11": "ELEMENT",
+          "12": "TEXTE",
+          "13": "SOUS_TOTAL",
+          "14": null,
+          "15": "TRANCHE_1"
+        },
+        "styles": {}
+      }
+    },
+    {
+      "nom": "Résolution propriété par propriété : global < famille < type < document < ligne",
+      "lignes": [
+        {
+          "lig_id": 1,
+          "lig_parent_id": null,
+          "lig_tyl_id": 1
+        },
+        {
+          "lig_id": 2,
+          "lig_parent_id": null,
+          "lig_tyl_id": 1,
+          "lig_style": {
+            "couleur": "#FF0000",
+            "gras": false,
+            "barre": true
+          }
+        },
+        {
+          "lig_id": 3,
+          "lig_parent_id": null,
+          "lig_tyl_id": 4
+        },
+        {
+          "lig_id": 4,
+          "lig_parent_id": null,
+          "lig_tyl_id": 9,
+          "lig_style": {
+            "italique": true
+          }
+        },
+        {
+          "lig_id": 5,
+          "lig_parent_id": null,
+          "lig_tyl_id": 3
+        }
+      ],
+      "contexte": {
+        "famille": "V",
+        "type": "DEVIS",
+        "styles": [
+          {
+            "classe": "TRANCHE_1",
+            "famille": null,
+            "type": null,
+            "valeur": {
+              "couleur": "#112233",
+              "fond": "#eeeeee",
+              "gras": true,
+              "taille": "GRANDE"
+            }
+          },
+          {
+            "classe": "TRANCHE_1",
+            "famille": "V",
+            "type": null,
+            "valeur": {
+              "fond": "--document-style-tranche",
+              "souligne": true
+            }
+          },
+          {
+            "classe": "TRANCHE_1",
+            "famille": "A",
+            "type": null,
+            "valeur": {
+              "couleur": "#00ff00"
+            }
+          },
+          {
+            "classe": "TRANCHE_1",
+            "famille": null,
+            "type": "DEVIS",
+            "valeur": {
+              "taille": "PETITE",
+              "souligne": null
+            }
+          },
+          {
+            "classe": "TRANCHE_1",
+            "famille": null,
+            "type": "FACTURE",
+            "valeur": {
+              "couleur": "#0000ff"
+            }
+          },
+          {
+            "classe": "TEXTE",
+            "famille": null,
+            "type": null,
+            "valeur": {
+              "italique": true,
+              "couleur": "rouge",
+              "inconnue": 1
+            }
+          }
+        ],
+        "document": {
+          "TRANCHE_1": {
+            "couleur": "#AABBCC"
+          },
+          "ELEMENT": {
+            "barre": true
+          }
+        }
+      },
+      "attendu": {
+        "classes": {
+          "1": "TRANCHE_1",
+          "2": "TRANCHE_1",
+          "3": "TEXTE",
+          "4": null,
+          "5": "ELEMENT"
+        },
+        "styles": {
+          "1": {
+            "couleur": "#aabbcc",
+            "fond": "--document-style-tranche",
+            "gras": true,
+            "souligne": true,
+            "taille": "PETITE"
+          },
+          "2": {
+            "couleur": "#ff0000",
+            "fond": "--document-style-tranche",
+            "gras": false,
+            "souligne": true,
+            "barre": true,
+            "taille": "PETITE"
+          },
+          "3": {
+            "italique": true
+          },
+          "4": {
+            "italique": true
+          },
+          "5": {
+            "barre": true
+          }
+        }
+      }
+    },
+    {
+      "nom": "Sans paramétrage ni style propre : aucun style (rendu actuel)",
+      "lignes": [
+        {
+          "lig_id": 1,
+          "lig_parent_id": null,
+          "lig_tyl_id": 1,
+          "lig_style": {}
+        },
+        {
+          "lig_id": 2,
+          "lig_parent_id": null,
+          "lig_tyl_id": 2
+        }
+      ],
+      "contexte": {
+        "famille": "A",
+        "type": null,
+        "styles": [],
+        "document": null
+      },
+      "attendu": {
+        "classes": {
+          "1": "TRANCHE_1",
+          "2": "OUVRAGE"
+        },
+        "styles": {}
+      }
+    },
+    {
+      "nom": "Contexte sans famille ni type : seuls le global et le document s'appliquent (chaîne vide = absent)",
+      "lignes": [
+        {
+          "lig_id": 1,
+          "lig_parent_id": null,
+          "lig_tyl_id": 1
+        },
+        {
+          "lig_id": 2,
+          "lig_parent_id": null,
+          "lig_tyl_id": 4
+        }
+      ],
+      "contexte": {
+        "famille": "",
+        "type": null,
+        "styles": [
+          {
+            "classe": "TRANCHE_1",
+            "famille": null,
+            "type": null,
+            "valeur": {
+              "gras": true
+            }
+          },
+          {
+            "classe": "TRANCHE_1",
+            "famille": "V",
+            "type": null,
+            "valeur": {
+              "couleur": "#010203"
+            }
+          },
+          {
+            "classe": "TRANCHE_1",
+            "famille": null,
+            "type": "DEVIS",
+            "valeur": {
+              "italique": true
+            }
+          },
+          {
+            "classe": "TEXTE",
+            "famille": null,
+            "type": null,
+            "valeur": {
+              "taille": "PETITE"
+            }
+          }
+        ],
+        "document": {
+          "TEXTE": {
+            "barre": true
+          }
+        }
+      },
+      "attendu": {
+        "classes": {
+          "1": "TRANCHE_1",
+          "2": "TEXTE"
+        },
+        "styles": {
+          "1": {
+            "gras": true
+          },
+          "2": {
+            "taille": "PETITE",
+            "barre": true
+          }
+        }
+      }
+    },
+    {
+      "nom": "Taille au niveau de la ligne (lig_style) sans style de classe",
+      "lignes": [
+        {
+          "lig_id": 1,
+          "lig_parent_id": null,
+          "lig_tyl_id": 9,
+          "lig_style": {
+            "taille": "GRANDE"
+          }
+        },
+        {
+          "lig_id": 2,
+          "lig_parent_id": null,
+          "lig_tyl_id": 4,
+          "lig_style": {
+            "taille": "GRANDE",
+            "gras": null
+          }
+        }
+      ],
+      "contexte": {
+        "famille": "V",
+        "type": "DEVIS",
+        "styles": [
+          {
+            "classe": "TEXTE",
+            "famille": null,
+            "type": null,
+            "valeur": {
+              "taille": "PETITE",
+              "gras": true
+            }
+          }
+        ],
+        "document": null
+      },
+      "attendu": {
+        "classes": {
+          "1": null,
+          "2": "TEXTE"
+        },
+        "styles": {
+          "1": {
+            "taille": "GRANDE"
+          },
+          "2": {
+            "gras": true,
+            "taille": "GRANDE"
+          }
+        }
+      }
+    },
+    {
+      "nom": "Cycle de parents : le calcul se termine",
+      "lignes": [
+        {
+          "lig_id": 1,
+          "lig_parent_id": 2,
+          "lig_tyl_id": 1
+        },
+        {
+          "lig_id": 2,
+          "lig_parent_id": 1,
+          "lig_tyl_id": 1
+        },
+        {
+          "lig_id": 3,
+          "lig_parent_id": 3,
+          "lig_tyl_id": 2
+        }
+      ],
+      "contexte": {
+        "famille": "V",
+        "type": "DEVIS",
+        "styles": [],
+        "document": null
+      },
+      "attendu": {
+        "classes": {
+          "1": "TRANCHE_5",
+          "2": "TRANCHE_5",
+          "3": "SOUS_OUVRAGE"
+        },
+        "styles": {}
+      }
+    }
+  ],
+  "validations": [
+    {
+      "nom": "Style valide",
+      "style": {
+        "couleur": "#aabbcc",
+        "fond": "--theme-x",
+        "gras": true,
+        "taille": "NORMALE",
+        "barre": null
+      },
+      "attendu": []
+    },
+    {
+      "nom": "Propriété inconnue et valeurs invalides",
+      "style": {
+        "police": "Arial",
+        "gras": "oui",
+        "couleur": "rouge",
+        "taille": "ENORME"
+      },
+      "attendu": [
+        "STYLE_PROPRIETE:police",
+        "STYLE_VALEUR:gras",
+        "STYLE_VALEUR:couleur",
+        "STYLE_VALEUR:taille"
+      ]
+    },
+    {
+      "nom": "Styles de document : classe inconnue",
+      "document": {
+        "TRANCHE_1": {
+          "gras": true
+        },
+        "CHAPITRE": {
+          "gras": true
+        }
+      },
+      "attendu": [
+        "STYLE_CLASSE:CHAPITRE"
+      ]
+    },
+    {
+      "nom": "Style null : aucune faute",
+      "style": null,
+      "attendu": []
+    },
+    {
+      "nom": "Style de forme invalide (tableau)",
+      "style": [
+        1
+      ],
+      "attendu": [
+        "STYLE_FORME"
+      ]
+    },
+    {
+      "nom": "Style de forme invalide (texte)",
+      "style": "gras",
+      "attendu": [
+        "STYLE_FORME"
+      ]
+    },
+    {
+      "nom": "Styles de document de forme invalide",
+      "document": [
+        "x"
+      ],
+      "attendu": [
+        "STYLE_FORME"
+      ]
+    },
+    {
+      "nom": "Couleur avec saut de ligne final refusée",
+      "style": {
+        "couleur": "#aabbcc\n",
+        "fond": "--theme-x\n"
+      },
+      "attendu": [
+        "STYLE_VALEUR:couleur",
+        "STYLE_VALEUR:fond"
+      ]
+    }
+  ]
+}

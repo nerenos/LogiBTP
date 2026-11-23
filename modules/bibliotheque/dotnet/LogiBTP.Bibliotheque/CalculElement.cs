@@ -12,6 +12,9 @@ public sealed class UniteElement
 
 public sealed class TarifCalcul
 {
+    /// <summary>Identifiant du tarif et fournisseur de l'annuaire (PA de référence, plan de mise à jour).</summary>
+    public long? Id { get; set; }
+    public long? TiersId { get; set; }
     public decimal Prix { get; set; }
     /// <summary>Prix public et remises en % (lot 8) : le prix net du tarif est le prix public remisé.</summary>
     public decimal? PrixPublic { get; set; }
@@ -26,6 +29,8 @@ public sealed class TarifCalcul
 /// <summary>Entrée du calcul (mêmes noms que calcul.js, en snake_case dans le jeu partagé).</summary>
 public sealed class EntreeElement
 {
+    /// <summary>Type de l'élément (<see cref="TypeElement"/>) ; non renseigné : traité comme un article.</summary>
+    public string? Type { get; set; }
     public string UniteStock { get; set; } = "";
     public List<UniteElement> Unites { get; set; } = [];
     public Dictionary<string, decimal?> Donnees { get; set; } = [];
@@ -62,10 +67,10 @@ public static class CalculElement
     {
         if (string.IsNullOrEmpty(unite) || unite == e.UniteStock) return 1m;
         var u = e.Unites.FirstOrDefault(x => x.Unite == unite)
-            ?? throw new ErreurCalcul("UNITE", $"Unité {unite} sans correspondance avec l'unité de stock {e.UniteStock}");
+            ?? throw new ErreurCalcul(ErreurCalculElement.Unite, $"Unité {unite} sans correspondance avec l'unité de stock {e.UniteStock}");
         var r = Expression.Evaluer(u.Formule ?? "", reference =>
-            e.Donnees.TryGetValue(reference, out var v) && v is { } d ? d : throw new ErreurCalcul("DONNEE", $"Donnée technique {reference} non renseignée"));
-        if (r <= 0) throw new ErreurCalcul("RATIO", $"Correspondance {unite} nulle ou négative");
+            e.Donnees.TryGetValue(reference, out var v) && v is { } d ? d : throw new ErreurCalcul(ErreurCalculElement.Donnee, $"Donnée technique {reference} non renseignée"));
+        if (r <= 0) throw new ErreurCalcul(ErreurCalculElement.Ratio, $"Correspondance {unite} nulle ou négative");
         return r;
     }
 
@@ -73,7 +78,7 @@ public static class CalculElement
     public static decimal PrixNetTarif(TarifCalcul t) =>
         t.PrixPublic is { } p ? Arr6(p * (1 - (t.Remise1 ?? 0) / 100) * (1 - (t.Remise2 ?? 0) / 100)) : t.Prix;
 
-    private static bool EnVigueur(TarifCalcul t, string date) =>
+    internal static bool EnVigueur(TarifCalcul t, string date) =>
         (string.IsNullOrEmpty(t.Debut) || string.CompareOrdinal(t.Debut[..10], date) <= 0)
         && (string.IsNullOrEmpty(t.Fin) || string.CompareOrdinal(t.Fin[..10], date) >= 0);
 
@@ -94,7 +99,7 @@ public static class CalculElement
             "FOURNISSEUR_PRINCIPAL" => tarifs.FirstOrDefault(t => t.Principal) is { } p ? ParStock(p) : null,
             "MEILLEUR_MIN" => tarifs.Select(ParStock).Where(x => x is not null).Min(),
             "MEILLEUR_MAX" => tarifs.Select(ParStock).Where(x => x is not null).Max(),
-            _ => throw new ErreurCalcul("SCENARIO", $"Scénario de prix d'achat inconnu : {e.Scenario}"),
+            _ => throw new ErreurCalcul(ErreurCalculElement.Scenario, $"Scénario de prix d'achat inconnu : {e.Scenario}"),
         };
         if (pa is null) alertes.Add("PA_INDISPONIBLE");
         return (pa is null ? null : Arr6(pa.Value), alertes);

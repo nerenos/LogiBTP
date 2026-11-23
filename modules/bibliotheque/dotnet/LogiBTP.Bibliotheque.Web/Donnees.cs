@@ -285,3 +285,21 @@ public sealed record PosteElementDto(string? Niveau, string? Mode, string? Base,
 
 public sealed record ElementRechercheDto(long Id, string BibCode, string Code, string Type, string? Libelle, string LibelleHtml, string UniteStock,
     decimal? Pa, decimal? Pr, decimal? Pv, decimal? PvNet, decimal CoefFg, decimal CoefBenef);
+
+// ---------------------------------------------------------------- PA de référence et mise à jour de la bibliothèque
+
+/// <summary>Demande de PA de référence : éléments (identifiants) et fournisseur éventuel de la pièce (tiers de l'annuaire).</summary>
+public sealed record DemandePaReference(List<long> Elements, long? TiersId = null);
+
+/// <summary>PA de référence d'un élément par unité de stock ; Compose : ouvrage ou ensemble (prix calculé par la composition, pas de mise à jour).</summary>
+public sealed record PaReferenceDto(long EleId, string UniteStock, string Scenario, decimal? Pa, string Source, long? TarifId, bool Compose, string? Empreinte, List<string> Alertes);
+
+/// <summary>
+/// Mise à jour de la bibliothèque : nouveau PA par unité de stock de l'élément, fournisseur de la pièce (Fournisseur : nom
+/// du tarif créé le cas échéant) et empreinte lue avec le PA de référence (refus si la fiche a changé depuis).
+/// </summary>
+public sealed record DemandeMajPa(long EleId, decimal? Pa, long? TiersId = null, string? Fournisseur = null, string? Empreinte = null);
+
+public sealed record DemandeMajPaListe(List<DemandeMajPa> Demandes, bool Simulation = false);
+
+public sealed record ResultatMajPa(long EleId, bool Ecrit, string Action, string? Motif, decimal? PaFixe, TarifPlan? Tarif, PrixElementDto? Prix);

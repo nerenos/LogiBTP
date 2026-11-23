@@ -21,6 +21,7 @@ public class CodesTests
     [InlineData("ROLE_RELANCE", typeof(RolesRelance))]
     [InlineData("MODELE_EDITION", typeof(ModelesEdition))]
     [InlineData("AVERTISSEMENT_GESTION", typeof(AvertissementsGestion))]
+    [InlineData("INDICATEUR_FICHE", typeof(IndicateursFiche))]
     [InlineData("STATUT_DOCUMENT_BTP", typeof(StatutsDocumentBtp))]
     [InlineData("ERREUR_TERRAIN", typeof(ErreursTerrain))]
     [InlineData("ETAT_RESERVE", typeof(EtatsReserve))]

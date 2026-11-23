@@ -21,9 +21,9 @@ public static class SynthesesFiches
 
     private sealed record HabilitationSql(string Code, DateOnly? ObtenueLe, DateOnly? ValideJusquAu, int? DureeMois);
     private sealed record SalarieSql(string? Statut, int MinutesMois, int MinutesSemaine, int CongesAttente, int Materiels, int Missions,
-        bool? CompteActif, int Pieces);
+        bool? CompteActif, int Pieces, int Pointages30);
     private sealed record MaterielSql(string Mode, string? Affecte, int Heures, int? Kilometres, string Compteurs, decimal? CoutMois,
-        int Affectations, int Evenements, int Etats, int Pieces);
+        int Affectations, int Evenements, int Etats, int Pieces, int Pointages30);
     private sealed record MarcheSql(decimal? Montant, decimal? Facture, decimal? Reste, int Avenants, int Pieces);
     private sealed record ChantierSql(decimal? Montant, decimal? Facture, int Marches, int Pieces);
 
@@ -74,6 +74,8 @@ public static class SynthesesFiches
                       AND a.maf_du <= current_date AND (a.maf_au IS NULL OR a.maf_au >= current_date))::int AS materiels,
                    (SELECT count(*) FROM mission_interim m WHERE m.mis_sal_id = s.sal_id)::int AS missions,
                    (SELECT c.cpt_actif FROM compte c WHERE c.cpt_type_element = 'individu' AND c.cpt_id_element = s.sal_ind_id::text LIMIT 1) AS compte_actif,
+                   (SELECT count(*) FROM v_liste_pointages p WHERE p.salarie_id = s.sal_id
+                      AND p.date_pointage BETWEEN current_date - 29 AND current_date)::int AS pointages30,
                    {SqlPieces} AS pieces
             FROM salarie s WHERE s.sal_id = @i
             """, new NpgsqlParameter("i", id), new NpgsqlParameter("t", TypesFiche.Salarie)).ToListAsync(ct)).FirstOrDefault();
@@ -84,6 +86,8 @@ public static class SynthesesFiches
             new("heures_mois", "Heures du mois", Heures(s.MinutesMois)),
             new("heures_semaine", "Heures de la semaine", Heures(s.MinutesSemaine)),
         };
+        // Derniers pointages (30 jours, aujourd'hui compris) : même période que la liste ouverte par le lien de la fiche.
+        indicateurs.Add(new(IndicateursFiche.Pointages30J, "Pointages (30 jours)", s.Pointages30.ToString(Fr)));
         if (s.CongesAttente > 0) indicateurs.Add(new("conges", "Congés en attente", s.CongesAttente.ToString(Fr), "attention", "/pointage/conges"));
         indicateurs.Add(new("habilitations", "Habilitations", alertes == 0 ? (habilitations == 0 ? "aucune" : "à jour") : $"{alertes} à revoir",
             expirees > 0 ? "erreur" : alertes > 0 ? "attention" : habilitations > 0 ? "ok" : null));
@@ -110,6 +114,8 @@ public static class SynthesesFiches
                    (SELECT count(*) FROM materiel_affectation a WHERE a.maf_mat_id = m.mat_id)::int AS affectations,
                    (SELECT count(*) FROM materiel_evenement e WHERE e.mev_mat_id = m.mat_id)::int AS evenements,
                    (SELECT count(*) FROM materiel_etat e WHERE e.met_mat_id = m.mat_id)::int AS etats,
+                   (SELECT count(*) FROM pointage_materiel p WHERE p.pma_mat_id = m.mat_id
+                      AND p.pma_date BETWEEN current_date - 29 AND current_date)::int AS pointages30,
                    {SqlPieces} AS pieces
             FROM materiel m WHERE m.mat_id = @i
             """, new NpgsqlParameter("i", id), new NpgsqlParameter("t", TypesFiche.Materiel)).ToListAsync(ct)).FirstOrDefault();
@@ -131,6 +137,7 @@ public static class SynthesesFiches
         }
         if (controles > 0)
             indicateurs.Add(new("controles", "Contrôles", alertes == 0 ? "à jour" : $"{alertes} à revoir", expirees > 0 ? "erreur" : alertes > 0 ? "attention" : "ok"));
+        indicateurs.Add(new(IndicateursFiche.Pointages30J, "Pointages (30 jours)", m.Pointages30.ToString(Fr)));
         if (m.CoutMois is { } cout) indicateurs.Add(new("cout_mois", "Coût du mois", Euros(cout)));
         return new SyntheseFiche(indicateurs, new Dictionary<string, CompteOnglet>
         {
