@@ -1,0 +1,143 @@
+{
+  "nom": "Métré du document : variables $$ avant la grille",
+  "description": "Métré du document (sans ligne) : évalué en premier, il publie Hsp et Surface en $$ et écrit $$Murs ; son « Renvoyer » est averti (METRE_DOCUMENT_RESULTAT) et ignoré. La définition $$ de la grille est évaluée après et réécrit Surface (80 × 2). Les lignes lisent les $$ (160 + 10 = 170 ; 2,5 × 10 = 25 dans une tranche × 2 : 100).",
+  "entree": {
+    "document": {
+      "ent_id": 1,
+      "ent_mode_calcul_ouvrage": "V",
+      "ent_precision_montant": 2
+    },
+    "taux_tva": [
+      {
+        "ttv_id": 1,
+        "ttv_code": "T20",
+        "ttv_libelle": "TVA 20 %",
+        "ttv_taux": 20,
+        "ttv_categorie": "N"
+      }
+    ],
+    "lignes": [
+      {
+        "lig_id": 1,
+        "lig_parent_id": null,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Murs",
+        "lig_tva_id": 1,
+        "lig_qte_source": "M",
+        "lig_mtr_id": 41,
+        "lig_pa": 1
+      },
+      {
+        "lig_id": 2,
+        "lig_parent_id": null,
+        "lig_ordre": 2,
+        "lig_tyl_id": 1,
+        "lig_libelle_html": "Logement",
+        "lig_qte": 2
+      },
+      {
+        "lig_id": 3,
+        "lig_parent_id": 2,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Plinthes",
+        "lig_tva_id": 1,
+        "lig_qte_source": "M",
+        "lig_mtr_id": 42,
+        "lig_pa": 2
+      }
+    ],
+    "metres": [
+      {
+        "mtr_id": 30,
+        "mtr_ent_id": 1,
+        "mtr_lig_id": null,
+        "mtr_libelle": "Document",
+        "mtr_script": "Hsp est un numérique = 2.5\nSurface est un numérique = 80\n$$Murs = Hsp * 4\nRenvoyer 1"
+      },
+      {
+        "mtr_id": 41,
+        "mtr_lig_id": 1,
+        "mtr_libelle": "Murs",
+        "mtr_script": "Renvoyer $$Surface + $$Murs"
+      },
+      {
+        "mtr_id": 42,
+        "mtr_lig_id": 3,
+        "mtr_libelle": "Plinthes",
+        "mtr_script": "Renvoyer $$Hsp * 10"
+      }
+    ],
+    "variables": [
+      {
+        "var_id": 10,
+        "var_lig_id": null,
+        "var_mtr_id": null,
+        "var_portee": "$$",
+        "var_nom": "Surface",
+        "var_operation": "=",
+        "var_formule": "{{$$Surface}} * 2",
+        "var_ordre": 1
+      },
+      {
+        "var_id": 70,
+        "var_lig_id": null,
+        "var_mtr_id": 30,
+        "var_portee": "$$",
+        "var_nom": "Hsp",
+        "var_operation": "=",
+        "var_formule": "2.5",
+        "var_ordre": 1,
+        "var_type": "N"
+      }
+    ]
+  },
+  "attendu": {
+    "erreurs": [],
+    "avertissements": [
+      "METRE_DOCUMENT_RESULTAT"
+    ],
+    "document": {
+      "ent_total_ht": 270
+    },
+    "metres": {
+      "30": {
+        "mtr_resultat": null
+      },
+      "41": {
+        "mtr_resultat": 170
+      },
+      "42": {
+        "mtr_resultat": 25
+      }
+    },
+    "variables": {
+      "10": {
+        "var_valeur": 160
+      },
+      "70": {
+        "var_portee": "$$",
+        "var_lig_id": null,
+        "var_mtr_id": 30,
+        "var_valeur": 2.5
+      }
+    },
+    "lignes": {
+      "1": {
+        "lig_qte_vendue": 170,
+        "lig_montant_ht": 170
+      },
+      "2": {
+        "lig_qte_vendue": 2,
+        "lig_montant_ht": 100,
+        "lig_pv": 50
+      },
+      "3": {
+        "lig_qte_vendue": 25,
+        "lig_qte_totale": 50,
+        "lig_montant_ht": 100
+      }
+    }
+  }
+}
