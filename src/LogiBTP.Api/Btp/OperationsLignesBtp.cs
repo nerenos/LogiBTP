@@ -249,7 +249,7 @@ public static class OperationsLignesBtp
             if (l.LigPiedBaseId is long b && ids.Contains(b)) l.LigPiedBaseId = null;
         }
         // Compléments qui suivent les lignes : métrés, variables, clés de ventilation des frais annexes.
-        var metres = d.Metres.Where(m => ids.Contains(m.MtrLigId)).Select(m => m.MtrId).ToHashSet();
+        var metres = d.Metres.Where(m => m.MtrLigId is long ml && ids.Contains(ml)).Select(m => m.MtrId).ToHashSet();
         d.Metres.RemoveAll(m => metres.Contains(m.MtrId));
         d.Variables.RemoveAll(v => v.VarLigId is long l && ids.Contains(l) || v.VarMtrId is long m && metres.Contains(m));
         d.Ventilations.RemoveAll(v => v.VfrSourceLigId is long s && ids.Contains(s) || v.VfrLigId is long l && ids.Contains(l));
@@ -304,7 +304,12 @@ public static class OperationsLignesBtp
                 racine.LigPvFixe = e.PvFixe;
                 if (e.PvFixe) racine.LigPv = e.Pv is decimal pv ? ArrondiCalcul.Arr6(pv) : null;
             }
-            else if (string.IsNullOrEmpty(racine.LigLibelleHtml)) racine.LigLibelleHtml = e.LibelleHtml;
+            else
+            {
+                if (string.IsNullOrEmpty(racine.LigLibelleHtml)) racine.LigLibelleHtml = e.LibelleHtml;
+                // Ensemble : la quantité d'appel est posée sur la tranche (elle multiplie ses lignes), sauf si son métré la donne.
+                if (o["quantite"] is not null && racine.LigQteSource != "M") racine.LigQte = quantite;
+            }
         }
         else
         {
@@ -360,7 +365,8 @@ public static class OperationsLignesBtp
         foreach (var m in metres)
         {
             m.MtrId = mtr[m.MtrId];
-            m.MtrLigId = lig.TryGetValue(m.MtrLigId, out var ml) ? ml : racine;
+            m.MtrLigId = m.MtrLigId is long ancien && lig.TryGetValue(ancien, out var ml) ? ml : racine;
+            m.MtrEntId = null;
         }
         foreach (var v in variables)
         {
