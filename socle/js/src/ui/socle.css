@@ -301,3 +301,18 @@ button.lien { background: none; border: none; padding: 0; color: var(--accent); 
 
 /* Titres courts des onglets (activerTitresCourts) : la ligne garde sa hauteur, pastilles de compteur conservées. */
 .onglets.titres-courts > button { white-space: nowrap; }
+
+/* Interrupteur oui / non (case à cocher role="switch", classe interrupteur) ; .herite : valeur non fixée (héritée), atténuée. */
+input[type=checkbox].interrupteur {
+  appearance: none; -webkit-appearance: none; position: relative; flex: none; width: 2.1em; height: 1.2em; margin: 0; padding: 0;
+  border: 1px solid var(--bord); border-radius: 0.6em; background: var(--bord); cursor: pointer; transition: background 0.15s;
+}
+input[type=checkbox].interrupteur::before {
+  content: ""; position: absolute; top: 50%; left: 0.12em; width: 0.9em; height: 0.9em; border-radius: 50%;
+  background: var(--surface); transform: translateY(-50%); transition: left 0.15s;
+}
+input[type=checkbox].interrupteur:checked { background: var(--accent); border-color: var(--accent); }
+input[type=checkbox].interrupteur:checked::before { left: calc(100% - 1.02em); }
+input[type=checkbox].interrupteur:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+input[type=checkbox].interrupteur:disabled { cursor: default; opacity: 0.6; }
+input[type=checkbox].interrupteur.herite { opacity: 0.45; border-style: dashed; }
