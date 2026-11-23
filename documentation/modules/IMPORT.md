@@ -93,7 +93,7 @@ Classes du cœur dans `src/LogiBTP.Api/Reprise/` ; un domaine par source, même 
   signalés) ; affectations du métré de la ligne récapitulative (R, non reprise) et variables `GLOBALE` : **métré du
   document** « Récapitulatif » (`MetresMde.ScriptDocument` : déclaration à la première affectation, réaffectations dans
   l'ordre, valeurs `GLOBALE` en dernier ; variables publiées en `$$NOM`), lues par les formules quelle que soit leur casse
-  (`p*0,150` → `$$P*0.150`, virgule décimale → point) ; tranche T : quantité ≠ 0 et ≠ 1 → quantité de tranche (ses lignes
+  (`p*0,150` → `$$P*0.150`, virgule décimale → point) ; données de la ligne entre crochets → colonnes de la ligne (`[POIDS]` → `{{lig_poids}}`, `[LONGUEUR]`, `[LARGEUR]`, `[HAUTEUR]`, `[EPAISSEUR]`, `[SURFACE]`, `[VOLUME]` → surface ou volume selon l'option ; `MetresMde.DonneesLigne`), reprises des colonnes POIDS, LONGUEUR, LARGEUR, HAUTEUR, VOLUME des lignes (m, kg) ; donnée inconnue laissée telle quelle et signalée ; anomalies des champs supplémentaires (`SYS_RTCINFOS`) avec le nom affiché du champ ; tranche T : quantité ≠ 0 et ≠ 1 → quantité de tranche (ses lignes
   multipliées), métré cité → métré de tranche (plan metres-tranches-document, lot 7) ; quantité issue du métré
   (`lig_qte_source` M) si son résultat, arrondi à la précision de la ligne, retrouve la quantité source (tranche sans
   quantité : 1), sinon quantité saisie gardée, métré attaché et `MetreEcart` signalé.

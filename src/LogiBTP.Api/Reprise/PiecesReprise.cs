@@ -48,6 +48,13 @@ public sealed record LignePiece
     public int? ChantierId { get; init; }
     /// <summary>Métré de la ligne, traduit en script (quantité issue du métré si son résultat retrouve <see cref="Qte"/>).</summary>
     public MetrePiece? Metre { get; init; }
+    /// <summary>Données techniques de la ligne (m, m², m³, kg), lues par les métrés ({{lig_poids}}…).</summary>
+    public decimal? Poids { get; init; }
+    public decimal? Longueur { get; init; }
+    public decimal? Largeur { get; init; }
+    public decimal? Hauteur { get; init; }
+    public decimal? Surface { get; init; }
+    public decimal? Volume { get; init; }
 }
 
 /// <summary>Métré d'une ligne source traduit en script LogiBTP.</summary>
@@ -314,6 +321,7 @@ public sealed class PiecesReprise : IAsyncDisposable
                 x.LigCoefRemise = l.CoefRemise <= 0 ? 1 : l.CoefRemise;
                 x.LigPrecisionPv = decimalesPrix ?? 6;
                 x.LigChaId = l.Composante ? null : l.ChantierId;
+                (x.LigPoids, x.LigLongueur, x.LigLargeur, x.LigHauteur, x.LigSurface, x.LigVolume) = (l.Poids, l.Longueur, l.Largeur, l.Hauteur, l.Surface, l.Volume);
                 if (l.Metre is not null)
                 {
                     // Quantité issue du métré (repasse à la saisie si son résultat ne retrouve pas la quantité source).

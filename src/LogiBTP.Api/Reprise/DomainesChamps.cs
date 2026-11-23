@@ -23,8 +23,10 @@ public sealed class ChampsMde : IDomaineReprise
         {
             volume.Lues++;
             var cle = $"{l.Texte("TABLENAME")}.{l.Texte("FIELDNAME")}";
-            var fiche = ctx.Correspondre(TablesCorrespondance.TableFiche, l.Texte("TABLENAME"), $"SYS_RTCINFOS {cle}");
-            var type = ctx.Correspondre(TablesCorrespondance.TypeChamp, l.Texte("DATATYPE") ?? "", $"SYS_RTCINFOS {cle}");
+            // Emplacement des anomalies : colonne RTCFIELD et nom affiché du champ dans MDE.
+            var emplacement = $"SYS_RTCINFOS {cle}" + (l.Texte("DISPLAYNAME") is { Length: > 0 } nom ? $" « {nom.Trim()} »" : "");
+            var fiche = ctx.Correspondre(TablesCorrespondance.TableFiche, l.Texte("TABLENAME"), emplacement);
+            var type = ctx.Correspondre(TablesCorrespondance.TypeChamp, l.Texte("DATATYPE") ?? "", emplacement);
             if (fiche is not { Ignorer: false, Cible: { } typeFiche } || l.Texte("FIELDNAME") is null) { volume.Ecartees++; continue; }
             var libelle = l.Texte("DISPLAYNAME") ?? l.Texte("FIELDNAME")!;
 
@@ -32,12 +34,12 @@ public sealed class ChampsMde : IDomaineReprise
             ChampStandard? standard = null;
             if (ctx.Correspondances.Tables.TryGetValue(TablesCorrespondance.ChampFiche, out var table) && table.Trouver(cle) is not null)
             {
-                var e = ctx.Correspondre(TablesCorrespondance.ChampFiche, cle, $"SYS_RTCINFOS {cle}");
+                var e = ctx.Correspondre(TablesCorrespondance.ChampFiche, cle, emplacement);
                 if (e is not { Ignorer: false, Cible: { } cible }) { volume.Ecartees++; continue; }
                 standard = cible.Split('.', 2) is [var tf, var code] && tf == typeFiche ? createur.Standard(typeFiche, code) : null;
                 if (standard is null)
                 {
-                    ctx.Rapport.Signaler(NiveauAnomalie.Avertissement, CodeAnomalie.ValeurInconnue, $"SYS_RTCINFOS {cle}",
+                    ctx.Rapport.Signaler(NiveauAnomalie.Avertissement, CodeAnomalie.ValeurInconnue, emplacement,
                         $"Champ « {cible} » inconnu de la fiche {typeFiche} : champ supplémentaire créé");
                 }
             }
@@ -50,7 +52,7 @@ public sealed class ChampsMde : IDomaineReprise
             var valeurs = typeChamp == TypesChampSupplementaire.Liste ? ChampsReprise.OptionsMde(l.Texte("PARAMS")) : null;
             if (standard is null && typeChamp == TypesChampSupplementaire.Liste && valeurs is null)
             {
-                ctx.Rapport.Signaler(NiveauAnomalie.Avertissement, CodeAnomalie.ValeurInconnue, $"SYS_RTCINFOS {cle}",
+                ctx.Rapport.Signaler(NiveauAnomalie.Avertissement, CodeAnomalie.ValeurInconnue, emplacement,
                     $"Liste de choix sans valeurs lisibles (PARAMS « {l.Texte("PARAMS")} ») : champ texte créé");
                 typeChamp = TypesChampSupplementaire.Texte;
             }

@@ -203,6 +203,10 @@ public sealed partial class PiecesVenteMde : IDomaineReprise
             var qte = l.Decimal("QUANTITE") ?? 0;
             var remise = l.Decimal("REMISE") ?? 0;
             var pv = l.Decimal("PV") is { } x and not 0 ? x : (decimal?)null;
+            // Données techniques de la ligne (m, kg ; VOLUME = surface ou volume selon l'option, comme la bibliothèque).
+            decimal? Technique(string c) => l.Contient(c) && l.Decimal(c) is { } v && v != 0 ? v : null;
+            var volumeMde = Technique("VOLUME");
+            var enVolume = ctx.Options.VolumeMde == LogiBTP.Import.VolumeMde.Volume;
             res.Add(new LignePiece
             {
                 Cle = cle, Reference = l.Texte("CLE"), ParentCle = parent, Type = type, Composante = composante && parent is not null, Code = l.Texte("CODEELEM"),
@@ -214,6 +218,8 @@ public sealed partial class PiecesVenteMde : IDomaineReprise
                 Pa = l.Decimal("DEBOURSE"), CoefFg = l.Decimal("COEFFG") ?? 1, CoefBenef = l.Decimal("COEFBEN") ?? 1,
                 CoefRemise = remise is > 0 and < 100 ? 1 - remise / 100 : 1, PvUnitaire = pv, PvFixe = l.Booleen("PVIMPOSE") == true,
                 MontantHt = l.Decimal("MONTANTHT"),
+                Poids = Technique("POIDS"), Longueur = Technique("LONGUEUR"), Largeur = Technique("LARGEUR"), Hauteur = Technique("HAUTEUR"),
+                Surface = enVolume ? null : volumeMde, Volume = enVolume ? volumeMde : null,
             });
             retenues.Add(cle);
         }
