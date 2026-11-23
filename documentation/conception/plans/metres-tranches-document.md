@@ -10,14 +10,14 @@
 
 | Lot | Titre | Module | Dépend de | Statut |
 |---|---|---|---|---|
-| 1 | Métré sans ligne : modèle et portée du document | `modules/metre` | — | À FAIRE |
-| 2 | Quantité de tranche dans le moteur de document | `modules/document` | — | À FAIRE |
-| 3 | Moteurs BTP : métré de tranche et métré du document | cœur | 1, 2 | À FAIRE |
-| 4 | Saisie : quantité et métré de tranche, métré du document | cœur (+ `modules/metre/js/ui`) | 3 | À FAIRE |
-| 5 | Copies, transformations, ensembles de la bibliothèque | cœur | 3 | À FAIRE |
-| 6 | Éditions | cœur | 3 | À FAIRE |
-| 7 | Reprise MDE : récapitulatif et tranches | cœur (`src/LogiBTP.Api/Reprise`) | 3 | À FAIRE |
-| 8 | Tests e2e et documentation | cœur | 4 à 7 | À FAIRE |
+| 1 | Métré sans ligne : modèle et portée du document | `modules/metre` | — | FAIT (23/11/2026) |
+| 2 | Quantité de tranche dans le moteur de document | `modules/document` | — | FAIT (23/11/2026) |
+| 3 | Moteurs BTP : métré de tranche et métré du document | cœur | 1, 2 | FAIT (23/11/2026) |
+| 4 | Saisie : quantité et métré de tranche, métré du document | cœur (+ `modules/metre/js/ui`) | 3 | FAIT (23/11/2026) |
+| 5 | Copies, transformations, ensembles de la bibliothèque | cœur | 3 | FAIT (23/11/2026) |
+| 6 | Éditions | cœur | 3 | FAIT (23/11/2026) |
+| 7 | Reprise MDE : récapitulatif et tranches | cœur (`src/LogiBTP.Api/Reprise`) | 3 | FAIT (23/11/2026) |
+| 8 | Tests e2e et documentation | cœur | 4 à 7 | FAIT (23/11/2026) |
 
 ---
 

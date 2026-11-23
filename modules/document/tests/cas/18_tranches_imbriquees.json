@@ -1,0 +1,113 @@
+{
+  "nom": "Quantité de tranche : tranches imbriquées 2 × 3",
+  "description": "Tranche « Bâtiment » × 2 contenant « Étage » × 3 : les quantités se cumulent (ligne de l'étage en quantité totale 6, montant 600, PU de l'étage 100 pour une unité) ; une ligne directe du bâtiment est multipliée par 2 ; une tranche sans quantité dans le bâtiment transmet le multiplicateur 2.",
+  "entree": {
+    "document": {
+      "ent_id": 1,
+      "ent_precision_montant": 2
+    },
+    "taux_tva": [
+      {
+        "ttv_id": 1,
+        "ttv_code": "T20",
+        "ttv_libelle": "TVA 20 %",
+        "ttv_taux": 20,
+        "ttv_categorie": "N"
+      }
+    ],
+    "lignes": [
+      {
+        "lig_id": 1,
+        "lig_parent_id": null,
+        "lig_ordre": 1,
+        "lig_tyl_id": 1,
+        "lig_libelle_html": "Bâtiment",
+        "lig_qte": 2
+      },
+      {
+        "lig_id": 2,
+        "lig_parent_id": 1,
+        "lig_ordre": 1,
+        "lig_tyl_id": 1,
+        "lig_libelle_html": "Étage",
+        "lig_qte": 3
+      },
+      {
+        "lig_id": 3,
+        "lig_parent_id": 2,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Logement",
+        "lig_qte": 1,
+        "lig_pv": 100,
+        "lig_tva_id": 1
+      },
+      {
+        "lig_id": 4,
+        "lig_parent_id": 1,
+        "lig_ordre": 2,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Hall",
+        "lig_qte": 1,
+        "lig_pv": 10,
+        "lig_tva_id": 1
+      },
+      {
+        "lig_id": 5,
+        "lig_parent_id": 1,
+        "lig_ordre": 3,
+        "lig_tyl_id": 1,
+        "lig_libelle_html": "Abords"
+      },
+      {
+        "lig_id": 6,
+        "lig_parent_id": 5,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Clôture",
+        "lig_qte": 1,
+        "lig_pv": 5,
+        "lig_tva_id": 1
+      }
+    ]
+  },
+  "attendu": {
+    "erreurs": [],
+    "document": {
+      "ent_total_ht": 630,
+      "ent_total_tva": 126
+    },
+    "lignes": {
+      "1": {
+        "lig_qte_vendue": 2,
+        "lig_qte_totale": 2,
+        "lig_montant_ht": 630,
+        "lig_pv": 315
+      },
+      "2": {
+        "lig_qte_vendue": 3,
+        "lig_qte_totale": 6,
+        "lig_montant_ht": 600,
+        "lig_pv": 100
+      },
+      "3": {
+        "lig_qte_vendue": 1,
+        "lig_qte_totale": 6,
+        "lig_montant_ht": 600
+      },
+      "4": {
+        "lig_qte_totale": 2,
+        "lig_montant_ht": 20
+      },
+      "5": {
+        "lig_qte_vendue": null,
+        "lig_pv": null,
+        "lig_montant_ht": 10
+      },
+      "6": {
+        "lig_qte_totale": 2,
+        "lig_montant_ht": 10
+      }
+    }
+  }
+}

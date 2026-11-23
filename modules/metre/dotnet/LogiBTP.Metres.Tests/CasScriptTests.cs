@@ -10,6 +10,8 @@ namespace LogiBTP.Metres.Tests;
 /// <summary>
 /// Jeux du langage de script partagés avec le module JS (modules/metre/tests/scripts/*.json, test/cas-script.test.js) :
 /// un fichier par thème, plusieurs cas par fichier. Hôte minimal : une ligne (id 1) et un seul contexte pour $ et @@.
+/// Entrée metre_document : métré du document (sans ligne ni contexte $ / @@) ; publication : portée de publication
+/// imposée par l'hôte (métré d'une tranche) ; dans les deux cas, exécution par ScriptMetre.Evaluer.
 /// </summary>
 public class CasScriptTests
 {
@@ -53,11 +55,14 @@ public class CasScriptTests
 
         var donnees = new Dictionary<string, object?>(StringComparer.Ordinal);
         foreach (var (col, v) in entree["donnees"]?.AsObject() ?? []) donnees[col] = Valeur(v);
-        var portees = new Portees((_, _) => [0]);
+        var document = entree["metre_document"]?.GetValue<bool>() == true;
+        var publication = entree["publication"]?.GetValue<string>();
+        long? ligneId = document ? null : 1;
+        var portees = new Portees((_, _) => document ? [] : [0]);
         foreach (var (cible, v) in entree["variables_existantes"]?.AsObject() ?? [])
         {
             var r = (ReferenceVariable)References.Analyser(cible);
-            portees.Affecter(r.Portee, r.Nom, "=", v!.GetValue<decimal>(), 1);
+            portees.Affecter(r.Portee, r.Nom, "=", v!.GetValue<decimal>(), ligneId);
         }
         var ecrivables = entree["ecrivables"]?.AsArray().Select(n => n!.GetValue<string>()).ToHashSet() ?? [];
         var script = entree["script"] is JsonArray lignes ? string.Join("\n", lignes.Select(n => n!.GetValue<string>())) : entree["script"]!.GetValue<string>();
@@ -65,7 +70,7 @@ public class CasScriptTests
         {
             Resoudre = texte => References.Analyser(texte) switch
             {
-                ReferenceVariable v => portees.LireValeur(v.Portee, v.Nom, 1),
+                ReferenceVariable v => portees.LireValeur(v.Portee, v.Nom, ligneId),
                 ReferenceDonnee d => donnees.TryGetValue(d.Colonne, out var x) ? x : throw new ErreurCalcul("COLONNE_INCONNUE", $"Colonne inconnue {d.Colonne}"),
                 _ => throw new InvalidOperationException(),
             },
@@ -75,9 +80,11 @@ public class CasScriptTests
                 donnees[reference] = valeur;
             },
             Portees = portees,
-            LigneId = 1,
+            LigneId = ligneId,
         };
-        var res = Interpreteur.Executer(script, contexte);
+        var res = document || publication is not null
+            ? ScriptMetre.Evaluer(new Metre { MtrId = 1, MtrEntId = 1, MtrLigId = ligneId, MtrScript = script }, contexte, publication)
+            : Interpreteur.Executer(script, contexte);
 
         var fautes = new List<string>();
         if (!CasPartages.Egal(a["resultat"], Noeud(res.Resultat))) fautes.Add($"resultat : attendu {a["resultat"]}, obtenu {res.Resultat}");
@@ -96,7 +103,7 @@ public class CasScriptTests
         foreach (var (cible, v) in a["portees"]?.AsObject() ?? [])
         {
             var rv = (ReferenceVariable)References.Analyser(cible);
-            var valeur = portees.LireValeur(rv.Portee, rv.Nom, 1);
+            var valeur = portees.LireValeur(rv.Portee, rv.Nom, ligneId);
             if (!CasPartages.Egal(v, Noeud(valeur))) fautes.Add($"portée {cible} : attendu {v}, obtenu {valeur}");
         }
         foreach (var (col, v) in a["donnees"]?.AsObject() ?? [])

@@ -69,6 +69,7 @@
       "pas_nul": "« Pour » : pas nul",
       "trop_tours": "« Pour » : plus de {{max}} tours",
       "sans_resultat": "Le script ne renvoie pas de quantité (« Renvoyer » absent)",
+      "document_resultat": "Métré du document : « Renvoyer » est ignoré (il ne donne que des variables $$)",
       "argument_numerique": "{{quoi}} : numérique attendu",
       "argument_entier": "{{quoi}} : entier de {{min}} à {{max}} attendu",
       "message_hote": "Métré, ligne {{ligne}}, colonne {{colonne}} : {{message}}"
@@ -153,6 +154,9 @@
       "creer": "Créer le métré",
       "sans_quantite": "Pas de quantité (« Renvoyer » absent)",
       "titre_document": "{{ligne}} · variables du document",
+      "titre_metre_document": "du document",
+      "sans_metre_document": "Le document n'a pas de métré : ses variables $$ sont définies dans la grille ci-dessous.",
+      "creer_document": "Créer le métré du document",
       "aide_sans_metre": "Sélectionnez une ligne qui accepte un métré.",
       "colonnes": {
         "nom": "Nom",

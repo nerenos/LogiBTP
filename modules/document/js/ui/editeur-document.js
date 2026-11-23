@@ -569,6 +569,11 @@ export class EditeurDocument {
   /** Complément affiché après le montant d'une tranche dans le plan (ventilation des frais annexes… en spécialisation). */
   complementTranche(_ligne) { return null; }
 
+  /** Tranche à quantité (saisie, ou métré en spécialisation) : quantité et PU pour une unité affichés. */
+  qteTrancheAffichee(c) {
+    return c?.lig_tyl_id === TL.TITRE && c.lig_qte_vendue !== null && c.lig_qte_vendue !== undefined;
+  }
+
   /** Demi-pastille du mode de vente (hors « vendu ») : { fond, libelle } ou null. */
   pastilleTypePrix(l) {
     const type = this.typePrixEffectif(l);
@@ -1193,7 +1198,9 @@ export class EditeurDocument {
       },
       {
         cle: 'qte', titre: texte('document.colonnes.qte'), classe: 'col-nombre', editeur: 'nombre',
-        editable: (l) => chiffree(l) || (saisissable(l) && (l.lig_tyl_id === TL.PIED_HT || l.lig_tyl_id === TL.PIED_TTC)),
+        // Tranche (TITRE, hors frais annexes) : quantité qui multiplie ses lignes, vide = 1.
+        editable: (l) => chiffree(l) || (saisissable(l) && (l.lig_tyl_id === TL.PIED_HT || l.lig_tyl_id === TL.PIED_TTC))
+          || (saisissable(l) && l.lig_tyl_id === TL.TITRE && (l.lig_type_prix ?? 'V') !== 'F'),
         champ: (l) => (estPied(l) ? 'lig_pied_valeur' : 'lig_qte'),
         lire: (l) => formatLibre(estPied(l) ? l.lig_pied_valeur : l.lig_qte),
         valeur: (r) => {
@@ -1203,6 +1210,7 @@ export class EditeurDocument {
             if (c.lig_pied_mode === 'C') return texte('document.editeur.taux_coef', { taux: formatLibre(c.lig_pied_valeur) });
             return c.lig_pied_mode === 'P' ? texte('document.editeur.taux_pct', { taux: formatLibre(c.lig_pied_valeur) }) : texte('document.editeur.montant_devise', { montant: formatLibre(c.lig_pied_valeur) });
           }
+          if (c.lig_tyl_id === TL.TITRE) return this.qteTrancheAffichee(c) ? formatNombre(c.lig_qte_vendue, c.lig_precision_qte ?? 2) : '';
           if (!estChiffree(c)) return '';
           return formatNombre(c.lig_qte_vendue, c.lig_precision_qte ?? 2);
         },
@@ -1218,7 +1226,8 @@ export class EditeurDocument {
       },
       {
         cle: 'pv', titre: texte('document.colonnes.pv'), classe: 'col-nombre', ...this.colonneNombre('lig_pv', (l) => chiffree(l) && !this.estCompose(l)),
-        valeur: (r) => this.baseAffichee(r.calcule) ?? (estChiffree(r.calcule) ? formatNombre(r.calcule.lig_pv, r.calcule.lig_precision_pv ?? 2) : ''),
+        valeur: (r) => this.baseAffichee(r.calcule) ?? (estChiffree(r.calcule) || this.qteTrancheAffichee(r.calcule)
+          ? formatNombre(r.calcule.lig_pv, r.calcule.lig_precision_pv ?? 2) : ''),
       },
       this.colonneRemise(chiffree),
       {

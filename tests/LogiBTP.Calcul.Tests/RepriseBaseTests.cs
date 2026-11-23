@@ -512,11 +512,15 @@ public class RepriseBaseTests
             // Décimales par défaut de MDE : quantités à 3, prix unitaires à 2 (option de la reprise).
             Assert.Equal(0L, await Compter("SELECT count(*) FROM document_ligne l JOIN document d ON d.ent_id = l.lig_ent_id WHERE d.ent_numero = 'DC000002' AND l.lig_tyl_id IN (2, 3) AND l.lig_libelle_html <> 'Écart de reprise' AND (l.lig_precision_qte <> 3 OR l.lig_precision_pv <> 2)"));
             Assert.True(await Compter("SELECT count(*) FROM document_ligne l JOIN document d ON d.ent_id = l.lig_ent_id WHERE d.ent_numero = 'DC000002' AND l.lig_precision_qte = 3 AND l.lig_precision_pv = 2") >= 4);
-            // Métrés en script : P du récapitulatif en variable du document, formules traduites ($$P, point décimal),
+            // Métrés en script : P du récapitulatif dans le métré du document, formules traduites ($$P, point décimal),
             // affectation locale totalisée ; métré qui ne retrouve pas la quantité : quantité saisie gardée, signalé.
             const string Devis2 = "document_ligne l JOIN document d ON d.ent_id = l.lig_ent_id JOIN metre m ON m.mtr_id = l.lig_mtr_id WHERE d.ent_numero = 'DC000002'";
-            Assert.Equal(1L, await Compter("SELECT count(*) FROM variable_definition v JOIN document d ON d.ent_id = v.var_ent_id WHERE d.ent_numero = 'DC000002' AND v.var_lig_id IS NULL AND v.var_portee = '$$' AND v.var_nom = 'P' AND v.var_formule = '1.1'"));
-            Assert.Equal(1L, await Compter("SELECT count(*) FROM variable_definition v JOIN document d ON d.ent_id = v.var_ent_id WHERE d.ent_numero = 'DC000002' AND v.var_portee = '$$' AND v.var_nom = 'H' AND v.var_formule = '2.5'"));
+            // Récapitulatif et variables globales : métré du document (plan metres-tranches-document, lot 7), ses variables
+            // publiées en $$ (lignes produites par le moteur, rattachées au métré).
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM metre m JOIN document d ON d.ent_id = m.mtr_ent_id WHERE d.ent_numero = 'DC000002' AND m.mtr_lig_id IS NULL AND m.mtr_script LIKE '%P est un numérique = 1.1%H est un numérique = 2.5'"));
+            Assert.Equal(0L, await Compter("SELECT count(*) FROM variable_definition v JOIN document d ON d.ent_id = v.var_ent_id WHERE d.ent_numero = 'DC000002' AND v.var_mtr_id IS NULL"));
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM variable_definition v JOIN document d ON d.ent_id = v.var_ent_id WHERE d.ent_numero = 'DC000002' AND v.var_lig_id IS NULL AND v.var_mtr_id IS NOT NULL AND v.var_portee = '$$' AND v.var_nom = 'P'"));
+            Assert.Equal(1L, await Compter("SELECT count(*) FROM variable_definition v JOIN document d ON d.ent_id = v.var_ent_id WHERE d.ent_numero = 'DC000002' AND v.var_mtr_id IS NOT NULL AND v.var_portee = '$$' AND v.var_nom = 'H'"));
             Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Devis2} AND l.lig_code = 'MUR20' AND l.lig_qte_source = 'M' AND l.lig_qte = 10 AND m.mtr_script LIKE '%Renvoyer 4*($$P+1.4)' AND m.mtr_libelle = 'Surface du mur'"));
             Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Devis2} AND l.lig_libelle_html LIKE '%Enduit%' AND l.lig_qte_source = 'M' AND l.lig_qte = 12.5 AND m.mtr_script LIKE '%// Mur nord%local L est un numérique = 5%Total += L%Total += 6*(1.000+0.250)%Renvoyer Total'"));
             Assert.Equal(1L, await Compter($"SELECT count(*) FROM {Devis2} AND l.lig_libelle_html LIKE '%Échafaudage%' AND l.lig_qte_source = 'S' AND l.lig_qte = 1 AND m.mtr_script LIKE '%Renvoyer $$P*2'"));

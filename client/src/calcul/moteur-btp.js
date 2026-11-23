@@ -1,7 +1,7 @@
 import { D, Dz, S, ZERO, UN, coef, arrondir, arr6, ErreurCalcul, analyserReference, echapperHtml, texteBrut } from '@logibtp/socle';
 import { MoteurDocument, TL, estChiffree, estPied, union } from '@logibtp/document';
 import {
-  Portees, evaluerVariable, repartirVariables, evaluerScriptMetre, lignesVariablesScript, messageErreurScript,
+  Portees, evaluerVariable, repartirVariables, evaluerScriptMetre, lignesVariablesScript, messageErreurScript, estMetreDocument,
 } from '@logibtp/metre';
 import {
   COLONNES_DOCUMENT_BTP, COLONNES_LIGNE_BTP, COLONNES_DECIMALES_BTP, COLONNES_PRIX_CALCULES_BTP, COLONNES_QTE_CALCULEES_BTP,
@@ -144,49 +144,76 @@ export class MoteurDevisBtp extends MoteurDocument {
     evaluerVariable(v, { resolveur: this.resolveur(ligne, 'calcul'), portees: this.portees, ligneId: ligne?.lig_id ?? null });
   }
 
+  /**
+   * Métré du document (sans ligne) puis définitions `$$` de la grille, qui peuvent lire et réécrire ses variables.
+   */
   avantQuantites() {
     for (const v of this.variables) v.var_valeur = null;
     const { document, parLigne, parMetre } = repartirVariables(this.variables);
     this.varsParLigne = parLigne;
     this.varsParMetre = parMetre;
+    const metreDocument = this.metres.find(estMetreDocument);
+    if (metreDocument) this.evaluerScript(null, metreDocument);
     for (const v of document) {
       try { this.evaluerVariable(v, null); } catch (e) { this.capturer(e, null); }
     }
   }
 
+  /** Métré de la ligne (lig_mtr_id), hors métré du document ; null sinon. */
+  metreDe(l) {
+    if (l.lig_mtr_id === null || l.lig_mtr_id === undefined) return null;
+    return this.metres.find((m) => m.mtr_id === l.lig_mtr_id && !estMetreDocument(m)) ?? null;
+  }
+
+  /** Une tranche a une quantité saisie ou un métré (évalué avant ses lignes : il donne ses variables $). */
+  aQuantiteTranche(l) {
+    return super.aQuantiteTranche(l) || (l.lig_qte_source ?? 'S') === 'M' || this.metreDe(l) !== null;
+  }
+
+  /**
+   * Quantité de départ : saisie, ou résultat du métré (lig_qte_source M). Tranche : son métré est évalué avant ses
+   * lignes et publie ses variables en `$` de la tranche.
+   */
   quantiteBase(l) {
     l.lig_qte_base = null;
-    const metre = l.lig_mtr_id !== null && l.lig_mtr_id !== undefined ? this.metres.find((m) => m.mtr_id === l.lig_mtr_id) : null;
-    this.metreDeLigne.set(l.lig_id, metre ?? null);
+    const metre = this.metreDe(l);
+    this.metreDeLigne.set(l.lig_id, metre);
     this.qteEnCours = l;
     try {
       if (metre) this.evaluerScript(l, metre);
       if ((l.lig_qte_source ?? 'S') === 'M') {
         if (!metre) throw new ErreurCalcul('METRE_ABSENT', 'La quantité est issue d\'un métré absent');
         // Script sans résultat (sans « Renvoyer » ou en erreur) : la quantité saisie est conservée.
-        return metre.mtr_resultat === null ? Dz(l.lig_qte) : D(metre.mtr_resultat);
+        return metre.mtr_resultat === null ? this.qteSaisie(l) : D(metre.mtr_resultat);
       }
-      return Dz(l.lig_qte);
+      return this.qteSaisie(l);
     } finally {
       this.qteEnCours = null;
     }
   }
 
-  /** Script du métré de la ligne : erreurs non bloquantes, libellé calculé, lignes de variables. */
+  /**
+   * Script d'un métré : erreurs non bloquantes, libellé calculé, lignes de variables. Ligne null : métré du document
+   * (variables `$$`, aucune écriture de donnée) ; tranche : variables publiées en `$`.
+   */
   evaluerScript(l, metre) {
+    const ligId = l?.lig_id ?? null;
+    const publication = l && l.lig_tyl_id === TL.TITRE ? '$' : undefined;
     const r = evaluerScriptMetre(metre, {
-      resoudre: this.resolveurScript(l), ecrire: (ref, valeur) => this.ecrireScript(l, ref, valeur), portees: this.portees, ligneId: l.lig_id,
-      fonctions: this.fonctionsScript,
+      resoudre: this.resolveurScript(l), ecrire: (ref, valeur) => this.ecrireScript(l, ref, valeur), portees: this.portees, ligneId: ligId,
+      fonctions: this.fonctionsScript, publication,
     });
-    for (const e of r.erreurs) this.erreur(l.lig_id, e.code, messageErreurScript(e), false);
-    if (r.erreurs.length > 0) this.libellesScript.delete(l.lig_id);
+    for (const e of r.erreurs) this.erreur(ligId, e.code, messageErreurScript(e), false);
+    if (!l) {
+      for (const a of r.avertissements) this.avertir(null, a.code, a.message);
+    } else if (r.erreurs.length > 0) this.libellesScript.delete(ligId);
     else if (r.resultat === null && (l.lig_qte_source ?? 'S') === 'M') {
-      this.avertir(l.lig_id, 'METRE_SANS_RESULTAT', 'Le métré ne renvoie pas de quantité (« Renvoyer » absent) : quantité saisie conservée');
+      this.avertir(ligId, 'METRE_SANS_RESULTAT', 'Le métré ne renvoie pas de quantité (« Renvoyer » absent) : quantité saisie conservée');
     }
     this.variablesScript.set(metre.mtr_id, lignesVariablesScript(metre, r, this.variablesScript.get(metre.mtr_id) ?? [], {
-      entId: this.doc.ent_id ?? null, nouvelId: () => this.prochainVarId--,
+      entId: this.doc.ent_id ?? null, nouvelId: () => this.prochainVarId--, publication,
     }));
-    this.scripts.push({ mtr_id: metre.mtr_id, lig_id: l.lig_id, resultat: r.resultat, erreurs: r.erreurs, avertissements: r.avertissements });
+    this.scripts.push({ mtr_id: metre.mtr_id, lig_id: ligId, resultat: r.resultat, erreurs: r.erreurs, avertissements: r.avertissements });
   }
 
   /** Fonctions propres à l'hôte proposées aux scripts (fonctions-btp.js ↔ FonctionsBtp.cs). */
@@ -196,8 +223,8 @@ export class MoteurDevisBtp extends MoteurDocument {
   resolveurScript(l) {
     return (texte) => {
       const ref = analyserReference(texte);
-      if (ref.genre === 'variable') return this.portees.lireValeur(ref.portee, ref.nom, l.lig_id);
-      if (!ref.table && ref.colonne === 'lig_libelle_html') return this.libellesScript.get(l.lig_id) ?? l.lig_libelle_html ?? '';
+      if (ref.genre === 'variable') return this.portees.lireValeur(ref.portee, ref.nom, l?.lig_id ?? null);
+      if (l && !ref.table && ref.colonne === 'lig_libelle_html') return this.libellesScript.get(l.lig_id) ?? l.lig_libelle_html ?? '';
       return this.lireDonnee(ref, l, 'calcul').valeur;
     };
   }
@@ -205,7 +232,7 @@ export class MoteurDevisBtp extends MoteurDocument {
   /** Écriture d'un script : seul le libellé de la ligne ({{lig_libelle_html}}), dans le libellé calculé. */
   ecrireScript(l, texte, valeur) {
     const ref = analyserReference(texte);
-    if (ref.genre !== 'donnee' || ref.table || ref.colonne !== 'lig_libelle_html') {
+    if (!l || ref.genre !== 'donnee' || ref.table || ref.colonne !== 'lig_libelle_html') {
       throw new ErreurCalcul('ECRITURE_INTERDITE', `{{${texte}}} ne peut pas être modifié par un métré (seul {{lig_libelle_html}} l'est)`);
     }
     if (typeof valeur !== 'string') throw new ErreurCalcul('TYPE', 'Libellé : chaîne attendue');
@@ -228,7 +255,7 @@ export class MoteurDevisBtp extends MoteurDocument {
   apresLigne(l) {
     // Variables de l'onglet Définition du métré : sorties du métré, évaluées après ses lignes et après
     // la quantité (elles peuvent lire le résultat, les variables du métré et lig_qte_vendue).
-    const metre = estChiffree(l) ? this.metreDeLigne.get(l.lig_id) : null;
+    const metre = estChiffree(l) || l.lig_tyl_id === TL.TITRE ? this.metreDeLigne.get(l.lig_id) ?? null : null;
     if (metre) for (const v of this.varsParMetre.get(metre.mtr_id) ?? []) this.evaluerVariable(v, l);
     for (const v of this.varsParLigne.get(l.lig_id) ?? []) this.evaluerVariable(v, l);
   }
@@ -478,7 +505,7 @@ export class MoteurDevisBtp extends MoteurDocument {
   montantFraisAnnexes(l) {
     const prec = l.lig_precision_pv ?? 2;
     const pvRem = arrondir(this.pvAffiche(l, this.px.get(l.lig_id), prec).times(coef(l.lig_coef_remise)), prec);
-    return arrondir(Dz(l.lig_qte_vendue).times(pvRem), this.precMontant);
+    return arrondir(this.qteMontant(l).times(pvRem), this.precMontant);
   }
 
   /** Type de prix effectif : le premier type non vendu de la ligne ou de ses ancêtres. */
@@ -570,7 +597,7 @@ export class MoteurDevisBtp extends MoteurDocument {
       for (const l of this.ordre) {
         if (estPied(l) || !this.estLigneDePrix(l) || !this.descendDe(l, portee) || this.estFraisAnnexes(l) || l.lig_is_ecart_arrondi
           || this.enErreur.has(l.lig_id) || !this.px.has(l.lig_id)) continue;
-        const base = arr6(this.px.get(l.lig_id).pv.times(Dz(l.lig_qte_vendue)));
+        const base = arr6(this.px.get(l.lig_id).pv.times(this.qteMontant(l)));
         const type = this.typePrixEffectif(l);
         const eligible = type === 'V' || ((type === 'O' || type === 'A') && horsVente !== 'V') || (type === 'M' && horsVente === 'OAM');
         const role = !eligible || this.fixe.get(l.lig_id) === 'AFF' || base.lte(0) ? 'X' : type === 'V' || modeBase ? 'R' : 'D';
@@ -603,7 +630,7 @@ export class MoteurDevisBtp extends MoteurDocument {
           if (k.vfr_mode === 'P') return montantsPct.get(k) ?? null;
           const v = D(k.vfr_valeur);
           if (v === null || v.lt(0)) return null;
-          return arrondir(cible ? v.times(Dz(cible.lig_qte_vendue)) : v, pm);
+          return arrondir(cible ? v.times(this.qteMontant(cible)) : v, pm);
         };
 
         // 1. Clés de ligne.
@@ -664,7 +691,7 @@ export class MoteurDevisBtp extends MoteurDocument {
     // Coefficient de chaque ligne qui reçoit des frais : 1 + parts / montant hors frais.
     for (const [id, part] of parties) {
       const l = this.parId.get(id);
-      const base = this.px.get(id).pv.times(Dz(l.lig_qte_vendue));
+      const base = this.px.get(id).pv.times(this.qteMontant(l));
       if (!base.isZero()) this.coefsFa.set(id, arr6(UN.plus(part.div(base))));
     }
   }
@@ -689,7 +716,7 @@ export class MoteurDevisBtp extends MoteurDocument {
     // Coefficient moyen du document (information) : lignes vendues.
     let base = ZERO, avec = ZERO;
     for (const l of this.lignesDePrixEnTotal()) {
-      const b = this.px.get(l.lig_id).pv.times(Dz(l.lig_qte_vendue));
+      const b = this.px.get(l.lig_id).pv.times(this.qteMontant(l));
       base = base.plus(b);
       avec = avec.plus(b).plus(this.partsFa.get(l.lig_id) ?? ZERO);
     }

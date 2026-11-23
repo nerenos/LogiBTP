@@ -1,0 +1,118 @@
+{
+  "nom": "Métré du document et métré de tranche",
+  "description": "Métré sans ligne (document) : variables non locales publiées en $$, écriture $$ permise, $ et @ refusés (PORTEE), « Renvoyer » averti et ignoré. Métré de tranche : publication en $ imposée par l'hôte.",
+  "cas": [
+    {
+      "nom": "Document : variables publiées en $$ et écriture $$",
+      "entree": {
+        "metre_document": true,
+        "script": [
+          "Hsp est un numérique = 2.5",
+          "local brut est un numérique = 4",
+          "Finition est une chaîne = \"Peinture\"",
+          "$$Logements = brut * 3"
+        ]
+      },
+      "attendu": {
+        "portees": {
+          "$$Hsp": 2.5,
+          "$$Finition": "Peinture",
+          "$$Logements": 12
+        }
+      }
+    },
+    {
+      "nom": "Document : lecture d'une variable $$ et d'une donnée de l'entête",
+      "entree": {
+        "metre_document": true,
+        "script": [
+          "$$Surface = $$Base * {{ent_nb_etages}}"
+        ],
+        "donnees": {
+          "ent_nb_etages": 3
+        },
+        "variables_existantes": {
+          "$$Base": 80
+        }
+      },
+      "attendu": {
+        "portees": {
+          "$$Surface": 240
+        }
+      }
+    },
+    {
+      "nom": "Document : variable $ refusée",
+      "entree": {
+        "metre_document": true,
+        "script": [
+          "$Hauteur = 2"
+        ]
+      },
+      "attendu": {
+        "erreurs": [
+          {
+            "code": "PORTEE",
+            "ligne": 1,
+            "colonne": 10
+          }
+        ]
+      }
+    },
+    {
+      "nom": "Document : variable @ refusée",
+      "entree": {
+        "metre_document": true,
+        "script": [
+          "@Hauteur = 2"
+        ]
+      },
+      "attendu": {
+        "erreurs": [
+          {
+            "code": "PORTEE",
+            "ligne": 1,
+            "colonne": 10
+          }
+        ]
+      }
+    },
+    {
+      "nom": "Document : « Renvoyer » averti et ignoré",
+      "entree": {
+        "metre_document": true,
+        "script": [
+          "Hsp est un numérique = 2.5",
+          "Renvoyer Hsp * 2"
+        ]
+      },
+      "attendu": {
+        "resultat": null,
+        "avertissements": [
+          "METRE_DOCUMENT_RESULTAT"
+        ],
+        "portees": {
+          "$$Hsp": 2.5
+        }
+      }
+    },
+    {
+      "nom": "Tranche : variables publiées en $ et quantité renvoyée",
+      "entree": {
+        "publication": "$",
+        "script": [
+          "Hauteur est un numérique = 2.7",
+          "Etages est un numérique = 3",
+          "Renvoyer Etages"
+        ]
+      },
+      "attendu": {
+        "resultat": 3,
+        "portees": {
+          "$Hauteur": 2.7,
+          "$Etages": 3
+        }
+      }
+    }
+  ]
+}
