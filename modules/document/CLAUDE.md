@@ -23,6 +23,7 @@
 - Aucune ligne de prix sans nature ; un ouvrage sans composante devient à la validation un élément de nature Prestation (`PRE`), PV fixe conservé.
 - Colonnes modifiables des lignes teintées, jamais le libellé. Remise : seul `lig_coef_remise` est enregistré (saisie en % convertie).
 - Reste à solder = quantité du parent − transformé (brouillons compris) ; solde par case ou seuil par famille ; tout le reliquat reprend toutes les lignes de prix. Tiers figé à la transformation (`TIERS_FIGE`).
+- Quantité de tranche (TITRE hors frais annexes, vide = 1, imbrication cumulée) : montants des lignes de prix multipliés (`qteMontant`), PU de tranche = montant ÷ quantité totale ; refusée en tranche F (`QTE_TRANCHE_FA`) ; jeux `tests/cas/17` à `19`.
 - Composantes dans un BL ou une facture : quantités unitaires × quantité du parent, jamais absolues. Options et variantes : chaque unité retenue ou non (`OPTION_NON_TRAITEE`) ; pour mémoire et tranches F reprises.
 - Achats : avoir seulement pour une erreur de quantité ; ni correction de quantité ni avenant (nouvelles commandes) ; facture fournisseur : prix modifiables avec avertissement et marqueur.
 - Plusieurs sources : une section par document source, tranches par commande pour les BL, un pied de section par source, chantier ventilé par ligne (`lig_cha_id`).

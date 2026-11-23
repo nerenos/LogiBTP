@@ -277,6 +277,11 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
   - [ ] Titre court d'un onglet saisi au paramétrage des champs supplémentaires (décision Q1 c) : sans support aujourd'hui.
   - [ ] `db/CLAUDE.md` cite `267_devis_relance.sql` comme dernière définition de `v_liste_documents` : c'est `287_liste_derniere_relance.sql` (puis `v_liste_documents_zones`, db/1.4) ; à corriger par un humain.
 
+- [ ] Métrés de tranche et du document (plan metres-tranches-document, lots 1 à 8 faits le 23/11/2026) : restes.
+  - [ ] Exécuter `e2e/metres-tranches-document.spec.ts` sur un poste (écrit sans exécution : sélecteurs du panneau Métré, déplacement de la ligne sous la tranche par Ctrl+flèches).
+  - [ ] Reprise MDE (Q17) : lancer sur une base réelle `SELECT TYPELIG, COUNT(*), SUM(CASE WHEN CLEMETRE IS NOT NULL THEN 1 END), SUM(CASE WHEN QUANTITE NOT IN (0, 1) THEN 1 END) FROM PMEDOCDEVCLILIG GROUP BY TYPELIG` (et les autres tables `…LIG`) pour confirmer que la quantité d'une tranche T multiplie ses lignes dans MDE ; rejouer `RepriseBaseTests` (MSSQL) avec les nouvelles assertions du métré du document.
+  - [ ] Écrans non vérifiés en navigateur : colonne Qté et PU d'une tranche, plan « × n », bouton « Métré » du document, conversion des définitions `$` à la création d'un métré de tranche.
+
 - [ ] Mode hors ligne : appel de la bibliothèque (F3) limité aux recherches déjà faites en ligne (réponses gardées par le
   service worker) ; à étudier : copie locale des éléments consultés ou d'une bibliothèque choisie pour la recherche hors
   ligne. Écrans hors document (fiches, pointage…) : consultation seulement.
