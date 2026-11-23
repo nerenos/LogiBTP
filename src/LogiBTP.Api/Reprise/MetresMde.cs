@@ -11,7 +11,8 @@ namespace LogiBTP.Api.Reprise;
 /// est totalisée (Totalisation de MDE : somme des résultats des lignes de niveau de total non nul) ; « NOM=expr »
 /// (ou la variable de résultat de la ligne) devient une variable locale du script, elle aussi totalisée ; les
 /// affectations du métré de la ligne récapitulative (TYPELIG R, non reprise) et les variables globales de PMEMETREVAR
-/// deviennent des variables du document ($$NOM), lues par les formules des lignes quelle que soit leur casse.
+/// forment le métré du document (variables $$NOM, plan metres-tranches-document, lot 7), lues par les formules des
+/// lignes quelle que soit leur casse. Le métré d'une tranche (T) devient un métré de tranche (quantité de la tranche).
 /// Autres types de ligne : commentaires (signalés).
 /// </summary>
 public sealed partial class MetresMde
@@ -60,28 +61,24 @@ public sealed partial class MetresMde
     }
 
     /// <summary>
-    /// Pièce complétée de ses métrés : variables du document (métrés des lignes non reprises, variables globales),
-    /// script de chaque ligne reprise qui cite un métré à formules.
+    /// Pièce complétée de ses métrés : métré du document (affectations des métrés des lignes non reprises, variables
+    /// globales), script de chaque ligne reprise (tranche comprise) qui cite un métré à formules.
     /// </summary>
     public PieceSource Appliquer(ContexteReprise ctx, PieceSource p, List<LigneSource> source, string emplacement)
     {
         if (parCle.Count == 0) return p;
         var parCleLigne = source.Where(l => l.Texte("CLE") is not null).GroupBy(l => l.Texte("CLE")!).ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
         var reprises = p.Lignes.Select(l => l.Reference).OfType<string>().ToHashSet(StringComparer.Ordinal);
-        var globales = new List<VariablePiece>();
-        void Ajouter(string nom, string formule)
-        {
-            if (globales.FindIndex(g => string.Equals(g.Nom, nom, StringComparison.OrdinalIgnoreCase)) is var i and >= 0) globales[i] = globales[i] with { Formule = formule };
-            else globales.Add(new VariablePiece(nom, formule));
-        }
-        // Lignes non reprises (récapitulatif) : leurs affectations sont globales au document.
+        var globales = new List<(string Nom, string Expr)>();
+        // Lignes non reprises (récapitulatif) : leurs affectations sont globales au document, dans l'ordre ; puis les
+        // valeurs des variables globales de PMEMETREVAR (dernière valeur connue de MDE, qui l'emporte).
         foreach (var l in source.Where(l => l.Texte("CLE") is { } c && !reprises.Contains(c)))
             if (Trouver(l.Texte("CLEMETRE")) is { } m)
-                foreach (var (nom, expr) in Affectations(m)) Ajouter(nom, Expression(expr, globales.Select(g => g.Nom).ToList(), []));
+                globales.AddRange(Affectations(m));
         foreach (var m in source.Select(l => Trouver(l.Texte("CLEMETRE"))).OfType<Metre>().Distinct())
-            foreach (var v in m.Variables.Where(v => v.Globale)) Ajouter(v.Nom, Nombre(v.Valeur));
+            foreach (var v in m.Variables.Where(v => v.Globale)) globales.Add((v.Nom, Nombre(v.Valeur)));
 
-        var noms = globales.Select(g => g.Nom).ToList();
+        var noms = Noms(globales);
         var lignes = p.Lignes.Select(l =>
         {
             if (l.Reference is not { } r || !parCleLigne.TryGetValue(r, out var ls) || Trouver(ls.Texte("CLEMETRE")) is not { } m
@@ -92,7 +89,45 @@ public sealed partial class MetresMde
                     $"Métré « {m.Libelle} » : ligne de type {t} reprise en commentaire");
             return l with { Metre = new MetrePiece(m.Libelle, script) };
         }).ToList();
-        return p with { Lignes = lignes, Variables = globales };
+        return p with
+        {
+            Lignes = lignes, Variables = [],
+            MetreDocument = globales.Count == 0 ? null : new MetrePiece(LibelleMetreDocument, ScriptDocument(globales)),
+        };
+    }
+
+    public const string LibelleMetreDocument = "Récapitulatif";
+
+    /// <summary>Noms des variables globales, à la casse de leur première affectation.</summary>
+    private static List<string> Noms(IEnumerable<(string Nom, string Expr)> globales)
+    {
+        var noms = new List<string>();
+        foreach (var (nom, _) in globales)
+            if (!noms.Any(n => string.Equals(n, nom, StringComparison.OrdinalIgnoreCase))) noms.Add(nom);
+        return noms;
+    }
+
+    /// <summary>
+    /// Script du métré du document : chaque variable globale déclarée à sa première affectation (non locale : publiée
+    /// en $$), réaffectée ensuite dans l'ordre ; formules au format LogiBTP (noms à la casse de leur déclaration).
+    /// </summary>
+    public static string ScriptDocument(IReadOnlyList<(string Nom, string Expr)> globales)
+    {
+        var noms = Noms(globales);
+        var declarees = new List<string>();
+        var sb = new StringBuilder("// Récapitulatif repris de MDE : variables du document\n");
+        foreach (var (nom, expr) in globales)
+        {
+            var declaree = noms.First(n => string.Equals(n, nom, StringComparison.OrdinalIgnoreCase));
+            var traduite = Expression(expr, [], noms);
+            if (declarees.Contains(declaree)) sb.Append(declaree).Append(" = ").Append(traduite).Append('\n');
+            else
+            {
+                declarees.Add(declaree);
+                sb.Append(declaree).Append(" est un numérique = ").Append(traduite).Append('\n');
+            }
+        }
+        return sb.ToString().TrimEnd('\n');
     }
 
     /// <summary>Affectations « NOM=expr » des lignes de formule d'un métré (dans l'ordre).</summary>

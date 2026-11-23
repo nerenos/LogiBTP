@@ -90,10 +90,13 @@ Classes du cœur dans `src/LogiBTP.Api/Reprise/` ; un domaine par source, même 
 - MDE, métrés des pièces de vente et des marchés (`MetresMde.cs` : `PMEMETRE`, `PMEMETRELIGNE`, `PMEMETREVAR`, lignes par
   `CLEMETRE`) : script LogiBTP par ligne (une formule seule : `Renvoyer expr` ; sinon `local Total`, `Total += expr` des
   lignes de niveau de total non nul, `NOM=expr` ou `VARRESULT` en variable locale totalisée, autres types en commentaire
-  signalés) ; affectations du métré de la ligne récapitulative (R, non reprise) et variables `GLOBALE` : variables du
-  document `$$NOM`, lues par les formules quelle que soit leur casse (`p*0,150` → `$$P*0.150`, virgule décimale → point) ;
-  quantité issue du métré (`lig_qte_source` M) si son résultat, arrondi à la précision de la ligne, retrouve la quantité
-  source, sinon quantité saisie gardée, métré attaché et `MetreEcart` signalé.
+  signalés) ; affectations du métré de la ligne récapitulative (R, non reprise) et variables `GLOBALE` : **métré du
+  document** « Récapitulatif » (`MetresMde.ScriptDocument` : déclaration à la première affectation, réaffectations dans
+  l'ordre, valeurs `GLOBALE` en dernier ; variables publiées en `$$NOM`), lues par les formules quelle que soit leur casse
+  (`p*0,150` → `$$P*0.150`, virgule décimale → point) ; tranche T : quantité ≠ 0 et ≠ 1 → quantité de tranche (ses lignes
+  multipliées), métré cité → métré de tranche (plan metres-tranches-document, lot 7) ; quantité issue du métré
+  (`lig_qte_source` M) si son résultat, arrondi à la précision de la ligne, retrouve la quantité source (tranche sans
+  quantité : 1), sinon quantité saisie gardée, métré attaché et `MetreEcart` signalé.
 - Articles à unités différentes (achat, stock, vente) : rapports de la source repris bruts (RATIOSTOCK direct, RATIOVENTE
   inversé : unités de vente par unité de stock), PA et PV gardés (coefficient
   déduit, PV non imposé), signalés `ConversionBrute` pour correction manuelle.
