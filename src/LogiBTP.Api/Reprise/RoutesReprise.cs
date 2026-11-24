@@ -25,11 +25,13 @@ public static class RoutesReprise
         g.MapGet("", async (HttpContext http, UniteEcriture unite, TachesReprise taches, SocieteCourante societe, CancellationToken ct) =>
         {
             Utilisateur.Depuis(http).ExigerAdmin();
+            var tache = taches.Derniere(societe);
             return Results.Ok(await unite.LireAsync(async (c, tx, t) => new
             {
                 // Dernière reprise lancée depuis l'écran (en cours : l'écran reprend son suivi après un rechargement).
-                tache = taches.Derniere(societe)?.Instantane(),
-                base_vide = await BaseCibleReprise.EstVideAsync(c, tx, t),
+                tache = tache?.Instantane(),
+                // Reprise en cours : ses tables sont verrouillées jusqu'à sa fin, le contrôle n'est pas fait (null).
+                base_vide = tache is { EnCours: true } ? null : await BaseCibleReprise.EstVideSansAttendreAsync(c, tx!, t),
                 sources = new[] { SourceReprise.Mde, SourceReprise.Optim },
                 // Décimales proposées avant l'import (quantités, prix des lignes de pièces) ; null : celles de la source.
                 decimales = new[] { SourceReprise.Mde, SourceReprise.Optim }.ToDictionary(s => s, s =>
@@ -62,7 +64,13 @@ public static class RoutesReprise
                 throw ExceptionMetier.Invalide("VALIDATION", "Connexion à la base source attendue",
                     new[] { new { champ = "connexion", code = "OBLIGATOIRE", message = "Connexion à la base source attendue" } });
             var source = Source(d.Source);
-            if (!await unite.LireAsync((c, tx, t) => BaseCibleReprise.EstVideAsync(c, tx, t), null, ct))
+            // Une reprise en cours verrouille les tables contrôlées : refus immédiat, avant de lire la base.
+            if (taches.Derniere(societe) is { EnCours: true })
+                throw ExceptionMetier.Conflit(ErreurReprise.EnCours, "Une reprise est déjà en cours pour cette base");
+            var vide = await unite.LireAsync((c, tx, t) => BaseCibleReprise.EstVideSansAttendreAsync(c, tx!, t), null, ct);
+            if (vide is null)
+                throw ExceptionMetier.Conflit(ErreurReprise.EnCours, "Une reprise est déjà en cours pour cette base (tables verrouillées)");
+            if (vide == false)
                 throw ExceptionMetier.Conflit(ErreurReprise.BaseNonVide, "La base cible contient déjà des données métier : la reprise se fait dans une base neuve");
             var tache = taches.Lancer(societe, new DemandeReprise
             {

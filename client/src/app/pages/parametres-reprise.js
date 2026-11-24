@@ -136,7 +136,10 @@ export class PageParametresReprise extends PageBase {
   async charger() {
     this.etat = await api.reprise.etat();
     const zone = this.conteneur.querySelector('[data-etat]');
-    zone.innerHTML = this.etat.base_vide ? '' : `<p class="erreur">${iconeHtml('avertissement')} ${th('base_non_vide')}</p>`;
+    // base_vide : null pendant une reprise en cours (tables verrouillées jusqu'à sa fin, contrôle non fait).
+    const enCours = this.tache || this.etat.tache?.etat === ETAT_REPRISE.EN_COURS;
+    zone.innerHTML = this.etat.base_vide === false ? `<p class="erreur">${iconeHtml('avertissement')} ${th('base_non_vide')}</p>`
+      : this.etat.base_vide === null && !enCours ? `<p class="erreur">${iconeHtml('avertissement')} ${th('base_verrouillee')}</p>` : '';
     this.activerBoutons(!this.tache && this.etat.tache?.etat !== ETAT_REPRISE.EN_COURS);
     this.rendreHistorique();
     if (!this.decimalesProposees) { this.proposerDecimales(); this.decimalesProposees = true; }
