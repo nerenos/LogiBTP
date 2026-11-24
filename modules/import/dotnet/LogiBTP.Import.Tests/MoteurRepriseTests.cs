@@ -225,6 +225,38 @@ public class MoteurRepriseTests
     }
 
     [Fact]
+    public async Task Avancement_signale_a_chaque_etape()
+    {
+        if (Admin is null) return;
+        await using var b = await BaseEssai.CreerAsync(Admin);
+        var etapes = new List<AvancementReprise>();
+        await using var unite = new UniteEcriture(new ConnexionRequete(b.Connexion));
+        var r = await new MoteurReprise([Ecrire(), D("suite", "essai")], EssaiVide).ExecuterAsync(
+            new OptionsReprise { Source = SourceReprise.Mde, Simulation = true, Avancement = etapes.Add },
+            new LecteurFictif(SourceReprise.Mde), Correspondances(), unite, default);
+        Assert.Equal(EtatReprise.Terminee, r.Rapport.Etat);
+        Assert.Equal([
+            new AvancementReprise(EtapeReprise.Preparation, null, 0, 2),
+            new AvancementReprise(EtapeReprise.Comptage, "CLIENT", 0, 1),
+            new AvancementReprise(EtapeReprise.Domaine, "essai", 0, 2),
+            new AvancementReprise(EtapeReprise.Domaine, "suite", 1, 2),
+            new AvancementReprise(EtapeReprise.Enregistrement, null, 2, 2),
+        ], etapes);
+    }
+
+    [Fact]
+    public async Task Suivi_en_erreur_sans_effet_sur_la_reprise()
+    {
+        if (Admin is null) return;
+        await using var b = await BaseEssai.CreerAsync(Admin);
+        await using var unite = new UniteEcriture(new ConnexionRequete(b.Connexion));
+        var r = await new MoteurReprise([Ecrire()], EssaiVide).ExecuterAsync(
+            new OptionsReprise { Source = SourceReprise.Mde, Simulation = true, Avancement = _ => throw new InvalidOperationException("suivi") },
+            new LecteurFictif(SourceReprise.Mde), Correspondances(), unite, default);
+        Assert.Equal(EtatReprise.Terminee, r.Rapport.Etat);
+    }
+
+    [Fact]
     public async Task Reprise_reelle_validee_puis_base_non_vide_refusee()
     {
         if (Admin is null) return;

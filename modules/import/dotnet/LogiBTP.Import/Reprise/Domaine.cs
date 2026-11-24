@@ -44,7 +44,16 @@ public sealed record OptionsReprise
 
     /// <summary>MDE : donnée technique qui reçoit la colonne VOLUME (<see cref="VolumeMde"/>, surface par défaut).</summary>
     public string VolumeMde { get; init; } = LogiBTP.Import.VolumeMde.Surface;
+
+    /// <summary>Avancement signalé par le moteur à chaque étape (écran : suivi de la tâche de fond) ; null : aucun suivi.</summary>
+    public Action<AvancementReprise>? Avancement { get; init; }
 }
+
+/// <summary>
+/// Avancement d'une exécution : étape (<see cref="EtapeReprise"/>), domaine en cours (étape DOMAINE) ou table comptée
+/// (COMPTAGE), éléments faits sur le total de l'étape (domaines ou tables).
+/// </summary>
+public sealed record AvancementReprise(string Etape, string? Element, int Faits, int Total);
 
 /// <summary>Ce qu'un domaine reçoit : source, correspondances, registre, rapport et unité d'écriture de la base cible.</summary>
 public sealed class ContexteReprise

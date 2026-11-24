@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sectionsRapport, lireSocietes, lireDecimales } from '../src/app/pages/parametres-reprise.js';
+import { sectionsRapport, lireSocietes, lireDecimales, dureeEcoulee, libelleEtape } from '../src/app/pages/parametres-reprise.js';
 
 // Écran « Reprise de données » (plan reprise-mde-optim, lot 3) : sections du rapport et saisie des sociétés OPTIM.
 const rapport = {
@@ -28,5 +28,21 @@ describe('reprise : écran (lot 3)', () => {
     expect(lireDecimales(' 0 ')).toBe(0);
     expect(lireDecimales('')).toBeNull();
     expect(lireDecimales('7')).toBeNull();
+  });
+});
+
+describe('reprise : suivi de la tâche de fond (grosse base)', () => {
+  it('durée écoulée en secondes, minutes ou heures', () => {
+    const debut = '2026-11-24T10:00:00Z';
+    expect(dureeEcoulee(debut, '2026-11-24T10:00:42Z')).toBe('42 s');
+    expect(dureeEcoulee(debut, '2026-11-24T10:03:05Z')).toBe('3 min 05 s');
+    expect(dureeEcoulee(debut, '2026-11-24T11:05:03Z')).toBe('1 h 05 min 03 s');
+    expect(dureeEcoulee(debut, null, Date.parse('2026-11-24T10:00:07Z'))).toBe('7 s');
+  });
+
+  it('étape affichée : domaine traduit, rang compté depuis 1', () => {
+    expect(libelleEtape({ etape: 'DOMAINE', element: 'ANNUAIRE', faits: 3, total: 14 })).toBe('Domaine 4 / 14 : Annuaire (tiers, contacts)');
+    expect(libelleEtape({ etape: 'COMPTAGE', element: 'PMEDOC', faits: 0, total: 80 })).toBe('Comptage des tables de la source (1 / 80) : PMEDOC');
+    expect(libelleEtape({ etape: 'PREPARATION', element: null, faits: 0, total: 14 })).toBe('Préparation…');
   });
 });

@@ -18,6 +18,15 @@ Référence lue à la demande (hors contexte par défaut). Les règles que le co
    [--volume-mde SURFACE|VOLUME]` (simulation par
    défaut, code de sortie 2 en cas d'échec). Décimales des lignes de pièces reprises : MDE 3 (quantités) et 2 (prix) par
    défaut, modifiables à l'écran avant l'import ; OPTIM : celles de la quantité source, prix à 6.
+   Écran : `POST /api/reprise/executer` ne fait que les contrôles rapides (connexion saisie, base vide, aucune reprise
+   en cours : 409 `REPRISE_EN_COURS`) puis rend la main (202) ; la reprise tourne en **tâche de fond**
+   (`TachesReprise`, singleton du cœur, une par base, mémoire du processus, portée `CreerPorteeSociete`, annulée par
+   `POST /api/reprise/tache/arreter` → `REPRISE_INTERROMPUE` ou l'arrêt de l'API). L'écran interroge
+   `GET /api/reprise/tache` toutes les 2 s (étape `ETAPE_REPRISE` : PREPARATION, COMPTAGE des tables, DOMAINE n / total,
+   ENREGISTREMENT, signalée par `OptionsReprise.Avancement`), puis affiche le rapport de l'exécution enregistrée ;
+   `GET /api/reprise` renvoie aussi `tache` : une page rechargée reprend le suivi. Avant (24/11/2026), la reprise
+   tournait dans la requête HTTP et s'annulait avec elle (navigateur ou proxy qui coupe une longue requête : transaction
+   annulée, aucun rapport, page vidée).
 2. `RepriseBase.ExecuterAsync(DemandeReprise)` : fichier de correspondances (fourni, sinon `Correspondances/mde.json` ou
    `optim.json`) validé contre les listes de la base cible (`CiblesReprise`), fusions de doublons retenues
    (`import_fusion`), lecteur en lecture seule (`LecteurSqlServer` / `LecteurMariaDb`).

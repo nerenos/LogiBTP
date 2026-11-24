@@ -69,6 +69,13 @@ public sealed class MoteurReprise(IReadOnlyList<IDomaineReprise> domaines, Func<
             Options = options, Lecteur = lecteur, Correspondances = correspondances, Unite = unite, Rapport = rapport,
         };
 
+        void Signaler(string etape, string? element, int faits, int total)
+        {
+            // Le suivi ne doit jamais faire échouer la reprise.
+            try { options.Avancement?.Invoke(new AvancementReprise(etape, element, faits, total)); } catch { /* suivi ignoré */ }
+        }
+
+        Signaler(EtapeReprise.Preparation, null, 0, ordre.Count);
         await using (var tx = await unite.CommencerAsync(ct))
         {
             if (!await baseVide(unite.Connexion, unite.Transaction, ct))
@@ -77,17 +84,24 @@ public sealed class MoteurReprise(IReadOnlyList<IDomaineReprise> domaines, Func<
             contexte.Fusions = await LireFusionsAsync(unite, options.Source, ct);
             try
             {
-                foreach (var table in await lecteur.TablesAsync(ct))
-                    rapport.TablesSource[table] = await lecteur.CompterAsync(table, ct);
-                contexte.RepriseId = await InsererAsync(unite.Connexion, unite.Transaction!, rapport, options, ct);
-                foreach (var domaine in ordre)
+                var tables = await lecteur.TablesAsync(ct);
+                for (var i = 0; i < tables.Count; i++)
                 {
+                    Signaler(EtapeReprise.Comptage, tables[i], i, tables.Count);
+                    rapport.TablesSource[tables[i]] = await lecteur.CompterAsync(tables[i], ct);
+                }
+                contexte.RepriseId = await InsererAsync(unite.Connexion, unite.Transaction!, rapport, options, ct);
+                for (var i = 0; i < ordre.Count; i++)
+                {
+                    var domaine = ordre[i];
                     ct.ThrowIfCancellationRequested();
+                    Signaler(EtapeReprise.Domaine, domaine.Code, i, ordre.Count);
                     var chrono = Stopwatch.StartNew();
                     await domaine.ExecuterAsync(contexte, ct);
                     await contexte.Registre.EnregistrerAsync(unite.Connexion, unite.Transaction!, contexte.RepriseId, ct);
                     rapport.Domaines.Add(new DomaineExecute(domaine.Code, chrono.ElapsedMilliseconds));
                 }
+                Signaler(EtapeReprise.Enregistrement, null, ordre.Count, ordre.Count);
                 rapport.Etat = rapport.Bloque ? EtatReprise.Echec : EtatReprise.Terminee;
                 rapport.Fin = DateTimeOffset.UtcNow;
                 if (options.Simulation || rapport.Bloque)

@@ -66,6 +66,17 @@ export const ERREUR_REPRISE = Object.freeze({
   CORRESPONDANCES_INVALIDES: 'REPRISE_CORRESPONDANCES_INVALIDES',
   SOURCE_INCOMPATIBLE: 'REPRISE_SOURCE_INCOMPATIBLE',
   OPTION_INVALIDE: 'REPRISE_OPTION_INVALIDE',
+  EN_COURS: 'REPRISE_EN_COURS',
+  INTERROMPUE: 'REPRISE_INTERROMPUE',
+  ERREUR: 'REPRISE_ERREUR',
+});
+
+/** Étape signalée par le moteur pendant une exécution (suivi de la tâche de fond de l'écran). */
+export const ETAPE_REPRISE = Object.freeze({
+  PREPARATION: 'PREPARATION',
+  COMPTAGE: 'COMPTAGE',
+  DOMAINE: 'DOMAINE',
+  ENREGISTREMENT: 'ENREGISTREMENT',
 });
 
 /** Niveau d'une anomalie du rapport de reprise. */

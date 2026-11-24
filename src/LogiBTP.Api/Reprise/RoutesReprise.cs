@@ -1,4 +1,3 @@
-using LogiBTP.Ged;
 using LogiBTP.Import;
 using LogiBTP.Import.Reprise;
 using LogiBTP.Socle.Donnees;
@@ -23,11 +22,13 @@ public static class RoutesReprise
     public static IEndpointRouteBuilder MapReprise(this IEndpointRouteBuilder api)
     {
         var g = api.MapGroup("/reprise");
-        g.MapGet("", async (HttpContext http, UniteEcriture unite, CancellationToken ct) =>
+        g.MapGet("", async (HttpContext http, UniteEcriture unite, TachesReprise taches, SocieteCourante societe, CancellationToken ct) =>
         {
             Utilisateur.Depuis(http).ExigerAdmin();
             return Results.Ok(await unite.LireAsync(async (c, tx, t) => new
             {
+                // Dernière reprise lancée depuis l'écran (en cours : l'écran reprend son suivi après un rechargement).
+                tache = taches.Derniere(societe)?.Instantane(),
                 base_vide = await BaseCibleReprise.EstVideAsync(c, tx, t),
                 sources = new[] { SourceReprise.Mde, SourceReprise.Optim },
                 // Décimales proposées avant l'import (quantités, prix des lignes de pièces) ; null : celles de la source.
@@ -51,32 +52,37 @@ public static class RoutesReprise
             var s = Source(source);
             return Results.Ok(new { nom = $"correspondances-{s.ToLowerInvariant()}.json", contenu = CorrespondancesReprise.TexteParDefaut(s) });
         });
-        g.MapPost("/executer", async (DemandeRepriseEcran d, HttpContext http, UniteEcriture unite, StockageGed stockage, CancellationToken ct) =>
+        // Lancement en tâche de fond (202) : contrôles rapides ici (connexion saisie, base vide, aucune reprise en cours),
+        // puis l'écran suit l'avancement par GET /reprise/tache jusqu'au rapport (plan reprise-mde-optim, grosse base).
+        g.MapPost("/executer", async (DemandeRepriseEcran d, HttpContext http, UniteEcriture unite, TachesReprise taches, SocieteCourante societe, CancellationToken ct) =>
         {
             var u = Utilisateur.Depuis(http);
             u.ExigerAdmin();
             if (string.IsNullOrWhiteSpace(d.Connexion))
                 throw ExceptionMetier.Invalide("VALIDATION", "Connexion à la base source attendue",
                     new[] { new { champ = "connexion", code = "OBLIGATOIRE", message = "Connexion à la base source attendue" } });
-            try
+            var source = Source(d.Source);
+            if (!await unite.LireAsync((c, tx, t) => BaseCibleReprise.EstVideAsync(c, tx, t), null, ct))
+                throw ExceptionMetier.Conflit(ErreurReprise.BaseNonVide, "La base cible contient déjà des données métier : la reprise se fait dans une base neuve");
+            var tache = taches.Lancer(societe, new DemandeReprise
             {
-                var r = await RepriseBase.ExecuterAsync(new DemandeReprise
-                {
-                    Source = Source(d.Source), ConnexionSource = d.Connexion, Simulation = d.Simulation, Auteur = u.Code,
-                    Societes = (d.Societes ?? []).Select(s => s.Trim()).Where(s => s.Length > 0).ToList(),
-                    Correspondances = string.IsNullOrWhiteSpace(d.Correspondances) ? null : d.Correspondances,
-                    StockageGed = stockage.Racine, DecimalesQte = d.DecimalesQte, DecimalesPrix = d.DecimalesPrix, VolumeMde = d.VolumeMde,
-                }, unite, ct);
-                return Results.Ok(new { reprise_id = r.RepriseId, rapport = r.Rapport });
-            }
-            catch (RepriseRefuseeException e)
-            {
-                throw e.Code == ErreurReprise.BaseNonVide ? ExceptionMetier.Conflit(e.Code, e.Message) : ExceptionMetier.Invalide(e.Code, e.Message);
-            }
-            catch (ArgumentException e)
-            {
-                throw ExceptionMetier.Invalide(ErreurReprise.SourceIncompatible, Masquage.Texte(e.Message) ?? e.GetType().Name);
-            }
+                Source = source, ConnexionSource = d.Connexion, Simulation = d.Simulation, Auteur = u.Code,
+                Societes = (d.Societes ?? []).Select(s => s.Trim()).Where(s => s.Length > 0).ToList(),
+                Correspondances = string.IsNullOrWhiteSpace(d.Correspondances) ? null : d.Correspondances,
+                DecimalesQte = d.DecimalesQte, DecimalesPrix = d.DecimalesPrix, VolumeMde = d.VolumeMde,
+            });
+            return Results.Accepted("/api/reprise/tache", tache.Instantane());
+        });
+        g.MapGet("/tache", (HttpContext http, TachesReprise taches, SocieteCourante societe) =>
+        {
+            Utilisateur.Depuis(http).ExigerAdmin();
+            return Results.Ok(new { tache = taches.Derniere(societe)?.Instantane() });
+        });
+        g.MapPost("/tache/arreter", (HttpContext http, TachesReprise taches, SocieteCourante societe) =>
+        {
+            Utilisateur.Depuis(http).ExigerAdmin();
+            if (!taches.Arreter(societe)) throw ExceptionMetier.Introuvable("Reprise en cours");
+            return Results.Ok(new { tache = taches.Derniere(societe)?.Instantane() });
         });
         g.MapGet("/executions/{id:long}", async (long id, HttpContext http, UniteEcriture unite, CancellationToken ct) =>
         {
