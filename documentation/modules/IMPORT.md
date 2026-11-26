@@ -27,6 +27,10 @@ Référence lue à la demande (hors contexte par défaut). Les règles que le co
    `GET /api/reprise` renvoie aussi `tache` : une page rechargée reprend le suivi. Avant (24/11/2026), la reprise
    tournait dans la requête HTTP et s'annulait avec elle (navigateur ou proxy qui coupe une longue requête : transaction
    annulée, aucun rapport, page vidée).
+   Délais : lectures de la source 600 s (`LecteurAdo.DelaiSecondes`, MDE en READ UNCOMMITTED, équivalent de
+   `WITH (NOLOCK)`), commandes sur la base cible 600 s aussi (`RepriseBase.ConnexionCible`, au lieu des 30 s par défaut).
+   Erreur inattendue : anomalie bloquante avec le domaine en cours en emplacement, code « enveloppe / origine » et
+   messages des exceptions internes (`MoteurReprise.CodeErreur`, `MessageErreur`).
 2. `RepriseBase.ExecuterAsync(DemandeReprise)` : fichier de correspondances (fourni, sinon `Correspondances/mde.json` ou
    `optim.json`) validé contre les listes de la base cible (`CiblesReprise`), fusions de doublons retenues
    (`import_fusion`), lecteur en lecture seule (`LecteurSqlServer` / `LecteurMariaDb`).

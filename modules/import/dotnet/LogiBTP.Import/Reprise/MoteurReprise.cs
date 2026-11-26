@@ -75,6 +75,7 @@ public sealed class MoteurReprise(IReadOnlyList<IDomaineReprise> domaines, Func<
             try { options.Avancement?.Invoke(new AvancementReprise(etape, element, faits, total)); } catch { /* suivi ignoré */ }
         }
 
+        string? domaineCourant = null;
         Signaler(EtapeReprise.Preparation, null, 0, ordre.Count);
         await using (var tx = await unite.CommencerAsync(ct))
         {
@@ -95,6 +96,7 @@ public sealed class MoteurReprise(IReadOnlyList<IDomaineReprise> domaines, Func<
                 {
                     var domaine = ordre[i];
                     ct.ThrowIfCancellationRequested();
+                    domaineCourant = domaine.Code;
                     Signaler(EtapeReprise.Domaine, domaine.Code, i, ordre.Count);
                     var chrono = Stopwatch.StartNew();
                     await domaine.ExecuterAsync(contexte, ct);
@@ -118,7 +120,7 @@ public sealed class MoteurReprise(IReadOnlyList<IDomaineReprise> domaines, Func<
                 await tx.RollbackAsync(CancellationToken.None);
                 rapport.Etat = EtatReprise.Echec;
                 rapport.Fin = DateTimeOffset.UtcNow;
-                rapport.Signaler(NiveauAnomalie.Bloquant, e is RepriseRefuseeException r ? r.Code : e.GetType().Name, null, e.Message);
+                rapport.Signaler(NiveauAnomalie.Bloquant, e is RepriseRefuseeException r ? r.Code : CodeErreur(e), domaineCourant, MessageErreur(e));
             }
         }
 
@@ -127,6 +129,26 @@ public sealed class MoteurReprise(IReadOnlyList<IDomaineReprise> domaines, Func<
         var id = await InsererAsync(unite.Connexion, unite.Transaction!, rapport, options, ct);
         await trace.CommitAsync(ct);
         return new ResultatReprise(id, rapport);
+    }
+
+    /// <summary>
+    /// Code d'une erreur inattendue : type de l'exception d'origine (une enveloppe comme « likely due to a transient
+    /// failure » d'EF ne dit rien de la cause), précédé de celui de l'enveloppe s'il diffère.
+    /// </summary>
+    public static string CodeErreur(Exception e)
+    {
+        var origine = e;
+        while (origine.InnerException is not null) origine = origine.InnerException;
+        return origine == e ? e.GetType().Name : $"{e.GetType().Name} / {origine.GetType().Name}";
+    }
+
+    /// <summary>Message d'une erreur inattendue avec ceux des exceptions internes (cause réelle), sans répétition.</summary>
+    public static string MessageErreur(Exception e)
+    {
+        var messages = new List<string>();
+        for (var x = e; x is not null; x = x.InnerException)
+            if (!string.IsNullOrWhiteSpace(x.Message) && !messages.Contains(x.Message)) messages.Add(x.Message);
+        return string.Join(" → ", messages);
     }
 
     private static async Task<IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>>> LireFusionsAsync(

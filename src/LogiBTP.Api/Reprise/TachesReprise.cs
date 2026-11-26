@@ -102,7 +102,10 @@ public sealed class TachesReprise(IServiceProvider services, IHostApplicationLif
         using var arret = CancellationTokenSource.CreateLinkedTokenSource(tache.Arret.Token, vie.ApplicationStopping);
         try
         {
-            await using var portee = services.CreerPorteeSociete(societe);
+            // Délai des commandes sur la base cible porté à celui des lectures de la source : sur une grosse base, une
+            // requête de la reprise peut dépasser les 30 s par défaut (« Timeout during reading attempt », enveloppé par
+            // EF en « likely due to a transient failure »).
+            await using var portee = services.CreerPorteeSociete(societe with { Connexion = RepriseBase.ConnexionCible(societe.Connexion) });
             var unite = portee.ServiceProvider.GetRequiredService<UniteEcriture>();
             var stockage = portee.ServiceProvider.GetRequiredService<StockageGed>();
             var r = await RepriseBase.ExecuterAsync(demande with { StockageGed = stockage.Racine, Avancement = tache.Avancer }, unite, arret.Token);

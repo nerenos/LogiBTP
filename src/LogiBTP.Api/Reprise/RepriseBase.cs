@@ -62,9 +62,16 @@ public static class RepriseBase
         _ => throw new ArgumentException($"Source de reprise inconnue : {source} (MDE ou OPTIM)"),
     };
 
+    /// <summary>Délai des commandes sur la base cible pendant une reprise (s), égal à celui des lectures de la source.</summary>
+    public const int DelaiCommandesCible = 600;
+
+    /// <summary>Connexion à la base cible avec le délai des commandes de la reprise (au lieu des 30 s par défaut).</summary>
+    public static string ConnexionCible(string connexion) =>
+        new Npgsql.NpgsqlConnectionStringBuilder(connexion) { CommandTimeout = DelaiCommandesCible }.ConnectionString;
+
     public static async Task<ResultatReprise> ExecuterAsync(DemandeReprise demande, CancellationToken ct)
     {
-        await using var unite = new UniteEcriture(new ConnexionRequete(demande.ConnexionCible));
+        await using var unite = new UniteEcriture(new ConnexionRequete(ConnexionCible(demande.ConnexionCible)));
         return await ExecuterAsync(demande, unite, ct);
     }
 

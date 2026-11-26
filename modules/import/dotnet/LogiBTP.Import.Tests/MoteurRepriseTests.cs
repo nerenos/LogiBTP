@@ -122,6 +122,17 @@ public class MoteurRepriseTests
     }
 
     [Fact]
+    public void Erreur_enveloppee_cause_reelle_dans_le_rapport()
+    {
+        var e = new InvalidOperationException("An exception has been raised that is likely due to a transient failure.",
+            new IOException("Exception while reading from stream", new TimeoutException("Timeout during reading attempt")));
+        Assert.Equal("InvalidOperationException / TimeoutException", MoteurReprise.CodeErreur(e));
+        Assert.Equal("An exception has been raised that is likely due to a transient failure. → Exception while reading from stream → Timeout during reading attempt",
+            MoteurReprise.MessageErreur(e));
+        Assert.Equal("InvalidOperationException", MoteurReprise.CodeErreur(new InvalidOperationException("x")));
+    }
+
+    [Fact]
     public async Task Source_incompatible()
     {
         var m = new MoteurReprise([], (_, _, _) => Task.FromResult(true));
@@ -278,7 +289,7 @@ public class MoteurRepriseTests
         await using var b = await BaseEssai.CreerAsync(Admin);
         var r = await LancerAsync(b, simulation: false, echecSur: "C002");
         Assert.Equal(EtatReprise.Echec, r.Rapport.Etat);
-        Assert.Contains(r.Rapport.Anomalies, a => a.Niveau == NiveauAnomalie.Bloquant && a.Message == "Échec simulé");
+        Assert.Contains(r.Rapport.Anomalies, a => a.Niveau == NiveauAnomalie.Bloquant && a.Message == "Échec simulé" && a.Emplacement == "essai");
         Assert.Equal(0, await b.CompterAsync("SELECT count(*) FROM essai"));
         Assert.Equal(1, await b.CompterAsync("SELECT count(*) FROM import_reprise WHERE irp_etat = 'ECHEC'"));
     }
