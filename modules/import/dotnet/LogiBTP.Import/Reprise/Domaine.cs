@@ -51,9 +51,10 @@ public sealed record OptionsReprise
 
 /// <summary>
 /// Avancement d'une exécution : étape (<see cref="EtapeReprise"/>), domaine en cours (étape DOMAINE) ou table comptée
-/// (COMPTAGE), éléments faits sur le total de l'étape (domaines ou tables).
+/// (COMPTAGE), éléments faits sur le total de l'étape (domaines ou tables), lignes lues dans la source pendant le domaine
+/// en cours et depuis le début (signalées par lots de <see cref="MoteurReprise.LotLignes"/>).
 /// </summary>
-public sealed record AvancementReprise(string Etape, string? Element, int Faits, int Total);
+public sealed record AvancementReprise(string Etape, string? Element, int Faits, int Total, long Lignes = 0, long LignesTotal = 0);
 
 /// <summary>Ce qu'un domaine reçoit : source, correspondances, registre, rapport et unité d'écriture de la base cible.</summary>
 public sealed class ContexteReprise

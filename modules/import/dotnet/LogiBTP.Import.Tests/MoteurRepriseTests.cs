@@ -250,9 +250,31 @@ public class MoteurRepriseTests
             new AvancementReprise(EtapeReprise.Preparation, null, 0, 2),
             new AvancementReprise(EtapeReprise.Comptage, "CLIENT", 0, 1),
             new AvancementReprise(EtapeReprise.Domaine, "essai", 0, 2),
-            new AvancementReprise(EtapeReprise.Domaine, "suite", 1, 2),
-            new AvancementReprise(EtapeReprise.Enregistrement, null, 2, 2),
+            new AvancementReprise(EtapeReprise.Domaine, "suite", 1, 2, 0, 2),
+            new AvancementReprise(EtapeReprise.Enregistrement, null, 2, 2, 0, 2),
         ], etapes);
+    }
+
+    [Fact]
+    public async Task Lignes_lues_signalees_par_lots()
+    {
+        if (Admin is null) return;
+        await using var b = await BaseEssai.CreerAsync(Admin);
+        var etapes = new List<AvancementReprise>();
+        // Domaine qui lit 3 lots et demi de lignes (lecture répétée de la table fictive à deux lignes).
+        var lire = new Domaine("lire", [], async (ctx, ct) =>
+        {
+            for (var i = 0; i < MoteurReprise.LotLignes * 7 / 4; i++)
+                await foreach (var _ in ctx.Lecteur.LireAsync("SELECT CODE FROM CLIENT", null, ct)) { }
+        });
+        await using var unite = new UniteEcriture(new ConnexionRequete(b.Connexion));
+        await new MoteurReprise([D("avant"), lire], EssaiVide).ExecuterAsync(
+            new OptionsReprise { Source = SourceReprise.Mde, Simulation = true, Avancement = etapes.Add },
+            new LecteurFictif(SourceReprise.Mde), Correspondances(), unite, default);
+        var lots = etapes.Where(e => e.Etape == EtapeReprise.Domaine && e.Lignes > 0).ToList();
+        Assert.Equal([500L, 1000L, 1500L], lots.Select(e => e.Lignes));
+        Assert.All(lots, e => Assert.Equal(("lire", 1), (e.Element, e.Faits)));
+        Assert.Equal(1750, etapes.Last().LignesTotal);
     }
 
     [Fact]

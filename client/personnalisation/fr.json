@@ -8805,6 +8805,7 @@
         "duree_h": "{{h}} h {{m}} min {{s}} s",
         "duree_m": "{{m}} min {{s}} s",
         "duree_s": "{{s}} s",
+        "lignes_total": "{{lignes}} lignes lues dans la source depuis le début",
         "arreter": "Arrêter",
         "arret_demande": "Arrêt demandé…",
         "confirmer_arret": "Arrêter la reprise en cours ? Tout ce qui a été fait est annulé, rien n'est écrit dans la base.",
@@ -8814,6 +8815,7 @@
           "PREPARATION": "Préparation…",
           "COMPTAGE": "Comptage des tables de la source ({{faits}} / {{total}}) : {{table}}",
           "DOMAINE": "Domaine {{faits}} / {{total}} : {{domaine}}",
+          "DOMAINE_LIGNES": "Domaine {{faits}} / {{total}} : {{domaine}} ({{lignes}} lignes lues)",
           "ENREGISTREMENT": "Enregistrement du rapport…"
         }
       },

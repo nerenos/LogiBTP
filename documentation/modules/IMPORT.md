@@ -23,7 +23,7 @@ Référence lue à la demande (hors contexte par défaut). Les règles que le co
    (`TachesReprise`, singleton du cœur, une par base, mémoire du processus, portée `CreerPorteeSociete`, annulée par
    `POST /api/reprise/tache/arreter` → `REPRISE_INTERROMPUE` ou l'arrêt de l'API). L'écran interroge
    `GET /api/reprise/tache` toutes les 2 s (étape `ETAPE_REPRISE` : PREPARATION, COMPTAGE des tables, DOMAINE n / total,
-   ENREGISTREMENT, signalée par `OptionsReprise.Avancement`), puis affiche le rapport de l'exécution enregistrée ;
+   ENREGISTREMENT, signalée par `OptionsReprise.Avancement` ; lignes lues dans la source pendant le domaine et au total, signalées par lots de 500), puis affiche le rapport de l'exécution enregistrée ;
    `GET /api/reprise` renvoie aussi `tache` : une page rechargée reprend le suivi. Avant (24/11/2026), la reprise
    tournait dans la requête HTTP et s'annulait avec elle (navigateur ou proxy qui coupe une longue requête : transaction
    annulée, aucun rapport, page vidée).

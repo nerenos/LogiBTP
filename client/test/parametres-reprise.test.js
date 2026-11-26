@@ -44,5 +44,8 @@ describe('reprise : suivi de la tâche de fond (grosse base)', () => {
     expect(libelleEtape({ etape: 'DOMAINE', element: 'ANNUAIRE', faits: 3, total: 14 })).toBe('Domaine 4 / 14 : Annuaire (tiers, contacts)');
     expect(libelleEtape({ etape: 'COMPTAGE', element: 'PMEDOC', faits: 0, total: 80 })).toBe('Comptage des tables de la source (1 / 80) : PMEDOC');
     expect(libelleEtape({ etape: 'PREPARATION', element: null, faits: 0, total: 14 })).toBe('Préparation…');
+    // Lignes lues dans le domaine (signalées par lots) : compteur affiché.
+    expect(libelleEtape({ etape: 'DOMAINE', element: 'PIECES_VENTE', faits: 7, total: 14, lignes: 12500 }))
+      .toMatch(/^Domaine 8 \/ 14 : Pièces de vente \(12\s?500 lignes lues\)$/);
   });
 });

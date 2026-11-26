@@ -63,19 +63,24 @@ public sealed class MoteurReprise(IReadOnlyList<IDomaineReprise> domaines, Func<
             throw new RepriseRefuseeException(ErreurReprise.SourceIncompatible,
                 $"Source de la reprise {options.Source}, du lecteur {lecteur.Source}, des correspondances {correspondances.Source}");
         var ordre = Ordre();
+        string? domaineCourant = null;
+        int rangCourant = 0;
+        long lignesAvantDomaine = 0;
+        var compte = new LecteurCompte(lecteur, total =>
+            Signaler(EtapeReprise.Domaine, domaineCourant, rangCourant, ordre.Count, total - lignesAvantDomaine, total));
+        lecteur = compte;
         var rapport = new RapportReprise { Source = options.Source, Societes = options.Societes, Simulation = options.Simulation };
         var contexte = new ContexteReprise
         {
             Options = options, Lecteur = lecteur, Correspondances = correspondances, Unite = unite, Rapport = rapport,
         };
 
-        void Signaler(string etape, string? element, int faits, int total)
+        void Signaler(string etape, string? element, int faits, int total, long lignes = 0, long lignesTotal = 0)
         {
             // Le suivi ne doit jamais faire échouer la reprise.
-            try { options.Avancement?.Invoke(new AvancementReprise(etape, element, faits, total)); } catch { /* suivi ignoré */ }
+            try { options.Avancement?.Invoke(new AvancementReprise(etape, element, faits, total, lignes, lignesTotal)); } catch { /* suivi ignoré */ }
         }
 
-        string? domaineCourant = null;
         Signaler(EtapeReprise.Preparation, null, 0, ordre.Count);
         await using (var tx = await unite.CommencerAsync(ct))
         {
@@ -97,13 +102,15 @@ public sealed class MoteurReprise(IReadOnlyList<IDomaineReprise> domaines, Func<
                     var domaine = ordre[i];
                     ct.ThrowIfCancellationRequested();
                     domaineCourant = domaine.Code;
-                    Signaler(EtapeReprise.Domaine, domaine.Code, i, ordre.Count);
+                    rangCourant = i;
+                    lignesAvantDomaine = compte.Lignes;
+                    Signaler(EtapeReprise.Domaine, domaine.Code, i, ordre.Count, 0, lignesAvantDomaine);
                     var chrono = Stopwatch.StartNew();
                     await domaine.ExecuterAsync(contexte, ct);
                     await contexte.Registre.EnregistrerAsync(unite.Connexion, unite.Transaction!, contexte.RepriseId, ct);
                     rapport.Domaines.Add(new DomaineExecute(domaine.Code, chrono.ElapsedMilliseconds));
                 }
-                Signaler(EtapeReprise.Enregistrement, null, ordre.Count, ordre.Count);
+                Signaler(EtapeReprise.Enregistrement, null, ordre.Count, ordre.Count, 0, compte.Lignes);
                 rapport.Etat = rapport.Bloque ? EtatReprise.Echec : EtatReprise.Terminee;
                 rapport.Fin = DateTimeOffset.UtcNow;
                 if (options.Simulation || rapport.Bloque)
@@ -129,6 +136,32 @@ public sealed class MoteurReprise(IReadOnlyList<IDomaineReprise> domaines, Func<
         var id = await InsererAsync(unite.Connexion, unite.Transaction!, rapport, options, ct);
         await trace.CommitAsync(ct);
         return new ResultatReprise(id, rapport);
+    }
+
+    /// <summary>Lignes lues dans la source entre deux signalements de l'avancement.</summary>
+    public const int LotLignes = 500;
+
+    /// <summary>Lecteur qui compte les lignes lues (toutes requêtes) et signale chaque lot ; ne libère pas le lecteur enveloppé.</summary>
+    private sealed class LecteurCompte(ILecteurSource interne, Action<long> surLot) : ILecteurSource
+    {
+        private long lignes;
+        public long Lignes => Interlocked.Read(ref lignes);
+        public string Source => interne.Source;
+        public Task<IReadOnlyList<string>> TablesAsync(CancellationToken ct) => interne.TablesAsync(ct);
+        public Task<long> CompterAsync(string table, CancellationToken ct) => interne.CompterAsync(table, ct);
+
+        public async IAsyncEnumerable<LigneSource> LireAsync(string requete, IReadOnlyDictionary<string, object?>? parametres,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct)
+        {
+            await foreach (var l in interne.LireAsync(requete, parametres, ct).WithCancellation(ct))
+            {
+                var n = Interlocked.Increment(ref lignes);
+                if (n % LotLignes == 0) surLot(n);
+                yield return l;
+            }
+        }
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 
     /// <summary>

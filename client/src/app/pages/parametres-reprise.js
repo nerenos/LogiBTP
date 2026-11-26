@@ -59,7 +59,8 @@ export function libelleEtape(tache) {
   const domaine = texte(`parametres_btp.reprise.domaines.${element}`, {}, element);
   switch (tache.etape) {
     case ETAPE_REPRISE.COMPTAGE: return t('suivi.etapes.COMPTAGE', { table: element, faits: tache.faits + 1, total: tache.total });
-    case ETAPE_REPRISE.DOMAINE: return t('suivi.etapes.DOMAINE', { domaine, faits: tache.faits + 1, total: tache.total });
+    case ETAPE_REPRISE.DOMAINE: return t(tache.lignes ? 'suivi.etapes.DOMAINE_LIGNES' : 'suivi.etapes.DOMAINE',
+      { domaine, faits: tache.faits + 1, total: tache.total, lignes: nombre(tache.lignes) });
     case ETAPE_REPRISE.ENREGISTREMENT: return t('suivi.etapes.ENREGISTREMENT');
     default: return t('suivi.etapes.PREPARATION');
   }
@@ -246,6 +247,7 @@ export class PageParametresReprise extends PageBase {
     zone.innerHTML = `<div class="reprise-suivi" role="status" aria-live="polite" data-suivi>
       <p><strong>${th(tache.simulation ? 'simulation_en_cours' : 'reprise_en_cours')}</strong></p>
       <p><progress max="${Math.max(1, tache.total)}"${valeur}></progress> ${echapper(libelleEtape(tache))}</p>
+      ${tache.lignes_total ? `<p>${th('suivi.lignes_total', { lignes: nombre(tache.lignes_total) })}</p>` : ''}
       <p class="aide">${th('suivi.depuis', { duree: dureeEcoulee(tache.debut), debut: formatDateHeure(tache.debut) })}${tache.auteur ? ` · ${echapper(tache.auteur)}` : ''}</p>
       <p class="aide">${th('suivi.aide')}</p>
       <div class="barre-outils"><div class="groupe-outils"><button type="button" class="danger" data-action="arreter"${tache.arret_demande ? ' disabled' : ''}>${iconeHtml('parametres_btp_reprise_arreter')} ${th(tache.arret_demande ? 'suivi.arret_demande' : 'suivi.arreter')}</button></div></div>
