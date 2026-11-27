@@ -18,6 +18,13 @@ CREATE INDEX IF NOT EXISTS ix_document_chantier_cha ON document_chantier (dch_ch
 
 COMMENT ON TABLE document_chantier IS 'Chantiers d''une pièce : entête (dch_entete) et lignes (lig_cha_id) ; tenue par triggers';
 
+-- Tenue suspendue pour la transaction en cours (SET LOCAL logibtp.document_chantier_suspendu = 'on') : reprise de
+-- données, qui écrit ses pièces ligne à ligne (chaque instruction recalculait les chantiers de la pièce : écriture des
+-- lignes 6 fois plus lente, de plus en plus) puis recalcule elle-même les chantiers de toutes les pièces à la fin.
+CREATE OR REPLACE FUNCTION f_document_chantier_suspendu() RETURNS BOOLEAN LANGUAGE sql STABLE AS $$
+    SELECT coalesce(current_setting('logibtp.document_chantier_suspendu', true), '') = 'on';
+$$;
+
 -- Chantiers des pièces données, recalculés.
 CREATE OR REPLACE FUNCTION f_document_chantier_maj(p_ents BIGINT[]) RETURNS VOID LANGUAGE sql AS $$
     DELETE FROM document_chantier WHERE dch_ent_id = ANY(p_ents);
@@ -34,6 +41,7 @@ $$;
 
 CREATE OR REPLACE FUNCTION trg_document_chantier_entete() RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
+    IF f_document_chantier_suspendu() THEN RETURN NULL; END IF;
     PERFORM f_document_chantier_maj(ARRAY[NEW.ent_id]);
     RETURN NULL;
 END $$;
@@ -45,6 +53,7 @@ CREATE TRIGGER document_chantier_entete AFTER INSERT OR UPDATE OF ent_chantier_i
 CREATE OR REPLACE FUNCTION trg_document_chantier_lignes() RETURNS TRIGGER LANGUAGE plpgsql AS $$
 DECLARE v_ents BIGINT[];
 BEGIN
+    IF f_document_chantier_suspendu() THEN RETURN NULL; END IF;
     IF TG_OP = 'INSERT' THEN
         v_ents := ARRAY(SELECT DISTINCT lig_ent_id FROM nouvelles WHERE lig_cha_id IS NOT NULL);
     ELSIF TG_OP = 'DELETE' THEN

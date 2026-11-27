@@ -314,6 +314,7 @@ modules/fiche/db/1.1_champs_supplementaires.sql
 modules/import/db/1.1_reprise.sql
 modules/metre/db/1.1_metre_document.sql
 db/1.5_metre_document.sql
+db/1.6_metre_ligne_differable.sql
 
 # ---- rejouables de fin du socle : joués après les mineures (voir MIGRATIONS.md) ----
 # Ordre des taux de TVA et taux par défaut (module Document 019n) : les taux sont créés par db/110, après le module ;

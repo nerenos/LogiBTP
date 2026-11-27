@@ -8844,8 +8844,8 @@
         "STOCK": "Stock",
         "GED": "GED et notes",
         "VALEURS_CHAMPS": "Valeurs des champs supplémentaires",
-        "RENTABILITE_SUSPENDUE": "Préparation (rentabilité suspendue)",
-        "RENTABILITE": "Chantiers mis en recalcul de rentabilité"
+        "SUIVIS_SUSPENDUS": "Préparation (suivis des chantiers et de la rentabilité suspendus)",
+        "SUIVIS": "Chantiers des pièces recalculés, rentabilité mise en recalcul"
       },
       "simulation_terminee": "Simulation terminée : relisez le rapport.",
       "reprise_terminee": "Reprise terminée.",
