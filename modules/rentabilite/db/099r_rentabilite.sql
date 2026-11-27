@@ -76,10 +76,17 @@ CREATE TABLE IF NOT EXISTS rentabilite_a_recalculer (
 );
 COMMENT ON TABLE rentabilite_a_recalculer IS 'File des chantiers à recalculer (signalés par les triggers du cœur, vidée par le planificateur de chaque base) ; arq_apres : reprise différée après une erreur';
 
+-- Signalements suspendus pour la transaction en cours (SET LOCAL logibtp.rentabilite_suspendue = 'on') : reprise de
+-- données, qui écrit des centaines de milliers de lignes en une transaction (chaque signalement réécrit la même ligne de
+-- file, sa chaîne de versions s'allonge jusqu'à la fin de la transaction) puis signale elle-même tous les chantiers.
+CREATE OR REPLACE FUNCTION f_rentabilite_suspendue() RETURNS BOOLEAN LANGUAGE sql STABLE AS $$
+    SELECT coalesce(current_setting('logibtp.rentabilite_suspendue', true), '') = 'on';
+$$;
+
 -- Signalement : un chantier par ligne de file, la première date et la dernière raison gardées.
 CREATE OR REPLACE FUNCTION f_rentabilite_signaler(p_chantiers INT[], p_raison TEXT) RETURNS VOID LANGUAGE sql AS $$
     INSERT INTO rentabilite_a_recalculer (arq_cha_id, arq_raison)
-    SELECT DISTINCT c, p_raison FROM unnest(p_chantiers) c WHERE c IS NOT NULL
+    SELECT DISTINCT c, p_raison FROM unnest(p_chantiers) c WHERE c IS NOT NULL AND NOT f_rentabilite_suspendue()
     ON CONFLICT (arq_cha_id) DO UPDATE SET arq_raison = EXCLUDED.arq_raison;
 $$;
 

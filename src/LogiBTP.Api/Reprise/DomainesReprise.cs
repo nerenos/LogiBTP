@@ -7,7 +7,7 @@ namespace LogiBTP.Api.Reprise;
 
 /// <summary>
 /// Domaines de la reprise par source (plan reprise-mde-optim) : chaque lot de domaine (référentiels, annuaire,
-/// bibliothèque, pièces…) ajoute les siens ici, avant <see cref="Codes.ValeursChamps"/> qui reste le dernier (le moteur
+/// bibliothèque, pièces…) ajoute les siens ici, avant <see cref="Codes.ValeursChamps"/> (suivi du seul recalcul de la rentabilité ; le moteur
 /// garde l'ordre de déclaration entre domaines sans dépendance l'un de l'autre).
 /// </summary>
 public static class DomainesReprise
@@ -31,6 +31,10 @@ public static class DomainesReprise
         public const string Ged = "GED";
         /// <summary>Valeurs des champs supplémentaires : déclaré en dernier (après toutes les fiches reprises).</summary>
         public const string ValeursChamps = "VALEURS_CHAMPS";
+        /// <summary>Signalements de la rentabilité suspendus : premier domaine (<see cref="SuspensionRentabilite"/>).</summary>
+        public const string RentabiliteSuspendue = "RENTABILITE_SUSPENDUE";
+        /// <summary>Chantiers mis dans la file de recalcul de la rentabilité : tout dernier domaine (<see cref="RecalculRentabilite"/>).</summary>
+        public const string Rentabilite = "RENTABILITE";
     }
 
     /// <summary>Paramètre du module Comptabilité où l'analytique source est gardé (Q11), sans table cible.</summary>
@@ -39,8 +43,8 @@ public static class DomainesReprise
     /// <param name="stockageGed">Répertoire de la GED de la société (sous le nom de sa base) ; null : documents non repris.</param>
     public static IReadOnlyList<IDomaineReprise> Pour(string source, string? stockageGed = null) => source switch
     {
-        SourceReprise.Mde => [new SocieteMde(), new ReferentielsMde(), new ChampsMde(), new AnnuaireMde(), new RessourcesMde(), new BibliothequeMde(), new StructureMde(), new PiecesVenteMde(), new AchatsMde(), new ReglementsMde(), new ExploitationMde(), new StockMde(), new GedMde(stockageGed), new ValeursChampsMde()],
-        SourceReprise.Optim => [new SocieteOptim(), new ReferentielsOptim(), new ChampsOptim(), new AnnuaireOptim(), new RessourcesOptim(), new BibliothequeOptim(), new StructureOptim(), new PiecesVenteOptim(), new AchatsOptim(), new ReglementsOptim(), new ExploitationOptim(), new StockOptim(), new GedOptim(stockageGed), new ValeursChampsOptim()],
+        SourceReprise.Mde => [new SuspensionRentabilite(), new SocieteMde(), new ReferentielsMde(), new ChampsMde(), new AnnuaireMde(), new RessourcesMde(), new BibliothequeMde(), new StructureMde(), new PiecesVenteMde(), new AchatsMde(), new ReglementsMde(), new ExploitationMde(), new StockMde(), new GedMde(stockageGed), new ValeursChampsMde(), new RecalculRentabilite()],
+        SourceReprise.Optim => [new SuspensionRentabilite(), new SocieteOptim(), new ReferentielsOptim(), new ChampsOptim(), new AnnuaireOptim(), new RessourcesOptim(), new BibliothequeOptim(), new StructureOptim(), new PiecesVenteOptim(), new AchatsOptim(), new ReglementsOptim(), new ExploitationOptim(), new StockOptim(), new GedOptim(stockageGed), new ValeursChampsOptim(), new RecalculRentabilite()],
         _ => throw new ArgumentException($"Source de reprise inconnue : {source}"),
     };
 }

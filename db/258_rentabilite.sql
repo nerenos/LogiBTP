@@ -126,6 +126,7 @@ $$;
 -- Pièce verrouillée (validation, dévalidation, annulation, statut, rattachement, totaux, dates) ; suppression.
 CREATE OR REPLACE FUNCTION trg_rentabilite_document() RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
+    IF f_rentabilite_suspendue() THEN RETURN NULL; END IF;
     IF TG_OP = 'DELETE' THEN
         IF OLD.ent_verrouille THEN
             PERFORM f_rentabilite_signaler(ARRAY[OLD.ent_chantier_id], 'Pièce supprimée');
@@ -150,6 +151,7 @@ CREATE TRIGGER rentabilite_document AFTER UPDATE OF ent_verrouille, ent_std_id, 
 CREATE OR REPLACE FUNCTION trg_rentabilite_lignes() RETURNS TRIGGER LANGUAGE plpgsql AS $$
 DECLARE v_chantiers INT[];
 BEGIN
+    IF f_rentabilite_suspendue() THEN RETURN NULL; END IF;
     SELECT ARRAY(SELECT DISTINCT unnest(f_rentabilite_chantiers_piece(d.ent_id))
                  FROM document d
                  WHERE d.ent_verrouille AND d.ent_id IN (SELECT lig_ent_id FROM nouvelles UNION SELECT lig_ent_id FROM anciennes))
