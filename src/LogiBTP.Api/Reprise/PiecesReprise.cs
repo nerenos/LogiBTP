@@ -234,7 +234,7 @@ public sealed class PiecesReprise : IAsyncDisposable
     {
         try
         {
-            await db.SaveChangesAsync(ct);
+            await ChronosReprise.MesurerAsync(PosteEntete, () => db.SaveChangesAsync(ct));
         }
         catch (DbUpdateException e) when (e.InnerException is { } cause)
         {
@@ -404,8 +404,11 @@ public sealed class PiecesReprise : IAsyncDisposable
     private List<Metre> metres = [];
     private List<VariableDefinition> variables = [];
 
-    private ResultatCalcul Calculer(DocumentBtp doc, List<DocumentLigneBtp> lignes) =>
-        MoteurDevisBtp.Calculer(new EntreeCalcul { Document = doc, Lignes = lignes, TauxTva = taux, Metres = metres, Variables = variables });
+    /// <summary>Postes des chronomètres de la reprise (temps des pièces).</summary>
+    public const string PosteCalcul = "PIECES_CALCUL", PosteEntete = "PIECES_ECRITURE_ENTETE", PosteLignes = "PIECES_ECRITURE_LIGNES";
+
+    private ResultatCalcul Calculer(DocumentBtp doc, List<DocumentLigneBtp> lignes) => ChronosReprise.Mesurer(PosteCalcul, () =>
+        MoteurDevisBtp.Calculer(new EntreeCalcul { Document = doc, Lignes = lignes, TauxTva = taux, Metres = metres, Variables = variables }));
 
     /// <summary>Écrit la pièce ; null si son type est inconnu de la base (signalé).</summary>
     public async Task<long?> EcrireAsync(PieceSource p, CancellationToken ct)
@@ -526,7 +529,9 @@ public sealed class PiecesReprise : IAsyncDisposable
         var complet = new DocumentCompletBtp { Document = r.Document, Lignes = r.Lignes, Tva = r.Tva, Metres = r.Metres, Variables = r.Variables };
         try
         {
-            var corr = await new PersistanceDocument<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp>(db, new SpecialisationBtp()).Ecrire(doc.EntId, complet, ct);
+            var corr = await ChronosReprise.MesurerAsync(PosteLignes, () =>
+                new PersistanceDocument<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp>(db, new SpecialisationBtp()).Ecrire(doc.EntId, complet, ct));
+            ctx.CompterDetails(r.Lignes.Count + r.Metres.Count);
             foreach (var (l, x) in p.Lignes.Zip(lignes))
                 if (l.Reference is { } reference && corr.Lignes.TryGetValue(x.LigId, out var reel))
                 {

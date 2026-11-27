@@ -21,6 +21,8 @@ export function sectionsRapport(r) {
   return [
     { cle: 'anomalies', colonnes: ['niveau', 'code', 'emplacement', 'message'], lignes: r.anomalies ?? [],
       cellules: (a) => [NIVEAUX[a.niveau] ?? a.niveau, a.code, a.emplacement ?? '', a.message] },
+    { cle: 'chronos', colonnes: ['poste', 'duree', 'nombre'], lignes: r.chronos ?? [],
+      cellules: (c) => [libellePoste(c.poste), duree(c.duree_ms), nombre(c.nombre)] },
     { cle: 'volumes', colonnes: ['table', 'lues', 'ecrites', 'ecartees'], lignes: r.volumes ?? [],
       cellules: (v) => [v.table, nombre(v.lues), nombre(v.ecrites), nombre(v.ecartees)] },
     { cle: 'valeurs_forcees', colonnes: ['fiche', 'cle', 'champ', 'valeur'], lignes: r.valeurs_forcees ?? [],
@@ -64,6 +66,29 @@ export function libelleEtape(tache) {
     case ETAPE_REPRISE.ENREGISTREMENT: return t('suivi.etapes.ENREGISTREMENT');
     default: return t('suivi.etapes.PREPARATION');
   }
+}
+
+/** Libellé d'un poste de temps de la reprise (code si le dictionnaire ne le connaît pas). */
+export const libellePoste = (poste) => texte(`parametres_btp.reprise.postes.${poste}`, {}, poste);
+
+/** Durée en millisecondes lisible (« 12 min 05 s »). */
+const duree = (ms) => dureeEcoulee(new Date(0).toISOString(), new Date(Number(ms ?? 0)).toISOString());
+
+/**
+ * Compteurs du suivi : lignes lues dans la source, fiches et pièces écrites, lignes de détail écrites, puis les postes
+ * où passe le temps (4 plus longs, part du temps écoulé).
+ */
+export function compteursSuivi(tache, maintenant = Date.now()) {
+  const lignes = [];
+  if (tache.lignes_total || tache.ecrites || tache.details) {
+    lignes.push(t('suivi.compteurs', { lues: nombre(tache.lignes_total), ecrites: nombre(tache.ecrites), details: nombre(tache.details) }));
+  }
+  const ecoule = Math.max(1, maintenant - Date.parse(tache.debut));
+  const postes = (tache.chronos ?? []).filter((c) => c.duree_ms >= 1000).slice(0, 4);
+  if (postes.length) {
+    lignes.push(t('suivi.postes', { postes: postes.map((c) => t('suivi.poste', { poste: libellePoste(c.poste), duree: duree(c.duree_ms), part: Math.round((100 * c.duree_ms) / ecoule) })).join(' · ') }));
+  }
+  return lignes;
 }
 
 /** Sociétés saisies « 1, 2 » → ['1', '2'] (vides ignorés). */
@@ -247,7 +272,7 @@ export class PageParametresReprise extends PageBase {
     zone.innerHTML = `<div class="reprise-suivi" role="status" aria-live="polite" data-suivi>
       <p><strong>${th(tache.simulation ? 'simulation_en_cours' : 'reprise_en_cours')}</strong></p>
       <p><progress max="${Math.max(1, tache.total)}"${valeur}></progress> ${echapper(libelleEtape(tache))}</p>
-      ${tache.lignes_total ? `<p>${th('suivi.lignes_total', { lignes: nombre(tache.lignes_total) })}</p>` : ''}
+      ${compteursSuivi(tache).map((c) => `<p>${echapper(c)}</p>`).join('')}
       <p class="aide">${th('suivi.depuis', { duree: dureeEcoulee(tache.debut), debut: formatDateHeure(tache.debut) })}${tache.auteur ? ` · ${echapper(tache.auteur)}` : ''}</p>
       <p class="aide">${th('suivi.aide')}</p>
       <div class="barre-outils"><div class="groupe-outils"><button type="button" class="danger" data-action="arreter"${tache.arret_demande ? ' disabled' : ''}>${iconeHtml('parametres_btp_reprise_arreter')} ${th(tache.arret_demande ? 'suivi.arret_demande' : 'suivi.arreter')}</button></div></div>

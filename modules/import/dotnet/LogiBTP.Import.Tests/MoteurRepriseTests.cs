@@ -243,37 +243,46 @@ public class MoteurRepriseTests
         var etapes = new List<AvancementReprise>();
         await using var unite = new UniteEcriture(new ConnexionRequete(b.Connexion));
         var r = await new MoteurReprise([Ecrire(), D("suite", "essai")], EssaiVide).ExecuterAsync(
-            new OptionsReprise { Source = SourceReprise.Mde, Simulation = true, Avancement = etapes.Add },
+            new OptionsReprise { Source = SourceReprise.Mde, Simulation = true, Avancement = etapes.Add, IntervalleAvancement = TimeSpan.FromHours(1) },
             new LecteurFictif(SourceReprise.Mde), Correspondances(), unite, default);
         Assert.Equal(EtatReprise.Terminee, r.Rapport.Etat);
+        // Étapes (les signalements périodiques du domaine, selon la durée, sont ignorés : intervalle long).
         Assert.Equal([
-            new AvancementReprise(EtapeReprise.Preparation, null, 0, 2),
-            new AvancementReprise(EtapeReprise.Comptage, "CLIENT", 0, 1),
-            new AvancementReprise(EtapeReprise.Domaine, "essai", 0, 2),
-            new AvancementReprise(EtapeReprise.Domaine, "suite", 1, 2, 0, 2),
-            new AvancementReprise(EtapeReprise.Enregistrement, null, 2, 2, 0, 2),
-        ], etapes);
+            (EtapeReprise.Preparation, null, 0, 2, 0L, 0L, 0L),
+            (EtapeReprise.Comptage, "CLIENT", 0, 1, 0L, 0L, 0L),
+            (EtapeReprise.Domaine, "essai", 0, 2, 0L, 0L, 0L),
+            (EtapeReprise.Domaine, "suite", 1, 2, 0L, 2L, 2L),
+            (EtapeReprise.Enregistrement, null, 2, 2, 0L, 2L, 2L),
+        ], etapes.Select(e => (e.Etape, e.Element, e.Faits, e.Total, e.Lignes, e.LignesTotal, e.Ecrites)));
+        // Temps de lecture de la source mesuré et reporté au rapport.
+        Assert.Contains(r.Rapport.Chronos, c => c.Poste == ChronosReprise.LectureSource && c.Nombre == 2);
+        Assert.Contains(etapes.Last().Chronos, c => c.Poste == ChronosReprise.LectureSource);
     }
 
     [Fact]
-    public async Task Lignes_lues_signalees_par_lots()
+    public async Task Compteurs_signales_pendant_le_domaine()
     {
         if (Admin is null) return;
         await using var b = await BaseEssai.CreerAsync(Admin);
         var etapes = new List<AvancementReprise>();
-        // Domaine qui lit 3 lots et demi de lignes (lecture répétée de la table fictive à deux lignes).
+        // Domaine qui lit 1 750 lignes en 200 ms au moins (lecture répétée de la table fictive à deux lignes).
         var lire = new Domaine("lire", [], async (ctx, ct) =>
         {
-            for (var i = 0; i < MoteurReprise.LotLignes * 7 / 4; i++)
+            for (var i = 0; i < 875; i++)
+            {
                 await foreach (var _ in ctx.Lecteur.LireAsync("SELECT CODE FROM CLIENT", null, ct)) { }
+                if (i % 175 == 0) await Task.Delay(50, ct);
+            }
         });
         await using var unite = new UniteEcriture(new ConnexionRequete(b.Connexion));
         await new MoteurReprise([D("avant"), lire], EssaiVide).ExecuterAsync(
-            new OptionsReprise { Source = SourceReprise.Mde, Simulation = true, Avancement = etapes.Add },
+            new OptionsReprise { Source = SourceReprise.Mde, Simulation = true, Avancement = e => { lock (etapes) etapes.Add(e); }, IntervalleAvancement = TimeSpan.FromMilliseconds(20) },
             new LecteurFictif(SourceReprise.Mde), Correspondances(), unite, default);
-        var lots = etapes.Where(e => e.Etape == EtapeReprise.Domaine && e.Lignes > 0).ToList();
-        Assert.Equal([500L, 1000L, 1500L], lots.Select(e => e.Lignes));
-        Assert.All(lots, e => Assert.Equal(("lire", 1), (e.Element, e.Faits)));
+        // Signalements périodiques pendant le domaine : compteurs croissants, domaine « lire » (rang 1).
+        var periodiques = etapes.Where(e => e.Etape == EtapeReprise.Domaine && e.Lignes > 0).ToList();
+        Assert.NotEmpty(periodiques);
+        Assert.All(periodiques, e => Assert.Equal(("lire", 1), (e.Element, e.Faits)));
+        Assert.Equal(periodiques.Select(e => e.Lignes).Order(), periodiques.Select(e => e.Lignes));
         Assert.Equal(1750, etapes.Last().LignesTotal);
     }
 

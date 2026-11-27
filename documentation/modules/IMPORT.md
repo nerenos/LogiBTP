@@ -23,7 +23,7 @@ Référence lue à la demande (hors contexte par défaut). Les règles que le co
    (`TachesReprise`, singleton du cœur, une par base, mémoire du processus, portée `CreerPorteeSociete`, annulée par
    `POST /api/reprise/tache/arreter` → `REPRISE_INTERROMPUE` ou l'arrêt de l'API). L'écran interroge
    `GET /api/reprise/tache` toutes les 2 s (étape `ETAPE_REPRISE` : PREPARATION, COMPTAGE des tables, DOMAINE n / total,
-   ENREGISTREMENT, signalée par `OptionsReprise.Avancement` ; lignes lues dans la source pendant le domaine et au total, signalées par lots de 500), puis affiche le rapport de l'exécution enregistrée ;
+   ENREGISTREMENT, signalée par `OptionsReprise.Avancement` ; compteurs signalés chaque seconde par une tâche de suivi : lignes lues dans la source pendant le domaine et au total, fiches / pièces écrites, lignes de pièces et métrés écrits ; temps par poste `ChronosReprise` (AsyncLocal posé par le moteur : `LECTURE_SOURCE`, `SQL_CIBLE`, `PIECES_CALCUL`, `PIECES_ECRITURE_ENTETE`, `PIECES_ECRITURE_LIGNES`), aussi dans le rapport, section « Temps par poste »), puis affiche le rapport de l'exécution enregistrée ;
    `GET /api/reprise` renvoie aussi `tache` : une page rechargée reprend le suivi. Avant (24/11/2026), la reprise
    tournait dans la requête HTTP et s'annulait avec elle (navigateur ou proxy qui coupe une longue requête : transaction
    annulée, aucun rapport, page vidée).
@@ -143,5 +143,5 @@ exploitation : `PointageNonRepris` ; stock : `ConsommationNonReprise` ; GED : `G
 - Interface : `e2e/reprise.spec.ts` (écran de reprise).
 
 ## Restes (voir `TODO.md`)
-Points à confirmer sur une copie des bases réelles (sens de colonnes, unités, codes non documentés) ; reprise exécutée
-dans la requête HTTP (une tâche de fond reste à décider pour les grosses bases) ; tables `PP_*` (lot 17).
+Points à confirmer sur une copie des bases réelles (sens de colonnes, unités, codes non documentés) ; reprise en une
+seule transaction (segmentation par domaine avec reprise sur échec à décider) ; tables `PP_*` (lot 17).

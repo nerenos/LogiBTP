@@ -52,6 +52,8 @@ public sealed class TacheReprise
                 id = Id, source = Source, simulation = Simulation, auteur = Auteur, debut = Debut, fin = Fin, etat = Etat,
                 etape = avancement.Etape, element = avancement.Element, faits = avancement.Faits, total = avancement.Total,
                 lignes = avancement.Lignes, lignes_total = avancement.LignesTotal,
+                ecrites = avancement.Ecrites, details = avancement.Details,
+                chronos = avancement.Chronos.Select(c => new { poste = c.Poste, duree_ms = c.DureeMs, nombre = c.Nombre }),
                 arret_demande = Arret.IsCancellationRequested, reprise_id = RepriseId, erreur = Erreur, message = Message,
             };
     }

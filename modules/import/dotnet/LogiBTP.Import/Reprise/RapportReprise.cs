@@ -92,6 +92,8 @@ public sealed class RapportReprise
     [JsonPropertyName("debut")] public DateTimeOffset Debut { get; init; } = DateTimeOffset.UtcNow;
     [JsonPropertyName("fin")] public DateTimeOffset? Fin { get; set; }
     [JsonPropertyName("domaines")] public List<DomaineExecute> Domaines { get; } = [];
+    /// <summary>Temps cumulé par poste (lecture de la source, calcul, écriture…), du plus long au plus court.</summary>
+    [JsonPropertyName("chronos")] public List<ChronoPoste> Chronos { get; } = [];
     [JsonPropertyName("tables_source")] public Dictionary<string, long> TablesSource { get; } = new(StringComparer.Ordinal);
     [JsonPropertyName("volumes")] public List<VolumeTable> Volumes { get; } = [];
     [JsonPropertyName("correspondances")] public Dictionary<string, Dictionary<string, string>> Correspondances { get; } = new(StringComparer.Ordinal);
@@ -101,6 +103,16 @@ public sealed class RapportReprise
     [JsonPropertyName("anomalies")] public List<AnomalieReprise> Anomalies { get; } = [];
     [JsonPropertyName("utilisateurs")] public List<UtilisateurSource> Utilisateurs { get; } = [];
     [JsonPropertyName("doublons")] public List<DoublonPropose> Doublons { get; } = [];
+
+    /// <summary>
+    /// Total des lignes écrites des volumes, lu pendant la reprise par le suivi de l'avancement (autre fil) : liste
+    /// modifiée pendant la lecture → null (valeur précédente gardée par l'appelant).
+    /// </summary>
+    public long? EcritesTotal()
+    {
+        try { return Volumes.ToArray().Sum(v => v.Ecrites); }
+        catch (Exception e) when (e is InvalidOperationException or ArgumentException or NullReferenceException or IndexOutOfRangeException) { return null; }
+    }
 
     /// <summary>Volumes d'une table source (créés au premier appel).</summary>
     public VolumeTable Volume(string table)
@@ -161,6 +173,8 @@ public sealed class RapportReprise
         sb.AppendLine($"- Début : {Debut:yyyy-MM-dd HH:mm:ss} UTC{(Fin is { } f ? $", fin : {f:yyyy-MM-dd HH:mm:ss} UTC" : "")}");
         sb.AppendLine($"- Domaines : {(Domaines.Count == 0 ? "aucun" : string.Join(", ", Domaines.Select(d => $"{d.Code} ({d.DureeMs} ms)")))}");
 
+        Section(sb, "Temps par poste", Chronos, ["Poste", "Durée (s)", "Passages"],
+            p => [p.Poste, (p.DureeMs / 1000m).ToString("N1", c), p.Nombre.ToString(c)]);
         Section(sb, "Anomalies", Anomalies, ["Niveau", "Code", "Emplacement", "Message"],
             a => [a.Niveau, a.Code, a.Emplacement ?? "", a.Message]);
         Section(sb, "Volumes par table source", Volumes, ["Table", "Lues", "Écrites", "Écartées"],

@@ -66,8 +66,9 @@ public sealed class MoteurReprise(IReadOnlyList<IDomaineReprise> domaines, Func<
         string? domaineCourant = null;
         int rangCourant = 0;
         long lignesAvantDomaine = 0;
-        var compte = new LecteurCompte(lecteur, total =>
-            Signaler(EtapeReprise.Domaine, domaineCourant, rangCourant, ordre.Count, total - lignesAvantDomaine, total));
+        var chronos = new ChronosReprise();
+        ChronosReprise.Courant = chronos;
+        var compte = new LecteurCompte(lecteur, chronos);
         lecteur = compte;
         var rapport = new RapportReprise { Source = options.Source, Societes = options.Societes, Simulation = options.Simulation };
         var contexte = new ContexteReprise
@@ -75,11 +76,37 @@ public sealed class MoteurReprise(IReadOnlyList<IDomaineReprise> domaines, Func<
             Options = options, Lecteur = lecteur, Correspondances = correspondances, Unite = unite, Rapport = rapport,
         };
 
+        long ecrites = 0;
         void Signaler(string etape, string? element, int faits, int total, long lignes = 0, long lignesTotal = 0)
         {
             // Le suivi ne doit jamais faire échouer la reprise.
-            try { options.Avancement?.Invoke(new AvancementReprise(etape, element, faits, total, lignes, lignesTotal)); } catch { /* suivi ignoré */ }
+            try
+            {
+                ecrites = rapport.EcritesTotal() ?? ecrites;
+                options.Avancement?.Invoke(new AvancementReprise(etape, element, faits, total, lignes, lignesTotal, ecrites, contexte.Details)
+                {
+                    Chronos = chronos.Postes(),
+                });
+            }
+            catch { /* suivi ignoré */ }
         }
+
+        // Compteurs du domaine en cours signalés à intervalle régulier (autre fil) jusqu'à la fin de l'exécution.
+        using var finSuivi = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        using var arretSuivi = new ArretALaFin(finSuivi); // suivi arrêté quelle que soit la sortie (refus, erreur)
+        var suivi = options.Avancement is null ? Task.CompletedTask : Task.Run(async () =>
+        {
+            try
+            {
+                while (true)
+                {
+                    await Task.Delay(options.IntervalleAvancement, finSuivi.Token);
+                    if (domaineCourant is { } d)
+                        Signaler(EtapeReprise.Domaine, d, rangCourant, ordre.Count, compte.Lignes - lignesAvantDomaine, compte.Lignes);
+                }
+            }
+            catch (OperationCanceledException) { /* fin du suivi */ }
+        });
 
         Signaler(EtapeReprise.Preparation, null, 0, ordre.Count);
         await using (var tx = await unite.CommencerAsync(ct))
@@ -110,9 +137,13 @@ public sealed class MoteurReprise(IReadOnlyList<IDomaineReprise> domaines, Func<
                     await contexte.Registre.EnregistrerAsync(unite.Connexion, unite.Transaction!, contexte.RepriseId, ct);
                     rapport.Domaines.Add(new DomaineExecute(domaine.Code, chrono.ElapsedMilliseconds));
                 }
+                domaineCourant = null;
+                await finSuivi.CancelAsync();
+                await suivi;
                 Signaler(EtapeReprise.Enregistrement, null, ordre.Count, ordre.Count, 0, compte.Lignes);
                 rapport.Etat = rapport.Bloque ? EtatReprise.Echec : EtatReprise.Terminee;
                 rapport.Fin = DateTimeOffset.UtcNow;
+                rapport.Chronos.AddRange(chronos.Postes());
                 if (options.Simulation || rapport.Bloque)
                     await tx.RollbackAsync(ct);
                 else
@@ -124,10 +155,15 @@ public sealed class MoteurReprise(IReadOnlyList<IDomaineReprise> domaines, Func<
             }
             catch (Exception e) when (e is not OperationCanceledException)
             {
+                var enEchec = domaineCourant;
+                domaineCourant = null;
+                await finSuivi.CancelAsync();
                 await tx.RollbackAsync(CancellationToken.None);
                 rapport.Etat = EtatReprise.Echec;
                 rapport.Fin = DateTimeOffset.UtcNow;
-                rapport.Signaler(NiveauAnomalie.Bloquant, e is RepriseRefuseeException r ? r.Code : CodeErreur(e), domaineCourant, MessageErreur(e));
+                rapport.Chronos.Clear();
+                rapport.Chronos.AddRange(chronos.Postes());
+                rapport.Signaler(NiveauAnomalie.Bloquant, e is RepriseRefuseeException r ? r.Code : CodeErreur(e), enEchec, MessageErreur(e));
             }
         }
 
@@ -138,11 +174,13 @@ public sealed class MoteurReprise(IReadOnlyList<IDomaineReprise> domaines, Func<
         return new ResultatReprise(id, rapport);
     }
 
-    /// <summary>Lignes lues dans la source entre deux signalements de l'avancement.</summary>
-    public const int LotLignes = 500;
+    private sealed class ArretALaFin(CancellationTokenSource source) : IDisposable
+    {
+        public void Dispose() => source.Cancel();
+    }
 
-    /// <summary>Lecteur qui compte les lignes lues (toutes requêtes) et signale chaque lot ; ne libère pas le lecteur enveloppé.</summary>
-    private sealed class LecteurCompte(ILecteurSource interne, Action<long> surLot) : ILecteurSource
+    /// <summary>Lecteur qui compte les lignes lues (toutes requêtes) ; ne libère pas le lecteur enveloppé.</summary>
+    private sealed class LecteurCompte(ILecteurSource interne, ChronosReprise chronos) : ILecteurSource
     {
         private long lignes;
         public long Lignes => Interlocked.Read(ref lignes);
@@ -153,11 +191,16 @@ public sealed class MoteurReprise(IReadOnlyList<IDomaineReprise> domaines, Func<
         public async IAsyncEnumerable<LigneSource> LireAsync(string requete, IReadOnlyDictionary<string, object?>? parametres,
             [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct)
         {
-            await foreach (var l in interne.LireAsync(requete, parametres, ct).WithCancellation(ct))
+            // Temps passé à attendre la source (requête et lignes suivantes), hors traitement des lignes par le domaine.
+            await using var e = interne.LireAsync(requete, parametres, ct).GetAsyncEnumerator(ct);
+            while (true)
             {
-                var n = Interlocked.Increment(ref lignes);
-                if (n % LotLignes == 0) surLot(n);
-                yield return l;
+                var debut = System.Diagnostics.Stopwatch.GetTimestamp();
+                var suivante = await e.MoveNextAsync();
+                chronos.Ajouter(ChronosReprise.LectureSource, System.Diagnostics.Stopwatch.GetTimestamp() - debut, suivante ? 1 : 0);
+                if (!suivante) yield break;
+                Interlocked.Increment(ref lignes);
+                yield return e.Current;
             }
         }
 

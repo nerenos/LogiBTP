@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sectionsRapport, lireSocietes, lireDecimales, dureeEcoulee, libelleEtape } from '../src/app/pages/parametres-reprise.js';
+import { sectionsRapport, lireSocietes, lireDecimales, dureeEcoulee, libelleEtape, compteursSuivi } from '../src/app/pages/parametres-reprise.js';
 
 // Écran « Reprise de données » (plan reprise-mde-optim, lot 3) : sections du rapport et saisie des sociétés OPTIM.
 const rapport = {
@@ -13,7 +13,7 @@ const rapport = {
 describe('reprise : écran (lot 3)', () => {
   it('une section par rubrique du rapport, correspondances aplaties, tables triées', () => {
     const s = Object.fromEntries(sectionsRapport(rapport).map((x) => [x.cle, x]));
-    expect(Object.keys(s)).toEqual(['anomalies', 'volumes', 'valeurs_forcees', 'ecarts_arrondi', 'champs_perdus', 'correspondances', 'utilisateurs', 'tables_source']);
+    expect(Object.keys(s)).toEqual(['anomalies', 'chronos', 'volumes', 'valeurs_forcees', 'ecarts_arrondi', 'champs_perdus', 'correspondances', 'utilisateurs', 'tables_source']);
     expect(s.valeurs_forcees.lignes).toEqual([]);
     expect(s.correspondances.lignes.map((l) => s.correspondances.cellules(l))).toEqual([['entite', 'TRS', 'personne'], ['entite', 'SCT', 'ignoré : société']]);
     expect(s.tables_source.lignes.map(([t]) => t)).toEqual(['bib_tiers', 'z_unite']);
@@ -47,5 +47,25 @@ describe('reprise : suivi de la tâche de fond (grosse base)', () => {
     // Lignes lues dans le domaine (signalées par lots) : compteur affiché.
     expect(libelleEtape({ etape: 'DOMAINE', element: 'PIECES_VENTE', faits: 7, total: 14, lignes: 12500 }))
       .toMatch(/^Domaine 8 \/ 14 : Pièces de vente \(12\s?500 lignes lues\)$/);
+  });
+});
+
+describe('reprise : compteurs et temps par poste du suivi', () => {
+  it('compteurs puis 4 postes les plus longs (plus d\'une seconde), part du temps écoulé', () => {
+    const tache = {
+      debut: '2026-11-27T10:00:00Z', lignes_total: 1200, ecrites: 35, details: 9000,
+      chronos: [
+        { poste: 'PIECES_ECRITURE_LIGNES', duree_ms: 300000, nombre: 30 },
+        { poste: 'PIECES_CALCUL', duree_ms: 120000, nombre: 90 },
+        { poste: 'LECTURE_SOURCE', duree_ms: 60000, nombre: 1200 },
+        { poste: 'SQL_CIBLE', duree_ms: 2000, nombre: 50 },
+        { poste: 'AUTRE', duree_ms: 1500, nombre: 1 },
+        { poste: 'COURT', duree_ms: 10, nombre: 1 },
+      ],
+    };
+    const [compteurs, postes] = compteursSuivi(tache, Date.parse('2026-11-27T10:10:00Z'));
+    expect(compteurs).toMatch(/^1\s?200 lignes lues dans la source · 35 fiches et pièces écrites · 9\s?000 lignes de pièces et métrés écrits$/);
+    expect(postes).toBe('Temps passé : écriture des lignes et métrés 5 min 00 s (50 %) · calcul des pièces 2 min 00 s (20 %) · lecture de la source 1 min 00 s (10 %) · requêtes sur la base 2 s (0 %)');
+    expect(compteursSuivi({ debut: tache.debut })).toEqual([]);
   });
 });

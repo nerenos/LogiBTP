@@ -8806,6 +8806,9 @@
         "duree_m": "{{m}} min {{s}} s",
         "duree_s": "{{s}} s",
         "lignes_total": "{{lignes}} lignes lues dans la source depuis le début",
+        "compteurs": "{{lues}} lignes lues dans la source · {{ecrites}} fiches et pièces écrites · {{details}} lignes de pièces et métrés écrits",
+        "postes": "Temps passé : {{postes}}",
+        "poste": "{{poste}} {{duree}} ({{part}} %)",
         "arreter": "Arrêter",
         "arret_demande": "Arrêt demandé…",
         "confirmer_arret": "Arrêter la reprise en cours ? Tout ce qui a été fait est annulé, rien n'est écrit dans la base.",
@@ -8818,6 +8821,13 @@
           "DOMAINE_LIGNES": "Domaine {{faits}} / {{total}} : {{domaine}} ({{lignes}} lignes lues)",
           "ENREGISTREMENT": "Enregistrement du rapport…"
         }
+      },
+      "postes": {
+        "LECTURE_SOURCE": "lecture de la source",
+        "SQL_CIBLE": "requêtes sur la base",
+        "PIECES_CALCUL": "calcul des pièces",
+        "PIECES_ECRITURE_ENTETE": "écriture des entêtes de pièces",
+        "PIECES_ECRITURE_LIGNES": "écriture des lignes et métrés"
       },
       "domaines": {
         "SOCIETE": "Société",
@@ -8887,6 +8897,12 @@
           "code": "Code",
           "emplacement": "Emplacement",
           "message": "Message"
+        },
+        "chronos": {
+          "titre": "Temps par poste",
+          "poste": "Poste",
+          "duree": "Durée",
+          "nombre": "Passages"
         },
         "volumes": {
           "titre": "Volumes par table source",
