@@ -8,7 +8,8 @@ namespace LogiBTP.Api.Reprise;
 /// instruction d'écriture des lignes recalculait les chantiers de la pièce (écriture 6 fois plus lente, de plus en
 /// plus) ; signalements de la rentabilité (<c>f_rentabilite_signaler</c>, module Rentabilité 099r) : chaque écriture
 /// d'une pièce validée réécrivait la même ligne de file des milliers de fois dans la transaction ; clé des métrés vers
-/// leur ligne différée à la fin de la transaction (db/1.6).
+/// leur ligne différée à la fin de la transaction (db/1.6) ; plans des requêtes préparées du serveur refaits à chaque
+/// exécution (<c>plan_cache_mode</c>).
 /// </summary>
 public sealed class SuspensionSuivis : IDomaineReprise
 {
@@ -22,6 +23,11 @@ public sealed class SuspensionSuivis : IDomaineReprise
         // Clé métré → ligne contrôlée à la fin (db/1.6) : sinon chaque métré verrouille sa ligne juste avant que la ligne
         // reçoive lig_mtr_id, et ce verrou suivi d'une mise à jour ralentit l'écriture au fil de la transaction.
         await SqlReprise.ExecuterAsync(ctx.Unite, "SET CONSTRAINTS fk_mtr_ligne DEFERRED", ct);
+        // Plans des contrôles de clés étrangères et des triggers (requêtes préparées du serveur) refaits à chaque
+        // exécution : préparés au début de la reprise, quand les tables de la base neuve sont vides, ils gardaient une
+        // lecture complète de la table (moins chère qu'un index sur une table vide), refaite à chaque ligne insérée sur
+        // une table qui grossit jusqu'à des millions de lignes.
+        await SqlReprise.ExecuterAsync(ctx.Unite, "SET LOCAL plan_cache_mode = force_custom_plan", ct);
     }
 }
 
