@@ -2,6 +2,20 @@ services:
   postgres:
     image: postgres:17
     container_name: logibtp-postgres
+    # Réglages pour les gros chargements (reprise de données d'une grosse base : des millions de lignes dans une seule
+    # transaction) : cache de 1 Go au lieu de 128 Mo, points de contrôle espacés (WAL jusqu'à 8 Go, 30 min). Plus de
+    # mémoire disponible pour Docker : monter shared_buffers vers le quart de celle-ci. Changement pris en compte par
+    # `docker compose up -d` (conteneur recréé, données gardées dans le volume ; jamais `down -v` pour cela).
+    command: >-
+      postgres
+      -c shared_buffers=1GB
+      -c effective_cache_size=3GB
+      -c work_mem=64MB
+      -c maintenance_work_mem=512MB
+      -c max_wal_size=8GB
+      -c checkpoint_timeout=30min
+      -c wal_compression=on
+    shm_size: 1gb
     environment:
       POSTGRES_DB: logibtp
       POSTGRES_USER: logibtp

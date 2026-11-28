@@ -1,8 +1,8 @@
 import { texte, texteHtml, icone, iconeHtml, textesParCode, langue } from '@logibtp/socle/dictionnaire';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, confirmer, formatDateHeure, telechargerFichier } from '@logibtp/socle/ui';
-import { erreursParChamp } from '@logibtp/socle';
-import { SOURCE_REPRISE, ETAT_REPRISE, NIVEAU_ANOMALIE, VOLUME_MDE, groupesFusion, controlerFusions, choixDepuisFusions } from '@logibtp/import';
+import { erreursParChamp, ErreurApi } from '@logibtp/socle';
+import { SOURCE_REPRISE, ETAT_REPRISE, ETAPE_REPRISE, NIVEAU_ANOMALIE, VOLUME_MDE, groupesFusion, controlerFusions, choixDepuisFusions } from '@logibtp/import';
 import { api } from '../api.js';
 
 const SOURCES = textesParCode('parametres_btp.reprise.sources', Object.values(SOURCE_REPRISE));
@@ -21,6 +21,8 @@ export function sectionsRapport(r) {
   return [
     { cle: 'anomalies', colonnes: ['niveau', 'code', 'emplacement', 'message'], lignes: r.anomalies ?? [],
       cellules: (a) => [NIVEAUX[a.niveau] ?? a.niveau, a.code, a.emplacement ?? '', a.message] },
+    { cle: 'chronos', colonnes: ['poste', 'duree', 'nombre'], lignes: r.chronos ?? [],
+      cellules: (c) => [libellePoste(c.poste), duree(c.duree_ms), nombre(c.nombre)] },
     { cle: 'volumes', colonnes: ['table', 'lues', 'ecrites', 'ecartees'], lignes: r.volumes ?? [],
       cellules: (v) => [v.table, nombre(v.lues), nombre(v.ecrites), nombre(v.ecartees)] },
     { cle: 'valeurs_forcees', colonnes: ['fiche', 'cle', 'champ', 'valeur'], lignes: r.valeurs_forcees ?? [],
@@ -38,6 +40,55 @@ export function sectionsRapport(r) {
       lignes: Object.entries(r.tables_source ?? {}).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
       cellules: ([table, n]) => [table, nombre(n)] },
   ];
+}
+
+/** Intervalle d'interrogation de l'avancement d'une reprise en tâche de fond (ms). */
+export const INTERVALLE_SUIVI = 2000;
+
+/** Durée écoulée lisible « 1 h 05 min 03 s » depuis `debut` (ISO) jusqu'à `fin` (ISO ou maintenant). */
+export function dureeEcoulee(debut, fin = null, maintenant = Date.now()) {
+  const ms = Math.max(0, (fin ? Date.parse(fin) : maintenant) - Date.parse(debut));
+  const s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const deux = (n) => String(n).padStart(2, '0');
+  return h ? t('suivi.duree_h', { h, m: deux(m), s: deux(s % 60) }) : m ? t('suivi.duree_m', { m, s: deux(s % 60) }) : t('suivi.duree_s', { s });
+}
+
+/** Libellé de l'étape en cours d'une tâche de reprise (domaine traduit s'il est connu, sinon son code). */
+export function libelleEtape(tache) {
+  const element = tache.element ?? '';
+  const domaine = texte(`parametres_btp.reprise.domaines.${element}`, {}, element);
+  switch (tache.etape) {
+    case ETAPE_REPRISE.COMPTAGE: return t('suivi.etapes.COMPTAGE', { table: element, faits: tache.faits + 1, total: tache.total });
+    case ETAPE_REPRISE.DOMAINE: return t(tache.lignes ? 'suivi.etapes.DOMAINE_LIGNES' : 'suivi.etapes.DOMAINE',
+      { domaine, faits: tache.faits + 1, total: tache.total, lignes: nombre(tache.lignes) });
+    case ETAPE_REPRISE.ENREGISTREMENT: return t('suivi.etapes.ENREGISTREMENT');
+    default: return t('suivi.etapes.PREPARATION');
+  }
+}
+
+/** Libellé d'un poste de temps de la reprise (code si le dictionnaire ne le connaît pas). */
+export const libellePoste = (poste) => texte(`parametres_btp.reprise.postes.${poste}`, {}, poste);
+
+/** Durée en millisecondes lisible (« 12 min 05 s »). */
+const duree = (ms) => dureeEcoulee(new Date(0).toISOString(), new Date(Number(ms ?? 0)).toISOString());
+
+/**
+ * Compteurs du suivi : lignes lues dans la source, fiches et pièces écrites, lignes de détail écrites, puis les postes
+ * où passe le temps (4 plus longs, part du temps écoulé).
+ */
+export function compteursSuivi(tache, maintenant = Date.now()) {
+  const lignes = [];
+  if (tache.lignes_total || tache.ecrites || tache.details) {
+    lignes.push(t('suivi.compteurs', { lues: nombre(tache.lignes_total), ecrites: nombre(tache.ecrites), details: nombre(tache.details) }));
+  }
+  const ecoule = Math.max(1, maintenant - Date.parse(tache.debut));
+  const postes = (tache.chronos ?? []).filter((c) => c.duree_ms >= 1000).slice(0, 4);
+  if (postes.length) {
+    lignes.push(t('suivi.postes', { postes: postes.map((c) => t('suivi.poste', { poste: libellePoste(c.poste), duree: duree(c.duree_ms), part: Math.round((100 * c.duree_ms) / ecoule) })).join(' · ') }));
+  }
+  return lignes;
 }
 
 /** Sociétés saisies « 1, 2 » → ['1', '2'] (vides ignorés). */
@@ -99,6 +150,7 @@ export class PageParametresReprise extends PageBase {
         afficher: () => this.afficher(Number(b.dataset.id)),
         markdown: () => this.telechargerMarkdown(Number(b.dataset.id)),
         fusions: () => this.enregistrerFusions(),
+        arreter: () => this.arreter(),
       };
       Promise.resolve(actions[b.dataset.action]?.()).catch((x) => this.app.erreur(x));
     });
@@ -110,11 +162,16 @@ export class PageParametresReprise extends PageBase {
   async charger() {
     this.etat = await api.reprise.etat();
     const zone = this.conteneur.querySelector('[data-etat]');
-    zone.innerHTML = this.etat.base_vide ? '' : `<p class="erreur">${iconeHtml('avertissement')} ${th('base_non_vide')}</p>`;
-    this.conteneur.querySelectorAll('[data-action="simuler"], [data-action="lancer"]').forEach((b) => { b.disabled = !this.etat.base_vide; });
+    // base_vide : null pendant une reprise en cours (tables verrouillées jusqu'à sa fin, contrôle non fait).
+    const enCours = this.tache || this.etat.tache?.etat === ETAT_REPRISE.EN_COURS;
+    zone.innerHTML = this.etat.base_vide === false ? `<p class="erreur">${iconeHtml('avertissement')} ${th('base_non_vide')}</p>`
+      : this.etat.base_vide === null && !enCours ? `<p class="erreur">${iconeHtml('avertissement')} ${th('base_verrouillee')}</p>` : '';
+    this.activerBoutons(!this.tache && this.etat.tache?.etat !== ETAT_REPRISE.EN_COURS);
     this.rendreHistorique();
     if (!this.decimalesProposees) { this.proposerDecimales(); this.decimalesProposees = true; }
     this.synchroniser();
+    // Reprise toujours en cours (page rechargée ou rouverte) : le suivi reprend.
+    if (!this.tache && this.etat.tache?.etat === ETAT_REPRISE.EN_COURS) this.suivre(this.etat.tache);
   }
 
   /** Décimales proposées pour la source choisie (MDE : quantités 3, prix 2) ; vide : celles de la source. */
@@ -145,17 +202,19 @@ export class PageParametresReprise extends PageBase {
     this.synchroniser();
   }
 
+  /**
+   * Lance la simulation ou la reprise réelle : le serveur rend la main aussitôt (tâche de fond) et la page suit
+   * l'avancement jusqu'au rapport ; un rechargement de la page reprend le suivi (`charger`).
+   */
   async executer(simulation) {
     const champ = (c) => this.conteneur.querySelector(`[data-c="${c}"]`);
     const erreur = this.conteneur.querySelector('[data-erreur="connexion"]');
     erreur.textContent = '';
     const source = this.source;
     if (!simulation && !await confirmer(t('confirmer_lancement', { source: SOURCES[source] ?? source }))) return;
-    const boutons = this.conteneur.querySelectorAll('[data-action="simuler"], [data-action="lancer"]');
-    boutons.forEach((b) => { b.disabled = true; });
-    this.conteneur.querySelector('[data-rapport]').innerHTML = `<p class="aide">${th(simulation ? 'simulation_en_cours' : 'reprise_en_cours')}</p>`;
+    this.activerBoutons(false);
     try {
-      const r = await api.reprise.executer({
+      const tache = await api.reprise.executer({
         source, connexion: champ('connexion').value, simulation,
         societes: source === SOURCE_REPRISE.OPTIM ? lireSocietes(champ('societes').value) : [],
         correspondances: this.correspondances?.contenu ?? null,
@@ -163,20 +222,99 @@ export class PageParametresReprise extends PageBase {
         decimales_prix: lireDecimales(champ('decimales_prix').value),
         volume_mde: source === SOURCE_REPRISE.MDE ? this.comboVolume.valeurCombo || VOLUME_MDE.SURFACE : null,
       });
-      this.rapportId = r.reprise_id;
-      const message = r.rapport.etat === ETAT_REPRISE.TERMINEE ? t(simulation ? 'simulation_terminee' : 'reprise_terminee') : t('reprise_echec');
-      this.app.message(message, r.rapport.etat === ETAT_REPRISE.TERMINEE ? 'succes' : 'avertissement');
-      await this.charger();
-      this.rendreRapport(r.reprise_id, r.rapport);
+      this.suivre(tache);
     } catch (e) {
-      this.conteneur.querySelector('[data-rapport]').innerHTML = '';
+      this.activerBoutons(true);
       const champs = erreursParChamp(e).filter((d) => d.champ === 'connexion');
       if (champs.length) erreur.textContent = champs.map((d) => d.message).join(' ');
       else throw e;
-    } finally {
-      boutons.forEach((b) => { b.disabled = !this.etat?.base_vide; });
     }
   }
+
+  /** Simuler et Lancer : actifs si la base est vide et qu'aucune reprise ne tourne. */
+  activerBoutons(actifs) {
+    this.conteneur.querySelectorAll('[data-action="simuler"], [data-action="lancer"]').forEach((b) => { b.disabled = !actifs || !this.etat?.base_vide; });
+  }
+
+  /** Suivi d'une tâche de fond : avancement affiché, interrogé toutes les 2 s jusqu'à la fin, puis rapport ou erreur. */
+  suivre(tache) {
+    clearTimeout(this.minuterieSuivi);
+    this.tache = tache;
+    if (!tache) return;
+    if (tache.etat === ETAT_REPRISE.EN_COURS) {
+      this.activerBoutons(false);
+      this.rendreSuivi(tache);
+      this.minuterieSuivi = setTimeout(() => this.interroger(), INTERVALLE_SUIVI);
+      return;
+    }
+    this.terminer(tache).catch((x) => this.app.erreur(x));
+  }
+
+  async interroger() {
+    if (this.suiviArrete) return;
+    let tache;
+    try {
+      ({ tache } = await api.reprise.tache());
+    } catch {
+      // Serveur momentanément injoignable (l'application le signale) : nouvel essai, la tâche continue côté serveur.
+      this.minuterieSuivi = setTimeout(() => this.interroger(), INTERVALLE_SUIVI * 3);
+      return;
+    }
+    if (this.suiviArrete) return;
+    if (!tache || tache.id !== this.tache?.id) { this.rendreSuiviPerdu(); return; }
+    this.suivre(tache);
+  }
+
+  /** Avancement : étape, barre de progression, durée écoulée, bouton d'arrêt. */
+  rendreSuivi(tache) {
+    const zone = this.conteneur.querySelector('[data-rapport]');
+    const valeur = tache.etape === ETAPE_REPRISE.DOMAINE || tache.etape === ETAPE_REPRISE.ENREGISTREMENT ? ` value="${tache.faits}"` : '';
+    zone.innerHTML = `<div class="reprise-suivi" role="status" aria-live="polite" data-suivi>
+      <p><strong>${th(tache.simulation ? 'simulation_en_cours' : 'reprise_en_cours')}</strong></p>
+      <p><progress max="${Math.max(1, tache.total)}"${valeur}></progress> ${echapper(libelleEtape(tache))}</p>
+      ${compteursSuivi(tache).map((c) => `<p>${echapper(c)}</p>`).join('')}
+      <p class="aide">${th('suivi.depuis', { duree: dureeEcoulee(tache.debut), debut: formatDateHeure(tache.debut) })}${tache.auteur ? ` · ${echapper(tache.auteur)}` : ''}</p>
+      <p class="aide">${th('suivi.aide')}</p>
+      <div class="barre-outils"><div class="groupe-outils"><button type="button" class="danger" data-action="arreter"${tache.arret_demande ? ' disabled' : ''}>${iconeHtml('parametres_btp_reprise_arreter')} ${th(tache.arret_demande ? 'suivi.arret_demande' : 'suivi.arreter')}</button></div></div>
+    </div>`;
+  }
+
+  rendreSuiviPerdu() {
+    this.tache = null;
+    this.conteneur.querySelector('[data-rapport]').innerHTML = `<p class="erreur">${iconeHtml('avertissement')} ${th('suivi.perdu')}</p>`;
+    this.charger().catch((x) => this.app.erreur(x));
+  }
+
+  async arreter() {
+    if (!await confirmer(t('suivi.confirmer_arret'))) return;
+    const { tache } = await api.reprise.arreter();
+    if (tache) this.rendreSuivi(tache);
+  }
+
+  /** Fin de la tâche : rapport de l'exécution enregistrée, ou erreur (rien n'a été écrit). */
+  async terminer(tache) {
+    this.tache = null;
+    this.conteneur.querySelector('[data-rapport]').innerHTML = '';
+    await this.charger();
+    if (tache.reprise_id) {
+      const rapport = await api.reprise.rapport(tache.reprise_id);
+      const ok = rapport.etat === ETAT_REPRISE.TERMINEE;
+      this.app.message(ok ? t(tache.simulation ? 'simulation_terminee' : 'reprise_terminee') : t('reprise_echec'), ok ? 'succes' : 'avertissement');
+      this.rendreRapport(tache.reprise_id, rapport);
+      return;
+    }
+    this.conteneur.querySelector('[data-rapport]').innerHTML = `<p class="erreur">${iconeHtml('avertissement')} ${th('suivi.echec', { duree: dureeEcoulee(tache.debut, tache.fin) })}</p>`;
+    this.app.erreur(new ErreurApi(422, tache.erreur ?? 'HTTP', tache.message ?? ''));
+  }
+
+  masquer() { this.suiviArrete = true; clearTimeout(this.minuterieSuivi); }
+
+  async reprendre() {
+    this.suiviArrete = false;
+    if (this.tache) await this.interroger();
+  }
+
+  fermer() { this.masquer(); }
 
   rendreHistorique() {
     const zone = this.conteneur.querySelector('[data-historique]');

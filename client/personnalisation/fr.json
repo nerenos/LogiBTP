@@ -8767,6 +8767,7 @@
       "titre": "Reprise de données",
       "aide": "Reprend une base MDE (SQL Server) ou OptimBTP (MariaDB) dans cette base, qui doit être neuve. La base source n'est que lue ; sa connexion n'est jamais conservée. Lancez d'abord une simulation : rien n'est écrit sauf le rapport. Relisez le rapport, cochez les doublons à fusionner, ajustez au besoin les correspondances, puis lancez la reprise.",
       "base_non_vide": "Cette base contient déjà des données (tiers, salariés, éléments ou pièces) : la reprise est impossible ici. Créez une société neuve.",
+      "base_verrouillee": "Une reprise est en cours sur cette base (lancée par une autre fenêtre ou par la commande de l'installeur) : attendez sa fin avant d'en lancer une autre.",
       "source": "Logiciel source",
       "sources": {
         "MDE": "MDE (SQL Server)",
@@ -8798,6 +8799,54 @@
       "confirmer_lancement": "Lancer la reprise réelle depuis {{source}} ? Les données reprises sont écrites dans cette base, qui ne pourra plus recevoir d'autre reprise.",
       "simulation_en_cours": "Simulation en cours… (plusieurs minutes pour une grosse base)",
       "reprise_en_cours": "Reprise en cours… (plusieurs minutes pour une grosse base)",
+      "suivi": {
+        "aide": "La reprise tourne sur le serveur : vous pouvez quitter ou recharger cette page, le suivi reprend à votre retour.",
+        "depuis": "En cours depuis {{duree}} (commencée le {{debut}})",
+        "duree_h": "{{h}} h {{m}} min {{s}} s",
+        "duree_m": "{{m}} min {{s}} s",
+        "duree_s": "{{s}} s",
+        "lignes_total": "{{lignes}} lignes lues dans la source depuis le début",
+        "compteurs": "{{lues}} lignes lues dans la source · {{ecrites}} fiches et pièces écrites · {{details}} lignes de pièces et métrés écrits",
+        "postes": "Temps passé : {{postes}}",
+        "poste": "{{poste}} {{duree}} ({{part}} %)",
+        "arreter": "Arrêter",
+        "arret_demande": "Arrêt demandé…",
+        "confirmer_arret": "Arrêter la reprise en cours ? Tout ce qui a été fait est annulé, rien n'est écrit dans la base.",
+        "perdu": "Le suivi de la reprise est perdu (serveur redémarré ?) : consultez les exécutions ci-dessous.",
+        "echec": "La reprise s'est arrêtée au bout de {{duree}} sans rapport : rien n'a été écrit dans la base.",
+        "etapes": {
+          "PREPARATION": "Préparation…",
+          "COMPTAGE": "Comptage des tables de la source ({{faits}} / {{total}}) : {{table}}",
+          "DOMAINE": "Domaine {{faits}} / {{total}} : {{domaine}}",
+          "DOMAINE_LIGNES": "Domaine {{faits}} / {{total}} : {{domaine}} ({{lignes}} lignes lues)",
+          "ENREGISTREMENT": "Enregistrement du rapport…"
+        }
+      },
+      "postes": {
+        "LECTURE_SOURCE": "lecture de la source",
+        "SQL_CIBLE": "requêtes sur la base",
+        "PIECES_CALCUL": "calcul des pièces",
+        "PIECES_ECRITURE_ENTETE": "écriture des entêtes de pièces",
+        "PIECES_ECRITURE_LIGNES": "écriture des lignes et métrés"
+      },
+      "domaines": {
+        "SOCIETE": "Société",
+        "REFERENTIELS": "Référentiels",
+        "CHAMPS": "Champs supplémentaires",
+        "ANNUAIRE": "Annuaire (tiers, contacts)",
+        "RESSOURCES": "Ressources (salariés, matériel)",
+        "BIBLIOTHEQUE": "Bibliothèque",
+        "STRUCTURE": "Affaires et chantiers",
+        "PIECES_VENTE": "Pièces de vente",
+        "ACHATS": "Achats",
+        "REGLEMENTS": "Règlements",
+        "EXPLOITATION": "Pointages",
+        "STOCK": "Stock",
+        "GED": "GED et notes",
+        "VALEURS_CHAMPS": "Valeurs des champs supplémentaires",
+        "SUIVIS_SUSPENDUS": "Préparation (suivis des chantiers et de la rentabilité suspendus)",
+        "SUIVIS": "Chantiers des pièces recalculés, rentabilité mise en recalcul"
+      },
       "simulation_terminee": "Simulation terminée : relisez le rapport.",
       "reprise_terminee": "Reprise terminée.",
       "reprise_echec": "Reprise en échec : rien n'a été écrit, voir les anomalies du rapport.",
@@ -8850,6 +8899,12 @@
           "code": "Code",
           "emplacement": "Emplacement",
           "message": "Message"
+        },
+        "chronos": {
+          "titre": "Temps par poste",
+          "poste": "Poste",
+          "duree": "Durée",
+          "nombre": "Passages"
         },
         "volumes": {
           "titre": "Volumes par table source",

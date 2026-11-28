@@ -80,6 +80,8 @@ builder.Services.AddSecurite(securite);
 builder.Logging.AddProvider(new JournalTechnique(builder.Configuration.GetConnectionString("LogiBTP"),
     Path.Combine(builder.Environment.ContentRootPath, "journaux"), JournalTechnique.Niveau(builder.Configuration[VariablesEnv.JournalNiveau])));
 builder.Services.AddHostedService<PurgeJournaux>();
+// Reprises de l'écran en tâche de fond, suivies en mémoire (une à la fois par base).
+builder.Services.AddSingleton<LogiBTP.Api.Reprise.TachesReprise>();
 builder.Services.AddHostedService<CopiesCertificatsLots>();
 builder.Services.AddHostedService<PassageAnnuaireFe>();
 // Facturation électronique, lot 24 : pièces validées à émettre (Btp/EnvoiFactureBtp.cs).

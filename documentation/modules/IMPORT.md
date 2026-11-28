@@ -18,6 +18,19 @@ Référence lue à la demande (hors contexte par défaut). Les règles que le co
    [--volume-mde SURFACE|VOLUME]` (simulation par
    défaut, code de sortie 2 en cas d'échec). Décimales des lignes de pièces reprises : MDE 3 (quantités) et 2 (prix) par
    défaut, modifiables à l'écran avant l'import ; OPTIM : celles de la quantité source, prix à 6.
+   Écran : `POST /api/reprise/executer` ne fait que les contrôles rapides (connexion saisie, base vide, aucune reprise
+   en cours : 409 `REPRISE_EN_COURS`) puis rend la main (202) ; la reprise tourne en **tâche de fond**
+   (`TachesReprise`, singleton du cœur, une par base, mémoire du processus, portée `CreerPorteeSociete`, annulée par
+   `POST /api/reprise/tache/arreter` → `REPRISE_INTERROMPUE` ou l'arrêt de l'API). L'écran interroge
+   `GET /api/reprise/tache` toutes les 2 s (étape `ETAPE_REPRISE` : PREPARATION, COMPTAGE des tables, DOMAINE n / total,
+   ENREGISTREMENT, signalée par `OptionsReprise.Avancement` ; compteurs signalés chaque seconde par une tâche de suivi : lignes lues dans la source pendant le domaine et au total, fiches / pièces écrites, lignes de pièces et métrés écrits ; temps par poste `ChronosReprise` (AsyncLocal posé par le moteur : `LECTURE_SOURCE`, `SQL_CIBLE`, `PIECES_CALCUL`, `PIECES_ECRITURE_ENTETE`, `PIECES_ECRITURE_LIGNES`), aussi dans le rapport, section « Temps par poste »). Suivis tenus par triggers : premier domaine `SUIVIS_SUSPENDUS` (`set_config(…, 'on', true)` de `logibtp.document_chantier_suspendu`, lu par `f_document_chantier_suspendu` dans les triggers de `document_chantier` (db/257), et de `logibtp.rentabilite_suspendue`, lu par `f_rentabilite_suspendue` dans `f_rentabilite_signaler` (099r) et les triggers des pièces et des lignes (258) : sans eux, chaque instruction d'écriture des lignes recalculait les chantiers de la pièce et réécrivait la même ligne de file de la rentabilité, de plus en plus lentement ; clé `fk_mtr_ligne` différée, db/1.6 : chaque métré verrouillait sa ligne juste avant sa mise à jour ; `SET LOCAL plan_cache_mode = force_custom_plan` : les plans des contrôles de clés et des triggers, préparés quand la base neuve était vide, restaient en lecture complète de table), dernier domaine `SUIVIS` (suivis rétablis, `f_document_chantier_maj` de toutes les pièces, tous les chantiers mis dans `rentabilite_a_recalculer`, calculés ensuite par le planificateur); puis affiche le rapport de l'exécution enregistrée ;
+   `GET /api/reprise` renvoie aussi `tache` : une page rechargée reprend le suivi. Avant (24/11/2026), la reprise
+   tournait dans la requête HTTP et s'annulait avec elle (navigateur ou proxy qui coupe une longue requête : transaction
+   annulée, aucun rapport, page vidée).
+   Délais : lectures de la source 600 s (`LecteurAdo.DelaiSecondes`, MDE en READ UNCOMMITTED, équivalent de
+   `WITH (NOLOCK)`), commandes sur la base cible 600 s aussi (`RepriseBase.ConnexionCible`, au lieu des 30 s par défaut).
+   Erreur inattendue : anomalie bloquante avec le domaine en cours en emplacement, code « enveloppe / origine » et
+   messages des exceptions internes (`MoteurReprise.CodeErreur`, `MessageErreur`).
 2. `RepriseBase.ExecuterAsync(DemandeReprise)` : fichier de correspondances (fourni, sinon `Correspondances/mde.json` ou
    `optim.json`) validé contre les listes de la base cible (`CiblesReprise`), fusions de doublons retenues
    (`import_fusion`), lecteur en lecture seule (`LecteurSqlServer` / `LecteurMariaDb`).
@@ -130,5 +143,5 @@ exploitation : `PointageNonRepris` ; stock : `ConsommationNonReprise` ; GED : `G
 - Interface : `e2e/reprise.spec.ts` (écran de reprise).
 
 ## Restes (voir `TODO.md`)
-Points à confirmer sur une copie des bases réelles (sens de colonnes, unités, codes non documentés) ; reprise exécutée
-dans la requête HTTP (une tâche de fond reste à décider pour les grosses bases) ; tables `PP_*` (lot 17).
+Points à confirmer sur une copie des bases réelles (sens de colonnes, unités, codes non documentés) ; reprise en une
+seule transaction (segmentation par domaine avec reprise sur échec à décider) ; tables `PP_*` (lot 17).

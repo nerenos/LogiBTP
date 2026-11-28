@@ -63,12 +63,52 @@ public sealed class MoteurReprise(IReadOnlyList<IDomaineReprise> domaines, Func<
             throw new RepriseRefuseeException(ErreurReprise.SourceIncompatible,
                 $"Source de la reprise {options.Source}, du lecteur {lecteur.Source}, des correspondances {correspondances.Source}");
         var ordre = Ordre();
+        string? domaineCourant = null;
+        int rangCourant = 0;
+        long lignesAvantDomaine = 0;
+        var chronos = new ChronosReprise();
+        ChronosReprise.Courant = chronos;
+        var compte = new LecteurCompte(lecteur, chronos);
+        lecteur = compte;
         var rapport = new RapportReprise { Source = options.Source, Societes = options.Societes, Simulation = options.Simulation };
         var contexte = new ContexteReprise
         {
             Options = options, Lecteur = lecteur, Correspondances = correspondances, Unite = unite, Rapport = rapport,
         };
 
+        long ecrites = 0;
+        void Signaler(string etape, string? element, int faits, int total, long lignes = 0, long lignesTotal = 0)
+        {
+            // Le suivi ne doit jamais faire échouer la reprise.
+            try
+            {
+                ecrites = rapport.EcritesTotal() ?? ecrites;
+                options.Avancement?.Invoke(new AvancementReprise(etape, element, faits, total, lignes, lignesTotal, ecrites, contexte.Details)
+                {
+                    Chronos = chronos.Postes(),
+                });
+            }
+            catch { /* suivi ignoré */ }
+        }
+
+        // Compteurs du domaine en cours signalés à intervalle régulier (autre fil) jusqu'à la fin de l'exécution.
+        using var finSuivi = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        using var arretSuivi = new ArretALaFin(finSuivi); // suivi arrêté quelle que soit la sortie (refus, erreur)
+        var suivi = options.Avancement is null ? Task.CompletedTask : Task.Run(async () =>
+        {
+            try
+            {
+                while (true)
+                {
+                    await Task.Delay(options.IntervalleAvancement, finSuivi.Token);
+                    if (domaineCourant is { } d)
+                        Signaler(EtapeReprise.Domaine, d, rangCourant, ordre.Count, compte.Lignes - lignesAvantDomaine, compte.Lignes);
+                }
+            }
+            catch (OperationCanceledException) { /* fin du suivi */ }
+        });
+
+        Signaler(EtapeReprise.Preparation, null, 0, ordre.Count);
         await using (var tx = await unite.CommencerAsync(ct))
         {
             if (!await baseVide(unite.Connexion, unite.Transaction, ct))
@@ -77,19 +117,33 @@ public sealed class MoteurReprise(IReadOnlyList<IDomaineReprise> domaines, Func<
             contexte.Fusions = await LireFusionsAsync(unite, options.Source, ct);
             try
             {
-                foreach (var table in await lecteur.TablesAsync(ct))
-                    rapport.TablesSource[table] = await lecteur.CompterAsync(table, ct);
-                contexte.RepriseId = await InsererAsync(unite.Connexion, unite.Transaction!, rapport, options, ct);
-                foreach (var domaine in ordre)
+                var tables = await lecteur.TablesAsync(ct);
+                for (var i = 0; i < tables.Count; i++)
                 {
+                    Signaler(EtapeReprise.Comptage, tables[i], i, tables.Count);
+                    rapport.TablesSource[tables[i]] = await lecteur.CompterAsync(tables[i], ct);
+                }
+                contexte.RepriseId = await InsererAsync(unite.Connexion, unite.Transaction!, rapport, options, ct);
+                for (var i = 0; i < ordre.Count; i++)
+                {
+                    var domaine = ordre[i];
                     ct.ThrowIfCancellationRequested();
+                    domaineCourant = domaine.Code;
+                    rangCourant = i;
+                    lignesAvantDomaine = compte.Lignes;
+                    Signaler(EtapeReprise.Domaine, domaine.Code, i, ordre.Count, 0, lignesAvantDomaine);
                     var chrono = Stopwatch.StartNew();
                     await domaine.ExecuterAsync(contexte, ct);
                     await contexte.Registre.EnregistrerAsync(unite.Connexion, unite.Transaction!, contexte.RepriseId, ct);
                     rapport.Domaines.Add(new DomaineExecute(domaine.Code, chrono.ElapsedMilliseconds));
                 }
+                domaineCourant = null;
+                await finSuivi.CancelAsync();
+                await suivi;
+                Signaler(EtapeReprise.Enregistrement, null, ordre.Count, ordre.Count, 0, compte.Lignes);
                 rapport.Etat = rapport.Bloque ? EtatReprise.Echec : EtatReprise.Terminee;
                 rapport.Fin = DateTimeOffset.UtcNow;
+                rapport.Chronos.AddRange(chronos.Postes());
                 if (options.Simulation || rapport.Bloque)
                     await tx.RollbackAsync(ct);
                 else
@@ -101,10 +155,15 @@ public sealed class MoteurReprise(IReadOnlyList<IDomaineReprise> domaines, Func<
             }
             catch (Exception e) when (e is not OperationCanceledException)
             {
+                var enEchec = domaineCourant;
+                domaineCourant = null;
+                await finSuivi.CancelAsync();
                 await tx.RollbackAsync(CancellationToken.None);
                 rapport.Etat = EtatReprise.Echec;
                 rapport.Fin = DateTimeOffset.UtcNow;
-                rapport.Signaler(NiveauAnomalie.Bloquant, e is RepriseRefuseeException r ? r.Code : e.GetType().Name, null, e.Message);
+                rapport.Chronos.Clear();
+                rapport.Chronos.AddRange(chronos.Postes());
+                rapport.Signaler(NiveauAnomalie.Bloquant, e is RepriseRefuseeException r ? r.Code : CodeErreur(e), enEchec, MessageErreur(e));
             }
         }
 
@@ -113,6 +172,59 @@ public sealed class MoteurReprise(IReadOnlyList<IDomaineReprise> domaines, Func<
         var id = await InsererAsync(unite.Connexion, unite.Transaction!, rapport, options, ct);
         await trace.CommitAsync(ct);
         return new ResultatReprise(id, rapport);
+    }
+
+    private sealed class ArretALaFin(CancellationTokenSource source) : IDisposable
+    {
+        public void Dispose() => source.Cancel();
+    }
+
+    /// <summary>Lecteur qui compte les lignes lues (toutes requêtes) ; ne libère pas le lecteur enveloppé.</summary>
+    private sealed class LecteurCompte(ILecteurSource interne, ChronosReprise chronos) : ILecteurSource
+    {
+        private long lignes;
+        public long Lignes => Interlocked.Read(ref lignes);
+        public string Source => interne.Source;
+        public Task<IReadOnlyList<string>> TablesAsync(CancellationToken ct) => interne.TablesAsync(ct);
+        public Task<long> CompterAsync(string table, CancellationToken ct) => interne.CompterAsync(table, ct);
+
+        public async IAsyncEnumerable<LigneSource> LireAsync(string requete, IReadOnlyDictionary<string, object?>? parametres,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct)
+        {
+            // Temps passé à attendre la source (requête et lignes suivantes), hors traitement des lignes par le domaine.
+            await using var e = interne.LireAsync(requete, parametres, ct).GetAsyncEnumerator(ct);
+            while (true)
+            {
+                var debut = System.Diagnostics.Stopwatch.GetTimestamp();
+                var suivante = await e.MoveNextAsync();
+                chronos.Ajouter(ChronosReprise.LectureSource, System.Diagnostics.Stopwatch.GetTimestamp() - debut, suivante ? 1 : 0);
+                if (!suivante) yield break;
+                Interlocked.Increment(ref lignes);
+                yield return e.Current;
+            }
+        }
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
+
+    /// <summary>
+    /// Code d'une erreur inattendue : type de l'exception d'origine (une enveloppe comme « likely due to a transient
+    /// failure » d'EF ne dit rien de la cause), précédé de celui de l'enveloppe s'il diffère.
+    /// </summary>
+    public static string CodeErreur(Exception e)
+    {
+        var origine = e;
+        while (origine.InnerException is not null) origine = origine.InnerException;
+        return origine == e ? e.GetType().Name : $"{e.GetType().Name} / {origine.GetType().Name}";
+    }
+
+    /// <summary>Message d'une erreur inattendue avec ceux des exceptions internes (cause réelle), sans répétition.</summary>
+    public static string MessageErreur(Exception e)
+    {
+        var messages = new List<string>();
+        for (var x = e; x is not null; x = x.InnerException)
+            if (!string.IsNullOrWhiteSpace(x.Message) && !messages.Contains(x.Message)) messages.Add(x.Message);
+        return string.Join(" → ", messages);
     }
 
     private static async Task<IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>>> LireFusionsAsync(

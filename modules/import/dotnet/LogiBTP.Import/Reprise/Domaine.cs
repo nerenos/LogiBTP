@@ -44,6 +44,25 @@ public sealed record OptionsReprise
 
     /// <summary>MDE : donnée technique qui reçoit la colonne VOLUME (<see cref="VolumeMde"/>, surface par défaut).</summary>
     public string VolumeMde { get; init; } = LogiBTP.Import.VolumeMde.Surface;
+
+    /// <summary>Avancement signalé par le moteur à chaque étape (écran : suivi de la tâche de fond) ; null : aucun suivi.</summary>
+    public Action<AvancementReprise>? Avancement { get; init; }
+
+    /// <summary>Intervalle des signalements de l'avancement pendant un domaine (compteurs).</summary>
+    public TimeSpan IntervalleAvancement { get; init; } = TimeSpan.FromSeconds(1);
+}
+
+/// <summary>
+/// Avancement d'une exécution : étape (<see cref="EtapeReprise"/>), domaine en cours (étape DOMAINE) ou table comptée
+/// (COMPTAGE), éléments faits sur le total de l'étape (domaines ou tables), lignes lues dans la source pendant le domaine
+/// en cours et depuis le début, fiches et pièces écrites (volumes du rapport), lignes de détail écrites (lignes de pièces,
+/// métrés) ; signalé à chaque étape puis à intervalle régulier (<see cref="OptionsReprise.IntervalleAvancement"/>).
+/// </summary>
+public sealed record AvancementReprise(string Etape, string? Element, int Faits, int Total, long Lignes = 0, long LignesTotal = 0,
+    long Ecrites = 0, long Details = 0)
+{
+    /// <summary>Temps cumulé par poste depuis le début (instantané), du plus long au plus court.</summary>
+    public IReadOnlyList<ChronoPoste> Chronos { get; init; } = [];
 }
 
 /// <summary>Ce qu'un domaine reçoit : source, correspondances, registre, rapport et unité d'écriture de la base cible.</summary>
@@ -58,6 +77,14 @@ public sealed class ContexteReprise
 
     /// <summary>Identifiant de l'exécution dans <c>import_reprise</c>.</summary>
     public long RepriseId { get; internal set; }
+
+    private long details;
+
+    /// <summary>Lignes de détail écrites (lignes de pièces, métrés…), pour le suivi de l'avancement (aucun effet sur le rapport).</summary>
+    public long Details => Interlocked.Read(ref details);
+
+    /// <summary>Compte des lignes de détail écrites par un domaine (suivi de l'avancement).</summary>
+    public void CompterDetails(long nombre) => Interlocked.Add(ref details, nombre);
 
     /// <summary>Fusions retenues (<c>import_fusion</c>) : par table source, clé fusionnée → clé conservée.</summary>
     public IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> Fusions { get; internal set; } =

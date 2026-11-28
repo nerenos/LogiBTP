@@ -37,6 +37,9 @@ public sealed record DemandeReprise
     /// <summary>MDE : la colonne VOLUME des données techniques en surface (défaut) ou en volume (<see cref="VolumeMde"/>).</summary>
     public string? VolumeMde { get; init; }
 
+    /// <summary>Suivi de l'avancement (écran : tâche de fond, <see cref="TachesReprise"/>) ; null : aucun.</summary>
+    public Action<AvancementReprise>? Avancement { get; init; }
+
     /// <summary>
     /// Décimales par défaut d'une source : MDE affiche les quantités à 3 et les prix à 2 (demande du 19/11/2026) ;
     /// OPTIM : null (décimales de la quantité source, prix à 6).
@@ -59,9 +62,16 @@ public static class RepriseBase
         _ => throw new ArgumentException($"Source de reprise inconnue : {source} (MDE ou OPTIM)"),
     };
 
+    /// <summary>Délai des commandes sur la base cible pendant une reprise (s), égal à celui des lectures de la source.</summary>
+    public const int DelaiCommandesCible = 600;
+
+    /// <summary>Connexion à la base cible avec le délai des commandes de la reprise (au lieu des 30 s par défaut).</summary>
+    public static string ConnexionCible(string connexion) =>
+        new Npgsql.NpgsqlConnectionStringBuilder(connexion) { CommandTimeout = DelaiCommandesCible }.ConnectionString;
+
     public static async Task<ResultatReprise> ExecuterAsync(DemandeReprise demande, CancellationToken ct)
     {
-        await using var unite = new UniteEcriture(new ConnexionRequete(demande.ConnexionCible));
+        await using var unite = new UniteEcriture(new ConnexionRequete(ConnexionCible(demande.ConnexionCible)));
         return await ExecuterAsync(demande, unite, ct);
     }
 
@@ -91,7 +101,7 @@ public static class RepriseBase
         var moteur = new MoteurReprise(DomainesReprise.Pour(source, demande.StockageGed), BaseCibleReprise.EstVideAsync);
         return await moteur.ExecuterAsync(new OptionsReprise
         {
-            Source = source, Societes = demande.Societes, Simulation = demande.Simulation, Auteur = demande.Auteur,
+            Source = source, Societes = demande.Societes, Simulation = demande.Simulation, Auteur = demande.Auteur, Avancement = demande.Avancement,
             DecimalesQte = Decimales(demande.DecimalesQte ?? DemandeReprise.DecimalesParDefaut(source).Qte),
             DecimalesPrix = Decimales(demande.DecimalesPrix ?? DemandeReprise.DecimalesParDefaut(source).Prix),
             VolumeMde = demande.VolumeMde?.Trim().ToUpperInvariant() switch

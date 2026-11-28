@@ -17,6 +17,7 @@ public class CodesTests
     [InlineData("MODE_AVANCEMENT", typeof(ModeAvancement))]
     [InlineData("ETAT_REPRISE", typeof(EtatReprise))]
     [InlineData("ERREUR_REPRISE", typeof(ErreurReprise))]
+    [InlineData("ETAPE_REPRISE", typeof(EtapeReprise))]
     [InlineData("NIVEAU_ANOMALIE", typeof(NiveauAnomalie))]
     [InlineData("ERREUR_FUSION", typeof(ErreurFusion))]
     [InlineData("CODE_ANOMALIE", typeof(CodeAnomalie))]

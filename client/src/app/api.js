@@ -710,7 +710,10 @@ export const api = {
   reprise: {
     etat: () => appel('GET', '/reprise'),
     correspondances: (source) => appel('GET', `/reprise/correspondances/${encodeURIComponent(source)}`),
+    // Lancement en tâche de fond (202, état de la tâche), puis suivi de l'avancement jusqu'au numéro de l'exécution.
     executer: (demande) => appel('POST', '/reprise/executer', demande),
+    tache: () => appel('GET', '/reprise/tache'),
+    arreter: () => appel('POST', '/reprise/tache/arreter'),
     rapport: (id) => appel('GET', `/reprise/executions/${encodeURIComponent(id)}`),
     markdown: (id) => appel('GET', `/reprise/executions/${encodeURIComponent(id)}/markdown`),
     fusions: (source, groupes) => appel('PUT', `/reprise/fusions/${encodeURIComponent(source)}`, groupes),

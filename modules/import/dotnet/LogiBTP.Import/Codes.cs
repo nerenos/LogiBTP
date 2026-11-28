@@ -76,6 +76,21 @@ public static class ErreurReprise
     public const string CorrespondancesInvalides = "REPRISE_CORRESPONDANCES_INVALIDES";
     public const string SourceIncompatible = "REPRISE_SOURCE_INCOMPATIBLE";
     public const string OptionInvalide = "REPRISE_OPTION_INVALIDE";
+    /// <summary>Une reprise tourne déjà pour cette base (une seule à la fois).</summary>
+    public const string EnCours = "REPRISE_EN_COURS";
+    /// <summary>Reprise arrêtée à la demande (ou par l'arrêt du serveur) : transaction annulée, rien d'écrit.</summary>
+    public const string Interrompue = "REPRISE_INTERROMPUE";
+    /// <summary>Erreur inattendue pendant la tâche de fond (détail dans le journal du serveur).</summary>
+    public const string Erreur = "REPRISE_ERREUR";
+}
+
+/// <summary>Étape signalée par le moteur pendant une exécution (suivi de la tâche de fond de l'écran).</summary>
+public static class EtapeReprise
+{
+    public const string Preparation = "PREPARATION";
+    public const string Comptage = "COMPTAGE";
+    public const string Domaine = "DOMAINE";
+    public const string Enregistrement = "ENREGISTREMENT";
 }
 
 /// <summary>Niveau d'une anomalie du rapport de reprise.</summary>

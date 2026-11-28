@@ -122,6 +122,17 @@ public class MoteurRepriseTests
     }
 
     [Fact]
+    public void Erreur_enveloppee_cause_reelle_dans_le_rapport()
+    {
+        var e = new InvalidOperationException("An exception has been raised that is likely due to a transient failure.",
+            new IOException("Exception while reading from stream", new TimeoutException("Timeout during reading attempt")));
+        Assert.Equal("InvalidOperationException / TimeoutException", MoteurReprise.CodeErreur(e));
+        Assert.Equal("An exception has been raised that is likely due to a transient failure. → Exception while reading from stream → Timeout during reading attempt",
+            MoteurReprise.MessageErreur(e));
+        Assert.Equal("InvalidOperationException", MoteurReprise.CodeErreur(new InvalidOperationException("x")));
+    }
+
+    [Fact]
     public async Task Source_incompatible()
     {
         var m = new MoteurReprise([], (_, _, _) => Task.FromResult(true));
@@ -225,6 +236,69 @@ public class MoteurRepriseTests
     }
 
     [Fact]
+    public async Task Avancement_signale_a_chaque_etape()
+    {
+        if (Admin is null) return;
+        await using var b = await BaseEssai.CreerAsync(Admin);
+        var etapes = new List<AvancementReprise>();
+        await using var unite = new UniteEcriture(new ConnexionRequete(b.Connexion));
+        var r = await new MoteurReprise([Ecrire(), D("suite", "essai")], EssaiVide).ExecuterAsync(
+            new OptionsReprise { Source = SourceReprise.Mde, Simulation = true, Avancement = etapes.Add, IntervalleAvancement = TimeSpan.FromHours(1) },
+            new LecteurFictif(SourceReprise.Mde), Correspondances(), unite, default);
+        Assert.Equal(EtatReprise.Terminee, r.Rapport.Etat);
+        // Étapes (les signalements périodiques du domaine, selon la durée, sont ignorés : intervalle long).
+        Assert.Equal([
+            (EtapeReprise.Preparation, null, 0, 2, 0L, 0L, 0L),
+            (EtapeReprise.Comptage, "CLIENT", 0, 1, 0L, 0L, 0L),
+            (EtapeReprise.Domaine, "essai", 0, 2, 0L, 0L, 0L),
+            (EtapeReprise.Domaine, "suite", 1, 2, 0L, 2L, 2L),
+            (EtapeReprise.Enregistrement, null, 2, 2, 0L, 2L, 2L),
+        ], etapes.Select(e => (e.Etape, e.Element, e.Faits, e.Total, e.Lignes, e.LignesTotal, e.Ecrites)));
+        // Temps de lecture de la source mesuré et reporté au rapport.
+        Assert.Contains(r.Rapport.Chronos, c => c.Poste == ChronosReprise.LectureSource && c.Nombre == 2);
+        Assert.Contains(etapes.Last().Chronos, c => c.Poste == ChronosReprise.LectureSource);
+    }
+
+    [Fact]
+    public async Task Compteurs_signales_pendant_le_domaine()
+    {
+        if (Admin is null) return;
+        await using var b = await BaseEssai.CreerAsync(Admin);
+        var etapes = new List<AvancementReprise>();
+        // Domaine qui lit 1 750 lignes en 200 ms au moins (lecture répétée de la table fictive à deux lignes).
+        var lire = new Domaine("lire", [], async (ctx, ct) =>
+        {
+            for (var i = 0; i < 875; i++)
+            {
+                await foreach (var _ in ctx.Lecteur.LireAsync("SELECT CODE FROM CLIENT", null, ct)) { }
+                if (i % 175 == 0) await Task.Delay(50, ct);
+            }
+        });
+        await using var unite = new UniteEcriture(new ConnexionRequete(b.Connexion));
+        await new MoteurReprise([D("avant"), lire], EssaiVide).ExecuterAsync(
+            new OptionsReprise { Source = SourceReprise.Mde, Simulation = true, Avancement = e => { lock (etapes) etapes.Add(e); }, IntervalleAvancement = TimeSpan.FromMilliseconds(20) },
+            new LecteurFictif(SourceReprise.Mde), Correspondances(), unite, default);
+        // Signalements périodiques pendant le domaine : compteurs croissants, domaine « lire » (rang 1).
+        var periodiques = etapes.Where(e => e.Etape == EtapeReprise.Domaine && e.Lignes > 0).ToList();
+        Assert.NotEmpty(periodiques);
+        Assert.All(periodiques, e => Assert.Equal(("lire", 1), (e.Element, e.Faits)));
+        Assert.Equal(periodiques.Select(e => e.Lignes).Order(), periodiques.Select(e => e.Lignes));
+        Assert.Equal(1750, etapes.Last().LignesTotal);
+    }
+
+    [Fact]
+    public async Task Suivi_en_erreur_sans_effet_sur_la_reprise()
+    {
+        if (Admin is null) return;
+        await using var b = await BaseEssai.CreerAsync(Admin);
+        await using var unite = new UniteEcriture(new ConnexionRequete(b.Connexion));
+        var r = await new MoteurReprise([Ecrire()], EssaiVide).ExecuterAsync(
+            new OptionsReprise { Source = SourceReprise.Mde, Simulation = true, Avancement = _ => throw new InvalidOperationException("suivi") },
+            new LecteurFictif(SourceReprise.Mde), Correspondances(), unite, default);
+        Assert.Equal(EtatReprise.Terminee, r.Rapport.Etat);
+    }
+
+    [Fact]
     public async Task Reprise_reelle_validee_puis_base_non_vide_refusee()
     {
         if (Admin is null) return;
@@ -246,7 +320,7 @@ public class MoteurRepriseTests
         await using var b = await BaseEssai.CreerAsync(Admin);
         var r = await LancerAsync(b, simulation: false, echecSur: "C002");
         Assert.Equal(EtatReprise.Echec, r.Rapport.Etat);
-        Assert.Contains(r.Rapport.Anomalies, a => a.Niveau == NiveauAnomalie.Bloquant && a.Message == "Échec simulé");
+        Assert.Contains(r.Rapport.Anomalies, a => a.Niveau == NiveauAnomalie.Bloquant && a.Message == "Échec simulé" && a.Emplacement == "essai");
         Assert.Equal(0, await b.CompterAsync("SELECT count(*) FROM essai"));
         Assert.Equal(1, await b.CompterAsync("SELECT count(*) FROM import_reprise WHERE irp_etat = 'ECHEC'"));
     }

@@ -12,6 +12,9 @@ namespace LogiBTP.Api.Reprise;
 /// </summary>
 public static class SqlReprise
 {
+    /// <summary>Poste des chronomètres de la reprise : requêtes SQL directes sur la base cible.</summary>
+    public const string PosteSql = "SQL_CIBLE";
+
     private static NpgsqlCommand Commande(UniteEcriture u, string sql, object?[] valeurs)
     {
         var cmd = new NpgsqlCommand(sql, u.Connexion, u.Transaction);
@@ -34,14 +37,14 @@ public static class SqlReprise
     public static async Task<int> ExecuterAsync(UniteEcriture u, string sql, CancellationToken ct, params object?[] valeurs)
     {
         await using var cmd = Commande(u, sql, valeurs);
-        return await cmd.ExecuteNonQueryAsync(ct);
+        return await ChronosReprise.MesurerAsync(PosteSql, () => cmd.ExecuteNonQueryAsync(ct));
     }
 
     /// <summary>Première colonne de la première ligne (INSERT … RETURNING), null sinon.</summary>
     public static async Task<object?> ScalaireAsync(UniteEcriture u, string sql, CancellationToken ct, params object?[] valeurs)
     {
         await using var cmd = Commande(u, sql, valeurs);
-        var r = await cmd.ExecuteScalarAsync(ct);
+        var r = await ChronosReprise.MesurerAsync(PosteSql, () => cmd.ExecuteScalarAsync(ct));
         return r is DBNull ? null : r;
     }
 
@@ -49,10 +52,13 @@ public static class SqlReprise
         params object?[] valeurs)
     {
         await using var cmd = Commande(u, sql, valeurs);
-        await using var r = await cmd.ExecuteReaderAsync(ct);
-        var liste = new List<T>();
-        while (await r.ReadAsync(ct)) liste.Add(ligne(r));
-        return liste;
+        return await ChronosReprise.MesurerAsync(PosteSql, async () =>
+        {
+            await using var r = await cmd.ExecuteReaderAsync(ct);
+            var liste = new List<T>();
+            while (await r.ReadAsync(ct)) liste.Add(ligne(r));
+            return liste;
+        });
     }
 
     /// <summary>Lignes d'une requête de la source, chargées en mémoire (référentiels : quelques centaines de lignes).</summary>
